@@ -662,7 +662,6 @@ export function renderRankingAudio(
   if (sounds.appear !== undefined) verifySynchronizedMedia(sounds.appear);
   if (sounds.move !== undefined) verifySynchronizedMedia(sounds.move);
   const totalSamples = timelineSampleFrames(timeline, 48_000);
-  const fadeSamples = timelineFrameSampleBoundary(timeline, style.fadeFrames, 48_000);
   const clips: AudioClip[] = [];
   for (const event of plan.events) {
     const media = sounds[event.kind];
@@ -670,6 +669,10 @@ export function renderRankingAudio(
     const audio = media.audio;
     assert(audio !== undefined, `Ranking ${event.kind} sound has no normalized audio.`);
     const startSample = timelineFrameSampleBoundary(timeline, event.frame, 48_000);
+    const fadeEndFrame = event.frame + style.fadeFrames;
+    assert(fadeEndFrame <= timeline.frameCount,
+      `Ranking sound ${event.id} fade exceeds Timeline.`);
+    const fadeSamples = timelineFrameSampleBoundary(timeline, fadeEndFrame, 48_000) - startSample;
     const sourceSampleFrames = synchronizedMediaSampleFrames(media);
     const length = Math.min(sourceSampleFrames, totalSamples - startSample);
     assert(length > 0, `Ranking sound ${event.id} starts after Timeline.`);

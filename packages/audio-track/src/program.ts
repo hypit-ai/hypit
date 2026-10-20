@@ -4,7 +4,7 @@ import { assertAudioTrackIdentity, sealAudioTrack } from "@hypit/composition";
 import type { AudioClip, AudioTrack } from "@hypit/composition";
 import { synchronizedMediaSampleFrames, verifySynchronizedMedia } from "@hypit/media";
 import type { SynchronizedMedia } from "@hypit/media";
-import { canonicalize, isResourceId } from "@hypit/hypit/protocol";
+import { assertBlobRef, canonicalize } from "@hypit/hypit/protocol";
 import { assertTemporalWindowFor, temporalDurationInSamples } from "@hypit/temporal";
 import type { TemporalWindow, TemporalDuration } from "@hypit/temporal";
 
@@ -88,8 +88,8 @@ function realizedClips(
   assertAudioClipSpec(spec);
   assertTemporalWindowFor(window, { subjectId: spec.id, timeline: timeline });
   const source = sourceFacts(media);
-  const fadeInSamples = temporalDurationInSamples(spec.mix.fadeIn, timeline);
-  const fadeOutSamples = temporalDurationInSamples(spec.mix.fadeOut, timeline);
+  const fadeInSamples = fadeSamples(spec.mix.fadeIn, timeline, window.span.startFrame, 1);
+  const fadeOutSamples = fadeSamples(spec.mix.fadeOut, timeline, window.span.endFrameExclusive, -1);
   const addition = {
     id: window.id,
     subjectId: spec.id,
@@ -148,7 +148,8 @@ export function assertAudioTrackProgram(value: AudioTrackProgram): void {
     assert(Number.isSafeInteger(clip.window.startFrame) && clip.window.startFrame >= 0
       && Number.isSafeInteger(clip.window.endFrameExclusive)
       && clip.window.endFrameExclusive > clip.window.startFrame, `Audio Clip ${clip.id} window is invalid.`);
-    assert(isResourceId(clip.source.artifact.resource) && clip.source.artifact.mediaType === "audio/wav"
+    assertBlobRef(clip.source.artifact, `Audio Clip ${clip.id} source Artifact`);
+    assert(clip.source.artifact.mediaType === "audio/wav"
       && Number.isSafeInteger(clip.source.sampleFrames) && clip.source.sampleFrames > 0,
     `Audio Clip ${clip.id} source is invalid.`);
     assertAudioSourceTimeSpec(clip.sourceTime, `Audio Clip ${clip.id} source time`);
@@ -157,6 +158,27 @@ export function assertAudioTrackProgram(value: AudioTrackProgram): void {
       && Number.isSafeInteger(clip.mix.fadeOutSamples) && clip.mix.fadeOutSamples >= 0,
     `Audio Clip ${clip.id} mix is invalid.`);
   }
+}
+
+/**
+ * A frame-authored fade is an interval attached to one Window edge. Derive its
+ * sample length from those two absolute boundaries so rational clocks preserve
+ * exactly the same interval as the Clip. Seconds and milliseconds remain free
+ * durations and keep their ordinary duration conversion.
+ */
+function fadeSamples(
+  duration: TemporalDuration,
+  timeline: Timeline,
+  edgeFrame: number,
+  direction: 1 | -1,
+): number {
+  if (duration.unit !== "frames") return temporalDurationInSamples(duration, timeline);
+  const otherFrame = edgeFrame + direction * duration.value;
+  if (otherFrame < 0 || otherFrame > timeline.frameCount) {
+    return temporalDurationInSamples(duration, timeline);
+  }
+  return Math.abs(timelineFrameSampleBoundary(timeline, otherFrame, 48_000)
+    - timelineFrameSampleBoundary(timeline, edgeFrame, 48_000));
 }
 
 function terminalClip(clip: AudioClipProgram, timeline: Timeline): AudioClip {

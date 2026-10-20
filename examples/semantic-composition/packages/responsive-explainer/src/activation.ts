@@ -1,11 +1,11 @@
 import { assertAttributes, assertEmptyElement, createMarkupSurfaceFacet, textAttribute } from "@hypit/hypit/markup";
 import { canonicalize, sameType } from "@hypit/hypit/protocol";
 import { sealGraphFragment } from "@hypit/hypit/author";
-import { createAdmissionPackageFacet } from "@hypit/hypit/admission";
+import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
 import { createProducerPackageFacet } from "@hypit/hypit/producer";
 import type { ProducerPackage } from "@hypit/hypit/producer";
-import type { AdmissionPackage } from "@hypit/hypit/admission";
-import type { ModuleManifest, TypeRef } from "@hypit/hypit/protocol";
+import type { RefinementPackage } from "@hypit/hypit/refinement";
+import type { ModuleManifest, TypeRef, TypedRecord } from "@hypit/hypit/protocol";
 import type { StructuredSurfaceHandler, SurfaceResolvedReference } from "@hypit/hypit/markup";
 import { compositionTypes } from "@hypit/composition";
 import { mediaTypes } from "@hypit/media";
@@ -37,23 +37,21 @@ export const manifest: ModuleManifest = { format: "hypit.module@1", ...module,
     spatialTypes.frame, temporalTypes.window, temporalTypes.instant]
     .map(type => ({ module: type.module })),
   types: [{ name: optionsType.name }], capabilities: [],
-  producers: [{ name: producer.name, inputs, outputs: [{ name: "visual", type: compositionTypes.visualTrack }], needs: [] }],
+  producers: [{ name: producer.name, inputs, result: { kind: "output" as const, name: "visual", type: compositionTypes.visualTrack } }],
 };
 const fragment = sealGraphFragment({ inputs, operations: [{ id: "compose", producer,
   inputs: Object.fromEntries(inputs.map(input => [input.name, { kind: "fragment-input" as const, name: input.name }])),
-  result: { kind: "output", name: "visual" } }],
+  result: { kind: "output" as const, name: "visual" } }],
   exports: [{ name: "visual", type: compositionTypes.visualTrack, root: { kind: "fragment-operation", operation: "compose" } }],
 });
-const inline = <T>(record: { value: { kind: string; value?: unknown } } | undefined): T => {
-  if (record?.value.kind !== "inline") throw new Error("Explainer inputs must be inline values.");
-  return record.value.value as T;
+const valueOf = <T>(record: TypedRecord | undefined): T => {
+  if (record?.value === undefined) throw new Error("Explainer inputs are missing.");
+  return record.value as T;
 };
-const component: ProducerPackage & AdmissionPackage = { producers: [{ producer, handler: ({ inputs }) => ({ needs: {}, outputs: {
-  visual: { kind: "inline", value: canonicalize(renderExplainer(inline<Timeline>(inputs.timeline),
-    inline<SpatialFrame>(inputs.within), inline<TemporalWindow>(inputs.window), inline<TemporalInstant>(inputs.reveal),
-    inline<SynchronizedMedia>(inputs.media), inline<TemporalWindow>(inputs.sourceWindow),
-    inline<FontStackRef>(inputs.font).faces, inline<ExplainerOptions>(inputs.options))) },
-} }) }] };
+const component: ProducerPackage & RefinementPackage = { producers: [{ producer, handler: ({ inputs }) => ({ kind: "output", value: (canonicalize(renderExplainer(valueOf<Timeline>(inputs.timeline),
+    valueOf<SpatialFrame>(inputs.within), valueOf<TemporalWindow>(inputs.window), valueOf<TemporalInstant>(inputs.reveal),
+    valueOf<SynchronizedMedia>(inputs.media), valueOf<TemporalWindow>(inputs.sourceWindow),
+    valueOf<FontStackRef>(inputs.font).faces, valueOf<ExplainerOptions>(inputs.options)))) }) }] };
 export const decodeSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
   assertAttributes(element, ["id", "timeline", "within", "font", "media", "source-window", "reveal", "title", "transition-frames", "stack-order", ...temporalWindowAttributeNames]);
   assertEmptyElement(element);
@@ -73,9 +71,8 @@ export const decodeSurface: StructuredSurfaceHandler = ({ element, resolveRefere
   const options: ExplainerOptions = { id, title: textAttribute(element, "title"),
     transitionFrames: Number(textAttribute(element, "transition-frames")), stackingOrder: Number(textAttribute(element, "stack-order")) };
   return { records: [{ id: `${id}.options`, type: optionsType,
-      value: { kind: "inline", value: canonicalize(options) }, range: element.range }],
-    fragments: [fragment],
-    components: [{ id, fragment: fragment.id,
+      value: (canonicalize(options)), range: element.range }],
+    components: [{ id, fragment,
       inputs: { timeline: timeline.ref, within: reference("within", spatialTypes.frame).ref,
         font: reference("font", mediaTypes.fontStack).ref,
         media: reference("media", mediaTypes.synchronized).ref,
@@ -100,6 +97,6 @@ const declaration = { name: "scene", tag: "Scene", mode: "structured" as const,
   },
 };
 export const hypitPackage = { format: "hypit.package@1" as const, modules: [{ manifest }],
-  facets: [createProducerPackageFacet(component), createAdmissionPackageFacet(component),
+  facets: [createProducerPackageFacet(component), createRefinementPackageFacet(component),
     createMarkupSurfaceFacet({ module, declaration, handler: decodeSurface })] };
 export default hypitPackage;

@@ -1,32 +1,23 @@
 export {
   createResolvedClosure,
   link,
+  resolveCapability,
   resolveProducer,
   resolveType,
-  sealRecord,
   verifyClosure,
   verifyRecordStructure,
 } from "./link.js";
 export {
-  sealBuildRequest,
-  sealCompiledGraph,
+  sealAuthorGraph,
   resolveLogicalOutput,
   resolveCandidate,
   resolveOperation,
-  satisfiedCandidate,
-  operationResultRecord,
-  verifyBuildRequest,
-  verifyCompiledGraph,
+  verifyAuthorGraph,
 } from "./graph.js";
-export { compileBuild, planBuild, plannedNeeds } from "./plan.js";
-export type { BuildCandidateSelection, PlannedExecution, PlannedNeed } from "./plan.js";
+export { planBuild, plannedNeeds } from "./plan.js";
+export type { BuildCandidateSelection, PlannedExecution, PlannedNeed, SelectedSupply } from "./plan.js";
 export { sliceExecution } from "./slice.js";
 export {
-  admitBuildResult,
   defineBuild,
-  materializeBuild,
-  resolveNeedCommand,
-  reduce,
-  start,
 } from "./reducer.js";
-export { BuildMachine } from "./machine.js";
+export { BuildMachine, materializeBuild } from "./machine.js";

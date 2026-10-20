@@ -1,4 +1,4 @@
-import { createAdmissionPackageFacet } from "@hypit/hypit/admission";
+import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
 import { createProducerPackageFacet } from "@hypit/hypit/producer";
 import { createMarkupSurfaceFacet } from "@hypit/hypit/markup";
 import { createStudioCompanionFacet } from "@hypit/studio-companion";
@@ -15,7 +15,7 @@ export const hypitPackage = {
       temporalDeclarations: narrativeStudioTemporalDeclarations,
       temporalRelations: narrativeStudioTemporalRelations,
     }),
-    ...[narrativeTemporalComponent].flatMap((component) => [createProducerPackageFacet(component), createAdmissionPackageFacet(component)]),
+    ...[narrativeTemporalComponent].flatMap((component) => [createProducerPackageFacet(component), createRefinementPackageFacet(component)]),
     createMarkupSurfaceFacet({ module: narrativeTemporalModuleRef,
       declaration: narrativeProjectionMarkupSurfaces.find((item) => item.name === "narrative-projection")!, handler: decodeNarrativeProjectionSurface }),
     createMarkupSurfaceFacet({ module: narrativeTemporalModuleRef,

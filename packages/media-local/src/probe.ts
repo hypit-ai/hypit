@@ -1,6 +1,7 @@
 import { sealMediaInspection } from "@hypit/media";
 import type { MediaAudioStream, MediaInspection, MediaOtherStream, MediaRational, MediaStream, MediaTimestamp, MediaVideoStream } from "@hypit/media";
 import type { BlobRef } from "@hypit/hypit/protocol";
+import { ffprobeDisplayRotation } from "./ffprobe-display.js";
 
 type JsonObject = Record<string, unknown>;
 
@@ -88,22 +89,6 @@ function sampleAspectRatio(value: unknown): MediaRational {
     || numerator <= 0 || denominator <= 0) return { numerator: 1, denominator: 1 };
   const factor = divisor(numerator, denominator);
   return { numerator: numerator / factor, denominator: denominator / factor };
-}
-
-function numeric(value: unknown): number | undefined {
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (typeof value === "string" && value.trim() && Number.isFinite(Number(value))) return Number(value);
-  return undefined;
-}
-
-function displayRotation(stream: FfprobeStream, index: number): 0 | 90 | 180 | 270 {
-  const sideData = stream.side_data_list?.map(object).find((item) => item?.side_data_type === "Display Matrix");
-  const raw = numeric(sideData?.rotation) ?? numeric(stream.tags?.rotate) ?? 0;
-  const normalized = ((raw % 360) + 360) % 360;
-  for (const quarter of [0, 90, 180, 270] as const) {
-    if (Math.abs(normalized - quarter) < 1e-6) return quarter;
-  }
-  throw new Error(`video stream ${index} uses unsupported non-quarter display rotation ${raw}`);
 }
 
 function timestamp(ticks: bigint, timeBase: MediaRational): MediaTimestamp {
@@ -261,7 +246,7 @@ export function parseMediaInspection(args: {
         width,
         height,
         sampleAspectRatio: sampleAspectRatio(stream.sample_aspect_ratio),
-        rotationDegrees: displayRotation(stream, index),
+        rotationDegrees: ffprobeDisplayRotation(stream, `video stream ${index}`),
         ...(rational(stream.avg_frame_rate, true) === undefined ? {} : { averageFrameRate: rational(stream.avg_frame_rate, true)! }),
         ...(rational(stream.r_frame_rate, true) === undefined ? {} : { nominalFrameRate: rational(stream.r_frame_rate, true)! }),
       };

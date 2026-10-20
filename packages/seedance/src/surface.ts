@@ -1,17 +1,19 @@
+import { sameType } from "@hypit/hypit/protocol";
 import { blobTypes } from "@hypit/hypit/blob";
 import {
-  generationPort,
-  sealGenerationMediaBinding,
-  sealGenerationRequestDraft,
-} from "@hypit/generation";
+  modelField,
+  sealModelArtifactBinding,
+  sealModelFieldBuilder,
+} from "@hypit/generation/model-fields";
 import type {
-  GenerationMediaPort,
-  GenerationMediaRole,
-  GenerationPortTable,
-} from "@hypit/generation";
-import { exactModelMediaInputNames, exactModelTextInputName } from "@hypit/generation/model";
-import type { ExactModelEndpoint, ExactModelMediaInput } from "@hypit/generation/model";
+  ModelArtifactField,
+  ModelArtifactRole,
+  ModelFieldTable,
+} from "@hypit/generation/model-fields";
+import { modelArtifactInputNames, modelTextInputName } from "@hypit/generation/model-fields";
+import type { FieldModelOperation, ModelArtifactInput } from "@hypit/generation/model-fields";
 import { textTypes, verifyText } from "@hypit/hypit/text";
+import { assertBlobRef } from "@hypit/hypit/protocol";
 import type { CanonicalValue } from "@hypit/hypit/protocol";
 import type { MarkupAttributeValue, StructuredElement, StructuredSurfaceHandler, SurfaceResolvedReference } from "@hypit/hypit/markup";
 
@@ -22,7 +24,7 @@ import { validateSeedanceAudio } from "./validation.js";
 
 type MediaInput = {
   readonly port: "referenceImage" | "referenceVideo" | "referenceAudio" | "firstFrame" | "lastFrame";
-  readonly role: GenerationMediaRole;
+  readonly role: ModelArtifactRole;
   readonly source: SurfaceResolvedReference;
   readonly fields?: { readonly personReference: boolean };
 };
@@ -71,10 +73,6 @@ function referencePath(element: StructuredElement, name: string): string {
   return value.path;
 }
 
-function sameType(left: SurfaceResolvedReference["type"], right: SurfaceResolvedReference["type"]): boolean {
-  return left.module.name === right.module.name && left.module.version === right.module.version && left.name === right.name;
-}
-
 function resolved(
   element: StructuredElement,
   name: string,
@@ -90,20 +88,20 @@ function prompt(reference: SurfaceResolvedReference, subject: string): void {
   if (!sameType(reference.type, textTypes.text)) throw new Error(`${subject} must reference Text`);
   const value = reference.record?.value;
   if (value !== undefined) {
-    if (value.kind !== "inline") throw new Error(`${subject} has an invalid authored Text value`);
-    verifyText(value.value);
+    verifyText(value);
   }
 }
 
 function mediaReference(
   reference: SurfaceResolvedReference,
-  role: GenerationMediaRole,
+  role: ModelArtifactRole,
   subject: string,
 ): SurfaceResolvedReference {
   if (!sameType(reference.type, blobTypes.blob)) throw new Error(`${subject} must reference a Blob`);
   const value = reference.record?.value;
-  if (value !== undefined && (value.kind !== "blob" || !value.mediaType.startsWith(`${role}/`))) {
-    throw new Error(`${subject} must reference ${role} media`);
+  if (value !== undefined) {
+    assertBlobRef(value, subject);
+    if (!value.mediaType.startsWith(`${role}/`)) throw new Error(`${subject} must reference ${role} media`);
   }
   if (value?.kind === "blob" && role === "audio") validateSeedanceAudio(value, subject);
   return reference;
@@ -147,8 +145,8 @@ function personReferenceFields(element: StructuredElement, name: string) {
   return { personReference: booleanAttribute(element, name, false) };
 }
 
-function enumeratedPort(table: GenerationPortTable, name: string): readonly (string | number)[] {
-  const port = generationPort(table, name);
+function enumeratedPort(table: ModelFieldTable, name: string): readonly (string | number)[] {
+  const port = modelField(table, name);
   if (port.value.kind !== "enum") throw new Error(`${table.model} port ${name} is not enumerated`);
   return port.value.values;
 }
@@ -158,7 +156,7 @@ function generationSettings(
   model: SeedanceModel,
 ): SeedancePortMap {
   const table = seedancePorts[model];
-  const duration = generationPort(table, "duration");
+  const duration = modelField(table, "duration");
   // The author's literal, measured beforehand; the model's declared range is the only check.
   const durationSec = integerAttribute(element, "duration");
   if (duration.value.kind === "number") {
@@ -201,7 +199,7 @@ function referenceInputs(
   model: SeedanceModel,
   resolveReference: (path: string) => SurfaceResolvedReference | undefined,
 ): MediaInput[] {
-  const accepted = Object.keys(REFERENCE_PORTS) as readonly GenerationMediaRole[];
+  const accepted = Object.keys(REFERENCE_PORTS) as readonly ModelArtifactRole[];
   const result: MediaInput[] = [];
   for (const child of element.children) {
     if (child.kind === "text") {
@@ -224,12 +222,6 @@ function referenceInputs(
     });
   }
   if (result.length === 0) throw new Error(`${element.name} requires at least one Reference child`);
-  const table = seedancePorts[model];
-  for (const role of accepted) {
-    const port = generationPort(table, REFERENCE_PORTS[role]);
-    const used = result.filter((item) => item.role === role).length;
-    if (used > port.maxItems) throw new Error(`${element.name} accepts at most ${port.maxItems} ${role} references`);
-  }
   return result;
 }
 
@@ -254,34 +246,31 @@ function frameInputs(
 
 function assembleMedia(
   id: string,
-  endpoint: ExactModelEndpoint,
+  endpoint: FieldModelOperation,
   values: readonly MediaInput[],
   range: StructuredElement["range"],
 ) {
   const records: Array<{
     readonly id: string;
     readonly type: SurfaceResolvedReference["type"];
-    readonly value: { readonly kind: "inline"; readonly value: CanonicalValue };
+    readonly value: CanonicalValue;
     readonly range: StructuredElement["range"];
   }> = [];
   const inputs: Record<string, SurfaceResolvedReference["ref"] | { readonly kind: "record"; readonly id: string }> = {};
-  const mediaInputs = values.map((value, index): ExactModelMediaInput => {
+  const mediaInputs = values.map((value, index): ModelArtifactInput => {
     const name = `media-${String(index + 1).padStart(4, "0")}`;
     const binding = endpoint.mediaBindings[value.port];
     if (binding === undefined) throw new Error(`${endpoint.ports.model} has no media port ${value.port}`);
-    const port = generationPort(endpoint.ports, value.port);
+    const port = modelField(endpoint.ports, value.port);
     if (port.value.kind !== "media") throw new Error(`${endpoint.ports.model} port ${value.port} is not media`);
     const bindingId = `${id}.${name}.binding`;
     records.push({
       id: bindingId,
       type: binding.type,
-      value: {
-        kind: "inline",
-        value: sealGenerationMediaBinding(port as GenerationMediaPort, { role: value.role, ...(value.fields === undefined ? {} : { fields: value.fields }) }) as unknown as CanonicalValue,
-      },
+      value: (sealModelArtifactBinding(port as ModelArtifactField, { role: value.role, ...(value.fields === undefined ? {} : { fields: value.fields }) }) as unknown as CanonicalValue),
       range,
     });
-    const names = exactModelMediaInputNames(name);
+    const names = modelArtifactInputNames(name);
     inputs[names.binding] = { kind: "record", id: bindingId };
     inputs[names.artifact] = value.source.ref;
     return { name, port: value.port };
@@ -291,7 +280,7 @@ function assembleMedia(
 
 function generationOutput(args: {
   readonly element: StructuredElement;
-  readonly endpoint: ExactModelEndpoint;
+  readonly endpoint: FieldModelOperation;
   readonly model: SeedanceModel;
   readonly promptSource: SurfaceResolvedReference;
   readonly media: readonly MediaInput[];
@@ -300,7 +289,7 @@ function generationOutput(args: {
   const { element, endpoint, model, promptSource } = args;
   const id = stringAttribute(element, "id");
   const assembled = assembleMedia(id, endpoint, args.media, element.range);
-  const draft = sealGenerationRequestDraft(seedancePorts[model], generationSettings(element, model));
+  const draft = sealModelFieldBuilder(seedancePorts[model], generationSettings(element, model));
   const fragment = createSeedanceAssembledGenerationFragment(
     endpoint,
     assembled.mediaInputs,
@@ -311,21 +300,20 @@ function generationOutput(args: {
     records: [{
       id: draftId,
       type: endpoint.draftType,
-      value: { kind: "inline" as const, value: draft as unknown as CanonicalValue },
+      value: (draft as unknown as CanonicalValue),
       range: element.range,
     }, ...assembled.records],
     components: [{
       id,
-      fragment: fragment.id,
+      fragment,
       inputs: {
         draft: { kind: "record" as const, id: draftId },
-        [exactModelTextInputName("prompt")]: promptSource.ref,
+        [modelTextInputName("prompt")]: promptSource.ref,
         ...assembled.inputs,
       },
       outputs: { video: `${id}.video` },
       range: element.range,
     }],
-    fragments: [fragment],
   };
 }
 

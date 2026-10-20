@@ -32,7 +32,7 @@ const element = (attributes: Record<string, MarkupAttributeValue>): StructuredEl
 });
 const inlineValues = (construction: ReturnType<typeof createTemporalWindowConstruction>, typeName: string) => construction.records
   .filter((record) => record.type.name === typeName)
-  .map((record) => record.value.kind === "inline" ? record.value.value : undefined);
+  .map((record) => record.value);
 
 test("absolute author declarations lower without any domain projector", () => {
   const literal = createTemporalWindowConstruction({ id: "literal", element: element({ from: "2.5s", for: "8f" }), timeline, resolveReference });
@@ -46,7 +46,7 @@ test("absolute author declarations lower without any domain projector", () => {
     id: "literal.end", subjectId: "literal", direction: 1,
     author: { binding: "for", relation: "after-start" },
   }]);
-  assert.equal(literal.fragments[0]!.operations.some((operation) => operation.producer.name === "shift-instant"), true);
+  assert.equal(literal.components[0]!.fragment.operations.some((operation) => operation.producer.name === "shift-instant"), true);
 });
 
 test("resolved Instants compose a Window and an Extent shifts either boundary", () => {

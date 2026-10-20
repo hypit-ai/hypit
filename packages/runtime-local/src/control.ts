@@ -12,6 +12,7 @@ import type { BuildCatalogEntry } from "./catalog.js";
 import type { BuildExecutionSnapshot } from "./execution.js";
 import type { BuildView } from "./host-api.js";
 import { buildIdCreatedAt } from "@hypit/hypit/protocol";
+import { materializeBuild } from "@hypit/hypit/kernel";
 
 function buildView(input: {
   readonly build: string;
@@ -29,23 +30,18 @@ function buildView(input: {
   const activity: BuildView["activity"] = input.submission !== undefined
     ? "submitting"
     : runtimeActivity!;
-  const names = new Map(input.catalog?.publishedOutputs.map((item) => [item.ref.id, item.name]) ?? []);
-  const targetRefs = input.catalog?.targets ?? input.snapshot?.state.targets.map((target) => ({
-    kind: "logical-output" as const,
-    id: target.output,
-  })) ?? [];
-  const targets = targetRefs.map((target) => {
-    const name = names.get(target.id);
-    if (name === undefined) throw new Error(`Build ${input.build} target ${target.id} has no published Output name`);
-    return name;
-  });
+  const targets = input.catalog?.publication.outputs.filter((output) => output.target)
+    .map((output) => output.name) ?? [];
   const requests = input.snapshot === undefined ? undefined : {
     total: input.snapshot.definition.plan.steps.reduce(
-      (total, step) => total + Object.keys(step.needs).length,
+      (total, step) => total + (step.result.kind === "need" ? 1 : 0),
       0,
     ),
     completed: input.snapshot.facts.filter((fact) => fact.kind === "need-applied").length,
   };
+  const state = input.snapshot === undefined
+    ? undefined
+    : materializeBuild(input.snapshot.definition, input.snapshot.facts);
   return {
     id: input.build,
     createdAt,
@@ -60,19 +56,23 @@ function buildView(input: {
     ...(input.catalog?.run === undefined ? {} : { run: input.catalog.run }),
     targets,
     ...(requests === undefined ? {} : { requests }),
-    acceptedRecords: input.snapshot?.state.records.length ?? 0,
-    outstandingCommands: input.snapshot?.state.outstanding.length ?? 0,
+    acceptedRecords: state?.records.length ?? 0,
+    outstandingCommands: state?.outstanding.length ?? 0,
     commands: input.commands.flatMap((command) => command.status === "started" && command.activity !== undefined
       ? [{ id: command.command, ...command.activity }] : []),
-    operations: input.operations.map((operation) => ({
-      id: operation.id,
-      endpoint: operation.endpoint,
-      ...(operation.receipt === undefined ? {} : { receipt: operation.receipt }),
-      ...(operation.wakeAt === undefined ? {} : { wakeAt: operation.wakeAt }),
-      status: operation.status,
-      ...(operation.progress === undefined ? {} : { progress: operation.progress }),
-      ...(operation.failure === undefined ? {} : { failure: operation.failure }),
-    })),
+    operations: input.operations.map((operation): BuildView["operations"][number] => {
+      const evidence = {
+        id: operation.id,
+        endpoint: operation.endpoint,
+        ...(operation.receipt === undefined ? {} : { receipt: operation.receipt }),
+        ...("wakeAt" in operation && operation.wakeAt !== undefined ? { wakeAt: operation.wakeAt } : {}),
+        ...(operation.progress === undefined ? {} : { progress: operation.progress }),
+      };
+      return operation.status === "failed"
+        ? { ...evidence, status: "failed", failure: operation.failure }
+        : { ...evidence, status: operation.status === "queued" || operation.status === "submitting"
+          || operation.status === "running" || operation.status === "collecting" ? "pending" : operation.status };
+    }),
   };
 }
 
@@ -121,8 +121,10 @@ export function createLocalRuntimeControl(
     },
     async cancel(build, reason) {
       if (await options.executionStore.read(build) === undefined) return undefined;
-      await options.executionStore.requestStop(build, { cause: "user-cancelled",
-        ...(reason === undefined ? {} : { reason }) });
+      await options.executionStore.requestStop(build, {
+        cause: "user-cancelled",
+        reason: reason ?? "Cancelled by user",
+      });
       return await inspect(build);
     },
     close() {

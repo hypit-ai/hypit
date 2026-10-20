@@ -9,7 +9,7 @@ import {
   installDistributionPackageResolution,
   loadNodePackageSelection,
 } from "../packages/loader/src/node/index.ts";
-import { admissionPackagesFromFacets } from "../packages/admission/src/index.ts";
+import { refinementPackagesFromFacets } from "../packages/refinement/src/index.ts";
 import { producerPackagesFromFacets } from "../packages/producer/src/index.ts";
 import { studioContributionFromPackage } from "../packages/studio-companion/src/index.ts";
 
@@ -122,19 +122,19 @@ try {
     ["@hypit/media-operations"]);
   assert.deepEqual(htmlVideo.contribution.modules?.map(({ manifest }) => manifest.name), ["@hypit/html-video"]);
   const producerPackages = (item) => producerPackagesFromFacets(item.contribution.facets ?? []);
-  const admissionPackages = (item) => admissionPackagesFromFacets(item.contribution.facets ?? []);
+  const refinementPackages = (item) => refinementPackagesFromFacets(item.contribution.facets ?? []);
   assert.equal(producerPackages(timeline).length, 1);
-  assert.equal(admissionPackages(timeline).length, 1);
+  assert.equal(refinementPackages(timeline).length, 1);
   assert.equal(producerPackages(script).length, 0);
-  assert.equal(admissionPackages(script).length, 0);
+  assert.equal(refinementPackages(script).length, 0);
   assert.equal(producerPackages(film).length, 1);
-  assert.equal(admissionPackages(film).length, 1);
+  assert.equal(refinementPackages(film).length, 1);
   assert.equal(producerPackages(imageOperations).length, 2);
-  assert.equal(admissionPackages(imageOperations).length, 2);
+  assert.equal(refinementPackages(imageOperations).length, 2);
   assert.equal(producerPackages(mediaOperations).length, 1);
-  assert.equal(admissionPackages(mediaOperations).length, 1);
+  assert.equal(refinementPackages(mediaOperations).length, 1);
   assert.equal(producerPackages(htmlVideo).length, 0);
-  assert.equal(admissionPackages(htmlVideo).length, 0);
+  assert.equal(refinementPackages(htmlVideo).length, 0);
 
   const scriptStudio = studioContributionFromPackage(script.specifier, script.contribution.facets ?? []);
   const filmStudio = studioContributionFromPackage(film.specifier, film.contribution.facets ?? []);

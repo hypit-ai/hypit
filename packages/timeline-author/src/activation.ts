@@ -1,4 +1,4 @@
-import { createAdmissionPackageFacet } from "@hypit/hypit/admission";
+import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
 import { createProducerPackageFacet } from "@hypit/hypit/producer";
 import { createMarkupSurfaceFacet } from "@hypit/hypit/markup";
 import { createStudioCompanionFacet } from "@hypit/studio-companion";
@@ -19,7 +19,7 @@ export const hypitPackage = {
       temporalDeclarations: timelineAuthorStudioTemporalDeclarations,
       temporalRelations: timelineAuthorStudioTemporalRelations,
     }),
-    ...[timelineAuthorComponent].flatMap((component) => [createProducerPackageFacet(component), createAdmissionPackageFacet(component)]),createMarkupSurfaceFacet({
+    ...[timelineAuthorComponent].flatMap((component) => [createProducerPackageFacet(component), createRefinementPackageFacet(component)]),createMarkupSurfaceFacet({
     module: timelineAuthorModuleRef,
     declaration: timelineAuthorMarkupSurfaces.find((item) => item.name === "timeline")!, handler: decodeTimelineAuthorSurface,
   }), createMarkupSurfaceFacet({ module: timelineAuthorModuleRef,

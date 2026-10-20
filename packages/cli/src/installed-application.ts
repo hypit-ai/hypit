@@ -10,6 +10,7 @@ import type { CliApplication, CliCommandModule } from "./application.js";
 import type { CliDistribution } from "./distribution.js";
 import type { CliIo } from "./output.js";
 import { runVersionCli, writeVersionHelp } from "./version.js";
+import { parseCliGlobalOptions } from "./global-options.js";
 
 type JsonObject = Record<string, unknown>;
 
@@ -25,6 +26,8 @@ type PackageManifest = JsonObject & {
 export type InstalledCliApplicationOptions = {
   readonly distribution: CliDistribution;
   readonly distributionRoot: string;
+  /** Host-bound command modules assembled by the executable application. */
+  readonly commandModules?: readonly CliCommandModule[];
   readonly launcher?: string;
   readonly cwd?: string;
 };
@@ -187,21 +190,21 @@ export function writeCliCompositionHelp(io: Pick<CliIo, "write">): void {
 }
 
 function cliAction(argv: readonly string[]): { action: string; specifier?: string; json: boolean } {
+  const global = parseCliGlobalOptions(argv.slice(1));
+  if (global.issue !== undefined) throw new Error(global.issue);
+  const unsupportedGlobal = global.seenOptions.find(option => option === "--jsonl");
+  if (unsupportedGlobal !== undefined) throw new Error(`${unsupportedGlobal} does not apply to cli`);
   const positional: string[] = [];
-  let json = false;
-  for (let index = 1; index < argv.length; index++) {
-    const value = argv[index]!;
+  for (let index = 0; index < global.remaining.length; index++) {
+    const value = global.remaining[index]!;
     if (value === "--project") { index++; continue; }
     if (value.startsWith("--project=")) continue;
-    if (value === "--json") { json = true; continue; }
-    if (["--debug", "--no-color"].includes(value)) continue;
-    if (value === "--color") { index++; continue; }
-    if (value === "--help" || value === "-h") return { action: "help", json };
+    if (value === "--help" || value === "-h") return { action: "help", json: global.presentation.json };
     if (value.startsWith("-")) throw new Error(`Unknown cli option: ${value}`);
     positional.push(value);
   }
   if (positional.length > 2) throw new Error("hypit cli accepts one action and at most one package export");
-  return { action: positional[0] ?? "status", ...(positional[1] === undefined ? {} : { specifier: positional[1] }), json };
+  return { action: positional[0] ?? "status", ...(positional[1] === undefined ? {} : { specifier: positional[1] }), json: global.presentation.json };
 }
 
 function replaceProjectUses(manifest: PackageManifest, uses: readonly string[]): PackageManifest {
@@ -234,7 +237,7 @@ async function runCliComposition(
     requireDirectDependency(projectManifest, parsed.specifier);
     const next = uses.includes(parsed.specifier) ? uses : [...uses, parsed.specifier];
     const selections = await loadSelections(options.distributionRoot, projectRoot, next);
-    indexCliCommandModules(selections.flatMap(selection => selection.modules));
+    indexCliCommandModules([...(options.commandModules ?? []), ...selections.flatMap(selection => selection.modules)]);
     if (!uses.includes(parsed.specifier)) {
       await writeFile(resolve(projectRoot, "package.json"), `${JSON.stringify(replaceProjectUses(projectManifest, next), null, 2)}\n`);
     }
@@ -253,24 +256,35 @@ async function runCliComposition(
   }
   if (parsed.action !== "status") throw new Error(`Unknown hypit cli action: ${parsed.action}`);
   const selections = await loadSelections(options.distributionRoot, projectRoot);
-  indexCliCommandModules(selections.flatMap(selection => selection.modules));
+  indexCliCommandModules([...(options.commandModules ?? []), ...selections.flatMap(selection => selection.modules)]);
   const report = {
     format: "hypit.cli-composition@1",
     ...(projectRoot === undefined ? {} : { project: projectRoot }),
-    contributions: selections.map(selection => ({
-      origin: selection.origin,
-      specifier: selection.specifier,
-      package: selection.package,
-      ...(selection.version === undefined ? {} : { version: selection.version }),
-      commands: selection.modules.flatMap(module => module.commands),
-    })),
+    contributions: [
+      ...(options.commandModules ?? []).map(module => ({
+        origin: "application" as const,
+        id: module.id,
+        commands: module.commands,
+      })),
+      ...selections.map(selection => ({
+        origin: selection.origin,
+        specifier: selection.specifier,
+        package: selection.package,
+        ...(selection.version === undefined ? {} : { version: selection.version }),
+        commands: selection.modules.flatMap(module => module.commands),
+      })),
+    ],
   };
   if (parsed.json) { io.write(`${JSON.stringify(report, null, 2)}\n`); return; }
   io.write(`Hypit CLI\nProject: ${projectRoot ?? "none"}\n`);
   for (const contribution of report.contributions) {
-    io.write(`\n${contribution.origin === "distribution" ? "Distribution" : "Project"}  ${contribution.specifier}`
-      + `${contribution.version === undefined ? "" : ` @ ${contribution.version}`}\n`
-      + `  ${contribution.commands.join("\n  ")}\n`);
+    if (contribution.origin === "application") {
+      io.write(`\nApplication  ${contribution.id}\n  ${contribution.commands.join("\n  ")}\n`);
+    } else {
+      io.write(`\n${contribution.origin === "distribution" ? "Distribution" : "Project"}  ${contribution.specifier}`
+        + `${contribution.version === undefined ? "" : ` @ ${contribution.version}`}\n`
+        + `  ${contribution.commands.join("\n  ")}\n`);
+    }
   }
 }
 
@@ -314,7 +328,7 @@ export async function runInstalledCliApplication(
       if (projectRoot !== undefined) return projectRoot;
       return await resolveProjectRoot({ cwd });
     },
-    commandModules: selections.flatMap(selection => selection.modules),
+    commandModules: [...(options.commandModules ?? []), ...selections.flatMap(selection => selection.modules)],
   };
   await runCliApplication(argv, io, application);
 }

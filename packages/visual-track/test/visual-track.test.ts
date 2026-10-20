@@ -22,6 +22,7 @@ import {
   bindVisualClipPath,
   createMediaLayerSet,
   createVisualTrackSet,
+  decodeMediaFramePaint,
   decodeVisualTrackSurface,
   finalizeVisualTrack,
   projectVisualTrack,
@@ -43,6 +44,15 @@ import { spatialTypes } from "@hypit/spatial";
 import { recipeType } from "@hypit/recipe";
 import type { Recipe } from "@hypit/recipe";
 import type { StructuredElement, StructuredNode, SurfaceResolvedReference, MarkupAttributeValue } from "@hypit/markup";
+
+test("gradient frame paints preserve commas inside functional colors", () => {
+  const paint = (value: string) => decodeMediaFramePaint({ path: "scrim", properties: { "frame-paint": value } }, "scrim")?.paint;
+  assert.deepEqual(paint("linear(180;rgba(0,0,0,0)@0,rgba(0,0,0,0.8)@1)"), {
+    kind: "linear-gradient",
+    angleDeg: 180,
+    stops: [{ color: "rgba(0,0,0,0)", offset: 0 }, { color: "rgba(0,0,0,0.8)", offset: 1 }],
+  });
+});
 
 const space = sealTimeline({ id: "test-space", frameCount: 120, frameRate: { numerator: 30, denominator: 1 },
 });
@@ -237,7 +247,7 @@ test("a Clip keeps ordered Paint/sample layers, two-frame fit and frame treatmen
     { name: "left", value: 0 },
     { name: "position", value: "absolute" },
     { name: "top", value: 0 },
-    { name: "transform-origin", value: "200px 150px" },
+    { name: "transform-origin", value: "198px 148px" },
     { name: "width", value: "100%" },
   ]);
   const mapping = elements.find((element) => element.id === "content:mapping");
@@ -246,7 +256,7 @@ test("a Clip keeps ordered Paint/sample layers, two-frame fit and frame treatmen
     { name: "left", value: 0 },
     { name: "position", value: "absolute" },
     { name: "top", value: 0 },
-    { name: "transform", value: "matrix(0.345,0,0,0.345,62,12)" },
+    { name: "transform", value: "matrix(0.345,0,0,0.345,60,10)" },
     { name: "transform-origin", value: "0 0" },
     { name: "width", value: "800px" },
   ]);
@@ -651,7 +661,7 @@ test("the Visual author Surface emits explicit graph edges for layers, absolute 
     path,
     ref: { kind: "record", id: path },
     type: recipeType,
-    record: { value: { kind: "inline", value: { path, properties } } } as never,
+    record: { value: ({ path, properties }) } as never,
   });
   const plain = (path: string, type: SurfaceResolvedReference["type"]): SurfaceResolvedReference => ({
     path, ref: { kind: "record", id: path }, type,
@@ -701,7 +711,7 @@ test("the Visual author Surface emits explicit graph edges for layers, absolute 
   const component = result.components.find((candidate) => candidate.outputs.visual !== undefined);
   assert.ok(component !== undefined);
   assert.deepEqual(Object.keys(component.outputs).sort(), ["program", "visual"]);
-  const fragment = result.fragments.find((candidate) => candidate.exports.some((output) => output.name === "visual"))!;
+  const fragment = result.components.find((candidate) => candidate.fragment.exports.some((output) => output.name === "visual"))!.fragment;
   const producers = fragment.operations.map((entry) => entry.producer.name);
   assert.ok(producers.includes("append-still-media-layer"));
   assert.ok(producers.includes("append-mapped-still-media-layer"));
@@ -710,7 +720,7 @@ test("the Visual author Surface emits explicit graph edges for layers, absolute 
   assert.ok(producers.includes("append-surface-media-layer"));
   assert.ok(producers.includes("bind-visual-clip-path"));
   assert.ok(producers.includes("bind-visual-clip-motion"));
-  assert.equal(result.fragments.some((candidate) => candidate.operations.some((operation) =>
+  assert.equal(result.components.some(({ fragment: candidate }) => candidate.operations.some((operation) =>
     operation.producer.module.name === "@hypit/narrative-temporal")), false);
   assert.equal(producers.some((name) => name.includes("sound") || name.includes("audio")), false);
   assert.ok(fragment.inputs.some((entry) => entry.type.name === blobTypes.blob.name));

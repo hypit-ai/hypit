@@ -26,8 +26,8 @@ export const decodeExampleSurface: StructuredSurfaceHandler = ({ element, resolv
     const font = reference(element, "font", resolveReference);
     if (recipe.type.module.name !== recipeType.module.name || recipe.type.name !== recipeType.name) throw new Error("Style.recipe must be an SVS Recipe.");
     if (font.type.module.name !== mediaTypes.fontStack.module.name || font.type.name !== mediaTypes.fontStack.name) throw new Error("Style.font must be a FontStackRef.");
-    if (recipe.record?.value.kind !== "inline" || font.record?.value.kind !== "inline") throw new Error("Style references must resolve to inline records.");
-    return { records: [{ id, type: exampleTypes.style, value: { kind: "inline", value: { recipe: recipe.record.value.value, fonts: font.record.value.value } }, range: element.range }], components: [], fragments: [], exports: [id] };
+    if (recipe.record === undefined || font.record === undefined) throw new Error("Style references must resolve to inline records.");
+    return { records: [{ id, type: exampleTypes.style, value: ({ recipe: recipe.record.value, fonts: font.record.value }), range: element.range }], components: [], exports: [id] };
   }
   const timeline = reference(element, "timeline", resolveReference);
   const within = reference(element, "within", resolveReference);
@@ -38,10 +38,10 @@ export const decodeExampleSurface: StructuredSurfaceHandler = ({ element, resolv
   if (surface === undefined) throw new Error(`Unknown example surface ${element.name}`);
   const fragment = surface.name === "box" ? exampleBoxFragment : surface.name === "text" ? exampleTextFragment : exampleImageFragment;
   const type = surface.name === "box" ? exampleTypes.box : surface.name === "text" ? exampleTypes.text : exampleTypes.imageSlot;
-  const record: SurfaceRecordDraft = { id: `${id}.value`, type, value: { kind: "inline", value: { id } }, range: element.range };
+  const record: SurfaceRecordDraft = { id: `${id}.value`, type, value: ({ id }), range: element.range };
   const image = element.attributes.image === undefined ? undefined : reference(element, "image", resolveReference);
   if (image !== undefined && (image.type.module.name !== blobTypes.blob.module.name || image.type.name !== blobTypes.blob.name)) throw new Error(`${element.name}.image must be a Blob Artifact.`);
-  const component: SurfaceComponentDraft = { id, fragment: fragment.id, inputs: { timeline: timeline.ref,
+  const component: SurfaceComponentDraft = { id, fragment, inputs: { timeline: timeline.ref,
     within: within.ref, ...(image === undefined ? {} : { image: image.ref }) }, outputs: { visual: `${id}.visual` }, range: element.range };
-  return { records: [record], components: [component], fragments: [fragment], exports: [`${id}.value`, `${id}.visual`] };
+  return { records: [record], components: [component], exports: [`${id}.value`, `${id}.visual`] };
 };

@@ -3,7 +3,7 @@ import { installPortraitInset } from "./portrait-inset.js";
 import { installReframe } from "./reframe.js";
 import { installPullback } from "./pullback.js";
 import { installPresenter } from "./presenter.js";
-import { createAdmissionPackageFacet } from "@hypit/hypit/admission";
+import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
 import { createProducerPackageFacet } from "@hypit/hypit/producer";
 import { assertAttributes, assertEmptyElement, createMarkupSurfaceFacet, textAttribute } from "@hypit/hypit/markup";
 import { canonicalize, sameType } from "@hypit/hypit/protocol";
@@ -109,16 +109,15 @@ export const manifest = {
     },
   ],
 };
-const inline = (r) => {
-  if (r?.value.kind !== "inline")
-    throw Error("Opening-system expects inline domain values.");
-  return r.value.value;
+const valueOf = (r) => {
+  if (!r) throw Error("Opening-system input is missing.");
+  return r.value;
 };
-const val = (v) => ({ kind: "inline", value: canonicalize(v) });
+const val = (v) => ((canonicalize(v)));
 const output = (name, v) => ({ outputs: { [name]: val(v) }, needs: {} });
 const component = {
   producers: [
-    { producer: producer("flag"), handler: ({inputs: i}) => output("track", renderFlag(inline(i.timeline), inline(i.within), inline(i.window), inline(i.options), i.logo.value)) },
+    { producer: producer("flag"), handler: ({inputs: i}) => output("track", renderFlag(valueOf(i.timeline), valueOf(i.within), valueOf(i.window), valueOf(i.options), i.logo.value)) },
     ...[
       ["title", renderTitle],
       ["timer", renderTimer],
@@ -128,13 +127,13 @@ const component = {
         output(
           "track",
           fn(
-            inline(i.timeline),
-            inline(i.within),
-            inline(i.window),
-            inline(i.font),
-            inline(i.options),
-            name === "title" ? inline(i.bounce) : i.logo?.value,
-            name === "timer" ? inline(i.stop) : undefined,
+            valueOf(i.timeline),
+            valueOf(i.within),
+            valueOf(i.window),
+            valueOf(i.font),
+            valueOf(i.options),
+            name === "title" ? valueOf(i.bounce) : i.logo?.value,
+            name === "timer" ? valueOf(i.stop) : undefined,
           ),
         ),
     })),
@@ -144,10 +143,10 @@ const component = {
         output(
           "track",
           renderVeil(
-            inline(i.timeline),
-            inline(i.within),
-            inline(i.window),
-            inline(i.options),
+            valueOf(i.timeline),
+            valueOf(i.within),
+            valueOf(i.window),
+            valueOf(i.options),
           ),
         ),
     },
@@ -156,12 +155,12 @@ const component = {
       producer: producer("append-" + kind),
       handler: ({ inputs: i }) =>
         output("items", [
-          ...inline(i.items),
+          ...valueOf(i.items),
           {
-            ...inline(i.options),
-            window: inline(i.window),
+            ...valueOf(i.options),
+            window: valueOf(i.window),
             [kind === "image" ? "image" : "media"]:
-              kind === "image" ? i.asset.value : inline(i.asset),
+              kind === "image" ? i.asset.value : valueOf(i.asset),
           },
         ]),
     })),
@@ -171,11 +170,11 @@ const component = {
         output(
           "track",
           renderStage(
-            inline(i.timeline),
-            inline(i.within),
-            inline(i.window),
-            inline(i.items),
-            inline(i.options),
+            valueOf(i.timeline),
+            valueOf(i.within),
+            valueOf(i.window),
+            valueOf(i.items),
+            valueOf(i.options),
           ),
         ),
     },
@@ -390,11 +389,10 @@ function decode(kind) {
     });
     return {
       records,
-      fragments: [fragment],
       components: [
         {
           id,
-          fragment: fragment.id,
+          fragment,
           inputs: bindings,
           outputs: { visual: id + ".visual" },
           range: element.range,
@@ -505,7 +503,7 @@ export const hypitPackage = {
   modules: [{ manifest }],
   facets: [
     createProducerPackageFacet(component),
-    createAdmissionPackageFacet(component),
+    createRefinementPackageFacet(component),
     ...declarations.map((declaration) =>
       createMarkupSurfaceFacet({
         module,

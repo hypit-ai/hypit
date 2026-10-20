@@ -1,11 +1,12 @@
 import {
+  resolveCapability,
   resolveProducer,
 } from "@hypit/kernel";
 import type {
   Candidate,
   Satisfaction,
   CandidateRoot,
-  CompiledGraph,
+  AuthorGraph,
   GraphValueRef,
   LinkedProgram,
   LogicalOutput,
@@ -13,6 +14,7 @@ import type {
   ProducerRef,
   TypeRef,
 } from "@hypit/protocol";
+import { sameType, typeKey } from "@hypit/protocol";
 
 export type FragmentInputRef = {
   readonly kind: "fragment-input";
@@ -45,7 +47,6 @@ export type FragmentExport = {
 
 export type GraphFragment = {
   readonly format: "hypit.fragment@1";
-  readonly id: string;
   readonly inputs: readonly { readonly name: string; readonly type: TypeRef }[];
   readonly operations: readonly FragmentOperation[];
   readonly exports: readonly FragmentExport[];
@@ -54,7 +55,6 @@ export type GraphFragment = {
 export type FragmentInstanceRequest = {
   /** Stable author instance identity, not a content-deduplication key. */
   readonly id: string;
-  readonly fragment: string;
   readonly inputs: Readonly<Record<string, GraphValueRef>>;
 };
 
@@ -67,7 +67,6 @@ export type ElaboratedFragmentExport = {
 export type ElaboratedFragment = {
   readonly format: "hypit.fragment-instance@1";
   readonly id: string;
-  readonly fragment: string;
   readonly instance: string;
   readonly inputs: Readonly<Record<string, GraphValueRef>>;
   readonly operations: readonly OperationNode[];
@@ -108,14 +107,8 @@ function assert(condition: unknown, code: string, message: string, subject?: str
   if (!condition) throw new FragmentError(code, message, subject);
 }
 
-function sameType(left: TypeRef, right: TypeRef): boolean {
-  return left.module.name === right.module.name
-    && left.module.version === right.module.version
-    && left.name === right.name;
-}
-
 function typeName(type: TypeRef): string {
-  return `${type.module.name}@${type.module.version}#${type.name}`;
+  return typeKey(type);
 }
 
 function exactKeys(
@@ -169,7 +162,7 @@ function normalizeExport(item: FragmentExport): FragmentExport {
   };
 }
 
-function fragmentContent(fragment: Omit<GraphFragment, "id">): Omit<GraphFragment, "id"> {
+function fragmentContent(fragment: GraphFragment): GraphFragment {
   return {
     format: "hypit.fragment@1",
     inputs: [...fragment.inputs]
@@ -181,65 +174,61 @@ function fragmentContent(fragment: Omit<GraphFragment, "id">): Omit<GraphFragmen
 }
 
 export function sealGraphFragment(
-  fragment: Omit<GraphFragment, "format" | "id">,
+  fragment: Omit<GraphFragment, "format">,
 ): GraphFragment {
-  const content = fragmentContent({ format: "hypit.fragment@1", ...fragment });
-  const producers = content.operations.map((operation) =>
-    `${operation.producer.module.name}@${operation.producer.module.version}#${operation.producer.name}:${operation.id}`);
-  const exports = content.exports.map((item) => item.name);
-  return { ...content, id: `fragment:${producers.join("+")}=>${exports.join("+")}` };
+  return fragmentContent({ format: "hypit.fragment@1", ...fragment });
 }
 
 function resultType(program: LinkedProgram, operation: FragmentOperation): TypeRef {
   const producer = resolveProducer(program.closure, operation.producer);
   if (operation.result.kind === "output") {
-    const output = producer.outputs.find((port) => port.name === operation.result.name);
+    const output = producer.result;
     assert(
-      output !== undefined && producer.needs.length === 0,
+      output.kind === "output" && output.name === operation.result.name,
       "FRAGMENT_RESULT_MISMATCH",
       `${operation.id} does not produce output ${operation.result.name}`,
       operation.id,
     );
     return output.type;
   }
-  const need = producer.needs.find((port) => port.name === operation.result.name);
+  const need = producer.result;
   assert(
-    need !== undefined && producer.outputs.length === 0,
+    need.kind === "need" && need.name === operation.result.name,
     "FRAGMENT_RESULT_MISMATCH",
     `${operation.id} does not request Need ${operation.result.name}`,
     operation.id,
   );
-  return need.returns;
+  return resolveCapability(program.closure, need.capability).returns;
 }
 
 export function verifyGraphFragment(program: LinkedProgram, fragment: GraphFragment): void {
+  const subject = "Graph Fragment";
   assert(fragment.format === "hypit.fragment@1", "UNSUPPORTED_FRAGMENT", "unsupported Graph Fragment format");
-  assert(fragment.id.trim().length > 0, "INVALID_FRAGMENT_ID", "Graph Fragment id is empty");
-  assert(fragment.exports.length > 0, "EMPTY_FRAGMENT_EXPORTS", `${fragment.id} has no exports`);
+  assert(fragment.exports.length > 0, "EMPTY_FRAGMENT_EXPORTS", `${subject} has no exports`);
 
   const inputs = new Map<string, TypeRef>();
   for (const input of fragment.inputs) {
-    assert(input.name.length > 0, "EMPTY_FRAGMENT_INPUT", `${fragment.id} has an empty input name`);
-    assert(!inputs.has(input.name), "DUPLICATE_FRAGMENT_INPUT", `${fragment.id} repeats input ${input.name}`);
+    assert(input.name.length > 0, "EMPTY_FRAGMENT_INPUT", `${subject} has an empty input name`);
+    assert(!inputs.has(input.name), "DUPLICATE_FRAGMENT_INPUT", `${subject} repeats input ${input.name}`);
     inputs.set(input.name, input.type);
   }
 
   const operations = new Map<string, FragmentOperation>();
   for (const operation of fragment.operations) {
-    assert(operation.id.length > 0, "EMPTY_FRAGMENT_OPERATION", `${fragment.id} has an empty Operation id`);
-    assert(!operations.has(operation.id), "DUPLICATE_FRAGMENT_OPERATION", `${fragment.id} repeats ${operation.id}`);
+    assert(operation.id.length > 0, "EMPTY_FRAGMENT_OPERATION", `${subject} has an empty Operation id`);
+    assert(!operations.has(operation.id), "DUPLICATE_FRAGMENT_OPERATION", `${subject} repeats ${operation.id}`);
     operations.set(operation.id, operation);
     const producer = resolveProducer(program.closure, operation.producer);
-    exactKeys(operation.inputs, producer.inputs.map((port) => port.name), `${fragment.id}.${operation.id}`);
+    exactKeys(operation.inputs, producer.inputs.map((port) => port.name), `${subject} ${operation.id}`);
   }
 
   const visiting = new Set<string>();
   const visited = new Set<string>();
   const operationType = (id: string): TypeRef => {
     const operation = operations.get(id);
-    assert(operation !== undefined, "UNKNOWN_FRAGMENT_OPERATION", `${fragment.id} references ${id}`, id);
+    assert(operation !== undefined, "UNKNOWN_FRAGMENT_OPERATION", `${subject} references ${id}`, id);
     if (visited.has(id)) return resultType(program, operation);
-    assert(!visiting.has(id), "FRAGMENT_CYCLE", `${fragment.id} cycles through ${id}`, id);
+    assert(!visiting.has(id), "FRAGMENT_CYCLE", `${subject} cycles through ${id}`, id);
     visiting.add(id);
     const producer = resolveProducer(program.closure, operation.producer);
     for (const port of producer.inputs) {
@@ -248,7 +237,7 @@ export function verifyGraphFragment(program: LinkedProgram, fragment: GraphFragm
       const supplied = ref.kind === "fragment-input"
         ? inputs.get(ref.name)
         : operationType(ref.operation);
-      assert(supplied !== undefined, "UNKNOWN_FRAGMENT_INPUT", `${fragment.id} references input ${ref.kind === "fragment-input" ? ref.name : ref.operation}`);
+      assert(supplied !== undefined, "UNKNOWN_FRAGMENT_INPUT", `${subject} references input ${ref.kind === "fragment-input" ? ref.name : ref.operation}`);
       assert(
         sameType(supplied, port.type),
         "FRAGMENT_INPUT_TYPE_MISMATCH",
@@ -267,24 +256,24 @@ export function verifyGraphFragment(program: LinkedProgram, fragment: GraphFragm
     if (ref.kind === "fragment-input" || reachableOperations.has(ref.operation)) return;
     reachableOperations.add(ref.operation);
     const operation = operations.get(ref.operation);
-    assert(operation !== undefined, "UNKNOWN_FRAGMENT_OPERATION", `${fragment.id} references ${ref.operation}`);
+    assert(operation !== undefined, "UNKNOWN_FRAGMENT_OPERATION", `${subject} references ${ref.operation}`);
     Object.values(operation.inputs).forEach(collectDependencies);
   };
 
   for (const item of fragment.exports) {
-    assert(item.name.length > 0, "EMPTY_FRAGMENT_EXPORT", `${fragment.id} has an empty export name`);
-    assert(!exports.has(item.name), "DUPLICATE_FRAGMENT_EXPORT", `${fragment.id} repeats export ${item.name}`);
+    assert(item.name.length > 0, "EMPTY_FRAGMENT_EXPORT", `${subject} has an empty export name`);
+    assert(!exports.has(item.name), "DUPLICATE_FRAGMENT_EXPORT", `${subject} repeats export ${item.name}`);
     exports.add(item.name);
     assert(
       item.root.kind === "fragment-operation",
       "INVALID_FRAGMENT_EXPORT_ROOT",
-      `${fragment.id}.${item.name} must export a local Operation result`,
+      `${subject} export ${item.name} must name a local Operation result`,
     );
     const supplied = operationType(item.root.operation);
     assert(
       sameType(supplied, item.type),
       "FRAGMENT_EXPORT_TYPE_MISMATCH",
-      `${fragment.id}.${item.name} declares ${typeName(item.type)} but returns ${typeName(supplied)}`,
+      `${subject} export ${item.name} declares ${typeName(item.type)} but returns ${typeName(supplied)}`,
     );
     collectDependencies(item.root);
   }
@@ -292,7 +281,7 @@ export function verifyGraphFragment(program: LinkedProgram, fragment: GraphFragm
     assert(
       reachableOperations.has(id),
       "UNREACHABLE_FRAGMENT_OPERATION",
-      `${fragment.id}.${id} contributes to no export`,
+      `${subject} Operation ${id} contributes to no export`,
       id,
     );
   }
@@ -320,7 +309,6 @@ export function elaborateGraphFragment(
 ): ElaboratedFragment {
   verifyGraphFragment(program, fragment);
   assert(request.id.length > 0, "EMPTY_FRAGMENT_INSTANCE", "Fragment instance id is empty");
-  assert(request.fragment === fragment.id, "FRAGMENT_INSTANCE_MISMATCH", `${request.id} locks another Fragment`);
   exactKeys(request.inputs, fragment.inputs.map((input) => input.name), request.id);
   const inputs = Object.fromEntries(
     Object.entries(request.inputs)
@@ -338,7 +326,7 @@ export function elaborateGraphFragment(
       return bound;
     }
     const operation = operationIds.get(ref.operation);
-    assert(operation !== undefined, "UNKNOWN_FRAGMENT_OPERATION", `${fragment.id} references ${ref.operation}`);
+    assert(operation !== undefined, "UNKNOWN_FRAGMENT_OPERATION", `Graph Fragment references ${ref.operation}`);
     return { kind: "operation-result", operation };
   };
   const operations: OperationNode[] = fragment.operations.map((operation) => {
@@ -369,7 +357,6 @@ export function elaborateGraphFragment(
   });
   const content = {
     format: "hypit.fragment-instance@1" as const,
-    fragment: fragment.id,
     instance: request.id,
     inputs,
     operations,
@@ -494,9 +481,9 @@ export function bindAuthorFragment(
 
 /** Merge already elaborated contributions; final Graph validation remains Core's authority. */
 export function mergeFragmentContributions(
-  graph: Pick<CompiledGraph, "outputs" | "candidates" | "operations">,
+  graph: Pick<AuthorGraph, "outputs" | "candidates" | "operations">,
   ...contributions: readonly FragmentContribution[]
-): Pick<CompiledGraph, "outputs" | "candidates" | "operations"> {
+): Pick<AuthorGraph, "outputs" | "candidates" | "operations"> {
   return {
     outputs: [...graph.outputs, ...contributions.flatMap((item) => item.outputs)],
     candidates: [...graph.candidates, ...contributions.flatMap((item) => item.candidates)],

@@ -33,7 +33,7 @@ const manifest = {
     },
   ],
 };
-const inline = (r) => r.value.value;
+const valueOf = (r) => r.value;
 export function singleLineSchedule(timing, program, document) {
   const schedule = scheduleFineCaption(timing, program, document);
   const cues = [...schedule.cues].sort(
@@ -62,9 +62,11 @@ export function singleLineSchedule(timing, program, document) {
   return result;
 }
 const handler = (ctx) => {
-  const result = decodeFineCaptionTrackSurface(ctx),
-    ids = new Map();
-  const fragments = result.fragments.map((f) => {
+  const result = decodeFineCaptionTrackSurface(ctx);
+  return {
+    ...result,
+    components: result.components.map((component) => {
+      const f = component.fragment;
     if (
       !f.operations.some(
         (op) =>
@@ -72,7 +74,7 @@ const handler = (ctx) => {
           op.producer.name === captionFineProducers.schedule.name,
       )
     )
-      return f;
+      return component;
     const replacement = sealGraphFragment({
       inputs: f.inputs,
       operations: f.operations.map((op) =>
@@ -83,16 +85,8 @@ const handler = (ctx) => {
       ),
       exports: f.exports,
     });
-    ids.set(f.id, replacement.id);
-    return replacement;
-  });
-  return {
-    ...result,
-    fragments,
-    components: result.components.map((c) => ({
-      ...c,
-      fragment: ids.get(c.fragment) ?? c.fragment,
-    })),
+      return { ...component, fragment: replacement };
+    }),
   };
 };
 const producers = {
@@ -101,16 +95,13 @@ const producers = {
           producer,
           handler: ({ inputs: i }) => ({
             outputs: {
-              schedule: {
-                kind: "inline",
-                value: canonicalize(
+              schedule: (canonicalize(
                   singleLineSchedule(
-                    inline(i.timing),
-                    inline(i.program),
-                    inline(i.document),
+                    valueOf(i.timing),
+                    valueOf(i.program),
+                    valueOf(i.document),
                   ),
-                ),
-              },
+                )),
             },
             needs: {},
           }),

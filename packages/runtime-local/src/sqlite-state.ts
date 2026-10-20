@@ -2,14 +2,18 @@ import { existsSync, mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
-import { materializeBuild } from "@hypit/hypit/kernel";
 import type {
   BuildDefinition,
   BuildFact,
+  CanonicalValue,
+  CapabilityRef,
   CommandResult,
+  Need,
+  TypeRef,
+  Value,
 } from "@hypit/hypit/protocol";
-import { assertBuildId } from "@hypit/hypit/protocol";
-import { capacityUnits } from "@hypit/hypit/runtime";
+import { assertBuildId, normalizeValue, valueBlobRefs } from "@hypit/hypit/protocol";
+import { applyOperationUpdate, capacityUnits } from "@hypit/hypit/runtime";
 import type {
   BuildSnapshot,
   BuildStore,
@@ -18,9 +22,13 @@ import type {
   CapacityAcquireRequest,
   CapacityReservation,
   CommandExecutionBegin,
+  CommandExecutionActivity,
   CommandExecutionReceipt,
   CommandExecutionStore,
   OperationIdentity,
+  OperationContext,
+  OperationCancellation,
+  OperationEvidence,
   OperationQuery,
   OperationSnapshot,
   OperationStore,
@@ -77,8 +85,7 @@ function parseBuildSnapshot(row: Row, factRows: readonly Row[]): BuildSnapshot {
     assert(typeof factRow.fact_json === "string", "SQLite Build Fact row has no Fact");
     return JSON.parse(factRow.fact_json) as BuildFact;
   });
-  const state = materializeBuild(definition, facts);
-  return { build: row.build_id, definition, facts, state };
+  return { build: row.build_id, definition, facts };
 }
 
 function operationIdentityFrom(snapshot: OperationSnapshot): OperationIdentity {
@@ -90,17 +97,220 @@ function operationIdentityFrom(snapshot: OperationSnapshot): OperationIdentity {
   };
 }
 
-function parseOperationSnapshot(row: Row): OperationSnapshot {
-  for (const field of ["operation_id", "build_id", "command_id", "endpoint_id"] as const) {
-    assert(typeof row[field] === "string", `SQLite Operation row has no ${field}`);
-  }
-  assert(typeof row.status === "string", "SQLite Operation row has no status");
-  const payload = typeof row.payload_json === "string" ? JSON.parse(row.payload_json) as unknown : undefined;
+function object(value: unknown, subject: string): Record<string, unknown> {
+  assert(value !== null && !Array.isArray(value) && typeof value === "object", `${subject} must be an object`);
+  return value as Record<string, unknown>;
+}
+
+function exactKeys(value: Record<string, unknown>, allowed: readonly string[], subject: string): void {
+  const permitted = new Set(allowed);
+  const unexpected = Object.keys(value).filter((key) => !permitted.has(key));
+  assert(unexpected.length === 0, `${subject} has unexpected field ${unexpected[0]}`);
+}
+
+function nonEmptyString(value: unknown, subject: string): string {
+  assert(typeof value === "string" && value.trim().length > 0, `${subject} must be a non-empty string`);
+  return value;
+}
+
+function nonNegativeTime(value: unknown, subject: string): number {
+  assert(typeof value === "number" && Number.isSafeInteger(value) && value >= 0,
+    `${subject} must be a non-negative safe integer`);
+  return value;
+}
+
+function optionalTime(value: unknown, subject: string): number | undefined {
+  return value === undefined ? undefined : nonNegativeTime(value, subject);
+}
+
+function parseNamedRef(value: unknown, subject: string): { readonly module: { readonly name: string; readonly version: string }; readonly name: string } {
+  const ref = object(value, subject);
+  exactKeys(ref, ["module", "name"], subject);
+  const module = object(ref.module, `${subject}.module`);
+  exactKeys(module, ["name", "version"], `${subject}.module`);
   return {
-    id: row.operation_id, build: row.build_id, command: row.command_id,
-    endpoint: row.endpoint_id, status: row.status,
-    ...(payload as object ?? {}),
-  } as OperationSnapshot;
+    module: {
+      name: nonEmptyString(module.name, `${subject}.module.name`),
+      version: nonEmptyString(module.version, `${subject}.module.version`),
+    },
+    name: nonEmptyString(ref.name, `${subject}.name`),
+  };
+}
+
+function parseNeed(value: unknown): Need {
+  const need = object(value, "SQLite Operation Need");
+  exactKeys(need, ["id", "capability", "returns", "constraints", "result"], "SQLite Operation Need");
+  return {
+    id: nonEmptyString(need.id, "SQLite Operation Need id"),
+    capability: parseNamedRef(need.capability, "SQLite Operation Need capability") as CapabilityRef,
+    returns: parseNamedRef(need.returns, "SQLite Operation Need return Type") as TypeRef,
+    constraints: normalizeValue(need.constraints, "SQLite Operation Need constraints"),
+    result: nonEmptyString(need.result, "SQLite Operation Need result"),
+  };
+}
+
+function parseCredentials(value: unknown): OperationContext["credentials"] {
+  const credentials = object(value, "SQLite Operation credential references");
+  return Object.fromEntries(Object.entries(credentials).map(([slot, candidate]) => {
+    assert(slot.trim().length > 0, "SQLite Operation credential slot must not be empty");
+    const ref = object(candidate, `SQLite Operation credential ${slot}`);
+    exactKeys(ref, ["store", "key"], `SQLite Operation credential ${slot}`);
+    return [slot, {
+      store: nonEmptyString(ref.store, `SQLite Operation credential ${slot} store`),
+      key: nonEmptyString(ref.key, `SQLite Operation credential ${slot} key`),
+    }];
+  }));
+}
+
+function parseCompletion(value: unknown): { readonly value: Value } {
+  const completion = object(value, "SQLite Operation completion");
+  exactKeys(completion, ["value"], "SQLite Operation completion");
+  return { value: normalizeValue(completion.value, "SQLite Operation completion value") };
+}
+
+function parseFailure(value: unknown): { readonly code: string; readonly message: string } {
+  const failure = object(value, "SQLite Operation failure");
+  exactKeys(failure, ["code", "message"], "SQLite Operation failure");
+  return {
+    code: nonEmptyString(failure.code, "SQLite Operation failure code"),
+    message: nonEmptyString(failure.message, "SQLite Operation failure message"),
+  };
+}
+
+function parseCancellation(value: unknown): OperationCancellation {
+  const cancellation = object(value, "SQLite Operation cancellation");
+  exactKeys(cancellation, ["outcome", "message"], "SQLite Operation cancellation");
+  assert(cancellation.outcome === "confirmed" || cancellation.outcome === "accepted"
+    || cancellation.outcome === "unsupported" || cancellation.outcome === "too-late"
+    || cancellation.outcome === "failed", "SQLite Operation cancellation has invalid outcome");
+  assert(cancellation.message === undefined || typeof cancellation.message === "string",
+    "SQLite Operation cancellation message must be a string");
+  return {
+    outcome: cancellation.outcome,
+    ...(cancellation.message === undefined ? {} : { message: cancellation.message }),
+  };
+}
+
+function parseHandle(value: unknown): CanonicalValue {
+  const handle = normalizeValue(value, "SQLite Operation handle");
+  assert(valueBlobRefs(handle).length === 0, "SQLite Operation handle must not contain byte resources");
+  return handle as CanonicalValue;
+}
+
+function parseEvidence(facts: Record<string, unknown>): OperationEvidence {
+  const receipt = facts.receipt === undefined ? undefined : object(facts.receipt, "SQLite Operation receipt");
+  if (receipt !== undefined) {
+    exactKeys(receipt, ["id", "url"], "SQLite Operation receipt");
+    nonEmptyString(receipt.id, "SQLite Operation receipt id");
+    assert(receipt.url === undefined || typeof receipt.url === "string", "SQLite Operation receipt URL must be a string");
+  }
+  const progress = facts.progress === undefined ? undefined : object(facts.progress, "SQLite Operation progress");
+  if (progress !== undefined) {
+    exactKeys(progress, ["phase", "completed", "total", "unit"], "SQLite Operation progress");
+    nonEmptyString(progress.phase, "SQLite Operation progress phase");
+    for (const field of ["completed", "total"] as const) {
+      assert(progress[field] === undefined || typeof progress[field] === "number" && Number.isFinite(progress[field]),
+        `SQLite Operation progress ${field} must be finite`);
+    }
+    assert(progress.unit === undefined || typeof progress.unit === "string", "SQLite Operation progress unit must be a string");
+  }
+  return {
+    ...(receipt === undefined ? {} : { receipt: {
+      id: receipt.id as string,
+      ...(receipt.url === undefined ? {} : { url: receipt.url as string }),
+    } }),
+    ...(progress === undefined ? {} : { progress: {
+      phase: progress.phase as string,
+      ...(progress.completed === undefined ? {} : { completed: progress.completed as number }),
+      ...(progress.total === undefined ? {} : { total: progress.total as number }),
+      ...(progress.unit === undefined ? {} : { unit: progress.unit as string }),
+    } }),
+  };
+}
+
+function parseOperationSnapshot(row: Row): OperationSnapshot {
+  assert(row.status === "queued" || row.status === "submitting" || row.status === "running" || row.status === "collecting"
+    || row.status === "received" || row.status === "completed"
+    || row.status === "failed" || row.status === "cancelled", "SQLite Operation row has invalid status");
+  const payload = typeof row.payload_json === "string" ? JSON.parse(row.payload_json) as unknown : undefined;
+  assert(payload !== null && !Array.isArray(payload) && typeof payload === "object",
+    "SQLite Operation row has invalid payload");
+  const facts = payload as Record<string, unknown>;
+  const identity: OperationIdentity = {
+    id: nonEmptyString(row.operation_id, "SQLite Operation id"),
+    build: nonEmptyString(row.build_id, "SQLite Operation build id"),
+    command: nonEmptyString(row.command_id, "SQLite Operation command id"),
+    endpoint: nonEmptyString(row.endpoint_id, "SQLite Operation endpoint id"),
+  };
+  const commonKeys = ["createdAt", "need", "credentials", "pool", "receipt", "progress"] as const;
+  const common = {
+    ...identity,
+    createdAt: nonNegativeTime(facts.createdAt, "SQLite Operation creation time"),
+    need: parseNeed(facts.need),
+    credentials: parseCredentials(facts.credentials),
+    ...(facts.pool === undefined ? {} : { pool: nonEmptyString(facts.pool, "SQLite Operation pool") }),
+    ...parseEvidence(facts),
+  };
+  if (row.status === "queued") {
+    exactKeys(facts, [...commonKeys, "wakeAt"], "SQLite queued Operation payload");
+    const wakeAt = optionalTime(facts.wakeAt, "SQLite queued Operation wake time");
+    return { ...common, status: "queued", ...(wakeAt === undefined ? {} : { wakeAt }) };
+  }
+  if (row.status === "submitting") {
+    exactKeys(facts, commonKeys, "SQLite submitting Operation payload");
+    return { ...common, status: "submitting" };
+  }
+  if (row.status === "running") {
+    exactKeys(facts, [...commonKeys, "handle", "acknowledgedAt", "wakeAt"], "SQLite running Operation payload");
+    const wakeAt = optionalTime(facts.wakeAt, "SQLite running Operation wake time");
+    return {
+      ...common,
+      status: "running",
+      handle: parseHandle(facts.handle),
+      acknowledgedAt: nonNegativeTime(facts.acknowledgedAt, "SQLite running Operation acknowledgement time"),
+      ...(wakeAt === undefined ? {} : { wakeAt }),
+    };
+  }
+  if (row.status === "collecting") {
+    exactKeys(facts, [...commonKeys, "handle", "acknowledgedAt", "endedAt", "wakeAt"], "SQLite collecting Operation payload");
+    const wakeAt = optionalTime(facts.wakeAt, "SQLite collecting Operation wake time");
+    return {
+      ...common,
+      status: "collecting",
+      handle: parseHandle(facts.handle),
+      acknowledgedAt: nonNegativeTime(facts.acknowledgedAt, "SQLite collecting Operation acknowledgement time"),
+      endedAt: nonNegativeTime(facts.endedAt, "SQLite collecting Operation end time"),
+      ...(wakeAt === undefined ? {} : { wakeAt }),
+    };
+  }
+  if (row.status === "received" || row.status === "completed") {
+    exactKeys(facts, [...commonKeys, "completion", "acknowledgedAt", "endedAt"], `SQLite ${row.status} Operation payload`);
+    const completed = {
+      ...common,
+      completion: parseCompletion(facts.completion),
+      acknowledgedAt: nonNegativeTime(facts.acknowledgedAt, `SQLite ${row.status} Operation acknowledgement time`),
+      endedAt: nonNegativeTime(facts.endedAt, `SQLite ${row.status} Operation end time`),
+    };
+    return row.status === "received"
+      ? { ...completed, status: "received" }
+      : { ...completed, status: "completed" };
+  }
+  if (row.status === "failed") {
+    exactKeys(facts, [...commonKeys, "failure", "endedAt"], "SQLite failed Operation payload");
+    return {
+      ...common,
+      status: "failed",
+      failure: parseFailure(facts.failure),
+      endedAt: nonNegativeTime(facts.endedAt, "SQLite failed Operation end time"),
+    };
+  }
+  exactKeys(facts, [...commonKeys, "cancellation", "endedAt"], "SQLite cancelled Operation payload");
+  return {
+    ...common,
+    status: "cancelled",
+    cancellation: parseCancellation(facts.cancellation),
+    endedAt: nonNegativeTime(facts.endedAt, "SQLite cancelled Operation end time"),
+  };
 }
 
 function operationPayload(operation: OperationSnapshot): string {
@@ -137,8 +347,7 @@ class SqliteBuildStore implements BuildStore {
     if (result.changes !== 1) throw new Error(`build ${build} already exists`);
     const storedDefinition = copy(definition);
     const facts: readonly BuildFact[] = [];
-    const state = materializeBuild(storedDefinition, facts);
-    return { build, definition: storedDefinition, facts, state };
+    return { build, definition: storedDefinition, facts };
   }
 
   async read(build: string): Promise<BuildSnapshot | undefined> {
@@ -396,11 +605,7 @@ class SqliteOperationStore implements OperationStore {
   async update(id: string, update: OperationUpdate): Promise<OperationSnapshot> {
     const current = await this.read(id);
     if (current === undefined) throw new Error(`Operation ${id} does not exist`);
-    if (current.status === "completed" || current.status === "failed" || current.status === "cancelled") return current;
-    const next = { ...current, ...copy(update) } as OperationSnapshot;
-    // Progress and timers describe the next action; acknowledgement and request
-    // facts survive success/failure until the Result has saved the receipt.
-    if (update.status !== "pending" || update.wakeAt === undefined) delete (next as { wakeAt?: number }).wakeAt;
+    const next = applyOperationUpdate(current, copy(update));
     const result = this.#database.prepare(`
       UPDATE hypit_operations SET status = ?, payload_json = ? WHERE operation_id = ?
     `).run(next.status, operationPayload(next), id);
@@ -421,13 +626,15 @@ function parseCommandExecution(row: Row): CommandExecutionReceipt {
   if (row.status === "completed") {
     assert(event !== undefined, `SQLite Command execution ${row.command_id} has no result`);
   }
+  if (row.status === "completed") {
+    return { build: row.build_id, command: row.command_id, status: "completed", event: event! };
+  }
   return {
     build: row.build_id,
     command: row.command_id,
-    status: row.status,
-    ...(event === undefined ? {} : { event }),
-    ...(row.status !== "started" || typeof row.activity_json !== "string" ? {} : {
-      activity: JSON.parse(row.activity_json) as NonNullable<CommandExecutionReceipt["activity"]>,
+    status: "started",
+    ...(typeof row.activity_json !== "string" ? {} : {
+      activity: JSON.parse(row.activity_json) as CommandExecutionActivity,
     }),
   };
 }
@@ -476,7 +683,7 @@ class SqliteCommandExecutionStore implements CommandExecutionStore {
     `).all(build) as Row[]).map(parseCommandExecution);
   }
 
-  async reportProgress(build: string, command: string, activity: NonNullable<CommandExecutionReceipt["activity"]>): Promise<void> {
+  async reportProgress(build: string, command: string, activity: CommandExecutionActivity): Promise<void> {
     this.#database.prepare(`
       UPDATE hypit_command_executions SET activity_json = ?
       WHERE build_id = ? AND command_id = ? AND status = 'started'
@@ -498,7 +705,9 @@ function parseExecutionSnapshot(row: Row): BuildExecutionSnapshot {
     || (typeof row.result_writer_owner === "string" && typeof row.result_writer_acquired_at === "number"),
   "SQLite Result-writer lease is invalid");
   assert((row.decision_outcome === null && row.decision_reason === null)
-    || (row.decision_outcome === "complete" || row.decision_outcome === "failed" || row.decision_outcome === "cancelled"),
+    || (row.decision_outcome === "complete" && row.decision_reason === null)
+    || ((row.decision_outcome === "failed" || row.decision_outcome === "cancelled")
+      && typeof row.decision_reason === "string"),
   "SQLite Execution decision is invalid");
   assert((row.attention_step === null && row.attention_error === null)
     || ((row.attention_step === "result" || row.attention_step === "cleanup")
@@ -522,11 +731,10 @@ function parseExecutionSnapshot(row: Row): BuildExecutionSnapshot {
         ...(typeof row.stop_reason === "string" ? { reason: row.stop_reason } : {}),
       },
     } : {}),
-    ...(typeof row.decision_outcome === "string" ? {
-      decision: {
-        outcome: row.decision_outcome as "complete" | "failed" | "cancelled",
-        ...(typeof row.decision_reason === "string" ? { reason: row.decision_reason } : {}),
-      },
+    ...(row.decision_outcome === "complete" ? {
+      decision: { outcome: "complete" as const },
+    } : row.decision_outcome === "failed" || row.decision_outcome === "cancelled" ? {
+      decision: { outcome: row.decision_outcome, reason: row.decision_reason as string },
     } : {}),
     ...(typeof row.attention_step === "string" ? {
       attention: {
@@ -675,18 +883,19 @@ class SqliteBuildExecutionStore implements BuildExecutionStore {
   async decide(
     build: string,
     owner: string,
-    outcome: "complete" | "failed" | "cancelled",
-    reason?: string,
+    decision: import("./execution.js").BuildExecutionDecision,
   ): Promise<BuildExecutionSnapshot> {
     return transaction(this.#database, () => {
       const row = this.#database.prepare("SELECT * FROM hypit_executions WHERE build_id = ?").get(build) as Row | undefined;
       if (row === undefined) throw new Error(`Execution ${build} does not exist`);
       const current = parseExecutionSnapshot(row);
-      const effective = current.stop === undefined ? outcome
-        : current.stop.cause === "user-cancelled" ? "cancelled" : "failed";
-      const effectiveReason = current.stop === undefined ? reason : current.stop.reason;
+      const effective: import("./execution.js").BuildExecutionDecision = current.stop === undefined
+        ? decision
+        : current.stop.cause === "user-cancelled"
+          ? { outcome: "cancelled", reason: current.stop.reason ?? "Cancelled by user" }
+          : { outcome: "failed", reason: current.stop.reason ?? "Execution failed" };
       if (current.decision !== undefined) {
-        assert(current.decision.outcome === effective && current.decision.reason === effectiveReason,
+        assert(current.decision.outcome === effective.outcome && current.decision.reason === effective.reason,
           `Execution ${build} already has a different decision`);
         return current;
       }
@@ -696,7 +905,7 @@ class SqliteBuildExecutionStore implements BuildExecutionStore {
         SET decision_outcome = ?, decision_reason = ?, turn_owner = NULL, turn_acquired_at = NULL,
             attention_step = NULL, attention_error = NULL
         WHERE build_id = ? AND turn_owner = ? AND decision_outcome IS NULL
-      `).run(effective, effectiveReason ?? null, build, owner);
+      `).run(effective.outcome, effective.reason ?? null, build, owner);
       return parseExecutionSnapshot(
         this.#database.prepare("SELECT * FROM hypit_executions WHERE build_id = ?").get(build) as Row,
       );
@@ -803,10 +1012,18 @@ class SqliteBuildExecutionStore implements BuildExecutionStore {
   #rate(resource: CapacityResourceClaim, now: number): number {
     const row = this.#database.prepare("SELECT * FROM hypit_rates WHERE resource_id = ?").get(resource.id) as Row | undefined;
     if (row === undefined) return resource.limit;
-    assert(row.limit_units === resource.limit && row.period_ms === resource.periodMs,
-      `Shared rate ${resource.id} has conflicting limit or periodMs`);
-    return Math.min(resource.limit, (row.tokens as number)
-      + Math.max(0, now - (row.updated_at as number)) * resource.limit / resource.periodMs!);
+    const previousLimit = row.limit_units as number;
+    const previousPeriod = row.period_ms as number;
+    const carried = Math.min(previousLimit, (row.tokens as number)
+      + Math.max(0, now - (row.updated_at as number)) * previousLimit / previousPeriod);
+    const available = Math.min(resource.limit, carried);
+    if (previousLimit !== resource.limit || previousPeriod !== resource.periodMs) {
+      this.#database.prepare(`
+        UPDATE hypit_rates SET limit_units = ?, period_ms = ?, tokens = ?, updated_at = ?
+        WHERE resource_id = ?
+      `).run(resource.limit, resource.periodMs!, available, now, resource.id);
+    }
+    return available;
   }
 
   #blocked(resources: readonly CapacityResourceClaim[], now: number): Extract<CapacityAcquire, { status: "blocked" }> | undefined {
@@ -855,7 +1072,11 @@ class SqliteBuildExecutionStore implements BuildExecutionStore {
         if (resource.periodMs === undefined) continue;
         this.#database.prepare(`
           INSERT INTO hypit_rates (resource_id, limit_units, period_ms, tokens, updated_at) VALUES (?, ?, ?, ?, ?)
-          ON CONFLICT(resource_id) DO UPDATE SET tokens = excluded.tokens, updated_at = excluded.updated_at
+          ON CONFLICT(resource_id) DO UPDATE SET
+            limit_units = excluded.limit_units,
+            period_ms = excluded.period_ms,
+            tokens = excluded.tokens,
+            updated_at = excluded.updated_at
         `).run(resource.id, resource.limit, resource.periodMs, this.#rate(resource, request.now) - capacityUnits(resource), request.now);
       }
       const reservation: CapacityReservation = {
@@ -986,7 +1207,7 @@ export class SqliteRuntimeState {
         build_id TEXT NOT NULL,
         command_id TEXT NOT NULL,
         endpoint_id TEXT NOT NULL,
-        status TEXT NOT NULL CHECK (status IN ('pending', 'completed', 'failed', 'cancelled')),
+        status TEXT NOT NULL CHECK (status IN ('queued', 'submitting', 'running', 'collecting', 'received', 'completed', 'failed', 'cancelled')),
         payload_json TEXT
       ) STRICT;
       CREATE TABLE IF NOT EXISTS hypit_command_executions (

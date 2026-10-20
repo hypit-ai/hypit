@@ -1,22 +1,23 @@
 import type {
-  CompiledGraph,
+  AuthorGraph,
   GraphValueRef,
   LinkedProgram,
   ResolvedModuleClosure,
   TypeRef,
   TypedRecord,
 } from "@hypit/protocol";
+import { sameType, typeKey } from "@hypit/protocol";
 import type {
   ResolvedSourceAsset,
   SourceAssetRequest,
   SourceAssetResolver,
   SourceImportRequest,
+  SourceRange,
   SourceResolver,
   SourceUnit,
 } from "@hypit/source";
 
 import type { AuthorComponent, AuthorValueRef } from "./author.js";
-import type { GraphFragment } from "./fragment.js";
 
 export type AuthorSourceUnit = SourceUnit;
 export type AuthorFrontendSourceUnit = AuthorSourceUnit;
@@ -45,13 +46,13 @@ export type AuthorSourceIdentity = {
 
 export type AuthorInputProvenanceDraft = {
   readonly name: string;
-  readonly range: import("@hypit/protocol").SourceRange;
+  readonly range: SourceRange;
   readonly kind: "literal" | "reference";
   readonly ref?: AuthorValueRef;
 };
 
 export type AuthorElementProvenanceDraft = {
-  readonly range: import("@hypit/protocol").SourceRange;
+  readonly range: SourceRange;
   readonly records: readonly string[];
   readonly components: readonly string[];
   readonly outputs: readonly { readonly component: string; readonly name: string; readonly id: string }[];
@@ -76,7 +77,6 @@ export type AuthorSourceDecodeContext = {
 export type DecodedAuthorSource = {
   readonly records: readonly TypedRecord[];
   readonly components: readonly AuthorComponent[];
-  readonly fragments: readonly GraphFragment[];
   readonly exports: readonly AuthorSourceExport[];
   readonly identities?: readonly AuthorSourceIdentity[];
   readonly provenance?: readonly AuthorElementProvenanceDraft[];
@@ -120,8 +120,7 @@ export class AuthorFrontendRegistry implements AuthorFrontendRegistryLike {
   }
 }
 
-export type AuthorRecordAdmitter = (
-  closure: ResolvedModuleClosure,
+export type AuthorRecordValidator = (
   record: TypedRecord,
 ) => Awaitable<void>;
 
@@ -135,7 +134,7 @@ export type SourceClosureUnit = {
 export type AuthorInputProvenance = {
   readonly id: string;
   readonly name: string;
-  readonly range: import("@hypit/protocol").SourceRange;
+  readonly range: SourceRange;
   readonly kind: "literal" | "reference";
   readonly ref?: AuthorValueRef;
 };
@@ -145,7 +144,7 @@ export type AuthorElementProvenance = {
   readonly source: string;
   readonly sourceName: string;
   readonly frontend: string;
-  readonly range: import("@hypit/protocol").SourceRange;
+  readonly range: SourceRange;
   readonly records: readonly { readonly local: string; readonly id: string }[];
   readonly components: readonly { readonly local: string; readonly id: string }[];
   readonly outputs: readonly {
@@ -177,16 +176,10 @@ export type CompiledSourceExport = {
 export type CompiledSourceClosure = {
   readonly closure: SourceClosure;
   readonly program: LinkedProgram;
-  readonly graph: CompiledGraph;
+  readonly graph: AuthorGraph;
   readonly exports: readonly CompiledSourceExport[];
   readonly provenance: AuthorProvenance;
 };
-
-function sameType(left: TypeRef, right: TypeRef): boolean {
-  return left.module.name === right.module.name
-    && left.module.version === right.module.version
-    && left.name === right.name;
-}
 
 export function resolveCompiledSourceExport(
   compiled: CompiledSourceClosure,
@@ -196,10 +189,9 @@ export function resolveCompiledSourceExport(
   const item = compiled.exports.find((candidate) => candidate.name === name);
   if (item === undefined) throw new AuthorFrontendError("UNKNOWN_SOURCE_EXPORT", `unknown source export ${name}`, name);
   if (expected !== undefined && !sameType(item.type, expected)) {
-    const typeName = (type: TypeRef) => `${type.module.name}@${type.module.version}#${type.name}`;
     throw new AuthorFrontendError(
       "SOURCE_EXPORT_TYPE_MISMATCH",
-      `${name} is ${typeName(item.type)}, expected ${typeName(expected)}`,
+      `${name} is ${typeKey(item.type)}, expected ${typeKey(expected)}`,
       name,
     );
   }

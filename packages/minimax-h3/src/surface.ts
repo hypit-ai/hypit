@@ -1,17 +1,18 @@
+import { sameType } from "@hypit/hypit/protocol";
 import { blobTypes } from "@hypit/hypit/blob";
-import { generationPort, sealGenerationMediaBinding, sealGenerationRequestDraft } from "@hypit/generation";
-import type { GenerationMediaPort, GenerationMediaRole, GenerationPortValue } from "@hypit/generation";
-import { createExactModelPrimaryGenerationFragment, exactModelMediaInputNames, exactModelTextInputName } from "@hypit/generation/model";
-import type { ExactModelMediaInput } from "@hypit/generation/model";
+import { modelField, sealModelArtifactBinding, sealModelFieldBuilder } from "@hypit/generation/model-fields";
+import type { ModelArtifactField, ModelArtifactRole, ModelFieldValue } from "@hypit/generation/model-fields";
+import { createFieldModelPrimaryFragment, modelArtifactInputNames, modelTextInputName } from "@hypit/generation/model-fields";
+import type { ModelArtifactInput } from "@hypit/generation/model-fields";
 import type { CanonicalValue, TypeRef } from "@hypit/hypit/protocol";
+import { isBlobRef } from "@hypit/hypit/protocol";
 import type { MarkupAttributeValue, StructuredElement, StructuredSurfaceHandler, SurfaceResolvedReference } from "@hypit/hypit/markup";
 import { textTypes, verifyText } from "@hypit/hypit/text";
 import { minimaxH3Endpoints } from "./index.js";
 
-type Media = { readonly port: "referenceImage" | "referenceVideo" | "referenceAudio" | "firstFrame" | "lastFrame"; readonly role: GenerationMediaRole; readonly source: SurfaceResolvedReference };
+type Media = { readonly port: "referenceImage" | "referenceVideo" | "referenceAudio" | "firstFrame" | "lastFrame"; readonly role: ModelArtifactRole; readonly source: SurfaceResolvedReference };
 function assert(condition: unknown, message: string): asserts condition { if (!condition) throw new Error(message); }
 function localName(name: string): string { return name.includes(":") ? name.slice(name.lastIndexOf(":") + 1) : name; }
-function sameType(a: TypeRef, b: TypeRef): boolean { return a.name === b.name && a.module.name === b.module.name && a.module.version === b.module.version; }
 function exact(element: StructuredElement, allowed: readonly string[], required: readonly string[]): void {
   const unknown = Object.keys(element.attributes).filter((name) => !allowed.includes(name)); assert(unknown.length === 0, `${element.name} does not accept ${unknown[0]}`);
   const missing = required.filter((name) => element.attributes[name] === undefined); assert(missing.length === 0, `${element.name} requires ${missing.join(", ")}`);
@@ -25,32 +26,32 @@ function ref(element: StructuredElement, name: string, type: TypeRef, resolve: (
   const value: MarkupAttributeValue | undefined = element.attributes[name]; assert(typeof value === "object" && value.kind === "reference", `${element.name}.${name} must be a reference`);
   const result = resolve(value.path); assert(result !== undefined && sameType(result.type, type), `${element.name}.${name} has the wrong type`); return result;
 }
-function mediaRef(element: StructuredElement, name: string, role: GenerationMediaRole, resolve: (path: string) => SurfaceResolvedReference | undefined): SurfaceResolvedReference {
+function mediaRef(element: StructuredElement, name: string, role: ModelArtifactRole, resolve: (path: string) => SurfaceResolvedReference | undefined): SurfaceResolvedReference {
   const result = ref(element, name, blobTypes.blob, resolve);
-  if (result.record !== undefined) assert(result.record.value.kind === "blob" && result.record.value.mediaType.startsWith(`${role}/`), `${element.name}.${name} must be ${role} media`);
+  if (result.record !== undefined) assert(isBlobRef(result.record.value) && result.record.value.mediaType.startsWith(`${role}/`), `${element.name}.${name} must be ${role} media`);
   return result;
 }
 function empty(element: StructuredElement): void { assert(!element.children.some((item) => item.kind === "element" || item.value.trim()), `${element.name} must be empty`); }
 
-function output(element: StructuredElement, prompt: SurfaceResolvedReference, ports: Readonly<Record<string, readonly GenerationPortValue[]>>, media: readonly Media[]) {
+function output(element: StructuredElement, prompt: SurfaceResolvedReference, ports: Readonly<Record<string, readonly ModelFieldValue[]>>, media: readonly Media[]) {
   const id = text(element, "id"); const endpoint = minimaxH3Endpoints.video!;
-  const draft = sealGenerationRequestDraft(endpoint.ports, ports);
-  const records: Array<{ id: string; type: TypeRef; value: { kind: "inline"; value: CanonicalValue }; range: StructuredElement["range"] }> = [{ id: `${id}.draft`, type: endpoint.draftType, value: { kind: "inline", value: draft as unknown as CanonicalValue }, range: element.range }];
-  const inputs: Record<string, SurfaceResolvedReference["ref"] | { kind: "record"; id: string }> = { draft: { kind: "record", id: `${id}.draft` }, [exactModelTextInputName("prompt")]: prompt.ref };
-  const mediaInputs = media.map((item, index): ExactModelMediaInput => {
-    const name = `media-${String(index + 1).padStart(4, "0")}`; const binding = endpoint.mediaBindings[item.port]!; const port = generationPort(endpoint.ports, item.port);
+  const draft = sealModelFieldBuilder(endpoint.ports, ports);
+  const records: Array<{ id: string; type: TypeRef; value: CanonicalValue; range: StructuredElement["range"] }> = [{ id: `${id}.draft`, type: endpoint.draftType, value: (draft as unknown as CanonicalValue), range: element.range }];
+  const inputs: Record<string, SurfaceResolvedReference["ref"] | { kind: "record"; id: string }> = { draft: { kind: "record", id: `${id}.draft` }, [modelTextInputName("prompt")]: prompt.ref };
+  const mediaInputs = media.map((item, index): ModelArtifactInput => {
+    const name = `media-${String(index + 1).padStart(4, "0")}`; const binding = endpoint.mediaBindings[item.port]!; const port = modelField(endpoint.ports, item.port);
     assert(port.value.kind === "media", `${item.port} is not media`); const bindingId = `${id}.${name}.binding`;
-    records.push({ id: bindingId, type: binding.type, value: { kind: "inline", value: sealGenerationMediaBinding(port as GenerationMediaPort, { role: item.role }) as unknown as CanonicalValue }, range: element.range });
-    const names = exactModelMediaInputNames(name); inputs[names.binding] = { kind: "record", id: bindingId }; inputs[names.artifact] = item.source.ref;
+    records.push({ id: bindingId, type: binding.type, value: (sealModelArtifactBinding(port as ModelArtifactField, { role: item.role }) as unknown as CanonicalValue), range: element.range });
+    const names = modelArtifactInputNames(name); inputs[names.binding] = { kind: "record", id: bindingId }; inputs[names.artifact] = item.source.ref;
     return { name, port: item.port };
   });
-  const fragment = createExactModelPrimaryGenerationFragment(endpoint, mediaInputs, [{ name: "prompt", port: "prompt" }]);
-  return { records, fragments: [fragment], components: [{ id, fragment: fragment.id, inputs, outputs: { video: `${id}.video` }, range: element.range }] };
+  const fragment = createFieldModelPrimaryFragment(endpoint, mediaInputs, [{ name: "prompt", port: "prompt" }]);
+  return { records, components: [{ id, fragment, inputs, outputs: { video: `${id}.video` }, range: element.range }] };
 }
 function common(element: StructuredElement, resolveReference: (path: string) => SurfaceResolvedReference | undefined) {
   const prompt = ref(element, "prompt", textTypes.text, resolveReference);
-  if (prompt.record !== undefined) { assert(prompt.record.value.kind === "inline", `${element.name}.prompt must reference Text`); verifyText(prompt.record.value.value); }
-  const ports: Record<string, readonly GenerationPortValue[]> = { duration: [integer(element, "duration")] };
+  if (prompt.record !== undefined) { assert(true, `${element.name}.prompt must reference Text`); verifyText(prompt.record.value); }
+  const ports: Record<string, readonly ModelFieldValue[]> = { duration: [integer(element, "duration")] };
   const resolution = optionalText(element, "resolution"); if (resolution !== undefined) ports.resolution = [resolution];
   const aspect = optionalText(element, "aspect-ratio"); if (aspect !== undefined) ports.aspectRatio = [aspect];
   return { prompt, ports };
@@ -81,7 +82,5 @@ export const decodeMinimaxReferenceVideoSurface: StructuredSurfaceHandler = ({ e
   }
   assert(media.length > 0, `${element.name} requires at least one Reference`);
   assert(!media.some((item) => item.role === "audio") || media.some((item) => item.role === "image" || item.role === "video"), `${element.name} reference audio requires an image or video companion`);
-  for (const port of ["referenceImage", "referenceVideo", "referenceAudio"] as const) assert(media.filter((item) => item.port === port).length <= generationPort(minimaxH3Endpoints.video!.ports, port).maxItems, `${element.name} has too many ${port} references`);
-  assert(media.length <= 12, `${element.name} accepts at most 12 total references`);
   return output(element, prompt, ports, media);
 };

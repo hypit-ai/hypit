@@ -28,7 +28,7 @@ test("Fontsource Face reads an installed package as data and preserves every Uni
     resolveReference: () => undefined,
     resolveAsset: (request) => {
       requests.push(request.from);
-      return { artifact: {
+      return { blob: {
         kind: "blob",
         resource: fixtureResource(`fontsource:${request.from}`),
         size: 2_048,
@@ -39,7 +39,7 @@ test("Fontsource Face reads an installed package as data and preserves every Uni
   assert.deepEqual(result.records[0]!.type, mediaTypes.fontArtifact);
   assert.equal(requests.length, 7);
   assert.ok(requests.every((request) => request.startsWith("package:@fontsource-variable/inter/files/")));
-  const value = (result.records[0]!.value as unknown as { value: { sources: unknown[]; weight: number } }).value;
+  const value = result.records[0]!.value as unknown as { sources: unknown[]; weight: number };
   assert.equal(value.sources.length, 7);
   assert.equal(value.weight, 700);
 });

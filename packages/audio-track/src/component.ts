@@ -1,6 +1,6 @@
 import type { ProducerPackage } from "@hypit/hypit/producer";
-import type { AdmissionPackage } from "@hypit/hypit/admission";
-import type { StoredValue } from "@hypit/hypit/protocol";
+import type { RefinementPackage } from "@hypit/hypit/refinement";
+import type { Value } from "@hypit/hypit/protocol";
 import { canonicalize } from "@hypit/hypit/protocol";
 import type { SynchronizedMedia } from "@hypit/media";
 import type { TemporalWindow } from "@hypit/temporal";
@@ -16,36 +16,36 @@ import {
 } from "./program.js";
 import type { AudioClipSpec, AudioTrackHeader, AudioTrackProgram, AudioTrackSet } from "./types.js";
 
-function inline<T>(value: StoredValue | undefined, label: string): T {
-  if (value?.kind !== "inline") throw new Error(`${label} must be inline.`);
-  return value.value as unknown as T;
+function valueOf<T>(value: Value | undefined, label: string): T {
+  if (value === undefined) throw new Error(`${label} is missing.`);
+  return value as unknown as T;
 }
-const output = (value: unknown) => ({ kind: "inline" as const, value: canonicalize(value) });
+const output = (value: unknown) => ((canonicalize(value)));
 
 export const audioTrackComponent = {
   producers: [
-    { producer: audioTrackProducers.createSet, handler: () => ({ outputs: { set: output(createAudioTrackSet()) }, needs: {} }) },
-    { producer: audioTrackProducers.appendClip, handler: ({ inputs }) => ({ outputs: { set: output(
+    { producer: audioTrackProducers.createSet, handler: () => ({ kind: "output", value: output(createAudioTrackSet()) }) },
+    { producer: audioTrackProducers.appendClip, handler: ({ inputs }) => ({ kind: "output", value: output(
       appendAudioClip(
-        inline<AudioTrackSet>(inputs.set?.value, "AudioTrackSet"),
-        inline<AudioTrackHeader>(inputs.header?.value, "AudioTrackHeader"),
-        inline<Timeline>(inputs.timeline?.value, "Timeline"),
-        inline<SynchronizedMedia>(inputs.media?.value, "SynchronizedMedia"),
-        inline<AudioClipSpec>(inputs.spec?.value, "AudioClipSpec"),
-        inline<TemporalWindow>(inputs.window?.value, "TemporalWindow"),
+        valueOf<AudioTrackSet>(inputs.set?.value, "AudioTrackSet"),
+        valueOf<AudioTrackHeader>(inputs.header?.value, "AudioTrackHeader"),
+        valueOf<Timeline>(inputs.timeline?.value, "Timeline"),
+        valueOf<SynchronizedMedia>(inputs.media?.value, "SynchronizedMedia"),
+        valueOf<AudioClipSpec>(inputs.spec?.value, "AudioClipSpec"),
+        valueOf<TemporalWindow>(inputs.window?.value, "TemporalWindow"),
       ),
-    ) }, needs: {} }) },
-    { producer: audioTrackProducers.finalize, handler: ({ inputs }) => ({ outputs: { program: output(finalizeAudioTrack(
-      inline<AudioTrackSet>(inputs.set?.value, "AudioTrackSet"),
-      inline<AudioTrackHeader>(inputs.header?.value, "AudioTrackHeader"),
-    )) }, needs: {} }) },
-    { producer: audioTrackProducers.render, handler: ({ inputs }) => ({ outputs: { track: output(renderAudioTrack(
-      inline<Timeline>(inputs.timeline?.value, "Timeline"),
-      inline<AudioTrackProgram>(inputs.program?.value, "AudioTrackProgram"),
-    )) }, needs: {} }) },
+    ) }) },
+    { producer: audioTrackProducers.finalize, handler: ({ inputs }) => ({ kind: "output", value: output(finalizeAudioTrack(
+      valueOf<AudioTrackSet>(inputs.set?.value, "AudioTrackSet"),
+      valueOf<AudioTrackHeader>(inputs.header?.value, "AudioTrackHeader"),
+    )) }) },
+    { producer: audioTrackProducers.render, handler: ({ inputs }) => ({ kind: "output", value: output(renderAudioTrack(
+      valueOf<Timeline>(inputs.timeline?.value, "Timeline"),
+      valueOf<AudioTrackProgram>(inputs.program?.value, "AudioTrackProgram"),
+    )) }) },
   ],
-  validators: [{
+  refinements: [{
     type: audioTrackTypes.program,
-    handler: ({ value }) => assertAudioTrackProgram(inline<AudioTrackProgram>(value, "AudioTrackProgram")),
+    handler: ({ value }) => assertAudioTrackProgram(valueOf<AudioTrackProgram>(value, "AudioTrackProgram")),
   }],
-} satisfies ProducerPackage & AdmissionPackage;
+} satisfies ProducerPackage & RefinementPackage;

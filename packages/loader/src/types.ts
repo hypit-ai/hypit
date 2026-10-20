@@ -8,7 +8,7 @@ export type ModuleContribution = {
   readonly specifiers?: readonly string[];
 };
 
-/** Opaque logical address resolved to an explicitly selected installed package. */
+/** Package-qualified logical address resolved to an explicitly selected installed package. */
 export type LogicalPackageAddress = {
   readonly abi: string;
   readonly name: string;

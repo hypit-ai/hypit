@@ -1,17 +1,16 @@
 import { blobTypes } from "@hypit/hypit/blob";
-import { sealGenerationPortRequest, sealGenerationPortTable } from "@hypit/generation";
-import type { GenerationPortTable, GenerationPortValue, GenerationRequest } from "@hypit/generation";
+import { sealModelFieldRequest, defineModelFields } from "@hypit/generation/model-fields";
+import type { ModelFieldTable, ModelFieldValue, ModelFieldRequest } from "@hypit/generation/model-fields";
 import type { SurfaceAttributeVocabulary, SurfaceChildVocabulary, SurfacePortVocabulary, SurfaceVocabulary } from "@hypit/hypit/markup";
-import { defineExactModelModule } from "@hypit/generation/model";
+import { defineFieldModelModule, standardGenerationResults } from "@hypit/generation/model-fields";
 import { textTypes } from "@hypit/hypit/text";
 
 export const grokImagineModuleRef = { name: "@hypit/grok-imagine", version: "1" } as const;
 export const grokImagineModels = ["grok-imagine-video", "grok-imagine-video-1.5-preview"] as const;
 export type GrokImagineModel = typeof grokImagineModels[number];
 
-export const grokImagineVideoPorts: GenerationPortTable = sealGenerationPortTable({
+export const grokImagineVideoPorts: ModelFieldTable = defineModelFields({
   model: "grok-imagine-video",
-  result: "video",
   ports: [
     { name: "prompt", value: { kind: "text", maxChars: 5_000 }, minItems: 1, maxItems: 1 },
     {
@@ -27,9 +26,8 @@ export const grokImagineVideoPorts: GenerationPortTable = sealGenerationPortTabl
   requires: [],
 });
 
-export const grokImagine15PreviewPorts: GenerationPortTable = sealGenerationPortTable({
+export const grokImagine15PreviewPorts: ModelFieldTable = defineModelFields({
   model: "grok-imagine-video-1.5-preview",
-  result: "video",
   ports: [
     { name: "prompt", value: { kind: "text", maxChars: 4_096 }, minItems: 1, maxItems: 1 },
     {
@@ -45,19 +43,19 @@ export const grokImagine15PreviewPorts: GenerationPortTable = sealGenerationPort
   requires: [],
 });
 
-export const grokImaginePorts: Readonly<Record<GrokImagineModel, GenerationPortTable>> = {
+export const grokImaginePorts: Readonly<Record<GrokImagineModel, ModelFieldTable>> = {
   "grok-imagine-video": grokImagineVideoPorts,
   "grok-imagine-video-1.5-preview": grokImagine15PreviewPorts,
 };
 
 export function sealGrokImagineRequest(
   model: GrokImagineModel,
-  ports: Readonly<Record<string, readonly GenerationPortValue[]>>,
-): GenerationRequest {
-  return sealGenerationPortRequest(grokImaginePorts[model], ports);
+  ports: Readonly<Record<string, readonly ModelFieldValue[]>>,
+): ModelFieldRequest {
+  return sealModelFieldRequest(grokImaginePorts[model], ports);
 }
 
-const grokImagineBaseDefinition = defineExactModelModule({
+const grokImagineBaseDefinition = defineFieldModelModule({
   module: grokImagineModuleRef,
   endpoints: [
     {
@@ -65,12 +63,14 @@ const grokImagineBaseDefinition = defineExactModelModule({
       requestTypeName: "GrokImagineVideoRequest",
       producerName: "request-grok-imagine-video",
       ports: grokImagineVideoPorts,
+      result: standardGenerationResults.video,
     },
     {
       key: "preview-1.5",
       requestTypeName: "GrokImagine15PreviewRequest",
       producerName: "request-grok-imagine-preview-1-5",
       ports: grokImagine15PreviewPorts,
+      result: standardGenerationResults.video,
     },
   ],
 });

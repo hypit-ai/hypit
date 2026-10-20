@@ -301,6 +301,32 @@ test("overlapping evidence word windows reach the map overlapping", () => {
   assert.equal(map.tokens[1]!.startFrame < map.tokens[0]!.endFrameExclusive, true, "the overlap survived");
 });
 
+test("nested and untimed evidence still projects monotone Script boundaries", () => {
+  const cases = [
+    ["<line>one 2 three</line>", [
+      { text: "one", startSec: 0.1, endSec: 0.5 },
+      { text: "2" },
+      { text: "three", startSec: 0.4, endSec: 0.9 },
+    ]],
+    ["<line>one two</line>", [
+      { text: "one", startSec: 0.1, endSec: 0.8 },
+      { text: "two", startSec: 0.3, endSec: 0.5 },
+    ]],
+  ] as const;
+  for (const [source, words] of cases) {
+    const narrative = parseScript("monotone.svml", source);
+    const map = locate(narrative, { words });
+    for (const [index, token] of map.tokens.entries()) {
+      const previous = map.tokens[index - 1];
+      assert.ok(token.endFrameExclusive > token.startFrame, source);
+      if (previous !== undefined) {
+        assert.ok(token.startFrame >= previous.startFrame, source);
+        assert.ok(token.endFrameExclusive >= previous.endFrameExclusive, source);
+      }
+    }
+  }
+});
+
 test("locating is total: every Script token carries a window", () => {
   const narrative = parseScript("total.svml", "<line>alpha beta gamma delta</line>");
   // Nothing the aligner could place: every window below is interpolated.

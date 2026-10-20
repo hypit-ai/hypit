@@ -17,13 +17,7 @@ export type {
 export type {
   CheckedRun,
   CompiledRun,
+  RunAuthorCompiler,
   RunCompilerOptions,
-  PlannedBuild,
+  PreparedBuild,
 } from "./run.js";
-export {
-  findCandidate,
-  findLogicalOutput,
-  findOperation,
-  findOperationsByProducer,
-  walkOperationInputs,
-} from "./graph-query.js";

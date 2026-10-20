@@ -85,9 +85,7 @@ export const decodeTimelineAuthorSurface: StructuredSurfaceHandler = ({ element,
   }
 
   const plan = compileTimelineAuthorFragment({ id, end, declarations });
-  const staticClock = clock.record?.value.kind === "inline"
-    ? clock.record.value.value as unknown as Clock
-    : undefined;
+  const staticClock = clock.record?.value as unknown as Clock | undefined;
   if (staticClock !== undefined) {
     for (const item of plan.inlineInputs) {
       if (!sameType(item.type, timelineAuthorTypes.duration)) continue;
@@ -111,9 +109,9 @@ export const decodeTimelineAuthorSurface: StructuredSurfaceHandler = ({ element,
   };
   const headerRecord = `${id}.__header`;
   const records = [{ id: headerRecord, type: timelineAuthorTypes.header,
-    value: { kind: "inline" as const, value: canonicalize({ id }) }, range: element.range },
+    value: (canonicalize({ id })), range: element.range },
   ...plan.inlineInputs.map((item) => ({ id: `${id}.__${item.name}`, type: item.type,
-    value: { kind: "inline" as const, value: canonicalize(item.value) }, range: authoredRange(item) }))];
+    value: (canonicalize(item.value)), range: authoredRange(item) }))];
   const inputs = {
     header: { kind: "record" as const, id: headerRecord },
     clock: clock.ref,
@@ -127,8 +125,7 @@ export const decodeTimelineAuthorSurface: StructuredSurfaceHandler = ({ element,
   const outputs = Object.fromEntries(plan.outputNames.map((item) => [item.port, `${id}.${item.suffix}`]));
   return {
     records,
-    fragments: [plan.fragment],
-    components: [{ id, fragment: plan.fragment.id, inputs, outputs, range: element.range }],
+    components: [{ id, fragment: plan.fragment, inputs, outputs, range: element.range }],
     exports: Object.values(outputs),
   };
 };
@@ -145,8 +142,8 @@ export const decodeClockSurface: StructuredSurfaceHandler = ({ element }) => {
     throw new Error(`${element.name}.frame-rate must be a positive rational.`);
   }
   const value = { frameRate: { numerator, denominator } };
-  return { records: [{ id, type: timelineTypes.clock, value: { kind: "inline", value: canonicalize(value) }, range: element.range }],
-    components: [], fragments: [], exports: [id] };
+  return { records: [{ id, type: timelineTypes.clock, value: (canonicalize(value)), range: element.range }],
+    components: [], exports: [id] };
 };
 
 /** Publish one reusable absolute Window independently of Timeline construction and consumers. */
@@ -162,7 +159,6 @@ export const decodeAbsoluteWindowSurface: StructuredSurfaceHandler = ({ element,
   const component = construction.components[0]!;
   return {
     records: construction.records,
-    fragments: construction.fragments,
     components: [{ ...component, outputs: { window: id, start: `${id}.start`, end: `${id}.end` } }],
     exports: [id, `${id}.start`, `${id}.end`],
   };
@@ -181,7 +177,6 @@ export const decodeAbsoluteInstantSurface: StructuredSurfaceHandler = ({ element
   const component = construction.components[0]!;
   return {
     records: construction.records,
-    fragments: construction.fragments,
     components: [{ ...component, outputs: { instant: id } }],
     exports: [id],
   };

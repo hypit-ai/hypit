@@ -5,7 +5,8 @@ import {
   verifySynchronizedMedia,
 } from "@hypit/media";
 import type { SynchronizedMedia } from "@hypit/media";
-import { canonicalize, isResourceId } from "@hypit/hypit/protocol";
+import { assertBlobRef, canonicalize } from "@hypit/hypit/protocol";
+import type { BlobRef } from "@hypit/hypit/protocol";
 import { verifyText } from "@hypit/hypit/text";
 import type { Text } from "@hypit/hypit/text";
 import { assertSpatialFrame } from "@hypit/spatial";
@@ -93,9 +94,9 @@ function stacking(value: number, label: string): void {
   assert(Number.isSafeInteger(value), `${label} must be an integer.`);
 }
 
-function assertBlobImage(value: { readonly resource: string; readonly size: number; readonly mediaType: string }, label: string): void {
-  assert(isResourceId(value.resource) && Number.isSafeInteger(value.size) && value.size >= 0
-    && /^image\//u.test(value.mediaType), `${label} must be an image Artifact.`);
+function assertBlobImage(value: BlobRef, label: string): void {
+  assertBlobRef(value, label);
+  assert(/^image\//u.test(value.mediaType), `${label} must be an image Artifact.`);
 }
 
 export function assertRankingHeader(value: RankingHeader): void {

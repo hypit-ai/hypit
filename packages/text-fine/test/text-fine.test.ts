@@ -1,18 +1,24 @@
-import { sealTimeline, timelineDependency, timelineTypes } from "@hypit/timeline";
+import { blobManifest } from "@hypit/blob";
+import { sealTimeline, timelineDependency, timelineManifest, timelineTypes } from "@hypit/timeline";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { fixtureResource } from "../../../test/fixture-resource.js";
 import { narrativeProjectionFixture, timelineFixture } from "../../../test/timeline-fixture.js";
 import { projectProgramWindow, projectSelectionWindow } from "../../../test/temporal-fixture.js";
 
-import { spatialComponent, videoContractManifests } from "../../../test/support/video-domain.js";
-import { registerTypeValidatorFacets } from "@hypit/admission";
-import { compositionTypes, sealComposition } from "@hypit/composition";
-import { createResolvedClosure, sealBuildRequest, start } from "@hypit/kernel";
+import { registerTypeRefinements } from "@hypit/refinement";
+import { compositionManifest, compositionTypes, sealComposition } from "@hypit/composition";
+import {
+  createResolvedClosure,
+  defineBuild,
+  link,
+  materializeBuild,
+  planBuild,
+} from "@hypit/kernel";
 import { AuthorFrontendRegistry, resolveCompiledSourceExport } from "@hypit/author";
 import { compileSourceClosure } from "@hypit/compiler";
 import { compileHtmlProgram } from "@hypit/html-program";
-import { mediaDependency, mediaTypes } from "@hypit/media";
+import { mediaDependency, mediaManifest, mediaTypes } from "@hypit/media";
 import type { CompositableSurfaceRef, FontArtifactRef } from "@hypit/media";
 import type { NarrativeSelectionRef } from "@hypit/narrative";
 import type { ModuleManifest } from "@hypit/protocol";
@@ -42,13 +48,32 @@ import {
   textFineTypes,
 } from "@hypit/text-fine";
 import type { TextStyle } from "@hypit/text-fine";
-import { spatialDependency, spatialTypes } from "@hypit/spatial";
+import { spatialComponent, spatialDependency, spatialManifest, spatialTypes } from "@hypit/spatial";
+
+function buildState(
+  program: Parameters<typeof planBuild>[0],
+  graph: Parameters<typeof planBuild>[1],
+  targets: readonly string[],
+) {
+  const planned = planBuild(program, graph, {
+    format: "hypit.run-graph@1",
+    records: [],
+    candidates: [],
+    operations: [],
+    satisfactions: [],
+    targets: targets.map((output) => ({ output })),
+  });
+  return materializeBuild(defineBuild({
+    program: link(program.closure, [...program.records, ...planned.initialRecords]),
+    plan: planned.plan,
+  }), []);
+}
 import { recipeManifest, recipeType } from "@hypit/recipe";
 import { sealText, textComponent, textDependency, textManifest, textTypes } from "@hypit/text";
 import { MarkupSurfaceRegistry, createMarkupAuthorFrontend } from "@hypit/markup";
-import { createRecordAdmitter, TypeValidatorRegistry } from "@hypit/admission";
+import { createRecordValidator, RefinementRegistry } from "@hypit/refinement";
 import { resolveSelfDescribedTextSource } from "@hypit/source/text";
-import { temporalDependency, temporalTypes } from "@hypit/temporal";
+import { temporalDependency, temporalManifest, temporalTypes } from "@hypit/temporal";
 
 const space = sealTimeline({ id: "test-space", frameCount: 150, frameRate: { numerator: 30, denominator: 1 },
 });
@@ -297,7 +322,13 @@ test("the self-described Markup Surfaces compile Style, Motion and all three spa
     producers: [],
   };
   const closure = createResolvedClosure([
-    ...videoContractManifests,
+    blobManifest,
+    timelineManifest,
+    temporalManifest,
+    mediaManifest,
+    spatialManifest,
+    compositionManifest,
+    recipeManifest,
     textManifest,
     textFineManifest,
     fixtureManifest,
@@ -308,46 +339,45 @@ test("the self-described Markup Surfaces compile Style, Motion and all three spa
       {
         id: "editorial",
         type: recipeType,
-        value: { kind: "inline", value: {
+        value: ({
 
           path: "text.editorial",
           properties: {
             size: 44,
             "line-height": 1.15,
           },
-        } },
+        }),
         range: element.range,
       },
       {
         id: "mask-editorial",
         type: recipeType,
-        value: { kind: "inline", value: {
+        value: ({
 
           path: "text.mask-editorial",
           properties: {
             size: 100,
             "line-height": 1,
           },
-        } },
+        }),
         range: element.range,
       },
-      { id: "semantic", type: timelineTypes.timeline, value: { kind: "inline", value: semantic }, range: element.range },
-      { id: "whole-window", type: temporalTypes.window, value: { kind: "inline", value: projectProgramWindow({ itemId: "whole-window", semantic,
-        projection: { start: { ref: "timeline.start" }, end: { ref: "timeline.end" } } }) }, range: element.range },
-      { id: "point-window", type: temporalTypes.window, value: { kind: "inline", value: projectProgramWindow({ itemId: "point-window", semantic,
-        projection: { start: { ref: "absolute", at: { unit: "frames", value: 30 } }, end: { ref: "absolute", at: { unit: "frames", value: 60 } } } }) }, range: element.range },
-      { id: "title-point", type: spatialTypes.point, value: { kind: "inline", value: { xPx: 540, yPx: 120 } }, range: element.range },
-      { id: "body-frame", type: spatialTypes.frame, value: { kind: "inline", value: { xPx: 80, yPx: 220, widthPx: 920, heightPx: 520 } }, range: element.range },
-      { id: "arc", type: spatialTypes.path, value: { kind: "inline", value: { commands: [
+      { id: "semantic", type: timelineTypes.timeline, value: (semantic), range: element.range },
+      { id: "whole-window", type: temporalTypes.window, value: (projectProgramWindow({ itemId: "whole-window", semantic,
+        projection: { start: { ref: "timeline.start" }, end: { ref: "timeline.end" } } })), range: element.range },
+      { id: "point-window", type: temporalTypes.window, value: (projectProgramWindow({ itemId: "point-window", semantic,
+        projection: { start: { ref: "absolute", at: { unit: "frames", value: 30 } }, end: { ref: "absolute", at: { unit: "frames", value: 60 } } } })), range: element.range },
+      { id: "title-point", type: spatialTypes.point, value: ({ xPx: 540, yPx: 120 }), range: element.range },
+      { id: "body-frame", type: spatialTypes.frame, value: ({ xPx: 80, yPx: 220, widthPx: 920, heightPx: 520 }), range: element.range },
+      { id: "arc", type: spatialTypes.path, value: ({ commands: [
         { kind: "move", xPx: 120, yPx: 900 },
         { kind: "cubic", control1X: 360, control1Y: 760, control2X: 720, control2Y: 1_040, xPx: 960, yPx: 900 },
-      ] } }, range: element.range },
-      { id: "exact-font", type: mediaTypes.fontArtifact, value: { kind: "inline", value: exactTestFont }, range: element.range },
-      { id: "material", type: mediaTypes.compositableSurface, value: { kind: "inline", value: exactTestSurface }, range: element.range },
-      { id: "copy", type: textTypes.text, value: { kind: "inline", value: sealText("Hello from a Text edge") }, range: element.range },
+      ] }), range: element.range },
+      { id: "exact-font", type: mediaTypes.fontArtifact, value: (exactTestFont), range: element.range },
+      { id: "material", type: mediaTypes.compositableSurface, value: (exactTestSurface), range: element.range },
+      { id: "copy", type: textTypes.text, value: (sealText("Hello from a Text edge")), range: element.range },
     ],
     components: [],
-    fragments: [],
   }) });
   surfaces.registerStructured({ module: textFineModuleRef, declaration: textFineMarkupSurfaces.find((item) => item.name === "style")!, handler: decodeTypographyStyleSurface });
   surfaces.registerStructured({ module: textFineModuleRef, declaration: textFineMarkupSurfaces.find((item) => item.name === "motion")!, handler: decodeTypographyMotionSurface });
@@ -361,9 +391,9 @@ test("the self-described Markup Surfaces compile Style, Motion and all three spa
     registry: surfaces,
     resolveModule: (request) => request.from === "example.text-inputs@1" ? fixtureModule : textFineModuleRef,
   }));
-  const validators = new TypeValidatorRegistry();
-  registerTypeValidatorFacets(validators, spatialComponent.validators ?? []);
-  registerTypeValidatorFacets(validators, textComponent.validators ?? []);
+  const refinements = new RefinementRegistry();
+  registerTypeRefinements(refinements, spatialComponent.refinements ?? []);
+  registerTypeRefinements(refinements, textComponent.refinements ?? []);
   const compiled = await compileSourceClosure({
     entry: resolveSelfDescribedTextSource({
       id: "/project/text.svml",
@@ -411,7 +441,7 @@ test("the self-described Markup Surfaces compile Style, Motion and all three spa
     }),
     closure,
     frontends,
-    admitRecord: createRecordAdmitter(validators),
+    validateRecord: createRecordValidator(refinements),
     resolveSource() { throw new Error("Text fixture has no source imports."); },
   });
   const maskOccurrence = resolveCompiledSourceExport(compiled, "mask-shape.occurrence", textFineTypes.occurrence);
@@ -426,20 +456,21 @@ test("the self-described Markup Surfaces compile Style, Motion and all three spa
   assert.equal(pointVisual.ref.kind, "logical-output");
   assert.equal(pathVisual.ref.kind, "logical-output");
   assert.equal(track.ref.kind, "logical-output");
-  const occurrenceBuild = start(compiled.program, compiled.graph, sealBuildRequest({
-    targets: [flowVisual, pointVisual, pathVisual].map((value) => ({
-      output: value.ref.kind === "logical-output" ? value.ref.id : "",
-    })),
-  }));
+  const occurrenceBuild = buildState(
+    compiled.program,
+    compiled.graph,
+    [flowVisual, pointVisual, pathVisual].map((value) =>
+      value.ref.kind === "logical-output" ? value.ref.id : ""),
+  );
   const occurrenceProducers = occurrenceBuild.plan.steps.map((step) => step.producer.name);
   assert.equal(occurrenceProducers.filter((name) => name === textFineProducers.createOccurrence.name).length, 3);
   assert.equal(occurrenceProducers.filter((name) => name === textFineProducers.renderOccurrence.name).length, 3);
   assert.equal(occurrenceProducers.includes("create-text-fine-set"), false);
   assert.equal(occurrenceProducers.includes("append-text-item"), false);
   assert.equal(occurrenceProducers.includes("finalize-text-fine"), false);
-  const build = start(compiled.program, compiled.graph, sealBuildRequest({
-    targets: [{ output: track.ref.kind === "logical-output" ? track.ref.id : "" }],
-  }));
+  const build = buildState(compiled.program, compiled.graph, [
+    track.ref.kind === "logical-output" ? track.ref.id : "",
+  ]);
   const producers = build.plan.steps.map((step) => step.producer.name);
   assert.equal(producers.filter((name) => name === textFineProducers.bindArea.name).length, 1);
   assert.equal(producers.filter((name) => name === textFineProducers.renderOccurrenceMask.name).length, 1);
@@ -602,21 +633,30 @@ test("a paragraph's source indentation is not part of its words", async () => {
     types: [], capabilities: [], producers: [],
   };
   const closure = createResolvedClosure([
-    ...videoContractManifests, textManifest, textFineManifest, fixtureManifest,
+    blobManifest,
+    timelineManifest,
+    temporalManifest,
+    mediaManifest,
+    spatialManifest,
+    compositionManifest,
+    recipeManifest,
+    textManifest,
+    textFineManifest,
+    fixtureManifest,
   ]);
   const surfaces = new MarkupSurfaceRegistry();
   surfaces.registerStructured({ module: fixtureModule, declaration: fixtureSurface, handler: ({ element }) => ({
     records: [
-      { id: "editorial", type: recipeType, value: { kind: "inline", value: {
-          path: "text.editorial", properties: { size: 44, "line-height": 1.15 } } },
+      { id: "editorial", type: recipeType, value: ({
+          path: "text.editorial", properties: { size: 44, "line-height": 1.15 } }),
         range: element.range },
-      { id: "semantic", type: timelineTypes.timeline, value: { kind: "inline", value: semantic }, range: element.range },
-      { id: "whole-window", type: temporalTypes.window, value: { kind: "inline", value: projectProgramWindow({ itemId: "whole-window", semantic,
-        projection: { start: { ref: "timeline.start" }, end: { ref: "timeline.end" } } }) }, range: element.range },
-      { id: "body-frame", type: spatialTypes.frame, value: { kind: "inline", value: { xPx: 80, yPx: 220, widthPx: 920, heightPx: 520 } }, range: element.range },
-      { id: "exact-font", type: mediaTypes.fontArtifact, value: { kind: "inline", value: exactTestFont }, range: element.range },
+      { id: "semantic", type: timelineTypes.timeline, value: (semantic), range: element.range },
+      { id: "whole-window", type: temporalTypes.window, value: (projectProgramWindow({ itemId: "whole-window", semantic,
+        projection: { start: { ref: "timeline.start" }, end: { ref: "timeline.end" } } })), range: element.range },
+      { id: "body-frame", type: spatialTypes.frame, value: ({ xPx: 80, yPx: 220, widthPx: 920, heightPx: 520 }), range: element.range },
+      { id: "exact-font", type: mediaTypes.fontArtifact, value: (exactTestFont), range: element.range },
     ],
-    components: [], fragments: [],
+    components: [],
   }) });
   surfaces.registerStructured({ module: textFineModuleRef, declaration: textFineMarkupSurfaces.find((item) => item.name === "style")!, handler: decodeTypographyStyleSurface });
   surfaces.registerStructured({ module: textFineModuleRef, declaration: textFineMarkupSurfaces.find((item) => item.name === "flow")!, handler: decodeTypographyFlowSurface });
@@ -625,9 +665,9 @@ test("a paragraph's source indentation is not part of its words", async () => {
     registry: surfaces,
     resolveModule: (request) => request.from === "example.text-inputs@1" ? fixtureModule : textFineModuleRef,
   }));
-  const validators = new TypeValidatorRegistry();
-  registerTypeValidatorFacets(validators, spatialComponent.validators ?? []);
-  registerTypeValidatorFacets(validators, textComponent.validators ?? []);
+  const refinements = new RefinementRegistry();
+  registerTypeRefinements(refinements, spatialComponent.refinements ?? []);
+  registerTypeRefinements(refinements, textComponent.refinements ?? []);
   const compiled = await compileSourceClosure({
     entry: resolveSelfDescribedTextSource({
       id: "/project/text.svml", name: "text.svml",
@@ -648,7 +688,7 @@ test("a paragraph's source indentation is not part of its words", async () => {
         </svml>`,
     }),
     closure, frontends,
-    admitRecord: createRecordAdmitter(validators),
+    validateRecord: createRecordValidator(refinements),
     resolveSource() { throw new Error("Text fixture has no source imports."); },
   });
   const track = resolveCompiledSourceExport(compiled, "body.visual", compositionTypes.visualTrack);

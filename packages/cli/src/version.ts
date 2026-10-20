@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 import type { CliIo } from "./output.js";
+import { parseCliGlobalOptions } from "./global-options.js";
 
 export type VersionEnvironment = {
   readonly packageRoot: string;
@@ -42,17 +43,19 @@ export async function runVersionCli(
   io: CliIo,
   environment: VersionEnvironment,
 ): Promise<void> {
+  const global = parseCliGlobalOptions(argv.slice(1));
+  if (global.issue !== undefined) throw new Error(global.issue);
+  const unsupportedGlobal = global.seenOptions.find(option => option === "--jsonl");
+  if (unsupportedGlobal !== undefined) throw new Error(`${unsupportedGlobal} does not apply to version`);
   let check = false;
-  let json = false;
   let registry = "https://registry.npmjs.org/";
   let selectedRegistry = false;
-  for (let i = 1; i < argv.length; i++) {
-    const arg = argv[i];
+  for (let i = 0; i < global.remaining.length; i++) {
+    const arg = global.remaining[i];
     if (arg === "--check") check = true;
-    else if (arg === "--json") json = true;
     else if (arg === "--registry") {
       selectedRegistry = true;
-      const value = argv[++i];
+      const value = global.remaining[++i];
       if (value === undefined || value.startsWith("--")) throw new Error("--registry requires a URL");
       const url = new URL(value);
       if (!["https:", "http:"].includes(url.protocol) || url.username || url.password || url.search || url.hash) {
@@ -60,7 +63,7 @@ export async function runVersionCli(
       }
       registry = `${url.href.replace(/\/+$/u, "")}/`;
     } else if (arg === "--help") { writeVersionHelp(io); return; }
-    else if (arg !== "--no-color" && arg !== "--debug") throw new Error(`Unknown version option: ${arg}`);
+    else throw new Error(`Unknown version option: ${arg}`);
   }
   if (selectedRegistry && !check) throw new Error("--registry selects the source for --check; add --check to query it");
   const manifest = JSON.parse(await readFile(resolve(environment.packageRoot, "package.json"), "utf8")) as {
@@ -95,7 +98,7 @@ export async function runVersionCli(
     ...(releases === undefined ? {} : { releases }),
     ...(latest === undefined ? {} : { latest }),
   };
-  if (json) { io.write(`${JSON.stringify(report, null, 2)}\n`); return; }
+  if (global.presentation.json) { io.write(`${JSON.stringify(report, null, 2)}\n`); return; }
   io.write(`${manifest.name} ${manifest.version}\nDistribution: ${report.distribution}\n`
     + (report.launcher === undefined ? "" : `Launcher: ${report.launcher}\n`));
   if (latest !== undefined) {

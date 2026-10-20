@@ -1,3 +1,4 @@
+import { sameType } from "@hypit/hypit/protocol";
 import { blobTypes } from "@hypit/hypit/blob";
 import type { CanonicalValue } from "@hypit/hypit/protocol";
 import type { MarkupAttributeValue, StructuredElement, StructuredSurfaceHandler, SurfaceResolvedReference } from "@hypit/hypit/markup";
@@ -8,9 +9,6 @@ import { sealImageComposeLayerSpec, sealImageComposeOptions } from "./compose-pr
 import { imageComposeTypes } from "./refs.js";
 
 function localName(name: string): string { return name.slice(name.lastIndexOf(":") + 1); }
-function sameType(left: SurfaceResolvedReference["type"], right: SurfaceResolvedReference["type"]): boolean {
-  return left.module.name === right.module.name && left.module.version === right.module.version && left.name === right.name;
-}
 function exact(element: StructuredElement, allowed: readonly string[], required: readonly string[] = []): void {
   const unknown = Object.keys(element.attributes).filter((name) => !allowed.includes(name));
   if (unknown.length > 0) throw new Error(`${element.name} does not accept ${unknown[0]}.`);
@@ -43,9 +41,9 @@ export const decodeImageComposeSurface: StructuredSurfaceHandler = ({ element, r
   const optionsId = `${id}.__options`;
   const records = [{
     id: optionsId, type: imageComposeTypes.options,
-    value: { kind: "inline" as const, value: sealImageComposeOptions({
+    value: (sealImageComposeOptions({
       background: text(element, "background", "#00000000"),
-    }) as unknown as CanonicalValue }, range: element.range,
+    }) as unknown as CanonicalValue), range: element.range,
   }];
   const inputs: Record<string, typeof canvas.ref> = { canvas: canvas.ref, options: { kind: "record", id: optionsId } };
   const layers: Parameters<typeof createImageComposeFragment>[0][number][] = [];
@@ -63,12 +61,12 @@ export const decodeImageComposeSurface: StructuredSurfaceHandler = ({ element, r
     const specId = `${id}.layer.${suffix}.spec`;
     records.push({
       id: specId, type: imageComposeTypes.layerSpec,
-      value: { kind: "inline", value: sealImageComposeLayerSpec({
+      value: (sealImageComposeLayerSpec({
 
         fit: text(child, "fit", "contain") as "contain",
         interpolation: text(child, "interpolation", "lanczos") as "lanczos",
         opacity: number(child, "opacity", 1),
-      }) as unknown as CanonicalValue }, range: child.range,
+      }) as unknown as CanonicalValue), range: child.range,
     });
     const sourceName = `layer-${suffix}-source`; const frameName = `layer-${suffix}-frame`; const specName = `layer-${suffix}-spec`;
     inputs[sourceName] = source.ref; inputs[frameName] = frame.ref; inputs[specName] = { kind: "record", id: specId };
@@ -77,7 +75,6 @@ export const decodeImageComposeSurface: StructuredSurfaceHandler = ({ element, r
   const fragment = createImageComposeFragment(layers);
   return {
     records,
-    components: [{ id, fragment: fragment.id, inputs, outputs: { image: `${id}.image` }, range: element.range }],
-    fragments: [fragment],
+    components: [{ id, fragment, inputs, outputs: { image: `${id}.image` }, range: element.range }],
   };
 };

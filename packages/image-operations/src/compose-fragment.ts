@@ -18,7 +18,7 @@ export function createImageComposeFragment(layers: readonly ImageComposeFragment
   if (layers.length === 0) throw new Error("Image Compose Fragment requires at least one Layer.");
   const operations: FragmentOperation[] = [{
     id: "image:layers:empty", producer: imageComposeProducers.createLayers, inputs: {},
-    result: { kind: "output", name: "layers" },
+    result: { kind: "output" as const, name: "layers" },
   }];
   let previous = "image:layers:empty";
   layers.forEach((layer, index) => {
@@ -29,14 +29,14 @@ export function createImageComposeFragment(layers: readonly ImageComposeFragment
         layers: operation(previous), source: input(layer.sourceName),
         frame: input(layer.frameName), spec: input(layer.specName),
       },
-      result: { kind: "output", name: "layers" },
+      result: { kind: "output" as const, name: "layers" },
     });
     previous = id;
   });
   operations.push({
     id: "image:compose", producer: imageComposeProducers.request,
     inputs: { canvas: input("canvas"), options: input("options"), layers: operation(previous) },
-    result: { kind: "need", name: "image" },
+    result: { kind: "need" as const, name: "image" },
   });
   return sealGraphFragment({
     inputs: [

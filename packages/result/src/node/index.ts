@@ -8,7 +8,7 @@ export {
   describeBuildResultOutput,
   locateBuildResultOutput,
   locateRepositoryBuildResultOutput,
-  normalizeBuildResultForwards,
+  normalizePublicationPlan,
   readBuildResult,
   resolveBuildResultOutput,
 } from "./store.js";

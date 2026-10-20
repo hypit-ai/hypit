@@ -32,10 +32,11 @@ const page = { kind: "page" as const, url: "https://prices.example/models" };
 /** A host whose Profile serves everything through one paid Endpoint, answering each Need in kind. */
 function host(seen: Need[]): Awaited<ReturnType<TranscribeEnvironment["openHost"]>>["host"] {
   return {
-    providers: async (requests) => requests.map((request) => ({
-      request: request.request,
-      capability: request.capability,
+    endpoints: async (queries) => queries.map((query) => ({
+      need: query.need,
+      capability: query.capability,
       status: "resolved" as const,
+      support: "supported" as const,
       endpoint: "paid.default",
       use: "@hypit/provider-example",
       pricing: page,
@@ -46,13 +47,13 @@ function host(seen: Need[]): Awaited<ReturnType<TranscribeEnvironment["openHost"
       seen.push(need);
       if (need.capability.name === "whisperx-alignment") {
         const request = need.constraints as unknown as WhisperXAlignmentRequest;
-        return { value: { kind: "inline" as const, value: canonicalize(sealAlignedTranscriptEvidence({
+        return { value: (canonicalize(sealAlignedTranscriptEvidence({
           domainId: request.domainId,
           sampleFrames: request.sampleFrames,
           passages: interpretWhisperXTranscript({
             segments: [{ start: 0, end: 1.5, words: [{ text: "hello", start: 0.1, end: 0.5 }, { text: "world", start: 0.9, end: 1.4 }] }],
           }, request.sampleFrames),
-        })) } };
+        }))) };
       }
       throw new Error(`Unexpected capability ${need.capability.name}`);
     },
@@ -99,10 +100,11 @@ test("a Profile that does not serve the capability stops before anything is spen
     const unserved: TranscribeEnvironment = {
       cwd: root,
       openHost: async () => ({ profile: join(root, "hypit.runtime.json"), host: {
-        providers: async (requests) => requests.map((request) => ({
-          request: request.request,
-          capability: request.capability,
+        endpoints: async (queries) => queries.map((query) => ({
+          need: query.need,
+          capability: query.capability,
           status: "unresolved" as const,
+          support: "not-evaluated" as const,
         })),
         invoke: async () => { invoked = true; throw new Error("must not be reached"); },
       } }),
@@ -146,12 +148,12 @@ test("Chinese transcription explicitly sends zh and retains individual character
       invoke: async (need) => {
         const request = need.constraints as unknown as WhisperXAlignmentRequest;
         assert.equal(request.language, "zh");
-        return { value: { kind: "inline", value: canonicalize({
+        return { value: (canonicalize({
           domainId: request.domainId,
           sampleFrames: request.sampleFrames,
           passages: interpretWhisperXTranscript({
           segments: [{ words: [{ word: "你", start: 0.1, end: 0.24 }, { word: "好！", start: 0.5, end: 1.1 }] }],
-        }, request.sampleFrames) }) } };
+        }, request.sampleFrames) })) };
       },
     } }) };
     await runTranscribeCli(["transcribe", "speech.wav", "--language", "zh", "--to", "speech.json"], capture().io, env);
@@ -169,15 +171,15 @@ test("transcription explains ambiguous selection and preserves unsupported reque
   try {
     await writeFile(join(root, "speech.wav"), wav(16_000));
     for (const selection of [
-      { status: "ambiguous" as const, endpoints: ["local.words", "hosted.words"] },
-      { status: "unsupported" as const, binding: "hosted.words",
+      { status: "ambiguous" as const, support: "not-evaluated" as const, endpoints: ["local.words", "hosted.words"] },
+      { status: "resolved" as const, support: "unsupported" as const, endpoint: "hosted.words", binding: "hosted.words",
         rejections: [{ endpoint: "hosted.words", message: "This deployment does not support zh alignment" }] },
     ]) {
       let invoked = false;
       const env: TranscribeEnvironment = { cwd: root, openHost: async () => ({
         profile: join(root, "runtime.json"), host: {
-          providers: async (requests) => requests.map((request) => ({
-            request: request.request, capability: request.capability, ...selection,
+          endpoints: async (queries) => queries.map((query) => ({
+            need: query.need, capability: query.capability, ...selection,
           })),
           invoke: async () => { invoked = true; throw new Error("must not invoke rejected selection"); },
         },

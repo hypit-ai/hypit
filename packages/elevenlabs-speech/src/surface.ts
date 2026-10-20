@@ -1,18 +1,15 @@
+import { sameType } from "@hypit/hypit/protocol";
 import { blobTypes } from "@hypit/hypit/blob";
-import { generationPort, sealGenerationMediaBinding } from "@hypit/generation";
-import type { GenerationMediaPort } from "@hypit/generation";
-import { exactModelMediaInputNames, exactModelTextInputName } from "@hypit/generation/model";
-import type { ExactModelEndpoint, ExactModelMediaInput, ExactModelTextInput } from "@hypit/generation/model";
+import { modelField, sealModelArtifactBinding } from "@hypit/generation/model-fields";
+import type { ModelArtifactField } from "@hypit/generation/model-fields";
+import { modelArtifactInputNames, modelTextInputName } from "@hypit/generation/model-fields";
+import type { FieldModelOperation, ModelArtifactInput, ModelTextInput } from "@hypit/generation/model-fields";
 import { textTypes, verifyText } from "@hypit/hypit/text";
 import type { CanonicalValue } from "@hypit/hypit/protocol";
 import type { MarkupAttributeValue, StructuredElement, StructuredSurfaceHandler, SurfaceResolvedReference } from "@hypit/hypit/markup";
 
 import { createElevenLabsSpeechAudioFragment } from "./fragment.js";
 import { elevenLabsSpeechEndpoints, sealElevenLabsSpeechRequestDraft } from "./index.js";
-
-function sameType(left: SurfaceResolvedReference["type"], right: SurfaceResolvedReference["type"]): boolean {
-  return left.module.name === right.module.name && left.module.version === right.module.version && left.name === right.name;
-}
 
 function attributes(element: StructuredElement, required: readonly string[]): void {
   const allowed = new Set(required);
@@ -53,8 +50,7 @@ function speechText(reference: SurfaceResolvedReference, subject: string): Surfa
   if (!sameType(reference.type, textTypes.text)) throw new Error(`${subject} must reference Text`);
   const value = reference.record?.value;
   if (value !== undefined) {
-    if (value.kind !== "inline") throw new Error(`${subject} has an invalid authored Text value`);
-    verifyText(value.value);
+    verifyText(value);
   }
   return reference;
 }
@@ -80,43 +76,40 @@ function body(element: StructuredElement, required: boolean): string | undefined
 
 function output(
   element: StructuredElement,
-  endpoint: ExactModelEndpoint,
+  endpoint: FieldModelOperation,
   draft: ReturnType<typeof sealElevenLabsSpeechRequestDraft>,
   outputName: "reference" | "audio",
-  text: readonly { readonly input: ExactModelTextInput; readonly source: SurfaceResolvedReference }[],
-  media: readonly { readonly input: ExactModelMediaInput; readonly source: SurfaceResolvedReference }[] = [],
+  text: readonly { readonly input: ModelTextInput; readonly source: SurfaceResolvedReference }[],
+  media: readonly { readonly input: ModelArtifactInput; readonly source: SurfaceResolvedReference }[] = [],
 ) {
   const id = stringAttribute(element, "id");
   const draftId = `${id}.draft`;
   const records: Array<{
     readonly id: string;
     readonly type: SurfaceResolvedReference["type"];
-    readonly value: { readonly kind: "inline"; readonly value: CanonicalValue };
+    readonly value: CanonicalValue;
     readonly range: StructuredElement["range"];
   }> = [{
     id: draftId,
     type: endpoint.draftType,
-    value: { kind: "inline", value: draft as unknown as CanonicalValue },
+    value: (draft as unknown as CanonicalValue),
     range: element.range,
   }];
   const inputs: Record<string, SurfaceResolvedReference["ref"] | { readonly kind: "record"; readonly id: string }> = {
     draft: { kind: "record", id: draftId },
   };
-  for (const item of text) inputs[exactModelTextInputName(item.input.name)] = item.source.ref;
+  for (const item of text) inputs[modelTextInputName(item.input.name)] = item.source.ref;
   for (const item of media) {
     const binding = endpoint.mediaBindings[item.input.port];
     if (binding === undefined) throw new Error(`${endpoint.ports.model} has no media port ${item.input.port}`);
-    const port = generationPort(endpoint.ports, item.input.port);
+    const port = modelField(endpoint.ports, item.input.port);
     if (port.value.kind !== "media") throw new Error(`${endpoint.ports.model} port ${item.input.port} is not media`);
-    const names = exactModelMediaInputNames(item.input.name);
+    const names = modelArtifactInputNames(item.input.name);
     const bindingId = `${id}.${item.input.name}.binding`;
     records.push({
       id: bindingId,
       type: binding.type,
-      value: {
-        kind: "inline",
-        value: sealGenerationMediaBinding(port as GenerationMediaPort, { role: "audio" }) as unknown as CanonicalValue,
-      },
+      value: (sealModelArtifactBinding(port as ModelArtifactField, { role: "audio" }) as unknown as CanonicalValue),
       range: element.range,
     });
     inputs[names.binding] = { kind: "record", id: bindingId };
@@ -131,12 +124,11 @@ function output(
     records,
     components: [{
       id,
-      fragment: fragment.id,
+      fragment,
       inputs,
       outputs: { audio: `${id}.${outputName}` },
       range: element.range,
     }],
-    fragments: [fragment],
   };
 }
 

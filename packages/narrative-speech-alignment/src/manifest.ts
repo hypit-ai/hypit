@@ -17,8 +17,7 @@ export const speechAlignmentManifest: ModuleManifest = {
     inputs: [{ name: "narrative", type: narrativeTypes.narrative }, { name: "segment", type: narrativeTypes.segmentRef },
       { name: "domain", type: temporalTypes.localDomain },
       { name: "evidence", type: speechEvidenceTypes.alignedTranscript }],
-    outputs: [{ name: "alignment", type: narrativeTemporalTypes.narrativeAlignment }],
-    needs: [],
+    result: { kind: "output" as const, name: "alignment", type: narrativeTemporalTypes.narrativeAlignment },
   }],
 };
 export const speechAlignmentDependency = { module: speechAlignmentModuleRef } as const;

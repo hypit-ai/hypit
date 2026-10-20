@@ -1,5 +1,4 @@
 import { randomUUID } from "node:crypto";
-import type { BuildState } from "@hypit/hypit/protocol";
 import type {
   ResourceStore,
   RuntimeBuildExecution,
@@ -47,12 +46,12 @@ class CapacityExecutor implements RuntimeCommandExecutor {
     this.#owner = owner;
   }
 
-  prepare(state: BuildState): RuntimePreparation {
-    return this.#delegate.prepare(state);
+  prepare(execution: RuntimeBuildExecution): RuntimePreparation {
+    return this.#delegate.prepare(execution);
   }
 
-  prepareExecution(execution: RuntimeBuildExecution): RuntimePreparation {
-    return this.#delegate.prepareExecution?.(execution) ?? this.#delegate.prepare(execution.view());
+  async completeOperation(operation: string): Promise<void> {
+    await this.#delegate.completeOperation?.(operation);
   }
 
   async #assertRunning(build: string): Promise<void> {
@@ -63,10 +62,9 @@ class CapacityExecutor implements RuntimeCommandExecutor {
   }
 
   async #executeOnce(
-    state: BuildState,
+    execution: RuntimeBuildExecution,
     descriptor: RuntimeRunnableCommand,
     context: { readonly build: string },
-    execution?: RuntimeBuildExecution,
   ): Promise<RuntimeExecutionResult> {
     const store = this.#options.stores.executions;
     const recordExecution = this.#options.executionLogs === undefined ? {} : {
@@ -74,9 +72,7 @@ class CapacityExecutor implements RuntimeCommandExecutor {
         this.#options.executionLogs!.record(context.build, descriptor.command.id, event),
     };
     const execute = (executionContext: import("@hypit/hypit/runtime").RuntimeExecutionContext) =>
-      execution !== undefined && this.#delegate.executeExecutionCommand !== undefined
-        ? this.#delegate.executeExecutionCommand(execution, descriptor, executionContext)
-        : this.#delegate.executeCommand(state, descriptor, executionContext);
+      this.#delegate.executeCommand(execution, descriptor, executionContext);
     if (descriptor.capacityMode === "asynchronous") {
       return await execute({
         ...context, ...recordExecution, releaseOperationCapacity: () => this.#options.stores.execution.releaseCapacity(context.build, descriptor.command.id),
@@ -120,23 +116,24 @@ class CapacityExecutor implements RuntimeCommandExecutor {
   async #releaseAfter(result: RuntimeExecutionResult, build: string, command: string): Promise<boolean> {
     if (result.status !== "pending") return true;
     const [operation] = await this.#options.stores.operations.list({ build, command });
-    return operation?.remoteEnded === true || operation?.submission === "queued";
+    return operation === undefined || operation.status === "queued" || operation.status === "collecting"
+      || operation.status === "received" || operation.status === "completed"
+      || operation.status === "failed" || operation.status === "cancelled";
   }
 
   async #execute(
-    state: BuildState,
+    execution: RuntimeBuildExecution,
     descriptor: RuntimeRunnableCommand,
     context: { readonly build: string },
-    execution?: RuntimeBuildExecution,
   ): Promise<RuntimeExecutionResult> {
     const resources = descriptor.resources;
     await this.#assertRunning(context.build);
     if (descriptor.capacityMode === "asynchronous") {
       const [operation] = await this.#options.stores.operations.list({ build: context.build, command: descriptor.command.id });
-      if (operation?.remoteEnded) return await this.#executeOnce(state, descriptor, context, execution);
+      if (operation?.status === "collecting") return await this.#executeOnce(execution, descriptor, context);
     }
     if (resources.length === 0) {
-      return await this.#executeOnce(state, descriptor, context, execution);
+      return await this.#executeOnce(execution, descriptor, context);
     }
     // acquireCapacity also returns the reservation already held by this command.
     const acquired = await this.#options.stores.execution.acquireCapacity({
@@ -153,7 +150,7 @@ class CapacityExecutor implements RuntimeCommandExecutor {
       };
     }
     try {
-      const result = await this.#executeOnce(state, descriptor, context, execution);
+      const result = await this.#executeOnce(execution, descriptor, context);
       if (await this.#releaseAfter(result, context.build, descriptor.command.id)) {
         await this.#options.stores.execution.releaseCapacity(
           acquired.reservation.build,
@@ -163,7 +160,7 @@ class CapacityExecutor implements RuntimeCommandExecutor {
       return result;
     } catch (error) {
       const operations = await this.#options.stores.operations.list({ build: context.build, command: descriptor.command.id });
-      if (!operations.some((operation) => operation.status === "pending")) {
+      if (!operations.some((operation) => operation.status === "submitting" || operation.status === "running")) {
         await this.#options.stores.execution.releaseCapacity(context.build, descriptor.command.id);
       }
       throw error;
@@ -171,27 +168,18 @@ class CapacityExecutor implements RuntimeCommandExecutor {
   }
 
   async executeCommand(
-    state: BuildState,
-    descriptor: RuntimeRunnableCommand,
-    context: { readonly build: string },
-  ): Promise<RuntimeExecutionResult> {
-    return await this.#execute(state, descriptor, context);
-  }
-
-  async executeExecutionCommand(
     execution: RuntimeBuildExecution,
     descriptor: RuntimeRunnableCommand,
     context: { readonly build: string },
   ): Promise<RuntimeExecutionResult> {
-    return await this.#execute(execution.view(), descriptor, context, execution);
+    return await this.#execute(execution, descriptor, context);
   }
 
   async cancelOperation(
-    state: BuildState,
     operation: import("@hypit/hypit/runtime").OperationSnapshot,
   ) {
     assert(this.#delegate.cancelOperation !== undefined, "selected executor cannot cancel Operations");
-    return await this.#delegate.cancelOperation(state, operation);
+    return await this.#delegate.cancelOperation(operation);
   }
 }
 
@@ -228,25 +216,29 @@ class DurableLocalWorker {
 
   async #finishResult(execution: BuildExecutionSnapshot, outcome: import("./execution.js").BuildOutcome, reason?: string): Promise<WorkerTurnResult> {
     await this.#options.stores.execution.releaseBuildCapacity(execution.build);
-    const decided = await this.#options.stores.execution.decide(execution.build, this.#owner, outcome, reason);
+    const decision: import("./execution.js").BuildExecutionDecision = outcome === "complete"
+      ? { outcome: "complete" }
+      : { outcome, reason: reason ?? (outcome === "failed" ? "Build failed" : "Build cancelled") };
+    const decided = await this.#options.stores.execution.decide(execution.build, this.#owner, decision);
     return await this.#options.resultWriter.completeResult(decided);
   }
 
   async #finishStopped(execution: BuildExecutionSnapshot): Promise<WorkerTurnResult> {
     assert(execution.stop !== undefined, `Build ${execution.build} has no stop request`);
     const operations = await this.#options.stores.operations.list({ build: execution.build });
-    const received = operations.filter((operation) => operation.status === "pending" && operation.completion !== undefined);
+    const received = operations.filter((operation) => operation.status === "received");
     if (received.length > 0 || execution.stop.cause === "user-cancelled") {
       const snapshot = await this.#readBuild(execution.build);
       assert(snapshot !== undefined, `Build ${execution.build} has no execution state`);
-      const machine = BuildMachine.fromMaterialized(snapshot.definition, snapshot.state);
+      const machine = new BuildMachine(snapshot.definition, snapshot.facts);
       for (const operation of received) {
         let event: import("@hypit/hypit/protocol").CommandResult | undefined;
         try {
-          event = await this.#executor.acceptOperation?.(machine.view(), operation);
+          event = await this.#executor.acceptOperation?.(machine, operation);
         } catch (error) {
           await this.#options.stores.operations.update(operation.id, {
             status: "failed", failure: { code: "INVALID_ENDPOINT_RESULT", message: error instanceof Error ? error.message : String(error) },
+            endedAt: Date.now(),
           });
           continue;
         }
@@ -255,16 +247,18 @@ class DurableLocalWorker {
         if (fact !== undefined) {
           await this.#options.stores.builds.append(execution.build, fact);
           machine.commit();
+          await this.#executor.completeOperation?.(operation.id);
         }
       }
       if (execution.stop.cause === "user-cancelled") {
         for (const operation of await this.#options.stores.operations.list({ build: execution.build })) {
-          if (operation.status === "pending") {
-            const cancelled = await this.#executor.cancelOperation?.(machine.view(), operation);
+          if (operation.status === "queued" || operation.status === "submitting"
+            || operation.status === "running" || operation.status === "collecting") {
+            const cancelled = await this.#executor.cancelOperation?.(operation);
             if (cancelled !== undefined) await this.#options.executionLogs?.record(operation.build, operation.command, {
               endpoint: operation.endpoint, kind: "diagnostic", level: "info",
-              message: `Cancellation: ${cancelled.cancellation?.outcome ?? "unsupported"}${
-                cancelled.cancellation?.message === undefined ? "" : `; ${cancelled.cancellation.message}`}`,
+              message: `Cancellation: ${cancelled.status === "cancelled" ? cancelled.cancellation.outcome : "unsupported"}${
+                cancelled.status !== "cancelled" || cancelled.cancellation.message === undefined ? "" : `; ${cancelled.cancellation.message}`}`,
             });
           }
         }
@@ -304,9 +298,10 @@ class DurableLocalWorker {
       ...deferred.flatMap((item) => item.wakeAt === undefined ? [] : [item.wakeAt]),
     ]);
     const operations = await this.#options.stores.operations.list({ build: execution.build });
-    const waiting = operations.filter((item) => item.status === "pending" && item.request !== undefined && item.submission !== "queued");
+    const waiting = operations.filter((item) => item.status === "running" || item.status === "collecting");
     const commands = new Set(waiting.map((item) => item.command));
-    const onlyOperations = this.#executor.prepare(result.state).runnable.every((item) => commands.has(item.command.id));
+    const machine = new BuildMachine(result.definition, result.facts);
+    const onlyOperations = this.#executor.prepare(machine).runnable.every((item) => commands.has(item.command.id));
     const released = await this.#options.stores.execution.releaseTurn(
       execution.build,
       this.#owner,
@@ -348,7 +343,7 @@ class DurableLocalWorker {
                   this.#options.executionLogs!.record(operation.build, operation.command, event),
               }),
             });
-            if (result.remoteEnded || result.status !== "pending") {
+            if (result.status !== "submitting" && result.status !== "running") {
               await this.#options.stores.execution.releaseCapacity(execution.build, result.command);
             }
             return result;
@@ -362,8 +357,11 @@ class DurableLocalWorker {
             finished.push(await this.#stopFailed(execution, failed.failure!.message));
             continue;
           }
-          if (advanced.every((item) => item.status === "pending" && item.completion === undefined)) {
-            const wake = Math.min(...advanced.flatMap((item) => item.wakeAt === undefined ? [] : [item.wakeAt]));
+          if (advanced.every((item) => item.status === "queued" || item.status === "submitting"
+            || item.status === "running" || item.status === "collecting")) {
+            const wake = Math.min(...advanced.flatMap((item) =>
+              (item.status === "queued" || item.status === "running" || item.status === "collecting")
+                && item.wakeAt !== undefined ? [item.wakeAt] : []));
             finished.push(await this.#options.stores.execution.releaseTurn(execution.build, this.#owner,
               Number.isFinite(wake) ? wake : undefined, execution.operationWait));
             continue;
@@ -385,13 +383,14 @@ class DurableLocalWorker {
       onStateChange: async (build, state) => {
         const item = runnable.find((candidate) => candidate.execution.build === build);
         assert(item !== undefined, `Result update refers to unknown Build ${build}`);
-        await this.#options.resultWriter.sync(item.execution, state).catch(() => undefined);
+        await this.#options.resultWriter.sync(item.execution, state.records).catch(() => undefined);
       },
     });
     try {
       const results = await scheduler.run(runnable.map(({ execution, snapshot }) => ({
         id: execution.build,
-        snapshot,
+        definition: snapshot.definition,
+        facts: snapshot.facts,
       })));
       const byBuild = new Map(runnable.map((item) => [item.execution.build, item]));
       for (const result of results) {

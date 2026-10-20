@@ -19,7 +19,7 @@ import type {
 import { parseRecipe } from "@hypit/hypit/recipe";
 import { parseOpeningTag } from "@hypit/hypit/markup";
 import { maskSourceHeader, parseSourceHeader } from "@hypit/hypit/source/text";
-import { parameterControlForSchema, parameterRecordSchema } from "./parameter-values.js";
+import { parameterControlForPresentation, parameterControlForSchema, parameterRecordSchema } from "./parameter-values.js";
 import { sameType } from "@hypit/hypit/protocol";
 import type { CanonicalValue } from "@hypit/hypit/protocol";
 
@@ -482,7 +482,9 @@ export function inspectorFieldsForBindings(
   const fields = declarations.flatMap((declaration): readonly StudioInspectorField[] => {
     const binding = byBinding.get(declaration.binding);
     if (binding === undefined) return [];
-    const control = declaration.control ?? (binding.attributes ? "record" : parameterControlForSchema(binding.schema));
+    const control = declaration.control ?? (binding.attributes ? "record"
+      : parameterControlForPresentation(binding.schema, declaration.valuePresentation)
+        ?? parameterControlForSchema(binding.schema));
     if (control === undefined) {
       throw new Error(`Studio Inspector binding ${declaration.binding} has neither a control nor a supported public schema.`);
     }

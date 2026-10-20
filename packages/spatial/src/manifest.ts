@@ -325,10 +325,10 @@ export const spatialManifest: ModuleManifest = {
   ],
   capabilities: [],
   producers: [
-    { name: spatialProducers.frameEdges.name, inputs: [{ name: "parent", type: spatialTypes.frame }, { name: "program", type: spatialTypes.frameEdgesProgram }], outputs: [{ name: "frame", type: spatialTypes.frame }], needs: [] },
-    { name: spatialProducers.anchoredFrame.name, inputs: [{ name: "parent", type: spatialTypes.frame }, { name: "program", type: spatialTypes.anchoredFrameProgram }], outputs: [{ name: "frame", type: spatialTypes.frame }], needs: [] },
-    { name: spatialProducers.aspectFrame.name, inputs: [{ name: "parent", type: spatialTypes.frame }, { name: "extent", type: spatialTypes.extent }, { name: "program", type: spatialTypes.aspectFrameProgram }], outputs: [{ name: "frame", type: spatialTypes.frame }], needs: [] },
-    { name: spatialProducers.resolveContentFit.name, inputs: [{ name: "frame", type: spatialTypes.frame }, { name: "extent", type: spatialTypes.extent }, { name: "fit", type: spatialTypes.fit }], outputs: [{ name: "mapping", type: spatialTypes.map2D }], needs: [] },
+    { name: spatialProducers.frameEdges.name, inputs: [{ name: "parent", type: spatialTypes.frame }, { name: "program", type: spatialTypes.frameEdgesProgram }], result: { kind: "output" as const, name: "frame", type: spatialTypes.frame } },
+    { name: spatialProducers.anchoredFrame.name, inputs: [{ name: "parent", type: spatialTypes.frame }, { name: "program", type: spatialTypes.anchoredFrameProgram }], result: { kind: "output" as const, name: "frame", type: spatialTypes.frame } },
+    { name: spatialProducers.aspectFrame.name, inputs: [{ name: "parent", type: spatialTypes.frame }, { name: "extent", type: spatialTypes.extent }, { name: "program", type: spatialTypes.aspectFrameProgram }], result: { kind: "output" as const, name: "frame", type: spatialTypes.frame } },
+    { name: spatialProducers.resolveContentFit.name, inputs: [{ name: "frame", type: spatialTypes.frame }, { name: "extent", type: spatialTypes.extent }, { name: "fit", type: spatialTypes.fit }], result: { kind: "output" as const, name: "mapping", type: spatialTypes.map2D } },
   ],
 };
 export const spatialDependency = { module: spatialModuleRef } as const;

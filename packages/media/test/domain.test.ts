@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { mediaLocalTemporalDomain } from "../src/index.js";
+import { mediaLocalTemporalDomain, verifySynchronizedMedia } from "../src/index.js";
 import type { SynchronizedMedia } from "../src/index.js";
 import { fixtureResource } from "../../../test/fixture-resource.js";
 
@@ -19,4 +19,13 @@ test("normalized media publishes a factual local temporal domain without program
   assert.deepEqual(domain, { id: "opening-local", ...media.frameDomain });
   assert.equal("timelineId" in domain, false);
   assert.equal("media" in domain, false);
+});
+
+test("SynchronizedMedia validation reports malformed nested facts at their boundary", () => {
+  assert.throws(() => verifySynchronizedMedia({ frameDomain: null, visual: {} }),
+    /SynchronizedMedia\.frameDomain must be an object/u);
+  assert.throws(() => verifySynchronizedMedia({ frameDomain: media.frameDomain, visual: 1 }),
+    /SynchronizedMedia\.visual must be an object/u);
+  assert.throws(() => verifySynchronizedMedia({ frameDomain: media.frameDomain, audio: "wav" }),
+    /SynchronizedMedia\.audio must be an object/u);
 });

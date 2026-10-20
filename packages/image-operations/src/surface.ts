@@ -1,3 +1,4 @@
+import { sameType } from "@hypit/hypit/protocol";
 import { blobTypes } from "@hypit/hypit/blob";
 import type { StructuredElement, StructuredSurfaceHandler, SurfaceResolvedReference, MarkupAttributeValue } from "@hypit/hypit/markup";
 import type { CanonicalValue } from "@hypit/hypit/protocol";
@@ -143,10 +144,6 @@ function operation(element: StructuredElement): ImageTransformOperation {
   }
 }
 
-function sameType(left: SurfaceResolvedReference["type"], right: SurfaceResolvedReference["type"]): boolean {
-  return left.module.name === right.module.name && left.module.version === right.module.version && left.name === right.name;
-}
-
 function ref(
   element: StructuredElement,
   name: string,
@@ -183,11 +180,10 @@ export const decodeImageTransformProgramSurface: StructuredSurfaceHandler = ({ e
     records: [{
       id,
       type: imageTransformTypes.program,
-      value: { kind: "inline", value: program as unknown as CanonicalValue },
+      value: (program as unknown as CanonicalValue),
       range: element.range,
     }],
     components: [],
-    fragments: [],
   };
 };
 
@@ -201,11 +197,10 @@ export const decodeImageTransformSurface: StructuredSurfaceHandler = ({ element,
     records: [],
     components: [{
       id,
-      fragment: imageTransformFragment.id,
+      fragment: imageTransformFragment,
       inputs: { source: source.ref, program: program.ref },
       outputs: { image: `${id}.image` },
       range: element.range,
     }],
-    fragments: [imageTransformFragment],
   };
 };

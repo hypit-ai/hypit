@@ -13,9 +13,11 @@ import {
 import {
   isStreamingResourceStore,
 } from "@hypit/hypit/runtime";
-import { assertOrderedBuildId } from "@hypit/hypit/protocol";
-import type { BlobRef, BuildDefinition } from "@hypit/hypit/protocol";
-import { admissionPackagesFromFacets, registerTypeValidatorFacets, TypeValidatorRegistry } from "@hypit/hypit/admission";
+import { installEndpoint } from "@hypit/hypit/endpoint";
+import { assertOrderedBuildId, parseCapabilityKey, valueBlobRefs } from "@hypit/hypit/protocol";
+import type { BuildDefinition } from "@hypit/hypit/protocol";
+import { refinementPackagesFromFacets, registerTypeRefinements, RefinementRegistry } from "@hypit/hypit/refinement";
+import { materializeBuild } from "@hypit/hypit/kernel";
 
 import { createLocalRuntimeControl } from "./control.js";
 import { createLocalCredentialControl } from "./credentials.js";
@@ -48,33 +50,20 @@ function projectPath(root: string, path: string): string {
 
 function requiredInitialResources(request: LocalBuildRequest): ReadonlySet<string> {
   const definition = request.definition;
-  const forwarded = new Set(request.result.forwards?.map((item) => item.output) ?? []);
-  const publicOwnedRecords = request.catalog.publishedOutputs.flatMap((published) => {
-    if (forwarded.has(published.ref.id)) return [];
-    const binding = definition.plan.outputBindings.find((item) => item.output === published.ref.id);
-    return binding === undefined ? [] : [binding.record];
+  const publicOwnedRecords = request.catalog.publication.outputs.flatMap((published) => {
+    if (published.source.kind === "historical-output") return [];
+    return [published.source.record];
   });
   const recordIds = new Set([
     ...publicOwnedRecords,
     ...definition.plan.steps.flatMap((step) => Object.values(step.inputs)),
   ]);
   const resources = new Set<string>();
-  const visit = (value: unknown): void => {
-    if (value === null || typeof value !== "object") return;
-    if (Array.isArray(value)) {
-      value.forEach(visit);
-      return;
-    }
-    const item = value as Readonly<Record<string, unknown>>;
-    if (item.kind === "blob" && typeof item.resource === "string") {
-      resources.add((item as unknown as BlobRef).resource);
-      return;
-    }
-    Object.values(item).forEach(visit);
-  };
-  [...definition.program.records, ...definition.initialRecords]
+  definition.program.records
     .filter((record) => recordIds.has(record.id))
-    .forEach((record) => visit(record.value));
+    .forEach((record) => {
+      for (const { blob } of valueBlobRefs(record.value)) resources.add(blob.resource);
+    });
   return resources;
 }
 
@@ -95,13 +84,6 @@ async function wait(delayMs: number, signal: AbortSignal | undefined): Promise<v
   });
 }
 
-/** Capability keys are `name@version#capability`; the registry binds by CapabilityRef. */
-export function parseCapabilityKey(key: string): { readonly module: { readonly name: string; readonly version: string }; readonly name: string } {
-  const match = /^(.+)@([^@#]+)#(.+)$/u.exec(key);
-  if (match === null) throw new Error(`${key} is not a capability key of the form name@version#capability`);
-  return { module: { name: match[1]!, version: match[2]! }, name: match[3]! };
-}
-
 /** Providers declare everything they can do; the Profile that selected them says who does it. */
 export function applyEndpointBindings(registry: EndpointRegistry, bindings: Readonly<Record<string, string>> | undefined): void {
   for (const [key, endpointId] of Object.entries(bindings ?? {})) registry.bind(parseCapabilityKey(key), endpointId);
@@ -114,10 +96,10 @@ export async function createLocalRuntime(
   const buildCatalog = options.buildCatalog;
   const producers = new ProducerRegistry();
   const endpoints = new EndpointRegistry();
-  const validators = new TypeValidatorRegistry();
+  const refinements = new RefinementRegistry();
   for (const pack of options.producerPackages ?? []) registerProducerFacets(producers, pack.producers ?? []);
-  for (const pack of options.admissionPackages ?? []) registerTypeValidatorFacets(validators, pack.validators ?? []);
-  for (const endpoint of options.endpoints ?? []) await endpoint.install(endpoints);
+  for (const pack of options.refinementPackages ?? []) registerTypeRefinements(refinements, pack.refinements ?? []);
+  for (const endpoint of options.endpoints ?? []) await installEndpoint(endpoint, endpoints);
   applyEndpointBindings(endpoints, options.bindings);
   const loadedProducerPackages = new Set<string>();
   let componentInstallation = Promise.resolve();
@@ -132,7 +114,7 @@ export async function createLocalRuntime(
       for (const item of fresh) {
         const facets = item.contribution.facets ?? [];
         for (const pack of producerPackagesFromFacets(facets)) registerProducerFacets(producers, pack.producers ?? []);
-        for (const pack of admissionPackagesFromFacets(facets)) registerTypeValidatorFacets(validators, pack.validators ?? []);
+        for (const pack of refinementPackagesFromFacets(facets)) registerTypeRefinements(refinements, pack.refinements ?? []);
       }
       for (const item of fresh) loadedProducerPackages.add(item.specifier);
     });
@@ -147,7 +129,7 @@ export async function createLocalRuntime(
     credentials: options.credentialStore,
     operations: options.operationStore,
     actions: createActionExecutor(options.executionStore),
-    validators,
+    refinements,
   });
   const resultWriter = createLocalResultWriter({
     ...(options.executionLogs === undefined ? {} : { executionLogs: options.executionLogs }),
@@ -194,13 +176,13 @@ export async function createLocalRuntime(
     const resourceStore = options.resourceStoreForBuild?.(request.id) ?? options.resourceStore;
     const required = requiredInitialResources(request);
     for (const item of (request.attachments ?? []).filter((attachment) =>
-      required.has(attachment.artifact.resource))) {
-      if (await resourceStore.has(item.artifact.resource)) continue;
+      required.has(attachment.blob.resource))) {
+      if (await resourceStore.has(item.blob.resource)) continue;
       const stream = await item.open();
       if (isStreamingResourceStore(resourceStore)) {
-        await resourceStore.writeStream(item.artifact, stream);
+        await resourceStore.writeStream(item.blob, stream);
       } else {
-        await resourceStore.write(item.artifact, await (async () => {
+        await resourceStore.write(item.blob, await (async () => {
             const chunks: Uint8Array[] = [];
             let size = 0;
             for await (const chunk of stream) {
@@ -227,7 +209,9 @@ export async function createLocalRuntime(
       options.buildStore.read(build),
       options.executionStore.read(build),
     ]);
-    const state = snapshot?.state ?? previousState;
+    const state = snapshot === undefined
+      ? previousState
+      : materializeBuild(snapshot.definition, snapshot.facts);
     assert(state !== undefined, `Build ${build} has no execution state`);
     if (execution !== undefined) {
       const view = await control.inspect(build);
@@ -241,11 +225,9 @@ export async function createLocalRuntime(
       return {
         id: build,
         state,
-        completion: {
-          build,
-          outcome: result.outcome,
-          ...(result.failure === undefined ? {} : { reason: result.failure }),
-        },
+        completion: result.outcome === "complete"
+          ? { build, outcome: "complete" }
+          : { build, outcome: result.outcome, reason: result.failure },
       };
     } finally {
       await opened.close?.();
@@ -268,25 +250,6 @@ export async function createLocalRuntime(
       await stageAttachments(request);
       const opened = await openBuildResultRepository(resultRequest.repository);
       try {
-        const publishedOutputs = request.catalog.publishedOutputs.map((published) => ({
-          name: published.name,
-          ...(published.displayName === undefined ? {} : { displayName: published.displayName }),
-          output: published.ref.id,
-        }));
-        const names = new Map<string, string>();
-        for (const published of publishedOutputs) {
-          assert(!names.has(published.output),
-            `Logical Output ${published.output} has more than one public name`);
-          names.set(published.output, published.name);
-        }
-        const targets = (request.catalog.targets ?? request.definition.targets.map((target) => ({
-          kind: "logical-output" as const,
-          id: target.output,
-        }))).map((target) => {
-          const name = names.get(target.id);
-          assert(name !== undefined, `Target ${target.id} is not a published Author Output`);
-          return name;
-        });
         await opened.repository.create({
           id: request.id,
           ...(resultRequest.title === undefined ? {} : { title: resultRequest.title }),
@@ -294,9 +257,7 @@ export async function createLocalRuntime(
           ...(request.catalog.run === undefined ? {} : {
             run: { id: projectPath(resultRequest.repository.root, request.catalog.run.path) },
           }),
-          targets,
-          publishedOutputs,
-          ...(resultRequest.forwards === undefined ? {} : { forwards: resultRequest.forwards }),
+          publication: request.catalog.publication,
           ...(resultRequest.resourceReferences === undefined ? {} : { resourceReferences: resultRequest.resourceReferences }),
         });
       } finally {

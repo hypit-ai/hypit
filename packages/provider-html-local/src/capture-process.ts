@@ -2,14 +2,20 @@ import type { ExecutionDiagnostic } from "@hypit/hypit/endpoint";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { killRenderTree } from "./process-tree.js";
-import type { CaptureInput } from "./capture.js";
 import type { HtmlRasterProgress } from "./render.js";
 
 const cleanupMs = 5_000;
 
+/** The process supervisor only owns output bounding; the child owns the capture payload. */
+export type CaptureProcessInput = {
+  readonly config: {
+    readonly maxProcessOutputBytes: number;
+  };
+};
+
 /** One disposable execution, with no persisted state or resubmission behavior. */
-export async function runCaptureProcess(
-  input: CaptureInput,
+export async function runCaptureProcess<T extends CaptureProcessInput>(
+  input: T,
   signal: AbortSignal,
   onProgress: (event: HtmlRasterProgress) => void,
   entry = new URL("./capture-worker.js", import.meta.url),

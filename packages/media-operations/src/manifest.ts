@@ -5,12 +5,13 @@ import { recipeModuleRef, recipeType } from "@hypit/hypit/recipe";
 import { compositionDependency, compositionTypes, audioSampleSpanSchema, audioGainEnvelopeSchema } from "@hypit/composition";
 import { temporalDependency, temporalTypes } from "@hypit/temporal";
 import { blobTypes } from "@hypit/hypit/blob";
+import { blobRefSchema } from "@hypit/hypit/protocol";
 import type { CapabilityRef, ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/hypit/protocol";
 
 export const mediaOperationsModuleRef = { name: "@hypit/media-operations", version: "1" } as const;
 export const mediaOperationsTypes = {
   selectionRequest: { module: mediaOperationsModuleRef, name: "MediaSelectionRequest" },
-  audioProgramPlan: { module: mediaOperationsModuleRef, name: "AudioProgramPlan" },
+  audioProgram: { module: mediaOperationsModuleRef, name: "AudioProgram" },
   transformProgram: { module: mediaOperationsModuleRef, name: "MediaTransformProgram" },
   audioExtractionRequest: { module: mediaOperationsModuleRef, name: "AudioExtractionRequest" },
   frameExtractionRequest: { module: mediaOperationsModuleRef, name: "FrameExtractionRequest" },
@@ -37,7 +38,7 @@ export const mediaOperationsProducers = {
   planStill: { module: mediaOperationsModuleRef, name: "plan-still-video" },
   renderStill: { module: mediaOperationsModuleRef, name: "request-still-video" },
   bindStill: { module: mediaOperationsModuleRef, name: "bind-still-video-source" },
-  planAudio: { module: mediaOperationsModuleRef, name: "compile-audio-program" },
+  compileAudio: { module: mediaOperationsModuleRef, name: "compile-audio-program" },
   renderAudio: { module: mediaOperationsModuleRef, name: "request-audio-render" },
   renderAudioRange: { module: mediaOperationsModuleRef, name: "request-audio-range" },
   mux: { module: mediaOperationsModuleRef, name: "request-media-mux" },
@@ -167,15 +168,7 @@ export const stillVideoRequestSchema: ValueSchema = {
       fields: {
         startFrame: { schema: { kind: "number", integer: true, minimum: 0 } },
         endFrameExclusive: { schema: { kind: "number", integer: true, minimum: 1 } },
-        source: { optional: true, schema: {
-          kind: "object",
-          fields: {
-            kind: { schema: { kind: "literal", value: "blob" } },
-            resource: { schema: { kind: "string", minLength: 5, maxLength: 256 } },
-            size: { schema: { kind: "number", integer: true, minimum: 0 } },
-            mediaType: { schema: { kind: "string", minLength: 6 } },
-          },
-        } },
+        source: { optional: true, schema: blobRefSchema() },
       },
     } } },
   },
@@ -188,17 +181,9 @@ export const stillVideoLayoutSchema: ValueSchema = {
   },
 };
 
-const blobRefSchema: ValueSchema = {
-  kind: "object",
-  fields: {
-    kind: { schema: { kind: "literal", value: "blob" } },
-    resource: { schema: { kind: "string", minLength: 5, maxLength: 256 } },
-    size: { schema: { kind: "number", integer: true, minimum: 0 } },
-    mediaType: { schema: { kind: "literal", value: "audio/wav" } },
-  },
-};
+const audioBlobRefSchema = blobRefSchema(["audio/wav"]);
 
-export const audioProgramPlanSchema: ValueSchema = {
+export const audioProgramSchema: ValueSchema = {
   kind: "object",
   fields: {
     frameRate: { schema: {
@@ -215,7 +200,7 @@ export const audioProgramPlanSchema: ValueSchema = {
       kind: "object",
       fields: {
         id: { schema: { kind: "string", minLength: 1 } },
-        artifact: { schema: blobRefSchema },
+        artifact: { schema: audioBlobRefSchema },
         targetStartSample: { schema: integer },
         targetEndSampleExclusive: { schema: { kind: "number", integer: true, minimum: 1 } },
         sourceSampleFrames: { schema: { kind: "number", integer: true, minimum: 1 } },
@@ -446,7 +431,7 @@ export const mediaOperationsManifest: ModuleManifest = {
       name: mediaOperationsTypes.selectionRequest.name,
     },
     {
-      name: mediaOperationsTypes.audioProgramPlan.name,
+      name: mediaOperationsTypes.audioProgram.name,
     },
     {
       name: mediaOperationsTypes.transformProgram.name,
@@ -478,12 +463,7 @@ export const mediaOperationsManifest: ModuleManifest = {
     {
       name: mediaOperationsProducers.inspect.name,
       inputs: [{ name: "source", type: blobTypes.blob }],
-      outputs: [],
-      needs: [{
-        name: "inspection",
-        capability: mediaOperationsCapabilities.inspect,
-        returns: mediaTypes.inspection,
-      }],
+      result: { kind: "need" as const, name: "inspection", capability: mediaOperationsCapabilities.inspect },
     },
     {
       name: mediaOperationsProducers.select.name,
@@ -491,11 +471,7 @@ export const mediaOperationsManifest: ModuleManifest = {
         { name: "inspection", type: mediaTypes.inspection },
         { name: "request", type: mediaOperationsTypes.selectionRequest },
       ],
-      outputs: [{
-        name: "selection",
-        type: mediaTypes.streamSelection,
-      }],
-      needs: [],
+      result: { kind: "output" as const, name: "selection", type: mediaTypes.streamSelection },
     },
     {
       name: mediaOperationsProducers.normalize.name,
@@ -505,12 +481,7 @@ export const mediaOperationsManifest: ModuleManifest = {
         { name: "selection", type: mediaTypes.streamSelection },
         { name: "request", type: mediaOperationsTypes.selectionRequest },
       ],
-      outputs: [],
-      needs: [{
-        name: "media",
-        capability: mediaOperationsCapabilities.normalize,
-        returns: mediaTypes.synchronized,
-      }],
+      result: { kind: "need" as const, name: "media", capability: mediaOperationsCapabilities.normalize },
     },
     {
       name: mediaOperationsProducers.transform.name,
@@ -518,12 +489,7 @@ export const mediaOperationsManifest: ModuleManifest = {
         { name: "media", type: mediaTypes.synchronized },
         { name: "program", type: mediaOperationsTypes.transformProgram },
       ],
-      outputs: [],
-      needs: [{
-        name: "video",
-        capability: mediaOperationsCapabilities.transform,
-        returns: blobTypes.blob,
-      }],
+      result: { kind: "need" as const, name: "video", capability: mediaOperationsCapabilities.transform },
     },
     {
       name: mediaOperationsProducers.extractAudio.name,
@@ -532,12 +498,7 @@ export const mediaOperationsManifest: ModuleManifest = {
         { name: "inspection", type: mediaTypes.inspection },
         { name: "request", type: mediaOperationsTypes.audioExtractionRequest },
       ],
-      outputs: [],
-      needs: [{
-        name: "audio",
-        capability: mediaOperationsCapabilities.extractAudio,
-        returns: blobTypes.blob,
-      }],
+      result: { kind: "need" as const, name: "audio", capability: mediaOperationsCapabilities.extractAudio },
     },
     {
       name: mediaOperationsProducers.extractFrame.name,
@@ -546,12 +507,7 @@ export const mediaOperationsManifest: ModuleManifest = {
         { name: "inspection", type: mediaTypes.inspection },
         { name: "request", type: mediaOperationsTypes.frameExtractionRequest },
       ],
-      outputs: [],
-      needs: [{
-        name: "image",
-        capability: mediaOperationsCapabilities.extractFrame,
-        returns: blobTypes.blob,
-      }],
+      result: { kind: "need" as const, name: "image", capability: mediaOperationsCapabilities.extractFrame },
     },
     {
       name: mediaOperationsProducers.planStill.name,
@@ -560,8 +516,7 @@ export const mediaOperationsManifest: ModuleManifest = {
         { name: "clock", type: timelineTypes.clock },
         { name: "layout", type: mediaOperationsTypes.stillVideoLayout },
       ],
-      outputs: [{ name: "request", type: mediaOperationsTypes.stillVideoRequest }],
-      needs: [],
+      result: { kind: "output" as const, name: "request", type: mediaOperationsTypes.stillVideoRequest },
     },
     {
       name: mediaOperationsProducers.bindStill.name,
@@ -569,49 +524,32 @@ export const mediaOperationsManifest: ModuleManifest = {
         { name: "request", type: mediaOperationsTypes.stillVideoRequest },
         { name: "source", type: blobTypes.blob },
       ],
-      outputs: [{ name: "request", type: mediaOperationsTypes.stillVideoRequest }],
-      needs: [],
+      result: { kind: "output" as const, name: "request", type: mediaOperationsTypes.stillVideoRequest },
     },
     {
       name: mediaOperationsProducers.renderStill.name,
       inputs: [
         { name: "request", type: mediaOperationsTypes.stillVideoRequest },
       ],
-      outputs: [],
-      needs: [{
-        name: "video",
-        capability: mediaOperationsCapabilities.renderStill,
-        returns: blobTypes.blob,
-      }],
+      result: { kind: "need" as const, name: "video", capability: mediaOperationsCapabilities.renderStill },
     },
     {
-      name: mediaOperationsProducers.planAudio.name,
+      name: mediaOperationsProducers.compileAudio.name,
       inputs: [
         { name: "composition", type: compositionTypes.composition },
         { name: "timeline", type: timelineTypes.timeline },
       ],
-      outputs: [{ name: "plan", type: mediaOperationsTypes.audioProgramPlan }],
-      needs: [],
+      result: { kind: "output" as const, name: "program", type: mediaOperationsTypes.audioProgram },
     },
     {
       name: mediaOperationsProducers.renderAudio.name,
-      inputs: [{ name: "plan", type: mediaOperationsTypes.audioProgramPlan }],
-      outputs: [],
-      needs: [{
-        name: "audio",
-        capability: mediaOperationsCapabilities.renderAudio,
-        returns: mediaTypes.timelineAudio,
-      }],
+      inputs: [{ name: "program", type: mediaOperationsTypes.audioProgram }],
+      result: { kind: "need" as const, name: "audio", capability: mediaOperationsCapabilities.renderAudio },
     },
     {
       name: mediaOperationsProducers.renderAudioRange.name,
-      inputs: [{ name: "plan", type: mediaOperationsTypes.audioProgramPlan }, { name: "range", type: mediaTypes.frameRange }],
-      outputs: [],
-      needs: [{
-        name: "audio",
-        capability: mediaOperationsCapabilities.renderAudio,
-        returns: mediaTypes.timelineAudio,
-      }],
+      inputs: [{ name: "program", type: mediaOperationsTypes.audioProgram }, { name: "range", type: mediaTypes.frameRange }],
+      result: { kind: "need" as const, name: "audio", capability: mediaOperationsCapabilities.renderAudio },
     },
     {
       name: mediaOperationsProducers.mux.name,
@@ -619,18 +557,12 @@ export const mediaOperationsManifest: ModuleManifest = {
         { name: "visual", type: mediaTypes.timelineVisual },
         { name: "audio", type: mediaTypes.timelineAudio },
       ],
-      outputs: [],
-      needs: [{
-        name: "media",
-        capability: mediaOperationsCapabilities.mux,
-        returns: mediaTypes.muxed,
-      }],
+      result: { kind: "need" as const, name: "media", capability: mediaOperationsCapabilities.mux },
     },
     {
       name: mediaOperationsProducers.projectMuxed.name,
       inputs: [{ name: "media", type: mediaTypes.muxed }],
-      outputs: [{ name: "video", type: blobTypes.blob }],
-      needs: [],
+      result: { kind: "output" as const, name: "video", type: blobTypes.blob },
     },
   ],
 };

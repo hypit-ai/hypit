@@ -3,7 +3,8 @@ import { resolve } from "node:path";
 
 import { loadDiscoveredSourcePackages } from "@hypit/hypit/cli";
 import type { CliApplicationContext, CliCommandModule, CliIo } from "@hypit/hypit/cli";
-import { sealText } from "@hypit/hypit/text";
+import { sameType } from "@hypit/hypit/protocol";
+import { sealText, textTypes } from "@hypit/hypit/text";
 
 import {
   countSpeechEstimateUnits,
@@ -74,10 +75,9 @@ async function segmentSpeech(
   const compiled = await compiler.compileResolvedSource(workspace.entry, workspace);
   const suffix = `.segment.${segment}.speech`;
   const record = compiled.program.records.find((item) =>
-    item.type.module.name === "@hypit/text" && item.type.name === "Text" && item.id.endsWith(suffix));
+    sameType(item.type, textTypes.text) && item.id.endsWith(suffix));
   assert(record !== undefined, `${source} declares no Segment ${segment} with speech; Segments are named by the Script's <segment id>`);
-  assert(record.value.kind === "inline", `Segment ${segment} speech is not an inline Text`);
-  const text = (record.value.value as { readonly value?: unknown } | null)?.value;
+  const text = (record.value as { readonly value?: unknown } | null)?.value;
   assert(typeof text === "string", `Segment ${segment} speech is not Text`);
   return text;
 }

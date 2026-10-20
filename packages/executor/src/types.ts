@@ -1,13 +1,8 @@
-import type {
-  BuildState,
-  BuildCommand,
-  TypeRef,
-  CapabilityRef,
-} from "@hypit/protocol";
+import type { TypeRef, CapabilityRef } from "@hypit/protocol";
 import type {
   ProducerHandler,
 } from "@hypit/producer";
-import type { EndpointRegistrationOptions, EndpointScheduling, ImmediateEndpointHandler, AsyncEndpoint } from "@hypit/endpoint";
+import type { EndpointRegistrationOptions, ImmediateEndpointHandler, AsyncEndpoint } from "@hypit/endpoint";
 
 export type {
   ProducerHandler,
@@ -15,15 +10,6 @@ export type {
   ProducerHandlerResult,
   ProducerRegistrar,
 } from "@hypit/producer";
-
-export type ExecutorExecutionOutcome = {
-  readonly command: string;
-  readonly kind: BuildCommand["kind"];
-  readonly status: "completed" | "pending" | "error";
-  readonly operation?: string;
-  readonly wakeAt?: number;
-  readonly message?: string;
-};
 
 export type BlockedCommand = {
   readonly command: string;
@@ -36,16 +22,8 @@ export type BlockedCommand = {
   readonly subject: string;
 };
 
-export type ExecutorRunResult = {
-  readonly status: "complete" | "paused" | "failed";
-  readonly state: BuildState;
-  readonly outcomes: readonly ExecutorExecutionOutcome[];
-  readonly blocked: readonly BlockedCommand[];
-};
-
 export type ProducerRegistration = {
   readonly handler: ProducerHandler;
-  readonly scheduling?: EndpointScheduling;
 };
 
 type EndpointRegistrationBase = {
@@ -59,11 +37,8 @@ export type EndpointRegistration = EndpointRegistrationBase & (
   | { readonly kind: "asynchronous"; readonly endpoint: AsyncEndpoint }
 );
 
-export type EndpointResolution =
+/** Deployment selection depends only on capability, return Type and explicit Profile binding. */
+export type EndpointSelection =
   | { readonly status: "resolved"; readonly registration: EndpointRegistration }
   | { readonly status: "missing"; readonly endpointId?: string }
-  | {
-    readonly status: "unsupported";
-    readonly rejections: readonly { readonly endpointId: string; readonly reason: string }[];
-  }
   | { readonly status: "ambiguous"; readonly endpointIds: readonly string[] };

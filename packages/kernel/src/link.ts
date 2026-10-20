@@ -1,4 +1,5 @@
 import type {
+  CapabilityRef,
   LinkedProgram,
   ModuleManifest,
   ModuleRef,
@@ -11,13 +12,14 @@ import type {
   TypeRef,
   TypedRecord,
 } from "@hypit/protocol";
+import { capabilityKey, moduleKey, producerKey, typeKey } from "@hypit/protocol";
 
 import { invariant } from "./error.js";
-import { capabilityKey, moduleKey, producerKey, typeKey } from "./reference.js";
 
 type ClosureIndex = {
   readonly types: ReadonlyMap<string, ResolvedTypeDeclaration>;
   readonly producers: ReadonlyMap<string, ResolvedProducerDeclaration>;
+  readonly capabilities: ReadonlyMap<string, ResolvedCapabilityDeclaration>;
 };
 
 const closureIndexes = new WeakMap<ResolvedModuleClosure, ClosureIndex>();
@@ -31,6 +33,7 @@ function closureIndex(closure: ResolvedModuleClosure): ClosureIndex {
   if (existing !== undefined) return existing;
   const types = new Map<string, ResolvedTypeDeclaration>();
   const producers = new Map<string, ResolvedProducerDeclaration>();
+  const capabilities = new Map<string, ResolvedCapabilityDeclaration>();
   for (const module of closure.modules) {
     const ref = manifestRef(module.manifest);
     for (const declaration of module.manifest.types) {
@@ -41,8 +44,12 @@ function closureIndex(closure: ResolvedModuleClosure): ClosureIndex {
       const producer = { module: ref, name: declaration.name };
       producers.set(producerKey(producer), { ...declaration, ref: producer });
     }
+    for (const declaration of module.manifest.capabilities) {
+      const capability = { module: ref, name: declaration.name };
+      capabilities.set(capabilityKey(capability), { ...declaration, ref: capability });
+    }
   }
-  const created = { types, producers };
+  const created = { types, producers, capabilities };
   closureIndexes.set(closure, created);
   return created;
 }
@@ -88,14 +95,10 @@ export function verifyClosure(closure: ResolvedModuleClosure): void {
       key,
     );
     for (const producer of module.manifest.producers) {
-      ensureUniqueNames(producer.inputs.map((item) => item.name), "input port", `${key}#${producer.name}`);
-      ensureUniqueNames(producer.outputs.map((item) => item.name), "output port", `${key}#${producer.name}`);
-      ensureUniqueNames(producer.needs.map((item) => item.name), "need port", `${key}#${producer.name}`);
-      invariant(
-        producer.outputs.length + producer.needs.length === 1,
-        "PRODUCER_RESULT_NORMAL_FORM",
-        `${key}#${producer.name} must declare exactly one public result`,
-      );
+      const producerRef: ProducerRef = { module: ref, name: producer.name };
+      const identity = producerKey(producerRef);
+      ensureUniqueNames(producer.inputs.map((item) => item.name), "input port", identity);
+      invariant(producer.result.name.length > 0, "EMPTY_NAME", `result name in ${identity} is empty`);
     }
     for (const type of module.manifest.types) {
       declaredTypes.add(typeKey({ module: ref, name: type.name }));
@@ -124,44 +127,38 @@ export function verifyClosure(closure: ResolvedModuleClosure): void {
       ...module.manifest.dependencies.map((dependency) => moduleKey(dependency.module)),
     ]);
     for (const producer of module.manifest.producers) {
-      for (const port of [...producer.inputs, ...producer.outputs]) {
+      const producerRef: ProducerRef = {
+        module: manifestRef(module.manifest),
+        name: producer.name,
+      };
+      const identity = producerKey(producerRef);
+      const typedPorts = producer.result.kind === "output"
+        ? [...producer.inputs, producer.result]
+        : producer.inputs;
+      for (const port of typedPorts) {
         invariant(
           allowed.has(moduleKey(port.type.module)),
           "UNDECLARED_TYPE_DEPENDENCY",
-          `${moduleKey(module.manifest)}#${producer.name} references ${typeKey(port.type)} without a dependency`,
+          `${identity} references ${typeKey(port.type)} without a dependency`,
         );
         invariant(
           declaredTypes.has(typeKey(port.type)),
           "UNKNOWN_TYPE",
-          `${moduleKey(module.manifest)}#${producer.name} references unknown type ${typeKey(port.type)}`,
+          `${identity} references unknown type ${typeKey(port.type)}`,
         );
       }
-      for (const port of producer.needs) {
-        invariant(
-          allowed.has(moduleKey(port.returns.module)),
-          "UNDECLARED_TYPE_DEPENDENCY",
-          `${moduleKey(module.manifest)}#${producer.name} references ${typeKey(port.returns)} without a dependency`,
-        );
-        invariant(
-          declaredTypes.has(typeKey(port.returns)),
-          "UNKNOWN_TYPE",
-          `${moduleKey(module.manifest)}#${producer.name} references unknown type ${typeKey(port.returns)}`,
-        );
+      if (producer.result.kind === "need") {
+        const port = producer.result;
         invariant(
           allowed.has(moduleKey(port.capability.module)),
           "UNDECLARED_CAPABILITY_DEPENDENCY",
-          `${moduleKey(module.manifest)}#${producer.name} references ${capabilityKey(port.capability)} without a dependency`,
+          `${identity} references ${capabilityKey(port.capability)} without a dependency`,
         );
         const capability = declaredCapabilities.get(capabilityKey(port.capability));
         invariant(
           capability !== undefined,
           "UNKNOWN_CAPABILITY",
-          `${moduleKey(module.manifest)}#${producer.name} references unknown capability ${capabilityKey(port.capability)}`,
-        );
-        invariant(
-          typeKey(capability.returns) === typeKey(port.returns),
-          "CAPABILITY_RETURN_MISMATCH",
-          `${capabilityKey(port.capability)} returns ${typeKey(capability.returns)}, not ${typeKey(port.returns)}`,
+          `${identity} references unknown capability ${capabilityKey(port.capability)}`,
         );
       }
     }
@@ -204,8 +201,18 @@ export function resolveProducer(
   return declaration;
 }
 
-export function sealRecord(record: TypedRecord): TypedRecord {
-  return { ...record };
+export function resolveCapability(
+  closure: ResolvedModuleClosure,
+  ref: CapabilityRef,
+): ResolvedCapabilityDeclaration {
+  const declaration = closureIndex(closure).capabilities.get(capabilityKey(ref));
+  invariant(
+    declaration !== undefined,
+    "UNKNOWN_CAPABILITY",
+    `unknown capability ${capabilityKey(ref)}`,
+    capabilityKey(ref),
+  );
+  return declaration;
 }
 
 export function verifyRecordStructure(

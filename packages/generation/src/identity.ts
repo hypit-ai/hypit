@@ -1,16 +1,13 @@
 import {
+  assertBlobRef,
   canonicalize,
-  isResourceId,
 } from "@hypit/hypit/protocol";
 import type { BlobRef } from "@hypit/hypit/protocol";
 
 import type {
   GeneratedAudioSet,
-  GeneratedAudioSetContent,
   GeneratedImageSet,
-  GeneratedImageSetContent,
   GeneratedVideoSet,
-  GeneratedVideoSetContent,
 } from "./types.js";
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -26,13 +23,9 @@ export function assertGenerationBlobRef(
   value: unknown,
   mediaPrefix?: "image/" | "video/" | "audio/",
 ): asserts value is BlobRef {
-  const object = plainObject(value, "Generation artifact");
-  assert(object.kind === "blob", "Generation artifact must be a BlobRef");
-  assert(typeof object.resource === "string" && isResourceId(object.resource), "Generation artifact resource is invalid");
-  assert(Number.isSafeInteger(object.size) && (object.size as number) >= 0, "Generation artifact size is invalid");
-  assert(typeof object.mediaType === "string" && object.mediaType.length > 0, "Generation artifact mediaType is invalid");
+  assertBlobRef(value, "Generation artifact");
   if (mediaPrefix !== undefined) {
-    assert(object.mediaType.startsWith(mediaPrefix), `Generation artifact must have ${mediaPrefix} media`);
+    assert(value.mediaType.startsWith(mediaPrefix), `Generation artifact must have ${mediaPrefix} media`);
   }
 }
 
@@ -43,7 +36,7 @@ export function sealGenerationRequest<T extends object>(
   return canonicalize(content) as unknown as T;
 }
 
-export function sealGeneratedImageSet(content: GeneratedImageSetContent): GeneratedImageSet {
+export function sealGeneratedImageSet(content: GeneratedImageSet): GeneratedImageSet {
   assert(content.images.length > 0, "Generated image set is empty");
   content.images.forEach((artifact) => assertGenerationBlobRef(artifact, "image/"));
   return canonicalize(content) as unknown as GeneratedImageSet;
@@ -55,7 +48,7 @@ export function verifyGeneratedImageSet(value: unknown): asserts value is Genera
   object.images.forEach((artifact) => assertGenerationBlobRef(artifact, "image/"));
 }
 
-export function sealGeneratedVideoSet(content: GeneratedVideoSetContent): GeneratedVideoSet {
+export function sealGeneratedVideoSet(content: GeneratedVideoSet): GeneratedVideoSet {
   assert(content.videos.length > 0, "Generated video set is empty");
   content.videos.forEach((artifact) => assertGenerationBlobRef(artifact, "video/"));
   return canonicalize(content) as unknown as GeneratedVideoSet;
@@ -67,7 +60,7 @@ export function verifyGeneratedVideoSet(value: unknown): asserts value is Genera
   object.videos.forEach((artifact) => assertGenerationBlobRef(artifact, "video/"));
 }
 
-export function sealGeneratedAudioSet(content: GeneratedAudioSetContent): GeneratedAudioSet {
+export function sealGeneratedAudioSet(content: GeneratedAudioSet): GeneratedAudioSet {
   assert(content.audios.length > 0, "Generated audio set is empty");
   content.audios.forEach((artifact) => assertGenerationBlobRef(artifact, "audio/"));
   return canonicalize(content) as unknown as GeneratedAudioSet;

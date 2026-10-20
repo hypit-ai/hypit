@@ -2,7 +2,6 @@ import {
   createResolvedClosure,
   defineBuild,
   link,
-  sealRecord,
 } from "@hypit/kernel";
 import type {
   BuildDefinition,
@@ -27,35 +26,30 @@ const manifest: ModuleManifest = {
   producers: [{
     name: advanceProducer.name,
     inputs: [{ name: "previous", type: valueType }],
-    outputs: [{ name: "next", type: valueType }],
-    needs: [],
+    result: { kind: "output" as const, name: "next", type: valueType },
   }],
 };
 
 export function createChainDefinition(length: number): BuildDefinition {
   if (!Number.isSafeInteger(length) || length < 1) throw new Error("chain length must be positive");
-  const program = link(createResolvedClosure([manifest]), [sealRecord({
+  const program = link(createResolvedClosure([manifest]), [({
     id: "record:0",
     type: valueType,
-    value: { kind: "inline", value: 0 },
+    value: (0),
   })]);
   const finalRecord = `record:${length}`;
   return defineBuild({
     program,
-    initialRecords: [],
     plan: {
       format: "hypit.plan@1",
       steps: Array.from({ length }, (_, index) => ({
         id: `step:${index}`,
         producer: advanceProducer,
         inputs: { previous: `record:${index}` },
-        outputs: { next: `record:${index + 1}` },
-        needs: {},
+        result: { kind: "output" as const, name: "next", record: `record:${index + 1}` },
       })),
-      goals: [{ record: finalRecord, type: valueType }],
-      outputBindings: [{ output: "result", record: finalRecord, type: valueType }],
+      goals: [finalRecord],
     },
-    targets: [{ output: "result" }],
   });
 }
 
@@ -64,7 +58,6 @@ export function completeChainStep(command: InvokeProducerCommand): CommandResult
   return {
     kind: "producer-completed",
     command: command.id,
-    outputs: { next: { kind: "inline", value: index + 1 } },
-    needs: {},
+    result: { kind: "output" as const, value: (index + 1) },
   };
 }

@@ -8,12 +8,13 @@ import type {
   BuildResultRepository,
   RepositoryBuildResultOutput,
 } from "@hypit/result/node";
+import { buildResultOutput } from "@hypit/result";
 
 export type BuildResultExport = {
   readonly build: string;
   readonly output: string;
   readonly type: RepositoryBuildResultOutput["type"];
-  readonly kind: "scalar" | "resource" | "composite";
+  readonly representation: "inline" | "file" | "value-document";
   readonly path: string;
 };
 
@@ -124,7 +125,7 @@ export async function exportBuildResultOutput(
 ): Promise<BuildResultExport> {
   const manifest = await repository.read(build);
   if (manifest === undefined) throw new Error(`Build Result ${build} does not exist`);
-  const publishedOutput = manifest.outputs[output];
+  const publishedOutput = buildResultOutput(manifest, output);
   if (publishedOutput === undefined) throw new Error(`Build ${build} has no Output ${output}`);
   const resolvedOutput = await repository.resolve(build, output);
   if (resolvedOutput === undefined) throw new Error(`Build ${build} Output ${output} cannot be resolved`);
@@ -149,9 +150,9 @@ export async function exportBuildResultOutput(
     build,
     output,
     type: publishedOutput.type,
-    kind: resolvedOutput.value.kind === "inline"
-      ? "scalar"
-      : (resolvedOutput.value.kind === "build-file" || resolvedOutput.value.kind === "external-file") ? "resource" : "composite",
+    representation: resolvedOutput.value.kind === "inline"
+      ? "inline"
+      : (resolvedOutput.value.kind === "build-file" || resolvedOutput.value.kind === "external-file") ? "file" : "value-document",
     path: target,
   };
 }

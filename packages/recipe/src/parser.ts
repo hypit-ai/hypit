@@ -29,30 +29,33 @@ function fail(sourceName: string, code: string, message: string, offset: number)
   throw new RecipeSyntaxError(code, message, sourceName, offset);
 }
 
+type RecipeQuote = "\"" | "'";
+type RecipeQuoteScan = { quote: RecipeQuote | undefined; escaped: boolean };
+
+/** Consume characters hidden from Recipe structure by one quoted string. */
+function consumeQuotedSyntax(scan: RecipeQuoteScan, character: string): boolean {
+  if (scan.escaped) {
+    scan.escaped = false;
+    return true;
+  }
+  if (scan.quote !== undefined) {
+    if (character === "\\") scan.escaped = true;
+    else if (character === scan.quote) scan.quote = undefined;
+    return true;
+  }
+  if (character === "\"" || character === "'") {
+    scan.quote = character;
+    return true;
+  }
+  return false;
+}
+
 function withoutComments(sourceName: string, text: string): string {
   const output = [...text];
   let cursor = 0;
-  let quote: "\"" | "'" | undefined;
-  let escaped = false;
+  const quoted: RecipeQuoteScan = { quote: undefined, escaped: false };
   while (cursor < text.length) {
-    const character = text[cursor];
-    if (escaped) {
-      escaped = false;
-      cursor += 1;
-      continue;
-    }
-    if (character === "\\" && quote !== undefined) {
-      escaped = true;
-      cursor += 1;
-      continue;
-    }
-    if (quote !== undefined) {
-      if (character === quote) quote = undefined;
-      cursor += 1;
-      continue;
-    }
-    if (character === "\"" || character === "'") {
-      quote = character;
+    if (consumeQuotedSyntax(quoted, text[cursor]!)) {
       cursor += 1;
       continue;
     }
@@ -71,27 +74,11 @@ function withoutComments(sourceName: string, text: string): string {
 }
 
 function closingBrace(text: string, start: number, limit: number): number {
-  let quote: "\"" | "'" | undefined;
-  let escaped = false;
+  const quoted: RecipeQuoteScan = { quote: undefined, escaped: false };
   let nested = 0;
   for (let cursor = start; cursor < limit; cursor += 1) {
     const character = text[cursor];
-    if (escaped) {
-      escaped = false;
-      continue;
-    }
-    if (character === "\\" && quote !== undefined) {
-      escaped = true;
-      continue;
-    }
-    if (quote !== undefined) {
-      if (character === quote) quote = undefined;
-      continue;
-    }
-    if (character === "\"" || character === "'") {
-      quote = character;
-      continue;
-    }
+    if (consumeQuotedSyntax(quoted, character!)) continue;
     if (character === "{") {
       nested += 1;
       continue;
@@ -112,26 +99,10 @@ function skipSpace(text: string, start: number): number {
 
 /** Find the root terminator without treating quoted Recipe text as document structure. */
 function closingSheet(text: string, start: number): number {
-  let quote: "\"" | "'" | undefined;
-  let escaped = false;
+  const quoted: RecipeQuoteScan = { quote: undefined, escaped: false };
   for (let cursor = start; cursor < text.length; cursor += 1) {
     const character = text[cursor];
-    if (escaped) {
-      escaped = false;
-      continue;
-    }
-    if (character === "\\" && quote !== undefined) {
-      escaped = true;
-      continue;
-    }
-    if (quote !== undefined) {
-      if (character === quote) quote = undefined;
-      continue;
-    }
-    if (character === "\"" || character === "'") {
-      quote = character;
-      continue;
-    }
+    if (consumeQuotedSyntax(quoted, character!)) continue;
     if (text.startsWith("</sheet>", cursor)) return cursor;
   }
   return -1;
@@ -183,36 +154,51 @@ function parseValue(sourceName: string, text: string, offset: number): Canonical
       fail(sourceName, "SVS_VALUE_STRUCTURED", "Structured Recipe values must use JSON array/object syntax.", offset);
     }
   }
-  if (
-    (value.startsWith('"') && value.endsWith('"'))
-    || (value.startsWith("'") && value.endsWith("'"))
-  ) {
-    return value.slice(1, -1);
+  if (value.startsWith('"') || value.endsWith('"')) {
+    if (!value.startsWith('"') || !value.endsWith('"')) {
+      fail(sourceName, "SVS_VALUE_STRING", "Malformed double-quoted Recipe string.", offset);
+    }
+    try {
+      const decoded: unknown = JSON.parse(value);
+      if (typeof decoded === "string") return decoded;
+    } catch {
+      // The syntax error below belongs to Recipe rather than the JSON implementation.
+    }
+    fail(sourceName, "SVS_VALUE_STRING", "Double-quoted Recipe strings must use JSON string syntax.", offset);
+  }
+  if (value.startsWith("'") || value.endsWith("'")) {
+    if (!value.startsWith("'") || !value.endsWith("'")) {
+      fail(sourceName, "SVS_VALUE_STRING", "Malformed single-quoted Recipe string.", offset);
+    }
+    let decoded = "";
+    let escaped = false;
+    for (let index = 1; index < value.length - 1; index += 1) {
+      const character = value[index]!;
+      if (escaped) {
+        decoded += character === "'" || character === "\\" ? character : `\\${character}`;
+        escaped = false;
+        continue;
+      }
+      if (character === "\\") {
+        escaped = true;
+        continue;
+      }
+      if (character === "'") {
+        fail(sourceName, "SVS_VALUE_STRING", "Single-quoted Recipe strings must escape an inner quote.", offset + index);
+      }
+      decoded += character;
+    }
+    if (escaped) fail(sourceName, "SVS_VALUE_STRING", "Single-quoted Recipe strings cannot end with an escape.", offset + value.length - 1);
+    return decoded;
   }
   return value;
 }
 
 function valueSemicolon(text: string, start: number): number {
-  let quote: "\"" | "'" | undefined;
-  let escaped = false;
+  const quoted: RecipeQuoteScan = { quote: undefined, escaped: false };
   for (let cursor = start; cursor < text.length; cursor += 1) {
     const character = text[cursor];
-    if (escaped) {
-      escaped = false;
-      continue;
-    }
-    if (character === "\\" && quote !== undefined) {
-      escaped = true;
-      continue;
-    }
-    if (quote !== undefined) {
-      if (character === quote) quote = undefined;
-      continue;
-    }
-    if (character === "\"" || character === "'") {
-      quote = character;
-      continue;
-    }
+    if (consumeQuotedSyntax(quoted, character!)) continue;
     if (character === ";") return cursor;
   }
   return -1;

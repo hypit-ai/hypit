@@ -21,7 +21,7 @@ export function createAudioTrackFragment(clips: readonly AudioTrackFragmentItem[
   if (clips.length === 0) throw new Error("Audio Track Fragment requires at least one Clip.");
   const inputTypes = new Map<string, (typeof audioTrackTypes.clipSpec | typeof mediaTypes.synchronized | typeof temporalTypes.window)>();
   const operations: FragmentOperation[] = [
-    { id: "audio:set:empty", producer: audioTrackProducers.createSet, inputs: {}, result: { kind: "output", name: "set" } },
+    { id: "audio:set:empty", producer: audioTrackProducers.createSet, inputs: {}, result: { kind: "output" as const, name: "set" } },
   ];
   let current = "audio:set:empty";
   clips.forEach((clip, index) => {
@@ -37,13 +37,13 @@ export function createAudioTrackFragment(clips: readonly AudioTrackFragmentItem[
         media: input(clip.mediaName), spec: input(clip.specName),
         window: input(clip.windowName),
       },
-      result: { kind: "output", name: "set" },
+      result: { kind: "output" as const, name: "set" },
     });
     current = id;
   });
   operations.push(
-    { id: "audio:program", producer: audioTrackProducers.finalize, inputs: { set: operation(current), header: input("header") }, result: { kind: "output", name: "program" } },
-    { id: "audio:track", producer: audioTrackProducers.render, inputs: { timeline: input("timeline"), program: operation("audio:program") }, result: { kind: "output", name: "track" } },
+    { id: "audio:program", producer: audioTrackProducers.finalize, inputs: { set: operation(current), header: input("header") }, result: { kind: "output" as const, name: "program" } },
+    { id: "audio:track", producer: audioTrackProducers.render, inputs: { timeline: input("timeline"), program: operation("audio:program") }, result: { kind: "output" as const, name: "track" } },
   );
   return sealGraphFragment({
     inputs: [

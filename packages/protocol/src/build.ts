@@ -11,30 +11,20 @@ import type {
   TypeRef,
 } from "./identity.js";
 import type { ResolvedModuleClosure } from "./module.js";
-import type { CanonicalValue, StoredValue } from "./value.js";
+import type { Value } from "./value.js";
 
-export type SourceRange = {
-  readonly start: number;
-  readonly end: number;
-};
-
-/** One typed value in the graph; semantic validation happens at the Host admission boundary. */
+/** One typed value in the graph; semantic validation belongs to its installed Type owner. */
 export type TypedRecord = {
   readonly id: RecordId;
   readonly type: TypeRef;
-  readonly value: StoredValue;
+  readonly value: Value;
 };
 
 export type Need = {
   readonly id: NeedId;
   readonly capability: CapabilityRef;
   readonly returns: TypeRef;
-  readonly constraints: CanonicalValue;
-  readonly result: RecordId;
-};
-
-export type NeedBinding = {
-  readonly id: NeedId;
+  readonly constraints: Value;
   readonly result: RecordId;
 };
 
@@ -81,13 +71,10 @@ export type OperationNode = {
   readonly result: OperationResult;
 };
 
-export type ProvidedValue = {
-  readonly id: RecordId;
-  readonly value: StoredValue;
-};
-
 export type CandidateRoot =
-  | { readonly kind: "value"; readonly value: ProvidedValue }
+  | { readonly kind: "value"; readonly record: RecordId; readonly value: Value }
+  /** A zero-input value whose source is materialized only after this Candidate is selected. */
+  | { readonly kind: "supply"; readonly record: RecordId }
   | { readonly kind: "operation"; readonly result: OperationResultRef };
 
 export type Candidate = {
@@ -97,7 +84,7 @@ export type Candidate = {
   readonly root: CandidateRoot;
 };
 
-export type CompiledGraph = {
+export type AuthorGraph = {
   readonly format: "hypit.graph@1";
   readonly outputs: readonly LogicalOutput[];
   readonly candidates: readonly Candidate[];
@@ -113,36 +100,18 @@ export type Satisfaction = {
   readonly candidate: CandidateId;
 };
 
-export type BuildRequest = {
-  readonly format: "hypit.build-request@1";
-  readonly targets: readonly BuildTarget[];
-};
-
-export type BuildOutputBinding = {
-  readonly output: LogicalOutputId;
-  readonly record: RecordId;
-  readonly type: TypeRef;
-};
-
 export type ProducerStep = {
   readonly id: StepId;
   readonly producer: ProducerRef;
   readonly inputs: Readonly<Record<string, RecordId>>;
-  readonly outputs: Readonly<Record<string, RecordId>>;
-  readonly needs: Readonly<Record<string, NeedBinding>>;
-};
-
-export type BuildGoal = {
-  readonly record: RecordId;
-  readonly type: TypeRef;
+  readonly result: OperationResult;
 };
 
 export type BuildPlan = {
   readonly format: "hypit.plan@1";
   readonly steps: readonly ProducerStep[];
-  readonly goals: readonly BuildGoal[];
-  /** Every Logical Output reached by the selected execution, independent of how it was supplied. */
-  readonly outputBindings: readonly BuildOutputBinding[];
+  /** Unique Record identities whose existence completes this finite execution. */
+  readonly goals: readonly RecordId[];
 };
 
 /** The complete execution intent compiled from one `.svrun` source. */
@@ -185,14 +154,15 @@ export type BuildCommand = InvokeProducerCommand | FulfillNeedCommand;
 export type ProducerCompletedEvent = {
   readonly kind: "producer-completed";
   readonly command: CommandId;
-  readonly outputs: Readonly<Record<string, StoredValue>>;
-  readonly needs: Readonly<Record<string, CanonicalValue>>;
+  readonly result:
+    | { readonly kind: "output"; readonly value: Value }
+    | { readonly kind: "need"; readonly constraints: Value };
 };
 
 export type NeedFulfilledEvent = {
   readonly kind: "need-fulfilled";
   readonly command: CommandId;
-  readonly value: StoredValue;
+  readonly value: Value;
 };
 
 export type CommandFailedEvent = {
@@ -214,11 +184,9 @@ export type BuildDiagnostic = {
 /** Immutable finite program selected by one Author Graph plus one Run Graph. */
 export type BuildDefinition = {
   readonly format: "hypit.build-definition@1";
+  /** Complete sealed execution program, including every already-established starting Record. */
   readonly program: LinkedProgram;
-  /** Selected zero-input values. Candidate identity has already served its planning purpose. */
-  readonly initialRecords: readonly TypedRecord[];
   readonly plan: BuildPlan;
-  readonly targets: readonly BuildTarget[];
 };
 
 type BuildFactBase = {
@@ -226,22 +194,23 @@ type BuildFactBase = {
   readonly command: CommandId;
 };
 
-/** One Producer result admitted by Core. Every added value is stored exactly once. */
+/** One Producer result accepted by Core. Every added value is stored exactly once. */
 export type ProducerAppliedFact = BuildFactBase & {
   readonly kind: "producer-applied";
   readonly step: StepId;
-  readonly records: readonly TypedRecord[];
-  readonly needs: readonly Need[];
+  readonly result:
+    | { readonly kind: "output"; readonly record: TypedRecord }
+    | { readonly kind: "need"; readonly need: Need };
 };
 
-/** One external Need result admitted by Core. */
+/** One external Need result accepted by Core. */
 export type NeedAppliedFact = BuildFactBase & {
   readonly kind: "need-applied";
   readonly need: NeedId;
   readonly record: TypedRecord;
 };
 
-/** One terminal command failure admitted by Core. */
+/** One terminal command failure accepted by Core. */
 export type CommandFailedFact = BuildFactBase & {
   readonly kind: "command-failed";
   readonly diagnostic: BuildDiagnostic;
@@ -255,7 +224,6 @@ export type BuildState = {
   readonly format: "hypit.build@1";
   readonly program: LinkedProgram;
   readonly plan: BuildPlan;
-  readonly targets: readonly BuildTarget[];
   readonly status: "active" | "complete" | "failed";
   readonly records: readonly TypedRecord[];
   readonly steps: readonly StepState[];

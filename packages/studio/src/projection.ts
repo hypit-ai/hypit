@@ -1,6 +1,6 @@
-import type { BlobAttachment } from "@hypit/hypit/workspace";
-import type { BlobRef, ResourceId, StoredValue } from "@hypit/hypit/protocol";
-import { sameType } from "@hypit/hypit/protocol";
+import type { BlobRef, ResourceId, Value } from "@hypit/hypit/protocol";
+import { normalizeValue, sameType, valueBlobRefs } from "@hypit/hypit/protocol";
+import type { BuildCandidateSelection } from "@hypit/hypit/kernel";
 import type { Composition } from "@hypit/composition";
 import { compositionTypes } from "@hypit/composition";
 import { timelineTypes, assertTimelineIdentity } from "@hypit/timeline";
@@ -17,6 +17,7 @@ import { studioSurfacePreview } from "./surface-preview.js";
 import { executedTemporalBindings } from "./temporal-graph.js";
 import type { StudioCompanionRegistry } from "./studio-registry.js";
 import { resolveStudioDeclarations } from "./temporal-declarations.js";
+import { attachmentFile, bytesFile, materialBytes } from "./material.js";
 
 function playable(type: import("@hypit/hypit/protocol").TypeRef): boolean {
   return sameType(type, compositionTypes.visualTrack) || sameType(type, compositionTypes.audioTrack);
@@ -45,55 +46,24 @@ export type StudioProjection = {
   readonly timeline: Timeline;
 };
 
-async function bytesOf(attachment: BlobAttachment): Promise<Uint8Array> {
-  const chunks: Uint8Array[] = [];
-  let size = 0;
-  for await (const chunk of await attachment.open()) {
-    const copy = Uint8Array.from(chunk);
-    chunks.push(copy);
-    size += copy.byteLength;
-  }
-  const bytes = new Uint8Array(size);
-  let offset = 0;
-  for (const chunk of chunks) {
-    bytes.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
-  return bytes;
-}
-
 type ExecutionState = Awaited<ReturnType<typeof executeStudioProjection>>["state"];
 
 function selectedValue(
   state: ExecutionState,
+  selections: readonly Pick<BuildCandidateSelection, "output" | "record">[],
   output: string,
-): StoredValue | undefined {
-  const selection = state.plan.outputBindings.find((item) => item.output === output);
+): Value | undefined {
+  const selection = selections.find((item) => item.output === output);
   if (selection === undefined) return state.program.records.find((item) => item.id === output)?.value;
   const executed = state.records.find((item) => item.id === selection.record)?.value;
   if (executed !== undefined) return executed;
-  // Inline Source and Run candidates both belong to this freshly recompiled
+  // Materialized Source and Run candidates both belong to this freshly recompiled
   // revision. There is no stale-plan distinction to reconstruct here.
   return state.program.records.find((item) => item.id === selection.record)?.value;
 }
 
 function compositionArtifacts(composition: Composition): readonly BlobRef[] {
-  const found = new Map<ResourceId, BlobRef>();
-  const visit = (value: unknown): void => {
-    if (value === null || typeof value !== "object") return;
-    if ((value as { readonly kind?: unknown }).kind === "blob") {
-      const artifact = value as BlobRef;
-      found.set(artifact.resource, artifact);
-      return;
-    }
-    if (Array.isArray(value)) {
-      for (const item of value) visit(item);
-      return;
-    }
-    for (const item of Object.values(value)) visit(item);
-  };
-  visit(composition);
-  return [...found.values()];
+  return valueBlobRefs(normalizeValue(composition)).map((item) => item.blob);
 }
 
 /** Build only the Studio-approved deterministic projection of one explicit Run. */
@@ -117,37 +87,33 @@ export async function resolveStudioProjection(input: {
   const store = new MemoryResourceStore();
   const served = new Map(input.source.served);
   for (const attachment of input.run.attachments) {
-    const bytes = await bytesOf(attachment);
-    await store.write(attachment.artifact, bytes);
-    served.set(attachment.artifact.resource, {
-      mediaType: attachment.artifact.mediaType,
-      bytes,
-    });
-  }
-  for (const [resource, file] of input.source.served) {
-    await store.write({ kind: "blob", resource: resource as ResourceId, size: file.bytes.byteLength, mediaType: file.mediaType }, file.bytes);
+    if (!served.has(attachment.blob.resource)) {
+      served.set(attachment.blob.resource, attachmentFile(attachment));
+    }
   }
   const resources = {
     async get(resource: ResourceId) {
+      const file = served.get(resource);
+      if (file !== undefined) return materialBytes(file);
       return await store.get(resource);
     },
     async put(bytes: Uint8Array, mediaType: string) {
       const ref = await store.put(bytes, mediaType);
-      served.set(ref.resource, { mediaType, bytes });
+      served.set(ref.resource, bytesFile(mediaType, bytes));
       return ref;
     },
     async write(resource: BlobRef, bytes: Uint8Array) {
       await store.write(resource, bytes);
-      served.set(resource.resource, { mediaType: resource.mediaType, bytes });
+      served.set(resource.resource, bytesFile(resource.mediaType, bytes));
     },
     async has(resource: ResourceId) {
-      return await store.has(resource);
+      return served.has(resource) || await store.has(resource);
     },
   };
-  const planned = input.run.plan(input.run.run, targets.map((target) => target.ref));
+  const prepared = input.run.prepare(input.run.run, targets.map((target) => target.ref));
   const executed = await executeStudioProjection(
     input.domain,
-    planned.state,
+    prepared.state,
     resources,
     input.transientExecution,
   );
@@ -164,17 +130,17 @@ export async function resolveStudioProjection(input: {
   const timingOutput = input.source.exports.find((target) => target.ref === input.timeRef);
   const timingRecord = executed.state.program.records.find((record) => record.id === input.timeRef);
   const timingType = timingOutput?.typeRef ?? timingRecord?.type;
-  const timingValue = selectedValue(executed.state, input.timeRef);
-  if (timingValue?.kind !== "inline" || timingType === undefined) throw new Error("Studio requires a resolved film time source.");
+  const timingValue = selectedValue(executed.state, prepared.selections, input.timeRef);
+  if (timingValue === undefined || timingType === undefined) throw new Error("Studio requires a resolved film time source.");
   if (!sameType(timingType, timelineTypes.timeline)) throw new Error("Studio requires the declared Timeline.");
-  const timeline = timingValue.value as unknown as Timeline;
+  const timeline = timingValue as unknown as Timeline;
   assertTimelineIdentity(timeline);
   const rate = timeline.frameRate;
-  const compositionValue = selectedValue(executed.state, input.compositionRef);
-  if (compositionValue?.kind !== "inline") {
-    throw new Error("Studio Film composition did not produce an inline Composition.");
+  const compositionValue = selectedValue(executed.state, prepared.selections, input.compositionRef);
+  if (compositionValue === undefined) {
+    throw new Error("Studio Film composition did not produce a Composition.");
   }
-  const composition = compositionValue.value as unknown as Composition;
+  const composition = compositionValue as unknown as Composition;
   for (const artifact of compositionArtifacts(composition)) {
     if (!served.has(artifact.resource)) {
       throw new Error(`Studio composition Resource ${artifact.resource} has no Run attachment.`);
@@ -183,10 +149,10 @@ export async function resolveStudioProjection(input: {
   const projectionByRef = new Map(input.projections.map((projection) => [projection.ref, projection]));
   const tracks: BuiltTrack[] = targets.flatMap((target) => {
     if (!playable(target.typeRef)) return [];
-    const stored = selectedValue(executed.state, target.ref);
+    const stored = selectedValue(executed.state, prepared.selections, target.ref);
     const candidateId = satisfactions.get(target.ref);
-    if (stored?.kind !== "inline") {
-      throw new Error(`Studio projection ${target.name} did not produce an inline Track.`);
+    if (stored === undefined) {
+      throw new Error(`Studio projection ${target.name} did not produce a Track.`);
     }
     const projection = projectionByRef.get(target.ref);
     if (projection === undefined) {
@@ -205,13 +171,14 @@ export async function resolveStudioProjection(input: {
       role: projection.role,
       trace: projection.trace,
       ...(surfacePreview === undefined ? {} : { surfacePreview }),
-      value: stored.value,
+      value: stored,
     }];
   });
   const temporalBindings = new Map(tracks.map((track) => [
     track.outputRef,
     executedTemporalBindings(
       executed.state,
+      prepared.selections,
       track.outputRef,
       (type, value) => input.registry.identifyTemporalSource(type, value),
       (producer, output) => input.registry.temporalRelationFor(producer, output),
@@ -219,31 +186,30 @@ export async function resolveStudioProjection(input: {
   ] as const));
   const values = new Map<string, unknown>();
   for (const target of targets) {
-    const stored = selectedValue(executed.state, target.ref);
-    if (stored?.kind === "inline") values.set(target.ref, stored.value);
+    const stored = selectedValue(executed.state, prepared.selections, target.ref);
+    if (stored !== undefined) values.set(target.ref, stored);
   }
   // Companion traces carry exact qualified references. Resolve those references from
   // the executed projection so deterministic upstream Producers are visible too.
   for (const projection of input.projections) {
     for (const reference of projection.trace.references) {
-      const stored = selectedValue(executed.state, reference.ref);
-      if (stored?.kind === "inline") values.set(reference.ref, stored.value);
+      const stored = selectedValue(executed.state, prepared.selections, reference.ref);
+      if (stored !== undefined) values.set(reference.ref, stored);
     }
   }
   const temporalValueTypes = input.registry.temporalDomainValueTypes();
   const temporalDomainValues: StudioObservedValue[] = [];
   const declarations = await resolveStudioDeclarations({
     run: input.run, registry: input.registry, domain: input.domain,
-    resolved: executed.state, resources,
+    resolved: executed.state, selections: prepared.selections, resources,
     ...(input.transientExecution === undefined ? {} : { transientExecution: input.transientExecution }),
   });
   const temporalDomainValueIds = new Set<string>();
   for (const record of [...executed.state.program.records, ...executed.state.records]) {
-    if (record.value.kind !== "inline") continue;
     if (!temporalValueTypes.some((type) => sameType(type, record.type))) continue;
-    values.set(record.id, record.value.value);
+    values.set(record.id, record.value);
     if (!temporalDomainValueIds.has(record.id)) {
-      temporalDomainValues.push({ id: record.id, type: record.type, value: record.value.value });
+      temporalDomainValues.push({ id: record.id, type: record.type, value: record.value });
       temporalDomainValueIds.add(record.id);
     }
   }

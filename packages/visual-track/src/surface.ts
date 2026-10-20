@@ -110,8 +110,8 @@ export const decodeVisualMotionSurface: StructuredSurfaceHandler = ({ element })
   const motion = inlineMotion(element);
   if (motion === undefined) throw new Error(`${element.name} requires at least two Pose children.`);
   return {
-    records: [{ id, type: visualTrackTypes.motion, value: { kind: "inline", value: motion as never }, range: element.range }],
-    components: [], fragments: [], exports: [id],
+    records: [{ id, type: visualTrackTypes.motion, value: (motion as never), range: element.range }],
+    components: [], exports: [id],
   };
 };
 
@@ -128,10 +128,10 @@ function reference(
 }
 
 function recipe(value: SurfaceResolvedReference, label: string): Recipe {
-  if (!sameType(value.type, recipeType) || value.record?.value.kind !== "inline") {
+  if (!sameType(value.type, recipeType) || value.record === undefined) {
     throw new Error(`${label} must be an authored SVS Recipe.`);
   }
-  return value.record.value.value as unknown as Recipe;
+  return value.record.value as unknown as Recipe;
 }
 
 const FIT_ATTRIBUTES = ["fit", "frame-x", "frame-y", "content-x", "content-y", "fit-offset-x", "fit-offset-y", "fit-constraint"] as const;
@@ -244,8 +244,8 @@ function sourceTimeFrom(
   if (element.attributes["source-time"] === undefined) return inline;
   if (inline !== undefined) throw new Error(`${element.name} cannot combine source-time={SourceTime} with inline Map children.`);
   const value = reference(element.attributes["source-time"], `${element.name}.source-time`, visualTrackTypes.sourceTime, resolve);
-  if (value.record?.value.kind !== "inline") throw new Error(`${element.name}.source-time must resolve to an inline SourceTime value.`);
-  const spec = value.record.value.value as unknown as VisualSourceTimeSpec;
+  if (value.record === undefined) throw new Error(`${element.name}.source-time must resolve to an authored SourceTime value.`);
+  const spec = value.record.value as unknown as VisualSourceTimeSpec;
   assertVisualSourceTimeSpec(spec);
   return spec;
 }
@@ -265,8 +265,8 @@ export const decodeVisualSourceTimeSurface: StructuredSurfaceHandler = ({ elemen
   const value = { relations };
   assertVisualSourceTimeSpec(value);
   return {
-    records: [{ id, type: visualTrackTypes.sourceTime, value: { kind: "inline", value: value as never }, range: element.range }],
-    components: [], fragments: [], exports: [id],
+    records: [{ id, type: visualTrackTypes.sourceTime, value: (value as never), range: element.range }],
+    components: [], exports: [id],
   };
 };
 
@@ -295,19 +295,19 @@ type FragmentClip = {
 
 function appendLayers(operations: FragmentOperation[], prefix: string, layers: readonly FragmentLayer[]): string {
   const emptyId = `${prefix}:layers:empty`;
-  operations.push({ id: emptyId, producer: visualTrackProducers.createLayers, inputs: {}, result: { kind: "output", name: "layers" } });
+  operations.push({ id: emptyId, producer: visualTrackProducers.createLayers, inputs: {}, result: { kind: "output" as const, name: "layers" } });
   let current = emptyId;
   for (const [index, layer] of layers.entries()) {
     const id = `${prefix}:layers:${String(index + 1).padStart(4, "0")}`;
     const common = { layers: operation(current), spec: input(layer.specName) };
     if (layer.kind === "paint") {
-      operations.push({ id, producer: visualTrackProducers.appendPaintLayer, inputs: common, result: { kind: "output", name: "layers" } });
+      operations.push({ id, producer: visualTrackProducers.appendPaintLayer, inputs: common, result: { kind: "output" as const, name: "layers" } });
     } else if (layer.kind === "still") {
       operations.push({ id, producer: layer.placementKind === "fit"
         ? visualTrackProducers.appendStillLayer : visualTrackProducers.appendMappedStillLayer, inputs: {
         ...common, source: input(layer.sourceName), extent: input(layer.extentName),
         [layer.placementKind === "fit" ? "fit" : "mapping"]: input(layer.placementName),
-      }, result: { kind: "output", name: "layers" } });
+      }, result: { kind: "output" as const, name: "layers" } });
     } else {
       const producer = layer.kind === "timed"
         ? layer.placementKind === "fit" ? visualTrackProducers.appendTimedLayer : visualTrackProducers.appendMappedTimedLayer
@@ -315,7 +315,7 @@ function appendLayers(operations: FragmentOperation[], prefix: string, layers: r
       operations.push({ id, producer, inputs: {
         ...common, source: input(layer.sourceName),
         [layer.placementKind === "fit" ? "fit" : "mapping"]: input(layer.placementName),
-      }, result: { kind: "output", name: "layers" } });
+      }, result: { kind: "output" as const, name: "layers" } });
     }
     current = id;
   }
@@ -324,7 +324,7 @@ function appendLayers(operations: FragmentOperation[], prefix: string, layers: r
 
 function createVisualTrackSurfaceFragment(inputTypes: readonly { readonly name: string; readonly type: TypeRef }[], clips: readonly FragmentClip[]) {
   const operations: FragmentOperation[] = [
-    { id: "track:set:empty", producer: visualTrackProducers.createSet, inputs: {}, result: { kind: "output", name: "set" } },
+    { id: "track:set:empty", producer: visualTrackProducers.createSet, inputs: {}, result: { kind: "output" as const, name: "set" } },
   ];
   let set = "track:set:empty";
   for (const clip of clips) {
@@ -336,14 +336,14 @@ function createVisualTrackSurfaceFragment(inputTypes: readonly { readonly name: 
       const bindId = `${prefix}:bind-clip-path`;
       operations.push({ id: bindId, producer: visualTrackProducers.bindClipPath, inputs: {
         spec, path: input(clip.clipPathName),
-      }, result: { kind: "output", name: "spec" } });
+      }, result: { kind: "output" as const, name: "spec" } });
       spec = operation(bindId);
     }
     if (clip.motionName !== undefined) {
       const bindId = `${prefix}:bind-motion`;
       operations.push({ id: bindId, producer: visualTrackProducers.bindMotion, inputs: {
         spec, motion: input(clip.motionName),
-      }, result: { kind: "output", name: "spec" } });
+      }, result: { kind: "output" as const, name: "spec" } });
       spec = operation(bindId);
     }
     const common = {
@@ -351,12 +351,12 @@ function createVisualTrackSurfaceFragment(inputTypes: readonly { readonly name: 
       layers: operation(layers), frame: input(clip.frameName), spec, window: input(clip.windowName),
     };
     operations.push({ id: appendId, producer: visualTrackProducers.appendClip,
-      inputs: common, result: { kind: "output", name: "set" } });
+      inputs: common, result: { kind: "output" as const, name: "set" } });
     set = appendId;
   }
   operations.push(
-    { id: "track:finalize", producer: visualTrackProducers.finalize, inputs: { set: operation(set), header: input("header"), timeline: input("timeline") }, result: { kind: "output", name: "program" } },
-    { id: "track:visual", producer: visualTrackProducers.projectVisual, inputs: { timeline: input("timeline"), program: operation("track:finalize") }, result: { kind: "output", name: "track" } },
+    { id: "track:finalize", producer: visualTrackProducers.finalize, inputs: { set: operation(set), header: input("header"), timeline: input("timeline") }, result: { kind: "output" as const, name: "program" } },
+    { id: "track:visual", producer: visualTrackProducers.projectVisual, inputs: { timeline: input("timeline"), program: operation("track:finalize") }, result: { kind: "output" as const, name: "track" } },
   );
   return sealGraphFragment({
     inputs: inputTypes,
@@ -392,7 +392,7 @@ function builder(): SurfaceBuilder {
     },
     addRecord(name, id, type, value, range) {
       if (inputs[name] !== undefined) throw new Error(`Media Surface repeats input ${name}.`);
-      records.push({ id, type, value: { kind: "inline", value: value as never }, range });
+      records.push({ id, type, value: (value as never), range });
       inputs[name] = { kind: "record", id };
       inputTypes.push({ name, type });
     },
@@ -661,12 +661,11 @@ export const decodeVisualTrackSurface: StructuredSurfaceHandler = ({ element, re
     records: state.records,
     components: [{
       id: trackId,
-      fragment: fragment.id,
+      fragment,
       inputs: state.inputs,
       outputs: { visual: `${trackId}.visual`, program: `${trackId}.program` },
       range: element.range,
     }],
-    fragments: [fragment],
     exports: [
       `${trackId}.program`,
       `${trackId}.visual`,

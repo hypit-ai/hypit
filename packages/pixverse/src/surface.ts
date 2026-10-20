@@ -1,13 +1,15 @@
+import { sameType } from "@hypit/hypit/protocol";
 import { blobTypes } from "@hypit/hypit/blob";
-import { generationPort, sealGenerationMediaBinding, sealGenerationRequestDraft } from "@hypit/generation";
-import type { GenerationMediaPort, GenerationMediaRole, GenerationPortValue } from "@hypit/generation";
+import { modelField, sealModelArtifactBinding, sealModelFieldBuilder } from "@hypit/generation/model-fields";
+import type { ModelArtifactField, ModelArtifactRole, ModelFieldValue } from "@hypit/generation/model-fields";
 import {
-  createExactModelPrimaryGenerationFragment,
-  exactModelMediaInputNames,
-  exactModelTextInputName,
-} from "@hypit/generation/model";
-import type { ExactModelEndpoint } from "@hypit/generation/model";
+  createFieldModelPrimaryFragment,
+  modelArtifactInputNames,
+  modelTextInputName,
+} from "@hypit/generation/model-fields";
+import type { FieldModelOperation } from "@hypit/generation/model-fields";
 import type { CanonicalValue, TypeRef } from "@hypit/hypit/protocol";
+import { isBlobRef } from "@hypit/hypit/protocol";
 import type { MarkupAttributeValue, StructuredElement, StructuredSurfaceHandler, SurfaceResolvedReference } from "@hypit/hypit/markup";
 import { textTypes, verifyText } from "@hypit/hypit/text";
 
@@ -16,7 +18,7 @@ import type { PixverseModel } from "./index.js";
 
 type MediaInput = {
   readonly port: "firstFrame" | "lastFrame" | "referenceImage" | "referenceVideo";
-  readonly role: GenerationMediaRole;
+  readonly role: ModelArtifactRole;
   readonly source: SurfaceResolvedReference;
 };
 
@@ -26,10 +28,6 @@ function assert(condition: unknown, message: string): asserts condition {
 
 function localName(name: string): string {
   return name.includes(":") ? name.slice(name.lastIndexOf(":") + 1) : name;
-}
-
-function sameType(left: TypeRef, right: TypeRef): boolean {
-  return left.name === right.name && left.module.name === right.module.name && left.module.version === right.module.version;
 }
 
 function exact(element: StructuredElement, allowed: readonly string[], required: readonly string[]): void {
@@ -46,24 +44,24 @@ function text(element: StructuredElement, name: string): string {
 }
 
 /** An absent optional attribute leaves its port unstated, which the model reads as its own default. */
-function optionalText(element: StructuredElement, name: string): readonly GenerationPortValue[] | undefined {
+function optionalText(element: StructuredElement, name: string): readonly ModelFieldValue[] | undefined {
   return element.attributes[name] === undefined ? undefined : [text(element, name)];
 }
 
-function optionalFlag(element: StructuredElement, name: string): readonly GenerationPortValue[] | undefined {
+function optionalFlag(element: StructuredElement, name: string): readonly ModelFieldValue[] | undefined {
   if (element.attributes[name] === undefined) return undefined;
   const value = text(element, name);
   assert(value === "true" || value === "false", `${element.name}.${name} must be true or false`);
   return [value === "true"];
 }
 
-function integer(element: StructuredElement, name: string): readonly GenerationPortValue[] {
+function integer(element: StructuredElement, name: string): readonly ModelFieldValue[] {
   const value = text(element, name);
   assert(/^\d+$/u.test(value), `${element.name}.${name} must be a whole number`);
   return [Number(value)];
 }
 
-function optionalInteger(element: StructuredElement, name: string): readonly GenerationPortValue[] | undefined {
+function optionalInteger(element: StructuredElement, name: string): readonly ModelFieldValue[] | undefined {
   return element.attributes[name] === undefined ? undefined : integer(element, name);
 }
 
@@ -83,12 +81,12 @@ function ref(
 function media(
   element: StructuredElement,
   name: string,
-  role: GenerationMediaRole,
+  role: ModelArtifactRole,
   resolve: (path: string) => SurfaceResolvedReference | undefined,
 ): SurfaceResolvedReference {
   const artifact = ref(element, name, blobTypes.blob, resolve);
   if (artifact.record !== undefined) {
-    assert(artifact.record.value.kind === "blob" && artifact.record.value.mediaType.startsWith(`${role}/`),
+    assert(isBlobRef(artifact.record.value) && artifact.record.value.mediaType.startsWith(`${role}/`),
       `${element.name}.${name} must reference ${role} media`);
   }
   return artifact;
@@ -99,7 +97,7 @@ function empty(element: StructuredElement): void {
     `${element.name} accepts no children`);
 }
 
-function selectModel(element: StructuredElement): { endpoint: ExactModelEndpoint; model: PixverseModel } {
+function selectModel(element: StructuredElement): { endpoint: FieldModelOperation; model: PixverseModel } {
   const requested = text(element, "model");
   if (requested === "v6" || requested === "pixverse-v6") {
     return { endpoint: pixverseEndpointsByModel["pixverse-v6"], model: "pixverse-v6" };
@@ -113,61 +111,63 @@ function selectModel(element: StructuredElement): { endpoint: ExactModelEndpoint
 /** A switch one model carries and the other does not is refused where it was authored. */
 function modelScoped(
   element: StructuredElement,
-  endpoint: ExactModelEndpoint,
+  endpoint: FieldModelOperation,
   attribute: string,
   port: string,
-  read: (element: StructuredElement, name: string) => readonly GenerationPortValue[] | undefined,
-): readonly GenerationPortValue[] | undefined {
+  read: (element: StructuredElement, name: string) => readonly ModelFieldValue[] | undefined,
+): readonly ModelFieldValue[] | undefined {
   if (element.attributes[attribute] === undefined) return undefined;
   assert(endpoint.ports.ports.some((item) => item.name === port),
     `${element.name}.${attribute} is not accepted by ${endpoint.ports.model}`);
   return read(element, attribute);
 }
 
-function capacity(element: StructuredElement, endpoint: ExactModelEndpoint, port: string, used: number): void {
+function capacity(element: StructuredElement, endpoint: FieldModelOperation, port: string, used: number): void {
   if (used === 0) return;
   const declared = endpoint.ports.ports.find((item) => item.name === port);
   assert(declared !== undefined, `${element.name} references are not accepted by ${endpoint.ports.model}`);
-  assert(used <= declared.maxItems,
-    `${element.name} accepts at most ${declared.maxItems} ${port === "referenceVideo" ? "video" : "image"} references on ${endpoint.ports.model}`);
+  if (declared.maxItems !== undefined) {
+    assert(used <= declared.maxItems,
+      `${element.name} accepts at most ${declared.maxItems} ${port === "referenceVideo" ? "video" : "image"} references on ${endpoint.ports.model}`);
+  }
 }
 
 function assemble(
   element: StructuredElement,
-  endpoint: ExactModelEndpoint,
+  endpoint: FieldModelOperation,
   prompt: SurfaceResolvedReference,
   inputs: readonly MediaInput[],
-  stated: Readonly<Record<string, readonly GenerationPortValue[] | undefined>>,
+  stated: Readonly<Record<string, readonly ModelFieldValue[] | undefined>>,
 ) {
   const id = text(element, "id");
-  const draft = sealGenerationRequestDraft(endpoint.ports, Object.fromEntries(
-    Object.entries(stated).filter((entry): entry is [string, readonly GenerationPortValue[]] => entry[1] !== undefined),
+  const draft = sealModelFieldBuilder(endpoint.ports, Object.fromEntries(
+    Object.entries(stated).filter((entry): entry is [string, readonly ModelFieldValue[]] => entry[1] !== undefined),
   ));
-  const records: Array<{ id: string; type: TypeRef; value: { kind: "inline"; value: CanonicalValue }; range: StructuredElement["range"] }> = [{
+  const records: Array<{ id: string; type: TypeRef; value: CanonicalValue; range: StructuredElement["range"] }> = [{
     id: `${id}.draft`, type: endpoint.draftType,
-    value: { kind: "inline", value: draft as unknown as CanonicalValue }, range: element.range,
+    value: (draft as unknown as CanonicalValue), range: element.range,
   }];
   const componentInputs: Record<string, SurfaceResolvedReference["ref"] | { kind: "record"; id: string }> = {
-    draft: { kind: "record", id: `${id}.draft` }, [exactModelTextInputName("prompt")]: prompt.ref,
+    draft: { kind: "record", id: `${id}.draft` }, [modelTextInputName("prompt")]: prompt.ref,
   };
   const attached = inputs.map(({ port, role, source }, index) => {
     const name = `media-${String(index + 1).padStart(4, "0")}`;
     const bindingId = `${id}.${name}.binding`;
-    const mediaPort = generationPort(endpoint.ports, port);
+    const mediaPort = modelField(endpoint.ports, port);
     assert(mediaPort.value.kind === "media", `PixVerse port ${port} is not media`);
     records.push({
       id: bindingId, type: endpoint.mediaBindings[port]!.type,
-      value: { kind: "inline", value: sealGenerationMediaBinding(mediaPort as GenerationMediaPort, { role }) as unknown as CanonicalValue },
+      value: (sealModelArtifactBinding(mediaPort as ModelArtifactField, { role }) as unknown as CanonicalValue),
       range: element.range,
     });
-    const names = exactModelMediaInputNames(name);
+    const names = modelArtifactInputNames(name);
     componentInputs[names.binding] = { kind: "record", id: bindingId };
     componentInputs[names.artifact] = source.ref;
     return { name, port } as const;
   });
-  const fragment = createExactModelPrimaryGenerationFragment(endpoint, attached, [{ name: "prompt", port: "prompt" }]);
-  return { records, fragments: [fragment], components: [{
-    id, fragment: fragment.id, inputs: componentInputs, outputs: { video: `${id}.video` }, range: element.range,
+  const fragment = createFieldModelPrimaryFragment(endpoint, attached, [{ name: "prompt", port: "prompt" }]);
+  return { records, components: [{
+    id, fragment, inputs: componentInputs, outputs: { video: `${id}.video` }, range: element.range,
   }] };
 }
 
@@ -177,8 +177,8 @@ function promptReference(
 ): SurfaceResolvedReference {
   const prompt = ref(element, "prompt", textTypes.text, resolveReference);
   if (prompt.record !== undefined) {
-    assert(prompt.record.value.kind === "inline", `${element.name}.prompt must reference Text`);
-    verifyText(prompt.record.value.value);
+    assert(true, `${element.name}.prompt must reference Text`);
+    verifyText(prompt.record.value);
   }
   return prompt;
 }

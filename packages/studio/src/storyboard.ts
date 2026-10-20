@@ -1,4 +1,10 @@
 import { spawn } from "node:child_process";
+import { createWriteStream } from "node:fs";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { Readable } from "node:stream";
+import { pipeline } from "node:stream/promises";
 
 import type { ServedFile } from "./compile.js";
 
@@ -22,7 +28,6 @@ type VideoFacts = {
 function run(
   executable: string,
   args: readonly string[],
-  input: Uint8Array,
   maxOutputBytes: number,
 ): Promise<Buffer> {
   return new Promise((resolve, reject) => {
@@ -59,7 +64,7 @@ function run(
       else finish(new Error(`${executable} exited ${String(code)}: ${stderr.trim()}`));
     });
     child.stdin.on("error", () => { /* a failed child reports through close */ });
-    child.stdin.end(Buffer.from(input));
+    child.stdin.end();
   });
 }
 
@@ -71,14 +76,14 @@ function rational(value: string | undefined): number | undefined {
   return Number.isFinite(result) && result > 0 ? result : undefined;
 }
 
-async function videoFacts(file: ServedFile): Promise<VideoFacts> {
+async function videoFacts(path: string): Promise<VideoFacts> {
   const output = await run("ffprobe", [
     "-v", "error",
     "-select_streams", "v:0",
     "-show_entries", "stream=avg_frame_rate,duration,width,height:format=duration",
     "-of", "json",
-    "pipe:0",
-  ], file.bytes, 1024 * 1024);
+    path,
+  ], 1024 * 1024);
   const value = JSON.parse(output.toString("utf8")) as {
     readonly streams?: readonly {
       readonly avg_frame_rate?: string;
@@ -103,14 +108,39 @@ async function videoFacts(file: ServedFile): Promise<VideoFacts> {
 /** Build one immutable filmstrip atlas for an already selected video Artifact. */
 export async function createStudioStoryboard(file: ServedFile): Promise<StudioStoryboard> {
   if (!file.mediaType.startsWith("video/")) throw new Error("Studio storyboards require a video Artifact.");
-  const facts = await videoFacts(file);
+  return withMediaFile(file, storyboardFromFile);
+}
+
+/** Decode the low-resolution waveform outside the playback browser. */
+export async function createStudioWaveform(file: ServedFile): Promise<Uint8Array> {
+  return withMediaFile(file, (path) => run("ffmpeg", [
+    "-hide_banner", "-loglevel", "error", "-threads", "1",
+    "-i", path, "-filter_complex_threads", "1",
+    "-filter_complex", "[0:a:0]aresample=8000,showwavespic=s=2048x56:colors=white:scale=lin:filter=peak",
+    "-frames:v", "1", "-an", "-f", "image2pipe", "-vcodec", "png", "pipe:1",
+  ], 1024 * 1024));
+}
+
+async function withMediaFile<T>(file: ServedFile, use: (path: string) => Promise<T>): Promise<T> {
+  const directory = await mkdtemp(join(tmpdir(), "hypit-storyboard-"));
+  try {
+    const path = join(directory, "source");
+    await pipeline(Readable.from(await file.open()), createWriteStream(path));
+    return await use(path);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+}
+
+async function storyboardFromFile(path: string): Promise<StudioStoryboard> {
+  const facts = await videoFacts(path);
   // Timeline content is roughly 40 CSS px high. An 80 px atlas tile remains
   // crisp on a 2x display while still being a small presentation derivative.
   const tileHeight = 80;
   const tileWidth = Math.max(1, Math.round(tileHeight * facts.width / facts.height));
   // Short-form material gets a tile for every source frame. Longer material
   // gradually reduces sampling density to keep the presentation atlas bounded.
-  const sampleFps = Math.max(1, Math.min(facts.fps, 360 / facts.duration));
+  const sampleFps = Math.min(facts.fps, 360 / facts.duration);
   const count = Math.max(1, Math.floor(facts.duration * sampleFps));
   const columns = Math.min(32, count);
   const rows = Math.ceil(count / columns);
@@ -122,12 +152,12 @@ export async function createStudioStoryboard(file: ServedFile): Promise<StudioSt
   ].join(",");
   const bytes = await run("ffmpeg", [
     "-hide_banner", "-loglevel", "error",
-    "-i", "pipe:0",
+    "-i", path,
     "-vf", filter,
     "-frames:v", "1",
     "-f", "image2pipe",
     "-vcodec", "png",
     "pipe:1",
-  ], file.bytes, 64 * 1024 * 1024);
+  ], 64 * 1024 * 1024);
   return { bytes, count, columns, rows, tileWidth, tileHeight, sampleFps };
 }

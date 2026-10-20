@@ -1,3 +1,4 @@
+import { sameType } from "@hypit/hypit/protocol";
 import { blobTypes } from "@hypit/hypit/blob";
 import type { StructuredElement, StructuredSurfaceHandler } from "@hypit/hypit/markup";
 import type { FontArtifactRef } from "./render.js";
@@ -108,18 +109,17 @@ async function decodeMediaAssetSurface(
   const source = stringAttribute(element, "src");
   const mediaType = mediaTypeFor(element, source, kind, known);
   const resolved = await resolveAsset({ from: source, mediaType, range: element.range });
-  if (!resolved.artifact.mediaType.startsWith(`${kind}/`)) {
+  if (!resolved.blob.mediaType.startsWith(`${kind}/`)) {
     throw new Error(`${element.name}.src did not resolve to an ${kind} artifact`);
   }
   return {
     records: [{
       id,
       type: blobTypes.blob,
-      value: resolved.artifact,
+      value: resolved.blob,
       range: element.range,
     }],
     components: [],
-    fragments: [],
   };
 }
 
@@ -177,7 +177,7 @@ export const decodeMediaFontSurface: StructuredSurfaceHandler = async ({ element
     const mediaType = mediaTypeFor(declaration.element, declaration.source, "font", FONT_MEDIA_TYPES);
     const resolved = await resolveAsset({ from: declaration.source, mediaType, range: declaration.element.range });
     sources.push({
-      artifact: resolved.artifact,
+      artifact: resolved.blob,
       ...(declaration.unicodeRange === undefined ? {} : { unicodeRange: declaration.unicodeRange }),
     });
   }
@@ -188,15 +188,10 @@ export const decodeMediaFontSurface: StructuredSurfaceHandler = async ({ element
   };
   assertFontArtifactRef(font, `${element.name}.${id}`);
   return {
-    records: [{ id, type: mediaTypes.fontArtifact, value: { kind: "inline" as const, value: font }, range: element.range }],
+    records: [{ id, type: mediaTypes.fontArtifact, value: (font), range: element.range }],
     components: [],
-    fragments: [],
   };
 };
-
-function sameType(left: { readonly module: { readonly name: string; readonly version: string }; readonly name: string }, right: typeof mediaTypes.fontArtifact): boolean {
-  return left.module.name === right.module.name && left.module.version === right.module.version && left.name === right.name;
-}
 
 export const decodeMediaFontStackSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
   assertAttributes(element, ["id", "primary"]);
@@ -210,10 +205,10 @@ export const decodeMediaFontStackSurface: StructuredSurfaceHandler = ({ element,
     const resolved = resolveReference(raw.path);
     if (resolved === undefined) throw new Error(`${owner.name}.${name} cannot resolve ${raw.path}`);
     if (!sameType(resolved.type, mediaTypes.fontArtifact)) throw new Error(`${owner.name}.${name} has the wrong type`);
-    if (resolved.record?.value.kind !== "inline") {
-      throw new Error(`${owner.name}.${name} must reference an authored inline FontArtifact`);
+    if (resolved.record === undefined) {
+      throw new Error(`${owner.name}.${name} must reference an authored FontArtifact`);
     }
-    faces.push(resolved.record.value.value as unknown as FontArtifactRef);
+    faces.push(resolved.record.value as unknown as FontArtifactRef);
   };
   append(element, "primary");
   for (const child of element.children) {
@@ -229,8 +224,7 @@ export const decodeMediaFontStackSurface: StructuredSurfaceHandler = ({ element,
   const stack = { faces };
   assertFontStackRef(stack, `${element.name}.${id}`);
   return {
-    records: [{ id, type: mediaTypes.fontStack, value: { kind: "inline", value: stack }, range: element.range }],
+    records: [{ id, type: mediaTypes.fontStack, value: (stack), range: element.range }],
     components: [],
-    fragments: [],
   };
 };

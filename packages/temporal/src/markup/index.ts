@@ -1,5 +1,5 @@
 import { sealGraphFragment } from "@hypit/hypit/author";
-import type { FragmentOperation, FragmentOperationRef, GraphFragment } from "@hypit/hypit/author";
+import type { FragmentOperation, FragmentOperationRef } from "@hypit/hypit/author";
 import type {
   MarkupAttributeValue, StructuredElement, SurfaceAttributeVocabulary, SurfaceComponentDraft,
   SurfaceRecordDraft, SurfaceResolvedReference,
@@ -38,7 +38,6 @@ const temporalWindowAuthorAttributeNames = ["from", "until", "for"] as const;
 export type TemporalMarkupConstruction = {
   readonly records: readonly SurfaceRecordDraft[];
   readonly components: readonly SurfaceComponentDraft[];
-  readonly fragments: readonly GraphFragment[];
   readonly ref: SurfaceResolvedReference["ref"];
   readonly startRef?: SurfaceResolvedReference["ref"];
   readonly endRef?: SurfaceResolvedReference["ref"];
@@ -134,7 +133,7 @@ function constructWindow(value: {
     timeline: value.timeline.ref, "window-spec": { kind: "record", id: `${value.id}.__temporal.window` },
   };
   const records: SurfaceRecordDraft[] = [{ id: `${value.id}.__temporal.window`, type: temporalTypes.windowSpec,
-    value: { kind: "inline", value: { id: value.id, subjectId: value.subjectId } }, range: value.element.range }];
+    value: ({ id: value.id, subjectId: value.subjectId }), range: value.element.range }];
   const operations: FragmentOperation[] = [];
   const materialize = (name: "start" | "end", draft: InstantDraft): FragmentOperationRef => {
     if (draft.kind === "reference") {
@@ -143,19 +142,19 @@ function constructWindow(value: {
       bindings[port] = draft.reference.ref;
       const operationId = `reuse-${name}`;
       operations.push({ id: operationId, producer: temporalProducers.reuseInstant,
-        inputs: { instant: fragmentInput(port) }, result: { kind: "output", name: "instant" } });
+        inputs: { instant: fragmentInput(port) }, result: { kind: "output" as const, name: "instant" } });
       return operation(operationId);
     }
     const port = `${name}-spec`, recordId = `${value.id}.__temporal.${name}`;
     ports.push({ name: port, type: temporalTypes.instantSpec });
     bindings[port] = { kind: "record", id: recordId };
-    records.push({ id: recordId, type: temporalTypes.instantSpec, value: { kind: "inline", value: {
+    records.push({ id: recordId, type: temporalTypes.instantSpec, value: ({
       id: `${value.id}.${name}`, subjectId: value.subjectId, projection: draft.expression,
       ...(draft.author === undefined ? {} : { author: draft.author }),
-    } }, range: value.element.range });
+    }), range: value.element.range });
     const operationId = `materialize-${name}`;
     operations.push({ id: operationId, producer: temporalProducers.projectProgramInstant,
-      inputs: { timeline: fragmentInput("timeline"), spec: fragmentInput(port) }, result: { kind: "output", name: "instant" } });
+      inputs: { timeline: fragmentInput("timeline"), spec: fragmentInput(port) }, result: { kind: "output" as const, name: "instant" } });
     return operation(operationId);
   };
   let start = materialize("start", value.start);
@@ -171,9 +170,9 @@ function constructWindow(value: {
       const durationId = `${value.id}.__temporal.duration`;
       bindings.duration = { kind: "record", id: durationId };
       records.push({ id: durationId, type: temporalTypes.duration,
-        value: { kind: "inline", value: value.extent.duration }, range: value.element.range });
+        value: (value.extent.duration), range: value.element.range });
       operations.push({ id: "resolve-extent", producer: temporalProducers.extentFromDuration,
-        inputs: { timeline: fragmentInput("timeline"), duration: fragmentInput("duration") }, result: { kind: "output", name: "extent" } });
+        inputs: { timeline: fragmentInput("timeline"), duration: fragmentInput("duration") }, result: { kind: "output" as const, name: "extent" } });
       extentRef = operation("resolve-extent");
     }
     const direction = value.direction;
@@ -183,29 +182,29 @@ function constructWindow(value: {
     ports.push({ name: "shift-spec", type: temporalTypes.shiftSpec });
     const shiftId = `${value.id}.__temporal.shift`;
     bindings["shift-spec"] = { kind: "record", id: shiftId };
-    records.push({ id: shiftId, type: temporalTypes.shiftSpec, value: { kind: "inline", value: {
+    records.push({ id: shiftId, type: temporalTypes.shiftSpec, value: ({
       id: `${value.id}.${direction === 1 ? "end" : "start"}`, subjectId: value.subjectId, direction,
       ...(value.extent.kind !== "duration" || value.extent.author === undefined ? {} : {
         author: { ...value.extent.author, relation: direction === 1 ? "after-start" : "before-end" },
       }),
-    } }, range: value.element.range });
+    }), range: value.element.range });
     operations.push({ id: "shift", producer: temporalProducers.shiftInstant,
       inputs: { timeline: fragmentInput("timeline"), instant: base, extent: extentRef, spec: fragmentInput("shift-spec") },
-      result: { kind: "output", name: "instant" } });
+      result: { kind: "output" as const, name: "instant" } });
     if (direction === 1) end = operation("shift"); else start = operation("shift");
   }
   if (end === undefined) throw new Error("Temporal Window has no end Instant.");
   operations.push({ id: "compose", producer: temporalProducers.composeWindow,
-    inputs: { spec: fragmentInput("window-spec"), start, end }, result: { kind: "output", name: "window" } });
+    inputs: { spec: fragmentInput("window-spec"), start, end }, result: { kind: "output" as const, name: "window" } });
   const fragment = sealGraphFragment({ inputs: ports, operations, exports: [
     { name: "window", type: temporalTypes.window, root: operation("compose") },
     { name: "start", type: temporalTypes.instant, root: start },
     { name: "end", type: temporalTypes.instant, root: end },
   ] });
   const componentId = `${value.id}.__temporal`;
-  return { records, components: [{ id: componentId, fragment: fragment.id, inputs: bindings,
+  return { records, components: [{ id: componentId, fragment, inputs: bindings,
     outputs: { window: `${value.id}.__temporal.window.value`, start: `${value.id}.__temporal.start.value`,
-      end: `${value.id}.__temporal.end.value` }, range: value.element.range }], fragments: [fragment],
+      end: `${value.id}.__temporal.end.value` }, range: value.element.range }],
     ref: { kind: "component-output", component: componentId, output: "window" },
     startRef: { kind: "component-output", component: componentId, output: "start" },
     endRef: { kind: "component-output", component: componentId, output: "end" } };
@@ -247,7 +246,7 @@ export function createTemporalInstantConstruction(value: {
   if (typeof raw !== "string") {
     const found = resolvedReference(raw, `${value.element.name}.${attribute}`, temporalTypes.instant, value.resolveReference);
     const rawOffset = value.element.attributes.offset;
-    if (rawOffset === undefined) return { records: [], components: [], fragments: [], ref: found.ref };
+    if (rawOffset === undefined) return { records: [], components: [], ref: found.ref };
     const offset = signedDuration(rawOffset, `${value.element.name}.offset`);
     const durationId = `${value.id}.__temporal.duration`, shiftId = `${value.id}.__temporal.shift`;
     const fragment = sealGraphFragment({ inputs: [
@@ -255,25 +254,25 @@ export function createTemporalInstantConstruction(value: {
       { name: "duration", type: temporalTypes.duration }, { name: "spec", type: temporalTypes.shiftSpec },
     ], operations: [{ id: "extent", producer: temporalProducers.extentFromDuration,
       inputs: { timeline: fragmentInput("timeline"), duration: fragmentInput("duration") },
-      result: { kind: "output", name: "extent" } },
+      result: { kind: "output" as const, name: "extent" } },
     { id: "shift", producer: temporalProducers.shiftInstant,
       inputs: { timeline: fragmentInput("timeline"), instant: fragmentInput("instant"),
-        extent: operation("extent"), spec: fragmentInput("spec") }, result: { kind: "output", name: "instant" } }],
+        extent: operation("extent"), spec: fragmentInput("spec") }, result: { kind: "output" as const, name: "instant" } }],
     exports: [{ name: "instant", type: temporalTypes.instant, root: operation("shift") }] });
     const componentId = `${value.id}.__temporal`;
     return {
       records: [
-        { id: durationId, type: temporalTypes.duration, value: { kind: "inline", value: offset.duration }, range: value.element.range },
-        { id: shiftId, type: temporalTypes.shiftSpec, value: { kind: "inline", value: {
+        { id: durationId, type: temporalTypes.duration, value: (offset.duration), range: value.element.range },
+        { id: shiftId, type: temporalTypes.shiftSpec, value: ({
           id: value.id, subjectId: value.subjectId ?? value.id, direction: offset.direction,
           author: { binding: "offset", relation: "direct" },
-        } }, range: value.element.range },
+        }), range: value.element.range },
       ],
-      components: [{ id: componentId, fragment: fragment.id, inputs: {
+      components: [{ id: componentId, fragment, inputs: {
         timeline: value.timeline.ref, instant: found.ref,
         duration: { kind: "record", id: durationId }, spec: { kind: "record", id: shiftId },
       }, outputs: { instant: `${value.id}.__temporal.instant.value` }, range: value.element.range }],
-      fragments: [fragment], ref: { kind: "component-output", component: componentId, output: "instant" },
+      ref: { kind: "component-output", component: componentId, output: "instant" },
     };
   }
   if (value.element.attributes.offset !== undefined) {
@@ -283,16 +282,16 @@ export function createTemporalInstantConstruction(value: {
   const fragment = sealGraphFragment({ inputs: [
     { name: "timeline", type: timelineTypes.timeline }, { name: "spec", type: temporalTypes.instantSpec },
   ], operations: [{ id: "materialize", producer: temporalProducers.projectProgramInstant,
-    inputs: { timeline: fragmentInput("timeline"), spec: fragmentInput("spec") }, result: { kind: "output", name: "instant" } }],
+    inputs: { timeline: fragmentInput("timeline"), spec: fragmentInput("spec") }, result: { kind: "output" as const, name: "instant" } }],
   exports: [{ name: "instant", type: temporalTypes.instant, root: operation("materialize") }] });
   const componentId = `${value.id}.__temporal`;
-  return { records: [{ id: specId, type: temporalTypes.instantSpec, value: { kind: "inline", value: {
+  return { records: [{ id: specId, type: temporalTypes.instantSpec, value: ({
     id: value.id, subjectId: value.subjectId ?? value.id,
     projection: parseTemporalInstant(raw, `${value.element.name}.${attribute}`),
     author: { binding: attribute, relation: "direct" },
-  } }, range: value.element.range }], components: [{ id: componentId, fragment: fragment.id,
+  }), range: value.element.range }], components: [{ id: componentId, fragment,
     inputs: { timeline: value.timeline.ref, spec: { kind: "record", id: specId } },
-    outputs: { instant: `${value.id}.__temporal.instant.value` }, range: value.element.range }], fragments: [fragment],
+    outputs: { instant: `${value.id}.__temporal.instant.value` }, range: value.element.range }],
   ref: { kind: "component-output", component: componentId, output: "instant" } };
 }
 

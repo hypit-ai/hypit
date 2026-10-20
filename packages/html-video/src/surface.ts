@@ -1,6 +1,7 @@
 import { resolveTemporalContext } from "@hypit/temporal/markup";
 import { compositionTypes } from "@hypit/composition";
 import { mediaTypes, verifyMediaFrameRange } from "@hypit/media";
+import { sameType } from "@hypit/hypit/protocol";
 import type { StructuredElement, StructuredSurfaceHandler, MarkupAttributeValue } from "@hypit/hypit/markup";
 
 import { createHtmlVideoFragment } from "./fragment.js";
@@ -30,10 +31,7 @@ export const decodeHtmlVideoSurface: StructuredSurfaceHandler = ({ element, reso
   const id = stringAttribute(element, "id");
   const path = referenceAttribute(element, "composition");
   const composition = resolveReference(path);
-  if (composition === undefined
-    || composition.type.module.name !== compositionTypes.composition.module.name
-    || composition.type.module.version !== compositionTypes.composition.module.version
-    || composition.type.name !== compositionTypes.composition.name) {
+  if (composition === undefined || !sameType(composition.type, compositionTypes.composition)) {
     throw new Error(`${element.name}.composition must reference Composition`);
   }
   const context = resolveTemporalContext({ element, resolveReference });
@@ -48,14 +46,13 @@ export const decodeHtmlVideoSurface: StructuredSurfaceHandler = ({ element, reso
   const fragment = createHtmlVideoFragment(selected);
   const rangeId = `${id}.frame-range`;
   return {
-    records: range === undefined ? [] : [{ id: rangeId, type: mediaTypes.frameRange, value: { kind: "inline", value: range }, range: element.range }],
+    records: range === undefined ? [] : [{ id: rangeId, type: mediaTypes.frameRange, value: (range), range: element.range }],
     components: [{
       id,
-      fragment: fragment.id,
+      fragment,
       inputs: { composition: composition.ref, timeline: context.timeline.ref, ...(selected ? { range: { kind: "record" as const, id: rangeId } } : {}) },
       outputs: { video: `${id}.video` },
       range: element.range,
     }],
-    fragments: [fragment],
   };
 };

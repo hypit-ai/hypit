@@ -12,7 +12,7 @@ import type {
   TypedRecord,
 } from "@hypit/protocol";
 import {
-  createProvidedCandidate,
+  createSupplyCandidate,
 } from "./candidate.js";
 
 import { sealRunGraph } from "./graph.js";
@@ -35,7 +35,7 @@ export function collectRunModuleRequests(
   const imports = new Map(document.imports.map((item) => [item.as, item.from]));
   const requests = new Set<string>();
   for (const declaration of document.candidates) {
-    if (declaration.kind === "provided") {
+    if (declaration.kind === "value") {
       requests.add(moduleRequest(declaration.type.module));
       continue;
     }
@@ -96,22 +96,20 @@ export async function resolveRunDocument(
   for (const declaration of document.candidates) {
     if (declarationIds.has(declaration.id)) throw new Error(`Run Candidate ${declaration.id} is declared twice`);
     declarationIds.add(declaration.id);
-    if (declaration.kind === "provided") {
-      const candidate = createProvidedCandidate({
+    if (declaration.kind === "value") {
+      const candidate = createSupplyCandidate({
         id: declaration.id,
         type: declaration.type,
-        value: { kind: "inline", value: null },
       });
       addCandidate(candidate);
       bindCandidateName(declaration.id, candidate.id);
-      candidateSources.set(candidate.id, { kind: "stored-value", from: declaration.from });
+      candidateSources.set(candidate.id, { kind: "value", from: declaration.from });
       continue;
     }
     if (declaration.kind === "file") {
-      const candidate = createProvidedCandidate({
+      const candidate = createSupplyCandidate({
         id: declaration.id,
         type: declaration.type,
-        value: { kind: "inline", value: null },
       });
       addCandidate(candidate);
       bindCandidateName(declaration.id, candidate.id);
@@ -122,7 +120,7 @@ export async function resolveRunDocument(
       });
       continue;
     }
-    if (declaration.kind === "build-record") {
+    if (declaration.kind === "build-output") {
       const destinations = document.satisfactions
         .filter((item) => item.candidate === declaration.id)
         .map((item) => resolveCompiledSourceExport(context.compilation, item.output));
@@ -136,7 +134,7 @@ export async function resolveRunDocument(
           throw new Error(`Historical Candidate ${declaration.id} is used for incompatible Logical Output types`);
         }
       }
-      const candidate = createProvidedCandidate({ id: declaration.id, type, value: { kind: "inline", value: null } });
+      const candidate = createSupplyCandidate({ id: declaration.id, type });
       addCandidate(candidate);
       bindCandidateName(declaration.id, candidate.id);
       candidateSources.set(candidate.id, {
@@ -164,13 +162,12 @@ export async function resolveRunDocument(
       records.set(id, {
         id,
         type: inputDeclaration.type,
-        value: { kind: "inline", value: canonicalize(item.value) },
+        value: (canonicalize(item.value)),
       });
       return [item.name, { kind: "record", id }];
     }));
     const instance = elaborateGraphFragment(context.compilation.program, fragment, {
       id: `run:${declaration.id}`,
-      fragment: fragment.id,
       inputs: fragmentInputs,
     });
     const contribution = exportRunFragment(instance, declaration.exports);

@@ -13,7 +13,7 @@ import type {
   VisualTrack,
 } from "@hypit/composition";
 import { assertFontArtifactRef } from "@hypit/media";
-import { canonicalize, isResourceId } from "@hypit/hypit/protocol";
+import { assertBlobRef, canonicalize } from "@hypit/hypit/protocol";
 import type { BlobRef } from "@hypit/hypit/protocol";
 import { assertSpatialFrame } from "@hypit/spatial";
 import type { SpatialFrame } from "@hypit/spatial";
@@ -161,8 +161,7 @@ export function setCommentStickerContentText(
 }
 
 function assertAvatar(value: BlobRef): void {
-  assert(value.kind === "blob" && isResourceId(value.resource), "Comment Sticker avatar is not a BlobRef.");
-  integer(value.size, "Comment Sticker avatar size");
+  assertBlobRef(value, "Comment Sticker avatar");
   assert(value.mediaType.startsWith("image/"), "Comment Sticker avatar must be an image Artifact.");
 }
 

@@ -57,8 +57,8 @@ function authoredRecipe(
   resolve: (path: string) => SurfaceResolvedReference | undefined,
 ): Recipe {
   const value = typedReference(raw, label, recipeType, resolve);
-  if (value.record?.value.kind !== "inline") throw new Error(`${label} must be an authored SVS Recipe.`);
-  const recipe = value.record.value.value as unknown as Recipe;
+  if (value.record === undefined) throw new Error(`${label} must be an authored SVS Recipe.`);
+  const recipe = value.record.value as unknown as Recipe;
   const unknown = Object.keys(recipe.properties).filter((name) => !["audio", "span-authority", "video"].includes(name));
   if (unknown.length > 0) throw new Error(`${label} only accepts video, audio and span-authority; found ${unknown.join(", ")}.`);
   return recipe;
@@ -173,9 +173,7 @@ export const decodeSynchronizedMediaSurface: StructuredSurfaceHandler = ({ eleme
   const id = text(element, "id");
   const source = ref(element.attributes.source, `${element.name}.source`, resolveReference);
   const clock = typedReference(element.attributes.clock, `${element.name}.clock`, timelineTypes.clock, resolveReference);
-  const clockValue = clock.record?.value.kind === "inline"
-    ? clock.record.value.value as unknown as Clock
-    : undefined;
+  const clockValue = clock.record?.value as unknown as Clock | undefined;
   if (clockValue === undefined) throw new Error(`${element.name}.clock must be an authored Clock record.`);
   const normalizationRecipe = hasRecipe ? authoredRecipe(element.attributes.recipe, `${element.name}.recipe`, resolveReference) : undefined;
   const video = stream(normalizationRecipe === undefined ? text(element, "video") : recipeText(normalizationRecipe, "video", `${element.name}.recipe`), "video");
@@ -194,17 +192,16 @@ export const decodeSynchronizedMediaSurface: StructuredSurfaceHandler = ({ eleme
   const domainId = `${id}.domain-spec`;
   return {
     records: [
-      { id: requestId, type: mediaOperationsTypes.selectionRequest, value: { kind: "inline", value: request }, range: element.range },
-      { id: domainId, type: mediaTypes.domainSpec, value: { kind: "inline", value: { id } }, range: element.range },
+      { id: requestId, type: mediaOperationsTypes.selectionRequest, value: (request), range: element.range },
+      { id: domainId, type: mediaTypes.domainSpec, value: ({ id }), range: element.range },
     ],
     components: [{
       id,
-      fragment: synchronizedMediaFragment.id,
+      fragment: synchronizedMediaFragment,
       inputs: { source: source.ref, request: { kind: "record", id: requestId }, domain: { kind: "record", id: domainId } },
       outputs: { media: `${id}.media`, domain: `${id}.domain`, extent: `${id}.extent` },
       range: element.range,
     }],
-    fragments: [synchronizedMediaFragment],
   };
 };
 
@@ -257,19 +254,19 @@ export const decodeStillVideoSurface: StructuredSurfaceHandler = ({ element, res
     records: [{
       id: durationId,
       type: temporalTypes.duration,
-      value: { kind: "inline", value: duration },
+      value: (duration),
       range: element.range,
     }, {
       id: layoutId,
       type: mediaOperationsTypes.stillVideoLayout,
-      value: { kind: "inline", value: {
+      value: ({
         weights: pictures.map((picture) => picture.weight),
-      } },
+      }),
       range: element.range,
     }],
     components: [{
       id,
-      fragment: fragment.id,
+      fragment,
       inputs: {
         duration: { kind: "record", id: durationId },
         clock: clock.ref,
@@ -279,7 +276,6 @@ export const decodeStillVideoSurface: StructuredSurfaceHandler = ({ element, res
       outputs: { video: `${id}.video` },
       range: element.range,
     }],
-    fragments: [fragment],
   };
 };
 
@@ -293,11 +289,11 @@ export const decodeTransformMediaSurface: StructuredSurfaceHandler = ({ element,
   const programId = `${id}.program`;
   return {
     records: [
-      { id: programId, type: mediaOperationsTypes.transformProgram, value: { kind: "inline", value: program }, range: element.range },
+      { id: programId, type: mediaOperationsTypes.transformProgram, value: (program), range: element.range },
     ],
     components: [{
       id,
-      fragment: transformMediaFragment.id,
+      fragment: transformMediaFragment,
       inputs: {
         media: source.ref,
         program: { kind: "record", id: programId },
@@ -305,7 +301,6 @@ export const decodeTransformMediaSurface: StructuredSurfaceHandler = ({ element,
       outputs: { video: `${id}.video` },
       range: element.range,
     }],
-    fragments: [transformMediaFragment],
   };
 };
 
@@ -321,15 +316,14 @@ export const decodeExtractAudioSurface: StructuredSurfaceHandler = ({ element, r
   const requestId = `${id}.request`;
   return {
     records: [{ id: requestId, type: mediaOperationsTypes.audioExtractionRequest,
-      value: { kind: "inline", value: request }, range: element.range }],
+      value: (request), range: element.range }],
     components: [{
       id,
-      fragment: extractAudioFragment.id,
+      fragment: extractAudioFragment,
       inputs: { source: source.ref, request: { kind: "record", id: requestId } },
       outputs: { audio: `${id}.audio` },
       range: element.range,
     }],
-    fragments: [extractAudioFragment],
   };
 };
 
@@ -356,14 +350,13 @@ export const decodeExtractFrameSurface: StructuredSurfaceHandler = ({ element, r
   const requestId = `${id}.request`;
   return {
     records: [{ id: requestId, type: mediaOperationsTypes.frameExtractionRequest,
-      value: { kind: "inline", value: request }, range: element.range }],
+      value: (request), range: element.range }],
     components: [{
       id,
-      fragment: extractFrameFragment.id,
+      fragment: extractFrameFragment,
       inputs: { source: source.ref, request: { kind: "record", id: requestId } },
       outputs: { image: `${id}.image` },
       range: element.range,
     }],
-    fragments: [extractFrameFragment],
   };
 };

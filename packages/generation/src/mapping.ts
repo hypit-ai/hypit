@@ -15,21 +15,22 @@ export type GenerationArtifactUrlResolver = (
 /**
  * How one service names the fields of one model's declared input ports.
  *
- * A mapping is data, not code, and it references its Capability by name. A
- * Provider package therefore never imports a model package: the model owns what
- * it eats, the service owns what it calls that on the wire.
+ * A mapping is optional Provider-local data over one already validated Model
+ * request. The Provider may depend one-way on that Model's public contract;
+ * this helper owns only service field names and transport projection, never the
+ * Model request semantics.
  */
 export type GenerationFieldMapping =
   /** One scalar written as-is. */
-  | { readonly as: "value"; readonly field: string; readonly whenAbsent?: CanonicalValue }
+  | { readonly as: "value"; readonly field: string }
   /** One scalar coerced to its string form, for services that type it loosely. */
-  | { readonly as: "string"; readonly field: string; readonly whenAbsent?: CanonicalValue }
+  | { readonly as: "string"; readonly field: string }
   /** Several scalars written as one array. */
-  | { readonly as: "valueArray"; readonly field: string; readonly whenAbsent?: CanonicalValue }
+  | { readonly as: "valueArray"; readonly field: string }
   /** One media item written as a resolved URL. */
-  | { readonly as: "url"; readonly field: string; readonly resourceFields?: readonly string[]; readonly whenAbsent?: CanonicalValue }
+  | { readonly as: "url"; readonly field: string; readonly resourceFields?: readonly string[] }
   /** Several media items written as one array of resolved URLs. */
-  | { readonly as: "urlArray"; readonly field: string; readonly resourceFields?: readonly string[]; readonly whenAbsent?: CanonicalValue }
+  | { readonly as: "urlArray"; readonly field: string; readonly resourceFields?: readonly string[] }
   /** Media items written as objects carrying the resolved URL and their item fields. */
   | {
       readonly as: "itemObject";
@@ -37,7 +38,6 @@ export type GenerationFieldMapping =
       readonly urlKey: string;
       readonly resourceFields?: readonly string[];
       readonly fieldKeys: Readonly<Record<string, string>>;
-      readonly whenAbsent?: CanonicalValue;
     };
 
 /** Selects the service-side model identifier. The first matching route wins. */
@@ -53,7 +53,6 @@ export type GenerationWireMapping = {
    * cannot silently serve another.
    */
   readonly capability: CapabilityRef;
-  readonly result: "audio" | "image" | "video";
   readonly routes: readonly GenerationWireRoute[];
   readonly fields: Readonly<Record<string, GenerationFieldMapping>>;
   readonly constants?: Readonly<Record<string, CanonicalValue>>;
@@ -62,6 +61,24 @@ export type GenerationWireMapping = {
 export type GenerationWireRequest = {
   readonly model: string;
   readonly input: CanonicalValue;
+};
+
+export type GenerationWireResource = {
+  readonly kind: "generation-resource";
+  readonly artifact: BlobRef;
+  readonly fields: Readonly<Record<string, string | number | boolean>>;
+};
+
+export type GenerationWireValuePlan =
+  | CanonicalValue
+  | GenerationWireResource
+  | readonly GenerationWireValuePlan[]
+  | { readonly [key: string]: GenerationWireValuePlan };
+
+/** Pure Provider projection. Resources remain explicit until a transport is chosen. */
+export type GenerationWirePlan = {
+  readonly model: string;
+  readonly input: Readonly<Record<string, GenerationWireValuePlan>>;
 };
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -77,27 +94,15 @@ export function selectWireModel(mapping: GenerationWireMapping, present: Readonl
   throw new Error(`${mapping.capability.name} has no route for ports ${[...present].sort().join(", ")}`);
 }
 
-/**
- * Select one service model from the authored request shape.
- *
- * During planning, `pendingPorts` names graph inputs the model package has
- * already attached even though their Resource bytes do not exist yet. They are
- * ordinary model port names, not graph traversal instructions.
- */
+/** Select one service model from the concrete request emitted by its Producer. */
 export function selectWireModelForRequest(
   mapping: GenerationWireMapping,
   request: GenerationRequest,
-  pendingPorts: readonly string[] = [],
 ): string {
   const unsupported = unsupportedRequestField(mapping, request);
   assert(unsupported === undefined,
     `${mapping.capability.name} request contains ${unsupported} this Provider cannot map`);
   const present = new Set(presentPorts(request));
-  for (const port of pendingPorts) {
-    assert(mapping.fields[port] !== undefined,
-      `${mapping.capability.name} request contains future port ${port} this Provider cannot map`);
-    present.add(port);
-  }
   return selectWireModel(mapping, present);
 }
 
@@ -110,20 +115,16 @@ function resourceFields(item: GenerationMediaValue, names: readonly string[] = [
  * Compile one port-shaped request into one service payload. The engine needs
  * only the mapping and the request, never the model package.
  */
-export async function compileWireRequest(
+export function planWireRequest(
   mapping: GenerationWireMapping,
   request: GenerationRequest,
-  resolve: GenerationArtifactUrlResolver,
-): Promise<GenerationWireRequest> {
+): GenerationWirePlan {
   const model = selectWireModelForRequest(mapping, request);
-  const input: Record<string, CanonicalValue> = { ...(mapping.constants ?? {}) };
+  const input: Record<string, GenerationWireValuePlan> = { ...(mapping.constants ?? {}) };
 
   for (const [port, field] of Object.entries(mapping.fields)) {
     const supplied = request.ports[port];
-    if (supplied === undefined) {
-      if (field.whenAbsent !== undefined) input[field.field] = field.whenAbsent;
-      continue;
-    }
+    if (supplied === undefined) continue;
     if (field.as === "value") {
       input[field.field] = supplied[0] as CanonicalValue;
     } else if (field.as === "string") {
@@ -132,22 +133,63 @@ export async function compileWireRequest(
       input[field.field] = supplied as readonly CanonicalValue[];
     } else if (field.as === "url") {
       const item = supplied[0] as GenerationMediaValue;
-      input[field.field] = await resolve(item.artifact, resourceFields(item, field.resourceFields));
+      input[field.field] = {
+        kind: "generation-resource",
+        artifact: item.artifact,
+        fields: resourceFields(item, field.resourceFields),
+      };
     } else if (field.as === "urlArray") {
-      input[field.field] = await Promise.all((supplied as readonly GenerationMediaValue[])
-        .map((item) => resolve(item.artifact, resourceFields(item, field.resourceFields))));
+      input[field.field] = (supplied as readonly GenerationMediaValue[]).map((item) => ({
+        kind: "generation-resource" as const,
+        artifact: item.artifact,
+        fields: resourceFields(item, field.resourceFields),
+      }));
     } else {
       const media = supplied as readonly GenerationMediaValue[];
-      input[field.field] = await Promise.all(media.map(async (item) => ({
-        [field.urlKey]: await resolve(item.artifact, resourceFields(item, field.resourceFields)),
+      input[field.field] = media.map((item) => ({
+        [field.urlKey]: {
+          kind: "generation-resource" as const,
+          artifact: item.artifact,
+          fields: resourceFields(item, field.resourceFields),
+        },
         ...Object.fromEntries(Object.entries(field.fieldKeys)
           .filter(([source]) => item.fields?.[source] !== undefined)
           .map(([source, target]) => [target, item.fields![source] as CanonicalValue])),
-      })));
+      }));
     }
   }
 
-  return { model, input: canonicalize(input) };
+  return { model, input };
+}
+
+function isWireResource(value: GenerationWireValuePlan): value is GenerationWireResource {
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+    && (value as { readonly kind?: unknown }).kind === "generation-resource";
+}
+
+async function materializeWireValue(
+  value: GenerationWireValuePlan,
+  resolve: GenerationArtifactUrlResolver,
+): Promise<CanonicalValue> {
+  if (isWireResource(value)) return await resolve(value.artifact, value.fields);
+  if (Array.isArray(value)) return await Promise.all(value.map(async (item) => await materializeWireValue(item, resolve)));
+  if (value !== null && typeof value === "object") {
+    const entries = await Promise.all(Object.entries(value)
+      .map(async ([key, item]) => [key, await materializeWireValue(item, resolve)] as const));
+    return Object.fromEntries(entries);
+  }
+  return value;
+}
+
+/** Effect boundary for the URL-based transport used by the current HTTP Providers. */
+export async function materializeWireRequest(
+  plan: GenerationWirePlan,
+  resolve: GenerationArtifactUrlResolver,
+): Promise<GenerationWireRequest> {
+  return {
+    model: plan.model,
+    input: canonicalize(await materializeWireValue(plan.input, resolve)),
+  };
 }
 
 /** Describe only a supplied value the mapping cannot carry; no model table or saved verdict. */
@@ -189,9 +231,6 @@ export function assertMappingCoversPorts(
 ): void {
   assert(mapping.capability.name === table.model,
     `mapping names Capability ${mapping.capability.name} but the port table declares ${table.model}`);
-  assert(mapping.result === table.result,
-    `${table.model} mapping result ${mapping.result} differs from the port table`);
-
   const declared = new Map(table.ports.map((port) => [port.name, port]));
   Object.keys(mapping.fields).forEach((name) => assert(declared.has(name),
     `${table.model} mapping names undeclared port ${name}`));
@@ -208,7 +247,7 @@ export function assertMappingCoversPorts(
       assert(field.as === "url" || field.as === "urlArray" || field.as === "itemObject",
         `${subject} must resolve media to a URL`);
       if (field.as === "url") {
-        assert(port.maxItems === 1, `${subject} uses url but the port accepts up to ${port.maxItems} items`);
+        assert(port.maxItems === 1, `${subject} uses url but the port is not a single value`);
       }
       const mappedFields = [
         ...(field.resourceFields ?? []),
@@ -222,7 +261,7 @@ export function assertMappingCoversPorts(
         `${subject} maps unknown item field ${name}`);
       continue;
     }
-    if (port.maxItems > 1) {
+    if (port.maxItems === undefined || port.maxItems > 1) {
       assert(field.as === "valueArray", `${subject} must use valueArray because the port accepts several values`);
       continue;
     }

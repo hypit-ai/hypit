@@ -1,10 +1,11 @@
+import { capabilityKey } from "@hypit/hypit/protocol";
 import { readFileSync } from "node:fs";
 import type { RuntimeDoctorDiagnostic } from "@hypit/runtime-local/extension";
 import type { AsyncEndpoint, CredentialRef, EndpointCredential, EndpointFulfillment, EndpointInvocationContext, EndpointPollContext, EndpointPricingReader, EndpointStartContext, EndpointOutcome, ImmediateEndpointHandler, ResourceStore } from "@hypit/hypit/endpoint";
 import { credentialRef, EndpointServiceError, defineEndpoint, wakeAfter } from "@hypit/hypit/endpoint";
 import { EndpointHttpError, EndpointResponseError, EndpointTransportError, withRequestDeadline } from "@hypit/hypit/endpoint/http";
-import { selectWireModelForRequest } from "@hypit/generation";
-import type { GenerationRequest } from "@hypit/generation";
+import { selectWireModelForRequest } from "@hypit/generation/provider";
+import type { ProviderFieldRequest } from "@hypit/generation/provider";
 import { canonicalize } from "@hypit/hypit/protocol";
 import type { BlobRef, CanonicalValue, CapabilityRef } from "@hypit/hypit/protocol";
 import { sealAlignedTranscriptEvidence, speechEvidenceTypes } from "@hypit/speech-evidence";
@@ -79,7 +80,6 @@ function object(value: unknown, subject: string): Record<string, unknown> {
   assert(value !== null && typeof value === "object" && !Array.isArray(value), `${subject} must be an object`);
   return value as Record<string, unknown>;
 }
-function capabilityKey(capability: CapabilityRef): string { return `${capability.module.name}@${capability.module.version}#${capability.name}`; }
 function apiBaseUrl(value: string): string {
   const trimmed = value.trim().replace(/\/+$/u, "");
   assert(trimmed.length > 0, "HypiHub base URL is empty");
@@ -323,12 +323,8 @@ function pricingModel(request: import("@hypit/hypit/endpoint").EndpointRequest, 
   }
   const route = hypiHubRouteForCapability(request.capability);
   if (route === undefined) return undefined;
-  const generation = request.constraints as unknown as GenerationRequest;
-  return selectWireModelForRequest(
-    route,
-    generation,
-    request.pendingInputs?.map((input) => input.input),
-  );
+  const generation = request.constraints as unknown as ProviderFieldRequest;
+  return selectWireModelForRequest(route, generation);
 }
 
 /** Read HypiHub's own current model-pricing document without calculating a request total. */
@@ -501,7 +497,11 @@ function endpoint(client: HypiHubClient, pollIntervalMs: number, maxOperationMs:
         const remoteEnded = status === "succeeded" || status === "completed";
         const handle: Handle = { contract: "hypit.hypihub-operation@1", jobId: jobId(response), route: capabilityKey(route.capability), startedAt: Date.now() };
         const receipt = { id: handle.jobId };
-        await context.checkpoint?.({ handle: canonicalize(handle), receipt, ...(remoteEnded ? { remoteEnded: true as const } : {}) });
+        await context.checkpoint?.({
+          status: remoteEnded ? "ended" : "accepted",
+          handle: canonicalize(handle),
+          receipt,
+        });
         const rejected = hypiHubJobFailure(response, handle.jobId);
         if (rejected !== undefined) return { ...failure(rejected), receipt };
         return remoteEnded ? { status: "ready", handle: canonicalize(handle), receipt }
@@ -623,7 +623,7 @@ export function createHypiHubProvider(options: CreateHypiHubProviderOptions = {}
         passages: interpretWhisperXTranscript(response as WhisperXTranscriptResponse, request.sampleFrames),
       });
       await context.reportProgress?.({ phase: "Word timing ready" });
-      return { value: { kind: "inline", value: canonicalize(evidence) } };
+      return { value: (canonicalize(evidence)) };
     } catch (error) {
       throw new Error(failureMessage(error), { cause: error });
     }

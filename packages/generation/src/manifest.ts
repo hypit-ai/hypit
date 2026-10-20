@@ -40,26 +40,17 @@ export const generationManifest: ModuleManifest = {
     {
       name: generationProducers.primaryAudio.name,
       inputs: [{ name: "set", type: generationTypes.audioSet }],
-      outputs: [{ name: "audio", type: blobTypes.blob }],
-      needs: [],
+      result: { kind: "output" as const, name: "audio", type: blobTypes.blob },
     },
     {
       name: generationProducers.primaryImage.name,
       inputs: [{ name: "set", type: generationTypes.imageSet }],
-      outputs: [{
-        name: "image",
-        type: blobTypes.blob,
-      }],
-      needs: [],
+      result: { kind: "output" as const, name: "image", type: blobTypes.blob },
     },
     {
       name: generationProducers.primaryVideo.name,
       inputs: [{ name: "set", type: generationTypes.videoSet }],
-      outputs: [{
-        name: "video",
-        type: blobTypes.blob,
-      }],
-      needs: [],
+      result: { kind: "output" as const, name: "video", type: blobTypes.blob },
     },
   ],
 };

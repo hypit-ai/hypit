@@ -1,0 +1,21 @@
+{
+  "name": "@hypit/html-playback",
+  "version": "0.1.0",
+  "license": "SEE LICENSE IN LICENSE",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "dependencies": {
+    "@hypit/composition": "workspace:^0.2.0",
+    "@hypit/media-operations": "workspace:^0.3.0"
+  },
+  "peerDependencies": {
+    "@hypit/hypit": "workspace:^0.4.0"
+  }
+}

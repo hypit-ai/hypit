@@ -1,16 +1,17 @@
-import { sealTimeline, timelineTypes } from "@hypit/timeline";
+import { sealTimeline, timelineManifest, timelineTypes } from "@hypit/timeline";
 import assert from "node:assert/strict";
 import test from "node:test";
-import { videoContractManifests } from "../../../test/support/video-domain.js";
 import { fixtureResource } from "../../../test/fixture-resource.js";
 import { narrativeProjectionFixture, timelineFixture } from "../../../test/timeline-fixture.js";
 import { projectMomentInstantFixture, projectSegmentWindow, projectSelectionWindow } from "../../../test/temporal-fixture.js";
 
 import { createResolvedClosure } from "@hypit/kernel";
+import { blobManifest } from "@hypit/blob";
+import { compositionManifest } from "@hypit/composition";
 import type { FontArtifactRef, SynchronizedMedia } from "@hypit/media";
-import { mediaTypes } from "@hypit/media";
+import { mediaManifest, mediaTypes } from "@hypit/media";
 import type { NarrativeSegmentRef, NarrativeMomentRef, NarrativeSelectionRef } from "@hypit/narrative";
-import { sealCanvas, sealSpatialFrame } from "@hypit/spatial";
+import { sealCanvas, sealSpatialFrame, spatialManifest } from "@hypit/spatial";
 import type { Recipe } from "@hypit/recipe";
 
 import {
@@ -80,7 +81,7 @@ import type {
 import { spatialTypes } from "@hypit/spatial";
 import { recipeType } from "@hypit/recipe";
 import { sealText, textManifest, textTypes } from "@hypit/text";
-import { temporalTypes } from "@hypit/temporal";
+import { temporalManifest, temporalTypes } from "@hypit/temporal";
 import type { TemporalWindow } from "@hypit/temporal";
 import type {
   StructuredElement,
@@ -324,6 +325,16 @@ test("variant Style decoders reject unknown Recipes and keep exact fonts and ind
   }), font), /exactly three/u);
 });
 
+test("Ranking owns its color vocabulary independently of Studio presentation", () => {
+  const value = decodeColumnStyle(recipe("ranking.column", {
+    "text-color": "transparent",
+    "rank-colors": ["#abc", "#11223344"],
+  }), font).style;
+  assert.equal(value.text.color, "transparent");
+  assert.deepEqual(value.rankColors, ["#abc", "#11223344"]);
+  assert.throws(() => decodeColumnStyle(recipe("ranking.column", { "text-color": "red" }), font), /hexadecimal color/u);
+});
+
 test("TierBoard separates its board Frame from the outer placement Frame and holds drop Items until the final curved glide", () => {
   const owner = header("tier-board", "tiers");
   const semantic = [
@@ -515,14 +526,23 @@ test("each component owns a distinct event law", () => {
 });
 
 test("all three author Surfaces preserve absolute temporal, spatial, font, image and optional sound graph edges", async () => {
-  createResolvedClosure([...videoContractManifests, textManifest, rankingManifest]);
+  createResolvedClosure([
+    blobManifest,
+    timelineManifest,
+    temporalManifest,
+    mediaManifest,
+    spatialManifest,
+    compositionManifest,
+    textManifest,
+    rankingManifest,
+  ]);
   const range = { source: "ranking.svml", start: 0, end: 1 };
   const ref = (path: string): MarkupAttributeValue => ({ kind: "reference", path });
   const node = (name: string, attributes: Record<string, MarkupAttributeValue>, children: StructuredNode[] = []): StructuredElement => ({ kind: "element", name, attributes, children, range });
   const plain = (path: string, type: SurfaceResolvedReference["type"]): SurfaceResolvedReference => ({ path, ref: { kind: "record", id: path }, type });
   const inlineReference = (path: string, type: SurfaceResolvedReference["type"], value: unknown): SurfaceResolvedReference => ({
     path, ref: { kind: "record", id: path }, type,
-    record: { value: { kind: "inline", value } } as never,
+    record: { value } as never,
   });
   const references = new Map<string, SurfaceResolvedReference>([
     ["semantic", plain("semantic", timelineTypes.timeline)],
@@ -585,12 +605,12 @@ test("all three author Surfaces preserve absolute temporal, spatial, font, image
       resolveAsset: async () => { throw new Error("no asset resolution expected"); },
     });
     assert.equal(result.components.filter((component) => component.outputs.visual !== undefined).length, 1);
-    const fragment = result.fragments.find((candidate) => candidate.exports.some((output) => output.name === "visual"))!;
+    const fragment = result.components.find((candidate) => candidate.fragment.exports.some((output) => output.name === "visual"))!.fragment;
     assert.ok(fragment.exports.some((output) => output.name === "schedule"));
     assert.ok(fragment.exports.some((output) => output.name === "program"));
     assert.ok(fragment.exports.some((output) => output.name === "visual"));
     assert.ok(fragment.inputs.some((input) => input.name === "frame"));
-    assert.equal(result.fragments.some((fragment) => fragment.operations.some((operation) =>
+    assert.equal(result.components.some(({ fragment }) => fragment.operations.some((operation) =>
       operation.producer.module.name === "@hypit/narrative-temporal")), false);
   }
   const programTier = await decodeTierBoardSurface({
@@ -598,18 +618,18 @@ test("all three author Surfaces preserve absolute temporal, spatial, font, image
     resolveReference: (path) => references.get(path),
     resolveAsset: async () => { throw new Error("no asset resolution expected"); },
   });
-  const tierFragment = programTier.fragments.find((candidate) => candidate.exports.some((output) => output.name === "visual"))!;
+  const tierFragment = programTier.components.find((candidate) => candidate.fragment.exports.some((output) => output.name === "visual"))!.fragment;
   assert.equal(tierFragment.inputs.find((input) => input.name === "outer")?.type.name, "TemporalWindow");
-  assert.equal(programTier.fragments.some((fragment) => fragment.operations.some((operation) =>
+  assert.equal(programTier.components.some(({ fragment }) => fragment.operations.some((operation) =>
     operation.producer.module.name === "@hypit/temporal")), false);
-  assert.equal(programTier.fragments.some((fragment) => fragment.operations.some((operation) =>
+  assert.equal(programTier.components.some(({ fragment }) => fragment.operations.some((operation) =>
     operation.producer.module.name === "@hypit/narrative-temporal")), false);
   const column = await decodeColumnSurface({
     sourceName: "ranking.svml", element: cases[1][1],
     resolveReference: (path) => references.get(path),
     resolveAsset: async () => { throw new Error("no asset resolution expected"); },
   });
-  const columnFragment = column.fragments.find((candidate) => candidate.exports.some((output) => output.name === "visual"))!;
+  const columnFragment = column.components.find((candidate) => candidate.fragment.exports.some((output) => output.name === "visual"))!.fragment;
   const audio = columnFragment.exports.find((output) => output.name === "audio");
   assert.ok(columnFragment.operations.some((operation) => operation.producer.name === rankingProducers.materializeTextItem.name));
   assert(audio !== undefined);
@@ -630,14 +650,14 @@ test("Ranking Surfaces declare their sealed Records and icon Producers consume B
   const icon = image("producer");
   const result = await producer.handler({
     inputs: {
-      set: { value: { kind: "inline", value: createTierBoardItemSet() } },
-      spec: { value: { kind: "inline", value: tierSpec("one", "s") } },
+      set: { value: (createTierBoardItemSet()) },
+      spec: { value: (tierSpec("one", "s")) },
       icon: { value: icon },
     },
   } as never);
-  const set = (result.outputs as { readonly set: { readonly kind: "inline"; readonly value: unknown } }).set;
-  assert.equal(set.kind, "inline");
-  assert.deepEqual((set.value as { readonly items: readonly { readonly icon: unknown }[] }).items[0]?.icon, icon);
+  assert.equal(result.kind, "output");
+  const set = result.value;
+  assert.deepEqual((set as { readonly items: readonly { readonly icon: unknown }[] }).items[0]?.icon, icon);
 });
 
 test("Ranking author Surfaces fail closed on impossible image and sound combinations", async () => {

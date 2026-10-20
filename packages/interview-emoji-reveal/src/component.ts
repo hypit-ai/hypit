@@ -1,8 +1,8 @@
 import type { Timeline } from "@hypit/timeline";
 import type { ProducerPackage } from "@hypit/hypit/producer";
-import type { AdmissionPackage } from "@hypit/hypit/admission";
-import { canonicalize } from "@hypit/hypit/protocol";
-import type { BlobRef, StoredValue } from "@hypit/hypit/protocol";
+import type { RefinementPackage } from "@hypit/hypit/refinement";
+import { assertBlobRef, canonicalize } from "@hypit/hypit/protocol";
+import type { BlobRef, Value } from "@hypit/hypit/protocol";
 import type { SpatialFrame } from "@hypit/spatial";
 import type { TemporalInstant, TemporalWindow } from "@hypit/temporal";
 
@@ -10,37 +10,37 @@ import { emojiRevealProducers, emojiRevealTypes } from "./manifest.js";
 import { appendEmojiRevealItem, appendPresetEmojiRevealItem, assertEmojiRevealProgram, createEmojiRevealSet, finalizeEmojiReveal, renderEmojiReveal } from "./program.js";
 import type { EmojiRevealHeader, EmojiRevealItemSpec, EmojiRevealProgram, EmojiRevealSet, EmojiRevealStyle } from "./types.js";
 
-function inline<T>(value: StoredValue | undefined, label: string): T {
-  if (value?.kind !== "inline") throw new Error(`${label} must be inline.`);
-  return value.value as unknown as T;
+function valueOf<T>(value: Value | undefined, label: string): T {
+  if (value === undefined) throw new Error(`${label} is missing.`);
+  return value as unknown as T;
 }
-const output = (value: unknown) => ({ kind: "inline" as const, value: canonicalize(value) });
-function blob(value: StoredValue | undefined, label: string): BlobRef {
-  if (value?.kind !== "blob") throw new Error(`${label} must be a blob Artifact.`);
+const output = (value: unknown) => ((canonicalize(value)));
+function blob(value: Value | undefined, label: string): BlobRef {
+  assertBlobRef(value, label);
   return value;
 }
 
 export const emojiRevealComponent = {
   producers: [
-    { producer: emojiRevealProducers.createSet, handler: () => ({ outputs: { set: output(createEmojiRevealSet()) }, needs: {} }) },
-    { producer: emojiRevealProducers.appendItem, handler: ({ inputs }) => ({ outputs: { set: output(appendEmojiRevealItem(
-      inline<EmojiRevealSet>(inputs.set?.value, "EmojiRevealSet"), inline<Timeline>(inputs.timeline?.value, "Timeline"),
-      inline<EmojiRevealItemSpec>(inputs.spec?.value, "EmojiRevealItemSpec"), blob(inputs.icon?.value, "Emoji Reveal icon"),
-      inline<TemporalInstant>(inputs.activation?.value, "TemporalInstant"),
-    )) }, needs: {} }) },
-    { producer: emojiRevealProducers.appendPresetItem, handler: ({ inputs }) => ({ outputs: { set: output(appendPresetEmojiRevealItem(
-      inline<EmojiRevealSet>(inputs.set?.value, "EmojiRevealSet"),
-      inline<EmojiRevealItemSpec>(inputs.spec?.value, "EmojiRevealItemSpec"), blob(inputs.icon?.value, "Emoji Reveal icon"),
-    )) }, needs: {} }) },
-    { producer: emojiRevealProducers.finalize, handler: ({ inputs }) => ({ outputs: { program: output(finalizeEmojiReveal(
-      inline<EmojiRevealHeader>(inputs.header?.value, "EmojiRevealHeader"), inline<Timeline>(inputs.timeline?.value, "Timeline"),
-      inline<TemporalWindow>(inputs.outer?.value, "TemporalWindow"), inline<EmojiRevealStyle>(inputs.style?.value, "EmojiRevealStyle"),
-      blob(inputs.placeholder?.value, "Emoji Reveal placeholder"), inline<EmojiRevealSet>(inputs.set?.value, "EmojiRevealSet"),
-    )) }, needs: {} }) },
-    { producer: emojiRevealProducers.render, handler: ({ inputs }) => ({ outputs: { track: output(renderEmojiReveal(
-      inline<SpatialFrame>(inputs.within?.value, "SpatialFrame"), inline<Timeline>(inputs.timeline?.value, "Timeline"),
-      inline<EmojiRevealProgram>(inputs.program?.value, "EmojiRevealProgram"),
-    )) }, needs: {} }) },
+    { producer: emojiRevealProducers.createSet, handler: () => ({ kind: "output", value: output(createEmojiRevealSet()) }) },
+    { producer: emojiRevealProducers.appendItem, handler: ({ inputs }) => ({ kind: "output", value: output(appendEmojiRevealItem(
+      valueOf<EmojiRevealSet>(inputs.set?.value, "EmojiRevealSet"), valueOf<Timeline>(inputs.timeline?.value, "Timeline"),
+      valueOf<EmojiRevealItemSpec>(inputs.spec?.value, "EmojiRevealItemSpec"), blob(inputs.icon?.value, "Emoji Reveal icon"),
+      valueOf<TemporalInstant>(inputs.activation?.value, "TemporalInstant"),
+    )) }) },
+    { producer: emojiRevealProducers.appendPresetItem, handler: ({ inputs }) => ({ kind: "output", value: output(appendPresetEmojiRevealItem(
+      valueOf<EmojiRevealSet>(inputs.set?.value, "EmojiRevealSet"),
+      valueOf<EmojiRevealItemSpec>(inputs.spec?.value, "EmojiRevealItemSpec"), blob(inputs.icon?.value, "Emoji Reveal icon"),
+    )) }) },
+    { producer: emojiRevealProducers.finalize, handler: ({ inputs }) => ({ kind: "output", value: output(finalizeEmojiReveal(
+      valueOf<EmojiRevealHeader>(inputs.header?.value, "EmojiRevealHeader"), valueOf<Timeline>(inputs.timeline?.value, "Timeline"),
+      valueOf<TemporalWindow>(inputs.outer?.value, "TemporalWindow"), valueOf<EmojiRevealStyle>(inputs.style?.value, "EmojiRevealStyle"),
+      blob(inputs.placeholder?.value, "Emoji Reveal placeholder"), valueOf<EmojiRevealSet>(inputs.set?.value, "EmojiRevealSet"),
+    )) }) },
+    { producer: emojiRevealProducers.render, handler: ({ inputs }) => ({ kind: "output", value: output(renderEmojiReveal(
+      valueOf<SpatialFrame>(inputs.within?.value, "SpatialFrame"), valueOf<Timeline>(inputs.timeline?.value, "Timeline"),
+      valueOf<EmojiRevealProgram>(inputs.program?.value, "EmojiRevealProgram"),
+    )) }) },
   ],
-  validators: [{ type: emojiRevealTypes.program, handler: ({ value }) => assertEmojiRevealProgram(inline<EmojiRevealProgram>(value, "EmojiRevealProgram")) }],
-} satisfies ProducerPackage & AdmissionPackage;
+  refinements: [{ type: emojiRevealTypes.program, handler: ({ value }) => assertEmojiRevealProgram(valueOf<EmojiRevealProgram>(value, "EmojiRevealProgram")) }],
+} satisfies ProducerPackage & RefinementPackage;

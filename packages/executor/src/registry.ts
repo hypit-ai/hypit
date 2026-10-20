@@ -1,4 +1,5 @@
 import type {
+  EndpointDemand,
   EndpointRequest,
   EndpointRegistrar,
   EndpointRegistrationOptions,
@@ -9,32 +10,16 @@ import type {
 import type {
   ProducerRegistrar,
 } from "@hypit/producer";
-import type {
-  CapabilityRef,
-  ProducerRef,
-  TypeRef,
-} from "@hypit/protocol";
+import type { CapabilityRef, ProducerRef, TypeRef } from "@hypit/protocol";
+import { capabilityKey, producerKey, sameCapability, sameType } from "@hypit/protocol";
 import { capacityUnits, verifyCredentialRef } from "@hypit/runtime";
 
 import type {
   ProducerHandler,
   ProducerRegistration,
   EndpointRegistration,
-  EndpointResolution,
+  EndpointSelection,
 } from "./types.js";
-
-function moduleKey(ref: { readonly name: string; readonly version: string }): string {
-  return `${ref.name}@${ref.version}`;
-}
-
-function sameRef(
-  left: { readonly module: { readonly name: string; readonly version: string }; readonly name: string },
-  right: { readonly module: { readonly name: string; readonly version: string }; readonly name: string },
-): boolean {
-  return left.module.name === right.module.name
-    && left.module.version === right.module.version
-    && left.name === right.name;
-}
 
 function verifyScheduling(scheduling: EndpointScheduling | undefined): void {
   if (scheduling === undefined) return;
@@ -51,34 +36,17 @@ function verifyScheduling(scheduling: EndpointScheduling | undefined): void {
   }
 }
 
-export function producerRegistryKey(ref: ProducerRef): string {
-  return `${moduleKey(ref.module)}#${ref.name}`;
-}
-
-export function endpointCapabilityKey(ref: CapabilityRef): string {
-  return `${moduleKey(ref.module)}#${ref.name}`;
-}
-
-export function endpointReturnKey(ref: TypeRef): string {
-  return `${moduleKey(ref.module)}#${ref.name}`;
-}
-
 export class ProducerRegistry implements ProducerRegistrar {
   readonly #producers = new Map<string, ProducerRegistration>();
 
-  registerProducer(
-    producer: ProducerRef,
-    handler: ProducerHandler,
-    options: { readonly scheduling?: EndpointScheduling } = {},
-  ): void {
-    const key = producerRegistryKey(producer);
+  registerProducer(producer: ProducerRef, handler: ProducerHandler): void {
+    const key = producerKey(producer);
     if (this.#producers.has(key)) throw new Error(`producer ${key} is already registered`);
-    verifyScheduling(options.scheduling);
-    this.#producers.set(key, { handler, ...options });
+    this.#producers.set(key, { handler });
   }
 
   producer(ref: ProducerRef): ProducerRegistration | undefined {
-    return this.#producers.get(producerRegistryKey(ref));
+    return this.#producers.get(producerKey(ref));
   }
 }
 
@@ -92,10 +60,7 @@ function verifyEndpointOptions(options: EndpointOptions): void {
   }
 }
 
-/**
- * Endpoint selection always receives the complete support-relevant request. Upstream graph values
- * may still be pending, but the package that declares the request exposes their semantic slots.
- */
+/** Endpoint support checks always receive the concrete request emitted by a completed Producer. */
 
 export class EndpointRegistry implements EndpointRegistrar {
   readonly #registrations: EndpointRegistration[] = [];
@@ -109,7 +74,7 @@ export class EndpointRegistry implements EndpointRegistrar {
    */
   bind(capability: CapabilityRef, endpointId: string): void {
     if (!endpointId.trim()) throw new Error("binding endpoint id must not be empty");
-    this.#bindings.set(endpointCapabilityKey(capability), endpointId);
+    this.#bindings.set(capabilityKey(capability), endpointId);
   }
 
   /** Endpoint instance ids that registered at least one capability. */
@@ -151,7 +116,7 @@ export class EndpointRegistry implements EndpointRegistrar {
       const bound = this.#bindings.get(key);
       found.push({ capability: registrations[0]!.capability, endpointIds: ids, ...(bound === undefined ? {} : { bound }) });
     }
-    return found.sort((left, right) => endpointCapabilityKey(left.capability).localeCompare(endpointCapabilityKey(right.capability)));
+    return found.sort((left, right) => capabilityKey(left.capability).localeCompare(capabilityKey(right.capability)));
   }
 
   registerImmediateEndpoint(
@@ -163,14 +128,14 @@ export class EndpointRegistry implements EndpointRegistrar {
   ): void {
     if (!id.trim()) throw new Error("endpoint id must not be empty");
     verifyEndpointOptions(options);
-    const key = `${id}\n${endpointCapabilityKey(capability)}`;
-    if (this.#registrationKeys.has(key)) throw new Error(`endpoint ${id} already registers ${endpointCapabilityKey(capability)}`);
+    const key = `${id}\n${capabilityKey(capability)}`;
+    if (this.#registrationKeys.has(key)) throw new Error(`endpoint ${id} already registers ${capabilityKey(capability)}`);
     const registration = { kind: "immediate" as const, id, capability, returns, handler, ...options };
     this.#registrationKeys.add(key);
     this.#registrations.push(registration);
-    const registrations = this.#registrationsByCapability.get(endpointCapabilityKey(capability)) ?? [];
+    const registrations = this.#registrationsByCapability.get(capabilityKey(capability)) ?? [];
     registrations.push(registration);
-    this.#registrationsByCapability.set(endpointCapabilityKey(capability), registrations);
+    this.#registrationsByCapability.set(capabilityKey(capability), registrations);
   }
 
   registerAsyncEndpoint(
@@ -182,53 +147,46 @@ export class EndpointRegistry implements EndpointRegistrar {
   ): void {
     if (!id.trim()) throw new Error("endpoint id must not be empty");
     verifyEndpointOptions(options);
-    const key = `${id}\n${endpointCapabilityKey(capability)}`;
-    if (this.#registrationKeys.has(key)) throw new Error(`endpoint ${id} already registers ${endpointCapabilityKey(capability)}`);
+    const key = `${id}\n${capabilityKey(capability)}`;
+    if (this.#registrationKeys.has(key)) throw new Error(`endpoint ${id} already registers ${capabilityKey(capability)}`);
     const registration = { kind: "asynchronous" as const, id, capability, returns, endpoint, ...options };
     this.#registrationKeys.add(key);
     this.#registrations.push(registration);
-    const registrations = this.#registrationsByCapability.get(endpointCapabilityKey(capability)) ?? [];
+    const registrations = this.#registrationsByCapability.get(capabilityKey(capability)) ?? [];
     registrations.push(registration);
-    this.#registrationsByCapability.set(endpointCapabilityKey(capability), registrations);
+    this.#registrationsByCapability.set(capabilityKey(capability), registrations);
   }
 
-  resolve(need: EndpointRequest): EndpointResolution {
-    const key = endpointCapabilityKey(need.capability);
+  select(demand: EndpointDemand): EndpointSelection {
+    const key = capabilityKey(demand.capability);
     const registrations = (this.#registrationsByCapability.get(key) ?? [])
-      .filter((registration) => sameRef(registration.returns, need.returns));
+      .filter((registration) => sameType(registration.returns, demand.returns));
     const bound = this.#bindings.get(key);
     if (bound !== undefined) {
       const chosen = registrations.find((registration) => registration.id === bound);
       if (chosen === undefined) return { status: "missing", endpointId: bound };
-      const support = chosen.supports?.(need) ?? { status: "supported" };
-      if (support.status === "unsupported") {
-        if (!support.reason.trim()) throw new Error(`Endpoint ${chosen.id} returned an empty unsupported reason`);
-        return { status: "unsupported", rejections: [{ endpointId: chosen.id, reason: support.reason }] };
-      }
       return { status: "resolved", registration: chosen };
     }
     if (registrations.length === 0) return { status: "missing" };
-    const supported: EndpointRegistration[] = [];
-    const rejections: { endpointId: string; reason: string }[] = [];
-    for (const registration of registrations) {
-      const support = registration.supports?.(need) ?? { status: "supported" };
-      if (support.status === "supported") {
-        supported.push(registration);
-      } else {
-        if (!support.reason.trim()) throw new Error(`Endpoint ${registration.id} returned an empty unsupported reason`);
-        rejections.push({ endpointId: registration.id, reason: support.reason });
-      }
-    }
-    if (supported.length === 0) {
-      return { status: "unsupported", rejections: rejections.sort((left, right) => left.endpointId.localeCompare(right.endpointId)) };
-    }
-    if (supported.length > 1) {
+    if (registrations.length > 1) {
       return {
         status: "ambiguous",
-        endpointIds: [...new Set(supported.map((registration) => registration.id))].sort(),
+        endpointIds: [...new Set(registrations.map((registration) => registration.id))].sort(),
       };
     }
-    return { status: "resolved", registration: supported[0]! };
+    return { status: "resolved", registration: registrations[0]! };
+  }
+
+  /** Support belongs to one already selected deployment and one concrete request. */
+  checkSupport(registration: EndpointRegistration, request: EndpointRequest) {
+    if (!sameCapability(registration.capability, request.capability) || !sameType(registration.returns, request.returns)) {
+      throw new Error(`Endpoint ${registration.id} cannot check support for another demand`);
+    }
+    const support = registration.supports?.(request) ?? { status: "supported" as const };
+    if (support.status === "unsupported" && !support.reason.trim()) {
+      throw new Error(`Endpoint ${registration.id} returned an empty unsupported reason`);
+    }
+    return support;
   }
 
 }

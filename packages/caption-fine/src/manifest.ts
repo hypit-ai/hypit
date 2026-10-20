@@ -366,8 +366,7 @@ export const captionFineManifest: ModuleManifest = {
         { name: "program", type: captionTypes.program },
         { name: "document", type: captionTypes.document },
       ],
-      outputs: [{ name: "schedule", type: captionFineTypes.schedule }],
-      needs: [],
+      result: { kind: "output" as const, name: "schedule", type: captionFineTypes.schedule },
     },
     {
       name: captionFineProducers.render.name,
@@ -378,8 +377,7 @@ export const captionFineManifest: ModuleManifest = {
         { name: "timeline", type: timelineTypes.timeline },
         { name: "within", type: spatialTypes.frame },
       ],
-      outputs: [{ name: "track", type: compositionTypes.visualTrack }],
-      needs: [],
+      result: { kind: "output" as const, name: "track", type: compositionTypes.visualTrack },
     },
     {
       name: captionFineProducers.renderWithRegions.name,
@@ -391,8 +389,7 @@ export const captionFineManifest: ModuleManifest = {
         { name: "within", type: spatialTypes.frame },
         { name: "regions", type: regionEvidenceTypes.evidence },
       ],
-      outputs: [{ name: "track", type: compositionTypes.visualTrack }],
-      needs: [],
+      result: { kind: "output" as const, name: "track", type: compositionTypes.visualTrack },
     },
   ],
 };

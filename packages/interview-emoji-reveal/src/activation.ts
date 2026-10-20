@@ -1,5 +1,5 @@
 import { createMarkupSurfaceFacet } from "@hypit/hypit/markup";
-import { createAdmissionPackageFacet } from "@hypit/hypit/admission";
+import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
 import { createProducerPackageFacet } from "@hypit/hypit/producer";
 
 import { emojiRevealComponent, emojiRevealManifest, emojiRevealMarkupSurfaces, emojiRevealModuleRef } from "./index.js";
@@ -10,7 +10,7 @@ export const hypitPackage = {
   modules: [{ manifest: emojiRevealManifest }],
   facets: [
     createProducerPackageFacet(emojiRevealComponent),
-    createAdmissionPackageFacet(emojiRevealComponent),
+    createRefinementPackageFacet(emojiRevealComponent),
     createMarkupSurfaceFacet({ module: emojiRevealModuleRef, declaration: emojiRevealMarkupSurfaces.find((item) => item.name === "style")!, handler: decodeEmojiRevealStyleSurface }),
     createMarkupSurfaceFacet({ module: emojiRevealModuleRef, declaration: emojiRevealMarkupSurfaces.find((item) => item.name === "emojiReveal")!, handler: decodeEmojiRevealTrackSurface }),
   ],

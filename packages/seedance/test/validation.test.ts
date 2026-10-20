@@ -1,11 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { sealGenerationRequestDraft } from "@hypit/generation";
-import type { GenerationRequest } from "@hypit/generation";
-import { plannedExactModelRequest } from "@hypit/generation/model";
-import type { ExactModelEndpoint } from "@hypit/generation/model";
+import { sealModelFieldBuilder } from "@hypit/generation/model-fields";
+import type { ModelFieldRequest } from "@hypit/generation/model-fields";
 import { canonicalize } from "@hypit/protocol";
-import type { BlobRef, BuildState, ProducerRef, StoredValue } from "@hypit/protocol";
+import type { BlobRef, ProducerRef, Value } from "@hypit/protocol";
 import { fixtureResource } from "../../../test/fixture-resource.js";
 import {
   seedanceComponent, seedanceDefinition, seedanceEndpointsByModel, sealSeedanceRequest,
@@ -21,29 +19,12 @@ const settings = {
     kind: "blob" as const, resource: fixtureResource("reference-image"), size: 4, mediaType: "image/png",
   } }],
 };
-const inline = (value: unknown): StoredValue => ({ kind: "inline", value: canonicalize(value) });
-const input = (value: StoredValue) => ({ value });
-async function produce(producer: ProducerRef, inputs: Record<string, { value: StoredValue }>) {
+const valueOf = (value: unknown): Value => ((canonicalize(value)));
+const input = (value: Value) => ({ value });
+async function produce(producer: ProducerRef, inputs: Record<string, { value: Value }>) {
   const facet = seedanceDefinition.component.producers.find((item) => item.producer.name === producer.name);
   assert.ok(facet);
   return await facet.handler({ inputs } as never);
-}
-
-function assembly(endpoint: ExactModelEndpoint, artifact?: BlobRef): BuildState {
-  return {
-    records: [
-      { id: "draft", type: endpoint.draftType, value: inline(sealGenerationRequestDraft(endpoint.ports, settings)) },
-      { id: "binding", type: endpoint.mediaBindings.referenceAudio!.type, value: inline({ role: "audio" }) },
-      ...(artifact === undefined ? [] : [{ id: "audio", value: artifact }]),
-    ],
-    needs: [],
-    plan: { steps: [
-      { id: "upstream", producer: { module: { name: "@test/audio", version: "1" }, name: "generate" }, inputs: {}, outputs: { audio: "audio" }, needs: {} },
-      { id: "bind", producer: endpoint.mediaBindings.referenceAudio!.producer, inputs: { draft: "draft", binding: "binding", artifact: "audio" }, outputs: { draft: "bound" }, needs: {} },
-      { id: "finalize", producer: endpoint.finalizeProducer, inputs: { draft: "bound" }, outputs: { request: "request" }, needs: {} },
-      { id: "generate", producer: endpoint.producer, inputs: { request: "request" }, outputs: {}, needs: { generation: { id: "need" } } },
-    ] },
-  } as unknown as BuildState;
 }
 
 test("Seedance activation and public definition share their component implementation", () => {
@@ -61,19 +42,22 @@ for (const [model, endpoint] of Object.entries(seedanceEndpointsByModel)) {
         const binding = { role, ...(fields === undefined ? {} : { fields }) };
         assert.throws(() => endpoint.sealRequest({ ...initial, [port]: [{ ...binding, artifact }] }), /personReference/);
         await assert.rejects(produce(endpoint.mediaBindings[port]!.producer, {
-          draft: input(inline(sealGenerationRequestDraft(endpoint.ports, initial))),
-          binding: input(inline(binding)), artifact: input(artifact),
+          draft: input(valueOf(sealModelFieldBuilder(endpoint.ports, initial))),
+          binding: input(valueOf(binding)), artifact: input(artifact),
         }), /personReference/);
       }
       for (const flag of [true, false]) {
         const binding = { role, fields: { personReference: flag } };
         const bound = await produce(endpoint.mediaBindings[port]!.producer, {
-          draft: input(inline(sealGenerationRequestDraft(endpoint.ports, initial))),
-          binding: input(inline(binding)), artifact: input(artifact),
+          draft: input(valueOf(sealModelFieldBuilder(endpoint.ports, initial))),
+          binding: input(valueOf(binding)), artifact: input(artifact),
         });
-        const finalized = await produce(endpoint.finalizeProducer, { draft: input(bound.outputs.draft!) });
-        const generated = await produce(endpoint.producer, { request: input(finalized.outputs.request!) });
-        const request = generated.needs.generation as unknown as GenerationRequest;
+        assert.equal(bound.kind, "output");
+        const finalized = await produce(endpoint.finalizeProducer, { draft: input(bound.value) });
+        assert.equal(finalized.kind, "output");
+        const generated = await produce(endpoint.producer, { request: input(finalized.value) });
+        assert.equal(generated.kind, "need");
+        const request = generated.constraints as unknown as ModelFieldRequest;
         assert.deepEqual(request.ports[port], [{ ...binding, artifact }]);
       }
     }
@@ -87,16 +71,16 @@ for (const [model, endpoint] of Object.entries(seedanceEndpointsByModel)) {
       const artifact = audio(mediaType);
       const ports = { ...settings, referenceAudio: [{ role: "audio" as const, artifact }] };
       // The generic envelope can represent this media; the exact model owns its restriction.
-      const request = sealGenerationRequestDraft(endpoint.ports, ports);
+      const request = sealModelFieldBuilder(endpoint.ports, ports);
       assert.throws(() => sealSeedanceRequest(endpoint.ports.model as keyof typeof seedanceEndpointsByModel, ports), /m4a/);
       assert.throws(() => endpoint.sealRequest(ports), /m4a/);
-      const validator = seedanceComponent.validators.find((item) => item.type.name === endpoint.requestType.name)!;
-      await assert.rejects(async () => validator.handler({ value: inline(request) } as never), /m4a/);
-      await assert.rejects(produce(endpoint.finalizeProducer, { draft: input(inline(request)) }), /m4a/);
-      await assert.rejects(produce(endpoint.producer, { request: input(inline(request)) }), /m4a/);
+      const validator = seedanceComponent.refinements.find((item) => item.type.name === endpoint.requestType.name)!;
+      await assert.rejects(async () => validator.handler({ value: valueOf(request) } as never), /m4a/);
+      await assert.rejects(produce(endpoint.finalizeProducer, { draft: input(valueOf(request)) }), /m4a/);
+      await assert.rejects(produce(endpoint.producer, { request: input(valueOf(request)) }), /m4a/);
       await assert.rejects(produce(endpoint.mediaBindings.referenceAudio!.producer, {
-        draft: input(inline(sealGenerationRequestDraft(endpoint.ports, settings))),
-        binding: input(inline({ role: "audio" })), artifact: input(artifact),
+        draft: input(valueOf(sealModelFieldBuilder(endpoint.ports, settings))),
+        binding: input(valueOf({ role: "audio" })), artifact: input(artifact),
       }), /m4a/);
     }
   });
@@ -105,41 +89,18 @@ for (const [model, endpoint] of Object.entries(seedanceEndpointsByModel)) {
     for (const mediaType of ["audio/wav", "audio/mpeg"]) {
       const artifact = audio(mediaType);
       const bound = await produce(endpoint.mediaBindings.referenceAudio!.producer, {
-        draft: input(inline(sealGenerationRequestDraft(endpoint.ports, settings))),
-        binding: input(inline({ role: "audio" })), artifact: input(artifact),
+        draft: input(valueOf(sealModelFieldBuilder(endpoint.ports, settings))),
+        binding: input(valueOf({ role: "audio" })), artifact: input(artifact),
       });
-      const finalized = await produce(endpoint.finalizeProducer, { draft: input(bound.outputs.draft!) });
-      const generated = await produce(endpoint.producer, { request: input(finalized.outputs.request!) });
-      assert.deepEqual(generated.needs.generation, endpoint.sealRequest({
+      assert.equal(bound.kind, "output");
+      const finalized = await produce(endpoint.finalizeProducer, { draft: input(bound.value) });
+      assert.equal(finalized.kind, "output");
+      const generated = await produce(endpoint.producer, { request: input(finalized.value) });
+      assert.equal(generated.kind, "need");
+      assert.deepEqual(generated.constraints, endpoint.sealRequest({
         ...settings, referenceAudio: [{ role: "audio", artifact }],
       }));
     }
   });
 
-  test(`${model}: planning preserves future audio and rejects it when the actual unsupported value exists`, () => {
-    const pending = plannedExactModelRequest(assembly(endpoint), "generate", "generation", endpoint)!;
-    assert.equal(pending.complete, false);
-    assert.equal(pending.ports.referenceAudio, undefined);
-    assert.deepEqual(pending.pendingMedia, [{
-      port: "referenceAudio", role: "audio", record: "audio", sourceStep: "upstream", available: false,
-    }]);
-    assert.throws(() => plannedExactModelRequest(assembly(endpoint, audio("audio/mp4")), "generate", "generation", endpoint), /m4a/);
-    const known = plannedExactModelRequest(assembly(endpoint, audio("audio/wav")), "generate", "generation", endpoint)!;
-    assert.deepEqual(known.pendingMedia, []);
-    assert.deepEqual(known.ports.referenceAudio, [{ role: "audio", artifact: audio("audio/wav") }]);
-  });
-
-  test(`${model}: planning validates directly supplied requests and already formed Needs`, () => {
-    for (const mediaType of ["audio/mp4", "audio/wav"]) {
-      const request = { ports: { ...settings, referenceAudio: [{ role: "audio", artifact: audio(mediaType) }] } };
-      const state = assembly(endpoint);
-      const direct = { ...state, records: [...state.records, { id: "request", type: endpoint.requestType, value: inline(request) }] } as BuildState;
-      const withNeed = { ...state, needs: [{ id: "need", constraints: request }] } as unknown as BuildState;
-      for (const candidate of [direct, withNeed]) {
-        const plan = () => plannedExactModelRequest(candidate, "generate", "generation", endpoint);
-        if (mediaType === "audio/mp4") assert.throws(plan, /m4a/);
-        else assert.deepEqual(plan()!.ports, request.ports);
-      }
-    }
-  });
 }

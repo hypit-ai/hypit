@@ -5,18 +5,18 @@ import { fixtureResource } from "../../../test/fixture-resource.js";
 import { blobManifest, blobTypes } from "@hypit/blob";
 import {
   createResolvedClosure,
+  defineBuild,
   link,
-  sealBuildRequest,
-  sealCompiledGraph,
-  sealRecord,
-  start,
+  materializeBuild,
+  planBuild,
+  sealAuthorGraph,
 } from "@hypit/kernel";
 import { elaborateAuthorGraph } from "@hypit/author";
+import { generationManifest } from "@hypit/generation";
 import {
-  generationManifest,
-  sealGenerationMediaBinding,
-  sealGenerationRequestDraft,
-} from "@hypit/generation";
+  sealModelArtifactBinding,
+  sealModelFieldBuilder,
+} from "@hypit/generation/model-fields";
 import {
   createGptImageCleanFragment,
   gptImage2Ports,
@@ -27,13 +27,13 @@ import {
   sealGptImage2Draft,
 } from "@hypit/gpt-image";
 import { imageOperationsManifest, imageTransformTypes } from "@hypit/image-operations";
-import { exactModelMediaInputNames } from "@hypit/generation/model";
+import { modelArtifactInputNames } from "@hypit/generation/model-fields";
 import { mediaManifest } from "@hypit/media";
 import { narrativeManifest } from "@hypit/narrative";
 import { timelineManifest } from "@hypit/timeline";
 import { temporalManifest } from "@hypit/temporal";
-import type { CanonicalValue, ResourceId, ModuleManifest, StoredValue, TypeRef } from "@hypit/protocol";
-import { createProvidedCandidate } from "@hypit/run";
+import type { CanonicalValue, ResourceId, ModuleManifest, Value, TypeRef } from "@hypit/protocol";
+import { createValueCandidate } from "@hypit/run";
 import {
   createSeedanceAssembledGenerationFragment,
   seedanceEndpoints,
@@ -43,6 +43,25 @@ import {
 import { spatialManifest } from "@hypit/spatial";
 import { recipeManifest } from "@hypit/recipe";
 import { textManifest } from "@hypit/text";
+
+function buildState(
+  program: Parameters<typeof planBuild>[0],
+  graph: Parameters<typeof planBuild>[1],
+  targets: readonly string[],
+) {
+  const planned = planBuild(program, graph, {
+    format: "hypit.run-graph@1",
+    records: [],
+    candidates: [],
+    operations: [],
+    satisfactions: [],
+    targets: targets.map((output) => ({ output })),
+  });
+  return materializeBuild(defineBuild({
+    program: link(program.closure, [...program.records, ...planned.initialRecords]),
+    plan: planned.plan,
+  }), []);
+}
 
 const image = (name: string) => ({
   kind: "blob" as const,
@@ -77,14 +96,12 @@ function fixture() {
   const records: Array<{
     readonly id: string;
     readonly type: TypeRef;
-    readonly value: StoredValue;
+    readonly value: Value;
   }> = [];
-  const add = (id: string, type: TypeRef, value: StoredValue) => records.push({ id, type, value });
+  const add = (id: string, type: TypeRef, value: Value) => records.push({ id, type, value });
   add("person", blobTypes.blob, image("person"));
   add("product", blobTypes.blob, image("product"));
-  add("cleanup", imageTransformTypes.program, {
-    kind: "inline", value: gptImageCleanupProgram as unknown as CanonicalValue,
-  });
+  add("cleanup", imageTransformTypes.program, (gptImageCleanupProgram as unknown as CanonicalValue));
 
   const gptFragments = {
     holding: createGptImageCleanFragment([
@@ -94,16 +111,10 @@ function fixture() {
     interview: createGptImageCleanFragment([{ name: "holding", port: "images" }]),
   };
   const addGptInputs = (id: string, names: readonly string[]) => {
-    add(`${id}.draft`, gpt.draftType, {
-      kind: "inline",
-      value: sealGptImage2Draft({
+    add(`${id}.draft`, gpt.draftType, (sealGptImage2Draft({
         prompt: [`${id} prompt`], aspectRatio: ["9:16"], resolution: ["1K"],
-      }) as unknown as CanonicalValue,
-    });
-    for (const name of names) add(`${id}.${name}.binding`, gpt.mediaBindings.images!.type, {
-      kind: "inline",
-      value: sealGenerationMediaBinding(gptBindingPort as never, { role: "image" }) as unknown as CanonicalValue,
-    });
+      }) as unknown as CanonicalValue));
+    for (const name of names) add(`${id}.${name}.binding`, gpt.mediaBindings.images!.type, (sealModelArtifactBinding(gptBindingPort as never, { role: "image" }) as unknown as CanonicalValue));
   };
   addGptInputs("holding", ["person", "product"]);
   addGptInputs("walking", ["holding"]);
@@ -111,17 +122,11 @@ function fixture() {
 
   const seedanceMedia = ["holding", "walking", "interview"].map((name) => ({ name, port: "referenceImage" }));
   const seedanceFragment = createSeedanceAssembledGenerationFragment(seedance, seedanceMedia);
-  add("montage.draft", seedance.draftType, {
-    kind: "inline",
-    value: sealGenerationRequestDraft(seedancePorts["seedance-2-mini"], {
+  add("montage.draft", seedance.draftType, (sealModelFieldBuilder(seedancePorts["seedance-2-mini"], {
       prompt: ["A fast montage from all three reference images."],
       resolution: ["720p"], aspectRatio: ["9:16"], duration: [6], generateAudio: [false], webSearch: [false],
-    }) as unknown as CanonicalValue,
-  });
-  for (const name of ["holding", "walking", "interview"]) add(`montage.${name}.binding`, seedance.mediaBindings.referenceImage!.type, {
-    kind: "inline",
-    value: sealGenerationMediaBinding(seedanceBindingPort as never, { role: "image", fields: { personReference: true } }) as unknown as CanonicalValue,
-  });
+    }) as unknown as CanonicalValue));
+  for (const name of ["holding", "walking", "interview"]) add(`montage.${name}.binding`, seedance.mediaBindings.referenceImage!.type, (sealModelArtifactBinding(seedanceBindingPort as never, { role: "image", fields: { personReference: true } }) as unknown as CanonicalValue));
 
   const componentInputs = (
     id: string,
@@ -130,7 +135,7 @@ function fixture() {
     ["draft", { kind: "record" as const, id: `${id}.draft` }],
     ["cleanup", { kind: "record" as const, id: "cleanup" }],
     ...media.flatMap((item) => {
-      const names = exactModelMediaInputNames(item.name);
+      const names = modelArtifactInputNames(item.name);
       return [
         [names.binding, { kind: "record" as const, id: `${id}.${item.name}.binding` }],
         [names.artifact, item.source],
@@ -139,7 +144,7 @@ function fixture() {
   ]);
   const components = [{
     id: "holding",
-    fragment: gptFragments.holding.id,
+    fragment: gptFragments.holding,
     inputs: componentInputs("holding", [
       { name: "person", source: { kind: "record", id: "person" } },
       { name: "product", source: { kind: "record", id: "product" } },
@@ -147,25 +152,25 @@ function fixture() {
     outputs: { image: "holding.image" },
   }, {
     id: "walking",
-    fragment: gptFragments.walking.id,
+    fragment: gptFragments.walking,
     inputs: componentInputs("walking", [{
       name: "holding", source: { kind: "component-output", component: "holding", output: "image" },
     }]),
     outputs: { image: "walking.image" },
   }, {
     id: "interview",
-    fragment: gptFragments.interview.id,
+    fragment: gptFragments.interview,
     inputs: componentInputs("interview", [{
       name: "holding", source: { kind: "component-output", component: "holding", output: "image" },
     }]),
     outputs: { image: "interview.image" },
   }, {
     id: "montage",
-    fragment: seedanceFragment.id,
+    fragment: seedanceFragment,
     inputs: Object.fromEntries([
       ["draft", { kind: "record" as const, id: "montage.draft" }],
       ...["holding", "walking", "interview"].flatMap((name) => {
-        const names = exactModelMediaInputNames(name);
+        const names = modelArtifactInputNames(name);
         return [
           [names.binding, { kind: "record" as const, id: `montage.${name}.binding` }],
           [names.artifact, { kind: "component-output" as const, component: name, output: "image" }],
@@ -174,21 +179,14 @@ function fixture() {
     ]),
     outputs: { video: "montage.video" },
   }];
-  const program = link(closure, records.map((record) => sealRecord(record)));
-  const fragments = new Map([
-    ...Object.values(gptFragments).map((fragment) => [fragment.id, fragment] as const),
-    [seedanceFragment.id, seedanceFragment] as const,
-  ]);
-  const elaborated = elaborateAuthorGraph(program, components,
-    (id) => fragments.get(id));
+  const program = link(closure, records);
+  const elaborated = elaborateAuthorGraph(program, components);
   return { program, graph: elaborated };
 }
 
 test("the common B-roll topology is one graph with one shared holding image", () => {
   const { program, graph } = fixture();
-  const state = start(program, graph, sealBuildRequest({
-    targets: [{ output: "montage.video" }],
-  }));
+  const state = buildState(program, graph, ["montage.video"]);
   const producers = state.plan.steps.map((step) => step.producer.name);
   assert.equal(producers.filter((name) => name === "request-gpt-image-2").length, 3);
   assert.equal(producers.filter((name) => name === "request-image-transform").length, 3);
@@ -201,21 +199,19 @@ test("the common B-roll topology is one graph with one shared holding image", ()
 
 test("an explicitly selected holding-image Candidate prunes only that branch", () => {
   const { program, graph } = fixture();
-  const candidate = createProvidedCandidate({
+  const candidate = createValueCandidate({
     id: "approved-holding",
     type: blobTypes.blob,
     value: image("approved-holding"),
   });
-  const realized = sealCompiledGraph({
+  const realized = sealAuthorGraph({
     outputs: graph.outputs.map((item) => item.id === "holding.image"
       ? { ...item, primary: candidate.id }
       : item),
     candidates: [...graph.candidates, candidate],
     operations: graph.operations,
   });
-  const state = start(program, realized, sealBuildRequest({
-    targets: [{ output: "montage.video" }],
-  }));
+  const state = buildState(program, realized, ["montage.video"]);
   const producers = state.plan.steps.map((step) => step.producer.name);
   assert.equal(producers.filter((name) => name === "request-gpt-image-2").length, 2);
   assert.equal(producers.filter((name) => name === "request-image-transform").length, 2);

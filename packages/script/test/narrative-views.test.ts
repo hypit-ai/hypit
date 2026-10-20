@@ -54,7 +54,7 @@ test("omitted speech shares display prose while retaining ordinary Narrative and
     const decoded = decodeScriptSurface({ sourceName: "short.svml", source, tag: "script",
       attributes: { id: "story" }, openingStart: 0, contentStart: source.indexOf(">") + 1 });
     assert.deepEqual(decoded.records.find(record => record.id === "story")?.value,
-      { kind: "inline", value: narrativeValue(parsed, "story") });
+      (narrativeValue(parsed, "story")));
   }
 });
 
@@ -77,11 +77,8 @@ test("Script exports Narrative and CaptionDocument as independent views from one
     attributes: { id: "story" }, openingStart: 0, contentStart: source.indexOf(">") + 1 });
   const root = result.records.find((record) => record.id === "story")!;
   const caption = result.records.find((record) => record.id === "story.caption")!;
-  assert.equal(root.value.kind, "inline");
-  assert.equal(caption.value.kind, "inline");
-  if (root.value.kind !== "inline" || caption.value.kind !== "inline") return;
-  const narrative = root.value.value as unknown as Narrative;
-  const document = caption.value.value as unknown as CaptionDocument;
+  const narrative = root.value as unknown as Narrative;
+  const document = caption.value as unknown as CaptionDocument;
   assertNarrativeIdentity(narrative);
   assert.equal("caption" in narrative, false);
   assert.match(document.words.map((word) => word.text).join(""), /hypit/);

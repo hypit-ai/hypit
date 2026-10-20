@@ -1,4 +1,10 @@
-import type { BlobRef, SourceRange } from "@hypit/protocol";
+import type { BlobRef } from "@hypit/protocol";
+
+/** Half-open offsets in the representation decoded by one Source Frontend. */
+export type SourceRange = {
+  readonly start: number;
+  readonly end: number;
+};
 
 export type SourceUnit = {
   /** Workspace-canonical identity used only for recursion and diagnostics. */
@@ -29,7 +35,7 @@ export type SourceAssetRequest = {
 };
 
 export type ResolvedSourceAsset = {
-  readonly artifact: BlobRef;
+  readonly blob: BlobRef;
 };
 
 export type Awaitable<T> = T | Promise<T>;

@@ -1,12 +1,11 @@
-import { sealTimeline, timelineDependency, timelineTypes, timelineComponent } from "@hypit/timeline";
-import { compositionComponent, videoContractManifests } from "../../../test/support/video-domain.js";
-import { blobTypes } from "@hypit/blob";
+import { sealTimeline, timelineDependency, timelineManifest, timelineTypes, timelineComponent } from "@hypit/timeline";
+import { blobManifest, blobTypes } from "@hypit/blob";
 import {
   registerProducerFacets,
 } from "@hypit/producer";
-import { registerTypeValidatorFacets } from "@hypit/admission";
-import { mediaTypes, sealMuxedMedia, sealTimelineVisual, sealTimelineAudio } from "@hypit/media";
-import { compositionDependency, compositionTypes, sealComposition } from "@hypit/composition";
+import { registerTypeRefinements } from "@hypit/refinement";
+import { mediaManifest, mediaTypes, sealMuxedMedia, sealTimelineVisual, sealTimelineAudio } from "@hypit/media";
+import { compositionComponent, compositionDependency, compositionManifest, compositionTypes, sealComposition } from "@hypit/composition";
 import type { Composition } from "@hypit/composition";
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -15,17 +14,18 @@ import { timelineFixture } from "../../../test/timeline-fixture.js";
 
 import {
   createResolvedClosure,
+  defineBuild,
   link,
-  sealBuildRequest,
-  sealCompiledGraph,
-  sealRecord,
-  start,
+  materializeBuild,
+  planBuild,
+  sealAuthorGraph,
 } from "@hypit/kernel";
 import {
   ProducerRegistry,
   Executor,
   EndpointRegistry,
 } from "@hypit/executor";
+import { InProcessBuildScheduler } from "@hypit/hypit/runtime";
 import {
   AuthorFrontendRegistry,
   bindAuthorFragment,
@@ -52,7 +52,7 @@ import {
   htmlVideoModuleRef,
 } from "@hypit/html-video";
 import {
-  compileAudioProgramPlan,
+  compileAudioProgram,
   decodeExtractFrameSurface,
   mediaOperationsComponent,
   mediaOperationsComponents,
@@ -63,20 +63,32 @@ import {
   mediaOperationsProducers,
 } from "@hypit/media-operations";
 import {
-  admitRecord,
-  createRecordAdmitter,
-  TypeValidatorRegistry,
-} from "@hypit/admission";
+  validateRecord,
+  createRecordValidator,
+  RefinementRegistry,
+} from "@hypit/refinement";
 import type {
+  BuildState,
   CanonicalValue,
   ModuleManifest,
-  StoredValue,
+  Value,
   TypedRecord,
 } from "@hypit/protocol";
+import { isBlobRef } from "@hypit/protocol";
+import { recipeManifest } from "@hypit/recipe";
+import { temporalManifest } from "@hypit/temporal";
 import {
   createMarkupAuthorFrontend,
   MarkupSurfaceRegistry,
 } from "@hypit/markup";
+
+async function runBuild(executor: Executor, state: BuildState) {
+  return (await new InProcessBuildScheduler(executor).run([{
+    id: "html-video-test",
+    definition: { format: "hypit.build-definition@1", program: state.program, plan: state.plan },
+    facts: [],
+  }]))[0]!;
+}
 
 const space = sealTimeline({ id: "test-space", frameCount: 60, frameRate: { numerator: 30, denominator: 1 },
 });
@@ -87,45 +99,65 @@ const composition = sealComposition({
   tracks: [],
 });
 
-const stored = (value: CanonicalValue): StoredValue => ({ kind: "inline", value });
-function inline(record: TypedRecord | undefined): CanonicalValue {
+const stored = (value: CanonicalValue): Value => value;
+function valueOf(record: TypedRecord | undefined): CanonicalValue {
   assert(record, "missing Producer input");
-  assert.equal(record.value.kind, "inline");
-  return record.value.value;
+  return record.value;
 }
 
 const closure = createResolvedClosure([
-  ...videoContractManifests,
+  blobManifest,
+  timelineManifest,
+  temporalManifest,
+  mediaManifest,
+  compositionManifest,
+  recipeManifest,
   htmlProgramManifest,
   mediaOperationsManifest,
   htmlVideoManifest,
 ]);
-const compositionRecord = await admitRecord(closure, sealRecord({
+const compositionRecord = await validateRecord({
   id: "composition",
   type: compositionTypes.composition,
   value: stored(composition),
-}), validatorRegistry());
-const spaceRecord = await admitRecord(closure, sealRecord({
+}, validatorRegistry());
+const spaceRecord = await validateRecord({
   id: "space",
   type: timelineTypes.timeline,
   value: stored(space),
-}), validatorRegistry());
+}, validatorRegistry());
 const linked = link(closure, [compositionRecord, spaceRecord]);
 const instance = elaborateGraphFragment(linked, htmlVideoFragment, {
   id: "final",
-  fragment: htmlVideoFragment.id,
   inputs: {
     composition: { kind: "record", id: compositionRecord.id },
     timeline: { kind: "record", id: spaceRecord.id },
   },
 });
 const contribution = bindAuthorFragment(instance, { video: "final.video" });
-const graph = sealCompiledGraph({ ...contribution });
+const graph = sealAuthorGraph({ ...contribution });
 
 function build() {
-  return start(linked, graph, sealBuildRequest({
-    targets: [{ output: "final.video" }],
-  }));
+  return buildState(linked, graph, ["final.video"]);
+}
+
+function buildState(
+  program: Parameters<typeof planBuild>[0],
+  authorGraph: Parameters<typeof planBuild>[1],
+  targets: readonly string[],
+) {
+  const planned = planBuild(program, authorGraph, {
+    format: "hypit.run-graph@1",
+    records: [],
+    candidates: [],
+    operations: [],
+    satisfactions: [],
+    targets: targets.map((output) => ({ output })),
+  });
+  return materializeBuild(defineBuild({
+    program: link(program.closure, [...program.records, ...planned.initialRecords]),
+    plan: planned.plan,
+  }), []);
 }
 
 function producerRegistry(): ProducerRegistry {
@@ -136,11 +168,11 @@ function producerRegistry(): ProducerRegistry {
   return registry;
 }
 
-function validatorRegistry(): TypeValidatorRegistry {
-  const registry = new TypeValidatorRegistry();
-  registerTypeValidatorFacets(registry, compositionComponent.validators);
+function validatorRegistry(): RefinementRegistry {
+  const registry = new RefinementRegistry();
+  registerTypeRefinements(registry, compositionComponent.refinements);
   for (const component of mediaOperationsComponents) {
-    registerTypeValidatorFacets(registry, component.validators);
+    registerTypeRefinements(registry, component.refinements);
   }
   return registry;
 }
@@ -149,13 +181,13 @@ test("HTML renderer rendering is an explicit exact Need after ordinary document 
   assert.deepEqual(build().plan.steps.map((step) => step.producer.name).sort(), [
     htmlProgramProducers.compile.name,
     htmlProgramProducers.requestVisual.name,
-    mediaOperationsProducers.planAudio.name,
+    mediaOperationsProducers.compileAudio.name,
     mediaOperationsProducers.renderAudio.name,
     mediaOperationsProducers.mux.name,
     mediaOperationsProducers.projectMuxed.name,
   ].sort());
 
-  const result = await new Executor({ producers: producerRegistry(), validators: validatorRegistry() }).run(build());
+  const result = await runBuild(new Executor({ producers: producerRegistry(), refinements: validatorRegistry() }), build());
   assert.equal(result.status, "paused");
   assert.equal(result.state.needs.length, 2);
   const visual = result.state.needs.find((need) => need.capability.name === htmlProgramCapabilities.rasterizeVisual.name)!;
@@ -209,11 +241,11 @@ test("separate visual, audio and mux Endpoints complete one author-visible rende
     mediaOperationsCapabilities.renderAudio,
     mediaTypes.timelineAudio,
     ({ need }) => {
-      const request = need.constraints as { contract: string; plan: ReturnType<typeof compileAudioProgramPlan> };
+      const request = need.constraints as { contract: string; program: ReturnType<typeof compileAudioProgram> };
       return {
         value: stored(sealTimelineAudio({
           artifact: audioArtifact,
-          sampleFrames: request.plan.sampleFrames,
+          sampleFrames: request.program.sampleFrames,
         })),
       };
     },
@@ -235,16 +267,16 @@ test("separate visual, audio and mux Endpoints complete one author-visible rende
       };
     },
   );
-  const result = await new Executor({
+  const result = await runBuild(new Executor({
     producers: producerRegistry(),
     endpoints,
-    validators: validatorRegistry(),
-  }).run(build());
+    refinements: validatorRegistry(),
+  }), build());
   assert.equal(result.status, "complete");
   const video = result.state.records.find((record) =>
     record.type.module.name === blobTypes.blob.module.name
     && record.type.name === blobTypes.blob.name
-    && record.value.kind === "blob"
+    && isBlobRef(record.value)
     && record.value.resource === finalArtifact.resource);
   assert(video, "missing final Blob");
   assert.deepEqual(video.value, finalArtifact);
@@ -276,7 +308,7 @@ test("a render Product with another frame domain is rejected by the explicit dow
     mediaOperationsCapabilities.renderAudio,
     mediaTypes.timelineAudio,
     ({ need }) => {
-      const request = need.constraints as { readonly plan: ReturnType<typeof compileAudioProgramPlan> };
+      const request = need.constraints as { readonly program: ReturnType<typeof compileAudioProgram> };
       return {
         value: stored(sealTimelineAudio({
           artifact: {
@@ -285,16 +317,16 @@ test("a render Product with another frame domain is rejected by the explicit dow
             size: 1,
             mediaType: "audio/wav",
           },
-          sampleFrames: request.plan.sampleFrames,
+          sampleFrames: request.program.sampleFrames,
         })),
       };
     },
   );
-  const result = await new Executor({
+  const result = await runBuild(new Executor({
     producers: producerRegistry(),
     endpoints,
-    validators: validatorRegistry(),
-  }).run(build());
+    refinements: validatorRegistry(),
+  }), build());
   assert.equal(result.status, "failed");
   assert.match(result.outcomes.at(-1)?.message ?? "", /different presentation durations/u);
 });
@@ -326,7 +358,12 @@ function source(text: string): ResolvedSource {
 for (const selectedRange of [false, true]) {
 test(`the ${selectedRange ? "selected" : "full"} rendered video remains an ordinary Blob for downstream components`, async () => {
   const sourceClosure = createResolvedClosure([
-    ...videoContractManifests,
+    blobManifest,
+    timelineManifest,
+    temporalManifest,
+    mediaManifest,
+    compositionManifest,
+    recipeManifest,
     htmlProgramManifest,
     mediaOperationsManifest,
     htmlVideoManifest,
@@ -339,7 +376,6 @@ test(`the ${selectedRange ? "selected" : "full"} rendered video remains an ordin
       { id: "semantic", type: timelineTypes.timeline, value: stored(semantic), range: element.range },
     ],
     components: [],
-    fragments: [],
   }) });
   surfaces.registerStructured({
     module: htmlVideoModuleRef,
@@ -374,17 +410,17 @@ test(`the ${selectedRange ? "selected" : "full"} rendered video remains an ordin
     resolveSource() {
       throw new Error("the fixture has no source imports");
     },
-    admitRecord: createRecordAdmitter(validatorRegistry()),
+    validateRecord: createRecordValidator(validatorRegistry()),
   });
   const target = resolveCompiledSourceExport(compiled, "poster.image", blobTypes.blob);
   assert.equal(target.ref.kind, "logical-output");
-  const state = start(compiled.program, compiled.graph, sealBuildRequest({
-    targets: [{ output: target.ref.kind === "logical-output" ? target.ref.id : "" }],
-  }));
+  const state = buildState(compiled.program, compiled.graph, [
+    target.ref.kind === "logical-output" ? target.ref.id : "",
+  ]);
   assert.deepEqual(state.plan.steps.map((step) => step.producer.name).sort(), [
     htmlProgramProducers.compile.name,
     selectedRange ? htmlProgramProducers.requestVisualRange.name : htmlProgramProducers.requestVisual.name,
-    mediaOperationsProducers.planAudio.name,
+    mediaOperationsProducers.compileAudio.name,
     selectedRange ? mediaOperationsProducers.renderAudioRange.name : mediaOperationsProducers.renderAudio.name,
     mediaOperationsProducers.mux.name,
     mediaOperationsProducers.projectMuxed.name,
@@ -397,20 +433,21 @@ test(`the ${selectedRange ? "selected" : "full"} rendered video remains an ordin
 
 test("selected render frames reach both visual and audio Needs through the ordinary Build graph", async () => {
   const range = { startFrame: 15, endFrameExclusive: 45 };
-  const rangeRecord = await admitRecord(closure, sealRecord({ id: "selection", type: mediaTypes.frameRange,
-    value: stored(range) }), validatorRegistry());
+  const rangeRecord = await validateRecord({ id: "selection", type: mediaTypes.frameRange,
+    value: stored(range) }, validatorRegistry());
   const program = link(closure, [compositionRecord, spaceRecord, rangeRecord]);
   const fragment = createHtmlVideoFragment(true);
   const selected = elaborateGraphFragment(program, fragment, {
-    id: "selected", fragment: fragment.id, inputs: {
+    id: "selected", inputs: {
       composition: { kind: "record", id: compositionRecord.id },
       timeline: { kind: "record", id: spaceRecord.id },
       range: { kind: "record", id: rangeRecord.id },
     },
   });
-  const selectedGraph = sealCompiledGraph(bindAuthorFragment(selected, { video: "selected.video" }));
-  const result = await new Executor({ producers: producerRegistry(), validators: validatorRegistry() }).run(
-    start(program, selectedGraph, sealBuildRequest({ targets: [{ output: "selected.video" }] })),
+  const selectedGraph = sealAuthorGraph(bindAuthorFragment(selected, { video: "selected.video" }));
+  const result = await runBuild(
+    new Executor({ producers: producerRegistry(), refinements: validatorRegistry() }),
+    buildState(program, selectedGraph, ["selected.video"]),
   );
   assert.equal(result.state.needs.length, 2);
   for (const need of result.state.needs) assert.deepEqual((need.constraints as { range: unknown }).range, range);

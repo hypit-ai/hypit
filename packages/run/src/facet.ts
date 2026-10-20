@@ -9,13 +9,13 @@ export const runFragmentFacetAbi = "hypit.run-fragment@1";
 
 export type RunFragmentFacet = Facet & {
   readonly abi: typeof runFragmentFacetAbi;
-  readonly offers: readonly string[];
+  readonly address: string;
   readonly implementation: RunFragmentPackage;
 };
 
 function validateFragments(fragments: Readonly<Record<string, GraphFragment>>): void {
   for (const [name, fragment] of Object.entries(fragments)) {
-    if (name.trim().length === 0 || fragment.id.trim().length === 0) {
+    if (name.trim().length === 0 || fragment.format !== "hypit.fragment@1") {
       throw new Error("Run Fragment facet has an invalid export");
     }
   }
@@ -27,7 +27,7 @@ export function createRunFragmentFacet(item: RunFragmentPackage): RunFragmentFac
   validateFragments(item.fragments);
   return {
     abi: runFragmentFacetAbi,
-    offers: [item.name],
+    address: item.name,
     implementation: item,
   };
 }
@@ -54,6 +54,9 @@ export function installRunFragmentFacets(
       throw new Error("Run Fragment facet has an invalid package implementation");
     }
     validateFragments(facet.implementation.fragments);
+    if (facet.address !== facet.implementation.name) {
+      throw new Error("Run Fragment facet address does not match its implementation");
+    }
     registry.register(facet.implementation);
   }
 }

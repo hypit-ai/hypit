@@ -1,12 +1,13 @@
+import { parseTypeKey } from "@hypit/protocol";
 import type { CanonicalValue, TypeRef } from "@hypit/protocol";
 import type {
-  RunBuildRecord,
+  RunBuildOutputSource,
   RunCandidateDeclaration,
   RunDocument,
   RunFragmentInstance,
   RunImport,
-  RunProvidedFile,
-  RunProvidedValue,
+  RunFileSource,
+  RunValueSource,
   RunSatisfaction,
   RunTarget,
 } from "@hypit/run";
@@ -77,18 +78,6 @@ function empty(element: StructuredElement): void {
   if (elements(element).length > 0) fail(element, "RUN_CHILD", `<${element.name}> must be empty`);
 }
 
-function parseTypeRef(value: string): TypeRef {
-  const hash = value.lastIndexOf("#");
-  const version = hash <= 0 ? -1 : value.lastIndexOf("@", hash);
-  if (hash <= 0 || version <= 0 || version === hash - 1 || hash === value.length - 1) {
-    throw new Error(`Type ${value} must use package@version#Type`);
-  }
-  return {
-    module: { name: value.slice(0, version), version: value.slice(version + 1, hash) },
-    name: value.slice(hash + 1),
-  };
-}
-
 function authorDeclaration(element: StructuredElement): { readonly source: string } {
   exactAttributes(element, ["source"]);
   empty(element);
@@ -107,29 +96,29 @@ function target(element: StructuredElement): RunTarget {
   return { output: stringAttribute(element, "output")! };
 }
 
-function provided(element: StructuredElement): RunProvidedValue {
+function valueSource(element: StructuredElement): RunValueSource {
   exactAttributes(element, ["id", "type", "from"]);
   empty(element);
   let type: TypeRef;
   try {
-    type = parseTypeRef(stringAttribute(element, "type")!);
+    type = parseTypeKey(stringAttribute(element, "type")!);
   } catch (error) {
     fail(element, "RUN_TYPE", error instanceof Error ? error.message : String(error));
   }
   return {
-    kind: "provided",
+    kind: "value",
     id: stringAttribute(element, "id")!,
     type,
     from: stringAttribute(element, "from")!,
   };
 }
 
-function file(element: StructuredElement): RunProvidedFile {
+function file(element: StructuredElement): RunFileSource {
   exactAttributes(element, ["id", "type", "from", "media-type"]);
   empty(element);
   let type: TypeRef;
   try {
-    type = parseTypeRef(stringAttribute(element, "type")!);
+    type = parseTypeKey(stringAttribute(element, "type")!);
   } catch (error) {
     fail(element, "RUN_TYPE", error instanceof Error ? error.message : String(error));
   }
@@ -146,11 +135,11 @@ function file(element: StructuredElement): RunProvidedFile {
   };
 }
 
-function buildRecord(element: StructuredElement): RunBuildRecord {
+function buildOutput(element: StructuredElement): RunBuildOutputSource {
   exactAttributes(element, ["id", "build", "output"]);
   empty(element);
   return {
-    kind: "build-record",
+    kind: "build-output",
     id: stringAttribute(element, "id")!,
     build: stringAttribute(element, "build")!,
     output: stringAttribute(element, "output")!,
@@ -262,9 +251,9 @@ function parseRunDocumentBody(name: string, text: string): RunDocument {
     bodyStarted = true;
     if (author === undefined) fail(child, "RUN_AUTHOR_MISSING", "<svrun> requires an opening <author> declaration");
     if (child.name === "target") targets.push(target(child));
-    else if (child.name === "value") candidates.push(provided(child));
+    else if (child.name === "value") candidates.push(valueSource(child));
     else if (child.name === "file") candidates.push(file(child));
-    else if (child.name === "build-record") candidates.push(buildRecord(child));
+    else if (child.name === "build-record") candidates.push(buildOutput(child));
     else if (child.name === "fragment") candidates.push(fragment(child));
     else if (child.name === "satisfy") {
       const item = satisfaction(child);

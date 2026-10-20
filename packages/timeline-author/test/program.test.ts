@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createResolvedClosure, link } from "@hypit/kernel";
 import { verifyGraphFragment } from "@hypit/author";
-import { temporalExtentFromDomain } from "@hypit/temporal";
-import { videoContractManifests } from "../../../test/support/video-domain.js";
+import { temporalExtentFromDomain, temporalManifest } from "@hypit/temporal";
+import { timelineManifest } from "@hypit/timeline";
 
 import {
   compileTimelineAuthorFragment,
@@ -75,11 +75,15 @@ test("Surface planning lowers author Instants and Windows to typed graph operati
     { binding: "at", declarationId: "claim", expression: "offset" },
   ]);
   assert.equal(JSON.stringify(plan.fragment).includes("speech.end-12f"), false);
-  verifyGraphFragment(link(createResolvedClosure([...videoContractManifests, timelineAuthorManifest]), []), plan.fragment);
+  verifyGraphFragment(link(createResolvedClosure([
+    timelineManifest,
+    temporalManifest,
+    timelineAuthorManifest,
+  ]), []), plan.fragment);
 });
 
 test("typed graph verification rejects real cycles while named side anchors stay public", () => {
-  const program = link(createResolvedClosure([...videoContractManifests, timelineAuthorManifest]), []);
+  const program = link(createResolvedClosure([timelineManifest, temporalManifest, timelineAuthorManifest]), []);
   const cyclic = compileTimelineAuthorFragment({
     id: "film",
     end: "a",

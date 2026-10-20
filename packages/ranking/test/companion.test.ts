@@ -16,21 +16,46 @@ test("each Ranking surface has independent visual and audio Companions", () => {
   }
 });
 
+test("Ranking Companion owns scalar and recursive color presentation", () => {
+  const visual = (id: string) => rankingStudioTrackCompanions.find((entry) =>
+    entry.id === id && entry.output.type.name === compositionTypes.visualTrack.name)!;
+  const field = (id: string, binding: string) => visual(id).inspector?.find((entry) => entry.binding === binding);
+  assert.deepEqual(field("column", "style.text-color")?.valuePresentation, { kind: "color" });
+  assert.deepEqual(field("column", "style.rank-colors")?.valuePresentation,
+    { kind: "list", item: { kind: "color" } });
+  assert.deepEqual(field("tier", "style.rows")?.valuePresentation,
+    { kind: "list", item: { kind: "record", fields: { color: { kind: "color" } } } });
+  assert.deepEqual(field("top-three", "style.slot-colors")?.valuePresentation,
+    { kind: "list", item: { kind: "color" } });
+});
+
 test("audio uses exact event identities and emitted clips, with shared recipe ownership", () => {
   const audio = rankingStudioTrackCompanions.find((entry) => entry.id === "tier-audio")!;
   const context = {
-    track: { outputRef: "board.audio", value: { clips: [
-      { id: "opaque-event-id", artifact: { resource: "res_sound" } },
-    ] }, trace: { outputPorts: [{ name: "events", ref: "board.events" }] } },
-    placement: { id: "board", range: { start: 0, end: 100 }, children: [
-      { id: "player", attributes: { label: "Player One" }, values: [] },
-    ] },
+    track: {
+      name: "board.audio", type: "AudioTrack", typeRef: compositionTypes.audioTrack,
+      outputRef: "board.audio", candidateOrigin: "source", role: "track",
+      value: { clips: [{ id: "opaque-event-id", artifact: { resource: "res_sound" } }] },
+      trace: { references: [], outputPorts: [{ name: "events", ref: "board.events" }] },
+    },
+    placement: {
+      sourcePath: "ranking.svml", tag: "Tier", module: { name: "@hypit/ranking", version: "1" },
+      surface: "tier", id: "board", range: { start: 0, end: 100 }, records: [], values: [], outputs: [],
+      outputPorts: [], attributes: {}, attributeValueRanges: {}, references: [], referenceAttributes: {},
+      referenceTypes: {},
+      children: [{
+        sourcePath: "ranking.svml", tag: "Item", id: "player", range: { start: 10, end: 20 },
+        attributes: { label: "Player One" }, attributeValueRanges: {}, references: [], referenceAttributes: {},
+        referenceTypes: {}, values: [],
+      }],
+    },
     values: new Map([["board.events", { events: [
       { id: "opaque-event-id", itemId: "player", kind: "move", frame: 90 },
       { id: "unprovided-sound", itemId: "player", kind: "appear", frame: 0 },
     ] }]]),
     spans: [{ id: "opaque-event-id", startFrame: 90, endFrameExclusive: 99, stackOrder: 0 }],
-  } as unknown as StudioTrackCompanionContext;
+    temporalBindings: [], temporalDomains: [], generic: () => [],
+  } satisfies StudioTrackCompanionContext;
   const items = audio.project!(context);
   assert.equal(items.length, 1);
   assert.equal(items[0]!.display.title, "Player One · Move");

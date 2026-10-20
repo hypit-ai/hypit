@@ -1,5 +1,5 @@
 import { canonicalStringify } from "@hypit/hypit/protocol";
-import type { SourceRange } from "@hypit/hypit/protocol";
+import type { SourceRange } from "@hypit/hypit/source";
 import { captionDocument, narrativeValue } from "./narrative.js";
 import { parseScript } from "./parser.js";
 import type { Affinity, ParsedNarrative, SemanticAnchor } from "./types.js";

@@ -1,4 +1,4 @@
-import { createAdmissionPackageFacet } from "@hypit/hypit/admission";
+import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
 import { createProducerPackageFacet } from "@hypit/hypit/producer";
 import { createMarkupSurfaceFacet } from "@hypit/hypit/markup";
 import { createStudioCompanionFacet } from "@hypit/studio-companion";
@@ -16,7 +16,7 @@ export const hypitPackage = {
   format: "hypit.package@1" as const,
   modules: [{ manifest: audioTrackManifest }],
   facets: [
-    ...[audioTrackComponent].flatMap((component) => [createProducerPackageFacet(component), createAdmissionPackageFacet(component)]),
+    ...[audioTrackComponent].flatMap((component) => [createProducerPackageFacet(component), createRefinementPackageFacet(component)]),
     createMarkupSurfaceFacet({
       module: audioTrackModuleRef,
       declaration: audioTrackMarkupSurfaces.find((item) => item.name === "track")!,

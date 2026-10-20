@@ -20,7 +20,7 @@ const operation = (id: string) => ({ kind: "fragment-operation" as const, operat
 export function createEmojiRevealFragment(items: readonly EmojiRevealFragmentItem[]) {
   if (items.length === 0) throw new Error("Emoji Reveal Fragment requires at least one Item.");
   const operations: FragmentOperation[] = [
-    { id: "emoji:set:empty", producer: emojiRevealProducers.createSet, inputs: {}, result: { kind: "output", name: "set" } },
+    { id: "emoji:set:empty", producer: emojiRevealProducers.createSet, inputs: {}, result: { kind: "output" as const, name: "set" } },
   ];
   let current = "emoji:set:empty";
   items.forEach((item, index) => {
@@ -32,17 +32,17 @@ export function createEmojiRevealFragment(items: readonly EmojiRevealFragmentIte
       ...(item.activationName === undefined ? {} : {
         timeline: input("timeline"), activation: input(item.activationName),
       }),
-    }, result: { kind: "output", name: "set" } });
+    }, result: { kind: "output" as const, name: "set" } });
     current = id;
   });
   operations.push(
     { id: "emoji:program", producer: emojiRevealProducers.finalize, inputs: {
       header: input("header"), timeline: input("timeline"), outer: input("outer"), style: input("style"),
       placeholder: input("placeholder"), set: operation(current),
-    }, result: { kind: "output", name: "program" } },
+    }, result: { kind: "output" as const, name: "program" } },
     { id: "emoji:track", producer: emojiRevealProducers.render, inputs: {
       within: input("within"), timeline: input("timeline"), program: operation("emoji:program"),
-    }, result: { kind: "output", name: "track" } },
+    }, result: { kind: "output" as const, name: "track" } },
   );
   return sealGraphFragment({
     inputs: [

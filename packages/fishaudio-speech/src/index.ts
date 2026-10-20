@@ -1,8 +1,8 @@
 import { blobTypes } from "@hypit/hypit/blob";
-import { sealGenerationPortRequest, sealGenerationRequestDraft, sealGenerationPortTable } from "@hypit/generation";
-import type { GenerationPortTable, GenerationPortValue, GenerationRequest } from "@hypit/generation";
+import { sealModelFieldRequest, sealModelFieldBuilder, defineModelFields } from "@hypit/generation/model-fields";
+import type { ModelFieldTable, ModelFieldValue, ModelFieldRequest } from "@hypit/generation/model-fields";
 import type { SurfaceAttributeVocabulary, SurfacePortVocabulary } from "@hypit/hypit/markup";
-import { defineExactModelModule } from "@hypit/generation/model";
+import { defineFieldModelModule, standardGenerationResults } from "@hypit/generation/model-fields";
 import { textTypes } from "@hypit/hypit/text";
 
 export const fishAudioSpeechModuleRef = { name: "@hypit/fishaudio-speech", version: "1" } as const;
@@ -17,11 +17,10 @@ export type FishAudioSpeechModel = typeof fishAudioSpeechModels[number];
 const spokenText = { kind: "text" } as const;
 const voiceDescription = { kind: "text" } as const;
 
-function table(model: FishAudioSpeechModel): GenerationPortTable {
+function table(model: FishAudioSpeechModel): ModelFieldTable {
   if (model === "voice-design-1") {
-    return sealGenerationPortTable({
+    return defineModelFields({
       model,
-      result: "audio",
       ports: [
         { name: "text", value: spokenText, minItems: 1, maxItems: 1 },
         { name: "voiceDescription", value: voiceDescription, minItems: 1, maxItems: 1 },
@@ -29,9 +28,8 @@ function table(model: FishAudioSpeechModel): GenerationPortTable {
       requires: [],
     });
   }
-  return sealGenerationPortTable({
+  return defineModelFields({
     model,
-    result: "audio",
     ports: [
       { name: "text", value: spokenText, minItems: 1, maxItems: 1 },
       { name: "voiceReference", value: { kind: "media", accepts: ["audio"] }, minItems: 1, maxItems: 1 },
@@ -40,26 +38,26 @@ function table(model: FishAudioSpeechModel): GenerationPortTable {
   });
 }
 
-export const fishAudioSpeechPorts: Readonly<Record<FishAudioSpeechModel, GenerationPortTable>> = {
+export const fishAudioSpeechPorts: Readonly<Record<FishAudioSpeechModel, ModelFieldTable>> = {
   "voice-design-1": table("voice-design-1"),
   "voice-clone": table("voice-clone"),
 };
 
 export function sealFishAudioSpeechRequest(
   model: FishAudioSpeechModel,
-  ports: Readonly<Record<string, readonly GenerationPortValue[]>>,
-): GenerationRequest {
-  return sealGenerationPortRequest(fishAudioSpeechPorts[model], ports);
+  ports: Readonly<Record<string, readonly ModelFieldValue[]>>,
+): ModelFieldRequest {
+  return sealModelFieldRequest(fishAudioSpeechPorts[model], ports);
 }
 
 export function sealFishAudioSpeechRequestDraft(
   model: FishAudioSpeechModel,
-  ports: Readonly<Record<string, readonly GenerationPortValue[]>>,
+  ports: Readonly<Record<string, readonly ModelFieldValue[]>>,
 ) {
-  return sealGenerationRequestDraft(fishAudioSpeechPorts[model], ports);
+  return sealModelFieldBuilder(fishAudioSpeechPorts[model], ports);
 }
 
-const base = defineExactModelModule({
+const base = defineFieldModelModule({
   module: fishAudioSpeechModuleRef,
   endpoints: ([
     ["voiceDesign", "voice-design-1", "FishAudioVoiceDesignRequest"],
@@ -69,6 +67,7 @@ const base = defineExactModelModule({
     requestTypeName,
     producerName: `request-${model}`,
     ports: fishAudioSpeechPorts[model],
+    result: standardGenerationResults.audio,
   })),
 });
 

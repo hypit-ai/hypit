@@ -1,5 +1,5 @@
 import type { CliCompilerOptions } from "@hypit/hypit/cli";
-import { admissionPackagesFromFacets, registerTypeValidatorFacets, TypeValidatorRegistry } from "@hypit/hypit/admission";
+import { refinementPackagesFromFacets, registerTypeRefinements, RefinementRegistry } from "@hypit/hypit/refinement";
 import { ModulePackageRegistry, Compiler } from "@hypit/hypit/compiler";
 import { AuthorFrontendRegistry, installAuthorFrontendFacets } from "@hypit/hypit/author";
 import {
@@ -47,14 +47,14 @@ export function createVideoCompiler(options: CliCompilerOptions) {
   const modules = new ModulePackageRegistry();
   const surfaces = new MarkupSurfaceRegistry();
   const frontends = new AuthorFrontendRegistry();
-  const validators = new TypeValidatorRegistry();
+  const refinements = new RefinementRegistry();
   for (const item of options.packageContributions) {
     for (const module of item.modules ?? []) modules.register(module);
     const facets = item.facets ?? [];
     installMarkupSurfaceFacets(facets, surfaces);
     installAuthorFrontendFacets(facets, frontends);
-    for (const pack of admissionPackagesFromFacets(facets)) {
-      registerTypeValidatorFacets(validators, pack.validators ?? []);
+    for (const pack of refinementPackagesFromFacets(facets)) {
+      registerTypeRefinements(refinements, pack.refinements ?? []);
     }
   }
   frontends.register(createMarkupAuthorFrontend({
@@ -68,7 +68,7 @@ export function createVideoCompiler(options: CliCompilerOptions) {
   return new Compiler({
     modules,
     frontends,
-    validators,
+    refinements,
     workspace: createVideoWorkspace(options),
   });
 }

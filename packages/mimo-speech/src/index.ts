@@ -1,8 +1,8 @@
 import { blobTypes } from "@hypit/hypit/blob";
-import { sealGenerationPortRequest, sealGenerationRequestDraft, sealGenerationPortTable } from "@hypit/generation";
-import type { GenerationPortTable, GenerationPortValue, GenerationRequest } from "@hypit/generation";
+import { sealModelFieldRequest, sealModelFieldBuilder, defineModelFields } from "@hypit/generation/model-fields";
+import type { ModelFieldTable, ModelFieldValue, ModelFieldRequest } from "@hypit/generation/model-fields";
 import type { SurfaceAttributeVocabulary, SurfacePortVocabulary } from "@hypit/hypit/markup";
-import { defineExactModelModule } from "@hypit/generation/model";
+import { defineFieldModelModule, standardGenerationResults } from "@hypit/generation/model-fields";
 import { textTypes } from "@hypit/hypit/text";
 
 export const mimoSpeechModuleRef = { name: "@hypit/mimo-speech", version: "1" } as const;
@@ -17,11 +17,10 @@ export type MimoSpeechModel = typeof mimoSpeechModels[number];
 const spokenText = { kind: "text" } as const;
 const instruction = { kind: "text" } as const;
 
-function table(model: MimoSpeechModel): GenerationPortTable {
+function table(model: MimoSpeechModel): ModelFieldTable {
   if (model === "mimo-v2.5-tts-voicedesign") {
-    return sealGenerationPortTable({
+    return defineModelFields({
       model,
-      result: "audio",
       ports: [
         { name: "text", value: spokenText, minItems: 1, maxItems: 1 },
         { name: "voiceDescription", value: instruction, minItems: 1, maxItems: 1 },
@@ -29,9 +28,8 @@ function table(model: MimoSpeechModel): GenerationPortTable {
       requires: [],
     });
   }
-  return sealGenerationPortTable({
+  return defineModelFields({
     model,
-    result: "audio",
     ports: [
       { name: "text", value: spokenText, minItems: 1, maxItems: 1 },
       { name: "instruction", value: instruction, minItems: 0, maxItems: 1 },
@@ -41,26 +39,26 @@ function table(model: MimoSpeechModel): GenerationPortTable {
   });
 }
 
-export const mimoSpeechPorts: Readonly<Record<MimoSpeechModel, GenerationPortTable>> = {
+export const mimoSpeechPorts: Readonly<Record<MimoSpeechModel, ModelFieldTable>> = {
   "mimo-v2.5-tts-voicedesign": table("mimo-v2.5-tts-voicedesign"),
   "mimo-v2.5-tts-voiceclone": table("mimo-v2.5-tts-voiceclone"),
 };
 
 export function sealMimoSpeechRequest(
   model: MimoSpeechModel,
-  ports: Readonly<Record<string, readonly GenerationPortValue[]>>,
-): GenerationRequest {
-  return sealGenerationPortRequest(mimoSpeechPorts[model], ports);
+  ports: Readonly<Record<string, readonly ModelFieldValue[]>>,
+): ModelFieldRequest {
+  return sealModelFieldRequest(mimoSpeechPorts[model], ports);
 }
 
 export function sealMimoSpeechRequestDraft(
   model: MimoSpeechModel,
-  ports: Readonly<Record<string, readonly GenerationPortValue[]>>,
+  ports: Readonly<Record<string, readonly ModelFieldValue[]>>,
 ) {
-  return sealGenerationRequestDraft(mimoSpeechPorts[model], ports);
+  return sealModelFieldBuilder(mimoSpeechPorts[model], ports);
 }
 
-const base = defineExactModelModule({
+const base = defineFieldModelModule({
   module: mimoSpeechModuleRef,
   endpoints: ([
     ["voiceDesign", "mimo-v2.5-tts-voicedesign", "MimoVoiceDesignRequest"],
@@ -70,6 +68,7 @@ const base = defineExactModelModule({
     requestTypeName,
     producerName: `request-${model}`,
     ports: mimoSpeechPorts[model],
+    result: standardGenerationResults.audio,
   })),
 });
 

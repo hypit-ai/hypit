@@ -29,11 +29,11 @@ import {
 
 const input = (name) => ({ kind: "fragment-input", name });
 const operation = (id) => ({ kind: "fragment-operation", operation: id });
-const inline = (record, label) => {
-  if (record?.value.kind !== "inline") throw Error(`${label} must be inline.`);
-  return record.value.value;
+const valueOf = (record, label) => {
+  if (!record) throw Error(`${label} is missing.`);
+  return record.value;
 };
-const stored = (value) => ({ kind: "inline", value: canonicalize(value) });
+const stored = (value) => ((canonicalize(value)));
 
 export function presenterTypes(module) {
   return {
@@ -144,8 +144,8 @@ function ref(element, name, type, resolveReference) {
 }
 
 function authored(value, label) {
-  if (value.record?.value.kind !== "inline") throw Error(`${label} must be an authored inline value.`);
-  return value.record.value.value;
+  if (!value.record) throw Error(`${label} must be an authored value.`);
+  return value.record.value;
 }
 
 export function installPresenter(module, manifest, component) {
@@ -175,11 +175,11 @@ export function installPresenter(module, manifest, component) {
     { name: producers.resolve.name, inputs: [{ name: "program", type: types.program }, { name: "timeline", type: timelineTypes.timeline }, { name: "header", type: types.header }], outputs: [{ name: "visual", type: compositionTypes.visualTrack }], needs: [] },
   );
   component.producers.push(
-    { producer: producers.source, handler: ({ inputs }) => ({ outputs: { sources: stored(sourcesValue([sourceValue(inline(inputs.spec, "PresenterSourceSpec"), inline(inputs.media, "SynchronizedMedia"), inline(inputs.window, "TemporalWindow"), inline(inputs.timeline, "Timeline"))])) }, needs: {} }) },
-    { producer: producers.combineSources, handler: ({ inputs }) => ({ outputs: { sources: stored(sourcesValue([...inline(inputs.left, "PresenterSources").sources, ...inline(inputs.right, "PresenterSources").sources])) }, needs: {} }) },
+    { producer: producers.source, handler: ({ inputs }) => ({ outputs: { sources: stored(sourcesValue([sourceValue(valueOf(inputs.spec, "PresenterSourceSpec"), valueOf(inputs.media, "SynchronizedMedia"), valueOf(inputs.window, "TemporalWindow"), valueOf(inputs.timeline, "Timeline"))])) }, needs: {} }) },
+    { producer: producers.combineSources, handler: ({ inputs }) => ({ outputs: { sources: stored(sourcesValue([...valueOf(inputs.left, "PresenterSources").sources, ...valueOf(inputs.right, "PresenterSources").sources])) }, needs: {} }) },
     { producer: producers.create, handler: () => ({ outputs: { program: stored({ uses: [] }) }, needs: {} }) },
-    { producer: producers.append, handler: ({ inputs }) => ({ outputs: { program: stored({ uses: [...inline(inputs.program, "PresenterProgram").uses, { window: inline(inputs.window, "TemporalWindow"), visual: inline(inputs.visual, "VisualTrack") }] }) }, needs: {} }) },
-    { producer: producers.resolve, handler: ({ inputs }) => ({ outputs: { visual: stored(resolvePresenter(inline(inputs.timeline, "Timeline"), inline(inputs.header, "PresenterHeader").id, inline(inputs.program, "PresenterProgram"))) }, needs: {} }) },
+    { producer: producers.append, handler: ({ inputs }) => ({ outputs: { program: stored({ uses: [...valueOf(inputs.program, "PresenterProgram").uses, { window: valueOf(inputs.window, "TemporalWindow"), visual: valueOf(inputs.visual, "VisualTrack") }] }) }, needs: {} }) },
+    { producer: producers.resolve, handler: ({ inputs }) => ({ outputs: { visual: stored(resolvePresenter(valueOf(inputs.timeline, "Timeline"), valueOf(inputs.header, "PresenterHeader").id, valueOf(inputs.program, "PresenterProgram"))) }, needs: {} }) },
   );
 
   const ordinaryInputs = [...common, { name: "frame", type: spatialTypes.frame }, { name: "fit", type: spatialTypes.fit },
@@ -187,9 +187,9 @@ export function installPresenter(module, manifest, component) {
     { name: "spec", type: visualTrackTypes.clipSpec }];
   manifest.producers.push({ name: producers.ordinary.name, inputs: ordinaryInputs, outputs: [{ name: "visual", type: compositionTypes.visualTrack }], needs: [] });
   component.producers.push({ producer: producers.ordinary, handler: ({ inputs }) => ({ outputs: { visual: stored(ordinaryPresenter(
-    inline(inputs.timeline, "Timeline"), inline(inputs.window, "TemporalWindow"),
-    inline(inputs.frame, "SpatialFrame"), inline(inputs.sources, "PresenterSources"), inline(inputs.fit, "ContentFit"),
-    inline(inputs.sample, "MediaSampleLayerSpec"), inline(inputs.spec, "VisualClipSpec"),
+    valueOf(inputs.timeline, "Timeline"), valueOf(inputs.window, "TemporalWindow"),
+    valueOf(inputs.frame, "SpatialFrame"), valueOf(inputs.sources, "PresenterSources"), valueOf(inputs.fit, "ContentFit"),
+    valueOf(inputs.sample, "MediaSampleLayerSpec"), valueOf(inputs.spec, "VisualClipSpec"),
   )) }, needs: {} }) });
   const ordinaryFragment = sealGraphFragment({ inputs: ordinaryInputs, operations: [{ id: "render", producer: producers.ordinary,
     inputs: Object.fromEntries(ordinaryInputs.map((port) => [port.name, input(port.name)])), result: { kind: "output", name: "visual" } }],
@@ -235,7 +235,7 @@ export function installPresenter(module, manifest, component) {
       spec: bind("spec", specType, decodeVisualClipSpec(selectedRecipe(treatmentKeys), { id, z: stackingOrder })),
     });
     records.push({ id, type: types.style, value: stored(style), range: element.range });
-    return { records, components: [], fragments: [] };
+    return { records, components: [] };
   } });
 
   const presenterFacet = createMarkupSurfaceFacet({ module, declaration: {
@@ -268,7 +268,7 @@ export function installPresenter(module, manifest, component) {
     const context = resolveTemporalContext({ element, resolveReference });
     const within = ref(element, "within", spatialTypes.frame, resolveReference);
     const records = [{ id: `${id}.header`, type: types.header, value: stored({ id }), range: element.range }];
-    const components = [], fragments = [], sourceDeclarations = [], uses = [];
+    const components = [], sourceDeclarations = [], uses = [];
     for (const child of element.children) {
       if (child.kind === "text") { if (child.value.trim()) throw Error("Presenter accepts only Source and Use children."); continue; }
       const tag = child.name.split(":").at(-1);
@@ -302,8 +302,7 @@ export function installPresenter(module, manifest, component) {
     }
     const [sourceRoot] = sourceRoots;
     const sourceFragment = sealGraphFragment({ inputs: sourceInputs, operations: sourceOps, exports: [{ name: "sources", type: types.sources, root: operation(sourceRoot) }] });
-    fragments.push(sourceFragment);
-    components.push({ id: `${id}.__sources`, fragment: sourceFragment.id, inputs: { timeline: context.timeline.ref, ...Object.fromEntries(sourceDeclarations.flatMap((source, index) => [
+    components.push({ id: `${id}.__sources`, fragment: sourceFragment, inputs: { timeline: context.timeline.ref, ...Object.fromEntries(sourceDeclarations.flatMap((source, index) => [
       [`spec-${index}`, { kind: "record", id: source.specId }], [`media-${index}`, source.media.ref], [`window-${index}`, source.window.ref],
     ])) }, outputs: { sources: `${id}.__sources.value` }, range: element.range });
     const collectorInputs = [{ name: "timeline", type: timelineTypes.timeline }, { name: "header", type: types.header }];
@@ -315,9 +314,8 @@ export function installPresenter(module, manifest, component) {
       const useId = optionalTextAttribute(child, "id") ?? `${id}.use.${index + 1}`;
       const temporal = resolveTemporalWindowReference({ element: child, resolveReference });
       const style = authored(ref(child, "style", types.style, resolveReference), "Presenter Style");
-      fragments.push(style.fragment);
       const needsWithin = style.fragment.inputs.some((port) => port.name === "within");
-      components.push({ id: `${useId}.__style`, fragment: style.fragment.id, inputs: {
+      components.push({ id: `${useId}.__style`, fragment: style.fragment, inputs: {
         ...Object.fromEntries(Object.entries(style.bindings).map(([name, value]) => [name, value.ref])),
         timeline: context.timeline.ref,
         ...(needsWithin ? { within: within.ref } : {}),
@@ -332,9 +330,8 @@ export function installPresenter(module, manifest, component) {
     }
     ops.push({ id: "resolve", producer: producers.resolve, inputs: { program: operation(previous), timeline: input("timeline"), header: input("header") }, result: { kind: "output", name: "visual" } });
     const collector = sealGraphFragment({ inputs: collectorInputs, operations: ops, exports: [{ name: "program", type: types.program, root: operation(previous) }, { name: "visual", type: compositionTypes.visualTrack, root: operation("resolve") }] });
-    fragments.push(collector);
-    components.push({ id, fragment: collector.id, inputs: bindings, outputs: { program: `${id}.program`, visual: `${id}.visual` }, range: element.range });
-    return { records, components, fragments, exports: [`${id}.program`, `${id}.visual`] };
+    components.push({ id, fragment: collector, inputs: bindings, outputs: { program: `${id}.program`, visual: `${id}.visual` }, range: element.range });
+    return { records, components, exports: [`${id}.program`, `${id}.visual`] };
   } });
   return { types, styleFacet, presenterFacet };
 }

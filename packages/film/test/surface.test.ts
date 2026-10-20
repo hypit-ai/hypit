@@ -1,14 +1,28 @@
-import { sealTimeline, timelineDependency, timelineTypes } from "@hypit/timeline";
-import { compositionComponent, spatialComponent, videoContractManifests } from "../../../test/support/video-domain.js";
-import { registerTypeValidatorFacets } from "@hypit/admission";
-import { compositionDependency, compositionTypes, sealAudioTrack, sealVisualTrack } from "@hypit/composition";
+import { blobManifest } from "@hypit/blob";
+import { sealTimeline, timelineDependency, timelineManifest, timelineTypes } from "@hypit/timeline";
+import { registerTypeRefinements } from "@hypit/refinement";
+import {
+  compositionComponent,
+  compositionDependency,
+  compositionManifest,
+  compositionTypes,
+  sealAudioTrack,
+  sealVisualTrack,
+} from "@hypit/composition";
+import { mediaManifest } from "@hypit/media";
 import type { Track } from "@hypit/composition";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { fixtureResource } from "../../../test/fixture-resource.js";
 import { timelineFixture } from "../../../test/timeline-fixture.js";
 
-import { createResolvedClosure, sealBuildRequest, start } from "@hypit/kernel";
+import {
+  createResolvedClosure,
+  defineBuild,
+  link,
+  materializeBuild,
+  planBuild,
+} from "@hypit/kernel";
 import {
   AuthorFrontendRegistry,
   resolveCompiledSourceExport,
@@ -25,20 +39,41 @@ import {
   filmTypes,
 } from "@hypit/film";
 import type { ModuleManifest } from "@hypit/protocol";
-import { recipeFrontend, recipeType } from "@hypit/recipe";
+import { recipeFrontend, recipeManifest, recipeType } from "@hypit/recipe";
 import {
   decodeCanvasSurface,
+  spatialComponent,
   spatialManifest,
   spatialMarkupSurfaces,
   spatialModuleRef,
   spatialTypes,
 } from "@hypit/spatial";
+import { temporalManifest } from "@hypit/temporal";
 import {
   MarkupSurfaceRegistry,
   createMarkupAuthorFrontend,
 } from "@hypit/markup";
 import type { StructuredElement, SurfaceResolvedReference } from "@hypit/markup";
-import { createRecordAdmitter, TypeValidatorRegistry } from "@hypit/admission";
+import { createRecordValidator, RefinementRegistry } from "@hypit/refinement";
+
+function buildState(
+  program: Parameters<typeof planBuild>[0],
+  graph: Parameters<typeof planBuild>[1],
+  targets: readonly string[],
+) {
+  const planned = planBuild(program, graph, {
+    format: "hypit.run-graph@1",
+    records: [],
+    candidates: [],
+    operations: [],
+    satisfactions: [],
+    targets: targets.map((output) => ({ output })),
+  });
+  return materializeBuild(defineBuild({
+    program: link(program.closure, [...program.records, ...planned.initialRecords]),
+    plan: planned.plan,
+  }), []);
+}
 
 const fixtureModule = { name: "example.film-fixture", version: "1" } as const;
 const fixtureSurfaceDigest = fixtureResource("example.film-fixture/inputs-surface@1");
@@ -73,7 +108,13 @@ const audio = sealAudioTrack({ timelineId: "test-space",
 });
 
 const closure = createResolvedClosure([
-  ...videoContractManifests,
+  blobManifest,
+  timelineManifest,
+  temporalManifest,
+  mediaManifest,
+  spatialManifest,
+  compositionManifest,
+  recipeManifest,
   fixtureManifest,
   filmManifest,
 ]);
@@ -87,10 +128,10 @@ function source(id: string, text: string): ResolvedSource {
   });
 }
 
-function validatorRegistry(): TypeValidatorRegistry {
-  const registry = new TypeValidatorRegistry();
-  registerTypeValidatorFacets(registry, compositionComponent.validators);
-  registerTypeValidatorFacets(registry, spatialComponent.validators);
+function validatorRegistry(): RefinementRegistry {
+  const registry = new RefinementRegistry();
+  registerTypeRefinements(registry, compositionComponent.refinements);
+  registerTypeRefinements(registry, spatialComponent.refinements);
   return registry;
 }
 
@@ -104,12 +145,11 @@ async function compileFilm(options: { readonly styles?: string; readonly tracks?
   const surfaces = new MarkupSurfaceRegistry();
   surfaces.registerStructured({ module: fixtureModule, declaration: fixtureSurface, handler: ({ element }) => ({
     records: [
-      { id: "semantic", type: timelineTypes.timeline, value: { kind: "inline", value: semantic }, range: element.range },
-      { id: "visual", type: compositionTypes.visualTrack, value: { kind: "inline", value: visual }, range: element.range },
-      { id: "audio", type: compositionTypes.audioTrack, value: { kind: "inline", value: audio }, range: element.range },
+      { id: "semantic", type: timelineTypes.timeline, value: (semantic), range: element.range },
+      { id: "visual", type: compositionTypes.visualTrack, value: (visual), range: element.range },
+      { id: "audio", type: compositionTypes.audioTrack, value: (audio), range: element.range },
     ],
     components: [],
-    fragments: [],
   }) });
   surfaces.registerStructured({
     module: filmModuleRef,
@@ -149,23 +189,24 @@ async function compileFilm(options: { readonly styles?: string; readonly tracks?
     resolveSource() {
       return source("/project/recipes.svs", options.styles ?? validStyles);
     },
-    admitRecord: createRecordAdmitter(validatorRegistry()),
+    validateRecord: createRecordValidator(validatorRegistry()),
   });
 }
 
 test("the official Film Surface validates SVS and lowers dynamic peer Tracks", async () => {
   const compiled = await compileFilm();
   const program = compiled.program.records.find((record) => record.type.name === filmTypes.program.name);
-  assert.deepEqual(program?.value.kind === "inline" ? program.value.value : undefined, {
+  assert.ok(program);
+  assert.deepEqual(program.value, {
 
     id: "main",
     clearColor: "#09090B",
   });
   const target = resolveCompiledSourceExport(compiled, "main.composition", compositionTypes.composition);
   assert.equal(target.ref.kind, "logical-output");
-  const build = start(compiled.program, compiled.graph, sealBuildRequest({
-    targets: [{ output: target.ref.kind === "logical-output" ? target.ref.id : "" }],
-  }));
+  const build = buildState(compiled.program, compiled.graph, [
+    target.ref.kind === "logical-output" ? target.ref.id : "",
+  ]);
   assert.deepEqual(build.plan.steps.map((step) => step.producer.name).sort(), [
     filmProducers.createTrackSet.name,
     filmProducers.appendAudioTrack.name,
@@ -198,7 +239,7 @@ test("Film distinguishes component output ports and resolves duplicate aliases",
   }
   refs.set("appearance", { path: "appearance", type: recipeType,
     ref: { kind: "record", id: "appearance" }, record: { id: "appearance", type: recipeType,
-      value: { kind: "inline", value: { path: "film", properties: { background: "#000000" } } } } });
+      value: ({ path: "film", properties: { background: "#000000" } }) } });
   for (const [path, component, output, type] of [
     ["board.visual", "board", "visual", compositionTypes.visualTrack],
     ["board.audio", "board", "audio", compositionTypes.audioTrack],

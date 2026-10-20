@@ -3,7 +3,7 @@ import test from "node:test";
 import { EndpointRegistry, MemoryResourceStore } from "@hypit/executor";
 import { sealGptImage2Request } from "@hypit/gpt-image";
 import type { BlobRef, EndpointStartContext } from "@hypit/hypit/endpoint";
-import { canonicalize } from "@hypit/hypit/endpoint";
+import { canonicalize, endpointOffers, installEndpoint } from "@hypit/hypit/endpoint";
 import { generationTypes } from "@hypit/generation";
 import { capability, createImageProvider } from "../src/provider.js";
 
@@ -38,7 +38,9 @@ test("project Provider maps a reference, retains its receipt and collects throug
         return Response.json({ id: "received-task" });
       }
       if (url.pathname === "/tasks/received-task") {
-        assert.deepEqual(checkpoint, { handle: { id: "received-task" }, receipt: { id: "received-task" } });
+        assert.deepEqual(checkpoint, {
+          status: "accepted", handle: { id: "received-task" }, receipt: { id: "received-task" },
+        });
         return Response.json({ state: "succeeded", url: "https://assets.example/output.webp" });
       }
       throw new Error(`Unexpected path ${url.pathname}`);
@@ -48,13 +50,13 @@ test("project Provider maps a reference, retains its receipt and collects throug
     prompt: ["A portrait"], aspectRatio: ["9:16"], resolution: ["1K"], images: [{ role: "image", artifact: source }],
   }));
   const need = { id: "need:example", capability, returns: generationTypes.imageSet, constraints, result: "record:example" } as const;
-  const registry = new EndpointRegistry(); await provider.install(registry);
-  const resolution = registry.resolve(need);
+  const registry = new EndpointRegistry(); await installEndpoint(provider, registry);
+  const resolution = registry.select(need);
   assert.equal(resolution.status, "resolved");
   assert.equal(resolution.registration.kind, "asynchronous");
   const endpoint = resolution.registration.endpoint;
   const context: EndpointStartContext = {
-    need, command: { kind: "fulfill-need", id: "command:example", need }, operation: "operation:example",
+    need, operation: "operation:example",
     resources, credentials: { apiKey: { secret: "test-key" } },
     checkpoint: async (value) => { checkpoint = value; },
     reportProgress: async (value) => { progress.push(value.phase); },
@@ -64,13 +66,12 @@ test("project Provider maps a reference, retains its receipt and collects throug
   const start = await endpoint.start(context); assert.equal(start.status, "pending");
   const ready = await endpoint.poll({ ...context, handle: start.handle }); assert.equal(ready.status, "ready");
   const collected = await endpoint.collect!({ ...context, handle: ready.handle }); assert.equal(collected.status, "completed");
-  assert.equal(collected.result.value.kind, "inline");
-  const images = (collected.result.value.value as unknown as { images: BlobRef[] }).images;
+  const images = (collected.result.value as unknown as { images: BlobRef[] }).images;
   assert.equal(images[0]?.mediaType, "image/webp");
   assert.deepEqual(await resources.get(images[0]!.resource), new Uint8Array([4, 5, 6]));
   assert.deepEqual(calls, ["/rates", "/uploads", "/tasks", "/tasks/received-task", "/output.webp"]);
   assert.deepEqual(progress, ["Preparing image request: gpt-image-2", "Submitting image request: gpt-image-2", "Receiving generated image"]);
-  assert.equal(provider.offers[0]!.supports!({ ...need, constraints: canonicalize(sealGptImage2Request({
+  assert.equal(endpointOffers(provider)[0]!.supports!({ ...need, constraints: canonicalize(sealGptImage2Request({
     prompt: ["A portrait"], aspectRatio: ["9:16"], resolution: ["2K"],
   })) }).status, "unsupported");
 });
@@ -97,13 +98,13 @@ test("project Provider retains public submission and task errors without suggest
       constraints: canonicalize(sealGptImage2Request({ prompt: ["A portrait"], aspectRatio: ["1:1"], resolution: ["1K"] })),
       result: "result:failure" };
     const registry = new EndpointRegistry();
-    await provider.install(registry);
-    const resolved = registry.resolve(need);
+    await installEndpoint(provider, registry);
+    const resolved = registry.select(need);
     assert.equal(resolved.status, "resolved");
     assert.equal(resolved.registration.kind, "asynchronous");
     const endpoint = resolved.registration.endpoint;
     const context: EndpointStartContext = {
-      command: { kind: "fulfill-need", id: "command:failure", need }, need, operation: "operation:failure",
+      need, operation: "operation:failure",
       resources: new MemoryResourceStore(), credentials: { apiKey: { secret: "test-key" } },
       checkpoint: async () => { checkpointed = true; },
     };

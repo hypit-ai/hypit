@@ -1,15 +1,16 @@
-import type { ModuleRef } from "@hypit/hypit/protocol";
-import type { GenerationWireMapping } from "@hypit/generation";
-
-const SEEDANCE: ModuleRef = { name: "@hypit/seedance", version: "1" };
-const MINIMAX_H3: ModuleRef = { name: "@hypit/minimax-h3", version: "1" };
-const WAN: ModuleRef = { name: "@hypit/wan", version: "1" };
+import type { GenerationWireMapping } from "@hypit/generation/provider";
+import { minimaxH3ModuleRef } from "@hypit/minimax-h3";
+import { seedanceModuleRef } from "@hypit/seedance";
+import { wanModuleRef } from "@hypit/wan";
 
 /**
  * One mapping plus the Monid provider that relays the endpoint. Monid addresses an endpoint by
  * provider and path, so the provider travels with the mapping rather than being assumed.
  */
-export type MonidMapping = GenerationWireMapping & { readonly service: string };
+export type MonidMapping = GenerationWireMapping & {
+  readonly service: string;
+  readonly media: "image" | "video";
+};
 
 /**
  * Monid `bytedance` endpoints and the fields their ModelArk request body takes. Media fields name
@@ -18,7 +19,7 @@ export type MonidMapping = GenerationWireMapping & { readonly service: string };
  */
 const seedance = (name: string, endpoint: string): MonidMapping => ({
   service: "bytedance",
-  capability: { module: SEEDANCE, name }, result: "video", routes: [{ model: endpoint }],
+  capability: { module: seedanceModuleRef, name }, media: "video", routes: [{ model: endpoint }],
   fields: {
     prompt: { as: "value", field: "text" },
     referenceImage: { as: "urlArray", field: "reference_image", resourceFields: ["personReference"] },
@@ -37,12 +38,11 @@ const seedance = (name: string, endpoint: string): MonidMapping => ({
 /**
  * Monid's `minimax` MiniMax-H3 endpoint. It takes the same role-tagged `content` array as the
  * ModelArk endpoints above, names the model in the body, and carries neither a generated-audio nor
- * a web-search field. `resolution` is required by the endpoint while the model's port is optional,
- * so an unstated resolution is sent as the 2K the HypiHub Provider also selects.
+ * a web-search field. The Model finalizes an omitted resolution as 2K before this mapping runs.
  */
 const minimaxH3: MonidMapping = {
   service: "minimax",
-  capability: { module: MINIMAX_H3, name: "minimax-h3" }, result: "video",
+  capability: { module: minimaxH3ModuleRef, name: "minimax-h3" }, media: "video",
   routes: [{ model: "/v1/video/minimax-h3" }],
   constants: { model: "MiniMax-H3" },
   fields: {
@@ -52,7 +52,7 @@ const minimaxH3: MonidMapping = {
     referenceAudio: { as: "urlArray", field: "reference_audio" },
     firstFrame: { as: "url", field: "first_frame" },
     lastFrame: { as: "url", field: "last_frame" },
-    resolution: { as: "value", field: "resolution", whenAbsent: "2K" },
+    resolution: { as: "value", field: "resolution" },
     aspectRatio: { as: "value", field: "ratio" },
     duration: { as: "value", field: "duration" },
   },
@@ -65,7 +65,7 @@ const minimaxH3: MonidMapping = {
  */
 const wan = (name: string, endpoint: string): MonidMapping => ({
   service: "alibaba",
-  capability: { module: WAN, name }, result: "image",
+  capability: { module: wanModuleRef, name }, media: "image",
   routes: [{ model: endpoint }],
   fields: {
     prompt: { as: "value", field: "prompt" },

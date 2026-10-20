@@ -10,7 +10,7 @@ import {
   loadNodePackageSelection,
 } from "../packages/loader/src/node/index.ts";
 import { compositionTypes } from "../packages/composition/src/index.ts";
-import { admissionPackagesFromFacets } from "../packages/admission/src/index.ts";
+import { refinementPackagesFromFacets } from "../packages/refinement/src/index.ts";
 import { producerPackagesFromFacets } from "../packages/producer/src/index.ts";
 import { studioContributionFromPackage } from "../packages/studio-companion/src/index.ts";
 
@@ -91,7 +91,7 @@ try {
     ["@hypit/visual-track", "1"],
   ]);
   assert.equal(producerPackagesFromFacets(visualTrack.contribution.facets ?? []).length, 1);
-  assert.equal(admissionPackagesFromFacets(visualTrack.contribution.facets ?? []).length, 1);
+  assert.equal(refinementPackagesFromFacets(visualTrack.contribution.facets ?? []).length, 1);
   const studio = studioContributionFromPackage(
     visualTrack.specifier,
     visualTrack.contribution.facets ?? [],

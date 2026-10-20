@@ -13,6 +13,7 @@ import {
   mediaTypes,
 } from "@hypit/media";
 
+import { blobRefSchema } from "@hypit/hypit/protocol";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/hypit/protocol";
 import {
   contentFitSchema,
@@ -69,12 +70,7 @@ const integer = { kind: "number", integer: true } as const;
 const unsignedInteger = { kind: "number", integer: true, minimum: 0 } as const;
 const positiveInteger = { kind: "number", integer: true, minimum: 1 } as const;
 const object = (fields: Readonly<Record<string, { readonly schema: ValueSchema; readonly optional?: boolean }>>): ValueSchema => ({ kind: "object", fields });
-const blob = object({
-  kind: { schema: { kind: "literal", value: "blob" } },
-  resource: { schema: { kind: "string", minLength: 5, maxLength: 256 } },
-  size: { schema: unsignedInteger },
-  mediaType: { schema: string },
-});
+const blob = blobRefSchema();
 const rational = object({ numerator: { schema: positiveInteger }, denominator: { schema: positiveInteger } });
 const extent = intrinsicExtentSchema;
 const signedRational = object({ numerator: { schema: integer }, denominator: { schema: positiveInteger } });
@@ -418,20 +414,20 @@ export const visualTrackManifest: ModuleManifest = {
   ],
   capabilities: [],
   producers: [
-    { name: visualTrackProducers.createLayers.name, inputs: [], outputs: [{ name: "layers", type: visualTrackTypes.layerSet }], needs: [] },
-    { name: visualTrackProducers.appendPaintLayer.name, inputs: [{ name: "layers", type: visualTrackTypes.layerSet }, { name: "spec", type: visualTrackTypes.paintLayerSpec }], outputs: [{ name: "layers", type: visualTrackTypes.layerSet }], needs: [] },
-    { name: visualTrackProducers.appendStillLayer.name, inputs: [{ name: "layers", type: visualTrackTypes.layerSet }, { name: "source", type: blobTypes.blob }, { name: "extent", type: spatialTypes.extent }, { name: "fit", type: spatialTypes.fit }, { name: "spec", type: visualTrackTypes.sampleLayerSpec }], outputs: [{ name: "layers", type: visualTrackTypes.layerSet }], needs: [] },
-    { name: visualTrackProducers.appendMappedStillLayer.name, inputs: [{ name: "layers", type: visualTrackTypes.layerSet }, { name: "source", type: blobTypes.blob }, { name: "extent", type: spatialTypes.extent }, { name: "mapping", type: spatialTypes.map2D }, { name: "spec", type: visualTrackTypes.sampleLayerSpec }], outputs: [{ name: "layers", type: visualTrackTypes.layerSet }], needs: [] },
-    { name: visualTrackProducers.appendTimedLayer.name, inputs: [{ name: "layers", type: visualTrackTypes.layerSet }, { name: "source", type: mediaTypes.synchronized }, { name: "fit", type: spatialTypes.fit }, { name: "spec", type: visualTrackTypes.sampleLayerSpec }], outputs: [{ name: "layers", type: visualTrackTypes.layerSet }], needs: [] },
-    { name: visualTrackProducers.appendMappedTimedLayer.name, inputs: [{ name: "layers", type: visualTrackTypes.layerSet }, { name: "source", type: mediaTypes.synchronized }, { name: "mapping", type: spatialTypes.map2D }, { name: "spec", type: visualTrackTypes.sampleLayerSpec }], outputs: [{ name: "layers", type: visualTrackTypes.layerSet }], needs: [] },
-    { name: visualTrackProducers.appendSurfaceLayer.name, inputs: [{ name: "layers", type: visualTrackTypes.layerSet }, { name: "source", type: mediaTypes.compositableSurface }, { name: "fit", type: spatialTypes.fit }, { name: "spec", type: visualTrackTypes.sampleLayerSpec }], outputs: [{ name: "layers", type: visualTrackTypes.layerSet }], needs: [] },
-    { name: visualTrackProducers.appendMappedSurfaceLayer.name, inputs: [{ name: "layers", type: visualTrackTypes.layerSet }, { name: "source", type: mediaTypes.compositableSurface }, { name: "mapping", type: spatialTypes.map2D }, { name: "spec", type: visualTrackTypes.sampleLayerSpec }], outputs: [{ name: "layers", type: visualTrackTypes.layerSet }], needs: [] },
-    { name: visualTrackProducers.createSet.name, inputs: [], outputs: [{ name: "set", type: visualTrackTypes.set }], needs: [] },
-    { name: visualTrackProducers.appendClip.name, inputs: clipInputs, outputs: [{ name: "set", type: visualTrackTypes.set }], needs: [] },
-    { name: visualTrackProducers.bindClipPath.name, inputs: [{ name: "spec", type: visualTrackTypes.clipSpec }, { name: "path", type: spatialTypes.path }], outputs: [{ name: "spec", type: visualTrackTypes.clipSpec }], needs: [] },
-    { name: visualTrackProducers.bindMotion.name, inputs: [{ name: "spec", type: visualTrackTypes.clipSpec }, { name: "motion", type: visualTrackTypes.motion }], outputs: [{ name: "spec", type: visualTrackTypes.clipSpec }], needs: [] },
-    { name: visualTrackProducers.finalize.name, inputs: [{ name: "set", type: visualTrackTypes.set }, { name: "header", type: visualTrackTypes.header }, { name: "timeline", type: timelineTypes.timeline }], outputs: [{ name: "program", type: visualTrackTypes.program }], needs: [] },
-    { name: visualTrackProducers.projectVisual.name, inputs: [{ name: "timeline", type: timelineTypes.timeline }, { name: "program", type: visualTrackTypes.program }], outputs: [{ name: "track", type: compositionTypes.visualTrack }], needs: [] },
+    { name: visualTrackProducers.createLayers.name, inputs: [], result: { kind: "output" as const, name: "layers", type: visualTrackTypes.layerSet } },
+    { name: visualTrackProducers.appendPaintLayer.name, inputs: [{ name: "layers", type: visualTrackTypes.layerSet }, { name: "spec", type: visualTrackTypes.paintLayerSpec }], result: { kind: "output" as const, name: "layers", type: visualTrackTypes.layerSet } },
+    { name: visualTrackProducers.appendStillLayer.name, inputs: [{ name: "layers", type: visualTrackTypes.layerSet }, { name: "source", type: blobTypes.blob }, { name: "extent", type: spatialTypes.extent }, { name: "fit", type: spatialTypes.fit }, { name: "spec", type: visualTrackTypes.sampleLayerSpec }], result: { kind: "output" as const, name: "layers", type: visualTrackTypes.layerSet } },
+    { name: visualTrackProducers.appendMappedStillLayer.name, inputs: [{ name: "layers", type: visualTrackTypes.layerSet }, { name: "source", type: blobTypes.blob }, { name: "extent", type: spatialTypes.extent }, { name: "mapping", type: spatialTypes.map2D }, { name: "spec", type: visualTrackTypes.sampleLayerSpec }], result: { kind: "output" as const, name: "layers", type: visualTrackTypes.layerSet } },
+    { name: visualTrackProducers.appendTimedLayer.name, inputs: [{ name: "layers", type: visualTrackTypes.layerSet }, { name: "source", type: mediaTypes.synchronized }, { name: "fit", type: spatialTypes.fit }, { name: "spec", type: visualTrackTypes.sampleLayerSpec }], result: { kind: "output" as const, name: "layers", type: visualTrackTypes.layerSet } },
+    { name: visualTrackProducers.appendMappedTimedLayer.name, inputs: [{ name: "layers", type: visualTrackTypes.layerSet }, { name: "source", type: mediaTypes.synchronized }, { name: "mapping", type: spatialTypes.map2D }, { name: "spec", type: visualTrackTypes.sampleLayerSpec }], result: { kind: "output" as const, name: "layers", type: visualTrackTypes.layerSet } },
+    { name: visualTrackProducers.appendSurfaceLayer.name, inputs: [{ name: "layers", type: visualTrackTypes.layerSet }, { name: "source", type: mediaTypes.compositableSurface }, { name: "fit", type: spatialTypes.fit }, { name: "spec", type: visualTrackTypes.sampleLayerSpec }], result: { kind: "output" as const, name: "layers", type: visualTrackTypes.layerSet } },
+    { name: visualTrackProducers.appendMappedSurfaceLayer.name, inputs: [{ name: "layers", type: visualTrackTypes.layerSet }, { name: "source", type: mediaTypes.compositableSurface }, { name: "mapping", type: spatialTypes.map2D }, { name: "spec", type: visualTrackTypes.sampleLayerSpec }], result: { kind: "output" as const, name: "layers", type: visualTrackTypes.layerSet } },
+    { name: visualTrackProducers.createSet.name, inputs: [], result: { kind: "output" as const, name: "set", type: visualTrackTypes.set } },
+    { name: visualTrackProducers.appendClip.name, inputs: clipInputs, result: { kind: "output" as const, name: "set", type: visualTrackTypes.set } },
+    { name: visualTrackProducers.bindClipPath.name, inputs: [{ name: "spec", type: visualTrackTypes.clipSpec }, { name: "path", type: spatialTypes.path }], result: { kind: "output" as const, name: "spec", type: visualTrackTypes.clipSpec } },
+    { name: visualTrackProducers.bindMotion.name, inputs: [{ name: "spec", type: visualTrackTypes.clipSpec }, { name: "motion", type: visualTrackTypes.motion }], result: { kind: "output" as const, name: "spec", type: visualTrackTypes.clipSpec } },
+    { name: visualTrackProducers.finalize.name, inputs: [{ name: "set", type: visualTrackTypes.set }, { name: "header", type: visualTrackTypes.header }, { name: "timeline", type: timelineTypes.timeline }], result: { kind: "output" as const, name: "program", type: visualTrackTypes.program } },
+    { name: visualTrackProducers.projectVisual.name, inputs: [{ name: "timeline", type: timelineTypes.timeline }, { name: "program", type: visualTrackTypes.program }], result: { kind: "output" as const, name: "track", type: compositionTypes.visualTrack } },
   ],
 };
 

@@ -16,7 +16,7 @@ export function createExampleFragment(producer: typeof exampleProducers[keyof ty
   return sealGraphFragment({
     inputs,
     operations: [
-      { id, producer, inputs: renderInputs, result: { kind: "output", name: "visual" } },
+      { id, producer, inputs: renderInputs, result: { kind: "output" as const, name: "visual" } },
     ],
     exports: [{ name: "visual", type: compositionTypes.visualTrack, root: operation(id) }],
   });
@@ -27,6 +27,6 @@ export const exampleTextFragment = createExampleFragment(exampleProducers.render
 export const exampleImageFragment = createExampleFragment(exampleProducers.renderImage, "render-image-slot", true);
 export const exampleAppendFragment = sealGraphFragment({
   inputs: [{ name: "previous", type: exampleTypes.itemSet }, { name: "item", type: exampleTypes.itemSet }],
-  operations: [{ id: "append-items", producer: exampleProducers.appendItems, inputs: { previous: input("previous"), item: input("item") }, result: { kind: "output", name: "set" } }],
+  operations: [{ id: "append-items", producer: exampleProducers.appendItems, inputs: { previous: input("previous"), item: input("item") }, result: { kind: "output" as const, name: "set" } }],
   exports: [{ name: "set", type: exampleTypes.itemSet, root: operation("append-items") }],
 });

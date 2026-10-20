@@ -1,8 +1,8 @@
 import type { Timeline } from "@hypit/timeline";
 import { canonicalize } from "@hypit/hypit/protocol";
 import type { ProducerPackage, ProducerHandlerContext } from "@hypit/hypit/producer";
-import type { AdmissionPackage } from "@hypit/hypit/admission";
-import type { StoredValue } from "@hypit/hypit/protocol";
+import type { RefinementPackage } from "@hypit/hypit/refinement";
+import type { Value } from "@hypit/hypit/protocol";
 import type { SpatialFrame } from "@hypit/spatial";
 import type { TemporalInstant } from "@hypit/temporal";
 import type { MediaLayerSet } from "@hypit/visual-track";
@@ -21,19 +21,19 @@ import type {
   DepthStackSpec,
 } from "./types.js";
 
-function inline<T>(value: StoredValue | undefined, label: string): T {
-  if (value?.kind !== "inline") throw new Error(`${label} must be inline.`);
-  return value.value as unknown as T;
+function valueOf<T>(value: Value | undefined, label: string): T {
+  if (value === undefined) throw new Error(`${label} is missing.`);
+  return value as unknown as T;
 }
-const output = (value: unknown) => ({ kind: "inline" as const, value: canonicalize(value) });
+const output = (value: unknown) => ((canonicalize(value)));
 
 function finalizeInputs(inputs: ProducerHandlerContext["inputs"]) {
   return {
-    set: inline<DepthStackCardSet>(inputs.set?.value, "DepthStackCardSet"),
-    header: inline<DepthStackHeader>(inputs.header?.value, "DepthStackHeader"),
-    frame: inline<SpatialFrame>(inputs.frame?.value, "SpatialFrame"),
-    spec: inline<DepthStackSpec>(inputs.spec?.value, "DepthStackSpec"),
-    timeline: inline<Timeline>(inputs.timeline?.value, "Timeline"),
+    set: valueOf<DepthStackCardSet>(inputs.set?.value, "DepthStackCardSet"),
+    header: valueOf<DepthStackHeader>(inputs.header?.value, "DepthStackHeader"),
+    frame: valueOf<SpatialFrame>(inputs.frame?.value, "SpatialFrame"),
+    spec: valueOf<DepthStackSpec>(inputs.spec?.value, "DepthStackSpec"),
+    timeline: valueOf<Timeline>(inputs.timeline?.value, "Timeline"),
   };
 }
 
@@ -41,46 +41,46 @@ export const depthStackComponent = {
   producers: [
     {
       producer: depthStackProducers.bindLabelText,
-      handler: ({ inputs }) => ({ outputs: { label: output(bindDepthStackCardLabelText(
-        inline<DepthStackCardLabelStyle>(inputs.style?.value, "DepthStackCardLabelStyle"),
-        inline<Text>(inputs.content?.value, "Text"),
-      )) }, needs: {} }),
+      handler: ({ inputs }) => ({ kind: "output", value: output(bindDepthStackCardLabelText(
+        valueOf<DepthStackCardLabelStyle>(inputs.style?.value, "DepthStackCardLabelStyle"),
+        valueOf<Text>(inputs.content?.value, "Text"),
+      )) }),
     },
     {
       producer: depthStackProducers.createCards,
-      handler: () => ({ outputs: { set: output(createDepthStackCardSet()) }, needs: {} }),
+      handler: () => ({ kind: "output", value: output(createDepthStackCardSet()) }),
     },
     {
       producer: depthStackProducers.appendCard,
-      handler: ({ inputs }) => ({ outputs: { set: output(appendDepthStackCard(
-        inline<DepthStackCardSet>(inputs.set?.value, "DepthStackCardSet"),
-        inline<Timeline>(inputs.timeline?.value, "Timeline"),
-        inline<MediaLayerSet>(inputs.material?.value, "MediaLayerSet"),
-        inline<DepthStackCardLabel>(inputs.label?.value, "DepthStackCardLabel"),
-        inline<DepthStackCardSpec>(inputs.spec?.value, "DepthStackCardSpec"),
-        inline<TemporalInstant>(inputs.activation?.value, "TemporalInstant"),
-      )) }, needs: {} }),
+      handler: ({ inputs }) => ({ kind: "output", value: output(appendDepthStackCard(
+        valueOf<DepthStackCardSet>(inputs.set?.value, "DepthStackCardSet"),
+        valueOf<Timeline>(inputs.timeline?.value, "Timeline"),
+        valueOf<MediaLayerSet>(inputs.material?.value, "MediaLayerSet"),
+        valueOf<DepthStackCardLabel>(inputs.label?.value, "DepthStackCardLabel"),
+        valueOf<DepthStackCardSpec>(inputs.spec?.value, "DepthStackCardSpec"),
+        valueOf<TemporalInstant>(inputs.activation?.value, "TemporalInstant"),
+      )) }),
     },
     {
       producer: depthStackProducers.finalize,
       handler: ({ inputs }) => {
         const value = finalizeInputs(inputs);
-        return { outputs: { program: output(finalizeDepthStack(
+        return { kind: "output", value: output(finalizeDepthStack(
           value.set, value.header, value.frame, value.spec,
-          inline<TemporalInstant>(inputs.terminal?.value, "TemporalInstant"), value.timeline,
-        )) }, needs: {} };
+          valueOf<TemporalInstant>(inputs.terminal?.value, "TemporalInstant"), value.timeline,
+        )) };
       },
     },
     {
       producer: depthStackProducers.render,
-      handler: ({ inputs }) => ({ outputs: { track: output(renderDepthStack(
-        inline<Timeline>(inputs.timeline?.value, "Timeline"),
-        inline<DepthStackProgram>(inputs.program?.value, "DepthStackProgram"),
-      )) }, needs: {} }),
+      handler: ({ inputs }) => ({ kind: "output", value: output(renderDepthStack(
+        valueOf<Timeline>(inputs.timeline?.value, "Timeline"),
+        valueOf<DepthStackProgram>(inputs.program?.value, "DepthStackProgram"),
+      )) }),
     },
   ],
-  validators: [{
+  refinements: [{
     type: depthStackTypes.program,
-    handler: ({ value }) => assertDepthStackProgram(inline<DepthStackProgram>(value, "DepthStackProgram")),
+    handler: ({ value }) => assertDepthStackProgram(valueOf<DepthStackProgram>(value, "DepthStackProgram")),
   }],
-} satisfies ProducerPackage & AdmissionPackage;
+} satisfies ProducerPackage & RefinementPackage;

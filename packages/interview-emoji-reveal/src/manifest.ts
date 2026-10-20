@@ -5,6 +5,7 @@ import { readFile } from "node:fs/promises";
 import { blobDependency, blobTypes } from "@hypit/hypit/blob";
 import { compositionDependency, compositionTypes } from "@hypit/composition";
 
+import { blobRefSchema } from "@hypit/hypit/protocol";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/hypit/protocol";
 import { spatialDependency, spatialTypes } from "@hypit/spatial";
 import { recipeType } from "@hypit/hypit/recipe";
@@ -42,12 +43,7 @@ const positive = { kind: "number", minimum: 0.000001 } as const;
 const nonNegative = { kind: "number", minimum: 0 } as const;
 const number = { kind: "number" } as const;
 const object = (fields: Readonly<Record<string, { readonly schema: ValueSchema; readonly optional?: boolean }>>): ValueSchema => ({ kind: "object", fields });
-const blob = object({
-  kind: { schema: { kind: "literal", value: "blob" } },
-  digest: { schema: { kind: "string", minLength: 71, maxLength: 71 } },
-  size: { schema: { kind: "number", integer: true, minimum: 0 } },
-  mediaType: { schema: string },
-});
+const blob = blobRefSchema();
 
 export const emojiRevealHeaderSchema: ValueSchema = object({ id: { schema: string } });
 export const emojiRevealItemSpecSchema: ValueSchema = object({
@@ -154,19 +150,19 @@ export const emojiRevealManifest: ModuleManifest = {
   ],
   capabilities: [],
   producers: [
-    { name: emojiRevealProducers.createSet.name, inputs: [], outputs: [{ name: "set", type: emojiRevealTypes.set }], needs: [] },
+    { name: emojiRevealProducers.createSet.name, inputs: [], result: { kind: "output" as const, name: "set", type: emojiRevealTypes.set } },
     { name: emojiRevealProducers.appendItem.name,
       inputs: [{ name: "set", type: emojiRevealTypes.set }, { name: "timeline", type: timelineTypes.timeline }, { name: "spec", type: emojiRevealTypes.itemSpec }, { name: "icon", type: blobTypes.blob }, { name: "activation", type: temporalTypes.instant }],
-      outputs: [{ name: "set", type: emojiRevealTypes.set }], needs: [] },
+      result: { kind: "output" as const, name: "set", type: emojiRevealTypes.set } },
     { name: emojiRevealProducers.appendPresetItem.name,
       inputs: [{ name: "set", type: emojiRevealTypes.set }, { name: "spec", type: emojiRevealTypes.itemSpec }, { name: "icon", type: blobTypes.blob }],
-      outputs: [{ name: "set", type: emojiRevealTypes.set }], needs: [] },
+      result: { kind: "output" as const, name: "set", type: emojiRevealTypes.set } },
     { name: emojiRevealProducers.finalize.name,
       inputs: [{ name: "header", type: emojiRevealTypes.header }, { name: "timeline", type: timelineTypes.timeline }, { name: "outer", type: temporalTypes.window }, { name: "style", type: emojiRevealTypes.style }, { name: "placeholder", type: blobTypes.blob }, { name: "set", type: emojiRevealTypes.set }],
-      outputs: [{ name: "program", type: emojiRevealTypes.program }], needs: [] },
+      result: { kind: "output" as const, name: "program", type: emojiRevealTypes.program } },
     { name: emojiRevealProducers.render.name,
       inputs: [{ name: "within", type: spatialTypes.frame }, { name: "timeline", type: timelineTypes.timeline }, { name: "program", type: emojiRevealTypes.program }],
-      outputs: [{ name: "track", type: compositionTypes.visualTrack }], needs: [] },
+      result: { kind: "output" as const, name: "track", type: compositionTypes.visualTrack } },
   ],
 };
 

@@ -71,7 +71,7 @@ export async function discoverSourcePackages(
     }
     for (const facet of item.contribution.facets ?? []) {
       if (facet.abi !== runFragmentFacetAbi) continue;
-      for (const request of facet.offers ?? []) fragmentOwners.set(request, item.specifier);
+      if (facet.address !== undefined) fragmentOwners.set(facet.address, item.specifier);
     }
   }
 

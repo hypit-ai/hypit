@@ -24,6 +24,7 @@ import type {
 } from "./shared.js";
 import type { Placement } from "./observe.js";
 import type { StudioProjection } from "./projection.js";
+import type { ExecutedGraph } from "./temporal-graph.js";
 import {
   sealStudioItem,
 } from "./studio-registry.js";
@@ -41,6 +42,13 @@ type Present = {
 };
 
 const timelineBandHeightPx = 15;
+
+/** Resolved facts consumed by snapshot projection; execution services and stored materials stay outside it. */
+export type SnapshotProjection = Pick<StudioProjection,
+  "source" | "tracks" | "values" | "temporalDomainValues" | "temporalValues"
+  | "temporalBindings" | "timeline" | "timingOutput" | "timingCandidateId" | "timingCandidateOrigin"> & {
+    readonly state: ExecutedGraph;
+  };
 
 /** Sound is placed in samples rather than frames, in the canonical 48 kHz. */
 const SAMPLE_RATE = 48_000;
@@ -101,7 +109,7 @@ function authored(placements: readonly Placement[]): readonly Located[] {
 /** Package Companions project their own temporal facts onto Studio's absolute ruler. */
 function temporalDomains(
   registry: StudioCompanionRegistry,
-  built: StudioProjection,
+  built: SnapshotProjection,
 ): readonly TemporalDomainView[] {
   const provenance: CandidateProvenance = {
     output: built.timingOutput?.name ?? "Timeline",
@@ -122,7 +130,7 @@ function temporalDomains(
 /** Package-declared Instants share one read-only Timeline row. */
 function temporalDeclarationDomain(
   registry: StudioCompanionRegistry,
-  built: StudioProjection,
+  built: SnapshotProjection,
   source: { readonly path: string; readonly text: string },
 ): TemporalDomainView {
   const values = new Map(built.temporalValues.map((item) => [item.id, item] as const));
@@ -167,7 +175,7 @@ function temporalDeclarationDomain(
   };
 }
 
-export function snapshot(registry: StudioCompanionRegistry, built: StudioProjection, input: {
+export function snapshot(registry: StudioCompanionRegistry, built: SnapshotProjection, input: {
   readonly revision: number;
   readonly path: string;
   readonly text: string;
@@ -353,6 +361,6 @@ export function snapshot(registry: StudioCompanionRegistry, built: StudioProject
   };
 }
 
-function note(_built: StudioProjection): string {
+function note(_built: SnapshotProjection): string {
   return "Composition and timing are resolved from the selected Run Source.";
 }

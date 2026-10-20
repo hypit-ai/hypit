@@ -1,3 +1,4 @@
+import { sameType } from "@hypit/hypit/protocol";
 import { timelineTypes } from "@hypit/timeline";
 import { resolveTemporalContext } from "@hypit/temporal/markup";
 
@@ -53,10 +54,6 @@ const operation = (id: string) => ({ kind: "fragment-operation" as const, operat
 
 function localName(name: string): string {
   return name.slice(name.lastIndexOf(":") + 1);
-}
-
-function sameType(left: SurfaceResolvedReference["type"], right: SurfaceResolvedReference["type"]): boolean {
-  return left.module.name === right.module.name && left.module.version === right.module.version && left.name === right.name;
 }
 
 function allowed(element: StructuredElement, names: readonly string[], required: readonly string[] = []): void {
@@ -144,14 +141,14 @@ function oneOfReference(
   return result;
 }
 
-function inline<T>(value: SurfaceResolvedReference, label: string): T {
-  if (value.record?.value.kind !== "inline") throw new Error(`${label} must reference an authored inline Record.`);
-  return value.record.value.value as unknown as T;
+function valueOf<T>(value: SurfaceResolvedReference, label: string): T {
+  if (value.record === undefined) throw new Error(`${label} must reference an authored Record.`);
+  return value.record.value as unknown as T;
 }
 
 function recipe(value: SurfaceResolvedReference, label: string): Recipe {
   if (!sameType(value.type, recipeType)) throw new Error(`${label} must reference an SVS Recipe.`);
-  return inline<Recipe>(value, label);
+  return valueOf<Recipe>(value, label);
 }
 
 function propNumber(value: Recipe, name: string, fallback?: number): number {
@@ -180,11 +177,11 @@ function exactFonts(
   if (raw === undefined) throw new Error(`${element.name}.font must reference one exact FontArtifactRef or FontStackRef.`);
   const resolved = oneOfReference(raw, `${element.name}.font`, [mediaTypes.fontArtifact, mediaTypes.fontStack], resolve);
   if (sameType(resolved.type, mediaTypes.fontArtifact)) {
-    const font = inline<FontArtifactRef>(resolved, `${element.name}.font`);
+    const font = valueOf<FontArtifactRef>(resolved, `${element.name}.font`);
     assertFontArtifactRef(font, `${element.name}.font`);
     return [font];
   }
-  const stack = inline<FontStackRef>(resolved, `${element.name}.font`);
+  const stack = valueOf<FontStackRef>(resolved, `${element.name}.font`);
   assertFontStackRef(stack, `${element.name}.font`);
   return [...stack.faces];
 }
@@ -427,7 +424,7 @@ export const decodeTypographyStyleSurface: StructuredSurfaceHandler = ({ element
     },
     paints,
   });
-  return { records: [{ id, type: textFineTypes.style, value: { kind: "inline", value: style }, range: element.range }], components: [], fragments: [] };
+  return { records: [{ id, type: textFineTypes.style, value: (style), range: element.range }], components: [] };
 };
 
 function keyframeStyle(element: StructuredElement): VisualStyleDeclaration[] {
@@ -495,7 +492,7 @@ export const decodeTypographyMotionSurface: StructuredSurfaceHandler = ({ elemen
     ...(itemKeyframes.length === 0 ? {} : { item: { keyframes: itemKeyframes } }),
     sequences,
   });
-  return { records: [{ id, type: textFineTypes.motion, value: { kind: "inline", value: motion }, range: element.range }], components: [], fragments: [] };
+  return { records: [{ id, type: textFineTypes.motion, value: (motion), range: element.range }], components: [] };
 };
 
 export const decodeTypographyPathMotionSurface: StructuredSurfaceHandler = ({ element }) => {
@@ -517,7 +514,7 @@ export const decodeTypographyPathMotionSurface: StructuredSurfaceHandler = ({ el
     });
   }
   const motion = sealTextPathMotion({ id, keyframes });
-  return { records: [{ id, type: textFineTypes.pathMotion, value: { kind: "inline", value: motion }, range: element.range }], components: [], fragments: [] };
+  return { records: [{ id, type: textFineTypes.pathMotion, value: (motion), range: element.range }], components: [] };
 };
 
 function dedent(value: string): string {
@@ -527,7 +524,7 @@ function dedent(value: string): string {
 }
 
 function runStyle(value: SurfaceResolvedReference): VisualTextRunStyle {
-  const style = inline<TextStyle>(value, "Text inline Style");
+  const style = valueOf<TextStyle>(value, "Text valueOf Style");
   return { typography: style.typography, paints: style.paints };
 }
 
@@ -606,10 +603,10 @@ type FineTextForm = "flow" | "point" | "path";
 const fineTextWindowAttributeNames = fineTextWindowAttributeVocabulary.map(({ name }) => name);
 
 const FLOW_ATTRIBUTES = [
-  "inline-size", "block-size", "padding", "align", "block-align", "wrap", "overflow", "max-lines",
+  "valueOf-size", "block-size", "padding", "align", "block-align", "wrap", "overflow", "max-lines",
   "minimum-scale", "clip", "columns", "column-gap", "metric-edge",
 ] as const;
-const POINT_ATTRIBUTES = ["anchor-inline", "anchor-block"] as const;
+const POINT_ATTRIBUTES = ["anchor-valueOf", "anchor-block"] as const;
 const PATH_ATTRIBUTES = ["side", "orientation", "start-margin", "end-margin", "align", "reverse", "overflow", "path-motion"] as const;
 
 function flowPlacementPolicy(element: StructuredElement): TextFlowPlacementPolicy {
@@ -618,7 +615,7 @@ function flowPlacementPolicy(element: StructuredElement): TextFlowPlacementPolic
   return {
     z: integer(element, "z"),
     flow: {
-      inlineSize: enumText(element, "inline-size", ["hug", "fixed"] as const, "fixed"),
+      inlineSize: enumText(element, "valueOf-size", ["hug", "fixed"] as const, "fixed"),
       blockSize: enumText(element, "block-size", ["hug", "fixed"] as const, "fixed"),
       paddingPx: { inlineStart: padding[3]!, inlineEnd: padding[1]!, blockStart: padding[0]!, blockEnd: padding[2]! },
       inlineAlign: enumText(element, "align", ["start", "center", "end", "justify"] as const, "center"),
@@ -638,7 +635,7 @@ function flowPlacementPolicy(element: StructuredElement): TextFlowPlacementPolic
 function pointPlacementPolicy(element: StructuredElement): TextPointPlacementPolicy {
   return {
     z: integer(element, "z"),
-    anchorInline: enumText(element, "anchor-inline", ["start", "center", "end"] as const, "center"),
+    anchorInline: enumText(element, "anchor-valueOf", ["start", "center", "end"] as const, "center"),
     anchorBlock: enumText(element, "anchor-block", ["start", "center", "end"] as const, "center"),
   };
 }
@@ -668,13 +665,13 @@ function createFineTextFragment(form: FineTextForm, externalContent: boolean): G
       policy: input("placementPolicy"),
       ...(form === "path" ? { marginMotion: input("pathMotion") } : {}),
     },
-    result: { kind: "output", name: "placement" },
+    result: { kind: "output" as const, name: "placement" },
   }];
   if (externalContent) operations.push({
     id: "text:content",
     producer: textFineProducers.materializePlainItem,
     inputs: { spec: input("spec"), content: input("content") },
-    result: { kind: "output", name: "spec" },
+    result: { kind: "output" as const, name: "spec" },
   });
   operations.push(
     {
@@ -685,13 +682,13 @@ function createFineTextFragment(form: FineTextForm, externalContent: boolean): G
         spec: externalContent ? operation("text:content") : input("spec"),
         style: input("style"), motion: input("motion"), window: input("window"),
       },
-      result: { kind: "output", name: "occurrence" },
+      result: { kind: "output" as const, name: "occurrence" },
     },
     {
       id: "text:render",
       producer: textFineProducers.renderOccurrence,
       inputs: { timeline: input("timeline"), occurrence: operation("text:occurrence") },
-      result: { kind: "output", name: "visual" },
+      result: { kind: "output" as const, name: "visual" },
     },
   );
   return sealGraphFragment({
@@ -752,25 +749,25 @@ function decodeFineTextOccurrenceSurface(form: FineTextForm): StructuredSurfaceH
       records: [
         {
           id: defaultMotionId, type: textFineTypes.motion,
-          value: { kind: "inline", value: stillTextMotion(defaultMotionId) }, range: element.range,
+          value: (stillTextMotion(defaultMotionId)), range: element.range,
         },
         {
           id: placementPolicyId,
           type: form === "flow" ? textFineTypes.flowPlacementPolicy : form === "point" ? textFineTypes.pointPlacementPolicy : textFineTypes.pathPlacementPolicy,
-          value: { kind: "inline", value: placementPolicy }, range: element.range,
+          value: (placementPolicy), range: element.range,
         },
         ...(form !== "path" ? [] : [{
           id: defaultPathMotionId, type: textFineTypes.pathMotion,
-          value: { kind: "inline" as const, value: stillTextPathMotion(defaultPathMotionId) }, range: element.range,
+          value: (stillTextPathMotion(defaultPathMotionId)), range: element.range,
         }]),
         {
           id: specId, type: content === undefined ? textFineTypes.itemSpec : textFineTypes.plainItemSpec,
-          value: { kind: "inline", value: spec }, range: element.range,
+          value: (spec), range: element.range,
         },
       ],
       components: [
         {
-          id, fragment: fragment.id,
+          id, fragment,
           inputs: {
             timeline: context.timeline.ref, geometry: geometry.ref,
             placementPolicy: { kind: "record", id: placementPolicyId },
@@ -782,7 +779,6 @@ function decodeFineTextOccurrenceSurface(form: FineTextForm): StructuredSurfaceH
           outputs: { occurrence: `${id}.occurrence`, visual: `${id}.visual` }, range: element.range,
         },
       ],
-      fragments: [fragment],
       exports: [`${id}.occurrence`, `${id}.visual`],
     };
   };
@@ -805,7 +801,7 @@ function createMaskFragment(id: string): GraphFragment {
       {
         id: "text-mask:render", producer: textFineProducers.renderOccurrenceMask,
         inputs: { timeline: input("timeline"), occurrence: input("occurrence"), material: input("material"), spec: input("spec") },
-        result: { kind: "output", name: "visual" },
+        result: { kind: "output" as const, name: "visual" },
       },
     ],
     exports: [{
@@ -829,13 +825,12 @@ export const decodeTypographyMaskSurface: StructuredSurfaceHandler = ({ element,
   });
   const fragment = createMaskFragment(id);
   return {
-    records: [{ id: specId, type: textFineTypes.maskSpec, value: { kind: "inline", value: spec }, range: element.range }],
+    records: [{ id: specId, type: textFineTypes.maskSpec, value: (spec), range: element.range }],
     components: [{
-      id, fragment: fragment.id,
+      id, fragment,
       inputs: { timeline: context.timeline.ref, occurrence: occurrence.ref, material: material.ref, spec: { kind: "record", id: specId } },
       outputs: { visual: `${id}.visual` }, range: element.range,
     }],
-    fragments: [fragment],
     exports: [`${id}.visual`],
   };
 };

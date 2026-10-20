@@ -18,7 +18,7 @@ function reference(element: StructuredElement, name: string, expected: SurfaceRe
   return value;
 }
 function authoredExcerpt(value: SurfaceResolvedReference): NarrativeSegmentRef | undefined {
-  return value.record?.value.kind === "inline" ? value.record.value.value as unknown as NarrativeSegmentRef : undefined;
+  return value.record?.value as unknown as NarrativeSegmentRef | undefined;
 }
 
 export const decodeWhisperXAlignmentSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
@@ -39,10 +39,10 @@ export const decodeWhisperXAlignmentSurface: StructuredSurfaceHandler = ({ eleme
     inputs.media = reference(element, "media", mediaTypes.synchronized, resolveReference).ref;
     const language = parseWhisperXLanguage(stringAttribute(element, "language"), `${element.name}.language`);
     const languageId = `${id}.language`;
-    records.push({ id: languageId, type: whisperXTypes.language, value: { kind: "inline", value: language }, range: element.range });
+    records.push({ id: languageId, type: whisperXTypes.language, value: (language), range: element.range });
     inputs.language = { kind: "record", id: languageId };
   }
-  return { records, components: [{ id, fragment: fragment.id, inputs,
+  return { records, components: [{ id, fragment, inputs,
     outputs: { alignment: `${id}.alignment` }, range: element.range }],
-    fragments: [fragment], exports: [`${id}.alignment`] };
+    exports: [`${id}.alignment`] };
 };

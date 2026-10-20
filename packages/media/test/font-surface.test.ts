@@ -21,7 +21,7 @@ test("Font Surface turns explicit author bytes and face metadata into one exact 
     resolveAsset: (request) => {
       requests.push(request);
       return {
-        artifact: {
+        blob: {
           kind: "blob",
           resource: fixtureResource("font:inter-bold"),
           size: 2_048,
@@ -34,9 +34,7 @@ test("Font Surface turns explicit author bytes and face metadata into one exact 
   assert.deepEqual(requests, [{ from: "./Inter-Bold.woff2", mediaType: "font/woff2", range }]);
   assert.equal(result.records.length, 1);
   assert.deepEqual(result.records[0]!.type, mediaTypes.fontArtifact);
-  assert.deepEqual(result.records[0]!.value, {
-    kind: "inline",
-    value: {
+  assert.deepEqual(result.records[0]!.value, ({
       sources: [{ artifact: {
         kind: "blob",
         resource: fixtureResource("font:inter-bold"),
@@ -45,8 +43,7 @@ test("Font Surface turns explicit author bytes and face metadata into one exact 
       } }],
       weight: 700,
       style: "normal",
-    },
-  });
+    }));
 });
 
 test("Font Surface rejects ambiguous files and invalid face metadata before accepting bytes", async () => {
@@ -85,7 +82,7 @@ test("Font Surface preserves package assets and Unicode-range shards as one exac
     },
     resolveReference: () => undefined,
     resolveAsset: (request) => ({
-      artifact: {
+      blob: {
         kind: "blob",
         resource: fixtureResource(`font:${request.from}`),
         size: 1_024,
@@ -93,9 +90,7 @@ test("Font Surface preserves package assets and Unicode-range shards as one exac
       },
     }),
   });
-  assert.deepEqual(result.records[0]!.value, {
-    kind: "inline",
-    value: {
+  assert.deepEqual(result.records[0]!.value, ({
       sources: [{
         artifact: {
           kind: "blob",
@@ -107,8 +102,7 @@ test("Font Surface preserves package assets and Unicode-range shards as one exac
       }],
       weight: 600,
       style: "normal",
-    },
-  });
+    }));
 });
 
 test("FontStack Surface orders generic FontArtifact records without knowing their source", async () => {
@@ -119,7 +113,7 @@ test("FontStack Surface orders generic FontArtifact records without knowing thei
     record: {
       id,
       type: mediaTypes.fontArtifact,
-      value: { kind: "inline" as const, value: {
+      value: ({
         sources: [{ artifact: {
           kind: "blob" as const,
           resource: fixtureResource(`font:${id}`),
@@ -128,7 +122,7 @@ test("FontStack Surface orders generic FontArtifact records without knowing thei
         } }],
         weight: 600,
         style: "normal",
-      } },
+      }),
     },
   });
   const result = await decodeMediaFontStackSurface({
@@ -150,5 +144,5 @@ test("FontStack Surface orders generic FontArtifact records without knowing thei
     resolveAsset: () => { throw new Error("FontStack resolves values, not assets"); },
   });
   assert.deepEqual(result.records[0]!.type, mediaTypes.fontStack);
-  assert.equal((result.records[0]!.value as unknown as { value: { faces: unknown[] } }).value.faces.length, 2);
+  assert.equal((result.records[0]!.value as unknown as { faces: unknown[] }).faces.length, 2);
 });

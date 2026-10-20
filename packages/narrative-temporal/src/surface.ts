@@ -69,17 +69,17 @@ function outputFragment(kind: NarrativeSource["kind"], output: "instant" | "wind
   ];
   const operations: FragmentOperation[] = [{ id: "start", producer: projectionProducer(kind), inputs: {
     projection: input("projection"), [kind]: input("source"), spec: input("start-spec"),
-  }, result: { kind: "output", name: "instant" } }];
+  }, result: { kind: "output" as const, name: "instant" } }];
   if (output === "instant") return sealGraphFragment({ inputs: ports, operations,
     exports: [{ name: "instant", type: temporalTypes.instant, root: operation("start") }] });
   ports.push({ name: "end-spec", type: narrativeTemporalTypes.narrativeInstantSpec },
     { name: "window-spec", type: temporalTypes.windowSpec });
   operations.push({ id: "end", producer: projectionProducer(kind), inputs: {
     projection: input("projection"), [kind]: input("source"), spec: input("end-spec"),
-  }, result: { kind: "output", name: "instant" } }, {
+  }, result: { kind: "output" as const, name: "instant" } }, {
     id: "window", producer: temporalProducers.composeWindow,
     inputs: { spec: input("window-spec"), start: operation("start"), end: operation("end") },
-    result: { kind: "output", name: "window" },
+    result: { kind: "output" as const, name: "window" },
   });
   return sealGraphFragment({ inputs: ports, operations, exports: [
     { name: "window", type: temporalTypes.window, root: operation("window") },
@@ -131,7 +131,7 @@ export const decodeNarrativeProjectionSurface: StructuredSurfaceHandler = ({ ele
     const operationId = `entry-${index + 1}`;
     operations.push({ id: operationId, producer: narrativeTemporalProducers.projectAlignment,
       inputs: { alignment: input(alignmentName), domain: input(domainName), window: input(windowName), timeline: input("timeline") },
-      result: { kind: "output", name: "parts" } });
+      result: { kind: "output" as const, name: "parts" } });
     entryRoots.push(operationId);
   }
   let level = entryRoots, combineIndex = 0;
@@ -142,21 +142,21 @@ export const decodeNarrativeProjectionSurface: StructuredSurfaceHandler = ({ ele
       if (right === undefined) { next.push(left); continue; }
       const operationId = `combine-${++combineIndex}`;
       operations.push({ id: operationId, producer: narrativeTemporalProducers.combineProjectionParts,
-        inputs: { left: operation(left), right: operation(right) }, result: { kind: "output", name: "parts" } });
+        inputs: { left: operation(left), right: operation(right) }, result: { kind: "output" as const, name: "parts" } });
       next.push(operationId);
     }
     level = next;
   }
   operations.push({ id: "finalize", producer: narrativeTemporalProducers.finalizeProjection,
     inputs: { header: input("header"), narrative: input("narrative"), timeline: input("timeline"), parts: operation(level[0]!) },
-    result: { kind: "output", name: "projection" } });
+    result: { kind: "output" as const, name: "projection" } });
   const fragment = sealGraphFragment({ inputs: ports, operations,
     exports: [{ name: "projection", type: narrativeTemporalTypes.narrativeProjection, root: operation("finalize") }] });
   return {
     records: [{ id: `${id}.__header`, type: narrativeTemporalTypes.narrativeProjectionHeader,
-      value: { kind: "inline", value: canonicalize({ id }) }, range: element.range }],
-    components: [{ id, fragment: fragment.id, inputs: bindings, outputs: { projection: id }, range: element.range }],
-    fragments: [fragment], exports: [id],
+      value: (canonicalize({ id })), range: element.range }],
+    components: [{ id, fragment, inputs: bindings, outputs: { projection: id }, range: element.range }],
+    exports: [id],
   };
 };
 
@@ -181,11 +181,11 @@ export const decodeNarrativeInstantSurface: StructuredSurfaceHandler = ({ elemen
   const specId = `${id}.__spec`, fragment = outputFragment(source.kind, "instant");
   return {
     records: [{ id: specId, type: narrativeTemporalTypes.narrativeInstantSpec,
-      value: { kind: "inline", value: canonicalize({ id, subjectId: id, boundary }) }, range: element.range }],
-    components: [{ id: `${id}.__projection`, fragment: fragment.id, inputs: {
+      value: (canonicalize({ id, subjectId: id, boundary })), range: element.range }],
+    components: [{ id: `${id}.__projection`, fragment, inputs: {
       projection: projection.ref, source: source.reference.ref, "start-spec": { kind: "record", id: specId },
     }, outputs: { instant: id }, range: element.range }],
-    fragments: [fragment], exports: [id],
+    exports: [id],
   };
 };
 
@@ -202,18 +202,18 @@ export const decodeNarrativeWindowSurface: StructuredSurfaceHandler = ({ element
   return {
     records: [
       { id: startSpecId, type: narrativeTemporalTypes.narrativeInstantSpec,
-        value: { kind: "inline", value: canonicalize({ id: `${id}.start`, subjectId: id, boundary: "start" }) }, range: element.range },
+        value: (canonicalize({ id: `${id}.start`, subjectId: id, boundary: "start" })), range: element.range },
       { id: endSpecId, type: narrativeTemporalTypes.narrativeInstantSpec,
-        value: { kind: "inline", value: canonicalize({ id: `${id}.end`, subjectId: id, boundary: "end" }) }, range: element.range },
+        value: (canonicalize({ id: `${id}.end`, subjectId: id, boundary: "end" })), range: element.range },
       { id: windowSpecId, type: temporalTypes.windowSpec,
-        value: { kind: "inline", value: canonicalize({ id, subjectId: id }) }, range: element.range },
+        value: (canonicalize({ id, subjectId: id })), range: element.range },
     ],
-    components: [{ id: `${id}.__projection`, fragment: fragment.id, inputs: {
+    components: [{ id: `${id}.__projection`, fragment, inputs: {
       projection: projection.ref, source: source.reference.ref,
       "start-spec": { kind: "record", id: startSpecId }, "end-spec": { kind: "record", id: endSpecId },
       "window-spec": { kind: "record", id: windowSpecId },
     }, outputs: { window: id, start: `${id}.start`, end: `${id}.end` }, range: element.range }],
-    fragments: [fragment], exports: [id, `${id}.start`, `${id}.end`],
+    exports: [id, `${id}.start`, `${id}.end`],
   };
 };
 

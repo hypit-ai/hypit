@@ -1,8 +1,8 @@
 import { blobTypes } from "@hypit/hypit/blob";
-import { sealGenerationPortRequest, sealGenerationPortTable } from "@hypit/generation";
-import type { GenerationPortTable, GenerationPortValue, GenerationRequest } from "@hypit/generation";
+import { sealModelFieldRequest, defineModelFields } from "@hypit/generation/model-fields";
+import type { ModelFieldTable, ModelFieldValue, ModelFieldRequest } from "@hypit/generation/model-fields";
 import type { SurfaceAttributeVocabulary, SurfaceChildVocabulary } from "@hypit/hypit/markup";
-import { defineExactModelModule } from "@hypit/generation/model";
+import { defineFieldModelModule, standardGenerationResults } from "@hypit/generation/model-fields";
 import { textTypes } from "@hypit/hypit/text";
 
 export const nanoBananaModuleRef = { name: "@hypit/nano-banana", version: "1" } as const;
@@ -14,11 +14,10 @@ const NANO_BANANA_2_RATIOS = ["auto", "1:1", "2:3", "3:2", "1:4", "4:1", "3:4", 
 const NANO_BANANA_PRO_RATIOS = ["auto", "1:1", "2:3", "3:2", "3:4", "4:3", "4:5",
   "5:4", "9:16", "16:9", "21:9"] as const;
 
-function nanoBananaPortTable(model: NanoBananaModel): GenerationPortTable {
+function nanoBananaPortTable(model: NanoBananaModel): ModelFieldTable {
   const pro = model === "nano-banana-pro";
-  return sealGenerationPortTable({
+  return defineModelFields({
     model,
-    result: "image",
     ports: [
       { name: "prompt", value: { kind: "text", maxChars: pro ? 10_000 : 20_000 }, minItems: 1, maxItems: 1 },
       { name: "images", value: { kind: "media", accepts: ["image"] }, minItems: 0, maxItems: pro ? 8 : 14 },
@@ -38,25 +37,26 @@ function nanoBananaPortTable(model: NanoBananaModel): GenerationPortTable {
   });
 }
 
-export const nanoBananaPorts: Readonly<Record<NanoBananaModel, GenerationPortTable>> = {
+export const nanoBananaPorts: Readonly<Record<NanoBananaModel, ModelFieldTable>> = {
   "nano-banana-2": nanoBananaPortTable("nano-banana-2"),
   "nano-banana-pro": nanoBananaPortTable("nano-banana-pro"),
 };
 
 export function sealNanoBananaRequest(
   model: NanoBananaModel,
-  ports: Readonly<Record<string, readonly GenerationPortValue[]>>,
-): GenerationRequest {
-  return sealGenerationPortRequest(nanoBananaPorts[model], ports);
+  ports: Readonly<Record<string, readonly ModelFieldValue[]>>,
+): ModelFieldRequest {
+  return sealModelFieldRequest(nanoBananaPorts[model], ports);
 }
 
-const nanoBananaBaseDefinition = defineExactModelModule({
+const nanoBananaBaseDefinition = defineFieldModelModule({
   module: nanoBananaModuleRef,
   endpoints: nanoBananaModels.map((model) => ({
     key: model === "nano-banana-2" ? "v2" : "pro",
     requestTypeName: model === "nano-banana-2" ? "NanoBanana2Request" : "NanoBananaProRequest",
     producerName: `request-${model}`,
     ports: nanoBananaPorts[model],
+    result: standardGenerationResults.image,
   })),
 });
 

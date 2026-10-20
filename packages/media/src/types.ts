@@ -106,7 +106,7 @@ export type TimelineVisual = {
   readonly artifact: BlobRef;
 };
 
-/** Exact 48 kHz stereo PCM result of one explicit timeline-audio plan. */
+/** Exact 48 kHz stereo PCM result of one explicit AudioProgram. */
 export type TimelineAudio = {
   readonly artifact: BlobRef;
   readonly sampleFrames: number;

@@ -1,13 +1,15 @@
+import { sameType } from "@hypit/hypit/protocol";
 import { blobTypes } from "@hypit/hypit/blob";
-import { generationPort, sealGenerationMediaBinding, sealGenerationRequestDraft } from "@hypit/generation";
-import type { GenerationMediaPort } from "@hypit/generation";
+import { modelField, sealModelArtifactBinding, sealModelFieldBuilder } from "@hypit/generation/model-fields";
+import type { ModelArtifactField } from "@hypit/generation/model-fields";
 import {
-  createExactModelPrimaryGenerationFragment,
-  exactModelMediaInputNames,
-  exactModelTextInputName,
-} from "@hypit/generation/model";
-import type { ExactModelEndpoint } from "@hypit/generation/model";
+  createFieldModelPrimaryFragment,
+  modelArtifactInputNames,
+  modelTextInputName,
+} from "@hypit/generation/model-fields";
+import type { FieldModelOperation } from "@hypit/generation/model-fields";
 import type { CanonicalValue, TypeRef } from "@hypit/hypit/protocol";
+import { isBlobRef } from "@hypit/hypit/protocol";
 import type { MarkupAttributeValue, StructuredElement, StructuredSurfaceHandler, SurfaceResolvedReference } from "@hypit/hypit/markup";
 import { textTypes, verifyText } from "@hypit/hypit/text";
 
@@ -19,10 +21,6 @@ function assert(condition: unknown, message: string): asserts condition {
 
 function localName(name: string): string {
   return name.includes(":") ? name.slice(name.lastIndexOf(":") + 1) : name;
-}
-
-function sameType(left: TypeRef, right: TypeRef): boolean {
-  return left.name === right.name && left.module.name === right.module.name && left.module.version === right.module.version;
 }
 
 function exact(element: StructuredElement, allowed: readonly string[], required = allowed): void {
@@ -51,16 +49,16 @@ function ref(
   return result;
 }
 
-function decoder(endpoint: ExactModelEndpoint): StructuredSurfaceHandler {
+function decoder(endpoint: FieldModelOperation): StructuredSurfaceHandler {
   return ({ element, resolveReference }) => {
     exact(element, ["id", "prompt", "aspect-ratio", "resolution", "output-format"]);
     const id = text(element, "id");
     const prompt = ref(element, "prompt", textTypes.text, resolveReference);
     if (prompt.record !== undefined) {
-      assert(prompt.record.value.kind === "inline", `${element.name}.prompt must reference Text`);
-      verifyText(prompt.record.value.value);
+      assert(true, `${element.name}.prompt must reference Text`);
+      verifyText(prompt.record.value);
     }
-    const imagePort = generationPort(endpoint.ports, "images");
+    const imagePort = modelField(endpoint.ports, "images");
     assert(imagePort.value.kind === "media", "Nano Banana images port is not media");
     const images: SurfaceResolvedReference[] = [];
     for (const child of element.children) {
@@ -73,40 +71,42 @@ function decoder(endpoint: ExactModelEndpoint): StructuredSurfaceHandler {
       assert(!child.children.some((item) => item.kind === "element" || item.value.trim()), `${child.name} must be empty`);
       const image = ref(child, "image", blobTypes.blob, resolveReference);
       if (image.record !== undefined) {
-        assert(image.record.value.kind === "blob" && image.record.value.mediaType.startsWith("image/"),
+        assert(isBlobRef(image.record.value) && image.record.value.mediaType.startsWith("image/"),
           `${child.name}.image must reference image media`);
       }
       images.push(image);
     }
-    assert(images.length <= imagePort.maxItems, `${element.name} accepts at most ${imagePort.maxItems} references`);
-    const draft = sealGenerationRequestDraft(endpoint.ports, {
+    if (imagePort.maxItems !== undefined) {
+      assert(images.length <= imagePort.maxItems, `${element.name} accepts at most ${imagePort.maxItems} references`);
+    }
+    const draft = sealModelFieldBuilder(endpoint.ports, {
       aspectRatio: [text(element, "aspect-ratio")],
       resolution: [text(element, "resolution")],
       outputFormat: [text(element, "output-format")],
     });
-    const records: Array<{ id: string; type: TypeRef; value: { kind: "inline"; value: CanonicalValue }; range: StructuredElement["range"] }> = [{
+    const records: Array<{ id: string; type: TypeRef; value: CanonicalValue; range: StructuredElement["range"] }> = [{
       id: `${id}.draft`, type: endpoint.draftType,
-      value: { kind: "inline", value: draft as unknown as CanonicalValue }, range: element.range,
+      value: (draft as unknown as CanonicalValue), range: element.range,
     }];
     const inputs: Record<string, SurfaceResolvedReference["ref"] | { kind: "record"; id: string }> = {
-      draft: { kind: "record", id: `${id}.draft` }, [exactModelTextInputName("prompt")]: prompt.ref,
+      draft: { kind: "record", id: `${id}.draft` }, [modelTextInputName("prompt")]: prompt.ref,
     };
     const media = images.map((image, index) => {
       const name = `image-${String(index + 1).padStart(4, "0")}`;
       const bindingId = `${id}.${name}.binding`;
       records.push({
         id: bindingId, type: endpoint.mediaBindings.images!.type,
-        value: { kind: "inline", value: sealGenerationMediaBinding(imagePort as GenerationMediaPort, { role: "image" }) as unknown as CanonicalValue },
+        value: (sealModelArtifactBinding(imagePort as ModelArtifactField, { role: "image" }) as unknown as CanonicalValue),
         range: element.range,
       });
-      const names = exactModelMediaInputNames(name);
+      const names = modelArtifactInputNames(name);
       inputs[names.binding] = { kind: "record", id: bindingId };
       inputs[names.artifact] = image.ref;
       return { name, port: "images" } as const;
     });
-    const fragment = createExactModelPrimaryGenerationFragment(endpoint, media, [{ name: "prompt", port: "prompt" }]);
-    return { records, fragments: [fragment], components: [{
-      id, fragment: fragment.id, inputs, outputs: { image: `${id}.image` }, range: element.range,
+    const fragment = createFieldModelPrimaryFragment(endpoint, media, [{ name: "prompt", port: "prompt" }]);
+    return { records, components: [{
+      id, fragment, inputs, outputs: { image: `${id}.image` }, range: element.range,
     }] };
   };
 }

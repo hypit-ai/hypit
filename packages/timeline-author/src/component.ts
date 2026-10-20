@@ -1,7 +1,7 @@
 import { canonicalize } from "@hypit/hypit/protocol";
 import type { ProducerPackage } from "@hypit/hypit/producer";
-import type { AdmissionPackage } from "@hypit/hypit/admission";
-import type { StoredValue } from "@hypit/hypit/protocol";
+import type { RefinementPackage } from "@hypit/hypit/refinement";
+import type { Value } from "@hypit/hypit/protocol";
 import type { LocalTemporalDomain, TemporalExtent, TemporalWindow } from "@hypit/temporal";
 import type { Clock, Timeline } from "@hypit/timeline";
 
@@ -17,28 +17,28 @@ import type {
   ConstructionPoint, ConstructionSpan, TimelineAuthorHeader,
 } from "./types.js";
 
-function inline<T>(value: StoredValue | undefined, subject: string): T {
-  if (value?.kind !== "inline") throw new Error(`${subject} must be inline.`);
-  return value.value as unknown as T;
+function valueOf<T>(value: Value | undefined, subject: string): T {
+  if (value === undefined) throw new Error(`${subject} is missing.`);
+  return value as unknown as T;
 }
-const output = (value: unknown) => ({ kind: "inline" as const, value: canonicalize(value) });
+const output = (value: unknown) => ((canonicalize(value)));
 
 export const timelineAuthorComponent = {
   producers: [
-    { producer: timelineAuthorProducers.origin, handler: ({ inputs }) => ({ outputs: { point: output(constructionOrigin(inline<Clock>(inputs.clock?.value, "Clock"))) }, needs: {} }) },
-    { producer: timelineAuthorProducers.duration, handler: ({ inputs }) => ({ outputs: { extent: output(constructionDuration(inline<Clock>(inputs.clock?.value, "Clock"), inline<ConstructionDurationSpec>(inputs.duration?.value, "ConstructionDurationSpec").duration)) }, needs: {} }) },
-    { producer: timelineAuthorProducers.resolvedExtent, handler: ({ inputs }) => ({ outputs: { extent: output(constructionResolvedExtent(inline<Clock>(inputs.clock?.value, "Clock"), inline<TemporalExtent>(inputs.extent?.value, "TemporalExtent"))) }, needs: {} }) },
-    { producer: timelineAuthorProducers.offset, handler: ({ inputs }) => ({ outputs: { point: output(constructionOffset(inline<ConstructionPoint>(inputs.point?.value, "ConstructionPoint"), inline<ConstructionExtent>(inputs.extent?.value, "ConstructionExtent"), inline<ConstructionOffsetSpec>(inputs.spec?.value, "ConstructionOffsetSpec"))) }, needs: {} }) },
-    { producer: timelineAuthorProducers.earliest, handler: ({ inputs }) => ({ outputs: { point: output(constructionEarliest(inline<ConstructionPoint>(inputs.left?.value, "ConstructionPoint"), inline<ConstructionPoint>(inputs.right?.value, "ConstructionPoint"))) }, needs: {} }) },
-    { producer: timelineAuthorProducers.latest, handler: ({ inputs }) => ({ outputs: { point: output(constructionLatest(inline<ConstructionPoint>(inputs.left?.value, "ConstructionPoint"), inline<ConstructionPoint>(inputs.right?.value, "ConstructionPoint"))) }, needs: {} }) },
-    { producer: timelineAuthorProducers.aliasPoint, handler: ({ inputs }) => ({ outputs: { point: output(constructionAliasPoint(inline<ConstructionPoint>(inputs.point?.value, "ConstructionPoint"))) }, needs: {} }) },
-    { producer: timelineAuthorProducers.span, handler: ({ inputs }) => ({ outputs: { span: output(constructionSpan(inline<ConstructionPoint>(inputs.start?.value, "ConstructionPoint"), inline<ConstructionExtent>(inputs.extent?.value, "ConstructionExtent"))) }, needs: {} }) },
-    { producer: timelineAuthorProducers.spanEnding, handler: ({ inputs }) => ({ outputs: { span: output(constructionSpanEnding(inline<ConstructionPoint>(inputs.end?.value, "ConstructionPoint"), inline<ConstructionExtent>(inputs.extent?.value, "ConstructionExtent"))) }, needs: {} }) },
-    { producer: timelineAuthorProducers.spanBetween, handler: ({ inputs }) => ({ outputs: { span: output(constructionSpanBetween(inline<ConstructionPoint>(inputs.start?.value, "ConstructionPoint"), inline<ConstructionPoint>(inputs.end?.value, "ConstructionPoint"))) }, needs: {} }) },
-    { producer: timelineAuthorProducers.spanStart, handler: ({ inputs }) => ({ outputs: { point: output(constructionSpanStart(inline<ConstructionSpan>(inputs.span?.value, "ConstructionSpan"))) }, needs: {} }) },
-    { producer: timelineAuthorProducers.spanEnd, handler: ({ inputs }) => ({ outputs: { point: output(constructionSpanEnd(inline<ConstructionSpan>(inputs.span?.value, "ConstructionSpan"))) }, needs: {} }) },
-    { producer: timelineAuthorProducers.finalize, handler: ({ inputs }) => ({ outputs: { timeline: output(finalizeTimeline(inline<TimelineAuthorHeader>(inputs.header?.value, "TimelineAuthorHeader"), inline<Clock>(inputs.clock?.value, "Clock"), inline<ConstructionPoint>(inputs.end?.value, "ConstructionPoint"))) }, needs: {} }) },
-    { producer: timelineAuthorProducers.instant, handler: ({ inputs }) => ({ outputs: { instant: output(materializeInstant(inline<Timeline>(inputs.timeline?.value, "Timeline"), inline<ConstructionPoint>(inputs.point?.value, "ConstructionPoint"), inline<ConstructionIdentitySpec>(inputs.spec?.value, "ConstructionIdentitySpec"))) }, needs: {} }) },
-    { producer: timelineAuthorProducers.window, handler: ({ inputs }) => ({ outputs: { window: output(materializeWindow(inline<Timeline>(inputs.timeline?.value, "Timeline"), inline<ConstructionSpan>(inputs.span?.value, "ConstructionSpan"), inline<ConstructionIdentitySpec>(inputs.spec?.value, "ConstructionIdentitySpec"))) }, needs: {} }) },
+    { producer: timelineAuthorProducers.origin, handler: ({ inputs }) => ({ kind: "output", value: output(constructionOrigin(valueOf<Clock>(inputs.clock?.value, "Clock"))) }) },
+    { producer: timelineAuthorProducers.duration, handler: ({ inputs }) => ({ kind: "output", value: output(constructionDuration(valueOf<Clock>(inputs.clock?.value, "Clock"), valueOf<ConstructionDurationSpec>(inputs.duration?.value, "ConstructionDurationSpec").duration)) }) },
+    { producer: timelineAuthorProducers.resolvedExtent, handler: ({ inputs }) => ({ kind: "output", value: output(constructionResolvedExtent(valueOf<Clock>(inputs.clock?.value, "Clock"), valueOf<TemporalExtent>(inputs.extent?.value, "TemporalExtent"))) }) },
+    { producer: timelineAuthorProducers.offset, handler: ({ inputs }) => ({ kind: "output", value: output(constructionOffset(valueOf<ConstructionPoint>(inputs.point?.value, "ConstructionPoint"), valueOf<ConstructionExtent>(inputs.extent?.value, "ConstructionExtent"), valueOf<ConstructionOffsetSpec>(inputs.spec?.value, "ConstructionOffsetSpec"))) }) },
+    { producer: timelineAuthorProducers.earliest, handler: ({ inputs }) => ({ kind: "output", value: output(constructionEarliest(valueOf<ConstructionPoint>(inputs.left?.value, "ConstructionPoint"), valueOf<ConstructionPoint>(inputs.right?.value, "ConstructionPoint"))) }) },
+    { producer: timelineAuthorProducers.latest, handler: ({ inputs }) => ({ kind: "output", value: output(constructionLatest(valueOf<ConstructionPoint>(inputs.left?.value, "ConstructionPoint"), valueOf<ConstructionPoint>(inputs.right?.value, "ConstructionPoint"))) }) },
+    { producer: timelineAuthorProducers.aliasPoint, handler: ({ inputs }) => ({ kind: "output", value: output(constructionAliasPoint(valueOf<ConstructionPoint>(inputs.point?.value, "ConstructionPoint"))) }) },
+    { producer: timelineAuthorProducers.span, handler: ({ inputs }) => ({ kind: "output", value: output(constructionSpan(valueOf<ConstructionPoint>(inputs.start?.value, "ConstructionPoint"), valueOf<ConstructionExtent>(inputs.extent?.value, "ConstructionExtent"))) }) },
+    { producer: timelineAuthorProducers.spanEnding, handler: ({ inputs }) => ({ kind: "output", value: output(constructionSpanEnding(valueOf<ConstructionPoint>(inputs.end?.value, "ConstructionPoint"), valueOf<ConstructionExtent>(inputs.extent?.value, "ConstructionExtent"))) }) },
+    { producer: timelineAuthorProducers.spanBetween, handler: ({ inputs }) => ({ kind: "output", value: output(constructionSpanBetween(valueOf<ConstructionPoint>(inputs.start?.value, "ConstructionPoint"), valueOf<ConstructionPoint>(inputs.end?.value, "ConstructionPoint"))) }) },
+    { producer: timelineAuthorProducers.spanStart, handler: ({ inputs }) => ({ kind: "output", value: output(constructionSpanStart(valueOf<ConstructionSpan>(inputs.span?.value, "ConstructionSpan"))) }) },
+    { producer: timelineAuthorProducers.spanEnd, handler: ({ inputs }) => ({ kind: "output", value: output(constructionSpanEnd(valueOf<ConstructionSpan>(inputs.span?.value, "ConstructionSpan"))) }) },
+    { producer: timelineAuthorProducers.finalize, handler: ({ inputs }) => ({ kind: "output", value: output(finalizeTimeline(valueOf<TimelineAuthorHeader>(inputs.header?.value, "TimelineAuthorHeader"), valueOf<Clock>(inputs.clock?.value, "Clock"), valueOf<ConstructionPoint>(inputs.end?.value, "ConstructionPoint"))) }) },
+    { producer: timelineAuthorProducers.instant, handler: ({ inputs }) => ({ kind: "output", value: output(materializeInstant(valueOf<Timeline>(inputs.timeline?.value, "Timeline"), valueOf<ConstructionPoint>(inputs.point?.value, "ConstructionPoint"), valueOf<ConstructionIdentitySpec>(inputs.spec?.value, "ConstructionIdentitySpec"))) }) },
+    { producer: timelineAuthorProducers.window, handler: ({ inputs }) => ({ kind: "output", value: output(materializeWindow(valueOf<Timeline>(inputs.timeline?.value, "Timeline"), valueOf<ConstructionSpan>(inputs.span?.value, "ConstructionSpan"), valueOf<ConstructionIdentitySpec>(inputs.spec?.value, "ConstructionIdentitySpec"))) }) },
   ],
-} satisfies ProducerPackage & AdmissionPackage;
+} satisfies ProducerPackage & RefinementPackage;

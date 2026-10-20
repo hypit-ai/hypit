@@ -190,17 +190,17 @@ class NodeFilesystemWorkspaceSession implements WorkspaceSession {
     }
     if (request.bytes !== undefined) {
       const bytes = Uint8Array.from(request.bytes);
-      const artifact: BlobRef = {
+      const blob: BlobRef = {
         kind: "blob",
         resource: `res_${randomUUID()}`,
         size: bytes.byteLength,
         mediaType: request.mediaType,
       };
-      this.#attachments.set(`${artifact.resource}\u0000${artifact.mediaType}`, {
-        artifact: { ...artifact },
+      this.#attachments.set(`${blob.resource}\u0000${blob.mediaType}`, {
+        blob: { ...blob },
         open: async () => (async function* () { yield Uint8Array.from(bytes); })(),
       });
-      return { artifact };
+      return { blob };
     }
     const relativeAsset = request.from.startsWith("./") || request.from.startsWith("../");
     let canonical: string;
@@ -234,30 +234,31 @@ class NodeFilesystemWorkspaceSession implements WorkspaceSession {
       identity = { resource: `res_${randomUUID()}`, size };
       this.#assetIdentity.set(canonical, identity);
     }
-    const artifact: BlobRef = {
+    const blob: BlobRef = {
       kind: "blob",
       resource: identity.resource,
       size: identity.size,
       mediaType: request.mediaType,
     };
-    const attachmentKey = `${artifact.resource}\u0000${artifact.mediaType}`;
+    const attachmentKey = `${blob.resource}\u0000${blob.mediaType}`;
     if (!this.#attachments.has(attachmentKey)) {
       this.#attachments.set(attachmentKey, {
-        artifact: { ...artifact },
+        blob: { ...blob },
         location: pathToFileURL(canonical).href,
         open: () => createReadStream(canonical),
+        openRange: (range) => createReadStream(canonical, { start: range.start, end: range.endExclusive - 1 }),
       });
     }
-    return { artifact: { ...artifact } };
+    return { blob: { ...blob } };
   };
 
   attachments(): readonly BlobAttachment[] {
     return [...this.#attachments.values()]
       .sort((left, right) => {
-        const byResource = left.artifact.resource.localeCompare(right.artifact.resource);
-        return byResource === 0 ? left.artifact.mediaType.localeCompare(right.artifact.mediaType) : byResource;
+        const byResource = left.blob.resource.localeCompare(right.blob.resource);
+        return byResource === 0 ? left.blob.mediaType.localeCompare(right.blob.mediaType) : byResource;
       })
-      .map((item) => ({ ...item, artifact: { ...item.artifact } }));
+      .map((item) => ({ ...item, blob: { ...item.blob } }));
   }
 }
 
@@ -270,7 +271,7 @@ export type NodeFilesystemWorkspaceOptions = {
   readonly externalSourceResolver?: NodeFilesystemExternalSourceResolver;
   /** Host-owned resolver for explicit non-relative asset locators, each with its own read boundary. */
   readonly externalAssetResolver?: NodeFilesystemExternalAssetResolver;
-  /** Selects a Frontend for each admitted Source. Defaults to the legacy self-described text adapter. */
+  /** Selects a Frontend for each resolved Source. Defaults to the legacy self-described text adapter. */
   readonly sourceAdapter?: NodeFilesystemSourceAdapter;
 };
 

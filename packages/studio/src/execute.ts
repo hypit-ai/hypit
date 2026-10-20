@@ -1,6 +1,8 @@
 import { MemoryResourceStore, Executor } from "@hypit/hypit/executor";
+import { InProcessBuildScheduler } from "@hypit/hypit/runtime";
 import type { ResourceStore } from "@hypit/hypit/runtime";
 import type { BuildState } from "@hypit/hypit/protocol";
+import { capabilityKey } from "@hypit/hypit/protocol";
 import type { CliTransientExecution as RuntimeHostTransientExecution } from "@hypit/hypit/cli";
 
 import type { StudioDomain } from "./domain.js";
@@ -19,20 +21,24 @@ export type Executed = {
  */
 export async function executeStudioProjection(
   domain: StudioDomain,
-  planned: BuildState,
+  state: BuildState,
   resources: ResourceStore,
   execution?: RuntimeHostTransientExecution,
 ): Promise<Executed> {
   const result = execution === undefined
-    ? await new Executor({
+    ? (await new InProcessBuildScheduler(new Executor({
         producers: domain.producers,
-        validators: domain.validators,
+        refinements: domain.refinements,
         resources,
-      }).run(planned)
+      })).run([{
+        id: "studio-projection",
+        definition: { format: "hypit.build-definition@1", program: state.program, plan: state.plan },
+        facts: [],
+      }]))[0]!
     : await execution.evaluate({
-        state: planned,
+        state,
         producers: domain.producers,
-        validators: domain.validators,
+        refinements: domain.refinements,
         resources,
       });
   const counts = new Map<string, number>();
@@ -41,7 +47,7 @@ export async function executeStudioProjection(
     const capability = command?.kind === "fulfill-need" ? command.need.capability : undefined;
     const name = capability === undefined
       ? item.subject
-      : `${capability.module.name}@${capability.module.version}#${capability.name}`;
+      : capabilityKey(capability);
     counts.set(name, (counts.get(name) ?? 0) + 1);
   }
   return {

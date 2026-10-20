@@ -1,4 +1,4 @@
-import { createAdmissionPackageFacet } from "@hypit/hypit/admission";
+import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
 import { createProducerPackageFacet } from "@hypit/hypit/producer";
 import { createMarkupSurfaceFacet } from "@hypit/hypit/markup";
 import { createStudioTrackCompanionFacet } from "@hypit/studio-companion";
@@ -19,7 +19,7 @@ export const hypitPackage = {
     manifest: commentStickerManifest,
   }],
   facets: [
-    ...[commentStickerComponent].flatMap((component) => [createProducerPackageFacet(component), createAdmissionPackageFacet(component)]),
+    ...[commentStickerComponent].flatMap((component) => [createProducerPackageFacet(component), createRefinementPackageFacet(component)]),
     createMarkupSurfaceFacet({
       module: commentStickerModuleRef,
     declaration: commentStickerMarkupSurfaces.find((item) => item.name === "style")!,

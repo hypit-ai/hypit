@@ -3,10 +3,10 @@ import test from "node:test";
 
 import {
   createResolvedClosure,
+  defineBuild,
   link,
-  sealBuildRequest,
-  sealRecord,
-  start,
+  materializeBuild,
+  planBuild,
 } from "@hypit/kernel";
 import {
   AuthorGraphError,
@@ -15,6 +15,7 @@ import {
 } from "@hypit/author";
 import type { AuthorComponent, GraphFragment } from "@hypit/author";
 import type {
+  AuthorGraph,
   LinkedProgram,
   ModuleManifest,
   ProducerRef,
@@ -44,32 +45,44 @@ const manifest: ModuleManifest = {
     {
       name: measureProducer.name,
       inputs: [{ name: "sample", type: sampleType }],
-      outputs: [{ name: "measurement", type: measurementType }],
-      needs: [],
+      result: { kind: "output" as const, name: "measurement", type: measurementType },
     },
     {
       name: reportProducer.name,
       inputs: [{ name: "measurement", type: measurementType }],
-      outputs: [{ name: "report", type: reportType }],
-      needs: [],
+      result: { kind: "output" as const, name: "report", type: reportType },
     },
     {
       name: echoProducer.name,
       inputs: [{ name: "sample", type: sampleType }],
-      outputs: [{ name: "sample", type: sampleType }],
-      needs: [],
+      result: { kind: "output" as const, name: "sample", type: sampleType },
     },
   ],
 };
 
 const closure = createResolvedClosure([manifest]);
 
+function buildState(linked: LinkedProgram, graph: AuthorGraph, targets: readonly string[]) {
+  const planned = planBuild(linked, graph, {
+    format: "hypit.run-graph@1",
+    records: [],
+    candidates: [],
+    operations: [],
+    satisfactions: [],
+    targets: targets.map((output) => ({ output })),
+  });
+  return materializeBuild(defineBuild({
+    program: link(linked.closure, [...linked.records, ...planned.initialRecords]),
+    plan: planned.plan,
+  }), []);
+}
+
 function program(): LinkedProgram {
-  return link(closure, [sealRecord({
+  return link(closure, [{
       id: "sample:soil",
       type: sampleType,
-      value: { kind: "inline", value: "soil" },
-  })]);
+      value: ("soil"),
+  }]);
 }
 
 function singleOperationFragment(
@@ -85,7 +98,7 @@ function singleOperationFragment(
       id: "produce",
       producer,
       inputs: { [inputName]: { kind: "fragment-input", name: inputName } },
-      result: { kind: "output", name: resultName },
+      result: { kind: "output" as const, name: resultName },
     }],
     exports: [{
       name: "result",
@@ -116,18 +129,12 @@ const echoFragment = singleOperationFragment(
   "sample",
   sampleType,
 );
-const fragments = new Map([
-  [measureFragment.id, measureFragment],
-  [reportFragment.id, reportFragment],
-  [echoFragment.id, echoFragment],
-]);
-
 test("Author linking resolves forward component references without Text or video contracts", () => {
   const linked = program();
   const components = [
       {
         id: "final-report",
-        fragment: reportFragment.id,
+        fragment: reportFragment,
         inputs: {
           measurement: {
             kind: "component-output",
@@ -139,13 +146,13 @@ test("Author linking resolves forward component references without Text or video
       },
       {
         id: "measurement",
-        fragment: measureFragment.id,
+        fragment: measureFragment,
         inputs: { sample: { kind: "record", id: "sample:soil" } },
         outputs: { result: "measurement:soil" },
       },
   ] satisfies readonly AuthorComponent[];
 
-  const elaborated = elaborateAuthorGraph(linked, components, (id) => fragments.get(id));
+  const elaborated = elaborateAuthorGraph(linked, components);
   assert.equal(elaborated.outputs.length, 2);
   assert.deepEqual(
     elaborated.outputs.map((output) => output.id),
@@ -158,24 +165,21 @@ test("Author linking resolves forward component references without Text or video
     id: "measurement:soil",
   });
 
-  const request = sealBuildRequest({
-    targets: [{ output: "report:final" }],
-  });
-  const state = start(linked, elaborated, request);
+  const state = buildState(linked, elaborated, ["report:final"]);
   assert.deepEqual(
     state.plan.steps.map((step) => step.producer.name).sort(),
     [measureProducer.name, reportProducer.name].sort(),
   );
   const measurementStep = state.plan.steps.find((step) => step.producer.name === measureProducer.name);
   const reportStep = state.plan.steps.find((step) => step.producer.name === reportProducer.name);
-  assert.equal(reportStep?.inputs.measurement, measurementStep?.outputs.measurement);
+  assert.equal(reportStep?.inputs.measurement, measurementStep?.result.record);
 });
 
 test("Author linking rejects cycles before producing a Core graph", () => {
   const components = [
       {
         id: "left",
-        fragment: echoFragment.id,
+        fragment: echoFragment,
         inputs: {
           sample: { kind: "component-output", component: "right", output: "result" },
         },
@@ -183,7 +187,7 @@ test("Author linking rejects cycles before producing a Core graph", () => {
       },
       {
         id: "right",
-        fragment: echoFragment.id,
+        fragment: echoFragment,
         inputs: {
           sample: { kind: "component-output", component: "left", output: "result" },
         },
@@ -191,7 +195,7 @@ test("Author linking rejects cycles before producing a Core graph", () => {
       },
   ] satisfies readonly AuthorComponent[];
   assert.throws(
-    () => elaborateAuthorGraph(program(), components, (id) => fragments.get(id)),
+    () => elaborateAuthorGraph(program(), components),
     (error: unknown) => error instanceof AuthorGraphError && error.code === "AUTHOR_COMPONENT_CYCLE",
   );
 });
@@ -199,12 +203,12 @@ test("Author linking rejects cycles before producing a Core graph", () => {
 test("Author linking checks symbolic input types before Graph verification", () => {
   const components = [{
       id: "final-report",
-      fragment: reportFragment.id,
+      fragment: reportFragment,
       inputs: { measurement: { kind: "record", id: "sample:soil" } },
       outputs: { result: "report:invalid" },
   }] satisfies readonly AuthorComponent[];
   assert.throws(
-    () => elaborateAuthorGraph(program(), components, (id) => fragments.get(id)),
+    () => elaborateAuthorGraph(program(), components),
     (error: unknown) => error instanceof AuthorGraphError && error.code === "AUTHOR_INPUT_TYPE_MISMATCH",
   );
 });

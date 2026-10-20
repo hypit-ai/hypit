@@ -3,9 +3,10 @@ import test from "node:test";
 
 import {
   createResolvedClosure,
+  defineBuild,
   link,
-  sealBuildRequest,
-  start,
+  materializeBuild,
+  planBuild,
 } from "@hypit/kernel";
 import {
   AuthorGraphError,
@@ -14,10 +15,27 @@ import {
 } from "@hypit/author";
 import type { GraphFragment } from "@hypit/author";
 import type {
+  AuthorGraph,
+  LinkedProgram,
   ModuleManifest,
   ProducerRef,
   TypeRef,
 } from "@hypit/protocol";
+
+function buildState(program: LinkedProgram, graph: AuthorGraph, target: string) {
+  const planned = planBuild(program, graph, {
+    format: "hypit.run-graph@1",
+    records: [],
+    candidates: [],
+    operations: [],
+    satisfactions: [],
+    targets: [{ output: target }],
+  });
+  return materializeBuild(defineBuild({
+    program: link(program.closure, [...program.records, ...planned.initialRecords]),
+    plan: planned.plan,
+  }), []);
+}
 import {
   MarkupFrontendError,
   MarkupSurfaceRegistry,
@@ -55,14 +73,12 @@ const manifest: ModuleManifest = {
     {
       name: measureProducer.name,
       inputs: [{ name: "sample", type: sampleType }],
-      outputs: [{ name: "measurement", type: measurementType }],
-      needs: [],
+      result: { kind: "output" as const, name: "measurement", type: measurementType },
     },
     {
       name: reportProducer.name,
       inputs: [{ name: "measurement", type: measurementType }],
-      outputs: [{ name: "report", type: reportType }],
-      needs: [],
+      result: { kind: "output" as const, name: "report", type: reportType },
     },
   ],
 };
@@ -80,7 +96,7 @@ function singleOperationFragment(
       id: "produce",
       producer,
       inputs: { [inputName]: { kind: "fragment-input", name: inputName } },
-      result: { kind: "output", name: resultName },
+      result: { kind: "output" as const, name: resultName },
     }],
     exports: [{
       name: "result",
@@ -125,7 +141,7 @@ function componentOutput(path: string): { readonly component: string; readonly o
   return { component: path.slice(0, separator), output: path.slice(separator + 1) };
 }
 
-function registry(options: { readonly omitMeasureFragment?: boolean } = {}): MarkupSurfaceRegistry {
+function registry(): MarkupSurfaceRegistry {
   const values = new MarkupSurfaceRegistry();
   values.registerStructured({
     module: laboratory,
@@ -134,11 +150,10 @@ function registry(options: { readonly omitMeasureFragment?: boolean } = {}): Mar
     records: [{
       id: stringAttribute(element, "id"),
       type: sampleType,
-      value: { kind: "inline", value: stringAttribute(element, "value") },
+      value: (stringAttribute(element, "value")),
       range: element.range,
     }],
     components: [],
-    fragments: [],
     }),
   });
   values.registerStructured({
@@ -150,12 +165,11 @@ function registry(options: { readonly omitMeasureFragment?: boolean } = {}): Mar
       records: [],
       components: [{
         id,
-        fragment: measureFragment.id,
+        fragment: measureFragment,
         inputs: { sample: { kind: "record", id: referenceAttribute(element, "sample") } },
         outputs: { result: `${id}.result` },
         range: element.range,
       }],
-      fragments: options.omitMeasureFragment === true ? [] : [measureFragment],
     };
     },
   });
@@ -169,7 +183,7 @@ function registry(options: { readonly omitMeasureFragment?: boolean } = {}): Mar
       records: [],
       components: [{
         id,
-        fragment: reportFragment.id,
+        fragment: reportFragment,
         inputs: {
           measurement: {
             kind: "component-output",
@@ -180,7 +194,6 @@ function registry(options: { readonly omitMeasureFragment?: boolean } = {}): Mar
         outputs: { result: `${id}.result` },
         range: element.range,
       }],
-      fragments: [reportFragment],
     };
     },
   });
@@ -209,17 +222,11 @@ test("Markup Surfaces compile forward author references into a Core BuildPlan", 
   </svml>`);
 
   assert.deepEqual(decoded.components.map((component) => component.id), ["final", "measurement"]);
-  assert.deepEqual(decoded.fragments.map((fragment) => fragment.id).sort(), [
-    measureFragment.id,
-    reportFragment.id,
-  ].sort());
+  assert.deepEqual(decoded.components.map((component) => component.fragment), [reportFragment, measureFragment]);
 
   const program = link(closure, decoded.records);
-  const catalog = new Map(decoded.fragments.map((fragment) => [fragment.id, fragment]));
-  const elaborated = elaborateAuthorGraph(program, decoded.components, (id) => catalog.get(id));
-  const state = start(program, elaborated, sealBuildRequest({
-    targets: [{ output: "final.result" }],
-  }));
+  const elaborated = elaborateAuthorGraph(program, decoded.components);
+  const state = buildState(program, elaborated, "final.result");
 
   assert.deepEqual(
     state.plan.steps.map((step) => step.producer.name).sort(),
@@ -227,7 +234,7 @@ test("Markup Surfaces compile forward author references into a Core BuildPlan", 
   );
   const measurementStep = state.plan.steps.find((step) => step.producer.name === measureProducer.name);
   const reportStep = state.plan.steps.find((step) => step.producer.name === reportProducer.name);
-  assert.equal(reportStep?.inputs.measurement, measurementStep?.outputs.measurement);
+  assert.equal(reportStep?.inputs.measurement, measurementStep?.result.record);
 });
 
 test("component source reflow does not change decoded component meaning", async () => {
@@ -246,27 +253,14 @@ test("component source reflow does not change decoded component meaning", async 
   assert.deepEqual(compact.components, multiline.components);
 });
 
-test("Markup rejects a component whose Surface omits its Fragment definition", async () => {
-  await assert.rejects(
-    decode(`<svml>
-      <import as="lab" from="example.text-laboratory@1"/>
-      <lab:Sample id="soil" value="soil"/>
-      <lab:Measure id="measurement" sample={soil}/>
-    </svml>`, registry({ omitMeasureFragment: true })),
-    (error: unknown) => error instanceof MarkupFrontendError
-      && error.code === "MARKUP_COMPONENT_FRAGMENT_MISSING",
-  );
-});
-
 test("unknown component references remain inert until whole-document Author linking", async () => {
   const decoded = await decode(`<svml>
     <import as="lab" from="example.text-laboratory@1"/>
     <lab:Report id="final" measurement={missing.result}/>
   </svml>`);
   const program = link(closure, decoded.records);
-  const catalog = new Map(decoded.fragments.map((fragment) => [fragment.id, fragment]));
   assert.throws(
-    () => elaborateAuthorGraph(program, decoded.components, (id) => catalog.get(id)),
+    () => elaborateAuthorGraph(program, decoded.components),
     (error: unknown) => error instanceof AuthorGraphError
       && error.code === "UNKNOWN_AUTHOR_COMPONENT",
   );

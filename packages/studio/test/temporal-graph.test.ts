@@ -1,21 +1,26 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import type { BuildState, ProducerStep, TypeRef, TypedRecord } from "@hypit/protocol";
+import { canonicalize } from "@hypit/protocol";
+import type { ProducerStep, TypeRef, TypedRecord } from "@hypit/protocol";
 
 import { executedTemporalBindings } from "../src/temporal-graph.js";
 import { commonTemporalStudioRelations } from "@hypit/temporal/studio";
 import { narrativeStudioTemporalRelations } from "../../narrative-temporal/src/studio.js";
+import { executedGraph } from "./executed-graph-scenario.js";
 
 const module = (name: string) => ({ name, version: "1" });
 const type = (owner: string, name: string): TypeRef => ({ module: module(owner), name });
 const record = (id: string, owner: string, name: string, value: unknown): TypedRecord => ({
-  id, type: type(owner, name), value: { kind: "inline", value: value as never },
+  id, type: type(owner, name), value: canonicalize(value),
 });
 const producer = (owner: string, name: string) => ({ module: module(owner), name });
-const step = (id: string, owner: string, name: string, inputs: ProducerStep["inputs"], outputs: ProducerStep["outputs"]): ProducerStep => ({
-  id, producer: producer(owner, name), inputs, outputs, needs: {},
-});
+const step = (id: string, owner: string, name: string, inputs: ProducerStep["inputs"], outputs: Readonly<Record<string, string>>): ProducerStep => {
+  const [result] = Object.entries(outputs);
+  assert.ok(result);
+  return { id, producer: producer(owner, name), inputs,
+    result: { kind: "output", name: result[0], record: result[1] } };
+};
 const relationFor = (relations: typeof commonTemporalStudioRelations) =>
   (candidate: ProducerStep["producer"], output: string) => relations.find((relation) =>
     relation.match.producer.module.name === candidate.module.name
@@ -48,25 +53,16 @@ test("Studio reads Instant lineage and author authority from executed graph edge
     step("append", "@hypit/depth-stack", "append-depth-stack-card", { set: "empty", spec: "card-spec", activation: "point" }, { set: "cards" }),
     step("render", "@hypit/depth-stack", "render-depth-stack", { program: "cards" }, { track: "track" }),
   ];
-  const state = {
-    format: "hypit.build@1",
-    program: { closure: { modules: [] }, records: program },
-    targets: [{ output: "visual" }],
-    plan: {
-      format: "hypit.plan@1", steps, goals: [{ record: "track", type: type("@hypit/composition", "VisualTrack") }],
-      outputBindings: [{ output: "visual", record: "track", type: type("@hypit/composition", "VisualTrack") }],
-    },
-    status: "complete", records: executed, steps: steps.map(({ id }) => ({ id, status: "complete" as const })),
-    needs: [], outstanding: [], diagnostics: [],
-  } as unknown as BuildState;
+  const state = executedGraph({ programRecords: program, steps, records: executed, goals: ["track"] });
 
-  const opaque = executedTemporalBindings(state, "visual");
+  const selections = [{ output: "visual", record: "track" }];
+  const opaque = executedTemporalBindings(state, selections, "visual");
   assert.deepEqual(opaque[0]?.projection, {
     kind: "instant", expression: "42f", reference: "absolute", frame: 42,
     source: { timelineId: "speech", type: type("@hypit/temporal", "TemporalInstant"), kind: "resolved", id: "deck.card::cue" },
     authority: { kind: "fixed" },
   });
-  const bindings = executedTemporalBindings(state, "visual", (sourceType, value) => {
+  const bindings = executedTemporalBindings(state, selections, "visual", (sourceType, value) => {
     const held = value as { readonly id?: unknown };
     return sourceType.module.name === "@hypit/narrative" && typeof held.id === "string"
       ? { companion: "narrative", id: "story-on-speech", kind: sourceType.name === "NarrativeMoment" ? "moment" : "source", itemId: held.id }
@@ -90,7 +86,7 @@ test("Studio reads Instant lineage and author authority from executed graph edge
       input: "activation",
       role: "domain",
       inputs: [
-        { name: "activation", record: "point", type: type("@hypit/temporal", "TemporalInstant"), value: executed[0]!.value.kind === "inline" ? executed[0]!.value.value : undefined },
+        { name: "activation", record: "point", type: type("@hypit/temporal", "TemporalInstant"), value: executed[0]!.value },
         { name: "spec", record: "card-spec", type: type("@hypit/depth-stack", "DepthStackCardSpec"), value: { id: "card" } },
       ],
     }],
@@ -121,20 +117,15 @@ test("Studio reads author parameter authority declared by the Temporal Spec", ()
     step("append", "@hypit/depth-stack", "append-depth-stack-card", { set: "empty", spec: "card-spec", activation: "point" }, { set: "cards" }),
     step("render", "@hypit/depth-stack", "render-depth-stack", { program: "cards" }, { track: "track" }),
   ];
-  const state = {
-    format: "hypit.build@1",
-    program: { closure: { modules: [] }, records: program },
-    targets: [{ output: "visual" }],
-    plan: {
-      format: "hypit.plan@1", steps,
-      goals: [{ record: "track", type: type("@hypit/composition", "VisualTrack") }],
-      outputBindings: [{ output: "visual", record: "track", type: type("@hypit/composition", "VisualTrack") }],
-    },
-    status: "complete", records: executed, steps: steps.map(({ id }) => ({ id, status: "complete" as const })),
-    needs: [], outstanding: [], diagnostics: [],
-  } as unknown as BuildState;
+  const state = executedGraph({ programRecords: program, steps, records: executed, goals: ["track"] });
 
-  const bindings = executedTemporalBindings(state, "visual", undefined, relationFor(commonTemporalStudioRelations));
+  const bindings = executedTemporalBindings(
+    state,
+    [{ output: "visual", record: "track" }],
+    "visual",
+    undefined,
+    relationFor(commonTemporalStudioRelations),
+  );
   assert.equal(bindings.length, 1);
   assert.deepEqual(bindings[0]?.projection, {
     kind: "instant",

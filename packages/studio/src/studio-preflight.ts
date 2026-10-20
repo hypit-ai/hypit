@@ -1,5 +1,5 @@
 import type { Candidate } from "@hypit/hypit/protocol";
-import { sameType } from "@hypit/hypit/protocol";
+import { isBlobRef, sameType } from "@hypit/hypit/protocol";
 import type { StudioFilmCompanion } from "@hypit/studio-companion";
 import { timelineTypes } from "@hypit/timeline";
 
@@ -25,7 +25,7 @@ export type StudioViewRequirement = {
   readonly role: StudioViewRole;
   readonly candidateId?: string;
   readonly trace: StudioTrace;
-  readonly candidatePolicy: "materialized-inline" | "deterministic-derived";
+  readonly candidatePolicy: "materialized-value" | "deterministic-derived";
 };
 
 export type StudioInspection = {
@@ -34,6 +34,9 @@ export type StudioInspection = {
   readonly timeRef: string;
   readonly projections: readonly StudioViewRequirement[];
 };
+
+/** Run selection facts required by Studio preflight; compilation callbacks and attachments stay outside it. */
+export type StudioRunSelection = Pick<RunPlan, "targets" | "run">;
 
 export class StudioPreflightError extends Error {
   readonly issues: readonly string[];
@@ -46,8 +49,7 @@ export class StudioPreflightError extends Error {
 }
 
 function candidateIsMaterialized(candidate: Candidate | undefined): boolean {
-  return candidate?.root.kind === "value"
-    && candidate.root.value.value.kind === "inline";
+  return candidate?.root.kind === "value";
 }
 
 function localName(value: string): string {
@@ -86,7 +88,7 @@ function filmForTarget(registry: StudioCompanionRegistry, source: CompiledSource
 export function inspectStudioRun(
   registry: StudioCompanionRegistry,
   source: CompiledSource,
-  base: RunPlan,
+  base: StudioRunSelection,
 ): StudioInspection {
   const issues: string[] = [];
   if (base.targets.length === 0) issues.push("the Run Source has no target; Studio requires Film or Render");
@@ -115,7 +117,7 @@ export function inspectStudioRun(
   for (const target of targets) {
     const candidateId = satisfactions.get(target.ref);
     const candidate = candidateId === undefined ? undefined : candidates.get(candidateId);
-    if (candidate?.root.kind === "value" && candidate.root.value.value.kind === "blob") {
+    if (candidate?.root.kind === "value" && isBlobRef(candidate.root.value)) {
       issues.push(`Render target ${outputFor(source, target.ref)?.name ?? target.ref} is an opaque media Candidate; Studio needs the current Film graph`);
     }
   }
@@ -168,7 +170,7 @@ export function inspectStudioRun(
         role,
         ...(candidateId === undefined ? {} : { candidateId }),
         trace: traceFor(source, ref),
-        candidatePolicy: "materialized-inline",
+        candidatePolicy: "materialized-value",
       });
       continue;
     }

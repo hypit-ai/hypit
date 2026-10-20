@@ -1,5 +1,5 @@
-import { link } from "@hypit/kernel";
-import { canonicalStringify, isResourceId } from "@hypit/protocol";
+import { link, verifyRecordStructure } from "@hypit/kernel";
+import { isResourceId, sameType, typeKey } from "@hypit/protocol";
 import type {
   GraphValueRef,
   ResolvedModuleClosure,
@@ -18,7 +18,7 @@ import type {
   AuthorFrontend,
   AuthorFrontendRegistryLike,
   AuthorFrontendSourceUnit,
-  AuthorRecordAdmitter,
+  AuthorRecordValidator,
   AuthorSourceDiscovery,
   AuthorSourceExport,
   AuthorSourceIdentity,
@@ -31,7 +31,6 @@ import type {
   SourceClosure,
   SourceClosureUnit,
 } from "@hypit/author";
-import type { GraphFragment } from "@hypit/author";
 
 type Awaitable<T> = T | Promise<T>;
 
@@ -49,7 +48,7 @@ export type CompileSourceClosureRequest = {
   ) => Awaitable<AuthorSourceDiscovery>;
   readonly resolveSource: SourceResolver;
   readonly resolveAsset?: SourceAssetResolver;
-  readonly admitRecord?: AuthorRecordAdmitter;
+  readonly validateRecord?: AuthorRecordValidator;
 };
 
 export class SourceClosureError extends Error {
@@ -74,13 +73,7 @@ function assert(
 }
 
 function typeName(type: TypeRef): string {
-  return `${type.module.name}@${type.module.version}#${type.name}`;
-}
-
-function sameType(left: TypeRef, right: TypeRef): boolean {
-  return left.module.name === right.module.name
-    && left.module.version === right.module.version
-    && left.name === right.name;
+  return typeKey(type);
 }
 
 function sourceKey(source: AuthorSourceUnit, frontend: string): string {
@@ -91,7 +84,6 @@ type HygienicSource = {
   readonly unit: SourceClosureUnit;
   readonly records: readonly TypedRecord[];
   readonly components: readonly AuthorComponent[];
-  readonly fragments: readonly GraphFragment[];
   readonly exports: readonly AuthorSourceExport[];
   readonly identities: readonly AuthorSourceIdentity[];
   readonly provenance: readonly AuthorElementProvenance[];
@@ -109,16 +101,6 @@ function hygienizeSource(
 ): HygienicSource {
   const recordsById = new Map(decoded.records.map((record) => [record.id, record]));
   const componentsById = new Map(decoded.components.map((component) => [component.id, component]));
-  const fragmentsById = new Map(decoded.fragments.map((fragment) => [fragment.id, fragment]));
-  const fragmentExports = new Map(decoded.fragments.map((fragment) => [
-    fragment.id,
-    new Map(fragment.exports.map((item) => [item.name, item])),
-  ]));
-  const fragmentIds = new Set<string>();
-  for (const fragment of decoded.fragments) {
-    assert(!fragmentIds.has(fragment.id), "DUPLICATE_SOURCE_FRAGMENT", `${source.name} repeats Fragment ${fragment.id}`);
-    fragmentIds.add(fragment.id);
-  }
   const exportNames = new Set<string>();
   for (const item of decoded.exports) {
     assert(item.name.length > 0, "EMPTY_SOURCE_EXPORT", `${source.name} returned an empty export`);
@@ -136,9 +118,7 @@ function hygienizeSource(
     } else {
       const component = componentsById.get(ref.component);
       assert(component !== undefined, "UNKNOWN_SOURCE_EXPORT", `${source.name}.${item.name} references unknown component ${ref.component}`);
-      const fragment = fragmentsById.get(component.fragment);
-      assert(fragment !== undefined, "UNKNOWN_SOURCE_EXPORT", `${source.name}.${item.name} references unavailable Fragment ${component.fragment}`);
-      const declaration = fragmentExports.get(fragment.id)?.get(ref.output);
+      const declaration = component.fragment.exports.find((output) => output.name === ref.output);
       assert(declaration !== undefined, "UNKNOWN_SOURCE_EXPORT", `${source.name}.${item.name} references unknown output ${ref.output}`);
       assert(
         sameType(declaration.type, item.type),
@@ -201,7 +181,6 @@ function hygienizeSource(
     unit: unitContent,
     records,
     components,
-    fragments: decoded.fragments,
     exports,
     identities: decoded.identities ?? [],
     provenance: (decoded.provenance ?? []).map((element) => ({
@@ -236,7 +215,7 @@ function graphRefForExport(
   if (item.ref.kind === "record") return item.ref;
   const component = components.get(item.ref.component);
   assert(component !== undefined, "UNKNOWN_SOURCE_EXPORT", `export ${item.name} references ${item.ref.component}`);
-  const output = component.outputs[item.ref.output];
+  const output = Object.hasOwn(component.outputs, item.ref.output) ? component.outputs[item.ref.output] : undefined;
   assert(output !== undefined, "UNKNOWN_SOURCE_EXPORT", `export ${item.name} references ${item.ref.component}.${item.ref.output}`);
   return { kind: "logical-output", id: output };
 }
@@ -299,12 +278,12 @@ export async function compileSourceClosure(
         const existing = assets.get(assetRequest.from);
         if (existing !== undefined) {
           assert(
-            existing.artifact.mediaType === assetRequest.mediaType,
+            existing.blob.mediaType === assetRequest.mediaType,
             "SOURCE_ASSET_MEDIA_TYPE_CONFLICT",
             `${source.name} assigns conflicting media types to ${assetRequest.from}`,
             assetRequest.from,
           );
-          return { artifact: existing.artifact };
+          return { blob: existing.blob };
         }
         assert(
           request.resolveAsset !== undefined,
@@ -313,28 +292,29 @@ export async function compileSourceClosure(
           assetRequest.from,
         );
         const resolved = await request.resolveAsset(rawSource, assetRequest);
-        const artifact = resolved.artifact;
-        assert(artifact.kind === "blob", "INVALID_SOURCE_ASSET", `${assetRequest.from} did not resolve to a BlobRef`);
-        assert(isResourceId(artifact.resource), "INVALID_SOURCE_ASSET_RESOURCE", `${assetRequest.from} has an invalid Resource identity`);
-        assert(Number.isSafeInteger(artifact.size) && artifact.size >= 0, "INVALID_SOURCE_ASSET_SIZE", `${assetRequest.from} has an invalid size`);
+        const blob = resolved.blob;
+        assert(blob.kind === "blob", "INVALID_SOURCE_ASSET", `${assetRequest.from} did not resolve to a BlobRef`);
+        assert(isResourceId(blob.resource), "INVALID_SOURCE_ASSET_RESOURCE", `${assetRequest.from} has an invalid Resource identity`);
+        assert(Number.isSafeInteger(blob.size) && blob.size >= 0, "INVALID_SOURCE_ASSET_SIZE", `${assetRequest.from} has an invalid size`);
         assert(
-          artifact.mediaType === assetRequest.mediaType,
+          blob.mediaType === assetRequest.mediaType,
           "SOURCE_ASSET_MEDIA_TYPE_MISMATCH",
-          `${assetRequest.from} resolved as ${artifact.mediaType}, expected ${assetRequest.mediaType}`,
+          `${assetRequest.from} resolved as ${blob.mediaType}, expected ${assetRequest.mediaType}`,
           assetRequest.from,
         );
-        assets.set(assetRequest.from, { artifact });
-        return { artifact };
+        assets.set(assetRequest.from, { blob });
+        return { blob };
       },
     });
-    const admittedRecords: TypedRecord[] = [];
+    const validatedRecords: TypedRecord[] = [];
     for (const record of rawDecoded.records) {
-      await request.admitRecord?.(request.closure, record);
-      admittedRecords.push(record);
+      verifyRecordStructure(request.closure, record);
+      await request.validateRecord?.(record);
+      validatedRecords.push(record);
     }
     const decoded: DecodedAuthorSource = {
       ...rawDecoded,
-      records: admittedRecords,
+      records: validatedRecords,
     };
     const result = hygienizeSource(source, frontend, decoded, imports);
     visiting.pop();
@@ -366,20 +346,9 @@ export async function compileSourceClosure(
     assert(!recordIds.has(record.id), "SOURCE_RECORD_COLLISION", `Source closure repeats Record ${record.id}`, record.id);
     recordIds.add(record.id);
   }
-  const fragments = new Map<string, GraphFragment>();
-  for (const fragment of ordered.flatMap((unit) => unit.fragments)) {
-    const existing = fragments.get(fragment.id);
-    assert(
-      existing === undefined || canonicalStringify(existing) === canonicalStringify(fragment),
-      "SOURCE_FRAGMENT_CONFLICT",
-      `Source closure has conflicting Fragment ${fragment.id}`,
-      fragment.id,
-    );
-    fragments.set(fragment.id, fragment);
-  }
   const components = ordered.flatMap((unit) => unit.components);
   const program = link(request.closure, records);
-  const graph = elaborateAuthorGraph(program, components, (id) => fragments.get(id));
+  const graph = elaborateAuthorGraph(program, components);
   const units = ordered.map((unit) => unit.unit).sort((left, right) => left.id.localeCompare(right.id));
   const sourceClosure: SourceClosure = {
     entry: entry.unit.id,

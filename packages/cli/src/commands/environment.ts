@@ -2,11 +2,10 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 import type { CliCommand, EnvironmentCommand } from "../command.js";
-import type { CliDistribution } from "../distribution.js";
 import { acquireOAuthCredential } from "../oauth.js";
 import { writeCliOutput } from "../output.js";
 import type { CliIo } from "../output.js";
-import type { CliRuntimeHost } from "../runtime-port.js";
+import type { CliDiagnostic, CliResultRepositoryLocation, CliRuntimeHost } from "../runtime-port.js";
 import type { OperationalWriter } from "./types.js";
 
 export function isEnvironmentCommand(args: CliCommand): args is EnvironmentCommand {
@@ -18,14 +17,16 @@ export async function runEnvironmentCommand(input: {
   readonly runtimeProfile: string | undefined;
   readonly runtimeFromProject: boolean;
   readonly io: CliIo;
-  readonly distribution: CliDistribution;
   readonly projectRoot: string;
-  readonly packageRootForProject: () => Promise<string>;
+  readonly diagnoseProjectResults: () => Promise<{
+    readonly location?: CliResultRepositoryLocation;
+    readonly diagnostics: readonly CliDiagnostic[];
+  }>;
   readonly runtimeHost: (profile: string, packageRoot?: string) => Promise<CliRuntimeHost>;
   readonly write: OperationalWriter;
 }): Promise<void> {
   const {
-    args, runtimeProfile, runtimeFromProject, io, distribution, projectRoot, packageRootForProject, runtimeHost, write,
+    args, runtimeProfile, runtimeFromProject, io, projectRoot, diagnoseProjectResults, runtimeHost, write,
   } = input;
   const profileSource: "none" | "argument" | "project" = runtimeProfile === undefined
     ? "none" : runtimeFromProject ? "project" : "argument";
@@ -37,12 +38,7 @@ export async function runEnvironmentCommand(input: {
     const profile = runtimeProfile === undefined ? undefined : resolve(runtimeProfile);
     const [runtimeResult, projectResult] = await Promise.all([
       profile === undefined ? undefined : (await runtimeHost(profile)).doctor(args.endpoints === undefined ? {} : { endpoints: args.endpoints }),
-      distribution.diagnoseProjectResults(projectRoot, {
-        packageRoot: await packageRootForProject(),
-        ...(distribution.packageRoot === undefined
-          ? {}
-          : { distributionPackageRoot: distribution.packageRoot }),
-      }),
+      diagnoseProjectResults(),
     ]);
     const diagnostics = [...(runtimeResult?.diagnostics ?? []), ...projectResult.diagnostics];
     const machine = {

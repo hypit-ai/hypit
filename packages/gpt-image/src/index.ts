@@ -1,20 +1,19 @@
 import { blobTypes } from "@hypit/hypit/blob";
 import {
-  sealGenerationPortRequest,
-  sealGenerationRequestDraft,
-  sealGenerationPortTable,
-} from "@hypit/generation";
-import type { GenerationPortTable, GenerationPortValue, GenerationRequest } from "@hypit/generation";
+  sealModelFieldRequest,
+  sealModelFieldBuilder,
+  defineModelFields,
+} from "@hypit/generation/model-fields";
+import type { ModelFieldTable, ModelFieldValue, ModelFieldRequest } from "@hypit/generation/model-fields";
 import type { SurfaceAttributeVocabulary, SurfaceChildVocabulary } from "@hypit/hypit/markup";
-import { defineExactModelModule } from "@hypit/generation/model";
+import { defineFieldModelModule, standardGenerationResults } from "@hypit/generation/model-fields";
 import { imageOperationsModuleRef, imageTransformTypes } from "@hypit/image-operations";
 import { textTypes } from "@hypit/hypit/text";
 
 export const gptImageModuleRef = { name: "@hypit/gpt-image", version: "1" } as const;
 
-export const gptImage2Ports: GenerationPortTable = sealGenerationPortTable({
+export const gptImage2Ports: ModelFieldTable = defineModelFields({
   model: "gpt-image-2",
-  result: "image",
   ports: [
     { name: "prompt", value: { kind: "text", maxChars: 20_000 }, minItems: 1, maxItems: 1 },
     {
@@ -42,25 +41,26 @@ export const gptImage2Ports: GenerationPortTable = sealGenerationPortTable({
 });
 
 export function sealGptImage2Request(
-  ports: Readonly<Record<string, readonly GenerationPortValue[]>>,
-): GenerationRequest {
-  return sealGenerationPortRequest(gptImage2Ports, ports);
+  ports: Readonly<Record<string, readonly ModelFieldValue[]>>,
+): ModelFieldRequest {
+  return sealModelFieldRequest(gptImage2Ports, ports);
 }
 
 /** Scalar request seed; reference images are attached later by explicit graph edges. */
 export function sealGptImage2Draft(
-  ports: Readonly<Record<string, readonly GenerationPortValue[]>>,
+  ports: Readonly<Record<string, readonly ModelFieldValue[]>>,
 ) {
-  return sealGenerationRequestDraft(gptImage2Ports, ports);
+  return sealModelFieldBuilder(gptImage2Ports, ports);
 }
 
-const gptImageBaseDefinition = defineExactModelModule({
+const gptImageBaseDefinition = defineFieldModelModule({
   module: gptImageModuleRef,
   endpoints: [{
     key: "image",
     requestTypeName: "GptImage2Request",
     producerName: "request-gpt-image-2",
     ports: gptImage2Ports,
+    result: standardGenerationResults.image,
   }],
 });
 

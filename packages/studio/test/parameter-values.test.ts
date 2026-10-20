@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { blobRefSchema } from "@hypit/hypit/protocol";
 import type { StudioInspectorField } from "@hypit/studio-companion";
-import { parameterAuthorValue, parameterControlForSchema, parameterNumber, parameterOption, serializeParameterValue, validateParameterValue } from "../src/parameter-values.js";
+import { parameterAuthorValue, parameterControlForPresentation, parameterControlForSchema, parameterNumber, parameterOption, serializeParameterValue, validateParameterValue } from "../src/parameter-values.js";
 
 const field = (overrides: Partial<StudioInspectorField>): StudioInspectorField => ({
   id: "width", binding: "frame.width", label: "Width", domain: "where", section: { id: "size", label: "Size" },
@@ -50,11 +51,24 @@ test("SVML parameter text escapes attribute delimiters while SVS keeps its own c
 });
 
 
-test("top-level and nested parameter fields share schema-to-control selection", () => {
+test("structural schemas select generic controls while presentation selects color", () => {
   assert.equal(parameterControlForSchema({ kind: "string", enum: ["left", "right"] }), "select");
-  assert.equal(parameterControlForSchema({ kind: "string", format: "color" }), "color");
+  assert.equal(parameterControlForSchema({ kind: "string" }), "text");
+  assert.equal(parameterControlForPresentation({ kind: "string" }, { kind: "color" }), "color");
+  assert.equal(parameterControlForPresentation(
+    { kind: "array", items: { kind: "string" } },
+    { kind: "list", item: { kind: "color" } },
+  ), "list");
+  assert.equal(parameterControlForPresentation({ kind: "number" }, { kind: "color" }), undefined);
   assert.equal(parameterControlForSchema({ kind: "boolean" }), "boolean");
   assert.equal(parameterControlForSchema({ kind: "number" }), "number");
   assert.equal(parameterControlForSchema({ kind: "object", fields: {} }), "record");
   assert.equal(parameterControlForSchema({ kind: "array", items: { kind: "string" } }), "list");
+});
+
+test("opaque Blob schemas validate without exposing a generic editor control", () => {
+  const value = { kind: "blob", resource: "res_image", size: 4, mediaType: "image/png" } as const;
+  assert.doesNotThrow(() => validateParameterValue(value, blobRefSchema(["image/png"]), "Artifact"));
+  assert.throws(() => validateParameterValue(value, blobRefSchema(["audio/wav"]), "Artifact"), /does not accept/u);
+  assert.equal(parameterControlForSchema(blobRefSchema()), undefined);
 });

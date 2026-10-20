@@ -1,21 +1,22 @@
 import { sealVisualTrack } from "@hypit/composition";
 import type { Timeline } from "@hypit/timeline";
 import type { SpatialFrame } from "@hypit/spatial";
-import { canonicalize } from "@hypit/hypit/protocol";
+import { assertBlobRef, canonicalize } from "@hypit/hypit/protocol";
 import type { BlobRef, TypedRecord } from "@hypit/hypit/protocol";
 import type { ProducerPackage, ProducerHandler } from "@hypit/hypit/producer";
-import type { AdmissionPackage } from "@hypit/hypit/admission";
+import type { RefinementPackage } from "@hypit/hypit/refinement";
 import { VISUAL_IR_V1 } from "@hypit/composition";
 import { exampleProducers, exampleTypes } from "./manifest.js";
 
-const inline = <T>(record: { readonly value: { readonly kind: string; readonly value?: unknown } } | undefined): T => {
-  if (record?.value.kind !== "inline") throw new Error("example producer input must be inline");
-  return record.value.value as T;
+const valueOf = <T>(record: TypedRecord | undefined): T => {
+  if (record?.value === undefined) throw new Error("example producer input is missing");
+  return record.value as T;
 };
-const output = (value: unknown) => ({ kind: "inline" as const, value: canonicalize(value) });
+const output = (value: unknown) => ((canonicalize(value)));
 function image(record: TypedRecord | undefined): BlobRef | undefined {
   if (record === undefined) return undefined;
-  if (record.value.kind !== "blob" || !record.value.mediaType.startsWith("image/")) {
+  assertBlobRef(record.value, "example ImageSlot input");
+  if (!record.value.mediaType.startsWith("image/")) {
     throw new Error("example ImageSlot input must be an image Blob Artifact");
   }
   return record.value;
@@ -35,9 +36,9 @@ function render(kind: string, timeline: Timeline, within: SpatialFrame, image?: 
     ] }],
   });
 }
-const producer = (kind: string): { readonly handler: ProducerHandler } => ({ handler: ({ inputs }) => ({ outputs: { visual: output(render(kind,
-  inline<Timeline>(inputs.timeline), inline<SpatialFrame>(inputs.within), image(inputs.image))) }, needs: {} }) });
-const appendItems: { readonly handler: ProducerHandler } = { handler: ({ inputs }) => ({ outputs: { set: output({ items: [inline<{ items: readonly unknown[] }>(inputs.previous).items, inline<{ items: readonly unknown[] }>(inputs.item).items].flat() }) }, needs: {} }) };
+const producer = (kind: string): { readonly handler: ProducerHandler } => ({ handler: ({ inputs }) => ({ kind: "output", value: output(render(kind,
+  valueOf<Timeline>(inputs.timeline), valueOf<SpatialFrame>(inputs.within), image(inputs.image))) }) });
+const appendItems: { readonly handler: ProducerHandler } = { handler: ({ inputs }) => ({ kind: "output", value: output({ items: [valueOf<{ items: readonly unknown[] }>(inputs.previous).items, valueOf<{ items: readonly unknown[] }>(inputs.item).items].flat() }) }) };
 
 export const exampleComponent = {
   producers: [
@@ -46,9 +47,9 @@ export const exampleComponent = {
     { producer: exampleProducers.renderImage, ...producer("image") },
     { producer: exampleProducers.appendItems, ...appendItems },
   ],
-  validators: [
+  refinements: [
     { type: exampleTypes.box, handler: () => {} },
     { type: exampleTypes.text, handler: () => {} },
     { type: exampleTypes.imageSlot, handler: () => {} },
   ],
-} satisfies ProducerPackage & AdmissionPackage;
+} satisfies ProducerPackage & RefinementPackage;

@@ -6,7 +6,9 @@ export type { NodeCliRunner } from "./node-application.js";
 export { acceptSecretBytes } from "./secret-input.js";
 export { genericCliCommandNames } from "./command.js";
 export { commandHint } from "./command-hint.js";
-export { cliProviderLine, cliProviderView, createCliScratchResources, openCliRuntimeHost, selectCliProvider } from "./immediate.js";
+export { parseCliDecimalInteger } from "./decimal-integer.js";
+export { cliEndpointLine, cliEndpointView, createCliScratchResources, openCliRuntimeHost, selectCliEndpoint } from "./immediate.js";
+export type { CliRuntimeSelectionContext } from "./immediate.js";
 export { runVersionCli, writeVersionHelp } from "./version.js";
 export type { VersionEnvironment } from "./version.js";
 export { runInstalledCliApplication, writeCliCompositionHelp } from "./installed-application.js";
@@ -31,7 +33,7 @@ export type {
   CliBuildStatusView,
   CliBuildSummary,
   CliOutputView,
-  PublicOutputKind,
+  PublicOutputRepresentation,
 } from "./view.js";
 export type {
   CliCompilerOptions,

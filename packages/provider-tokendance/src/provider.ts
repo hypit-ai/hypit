@@ -1,7 +1,8 @@
+import { capabilityKey } from "@hypit/hypit/protocol";
 import type { AsyncEndpoint, EndpointCredential, EndpointInvocationContext, EndpointOutcome, ImmediateEndpointHandler } from "@hypit/hypit/endpoint";
 import { EndpointServiceError, defineEndpoint, wakeAfter } from "@hypit/hypit/endpoint";
 import { EndpointHttpError, EndpointResponseError, EndpointTransportError, withRequestDeadline } from "@hypit/hypit/endpoint/http";
-import type { GenerationArtifactUrlResolver } from "@hypit/generation";
+import type { GenerationArtifactUrlResolver } from "@hypit/generation/provider";
 import { canonicalize } from "@hypit/hypit/protocol";
 import type { BlobRef, CanonicalValue, CapabilityRef } from "@hypit/hypit/protocol";
 import { credentialRef } from "@hypit/hypit/endpoint";
@@ -40,7 +41,6 @@ function object(value: unknown, subject: string): Record<string, unknown> {
   assert(value !== null && typeof value === "object" && !Array.isArray(value), `${subject} must be an object`);
   return value as Record<string, unknown>;
 }
-function capabilityKey(capability: CapabilityRef): string { return `${capability.module.name}@${capability.module.version}#${capability.name}`; }
 function apiBaseUrl(value: string): string {
   let trimmed = value.trim();
   while (trimmed.endsWith("/")) trimmed = trimmed.slice(0, -1);
@@ -212,7 +212,7 @@ function endpoint(client: TokenDanceClient, pollIntervalMs: number, maxOperation
         }
         const handle: Handle = { contract: "hypit.tokendance-operation@1", taskId: taskId(route.protocol, response), route: route.key, startedAt: Date.now() };
         const receipt = { id: handle.taskId };
-        await context.checkpoint?.({ handle: canonicalize(handle), receipt });
+        await context.checkpoint?.({ status: "accepted", handle: canonicalize(handle), receipt });
         return { ...wakeAfter(canonicalize(handle), pollIntervalMs, Date.now(), { phase: "submitted" }), receipt };
       } catch (error) {
         return failure(error);

@@ -22,7 +22,7 @@ export const htmlProgramFragment = sealGraphFragment({
     id: "compile-program",
     producer: htmlProgramProducers.compile,
     inputs: { composition: input("composition"), timeline: input("timeline") },
-    result: { kind: "output", name: "program" },
+    result: { kind: "output" as const, name: "program" },
   }],
   exports: [{
     name: "program",

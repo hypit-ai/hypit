@@ -51,15 +51,27 @@ export type GenerationPortKind = GenerationPortScalarKind | GenerationMediaPortK
 type GenerationPortBase = {
   readonly name: string;
   readonly minItems: number;
-  readonly maxItems: number;
+  /** Omit when the Model contract has no owned finite ceiling. */
+  readonly maxItems?: number;
 };
 
-export type GenerationScalarPort = GenerationPortBase & { readonly value: GenerationPortScalarKind };
+export type GenerationScalarValue = string | number | boolean;
+
+export type GenerationScalarPort = GenerationPortBase & {
+  readonly value: GenerationPortScalarKind;
+  /**
+   * Model-owned values inserted when an author omits this port. Defaults are
+   * part of request finalization: every complete request carries them
+   * explicitly, so Providers never infer model semantics.
+   */
+  readonly defaultItems?: readonly GenerationScalarValue[];
+};
 export type GenerationMediaPort = GenerationPortBase & { readonly value: GenerationMediaPortKind };
 
 /**
- * One named input port. `minItems: 0` means the model works without it;
- * `maxItems: 1` means the port carries a single value rather than a list.
+ * One named input port. `minItems: 0` means the finalized model request works
+ * without it; a required scalar may still be author-optional when its Model
+ * declares `defaultItems`. `maxItems: 1` means the port carries one value.
  */
 export type GenerationPort = GenerationScalarPort | GenerationMediaPort;
 
@@ -78,7 +90,6 @@ export type GenerationPortRequirement =
 export type GenerationPortTable = {
   /** Exact model identity; this is also the Capability name. */
   readonly model: string;
-  readonly result: "audio" | "image" | "video";
   readonly ports: readonly GenerationPort[];
   readonly requires: readonly GenerationPortRequirement[];
 };
@@ -89,7 +100,7 @@ export type GenerationMediaValue = {
   readonly fields?: Readonly<Record<string, string | number | boolean>>;
 };
 
-export type GenerationPortValue = string | number | boolean | GenerationMediaValue;
+export type GenerationPortValue = GenerationScalarValue | GenerationMediaValue;
 
 const PORT_NAME = /^[a-z][A-Za-z0-9]*$/u;
 
@@ -133,10 +144,34 @@ function assertScalarKind(value: GenerationPortScalarKind, subject: string): voi
   assert(value.kind === "boolean", `${subject} has an unsupported port kind`);
 }
 
+function assertScalarValue(value: unknown, kind: GenerationPortScalarKind, subject: string): void {
+  if (kind.kind === "text") {
+    assert(typeof value === "string" && value.length > 0, `${subject} must be non-empty text`);
+    if (kind.maxChars !== undefined) assert(value.length <= kind.maxChars, `${subject} exceeds maxChars`);
+    return;
+  }
+  if (kind.kind === "token") {
+    assert(typeof value === "string" && value.length >= kind.minLength && value.length <= kind.maxLength,
+      `${subject} must satisfy the token length`);
+    return;
+  }
+  if (kind.kind === "boolean") {
+    assert(typeof value === "boolean", `${subject} must be boolean`);
+    return;
+  }
+  if (kind.kind === "number") {
+    assert(typeof value === "number" && Number.isFinite(value), `${subject} must be finite`);
+    if (kind.integer === true) assert(Number.isSafeInteger(value), `${subject} must be an integer`);
+    if (kind.minimum !== undefined) assert(value >= kind.minimum, `${subject} is below minimum`);
+    if (kind.maximum !== undefined) assert(value <= kind.maximum, `${subject} exceeds maximum`);
+    return;
+  }
+  assert((typeof value === "string" || typeof value === "number") && kind.values.includes(value),
+    `${subject} must be one of the declared enum values`);
+}
+
 export function assertGenerationPortTable(value: GenerationPortTable): void {
   assert(typeof value.model === "string" && value.model.trim().length > 0, "Generation port table model is empty");
-  assert(value.result === "audio" || value.result === "image" || value.result === "video",
-    `${value.model} port table result is invalid`);
   assert(value.ports.length > 0, `${value.model} declares no input port`);
 
   const names = new Set<string>();
@@ -146,8 +181,10 @@ export function assertGenerationPortTable(value: GenerationPortTable): void {
     assert(!names.has(port.name), `${subject} is declared twice`);
     names.add(port.name);
     assert(Number.isSafeInteger(port.minItems) && port.minItems >= 0, `${subject} minItems is invalid`);
-    assert(Number.isSafeInteger(port.maxItems) && port.maxItems >= Math.max(1, port.minItems),
-      `${subject} maxItems is invalid`);
+    if (port.maxItems !== undefined) {
+      assert(Number.isSafeInteger(port.maxItems) && port.maxItems >= Math.max(1, port.minItems),
+        `${subject} maxItems is invalid`);
+    }
     if (isMediaPort(port)) {
       const media = port.value;
       assert(media.accepts.length > 0, `${subject} accepts no media role`);
@@ -168,6 +205,15 @@ export function assertGenerationPortTable(value: GenerationPortTable): void {
       }
     } else {
       assertScalarKind(port.value, subject);
+      if (port.defaultItems !== undefined) {
+        assert(port.minItems > 0, `${subject} defaults require a non-zero minItems`);
+        assert(port.defaultItems.length >= port.minItems, `${subject} has too few default items`);
+        if (port.maxItems !== undefined) {
+          assert(port.defaultItems.length <= port.maxItems, `${subject} has too many default items`);
+        }
+        port.defaultItems.forEach((item, index) => assertScalarValue(item, port.value,
+          `${subject} defaultItems[${index}]`));
+      }
     }
   }
 

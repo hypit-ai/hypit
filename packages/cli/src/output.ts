@@ -103,10 +103,11 @@ export type PlanPreflight = {
   readonly omittedDiagnostics?: number;
 };
 
-export type PlanProvider = {
-  readonly request: string;
+export type PlanEndpoint = {
+  readonly need: string;
   readonly capability: string;
-  readonly status: "resolved" | "unresolved" | "unsupported" | "ambiguous";
+  readonly status: "resolved" | "unresolved" | "ambiguous";
+  readonly support: "supported" | "unsupported" | "not-evaluated";
   readonly endpoint?: string;
   readonly use?: string;
   readonly pricing?: { readonly kind: "page"; readonly url: string } | { readonly kind: "local" };
@@ -138,10 +139,8 @@ export type PlanOutput = {
   readonly choiceCount: number;
   readonly choices?: readonly { readonly output: string; readonly candidate: string }[];
   readonly omittedChoices?: number;
-  readonly unreached?: readonly { readonly output: string; readonly operation: string }[];
-  readonly omittedUnreached?: number;
   /** Present only when a Runtime Profile was selected; the Endpoint and price page behind each capability. */
-  readonly providers?: readonly PlanProvider[];
+  readonly endpoints?: readonly PlanEndpoint[];
   /** Every external request the Build will make, in step order, with its parameters when known. */
   readonly needs?: readonly PlanNeed[];
   readonly preflight?: PlanPreflight;
@@ -149,7 +148,7 @@ export type PlanOutput = {
 
 /** Output scope is independent of encoding. Limits apply to expanded detail, not demanded work. */
 export function createPlanOutput(plan: PlanOutput, options: { readonly verbose: boolean; readonly limit: number }): PlanOutput {
-  const { steps, choices = [], unreached = [], preflight, ...summary } = plan;
+  const { steps, choices = [], preflight, ...summary } = plan;
   const limit = options.limit;
   return {
     ...summary,
@@ -157,8 +156,6 @@ export function createPlanOutput(plan: PlanOutput, options: { readonly verbose: 
       steps,
       choices: choices.slice(0, limit),
       ...(choices.length <= limit ? {} : { omittedChoices: choices.length - limit }),
-      unreached: unreached.slice(0, limit),
-      ...(unreached.length <= limit ? {} : { omittedUnreached: unreached.length - limit }),
     } : {}),
     ...(preflight === undefined ? {} : { preflight: {
       ok: preflight.ok,
@@ -175,7 +172,7 @@ export function createPlanOutput(plan: PlanOutput, options: { readonly verbose: 
   };
 }
 
-export type PricingEntry = PlanProvider & {
+export type PricingEntry = PlanEndpoint & {
   readonly pricingDocuments?: readonly PricingDocument[];
   readonly pricingError?: string;
 };
@@ -193,26 +190,25 @@ export type PricingOutput = {
   readonly noChargeRequestCount: number;
   readonly producerFailureCount: number;
   readonly producerFailures: PlanOutput["producerFailures"];
-  readonly groups: readonly (Omit<PricingEntry, "request"> & {
+  readonly groups: readonly (Omit<PricingEntry, "need"> & {
     readonly requests: readonly PlanNeed[];
   })[];
 };
 
 export type PlanNeed = {
-  readonly request: string;
+  readonly need: string;
   readonly step: string;
   readonly port: string;
   readonly capability: string;
+  readonly status: "concrete" | "blocked" | "failed" | "unavailable";
   readonly endpoint?: string;
   readonly summary?: {
     readonly fields: Readonly<Record<string, string | number | boolean>>;
-    readonly references: Readonly<Record<string, number>>;
   };
   readonly pending: readonly {
     readonly input: string;
     readonly record: string;
     readonly sourceStep?: string;
-    readonly kind?: "image" | "video" | "audio" | "other";
   }[];
   readonly issue?: string;
 };
@@ -439,43 +435,28 @@ function stepLabel(step: string): string {
   return at === -1 ? decoded : decoded.slice(at + marker.length);
 }
 
-const MEASURE = /^(\d+) (words|chars)$/u;
-
-/** Text lengths are ranged across a group rather than splitting otherwise identical requests. */
 function groupKey(need: PlanNeed): string {
-  const pending = need.pending.map((item) => item.kind ?? "value").sort().join(",");
-  if (need.summary === undefined) return `?${pending}|${need.issue ?? ""}`;
-  const fields = Object.entries(need.summary.fields)
-    .map(([name, value]) => {
-      const measured = typeof value === "string" ? MEASURE.exec(value) : null;
-      return measured === null ? `${name}=${String(value)}` : `${name}=<${measured[2]}>`;
-    });
-  const references = Object.entries(need.summary.references).map(([kind, count]) => `${kind}=${count}`);
-  return [...fields, "|", ...references, "|", pending, "|", need.issue ?? ""].join(" ");
+  const pending = need.pending.map((item) => item.input).sort().join(",");
+  if (need.summary === undefined) return `${need.status}|?${pending}|${need.issue ?? ""}`;
+  const fields = Object.entries(need.summary.fields).map(([name, value]) => `${name}=${String(value)}`);
+  return [need.status, "|", ...fields, "|", pending, "|", need.issue ?? ""].join(" ");
 }
 
 function needSummaryText(needs: readonly PlanNeed[]): string {
   const first = needs[0]!;
   const parts: string[] = [];
   for (const [name, value] of Object.entries(first.summary?.fields ?? {})) {
-    const measured = typeof value === "string" ? MEASURE.exec(value) : null;
-    if (measured !== null) {
-      const unit = measured[2]!;
-      const counts = needs.map((need) => Number(MEASURE.exec(String(need.summary?.fields[name] ?? `0 ${unit}`))?.[1] ?? 0));
-      const low = Math.min(...counts);
-      const high = Math.max(...counts);
-      parts.push(`${name} ${low === high ? low : `${low}–${high}`} ${unit}`);
-    } else if (typeof value === "boolean") {
+    if (typeof value === "boolean") {
       parts.push(value ? name : `no ${name}`);
     } else {
       parts.push(`${name} ${value}`);
     }
   }
-  const references = Object.entries(first.summary?.references ?? {}).sort(([left], [right]) => left.localeCompare(right))
-    .map(([kind, count]) => `${count} ${kind}`);
-  if (references.length > 0) parts.push(`${references.join(" + ")} reference${references.length === 1 && references[0]!.startsWith("1 ") ? "" : "s"}`);
   const pendingCount = first.pending.length;
   if (pendingCount > 0) parts.push(`${pendingCount === 1 ? "input" : `${pendingCount} inputs`} produced during Build`);
+  if (first.status === "blocked" && pendingCount === 0) parts.push("request blocked by upstream work");
+  if (first.status === "failed") parts.push("request Producer failed");
+  if (first.status === "unavailable") parts.push("request Producer unavailable");
   if (first.issue !== undefined) parts.push(`could not inspect: ${first.issue}`);
   return parts.length === 0 ? "request summary unavailable" : parts.join(" · ");
 }
@@ -494,21 +475,22 @@ function groupedNeedLines(needs: readonly PlanNeed[], colors: Palette, verbose: 
   });
 }
 
-function providerGroupKey(provider: PlanProvider): string {
+function endpointGroupKey(endpoint: PlanEndpoint): string {
   return JSON.stringify({
-    capability: provider.capability,
-    status: provider.status,
-    endpoint: provider.endpoint,
-    use: provider.use,
-    pricing: provider.pricing,
-    endpoints: provider.endpoints,
-    rejections: provider.rejections,
-    binding: provider.binding,
+    capability: endpoint.capability,
+    status: endpoint.status,
+    support: endpoint.support,
+    endpoint: endpoint.endpoint,
+    use: endpoint.use,
+    pricing: endpoint.pricing,
+    endpoints: endpoint.endpoints,
+    rejections: endpoint.rejections,
+    binding: endpoint.binding,
   });
 }
 
-function providerRejectionText(provider: Pick<PlanProvider, "rejections">, verbose: boolean): string {
-  const rejections = provider.rejections ?? [];
+function endpointRejectionText(endpoint: Pick<PlanEndpoint, "rejections">, verbose: boolean): string {
+  const rejections = endpoint.rejections ?? [];
   if (rejections.length === 0) return "no configured Endpoint accepts this request";
   const shown = verbose ? rejections : rejections.slice(0, 1);
   return shown.map((rejection) => `${rejection.endpoint}: ${rejection.message}`).join("; ")
@@ -551,28 +533,24 @@ function renderPlan(
       lines.push(`  ${colors.error(glyph(io, "×", "x"))} ${colors.accent(stepLabel(failure.step))}: ${failure.message}`);
     }
   }
-  if (view.machine.providers !== undefined) {
-    if (view.machine.providers.length > 0) lines.push("", colors.strong("Providers and price pages"));
-    const groups = new Map<string, PlanProvider[]>();
-    for (const provider of view.machine.providers) {
-      const key = providerGroupKey(provider);
-      groups.set(key, [...(groups.get(key) ?? []), provider]);
+  if (view.machine.endpoints !== undefined) {
+    if (view.machine.endpoints.length > 0) lines.push("", colors.strong("Providers and price pages"));
+    const groups = new Map<string, PlanEndpoint[]>();
+    for (const endpoint of view.machine.endpoints) {
+      const key = endpointGroupKey(endpoint);
+      groups.set(key, [...(groups.get(key) ?? []), endpoint]);
     }
     for (const group of groups.values()) {
       const item = group[0]!;
-      const requestIssue = (view.machine.needs ?? [])
-        .find((need) => need.request === item.request)?.issue;
-      const where = requestIssue !== undefined
-        ? colors.error("request is not completely described before Build")
-        : item.status === "resolved"
-        ? `${item.endpoint ?? ""} ${colors.dim(`(${item.use ?? "?"})${item.binding === undefined ? "" : ", bound in the Profile"}`)}`
+      const where = item.status === "resolved"
+        ? item.support === "unsupported"
+          ? colors.error(endpointRejectionText(item, verbose))
+          : `${item.endpoint ?? ""} ${colors.dim(`(${item.use ?? "?"})${item.binding === undefined ? "" : ", bound in the Profile"}`)}`
         : item.status === "ambiguous"
           ? colors.warning(`${(item.endpoints ?? []).join(", ")} all offer it; add "bindings": { "${item.capability}": "<instance>" } to the Profile`)
-          : item.status === "unsupported"
-            ? colors.error(providerRejectionText(item, verbose))
           : item.binding === undefined
-            ? colors.error("no selected Endpoint accepts this request")
-            : colors.error(`bound to ${item.binding}, which does not offer it`);
+            ? colors.error("no Endpoint offers this demand")
+            : colors.error(`bound to ${item.binding}, which does not offer this demand`);
       const price = item.pricing === undefined
         ? (item.status === "resolved" ? colors.warning("price source unknown") : undefined)
         : item.pricing.kind === "local"
@@ -580,8 +558,8 @@ function renderPlan(
           : item.pricing.url;
       lines.push(`  ${colors.accent(verbose ? item.capability : capabilityLabel(item.capability))}`);
       lines.push(`    ${where}${price === undefined ? "" : `  ·  ${price}`}`);
-      const requests = new Set(group.map((provider) => provider.request));
-      lines.push(...groupedNeedLines((view.machine.needs ?? []).filter((need) => requests.has(need.request)), colors, verbose));
+      const needs = new Set(group.map((endpoint) => endpoint.need));
+      lines.push(...groupedNeedLines((view.machine.needs ?? []).filter((need) => needs.has(need.need)), colors, verbose));
     }
   } else if (view.machine.requestCount > 0) {
     const byCapability = new Map<string, PlanNeed[]>();
@@ -594,17 +572,6 @@ function renderPlan(
       lines.push(...groupedNeedLines(needs, colors, verbose));
     }
     lines.push("", colors.dim("Pass --runtime <profile> to see the Endpoint and price page behind each request."));
-  }
-  const unreached = view.machine.unreached ?? [];
-  if (verbose && unreached.length > 0) {
-    lines.push("", colors.strong("Declared but not reached"));
-    const width = Math.max(...unreached.map((item) => item.output.length));
-    for (const item of unreached) {
-      lines.push(`  ${colors.accent(item.output.padEnd(width))}  ${colors.dim(item.operation)}`);
-    }
-    if ((view.machine.omittedUnreached ?? 0) > 0) {
-      lines.push(`  ${colors.dim(`${view.machine.omittedUnreached} more · use --limit <count>`)}`);
-    }
   }
   if (view.machine.preflight !== undefined
     && (view.machine.preflight.diagnostics.length > 0
@@ -654,23 +621,15 @@ function pricingNeedLines(needs: readonly PlanNeed[], colors: Palette, verbose: 
   if (verbose || needs.length < 2) return groupedNeedLines(needs, colors, verbose);
   const first = needs[0]!;
   const sharedFields = Object.fromEntries(Object.entries(first.summary?.fields ?? {}).filter(([key, value]) => {
-    const measured = typeof value === "string" ? MEASURE.exec(value) : null;
-    return needs.every((need) => {
-      const other = need.summary?.fields[key];
-      return other === value || (measured !== null && typeof other === "string"
-        && MEASURE.exec(other)?.[2] === measured[2]);
-    });
+    return needs.every((need) => need.summary?.fields[key] === value);
   }));
-  const sharedReferences = needs.every((need) =>
-    JSON.stringify(need.summary?.references ?? {}) === JSON.stringify(first.summary?.references ?? {}));
   const sharedPending = needs.every((need) =>
-    JSON.stringify(need.pending.map((input) => input.kind).sort())
-      === JSON.stringify(first.pending.map((input) => input.kind).sort()));
+    JSON.stringify(need.pending.map((input) => input.input).sort())
+      === JSON.stringify(first.pending.map((input) => input.input).sort()));
   const common = needs.map(({ issue: _issue, ...need }) => ({
     ...need,
     summary: {
       fields: Object.fromEntries(Object.keys(sharedFields).map((key) => [key, need.summary!.fields[key]!])),
-      references: sharedReferences ? need.summary?.references ?? {} : {},
     },
     pending: sharedPending ? need.pending : [],
   }));
@@ -678,12 +637,11 @@ function pricingNeedLines(needs: readonly PlanNeed[], colors: Palette, verbose: 
     ...need,
     summary: {
       fields: Object.fromEntries(Object.entries(need.summary?.fields ?? {}).filter(([key]) => !Object.hasOwn(sharedFields, key))),
-      references: sharedReferences ? {} : need.summary?.references ?? {},
     },
     pending: sharedPending ? [] : need.pending,
   }));
   const hasParameters = (need: PlanNeed) => Object.keys(need.summary?.fields ?? {}).length > 0
-    || Object.keys(need.summary?.references ?? {}).length > 0 || need.pending.length > 0 || need.issue !== undefined;
+    || need.pending.length > 0 || need.issue !== undefined;
   return [
     ...(common.some(hasParameters) ? [`    ${needSummaryText(common)}`] : []),
     ...(varying.some(hasParameters) ? groupedNeedLines(varying, colors, false) : []),
@@ -698,11 +656,11 @@ export function createPricingOutput(
   includeNoCharge = false,
   producerFailures: PricingOutput["producerFailures"] = [],
 ): PricingOutput {
-  const needsByRequest = new Map(needs.map((need) => [need.request, need]));
-  const groups = new Map<string, Omit<PricingEntry, "request"> & { requests: PlanNeed[] }>();
+  const needsById = new Map(needs.map((need) => [need.need, need]));
+  const groups = new Map<string, Omit<PricingEntry, "need"> & { requests: PlanNeed[] }>();
   let noChargeRequestCount = 0;
-  for (const { request, ...entry } of entries) {
-    if (entry.status === "resolved" && entry.pricing?.kind === "local") {
+  for (const { need: needId, ...entry } of entries) {
+    if (entry.status === "resolved" && entry.support !== "unsupported" && entry.pricing?.kind === "local") {
       noChargeRequestCount++;
       if (!includeNoCharge) continue;
     }
@@ -712,7 +670,7 @@ export function createPricingOutput(
       group = { ...entry, requests: [] };
       groups.set(key, group);
     }
-    const need = needsByRequest.get(request);
+    const need = needsById.get(needId);
     if (need !== undefined) group.requests.push(need);
   }
   return {
@@ -749,15 +707,18 @@ function renderPricing(
   const shown = view.limit === undefined ? machine.groups : machine.groups.slice(0, view.limit);
   for (const item of shown) {
     const selected = item.status === "resolved"
-      ? `${item.endpoint ?? ""} ${colors.dim(`(${item.use ?? "?"})`)}`
+      ? item.support === "unsupported"
+        ? colors.error(endpointRejectionText(item, verbose))
+        : `${item.endpoint ?? ""} ${colors.dim(`(${item.use ?? "?"})`)}`
       : item.status === "ambiguous"
         ? colors.error(`several Endpoints: ${(item.endpoints ?? []).join(", ")}`)
-        : item.status === "unsupported"
-          ? colors.error(providerRejectionText(item, verbose))
-        : colors.error("no selected Endpoint accepts this request");
+        : colors.error("no Endpoint offers this demand");
     lines.push(`  ${colors.accent(verbose ? item.capability : capabilityLabel(item.capability))}`);
     lines.push(`    ${selected} · ${item.requests.length} request${item.requests.length === 1 ? "" : "s"}`);
     lines.push(...pricingNeedLines(item.requests, colors, verbose));
+    if (item.status === "resolved" && item.support === "not-evaluated") {
+      lines.push(`      ${colors.dim("Request-sensitive pricing deferred until the request is concrete")}`);
+    }
     if (item.pricing?.kind === "local") {
       lines.push(`      ${colors.dim("local, no Provider charge")}`);
     }
@@ -851,7 +812,7 @@ function commandHelp(topic: string, colors: Palette): readonly string[] | undefi
       "",
       "With --runtime, plan also preflights only the demanded deployment slice and names the Provider",
       "and price page behind each external request.",
-      "--verbose expands Run choices and unreached declarations. --limit bounds that detail,",
+      "--verbose expands Run choices and graph step counts. --limit bounds that detail,",
       "while all demanded requests and diagnostics remain visible in both text and JSON.",
       "Planning never starts external work.",
     ],
@@ -1015,6 +976,7 @@ export function writeCliHelp(io: CliIo, topic?: string): void {
 
 export function renderCliError(error: unknown, options: {
   readonly json: boolean;
+  readonly jsonl?: boolean;
   readonly color: boolean;
   readonly unicode: boolean;
   readonly debug: boolean;
@@ -1035,7 +997,7 @@ export function renderCliError(error: unknown, options: {
         ...(source instanceof CliUsageError ? { help: source.help } : {}),
         ...(options.debug && trace !== undefined && trace.length > 0 ? { trace } : {}),
       },
-    }, null, 2)}\n`;
+    }, null, options.jsonl === true ? undefined : 2)}\n`;
   }
   const colors = palette(options.color);
   const mark = options.unicode ? "×" : "x";

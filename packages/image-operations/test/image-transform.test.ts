@@ -68,10 +68,7 @@ test("the official Surface separates Program declaration from Transform use", as
   });
   assert.equal(output.records.length, 1);
   assert.deepEqual(output.records[0]?.type, imageTransformTypes.program);
-  assert.deepEqual(output.records[0]?.value, {
-    kind: "inline",
-    value: denoiseProgram as unknown as CanonicalValue,
-  });
+  assert.deepEqual(output.records[0]?.value, (denoiseProgram as unknown as CanonicalValue));
 });
 
 test("the graph contract is exactly source plus Program to one image Need", async () => {
@@ -80,7 +77,9 @@ test("the graph contract is exactly source plus Program to one image Need", asyn
   assert.deepEqual(imageOperationsManifest.capabilities.map((capability) => capability.name), [
     "transform-image", "compose-image",
   ]);
-  assert.deepEqual(imageOperationsManifest.producers[0]?.needs[0]?.capability,
+  assert.deepEqual(imageOperationsManifest.producers[0]?.result.kind === "need"
+    ? imageOperationsManifest.producers[0].result.capability
+    : undefined,
     imageOperationsCapabilities.transform);
   const producer = imageTransformComponent.producers[0]!;
   const source = {
@@ -98,11 +97,11 @@ test("the graph contract is exactly source plus Program to one image Need", asyn
     inputs: {
       source: record("source", blobTypes.blob, source),
       program: record("program", imageTransformTypes.program,
-        { kind: "inline", value: denoiseProgram as unknown as CanonicalValue }),
+        (denoiseProgram as unknown as CanonicalValue)),
     },
   } as never);
-  assert.deepEqual(result.outputs, {});
-  assert.deepEqual(result.needs.image, {
+  assert.equal(result.kind, "need");
+  assert.deepEqual(result.constraints, {
     source,
     operations: denoiseProgram.operations,
   });

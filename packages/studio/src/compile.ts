@@ -1,16 +1,13 @@
 import type { CompiledAuthorSource } from "@hypit/hypit/compiler";
 import type { AuthorElementProvenance, AuthorValueRef } from "@hypit/hypit/author";
-import type { BlobAttachment } from "@hypit/hypit/workspace";
 import type { TypeRef } from "@hypit/hypit/protocol";
 
 import type { Observations } from "./observe.js";
 import type { Placement } from "./observe.js";
+import { attachmentFile } from "./material.js";
+import type { ServedFile } from "./material.js";
 
-export type ServedFile = {
-  readonly mediaType: string;
-  readonly bytes: Uint8Array;
-  readonly source?: string;
-};
+export type { ServedFile } from "./material.js";
 
 export type CompiledSource = {
   readonly compiled: CompiledAuthorSource;
@@ -35,10 +32,7 @@ export async function observedCompiledSource(
 ): Promise<CompiledSource> {
   const served = new Map<string, ServedFile>();
   for (const attachment of compiled.attachments) {
-    served.set(attachment.artifact.resource, {
-      mediaType: attachment.artifact.mediaType,
-      bytes: await bytesOf(attachment),
-    });
+    served.set(attachment.blob.resource, attachmentFile(attachment));
   }
   const normalized = normalizeObservations(compiled, observations);
   const names = new Map(compiled.provenance.elements.flatMap((element) =>
@@ -146,21 +140,4 @@ function normalizeObservations(
     };
   });
   return { placements, temporalDomains: observations.temporalDomains };
-}
-
-async function bytesOf(attachment: BlobAttachment): Promise<Uint8Array> {
-  const chunks: Uint8Array[] = [];
-  let size = 0;
-  for await (const chunk of await attachment.open()) {
-    const copy = Uint8Array.from(chunk);
-    chunks.push(copy);
-    size += copy.byteLength;
-  }
-  const bytes = new Uint8Array(size);
-  let offset = 0;
-  for (const chunk of chunks) {
-    bytes.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
-  return bytes;
 }

@@ -1,5 +1,6 @@
+import { moduleKey } from "@hypit/protocol";
 import type {
-  CompiledGraph,
+  AuthorGraph,
   GraphValueRef,
   LinkedProgram,
   ModuleRef,
@@ -7,12 +8,8 @@ import type {
 } from "@hypit/protocol";
 
 import { createResolvedClosure, link } from "./link.js";
-import { planBuild } from "./plan.js";
-import type { BuildCandidateSelection } from "./plan.js";
-
-function moduleKey(ref: ModuleRef): string {
-  return `${ref.name}\u0000${ref.version}`;
-}
+import { verifyBuildPlan } from "./plan.js";
+import type { BuildCandidateSelection, PlannedExecution } from "./plan.js";
 
 /**
  * Materialize exactly the execution selected by one Author Graph and one Run Graph.
@@ -23,16 +20,17 @@ function moduleKey(ref: ModuleRef): string {
  */
 export function sliceExecution(
   program: LinkedProgram,
-  authorGraph: CompiledGraph,
+  authorGraph: AuthorGraph,
   runGraph: RunGraph,
+  selected: PlannedExecution,
 ): {
   readonly program: LinkedProgram;
-  readonly plan: ReturnType<typeof planBuild>["plan"];
-  readonly initialRecords: ReturnType<typeof planBuild>["initialRecords"];
+  readonly plan: PlannedExecution["plan"];
+  readonly initialRecords: PlannedExecution["initialRecords"];
+  readonly selectedSupplies: PlannedExecution["selectedSupplies"];
   readonly targets: RunGraph["targets"];
   readonly selections: readonly BuildCandidateSelection[];
 } {
-  const preliminary = planBuild(program, authorGraph, runGraph);
   const graph = {
     format: "hypit.graph@1" as const,
     outputs: authorGraph.outputs,
@@ -42,7 +40,7 @@ export function sliceExecution(
   const outputById = new Map(authorGraph.outputs.map((item) => [item.id, item]));
   const candidateById = new Map(graph.candidates.map((item) => [item.id, item]));
   const operationById = new Map(graph.operations.map((item) => [item.id, item]));
-  const selectionByOutput = new Map(preliminary.selections.map((item) => [item.output, item]));
+  const selectionByOutput = new Map(selected.selections.map((item) => [item.output, item]));
   const outputs = new Set<string>();
   const candidates = new Set<string>();
   const operations = new Set<string>();
@@ -78,6 +76,31 @@ export function sliceExecution(
 
   const selectedOperations = graph.operations.filter((item) => operations.has(item.id));
   const authoredRecords = program.records.filter((record) => records.has(record.id));
+  const executionSelections = selected.selections.filter((item) => outputs.has(item.output));
+  const targetRecords = new Set<string>();
+  for (const target of runGraph.targets) {
+    const selection = selectionByOutput.get(target.output);
+    const output = outputById.get(target.output);
+    if (selection === undefined || output === undefined) {
+      throw new Error(`execution slice has no selected source for ${target.output}`);
+    }
+    targetRecords.add(selection.record);
+  }
+  const goals = [...targetRecords].sort();
+  const requiredRecords = new Set([
+    ...goals,
+    ...selected.plan.steps
+      .filter((step) => operations.has(step.id))
+      .flatMap((step) => Object.values(step.inputs)),
+  ]);
+  const initialRecords = selected.initialRecords.filter((record) => requiredRecords.has(record.id));
+  const selectedSupplies = selected.selectedSupplies.filter((supply) =>
+    candidates.has(supply.candidate) && requiredRecords.has(supply.record));
+  const plan: PlannedExecution["plan"] = {
+    format: "hypit.plan@1",
+    steps: selected.plan.steps.filter((step) => operations.has(step.id)),
+    goals,
+  };
 
   const requiredModules = new Set<string>();
   const modulesByKey = new Map(program.closure.modules.map((item) => [moduleKey(item.manifest), item]));
@@ -85,24 +108,29 @@ export function sliceExecution(
     const key = moduleKey(ref);
     if (requiredModules.has(key)) return;
     const resolved = modulesByKey.get(key);
-    if (resolved === undefined) throw new Error(`execution slice refers to absent module ${ref.name}@${ref.version}`);
+    if (resolved === undefined) throw new Error(`execution slice refers to absent module ${key}`);
     requiredModules.add(key);
     resolved.manifest.dependencies.forEach((item) => requireModule(item.module));
   };
   selectedOperations.forEach((item) => requireModule(item.producer.module));
-  preliminary.plan.outputBindings.forEach((item) => requireModule(item.type.module));
-  preliminary.initialRecords.forEach((item) => requireModule(item.type.module));
+  initialRecords.forEach((item) => requireModule(item.type.module));
+  selectedSupplies.forEach((item) => requireModule(item.type.module));
   authoredRecords.forEach((item) => requireModule(item.type.module));
 
   const closure = createResolvedClosure(program.closure.modules
     .filter((item) => requiredModules.has(moduleKey(item.manifest)))
     .map((item) => item.manifest));
   const slicedProgram = link(closure, authoredRecords);
+  verifyBuildPlan(slicedProgram, [
+    ...initialRecords,
+    ...selectedSupplies.map((supply) => ({ id: supply.record, type: supply.type })),
+  ], plan);
   return {
     program: slicedProgram,
-    plan: preliminary.plan,
-    initialRecords: preliminary.initialRecords,
+    plan,
+    initialRecords,
+    selectedSupplies,
     targets: runGraph.targets,
-    selections: preliminary.selections,
+    selections: executionSelections,
   };
 }

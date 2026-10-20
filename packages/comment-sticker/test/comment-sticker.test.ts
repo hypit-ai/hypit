@@ -143,7 +143,7 @@ function authored(path: string, type: SurfaceResolvedReference["type"], value: u
     record: {
       id: path,
       type,
-      value: { kind: "inline", value: value as never },
+      value: (value as never),
     },
   };
 }
@@ -184,7 +184,7 @@ test("Track Surface lowers literal and graph Text with a resolved Window to a fi
     resolveAsset: noAsset,
   });
   assert.equal(result.components.filter((component) => component.outputs.visual !== undefined).length, 1);
-  assert.deepEqual(result.fragments.flatMap((fragment) => fragment.operations.map((operation) => operation.producer.name)).sort(), [
+  assert.deepEqual(result.components.flatMap(({ fragment }) => fragment.operations.map((operation) => operation.producer.name)).sort(), [
     commentStickerProducers.createSet.name,
     commentStickerProducers.createContent.name,
     commentStickerProducers.setContentAuthor.name,

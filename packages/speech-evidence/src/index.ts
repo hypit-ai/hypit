@@ -1,4 +1,4 @@
-import { isResourceId } from "@hypit/hypit/protocol";
+import { assertBlobRef } from "@hypit/hypit/protocol";
 import { mediaDependency, mediaTypes } from "@hypit/media";
 import { temporalDependency, temporalTypes } from "@hypit/temporal";
 import type { BlobRef, CapabilityRef, ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/hypit/protocol";
@@ -128,12 +128,7 @@ export const speechEvidenceManifest: ModuleManifest = {
       { name: "media", type: mediaTypes.synchronized },
       { name: "domain", type: temporalTypes.localDomain },
     ],
-    outputs: [],
-    needs: [{
-      name: "evidenceAudio",
-      capability: speechEvidenceCapabilities.projectAudio,
-      returns: speechEvidenceTypes.audio,
-    }],
+    result: { kind: "need" as const, name: "evidenceAudio", capability: speechEvidenceCapabilities.projectAudio },
   }],
 };
 export const speechEvidenceDependency = {
@@ -159,9 +154,9 @@ export function sealSpeechEvidenceAudio(value: SpeechEvidenceAudio): SpeechEvide
 }
 
 export function assertSpeechEvidenceAudioIdentity(value: SpeechEvidenceAudio): void {
+  assertBlobRef(value.artifact, "SpeechEvidenceAudio.artifact");
   if (typeof value.domainId !== "string" || value.domainId.length === 0
-    || value.artifact.kind !== "blob" || !isResourceId(value.artifact.resource)
-    || !Number.isSafeInteger(value.artifact.size) || value.artifact.size < 0 || value.artifact.mediaType !== "audio/wav"
+    || value.artifact.mediaType !== "audio/wav"
     || !Number.isSafeInteger(value.sampleFrames) || value.sampleFrames < 1) {
     throw new Error("SpeechEvidenceAudio identity is invalid.");
   }

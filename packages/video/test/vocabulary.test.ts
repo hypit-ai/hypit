@@ -32,19 +32,30 @@ test("the listing sees every activatable package from the repository root", asyn
   assert.ok(pipeline !== undefined, "media-operations is listed");
   assert.ok(pipeline.tags.includes("StillVideo"), `tags: ${pipeline.tags.join(", ")}`);
   assert.equal(pipeline.unreadable, undefined);
+  const seedance = listing.find((item) => item.name === "@hypit/seedance");
+  assert.deepEqual(seedance?.capabilities?.map((item) => item.name).sort(),
+    ["seedance-2", "seedance-2-fast", "seedance-2-mini", "seedance-2.5"]);
+  assert.ok(seedance?.capabilities?.every((item) =>
+    item.module === "@hypit/seedance@1"
+      && item.returns === "@hypit/generation@1#GeneratedVideoSet"));
 });
 
 test("vocabulary discovers bundled packages from a separate project without node_modules", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-vocabulary-"));
   const project = join(root, "project");
   const distribution = join(root, "distribution");
-  async function packageAt(directory: string, name: string, description = name): Promise<void> {
+  async function packageAt(
+    directory: string,
+    name: string,
+    description = name,
+    activation?: string,
+  ): Promise<void> {
     await mkdir(directory, { recursive: true });
     await writeFile(join(directory, "package.json"), JSON.stringify({
       name, version: "1.0.0", type: "module", description,
       hypit: { activation: "./activation.mjs" },
     }));
-    await writeFile(join(directory, "activation.mjs"), `export default {
+    await writeFile(join(directory, "activation.mjs"), activation ?? `export default {
       format: "hypit.package@1",
       facets: [{
         abi: ${JSON.stringify(markupSurfaceFacetAbi)},
@@ -90,6 +101,38 @@ test("vocabulary discovers bundled packages from a separate project without node
     assert.deepEqual(listing.map((item) => item.name).sort(), ["@hypit/bundled", "@studio/custom", "@studio/local"]);
     assert.equal(listing.find((item) => item.name === "@studio/custom")!.description, "project package");
     assert.ok(listing.every((item) => item.unreadable === undefined && item.tags.includes("Card")));
+
+    // Model discovery is a projection of the named package's Manifest. Loading its dependency
+    // closure must not attribute a dependency's capabilities to the package being listed.
+    const inner = join(project, "node_modules", "@studio", "inner");
+    await packageAt(inner, "@studio/inner", "inner model", `export default {
+      format: "hypit.package@1",
+      modules: [{ manifest: {
+        format: "hypit.module@1", name: "@studio/inner", version: "1",
+        dependencies: [], types: [],
+        capabilities: [{
+          name: "inner-model",
+          returns: { module: { name: "@hypit/generation", version: "1" }, name: "GeneratedImageSet" },
+        }],
+        producers: [],
+      }}],
+    };`);
+    const outer = join(project, "node_modules", "@studio", "outer");
+    await packageAt(outer, "@studio/outer", "outer package", `export default {
+      format: "hypit.package@1",
+      modules: [{ manifest: {
+        format: "hypit.module@1", name: "@studio/outer", version: "1",
+        dependencies: [{ module: { name: "@studio/inner", version: "1" } }],
+        types: [], capabilities: [], producers: [],
+      }}],
+    };`);
+    const modelListing = await listPackages(project, distribution);
+    assert.deepEqual(modelListing.find((item) => item.name === "@studio/inner")?.capabilities, [{
+      module: "@studio/inner@1",
+      name: "inner-model",
+      returns: "@hypit/generation@1#GeneratedImageSet",
+    }]);
+    assert.equal(modelListing.find((item) => item.name === "@studio/outer")?.capabilities, undefined);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

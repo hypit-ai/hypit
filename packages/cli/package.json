@@ -20,7 +20,7 @@
     "@hypit/run": "workspace:*",
     "@hypit/runtime": "workspace:*",
     "@hypit/source": "workspace:*",
-    "@hypit/admission": "workspace:*",
+    "@hypit/refinement": "workspace:*",
     "@hypit/workspace": "workspace:*",
     "typescript": "5.9.3"
   },

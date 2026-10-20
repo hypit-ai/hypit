@@ -142,8 +142,7 @@ export const textManifest: ModuleManifest = {
     {
       name: textProducers.emptyBindings.name,
       inputs: [],
-      outputs: [{ name: "bindings", type: textTypes.bindings }],
-      needs: [],
+      result: { kind: "output" as const, name: "bindings", type: textTypes.bindings },
     },
     {
       name: textProducers.bindText.name,
@@ -152,8 +151,7 @@ export const textManifest: ModuleManifest = {
         { name: "binding", type: textTypes.binding },
         { name: "text", type: textTypes.text },
       ],
-      outputs: [{ name: "bindings", type: textTypes.bindings }],
-      needs: [],
+      result: { kind: "output" as const, name: "bindings", type: textTypes.bindings },
     },
     {
       name: textProducers.render.name,
@@ -161,8 +159,7 @@ export const textManifest: ModuleManifest = {
         { name: "template", type: textTypes.template },
         { name: "bindings", type: textTypes.bindings },
       ],
-      outputs: [{ name: "text", type: textTypes.text }],
-      needs: [],
+      result: { kind: "output" as const, name: "text", type: textTypes.text },
     },
   ],
 };

@@ -29,8 +29,7 @@ test("Studio observes and edits the compiler's Script body without changing its 
   assert.equal(after.serializations.speech, parsed.serializations.speech);
   assert.deepEqual(captionDocument(after, "caption", "story"), captionDocument(parsed, "caption", "story"));
 
-  const values = decoded.records.flatMap(record => record.value.kind === "inline"
-    ? [{ id: record.id, type: record.type, value: record.value.value }] : []);
+  const values = decoded.records.flatMap(record => [{ id: record.id, type: record.type, value: record.value }]);
   values.push({ id: "story.projection", type: narrativeTemporalTypes.narrativeProjection, value: {
     id: "story.projection", narrativeId: "story", timelineId: "film",
     segments: parsed.segments.map((segment) => ({ segmentId: segment.id,
@@ -65,8 +64,7 @@ test("Studio projects every exact Narrative Projection instead of choosing one p
   const observed = companion.observe({ sourceName: "studio.svml", source, tag: "script", attributes: { id: "story" },
     range: { start: 0, end: source.length }, contentStart: prefix.length, nextOffset: decoded.nextOffset })!;
   const parsed = parseScript("body", body);
-  const values = decoded.records.flatMap(record => record.value.kind === "inline"
-    ? [{ id: record.id, type: record.type, value: record.value.value }] : []);
+  const values = decoded.records.flatMap(record => [{ id: record.id, type: record.type, value: record.value }]);
   for (const [id, offset] of [["story.primary", 0], ["story.alternate", 40]] as const) {
     values.push({ id, type: narrativeTemporalTypes.narrativeProjection, value: {
       id, narrativeId: "story", timelineId: "film",

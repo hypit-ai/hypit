@@ -1,4 +1,4 @@
-import { createAdmissionPackageFacet } from "@hypit/hypit/admission";
+import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
 import { createProducerPackageFacet } from "@hypit/hypit/producer";
 import { createMarkupSurfaceFacet } from "@hypit/hypit/markup";
 import { createStudioCompanionFacet } from "@hypit/studio-companion";
@@ -17,7 +17,7 @@ export const hypitPackage = {
   format: "hypit.package@1" as const,
   modules: [{ manifest: visualTrackManifest }],
   facets: [
-    ...[visualTrackComponent].flatMap((component) => [createProducerPackageFacet(component), createAdmissionPackageFacet(component)]),
+    ...[visualTrackComponent].flatMap((component) => [createProducerPackageFacet(component), createRefinementPackageFacet(component)]),
     createMarkupSurfaceFacet({
       module: visualTrackModuleRef,
       declaration: visualTrackMarkupSurfaces.find((item) => item.name === "track")!,

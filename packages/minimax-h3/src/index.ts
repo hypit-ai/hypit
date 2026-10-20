@@ -1,8 +1,8 @@
 import { blobTypes } from "@hypit/hypit/blob";
-import { sealGenerationPortRequest, sealGenerationPortTable } from "@hypit/generation";
-import type { GenerationPortTable, GenerationPortValue, GenerationRequest } from "@hypit/generation";
+import { sealModelFieldRequest, defineModelFields } from "@hypit/generation/model-fields";
+import type { ModelFieldTable, ModelFieldValue, ModelFieldRequest } from "@hypit/generation/model-fields";
 import type { SurfaceAttributeVocabulary, SurfacePortVocabulary, SurfaceVocabulary } from "@hypit/hypit/markup";
-import { defineExactModelModule } from "@hypit/generation/model";
+import { defineFieldModelModule, standardGenerationResults } from "@hypit/generation/model-fields";
 import { textTypes } from "@hypit/hypit/text";
 
 export const minimaxH3ModuleRef = { name: "@hypit/minimax-h3", version: "1" } as const;
@@ -16,9 +16,8 @@ export const minimaxH3ModuleRef = { name: "@hypit/minimax-h3", version: "1" } as
  * 768p and H3-Regenerate-2K re-renders from the original context — so the
  * spelling is MiniMax's, not any gateway's.
  */
-export const minimaxH3Ports: GenerationPortTable = sealGenerationPortTable({
+export const minimaxH3Ports: ModelFieldTable = defineModelFields({
   model: "minimax-h3",
-  result: "video",
   ports: [
     { name: "prompt", value: { kind: "text", maxChars: 7_000 }, minItems: 1, maxItems: 1 },
     {
@@ -27,16 +26,17 @@ export const minimaxH3Ports: GenerationPortTable = sealGenerationPortTable({
       minItems: 1,
       maxItems: 1,
     },
-    { name: "resolution", value: { kind: "enum", values: ["768P", "2K"] }, minItems: 0, maxItems: 1 },
+    { name: "resolution", value: { kind: "enum", values: ["768P", "2K"] }, minItems: 1, maxItems: 1,
+      defaultItems: ["2K"] },
     {
       name: "aspectRatio",
       value: { kind: "enum", values: ["21:9", "16:9", "4:3", "1:1", "3:4", "9:16"] },
       minItems: 0,
       maxItems: 1,
     },
-    { name: "referenceImage", value: { kind: "media", accepts: ["image"] }, minItems: 0, maxItems: 9 },
-    { name: "referenceVideo", value: { kind: "media", accepts: ["video"] }, minItems: 0, maxItems: 3 },
-    { name: "referenceAudio", value: { kind: "media", accepts: ["audio"] }, minItems: 0, maxItems: 3 },
+    { name: "referenceImage", value: { kind: "media", accepts: ["image"] }, minItems: 0 },
+    { name: "referenceVideo", value: { kind: "media", accepts: ["video"] }, minItems: 0 },
+    { name: "referenceAudio", value: { kind: "media", accepts: ["audio"] }, minItems: 0 },
     { name: "firstFrame", value: { kind: "media", accepts: ["image"] }, minItems: 0, maxItems: 1 },
     { name: "lastFrame", value: { kind: "media", accepts: ["image"] }, minItems: 0, maxItems: 1 },
   ],
@@ -52,23 +52,23 @@ export const minimaxH3Ports: GenerationPortTable = sealGenerationPortTable({
     // model takes no aspect ratio in that mode.
     { kind: "atMostOneOf", ports: ["aspectRatio", "firstFrame"] },
     { kind: "atMostOneOf", ports: ["aspectRatio", "lastFrame"] },
-    { kind: "weightedTotal", weights: { referenceImage: 1, referenceVideo: 1, referenceAudio: 1 }, maximum: 12 },
   ],
 });
 
 export function sealMinimaxH3Request(
-  ports: Readonly<Record<string, readonly GenerationPortValue[]>>,
-): GenerationRequest {
-  return sealGenerationPortRequest(minimaxH3Ports, ports);
+  ports: Readonly<Record<string, readonly ModelFieldValue[]>>,
+): ModelFieldRequest {
+  return sealModelFieldRequest(minimaxH3Ports, ports);
 }
 
-const minimaxH3BaseDefinition = defineExactModelModule({
+const minimaxH3BaseDefinition = defineFieldModelModule({
   module: minimaxH3ModuleRef,
   endpoints: [{
     key: "video",
     requestTypeName: "MinimaxH3Request",
     producerName: "request-minimax-h3",
     ports: minimaxH3Ports,
+    result: standardGenerationResults.video,
   }],
 });
 
@@ -93,7 +93,7 @@ const minimaxH3Common: readonly SurfaceAttributeVocabulary[] = [
   { name: "duration", kind: "literal", required: true,
     summary: "Sets the length of the generated video in whole seconds." },
   { name: "resolution", kind: "literal", required: false, values: ["768P", "2K"],
-    summary: "Chooses which of the model's two output tiers renders the video." },
+    summary: "Chooses which of the model's two output tiers renders the video; defaults to 2K." },
 ];
 
 const minimaxH3AspectRatio: SurfaceAttributeVocabulary = {
@@ -169,7 +169,7 @@ export const minimaxH3MarkupSurfaces = [
         minimaxH3DurationNote,
         minimaxH3ResolutionNote,
         "`Reference` carries exactly one of `image`, `video` or `audio`, and is empty.",
-        "The element requires at least one `Reference`, and accepts at most 9 image, 3 video and 3 audio references and 12 in total.",
+        "The element requires at least one `Reference`; the selected Endpoint reports any service-specific reference quota.",
         "An audio `Reference` requires an image or video `Reference` beside it.",
         "The element carries no text content.",
       ],

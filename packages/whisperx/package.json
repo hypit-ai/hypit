@@ -1,6 +1,6 @@
 {
   "name": "@hypit/whisperx",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
   "type": "module",
@@ -16,16 +16,16 @@
     "activation": "./src/activation.ts"
   },
   "peerDependencies": {
-    "@hypit/hypit": "workspace:^0.3.1"
+    "@hypit/hypit": "workspace:^0.4.0"
   },
   "dependencies": {
-    "@hypit/media": "workspace:^0.1.0",
-    "@hypit/media-local": "workspace:^0.2.0",
-    "@hypit/narrative": "workspace:^0.1.0",
-    "@hypit/narrative-speech-alignment": "workspace:^0.2.0",
-    "@hypit/narrative-temporal": "workspace:^0.1.0",
-    "@hypit/speech-evidence": "workspace:^0.1.0",
-    "@hypit/temporal": "workspace:^0.1.0"
+    "@hypit/media": "workspace:^0.2.0",
+    "@hypit/media-local": "workspace:^0.2.1",
+    "@hypit/narrative": "workspace:^0.1.1",
+    "@hypit/narrative-speech-alignment": "workspace:^0.2.1",
+    "@hypit/narrative-temporal": "workspace:^0.1.1",
+    "@hypit/speech-evidence": "workspace:^0.2.0",
+    "@hypit/temporal": "workspace:^0.1.1"
   },
   "devDependencies": {
     "@hypit/hypit": "workspace:*",

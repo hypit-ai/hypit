@@ -46,7 +46,7 @@ export const regionEvidenceManifest: ModuleManifest = {
       { name: "timeline", type: timelineTypes.timeline },
       { name: "recipe", type: recipeType },
     ],
-    outputs: [{ name: "evidence", type: regionEvidenceTypes.evidence }], needs: [],
+    result: { kind: "output" as const, name: "evidence", type: regionEvidenceTypes.evidence },
   }],
 };
 export const regionEvidenceDependency = { module: regionEvidenceModuleRef } as const;

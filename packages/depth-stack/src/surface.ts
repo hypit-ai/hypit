@@ -1,3 +1,4 @@
+import { sameType } from "@hypit/hypit/protocol";
 import { resolveTemporalContext } from "@hypit/temporal/markup";
 import { blobTypes } from "@hypit/hypit/blob";
 import { mediaTypes } from "@hypit/media";
@@ -29,10 +30,6 @@ import {
   sealDepthStackHeader,
 } from "./program.js";
 import type { DepthStackCardLabelStyle } from "./types.js";
-
-function sameType(left: TypeRef, right: TypeRef): boolean {
-  return left.module.name === right.module.name && left.module.version === right.module.version && left.name === right.name;
-}
 
 function allowed(element: StructuredElement, names: readonly string[]): void {
   const permit = new Set(names);
@@ -92,9 +89,9 @@ function oneOfReference(
   return value;
 }
 
-function inline<T>(value: SurfaceResolvedReference, label: string): T {
-  if (value.record?.value.kind !== "inline") throw new Error(`${label} must resolve during author compilation.`);
-  return value.record.value.value as unknown as T;
+function valueOf<T>(value: SurfaceResolvedReference, label: string): T {
+  if (value.record === undefined) throw new Error(`${label} must resolve during author compilation.`);
+  return value.record.value as unknown as T;
 }
 
 function recipe(
@@ -102,7 +99,7 @@ function recipe(
   label: string,
   resolve: (path: string) => SurfaceResolvedReference | undefined,
 ): Recipe {
-  return inline<Recipe>(reference(raw, label, recipeType, resolve), label);
+  return valueOf<Recipe>(reference(raw, label, recipeType, resolve), label);
 }
 
 function labelText(element: StructuredElement): string {
@@ -119,7 +116,7 @@ function labelFragment(id: string) {
     inputs: [{ name: "style", type: depthStackTypes.cardLabelStyle }, { name: "content", type: textTypes.text }],
     operations: [{
       id: "bind", producer: depthStackProducers.bindLabelText,
-      inputs: { style: input("style"), content: input("content") }, result: { kind: "output", name: "label" },
+      inputs: { style: input("style"), content: input("content") }, result: { kind: "output" as const, name: "label" },
     }],
     exports: [{ name: "label", type: depthStackTypes.cardLabel, root: operation }],
   });
@@ -128,7 +125,7 @@ function labelFragment(id: string) {
 export const decodeDepthStackLabelSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
   allowed(element, ["id", "content", "font", "size", "color", "align", "block", "padding"]);
   const id = text(element, "id");
-  const stack = inline<FontStackRef>(reference(element.attributes.font, `${element.name}.font`, mediaTypes.fontStack, resolveReference), `${element.name}.font`);
+  const stack = valueOf<FontStackRef>(reference(element.attributes.font, `${element.name}.font`, mediaTypes.fontStack, resolveReference), `${element.name}.font`);
   const primary = stack.faces[0];
   if (primary === undefined) throw new Error(`${element.name}.font stack is empty.`);
   const align = text(element, "align", "center");
@@ -155,11 +152,11 @@ export const decodeDepthStackLabelSurface: StructuredSurfaceHandler = ({ element
     },
   });
   const styleId = `${id}.__style`;
-  const records: SurfaceRecordDraft[] = [{ id: styleId, type: depthStackTypes.cardLabelStyle, value: { kind: "inline", value: style }, range: element.range }];
+  const records: SurfaceRecordDraft[] = [{ id: styleId, type: depthStackTypes.cardLabelStyle, value: (style), range: element.range }];
   let contentRef: AuthorValueRef;
   if (element.attributes.content === undefined) {
     const contentId = `${id}.__content`;
-    records.push({ id: contentId, type: textTypes.text, value: { kind: "inline", value: sealText(labelText(element)) }, range: element.range });
+    records.push({ id: contentId, type: textTypes.text, value: (sealText(labelText(element))), range: element.range });
     contentRef = { kind: "record", id: contentId };
   } else {
     empty(element);
@@ -168,8 +165,7 @@ export const decodeDepthStackLabelSurface: StructuredSurfaceHandler = ({ element
   const fragment = labelFragment(id);
   return {
     records,
-    components: [{ id, fragment: fragment.id, inputs: { style: { kind: "record", id: styleId }, content: contentRef }, outputs: { label: id }, range: element.range }],
-    fragments: [fragment],
+    components: [{ id, fragment, inputs: { style: { kind: "record", id: styleId }, content: contentRef }, outputs: { label: id }, range: element.range }],
   };
 };
 
@@ -184,8 +180,8 @@ export const decodeDepthStackSurface: StructuredSurfaceHandler = ({ element, res
   const headerId = `${id}.header`;
   const specId = `${id}.spec`;
   records.push(
-    { id: headerId, type: depthStackTypes.header, value: { kind: "inline", value: sealDepthStackHeader({ id }) }, range: element.range },
-    { id: specId, type: depthStackTypes.spec, value: { kind: "inline", value: decodeDepthStackSpec(appearance) }, range: element.range },
+    { id: headerId, type: depthStackTypes.header, value: (sealDepthStackHeader({ id })), range: element.range },
+    { id: specId, type: depthStackTypes.spec, value: (decodeDepthStackSpec(appearance)), range: element.range },
   );
   const inputs: Record<string, typeof context.timeline.ref> = {
     frame: frame.ref, header: { kind: "record", id: headerId }, timeline: context.timeline.ref,
@@ -219,9 +215,9 @@ export const decodeDepthStackSurface: StructuredSurfaceHandler = ({ element, res
     const sampleId = `${id}.card.${suffix}.sample-spec`;
     const cardSpecId = `${id}.card.${suffix}.card-spec`;
     records.push(
-      { id: fitId, type: spatialTypes.fit, value: { kind: "inline", value: material.fit }, range: child.range },
-      { id: sampleId, type: visualTrackTypes.sampleLayerSpec, value: { kind: "inline", value: material.sample }, range: child.range },
-      { id: cardSpecId, type: depthStackTypes.cardSpec, value: { kind: "inline", value: decodeDepthStackCardSpec(cardAppearance, cardId) }, range: child.range },
+      { id: fitId, type: spatialTypes.fit, value: (material.fit), range: child.range },
+      { id: sampleId, type: visualTrackTypes.sampleLayerSpec, value: (material.sample), range: child.range },
+      { id: cardSpecId, type: depthStackTypes.cardSpec, value: (decodeDepthStackCardSpec(cardAppearance, cardId)), range: child.range },
     );
     const sourceName = `card-${suffix}-source`;
     const fitName = `card-${suffix}-fit`;
@@ -237,7 +233,7 @@ export const decodeDepthStackSurface: StructuredSurfaceHandler = ({ element, res
     let labelRef: typeof context.timeline.ref;
     if (child.attributes.label === undefined) {
       const labelId = `${id}.card.${suffix}.label-none`;
-      records.push({ id: labelId, type: depthStackTypes.cardLabel, value: { kind: "inline", value: noDepthStackCardLabel() }, range: child.range });
+      records.push({ id: labelId, type: depthStackTypes.cardLabel, value: (noDepthStackCardLabel()), range: child.range });
       labelRef = { kind: "record", id: labelId };
     } else {
       labelRef = reference(child.attributes.label, `${child.name}.label`, depthStackTypes.cardLabel, resolveReference).ref;
@@ -252,7 +248,7 @@ export const decodeDepthStackSurface: StructuredSurfaceHandler = ({ element, res
     if (material.framePaint !== undefined) {
       framePaintSpecName = `card-${suffix}-frame-paint`;
       const paintId = `${id}.card.${suffix}.frame-paint`;
-      records.push({ id: paintId, type: visualTrackTypes.paintLayerSpec, value: { kind: "inline", value: material.framePaint }, range: child.range });
+      records.push({ id: paintId, type: visualTrackTypes.paintLayerSpec, value: (material.framePaint), range: child.range });
       inputs[framePaintSpecName] = { kind: "record", id: paintId };
     }
     cards.push({
@@ -264,8 +260,7 @@ export const decodeDepthStackSurface: StructuredSurfaceHandler = ({ element, res
   const fragment = createDepthStackFragment(cards, "terminal");
   return {
     records,
-    components: [{ id, fragment: fragment.id, inputs, outputs: { program: `${id}.program`, visual: `${id}.visual` }, range: element.range }],
-    fragments: [fragment],
+    components: [{ id, fragment, inputs, outputs: { program: `${id}.program`, visual: `${id}.visual` }, range: element.range }],
     exports: [`${id}.program`, `${id}.visual`],
   };
 };

@@ -1,3 +1,4 @@
+import { sameType } from "@hypit/hypit/protocol";
 import { compositionTypes } from "@hypit/composition";
 import type { AudioTrack, Track, VisualTrack } from "@hypit/composition";
 import { spatialTypes } from "@hypit/spatial";
@@ -39,12 +40,6 @@ function referenceAttribute(element: StructuredElement, name: string): string {
   return value.path;
 }
 
-function sameType(left: SurfaceResolvedReference["type"], right: SurfaceResolvedReference["type"]): boolean {
-  return left.module.name === right.module.name
-    && left.module.version === right.module.version
-    && left.name === right.name;
-}
-
 function requiredReference(
   element: StructuredElement,
   name: string,
@@ -59,11 +54,10 @@ function requiredReference(
 function recipe(reference: SurfaceResolvedReference, label: string): Recipe {
   if (!sameType(reference.type, recipeType)) throw new Error(`${label} must reference an SVS Recipe`);
   const value = reference.record?.value;
-  if (value?.kind !== "inline" || value.value === null || Array.isArray(value.value)
-    || typeof value.value !== "object") {
+  if (value === undefined || value === null || Array.isArray(value) || typeof value !== "object") {
     throw new Error(`${label} must reference an authored Recipe value`);
   }
-  return value.value as Recipe;
+  return value as unknown as Recipe;
 }
 
 function trackChildren(element: StructuredElement): StructuredElement[] {
@@ -124,12 +118,12 @@ export const decodeFilmSurface: StructuredSurfaceHandler = ({ element, resolveRe
     records: [{
       id: programId,
       type: filmTypes.program,
-      value: { kind: "inline", value: program },
+      value: (program),
       range: element.range,
     }],
     components: [{
       id,
-      fragment: fragment.id,
+      fragment,
       inputs: {
         program: { kind: "record", id: programId },
         canvas: canvas.ref,
@@ -139,6 +133,5 @@ export const decodeFilmSurface: StructuredSurfaceHandler = ({ element, resolveRe
       outputs: { composition: `${id}.composition` },
       range: element.range,
     }],
-    fragments: [fragment],
   };
 };

@@ -1,12 +1,11 @@
-import { plannedNeedInputs } from "@hypit/hypit/producer";
-import type { BlobRef, CanonicalValue, StoredValue } from "@hypit/hypit/protocol";
+import type { BlobRef, Value } from "@hypit/hypit/protocol";
 import type { ProducerPackage, ProducerHandlerContext } from "@hypit/hypit/producer";
-import type { AdmissionPackage } from "@hypit/hypit/admission";
-import { canonicalize } from "@hypit/hypit/protocol";
+import type { RefinementPackage } from "@hypit/hypit/refinement";
+import { assertBlobRef, canonicalize } from "@hypit/hypit/protocol";
 import type { Canvas, SpatialFrame } from "@hypit/spatial";
 
 import { imageComposeRequest } from "./execution.js";
-import { imageComposeProducers, imageComposeTypes, imageOperationsCapabilities } from "./refs.js";
+import { imageComposeProducers, imageComposeTypes } from "./refs.js";
 import {
   appendImageComposeLayer,
   assertImageComposeLayerSet,
@@ -16,85 +15,51 @@ import {
 } from "./compose-program.js";
 import type { ImageComposeLayerSet, ImageComposeLayerSpec, ImageComposeOptions } from "./compose-types.js";
 
-function inline<T>(value: StoredValue | undefined, label: string): T {
-  if (value?.kind !== "inline") throw new Error(`${label} must be inline.`);
-  return value.value as unknown as T;
+function valueOf<T>(value: Value | undefined, label: string): T {
+  if (value === undefined) throw new Error(`${label} is missing.`);
+  return value as unknown as T;
 }
-function blob(value: StoredValue | undefined, label: string): BlobRef {
-  if (value?.kind !== "blob") throw new Error(`${label} must be a Blob Artifact.`);
+function blob(value: Value | undefined, label: string): BlobRef {
+  assertBlobRef(value, label);
   return value;
 }
-const output = (value: unknown) => ({ kind: "inline" as const, value: canonicalize(value) });
+const output = (value: unknown) => ((canonicalize(value)));
 
 export const imageComposeComponent = {
   producers: [{
     producer: imageComposeProducers.createLayers,
-    handler: () => ({ outputs: { layers: output(createImageComposeLayerSet()) }, needs: {} }),
+    handler: () => ({ kind: "output", value: output(createImageComposeLayerSet()) }),
   }, {
     producer: imageComposeProducers.appendLayer,
-    handler: ({ inputs }: ProducerHandlerContext) => ({
-      outputs: { layers: output(appendImageComposeLayer(
-        inline<ImageComposeLayerSet>(inputs.layers?.value, "ImageComposeLayerSet"),
+    handler: ({ inputs }: ProducerHandlerContext) => ({ kind: "output", value: output(appendImageComposeLayer(
+        valueOf<ImageComposeLayerSet>(inputs.layers?.value, "ImageComposeLayerSet"),
         blob(inputs.source?.value, "Image Compose source"),
-        inline<SpatialFrame>(inputs.frame?.value, "SpatialFrame"),
-        inline<ImageComposeLayerSpec>(inputs.spec?.value, "ImageComposeLayerSpec"),
-      )) },
-      needs: {},
-    }),
+        valueOf<SpatialFrame>(inputs.frame?.value, "SpatialFrame"),
+        valueOf<ImageComposeLayerSpec>(inputs.spec?.value, "ImageComposeLayerSpec"),
+      )) }),
   }, {
     producer: imageComposeProducers.request,
     handler: ({ inputs }: ProducerHandlerContext) => {
-      const canvas = inline<Canvas>(inputs.canvas?.value, "Canvas");
-      const options = inline<ImageComposeOptions>(inputs.options?.value, "ImageComposeOptions");
-      const set = inline<ImageComposeLayerSet>(inputs.layers?.value, "ImageComposeLayerSet");
-      return { outputs: {}, needs: { image: imageComposeRequest({
+      const canvas = valueOf<Canvas>(inputs.canvas?.value, "Canvas");
+      const options = valueOf<ImageComposeOptions>(inputs.options?.value, "ImageComposeOptions");
+      const set = valueOf<ImageComposeLayerSet>(inputs.layers?.value, "ImageComposeLayerSet");
+      return { kind: "need", constraints: imageComposeRequest({
         canvas, background: options.background,
         layers: set.layers.map((layer) => ({
           source: layer.source, frame: layer.frame, fit: layer.spec.fit,
           interpolation: layer.spec.interpolation, opacity: layer.spec.opacity,
         })),
-      }) } };
+      }) };
     },
   }],
-  validators: [{
+  refinements: [{
     type: imageComposeTypes.options,
-    handler: ({ value }) => assertImageComposeOptions(inline<ImageComposeOptions>(value, "ImageComposeOptions")),
+    handler: ({ value }) => assertImageComposeOptions(valueOf<ImageComposeOptions>(value, "ImageComposeOptions")),
   }, {
     type: imageComposeTypes.layerSpec,
-    handler: ({ value }) => assertImageComposeLayerSpec(inline<ImageComposeLayerSpec>(value, "ImageComposeLayerSpec")),
+    handler: ({ value }) => assertImageComposeLayerSpec(valueOf<ImageComposeLayerSpec>(value, "ImageComposeLayerSpec")),
   }, {
     type: imageComposeTypes.layerSet,
-    handler: ({ value }) => assertImageComposeLayerSet(inline<ImageComposeLayerSet>(value, "ImageComposeLayerSet")),
+    handler: ({ value }) => assertImageComposeLayerSet(valueOf<ImageComposeLayerSet>(value, "ImageComposeLayerSet")),
   }],
-  plannedNeeds: [{
-    producer: imageComposeProducers.request,
-    port: "image",
-    capability: imageOperationsCapabilities.compose,
-    plan({ state, step }) {
-      const operation = state.plan.steps.find((item) => item.id === step);
-      if (operation === undefined) return undefined;
-      const read = (input: string) => {
-        const record = operation.inputs[input];
-        const value = record === undefined ? undefined : state.records.find((item) => item.id === record)?.value;
-        return value?.kind === "inline" ? value.value : undefined;
-      };
-      const canvas = read("canvas");
-      const options = read("options");
-      if (canvas === undefined || options === undefined) return undefined;
-      return {
-        constraints: { canvas, options },
-        pendingInputs: plannedNeedInputs(state, step),
-      };
-    },
-    present(specification) {
-      const constraints = specification.constraints as Readonly<Record<string, CanonicalValue>>;
-      const canvas = constraints.canvas as Readonly<Record<string, CanonicalValue>> | undefined;
-      return {
-        fields: typeof canvas?.widthPx === "number" && typeof canvas.heightPx === "number"
-          ? { canvas: [`${canvas.widthPx}×${canvas.heightPx}`] }
-          : {},
-        references: {},
-      };
-    },
-  }],
-} satisfies ProducerPackage & AdmissionPackage;
+} satisfies ProducerPackage & RefinementPackage;

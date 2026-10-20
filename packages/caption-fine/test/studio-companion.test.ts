@@ -104,11 +104,30 @@ test("Caption Uses stay in Inspector while Cues remain independent of rendered c
     { id: "hidden", styleId: "hidden", window: projectProgramWindow({itemId:"hidden",semantic:timeline,projection:{start:{ref:"timeline.start"},end:{ref:"timeline.end"}}}) },
   ];
   const context = {
-    track:{outputRef:"captions.track",trace:{references:[{input:"document",typeRef:captionTypes.document,ref:"document"},{input:"timing",typeRef:captionTypes.timing,ref:"timing"}],outputPorts:[{name:"schedule",ref:"schedule"},{name:"program",ref:"program"}]}},
-    placement:{children:uses.map((use,i)=>({id:use.id,range:{start:i*10,end:i*10+8},referenceAttributes:{style:use.styleId},values:[]}))},
+    track: {
+      name: "captions.track", type: "VisualTrack", typeRef: compositionTypes.visualTrack,
+      outputRef: "captions.track", candidateOrigin: "source", role: "track", value: undefined,
+      trace: {
+        references: [
+          { input: "document", name: "document", type: "CaptionDocument", typeRef: captionTypes.document, ref: "document" },
+          { input: "timing", name: "timing", type: "CaptionTiming", typeRef: captionTypes.timing, ref: "timing" },
+        ],
+        outputPorts: [{ name: "schedule", ref: "schedule" }, { name: "program", ref: "program" }],
+      },
+    },
+    placement: {
+      sourcePath: "captions.svml", tag: "Caption", module: { name: "@hypit/caption-fine", version: "1" },
+      surface: "caption", range: { start: 0, end: 20 }, records: [], values: [], outputs: [], outputPorts: [],
+      attributes: {}, attributeValueRanges: {}, references: [], referenceAttributes: {}, referenceTypes: {},
+      children: uses.map((use, i) => ({
+        sourcePath: "captions.svml", tag: "Use", id: use.id, range: { start: i * 10, end: i * 10 + 8 },
+        attributes: {}, attributeValueRanges: {}, references: [], referenceAttributes: { style: use.styleId },
+        referenceTypes: {}, values: [],
+      })),
+    },
     values:new Map<string,unknown>([["document",{id:"document",units:[],words:[],cues:[]}],["timing",{timelineId:"film",documentId:"document",units:[]}],["schedule",{cues:[]}],["program",{uses}]]),
-    spans:[],temporalBindings:[],
-  } as unknown as StudioTrackCompanionContext;
+    spans: [], temporalBindings: [], temporalDomains: [], generic: () => [],
+  } satisfies StudioTrackCompanionContext;
   assert.deepEqual(projectCaption(context), []);
   const objects=projectCaptionUses(context);
   assert.deepEqual(objects.map(item=>[item.title,item.elementRange,item.inspector?.find(field=>field.id==="scope")?.value]),[

@@ -106,11 +106,11 @@ export function createObserver(
         async handler(input: StructuredSurfaceInput) {
           const output = await handler(input) as SurfaceDecodeOutput;
           const id = input.element.attributes.id;
-          const observed = output.records.flatMap((record): ObservedValue[] => record.value.kind === "inline" ? [{
+          const observed = output.records.map((record): ObservedValue => ({
             id: record.id,
             type: { module: { ...record.type.module }, name: record.type.name },
-            value: structuredClone(record.value.value),
-          }] : []);
+            value: structuredClone(record.value),
+          }));
           const valuesFor = (range: { readonly start: number; readonly end: number }): readonly ObservedValue[] =>
             observed.filter((value) => output.records.some((record) =>
               record.id === value.id && record.range.start === range.start && record.range.end === range.end));

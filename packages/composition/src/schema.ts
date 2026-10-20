@@ -1,5 +1,6 @@
 import { compositableSurfaceSchema, fontArtifactSchema, mediaDependency } from "@hypit/media";
 import { timelineDependency } from "@hypit/timeline";
+import { blobRefSchema } from "@hypit/hypit/protocol";
 import type { ValueSchema } from "@hypit/hypit/protocol";
 import { VISUAL_IR_V1, VISUAL_STYLE_ENUM_VALUES_V1, VISUAL_STYLE_NAMES_V1 } from "./visual.js";
 export { mediaDependency, timelineDependency };
@@ -9,18 +10,8 @@ const object = (
   fields: Readonly<Record<string, { readonly schema: ValueSchema; readonly optional?: boolean }>>,
   allowUnknown = false,
 ): ValueSchema => ({ kind: "object", fields, ...(allowUnknown ? { allowUnknown: true } : {}) });
-const audioBlobRef = object({
-  kind: { schema: { kind: "literal", value: "blob" } },
-  resource: { schema: { kind: "string", minLength: 5, maxLength: 256 } },
-  size: { schema: integer },
-  mediaType: { schema: { kind: "literal", value: "audio/wav" } },
-});
-const mediaBlobRef = object({
-  kind: { schema: { kind: "literal", value: "blob" } },
-  resource: { schema: { kind: "string", minLength: 5, maxLength: 256 } },
-  size: { schema: integer },
-  mediaType: { schema: string },
-});
+const audioBlobRef = blobRefSchema(["audio/wav"]);
+const mediaBlobRef = blobRefSchema();
 const positiveInteger = { kind: "number", integer: true, minimum: 1 } as const;
 const nonNegativeRational = object({ numerator: { schema: integer }, denominator: { schema: positiveInteger } });
 const signedRational = object({ numerator: { schema: signedInteger }, denominator: { schema: positiveInteger } });

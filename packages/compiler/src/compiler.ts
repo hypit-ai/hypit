@@ -1,18 +1,18 @@
-import { link } from "@hypit/kernel";
+import { link, verifyRecordStructure } from "@hypit/kernel";
 import type {
   AuthorFrontendRegistryLike,
   AuthorSourceDiscovery,
   CompiledSourceClosure,
-  AuthorRecordAdmitter,
+  AuthorRecordValidator,
 } from "@hypit/author";
 import type { ResolvedSource, SourceUnit } from "@hypit/source";
 import type { BlobAttachment, Workspace, WorkspaceSession } from "@hypit/workspace";
 import type { BlobRef, LinkedProgram } from "@hypit/protocol";
 import {
-  TypeValidatorRegistry,
-  createRecordAdmitter,
-} from "@hypit/admission";
-import type { TypeValidatorRegistryLike } from "@hypit/admission";
+  RefinementRegistry,
+  createRecordValidator,
+} from "@hypit/refinement";
+import type { RefinementRegistryLike } from "@hypit/refinement";
 
 import { CompilerError } from "./error.js";
 import type { ModulePackageRegistryLike } from "./modules.js";
@@ -24,33 +24,34 @@ type DiscoveredUnit = {
   readonly discovery: AuthorSourceDiscovery;
 };
 
-function attachmentKey(artifact: BlobRef): string {
-  return `${artifact.resource}\u0000${artifact.mediaType}`;
+function attachmentKey(blob: BlobRef): string {
+  return `${blob.resource}\u0000${blob.mediaType}`;
 }
 
 export function mergeAttachments(groups: readonly (readonly BlobAttachment[])[]): readonly BlobAttachment[] {
   const merged = new Map<string, BlobAttachment>();
   for (const item of groups.flat()) {
-    const key = attachmentKey(item.artifact);
+    const key = attachmentKey(item.blob);
     const existing = merged.get(key);
     if (existing !== undefined) {
-      if (existing.artifact.size !== item.artifact.size) {
+      if (existing.blob.size !== item.blob.size) {
         throw new CompilerError(
           "SOURCE_ATTACHMENT_CONFLICT",
-          `Artifact attachment ${item.artifact.resource} carries conflicting sizes`,
-          item.artifact.resource,
+          `Blob attachment ${item.blob.resource} carries conflicting sizes`,
+          item.blob.resource,
         );
       }
       continue;
     }
     merged.set(key, {
-      artifact: { ...item.artifact },
+      blob: { ...item.blob },
       open: item.open,
+      ...(item.openRange === undefined ? {} : { openRange: item.openRange }),
       ...(item.location === undefined ? {} : { location: item.location }),
     });
   }
   return [...merged.values()]
-    .sort((left, right) => attachmentKey(left.artifact).localeCompare(attachmentKey(right.artifact)));
+    .sort((left, right) => attachmentKey(left.blob).localeCompare(attachmentKey(right.blob)));
 }
 
 async function discoverClosure(
@@ -88,8 +89,8 @@ export type CompilerOptions = {
   readonly frontends: AuthorFrontendRegistryLike;
   /** Explicit definition environment selected by the Host. */
   readonly workspace: Workspace;
-  /** Trusted Type-owner validators used to admit authored Records before linking. */
-  readonly validators?: TypeValidatorRegistryLike;
+  /** Trusted Type-owner refinements applied to authored Records before linking. */
+  readonly refinements?: RefinementRegistryLike;
 };
 
 export type CompiledAuthorSource = CompiledSourceClosure & {
@@ -100,11 +101,11 @@ export type CompiledAuthorSource = CompiledSourceClosure & {
 /** Domain-neutral compiler from a resolved Author Source to a verified Source Closure and Graph. */
 export class Compiler {
   readonly #options: CompilerOptions;
-  readonly #admitRecord: AuthorRecordAdmitter;
+  readonly #validateRecord: AuthorRecordValidator;
 
   constructor(options: CompilerOptions) {
     this.#options = options;
-    this.#admitRecord = createRecordAdmitter(options.validators ?? new TypeValidatorRegistry());
+    this.#validateRecord = createRecordValidator(options.refinements ?? new RefinementRegistry());
   }
 
   supportsFrontend(id: string): boolean {
@@ -152,7 +153,7 @@ export class Compiler {
       },
       resolveSource: workspace.resolveSource,
       resolveAsset: workspace.resolveAsset,
-      admitRecord: this.#admitRecord,
+      validateRecord: this.#validateRecord,
     });
     return {
       ...compilation,
@@ -170,9 +171,10 @@ export class Compiler {
     return link(closure, program.records);
   }
 
-  /** Admit one selected Run value through the same Type-owner boundary as authored Records. */
-  async admitRecord(program: LinkedProgram, record: import("@hypit/protocol").TypedRecord): Promise<void> {
-    await this.#admitRecord(program.closure, record);
+  /** Validate one selected Run value through the same Type-owner boundary as authored Records. */
+  async validateRecord(program: LinkedProgram, record: import("@hypit/protocol").TypedRecord): Promise<void> {
+    verifyRecordStructure(program.closure, record);
+    await this.#validateRecord(record);
   }
 
 }

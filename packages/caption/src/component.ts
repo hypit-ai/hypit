@@ -1,7 +1,7 @@
-import type { AdmissionPackage } from "@hypit/hypit/admission";
+import type { RefinementPackage } from "@hypit/hypit/refinement";
 import type { TemporalWindow } from "@hypit/temporal";
 import type { ProducerPackage } from "@hypit/hypit/producer";
-import type { StoredValue } from "@hypit/hypit/protocol";
+import type { Value } from "@hypit/hypit/protocol";
 import { canonicalize } from "@hypit/hypit/protocol";
 
 import { captionProducers, captionTypes } from "./manifest.js";
@@ -10,46 +10,46 @@ import { assertCaptionDocumentIdentity } from "./identity.js";
 import { assertCaptionTiming } from "./temporalize.js";
 import type { CaptionDocument, CaptionProgram, CaptionStyleIntent, CaptionTiming } from "./types.js";
 
-function inline<T>(value: StoredValue | undefined, subject: string): T {
-  if (value?.kind !== "inline") throw new Error(`${subject} must be inline`);
-  return value.value as T;
+function valueOf<T>(value: Value | undefined, subject: string): T {
+  if (value === undefined) throw new Error(`${subject} is missing`);
+  return value as T;
 }
 
 export const captionComponent = {
   producers: [{
     producer: captionProducers.create,
-    handler: ({ inputs }) => ({ outputs: { program: { kind: "inline", value: canonicalize({
-      id: inline<{id:string}>(inputs.header?.value, "CaptionTrackSpec").id,
-      documentId: inline<CaptionDocument>(inputs.document?.value, "CaptionDocument").id,
+    handler: ({ inputs }) => ({ kind: "output", value: (canonicalize({
+      id: valueOf<{id:string}>(inputs.header?.value, "CaptionTrackSpec").id,
+      documentId: valueOf<CaptionDocument>(inputs.document?.value, "CaptionDocument").id,
       styles: [], uses: [],
-    }) } }, needs: {} }),
+    })) }),
   }, {
     producer: captionProducers.append,
-    handler: ({ inputs }) => ({ outputs: { program: { kind: "inline", value: canonicalize(appendCaptionUse(
-      inline<CaptionProgram>(inputs.program?.value, "CaptionProgram"),
-      inline<{id:string}>(inputs.filter?.value, "CaptionContentFilter").id,
-      inline<TemporalWindow>(inputs.window?.value, "TemporalWindow"),
-      inline<CaptionStyleIntent>(inputs.style?.value, "CaptionStyle"),
-      inline<{id:string;role?:string}>(inputs.filter?.value, "CaptionContentFilter").role,
-    )) } }, needs: {} }),
+    handler: ({ inputs }) => ({ kind: "output", value: (canonicalize(appendCaptionUse(
+      valueOf<CaptionProgram>(inputs.program?.value, "CaptionProgram"),
+      valueOf<{id:string}>(inputs.filter?.value, "CaptionContentFilter").id,
+      valueOf<TemporalWindow>(inputs.window?.value, "TemporalWindow"),
+      valueOf<CaptionStyleIntent>(inputs.style?.value, "CaptionStyle"),
+      valueOf<{id:string;role?:string}>(inputs.filter?.value, "CaptionContentFilter").role,
+    ))) }),
   }, {
     producer: captionProducers.appendUnbounded,
-    handler: ({ inputs }) => ({ outputs: { program: { kind: "inline", value: canonicalize(appendCaptionUse(
-      inline<CaptionProgram>(inputs.program?.value, "CaptionProgram"),
-      inline<{id:string}>(inputs.filter?.value, "CaptionContentFilter").id,
+    handler: ({ inputs }) => ({ kind: "output", value: (canonicalize(appendCaptionUse(
+      valueOf<CaptionProgram>(inputs.program?.value, "CaptionProgram"),
+      valueOf<{id:string}>(inputs.filter?.value, "CaptionContentFilter").id,
       undefined,
-      inline<CaptionStyleIntent>(inputs.style?.value, "CaptionStyle"),
-      inline<{id:string;role?:string}>(inputs.filter?.value, "CaptionContentFilter").role,
-    )) } }, needs: {} }),
+      valueOf<CaptionStyleIntent>(inputs.style?.value, "CaptionStyle"),
+      valueOf<{id:string;role?:string}>(inputs.filter?.value, "CaptionContentFilter").role,
+    ))) }),
   }],
-  validators: [
-    { type: captionTypes.document, handler: ({ value }) => assertCaptionDocumentIdentity(inline<CaptionDocument>(value, "CaptionDocument")) },
+  refinements: [
+    { type: captionTypes.document, handler: ({ value }) => assertCaptionDocumentIdentity(valueOf<CaptionDocument>(value, "CaptionDocument")) },
     { type: captionTypes.style, handler: ({ value }) => {
-      if (value.kind !== "inline") throw new Error("CaptionStyle must be inline");
-      const style = value.value as CaptionStyleIntent;
+      if (value === undefined) throw new Error("CaptionStyle is missing");
+      const style = value as CaptionStyleIntent;
       assertCaptionStyle(style);
     } },
-    { type: captionTypes.program, handler: ({ value }) => assertCaptionProgram(inline<CaptionProgram>(value, "CaptionProgram")) },
-    { type: captionTypes.timing, handler: ({ value }) => assertCaptionTiming(inline<CaptionTiming>(value, "CaptionTiming")) },
+    { type: captionTypes.program, handler: ({ value }) => assertCaptionProgram(valueOf<CaptionProgram>(value, "CaptionProgram")) },
+    { type: captionTypes.timing, handler: ({ value }) => assertCaptionTiming(valueOf<CaptionTiming>(value, "CaptionTiming")) },
   ],
-} satisfies ProducerPackage & AdmissionPackage;
+} satisfies ProducerPackage & RefinementPackage;

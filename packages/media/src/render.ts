@@ -1,4 +1,4 @@
-import { isResourceId } from "@hypit/hypit/protocol";
+import { assertBlobRef } from "@hypit/hypit/protocol";
 import type { BlobRef } from "@hypit/hypit/protocol";
 
 const FONT_MEDIA_TYPES = new Set([
@@ -46,18 +46,6 @@ export type CompositableSurfaceRef = {
         readonly frameCount: number;
       };
 };
-
-function assertBlobRef(value: BlobRef, label: string): void {
-  if (
-    value.kind !== "blob"
-    || !isResourceId(value.resource)
-    || !Number.isSafeInteger(value.size)
-    || value.size < 0
-    || !value.mediaType
-  ) {
-    throw new Error(`${label} Artifact is invalid.`);
-  }
-}
 
 export function assertFontArtifactRef(value: FontArtifactRef, label = "FontArtifactRef"): void {
   if (!Array.isArray(value.sources) || value.sources.length === 0) throw new Error(`${label} sources are empty.`);

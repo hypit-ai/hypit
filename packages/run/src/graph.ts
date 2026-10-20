@@ -1,4 +1,5 @@
 import type { RunGraph } from "./types.js";
+import { normalizeValue } from "@hypit/protocol";
 
 export class RunGraphError extends Error {
   readonly code: string;
@@ -17,7 +18,8 @@ function assert(condition: unknown, code: string, message: string): asserts cond
 function content(graph: RunGraph): RunGraph {
   return {
     format: "hypit.run-graph@1",
-    records: [...graph.records].sort((left, right) => left.id.localeCompare(right.id)),
+    records: graph.records.map((record) => ({ ...record, value: normalizeValue(record.value) }))
+      .sort((left, right) => left.id.localeCompare(right.id)),
     candidates: [...graph.candidates].sort((left, right) => left.id.localeCompare(right.id)),
     operations: [...graph.operations].sort((left, right) => left.id.localeCompare(right.id)),
     satisfactions: [...graph.satisfactions].sort((left, right) => left.output.localeCompare(right.output)),
@@ -37,7 +39,6 @@ export function verifyRunGraph(graph: RunGraph): void {
   for (const record of graph.records) {
     assert(record.id.length > 0, "EMPTY_RUN_RECORD", "Run Graph Record id is empty");
     assert(!recordIds.has(record.id), "DUPLICATE_RUN_RECORD", `Run Graph repeats Record ${record.id}`);
-    assert(record.value.kind === "inline", "INVALID_RUN_RECORD", `Run Graph Record ${record.id} must be inline`);
     recordIds.add(record.id);
   }
   const candidateIds = new Set<string>();

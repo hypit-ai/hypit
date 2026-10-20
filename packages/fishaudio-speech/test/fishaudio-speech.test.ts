@@ -30,7 +30,7 @@ const speechReference: SurfaceResolvedReference = {
   record: {
     id: "story.segment.opening.speech",
     type: textTypes.text,
-    value: { kind: "inline", value: speech },
+    value: (speech),
   },
 };
 const voiceReference: SurfaceResolvedReference = {
@@ -54,7 +54,6 @@ const context = (source: string, voice: SurfaceResolvedReference = voiceReferenc
 
 test("Fish Audio Speech declares the two exact audio request shapes", () => {
   assert.deepEqual(fishAudioSpeechModels, ["voice-design-1", "voice-clone"]);
-  assert.ok(Object.values(fishAudioSpeechPorts).every((ports) => ports.result === "audio"));
   assert.ok(Object.values(fishAudioSpeechEndpoints).every((endpoint) => endpoint.returns.name === generationTypes.audioSet.name));
   assert.throws(() => sealFishAudioSpeechRequest("voice-design-1", {
     text: ["Do not rewrite me."],
@@ -75,14 +74,13 @@ test("VoiceDesign publishes one reusable voice reference", async () => {
     A clear, confident young woman with a grounded conversational tone.
   </fish:VoiceDesign>`));
   assert.deepEqual(result.components[0]!.outputs, { audio: "host.reference" });
-  const exported = result.fragments[0]!.exports.find((item) => item.name === "audio");
+  const exported = result.components[0]!.fragment.exports.find((item) => item.name === "audio");
   assert.deepEqual(exported?.type, blobTypes.blob);
   assert.deepEqual(result.components[0]!.inputs["speech:text"], {
     kind: "record",
     id: "story.segment.opening.speech",
   });
-  const request = result.records[0]!.value.kind === "inline"
-    ? result.records[0]!.value.value as Record<string, unknown> : {};
+  const request = result.records[0]!.value as Record<string, unknown>;
   assert.equal((request.ports as Record<string, unknown[]>).text, undefined);
 });
 

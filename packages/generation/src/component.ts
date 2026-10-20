@@ -1,5 +1,6 @@
-import type { AdmissionPackage } from "@hypit/hypit/admission";
+import type { RefinementPackage } from "@hypit/hypit/refinement";
 import type { ProducerPackage } from "@hypit/hypit/producer";
+import type { Value } from "@hypit/hypit/protocol";
 
 import {
   verifyGeneratedAudioSet,
@@ -8,17 +9,17 @@ import {
 } from "./identity.js";
 import { generationProducers, generationTypes } from "./manifest.js";
 
-function inline(value: { readonly kind: string; readonly value?: unknown }, subject: string): unknown {
-  if (value.kind !== "inline") throw new Error(`${subject} must be inline`);
-  return value.value;
+function valueOf(value: Value | undefined, subject: string): unknown {
+  if (value === undefined) throw new Error(`${subject} is missing`);
+  return value;
 }
 
 function primary(
-  value: { readonly kind: string; readonly value?: unknown },
+  value: Value,
   kind: "audio" | "image" | "video",
 ): import("@hypit/hypit/protocol").BlobRef {
   const label = kind === "audio" ? "Audio" : kind === "image" ? "Image" : "Video";
-  const content = inline(value, `Generated${label}Set`) as {
+  const content = valueOf(value, `Generated${label}Set`) as {
     readonly images?: readonly import("@hypit/hypit/protocol").BlobRef[];
     readonly videos?: readonly import("@hypit/hypit/protocol").BlobRef[];
     readonly audios?: readonly import("@hypit/hypit/protocol").BlobRef[];
@@ -35,44 +36,35 @@ export const generationComponent = {
   producers: [
     {
       producer: generationProducers.primaryAudio,
-      handler: ({ inputs }) => ({
-        outputs: { audio: primary(inputs.set!.value, "audio") },
-        needs: {},
-      }),
+      handler: ({ inputs }) => ({ kind: "output", value: primary(inputs.set!.value, "audio") }),
     },
     {
       producer: generationProducers.primaryImage,
-      handler: ({ inputs }) => ({
-        outputs: { image: primary(inputs.set!.value, "image") },
-        needs: {},
-      }),
+      handler: ({ inputs }) => ({ kind: "output", value: primary(inputs.set!.value, "image") }),
     },
     {
       producer: generationProducers.primaryVideo,
-      handler: ({ inputs }) => ({
-        outputs: { video: primary(inputs.set!.value, "video") },
-        needs: {},
-      }),
+      handler: ({ inputs }) => ({ kind: "output", value: primary(inputs.set!.value, "video") }),
     },
   ],
-  validators: [
+  refinements: [
     {
       type: generationTypes.audioSet,
       handler: ({ value }) => {
-        verifyGeneratedAudioSet(inline(value, "GeneratedAudioSet"));
+        verifyGeneratedAudioSet(valueOf(value, "GeneratedAudioSet"));
       },
     },
     {
       type: generationTypes.imageSet,
       handler: ({ value }) => {
-        verifyGeneratedImageSet(inline(value, "GeneratedImageSet"));
+        verifyGeneratedImageSet(valueOf(value, "GeneratedImageSet"));
       },
     },
     {
       type: generationTypes.videoSet,
       handler: ({ value }) => {
-        verifyGeneratedVideoSet(inline(value, "GeneratedVideoSet"));
+        verifyGeneratedVideoSet(valueOf(value, "GeneratedVideoSet"));
       },
     },
   ],
-} satisfies ProducerPackage & AdmissionPackage;
+} satisfies ProducerPackage & RefinementPackage;

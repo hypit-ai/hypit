@@ -1,6 +1,6 @@
-import type { PlannedBuild } from "@hypit/hypit/compiler";
+import type { PreparedBuild } from "@hypit/hypit/compiler";
 import { RunCompiler } from "@hypit/hypit/compiler";
-import type { Candidate, OperationNode, Satisfaction, BuildTarget } from "@hypit/hypit/protocol";
+import type { RunGraph } from "@hypit/hypit/protocol";
 import type { BlobAttachment } from "@hypit/hypit/workspace";
 import {
   installRunFragmentFacets,
@@ -16,12 +16,7 @@ import type { StudioDomain } from "./domain.js";
 import { createObserver } from "./observe.js";
 
 export type RunCompilation = {
-  readonly graph: {
-    readonly candidates: readonly Candidate[];
-    readonly operations: readonly OperationNode[];
-    readonly satisfactions: readonly Satisfaction[];
-    readonly targets: readonly BuildTarget[];
-  };
+  readonly graph: RunGraph;
 };
 
 export type RunPlan = {
@@ -32,7 +27,7 @@ export type RunPlan = {
   readonly run: RunCompilation;
   readonly targets: readonly string[];
   readonly attachments: readonly BlobAttachment[];
-  readonly plan: (run: RunCompilation, targets: readonly string[]) => PlannedBuild;
+  readonly prepare: (run: RunCompilation, targets: readonly string[]) => PreparedBuild;
 };
 
 /** Compile the exact Run Source selected for Studio, using normal Run facets. */
@@ -70,17 +65,11 @@ export async function loadStudioRun(input: {
     run: compiled.run as RunCompilation,
     targets,
     attachments: compiled.attachments,
-    plan(run, selected) {
-      return compiler.planCompilation({
-        ...compiled,
-        run: {
-          ...compiled.run,
-          graph: {
-            ...run.graph,
-            targets: selected.map((output) => ({ output })),
-          },
-        },
-      } as never);
+    prepare(run, selected) {
+      return compiler.prepareVariant(compiled, {
+        ...run.graph,
+        targets: selected.map((output) => ({ output })),
+      });
     },
   };
 }

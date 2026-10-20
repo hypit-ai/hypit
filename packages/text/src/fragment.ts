@@ -35,7 +35,7 @@ export function createTextRenderFragment(entries: readonly TextFragmentBinding[]
         binding: input(`${prefix}:spec`),
         text: input(`${prefix}:text`),
       },
-      result: { kind: "output", name: "bindings" },
+      result: { kind: "output" as const, name: "bindings" },
     });
     bindings = operation(id);
   });
@@ -43,7 +43,7 @@ export function createTextRenderFragment(entries: readonly TextFragmentBinding[]
     id: "render",
     producer: textProducers.render,
     inputs: { template: input("template"), bindings },
-    result: { kind: "output", name: "text" },
+    result: { kind: "output" as const, name: "text" },
   });
   return sealGraphFragment({
     inputs,

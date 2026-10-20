@@ -135,10 +135,30 @@ test("pricing keeps every planned generation after the old 20-request cutoff and
       bootstrapPackages: videoTestPackages,
       openRuntimeHost: async (path, options) => ({
         ...await videoDistribution.openRuntimeHost(path, options),
-        pricing: async (requests) => {
-          queried = requests.length;
-          return requests.map((request) => ({
-            request: request.request, capability: request.capability, status: "resolved" as const,
+        openInspection: async (queries) => {
+          queried = queries.length;
+          return {
+            dataRoot: "/tmp",
+            endpoints: async () => queries.map((query) => ({
+              need: query.need, capability: query.capability, status: "resolved" as const, support: "supported" as const,
+              endpoint: "test.vendor", use: "test.provider",
+            })),
+            pricing: async () => queries.map((query) => ({
+              need: query.need, capability: query.capability, status: "resolved" as const, support: "supported" as const,
+              endpoint: "test.vendor", use: "test.provider",
+              pricingDocuments: [{ source: "https://vendor.example/rates", data: { creditsPerImage: 2 } }],
+            })),
+            preflight: async () => ({ dataRoot: "/tmp", diagnostics: [] }),
+            executionStatus: async () => ({ state: "stopped" as const }),
+            ensureExecution: async () => ({ state: "stopped" as const }),
+            createRuntime: async () => { throw new Error("pricing cannot execute a Build"); },
+            close() {},
+          };
+        },
+        pricing: async (queries) => {
+          queried = queries.length;
+          return queries.map((query) => ({
+            need: query.need, capability: query.capability, status: "resolved" as const, support: "supported" as const,
             endpoint: "test.vendor", use: "test.provider",
             pricingDocuments: [{ source: "https://vendor.example/rates", data: { creditsPerImage: 2 } }],
           }));
@@ -155,8 +175,8 @@ test("pricing keeps every planned generation after the old 20-request cutoff and
     assert.equal(group.requests.length, 25);
     assert.deepEqual(group.pricingDocuments[0].data, { creditsPerImage: 2 });
     for (const request of group.requests) {
-      assert.equal(request.summary.fields.resolution, "2K");
-      assert.equal(request.summary.fields.aspectRatio, "9:16");
+      assert.equal(request.summary.fields["ports.resolution[0]"], "2K");
+      assert.equal(request.summary.fields["ports.aspectRatio[0]"], "9:16");
     }
   } finally {
     await rm(root, { recursive: true, force: true });

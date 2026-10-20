@@ -1,4 +1,4 @@
-import { canonicalize, isResourceId } from "@hypit/hypit/protocol";
+import { assertBlobRef, canonicalize } from "@hypit/hypit/protocol";
 import { assertCanvas, assertSpatialFrame } from "@hypit/spatial";
 
 import type {
@@ -21,8 +21,8 @@ function color(value: string | undefined, subject: string, alpha = true): void {
   assert(pattern.test(value), `${subject} must be ${alpha ? "#RRGGBB or #RRGGBBAA" : "#RRGGBBAA"}`);
 }
 function image(value: ImageComposeExecutionLayer["source"] | undefined, subject: string): void {
-  assert(value !== undefined && value.kind === "blob" && isResourceId(value.resource) && Number.isSafeInteger(value.size)
-    && value.size >= 0 && value.mediaType.startsWith("image/"), `${subject} must be an image Blob Artifact`);
+  assertBlobRef(value, subject);
+  assert(value.mediaType.startsWith("image/"), `${subject} must be an image Blob Artifact`);
 }
 
 function assertTransformOperation(operation: ImageTransformOperation, index: number): void {

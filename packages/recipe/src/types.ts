@@ -1,4 +1,5 @@
-import type { CanonicalValue, SourceRange } from "@hypit/protocol";
+import type { CanonicalValue } from "@hypit/protocol";
+import type { SourceRange } from "@hypit/source";
 
 export type Recipe = {
   readonly path: string;

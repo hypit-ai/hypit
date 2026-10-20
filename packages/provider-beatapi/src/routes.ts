@@ -1,15 +1,17 @@
+import { capabilityKey } from "@hypit/hypit/protocol";
 import {
-  compileWireRequest,
-  selectWireModelForRequest,
   generationTypes,
   sealGeneratedImageSet,
   sealGeneratedVideoSet,
 } from "@hypit/generation";
-import type { GenerationArtifactUrlResolver, GenerationRequest, GenerationWireMapping } from "@hypit/generation";
+import type { ProviderFieldRequest } from "@hypit/generation/provider";
+import { materializeWireRequest, planWireRequest, selectWireModelForRequest } from "@hypit/generation/provider";
+import type { GenerationArtifactUrlResolver, GenerationWireMapping } from "@hypit/generation/provider";
 import { canonicalize } from "@hypit/hypit/protocol";
-import type { BlobRef, CapabilityRef, CanonicalValue, StoredValue, TypeRef } from "@hypit/hypit/protocol";
+import type { BlobRef, CapabilityRef, CanonicalValue, Value, TypeRef } from "@hypit/hypit/protocol";
 import type { EndpointRequest, EndpointSupport } from "@hypit/hypit/endpoint";
 import { beatApiMappings } from "./mapping.js";
+import type { BeatApiMapping } from "./mapping.js";
 
 export type BeatApiPreparedRequest = {
   readonly model: string;
@@ -17,19 +19,19 @@ export type BeatApiPreparedRequest = {
   readonly compile: (resolve: GenerationArtifactUrlResolver) => Promise<Record<string, unknown>>;
 };
 
-export type BeatApiRoute = GenerationWireMapping & {
+export type BeatApiRoute = BeatApiMapping & {
   readonly key: string;
   readonly returns: TypeRef;
   readonly supports: (request: EndpointRequest) => EndpointSupport;
   readonly prepare: (constraints: CanonicalValue) => BeatApiPreparedRequest;
-  readonly packageResult: (artifacts: readonly BlobRef[]) => StoredValue;
+  readonly packageResult: (artifacts: readonly BlobRef[]) => Value;
 };
 
-function scalar(request: GenerationRequest, port: string): string | number | boolean | undefined {
+function scalar(request: ProviderFieldRequest, port: string): string | number | boolean | undefined {
   const value = request.ports[port]?.[0];
   return typeof value === "string" || typeof value === "number" || typeof value === "boolean" ? value : undefined;
 }
-function count(request: GenerationRequest, port: string): number {
+function count(request: ProviderFieldRequest, port: string): number {
   return request.ports[port]?.length ?? 0;
 }
 
@@ -37,7 +39,7 @@ function count(request: GenerationRequest, port: string): number {
 const NANO_BANANA_2_UNAVAILABLE: readonly string[] = ["1:4", "4:1", "1:8", "8:1"];
 
 /** BeatAPI's documented input ranges per model, checked before any reference is uploaded. */
-function rejection(mapping: GenerationWireMapping, request: GenerationRequest): string | undefined {
+function rejection(mapping: GenerationWireMapping, request: ProviderFieldRequest): string | undefined {
   const { name } = mapping.capability;
   const model = selectWireModelForRequest(mapping, request);
   const ratio = scalar(request, "aspectRatio");
@@ -86,38 +88,31 @@ function normalize(mapping: GenerationWireMapping, input: Record<string, unknown
   return input;
 }
 
-function capabilityKey(capability: CapabilityRef): string {
-  return `${capability.module.name}@${capability.module.version}#${capability.name}`;
-}
-
 export const beatApiRoutes: readonly BeatApiRoute[] = beatApiMappings.map((mapping) => ({
   ...mapping,
   key: capabilityKey(mapping.capability),
-  returns: mapping.result === "image" ? generationTypes.imageSet : generationTypes.videoSet,
+  returns: mapping.media === "image" ? generationTypes.imageSet : generationTypes.videoSet,
   supports: (request) => {
-    const reason = rejection(mapping, request.constraints as unknown as GenerationRequest);
+    const reason = rejection(mapping, request.constraints as unknown as ProviderFieldRequest);
     return reason === undefined ? { status: "supported" } : { status: "unsupported", reason };
   },
   prepare: (constraints) => {
-    const request = constraints as unknown as GenerationRequest;
+    const request = constraints as unknown as ProviderFieldRequest;
     const reason = rejection(mapping, request);
     if (reason !== undefined) throw new Error(reason);
     const model = selectWireModelForRequest(mapping, request);
     return {
       model,
-      media: mapping.result === "image" ? "image" : "video",
+      media: mapping.media === "image" ? "image" : "video",
       compile: async (resolve) => ({
         model,
-        ...normalize(mapping, (await compileWireRequest(mapping, request, resolve)).input as Record<string, unknown>),
+        ...normalize(mapping, (await materializeWireRequest(planWireRequest(mapping, request), resolve)).input as Record<string, unknown>),
       }),
     };
   },
-  packageResult: (artifacts) => ({
-    kind: "inline",
-    value: canonicalize(mapping.result === "image"
+  packageResult: (artifacts) => ((canonicalize(mapping.media === "image"
       ? sealGeneratedImageSet({ images: artifacts })
-      : sealGeneratedVideoSet({ videos: artifacts })),
-  }),
+      : sealGeneratedVideoSet({ videos: artifacts })))),
 }));
 
 const byCapability = new Map(beatApiRoutes.map((route) => [route.key, route]));

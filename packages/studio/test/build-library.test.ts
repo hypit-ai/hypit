@@ -8,7 +8,7 @@ import test from "node:test";
 import { buildResultDirectory, FileBuildResultRepository } from "@hypit/result/node";
 import type { BuildResultRepository } from "@hypit/result/node";
 import type { CliBuildView as BuildView } from "@hypit/cli";
-import { buildIdCreatedAt } from "@hypit/protocol";
+import { buildIdCreatedAt, isBlobRef } from "@hypit/protocol";
 import { createVideoDistribution } from "@hypit/video";
 
 import { openStudioBuildLibrary, readStudioLibrary } from "../src/build-library.js";
@@ -66,7 +66,7 @@ test("Studio library joins this environment's Builds with project Build Result f
       const value = manifest?.outputs[output as "final.video"];
       return value === undefined ? undefined : {
         type: value.type,
-        kind: "resource",
+        representation: "file",
         size: value.value.size,
         mediaType: value.value.mediaType,
       };
@@ -186,7 +186,7 @@ test("Studio opens project Build Results without a Runtime or ResourceStore", as
     for await (const chunk of stream!) opened.push(...chunk);
     assert.deepEqual(Uint8Array.from(opened), bytes.slice(2, 8));
     const record = await buildLibrary.resolveHistoricalOutput(build, "final.video");
-    assert.equal(record?.value.kind, "blob");
+    assert.equal(record === undefined ? false : isBlobRef(record.value), true);
     assert.equal(record?.attachments?.length, 1);
     await buildLibrary.close();
   } finally {
@@ -230,9 +230,9 @@ test("media listing includes active files, follows file references and leaves Co
     async browse() { return { results: [manifests[0] as import("@hypit/result").FinishedBuildResultManifest] }; },
     async describeOutput(_build, output) {
       described.push(output);
-      if (output === "reused.take") return { kind: "composite", type: mediaTypeRef };
+      if (output === "reused.take") return { representation: "value-document", type: mediaTypeRef };
       assert.equal(output, "reused.image");
-      return { kind: "resource", type: mediaTypeRef, mediaType: "image/png", size: 100 };
+      return { representation: "file", type: mediaTypeRef, mediaType: "image/png", size: 100 };
     },
     async resolve(_build, output) {
       resolved.push(output);
@@ -284,13 +284,13 @@ test("Studio groups repeated external file references and retains both Build use
     const type = { module: { name: "example", version: "1" }, name: "Image" };
     for (const id of ["bld_20260902T130000000Z_0000000001", "bld_20260902T130000001Z_0000000001"]) {
       const writer = await results.create({ id, source: { id: join(root, "main.svml") },
-        targets: ["portrait"], publishedOutputs: [{ name: "portrait", output: "portrait" }],
+        publication: { outputs: [{ name: "portrait", output: "portrait", target: true,
+          type,
+          source: { kind: "current-record", record: "image" } }] },
         resourceReferences: { res_image: { kind: "external-file", uri: pathToFileURL(imagePath).href,
           size: 2, mediaType: "image/png" } } });
-      await writer.sync({ state: { status: "complete", records: [{ id: "image", type,
+      await writer.sync({ records: [{ id: "image", type,
         value: { kind: "blob", resource: "res_image", size: 2, mediaType: "image/png" } }],
-        plan: { outputBindings: [{ output: "portrait", record: "image", type }] },
-      } as unknown as import("@hypit/protocol").BuildState,
       resources: { async open() { throw new Error("No bytes should be copied"); } } });
       await writer.finish({ outcome: "complete" });
     }

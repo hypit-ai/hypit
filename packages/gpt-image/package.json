@@ -1,6 +1,6 @@
 {
   "name": "@hypit/gpt-image",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
   "type": "module",
@@ -15,11 +15,11 @@
     "README.md"
   ],
   "dependencies": {
-    "@hypit/generation": "workspace:^0.1.0",
-    "@hypit/image-operations": "workspace:^0.2.0"
+    "@hypit/generation": "workspace:^0.2.0",
+    "@hypit/image-operations": "workspace:^0.3.0"
   },
   "peerDependencies": {
-    "@hypit/hypit": "workspace:^0.3.1"
+    "@hypit/hypit": "workspace:^0.4.0"
   },
   "devDependencies": {
     "@hypit/blob": "workspace:*",

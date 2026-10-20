@@ -1,4 +1,4 @@
-import { createAdmissionPackageFacet } from "@hypit/hypit/admission";
+import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
 import { createProducerPackageFacet } from "@hypit/hypit/producer";
 import { createMarkupSurfaceFacet } from "@hypit/hypit/markup";
 import { createStudioTrackCompanionFacet } from "@hypit/studio-companion";
@@ -32,7 +32,7 @@ export const hypitPackage = {
     manifest: rankingManifest,
   }],
   facets: [
-    ...[rankingComponent].flatMap((component) => [createProducerPackageFacet(component), createAdmissionPackageFacet(component)]),
+    ...[rankingComponent].flatMap((component) => [createProducerPackageFacet(component), createRefinementPackageFacet(component)]),
     ...facets.map(([surface, handler]) => createMarkupSurfaceFacet({
       module: rankingModuleRef,
       declaration: rankingMarkupSurfaces.find((item) => item.name === surface)!,

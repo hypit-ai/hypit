@@ -1,16 +1,18 @@
+import { capabilityKey } from "@hypit/hypit/protocol";
 import {
-  compileWireRequest,
-  selectWireModelForRequest,
   generationTypes,
   sealGeneratedAudioSet,
   sealGeneratedImageSet,
   sealGeneratedVideoSet,
 } from "@hypit/generation";
-import type { GenerationArtifactUrlResolver, GenerationRequest, GenerationWireMapping } from "@hypit/generation";
+import type { ProviderFieldRequest } from "@hypit/generation/provider";
+import { materializeWireRequest, planWireRequest, selectWireModelForRequest } from "@hypit/generation/provider";
+import type { GenerationArtifactUrlResolver, GenerationWireMapping } from "@hypit/generation/provider";
 import { canonicalize } from "@hypit/hypit/protocol";
-import type { BlobRef, CapabilityRef, CanonicalValue, StoredValue, TypeRef } from "@hypit/hypit/protocol";
+import type { BlobRef, CapabilityRef, CanonicalValue, Value, TypeRef } from "@hypit/hypit/protocol";
 import type { EndpointRequest, EndpointSupport } from "@hypit/hypit/endpoint";
 import { hypiHubMappings } from "./mapping.js";
+import type { HypiHubGenerationMapping } from "./mapping.js";
 
 export type HypiHubModelOperation = "images" | "image_edits" | "videos" | "audio_speech" | "transcriptions";
 
@@ -27,16 +29,16 @@ export type HypiHubRoute = (typeof hypiHubMappings)[number] & {
   readonly media: "image" | "video" | "audio";
   readonly supports?: (request: EndpointRequest) => EndpointSupport;
   readonly prepare: (constraints: CanonicalValue) => HypiHubPreparedRequest;
-  readonly packageResult: (artifacts: readonly BlobRef[]) => StoredValue;
+  readonly packageResult: (artifacts: readonly BlobRef[]) => Value;
 };
 
-function scalar(request: GenerationRequest, port: string): string | number | boolean | undefined {
+function scalar(request: ProviderFieldRequest, port: string): string | number | boolean | undefined {
   const value = request.ports[port]?.[0];
   return typeof value === "string" || typeof value === "number" || typeof value === "boolean" ? value : undefined;
 }
 
 /** Current HypiHub GPT Image combinations, independently declared at this Endpoint boundary. */
-function hypiHubGenerationRejection(mapping: GenerationWireMapping, request: GenerationRequest): string | undefined {
+function hypiHubGenerationRejection(mapping: GenerationWireMapping, request: ProviderFieldRequest): string | undefined {
   if (mapping.capability.module.name !== "@hypit/gpt-image" || mapping.capability.name !== "gpt-image-2") {
     return undefined;
   }
@@ -61,17 +63,17 @@ export const hypiHubRoutes: readonly HypiHubRoute[] = hypiHubMappings.map((mappi
   return {
     ...mapping,
     key: capabilityKey(mapping.capability),
-    returns: mapping.result === "image" ? generationTypes.imageSet
-      : mapping.result === "video" ? generationTypes.videoSet : generationTypes.audioSet,
-    media: mapping.result,
+    returns: mapping.media === "image" ? generationTypes.imageSet
+      : mapping.media === "video" ? generationTypes.videoSet : generationTypes.audioSet,
+    media: mapping.media,
     ...(hasRequestLimits ? {
       supports: (request: EndpointRequest) => {
-        const reason = hypiHubGenerationRejection(mapping, request.constraints as unknown as GenerationRequest);
+        const reason = hypiHubGenerationRejection(mapping, request.constraints as unknown as ProviderFieldRequest);
         return reason === undefined ? { status: "supported" } : { status: "unsupported", reason };
       },
     } : {}),
     prepare: (constraints) => {
-      const request = constraints as unknown as GenerationRequest;
+      const request = constraints as unknown as ProviderFieldRequest;
       const rejection = hypiHubGenerationRejection(mapping, request);
       if (rejection !== undefined) throw new Error(rejection);
       const model = selectWireModelForRequest(mapping, request);
@@ -79,37 +81,34 @@ export const hypiHubRoutes: readonly HypiHubRoute[] = hypiHubMappings.map((mappi
       const hasReferences = Object.entries(mapping.fields).some(([port, field]) =>
         (field.as === "url" || field.as === "urlArray" || field.as === "itemObject")
           && (request.ports[port]?.length ?? 0) > 0);
-      const operation = mapping.result === "audio" ? "audio_speech" : mapping.result === "video" ? "videos"
+      const operation = mapping.media === "audio" ? "audio_speech" : mapping.media === "video" ? "videos"
         : hasReferences ? "image_edits" : "images";
       return {
         model,
         operation,
-        compile: async (resolve) => normalizeHypiHubRequest(mapping, await compileWireRequest(mapping, request, resolve)),
+        compile: async (resolve) => normalizeHypiHubRequest(mapping, await materializeWireRequest(planWireRequest(mapping, request), resolve)),
       };
     },
-    packageResult: (artifacts) => ({
-      kind: "inline",
-      value: canonicalize(mapping.result === "image"
+    packageResult: (artifacts) => ((canonicalize(mapping.media === "image"
         ? sealGeneratedImageSet({ images: artifacts })
-        : mapping.result === "video"
+        : mapping.media === "video"
           ? sealGeneratedVideoSet({ videos: artifacts })
-          : sealGeneratedAudioSet({ audios: artifacts })),
-    }),
+          : sealGeneratedAudioSet({ audios: artifacts })))),
   };
 });
 
 /** Convert the provider-neutral generation wire shape to HypiHub's public API shape. */
 function normalizeHypiHubRequest(
-  mapping: GenerationWireMapping,
+  mapping: HypiHubGenerationMapping,
   request: { readonly model: string; readonly input: CanonicalValue },
 ): { readonly model: string; readonly input: CanonicalValue } {
   const input = { ...(request.input as Record<string, unknown>) };
-  if (mapping.result === "image") {
+  if (mapping.media === "image") {
     return { model: request.model, input: canonicalize(input) };
   }
 
   // Audio mappings already use HypiHub's public /audio/speech vocabulary.
-  if (mapping.result === "audio") {
+  if (mapping.media === "audio") {
     return { model: request.model, input: canonicalize(input) };
   }
 
@@ -141,10 +140,6 @@ function normalizeHypiHubRequest(
   if (Array.isArray(videoRefs) && videoRefs.length > 0) input.reference_videos = videoRefs;
   if (Array.isArray(audioRefs) && audioRefs.length > 0) input.reference_audios = audioRefs;
   return { model: request.model, input: canonicalize(input) };
-}
-
-function capabilityKey(capability: { module: { name: string; version: string }; name: string }): string {
-  return `${capability.module.name}@${capability.module.version}#${capability.name}`;
 }
 
 const byCapability = new Map(hypiHubRoutes.map((route) => [capabilityKey(route.capability), route]));

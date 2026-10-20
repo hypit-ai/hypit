@@ -1,6 +1,6 @@
 {
   "name": "@hypit/hypit",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "homepage": "https://hypit.ai",
   "repository": {
     "type": "git",
@@ -65,10 +65,10 @@
       "types": "./dist/public/blob.d.ts",
       "import": "./packages/blob/src/index.ts"
     },
-    "./admission": {
-      "hypit-source": "./packages/admission/src/index.ts",
-      "types": "./dist/public/admission.d.ts",
-      "import": "./packages/admission/src/index.ts"
+    "./refinement": {
+      "hypit-source": "./packages/refinement/src/index.ts",
+      "types": "./dist/public/refinement.d.ts",
+      "import": "./packages/refinement/src/index.ts"
     },
     "./producer": {
       "hypit-source": "./packages/producer/src/index.ts",
@@ -162,7 +162,6 @@
   "hypit": {
     "cli": {
       "use": [
-        "@hypit/runtime-local/cli",
         "@hypit/browser-capture/cli",
         "@hypit/yt-dlp/cli",
         "@hypit/media-local/cli",
@@ -229,9 +228,9 @@
     "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs",
     "test": "node test/run.mjs",
-    "test:runtime-scale": "node test/run.mjs runtime-scale",
+    "test:runtime-scale": "node test/run.mjs environment runtime-scale",
     "test:whisperx-service": "uv run --project packages/provider-whisperx-local/runtime --frozen python -m unittest discover -s packages/provider-whisperx-local/test/service -p \"test_*.py\"",
-    "test:image-opencv": "node test/run.mjs image-opencv",
+    "test:image-opencv": "node test/run.mjs environment image-opencv",
     "hypit": "node bin/hypit.mjs",
     "studio": "node bin/hypit.mjs studio",
     "prepack": "npm run build:public-types"
@@ -240,7 +239,7 @@
     "node": ">=22.15.0"
   },
   "devDependencies": {
-    "@hypit/admission": "workspace:*",
+    "@hypit/refinement": "workspace:*",
     "@hypit/author": "workspace:*",
     "@hypit/blob": "workspace:*",
     "@hypit/browser-capture": "workspace:*",
@@ -260,6 +259,8 @@
     "@hypit/grok-imagine": "workspace:*",
     "@hypit/html-document": "workspace:*",
     "@hypit/html-program": "workspace:*",
+    "@hypit/html-playback": "workspace:*",
+    "@hypit/html-document": "workspace:*",
     "@hypit/image-operations": "workspace:*",
     "@hypit/interview-emoji-reveal": "workspace:*",
     "@hypit/media": "workspace:*",
@@ -325,14 +326,14 @@
     "@hypit/visual-track": "workspace:*"
   },
   "dependencies": {
-    "@hypit/browser-capture": "workspace:^0.2.0",
-    "@hypit/speech-estimate": "workspace:^0.1.1",
-    "@hypit/media-local": "workspace:^0.2.0",
-    "@hypit/runtime-local": "workspace:^0.1.1",
-    "@hypit/video": "workspace:^0.2.0",
-    "@hypit/studio": "workspace:^0.2.0",
-    "@hypit/whisperx": "workspace:^0.2.0",
-    "@hypit/yt-dlp": "workspace:^0.2.0",
+    "@hypit/browser-capture": "workspace:^0.2.1",
+    "@hypit/speech-estimate": "workspace:^0.1.2",
+    "@hypit/media-local": "workspace:^0.2.1",
+    "@hypit/runtime-local": "workspace:^0.2.0",
+    "@hypit/video": "workspace:^0.3.0",
+    "@hypit/studio": "workspace:^0.3.0",
+    "@hypit/whisperx": "workspace:^0.3.0",
+    "@hypit/yt-dlp": "workspace:^0.2.1",
     "@types/node": "24.10.1",
     "koffi": "3.2.1",
     "tsx": "4.21.0",

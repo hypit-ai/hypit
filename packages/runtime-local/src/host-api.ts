@@ -1,13 +1,16 @@
 import type { BlobAttachment } from "@hypit/hypit/workspace";
-import type { BuildResultForward } from "@hypit/hypit/result";
-import type { ExecutorRunResult, ExecutorOptions, ProducerRegistry } from "@hypit/hypit/executor";
-import type { BuildDefinition, BuildState, CanonicalValue, CapabilityRef, Need, StoredValue } from "@hypit/hypit/protocol";
+import type { ExecutorOptions, ProducerRegistry } from "@hypit/hypit/executor";
+import type { BuildDefinition, BuildState, CanonicalValue, CapabilityRef, Need, Value } from "@hypit/hypit/protocol";
 import type {
   CapacityReservation,
   CredentialAcquisition,
   CredentialRef,
   OperationSnapshot,
   ResourceStore,
+  RuntimeEndpointObservation,
+  RuntimeEndpointPricingObservation,
+  RuntimeEndpointQuery,
+  ScheduledBuildResult,
 } from "@hypit/hypit/runtime";
 import type { BuildCatalogDescriptor } from "./catalog.js";
 import type { BuildCompletion, BuildExecutionStop, BuildResultRepositoryLocation } from "./execution.js";
@@ -29,15 +32,18 @@ export type RuntimeHostBuildSubmission = RuntimeHostActiveBuildSubmission | Runt
 
 export type BuildActivity = "submitting" | "ready" | "running" | "waiting" | "saving-result";
 
-export type BuildOperationView = {
-  readonly id?: string;
+type BuildOperationViewEvidence = {
+  readonly id: string;
   readonly receipt?: import("@hypit/hypit/runtime").OperationReceipt;
   readonly wakeAt?: number;
   readonly endpoint: string;
-  readonly status: OperationSnapshot["status"];
   readonly progress?: OperationSnapshot["progress"];
-  readonly failure?: OperationSnapshot["failure"];
 };
+
+export type BuildOperationView = BuildOperationViewEvidence & (
+  | { readonly status: "failed"; readonly failure: Extract<OperationSnapshot, { readonly status: "failed" }>["failure"] }
+  | { readonly status: "pending" | "received" | "completed" | "cancelled"; readonly failure?: never }
+);
 
 /** Stable Host view. Runtime persistence records never cross this boundary. */
 export type BuildView = {
@@ -124,7 +130,6 @@ export type RuntimeHostExecution = RuntimeHostControl & RuntimeHostCredentialCon
     readonly result: {
       readonly repository: BuildResultRepositoryLocation;
       readonly title?: string;
-      readonly forwards?: readonly BuildResultForward[];
       readonly resourceReferences?: Readonly<Record<string, import("@hypit/hypit/result").BuildResultFileRef>>;
     };
   }, options?: {
@@ -149,63 +154,38 @@ export type RuntimeHostTransientExecution = {
   evaluate(input: {
     readonly state: BuildState;
     readonly producers: ProducerRegistry;
-    readonly validators: NonNullable<ExecutorOptions["validators"]>;
+    readonly refinements: NonNullable<ExecutorOptions["refinements"]>;
     readonly resources: ResourceStore;
-  }): Promise<ExecutorRunResult>;
+  }): Promise<ScheduledBuildResult>;
   close(): void | Promise<void>;
 };
 
-/** The selected Endpoint behind one demanded capability, read from the Profile alone. */
-export type RuntimeHostCapabilityProvider = {
-  /** Caller-owned identity for this planned request. */
-  readonly request: string;
-  readonly capability: CapabilityRef;
-  readonly status: "resolved" | "unresolved" | "unsupported" | "ambiguous";
-  /** Configured Endpoint instance selected for this request, when exactly one is identifiable. */
-  readonly endpoint?: string;
-  /** Provider package the Runtime Profile selected for that Endpoint. */
-  readonly use?: string;
-  /** Where that Provider publishes its prices, as the Provider package declares it. */
-  readonly pricing?: { readonly kind: "page"; readonly url: string } | { readonly kind: "local" };
-  /** Every matching Endpoint instance when the selection is ambiguous. */
-  readonly endpoints?: readonly string[];
-  /** Provider-owned reasons from Endpoints that offer the capability but reject this request. */
-  readonly rejections?: readonly { readonly endpoint: string; readonly message: string }[];
-  /** The Endpoint instance the Profile's `bindings` name for this capability, when it names one. */
-  readonly binding?: string;
+/** Shared Endpoint-owned observations exposed through this Host boundary. */
+export type RuntimeHostEndpointObservation = RuntimeEndpointObservation;
+export type RuntimeHostEndpointPricing = RuntimeEndpointPricingObservation;
+export type RuntimeHostEndpointQuery = RuntimeEndpointQuery;
+
+/** One immutable Profile and Endpoint activation snapshot, scoped to one command. */
+export type RuntimeHostInspection = {
+  readonly dataRoot: string;
+  endpoints(): Promise<readonly RuntimeHostEndpointObservation[]>;
+  pricing(): Promise<readonly RuntimeHostEndpointPricing[]>;
+  preflight(): Promise<RuntimeHostDoctorResult>;
+  executionStatus(): Promise<{ readonly state: "running" | "stopped" }>;
+  ensureExecution(options?: { readonly maxWaitMs?: number }): Promise<{ readonly state: "running" | "stopped" }>;
+  createRuntime(): Promise<RuntimeHostExecution>;
+  close(): void | Promise<void>;
 };
 
-export type RuntimeHostCapabilityPricing = RuntimeHostCapabilityProvider & {
-  /** Provider-owned current pricing material relevant to this request. */
-  readonly pricingDocuments?: readonly {
-    readonly source: string;
-    readonly data: CanonicalValue;
-    readonly summary?: string;
-  }[];
-  /** A failed pricing-source read. The Provider's static price page remains available. */
-  readonly pricingError?: string;
-};
-
-export type RuntimeHostProviderQuery = {
-  readonly request: string;
-  readonly capability: CapabilityRef;
-  readonly returns: import("@hypit/hypit/protocol").TypeRef;
-  /** Complete support-relevant parameters available before the Build. */
-  readonly constraints: import("@hypit/hypit/protocol").CanonicalValue;
-  /** Future graph inputs described by the package that owns this request. */
-  readonly pendingInputs?: readonly {
-    readonly input: string;
-    readonly role?: string;
-  }[];
-};
-
-export type RuntimeWorkerState = {
-  readonly state: "running" | "stopped";
+type RuntimeWorkerStateBase = {
   readonly profile: string;
-  readonly pid?: number;
-  readonly startedAt?: number;
   readonly logPath: string;
 };
+
+export type RuntimeWorkerState = RuntimeWorkerStateBase & (
+  | { readonly state: "running"; readonly pid: number; readonly startedAt: number }
+  | { readonly state: "stopped"; readonly pid?: never; readonly startedAt?: never }
+);
 
 export type RuntimeController = {
   readonly profile: string;
@@ -265,19 +245,21 @@ export type LocalRuntimeHost = {
     readonly capabilities?: readonly CapabilityRef[];
     readonly endpoints?: readonly string[];
   }): Promise<RuntimeHostDoctorResult>;
+  /** Freeze the Profile and Endpoint declarations used by one plan, pricing or Build command. */
+  openInspection(queries: readonly RuntimeHostEndpointQuery[]): Promise<RuntimeHostInspection>;
   /**
    * Which selected Endpoint would serve each capability and where its Provider publishes prices.
    * Reads the Profile and Endpoint declarations only; never resolves a credential or contacts a service.
    */
-  providers(requests: readonly RuntimeHostProviderQuery[]): Promise<readonly RuntimeHostCapabilityProvider[]>;
+  endpoints(queries: readonly RuntimeHostEndpointQuery[]): Promise<readonly RuntimeHostEndpointObservation[]>;
   /** Read current Provider-owned pricing material relevant to these requests. */
-  pricing(requests: readonly RuntimeHostProviderQuery[]): Promise<readonly RuntimeHostCapabilityPricing[]>;
+  pricing(queries: readonly RuntimeHostEndpointQuery[]): Promise<readonly RuntimeHostEndpointPricing[]>;
   /**
    * Execute one immediate Need through the selected Endpoint and its credentials, outside any Build.
    * The creation-time boundary for observation, transcription and other quick capabilities; it
    * creates no Build, Result or state, and refuses asynchronous capabilities.
    */
-  invoke(need: Need, resources: ResourceStore, observation?: RuntimeInvocationObservation): Promise<{ readonly value: StoredValue }>;
+  invoke(need: Need, resources: ResourceStore, observation?: RuntimeInvocationObservation): Promise<{ readonly value: Value }>;
   /** Open one disposable authoring execution. It creates no Build, Result or recoverable Operation. */
   openTransientExecution(): Promise<RuntimeHostTransientExecution>;
   runWorker(readyFile: string, owner: string, execution?: { readonly dataRoot: string }): Promise<void>;

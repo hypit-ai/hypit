@@ -1,12 +1,12 @@
-import type { ModuleRef } from "@hypit/hypit/protocol";
-import type { GenerationWireMapping } from "@hypit/generation";
+import type { GenerationWireMapping } from "@hypit/generation/provider";
+import { gptImageModuleRef } from "@hypit/gpt-image";
+import { grokImagineModuleRef } from "@hypit/grok-imagine";
+import { minimaxH3ModuleRef } from "@hypit/minimax-h3";
+import { nanoBananaModuleRef } from "@hypit/nano-banana";
+import { seedanceModuleRef } from "@hypit/seedance";
+import { seedreamModuleRef } from "@hypit/seedream";
 
-const SEEDANCE: ModuleRef = { name: "@hypit/seedance", version: "1" };
-const SEEDREAM: ModuleRef = { name: "@hypit/seedream", version: "1" };
-const MINIMAX: ModuleRef = { name: "@hypit/minimax-h3", version: "1" };
-const GPT_IMAGE: ModuleRef = { name: "@hypit/gpt-image", version: "1" };
-const NANO_BANANA: ModuleRef = { name: "@hypit/nano-banana", version: "1" };
-const GROK: ModuleRef = { name: "@hypit/grok-imagine", version: "1" };
+export type HiApiMapping = GenerationWireMapping & { readonly media: "image" | "video" };
 
 /**
  * HiAPI model IDs and the `input` fields each documents. A model whose HiAPI ID depends on the
@@ -28,16 +28,16 @@ const seedanceFields = {
   webSearch: { as: "value", field: "web_search" },
 } as const satisfies GenerationWireMapping["fields"];
 
-const seedance2 = (name: string, model: string): GenerationWireMapping => ({
-  capability: { module: SEEDANCE, name }, result: "video", routes: [{ model }], fields: seedanceFields,
+const seedance2 = (name: string, model: string): HiApiMapping => ({
+  capability: { module: seedanceModuleRef, name }, media: "video", routes: [{ model }], fields: seedanceFields,
 });
 
-export const hiApiMappings: readonly GenerationWireMapping[] = [
+export const hiApiMappings: readonly HiApiMapping[] = [
   seedance2("seedance-2", "seedance-2.0"),
   seedance2("seedance-2-fast", "seedance-2.0-fast"),
   seedance2("seedance-2-mini", "seedance-2.0-mini"),
   {
-    capability: { module: SEEDANCE, name: "seedance-2.5" }, result: "video",
+    capability: { module: seedanceModuleRef, name: "seedance-2.5" }, media: "video",
     routes: [
       { model: "seedance-2.5/reference-to-video", whenPresent: ["referenceVideo"] },
       { model: "seedance-2.5/image-to-video", whenPresent: ["firstFrame"] },
@@ -48,7 +48,7 @@ export const hiApiMappings: readonly GenerationWireMapping[] = [
     fields: seedanceFields,
   },
   {
-    capability: { module: SEEDREAM, name: "seedream-5-lite" }, result: "image",
+    capability: { module: seedreamModuleRef, name: "seedream-5-lite" }, media: "image",
     routes: [
       { model: "seedream-5.0-lite/image-to-image", whenPresent: ["images"] },
       { model: "seedream-5.0-lite/text-to-image" },
@@ -63,7 +63,7 @@ export const hiApiMappings: readonly GenerationWireMapping[] = [
     },
   },
   {
-    capability: { module: MINIMAX, name: "minimax-h3" }, result: "video", routes: [{ model: "minimax-h3" }],
+    capability: { module: minimaxH3ModuleRef, name: "minimax-h3" }, media: "video", routes: [{ model: "minimax-h3" }],
     constants: { watermark: false },
     fields: {
       prompt: { as: "value", field: "prompt" },
@@ -78,7 +78,7 @@ export const hiApiMappings: readonly GenerationWireMapping[] = [
     },
   },
   {
-    capability: { module: GPT_IMAGE, name: "gpt-image-2" }, result: "image",
+    capability: { module: gptImageModuleRef, name: "gpt-image-2" }, media: "image",
     routes: [
       { model: "gpt-image-2/image-to-image", whenPresent: ["images"] },
       { model: "gpt-image-2/text-to-image" },
@@ -91,8 +91,8 @@ export const hiApiMappings: readonly GenerationWireMapping[] = [
       images: { as: "urlArray", field: "input_urls" },
     },
   },
-  ...([["nano-banana-2", "Nano-Banana-2"], ["nano-banana-pro", "Nano-Banana-Pro"]] as const).map(([name, model]): GenerationWireMapping => ({
-    capability: { module: NANO_BANANA, name }, result: "image", routes: [{ model }],
+  ...([["nano-banana-2", "Nano-Banana-2"], ["nano-banana-pro", "Nano-Banana-Pro"]] as const).map(([name, model]): HiApiMapping => ({
+    capability: { module: nanoBananaModuleRef, name }, media: "image", routes: [{ model }],
     fields: {
       prompt: { as: "value", field: "prompt" },
       images: { as: "urlArray", field: "image_input" },
@@ -102,7 +102,7 @@ export const hiApiMappings: readonly GenerationWireMapping[] = [
     },
   })),
   {
-    capability: { module: GROK, name: "grok-imagine-video" }, result: "video",
+    capability: { module: grokImagineModuleRef, name: "grok-imagine-video" }, media: "video",
     routes: [
       { model: "grok-imagine/image-to-video", whenPresent: ["images"] },
       { model: "grok-imagine/text-to-video" },
@@ -116,7 +116,7 @@ export const hiApiMappings: readonly GenerationWireMapping[] = [
     },
   },
   {
-    capability: { module: GROK, name: "grok-imagine-video-1.5-preview" }, result: "video",
+    capability: { module: grokImagineModuleRef, name: "grok-imagine-video-1.5-preview" }, media: "video",
     routes: [{ model: "grok-imagine-1.5/image-to-video" }],
     fields: {
       prompt: { as: "value", field: "prompt" },

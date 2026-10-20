@@ -1,6 +1,6 @@
 import { assertAudioLevelAutomation } from "./audio-level-automation.js";
 import type { AudioLevelAutomation, AudioSampleSpan } from "./audio-level-automation.js";
-import { canonicalStringify, isResourceId } from "@hypit/hypit/protocol";
+import { assertBlobRef, canonicalStringify } from "@hypit/hypit/protocol";
 import type { BlobRef, CanonicalValue } from "@hypit/hypit/protocol";
 
 import {
@@ -481,15 +481,7 @@ function assertFrameSpan(span: FrameSpan, totalFrames: number, label: string): v
 }
 
 function assertMediaArtifact(artifact: BlobRef, label: string): void {
-  if (
-    artifact.kind !== "blob"
-    || !isResourceId(artifact.resource)
-    || !Number.isSafeInteger(artifact.size)
-    || artifact.size < 0
-    || !artifact.mediaType
-  ) {
-    throw new Error(`${label} is invalid.`);
-  }
+  assertBlobRef(artifact, label);
 }
 
 function assertRational(value: VisualSourceTimeRational, label: string, sign: "positive" | "non-negative" | "signed"): void {
@@ -552,13 +544,12 @@ function assertSourceTime(value: VisualSourceTimeMap, durationFrames: number, la
 }
 
 function assertAudioArtifact(artifact: BlobRef, label: string): void {
-  if (
-    artifact.kind !== "blob"
-    || !isResourceId(artifact.resource)
-    || !Number.isSafeInteger(artifact.size)
-    || artifact.size < 0
-    || artifact.mediaType !== "audio/wav"
-  ) {
+  try {
+    assertBlobRef(artifact, label);
+  } catch {
+    throw new Error(`${label} must be a canonical WAV BlobRef.`);
+  }
+  if (artifact.mediaType !== "audio/wav") {
     throw new Error(`${label} must be a canonical WAV BlobRef.`);
   }
 }

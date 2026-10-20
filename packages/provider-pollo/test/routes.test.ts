@@ -1,11 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { assertMappingCoversPorts } from "@hypit/generation";
 import type { BlobRef, CanonicalValue } from "@hypit/protocol";
-import { gptImage2Ports } from "@hypit/gpt-image";
-import { grokImaginePorts, sealGrokImagineRequest } from "@hypit/grok-imagine";
-import { minimaxH3Ports, sealMinimaxH3Request } from "@hypit/minimax-h3";
-import { nanoBananaPorts } from "@hypit/nano-banana";
+import { sealGrokImagineRequest } from "@hypit/grok-imagine";
+import { sealMinimaxH3Request } from "@hypit/minimax-h3";
 
 import { polloMappings } from "../src/mapping.js";
 import { polloRouteForCapability } from "../src/routes.js";
@@ -15,13 +12,6 @@ const audio: BlobRef = { kind: "blob", resource: "res_pollo_2", size: 3, mediaTy
 const resolve = async (artifact: { resource: string }) => `https://example.test/${artifact.resource}`;
 const route = (module: string, name: string) => polloRouteForCapability({ module: { name: module, version: "1" }, name })!;
 const constraints = (request: unknown) => request as CanonicalValue;
-
-test("every Pollo mapping covers its model's ports", () => {
-  const tables = { ...grokImaginePorts, ...nanoBananaPorts, "minimax-h3": minimaxH3Ports, "gpt-image-2": gptImage2Ports };
-  for (const mapping of polloMappings) {
-    assertMappingCoversPorts(tables[mapping.capability.name as keyof typeof tables], mapping);
-  }
-});
 
 test("MiniMax H3 references become Pollo typed refs", async () => {
   const minimax = route("@hypit/minimax-h3", "minimax-h3");

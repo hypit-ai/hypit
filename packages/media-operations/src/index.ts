@@ -11,11 +11,11 @@ export {
   transformMediaFragment,
 } from "./fragment.js";
 export {
-  compileAudioProgramPlan,
-  sealAudioProgramPlan,
-  verifyAudioProgramPlan,
-} from "./audio-plan.js";
-export { mediaOperationsCapabilities, mediaOperationsManifest, mediaOperationsMarkupSurfaces, mediaOperationsModuleRef, mediaOperationsProducers, mediaOperationsTypes, audioProgramPlanSchema, mediaSelectionRequestSchema, audioExtractionRequestSchema, frameExtractionRequestSchema, stillVideoRequestSchema, stillVideoLayoutSchema, mediaTransformProgramSchema } from "./manifest.js";
+  compileAudioProgram,
+  sealAudioProgram,
+  verifyAudioProgram,
+} from "./audio-program.js";
+export { mediaOperationsCapabilities, mediaOperationsManifest, mediaOperationsMarkupSurfaces, mediaOperationsModuleRef, mediaOperationsProducers, mediaOperationsTypes, audioProgramSchema, mediaSelectionRequestSchema, audioExtractionRequestSchema, frameExtractionRequestSchema, stillVideoRequestSchema, stillVideoLayoutSchema, mediaTransformProgramSchema } from "./manifest.js";
 export {
   sealMediaSelectionRequest,
   selectMediaStreams,

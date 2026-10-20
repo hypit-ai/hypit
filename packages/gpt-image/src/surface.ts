@@ -1,17 +1,19 @@
+import { sameType } from "@hypit/hypit/protocol";
 import { blobTypes } from "@hypit/hypit/blob";
 import {
-  generationPort,
-  sealGenerationMediaBinding,
-} from "@hypit/generation";
-import type { GenerationMediaPort } from "@hypit/generation";
+  modelField,
+  sealModelArtifactBinding,
+} from "@hypit/generation/model-fields";
+import type { ModelArtifactField } from "@hypit/generation/model-fields";
 import { imageTransformTypes } from "@hypit/image-operations";
 import {
-  exactModelMediaInputNames,
-  exactModelTextInputName,
-  createExactModelPrimaryGenerationFragment,
-} from "@hypit/generation/model";
+  modelArtifactInputNames,
+  modelTextInputName,
+  createFieldModelPrimaryFragment,
+} from "@hypit/generation/model-fields";
 import type { MarkupAttributeValue, StructuredElement, StructuredSurfaceHandler, SurfaceResolvedReference } from "@hypit/hypit/markup";
 import type { CanonicalValue, TypeRef } from "@hypit/hypit/protocol";
+import { isBlobRef } from "@hypit/hypit/protocol";
 import { textTypes, verifyText } from "@hypit/hypit/text";
 
 import { createGptImageCleanFragment } from "./fragment.js";
@@ -28,12 +30,6 @@ function assert(condition: unknown, message: string): asserts condition {
 
 function localName(value: string): string {
   return value.includes(":") ? value.slice(value.lastIndexOf(":") + 1) : value;
-}
-
-function sameType(left: TypeRef, right: TypeRef): boolean {
-  return left.module.name === right.module.name
-    && left.module.version === right.module.version
-    && left.name === right.name;
 }
 
 function exactAttributes(element: StructuredElement, allowed: readonly string[], required: readonly string[]): void {
@@ -75,8 +71,8 @@ function prompt(
 ): SurfaceResolvedReference {
   const result = resolve(element, "prompt", textTypes.text, resolveReference);
   if (result.record !== undefined) {
-    assert(result.record.value.kind === "inline", `${element.name}.prompt must reference Text`);
-    verifyText(result.record.value.value);
+    assert(true, `${element.name}.prompt must reference Text`);
+    verifyText(result.record.value);
   }
   return result;
 }
@@ -84,6 +80,7 @@ function prompt(
 function references(
   element: StructuredElement,
   resolveReference: (path: string) => SurfaceResolvedReference | undefined,
+  maximum: number | undefined,
 ): readonly SurfaceResolvedReference[] {
   const result: SurfaceResolvedReference[] = [];
   for (const child of element.children) {
@@ -97,12 +94,14 @@ function references(
       `${child.name} must be empty`);
     const image = resolve(child, "image", blobTypes.blob, resolveReference);
     if (image.record !== undefined) {
-      assert(image.record.value.kind === "blob" && image.record.value.mediaType.startsWith("image/"),
+      assert(isBlobRef(image.record.value) && image.record.value.mediaType.startsWith("image/"),
         `${child.name}.image must reference image media`);
     }
     result.push(image);
   }
-  assert(result.length <= 16, `${element.name} accepts at most 16 Reference children`);
+  if (maximum !== undefined) {
+    assert(result.length <= maximum, `${element.name} accepts at most ${maximum} Reference children`);
+  }
   return result;
 }
 
@@ -112,10 +111,10 @@ function decode(clean: boolean): StructuredSurfaceHandler {
       ["id", "prompt", "aspect-ratio", "resolution"]);
     const id = textAttribute(element, "id");
     const promptSource = prompt(element, resolveReference);
-    const images = references(element, resolveReference);
     const endpoint = gptImageEndpoints.image!;
-    const imagePort = generationPort(gptImage2Ports, "images");
+    const imagePort = modelField(gptImage2Ports, "images");
     assert(imagePort.value.kind === "media", "GPT Image images port is not media");
+    const images = references(element, resolveReference, imagePort.maxItems);
     const background = element.attributes.background === undefined
       ? undefined
       : textAttribute(element, "background");
@@ -127,17 +126,17 @@ function decode(clean: boolean): StructuredSurfaceHandler {
     const records: Array<{
       readonly id: string;
       readonly type: TypeRef;
-      readonly value: { readonly kind: "inline"; readonly value: CanonicalValue };
+      readonly value: CanonicalValue;
       readonly range: StructuredElement["range"];
     }> = [{
       id: `${id}.draft`,
       type: endpoint.draftType,
-      value: { kind: "inline", value: draft as unknown as CanonicalValue },
+      value: (draft as unknown as CanonicalValue),
       range: element.range,
     }];
     const inputs: Record<string, SurfaceResolvedReference["ref"] | { readonly kind: "record"; readonly id: string }> = {
       draft: { kind: "record", id: `${id}.draft` },
-      [exactModelTextInputName("prompt")]: promptSource.ref,
+      [modelTextInputName("prompt")]: promptSource.ref,
     };
     const mediaInputs = images.map((image, index) => {
       const name = `image-${String(index + 1).padStart(4, "0")}`;
@@ -145,13 +144,10 @@ function decode(clean: boolean): StructuredSurfaceHandler {
       records.push({
         id: bindingId,
         type: endpoint.mediaBindings.images!.type,
-        value: {
-          kind: "inline",
-          value: sealGenerationMediaBinding(imagePort as GenerationMediaPort, { role: "image" }) as unknown as CanonicalValue,
-        },
+        value: (sealModelArtifactBinding(imagePort as ModelArtifactField, { role: "image" }) as unknown as CanonicalValue),
         range: element.range,
       });
-      const names = exactModelMediaInputNames(name);
+      const names = modelArtifactInputNames(name);
       inputs[names.binding] = { kind: "record", id: bindingId };
       inputs[names.artifact] = image.ref;
       return { name, port: "images" } as const;
@@ -160,7 +156,7 @@ function decode(clean: boolean): StructuredSurfaceHandler {
       records.push({
         id: `${id}.cleanup`,
         type: imageTransformTypes.program,
-        value: { kind: "inline", value: gptImageCleanupProgram as unknown as CanonicalValue },
+        value: (gptImageCleanupProgram as unknown as CanonicalValue),
         range: element.range,
       });
       inputs.cleanup = { kind: "record", id: `${id}.cleanup` };
@@ -168,17 +164,16 @@ function decode(clean: boolean): StructuredSurfaceHandler {
     const textInputs = [{ name: "prompt", port: "prompt" }] as const;
     const fragment = clean
       ? createGptImageCleanFragment(mediaInputs, textInputs)
-      : createExactModelPrimaryGenerationFragment(endpoint, mediaInputs, textInputs);
+      : createFieldModelPrimaryFragment(endpoint, mediaInputs, textInputs);
     return {
       records,
       components: [{
         id,
-        fragment: fragment.id,
+        fragment,
         inputs,
         outputs: { image: `${id}.image` },
         range: element.range,
       }],
-      fragments: [fragment],
     };
   };
 }

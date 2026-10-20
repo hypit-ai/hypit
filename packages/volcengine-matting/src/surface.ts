@@ -1,9 +1,9 @@
 import { blobTypes } from "@hypit/hypit/blob";
-import { sealGenerationMediaBinding, sealGenerationRequestDraft } from "@hypit/generation";
-import type { GenerationMediaPort } from "@hypit/generation";
-import { canonicalize } from "@hypit/hypit/protocol";
+import { sealModelArtifactBinding, sealModelFieldBuilder } from "@hypit/generation/model-fields";
+import type { ModelArtifactField } from "@hypit/generation/model-fields";
+import { canonicalize, isBlobRef, sameType } from "@hypit/hypit/protocol";
 import type { StructuredSurfaceHandler } from "@hypit/hypit/markup";
-import { createExactModelPrimaryGenerationFragment, exactModelMediaInputNames } from "@hypit/generation/model";
+import { createFieldModelPrimaryFragment, modelArtifactInputNames } from "@hypit/generation/model-fields";
 import { portraitMattingEndpoint as endpoint } from "./index.js";
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -19,27 +19,24 @@ export const decodePortraitMattingSurface: StructuredSurfaceHandler = ({ element
   assert(!element.children.some((item) => item.kind === "element" || item.value.trim()), `${element.name} must be empty`);
   assert(typeof source === "object" && source.kind === "reference", `${element.name}.source must be a video reference`);
   const resolved = resolveReference(source.path);
-  assert(resolved !== undefined && resolved.type.name === blobTypes.blob.name
-    && resolved.type.module.name === blobTypes.blob.module.name
-    && resolved.type.module.version === blobTypes.blob.module.version, `${element.name}.source must be a Blob`);
+  assert(resolved !== undefined && sameType(resolved.type, blobTypes.blob), `${element.name}.source must be a Blob`);
   if (resolved.record !== undefined) {
-    assert(resolved.record.value.kind === "blob" && resolved.record.value.mediaType.startsWith("video/"),
+    assert(isBlobRef(resolved.record.value) && resolved.record.value.mediaType.startsWith("video/"),
       `${element.name}.source must be video media`);
   }
   assert(format === undefined || typeof format === "string", `${element.name}.format must be literal`);
-  const draft = sealGenerationRequestDraft(endpoint.ports, { format: [format ?? "WEBM"] });
-  const binding = sealGenerationMediaBinding(endpoint.ports.ports.find((port) => port.name === "source")! as GenerationMediaPort,
+  const draft = sealModelFieldBuilder(endpoint.ports, { format: [format ?? "WEBM"] });
+  const binding = sealModelArtifactBinding(endpoint.ports.ports.find((port) => port.name === "source")! as ModelArtifactField,
     { role: "video" });
-  const names = exactModelMediaInputNames("source");
-  const fragment = createExactModelPrimaryGenerationFragment(endpoint, [{ name: "source", port: "source" }], []);
+  const names = modelArtifactInputNames("source");
+  const fragment = createFieldModelPrimaryFragment(endpoint, [{ name: "source", port: "source" }], []);
   return {
     records: [
-      { id: `${id}.draft`, type: endpoint.draftType, value: { kind: "inline", value: canonicalize(draft) }, range: element.range },
+      { id: `${id}.draft`, type: endpoint.draftType, value: (canonicalize(draft)), range: element.range },
       { id: `${id}.source-binding`, type: endpoint.mediaBindings.source!.type,
-        value: { kind: "inline", value: canonicalize(binding) }, range: element.range },
+        value: (canonicalize(binding)), range: element.range },
     ],
-    fragments: [fragment],
-    components: [{ id, fragment: fragment.id, inputs: {
+    components: [{ id, fragment, inputs: {
       draft: { kind: "record", id: `${id}.draft` },
       [names.binding]: { kind: "record", id: `${id}.source-binding` },
       [names.artifact]: resolved.ref,

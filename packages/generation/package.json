@@ -1,22 +1,23 @@
 {
   "name": "@hypit/generation",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./model": "./src/model.ts"
+    "./model": "./src/model-contract.ts",
+    "./model-fields": "./src/model-fields.ts",
+    "./provider": "./src/provider.ts"
   },
   "hypit": {
     "activation": "./src/activation.ts"
   },
   "devDependencies": {
     "@hypit/executor": "workspace:*",
-    "@hypit/admission": "workspace:*",
+    "@hypit/refinement": "workspace:*",
     "@hypit/author": "workspace:*",
     "@hypit/blob": "workspace:*",
-    "@hypit/facet": "workspace:*",
     "@hypit/producer": "workspace:*",
     "@hypit/protocol": "workspace:*",
     "@hypit/text": "workspace:*",
@@ -27,6 +28,6 @@
     "README.md"
   ],
   "peerDependencies": {
-    "@hypit/hypit": "workspace:^0.3.1"
+    "@hypit/hypit": "workspace:^0.4.0"
   }
 }

@@ -216,7 +216,7 @@ export function createStage(store: Store, selectedArtifact: (id: string | undefi
 
   const toggle = (): void => {
     if (artifactPreview.selected !== undefined) { artifactPreview.toggle(); return; }
-    if (state === undefined) return;
+    if (state === undefined || !ready) return;
     if (playing) { stop(); return; }
     playing = true;
     setIcon(playIcon, "pause");
@@ -229,7 +229,7 @@ export function createStage(store: Store, selectedArtifact: (id: string | undefi
     const step = (now: number): void => {
       const at = fromFrame + Math.round((now - began) / 1000 * rate);
       if (!playing || at >= total) { store.seek(total - 1, "play"); stop(); return; }
-      store.seek(at, "play");
+      if (at !== state?.playhead.frame) store.seek(at, "play");
       raf = requestAnimationFrame(step);
     };
     raf = requestAnimationFrame(step);
@@ -300,6 +300,7 @@ export function createStage(store: Store, selectedArtifact: (id: string | undefi
     const rate = fps(state.snapshot);
     progress.hidden = scrubber.hidden = time.hidden = false;
     scrubber.disabled = !ready;
+    play.disabled = previous.disabled = next.disabled = !ready;
     scrubber.step = String(1 / rate);
     scrubber.max = String(Math.max(0, state.snapshot.timeline.frameCount - 1) / rate);
     scrubber.value = String(state.playhead.frame / rate);
@@ -346,13 +347,18 @@ export function createStage(store: Store, selectedArtifact: (id: string | undefi
     selectedArtifact(artifact.id);
   };
 
-  iframe.addEventListener("load", () => {
+  const previewReady = (): void => {
+    if (ready) return;
     ready = true;
     compositionTime();
     if (state !== undefined) seekPicture(state.playhead.frame);
     applyMuted();
     // The box could not be measured until now.
     overlay.refresh();
+  };
+  iframe.addEventListener("load", previewReady);
+  window.addEventListener("message", (event: MessageEvent) => {
+    if (event.source === iframe.contentWindow && event.data?.type === "hypit-preview-ready") previewReady();
   });
 
   new ResizeObserver(fit).observe(viewport);

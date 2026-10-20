@@ -1,28 +1,29 @@
 import { blobTypes } from "@hypit/hypit/blob";
-import { sealGenerationPortRequest, sealGenerationPortTable } from "@hypit/generation";
-import type { GenerationPortValue } from "@hypit/generation";
-import { defineExactModelModule } from "@hypit/generation/model";
+import { sealModelFieldRequest, defineModelFields } from "@hypit/generation/model-fields";
+import type { ModelFieldValue } from "@hypit/generation/model-fields";
+import { defineFieldModelModule, standardGenerationResults } from "@hypit/generation/model-fields";
 
 export const volcengineMattingModuleRef = { name: "@hypit/volcengine-matting", version: "1" } as const;
 
-export const portraitMattingPorts = sealGenerationPortTable({
+export const portraitMattingPorts = defineModelFields({
   model: "matte-portrait-video",
-  result: "video",
   ports: [
     { name: "source", value: { kind: "media", accepts: ["video"] }, minItems: 1, maxItems: 1 },
-    { name: "format", value: { kind: "enum", values: ["WEBM", "MOV"] }, minItems: 0, maxItems: 1 },
+    { name: "format", value: { kind: "enum", values: ["WEBM", "MOV"] }, minItems: 1, maxItems: 1,
+      defaultItems: ["WEBM"] },
   ],
   requires: [],
 });
 
-export function sealPortraitMattingRequest(ports: Readonly<Record<string, readonly GenerationPortValue[]>>) {
-  return sealGenerationPortRequest(portraitMattingPorts, ports);
+export function sealPortraitMattingRequest(ports: Readonly<Record<string, readonly ModelFieldValue[]>>) {
+  return sealModelFieldRequest(portraitMattingPorts, ports);
 }
 
-export const volcengineMattingDefinition = defineExactModelModule({
+export const volcengineMattingDefinition = defineFieldModelModule({
   module: volcengineMattingModuleRef,
   endpoints: [{ key: "portrait", requestTypeName: "PortraitMattingRequest",
-    producerName: "request-portrait-matting", ports: portraitMattingPorts }],
+    producerName: "request-portrait-matting", ports: portraitMattingPorts,
+    result: standardGenerationResults.video }],
 });
 export const portraitMattingEndpoint = volcengineMattingDefinition.endpoints.portrait!;
 

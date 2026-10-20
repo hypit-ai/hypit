@@ -8,7 +8,7 @@ export type FrontendFacet<
   Kind extends string,
   Frontend extends FrontendImplementation,
 > = Facet & {
-  readonly offers: readonly [string];
+  readonly address: string;
   readonly implementation: {
     readonly kind: Kind;
     readonly frontend: Frontend;
@@ -26,7 +26,7 @@ export function createFrontendFacet<
   }
   return {
     abi,
-    offers: [frontend.id],
+    address: frontend.id,
     implementation: {
       kind,
       frontend,
@@ -49,6 +49,9 @@ export function frontendsFromFacets<
     if (frontend === null || typeof frontend !== "object" || Array.isArray(frontend)
       || typeof (frontend as { readonly id?: unknown }).id !== "string") {
       throw new Error(`${kind} Frontend facet has an invalid implementation`);
+    }
+    if (facet.address !== (frontend as Frontend).id) {
+      throw new Error(`${kind} Frontend facet address does not match its implementation`);
     }
     values.push(frontend as Frontend);
   }

@@ -1,11 +1,11 @@
-import { sealTimeline, timelineTypes } from "@hypit/timeline";
+import { sealTimeline, timelineManifest, timelineTypes } from "@hypit/timeline";
 import assert from "node:assert/strict";
 import test from "node:test";
-import { videoContractManifests } from "../../../test/support/video-domain.js";
 import { fixtureResource } from "../../../test/fixture-resource.js";
 import { timelineFixture } from "../../../test/timeline-fixture.js";
 
-import { compositionDependency, compositionTypes } from "@hypit/composition";
+import { blobManifest, blobTypes } from "@hypit/blob";
+import { compositionDependency, compositionManifest, compositionTypes } from "@hypit/composition";
 import type { VisualElement, VisualSourceTimeMap } from "@hypit/composition";
 import { createResolvedClosure } from "@hypit/kernel";
 import {
@@ -34,14 +34,14 @@ import type {
   DepthStackSpec,
 } from "@hypit/depth-stack";
 import type { FontArtifactRef } from "@hypit/media";
-import { mediaTypes } from "@hypit/media";
+import { mediaManifest, mediaTypes } from "@hypit/media";
 import { mediaOperationsManifest } from "@hypit/media-operations";
 import type { MediaLayerSet } from "@hypit/visual-track";
 import type { ModuleManifest } from "@hypit/protocol";
-import { temporalTypes } from "@hypit/temporal";
+import { temporalManifest, temporalTypes } from "@hypit/temporal";
 import type { TemporalInstant } from "@hypit/temporal";
-import { canvasFrame, sealCanvas, sealSpatialFrame, spatialTypes } from "@hypit/spatial";
-import { recipeType } from "@hypit/recipe";
+import { canvasFrame, sealCanvas, sealSpatialFrame, spatialManifest, spatialTypes } from "@hypit/spatial";
+import { recipeManifest, recipeType } from "@hypit/recipe";
 import { sealText, textManifest, textTypes } from "@hypit/text";
 import type { Recipe } from "@hypit/recipe";
 import type {
@@ -50,7 +50,6 @@ import type {
   SurfaceResolvedReference,
   MarkupAttributeValue,
 } from "@hypit/markup";
-import { blobTypes } from "@hypit/blob";
 import { visualTrackManifest, visualTrackTypes } from "@hypit/visual-track";
 
 const space = sealTimeline({ id: "test-space", frameCount: 60, frameRate: { numerator: 30, denominator: 1 },
@@ -412,7 +411,7 @@ test("the author Surface keeps every source, trigger, terminal, Frame and option
   const plain = (path: string, type: SurfaceResolvedReference["type"]): SurfaceResolvedReference => ({ path, ref: { kind: "record", id: path }, type });
   const appearance = (path: string, properties: Recipe["properties"]): SurfaceResolvedReference => ({
     path, ref: { kind: "record", id: path }, type: recipeType,
-    record: { value: { kind: "inline", value: { path, properties } } } as never,
+    record: { value: ({ path, properties }) } as never,
   });
   const references = new Map<string, SurfaceResolvedReference>([
     ["timeline", plain("timeline", timelineTypes.timeline)],
@@ -439,12 +438,12 @@ test("the author Surface keeps every source, trigger, terminal, Frame and option
   const component = result.components.find((candidate) => candidate.outputs.visual !== undefined);
   assert.ok(component !== undefined);
   assert.deepEqual(Object.keys(component.outputs).sort(), ["program", "visual"]);
-  const fragment = result.fragments.find((candidate) => candidate.exports.some((output) => output.name === "visual"))!;
+  const fragment = result.components.find((candidate) => candidate.fragment.exports.some((output) => output.name === "visual"))!.fragment;
   assert.ok(fragment.operations.some((operation) => operation.producer.name === "append-still-media-layer"));
   assert.ok(fragment.operations.some((operation) => operation.producer.name === "append-timed-media-layer"));
   assert.ok(fragment.operations.some((operation) => operation.producer.name === "append-depth-stack-card"));
   assert.ok(fragment.operations.some((operation) => operation.producer.name === "finalize-depth-stack"));
-  assert.equal(result.fragments.some((candidate) => candidate.operations.some((operation) =>
+  assert.equal(result.components.some(({ fragment: candidate }) => candidate.operations.some((operation) =>
     operation.producer.module.name === "@hypit/narrative-temporal")), false);
   assert.ok(fragment.inputs.some((input) => input.name === "frame"));
   assert.equal(fragment.inputs.some((input) => input.name === "within"), false);
@@ -464,13 +463,13 @@ test("Label Surface compiles explicit exact-font text rather than media metadata
     },
     resolveReference: (path) => path === "font" ? {
       path, ref: { kind: "record", id: path }, type: mediaTypes.fontStack,
-      record: { value: { kind: "inline", value: stack } } as never,
+      record: { value: (stack) } as never,
     } : undefined,
     resolveAsset: async () => { throw new Error("no asset resolution expected"); },
   });
   assert.equal(result.components.length, 1);
   assert.equal(result.components[0]?.outputs.label, "proof-label");
-  assert.equal(result.fragments[0]?.operations[0]?.producer.name, depthStackProducers.bindLabelText.name);
+  assert.equal(result.components[0]?.fragment.operations[0]?.producer.name, depthStackProducers.bindLabelText.name);
   assert.ok(result.records.some((record) => record.type.name === depthStackTypes.cardLabelStyle.name));
   assert.ok(result.records.some((record) => record.type.module.name === "@hypit/text" && record.type.name === "Text"));
 });
@@ -487,10 +486,10 @@ test("Label Surface accepts ordinary graph Text without copying it during author
     },
     resolveReference: (path) => path === "font" ? {
       path, ref: { kind: "record", id: path }, type: mediaTypes.fontStack,
-      record: { value: { kind: "inline", value: stack } } as never,
+      record: { value: (stack) } as never,
     } : path === "copy" ? {
       path, ref: { kind: "record", id: path }, type: textTypes.text,
-      record: { value: { kind: "inline", value: sealText("Dynamic evidence") } } as never,
+      record: { value: (sealText("Dynamic evidence")) } as never,
     } : undefined,
     resolveAsset: async () => { throw new Error("no asset resolution expected"); },
   });
@@ -507,12 +506,17 @@ test("another Deck family can coexist by contributing only the existing VisualTr
     types: [], capabilities: [], producers: [{
       name: "render-carousel",
       inputs: [],
-      outputs: [{ name: "track", type: compositionTypes.visualTrack }],
-      needs: [],
+      result: { kind: "output" as const, name: "track", type: compositionTypes.visualTrack },
     }],
   };
   const closure = createResolvedClosure([
-    ...videoContractManifests,
+    blobManifest,
+    timelineManifest,
+    temporalManifest,
+    mediaManifest,
+    spatialManifest,
+    compositionManifest,
+    recipeManifest,
     mediaOperationsManifest,
     visualTrackManifest,
     textManifest,
@@ -521,7 +525,9 @@ test("another Deck family can coexist by contributing only the existing VisualTr
   ]);
   assert.ok(closure.modules.some((module) => module.manifest.name === "@hypit/depth-stack"));
   assert.ok(closure.modules.some((module) => module.manifest.name === "example.carousel"));
-  assert.deepEqual(other.producers[0]?.outputs[0]?.type, compositionTypes.visualTrack);
+  assert.deepEqual(other.producers[0]?.result.kind === "output"
+    ? other.producers[0].result.type
+    : undefined, compositionTypes.visualTrack);
 });
 
 test("SVS decoding exposes documented depth, frame treatment and playback axes", () => {

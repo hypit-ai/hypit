@@ -6,12 +6,16 @@ import type {
 } from "@hypit/source";
 import type { BlobRef } from "@hypit/protocol";
 
-/** Repeatably openable transfer bytes admitted by the selected Workspace. */
+export type BlobByteRange = { readonly start: number; readonly endExclusive: number };
+
+/** Repeatably openable transfer bytes supplied by the selected Workspace. */
 export type BlobAttachment = {
-  readonly artifact: BlobRef;
+  readonly blob: BlobRef;
   /** Stable external address, when the Workspace supplies a file by reference. */
   readonly location?: string;
   open(): Awaitable<AsyncIterable<Uint8Array>>;
+  /** Optional random access for preview playback; ranges use an exclusive end. */
+  openRange?(range: BlobByteRange): Awaitable<AsyncIterable<Uint8Array>>;
 };
 
 /** One isolated, read-once definition session for exactly one compilation. */

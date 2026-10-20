@@ -1,8 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { registerTypeValidatorFacets } from "@hypit/admission";
-import { createResolvedClosure, sealBuildRequest, start } from "@hypit/kernel";
+import { registerTypeRefinements } from "@hypit/refinement";
+import {
+  createResolvedClosure,
+  defineBuild,
+  link,
+  materializeBuild,
+  planBuild,
+} from "@hypit/kernel";
 import { AuthorFrontendRegistry, resolveCompiledSourceExport } from "@hypit/author";
 import { compileSourceClosure } from "@hypit/compiler";
 import type { ResolvedSource } from "@hypit/source";
@@ -11,7 +17,26 @@ import {
   MarkupSurfaceRegistry,
   createMarkupAuthorFrontend,
 } from "@hypit/markup";
-import { createRecordAdmitter, TypeValidatorRegistry } from "@hypit/admission";
+import { createRecordValidator, RefinementRegistry } from "@hypit/refinement";
+
+function buildState(
+  program: Parameters<typeof planBuild>[0],
+  graph: Parameters<typeof planBuild>[1],
+  targets: readonly string[],
+) {
+  const planned = planBuild(program, graph, {
+    format: "hypit.run-graph@1",
+    records: [],
+    candidates: [],
+    operations: [],
+    satisfactions: [],
+    targets: targets.map((output) => ({ output })),
+  });
+  return materializeBuild(defineBuild({
+    program: link(program.closure, [...program.records, ...planned.initialRecords]),
+    plan: planned.plan,
+  }), []);
+}
 
 import {
   anchoredFrame,
@@ -231,8 +256,8 @@ test("self-described Spatial Surfaces produce explicit static geometry", async (
   register("aspect-frame", decodeAspectFrameSurface);
   const frontends = new AuthorFrontendRegistry();
   frontends.register(createMarkupAuthorFrontend({ registry: surfaces, resolveModule: () => spatialModuleRef }));
-  const validators = new TypeValidatorRegistry();
-  registerTypeValidatorFacets(validators, spatialComponent.validators ?? []);
+  const refinements = new RefinementRegistry();
+  registerTypeRefinements(refinements, spatialComponent.refinements ?? []);
   const compiled = await compileSourceClosure({
     entry: source(`<svml>
       <import as="space" from="@hypit/spatial@1"/>
@@ -249,7 +274,7 @@ test("self-described Spatial Surfaces produce explicit static geometry", async (
     </svml>`),
     closure,
     frontends,
-    admitRecord: createRecordAdmitter(validators),
+    validateRecord: createRecordValidator(refinements),
     resolveSource() { throw new Error("Spatial fixture imports no Source files."); },
   });
   assert.equal(resolveCompiledSourceExport(compiled, "vertical.canvas", spatialTypes.canvas).ref.kind, "record");
@@ -259,9 +284,9 @@ test("self-described Spatial Surfaces produce explicit static geometry", async (
   assert.equal(resolveCompiledSourceExport(compiled, "turned", spatialTypes.map2D).ref.kind, "record");
   const sticker = resolveCompiledSourceExport(compiled, "sticker", spatialTypes.frame);
   assert.equal(sticker.ref.kind, "logical-output");
-  const build = start(compiled.program, compiled.graph, sealBuildRequest({
-    targets: [{ output: sticker.ref.kind === "logical-output" ? sticker.ref.id : "" }],
-  }));
+  const build = buildState(compiled.program, compiled.graph, [
+    sticker.ref.kind === "logical-output" ? sticker.ref.id : "",
+  ]);
   assert.deepEqual(build.plan.steps.map((step) => step.producer.name).sort(), [
     spatialProducers.frameEdges.name,
     spatialProducers.aspectFrame.name,

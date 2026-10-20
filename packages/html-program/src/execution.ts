@@ -1,5 +1,5 @@
 import type { CanonicalValue, BlobRef } from "@hypit/hypit/protocol";
-import { isResourceId } from "@hypit/hypit/protocol";
+import { assertBlobRef } from "@hypit/hypit/protocol";
 import { verifyMediaFrameRange } from "@hypit/media";
 import type { MediaFrameRange } from "@hypit/media";
 import { assertHtmlProgram } from "./document.js";
@@ -39,10 +39,18 @@ export function htmlFrameRequest(request: HtmlFrameRequest): CanonicalValue {
 }
 
 export function verifyHtmlFrameImages(value: unknown): asserts value is HtmlFrameImages {
-  if (!Array.isArray(value) || value.length === 0 || value.some(blob => !blob || blob.kind !== "blob"
-    || !isResourceId(blob.resource) || blob.mediaType !== "image/png"
-    || !Number.isSafeInteger(blob.size) || blob.size <= 0)) {
+  if (!Array.isArray(value) || value.length === 0) {
     throw new Error("HTML frame images must be PNG BlobRefs in request order");
+  }
+  for (const blob of value) {
+    try {
+      assertBlobRef(blob, "HTML frame image");
+    } catch {
+      throw new Error("HTML frame images must be PNG BlobRefs in request order");
+    }
+    if (blob.mediaType !== "image/png" || blob.size <= 0) {
+      throw new Error("HTML frame images must be PNG BlobRefs in request order");
+    }
   }
 }
 

@@ -53,9 +53,7 @@ export function installPullback(module, manifest, component, optionsType, mode="
     handler: ({ inputs }) => {
       const { timeline, within, window, sources, options } = Object.fromEntries(
         Object.entries(inputs).map(([k, r]) => {
-          if (r.value.kind !== "inline")
-            throw Error("Pullback needs inline inputs");
-          return [k, r.value.value];
+          return [k, r.value];
         }),
       );
       const { clips, children } = placedVisualMedia(timeline, window, sources.sources);
@@ -110,7 +108,7 @@ export function installPullback(module, manifest, component, optionsType, mode="
             : [],
         });
       return {
-        outputs: { visual: { kind: "inline", value: canonicalize(visual) } },
+        outputs: { visual: (canonicalize(visual)) },
         needs: {},
       };
     },
@@ -157,21 +155,17 @@ export function installPullback(module, manifest, component, optionsType, mode="
           {
             id: id + ".options",
             type: optionsType,
-            value: { kind: "inline", value: canonicalize({ scale }) },
+            value: (canonicalize({ scale })),
             range: element.range,
           },
           {
             id,
             type: types.style,
-            value: {
-              kind: "inline",
-              value: canonicalize(presenterStyle(fragment, { options })),
-            },
+            value: (canonicalize(presenterStyle(fragment, { options }))),
             range: element.range,
           },
         ],
         components: [],
-        fragments: [],
       };
     },
   });

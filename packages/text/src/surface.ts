@@ -1,3 +1,4 @@
+import { sameType } from "@hypit/protocol";
 import type { CanonicalValue } from "@hypit/protocol";
 import { recipeType } from "@hypit/recipe";
 import type { Recipe } from "@hypit/recipe";
@@ -46,12 +47,6 @@ function referencePath(element: StructuredElement, name: string): string {
   return value.path;
 }
 
-function sameType(left: SurfaceResolvedReference["type"], right: SurfaceResolvedReference["type"]): boolean {
-  return left.module.name === right.module.name
-    && left.module.version === right.module.version
-    && left.name === right.name;
-}
-
 function reference(
   element: StructuredElement,
   name: string,
@@ -65,9 +60,9 @@ function reference(
   return result;
 }
 
-function inline<T>(value: SurfaceResolvedReference, subject: string): T {
-  if (value.record?.value.kind !== "inline") throw new Error(`${subject} must reference an authored inline value`);
-  return value.record.value.value as unknown as T;
+function valueOf<T>(value: SurfaceResolvedReference, subject: string): T {
+  if (value.record === undefined) throw new Error(`${subject} must reference an authored value`);
+  return value.record.value as unknown as T;
 }
 
 function bodyText(element: StructuredElement): string {
@@ -108,11 +103,10 @@ export const decodeTextValueSurface: StructuredSurfaceHandler = ({ element }) =>
     records: [{
       id,
       type: textTypes.text,
-      value: { kind: "inline", value: sealText(bodyText(element)) as unknown as CanonicalValue },
+      value: (sealText(bodyText(element)) as unknown as CanonicalValue),
       range: element.range,
     }],
     components: [],
-    fragments: [],
   };
 };
 
@@ -126,11 +120,11 @@ export const decodeTextRenderSurface: StructuredSurfaceHandler = ({ element, res
   const template = reference(element, "template", textTypes.template, resolveReference);
   const initial: Record<string, TextBindingValue> = {};
   if (element.attributes.recipe !== undefined) {
-    const templateValue = inline<TextTemplate>(template, `${element.name}.template`);
+    const templateValue = valueOf<TextTemplate>(template, `${element.name}.template`);
     verifyTextTemplate(templateValue);
     const consumed = textTemplateBindingNames(templateValue);
     const recipe = reference(element, "recipe", recipeType, resolveReference);
-    const value = inline<Recipe>(recipe, `${element.name}.recipe`);
+    const value = valueOf<Recipe>(recipe, `${element.name}.recipe`);
     for (const [name, item] of Object.entries(value.properties)) {
       if (!consumed.has(name)) continue;
       if (typeof item !== "string" && typeof item !== "boolean" && !(typeof item === "number" && Number.isFinite(item))) {
@@ -179,22 +173,19 @@ export const decodeTextRenderSurface: StructuredSurfaceHandler = ({ element, res
   const records = [{
     id: bindingsId,
     type: textTypes.bindings,
-    value: { kind: "inline" as const, value: sealTextBindings(initial) as unknown as CanonicalValue },
+    value: (sealTextBindings(initial) as unknown as CanonicalValue),
     range: element.range,
   }, ...dynamic.map((item) => ({
     id: `${id}.${item.input}`,
     type: textTypes.binding,
-    value: {
-      kind: "inline" as const,
-      value: sealTextBinding({ name: item.name, mode: item.mode }) as unknown as CanonicalValue,
-    },
+    value: (sealTextBinding({ name: item.name, mode: item.mode }) as unknown as CanonicalValue),
     range: element.range,
   }))];
   return {
     records,
     components: [{
       id,
-      fragment: fragment.id,
+      fragment,
       inputs: {
         template: template.ref,
         bindings: { kind: "record", id: bindingsId },
@@ -207,6 +198,5 @@ export const decodeTextRenderSurface: StructuredSurfaceHandler = ({ element, res
       outputs: { text: id },
       range: element.range,
     }],
-    fragments: [fragment],
   };
 };

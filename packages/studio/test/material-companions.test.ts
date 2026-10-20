@@ -3,7 +3,7 @@ import test from "node:test";
 import { compositionTypes } from "@hypit/composition";
 import { audioTrackTypes } from "@hypit/audio-track";
 import { visualTrackTypes } from "@hypit/visual-track";
-import type { StudioTrackCompanionContext } from "@hypit/studio-companion";
+import type { StudioPlacementChild, StudioTrackCompanionContext } from "@hypit/studio-companion";
 import { audioTrackStudioTrackCompanions } from "../../audio-track/src/studio.js";
 import { textFineStudioTrackCompanions } from "../../text-fine/src/studio.js";
 import { visualTrackStudioTrackCompanions } from "../../visual-track/src/studio.js";
@@ -12,12 +12,17 @@ for (const kind of ["audio", "visual"] as const) {
   test(`${kind} Clip titles use explicit author names or exact source references without changing identity`, () => {
     const sourceType = kind === "audio" ? audioTrackTypes.clipSpec : visualTrackTypes.clipSpec;
     const subjects = ["my-chosen-name", "track.item.0002", "track.item.0003"];
-    const child = (id: string, index: number) => ({
+    const child = (id: string, index: number): StudioPlacementChild => ({
       ...(index === 0 ? { id } : {}),
+      sourcePath: "main.svml",
+      tag: `${kind}:Clip`,
       attributes: index === 0 ? { id } : {},
+      attributeValueRanges: {},
       referenceAttributes: { [kind === "audio" ? "source" : "image"]: "assets.shared.material" },
+      referenceTypes: {},
+      references: [],
       range: { start: index * 10, end: index * 10 + 9 },
-      values: [{ type: sourceType, value: { id } }],
+      values: [{ id: `${id}.source`, type: sourceType, value: { id } }],
     });
     const clips = subjects.map((id, index) => ({
         id: `projected.${index}`, subjectId: id,
@@ -28,12 +33,20 @@ for (const kind of ["audio", "visual"] as const) {
         layers: [{ kind: "sample", id: "picture", source: { kind: "still", artifact: { resource: "res_image" } } }],
       }));
     const program = { id: `track.${kind}`, clips };
-    const context = {
-      track: { outputRef: `track.${kind}`, typeRef: kind === "audio" ? compositionTypes.audioTrack : compositionTypes.visualTrack,
-        trace: { outputPorts: [{ name: "program", ref: "track.program" }] } },
-      placement: { children: subjects.map(child) },
-      values: new Map([["track.program", program]]), spans: [], temporalBindings: [],
-    } as unknown as StudioTrackCompanionContext;
+    const typeRef = kind === "audio" ? compositionTypes.audioTrack : compositionTypes.visualTrack;
+    const children = subjects.map(child);
+    const context: StudioTrackCompanionContext = {
+      track: { name: `track.${kind}`, outputRef: `track.${kind}`, type: typeRef.name, typeRef,
+        candidateOrigin: "source", role: "track", value: program,
+        trace: { outputPorts: [{ name: "program", ref: "track.program" }], references: [] } },
+      placement: {
+        sourcePath: "main.svml", tag: `${kind}:Track`, module: typeRef.module, surface: "track",
+        range: { start: 0, end: 100 }, records: [], values: [], outputs: [`track.${kind}`],
+        outputPorts: [{ name: "program", ref: "track.program" }], children,
+        attributes: {}, attributeValueRanges: {}, referenceAttributes: {}, referenceTypes: {}, references: [],
+      },
+      values: new Map([["track.program", program]]), spans: [], temporalBindings: [], temporalDomains: [], generic: () => [],
+    };
     const companion = kind === "audio" ? audioTrackStudioTrackCompanions[0]!
       : visualTrackStudioTrackCompanions.find((entry) => entry.id === "visual")!;
     const items = companion.project!(context);

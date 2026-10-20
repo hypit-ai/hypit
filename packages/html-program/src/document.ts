@@ -15,13 +15,22 @@ import type {
   VisualStyleDeclaration,
   VisualTrack,
 } from "@hypit/composition";
-import { canonicalStringify, isResourceId } from "@hypit/hypit/protocol";
+import { assertBlobRef, canonicalStringify, isResourceId } from "@hypit/hypit/protocol";
 import type { BlobRef, ResourceId } from "@hypit/hypit/protocol";
 import { VISUAL_IR_V1 } from "@hypit/composition";
 import { readHtmlVisual, htmlVisualHtml, htmlVisualScript } from "./html-visual.js";
 import { presentationCaptureScopeRuntime } from "./capture-scope.js";
 import { presentationVisibilityScript } from "./visibility.js";
 import { frameSelectionRuntime, frameWorkIndexRuntime } from "./frame-work.js";
+
+function isBlobRef(value: unknown): value is BlobRef {
+  try {
+    assertBlobRef(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 import type {
   ResourceUrlResolver,
@@ -652,6 +661,15 @@ function frameAnimationRuntime(numerator: number, denominator: number): string {
   const denominator = ${denominator};
   const millisecondsPerFrame = denominator * 1000 / numerator;
   const groupsBySpan = new Map();
+  const read = (style, name) => name.startsWith("--") ? style.getPropertyValue(name) : style[name];
+  const write = (style, name, value) => {
+    if (name.startsWith("--")) style.setProperty(name, value);
+    else style[name] = value;
+  };
+  const clear = (style, name) => {
+    if (name.startsWith("--")) style.removeProperty(name);
+    else style[name] = "";
+  };
   for (const element of document.querySelectorAll("[data-hypit-frame-animation]")) {
     const start = Number(element.getAttribute("data-hypit-animation-start-frame"));
     const duration = Number(element.getAttribute("data-hypit-animation-sample-frames"));
@@ -678,6 +696,11 @@ function frameAnimationRuntime(numerator: number, denominator: number): string {
       .filter((name) => name !== "offset" && name !== "computedOffset" && name !== "easing" && name !== "composite");
     animation.cancel();
     element.style.animationName = "none";
+    // Keyframes may omit properties and therefore interpolate against the
+    // authored underlying value. Preserve that value before any requested
+    // frame writes its sampled pose inline.
+    const authored = {};
+    for (const name of properties) authored[name] = read(element.style, name) ?? "";
     const key = start + ":" + end;
     let work = groupsBySpan.get(key);
     if (work === undefined) {
@@ -689,16 +712,11 @@ function frameAnimationRuntime(numerator: number, denominator: number): string {
       };
       groupsBySpan.set(key, work);
     }
-    work.payload.animations.push({ element, keyframes, timing, properties });
+    work.payload.animations.push({ element, keyframes, timing, properties, authored });
   }
   // The shared index owns only frame-span lookup. Animation materialization and
   // absolute currentTime evaluation remain private to this adapter.
   const workIndex = htmlCreateFrameWorkIndex([...groupsBySpan.values()]);
-  const read = (style, name) => name.startsWith("--") ? style.getPropertyValue(name) : style[name];
-  const write = (style, name, value) => {
-    if (name.startsWith("--")) style.setProperty(name, value);
-    else style[name] = value;
-  };
   const applyFrame = (programFrame) => {
     const active = [];
     for (const work of workIndex.at(programFrame)) {
@@ -708,12 +726,24 @@ function frameAnimationRuntime(numerator: number, denominator: number): string {
       // inputs to animation state.
       for (const item of work.payload.animations) active.push({ item, localTime });
     }
+    // A previous seek's inline pose is not an input to this seek. Restore the
+    // authored underlying value before transiently evaluating every animation.
+    for (const { item } of active) {
+      for (const name of item.properties) {
+        const value = item.authored[name];
+        if (value === "") clear(item.element.style, name);
+        else write(item.element.style, name, value);
+      }
+    }
     // Evaluate each pose with a transient Animation, read it and cancel it before
     // this seek returns, so no adapter ever sees it. The Animation constructor,
     // unlike Element.animate, is not tracked by HTML renderer' waapi adapter. Only
     // the resulting inline style reaches the captured frame.
     const probes = active.map(({ item, localTime }) => {
       const probe = new Animation(new KeyframeEffect(item.element, item.keyframes, item.timing), document.timeline);
+      // A running Animation advances with wall time after currentTime is set.
+      // Pause first so the sampled pose is only a function of programFrame.
+      probe.pause();
       probe.currentTime = localTime;
       return probe;
     });
@@ -883,8 +913,7 @@ export function assertHtmlProgram(document: HtmlProgram): void {
   const declared = [...document.artifacts];
   if (declared.some((entry) => {
     const item = entry?.artifact;
-    if (item?.kind !== "blob" || !isResourceId(item.resource)
-      || !Number.isSafeInteger(item.size) || item.size < 0 || item.mediaType.length === 0) return true;
+    if (!isBlobRef(item)) return true;
     if (entry.usage?.kind === "always") return Object.keys(entry.usage).length !== 1;
     if (entry.usage?.kind !== "frames" || !Array.isArray(entry.usage.spans) || entry.usage.spans.length === 0) return true;
     if (entry.usage.spans.some((span) => span === null || typeof span !== "object"

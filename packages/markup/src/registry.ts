@@ -1,3 +1,4 @@
+import { moduleKey } from "@hypit/protocol";
 import type { ModuleRef } from "@hypit/protocol";
 
 import type {
@@ -10,7 +11,7 @@ import type {
 } from "./types.js";
 
 function key(module: ModuleRef, surface: string): string {
-  return `${module.name}@${module.version}#${surface}`;
+  return `${moduleKey(module)}#${surface}`;
 }
 
 export class MarkupSurfaceRegistry implements MarkupSurfaceRegistryLike {
@@ -27,7 +28,7 @@ export class MarkupSurfaceRegistry implements MarkupSurfaceRegistryLike {
     if (value.mode !== "raw" && value.mode !== "structured") throw new Error("Surface mode is invalid");
     const surfaceKey = key(value.module, value.surface);
     if (this.#values.has(surfaceKey)) throw new Error(`Surface ${surfaceKey} is already registered`);
-    const module = `${value.module.name}@${value.module.version}`;
+    const module = moduleKey(value.module);
     const tag = `${module}#${value.tag}`;
     if (this.#tags.has(tag)) throw new Error(`Surface tag ${value.tag} is already registered for ${module}`);
     this.#values.set(surfaceKey, value);

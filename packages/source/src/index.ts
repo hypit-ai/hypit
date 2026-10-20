@@ -6,6 +6,7 @@ export type {
   SourceAssetResolver,
   SourceImportRequest,
   SourceResolver,
+  SourceRange,
   SourceUnit,
 } from "./unit.js";
 export { decodeSourceText } from "./unit.js";

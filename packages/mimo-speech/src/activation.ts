@@ -1,4 +1,4 @@
-import { createAdmissionPackageFacet } from "@hypit/hypit/admission";
+import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
 import { createProducerPackageFacet } from "@hypit/hypit/producer";
 import { createMarkupSurfaceFacet } from "@hypit/hypit/markup";
 
@@ -16,8 +16,7 @@ export const hypitPackage = {
   format: "hypit.package@1" as const,
   modules: [{ manifest: mimoSpeechManifest }],
   facets: [
-    ...[mimoSpeechComponent].flatMap((component) => [createProducerPackageFacet(component), createAdmissionPackageFacet(component)]),
-    mimoSpeechDefinition.facet,
+    ...[mimoSpeechComponent].flatMap((component) => [createProducerPackageFacet(component), createRefinementPackageFacet(component)]),
     createMarkupSurfaceFacet({
       module: mimoSpeechModuleRef,
       declaration: mimoSpeechMarkupSurfaces.find((item) => item.name === "voiceDesign")!,

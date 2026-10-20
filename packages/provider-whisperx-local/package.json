@@ -1,6 +1,6 @@
 {
   "name": "@hypit/provider-whisperx-local",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
   "type": "module",
@@ -9,16 +9,21 @@
   },
   "files": [
     "dist",
-    "runtime",
+    "runtime/.python-version",
+    "runtime/README.md",
+    "runtime/deploy",
+    "runtime/pyproject.toml",
+    "runtime/src/hypit_whisperx_service",
+    "runtime/uv.lock",
     "README.md"
   ],
   "hypit": {
     "activation": "./src/activation.ts"
   },
   "peerDependencies": {
-    "@hypit/hypit": "workspace:^0.3.1",
-    "@hypit/runtime-local": "workspace:^0.1.1",
-    "@hypit/whisperx": "workspace:^0.2.0"
+    "@hypit/hypit": "workspace:^0.4.0",
+    "@hypit/runtime-local": "workspace:^0.2.0",
+    "@hypit/whisperx": "workspace:^0.3.0"
   },
   "devDependencies": {
     "@hypit/endpoint": "workspace:*",
@@ -30,6 +35,6 @@
     "@hypit/executor": "workspace:*"
   },
   "dependencies": {
-    "@hypit/speech-evidence": "workspace:^0.1.0"
+    "@hypit/speech-evidence": "workspace:^0.2.0"
   }
 }

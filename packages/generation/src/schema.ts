@@ -1,26 +1,5 @@
+import { blobRefSchema } from "@hypit/hypit/protocol";
 import type { ObjectFieldSchema, ValueSchema } from "@hypit/hypit/protocol";
-
-export const generationResourceSchema = {
-  kind: "string",
-  minLength: 71,
-  maxLength: 71,
-} as const satisfies ValueSchema;
-
-export const generationPromptSchema = {
-  kind: "string",
-  minLength: 1,
-  maxLength: 20_000,
-} as const satisfies ValueSchema;
-
-export const generationBlobRefSchema = {
-  kind: "object",
-  fields: {
-    kind: { schema: { kind: "literal", value: "blob" } },
-    resource: { schema: generationResourceSchema },
-    size: { schema: { kind: "number", integer: true, minimum: 0 } },
-    mediaType: { schema: { kind: "string", minLength: 1, maxLength: 255 } },
-  },
-} as const satisfies ValueSchema;
 
 export function generationObjectSchema(
   fields: Readonly<Record<string, ObjectFieldSchema>>,
@@ -33,8 +12,7 @@ export const generatedImageSetSchema = generationObjectSchema({
     schema: {
       kind: "array",
       minItems: 1,
-      maxItems: 16,
-      items: generationBlobRefSchema,
+      items: blobRefSchema(),
     },
   },
 });
@@ -44,8 +22,7 @@ export const generatedVideoSetSchema = generationObjectSchema({
     schema: {
       kind: "array",
       minItems: 1,
-      maxItems: 8,
-      items: generationBlobRefSchema,
+      items: blobRefSchema(),
     },
   },
 });
@@ -55,8 +32,7 @@ export const generatedAudioSetSchema = generationObjectSchema({
     schema: {
       kind: "array",
       minItems: 1,
-      maxItems: 16,
-      items: generationBlobRefSchema,
+      items: blobRefSchema(),
     },
   },
 });

@@ -1,10 +1,10 @@
-import { canonicalize } from "@hypit/hypit/protocol";
+import { blobRefSchema, canonicalize } from "@hypit/hypit/protocol";
 import type { BlobRef, ObjectFieldSchema, ValueSchema } from "@hypit/hypit/protocol";
 import { verifyText } from "@hypit/hypit/text";
 import type { Text } from "@hypit/hypit/text";
 
 import { assertGenerationBlobRef, sealGenerationRequest } from "./identity.js";
-import { generationBlobRefSchema, generationObjectSchema } from "./schema.js";
+import { generationObjectSchema } from "./schema.js";
 import { assertGenerationPortTable, isMediaPort } from "./ports.js";
 import type {
   GenerationMediaPort,
@@ -96,7 +96,7 @@ function portItemSchema(port: GenerationPort): ValueSchema {
   const media = port.value;
   return generationObjectSchema({
     role: { schema: { kind: "string", enum: [...media.accepts] } },
-    artifact: { schema: generationBlobRefSchema },
+    artifact: { schema: blobRefSchema() },
     ...(media.itemFields === undefined || media.itemFields.length === 0
       ? {}
       : { fields: { schema: itemFieldsSchema(media.itemFields) } }),
@@ -139,7 +139,7 @@ export function portsObjectSchema(
         kind: "array",
         items: portItemSchema(port),
         minItems: Math.max(1, port.minItems),
-        maxItems: port.maxItems,
+        ...(port.maxItems === undefined ? {} : { maxItems: port.maxItems }),
       },
       ...(port.minItems === 0 || defer.has(port.name) ? { optional: true } : {}),
     } satisfies ObjectFieldSchema])));
@@ -154,11 +154,8 @@ export function requestSchemaFromPorts(table: GenerationPortTable): ValueSchema 
 
 /** Structural schema for the model-owned request draft used by graph assembly. */
 export function requestDraftSchemaFromPorts(table: GenerationPortTable): ValueSchema {
-  const deferred = table.ports
-    .filter((port) => isMediaPort(port) || port.value.kind === "text")
-    .map((port) => port.name);
   return generationObjectSchema({
-    ports: { schema: portsObjectSchema(table, { defer: deferred }) },
+    ports: { schema: portsObjectSchema(table, { defer: deferredPorts(table) }) },
   });
 }
 
@@ -231,7 +228,7 @@ function verifyMediaValue(value: unknown, port: GenerationMediaPort, subject: st
 
 /**
  * Full standalone verification against the port table. Core's generic schema
- * admission runs first; this adds the facts a Schema cannot state, such as the
+ * type-owner validation runs first; this adds the facts a Schema cannot state, such as the
  * media type each role demands and the model's port combination rules.
  */
 export function verifyPortsAgainstTable(
@@ -261,7 +258,9 @@ export function verifyPortsAgainstTable(
     assert(Array.isArray(supplied), `${subject} must be an array`);
     assert(supplied.length >= Math.max(1, port.minItems),
       `${subject} needs at least ${Math.max(1, port.minItems)} value(s)`);
-    assert(supplied.length <= port.maxItems, `${subject} accepts at most ${port.maxItems} value(s)`);
+    if (port.maxItems !== undefined) {
+      assert(supplied.length <= port.maxItems, `${subject} accepts at most ${port.maxItems} value(s)`);
+    }
     present.add(port.name);
     supplied.forEach((item, index) => {
       const label = port.maxItems === 1 ? subject : `${subject}[${index}]`;
@@ -302,7 +301,8 @@ export function verifyPortsAgainstTable(
 
 function deferredPorts(table: GenerationPortTable): readonly string[] {
   return table.ports
-    .filter((port) => isMediaPort(port) || port.value.kind === "text")
+    .filter((port) => isMediaPort(port) || port.value.kind === "text"
+      || (!isMediaPort(port) && port.defaultItems !== undefined))
     .map((port) => port.name);
 }
 
@@ -411,10 +411,15 @@ export function sealGenerationPortRequest(
   table: GenerationPortTable,
   ports: Readonly<Record<string, readonly GenerationPortValue[]>>,
 ): GenerationRequest {
+  const stated = Object.fromEntries(
+    Object.entries(ports).filter(([, values]) => values !== undefined && values.length > 0),
+  );
+  const finalized = Object.fromEntries(table.ports.map((port) => [
+    port.name,
+    stated[port.name] ?? (!isMediaPort(port) ? port.defaultItems : undefined),
+  ]).filter((entry): entry is [string, readonly GenerationPortValue[]] => entry[1] !== undefined));
   const content: GenerationRequest = {
-    ports: Object.fromEntries(
-      Object.entries(ports).filter(([, values]) => values !== undefined && values.length > 0),
-    ),
+    ports: finalized,
   };
   const request = sealGenerationRequest(content);
   verifyRequestAgainstPorts(table, request);

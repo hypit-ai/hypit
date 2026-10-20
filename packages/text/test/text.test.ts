@@ -146,7 +146,7 @@ test("Markup Text Surfaces expose literal and assembled Text as ordinary graph v
     resolveReference: () => undefined,
     resolveAsset: () => { throw new Error("no asset"); },
   });
-  assert.equal((authored.records[0]?.value as { value?: { value?: string } }).value?.value, "Make a vertical product video.");
+  assert.equal((authored.records[0]?.value as { value?: { value?: string } })?.value, "Make a vertical product video.");
 
   const assembled = parseStructuredElement({
     name: "text.svml",
@@ -176,7 +176,7 @@ test("Markup Text Surfaces expose literal and assembled Text as ordinary graph v
     kind: "component-output", component: "script", output: "text",
   });
   const initial = result.records.find((record) => record.id === "prompt.bindings");
-  assert.deepEqual((initial?.value as { value?: { values?: unknown } }).value?.values,
+  assert.deepEqual((initial?.value as { values?: unknown })?.values,
     { camera: "handheld", strict: true });
   assert.equal(result.records.filter((record) => record.type.name === "TextBinding").length, 3);
 });
@@ -203,15 +203,14 @@ test("Text Render projects only declared SVS Recipe properties and lets explicit
   const refs = new Map<string, SurfaceResolvedReference>([
     ["kit", {
       path: "kit", ref: { kind: "record", id: "kit" }, type: textTypes.template,
-      record: { value: { kind: "inline", value: template } } as unknown as NonNullable<SurfaceResolvedReference["record"]>,
+      record: { id: "kit", type: textTypes.template, value: template },
     }],
     ["recipes.shot", {
       path: "recipes.shot", ref: { kind: "record", id: "recipes.shot" }, type: recipeType,
-      record: { value: { kind: "inline", value: {
-
+      record: { id: "recipes.shot", type: recipeType, value: {
         path: "recipes.shot",
         properties: { camera: "handheld", energy: "high", model: "mini" },
-      } } } as unknown as NonNullable<SurfaceResolvedReference["record"]>,
+      } },
     }],
   ]);
   const result = await decodeTextRenderSurface({
@@ -221,7 +220,7 @@ test("Text Render projects only declared SVS Recipe properties and lets explicit
     resolveAsset: () => { throw new Error("no asset"); },
   });
   const initial = result.records.find((record) => record.id === "prompt.bindings");
-  assert.deepEqual((initial?.value as { value?: { values?: unknown } }).value?.values, {
+  assert.deepEqual((initial?.value as { values?: unknown })?.values, {
     camera: "handheld",
     energy: "calm",
   });

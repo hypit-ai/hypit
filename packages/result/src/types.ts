@@ -1,10 +1,12 @@
 import { assertOrderedBuildId } from "@hypit/protocol";
 import type {
   BlobRef,
-  BuildState,
   CanonicalValue,
   TypeRef,
+  CapabilityRef,
+  TypedRecord,
 } from "@hypit/protocol";
+import { isTypeRef } from "@hypit/protocol";
 
 /** The one durable conclusion of a finished Build. Active execution belongs to Runtime. */
 export type BuildResultOutcome = "complete" | "failed" | "cancelled";
@@ -171,9 +173,9 @@ export type BuildResultOutput = {
 };
 
 /** Non-secret execution facts at the end of this attempt. Pending means the remote outcome was not observed. */
-export type BuildResultOperation = {
+type BuildResultOperationEvidence = {
   readonly operation: string;
-  readonly need?: { readonly id: string; readonly capability: TypeRef };
+  readonly need?: { readonly id: string; readonly capability: CapabilityRef };
   readonly createdAt?: number;
   readonly acknowledgedAt?: number;
   readonly endedAt?: number;
@@ -184,11 +186,15 @@ export type BuildResultOperation = {
   readonly pool?: string;
   readonly credentials?: Readonly<Record<string, { readonly store: string; readonly key: string }>>;
   readonly receipt?: { readonly id: string; readonly url?: string };
-  readonly status: "pending" | "completed" | "failed" | "cancelled";
-  readonly failure?: { readonly code: string; readonly message: string };
 };
 
-export type BuildResultManifest = {
+export type BuildResultOperation = BuildResultOperationEvidence & (
+  | { readonly status: "pending" | "received" | "completed"; readonly failure?: never }
+  | { readonly status: "failed"; readonly failure: { readonly code: string; readonly message: string } }
+  | { readonly status: "cancelled"; readonly failure?: never }
+);
+
+type BuildResultManifestBase = {
   readonly format: "hypit.build-result@1";
   /** Injected from the Repository address; `result.json` does not repeat its containing Build id. */
   readonly id: string;
@@ -202,34 +208,70 @@ export type BuildResultManifest = {
   readonly run?: { readonly id: string };
   /** Author-facing names of the Build's actual final goals. */
   readonly targets: readonly string[];
-  readonly finishedAt?: number;
-  /** Absent while this Result is still accepting completed public Outputs. */
-  readonly outcome?: BuildResultOutcome;
-  readonly failure?: string;
   readonly outputs: Readonly<Record<string, BuildResultOutput>>;
   readonly operations?: readonly BuildResultOperation[];
   readonly executionLog?: BuildResultFileRef;
 };
 
-export type FinishedBuildResultManifest = BuildResultManifest & {
-  readonly outcome: BuildResultOutcome;
-  readonly finishedAt: number;
+export type OpenBuildResultManifest = BuildResultManifestBase & {
+  readonly outcome?: never;
+  readonly finishedAt?: never;
+  readonly failure?: never;
 };
 
-export type BuildResultPublishedOutput = {
-  /** Author-provided display name; the Output identifier remains unchanged. */
+export type FinishedBuildResultManifest = BuildResultManifestBase & (
+  | { readonly outcome: "complete"; readonly finishedAt: number; readonly failure?: never }
+  | { readonly outcome: "failed" | "cancelled"; readonly finishedAt: number; readonly failure: string }
+);
+
+/** A Result is either writable or finished with one internally consistent conclusion. */
+export type BuildResultManifest = OpenBuildResultManifest | FinishedBuildResultManifest;
+
+/**
+ * Read one exact public Output name. Output names are author data, so inherited object
+ * properties such as `constructor` and `toString` are never Result entries.
+ */
+export function buildResultOutput(
+  manifest: Pick<BuildResultManifest, "outputs">,
+  name: string,
+): BuildResultOutput | undefined {
+  return Object.hasOwn(manifest.outputs, name) ? manifest.outputs[name] : undefined;
+}
+
+/** Define an author-named Output without invoking special object setters such as `__proto__`. */
+export function defineBuildResultOutput(
+  outputs: Record<string, BuildResultOutput>,
+  name: string,
+  output: BuildResultOutput,
+): void {
+  Object.defineProperty(outputs, name, {
+    value: output,
+    enumerable: true,
+    configurable: true,
+    writable: true,
+  });
+}
+
+/** One public Output selected by compilation, including its durable publication source. */
+export type OutputPublication = {
   readonly displayName?: string;
   readonly name: string;
   readonly output: string;
+  readonly target: boolean;
+  /** Expected public type, independent of where this Build obtains the value. */
+  readonly type: TypeRef;
+  readonly source:
+    | { readonly kind: "current-record"; readonly record: string }
+    | {
+        readonly kind: "historical-output";
+        readonly build: string;
+        readonly output: string;
+      };
 };
 
-export type BuildResultForward = {
-  /** Logical Output in the current Build whose entire value is carried forward. */
-  readonly output: string;
-  readonly build: string;
-  readonly sourceOutput: string;
-  /** Expected source type when the compiler has already inspected the historical Output. */
-  readonly type?: TypeRef;
+/** Immutable publication facts derived once from the selected execution. */
+export type PublicationPlan = {
+  readonly outputs: readonly OutputPublication[];
 };
 
 /** One terminal historical Output address found without opening its value document or files. */
@@ -244,12 +286,74 @@ export type BuildResultSeed = {
   readonly title?: string;
   readonly source: { readonly id: string };
   readonly run?: { readonly id: string };
-  readonly targets: readonly string[];
-  readonly publishedOutputs: readonly BuildResultPublishedOutput[];
-  readonly forwards?: readonly BuildResultForward[];
-  /** Known file locations for admitted Resource identities, including nested uses. */
+  readonly publication: PublicationPlan;
+  /** Known file locations for referenced Resource identities, including nested uses. */
   readonly resourceReferences?: Readonly<Record<string, BuildResultFileRef>>;
 };
+
+function assertTypeRef(value: unknown, subject: string): asserts value is TypeRef {
+  if (!isTypeRef(value)) throw new Error(`${subject} must be a Type reference`);
+}
+
+/** Validate immutable publication facts without consulting execution or repository state. */
+export function assertPublicationPlan(
+  publication: unknown,
+  options: { readonly build?: string } = {},
+): asserts publication is PublicationPlan {
+  if (publication === null || Array.isArray(publication) || typeof publication !== "object"
+    || !Array.isArray((publication as Readonly<Record<string, unknown>>).outputs)) {
+    throw new Error("Build Result publication must contain an outputs array");
+  }
+  const names = new Set<string>();
+  const outputs = new Set<string>();
+  for (const [index, raw] of (publication as { readonly outputs: readonly unknown[] }).outputs.entries()) {
+    if (raw === null || Array.isArray(raw) || typeof raw !== "object") {
+      throw new Error(`Published Output ${index} must be an object`);
+    }
+    const published = raw as Readonly<Record<string, unknown>>;
+    if (typeof published.name !== "string" || published.name.trim().length === 0) {
+      throw new Error("Published Output name must not be empty");
+    }
+    if (typeof published.output !== "string" || published.output.trim().length === 0) {
+      throw new Error(`Published Output ${published.name} has no Logical Output`);
+    }
+    if (published.displayName !== undefined
+      && (typeof published.displayName !== "string" || published.displayName.trim().length === 0)) {
+      throw new Error(`Published Output ${published.name} has an empty display name`);
+    }
+    if (typeof published.target !== "boolean") {
+      throw new Error(`Published Output ${published.name} target must be a boolean`);
+    }
+    assertTypeRef(published.type, `Published Output ${published.name} type`);
+    if (names.has(published.name)) throw new Error(`Published Output name ${published.name} is repeated`);
+    if (outputs.has(published.output)) {
+      throw new Error(`Logical Output ${published.output} has more than one published name`);
+    }
+    names.add(published.name);
+    outputs.add(published.output);
+    if (published.source === null || Array.isArray(published.source) || typeof published.source !== "object") {
+      throw new Error(`Logical Output ${published.output} has no publication source`);
+    }
+    const source = published.source as Readonly<Record<string, unknown>>;
+    if (source.kind === "current-record") {
+      if (typeof source.record !== "string" || source.record.trim().length === 0) {
+        throw new Error(`Logical Output ${published.output} has no current Record source`);
+      }
+      continue;
+    }
+    if (source.kind !== "historical-output") {
+      throw new Error(`Logical Output ${published.output} has an invalid publication source kind`);
+    }
+    if (typeof source.build !== "string" || source.build.trim().length === 0
+      || typeof source.output !== "string" || source.output.trim().length === 0) {
+      throw new Error(`Logical Output ${published.output} has an incomplete historical source`);
+    }
+    if (source.build === options.build) {
+      throw new Error(`Logical Output ${published.output} cannot forward to its own Build`);
+    }
+    assertOrderedBuildId(source.build);
+  }
+}
 
 /** Validate the one-name-per-Output public Result surface before storage is touched. */
 export function assertBuildResultSeed(seed: BuildResultSeed): void {
@@ -260,62 +364,34 @@ export function assertBuildResultSeed(seed: BuildResultSeed): void {
   if (seed.title !== undefined && seed.title.trim().length === 0) {
     throw new Error("Build Result title must not be empty");
   }
+  assertPublicationPlan(seed.publication, { build: seed.id });
   for (const [resource, file] of Object.entries(seed.resourceReferences ?? {})) {
     if (resource.length === 0) throw new Error("Resource reference has no identity");
     assertBuildResultFileRef(file, `Resource ${resource}`);
     if (file.kind === "build-file" && file.build === undefined) throw new Error(`Resource ${resource} needs its owning Build`);
   }
-  const names = new Set<string>();
-  const outputs = new Set<string>();
-  for (const published of seed.publishedOutputs) {
-    if (published.name.trim().length === 0) throw new Error("Published Output name must not be empty");
-    if (published.output.trim().length === 0) throw new Error(`Published Output ${published.name} has no Logical Output`);
-    if (names.has(published.name)) throw new Error(`Published Output name ${published.name} is repeated`);
-    if (outputs.has(published.output)) {
-      throw new Error(`Logical Output ${published.output} has more than one published name`);
-    }
-    names.add(published.name);
-    outputs.add(published.output);
-  }
-  const targets = new Set<string>();
-  for (const target of seed.targets) {
-    if (!names.has(target)) throw new Error(`Target ${target} is not a published Output`);
-    if (targets.has(target)) throw new Error(`Target ${target} is repeated`);
-    targets.add(target);
-  }
-  const logicalOutputs = new Set(seed.publishedOutputs.map((published) => published.output));
-  const forwards = new Set<string>();
-  for (const forward of seed.forwards ?? []) {
-    if (!logicalOutputs.has(forward.output)) {
-      throw new Error(`Forwarded Logical Output ${forward.output} is not public`);
-    }
-    if (forwards.has(forward.output)) {
-      throw new Error(`Logical Output ${forward.output} has more than one forward source`);
-    }
-    if (forward.build.trim().length === 0 || forward.sourceOutput.trim().length === 0) {
-      throw new Error(`Logical Output ${forward.output} has an incomplete forward source`);
-    }
-    if (forward.build === seed.id) throw new Error(`Logical Output ${forward.output} cannot forward to its own Build`);
-    forwards.add(forward.output);
-  }
 }
 
 export type BuildResultResourceSource = {
-  open(artifact: BlobRef): Promise<AsyncIterable<Uint8Array> | undefined>;
+  open(blob: BlobRef): Promise<AsyncIterable<Uint8Array> | undefined>;
 };
 
 export type BuildResultSync = {
-  readonly state: BuildState;
+  /** Already accepted Records; Result does not observe Runtime lifecycle or scheduling state. */
+  readonly records: readonly TypedRecord[];
   readonly resources: BuildResultResourceSource;
 };
 
-export type BuildResultFinish = {
+type BuildResultFinishEvidence = {
   /** Closed execution evidence; Repository stores it before publishing the terminal manifest. */
   readonly executionLog?: AsyncIterable<Uint8Array>;
   readonly operations?: readonly BuildResultOperation[];
-  readonly outcome: BuildResultOutcome;
-  readonly failure?: string;
 };
+
+export type BuildResultFinish = BuildResultFinishEvidence & (
+  | { readonly outcome: "complete"; readonly failure?: never }
+  | { readonly outcome: "failed" | "cancelled"; readonly failure: string }
+);
 
 export type BuildResultPresentationUpdate = {
   /** Exact public Output names; null removes an override. */
@@ -363,9 +439,9 @@ export type RepositoryBuildResultOutput = Omit<ResolvedBuildResultOutput, "direc
 export type RepositoryBuildResultOutputDescription = {
   readonly type: TypeRef;
 } & (
-  | { readonly kind: "scalar" }
-  | { readonly kind: "composite" }
-  | { readonly kind: "resource"; readonly size: number; readonly mediaType: string }
+  | { readonly representation: "inline" }
+  | { readonly representation: "value-document" }
+  | { readonly representation: "file"; readonly size: number; readonly mediaType: string }
 );
 
 export type BuildResultWriter = {

@@ -23,13 +23,13 @@ export const synchronizedMediaFragment = sealGraphFragment({
       id: "inspect",
       producer: mediaOperationsProducers.inspect,
       inputs: { source: input("source") },
-      result: { kind: "need", name: "inspection" },
+      result: { kind: "need" as const, name: "inspection" },
     },
     {
       id: "select",
       producer: mediaOperationsProducers.select,
       inputs: { inspection: operation("inspect"), request: input("request") },
-      result: { kind: "output", name: "selection" },
+      result: { kind: "output" as const, name: "selection" },
     },
     {
       id: "normalize",
@@ -40,19 +40,19 @@ export const synchronizedMediaFragment = sealGraphFragment({
         selection: operation("select"),
         request: input("request"),
       },
-      result: { kind: "need", name: "media" },
+      result: { kind: "need" as const, name: "media" },
     },
     {
       id: "domain",
       producer: mediaProducers.localDomain,
       inputs: { media: operation("normalize"), spec: input("domain") },
-      result: { kind: "output", name: "domain" },
+      result: { kind: "output" as const, name: "domain" },
     },
     {
       id: "extent",
       producer: temporalProducers.extentFromDomain,
       inputs: { domain: operation("domain") },
-      result: { kind: "output", name: "extent" },
+      result: { kind: "output" as const, name: "extent" },
     },
   ],
   exports: [{
@@ -80,7 +80,7 @@ export const transformMediaFragment = sealGraphFragment({
       id: "transform",
       producer: mediaOperationsProducers.transform,
       inputs: { media: input("media"), program: input("program") },
-      result: { kind: "need", name: "video" },
+      result: { kind: "need" as const, name: "video" },
     },
   ],
   exports: [{
@@ -100,13 +100,13 @@ export const extractAudioFragment = sealGraphFragment({
       id: "inspect",
       producer: mediaOperationsProducers.inspect,
       inputs: { source: input("source") },
-      result: { kind: "need", name: "inspection" },
+      result: { kind: "need" as const, name: "inspection" },
     },
     {
       id: "extract",
       producer: mediaOperationsProducers.extractAudio,
       inputs: { source: input("source"), inspection: operation("inspect"), request: input("request") },
-      result: { kind: "need", name: "audio" },
+      result: { kind: "need" as const, name: "audio" },
     },
   ],
   exports: [{
@@ -126,13 +126,13 @@ export const extractFrameFragment = sealGraphFragment({
       id: "inspect",
       producer: mediaOperationsProducers.inspect,
       inputs: { source: input("source") },
-      result: { kind: "need", name: "inspection" },
+      result: { kind: "need" as const, name: "inspection" },
     },
     {
       id: "extract",
       producer: mediaOperationsProducers.extractFrame,
       inputs: { source: input("source"), inspection: operation("inspect"), request: input("request") },
-      result: { kind: "need", name: "image" },
+      result: { kind: "need" as const, name: "image" },
     },
   ],
   exports: [{
@@ -162,7 +162,7 @@ export function createStillVideoFragment(count: number) {
         id: "plan",
         producer: mediaOperationsProducers.planStill,
         inputs: { duration: input("duration"), clock: input("clock"), layout: input("layout") },
-        result: { kind: "output", name: "request" },
+        result: { kind: "output" as const, name: "request" },
       },
       ...sources.map((name, index) => ({
         id: `bind-${index}`,
@@ -174,7 +174,7 @@ export function createStillVideoFragment(count: number) {
         id: "render",
         producer: mediaOperationsProducers.renderStill,
         inputs: { request: operation(`bind-${count - 1}`) },
-        result: { kind: "need", name: "video" },
+        result: { kind: "need" as const, name: "video" },
       },
     ],
     exports: [{

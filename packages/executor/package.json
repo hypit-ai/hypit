@@ -13,6 +13,6 @@
     "@hypit/endpoint": "workspace:*",
     "@hypit/protocol": "workspace:*",
     "@hypit/runtime": "workspace:*",
-    "@hypit/admission": "workspace:*"
+    "@hypit/refinement": "workspace:*"
   }
 }

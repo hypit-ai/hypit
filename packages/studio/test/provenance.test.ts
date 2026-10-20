@@ -37,9 +37,9 @@ test("Studio joins repeated local names through compiler-owned provenance", asyn
     outputs: [{ component: `${source}::component::track`, name: "visual", local: "visual", id: output }],
     inputs: [{ id: `${source}::endpoint::10:id`, name: "id", range: { start: 14, end: 19 }, kind: "literal" as const }],
   });
-  const compiled = {
+  const compiled: CompiledAuthorSource = {
     closure: { entry: "a.svml", units: [] },
-    program: { closure: { modules: [] }, records: [] },
+    program: { closure: { format: "hypit.closure@1", modules: [] }, records: [] },
     graph: {
       format: "hypit.graph@1", candidates: [], operations: [],
       outputs: [
@@ -53,7 +53,7 @@ test("Studio joins repeated local names through compiler-owned provenance", asyn
       element("b.svml", "b::output::visual"),
     ] },
     attachments: [],
-  } as unknown as CompiledAuthorSource;
+  };
   const source = await observedCompiledSource(compiled, {
     placements: [placement("a.svml"), placement("b.svml")],
     temporalDomains: [],

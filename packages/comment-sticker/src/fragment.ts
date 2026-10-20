@@ -38,7 +38,7 @@ export function createCommentStickerFragment(items: readonly CommentStickerFragm
       id: "comment:set:empty",
       producer: commentStickerProducers.createSet,
       inputs: {},
-      result: { kind: "output", name: "set" },
+      result: { kind: "output" as const, name: "set" },
     },
   ];
   let current = "comment:set:empty";
@@ -58,7 +58,7 @@ export function createCommentStickerFragment(items: readonly CommentStickerFragm
       id: createContentId,
       producer: commentStickerProducers.createContent,
       inputs: { comment: input(item.commentName) },
-      result: { kind: "output", name: "content" },
+      result: { kind: "output" as const, name: "content" },
     });
     let content = operation(createContentId);
     for (const [field, name, producer] of [
@@ -72,7 +72,7 @@ export function createCommentStickerFragment(items: readonly CommentStickerFragm
         id: fieldId,
         producer,
         inputs: { content, [field]: input(name) },
-        result: { kind: "output", name: "content" },
+        result: { kind: "output" as const, name: "content" },
       });
       content = operation(fieldId);
     }
@@ -91,7 +91,7 @@ export function createCommentStickerFragment(items: readonly CommentStickerFragm
         content,
         ...(item.avatarName === undefined ? {} : { avatar: input(item.avatarName) }),
       },
-      result: { kind: "output", name: "set" },
+      result: { kind: "output" as const, name: "set" },
     });
     current = id;
   });
@@ -100,13 +100,13 @@ export function createCommentStickerFragment(items: readonly CommentStickerFragm
       id: "comment:program",
       producer: commentStickerProducers.finalize,
       inputs: { set: operation(current), header: input("header") },
-      result: { kind: "output", name: "program" },
+      result: { kind: "output" as const, name: "program" },
     },
     {
       id: "comment:track",
       producer: commentStickerProducers.render,
       inputs: { timeline: input("timeline"), program: operation("comment:program") },
-      result: { kind: "output", name: "track" },
+      result: { kind: "output" as const, name: "track" },
     },
   );
   return sealGraphFragment({

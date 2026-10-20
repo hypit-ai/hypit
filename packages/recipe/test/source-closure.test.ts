@@ -2,8 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   createResolvedClosure,
-  sealBuildRequest,
-  start,
+  defineBuild,
+  link,
+  materializeBuild,
+  planBuild,
 } from "@hypit/kernel";
 import {
   AuthorFrontendRegistry,
@@ -34,6 +36,25 @@ import {
 } from "@hypit/markup";
 import type { StructuredElement } from "@hypit/markup";
 
+function buildState(
+  program: Parameters<typeof planBuild>[0],
+  graph: Parameters<typeof planBuild>[1],
+  targets: readonly string[],
+) {
+  const planned = planBuild(program, graph, {
+    format: "hypit.run-graph@1",
+    records: [],
+    candidates: [],
+    operations: [],
+    satisfactions: [],
+    targets: targets.map((output) => ({ output })),
+  });
+  return materializeBuild(defineBuild({
+    program: link(program.closure, [...program.records, ...planned.initialRecords]),
+    plan: planned.plan,
+  }), []);
+}
+
 const laboratory = { name: "example.recipe-card", version: "1" } as const;
 const cardType = { module: laboratory, name: "Card" } satisfies TypeRef;
 const cardAppearanceType = { module: laboratory, name: "CardAppearance" } satisfies TypeRef;
@@ -58,8 +79,7 @@ const manifest: ModuleManifest = {
   producers: [{
     name: renderProducer.name,
     inputs: [{ name: "appearance", type: cardAppearanceType }],
-    outputs: [{ name: "card", type: cardType }],
-    needs: [],
+    result: { kind: "output" as const, name: "card", type: cardType },
   }],
 };
 
@@ -69,7 +89,7 @@ const cardFragment = sealGraphFragment({
     id: "render",
     producer: renderProducer,
     inputs: { appearance: { kind: "fragment-input", name: "appearance" } },
-    result: { kind: "output", name: "card" },
+    result: { kind: "output" as const, name: "card" },
   }],
   exports: [{
     name: "result",
@@ -96,11 +116,11 @@ function recipeValue(record: TypedRecord | undefined): Recipe {
   if (record?.type.module.name !== recipeType.module.name || record.type.name !== recipeType.name) {
     throw new Error("Card.appearance must reference an SVS Recipe");
   }
-  if (record.value.kind !== "inline" || record.value.value === null
-    || Array.isArray(record.value.value) || typeof record.value.value !== "object") {
-    throw new Error("Card.appearance Recipe must be inline");
+  if (record.value === null
+    || Array.isArray(record.value) || typeof record.value !== "object") {
+    throw new Error("Card.appearance Recipe must be an object");
   }
-  return record.value.value as Recipe;
+  return record.value as Recipe;
 }
 
 function sourceRegistry(): MarkupSurfaceRegistry {
@@ -126,26 +146,22 @@ function sourceRegistry(): MarkupSurfaceRegistry {
       records: [{
         id: appearanceId,
         type: cardAppearanceType,
-        value: {
-          kind: "inline",
-          value: {
+        value: ({
             contract: "example.card-appearance@1",
             fill,
             padding,
-          },
-        },
+          }),
         range: element.range,
       }],
       components: [{
         id,
-        fragment: cardFragment.id,
+        fragment: cardFragment,
         inputs: {
           appearance: { kind: "record", id: appearanceId },
         },
         outputs: { result: `${id}.result` },
         range: element.range,
       }],
-      fragments: [cardFragment],
     };
   } });
   return registry;
@@ -198,27 +214,21 @@ test("Text and SVS recursively compile one aliased Recipe into a Core BuildPlan"
   assert.equal(compiled.program.records.length, 2);
   const recipe = compiled.program.records.find((record) => record.type.name === recipeType.name);
   const appearance = compiled.program.records.find((record) => record.type.name === cardAppearanceType.name);
-  assert.deepEqual(recipe?.value, {
-    kind: "inline",
-    value: {
+  assert.deepEqual(recipe?.value, ({
 
       path: "card.answer",
       properties: { fill: "#73FBD3", padding: "16 24" },
-    },
-  });
-  assert.deepEqual(appearance?.value, {
-    kind: "inline",
-    value: {
+    }));
+  assert.deepEqual(appearance?.value, ({
       contract: "example.card-appearance@1",
       fill: "#73FBD3",
       padding: "16 24",
-    },
-  });
+    }));
   const target = resolveCompiledSourceExport(compiled, "answer.result", cardType);
   assert.equal(target.ref.kind, "logical-output");
-  const state = start(compiled.program, compiled.graph, sealBuildRequest({
-    targets: [{ output: target.ref.kind === "logical-output" ? target.ref.id : "" }],
-  }));
+  const state = buildState(compiled.program, compiled.graph, [
+    target.ref.kind === "logical-output" ? target.ref.id : "",
+  ]);
   assert.equal(state.plan.steps.length, 1);
   assert.equal(state.plan.steps[0]?.producer.name, renderProducer.name);
   assert.equal(state.plan.steps[0]?.inputs.appearance, appearance?.id);
@@ -313,6 +323,27 @@ test("quoted Recipe values may contain Prompt punctuation without changing SVS s
   assert.equal(sheet.recipes[0]?.value.properties.text, "first; second } /* literal */");
 });
 
+test("Recipe strings decode the quote syntax used by their structure scanner", () => {
+  const sheet = parseRecipe(
+    "escape.svs",
+    `<sheet version="1">
+  demo.value {
+    quoted: "He said \\"hi\\" twice";
+    control: "line\\nbreak\\there";
+    single: 'It\\'s C:\\\\caps';
+  }
+</sheet>`,
+  );
+  const properties = sheet.recipes[0]?.value.properties;
+  assert.equal(properties?.quoted, 'He said "hi" twice');
+  assert.equal(properties?.control, "line\nbreak\there");
+  assert.equal(properties?.single, "It's C:\\caps");
+  assert.throws(
+    () => parseRecipe("joined.svs", '<sheet version="1">demo.value { value: "one" "two"; }</sheet>'),
+    (error: unknown) => error instanceof RecipeSyntaxError && error.code === "SVS_VALUE_STRING",
+  );
+});
+
 test("quoted Recipe values may contain the sheet closing text without ending the document", () => {
   const sheet = parseRecipe(
     "literal-close.svs",
@@ -353,6 +384,26 @@ test("SVS parses and serializes canonical arrays and objects as one Recipe value
   assert.deepEqual(recipe.value.properties.colors, ["#FF3F56", "#FFA72D"]);
   assert.deepEqual(recipe.value.properties.rows, [{ id: "s", label: "S", color: "#EF4444" }]);
   assert.equal(formatRecipeValue(recipe.value.properties.colors!), '["#FF3F56","#FFA72D"]');
+});
+
+test("formatted Recipe values parse back to the same canonical value", () => {
+  const values = [
+    "plain-value",
+    "two words",
+    "assets/*.png",
+    "</sheet>",
+    'He said "hi"',
+    "line\nbreak",
+    "tab\there",
+    "C:\\caps",
+    "null",
+    "12",
+  ] as const;
+  for (const value of values) {
+    const source = `<sheet version="1">demo.value { value: ${formatRecipeValue(value)}; }</sheet>`;
+    assert.equal(parseRecipe("format.svs", source).recipes[0]?.value.properties.value, value, JSON.stringify(value));
+  }
+  assert.equal(formatRecipeValue("plain-value"), "plain-value");
 });
 
 test("SVS exposes exact property and value spans without inventing editor metadata", () => {

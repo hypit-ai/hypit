@@ -1,3 +1,4 @@
+import { sameType } from "@hypit/hypit/protocol";
 import { mediaTypes } from "@hypit/media";
 import type { MarkupAttributeValue, StructuredElement, StructuredSurfaceHandler, SurfaceRecordDraft, SurfaceResolvedReference } from "@hypit/hypit/markup";
 import type { TemporalDuration } from "@hypit/temporal";
@@ -17,10 +18,6 @@ import type {
   AudioSourceTimeRelation,
   AudioSourceTimeSpec,
 } from "./types.js";
-
-function sameType(left: SurfaceResolvedReference["type"], right: SurfaceResolvedReference["type"]): boolean {
-  return left.module.name === right.module.name && left.module.version === right.module.version && left.name === right.name;
-}
 
 function allowed(element: StructuredElement, names: readonly string[]): void {
   const permit = new Set(names);
@@ -176,8 +173,8 @@ function sourceTimeFrom(element: StructuredElement,
   if (element.attributes["source-time"] === undefined) return inline;
   if (inline !== undefined) throw new Error(`${element.name} cannot combine source-time={AudioSourceTime} with inline Map children.`);
   const value = resolved(element.attributes["source-time"], `${element.name}.source-time`, audioTrackTypes.sourceTime, resolve);
-  if (value.record?.value.kind !== "inline") throw new Error(`${element.name}.source-time must resolve to an inline value.`);
-  const spec = value.record.value.value as unknown as AudioSourceTimeSpec;
+  if (value.record === undefined) throw new Error(`${element.name}.source-time must resolve to an authored value.`);
+  const spec = value.record.value as unknown as AudioSourceTimeSpec;
   assertAudioSourceTimeSpec(spec);
   return spec;
 }
@@ -196,8 +193,8 @@ export const decodeAudioSourceTimeSurface: StructuredSurfaceHandler = ({ element
   }
   const value = { relations };
   assertAudioSourceTimeSpec(value);
-  return { records: [{ id, type: audioTrackTypes.sourceTime, value: { kind: "inline", value: value as never }, range: element.range }],
-    components: [], fragments: [], exports: [id] };
+  return { records: [{ id, type: audioTrackTypes.sourceTime, value: (value as never), range: element.range }],
+    components: [], exports: [id] };
 };
 
 export const decodeAudioTrackSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
@@ -208,7 +205,7 @@ export const decodeAudioTrackSurface: StructuredSurfaceHandler = ({ element, res
   const records: SurfaceRecordDraft[] = [{
     id: headerId,
     type: audioTrackTypes.header,
-    value: { kind: "inline", value: sealAudioTrackHeader({ id }) },
+    value: (sealAudioTrackHeader({ id })),
     range: element.range,
   }];
   const clips: Parameters<typeof createAudioTrackFragment>[0][number][] = [];
@@ -252,7 +249,7 @@ export const decodeAudioTrackSurface: StructuredSurfaceHandler = ({ element, res
     const mediaName = `clip-${suffix}-media`;
     const specName = `clip-${suffix}-spec`;
     const specId = `${id}.clip.${suffix}.spec`;
-    records.push({ id: specId, type: audioTrackTypes.clipSpec, value: { kind: "inline", value: spec }, range: child.range });
+    records.push({ id: specId, type: audioTrackTypes.clipSpec, value: (spec), range: child.range });
     inputs[windowName] = window.ref;
     inputs[mediaName] = source.ref;
     inputs[specName] = { kind: "record", id: specId };
@@ -264,12 +261,11 @@ export const decodeAudioTrackSurface: StructuredSurfaceHandler = ({ element, res
     records,
     components: [{
       id,
-      fragment: fragment.id,
+      fragment,
       inputs,
       outputs: { program: `${id}.program`, audio: `${id}.audio` },
       range: element.range,
     }],
-    fragments: [fragment],
     exports: [`${id}.audio`, `${id}.program`],
   };
 };

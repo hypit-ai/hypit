@@ -1,6 +1,6 @@
 {
   "name": "@hypit/temporal",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
   "type": "module",
@@ -13,22 +13,22 @@
     "activation": "./src/activation.ts"
   },
   "dependencies": {
-    "@hypit/timeline": "workspace:^0.1.0"
+    "@hypit/timeline": "workspace:^0.1.1"
   },
   "files": [
     "dist",
     "README.md"
   ],
   "peerDependencies": {
-    "@hypit/hypit": "workspace:^0.3.1",
-    "@hypit/studio-companion": "workspace:^0.1.1"
+    "@hypit/hypit": "workspace:^0.4.0",
+    "@hypit/studio-companion": "workspace:^0.1.3"
   },
   "devDependencies": {
     "@hypit/author": "workspace:*",
     "@hypit/markup": "workspace:*",
     "@hypit/producer": "workspace:*",
     "@hypit/protocol": "workspace:*",
-    "@hypit/admission": "workspace:*",
+    "@hypit/refinement": "workspace:*",
     "@hypit/hypit": "workspace:*"
   }
 }

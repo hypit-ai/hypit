@@ -14,7 +14,14 @@ async function nearestProjectPackageRoot(start: string): Promise<string | undefi
     const candidate = resolve(directory, "package.json");
     try {
       if ((await stat(candidate)).isFile()) {
-        const manifest = JSON.parse(await readFile(candidate, "utf8")) as unknown;
+        const source = await readFile(candidate, "utf8");
+        let manifest: unknown;
+        try {
+          manifest = JSON.parse(source) as unknown;
+        } catch (error) {
+          throw new Error(`Project manifest ${candidate} is not valid JSON: ${error instanceof Error ? error.message : String(error)}`,
+            { cause: error });
+        }
         if (isProjectManifest(manifest)) return directory;
       }
     } catch (error) {

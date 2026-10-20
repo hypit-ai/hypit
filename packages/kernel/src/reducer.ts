@@ -1,26 +1,22 @@
 import type {
   BuildDefinition,
   BuildFact,
-  BuildRequest,
   BuildState,
   BuildCommand,
-  CompiledGraph,
   CommandResult,
   CommandId,
   FulfillNeedCommand,
   InvokeProducerCommand,
-  LinkedProgram,
   Need,
-  NeedFulfilledEvent,
   ProducerCompletedEvent,
-  StoredValue,
+  ProducerAppliedFact,
   TypedRecord,
 } from "@hypit/protocol";
 
-import { canonicalize, SvmlError } from "@hypit/protocol";
+import { normalizeValue, SvmlError } from "@hypit/protocol";
 import { invariant } from "./error.js";
-import { resolveProducer, verifyRecordStructure } from "./link.js";
-import { planBuild, producerStep, verifyBuildPlan } from "./plan.js";
+import { resolveCapability, resolveProducer, verifyRecordStructure } from "./link.js";
+import { producerStep, verifyBuildPlan } from "./plan.js";
 
 function commandId(kind: "producer" | "need", subject: string): string {
   return `${kind}:${subject}`;
@@ -40,161 +36,45 @@ export function buildProducerCommand(step: BuildState["plan"]["steps"][number]):
   };
 }
 
-/** Resolve an issued Need's Command even after the Build has stopped scheduling work. */
-export function resolveNeedCommand(state: BuildState, id: CommandId): FulfillNeedCommand | undefined {
-  const need = state.needs.find((item) => buildNeedCommand(item).id === id);
-  return need === undefined ? undefined : buildNeedCommand(need);
-}
-
-function withoutCommand(state: BuildState, id: string): readonly BuildCommand[] {
-  return state.outstanding.filter((command) => command.id !== id);
-}
-
-function normalizeStoredValue(value: StoredValue): StoredValue {
-  if (value.kind === "inline") {
-    return { kind: "inline", value: canonicalize(value.value) };
-  }
-  invariant(Number.isSafeInteger(value.size) && value.size >= 0, "INVALID_BLOB", "blob size is invalid");
-  return { ...value };
-}
-
-function exactPortKeys(
-  actual: Readonly<Record<string, unknown>>,
-  expected: readonly string[],
-  subject: string,
-): void {
-  const left = Object.keys(actual).sort();
-  const right = [...expected].sort();
-  invariant(
-    JSON.stringify(left) === JSON.stringify(right),
-    "PRODUCER_RESULT_PORT_MISMATCH",
-    `${subject} returned [${left.join(", ")}] but must return [${right.join(", ")}]`,
-    subject,
-  );
-}
-
-function acceptProducerEvent(
-  state: BuildState,
-  command: InvokeProducerCommand,
+function acceptedProducerResult(
+  state: Pick<BuildState, "program">,
+  step: BuildState["plan"]["steps"][number],
   event: ProducerCompletedEvent,
-): BuildState {
-  const step = producerStep(state.plan, command.step);
-  const stepState = state.steps.find((item) => item.id === step.id);
-  invariant(stepState?.status === "pending", "STEP_ALREADY_COMPLETE", `${step.id} is already complete`, step.id);
+): ProducerAppliedFact["result"] {
   const producer = resolveProducer(state.program.closure, step.producer);
-  exactPortKeys(event.outputs, producer.outputs.map((port) => port.name), `${step.id}.outputs`);
-  exactPortKeys(event.needs, producer.needs.map((port) => port.name), `${step.id}.needs`);
-
-  const outputs: TypedRecord[] = producer.outputs
-    .filter((port) => step.outputs[port.name] !== undefined)
-    .map((port) => {
-    const id = step.outputs[port.name];
-    const rawValue = event.outputs[port.name];
-    invariant(id !== undefined, "MISSING_OUTPUT_BINDING", `${step.id}.${port.name} is not bound`);
-    invariant(rawValue !== undefined, "MISSING_OUTPUT_VALUE", `${step.id}.${port.name} returned no value`);
-    const value = normalizeStoredValue(rawValue);
-    return {
-      id,
+  invariant(event.result.kind === step.result.kind, "PRODUCER_RESULT_KIND_MISMATCH",
+    `${step.id} returned ${event.result.kind}, not ${step.result.kind}`, step.id);
+  if (step.result.kind === "output") {
+    invariant(event.result.kind === "output", "PRODUCER_RESULT_KIND_MISMATCH", step.id, step.id);
+    const port = producer.result;
+    invariant(port.kind === "output" && port.name === step.result.name, "PRODUCER_RESULT_PORT_MISMATCH",
+      `${step.id} does not declare output ${step.result.name}`, step.id);
+    const record: TypedRecord = {
+      id: step.result.record,
       type: port.type,
-      value,
+      value: normalizeValue(event.result.value),
     };
-  });
-
-  const needs: Need[] = producer.needs
-    .filter((port) => step.needs[port.name] !== undefined)
-    .map((port) => {
-    const binding = step.needs[port.name];
-    const constraints = event.needs[port.name];
-    invariant(binding !== undefined, "MISSING_NEED_BINDING", `${step.id}.${port.name} is not bound`);
-    invariant(constraints !== undefined, "MISSING_NEED_VALUE", `${step.id}.${port.name} returned no constraints`);
-    const normalized = canonicalize(constraints);
-    const request = {
+    verifyRecordStructure(state.program.closure, record);
+    return { kind: "output", record };
+  }
+  invariant(event.result.kind === "need", "PRODUCER_RESULT_KIND_MISMATCH", step.id, step.id);
+  const port = producer.result;
+  invariant(port.kind === "need" && port.name === step.result.name, "PRODUCER_RESULT_PORT_MISMATCH",
+    `${step.id} does not declare Need ${step.result.name}`, step.id);
+  return {
+    kind: "need",
+    need: {
+      id: step.result.id,
       capability: port.capability,
-      returns: port.returns,
-      constraints: normalized,
-      result: binding.result,
-    } as const;
-    return {
-      id: binding.id,
-      ...request,
-    };
-  });
-  outputs.forEach((record) => verifyRecordStructure(state.program.closure, record));
-
-  return {
-    ...state,
-    records: [...state.records, ...outputs],
-    needs: [...state.needs, ...needs],
-    steps: state.steps.map((item) =>
-      item.id === step.id ? { id: item.id, status: "complete" } : item,
-    ),
-    outstanding: withoutCommand(state, command.id),
+      returns: resolveCapability(state.program.closure, port.capability).returns,
+      constraints: normalizeValue(event.result.constraints),
+      result: step.result.record,
+    },
   };
-}
-
-function acceptNeedEvent(
-  state: BuildState,
-  command: FulfillNeedCommand,
-  event: NeedFulfilledEvent,
-): BuildState {
-  const need = state.needs.find((item) => item.id === command.need.id);
-  invariant(need !== undefined, "UNKNOWN_NEED", `unknown need ${command.need.id}`, command.need.id);
-  invariant(
-    !state.records.some((record) => record.id === need.result),
-    "NEED_ALREADY_FULFILLED",
-    `${need.id} is already fulfilled`,
-    need.id,
-  );
-  const value = normalizeStoredValue(event.value);
-  const record: TypedRecord = {
-    id: need.result,
-    type: need.returns,
-    value,
-  };
-  verifyRecordStructure(state.program.closure, record);
-
-  return {
-    ...state,
-    records: [...state.records, record],
-    outstanding: withoutCommand(state, command.id),
-  };
-}
-
-function acceptFailure(
-  state: BuildState,
-  event: CommandResult & { kind: "command-failed" },
-): BuildState {
-  return {
-    ...state,
-    status: "failed",
-    outstanding: [],
-    diagnostics: [
-      ...state.diagnostics,
-      { code: event.code, message: event.message, subject: event.command },
-    ],
-  };
-}
-
-function applyEvent(state: BuildState, event: CommandResult): BuildState {
-  const command = state.outstanding.find((item) => item.id === event.command);
-  invariant(command !== undefined, "UNKNOWN_COMMAND", `event references ${event.command}`, event.command);
-
-  if (event.kind === "command-failed") return acceptFailure(state, event);
-  if (command.kind === "invoke-producer" && event.kind === "producer-completed") {
-    return acceptProducerEvent(state, command, event);
-  }
-  if (command.kind === "fulfill-need" && event.kind === "need-fulfilled") {
-    return acceptNeedEvent(state, command, event);
-  }
-  throw new SvmlError(
-    "EVENT_COMMAND_MISMATCH",
-    `${event.kind} cannot complete ${command.kind}`,
-    command.id,
-  );
 }
 
 function goalsComplete(state: BuildState, records: ReadonlySet<string>): boolean {
-  return state.plan.goals.every((goal) => records.has(goal.record));
+  return state.plan.goals.every((goal) => records.has(goal));
 }
 
 /**
@@ -255,65 +135,32 @@ function schedule(state: BuildState): BuildState {
   return scheduled;
 }
 
-export function start(
-  program: LinkedProgram,
-  graph: CompiledGraph,
-  request: BuildRequest,
-): BuildState {
-  const planned = planBuild(program, graph, {
-    format: "hypit.run-graph@1",
-    records: [],
-    candidates: [],
-    operations: [],
-    satisfactions: [],
-    targets: request.targets,
-  });
-  return schedule(initialBuildView(defineBuild({
-    program,
-    initialRecords: planned.initialRecords,
-    plan: planned.plan,
-    targets: request.targets,
-  })));
-}
-
-export function reduce(state: BuildState, event?: CommandResult): BuildState {
-  const next = event === undefined ? state : applyEvent(state, event);
-  return schedule(next);
-}
-
 /** Seal one already selected execution. Graphs and Candidates do not cross this boundary. */
 export function defineBuild(
   input: Omit<BuildDefinition, "format">,
 ): BuildDefinition {
-  verifyBuildPlan(input.program, input.initialRecords, input.plan);
-  const bindings = new Set(input.plan.outputBindings.map((binding) => binding.output));
-  const targets = new Set<string>();
-  for (const target of input.targets) {
-    invariant(bindings.has(target.output), "UNKNOWN_BUILD_TARGET", `${target.output} has no Output binding`, target.output);
-    invariant(!targets.has(target.output), "DUPLICATE_BUILD_TARGET", `${target.output} is targeted twice`, target.output);
-    targets.add(target.output);
-  }
+  verifyBuildPlan(input.program, [], input.plan);
   return { format: "hypit.build-definition@1", ...input };
 }
 
-function initialBuildView(definition: BuildDefinition): BuildState {
+/** Create the first disposable execution view for one immutable Definition. */
+export function initialBuildState(definition: BuildDefinition): BuildState {
   invariant(definition.format === "hypit.build-definition@1", "UNSUPPORTED_BUILD_DEFINITION", definition.format);
-  verifyBuildPlan(definition.program, definition.initialRecords, definition.plan);
-  return {
+  verifyBuildPlan(definition.program, [], definition.plan);
+  return schedule({
     format: "hypit.build@1",
     program: definition.program,
     plan: definition.plan,
-    targets: definition.targets,
     status: "active",
-    records: [...definition.program.records, ...definition.initialRecords],
+    records: [...definition.program.records],
     steps: definition.plan.steps.map((step) => ({ id: step.id, status: "pending" })),
     needs: [],
     outstanding: [],
     diagnostics: [],
-  };
+  });
 }
 
-export type BuildAdmissionLookup = {
+export type BuildFactLookup = {
   readonly command: (id: CommandId) => BuildCommand | undefined;
   readonly stepStatus: (id: string) => "pending" | "complete" | undefined;
   readonly need: (id: string) => Need | undefined;
@@ -322,14 +169,14 @@ export type BuildAdmissionLookup = {
 
 /**
  * Validate one result and derive its durable Fact without advancing scheduling.
- * BuildMachine supplies its private indexes; the pure reducer uses array lookups.
+ * BuildMachine supplies its private indexes.
  */
 export function factForBuildResult(
   state: Pick<BuildState, "program" | "plan" | "steps" | "needs" | "records" | "outstanding">,
   event: CommandResult,
-  indexed?: BuildAdmissionLookup,
+  indexed?: BuildFactLookup,
 ): BuildFact {
-  const lookup: BuildAdmissionLookup = indexed ?? {
+  const lookup: BuildFactLookup = indexed ?? {
     command: (id) => state.outstanding.find((item) => item.id === id),
     stepStatus: (id) => state.steps.find((item) => item.id === id)?.status,
     need: (id) => state.needs.find((item) => item.id === id),
@@ -350,41 +197,13 @@ export function factForBuildResult(
     const step = producerStep(state.plan, command.step);
     invariant(lookup.stepStatus(step.id) === "pending", "STEP_ALREADY_COMPLETE",
       `${step.id} is already complete`, step.id);
-    const producer = resolveProducer(state.program.closure, step.producer);
-    exactPortKeys(event.outputs, producer.outputs.map((port) => port.name), `${step.id}.outputs`);
-    exactPortKeys(event.needs, producer.needs.map((port) => port.name), `${step.id}.needs`);
-    const records: TypedRecord[] = producer.outputs
-      .filter((port) => step.outputs[port.name] !== undefined)
-      .map((port) => {
-        const id = step.outputs[port.name];
-        const rawValue = event.outputs[port.name];
-        invariant(id !== undefined, "MISSING_OUTPUT_BINDING", `${step.id}.${port.name} is not bound`);
-        invariant(rawValue !== undefined, "MISSING_OUTPUT_VALUE", `${step.id}.${port.name} returned no value`);
-        return { id, type: port.type, value: normalizeStoredValue(rawValue) };
-      });
-    const needs: Need[] = producer.needs
-      .filter((port) => step.needs[port.name] !== undefined)
-      .map((port) => {
-        const binding = step.needs[port.name];
-        const constraints = event.needs[port.name];
-        invariant(binding !== undefined, "MISSING_NEED_BINDING", `${step.id}.${port.name} is not bound`);
-        invariant(constraints !== undefined, "MISSING_NEED_VALUE", `${step.id}.${port.name} returned no constraints`);
-        return {
-          id: binding.id,
-          capability: port.capability,
-          returns: port.returns,
-          constraints: canonicalize(constraints),
-          result: binding.result,
-        };
-      });
-    records.forEach((record) => verifyRecordStructure(state.program.closure, record));
+    const result = acceptedProducerResult(state, step, event);
     return {
       format: "hypit.build-fact@1",
       kind: "producer-applied",
       command: event.command,
       step: command.step,
-      records,
-      needs,
+      result,
     };
   }
   if (command.kind === "fulfill-need" && event.kind === "need-fulfilled") {
@@ -395,7 +214,7 @@ export function factForBuildResult(
     const record: TypedRecord = {
       id: need.result,
       type: need.returns,
-      value: normalizeStoredValue(event.value),
+      value: normalizeValue(event.value),
     };
     verifyRecordStructure(state.program.closure, record);
     return {
@@ -411,86 +230,4 @@ export function factForBuildResult(
     `${event.kind} cannot complete ${command.kind}`,
     command.id,
   );
-}
-
-/**
- * Admit one untrusted Command result and return the fixed Core Fact it establishes.
- * The returned next view is provisional until the Store durably appends `fact`.
- */
-export function admitBuildResult(
-  state: BuildState,
-  event: CommandResult,
-): { readonly fact: BuildFact; readonly state: BuildState } {
-  const fact = factForBuildResult(state, event);
-  const next = reduce(state, event);
-  return { fact, state: next };
-}
-
-function verifyFactShape(fact: BuildFact): void {
-  invariant(fact.format === "hypit.build-fact@1", "UNSUPPORTED_BUILD_FACT", fact.command, fact.command);
-}
-
-/** Reconstruct the materialized view from one immutable Definition and its accepted Facts. */
-export function materializeBuild(
-  definition: BuildDefinition,
-  facts: readonly BuildFact[],
-): BuildState {
-  const initial = initialBuildView(definition);
-  const records = [...initial.records];
-  const steps = [...initial.steps];
-  const needs: Need[] = [];
-  const diagnostics: BuildState["diagnostics"][number][] = [];
-  const stepIndexes = new Map(steps.map((step, index) => [step.id, index]));
-  const recordIds = new Set(records.map((record) => record.id));
-  const needIds = new Set<string>();
-  let status: BuildState["status"] = "active";
-
-  for (const fact of facts) {
-    verifyFactShape(fact);
-    invariant(status === "active", "FACT_AFTER_TERMINAL", fact.command, fact.command);
-
-    if (fact.kind === "producer-applied") {
-      const stepIndex = stepIndexes.get(fact.step);
-      invariant(stepIndex !== undefined, "UNKNOWN_STEP", fact.step, fact.step);
-      const step = steps[stepIndex];
-      invariant(step?.status === "pending", "STEP_ALREADY_COMPLETE", fact.step, fact.step);
-      const planned = producerStep(definition.plan, fact.step);
-      invariant(
-        Object.values(planned.inputs).every((record) => recordIds.has(record)),
-        "FACT_INPUT_NOT_READY",
-        fact.step,
-        fact.step,
-      );
-      for (const record of fact.records) {
-        invariant(!recordIds.has(record.id), "DUPLICATE_RECORD", record.id, record.id);
-        recordIds.add(record.id);
-        records.push(record);
-      }
-      for (const need of fact.needs) {
-        invariant(!needIds.has(need.id), "DUPLICATE_NEED", need.id, need.id);
-        needIds.add(need.id);
-        needs.push(need);
-      }
-      steps[stepIndex] = { id: fact.step, status: "complete" };
-      continue;
-    }
-    if (fact.kind === "need-applied") {
-      invariant(needIds.has(fact.need), "UNKNOWN_NEED", fact.need, fact.need);
-      invariant(!recordIds.has(fact.record.id), "NEED_ALREADY_FULFILLED", fact.need, fact.need);
-      recordIds.add(fact.record.id);
-      records.push(fact.record);
-      continue;
-    }
-    diagnostics.push(fact.diagnostic);
-    status = "failed";
-  }
-
-  return schedule({
-    ...initial,
-    status,
-    records,
-    steps,
-    needs,
-    diagnostics,
-  });
 }

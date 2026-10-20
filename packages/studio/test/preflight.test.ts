@@ -5,10 +5,10 @@ import test from "node:test";
 import { compositionTypes } from "@hypit/composition";
 import type { StudioFilmCompanion, StudioPlacement } from "@hypit/studio-companion";
 
-import type { CompiledSource } from "../src/compile.js";
-import type { RunPlan } from "../src/run.js";
 import { inspectStudioRun, StudioPreflightError } from "../src/studio-preflight.js";
+import type { StudioRunSelection } from "../src/studio-preflight.js";
 import { StudioCompanionRegistry } from "../src/studio-registry.js";
+import { compiledSourceScenario } from "./compiled-source-scenario.js";
 
 const filmModule = { name: "@example/film", version: "1" } as const;
 const companion: StudioFilmCompanion = {
@@ -27,20 +27,16 @@ function placement(id: string): StudioPlacement {
 }
 
 test("Studio rejects a Run that reaches two distinct Film compositions", () => {
-  const source = {
-    observations: { placements: [placement("one"), placement("two")], temporalDomains: [] },
-    served: new Map(),
+  const source = compiledSourceScenario({
+    placements: [placement("one"), placement("two")],
     exports: ["one", "two"].map((id) => ({
-      name: `${id}.composition`, ref: `${id}.composition`, type: "Composition", typeRef: compositionTypes.composition,
+      name: `${id}.composition`, ref: `${id}.composition`, type: compositionTypes.composition,
     })),
-    compiled: { program: { records: [] } },
-  } as unknown as CompiledSource;
-  const run = {
-    source, targets: ["one.composition", "two.composition"], attachments: [],
-    runPath: "build.svrun", authorSource: "main.svml",
-    run: { graph: { candidates: [], operations: [], satisfactions: [], targets: [] } },
-    plan: () => { throw new Error("multi-Film rejection must happen before planning projections"); },
-  } as unknown as RunPlan;
+  });
+  const run: StudioRunSelection = {
+    targets: ["one.composition", "two.composition"],
+    run: { graph: { format: "hypit.run-graph@1", records: [], candidates: [], operations: [], satisfactions: [], targets: [] } },
+  };
   const registry = new StudioCompanionRegistry([], { films: [companion] });
   assert.throws(
     () => inspectStudioRun(registry, source, run),

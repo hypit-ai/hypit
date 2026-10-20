@@ -1,4 +1,5 @@
 import type { Narrative, NarrativeToken } from "@hypit/narrative";
+import { clockFrameSampleBoundary } from "@hypit/timeline";
 import type { NarrativeAlignmentTiming } from "./types.js";
 import type {
   AlignedTranscriptEvidence,
@@ -35,11 +36,11 @@ function alignmentFrameSampleBoundary(basis: AlignmentBasis, frame: number): num
   if (!Number.isSafeInteger(frame) || frame < 0 || frame > basis.frameDomain.frameCount) {
     fail("SPEECH_FRAME", "Speech frame boundary is outside normalized media.");
   }
-  const numerator = BigInt(frame) * 16_000n * BigInt(basis.frameDomain.frameRate.denominator);
-  const denominator = BigInt(basis.frameDomain.frameRate.numerator);
-  const value = (numerator * 2n + denominator) / (denominator * 2n);
-  if (value > BigInt(Number.MAX_SAFE_INTEGER)) fail("SPEECH_FRAME", "Speech sample domain exceeds safe arithmetic.");
-  return Number(value);
+  try {
+    return clockFrameSampleBoundary(basis.frameDomain, frame, 16_000);
+  } catch {
+    fail("SPEECH_FRAME", "Speech sample domain exceeds safe arithmetic.");
+  }
 }
 
 type MutableTiming = {
@@ -445,13 +446,23 @@ export function locateAlignedSegmentTiming(
     const basisSegment = basis.segments.find((item) => item.segmentId === segment.id)!;
     const bounds = speechBounds(basis, aligned, basisSegment);
     const complete = fillMissingTiming(located, source, bounds.start, bounds.end);
+    // Provider windows remain evidence and may overlap or nest. The semantic
+    // projection preserves that overlap while making starts and ends monotone
+    // in Script order, which is the invariant downstream selections consume.
+    let previousStart = 0;
+    let previousEnd = 0;
     timedTokens.push(...source.map((token, index): LocalTimedSpeechToken => {
       const timing = complete[index]!;
       const projected = projectSampleTiming(basis, timing);
+      const startFrame = Math.max(projected.startFrame, previousStart);
+      const endFrameExclusive = Math.max(projected.endFrameExclusive, previousEnd, startFrame + 1);
+      previousStart = startFrame;
+      previousEnd = endFrameExclusive;
       return {
         tokenId: token.id,
         segmentId: segment.id,
-        ...projected,
+        startFrame,
+        endFrameExclusive,
       };
     }));
     timedSegments.push({

@@ -1,11 +1,14 @@
-import { sealTimeline, timelineTypes } from "@hypit/timeline";
+import { blobManifest } from "@hypit/blob";
+import { sealTimeline, timelineManifest, timelineTypes } from "@hypit/timeline";
 import type { Timeline } from "@hypit/timeline";
-import { compositionComponent, spatialComponent, videoContractManifests } from "../../../test/support/video-domain.js";
-import { registerTypeValidatorFacets } from "@hypit/admission";
-import { compositionTypes, sealAudioTrack, sealVisualTrack } from "@hypit/composition";
+import { registerTypeRefinements } from "@hypit/refinement";
+import { compositionComponent, compositionManifest, compositionTypes, sealAudioTrack, sealVisualTrack } from "@hypit/composition";
 import type { Composition, Track } from "@hypit/composition";
+import { mediaManifest } from "@hypit/media";
 import type { FontArtifactRef } from "@hypit/media";
-import { sealCanvas, spatialTypes } from "@hypit/spatial";
+import { sealCanvas, spatialComponent, spatialManifest, spatialTypes } from "@hypit/spatial";
+import { recipeManifest } from "@hypit/recipe";
+import { temporalManifest } from "@hypit/temporal";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { fixtureResource } from "../../../test/fixture-resource.js";
@@ -13,13 +16,14 @@ import { timelineFixture } from "../../../test/timeline-fixture.js";
 
 import {
   createResolvedClosure,
+  defineBuild,
   link,
-  sealBuildRequest,
-  sealCompiledGraph,
-  sealRecord,
-  start,
+  materializeBuild,
+  planBuild,
+  sealAuthorGraph,
 } from "@hypit/kernel";
 import { ProducerRegistry, Executor } from "@hypit/executor";
+import { InProcessBuildScheduler } from "@hypit/hypit/runtime";
 import {
   bindAuthorFragment,
   elaborateGraphFragment,
@@ -27,19 +31,27 @@ import {
 } from "@hypit/author";
 import { appendFilmAudioTrack, appendFilmVisualTrack, compileFilmComposition, createFilmAssemblyFragment, createFilmTrackSet, filmManifest, filmProducers, filmTypes, sealFilmProgram } from "@hypit/film";
 import { compileHtmlProgram, htmlProgramFragment, htmlProgramManifest, htmlProgramProducers, htmlProgramTypes } from "@hypit/html-program";
-import type { CanonicalValue, CompiledGraph, StoredValue, TypedRecord } from "@hypit/protocol";
+import type { AuthorGraph, BuildState, CanonicalValue, Value, TypedRecord } from "@hypit/protocol";
 import { renderFineTextOccurrence, stillTextMotion } from "@hypit/text-fine";
 import type { TextStyle } from "@hypit/text-fine";
-import { admitRecord, TypeValidatorRegistry } from "@hypit/admission";
+import { validateRecord, RefinementRegistry } from "@hypit/refinement";
+
+async function runBuild(executor: Executor, state: BuildState) {
+  return (await new InProcessBuildScheduler(executor).run([{
+    id: "film-test",
+    definition: { format: "hypit.build-definition@1", program: state.program, plan: state.plan },
+    facts: [],
+  }]))[0]!;
+}
 
 const space = sealTimeline({ id: "test-space", frameCount: 120, frameRate: { numerator: 30, denominator: 1 },
 });
 const semantic = timelineFixture(space);
 
-function validatorRegistry(): TypeValidatorRegistry {
-  const registry = new TypeValidatorRegistry();
-  registerTypeValidatorFacets(registry, compositionComponent.validators);
-  registerTypeValidatorFacets(registry, spatialComponent.validators);
+function validatorRegistry(): RefinementRegistry {
+  const registry = new RefinementRegistry();
+  registerTypeRefinements(registry, compositionComponent.refinements);
+  registerTypeRefinements(registry, spatialComponent.refinements);
   return registry;
 }
 const canvas = sealCanvas({
@@ -104,30 +116,35 @@ const audio = sealAudioTrack({ timelineId: "test-space",
   clips: [],
 });
 
-function inline(record: TypedRecord | undefined): CanonicalValue {
+function valueOf(record: TypedRecord | undefined): CanonicalValue {
   assert(record, "missing Producer input");
-  assert.equal(record.value.kind, "inline");
-  return record.value.value;
+  return record.value;
 }
 
-function stored(value: CanonicalValue): StoredValue {
-  return { kind: "inline", value };
+function stored(value: CanonicalValue): Value {
+  return value;
 }
 
 const closure = createResolvedClosure([
-  ...videoContractManifests,
+  blobManifest,
+  timelineManifest,
+  temporalManifest,
+  mediaManifest,
+  spatialManifest,
+  compositionManifest,
+  recipeManifest,
   htmlProgramManifest,
   filmManifest,
 ]);
 const records = await Promise.all([
-  sealRecord({ id: "timeline", type: timelineTypes.timeline, value: stored(space) }),
-  sealRecord({ id: "semantic", type: timelineTypes.timeline, value: stored(semantic) }),
-  sealRecord({ id: "canvas", type: spatialTypes.canvas, value: stored(canvas) }),
-  sealRecord({ id: "film-program", type: filmTypes.program, value: stored(filmProgram) }),
-  sealRecord({ id: "title", type: compositionTypes.visualTrack, value: stored(titleVisual) }),
-  sealRecord({ id: "background", type: compositionTypes.visualTrack, value: stored(background) }),
-  sealRecord({ id: "audio", type: compositionTypes.audioTrack, value: stored(audio) }),
-].map(async (record) => await admitRecord(closure, record, validatorRegistry())));
+  { id: "timeline", type: timelineTypes.timeline, value: stored(space) },
+  { id: "semantic", type: timelineTypes.timeline, value: stored(semantic) },
+  { id: "canvas", type: spatialTypes.canvas, value: stored(canvas) },
+  { id: "film-program", type: filmTypes.program, value: stored(filmProgram) },
+  { id: "title", type: compositionTypes.visualTrack, value: stored(titleVisual) },
+  { id: "background", type: compositionTypes.visualTrack, value: stored(background) },
+  { id: "audio", type: compositionTypes.audioTrack, value: stored(audio) },
+].map(async (record) => await validateRecord(record, validatorRegistry())));
 const linked = link(closure, records);
 
 const filmFragment = createFilmAssemblyFragment({
@@ -140,7 +157,6 @@ const filmFragment = createFilmAssemblyFragment({
 });
 const filmInstance = elaborateGraphFragment(linked, filmFragment, {
   id: "main-film",
-  fragment: filmFragment.id,
   inputs: {
     program: { kind: "record", id: "film-program" },
     canvas: { kind: "record", id: "canvas" },
@@ -155,7 +171,6 @@ const filmContribution = bindAuthorFragment(filmInstance, {
 });
 const htmlProgramInstance = elaborateGraphFragment(linked, htmlProgramFragment, {
   id: "main-render",
-  fragment: htmlProgramFragment.id,
   inputs: {
     composition: { kind: "logical-output", id: "main.composition" },
     timeline: { kind: "record", id: "timeline" },
@@ -169,12 +184,21 @@ const merged = mergeFragmentContributions(
   filmContribution,
   htmlProgramContribution,
 );
-const graph: CompiledGraph = sealCompiledGraph({ ...merged });
+const graph: AuthorGraph = sealAuthorGraph({ ...merged });
 
 function build(target: string) {
-  return start(linked, graph, sealBuildRequest({
+  const planned = planBuild(linked, graph, {
+    format: "hypit.run-graph@1",
+    records: [],
+    candidates: [],
+    operations: [],
+    satisfactions: [],
     targets: [{ output: target }],
-  }));
+  });
+  return materializeBuild(defineBuild({
+    program: link(linked.closure, [...linked.records, ...planned.initialRecords]),
+    plan: planned.plan,
+  }), []);
 }
 
 function producerNames(target: string): string[] {
@@ -198,50 +222,35 @@ test("Film stops at Composition and HTML compilation remains an ordinary downstr
   );
 });
 
-test("the Driver folds peer Tracks, then independently compiles the Composition", async () => {
+test("the scheduled Producers fold peer Tracks, then independently compile the Composition", async () => {
   const registry = new ProducerRegistry();
-  registry.registerProducer(filmProducers.createTrackSet, () => ({
-    outputs: { set: stored(createFilmTrackSet()) },
-    needs: {},
-  }));
-  registry.registerProducer(filmProducers.appendVisualTrack, ({ inputs }) => ({
-    outputs: { set: stored(appendFilmVisualTrack(
-      inline(inputs.set) as never,
-      inline(inputs.timeline) as typeof space,
-      inline(inputs.track) as never,
-    )) },
-    needs: {},
-  }));
-  registry.registerProducer(filmProducers.appendAudioTrack, ({ inputs }) => ({
-    outputs: { set: stored(appendFilmAudioTrack(
-      inline(inputs.set) as never,
-      inline(inputs.timeline) as typeof space,
-      inline(inputs.track) as never,
-    )) },
-    needs: {},
-  }));
-  registry.registerProducer(filmProducers.compileComposition, ({ inputs }) => ({
-    outputs: { composition: stored(compileFilmComposition(
-      inline(inputs.program) as never,
-      inline(inputs.canvas) as typeof canvas,
-      inline(inputs.timeline) as typeof space,
-      inline(inputs.set) as never,
-    )) },
-    needs: {},
-  }));
-  registry.registerProducer(htmlProgramProducers.compile, ({ inputs }) => ({
-    outputs: { program: stored(compileHtmlProgram(
-      inline(inputs.composition) as never,
-      inline(inputs.timeline) as typeof space,
-    )) },
-    needs: {},
-  }));
+  registry.registerProducer(filmProducers.createTrackSet, () => ({ kind: "output", value: stored(createFilmTrackSet()) }));
+  registry.registerProducer(filmProducers.appendVisualTrack, ({ inputs }) => ({ kind: "output", value: stored(appendFilmVisualTrack(
+      valueOf(inputs.set) as never,
+      valueOf(inputs.timeline) as typeof space,
+      valueOf(inputs.track) as never,
+    )) }));
+  registry.registerProducer(filmProducers.appendAudioTrack, ({ inputs }) => ({ kind: "output", value: stored(appendFilmAudioTrack(
+      valueOf(inputs.set) as never,
+      valueOf(inputs.timeline) as typeof space,
+      valueOf(inputs.track) as never,
+    )) }));
+  registry.registerProducer(filmProducers.compileComposition, ({ inputs }) => ({ kind: "output", value: stored(compileFilmComposition(
+      valueOf(inputs.program) as never,
+      valueOf(inputs.canvas) as typeof canvas,
+      valueOf(inputs.timeline) as typeof space,
+      valueOf(inputs.set) as never,
+    )) }));
+  registry.registerProducer(htmlProgramProducers.compile, ({ inputs }) => ({ kind: "output", value: stored(compileHtmlProgram(
+      valueOf(inputs.composition) as never,
+      valueOf(inputs.timeline) as typeof space,
+    )) }));
 
-  const result = await new Executor({ producers: registry, validators: validatorRegistry() }).run(build("main.program"));
+  const result = await runBuild(new Executor({ producers: registry, refinements: validatorRegistry() }), build("main.program"));
   assert.equal(result.status, "complete");
   const documentRecord = result.state.records.find((record) => record.type.module.name === htmlProgramTypes.program.module.name);
   assert(documentRecord);
-  const document = inline(documentRecord) as { readonly html: string };
+  const document = valueOf(documentRecord) as { readonly html: string };
   assert.match(document.html, /data-hypit-text-run="title-text"/u);
   assert.match(document.html, /background-track/u);
   assert.equal(result.state.records.filter((record) => record.type.name === filmTypes.trackSet.name).length, 4);

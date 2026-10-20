@@ -28,7 +28,7 @@ const speechReference: SurfaceResolvedReference = {
   record: {
     id: "story.segment.opening.speech",
     type: textTypes.text,
-    value: { kind: "inline", value: speech },
+    value: (speech),
   },
 };
 
@@ -58,7 +58,7 @@ test("VoiceDesign publishes one reusable voice reference", async () => {
     A clear, confident young woman with a grounded conversational tone.
   </eleven:VoiceDesign>`));
   assert.deepEqual(result.components[0]!.outputs, { audio: "host.reference" });
-  const exported = result.fragments[0]!.exports.find((item) => item.name === "audio");
+  const exported = result.components[0]!.fragment.exports.find((item) => item.name === "audio");
   assert.deepEqual(exported?.type, blobTypes.blob);
   assert.deepEqual(result.components[0]!.inputs["speech:text"], {
     kind: "record",

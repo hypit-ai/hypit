@@ -1,27 +1,10 @@
-import type {
-  CanonicalValue,
-  StoredValue,
-  FulfillNeedCommand,
-} from "@hypit/protocol";
+import type { CanonicalValue, Need, Value } from "@hypit/protocol";
 import type { CredentialRef } from "./credentials.js";
 
 /** Provider-authored, non-secret acknowledgement suitable for Results and user inspection. */
 export type OperationReceipt = {
   readonly id: string;
   readonly url?: string;
-};
-
-export type OperationFacts = {
-  readonly createdAt?: number;
-  readonly acknowledgedAt?: number;
-  readonly endedAt?: number;
-  /** The exact request needed to advance this Operation without materializing its Build. */
-  readonly request?: FulfillNeedCommand;
-  readonly credentials?: Readonly<Record<string, CredentialRef>>;
-  readonly pool?: string;
-  readonly receipt?: OperationReceipt;
-  readonly remoteEnded?: true;
-  readonly submission?: "queued" | "started" | "accepted";
 };
 
 export type OperationIdentity = {
@@ -31,22 +14,22 @@ export type OperationIdentity = {
   readonly endpoint: string;
 };
 
-export type OperationCompletion = {
-  readonly value: StoredValue;
+/** Immutable execution context captured when the Operation is created. */
+export type OperationContext = {
+  readonly createdAt: number;
+  readonly need: Need;
+  readonly credentials: Readonly<Record<string, CredentialRef>>;
+  readonly pool?: string;
 };
+
+export type OperationCompletion = { readonly value: Value };
 
 export type OperationFailure = {
   readonly code: string;
   readonly message: string;
 };
 
-/**
- * Provider-neutral, human-observable progress for one asynchronous Operation.
- *
- * The opaque handle remains the Provider's private task state. This
- * deliberately small projection is the only part Runtime tools may display;
- * it must not carry credentials, request bodies or vendor-specific payloads.
- */
+/** Provider-neutral, human-observable progress for one asynchronous Operation. */
 export type OperationProgress = {
   readonly phase: string;
   readonly completed?: number;
@@ -54,33 +37,71 @@ export type OperationProgress = {
   readonly unit?: string;
 };
 
-export type OperationSnapshot = OperationIdentity & OperationFacts & {
-  readonly status: OperationUpdate["status"];
-  readonly handle?: CanonicalValue;
-  readonly wakeAt?: number;
-  readonly progress?: OperationProgress;
-  readonly completion?: OperationCompletion;
-  readonly failure?: OperationFailure;
-  /** Last acknowledgement of an explicit, best-effort cancellation request. */
-  readonly cancellation?: { readonly outcome: "confirmed" | "accepted" | "unsupported" | "too-late" | "failed"; readonly message?: string };
+export type OperationCancellation = {
+  readonly outcome: "confirmed" | "accepted" | "unsupported" | "too-late" | "failed";
+  readonly message?: string;
 };
 
-export type OperationUpdate = OperationFacts & (
+export type OperationEvidence = {
+  readonly receipt?: OperationReceipt;
+  readonly progress?: OperationProgress;
+};
+
+/** Every executable phase carries the facts required to perform its one valid next action. */
+export type OperationState =
+  | { readonly status: "queued"; readonly wakeAt?: number }
+  | { readonly status: "submitting" }
   | {
-      readonly status: "pending";
-      /** Candidate awaits Build-boundary validation. */
-      readonly completion?: OperationCompletion;
-      /** Provider-owned task state once submission is acknowledged. */
-      readonly handle?: CanonicalValue;
+      readonly status: "running";
+      readonly handle: CanonicalValue;
+      readonly acknowledgedAt: number;
       readonly wakeAt?: number;
-      readonly progress?: OperationProgress;
+    }
+  | {
+      readonly status: "collecting";
+      readonly handle: CanonicalValue;
+      readonly acknowledgedAt: number;
+      readonly endedAt: number;
+      readonly wakeAt?: number;
+    }
+  | {
+      readonly status: "received";
+      readonly completion: OperationCompletion;
+      readonly acknowledgedAt: number;
+      readonly endedAt: number;
     }
   | {
       readonly status: "completed";
       readonly completion: OperationCompletion;
+      readonly acknowledgedAt: number;
+      readonly endedAt: number;
     }
-  | { readonly status: "failed"; readonly failure: OperationFailure }
-  | { readonly status: "cancelled"; readonly cancellation?: OperationSnapshot["cancellation"] });
+  | { readonly status: "failed"; readonly failure: OperationFailure; readonly endedAt: number }
+  | { readonly status: "cancelled"; readonly cancellation: OperationCancellation; readonly endedAt: number };
+
+export type OperationSnapshot = OperationIdentity & OperationContext & OperationEvidence & OperationState;
+
+/** Updates replace the lifecycle phase while preserving immutable context and accumulated evidence. */
+export type OperationUpdate = OperationEvidence & OperationState;
+
+export function applyOperationUpdate(current: OperationSnapshot, update: OperationUpdate): OperationSnapshot {
+  if (current.status === "completed" || current.status === "failed" || current.status === "cancelled") {
+    return current;
+  }
+  return {
+    id: current.id,
+    build: current.build,
+    command: current.command,
+    endpoint: current.endpoint,
+    createdAt: current.createdAt,
+    need: current.need,
+    credentials: current.credentials,
+    ...(current.pool === undefined ? {} : { pool: current.pool }),
+    ...(update.receipt ?? current.receipt) === undefined ? {} : { receipt: update.receipt ?? current.receipt },
+    ...(update.progress ?? current.progress) === undefined ? {} : { progress: update.progress ?? current.progress },
+    ...update,
+  } as OperationSnapshot;
+}
 
 export type OperationQuery = {
   readonly build?: string;

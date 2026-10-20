@@ -6,16 +6,16 @@ import { dirname, relative, resolve, sep } from "node:path";
 import {
   loadNodePackageSelection,
 } from "@hypit/hypit/loader/node";
-import { verifyPackageContributions } from "@hypit/hypit/loader";
 import type { NodePackageSelectionRequest } from "@hypit/hypit/loader/node";
 import { hypitHostStateRoot } from "@hypit/hypit/cli";
 import { EndpointRegistry, Executor } from "@hypit/hypit/executor";
 import type { EndpointCredential, EndpointFulfillment, EndpointInstance, EndpointRegistrar, EndpointScheduling } from "@hypit/hypit/endpoint";
-import { endpointResourceClaims, verifyEndpointPricingDocument } from "@hypit/hypit/endpoint";
-import { assertBuildId, canonicalize, canonicalStringify } from "@hypit/hypit/protocol";
+import { endpointOffers, endpointResourceClaims, installEndpoint, verifyEndpointPricingDocument } from "@hypit/hypit/endpoint";
+import { assertBuildId, canonicalize, canonicalStringify, capabilityKey, parseCapabilityKey } from "@hypit/hypit/protocol";
 import type { CanonicalValue, CapabilityRef, Need } from "@hypit/hypit/protocol";
 import {
   CompositeCredentialStore,
+  InProcessBuildScheduler,
   capacityUnits,
   writableCredentialStore,
 } from "@hypit/hypit/runtime";
@@ -39,15 +39,15 @@ import type {
   RuntimeOpened,
 } from "@hypit/runtime-local/extension";
 import type {
-  RuntimeHostCapabilityPricing,
-  RuntimeHostCapabilityProvider,
-  RuntimeHostProviderQuery,
+  RuntimeHostEndpointObservation,
+  RuntimeHostEndpointPricing,
+  RuntimeHostEndpointQuery,
   RuntimeHostTransientExecution,
   RuntimeInvocationObservation,
 } from "./host-api.js";
 import { SqliteRuntimeState } from "./sqlite-state.js";
 
-import { applyEndpointBindings, createLocalRuntime, parseCapabilityKey } from "./runtime.js";
+import { applyEndpointBindings, createLocalRuntime } from "./runtime.js";
 import {
   createLocalRuntimeControl,
 } from "./control.js";
@@ -101,6 +101,15 @@ export type LoadRuntimeConfigOptions = {
 export type RuntimeConfigDoctorResult = {
   readonly dataRoot: string;
   readonly diagnostics: readonly RuntimeDoctorDiagnostic[];
+};
+
+export type RuntimeConfigInspection = {
+  readonly dataRoot: string;
+  endpoints(): Promise<readonly RuntimeHostEndpointObservation[]>;
+  pricing(): Promise<readonly RuntimeHostEndpointPricing[]>;
+  preflight(): Promise<RuntimeConfigDoctorResult>;
+  createRuntime(): Promise<LocalRuntime>;
+  close(): void | Promise<void>;
 };
 
 type RuntimeInspectionOptions = LoadRuntimeConfigOptions & {
@@ -241,7 +250,15 @@ export async function readRuntimeWorkerOptions(path: string): Promise<{ readonly
 
 async function openRuntimeConfig(path: string, packageRootHint?: string): Promise<OpenedRuntimeConfig> {
   const absolute = resolve(path);
-  const document = parseLocalRuntimeProfile(JSON.parse(await readFile(absolute, "utf8")));
+  const source = await readFile(absolute, "utf8");
+  let value: unknown;
+  try {
+    value = JSON.parse(source) as unknown;
+  } catch (error) {
+    throw new Error(`Runtime Profile ${absolute} is not valid JSON: ${error instanceof Error ? error.message : String(error)}`,
+      { cause: error });
+  }
+  const document = parseLocalRuntimeProfile(value);
   const profileRoot = dirname(absolute);
   return {
     absolute,
@@ -360,19 +377,6 @@ export async function resolveRuntimeConfigPaths(
   return { packageRoot: opened.packageRoot, dataRoot: opened.root };
 }
 
-function capabilityKey(capability: CapabilityRef): string {
-  return `${capability.module.name}@${capability.module.version}#${capability.name}`;
-}
-
-function sameRef(
-  left: { readonly module: { readonly name: string; readonly version: string }; readonly name: string },
-  right: { readonly module: { readonly name: string; readonly version: string }; readonly name: string },
-): boolean {
-  return left.module.name === right.module.name
-    && left.module.version === right.module.version
-    && left.name === right.name;
-}
-
 function adapterContext(
   root: string,
   hostStateRoot: string,
@@ -423,7 +427,7 @@ export async function declaredManagedPrograms(
     : new Set(options.capabilities.map(capabilityKey));
   const programs: DeclaredManagedProgram[] = [];
   for (const { entry, activation } of await activatedEndpoints(document, root, hostStateRoot, registry)) {
-    if (requested !== undefined && !activation.endpoint.offers.some((offer) => requestsCapability(document, entry.instance, offer.capability, requested))) continue;
+    if (requested !== undefined && !endpointOffers(activation.endpoint).some((offer) => requestsCapability(document, entry.instance, offer.capability, requested))) continue;
     if (activation.program !== undefined) programs.push({ instance: entry.instance, program: activation.program });
   }
   return { dataRoot: root, programs };
@@ -438,9 +442,49 @@ async function installedEndpointRegistry(
   activations: readonly { readonly entry: LocalRuntimeAdapterSelection; readonly activation: RuntimeEndpointActivation }[],
 ): Promise<EndpointRegistry> {
   const endpoints = new EndpointRegistry();
-  for (const { activation } of activations) await activation.endpoint.install(endpoints);
+  for (const { activation } of activations) await installEndpoint(activation.endpoint, endpoints);
   applyEndpointBindings(endpoints, document.bindings);
   return endpoints;
+}
+
+type RuntimeInspectionSnapshot = {
+  readonly opened: OpenedRuntimeConfig;
+  readonly document: LocalRuntimeProfile;
+  readonly hostStateRoot: string;
+  readonly registry: RuntimeAdapterRegistry;
+  readonly activations: readonly {
+    readonly entry: LocalRuntimeAdapterSelection;
+    readonly activation: RuntimeEndpointActivation;
+  }[];
+  readonly endpoints: EndpointRegistry;
+};
+
+async function openRuntimeInspectionSnapshot(
+  path: string,
+  queries: readonly RuntimeHostEndpointQuery[],
+  options: LoadRuntimeConfigOptions,
+): Promise<RuntimeInspectionSnapshot> {
+  const opened = await openRuntimeConfig(path, options.packageRoot);
+  const document = scopedProfile(opened.document, {
+    capabilities: queries.map((query) => query.capability),
+  });
+  const hostStateRoot = resolve(options.hostStateRoot ?? hypitHostStateRoot());
+  const registry = options.registry ?? new RuntimeAdapterRegistry();
+  await installRuntimeAdapters(
+    registry,
+    opened.packageRoot,
+    endpointAdapterSelection(document),
+    options.distributionPackageRoot,
+  );
+  const activations = await activatedEndpoints(document, opened.root, hostStateRoot, registry);
+  return {
+    opened,
+    document,
+    hostStateRoot,
+    registry,
+    activations,
+    endpoints: await installedEndpointRegistry(document, activations),
+  };
 }
 
 type TransientResourceClaim = EndpointScheduling["resources"][number];
@@ -536,7 +580,7 @@ export async function openTransientRuntimeConfigExecution(
         }
       },
     };
-    await activation.endpoint.install(transientOnly);
+    await installEndpoint(activation.endpoint, transientOnly);
   }
   applyEndpointBindings(endpoints, document.bindings);
   const stores = await openCredentialStores(document, root, hostStateRoot, registry);
@@ -549,13 +593,24 @@ export async function openTransientRuntimeConfigExecution(
       if (closed) throw new Error("transient Runtime execution is closed");
       activeEvaluations += 1;
       try {
-        return await new Executor({
+        const executor = new Executor({
           producers: input.producers,
-          validators: input.validators,
+          refinements: input.refinements,
           endpoints,
           resources: input.resources,
           credentials: stores.store,
-        }).run(input.state);
+        });
+        const [result] = await new InProcessBuildScheduler(executor).run([{
+          id: "transient",
+          definition: {
+            format: "hypit.build-definition@1",
+            program: input.state.program,
+            plan: input.state.plan,
+          },
+          facts: [],
+        }]);
+        if (result === undefined) throw new Error("transient execution produced no result");
+        return result;
       } finally {
         activeEvaluations -= 1;
         if (activeEvaluations === 0) {
@@ -579,62 +634,79 @@ export async function openTransientRuntimeConfigExecution(
   };
 }
 
-/** Static Endpoint selection per capability. Reads the Profile and activations only; never a credential or a service. */
-export async function describeRuntimeConfigProviders(
-  path: string,
-  requests: readonly RuntimeHostProviderQuery[],
-  options: LoadRuntimeConfigOptions = {},
-): Promise<readonly RuntimeHostCapabilityProvider[]> {
-  if (requests.length === 0) return [];
-  const opened = await openRuntimeConfig(path, options.packageRoot);
-  const { root, packageRoot } = opened;
-  const document = scopedProfile(opened.document, { capabilities: requests.map((request) => request.capability) });
-  const hostStateRoot = resolve(options.hostStateRoot ?? hypitHostStateRoot());
-  const registry = options.registry ?? new RuntimeAdapterRegistry();
-  await installRuntimeAdapters(registry, packageRoot, endpointAdapterSelection(document), options.distributionPackageRoot);
-  const activations = await activatedEndpoints(document, root, hostStateRoot, registry);
-  const endpoints = await installedEndpointRegistry(document, activations);
-  return requests.map((request): RuntimeHostCapabilityProvider => {
+type InspectionEndpointSelection = {
+  readonly query: RuntimeHostEndpointQuery;
+  readonly observation: RuntimeHostEndpointObservation;
+  readonly activation?: RuntimeInspectionSnapshot["activations"][number];
+};
+
+/** Resolve static Endpoint selection once per frozen inspection session. */
+function resolveInspectionEndpoints(
+  snapshot: RuntimeInspectionSnapshot,
+  queries: readonly RuntimeHostEndpointQuery[],
+): readonly InspectionEndpointSelection[] {
+  const { document, activations, endpoints } = snapshot;
+  return queries.map((query): InspectionEndpointSelection => {
     const base = {
-      request: request.request,
-      capability: structuredClone(request.capability),
+      need: query.need,
+      capability: structuredClone(query.capability),
     };
-    const binding = document.bindings[capabilityKey(request.capability)];
+    const binding = document.bindings[capabilityKey(query.capability)];
     const bound = binding === undefined ? {} : { binding };
-    const resolution = endpoints.resolve({
-      capability: request.capability,
-      returns: request.returns,
-      constraints: request.constraints,
-      ...(request.pendingInputs === undefined ? {} : { pendingInputs: request.pendingInputs }),
-    });
-    if (resolution.status === "missing") return { ...base, status: "unresolved", ...bound };
-    if (resolution.status === "unsupported") {
-      const endpoint = resolution.rejections.length === 1 ? resolution.rejections[0]!.endpointId : undefined;
-      const match = endpoint === undefined ? undefined
-        : activations.find(({ activation }) => activation.endpoint.instance.id === endpoint);
-      const pricing = match?.activation.endpoint.pricing;
+    const selection = endpoints.select(query);
+    if (selection.status === "missing") {
+      return { query, observation: { ...base, status: "unresolved", support: "not-evaluated", ...bound } };
+    }
+    if (selection.status === "ambiguous") {
       return {
-        ...base,
-        status: "unsupported",
-        ...(endpoint === undefined ? {} : { endpoint }),
-        ...(match === undefined ? {} : { use: match.entry.use }),
-        ...(pricing === undefined ? {} : { pricing: structuredClone(pricing) }),
-        rejections: resolution.rejections.map((item) => ({ endpoint: item.endpointId, message: item.reason })),
-        ...bound,
+        query,
+        observation: {
+          ...base,
+          status: "ambiguous",
+          support: "not-evaluated",
+          endpoints: selection.endpointIds,
+          ...bound,
+        },
       };
     }
-    if (resolution.status === "ambiguous") return { ...base, status: "ambiguous", endpoints: resolution.endpointIds, ...bound };
-    const match = activations.find(({ activation }) => activation.endpoint.instance.id === resolution.registration.id);
+    const match = activations.find(({ activation }) => activation.endpoint.instance.id === selection.registration.id);
     const pricing = match?.activation.endpoint.pricing;
-    return {
+    const support = query.kind === "concrete"
+      ? endpoints.checkSupport(selection.registration, query)
+      : { status: "not-evaluated" as const };
+    const selected = {
       ...base,
-      status: "resolved",
-      endpoint: resolution.registration.id,
+      status: "resolved" as const,
+      endpoint: selection.registration.id,
       ...(match === undefined ? {} : { use: match.entry.use }),
       ...(pricing === undefined ? {} : { pricing: structuredClone(pricing) }),
       ...bound,
     };
+    const observation: RuntimeHostEndpointObservation = support.status === "unsupported" ? {
+      ...selected,
+      support: "unsupported",
+      rejections: [{ endpoint: selection.registration.id, message: support.reason }],
+    } : { ...selected, support: support.status };
+    return {
+      query,
+      observation,
+      ...(match === undefined ? {} : { activation: match }),
+    };
   });
+}
+
+export async function describeRuntimeConfigEndpoints(
+  path: string,
+  queries: readonly RuntimeHostEndpointQuery[],
+  options: LoadRuntimeConfigOptions = {},
+): Promise<readonly RuntimeHostEndpointObservation[]> {
+  if (queries.length === 0) return [];
+  const inspection = await openRuntimeConfigInspection(path, queries, options);
+  try {
+    return await inspection.endpoints();
+  } finally {
+    await inspection.close();
+  }
 }
 
 async function resolveEndpointCredentials(
@@ -662,22 +734,16 @@ async function resolveEndpointCredentials(
   return credentials;
 }
 
-/** Read current Provider-owned pricing material; no Build, generation or durable pricing cache is created. */
-export async function readRuntimeConfigPricing(
-  path: string,
-  requests: readonly RuntimeHostProviderQuery[],
-  options: LoadRuntimeConfigOptions = {},
-): Promise<readonly RuntimeHostCapabilityPricing[]> {
-  if (requests.length === 0) return [];
-  const opened = await openRuntimeConfig(path, options.packageRoot);
+type InspectionCredentialStores = Map<string, Awaited<ReturnType<typeof openCredentialStores>>>;
+
+async function readInspectionPricing(
+  snapshot: RuntimeInspectionSnapshot,
+  selections: readonly InspectionEndpointSelection[],
+  options: LoadRuntimeConfigOptions,
+  stores: InspectionCredentialStores,
+): Promise<readonly RuntimeHostEndpointPricing[]> {
+  const { opened, document, hostStateRoot, registry } = snapshot;
   const { absolute, root, packageRoot } = opened;
-  const document = scopedProfile(opened.document, { capabilities: requests.map((request) => request.capability) });
-  const hostStateRoot = resolve(options.hostStateRoot ?? hypitHostStateRoot());
-  const registry = options.registry ?? new RuntimeAdapterRegistry();
-  await installRuntimeAdapters(registry, packageRoot, endpointAdapterSelection(document), options.distributionPackageRoot);
-  const activations = await activatedEndpoints(document, root, hostStateRoot, registry);
-  const endpoints = await installedEndpointRegistry(document, activations);
-  const stores = new Map<string, Awaited<ReturnType<typeof openCredentialStores>>>();
   const openedStores = async (endpoint: EndpointInstance) => {
     let opened = stores.get(endpoint.instance.id);
     if (opened === undefined) {
@@ -688,96 +754,123 @@ export async function readRuntimeConfigPricing(
     }
     return opened;
   };
-  const result: RuntimeHostCapabilityPricing[] = [];
-  try {
-    for (const request of requests) {
-      const base = {
-        request: request.request,
-        capability: structuredClone(request.capability),
-      };
-      const binding = document.bindings[capabilityKey(request.capability)];
-      const bound = binding === undefined ? {} : { binding };
-      const endpointRequest = {
-        capability: request.capability,
-        returns: request.returns,
-        constraints: request.constraints,
-        ...(request.pendingInputs === undefined ? {} : { pendingInputs: request.pendingInputs }),
-      };
-      const resolution = endpoints.resolve(endpointRequest);
-      if (resolution.status === "missing") {
-        result.push({
-          ...base,
-          status: "unresolved",
-          ...bound,
-        });
-        continue;
-      }
-      if (resolution.status === "unsupported") {
-        const endpoint = resolution.rejections.length === 1 ? resolution.rejections[0]!.endpointId : undefined;
-        const match = endpoint === undefined ? undefined
-          : activations.find(({ activation }) => activation.endpoint.instance.id === endpoint);
-        const pricing = match?.activation.endpoint.pricing;
-        result.push({
-          ...base,
-          status: "unsupported",
-          ...(endpoint === undefined ? {} : { endpoint }),
-          ...(match === undefined ? {} : { use: match.entry.use }),
-          ...(pricing === undefined ? {} : { pricing: structuredClone(pricing) }),
-          rejections: resolution.rejections.map((item) => ({ endpoint: item.endpointId, message: item.reason })),
-          ...bound,
-        });
-        continue;
-      }
-      if (resolution.status === "ambiguous") {
-        result.push({
-          ...base,
-          status: "ambiguous",
-          endpoints: resolution.endpointIds,
-          ...bound,
-        });
-        continue;
-      }
-      const match = activations.find(({ activation }) =>
-        activation.endpoint.instance.id === resolution.registration.id);
-      const pricing = match?.activation.endpoint.pricing;
-      const selected = {
-        ...base,
-        status: "resolved" as const,
-        endpoint: resolution.registration.id,
-        ...(match === undefined ? {} : { use: match.entry.use }),
-        ...(pricing === undefined ? {} : { pricing: structuredClone(pricing) }),
-        ...bound,
-      };
-      if (pricing?.kind === "local" || match?.activation.endpoint.readPricing === undefined) {
-        result.push(selected);
-        continue;
-      }
-      try {
-        const pricingDocuments = await match.activation.endpoint.readPricing({
-          request: endpointRequest,
-          credentials: async () => {
-            const opened = await openedStores(match.activation.endpoint);
-            return await resolveEndpointCredentials(match.activation.endpoint, opened.store, absolute);
-          },
-        });
-        pricingDocuments.forEach(verifyEndpointPricingDocument);
-        result.push({
-          ...selected,
-          ...(pricingDocuments.length === 0 ? {} : {
-            pricingDocuments: structuredClone(pricingDocuments),
-          }),
-        });
-      } catch (error) {
-        result.push({
-          ...selected,
-          pricingError: error instanceof Error ? error.message : String(error),
-        });
-      }
+  const result: RuntimeHostEndpointPricing[] = [];
+  for (const selection of selections) {
+    const request = selection.query;
+    const selected: RuntimeHostEndpointPricing = selection.observation;
+    const endpoint = selection.activation?.activation.endpoint;
+    if (request.kind !== "concrete" || selected.support === "unsupported"
+      || selected.status !== "resolved" || selected.pricing?.kind === "local"
+      || endpoint?.readPricing === undefined) {
+      result.push(selected);
+      continue;
     }
-    return result;
-  } finally {
-    await Promise.all([...stores.values()].map((opened) => opened.close()));
+    const endpointRequest = {
+      capability: request.capability,
+      returns: request.returns,
+      constraints: request.constraints,
+    };
+    try {
+      const pricingDocuments = await endpoint.readPricing({
+        request: endpointRequest,
+        credentials: async () => {
+          const opened = await openedStores(endpoint);
+          return await resolveEndpointCredentials(endpoint, opened.store, absolute);
+        },
+      });
+      pricingDocuments.forEach(verifyEndpointPricingDocument);
+      result.push({
+        ...selected,
+        ...(pricingDocuments.length === 0 ? {} : {
+          pricingDocuments: structuredClone(pricingDocuments),
+        }),
+      });
+    } catch (error) {
+      result.push({
+        ...selected,
+        pricingError: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
+  return result;
+}
+
+/** Read current Provider-owned pricing material; no Build, generation or durable pricing cache is created. */
+export async function readRuntimeConfigPricing(
+  path: string,
+  queries: readonly RuntimeHostEndpointQuery[],
+  options: LoadRuntimeConfigOptions = {},
+): Promise<readonly RuntimeHostEndpointPricing[]> {
+  if (queries.length === 0) return [];
+  const inspection = await openRuntimeConfigInspection(path, queries, options);
+  try {
+    return await inspection.pricing();
+  } finally {
+    await inspection.close();
+  }
+}
+
+/**
+ * Freeze one Profile and its activated Endpoint declarations for a single caller command.
+ * Pricing credentials remain lazy and are released with the session; nothing is persisted.
+ */
+export async function openRuntimeConfigInspection(
+  path: string,
+  queries: readonly RuntimeHostEndpointQuery[],
+  options: LoadRuntimeConfigOptions = {},
+): Promise<RuntimeConfigInspection> {
+  const snapshot = await openRuntimeInspectionSnapshot(path, queries, options);
+  const selections = resolveInspectionEndpoints(snapshot, queries);
+  const stores: InspectionCredentialStores = new Map();
+  let closed = false;
+  let endpointResult: readonly RuntimeHostEndpointObservation[] | undefined;
+  let pricingResult: Promise<readonly RuntimeHostEndpointPricing[]> | undefined;
+  let preflightResult: Promise<RuntimeConfigDoctorResult> | undefined;
+  let runtimeResult: Promise<LocalRuntime> | undefined;
+  const assertOpen = (): void => {
+    if (closed) throw new Error("Runtime inspection is closed");
+  };
+  const endpoints = (): readonly RuntimeHostEndpointObservation[] => {
+    assertOpen();
+    endpointResult ??= selections.map((item) => item.observation);
+    return endpointResult;
+  };
+  const selectedEndpoints = (): readonly string[] => [...new Set(endpoints().flatMap((item) =>
+    item.status === "resolved" && item.endpoint !== undefined ? [item.endpoint] : []))];
+  return {
+    dataRoot: snapshot.opened.root,
+    endpoints: async () => endpoints(),
+    pricing: async () => {
+      assertOpen();
+      pricingResult ??= readInspectionPricing(snapshot, selections, options, stores);
+      return await pricingResult;
+    },
+    preflight: async () => {
+      assertOpen();
+      preflightResult ??= inspectOpenedRuntimeConfig(snapshot.opened, {
+        ...options,
+        registry: snapshot.registry,
+        endpoints: selectedEndpoints(),
+        active: false,
+      }, snapshot);
+      return await preflightResult;
+    },
+    createRuntime: async () => {
+      assertOpen();
+      runtimeResult ??= createRuntimeFromOpened(snapshot.opened, {
+        ...options,
+        registry: snapshot.registry,
+        endpoints: selectedEndpoints(),
+      }, undefined, snapshot.activations);
+      return await runtimeResult;
+    },
+    close: async () => {
+      if (closed) return;
+      closed = true;
+      await Promise.all([...stores.values()].map((opened) => opened.close()));
+      stores.clear();
+    },
+  };
 }
 
 /**
@@ -803,22 +896,21 @@ export async function invokeRuntimeConfigNeed(
   const activations = await activatedEndpoints(document, root, hostStateRoot, registry);
   const endpoints = await installedEndpointRegistry(document, activations);
   const subject = capabilityKey(need.capability);
-  const resolution = endpoints.resolve(need);
-  if (resolution.status === "missing") {
-    throw new Error(resolution.endpointId === undefined
+  const selection = endpoints.select(need);
+  if (selection.status === "missing") {
+    throw new Error(selection.endpointId === undefined
       ? `No Endpoint in ${absolute} serves ${subject}; hypit plan --runtime ${absolute} shows which Endpoint each capability needs`
-      : `${absolute} binds ${subject} to ${resolution.endpointId}, which does not serve this request; change that binding`);
+      : `${absolute} binds ${subject} to ${selection.endpointId}, which does not offer this demand; change that binding`);
   }
-  if (resolution.status === "unsupported") {
-    throw new Error(resolution.rejections
-      .map((rejection) => `${rejection.endpointId} rejected ${subject}: ${rejection.reason}`)
-      .join("; "));
-  }
-  if (resolution.status === "ambiguous") {
-    throw new Error(`Several Endpoints in ${absolute} serve ${subject}: ${resolution.endpointIds.join(", ")}. `
+  if (selection.status === "ambiguous") {
+    throw new Error(`Several Endpoints in ${absolute} serve ${subject}: ${selection.endpointIds.join(", ")}. `
       + `Say which one does it: add "bindings": { "${subject}": "<instance>" } to the Profile`);
   }
-  const registration = resolution.registration;
+  const registration = selection.registration;
+  const support = endpoints.checkSupport(registration, need);
+  if (support.status === "unsupported") {
+    throw new Error(`${registration.id} rejected ${subject}: ${support.reason}`);
+  }
   if (registration.kind !== "immediate") {
     throw new Error(`${subject} is an asynchronous capability; creation-time calls only use immediate capabilities, submit a Build for it`);
   }
@@ -830,7 +922,6 @@ export async function invokeRuntimeConfigNeed(
   try {
     const credentials = await resolveEndpointCredentials(activation.endpoint, stores.store, absolute);
     return await registration.handler({
-      command: { kind: "fulfill-need", id: `command:${need.id}`, need },
       need,
       resources,
       credentials,
@@ -889,11 +980,11 @@ function buildWorkPath(root: string, build: string): string {
   return target;
 }
 
-async function inspectRuntimeConfig(
-  path: string,
+async function inspectOpenedRuntimeConfig(
+  opened: OpenedRuntimeConfig,
   options: RuntimeInspectionOptions,
+  prepared?: Pick<RuntimeInspectionSnapshot, "registry" | "activations">,
 ): Promise<RuntimeConfigDoctorResult> {
-  const opened = await openRuntimeConfig(path, options.packageRoot);
   const { absolute, root, packageRoot } = opened;
   const document = scopedProfile(opened.document, options);
   const scoped = options.endpoints !== undefined || options.capabilities !== undefined;
@@ -906,11 +997,13 @@ async function inspectRuntimeConfig(
       return { dataRoot: root, diagnostics: [diagnostic(error, "RUNTIME_DATA_ROOT_INVALID", root)] };
     }
   }
-  const registry = options.registry ?? new RuntimeAdapterRegistry();
-  try {
-    await installRuntimeAdapters(registry, packageRoot, endpointAdapterSelection(document), options.distributionPackageRoot);
-  } catch (error) {
-    return { dataRoot: root, diagnostics: [diagnostic(error, "RUNTIME_PACKAGE_SELECTION_INVALID")] };
+  const registry = prepared?.registry ?? options.registry ?? new RuntimeAdapterRegistry();
+  if (prepared === undefined) {
+    try {
+      await installRuntimeAdapters(registry, packageRoot, endpointAdapterSelection(document), options.distributionPackageRoot);
+    } catch (error) {
+      return { dataRoot: root, diagnostics: [diagnostic(error, "RUNTIME_PACKAGE_SELECTION_INVALID")] };
+    }
   }
   const requested = options.capabilities === undefined
     ? undefined
@@ -918,20 +1011,25 @@ async function inspectRuntimeConfig(
   const covered = new Set<string>();
   const activated: Array<{ readonly item: LocalRuntimeAdapterSelection; readonly activation: RuntimeEndpointActivation }> = [];
   const selectedEndpoints: Array<{ readonly item: LocalRuntimeAdapterSelection; readonly activation: RuntimeEndpointActivation }> = [];
+  const preparedActivations = new Map(prepared?.activations.map((item) => [item.entry.instance, item.activation]));
   for (const item of document.endpoints) {
     let activation: RuntimeEndpointActivation;
     try {
-      activation = await registry.activateEndpoint(item.use, adapterContext(root, hostStateRoot, {
-        ...item,
-        pool: item.pool ?? item.instance,
-      }));
+      const existing = preparedActivations.get(item.instance);
+      if (prepared !== undefined && existing === undefined) {
+        throw new Error(`Runtime inspection has no activated Endpoint ${item.instance}`);
+      }
+      activation = existing ?? await registry.activateEndpoint(
+        item.use,
+        adapterContext(root, hostStateRoot, { ...item, pool: item.pool ?? item.instance }),
+      );
     } catch (error) {
       diagnostics.push(diagnostic(error, "RUNTIME_ENDPOINT_CONFIG_INVALID", item.instance));
       continue;
     }
     activated.push({ item, activation });
-    if (requested !== undefined && !activation.endpoint.offers.some((offer) => requestsCapability(document, item.instance, offer.capability, requested))) continue;
-    for (const offer of activation.endpoint.offers) covered.add(capabilityKey(offer.capability));
+    if (requested !== undefined && !endpointOffers(activation.endpoint).some((offer) => requestsCapability(document, item.instance, offer.capability, requested))) continue;
+    for (const offer of endpointOffers(activation.endpoint)) covered.add(capabilityKey(offer.capability));
     selectedEndpoints.push({ item, activation });
     const program = activation.program;
     if (program === undefined) continue;
@@ -966,7 +1064,7 @@ async function inspectRuntimeConfig(
     const endpoints = await installedEndpointRegistry(document, activated.map(({ item, activation }) => ({ entry: item, activation })));
     for (const [key, instance] of Object.entries(document.bindings)) {
       const offered = activated.some(({ item, activation }) =>
-        item.instance === instance && activation.endpoint.offers.some((offer) => capabilityKey(offer.capability) === key));
+        item.instance === instance && endpointOffers(activation.endpoint).some((offer) => capabilityKey(offer.capability) === key));
       if (!offered && activated.some(({ item }) => item.instance === instance)) diagnostics.push({
         severity: "error",
         code: "RUNTIME_BINDING_INVALID",
@@ -1043,8 +1141,9 @@ async function inspectRuntimeConfig(
         }
         if (!options.active || missing || activation.diagnose === undefined) continue;
         try {
-          const capabilities = (options.capabilities ?? activation.endpoint.offers.map((offer) => offer.capability))
-            .filter((capability) => activation.endpoint.offers
+          const offers = endpointOffers(activation.endpoint);
+          const capabilities = (options.capabilities ?? offers.map((offer) => offer.capability))
+            .filter((capability) => offers
               .some((offer) => capabilityKey(offer.capability) === capabilityKey(capability)));
           diagnostics.push(...await activation.diagnose({
             credentials,
@@ -1061,6 +1160,13 @@ async function inspectRuntimeConfig(
     }
   }
   return { dataRoot: root, diagnostics };
+}
+
+async function inspectRuntimeConfig(
+  path: string,
+  options: RuntimeInspectionOptions,
+): Promise<RuntimeConfigDoctorResult> {
+  return await inspectOpenedRuntimeConfig(await openRuntimeConfig(path, options.packageRoot), options);
 }
 
 /**
@@ -1124,7 +1230,7 @@ export async function createRuntimeForBuild(dataRoot: string, build: string, exe
 
 async function createRuntimeFromOpened(opened: OpenedRuntimeConfig, options: LoadRuntimeConfigOptions, execution?: {
   readonly state: SqliteRuntimeState; readonly build: string;
-}): Promise<LocalRuntime> {
+}, preparedActivations?: readonly RuntimeInspectionSnapshot["activations"][number][]): Promise<LocalRuntime> {
   const { root, packageRoot } = opened;
   let document = scopedProfile(opened.document, options);
   const hostStateRoot = resolve(options.hostStateRoot ?? hypitHostStateRoot());
@@ -1133,10 +1239,18 @@ async function createRuntimeFromOpened(opened: OpenedRuntimeConfig, options: Loa
   const state = execution?.state ?? new SqliteRuntimeState(statePath(root));
   let credentials: Awaited<ReturnType<typeof openCredentialStores>> | undefined;
   try {
-    const endpoints = await Promise.all(document.endpoints.map(async (item) => await registry.createEndpoint(
-      item.use,
-      adapterContext(root, hostStateRoot, { ...item, pool: item.pool ?? item.instance }),
-    )));
+    const prepared = new Map(preparedActivations?.map((item) => [item.entry.instance, item.activation.endpoint]));
+    const endpoints = await Promise.all(document.endpoints.map(async (item) => {
+      if (preparedActivations !== undefined) {
+        const endpoint = prepared.get(item.instance);
+        if (endpoint === undefined) throw new Error(`Runtime inspection has no activated Endpoint ${item.instance}`);
+        return endpoint;
+      }
+      return await registry.createEndpoint(
+        item.use,
+        adapterContext(root, hostStateRoot, { ...item, pool: item.pool ?? item.instance }),
+      );
+    }));
     document = credentialProfile(document, endpoints);
     await installRuntimeAdapters(registry, packageRoot, runtimePackageSelection({ ...document, endpoints: [] }), options.distributionPackageRoot, options.importModule);
     credentials = await openCredentialStores(document, root, hostStateRoot, registry);
@@ -1172,7 +1286,6 @@ async function createRuntimeFromOpened(opened: OpenedRuntimeConfig, options: Loa
             ? {}
             : { fallbackRoots: [options.distributionPackageRoot] }),
         });
-        verifyPackageContributions(loaded.map((item) => item.contribution));
         return loaded;
       },
       endpoints,

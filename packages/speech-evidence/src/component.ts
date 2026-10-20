@@ -1,40 +1,38 @@
-import type { AdmissionPackage } from "@hypit/hypit/admission";
-import { plannedNeedInputs } from "@hypit/hypit/producer";
+import type { RefinementPackage } from "@hypit/hypit/refinement";
 import type { ProducerPackage } from "@hypit/hypit/producer";
 import { synchronizedMediaSampleFrames, verifySynchronizedMedia } from "@hypit/media";
 import type { SynchronizedMedia } from "@hypit/media";
 import { canonicalize } from "@hypit/hypit/protocol";
-import type { StoredValue } from "@hypit/hypit/protocol";
+import type { Value } from "@hypit/hypit/protocol";
 import { assertLocalTemporalDomain } from "@hypit/temporal";
 import type { LocalTemporalDomain } from "@hypit/temporal";
 
 import {
   assertAlignedTranscriptEvidenceIdentity,
   assertSpeechEvidenceAudioIdentity,
-  speechEvidenceCapabilities,
   speechEvidenceProducers,
   speechEvidenceSampleBoundary,
   speechEvidenceTypes,
 } from "./index.js";
 import type { AlignedTranscriptEvidence, ProjectSpeechEvidenceAudioNeed, SpeechEvidenceAudio } from "./index.js";
 
-function inline<T>(value: StoredValue, subject: string): T {
-  if (value.kind !== "inline") throw new Error(`${subject} must be inline.`);
-  return value.value as T;
+function valueOf<T>(value: Value, subject: string): T {
+  if (value === undefined) throw new Error(`${subject} is missing.`);
+  return value as T;
 }
 
 export const speechEvidenceComponent = {
-  validators: [
+  refinements: [
     { type: speechEvidenceTypes.audio,
-      handler: ({ value }) => assertSpeechEvidenceAudioIdentity(inline<SpeechEvidenceAudio>(value, "SpeechEvidenceAudio")) },
+      handler: ({ value }) => assertSpeechEvidenceAudioIdentity(valueOf<SpeechEvidenceAudio>(value, "SpeechEvidenceAudio")) },
     { type: speechEvidenceTypes.alignedTranscript,
-      handler: ({ value }) => assertAlignedTranscriptEvidenceIdentity(inline<AlignedTranscriptEvidence>(value, "AlignedTranscriptEvidence")) },
+      handler: ({ value }) => assertAlignedTranscriptEvidenceIdentity(valueOf<AlignedTranscriptEvidence>(value, "AlignedTranscriptEvidence")) },
   ],
   producers: [{
     producer: speechEvidenceProducers.projectAudio,
     handler: ({ inputs }) => {
-      const media = inline<SynchronizedMedia>(inputs.media!.value, "SynchronizedMedia");
-      const domain = inline<LocalTemporalDomain>(inputs.domain!.value, "LocalTemporalDomain");
+      const media = valueOf<SynchronizedMedia>(inputs.media!.value, "SynchronizedMedia");
+      const domain = valueOf<LocalTemporalDomain>(inputs.domain!.value, "LocalTemporalDomain");
       verifySynchronizedMedia(media);
       assertLocalTemporalDomain(domain);
       if (domain.frameCount !== media.frameDomain.frameCount
@@ -55,19 +53,7 @@ export const speechEvidenceComponent = {
         sourceSampleFrames,
         evidenceSampleFrames,
       };
-      return { outputs: {}, needs: { evidenceAudio: canonicalize(need) } };
+      return { kind: "need", constraints: canonicalize(need) };
     },
   }],
-  plannedNeeds: [{
-    producer: speechEvidenceProducers.projectAudio,
-    port: "evidenceAudio",
-    capability: speechEvidenceCapabilities.projectAudio,
-    plan({ state, step }) {
-      return { constraints: {}, pendingInputs: plannedNeedInputs(state, step, { media: "audio" }) };
-    },
-    present(specification) {
-      const audio = specification.pendingInputs.filter((item) => item.role === "audio").length;
-      return { fields: {}, references: audio === 0 ? {} : { audio } };
-    },
-  }],
-} satisfies ProducerPackage & AdmissionPackage;
+} satisfies ProducerPackage & RefinementPackage;

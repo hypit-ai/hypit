@@ -2,12 +2,11 @@ import { randomUUID } from "node:crypto";
 import { BuildMachine } from "@hypit/hypit/kernel";
 import { isStreamingResourceStore } from "@hypit/hypit/runtime";
 import type {
-  BuildSnapshot,
   OperationSnapshot,
 } from "@hypit/hypit/runtime";
 import type { BuildExecutionSnapshot } from "./execution.js";
-import type { CommandResult } from "@hypit/hypit/protocol";
-import type { BuildResultWriter } from "@hypit/hypit/result";
+import type { BuildState, CommandResult } from "@hypit/hypit/protocol";
+import type { BuildResultFinish, BuildResultOperation, BuildResultWriter } from "@hypit/hypit/result";
 
 import type {
   CreateLocalResultWriterOptions,
@@ -19,9 +18,9 @@ function assert(condition: unknown, message: string): asserts condition {
 }
 
 function operationEvent(operation: OperationSnapshot): CommandResult | undefined {
-  if (operation.status === "pending") return undefined;
-  if (operation.status === "completed") {
-    assert(operation.completion !== undefined, `Operation ${operation.id} has no completion`);
+  if (operation.status === "queued" || operation.status === "submitting"
+    || operation.status === "running" || operation.status === "collecting") return undefined;
+  if (operation.status === "received" || operation.status === "completed") {
     return {
       kind: "need-fulfilled",
       command: operation.command,
@@ -29,7 +28,6 @@ function operationEvent(operation: OperationSnapshot): CommandResult | undefined
     };
   }
   if (operation.status === "failed") {
-    assert(operation.failure !== undefined, `Operation ${operation.id} has no failure`);
     return {
       kind: "command-failed",
       command: operation.command,
@@ -42,6 +40,39 @@ function operationEvent(operation: OperationSnapshot): CommandResult | undefined
     command: operation.command,
     code: "CANCELLED",
     message: `Operation ${operation.id} was cancelled by the Runtime capacity controller`,
+  };
+}
+
+function resultOperation(operation: OperationSnapshot): BuildResultOperation {
+  const evidence = {
+    need: { id: operation.need.id, capability: operation.need.capability },
+    createdAt: operation.createdAt,
+    ...("acknowledgedAt" in operation ? { acknowledgedAt: operation.acknowledgedAt } : {}),
+    ...("endedAt" in operation ? { endedAt: operation.endedAt } : {}),
+    ...(operation.progress === undefined ? {} : { progress: operation.progress }),
+    ...(operation.status === "cancelled" ? { cancellation: operation.cancellation } : {}),
+    operation: operation.id,
+    command: operation.command,
+    endpoint: operation.endpoint,
+    ...(operation.pool === undefined ? {} : { pool: operation.pool }),
+    credentials: operation.credentials,
+    ...(operation.receipt === undefined ? {} : { receipt: operation.receipt }),
+  };
+  return operation.status === "failed"
+    ? { ...evidence, status: "failed", failure: operation.failure }
+    : { ...evidence, status: operation.status === "queued" || operation.status === "submitting"
+      || operation.status === "running" || operation.status === "collecting" ? "pending" : operation.status };
+}
+
+function resultFinish(
+  decision: NonNullable<BuildExecutionSnapshot["decision"]>,
+  evidence: Omit<BuildResultFinish, "outcome" | "failure">,
+): BuildResultFinish {
+  if (decision.outcome === "complete") return { ...evidence, outcome: "complete" };
+  return {
+    ...evidence,
+    outcome: decision.outcome,
+    failure: decision.reason,
   };
 }
 
@@ -76,40 +107,51 @@ export function createLocalResultWriter(
     }
   };
 
-  const acceptStoredResults = async (build: string): Promise<BuildSnapshot> => {
+  const acceptStoredResults = async (build: string): Promise<BuildState> => {
     const snapshot = await options.buildStore.read(build);
     assert(snapshot !== undefined, `Build ${build} has no durable execution state`);
-    const machine = BuildMachine.fromMaterialized(snapshot.definition, snapshot.state);
-    const accept = async (event: CommandResult): Promise<void> => {
-      if (!machine.view().outstanding.some((command) => command.id === event.command)) return;
+    const machine = new BuildMachine(snapshot.definition, snapshot.facts);
+    const accept = async (event: CommandResult): Promise<boolean> => {
+      if (!machine.view().outstanding.some((command) => command.id === event.command)) return true;
       const fact = machine.evaluate(event);
-      if (fact === undefined) return;
+      if (fact === undefined) return false;
       await options.buildStore.append(build, fact);
       machine.commit();
+      return true;
     };
-    const events = [
-      ...(await options.commandExecutionStore.list(build)).flatMap((receipt) =>
-        receipt.status === "completed" && receipt.event !== undefined ? [receipt.event] : []),
-      ...(await options.operationStore.list({ build })).flatMap((operation) => operationEvent(operation) ?? []),
-    ];
+    const commandEvents = (await options.commandExecutionStore.list(build)).flatMap((receipt) =>
+      receipt.status === "completed" ? [receipt.event] : []);
+    const operationEvents = (await options.operationStore.list({ build })).flatMap((operation) => {
+      const event = operationEvent(operation);
+      return event === undefined ? [] : [{ operation, event }];
+    });
     // Preserve already validated sibling outputs before a failure closes Core's outstanding work.
-    for (const event of events.filter((event) => event.kind !== "command-failed")) await accept(event);
-    for (const event of events.filter((event) => event.kind === "command-failed")) await accept(event);
-    const accepted = await options.buildStore.read(build);
-    assert(accepted !== undefined, `Build ${build} disappeared while accepting stored results`);
-    return accepted;
+    for (const event of commandEvents.filter((event) => event.kind !== "command-failed")) await accept(event);
+    for (const { operation, event } of operationEvents.filter(({ event }) => event.kind !== "command-failed")) {
+      if (await accept(event) && operation.status === "received") {
+        await options.operationStore.update(operation.id, {
+          status: "completed",
+          completion: operation.completion,
+          acknowledgedAt: operation.acknowledgedAt,
+          endedAt: operation.endedAt,
+        });
+      }
+    }
+    for (const event of commandEvents.filter((event) => event.kind === "command-failed")) await accept(event);
+    for (const { event } of operationEvents.filter(({ event }) => event.kind === "command-failed")) await accept(event);
+    return machine.view();
   };
 
   const syncResult = async (
     execution: BuildExecutionSnapshot,
-    state: import("@hypit/hypit/protocol").BuildState,
+    records: readonly import("@hypit/hypit/protocol").TypedRecord[],
   ): Promise<void> => {
     const result = await openWriter(execution);
     try {
       if (result.manifest.outcome !== undefined) return;
       const resources = options.resourceStoreForBuild?.(execution.build) ?? options.resourceStore;
       await result.writer.sync({
-        state,
+        records,
         resources: {
           open: async (artifact) => {
             if (isStreamingResourceStore(resources)) return await resources.open(artifact.resource);
@@ -131,41 +173,22 @@ export function createLocalResultWriter(
       if (opened.manifest.outcome === undefined) {
         await opened.close();
         closed = true;
-        const snapshot = await acceptStoredResults(execution.build);
-        await syncResult(execution, snapshot.state);
+        const state = await acceptStoredResults(execution.build);
+        await syncResult(execution, state.records);
         const reopened = await openWriter(execution);
         try {
-          const operations = (await options.operationStore.list({ build: execution.build })).map((operation) => {
-            return {
-              ...(operation.request === undefined ? {} : { need: { id: operation.request.need.id, capability: operation.request.need.capability } }),
-              ...(operation.createdAt === undefined ? {} : { createdAt: operation.createdAt }),
-              ...(operation.acknowledgedAt === undefined ? {} : { acknowledgedAt: operation.acknowledgedAt }),
-              ...(operation.endedAt === undefined ? {} : { endedAt: operation.endedAt }),
-              ...(operation.progress === undefined ? {} : { progress: operation.progress }),
-              ...(operation.cancellation === undefined ? {} : { cancellation: operation.cancellation }),
-              operation: operation.id, command: operation.command, endpoint: operation.endpoint, status: operation.status,
-              ...(operation.pool === undefined ? {} : { pool: operation.pool }),
-              ...(operation.credentials === undefined ? {} : { credentials: operation.credentials }),
-              ...(operation.receipt === undefined ? {} : { receipt: operation.receipt }),
-              ...(operation.failure === undefined ? {} : { failure: operation.failure }),
-            };
-          });
+          const operations = (await options.operationStore.list({ build: execution.build })).map(resultOperation);
           const executionLog = await options.executionLogs?.open(execution.build);
-          await reopened.writer.finish({
+          await reopened.writer.finish(resultFinish(execution.decision, {
             ...(executionLog === undefined ? {} : { executionLog }),
             operations,
-            outcome: execution.decision.outcome,
-            ...(execution.decision.reason === undefined ? {} : { failure: execution.decision.reason }),
-          });
+          }));
         } finally {
           await reopened.close();
         }
         return;
       }
-      await opened.writer.finish({
-        outcome: execution.decision.outcome,
-        ...(execution.decision.reason === undefined ? {} : { failure: execution.decision.reason }),
-      });
+      await opened.writer.finish(resultFinish(execution.decision, {}));
     } finally {
       if (!closed) await opened.close();
     }

@@ -2,12 +2,12 @@ import type {
   CanonicalValue,
   ModuleRef,
   ResolvedModuleClosure,
-  SourceRange,
-  StoredValue,
+  Value,
   TypeRef,
   TypedRecord,
   ValueSchema,
 } from "@hypit/protocol";
+import type { SourceRange } from "@hypit/source";
 import type {
   AuthorComponent,
   AuthorFrontend,
@@ -17,7 +17,6 @@ import type {
   AuthorElementProvenanceDraft,
   AuthorValueRef,
   Awaitable,
-  GraphFragment,
   ResolvedAuthorSourceImport,
 } from "@hypit/author";
 
@@ -68,7 +67,7 @@ export type StructuredNode = StructuredText | StructuredElement;
 export type SurfaceRecordDraft = {
   readonly id: string;
   readonly type: TypeRef;
-  readonly value: StoredValue;
+  readonly value: Value;
   readonly range: SourceRange;
 };
 
@@ -80,7 +79,6 @@ export type SurfaceComponentDraft = AuthorComponent & {
 export type SurfaceDecodeOutput = {
   readonly records: readonly SurfaceRecordDraft[];
   readonly components: readonly SurfaceComponentDraft[];
-  readonly fragments: readonly GraphFragment[];
   /** Domain-owned public identities that must be unique in the Source closure. */
   readonly identities?: readonly AuthorSourceIdentity[];
   /**
@@ -114,7 +112,7 @@ export type StructuredSurfaceInput = {
   readonly element: StructuredElement;
   /**
    * Resolve an explicitly written author reference. Imported record values are
-   * available because their source has already been compiled and admitted.
+   * available because their source has already been compiled and validated.
    * A component output has a ref and Type but no compile-time Record value.
    */
   readonly resolveReference: (path: string) => SurfaceResolvedReference | undefined;
@@ -232,7 +230,6 @@ export type MarkupDecodeContext = {
 export type MarkupDecodeResult = {
   readonly records: readonly TypedRecord[];
   readonly components: readonly AuthorComponent[];
-  readonly fragments: readonly GraphFragment[];
   readonly exports: readonly AuthorSourceExport[];
   readonly identities: readonly AuthorSourceIdentity[];
   readonly provenance: readonly AuthorElementProvenanceDraft[];

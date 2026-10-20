@@ -1,4 +1,5 @@
 import { createResolvedClosure } from "@hypit/kernel";
+import { moduleKey } from "@hypit/protocol";
 import type {
   ModuleManifest,
   ModuleRef,
@@ -6,10 +7,6 @@ import type {
 } from "@hypit/protocol";
 
 import { CompilerError } from "./error.js";
-
-function moduleKey(ref: ModuleRef): string {
-  return `${ref.name}@${ref.version}`;
-}
 
 function manifestRef(manifest: ModuleManifest): ModuleRef {
   return { name: manifest.name, version: manifest.version };

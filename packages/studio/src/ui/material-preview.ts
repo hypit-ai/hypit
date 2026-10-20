@@ -1,4 +1,5 @@
 import type { StudioMaterialPreview } from "../shared.js";
+import { createPreviewQueue } from "./preview-queue.js";
 
 type Storyboard = {
   readonly imageUrl: string;
@@ -13,6 +14,7 @@ const generatedAudio = new Map<string, Promise<string | undefined>>();
 const resolvedAudio = new Map<string, string | undefined>();
 const storyboards = new Map<string, Promise<Storyboard | undefined>>();
 const resolvedStoryboards = new Map<string, Storyboard | undefined>();
+const loadPreview = createPreviewQueue(2);
 
 function previewUrl(preview: StudioMaterialPreview): string {
   if (preview.source.kind === "artifact") return `/__studio/material/${preview.source.resource}`;
@@ -54,7 +56,7 @@ async function loadStoryboard(materialUrl: string): Promise<Storyboard | undefin
 function storyboardFor(url: string): Promise<Storyboard | undefined> {
   const held = storyboards.get(url);
   if (held !== undefined) return held;
-  const pending = loadStoryboard(url).catch(() => undefined).then((storyboard) => {
+  const pending = loadPreview(() => loadStoryboard(url)).catch(() => undefined).then((storyboard) => {
     resolvedStoryboards.set(url, storyboard);
     return storyboard;
   });
@@ -99,6 +101,10 @@ function renderStoryboard(target: HTMLElement, storyboard: Storyboard): void {
 }
 
 async function audioWaveform(url: string): Promise<string | undefined> {
+  if (url.startsWith("/__studio/material/")) {
+    const response = await fetch(url.replace("/__studio/material/", "/__studio/waveform/"));
+    return response.ok ? URL.createObjectURL(await response.blob()) : undefined;
+  }
   const response = await fetch(url);
   if (!response.ok) return undefined;
   const audioContext = new AudioContext();
@@ -132,7 +138,7 @@ async function audioWaveform(url: string): Promise<string | undefined> {
 export function audioPreview(url: string): Promise<string | undefined> {
   const held = generatedAudio.get(url);
   if (held !== undefined) return held;
-  const pending = audioWaveform(url).catch(() => undefined).then((waveform) => {
+  const pending = loadPreview(() => audioWaveform(url)).catch(() => undefined).then((waveform) => {
     resolvedAudio.set(url, waveform);
     return waveform;
   });

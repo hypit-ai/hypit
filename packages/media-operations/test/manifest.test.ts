@@ -52,20 +52,19 @@ test("the Normalize Surface makes inspection and normalization an explicit autho
       ? { path, ref: { kind: "record", id: path }, type: blobTypes.blob }
       : path === "clock"
         ? { path, ref: { kind: "record", id: path }, type: timelineTypes.clock,
-          record: { value: { kind: "inline", value: { frameRate: { numerator: 30_000, denominator: 1_001 } } } } as never }
+          record: { value: ({ frameRate: { numerator: 30_000, denominator: 1_001 } }) } as never }
         : path === "policy"
           ? { path, ref: { kind: "record", id: path }, type: recipeType,
-            record: { value: { kind: "inline", value: { path, properties: { video: "primary-moving", audio: "none", "span-authority": "video" } } } } as never }
+            record: { value: ({ path, properties: { video: "primary-moving", audio: "none", "span-authority": "video" } }) } as never }
           : undefined,
     resolveAsset: async () => { throw new Error("no asset resolution expected"); },
   });
-  assert.equal(result.fragments[0]?.id, synchronizedMediaFragment.id);
+  assert.deepEqual(result.components[0]?.fragment, synchronizedMediaFragment);
   assert.deepEqual(result.components[0]?.outputs, {
     media: "motion.media", domain: "motion.domain", extent: "motion.extent",
   });
   const request = result.records[0]?.value;
-  assert.ok(request?.kind === "inline");
-  assert.deepEqual(request.value, {
+  assert.deepEqual(request, {
     video: { mode: "primary-moving" },
     audio: { mode: "none" },
     spanAuthority: "video",
@@ -95,11 +94,11 @@ test("media operations are ordinary graph branches over Blob", async () => {
       ],
     },
   });
-  assert.equal(transform.fragments[0]?.id, transformMediaFragment.id);
+  assert.deepEqual(transform.components[0]?.fragment, transformMediaFragment);
   assert.deepEqual(transform.components[0]?.outputs, { video: "prepared.video" });
   const program = transform.records.find((record) => record.id === "prepared.program");
-  assert.ok(program?.value.kind === "inline");
-  assert.deepEqual(program.value.value, {
+  assert.ok(program);
+  assert.deepEqual(program.value, {
     operations: [
       { kind: "trim", tailSec: 0.25 },
       { kind: "retime", rate: 1.05 },
@@ -114,7 +113,7 @@ test("media operations are ordinary graph branches over Blob", async () => {
       children: [],
     },
   });
-  assert.equal(audio.fragments[0]?.id, extractAudioFragment.id);
+  assert.deepEqual(audio.components[0]?.fragment, extractAudioFragment);
   assert.deepEqual(audio.components[0]?.outputs, { audio: "voice-reference.audio" });
 
   const frame = await decodeExtractFrameSurface({
@@ -126,7 +125,7 @@ test("media operations are ordinary graph branches over Blob", async () => {
       children: [],
     },
   });
-  assert.equal(frame.fragments[0]?.id, extractFrameFragment.id);
+  assert.deepEqual(frame.components[0]?.fragment, extractFrameFragment);
   assert.deepEqual(frame.components[0]?.outputs, { image: "continuity.image" });
 });
 
@@ -153,15 +152,15 @@ test("StillVideo stops at an ordinary MP4 branch before Normalize", async () => 
         : undefined,
     resolveAsset: async () => { throw new Error("no asset resolution expected"); },
   });
-  assert.equal(output.fragments[0]?.id, stillVideoFragment.id);
+  assert.deepEqual(output.components[0]?.fragment, stillVideoFragment);
   assert.deepEqual(output.components[0]?.outputs, { video: "opening-still.video" });
   assert.deepEqual(output.records[0], {
     id: "opening-still.duration", type: temporalTypes.duration,
-    value: { kind: "inline", value: { unit: "seconds", numerator: 6, denominator: 1 } }, range,
+    value: ({ unit: "seconds", numerator: 6, denominator: 1 }), range,
   }, "the literal duration is the author's exact TemporalDuration Record");
   assert.deepEqual(output.components[0]?.inputs.duration, { kind: "record", id: "opening-still.duration" });
   assert.deepEqual(output.components[0]?.inputs["source-0"], { kind: "record", id: "opening-head" });
-  assert.deepEqual(output.records[1]?.value, { kind: "inline", value: { weights: [1] } }, "one picture, one whole share");
+  assert.deepEqual(output.records[1]?.value, ({ weights: [1] }), "one picture, one whole share");
   assert.equal(stillVideoFragment.exports[0]?.type.name, blobTypes.blob.name);
 });
 
@@ -186,9 +185,9 @@ test("StillVideo spreads several pictures over one literal duration by weight, i
     resolveReference,
     resolveAsset: async () => { throw new Error("no asset resolution expected"); },
   });
-  assert.equal(output.fragments[0]?.id, createStillVideoFragment(3).id);
-  assert.notEqual(output.fragments[0]?.id, stillVideoFragment.id, "three pictures are a different shape from one");
-  assert.deepEqual(output.records[1]?.value, { kind: "inline", value: { weights: [1, 2, 1] } });
+  assert.deepEqual(output.components[0]?.fragment, createStillVideoFragment(3));
+  assert.notDeepEqual(output.components[0]?.fragment, stillVideoFragment, "three pictures are a different shape from one");
+  assert.deepEqual(output.records[1]?.value, ({ weights: [1, 2, 1] }));
   assert.deepEqual(
     ["source-0", "source-1", "source-2"].map((name) => output.components[0]?.inputs[name]),
     [{ kind: "record", id: "counter" }, { kind: "record", id: "basil" }, { kind: "record", id: "board" }],

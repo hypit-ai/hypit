@@ -1,4 +1,4 @@
-import { createAdmissionPackageFacet } from "@hypit/admission";
+import { createRefinementPackageFacet } from "@hypit/refinement";
 import { createProducerPackageFacet } from "@hypit/producer";
 import { createAuthorFrontendFacet } from "@hypit/author";
 import { createMarkupSurfaceFacet } from "@hypit/markup";
@@ -17,7 +17,7 @@ export const hypitPackage = {
   format: "hypit.package@1" as const,
   modules: [{ manifest: textManifest }],
   facets: [
-    ...[textComponent].flatMap((component) => [createProducerPackageFacet(component), createAdmissionPackageFacet(component)]),
+    ...[textComponent].flatMap((component) => [createProducerPackageFacet(component), createRefinementPackageFacet(component)]),
     createAuthorFrontendFacet(textRecipeFrontend),
     createMarkupSurfaceFacet({
       module: textModuleRef,

@@ -9,9 +9,14 @@ import { serializeAttributeGroup, validateParameterValue } from "../src/paramete
 
 function fields(text: string, companion: Pick<StudioTrackCompanion, "bindings" | "inspector"> = audioTrackStudioTrackCompanions[0]!) {
   const element = parseStructuredElement({ name: "main.svml", text }, 0).element;
-  const placement = { ...element, id: "music", tag: element.name, surface: "item", module: audioTrackModuleRef,
-    sourcePath: "main.svml", references: [], referenceAttributes: {}, records: [], outputs: [], outputPorts: [], values: [], children: [],
-  } as unknown as StudioPlacement;
+  const attributes = Object.fromEntries(Object.entries(element.attributes)
+    .flatMap(([name, value]) => typeof value === "string" ? [[name, value]] : []));
+  const placement: StudioPlacement = { ...element, id: "music", tag: element.name, surface: "item", module: audioTrackModuleRef,
+    attributes,
+    sourcePath: "main.svml", references: [], referenceAttributes: {}, referenceTypes: {},
+    attributeValueRanges: element.attributeValueRanges ?? {},
+    records: [], outputs: [], outputPorts: [], values: [], children: [],
+  };
   const draft: StudioItemDraft = { id: "music", authoredId: "music", display: { title: "Music", layers: [] }, startFrame: 0, endFrameExclusive: 90, stackOrder: 0 };
   return inspectorFieldsForBindings(draft, sourceBindingsForDraft({ root: "/project", files: [{ path: "main.svml", text, language: "svml" }],
     placement, draft, declarations: companion.bindings! }), companion.inspector!);

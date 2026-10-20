@@ -1,6 +1,6 @@
 import { isAbsolute, relative, resolve } from "node:path";
 
-import type { BuildState, ProducerStep, StoredValue, TypedRecord } from "@hypit/hypit/protocol";
+import type { ProducerStep, Value, TypedRecord } from "@hypit/hypit/protocol";
 import { sameType } from "@hypit/hypit/protocol";
 import { temporalTypes } from "@hypit/temporal";
 import type {
@@ -13,6 +13,7 @@ import type {
 import type { Placement } from "./observe.js";
 import type { StudioSourceFile } from "./parameters.js";
 import { executedTemporalProjection } from "./temporal-graph.js";
+import type { ExecutedGraph } from "./temporal-graph.js";
 import type { StudioCompanionRegistry } from "./studio-registry.js";
 
 type TemporalAuthor = {
@@ -25,17 +26,18 @@ export type TemporalSourceWrite = {
   readonly replacement: string;
 };
 
-function inline(value: StoredValue): unknown | undefined {
-  return value.kind === "inline" ? value.value : undefined;
+function valueOf(value: Value): unknown | undefined {
+  return value;
 }
 
-function recordIndex(state: BuildState): ReadonlyMap<string, TypedRecord> {
+function recordIndex(state: ExecutedGraph): ReadonlyMap<string, TypedRecord> {
   return new Map([...state.program.records, ...state.records].map((record) => [record.id, record] as const));
 }
 
-function producerIndex(state: BuildState): ReadonlyMap<string, ProducerStep> {
-  return new Map(state.plan.steps.flatMap((step) =>
-    Object.values(step.outputs).map((record) => [record, step] as const)));
+function producerIndex(state: ExecutedGraph): ReadonlyMap<string, ProducerStep> {
+  return new Map(state.plan.steps
+    .filter((step) => step.result.kind === "output")
+    .map((step) => [step.result.record, step] as const));
 }
 
 type AuthorElement = {
@@ -75,7 +77,7 @@ function absolute(root: string, path: string): string {
  * the Spec identity keeps those writes distinct.
  */
 export function temporalAuthorBindings(input: {
-  readonly state: BuildState;
+  readonly state: ExecutedGraph;
   readonly rootRecord: string;
   readonly workspaceRoot: string;
   readonly placements: readonly Placement[];
@@ -89,7 +91,7 @@ export function temporalAuthorBindings(input: {
   const bindings = new Map<string, StudioSourceBinding>();
   const collect = (recordId: string): void => {
     const held = records.get(recordId);
-    const spec = held === undefined ? undefined : inline(held.value) as { readonly author?: TemporalAuthor } | undefined;
+    const spec = held === undefined ? undefined : valueOf(held.value) as { readonly author?: TemporalAuthor } | undefined;
     const binding = typeof spec?.author?.binding === "string" ? spec.author.binding : undefined;
     if (binding === undefined) return;
     const owner = `${recordId}:${binding}`;
@@ -134,7 +136,7 @@ export function temporalAuthorBindings(input: {
  * relations deliberately produce no plan instead of guessing an owner.
  */
 export function planTemporalInverse(input: {
-  readonly state: BuildState;
+  readonly state: ExecutedGraph;
   readonly rootRecord: string;
   readonly target: { readonly kind: "instant"; readonly frame: number }
     | { readonly kind: "window"; readonly startFrame: number; readonly endFrameExclusive: number };
@@ -198,7 +200,7 @@ export function planTemporalInverse(input: {
     const record = records.get(recordId);
     const step = producers.get(recordId);
     if (record === undefined) throw new Error(`Temporal inverse cannot read ${recordId}.`);
-    const raw = inline(record.value) as {
+    const raw = valueOf(record.value) as {
       readonly frame?: unknown; readonly frameCount?: unknown;
       readonly startFrame?: unknown; readonly endFrameExclusive?: unknown;
       readonly span?: { readonly startFrame?: unknown; readonly endFrameExclusive?: unknown };
@@ -218,13 +220,15 @@ export function planTemporalInverse(input: {
       const held = current();
       return held === undefined || !sameConstraint(held, target) ? [] : solve(candidate);
     }
-    const outputName = Object.entries(step.outputs).find(([, output]) => output === recordId)?.[0];
+    const outputName = step.result.kind === "output" && step.result.record === recordId
+      ? step.result.name
+      : undefined;
     const relation = outputName === undefined ? undefined : input.registry?.temporalRelationFor(step.producer, outputName);
     if (relation !== undefined) {
       const relationValue = (id: string): StudioTemporalRelationValue => {
         const found = records.get(id);
         if (found === undefined) throw new Error(`Temporal relation ${relation.id} cannot read ${id}.`);
-        return { record: id, type: found.type, value: inline(found.value) };
+        return { record: id, type: found.type, value: valueOf(found.value) };
       };
       const plans = relation.invert({
         target,

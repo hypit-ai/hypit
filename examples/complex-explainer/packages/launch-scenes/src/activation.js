@@ -1,5 +1,5 @@
 import { sceneCompanions } from "./studio.js";
-import { createAdmissionPackageFacet } from "@hypit/hypit/admission";
+import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
 import { createProducerPackageFacet } from "@hypit/hypit/producer";
 import { createStudioTrackCompanionFacet } from "@hypit/studio-companion";
 import { assertAttributes, assertEmptyElement, textAttribute, createMarkupSurfaceFacet } from "@hypit/hypit/markup";
@@ -92,11 +92,11 @@ export const manifest = {
     })),
   ],
 };
-const inline = (r) => {
-    if (r?.value.kind !== "inline") throw Error("Expected inline scene value");
-    return r.value.value;
+const valueOf = (r) => {
+    if (!r) throw Error("Expected scene value");
+    return r.value;
   },
-  value = (v) => ({ kind: "inline", value: canonicalize(v) }),
+  value = (v) => ((canonicalize(v))),
   out = (n, v) => ({ outputs: { [n]: value(v) }, needs: {} });
 const component = {
   producers: [
@@ -104,12 +104,12 @@ const component = {
     {
       producer: producer("append"),
       handler: ({ inputs: i }) => {
-        const o = inline(i.options),
-          at = inline(i.at),
-          list = inline(i.events);
+        const o = valueOf(i.options),
+          at = valueOf(i.at),
+          list = valueOf(i.events);
         assertTemporalInstantFor(at, {
           subjectId: o.id,
-          space: inline(i.timeline),
+          space: valueOf(i.timeline),
         });
         if (list.some((e) => e.name === o.name)) throw Error("Beat names must be unique");
         return out("events", [...list, { ...o, at }]);
@@ -121,12 +121,12 @@ const component = {
         out(
           "track",
           tags[tag].render(
-            inline(i.timeline),
-            inline(i.within),
-            inline(i.window),
-            inline(i.font),
-            inline(i.options),
-            inline(i.events),
+            valueOf(i.timeline),
+            valueOf(i.within),
+            valueOf(i.window),
+            valueOf(i.font),
+            valueOf(i.options),
+            valueOf(i.events),
             Object.fromEntries(tags[tag].assets.map((n) => [n, i[n].value])),
           ),
         ),
@@ -252,11 +252,10 @@ function decode(tag) {
     });
     return {
       records,
-      fragments: [fragment],
       components: [
         {
           id,
-          fragment: fragment.id,
+          fragment,
           inputs: bindings,
           outputs: { visual: id + ".visual" },
           range: element.range,
@@ -271,7 +270,7 @@ export const hypitPackage = {
   modules: [{ manifest }],
   facets: [
     createProducerPackageFacet(component),
-    createAdmissionPackageFacet(component),
+    createRefinementPackageFacet(component),
     createStudioTrackCompanionFacet(sceneCompanions(module, tags)),
     ...Object.keys(tags).map((tag) =>
       createMarkupSurfaceFacet({

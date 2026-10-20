@@ -46,7 +46,7 @@ const withMoment: StudioTemporalDomainView = { ...temporalDomain, editItems: [..
 }] };
 
 test("structured parameter values validate and serialize through the generic SVS path", () => {
-  const schema = { kind: "array", minItems: 1, items: { kind: "string", format: "color" } } as const;
+  const schema = { kind: "array", minItems: 1, items: { kind: "string" } } as const;
   assert.doesNotThrow(() => validateParameterValue(["#FF3F56", "#FFA72D"], schema, "Colors"));
   assert.throws(() => validateParameterValue([], schema, "Colors"), /at least 1/u);
   assert.equal(serializeParameterValue(["#FF3F56", "#FFA72D"], "svs"), '["#FF3F56","#FFA72D"]');
@@ -281,7 +281,7 @@ test("a derived Item follows its actual Style and Companion-owned Recipe present
 <sheet version="1">
   caption.alt { x: 0.4; handoff: overlap; colors: ["#FF3F56", "#FFA72D"]; }
 </sheet>`;
-  const colors = { kind: "array", minItems: 1, items: { kind: "string", format: "color" } } as const;
+  const colors = { kind: "array", minItems: 1, items: { kind: "string" } } as const;
   const placement = (input: {
     id: string;
     module: string;
@@ -325,7 +325,7 @@ test("a derived Item follows its actual Style and Companion-owned Recipe present
         { name: "colors", required: false, summary: "Ordered colors", schema: colors },
       ],
     }] },
-    handler: () => ({ records: [], components: [], fragments: [], exports: [] }),
+    handler: () => ({ records: [], components: [], exports: [] }),
   } as RegisteredSurface;
   const surfaces: MarkupSurfaceRegistryLike = {
     resolve(module, name) {
@@ -374,6 +374,7 @@ test("a derived Item follows its actual Style and Companion-owned Recipe present
     {
       binding: "layout.colors", label: "Colors", domain: "how", page: { id: "paint", label: "Paint" },
       section: { id: "palette", label: "Palette" },
+      valuePresentation: { kind: "list", item: { kind: "color" } },
     },
     {
       binding: "layout.fallback-colors", label: "Fallback Colors", domain: "how", page: { id: "paint", label: "Paint" },
@@ -390,6 +391,7 @@ test("a derived Item follows its actual Style and Companion-owned Recipe present
     { binding: "layout.fallback-colors", domain: "how", section: "palette", control: "list", options: undefined },
   ]);
   assert.deepEqual(inspector[2]?.value, ["#FF3F56", "#FFA72D"]);
+  assert.deepEqual(inspector[2]?.valuePresentation, { kind: "list", item: { kind: "color" } });
   assert.deepEqual(inspector[3]?.value, ["#000000"]);
   assert.equal(inspector[3]?.edit?.source.preimage, "");
   assert.match(inspector[3]?.edit?.source.prefix ?? "", /fallback-colors/u);

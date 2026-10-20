@@ -18,7 +18,12 @@ test("typed child values recover an omitted authored id without ordinal guessing
       range: { start: 0, end: 50 }, records: [], values: [], outputs: [], outputPorts: [], children: [child],
       attributes: {}, attributeValueRanges: {}, references: [], referenceAttributes: {}, referenceTypes: {},
     },
-  } as unknown as StudioTrackCompanionContext;
+    track: {
+      name: "track", type: "Track", typeRef: itemType, outputRef: "track", candidateOrigin: "source", role: "track",
+      trace: { references: [], outputPorts: [] }, value: undefined,
+    },
+    spans: [], values: new Map(), temporalBindings: [], temporalDomains: [], generic: () => [],
+  } satisfies StudioTrackCompanionContext;
   assert.equal(authoredChildFor(context, "track.item.0001", [itemType]), child);
   assert.equal(authoredChildFor(context, "track.item.0001", [{ ...itemType, module: { ...itemType.module, version: "2" } }]), undefined);
 });

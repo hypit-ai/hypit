@@ -11,7 +11,3 @@ export type GeneratedVideoSet = {
 export type GeneratedAudioSet = {
   readonly audios: readonly BlobRef[];
 };
-
-export type GeneratedImageSetContent = GeneratedImageSet;
-export type GeneratedVideoSetContent = GeneratedVideoSet;
-export type GeneratedAudioSetContent = GeneratedAudioSet;

@@ -2,11 +2,11 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { fixtureResource } from "../../../test/fixture-resource.js";
 
-import { registerTypeValidatorFacets } from "@hypit/admission";
+import { registerTypeRefinements } from "@hypit/refinement";
 import { createResolvedClosure } from "@hypit/kernel";
 import { canonicalize } from "@hypit/protocol";
 import type { BlobRef } from "@hypit/protocol";
-import { TypeValidatorRegistry, validateValue } from "@hypit/admission";
+import { RefinementRegistry, validateValue } from "@hypit/refinement";
 import { blobManifest } from "@hypit/blob";
 import type { FontArtifactRef } from "@hypit/media";
 import { mediaManifest } from "@hypit/media";
@@ -191,7 +191,7 @@ test("VisualTrack explicitly binds the visual IR instead of trusting the Runtime
   );
 });
 
-test("the Type owner rejects an invalid VisualTrack at the shared admission gate", async () => {
+test("the Type owner rejects an invalid VisualTrack at the shared Type-owner validator", async () => {
   const { visual } = fixture();
   const present = visual.presents[0]!;
   const invalid = sealVisualTrack({...visual,
@@ -203,15 +203,14 @@ test("the Type owner rejects an invalid VisualTrack at the shared admission gate
       ],
     }],
   });
-  const validators = new TypeValidatorRegistry();
-  registerTypeValidatorFacets(validators, compositionComponent.validators);
+  const refinements = new RefinementRegistry();
+  registerTypeRefinements(refinements, compositionComponent.refinements);
 
   await assert.rejects(
     async () => await validateValue(
-      createResolvedClosure(videoContractManifests),
       compositionTypes.visualTrack,
-      { kind: "inline", value: canonicalize(invalid) },
-      validators,
+      (canonicalize(invalid)),
+      refinements,
     ),
     /must contain exactly one root element/u,
   );

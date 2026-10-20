@@ -84,12 +84,7 @@ export const whisperXManifest: ModuleManifest = {
         { name: "evidence", type: speechEvidenceTypes.audio },
         { name: "language", type: whisperXTypes.language },
       ],
-      outputs: [],
-      needs: [{
-        name: "alignment",
-        capability: whisperXCapabilities.alignment,
-        returns: speechEvidenceTypes.alignedTranscript,
-      }],
+      result: { kind: "need" as const, name: "alignment", capability: whisperXCapabilities.alignment },
     },
   ],
 };

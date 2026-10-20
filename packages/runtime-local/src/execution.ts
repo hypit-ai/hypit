@@ -24,10 +24,9 @@ export type BuildExecutionRequest = {
   readonly result: BuildResultRepositoryLocation;
 };
 
-export type BuildExecutionDecision = {
-  readonly outcome: BuildOutcome;
-  readonly reason?: string;
-};
+export type BuildExecutionDecision =
+  | { readonly outcome: "complete"; readonly reason?: never }
+  | { readonly outcome: "failed" | "cancelled"; readonly reason: string };
 
 /** A durable instruction to stop launching work, independent of remote Operation termination. */
 export type BuildExecutionStop = {
@@ -100,7 +99,7 @@ export type BuildExecutionStore = {
   /** An unobserved stop wakes the next turn immediately to finish the attempt. */
   releaseTurn(build: string, owner: string, wakeAt: number | undefined, operationWait?: readonly string[]): Promise<BuildExecutionSnapshot>;
   /** Freeze the one conclusion. An execution with a decision can never be claimed again. */
-  decide(build: string, owner: string, outcome: BuildOutcome, reason?: string): Promise<BuildExecutionSnapshot>;
+  decide(build: string, owner: string, decision: BuildExecutionDecision): Promise<BuildExecutionSnapshot>;
   /** Record the first stop request. Repeated requests cannot replace its cause or reason. */
   requestStop(build: string, stop: BuildExecutionStop): Promise<BuildExecutionSnapshot>;
   setAttention(build: string, attention: BuildExecutionAttention | undefined): Promise<BuildExecutionSnapshot>;

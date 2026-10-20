@@ -11,6 +11,7 @@ import { loadStudioRun } from "../src/run.js";
 import { executeStudioProjection, MemoryResourceStore } from "../src/execute.js";
 import { observedTemporalValues, resolveStudioDeclarations } from "../src/temporal-declarations.js";
 import { Executor } from "@hypit/hypit/executor";
+import { InProcessBuildScheduler } from "@hypit/hypit/runtime";
 import { readStudioSession } from "../src/session.js";
 
 async function fixture(t: TestContext, extra = "", target = "program.timeline") {
@@ -46,22 +47,31 @@ async function fixture(t: TestContext, extra = "", target = "program.timeline") 
   const unused = run.source.exports.find(output => output.name === "program.unused");
   assert.ok(unused);
   const resources = new MemoryResourceStore();
-  const selected = await executeStudioProjection(domain, run.plan(run.run, run.targets).state, resources);
+  const prepared = run.prepare(run.run, run.targets);
+  const selected = await executeStudioProjection(domain, prepared.state, resources);
   assert.deepEqual(selected.errors, []);
-  assert.equal(observedTemporalValues(selected.state).some(value => value.id === unused.ref), false);
-  return { root, run, domain, registry, resources, resolved: selected.state, unused };
+  assert.equal(observedTemporalValues(selected.state, prepared.selections).some(value => value.id === unused.ref), false);
+  return { root, run, domain, registry, resources, resolved: selected.state, selections: prepared.selections, unused };
 }
 
 test("Companion display requests resolve unused nested and standalone Instants", async (t) => {
   const input = await fixture(t);
   const declarations = await resolveStudioDeclarations({ ...input, transientExecution: {
     async evaluate(execution) {
-      const timeline = input.resolved.plan.outputBindings.find(binding =>
-        binding.output === input.run.targets[0])!;
-      const reused = execution.state.plan.outputBindings.find(binding => binding.output === timeline.output)!;
-      assert.ok(execution.state.records.some(record => record.id === reused.record),
+      const timeline = input.selections.find(selection => selection.output === input.run.targets[0])!;
+      const original = input.resolved.records.find(record => record.id === timeline.record)!;
+      assert.ok([...execution.state.program.records, ...execution.state.records].some(record =>
+        record.id.startsWith("studio:resolved:") && JSON.stringify(record.value) === JSON.stringify(original.value)),
         "the already resolved logical Timeline output is supplied as a value Candidate");
-      return new Executor(execution).run(execution.state);
+      return (await new InProcessBuildScheduler(new Executor(execution)).run([{
+        id: "studio-test",
+        definition: {
+          format: "hypit.build-definition@1",
+          program: execution.state.program,
+          plan: execution.state.plan,
+        },
+        facts: [],
+      }]))[0]!;
     },
     close() {},
   } });

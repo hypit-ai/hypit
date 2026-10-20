@@ -1,15 +1,10 @@
+import { blobRefSchema } from "@hypit/hypit/protocol";
 import type { ValueSchema } from "@hypit/hypit/protocol";
 const string = { kind: "string", minLength: 1 } as const;
 const number = { kind: "number", minimum: 0 } as const;
 const seconds = { kind: "number", minimum: 0 } as const;
 const integer = { kind: "number", integer: true, minimum: 0 } as const;
 const object = (fields: Readonly<Record<string, { readonly schema: ValueSchema; readonly optional?: boolean }>>): ValueSchema => ({ kind: "object", fields });
-const blobArtifactSchema = (mediaTypes?: readonly string[]): ValueSchema => object({
-  kind: { schema: { kind: "literal", value: "blob" } },
-  resource: { schema: { kind: "string", minLength: 5, maxLength: 256 } },
-  size: { schema: integer },
-  mediaType: { schema: mediaTypes === undefined ? string : { kind: "string", enum: mediaTypes } },
-});
 const rational = object({ numerator: { schema: { kind: "number", integer: true, minimum: 1 } }, denominator: { schema: { kind: "number", integer: true, minimum: 1 } } });
 const timestamp = object({ ticks: { schema: { kind: "string", minLength: 1, maxLength: 128 } }, timeBase: { schema: rational } });
 const disposition = object({ default: { schema: { kind: "boolean" } }, attachedPicture: { schema: { kind: "boolean" } } });
@@ -40,22 +35,22 @@ export const mediaStreamSelectionSchema: ValueSchema = object({
 export const synchronizedMediaSchema: ValueSchema = object({
   frameDomain: { schema: object({ frameRate: { schema: rational },
     frameCount: { schema: { kind: "number", integer: true, minimum: 1 } } }) },
-  visual: { schema: object({ artifact: { schema: blobArtifactSchema() },
+  visual: { schema: object({ artifact: { schema: blobRefSchema() },
     width: { schema: { kind: "number", integer: true, minimum: 1 } }, height: { schema: { kind: "number", integer: true, minimum: 1 } },
   }), optional: true },
-  audio: { schema: object({ artifact: { schema: blobArtifactSchema(["audio/wav"]) } }), optional: true },
+  audio: { schema: object({ artifact: { schema: blobRefSchema(["audio/wav"]) } }), optional: true },
 });
 
 export const timelineVisualSchema: ValueSchema = object({ frameRate: { schema: rational }, frameCount: { schema: { kind: "number", integer: true, minimum: 1 } },
   canvas: { schema: object({ width: { schema: { kind: "number", integer: true, minimum: 1 } }, height: { schema: { kind: "number", integer: true, minimum: 1 } } }) },
-  artifact: { schema: blobArtifactSchema() } });
-export const timelineAudioSchema: ValueSchema = object({ artifact: { schema: blobArtifactSchema(["audio/wav"]) },
+  artifact: { schema: blobRefSchema() } });
+export const timelineAudioSchema: ValueSchema = object({ artifact: { schema: blobRefSchema(["audio/wav"]) },
   sampleFrames: { schema: { kind: "number", integer: true, minimum: 1 } } });
 export const muxedMediaSchema: ValueSchema = object({ frameRate: { schema: rational }, frameCount: { schema: { kind: "number", integer: true, minimum: 1 } },
   canvas: { schema: object({ width: { schema: { kind: "number", integer: true, minimum: 1 } }, height: { schema: { kind: "number", integer: true, minimum: 1 } } }) },
-  presentationSampleFrames: { schema: { kind: "number", integer: true, minimum: 1 } }, artifact: { schema: blobArtifactSchema(["video/mp4"]) } });
+  presentationSampleFrames: { schema: { kind: "number", integer: true, minimum: 1 } }, artifact: { schema: blobRefSchema(["video/mp4"]) } });
 const fontSourceSchema: ValueSchema = object({
-  artifact: { schema: blobArtifactSchema(["font/otf", "font/ttf", "font/woff", "font/woff2"]) },
+  artifact: { schema: blobRefSchema(["font/otf", "font/ttf", "font/woff", "font/woff2"]) },
   unicodeRange: { schema: { kind: "string", minLength: 3 }, optional: true },
 });
 export const fontArtifactSchema: ValueSchema = object({ sources: { schema: { kind: "array", minItems: 1, items: fontSourceSchema } },
@@ -65,6 +60,6 @@ const surfaceTiming: ValueSchema = { kind: "oneOf", variants: [
   object({ kind: { schema: { kind: "literal", value: "still" } } }),
   object({ kind: { schema: { kind: "literal", value: "frames" } }, frameRate: { schema: rational }, frameCount: { schema: { kind: "number", integer: true, minimum: 1 } } }),
 ] };
-export const compositableSurfaceSchema: ValueSchema = object({ artifact: { schema: blobArtifactSchema() }, width: { schema: { kind: "number", integer: true, minimum: 1 } },
+export const compositableSurfaceSchema: ValueSchema = object({ artifact: { schema: blobRefSchema() }, width: { schema: { kind: "number", integer: true, minimum: 1 } },
   height: { schema: { kind: "number", integer: true, minimum: 1 } }, colorSpace: { schema: { kind: "literal", value: "srgb" } },
   alphaMode: { schema: { kind: "string", enum: ["opaque", "straight"] } }, timing: { schema: surfaceTiming } });

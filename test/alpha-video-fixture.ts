@@ -69,8 +69,7 @@ export function testMediaEnvironment(resources: MemoryResourceStore): MediaExecu
 export async function normalizeTestVideo(resources: MemoryResourceStore, source: BlobRef, withAudio: boolean) {
   const env = testMediaEnvironment(resources);
   const inspected = await executeInspectMedia(env, canonicalize({ source }));
-  assert.equal(inspected.value.kind, "inline");
-  const inspection = inspected.value.value;
+  const inspection = inspected.value;
   verifyMediaInspection(inspection);
   const frameRate = { numerator: 12, denominator: 1 };
   const selection = selectMediaStreams(inspection, {
@@ -78,9 +77,8 @@ export async function normalizeTestVideo(resources: MemoryResourceStore, source:
   });
   const result = await executeNormalizeMedia(env, canonicalize({ source, inspection, selection, frameRate,
     audio: { sampleRate: 48_000, channels: 2, codec: "pcm_s16le", loudness: "preserve" } }));
-  assert.equal(result.value.kind, "inline");
-  verifySynchronizedMedia(result.value.value);
-  return result.value.value;
+  verifySynchronizedMedia(result.value);
+  return result.value;
 }
 
 export async function writeTestArtifact(resources: MemoryResourceStore, source: BlobRef, path: string) {

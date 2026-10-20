@@ -1,11 +1,11 @@
-import type { ModuleRef } from "@hypit/hypit/protocol";
-import type { GenerationWireMapping } from "@hypit/generation";
+import type { GenerationWireMapping } from "@hypit/generation/provider";
+import { gptImageModuleRef } from "@hypit/gpt-image";
+import { grokImagineModuleRef } from "@hypit/grok-imagine";
+import { minimaxH3ModuleRef } from "@hypit/minimax-h3";
+import { nanoBananaModuleRef } from "@hypit/nano-banana";
+import { seedanceModuleRef } from "@hypit/seedance";
 
-const SEEDANCE: ModuleRef = { name: "@hypit/seedance", version: "1" };
-const MINIMAX: ModuleRef = { name: "@hypit/minimax-h3", version: "1" };
-const GROK: ModuleRef = { name: "@hypit/grok-imagine", version: "1" };
-const GPT_IMAGE: ModuleRef = { name: "@hypit/gpt-image", version: "1" };
-const NANO_BANANA: ModuleRef = { name: "@hypit/nano-banana", version: "1" };
+export type BeatApiMapping = GenerationWireMapping & { readonly media: "image" | "video" };
 
 /**
  * BeatAPI model aliases and the body fields each one documents. One alias serves every input mode,
@@ -29,17 +29,17 @@ const seedanceFields = {
   webSearch: { as: "value", field: "web_search" },
 } as const satisfies GenerationWireMapping["fields"];
 
-const seedance = (name: string): GenerationWireMapping => ({
-  capability: { module: SEEDANCE, name }, result: "video", routes: [{ model: name }], fields: seedanceFields,
+const seedance = (name: string): BeatApiMapping => ({
+  capability: { module: seedanceModuleRef, name }, media: "video", routes: [{ model: name }], fields: seedanceFields,
 });
 
-export const beatApiMappings: readonly GenerationWireMapping[] = [
+export const beatApiMappings: readonly BeatApiMapping[] = [
   seedance("seedance-2"),
   seedance("seedance-2-fast"),
   seedance("seedance-2-mini"),
   seedance("seedance-2.5"),
   {
-    capability: { module: MINIMAX, name: "minimax-h3" }, result: "video",
+    capability: { module: minimaxH3ModuleRef, name: "minimax-h3" }, media: "video",
     routes: [{ model: "minimax-h3" }],
     fields: {
       prompt: { as: "value", field: "prompt" },
@@ -54,7 +54,7 @@ export const beatApiMappings: readonly GenerationWireMapping[] = [
     },
   },
   {
-    capability: { module: GROK, name: "grok-imagine-video-1.5-preview" }, result: "video",
+    capability: { module: grokImagineModuleRef, name: "grok-imagine-video-1.5-preview" }, media: "video",
     routes: [{ model: "grok-imagine-video-1.5" }],
     fields: {
       prompt: { as: "value", field: "prompt" },
@@ -65,7 +65,7 @@ export const beatApiMappings: readonly GenerationWireMapping[] = [
     },
   },
   {
-    capability: { module: GPT_IMAGE, name: "gpt-image-2" }, result: "image",
+    capability: { module: gptImageModuleRef, name: "gpt-image-2" }, media: "image",
     routes: [{ model: "gpt-image-2" }],
     fields: {
       prompt: { as: "value", field: "prompt" },
@@ -76,7 +76,7 @@ export const beatApiMappings: readonly GenerationWireMapping[] = [
     },
   },
   ...(["nano-banana-2", "nano-banana-pro"] as const).map((model) => ({
-    capability: { module: NANO_BANANA, name: model }, result: "image" as const,
+    capability: { module: nanoBananaModuleRef, name: model }, media: "image" as const,
     routes: [{ model }],
     fields: {
       prompt: { as: "value" as const, field: "prompt" },

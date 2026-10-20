@@ -2,11 +2,11 @@ import { mkdir, stat, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 
 import {
-  cliProviderLine,
-  cliProviderView,
+  cliEndpointLine,
+  cliEndpointView,
   createCliScratchResources,
   openCliRuntimeHost,
-  selectCliProvider,
+  selectCliEndpoint,
 } from "@hypit/hypit/cli";
 import type { CliApplicationContext, CliCommandModule, CliIo, CliRuntimeHost } from "@hypit/hypit/cli";
 import { speechEvidenceFile } from "@hypit/media-local";
@@ -71,7 +71,7 @@ export type TranscribeEnvironment = {
   readonly cwd: string;
   openHost(runtime: string | undefined, project: string | undefined): Promise<{
     readonly profile: string;
-    readonly host: Pick<CliRuntimeHost, "providers" | "invoke">;
+    readonly host: Pick<CliRuntimeHost, "endpoints" | "invoke">;
   }>;
 };
 
@@ -112,8 +112,8 @@ export async function runTranscribeCli(
     constraints: whisperXRequestForEvidenceAudio(audio, { language }),
     result: "record:hypit-transcribe",
   };
-  const provider = await selectCliProvider(host, need, profile);
-  if (!parsed.json) io.write(`Transcribing through ${cliProviderLine(provider)}\n`);
+  const endpoint = await selectCliEndpoint(host, need, profile);
+  if (!parsed.json) io.write(`Transcribing through ${cliEndpointLine(endpoint)}\n`);
   const report = parsed.json ? io.writeProgress : io.writeProgress ?? io.write;
   let previousPhase: string | undefined;
   const fulfillment = await host.invoke(need, resources, {
@@ -124,13 +124,12 @@ export async function runTranscribeCli(
     },
     reportDiagnostic: async (diagnostic) => { report?.(`  · ${diagnostic.message}\n`); },
   });
-  assert(fulfillment.value.kind === "inline", "the transcript came back by reference");
-  const aligned = fulfillment.value.value as unknown as AlignedTranscriptEvidence;
+  const aligned = fulfillment.value as unknown as AlignedTranscriptEvidence;
   const file = transcriptDocumentFromEvidence(aligned, { source, language });
   const words = file.passages.reduce((total, passage) => total + passage.words.length, 0);
   await writeNew(to, `${JSON.stringify(file, null, 2)}\n`);
   const view = { format: "hypit.whisperx-transcribe@1", source, language,
-    audio_seconds: file.audio_seconds, extracted: evidence.extracted, ...cliProviderView(provider),
+    audio_seconds: file.audio_seconds, extracted: evidence.extracted, ...cliEndpointView(endpoint),
     passages: file.passages.length, words, path: to };
   if (parsed.json) io.write(`${JSON.stringify(view, null, 2)}\n`);
   else io.write(`✓ Transcript written\n\n  ${words} words in ${file.passages.length} passage${

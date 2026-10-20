@@ -1,6 +1,6 @@
-import type { AdmissionPackage } from "@hypit/admission";
+import type { RefinementPackage } from "@hypit/refinement";
 import type { ProducerPackage, ProducerHandlerContext } from "@hypit/producer";
-import type { StoredValue } from "@hypit/protocol";
+import type { Value } from "@hypit/protocol";
 
 import {
   textProducers,
@@ -17,57 +17,41 @@ import {
 } from "./program.js";
 import type { Text, TextBinding, TextBindings, TextTemplate } from "./types.js";
 
-function inline<T>(value: StoredValue | undefined, subject: string): T {
-  if (value?.kind !== "inline") throw new Error(`${subject} must be inline`);
-  return value.value as unknown as T;
+function valueOf<T>(value: Value | undefined, subject: string): T {
+  if (value === undefined) throw new Error(`${subject} is missing`);
+  return value as unknown as T;
 }
 
 export const textComponent = {
-  validators: [
+  refinements: [
     { type: textTypes.text,
-      handler: ({ value }) => verifyText(inline(value, "Text")) },
+      handler: ({ value }) => verifyText(valueOf(value, "Text")) },
     { type: textTypes.template,
-      handler: ({ value }) => verifyTextTemplate(inline(value, "TextTemplate")) },
+      handler: ({ value }) => verifyTextTemplate(valueOf(value, "TextTemplate")) },
     { type: textTypes.bindings,
-      handler: ({ value }) => verifyTextBindings(inline(value, "TextBindings")) },
+      handler: ({ value }) => verifyTextBindings(valueOf(value, "TextBindings")) },
     { type: textTypes.binding,
-      handler: ({ value }) => verifyTextBinding(inline(value, "TextBinding")) },
+      handler: ({ value }) => verifyTextBinding(valueOf(value, "TextBinding")) },
   ],
   producers: [
     {
       producer: textProducers.emptyBindings,
-      handler: () => ({ outputs: { bindings: { kind: "inline", value: sealTextBindings() } }, needs: {} }),
+      handler: () => ({ kind: "output", value: (sealTextBindings()) }),
     },
     {
       producer: textProducers.bindText,
-      handler: ({ inputs }: ProducerHandlerContext) => ({
-        outputs: {
-          bindings: {
-            kind: "inline",
-            value: bindText(
-              inline<TextBindings>(inputs.bindings?.value, "Text bindings"),
-              inline<TextBinding>(inputs.binding?.value, "Text binding"),
-              inline<Text>(inputs.text?.value, "Text input"),
-            ),
-          },
-        },
-        needs: {},
-      }),
+      handler: ({ inputs }: ProducerHandlerContext) => ({ kind: "output", value: (bindText(
+              valueOf<TextBindings>(inputs.bindings?.value, "Text bindings"),
+              valueOf<TextBinding>(inputs.binding?.value, "Text binding"),
+              valueOf<Text>(inputs.text?.value, "Text input"),
+            )) }),
     },
     {
       producer: textProducers.render,
-      handler: ({ inputs }: ProducerHandlerContext) => ({
-        outputs: {
-          text: {
-            kind: "inline",
-            value: renderText(
-              inline<TextTemplate>(inputs.template?.value, "Text template"),
-              inline<TextBindings>(inputs.bindings?.value, "Text bindings"),
-            ),
-          },
-        },
-        needs: {},
-      }),
+      handler: ({ inputs }: ProducerHandlerContext) => ({ kind: "output", value: (renderText(
+              valueOf<TextTemplate>(inputs.template?.value, "Text template"),
+              valueOf<TextBindings>(inputs.bindings?.value, "Text bindings"),
+            )) }),
     },
   ],
-} satisfies ProducerPackage & AdmissionPackage;
+} satisfies ProducerPackage & RefinementPackage;

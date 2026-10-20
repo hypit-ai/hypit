@@ -96,7 +96,7 @@ export async function captureStagedVisual(input: CaptureInput, controller: Abort
     const plannedSources = sourceWindows(slots, requestedRanges);
     const sourceTotal = plannedSources.reduce((sum, source) => sum + source.windows.reduce((count, window) =>
       count + window.endFrameExclusive - window.startFrame, 0), 0);
-    const sources = new Map<string, { path: string; fps: VideoSlot["sourceFps"];
+    const sources = new Map<string, { path: string;
       metadata: Awaited<ReturnType<typeof probeSourceVideo>> }>();
     // Chrome needs dimensions before initialization. Pixel frames themselves
     // are decoded lazily for the screenshots that lease them.
@@ -106,7 +106,7 @@ export async function captureStagedVisual(input: CaptureInput, controller: Abort
       const metadata = await probeSourceVideo({ executable: ffprobePath, path,
         timeoutMs: config.processTimeoutMs, maxOutputBytes: config.maxProcessOutputBytes, signal });
       signal.throwIfAborted();
-      sources.set(source.src, { path, fps: source.fps, metadata });
+      sources.set(source.src, { path, metadata });
     }
     let extraction = 0;
     sourceFrameStore = new SourceFrameStore({ maxBytes: config.maxDecodedSourceBytes, signal,
@@ -114,7 +114,7 @@ export async function captureStagedVisual(input: CaptureInput, controller: Abort
         const source = sources.get(src);
         assert(source !== undefined, `HTML renderer source ${src} is outside the requested render`);
         return decodeSourceFrameWindow({ executable: ffmpegPath, path: source.path, outputDir: join(work, "decoded"),
-          outputPrefix: `source-${extraction++}`, window, fps: source.fps, metadata: source.metadata,
+          outputPrefix: `source-${extraction++}`, window, metadata: source.metadata,
           timeoutMs: config.processTimeoutMs, maxProcessOutputBytes: config.maxProcessOutputBytes, signal });
       },
       remove: async path => { await rm(path, { force: true }); },

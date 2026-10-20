@@ -1,7 +1,7 @@
-import type { AdmissionPackage } from "@hypit/hypit/admission";
+import type { RefinementPackage } from "@hypit/hypit/refinement";
 import type { CaptionDocument, CaptionTiming } from "@hypit/caption";
 import type { ProducerPackage } from "@hypit/hypit/producer";
-import type { StoredValue } from "@hypit/hypit/protocol";
+import type { Value } from "@hypit/hypit/protocol";
 import { canonicalize } from "@hypit/hypit/protocol";
 import type { NarrativeProjection } from "@hypit/narrative-temporal";
 
@@ -10,25 +10,22 @@ import { narrativeCaptionProducers, narrativeCaptionTypes } from "./manifest.js"
 import { projectNarrativeCaptionTiming } from "./project.js";
 import type { NarrativeCaptionBinding } from "./types.js";
 
-function inline<T>(value: StoredValue | undefined, subject: string): T {
-  if (value?.kind !== "inline") throw new Error(`${subject} must be inline`);
-  return value.value as T;
+function valueOf<T>(value: Value | undefined, subject: string): T {
+  if (value === undefined) throw new Error(`${subject} is missing`);
+  return value as T;
 }
 
 export const narrativeCaptionComponent = {
   producers: [{
     producer: narrativeCaptionProducers.projectTiming,
-    handler: ({ inputs }) => ({
-      outputs: { timing: { kind: "inline", value: canonicalize(projectNarrativeCaptionTiming(
-        inline<CaptionDocument>(inputs.document?.value, "CaptionDocument"),
-        inline<NarrativeCaptionBinding>(inputs.binding?.value, "NarrativeCaptionBinding"),
-        inline<NarrativeProjection>(inputs.projection?.value, "NarrativeProjection"),
-      ) as CaptionTiming) } },
-      needs: {},
-    }),
+    handler: ({ inputs }) => ({ kind: "output", value: (canonicalize(projectNarrativeCaptionTiming(
+        valueOf<CaptionDocument>(inputs.document?.value, "CaptionDocument"),
+        valueOf<NarrativeCaptionBinding>(inputs.binding?.value, "NarrativeCaptionBinding"),
+        valueOf<NarrativeProjection>(inputs.projection?.value, "NarrativeProjection"),
+      ) as CaptionTiming)) }),
   }],
-  validators: [{
+  refinements: [{
     type: narrativeCaptionTypes.binding,
-    handler: ({ value }) => assertNarrativeCaptionBindingIdentity(inline<NarrativeCaptionBinding>(value, "NarrativeCaptionBinding")),
+    handler: ({ value }) => assertNarrativeCaptionBindingIdentity(valueOf<NarrativeCaptionBinding>(value, "NarrativeCaptionBinding")),
   }],
-} satisfies ProducerPackage & AdmissionPackage;
+} satisfies ProducerPackage & RefinementPackage;

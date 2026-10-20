@@ -1,4 +1,4 @@
-import type { GenerationRequestDraft } from "@hypit/generation";
+import type { ModelFieldBuilder } from "@hypit/generation/model-fields";
 import type { BlobRef } from "@hypit/hypit/protocol";
 
 /** Seedance's reference-audio rule, shared by known imports and request assembly. */
@@ -9,7 +9,7 @@ export function validateSeedanceAudio(artifact: BlobRef, subject = "Seedance ref
 }
 
 /** Missing references in a draft remain graph inputs; only supplied audio is checked. */
-export function validateSeedanceInputs(request: GenerationRequestDraft): void {
+export function validateSeedanceInputs(request: ModelFieldBuilder): void {
   for (const value of request.ports.referenceAudio ?? []) {
     if (typeof value === "object" && value.role === "audio") validateSeedanceAudio(value.artifact);
   }

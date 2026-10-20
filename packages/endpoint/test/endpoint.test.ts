@@ -3,6 +3,8 @@ import test from "node:test";
 
 import {
   defineEndpoint,
+  endpointOffers,
+  installEndpoint,
   wakeAfter,
 } from "@hypit/endpoint";
 import {
@@ -20,7 +22,13 @@ import type {
 import type { CapabilityRef, TypeRef } from "@hypit/protocol";
 import { credentialRef } from "@hypit/runtime";
 
-import { capabilities, types } from "../../kernel/test/greeting-fixture.js";
+const endpointModule = { name: "example.endpoint", version: "1" } as const;
+const capabilities = {
+  generation: { module: endpointModule, name: "generate" },
+} satisfies Record<string, CapabilityRef>;
+const types = {
+  generated: { module: endpointModule, name: "Generated" },
+} satisfies Record<string, TypeRef>;
 
 type CapturedRegistration = {
   readonly id: string;
@@ -55,13 +63,13 @@ test("one Endpoint definition generates one configured instance and host-neutral
       capacity: "text-generation",
       maxConcurrency: 1,
       handler: () => ({
-        value: { kind: "inline", value: "generated" },
+        value: ("generated"),
       }),
     }],
   });
   assert.equal(endpoint.instance.id, "example.personal");
   assert.equal(endpoint.instance.pool, "example.personal");
-  assert.deepEqual(endpoint.offers, [{
+  assert.deepEqual(endpointOffers(endpoint), [{
     capability: capabilities.generation,
     returns: types.generated,
     endpoint: "example.personal",
@@ -69,7 +77,7 @@ test("one Endpoint definition generates one configured instance and host-neutral
   }]);
 
   const registrations: CapturedRegistration[] = [];
-  await endpoint.install(capturingRegistrar(registrations));
+  await installEndpoint(endpoint, capturingRegistrar(registrations));
   assert.equal(registrations[0]?.id, "example.personal");
   assert.equal(registrations[0]?.kind, "immediate");
   assert.deepEqual(registrations[0]?.options.credentials, {
@@ -112,7 +120,11 @@ test("wakeAfter turns polling policy into an explicit Runtime wake hint", () => 
 test("HTTP mechanics retain transport evidence without choosing an Endpoint outcome", async () => {
   const now = Date.parse("2026-10-07T00:00:00Z");
   assert.equal(retryAfterMs(new Headers({ "retry-after": "30" }), now), 30_000);
+  assert.equal(retryAfterMs(new Headers({ "retry-after": "1.5" }), now), 1_500);
   assert.equal(retryAfterMs(new Headers({ "retry-after": "Wed, 07 Oct 2026 00:00:45 GMT" }), now), 45_000);
+  assert.equal(retryAfterMs(new Headers({ "retry-after": "-1" }), now), undefined);
+  assert.equal(retryAfterMs(new Headers({ "retry-after": "1..5" }), now), undefined);
+  assert.equal(retryAfterMs(new Headers({ "retry-after": "Mar" }), now), undefined);
   assert.equal(retryAfterMs(new Headers({ "retry-after": "later" }), now), undefined);
 
   const cause = Object.assign(new Error("getaddrinfo ENOTFOUND api.example.test"), { code: "ENOTFOUND" });

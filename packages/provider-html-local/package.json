@@ -1,6 +1,6 @@
 {
   "name": "@hypit/provider-html-local",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
   "type": "module",
@@ -18,15 +18,15 @@
     }
   },
   "dependencies": {
-    "@hypit/html-program": "workspace:^0.1.0",
-    "@hypit/media": "workspace:^0.1.0",
+    "@hypit/html-program": "workspace:^0.2.0",
+    "@hypit/media": "workspace:^0.2.0",
     "@puppeteer/browsers": "3.2.2",
     "puppeteer-core": "25.10.0",
     "tsx": "4.21.0"
   },
   "peerDependencies": {
-    "@hypit/hypit": "workspace:^0.3.1",
-    "@hypit/runtime-local": "workspace:^0.1.1"
+    "@hypit/hypit": "workspace:^0.4.0",
+    "@hypit/runtime-local": "workspace:^0.2.0"
   },
   "devDependencies": {
     "@fontsource-variable/inter": "5.3.0",

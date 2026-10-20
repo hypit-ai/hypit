@@ -72,9 +72,9 @@ function oneOfReference(
   return value;
 }
 
-function inline<T>(value: SurfaceResolvedReference, label: string): T {
-  if (value.record?.value.kind !== "inline") throw new Error(`${label} must resolve during author compilation.`);
-  return value.record.value.value as unknown as T;
+function valueOf<T>(value: SurfaceResolvedReference, label: string): T {
+  if (value.record === undefined) throw new Error(`${label} must resolve during author compilation.`);
+  return value.record.value as unknown as T;
 }
 
 function styleSurface<T>(
@@ -87,13 +87,13 @@ function styleSurface<T>(
     const id = text(element, "id");
     const recipeRef = reference(element.attributes.recipe, `${element.name}.recipe`, recipeType, resolveReference);
     const fontRef = oneOfReference(element.attributes.font, `${element.name}.font`, [mediaTypes.fontArtifact, mediaTypes.fontStack], resolveReference);
-    const decoded = decode(inline<Recipe>(recipeRef, `${element.name}.recipe`), inline<FontArtifactRef | FontStackRef>(fontRef, `${element.name}.font`));
+    const decoded = decode(valueOf<Recipe>(recipeRef, `${element.name}.recipe`), valueOf<FontArtifactRef | FontStackRef>(fontRef, `${element.name}.font`));
     return {
       records: [
-        { id, type: styleType, value: { kind: "inline", value: decoded.style as unknown as CanonicalValue }, range: element.range },
-        { id: `${id}.sound`, type: rankingTypes.soundStyle, value: { kind: "inline", value: decoded.sound as unknown as CanonicalValue }, range: element.range },
+        { id, type: styleType, value: (decoded.style as unknown as CanonicalValue), range: element.range },
+        { id: `${id}.sound`, type: rankingTypes.soundStyle, value: (decoded.sound as unknown as CanonicalValue), range: element.range },
       ],
-      components: [], fragments: [],
+      components: [],
     };
   };
 }
@@ -209,7 +209,7 @@ function rankingSurface(variant: RankingVariant): StructuredSurfaceHandler {
     const headerId = `${id}.header`;
     records.push({
       id: headerId, type: rankingTypes.header,
-      value: { kind: "inline", value: sealRankingHeader({ id, variant }) as unknown as CanonicalValue },
+      value: (sealRankingHeader({ id, variant }) as unknown as CanonicalValue),
       range: element.range,
     });
     const inputs: Record<string, typeof context.timeline.ref> = {
@@ -237,7 +237,7 @@ function rankingSurface(variant: RankingVariant): StructuredSurfaceHandler {
       hasDrop ||= spec.variant === "tier-board" && !spec.preset && spec.entry === "drop";
       const specId = `${id}.item.${suffix}.spec`;
       const specName = `item-${suffix}-spec`;
-      records.push({ id: specId, type: authored.content === undefined ? rankingTypes.itemSpec : rankingTypes.textItemShell, value: { kind: "inline", value: spec as unknown as CanonicalValue }, range: child.range });
+      records.push({ id: specId, type: authored.content === undefined ? rankingTypes.itemSpec : rankingTypes.textItemShell, value: (spec as unknown as CanonicalValue), range: child.range });
       inputs[specName] = { kind: "record", id: specId };
       const contentName = authored.content === undefined ? undefined : `item-${suffix}-content`;
       if (authored.content !== undefined) inputs[contentName!] = authored.content.ref;
@@ -281,14 +281,13 @@ function rankingSurface(variant: RankingVariant): StructuredSurfaceHandler {
     return {
       records,
       components: [{
-        id, fragment: fragment.id, inputs,
+        id, fragment, inputs,
         outputs: {
           schedule: `${id}.schedule`, program: `${id}.program`, visual: `${id}.visual`,
           ...(sound.appearName === undefined && sound.moveName === undefined ? {} : { events: `${id}.events`, audio: `${id}.audio` }),
         },
         range: element.range,
       }],
-      fragments: [fragment],
       exports: [`${id}.schedule`, `${id}.program`, `${id}.visual`, ...(sound.appearName === undefined && sound.moveName === undefined ? [] : [`${id}.events`, `${id}.audio`])],
     };
   };

@@ -1,15 +1,15 @@
 import {
   createResolvedClosure,
+  defineBuild,
   link,
-  sealBuildRequest,
-  sealCompiledGraph,
-  sealRecord,
-  start,
+  materializeBuild,
+  planBuild,
+  sealAuthorGraph,
 } from "@hypit/kernel";
 import type {
   BuildState,
   CapabilityRef,
-  CompiledGraph,
+  AuthorGraph,
   ModuleManifest,
   ProducerRef,
   TypeRef,
@@ -26,6 +26,21 @@ export const types = {
 export const capabilities = {
   generation: { module: moduleRef, name: "generate-greeting-text" },
 } satisfies Record<string, CapabilityRef>;
+
+function initialState(program: Parameters<typeof planBuild>[0], graph: AuthorGraph, targets: readonly string[]): BuildState {
+  const planned = planBuild(program, graph, {
+    format: "hypit.run-graph@1",
+    records: [],
+    candidates: [],
+    operations: [],
+    satisfactions: [],
+    targets: targets.map((output) => ({ output })),
+  });
+  return materializeBuild(defineBuild({
+    program: link(program.closure, [...program.records, ...planned.initialRecords]),
+    plan: planned.plan,
+  }), []);
+}
 
 export const producers = {
   makePrompt: { module: moduleRef, name: "make-prompt" },
@@ -54,36 +69,28 @@ export const manifest: ModuleManifest = {
     {
       name: producers.makePrompt.name,
       inputs: [{ name: "intent", type: types.intent }],
-      outputs: [{ name: "prompt", type: types.prompt }],
-      needs: [],
+      result: { kind: "output" as const, name: "prompt", type: types.prompt },
     },
     {
       name: producers.requestText.name,
       inputs: [{ name: "prompt", type: types.prompt }],
-      outputs: [],
-      needs: [{
-        name: "generation",
-        capability: capabilities.generation,
-        returns: types.generated,
-      }],
+      result: { kind: "need" as const, name: "generation", capability: capabilities.generation },
     },
     {
       name: producers.placeholderText.name,
       inputs: [{ name: "prompt", type: types.prompt }],
-      outputs: [{ name: "generated", type: types.generated }],
-      needs: [],
+      result: { kind: "output" as const, name: "generated", type: types.generated },
     },
     {
       name: producers.assemble.name,
       inputs: [{ name: "generated", type: types.generated }],
-      outputs: [{ name: "document", type: types.document }],
-      needs: [],
+      result: { kind: "output" as const, name: "document", type: types.document },
     },
   ],
 };
 
-export function greetingGraph(includeSide = false): CompiledGraph {
-  return sealCompiledGraph({
+export function greetingGraph(includeSide = false): AuthorGraph {
+  return sealAuthorGraph({
     outputs: [
       {
         id: "prompt",
@@ -125,25 +132,25 @@ export function greetingGraph(includeSide = false): CompiledGraph {
         id: "make-prompt",
         producer: producers.makePrompt,
         inputs: { intent: { kind: "record", id: "intent:root" } },
-        result: { kind: "output", name: "prompt", record: "prompt:root" },
+        result: { kind: "output" as const, name: "prompt", record: "prompt:root" },
       },
       {
         id: "request-text",
         producer: producers.requestText,
         inputs: { prompt: { kind: "logical-output", id: "prompt" } },
-        result: { kind: "need", name: "generation", id: "need:generation", record: "generated:root" },
+        result: { kind: "need" as const, name: "generation", id: "need:generation", record: "generated:root" },
       },
       {
         id: "placeholder-text",
         producer: producers.placeholderText,
         inputs: { prompt: { kind: "logical-output", id: "prompt" } },
-        result: { kind: "output", name: "generated", record: "generated:placeholder" },
+        result: { kind: "output" as const, name: "generated", record: "generated:placeholder" },
       },
       {
         id: "assemble",
         producer: producers.assemble,
         inputs: { generated: { kind: "logical-output", id: "generated" } },
-        result: { kind: "output", name: "document", record: "document:root" },
+        result: { kind: "output" as const, name: "document", record: "document:root" },
       },
       ...(includeSide ? [{
         id: "side-placeholder",
@@ -166,15 +173,15 @@ export function createGreetingBuild(options?: {
   readonly targetOutputs?: readonly string[];
 }): BuildState {
   const closure = createResolvedClosure([manifest]);
-  const authored = sealRecord({
+  const authored = ({
     id: "intent:root",
     type: types.intent,
-    value: { kind: "inline", value: { name: "Ada" } },
+    value: ({ name: "Ada" }),
   });
   const program = link(closure, [authored]);
   const sourceGraph = greetingGraph(options?.includeSideTarget ?? false);
   const graph = options?.generationRealization === "placeholder"
-    ? sealCompiledGraph({
+    ? sealAuthorGraph({
         outputs: sourceGraph.outputs.map((item) => item.id === "generated"
           ? { ...item, primary: "placeholder-text" }
           : item),
@@ -182,23 +189,21 @@ export function createGreetingBuild(options?: {
         operations: sourceGraph.operations,
       })
     : sourceGraph;
-  const request = sealBuildRequest({
-    targets: options?.targetOutputs?.map((output) => ({ output }))
-      ?? [...(options?.includeSideTarget ? [{ output: "side-document" }] : []), { output: "document" }],
-  });
-  return start(program, graph, request);
+  const targets = options?.targetOutputs
+    ?? [...(options?.includeSideTarget ? ["side-document"] : []), "document"];
+  return initialState(program, graph, targets);
 }
 
 export function createParallelGreetingBuild(generationCount = 2) {
   const generations = ["a", "b", "c"].slice(0, generationCount);
   const closure = createResolvedClosure([manifest]);
-  const authored = sealRecord({
+  const authored = ({
     id: "intent:root",
     type: types.intent,
-    value: { kind: "inline", value: { name: "Ada" } },
+    value: ({ name: "Ada" }),
   });
   const program = link(closure, [authored]);
-  const graph = sealCompiledGraph({
+  const graph = sealAuthorGraph({
     outputs: [
       {
         id: "prompt",
@@ -231,7 +236,7 @@ export function createParallelGreetingBuild(generationCount = 2) {
         id: "make-prompt",
         producer: producers.makePrompt,
         inputs: { intent: { kind: "record", id: "intent:root" } },
-        result: { kind: "output", name: "prompt", record: "prompt:root" },
+        result: { kind: "output" as const, name: "prompt", record: "prompt:root" },
       },
       ...generations.map((suffix) => ({
         id: `generate-${suffix}`,
@@ -246,7 +251,5 @@ export function createParallelGreetingBuild(generationCount = 2) {
       })),
     ],
   });
-  return start(program, graph, sealBuildRequest({
-    targets: generations.map((suffix) => ({ output: `generated-${suffix}` })),
-  }));
+  return initialState(program, graph, generations.map((suffix) => `generated-${suffix}`));
 }

@@ -30,16 +30,16 @@ export type RunTarget = {
   readonly output: string;
 };
 
-export type RunProvidedValue = {
-  readonly kind: "provided";
+export type RunValueSource = {
+  readonly kind: "value";
   readonly id: string;
   readonly type: TypeRef;
-  /** File containing one StoredValue JSON object. */
+  /** File containing one Value JSON object. */
   readonly from: string;
 };
 
-/** Ordinary source file admitted as one Resource Candidate of an explicitly named blob Type. */
-export type RunProvidedFile = {
+/** Ordinary source file supplied as one Resource Candidate of an explicitly named blob Type. */
+export type RunFileSource = {
   readonly kind: "file";
   readonly id: string;
   readonly type: TypeRef;
@@ -47,8 +47,8 @@ export type RunProvidedFile = {
   readonly mediaType: string;
 };
 
-export type RunBuildRecord = {
-  readonly kind: "build-record";
+export type RunBuildOutputSource = {
+  readonly kind: "build-output";
   readonly id: string;
   readonly build: string;
   /** Unique public Output name inside the prior Build Result. */
@@ -79,7 +79,7 @@ export type RunFragmentInstance = {
   readonly exports?: readonly string[];
 };
 
-export type RunCandidateDeclaration = RunProvidedValue | RunProvidedFile | RunBuildRecord | RunFragmentInstance;
+export type RunCandidateDeclaration = RunValueSource | RunFileSource | RunBuildOutputSource | RunFragmentInstance;
 
 export type RunSatisfaction = {
   readonly output: string;
@@ -130,7 +130,7 @@ export type ResolveRunDocumentContext = {
 };
 
 export type RunCandidateSource =
-  | { readonly kind: "stored-value"; readonly from: string }
+  | { readonly kind: "value"; readonly from: string }
   | { readonly kind: "file"; readonly from: string; readonly mediaType: string }
   | { readonly kind: "build-output"; readonly build: string; readonly output: string };
 

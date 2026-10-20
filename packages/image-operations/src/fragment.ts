@@ -15,7 +15,7 @@ export const imageTransformFragment = sealGraphFragment({
     id: "image:transform",
     producer: imageTransformProducers.request,
     inputs: { source: input("source"), program: input("program") },
-    result: { kind: "need", name: "image" },
+    result: { kind: "need" as const, name: "image" },
   }],
   exports: [{
     name: "image",

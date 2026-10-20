@@ -1,3 +1,4 @@
+import { sameType } from "@hypit/hypit/protocol";
 import type { CanonicalValue } from "@hypit/hypit/protocol";
 import type { AuthorValueRef } from "@hypit/hypit/author";
 import type {
@@ -23,10 +24,6 @@ import type {
   SpatialPath,
   SpatialPathCommand,
 } from "./types.js";
-
-function sameType(left: SurfaceResolvedReference["type"], right: SurfaceResolvedReference["type"]): boolean {
-  return left.module.name === right.module.name && left.module.version === right.module.version && left.name === right.name;
-}
 
 function exact(element: StructuredElement, allowed: readonly string[], required: readonly string[]): void {
   const unknown = Object.keys(element.attributes).filter((name) => !allowed.includes(name));
@@ -103,10 +100,10 @@ export const decodeCanvasSurface: StructuredSurfaceHandler = ({ element }) => {
   const bounds = canvasFrame(canvas);
   return {
     records: [
-      { id: `${id}.canvas`, type: spatialTypes.canvas, value: { kind: "inline" as const, value: canvas as unknown as CanonicalValue }, range: element.range },
-      { id: `${id}.bounds`, type: spatialTypes.frame, value: { kind: "inline" as const, value: bounds as unknown as CanonicalValue }, range: element.range },
+      { id: `${id}.canvas`, type: spatialTypes.canvas, value: (canvas as unknown as CanonicalValue), range: element.range },
+      { id: `${id}.bounds`, type: spatialTypes.frame, value: (bounds as unknown as CanonicalValue), range: element.range },
     ],
-    components: [], fragments: [],
+    components: [],
   };
 };
 
@@ -118,8 +115,8 @@ export const decodePointSurface: StructuredSurfaceHandler = ({ element }) => {
     yPx: number(element, "y"),
   });
   return {
-    records: [{ id, type: spatialTypes.point, value: { kind: "inline", value: point as unknown as CanonicalValue }, range: element.range }],
-    components: [], fragments: [],
+    records: [{ id, type: spatialTypes.point, value: (point as unknown as CanonicalValue), range: element.range }],
+    components: [],
   };
 };
 
@@ -179,8 +176,8 @@ export const decodePathSurface: StructuredSurfaceHandler = ({ element }) => {
   const path: SpatialPath = { commands };
   assertSpatialPath(path);
   return {
-    records: [{ id, type: spatialTypes.path, value: { kind: "inline", value: path as unknown as CanonicalValue }, range: element.range }],
-    components: [], fragments: [],
+    records: [{ id, type: spatialTypes.path, value: (path as unknown as CanonicalValue), range: element.range }],
+    components: [],
   };
 };
 
@@ -191,7 +188,7 @@ export const decodeExtentSurface: StructuredSurfaceHandler = ({ element }) => {
     widthPx: positiveInteger(element, "width"),
     heightPx: positiveInteger(element, "height"),
   });
-  return { records: [{ id, type: spatialTypes.extent, value: { kind: "inline", value: extent as unknown as CanonicalValue }, range: element.range }], components: [], fragments: [] };
+  return { records: [{ id, type: spatialTypes.extent, value: (extent as unknown as CanonicalValue), range: element.range }], components: [] };
 };
 
 export const decodeMapSurface: StructuredSurfaceHandler = ({ element }) => {
@@ -202,7 +199,7 @@ export const decodeMapSurface: StructuredSurfaceHandler = ({ element }) => {
     yx: number(element, "yx"), yy: number(element, "yy"),
     tx: number(element, "tx"), ty: number(element, "ty"),
   });
-  return { records: [{ id, type: spatialTypes.map2D, value: { kind: "inline", value: mapping as unknown as CanonicalValue }, range: element.range }], components: [], fragments: [] };
+  return { records: [{ id, type: spatialTypes.map2D, value: (mapping as unknown as CanonicalValue), range: element.range }], components: [] };
 };
 
 function frameSurface(
@@ -216,11 +213,10 @@ function frameSurface(
   const parent = parentFrame(element, reference(element, "within", resolveReference));
   const programId = `${id}.__program`;
   return {
-    records: [{ id: programId, type: programType, value: { kind: "inline" as const, value: program as unknown as CanonicalValue }, range: element.range }],
+    records: [{ id: programId, type: programType, value: (program as unknown as CanonicalValue), range: element.range }],
     components: [
-      { id, fragment: fragment.id, inputs: { parent, program: { kind: "record" as const, id: programId } }, outputs: { frame: id }, range: element.range },
+      { id, fragment, inputs: { parent, program: { kind: "record" as const, id: programId } }, outputs: { frame: id }, range: element.range },
     ],
-    fragments: [fragment],
     exports: [id],
   };
 }
@@ -246,7 +242,7 @@ function aspectExtent(
   id: string,
   element: StructuredElement,
   resolveReference: (path: string) => SurfaceResolvedReference | undefined,
-): { readonly ref: AuthorValueRef; readonly records: readonly { readonly id: string; readonly type: typeof spatialTypes.extent; readonly value: { readonly kind: "inline"; readonly value: CanonicalValue }; readonly range: StructuredElement["range"] }[] } {
+): { readonly ref: AuthorValueRef; readonly records: readonly { readonly id: string; readonly type: typeof spatialTypes.extent; readonly value: CanonicalValue; readonly range: StructuredElement["range"] }[] } {
   const raw = element.attributes.aspect;
   if (typeof raw === "object" && raw.kind === "reference") {
     const resolved = resolveReference(raw.path);
@@ -258,7 +254,7 @@ function aspectExtent(
   if (match === null) throw new Error(`${element.name}.aspect must be IntrinsicExtent or width/height.`);
   const extent = sealIntrinsicExtent({ widthPx: Number(match[1]), heightPx: Number(match[2]) });
   const extentId = `${id}.__extent`;
-  return { ref: { kind: "record", id: extentId }, records: [{ id: extentId, type: spatialTypes.extent, value: { kind: "inline", value: extent as unknown as CanonicalValue }, range: element.range }] };
+  return { ref: { kind: "record", id: extentId }, records: [{ id: extentId, type: spatialTypes.extent, value: (extent as unknown as CanonicalValue), range: element.range }] };
 }
 
 export const decodeAspectFrameSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
@@ -278,12 +274,11 @@ export const decodeAspectFrameSurface: StructuredSurfaceHandler = ({ element, re
   return {
     records: [
       ...extent.records,
-      { id: programId, type: spatialTypes.aspectFrameProgram, value: { kind: "inline" as const, value: program as unknown as CanonicalValue }, range: element.range },
+      { id: programId, type: spatialTypes.aspectFrameProgram, value: (program as unknown as CanonicalValue), range: element.range },
     ],
     components: [
-      { id, fragment: aspectFrameFragment.id, inputs: { parent, extent: extent.ref, program: { kind: "record" as const, id: programId } }, outputs: { frame: id }, range: element.range },
+      { id, fragment: aspectFrameFragment, inputs: { parent, extent: extent.ref, program: { kind: "record" as const, id: programId } }, outputs: { frame: id }, range: element.range },
     ],
-    fragments: [aspectFrameFragment],
     exports: [id],
   };
 };

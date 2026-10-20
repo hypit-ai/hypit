@@ -1,7 +1,5 @@
-import {
-  sealRecord,
-} from "@hypit/kernel";
 import type { AuthorFrontend, AuthorSourceExport } from "@hypit/author";
+import type { TypedRecord } from "@hypit/protocol";
 import { decodeSourceText } from "@hypit/source";
 
 import { recipeFrontendId, recipeModuleRef, recipeType } from "./manifest.js";
@@ -14,10 +12,10 @@ export const recipeFrontend: AuthorFrontend = {
   },
   decode(source, context) {
     const parsed = parseRecipe(source.name, decodeSourceText(source));
-    const records = parsed.recipes.map((recipe) => sealRecord({
+    const records: TypedRecord[] = parsed.recipes.map((recipe) => ({
       id: recipe.value.path,
       type: recipeType,
-      value: { kind: "inline", value: recipe.value },
+      value: (recipe.value),
     }));
     const exports: AuthorSourceExport[] = records.map((record) => ({
       name: record.id,
@@ -27,7 +25,6 @@ export const recipeFrontend: AuthorFrontend = {
     return {
       records,
       components: [],
-      fragments: [],
       exports,
     };
   },

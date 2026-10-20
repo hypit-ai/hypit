@@ -9,11 +9,11 @@ import type {
 import { RunCompiler } from "@hypit/compiler";
 import type {
   CompiledRun,
-  Compiler,
+  RunAuthorCompiler,
 } from "@hypit/compiler";
 import type { PackageContribution } from "@hypit/loader";
 import type { BlobAttachment, WorkspaceSession } from "@hypit/workspace";
-import type { BlobRef, CanonicalValue, StoredValue } from "@hypit/protocol";
+import type { BlobRef, CanonicalValue, Value } from "@hypit/protocol";
 import {
   installRunFragmentFacets,
   runFrontendsFromFacets,
@@ -40,7 +40,7 @@ function createBuildResultResolutionSession(): BuildResultResolutionSession {
 
 export async function checkRunFile(options: {
   readonly workspace: WorkspaceSession;
-  readonly authorCompiler: Compiler;
+  readonly authorCompiler: RunAuthorCompiler;
   readonly frontends: readonly RunFrontend[];
   readonly packageContributions: readonly PackageContribution[];
 }) {
@@ -110,13 +110,13 @@ function bindResultResources(
 
 /** Resolve one historical public Output into an ordinary Run value plus lazy file attachments. */
 export async function resolveBuildResultValue(
-  repository: BuildResultRepository,
+  repository: BuildResultValueRepository,
   build: string,
   output: string,
   session: BuildResultResolutionSession = createBuildResultResolutionSession(),
 ): Promise<{
   readonly type: RepositoryBuildResultOutput["type"];
-  readonly value: StoredValue;
+  readonly value: Value;
   readonly attachments?: readonly BlobAttachment[];
   } | undefined> {
   const manifest = await repository.read(build);
@@ -126,22 +126,27 @@ export async function resolveBuildResultValue(
     const existing = session.files.get(address);
     if (existing !== undefined) return existing;
     file = await repository.describeFile(owner, file);
-    const artifact: BlobRef = {
+    const blob: BlobRef = {
       kind: "blob",
       resource: `res_${randomUUID()}`,
       size: file.size,
       mediaType: file.mediaType,
     };
     const attachment = {
-      artifact,
+      blob,
       async open() {
         const stream = await repository.openFile(owner, file);
         if (stream === undefined) throw new Error(`File ${address} is unavailable`);
         return stream;
       },
+      async openRange(range: { readonly start: number; readonly endExclusive: number }) {
+        const stream = await repository.openFile(owner, file, range);
+        if (stream === undefined) throw new Error(`File ${address} is unavailable`);
+        return stream;
+      },
     };
     session.files.set(address, attachment);
-    session.references.set(artifact.resource, ownedFileReference(owner, file));
+    session.references.set(blob.resource, ownedFileReference(owner, file));
     return attachment;
   };
   const attachments = new Map<string, BlobAttachment>();
@@ -155,22 +160,22 @@ export async function resolveBuildResultValue(
   if (resolved === undefined) return undefined;
   const owner = resolved.build === build ? manifest : await repository.read(resolved.build);
   if (owner?.outcome === undefined) return undefined;
-  let value: StoredValue;
+  let value: Value;
   if (resolved.value.kind === "build-file" || resolved.value.kind === "external-file") {
     const attachment = await resultAttachment(resolved.build, resolved.value);
-    attachments.set(attachment.artifact.resource, attachment);
-    value = attachment.artifact;
+    attachments.set(attachment.blob.resource, attachment);
+    value = attachment.blob;
   } else if (resolved.value.kind === "inline") {
-    value = { kind: "inline", value: resolved.value.value };
+    value = resolved.value.value;
   } else {
     const bindings: Array<{ readonly at: BuildResultValuePath; readonly replacement: BlobRef }> = [];
     for (const binding of resolved.value.document.resources) {
       const attachment = await resultAttachment(resolved.build, binding.file);
-      attachments.set(attachment.artifact.resource, attachment);
-      bindings.push({ at: binding.at, replacement: attachment.artifact });
+      attachments.set(attachment.blob.resource, attachment);
+      bindings.push({ at: binding.at, replacement: attachment.blob });
     }
     const composite = bindResultResources(resolved.value.document.value, bindings);
-    value = { kind: "inline", value: composite };
+    value = (composite);
   }
   return {
     type: resolved.type,
@@ -179,8 +184,12 @@ export async function resolveBuildResultValue(
   };
 }
 
+/** Result capabilities needed to turn one historical Output back into a Run value. */
+export type BuildResultValueRepository = Pick<BuildResultRepository,
+  "read" | "resolve" | "describeFile" | "openFile">;
+
 function createRunCompiler(options: {
-  readonly authorCompiler: Compiler;
+  readonly authorCompiler: RunAuthorCompiler;
   readonly frontends: readonly RunFrontend[];
   readonly packageContributions: readonly PackageContribution[];
   readonly results?: BuildResultRepository;
@@ -214,7 +223,7 @@ export function collectRunFrontends(
 
 export async function loadRunFile(options: {
   readonly workspace: WorkspaceSession;
-  readonly authorCompiler: Compiler;
+  readonly authorCompiler: RunAuthorCompiler;
   readonly frontends: readonly RunFrontend[];
   readonly packageContributions: readonly PackageContribution[];
   readonly results?: BuildResultRepository;
@@ -223,9 +232,9 @@ export async function loadRunFile(options: {
   const compiler = createRunCompiler(options, resultSession);
   const compiled = await compiler.compileResolvedSource(options.workspace.entry, options.workspace);
   const references = new Map<string, BuildResultFileRef>(compiled.attachments.flatMap((attachment) =>
-    attachment.location === undefined ? [] : [[attachment.artifact.resource, {
+    attachment.location === undefined ? [] : [[attachment.blob.resource, {
       kind: "external-file" as const, uri: attachment.location,
-      size: attachment.artifact.size, mediaType: attachment.artifact.mediaType,
+      size: attachment.blob.size, mediaType: attachment.blob.mediaType,
     }]]));
   for (const [resource, file] of resultSession.references) references.set(resource, file);
   return { path: options.workspace.entry.unit.id, compiler, ...compiled, resultResourceReferences: Object.fromEntries(references) };

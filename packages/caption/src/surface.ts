@@ -11,6 +11,6 @@ export const decodeHiddenCaptionStyleSurface: StructuredSurfaceHandler = ({ elem
     throw new Error(`${element.name} accepts no children`);
   }
   return { records: [{ id, type: captionTypes.style,
-    value: { kind: "inline", value: sealCaptionStyle({ id, rendering: null }) }, range: element.range }],
-    components: [], fragments: [] };
+    value: (sealCaptionStyle({ id, rendering: null })), range: element.range }],
+    components: [] };
 };

@@ -107,7 +107,7 @@ export async function runProjectResultCommand(input: {
     ], entries.map((item) => {
       const label = item.title === undefined ? item.build : `${item.title} · ${item.build}`;
       return `${label}: ${item.outcome} · ${new Date(item.createdAt).toLocaleString()}`
-        + (args.presentation.verbose ? ` · ${item.output.kind} · ${item.output.type}` : "");
+        + (args.presentation.verbose ? ` · ${item.output.representation} · ${item.output.type}` : "");
     }).concat(page.next === undefined ? [] : [
       `Older    Repeat this command with --before ${page.next}, keeping the other options.`,
     ]));
@@ -144,7 +144,7 @@ export async function runProjectResultCommand(input: {
         ...(build.omittedOperations === undefined ? [] : [`${build.omittedOperations} more execution receipts · use --limit <count>`]),
         ...(build.note === undefined ? [] : [`Note      ${build.note}`]),
         ...build.outputs.map((item) => `${item.highlighted ? "★" : item.target ? "Target" : "Output"}    ${item.name}`
-          + (!args.presentation.verbose ? "" : ` · ${item.type} · ${item.kind}`
+          + (!args.presentation.verbose ? "" : ` · ${item.type} · ${item.representation}`
             + `${item.mediaType === undefined ? "" : ` · ${item.mediaType}`}`
             + `${item.size === undefined ? "" : ` · ${item.size} bytes`}`)),
         ...(args.outputName === undefined && (build.otherOutputCount ?? 0) > 0 ? [
@@ -190,7 +190,7 @@ export async function runProjectResultCommand(input: {
     build: exported.build,
     output: exported.output,
     type: cliTypeName(exported.type),
-    kind: exported.kind,
+    representation: exported.representation,
     path: exported.path,
   };
   const path = projectPath(await realpath(exported.path), projectRoot);
@@ -198,7 +198,7 @@ export async function runProjectResultCommand(input: {
     args.presentation.verbose ? [
       ["Build", exported.build],
       ["Type", machine.type],
-      ["Kind", exported.kind],
+      ["Representation", exported.representation],
       ["Path", exported.path],
     ] : []);
 }

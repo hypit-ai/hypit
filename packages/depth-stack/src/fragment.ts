@@ -50,7 +50,7 @@ export function createDepthStackFragment(
       id: "cards",
       producer: depthStackProducers.createCards,
       inputs: {},
-      result: { kind: "output", name: "set" },
+      result: { kind: "output" as const, name: "set" },
     },
   ];
   let cardSet = operation("cards");
@@ -72,7 +72,7 @@ export function createDepthStackFragment(
       id: layersId,
       producer: visualTrackProducers.createLayers,
       inputs: {},
-      result: { kind: "output", name: "layers" },
+      result: { kind: "output" as const, name: "layers" },
     });
     let layers = operation(layersId);
     if (card.framePaintSpecName !== undefined) {
@@ -81,7 +81,7 @@ export function createDepthStackFragment(
         id: paintId,
         producer: visualTrackProducers.appendPaintLayer,
         inputs: { layers, spec: input(card.framePaintSpecName) },
-        result: { kind: "output", name: "layers" },
+        result: { kind: "output" as const, name: "layers" },
       });
       layers = operation(paintId);
     }
@@ -99,7 +99,7 @@ export function createDepthStackFragment(
         fit: input(card.fitName),
         spec: input(card.sampleSpecName),
       },
-      result: { kind: "output", name: "layers" },
+      result: { kind: "output" as const, name: "layers" },
     });
     const appendId = `append-${card.suffix}`;
     operations.push({
@@ -113,7 +113,7 @@ export function createDepthStackFragment(
         spec: input(card.cardSpecName),
         activation: input(card.activationName),
       },
-      result: { kind: "output", name: "set" },
+      result: { kind: "output" as const, name: "set" },
     });
     cardSet = operation(appendId);
   }
@@ -129,13 +129,13 @@ export function createDepthStackFragment(
       timeline: input("timeline"),
       terminal: input(terminalName),
     },
-    result: { kind: "output", name: "program" },
+    result: { kind: "output" as const, name: "program" },
   });
   operations.push({
     id: "track",
     producer: depthStackProducers.render,
     inputs: { timeline: input("timeline"), program: operation("program") },
-    result: { kind: "output", name: "track" },
+    result: { kind: "output" as const, name: "track" },
   });
   return sealGraphFragment({
     inputs,

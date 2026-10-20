@@ -6,6 +6,7 @@ import { blobDependency, blobTypes } from "@hypit/hypit/blob";
 import { compositionDependency, compositionTypes } from "@hypit/composition";
 import { fontArtifactSchema, mediaDependency, mediaTypes } from "@hypit/media";
 
+import { blobRefSchema } from "@hypit/hypit/protocol";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/hypit/protocol";
 import { spatialDependency, spatialFrameSchema, spatialTypes } from "@hypit/spatial";
 import { recipeType } from "@hypit/hypit/recipe";
@@ -51,12 +52,7 @@ const unsignedInteger = { kind: "number", integer: true, minimum: 0 } as const;
 const positiveInteger = { kind: "number", integer: true, minimum: 1 } as const;
 const object = (fields: Readonly<Record<string, { readonly schema: ValueSchema; readonly optional?: boolean }>>): ValueSchema => ({ kind: "object", fields });
 const enumString = (values: readonly string[]): ValueSchema => ({ kind: "string", enum: values });
-const blobRef = object({
-  kind: { schema: { kind: "literal", value: "blob" } },
-  resource: { schema: { kind: "string", minLength: 5, maxLength: 256 } },
-  size: { schema: unsignedInteger },
-  mediaType: { schema: string },
-});
+const blobRef = blobRefSchema();
 const duration: ValueSchema = { kind: "oneOf", variants: [
   object({ unit: { schema: { kind: "literal", value: "frames" } }, value: { schema: integer } }),
   object({ unit: { schema: { kind: "literal", value: "milliseconds" } }, value: { schema: integer } }),
@@ -341,7 +337,7 @@ export const commentStickerManifest: ModuleManifest = {
   ],
   capabilities: [],
   producers: [
-    { name: commentStickerProducers.createContent.name, inputs: [{ name: "comment", type: textTypes.text }], outputs: [{ name: "content", type: commentStickerTypes.content }], needs: [] },
+    { name: commentStickerProducers.createContent.name, inputs: [{ name: "comment", type: textTypes.text }], result: { kind: "output" as const, name: "content", type: commentStickerTypes.content } },
     ...([
       [commentStickerProducers.setContentAuthor, "author"],
       [commentStickerProducers.setContentHeader, "header"],
@@ -349,20 +345,19 @@ export const commentStickerManifest: ModuleManifest = {
     ] as const).map(([producer, field]) => ({
       name: producer.name,
       inputs: [{ name: "content", type: commentStickerTypes.content }, { name: field, type: textTypes.text }],
-      outputs: [{ name: "content", type: commentStickerTypes.content }], needs: [],
+      result: { kind: "output" as const, name: "content", type: commentStickerTypes.content },
     })),
-    { name: commentStickerProducers.createSet.name, inputs: [], outputs: [{ name: "set", type: commentStickerTypes.set }], needs: [] },
+    { name: commentStickerProducers.createSet.name, inputs: [], result: { kind: "output" as const, name: "set", type: commentStickerTypes.set } },
     ...([
       [commentStickerProducers.appendItem, []],
       [commentStickerProducers.appendItemAvatar, [{ name: "avatar", type: blobTypes.blob }]],
     ] as const).map(([producer, extra]) => ({
       name: producer.name,
       inputs: [...appendInputs, ...extra],
-      outputs: [{ name: "set", type: commentStickerTypes.set }],
-      needs: [],
+      result: { kind: "output" as const, name: "set", type: commentStickerTypes.set },
     })),
-    { name: commentStickerProducers.finalize.name, inputs: [{ name: "set", type: commentStickerTypes.set }, { name: "header", type: commentStickerTypes.header }], outputs: [{ name: "program", type: commentStickerTypes.program }], needs: [] },
-    { name: commentStickerProducers.render.name, inputs: [{ name: "timeline", type: timelineTypes.timeline }, { name: "program", type: commentStickerTypes.program }], outputs: [{ name: "track", type: compositionTypes.visualTrack }], needs: [] },
+    { name: commentStickerProducers.finalize.name, inputs: [{ name: "set", type: commentStickerTypes.set }, { name: "header", type: commentStickerTypes.header }], result: { kind: "output" as const, name: "program", type: commentStickerTypes.program } },
+    { name: commentStickerProducers.render.name, inputs: [{ name: "timeline", type: timelineTypes.timeline }, { name: "program", type: commentStickerTypes.program }], result: { kind: "output" as const, name: "track", type: compositionTypes.visualTrack } },
   ],
 };
 

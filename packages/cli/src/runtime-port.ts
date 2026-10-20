@@ -1,14 +1,12 @@
 import type { BlobAttachment } from "@hypit/workspace";
-import type { BuildResultForward } from "@hypit/result";
-import type { ExecutorOptions, ExecutorRunResult, ProducerRegistry } from "@hypit/executor";
+import type { PublicationPlan } from "@hypit/result";
+import type { ExecutorOptions, ProducerRegistry } from "@hypit/executor";
 import type {
   BuildDefinition,
   BuildState,
-  CanonicalValue,
   CapabilityRef,
-  LogicalOutputRef,
   Need,
-  StoredValue,
+  Value,
 } from "@hypit/protocol";
 import type {
   CapacityReservation,
@@ -16,6 +14,10 @@ import type {
   CredentialRef,
   OperationSnapshot,
   ResourceStore,
+  RuntimeEndpointObservation,
+  RuntimeEndpointPricingObservation,
+  RuntimeEndpointQuery,
+  ScheduledBuildResult,
 } from "@hypit/runtime";
 
 export type CliResultRepositoryLocation = { readonly root: string; readonly path: string };
@@ -30,12 +32,7 @@ export type CliDiagnostic = {
 export type CliBuildCatalogDescriptor = {
   readonly source: { readonly path: string };
   readonly run?: { readonly path: string };
-  readonly targets?: readonly LogicalOutputRef[];
-  readonly publishedOutputs: readonly {
-    readonly displayName?: string;
-    readonly name: string;
-    readonly ref: LogicalOutputRef;
-  }[];
+  readonly publication: PublicationPlan;
 };
 
 export type CliBuildView = {
@@ -52,15 +49,16 @@ export type CliBuildView = {
   readonly requests?: { readonly total: number; readonly completed: number };
   readonly acceptedRecords: number;
   readonly outstandingCommands: number;
-  readonly operations: readonly {
-    readonly id?: string;
+  readonly operations: readonly ({
+    readonly id: string;
     readonly receipt?: import("@hypit/runtime").OperationReceipt;
     readonly wakeAt?: number;
     readonly endpoint: string;
-    readonly status: OperationSnapshot["status"];
     readonly progress?: OperationSnapshot["progress"];
-    readonly failure?: OperationSnapshot["failure"];
-  }[];
+  } & (
+    | { readonly status: "failed"; readonly failure: Extract<OperationSnapshot, { readonly status: "failed" }>["failure"] }
+    | { readonly status: "pending" | "received" | "completed" | "cancelled"; readonly failure?: never }
+  ))[];
   readonly commands?: readonly {
     readonly id: string;
     readonly endpoint: string;
@@ -126,7 +124,6 @@ export type CliRuntime = CliRuntimeControl & CliCredentialControl & CliResultCon
     readonly result: {
       readonly repository: CliResultRepositoryLocation;
       readonly title?: string;
-      readonly forwards?: readonly BuildResultForward[];
       readonly resourceReferences?: Readonly<Record<string, import("@hypit/result").BuildResultFileRef>>;
     };
   }, options?: {
@@ -143,35 +140,26 @@ export type CliTransientExecution = {
   evaluate(input: {
     readonly state: BuildState;
     readonly producers: ProducerRegistry;
-    readonly validators: NonNullable<ExecutorOptions["validators"]>;
+    readonly refinements: NonNullable<ExecutorOptions["refinements"]>;
     readonly resources: ResourceStore;
-  }): Promise<ExecutorRunResult>;
+  }): Promise<ScheduledBuildResult>;
   close(): void | Promise<void>;
 };
 
-export type CliCapabilityProvider = {
-  readonly request: string;
-  readonly capability: CapabilityRef;
-  readonly status: "resolved" | "unresolved" | "unsupported" | "ambiguous";
-  readonly endpoint?: string;
-  readonly use?: string;
-  readonly pricing?: { readonly kind: "page"; readonly url: string } | { readonly kind: "local" };
-  readonly endpoints?: readonly string[];
-  readonly rejections?: readonly { readonly endpoint: string; readonly message: string }[];
-  readonly binding?: string;
-};
+export type CliEndpointObservation = RuntimeEndpointObservation;
+export type CliEndpointPricing = RuntimeEndpointPricingObservation;
+export type CliEndpointQuery = RuntimeEndpointQuery;
 
-export type CliCapabilityPricing = CliCapabilityProvider & {
-  readonly pricingDocuments?: readonly { readonly source: string; readonly data: CanonicalValue; readonly summary?: string }[];
-  readonly pricingError?: string;
-};
-
-export type CliProviderQuery = {
-  readonly request: string;
-  readonly capability: CapabilityRef;
-  readonly returns: import("@hypit/protocol").TypeRef;
-  readonly constraints: CanonicalValue;
-  readonly pendingInputs?: readonly { readonly input: string; readonly role?: string }[];
+/** One command-scoped Runtime snapshot; it owns no state beyond its lifetime. */
+export type CliRuntimeInspection = {
+  readonly dataRoot: string;
+  endpoints(): Promise<readonly CliEndpointObservation[]>;
+  pricing(): Promise<readonly CliEndpointPricing[]>;
+  preflight(): Promise<CliRuntimeDoctorResult>;
+  executionStatus(): Promise<{ readonly state: "running" | "stopped" }>;
+  ensureExecution(options?: { readonly maxWaitMs?: number }): Promise<{ readonly state: "running" | "stopped" }>;
+  createRuntime(): Promise<CliRuntime>;
+  close(): void | Promise<void>;
 };
 
 export type CliInvocationObservation = {
@@ -192,8 +180,9 @@ export type CliRuntimeHost = {
   openCredentials(endpoint: string): Promise<CliCredentialControl>;
   preflight(options?: { readonly capabilities?: readonly CapabilityRef[]; readonly endpoints?: readonly string[] }): Promise<CliRuntimeDoctorResult>;
   doctor(options?: { readonly capabilities?: readonly CapabilityRef[]; readonly endpoints?: readonly string[] }): Promise<CliRuntimeDoctorResult>;
-  providers(requests: readonly CliProviderQuery[]): Promise<readonly CliCapabilityProvider[]>;
-  pricing(requests: readonly CliProviderQuery[]): Promise<readonly CliCapabilityPricing[]>;
-  invoke(need: Need, resources: ResourceStore, observation?: CliInvocationObservation): Promise<{ readonly value: StoredValue }>;
+  openInspection(queries: readonly CliEndpointQuery[]): Promise<CliRuntimeInspection>;
+  endpoints(queries: readonly CliEndpointQuery[]): Promise<readonly CliEndpointObservation[]>;
+  pricing(queries: readonly CliEndpointQuery[]): Promise<readonly CliEndpointPricing[]>;
+  invoke(need: Need, resources: ResourceStore, observation?: CliInvocationObservation): Promise<{ readonly value: Value }>;
   openTransientExecution(): Promise<CliTransientExecution>;
 };

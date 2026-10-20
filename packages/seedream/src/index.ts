@@ -1,15 +1,14 @@
 import { blobTypes } from "@hypit/hypit/blob";
-import { sealGenerationPortRequest, sealGenerationPortTable } from "@hypit/generation";
-import type { GenerationPortTable, GenerationPortValue, GenerationRequest } from "@hypit/generation";
+import { sealModelFieldRequest, defineModelFields } from "@hypit/generation/model-fields";
+import type { ModelFieldTable, ModelFieldValue, ModelFieldRequest } from "@hypit/generation/model-fields";
 import type { SurfaceAttributeVocabulary } from "@hypit/hypit/markup";
-import { defineExactModelModule } from "@hypit/generation/model";
+import { defineFieldModelModule, standardGenerationResults } from "@hypit/generation/model-fields";
 import { textTypes } from "@hypit/hypit/text";
 
 export const seedreamModuleRef = { name: "@hypit/seedream", version: "1" } as const;
 
-export const seedream5LitePorts: GenerationPortTable = sealGenerationPortTable({
+export const seedream5LitePorts: ModelFieldTable = defineModelFields({
   model: "seedream-5-lite",
-  result: "image",
   ports: [
     { name: "prompt", value: { kind: "text", maxChars: 3_000 }, minItems: 1, maxItems: 1 },
     {
@@ -29,18 +28,19 @@ export const seedream5LitePorts: GenerationPortTable = sealGenerationPortTable({
 });
 
 export function sealSeedreamRequest(
-  ports: Readonly<Record<string, readonly GenerationPortValue[]>>,
-): GenerationRequest {
-  return sealGenerationPortRequest(seedream5LitePorts, ports);
+  ports: Readonly<Record<string, readonly ModelFieldValue[]>>,
+): ModelFieldRequest {
+  return sealModelFieldRequest(seedream5LitePorts, ports);
 }
 
-const seedreamBaseDefinition = defineExactModelModule({
+const seedreamBaseDefinition = defineFieldModelModule({
   module: seedreamModuleRef,
   endpoints: [{
     key: "image",
     requestTypeName: "Seedream5LiteRequest",
     producerName: "request-seedream-5-lite",
     ports: seedream5LitePorts,
+    result: standardGenerationResults.image,
   }],
 });
 

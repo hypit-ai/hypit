@@ -7,15 +7,7 @@ import { dirname, join, resolve } from "node:path";
 import { processAlive, stopProcessTree } from "./process-control.js";
 import { readProcessLogs } from "./process-logs.js";
 import { startWithOwnConsole } from "./programs.js";
-import type { RuntimeWorkerLaunch } from "./host-api.js";
-
-export type RuntimeProcessState = {
-  readonly state: "running" | "stopped";
-  readonly profile: string;
-  readonly pid?: number;
-  readonly startedAt?: number;
-  readonly logPath: string;
-};
+import type { RuntimeWorkerLaunch, RuntimeWorkerState } from "./host-api.js";
 
 type ProcessRecord = {
   readonly profile: string;
@@ -90,7 +82,7 @@ async function readyOwner(path: string): Promise<string | undefined> {
 export async function runtimeProcessStatus(
   profile: string,
   dataRoot: string,
-): Promise<RuntimeProcessState> {
+): Promise<RuntimeWorkerState> {
   const location = paths(dataRoot);
   const current = await record(dataRoot);
   if (current === undefined || !processAlive(current.pid)) {
@@ -141,7 +133,7 @@ async function waitForReady(
   dataRoot: string,
   owner: string,
   timeoutMs: number,
-): Promise<RuntimeProcessState> {
+): Promise<RuntimeWorkerState> {
   const location = paths(dataRoot);
   const deadline = Date.now() + timeoutMs;
   while (Date.now() <= deadline) {
@@ -175,7 +167,7 @@ export async function ensureRuntimeProcess(
   dataRoot: string,
   launch: RuntimeWorkerLaunch,
   timeoutMs = 10_000,
-): Promise<RuntimeProcessState> {
+): Promise<RuntimeWorkerState> {
   const absolute = resolve(profile);
   const location = paths(dataRoot);
   await mkdir(location.root, { recursive: true });
@@ -265,7 +257,7 @@ export async function ensureRuntimeProcess(
   }
 }
 
-async function stopRuntimeProcessUnlocked(profile: string, dataRoot: string, timeoutMs: number): Promise<RuntimeProcessState> {
+async function stopRuntimeProcessUnlocked(profile: string, dataRoot: string, timeoutMs: number): Promise<RuntimeWorkerState> {
   const current = await record(dataRoot);
   const location = paths(dataRoot);
   if (current === undefined || !processAlive(current.pid)) {
@@ -299,7 +291,7 @@ async function stopRuntimeProcessUnlocked(profile: string, dataRoot: string, tim
   return { state: "stopped", profile: resolve(profile), logPath: location.log };
 }
 
-export async function stopRuntimeProcess(profile: string, dataRoot: string, timeoutMs = 10_000): Promise<RuntimeProcessState> {
+export async function stopRuntimeProcess(profile: string, dataRoot: string, timeoutMs = 10_000): Promise<RuntimeWorkerState> {
   const location = paths(dataRoot);
   await mkdir(location.root, { recursive: true });
   const releaseLaunch = await acquireLaunch(location.launch, timeoutMs);

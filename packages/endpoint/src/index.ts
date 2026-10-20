@@ -1,13 +1,12 @@
 import type {
   CanonicalValue,
   CapabilityRef,
-  FulfillNeedCommand,
   ModuleRef,
   Need,
-  StoredValue,
+  Value,
   TypeRef,
 } from "@hypit/protocol";
-import { canonicalize } from "@hypit/protocol";
+import { canonicalize, capabilityKey } from "@hypit/protocol";
 import type {
   ResourceStore,
   CredentialAcquisition,
@@ -22,7 +21,7 @@ import type {
 import { capacityUnits, verifyCredentialRef } from "@hypit/runtime";
 
 export { canonicalize } from "@hypit/protocol";
-export type { BlobRef, CanonicalValue, CapabilityRef, ModuleRef, ResourceId, StoredValue, TypeRef } from "@hypit/protocol";
+export type { BlobRef, CanonicalValue, CapabilityRef, ModuleRef, ResourceId, Value, TypeRef } from "@hypit/protocol";
 export {
   credentialRef,
   decodeOAuth2Credential,
@@ -45,25 +44,21 @@ export type {
 export type Awaitable<T> = T | Promise<T>;
 
 export type EndpointFulfillment = {
-  readonly value: StoredValue;
+  readonly value: Value;
 };
 
-/** One future input binding whose value does not exist until an upstream graph step runs. */
-export type EndpointInputSlot = {
-  readonly input: string;
-  readonly role?: string;
+/** Deployment demand known from the finite BuildPlan before a concrete request exists. */
+export type EndpointDemand = {
+  readonly capability: Need["capability"];
+  readonly returns: Need["returns"];
 };
 
 /**
- * The complete support-relevant request. Execution-only ids and the result Record are deliberately
- * absent. Before a Build, future graph values appear as semantic slots; during execution their
- * concrete values are already present in `constraints` and `pendingInputs` is omitted.
+ * One concrete support-relevant request. Execution-only ids and the result Record are deliberately
+ * absent. This object exists only after its Producer has consumed every input and emitted a Need.
  */
-export type EndpointRequest = {
-  readonly capability: Need["capability"];
-  readonly returns: Need["returns"];
+export type EndpointRequest = EndpointDemand & {
   readonly constraints: Need["constraints"];
-  readonly pendingInputs?: readonly EndpointInputSlot[];
 };
 
 export type EndpointCredential = CredentialValue & {
@@ -101,7 +96,6 @@ export function verifyEndpointPricingDocument(value: EndpointPricingDocument): v
 }
 
 export type EndpointInvocationContext = {
-  readonly command: FulfillNeedCommand;
   readonly need: Need;
   readonly resources: ResourceStore;
   /** Only slots explicitly declared by this configured Endpoint instance are present. */
@@ -116,10 +110,12 @@ export type ImmediateEndpointHandler = (
   context: EndpointInvocationContext,
 ) => Awaitable<EndpointFulfillment>;
 
-export type EndpointCheckpoint = {
+export type EndpointCheckpoint = (
+  | { readonly status: "accepted" }
+  | { readonly status: "ended" }
+) & {
   readonly handle: CanonicalValue;
   readonly receipt?: OperationReceipt;
-  readonly remoteEnded?: true;
 };
 
 export const endpointActions = ["submit", "poll", "collect"] as const;
@@ -257,13 +253,23 @@ export type EndpointInstance = {
     readonly id: string;
     readonly pool: string;
   };
-  readonly offers: readonly EndpointOffer[];
+  readonly capabilities: readonly EndpointExecutableCapability[];
   /** Host-facing login material declared by this exact configured Endpoint instance. */
   readonly credentials: readonly EndpointCredentialDescription[];
   readonly pricing?: EndpointPricing;
   /** Optional live pricing-material reader owned by this Provider. */
   readonly readPricing?: EndpointPricingReader;
-  install(registry: EndpointRegistrar): Awaitable<void>;
+};
+
+export type EndpointExecutableCapability = (
+  | { readonly lifecycle: "immediate"; readonly handler: ImmediateEndpointHandler }
+  | { readonly lifecycle: "asynchronous"; readonly endpoint: AsyncEndpoint }
+) & {
+  readonly capability: CapabilityRef;
+  readonly returns: TypeRef;
+  readonly supports?: (request: EndpointRequest) => EndpointSupport;
+  readonly transient?: true;
+  readonly scheduling: EndpointScheduling;
 };
 
 export type EndpointOffer = {
@@ -273,6 +279,48 @@ export type EndpointOffer = {
   readonly supports?: (request: EndpointRequest) => EndpointSupport;
   readonly transient?: true;
 };
+
+/** Public discovery projection derived from the executable declarations. */
+export function endpointOffers(endpoint: EndpointInstance): readonly EndpointOffer[] {
+  return endpoint.capabilities.map((item) => ({
+    capability: item.capability,
+    returns: item.returns,
+    endpoint: endpoint.instance.id,
+    ...(item.supports === undefined ? {} : { supports: item.supports }),
+    ...(item.transient === true ? { transient: true } : {}),
+  }));
+}
+
+/** Install the same declarations used by discovery; no second registration surface exists. */
+export async function installEndpoint(endpoint: EndpointInstance, registry: EndpointRegistrar): Promise<void> {
+  const credentials = Object.fromEntries(endpoint.credentials.map((item) => [item.slot, item.ref]));
+  for (const capability of endpoint.capabilities) {
+    const common: EndpointRegistrationOptions = {
+      pool: endpoint.instance.pool,
+      ...(capability.supports === undefined ? {} : { supports: capability.supports }),
+      ...(capability.transient === true ? { transient: true } : {}),
+      credentials,
+      scheduling: capability.scheduling,
+    };
+    if (capability.lifecycle === "immediate") {
+      registry.registerImmediateEndpoint(
+        endpoint.instance.id,
+        capability.capability,
+        capability.returns,
+        capability.handler,
+        common,
+      );
+    } else {
+      registry.registerAsyncEndpoint(
+        endpoint.instance.id,
+        capability.capability,
+        capability.returns,
+        capability.endpoint,
+        common,
+      );
+    }
+  }
+}
 
 export type EndpointCredentialDescription = {
   readonly endpoint: string;
@@ -338,10 +386,6 @@ function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
 
-function refKey(ref: { readonly module: ModuleRef; readonly name: string }): string {
-  return `${ref.module.name}@${ref.module.version}#${ref.name}`;
-}
-
 function positiveInteger(value: number, subject: string): number {
   assert(Number.isSafeInteger(value) && value > 0, `${subject} must be a positive safe integer`);
   return value;
@@ -354,7 +398,7 @@ export function defineEndpoint(options: DefineEndpointOptions): EndpointInstance
   assert(options.capabilities.length > 0, "Endpoint instance declares no capability");
   assert(options.actions === undefined || options.actionLimits === undefined,
     "Endpoint instance must choose actions or actionLimits, not both");
-  const keys = options.capabilities.map((item) => refKey(item.capability));
+  const keys = options.capabilities.map((item) => capabilityKey(item.capability));
   assert(new Set(keys).size === keys.length, "Endpoint instance repeats a capability");
   const capacities = options.capabilities.map((item) => item.capacity ?? item.capability.name);
   assert(capacities.every((capacity) => capacity.trim().length > 0), "Endpoint instance capacity class is empty");
@@ -366,7 +410,7 @@ export function defineEndpoint(options: DefineEndpointOptions): EndpointInstance
   const capacityConcurrency = new Map<string, number>();
   for (const capability of options.capabilities) {
     assert(capability.transient !== true || capability.lifecycle === "immediate",
-      `Endpoint capability ${refKey(capability.capability)} cannot be transient and asynchronous`);
+      `Endpoint capability ${capabilityKey(capability.capability)} cannot be transient and asynchronous`);
     const capacity = capability.capacity ?? capability.capability.name;
     const concurrency = positiveInteger(
       capability.maxConcurrency ?? options.defaultConcurrency ?? 1,
@@ -403,75 +447,52 @@ export function defineEndpoint(options: DefineEndpointOptions): EndpointInstance
       ...(input?.acquisition === undefined ? {} : { acquisition: structuredClone(input.acquisition) }),
     } satisfies EndpointCredentialDescription;
   });
-  const fulfills = options.capabilities.map((item) => ({
-    capability: structuredClone(item.capability),
-    returns: structuredClone(item.returns),
-    ...(item.supports === undefined ? {} : { supports: item.supports }),
-    ...(item.transient === true ? { transient: true as const } : {}),
-  }));
   const instance = {
     id: options.instance,
     pool: options.pool,
   };
   const actions = options.actions ?? (options.actionLimits === undefined ? undefined : actionResourceClaims(options.pool, options.actionLimits));
-  const offers: readonly EndpointOffer[] = fulfills.map((item) => ({
-    ...item,
-    endpoint: options.instance,
-  }));
+  const capabilities: EndpointExecutableCapability[] = options.capabilities.map((capability) => {
+    const capacity = capability.capacity ?? capability.capability.name;
+    const authorityConcurrency = positiveInteger(options.defaultConcurrency ?? 1, "defaultConcurrency");
+    const exactConcurrency = positiveInteger(
+      capability.maxConcurrency ?? authorityConcurrency,
+      `${capacity} maxConcurrency`,
+    );
+    const scheduling: EndpointScheduling = {
+      ...(capability.lifecycle !== "asynchronous" || actions === undefined ? {} : { actions }),
+      ...(capability.unitsForRequest === undefined ? {} : { unitsForRequest: capability.unitsForRequest }),
+      resources: [
+        { id: `pool:${options.pool}`, limit: authorityConcurrency },
+        { id: `capacity:${options.pool}/${capacity}`, limit: exactConcurrency },
+        ...(capability.resources ?? []),
+      ],
+    };
+    return capability.lifecycle === "immediate"
+      ? {
+          lifecycle: "immediate",
+          capability: structuredClone(capability.capability),
+          returns: structuredClone(capability.returns),
+          handler: capability.handler,
+          scheduling,
+          ...(capability.supports === undefined ? {} : { supports: capability.supports }),
+          ...(capability.transient === true ? { transient: true as const } : {}),
+        }
+      : {
+          lifecycle: "asynchronous",
+          capability: structuredClone(capability.capability),
+          returns: structuredClone(capability.returns),
+          endpoint: capability.endpoint,
+          scheduling,
+          ...(capability.supports === undefined ? {} : { supports: capability.supports }),
+        };
+  });
   return {
     instance,
-    offers,
+    capabilities,
     credentials: credentialDescriptions,
     ...(options.pricing === undefined ? {} : { pricing: structuredClone(options.pricing) }),
     ...(options.readPricing === undefined ? {} : { readPricing: options.readPricing }),
-    install(registry) {
-      for (const capability of options.capabilities) {
-        const capacity = capability.capacity ?? capability.capability.name;
-        const authorityConcurrency = positiveInteger(options.defaultConcurrency ?? 1, "defaultConcurrency");
-        const exactConcurrency = positiveInteger(
-          capability.maxConcurrency ?? authorityConcurrency,
-          `${capacity} maxConcurrency`,
-        );
-        const common: EndpointRegistrationOptions = {
-          pool: options.pool,
-          ...(capability.supports === undefined ? {} : { supports: capability.supports }),
-          ...(capability.transient === true ? { transient: true } : {}),
-          credentials,
-          scheduling: {
-            ...(capability.lifecycle !== "asynchronous" || actions === undefined ? {} : { actions }),
-            ...(capability.unitsForRequest === undefined ? {} : { unitsForRequest: capability.unitsForRequest }),
-            resources: [
-              {
-                id: `pool:${options.pool}`,
-                limit: authorityConcurrency,
-              },
-              {
-                id: `capacity:${options.pool}/${capacity}`,
-                limit: exactConcurrency,
-              },
-              ...(capability.resources ?? []),
-            ],
-          },
-        };
-        if (capability.lifecycle === "immediate") {
-          registry.registerImmediateEndpoint(
-            options.instance,
-            capability.capability,
-            capability.returns,
-            capability.handler,
-            common,
-          );
-        } else {
-          registry.registerAsyncEndpoint(
-            options.instance,
-            capability.capability,
-            capability.returns,
-            capability.endpoint,
-            common,
-          );
-        }
-      }
-    },
   };
 }
 

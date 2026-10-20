@@ -45,18 +45,12 @@ export type LocateNodePackageOptions = {
   readonly from: string | URL;
   /** Explicit project roots whose `packages/` or `services/` directories own selected packages. */
   readonly workspaceRoots?: readonly string[];
-  /** Defaults to the active Hypit Distribution roots. */
+  /** Explicit Hypit Distribution roots available to this resolution. */
   readonly distributionRoots?: readonly string[];
 };
 
-let activeDistributionRoots: readonly string[] = [];
-
 function normalizedRoots(roots: readonly string[]): readonly string[] {
   return [...new Set(roots.map((root) => resolve(root)))];
-}
-
-export function setActiveDistributionPackageRoots(roots: readonly string[]): void {
-  activeDistributionRoots = normalizedRoots(roots);
 }
 
 function packageName(value: string): string {
@@ -217,15 +211,13 @@ export function locateNodePackage(nameValue: string, options: LocateNodePackageO
   const name = packageName(nameValue);
   const from = fromPath(options.from);
   const workspaceRoots = normalizedRoots(options.workspaceRoots ?? []);
-  const distributionRoots = normalizedRoots(options.distributionRoots ?? activeDistributionRoots);
+  const distributionRoots = normalizedRoots(options.distributionRoots ?? []);
   const nearby = ancestorPackage(name, from);
 
-  if (name.startsWith("@hypit/")) {
-    for (const root of distributionRoots) {
-      const directory = embeddedPackageDirectory(root, name);
-      const embedded = directory === undefined ? undefined : readPackage(directory, name);
-      if (embedded !== undefined) return embedded;
-    }
+  for (const root of distributionRoots) {
+    const directory = embeddedPackageDirectory(root, name);
+    const embedded = directory === undefined ? undefined : readPackage(directory, name);
+    if (embedded !== undefined) return embedded;
   }
 
   if (nearby !== undefined) return nearby;

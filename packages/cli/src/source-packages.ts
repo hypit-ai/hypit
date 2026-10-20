@@ -10,6 +10,11 @@ import { modulePackageAbi } from "@hypit/protocol";
 
 import type { CliDistribution } from "./distribution.js";
 
+type CliSourcePackageDiscovery = Pick<
+  CliDistribution,
+  "bootstrapPackages" | "discoverSourcePackages"
+>;
+
 type DiscoveryOptions = {
   readonly source: string;
   readonly workspaceRoot?: string;
@@ -24,7 +29,7 @@ function mergePackages(
 }
 
 async function discover(
-  distribution: CliDistribution,
+  distribution: CliSourcePackageDiscovery,
   options: DiscoveryOptions,
   packages: readonly LoadedPackage[],
 ) {
@@ -49,7 +54,7 @@ function offerCounts(packages: readonly LoadedPackage[]): ReadonlyMap<string, nu
         ...(module.specifiers ?? []),
       ].map((name) => ({ abi: modulePackageAbi, name }))),
       ...(item.contribution.facets ?? []).flatMap((facet) =>
-        (facet.offers ?? []).map((name) => ({ abi: facet.abi, name }))),
+        facet.address === undefined ? [] : [{ abi: facet.abi, name: facet.address }]),
     ];
     for (const address of new Set(offers.map((offer) => `${offer.abi}\u0000${offer.name}`))) {
       counts.set(address, (counts.get(address) ?? 0) + 1);
@@ -70,7 +75,7 @@ function selectionSatisfied(
 
 /** Load only the installed packages reached by recursive Frontend discovery. */
 export async function loadDiscoveredSourcePackages(
-  distribution: CliDistribution,
+  distribution: CliSourcePackageDiscovery,
   options: DiscoveryOptions,
 ): Promise<readonly LoadedPackage[]> {
   let packages = distribution.bootstrapPackages;

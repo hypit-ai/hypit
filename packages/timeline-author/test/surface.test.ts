@@ -26,7 +26,7 @@ function clockReference(numerator: number, denominator = 1) {
     record: {
       id: "clock",
       type: timelineTypes.clock,
-      value: { kind: "inline" as const, value: { frameRate: { numerator, denominator } } },
+      value: ({ frameRate: { numerator, denominator } }),
     },
   };
 }
@@ -52,8 +52,8 @@ test("Timeline Surface publishes its range and every named Instant or Window", a
     "film.outro", "film.outro.start", "film.outro.end",
     "film.speech", "film.speech.start", "film.speech.end", "film.private-cue",
   ]);
-  assert.equal(JSON.stringify(output.fragments).includes("speech.end"), false);
-  assert.equal(JSON.stringify(output.fragments).includes("3s"), false);
+  assert.equal(JSON.stringify(output.components.map(({ fragment }) => fragment)).includes("speech.end"), false);
+  assert.equal(JSON.stringify(output.components.map(({ fragment }) => fragment)).includes("3s"), false);
   const childRecords = output.records.filter((record) => record.range.start !== element.range.start);
   assert(childRecords.some((record) => record.range.start === source.indexOf('<time:Window id="outro"')));
   assert(childRecords.every((record) => record.range.start !== source.indexOf('<time:Instant id="private-cue"')));
@@ -122,8 +122,8 @@ test("standalone Window publishes one reusable value and its boundaries", async 
   assert.deepEqual(output.exports, ["reveal-band", "reveal-band.start", "reveal-band.end"]);
   assert.deepEqual(output.components[0]?.outputs,
     { window: "reveal-band", start: "reveal-band.start", end: "reveal-band.end" });
-  assert.equal(output.fragments[0]?.exports.find((port) => port.name === "window")?.type.name, "TemporalWindow");
-  assert.equal(output.fragments[0]?.exports.filter((port) => port.type.name === "TemporalInstant").length, 2);
+  assert.equal(output.components[0]?.fragment.exports.find((port) => port.name === "window")?.type.name, "TemporalWindow");
+  assert.equal(output.components[0]?.fragment.exports.filter((port) => port.type.name === "TemporalInstant").length, 2);
 });
 
 test("standalone Instant publishes direct points and explicit shifts without creating aliases", async () => {
@@ -153,5 +153,5 @@ test("standalone Instant publishes direct points and explicit shifts without cre
     resolveAsset: async () => { throw new Error("unused"); },
   });
   assert.deepEqual(shiftedOutput.exports, ["after-reveal"]);
-  assert.equal(shiftedOutput.fragments[0]?.operations.at(-1)?.producer.name, "shift-instant");
+  assert.equal(shiftedOutput.components[0]?.fragment.operations.at(-1)?.producer.name, "shift-instant");
 });

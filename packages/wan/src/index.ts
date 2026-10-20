@@ -1,8 +1,8 @@
 import { blobTypes } from "@hypit/hypit/blob";
-import { sealGenerationPortRequest, sealGenerationPortTable } from "@hypit/generation";
-import type { GenerationPortTable, GenerationPortValue, GenerationRequest } from "@hypit/generation";
+import { sealModelFieldRequest, defineModelFields } from "@hypit/generation/model-fields";
+import type { ModelFieldTable, ModelFieldValue, ModelFieldRequest } from "@hypit/generation/model-fields";
 import type { SurfaceAttributeVocabulary, SurfaceChildVocabulary } from "@hypit/hypit/markup";
-import { defineExactModelModule } from "@hypit/generation/model";
+import { defineFieldModelModule, standardGenerationResults } from "@hypit/generation/model-fields";
 import { textTypes } from "@hypit/hypit/text";
 
 export const wanModuleRef = { name: "@hypit/wan", version: "1" } as const;
@@ -16,11 +16,10 @@ export type WanModel = typeof wanModels[number];
 const WAN_RESOLUTIONS = ["1K", "2K"] as const;
 const WAN_PRO_RESOLUTIONS = ["1K", "2K", "4K"] as const;
 
-function wanPortTable(model: WanModel): GenerationPortTable {
+function wanPortTable(model: WanModel): ModelFieldTable {
   const pro = model === "wan-2.7-image-pro";
-  return sealGenerationPortTable({
+  return defineModelFields({
     model,
-    result: "image",
     ports: [
       { name: "prompt", value: { kind: "text", maxChars: 5_000 }, minItems: 1, maxItems: 1 },
       { name: "images", value: { kind: "media", accepts: ["image"] }, minItems: 0, maxItems: 9 },
@@ -44,25 +43,26 @@ function wanPortTable(model: WanModel): GenerationPortTable {
   });
 }
 
-export const wanPorts: Readonly<Record<WanModel, GenerationPortTable>> = {
+export const wanPorts: Readonly<Record<WanModel, ModelFieldTable>> = {
   "wan-2.7-image": wanPortTable("wan-2.7-image"),
   "wan-2.7-image-pro": wanPortTable("wan-2.7-image-pro"),
 };
 
 export function sealWanRequest(
   model: WanModel,
-  ports: Readonly<Record<string, readonly GenerationPortValue[]>>,
-): GenerationRequest {
-  return sealGenerationPortRequest(wanPorts[model], ports);
+  ports: Readonly<Record<string, readonly ModelFieldValue[]>>,
+): ModelFieldRequest {
+  return sealModelFieldRequest(wanPorts[model], ports);
 }
 
-const wanBaseDefinition = defineExactModelModule({
+const wanBaseDefinition = defineFieldModelModule({
   module: wanModuleRef,
   endpoints: wanModels.map((model) => ({
     key: model === "wan-2.7-image" ? "image" : "pro",
     requestTypeName: model === "wan-2.7-image" ? "WanImageRequest" : "WanProImageRequest",
     producerName: `request-${model}`,
     ports: wanPorts[model],
+    result: standardGenerationResults.image,
   })),
 });
 
@@ -116,17 +116,25 @@ const surface = (
     summary,
     attributes: wanAttributes(pro),
     children: wanChildren,
-    ports: [{
-      name: "image",
-      type: blobTypes.blob,
-      summary: "The primary generated image, addressed as `<id>.image`.",
-    }],
+    ports: [
+      {
+        name: "images",
+        type: endpoint!.returns,
+        summary: "The complete generated image set, addressed as `<id>.images`.",
+      },
+      {
+        name: "image",
+        type: blobTypes.blob,
+        summary: "The explicitly selected primary image, addressed as `<id>.image`.",
+      },
+    ],
     example,
     notes: [
       "The element accepts at most 9 `Reference` children and no text content.",
       "With references present the output takes the shape of the last one; a prompt-only element renders at the band's own framing.",
       "The model reads exclusions from the prompt itself, so write them there.",
       "Every `Reference` is an ordinary image Artifact edge; the Surface copies no runtime media into request metadata.",
+      "Multi-image runs publish the complete set as `<id>.images`; `<id>.image` remains the explicit primary selection.",
       "The Surface lowers the element into the package's exact model request and selects no Provider.",
     ],
   },

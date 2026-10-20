@@ -1,11 +1,11 @@
-import { createExactModelPrimaryGenerationFragment } from "@hypit/generation/model";
-import type { ExactModelEndpoint, ExactModelMediaInput, ExactModelTextInput } from "@hypit/generation/model";
+import { createFieldModelPrimaryFragment } from "@hypit/generation/model-fields";
+import type { FieldModelOperation, ModelArtifactInput, ModelTextInput } from "@hypit/generation/model-fields";
 
 /** Model result projection over the same graph-native request assembly as every exact model. */
 export function createMimoSpeechAudioFragment(
-  endpoint: ExactModelEndpoint,
-  mediaInputs: readonly ExactModelMediaInput[] = [],
-  textInputs: readonly ExactModelTextInput[] = [],
+  endpoint: FieldModelOperation,
+  mediaInputs: readonly ModelArtifactInput[] = [],
+  textInputs: readonly ModelTextInput[] = [],
 ) {
-  return createExactModelPrimaryGenerationFragment(endpoint, mediaInputs, textInputs);
+  return createFieldModelPrimaryFragment(endpoint, mediaInputs, textInputs);
 }

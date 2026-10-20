@@ -18,7 +18,7 @@ import { parameterAuthorValue, parameterOption, serializeParameterValue, seriali
 import { readStudioSession } from "./session.js";
 import type { StudioSession } from "./session.js";
 import type { Range, StudioFailure, StudioLibraryRequest, StudioLibraryView, StudioMutation, StudioSnapshot } from "./shared.js";
-import { createStudioStoryboard } from "./storyboard.js";
+import { createStudioStoryboard, createStudioWaveform } from "./storyboard.js";
 import type { StudioStoryboard } from "./storyboard.js";
 import { findSurfacePreview } from "./surface-preview.js";
 import { domainGestureSpan } from "./temporal-edit.js";
@@ -92,6 +92,7 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
   let timer: ReturnType<typeof setTimeout> | undefined;
   let mutating = false;
   let publishing = 0;
+  let publication: Promise<void> = Promise.resolve();
   let requestedRevision = 0;
   let currentSource = options.source;
   let allowedSourceFiles = new Set<string>();
@@ -100,6 +101,9 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
     message => server?.config.logger.warn(message),
   );
   const storyboards = new Map<string, Promise<StudioStoryboard>>();
+  const waveforms = new Map<string, Promise<Uint8Array>>();
+  let waveformQueue: Promise<unknown> = Promise.resolve();
+  let storyboardQueue: Promise<unknown> = Promise.resolve();
 
   const readLibrary = async (request: StudioLibraryRequest): Promise<StudioLibraryView> => {
     return await options.buildLibrary?.library(request) ?? {
@@ -110,8 +114,7 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
     };
   };
 
-  const publish = async (attempt: number, notify = true): Promise<void> => {
-    publishing += 1;
+  const publishRevision = async (attempt: number, notify: boolean): Promise<void> => {
     try {
       // SVML and SVRun form one Studio source of truth. Recompile both for
       // every revision so a new Author graph is never executed through an old
@@ -151,6 +154,8 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
       visualHtml = result.visualHtml;
       visualDocument = result.document;
       material = result.material;
+      storyboards.clear();
+      waveforms.clear();
       temporalEdit = result.temporalEdit;
       failure = undefined;
       if (notify) server?.ws.send({ type: "custom", event: "studio:snapshot", data: snapshot });
@@ -164,9 +169,23 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
         ...(range === undefined ? {} : { range }),
       };
       if (notify) server?.ws.send({ type: "custom", event: "studio:error", data: failure });
-    } finally {
-      publishing -= 1;
     }
+  };
+
+  // Source changes supersede queued revisions; readers share the in-flight compilation.
+  const publish = (attempt: number, notify = true): Promise<void> => {
+    publishing += 1;
+    const next = publication.then(async () => {
+      if (attempt === requestedRevision) await publishRevision(attempt, notify);
+    }).finally(() => { publishing -= 1; });
+    publication = next;
+    return next;
+  };
+
+  const ensureSnapshot = async (): Promise<void> => {
+    if (snapshot !== undefined || failure !== undefined) return;
+    if (publishing === 0) await publish(++requestedRevision);
+    else await publication;
   };
 
   const schedule = (): void => {
@@ -396,7 +415,6 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
     if (parameter.options !== undefined && !parameter.options.some(option => parameterOption(option).value === authorValue)) {
       throw new Error(`${parameter.label} does not accept ${mutation.value}.`);
     }
-    if (parameter.control === "color") validateParameterValue(authorValue, { kind: "string", format: "color" }, parameter.label);
     if (parameter.edit.attributes) {
       const replacement = serializeAttributeGroup(parameter, authorValue);
       return replacement === parameter.edit.source.preimage ? [] : [{ ...parameter.edit.source, replacement }];
@@ -592,7 +610,7 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
               json(response, 409, { error: "Studio is compiling a Source change; capture after the updated preview is ready." });
               return;
             }
-            if (snapshot === undefined && failure === undefined) await publish(++requestedRevision);
+            await ensureSnapshot();
             if (failure !== undefined || visualHtml === undefined) {
               json(response, 500, failure ?? { error: "Studio has no compiled picture." });
               return;
@@ -610,10 +628,7 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
         }
         if (url.pathname === "/__studio/session") {
           void (async () => {
-            if (snapshot === undefined && failure === undefined) {
-              const attempt = ++requestedRevision;
-              await publish(attempt);
-            }
+            await ensureSnapshot();
             if (failure !== undefined && (snapshot === undefined || failure.revision > snapshot.revision)) {
               json(response, 500, failure);
             } else if (snapshot !== undefined) {
@@ -669,6 +684,36 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
           });
           return;
         }
+        const waveformResource = /^\/__studio\/waveform\/(res_[a-zA-Z0-9._:-]+)$/u.exec(url.pathname)?.[1];
+        if (waveformResource !== undefined) {
+          void (async () => {
+            const file = material.get(waveformResource);
+            if (file === undefined || !/^(audio|video)\//u.test(file.mediaType)) {
+              response.statusCode = 404;
+              response.end();
+              return;
+            }
+            let pending = waveforms.get(waveformResource);
+            if (pending === undefined) {
+              pending = waveformQueue.then(() => {
+                if (material.get(waveformResource) !== file) throw new Error("Studio material changed before its waveform was requested.");
+                return createStudioWaveform(file);
+              });
+              waveformQueue = pending.catch(() => undefined);
+              waveforms.set(waveformResource, pending);
+            }
+            const bytes = await pending;
+            response.statusCode = 200;
+            response.setHeader("content-type", "image/png");
+            response.setHeader("cache-control", "public, max-age=31536000, immutable");
+            if (request.method === "HEAD") response.end();
+            else response.end(Buffer.from(bytes));
+          })().catch((error) => {
+            waveforms.delete(waveformResource);
+            json(response, 500, { error: error instanceof Error ? error.message : String(error) });
+          });
+          return;
+        }
         const storyboardResource = /^\/__studio\/storyboard\/(res_[a-zA-Z0-9._:-]+)$/u.exec(url.pathname)?.[1];
         if (storyboardResource !== undefined) {
           void (async () => {
@@ -681,7 +726,11 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
             try {
               let pending = storyboards.get(storyboardResource);
               if (pending === undefined) {
-                pending = createStudioStoryboard(file);
+                pending = storyboardQueue.then(() => {
+                  if (material.get(storyboardResource) !== file) throw new Error("Studio material changed before its storyboard was requested.");
+                  return createStudioStoryboard(file);
+                });
+                storyboardQueue = pending.catch(() => undefined);
                 storyboards.set(storyboardResource, pending);
               }
               const storyboard = await pending;
@@ -711,7 +760,7 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
             response.end();
             return;
           }
-          const size = file.bytes.byteLength;
+          const size = file.size;
           let range: BuildResultFileRange | undefined;
           try {
             range = requestedByteRange(request.headers.range, size);
@@ -731,7 +780,16 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
             response.setHeader("content-range", `bytes ${range.start}-${range.endExclusive - 1}/${size}`);
           }
           if (request.method === "HEAD") response.end();
-          else response.end(range === undefined ? file.bytes : file.bytes.subarray(range.start, range.endExclusive));
+          else void (async () => {
+            await pipeline(Readable.from(await file.open(range)), response);
+          })().catch((error) => {
+            if (response.headersSent) response.destroy(error instanceof Error ? error : new Error(String(error)));
+            else {
+              response.removeHeader("content-length");
+              response.removeHeader("content-range");
+              json(response, 500, { error: error instanceof Error ? error.message : String(error) });
+            }
+          });
           return;
         }
         if (url.pathname === "/__studio/artifact") {

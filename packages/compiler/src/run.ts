@@ -1,26 +1,28 @@
-import type { WorkspaceSession } from "@hypit/workspace";
 import {
   sliceExecution,
   defineBuild,
+  link,
   materializeBuild,
   planBuild,
+  verifyRecordStructure,
 } from "@hypit/kernel";
-import type { BuildCandidateSelection } from "@hypit/kernel";
+import type { BuildCandidateSelection, PlannedExecution } from "@hypit/kernel";
 import type {
   BlobAttachment,
+  WorkspaceSession,
 } from "@hypit/workspace";
 import type {
   BuildDefinition,
   BuildState,
-  StoredValue,
+  Value,
   TypeRef,
+  TypedRecord,
 } from "@hypit/protocol";
-import { sameType } from "@hypit/protocol";
+import { normalizeValue, sameType } from "@hypit/protocol";
 import {
   collectRunModuleRequests,
   compileRunSource,
   resolveRunDocument,
-  sealRunGraph,
 } from "@hypit/run";
 import type {
   RunCompilation,
@@ -29,12 +31,21 @@ import type {
 } from "@hypit/run";
 import type { LinkedProgram } from "@hypit/protocol";
 import type { ResolvedSource, SourceUnit } from "@hypit/source";
+import type { PublicationPlan } from "@hypit/result";
 
 import type { CompiledAuthorSource } from "./compiler.js";
-import { mergeAttachments, Compiler } from "./compiler.js";
+import { mergeAttachments } from "./compiler.js";
+
+/** The exact Author-compilation boundary required by Run compilation. */
+export type RunAuthorCompiler = {
+  openEntry(locator: string): Promise<WorkspaceSession>;
+  compileResolvedSource(entry: ResolvedSource, workspace: WorkspaceSession): Promise<CompiledAuthorSource>;
+  extendExecutionProgram(program: LinkedProgram, requests: readonly string[]): LinkedProgram;
+  validateRecord(program: LinkedProgram, record: TypedRecord): Promise<void>;
+};
 
 export type RunCompilerOptions = {
-  readonly authorCompiler: Compiler;
+  readonly authorCompiler: RunAuthorCompiler;
   readonly frontends: RunFrontendRegistryLike;
   readonly fragments: RunFragmentRegistryLike;
   readonly locateHistoricalOutput?: (
@@ -56,12 +67,12 @@ export type RunCompilerOptions = {
     output: string,
   ) => Promise<{
     readonly type: TypeRef;
-    readonly value: StoredValue;
+    readonly value: Value;
     readonly attachments?: readonly BlobAttachment[];
   } | undefined>
     | {
       readonly type: TypeRef;
-      readonly value: StoredValue;
+      readonly value: Value;
       readonly attachments?: readonly BlobAttachment[];
     }
     | undefined;
@@ -74,12 +85,16 @@ export type CompiledRun = {
   /** Author program rebound to the union closure required by Author and selected Run code. */
   readonly program: LinkedProgram;
   readonly run: RunCompilation;
+  /** The one structural selection shared by supply materialization, execution slicing and publication. */
+  readonly selection: PlannedExecution;
   /** Terminal historical addresses selected during structural planning, keyed by Candidate id. */
   readonly historicalOutputs: Readonly<Record<string, {
     readonly build: string;
     readonly output: string;
     readonly type: TypeRef;
   }>>;
+  /** Selected zero-input sources that have been materialized and validated for this compilation. */
+  readonly materializedSupplies: readonly TypedRecord[];
   readonly attachments: readonly BlobAttachment[];
 };
 
@@ -97,34 +112,36 @@ export type CheckedRun = {
   readonly attachments: readonly BlobAttachment[];
 };
 
-export type PlannedBuild = {
+export type PreparedBuild = {
   readonly compilation: CompiledRun;
   /** Compiler-only explanation of how the two graphs became the execution plan. */
   readonly selections: readonly BuildCandidateSelection[];
-  /** Whole-Output historical sources selected by the plan; Result storage may forward them directly. */
-  readonly resultForwards: readonly {
-    readonly output: string;
-    readonly build: string;
-    readonly sourceOutput: string;
-    readonly type: TypeRef;
-  }[];
+  /** Public Result surface and source ownership derived from the same structural selection. */
+  readonly publication: PublicationPlan;
   /** Immutable authority persisted once for every fresh Runtime Build. */
   readonly definition: BuildDefinition;
   /** Materialized plan/read view; durable Stores persist Definition + Facts instead. */
   readonly state: BuildState;
 };
 
-function decodeStoredValue(bytes: Uint8Array, from: string): StoredValue {
+type StructuralRunResolution = {
+  readonly decoded: Awaited<ReturnType<typeof compileRunSource>>;
+  readonly authorSource: ResolvedSource;
+  readonly author: CompiledAuthorSource;
+  readonly program: LinkedProgram;
+  readonly run: RunCompilation;
+  readonly plan: PlannedExecution;
+  readonly selectedCandidates: ReadonlySet<string>;
+};
+
+function decodeValue(bytes: Uint8Array, from: string): Value {
   let parsed: unknown;
   try {
     parsed = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
   } catch (error) {
-    throw new Error(`${from} is not valid UTF-8 StoredValue JSON: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(`${from} is not valid UTF-8 Value JSON: ${error instanceof Error ? error.message : String(error)}`);
   }
-  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
-    throw new Error(`${from} must contain one StoredValue object`);
-  }
-  return parsed as StoredValue;
+  return normalizeValue(parsed, from);
 }
 
 async function attachmentBytes(attachment: BlobAttachment): Promise<Uint8Array> {
@@ -143,15 +160,15 @@ async function attachmentBytes(attachment: BlobAttachment): Promise<Uint8Array> 
   return bytes;
 }
 
-async function storedValueFromWorkspace(
+async function valueFromWorkspace(
   workspace: WorkspaceSession,
   source: SourceUnit,
   from: string,
-): Promise<StoredValue> {
+): Promise<Value> {
   const resolved = await workspace.resolveAsset(source, { from, mediaType: "application/json" });
-  const attachment = (await workspace.attachments()).find((item) => item.artifact.resource === resolved.artifact.resource);
+  const attachment = (await workspace.attachments()).find((item) => item.blob.resource === resolved.blob.resource);
   if (attachment === undefined) throw new Error(`Workspace did not retain bytes for ${from}`);
-  return decodeStoredValue(await attachmentBytes(attachment), from);
+  return decodeValue(await attachmentBytes(attachment), from);
 }
 
 async function fileValueFromWorkspace(
@@ -159,8 +176,21 @@ async function fileValueFromWorkspace(
   source: SourceUnit,
   from: string,
   mediaType: string,
-): Promise<StoredValue> {
-  return (await workspace.resolveAsset(source, { from, mediaType })).artifact;
+): Promise<Value> {
+  return (await workspace.resolveAsset(source, { from, mediaType })).blob;
+}
+
+function materializedSupply(
+  program: LinkedProgram,
+  planned: PlannedExecution,
+  candidate: string,
+  value: Value,
+): TypedRecord {
+  const supply = planned.selectedSupplies.find((item) => item.candidate === candidate);
+  if (supply === undefined) throw new Error(`Candidate ${candidate} does not declare a selected supply`);
+  const record: TypedRecord = { id: supply.record, type: supply.type, value };
+  verifyRecordStructure(program.closure, record);
+  return record;
 }
 
 /** Compiler for the second, mandatory source graph. It never guesses a Frontend from a suffix. */
@@ -180,13 +210,7 @@ export class RunCompiler {
     return await this.compileResolvedSource(workspace.entry, workspace);
   }
 
-  /**
-   * Validate both source documents without materializing historical Build values.
-   *
-   * A future BuildRecord is valid Run intent even before that Build exists. It
-   * becomes executable only when plan/build resolves its exact historical Result value.
-   */
-  async checkResolvedSource(source: ResolvedSource, workspace: WorkspaceSession): Promise<CheckedRun> {
+  async #resolveStructure(source: ResolvedSource, workspace: WorkspaceSession): Promise<StructuralRunResolution> {
     const decoded = await compileRunSource(source, this.#options.frontends);
     const authorSource = await workspace.resolveSource(source.unit, {
       from: decoded.document.author.source,
@@ -198,114 +222,93 @@ export class RunCompiler {
       collectRunModuleRequests(decoded.document, this.#options.fragments),
     );
     const executionCompilation = program === author.program ? author : { ...author, program };
-    const structuralRun = await resolveRunDocument(decoded.document, {
+    const run = await resolveRunDocument(decoded.document, {
       compilation: executionCompilation,
       fragments: this.#options.fragments,
     });
-    const structuralPlan = planBuild(program, author.graph, structuralRun.graph);
-    const selectedLocalSources = new Set(structuralPlan.selections
-      .filter((selection) => {
-        const candidateSource = structuralRun.candidateSources[selection.candidate];
-        return candidateSource?.kind === "stored-value" || candidateSource?.kind === "file";
-      })
-      .map((selection) => selection.candidate));
-    const resolvedValues = new Map<string, StoredValue>();
-    for (const candidate of selectedLocalSources) {
-      const candidateSource = structuralRun.candidateSources[candidate]!;
-      const value = candidateSource.kind === "stored-value"
-        ? await storedValueFromWorkspace(workspace, source.unit, candidateSource.from)
-        : candidateSource.kind === "file"
-          ? await fileValueFromWorkspace(workspace, source.unit, candidateSource.from, candidateSource.mediaType)
-          : undefined;
-      if (value !== undefined) resolvedValues.set(candidate, value);
-    }
-    const checkedRunGraph = sealRunGraph({
-      ...structuralRun.graph,
-      candidates: structuralRun.graph.candidates.map((candidate) => {
-        const value = resolvedValues.get(candidate.id);
-        if (value === undefined) return candidate;
-        if (candidate.root.kind !== "value") throw new Error(`Run Candidate ${candidate.id} is not a zero-input value`);
-        return {
-          ...candidate,
-          root: {
-            kind: "value" as const,
-            value: { id: candidate.root.value.id, value },
-          },
-        };
-      }),
-    });
-    const checkedPlan = planBuild(program, author.graph, checkedRunGraph);
-    const admitRecord = (this.#options.authorCompiler as Compiler & {
-      readonly admitRecord?: Compiler["admitRecord"];
-    }).admitRecord;
-    if (typeof admitRecord === "function") {
-      const localRecordIds = new Set(checkedPlan.selections
-        .filter((selection) => selectedLocalSources.has(selection.candidate))
-        .map((selection) => selection.record));
-      for (const record of checkedRunGraph.records) localRecordIds.add(record.id);
-      for (const record of checkedPlan.initialRecords) {
-        if (localRecordIds.has(record.id)) await admitRecord.call(this.#options.authorCompiler, program, record);
-      }
-    }
+    const plan = planBuild(program, author.graph, run.graph);
     return {
-      source: source.unit.id,
-      authorSource: authorSource.unit.id,
+      decoded,
+      authorSource,
       author,
       program,
-      document: decoded.document,
-      unresolvedHistoricalOutputs: decoded.document.candidates.flatMap((item) => item.kind === "build-record"
-        ? [{ id: item.id, build: item.build, output: item.output }]
-        : []),
-      attachments: mergeAttachments([author.attachments, await workspace.attachments()]),
+      run,
+      plan,
+      selectedCandidates: new Set(plan.selections.map((selection) => selection.candidate)),
+    };
+  }
+
+  async #materializeLocalSupplies(
+    source: ResolvedSource,
+    workspace: WorkspaceSession,
+    resolved: StructuralRunResolution,
+  ): Promise<Map<string, TypedRecord>> {
+    const records = new Map<string, TypedRecord>();
+    for (const candidate of resolved.selectedCandidates) {
+      const candidateSource = resolved.run.candidateSources[candidate];
+      if (candidateSource?.kind === "value") {
+        const value = await valueFromWorkspace(workspace, source.unit, candidateSource.from);
+        records.set(candidate, materializedSupply(resolved.program, resolved.plan, candidate, value));
+      } else if (candidateSource?.kind === "file") {
+        const value = await fileValueFromWorkspace(workspace, source.unit, candidateSource.from, candidateSource.mediaType);
+        records.set(candidate, materializedSupply(resolved.program, resolved.plan, candidate, value));
+      }
+    }
+    return records;
+  }
+
+  async #validateMaterialized(resolved: StructuralRunResolution, records: Iterable<TypedRecord>): Promise<void> {
+    for (const record of resolved.plan.initialRecords) {
+      await this.#options.authorCompiler.validateRecord(resolved.program, record);
+    }
+    for (const record of records) {
+      await this.#options.authorCompiler.validateRecord(resolved.program, record);
+    }
+  }
+
+  /**
+   * Validate both source documents without materializing historical Build values.
+   *
+   * A future Build Output source is valid Run intent even before that Build exists. It
+   * becomes executable only when plan/build resolves its exact historical Result value.
+   */
+  async checkResolvedSource(source: ResolvedSource, workspace: WorkspaceSession): Promise<CheckedRun> {
+    const resolved = await this.#resolveStructure(source, workspace);
+    const materializedRecords = await this.#materializeLocalSupplies(source, workspace, resolved);
+    await this.#validateMaterialized(resolved, materializedRecords.values());
+    return {
+      source: source.unit.id,
+      authorSource: resolved.authorSource.unit.id,
+      author: resolved.author,
+      program: resolved.program,
+      document: resolved.decoded.document,
+      unresolvedHistoricalOutputs: resolved.decoded.document.candidates.flatMap((item) => {
+        const candidate = resolved.run.candidates[item.id];
+        return item.kind === "build-output" && candidate !== undefined && resolved.selectedCandidates.has(candidate)
+          ? [{ id: item.id, build: item.build, output: item.output }]
+          : [];
+      }),
+      attachments: mergeAttachments([resolved.author.attachments, await workspace.attachments()]),
     };
   }
 
   /** Compile both source graphs in one read-once Workspace session selected by the Host. */
   async compileResolvedSource(source: ResolvedSource, workspace: WorkspaceSession): Promise<CompiledRun> {
-    const decoded = await compileRunSource(source, this.#options.frontends);
-    const authorSource = await workspace.resolveSource(source.unit, {
-      from: decoded.document.author.source,
-      alias: "author",
-    });
-    const author = await this.#options.authorCompiler.compileResolvedSource(authorSource, workspace);
-    const program = this.#options.authorCompiler.extendExecutionProgram(
-      author.program,
-      collectRunModuleRequests(decoded.document, this.#options.fragments),
-    );
-    const executionCompilation = program === author.program ? author : { ...author, program };
+    const resolved = await this.#resolveStructure(source, workspace);
+    const { author, program, run: structuralRun, plan: structuralPlan } = resolved;
     const locateHistoricalOutput = this.#options.locateHistoricalOutput;
     const resolveHistoricalOutput = this.#options.resolveHistoricalOutput;
     const buildAttachments: BlobAttachment[] = [];
-    const structuralRun = await resolveRunDocument(decoded.document, {
-      compilation: executionCompilation,
-      fragments: this.#options.fragments,
-    });
-    const structuralPlan = planBuild(program, author.graph, structuralRun.graph);
-    const selectedSources = new Set(structuralPlan.selections
-      .filter((selection) => structuralRun.candidateSources[selection.candidate] !== undefined)
-      .map((selection) => selection.candidate));
     const consumedRecords = new Set(structuralPlan.plan.steps.flatMap((step) => Object.values(step.inputs)));
     const historicalOutputs = new Map<string, {
       readonly build: string;
       readonly output: string;
       readonly type: TypeRef;
     }>();
-    const resolvedValues = new Map<string, StoredValue>();
-    for (const candidate of selectedSources) {
-      const candidateSource = structuralRun.candidateSources[candidate]!;
-      if (candidateSource.kind === "stored-value") {
-        resolvedValues.set(candidate, await storedValueFromWorkspace(workspace, source.unit, candidateSource.from));
-        continue;
-      }
-      if (candidateSource.kind === "file") {
-        resolvedValues.set(candidate, await fileValueFromWorkspace(
-          workspace,
-          source.unit,
-          candidateSource.from,
-          candidateSource.mediaType,
-        ));
-        continue;
-      }
+    const materializedRecords = await this.#materializeLocalSupplies(source, workspace, resolved);
+    for (const candidate of resolved.selectedCandidates) {
+      const candidateSource = structuralRun.candidateSources[candidate];
+      if (candidateSource?.kind !== "build-output") continue;
       if (locateHistoricalOutput === undefined) {
         throw new Error(`Historical Build Candidate ${candidateSource.build}/${candidateSource.output} requires a project Result Store`);
       }
@@ -331,56 +334,25 @@ export class RunCompiler {
       if (!sameType(resolved.type, declaration.type)) {
         throw new Error(`Build ${candidateSource.build} Output ${candidateSource.output} has the wrong type for its satisfied Logical Output`);
       }
-      resolvedValues.set(candidate, resolved.value);
+      materializedRecords.set(candidate, materializedSupply(program, structuralPlan, candidate, resolved.value));
       buildAttachments.push(...(resolved.attachments ?? []));
     }
-    const run = {
-      ...structuralRun,
-      graph: sealRunGraph({
-        ...structuralRun.graph,
-        candidates: structuralRun.graph.candidates.map((candidate) => {
-          const resolved = resolvedValues.get(candidate.id);
-          if (resolved === undefined) return candidate;
-          if (candidate.root.kind !== "value") throw new Error(`Historical Candidate ${candidate.id} is not a zero-input value`);
-          return {
-            ...candidate,
-            root: {
-              kind: "value" as const,
-              value: { id: candidate.root.value.id, value: resolved },
-            },
-          };
-        }),
-      }),
-    };
-    const forwardOnlyOutputs = new Set(structuralPlan.selections.flatMap((selection) => {
-      const source = structuralRun.candidateSources[selection.candidate];
-      return source?.kind === "build-output" && !consumedRecords.has(selection.record) ? [selection.output] : [];
-    }));
-    const admitted = planBuild(program, author.graph, {
-      ...run.graph,
-      targets: run.graph.targets.filter((target) => !forwardOnlyOutputs.has(target.output)),
-    });
-    const admitRecord = (this.#options.authorCompiler as Compiler & {
-      readonly admitRecord?: Compiler["admitRecord"];
-    }).admitRecord;
-    if (typeof admitRecord === "function") {
-      for (const record of admitted.initialRecords) {
-        await admitRecord.call(this.#options.authorCompiler, program, record);
-      }
-    }
+    await this.#validateMaterialized(resolved, materializedRecords.values());
     return {
       source: source.unit.id,
-      authorSource: authorSource.unit.id,
+      authorSource: resolved.authorSource.unit.id,
       author,
       program,
-      run,
+      run: structuralRun,
+      selection: structuralPlan,
       historicalOutputs: Object.fromEntries(historicalOutputs),
+      materializedSupplies: [...materializedRecords.values()].sort((left, right) => left.id.localeCompare(right.id)),
       attachments: mergeAttachments([author.attachments, await workspace.attachments(), buildAttachments]),
     };
   }
 
-  planCompilation(compilation: CompiledRun): PlannedBuild {
-    const preliminary = planBuild(compilation.program, compilation.author.graph, compilation.run.graph);
+  prepareCompilation(compilation: CompiledRun): PreparedBuild {
+    const preliminary = compilation.selection;
     const consumedRecords = new Set(preliminary.plan.steps.flatMap((step) => Object.values(step.inputs)));
     const forwardOnlyOutputs = new Set(preliminary.selections.flatMap((selection) => {
       const source = compilation.run.candidateSources[selection.candidate];
@@ -390,32 +362,92 @@ export class RunCompiler {
       ...compilation.run.graph,
       targets: compilation.run.graph.targets.filter((target) => !forwardOnlyOutputs.has(target.output)),
     };
-    const sliced = sliceExecution(compilation.program, compilation.author.graph, executionRun);
+    const sliced = sliceExecution(compilation.program, compilation.author.graph, executionRun, preliminary);
+    const materializedById = new Map(compilation.materializedSupplies.map((record) => [record.id, record]));
+    const suppliedRecords = sliced.selectedSupplies.map((supply) => {
+      const record = materializedById.get(supply.record);
+      if (record === undefined) throw new Error(`Selected supply ${supply.candidate} was not materialized during Run compilation`);
+      if (!sameType(record.type, supply.type)) {
+        throw new Error(`Selected supply ${supply.candidate} materialized with the wrong type`);
+      }
+      return record;
+    });
+    const initialRecords = [...sliced.initialRecords, ...suppliedRecords]
+      .sort((left, right) => left.id.localeCompare(right.id));
+    const sealedProgram = link(sliced.program.closure, [...sliced.program.records, ...initialRecords]);
     const definition = defineBuild({
-      program: sliced.program,
-      initialRecords: sliced.initialRecords,
+      program: sealedProgram,
       plan: sliced.plan,
-      targets: sliced.targets,
     });
     const state = materializeBuild(definition, []);
-    const resultForwards = preliminary.selections.flatMap((selection) => {
-      const source = compilation.run.candidateSources[selection.candidate];
-      if (source?.kind !== "build-output") return [];
-      const located = compilation.historicalOutputs[selection.candidate];
-      if (located === undefined) {
-        throw new Error(`Historical Candidate ${selection.candidate} was not located during Run compilation`);
+    const selections = new Map(preliminary.selections.map((selection) => [selection.output, selection]));
+    const targets = new Set(compilation.run.graph.targets.map((target) => target.output));
+    const names = new Set<string>();
+    const outputs = new Set<string>();
+    const publication: PublicationPlan = {
+      outputs: compilation.author.exports.flatMap((item) => {
+        if (item.ref.kind === "operation-result") {
+          throw new Error(`public output ${item.name} was not lowered to a stable Record or Logical Output`);
+        }
+        if (item.ref.kind !== "logical-output") return [];
+        const outputId = item.ref.id;
+        if (names.has(item.name)) throw new Error(`public Output name ${item.name} is repeated`);
+        if (outputs.has(outputId)) {
+          throw new Error(`Logical Output ${outputId} has more than one public name`);
+        }
+        names.add(item.name);
+        outputs.add(outputId);
+        const element = compilation.author.provenance.elements.find((element) =>
+          element.outputs.some((output) => output.id === outputId));
+        const authored = element?.outputs.find((output) => output.id === outputId);
+        const displayName = element?.components.find((component) => component.id === authored?.component)?.local;
+        const selection = selections.get(outputId);
+        const candidateSource = selection === undefined
+          ? undefined
+          : compilation.run.candidateSources[selection.candidate];
+        let source: PublicationPlan["outputs"][number]["source"] = selection === undefined
+          ? { kind: "current-record", record: outputId }
+          : { kind: "current-record", record: selection.record };
+        if (selection !== undefined && candidateSource?.kind === "build-output") {
+          const located = compilation.historicalOutputs[selection.candidate];
+          if (located === undefined) {
+            throw new Error(`Historical Candidate ${selection.candidate} was not located during Run compilation`);
+          }
+          source = {
+            kind: "historical-output" as const,
+            build: located.build,
+            output: located.output,
+          };
+        }
+        return [{
+          name: item.name,
+          output: outputId,
+          type: item.type,
+          ...(displayName === undefined ? {} : { displayName }),
+          target: targets.has(outputId),
+          source,
+        }];
+      }),
+    };
+    for (const target of targets) {
+      if (!publication.outputs.some((output) => output.output === target)) {
+        throw new Error(`Target ${target} is not a published Author Output`);
       }
-      return [{
-        output: selection.output,
-        build: located.build,
-        sourceOutput: located.output,
-        type: located.type,
-      }];
-    });
-    return { compilation, selections: sliced.selections, resultForwards, definition, state };
+    }
+    return { compilation, selections: sliced.selections, publication, definition, state };
   }
 
-  async planEntry(locator: string): Promise<PlannedBuild> {
-    return this.planCompilation(await this.compileEntry(locator));
+  /** Plan a distinct in-memory Run graph as a distinct compilation selection. */
+  prepareVariant(compilation: CompiledRun, graph: RunCompilation["graph"]): PreparedBuild {
+    const run = { ...compilation.run, graph };
+    return this.prepareCompilation({
+      ...compilation,
+      run,
+      selection: planBuild(compilation.program, compilation.author.graph, graph),
+    });
+  }
+
+  async prepareEntry(locator: string): Promise<PreparedBuild> {
+    return this.prepareCompilation(await this.compileEntry(locator));
   }
 }

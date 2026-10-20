@@ -1,6 +1,6 @@
 {
   "name": "@hypit/runtime-local",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
   "type": "module",
@@ -21,10 +21,10 @@
     "koffi": "3.2.1"
   },
   "peerDependencies": {
-    "@hypit/hypit": "workspace:^0.3.0"
+    "@hypit/hypit": "workspace:^0.4.0"
   },
   "devDependencies": {
-    "@hypit/admission": "workspace:*",
+    "@hypit/refinement": "workspace:*",
     "@hypit/credential-store-env": "workspace:*",
     "@hypit/endpoint": "workspace:*",
     "@hypit/executor": "workspace:*",

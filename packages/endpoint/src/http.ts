@@ -108,10 +108,20 @@ export async function withRequestDeadline<T>(
   }
 }
 
+const httpDatePatterns = [
+  /^(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun), \d{2} (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{4} \d{2}:\d{2}:\d{2} GMT$/u,
+  /^(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday), \d{2}-(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)-\d{2} \d{2}:\d{2}:\d{2} GMT$/u,
+  /^(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun) (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) {1,2}\d{1,2} \d{2}:\d{2}:\d{2} \d{4}$/u,
+] as const;
+
 /** The wait a `Retry-After` header asks for, in milliseconds: delay-seconds or an HTTP-date. */
 export function retryAfterMs(headers: Headers, now = Date.now()): number | undefined {
   const value = headers.get("retry-after")?.trim();
   if (value === undefined || value.length === 0) return undefined;
-  const delay = /^\d+$/u.test(value) ? Number(value) * 1000 : Date.parse(value) - now;
+  const seconds = /^\d+(?:\.\d+)?$/u.test(value) ? Number(value) : undefined;
+  const httpDate = httpDatePatterns.some(pattern => pattern.test(value));
+  const delay = seconds !== undefined
+    ? seconds * 1000
+    : httpDate ? Date.parse(value) - now : Number.NaN;
   return Number.isFinite(delay) ? Math.max(0, Math.round(delay)) : undefined;
 }

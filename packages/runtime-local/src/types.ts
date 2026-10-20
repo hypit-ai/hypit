@@ -1,4 +1,4 @@
-import type { AdmissionPackage } from "@hypit/hypit/admission";
+import type { RefinementPackage } from "@hypit/hypit/refinement";
 import type { Awaitable, ProducerPackage } from "@hypit/hypit/producer";
 import type { EndpointInstance } from "@hypit/hypit/endpoint";
 import type { LoadedPackage } from "@hypit/hypit/loader";
@@ -48,8 +48,8 @@ export type CreateLocalRuntimeOptions = {
   readonly credentialStore: CredentialStore;
   /** Deterministic implementations injected directly by an embedding. Installed packages arrive as facets. */
   readonly producerPackages?: readonly ProducerPackage[];
-  /** Type-owner admission rules injected directly by an embedding. */
-  readonly admissionPackages?: readonly AdmissionPackage[];
+  /** Type-owner validation rules injected directly by an embedding. */
+  readonly refinementPackages?: readonly RefinementPackage[];
   /** Load the complete physical package closure named by a claimed Build. */
   readonly loadProducerPackages?: (specifiers: readonly string[]) => Awaitable<readonly LoadedPackage[]>;
   readonly endpoints?: readonly EndpointInstance[];
@@ -105,7 +105,10 @@ export type LocalRuntimeControl = RuntimeHostControl;
 
 export type LocalResultWriter = RuntimeHostResultControl & {
   /** Incrementally accept public Outputs already completed during execution. */
-  sync(execution: BuildExecutionSnapshot, state: import("@hypit/hypit/protocol").BuildState): Promise<void>;
+  sync(
+    execution: BuildExecutionSnapshot,
+    records: readonly import("@hypit/hypit/protocol").TypedRecord[],
+  ): Promise<void>;
   /** Persist the outcome just frozen by the execution Worker, then remove active Runtime state. */
   completeResult(execution: BuildExecutionSnapshot): Promise<BuildExecutionSnapshot | BuildCompletion>;
 };

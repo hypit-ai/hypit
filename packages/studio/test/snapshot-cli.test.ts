@@ -6,7 +6,7 @@ import { join } from "node:path";
 import sharp from "sharp";
 import { canonicalize } from "@hypit/protocol";
 import { verifyHtmlFrameRequest } from "@hypit/html-program";
-import type { CliApplicationContext, CliRuntimeHost } from "@hypit/cli";
+import type { CliRuntimeHost, CliRuntimeSelectionContext } from "@hypit/cli";
 import { runSnapshotCli, studioDocumentUrl } from "../src/snapshot-cli.js";
 
 test("snapshot --studio requires an absolute HTTP URL", () => {
@@ -35,25 +35,25 @@ test("Studio snapshots pass one typed HTML Program and only its selected Artifac
   });
   try {
     const host = {
-      providers: async requests => requests.map(request => ({ request: request.request, capability: request.capability,
-        status: "resolved", endpoint: "frames", use: "@example/frames" })),
+      endpoints: async queries => queries.map(query => ({ need: query.need, capability: query.capability,
+        status: "resolved", support: "supported", endpoint: "frames", use: "@example/frames" })),
       invoke: async (need, resources) => {
         assert.equal(need.capability.name, "rasterize-frames");
         verifyHtmlFrameRequest(need.constraints);
         assert.deepEqual(need.constraints.program, program);
         assert.deepEqual(need.constraints.frames, [3]);
         assert.deepEqual(Buffer.from((await resources.get(artifact.resource))!), bytes);
-        return { value: { kind: "inline", value: canonicalize([await resources.put(bytes, "image/png")]) } };
+        return { value: (canonicalize([await resources.put(bytes, "image/png")])) };
       },
-    } as Pick<CliRuntimeHost, "providers" | "invoke">;
-    const application = {
+    } as Pick<CliRuntimeHost, "endpoints" | "invoke">;
+    const application: CliRuntimeSelectionContext = {
       cwd: directory,
       resolveProjectRoot: async () => directory,
       distribution: {
         resolveProjectRuntime: async () => ({ profile: "selected.json" }),
         openRuntimeHost: async () => host as CliRuntimeHost,
       },
-    } as unknown as CliApplicationContext;
+    };
     let output = "";
     await runSnapshotCli(["snapshot", "--studio", "http://studio.example:5191/#comments", "--at-frame", "3", "--to", "evidence"],
       { write(text) { output += text; } }, application);

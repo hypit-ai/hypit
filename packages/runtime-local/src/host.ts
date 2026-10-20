@@ -12,9 +12,10 @@ import {
   createRuntimeResultControlFromConfig,
   createRuntimeCredentialsFromConfig,
   createRuntimeFromConfig,
-  describeRuntimeConfigProviders,
+  describeRuntimeConfigEndpoints,
   doctorRuntimeConfig,
   invokeRuntimeConfigNeed,
+  openRuntimeConfigInspection,
   openTransientRuntimeConfigExecution,
   preflightRuntimeConfig,
   readRuntimeConfigPricing,
@@ -139,7 +140,26 @@ export async function openLocalRuntimeHost(
       ...(options?.capabilities === undefined ? {} : { capabilities: options.capabilities }),
       ...(options?.endpoints === undefined ? {} : { endpoints: options.endpoints }),
     }),
-    providers: async (capabilities) => await describeRuntimeConfigProviders(profile, capabilities, {
+    openInspection: async (requests) => {
+      const inspection = await openRuntimeConfigInspection(profile, requests, {
+        packageRoot: basePackageRoot,
+        ...distribution,
+      });
+      return {
+        ...inspection,
+        executionStatus: async () => await runtimeProcessStatus(profile, inspection.dataRoot),
+        ensureExecution: async (options) => await ensureRuntimeProcess(
+          profile,
+          inspection.dataRoot,
+          {
+            ...hostOptions.workerLaunch,
+            workerArgs: ["--package-root", basePackageRoot],
+          },
+          options?.maxWaitMs ?? 10_000,
+        ),
+      };
+    },
+    endpoints: async (queries) => await describeRuntimeConfigEndpoints(profile, queries, {
       packageRoot: basePackageRoot,
       ...distribution,
     }),

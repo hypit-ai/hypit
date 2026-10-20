@@ -51,7 +51,7 @@ export function installPortraitInset(module, manifest, component) {
     producer,
     handler: ({ inputs }) => {
       const { timeline, within, window, sources, frame } = Object.fromEntries(
-          Object.entries(inputs).map(([k, r]) => [k, r.value.value]),
+          Object.entries(inputs).map(([k, r]) => [k, r.value]),
         ),
         { clips, children } = placedVisualMedia(timeline, window, sources.sources);
       const program = htmlVisual({
@@ -102,7 +102,7 @@ export function installPortraitInset(module, manifest, component) {
             : [],
         });
       return {
-        outputs: { visual: { kind: "inline", value: canonicalize(visual) } },
+        outputs: { visual: (canonicalize(visual)) },
         needs: {},
       };
     },
@@ -150,15 +150,11 @@ export function installPortraitInset(module, manifest, component) {
           {
             id: textAttribute(element, "id"),
             type: types.style,
-            value: {
-              kind: "inline",
-              value: canonicalize(presenterStyle(fragment, bindings)),
-            },
+            value: (canonicalize(presenterStyle(fragment, bindings))),
             range: element.range,
           },
         ],
         components: [],
-        fragments: [],
       };
     },
   });

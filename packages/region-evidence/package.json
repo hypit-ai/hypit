@@ -1,6 +1,6 @@
 {
   "name": "@hypit/region-evidence",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
   "type": "module",
@@ -11,15 +11,15 @@
     "activation": "./src/activation.ts"
   },
   "dependencies": {
-    "@hypit/spatial": "workspace:^0.1.0",
-    "@hypit/timeline": "workspace:^0.1.0"
+    "@hypit/spatial": "workspace:^0.1.1",
+    "@hypit/timeline": "workspace:^0.1.1"
   },
   "files": [
     "dist",
     "README.md"
   ],
   "peerDependencies": {
-    "@hypit/hypit": "workspace:^0.3.1"
+    "@hypit/hypit": "workspace:^0.4.0"
   },
   "devDependencies": {
     "@hypit/producer": "workspace:*",
@@ -27,7 +27,7 @@
     "@hypit/markup": "workspace:*",
     "@hypit/protocol": "workspace:*",
     "@hypit/recipe": "workspace:*",
-    "@hypit/admission": "workspace:*",
+    "@hypit/refinement": "workspace:*",
     "@hypit/hypit": "workspace:*"
   }
 }

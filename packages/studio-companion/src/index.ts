@@ -139,6 +139,12 @@ export type StudioNumberPresentation = {
   readonly step?: number;
 };
 
+/** Studio-only recursive control hints. They never refine a domain ValueSchema. */
+export type StudioValuePresentation =
+  | { readonly kind: "color" }
+  | { readonly kind: "list"; readonly item?: StudioValuePresentation }
+  | { readonly kind: "record"; readonly fields?: Readonly<Record<string, StudioValuePresentation>> };
+
 /** Attribute ranges are relative to the owning element's source preimage. */
 export type StudioAttributeGroupEdit = {
   readonly insertionOffset: number;
@@ -198,6 +204,8 @@ export type StudioInspectorFieldDeclaration = {
   readonly unit?: string;
   readonly number?: StudioNumberPresentation;
   readonly multiline?: boolean;
+  /** Optional recursive presentation for this value and its structured members. */
+  readonly valuePresentation?: StudioValuePresentation;
   /** Optional suggested colors, independent of the accepted color value. */
   readonly swatches?: readonly string[];
 };

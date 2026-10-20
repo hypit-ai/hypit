@@ -13,7 +13,7 @@ import {
   sealImageComposeLayerSpec,
   sealImageComposeOptions,
 } from "@hypit/image-operations";
-import type { CanonicalValue, StoredValue, TypeRef, TypedRecord } from "@hypit/protocol";
+import type { CanonicalValue, Value, TypeRef, TypedRecord } from "@hypit/protocol";
 import { sealCanvas, sealSpatialFrame, spatialTypes } from "@hypit/spatial";
 
 const canvas = sealCanvas({
@@ -26,7 +26,7 @@ const spec = sealImageComposeLayerSpec({
 });
 const source = { kind: "blob" as const, resource: fixtureResource("hero-image"), size: 123, mediaType: "image/png" };
 
-function record(id: string, type: TypeRef, value: StoredValue): TypedRecord {
+function record(id: string, type: TypeRef, value: Value): TypedRecord {
   return { id, type, value };
 }
 
@@ -40,28 +40,29 @@ test("Image Compose is an ordered Layer graph with no privileged base image", ()
     "image:layers:append:0001", "image:layers:append:0002", "image:layers:empty",
   ].sort());
   assert.deepEqual(fragment.exports.map((output) => output.name), ["image"]);
-  assert.deepEqual(imageOperationsManifest.producers.at(-1)?.needs[0]?.capability,
+  const result = imageOperationsManifest.producers.at(-1)?.result;
+  assert.deepEqual(result?.kind === "need" ? result.capability : undefined,
     imageOperationsCapabilities.compose);
 });
 
 test("component data flow preserves explicit Canvas, Frame and paint order", async () => {
   const [create, append, request] = imageComposeComponent.producers;
   const empty = await create!.handler({ inputs: {} } as never);
-  assert("layers" in empty.outputs);
+  assert.equal(empty.kind, "output");
   const appended = await append!.handler({ inputs: {
-    layers: record("layers", imageComposeTypes.layerSet, empty.outputs.layers!),
+    layers: record("layers", imageComposeTypes.layerSet, empty.value),
     source: record("source", blobTypes.blob, source),
-    frame: record("frame", spatialTypes.frame, { kind: "inline", value: frame as unknown as CanonicalValue }),
-    spec: record("spec", imageComposeTypes.layerSpec, { kind: "inline", value: spec as unknown as CanonicalValue }),
+    frame: record("frame", spatialTypes.frame, (frame as unknown as CanonicalValue)),
+    spec: record("spec", imageComposeTypes.layerSpec, (spec as unknown as CanonicalValue)),
   } } as never);
-  assert("layers" in appended.outputs);
+  assert.equal(appended.kind, "output");
   const result = await request!.handler({ inputs: {
-    canvas: record("canvas", spatialTypes.canvas, { kind: "inline", value: canvas as unknown as CanonicalValue }),
-    options: record("options", imageComposeTypes.options, { kind: "inline", value: options as unknown as CanonicalValue }),
-    layers: record("layers", imageComposeTypes.layerSet, appended.outputs.layers!),
+    canvas: record("canvas", spatialTypes.canvas, (canvas as unknown as CanonicalValue)),
+    options: record("options", imageComposeTypes.options, (options as unknown as CanonicalValue)),
+    layers: record("layers", imageComposeTypes.layerSet, appended.value),
   } } as never);
-  assert("image" in result.needs);
-  assert.deepEqual(result.needs.image, {
+  assert.equal(result.kind, "need");
+  assert.deepEqual(result.constraints, {
     canvas, background: options.background,
     layers: [{ source, frame, fit: spec.fit, interpolation: spec.interpolation, opacity: spec.opacity }],
   });

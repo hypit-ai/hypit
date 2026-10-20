@@ -134,15 +134,14 @@ export const decodeFontsourceFaceSurface: StructuredSurfaceHandler = async ({
       range: element.range,
     });
     sources.push({
-      artifact: resolved.artifact,
+      artifact: resolved.blob,
       ...(file.unicodeRange === undefined ? {} : { unicodeRange: file.unicodeRange }),
     });
   }
   const font: FontArtifactRef = { sources, weight, style };
   assertFontArtifactRef(font, `${element.name}.${id}`);
   return {
-    records: [{ id, type: mediaTypes.fontArtifact, value: { kind: "inline", value: font }, range: element.range }],
+    records: [{ id, type: mediaTypes.fontArtifact, value: (font), range: element.range }],
     components: [],
-    fragments: [],
   };
 };

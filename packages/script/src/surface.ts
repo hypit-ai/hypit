@@ -93,45 +93,45 @@ export function decodeScriptSurface(input: ScriptSurfaceInput): ScriptSurfaceOut
       {
         id: rawId,
         type: narrativeType,
-        value: { kind: "inline", value: narrative },
+        value: (narrative),
         range: { start: input.openingStart, end: close.end },
       },
       ...parsed.segments.map((segment) => ({
         id: `${rawId}.segment.${segment.id}`,
         type: narrativeSegmentRefType,
-        value: { kind: "inline" as const, value: narrativeSegmentExcerptValue(parsed, segment, rawId) },
+        value: (narrativeSegmentExcerptValue(parsed, segment, rawId)),
         range: segment.range,
       })),
       ...parsed.segments.flatMap((segment) => [
         {
           id: `${rawId}.segment.${segment.id}.dialogue`,
           type: textTypes.text,
-          value: { kind: "inline" as const, value: narrativeDialogueTextValue(segment) },
+          value: (narrativeDialogueTextValue(segment)),
           range: segment.range,
         },
         {
           id: `${rawId}.segment.${segment.id}.speech`,
           type: textTypes.text,
-          value: { kind: "inline" as const, value: narrativeSpeechTextValue(segment) },
+          value: (narrativeSpeechTextValue(segment)),
           range: segment.range,
         },
       ]),
       {
         id: captionId,
         type: captionDocumentType,
-        value: { kind: "inline" as const, value: caption },
+        value: (caption),
         range: { start: input.openingStart, end: close.end },
       },
       {
         id: `${rawId}.caption-binding`,
         type: narrativeCaptionBindingType,
-        value: { kind: "inline" as const, value: captionBinding },
+        value: (captionBinding),
         range: { start: input.openingStart, end: close.end },
       },
       ...parsed.selections.map((selection) => ({
         id: `${rawId}.selection.${selection.id}`,
         type: narrativeSelectionType,
-        value: { kind: "inline" as const, value: narrativeSelectionValue(selection, rawId) },
+        value: (narrativeSelectionValue(selection, rawId)),
         range: {
           start: selection.open.range.start,
           end: selection.close.range.end,
@@ -140,12 +140,11 @@ export function decodeScriptSurface(input: ScriptSurfaceInput): ScriptSurfaceOut
       ...parsed.moments.map((moment) => ({
         id: `${rawId}.moment.${moment.id}`,
         type: narrativeMomentType,
-        value: { kind: "inline" as const, value: narrativeMomentValue(moment, rawId) },
+        value: (narrativeMomentValue(moment, rawId)),
         range: moment.range,
       })),
     ],
     components: [],
-    fragments: [],
     identities: [{ namespace: narrativeType, id: rawId }],
   };
 }

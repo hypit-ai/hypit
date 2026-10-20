@@ -1,3 +1,4 @@
+import { sameType } from "@hypit/hypit/protocol";
 import { captionProducers, captionTypes } from "@hypit/caption";
 import { assertFontArtifactRef, assertFontStackRef, mediaTypes } from "@hypit/media";
 import type { FontArtifactRef, FontStackRef } from "@hypit/media";
@@ -19,10 +20,6 @@ import { captionFineProducers, captionFineTypes } from "./manifest.js";
 const input = (name: string) => ({ kind: "fragment-input" as const, name });
 const operation = (id: string) => ({ kind: "fragment-operation" as const, operation: id });
 import { fineCaptionStyle } from "./style.js";
-
-function sameType(left: SurfaceResolvedReference["type"], right: SurfaceResolvedReference["type"]): boolean {
-  return left.module.name === right.module.name && left.module.version === right.module.version && left.name === right.name;
-}
 
 function attributes(element: StructuredElement, required: readonly string[], optional: readonly string[] = []): void {
   const actual = Object.keys(element.attributes);
@@ -55,9 +52,9 @@ function reference(
   return value;
 }
 
-function inline<T>(referenceValue: SurfaceResolvedReference, subject: string): T {
-  if (referenceValue.record?.value.kind !== "inline") throw new Error(`${subject} must reference an authored inline Record`);
-  return referenceValue.record.value.value as unknown as T;
+function valueOf<T>(referenceValue: SurfaceResolvedReference, subject: string): T {
+  if (referenceValue.record === undefined) throw new Error(`${subject} must reference an authored Record`);
+  return referenceValue.record.value as unknown as T;
 }
 
 function localName(name: string): string {
@@ -78,9 +75,9 @@ function exactFonts(
   const resolved = resolveReference(primary.path);
   if (resolved === undefined) throw new Error(`${element.name}.font cannot resolve ${primary.path}`);
   if (sameType(resolved.type, mediaTypes.fontArtifact)) {
-    result.push(inline<FontArtifactRef>(resolved, `${element.name}.font`));
+    result.push(valueOf<FontArtifactRef>(resolved, `${element.name}.font`));
   } else if (sameType(resolved.type, mediaTypes.fontStack)) {
-    const stack = inline<FontStackRef>(resolved, `${element.name}.font`);
+    const stack = valueOf<FontStackRef>(resolved, `${element.name}.font`);
     assertFontStackRef(stack, `${element.name}.font`);
     result.push(...stack.faces);
   } else {
@@ -96,7 +93,7 @@ function exactFonts(
     if (child.children.some((nested) => nested.kind === "element" || nested.value.trim())) {
       throw new Error(`${child.name} does not accept children`);
     }
-    result.push(inline<FontArtifactRef>(
+    result.push(valueOf<FontArtifactRef>(
       reference(child, "font", mediaTypes.fontArtifact, resolveReference),
       `${child.name}.font`,
     ));
@@ -108,12 +105,11 @@ function exactFonts(
 export const decodeFineCaptionStyleSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
   attributes(element, ["id", "recipe", "font"]);
   const id = stringAttribute(element, "id");
-  const recipe = inline<Recipe>(reference(element, "recipe", recipeType, resolveReference), `${element.name}.recipe`);
+  const recipe = valueOf<Recipe>(reference(element, "recipe", recipeType, resolveReference), `${element.name}.recipe`);
   const style = fineCaptionStyle(id, recipe, exactFonts(element, resolveReference));
   return {
-    records: [{ id, type: captionTypes.style, value: { kind: "inline", value: style }, range: element.range }],
+    records: [{ id, type: captionTypes.style, value: (style), range: element.range }],
     components: [],
-    fragments: [],
   };
 };
 
@@ -126,13 +122,12 @@ export const decodeFineCaptionTrackSurface: StructuredSurfaceHandler = ({ elemen
   const context = resolveTemporalContext({ element, resolveReference });
   const regions = element.attributes.regions === undefined ? undefined : reference(element, "regions", regionEvidenceTypes.evidence, resolveReference);
   const records: SurfaceRecordDraft[] = [{ id: `${id}.header`, type: captionTypes.header,
-    value: { kind: "inline", value: { id } }, range: element.range }];
+    value: ({ id }), range: element.range }];
   const components: SurfaceComponentDraft[] = [];
-  const fragments: ReturnType<typeof sealGraphFragment>[] = [];
   const inputs: { name: string; type: SurfaceResolvedReference["type"] }[] = [{ name: "document", type: captionTypes.document }, { name: "timing", type: captionTypes.timing }, { name: "timeline", type: timelineTypes.timeline }, { name: "within", type: spatialTypes.frame }, { name: "header", type: captionTypes.header }];
   const bindings: Record<string, SurfaceResolvedReference["ref"]> = { document: document.ref, timing: timing.ref, timeline: context.timeline.ref, within: within.ref, header: { kind: "record", id: `${id}.header` } };
   const operations: FragmentOperation[] = [{ id: "create", producer: captionProducers.create,
-    inputs: { document: input("document"), header: input("header") }, result: { kind: "output", name: "program" } }];
+    inputs: { document: input("document"), header: input("header") }, result: { kind: "output" as const, name: "program" } }];
   let previous = "create", index = 0;
   for (const child of element.children) {
     if (child.kind === "text") { if (child.value.trim()) throw new Error("Caption accepts Use children."); continue; }
@@ -147,9 +142,9 @@ export const decodeFineCaptionTrackSurface: StructuredSurfaceHandler = ({ elemen
     const style = reference(child, "style", captionTypes.style, resolveReference);
     const role = optionalTextAttribute(child, "role");
     const filterId = `${useId}.filter`;
-    records.push({ id: filterId, type: captionTypes.filter, value: { kind: "inline", value: {
+    records.push({ id: filterId, type: captionTypes.filter, value: ({
       id: useId, ...(role === undefined ? {} : { role }),
-    } }, range: child.range });
+    }), range: child.range });
     const key = `use-${index}`;
     inputs.push(...(window === undefined ? [] : [{ name: `${key}-window`, type: temporalTypes.window }]),
       { name: `${key}-style`, type: captionTypes.style }, { name: `${key}-filter`, type: captionTypes.filter });
@@ -157,21 +152,20 @@ export const decodeFineCaptionTrackSurface: StructuredSurfaceHandler = ({ elemen
     bindings[`${key}-style`] = style.ref; bindings[`${key}-filter`] = { kind: "record", id: filterId };
     operations.push({ id: key, producer: window === undefined ? captionProducers.appendUnbounded : captionProducers.append,
       inputs: { program: operation(previous), ...(window === undefined ? {} : { window: input(`${key}-window`) }),
-        style: input(`${key}-style`), filter: input(`${key}-filter`) }, result: { kind: "output", name: "program" } });
+        style: input(`${key}-style`), filter: input(`${key}-filter`) }, result: { kind: "output" as const, name: "program" } });
     previous = key;
   }
   operations.push({ id: "schedule", producer: captionFineProducers.schedule,
-    inputs: { timing: input("timing"), document: input("document"), program: operation(previous) }, result: { kind: "output", name: "schedule" } });
+    inputs: { timing: input("timing"), document: input("document"), program: operation(previous) }, result: { kind: "output" as const, name: "schedule" } });
   if (regions !== undefined) { inputs.push({ name: "regions", type: regionEvidenceTypes.evidence }); bindings.regions = regions.ref; }
   operations.push({ id: "render", producer: regions === undefined ? captionFineProducers.render : captionFineProducers.renderWithRegions,
-    inputs: { schedule: operation("schedule"), document: input("document"), timeline: input("timeline"), within: input("within"), program: operation(previous), ...(regions === undefined ? {} : { regions: input("regions") }) }, result: { kind: "output", name: "track" } });
+    inputs: { schedule: operation("schedule"), document: input("document"), timeline: input("timeline"), within: input("within"), program: operation(previous), ...(regions === undefined ? {} : { regions: input("regions") }) }, result: { kind: "output" as const, name: "track" } });
   const collector = sealGraphFragment({ inputs, operations, exports: [
     { name: "program", type: captionTypes.program, root: operation(previous) },
     { name: "schedule", type: captionFineTypes.schedule, root: operation("schedule") },
     { name: "visual", type: compositionTypes.visualTrack, root: operation("render") },
   ] });
-  fragments.push(collector);
-  components.push({ id, fragment: collector.id, inputs: bindings,
+  components.push({ id, fragment: collector, inputs: bindings,
     outputs: { program: `${id}.program`, schedule: `${id}.schedule`, visual: `${id}.visual` }, range: element.range });
-  return { records, components, fragments, exports: [`${id}.program`, `${id}.schedule`, `${id}.visual`] };
+  return { records, components, exports: [`${id}.program`, `${id}.schedule`, `${id}.visual`] };
 };

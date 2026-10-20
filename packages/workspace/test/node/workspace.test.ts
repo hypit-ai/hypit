@@ -57,7 +57,7 @@ test("a Host-resolved package asset stays inside the resolver's explicit root", 
       from: "package:@acme/brand-fonts/files/brand.woff2",
       mediaType: "font/woff2",
     });
-    assert.equal(resolved.artifact.mediaType, "font/woff2");
+    assert.equal(resolved.blob.mediaType, "font/woff2");
     assert.equal((await session.attachments()).length, 1);
   } finally {
     await rm(parent, { recursive: true, force: true });

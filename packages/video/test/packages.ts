@@ -5,6 +5,7 @@ import composition from "../../composition/src/activation.js";
 import film from "../../film/src/activation.js";
 import fontsource from "../../fontsource/src/activation.js";
 import generation from "../../generation/src/activation.js";
+import htmlDocument from "../../html-document/src/activation.js";
 import renderHTML from "../../html-video/src/activation.js";
 import htmlProgram from "../../html-program/src/activation.js";
 import mediaOperations from "../../media-operations/src/activation.js";
@@ -59,6 +60,7 @@ export const videoTestPackages = [
   bind("@hypit/visual-track", mediaTrack),
   bind("@hypit/text-fine", textFine),
   bind("@hypit/film", film),
+  bind("@hypit/html-document", htmlDocument),
   bind("@hypit/html-program", htmlProgram),
   bind("@hypit/media-operations", mediaOperations),
   bind("@hypit/html-video", renderHTML),

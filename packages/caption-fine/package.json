@@ -1,6 +1,6 @@
 {
   "name": "@hypit/caption-fine",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
   "type": "module",
@@ -17,8 +17,8 @@
     "activation": "./src/activation.ts"
   },
   "peerDependencies": {
-    "@hypit/hypit": "workspace:^0.3.1",
-    "@hypit/studio-companion": "workspace:^0.1.1"
+    "@hypit/hypit": "workspace:^0.4.0",
+    "@hypit/studio-companion": "workspace:^0.1.3"
   },
   "devDependencies": {
     "@hypit/caption": "workspace:*",
@@ -41,13 +41,13 @@
     "sharp": "0.35.4"
   },
   "dependencies": {
-    "@hypit/caption": "workspace:^0.1.0",
-    "@hypit/composition": "workspace:^0.1.0",
-    "@hypit/html-program": "workspace:^0.1.0",
-    "@hypit/media": "workspace:^0.1.0",
-    "@hypit/region-evidence": "workspace:^0.1.0",
-    "@hypit/spatial": "workspace:^0.1.0",
-    "@hypit/temporal": "workspace:^0.1.0",
-    "@hypit/timeline": "workspace:^0.1.0"
+    "@hypit/caption": "workspace:^0.1.1",
+    "@hypit/composition": "workspace:^0.2.0",
+    "@hypit/html-program": "workspace:^0.2.0",
+    "@hypit/media": "workspace:^0.2.0",
+    "@hypit/region-evidence": "workspace:^0.1.1",
+    "@hypit/spatial": "workspace:^0.1.1",
+    "@hypit/temporal": "workspace:^0.1.1",
+    "@hypit/timeline": "workspace:^0.1.1"
   }
 }

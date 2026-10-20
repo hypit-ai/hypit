@@ -43,7 +43,7 @@ test("Script's raw boundary scanner respects escapes before comments and closing
   const source = `<svml><import from="@hypit/script@1"/><script id="story">${body}</script></svml>`;
   const result = await decodeMarkup({ name: "escapes.svml", text: source }, scriptContext());
   const speech = result.records.find(record => record.id === "story.segment.line.speech")!;
-  assert.deepEqual(speech.value, { kind: "inline", value: { value: parseScript("body", body).serializations.speech } });
+  assert.deepEqual(speech.value, ({ value: parseScript("body", body).serializations.speech }));
 });
 
 test("Script teaches Markup <script> only through its imported Manifest", async () => {
@@ -77,9 +77,8 @@ test("Script teaches Markup <script> only through its imported Manifest", async 
     record.id === "story.caption" && record.type.name === "CaptionDocument"), true);
   const captionBinding = result.records.find((record) => record.id === "story.caption-binding");
   assert.equal(captionBinding?.type.name, "NarrativeCaptionBinding");
-  assert.equal(captionBinding?.value.kind, "inline");
-  if (captionBinding?.value.kind === "inline") {
-    assert.equal((captionBinding.value.value as { readonly id?: string }).id, "story.caption-binding");
+  if (captionBinding !== undefined) {
+    assert.equal((captionBinding.value as { readonly id?: string }).id, "story.caption-binding");
   }
   assert.deepEqual(result.identities, [{ namespace: narrativeType, id: "story" }]);
 });
@@ -104,7 +103,6 @@ test("a raw Surface cannot consume the Markup document close", async () => {
       nextOffset: input.source.length,
       records: [],
       components: [],
-      fragments: [],
     }),
   });
   await assert.rejects(
@@ -187,12 +185,11 @@ test("a module can use Markup's generic structured parser without adding another
       {
         id: "card",
         type,
-        value: { kind: "inline", value: { tag: element.name } },
+        value: ({ tag: element.name }),
         range: element.range,
       },
     ],
     components: [],
-    fragments: [],
   }) });
   const result = await decodeMarkup(
     {
@@ -210,12 +207,11 @@ test("a module can use Markup's generic structured parser without adding another
       {
         id: "other",
         type: { module, name: "Other" },
-        value: { kind: "inline", value: { tag: element.name } },
+        value: ({ tag: element.name }),
         range: element.range,
       },
     ],
     components: [],
-    fragments: [],
   }) });
   await assert.rejects(
     decodeMarkup(
@@ -232,13 +228,9 @@ test("a wordless Script publishes its Segment and an empty CaptionDocument", asy
     text: '<svml><import from="@hypit/script@1"/><script id="story"><empty></empty></script></svml>',
   }, scriptContext());
   const narrative = result.records.find((record) => record.id === "story")!;
-  assert.equal(narrative.value.kind, "inline");
-  const value = (narrative.value as { kind: "inline"; value: unknown }).value as Narrative;
+  const value = narrative.value as unknown as Narrative;
   assert.deepEqual(value.tokens, []);
   assert.equal(value.segments[0]?.id, "empty");
   assert.ok(result.records.some((record) => record.id === "story.segment.empty"));
-  assert.deepEqual(result.records.find((record) => record.id === "story.caption")?.value, {
-    kind: "inline",
-    value: { id: "story.caption", units: [], words: [], cues: [] },
-  });
+  assert.deepEqual(result.records.find((record) => record.id === "story.caption")?.value, ({ id: "story.caption", units: [], words: [], cues: [] }));
 });

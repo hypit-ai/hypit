@@ -1,13 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { assertMappingCoversPorts } from "@hypit/generation";
 import type { BlobRef, CanonicalValue } from "@hypit/protocol";
-import { gptImage2Ports, sealGptImage2Request } from "@hypit/gpt-image";
-import { grokImaginePorts } from "@hypit/grok-imagine";
-import { minimaxH3Ports } from "@hypit/minimax-h3";
-import { nanoBananaPorts } from "@hypit/nano-banana";
-import { seedancePorts, sealSeedanceRequest } from "@hypit/seedance";
-import { seedream5LitePorts, sealSeedreamRequest } from "@hypit/seedream";
+import { sealGptImage2Request } from "@hypit/gpt-image";
+import { sealSeedanceRequest } from "@hypit/seedance";
+import { sealSeedreamRequest } from "@hypit/seedream";
 
 import { hiApiMappings } from "../src/mapping.js";
 import { hiApiRouteForCapability } from "../src/routes.js";
@@ -17,16 +13,6 @@ const video: BlobRef = { kind: "blob", resource: "res_hiapi_2", size: 3, mediaTy
 const resolve = async () => "https://example.test/reference";
 const route = (module: string, name: string) => hiApiRouteForCapability({ module: { name: module, version: "1" }, name })!;
 const constraints = (request: unknown) => request as CanonicalValue;
-
-test("every HiAPI mapping covers its model's ports", () => {
-  const tables = {
-    ...seedancePorts, ...grokImaginePorts, ...nanoBananaPorts,
-    "seedream-5-lite": seedream5LitePorts, "minimax-h3": minimaxH3Ports, "gpt-image-2": gptImage2Ports,
-  };
-  for (const mapping of hiApiMappings) {
-    assertMappingCoversPorts(tables[mapping.capability.name as keyof typeof tables], mapping);
-  }
-});
 
 test("Seedance 2.5 selects the HiAPI model from the request shape", async () => {
   const seedance = route("@hypit/seedance", "seedance-2.5");

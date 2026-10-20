@@ -8,7 +8,9 @@ import type {
   ProjectResultCommand,
   RuntimeOption,
 } from "./command.js";
-import type { CliColorMode, CliOutputOptions } from "./output.js";
+import type { CliOutputOptions } from "./output.js";
+import { parseCliGlobalOptions } from "./global-options.js";
+import { parseCliDecimalInteger } from "./decimal-integer.js";
 import { CliUsageError } from "./usage-error.js";
 
 type RawOptions = {
@@ -305,6 +307,8 @@ function commandOptions(label: string, values: readonly string[], cwd: string, .
 }
 
 function parseOptions(values: readonly string[], cwd: string): RawOptions {
+  const global = parseCliGlobalOptions(values);
+  if (global.issue !== undefined) throw new Error(global.issue);
   let projectRoot: string | undefined;
   const assetRoots: string[] = [];
   let packageRoot: string | undefined;
@@ -323,18 +327,14 @@ function parseOptions(values: readonly string[], cwd: string): RawOptions {
   let lines = 50;
   let before: string | undefined;
   let destination: string | undefined;
-  let json = false;
-  let jsonl = false;
-  let color: CliColorMode = "auto";
-  let verbose = false;
   let watch = false;
   let reason: string | undefined;
   let slot: string | undefined;
   let credentialFile: string | undefined;
   let source: string | undefined;
-  const seenOptions = new Set<string>();
-  for (let index = 0; index < values.length; index += 1) {
-    const item = values[index]!;
+  const seenOptions = new Set<string>(global.seenOptions);
+  for (let index = 0; index < global.remaining.length; index += 1) {
+    const item = global.remaining[index]!;
     if (!item.startsWith("--")) throw new Error(`unexpected positional argument ${item}`);
     const repeatable = item === "--endpoint" || [
       "--json", "--jsonl", "--watch", "--verbose", "--debug",
@@ -342,91 +342,74 @@ function parseOptions(values: readonly string[], cwd: string): RawOptions {
     ].includes(item);
     if (!repeatable && seenOptions.has(item)) throw new Error(`${item} cannot be repeated`);
     seenOptions.add(item);
-    if (item === "--json") { json = true; continue; }
-    if (item === "--jsonl") { jsonl = true; continue; }
     if (item === "--watch") { watch = true; continue; }
-    if (item === "--verbose") { verbose = true; continue; }
-    if (item === "--debug") continue;
-    if (item === "--no-color") { color = "never"; continue; }
-    if (item === "--color") {
-      const value = optionValue(values, index, "--color requires auto, always or never");
-      if (value !== "auto" && value !== "always" && value !== "never") {
-        throw new Error("--color requires auto, always or never");
-      }
-      color = value;
-      index += 1;
-      continue;
-    }
-    if (item === "--endpoint") { endpoints.push(optionValue(values, index, "--endpoint requires an Endpoint name")); index += 1; continue; }
+    if (item === "--endpoint") { endpoints.push(optionValue(global.remaining, index, "--endpoint requires an Endpoint name")); index += 1; continue; }
     if (item === "--project") {
-      projectRoot = resolve(cwd, optionValue(values, index, "--project requires a directory")); index += 1; continue;
+      projectRoot = resolve(cwd, optionValue(global.remaining, index, "--project requires a directory")); index += 1; continue;
     }
     if (item === "--asset-root") {
-      assetRoots.push(resolve(cwd, optionValue(values, index, "--asset-root requires a directory"))); index += 1; continue;
+      assetRoots.push(resolve(cwd, optionValue(global.remaining, index, "--asset-root requires a directory"))); index += 1; continue;
     }
     if (item === "--package-root") {
-      packageRoot = resolve(cwd, optionValue(values, index, "--package-root requires a directory")); index += 1; continue;
+      packageRoot = resolve(cwd, optionValue(global.remaining, index, "--package-root requires a directory")); index += 1; continue;
     }
     if (item === "--runtime") {
-      runtimeProfile = resolve(cwd, optionValue(values, index, "--runtime requires a Runtime Profile")); index += 1; continue;
+      runtimeProfile = resolve(cwd, optionValue(global.remaining, index, "--runtime requires a Runtime Profile")); index += 1; continue;
     }
     if (item === "--out") {
       throw new Error("--out does not apply to Build submission; use `get <build-id> --output <name> --to <path>` to export one Result Output");
     }
     if (item === "--output") {
-      outputName = optionValue(values, index, "--output requires a public Output name"); index += 1; continue;
+      outputName = optionValue(global.remaining, index, "--output requires a public Output name"); index += 1; continue;
     }
     if (item === "--title") {
-      title = optionValue(values, index, "--title requires text"); index += 1; continue;
+      title = optionValue(global.remaining, index, "--title requires text"); index += 1; continue;
     }
     if (item === "--note") {
-      note = optionValue(values, index, "--note requires text"); index += 1; continue;
+      note = optionValue(global.remaining, index, "--note requires text"); index += 1; continue;
     }
     if (item === "--highlight") {
-      highlightedOutputs.push(optionValue(values, index, "--highlight requires an Output name")); index += 1; continue;
+      highlightedOutputs.push(optionValue(global.remaining, index, "--highlight requires an Output name")); index += 1; continue;
     }
     if (item === "--clear-title") { clearTitle = true; continue; }
     if (item === "--clear-note") { clearNote = true; continue; }
     if (item === "--clear-highlights") { clearHighlights = true; continue; }
     if (item === "--limit") {
-      limit = positiveInteger(optionValue(values, index, "--limit requires a positive integer"), "--limit");
+      limit = positiveInteger(optionValue(global.remaining, index, "--limit requires a positive integer"), "--limit");
       index += 1; continue;
     }
     if (item === "--lines") {
-      lines = positiveInteger(optionValue(values, index, "--lines requires a positive integer"), "--lines");
+      lines = positiveInteger(optionValue(global.remaining, index, "--lines requires a positive integer"), "--lines");
       index += 1; continue;
     }
     if (item === "--before") {
-      before = optionValue(values, index, "--before requires a Build id"); index += 1; continue;
+      before = optionValue(global.remaining, index, "--before requires a Build id"); index += 1; continue;
     }
     if (item === "--to") {
-      destination = resolve(cwd, optionValue(values, index, "--to requires a file path")); index += 1; continue;
+      destination = resolve(cwd, optionValue(global.remaining, index, "--to requires a file path")); index += 1; continue;
     }
     if (item === "--follow") { follow = true; continue; }
     if (item === "--max-wait-ms") {
-      const value = Number(optionValue(values, index, "--max-wait-ms requires milliseconds"));
-      if (!Number.isSafeInteger(value) || value < 0) throw new Error("--max-wait-ms must be a non-negative safe integer");
+      const value = parseCliDecimalInteger(optionValue(global.remaining, index, "--max-wait-ms requires milliseconds"));
+      if (value === undefined) throw new Error("--max-wait-ms must be a non-negative safe integer");
       maxWaitMs = value; index += 1; continue;
     }
     if (item === "--reason") {
-      reason = optionValue(values, index, "--reason requires text"); index += 1; continue;
+      reason = optionValue(global.remaining, index, "--reason requires text"); index += 1; continue;
     }
     if (item === "--slot") {
-      slot = optionValue(values, index, "--slot requires a credential slot"); index += 1; continue;
+      slot = optionValue(global.remaining, index, "--slot requires a credential slot"); index += 1; continue;
     }
     if (item === "--from") {
-      credentialFile = resolve(cwd, optionValue(values, index, "--from requires a credential file")); index += 1; continue;
+      credentialFile = resolve(cwd, optionValue(global.remaining, index, "--from requires a credential file")); index += 1; continue;
     }
     if (item === "--source") {
-      source = resolve(cwd, optionValue(values, index, "--source requires a source path")); index += 1; continue;
+      source = resolve(cwd, optionValue(global.remaining, index, "--source requires a source path")); index += 1; continue;
     }
     throw new Error(`unknown option ${item}`);
   }
-  if (seenOptions.has("--color") && seenOptions.has("--no-color")) {
-    throw new Error("--color and --no-color are mutually exclusive");
-  }
   return {
-    presentation: { json: json || jsonl, ...(jsonl ? { jsonl: true } : {}), color, verbose },
+    presentation: global.presentation,
     assetRoots,
     follow,
     endpoints,
@@ -472,8 +455,8 @@ function optionValue(values: readonly string[], index: number, message: string):
 }
 
 function positiveInteger(value: string, option: string): number {
-  const parsed = Number(value);
-  if (!Number.isSafeInteger(parsed) || parsed < 1) throw new Error(`${option} requires a positive integer`);
+  const parsed = parseCliDecimalInteger(value);
+  if (parsed === undefined || parsed < 1) throw new Error(`${option} requires a positive integer`);
   return parsed;
 }
 

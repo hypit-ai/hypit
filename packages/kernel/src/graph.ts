@@ -1,22 +1,20 @@
 import type {
-  BuildRequest,
   Candidate,
   CandidateRoot,
-  CompiledGraph,
+  AuthorGraph,
   GraphValueRef,
   LinkedProgram,
   LogicalOutput,
   OperationNode,
   OperationResult,
-  StoredValue,
+  Value,
   TypeRef,
   TypedRecord,
 } from "@hypit/protocol";
 
-import { canonicalize } from "@hypit/protocol";
+import { normalizeValue, sameType, typeKey } from "@hypit/protocol";
 import { invariant } from "./error.js";
-import { resolveProducer, verifyRecordStructure } from "./link.js";
-import { producerKey, sameType, typeKey } from "./reference.js";
+import { resolveCapability, resolveProducer, verifyRecordStructure } from "./link.js";
 
 type GraphIndex = {
   readonly outputs: ReadonlyMap<string, LogicalOutput>;
@@ -24,10 +22,10 @@ type GraphIndex = {
   readonly operations: ReadonlyMap<string, OperationNode>;
 };
 
-const graphIndexes = new WeakMap<CompiledGraph, GraphIndex>();
+const graphIndexes = new WeakMap<AuthorGraph, GraphIndex>();
 const programRecordIndexes = new WeakMap<LinkedProgram, ReadonlyMap<string, LinkedProgram["records"][number]>>();
 
-function graphIndex(graph: CompiledGraph): GraphIndex {
+function graphIndex(graph: AuthorGraph): GraphIndex {
   const existing = graphIndexes.get(graph);
   if (existing !== undefined) return existing;
   const created = {
@@ -38,7 +36,6 @@ function graphIndex(graph: CompiledGraph): GraphIndex {
   graphIndexes.set(graph, created);
   return created;
 }
-
 function programRecords(program: LinkedProgram): ReadonlyMap<string, LinkedProgram["records"][number]> {
   const existing = programRecordIndexes.get(program);
   if (existing !== undefined) return existing;
@@ -53,25 +50,12 @@ function normalizeRef(ref: GraphValueRef): GraphValueRef {
   return { kind: "operation-result", operation: ref.operation };
 }
 
-function normalizedStoredValue(value: StoredValue): StoredValue {
-  if (value.kind === "inline") return { kind: "inline", value: canonicalize(value.value) };
-  return {
-    kind: "blob",
-    resource: value.resource,
-    size: value.size,
-    mediaType: value.mediaType,
-  };
-}
-
 function normalizeRoot(root: CandidateRoot): CandidateRoot {
   if (root.kind === "operation") {
     return { kind: "operation", result: { kind: "operation-result", operation: root.result.operation } };
   }
-  const value = {
-    id: root.value.id,
-    value: normalizedStoredValue(root.value.value),
-  };
-  return { kind: "value", value };
+  if (root.kind === "supply") return { kind: "supply", record: root.record };
+  return { kind: "value", record: root.record, value: normalizeValue(root.value) };
 }
 
 function normalizeOutput(output: LogicalOutput): LogicalOutput {
@@ -115,9 +99,9 @@ function normalizeOperation(operation: OperationNode): OperationNode {
   };
 }
 
-export function sealCompiledGraph(
-  graph: Omit<CompiledGraph, "format">,
-): CompiledGraph {
+export function sealAuthorGraph(
+  graph: Omit<AuthorGraph, "format">,
+): AuthorGraph {
   const normalized = {
     outputs: [...graph.outputs].map(normalizeOutput).sort((a, b) => a.id.localeCompare(b.id)),
     candidates: [...graph.candidates].map(normalizeCandidate).sort((a, b) => a.id.localeCompare(b.id)),
@@ -129,42 +113,22 @@ export function sealCompiledGraph(
   };
 }
 
-export function sealBuildRequest(
-  request: Omit<BuildRequest, "format">,
-): BuildRequest {
-  const targets = [...request.targets]
-    .map((target) => ({ output: target.output }))
-    .sort((a, b) => a.output.localeCompare(b.output));
-  return {
-    format: "hypit.build-request@1" as const,
-    targets,
-  };
-}
-
-export function resolveLogicalOutput(graph: CompiledGraph, id: string): LogicalOutput {
+export function resolveLogicalOutput(graph: AuthorGraph, id: string): LogicalOutput {
   const output = graphIndex(graph).outputs.get(id);
   invariant(output !== undefined, "UNKNOWN_LOGICAL_OUTPUT", `unknown logical output ${id}`, id);
   return output;
 }
 
-export function resolveCandidate(graph: CompiledGraph, id: string): Candidate {
+export function resolveCandidate(graph: AuthorGraph, id: string): Candidate {
   const candidate = graphIndex(graph).candidates.get(id);
   invariant(candidate !== undefined, "UNKNOWN_CANDIDATE", `unknown Candidate ${id}`, id);
   return candidate;
 }
 
-export function resolveOperation(graph: CompiledGraph, id: string): OperationNode {
+export function resolveOperation(graph: AuthorGraph, id: string): OperationNode {
   const operation = graphIndex(graph).operations.get(id);
   invariant(operation !== undefined, "UNKNOWN_OPERATION", `unknown Operation ${id}`, id);
   return operation;
-}
-
-export function satisfiedCandidate(
-  graph: CompiledGraph,
-  outputId: string,
-): Candidate {
-  const output = resolveLogicalOutput(graph, outputId);
-  return resolveCandidate(graph, output.primary);
 }
 
 export function operationResultRecord(operation: OperationNode): string {
@@ -174,26 +138,26 @@ export function operationResultRecord(operation: OperationNode): string {
 function operationResultType(program: LinkedProgram, operation: OperationNode): TypeRef {
   const producer = resolveProducer(program.closure, operation.producer);
   if (operation.result.kind === "output") {
-    const output = producer.outputs.find((port) => port.name === operation.result.name);
+    const output = producer.result;
     invariant(
-      output !== undefined && producer.needs.length === 0,
+      output.kind === "output" && output.name === operation.result.name,
       "OPERATION_RESULT_MISMATCH",
       `${operation.id} does not produce output ${operation.result.name}`,
       operation.id,
     );
     return output.type;
   }
-  const need = producer.needs.find((port) => port.name === operation.result.name);
+  const need = producer.result;
   invariant(
-    need !== undefined && producer.outputs.length === 0,
+    need.kind === "need" && need.name === operation.result.name,
     "OPERATION_RESULT_MISMATCH",
     `${operation.id} does not request Need ${operation.result.name}`,
     operation.id,
   );
-  return need.returns;
+  return resolveCapability(program.closure, need.capability).returns;
 }
 
-function graphValueType(program: LinkedProgram, graph: CompiledGraph, ref: GraphValueRef): TypeRef {
+function graphValueType(program: LinkedProgram, graph: AuthorGraph, ref: GraphValueRef): TypeRef {
   if (ref.kind === "record") {
     const record = programRecords(program).get(ref.id);
     invariant(record !== undefined, "UNKNOWN_GRAPH_INPUT", `unknown authored record ${ref.id}`, ref.id);
@@ -218,16 +182,11 @@ function exactKeys(
   );
 }
 
-function verifyOperation(program: LinkedProgram, graph: CompiledGraph, operation: OperationNode): void {
+function verifyOperation(program: LinkedProgram, graph: AuthorGraph, operation: OperationNode): void {
   invariant(operation.id.length > 0, "EMPTY_OPERATION_ID", "Operation id is empty");
   invariant(operation.result.record.length > 0, "EMPTY_RECORD_ID", `${operation.id} result record is empty`);
   const producer = resolveProducer(program.closure, operation.producer);
   exactKeys(operation.inputs, producer.inputs.map((port) => port.name), `${operation.id}.inputs`);
-  invariant(
-    producer.outputs.length + producer.needs.length === 1,
-    "PRODUCER_RESULT_NORMAL_FORM",
-    `${producerKey(operation.producer)} must declare exactly one public result`,
-  );
   operationResultType(program, operation);
   if (operation.result.kind === "need") {
     invariant(operation.result.id.length > 0, "EMPTY_NEED_ID", `${operation.id} Need id is empty`);
@@ -243,7 +202,7 @@ function verifyOperation(program: LinkedProgram, graph: CompiledGraph, operation
   }
 }
 
-function verifyCandidateValue(program: LinkedProgram, graph: CompiledGraph, candidate: Candidate): void {
+function verifyCandidateValue(program: LinkedProgram, graph: AuthorGraph, candidate: Candidate): void {
   if (candidate.root.kind === "operation") {
     const supplied = operationResultType(program, resolveOperation(graph, candidate.root.result.operation));
     invariant(
@@ -254,10 +213,14 @@ function verifyCandidateValue(program: LinkedProgram, graph: CompiledGraph, cand
     );
     return;
   }
+  if (candidate.root.kind === "supply") {
+    invariant(candidate.root.record.length > 0, "EMPTY_RECORD_ID", `${candidate.id} supply Record id is empty`, candidate.id);
+    return;
+  }
   const provisional: TypedRecord = {
-    id: candidate.root.value.id,
+    id: candidate.root.record,
     type: candidate.type,
-    value: candidate.root.value.value,
+    value: candidate.root.value,
   };
   verifyRecordStructure(program.closure, provisional);
 }
@@ -274,8 +237,8 @@ function verifySatisfaction(
   );
 }
 
-export function verifyCompiledGraph(program: LinkedProgram, graph: CompiledGraph): void {
-  invariant(graph.format === "hypit.graph@1", "UNSUPPORTED_GRAPH", "unsupported compiled graph format");
+export function verifyAuthorGraph(program: LinkedProgram, graph: AuthorGraph): void {
+  invariant(graph.format === "hypit.graph@1", "UNSUPPORTED_GRAPH", "unsupported Author Graph format");
   const outputIds = new Set<string>();
   const candidateIds = new Set<string>();
   const operationIds = new Set<string>();
@@ -316,24 +279,4 @@ export function verifyCompiledGraph(program: LinkedProgram, graph: CompiledGraph
     const primary = resolveCandidate(graph, output.primary);
     verifySatisfaction(output, primary);
   }
-}
-
-export function verifyBuildRequest(
-  program: LinkedProgram,
-  graph: CompiledGraph,
-  request: BuildRequest,
-): void {
-  verifyCompiledGraph(program, graph);
-  invariant(
-    request.format === "hypit.build-request@1",
-    "UNSUPPORTED_BUILD_REQUEST",
-    "unsupported BuildRequest format",
-  );
-  const targets = new Set<string>();
-  for (const target of request.targets) {
-    resolveLogicalOutput(graph, target.output);
-    invariant(!targets.has(target.output), "DUPLICATE_BUILD_TARGET", `${target.output} is targeted twice`);
-    targets.add(target.output);
-  }
-
 }

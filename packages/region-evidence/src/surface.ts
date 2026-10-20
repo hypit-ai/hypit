@@ -1,3 +1,4 @@
+import { sameType } from "@hypit/hypit/protocol";
 import { spatialTypes } from "@hypit/spatial";
 import { recipeType } from "@hypit/hypit/recipe";
 import { timelineTypes } from "@hypit/timeline";
@@ -5,9 +6,6 @@ import type { StructuredElement, StructuredSurfaceHandler, SurfaceResolvedRefere
 
 import { regionEvidenceFragment } from "./fragment.js";
 
-function sameType(left: SurfaceResolvedReference["type"], right: SurfaceResolvedReference["type"]): boolean {
-  return left.module.name === right.module.name && left.module.version === right.module.version && left.name === right.name;
-}
 function text(element: StructuredElement, name: string): string {
   const value = element.attributes[name];
   if (typeof value !== "string" || !value.trim()) throw new Error(`${element.name}.${name} must be text.`);
@@ -32,9 +30,9 @@ export const decodeRegionEvidenceSurface: StructuredSurfaceHandler = ({ element,
   const recipe = reference(element, "recipe", recipeType, resolveReference);
   return {
     records: [],
-    components: [{ id, fragment: regionEvidenceFragment.id, inputs: {
+    components: [{ id, fragment: regionEvidenceFragment, inputs: {
       within: within.ref, timeline: timeline.ref, recipe: recipe.ref,
     }, outputs: { evidence: id }, range: element.range }],
-    fragments: [regionEvidenceFragment], exports: [id],
+    exports: [id],
   };
 };

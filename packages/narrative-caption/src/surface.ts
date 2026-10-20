@@ -46,7 +46,7 @@ export const decodeNarrativeCaptionTimingSurface: StructuredSurfaceHandler = ({ 
       id: "project",
       producer: narrativeCaptionProducers.projectTiming,
       inputs: { document: input("document"), binding: input("binding"), projection: input("projection") },
-      result: { kind: "output", name: "timing" },
+      result: { kind: "output" as const, name: "timing" },
     }],
     exports: [{ name: "timing", type: captionTypes.timing, root: operation("project") }],
   });
@@ -54,12 +54,11 @@ export const decodeNarrativeCaptionTimingSurface: StructuredSurfaceHandler = ({ 
     records: [],
     components: [{
       id,
-      fragment: fragment.id,
+      fragment,
       inputs: { document: document.ref, binding: binding.ref, projection: projection.ref },
       outputs: { timing: id },
       range: element.range,
     }],
-    fragments: [fragment],
     exports: [id],
   };
 };

@@ -1,8 +1,8 @@
 import type { Timeline } from "@hypit/timeline";
 import type { ProducerPackage, ProducerHandlerContext } from "@hypit/hypit/producer";
-import type { AdmissionPackage } from "@hypit/hypit/admission";
+import type { RefinementPackage } from "@hypit/hypit/refinement";
 import { canonicalize } from "@hypit/hypit/protocol";
-import type { BlobRef, StoredValue } from "@hypit/hypit/protocol";
+import type { BlobRef, Value } from "@hypit/hypit/protocol";
 import type { SpatialFrame } from "@hypit/spatial";
 import type { Text } from "@hypit/hypit/text";
 
@@ -18,23 +18,23 @@ import type {
 } from "./types.js";
 import type { TemporalWindow } from "@hypit/temporal";
 
-function inline<T>(value: StoredValue | undefined, label: string): T {
-  if (value?.kind !== "inline") throw new Error(`${label} must be inline.`);
-  return value.value as unknown as T;
+function valueOf<T>(value: Value | undefined, label: string): T {
+  if (value === undefined) throw new Error(`${label} is missing.`);
+  return value as unknown as T;
 }
 
-const output = (value: unknown) => ({ kind: "inline" as const, value: canonicalize(value) });
+const output = (value: unknown) => ((canonicalize(value)));
 
-function common(inputs: Record<string, { readonly value: StoredValue } | undefined>) {
+function common(inputs: Record<string, { readonly value: Value } | undefined>) {
   return {
-    set: inline<CommentStickerSet>(inputs.set?.value, "CommentStickerSet"),
-    header: inline<CommentStickerHeader>(inputs.header?.value, "CommentStickerHeader"),
-    timeline: inline<Timeline>(inputs.timeline?.value, "Timeline"),
-    frame: inline<SpatialFrame>(inputs.frame?.value, "SpatialFrame"),
-    style: inline<CommentStickerStyle>(inputs.style?.value, "CommentStickerStyle"),
-    spec: inline<CommentStickerItemSpec>(inputs.spec?.value, "CommentStickerItemSpec"),
-    content: inline<CommentStickerContent>(inputs.content?.value, "CommentStickerContent"),
-    window: inline<TemporalWindow>(inputs.window?.value, "TemporalWindow"),
+    set: valueOf<CommentStickerSet>(inputs.set?.value, "CommentStickerSet"),
+    header: valueOf<CommentStickerHeader>(inputs.header?.value, "CommentStickerHeader"),
+    timeline: valueOf<Timeline>(inputs.timeline?.value, "Timeline"),
+    frame: valueOf<SpatialFrame>(inputs.frame?.value, "SpatialFrame"),
+    style: valueOf<CommentStickerStyle>(inputs.style?.value, "CommentStickerStyle"),
+    spec: valueOf<CommentStickerItemSpec>(inputs.spec?.value, "CommentStickerItemSpec"),
+    content: valueOf<CommentStickerContent>(inputs.content?.value, "CommentStickerContent"),
+    window: valueOf<TemporalWindow>(inputs.window?.value, "TemporalWindow"),
   };
 }
 
@@ -42,9 +42,9 @@ export const commentStickerComponent = {
   producers: [
     {
       producer: commentStickerProducers.createContent,
-      handler: ({ inputs }) => ({ outputs: { content: output(createCommentStickerContent(
-        inline<Text>(inputs.comment?.value, "Text"),
-      )) }, needs: {} }),
+      handler: ({ inputs }) => ({ kind: "output" as const, value: output(createCommentStickerContent(
+        valueOf<Text>(inputs.comment?.value, "Text"),
+      )) }),
     },
     ...([
       [commentStickerProducers.setContentAuthor, "author"],
@@ -52,15 +52,15 @@ export const commentStickerComponent = {
       [commentStickerProducers.setContentMeta, "meta"],
     ] as const).map(([producer, field]) => ({
       producer,
-      handler: ({ inputs }: ProducerHandlerContext) => ({ outputs: { content: output(setCommentStickerContentText(
-        inline<CommentStickerContent>(inputs.content?.value, "CommentStickerContent"),
+      handler: ({ inputs }: ProducerHandlerContext) => ({ kind: "output" as const, value: output(setCommentStickerContentText(
+        valueOf<CommentStickerContent>(inputs.content?.value, "CommentStickerContent"),
         field,
-        inline<Text>(inputs[field]?.value, "Text"),
-      )) }, needs: {} }),
+        valueOf<Text>(inputs[field]?.value, "Text"),
+      )) }),
     })),
     {
       producer: commentStickerProducers.createSet,
-      handler: () => ({ outputs: { set: output(createCommentStickerSet()) }, needs: {} }),
+      handler: () => ({ kind: "output" as const, value: output(createCommentStickerSet()) }),
     },
     ...([
       [commentStickerProducers.appendItem, false],
@@ -69,29 +69,29 @@ export const commentStickerComponent = {
       producer,
       handler: ({ inputs }: ProducerHandlerContext) => {
         const values = common(inputs);
-        return { outputs: { set: output(appendProjectedCommentSticker(
+        return { kind: "output" as const, value: output(appendProjectedCommentSticker(
           values.set, values.header, values.timeline, values.frame, values.style, values.spec, values.content, values.window,
-          avatar ? inline<BlobRef>(inputs.avatar?.value, "Comment Sticker avatar") : undefined,
-        )) }, needs: {} };
+          avatar ? valueOf<BlobRef>(inputs.avatar?.value, "Comment Sticker avatar") : undefined,
+        )) };
       },
     })),
     {
       producer: commentStickerProducers.finalize,
-      handler: ({ inputs }) => ({ outputs: { program: output(finalizeCommentSticker(
-        inline<CommentStickerSet>(inputs.set?.value, "CommentStickerSet"),
-        inline<CommentStickerHeader>(inputs.header?.value, "CommentStickerHeader"),
-      )) }, needs: {} }),
+      handler: ({ inputs }) => ({ kind: "output" as const, value: output(finalizeCommentSticker(
+        valueOf<CommentStickerSet>(inputs.set?.value, "CommentStickerSet"),
+        valueOf<CommentStickerHeader>(inputs.header?.value, "CommentStickerHeader"),
+      )) }),
     },
     {
       producer: commentStickerProducers.render,
-      handler: ({ inputs }) => ({ outputs: { track: output(renderCommentSticker(
-        inline<Timeline>(inputs.timeline?.value, "Timeline"),
-        inline<CommentStickerProgram>(inputs.program?.value, "CommentStickerProgram"),
-      )) }, needs: {} }),
+      handler: ({ inputs }) => ({ kind: "output" as const, value: output(renderCommentSticker(
+        valueOf<Timeline>(inputs.timeline?.value, "Timeline"),
+        valueOf<CommentStickerProgram>(inputs.program?.value, "CommentStickerProgram"),
+      )) }),
     },
   ],
-  validators: [{
+  refinements: [{
     type: commentStickerTypes.program,
-    handler: ({ value }) => assertCommentStickerProgram(inline<CommentStickerProgram>(value, "CommentStickerProgram")),
+    handler: ({ value }) => assertCommentStickerProgram(valueOf<CommentStickerProgram>(value, "CommentStickerProgram")),
   }],
-} satisfies ProducerPackage & AdmissionPackage;
+} satisfies ProducerPackage & RefinementPackage;

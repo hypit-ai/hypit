@@ -1,3 +1,4 @@
+import { sameType } from "@hypit/hypit/protocol";
 import { resolveTemporalContext } from "@hypit/temporal/markup";
 import { blobTypes } from "@hypit/hypit/blob";
 import { mediaTypes } from "@hypit/media";
@@ -17,9 +18,6 @@ import { sealCommentStickerHeader, sealCommentStickerItemSpec } from "./program.
 const TIMING = temporalWindowAttributeNames;
 
 function localName(name: string): string { return name.slice(name.lastIndexOf(":") + 1); }
-function sameType(left: SurfaceResolvedReference["type"], right: SurfaceResolvedReference["type"]): boolean {
-  return left.module.name === right.module.name && left.module.version === right.module.version && left.name === right.name;
-}
 function allowed(element: StructuredElement, names: readonly string[], required: readonly string[] = []): void {
   const unknown = Object.keys(element.attributes).filter((name) => !names.includes(name));
   if (unknown.length > 0) throw new Error(`${element.name} does not accept ${unknown[0]}.`);
@@ -49,9 +47,9 @@ function reference(
   if (value === undefined || !sameType(value.type, expected)) throw new Error(`${label} has the wrong Type.`);
   return value;
 }
-function inline<T>(value: SurfaceResolvedReference, label: string): T {
-  if (value.record?.value.kind !== "inline") throw new Error(`${label} must reference authored inline data.`);
-  return value.record.value.value as unknown as T;
+function valueOf<T>(value: SurfaceResolvedReference, label: string): T {
+  if (value.record === undefined) throw new Error(`${label} must reference authored data.`);
+  return value.record.value as unknown as T;
 }
 function dedent(value: string): string {
   const lines = value.replace(/^\n/u, "").replace(/\n\s*$/u, "").split("\n");
@@ -76,8 +74,8 @@ export const decodeCommentStickerStyleSurface: StructuredSurfaceHandler = ({ ele
   const id = text(element, "id");
   const recipeRef = reference(element.attributes.recipe, `${element.name}.recipe`, recipeType, resolveReference);
   const fontRef = reference(element.attributes.font, `${element.name}.font`, mediaTypes.fontStack, resolveReference);
-  const style = decodeCommentStickerStyle(inline<Recipe>(recipeRef, `${element.name}.recipe`), inline<FontStackRef>(fontRef, `${element.name}.font`), id);
-  return { records: [{ id, type: commentStickerTypes.style, value: { kind: "inline", value: style }, range: element.range }], components: [], fragments: [] };
+  const style = decodeCommentStickerStyle(valueOf<Recipe>(recipeRef, `${element.name}.recipe`), valueOf<FontStackRef>(fontRef, `${element.name}.font`), id);
+  return { records: [{ id, type: commentStickerTypes.style, value: (style), range: element.range }], components: [] };
 };
 
 export const decodeCommentStickerTrackSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
@@ -88,7 +86,7 @@ export const decodeCommentStickerTrackSurface: StructuredSurfaceHandler = ({ ele
   const records: SurfaceRecordDraft[] = [{
     id: headerId,
     type: commentStickerTypes.header,
-    value: { kind: "inline", value: sealCommentStickerHeader({ id }) },
+    value: (sealCommentStickerHeader({ id })),
     range: element.range,
   }];
   const inputs: Record<string, typeof context.timeline.ref> = { header: { kind: "record", id: headerId }, timeline: context.timeline.ref };
@@ -121,10 +119,10 @@ export const decodeCommentStickerTrackSurface: StructuredSurfaceHandler = ({ ele
     records.push({
       id: specId,
       type: commentStickerTypes.itemSpec,
-      value: { kind: "inline", value: sealCommentStickerItemSpec({
+      value: (sealCommentStickerItemSpec({
 
         id: itemId,
-      }) },
+      })),
       range: child.range,
     });
     const windowName = `item-${suffix}-window`;
@@ -135,7 +133,7 @@ export const decodeCommentStickerTrackSurface: StructuredSurfaceHandler = ({ ele
       const name = `item-${suffix}-${field}`;
       if (typeof value === "string") {
         const recordId = `${id}.item.${suffix}.${field}`;
-        records.push({ id: recordId, type: textTypes.text, value: { kind: "inline", value: sealText(value) }, range: child.range });
+        records.push({ id: recordId, type: textTypes.text, value: (sealText(value)), range: child.range });
         inputs[name] = { kind: "record", id: recordId };
       } else inputs[name] = value.ref;
       return name;
@@ -153,8 +151,7 @@ export const decodeCommentStickerTrackSurface: StructuredSurfaceHandler = ({ ele
   const fragment = createCommentStickerFragment(items);
   return {
     records,
-    components: [{ id, fragment: fragment.id, inputs, outputs: { program: `${id}.program`, visual: `${id}.visual` }, range: element.range }],
-    fragments: [fragment],
+    components: [{ id, fragment, inputs, outputs: { program: `${id}.program`, visual: `${id}.visual` }, range: element.range }],
     exports: [`${id}.program`, `${id}.visual`],
   };
 };

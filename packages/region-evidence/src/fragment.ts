@@ -15,6 +15,6 @@ export const regionEvidenceFragment = sealGraphFragment({
   ],
   operations: [{ id: "resolve", producer: regionEvidenceProducers.resolve, inputs: {
     within: input("within"), timeline: input("timeline"), recipe: input("recipe"),
-  }, result: { kind: "output", name: "evidence" } }],
+  }, result: { kind: "output" as const, name: "evidence" } }],
   exports: [{ name: "evidence", type: regionEvidenceTypes.evidence, root: { kind: "fragment-operation", operation: "resolve" } }],
 });

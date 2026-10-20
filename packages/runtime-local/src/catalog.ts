@@ -1,13 +1,4 @@
-import type {
-  LogicalOutputRef,
-} from "@hypit/hypit/protocol";
-
-export type BuildPublishedOutput = {
-  /** Author-provided display name; the Output identifier remains unchanged. */
-  readonly displayName?: string;
-  readonly name: string;
-  readonly ref: LogicalOutputRef;
-};
+import type { PublicationPlan } from "@hypit/hypit/result";
 
 export type BuildCatalogDescriptor = {
   readonly source: {
@@ -16,9 +7,7 @@ export type BuildCatalogDescriptor = {
   readonly run?: {
     readonly path: string;
   };
-  /** Author-facing targets requested by the Run, including Outputs forwarded outside Core execution. */
-  readonly targets?: readonly LogicalOutputRef[];
-  readonly publishedOutputs: readonly BuildPublishedOutput[];
+  readonly publication: PublicationPlan;
 };
 
 export type BuildCatalogEntry = BuildCatalogDescriptor & {

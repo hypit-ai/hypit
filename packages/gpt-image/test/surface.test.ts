@@ -53,15 +53,15 @@ test("raw GPT Image Surface keeps Text and every reference image on explicit gra
   });
   assert.deepEqual(component.outputs, { image: "holding.image" });
   const draft = result.records.find((record) => record.id === "holding.draft");
-  assert.equal(draft?.value.kind, "inline");
-  assert.deepEqual((draft?.value.value as { ports?: unknown }).ports, {
+  assert.ok(draft);
+  assert.deepEqual((draft.value as { ports?: unknown }).ports, {
     aspectRatio: ["9:21"],
     resolution: ["2K"],
     background: ["auto"],
   });
   assert.equal(result.records.filter((record) => record.id.endsWith(".binding")).length, 2);
   assert.equal(result.records.some((record) => record.id.endsWith(".cleanup")), false);
-  assert.deepEqual(result.fragments[0]?.operations.map((operation) => operation.id), [
+  assert.deepEqual(result.components[0]?.fragment.operations.map((operation) => operation.id), [
     "bind-text:0001:prompt",
     "bind:0001:images",
     "bind:0002:images",
@@ -76,7 +76,7 @@ test("clean GPT Image Surface adds its package-owned cleanup as one visible down
   const component = result.components[0]!;
   assert.deepEqual(component.inputs.cleanup, { kind: "record", id: "holding.cleanup" });
   assert.ok(result.records.some((record) => record.id === "holding.cleanup"));
-  assert.deepEqual(result.fragments[0]?.operations.map((operation) => operation.id).toSorted(), [
+  assert.deepEqual(result.components[0]?.fragment.operations.map((operation) => operation.id).toSorted(), [
     "bind-text:0001:prompt",
     "bind:0001:images",
     "bind:0002:images",
@@ -85,7 +85,7 @@ test("clean GPT Image Surface adds its package-owned cleanup as one visible down
     "generate",
     "select-primary-image",
   ].toSorted());
-  const clean = result.fragments[0]?.operations.find((operation) => operation.id === "clean-image");
+  const clean = result.components[0]?.fragment.operations.find((operation) => operation.id === "clean-image");
   assert.deepEqual(clean?.inputs.source, { kind: "fragment-operation", operation: "select-primary-image" });
   assert.deepEqual(clean?.inputs.program, { kind: "fragment-input", name: "cleanup" });
 });

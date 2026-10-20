@@ -48,10 +48,9 @@ export const exampleManifest: ModuleManifest = {
       ? [{ name: "previous", type: exampleTypes.itemSet }, { name: "item", type: exampleTypes.itemSet }]
       : [{ name: "timeline", type: timelineTypes.timeline }, { name: "within", type: spatialTypes.frame },
         ...(producer === exampleProducers.renderImage ? [{ name: "image", type: blobTypes.blob }] : [])],
-    outputs: producer === exampleProducers.appendItems
-      ? [{ name: "set", type: exampleTypes.itemSet }]
-      : [{ name: "visual", type: compositionTypes.visualTrack }],
-    needs: [],
+    result: producer === exampleProducers.appendItems
+      ? { kind: "output", name: "set", type: exampleTypes.itemSet }
+      : { kind: "output", name: "visual", type: compositionTypes.visualTrack },
   })),
 };
 

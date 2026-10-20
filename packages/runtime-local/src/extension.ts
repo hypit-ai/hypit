@@ -122,9 +122,9 @@ function address(facet: RuntimeAdapterFacet): RuntimeAdapterAddress {
     ? "endpoint"
     : facet.abi === runtimeCredentialStoreAdapterFacetAbi ? "credential-store" : undefined;
   assert(kind !== undefined, `Runtime Adapter ${facet.abi} ABI is unsupported`);
-  assert(facet.offers?.length === 1 && facet.offers[0]!.trim().length > 0,
-    "Runtime Adapter must offer exactly one non-empty use name");
-  return { use: facet.offers[0]!, kind };
+  assert(facet.address !== undefined && facet.address.trim().length > 0,
+    "Runtime Adapter must declare one non-empty use name");
+  return { use: facet.address, kind };
 }
 
 function verifyImplementation(value: unknown, subject: string, kind: RuntimeAdapterKind): RuntimeAdapterImplementation {
@@ -154,7 +154,7 @@ function storeFacet<T>(kind: "credential-store", options: {
   };
   return {
     abi: abiFor(kind),
-    offers: [options.use],
+    address: options.use,
     implementation: verifyImplementation(implementation, `Runtime Adapter ${options.use}`, kind),
   };
 }
@@ -166,7 +166,7 @@ export function createRuntimeEndpointAdapterFacet(options: {
   assert(options.use.trim().length > 0, "Runtime Adapter use name is empty");
   return {
     abi: runtimeEndpointAdapterFacetAbi,
-    offers: [options.use],
+    address: options.use,
     implementation: verifyImplementation({ activate: options.activate }, `Runtime Adapter ${options.use}`, "endpoint"),
   };
 }

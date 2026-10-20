@@ -1,9 +1,11 @@
 export { RunFragmentRegistry } from "./registry.js";
 export {
-  createProvidedCandidate,
+  createValueCandidate,
+  createSupplyCandidate,
 } from "./candidate.js";
 export type {
-  ProvidedCandidateInput,
+  ValueCandidateInput,
+  SupplyCandidateInput,
 } from "./candidate.js";
 export {
   createRunFragmentFacet,

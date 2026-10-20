@@ -1,4 +1,4 @@
-import { createAdmissionPackageFacet } from "@hypit/hypit/admission";
+import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
 import { createProducerPackageFacet } from "@hypit/hypit/producer";
 import { createMarkupSurfaceFacet } from "@hypit/hypit/markup";
 import {
@@ -14,8 +14,7 @@ export const hypitPackage = {
   format: "hypit.package@1" as const,
   modules: [{ manifest: grokImagineManifest }],
   facets: [
-    ...[grokImagineComponent].flatMap((component) => [createProducerPackageFacet(component), createAdmissionPackageFacet(component)]),
-    grokImagineDefinition.facet,
+    ...[grokImagineComponent].flatMap((component) => [createProducerPackageFacet(component), createRefinementPackageFacet(component)]),
     createMarkupSurfaceFacet({
       module: grokImagineModuleRef,
     declaration: grokImagineMarkupSurfaces.find((item) => item.name === "video")!,

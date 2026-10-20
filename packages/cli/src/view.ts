@@ -5,18 +5,22 @@ import type {
   BuildResultRepository,
   RepositoryBuildResultOutputDescription,
 } from "@hypit/result";
+import { buildResultOutput } from "@hypit/result";
 import { buildIdCreatedAt } from "@hypit/protocol";
 import type { TypeRef } from "@hypit/protocol";
 import type { CliBuildView as BuildView } from "./runtime-port.js";
 import { commandHint } from "./command-hint.js";
 import type { CommandScope } from "./command-hint.js";
 
-export type PublicOutputKind = "scalar" | "resource" | "composite";
+export type PublicOutputRepresentation = "inline" | "file" | "value-document";
+
+/** Result capability used by CLI presentation; mutation and byte access stay outside this boundary. */
+export type BuildResultDescriptionRepository = Pick<BuildResultRepository, "describeOutput">;
 
 export type CliOutputView = {
   readonly name: string;
   readonly type: string;
-  readonly kind: PublicOutputKind;
+  readonly representation: PublicOutputRepresentation;
   readonly target: boolean;
   readonly highlighted: boolean;
   readonly mediaType?: string;
@@ -116,7 +120,7 @@ export function buildCreatedAtIso(build: string): string {
 }
 
 export async function outputView(
-  repository: BuildResultRepository,
+  repository: BuildResultDescriptionRepository,
   manifest: BuildResultManifest,
   name: string,
 ): Promise<CliOutputView> {
@@ -127,10 +131,10 @@ export async function outputView(
   return {
     name,
     type: cliTypeName(output.type),
-    kind: output.kind,
+    representation: output.representation,
     target: manifest.targets.includes(name),
     highlighted: manifest.highlightedOutputs?.includes(name) === true,
-    ...(output.kind === "resource" ? {
+    ...(output.representation === "file" ? {
       mediaType: output.mediaType,
       size: output.size,
     } : {}),
@@ -235,11 +239,11 @@ function groupOperationViews(
 }
 
 export async function buildResultView(
-  repository: BuildResultRepository,
+  repository: BuildResultDescriptionRepository,
   manifest: BuildResultManifest,
   options: { readonly projectRoot: string; readonly output?: string; readonly limit: number; readonly verbose?: boolean },
 ): Promise<CliBuildResultView> {
-  if (options.output !== undefined && manifest.outputs[options.output] === undefined) {
+  if (options.output !== undefined && buildResultOutput(manifest, options.output) === undefined) {
     throw new Error(`Build Result ${manifest.id} has no public Output ${options.output}`);
   }
   const available = orderedOutputNames(manifest);

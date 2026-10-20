@@ -1,0 +1,123 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { sealComposition, sealVisualTrack, VISUAL_IR_V1 } from "@hypit/composition";
+import { sealTimeline } from "@hypit/timeline";
+import { fixtureResource } from "../../../test/fixture-resource.js";
+import {
+  assertHtmlDocument,
+  compileHtmlDocument,
+  materializeHtmlDocument,
+} from "../src/index.js";
+
+function fixture() {
+  const timeline = sealTimeline({
+    id: "document-clock",
+    frameCount: 60,
+    frameRate: { numerator: 30_000, denominator: 1_001 },
+  });
+  const picture = {
+    kind: "blob" as const,
+    resource: fixtureResource("html-document:picture"),
+    size: 10,
+    mediaType: "image/png",
+  };
+  const secondPicture = {
+    ...picture,
+    resource: fixtureResource("html-document:second-picture"),
+  };
+  const track = sealVisualTrack({
+    timelineId: timeline.id,
+    visualIr: VISUAL_IR_V1,
+    id: "picture",
+    presents: [{
+      id: "picture",
+      order: 0,
+      z: 0,
+      span: { startFrame: 0, endFrameExclusive: timeline.frameCount },
+      elements: [
+        { id: "root", order: 0, kind: "box", style: [] },
+        { id: "image", parent: "root", order: 1, kind: "image", artifact: picture, style: [] },
+        { id: "second-image", parent: "root", order: 2, kind: "image", artifact: secondPicture, style: [] },
+      ],
+    }],
+  });
+  return {
+    timeline,
+    pictures: [picture, secondPicture],
+    composition: sealComposition({
+      id: "document",
+      canvas: { width: 1920, height: 1080, clearColor: "#000000" },
+      tracks: [track],
+    }),
+  };
+}
+
+test("HTML Document composes independently compiled picture, sound and shared playback", () => {
+  const { composition, pictures, timeline } = fixture();
+  const document = compileHtmlDocument(composition, timeline);
+  assert.doesNotThrow(() => assertHtmlDocument(document));
+  assert.equal(document.program.frameCount, 60);
+  assert.equal(document.audio.frameCount, 60);
+  assert.deepEqual(document.resources.artifacts.map((binding) => binding.id),
+    pictures.map((picture) => picture.resource).sort());
+
+  const html = materializeHtmlDocument(document, (artifact) => `/materials/${artifact.resource}`, {
+    autoplay: false,
+    loop: false,
+    muted: false,
+    responsive: false,
+  });
+  assert.match(html, /window\.__hypitDocument/u);
+  assert.match(html, /hypit\.html-document\.command@1/u);
+  assert.match(html, /\/materials\//u);
+  assert.match(html, /"autoplay":false/u);
+});
+
+test("document-local identities survive recursive Result material rebinding", () => {
+  const { composition, timeline } = fixture();
+  const original = compileHtmlDocument(composition, timeline);
+  const reboundResource = fixtureResource("html-document:rebound-picture");
+  const rebound = {
+    ...original,
+    program: {
+      ...original.program,
+      artifacts: original.program.artifacts.map((entry) => ({
+        ...entry,
+        artifact: { ...entry.artifact, resource: reboundResource },
+      })),
+      surfaces: original.program.surfaces.map((surface) => ({
+        ...surface,
+        artifact: { ...surface.artifact, resource: reboundResource },
+      })),
+    },
+    resources: {
+      artifacts: original.resources.artifacts.map((binding) => ({
+        ...binding,
+        artifact: { ...binding.artifact, resource: reboundResource },
+      })),
+      surfaces: original.resources.surfaces.map((binding) => ({
+        ...binding,
+        artifact: { ...binding.artifact, resource: reboundResource },
+      })),
+    },
+  };
+  const resolved: string[] = [];
+  const html = materializeHtmlDocument(rebound, (artifact) => {
+    resolved.push(artifact.resource);
+    return `/rebound/${artifact.resource}`;
+  });
+  assert.ok(resolved.length > 0);
+  assert.ok(resolved.every((resource) => resource === reboundResource));
+  assert.match(html, /\/rebound\//u);
+});
+
+test("HTML Document rejects picture and sound that disagree on their frame clock", () => {
+  const { composition, timeline } = fixture();
+  const document = compileHtmlDocument(composition, timeline);
+  const invalid = { ...document, audio: {
+    ...document.audio,
+    frameRate: { numerator: 60, denominator: 1 },
+    sampleFrames: 48_000,
+  } };
+  assert.throws(() => assertHtmlDocument(invalid), /same frame clock/u);
+});

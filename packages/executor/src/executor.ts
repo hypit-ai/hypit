@@ -1,4 +1,4 @@
-import { reduce, resolveNeedCommand, resolveProducer } from "@hypit/kernel";
+import { resolveProducer } from "@hypit/kernel";
 import type { ProducerHandlerResult } from "@hypit/producer";
 import type { EndpointCredential, EndpointFulfillment, EndpointOutcome } from "@hypit/endpoint";
 import { endpointResourceClaims } from "@hypit/endpoint";
@@ -10,11 +10,12 @@ import type {
   InvokeProducerCommand,
   TypedRecord,
 } from "@hypit/protocol";
+import { capabilityKey, producerKey, typeKey } from "@hypit/protocol";
 import {
-  TypeValidatorRegistry,
+  RefinementRegistry,
   validateValue,
-} from "@hypit/admission";
-import type { TypeValidatorRegistryLike } from "@hypit/admission";
+} from "@hypit/refinement";
+import type { RefinementRegistryLike } from "@hypit/refinement";
 import type {
   ResourceStore,
   CredentialStore,
@@ -34,14 +35,9 @@ import { MemoryResourceStore } from "./resources.js";
 import {
   ProducerRegistry,
   EndpointRegistry,
-  producerRegistryKey,
-  endpointCapabilityKey,
-  endpointReturnKey,
 } from "./registry.js";
 import type {
   BlockedCommand,
-  ExecutorExecutionOutcome,
-  ExecutorRunResult,
   EndpointRegistration,
 } from "./types.js";
 
@@ -53,7 +49,7 @@ export type ExecutorOptions = {
   readonly resourcesForBuild?: (build: string) => ResourceStore;
   readonly operations?: OperationStore;
   readonly credentials?: CredentialStore;
-  readonly validators?: TypeValidatorRegistryLike;
+  readonly refinements?: RefinementRegistryLike;
   readonly actions?: import("@hypit/runtime").RuntimeActionExecutor;
 };
 
@@ -69,6 +65,10 @@ type Executable =
       readonly resources: readonly import("@hypit/runtime").RuntimeResourceClaim[];
       readonly registration: EndpointRegistration;
     };
+
+type CommandClassification =
+  | { readonly status: "executable"; readonly executable: Executable }
+  | { readonly status: "blocked"; readonly blocked: BlockedCommand };
 
 function failureMessage(error: unknown): string {
   const parts: string[] = [];
@@ -95,7 +95,7 @@ export class Executor {
   readonly #resourcesForBuild: ((build: string) => ResourceStore) | undefined;
   readonly operations: OperationStore | undefined;
   readonly credentials: CredentialStore | undefined;
-  readonly validators: TypeValidatorRegistryLike;
+  readonly refinements: RefinementRegistryLike;
   readonly #actions: import("@hypit/runtime").RuntimeActionExecutor | undefined;
   readonly #credentialReads = new Map<string, Promise<CredentialValue | undefined>>();
 
@@ -106,7 +106,7 @@ export class Executor {
     this.#resourcesForBuild = options.resourcesForBuild;
     this.operations = options.operations;
     this.credentials = options.credentials;
-    this.validators = options.validators ?? new TypeValidatorRegistry();
+    this.refinements = options.refinements ?? new RefinementRegistry();
     this.#actions = options.actions;
   }
 
@@ -170,22 +170,24 @@ export class Executor {
     state: BuildState,
     command: BuildCommand,
     indexedRecord?: (id: string) => TypedRecord | undefined,
-  ): { readonly executable?: Executable; readonly blocked?: BlockedCommand } {
+  ): CommandClassification {
     if (command.kind === "invoke-producer") {
       const registration = this.producers.producer(command.producer);
       if (registration === undefined) {
         return {
+          status: "blocked",
           blocked: {
             command: command.id,
             reason: "missing-producer",
-            subject: producerRegistryKey(command.producer),
+            subject: producerKey(command.producer),
           },
         };
       }
       return {
+        status: "executable",
         executable: {
           command,
-          resources: registration.scheduling?.resources ?? [],
+          resources: [],
           run: async () =>
             registration.handler({
               command: structuredClone(command),
@@ -196,41 +198,44 @@ export class Executor {
       };
     }
 
-    const resolution = this.endpoints.resolve(command.need);
-    if (resolution.status === "missing") {
+    const selection = this.endpoints.select(command.need);
+    if (selection.status === "missing") {
       return {
+        status: "blocked",
         blocked: {
           command: command.id,
           reason: "missing-endpoint",
-          subject: resolution.endpointId === undefined
-            ? `${endpointCapabilityKey(command.need.capability)} -> ${endpointReturnKey(command.need.returns)}`
-            : `${endpointCapabilityKey(command.need.capability)} -> ${resolution.endpointId}`,
+          subject: selection.endpointId === undefined
+            ? `${capabilityKey(command.need.capability)} -> ${typeKey(command.need.returns)}`
+            : `${capabilityKey(command.need.capability)} -> ${selection.endpointId}`,
         },
       };
     }
-    if (resolution.status === "unsupported") {
+    if (selection.status === "ambiguous") {
       return {
-        blocked: {
-          command: command.id,
-          reason: "unsupported-endpoint-request",
-          subject: resolution.rejections
-            .map((rejection) => `${rejection.endpointId}: ${rejection.reason}`)
-            .join("; "),
-        },
-      };
-    }
-    if (resolution.status === "ambiguous") {
-      return {
+        status: "blocked",
         blocked: {
           command: command.id,
           reason: "ambiguous-endpoint",
-          subject: `${endpointCapabilityKey(command.need.capability)} -> ${resolution.endpointIds.join(", ")}`,
+          subject: `${capabilityKey(command.need.capability)} -> ${selection.endpointIds.join(", ")}`,
         },
       };
     }
-    const registration = resolution.registration;
+    const registration = selection.registration;
+    const support = this.endpoints.checkSupport(registration, command.need);
+    if (support.status === "unsupported") {
+      return {
+        status: "blocked",
+        blocked: {
+          command: command.id,
+          reason: "unsupported-endpoint-request",
+          subject: `${registration.id}: ${support.reason}`,
+        },
+      };
+    }
     if (registration.kind === "asynchronous" && this.operations === undefined) {
       return {
+        status: "blocked",
         blocked: {
           command: command.id,
           reason: "missing-operation-store",
@@ -239,6 +244,7 @@ export class Executor {
       };
     }
     return {
+      status: "executable",
       executable: {
         command,
         endpointId: registration.id,
@@ -257,10 +263,9 @@ export class Executor {
     result: EndpointFulfillment,
   ): Promise<CommandResult> {
     await validateValue(
-      state.program.closure,
       executable.command.need.returns,
       result.value,
-      this.validators,
+      this.refinements,
     );
     return {
       kind: "need-fulfilled",
@@ -270,21 +275,18 @@ export class Executor {
   }
 
   async acceptOperation(
-    state: BuildState,
+    execution: RuntimeBuildExecution,
     snapshot: OperationSnapshot,
   ): Promise<CommandResult | undefined> {
-    if ((snapshot.status === "completed" || snapshot.status === "pending") && snapshot.completion !== undefined) {
+    const state = execution.view();
+    if (snapshot.status === "received" || snapshot.status === "completed") {
       const command = state.outstanding.find((item) => item.id === snapshot.command);
       if (command?.kind !== "fulfill-need") return undefined;
-      await validateValue(state.program.closure, command.need.returns, snapshot.completion.value, this.validators);
-      if (snapshot.status === "pending") {
-        await this.operations!.update(snapshot.id, { status: "completed", completion: snapshot.completion });
-      }
+      await validateValue(command.need.returns, snapshot.completion.value, this.refinements);
       return { kind: "need-fulfilled", command: snapshot.command, value: snapshot.completion.value };
     }
     if (snapshot.status === "failed") {
       const failure = snapshot.failure;
-      if (failure === undefined) throw new Error(`Operation ${snapshot.id} has no failure`);
       const content = {
         kind: "command-failed",
         command: snapshot.command,
@@ -305,8 +307,19 @@ export class Executor {
     return undefined;
   }
 
+  async completeOperation(id: string): Promise<void> {
+    const operation = await this.operations?.read(id);
+    if (operation?.status !== "received") return;
+    await this.operations!.update(id, {
+      status: "completed",
+      completion: operation.completion,
+      acknowledgedAt: operation.acknowledgedAt,
+      endedAt: operation.endedAt,
+    });
+  }
+
   async #executeEndpoint(
-    state: BuildState,
+    execution: RuntimeBuildExecution,
     executable: Extract<Executable, { readonly endpointId: string }>,
     context: RuntimeExecutionContext,
   ): Promise<RuntimeExecutionResult> {
@@ -321,21 +334,28 @@ export class Executor {
     }
     operation ??= await operations.create({
       id: `op_${crypto.randomUUID()}`, build: context.build, command: executable.command.id,
-      endpoint: executable.endpointId, status: "pending", submission: "queued", createdAt: Date.now(),
-      request: structuredClone(executable.command),
+      endpoint: executable.endpointId, status: "queued", createdAt: Date.now(),
+      need: structuredClone(executable.command.need),
       credentials: structuredClone(executable.registration.credentials ?? {}),
       ...(executable.registration.pool === undefined ? {} : { pool: executable.registration.pool }),
       wakeAt: Date.now(), progress: { phase: "ready-to-submit" },
     });
-    if (operation.status === "pending" && operation.completion === undefined) {
+    if (operation.status === "queued" || operation.status === "submitting"
+      || operation.status === "running" || operation.status === "collecting") {
       operation = await this.#advanceOperation(operation, executable.registration, context);
     }
-    if (operation.remoteEnded) await context.releaseOperationCapacity?.();
-    const event = await this.acceptOperation(state, operation);
+    if (operation.status === "queued" || operation.status === "collecting"
+      || operation.status === "received" || operation.status === "completed"
+      || operation.status === "failed" || operation.status === "cancelled") {
+      await context.releaseOperationCapacity?.();
+    }
+    const event = await this.acceptOperation(execution, operation);
+    const nextWakeAt = operation.status === "queued" || operation.status === "running" || operation.status === "collecting"
+      ? operation.wakeAt : undefined;
     return event === undefined ? {
       status: "pending", operation: operation.id,
-      ...(operation.wakeAt === undefined ? {} : { wakeAt: operation.wakeAt }),
-    } : { status: "completed", event };
+      ...(nextWakeAt === undefined ? {} : { wakeAt: nextWakeAt }),
+    } : { status: "completed", event, operation: operation.id };
   }
 
   async #advanceOperation(
@@ -346,7 +366,7 @@ export class Executor {
     const result = await this.#advanceOperationStep(operation, registration, runtimeContext);
     if (result.status === "failed" && operation.status !== "failed") {
       await runtimeContext.recordExecution?.({ endpoint: operation.endpoint, kind: "failed", message: result.failure!.message });
-    } else if (result.completion !== undefined && operation.completion === undefined) {
+    } else if (result.status === "received") {
       await runtimeContext.recordExecution?.({ endpoint: operation.endpoint, kind: "completed" });
     } else if (result.progress?.phase !== undefined && result.progress.phase !== operation.progress?.phase) {
       await runtimeContext.recordExecution?.({ endpoint: operation.endpoint, kind: "phase", phase: result.progress.phase });
@@ -378,37 +398,49 @@ export class Executor {
   ): Promise<OperationSnapshot> {
     const operations = this.operations!;
     if (registration.kind !== "asynchronous") throw new Error("Operation Endpoint is not asynchronous");
-    if (operation.status !== "pending" || operation.completion !== undefined) return operation;
-    if ((operation.wakeAt ?? 0) > Date.now()) return operation;
-    const command = operation.request;
-    if (command === undefined) throw new Error(`Operation ${operation.id} has no stored request`);
+    if (operation.status === "received" || operation.status === "completed"
+      || operation.status === "failed" || operation.status === "cancelled") return operation;
+    const wakeAt = operation.status === "queued" || operation.status === "running" || operation.status === "collecting"
+      ? operation.wakeAt : undefined;
+    if ((wakeAt ?? 0) > Date.now()) return operation;
     const endpoint = registration.endpoint;
-    const action: import("@hypit/endpoint").EndpointAction = operation.remoteEnded ? "collect"
-      : operation.handle !== undefined ? "poll" : "submit";
-    if (action === "submit" && operation.submission !== "queued") {
+    if (operation.status === "submitting") {
       return await operations.update(operation.id, {
         status: "failed", failure: { code: "SUBMISSION_INTERRUPTED",
-          message: "Submission ended without a task receipt; this execution attempt has failed" },
+          message: "Submission ended without a task receipt; this execution attempt has failed" }, endedAt: Date.now(),
       });
     }
+    const action: import("@hypit/endpoint").EndpointAction = operation.status === "collecting" ? "collect"
+      : operation.status === "running" ? "poll" : "submit";
+    const actionHandle = operation.status === "running" || operation.status === "collecting" ? operation.handle : undefined;
+    const actionAcknowledgedAt = operation.status === "running" || operation.status === "collecting"
+      ? operation.acknowledgedAt : undefined;
+    const actionEndedAt = operation.status === "collecting" ? operation.endedAt : undefined;
     const invoke = async (): Promise<EndpointOutcome> => {
       const context = {
-        command: structuredClone(command), need: structuredClone(command.need),
+        need: structuredClone(operation.need),
         resources: this.#resourceStore(operation.build), operation: operation.id,
-        credentials: await this.#endpointCredentials({ ...registration, credentials: operation.credentials ?? registration.credentials ?? {} }),
+        credentials: await this.#endpointCredentials({ ...registration, credentials: operation.credentials }),
         ...this.#endpointObservers(operation.endpoint, runtimeContext),
         checkpoint: async (checkpoint: import("@hypit/endpoint").EndpointCheckpoint) => {
-          await operations.update(operation.id, { status: "pending", ...checkpoint,
-            submission: "accepted", acknowledgedAt: operation.acknowledgedAt ?? Date.now(), wakeAt: Date.now(), progress: { phase: checkpoint.remoteEnded ? "collecting" : "submitted" } });
-          if (checkpoint.remoteEnded) await runtimeContext.releaseOperationCapacity?.();
+          const acknowledgedAt = operation.status === "running" || operation.status === "collecting"
+            ? operation.acknowledgedAt : Date.now();
+          await operations.update(operation.id, checkpoint.status === "ended"
+            ? { status: "collecting", handle: checkpoint.handle, acknowledgedAt, endedAt: Date.now(),
+                wakeAt: Date.now(), ...(checkpoint.receipt === undefined ? {} : { receipt: checkpoint.receipt }),
+                progress: { phase: "collecting" } }
+            : { status: "running", handle: checkpoint.handle, acknowledgedAt, wakeAt: Date.now(),
+                ...(checkpoint.receipt === undefined ? {} : { receipt: checkpoint.receipt }),
+                progress: { phase: "submitted" } });
+          if (checkpoint.status === "ended") await runtimeContext.releaseOperationCapacity?.();
         },
       };
       if (action === "submit") {
-        await operations.update(operation.id, { status: "pending", submission: "started", progress: { phase: "submitting" } });
+        await operations.update(operation.id, { status: "submitting", progress: { phase: "submitting" } });
         await runtimeContext.recordExecution?.({ endpoint: operation.endpoint, kind: "started" });
         return await endpoint.start(context);
       }
-      const pollContext = { ...context, handle: structuredClone(operation.handle!) };
+      const pollContext = { ...context, handle: structuredClone(actionHandle!) };
       if (action === "collect") {
         await runtimeContext.recordExecution?.({ endpoint: operation.endpoint, kind: "phase", phase: "collecting" });
         if (endpoint.collect === undefined) throw new Error(`Endpoint ${registration.id} declared artifacts ready but has no collect action`);
@@ -423,7 +455,12 @@ export class Executor {
         if (this.#actions === undefined) throw new Error(`Endpoint ${registration.id} requires Runtime action admission`);
         const result = await this.#actions.run({ build: operation.build, command: operation.command, action, resources }, invoke);
         if (result.status === "deferred") return await operations.update(operation.id, {
-          status: "pending", ...(result.wakeAt === undefined ? {} : { wakeAt: result.wakeAt }),
+          ...(action === "submit"
+            ? { status: "queued" as const }
+            : action === "collect"
+              ? { status: "collecting" as const, handle: actionHandle!, acknowledgedAt: actionAcknowledgedAt!, endedAt: actionEndedAt! }
+              : { status: "running" as const, handle: actionHandle!, acknowledgedAt: actionAcknowledgedAt! }),
+          ...(result.wakeAt === undefined ? {} : { wakeAt: result.wakeAt }),
           progress: { phase: "waiting-resource" },
         });
         outcome = result.value;
@@ -431,62 +468,70 @@ export class Executor {
     } catch (error) {
       return await operations.update(operation.id, {
         status: "failed", failure: { code: "ENDPOINT_ACTION_FAILED",
-          message: `${action} failed: ${failureMessage(error)}` },
+          message: `${action} failed: ${failureMessage(error)}` }, endedAt: Date.now(),
       });
     }
     const recorded = await operations.read(operation.id) ?? operation;
     const receipt = outcome.receipt ?? recorded.receipt;
-    const facts = receipt === undefined ? {} : {
-      receipt, acknowledgedAt: recorded.acknowledgedAt ?? Date.now(),
-    };
+    const acknowledgedAt = recorded.status === "running" || recorded.status === "collecting"
+      || recorded.status === "received" || recorded.status === "completed"
+      ? recorded.acknowledgedAt : Date.now();
+    const facts = receipt === undefined ? {} : { receipt };
     if (outcome.status === "pending") {
       return await operations.update(operation.id, {
-        status: "pending", ...facts, submission: "accepted", handle: outcome.handle,
+        ...(action === "collect"
+          ? { status: "collecting" as const, endedAt: recorded.status === "collecting" ? recorded.endedAt : Date.now() }
+          : { status: "running" as const }),
+        ...facts, acknowledgedAt, handle: outcome.handle,
         wakeAt: outcome.wakeAt ?? Date.now(),
         ...(outcome.progress === undefined ? {} : { progress: outcome.progress }),
       });
     }
     if (outcome.status === "ready") return await operations.update(operation.id, {
-      status: "pending", ...facts, remoteEnded: true, endedAt: Date.now(), handle: outcome.handle,
+      status: "collecting", ...facts, acknowledgedAt, endedAt: Date.now(), handle: outcome.handle,
       wakeAt: Date.now(), progress: { phase: "ready-to-collect" },
     });
     if (outcome.status === "failed") return await operations.update(operation.id, {
-      status: "failed", ...facts, failure: outcome.failure,
+      status: "failed", ...facts, failure: outcome.failure, endedAt: Date.now(),
     });
     return await operations.update(operation.id, {
-      status: "pending", ...facts, remoteEnded: true, endedAt: recorded.endedAt ?? Date.now(),
-      completion: outcome.result, wakeAt: Date.now(), progress: { phase: "ready-to-accept" },
+      status: "received", ...facts, acknowledgedAt,
+      endedAt: recorded.status === "collecting" ? recorded.endedAt : Date.now(),
+      completion: outcome.result, progress: { phase: "ready-to-accept" },
     });
   }
 
   async advanceOperation(operation: OperationSnapshot, context?: RuntimeExecutionContext): Promise<OperationSnapshot> {
-    if (operation.request === undefined) throw new Error(`Operation ${operation.id} has no stored request`);
-    const selected = this.endpoints.resolve(operation.request.need);
+    const selected = this.endpoints.select(operation.need);
     if (selected.status !== "resolved" || selected.registration.id !== operation.endpoint) {
       throw new Error(`Operation ${operation.id} cannot change its selected Endpoint ${operation.endpoint}`);
+    }
+    const support = this.endpoints.checkSupport(selected.registration, operation.need);
+    if (support.status === "unsupported") {
+      throw new Error(`Operation ${operation.id} request is no longer supported by ${operation.endpoint}: ${support.reason}`);
     }
     return await this.#advanceOperation(operation, selected.registration, context ?? { build: operation.build });
   }
 
   async #execute(
-    state: BuildState,
+    execution: RuntimeBuildExecution,
     executable: Executable,
     context?: RuntimeExecutionContext,
   ): Promise<RuntimeExecutionResult> {
+    const state = execution.view();
     if (!("endpointId" in executable)) {
       try {
         const result = (await executable.run()) as ProducerHandlerResult;
         const producer = resolveProducer(state.program.closure, executable.command.producer);
-        for (const port of producer.outputs) {
-          const value = result.outputs[port.name];
-          if (value === undefined) continue;
-          await validateValue(state.program.closure, port.type, value, this.validators);
+        if (result.kind === "output") {
+          const port = producer.result;
+          if (port.kind !== "output") throw new Error("Producer returned an output but declares a Need");
+          await validateValue(port.type, result.value, this.refinements);
         }
         const content = {
           kind: "producer-completed",
           command: executable.command.id,
-          outputs: result.outputs,
-          needs: result.needs,
+          result,
         } as const;
         return {
           status: "completed",
@@ -495,7 +540,7 @@ export class Executor {
       } catch (error) {
         const producer = executable.command.producer;
         throw new Error(
-          `Producer ${producer.module.name}@${producer.module.version}#${producer.name} failed: ${failureMessage(error)}`,
+          `Producer ${producerKey(producer)} failed: ${failureMessage(error)}`,
           { cause: error },
         );
       }
@@ -503,7 +548,7 @@ export class Executor {
     if (executable.registration.kind === "asynchronous") {
       if (context === undefined) throw new Error("asynchronous Endpoint execution requires a stable Build id");
       try {
-        return await this.#executeEndpoint(state, executable, context);
+        return await this.#executeEndpoint(execution, executable, context);
       } catch (error) {
         await context.recordExecution?.({ endpoint: executable.endpointId, kind: "failed", message: failureMessage(error) });
         throw new Error(
@@ -515,7 +560,6 @@ export class Executor {
     await context?.recordExecution?.({ endpoint: executable.endpointId, kind: "started" });
     try {
       const result = await executable.registration.handler({
-        command: structuredClone(executable.command),
         need: structuredClone(executable.command.need),
         resources: this.#resourceStore(context?.build),
         credentials: await this.#endpointCredentials(executable.registration),
@@ -541,76 +585,57 @@ export class Executor {
     if (state.status === "complete" || state.status === "failed") {
       return { state, runnable: [], blocked: [] };
     }
-    const classifications = commands.map((command) => ({
-      command,
-      ...this.#classify(state, command, indexedRecord),
-    }));
+    const classifications = commands.map((command) => this.#classify(state, command, indexedRecord));
     return {
       state,
-      runnable: classifications.flatMap(({ executable }) => executable === undefined ? [] : [{
-        command: executable.command,
-        resources: executable.resources,
-        capacityMode: "endpointId" in executable && executable.registration.kind === "asynchronous"
+      runnable: classifications.flatMap((classification) => classification.status === "blocked" ? [] : [{
+        command: classification.executable.command,
+        resources: classification.executable.resources,
+        capacityMode: "endpointId" in classification.executable && classification.executable.registration.kind === "asynchronous"
           ? "asynchronous"
           : "active",
       }]),
-      blocked: classifications
-        .map((item) => item.blocked)
-        .filter((item): item is BlockedCommand => item !== undefined),
+      blocked: classifications.flatMap((classification) =>
+        classification.status === "blocked" ? [classification.blocked] : []),
     };
   }
 
   /** Classify the commands already generated by Core for what this Host can execute. */
-  prepare(state: BuildState): RuntimePreparation {
-    return this.#prepare(state, state.outstanding);
-  }
-
-  prepareExecution(execution: RuntimeBuildExecution): RuntimePreparation {
+  prepare(execution: RuntimeBuildExecution): RuntimePreparation {
     return this.#prepare(execution.view(), execution.commands(), (id) => execution.record(id));
   }
 
   /** Execute one command emitted by `prepare` in the same scheduling turn. */
   async executeCommand(
-    state: BuildState,
-    descriptor: RuntimeRunnableCommand,
-    context: RuntimeExecutionContext,
-  ): Promise<RuntimeExecutionResult> {
-    const classified = this.#classify(state, descriptor.command);
-    if (classified.executable === undefined) {
-      throw new Error(`command ${descriptor.command.id} is no longer executable`);
-    }
-    return await this.#execute(state, classified.executable, context);
-  }
-
-  async executeExecutionCommand(
     execution: RuntimeBuildExecution,
     descriptor: RuntimeRunnableCommand,
     context: RuntimeExecutionContext,
   ): Promise<RuntimeExecutionResult> {
     const state = execution.view();
     const classified = this.#classify(state, descriptor.command, (id) => execution.record(id));
-    if (classified.executable === undefined) {
+    if (classified.status === "blocked") {
       throw new Error(`command ${descriptor.command.id} is no longer executable`);
     }
-    return await this.#execute(state, classified.executable, context);
+    return await this.#execute(execution, classified.executable, context);
   }
 
   /** Stop observing this Operation and make at most one explicit cancellation request. */
-  async cancelOperation(initial: BuildState, operation: OperationSnapshot): Promise<OperationSnapshot> {
+  async cancelOperation(operation: OperationSnapshot): Promise<OperationSnapshot> {
     const operations = this.operations;
     if (operations === undefined) throw new Error("cancelling an Operation requires OperationStore");
     const current = await operations.read(operation.id) ?? operation;
-    if (current.status !== "pending") return current;
-    let cancellation: NonNullable<OperationSnapshot["cancellation"]> = { outcome: "unsupported" };
-    if (current.handle !== undefined && !current.remoteEnded) {
+    if (current.status === "received" || current.status === "completed"
+      || current.status === "failed" || current.status === "cancelled") return current;
+    let cancellation: import("@hypit/runtime").OperationCancellation = { outcome: "unsupported" };
+    if (current.status === "running") {
       try {
-        const command = current.request ?? resolveNeedCommand(initial, current.command);
-        if (command === undefined) throw new Error(`Operation ${current.id} has no Need Command`);
-        const selected = this.endpoints.resolve(command.need);
+        const selected = this.endpoints.select(current.need);
         if (selected.status !== "resolved" || selected.registration.id !== current.endpoint
           || selected.registration.kind !== "asynchronous") throw new Error("Operation Endpoint changed");
+        const support = this.endpoints.checkSupport(selected.registration, current.need);
+        if (support.status === "unsupported") throw new Error(`Operation request is unsupported: ${support.reason}`);
         const result = await selected.registration.endpoint.cancel?.({
-          command, need: command.need, operation: current.id, handle: current.handle,
+          need: current.need, operation: current.id, handle: current.handle,
           resources: this.#resourceStore(current.build),
           credentials: await this.#endpointCredentials(selected.registration),
         });
@@ -619,68 +644,7 @@ export class Executor {
         cancellation = { outcome: "failed", message: failureMessage(error) };
       }
     }
-    return await operations.update(current.id, { status: "cancelled", cancellation });
+    return await operations.update(current.id, { status: "cancelled", cancellation, endedAt: Date.now() });
   }
 
-  async run(initial: BuildState, context?: RuntimeExecutionContext): Promise<ExecutorRunResult> {
-    let state = initial;
-    const outcomes: ExecutorExecutionOutcome[] = [];
-
-    while (true) {
-      if (state.status === "complete") {
-        return { status: "complete", state, outcomes, blocked: [] };
-      }
-      if (state.status === "failed") {
-        return { status: "failed", state, outcomes, blocked: [] };
-      }
-
-      const classifications = state.outstanding.map((command) => ({
-        command,
-        ...this.#classify(state, command),
-      }));
-      const selected = classifications.find((item) => item.executable !== undefined)?.executable;
-      if (selected === undefined) {
-        const blocked = classifications
-          .map((item) => item.blocked)
-          .filter((item): item is BlockedCommand => item !== undefined);
-        return { status: "paused", state, outcomes, blocked };
-      }
-
-      try {
-        const execution = await this.#execute(state, selected, context);
-        if (execution.status === "pending") {
-          outcomes.push({
-            command: selected.command.id,
-            kind: selected.command.kind,
-            status: "pending",
-            operation: execution.operation,
-            ...(execution.wakeAt === undefined ? {} : { wakeAt: execution.wakeAt }),
-          });
-          return { status: "paused", state, outcomes, blocked: [] };
-        }
-        if (execution.status === "deferred") {
-          throw new Error("direct Executor execution has no Runtime capacity admission to defer");
-        }
-        const event = execution.event;
-        state = reduce(state, event);
-        outcomes.push({
-          command: selected.command.id,
-          kind: selected.command.kind,
-          status: "completed",
-        });
-      } catch (error) {
-        outcomes.push({
-          command: selected.command.id,
-          kind: selected.command.kind,
-          status: "error",
-          message: error instanceof Error ? error.message : String(error),
-        });
-        state = reduce(state, {
-          kind: "command-failed", command: selected.command.id, code: "EXECUTION_FAILED",
-          message: failureMessage(error),
-        });
-        return { status: "failed", state, outcomes, blocked: [] };
-      }
-    }
-  }
 }

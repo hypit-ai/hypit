@@ -60,10 +60,11 @@ test("SVML language reaches the alignment request without a service-support tabl
       resolveAsset: () => { throw new Error("No assets expected"); },
     });
     const result = await whisperXComponent.producers[0]!.handler({ inputs: {
-      evidence: { value: { kind: "inline", value: evidenceAudio() } },
+      evidence: { value: (evidenceAudio()) },
       language: { value: output.records.find((record) => record.type.name === "WhisperXLanguage")!.value },
     } } as never);
-    assert.equal(verifyWhisperXAlignmentRequest(result.needs!.alignment).language, language);
+    assert.equal(result.kind, "need");
+    assert.equal(verifyWhisperXAlignmentRequest(result.constraints).language, language);
   }
 });
 
@@ -115,7 +116,7 @@ test("the real-media Surface materializes an empty Segment from its media domain
     path,
     ref: { kind: "record", id: path },
     type,
-    record: { id: path, type, value: { kind: "inline", value: value as never } },
+    record: { id: path, type, value: (value as never) },
   });
   const refs = new Map<string, SurfaceResolvedReference>([
     ["story", authored("story", narrativeTypes.narrative, narrative)],
@@ -134,7 +135,7 @@ test("the real-media Surface materializes an empty Segment from its media domain
   });
 
   assert.equal(output.records.length, 0);
-  assert.equal(output.fragments[0]?.operations[0]?.producer.name, narrativeTemporalProducers.materializeSegmentBoundaries.name);
+  assert.equal(output.components[0]?.fragment.operations[0]?.producer.name, narrativeTemporalProducers.materializeSegmentBoundaries.name);
   assert.deepEqual(Object.keys(output.components[0]?.inputs ?? {}).sort(), ["domain", "narrative", "segment"]);
   assert.deepEqual(output.components[0]?.outputs, { alignment: "pause.alignment" });
 });

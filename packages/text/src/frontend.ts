@@ -1,7 +1,5 @@
-import {
-  sealRecord,
-} from "@hypit/kernel";
 import type { AuthorFrontend, AuthorSourceExport } from "@hypit/author";
+import type { TypedRecord } from "@hypit/protocol";
 import { parseRecipe } from "@hypit/recipe";
 import { decodeSourceText } from "@hypit/source";
 
@@ -24,16 +22,15 @@ export const textRecipeFrontend: AuthorFrontend = {
     if (candidates.length !== 1) throw new Error(`${source.name} must declare exactly one root Recipe text-template.<id>`);
     const id = candidates[0]!;
     const template = textTemplateFromRecipes(recipes, id);
-    const record = sealRecord({
+    const record: TypedRecord = {
       id,
       type: textTypes.template,
-      value: { kind: "inline", value: template as unknown as import("@hypit/protocol").CanonicalValue },
-    });
+      value: (template as unknown as import("@hypit/protocol").CanonicalValue),
+    };
     const exports: AuthorSourceExport[] = [{ name: id, ref: { kind: "record", id }, type: textTypes.template }];
     return {
       records: [record],
       components: [],
-      fragments: [],
       exports,
     };
   },

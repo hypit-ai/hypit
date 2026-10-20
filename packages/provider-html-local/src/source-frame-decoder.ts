@@ -11,7 +11,6 @@ export type SourceVideoMetadata = {
   readonly width: number;
   readonly height: number;
   readonly videoCodec: string;
-  readonly isVFR: boolean;
   readonly colorSpace?: { readonly colorTransfer?: string };
 };
 
@@ -20,7 +19,7 @@ export async function probeSourceVideo(args: {
   readonly maxOutputBytes: number; readonly signal?: AbortSignal;
 }): Promise<SourceVideoMetadata> {
   const result = await runProcess({ executable: args.executable, argv: ["-v", "error", "-select_streams", "v:0",
-    "-show_entries", "stream=width,height,codec_name,color_transfer,avg_frame_rate,r_frame_rate", "-of", "json", args.path],
+    "-show_entries", "stream=width,height,codec_name,color_transfer", "-of", "json", args.path],
     timeoutMs: args.timeoutMs, maxOutputBytes: args.maxOutputBytes, ...(args.signal === undefined ? {} : { signal: args.signal }) });
   const data = JSON.parse(Buffer.from(result.stdout).toString("utf8")) as { streams?: Array<Record<string, unknown>> };
   const stream = data.streams?.[0];
@@ -28,10 +27,8 @@ export async function probeSourceVideo(args: {
   const codec = stream?.codec_name;
   assert(Number.isSafeInteger(width) && width > 0 && Number.isSafeInteger(height) && height > 0
     && typeof codec === "string" && codec.length > 0, `HTML renderer source ${args.path} has no usable video stream`);
-  const avg = String(stream?.avg_frame_rate ?? "");
-  const nominal = String(stream?.r_frame_rate ?? "");
   const transfer = typeof stream?.color_transfer === "string" ? stream.color_transfer : undefined;
-  return { width, height, videoCodec: codec, isVFR: avg.length > 0 && nominal.length > 0 && avg !== nominal,
+  return { width, height, videoCodec: codec,
     ...(transfer === undefined ? {} : { colorSpace: { colorTransfer: transfer } }) };
 }
 
@@ -89,13 +86,44 @@ export class PngFrameParser {
   }
 }
 
+export function sourceFrameDecodeArguments(args: {
+  readonly path: string;
+  readonly window: Omit<SourceFrameWindow, "source">;
+  readonly metadata: SourceVideoMetadata;
+  readonly platform?: NodeJS.Platform;
+}): string[] {
+  const count = args.window.endFrameExclusive - args.window.startFrame;
+  assert(Number.isSafeInteger(args.window.startFrame) && args.window.startFrame >= 0
+    && Number.isSafeInteger(count) && count > 0, "Source decode window is invalid");
+  const codec = args.metadata.videoCodec.toLowerCase();
+  const hdr = args.metadata.colorSpace?.colorTransfer === "smpte2084"
+    || args.metadata.colorSpace?.colorTransfer === "arib-std-b67";
+  const darwin = (args.platform ?? process.platform) === "darwin";
+  const argv = ["-v", "error"];
+  if (hdr && darwin) argv.push("-hwaccel", "videotoolbox");
+  if (alphaCodecs.has(codec)) {
+    argv.push("-c:v", codec === "vp9" ? "libvpx-vp9" : codec === "vp8" ? "libvpx" : codec);
+  }
+  argv.push("-i", args.path);
+  const filters: string[] = [];
+  if (hdr && darwin) filters.push("format=nv12");
+  // HtmlProgram asks for exact source-frame ordinals. Time seeking and FPS
+  // resampling reinterpret that fact as a nearby timestamp, especially at VFR
+  // and PTS boundaries. Decode in stream order and select the requested ordinal
+  // interval; a future fast seek may only be introduced with verified identity.
+  filters.push(`select=between(n\\,${args.window.startFrame}\\,${args.window.endFrameExclusive - 1})`);
+  argv.push("-vf", filters.join(","), "-fps_mode", "passthrough");
+  argv.push("-frames:v", String(count), "-q:v", "0", "-compression_level", "1",
+    "-f", "image2pipe", "-vcodec", "png", "pipe:1");
+  return argv;
+}
+
 export async function* decodeSourceFrameWindow(args: {
   readonly executable: string;
   readonly path: string;
   readonly outputDir: string;
   readonly outputPrefix: string;
   readonly window: Omit<SourceFrameWindow, "source">;
-  readonly fps: { readonly num: number; readonly den: number };
   readonly metadata: SourceVideoMetadata;
   readonly timeoutMs: number;
   readonly maxProcessOutputBytes: number;
@@ -105,24 +133,7 @@ export async function* decodeSourceFrameWindow(args: {
   const count = args.window.endFrameExclusive - args.window.startFrame;
   assert(Number.isSafeInteger(count) && count > 0, "Source decode window is empty");
   await mkdir(args.outputDir, { recursive: true });
-  const startTime = args.window.startFrame * args.fps.den / args.fps.num;
-  const duration = count * args.fps.den / args.fps.num;
-  const codec = args.metadata.videoCodec.toLowerCase();
-  const hdr = args.metadata.colorSpace?.colorTransfer === "smpte2084"
-    || args.metadata.colorSpace?.colorTransfer === "arib-std-b67";
-  const ffmpegFps = `${args.fps.num}/${args.fps.den}`;
-  const argv = ["-v", "error"];
-  if (hdr && process.platform === "darwin") argv.push("-hwaccel", "videotoolbox");
-  if (alphaCodecs.has(codec)) argv.push("-c:v", codec === "vp9" ? "libvpx-vp9" : codec === "vp8" ? "libvpx" : codec);
-  if (count === 1) argv.push("-i", args.path, "-ss", String(startTime));
-  else argv.push("-ss", String(startTime), "-i", args.path, "-t", String(duration));
-  const filters: string[] = [];
-  if (hdr && process.platform === "darwin") filters.push("format=nv12");
-  if (count > 1 && !args.metadata.isVFR) filters.push(`fps=${ffmpegFps}`);
-  if (filters.length > 0) argv.push("-vf", filters.join(","));
-  if (count > 1 && args.metadata.isVFR) argv.push("-fps_mode", "cfr", "-r", ffmpegFps);
-  argv.push("-frames:v", String(count), "-q:v", "0", "-compression_level", "1",
-    "-f", "image2pipe", "-vcodec", "png", "pipe:1");
+  const argv = sourceFrameDecodeArguments(args);
 
   const child = spawn(args.executable, argv, {
     shell: false, windowsHide: true, stdio: ["ignore", "pipe", "pipe"], env: processEnvironment(),

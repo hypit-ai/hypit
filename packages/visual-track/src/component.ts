@@ -1,8 +1,8 @@
 import type { ProducerPackage, ProducerHandlerContext } from "@hypit/hypit/producer";
-import type { AdmissionPackage } from "@hypit/hypit/admission";
+import type { RefinementPackage } from "@hypit/hypit/refinement";
 import type { CompositableSurfaceRef, SynchronizedMedia } from "@hypit/media";
-import { canonicalize } from "@hypit/hypit/protocol";
-import type { BlobRef, StoredValue } from "@hypit/hypit/protocol";
+import { assertBlobRef, canonicalize } from "@hypit/hypit/protocol";
+import type { BlobRef, Value } from "@hypit/hypit/protocol";
 import type { ContentFit, IntrinsicExtent, SpatialFrame, SpatialMap2D, SpatialPath } from "@hypit/spatial";
 import type { TemporalWindow } from "@hypit/temporal";
 import type { Timeline } from "@hypit/timeline";
@@ -38,86 +38,86 @@ import type {
   VisualTrackSet,
 } from "./types.js";
 
-function inline<T>(value: StoredValue | undefined, label: string): T {
-  if (value?.kind !== "inline") throw new Error(`${label} must be inline.`);
-  return value.value as unknown as T;
+function valueOf<T>(value: Value | undefined, label: string): T {
+  if (value === undefined) throw new Error(`${label} is missing.`);
+  return value as unknown as T;
 }
 
-function blob(value: StoredValue | undefined): BlobRef {
-  if (value?.kind !== "blob") throw new Error("Visual source must be a Blob.");
+function blob(value: Value | undefined): BlobRef {
+  assertBlobRef(value, "Visual source");
   return value;
 }
 
-const output = (value: unknown) => ({ kind: "inline" as const, value: canonicalize(value) });
+const output = (value: unknown) => ((canonicalize(value)));
 
 function clipInputs(inputs: ProducerHandlerContext["inputs"]) {
   return {
-    set: inline<VisualTrackSet>(inputs.set?.value, "VisualTrackSet"),
-    header: inline<VisualTrackHeader>(inputs.header?.value, "VisualTrackHeader"),
-    timeline: inline<Timeline>(inputs.timeline?.value, "Timeline"),
-    layers: inline<MediaLayerSet>(inputs.layers?.value, "MediaLayerSet"),
-    frame: inline<SpatialFrame>(inputs.frame?.value, "SpatialFrame"),
-    spec: inline<VisualClipSpec>(inputs.spec?.value, "VisualClipSpec"),
-    window: inline<TemporalWindow>(inputs.window?.value, "TemporalWindow"),
+    set: valueOf<VisualTrackSet>(inputs.set?.value, "VisualTrackSet"),
+    header: valueOf<VisualTrackHeader>(inputs.header?.value, "VisualTrackHeader"),
+    timeline: valueOf<Timeline>(inputs.timeline?.value, "Timeline"),
+    layers: valueOf<MediaLayerSet>(inputs.layers?.value, "MediaLayerSet"),
+    frame: valueOf<SpatialFrame>(inputs.frame?.value, "SpatialFrame"),
+    spec: valueOf<VisualClipSpec>(inputs.spec?.value, "VisualClipSpec"),
+    window: valueOf<TemporalWindow>(inputs.window?.value, "TemporalWindow"),
   };
 }
 
 export const visualTrackComponent = {
   producers: [
-    { producer: visualTrackProducers.createLayers, handler: () => ({ outputs: { layers: output(createMediaLayerSet()) }, needs: {} }) },
-    { producer: visualTrackProducers.appendPaintLayer, handler: ({ inputs }) => ({ outputs: { layers: output(appendMediaPaintLayer(
-      inline<MediaLayerSet>(inputs.layers?.value, "MediaLayerSet"),
-      inline<MediaPaintLayerSpec>(inputs.spec?.value, "MediaPaintLayerSpec"),
-    )) }, needs: {} }) },
-    { producer: visualTrackProducers.appendStillLayer, handler: ({ inputs }) => ({ outputs: { layers: output(appendStillMediaLayer(
-      inline<MediaLayerSet>(inputs.layers?.value, "MediaLayerSet"), blob(inputs.source?.value),
-      inline<IntrinsicExtent>(inputs.extent?.value, "IntrinsicExtent"), inline<ContentFit>(inputs.fit?.value, "ContentFit"),
-      inline<MediaSampleLayerSpec>(inputs.spec?.value, "MediaSampleLayerSpec"),
-    )) }, needs: {} }) },
-    { producer: visualTrackProducers.appendMappedStillLayer, handler: ({ inputs }) => ({ outputs: { layers: output(appendMappedStillMediaLayer(
-      inline<MediaLayerSet>(inputs.layers?.value, "MediaLayerSet"), blob(inputs.source?.value),
-      inline<IntrinsicExtent>(inputs.extent?.value, "IntrinsicExtent"), inline<SpatialMap2D>(inputs.mapping?.value, "SpatialMap2D"),
-      inline<MediaSampleLayerSpec>(inputs.spec?.value, "MediaSampleLayerSpec"),
-    )) }, needs: {} }) },
-    { producer: visualTrackProducers.appendTimedLayer, handler: ({ inputs }) => ({ outputs: { layers: output(appendTimedMediaLayer(
-      inline<MediaLayerSet>(inputs.layers?.value, "MediaLayerSet"), inline<SynchronizedMedia>(inputs.source?.value, "SynchronizedMedia"),
-      inline<ContentFit>(inputs.fit?.value, "ContentFit"), inline<MediaSampleLayerSpec>(inputs.spec?.value, "MediaSampleLayerSpec"),
-    )) }, needs: {} }) },
-    { producer: visualTrackProducers.appendMappedTimedLayer, handler: ({ inputs }) => ({ outputs: { layers: output(appendMappedTimedMediaLayer(
-      inline<MediaLayerSet>(inputs.layers?.value, "MediaLayerSet"), inline<SynchronizedMedia>(inputs.source?.value, "SynchronizedMedia"),
-      inline<SpatialMap2D>(inputs.mapping?.value, "SpatialMap2D"), inline<MediaSampleLayerSpec>(inputs.spec?.value, "MediaSampleLayerSpec"),
-    )) }, needs: {} }) },
-    { producer: visualTrackProducers.appendSurfaceLayer, handler: ({ inputs }) => ({ outputs: { layers: output(appendSurfaceMediaLayer(
-      inline<MediaLayerSet>(inputs.layers?.value, "MediaLayerSet"), inline<CompositableSurfaceRef>(inputs.source?.value, "CompositableSurfaceRef"),
-      inline<ContentFit>(inputs.fit?.value, "ContentFit"), inline<MediaSampleLayerSpec>(inputs.spec?.value, "MediaSampleLayerSpec"),
-    )) }, needs: {} }) },
-    { producer: visualTrackProducers.appendMappedSurfaceLayer, handler: ({ inputs }) => ({ outputs: { layers: output(appendMappedSurfaceMediaLayer(
-      inline<MediaLayerSet>(inputs.layers?.value, "MediaLayerSet"), inline<CompositableSurfaceRef>(inputs.source?.value, "CompositableSurfaceRef"),
-      inline<SpatialMap2D>(inputs.mapping?.value, "SpatialMap2D"), inline<MediaSampleLayerSpec>(inputs.spec?.value, "MediaSampleLayerSpec"),
-    )) }, needs: {} }) },
-    { producer: visualTrackProducers.createSet, handler: () => ({ outputs: { set: output(createVisualTrackSet()) }, needs: {} }) },
+    { producer: visualTrackProducers.createLayers, handler: () => ({ kind: "output", value: output(createMediaLayerSet()) }) },
+    { producer: visualTrackProducers.appendPaintLayer, handler: ({ inputs }) => ({ kind: "output", value: output(appendMediaPaintLayer(
+      valueOf<MediaLayerSet>(inputs.layers?.value, "MediaLayerSet"),
+      valueOf<MediaPaintLayerSpec>(inputs.spec?.value, "MediaPaintLayerSpec"),
+    )) }) },
+    { producer: visualTrackProducers.appendStillLayer, handler: ({ inputs }) => ({ kind: "output", value: output(appendStillMediaLayer(
+      valueOf<MediaLayerSet>(inputs.layers?.value, "MediaLayerSet"), blob(inputs.source?.value),
+      valueOf<IntrinsicExtent>(inputs.extent?.value, "IntrinsicExtent"), valueOf<ContentFit>(inputs.fit?.value, "ContentFit"),
+      valueOf<MediaSampleLayerSpec>(inputs.spec?.value, "MediaSampleLayerSpec"),
+    )) }) },
+    { producer: visualTrackProducers.appendMappedStillLayer, handler: ({ inputs }) => ({ kind: "output", value: output(appendMappedStillMediaLayer(
+      valueOf<MediaLayerSet>(inputs.layers?.value, "MediaLayerSet"), blob(inputs.source?.value),
+      valueOf<IntrinsicExtent>(inputs.extent?.value, "IntrinsicExtent"), valueOf<SpatialMap2D>(inputs.mapping?.value, "SpatialMap2D"),
+      valueOf<MediaSampleLayerSpec>(inputs.spec?.value, "MediaSampleLayerSpec"),
+    )) }) },
+    { producer: visualTrackProducers.appendTimedLayer, handler: ({ inputs }) => ({ kind: "output", value: output(appendTimedMediaLayer(
+      valueOf<MediaLayerSet>(inputs.layers?.value, "MediaLayerSet"), valueOf<SynchronizedMedia>(inputs.source?.value, "SynchronizedMedia"),
+      valueOf<ContentFit>(inputs.fit?.value, "ContentFit"), valueOf<MediaSampleLayerSpec>(inputs.spec?.value, "MediaSampleLayerSpec"),
+    )) }) },
+    { producer: visualTrackProducers.appendMappedTimedLayer, handler: ({ inputs }) => ({ kind: "output", value: output(appendMappedTimedMediaLayer(
+      valueOf<MediaLayerSet>(inputs.layers?.value, "MediaLayerSet"), valueOf<SynchronizedMedia>(inputs.source?.value, "SynchronizedMedia"),
+      valueOf<SpatialMap2D>(inputs.mapping?.value, "SpatialMap2D"), valueOf<MediaSampleLayerSpec>(inputs.spec?.value, "MediaSampleLayerSpec"),
+    )) }) },
+    { producer: visualTrackProducers.appendSurfaceLayer, handler: ({ inputs }) => ({ kind: "output", value: output(appendSurfaceMediaLayer(
+      valueOf<MediaLayerSet>(inputs.layers?.value, "MediaLayerSet"), valueOf<CompositableSurfaceRef>(inputs.source?.value, "CompositableSurfaceRef"),
+      valueOf<ContentFit>(inputs.fit?.value, "ContentFit"), valueOf<MediaSampleLayerSpec>(inputs.spec?.value, "MediaSampleLayerSpec"),
+    )) }) },
+    { producer: visualTrackProducers.appendMappedSurfaceLayer, handler: ({ inputs }) => ({ kind: "output", value: output(appendMappedSurfaceMediaLayer(
+      valueOf<MediaLayerSet>(inputs.layers?.value, "MediaLayerSet"), valueOf<CompositableSurfaceRef>(inputs.source?.value, "CompositableSurfaceRef"),
+      valueOf<SpatialMap2D>(inputs.mapping?.value, "SpatialMap2D"), valueOf<MediaSampleLayerSpec>(inputs.spec?.value, "MediaSampleLayerSpec"),
+    )) }) },
+    { producer: visualTrackProducers.createSet, handler: () => ({ kind: "output", value: output(createVisualTrackSet()) }) },
     { producer: visualTrackProducers.appendClip, handler: ({ inputs }) => {
       const value = clipInputs(inputs);
-      return { outputs: { set: output(appendVisualClip(
+      return { kind: "output", value: output(appendVisualClip(
         value.set, value.header, value.timeline, value.layers, value.frame, value.spec, value.window,
-      )) }, needs: {} };
+      )) };
     } },
-    { producer: visualTrackProducers.bindClipPath, handler: ({ inputs }) => ({ outputs: { spec: output(bindVisualClipPath(
-      inline<VisualClipSpec>(inputs.spec?.value, "VisualClipSpec"), inline<SpatialPath>(inputs.path?.value, "SpatialPath"),
-    )) }, needs: {} }) },
-    { producer: visualTrackProducers.bindMotion, handler: ({ inputs }) => ({ outputs: { spec: output(bindVisualClipMotion(
-      inline<VisualClipSpec>(inputs.spec?.value, "VisualClipSpec"), inline<VisualClipMotion>(inputs.motion?.value, "VisualClipMotion"),
-    )) }, needs: {} }) },
-    { producer: visualTrackProducers.finalize, handler: ({ inputs }) => ({ outputs: { program: output(finalizeVisualTrack(
-      inline<VisualTrackSet>(inputs.set?.value, "VisualTrackSet"), inline<VisualTrackHeader>(inputs.header?.value, "VisualTrackHeader"),
-      inline<Timeline>(inputs.timeline?.value, "Timeline"),
-    )) }, needs: {} }) },
-    { producer: visualTrackProducers.projectVisual, handler: ({ inputs }) => ({ outputs: { track: output(projectVisualTrack(
-      inline<Timeline>(inputs.timeline?.value, "Timeline"), inline<VisualTrackProgram>(inputs.program?.value, "VisualTrackProgram"),
-    )) }, needs: {} }) },
+    { producer: visualTrackProducers.bindClipPath, handler: ({ inputs }) => ({ kind: "output", value: output(bindVisualClipPath(
+      valueOf<VisualClipSpec>(inputs.spec?.value, "VisualClipSpec"), valueOf<SpatialPath>(inputs.path?.value, "SpatialPath"),
+    )) }) },
+    { producer: visualTrackProducers.bindMotion, handler: ({ inputs }) => ({ kind: "output", value: output(bindVisualClipMotion(
+      valueOf<VisualClipSpec>(inputs.spec?.value, "VisualClipSpec"), valueOf<VisualClipMotion>(inputs.motion?.value, "VisualClipMotion"),
+    )) }) },
+    { producer: visualTrackProducers.finalize, handler: ({ inputs }) => ({ kind: "output", value: output(finalizeVisualTrack(
+      valueOf<VisualTrackSet>(inputs.set?.value, "VisualTrackSet"), valueOf<VisualTrackHeader>(inputs.header?.value, "VisualTrackHeader"),
+      valueOf<Timeline>(inputs.timeline?.value, "Timeline"),
+    )) }) },
+    { producer: visualTrackProducers.projectVisual, handler: ({ inputs }) => ({ kind: "output", value: output(projectVisualTrack(
+      valueOf<Timeline>(inputs.timeline?.value, "Timeline"), valueOf<VisualTrackProgram>(inputs.program?.value, "VisualTrackProgram"),
+    )) }) },
   ],
-  validators: [{
+  refinements: [{
     type: visualTrackTypes.program,
-    handler: ({ value }) => assertVisualTrackProgram(inline<VisualTrackProgram>(value, "VisualTrackProgram")),
+    handler: ({ value }) => assertVisualTrackProgram(valueOf<VisualTrackProgram>(value, "VisualTrackProgram")),
   }],
-} satisfies ProducerPackage & AdmissionPackage;
+} satisfies ProducerPackage & RefinementPackage;

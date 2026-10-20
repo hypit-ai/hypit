@@ -76,14 +76,15 @@ test("Speech Evidence owns projection from one matching normalized media domain"
     } },
   });
   const run = (frameCount: number) => project.handler({ inputs: {
-    media: { value: { kind: "inline", value: media } },
-    domain: { value: { kind: "inline", value: {
+    media: { value: (media) },
+    domain: { value: ({
       id: "speech-domain", frameRate: media.frameDomain.frameRate, frameCount,
-    } } },
+    }) },
   } } as never);
 
   const result = await run(60);
-  assert.deepEqual(result.needs.evidenceAudio, {
+  assert.equal(result.kind, "need");
+  assert.deepEqual(result.constraints, {
     domainId: "speech-domain",
     source: media.audio!.artifact,
     sourceSampleFrames: 96_000,

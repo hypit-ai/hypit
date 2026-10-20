@@ -525,7 +525,9 @@ function loopAnimation(
   const start = activeWindow?.start ?? 0;
   const end = activeWindow?.end ?? durationFrames;
   const offsets: number[] = [...stepOffsets(start, end)];
-  for (let frame = start; frame <= end; frame += Math.max(1, Math.round(period / 4))) offsets.push(frame);
+  const harmonic = parameters.motion.loop === "flicker" ? 5 : parameters.motion.loop === "shake" ? 2 : 1;
+  const step = Math.max(1, Math.round(period / (4 * harmonic)));
+  for (let frame = start; frame <= end; frame += step) offsets.push(frame);
   return animationFrom(durationFrames, offsets, (frame) => {
     const active = frame >= start && (frame < end || (end === durationFrames && frame === durationFrames));
     if (!active) return parameters.motion.loop === "glow-pulse"
@@ -1129,6 +1131,13 @@ export function renderFineCaption(
     const endFrameExclusive = Math.min(totalFrames, Math.max(startFrame + 1, measuredEnd));
     if (startFrame >= totalFrames || endFrameExclusive <= startFrame) return [];
     const durationFrames = endFrameExclusive - startFrame;
+    // Scheduling owns the complete authored envelope; this renderer owns its
+    // intersection with the selected Timeline, including visible subranges.
+    const visibility = cue.visibility.map((span) => ({
+      startFrame: Math.max(span.startFrame, startFrame),
+      endFrameExclusive: Math.min(span.endFrameExclusive, endFrameExclusive),
+    })).filter((span) => span.endFrameExclusive > span.startFrame);
+    if (visibility.length === 0) return [];
     const trackedPlacement = regionSeriesById === undefined ? undefined : (() => {
       const role = authoredCue.role;
       if (role === undefined) throw new Error(`Fine Caption Cue ${cue.id} must have one Script Role to follow regions`);
@@ -1147,7 +1156,7 @@ export function renderFineCaption(
       order,
       z: parameters.stackingOrder,
       span: { startFrame, endFrameExclusive },
-      visibility: cue.visibility,
+      visibility,
       elements: cueElements(resolvedAtoms, atomFrames, parameters, wordText, durationFrames, cue.styleId, within, trackedPlacement),
     }];
   });

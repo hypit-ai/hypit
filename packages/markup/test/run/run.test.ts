@@ -7,8 +7,7 @@ import {
   link,
   materializeBuild,
   planBuild,
-  sealCompiledGraph,
-  sealRecord,
+  sealAuthorGraph,
 } from "@hypit/kernel";
 import { sealGraphFragment } from "@hypit/author";
 import type { CompiledSourceClosure } from "@hypit/author";
@@ -43,20 +42,19 @@ const manifest: ModuleManifest = {
   producers: [defaultProducer, previewProducer].map((producer) => ({
     name: producer.name,
     inputs: [{ name: "prompt", type: promptType }],
-    outputs: [{ name: "media", type: mediaType }],
-    needs: [],
+    result: { kind: "output" as const, name: "media", type: mediaType },
   })),
 };
 
 function fixture(): CompiledSourceClosure {
   const closure = createResolvedClosure([manifest]);
-  const prompt = sealRecord({
+  const prompt = {
     id: "prompt:root",
     type: promptType,
-    value: { kind: "inline", value: "A deliberate preview." },
-  });
+    value: ("A deliberate preview."),
+  };
   const program = link(closure, [prompt]);
-  const graph = sealCompiledGraph({
+  const graph = sealAuthorGraph({
     outputs: ["left", "right"].map((id) => ({ id, type: mediaType, primary: "default:candidate" })),
     candidates: [{
       id: "default:candidate",
@@ -67,10 +65,11 @@ function fixture(): CompiledSourceClosure {
       id: "default:operation",
       producer: defaultProducer,
       inputs: { prompt: { kind: "record", id: prompt.id } },
-      result: { kind: "output", name: "media", record: "default:record" },
+      result: { kind: "output" as const, name: "media", record: "default:record" },
     }],
   });
   return {
+    closure: { entry: "main.svml", units: [] },
     program,
     graph,
     exports: [
@@ -78,7 +77,8 @@ function fixture(): CompiledSourceClosure {
       { name: "left", type: mediaType, ref: { kind: "logical-output", id: "left" } },
       { name: "right", type: mediaType, ref: { kind: "logical-output", id: "right" } },
     ],
-  } as unknown as CompiledSourceClosure;
+    provenance: { format: "hypit.author-provenance@1", elements: [] },
+  } satisfies CompiledSourceClosure;
 }
 
 function previewFragment() {
@@ -88,7 +88,7 @@ function previewFragment() {
       id: "preview",
       producer: previewProducer,
       inputs: { prompt: { kind: "fragment-input", name: "prompt" } },
-      result: { kind: "output", name: "media" },
+      result: { kind: "output" as const, name: "media" },
     }],
     exports: ["first", "second"].map((name) => ({
       name,
@@ -98,13 +98,19 @@ function previewFragment() {
   });
 }
 
-function realize(compilation: CompiledSourceClosure, run: Awaited<ReturnType<typeof resolveRunDocument>>): BuildState {
+function realize(
+  compilation: CompiledSourceClosure,
+  run: Awaited<ReturnType<typeof resolveRunDocument>>,
+  supplied: readonly import("@hypit/protocol").TypedRecord[] = [],
+): BuildState {
   const planned = planBuild(compilation.program, compilation.graph, run.graph);
   return materializeBuild(defineBuild({
-    program: compilation.program,
-    initialRecords: planned.initialRecords,
+    program: link(compilation.program.closure, [
+      ...compilation.program.records,
+      ...planned.initialRecords,
+      ...supplied,
+    ]),
     plan: planned.plan,
-    targets: run.graph.targets,
   }), []);
 }
 
@@ -139,7 +145,7 @@ test("Run Fragments enter the Host only through the selected Run facet ABI", () 
   const facet = createRunFragmentFacet({ name: "@example/run-preview", fragments: { shared: fragment } });
   const registry = new RunFragmentRegistry();
   installRunFragmentFacets([facet], registry);
-  assert.equal(registry.resolve("@example/run-preview", "shared")?.id, fragment.id);
+  assert.equal(registry.resolve("@example/run-preview", "shared"), fragment);
 });
 
 test("one multi-export Fragment declaration remains one execution", async () => {
@@ -179,16 +185,15 @@ test("a Run Fragment may own an ordinary literal input", async () => {
     {
       id: "record:run:card:prompt",
       type: promptType,
-      value: { kind: "inline", value: "five seconds" },
+      value: ("five seconds"),
     },
     {
       id: "record:run:unused:prompt",
       type: promptType,
-      value: { kind: "inline", value: "not selected" },
+      value: ("not selected"),
     },
   ]);
   const state = realize(compilation, run);
-  assert.equal(state.records.find((item) => item.id === "record:run:card:prompt")?.value.kind, "inline");
   assert.equal(state.records.some((item) => item.id === "record:run:unused:prompt"), false);
 });
 
@@ -210,7 +215,7 @@ test("Run literal syntax decodes numbers and requires one source of value", () =
   </svrun>`), /requires exactly one of from or value/u);
 });
 
-test("a Provided Value is an ordinary zero-input Candidate", async () => {
+test("a Value source is selected structurally before it is materialized", async () => {
   const compiled = await compileDocument(`<svrun version="1">
     <author source="./main.svml"/>
     <target output="left"/>
@@ -218,16 +223,31 @@ test("a Provided Value is an ordinary zero-input Candidate", async () => {
     <satisfy output="left" candidate="fixed"/>
   </svrun>`);
   const compilation = fixture();
+  assert.equal(compiled.document.candidates[0]?.kind, "value");
   const run = await resolveRunDocument(compiled.document, {
     compilation,
     fragments: new RunFragmentRegistry(),
   });
-  const state = realize(compilation, run);
+  const planned = planBuild(compilation.program, compilation.graph, run.graph);
+  assert.deepEqual(planned.selectedSupplies, [{
+    candidate: "candidate:run:fixed",
+    record: "record:run:source:fixed",
+    type: mediaType,
+  }]);
+  assert.throws(() => defineBuild({
+    program: compilation.program,
+    plan: planned.plan,
+  }), /record:run:source:fixed/u, "a supply declaration cannot cross the BuildDefinition boundary as a fake Record");
+  const state = realize(compilation, run, [{
+    id: planned.selectedSupplies[0]!.record,
+    type: planned.selectedSupplies[0]!.type,
+    value: ("materialized"),
+  }]);
   assert.equal(state.plan.steps.length, 0);
-  assert.equal(state.records.some((record) => record.id === "provided:run:fixed"), true);
+  assert.equal(state.records.some((record) => record.id === "record:run:source:fixed"), true);
 });
 
-test("a source file is an ordinary Blob Candidate", async () => {
+test("a File source is an ordinary Blob Candidate", async () => {
   const compiled = await compileDocument(`<svrun version="1">
     <author source="./main.svml"/>
     <target output="left"/>
@@ -235,6 +255,7 @@ test("a source file is an ordinary Blob Candidate", async () => {
     <satisfy output="left" candidate="approved"/>
   </svrun>`);
   const compilation = fixture();
+  assert.equal(compiled.document.candidates[0]?.kind, "file");
   const run = await resolveRunDocument(compiled.document, {
     compilation,
     fragments: new RunFragmentRegistry(),
@@ -249,7 +270,7 @@ test("a source file is an ordinary Blob Candidate", async () => {
   });
 });
 
-test("a Build Record stays a structural zero-input Candidate until planning selects it", async () => {
+test("a Build Output source stays a structural zero-input Candidate until planning selects it", async () => {
   const compilation = fixture();
   const compiled = await compileDocument(`<svrun version="1">
     <author source="./main.svml"/><target output="right"/>
@@ -260,13 +281,17 @@ test("a Build Record stays a structural zero-input Candidate until planning sele
     compilation,
     fragments: new RunFragmentRegistry(),
   });
+  assert.equal(compiled.document.candidates[0]?.kind, "build-output");
   const candidate = run.graph.satisfactions[0]!.candidate;
   assert.deepEqual(run.candidateSources[candidate], {
     kind: "build-output",
     build: "prior-build",
     output: "friendly-shot",
   });
-  assert.equal(run.graph.candidates.find((item) => item.id === candidate)?.root.kind, "value");
+  assert.deepEqual(run.graph.candidates.find((item) => item.id === candidate)?.root, {
+    kind: "supply",
+    record: "record:run:source:prior",
+  });
 });
 
 test("Run imports are a prologue and Runtime settings are not language elements", () => {

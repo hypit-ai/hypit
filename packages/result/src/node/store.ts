@@ -23,7 +23,6 @@ import type {
   BuildResultFileRef,
   BuildResultFileRange,
   BuildResultFinish,
-  BuildResultForward,
   BuildResultManifest,
   BuildResultPresentationUpdate,
   BuildResultSeed,
@@ -33,9 +32,10 @@ import type {
   RepositoryBuildResultOutput,
   RepositoryBuildResultOutputDescription,
   RepositoryBuildResultOutputLocation,
+  PublicationPlan,
   FinishedBuildResultManifest,
 } from "../types.js";
-import { assertBuildResultSeed } from "../types.js";
+import { assertBuildResultSeed, buildResultOutput, defineBuildResultOutput } from "../types.js";
 import {
   decodeBuildResultJson,
   decodeBuildResultManifest,
@@ -82,7 +82,7 @@ export function applyBuildResultPresentation(
   if (update.highlightedOutputs !== undefined) {
     const highlighted = [...new Set(update.highlightedOutputs)];
     for (const output of highlighted) {
-      assert(manifest.outputs[output] !== undefined,
+      assert(buildResultOutput(manifest, output) !== undefined,
         `Build Result ${manifest.id} has no Output ${output}`);
     }
     if (highlighted.length === 0) delete base.highlightedOutputs;
@@ -91,15 +91,15 @@ export function applyBuildResultPresentation(
   if (update.outputDisplayNames !== undefined) {
     const outputs = { ...manifest.outputs };
     for (const [name, value] of Object.entries(update.outputDisplayNames)) {
-      const entry = manifest.outputs[name];
-      assert(Object.hasOwn(manifest.outputs, name) && entry !== undefined,
+      const entry = buildResultOutput(manifest, name);
+      assert(entry !== undefined,
         `Build Result ${manifest.id} has no Output ${name}`);
       const { displayName: _priorName, ...rest } = entry;
-      if (value === null) outputs[name] = rest;
+      if (value === null) defineBuildResultOutput(outputs, name, rest);
       else {
         const displayName = value.trim();
         assert(displayName.length > 0, "Output display name must not be empty");
-        outputs[name] = { ...rest, displayName };
+        defineBuildResultOutput(outputs, name, { ...rest, displayName });
       }
     }
     return { ...base, outputs };
@@ -127,14 +127,14 @@ async function writeManifestAtomic(path: string, manifest: BuildResultManifest):
   await writeJsonAtomic(path, encodeBuildResultManifest(manifest));
 }
 
-async function copyArtifactAtomic(
+async function copyBlobAtomic(
   source: BuildResultResourceSource,
-  artifact: BlobRef,
+  blob: BlobRef,
   destination: string,
 ): Promise<void> {
   await mkdir(dirname(destination), { recursive: true });
-  const input = await source.open(artifact);
-  if (input === undefined) throw new Error(`Build resource ${artifact.resource} is unavailable`);
+  const input = await source.open(blob);
+  if (input === undefined) throw new Error(`Build resource ${blob.resource} is unavailable`);
   await writeStreamAtomic(destination, input);
 }
 
@@ -153,7 +153,7 @@ export async function locateRepositoryBuildResultOutput(
     const manifest = await repository.read(currentBuild);
     if (manifest === undefined) return undefined;
     assert(manifest.outcome !== undefined, `Build ${currentBuild} is not a finished Result`);
-    const entry = manifest.outputs[currentOutput];
+    const entry = buildResultOutput(manifest, currentOutput);
     if (entry === undefined) return undefined;
     if (entry.value.kind === "build-output") {
       currentBuild = entry.value.build;
@@ -298,7 +298,7 @@ export async function resolveBuildResultOutput(
     const directory = buildResultDirectory(root, currentBuild);
     const manifest = await readBuildResult(directory);
     if (manifest === undefined) return undefined;
-    const entry = manifest.outputs[currentOutput];
+    const entry = buildResultOutput(manifest, currentOutput);
     if (entry === undefined) return undefined;
     if (entry.value.kind === "build-output") {
       currentBuild = entry.value.build;
@@ -346,7 +346,7 @@ export async function describeBuildResultOutput(
     assert(!seen.has(address), `Build Output forwarding repeats ${currentBuild} / ${currentOutput}`);
     seen.add(address);
     const manifest = await readBuildResult(buildResultDirectory(root, currentBuild));
-    const entry = manifest?.outputs[currentOutput];
+    const entry = manifest === undefined ? undefined : buildResultOutput(manifest, currentOutput);
     if (entry === undefined) return undefined;
     if (entry.value.kind === "build-output") {
       currentBuild = entry.value.build;
@@ -355,43 +355,47 @@ export async function describeBuildResultOutput(
     }
     const file = entry.value.kind === "external-file" ? await currentFileReference(entry.value, externalFiles) : entry.value;
     return file.kind === "build-file" || file.kind === "external-file"
-      ? { type: entry.type, kind: "resource", size: file.size, mediaType: file.mediaType }
+      ? { type: entry.type, representation: "file", size: file.size, mediaType: file.mediaType }
       : entry.value.kind === "value"
-        ? { type: entry.type, kind: "composite" }
-        : { type: entry.type, kind: "scalar" };
+        ? { type: entry.type, representation: "value-document" }
+        : { type: entry.type, representation: "inline" };
   }
 }
 
 /**
- * Accept only finished historical Results and reduce every new Forward to the Result that owns its
- * terminal value. This follows only the addresses named by the caller; it needs no reverse index or
- * global Result scan.
+ * Accept only finished historical Results and reduce every historical publication source to the
+ * Result that owns its terminal value. This follows only caller-named addresses; it needs no reverse
+ * index or global Result scan.
  */
-export async function normalizeBuildResultForwards(
+export async function normalizePublicationPlan(
   repository: {
     read(build: string): Promise<BuildResultManifest | undefined>;
   },
-  forwards: readonly BuildResultForward[],
-): Promise<readonly (BuildResultForward & { readonly type: TypeRef })[]> {
-  return await Promise.all(forwards.map(async (forward) => {
-    const source = await repository.read(forward.build);
+  publication: PublicationPlan,
+): Promise<PublicationPlan> {
+  return { outputs: await Promise.all(publication.outputs.map(async (published) => {
+    if (published.source.kind === "current-record") return published;
+    const sourceAddress = published.source;
+    const source = await repository.read(sourceAddress.build);
     assert(source?.outcome !== undefined,
-      `Build ${forward.build} is not a finished Result`);
-    const resolved = await locateRepositoryBuildResultOutput(repository, forward.build, forward.sourceOutput);
+      `Build ${sourceAddress.build} is not a finished Result`);
+    const resolved = await locateRepositoryBuildResultOutput(repository, sourceAddress.build, sourceAddress.output);
     assert(resolved !== undefined,
-      `Build ${forward.build} has no Output ${forward.sourceOutput}`);
+      `Build ${sourceAddress.build} has no Output ${sourceAddress.output}`);
     const owner = resolved.build === source.id ? source : await repository.read(resolved.build);
     assert(owner?.outcome !== undefined,
       `Build ${resolved.build} is not a finished Result`);
-    assert(forward.type === undefined || sameType(forward.type, resolved.type),
-      `Build ${forward.build} Output ${forward.sourceOutput} has the wrong type for its forwarded Logical Output`);
+    assert(sameType(published.type, resolved.type),
+      `Build ${sourceAddress.build} Output ${sourceAddress.output} has the wrong type for its forwarded Logical Output`);
     return {
-      output: forward.output,
-      build: resolved.build,
-      sourceOutput: resolved.output,
-      type: resolved.type,
+      ...published,
+      source: {
+        kind: "historical-output" as const,
+        build: resolved.build,
+        output: resolved.output,
+      },
     };
-  }));
+  })) };
 }
 
 export class FileBuildResult {
@@ -404,9 +408,9 @@ export class FileBuildResult {
   static async create(root: string, seed: BuildResultSeed, externalFiles: ExternalFileAccess = localExternalFiles): Promise<FileBuildResult> {
     assertOrderedBuildId(seed.id);
     assertBuildResultSeed(seed);
-    const forwards = await normalizeBuildResultForwards({
+    const publication = await normalizePublicationPlan({
       read: async (build) => await readBuildResult(buildResultDirectory(root, build)),
-    }, seed.forwards ?? []);
+    }, seed.publication);
     const directory = buildResultDirectory(root, seed.id);
     await mkdir(dirname(directory), { recursive: true });
     const temporary = join(resolve(root), `.preparing-${seed.id}-${randomUUID()}`);
@@ -417,7 +421,7 @@ export class FileBuildResult {
       ...(seed.title === undefined ? {} : { title: seed.title }),
       source: seed.source,
       ...(seed.run === undefined ? {} : { run: seed.run }),
-      targets: [...seed.targets],
+      targets: publication.outputs.filter((output) => output.target).map((output) => output.name),
       outputs: {},
     };
     try {
@@ -425,9 +429,8 @@ export class FileBuildResult {
       await writeJsonAtomic(join(temporary, writerStateName), {
         resources: {},
         values: {},
-        publishedOutputs: seed.publishedOutputs,
+        publication,
         ...(seed.resourceReferences === undefined ? {} : { resourceReferences: seed.resourceReferences }),
-        forwards,
       });
       await rename(temporary, directory);
     } catch (error) {
@@ -464,8 +467,8 @@ export class FileBuildResult {
       writer,
       sync: input,
       target: {
-        async writeResource(path, artifact, source) {
-          await copyArtifactAtomic(source, artifact, join(directory, path));
+        async writeResource(path, blob, source) {
+          await copyBlobAtomic(source, blob, join(directory, path));
         },
         async writeValue(path, document) {
           await writeJsonAtomic(join(directory, path), document);
@@ -486,17 +489,23 @@ export class FileBuildResult {
       await rm(join(this.directory, writerStateName), { force: true });
       return manifest;
     }
+    if (input.outcome === "complete") {
+      const missing = manifest.targets.filter((target) => buildResultOutput(manifest, target) === undefined);
+      assert(missing.length === 0,
+        `Build Result ${manifest.id} cannot complete before target Outputs are published: ${missing.join(", ")}`);
+    }
     const executionLog = await preserveExecutionLog(input.executionLog,
       async (path, chunks) => await writeStreamAtomic(join(this.directory, path), chunks));
     const now = Date.now();
-    const updated: BuildResultManifest = {
+    const evidence = {
       ...manifest,
-      outcome: input.outcome,
       ...(executionLog === undefined ? {} : { executionLog }),
       ...(input.operations === undefined ? {} : { operations: input.operations }),
       finishedAt: manifest.finishedAt ?? now,
-      ...(input.failure === undefined ? {} : { failure: input.failure }),
     };
+    const updated: BuildResultManifest = input.outcome === "complete"
+      ? { ...evidence, outcome: "complete" }
+      : { ...evidence, outcome: input.outcome, failure: input.failure };
     await writeManifestAtomic(join(this.directory, manifestName), updated);
     await rm(join(this.directory, writerStateName), { force: true });
     return updated;

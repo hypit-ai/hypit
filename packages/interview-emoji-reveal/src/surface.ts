@@ -22,9 +22,9 @@ function oneOfReference(raw: MarkupAttributeValue | undefined, label: string, ex
   const value = resolve(raw.path); if (value === undefined || !expected.some((type) => sameType(value.type, type))) throw new Error(`${label} has the wrong Type.`);
   return value;
 }
-function inline<T>(value: SurfaceResolvedReference, label: string): T {
-  if (value.record?.value.kind !== "inline") throw new Error(`${label} must resolve during author compilation.`);
-  return value.record.value.value as unknown as T;
+function valueOf<T>(value: SurfaceResolvedReference, label: string): T {
+  if (value.record === undefined) throw new Error(`${label} must resolve during author compilation.`);
+  return value.record.value as unknown as T;
 }
 
 function boolean(element: Parameters<StructuredSurfaceHandler>[0]["element"], name: string, fallback: boolean): boolean {
@@ -39,8 +39,8 @@ export const decodeEmojiRevealStyleSurface: StructuredSurfaceHandler = ({ elemen
   assertAttributes(element, ["id", "recipe"]); assertEmptyElement(element);
   const id = textAttribute(element, "id");
   const recipe = reference(element.attributes.recipe, `${element.name}.recipe`, recipeType, resolveReference);
-  const style = decodeEmojiRevealStyle(id, inline<Recipe>(recipe, `${element.name}.recipe`));
-  return { records: [{ id, type: emojiRevealTypes.style, value: { kind: "inline", value: style as unknown as CanonicalValue }, range: element.range }], components: [], fragments: [] };
+  const style = decodeEmojiRevealStyle(id, valueOf<Recipe>(recipe, `${element.name}.recipe`));
+  return { records: [{ id, type: emojiRevealTypes.style, value: (style as unknown as CanonicalValue), range: element.range }], components: [] };
 };
 
 export const decodeEmojiRevealTrackSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
@@ -54,7 +54,7 @@ export const decodeEmojiRevealTrackSurface: StructuredSurfaceHandler = ({ elemen
   const headerId = `${id}.header`;
   const records: SurfaceRecordDraft[] = [{
     id: headerId, type: emojiRevealTypes.header,
-    value: { kind: "inline", value: sealEmojiRevealHeader({ id }) as unknown as CanonicalValue }, range: element.range,
+    value: (sealEmojiRevealHeader({ id }) as unknown as CanonicalValue), range: element.range,
   }];
   const items: { specName: string; iconName: string; activationName?: string }[] = [];
   const inputs: Record<string, typeof context.timeline.ref> = {
@@ -79,7 +79,7 @@ export const decodeEmojiRevealTrackSurface: StructuredSurfaceHandler = ({ elemen
     const suffix = String(index).padStart(4, "0");
     const specId = `${id}.item.${suffix}.spec`; const specName = `item-${suffix}-spec`;
     const iconName = `item-${suffix}-icon`;
-    records.push({ id: specId, type: emojiRevealTypes.itemSpec, value: { kind: "inline", value: spec as unknown as CanonicalValue }, range: child.range });
+    records.push({ id: specId, type: emojiRevealTypes.itemSpec, value: (spec as unknown as CanonicalValue), range: child.range });
     inputs[specName] = { kind: "record", id: specId }; inputs[iconName] = icon.ref;
     if (preset) items.push({ specName, iconName });
     else {
@@ -93,7 +93,7 @@ export const decodeEmojiRevealTrackSurface: StructuredSurfaceHandler = ({ elemen
   const fragment = createEmojiRevealFragment(items);
   return {
     records,
-    components: [{ id, fragment: fragment.id, inputs, outputs: { program: `${id}.program`, visual: `${id}.visual` }, range: element.range }],
-    fragments: [fragment], exports: [`${id}.program`, `${id}.visual`],
+    components: [{ id, fragment, inputs, outputs: { program: `${id}.program`, visual: `${id}.visual` }, range: element.range }],
+    exports: [`${id}.program`, `${id}.visual`],
   };
 };

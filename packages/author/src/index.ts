@@ -8,7 +8,6 @@ export type {
   AuthorOutputBinding,
   AuthorRecordRef,
   AuthorValueRef,
-  GraphFragmentResolver,
 } from "./author.js";
 export {
   AuthorFrontendError,
@@ -39,7 +38,7 @@ export type {
   AuthorSourceImport,
   AuthorSourceResolver,
   AuthorSourceUnit,
-  AuthorRecordAdmitter,
+  AuthorRecordValidator,
   Awaitable,
   CompiledSourceClosure,
   CompiledSourceExport,

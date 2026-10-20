@@ -1,13 +1,13 @@
-import { sealGenerationPortTable } from "@hypit/generation";
+import { defineModelFields } from "@hypit/generation/model-fields";
 import type {
-  GenerationPortTable,
-  GenerationPortValue,
-  GenerationRequest,
-} from "@hypit/generation";
+  ModelFieldTable,
+  ModelFieldValue,
+  ModelFieldRequest,
+} from "@hypit/generation/model-fields";
 import { blobTypes } from "@hypit/hypit/blob";
 import type { ResourceId } from "@hypit/hypit/protocol";
 import type { SurfaceAttributeVocabulary, SurfacePortVocabulary } from "@hypit/hypit/markup";
-import { defineExactModelModule } from "@hypit/generation/model";
+import { defineFieldModelModule, standardGenerationResults } from "@hypit/generation/model-fields";
 import { textTypes } from "@hypit/hypit/text";
 import { validateSeedanceInputs } from "./validation.js";
 
@@ -30,16 +30,15 @@ const SEEDANCE_25_DURATIONS = [-1, ...Array.from({ length: 27 }, (_item, index) 
  * so it receives its own exact Capability while reusing the same three author
  * Surfaces.
  */
-function seedancePortTable(model: SeedanceModel): GenerationPortTable {
+function seedancePortTable(model: SeedanceModel): ModelFieldTable {
   const is25 = model === "seedance-2.5";
-  return sealGenerationPortTable({
+  return defineModelFields({
     model,
-    result: "video",
     ports: [
       { name: "prompt", value: { kind: "text", maxChars: is25 ? 30_000 : 20_000 }, minItems: 1, maxItems: 1 },
-      { name: "referenceImage", value: { kind: "media", accepts: ["image"], itemFields: PERSON_REFERENCE_FIELDS }, minItems: 0, maxItems: is25 ? 30 : 9 },
-      { name: "referenceVideo", value: { kind: "media", accepts: ["video"], itemFields: PERSON_REFERENCE_FIELDS }, minItems: 0, maxItems: is25 ? 10 : 3 },
-      { name: "referenceAudio", value: { kind: "media", accepts: ["audio"] }, minItems: 0, maxItems: is25 ? 10 : 3 },
+      { name: "referenceImage", value: { kind: "media", accepts: ["image"], itemFields: PERSON_REFERENCE_FIELDS }, minItems: 0 },
+      { name: "referenceVideo", value: { kind: "media", accepts: ["video"], itemFields: PERSON_REFERENCE_FIELDS }, minItems: 0 },
+      { name: "referenceAudio", value: { kind: "media", accepts: ["audio"] }, minItems: 0 },
       { name: "firstFrame", value: { kind: "media", accepts: ["image"], itemFields: PERSON_REFERENCE_FIELDS }, minItems: 0, maxItems: 1 },
       { name: "lastFrame", value: { kind: "media", accepts: ["image"], itemFields: PERSON_REFERENCE_FIELDS }, minItems: 0, maxItems: 1 },
       {
@@ -75,26 +74,25 @@ function seedancePortTable(model: SeedanceModel): GenerationPortTable {
       ...(is25 ? [] : [
         // Seedance 2 reference audio cannot travel alone; it needs a visual reference.
         { kind: "requiresAnyOf" as const, port: "referenceAudio", anyOf: ["referenceImage", "referenceVideo"] },
-        { kind: "weightedTotal" as const, weights: { referenceImage: 1, referenceVideo: 1, referenceAudio: 1 }, maximum: 12 },
       ]),
     ],
   });
 }
 
-export const seedancePorts: Readonly<Record<SeedanceModel, GenerationPortTable>> = {
+export const seedancePorts: Readonly<Record<SeedanceModel, ModelFieldTable>> = {
   "seedance-2": seedancePortTable("seedance-2"),
   "seedance-2-fast": seedancePortTable("seedance-2-fast"),
   "seedance-2-mini": seedancePortTable("seedance-2-mini"),
   "seedance-2.5": seedancePortTable("seedance-2.5"),
 };
 
-export type SeedancePortMap = Readonly<Record<string, readonly GenerationPortValue[]>>;
+export type SeedancePortMap = Readonly<Record<string, readonly ModelFieldValue[]>>;
 
-export function sealSeedanceRequest(model: SeedanceModel, ports: SeedancePortMap): GenerationRequest {
+export function sealSeedanceRequest(model: SeedanceModel, ports: SeedancePortMap): ModelFieldRequest {
   return seedanceEndpointsByModel[model].sealRequest(ports);
 }
 
-const seedanceBaseDefinition = defineExactModelModule({
+const seedanceBaseDefinition = defineFieldModelModule({
   module: seedanceModuleRef,
   endpoints: ([
     ["standard", "seedance-2"],
@@ -108,6 +106,7 @@ const seedanceBaseDefinition = defineExactModelModule({
       : `${model.split("-").map((part) => part[0]!.toUpperCase() + part.slice(1)).join("")}Request`,
     producerName: `request-${model}`,
     ports: seedancePorts[model],
+    result: standardGenerationResults.video,
     validateInputs: validateSeedanceInputs,
   })),
 });
@@ -315,7 +314,7 @@ export const seedanceMarkupSurfaces = [
 </seedance:ReferenceVideo>`,
       notes: [
         ...seedanceSettingNotes,
-        "The element requires at least one `Reference` child, and the model's port limits cap how many of each role it accepts.",
+        "The element requires at least one `Reference` child. The selected Endpoint reports any service-specific reference quota.",
         "Every image/video Reference requires `person-reference=\"true|false\"`. Classify the supplied material; audio must omit the field. The Provider transports it according to its API.",
         "A `Reference` carries exactly one of `image`, `video` or `audio`, and is empty.",
       ],

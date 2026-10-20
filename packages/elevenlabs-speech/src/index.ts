@@ -1,8 +1,8 @@
 import { blobTypes } from "@hypit/hypit/blob";
-import { sealGenerationPortRequest, sealGenerationRequestDraft, sealGenerationPortTable } from "@hypit/generation";
-import type { GenerationPortTable, GenerationPortValue, GenerationRequest } from "@hypit/generation";
+import { sealModelFieldRequest, sealModelFieldBuilder, defineModelFields } from "@hypit/generation/model-fields";
+import type { ModelFieldTable, ModelFieldValue, ModelFieldRequest } from "@hypit/generation/model-fields";
 import type { SurfaceAttributeVocabulary, SurfacePortVocabulary } from "@hypit/hypit/markup";
-import { defineExactModelModule } from "@hypit/generation/model";
+import { defineFieldModelModule, standardGenerationResults } from "@hypit/generation/model-fields";
 import { textTypes } from "@hypit/hypit/text";
 
 export const elevenLabsSpeechModuleRef = { name: "@hypit/elevenlabs-speech", version: "1" } as const;
@@ -15,10 +15,9 @@ const spokenText = { kind: "text", maxChars: 1000 } as const;
 // Voice descriptions have their own documented 20 to 1000 character bounds.
 const instruction = { kind: "text", maxChars: 1000 } as const;
 
-function table(model: ElevenLabsSpeechModel): GenerationPortTable {
-  return sealGenerationPortTable({
+function table(model: ElevenLabsSpeechModel): ModelFieldTable {
+  return defineModelFields({
     model,
-    result: "audio",
     ports: [
       { name: "text", value: spokenText, minItems: 1, maxItems: 1 },
       { name: "voiceDescription", value: instruction, minItems: 1, maxItems: 1 },
@@ -27,25 +26,25 @@ function table(model: ElevenLabsSpeechModel): GenerationPortTable {
   });
 }
 
-export const elevenLabsSpeechPorts: Readonly<Record<ElevenLabsSpeechModel, GenerationPortTable>> = {
+export const elevenLabsSpeechPorts: Readonly<Record<ElevenLabsSpeechModel, ModelFieldTable>> = {
   "eleven_ttv_v3": table("eleven_ttv_v3"),
 };
 
 export function sealElevenLabsSpeechRequest(
   model: ElevenLabsSpeechModel,
-  ports: Readonly<Record<string, readonly GenerationPortValue[]>>,
-): GenerationRequest {
-  return sealGenerationPortRequest(elevenLabsSpeechPorts[model], ports);
+  ports: Readonly<Record<string, readonly ModelFieldValue[]>>,
+): ModelFieldRequest {
+  return sealModelFieldRequest(elevenLabsSpeechPorts[model], ports);
 }
 
 export function sealElevenLabsSpeechRequestDraft(
   model: ElevenLabsSpeechModel,
-  ports: Readonly<Record<string, readonly GenerationPortValue[]>>,
+  ports: Readonly<Record<string, readonly ModelFieldValue[]>>,
 ) {
-  return sealGenerationRequestDraft(elevenLabsSpeechPorts[model], ports);
+  return sealModelFieldBuilder(elevenLabsSpeechPorts[model], ports);
 }
 
-const base = defineExactModelModule({
+const base = defineFieldModelModule({
   module: elevenLabsSpeechModuleRef,
   endpoints: ([
     ["voiceDesign", "eleven_ttv_v3", "ElevenLabsVoiceDesignRequest"],
@@ -54,6 +53,7 @@ const base = defineExactModelModule({
     requestTypeName,
     producerName: `request-${model}`,
     ports: elevenLabsSpeechPorts[model],
+    result: standardGenerationResults.audio,
   })),
 });
 

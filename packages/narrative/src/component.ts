@@ -1,6 +1,6 @@
-import type { AdmissionPackage } from "@hypit/hypit/admission";
+import type { RefinementPackage } from "@hypit/hypit/refinement";
 import type { ProducerPackage } from "@hypit/hypit/producer";
-import type { StoredValue } from "@hypit/hypit/protocol";
+import type { Value } from "@hypit/hypit/protocol";
 
 import {
   assertNarrativeSegmentRefIdentity,
@@ -16,16 +16,16 @@ import type {
   NarrativeSelectionRef,
 } from "./types.js";
 
-function inline<T>(value: StoredValue, subject: string): T {
-  if (value.kind !== "inline") throw new Error(`${subject} must be inline.`);
-  return value.value as T;
+function valueOf<T>(value: Value, subject: string): T {
+  if (value === undefined) throw new Error(`${subject} is missing.`);
+  return value as T;
 }
 
 export const narrativeComponent = {
-  validators: [
-    { type: narrativeTypes.narrative, handler: ({ value }) => assertNarrativeIdentity(inline<Narrative>(value, "Narrative")) },
-    { type: narrativeTypes.segmentRef, handler: ({ value }) => assertNarrativeSegmentRefIdentity(inline<NarrativeSegmentRef>(value, "NarrativeSegmentRef")) },
-    { type: narrativeTypes.selection, handler: ({ value }) => assertNarrativeSelectionRefIdentity(inline<NarrativeSelectionRef>(value, "NarrativeSelection")) },
-    { type: narrativeTypes.moment, handler: ({ value }) => assertNarrativeMomentRefIdentity(inline<NarrativeMomentRef>(value, "NarrativeMoment")) },
+  refinements: [
+    { type: narrativeTypes.narrative, handler: ({ value }) => assertNarrativeIdentity(valueOf<Narrative>(value, "Narrative")) },
+    { type: narrativeTypes.segmentRef, handler: ({ value }) => assertNarrativeSegmentRefIdentity(valueOf<NarrativeSegmentRef>(value, "NarrativeSegmentRef")) },
+    { type: narrativeTypes.selection, handler: ({ value }) => assertNarrativeSelectionRefIdentity(valueOf<NarrativeSelectionRef>(value, "NarrativeSelection")) },
+    { type: narrativeTypes.moment, handler: ({ value }) => assertNarrativeMomentRefIdentity(valueOf<NarrativeMomentRef>(value, "NarrativeMoment")) },
   ],
-} satisfies ProducerPackage & AdmissionPackage;
+} satisfies ProducerPackage & RefinementPackage;

@@ -1,13 +1,14 @@
 import {
-  sealCompiledGraph,
-  verifyCompiledGraph,
+  sealAuthorGraph,
+  verifyAuthorGraph,
 } from "@hypit/kernel";
 import type {
-  CompiledGraph,
+  AuthorGraph,
   GraphValueRef,
   LinkedProgram,
   TypeRef,
 } from "@hypit/protocol";
+import { sameType, typeKey } from "@hypit/protocol";
 
 import {
   bindAuthorFragment,
@@ -40,7 +41,7 @@ export type AuthorValueRef = AuthorRecordRef | AuthorComponentOutputRef;
  */
 export type AuthorComponent = {
   readonly id: string;
-  readonly fragment: string;
+  readonly fragment: GraphFragment;
   readonly inputs: Readonly<Record<string, AuthorValueRef>>;
   readonly outputs: Readonly<Record<string, string>>;
 };
@@ -51,9 +52,6 @@ export type AuthorOutputBinding = {
   readonly id: string;
   readonly type: TypeRef;
 };
-
-/** Resolve a selected Graph Fragment without executing package code. */
-export type GraphFragmentResolver = (id: string) => GraphFragment | undefined;
 
 export class AuthorGraphError extends Error {
   readonly code: string;
@@ -76,14 +74,8 @@ function assert(
   if (!condition) throw new AuthorGraphError(code, message, subject);
 }
 
-function sameType(left: TypeRef, right: TypeRef): boolean {
-  return left.module.name === right.module.name
-    && left.module.version === right.module.version
-    && left.name === right.name;
-}
-
 function typeName(type: TypeRef): string {
-  return `${type.module.name}@${type.module.version}#${type.name}`;
+  return typeKey(type);
 }
 
 function exactKeys(
@@ -149,7 +141,6 @@ function outputKey(component: string, output: string): string {
 function collectAuthorGraph(
   program: LinkedProgram,
   declarations: readonly AuthorComponent[],
-  resolveFragment: GraphFragmentResolver,
 ): CollectedAuthorGraph {
   const components = new Map<string, CollectedComponent>();
   const outputs = new Map<string, AuthorOutputBinding>();
@@ -164,20 +155,7 @@ function collectAuthorGraph(
       `Author Graph repeats component ${declaration.id}`,
       declaration.id,
     );
-    assert(declaration.fragment.trim().length > 0, "INVALID_FRAGMENT_ID", `${declaration.id} Fragment id is empty`);
-    const fragment = resolveFragment(declaration.fragment);
-    assert(
-      fragment !== undefined,
-      "UNKNOWN_GRAPH_FRAGMENT",
-      `${declaration.id} references unavailable Fragment ${declaration.fragment}`,
-      declaration.id,
-    );
-    assert(
-      fragment.id === declaration.fragment,
-      "FRAGMENT_RESOLUTION_MISMATCH",
-      `${declaration.id} resolved a different Fragment`,
-      declaration.id,
-    );
+    const fragment = declaration.fragment;
     verifyGraphFragment(program, fragment);
     exactKeys(declaration.inputs, fragment.inputs.map((input) => input.name), declaration.id);
     exactKeys(declaration.outputs, fragment.exports.map((item) => item.name), declaration.id);
@@ -185,7 +163,8 @@ function collectAuthorGraph(
     components.set(declaration.id, collected);
 
     for (const item of fragment.exports) {
-      const id = declaration.outputs[item.name] as string;
+      const id = Object.hasOwn(declaration.outputs, item.name) ? declaration.outputs[item.name] : undefined;
+      assert(id !== undefined, "MISSING_LOGICAL_OUTPUT_ID", `${declaration.id}.${item.name} output is missing`);
       assert(id.length > 0, "EMPTY_LOGICAL_OUTPUT_ID", `${declaration.id}.${item.name} output is empty`);
       assert(
         !outputIds.has(id),
@@ -214,9 +193,8 @@ function collectAuthorGraph(
 export function elaborateAuthorGraph(
   program: LinkedProgram,
   components: readonly AuthorComponent[],
-  resolveFragment: GraphFragmentResolver,
-): CompiledGraph {
-  const collected = collectAuthorGraph(program, components, resolveFragment);
+): AuthorGraph {
+  const collected = collectAuthorGraph(program, components);
   const records = new Map(program.records.map((record) => [record.id, record]));
   const visiting: string[] = [];
   const visitingAt = new Map<string, number>();
@@ -292,7 +270,6 @@ export function elaborateAuthorGraph(
     }
     const instance = elaborateGraphFragment(program, component.fragment, {
       id: `author:${component.declaration.id}`,
-      fragment: component.fragment.id,
       inputs,
     });
     contributions.push(bindAuthorFragment(instance, component.declaration.outputs));
@@ -302,7 +279,7 @@ export function elaborateAuthorGraph(
     { outputs: [], candidates: [], operations: [] },
     ...contributions,
   );
-  const graph = sealCompiledGraph(merged);
-  verifyCompiledGraph(program, graph);
+  const graph = sealAuthorGraph(merged);
+  verifyAuthorGraph(program, graph);
   return graph;
 }

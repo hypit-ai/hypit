@@ -1,11 +1,12 @@
-import type { AdmissionPackage } from "@hypit/hypit/admission";
+import type { RefinementPackage } from "@hypit/hypit/refinement";
 import type { ProducerPackage } from "@hypit/hypit/producer";
+import type { Value } from "@hypit/hypit/protocol";
 import { compositionTypes } from "./manifest.js";
 import { assertAudioTrackIdentity, assertCompositionIdentity, assertVisualTrackIdentity } from "./track.js";
 import type { AudioTrack, Composition, VisualTrack } from "./track.js";
-function inline(value: { readonly kind: string; readonly value?: unknown }, subject: string): unknown { if (value.kind !== "inline") throw new Error(`${subject} must be inline`); return value.value; }
-export const compositionComponent = { validators: [
-  { type: compositionTypes.visualTrack, handler: ({ value }) => assertVisualTrackIdentity(inline(value, "VisualTrack") as VisualTrack) },
-  { type: compositionTypes.audioTrack, handler: ({ value }) => assertAudioTrackIdentity(inline(value, "AudioTrack") as AudioTrack) },
-  { type: compositionTypes.composition, handler: ({ value }) => assertCompositionIdentity(inline(value, "Composition") as Composition) },
-] } satisfies ProducerPackage & AdmissionPackage;
+function valueOf(value: Value | undefined, subject: string): unknown { if (value === undefined) throw new Error(`${subject} is missing`); return value; }
+export const compositionComponent = { refinements: [
+  { type: compositionTypes.visualTrack, handler: ({ value }) => assertVisualTrackIdentity(valueOf(value, "VisualTrack") as VisualTrack) },
+  { type: compositionTypes.audioTrack, handler: ({ value }) => assertAudioTrackIdentity(valueOf(value, "AudioTrack") as AudioTrack) },
+  { type: compositionTypes.composition, handler: ({ value }) => assertCompositionIdentity(valueOf(value, "Composition") as Composition) },
+] } satisfies ProducerPackage & RefinementPackage;

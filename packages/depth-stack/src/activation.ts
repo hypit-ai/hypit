@@ -1,4 +1,4 @@
-import { createAdmissionPackageFacet } from "@hypit/hypit/admission";
+import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
 import { createProducerPackageFacet } from "@hypit/hypit/producer";
 import { createMarkupSurfaceFacet } from "@hypit/hypit/markup";
 import { createStudioTrackCompanionFacet } from "@hypit/studio-companion";
@@ -19,7 +19,7 @@ export const hypitPackage = {
     manifest: depthStackManifest,
   }],
   facets: [
-    ...[depthStackComponent].flatMap((component) => [createProducerPackageFacet(component), createAdmissionPackageFacet(component)]),
+    ...[depthStackComponent].flatMap((component) => [createProducerPackageFacet(component), createRefinementPackageFacet(component)]),
     createMarkupSurfaceFacet({
       module: depthStackModuleRef,
     declaration: depthStackMarkupSurfaces.find((item) => item.name === "label")!,

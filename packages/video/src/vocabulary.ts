@@ -13,15 +13,15 @@ import type {
   SurfacePortVocabulary,
   SurfaceVocabulary,
 } from "@hypit/hypit/markup";
-import { exactModelFacetAbi } from "@hypit/generation/model";
 import { loadNodePackageSelection, locateNodePackage, distributionPackageRoots } from "@hypit/hypit/loader/node";
 import type { NodePackageLoadOptions } from "@hypit/hypit/loader/node";
-import type { ValueSchema } from "@hypit/hypit/protocol";
+import { moduleKey, typeKey } from "@hypit/hypit/protocol";
+import type { ModuleManifest, ValueSchema } from "@hypit/hypit/protocol";
 import { findProjectRoot } from "@hypit/hypit/project";
 import { VISUAL_STYLE_ENUM_VALUES_V1, VISUAL_STYLE_NAMES_V1 } from "@hypit/composition";
 
 /**
- * What a Source may write: the installed packages, and the Surfaces each one declares.
+ * What a Source may write: installed packages, their Module Capabilities and declared Surfaces.
  *
  * The manifest is the authority; this prints it. A system you never inspected is a system you are
  * about to invent, so the listing shows every scope and the project's own `packages/`, and a named
@@ -40,6 +40,20 @@ async function readJson<T>(path: string): Promise<T | undefined> {
   try { return JSON.parse(await readFile(path, "utf8")) as T; } catch { return undefined; }
 }
 
+export type CapabilityListing = {
+  readonly module: string;
+  readonly name: string;
+  readonly returns: string;
+};
+
+function manifestCapabilities(manifest: ModuleManifest): readonly CapabilityListing[] {
+  return manifest.capabilities.map((capability) => ({
+    module: moduleKey(manifest),
+    name: capability.name,
+    returns: typeKey(capability.returns),
+  }));
+}
+
 // ---------------------------------------------------------------------------------------------------
 // Listing
 
@@ -47,7 +61,7 @@ export type PackageListing = {
   readonly name: string;
   readonly description?: string;
   readonly tags: readonly string[];
-  readonly models?: readonly string[];
+  readonly capabilities?: readonly CapabilityListing[];
   readonly unreadable?: string;
 };
 
@@ -85,13 +99,14 @@ export async function listPackages(projectRoot: string, distributionRoot?: strin
     const manifest = await readJson<{ readonly hypit?: { readonly activation?: string }; readonly description?: string }>(join(directory, "package.json"));
     if (manifest?.hypit?.activation === undefined) continue;
     const tags: string[] = [];
-    const models: string[] = [];
+    const capabilities: CapabilityListing[] = [];
     let unreadable: string | undefined;
     try {
       for (const pack of await loadNodePackageSelection([name], projectRoot, loading(distributionRoot))) {
+        if (pack.specifier !== name) continue;
+        for (const module of pack.contribution.modules ?? []) capabilities.push(...manifestCapabilities(module.manifest));
         for (const facet of pack.contribution.facets ?? []) {
           if (facet.abi === markupSurfaceFacetAbi) tags.push((facet.implementation as RegisteredSurface).tag);
-          else if (facet.abi === exactModelFacetAbi) models.push(...(facet as { readonly offers?: readonly string[] }).offers ?? []);
         }
       }
     } catch (error) { unreadable = error instanceof Error ? error.message : String(error); }
@@ -99,7 +114,8 @@ export async function listPackages(projectRoot: string, distributionRoot?: strin
       name,
       ...(manifest.description === undefined ? {} : { description: manifest.description }),
       tags: [...new Set(tags)].sort(),
-      ...(models.length === 0 ? {} : { models: [...new Set(models)].sort() }),
+      ...(capabilities.length === 0 ? {} : { capabilities: capabilities.toSorted((left, right) =>
+        `${left.module}#${left.name}`.localeCompare(`${right.module}#${right.name}`)) }),
       ...(unreadable === undefined ? {} : { unreadable }),
     });
   }
@@ -287,7 +303,7 @@ export function writeVocabularyHelp(io: CliIo): void {
     "hypit vocabulary",
     "What a Source may write. Prints installed package manifests; no Runtime Profile, no request, no state.",
     "",
-    "  hypit vocabulary                         every installed package with its tags and models",
+    "  hypit vocabulary                         every installed package with its tags and capabilities",
     "  hypit vocabulary <package…> [--tag <tag>] the Surfaces a package declares: module, import, attributes, children, ports, example",
     "  hypit vocabulary --visual [<shape>]      the value shapes and rules a drawing Producer must emit",
     "",
@@ -341,7 +357,8 @@ export async function runVocabularyCli(
     io.write(`${listing.map((item) => {
       const parts = [item.name];
       if (item.tags.length > 0) parts.push(`tags: ${item.tags.join(", ")}`);
-      if (item.models !== undefined) parts.push(`models: ${item.models.join(", ")}`);
+      if (item.capabilities !== undefined) parts.push(`capabilities: ${item.capabilities.map((capability) =>
+        `${capability.module}#${capability.name} -> ${capability.returns}`).join(", ")}`);
       if (item.unreadable !== undefined) parts.push(`unreadable: ${item.unreadable}`);
       return `${parts.join("\n    ")}${item.description === undefined ? "" : `\n    ${item.description}`}`;
     }).join("\n")}\n`);

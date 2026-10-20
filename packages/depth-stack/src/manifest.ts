@@ -372,20 +372,20 @@ export const depthStackManifest: ModuleManifest = {
     { name: depthStackTypes.program.name },
   ], capabilities: [],
   producers: [
-    { name: depthStackProducers.bindLabelText.name, inputs: [{ name: "style", type: depthStackTypes.cardLabelStyle }, { name: "content", type: textTypes.text }], outputs: [{ name: "label", type: depthStackTypes.cardLabel }], needs: [] },
-    { name: depthStackProducers.createCards.name, inputs: [], outputs: [{ name: "set", type: depthStackTypes.cardSet }], needs: [] },
+    { name: depthStackProducers.bindLabelText.name, inputs: [{ name: "style", type: depthStackTypes.cardLabelStyle }, { name: "content", type: textTypes.text }], result: { kind: "output" as const, name: "label", type: depthStackTypes.cardLabel } },
+    { name: depthStackProducers.createCards.name, inputs: [], result: { kind: "output" as const, name: "set", type: depthStackTypes.cardSet } },
     { name: depthStackProducers.appendCard.name, inputs: [
       { name: "set", type: depthStackTypes.cardSet }, { name: "timeline", type: timelineTypes.timeline }, { name: "material", type: visualTrackTypes.layerSet },
       { name: "label", type: depthStackTypes.cardLabel }, { name: "spec", type: depthStackTypes.cardSpec },
       { name: "activation", type: temporalTypes.instant },
-    ], outputs: [{ name: "set", type: depthStackTypes.cardSet }], needs: [] },
+    ], result: { kind: "output" as const, name: "set", type: depthStackTypes.cardSet } },
     { name: depthStackProducers.finalize.name,
       inputs: [...finalizeInputs, { name: "terminal", type: temporalTypes.instant }],
-      outputs: [{ name: "program", type: depthStackTypes.program }], needs: [] },
+      result: { kind: "output" as const, name: "program", type: depthStackTypes.program } },
     { name: depthStackProducers.render.name, inputs: [
       { name: "timeline", type: timelineTypes.timeline },
       { name: "program", type: depthStackTypes.program },
-    ], outputs: [{ name: "track", type: compositionTypes.visualTrack }], needs: [] },
+    ], result: { kind: "output" as const, name: "track", type: compositionTypes.visualTrack } },
   ],
 };
 export const depthStackDependency = { module: depthStackModuleRef } as const;

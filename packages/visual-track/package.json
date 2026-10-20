@@ -1,6 +1,6 @@
 {
   "name": "@hypit/visual-track",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
   "type": "module",
@@ -16,8 +16,8 @@
     "activation": "./src/activation.ts"
   },
   "peerDependencies": {
-    "@hypit/hypit": "workspace:^0.3.1",
-    "@hypit/studio-companion": "workspace:^0.1.1"
+    "@hypit/hypit": "workspace:^0.4.0",
+    "@hypit/studio-companion": "workspace:^0.1.3"
   },
   "devDependencies": {
     "@hypit/blob": "workspace:*",
@@ -36,10 +36,10 @@
     "typescript": "5.9.3"
   },
   "dependencies": {
-    "@hypit/composition": "workspace:^0.1.0",
-    "@hypit/media": "workspace:^0.1.0",
-    "@hypit/spatial": "workspace:^0.1.0",
-    "@hypit/temporal": "workspace:^0.1.0",
-    "@hypit/timeline": "workspace:^0.1.0"
+    "@hypit/composition": "workspace:^0.2.0",
+    "@hypit/media": "workspace:^0.2.0",
+    "@hypit/spatial": "workspace:^0.1.1",
+    "@hypit/temporal": "workspace:^0.1.1",
+    "@hypit/timeline": "workspace:^0.1.1"
   }
 }

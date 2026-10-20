@@ -1,20 +1,22 @@
-import type { CapabilityRef, ModuleRef } from "@hypit/hypit/protocol";
-import type { GenerationWireMapping } from "@hypit/generation";
+import { capabilityKey } from "@hypit/hypit/protocol";
+import type { CapabilityRef } from "@hypit/hypit/protocol";
+import type { GenerationWireMapping } from "@hypit/generation/provider";
+import { elevenLabsSpeechModuleRef } from "@hypit/elevenlabs-speech";
+import { fishAudioSpeechModuleRef } from "@hypit/fishaudio-speech";
+import { gptImageModuleRef } from "@hypit/gpt-image";
+import { grokImagineModuleRef } from "@hypit/grok-imagine";
+import { minimaxH3ModuleRef } from "@hypit/minimax-h3";
+import { mimoSpeechModuleRef } from "@hypit/mimo-speech";
+import { nanoBananaModuleRef } from "@hypit/nano-banana";
+import { pixverseModuleRef } from "@hypit/pixverse";
+import { seedanceModuleRef } from "@hypit/seedance";
+import { seedreamModuleRef } from "@hypit/seedream";
+import { volcengineMattingModuleRef } from "@hypit/volcengine-matting";
 
-/** HypiHub model IDs and the normalized request fields they accept. */
-const SEEDANCE: ModuleRef = { name: "@hypit/seedance", version: "1" };
-const GPT_IMAGE: ModuleRef = { name: "@hypit/gpt-image", version: "1" };
-const NANO_BANANA: ModuleRef = { name: "@hypit/nano-banana", version: "1" };
-const SEEDREAM: ModuleRef = { name: "@hypit/seedream", version: "1" };
-const MINIMAX: ModuleRef = { name: "@hypit/minimax-h3", version: "1" };
-const GROK: ModuleRef = { name: "@hypit/grok-imagine", version: "1" };
-const PIXVERSE: ModuleRef = { name: "@hypit/pixverse", version: "1" };
-const MIMO_SPEECH: ModuleRef = { name: "@hypit/mimo-speech", version: "1" };
-const FISHAUDIO_SPEECH: ModuleRef = { name: "@hypit/fishaudio-speech", version: "1" };
-const ELEVENLABS_SPEECH: ModuleRef = { name: "@hypit/elevenlabs-speech", version: "1" };
+export type HypiHubGenerationMapping = GenerationWireMapping & { readonly media: "audio" | "image" | "video" };
 
-const seedance = (name: string): GenerationWireMapping => ({
-  capability: { module: SEEDANCE, name }, result: "video", routes: [{ model: name }],
+const seedance = (name: string): HypiHubGenerationMapping => ({
+  capability: { module: seedanceModuleRef, name }, media: "video", routes: [{ model: name }],
   fields: {
     prompt: { as: "value", field: "prompt" },
     referenceImage: { as: "urlArray", field: "reference_image_urls", resourceFields: ["personReference"] },
@@ -35,8 +37,8 @@ const seedance = (name: string): GenerationWireMapping => ({
  * reference videos, which carry the length of the run in place of `seconds`. The model's own
  * `quality` band is HypiHub's `resolution`.
  */
-const pixverse = (name: string, model: string): GenerationWireMapping => ({
-  capability: { module: PIXVERSE, name }, result: "video", routes: [{ model }],
+const pixverse = (name: string, model: string): HypiHubGenerationMapping => ({
+  capability: { module: pixverseModuleRef, name }, media: "video", routes: [{ model }],
   fields: {
     prompt: { as: "value", field: "prompt" },
     firstFrame: { as: "url", field: "first_frame" },
@@ -50,13 +52,13 @@ const pixverse = (name: string, model: string): GenerationWireMapping => ({
   },
 });
 
-export const hypiHubMappings: readonly GenerationWireMapping[] = [
+export const hypiHubMappings: readonly HypiHubGenerationMapping[] = [
   {
-    capability: { module: { name: "@hypit/volcengine-matting", version: "1" }, name: "matte-portrait-video" },
-    result: "video", routes: [{ model: "matte-portrait-video" }],
+    capability: { module: volcengineMattingModuleRef, name: "matte-portrait-video" },
+    media: "video", routes: [{ model: "matte-portrait-video" }],
     fields: {
       source: { as: "url", field: "ref_video_url" },
-      format: { as: "value", field: "format", whenAbsent: "WEBM" },
+      format: { as: "value", field: "format" },
     },
   },
   seedance("seedance-2"),
@@ -66,17 +68,17 @@ export const hypiHubMappings: readonly GenerationWireMapping[] = [
   pixverse("pixverse-v6", "pixverse/v6"),
   pixverse("pixverse-c1", "pixverse/c1"),
   {
-    capability: { module: GPT_IMAGE, name: "gpt-image-2" }, result: "image", routes: [{ model: "gpt-image-2" }],
+    capability: { module: gptImageModuleRef, name: "gpt-image-2" }, media: "image", routes: [{ model: "gpt-image-2" }],
     fields: {
       prompt: { as: "value", field: "prompt" },
       aspectRatio: { as: "value", field: "aspect_ratio" },
-      resolution: { as: "value", field: "resolution", whenAbsent: "1K" },
+      resolution: { as: "value", field: "resolution" },
       background: { as: "value", field: "background" },
       images: { as: "itemObject", field: "reference_images", urlKey: "url", fieldKeys: {} },
     },
   },
   ...(["nano-banana-2", "nano-banana-pro"] as const).map((model) => ({
-    capability: { module: NANO_BANANA, name: model }, result: "image" as const, routes: [{ model }],
+    capability: { module: nanoBananaModuleRef, name: model }, media: "image" as const, routes: [{ model }],
     fields: {
       prompt: { as: "value" as const, field: "prompt" },
       aspectRatio: { as: "value" as const, field: "aspect_ratio" },
@@ -86,7 +88,7 @@ export const hypiHubMappings: readonly GenerationWireMapping[] = [
     },
   })),
   {
-    capability: { module: SEEDREAM, name: "seedream-5-lite" }, result: "image", routes: [{ model: "seedream-5-lite" }],
+    capability: { module: seedreamModuleRef, name: "seedream-5-lite" }, media: "image", routes: [{ model: "seedream-5-lite" }],
     fields: {
       prompt: { as: "value", field: "prompt" },
       aspectRatio: { as: "value", field: "aspect_ratio" },
@@ -97,10 +99,10 @@ export const hypiHubMappings: readonly GenerationWireMapping[] = [
     },
   },
   {
-    capability: { module: MINIMAX, name: "minimax-h3" }, result: "video", routes: [{ model: "minimax-h3" }],
+    capability: { module: minimaxH3ModuleRef, name: "minimax-h3" }, media: "video", routes: [{ model: "minimax-h3" }],
     fields: {
       prompt: { as: "value", field: "prompt" }, duration: { as: "value", field: "seconds" },
-      resolution: { as: "value", field: "resolution", whenAbsent: "2k" }, aspectRatio: { as: "value", field: "aspect_ratio" },
+      resolution: { as: "value", field: "resolution" }, aspectRatio: { as: "value", field: "aspect_ratio" },
       referenceImage: { as: "urlArray", field: "reference_image_urls" },
       referenceVideo: { as: "urlArray", field: "reference_videos" },
       referenceAudio: { as: "urlArray", field: "reference_audios" },
@@ -109,7 +111,7 @@ export const hypiHubMappings: readonly GenerationWireMapping[] = [
     },
   },
   {
-    capability: { module: GROK, name: "grok-imagine-video" }, result: "video", routes: [{ model: "grok-imagine-video" }],
+    capability: { module: grokImagineModuleRef, name: "grok-imagine-video" }, media: "video", routes: [{ model: "grok-imagine-video" }],
     fields: {
       prompt: { as: "value", field: "prompt" }, duration: { as: "value", field: "seconds" },
       resolution: { as: "value", field: "resolution" }, aspectRatio: { as: "value", field: "aspect_ratio" },
@@ -117,7 +119,7 @@ export const hypiHubMappings: readonly GenerationWireMapping[] = [
     },
   },
   {
-    capability: { module: GROK, name: "grok-imagine-video-1.5-preview" }, result: "video", routes: [
+    capability: { module: grokImagineModuleRef, name: "grok-imagine-video-1.5-preview" }, media: "video", routes: [
       { model: "grok-imagine-video-1.5-preview" },
     ],
     fields: {
@@ -127,14 +129,14 @@ export const hypiHubMappings: readonly GenerationWireMapping[] = [
     },
   },
   {
-    capability: { module: MIMO_SPEECH, name: "mimo-v2.5-tts-voicedesign" }, result: "audio", routes: [{ model: "mimo-v2.5-tts-voicedesign" }],
+    capability: { module: mimoSpeechModuleRef, name: "mimo-v2.5-tts-voicedesign" }, media: "audio", routes: [{ model: "mimo-v2.5-tts-voicedesign" }],
     fields: {
       text: { as: "value", field: "input" },
       voiceDescription: { as: "value", field: "voice_description" },
     },
   },
   {
-    capability: { module: MIMO_SPEECH, name: "mimo-v2.5-tts-voiceclone" }, result: "audio", routes: [{ model: "mimo-v2.5-tts-voiceclone" }],
+    capability: { module: mimoSpeechModuleRef, name: "mimo-v2.5-tts-voiceclone" }, media: "audio", routes: [{ model: "mimo-v2.5-tts-voiceclone" }],
     fields: {
       text: { as: "value", field: "input" },
       instruction: { as: "value", field: "prompt" },
@@ -142,14 +144,14 @@ export const hypiHubMappings: readonly GenerationWireMapping[] = [
     },
   },
   {
-    capability: { module: FISHAUDIO_SPEECH, name: "voice-design-1" }, result: "audio", routes: [{ model: "fishaudio/voice-design-1" }],
+    capability: { module: fishAudioSpeechModuleRef, name: "voice-design-1" }, media: "audio", routes: [{ model: "fishaudio/voice-design-1" }],
     fields: {
       text: { as: "value", field: "input" },
       voiceDescription: { as: "value", field: "voice_description" },
     },
   },
   {
-    capability: { module: FISHAUDIO_SPEECH, name: "voice-clone" }, result: "audio", routes: [{ model: "fishaudio/voice-clone" }],
+    capability: { module: fishAudioSpeechModuleRef, name: "voice-clone" }, media: "audio", routes: [{ model: "fishaudio/voice-clone" }],
     // Fish Audio titles its transient cloned voice; the title has no authored meaning.
     constants: { voice_description: "reference" },
     fields: {
@@ -158,7 +160,7 @@ export const hypiHubMappings: readonly GenerationWireMapping[] = [
     },
   },
   {
-    capability: { module: ELEVENLABS_SPEECH, name: "eleven_ttv_v3" }, result: "audio", routes: [{ model: "eleven_ttv_v3" }],
+    capability: { module: elevenLabsSpeechModuleRef, name: "eleven_ttv_v3" }, media: "audio", routes: [{ model: "eleven_ttv_v3" }],
     fields: {
       text: { as: "value", field: "input" },
       voiceDescription: { as: "value", field: "voice_description" },
@@ -166,12 +168,8 @@ export const hypiHubMappings: readonly GenerationWireMapping[] = [
   },
 ];
 
-function capabilityKey(ref: CapabilityRef): string {
-  return `${ref.module.name}@${ref.module.version}#${ref.name}`;
-}
-
 const byCapability = new Map(hypiHubMappings.map((mapping) => [capabilityKey(mapping.capability), mapping]));
 
-export function hypiHubMappingForCapability(capability: CapabilityRef): GenerationWireMapping | undefined {
+export function hypiHubMappingForCapability(capability: CapabilityRef): HypiHubGenerationMapping | undefined {
   return byCapability.get(capabilityKey(capability));
 }

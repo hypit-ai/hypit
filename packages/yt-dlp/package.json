@@ -1,6 +1,6 @@
 {
   "name": "@hypit/yt-dlp",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
   "type": "module",
@@ -14,10 +14,10 @@
     "README.md"
   ],
   "peerDependencies": {
-    "@hypit/hypit": "workspace:^0.3.1"
+    "@hypit/hypit": "workspace:^0.4.0"
   },
   "dependencies": {
-    "@hypit/media-local": "workspace:^0.2.0"
+    "@hypit/media-local": "workspace:^0.2.1"
   },
   "devDependencies": {
     "@hypit/hypit": "workspace:*"

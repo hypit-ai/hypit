@@ -22,16 +22,22 @@ import {
 } from "@hypit/audio-track";
 import type { AudioClipSpec, AudioSourceTimeSpec, AudioTrackSet } from "@hypit/audio-track";
 import { blobManifest } from "@hypit/blob";
-import { registerTypeValidatorFacets } from "@hypit/admission";
+import { registerTypeRefinements } from "@hypit/refinement";
 import { sealComposition, compositionManifest, compositionTypes } from "@hypit/composition";
-import { createResolvedClosure, sealBuildRequest, start } from "@hypit/kernel";
+import {
+  createResolvedClosure,
+  defineBuild,
+  link,
+  materializeBuild,
+  planBuild,
+} from "@hypit/kernel";
 import { AuthorFrontendRegistry, resolveCompiledSourceExport } from "@hypit/author";
 import { compileSourceClosure } from "@hypit/compiler";
 import type { SynchronizedMedia } from "@hypit/media";
 import { mediaComponent, mediaDependency, mediaManifest, mediaTypes } from "@hypit/media";
 import type { NarrativeMomentRef, NarrativeSelectionRef } from "@hypit/narrative";
 import { narrativeManifest } from "@hypit/narrative";
-import { compileAudioProgramPlan } from "@hypit/media-operations";
+import { compileAudioProgram } from "@hypit/media-operations";
 import type { ModuleManifest } from "@hypit/protocol";
 import { temporalDependency, temporalTypes } from "@hypit/temporal";
 import type { TemporalDuration } from "@hypit/temporal";
@@ -41,8 +47,27 @@ import { spatialManifest } from "@hypit/spatial";
 import { recipeManifest } from "@hypit/recipe";
 import { temporalManifest } from "@hypit/temporal";
 import { MarkupSurfaceRegistry, createMarkupAuthorFrontend } from "@hypit/markup";
-import { createRecordAdmitter, TypeValidatorRegistry } from "@hypit/admission";
+import { createRecordValidator, RefinementRegistry } from "@hypit/refinement";
 import { resolveSelfDescribedTextSource } from "@hypit/source/text";
+
+function buildState(
+  program: Parameters<typeof planBuild>[0],
+  graph: Parameters<typeof planBuild>[1],
+  targets: readonly string[],
+) {
+  const planned = planBuild(program, graph, {
+    format: "hypit.run-graph@1",
+    records: [],
+    candidates: [],
+    operations: [],
+    satisfactions: [],
+    targets: targets.map((output) => ({ output })),
+  });
+  return materializeBuild(defineBuild({
+    program: link(program.closure, [...program.records, ...planned.initialRecords]),
+    plan: planned.plan,
+  }), []);
+}
 
 const space = sealTimeline({ id: "test-space", frameCount: 300, frameRate: { numerator: 30, denominator: 1 },
 });
@@ -183,10 +208,10 @@ test("exact audio rates are not rejected by an arbitrary playback-mode ceiling",
     sourceTime: rateSpec({ rate: { numerator: 128, denominator: 1 } }),
   }));
   assert.deepEqual(track.clips[0]?.sourceTime.pieces[0]?.rate, { numerator: 128, denominator: 1 });
-  const plan = compileAudioProgramPlan(sealComposition({
+  const program = compileAudioProgram(sealComposition({
     id: "fast", canvas: { width: 1, height: 1, clearColor: "#000000" }, tracks: [track],
   }), space);
-  assert.equal(plan.clips[0]?.playbackRate, 128);
+  assert.equal(program.clips[0]?.playbackRate, 128);
 });
 
 test("source bounds and fades quantize once into the same sample domain", () => {
@@ -211,6 +236,37 @@ test("source bounds and fades quantize once into the same sample domain", () => 
   })), /fade exceeds its Window/u);
 });
 
+test("frame-authored fades share their Clip boundaries on a rational clock", () => {
+  const ntsc = sealTimeline({
+    id: "ntsc-space",
+    frameCount: 300,
+    frameRate: { numerator: 30_000, denominator: 1_001 },
+  });
+  const ntscSemantic = timelineFixture(ntsc, {
+    narrativeId: "ntsc-narrative",
+    segments: [{ id: "line", frameCount: 300 }],
+    anchors: [],
+  });
+  const sixteen = { unit: "frames" as const, value: 16 };
+  for (const startFrame of [0, 1, 2, 3]) {
+    const clip = spec({
+      mix: { gain: 1, fadeIn: sixteen, fadeOut: sixteen },
+      projection: {
+        start: { ref: "absolute", at: { unit: "frames", value: startFrame } },
+        end: { ref: "absolute", at: { unit: "frames", value: startFrame + 16 } },
+      },
+    });
+    const track = renderAudioTrack(ntsc, finalizeAudioTrack(
+      appendProgramAudioItem(createAudioTrackSet(), header, ntscSemantic, media("sting", 48_000), clip),
+      header,
+    ));
+    const rendered = track.clips[0]!;
+    const length = rendered.target.endSampleExclusive - rendered.target.startSample;
+    assert.equal(rendered.fadeInSamples, length, `fade-in from frame ${startFrame}`);
+    assert.equal(rendered.fadeOutSamples, length, `fade-out from frame ${startFrame}`);
+  }
+});
+
 test("piecewise audio maps preserve silent gaps while execution keeps one Clip-global fade clock", () => {
   const second = { unit: "seconds" as const, numerator: 1, denominator: 1 };
   const seconds = (value: number): TemporalDuration => ({ unit: "seconds", numerator: value, denominator: 1 });
@@ -230,10 +286,10 @@ test("piecewise audio maps preserve silent gaps while execution keeps one Clip-g
     { startSample: 0, endSampleExclusive: 48_000 },
     { startSample: 96_000, endSampleExclusive: 144_000 },
   ]);
-  const plan = compileAudioProgramPlan(sealComposition({
+  const program = compileAudioProgram(sealComposition({
     id: "piecewise", canvas: { width: 1, height: 1, clearColor: "#000000" }, tracks: [track],
   }), space);
-  assert.deepEqual(plan.clips.map((clip) => ({
+  assert.deepEqual(program.clips.map((clip) => ({
     target: [clip.targetStartSample, clip.targetEndSampleExclusive],
     mix: [clip.mixStartSample, clip.mixEndSampleExclusive],
     fade: [clip.fadeInSamples, clip.fadeOutSamples],
@@ -281,17 +337,17 @@ test("one Track with overlaps and two peer Tracks compile to the same mix", () =
       { ...second.clips[0]!, id: "b" },
     ],
   };
-  const peerPlan = compileAudioProgramPlan(sealComposition({
+  const peerProgram = compileAudioProgram(sealComposition({
     id: "peer", canvas: { width: 1, height: 1, clearColor: "#000000" },
     tracks: [first, second],
   }), space);
-  const combinedPlan = compileAudioProgramPlan(sealComposition({
+  const combinedProgram = compileAudioProgram(sealComposition({
     id: "combined", canvas: { width: 1, height: 1, clearColor: "#000000" },
     tracks: [combined],
   }), space);
   assert.deepEqual(
-    peerPlan.clips.map(({ id: _id, ...clip }) => clip),
-    combinedPlan.clips.map(({ id: _id, ...clip }) => clip),
+    peerProgram.clips.map(({ id: _id, ...clip }) => clip),
+    combinedProgram.clips.map(({ id: _id, ...clip }) => clip),
   );
 });
 
@@ -340,13 +396,12 @@ test("the self-described Audio Surface parses into the same finite Producer grap
   const registry = new MarkupSurfaceRegistry();
   registry.registerStructured({ module: fixtureModule, declaration: fixtureSurface, handler: ({ element }) => ({
     records: [
-      { id: "source", type: mediaTypes.synchronized, value: { kind: "inline", value: media("surface", 48_000) }, range: element.range },
-      { id: "semantic", type: timelineTypes.timeline, value: { kind: "inline", value: semantic }, range: element.range },
-      { id: "whole", type: temporalTypes.window, value: { kind: "inline", value: projectProgramWindow({ itemId: "whole",
-        semantic, projection: { start: { ref: "timeline.start" }, end: { ref: "timeline.end" } } }) }, range: element.range },
+      { id: "source", type: mediaTypes.synchronized, value: (media("surface", 48_000)), range: element.range },
+      { id: "semantic", type: timelineTypes.timeline, value: (semantic), range: element.range },
+      { id: "whole", type: temporalTypes.window, value: (projectProgramWindow({ itemId: "whole",
+        semantic, projection: { start: { ref: "timeline.start" }, end: { ref: "timeline.end" } } })), range: element.range },
     ],
     components: [],
-    fragments: [],
   }) });
   registry.registerStructured({
     module: audioTrackModuleRef,
@@ -358,8 +413,8 @@ test("the self-described Audio Surface parses into the same finite Producer grap
     registry,
     resolveModule: (request) => request.from === "example.audio-inputs@1" ? fixtureModule : audioTrackModuleRef,
   }));
-  const validators = new TypeValidatorRegistry();
-  registerTypeValidatorFacets(validators, mediaComponent.validators ?? []);
+  const refinements = new RefinementRegistry();
+  registerTypeRefinements(refinements, mediaComponent.refinements ?? []);
   const compiled = await compileSourceClosure({
     entry: resolveSelfDescribedTextSource({
       id: "/project/audio.svml",
@@ -378,14 +433,14 @@ test("the self-described Audio Surface parses into the same finite Producer grap
     }),
     closure,
     frontends,
-    admitRecord: createRecordAdmitter(validators),
+    validateRecord: createRecordValidator(refinements),
     resolveSource() { throw new Error("Audio fixture has no source imports."); },
   });
   const trackExport = resolveCompiledSourceExport(compiled, "sound.audio", compositionTypes.audioTrack);
   assert.equal(trackExport.ref.kind, "logical-output");
-  const build = start(compiled.program, compiled.graph, sealBuildRequest({
-    targets: [{ output: trackExport.ref.kind === "logical-output" ? trackExport.ref.id : "" }],
-  }));
+  const build = buildState(compiled.program, compiled.graph, [
+    trackExport.ref.kind === "logical-output" ? trackExport.ref.id : "",
+  ]);
   assert.deepEqual(build.plan.steps.map((step) => step.producer.name).sort(), [
     audioTrackProducers.createSet.name,
     audioTrackProducers.appendClip.name,

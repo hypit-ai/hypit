@@ -1,14 +1,19 @@
 import { canonicalize, defineEndpoint, wakeAfter } from "@hypit/hypit/endpoint";
 import type { AsyncEndpoint, CredentialRef, EndpointRequest } from "@hypit/hypit/endpoint";
-import { compileWireRequest, generationTypes, sealGeneratedImageSet, selectWireModelForRequest } from "@hypit/generation";
-import type { GenerationRequest, GenerationWireMapping } from "@hypit/generation";
+import {
+  generationTypes,
+  sealGeneratedImageSet,
+} from "@hypit/generation";
+import type { ProviderFieldRequest } from "@hypit/generation/provider";
+import { materializeWireRequest, planWireRequest, selectWireModelForRequest } from "@hypit/generation/provider";
+import type { GenerationWireMapping } from "@hypit/generation/provider";
 
 export const providerModule = { name: "@example/provider-images", version: "1" } as const;
 export const capability = { module: { name: "@hypit/gpt-image", version: "1" }, name: "gpt-image-2" } as const;
 
 // This example service implements only this subset of the model. Its API is described in README.
 const mapping: GenerationWireMapping = {
-  capability, result: "image", routes: [{ model: "gpt-image-2" }],
+  capability, routes: [{ model: "gpt-image-2" }],
   fields: {
     prompt: { as: "value", field: "prompt" },
     aspectRatio: { as: "value", field: "ratio" },
@@ -41,11 +46,10 @@ function address(value: string): string {
 }
 
 function support(request: EndpointRequest) {
-  const ports = (request.constraints as unknown as GenerationRequest).ports;
+  const ports = (request.constraints as unknown as ProviderFieldRequest).ports;
   const unsupported = ports.resolution?.[0] !== "1K"
     || !["1:1", "9:16", "16:9"].includes(String(ports.aspectRatio?.[0]))
-    || Object.keys(ports).some((port) => !(port in mapping.fields))
-    || request.pendingInputs?.some((slot) => !(slot.input in mapping.fields));
+    || Object.keys(ports).some((port) => !(port in mapping.fields));
   return unsupported
     ? { status: "unsupported" as const, reason: "This service offers 1K at 1:1, 9:16 or 16:9, without background control" }
     : { status: "supported" as const };
@@ -81,11 +85,11 @@ export function createImageProvider(options: {
       const supported = support(context.need);
       if (supported.status === "unsupported") throw new Error(supported.reason);
       const secret = key(context.credentials);
-      const authored = context.need.constraints as unknown as GenerationRequest;
+      const authored = context.need.constraints as unknown as ProviderFieldRequest;
       const model = selectWireModelForRequest(mapping, authored);
       // This service has no catalogue query; its known request limits were checked above.
       await context.reportProgress?.({ phase: `Preparing image request: ${model}` });
-      const request = await compileWireRequest(mapping, authored,
+      const request = await materializeWireRequest(planWireRequest(mapping, authored),
         async (artifact) => {
           const bytes = await context.resources.get(artifact.resource);
           if (bytes === undefined) throw new Error("Reference image is unavailable");
@@ -99,7 +103,7 @@ export function createImageProvider(options: {
         method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(request),
       });
       const id = text(task.id), handle = { id }, receipt = { id };
-      await context.checkpoint?.({ handle, receipt });
+      await context.checkpoint?.({ status: "accepted", handle, receipt });
       return { ...wakeAfter(handle, interval), receipt };
     },
     async poll(context) {
@@ -127,9 +131,7 @@ export function createImageProvider(options: {
       const mediaType = response.headers.get("content-type")?.split(";")[0]?.trim();
       if (!mediaType?.startsWith("image/")) throw new Error("Image service returned a non-image result");
       const artifact = await context.resources.put(new Uint8Array(await response.arrayBuffer()), mediaType);
-      return { status: "completed", result: { value: {
-        kind: "inline", value: canonicalize(sealGeneratedImageSet({ images: [artifact] })),
-      } } };
+      return { status: "completed", result: { value: (canonicalize(sealGeneratedImageSet({ images: [artifact] }))) } };
     },
   };
   return defineEndpoint({
@@ -139,8 +141,7 @@ export function createImageProvider(options: {
     actionLimits: { submit: { concurrency: 1 }, poll: { concurrency: 4 }, collect: { concurrency: 1 } },
     pricing: { kind: "page", url: `${base}/pricing` },
     async readPricing(context) {
-      const model = selectWireModelForRequest(mapping, context.request.constraints as unknown as GenerationRequest,
-        context.request.pendingInputs?.map((input) => input.input));
+      const model = selectWireModelForRequest(mapping, context.request.constraints as unknown as ProviderFieldRequest);
       const path = `/rates?model=${encodeURIComponent(model)}`;
       const source = `${base}${path}`;
       const rates = await json(path, key(await context.credentials()));

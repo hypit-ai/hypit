@@ -1,1 +1,13 @@
-export { injectRuntimeShim } from "@hypit/html-program/playback";
+import { injectHtmlPlayback } from "@hypit/html-playback";
+
+/** Studio host notification layered over the shared browser playback adapter. */
+export function injectRuntimeShim(html: string, audio = ""): string {
+  const playback = injectHtmlPlayback(html, audio);
+  const ready = `window.__hypitFrameReady.then(function () {
+    if (window.parent) window.parent.postMessage({ type: 'hypit-preview-ready' }, '*');
+  });\n`;
+  const marker = "})();\n</script>";
+  const at = playback.lastIndexOf(marker);
+  if (at < 0) throw new Error("HTML playback runtime is missing its completion boundary");
+  return playback.slice(0, at) + ready + playback.slice(at);
+}

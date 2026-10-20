@@ -113,8 +113,7 @@ export const filmManifest: ModuleManifest = {
     {
       name: filmProducers.createTrackSet.name,
       inputs: [],
-      outputs: [{ name: "set", type: filmTypes.trackSet }],
-      needs: [],
+      result: { kind: "output" as const, name: "set", type: filmTypes.trackSet },
     },
     {
       name: filmProducers.appendVisualTrack.name,
@@ -123,8 +122,7 @@ export const filmManifest: ModuleManifest = {
         { name: "timeline", type: timelineTypes.timeline },
         { name: "track", type: compositionTypes.visualTrack },
       ],
-      outputs: [{ name: "set", type: filmTypes.trackSet }],
-      needs: [],
+      result: { kind: "output" as const, name: "set", type: filmTypes.trackSet },
     },
     {
       name: filmProducers.appendAudioTrack.name,
@@ -133,8 +131,7 @@ export const filmManifest: ModuleManifest = {
         { name: "timeline", type: timelineTypes.timeline },
         { name: "track", type: compositionTypes.audioTrack },
       ],
-      outputs: [{ name: "set", type: filmTypes.trackSet }],
-      needs: [],
+      result: { kind: "output" as const, name: "set", type: filmTypes.trackSet },
     },
     {
       name: filmProducers.compileComposition.name,
@@ -144,8 +141,7 @@ export const filmManifest: ModuleManifest = {
         { name: "timeline", type: timelineTypes.timeline },
         { name: "set", type: filmTypes.trackSet },
       ],
-      outputs: [{ name: "composition", type: compositionTypes.composition }],
-      needs: [],
+      result: { kind: "output" as const, name: "composition", type: compositionTypes.composition },
     },
   ],
 };

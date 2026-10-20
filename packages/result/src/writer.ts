@@ -1,4 +1,5 @@
-import type { BlobRef, CanonicalValue, TypeRef, TypedRecord } from "@hypit/protocol";
+import { isBlobRef, mapValueBlobs, sameType } from "@hypit/protocol";
+import type { BlobRef, CanonicalValue, TypedRecord } from "@hypit/protocol";
 
 import type {
   BuildResultFileRef,
@@ -9,25 +10,22 @@ import type {
   BuildResultValueDocument,
   BuildResultValuePath,
   HistoricalBuildOutputRef,
+  OutputPublication,
+  PublicationPlan,
 } from "./types.js";
+import { buildResultOutput, defineBuildResultOutput } from "./types.js";
 
 export type BuildResultWriterState = {
   readonly resources: Readonly<Record<string, string>>;
   readonly resourceReferences?: Readonly<Record<string, BuildResultFileRef>>;
   readonly values: Readonly<Record<string, string>>;
-  readonly publishedOutputs: readonly { readonly name: string; readonly output: string; readonly displayName?: string }[];
-  readonly forwards: readonly {
-    readonly output: string;
-    readonly build: string;
-    readonly sourceOutput: string;
-    readonly type: TypeRef;
-  }[];
+  readonly publication: PublicationPlan;
 };
 
 export type BuildResultWriteTarget = {
   writeResource(
     path: string,
-    artifact: BlobRef,
+    blob: BlobRef,
     source: BuildResultResourceSource,
   ): Promise<void>;
   writeValue(path: string, document: BuildResultValueDocument): Promise<void>;
@@ -126,27 +124,8 @@ function scalar(value: unknown): value is null | boolean | number | string {
     || (typeof value === "number" && Number.isFinite(value));
 }
 
-function isBlobRef(value: unknown): value is BlobRef {
-  if (value === null || Array.isArray(value) || typeof value !== "object") return false;
-  const item = value as Readonly<Record<string, unknown>>;
-  return item.kind === "blob"
-    && typeof item.resource === "string"
-    && item.resource.length > 0
-    && typeof item.size === "number"
-    && Number.isSafeInteger(item.size)
-    && item.size >= 0
-    && typeof item.mediaType === "string"
-    && item.mediaType.length > 0;
-}
-
-function outputRecord(input: BuildResultSync, output: string): TypedRecord | undefined {
-  const binding = input.state.plan.outputBindings.find((item) => item.output === output);
-  return binding === undefined ? undefined : input.state.records.find((item) => item.id === binding.record);
-}
-
 type ReadyOutput = {
-  readonly published: BuildResultWriterState["publishedOutputs"][number];
-  readonly type: TypeRef;
+  readonly published: OutputPublication;
   readonly record?: TypedRecord;
   readonly forward?: HistoricalBuildOutputRef;
 };
@@ -168,77 +147,67 @@ export async function syncBuildResultOutputs(input: {
   const outputs: Record<string, BuildResultOutput> = { ...input.manifest.outputs };
 
   const materialize = async (artifacts: readonly BlobRef[]): Promise<readonly BuildResultFileRef[]> => {
-    const writes: Array<{ readonly path: string; readonly artifact: BlobRef }> = [];
-    const result = artifacts.map((artifact): BuildResultFileRef => {
-      const reference = input.writer.resourceReferences?.[artifact.resource];
-      if (reference !== undefined) return { ...reference, mediaType: artifact.mediaType };
-      const identity = artifact.resource;
+    const writes: Array<{ readonly path: string; readonly blob: BlobRef }> = [];
+    const result = artifacts.map((blob): BuildResultFileRef => {
+      const reference = input.writer.resourceReferences?.[blob.resource];
+      if (reference !== undefined) return { ...reference, mediaType: blob.mediaType };
+      const identity = blob.resource;
       assert(identity.length > 0, "Build resource has no instance identity");
       let path = resources.get(identity);
       if (path === undefined) {
-        path = numberedPath("files", "file", mediaExtension(artifact.mediaType), filePaths);
+        path = numberedPath("files", "file", mediaExtension(blob.mediaType), filePaths);
         resources.set(identity, path);
-        writes.push({ path, artifact });
+        writes.push({ path, blob });
       }
-      return { kind: "build-file", path, size: artifact.size, mediaType: artifact.mediaType };
+      return { kind: "build-file", path, size: blob.size, mediaType: blob.mediaType };
     });
-    await runBounded(writes, 4, async ({ path, artifact }) => {
-      await input.target.writeResource(path, artifact, input.sync.resources);
+    await runBounded(writes, 4, async ({ path, blob }) => {
+      await input.target.writeResource(path, blob, input.sync.resources);
     });
     return result;
   };
 
-  const encodeComposite = (
-    value: unknown,
-    path: BuildResultValuePath,
-    artifacts: Array<{ readonly at: BuildResultValuePath; readonly artifact: BlobRef }>,
-  ): CanonicalValue => {
-    if (isBlobRef(value)) {
-      artifacts.push({ at: path, artifact: value });
-      return null;
-    }
-    if (scalar(value)) return value;
-    if (Array.isArray(value)) {
-      return value.map((item, index) => encodeComposite(item, [...path, index], artifacts));
-    }
-    assert(value !== null && typeof value === "object", "Build Output contains a non-canonical value");
-    return Object.fromEntries(Object.entries(value as Readonly<Record<string, unknown>>)
-      .map(([key, item]) => [key, encodeComposite(item, [...path, key], artifacts)]));
-  };
-
   const outputValue = async (record: TypedRecord): Promise<BuildResultOutput["value"]> => {
-    if (record.value.kind === "blob") return (await materialize([record.value]))[0]!;
-    if (scalar(record.value.value)) return { kind: "inline", value: record.value.value };
+    if (isBlobRef(record.value)) return (await materialize([record.value]))[0]!;
+    if (scalar(record.value)) return { kind: "inline", value: record.value };
     const existingPath = values.get(record.id);
     if (existingPath !== undefined) return { kind: "value", path: existingPath };
     const path = numberedPath("values", "value", ".json", valuePaths);
     values.set(record.id, path);
-    const artifacts: Array<{ readonly at: BuildResultValuePath; readonly artifact: BlobRef }> = [];
-    const value = encodeComposite(record.value.value, [], artifacts);
-    const files = await materialize(artifacts.map((item) => item.artifact));
+    const blobs: Array<{ readonly at: BuildResultValuePath; readonly blob: BlobRef }> = [];
+    const value = mapValueBlobs(record.value, (blob, at) => {
+      blobs.push({ at, blob });
+      return null;
+    }) as CanonicalValue;
+    const files = await materialize(blobs.map((item) => item.blob));
     const document: BuildResultValueDocument = {
       format: "hypit.result-value@1",
       value,
-      resources: artifacts.map((item, index) => ({ at: item.at, file: files[index]! })),
+      resources: blobs.map((item, index) => ({ at: item.at, file: files[index]! })),
     };
     await input.target.writeValue(path, document);
     return { kind: "value", path };
   };
 
-  const forwards = new Map(input.writer.forwards.map((item) => [item.output, item]));
   const outputRank = (record: TypedRecord | undefined, forward: HistoricalBuildOutputRef | undefined): number => forward !== undefined
     ? 0
-    : record?.value.kind === "blob" ? 1 : record !== undefined && scalar(record.value.value) ? 2 : 3;
-  const ready: ReadyOutput[] = input.writer.publishedOutputs.flatMap((published): ReadyOutput[] => {
-    if (outputs[published.name] !== undefined) return [];
-    const source = forwards.get(published.output);
-    if (source !== undefined) return [{ published, type: source.type, forward: {
+    : record !== undefined && isBlobRef(record.value) ? 1 : record !== undefined && scalar(record.value) ? 2 : 3;
+  const ready: ReadyOutput[] = input.writer.publication.outputs.flatMap((published): ReadyOutput[] => {
+    if (buildResultOutput({ outputs }, published.name) !== undefined) return [];
+    const source = published.source;
+    if (source.kind === "historical-output") return [{ published, forward: {
       kind: "build-output" as const,
       build: source.build,
-      output: source.sourceOutput,
+      output: source.output,
     } }];
-    const record = outputRecord(input.sync, published.output);
-    return record === undefined ? [] : [{ published, type: record.type, record }];
+    const currentRecord = published.source.kind === "current-record" ? published.source.record : undefined;
+    const record = currentRecord === undefined
+      ? undefined
+      : input.sync.records.find((item) => item.id === currentRecord);
+    if (record === undefined) return [];
+    assert(sameType(record.type, published.type),
+      `Logical Output ${published.output} has the wrong type for published Output ${published.name}`);
+    return [{ published, record }];
   }).sort((left, right) => outputRank(left.record, left.forward) - outputRank(right.record, right.forward)
     || left.published.name.localeCompare(right.published.name));
 
@@ -246,12 +215,12 @@ export async function syncBuildResultOutputs(input: {
     return { changed: false, manifest: input.manifest, writer: input.writer };
   }
 
-  for (const { published, type, record, forward } of ready) {
-    outputs[published.name] = {
+  for (const { published, record, forward } of ready) {
+    defineBuildResultOutput(outputs, published.name, {
       ...(published.displayName === undefined ? {} : { displayName: published.displayName }),
-      type,
+      type: published.type,
       value: forward ?? await outputValue(record!),
-    };
+    });
   }
 
   return {

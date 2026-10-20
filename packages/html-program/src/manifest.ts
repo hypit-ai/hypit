@@ -1,5 +1,6 @@
 import { compositionDependency, compositionTypes, VISUAL_IR_V1 } from "@hypit/composition";
 import { compositableSurfaceSchema, mediaDependency, mediaTypes } from "@hypit/media";
+import { blobRefSchema } from "@hypit/hypit/protocol";
 import type { CapabilityRef, ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/hypit/protocol";
 import { timelineDependency, timelineTypes } from "@hypit/timeline";
 
@@ -18,7 +19,6 @@ export const htmlProgramProducers = {
   requestVisualRange: { module: htmlProgramModuleRef, name: "request-visual-range" },
 } satisfies Record<string, ProducerRef>;
 
-const resource = { kind: "string", minLength: 5, maxLength: 256 } as const;
 const positiveInteger = { kind: "number", integer: true, minimum: 1 } as const;
 const nonNegativeInteger = { kind: "number", integer: true, minimum: 0 } as const;
 export const htmlProgramSchema: ValueSchema = {
@@ -43,12 +43,7 @@ export const htmlProgramSchema: ValueSchema = {
     artifacts: { schema: { kind: "array", items: {
       kind: "object",
       fields: {
-        artifact: { schema: { kind: "object", fields: {
-          kind: { schema: { kind: "literal", value: "blob" } },
-          resource: { schema: resource },
-          size: { schema: nonNegativeInteger },
-          mediaType: { schema: { kind: "string", minLength: 1 } },
-        } } },
+        artifact: { schema: blobRefSchema() },
         usage: { schema: { kind: "oneOf", variants: [
           { kind: "object", fields: { kind: { schema: { kind: "literal", value: "always" } } } },
           { kind: "object", fields: {
@@ -64,7 +59,7 @@ export const htmlProgramSchema: ValueSchema = {
     surfaces: { schema: { kind: "array", items: compositableSurfaceSchema } },
     frameSources: { schema: { kind: "array", items: { kind: "object", fields: {
       id: { schema: { kind: "string", minLength: 1 } },
-      resource: { schema: resource },
+      resource: { schema: { kind: "string", minLength: 1 } },
       startFrame: { schema: nonNegativeInteger },
       endFrameExclusive: { schema: positiveInteger },
       sourceFrame: { schema: { kind: "object", fields: {
@@ -97,15 +92,12 @@ export const htmlProgramManifest: ModuleManifest = {
       { name: "composition", type: compositionTypes.composition },
       { name: "timeline", type: timelineTypes.timeline },
     ],
-    outputs: [{ name: "program", type: htmlProgramTypes.program }],
-    needs: [],
+    result: { kind: "output" as const, name: "program", type: htmlProgramTypes.program },
   }, {
     name: htmlProgramProducers.requestVisual.name,
-    inputs: [{ name: "program", type: htmlProgramTypes.program }], outputs: [],
-    needs: [{ name: "visual", capability: htmlProgramCapabilities.rasterizeVisual, returns: mediaTypes.timelineVisual }],
+    inputs: [{ name: "program", type: htmlProgramTypes.program }], result: { kind: "need" as const, name: "visual", capability: htmlProgramCapabilities.rasterizeVisual },
   }, {
     name: htmlProgramProducers.requestVisualRange.name,
-    inputs: [{ name: "program", type: htmlProgramTypes.program }, { name: "range", type: mediaTypes.frameRange }], outputs: [],
-    needs: [{ name: "visual", capability: htmlProgramCapabilities.rasterizeVisual, returns: mediaTypes.timelineVisual }],
+    inputs: [{ name: "program", type: htmlProgramTypes.program }, { name: "range", type: mediaTypes.frameRange }], result: { kind: "need" as const, name: "visual", capability: htmlProgramCapabilities.rasterizeVisual },
   }],
 };

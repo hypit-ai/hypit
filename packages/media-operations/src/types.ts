@@ -148,8 +148,8 @@ export type AudioProgramClip = AudioLevelAutomation & {
   readonly fadeOutSamples: number;
 };
 
-/** Pure media plan. Executing it is always a Provider Need. */
-export type AudioProgramPlan = {
+/** Pure, provider-independent audio program. Executing it is always a Provider Need. */
+export type AudioProgram = {
   readonly frameRate: MediaRational;
   readonly frameCount: number;
   readonly sampleRate: 48_000;
@@ -162,7 +162,7 @@ export type AudioProgramPlan = {
 };
 
 export type RenderAudioNeed = {
-  readonly plan: AudioProgramPlan;
+  readonly program: AudioProgram;
   readonly range?: MediaFrameRange;
 };
 

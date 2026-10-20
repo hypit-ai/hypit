@@ -1,17 +1,25 @@
-import { videoContractManifests } from "../../../test/support/video-domain.js";
-import { narrativeTemporalDependency, narrativeTemporalTypes } from "@hypit/narrative-temporal";
-import { compositionDependency, compositionTypes } from "@hypit/composition";
-import { spatialTypes } from "@hypit/spatial";
+import { blobManifest } from "@hypit/blob";
+import { compositionDependency, compositionManifest, compositionTypes } from "@hypit/composition";
+import { mediaManifest } from "@hypit/media";
+import { narrativeManifest } from "@hypit/narrative";
+import {
+  narrativeTemporalDependency,
+  narrativeTemporalManifest,
+  narrativeTemporalTypes,
+} from "@hypit/narrative-temporal";
+import { spatialManifest, spatialTypes } from "@hypit/spatial";
+import { timelineManifest } from "@hypit/timeline";
+import { temporalManifest } from "@hypit/temporal";
 import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
   createResolvedClosure,
+  defineBuild,
   link,
-  sealBuildRequest,
-  sealCompiledGraph,
-  sealRecord,
-  start,
+  materializeBuild,
+  planBuild,
+  sealAuthorGraph,
 } from "@hypit/kernel";
 import {
   bindAuthorFragment,
@@ -24,7 +32,7 @@ import type {
   GraphFragment,
 } from "@hypit/author";
 import type {
-  CompiledGraph,
+  AuthorGraph,
   LinkedProgram,
   ModuleManifest,
   ProducerRef,
@@ -50,43 +58,50 @@ const manifest: ModuleManifest = {
       { name: "request", type: requestType },
       { name: "style", type: requestType },
     ],
-    outputs: [{ name: "take", type: narrativeTemporalTypes.narrativeAlignment }],
-    needs: [],
+    result: { kind: "output" as const, name: "take", type: narrativeTemporalTypes.narrativeAlignment },
   }, {
     name: projectVisualProducer.name,
     inputs: [{ name: "take", type: narrativeTemporalTypes.narrativeAlignment }],
-    outputs: [{ name: "visual", type: compositionTypes.visualTrack }],
-    needs: [],
+    result: { kind: "output" as const, name: "visual", type: compositionTypes.visualTrack },
   }, {
     name: projectAudioProducer.name,
     inputs: [{ name: "take", type: narrativeTemporalTypes.narrativeAlignment }],
-    outputs: [{ name: "audio", type: compositionTypes.audioTrack }],
-    needs: [],
+    result: { kind: "output" as const, name: "audio", type: compositionTypes.audioTrack },
   }],
 };
 
-const closure = createResolvedClosure([...videoContractManifests, manifest]);
+const closure = createResolvedClosure([
+  blobManifest,
+  mediaManifest,
+  narrativeManifest,
+  timelineManifest,
+  temporalManifest,
+  narrativeTemporalManifest,
+  spatialManifest,
+  compositionManifest,
+  manifest,
+]);
 
 function program(): LinkedProgram {
-  const rawCanvas = sealRecord({
+  const rawCanvas = {
     id: "canvas:root",
     type: spatialTypes.canvas,
-    value: { kind: "inline", value: {
+    value: ({
       widthPx: 1080, heightPx: 1920,
-    } },
-  });
+    }),
+  };
   const canvas = rawCanvas;
   return link(closure, [
-      sealRecord({
+      {
         id: "request:root",
         type: requestType,
-        value: { kind: "inline", value: "Say hello." },
-      }),
-      sealRecord({
+        value: ("Say hello."),
+      },
+      {
         id: "style:root",
         type: requestType,
-        value: { kind: "inline", value: "Direct to camera." },
-      }),
+        value: ("Direct to camera."),
+      },
       canvas,
   ]);
 }
@@ -105,19 +120,19 @@ function speechFragment(): GraphFragment {
         id: "generate",
         producer: generateProducer,
         inputs: { request: input("request"), style: input("style") },
-        result: { kind: "output", name: "take" },
+        result: { kind: "output" as const, name: "take" },
       },
       {
         id: "visual",
         producer: projectVisualProducer,
         inputs: { take: operation("generate") },
-        result: { kind: "output", name: "visual" },
+        result: { kind: "output" as const, name: "visual" },
       },
       {
         id: "audio",
         producer: projectAudioProducer,
         inputs: { take: operation("generate") },
-        result: { kind: "output", name: "audio" },
+        result: { kind: "output" as const, name: "audio" },
       },
     ],
     exports: [
@@ -144,7 +159,6 @@ function instance(programValue: LinkedProgram, id: string) {
   const fragment = speechFragment();
   return elaborateGraphFragment(programValue, fragment, {
     id,
-    fragment: fragment.id,
     inputs: {
       request: { kind: "record", id: "request:root" },
       style: { kind: "record", id: "style:root" },
@@ -153,12 +167,27 @@ function instance(programValue: LinkedProgram, id: string) {
   });
 }
 
-function graph(...contributions: readonly FragmentContribution[]): CompiledGraph {
+function graph(...contributions: readonly FragmentContribution[]): AuthorGraph {
   const merged = mergeFragmentContributions(
     { outputs: [], candidates: [], operations: [] },
     ...contributions,
   );
-  return sealCompiledGraph({ ...merged });
+  return sealAuthorGraph({ ...merged });
+}
+
+function buildState(linked: LinkedProgram, authorGraph: AuthorGraph, targets: readonly string[]) {
+  const planned = planBuild(linked, authorGraph, {
+    format: "hypit.run-graph@1",
+    records: [],
+    candidates: [],
+    operations: [],
+    satisfactions: [],
+    targets: targets.map((output) => ({ output })),
+  });
+  return materializeBuild(defineBuild({
+    program: link(linked.closure, [...linked.records, ...planned.initialRecords]),
+    plan: planned.plan,
+  }), []);
 }
 
 test("one FragmentInstance shares its generation Operation across all exports", () => {
@@ -169,14 +198,8 @@ test("one FragmentInstance shares its generation Operation across all exports", 
     audio: "opening.audio",
     visual: "opening.visual",
   });
-  const compiled = graph(contribution);
-  const request = sealBuildRequest({
-    targets: [
-      { output: "opening.audio" },
-      { output: "opening.visual" },
-    ],
-  });
-  const state = start(linked, compiled, request);
+  const authorGraph = graph(contribution);
+  const state = buildState(linked, authorGraph, ["opening.audio", "opening.visual"]);
   assert.equal(
     state.plan.steps.filter((step) => step.producer.name === generateProducer.name).length,
     1,
@@ -203,7 +226,7 @@ test("distinct Fragment instances never content-dedupe", () => {
     6,
   );
 
-  const compiled = graph(
+  const authorGraph = graph(
     bindAuthorFragment(opening, {
       take: "opening.take",
       audio: "opening.audio",
@@ -215,12 +238,7 @@ test("distinct Fragment instances never content-dedupe", () => {
       visual: "closing.visual",
     }),
   );
-  const state = start(linked, compiled, sealBuildRequest({
-    targets: [
-      { output: "opening.audio" },
-      { output: "closing.audio" },
-    ],
-  }));
+  const state = buildState(linked, authorGraph, ["opening.audio", "closing.audio"]);
   assert.equal(
     state.plan.steps.filter((step) => step.producer.name === generateProducer.name).length,
     2,

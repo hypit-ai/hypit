@@ -17,13 +17,13 @@ export const whisperXAlignmentFragment = sealGraphFragment({
     { name: "language", type: whisperXTypes.language }],
   operations: [
     { id: "prepare-evidence-audio", producer: speechEvidenceProducers.projectAudio,
-      inputs: { media: input("media"), domain: input("domain") }, result: { kind: "need", name: "evidenceAudio" } },
+      inputs: { media: input("media"), domain: input("domain") }, result: { kind: "need" as const, name: "evidenceAudio" } },
     { id: "request-whisperx", producer: whisperXProducers.request,
-      inputs: { evidence: operation("prepare-evidence-audio"), language: input("language") }, result: { kind: "need", name: "alignment" } },
+      inputs: { evidence: operation("prepare-evidence-audio"), language: input("language") }, result: { kind: "need" as const, name: "alignment" } },
     { id: "align-narrative", producer: speechAlignmentProducers.alignNarrative,
       inputs: { narrative: input("narrative"), segment: input("segment"),
         domain: input("domain"), evidence: operation("request-whisperx") },
-      result: { kind: "output", name: "alignment" } },
+      result: { kind: "output" as const, name: "alignment" } },
   ],
   exports: [{ name: "alignment", type: narrativeTemporalTypes.narrativeAlignment, root: operation("align-narrative") }],
 });
@@ -34,7 +34,7 @@ export const whisperXBoundaryAlignmentFragment = sealGraphFragment({
   operations: [
     { id: "materialize-boundaries", producer: narrativeTemporalProducers.materializeSegmentBoundaries,
       inputs: { narrative: input("narrative"), segment: input("segment"), domain: input("domain") },
-      result: { kind: "output", name: "alignment" } },
+      result: { kind: "output" as const, name: "alignment" } },
   ],
   exports: [{ name: "alignment", type: narrativeTemporalTypes.narrativeAlignment, root: operation("materialize-boundaries") }],
 });

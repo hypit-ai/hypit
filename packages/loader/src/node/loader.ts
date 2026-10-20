@@ -3,7 +3,8 @@ import { realpathSync } from "node:fs";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 
-import { modulePackageAbi } from "@hypit/protocol";
+import { moduleKey, modulePackageAbi } from "@hypit/protocol";
+import { verifyPackageContributions } from "../contribution.js";
 
 import type {
   LoadedPackage,
@@ -133,8 +134,7 @@ async function assertExternalDependencies(
 ): Promise<void> {
   const distributionOwned = embeddedByDistribution(item, distributionRoots);
   for (const [name, required] of Object.entries(item.json.dependencies)) {
-    if (embeddedPackageNamed(name, distributionRoots) || name.startsWith("@hypit/")
-      || required.startsWith("workspace:")) continue;
+    if (embeddedPackageNamed(name, distributionRoots) || required.startsWith("workspace:")) continue;
     try {
       const resolved = locateNodePackage(name, {
         from: join(item.root, "__hypit_package_dependencies__.mjs"),
@@ -160,10 +160,10 @@ function addressKey(value: LogicalPackageAddress): string {
 function offers(value: PackageContribution): readonly LogicalPackageAddress[] {
   return [
     ...(value.modules ?? []).flatMap((item) => [
-      `${item.manifest.name}@${item.manifest.version}`,
+      moduleKey(item.manifest),
       ...(item.specifiers ?? []),
     ].map((name) => ({ abi: modulePackageAbi, name }))),
-    ...(value.facets ?? []).flatMap((facet) => (facet.offers ?? []).map((name) => ({ abi: facet.abi, name }))),
+    ...(value.facets ?? []).flatMap((facet) => facet.address === undefined ? [] : [{ abi: facet.abi, name: facet.address }]),
   ];
 }
 
@@ -214,17 +214,16 @@ export async function loadNodePackageSelection(
   const activated = new Map<string, ActivatedPackage>();
   const providedModules = new Set<string>();
   const requirements: { readonly key: string; readonly from: string }[] = [];
-  const moduleKey = (name: string, version: string) => `${name}@${version}`;
   const add = (item: ActivatedPackage): void => {
     assert(!activated.has(item.physical.json.name), `selected package ${item.physical.json.name} is repeated`);
     activated.set(item.physical.json.name, item);
     for (const module of item.contribution.modules ?? []) {
-      const key = moduleKey(module.manifest.name, module.manifest.version);
+      const key = moduleKey(module.manifest);
       assert(!providedModules.has(key), `selected packages provide ${key} more than once`);
       providedModules.add(key);
       for (const dependency of module.manifest.dependencies) {
         requirements.push({
-          key: moduleKey(dependency.module.name, dependency.module.version),
+          key: moduleKey(dependency.module),
           from: item.physical.root,
         });
       }
@@ -274,5 +273,6 @@ export async function loadNodePackageSelection(
       specifier: item.physical.json.name,
       contribution: item.contribution,
     }));
+  verifyPackageContributions(packages.map((item) => item.contribution));
   return packages;
 }

@@ -1,6 +1,6 @@
 {
   "name": "@hypit/composition",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
   "type": "module",
@@ -11,8 +11,8 @@
     "activation": "./src/activation.ts"
   },
   "dependencies": {
-    "@hypit/media": "workspace:^0.1.0",
-    "@hypit/timeline": "workspace:^0.1.0"
+    "@hypit/media": "workspace:^0.2.0",
+    "@hypit/timeline": "workspace:^0.1.1"
   },
   "devDependencies": {
     "@hypit/blob": "workspace:*",
@@ -21,7 +21,7 @@
     "@hypit/recipe": "workspace:*",
     "@hypit/spatial": "workspace:*",
     "@hypit/speech-evidence": "workspace:*",
-    "@hypit/admission": "workspace:*",
+    "@hypit/refinement": "workspace:*",
     "@hypit/producer": "workspace:*",
     "@hypit/protocol": "workspace:*",
     "@hypit/hypit": "workspace:*"
@@ -31,6 +31,6 @@
     "README.md"
   ],
   "peerDependencies": {
-    "@hypit/hypit": "workspace:^0.3.1"
+    "@hypit/hypit": "workspace:^0.4.0"
   }
 }

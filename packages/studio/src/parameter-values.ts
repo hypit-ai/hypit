@@ -1,6 +1,7 @@
+import { assertBlobRef } from "@hypit/hypit/protocol";
 import type { CanonicalValue, ValueSchema } from "@hypit/hypit/protocol";
 import { formatRecipeValue } from "@hypit/hypit/recipe";
-import type { StudioInspectorField, StudioParameterControl, StudioParameterOption, StudioNumberPresentation } from "@hypit/studio-companion";
+import type { StudioInspectorField, StudioParameterControl, StudioParameterOption, StudioNumberPresentation, StudioValuePresentation } from "@hypit/studio-companion";
 
 export const parameterOption = (option: StudioParameterOption): Exclude<StudioParameterOption, string> =>
   typeof option === "string" ? { value: option, label: option } : option;
@@ -65,9 +66,6 @@ export function validateParameterValue(value: CanonicalValue, schema: ValueSchem
     if (schema.enum !== undefined && !schema.enum.includes(value)) fail(path, `does not accept ${value}`);
     if (schema.minLength !== undefined && value.length < schema.minLength) fail(path, "is too short");
     if (schema.maxLength !== undefined && value.length > schema.maxLength) fail(path, "is too long");
-    if (schema.format === "color" && !/^#[0-9a-f]{6}(?:[0-9a-f]{2})?$/iu.test(value)) {
-      fail(path, "expects #RRGGBB or #RRGGBBAA");
-    }
     return;
   }
   if (schema.kind === "literal") {
@@ -110,7 +108,15 @@ export function validateParameterValue(value: CanonicalValue, schema: ValueSchem
     if (!accepted) fail(path, "does not match an accepted value shape");
     return;
   }
-  fail(path, "cannot edit blob values");
+  try {
+    assertBlobRef(value, path);
+  } catch {
+    fail(path, "expects an opaque BlobRef");
+  }
+  if (schema.mediaTypes !== undefined && !schema.mediaTypes.includes(value.mediaType)) {
+    fail(path, `does not accept ${value.mediaType}`);
+  }
+  if (schema.maxBytes !== undefined && value.size > schema.maxBytes) fail(path, `accepts at most ${schema.maxBytes} bytes`);
 }
 
 export function serializeParameterValue(value: CanonicalValue, language: "svml" | "svs" | "svrun"): string {
@@ -155,9 +161,19 @@ export function parameterControlForSchema(schema: ValueSchema | undefined): Stud
   if (schema.kind === "boolean") return "boolean";
   if (schema.kind === "number") return "number";
   if (schema.kind === "string") return schema.enum === undefined
-    ? schema.format === "color" ? "color" : "text"
+    ? "text"
     : "select";
   if (schema.kind === "array") return "list";
   if (schema.kind === "object" || parameterRecordVariants(schema).length > 0) return "record";
   return undefined;
+}
+
+export function parameterControlForPresentation(
+  schema: ValueSchema | undefined,
+  presentation: StudioValuePresentation | undefined,
+): StudioParameterControl | undefined {
+  if (schema === undefined || presentation === undefined) return undefined;
+  if (presentation.kind === "color") return schema.kind === "string" ? "color" : undefined;
+  if (presentation.kind === "list") return schema.kind === "array" ? "list" : undefined;
+  return schema.kind === "object" || parameterRecordVariants(schema).length > 0 ? "record" : undefined;
 }

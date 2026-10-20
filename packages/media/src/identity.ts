@@ -1,6 +1,6 @@
 import {
+  assertBlobRef,
   canonicalize,
-  isResourceId,
 } from "@hypit/hypit/protocol";
 import type { BlobRef } from "@hypit/hypit/protocol";
 
@@ -57,11 +57,7 @@ function compareTimestamp(left: MediaTimestamp, right: MediaTimestamp): number {
 }
 
 function verifyBlob(value: unknown, subject: string): asserts value is BlobRef {
-  const item = object(value, subject);
-  assert(item.kind === "blob", `${subject} must be a BlobRef`);
-  assert(typeof item.resource === "string" && isResourceId(item.resource), `${subject}.resource is invalid`);
-  nonNegativeInteger(item.size, `${subject}.size`);
-  assert(typeof item.mediaType === "string" && item.mediaType.length > 0, `${subject}.mediaType is invalid`);
+  assertBlobRef(value, subject);
 }
 
 function verifyStream(value: unknown, subject: string): asserts value is MediaStream {
@@ -169,19 +165,22 @@ export function synchronizedMediaSampleFrames(value: SynchronizedMedia): number 
 
 export function verifySynchronizedMedia(value: unknown): asserts value is SynchronizedMedia {
   const item = object(value, "SynchronizedMedia") as unknown as SynchronizedMedia;
-  verifyRational(item.frameDomain.frameRate, "SynchronizedMedia.frameDomain.frameRate");
-  positiveInteger(item.frameDomain.frameCount, "SynchronizedMedia.frameDomain.frameCount");
+  const frameDomain = object(item.frameDomain, "SynchronizedMedia.frameDomain");
+  verifyRational(frameDomain.frameRate, "SynchronizedMedia.frameDomain.frameRate");
+  positiveInteger(frameDomain.frameCount, "SynchronizedMedia.frameDomain.frameCount");
   synchronizedMediaSampleFrames(item);
   assert(item.visual !== undefined || item.audio !== undefined, "SynchronizedMedia contains no media projection");
   if (item.visual !== undefined) {
-    verifyBlob(item.visual.artifact, "SynchronizedMedia.visual.artifact");
-    assert(item.visual.artifact.mediaType.startsWith("video/"), "SynchronizedMedia visual artifact is not video");
-    positiveInteger(item.visual.width, "SynchronizedMedia.visual.width");
-    positiveInteger(item.visual.height, "SynchronizedMedia.visual.height");
+    const visual = object(item.visual, "SynchronizedMedia.visual");
+    verifyBlob(visual.artifact, "SynchronizedMedia.visual.artifact");
+    assert(visual.artifact.mediaType.startsWith("video/"), "SynchronizedMedia visual artifact is not video");
+    positiveInteger(visual.width, "SynchronizedMedia.visual.width");
+    positiveInteger(visual.height, "SynchronizedMedia.visual.height");
   }
   if (item.audio !== undefined) {
-    verifyBlob(item.audio.artifact, "SynchronizedMedia.audio.artifact");
-    assert(item.audio.artifact.mediaType === "audio/wav", "SynchronizedMedia audio artifact must be WAV");
+    const audio = object(item.audio, "SynchronizedMedia.audio");
+    verifyBlob(audio.artifact, "SynchronizedMedia.audio.artifact");
+    assert(audio.artifact.mediaType === "audio/wav", "SynchronizedMedia audio artifact must be WAV");
   }
 }
 

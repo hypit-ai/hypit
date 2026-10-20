@@ -2,9 +2,9 @@ import { assertAttributes, assertEmptyElement, createMarkupSurfaceFacet, textAtt
 import { canonicalize, sameType } from "@hypit/hypit/protocol";
 import { sealGraphFragment } from "@hypit/hypit/author";
 import type { ProducerPackage } from "@hypit/hypit/producer";
-import type { AdmissionPackage } from "@hypit/hypit/admission";
+import type { RefinementPackage } from "@hypit/hypit/refinement";
 import type { FragmentOperation } from "@hypit/hypit/author";
-import type { ModuleManifest, TypeRef } from "@hypit/hypit/protocol";
+import type { ModuleManifest, TypeRef, TypedRecord } from "@hypit/hypit/protocol";
 import type { StructuredSurfaceHandler, SurfaceResolvedReference } from "@hypit/hypit/markup";
 import { compositionTypes } from "@hypit/composition";
 import { mediaTypes } from "@hypit/media";
@@ -27,31 +27,31 @@ const producers = Object.fromEntries(["empty", "append", "render"].map(name => [
 export const manifest: ModuleManifest = { format: "hypit.module@1", ...module,
   dependencies: [compositionTypes.visualTrack, mediaTypes.fontStack, timelineTypes.timeline, spatialTypes.frame, temporalTypes.instant].map(type => ({ module: type.module })),
   types: Object.values(types).map(type => ({ name: type.name })), capabilities: [], producers: [
-    { name: "empty", inputs: [], outputs: [{ name: "messages", type: types.Messages }], needs: [] },
+    { name: "empty", inputs: [], result: { kind: "output" as const, name: "messages", type: types.Messages } },
     { name: "append", inputs: [{ name: "messages", type: types.Messages }, { name: "message", type: types.Message },
-      { name: "at", type: temporalTypes.instant }, { name: "timeline", type: timelineTypes.timeline }], outputs: [{ name: "messages", type: types.Messages }], needs: [] },
+      { name: "at", type: temporalTypes.instant }, { name: "timeline", type: timelineTypes.timeline }], result: { kind: "output" as const, name: "messages", type: types.Messages } },
     { name: "render", inputs: [{ name: "messages", type: types.Messages }, { name: "options", type: types.Options },
       { name: "timeline", type: timelineTypes.timeline }, { name: "within", type: spatialTypes.frame },
-      { name: "window", type: temporalTypes.window }, { name: "font", type: mediaTypes.fontStack }], outputs: [{ name: "visual", type: compositionTypes.visualTrack }], needs: [] },
+      { name: "window", type: temporalTypes.window }, { name: "font", type: mediaTypes.fontStack }], result: { kind: "output" as const, name: "visual", type: compositionTypes.visualTrack } },
   ],
 };
-const inline = <T>(record: { value: { kind: string; value?: unknown } } | undefined): T => {
-  if (record?.value.kind !== "inline") throw new Error("Chat inputs must be inline values.");
-  return record.value.value as T;
+const valueOf = <T>(record: TypedRecord | undefined): T => {
+  if (record?.value === undefined) throw new Error("Chat inputs are missing.");
+  return record.value as T;
 };
-const value = (data: unknown) => ({ kind: "inline" as const, value: canonicalize(data) });
-const component: ProducerPackage & AdmissionPackage = { producers: [
-  { producer: producers.empty, handler: () => ({ outputs: { messages: value([]) }, needs: {} }) },
+const value = (data: unknown) => ((canonicalize(data)));
+const component: ProducerPackage & RefinementPackage = { producers: [
+  { producer: producers.empty, handler: () => ({ kind: "output", value: value([]) }) },
   { producer: producers.append, handler: ({ inputs }) => {
-    const message = inline<Omit<Message, "at">>(inputs.message), at = inline<TemporalInstant>(inputs.at);
-    const messages = inline<Message[]>(inputs.messages);
-    assertTemporalInstantFor(at, { subjectId: message.id, timeline: inline<Timeline>(inputs.timeline) });
+    const message = valueOf<Omit<Message, "at">>(inputs.message), at = valueOf<TemporalInstant>(inputs.at);
+    const messages = valueOf<Message[]>(inputs.messages);
+    assertTemporalInstantFor(at, { subjectId: message.id, timeline: valueOf<Timeline>(inputs.timeline) });
     if (messages.some(item => item.id === message.id) || (messages.at(-1)?.at.frame ?? -1) > at.frame) throw new Error("Chat messages need unique ids and chronological arrival times.");
-    return { outputs: { messages: value([...messages, { ...message, at }]) }, needs: {} };
+    return { kind: "output", value: value([...messages, { ...message, at }]) };
   } },
-  { producer: producers.render, handler: ({ inputs }) => ({ outputs: { visual: value(renderChat(inline<Timeline>(inputs.timeline),
-    inline<SpatialFrame>(inputs.within), inline<TemporalWindow>(inputs.window), inline<FontStackRef>(inputs.font),
-    inline<Message[]>(inputs.messages), inline<ChatOptions>(inputs.options))) }, needs: {} }) },
+  { producer: producers.render, handler: ({ inputs }) => ({ kind: "output", value: value(renderChat(valueOf<Timeline>(inputs.timeline),
+    valueOf<SpatialFrame>(inputs.within), valueOf<TemporalWindow>(inputs.window), valueOf<FontStackRef>(inputs.font),
+    valueOf<Message[]>(inputs.messages), valueOf<ChatOptions>(inputs.options))) }) },
 ] };
 
 export const decodeSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
@@ -73,7 +73,7 @@ export const decodeSurface: StructuredSurfaceHandler = ({ element, resolveRefere
     font: reference("font", mediaTypes.fontStack).ref, window: window.ref, options: { kind: "record", id: `${id}.options` } };
   const input = (name: string) => ({ kind: "fragment-input" as const, name });
   const operation = (name: string) => ({ kind: "fragment-operation" as const, operation: name });
-  const operations: FragmentOperation[] = [{ id: "empty", producer: producers.empty, inputs: {}, result: { kind: "output", name: "messages" } }];
+  const operations: FragmentOperation[] = [{ id: "empty", producer: producers.empty, inputs: {}, result: { kind: "output" as const, name: "messages" } }];
   let previous = "empty", index = 0;
   for (const child of element.children) {
     if (child.kind === "text") { if (child.value.trim()) throw new Error("Chat Scene accepts Message children."); continue; }
@@ -86,15 +86,15 @@ export const decodeSurface: StructuredSurfaceHandler = ({ element, resolveRefere
     records.push({ id: `${id}.${key}`, type: types.Message, value: value({ id: messageId, sender: textAttribute(child, "sender"), text: textAttribute(child, "text"), side }), range: child.range });
     inputs.push({ name: key, type: types.Message }, { name: `${key}-at`, type: temporalTypes.instant });
     bindings[key] = { kind: "record", id: `${id}.${key}` }; bindings[`${key}-at`] = at.ref;
-    operations.push({ id: key, producer: producers.append, inputs: { messages: operation(previous), message: input(key), at: input(`${key}-at`), timeline: input("timeline") }, result: { kind: "output", name: "messages" } });
+    operations.push({ id: key, producer: producers.append, inputs: { messages: operation(previous), message: input(key), at: input(`${key}-at`), timeline: input("timeline") }, result: { kind: "output" as const, name: "messages" } });
     previous = key;
   }
   if (!index) throw new Error("Chat Scene requires a Message.");
   operations.push({ id: "render", producer: producers.render, inputs: { messages: operation(previous), options: input("options"),
-    timeline: input("timeline"), within: input("within"), font: input("font"), window: input("window") }, result: { kind: "output", name: "visual" } });
+    timeline: input("timeline"), within: input("within"), font: input("font"), window: input("window") }, result: { kind: "output" as const, name: "visual" } });
   const fragment = sealGraphFragment({ inputs, operations, exports: [{ name: "visual", type: compositionTypes.visualTrack, root: operation("render") }] });
-  return { records, fragments: [fragment], components:
-    [{ id, fragment: fragment.id, inputs: bindings, outputs: { visual: `${id}.visual` }, range: element.range }], exports: [`${id}.visual`] };
+  return { records, components:
+    [{ id, fragment, inputs: bindings, outputs: { visual: `${id}.visual` }, range: element.range }], exports: [`${id}.visual`] };
 };
 const declaration = { name: "scene", tag: "Scene", mode: "structured" as const,
   outputs: [compositionTypes.visualTrack, ...Object.values(types)],
@@ -109,8 +109,8 @@ const declaration = { name: "scene", tag: "Scene", mode: "structured" as const,
   },
 };
 export const hypitPackage = { format: "hypit.package@1" as const, modules: [{ manifest }],
-  facets: [createProducerPackageFacet(component), createAdmissionPackageFacet(component),
+  facets: [createProducerPackageFacet(component), createRefinementPackageFacet(component),
     createMarkupSurfaceFacet({ module, declaration, handler: decodeSurface })] };
 export default hypitPackage;
-import { createAdmissionPackageFacet } from "@hypit/hypit/admission";
+import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
 import { createProducerPackageFacet } from "@hypit/hypit/producer";

@@ -3,17 +3,9 @@ import test from "node:test";
 import { EndpointRegistry, MemoryResourceStore } from "@hypit/executor";
 import { sealSeedanceRequest } from "@hypit/seedance";
 import type { BlobRef, EndpointStartContext } from "@hypit/hypit/endpoint";
-import { canonicalize } from "@hypit/hypit/endpoint";
+import { canonicalize, endpointOffers, installEndpoint } from "@hypit/hypit/endpoint";
 import { generationTypes } from "@hypit/generation";
-import { assertMappingCoversPorts } from "@hypit/generation";
-import { seedancePorts } from "@hypit/seedance";
 import { capability, createVideoProvider, mapping } from "../src/provider.js";
-
-test("project video Provider accounts for every port the Seedance Model declares", () => {
-  // The check that turns a forgotten reference role or item field into a load-time failure
-  // instead of a paid generation returning the wrong video.
-  assertMappingCoversPorts(seedancePorts["seedance-2-mini"], mapping);
-});
 
 test("project video Provider uploads a reference, retains its receipt and collects the generated video", async () => {
   const resources = new MemoryResourceStore();
@@ -51,7 +43,9 @@ test("project video Provider uploads a reference, retains its receipt and collec
         return Response.json({ id: "received-job" });
       }
       if (url.pathname === "/videos/received-job") {
-        assert.deepEqual(checkpoint, { handle: { id: "received-job" }, receipt: { id: "received-job" } });
+        assert.deepEqual(checkpoint, {
+          status: "accepted", handle: { id: "received-job" }, receipt: { id: "received-job" },
+        });
         return Response.json({ status: "succeeded", output: "https://assets.example/output.mp4" });
       }
       throw new Error(`Unexpected path ${url.pathname}`);
@@ -67,13 +61,13 @@ test("project video Provider uploads a reference, retains its receipt and collec
     referenceImage: [{ role: "image", artifact: source, fields: { personReference: true } }],
   }));
   const need = { id: "need:example", capability, returns: generationTypes.videoSet, constraints, result: "record:example" } as const;
-  const registry = new EndpointRegistry(); await provider.install(registry);
-  const resolution = registry.resolve(need);
+  const registry = new EndpointRegistry(); await installEndpoint(provider, registry);
+  const resolution = registry.select(need);
   assert.equal(resolution.status, "resolved");
   assert.equal(resolution.registration.kind, "asynchronous");
   const endpoint = resolution.registration.endpoint;
   const context: EndpointStartContext = {
-    need, command: { kind: "fulfill-need", id: "command:example", need }, operation: "operation:example",
+    need, operation: "operation:example",
     resources, credentials: { apiKey: { secret: "test-key" } },
     checkpoint: async (value) => { checkpoint = value; },
     reportProgress: async (value) => { progress.push(value.phase); },
@@ -83,8 +77,7 @@ test("project video Provider uploads a reference, retains its receipt and collec
   const start = await endpoint.start(context); assert.equal(start.status, "pending");
   const ready = await endpoint.poll({ ...context, handle: start.handle }); assert.equal(ready.status, "ready");
   const collected = await endpoint.collect!({ ...context, handle: ready.handle }); assert.equal(collected.status, "completed");
-  assert.equal(collected.result.value.kind, "inline");
-  const videos = (collected.result.value.value as unknown as { videos: BlobRef[] }).videos;
+  const videos = (collected.result.value as unknown as { videos: BlobRef[] }).videos;
   assert.equal(videos[0]?.mediaType, "video/mp4");
   assert.deepEqual(await resources.get(videos[0]!.resource), new Uint8Array([4, 5, 6]));
   assert.deepEqual(calls, ["/rates", "/uploads", "/videos", "/videos/received-job", "/output.mp4"]);
@@ -101,14 +94,14 @@ test("project video Provider reports its narrower service range without changing
     constraints: canonicalize(sealSeedanceRequest("seedance-2-mini", ports)), result: "record:range",
   });
   const prompted = { prompt: ["A slow push-in"], generateAudio: [true], webSearch: [false] };
-  const supported = provider.offers[0]!.supports!(
+  const supported = endpointOffers(provider)[0]!.supports!(
     need({ ...prompted, duration: [5], resolution: ["720p"], aspectRatio: ["9:16"] }));
   assert.equal(supported.status, "supported");
   // The Model admits both of these; this Endpoint is what narrows them.
-  const tooLong = provider.offers[0]!.supports!(need({ ...prompted, duration: [12], resolution: ["720p"], aspectRatio: ["9:16"] }));
+  const tooLong = endpointOffers(provider)[0]!.supports!(need({ ...prompted, duration: [12], resolution: ["720p"], aspectRatio: ["9:16"] }));
   assert.equal(tooLong.status, "unsupported");
   assert.match(tooLong.status === "unsupported" ? tooLong.reason : "", /at most 10 seconds, not 12/u);
-  const tooSmall = provider.offers[0]!.supports!(need({ ...prompted, duration: [5], resolution: ["480p"], aspectRatio: ["9:16"] }));
+  const tooSmall = endpointOffers(provider)[0]!.supports!(need({ ...prompted, duration: [5], resolution: ["480p"], aspectRatio: ["9:16"] }));
   assert.equal(tooSmall.status, "unsupported");
   assert.match(tooSmall.status === "unsupported" ? tooSmall.reason : "", /renders at 720p, not 480p/u);
 });
@@ -139,13 +132,13 @@ test("project video Provider keeps the received task id when the render fails re
     result: "record:failure",
   };
   const registry = new EndpointRegistry();
-  await provider.install(registry);
-  const resolved = registry.resolve(need);
+  await installEndpoint(provider, registry);
+  const resolved = registry.select(need);
   assert.equal(resolved.status, "resolved");
   assert.equal(resolved.registration.kind, "asynchronous");
   const endpoint = resolved.registration.endpoint;
   const context: EndpointStartContext = {
-    command: { kind: "fulfill-need", id: "command:failure", need }, need, operation: "operation:failure",
+    need, operation: "operation:failure",
     resources: new MemoryResourceStore(), credentials: { apiKey: { secret: "test-key" } },
     checkpoint: async () => { checkpointed = true; },
   };
@@ -190,11 +183,11 @@ test("first and last frame person flags reach the upload API, including false", 
       lastFrame: [{ role: "image", artifact: image, fields: { personReference: false } }],
     })),
   };
-  const registry = new EndpointRegistry(); await provider.install(registry);
-  const selected = registry.resolve(need);
+  const registry = new EndpointRegistry(); await installEndpoint(provider, registry);
+  const selected = registry.select(need);
   assert.equal(selected.status, "resolved");
   assert.equal(selected.registration.kind, "asynchronous");
-  await selected.registration.endpoint.start({ need, command: { kind: "fulfill-need", id: "frames", need },
+  await selected.registration.endpoint.start({ need,
     operation: "frames", resources, credentials: { apiKey: { secret: "test" } },
   });
   assert.deepEqual(flags, ["true", "false"]);

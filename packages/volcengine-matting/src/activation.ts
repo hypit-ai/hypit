@@ -1,4 +1,4 @@
-import { createAdmissionPackageFacet } from "@hypit/hypit/admission";
+import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
 import { createProducerPackageFacet } from "@hypit/hypit/producer";
 import { createMarkupSurfaceFacet } from "@hypit/hypit/markup";
 import { portraitMattingSurface, volcengineMattingDefinition, volcengineMattingModuleRef } from "./index.js";
@@ -8,7 +8,7 @@ export const hypitPackage = {
   format: "hypit.package@1" as const,
   modules: [{ manifest: volcengineMattingDefinition.manifest }],
   facets: [
-    ...[volcengineMattingDefinition.component].flatMap((component) => [createProducerPackageFacet(component), createAdmissionPackageFacet(component)]),volcengineMattingDefinition.facet, createMarkupSurfaceFacet({
+    ...[volcengineMattingDefinition.component].flatMap((component) => [createProducerPackageFacet(component), createRefinementPackageFacet(component)]), createMarkupSurfaceFacet({
     module: volcengineMattingModuleRef, declaration: portraitMattingSurface, handler: decodePortraitMattingSurface,
   })],
 };

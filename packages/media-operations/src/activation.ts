@@ -1,4 +1,4 @@
-import { createAdmissionPackageFacet } from "@hypit/hypit/admission";
+import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
 import { createProducerPackageFacet } from "@hypit/hypit/producer";
 import { createMarkupSurfaceFacet } from "@hypit/hypit/markup";
 import { createRunFragmentFacet } from "@hypit/hypit/run";
@@ -19,7 +19,7 @@ export const hypitPackage = {
   format: "hypit.package@1" as const,
   modules: [{ manifest: mediaOperationsManifest }],
   facets: [
-    ...[mediaOperationsComponent].flatMap((component) => [createProducerPackageFacet(component), createAdmissionPackageFacet(component)]),createRunFragmentFacet({
+    ...[mediaOperationsComponent].flatMap((component) => [createProducerPackageFacet(component), createRefinementPackageFacet(component)]),createRunFragmentFacet({
     name: "@hypit/media-operations@1",
     fragments: {
       "still-video": stillVideoFragment,

@@ -5,7 +5,6 @@ import { pathToFileURL } from "node:url";
 
 import {
   embeddedPackageDirectory,
-  setActiveDistributionPackageRoots,
 } from "./location.js";
 
 let installed: readonly string[] = [];
@@ -57,10 +56,7 @@ function distributionPublicEntry(root: string, specifier: string): string | unde
 
 /** Resolve one import owned by an explicit Hypit Distribution. */
 export function resolveDistributionPackageImport(root: string, specifier: string): string | undefined {
-  if (specifier.startsWith("@hypit/")) {
-    return distributionPublicEntry(resolve(root), specifier) ?? distributionPackageEntry(resolve(root), specifier);
-  }
-  return undefined;
+  return distributionPublicEntry(resolve(root), specifier) ?? distributionPackageEntry(resolve(root), specifier);
 }
 
 /** Whether one package import is shared host code of the active Distribution. */
@@ -77,14 +73,11 @@ export function installDistributionPackageResolution(roots: readonly string[]): 
   if (next.every((root, index) => root === installed[index]) && next.length === installed.length) return;
   if (installed.length > 0) throw new Error("Distribution package roots cannot change inside one Host process");
   installed = next;
-  setActiveDistributionPackageRoots(installed);
   registerHooks({
     resolve(specifier, context, nextResolve) {
-      if (specifier.startsWith("@hypit/")) {
-        for (const root of installed) {
-          const entry = resolveDistributionPackageImport(root, specifier);
-          if (entry !== undefined) return nextResolve(pathToFileURL(entry).href, context);
-        }
+      for (const root of installed) {
+        const entry = resolveDistributionPackageImport(root, specifier);
+        if (entry !== undefined) return nextResolve(pathToFileURL(entry).href, context);
       }
       return nextResolve(specifier, context);
     },

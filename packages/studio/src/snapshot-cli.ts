@@ -1,13 +1,13 @@
 import { mkdir, mkdtemp, rename, rm, stat, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import {
-  cliProviderLine,
-  cliProviderView,
+  cliEndpointLine,
+  cliEndpointView,
   createCliScratchResources,
   openCliRuntimeHost,
-  selectCliProvider,
+  selectCliEndpoint,
 } from "@hypit/hypit/cli";
-import type { CliApplicationContext, CliIo } from "@hypit/hypit/cli";
+import type { CliIo, CliRuntimeSelectionContext } from "@hypit/hypit/cli";
 import { assertHtmlProgram, selectHtmlArtifacts } from "@hypit/html-program";
 import type { HtmlProgram } from "@hypit/html-program";
 import { htmlFrameRequest, htmlProgramCapabilities, htmlProgramTypes, verifyHtmlFrameImages } from "@hypit/html-program";
@@ -36,7 +36,7 @@ export function writeSnapshotHelp(io: CliIo): void {
     + `Studio supplies the typed HTML Program and its declared Artifacts; raw HTML is not reverse-compiled.\n`);
 }
 
-export async function runSnapshotCli(argv: readonly string[], io: CliIo, application: CliApplicationContext): Promise<void> {
+export async function runSnapshotCli(argv: readonly string[], io: CliIo, application: CliRuntimeSelectionContext): Promise<void> {
   if (argv.includes("--help")) { writeSnapshotHelp(io); return; }
   const options = new Map<string, string>();
   const positionals = [];
@@ -96,16 +96,15 @@ export async function runSnapshotCli(argv: readonly string[], io: CliIo, applica
     const need: Need = { id: "need:hypit-snapshot", capability: htmlProgramCapabilities.rasterizeFrames,
       returns: htmlProgramTypes.frameImages, result: "record:hypit-snapshot", constraints: htmlFrameRequest({ program: document, frames }) };
     const { host, profile } = await openCliRuntimeHost(application, options.get("--runtime"), options.get("--project"));
-    const provider = await selectCliProvider(host, need, profile);
-    if (!json) io.write(`Capturing ${frames.length} frames through ${cliProviderLine(provider)}\n`);
+    const endpoint = await selectCliEndpoint(host, need, profile);
+    if (!json) io.write(`Capturing ${frames.length} frames through ${cliEndpointLine(endpoint)}\n`);
     const report = json ? io.writeProgress : io.writeProgress ?? io.write;
     const fulfilled = await host.invoke(need, resources, {
       reportProgress: async progress => { report?.(`  · ${progress.phase}\n`); },
       reportDiagnostic: async diagnostic => { report?.(`  · ${diagnostic.message}\n`); },
     });
-    if (fulfilled.value.kind !== "inline") throw new Error("The frame list came back by reference");
-    verifyHtmlFrameImages(fulfilled.value.value);
-    const images = fulfilled.value.value;
+    verifyHtmlFrameImages(fulfilled.value);
+    const images = fulfilled.value;
     if (images.length !== frames.length) throw new Error(`Requested ${frames.length} frames, received ${images.length}`);
     await mkdir(dirname(to), { recursive: true });
     staging = await mkdtemp(join(dirname(to), ".hypit-snapshot-"));
@@ -132,7 +131,7 @@ export async function runSnapshotCli(argv: readonly string[], io: CliIo, applica
     }
     await rename(staging, to);
     staging = undefined;
-    if (json) io.write(`${JSON.stringify({ format: "hypit.studio-snapshot@1", source, ...cliProviderView(provider), frames: files, grids }, null, 2)}\n`);
+    if (json) io.write(`${JSON.stringify({ format: "hypit.studio-snapshot@1", source, ...cliEndpointView(endpoint), frames: files, grids }, null, 2)}\n`);
     else io.write(`Captured ${files.length} PNGs${grids.length === 0 ? "" : ` and ${grids.length} grid${grids.length === 1 ? "" : "s"}`}\n  ${to}\n`);
   } finally {
     if (staging !== undefined) await rm(staging, { recursive: true, force: true });

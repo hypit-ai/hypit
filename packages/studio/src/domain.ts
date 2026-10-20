@@ -16,7 +16,7 @@ import type { MarkupSurfaceRegistryLike } from "@hypit/hypit/markup";
 import type { LoadedPackage, PackageContribution } from "@hypit/hypit/loader";
 import { ModulePackageRegistry, Compiler } from "@hypit/hypit/compiler";
 import type { ModuleRef, ResolvedModuleClosure } from "@hypit/hypit/protocol";
-import { admissionPackagesFromFacets, registerTypeValidatorFacets, TypeValidatorRegistry } from "@hypit/hypit/admission";
+import { refinementPackagesFromFacets, registerTypeRefinements, RefinementRegistry } from "@hypit/hypit/refinement";
 
 export type StudioDomain = {
   readonly packages: readonly LoadedPackage[];
@@ -26,7 +26,7 @@ export type StudioDomain = {
   readonly closure: ResolvedModuleClosure;
   readonly surfaces: MarkupSurfaceRegistry;
   readonly producers: ProducerRegistry;
-  readonly validators: TypeValidatorRegistry;
+  readonly refinements: RefinementRegistry;
   readonly resolveModule: (specifier: string) => ModuleRef | undefined;
   readonly frontends: (surfaces?: MarkupSurfaceRegistryLike) => AuthorFrontendRegistry;
 };
@@ -86,11 +86,11 @@ export async function loadStudioDomain(input: {
   };
 
   const producers = new ProducerRegistry();
-  const validators = new TypeValidatorRegistry();
+  const refinements = new RefinementRegistry();
   for (const contribution of contributions) {
     const facets = contribution.facets ?? [];
     for (const item of producerPackagesFromFacets(facets)) registerProducerFacets(producers, item.producers ?? []);
-    for (const item of admissionPackagesFromFacets(facets)) registerTypeValidatorFacets(validators, item.validators ?? []);
+    for (const item of refinementPackagesFromFacets(facets)) registerTypeRefinements(refinements, item.refinements ?? []);
   }
 
   return {
@@ -119,7 +119,7 @@ export async function loadStudioDomain(input: {
       return new Compiler({
         modules: moduleRegistry,
         frontends,
-        validators,
+        refinements,
         workspace: input.distribution.createWorkspace({
           workspaceRoot: input.workspaceRoot,
           packageRoot: input.packageRoot,
@@ -132,7 +132,7 @@ export async function loadStudioDomain(input: {
     closure,
     surfaces,
     producers,
-    validators,
+    refinements,
     resolveModule,
     frontends(registry = surfaces) { return domainFrontends(registry); },
   };

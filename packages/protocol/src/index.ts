@@ -2,7 +2,14 @@ export * from "./canonical.js";
 export * from "./build-id.js";
 export * from "./error.js";
 export { modulePackageAbi } from "./module.js";
-export { blobRefObjectSchema } from "./value.js";
+export {
+  assertBlobRef,
+  blobRefSchema,
+  isBlobRef,
+  mapValueBlobs,
+  normalizeValue,
+  valueBlobRefs,
+} from "./value.js";
 export type * from "./build.js";
 export * from "./identity.js";
 export type * from "./module.js";

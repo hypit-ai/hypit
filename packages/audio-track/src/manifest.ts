@@ -1,7 +1,7 @@
 import { compositionDependency, compositionTypes } from "@hypit/composition";
 import type { StructuredSurfaceDeclaration, SurfaceVocabulary } from "@hypit/hypit/markup";
 import { mediaDependency, mediaTypes } from "@hypit/media";
-import { blobRefObjectSchema } from "@hypit/hypit/protocol";
+import { blobRefSchema } from "@hypit/hypit/protocol";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/hypit/protocol";
 import { temporalDependency, temporalTypes } from "@hypit/temporal";
 import {
@@ -54,7 +54,7 @@ const clipSpec = object({
 const frameSpan = object({ startFrame: { schema: integer }, endFrameExclusive: { schema: integer } });
 const clip = object({
   id: { schema: string }, window: { schema: frameSpan },
-  source: { schema: object({ artifact: { schema: blobRefObjectSchema(["audio/wav"]) }, sampleFrames: { schema: { kind: "number", integer: true, minimum: 1 } } }) },
+  source: { schema: object({ artifact: { schema: blobRefSchema(["audio/wav"]) }, sampleFrames: { schema: { kind: "number", integer: true, minimum: 1 } } }) },
   sourceTime: { schema: sourceTime },
   mix: { schema: object({ gain: { schema: number }, fadeInSamples: { schema: integer }, fadeOutSamples: { schema: integer } }) },
 });
@@ -157,10 +157,10 @@ export const audioTrackManifest: ModuleManifest = {
   ],
   capabilities: [],
   producers: [
-    { name: audioTrackProducers.createSet.name, inputs: [], outputs: [{ name: "set", type: audioTrackTypes.set }], needs: [] },
-    { name: audioTrackProducers.appendClip.name, inputs: [...clipInputs], outputs: [{ name: "set", type: audioTrackTypes.set }], needs: [] },
-    { name: audioTrackProducers.finalize.name, inputs: [{ name: "set", type: audioTrackTypes.set }, { name: "header", type: audioTrackTypes.header }], outputs: [{ name: "program", type: audioTrackTypes.program }], needs: [] },
-    { name: audioTrackProducers.render.name, inputs: [{ name: "timeline", type: timelineTypes.timeline }, { name: "program", type: audioTrackTypes.program }], outputs: [{ name: "track", type: compositionTypes.audioTrack }], needs: [] },
+    { name: audioTrackProducers.createSet.name, inputs: [], result: { kind: "output" as const, name: "set", type: audioTrackTypes.set } },
+    { name: audioTrackProducers.appendClip.name, inputs: [...clipInputs], result: { kind: "output" as const, name: "set", type: audioTrackTypes.set } },
+    { name: audioTrackProducers.finalize.name, inputs: [{ name: "set", type: audioTrackTypes.set }, { name: "header", type: audioTrackTypes.header }], result: { kind: "output" as const, name: "program", type: audioTrackTypes.program } },
+    { name: audioTrackProducers.render.name, inputs: [{ name: "timeline", type: timelineTypes.timeline }, { name: "program", type: audioTrackTypes.program }], result: { kind: "output" as const, name: "track", type: compositionTypes.audioTrack } },
   ],
 };
 

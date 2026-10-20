@@ -11,7 +11,7 @@ import { assertSpeechEvidenceAudioIdentity, sealSpeechEvidenceAudio, speechEvide
 import type { ProjectSpeechEvidenceAudioNeed, SpeechEvidenceAudio } from "@hypit/speech-evidence";
 import {
   verifyAudioExtractionRequest,
-  verifyAudioProgramPlan,
+  verifyAudioProgram,
   verifyFrameExtractionRequest,
   verifyMediaTransformProgram,
   type ExtractAudioNeed,
@@ -24,11 +24,9 @@ import {
   type TransformMediaNeed,
   verifyStillVideoRequest,
 } from "@hypit/media-operations";
-import type { AudioProgramClip, AudioProgramPlan, MediaTransformOperation } from "@hypit/media-operations";
-import {
-  canonicalize,
-  } from "@hypit/hypit/protocol";
-import type { BlobRef, CanonicalValue, StoredValue } from "@hypit/hypit/protocol";
+import type { AudioProgram, AudioProgramClip, MediaTransformOperation } from "@hypit/media-operations";
+import { canonicalize } from "@hypit/hypit/protocol";
+import type { BlobRef, CanonicalValue, Value } from "@hypit/hypit/protocol";
 
 import { runBoundedMediaProcess } from "./process.js";
 import { parseMediaInspection } from "./probe.js";
@@ -66,7 +64,7 @@ export type MediaExecutionEnvironment = {
 };
 
 export type MediaOperationResult = {
-  readonly value: StoredValue;
+  readonly value: Value;
 };
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -375,7 +373,7 @@ async function outputInspection(args: {
 }
 
 function inlineResult(value: CanonicalValue): MediaOperationResult {
-  return { value: { kind: "inline", value } };
+  return { value };
 }
 
 function artifactResult(value: BlobRef): MediaOperationResult {
@@ -457,8 +455,8 @@ function evidenceAudioNeed(value: CanonicalValue): ProjectSpeechEvidenceAudioNee
 
 function renderAudioNeed(value: CanonicalValue): RenderAudioNeed {
   const item = object(value, "RenderAudioNeed") as unknown as RenderAudioNeed;
-  verifyAudioProgramPlan(item.plan);
-  if (item.range !== undefined) verifyMediaFrameRange(item.range, item.plan.frameCount);
+  verifyAudioProgram(item.program);
+  if (item.range !== undefined) verifyMediaFrameRange(item.range, item.program.frameCount);
   return item;
 }
 
@@ -578,7 +576,9 @@ async function sourceVideoEncoding(env: MediaExecutionEnvironment, path: string,
     ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
   });
   const probe = JSON.parse(Buffer.from(bytes).toString("utf8")) as {
-    streams: { index: number; codec_name?: string; profile?: string; level?: number; pix_fmt?: string; time_base?: string; sample_aspect_ratio?: string; width?: number; height?: number; tags?: Record<string, string>; side_data_list?: { rotation?: number }[] }[];
+    streams: { index: number; codec_name?: string; profile?: string; level?: number; pix_fmt?: string;
+      time_base?: string; sample_aspect_ratio?: string; width?: number; height?: number;
+      tags?: Record<string, string>; side_data_list?: { rotation?: number }[] }[];
     pixel_formats: { name: string; flags: { alpha: number } }[];
     format?: { nb_streams?: number; format_name?: string };
   };
@@ -602,17 +602,19 @@ async function sourceVideoEncoding(env: MediaExecutionEnvironment, path: string,
 }
 
 async function copyNormalizedVisual(args: {
-  env: MediaExecutionEnvironment;
-  source: BlobRef;
-  video: MediaVideoStream;
-  frameRate: MediaRational;
-  frameCount: number;
-  encoding: Awaited<ReturnType<typeof sourceVideoEncoding>>;
-  input: string;
-  output: string;
+  readonly env: MediaExecutionEnvironment;
+  readonly source: BlobRef;
+  readonly video: MediaVideoStream;
+  readonly frameRate: MediaRational;
+  readonly frameCount: number;
+  readonly encoding: Awaited<ReturnType<typeof sourceVideoEncoding>>;
+  readonly input: string;
+  readonly output: string;
 }): Promise<BlobRef | undefined> {
   const { env, source, video, frameRate, frameCount, encoding, input, output } = args;
   const stream = encoding.stream;
+  // These are execution-local eligibility facts, not restrictions on Media.
+  // Anything not proven safe simply follows the ordinary normalization path.
   if (encoding.alpha || encoding.pixelFormat !== "yuv420p" || stream.codec_name !== "h264"
     || !["Constrained Baseline", "Baseline", "Main", "High"].includes(stream.profile ?? "")
     || stream.level === undefined || stream.level < 10 || stream.level > 41
@@ -629,26 +631,34 @@ async function copyNormalizedVisual(args: {
     const raw = await runProcess({
       executable: env.ffprobePath,
       argv: ["-v", "error", "-print_format", "json", "-select_streams", String(video.index),
-        "-show_frames", "-show_entries", "frame=pts,duration,pkt_duration,width,height,pix_fmt,sample_aspect_ratio,interlaced_frame:frame_side_data=rotation", input],
-      timeoutMs: env.processTimeoutMs, maxStdoutBytes: env.maxProbeOutputBytes,
+        "-show_frames", "-show_entries",
+        "frame=pts,duration,pkt_duration,width,height,pix_fmt,sample_aspect_ratio,interlaced_frame:frame_side_data=rotation",
+        input],
+      timeoutMs: env.processTimeoutMs,
+      maxStdoutBytes: env.maxProbeOutputBytes,
       ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
     });
     const probe = JSON.parse(Buffer.from(raw).toString("utf8")) as {
       frames?: Parameters<typeof normalizedVideoFrames>[3];
     };
     if (!normalizedVideoFrames(video, frameRate, frameCount, probe.frames ?? [])) return undefined;
-    if (source.mediaType === "video/mp4" && encoding.formatNames.includes("mp4") && encoding.streamCount === 1)
+    if (source.mediaType === "video/mp4" && encoding.formatNames.includes("mp4") && encoding.streamCount === 1) {
       return source;
+    }
     await runProcess({
       executable: env.ffmpegPath,
       argv: ["-y", "-copyts", "-i", input, "-map", `0:${video.index}`, "-an", "-sn", "-dn",
         "-map_metadata", "-1", "-c:v", "copy", "-avoid_negative_ts", "disabled", "-movflags", "+faststart", output],
-      timeoutMs: env.processTimeoutMs, maxStdoutBytes: 64 * 1024,
+      timeoutMs: env.processTimeoutMs,
+      maxStdoutBytes: 64 * 1024,
       ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
     });
     inspected = await outputInspection({
-      path: output, mediaType: "video/mp4", ffprobePath: env.ffprobePath,
-      timeoutMs: env.processTimeoutMs, maxProbeOutputBytes: env.maxProbeOutputBytes,
+      path: output,
+      mediaType: "video/mp4",
+      ffprobePath: env.ffprobePath,
+      timeoutMs: env.processTimeoutMs,
+      maxProbeOutputBytes: env.maxProbeOutputBytes,
       ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
     });
   } catch {
@@ -680,7 +690,8 @@ export async function executeNormalizeMedia(
     if (plan.video !== undefined) {
       const encoding = animation === undefined
         ? await sourceVideoEncoding(env, input, plan.video.index)
-        : { alpha: true, pixelFormat: undefined, stream: { index: plan.video.index }, formatNames: [], streamCount: undefined, inputArgs: [] };
+        : { alpha: true, pixelFormat: undefined, stream: { index: plan.video.index },
+          formatNames: [], streamCount: undefined, inputArgs: [] };
       const outputType = encoding.alpha ? "video/webm" : "video/mp4";
       const output = join(work, encoding.alpha ? "visual.webm" : "visual.mp4");
       const fps = `${need.frameRate.numerator}/${need.frameRate.denominator}`;
@@ -709,10 +720,10 @@ export async function executeNormalizeMedia(
         ]
         : ["-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p", "-movflags", "+faststart"];
       visualArtifact = animation === undefined
-        ? await copyNormalizedVisual({ env, source: need.source, video: plan.video, frameRate: need.frameRate,
-          frameCount: plan.frameCount, encoding, input, output })
+        ? await copyNormalizedVisual({ env, source: need.source, video: plan.video,
+          frameRate: need.frameRate, frameCount: plan.frameCount, encoding, input, output })
         : undefined;
-      if (visualArtifact) {
+      if (visualArtifact !== undefined) {
         visualWidth = plan.video.width;
         visualHeight = plan.video.height;
       } else {
@@ -1092,7 +1103,16 @@ export async function executeExtractFrame(
       maxStdoutBytes: 64 * 1024,
       ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
     });
-    const bytes = await readFile(output);
+    let bytes: Uint8Array;
+    try {
+      bytes = await readFile(output);
+    } catch (error) {
+      // ffmpeg may exit successfully when a time selection matches no decoded frame.
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+      throw new Error(need.at.kind === "time"
+        ? `Frame extraction found no frame at ${need.at.seconds}s in the selected stream`
+        : "Frame extraction found no frame for its selection", { cause: error });
+    }
     assert(bytes.byteLength > 0, "Frame extraction produced no image");
     const inspected = await outputInspection({
       path: output,
@@ -1181,11 +1201,11 @@ export async function executeRenderTimelineAudio(
   constraints: CanonicalValue,
 ): Promise<MediaOperationResult> {
   const need = renderAudioNeed(constraints);
-  const plan: AudioProgramPlan = need.plan;
+  const program: AudioProgram = need.program;
   const window = need.range === undefined
-    ? { startSample: 0, endSampleExclusive: plan.sampleFrames, sampleFrames: plan.sampleFrames }
-    : mediaFrameRangeSamples(need.range, plan.frameRate);
-  const clips = plan.clips.filter((clip) => clip.targetStartSample < window.endSampleExclusive
+    ? { startSample: 0, endSampleExclusive: program.sampleFrames, sampleFrames: program.sampleFrames }
+    : mediaFrameRangeSamples(need.range, program.frameRate);
+  const clips = program.clips.filter((clip) => clip.targetStartSample < window.endSampleExclusive
     && clip.targetEndSampleExclusive > window.startSample);
   const work = await mkdtemp(join(tmpdir(), "hypit-media-audio-"));
   try {
@@ -1194,7 +1214,7 @@ export async function executeRenderTimelineAudio(
       const existing = artifacts.get(clip.artifact.resource);
       if (existing !== undefined) {
         assert(existing.sampleFrames === clip.sourceSampleFrames,
-          `Audio input ${clip.artifact.resource} has conflicting sample counts in one plan`);
+          `Audio input ${clip.artifact.resource} has conflicting sample counts in one program`);
         continue;
       }
       const inputIndex = artifacts.size;
@@ -1209,7 +1229,7 @@ export async function executeRenderTimelineAudio(
         ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
       });
       assert(audio.decodedSampleFrames === clip.sourceSampleFrames,
-        `Audio input ${clip.artifact.resource} sample count differs from its plan`);
+        `Audio input ${clip.artifact.resource} sample count differs from its program`);
       artifacts.set(clip.artifact.resource, {
         source: clip.artifact,
         path,
@@ -1257,7 +1277,7 @@ export async function executeRenderTimelineAudio(
       ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
     });
     assert(audio.decodedSampleFrames === window.sampleFrames,
-      "Rendered TimelineAudio sample count differs from its plan");
+      "Rendered TimelineAudio sample count differs from its program");
     const value: TimelineAudio = sealTimelineAudio({
       artifact,
       sampleFrames: window.sampleFrames,

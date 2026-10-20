@@ -10,7 +10,7 @@ import {
   loadNodePackageSelection,
 } from "../packages/loader/src/node/index.ts";
 import { compositionTypes } from "../packages/composition/src/index.ts";
-import { admissionPackagesFromFacets } from "../packages/admission/src/index.ts";
+import { refinementPackagesFromFacets } from "../packages/refinement/src/index.ts";
 import { producerPackagesFromFacets } from "../packages/producer/src/index.ts";
 import { studioContributionFromPackage } from "../packages/studio-companion/src/index.ts";
 
@@ -113,9 +113,9 @@ try {
   assert.deepEqual(captionPackage.contribution.modules?.map(({ manifest }) => manifest.name), ["@hypit/caption-fine"]);
   assert.deepEqual(textPackage.contribution.modules?.map(({ manifest }) => manifest.name), ["@hypit/text-fine"]);
   assert.equal(producerPackagesFromFacets(captionPackage.contribution.facets ?? []).length, 1);
-  assert.equal(admissionPackagesFromFacets(captionPackage.contribution.facets ?? []).length, 1);
+  assert.equal(refinementPackagesFromFacets(captionPackage.contribution.facets ?? []).length, 1);
   assert.equal(producerPackagesFromFacets(textPackage.contribution.facets ?? []).length, 1);
-  assert.equal(admissionPackagesFromFacets(textPackage.contribution.facets ?? []).length, 1);
+  assert.equal(refinementPackagesFromFacets(textPackage.contribution.facets ?? []).length, 1);
 
   const captionStudio = studioContributionFromPackage(
     captionPackage.specifier,

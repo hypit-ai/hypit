@@ -1,15 +1,17 @@
+import { capabilityKey } from "@hypit/hypit/protocol";
 import {
-  compileWireRequest,
-  selectWireModelForRequest,
   generationTypes,
   sealGeneratedImageSet,
   sealGeneratedVideoSet,
 } from "@hypit/generation";
-import type { GenerationArtifactUrlResolver, GenerationRequest, GenerationWireMapping } from "@hypit/generation";
+import type { ProviderFieldRequest } from "@hypit/generation/provider";
+import { materializeWireRequest, planWireRequest, selectWireModelForRequest } from "@hypit/generation/provider";
+import type { GenerationArtifactUrlResolver, GenerationWireMapping } from "@hypit/generation/provider";
 import { canonicalize } from "@hypit/hypit/protocol";
-import type { BlobRef, CapabilityRef, CanonicalValue, StoredValue, TypeRef } from "@hypit/hypit/protocol";
+import type { BlobRef, CapabilityRef, CanonicalValue, Value, TypeRef } from "@hypit/hypit/protocol";
 import type { EndpointRequest, EndpointSupport } from "@hypit/hypit/endpoint";
 import { polloMappings } from "./mapping.js";
+import type { PolloMapping } from "./mapping.js";
 
 export type PolloPreparedRequest = {
   /** Request path under the Pollo platform base URL. */
@@ -17,19 +19,19 @@ export type PolloPreparedRequest = {
   readonly compile: (resolve: GenerationArtifactUrlResolver) => Promise<Record<string, unknown>>;
 };
 
-export type PolloRoute = GenerationWireMapping & {
+export type PolloRoute = PolloMapping & {
   readonly key: string;
   readonly returns: TypeRef;
   readonly supports: (request: EndpointRequest) => EndpointSupport;
   readonly prepare: (constraints: CanonicalValue) => PolloPreparedRequest;
-  readonly packageResult: (artifacts: readonly BlobRef[]) => StoredValue;
+  readonly packageResult: (artifacts: readonly BlobRef[]) => Value;
 };
 
-function scalar(request: GenerationRequest, port: string): string | number | boolean | undefined {
+function scalar(request: ProviderFieldRequest, port: string): string | number | boolean | undefined {
   const value = request.ports[port]?.[0];
   return typeof value === "string" || typeof value === "number" || typeof value === "boolean" ? value : undefined;
 }
-function count(request: GenerationRequest, port: string): number {
+function count(request: ProviderFieldRequest, port: string): number {
   return request.ports[port]?.length ?? 0;
 }
 function strings(value: unknown): readonly string[] {
@@ -39,7 +41,7 @@ function strings(value: unknown): readonly string[] {
 const GPT_IMAGE_RATIOS = ["1:1", "3:2", "2:3", "16:9", "9:16", "4:3", "3:4", "21:9", "auto"];
 
 /** Pollo's documented input ranges for each mapped model, checked before any reference is resolved. */
-function rejection(mapping: GenerationWireMapping, request: GenerationRequest): string | undefined {
+function rejection(mapping: GenerationWireMapping, request: ProviderFieldRequest): string | undefined {
   const { name } = mapping.capability;
   const ratio = scalar(request, "aspectRatio");
   if (name === "grok-imagine-video-1.5-preview") {
@@ -82,35 +84,28 @@ function normalize(mapping: GenerationWireMapping, input: Record<string, unknown
   return input;
 }
 
-function capabilityKey(capability: CapabilityRef): string {
-  return `${capability.module.name}@${capability.module.version}#${capability.name}`;
-}
-
 export const polloRoutes: readonly PolloRoute[] = polloMappings.map((mapping) => ({
   ...mapping,
   key: capabilityKey(mapping.capability),
-  returns: mapping.result === "image" ? generationTypes.imageSet : generationTypes.videoSet,
+  returns: mapping.media === "image" ? generationTypes.imageSet : generationTypes.videoSet,
   supports: (request) => {
-    const reason = rejection(mapping, request.constraints as unknown as GenerationRequest);
+    const reason = rejection(mapping, request.constraints as unknown as ProviderFieldRequest);
     return reason === undefined ? { status: "supported" } : { status: "unsupported", reason };
   },
   prepare: (constraints) => {
-    const request = constraints as unknown as GenerationRequest;
+    const request = constraints as unknown as ProviderFieldRequest;
     const reason = rejection(mapping, request);
     if (reason !== undefined) throw new Error(reason);
     return {
       path: selectWireModelForRequest(mapping, request),
       compile: async (resolve) => ({
-        input: normalize(mapping, (await compileWireRequest(mapping, request, resolve)).input as Record<string, unknown>),
+        input: normalize(mapping, (await materializeWireRequest(planWireRequest(mapping, request), resolve)).input as Record<string, unknown>),
       }),
     };
   },
-  packageResult: (artifacts) => ({
-    kind: "inline",
-    value: canonicalize(mapping.result === "image"
+  packageResult: (artifacts) => ((canonicalize(mapping.media === "image"
       ? sealGeneratedImageSet({ images: artifacts })
-      : sealGeneratedVideoSet({ videos: artifacts })),
-  }),
+      : sealGeneratedVideoSet({ videos: artifacts })))),
 }));
 
 const byCapability = new Map(polloRoutes.map((route) => [route.key, route]));

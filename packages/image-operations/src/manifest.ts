@@ -214,12 +214,11 @@ export const imageOperationsManifest: ModuleManifest = {
         { name: "source", type: blobTypes.blob },
         { name: "program", type: imageTransformTypes.program },
       ],
-      outputs: [],
-      needs: [{ name: "image", capability: imageOperationsCapabilities.transform, returns: blobTypes.blob }],
+      result: { kind: "need" as const, name: "image", capability: imageOperationsCapabilities.transform },
     },
     {
       name: imageComposeProducers.createLayers.name,
-      inputs: [], outputs: [{ name: "layers", type: imageComposeTypes.layerSet }], needs: [],
+      inputs: [], result: { kind: "output" as const, name: "layers", type: imageComposeTypes.layerSet },
     },
     {
       name: imageComposeProducers.appendLayer.name,
@@ -229,7 +228,7 @@ export const imageOperationsManifest: ModuleManifest = {
         { name: "frame", type: spatialTypes.frame },
         { name: "spec", type: imageComposeTypes.layerSpec },
       ],
-      outputs: [{ name: "layers", type: imageComposeTypes.layerSet }], needs: [],
+      result: { kind: "output" as const, name: "layers", type: imageComposeTypes.layerSet },
     },
     {
       name: imageComposeProducers.request.name,
@@ -238,8 +237,7 @@ export const imageOperationsManifest: ModuleManifest = {
         { name: "options", type: imageComposeTypes.options },
         { name: "layers", type: imageComposeTypes.layerSet },
       ],
-      outputs: [],
-      needs: [{ name: "image", capability: imageOperationsCapabilities.compose, returns: blobTypes.blob }],
+      result: { kind: "need" as const, name: "image", capability: imageOperationsCapabilities.compose },
     },
   ],
 };

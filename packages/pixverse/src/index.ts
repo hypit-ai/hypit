@@ -1,14 +1,14 @@
 import { blobTypes } from "@hypit/hypit/blob";
-import { sealGenerationPortRequest, sealGenerationPortTable } from "@hypit/generation";
+import { sealModelFieldRequest, defineModelFields } from "@hypit/generation/model-fields";
 import type {
-  GenerationPort,
-  GenerationPortRequirement,
-  GenerationPortTable,
-  GenerationPortValue,
-  GenerationRequest,
-} from "@hypit/generation";
+  ModelField,
+  ModelFieldRequirement,
+  ModelFieldTable,
+  ModelFieldValue,
+  ModelFieldRequest,
+} from "@hypit/generation/model-fields";
 import type { SurfaceAttributeVocabulary, SurfacePortVocabulary } from "@hypit/hypit/markup";
-import { defineExactModelModule } from "@hypit/generation/model";
+import { defineFieldModelModule, standardGenerationResults } from "@hypit/generation/model-fields";
 import { textTypes } from "@hypit/hypit/text";
 
 import { pixverseRequestValidator } from "./validation.js";
@@ -27,18 +27,18 @@ const PIXVERSE_V6_ASPECT_RATIOS = [...PIXVERSE_ASPECT_RATIOS, "auto"] as const;
  * and carries the sampling seed and multi-clip switch its endpoints declare. C1 takes up to seven
  * reference images and generates from a prompt, a frame or a pair of frames.
  */
-function pixversePortTable(model: PixverseModel): GenerationPortTable {
+function pixversePortTable(model: PixverseModel): ModelFieldTable {
   const v6 = model === "pixverse-v6";
-  const referenceVideo: readonly GenerationPort[] = v6
+  const referenceVideo: readonly ModelField[] = v6
     ? [{ name: "referenceVideo", value: { kind: "media", accepts: ["video"] }, minItems: 0, maxItems: 2 }]
     : [];
-  const v6Switches: readonly GenerationPort[] = v6
+  const v6Switches: readonly ModelField[] = v6
     ? [
         { name: "multiClip", value: { kind: "boolean" }, minItems: 0, maxItems: 1 },
         { name: "seed", value: { kind: "number", integer: true, minimum: 0, maximum: 2_147_483_647 }, minItems: 0, maxItems: 1 },
       ]
     : [];
-  const v6Requires: readonly GenerationPortRequirement[] = v6
+  const v6Requires: readonly ModelFieldRequirement[] = v6
     ? [
         // A run that bridges two frames, and one that carries subject references, is a single
         // continuous shot rather than several cuts.
@@ -48,9 +48,8 @@ function pixversePortTable(model: PixverseModel): GenerationPortTable {
         { kind: "atMostOneOf", ports: ["duration", "referenceVideo"] },
       ]
     : [];
-  return sealGenerationPortTable({
+  return defineModelFields({
     model,
-    result: "video",
     ports: [
       { name: "prompt", value: { kind: "text", maxChars: 5_000 }, minItems: 1, maxItems: 1 },
       { name: "firstFrame", value: { kind: "media", accepts: ["image"] }, minItems: 0, maxItems: 1 },
@@ -81,25 +80,26 @@ function pixversePortTable(model: PixverseModel): GenerationPortTable {
   });
 }
 
-export const pixversePorts: Readonly<Record<PixverseModel, GenerationPortTable>> = {
+export const pixversePorts: Readonly<Record<PixverseModel, ModelFieldTable>> = {
   "pixverse-v6": pixversePortTable("pixverse-v6"),
   "pixverse-c1": pixversePortTable("pixverse-c1"),
 };
 
 export function sealPixverseRequest(
   model: PixverseModel,
-  ports: Readonly<Record<string, readonly GenerationPortValue[]>>,
-): GenerationRequest {
-  return sealGenerationPortRequest(pixversePorts[model], ports);
+  ports: Readonly<Record<string, readonly ModelFieldValue[]>>,
+): ModelFieldRequest {
+  return sealModelFieldRequest(pixversePorts[model], ports);
 }
 
-const pixverseBaseDefinition = defineExactModelModule({
+const pixverseBaseDefinition = defineFieldModelModule({
   module: pixverseModuleRef,
   endpoints: ([["v6", "pixverse-v6"], ["c1", "pixverse-c1"]] as const).map(([key, model]) => ({
     key,
     requestTypeName: model === "pixverse-v6" ? "PixverseV6Request" : "PixverseC1Request",
     producerName: `request-${model}`,
     ports: pixversePorts[model],
+    result: standardGenerationResults.video,
     validateRequest: pixverseRequestValidator(model),
   })),
 });

@@ -159,7 +159,7 @@ export const mediaManifest: ModuleManifest = {
   ], capabilities: [], producers: [
     { name: mediaProducers.localDomain.name,
       inputs: [{ name: "media", type: mediaTypes.synchronized }, { name: "spec", type: mediaTypes.domainSpec }],
-      outputs: [{ name: "domain", type: temporalTypes.localDomain }], needs: [] },
+      result: { kind: "output" as const, name: "domain", type: temporalTypes.localDomain } },
   ],
 };
 export const mediaDependency = { module: mediaModuleRef } as const;

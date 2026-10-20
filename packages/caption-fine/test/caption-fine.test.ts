@@ -145,6 +145,17 @@ test("Fine Caption schedules visibility outside semantic Word timing and cuts on
   assert.equal(atom?.style.find((declaration) => declaration.name === "overflow-wrap")?.value, "anywhere");
 });
 
+test("Fine Caption intersects an authored tail with the renderer Timeline", () => {
+  const { document, program, projection } = fixture();
+  const schedule = scheduleFineCaption(projection, program, document);
+  assert.equal(schedule.cues[1]?.visibleEndFrameExclusive, 62,
+    "the schedule retains the complete authored envelope");
+  const track = renderCaption(schedule, program, document,
+    sealTimeline({ id: "test-space", frameCount: 60, frameRate: { numerator: 30, denominator: 1 } }));
+  assert.deepEqual(track.presents[1]?.span, { startFrame: 36, endFrameExclusive: 60 });
+  assert.deepEqual(track.presents[1]?.visibility, [{ startFrame: 36, endFrameExclusive: 60 }]);
+});
+
 test("Fine Caption uniformly springs the whole Cue through exact scales", () => {
   const { document, program, projection } = fixture();
   const style = fineCaptionStyle("plain", {
@@ -186,6 +197,28 @@ test("Fine Caption uniformly springs the whole Cue through exact scales", () => 
   assert.equal(cue?.parent, cueLoop?.id);
   assert.equal(declarationAt(4, "transform"), "none");
   assert.equal(declarationAt(4, "filter"), "none");
+});
+
+test("Fine Caption samples harmonic loop motion instead of aliasing it to rest", () => {
+  const { document, program, projection } = fixture();
+  const style = fineCaptionStyle("plain", {
+    ...recipe,
+    properties: { ...recipe.properties, loop: "shake" },
+  }, [font]);
+  const looping: CaptionProgram = { ...program, styles: [style] };
+  const track = renderCaption(
+    scheduleFineCaption(projection, looping, document),
+    looping,
+    document,
+    sealTimeline({ id: "test-space", frameCount: 90, frameRate: { numerator: 30, denominator: 1 } }),
+  );
+  const cueLoop = track.presents[0]?.elements.find((element) => element.id === "cue-loop");
+  const moved = (cueLoop?.animation?.keyframes ?? []).filter((keyframe) => {
+    const value = keyframe.style.find((declaration) => declaration.name === "transform")?.value;
+    return value !== "translateX(0px)" && value !== "none";
+  });
+  assert.ok(moved.length >= 6);
+  assert.ok(moved[0]!.atFrame < 6);
 });
 
 test("Fine Caption follows measured Role regions and hides null Frames", () => {
@@ -462,7 +495,7 @@ test("Caption Surface wires one Timeline to both ordinary and tracked-region ren
       resolveAsset() { throw new Error("Caption assembly uses declared inputs."); },
     });
     const component = result.components[0]!;
-    const fragment = result.fragments!.find(fragment => fragment.id === component.fragment)!;
+    const fragment = component.fragment;
     assert.deepEqual(Object.keys(component.inputs).sort(), fragment.inputs.map(input => input.name).sort());
     assert.deepEqual(component.inputs.timeline, { kind: "record", id: "timeline" });
   }
@@ -534,7 +567,7 @@ test("Caption Uses are either unbounded or consume one declared Window", async (
     const result=await decode(`<fine:Use style={style} ${time}/>`);
     const track=result.components.find(component=>component.id==="captions")!;
     assert.ok(track.outputs.program);
-    const fragment=result.fragments!.find(fragment=>fragment.id===track.fragment)!;
+    const fragment=track.fragment;
     assert.equal(fragment.inputs.find(port=>port.name==="timing")?.type.name,"CaptionTiming");
     assert.equal(fragment.inputs.some(port=>port.name.endsWith("-window")), time !== "");
     assert.equal(fragment.inputs.some(port=>port.name==="program"),false);

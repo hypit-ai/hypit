@@ -44,7 +44,7 @@ test("Projection Surface owns Maps only and publishes one direct value", async (
     <semantic:Map alignment={three.alignment} domain={three.domain} window={three.window}/>
   </semantic:Projection>`);
   assert.deepEqual(output.exports, ["story-time"]);
-  const fragment = output.fragments[0]!;
+  const fragment = output.components[0]!.fragment;
   assert.equal(fragment.operations.filter((operation) => operation.producer.name === "project-narrative-alignment").length, 3);
   assert.equal(fragment.operations.filter((operation) => operation.producer.name === "combine-narrative-projection-parts").length, 2);
   assert.equal(fragment.operations.at(-1)?.producer.name, "finalize-narrative-projection");
@@ -58,13 +58,13 @@ test("Narrative Instant reveals one semantic point or explicit interval boundary
   const moment = await decode(decodeNarrativeInstantSurface,
     '<semantic:Instant id="claim" projection={story-time} at={reveal}/>');
   assert.deepEqual(moment.exports, ["claim"]);
-  assert.equal(moment.fragments[0]?.operations[0]?.producer.name, "project-moment-instant");
+  assert.equal(moment.components[0]?.fragment.operations[0]?.producer.name, "project-moment-instant");
   assert.equal(Object.hasOwn(moment.components[0]?.inputs ?? {}, "timeline"), false);
 
   const boundary = await decode(decodeNarrativeInstantSurface,
     '<semantic:Instant id="ending-instant" projection={story-time} at={ending} boundary="end"/>');
   assert.deepEqual(boundary.exports, ["ending-instant"]);
-  assert.equal(boundary.fragments[0]?.operations[0]?.producer.name, "project-segment-instant");
+  assert.equal(boundary.components[0]?.fragment.operations[0]?.producer.name, "project-segment-instant");
   assert.throws(() => decode(decodeNarrativeInstantSurface,
     '<semantic:Instant id="bad" projection={story-time} at={ending}/>'), /boundary must be start or end/);
 });
@@ -73,7 +73,7 @@ test("Narrative Window reveals one complete semantic interval", async () => {
   const output = await decode(decodeNarrativeWindowSurface,
     '<semantic:Window id="proof-window" projection={story-time} during={proof}/>');
   assert.deepEqual(output.exports, ["proof-window", "proof-window.start", "proof-window.end"]);
-  assert.equal(output.fragments[0]?.operations.some((operation) => operation.producer.name === "compose-window"), true);
+  assert.equal(output.components[0]?.fragment.operations.some((operation) => operation.producer.name === "compose-window"), true);
   assert.throws(() => decode(decodeNarrativeWindowSurface,
     '<semantic:Window id="bad" projection={story-time} during={reveal}/>'), /Selection or Segment/);
 });

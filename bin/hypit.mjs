@@ -29,6 +29,7 @@ installDistributionPackageResolution([distributionRoot]);
 const args = process.argv.slice(2);
 const { runInstalledCliApplication, runNodeCli } = await import(new URL("packages/cli/src/index.ts", distributionUrl).href);
 const { createVideoDistribution } = await import("@hypit/video");
+const { createLocalRuntimeCliCommandModules } = await import("@hypit/runtime-local/cli");
 const videoDistribution = createVideoDistribution({
   packageRoot: distributionRoot,
   launcher: fileURLToPath(import.meta.url),
@@ -36,5 +37,6 @@ const videoDistribution = createVideoDistribution({
 await runNodeCli(args, async (argv, io) => await runInstalledCliApplication(argv, io, {
   distribution: videoDistribution,
   distributionRoot,
+  commandModules: createLocalRuntimeCliCommandModules(videoDistribution),
   launcher: fileURLToPath(import.meta.url),
 }));

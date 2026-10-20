@@ -1,74 +1,33 @@
 import { resolve } from "node:path";
 
-import type { CompiledAuthorSource } from "@hypit/compiler";
+import type { PublicationPlan } from "@hypit/result";
 import {
   producerPackagesFromFacets,
   registerProducerFacets,
 } from "@hypit/producer";
-import type {
-  PlannedNeedFacet,
-  PlannedNeedPresentation,
-  PlannedNeedSpecification,
-} from "@hypit/producer";
 import { evaluateProducerPlan, ProducerRegistry } from "@hypit/executor";
+import type { EvaluatedProducerStep } from "@hypit/executor";
 import type { PackageContribution } from "@hypit/loader";
+import { capabilityKey } from "@hypit/protocol";
 import type { BuildDefinition, BuildState, CanonicalValue, CapabilityRef } from "@hypit/protocol";
-import type { CliBuildCatalogDescriptor, CliProviderQuery, CliRuntimeHost } from "./runtime-port.js";
+import type { CliBuildCatalogDescriptor, CliEndpointQuery, CliRuntimeInspection } from "./runtime-port.js";
 import { plannedNeeds } from "@hypit/kernel";
 import {
-  admissionPackagesFromFacets,
-  registerTypeValidatorFacets,
-  TypeValidatorRegistry,
-} from "@hypit/admission";
+  refinementPackagesFromFacets,
+  registerTypeRefinements,
+  RefinementRegistry,
+} from "@hypit/refinement";
 
 export function createCatalogDescriptor(options: {
   readonly source: string;
-  readonly compilation: CompiledAuthorSource;
+  readonly publication: PublicationPlan;
   readonly run?: { readonly path: string };
-  readonly targets?: readonly { readonly output: string }[];
 }): CliBuildCatalogDescriptor {
-  const publishedOutputs = options.compilation.exports.flatMap((item) => {
-    if (item.ref.kind === "operation-result") {
-      throw new Error(`public output ${item.name} was not lowered to a stable Record or Logical Output`);
-    }
-    if (item.ref.kind !== "logical-output") return [];
-    const outputId = item.ref.id;
-    const element = options.compilation.provenance.elements.find((element) => element.outputs.some((output) => output.id === outputId));
-    const authored = element?.outputs.find((output) => output.id === outputId);
-    const displayName = element?.components.find((component) => component.id === authored?.component)?.local;
-    return [{ name: item.name, ref: item.ref, ...(displayName === undefined ? {} : { displayName }) }];
-  });
-  const names = new Set<string>();
-  const outputs = new Set<string>();
-  for (const published of publishedOutputs) {
-    if (names.has(published.name)) throw new Error(`public Output name ${published.name} is repeated`);
-    if (outputs.has(published.ref.id)) {
-      throw new Error(`Logical Output ${published.ref.id} has more than one public name`);
-    }
-    names.add(published.name);
-    outputs.add(published.ref.id);
-  }
   return {
     source: { path: resolve(options.source) },
     ...(options.run === undefined ? {} : { run: { path: resolve(options.run.path) } }),
-    ...(options.targets === undefined ? {} : {
-      targets: options.targets.map((target) => ({ kind: "logical-output" as const, id: target.output })),
-    }),
-    publishedOutputs,
+    publication: options.publication,
   };
-}
-
-function capabilityName(capability: CapabilityRef): string {
-  return `${capability.module.name}@${capability.module.version}#${capability.name}`;
-}
-
-function sameRef(
-  left: { readonly module: { readonly name: string; readonly version: string }; readonly name: string },
-  right: { readonly module: { readonly name: string; readonly version: string }; readonly name: string },
-): boolean {
-  return left.module.name === right.module.name
-    && left.module.version === right.module.version
-    && left.name === right.name;
 }
 
 /** The author-facing component and operation, without the encoded Source identity. */
@@ -81,14 +40,15 @@ function plannedStepLabel(step: string): string {
 }
 
 function demandedCapabilities(state: BuildState): readonly CapabilityRef[] {
-  const found = new Map(plannedNeeds(state).map((need) => [capabilityName(need.capability), need.capability]));
+  const found = new Map(plannedNeeds(state).map((need) => [capabilityKey(need.capability), need.capability]));
   return [...found.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([, value]) => value);
 }
 
-export type PlanProviderView = {
-  readonly request: string;
+export type PlanEndpointView = {
+  readonly need: string;
   readonly capability: string;
-  readonly status: "resolved" | "unresolved" | "unsupported" | "ambiguous";
+  readonly status: "resolved" | "unresolved" | "ambiguous";
+  readonly support: "supported" | "unsupported" | "not-evaluated";
   readonly endpoint?: string;
   readonly use?: string;
   readonly pricing?: { readonly kind: "page"; readonly url: string } | { readonly kind: "local" };
@@ -97,7 +57,7 @@ export type PlanProviderView = {
   readonly binding?: string;
 };
 
-export type PlanPricingView = PlanProviderView & {
+export type PlanPricingView = PlanEndpointView & {
   readonly pricingDocuments?: readonly {
     readonly source: string;
     readonly data: CanonicalValue;
@@ -110,19 +70,16 @@ export type PendingPlanInput = {
   readonly input: string;
   readonly record: string;
   readonly sourceStep?: string;
-  readonly kind?: "image" | "video" | "audio" | "other";
 };
 
-/** A reading of one request's authored parameters, never a second request payload. */
+/** A bounded presentation of concrete scalar leaves, never a second request payload. */
 export type NeedSummary = {
   readonly fields: Readonly<Record<string, string | number | boolean>>;
-  readonly references: Readonly<Record<string, number>>;
 };
 
 export type EvaluatedPlanNeed = {
+  readonly status: "concrete" | "blocked" | "failed" | "unavailable";
   readonly constraints?: CanonicalValue;
-  /** Package-owned support slots; kept separate from the CLI's compact pending-input view. */
-  readonly pendingInputs: PlannedNeedSpecification["pendingInputs"];
   readonly summary?: NeedSummary;
   readonly pending: readonly PendingPlanInput[];
   readonly issue?: string;
@@ -139,105 +96,79 @@ export type EvaluatedPlan = {
 };
 
 export type PlanNeedView = {
-  readonly request: string;
+  readonly need: string;
   readonly step: string;
   readonly port: string;
   readonly capability: string;
+  readonly status: EvaluatedPlanNeed["status"];
   readonly endpoint?: string;
   readonly summary?: NeedSummary;
   readonly pending: readonly PendingPlanInput[];
   readonly issue?: string;
 };
 
-function mediaKind(mediaType: string): string {
-  const prefix = mediaType.split("/")[0] ?? "";
-  return prefix === "image" || prefix === "video" || prefix === "audio" ? prefix : "other";
-}
-
-function countReferences(value: CanonicalValue, references: Record<string, number>): void {
-  if (value === null || typeof value !== "object") return;
-  if (Array.isArray(value)) {
-    for (const item of value) countReferences(item, references);
-    return;
-  }
-  const record = value as Record<string, CanonicalValue>;
-  if (typeof record.resource === "string" && typeof record.mediaType === "string") {
-    const kind = mediaKind(record.mediaType);
-    references[kind] = (references[kind] ?? 0) + 1;
-    return;
-  }
-  for (const item of Object.values(record)) countReferences(item, references);
-}
-
-function textMeasure(value: string): string {
-  const trimmed = value.trim();
-  const words = trimmed.split(/\s+/u).filter(Boolean);
-  const cjk = [...trimmed].filter((character) =>
-    /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u.test(character)).length;
-  if (cjk > 0 && words.length <= 1) return `${cjk} chars`;
-  return `${words.length} words`;
-}
-
 function scalarSummary(value: CanonicalValue): string | number | boolean | undefined {
   if (typeof value === "number" || typeof value === "boolean") return value;
   if (typeof value === "string") {
-    return value.length <= 40 && !value.includes("\n") ? value : textMeasure(value);
-  }
-  if (value !== null && typeof value === "object" && !Array.isArray(value)) {
-    const record = value as Record<string, CanonicalValue>;
-    if (typeof record.text === "string" && Object.keys(record).length <= 2) return scalarSummary(record.text);
+    const display = value.replace(/\s+/gu, " ").trim();
+    const characters = [...display];
+    return characters.length <= 40 ? display : `${characters.slice(0, 39).join("")}…`;
   }
   return undefined;
 }
 
-function summarizeFields(source: Readonly<Record<string, CanonicalValue>>): Readonly<Record<string, string | number | boolean>> {
-  const fields: Record<string, string | number | boolean> = {};
-  for (const [name, value] of Object.entries(source)) {
-    const values = Array.isArray(value) ? value : [value];
-    const scalars = values.map(scalarSummary).filter((item): item is string | number | boolean => item !== undefined);
-    if (scalars.length > 0) fields[name] = scalars.length === 1 ? scalars[0]! : scalars.map(String).join(", ");
+type SummaryField = {
+  readonly path: readonly string[];
+  readonly value: string | number | boolean;
+};
+
+function collectSummaryFields(
+  value: CanonicalValue,
+  path: readonly string[],
+  fields: SummaryField[],
+): void {
+  const scalar = scalarSummary(value);
+  if (scalar !== undefined) {
+    if (path.length > 0) fields.push({ path, value: scalar });
+    return;
   }
-  return fields;
+  if (Array.isArray(value)) {
+    for (const [index, item] of value.entries()) {
+      const tail = path[path.length - 1];
+      const itemPath = tail === undefined
+        ? [`[${index}]`]
+        : [...path.slice(0, -1), `${tail}[${index}]`];
+      collectSummaryFields(item, itemPath, fields);
+    }
+    return;
+  }
+  if (value === null || typeof value !== "object") return;
+  for (const [name, item] of Object.entries(value)) {
+    collectSummaryFields(item, [...path, name], fields);
+  }
 }
 
-/** Generic requests are summarized only from their declared top-level constraints. */
+/** Generic requests are projected structurally without recognizing domain envelopes or value kinds. */
 export function summarizeConstraints(constraints: CanonicalValue): NeedSummary {
-  const references: Record<string, number> = {};
-  countReferences(constraints, references);
-  if (constraints === null || typeof constraints !== "object" || Array.isArray(constraints)) {
-    return { fields: {}, references };
-  }
-  return { fields: summarizeFields(constraints as Record<string, CanonicalValue>), references };
-}
-
-/** Convert a package-owned request presentation into the compact generic CLI view. */
-function summarizePresentation(presentation: PlannedNeedPresentation): NeedSummary {
+  const collected: SummaryField[] = [];
+  collectSummaryFields(constraints, [], collected);
   const fields: Record<string, string | number | boolean> = {};
-  for (const [name, values] of Object.entries(presentation.fields)) {
-    const summarized = values.map((value) => scalarSummary(value as CanonicalValue))
-      .filter((value): value is string | number | boolean => value !== undefined);
-    if (summarized.length > 0) fields[name] = summarized.length === 1 ? summarized[0]! : summarized.map(String).join(", ");
+  for (const field of collected) {
+    fields[field.path.join(".")] = field.value;
   }
-  return { fields, references: structuredClone(presentation.references) };
+  return { fields };
 }
 
-function plannedNeedFacets(contributions: readonly PackageContribution[]): readonly PlannedNeedFacet[] {
-  return contributions.flatMap((contribution) =>
-    producerPackagesFromFacets(contribution.facets ?? []).flatMap((item) => item.plannedNeeds ?? []));
-}
-
-function plannedNeedFacetFor(
-  facets: readonly PlannedNeedFacet[],
-  state: BuildState,
-  stepId: string,
-  port: string,
-  capability: CapabilityRef,
-): PlannedNeedFacet | undefined {
-  const step = state.plan.steps.find((item) => item.id === stepId);
-  if (step === undefined) return undefined;
-  return facets.find((facet) => facet.port === port
-    && sameRef(facet.capability, capability)
-    && sameRef(facet.producer, step.producer));
+function pendingPlanInputs(step: EvaluatedProducerStep | undefined): readonly PendingPlanInput[] {
+  if (step?.status !== "blocked") return [];
+  return step.dependencies.map((dependency): PendingPlanInput => {
+    const sourceStep = dependency.source.kind === "supplied" ? undefined : dependency.source.step;
+    return {
+      input: dependency.input,
+      record: dependency.record,
+      ...(sourceStep === undefined ? {} : { sourceStep }),
+    };
+  });
 }
 
 /**
@@ -249,119 +180,84 @@ export async function evaluatePlanNeeds(
   contributions: readonly PackageContribution[],
 ): Promise<EvaluatedPlan> {
   const producers = new ProducerRegistry();
-  const validators = new TypeValidatorRegistry();
+  const refinements = new RefinementRegistry();
   for (const contribution of contributions) {
     const facets = contribution.facets ?? [];
     for (const item of producerPackagesFromFacets(facets)) {
       registerProducerFacets(producers, item.producers ?? []);
     }
-    for (const item of admissionPackagesFromFacets(facets)) {
-      registerTypeValidatorFacets(validators, item.validators ?? []);
+    for (const item of refinementPackagesFromFacets(facets)) {
+      registerTypeRefinements(refinements, item.refinements ?? []);
     }
   }
-  const evaluation = await evaluateProducerPlan(definition, producers, validators);
+  const evaluation = await evaluateProducerPlan(definition, producers, refinements);
   const state = evaluation.state;
   const known = new Map(state.needs.map((need) => [need.id, need]));
-  const producedBy = new Map(state.plan.steps.flatMap((step) =>
-    Object.values(step.outputs).map((record) => [record, step.id] as const)));
-  const records = new Set(state.records.map((record) => record.id));
-  const facets = plannedNeedFacets(contributions);
+  const evaluatedSteps = new Map(evaluation.steps.map((step) => [step.step, step]));
   const result = new Map<string, EvaluatedPlanNeed>();
 
   for (const planned of plannedNeeds(state)) {
-    const facet = plannedNeedFacetFor(facets, state, planned.step, planned.port, planned.capability);
+    const evaluatedStep = evaluatedSteps.get(planned.step);
     const need = known.get(planned.need);
     if (need !== undefined) {
-      const specification: PlannedNeedSpecification = { constraints: need.constraints, pendingInputs: [] };
       result.set(planned.need, {
+        status: "concrete",
         constraints: need.constraints,
-        pendingInputs: [],
-        summary: facet?.present === undefined
-          ? summarizeConstraints(need.constraints)
-          : summarizePresentation(facet.present(specification)),
+        summary: summarizeConstraints(need.constraints),
         pending: [],
       });
       continue;
     }
-
-    const specification = facet?.plan({ state, step: planned.step, port: planned.port });
-    if (facet !== undefined && specification !== undefined) {
-      const pending = specification.pendingInputs.map((item): PendingPlanInput => ({
-        input: item.input,
-        record: item.record,
-        ...(item.sourceStep === undefined ? {} : { sourceStep: item.sourceStep }),
-        ...(item.role === undefined ? {} : {
-          kind: item.role === "image" || item.role === "video" || item.role === "audio" ? item.role : "other",
-        }),
-      }));
-      result.set(planned.need, {
-        constraints: specification.constraints,
-        pendingInputs: specification.pendingInputs,
-        summary: facet.present === undefined
-          ? summarizeConstraints(specification.constraints)
-          : summarizePresentation(facet.present(specification)),
-        pending,
-      });
-      continue;
+    if (evaluatedStep === undefined || evaluatedStep.status === "complete") {
+      throw new Error(`planned request ${planned.need} has no concrete Need or pending Producer Step`);
     }
-
-    const step = state.plan.steps.find((item) => item.id === planned.step);
-    const pending = step === undefined ? [] : Object.entries(step.inputs)
-      .filter(([, record]) => !records.has(record))
-      .map(([input, record]): PendingPlanInput => {
-        const sourceStep = producedBy.get(record);
-        return { input, record, ...(sourceStep === undefined ? {} : { sourceStep }) };
-      });
     result.set(planned.need, {
-      pendingInputs: [],
-      pending,
-      issue: `Package does not describe the complete request for ${capabilityName(planned.capability)} before Build`,
+      status: evaluatedStep.status,
+      pending: pendingPlanInputs(evaluatedStep),
+      ...(evaluatedStep.status === "unavailable" ? { issue: evaluatedStep.message } : {}),
     });
   }
   return {
     state,
     needs: result,
-    producerFailures: [...evaluation.failures].map(([step, message]) => ({ step, message })),
+    producerFailures: evaluation.steps.flatMap((step) =>
+      step.status === "failed" ? [{ step: step.step, message: step.message }] : []),
   };
 }
 
 /** The complete pre-Build requests shared by Endpoint selection and Provider pricing reads. */
-export function plannedProviderQueries(
+export function plannedEndpointQueries(
   state: BuildState,
   evaluated: EvaluatedPlan,
-): readonly CliProviderQuery[] {
+): readonly CliEndpointQuery[] {
   const planned = plannedNeeds(state);
-  return planned.flatMap((item) => {
+  return planned.map((item): CliEndpointQuery => {
     const plannedRequest = evaluated.needs.get(item.need);
-    const constraints = plannedRequest?.constraints;
-    if (plannedRequest === undefined || constraints === undefined) return [];
-    return [{
-      request: item.need,
+    if (plannedRequest === undefined) throw new Error(`planned request ${item.need} has no evaluation result`);
+    const base = {
+      need: item.need,
       capability: item.capability,
       returns: item.returns,
-      constraints,
-      ...(plannedRequest.pendingInputs.length === 0 ? {} : {
-        pendingInputs: plannedRequest.pendingInputs.map((input) => ({
-          input: input.input,
-          ...(input.role === undefined ? {} : { role: input.role }),
-        })),
-      }),
-    }];
+    };
+    if (plannedRequest.status !== "concrete") return { ...base, kind: "demand" };
+    if (plannedRequest.constraints === undefined) {
+      throw new Error(`concrete planned request ${item.need} has no constraints`);
+    }
+    return { ...base, kind: "concrete", constraints: plannedRequest.constraints };
   });
 }
 
 /** Resolve every planned request independently; concrete constraints exercise Endpoint `supports`. */
-export async function describePlanProviders(
-  host: CliRuntimeHost,
-  state: BuildState,
-  evaluated: EvaluatedPlan,
-): Promise<readonly PlanProviderView[]> {
-  const planned = plannedNeeds(state);
-  const requests = plannedProviderQueries(state, evaluated);
-  const described = (await host.providers(requests)).map((item) => ({
-    request: item.request,
-    capability: capabilityName(item.capability),
+export async function describePlanEndpoints(
+  inspection: Pick<CliRuntimeInspection, "endpoints">,
+  _state: BuildState,
+  _evaluated: EvaluatedPlan,
+): Promise<readonly PlanEndpointView[]> {
+  return (await inspection.endpoints()).map((item) => ({
+    need: item.need,
+    capability: capabilityKey(item.capability),
     status: item.status,
+    support: item.support,
     ...(item.endpoint === undefined ? {} : { endpoint: item.endpoint }),
     ...(item.use === undefined ? {} : { use: item.use }),
     ...(item.pricing === undefined ? {} : { pricing: item.pricing }),
@@ -369,26 +265,20 @@ export async function describePlanProviders(
     ...(item.rejections === undefined ? {} : { rejections: item.rejections }),
     ...(item.binding === undefined ? {} : { binding: item.binding }),
   }));
-  return planned.map((item) => described.find((provider) => provider.request === item.need) ?? {
-    request: item.need,
-    capability: capabilityName(item.capability),
-    status: "unresolved" as const,
-  }).filter((item, index, all) => all.findIndex((candidate) => candidate.request === item.request) === index);
 }
 
 /** Read Provider-owned pricing material relevant to each planned request. */
 export async function describePlanPricing(
-  host: CliRuntimeHost,
-  state: BuildState,
-  evaluated: EvaluatedPlan,
+  inspection: Pick<CliRuntimeInspection, "pricing">,
+  _state: BuildState,
+  _evaluated: EvaluatedPlan,
 ): Promise<readonly PlanPricingView[]> {
-  const planned = plannedNeeds(state);
-  const requests = plannedProviderQueries(state, evaluated);
-  const pricing = await host.pricing(requests);
-  const described = pricing.map((item): PlanPricingView => ({
-    request: item.request,
-    capability: capabilityName(item.capability),
+  const pricing = await inspection.pricing();
+  return pricing.map((item): PlanPricingView => ({
+    need: item.need,
+    capability: capabilityKey(item.capability),
     status: item.status,
+    support: item.support,
     ...(item.endpoint === undefined ? {} : { endpoint: item.endpoint }),
     ...(item.use === undefined ? {} : { use: item.use }),
     ...(item.pricing === undefined ? {} : { pricing: item.pricing }),
@@ -398,53 +288,62 @@ export async function describePlanPricing(
     ...(item.pricingDocuments === undefined ? {} : { pricingDocuments: item.pricingDocuments }),
     ...(item.pricingError === undefined ? {} : { pricingError: item.pricingError }),
   }));
-  return planned.map((item) => described.find((entry) => entry.request === item.need) ?? {
-    request: item.need,
-    capability: capabilityName(item.capability),
-    status: "unresolved" as const,
-  }).filter((item, index, all) => all.findIndex((candidate) => candidate.request === item.request) === index);
 }
 
-/** Refuse a Build before it is queued when any external request is not fully selectable. */
+/** Reject known failures and concrete requests that cannot be submitted; blocked requests remain future work. */
 export function assertPlannedRequests(
   state: BuildState,
   evaluated: EvaluatedPlan,
-  providers: readonly PlanProviderView[],
+  endpoints: readonly PlanEndpointView[],
 ): void {
-  const byRequest = new Map(providers.map((item) => [item.request, item]));
-  const problems = plannedNeeds(state).flatMap((planned) => {
-    const subject = plannedStepLabel(planned.step);
-    const issue = evaluated.needs.get(planned.need)?.issue;
-    if (issue !== undefined) return [`${subject}: ${issue}`];
-    const provider = byRequest.get(planned.need);
-    if (provider?.status === "resolved") return [];
-    if (provider?.status === "ambiguous") {
-      return [`${subject}: several Endpoints accept ${capabilityName(planned.capability)}; bind one in the Runtime Profile`];
-    }
-    if (provider?.status === "unsupported") {
-      const detail = (provider.rejections ?? [])
-        .map((rejection) => `${rejection.endpoint}: ${rejection.message}`)
-        .join("; ");
-      return [`${subject}: ${detail || `no configured Endpoint accepts the complete ${capabilityName(planned.capability)} request`}`];
-    }
-    return [`${subject}: no selected Endpoint accepts the complete ${capabilityName(planned.capability)} request`];
-  });
+  const byNeed = new Map(endpoints.map((item) => [item.need, item]));
+  const problems = [
+    ...evaluated.producerFailures.map((failure) => `${plannedStepLabel(failure.step)}: ${failure.message}`),
+    ...plannedNeeds(state).flatMap((planned) => {
+      const subject = plannedStepLabel(planned.step);
+      const request = evaluated.needs.get(planned.need);
+      if (request === undefined) return [`${subject}: request evaluation is missing`];
+      const issue = request?.issue;
+      if (issue !== undefined) return [`${subject}: ${issue}`];
+      const endpoint = byNeed.get(planned.need);
+      if (endpoint?.status === "ambiguous") {
+        return [`${subject}: several Endpoints offer ${capabilityKey(planned.capability)}; bind one in the Runtime Profile`];
+      }
+      if (endpoint?.status !== "resolved") {
+        return [`${subject}: no selected Endpoint offers ${capabilityKey(planned.capability)}`];
+      }
+      if (request.status === "blocked" || request.status === "failed") return [];
+      if (endpoint.support === "unsupported") {
+        const detail = (endpoint.rejections ?? [])
+          .map((rejection) => `${rejection.endpoint}: ${rejection.message}`)
+          .join("; ");
+        return [`${subject}: ${detail || `no configured Endpoint accepts the complete ${capabilityKey(planned.capability)} request`}`];
+      }
+      if (request.status === "concrete" && endpoint.support !== "supported") {
+        return [`${subject}: selected Endpoint did not evaluate the complete ${capabilityKey(planned.capability)} request`];
+      }
+      return [];
+    }),
+  ];
   if (problems.length > 0) {
     throw new Error([
-      `Build has ${problems.length} external request${problems.length === 1 ? "" : "s"} that cannot be submitted:`,
+      `Build has ${problems.length} planning problem${problems.length === 1 ? "" : "s"} that prevent submission:`,
       ...problems.map((problem) => `  ${problem}`),
       "No Build was queued and no external request was made.",
     ].join("\n"));
   }
 }
 
-export async function preflightPlan(host: CliRuntimeHost, state: BuildState, providers: readonly PlanProviderView[]) {
+export async function preflightPlan(
+  inspection: Pick<CliRuntimeInspection, "preflight">,
+  state: BuildState,
+  _endpoints: readonly PlanEndpointView[],
+) {
   const capabilities = demandedCapabilities(state);
-  const endpoints = [...new Set(providers.flatMap((item) => item.status === "resolved" && item.endpoint !== undefined ? [item.endpoint] : []))];
-  const result = await host.preflight({ endpoints });
+  const result = await inspection.preflight();
   return {
     ok: !result.diagnostics.some((item) => item.severity === "error"),
-    capabilities: capabilities.map(capabilityName),
+    capabilities: capabilities.map(capabilityKey),
     diagnostics: result.diagnostics,
   } as const;
 }
@@ -463,21 +362,25 @@ export function assertPreflight(preflight: Awaited<ReturnType<typeof preflightPl
 export function describePlanNeeds(
   state: BuildState,
   evaluated: EvaluatedPlan,
-  providers: readonly PlanProviderView[],
+  endpoints: readonly PlanEndpointView[],
 ): readonly PlanNeedView[] {
-  const endpoint = new Map(providers.map((item) => [item.request, item]));
+  const byNeed = new Map(endpoints.map((item) => [item.need, item]));
   return plannedNeeds(state).map((planned) => {
-    const provider = endpoint.get(planned.need);
+    const endpoint = byNeed.get(planned.need);
     const found = evaluated.needs.get(planned.need);
+    if (found === undefined) {
+      throw new Error(`planned request ${planned.need} has no evaluation result`);
+    }
     return {
-      request: planned.need,
+      need: planned.need,
       step: planned.step,
       port: planned.port,
-      capability: capabilityName(planned.capability),
-      ...(provider?.endpoint === undefined ? {} : { endpoint: provider.endpoint }),
-      ...(found?.summary === undefined ? {} : { summary: found.summary }),
-      pending: found?.pending ?? [],
-      ...(found?.issue === undefined ? {} : { issue: found.issue }),
+      capability: capabilityKey(planned.capability),
+      status: found.status,
+      ...(endpoint?.endpoint === undefined ? {} : { endpoint: endpoint.endpoint }),
+      ...(found.summary === undefined ? {} : { summary: found.summary }),
+      pending: found.pending,
+      ...(found.issue === undefined ? {} : { issue: found.issue }),
     };
   });
 }

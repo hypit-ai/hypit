@@ -365,40 +365,40 @@
   <time:Window id="semantic-workshop-window" timeline={program.timeline} from={segment-semantic-time-start} until={segment-semantic-demo-end}/>
   <time:Window id="delivery-workshop-window" timeline={program.timeline} from={segment-result-start} until={segment-reference-reveal-end}/>
   <time:Window id="outro-scene-window" timeline={program.timeline} from={segment-closing-start} until="end"/>
-  <time:Window id="sfx-intro-codex-window" timeline={program.timeline} from={moment-intro-codex-cue} for="0.24s"/>
-  <time:Window id="sfx-intro-claude-window" timeline={program.timeline} from={moment-intro-claude-cue} for="0.24s"/>
-  <time:Window id="sfx-intro-examples-window" timeline={program.timeline} from={moment-intro-examples-cue} for="0.36s"/>
-  <time:Window id="sfx-intro-face-window" timeline={program.timeline} from={moment-intro-face-cue} for="0.48s"/>
-  <time:Window id="sfx-competitor-monthly-window" timeline={program.timeline} from={moment-competitor-monthly-cue} for="0.12s"/>
-  <time:Window id="sfx-competitor-watermark-window" timeline={program.timeline} from={moment-competitor-watermark-cue} for="0.65s"/>
-  <time:Window id="sfx-roads-window" timeline={program.timeline} from={moment-roads-cue} for="0.26s"/>
-  <time:Window id="sfx-road-assets-window" timeline={program.timeline} from={moment-road-assets-cue} for="0.24s"/>
-  <time:Window id="sfx-road-drag-window" timeline={program.timeline} from={moment-road-drag-cue} for="0.12s"/>
-  <time:Window id="sfx-road-fail-window" timeline={program.timeline} from={moment-road-fail-cue} for="0.4s"/>
-  <time:Window id="sfx-road-number-window" timeline={program.timeline} from={moment-road-number-cue} for="0.24s"/>
-  <time:Window id="sfx-road-image-window" timeline={program.timeline} from={moment-road-image-cue} for="0.36s"/>
-  <time:Window id="sfx-road-keys-window" timeline={program.timeline} from={moment-road-keys-cue} for="0.65s"/>
-  <time:Window id="sfx-road-tokens-window" timeline={program.timeline} from={moment-road-tokens-cue} for="0.65s"/>
-  <time:Window id="sfx-code-play-window" timeline={program.timeline} from={moment-code-play-cue} for="0.24s"/>
-  <time:Window id="sfx-code-duplicate-window" timeline={program.timeline} from={moment-code-duplicate-cue} for="0.65s"/>
-  <time:Window id="sfx-solution-keep-window" timeline={program.timeline} from={moment-solution-keep-cue} for="0.48s"/>
-  <time:Window id="sfx-solution-drop-window" timeline={program.timeline} from={moment-solution-drop-cue} for="0.36s"/>
-  <time:Window id="sfx-part-caption-window" timeline={program.timeline} from={moment-part-caption-cue} for="0.12s"/>
-  <time:Window id="sfx-part-ranking-window" timeline={program.timeline} from={moment-part-ranking-cue} for="0.12s"/>
-  <time:Window id="sfx-part-chart-window" timeline={program.timeline} from={moment-part-chart-cue} for="0.12s"/>
-  <time:Window id="sfx-part-card-window" timeline={program.timeline} from={moment-part-card-cue} for="0.12s"/>
-  <time:Window id="sfx-parts-library-window" timeline={program.timeline} from={moment-parts-library-cue} for="0.26s"/>
-  <time:Window id="sfx-parts-reuse-window" timeline={program.timeline} from={moment-parts-reuse-cue} for="0.48s"/>
-  <time:Window id="sfx-parts-swap-window" timeline={program.timeline} from={moment-parts-swap-cue} for="0.36s"/>
-  <time:Window id="sfx-rank-reveal-window" timeline={program.timeline} from={moment-rank-reveal-cue} for="0.26s"/>
-  <time:Window id="sfx-product-reveal-window" timeline={program.timeline} from={moment-product-reveal-cue} for="0.24s"/>
-  <time:Window id="sfx-sem-voice-window" timeline={program.timeline} from={moment-sem-voice-cue} for="0.12s"/>
-  <time:Window id="sfx-sem-adapt-window" timeline={program.timeline} from={moment-sem-adapt-cue} for="0.48s"/>
-  <time:Window id="sfx-result-assets-window" timeline={program.timeline} from={moment-result-assets-cue} for="0.72s"/>
-  <time:Window id="sfx-result-meta-window" timeline={program.timeline} from={moment-result-meta-cue} for="0.36s"/>
-  <time:Window id="sfx-outro-install-window" timeline={program.timeline} from={moment-outro-install-cue} for="0.12s"/>
-  <time:Window id="sfx-outro-gift-window" timeline={program.timeline} from={moment-outro-gift-cue} for="0.48s"/>
-  <time:Window id="sfx-outro-bye-window" timeline={program.timeline} from={moment-outro-bye-cue} for="0.72s"/>
+  <time:Window id="sfx-intro-codex-window" timeline={program.timeline} from={moment-intro-codex-cue} for="7f"/>
+  <time:Window id="sfx-intro-claude-window" timeline={program.timeline} from={moment-intro-claude-cue} for="7f"/>
+  <time:Window id="sfx-intro-examples-window" timeline={program.timeline} from={moment-intro-examples-cue} for="11f"/>
+  <time:Window id="sfx-intro-face-window" timeline={program.timeline} from={moment-intro-face-cue} for="14f"/>
+  <time:Window id="sfx-competitor-monthly-window" timeline={program.timeline} from={moment-competitor-monthly-cue} for="4f"/>
+  <time:Window id="sfx-competitor-watermark-window" timeline={program.timeline} from={moment-competitor-watermark-cue} for="20f"/>
+  <time:Window id="sfx-roads-window" timeline={program.timeline} from={moment-roads-cue} for="8f"/>
+  <time:Window id="sfx-road-assets-window" timeline={program.timeline} from={moment-road-assets-cue} for="7f"/>
+  <time:Window id="sfx-road-drag-window" timeline={program.timeline} from={moment-road-drag-cue} for="4f"/>
+  <time:Window id="sfx-road-fail-window" timeline={program.timeline} from={moment-road-fail-cue} for="12f"/>
+  <time:Window id="sfx-road-number-window" timeline={program.timeline} from={moment-road-number-cue} for="7f"/>
+  <time:Window id="sfx-road-image-window" timeline={program.timeline} from={moment-road-image-cue} for="11f"/>
+  <time:Window id="sfx-road-keys-window" timeline={program.timeline} from={moment-road-keys-cue} for="20f"/>
+  <time:Window id="sfx-road-tokens-window" timeline={program.timeline} from={moment-road-tokens-cue} for="20f"/>
+  <time:Window id="sfx-code-play-window" timeline={program.timeline} from={moment-code-play-cue} for="7f"/>
+  <time:Window id="sfx-code-duplicate-window" timeline={program.timeline} from={moment-code-duplicate-cue} for="20f"/>
+  <time:Window id="sfx-solution-keep-window" timeline={program.timeline} from={moment-solution-keep-cue} for="14f"/>
+  <time:Window id="sfx-solution-drop-window" timeline={program.timeline} from={moment-solution-drop-cue} for="11f"/>
+  <time:Window id="sfx-part-caption-window" timeline={program.timeline} from={moment-part-caption-cue} for="4f"/>
+  <time:Window id="sfx-part-ranking-window" timeline={program.timeline} from={moment-part-ranking-cue} for="4f"/>
+  <time:Window id="sfx-part-chart-window" timeline={program.timeline} from={moment-part-chart-cue} for="4f"/>
+  <time:Window id="sfx-part-card-window" timeline={program.timeline} from={moment-part-card-cue} for="4f"/>
+  <time:Window id="sfx-parts-library-window" timeline={program.timeline} from={moment-parts-library-cue} for="8f"/>
+  <time:Window id="sfx-parts-reuse-window" timeline={program.timeline} from={moment-parts-reuse-cue} for="14f"/>
+  <time:Window id="sfx-parts-swap-window" timeline={program.timeline} from={moment-parts-swap-cue} for="11f"/>
+  <time:Window id="sfx-rank-reveal-window" timeline={program.timeline} from={moment-rank-reveal-cue} for="8f"/>
+  <time:Window id="sfx-product-reveal-window" timeline={program.timeline} from={moment-product-reveal-cue} for="7f"/>
+  <time:Window id="sfx-sem-voice-window" timeline={program.timeline} from={moment-sem-voice-cue} for="4f"/>
+  <time:Window id="sfx-sem-adapt-window" timeline={program.timeline} from={moment-sem-adapt-cue} for="14f"/>
+  <time:Window id="sfx-result-assets-window" timeline={program.timeline} from={moment-result-assets-cue} for="22f"/>
+  <time:Window id="sfx-result-meta-window" timeline={program.timeline} from={moment-result-meta-cue} for="11f"/>
+  <time:Window id="sfx-outro-install-window" timeline={program.timeline} from={moment-outro-install-cue} for="4f"/>
+  <time:Window id="sfx-outro-gift-window" timeline={program.timeline} from={moment-outro-gift-cue} for="14f"/>
+  <time:Window id="sfx-outro-bye-window" timeline={program.timeline} from={moment-outro-bye-cue} for="22f"/>
   <time:Window id="sfx-montage-1-window" timeline={program.timeline} from={segment-opening-end-plus-0f} until={segment-opening-end-plus-4f}/>
   <time:Window id="sfx-montage-2-window" timeline={program.timeline} from={segment-opening-end-plus-5f} until={segment-opening-end-plus-9f}/>
   <time:Window id="sfx-montage-3-window" timeline={program.timeline} from={segment-opening-end-plus-9f} until={segment-opening-end-plus-13f}/>

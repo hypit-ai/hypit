@@ -2,7 +2,8 @@ import { bindDropdown } from "./dropdown.js";
 import { uiLabel, uiAttribute, uiText, uiAttr, userText, languageMenu, initializeI18n, type Message } from "./i18n.js";
 import type { StudioItem, StudioFailure, StudioInspectorDomain, StudioMutation, StudioSnapshot } from "../shared.js";
 import type { CanonicalValue, ValueSchema } from "@hypit/hypit/protocol";
-import { parameterAuthorValue, parameterControlForSchema, parameterNumber, parameterOption, parameterRecordSchema, parameterRecordVariants, validateParameterValue } from "../parameter-values.js";
+import type { StudioValuePresentation } from "@hypit/studio-companion";
+import { parameterAuthorValue, parameterControlForPresentation, parameterControlForSchema, parameterNumber, parameterOption, parameterRecordSchema, parameterRecordVariants, validateParameterValue } from "../parameter-values.js";
 import { createCodePane } from "./code.js";
 import { icon } from "./icons.js";
 import { createLibraryPane } from "./library.js";
@@ -410,9 +411,9 @@ function colorValueControl(
   });
   value.addEventListener(draft ? "input" : "change", () => {
     const next = value.value.trim();
-    const valid = /^#[0-9a-f]{6}(?:[0-9a-f]{2})?$/iu.test(next);
-    swatch.style.background = valid ? next : "transparent";
-    if (valid) {
+    const exact = /^#[0-9a-f]{6}(?:[0-9a-f]{2})?$/iu.test(next);
+    swatch.style.background = next;
+    if (exact) {
       picker.value = next.slice(0, 7);
       alpha = next.length === 9 ? next.slice(7) : "";
     }
@@ -443,19 +444,28 @@ function scalarDraftControl(
   label: string,
   schema: ValueSchema,
   held: CanonicalValue | undefined,
+  presentation: StudioValuePresentation | undefined,
   change: (value: CanonicalValue) => void,
 ): HTMLElement {
+  const control = parameterControlForPresentation(schema, presentation) ?? parameterControlForSchema(schema);
+  if (control === undefined) {
+    const value = document.createElement("span");
+    value.className = "parameter-display parameter-readonly";
+    value.textContent = "Opaque value";
+    return value;
+  }
   return parameterControl({ kind: "item", itemId: "" }, {
     id: label, label, domain: "how", section: { id: "record", label: "" },
-    control: parameterControlForSchema(schema) ?? "text",
+    control,
     ...(schema.kind === "string" && schema.enum !== undefined ? { options: schema.enum } : {}),
-    schema, value: held ?? null,
+    schema, value: held ?? null, ...(presentation === undefined ? {} : { valuePresentation: presentation }),
   }, change);
 }
 
 function recordDraftControl(
   schema: Extract<ValueSchema, { readonly kind: "object" }>,
   held: CanonicalValue,
+  presentation: Extract<StudioValuePresentation, { readonly kind: "record" }> | undefined,
   change: (value: CanonicalValue) => void,
 ): HTMLElement {
   let record = (held !== null && !Array.isArray(held) && typeof held === "object"
@@ -465,7 +475,7 @@ function recordDraftControl(
   fields.className = "parameter-record-fields";
   for (const [name, field] of Object.entries(schema.fields)) {
     if (field.schema.kind === "literal") continue;
-    fields.append(scalarDraftControl(fieldLabel(name), field.schema, record[name], (next) => {
+    fields.append(scalarDraftControl(fieldLabel(name), field.schema, record[name], presentation?.fields?.[name], (next) => {
       record = { ...record, [name]: next };
       change(record);
     }));
@@ -525,18 +535,22 @@ function structuredControl(owner: ParameterOwner, parameter: StudioItem["inspect
 
     if (schema.kind === "array") {
       const list = Array.isArray(draft) ? draft : [];
+      const itemPresentation = parameter.valuePresentation?.kind === "list"
+        ? parameter.valuePresentation.item
+        : undefined;
       const items = document.createElement("div");
       items.className = "parameter-list-items";
       list.forEach((item, index) => {
         const row = document.createElement("div");
         row.className = `parameter-list-item${schema.items.kind === "object" ? " record" : ""}`;
         const editor = schema.items.kind === "object"
-          ? recordDraftControl(schema.items, item, (next) => {
+          ? recordDraftControl(schema.items, item,
+              itemPresentation?.kind === "record" ? itemPresentation : undefined, (next) => {
               const current = Array.isArray(draft) ? draft : [];
               draft = current.map((candidate, heldIndex) => heldIndex === index ? next : candidate);
               save();
             })
-          : scalarDraftControl(`${parameter.label} ${index + 1}`, schema.items, item, (next) => {
+          : scalarDraftControl(`${parameter.label} ${index + 1}`, schema.items, item, itemPresentation, (next) => {
               const current = Array.isArray(draft) ? draft : [];
               draft = current.map((candidate, heldIndex) => heldIndex === index ? next : candidate);
               save();
@@ -580,7 +594,8 @@ function structuredControl(owner: ParameterOwner, parameter: StudioItem["inspect
       });
       shell.append(items);
     } else {
-      shell.append(recordDraftControl(schema, draft, (next) => {
+      shell.append(recordDraftControl(schema, draft,
+        parameter.valuePresentation?.kind === "record" ? parameter.valuePresentation : undefined, (next) => {
         draft = next;
         save();
       }));
@@ -593,7 +608,8 @@ function structuredControl(owner: ParameterOwner, parameter: StudioItem["inspect
       const add = document.createElement("button");
       add.type = "button";
       add.className = "parameter-structured-add";
-      add.innerHTML = `${icon("plus")}${uiLabel(schema.items.kind === "string" && schema.items.format === "color" ? "inspector.add-color" : "inspector.add-item")}`;
+      add.innerHTML = `${icon("plus")}${uiLabel(parameter.valuePresentation?.kind === "list"
+        && parameter.valuePresentation.item?.kind === "color" ? "inspector.add-color" : "inspector.add-item")}`;
       add.disabled = schema.maxItems !== undefined && list.length >= schema.maxItems;
       add.addEventListener("click", () => {
         const current = Array.isArray(draft) ? draft : [];

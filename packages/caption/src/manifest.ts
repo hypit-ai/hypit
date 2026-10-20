@@ -81,17 +81,17 @@ export const captionManifest: ModuleManifest = {
   ], capabilities: [], producers: [{
     name: captionProducers.create.name,
     inputs: [{ name: "document", type: captionTypes.document }, { name: "header", type: captionTypes.header }],
-    outputs: [{ name: "program", type: captionTypes.program }], needs: [],
+    result: { kind: "output" as const, name: "program", type: captionTypes.program },
   }, {
     name: captionProducers.append.name,
     inputs: [{ name: "program", type: captionTypes.program }, { name: "window", type: temporalTypes.window },
       { name: "style", type: captionTypes.style }, { name: "filter", type: captionTypes.filter }],
-    outputs: [{ name: "program", type: captionTypes.program }], needs: [],
+    result: { kind: "output" as const, name: "program", type: captionTypes.program },
   }, {
     name: captionProducers.appendUnbounded.name,
     inputs: [{ name: "program", type: captionTypes.program },
       { name: "style", type: captionTypes.style }, { name: "filter", type: captionTypes.filter }],
-    outputs: [{ name: "program", type: captionTypes.program }], needs: [],
+    result: { kind: "output" as const, name: "program", type: captionTypes.program },
   }],
 };
 export const captionDependency = { module: captionModuleRef } as const;

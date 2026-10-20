@@ -1,10 +1,10 @@
 import { assertAttributes, assertEmptyElement, createMarkupSurfaceFacet, textAttribute } from "@hypit/hypit/markup";
 import { canonicalize, sameType } from "@hypit/hypit/protocol";
 import { sealGraphFragment } from "@hypit/hypit/author";
-import { createAdmissionPackageFacet } from "@hypit/hypit/admission";
+import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
 import { createProducerPackageFacet } from "@hypit/hypit/producer";
 import type { ProducerPackage } from "@hypit/hypit/producer";
-import type { AdmissionPackage } from "@hypit/hypit/admission";
+import type { RefinementPackage } from "@hypit/hypit/refinement";
 import type { ModuleManifest } from "@hypit/hypit/protocol";
 import type { StructuredSurfaceHandler, SurfaceResolvedReference } from "@hypit/hypit/markup";
 import {
@@ -66,8 +66,7 @@ const manifest: ModuleManifest = {
       { name: "window", type: temporalTypes.window },
       { name: "options", type: optionsType },
     ],
-    outputs: [{ name: "visual", type: compositionTypes.visualTrack }],
-    needs: [],
+    result: { kind: "output" as const, name: "visual", type: compositionTypes.visualTrack },
   }],
 };
 
@@ -156,29 +155,21 @@ function renderFlash(
   return track;
 }
 
-const component: ProducerPackage & AdmissionPackage = {
+const component: ProducerPackage & RefinementPackage = {
   producers: [{
     producer: renderProducer,
     handler: ({ inputs }) => {
       const inline = <T>(name: string): T => {
         const input = inputs[name]?.value;
-        if (input?.kind !== "inline") throw new Error(`Flash ${name} must be inline.`);
-        return input.value as T;
+        if (input === undefined) throw new Error(`Flash ${name} is missing.`);
+        return input as unknown as T;
       };
-      return {
-        outputs: {
-          visual: {
-            kind: "inline",
-            value: renderFlash(
+      return { kind: "output", value: (renderFlash(
               inline<Timeline>("timeline"),
               inline<SpatialFrame>("within"),
               inline<TemporalWindow>("window"),
               inline<FlashOptions>("options"),
-            ),
-          },
-        },
-        needs: {},
-      };
+            )) };
     },
   }],
 };
@@ -239,7 +230,7 @@ const decodeFlash: StructuredSurfaceHandler = ({ element, resolveReference }) =>
         window: { kind: "fragment-input", name: "window" },
         options: { kind: "fragment-input", name: "options" },
       },
-      result: { kind: "output", name: "visual" },
+      result: { kind: "output" as const, name: "visual" },
     }],
     exports: [{
       name: "visual",
@@ -249,13 +240,12 @@ const decodeFlash: StructuredSurfaceHandler = ({ element, resolveReference }) =>
   });
   return {
     records: [
-      { id: optionsId, type: optionsType, value: { kind: "inline", value: canonicalize(options) }, range: element.range },
+      { id: optionsId, type: optionsType, value: (canonicalize(options)), range: element.range },
     ],
-    fragments: [fragment],
     components: [
       {
         id,
-        fragment: fragment.id,
+        fragment,
         inputs: {
           timeline: context.timeline.ref,
           within: within.ref,
@@ -299,7 +289,7 @@ export const hypitPackage = {
   modules: [{ manifest }],
   facets: [
     createProducerPackageFacet(component),
-    createAdmissionPackageFacet(component),
+    createRefinementPackageFacet(component),
     createMarkupSurfaceFacet({ module: moduleRef, declaration, handler: decodeFlash }),
   ],
 };

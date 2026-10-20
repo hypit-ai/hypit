@@ -1,17 +1,24 @@
 import { canonicalize, defineEndpoint, wakeAfter } from "@hypit/hypit/endpoint";
 import type { AsyncEndpoint, CredentialRef, EndpointRequest } from "@hypit/hypit/endpoint";
 import {
-  compileWireRequest, generationTypes, mappingSupportsRequest,
-  sealGeneratedVideoSet, selectWireModelForRequest,
+  generationTypes,
+  sealGeneratedVideoSet,
 } from "@hypit/generation";
-import type { GenerationRequest, GenerationWireMapping } from "@hypit/generation";
+import type { ProviderFieldRequest } from "@hypit/generation/provider";
+import {
+  mappingSupportsRequest,
+  materializeWireRequest,
+  planWireRequest,
+  selectWireModelForRequest,
+} from "@hypit/generation/provider";
+import type { GenerationWireMapping } from "@hypit/generation/provider";
 
 export const providerModule = { name: "@example/provider-videos", version: "1" } as const;
 export const capability = { module: { name: "@hypit/seedance", version: "1" }, name: "seedance-2-mini" } as const;
 
 // This example service implements only this subset of the model. Its API is described in README.
 export const mapping: GenerationWireMapping = {
-  capability, result: "video", routes: [{ model: "seedance-2-mini" }],
+  capability, routes: [{ model: "seedance-2-mini" }],
   fields: {
     prompt: { as: "value", field: "prompt" },
     duration: { as: "value", field: "duration" },
@@ -57,7 +64,7 @@ function address(value: string): string {
 }
 
 function serviceSupport(request: EndpointRequest) {
-  const ports = (request.constraints as unknown as GenerationRequest).ports;
+  const ports = (request.constraints as unknown as ProviderFieldRequest).ports;
   const duration = ports.duration?.[0];
   if (typeof duration === "number" && duration > SUPPORTED_SECONDS) {
     return { status: "unsupported" as const,
@@ -104,11 +111,11 @@ export function createVideoProvider(options: {
       const supported = serviceSupport(context.need);
       if (supported.status === "unsupported") throw new Error(supported.reason);
       const secret = key(context.credentials);
-      const authored = context.need.constraints as unknown as GenerationRequest;
+      const authored = context.need.constraints as unknown as ProviderFieldRequest;
       const model = selectWireModelForRequest(mapping, authored);
       // This service has no catalogue query; its known request limits were checked above.
       await context.reportProgress?.({ phase: `Preparing video request: ${model}` });
-      const request = await compileWireRequest(mapping, authored,
+      const request = await materializeWireRequest(planWireRequest(mapping, authored),
         async (artifact, fields) => {
           const bytes = await context.resources.get(artifact.resource);
           if (bytes === undefined) throw new Error("Reference media is unavailable");
@@ -126,7 +133,7 @@ export function createVideoProvider(options: {
         method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(request),
       });
       const id = text(task.id), handle = { id }, receipt = { id };
-      await context.checkpoint?.({ handle, receipt });
+      await context.checkpoint?.({ status: "accepted", handle, receipt });
       return { ...wakeAfter(handle, interval), receipt };
     },
     async poll(context) {
@@ -157,9 +164,7 @@ export function createVideoProvider(options: {
       const mediaType = response.headers.get("content-type")?.split(";")[0]?.trim();
       if (!mediaType?.startsWith("video/")) throw new Error("Video service returned a non-video result");
       const artifact = await context.resources.put(new Uint8Array(await response.arrayBuffer()), mediaType);
-      return { status: "completed", result: { value: {
-        kind: "inline", value: canonicalize(sealGeneratedVideoSet({ videos: [artifact] })),
-      } } };
+      return { status: "completed", result: { value: (canonicalize(sealGeneratedVideoSet({ videos: [artifact] }))) } };
     },
   };
   return defineEndpoint({
@@ -169,8 +174,7 @@ export function createVideoProvider(options: {
     actionLimits: { submit: { concurrency: 1 }, poll: { concurrency: 4 }, collect: { concurrency: 2 } },
     pricing: { kind: "page", url: `${base}/pricing` },
     async readPricing(context) {
-      const model = selectWireModelForRequest(mapping, context.request.constraints as unknown as GenerationRequest,
-        context.request.pendingInputs?.map((input) => input.input));
+      const model = selectWireModelForRequest(mapping, context.request.constraints as unknown as ProviderFieldRequest);
       const path = `/rates?model=${encodeURIComponent(model)}`;
       const source = `${base}${path}`;
       const rates = await json(path, key(await context.credentials()));

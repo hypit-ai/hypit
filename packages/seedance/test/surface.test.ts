@@ -101,7 +101,7 @@ test("FrameVideo exposes first-frame and optional last-frame as exact model port
   assert.equal(Object.keys(component.inputs).filter((name) => name.endsWith(":artifact")).length, 2);
 });
 
-test("ReferenceVideo keeps generated Text and heterogeneous references on explicit graph edges", async () => {
+test("ReferenceVideo keeps rendered prompt Text and heterogeneous references on explicit graph edges", async () => {
   const result = await decode(
     `<seedance:ReferenceVideo id="speaker" model="mini" prompt={direction} duration="6" generate-audio="true">
       <seedance:Reference image={generated.image} person-reference="true"/>
@@ -120,7 +120,7 @@ test("ReferenceVideo keeps generated Text and heterogeneous references on explic
     kind: "component-output", component: "assembled-direction", output: "text",
   });
   const draft = result.records.find((record) => record.id === "speaker.draft");
-  assert.ok(draft?.value.kind === "inline");
+  assert.ok(draft);
   assert.equal(JSON.stringify(draft.value).includes("referenceImage"), false,
     "runtime references must remain graph edges rather than authored draft metadata");
 });
@@ -149,14 +149,14 @@ test("visual reference classification survives authoring as per-input metadata",
     <seedance:Reference image={last.image} person-reference="false"/>
   </seedance:ReferenceVideo>`, decodeSeedanceReferenceVideoSurface);
   const bindings = result.records.filter((record) => record.id.endsWith(".binding"));
-  assert.deepEqual(bindings.map((record) => record.value.kind === "inline" ? record.value.value : null), [
+  assert.deepEqual(bindings.map((record) => record.value), [
     { role: "image", fields: { personReference: true } },
     { role: "video", fields: { personReference: false } },
     { role: "image", fields: { personReference: false } },
   ]);
   const frames = await decode('<seedance:FrameVideo id="frames" model="fast" prompt={direction} duration="5" first-frame={first.image} first-frame-person-reference="true" last-frame={last.image} last-frame-person-reference="false"/>', decodeSeedanceFrameVideoSurface);
   const frameBindings = frames.records.filter((record) => record.id.endsWith(".binding"));
-  assert.deepEqual(frameBindings.map((record) => record.value.kind === "inline" ? record.value.value : null), [
+  assert.deepEqual(frameBindings.map((record) => record.value), [
     { role: "image", fields: { personReference: true } },
     { role: "image", fields: { personReference: false } },
   ]);
@@ -175,5 +175,5 @@ test("every supplied visual requires classification, while absent frames and aud
   assert.equal(firstOnly.records.filter((record) => record.id.endsWith(".binding")).length, 1);
   const audioOnly = await decode('<seedance:ReferenceVideo id="voice" model="2.5" prompt={direction} duration="5"><seedance:Reference audio={voice.audio}/></seedance:ReferenceVideo>', decodeSeedanceReferenceVideoSurface);
   const binding = audioOnly.records.find((record) => record.id.endsWith(".binding"))!;
-  assert.deepEqual(binding.value.kind === "inline" ? binding.value.value : null, { role: "audio" });
+  assert.deepEqual(binding.value, { role: "audio" });
 });

@@ -1,17 +1,17 @@
-import type { ModuleRef } from "@hypit/hypit/protocol";
-import type { GenerationWireMapping } from "@hypit/generation";
+import type { GenerationWireMapping } from "@hypit/generation/provider";
+import { minimaxH3ModuleRef } from "@hypit/minimax-h3";
+import { seedanceModuleRef } from "@hypit/seedance";
+import { seedreamModuleRef } from "@hypit/seedream";
 
-const SEEDANCE: ModuleRef = { name: "@hypit/seedance", version: "1" };
-const SEEDREAM: ModuleRef = { name: "@hypit/seedream", version: "1" };
-const MINIMAX: ModuleRef = { name: "@hypit/minimax-h3", version: "1" };
+export type TokenDanceMapping = GenerationWireMapping & { readonly media: "image" | "video" };
 
 /**
  * TokenDance model IDs and the request fields they accept. Media fields name the `role` of an Ark
  * or MiniMax `content` item; routes.ts folds them into that array. `personReference` is accepted
  * on visual references and not transmitted: neither protocol has a field for it.
  */
-const seedance = (name: string, model: string): GenerationWireMapping => ({
-  capability: { module: SEEDANCE, name }, result: "video", routes: [{ model }],
+const seedance = (name: string, model: string): TokenDanceMapping => ({
+  capability: { module: seedanceModuleRef, name }, media: "video", routes: [{ model }],
   fields: {
     prompt: { as: "value", field: "text" },
     referenceImage: { as: "urlArray", field: "reference_image", resourceFields: ["personReference"] },
@@ -27,13 +27,13 @@ const seedance = (name: string, model: string): GenerationWireMapping => ({
   },
 });
 
-export const tokenDanceMappings: readonly GenerationWireMapping[] = [
+export const tokenDanceMappings: readonly TokenDanceMapping[] = [
   seedance("seedance-2", "seedance-2.0"),
   seedance("seedance-2-fast", "seedance-2.0-fast"),
   seedance("seedance-2-mini", "seedance-2.0-mini"),
   seedance("seedance-2.5", "seedance-2.5"),
   {
-    capability: { module: SEEDREAM, name: "seedream-5-lite" }, result: "image", routes: [{ model: "seedream-5.0-lite" }],
+    capability: { module: seedreamModuleRef, name: "seedream-5-lite" }, media: "image", routes: [{ model: "seedream-5.0-lite" }],
     fields: {
       prompt: { as: "value", field: "prompt" },
       aspectRatio: { as: "value", field: "aspect_ratio" },
@@ -44,11 +44,11 @@ export const tokenDanceMappings: readonly GenerationWireMapping[] = [
     },
   },
   {
-    capability: { module: MINIMAX, name: "minimax-h3" }, result: "video", routes: [{ model: "minimax-h3" }],
+    capability: { module: minimaxH3ModuleRef, name: "minimax-h3" }, media: "video", routes: [{ model: "minimax-h3" }],
     fields: {
       prompt: { as: "value", field: "text" },
       duration: { as: "value", field: "duration" },
-      resolution: { as: "value", field: "resolution", whenAbsent: "2K" },
+      resolution: { as: "value", field: "resolution" },
       aspectRatio: { as: "value", field: "ratio" },
       referenceImage: { as: "urlArray", field: "reference_image" },
       referenceVideo: { as: "urlArray", field: "reference_video" },

@@ -1,19 +1,27 @@
 import type { Composition } from "@hypit/composition";
 import type { Timeline } from "@hypit/timeline";
 import type { ProducerPackage } from "@hypit/hypit/producer";
-import type { AdmissionPackage } from "@hypit/hypit/admission";
+import type { RefinementPackage } from "@hypit/hypit/refinement";
+import type { Value } from "@hypit/hypit/protocol";
 import { canonicalize } from "@hypit/hypit/protocol";
 import { compileHtmlDocument, assertHtmlDocument } from "./document.js";
 import { htmlDocumentProducers, htmlDocumentTypes } from "./manifest.js";
 
+function valueOf<T>(value: Value | undefined, subject: string): T {
+  if (value === undefined) throw new Error(`${subject} is missing`);
+  return value as unknown as T;
+}
+
 export const htmlDocumentComponent = {
-  producers: [{ producer: htmlDocumentProducers.compile, handler: ({ inputs }) => {
-    const composition = inputs.composition!.value, timeline = inputs.timeline!.value;
-    if (composition.kind !== "inline" || timeline.kind !== "inline") throw new Error("HTML document requires inline Composition and Timeline");
-    return { outputs: { document: { kind: "inline", value: canonicalize(compileHtmlDocument(composition.value as unknown as Composition, timeline.value as unknown as Timeline)) } }, needs: {} };
-  } }],
-  validators: [{ type: htmlDocumentTypes.document, handler({ value }) {
-    if (value.kind !== "inline") throw new Error("HTML document must be inline");
-    assertHtmlDocument(value.value);
-  } }],
-} satisfies ProducerPackage & AdmissionPackage;
+  producers: [{
+    producer: htmlDocumentProducers.compile,
+    handler: ({ inputs }) => ({ kind: "output" as const, value: canonicalize(compileHtmlDocument(
+      valueOf<Composition>(inputs.composition?.value, "Composition"),
+      valueOf<Timeline>(inputs.timeline?.value, "Timeline"),
+    )) }),
+  }],
+  refinements: [{
+    type: htmlDocumentTypes.document,
+    handler: ({ value }) => assertHtmlDocument(value),
+  }],
+} satisfies ProducerPackage & RefinementPackage;

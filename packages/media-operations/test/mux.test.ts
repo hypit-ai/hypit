@@ -23,12 +23,12 @@ for (const { frameRate, frameCount, sampleFrames } of cases) {
       const audio = sealTimelineAudio({ sampleFrames: samples,
         artifact: { kind: "blob", resource: fixtureResource("mux:audio"), size: 1, mediaType: "audio/wav" } });
       return mux.handler({ inputs: {
-        visual: { value: { kind: "inline", value: visual } },
-        audio: { value: { kind: "inline", value: audio } },
+        visual: { value: (visual) },
+        audio: { value: (audio) },
       } } as never);
     };
     const result = await run(sampleFrames);
-    assert.deepEqual(Object.keys(result.needs), ["media"]);
+    assert.equal(result.kind, "need");
     for (const incorrect of [sampleFrames - 1, sampleFrames + 1]) {
       await assert.rejects(async () => run(incorrect), /different presentation durations/u);
     }

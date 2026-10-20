@@ -1,3 +1,5 @@
+import { moduleKey } from "@hypit/protocol";
+
 import type {
   ModuleContribution,
   PackageContribution,
@@ -9,12 +11,8 @@ function assertPackage(value: PackageContribution): void {
   }
   for (const facet of value.facets ?? []) {
     if (facet.abi.trim().length === 0) throw new Error("Package contribution has an empty Facet ABI");
-    const offers = facet.offers ?? [];
-    if (offers.some((item) => item.trim().length === 0)) {
+    if (facet.address !== undefined && facet.address.trim().length === 0) {
       throw new Error(`Package contribution has an empty logical name for Facet ${facet.abi}`);
-    }
-    if (new Set(offers).size !== offers.length) {
-      throw new Error(`Package contribution repeats a logical name for Facet ${facet.abi}`);
     }
   }
 }
@@ -27,7 +25,7 @@ export function verifyPackageContributions(packages: readonly PackageContributio
   for (const item of packages) {
     assertPackage(item);
     for (const module of item.modules ?? []) {
-      const key = `${module.manifest.name}@${module.manifest.version}`;
+      const key = moduleKey(module.manifest);
       if (manifests.has(key)) throw new Error(`Packages repeat Module ${key}`);
       for (const specifier of new Set([key, ...(module.specifiers ?? [])])) {
         if (specifier.trim().length === 0) throw new Error(`${key} declares an empty Module specifier`);
@@ -38,11 +36,10 @@ export function verifyPackageContributions(packages: readonly PackageContributio
       manifests.set(key, module);
     }
     for (const facet of item.facets ?? []) {
-      for (const offered of facet.offers ?? []) {
-        const key = `${facet.abi}\u0000${offered}`;
-        if (offers.has(key)) throw new Error(`Packages repeat ${facet.abi} offer ${offered}`);
-        offers.add(key);
-      }
+      if (facet.address === undefined) continue;
+      const key = `${facet.abi}\u0000${facet.address}`;
+      if (offers.has(key)) throw new Error(`Packages repeat ${facet.abi} offer ${facet.address}`);
+      offers.add(key);
     }
   }
 }

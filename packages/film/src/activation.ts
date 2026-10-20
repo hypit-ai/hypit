@@ -1,4 +1,4 @@
-import { createAdmissionPackageFacet } from "@hypit/hypit/admission";
+import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
 import { createProducerPackageFacet } from "@hypit/hypit/producer";
 import { createMarkupSurfaceFacet } from "@hypit/hypit/markup";
 import { createStudioCompanionFacet } from "@hypit/studio-companion";
@@ -12,7 +12,7 @@ export const hypitPackage = {
   format: "hypit.package@1" as const,
   modules: [{ manifest: filmManifest }],
   facets: [
-    ...[filmComponent].flatMap((component) => [createProducerPackageFacet(component), createAdmissionPackageFacet(component)]),
+    ...[filmComponent].flatMap((component) => [createProducerPackageFacet(component), createRefinementPackageFacet(component)]),
     createMarkupSurfaceFacet({
       module: filmModuleRef,
       declaration: filmMarkupSurfaces.find((item) => item.name === "film")!, handler: decodeFilmSurface,

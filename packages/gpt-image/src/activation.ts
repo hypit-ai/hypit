@@ -1,4 +1,4 @@
-import { createAdmissionPackageFacet } from "@hypit/hypit/admission";
+import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
 import { createProducerPackageFacet } from "@hypit/hypit/producer";
 import { createMarkupSurfaceFacet } from "@hypit/hypit/markup";
 
@@ -24,8 +24,7 @@ export const hypitPackage = {
     manifest: gptImageCleanManifest,
   }],
   facets: [
-    ...[gptImageComponent].flatMap((component) => [createProducerPackageFacet(component), createAdmissionPackageFacet(component)]),
-    gptImageDefinition.facet,
+    ...[gptImageComponent].flatMap((component) => [createProducerPackageFacet(component), createRefinementPackageFacet(component)]),
     createMarkupSurfaceFacet({
       module: gptImageModuleRef,
     declaration: gptImageMarkupSurfaces.find((item) => item.name === "image")!,

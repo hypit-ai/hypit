@@ -85,7 +85,7 @@ const unsigned = { kind: "number", integer: true, minimum: 0 } as const;
 const object = (fields: Readonly<Record<string, { readonly schema: ValueSchema; readonly optional?: boolean }>>, allowUnknown = false): ValueSchema => ({
   kind: "object", fields, ...(allowUnknown ? { allowUnknown: true } : {}),
 });
-const recipeColor = { kind: "string", format: "color", minLength: 7, maxLength: 9 } as const satisfies ValueSchema;
+const recipeColor = { kind: "string", minLength: 1 } as const satisfies ValueSchema;
 const rankingRecipeSchemas = {
   rows: { kind: "array", minItems: 1, items: object({
     id: { schema: { kind: "string", minLength: 1 } },
@@ -722,65 +722,59 @@ export const rankingManifest: ModuleManifest = {
   ],
   capabilities: [],
   producers: [
-    { name: rankingProducers.materializeTextItem.name, inputs: [{ name: "shell", type: rankingTypes.textItemShell }, { name: "content", type: textTypes.text }], outputs: [{ name: "spec", type: rankingTypes.itemSpec }], needs: [] },
-    { name: rankingProducers.createSpecs.name, inputs: [{ name: "header", type: rankingTypes.header }], outputs: [{ name: "set", type: rankingTypes.itemSpecs }], needs: [] },
-    { name: rankingProducers.appendSpec.name, inputs: [{ name: "set", type: rankingTypes.itemSpecs }, { name: "spec", type: rankingTypes.itemSpec }], outputs: [{ name: "set", type: rankingTypes.itemSpecs }], needs: [] },
-    { name: rankingProducers.createTriggeredCandidates.name, inputs: [], outputs: [
-      { name: "set", type: rankingTypes.triggeredCandidates },
-    ], needs: [] },
+    { name: rankingProducers.materializeTextItem.name, inputs: [{ name: "shell", type: rankingTypes.textItemShell }, { name: "content", type: textTypes.text }], result: { kind: "output" as const, name: "spec", type: rankingTypes.itemSpec } },
+    { name: rankingProducers.createSpecs.name, inputs: [{ name: "header", type: rankingTypes.header }], result: { kind: "output" as const, name: "set", type: rankingTypes.itemSpecs } },
+    { name: rankingProducers.appendSpec.name, inputs: [{ name: "set", type: rankingTypes.itemSpecs }, { name: "spec", type: rankingTypes.itemSpec }], result: { kind: "output" as const, name: "set", type: rankingTypes.itemSpecs } },
+    { name: rankingProducers.createTriggeredCandidates.name, inputs: [], result: { kind: "output" as const, name: "set", type: rankingTypes.triggeredCandidates } },
     { name: rankingProducers.appendTriggeredCandidate.name, inputs: [
       { name: "set", type: rankingTypes.triggeredCandidates }, { name: "spec", type: rankingTypes.itemSpec },
       { name: "activation", type: temporalTypes.instant },
-    ], outputs: [{ name: "set", type: rankingTypes.triggeredCandidates }], needs: [] },
+    ], result: { kind: "output" as const, name: "set", type: rankingTypes.triggeredCandidates } },
     { name: rankingProducers.schedule.name, inputs: [
       { name: "header", type: rankingTypes.header }, { name: "items", type: rankingTypes.itemSpecs },
       { name: "timeline", type: timelineTypes.timeline },
       { name: "outer", type: temporalTypes.window }, { name: "candidates", type: rankingTypes.triggeredCandidates },
       { name: "terminal", type: temporalTypes.instant },
-    ], outputs: [{ name: "schedule", type: rankingTypes.schedule }], needs: [] },
-    { name: rankingProducers.createTierWindows.name, inputs: [], outputs: [
-      { name: "set", type: rankingTypes.tierWindows },
-    ], needs: [] },
+    ], result: { kind: "output" as const, name: "schedule", type: rankingTypes.schedule } },
+    { name: rankingProducers.createTierWindows.name, inputs: [], result: { kind: "output" as const, name: "set", type: rankingTypes.tierWindows } },
     { name: rankingProducers.appendTierWindow.name, inputs: [
       { name: "set", type: rankingTypes.tierWindows }, { name: "spec", type: rankingTypes.itemSpec },
       { name: "window", type: temporalTypes.window },
-    ], outputs: [{ name: "set", type: rankingTypes.tierWindows }], needs: [] },
+    ], result: { kind: "output" as const, name: "set", type: rankingTypes.tierWindows } },
     { name: rankingProducers.tierSchedule.name, inputs: [
       { name: "header", type: rankingTypes.header }, { name: "items", type: rankingTypes.itemSpecs },
       { name: "timeline", type: timelineTypes.timeline },
       { name: "outer", type: temporalTypes.window }, { name: "windows", type: rankingTypes.tierWindows },
-    ], outputs: [{ name: "schedule", type: rankingTypes.schedule }], needs: [] },
-    { name: rankingProducers.createColumnWindows.name, inputs: [], outputs: [
-      { name: "set", type: rankingTypes.columnWindows },
-    ], needs: [] },
+    ], result: { kind: "output" as const, name: "schedule", type: rankingTypes.schedule } },
+    { name: rankingProducers.createColumnWindows.name, inputs: [], result: { kind: "output" as const, name: "set", type: rankingTypes.columnWindows } },
     { name: rankingProducers.appendColumnWindow.name, inputs: [
       { name: "set", type: rankingTypes.columnWindows }, { name: "spec", type: rankingTypes.itemSpec },
       { name: "window", type: temporalTypes.window },
-    ], outputs: [{ name: "set", type: rankingTypes.columnWindows }], needs: [] },
+    ], result: { kind: "output" as const, name: "set", type: rankingTypes.columnWindows } },
     { name: rankingProducers.columnSchedule.name, inputs: [
       { name: "header", type: rankingTypes.header }, { name: "items", type: rankingTypes.itemSpecs },
       { name: "timeline", type: timelineTypes.timeline },
       { name: "outer", type: temporalTypes.window }, { name: "windows", type: rankingTypes.columnWindows },
-    ], outputs: [{ name: "schedule", type: rankingTypes.schedule }], needs: [] },
+    ], result: { kind: "output" as const, name: "schedule", type: rankingTypes.schedule } },
     ...([
       [rankingProducers.createTierItems, rankingTypes.tierItems],
       [rankingProducers.createColumnItems, rankingTypes.columnItems],
       [rankingProducers.createTopThreeItems, rankingTypes.topThreeItems],
     ] as const).map(([producer, type]) => ({
-      name: producer.name, inputs: [], outputs: [{ name: "set", type }], needs: [],
+      name: producer.name, inputs: [], result: { kind: "output" as const, name: "set", type },
     })),
-    { name: rankingProducers.appendTierItem.name, inputs: [{ name: "set", type: rankingTypes.tierItems }, { name: "spec", type: rankingTypes.itemSpec }, { name: "icon", type: mediaTypes.blobArtifact }], outputs: [{ name: "set", type: rankingTypes.tierItems }], needs: [] },
+    { name: rankingProducers.appendTierItem.name, inputs: [{ name: "set", type: rankingTypes.tierItems }, { name: "spec", type: rankingTypes.itemSpec }, { name: "icon", type: mediaTypes.blobArtifact }], result: { kind: "output" as const, name: "set", type: rankingTypes.tierItems } },
     ...([
       [rankingProducers.appendColumnItem, rankingTypes.columnItems],
       [rankingProducers.appendTopThreeItem, rankingTypes.topThreeItems],
     ] as const).map(([producer, type]) => ({
-      name: producer.name, inputs: [{ name: "set", type }, { name: "spec", type: rankingTypes.itemSpec }], outputs: [{ name: "set", type }], needs: [],
+      name: producer.name, inputs: [{ name: "set", type }, { name: "spec", type: rankingTypes.itemSpec }], result: { kind: "output" as const, name: "set", type },
     })),
     ...([
       [rankingProducers.appendColumnIconItem, rankingTypes.columnItems],
       [rankingProducers.appendTopThreeIconItem, rankingTypes.topThreeItems],
     ] as const).map(([producer, type]) => ({
-      name: producer.name, inputs: [{ name: "set", type }, { name: "spec", type: rankingTypes.itemSpec }, { name: "icon", type: mediaTypes.blobArtifact }], outputs: [{ name: "set", type }], needs: [],
+      name: producer.name, inputs: [{ name: "set", type }, { name: "spec", type: rankingTypes.itemSpec }, { name: "icon", type: mediaTypes.blobArtifact }], result: { kind: "output" as const, name: "set", type },
     })),
     ...programDefinitions.flatMap(([programType, styleType, setType, programProducer, eventProducer, renderProducer]) => [
       { name: programProducer.name, inputs: [
@@ -789,23 +783,23 @@ export const rankingManifest: ModuleManifest = {
           ? [{ name: "within", type: spatialTypes.frame }] : []),
         { name: "frame", type: spatialTypes.frame }, { name: "schedule", type: rankingTypes.schedule },
         { name: "style", type: styleType }, { name: "set", type: setType },
-      ], outputs: [{ name: "program", type: programType }], needs: [] },
+      ], result: { kind: "output" as const, name: "program", type: programType } },
       { name: eventProducer.name, inputs: [
         { name: "schedule", type: rankingTypes.schedule }, { name: "style", type: styleType }, { name: "specs", type: rankingTypes.itemSpecs },
-      ], outputs: [{ name: "events", type: rankingTypes.soundEvents }], needs: [] },
-      { name: renderProducer.name, inputs: [{ name: "timeline", type: timelineTypes.timeline }, { name: "program", type: programType }], outputs: [{ name: "track", type: compositionTypes.visualTrack }], needs: [] },
+      ], result: { kind: "output" as const, name: "events", type: rankingTypes.soundEvents } },
+      { name: renderProducer.name, inputs: [{ name: "timeline", type: timelineTypes.timeline }, { name: "program", type: programType }], result: { kind: "output" as const, name: "track", type: compositionTypes.visualTrack } },
     ]),
-    { name: rankingProducers.createSounds.name, inputs: [], outputs: [{ name: "sounds", type: rankingTypes.sounds }], needs: [] },
+    { name: rankingProducers.createSounds.name, inputs: [], result: { kind: "output" as const, name: "sounds", type: rankingTypes.sounds } },
     ...([
       rankingProducers.appendAppearSound,
       rankingProducers.appendMoveSound,
     ] as const).map((producer) => ({
-      name: producer.name, inputs: [{ name: "sounds", type: rankingTypes.sounds }, { name: "media", type: mediaTypes.synchronized }], outputs: [{ name: "sounds", type: rankingTypes.sounds }], needs: [],
+      name: producer.name, inputs: [{ name: "sounds", type: rankingTypes.sounds }, { name: "media", type: mediaTypes.synchronized }], result: { kind: "output" as const, name: "sounds", type: rankingTypes.sounds },
     })),
     { name: rankingProducers.renderAudio.name, inputs: [
       { name: "timeline", type: timelineTypes.timeline }, { name: "events", type: rankingTypes.soundEvents },
       { name: "style", type: rankingTypes.soundStyle }, { name: "sounds", type: rankingTypes.sounds },
-    ], outputs: [{ name: "track", type: compositionTypes.audioTrack }], needs: [] },
+    ], result: { kind: "output" as const, name: "track", type: compositionTypes.audioTrack } },
   ],
 };
 

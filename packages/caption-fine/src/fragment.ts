@@ -26,7 +26,7 @@ export const fineCaptionTrackFragment = sealGraphFragment({
       inputs: {
         timing: input("timing"), program: input("program"), document: input("document"),
       },
-      result: { kind: "output", name: "schedule" },
+      result: { kind: "output" as const, name: "schedule" },
     },
     {
       id: "caption-fine:render",
@@ -35,7 +35,7 @@ export const fineCaptionTrackFragment = sealGraphFragment({
         schedule: operation("caption-fine:schedule"), program: input("program"),
         document: input("document"), timeline: input("timeline"), within: input("within"),
       },
-      result: { kind: "output", name: "track" },
+      result: { kind: "output" as const, name: "track" },
     },
   ],
   exports: [
@@ -69,7 +69,7 @@ export const fineCaptionRegionEvidenceFragment = sealGraphFragment({
       inputs: {
         timing: input("timing"), program: input("program"), document: input("document"),
       },
-      result: { kind: "output", name: "schedule" },
+      result: { kind: "output" as const, name: "schedule" },
     },
     {
       id: "caption-fine:render",
@@ -78,7 +78,7 @@ export const fineCaptionRegionEvidenceFragment = sealGraphFragment({
         schedule: operation("caption-fine:schedule"), program: input("program"),
         document: input("document"), timeline: input("timeline"), within: input("within"), regions: input("regions"),
       },
-      result: { kind: "output", name: "track" },
+      result: { kind: "output" as const, name: "track" },
     },
   ],
   exports: [

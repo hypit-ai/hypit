@@ -1,8 +1,8 @@
-import { fileReferenceIdentity, locateRepositoryBuildResultOutput } from "@hypit/hypit/result/node";
+import { buildResultOutput, fileReferenceIdentity, locateRepositoryBuildResultOutput } from "@hypit/hypit/result/node";
 import { isAbsolute, relative, resolve, sep } from "node:path";
 
 import { buildIdCreatedAt } from "@hypit/hypit/protocol";
-import type { StoredValue, TypeRef } from "@hypit/hypit/protocol";
+import type { Value, TypeRef } from "@hypit/hypit/protocol";
 import type {
   BuildResultFileRange,
   BuildResultManifest,
@@ -34,7 +34,7 @@ export type StudioBuildLibrary = {
     output: string,
   ) => Promise<{
     readonly type: TypeRef;
-    readonly value: StoredValue;
+    readonly value: Value;
     readonly attachments?: readonly import("@hypit/hypit/workspace").BlobAttachment[];
   } | undefined>;
   readonly openArtifact: (
@@ -95,7 +95,7 @@ function taskView(
     ...(view.run === undefined ? {} : { run: presentedPath(root, view.run.path) }),
     targets: result?.targets ?? view.targets,
     operations: view.operations.map((operation) => ({
-      status: operation.status,
+      status: operation.status === "received" ? "pending" : operation.status,
       ...(operation.progress?.phase === undefined ? {} : { phase: operation.progress.phase }),
       ...(operation.progress?.completed === undefined ? {} : { completed: operation.progress.completed }),
       ...(operation.progress?.total === undefined ? {} : { total: operation.progress.total }),
@@ -137,9 +137,9 @@ async function artifactsForResults(
       // Composite Outputs remain intact. Listing media never opens their Value Documents.
       if (entry.value.kind !== "build-file" && entry.value.kind !== "external-file" && entry.value.kind !== "build-output") return [];
       const description = entry.value.kind === "build-file" || entry.value.kind === "external-file"
-        ? { kind: "resource", mediaType: entry.value.mediaType }
+        ? { representation: "file" as const, mediaType: entry.value.mediaType, size: entry.value.size }
         : await repository.describeOutput(manifest.id, output);
-      if (description?.kind !== "resource" || (description.mediaType === undefined || !isMedia(description.mediaType))) return [];
+      if (description?.representation !== "file" || !isMedia(description.mediaType)) return [];
       if (media !== undefined && !description.mediaType.startsWith(`${media}/`)) return [];
       const resolved = entry.value.kind === "build-file"
         ? { build: manifest.id, output, value: entry.value }
@@ -285,7 +285,7 @@ export async function openStudioBuildLibrary(
     async renameArtifact(build, output, displayName) {
       const saved = presentationWrite.then(async () => {
         const updated = await results.updatePresentation(build, { outputDisplayNames: { [output]: displayName } });
-        return updated.outputs[output]?.displayName;
+        return buildResultOutput(updated, output)?.displayName;
       });
       presentationWrite = saved.catch(() => undefined);
       return await saved;

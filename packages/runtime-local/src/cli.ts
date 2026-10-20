@@ -1,7 +1,7 @@
 import { writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
-import { commandHint, hypitHostStateRoot, hypitProjectStateRoot, writeCliOutput } from "@hypit/hypit/cli";
+import { commandHint, hypitHostStateRoot, hypitProjectStateRoot, parseCliDecimalInteger, writeCliOutput } from "@hypit/hypit/cli";
 import type { CliApplicationContext, CliCommandModule, CliIo, CliMachineView, CliOutputOptions } from "@hypit/hypit/cli";
 import type { CanonicalValue } from "@hypit/hypit/protocol";
 
@@ -27,6 +27,8 @@ type LocalCommand = {
 
 /** Product choice consumed only by the Local Runtime command contribution. */
 export type LocalRuntimeCliDistribution = {
+  /** Physical Distribution root shown by path diagnostics and passed to the Worker Host. */
+  readonly packageRoot?: string;
   readonly initialRuntimeProfile?: CanonicalValue;
   openLocalRuntimeHost(path: string, options: {
     readonly packageRoot: string;
@@ -35,8 +37,8 @@ export type LocalRuntimeCliDistribution = {
 };
 
 function positiveInteger(value: string, name: string): number {
-  const parsed = Number(value);
-  if (!Number.isSafeInteger(parsed) || parsed < 1) throw new Error(`${name} requires a positive integer`);
+  const parsed = parseCliDecimalInteger(value);
+  if (parsed === undefined || parsed < 1) throw new Error(`${name} requires a positive integer`);
   return parsed;
 }
 
@@ -141,9 +143,13 @@ function write(io: CliIo, args: LocalCommand, machine: CliMachineView, title: st
   writeCliOutput(io, args.presentation, { kind: "operational", machine, title, status, facts, lines });
 }
 
-async function runLocal(argv: readonly string[], io: CliIo, context: CliApplicationContext): Promise<void> {
+async function runLocal(
+  argv: readonly string[],
+  io: CliIo,
+  context: CliApplicationContext,
+  localDistribution: LocalRuntimeCliDistribution,
+): Promise<void> {
   const args = parse(argv, context.cwd);
-  const localDistribution = context.distribution as typeof context.distribution & LocalRuntimeCliDistribution;
   if (args.root === "_worker") {
     const workerPackageRoot = args.packageRoot ?? localDistribution.packageRoot;
     if (args.profile === undefined || args.readyFile === undefined || args.workerOwner === undefined || workerPackageRoot === undefined) {
@@ -360,11 +366,16 @@ function writeHelp(argv: readonly string[], io: CliIo): void {
     + "  hypit paths [--project <project>] [--runtime <profile>]\n");
 }
 
-export const cliCommandModules = [{
-  format: "hypit.cli-command@1",
-  id: "@hypit/runtime-local#cli",
-  commands: ["runtime", "programs", "paths", "_worker"],
-  writeRootHelp,
-  writeHelp,
-  run: runLocal,
-}] as const satisfies readonly CliCommandModule[];
+/** Bind Local Runtime commands to their exact Host port at application assembly. */
+export function createLocalRuntimeCliCommandModules(
+  distribution: LocalRuntimeCliDistribution,
+): readonly CliCommandModule[] {
+  return [{
+    format: "hypit.cli-command@1",
+    id: "@hypit/runtime-local#cli",
+    commands: ["runtime", "programs", "paths", "_worker"],
+    writeRootHelp,
+    writeHelp,
+    run: async (argv, io, context) => await runLocal(argv, io, context, distribution),
+  }];
+}

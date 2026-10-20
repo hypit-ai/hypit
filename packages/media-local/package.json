@@ -1,6 +1,6 @@
 {
   "name": "@hypit/media-local",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
   "type": "module",
@@ -17,15 +17,15 @@
     "activation": "./src/activation.ts"
   },
   "dependencies": {
-    "@hypit/media": "workspace:^0.1.0",
-    "@hypit/media-operations": "workspace:^0.2.0",
-    "@hypit/speech-evidence": "workspace:^0.1.0",
-    "@hypit/timeline": "workspace:^0.1.0",
+    "@hypit/media": "workspace:^0.2.0",
+    "@hypit/media-operations": "workspace:^0.3.0",
+    "@hypit/speech-evidence": "workspace:^0.2.0",
+    "@hypit/timeline": "workspace:^0.1.1",
     "sharp": "0.35.4"
   },
   "peerDependencies": {
-    "@hypit/hypit": "workspace:^0.3.1",
-    "@hypit/runtime-local": "workspace:^0.1.1"
+    "@hypit/hypit": "workspace:^0.4.0",
+    "@hypit/runtime-local": "workspace:^0.2.0"
   },
   "devDependencies": {
     "@hypit/blob": "workspace:*",

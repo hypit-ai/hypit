@@ -1,5 +1,6 @@
 import { sameType } from "@hypit/hypit/protocol";
-import type { BuildState, ProducerRef, ProducerStep, StoredValue, TypeRef, TypedRecord } from "@hypit/hypit/protocol";
+import type { BuildState, ProducerRef, ProducerStep, Value, TypeRef, TypedRecord } from "@hypit/hypit/protocol";
+import type { BuildCandidateSelection } from "@hypit/hypit/kernel";
 import { temporalTypes } from "@hypit/temporal";
 import type {
   StudioTemporalBinding,
@@ -22,26 +23,30 @@ export type FindTemporalRelation = (
   output: string,
 ) => StudioTemporalRelationCompanion | undefined;
 
-function inline(value: StoredValue): unknown | undefined {
-  return value.kind === "inline" ? value.value : undefined;
+/** Executed graph facts needed for Studio lineage; scheduling and Runtime state stay outside this boundary. */
+export type ExecutedGraph = Pick<BuildState, "program" | "plan" | "records">;
+
+function valueOf(value: Value): unknown | undefined {
+  return value;
 }
 
-function recordIndex(state: BuildState): ReadonlyMap<string, TypedRecord> {
+function recordIndex(state: ExecutedGraph): ReadonlyMap<string, TypedRecord> {
   return new Map([...state.program.records, ...state.records].map((record) => [record.id, record] as const));
 }
 
-function producingSteps(state: BuildState): ReadonlyMap<string, ProducerStep> {
-  return new Map(state.plan.steps.flatMap((step) =>
-    Object.values(step.outputs).map((record) => [record, step] as const)));
+function producingSteps(state: ExecutedGraph): ReadonlyMap<string, ProducerStep> {
+  return new Map(state.plan.steps
+    .filter((step) => step.result.kind === "output")
+    .map((step) => [step.result.record, step] as const));
 }
 
 function relationValue(records: ReadonlyMap<string, TypedRecord>, id: string): StudioTemporalRelationValue | undefined {
   const found = records.get(id);
-  return found === undefined ? undefined : { record: id, type: found.type, value: inline(found.value) };
+  return found === undefined ? undefined : { record: id, type: found.type, value: valueOf(found.value) };
 }
 
 function fixedInstant(record: TypedRecord): StudioTemporalInstantProjection | undefined {
-  const held = inline(record.value) as {
+  const held = valueOf(record.value) as {
     readonly id?: unknown;
     readonly timelineId?: unknown;
     readonly frame?: unknown;
@@ -59,15 +64,15 @@ function fixedInstant(record: TypedRecord): StudioTemporalInstantProjection | un
 }
 
 function fixedWindow(record: TypedRecord): StudioTemporalProjection | undefined {
-  const held = inline(record.value) as {
+  const held = valueOf(record.value) as {
     readonly start?: unknown;
     readonly end?: unknown;
     readonly span?: { readonly startFrame?: unknown; readonly endFrameExclusive?: unknown };
   } | undefined;
   const startRecord: TypedRecord = { ...record, id: `${record.id}:start`,
-    value: { kind: "inline", value: held?.start as import("@hypit/hypit/protocol").CanonicalValue } };
+    value: (held?.start as import("@hypit/hypit/protocol").CanonicalValue) };
   const endRecord: TypedRecord = { ...record, id: `${record.id}:end`,
-    value: { kind: "inline", value: held?.end as import("@hypit/hypit/protocol").CanonicalValue } };
+    value: (held?.end as import("@hypit/hypit/protocol").CanonicalValue) };
   const start = fixedInstant(startRecord);
   const end = fixedInstant(endRecord);
   return start === undefined || end === undefined || !Number.isSafeInteger(held?.span?.startFrame)
@@ -94,7 +99,9 @@ function traceRecord(input: {
   if (record === undefined || input.active.has(input.record)) return undefined;
   const step = input.producers.get(input.record);
   if (step !== undefined && input.relationFor !== undefined) {
-    const outputName = Object.entries(step.outputs).find(([, id]) => id === input.record)?.[0];
+    const outputName = step.result.kind === "output" && step.result.record === input.record
+      ? step.result.name
+      : undefined;
     const relation = outputName === undefined ? undefined : input.relationFor(step.producer, outputName);
     if (relation?.trace !== undefined) {
       const output = relationValue(input.records, input.record);
@@ -127,7 +134,7 @@ function traceRecord(input: {
 
 /** Read one exact executed Temporal record through package-owned relation semantics. */
 export function executedTemporalProjection(
-  state: BuildState,
+  state: ExecutedGraph,
   record: string,
   identify?: IdentifyTemporalSource,
   relationFor?: FindTemporalRelation,
@@ -138,8 +145,12 @@ export function executedTemporalProjection(
   return traced?.kind === "instant" || traced?.kind === "window" ? traced : undefined;
 }
 
-function closure(state: BuildState, output: string): ReadonlySet<string> {
-  const selected = state.plan.outputBindings.find((selection) => selection.output === output);
+function closure(
+  state: ExecutedGraph,
+  selections: readonly Pick<BuildCandidateSelection, "output" | "record">[],
+  output: string,
+): ReadonlySet<string> {
+  const selected = selections.find((selection) => selection.output === output);
   if (selected === undefined) return new Set();
   const producers = producingSteps(state);
   const steps = new Set<string>();
@@ -161,29 +172,29 @@ function closure(state: BuildState, output: string): ReadonlySet<string> {
  * identity; packages explain relation meaning through their Companions.
  */
 export function executedTemporalBindings(
-  state: BuildState,
+  state: ExecutedGraph,
+  selections: readonly Pick<BuildCandidateSelection, "output" | "record">[],
   output: string,
   identify?: IdentifyTemporalSource,
   relationFor?: FindTemporalRelation,
 ): readonly StudioTemporalBinding[] {
   const records = recordIndex(state);
   const producers = producingSteps(state);
-  const stepIds = closure(state, output);
+  const stepIds = closure(state, selections, output);
   const steps = state.plan.steps.filter((step) => stepIds.has(step.id));
   return [...records.values()]
     .filter((record) => sameType(record.type, temporalTypes.instant) || sameType(record.type, temporalTypes.window))
     .flatMap((record): readonly StudioTemporalBinding[] => {
-      const held = inline(record.value) as { readonly id?: unknown; readonly subjectId?: unknown } | undefined;
+      const held = valueOf(record.value) as { readonly id?: unknown; readonly subjectId?: unknown } | undefined;
       if (typeof held?.id !== "string" || typeof held.subjectId !== "string") return [];
       const projection = executedTemporalProjection(state, record.id, identify, relationFor);
       if (projection === undefined) return [];
       const consumers = steps.flatMap((step) => Object.entries(step.inputs)
         .filter(([, child]) => child === record.id)
         .map(([name]) => {
-          const producesTemporal = Object.values(step.outputs).some((id) => {
-            const found = records.get(id);
-            return found !== undefined && (sameType(found.type, temporalTypes.instant) || sameType(found.type, temporalTypes.window));
-          });
+          const produced = step.result.kind === "output" ? records.get(step.result.record) : undefined;
+          const producesTemporal = produced !== undefined
+            && (sameType(produced.type, temporalTypes.instant) || sameType(produced.type, temporalTypes.window));
           return {
             step: step.id,
             producer: { module: { ...step.producer.module }, name: step.producer.name },
@@ -192,7 +203,7 @@ export function executedTemporalBindings(
             inputs: Object.entries(step.inputs).flatMap(([inputName, id]) => {
               const found = records.get(id);
               if (found === undefined) return [];
-              const value = inline(found.value);
+              const value = valueOf(found.value);
               return [{ name: inputName, record: id, type: { module: { ...found.type.module }, name: found.type.name },
                 ...(value === undefined ? {} : { value: structuredClone(value) }) }];
             }).sort((left, right) => left.name.localeCompare(right.name)),

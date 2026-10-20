@@ -1,15 +1,17 @@
+import { capabilityKey } from "@hypit/hypit/protocol";
 import {
-  compileWireRequest,
-  selectWireModelForRequest,
   generationTypes,
   sealGeneratedImageSet,
   sealGeneratedVideoSet,
 } from "@hypit/generation";
-import type { GenerationArtifactUrlResolver, GenerationRequest, GenerationWireMapping } from "@hypit/generation";
+import type { ProviderFieldRequest } from "@hypit/generation/provider";
+import { materializeWireRequest, planWireRequest, selectWireModelForRequest } from "@hypit/generation/provider";
+import type { GenerationArtifactUrlResolver, GenerationWireMapping } from "@hypit/generation/provider";
 import { canonicalize } from "@hypit/hypit/protocol";
-import type { BlobRef, CapabilityRef, CanonicalValue, StoredValue, TypeRef } from "@hypit/hypit/protocol";
+import type { BlobRef, CapabilityRef, CanonicalValue, Value, TypeRef } from "@hypit/hypit/protocol";
 import type { EndpointRequest, EndpointSupport } from "@hypit/hypit/endpoint";
 import { tokenDanceMappings } from "./mapping.js";
+import type { TokenDanceMapping } from "./mapping.js";
 
 /** Which TokenDance protocol a capability submits through. */
 export type TokenDanceProtocol = "ark-video" | "ark-image" | "minimax-video";
@@ -41,21 +43,21 @@ export const tokenDanceMediaLimits: Readonly<Record<TokenDanceProtocol, TokenDan
   "minimax-video": { image: 30 * MB, video: 50 * MB, audio: 15 * MB },
 };
 
-export type TokenDanceRoute = GenerationWireMapping & {
+export type TokenDanceRoute = TokenDanceMapping & {
   readonly key: string;
   readonly returns: TypeRef;
   readonly protocol: TokenDanceProtocol;
   readonly mediaLimits: TokenDanceMediaLimits;
   readonly supports: (request: EndpointRequest) => EndpointSupport;
   readonly prepare: (constraints: CanonicalValue) => TokenDancePreparedRequest;
-  readonly packageResult: (artifacts: readonly BlobRef[]) => StoredValue;
+  readonly packageResult: (artifacts: readonly BlobRef[]) => Value;
 };
 
-function scalar(request: GenerationRequest, port: string): string | number | boolean | undefined {
+function scalar(request: ProviderFieldRequest, port: string): string | number | boolean | undefined {
   const value = request.ports[port]?.[0];
   return typeof value === "string" || typeof value === "number" || typeof value === "boolean" ? value : undefined;
 }
-function present(request: GenerationRequest, port: string): boolean {
+function present(request: ProviderFieldRequest, port: string): boolean {
   return (request.ports[port]?.length ?? 0) > 0;
 }
 function strings(value: unknown): readonly string[] {
@@ -69,7 +71,7 @@ const SEEDREAM_SIZES: Readonly<Record<string, Readonly<Record<string, string>>>>
   ultra: { "1:1": "4096x4096", "4:3": "4704x3520", "3:4": "3520x4704", "16:9": "5504x3040", "9:16": "3040x5504", "3:2": "4992x3328", "2:3": "3328x4992", "21:9": "6240x2656" },
 };
 
-function rejection(mapping: GenerationWireMapping, request: GenerationRequest): string | undefined {
+function rejection(mapping: GenerationWireMapping, request: ProviderFieldRequest): string | undefined {
   const ratio = scalar(request, "aspectRatio");
   if (mapping.capability.module.name === "@hypit/seedance") {
     if (mapping.capability.name === "seedance-2.5" && present(request, "firstFrame") && ratio !== "adaptive") {
@@ -147,41 +149,34 @@ function minimaxVideoBody(model: string, input: Record<string, unknown>): Record
   };
 }
 
-function capabilityKey(capability: CapabilityRef): string {
-  return `${capability.module.name}@${capability.module.version}#${capability.name}`;
-}
-
 export const tokenDanceRoutes: readonly TokenDanceRoute[] = tokenDanceMappings.map((mapping) => {
   const protocol: TokenDanceProtocol = mapping.capability.module.name === "@hypit/minimax-h3" ? "minimax-video"
-    : mapping.result === "image" ? "ark-image" : "ark-video";
+    : mapping.media === "image" ? "ark-image" : "ark-video";
   const body = protocol === "ark-video" ? arkVideoBody : protocol === "ark-image" ? arkImageBody : minimaxVideoBody;
   return {
     ...mapping,
     key: capabilityKey(mapping.capability),
-    returns: mapping.result === "image" ? generationTypes.imageSet : generationTypes.videoSet,
+    returns: mapping.media === "image" ? generationTypes.imageSet : generationTypes.videoSet,
     protocol,
     mediaLimits: tokenDanceMediaLimits[protocol],
     supports: (request) => {
-      const reason = rejection(mapping, request.constraints as unknown as GenerationRequest);
+      const reason = rejection(mapping, request.constraints as unknown as ProviderFieldRequest);
       return reason === undefined ? { status: "supported" } : { status: "unsupported", reason };
     },
     prepare: (constraints) => {
-      const request = constraints as unknown as GenerationRequest;
+      const request = constraints as unknown as ProviderFieldRequest;
       const reason = rejection(mapping, request);
       if (reason !== undefined) throw new Error(reason);
       const model = selectWireModelForRequest(mapping, request);
       return {
         model,
         protocol,
-        compile: async (resolve) => body(model, (await compileWireRequest(mapping, request, resolve)).input as Record<string, unknown>),
+        compile: async (resolve) => body(model, (await materializeWireRequest(planWireRequest(mapping, request), resolve)).input as Record<string, unknown>),
       };
     },
-    packageResult: (artifacts) => ({
-      kind: "inline",
-      value: canonicalize(mapping.result === "image"
+    packageResult: (artifacts) => ((canonicalize(mapping.media === "image"
         ? sealGeneratedImageSet({ images: artifacts })
-        : sealGeneratedVideoSet({ videos: artifacts })),
-    }),
+        : sealGeneratedVideoSet({ videos: artifacts })))),
   };
 });
 

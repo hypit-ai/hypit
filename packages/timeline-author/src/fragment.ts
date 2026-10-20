@@ -128,14 +128,14 @@ export function compileTimelineAuthorFragment(options: TimelineAuthorFragmentOpt
     addInline(timelineAuthorTypes.identity, { id, subjectId }, "identity");
   const originRef = (): FragmentOperationRef => addOperation({
     id: "point:start", producer: timelineAuthorProducers.origin,
-    inputs: { clock: input("clock") }, result: { kind: "output", name: "point" },
+    inputs: { clock: input("clock") }, result: { kind: "output" as const, name: "point" },
   });
   const durationExtent = (raw: string, author?: TimelineAuthorBinding): FragmentOperationRef => {
     const duration = parseDuration(raw, "Timeline construction duration");
     const durationInput = addInline(timelineAuthorTypes.duration,
       { duration, ...(author === undefined ? {} : { author }) }, "duration", author);
     return addOperation({ id: `extent:duration:${generated}`, producer: timelineAuthorProducers.duration,
-      inputs: { clock: input("clock"), duration: durationInput }, result: { kind: "output", name: "extent" } });
+      inputs: { clock: input("clock"), duration: durationInput }, result: { kind: "output" as const, name: "extent" } });
   };
   const resolvedExtent = (declarationId: string, name: string): FragmentOperationRef => {
     if (!extentInputs.some((item) => item.name === name)) {
@@ -143,7 +143,7 @@ export function compileTimelineAuthorFragment(options: TimelineAuthorFragmentOpt
       extentInputs.push({ name, declarationId });
     }
     return addOperation({ id: `decl:${declarationId}:extent`, producer: timelineAuthorProducers.resolvedExtent,
-      inputs: { clock: input("clock"), extent: input(name) }, result: { kind: "output", name: "extent" } });
+      inputs: { clock: input("clock"), extent: input(name) }, result: { kind: "output" as const, name: "extent" } });
   };
   const declarationExtent = (declaration: Extract<TimelineAuthorDeclaration, { readonly kind: "window" }>): FragmentOperationRef => {
     if (declaration.duration !== undefined) return durationExtent(declaration.duration,
@@ -159,7 +159,7 @@ export function compileTimelineAuthorFragment(options: TimelineAuthorFragmentOpt
     assert(declaration.kind === "window", `Timeline Instant ${id} has no ${boundary} boundary.`);
     return addOperation({ id: `decl:${id}:${boundary}`,
       producer: boundary === "start" ? timelineAuthorProducers.spanStart : timelineAuthorProducers.spanEnd,
-      inputs: { span: spanRef(id) }, result: { kind: "output", name: "point" } });
+      inputs: { span: spanRef(id) }, result: { kind: "output" as const, name: "point" } });
   };
   const pointExpression = (source: string, author?: TimelineAuthorBinding): FragmentOperationRef => {
     const { base, direction, duration } = splitOffset(source);
@@ -172,7 +172,7 @@ export function compileTimelineAuthorFragment(options: TimelineAuthorFragmentOpt
       const spec = addInline(timelineAuthorTypes.offset,
         { direction: 1, ...(owned === undefined ? {} : { author: owned }) }, "offset", owned);
       ref = addOperation({ id: `point:absolute:${generated}`, producer: timelineAuthorProducers.offset,
-        inputs: { point: originRef(), extent, spec }, result: { kind: "output", name: "point" } });
+        inputs: { point: originRef(), extent, spec }, result: { kind: "output" as const, name: "point" } });
     } else {
       const aggregate = /^(earliest|latest)\((.*)\)$/u.exec(base);
       if (aggregate !== null) {
@@ -182,7 +182,7 @@ export function compileTimelineAuthorFragment(options: TimelineAuthorFragmentOpt
         for (const term of terms.slice(1)) {
           ref = addOperation({ id: `point:${aggregate[1]}:${++generated}`,
             producer: aggregate[1] === "earliest" ? timelineAuthorProducers.earliest : timelineAuthorProducers.latest,
-            inputs: { left: ref, right: pointExpression(term) }, result: { kind: "output", name: "point" } });
+            inputs: { left: ref, right: pointExpression(term) }, result: { kind: "output" as const, name: "point" } });
         }
       } else {
         const boundary = /^([A-Za-z][A-Za-z0-9_.:#-]{0,191})\.(start|end)$/u.exec(base);
@@ -201,13 +201,13 @@ export function compileTimelineAuthorFragment(options: TimelineAuthorFragmentOpt
     const spec = addInline(timelineAuthorTypes.offset,
       { direction, ...(owned === undefined ? {} : { author: owned }) }, "offset", owned);
     return addOperation({ id: `point:offset:${++generated}`, producer: timelineAuthorProducers.offset,
-      inputs: { point: ref, extent, spec }, result: { kind: "output", name: "point" } });
+      inputs: { point: ref, extent, spec }, result: { kind: "output" as const, name: "point" } });
   };
 
   for (const declaration of options.declarations) {
     if (declaration.kind === "instant") {
       addOperation({ id: `decl:${declaration.id}:point`, producer: timelineAuthorProducers.aliasPoint,
-        inputs: { point: pointExpression(declaration.at, { binding: "at", declarationId: declaration.id }) }, result: { kind: "output", name: "point" } });
+        inputs: { point: pointExpression(declaration.at, { binding: "at", declarationId: declaration.id }) }, result: { kind: "output" as const, name: "point" } });
       continue;
     }
     const hasFrom = declaration.from !== undefined;
@@ -221,25 +221,25 @@ export function compileTimelineAuthorFragment(options: TimelineAuthorFragmentOpt
           start: pointExpression(declaration.from!, { binding: "from", declarationId: declaration.id }),
           end: pointExpression(declaration.until!, { binding: "until", declarationId: declaration.id }),
         },
-        result: { kind: "output", name: "span" } });
+        result: { kind: "output" as const, name: "span" } });
     } else if (hasFrom) {
       addOperation({ id: `decl:${declaration.id}:span`, producer: timelineAuthorProducers.span,
         inputs: { start: pointExpression(declaration.from!, { binding: "from", declarationId: declaration.id }), extent: declarationExtent(declaration) },
-        result: { kind: "output", name: "span" } });
+        result: { kind: "output" as const, name: "span" } });
     } else {
       addOperation({ id: `decl:${declaration.id}:span`, producer: timelineAuthorProducers.spanEnding,
         inputs: { end: pointExpression(declaration.until!, { binding: "until", declarationId: declaration.id }), extent: declarationExtent(declaration) },
-        result: { kind: "output", name: "span" } });
+        result: { kind: "output" as const, name: "span" } });
     }
   }
 
   addOperation({ id: "point:end", producer: timelineAuthorProducers.aliasPoint,
-    inputs: { point: pointExpression(options.end, { binding: "end" }) }, result: { kind: "output", name: "point" } });
+    inputs: { point: pointExpression(options.end, { binding: "end" }) }, result: { kind: "output" as const, name: "point" } });
   addOperation({ id: "timeline", producer: timelineAuthorProducers.finalize,
     inputs: { header: input("header"), clock: input("clock"), end: operation("point:end") },
-    result: { kind: "output", name: "timeline" } });
+    result: { kind: "output" as const, name: "timeline" } });
   addOperation({ id: "span:window", producer: timelineAuthorProducers.spanBetween,
-    inputs: { start: originRef(), end: operation("point:end") }, result: { kind: "output", name: "span" } });
+    inputs: { start: originRef(), end: operation("point:end") }, result: { kind: "output" as const, name: "span" } });
 
   const exports: { name: string; type: TypeRef; root: FragmentOperationRef }[] = [
     { name: "timeline", type: timelineTypes.timeline, root: operation("timeline") },
@@ -249,7 +249,7 @@ export function compileTimelineAuthorFragment(options: TimelineAuthorFragmentOpt
     const operationId = `materialize:${port}`;
     addOperation({ id: operationId, producer: timelineAuthorProducers.instant,
       inputs: { timeline: operation("timeline"), point, spec: identitySpec(id, subjectId) },
-      result: { kind: "output", name: "instant" } });
+      result: { kind: "output" as const, name: "instant" } });
     exports.push({ name: port, type: temporalTypes.instant, root: operation(operationId) });
     outputNames.push({ port, suffix });
   };
@@ -257,7 +257,7 @@ export function compileTimelineAuthorFragment(options: TimelineAuthorFragmentOpt
     const operationId = `materialize:${port}`;
     addOperation({ id: operationId, producer: timelineAuthorProducers.window,
       inputs: { timeline: operation("timeline"), span, spec: identitySpec(id) },
-      result: { kind: "output", name: "window" } });
+      result: { kind: "output" as const, name: "window" } });
     exports.push({ name: port, type: temporalTypes.window, root: operation(operationId) });
     outputNames.push({ port, suffix });
   };

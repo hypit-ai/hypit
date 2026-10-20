@@ -9,6 +9,7 @@ const source = { kind: "blob" as const, resource: "res_matting-source" as const,
 
 test("portrait matting binds a source video and publishes an ordinary video edge for Normalize", async () => {
   assert.deepEqual(sealPortraitMattingRequest({ source: [{ role: "video", artifact: source }], format: ["MOV"] }).ports.format, ["MOV"]);
+  assert.deepEqual(sealPortraitMattingRequest({ source: [{ role: "video", artifact: source }] }).ports.format, ["WEBM"]);
   assert.throws(() => sealPortraitMattingRequest({ source: [{ role: "image", artifact: { ...source, mediaType: "image/png" } }] }), /video|role/u);
   assert.throws(() => sealPortraitMattingRequest({ source: [{ role: "video", artifact: source }], format: ["MP4"] }), /format/u);
   const result = await decodePortraitMattingSurface({
@@ -20,5 +21,5 @@ test("portrait matting binds a source video and publishes an ordinary video edge
   });
   assert.deepEqual(result.components[0]!.outputs, { video: "cutout.video" });
   assert.deepEqual(result.components[0]!.inputs["source:artifact"], { kind: "record", id: "performance.video" });
-  assert.deepEqual(result.fragments[0]!.exports.find((item) => item.name === "video")?.type, blobTypes.blob);
+  assert.deepEqual(result.components[0]!.fragment.exports.find((item) => item.name === "video")?.type, blobTypes.blob);
 });

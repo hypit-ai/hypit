@@ -1,6 +1,8 @@
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { request as httpRequest } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { Readable } from "node:stream";
 import { sealAlignedTranscriptEvidence, speechEvidenceTypes } from "@hypit/speech-evidence";
 import type { AlignedTranscriptEvidence } from "@hypit/speech-evidence";
 import type { EndpointInvocationContext, EndpointFulfillment } from "@hypit/hypit/endpoint";
@@ -56,6 +58,29 @@ function positiveInteger(value: number, subject: string): number {
 
 export const interpretWhisperXResponse = interpretWhisperXTranscript;
 
+// Long CPU transcriptions send no headers until finished; global fetch would abort them after
+// undici's 300 s headers timeout, so the request lifetime is governed by `signal` alone.
+function postJson(url: string, body: string, signal: AbortSignal): Promise<Response> {
+  return new Promise((resolve, reject) => {
+    const outgoing = httpRequest(url, {
+      method: "POST",
+      headers: { "content-type": "application/json", "content-length": Buffer.byteLength(body) },
+      signal,
+    }, (incoming) => {
+      const headers = new Headers();
+      for (const [name, value] of Object.entries(incoming.headers)) {
+        if (typeof value === "string") headers.set(name, value);
+      }
+      resolve(new Response(Readable.toWeb(incoming) as ReadableStream<Uint8Array>, {
+        status: incoming.statusCode ?? 500,
+        headers,
+      }));
+    });
+    outgoing.on("error", reject);
+    outgoing.end(body);
+  });
+}
+
 async function limitedJson(response: Response, maxBytes: number, subject: string): Promise<{
   readonly value: unknown;
 }> {
@@ -97,7 +122,7 @@ async function limitedJson(response: Response, maxBytes: number, subject: string
 }
 
 function result(value: CanonicalValue): EndpointFulfillment {
-  return { value: { kind: "inline", value } };
+  return { value };
 }
 
 export function createLocalWhisperXProvider(config: CreateLocalWhisperXProviderOptions) {
@@ -164,15 +189,10 @@ export function createLocalWhisperXProvider(config: CreateLocalWhisperXProviderO
             && healthValue.batchSize === expectedBatchSize,
           "WhisperX service runtime identity differs from the configured Provider");
           await context.reportProgress?.({ phase: "Transcribing and aligning words" });
-          const transcriptionResponse = await fetch(`${normalizedBaseUrl}/transcribe`, {
-            method: "POST",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify({
-              audio_path: audioPath,
-              language: request.language,
-            }),
-            signal,
-          });
+          const transcriptionResponse = await postJson(`${normalizedBaseUrl}/transcribe`, JSON.stringify({
+            audio_path: audioPath,
+            language: request.language,
+          }), signal);
           const raw = await limitedJson(transcriptionResponse, maxResponseBytes, "WhisperX transcription");
           assert(raw.value !== null && typeof raw.value === "object" && !Array.isArray(raw.value),
             "WhisperX transcription response is invalid");

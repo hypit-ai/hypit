@@ -3,6 +3,7 @@ import type { CliApplication } from "./application.js";
 import { renderCliError } from "./output.js";
 import type { CliIo } from "./output.js";
 import { acceptSecretBytes } from "./secret-input.js";
+import { parseCliGlobalOptions } from "./global-options.js";
 
 export type NodeCliRunner = (argv: readonly string[], io: CliIo) => void | Promise<void>;
 
@@ -39,12 +40,10 @@ export async function runNodeCli(
   argv: readonly string[],
   run: NodeCliRunner,
 ): Promise<void> {
-  const json = argv.includes("--json");
-  const debug = argv.includes("--debug");
-  const colorIndex = argv.indexOf("--color");
-  const colorMode = argv.includes("--no-color")
-    ? "never"
-    : colorIndex >= 0 ? argv[colorIndex + 1] : "auto";
+  const global = parseCliGlobalOptions(argv);
+  const json = global.presentation.json;
+  const debug = global.debug;
+  const colorMode = global.presentation.color;
   const color = !json && colorMode !== "never" && process.env.TERM !== "dumb"
     && (colorMode === "always" || (process.env.NO_COLOR === undefined && process.stdout.isTTY === true));
   const unicode = process.env.TERM !== "dumb";
@@ -61,10 +60,12 @@ export async function runNodeCli(
     },
   };
   try {
+    if (global.issue !== undefined) throw new Error(global.issue);
     await run(argv, io);
   } catch (error) {
     const rendered = renderCliError(error, {
       json,
+      jsonl: global.presentation.jsonl === true,
       color: !json && colorMode !== "never" && process.env.TERM !== "dumb"
         && (colorMode === "always" || (process.env.NO_COLOR === undefined && process.stderr.isTTY === true)),
       unicode,

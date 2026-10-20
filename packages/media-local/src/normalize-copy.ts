@@ -18,6 +18,7 @@ function ticks(value: unknown): bigint | undefined {
   return undefined;
 }
 
+/** Provider-private proof that the decoded stream already spans the requested frame clock. */
 export function normalizedVideoSpan(
   video: MediaVideoStream,
   frameRate: MediaRational,
@@ -31,6 +32,7 @@ export function normalizedVideoSpan(
       === BigInt(frameCount) * BigInt(frameRate.denominator) * BigInt(end.timeBase.denominator);
 }
 
+/** Provider-private proof that copying preserves every planned decoded frame. */
 export function normalizedVideoFrames(
   video: MediaVideoStream,
   frameRate: MediaRational,

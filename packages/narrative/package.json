@@ -1,6 +1,6 @@
 {
   "name": "@hypit/narrative",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
   "type": "module",
@@ -15,12 +15,12 @@
     "README.md"
   ],
   "peerDependencies": {
-    "@hypit/hypit": "workspace:^0.3.1"
+    "@hypit/hypit": "workspace:^0.4.0"
   },
   "devDependencies": {
     "@hypit/producer": "workspace:*",
     "@hypit/protocol": "workspace:*",
-    "@hypit/admission": "workspace:*",
+    "@hypit/refinement": "workspace:*",
     "@hypit/hypit": "workspace:*"
   }
 }

@@ -1,4 +1,4 @@
-import { canonicalStringify } from "@hypit/protocol";
+import { moduleKey, sameModule } from "@hypit/protocol";
 import { decodeSourceText } from "@hypit/source";
 import type {
   ModuleRef,
@@ -11,7 +11,6 @@ import type {
   AuthorSourceExport,
   AuthorSourceIdentity,
   AuthorValueRef,
-  GraphFragment,
 } from "@hypit/author";
 
 import { MarkupFrontendError } from "./error.js";
@@ -44,14 +43,6 @@ type BoundSurface = {
   readonly module: ResolvedModule;
   readonly surface: RegisteredSurface;
 };
-
-function moduleKey(ref: ModuleRef): string {
-  return `${ref.name}@${ref.version}`;
-}
-
-function sameModule(left: ModuleRef, right: ModuleRef): boolean {
-  return left.name === right.name && left.version === right.version;
-}
 
 function resolvedModuleRef(module: ResolvedModule): ModuleRef {
   return { name: module.manifest.name, version: module.manifest.version };
@@ -156,15 +147,9 @@ export async function decodeMarkup(source: MarkupSource, context: MarkupDecodeCo
   const records: TypedRecord[] = [];
   const recordsById = new Map<string, TypedRecord>();
   const components: AuthorComponent[] = [];
-  const componentRanges = new Map<string, SurfaceComponentDraft["range"]>();
-  const fragments = new Map<string, GraphFragment>();
-  const fragmentExports = new Map<string, ReadonlyMap<string, GraphFragment["exports"][number]>>();
   const componentReferences = new Map<string, SurfaceResolvedReference>();
-  const waitingComponents = new Map<string, AuthorComponent[]>();
-  const indexComponent = (component: AuthorComponent, fragment: GraphFragment): void => {
-    const declarations = fragmentExports.get(fragment.id)
-      ?? new Map(fragment.exports.map((item) => [item.name, item]));
-    fragmentExports.set(fragment.id, declarations);
+  const indexComponent = (component: AuthorComponent): void => {
+    const declarations = new Map(component.fragment.exports.map((item) => [item.name, item]));
     for (const [output, path] of Object.entries(component.outputs)) {
       const declaration = declarations.get(output);
       if (declaration === undefined) continue;
@@ -381,11 +366,10 @@ export async function decodeMarkup(source: MarkupSource, context: MarkupDecodeCo
       if (componentIds.has(draft.id)) {
         fail(source, "MARKUP_COMPONENT_DUPLICATE", `Duplicate author component "${draft.id}".`, draft.range.start);
       }
-      if (draft.fragment.length === 0) {
-        fail(source, "MARKUP_COMPONENT_FRAGMENT", `${draft.id} returned an empty Fragment id.`, draft.range.start);
+      if (draft.fragment.format !== "hypit.fragment@1") {
+        fail(source, "MARKUP_COMPONENT_FRAGMENT", `${draft.id} returned an invalid Graph Fragment.`, draft.range.start);
       }
       componentIds.add(draft.id);
-      componentRanges.set(draft.id, draft.range);
       const component = {
         id: draft.id,
         fragment: draft.fragment,
@@ -393,47 +377,12 @@ export async function decodeMarkup(source: MarkupSource, context: MarkupDecodeCo
         outputs: draft.outputs,
       };
       components.push(component);
-      const fragment = fragments.get(component.fragment);
-      if (fragment === undefined) {
-        const waiting = waitingComponents.get(component.fragment) ?? [];
-        waiting.push(component);
-        waitingComponents.set(component.fragment, waiting);
-      } else {
-        indexComponent(component, fragment);
-      }
-    }
-    for (const fragment of output.fragments) {
-      if (fragment.format !== "hypit.fragment@1" || fragment.id.length === 0) {
-        fail(
-          source,
-          "MARKUP_FRAGMENT_IDENTITY",
-          `Surface ${moduleKey(bound.module.manifest)}#${registered.surface} returned an invalid Graph Fragment.`,
-          opening.start,
-        );
-      }
-      const existing = fragments.get(fragment.id);
-      if (existing !== undefined && canonicalStringify(existing) !== canonicalStringify(fragment)) {
-        fail(source, "MARKUP_FRAGMENT_CONFLICT", `Graph Fragment ${fragment.id} has conflicting definitions.`, opening.start);
-      }
-      fragments.set(fragment.id, fragment);
-      fragmentExports.set(fragment.id, new Map(fragment.exports.map((item) => [item.name, item])));
-      for (const component of waitingComponents.get(fragment.id) ?? []) indexComponent(component, fragment);
-      waitingComponents.delete(fragment.id);
+      indexComponent(component);
     }
     if (structuredElement !== undefined) retainElementProvenance(structuredElement, output);
   }
   if (!closed) {
     fail(source, "MARKUP_ROOT_UNCLOSED", "Document is missing </svml>.", source.text.length);
-  }
-  for (const component of components) {
-    if (!fragments.has(component.fragment)) {
-      fail(
-        source,
-        "MARKUP_COMPONENT_FRAGMENT_MISSING",
-        `${component.id} references Fragment ${component.fragment} that no Surface contributed.`,
-        componentRanges.get(component.id)?.start,
-      );
-    }
   }
   const resolveImportedRef = (ref: AuthorValueRef): AuthorValueRef => {
     const path = ref.kind === "record" ? ref.id : `${ref.component}.${ref.output}`;
@@ -453,11 +402,10 @@ export async function decodeMarkup(source: MarkupSource, context: MarkupDecodeCo
   }));
   const exportNames = new Set(exports.map((item) => item.name));
   for (const component of resolvedComponents) {
-    const fragment = fragments.get(component.fragment) as GraphFragment;
     for (const [output, name] of Object.entries(component.outputs)) {
       if (privateBindings.has(name)) continue;
       if (exportNames.has(name)) fail(source, "MARKUP_EXPORT_DUPLICATE", `Duplicate public export ${name}.`);
-      const declaration = fragmentExports.get(fragment.id)?.get(output);
+      const declaration = component.fragment.exports.find((item) => item.name === output);
       if (declaration === undefined) {
         fail(source, "MARKUP_COMPONENT_EXPORT", `${component.id} binds unknown Fragment export ${output}.`);
       }
@@ -472,7 +420,6 @@ export async function decodeMarkup(source: MarkupSource, context: MarkupDecodeCo
   return {
     records,
     components: resolvedComponents,
-    fragments: [...fragments.values()].sort((left, right) => left.id.localeCompare(right.id)),
     exports: exports.sort((left, right) => left.name.localeCompare(right.name)),
     identities,
     provenance,
@@ -512,7 +459,6 @@ export function createMarkupAuthorFrontend(options: MarkupAuthorFrontendOptions)
       return {
         records: result.records,
         components: result.components,
-        fragments: result.fragments,
         exports: result.exports,
         identities: result.identities,
         provenance: result.provenance,

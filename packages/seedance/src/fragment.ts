@@ -1,8 +1,8 @@
 import { blobTypes } from "@hypit/hypit/blob";
 import { sealGraphFragment } from "@hypit/hypit/author";
 import { generationProducers } from "@hypit/generation";
-import { createExactModelPrimaryGenerationFragment } from "@hypit/generation/model";
-import type { ExactModelEndpoint, ExactModelMediaInput, ExactModelTextInput } from "@hypit/generation/model";
+import { createFieldModelPrimaryFragment } from "@hypit/generation/model-fields";
+import type { FieldModelOperation, ModelArtifactInput, ModelTextInput } from "@hypit/generation/model-fields";
 
 const input = (name: string) => ({ kind: "fragment-input" as const, name });
 const operation = (id: string) => ({ kind: "fragment-operation" as const, operation: id });
@@ -11,7 +11,7 @@ const operation = (id: string) => ({ kind: "fragment-operation" as const, operat
  * Keep the remote GeneratedVideoSet atomic, then deterministically expose its
  * primary video as an ordinary Blob for downstream media programs.
  */
-export function createSeedanceGenerationFragment(endpoint: ExactModelEndpoint) {
+export function createSeedanceGenerationFragment(endpoint: FieldModelOperation) {
   return sealGraphFragment({
     inputs: [{ name: "request", type: endpoint.requestType }],
     operations: [
@@ -19,13 +19,13 @@ export function createSeedanceGenerationFragment(endpoint: ExactModelEndpoint) {
         id: "generate",
         producer: endpoint.producer,
         inputs: { request: input("request") },
-        result: { kind: "need", name: "generation" },
+        result: { kind: "need" as const, name: "generation" },
       },
       {
         id: "select-primary-video",
         producer: generationProducers.primaryVideo,
         inputs: { set: operation("generate") },
-        result: { kind: "output", name: "video" },
+        result: { kind: "output" as const, name: "video" },
       },
     ],
     exports: [{
@@ -38,9 +38,9 @@ export function createSeedanceGenerationFragment(endpoint: ExactModelEndpoint) {
 
 /** Request assembly used by author Surfaces whose media references may be runtime outputs. */
 export function createSeedanceAssembledGenerationFragment(
-  endpoint: ExactModelEndpoint,
-  mediaInputs: readonly ExactModelMediaInput[] = [],
-  textInputs: readonly ExactModelTextInput[] = [],
+  endpoint: FieldModelOperation,
+  mediaInputs: readonly ModelArtifactInput[] = [],
+  textInputs: readonly ModelTextInput[] = [],
 ) {
-  return createExactModelPrimaryGenerationFragment(endpoint, mediaInputs, textInputs);
+  return createFieldModelPrimaryFragment(endpoint, mediaInputs, textInputs);
 }

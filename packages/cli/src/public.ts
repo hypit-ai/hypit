@@ -1,7 +1,9 @@
 /** Public structural ABI for packages that contribute commands to the root Hypit CLI Host. */
 export type { CliApplicationContext, CliCommandModule } from "./application.js";
 export { commandHint } from "./command-hint.js";
-export { cliProviderLine, cliProviderView, createCliScratchResources, openCliRuntimeHost, selectCliProvider } from "./immediate.js";
+export { parseCliDecimalInteger } from "./decimal-integer.js";
+export { cliEndpointLine, cliEndpointView, createCliScratchResources, openCliRuntimeHost, selectCliEndpoint } from "./immediate.js";
+export type { CliRuntimeSelectionContext } from "./immediate.js";
 export { hypitHostStateRoot, hypitProjectStateRoot } from "./paths.js";
 export { writeCliOutput } from "./output.js";
 export { loadDiscoveredSourcePackages } from "./source-packages.js";

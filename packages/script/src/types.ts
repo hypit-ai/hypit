@@ -1,4 +1,5 @@
-import type { CanonicalValue, SourceRange, StoredValue, TypeRef } from "@hypit/hypit/protocol";
+import type { CanonicalValue, Value, TypeRef } from "@hypit/hypit/protocol";
+import type { SourceRange } from "@hypit/hypit/source";
 import type { CaptionWordAttribute } from "@hypit/caption";
 import type { Narrative, NarrativeMoment, NarrativeSegment, NarrativeSelection, NarrativeToken, NarrativeTurn } from "@hypit/narrative";
 
@@ -104,7 +105,7 @@ export type ParsedNarrative = Omit<
 export type ScriptSurfaceRecordDraft = {
   readonly id: string;
   readonly type: TypeRef;
-  readonly value: StoredValue;
+  readonly value: Value;
   readonly range: SourceRange;
 };
 
@@ -122,7 +123,6 @@ export type ScriptSurfaceOutput = {
   readonly records: readonly ScriptSurfaceRecordDraft[];
   /** Script is a record-only Surface; it cannot smuggle executable graph declarations. */
   readonly components: readonly never[];
-  readonly fragments: readonly never[];
   readonly identities: readonly {
     readonly namespace: TypeRef;
     readonly id: string;

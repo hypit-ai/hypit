@@ -1,10 +1,11 @@
-import { assertOrderedBuildId } from "@hypit/protocol";
-import type { TypeRef } from "@hypit/protocol";
+import { assertOrderedBuildId, createCapabilityRef, createModuleRef, createTypeRef } from "@hypit/protocol";
+import type { CapabilityRef, TypeRef } from "@hypit/protocol";
 
 import {
   assertBuildResultFileRef,
   assertBuildResultPath,
   assertBuildResultValueDocument,
+  assertPublicationPlan,
 } from "./types.js";
 import type {
   BuildResultManifest,
@@ -54,13 +55,19 @@ function buildId(value: unknown, subject: string): string {
 function typeRef(value: unknown, subject: string): TypeRef {
   const item = object(value, subject);
   const module = object(item.module, `${subject}.module`);
-  return {
-    module: {
-      name: text(module.name, `${subject}.module.name`),
-      version: text(module.version, `${subject}.module.version`),
-    },
-    name: text(item.name, `${subject}.name`),
-  };
+  return createTypeRef(createModuleRef(
+    text(module.name, `${subject}.module.name`),
+    text(module.version, `${subject}.module.version`),
+  ), text(item.name, `${subject}.name`));
+}
+
+function capabilityRef(value: unknown, subject: string): CapabilityRef {
+  const item = object(value, subject);
+  const module = object(item.module, `${subject}.module`);
+  return createCapabilityRef(createModuleRef(
+    text(module.name, `${subject}.module.name`),
+    text(module.version, `${subject}.module.version`),
+  ), text(item.name, `${subject}.name`));
 }
 
 function resultPath(value: unknown, subject: string): string {
@@ -135,7 +142,7 @@ function operationReceipts(value: unknown, subject: string): NonNullable<BuildRe
   return value.map((raw) => {
     const item = object(raw, subject);
     const status = item.status;
-    if (status !== "pending" && status !== "completed" && status !== "failed" && status !== "cancelled") throw new Error(`${subject} has an invalid Operation status`);
+    if (status !== "pending" && status !== "received" && status !== "completed" && status !== "failed" && status !== "cancelled") throw new Error(`${subject} has an invalid Operation status`);
     const need = item.need === undefined ? undefined : object(item.need, `${subject}.need`);
     const progress = item.progress === undefined ? undefined : object(item.progress, `${subject}.progress`);
     const cancellation = item.cancellation === undefined ? undefined : object(item.cancellation, `${subject}.cancellation`);
@@ -148,8 +155,8 @@ function operationReceipts(value: unknown, subject: string): NonNullable<BuildRe
       const ref = object(rawRef, `${subject}.credential`);
       return [slot, { store: text(ref.store, "credential store"), key: text(ref.key, "credential reference") }];
     }));
-    return {
-      ...(need === undefined ? {} : { need: { id: text(need.id, "Need id"), capability: typeRef(need.capability, "Need capability") } }),
+    const evidence = {
+      ...(need === undefined ? {} : { need: { id: text(need.id, "Need id"), capability: capabilityRef(need.capability, "Need capability") } }),
       ...(item.createdAt === undefined ? {} : { createdAt: optionalTime(item.createdAt, "Operation createdAt")! }),
       ...(item.acknowledgedAt === undefined ? {} : { acknowledgedAt: optionalTime(item.acknowledgedAt, "Operation acknowledgedAt")! }),
       ...(item.endedAt === undefined ? {} : { endedAt: optionalTime(item.endedAt, "Operation endedAt")! }),
@@ -164,13 +171,21 @@ function operationReceipts(value: unknown, subject: string): NonNullable<BuildRe
         ...(cancellation.message === undefined ? {} : { message: text(cancellation.message, "Cancellation error") }),
       } }),
       operation: text(item.operation, "Operation id"), command: text(item.command, "Operation command"),
-      endpoint: text(item.endpoint, "Operation Endpoint"), status,
+      endpoint: text(item.endpoint, "Operation Endpoint"),
       ...(item.pool === undefined ? {} : { pool: text(item.pool, "Operation pool") }),
       ...(credentials === undefined ? {} : { credentials }),
       ...(receipt === undefined ? {} : { receipt: { id: text(receipt.id, "Remote receipt id"),
         ...(receipt.url === undefined ? {} : { url: text(receipt.url, "Remote receipt URL") }) } }),
-      ...(failure === undefined ? {} : { failure: { code: text(failure.code, "Operation failure code"), message: text(failure.message, "Operation failure message") } }),
     };
+    if (status === "failed") {
+      if (failure === undefined) throw new Error(`${subject} failed Operation has no failure`);
+      return { ...evidence, status, failure: {
+        code: text(failure.code, "Operation failure code"),
+        message: text(failure.message, "Operation failure message"),
+      } };
+    }
+    if (failure !== undefined) throw new Error(`${subject} ${status} Operation cannot have a failure`);
+    return { ...evidence, status };
   });
 }
 
@@ -203,8 +218,8 @@ export function decodeBuildResultManifest(
   }
   const failure = optionalString(item.failure, `${subject}.failure`);
   if (item.executionLog !== undefined) assertBuildResultFileRef(item.executionLog, `${subject}.executionLog`);
-  return {
-    format: "hypit.build-result@1",
+  const manifest = {
+    format: "hypit.build-result@1" as const,
     id,
     ...(title === undefined ? {} : { title }),
     ...(note === undefined ? {} : { note }),
@@ -212,13 +227,20 @@ export function decodeBuildResultManifest(
     source: { id: text(source.id, `${subject}.source.id`) },
     ...(run === undefined ? {} : { run: { id: text(run.id, `${subject}.run.id`) } }),
     targets: texts(item.targets, `${subject}.targets`),
-    ...(finishedAt === undefined ? {} : { finishedAt }),
-    ...(outcome === undefined ? {} : { outcome }),
-    ...(failure === undefined ? {} : { failure }),
     outputs: outputs(item.outputs, `${subject}.outputs`),
     ...(item.executionLog === undefined ? {} : { executionLog: item.executionLog }),
     ...(item.operations === undefined ? {} : { operations: operationReceipts(item.operations, `${subject}.operations`) }),
   };
+  if (outcome === undefined) {
+    if (failure !== undefined) throw new Error(`${subject} unfinished Result cannot have a failure`);
+    return manifest;
+  }
+  if (outcome === "complete") {
+    if (failure !== undefined) throw new Error(`${subject} complete Result cannot have a failure`);
+    return { ...manifest, outcome, finishedAt: finishedAt! };
+  }
+  if (failure === undefined) throw new Error(`${subject} ${outcome} Result has no failure reason`);
+  return { ...manifest, outcome, finishedAt: finishedAt!, failure };
 }
 
 /** Persist only Result content. The repository address is the single Build identity. */
@@ -241,33 +263,43 @@ export function decodeBuildResultWriterState(
   subject = "Build Result writer state",
 ): BuildResultWriterState {
   const item = object(value, subject);
-  if (!Array.isArray(item.publishedOutputs)) throw new Error(`${subject}.publishedOutputs must be an array`);
-  if (!Array.isArray(item.forwards)) throw new Error(`${subject}.forwards must be an array`);
+  const publication = object(item.publication, `${subject}.publication`);
+  if (!Array.isArray(publication.outputs)) throw new Error(`${subject}.publication.outputs must be an array`);
   const names = new Set<string>();
   const logicalOutputs = new Set<string>();
-  const publishedOutputs = item.publishedOutputs.map((value, index) => {
-    const published = object(value, `${subject}.publishedOutputs[${index}]`);
-    const name = text(published.name, `${subject}.publishedOutputs[${index}].name`);
-    const output = text(published.output, `${subject}.publishedOutputs[${index}].output`);
+  const publishedOutputs = publication.outputs.map((value, index) => {
+    const published = object(value, `${subject}.publication.outputs[${index}]`);
+    const name = text(published.name, `${subject}.publication.outputs[${index}].name`);
+    const output = text(published.output, `${subject}.publication.outputs[${index}].output`);
     if (names.has(name)) throw new Error(`${subject} repeats published name ${name}`);
     if (logicalOutputs.has(output)) throw new Error(`${subject} publishes Logical Output ${output} more than once`);
     names.add(name);
     logicalOutputs.add(output);
-    return { name, output, ...(published.displayName === undefined ? {} : { displayName: text(published.displayName, `${subject}.displayName`) }) };
-  });
-  const forwardedOutputs = new Set<string>();
-  const forwards = item.forwards.map((value, index) => {
-    const forward = object(value, `${subject}.forwards[${index}]`);
-    const output = text(forward.output, `${subject}.forwards[${index}].output`);
-    if (forwardedOutputs.has(output)) throw new Error(`${subject} forwards Logical Output ${output} more than once`);
-    forwardedOutputs.add(output);
+    const source = object(published.source, `${subject}.publication.outputs[${index}].source`);
+    if (source.kind !== "current-record" && source.kind !== "historical-output") {
+      throw new Error(`${subject}.publication.outputs[${index}].source.kind is not a publication source kind`);
+    }
+    if (typeof published.target !== "boolean") {
+      throw new Error(`${subject}.publication.outputs[${index}].target must be a boolean`);
+    }
     return {
+      name,
       output,
-      build: buildId(forward.build, `${subject}.forwards[${index}].build`),
-      sourceOutput: text(forward.sourceOutput, `${subject}.forwards[${index}].sourceOutput`),
-      type: typeRef(forward.type, `${subject}.forwards[${index}].type`),
+      type: typeRef(published.type, `${subject}.publication.outputs[${index}].type`),
+      ...(published.displayName === undefined ? {} : { displayName: text(published.displayName, `${subject}.displayName`) }),
+      target: published.target,
+      source: source.kind === "current-record" ? {
+        kind: "current-record" as const,
+        record: text(source.record, `${subject}.publication.outputs[${index}].source.record`),
+      } : {
+        kind: "historical-output" as const,
+        build: buildId(source.build, `${subject}.publication.outputs[${index}].source.build`),
+        output: text(source.output, `${subject}.publication.outputs[${index}].source.output`),
+      },
     };
   });
+  const publicationPlan = { outputs: publishedOutputs };
+  assertPublicationPlan(publicationPlan);
   return {
     ...(item.resourceReferences === undefined ? {} : { resourceReferences: Object.fromEntries(
       Object.entries(object(item.resourceReferences, `${subject}.resourceReferences`)).map(([resource, reference]) => {
@@ -277,8 +309,7 @@ export function decodeBuildResultWriterState(
     ) }),
     resources: pathMap(item.resources, `${subject}.resources`),
     values: pathMap(item.values, `${subject}.values`),
-    publishedOutputs,
-    forwards,
+    publication: publicationPlan,
   };
 }
 

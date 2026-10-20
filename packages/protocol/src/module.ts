@@ -16,22 +16,27 @@ export type PortDeclaration = {
   readonly type: TypeRef;
 };
 
-export type NeedPortDeclaration = {
-  readonly name: string;
-  readonly capability: CapabilityRef;
-  readonly returns: TypeRef;
-};
-
 export type CapabilityDeclaration = {
   readonly name: string;
   readonly returns: TypeRef;
 };
 
+export type ProducerResultDeclaration =
+  | {
+      readonly kind: "output";
+      readonly name: string;
+      readonly type: TypeRef;
+    }
+  | {
+      readonly kind: "need";
+      readonly name: string;
+      readonly capability: CapabilityRef;
+    };
+
 export type ProducerDeclaration = {
   readonly name: string;
   readonly inputs: readonly PortDeclaration[];
-  readonly outputs: readonly PortDeclaration[];
-  readonly needs: readonly NeedPortDeclaration[];
+  readonly result: ProducerResultDeclaration;
 };
 
 export type ModuleManifest = {

@@ -67,8 +67,8 @@ export function createRankingFragment(
     { name: "style", type: selected.style },
   ];
   const operations: FragmentOperation[] = [
-    { id: "specs", producer: rankingProducers.createSpecs, inputs: { header: input("header") }, result: { kind: "output", name: "set" } },
-    { id: "resolved", producer: selected.create, inputs: {}, result: { kind: "output", name: "set" } },
+    { id: "specs", producer: rankingProducers.createSpecs, inputs: { header: input("header") }, result: { kind: "output" as const, name: "set" } },
+    { id: "resolved", producer: selected.create, inputs: {}, result: { kind: "output" as const, name: "set" } },
     { id: "candidates", producer: variant === "column"
       ? rankingProducers.createColumnWindows
       : variant === "tier-board" ? rankingProducers.createTierWindows
@@ -90,7 +90,7 @@ export function createRankingFragment(
       id: materializedId,
       producer: rankingProducers.materializeTextItem,
       inputs: { shell: input(item.specName), content: input(item.contentName) },
-      result: { kind: "output", name: "spec" },
+      result: { kind: "output" as const, name: "spec" },
     });
     const resolvedSpec = item.contentName === undefined ? input(item.specName) : operation(materializedId);
     const specOperationId = `spec-${item.suffix}`;
@@ -98,7 +98,7 @@ export function createRankingFragment(
       id: specOperationId,
       producer: rankingProducers.appendSpec,
       inputs: { set: specs, spec: resolvedSpec },
-      result: { kind: "output", name: "set" },
+      result: { kind: "output" as const, name: "set" },
     });
     specs = operation(specOperationId);
     const visualId = `item-${item.suffix}`;
@@ -110,7 +110,7 @@ export function createRankingFragment(
         spec: resolvedSpec,
         ...(item.iconName === undefined ? {} : { icon: input(item.iconName) }),
       },
-      result: { kind: "output", name: "set" },
+      result: { kind: "output" as const, name: "set" },
     });
     resolved = operation(visualId);
     if (item.timingName !== undefined) {
@@ -125,7 +125,7 @@ export function createRankingFragment(
           set: candidates, spec: resolvedSpec,
           [variant === "top-three" ? "activation" : "window"]: input(item.timingName),
         },
-        result: { kind: "output", name: "set" },
+        result: { kind: "output" as const, name: "set" },
       });
       candidates = operation(timingId);
     }
@@ -135,7 +135,7 @@ export function createRankingFragment(
       id: "schedule",
       producer: variant === "column" ? rankingProducers.columnSchedule : rankingProducers.tierSchedule,
       inputs: { header: input("header"), items: specs, timeline: input("timeline"), outer: input("outer"), windows: candidates },
-      result: { kind: "output", name: "schedule" },
+      result: { kind: "output" as const, name: "schedule" },
     });
   } else {
     operations.push({
@@ -145,7 +145,7 @@ export function createRankingFragment(
       header: input("header"), items: specs, timeline: input("timeline"),
         outer: input("outer"), candidates, terminal: input("terminal"),
     },
-    result: { kind: "output", name: "schedule" },
+    result: { kind: "output" as const, name: "schedule" },
     });
   }
   operations.push({
@@ -156,13 +156,13 @@ export function createRankingFragment(
       ...(variant === "column" || variant === "tier-board" ? { within: input("within") } : {}),
       frame: input("frame"), schedule: operation("schedule"), style: input("style"), set: resolved,
     },
-    result: { kind: "output", name: "program" },
+    result: { kind: "output" as const, name: "program" },
   });
   operations.push({
     id: "visual",
     producer: selected.render,
     inputs: { timeline: input("timeline"), program: operation("program") },
-    result: { kind: "output", name: "track" },
+    result: { kind: "output" as const, name: "track" },
   });
   const hasAudio = sound.appearName !== undefined || sound.moveName !== undefined;
   if (hasAudio) {
@@ -170,10 +170,10 @@ export function createRankingFragment(
     operations.push({
       id: "events", producer: selected.events,
       inputs: { schedule: operation("schedule"), style: input("style"), specs },
-      result: { kind: "output", name: "events" },
+      result: { kind: "output" as const, name: "events" },
     });
     operations.push({
-      id: "sounds", producer: rankingProducers.createSounds, inputs: {}, result: { kind: "output", name: "sounds" },
+      id: "sounds", producer: rankingProducers.createSounds, inputs: {}, result: { kind: "output" as const, name: "sounds" },
     });
     let sounds = operation("sounds");
     for (const [kind, inputName, producer] of [
@@ -184,14 +184,14 @@ export function createRankingFragment(
       inputs.push({ name: inputName, type: mediaTypes.synchronized });
       const id = `sound-${kind}`;
       operations.push({
-        id, producer, inputs: { sounds, media: input(inputName) }, result: { kind: "output", name: "sounds" },
+        id, producer, inputs: { sounds, media: input(inputName) }, result: { kind: "output" as const, name: "sounds" },
       });
       sounds = operation(id);
     }
     operations.push({
       id: "audio", producer: rankingProducers.renderAudio,
       inputs: { timeline: input("timeline"), events: operation("events"), style: input("sound-style"), sounds },
-      result: { kind: "output", name: "track" },
+      result: { kind: "output" as const, name: "track" },
     });
   }
   return sealGraphFragment({

@@ -25,21 +25,21 @@ export const stillVisualTrackFragment = sealGraphFragment({
     { name: "window", type: temporalTypes.window },
   ],
   operations: [
-    { id: "layers", producer: visualTrackProducers.createLayers, inputs: {}, result: { kind: "output", name: "layers" } },
+    { id: "layers", producer: visualTrackProducers.createLayers, inputs: {}, result: { kind: "output" as const, name: "layers" } },
     { id: "sample", producer: visualTrackProducers.appendStillLayer, inputs: {
       layers: operation("layers"), source: input("source"), extent: input("extent"), fit: input("fit"), spec: input("sample-spec"),
-    }, result: { kind: "output", name: "layers" } },
-    { id: "set", producer: visualTrackProducers.createSet, inputs: {}, result: { kind: "output", name: "set" } },
+    }, result: { kind: "output" as const, name: "layers" } },
+    { id: "set", producer: visualTrackProducers.createSet, inputs: {}, result: { kind: "output" as const, name: "set" } },
     { id: "append", producer: visualTrackProducers.appendClip, inputs: {
       set: operation("set"), header: input("header"), timeline: input("timeline"), layers: operation("sample"),
       frame: input("frame"), spec: input("clip-spec"), window: input("window"),
-    }, result: { kind: "output", name: "set" } },
+    }, result: { kind: "output" as const, name: "set" } },
     { id: "finalize", producer: visualTrackProducers.finalize, inputs: {
       set: operation("append"), header: input("header"), timeline: input("timeline"),
-    }, result: { kind: "output", name: "program" } },
+    }, result: { kind: "output" as const, name: "program" } },
     { id: "visual", producer: visualTrackProducers.projectVisual, inputs: {
       timeline: input("timeline"), program: operation("finalize"),
-    }, result: { kind: "output", name: "track" } },
+    }, result: { kind: "output" as const, name: "track" } },
   ],
   exports: [
     { name: "program", type: visualTrackTypes.program, root: operation("finalize") },
@@ -50,7 +50,7 @@ export const stillVisualTrackFragment = sealGraphFragment({
 export const renderVisualTrackFragment = sealGraphFragment({
   inputs: [{ name: "timeline", type: timelineTypes.timeline }, { name: "program", type: visualTrackTypes.program }],
   operations: [
-    { id: "visual", producer: visualTrackProducers.projectVisual, inputs: { timeline: input("timeline"), program: input("program") }, result: { kind: "output", name: "track" } },
+    { id: "visual", producer: visualTrackProducers.projectVisual, inputs: { timeline: input("timeline"), program: input("program") }, result: { kind: "output" as const, name: "track" } },
   ],
   exports: [{ name: "visual", type: compositionTypes.visualTrack, root: operation("visual") }],
 });

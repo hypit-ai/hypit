@@ -1,5 +1,5 @@
-import { BuildMachine, reduce } from "@hypit/kernel";
-import type { BuildState, CommandResult } from "@hypit/protocol";
+import { BuildMachine } from "@hypit/kernel";
+import type { BuildFact, BuildState, CommandResult } from "@hypit/protocol";
 import { capacityUnits } from "./capacity.js";
 
 import type {
@@ -15,7 +15,8 @@ import type {
 type MutableBuild = {
   readonly id: string;
   state: BuildState;
-  machine: BuildMachine | undefined;
+  readonly machine: BuildMachine;
+  readonly facts: BuildFact[];
   readonly outcomes: SchedulerExecutionOutcome[];
   blocked: ScheduledBuildResult["blocked"];
   stopped: boolean;
@@ -55,11 +56,13 @@ export class InProcessBuildScheduler {
   readonly #executor: RuntimeCommandExecutor;
   readonly #buildStore: BuildSchedulerOptions["buildStore"];
   readonly #onStateChange: BuildSchedulerOptions["onStateChange"];
+  readonly #executionContext: BuildSchedulerOptions["executionContext"];
 
   constructor(executor: RuntimeCommandExecutor, options: BuildSchedulerOptions = {}) {
     this.#executor = executor;
     this.#buildStore = options.buildStore;
     this.#onStateChange = options.onStateChange;
+    this.#executionContext = options.executionContext;
   }
 
   async run(requests: readonly ScheduledBuild[]): Promise<readonly ScheduledBuildResult[]> {
@@ -69,26 +72,14 @@ export class InProcessBuildScheduler {
       if (request.id.trim().length === 0) throw new Error("scheduled build id must not be empty");
       if (ids.has(request.id)) throw new Error(`scheduled build ${request.id} is duplicated`);
       ids.add(request.id);
-      let state: BuildState;
-      let machine: BuildMachine | undefined;
-      if (this.#buildStore === undefined) {
-        if (request.state === undefined) throw new Error(`scheduled Build ${request.id} has no in-memory state`);
-        state = structuredClone(request.state);
-      } else {
-        const snapshot = request.snapshot;
-        if (snapshot === undefined) {
-          throw new Error(`scheduled Build ${request.id} has no durable snapshot`);
-        }
-        if (snapshot.build !== request.id) {
-          throw new Error(`scheduled Build snapshot ${snapshot.build} does not belong to ${request.id}`);
-        }
-        state = snapshot.state;
-        machine = BuildMachine.fromMaterialized(snapshot.definition, snapshot.state);
-      }
+      const facts: BuildFact[] = structuredClone([...request.facts]);
+      const machine = new BuildMachine(request.definition, facts);
+      const state = machine.view();
       builds.push({
         id: request.id,
         state,
         machine,
+        facts,
         outcomes: [],
         blocked: [],
         stopped: false,
@@ -111,18 +102,14 @@ export class InProcessBuildScheduler {
     };
 
     const accept = async (build: MutableBuild, event: CommandResult): Promise<void> => {
-      if (this.#buildStore === undefined || build.machine === undefined) {
-        build.state = reduce(build.state, event);
-        await this.#onStateChange?.(build.id, build.state);
-        return;
-      }
       const fact = build.machine.evaluate(event);
       if (fact === undefined) {
         build.state = build.machine.view();
         return;
       }
-      await this.#buildStore.append(build.id, fact);
+      await this.#buildStore?.append(build.id, fact);
       build.machine.commit();
+      build.facts.push(fact);
       build.state = build.machine.view();
       await this.#onStateChange?.(build.id, build.state);
     };
@@ -134,9 +121,7 @@ export class InProcessBuildScheduler {
           ready.set(build.id, []);
           continue;
         }
-        const prepared = build.machine !== undefined && this.#executor.prepareExecution !== undefined
-          ? this.#executor.prepareExecution(build.machine)
-          : this.#executor.prepare(build.state);
+        const prepared = this.#executor.prepare(build.machine);
         build.state = prepared.state;
         build.blocked = prepared.blocked;
         ready.set(build.id, prepared.runnable.filter((item) =>
@@ -157,10 +142,10 @@ export class InProcessBuildScheduler {
 
     const launch = (build: MutableBuild, command: RuntimeRunnableCommand): void => {
       const key = buildCommandKey(build.id, command.command.id);
-      const startedFrom = build.state;
-      const execution = build.machine !== undefined && this.#executor.executeExecutionCommand !== undefined
-        ? this.#executor.executeExecutionCommand(build.machine, command, { build: build.id })
-        : this.#executor.executeCommand(startedFrom, command, { build: build.id });
+      const execution = this.#executor.executeCommand(build.machine, command, {
+        ...this.#executionContext?.(build.id),
+        build: build.id,
+      });
       const promise = execution.then(
         (execution) => ({ key, build, command, execution }),
         (error: unknown) => ({ key, build, command, error }),
@@ -202,12 +187,19 @@ export class InProcessBuildScheduler {
         if (build.state.status === "failed" || build.state.status === "complete") continue;
         if (settled.execution === undefined) {
           build.stopped = true;
+          const message = settled.error instanceof Error ? settled.error.message : String(settled.error);
+          build.failure ??= {
+            kind: "command-failed",
+            command: settled.command.command.id,
+            code: "EXECUTION_FAILED",
+            message,
+          };
           build.outcomes.push({
             command: settled.command.command.id,
             kind: settled.command.command.kind,
             resources: settled.command.resources.map((resource) => resource.id),
             status: "error",
-            message: settled.error instanceof Error ? settled.error.message : String(settled.error),
+            message,
           });
           continue;
         }
@@ -244,6 +236,9 @@ export class InProcessBuildScheduler {
             build.failure ??= event;
           } else {
             await accept(build, event);
+            if (settled.execution.operation !== undefined) {
+              await this.#executor.completeOperation?.(settled.execution.operation);
+            }
           }
           build.outcomes.push({
             command: settled.command.command.id,
@@ -278,7 +273,9 @@ export class InProcessBuildScheduler {
       status: build.state.status === "complete"
         ? "complete"
         : build.state.status === "failed" ? "failed" : "paused",
+      definition: build.machine.definition,
       state: build.state,
+      facts: [...build.facts],
       outcomes: [...build.outcomes],
       blocked: [...build.blocked],
     }));

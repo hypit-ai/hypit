@@ -1,19 +1,19 @@
-import type { ModuleRef } from "@hypit/hypit/protocol";
-import type { GenerationWireMapping } from "@hypit/generation";
+import type { GenerationWireMapping } from "@hypit/generation/provider";
+import { gptImageModuleRef } from "@hypit/gpt-image";
+import { grokImagineModuleRef } from "@hypit/grok-imagine";
+import { minimaxH3ModuleRef } from "@hypit/minimax-h3";
+import { nanoBananaModuleRef } from "@hypit/nano-banana";
 
-const MINIMAX: ModuleRef = { name: "@hypit/minimax-h3", version: "1" };
-const GROK: ModuleRef = { name: "@hypit/grok-imagine", version: "1" };
-const GPT_IMAGE: ModuleRef = { name: "@hypit/gpt-image", version: "1" };
-const NANO_BANANA: ModuleRef = { name: "@hypit/nano-banana", version: "1" };
+export type PolloMapping = GenerationWireMapping & { readonly media: "image" | "video" };
 
 /**
  * Pollo generation paths and the `input` fields each documents. The route model is the request
  * path under the Pollo platform base URL. Reference fields prefixed `refs_` are folded into MiniMax's
  * typed `refs` array by routes.ts.
  */
-export const polloMappings: readonly GenerationWireMapping[] = [
+export const polloMappings: readonly PolloMapping[] = [
   {
-    capability: { module: MINIMAX, name: "minimax-h3" }, result: "video", routes: [{ model: "/v1/generation/minimax/minimax-h3/video" }],
+    capability: { module: minimaxH3ModuleRef, name: "minimax-h3" }, media: "video", routes: [{ model: "/v1/generation/minimax/minimax-h3/video" }],
     fields: {
       prompt: { as: "value", field: "prompt" },
       duration: { as: "value", field: "duration" },
@@ -27,7 +27,7 @@ export const polloMappings: readonly GenerationWireMapping[] = [
     },
   },
   {
-    capability: { module: GROK, name: "grok-imagine-video-1.5-preview" }, result: "video",
+    capability: { module: grokImagineModuleRef, name: "grok-imagine-video-1.5-preview" }, media: "video",
     routes: [{ model: "/v1/generation/xai/grok-imagine-video-1-5/video" }],
     fields: {
       prompt: { as: "value", field: "prompt" },
@@ -38,7 +38,7 @@ export const polloMappings: readonly GenerationWireMapping[] = [
     },
   },
   {
-    capability: { module: GPT_IMAGE, name: "gpt-image-2" }, result: "image", routes: [{ model: "/v1/generation/openai/gpt-image-2/image" }],
+    capability: { module: gptImageModuleRef, name: "gpt-image-2" }, media: "image", routes: [{ model: "/v1/generation/openai/gpt-image-2/image" }],
     fields: {
       prompt: { as: "value", field: "prompt" },
       aspectRatio: { as: "value", field: "aspectRatio" },
@@ -47,8 +47,8 @@ export const polloMappings: readonly GenerationWireMapping[] = [
       images: { as: "urlArray", field: "images" },
     },
   },
-  ...(["nano-banana-2", "nano-banana-pro"] as const).map((name): GenerationWireMapping => ({
-    capability: { module: NANO_BANANA, name }, result: "image", routes: [{ model: `/v1/generation/google/${name}/image` }],
+  ...(["nano-banana-2", "nano-banana-pro"] as const).map((name): PolloMapping => ({
+    capability: { module: nanoBananaModuleRef, name }, media: "image", routes: [{ model: `/v1/generation/google/${name}/image` }],
     fields: {
       prompt: { as: "value", field: "prompt" },
       images: { as: "urlArray", field: "images" },

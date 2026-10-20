@@ -2,18 +2,24 @@ import { parseHTML } from "linkedom";
 import type { Composition } from "@hypit/composition";
 import { assertHtmlProgram, compileHtmlProgram, materializeHtmlProgram } from "@hypit/html-program";
 import type { HtmlProgram, ResourceUrlResolver } from "@hypit/html-program";
-import { compileAudioProgramPlan, verifyAudioProgramPlan } from "@hypit/media-operations";
-import type { AudioProgramPlan } from "@hypit/media-operations";
+import { injectHtmlPlayback, materializePlaybackAudio } from "@hypit/html-playback";
+import { compileAudioProgram, verifyAudioProgram } from "@hypit/media-operations";
+import type { AudioProgram } from "@hypit/media-operations";
 import type { Timeline } from "@hypit/timeline";
+import { assertBlobRef } from "@hypit/hypit/protocol";
 import type { BlobRef } from "@hypit/hypit/protocol";
-import { injectRuntimeShim } from "@hypit/html-program/playback";
 
 export type HtmlDocument = {
   readonly format: "hypit.html-document@1";
   readonly program: HtmlProgram;
-  readonly audio: AudioProgramPlan;
-  readonly bindings: readonly { readonly id: string; readonly artifact: BlobRef }[];
+  readonly audio: AudioProgram;
+  /** Structural pairs of document-local identities and Result-rebindable artifacts. */
+  readonly resources: {
+    readonly artifacts: readonly { readonly id: string; readonly artifact: BlobRef }[];
+    readonly surfaces: readonly { readonly id: string; readonly artifact: BlobRef }[];
+  };
 };
+
 export type HtmlDocumentPlaybackOptions = {
   readonly autoplay?: boolean;
   readonly loop?: boolean;
@@ -22,72 +28,126 @@ export type HtmlDocumentPlaybackOptions = {
 };
 
 export function compileHtmlDocument(composition: Composition, timeline: Timeline): HtmlDocument {
-  const program = compileHtmlProgram(composition, timeline), audio = compileAudioProgramPlan(composition, timeline);
-  const resources = new Map([...program.artifacts.map(entry => entry.artifact), ...audio.clips.map(clip => clip.artifact)].map(artifact => [artifact.resource, artifact]));
-  return { format: "hypit.html-document@1", program, audio, bindings: [...resources].map(([id, artifact]) => ({ id, artifact })) };
+  const program = compileHtmlProgram(composition, timeline);
+  const audio = compileAudioProgram(composition, timeline);
+  return {
+    format: "hypit.html-document@1",
+    program,
+    audio,
+    resources: {
+      artifacts: program.artifacts.map(({ artifact }) => ({ id: artifact.resource, artifact })),
+      surfaces: program.surfaces.map(({ artifact }) => ({ id: artifact.resource, artifact })),
+    },
+  };
 }
 
-// Result storage rebinds BlobRefs. Keep template-local identities independent of those addresses.
+/**
+ * Result storage recursively rebinds BlobRefs, while compiled HTML deliberately
+ * addresses document-local resource identities. Reconstruct those identities
+ * at materialization time without a repository, reverse index or global table.
+ */
 function boundProgram(document: HtmlDocument): HtmlProgram {
-  if (!Array.isArray(document.bindings)) throw new Error("HTML document material bindings are required");
-  const aliases = new Map(document.bindings.map(binding => [binding.artifact?.resource, binding.id]));
-  const ids = new Set(document.bindings.map(binding => binding.id));
-  if (ids.size !== document.bindings.length) throw new Error("HTML document repeats a material identity");
-  const bind = (artifact: BlobRef): BlobRef => {
-    const id = aliases.get(artifact.resource);
-    if (id === undefined) throw new Error("HTML document material has no binding");
-    return { ...artifact, resource: id as BlobRef["resource"] };
+  const resources = document.resources;
+  if (resources === null || typeof resources !== "object"
+    || !Array.isArray(resources.artifacts) || !Array.isArray(resources.surfaces)) {
+    throw new Error("HTML document material pairs are required");
+  }
+  const restore = (
+    artifacts: readonly BlobRef[],
+    bindings: readonly { readonly id: string; readonly artifact: BlobRef }[],
+    label: string,
+  ): BlobRef[] => {
+    if (artifacts.length !== bindings.length) throw new Error(`HTML document ${label} pairs are incomplete`);
+    const ids = new Set<string>();
+    return artifacts.map((artifact, index) => {
+      const binding = bindings[index];
+      if (typeof binding?.id !== "string" || binding.id.length === 0 || ids.has(binding.id)) {
+        throw new Error(`HTML document ${label} repeats or omits a local identity`);
+      }
+      assertBlobRef(binding.artifact, `HTML document ${label} ${index}`);
+      assertBlobRef(artifact, `HTML document ${label} value ${index}`);
+      if (artifact.resource !== binding.artifact.resource || artifact.size !== binding.artifact.size
+        || artifact.mediaType !== binding.artifact.mediaType) {
+        throw new Error(`HTML document ${label} pair ${index} disagrees after material rebinding`);
+      }
+      ids.add(binding.id);
+      return { ...artifact, resource: binding.id as BlobRef["resource"] };
+    });
   };
-  return { ...document.program,
-    artifacts: document.program.artifacts.map(entry => ({ ...entry, artifact: bind(entry.artifact) })),
-    surfaces: document.program.surfaces.map(surface => ({ ...surface, artifact: bind(surface.artifact) })),
+  const artifacts = restore(document.program.artifacts.map((entry) => entry.artifact), resources.artifacts, "Artifact");
+  const surfaces = restore(document.program.surfaces.map((surface) => surface.artifact), resources.surfaces, "Surface");
+  return {
+    ...document.program,
+    artifacts: document.program.artifacts.map((entry, index) => ({ ...entry, artifact: artifacts[index]! })),
+    surfaces: document.program.surfaces.map((surface, index) => ({ ...surface, artifact: surfaces[index]! })),
   };
 }
 
 export function assertHtmlDocument(value: unknown): asserts value is HtmlDocument {
-  if (value === null || typeof value !== "object" || (value as HtmlDocument).format !== "hypit.html-document@1") throw new Error("Unsupported HTML document format");
-  const { program, audio } = value as HtmlDocument;
-  assertHtmlProgram(boundProgram(value as HtmlDocument));
-  verifyAudioProgramPlan(audio);
-  if (program.frameCount !== audio.frameCount || program.frameRate.numerator !== audio.frameRate.numerator || program.frameRate.denominator !== audio.frameRate.denominator) throw new Error("HTML picture and sound must use the same frame clock");
+  if (value === null || typeof value !== "object"
+    || (value as HtmlDocument).format !== "hypit.html-document@1") {
+    throw new Error("Unsupported HTML document format");
+  }
+  const document = value as HtmlDocument;
+  const program = boundProgram(document);
+  assertHtmlProgram(program);
+  verifyAudioProgram(document.audio);
+  if (program.frameCount !== document.audio.frameCount
+    || program.frameRate.numerator !== document.audio.frameRate.numerator
+    || program.frameRate.denominator !== document.audio.frameRate.denominator) {
+    throw new Error("HTML picture and sound must use the same frame clock");
+  }
 }
 
-const attribute = (value: string) => value.replaceAll("&", "&amp;").replaceAll('"', "&quot;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
-
-/** Materialize picture and sound using the host's URLs and shared frame playback. */
-function renderDocumentProgram(program: HtmlProgram, audio: AudioProgramPlan, resolve: ResourceUrlResolver): { html: string; preview: string } {
+function renderDocumentProgram(
+  program: HtmlProgram,
+  audio: AudioProgram,
+  resolvePicture: ResourceUrlResolver,
+  resolveAudio: ResourceUrlResolver,
+): string {
   assertHtmlProgram(program);
-  verifyAudioProgramPlan(audio);
-  const html = materializeHtmlProgram(program, resolve);
-  const clips = audio.clips.map(clip => `<audio class="hypit-studio-audio" preload="auto"
-    src="${attribute(resolve(clip.artifact))}"
-    data-start="${clip.targetStartSample / 48_000}"
-    data-duration="${(clip.targetEndSampleExclusive - clip.targetStartSample) / 48_000}"
-    data-media-start="${clip.sourceStartSample / 48_000}"
-    data-media-end="${clip.sourceEndSampleExclusive / 48_000}"
-    data-loop="${clip.sourceLoop}" data-phase="${clip.sourcePhaseSample / 48_000}"
-    data-playback-rate="${clip.playbackRate}" data-gain="${clip.gain}"
-    data-level-automation="${encodeURIComponent(JSON.stringify({ gainEnvelope: clip.gainEnvelope, audibility: clip.audibility, fadeInSamples: clip.fadeInSamples, fadeOutSamples: clip.fadeOutSamples, mixStartSample: clip.mixStartSample, mixEndSampleExclusive: clip.mixEndSampleExclusive }))}"></audio>`).join("");
-  return { html, preview: injectRuntimeShim(html, clips) };
+  verifyAudioProgram(audio);
+  const html = materializeHtmlProgram(program, resolvePicture);
+  return injectHtmlPlayback(html, materializePlaybackAudio(audio, resolveAudio));
 }
 
 /** Produce a browser page. Hosts resolve material to HTTP, relative or embedded URLs. */
-export function materializeHtmlDocument(document: HtmlDocument, resolve: ResourceUrlResolver, options: HtmlDocumentPlaybackOptions = {}): string {
+export function materializeHtmlDocument(
+  document: HtmlDocument,
+  resolve: ResourceUrlResolver,
+  options: HtmlDocumentPlaybackOptions = {},
+): string {
   assertHtmlDocument(document);
-  const program = boundProgram(document), audio = document.audio;
-  const materials = new Map(document.bindings.map(binding => [binding.id, binding.artifact]));
-  const rendered = renderDocumentProgram(program, audio, artifact => resolve(materials.get(artifact.resource) ?? artifact)).preview;
+  const program = boundProgram(document);
+  const materials = new Map(document.resources.artifacts.map((binding) => [binding.id, binding.artifact]));
+  const rendered = renderDocumentProgram(
+    program,
+    document.audio,
+    (artifact) => {
+      const material = materials.get(artifact.resource);
+      if (material === undefined) throw new Error("HTML document picture material has no structural pair");
+      return resolve(material);
+    },
+    resolve,
+  );
   const { document: page } = parseHTML(rendered);
-  const scripts = Array.from(page.querySelectorAll("script")).map(script => {
+  const scripts = Array.from(page.querySelectorAll("script")).map((script) => {
     const source = script.textContent ?? "";
     script.remove();
     return source;
   });
   const html = page.toString();
-  const settings = JSON.stringify({ autoplay: options.autoplay ?? true, loop: options.loop ?? true, muted: options.muted ?? true, responsive: options.responsive ?? true });
+  const settings = JSON.stringify({
+    autoplay: options.autoplay ?? true,
+    loop: options.loop ?? true,
+    muted: options.muted ?? true,
+    responsive: options.responsive ?? true,
+  });
   const driver = `<script>
 (() => {
-  const options = ${settings}, count = ${program.frameCount}, fps = ${program.frameRate.numerator}/${program.frameRate.denominator};
+  const options = ${settings};
+  const count = ${program.frameCount};
+  const fps = ${program.frameRate.numerator}/${program.frameRate.denominator};
   let frame = 0, playing = false, request, generation = 0, started, lastReport = 0;
   function report(force = false) {
     if (window.parent === window) return;
@@ -113,7 +173,11 @@ export function materializeHtmlDocument(document: HtmlDocument, resolve: Resourc
       const elapsed = Math.floor((now - started) * fps / 1000);
       frame = options.loop ? elapsed % count : Math.min(elapsed, count - 1);
       try { await window.__hypitPlayFrame(frame); }
-      catch (error) { playing = false; window.dispatchEvent(new CustomEvent('hypit-playback-error', {detail: error})); return; }
+      catch (error) {
+        playing = false;
+        window.dispatchEvent(new CustomEvent('hypit-playback-error', {detail: error}));
+        return;
+      }
       if (!playing || generation !== current) return;
       report();
       if (!options.loop && elapsed >= count - 1) { await pause(); return; }
@@ -125,14 +189,17 @@ export function materializeHtmlDocument(document: HtmlDocument, resolve: Resourc
     ready, play, pause,
     get frame() { return frame; }, get playing() { return playing; },
     async seekFrame(value) {
-      if (!Number.isSafeInteger(value) || value < 0 || value >= count) throw new RangeError('Frame outside HTML document');
+      if (!Number.isSafeInteger(value) || value < 0 || value >= count) {
+        throw new RangeError('Frame outside HTML document');
+      }
       await pause(); frame = value; await window.__hypitSeekFrame(frame); report(true);
     },
     async setMuted(value) { await ready; await window.__hypitSetMuted(value); }
   };
   let commands = Promise.resolve();
   window.addEventListener('message', event => {
-    if (event.source !== window.parent || window.parent === window || event.data?.type !== 'hypit.html-document.command@1') return;
+    if (event.source !== window.parent || window.parent === window
+      || event.data?.type !== 'hypit.html-document.command@1') return;
     const {action,frame:target,muted} = event.data;
     commands = commands.then(async () => {
       await ready;
@@ -141,7 +208,9 @@ export function materializeHtmlDocument(document: HtmlDocument, resolve: Resourc
       else if (action === 'seek') await window.__hypitDocument.seekFrame(target);
       else if (action === 'mute') await window.__hypitDocument.setMuted(muted);
       else if (action === 'state') report(true);
-    }).catch(error => window.parent.postMessage({type:'hypit.html-document.error@1',message:String(error)}, '*'));
+    }).catch(error => window.parent.postMessage({
+      type:'hypit.html-document.error@1', message:String(error)
+    }, '*'));
   });
   window.addEventListener('load', async () => {
     try {
@@ -155,12 +224,15 @@ export function materializeHtmlDocument(document: HtmlDocument, resolve: Resourc
         const root = document.querySelector('[data-hypit-program-root]');
         function resize() {
           const scale = Math.min(innerWidth/${program.canvas.width}, innerHeight/${program.canvas.height});
-          Object.assign(root.style, {position:'absolute', transformOrigin:'top left', transform:'scale('+scale+')', left:((innerWidth-${program.canvas.width}*scale)/2)+'px', top:((innerHeight-${program.canvas.height}*scale)/2)+'px'});
+          Object.assign(root.style, {
+            position:'absolute', transformOrigin:'top left', transform:'scale('+scale+')',
+            left:((innerWidth-${program.canvas.width}*scale)/2)+'px',
+            top:((innerHeight-${program.canvas.height}*scale)/2)+'px'
+          });
         }
         new ResizeObserver(resize).observe(document.documentElement); resize();
       }
-      readyResolve();
-      report(true);
+      readyResolve(); report(true);
       if (options.autoplay) await play();
     } catch (error) { readyReject(error); }
   }, {once:true});

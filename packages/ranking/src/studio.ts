@@ -2,7 +2,7 @@ import { rankingMarkupSurfaces, rankingModuleRef, rankingTypes } from "./index.j
 import type { RankingProgram, RankingSchedule, RankingSoundEventPlan } from "./index.js";
 import { compositionTypes } from "@hypit/composition";
 import type { AudioTrack } from "@hypit/composition";
-import type { StudioTrackCompanion, StudioTrackCompanionContext, StudioItemDraft, StudioInspectorFieldDeclaration, StudioSourceBindingDeclaration } from "@hypit/studio-companion";
+import type { StudioTrackCompanion, StudioTrackCompanionContext, StudioItemDraft, StudioInspectorFieldDeclaration, StudioSourceBindingDeclaration, StudioValuePresentation } from "@hypit/studio-companion";
 import { artifactPreview, authoredChildFor, previewLayer, requiredSurfaceValue, temporalLineageFor, temporalDomainSource } from "@hypit/studio-companion";
 
 
@@ -25,6 +25,20 @@ const frameParameters: readonly StudioSourceBindingDeclaration[] = [
 ];
 
 const soundProperties = new Set(["appear-gain", "move-gain", "sound-fade-frames"]);
+const colorProperties = new Set([
+  "text-color", "label-text-color", "board-background", "board-border-color", "board-shadow-color",
+]);
+
+function rankingValuePresentation(name: string): StudioValuePresentation | undefined {
+  if (colorProperties.has(name)) return { kind: "color" };
+  if (name === "rank-colors" || name === "slot-colors") {
+    return { kind: "list", item: { kind: "color" } };
+  }
+  if (name === "rows") {
+    return { kind: "list", item: { kind: "record", fields: { color: { kind: "color" } } } };
+  }
+  return undefined;
+}
 
 function rankingProperties(surface: "column-style" | "tier-style" | "top-three-style", audio = false) {
   return (rankingMarkupSurfaces.find((candidate) => candidate.name === surface)
@@ -97,11 +111,13 @@ function rankingInspector(surface: "column-style" | "tier-style" | "top-three-st
   return [...fontInspector.fields, ...rankingProperties(surface).map((property) => {
     const placement = rankingInspectorPlacement[property.name as keyof typeof rankingInspectorPlacement];
     if (placement === undefined) throw new Error(`Ranking Studio has no explicit placement for ${property.name}.`);
+    const valuePresentation = rankingValuePresentation(property.name);
     return {
       binding: `style.${property.name}`,
       label: title(property.name),
       ...placement,
       ...(property.summary === undefined ? {} : { summary: property.summary }),
+      ...(valuePresentation === undefined ? {} : { valuePresentation }),
     };
   })];
 }
