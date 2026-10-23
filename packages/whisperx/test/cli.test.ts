@@ -6,9 +6,9 @@ import test from "node:test";
 
 import { canonicalize } from "@hypit/hypit/protocol";
 import type { Need } from "@hypit/hypit/protocol";
-import { sealAlignedTranscriptEvidence } from "@hypit/speech-evidence";
+import { decodeSpeechTranscriptSource, sealSpeechTranscriptEvidence } from "@hypit/speech-evidence";
 import { interpretWhisperXTranscript } from "@hypit/whisperx";
-import type { WhisperXAlignmentRequest } from "@hypit/whisperx";
+import type { WhisperXTranscriptionRequest } from "@hypit/whisperx";
 
 import { runTranscribeCli } from "../src/cli.js";
 import type { TranscribeEnvironment } from "../src/cli.js";
@@ -45,15 +45,14 @@ function host(seen: Need[]): Awaited<ReturnType<TranscribeEnvironment["openHost"
       await observation?.reportProgress?.({ phase: "Aligning words" });
       await observation?.reportProgress?.({ phase: "Aligning words" });
       seen.push(need);
-      if (need.capability.name === "whisperx-alignment") {
-        const request = need.constraints as unknown as WhisperXAlignmentRequest;
-        return { value: (canonicalize(sealAlignedTranscriptEvidence({
-          domainId: request.domainId,
+      if (need.capability.name === "whisperx-transcription") {
+        const request = need.constraints as unknown as WhisperXTranscriptionRequest;
+        return canonicalize(sealSpeechTranscriptEvidence({
           sampleFrames: request.sampleFrames,
           passages: interpretWhisperXTranscript({
             segments: [{ start: 0, end: 1.5, words: [{ text: "hello", start: 0.1, end: 0.5 }, { text: "world", start: 0.9, end: 1.4 }] }],
           }, request.sampleFrames),
-        }))) };
+        }));
       }
       throw new Error(`Unexpected capability ${need.capability.name}`);
     },
@@ -69,22 +68,20 @@ function capture() {
   return { io: { write: (text: string) => { output += text; } }, text: () => output };
 }
 
-test("transcribe writes every word in seconds from the Profile's alignment Endpoint", async () => {
+test("transcribe writes exact editable evidence from the Profile's transcription Endpoint", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-transcribe-"));
   const seen: Need[] = [];
   try {
     await writeFile(join(root, "speech.wav"), wav(32_000));
     const out = capture();
-    await runTranscribeCli(["transcribe", "speech.wav", "--to", "speech.json", "--language", "en"], out.io, environment(root, seen));
+    await runTranscribeCli(["transcribe", "speech.wav", "--to", "speech.transcript.svml", "--language", "en"], out.io, environment(root, seen));
     assert.match(out.text(), /paid\.default \(@hypit\/provider-example\)  ·  https:\/\/prices\.example\/models/u);
     assert.match(out.text(), /2 words in 1 passage over 2s/u);
     assert.equal(out.text().match(/Aligning words/gu)?.length, 1);
-    const file = JSON.parse(await readFile(join(root, "speech.json"), "utf8")) as {
-      readonly audio_seconds: number; readonly passages: readonly { readonly words: readonly { readonly text: string; readonly start_seconds: number }[] }[];
-    };
-    assert.equal(file.audio_seconds, 2);
-    assert.deepEqual(file.passages[0]?.words.map((word) => [word.text, word.start_seconds]), [["hello", 0.1], ["world", 0.9]]);
-    const request = seen[0]!.constraints as unknown as WhisperXAlignmentRequest;
+    const file = decodeSpeechTranscriptSource(await readFile(join(root, "speech.transcript.svml"), "utf8"));
+    assert.equal(file.sampleFrames, 32_000);
+    assert.deepEqual(file.passages[0]?.words.map((word) => [word.text, word.startSample]), [["hello", 1_600], ["world", 14_400]]);
+    const request = seen[0]!.constraints as unknown as WhisperXTranscriptionRequest;
     assert.equal(request.language, "en");
     assert.equal(request.sampleFrames, 32_000);
   } finally {
@@ -110,8 +107,8 @@ test("a Profile that does not serve the capability stops before anything is spen
       } }),
     };
     await assert.rejects(
-      runTranscribeCli(["transcribe", "speech.wav", "--to", "speech.json", "--language", "en"], capture().io, unserved),
-      /No Endpoint in .*hypit\.runtime\.json serves @hypit\/whisperx@1#whisperx-alignment; configure an Endpoint/u,
+      runTranscribeCli(["transcribe", "speech.wav", "--to", "speech.transcript.svml", "--language", "en"], capture().io, unserved),
+      /No Endpoint in .*hypit\.runtime\.json serves @hypit\/whisperx@1#whisperx-transcription; configure an Endpoint/u,
     );
     assert.equal(invoked, false);
   } finally {
@@ -121,7 +118,7 @@ test("a Profile that does not serve the capability stops before anything is spen
 
 test("transcribe requires a spoken language before opening a host", async () => {
   const noHost: TranscribeEnvironment = { cwd: "/tmp", openHost: async () => { throw new Error("host must not open"); } };
-  await assert.rejects(runTranscribeCli(["transcribe", "speech.wav", "--to", "speech.json"], capture().io, noHost),
+  await assert.rejects(runTranscribeCli(["transcribe", "speech.wav", "--to", "speech.transcript.svml"], capture().io, noHost),
     /transcribe --language must be an explicit/u);
 });
 
@@ -130,11 +127,11 @@ test("transcribe passes Korean to the selected endpoint", async () => {
   try {
     await writeFile(join(root, "speech.wav"), wav(32_000));
     const seen: Need[] = [];
-    await runTranscribeCli(["transcribe", "speech.wav", "--language", "ko", "--to", "speech.json"], capture().io, {
+    await runTranscribeCli(["transcribe", "speech.wav", "--language", "ko", "--to", "speech.transcript.svml"], capture().io, {
       cwd: root, openHost: async () => ({ profile: join(root, "runtime.json"), host: host(seen) }),
     });
-    assert.equal((seen[0]!.constraints as unknown as WhisperXAlignmentRequest).language, "ko");
-    assert.equal(JSON.parse(await readFile(join(root, "speech.json"), "utf8")).language, "ko");
+    assert.equal((seen[0]!.constraints as unknown as WhisperXTranscriptionRequest).language, "ko");
+    assert.equal(decodeSpeechTranscriptSource(await readFile(join(root, "speech.transcript.svml"), "utf8")).sampleFrames, 32_000);
   } finally { await rm(root, { recursive: true, force: true }); }
 });
 
@@ -146,22 +143,21 @@ test("Chinese transcription explicitly sends zh and retains individual character
     const env: TranscribeEnvironment = { cwd: root, openHost: async () => ({ profile: join(root, "runtime.json"), host: {
       ...selected,
       invoke: async (need) => {
-        const request = need.constraints as unknown as WhisperXAlignmentRequest;
+        const request = need.constraints as unknown as WhisperXTranscriptionRequest;
         assert.equal(request.language, "zh");
-        return { value: (canonicalize({
-          domainId: request.domainId,
+        return canonicalize({
           sampleFrames: request.sampleFrames,
           passages: interpretWhisperXTranscript({
           segments: [{ words: [{ word: "你", start: 0.1, end: 0.24 }, { word: "好！", start: 0.5, end: 1.1 }] }],
-        }, request.sampleFrames) })) };
+        }, request.sampleFrames),
+        });
       },
     } }) };
-    await runTranscribeCli(["transcribe", "speech.wav", "--language", "zh", "--to", "speech.json"], capture().io, env);
-    const result = JSON.parse(await readFile(join(root, "speech.json"), "utf8"));
-    assert.equal(result.language, "zh");
-    assert.deepEqual(result.passages[0].words, [
-      { text: "你", start_seconds: 0.1, end_seconds: 0.24 },
-      { text: "好！", start_seconds: 0.5, end_seconds: 1.1 },
+    await runTranscribeCli(["transcribe", "speech.wav", "--language", "zh", "--to", "speech.transcript.svml"], capture().io, env);
+    const result = decodeSpeechTranscriptSource(await readFile(join(root, "speech.transcript.svml"), "utf8"));
+    assert.deepEqual(result.passages[0]!.words, [
+      { text: "你", startSample: 1_600, endSampleExclusive: 3_840 },
+      { text: "好！", startSample: 8_000, endSampleExclusive: 17_600 },
     ]);
   } finally { await rm(root, { recursive: true, force: true }); }
 });
@@ -185,11 +181,11 @@ test("transcription explains ambiguous selection and preserves unsupported reque
         },
       }) };
       await assert.rejects(runTranscribeCli([
-        "transcribe", "speech.wav", "--to", "speech.json", "--language", "zh",
+        "transcribe", "speech.wav", "--to", "speech.transcript.svml", "--language", "zh",
       ], capture().io, env), (error: Error) => {
         if (selection.status === "ambiguous") {
           assert.match(error.message, /local\.words, hosted\.words/u);
-          assert.match(error.message, /bindings\["@hypit\/whisperx@1#whisperx-alignment"\]/u);
+          assert.match(error.message, /bindings\["@hypit\/whisperx@1#whisperx-transcription"\]/u);
         } else {
           assert.match(error.message, /binding: hosted\.words/u);
           assert.match(error.message, /hosted\.words: This deployment does not support zh alignment/u);

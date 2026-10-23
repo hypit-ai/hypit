@@ -67,4 +67,4 @@ export const generationComponent = {
       },
     },
   ],
-} satisfies ProducerPackage & RefinementPackage;
+} satisfies { producers?: ProducerPackage; refinements?: RefinementPackage };

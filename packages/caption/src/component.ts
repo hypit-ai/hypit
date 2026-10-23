@@ -52,4 +52,4 @@ export const captionComponent = {
     { type: captionTypes.program, handler: ({ value }) => assertCaptionProgram(valueOf<CaptionProgram>(value, "CaptionProgram")) },
     { type: captionTypes.timing, handler: ({ value }) => assertCaptionTiming(valueOf<CaptionTiming>(value, "CaptionTiming")) },
   ],
-} satisfies ProducerPackage & RefinementPackage;
+} satisfies { producers?: ProducerPackage; refinements?: RefinementPackage };

@@ -49,4 +49,4 @@ export const captionFineComponent = {
         ))) }),
     },
   ],
-} satisfies ProducerPackage & RefinementPackage;
+} satisfies { producers?: ProducerPackage; refinements?: RefinementPackage };

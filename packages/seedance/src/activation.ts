@@ -17,7 +17,7 @@ export const hypitPackage = {
   format: "hypit.package@1" as const,
   modules: [{ manifest: seedanceManifest }],
   facets: [
-    ...[seedanceComponent].flatMap((component) => [createProducerPackageFacet(component), createRefinementPackageFacet(component)]),
+    ...[seedanceComponent].flatMap((component) => [createProducerPackageFacet(component.producers ?? []), createRefinementPackageFacet(component.refinements ?? [])]),
     createMarkupSurfaceFacet({
       module: seedanceModuleRef,
     declaration: seedanceMarkupSurfaces.find((item) => item.name === "text-video")!,

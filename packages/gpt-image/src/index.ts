@@ -46,7 +46,7 @@ export function sealGptImage2Request(
   return sealModelFieldRequest(gptImage2Ports, ports);
 }
 
-/** Scalar request seed; reference images are attached later by explicit graph edges. */
+/** Initial request draft; graph edges attach Text and reference images later. */
 export function sealGptImage2Draft(
   ports: Readonly<Record<string, readonly ModelFieldValue[]>>,
 ) {
@@ -193,8 +193,8 @@ export const gptImageCleanManifest = {
   name: gptImageCleanModuleRef.name,
   version: gptImageCleanModuleRef.version,
   dependencies: [
-    { module: gptImageModuleRef },
-    { module: imageOperationsModuleRef },
+    gptImageModuleRef,
+    imageOperationsModuleRef,
   ],
   types: [],
   capabilities: [],

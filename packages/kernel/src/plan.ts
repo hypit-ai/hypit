@@ -1,6 +1,5 @@
 import type {
   BuildPlan,
-  BuildTarget,
   BuildState,
   CapabilityRef,
   AuthorGraph,
@@ -16,7 +15,7 @@ import type {
   TypeRef,
   TypedRecord,
 } from "@hypit/protocol";
-import { sameType, typeKey } from "@hypit/protocol";
+import { compareCodeUnits, sameType, typeKey } from "@hypit/protocol";
 
 import { invariant } from "./error.js";
 import {
@@ -139,7 +138,7 @@ export type PlannedExecution = {
 function compilePlanning(
   program: LinkedProgram,
   graph: AuthorGraph,
-  targets: readonly BuildTarget[],
+  targets: readonly string[],
   satisfactions: readonly Satisfaction[],
   runRecords: readonly TypedRecord[],
 ): PlannedExecution {
@@ -150,9 +149,9 @@ function compilePlanning(
   verifyAuthorGraph(verificationProgram, graph);
   const targetIds = new Set<string>();
   for (const target of targets) {
-    resolveLogicalOutput(graph, target.output);
-    invariant(!targetIds.has(target.output), "DUPLICATE_BUILD_TARGET", `${target.output} is targeted twice`);
-    targetIds.add(target.output);
+    resolveLogicalOutput(graph, target);
+    invariant(!targetIds.has(target), "DUPLICATE_BUILD_TARGET", `${target} is targeted twice`);
+    targetIds.add(target);
   }
 
   const selectedCandidates = new Map<string, string>();
@@ -206,7 +205,7 @@ function compilePlanning(
 
   const pending: GraphValueRef[] = targets.map((target) => ({
     kind: "logical-output",
-    id: target.output,
+    id: target,
   }));
   while (pending.length > 0) {
     const ref = pending.pop() as GraphValueRef;
@@ -288,11 +287,11 @@ function compilePlanning(
   }));
   const targetSources = targets.map((target) => ({
     target,
-    source: resolvedOutputs.get(target.output) as ResolvedSource,
+    source: resolvedOutputs.get(target) as ResolvedSource,
   }));
 
   const steps: ProducerStep[] = demanded
-    .sort((a, b) => a.operation.id.localeCompare(b.operation.id))
+    .sort((a, b) => compareCodeUnits(a.operation.id, b.operation.id))
     .map(({ operation, inputs }) => ({
       id: operation.id,
       producer: operation.producer,
@@ -301,7 +300,7 @@ function compilePlanning(
     }));
 
   const goals = [...new Set(targetSources.map(({ source }) => source.record))].sort();
-  const sortedSelections = [...selections.values()].sort((a, b) => a.output.localeCompare(b.output));
+  const sortedSelections = [...selections.values()].sort((a, b) => compareCodeUnits(a.output, b.output));
   const initialRecordsById = new Map<string, TypedRecord>();
   for (const record of selectedValueRecords(program, graph, sortedSelections)) {
     initialRecordsById.set(record.id, record);
@@ -311,9 +310,9 @@ function compilePlanning(
     invariant(!initialRecordsById.has(id), "RUN_RECORD_CONFLICT", `${id} has multiple sources`, id);
     initialRecordsById.set(id, record);
   }
-  const initialRecords = [...initialRecordsById.values()].sort((left, right) => left.id.localeCompare(right.id));
+  const initialRecords = [...initialRecordsById.values()].sort((left, right) => compareCodeUnits(left.id, right.id));
   const plan = planContent(steps, goals);
-  const sortedSupplies = [...selectedSupplies.values()].sort((left, right) => left.candidate.localeCompare(right.candidate));
+  const sortedSupplies = [...selectedSupplies.values()].sort((left, right) => compareCodeUnits(left.candidate, right.candidate));
   verifyBuildPlan(program, [
     ...initialRecords,
     ...sortedSupplies.map((supply) => ({ id: supply.record, type: supply.type })),
@@ -433,7 +432,7 @@ export function selectedValueRecords(
     candidates.set(record.id, candidate.id);
     records.set(record.id, record);
   }
-  return [...records.values()].sort((left, right) => left.id.localeCompare(right.id));
+  return [...records.values()].sort((left, right) => compareCodeUnits(left.id, right.id));
 }
 
 function assertAcyclic(plan: BuildPlan, records: ReadonlyMap<RecordId, ProducedRecord>): void {

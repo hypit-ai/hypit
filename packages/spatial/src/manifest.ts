@@ -312,16 +312,16 @@ export const spatialManifest: ModuleManifest = {
   version: spatialModuleRef.version,
   dependencies: [],
   types: [
-    { name: spatialTypes.canvas.name },
-    { name: spatialTypes.point.name },
-    { name: spatialTypes.frame.name },
-    { name: spatialTypes.path.name },
-    { name: spatialTypes.extent.name },
-    { name: spatialTypes.map2D.name },
-    { name: spatialTypes.fit.name },
-    { name: spatialTypes.frameEdgesProgram.name },
-    { name: spatialTypes.anchoredFrameProgram.name },
-    { name: spatialTypes.aspectFrameProgram.name },
+    spatialTypes.canvas.name,
+    spatialTypes.point.name,
+    spatialTypes.frame.name,
+    spatialTypes.path.name,
+    spatialTypes.extent.name,
+    spatialTypes.map2D.name,
+    spatialTypes.fit.name,
+    spatialTypes.frameEdgesProgram.name,
+    spatialTypes.anchoredFrameProgram.name,
+    spatialTypes.aspectFrameProgram.name,
   ],
   capabilities: [],
   producers: [
@@ -331,4 +331,4 @@ export const spatialManifest: ModuleManifest = {
     { name: spatialProducers.resolveContentFit.name, inputs: [{ name: "frame", type: spatialTypes.frame }, { name: "extent", type: spatialTypes.extent }, { name: "fit", type: spatialTypes.fit }], result: { kind: "output" as const, name: "mapping", type: spatialTypes.map2D } },
   ],
 };
-export const spatialDependency = { module: spatialModuleRef } as const;
+export const spatialDependency = spatialModuleRef;

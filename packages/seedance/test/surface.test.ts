@@ -36,7 +36,7 @@ async function decode(source: string, handler: StructuredSurfaceHandler, referen
   });
 }
 
-test("TextVideo exposes prompt-only generation without inventing a usage", async () => {
+test("TextVideo exposes one authored Text edge and one settings draft", async () => {
   const result = await decode(
     '<seedance:TextVideo id="motion" model="mini" prompt={direction} duration="6" resolution="720p" aspect-ratio="9:16" generate-audio="false" web-search="true"/>',
     decodeSeedanceTextVideoSurface,
@@ -45,24 +45,24 @@ test("TextVideo exposes prompt-only generation without inventing a usage", async
     kind: "component-output", component: "assembled-direction", output: "text",
   });
   assert.deepEqual(result.components[0]?.outputs, { video: "motion.video" });
-  assert.equal(Object.keys(result.components[0]?.inputs ?? {}).some((name) => name.includes("media")), false);
+  assert.deepEqual(Object.keys(result.components[0]?.inputs ?? {}).sort(), ["draft", "prompt:text"]);
 });
 
-test("admitted M4A audio is rejected at decode while future audio remains a graph reference", async () => {
+test("supplied M4A audio is rejected at decode while future audio remains a graph reference", async () => {
   const source = '<seedance:ReferenceVideo id="speaker" model="mini" prompt={direction} duration="6"><seedance:Reference image={generated.image} person-reference="true"/><seedance:Reference audio={voice.audio}/></seedance:ReferenceVideo>';
   for (const mediaType of ["audio/mp4", "audio/x-m4a", "audio/wav", "audio/mpeg"]) {
-    const admitted = new Map(refs);
-    admitted.set("voice.audio", {
+    const supplied = new Map(refs);
+    supplied.set("voice.audio", {
       ...refs.get("voice.audio")!,
       record: {
         id: "voice", type: blobTypes.blob,
-        value: { kind: "blob", resource: fixtureResource("admitted-voice"), size: 4, mediaType },
+        value: { kind: "blob", resource: fixtureResource("supplied-voice"), size: 4, mediaType },
       },
     });
     if (mediaType === "audio/mp4" || mediaType === "audio/x-m4a") {
-      await assert.rejects(decode(source, decodeSeedanceReferenceVideoSurface, admitted), /m4a/);
+      await assert.rejects(decode(source, decodeSeedanceReferenceVideoSurface, supplied), /m4a/);
     } else {
-      assert.ok((await decode(source, decodeSeedanceReferenceVideoSurface, admitted)).components.length);
+      assert.ok((await decode(source, decodeSeedanceReferenceVideoSurface, supplied)).components.length);
     }
   }
   const future = await decode(source, decodeSeedanceReferenceVideoSurface);
@@ -121,8 +121,9 @@ test("ReferenceVideo keeps rendered prompt Text and heterogeneous references on 
   });
   const draft = result.records.find((record) => record.id === "speaker.draft");
   assert.ok(draft);
-  assert.equal(JSON.stringify(draft.value).includes("referenceImage"), false,
-    "runtime references must remain graph edges rather than authored draft metadata");
+  assert.deepEqual(draft.value, { ports: {
+    aspectRatio: ["9:16"], duration: [6], generateAudio: [true], resolution: ["720p"], webSearch: [false],
+  } });
 });
 
 test("the three Surfaces make incompatible invocation shapes unrepresentable", async () => {

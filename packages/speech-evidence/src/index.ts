@@ -1,20 +1,25 @@
 import { assertBlobRef } from "@hypit/hypit/protocol";
 import { mediaDependency, mediaTypes } from "@hypit/media";
-import { temporalDependency, temporalTypes } from "@hypit/temporal";
 import type { BlobRef, CapabilityRef, ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/hypit/protocol";
-export { parseTranscriptWords, phraseRanges, transcriptDocumentFromEvidence, wordsAt } from "./transcript-document.js";
+export {
+  decodeSpeechTranscriptEvidence,
+  decodeSpeechTranscriptSource,
+  encodeSpeechTranscriptEvidence,
+  phraseRanges,
+  speechTranscriptSource,
+  transcriptWordsFromEvidence,
+  wordsAt,
+} from "./transcript-document.js";
 export type { FrameWords, TranscriptWord } from "./transcript-document.js";
+export { decodeSpeechTranscriptSurface } from "./surface.js";
 
 export type ProjectSpeechEvidenceAudioNeed = {
-  readonly domainId: string;
   readonly source: BlobRef;
   readonly sourceSampleFrames: number;
   readonly evidenceSampleFrames: number;
 };
 
 export type SpeechEvidenceAudio = {
-  /** The exact local temporal domain from which this evidence audio was projected. */
-  readonly domainId: string;
   readonly artifact: BlobRef;
   /** Exact 16 kHz mono PCM sample count. */
   readonly sampleFrames: number;
@@ -55,8 +60,7 @@ export type SpeechTranscriptPassage = {
   readonly speechActivity?: readonly SpeechActivitySpan[];
 };
 
-export type AlignedTranscriptEvidence = {
-  readonly domainId: string;
+export type SpeechTranscriptEvidence = {
   readonly sampleFrames: number;
   readonly passages: readonly SpeechTranscriptPassage[];
 };
@@ -86,8 +90,7 @@ const activity = object({
   endSampleExclusive: { schema: sample },
 });
 
-export const alignedTranscriptEvidenceFields = {
-  domainId: { schema: { kind: "string", minLength: 1 } },
+export const speechTranscriptEvidenceFields = {
   sampleFrames: { schema: { kind: "number", integer: true, minimum: 1 } },
   passages: {
     schema: {
@@ -103,11 +106,11 @@ export const alignedTranscriptEvidenceFields = {
   },
 } as const satisfies Readonly<Record<string, { readonly schema: ValueSchema; readonly optional?: boolean }>>;
 
-export const alignedTranscriptEvidenceSchema: ValueSchema = object(alignedTranscriptEvidenceFields);
+export const speechTranscriptEvidenceSchema: ValueSchema = object(speechTranscriptEvidenceFields);
 export const speechEvidenceModuleRef = { name: "@hypit/speech-evidence", version: "1" } as const;
 export const speechEvidenceTypes = {
   audio: { module: speechEvidenceModuleRef, name: "SpeechEvidenceAudio" },
-  alignedTranscript: { module: speechEvidenceModuleRef, name: "AlignedTranscriptEvidence" },
+  transcript: { module: speechEvidenceModuleRef, name: "SpeechTranscriptEvidence" },
 } satisfies Record<string, TypeRef>;
 export const speechEvidenceCapabilities = {
   projectAudio: { module: speechEvidenceModuleRef, name: "project-speech-evidence-audio" },
@@ -115,29 +118,57 @@ export const speechEvidenceCapabilities = {
 export const speechEvidenceProducers = {
   projectAudio: { module: speechEvidenceModuleRef, name: "request-speech-evidence-audio" },
 } satisfies Record<string, ProducerRef>;
+export const speechEvidenceMarkupSurfaces = [{
+  name: "transcript",
+  tag: "Transcript",
+  mode: "raw",
+  outputs: [speechEvidenceTypes.transcript],
+  vocabulary: {
+    summary: "Publishes editable, provider-neutral speech transcript evidence in the canonical 16 kHz sample domain.",
+    attributes: [{ name: "id", kind: "identifier", required: true,
+      summary: "Names the SpeechTranscriptEvidence Record." }],
+    text: "A JSON object containing exact sampleFrames and passages with words, characters, speech activity and optional scores.",
+    ports: [{ name: "", type: speechEvidenceTypes.transcript,
+      summary: "The complete editable SpeechTranscriptEvidence value." }],
+    example: `<speech:Transcript id="opening">
+{
+  "sampleFrames": 160000,
+  "passages": []
+}
+</speech:Transcript>`,
+    notes: [
+      "Sample boundaries are exact integers in a fixed 16 kHz mono audio domain; this Surface does not carry media, Provider or LocalTemporalDomain identity.",
+      "Use the package serializer when materializing model output so text that could form Markup boundaries is Unicode-escaped.",
+    ],
+  },
+}] as const;
 export const speechEvidenceManifest: ModuleManifest = {
   format: "hypit.module@1",
   name: speechEvidenceModuleRef.name,
   version: speechEvidenceModuleRef.version,
-  dependencies: [mediaDependency, temporalDependency],
-  types: [{ name: speechEvidenceTypes.audio.name }, { name: speechEvidenceTypes.alignedTranscript.name }],
+  dependencies: [mediaDependency],
+  types: [speechEvidenceTypes.audio.name, speechEvidenceTypes.transcript.name],
   capabilities: [{ name: speechEvidenceCapabilities.projectAudio.name, returns: speechEvidenceTypes.audio }],
   producers: [{
     name: speechEvidenceProducers.projectAudio.name,
-    inputs: [
-      { name: "media", type: mediaTypes.synchronized },
-      { name: "domain", type: temporalTypes.localDomain },
-    ],
+    inputs: [{ name: "media", type: mediaTypes.synchronized }],
     result: { kind: "need" as const, name: "evidenceAudio", capability: speechEvidenceCapabilities.projectAudio },
   }],
 };
-export const speechEvidenceDependency = {
-  module: speechEvidenceModuleRef,
-} as const;
+export const speechEvidenceDependency = speechEvidenceModuleRef;
 
-export function sealAlignedTranscriptEvidence(value: AlignedTranscriptEvidence): AlignedTranscriptEvidence {
-  assertAlignedTranscriptEvidenceIdentity(value);
+export function sealSpeechTranscriptEvidence(value: SpeechTranscriptEvidence): SpeechTranscriptEvidence {
+  assertSpeechTranscriptEvidence(value);
   return structuredClone(value);
+}
+
+function assertExactFields(value: unknown, fields: readonly string[], subject: string): void {
+  if (value === null || Array.isArray(value) || typeof value !== "object") {
+    throw new Error(`${subject} is invalid.`);
+  }
+  const allowed = new Set(fields);
+  const unexpected = Object.keys(value).find((field) => !allowed.has(field));
+  if (unexpected !== undefined) throw new Error(`${subject} has unsupported field ${unexpected}.`);
 }
 
 export function speechEvidenceSampleBoundary(masterSampleBoundary: number): number {
@@ -150,25 +181,26 @@ export function speechEvidenceSampleBoundary(masterSampleBoundary: number): numb
 }
 
 export function sealSpeechEvidenceAudio(value: SpeechEvidenceAudio): SpeechEvidenceAudio {
+  assertSpeechEvidenceAudioIdentity(value);
   return structuredClone(value);
 }
 
 export function assertSpeechEvidenceAudioIdentity(value: SpeechEvidenceAudio): void {
+  assertExactFields(value, ["artifact", "sampleFrames"], "SpeechEvidenceAudio");
   assertBlobRef(value.artifact, "SpeechEvidenceAudio.artifact");
-  if (typeof value.domainId !== "string" || value.domainId.length === 0
-    || value.artifact.mediaType !== "audio/wav"
+  if (value.artifact.mediaType !== "audio/wav"
     || !Number.isSafeInteger(value.sampleFrames) || value.sampleFrames < 1) {
     throw new Error("SpeechEvidenceAudio identity is invalid.");
   }
 }
 
-export function assertAlignedTranscriptEvidenceIdentity(value: AlignedTranscriptEvidence): void {
-  const item = value as AlignedTranscriptEvidence | null | undefined;
+export function assertSpeechTranscriptEvidence(value: SpeechTranscriptEvidence): void {
+  const item = value as SpeechTranscriptEvidence | null | undefined;
+  assertExactFields(item, ["sampleFrames", "passages"], "SpeechTranscriptEvidence");
   if (item === null || item === undefined
-    || typeof item.domainId !== "string" || item.domainId.length === 0
     || !Number.isSafeInteger(item.sampleFrames) || item.sampleFrames < 1
     || !Array.isArray(item.passages)) {
-    throw new Error("AlignedTranscriptEvidence identity is invalid.");
+    throw new Error("SpeechTranscriptEvidence is invalid.");
   }
   const window = (candidate: {
     readonly startSample?: number;
@@ -186,27 +218,35 @@ export function assertAlignedTranscriptEvidenceIdentity(value: AlignedTranscript
   const score = (candidate: number | undefined): boolean => candidate === undefined
     || (Number.isFinite(candidate) && candidate >= 0 && candidate <= 1);
   for (const passage of item.passages) {
+    assertExactFields(passage, ["startSample", "endSampleExclusive", "words", "chars", "speechActivity"],
+      "SpeechTranscriptEvidence passage");
     if (passage === null || typeof passage !== "object" || !window(passage)
       || !Array.isArray(passage.words) || !Array.isArray(passage.chars)
       || (passage.speechActivity !== undefined && !Array.isArray(passage.speechActivity))) {
-      throw new Error("AlignedTranscriptEvidence passage is invalid.");
+      throw new Error("SpeechTranscriptEvidence passage is invalid.");
     }
     for (const word of passage.words) {
+      assertExactFields(word, ["text", "startSample", "endSampleExclusive", "score"],
+        "SpeechTranscriptEvidence word");
       if (word === null || typeof word !== "object" || typeof word.text !== "string"
         || !window(word) || !score(word.score)) {
-        throw new Error("AlignedTranscriptEvidence word is invalid.");
+        throw new Error("SpeechTranscriptEvidence word is invalid.");
       }
     }
     for (const character of passage.chars) {
+      assertExactFields(character, ["char", "wordIndex", "startSample", "endSampleExclusive", "score"],
+        "SpeechTranscriptEvidence character");
       if (character === null || typeof character !== "object" || typeof character.char !== "string"
         || !Number.isSafeInteger(character.wordIndex) || character.wordIndex < 0
         || character.wordIndex >= passage.words.length || !window(character) || !score(character.score)) {
-        throw new Error("AlignedTranscriptEvidence character is invalid.");
+        throw new Error("SpeechTranscriptEvidence character is invalid.");
       }
     }
     for (const activity of passage.speechActivity ?? []) {
+      assertExactFields(activity, ["startSample", "endSampleExclusive"],
+        "SpeechTranscriptEvidence speech activity");
       if (activity === null || typeof activity !== "object" || !window(activity)) {
-        throw new Error("AlignedTranscriptEvidence speech activity is invalid.");
+        throw new Error("SpeechTranscriptEvidence speech activity is invalid.");
       }
     }
   }

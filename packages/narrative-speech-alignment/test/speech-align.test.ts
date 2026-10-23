@@ -1,6 +1,6 @@
 import type { Narrative, NarrativeToken } from "@hypit/narrative";
-import { sealAlignedTranscriptEvidence } from "@hypit/speech-evidence";
-import type { AlignedTranscriptEvidence, SpeechCharacterEvidence, SpeechWordEvidence } from "@hypit/speech-evidence";
+import { sealSpeechTranscriptEvidence } from "@hypit/speech-evidence";
+import type { SpeechCharacterEvidence, SpeechTranscriptEvidence, SpeechWordEvidence } from "@hypit/speech-evidence";
 import assert from "node:assert/strict";
 import test from "node:test";
 
@@ -57,10 +57,9 @@ function evidence(args: {
   readonly words: readonly WordFixture[];
   readonly chars?: readonly SpeechCharacterEvidence[];
   readonly vad?: readonly { readonly startSec: number; readonly endSec: number }[];
-}): AlignedTranscriptEvidence {
+}): SpeechTranscriptEvidence {
   const rate = args.basis.frameDomain.frameRate;
-  return sealAlignedTranscriptEvidence({
-    domainId: args.basis.domainId,
+  return sealSpeechTranscriptEvidence({
     sampleFrames: Math.round(args.basis.frameDomain.frameCount * 16_000 * rate.denominator / rate.numerator),
     passages: [
       {
@@ -84,7 +83,6 @@ function speechBasis(
   if (narrative.segments.length !== 1) throw new Error("Test alignment requires one Segment.");
   const frameDomain = { frameRate: { numerator: 1_000, denominator: 1 }, frameCount: Math.round(durationSec * 1_000) };
   return {
-    domainId: "test-domain",
     frameDomain,
     segments: [{
       segmentId: narrative.segments[0]!.id,
@@ -381,21 +379,20 @@ test("three Script words may share the two video frames covered by one evidence 
   ]);
 });
 
-test("Evidence cannot be reinterpreted through another local frame domain", () => {
+test("Evidence must cover the complete selected local frame domain", () => {
   const narrative = parseScript("affinity.svml", "<line>Hello world.</line>");
   const basis = speechBasis(narrative, 2);
   const mismatched = evidence({
     basis,
     words: [{ text: "Hello", startSec: 0.1, endSec: 0.4 }, { text: "world", startSec: 0.5, endSec: 0.9 }],
   });
-  const anotherFrameDomain = { frameRate: { numerator: 30, denominator: 1 }, frameCount: 60 };
+  const anotherFrameDomain = { frameRate: { numerator: 30, denominator: 1 }, frameCount: 61 };
   const anotherBasis: AlignmentBasis = {
     ...basis,
-    domainId: "another-domain",
     frameDomain: anotherFrameDomain,
-    segments: [{ segmentId: "line", startFrame: 0, endFrameExclusive: 60 }],
+    segments: [{ segmentId: "line", startFrame: 0, endFrameExclusive: 61 }],
   };
-  assert.throws(() => locateAlignedSegmentTiming(narrative, anotherBasis, mismatched), /another local domain/u);
+  assert.throws(() => locateAlignedSegmentTiming(narrative, anotherBasis, mismatched), /sample span differs/u);
 });
 
 test("the final map is quantized once into the selected Timeline", () => {

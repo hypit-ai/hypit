@@ -51,7 +51,10 @@ export function defaultAudioSourceTimeSpec(): AudioSourceTimeSpec {
 }
 
 function assertPoint(value: AudioSourceTimePoint, label: string): void {
+  assert(value !== null && typeof value === "object" && !Array.isArray(value), `${label} is invalid.`);
   assert(value.edge === "start" || value.edge === "end", `${label}.edge is invalid.`);
+  assert(value.offset !== null && typeof value.offset === "object" && !Array.isArray(value.offset),
+    `${label}.offset is invalid.`);
   if (value.offset.unit === "seconds") {
     assert(Number.isSafeInteger(value.offset.numerator) && value.offset.numerator >= 0
       && Number.isSafeInteger(value.offset.denominator) && value.offset.denominator > 0, `${label}.offset is invalid.`);
@@ -61,14 +64,17 @@ function assertPoint(value: AudioSourceTimePoint, label: string): void {
 }
 
 function assertBounds(value: AudioSourceTimeBounds, label: string): void {
+  assert(value !== null && typeof value === "object" && !Array.isArray(value), `${label} is invalid.`);
   assertPoint(value.from, `${label}.from`);
   assertPoint(value.until, `${label}.until`);
 }
 
 export function assertAudioSourceTimeSpec(value: AudioSourceTimeSpec, label = "AudioSourceTimeSpec"): void {
-  assert(Array.isArray(value.relations) && value.relations.length > 0, `${label} requires at least one relation.`);
+  assert(value !== null && typeof value === "object" && !Array.isArray(value)
+    && Array.isArray(value.relations) && value.relations.length > 0, `${label} requires at least one relation.`);
   for (const [index, relation] of value.relations.entries()) {
     const item = `${label}.relations.${index}`;
+    assert(relation !== null && typeof relation === "object" && !Array.isArray(relation), `${item} is invalid.`);
     assertBounds(relation.target, `${item}.target`);
     assertBounds(relation.source, `${item}.source`);
     if (relation.kind === "fit") {
@@ -109,20 +115,62 @@ function sourceAt(sourceAnchor: number, targetAnchor: number, rate: AudioSourceT
     + BigInt(target - targetAnchor) * BigInt(rate.numerator), BigInt(rate.denominator));
 }
 
-function compare(value: AudioSourceTimeRational, integer: number): number {
-  const difference = BigInt(value.numerator) - BigInt(integer) * BigInt(value.denominator);
-  return difference < 0n ? -1 : difference > 0n ? 1 : 0;
+function floorDiv(numerator: bigint, denominator: bigint): bigint {
+  return numerator >= 0n
+    ? numerator / denominator
+    : -((-numerator + denominator - 1n) / denominator);
 }
 
-function firstTrue(from: number, until: number, predicate: (value: number) => boolean): number {
-  let left = from;
-  let right = until;
-  while (left < right) {
-    const middle = left + Math.floor((right - left) / 2);
-    if (predicate(middle)) right = middle;
-    else left = middle + 1;
-  }
-  return left;
+function ceilDiv(numerator: bigint, denominator: bigint): bigint {
+  return numerator >= 0n
+    ? (numerator + denominator - 1n) / denominator
+    : -((-numerator) / denominator);
+}
+
+/**
+ * A fractional positive rate reaches exact source-sample boundaries on one
+ * target-sample lattice. Intersect that lattice with both authored domains so
+ * the terminal map never invents a fractional sample boundary.
+ */
+function exactRateTarget(
+  target: { readonly startSample: number; readonly endSampleExclusive: number },
+  source: { readonly startSample: number; readonly endSampleExclusive: number },
+  targetAnchor: number,
+  sourceAnchor: number,
+  rate: AudioSourceTimeRational,
+  label: string,
+): { readonly startSample: number; readonly endSampleExclusive: number } {
+  const divisor = gcd(BigInt(rate.numerator), BigInt(rate.denominator));
+  const sourceStep = BigInt(rate.numerator) / divisor;
+  const targetStep = BigInt(rate.denominator) / divisor;
+  const targetAnchorValue = BigInt(targetAnchor);
+  const sourceAnchorValue = BigInt(sourceAnchor);
+  const startIndex = [
+    ceilDiv(BigInt(target.startSample) - targetAnchorValue, targetStep),
+    ceilDiv(BigInt(source.startSample) - sourceAnchorValue, sourceStep),
+  ].reduce((left, right) => left > right ? left : right);
+  const endIndex = [
+    floorDiv(BigInt(target.endSampleExclusive) - targetAnchorValue, targetStep),
+    floorDiv(BigInt(source.endSampleExclusive) - sourceAnchorValue, sourceStep),
+  ].reduce((left, right) => left < right ? left : right);
+  assert(endIndex > startIndex, `${label} does not sample any complete source-sample interval.`);
+  const startSample = targetAnchorValue + startIndex * targetStep;
+  const endSampleExclusive = targetAnchorValue + endIndex * targetStep;
+  assert(startSample >= 0n && endSampleExclusive <= BigInt(Number.MAX_SAFE_INTEGER),
+    `${label} target sample interval is invalid.`);
+  return { startSample: Number(startSample), endSampleExclusive: Number(endSampleExclusive) };
+}
+
+function exactRateStart(target: { readonly startSample: number; readonly endSampleExclusive: number },
+  targetAnchor: number, rate: AudioSourceTimeRational, label: string): number {
+  const divisor = gcd(BigInt(rate.numerator), BigInt(rate.denominator));
+  const targetStep = BigInt(rate.denominator) / divisor;
+  const anchor = BigInt(targetAnchor);
+  const index = ceilDiv(BigInt(target.startSample) - anchor, targetStep);
+  const start = anchor + index * targetStep;
+  assert(start >= 0n && start < BigInt(target.endSampleExclusive),
+    `${label} does not reach an exact source-sample boundary.`);
+  return Number(start);
 }
 
 function resolveRate(
@@ -137,16 +185,12 @@ function resolveRate(
   const targetAnchor = point(relation.targetAt, targetLength, timeline, `${label}.targetAt`);
   const sourceAnchor = point(relation.sourceAt, sourceLength, timeline, `${label}.sourceAt`);
   const wrap = relation.wrap === undefined ? undefined : bounds(relation.wrap, sourceLength, timeline, `${label}.wrap`);
-  let target = authoredTarget;
-  if (wrap === undefined) {
-    const at = (sample: number) => sourceAt(sourceAnchor, targetAnchor, relation.rate, sample);
-    const startSample = firstTrue(target.startSample, target.endSampleExclusive,
-      (sample) => compare(at(sample), permittedSource.startSample) >= 0);
-    const endSampleExclusive = firstTrue(startSample, target.endSampleExclusive,
-      (sample) => compare(at(sample), permittedSource.endSampleExclusive) >= 0);
-    assert(endSampleExclusive > startSample, `${label} does not sample any source audio.`);
-    target = { startSample, endSampleExclusive };
-  }
+  const target = wrap === undefined
+    ? exactRateTarget(authoredTarget, permittedSource, targetAnchor, sourceAnchor, relation.rate, label)
+    : {
+        startSample: exactRateStart(authoredTarget, targetAnchor, relation.rate, label),
+        endSampleExclusive: authoredTarget.endSampleExclusive,
+      };
   const rawStart = sourceAt(sourceAnchor, targetAnchor, relation.rate, target.startSample);
   let sourceAtStart = rawStart;
   if (wrap !== undefined) {

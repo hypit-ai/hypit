@@ -55,11 +55,11 @@ test("isolated Builds load fresh transitive code and Profile choices, share capa
       const producers = ${JSON.stringify(producers)};
       export default {
         format: 'hypit.package@1', modules: [{ manifest: ${JSON.stringify(manifest)} }],
-        facets: [{ abi: 'hypit.producer-package@1', implementation: { producers: [
+        facets: [{ abi: 'hypit.producer-package@1', implementation: [
           { producer: producers.makePrompt, handler: () => ({ kind: 'output', value: revision }) },
           { producer: producers.requestText, handler: ({ inputs }) => ({ kind: 'need', constraints: { prompt: inputs.prompt.value } }) },
           { producer: producers.assemble, handler: ({ inputs }) => ({ kind: 'output', value: { text: inputs.generated.value, revision } }) },
-        ] } }, createRuntimeEndpointAdapterFacet({ use: 'fixture-components', activate(context) {
+        ] }, createRuntimeEndpointAdapterFacet({ use: 'fixture-components', activate(context) {
           const config = context.config;
           return { endpoint: defineEndpoint({
             instance: context.instance, pool: context.pool, defaultConcurrency: 1,
@@ -72,7 +72,7 @@ test("isolated Builds load fresh transitive code and Profile choices, share capa
                 },
                 async poll({ handle }) {
                   if (!await access(config.gate).then(() => true, () => false)) return { status: 'pending', handle, wakeAt: Date.now() + 100 };
-                  return { status: 'completed', result: { value: revision + ':' + config.label } };
+                  return { status: 'completed', result: revision + ':' + config.label };
                 },
                 async cancel() { await writeFile(config.gate + '.cancelled', ''); return { status: 'confirmed' }; }
               }
@@ -81,7 +81,7 @@ test("isolated Builds load fresh transitive code and Profile choices, share capa
               async handler() {
                 await writeFile(config.entered, JSON.stringify({ revision, label: config.label, pid: process.pid }));
                 while (!await access(config.gate).then(() => true, () => false)) await pause(25);
-                return { value: revision + ':' + config.label };
+                return revision + ':' + config.label;
               }
             }]
 
@@ -105,7 +105,7 @@ test("isolated Builds load fresh transitive code and Profile choices, share capa
     await runtime.build({ id,
       definition: defineBuild({ program: initial.program, plan: initial.plan }),
       executionPackages: ["fixture-components"],
-      catalog: { source: { path: join(directory, "main.svml") }, publication: { outputs: [{
+      catalog: { sourcePath: join(directory, "main.svml"), publication: { outputs: [{
         name: "document", output: "document", target: true, type: types.document, source: { kind: "current-record", record: "document:root" },
       }] } },
       result: { repository: { root: directory, path: "results" } },

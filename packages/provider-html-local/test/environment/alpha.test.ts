@@ -33,7 +33,7 @@ test("transparent normalized media composites through an explicit Visual Clip in
     const layers = appendTimedMediaLayer(createMediaLayerSet(), broll, fit, sealMediaSampleLayerSpec({ id: "cutout",
       appearance: { opacity: 1, filter: { blurPx: 0, brightness: 1, contrast: 1, saturation: 1 } },
     }));
-    const spec = sealVisualClipSpec({ id: "broll-cutout", z: 2,
+    const spec = sealVisualClipSpec({ id: "broll-cutout",
       treatment: { clip: { kind: "none" }, padding: { topPx: 0, rightPx: 0, bottomPx: 0, leftPx: 0 },
         border: { widthPx: 0, style: "solid", color: "#000000" }, shadows: [] } });
     const items = appendVisualClip(createVisualTrackSet(), header, space,
@@ -41,7 +41,7 @@ test("transparent normalized media composites through an explicit Visual Clip in
         itemId: spec.id, semantic: space, projection: { start: { ref: "timeline.start" }, end: { ref: "timeline.end" } },
       }));
     const speechHeader = sealVisualTrackHeader({ id: "speech" });
-    const speechSpec = { ...spec, id: "speech", z: 1 };
+    const speechSpec = { ...spec, id: "speech" };
     const speechLayers = appendTimedMediaLayer(createMediaLayerSet(), media, fit, sealMediaSampleLayerSpec({
       id: "content",
       appearance: { opacity: 1, filter: { blurPx: 0, brightness: 1, contrast: 1, saturation: 1 } },
@@ -53,7 +53,7 @@ test("transparent normalized media composites through an explicit Visual Clip in
     const speechVisual = projectVisualTrack(space, finalizeVisualTrack(speechSet, speechHeader, space));
     const brollVisual = projectVisualTrack(space, finalizeVisualTrack(items, header, space));
     const document = compileHtmlProgram(sealComposition({ id: "alpha-proof",
-      canvas: { width: 192, height: 64, clearColor: "#143cdc" }, tracks: [speechVisual, brollVisual] }), space);
+      canvas: { width: 192, height: 64, clearColor: "#143cdc" }, visual: { members: [speechVisual, brollVisual].map(track => ({ kind: "track" as const, id: track.id, track })) }, audio: [] }), space);
     const rendered = await rasterizeHtmlProgram({ program: document }, { resources, workers: 2, quality: "high", processTimeoutMs: 120_000 });
     const video = await writeTestArtifact(resources, rendered.artifact, join(directory, "speech-and-broll.mp4"));
     const pixels = ffmpegBytes(["-i", video, "-pix_fmt", "rgb24", "-f", "rawvideo", "pipe:1"]);

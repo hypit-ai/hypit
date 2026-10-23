@@ -30,7 +30,6 @@ const percent = (binding, label, domain = "where") =>
     number: { scale: 100, step: 1 },
   });
 const text = (binding, label) => field(binding, label, "how", "Text", "text");
-const z = number("z", "Drawing order", "where", { number: { step: 1 } });
 const layouts = {
   Title: [
     text("title", "Title"),
@@ -43,7 +42,6 @@ const layouts = {
     percent("title-y", "Title Y"),
     percent("title-size", "Title size", "how"),
     field("color", "Title color", "how", "Appearance", "color"),
-    z,
   ],
   Timer: [
     text("title", "Title"),
@@ -64,9 +62,8 @@ const layouts = {
       unit: "cycles/s",
       number: { minimum: 0, step: 0.05 },
     }),
-    z,
   ],
-  Flag: [percent("x", "X"), percent("y", "Y"), percent("width", "Width"), percent("height", "Height"), field("flag-color", "Cloth color", "how", "Flag", "color"), z],
+  Flag: [percent("x", "X"), percent("y", "Y"), percent("width", "Width"), percent("height", "Height"), field("flag-color", "Cloth color", "how", "Flag", "color")],
   Stage: [
     percent("x", "X"),
     percent("y", "Y"),
@@ -89,7 +86,6 @@ const layouts = {
       unit: "px",
       number: { minimum: 0, step: 1 },
     }),
-    z,
   ],
   Veil: [
     field("pattern", "Pattern", "how", "Appearance", "select", {
@@ -102,7 +98,6 @@ const layouts = {
     percent("amount", "Pattern opacity", "how"),
     percent("shade", "Wash opacity", "how"),
     field("tint", "Wash color", "how", "Appearance", "color"),
-    z,
   ],
 };
 const names = {
@@ -161,9 +156,12 @@ const tracks = Object.entries(layouts).map(([kind, inspector]) => ({
           const span = temporal?.projection;
           return [
             {
-              id: context.track.outputRef + ":stage",
+              id: "stage",
               authoredId: context.placement.id,
-              elementRange: context.placement.range,
+              elementLocation: {
+                path: context.placement.sourcePath,
+                range: context.placement.range,
+              },
               display: {
                 title: names[kind][0],
                 layers: [textLayer(names[kind][1])],
@@ -175,7 +173,6 @@ const tracks = Object.entries(layouts).map(([kind, inspector]) => ({
                 span?.endFrameExclusive ??
                 Math.max(...children.map((e) => e.endFrameExclusive)),
               stackOrder: 0,
-              renderIds: [],
               ...(temporal ? { temporal } : {}),
               presentation: { kind: "material-stage", chrome: "standard" },
             },

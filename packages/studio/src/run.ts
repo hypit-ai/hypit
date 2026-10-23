@@ -57,7 +57,7 @@ export async function loadStudioRun(input: {
   });
   const compiled = await compiler.compileEntry(input.run);
   const source = await observedCompiledSource(compiled.author, observer.observations());
-  const targets = compiled.run.graph.targets.map((target) => target.output);
+  const targets = compiled.run.graph.targets;
   return {
     runPath: input.run,
     authorSource: compiled.authorSource,
@@ -68,7 +68,7 @@ export async function loadStudioRun(input: {
     prepare(run, selected) {
       return compiler.prepareVariant(compiled, {
         ...run.graph,
-        targets: selected.map((output) => ({ output })),
+        targets: selected,
       });
     },
   };

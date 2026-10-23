@@ -39,20 +39,28 @@ function nonEmpty(value: string, subject: string): string {
   return value;
 }
 
+function without(value: string, delimiter: string, subject: string): string {
+  if (value.includes(delimiter)) throw new Error(`${subject} must not contain ${delimiter}`);
+  return value;
+}
+
 export function createModuleRef(name: string, version: string): ModuleRef {
-  return { name: nonEmpty(name, "Module name"), version: nonEmpty(version, "Module version") };
+  return {
+    name: nonEmpty(name, "Module name"),
+    version: without(nonEmpty(version, "Module version"), "@", "Module version"),
+  };
 }
 
 export function createTypeRef(module: ModuleRef, name: string): TypeRef {
-  return { module, name: nonEmpty(name, "Type name") };
+  return { module, name: without(nonEmpty(name, "Type name"), "#", "Type name") };
 }
 
 export function createProducerRef(module: ModuleRef, name: string): ProducerRef {
-  return { module, name: nonEmpty(name, "Producer name") };
+  return { module, name: without(nonEmpty(name, "Producer name"), "#", "Producer name") };
 }
 
 export function createCapabilityRef(module: ModuleRef, name: string): CapabilityRef {
-  return { module, name: nonEmpty(name, "Capability name") };
+  return { module, name: without(nonEmpty(name, "Capability name"), "#", "Capability name") };
 }
 
 function isObject(value: unknown): value is Readonly<Record<string, unknown>> {
@@ -62,12 +70,38 @@ function isObject(value: unknown): value is Readonly<Record<string, unknown>> {
 export function isModuleRef(value: unknown): value is ModuleRef {
   return isObject(value)
     && typeof value.name === "string" && value.name.trim().length > 0
-    && typeof value.version === "string" && value.version.trim().length > 0;
+    && typeof value.version === "string" && value.version.trim().length > 0
+    && !value.version.includes("@");
 }
 
 function isNamedRef(value: unknown): value is { readonly module: ModuleRef; readonly name: string } {
   return isObject(value) && isModuleRef(value.module)
-    && typeof value.name === "string" && value.name.trim().length > 0;
+    && typeof value.name === "string" && value.name.trim().length > 0
+    && !value.name.includes("#");
+}
+
+/** Collision-free internal identity for a Module tuple. Never shown as author syntax. */
+export function moduleIdentity(ref: ModuleRef): string {
+  return JSON.stringify([ref.name, ref.version]);
+}
+
+function namedIdentity(ref: { readonly module: ModuleRef; readonly name: string }): string {
+  return JSON.stringify([ref.module.name, ref.module.version, ref.name]);
+}
+
+/** Collision-free internal identity for a Type tuple. */
+export function typeIdentity(ref: TypeRef): string {
+  return namedIdentity(ref);
+}
+
+/** Collision-free internal identity for a Producer tuple. */
+export function producerIdentity(ref: ProducerRef): string {
+  return namedIdentity(ref);
+}
+
+/** Collision-free internal identity for a Capability tuple. */
+export function capabilityIdentity(ref: CapabilityRef): string {
+  return namedIdentity(ref);
 }
 
 export function isTypeRef(value: unknown): value is TypeRef {

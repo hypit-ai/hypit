@@ -1,0 +1,55 @@
+<?svml using="@hypit/markup@1"?>
+<!-- Acceptance composition for VisualScope occurrence identity and Adjustment folding.
+     The same card VisualTrack is placed twice in the root Scope and once in a nested
+     Scope. The nested copy is translated for the whole Timeline and graded only in
+     the middle Window. Labels are above that Stack and remain unaffected. -->
+<svml>
+  <import as="media" from="@hypit/media@1"/>
+  <import as="time" from="@hypit/timeline-author@1"/>
+  <import as="visual" from="@hypit/visual-track@1"/>
+  <import as="adjust" from="@hypit/visual-adjustment@1"/>
+  <import as="space" from="@hypit/spatial@1"/>
+  <import as="film" from="@hypit/film@1"/>
+  <import as="html" from="@hypit/html-video@1"/>
+  <import as="recipes" source="./recipes.svs"/>
+
+  <space:Canvas id="canvas" width="960" height="540"/>
+  <space:Frame id="card-frame" within={canvas.bounds} left="4%" top="22%" right="46%" bottom="72%"/>
+  <space:Frame id="badge-frame" within={canvas.bounds} left="36%" top="78%" right="64%" bottom="96%"/>
+  <space:Extent id="picture-size" width="640" height="360"/>
+  <time:Clock id="clock" frame-rate="30"/>
+  <time:Timeline id="program" clock={clock} end="4s">
+    <time:Window id="middle" from="1s" until="3s"/>
+  </time:Timeline>
+
+  <media:Image id="card-image" src="../../visual-track/preview/rounded.png"/>
+  <media:Image id="badge-image" src="../../visual-track/preview/flush.png"/>
+
+  <visual:Track id="card" timeline={program.timeline}>
+    <visual:Clip id="card" image={card-image} extent={picture-size}
+      during={program.window} frame={card-frame} fit="contain"/>
+  </visual:Track>
+  <visual:Track id="badge" timeline={program.timeline}>
+    <visual:Clip id="badge" image={badge-image} extent={picture-size}
+      during={program.window} frame={badge-frame} fit="contain"/>
+  </visual:Track>
+
+  <adjust:Track id="move" timeline={program.timeline}>
+    <adjust:Adjustment id="move-right" during={program.window} appearance={recipes.look.move-right}/>
+  </adjust:Track>
+  <adjust:Track id="grade" timeline={program.timeline}>
+    <adjust:Adjustment id="middle-grade" during={program.middle} appearance={recipes.look.middle-grade}/>
+  </adjust:Track>
+
+  <film:Film id="main" canvas={canvas.canvas} timeline={program.timeline} appearance={recipes.film.preview}>
+    <film:Track id="card-left-base" source={card.visual}/>
+    <film:Track id="card-left-repeat" source={card.visual}/>
+    <film:Stack id="treated-copy">
+      <film:Track id="card-right" source={card.visual}/>
+      <film:Track id="move-right" source={move.visual}/>
+      <film:Track id="middle-grade" source={grade.visual}/>
+    </film:Stack>
+    <film:Track id="badge" source={badge.visual}/>
+  </film:Film>
+  <html:Video id="final" composition={main.composition} timeline={program.timeline}/>
+</svml>

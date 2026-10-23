@@ -1,4 +1,5 @@
 import type { AuthorFrontend, AuthorSourceExport } from "@hypit/author";
+import { moduleKey } from "@hypit/protocol";
 import type { TypedRecord } from "@hypit/protocol";
 import { parseRecipe } from "@hypit/recipe";
 import { decodeSourceText } from "@hypit/source";
@@ -11,7 +12,7 @@ export const textRecipeFrontendId = "@hypit/text/svs@1";
 export const textRecipeFrontend: AuthorFrontend = {
   id: textRecipeFrontendId,
   discover() {
-    return { modules: [`${textModuleRef.name}@${textModuleRef.version}`], sources: [] };
+    return { modules: [moduleKey(textModuleRef)], sources: [] };
   },
   decode(source, context) {
     const parsed = parseRecipe(source.name, decodeSourceText(source));

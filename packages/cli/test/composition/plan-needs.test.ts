@@ -32,14 +32,12 @@ test("Plan retains a deterministic Producer failure even when the Build has no e
   };
   const evaluated = await evaluatePlanNeeds(definition, [{
     format: "hypit.package@1",
-    facets: [createProducerPackageFacet({
-      producers: [{
+    facets: [createProducerPackageFacet([{
         producer: producers.makePrompt,
         handler() {
           throw new Error("Timeline end must be after its start");
         },
-      }],
-    })],
+      }])],
   }]);
 
   assert.equal(evaluated.needs.size, 0);
@@ -52,12 +50,10 @@ test("a structurally planned request stays blocked without creating partial cons
   const definition = greetingDefinition();
   const evaluated = await evaluatePlanNeeds(definition, [{
     format: "hypit.package@1",
-    facets: [createProducerPackageFacet({
-      producers: [{
+    facets: [createProducerPackageFacet([{
         producer: producers.requestText,
         handler: () => ({ kind: "need", constraints: { prompt: "unreachable" } }),
-      }],
-    })],
+      }])],
   }]);
   const request = [...evaluated.needs.values()][0];
 
@@ -93,15 +89,13 @@ test("an executed request Producer upgrades its structural demand to a concrete 
   const definition = greetingDefinition();
   const evaluated = await evaluatePlanNeeds(definition, [{
     format: "hypit.package@1",
-    facets: [createProducerPackageFacet({
-      producers: [{
+    facets: [createProducerPackageFacet([{
         producer: producers.makePrompt,
         handler: () => ({ kind: "output", value: ("Greet Ada") }),
       }, {
         producer: producers.requestText,
         handler: ({ inputs }: ProducerHandlerContext) => ({ kind: "need", constraints: { prompt: inputs.prompt!.value } }),
-      }],
-    })],
+      }])],
   }]);
   const request = [...evaluated.needs.values()][0];
 
@@ -125,18 +119,18 @@ test("a generic request summary preserves scalar paths without recognizing domai
     referenceImage: { resource: "resource:1", mediaType: "image/png", size: 10 },
     referenceAudio: { resource: "resource:2", mediaType: "audio/wav", size: 10 },
   });
-  assert.deepEqual(summary.fields, {
-    prompt: "A woman writes on a whiteboard in a bri…",
-    duration: 10,
-    resolution: "720p",
-    generateAudio: true,
-    "referenceImage.resource": "resource:1",
-    "referenceImage.mediaType": "image/png",
-    "referenceImage.size": 10,
-    "referenceAudio.resource": "resource:2",
-    "referenceAudio.mediaType": "audio/wav",
-    "referenceAudio.size": 10,
-  });
+  assert.deepEqual(summary, [
+    { at: ["prompt"], value: "A woman writes on a whiteboard in a bri…" },
+    { at: ["duration"], value: 10 },
+    { at: ["resolution"], value: "720p" },
+    { at: ["generateAudio"], value: true },
+    { at: ["referenceImage", "resource"], value: "resource:1" },
+    { at: ["referenceImage", "mediaType"], value: "image/png" },
+    { at: ["referenceImage", "size"], value: 10 },
+    { at: ["referenceAudio", "resource"], value: "resource:2" },
+    { at: ["referenceAudio", "mediaType"], value: "audio/wav" },
+    { at: ["referenceAudio", "size"], value: 10 },
+  ]);
 });
 
 test("a generic request summary follows nested objects and arrays without unwrapping envelopes", () => {
@@ -151,15 +145,15 @@ test("a generic request summary follows nested objects and arrays without unwrap
     },
     output: { resolution: "1080p" },
   });
-  assert.deepEqual(summary.fields, {
-    "ports.prompt[0]": "A short prompt",
-    "ports.resolution[0]": "2K",
-    "ports.referenceImage[0].role": "image",
-    "ports.referenceImage[0].artifact.resource": "resource:1",
-    "ports.referenceImage[0].artifact.mediaType": "image/png",
-    "ports.referenceImage[0].artifact.size": 10,
-    "output.resolution": "1080p",
-  });
+  assert.deepEqual(summary, [
+    { at: ["ports", "prompt", 0], value: "A short prompt" },
+    { at: ["ports", "resolution", 0], value: "2K" },
+    { at: ["ports", "referenceImage", 0, "role"], value: "image" },
+    { at: ["ports", "referenceImage", 0, "artifact", "resource"], value: "resource:1" },
+    { at: ["ports", "referenceImage", 0, "artifact", "mediaType"], value: "image/png" },
+    { at: ["ports", "referenceImage", 0, "artifact", "size"], value: 10 },
+    { at: ["output", "resolution"], value: "1080p" },
+  ]);
 });
 
 test("a request shape is projected the same way regardless of its domain", () => {
@@ -169,18 +163,28 @@ test("a request shape is projected the same way regardless of its domain", () =>
     sampleRate: 16_000,
     language: "en",
   });
-  assert.deepEqual(summary.fields, {
-    "audio.resource": "resource:3",
-    "audio.mediaType": "audio/wav",
-    "audio.size": 320_000,
-    sampleFrames: 160_000,
-    sampleRate: 16_000,
-    language: "en",
-  });
+  assert.deepEqual(summary, [
+    { at: ["audio", "resource"], value: "resource:3" },
+    { at: ["audio", "mediaType"], value: "audio/wav" },
+    { at: ["audio", "size"], value: 320_000 },
+    { at: ["sampleFrames"], value: 160_000 },
+    { at: ["sampleRate"], value: 16_000 },
+    { at: ["language"], value: "en" },
+  ]);
+});
+
+test("a request summary preserves root scalars and distinct structural paths", () => {
+  assert.deepEqual(summarizeConstraints("direct request"), [{ at: [], value: "direct request" }]);
+  assert.deepEqual(summarizeConstraints({ "a.b": 1, a: { b: 2 }, "items[0]": 3, items: [4] }), [
+    { at: ["a.b"], value: 1 },
+    { at: ["a", "b"], value: 2 },
+    { at: ["items[0]"], value: 3 },
+    { at: ["items", 0], value: 4 },
+  ]);
 });
 
 test("long strings are previewed rather than semantically measured", () => {
   const summary = summarizeConstraints({ prompt: "一个女生在大学教室里拿着手麦说话".repeat(3) });
-  assert.equal(String(summary.fields.prompt).endsWith("…"), true);
-  assert.doesNotMatch(String(summary.fields.prompt), /words|chars/u);
+  assert.equal(String(summary[0]?.value).endsWith("…"), true);
+  assert.doesNotMatch(String(summary[0]?.value), /words|chars/u);
 });

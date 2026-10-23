@@ -18,11 +18,11 @@ Keep source facts, preparation and use distinct:
 | Audio | The selected audio stream and prepared local time; its role can be a Script performance, music, narration or an effect. |
 | Compositable surface | Its declared pixels, extent and any animation information; use the producing package's output directly. |
 | Code-authored text, shapes or a scene | The component's data and resources; it can draw directly without an intermediate media file. |
-| A model reference | The exact image, video or audio input accepted by that model's Surface; normalization is not a universal prerequisite. |
+| A model reference | The exact image, video or audio input accepted by that model's Surface; prepare only the form that Surface declares. |
 
 Files, generated Outputs and earlier Results are sources of these values. A reference need not
-appear in the film. A video containing a person is not automatically semantic; the author establishes
-that relation by aligning one Script Segment to its local domain. [Runs](runs.md) owns explicit Result
+appear in the film. Align a Script Segment to a video's local domain when the production consumes
+that semantic timing relationship. [Runs](runs.md) owns explicit Result
 reuse. [Image operations](image-operations.md) owns still-image preparation.
 
 Normalization establishes moving media's frame clock, local domain and selected picture/audio
@@ -117,16 +117,39 @@ them on the accepted media's local domain:
 
 ```svml
 <import as="whisperx" from="@hypit/whisperx@1"/>
+<import as="speechalign" from="@hypit/narrative-speech-alignment@1"/>
 
-<whisperx:Alignment id="opening-semantic" narrative={story}
-  segment={story.segment.opening} media={performance-media.media}
-  domain={performance-media.domain} language="en"/>
+<whisperx:Transcription id="opening-transcription"
+  media={performance-media.media} language="en"/>
+<speechalign:Alignment id="opening-semantic" narrative={story}
+  segment={story.segment.opening} domain={performance-media.domain}
+  evidence={opening-transcription.transcript}/>
 ```
 
-Set `language` to the performed language supported by the selected WhisperX Endpoint. WhisperX
-supplies timed evidence; deterministic alignment associates it with Script. The result
+Set `language` to the performed language supported by the selected WhisperX Endpoint. Transcription
+supplies timed evidence; the independent alignment Surface associates it with Script. The result
 `opening-semantic.alignment` is `NarrativeAlignment`: Segment and Token boundaries on the named local
 domain. It carries no media and no Timeline position.
+
+When the observation needs review or correction, materialize it before the Build instead of hiding
+the model response inside execution:
+
+```bash
+hypit transcribe assets/opening.mp4 --language en --to authors/opening.transcript.svml
+```
+
+```svml
+<import as="accepted-speech" source="./opening.transcript.svml"/>
+<speechalign:Alignment id="opening-semantic" narrative={story}
+  segment={story.segment.opening} domain={performance-media.domain}
+  evidence={accepted-speech.transcript}/>
+```
+
+The generated Source exports `transcript` and preserves the complete provider-neutral evidence in
+16 kHz sample coordinates. If a measured word begins or ends incorrectly, edit that evidence and
+build again. The requested semantic word is unchanged; only the observation used to locate it has
+changed. The same alignment path therefore accepts live evidence or an edited file without a second
+format or adapter.
 
 Combine the alignment, its complete local domain and the equal-length Window in one explicit
 semantic projection:
@@ -203,7 +226,7 @@ rounded Frame instead masks Clip geometry; it does not remove the source backgro
 When original and processed pictures both appear, retain both and connect each as an explicit media
 input. If a picture-only transformation preserves the same frame correspondence, a project
 preparation component may reuse the accepted local domain and alignment while publishing a new
-visual source. This is an authored relation, never automatic variant inheritance.
+visual source. Author that relation in the component.
 
 For a moving portrait, the installed `@hypit/volcengine-matting` package exposes `Portrait` with
 `source={performance.video}` and publishes `cutout.video`; query its vocabulary and README for

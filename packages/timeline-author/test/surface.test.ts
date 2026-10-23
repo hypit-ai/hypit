@@ -8,7 +8,6 @@ import {
   decodeAbsoluteInstantSurface,
   decodeAbsoluteWindowSurface,
   decodeTimelineAuthorSurface,
-  timelineAuthorMarkupSurfaces,
   timelineAuthorTypes,
 } from "@hypit/timeline-author";
 
@@ -52,11 +51,14 @@ test("Timeline Surface publishes its range and every named Instant or Window", a
     "film.outro", "film.outro.start", "film.outro.end",
     "film.speech", "film.speech.start", "film.speech.end", "film.private-cue",
   ]);
-  assert.equal(JSON.stringify(output.components.map(({ fragment }) => fragment)).includes("speech.end"), false);
-  assert.equal(JSON.stringify(output.components.map(({ fragment }) => fragment)).includes("3s"), false);
   const childRecords = output.records.filter((record) => record.range.start !== element.range.start);
-  assert(childRecords.some((record) => record.range.start === source.indexOf('<time:Window id="outro"')));
-  assert(childRecords.every((record) => record.range.start !== source.indexOf('<time:Instant id="private-cue"')));
+  assert.equal(childRecords.length, 1);
+  assert.equal(childRecords[0]?.type.name, timelineAuthorTypes.duration.name);
+  assert.deepEqual(childRecords[0]?.value, {
+    duration: { unit: "seconds", numerator: 3, denominator: 1 },
+    author: { binding: "for", declarationId: "outro" },
+  });
+  assert.equal(childRecords[0]?.range.start, source.indexOf('<time:Window id="outro"'));
 });
 
 test("Timeline Window requires exactly two of from, until and for", () => {

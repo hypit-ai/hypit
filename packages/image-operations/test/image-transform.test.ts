@@ -6,8 +6,7 @@ import {
   decodeImageTransformProgramSurface,
   imageTransformComponent,
   imageTransformFragment,
-  imageOperationsCapabilities,
-  imageOperationsManifest,
+  imageTransformProducers,
   imageTransformTypes,
   sealImageTransformProgram,
 } from "@hypit/image-operations";
@@ -71,17 +70,12 @@ test("the official Surface separates Program declaration from Transform use", as
   assert.deepEqual(output.records[0]?.value, (denoiseProgram as unknown as CanonicalValue));
 });
 
-test("the graph contract is exactly source plus Program to one image Need", async () => {
+test("the Transform Fragment carries source and Program into one image Need", async () => {
   assert.deepEqual(imageTransformFragment.inputs.map((input) => input.name).sort(), ["program", "source"]);
   assert.deepEqual(imageTransformFragment.exports.map((output) => output.name), ["image"]);
-  assert.deepEqual(imageOperationsManifest.capabilities.map((capability) => capability.name), [
-    "transform-image", "compose-image",
-  ]);
-  assert.deepEqual(imageOperationsManifest.producers[0]?.result.kind === "need"
-    ? imageOperationsManifest.producers[0].result.capability
-    : undefined,
-    imageOperationsCapabilities.transform);
-  const producer = imageTransformComponent.producers[0]!;
+  const producer = imageTransformComponent.producers.find((item) =>
+    item.producer.name === imageTransformProducers.request.name);
+  assert.ok(producer);
   const source = {
     kind: "blob" as const,
     resource: fixtureResource("image-source"),

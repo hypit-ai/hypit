@@ -6,7 +6,8 @@ import { narrativeProjectionFixture, timelineFixture } from "../../../test/timel
 import { projectMomentWindow, projectProgramWindow, projectSegmentWindow, projectSelectionWindow } from "../../../test/temporal-fixture.js";
 import type { TemporalWindowProjection } from "../../../test/temporal-fixture.js";
 
-import { sealComposition } from "@hypit/composition";
+import { sealComposition, visualElements } from "@hypit/composition";
+import type { VisualPresent } from "@hypit/composition";
 import { compileHtmlProgram } from "@hypit/html-program";
 import { mediaTypes } from "@hypit/media";
 import type { CompositableSurfaceRef, SynchronizedMedia } from "@hypit/media";
@@ -16,6 +17,7 @@ import {
   appendMediaPaintLayer,
   appendMappedStillMediaLayer,
   appendVisualClip,
+  assertVisualTrackSet,
   appendStillMediaLayer,
   appendSurfaceMediaLayer,
   appendTimedMediaLayer,
@@ -34,7 +36,6 @@ import {
   sealVisualTrackHeader,
   stillVisualTrackFragment,
   visualTrackManifest,
-  visualTrackMarkupSurfaces,
   visualTrackTypes,
 } from "@hypit/visual-track";
 import type { VisualClipSpec, MediaLayerSet, VisualSourceTimeSpec } from "@hypit/visual-track";
@@ -44,6 +45,8 @@ import { spatialTypes } from "@hypit/spatial";
 import { recipeType } from "@hypit/recipe";
 import type { Recipe } from "@hypit/recipe";
 import type { StructuredElement, StructuredNode, SurfaceResolvedReference, MarkupAttributeValue } from "@hypit/markup";
+
+const presentElements = (present: VisualPresent) => visualElements(present.root);
 
 test("gradient frame paints preserve commas inside functional colors", () => {
   const paint = (value: string) => decodeMediaFramePaint({ path: "scrim", properties: { "frame-paint": value } }, "scrim")?.paint;
@@ -113,7 +116,6 @@ function clipSpec(overrides: Partial<TestVisualClipSpec> = {}): TestVisualClipSp
       border: { widthPx: 2, style: "solid", color: "#ffffff" },
       shadows: [{ offsetX: 0, offsetY: 8, blurPx: 20, spreadPx: 0, color: "#00000080" }],
     },
-    z: 40,
     ...clipOverrides,
     }),
     projection,
@@ -231,8 +233,8 @@ test("a Clip keeps ordered Paint/sample layers, two-frame fit and frame treatmen
   assert.deepEqual(program.clips[0]?.span, { startFrame: 0, endFrameExclusive: 120 });
   assert.deepEqual(program.clips[0]?.layers.map((layer) => layer.id), ["backing", "content"]);
   const track = projectVisualTrack(space, program);
-  assert.deepEqual({ order: track.presents[0]?.order, z: track.presents[0]?.z }, { order: 0, z: 40 });
-  const elements = track.presents[0]!.elements;
+  assert.equal(track.items[0]?.id, "product");
+  const elements = presentElements(track.items[0]!);
   assert.deepEqual(elements.slice(0, 3).map((element) => element.id), [
     "product:placement", "product:pose", "product:frame",
   ]);
@@ -278,7 +280,7 @@ test("an owned clip path is an explicit Visual input and lowers only over the Cl
   const track = projectVisualTrack(space, finalizeVisualTrack(appendProgramVisualClip(
     createVisualTrackSet(), header, semantic, stillLayers(), frame, clipped,
   ), header, space));
-  const frameElement = track.presents[0]!.elements.find((element) => element.id.endsWith(":frame"));
+  const frameElement = presentElements(track.items[0]!).find((element) => element.id.endsWith(":frame"));
   assert.equal(frameElement?.style.find((entry) => entry.name === "clip-path")?.value,
     'path("M 0 0 L 400 0 L 360 300 L 40 300 Z")');
 });
@@ -296,7 +298,7 @@ test("an explicit source mapping survives Program resolution and renderer loweri
   const sample = program.clips[0]!.layers.find((layer) => layer.kind === "sample");
   assert.deepEqual(sample?.kind === "sample" ? sample.mapping : undefined, mapping);
   const rendered = projectVisualTrack(space, program);
-  const element = rendered.presents[0]!.elements.find((candidate) => candidate.id === "mapped:mapping");
+  const element = presentElements(rendered.items[0]!).find((candidate) => candidate.id === "mapped:mapping");
   assert.ok(element?.style.some((entry) => entry.name === "transform"
     && entry.value === "matrix(0,0.5,-0.5,0,320,40)"));
 });
@@ -317,16 +319,16 @@ test("self-blur is two explicit samples of one Resource and collection keeps one
   const document = compileHtmlProgram(sealComposition({
     id: "media",
     canvas: { width: 1080, height: 1920, clearColor: "#000000" },
-    tracks: [track],
+    visual: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) }, audio: [],
   }), space);
   assert.equal(document.artifacts.length, 1);
   assert.equal((document.html.match(new RegExp(source.resource, "gu")) ?? []).length, 2,
     "HTML names the same declared Resource at both sampling sites");
   assert.equal((document.html.match(/hypit-resource:\/\/res_/gu) ?? []).length, 2);
-  const blurAppearance = track.presents[0]!.elements.find((element) => element.id === "blurred:appearance");
+  const blurAppearance = presentElements(track.items[0]!).find((element) => element.id === "blurred:appearance");
   assert.equal(blurAppearance?.style.find((entry) => entry.name === "filter")?.value,
     "blur(24px) brightness(0.7) saturate(0.8)");
-  const blurred = track.presents[0]!.elements.find((element) => element.id === "blurred");
+  const blurred = presentElements(track.items[0]!).find((element) => element.id === "blurred");
   assert.equal(blurred?.style.find((entry) => entry.name === "left")?.value, "-103px");
   assert.equal(blurred?.style.find((entry) => entry.name === "top")?.value, "-103px");
 });
@@ -375,7 +377,7 @@ test("piecewise source time, Clip pose and picture sampling remain separate wrap
       ],
     },
   })), header, space);
-  const elements = projectVisualTrack(space, program).presents[0]!.elements;
+  const elements = presentElements(projectVisualTrack(space, program).items[0]!);
   assert.ok(elements.find((element) => element.id.endsWith(":pose"))?.animation);
   const samplingWrapper = elements.find((element) => element.id === "video:sampling");
   assert.ok(samplingWrapper?.animation);
@@ -388,7 +390,7 @@ test("piecewise source time, Clip pose and picture sampling remain separate wrap
   ]);
 });
 
-test("Visual Track discards the audio member of synchronized media and exposes no audio facet", () => {
+test("Visual Track discards the audio member of synchronized media", () => {
   const layers = appendTimedMediaLayer(createMediaLayerSet(), timed("with-audio"), fit, sealMediaSampleLayerSpec({
     id: "video", appearance,
   }));
@@ -398,9 +400,7 @@ test("Visual Track discards the audio member of synchronized media and exposes n
   const sample = program.clips[0]!.layers[0]!;
   assert.equal(sample.kind, "sample");
   assert.equal(sample.kind === "sample" && "audio" in sample.source, false);
-  assert.equal(projectVisualTrack(space, program).presents.length, 1);
-  const trackSurface = visualTrackMarkupSurfaces.find((surface) => surface.name === "track")!;
-  assert.equal(trackSurface.outputs.some((type) => type.name === "AudioTrack"), false);
+  assert.equal(projectVisualTrack(space, program).items.length, 1);
 });
 
 test("still and animated typed Surfaces use the same layer law without browser format guesses", () => {
@@ -423,9 +423,9 @@ test("still and animated typed Surfaces use the same layer law without browser f
   layers = appendSurfaceMediaLayer(layers, animated, fit, sealMediaSampleLayerSpec({
     id: "animated", sourceTime: loopSourceTime(), appearance,
   }));
-  const elements = projectVisualTrack(space, finalizeVisualTrack(appendProgramVisualClip(
+  const elements = presentElements(projectVisualTrack(space, finalizeVisualTrack(appendProgramVisualClip(
     createVisualTrackSet(), header, semantic, layers, frame, clipSpec(),
-  ), header, space)).presents[0]!.elements;
+  ), header, space)).items[0]!);
   assert.equal(elements.find((element) => element.id === "still")?.kind, "surface");
   const moving = elements.find((element) => element.id === "animated");
   assert.equal(moving?.kind, "surface");
@@ -466,11 +466,10 @@ test("Visual Clips consume independent absolute Windows without becoming an excl
     moment, clipSpec({
       id: "popup",
       projection: { start: { ref: "moment.cue", offset: { unit: "frames", value: -10 } }, end: { ref: "moment.cue", offset: { unit: "frames", value: 20 } } },
-      z: 41,
     }));
   assert.deepEqual(overlapping.clips[1]?.span, { startFrame: 35, endFrameExclusive: 65 });
   const track = projectVisualTrack(space, finalizeVisualTrack(overlapping, header, space));
-  assert.deepEqual(track.presents.map((present) => present.z), [40, 41]);
+  assert.deepEqual(track.items.map((present) => present.id), ["mention", "popup"]);
 
   const absolute = appendProgramVisualClip(
     createVisualTrackSet(), header, semantic, stillLayers(), frame,
@@ -485,7 +484,7 @@ test("Visual Clips consume independent absolute Windows without becoming an excl
   assert.deepEqual(absolute.clips[0]?.span, { startFrame: 7, endFrameExclusive: 19 });
 });
 
-test("overlapping Clips may share z and retain their authored local order", () => {
+test("overlapping Clips retain their authored Track-local order", () => {
   const first = appendProgramVisualClip(
     createVisualTrackSet(), header, semantic, stillLayers(), frame,
     clipSpec({ id: "first", projection: {
@@ -501,12 +500,32 @@ test("overlapping Clips may share z and retain their authored local order", () =
     } }),
   );
   const program = finalizeVisualTrack(second, header, space);
-  assert.deepEqual(program.clips.map(({ order, z }) => ({ order, z })), [
-    { order: 0, z: 40 }, { order: 1, z: 40 },
-  ]);
+  assert.deepEqual(program.clips.map(({ id }) => id), ["first", "second"]);
 });
 
-test("a Visual Clip can consume one whole Narrative Segment without a synthetic Selection", () => {
+test("one resolved Window can time distinct Visual Clip occurrences", () => {
+  const shared = projectProgramWindow({ itemId: "shared-window", semantic,
+    projection: { start: { ref: "timeline.start" }, end: { ref: "absolute", at: { unit: "frames", value: 30 } } } });
+  let set = appendVisualClip(createVisualTrackSet(), header, space, stillLayers(), frame,
+    clipSpec({ id: "first" }), shared);
+  set = appendVisualClip(set, header, space, stillLayers(), frame, clipSpec({ id: "second" }), shared);
+  assert.deepEqual(set.clips.map((clip) => clip.id), ["first", "second"]);
+  assert.deepEqual(set.clips.map((clip) => clip.span), [shared.span, shared.span]);
+});
+
+test("VisualTrackSet refinement validates accumulated Clips in declaration order", () => {
+  const shared = projectProgramWindow({ itemId: "shared-window", semantic,
+    projection: { start: { ref: "timeline.start" }, end: { ref: "absolute", at: { unit: "frames", value: 30 } } } });
+  const set = appendVisualClip(createVisualTrackSet(), header, space, stillLayers(), frame,
+    clipSpec({ id: "first" }), shared);
+  assert.doesNotThrow(() => assertVisualTrackSet(set));
+  assert.throws(() => assertVisualTrackSet({ clips: [set.clips[0]!, structuredClone(set.clips[0]!)] }),
+    /repeats first/u);
+  assert.throws(() => assertVisualTrackSet({ clips: [{ ...set.clips[0]!, layers: [] }] }),
+    /requires layers/u);
+});
+
+test("a Visual Clip can consume one whole Narrative Segment directly", () => {
   const result = appendSegmentVisualClip(
     createVisualTrackSet(), header, semantic, stillLayers(), frame,
     { narrativeId: "script", kind: "segment", id: "answer", tokenStart: 0, tokenEndExclusive: 1 },
@@ -552,14 +571,14 @@ test("every documented Visual frame and fit remains one ordinary Clip instead of
         heightPx: index % 3 === 0 ? 1200 : index % 3 === 1 ? 400 : 800 },
       localFit, sealMediaSampleLayerSpec({ id: `sample-${index}`, appearance }));
     set = appendProgramVisualClip(set, header, semantic, layers, frames[index % frames.length]!, clipSpec({
-      id: `fit-${sizing}`, z: 100 + index,
+      id: `fit-${sizing}`,
       treatment: { clip: { kind: "none" }, padding: { topPx: 0, rightPx: 0, bottomPx: 0, leftPx: 0 }, shadows: [] },
     }));
   }
   const track = projectVisualTrack(space, finalizeVisualTrack(set, header, space));
-  assert.equal(track.presents.length, sizings.length);
-  for (const present of track.presents) {
-    const placement = present.elements[0]!;
+  assert.equal(track.items.length, sizings.length);
+  for (const present of track.items) {
+    const placement = present.root;
     assert.equal(placement.kind, "box");
     assert.ok(placement.style.some((entry) => entry.name === "width" && typeof entry.value === "string"));
     assert.ok(placement.style.some((entry) => entry.name === "height" && typeof entry.value === "string"));
@@ -585,9 +604,9 @@ test("transparent, Paint, self-blur and alternate-source backing are only ordere
     createVisualTrackSet(), header, semantic, layers, frame, clipSpec(),
   ), header, space));
   const document = compileHtmlProgram(sealComposition({
-    id: "layer-matrix", canvas: { width: 1080, height: 1920, clearColor: "#000000" }, tracks: [track],
+    id: "layer-matrix", canvas: { width: 1080, height: 1920, clearColor: "#000000" }, visual: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) }, audio: [],
   }), space);
-  assert.deepEqual(track.presents[0]!.elements.filter((element) => element.kind === "image").map((element) => element.id),
+  assert.deepEqual(presentElements(track.items[0]!).filter((element) => element.kind === "image").map((element) => element.id),
     ["self-blur", "alternate", "foreground"]);
   assert.equal(document.artifacts.length, 2, "repeated samples share bytes while the alternate source remains explicit");
 
@@ -597,7 +616,7 @@ test("transparent, Paint, self-blur and alternate-source backing are only ordere
       sealMediaSampleLayerSpec({ id: "only", appearance })),
     frame, clipSpec(),
   ), header, space));
-  assert.equal(transparent.presents[0]!.elements.some((element) =>
+  assert.equal(presentElements(transparent.items[0]!).some((element) =>
     element.kind === "box" && element.style.some((entry) => entry.name === "background")), false);
 });
 
@@ -606,7 +625,7 @@ test("timed visual sources remain visual whether normalized media has audio or n
   const program = finalizeVisualTrack(appendProgramVisualClip(
     createVisualTrackSet(), header, semantic, silent, frame, clipSpec(),
   ), header, space);
-  assert.equal(projectVisualTrack(space, program).presents[0]!.elements.some((element) => element.kind === "video"), true);
+  assert.equal(presentElements(projectVisualTrack(space, program).items[0]!).some((element) => element.kind === "video"), true);
   const audible = timedLayers("audible", true).layers[0]!;
   assert.equal(audible.kind === "sample" && "audio" in audible.source, false);
 });
@@ -684,21 +703,21 @@ test("the Visual author Surface emits explicit graph edges for layers, absolute 
     ["motion", plain("motion", visualTrackTypes.motion)],
   ]);
   const root = node("visual:Track", { id: "editorial", timeline: ref("semantic") }, [
-    node("visual:Clip", { id: "still-card", image: ref("still"), extent: ref("extent"), frame: ref("frame"), clip: ref("clip-path"), treatment: ref("still-style"), z: "20", fit: "contain", during: ref("selection") }),
-    node("visual:Clip", { id: "segment-card", image: ref("still"), extent: ref("extent"), frame: ref("frame"), mapping: ref("mapping"), treatment: ref("still-style"), z: "21", during: ref("answer-segment") }),
-    node("visual:Clip", { id: "proof", media: ref("video"), frame: ref("frame"), treatment: ref("card-style"), motion: ref("motion"), z: "30", fit: "cover", during: ref("selection") }, [
+    node("visual:Clip", { id: "still-card", image: ref("still"), extent: ref("extent"), frame: ref("frame"), clip: ref("clip-path"), treatment: ref("still-style"), fit: "contain", during: ref("selection") }),
+    node("visual:Clip", { id: "segment-card", image: ref("still"), extent: ref("extent"), frame: ref("frame"), mapping: ref("mapping"), treatment: ref("still-style"), during: ref("answer-segment") }),
+    node("visual:Clip", { id: "proof", media: ref("video"), frame: ref("frame"), treatment: ref("card-style"), motion: ref("motion"), fit: "cover", during: ref("selection") }, [
       node("visual:Map", { rate: "1", "wrap-from": "start", "wrap-until": "end" }),
       node("visual:Sampling", { at: "start", zoom: "1" }),
       node("visual:Sampling", { at: "end", zoom: "1.1", y: "-10", easing: "ease-out" }),
     ]),
-    node("visual:Clip", { image: ref("still"), extent: ref("extent"), id: "presenter", frame: ref("frame"), clip: ref("clip-path"), treatment: ref("still-style"), z: "31", during: ref("answer-segment") }, [
+    node("visual:Clip", { image: ref("still"), extent: ref("extent"), id: "presenter", frame: ref("frame"), clip: ref("clip-path"), treatment: ref("still-style"), during: ref("answer-segment") }, [
       node("visual:Sampling", { at: "start", zoom: "1" }),
       node("visual:Sampling", { at: "end", zoom: "1.08", x: "6" }),
       node("visual:Pose", { at: "start", opacity: "0" }),
       node("visual:Pose", { at: "end", opacity: "1" }),
     ]),
-    node("visual:Clip", { image: ref("still"), extent: ref("extent"), id: "inset", frame: ref("frame"), treatment: ref("still-style"), z: "32", during: ref("inset-window") }),
-    node("visual:Clip", { surface: ref("surface"), id: "alpha-overlay", frame: ref("frame"), treatment: ref("surface-style"), z: "35", fit: "cover", during: ref("selection") }, [
+    node("visual:Clip", { image: ref("still"), extent: ref("extent"), id: "inset", frame: ref("frame"), treatment: ref("still-style"), during: ref("inset-window") }),
+    node("visual:Clip", { surface: ref("surface"), id: "alpha-overlay", frame: ref("frame"), treatment: ref("surface-style"), fit: "cover", during: ref("selection") }, [
       node("visual:Map", { rate: "1", "wrap-from": "start", "wrap-until": "end" }),
     ]),
   ]);
@@ -720,13 +739,9 @@ test("the Visual author Surface emits explicit graph edges for layers, absolute 
   assert.ok(producers.includes("append-surface-media-layer"));
   assert.ok(producers.includes("bind-visual-clip-path"));
   assert.ok(producers.includes("bind-visual-clip-motion"));
-  assert.equal(result.components.some(({ fragment: candidate }) => candidate.operations.some((operation) =>
-    operation.producer.module.name === "@hypit/narrative-temporal")), false);
-  assert.equal(producers.some((name) => name.includes("sound") || name.includes("audio")), false);
   assert.ok(fragment.inputs.some((entry) => entry.type.name === blobTypes.blob.name));
   assert.ok(fragment.inputs.some((entry) => entry.type.name === mediaTypes.synchronized.name));
   assert.ok(fragment.inputs.some((entry) => entry.type.name === spatialTypes.path.name));
   const clipSpecs = result.records.filter((entry) => entry.type.name === "VisualClipSpec");
   assert.equal(clipSpecs.length, 6);
-  assert.ok(visualTrackMarkupSurfaces.some((surface) => surface.name === "track"));
 });

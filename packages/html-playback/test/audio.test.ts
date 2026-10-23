@@ -48,7 +48,7 @@ test("preview schedules independent envelopes, fades and half-open audible regio
     audibility: [{ startSample: 48000, endSampleExclusive: 96000 }, { startSample: 144000, endSampleExclusive: 192000 }],
   });
   await p.play(30);
-  const time = 1 + 1/60;
+  const time = 1;
   assert.equal(p.nodes[1]!.gain.events[0]!.value, 1 - time/4);
   assert.equal(p.nodes[2]!.gain.events[0]!.value, time/2);
   assert.equal(p.nodes[3]!.gain.events[0]!.value, 1);

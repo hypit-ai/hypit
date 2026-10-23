@@ -4,8 +4,6 @@ import type {
   RunDocument,
   RunFrontend,
   RunFrontendRegistryLike,
-  RunFrontendSourceUnit,
-  RunSourceUnit,
 } from "./types.js";
 
 export class RunSourceError extends Error {
@@ -41,9 +39,8 @@ export class RunFrontendRegistry implements RunFrontendRegistryLike {
 export async function compileRunSource(
   source: ResolvedSource,
   frontends: RunFrontendRegistryLike,
-): Promise<{ readonly document: RunDocument }> {
+): Promise<RunDocument> {
   const frontend = frontends.resolve(source.frontend);
   assert(frontend !== undefined, "UNKNOWN_RUN_FRONTEND", `Run Frontend ${source.frontend} is not registered`, source.frontend);
-  const decoded = await frontend.decode(source.unit);
-  return { document: decoded.document };
+  return await frontend.decode(source.unit);
 }

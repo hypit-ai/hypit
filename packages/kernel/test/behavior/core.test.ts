@@ -100,7 +100,7 @@ test("Core executes a finite plan through an external Need and completion", () =
   assert.deepEqual(state.records.at(-1)?.value, ({ text: "Hello, Ada!" }));
 });
 
-test("Build Definition plus admitted Facts restores the same next Command", () => {
+test("Build Definition plus accepted Facts restores the same next Command", () => {
   const initial = createGreetingBuild();
   const definition = defineBuild({
     program: initial.program,

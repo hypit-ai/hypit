@@ -43,7 +43,6 @@ const tags = {
     defaults: {
       text: "Hypit",
       subtitle: "",
-      z: 45,
       y: 0.18,
       size: 180,
       "subtitle-size": 44,
@@ -66,13 +65,13 @@ export const manifest = {
         temporalTypes.window,
         temporalTypes.instant,
         temporalTypes.duration, temporalTypes.extent, temporalTypes.shiftSpec,
-      ].map((t) => [t.module.name, { module: t.module }]),
+      ].map((t) => [t.module.name, t.module]),
     ).values(),
   ],
-  types: [{ name: "Options" }, { name: "Events" }],
+  types: ["Options", "Events"],
   capabilities: [],
   producers: [
-    { name: "empty", inputs: [], outputs: [port("events", events)], needs: [] },
+    { name: "empty", inputs: [], result: { kind: "output", ...port("events", events) } },
     {
       name: "append",
       inputs: [
@@ -81,14 +80,12 @@ export const manifest = {
         port("options", options),
         port("at", temporalTypes.instant),
       ],
-      outputs: [port("events", events)],
-      needs: [],
+      result: { kind: "output", ...port("events", events) },
     },
     ...Object.keys(tags).map((tag) => ({
       name: tags[tag].name,
       inputs: ins(tag),
-      outputs: [port("track", compositionTypes.visualTrack)],
-      needs: [],
+      result: { kind: "output", ...port("track", compositionTypes.visualTrack) },
     })),
   ],
 };
@@ -97,7 +94,7 @@ const valueOf = (r) => {
     return r.value;
   },
   value = (v) => ((canonicalize(v))),
-  out = (n, v) => ({ outputs: { [n]: value(v) }, needs: {} });
+  out = (_name, v) => ({ kind: "output", value: value(v) });
 const component = {
   producers: [
     { producer: producer("empty"), handler: () => out("events", []) },
@@ -162,7 +159,6 @@ function decode(tag) {
       if (v !== undefined && typeof v !== "string") throw Error(n + " must be literal");
       opts[n] = typeof d === "number" ? Number(v ?? d) : (v ?? d);
     }
-    if (!Number.isSafeInteger(opts.z)) throw Error("z must be integer");
     const records = [
         {
           id: id + ".options",
@@ -269,8 +265,8 @@ export const hypitPackage = {
   format: "hypit.package@1",
   modules: [{ manifest }],
   facets: [
-    createProducerPackageFacet(component),
-    createRefinementPackageFacet(component),
+    createProducerPackageFacet(component.producers ?? []),
+    createRefinementPackageFacet(component.refinements ?? []),
     createStudioTrackCompanionFacet(sceneCompanions(module, tags)),
     ...Object.keys(tags).map((tag) =>
       createMarkupSurfaceFacet({

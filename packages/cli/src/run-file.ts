@@ -174,8 +174,8 @@ export async function resolveBuildResultValue(
       attachments.set(attachment.blob.resource, attachment);
       bindings.push({ at: binding.at, replacement: attachment.blob });
     }
-    const composite = bindResultResources(resolved.value.document.value, bindings);
-    value = (composite);
+    const structuredValue = bindResultResources(resolved.value.document.value, bindings);
+    value = structuredValue;
   }
   return {
     type: resolved.type,

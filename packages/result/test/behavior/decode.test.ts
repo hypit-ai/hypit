@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { decodeBuildResultManifest } from "@hypit/result";
+import { decodeBuildResultManifest, decodeBuildResultValueDocument } from "@hypit/result";
 
 test("Result decoding rejects contradictory terminal and Operation states", () => {
   const build = "bld_20260902T100000000Z_0000000001";
   const base = {
     format: "hypit.build-result@1",
-    source: { id: "/project/main.svml" },
+    sourceId: "/project/main.svml",
     targets: [],
     outputs: {},
   };
@@ -41,4 +41,37 @@ test("Result decoding rejects contradictory terminal and Operation states", () =
     failure: "other branch failed",
     operations: [{ operation: "op", command: "cmd", endpoint: "remote", status: "received" }],
   }, build).operations?.[0]?.status, "received");
+});
+
+test("Result decoders reconstruct owned values from untrusted documents", () => {
+  const build = "bld_20260902T100000000Z_0000000001";
+  const manifest = decodeBuildResultManifest({
+    format: "hypit.build-result@1",
+    sourceId: "main.svml",
+    targets: [],
+    outputs: {},
+    executionLog: {
+      kind: "build-file", path: "execution.jsonl", size: 12, mediaType: "application/x-ndjson",
+      extra: "not owned",
+    },
+    extra: "not owned",
+  }, build);
+  assert.deepEqual(manifest, {
+    format: "hypit.build-result@1",
+    id: build,
+    sourceId: "main.svml",
+    targets: [],
+    outputs: {},
+    executionLog: {
+      kind: "build-file", path: "execution.jsonl", size: 12, mediaType: "application/x-ndjson",
+    },
+  });
+
+  const value = decodeBuildResultValueDocument({
+    format: "hypit.result-value@1",
+    value: { title: "hello" },
+    resources: [],
+    extra: "not owned",
+  });
+  assert.deepEqual(value, { format: "hypit.result-value@1", value: { title: "hello" }, resources: [] });
 });

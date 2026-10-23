@@ -19,15 +19,17 @@ export const filmProducers = {
 } satisfies Record<string, ProducerRef>;
 
 const string = { kind: "string", minLength: 1 } as const;
-const object = (fields: Readonly<Record<string, { readonly schema: ValueSchema; readonly optional?: boolean }>>): ValueSchema => ({
+const object = (fields: Readonly<Record<string, { readonly schema: ValueSchema; readonly optional?: boolean }>>, allowUnknown = false): ValueSchema => ({
   kind: "object",
   fields,
+  ...(allowUnknown ? { allowUnknown: true } : {}),
 });
 
 export const filmProgramSchema: ValueSchema = object({
-
   id: { schema: string },
   clearColor: { schema: string },
+  visual: { schema: object({ members: { schema: { kind: "array", items: object({}, true) } } }) },
+  audio: { schema: { kind: "array", items: { kind: "number", integer: true, minimum: 0 } } },
 });
 
 export const filmTrackSetSchema: ValueSchema = object({
@@ -47,7 +49,7 @@ export const filmMarkupSurfaces = [{
     outputs: [filmTypes.program],
     vocabulary: {
       summary:
-        "Assembles any number of peer VisualTrack and AudioTrack references into one Composition against a Canvas and a Timeline.",
+        "Assembles VisualTrack references into recursive visual scopes and sums root AudioTrack references into one Composition against a Canvas and a Timeline.",
       appearance:
         "One flat fill of the entire Canvas, in the single hexadecimal color the Recipe's `background` carries, lying behind everything else in the Frame. It covers the full Canvas width and height, holds that one color from the first Frame to the last, and never moves, fades or changes. Wherever nothing is painted over it, that color is what the Frame shows; the Film puts no mark of its own on top of it.",
       attributes: [
@@ -67,11 +69,19 @@ export const filmMarkupSurfaces = [{
       ],
       children: [
         { tag: "Track", cardinality: "many",
-          summary: "Adds one VisualTrack or AudioTrack to the assembly.",
+          summary: "Adds one VisualTrack or root AudioTrack to the current Film assembly.",
           attributes: [
+            { name: "id", kind: "identifier", required: false,
+              summary: "Names a VisualTrack occurrence inside its parent scope; AudioTrack entries do not accept id." },
             { name: "source", kind: "reference", required: true,
               accepts: [compositionTypes.visualTrack, compositionTypes.audioTrack],
               summary: "Selects the Track this entry contributes to the Composition." },
+          ] },
+        { tag: "Stack", cardinality: "many",
+          summary: "Groups VisualTrack and nested Stack children into one composited picture at this declaration position.",
+          attributes: [
+            { name: "id", kind: "identifier", required: true,
+              summary: "Names this recursive visual scope." },
           ] },
       ],
       ports: [
@@ -80,15 +90,19 @@ export const filmMarkupSurfaces = [{
       ],
       example: [
         '<film:Film id="main" canvas={vertical.canvas} timeline={speech.timeline} appearance={recipes.film.vertical}>',
-        "  <film:Track source={performance.visual}/>",
+        '  <film:Track id="performance" source={performance.visual}/>',
         "  <film:Track source={voice.audio}/>",
-        "  <film:Track source={captions.visual}/>",
+        '  <film:Stack id="titles">',
+        '    <film:Track id="captions" source={captions.visual}/>',
+        "  </film:Stack>",
         "</film:Film>",
       ].join("\n"),
       notes: [
-        "At least one `Track` is required.",
+        "An empty Film is a valid clear-and-silent Composition; a declared Stack must contain a visual child.",
         "The Recipe carries exactly one property, `background`, written as a hexadecimal color; any other property is rejected, and Canvas geometry and frame rate stay on their own edges.",
-        "Child order is organizational: Track identity, timing and absolute stacking stay in their own typed values.",
+        "Visual Track and Stack declarations are composed from bottom to top in written order; their sibling-unique ids identify occurrences and never decide paint order. AudioTrack has no visual occurrence id.",
+        "A VisualTrack value may be placed more than once. Each placement has its own member id and occurrence path.",
+        "AudioTrack is accepted only as a direct Film child. Root signals add as a multiset rather than being keyed by Track id; audio routing closes inside the package that produces an AudioTrack.",
       ],
     },
   }] as const;
@@ -102,11 +116,11 @@ export const filmManifest: ModuleManifest = {
     timelineDependency,
     spatialDependency,
     compositionDependency,
-    { module: recipeModuleRef },
+    recipeModuleRef,
   ],
   types: [
-    { name: filmTypes.program.name },
-    { name: filmTypes.trackSet.name },
+    filmTypes.program.name,
+    filmTypes.trackSet.name,
   ],
   capabilities: [],
   producers: [

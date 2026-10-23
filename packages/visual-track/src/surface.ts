@@ -603,7 +603,7 @@ export const decodeVisualTrackSurface: StructuredSurfaceHandler = ({ element, re
       clipIndex += 1;
       const clipSuffix = suffix(clipIndex);
       allowed(child, [
-        "id", "frame", "treatment", "motion", "z",
+        "id", "frame", "treatment", "motion",
         "image", "media", "surface", "extent",
         "clip", "source-time", "mapping", ...FIT_ATTRIBUTES, ...temporalWindowAttributeNames,
       ]);
@@ -643,7 +643,7 @@ export const decodeVisualTrackSurface: StructuredSurfaceHandler = ({ element, re
       const windowName = `clip-${clipSuffix}-window`;
       state.addValue(windowName, window.ref, temporalTypes.window);
       state.addRecord(specName, `${trackId}.clip.${clipSuffix}.spec`, visualTrackTypes.clipSpec,
-        decodeVisualClipSpec(treatment, { id, z: integerValue(child, "z") }), child.range);
+        decodeVisualClipSpec(treatment, { id }), child.range);
       const frameName = `clip-${clipSuffix}-frame`;
       state.addReference(frameName, reference(child.attributes.frame, `${child.name}.frame`, spatialTypes.frame, resolveReference));
       clips.push({ suffix: clipSuffix, windowName, frameName, specName,

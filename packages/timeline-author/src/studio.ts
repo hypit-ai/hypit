@@ -91,7 +91,7 @@ export const timelineAuthorStudioTemporalRelations: readonly StudioTemporalRelat
       const point = pointTrace(trace("point"));
       return point === undefined || typeof held.timelineId !== "string" || !Number.isSafeInteger(held.frame)
         ? undefined : { ...point, frame: held.frame as number,
-          source: { ...point.source, timelineId: held.timelineId } };
+          source: { ...point.source, scope: "timeline", timelineId: held.timelineId } };
     },
   }, {
     id: "materialize-window", match: { producer: timelineAuthorProducers.window, output: "window" },
@@ -107,14 +107,14 @@ export const timelineAuthorStudioTemporalRelations: readonly StudioTemporalRelat
       };
       const source = trace("span");
       return source?.kind !== "window" || !Number.isSafeInteger(held.span?.startFrame)
-        || !Number.isSafeInteger(held.span?.endFrameExclusive) ? undefined : {
+        || !Number.isSafeInteger(held.span?.endFrameExclusive)
+        || typeof held.start?.timelineId !== "string"
+        || typeof held.end?.timelineId !== "string" ? undefined : {
           ...source,
           start: { ...withFrame(source.start, held.span!.startFrame as number),
-            source: { ...source.start.source,
-              ...(typeof held.start?.timelineId === "string" ? { timelineId: held.start.timelineId } : {}) } },
+            source: { ...source.start.source, scope: "timeline", timelineId: held.start.timelineId } },
           end: { ...withFrame(source.end, held.span!.endFrameExclusive as number),
-            source: { ...source.end.source,
-              ...(typeof held.end?.timelineId === "string" ? { timelineId: held.end.timelineId } : {}) } },
+            source: { ...source.end.source, scope: "timeline", timelineId: held.end.timelineId } },
           startFrame: held.span!.startFrame as number,
           endFrameExclusive: held.span!.endFrameExclusive as number,
         };
@@ -287,7 +287,7 @@ export const timelineAuthorStudioTemporalRelations: readonly StudioTemporalRelat
     trace({ output }) {
       const held = value<ConstructionPoint>(output, "origin Point");
       return { kind: "instant", expression: "timeline.start", reference: "timeline.start", frame: held.frame,
-        source: { timelineId: "", type: output.type, kind: "construction", id: "start" }, authority: { kind: "fixed" } };
+        source: { scope: "construction", type: output.type, kind: "construction", id: "start" }, authority: { kind: "fixed" } };
     },
   }, ...[timelineAuthorProducers.earliest, timelineAuthorProducers.latest].map((producer): StudioTemporalRelationCompanion => ({
     id: producer.name, match: { producer, output: "point" },
@@ -302,7 +302,7 @@ export const timelineAuthorStudioTemporalRelations: readonly StudioTemporalRelat
         .filter((point): point is StudioTemporalInstantProjection => point !== undefined && point.frame === held.frame);
       return candidates.length === 1 ? candidates[0] : {
         kind: "instant", expression: `${held.frame}f`, reference: "absolute", frame: held.frame,
-        source: { timelineId: "", type: output.type, kind: "construction", id: output.record }, authority: { kind: "fixed" },
+        source: { scope: "construction", type: output.type, kind: "construction", id: output.record }, authority: { kind: "fixed" },
       };
     },
   })),

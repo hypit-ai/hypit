@@ -26,7 +26,7 @@ export {
   sealMediaSampleLayerSpec,
 } from "./layers.js";
 export { assertMediaLayerPrograms, resolveMediaLayerPrograms } from "./spatial.js";
-export { lowerVisualClipElements } from "./lower.js";
+export { lowerVisualClipRoot } from "./lower.js";
 export { visualClipSpecSchema, visualClipMotionSchema, visualFrameTreatmentSchema, visualSourceTimeSpecSchema, mediaLayerSetSchema, mediaPaintLayerSpecSchema, mediaSampleAppearanceSchema, mediaSampleLayerSpecSchema, mediaSamplingMotionSchema, visualTrackDependency, visualTrackHeaderSchema, visualTrackManifest, visualTrackMarkupSurfaces, visualTrackModuleRef, visualTrackProducers, visualTrackProgramSchema, visualTrackSetSchema, visualTrackTypes } from "./manifest.js";
 export {
   assertVisualClipMotion,

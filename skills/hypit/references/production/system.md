@@ -10,13 +10,12 @@ timed media to select its streams, establish a finite local temporal domain and 
 The work then decides how to use those facts.
 
 For spoken work, Script names meaningful passages and events. `NarrativeAlignment` locates one
-Segment on a source-local domain. The normalized medium independently supplies picture and sound.
-Their relationship is explicit, so the same recording can support semantic timing, visible picture
-and audible speech without becoming a special media class.
+Segment on a source-local domain. The normalized medium supplies picture and sound. Connect the
+recording to alignment, picture and sound according to the relationships the production uses.
 
 A-roll names the performance carrying a passage. Its picture may fill the frame, move, disappear or
 be absent while its sound and semantic relationships continue. B-roll, generated shots, imported
-pictures, narration, music and effects use the same ordinary media values in their own roles.
+pictures, narration, music and effects each connect their media to the role they serve.
 [Media preparation](media.md) owns supplied material, normalization and processed variants.
 
 ## Timeline publishes absolute time
@@ -42,11 +41,12 @@ Time, visual scope and paint order are separate choices. One scene can respond t
 and several components can respond to the same event. [Spatial layout](spatial.md) owns geometry;
 [component design](component-design.md) owns useful visual scope.
 
-## Visual and Audio Clips place ordinary occurrences
+## Visual and Audio Clips place media occurrences
 
-A Visual Clip combines one picture source, an absolute Window, a destination Frame, paint order and
-source sampling. An Audio Clip combines one audio source, an absolute Window, source sampling and
-mix treatment. The same synchronized medium can feed both through separate explicit occurrences.
+A Visual Clip combines one picture source, an absolute Window, a destination Frame and source
+sampling. Its declaration contributes to Track-local item order; Film separately places the complete
+VisualTrack through a named parent membership. An Audio Clip combines one audio source, an absolute Window, source sampling and
+mix treatment. One synchronized medium can supply both occurrences.
 
 Keep three times distinct:
 

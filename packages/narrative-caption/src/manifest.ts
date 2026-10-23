@@ -16,7 +16,7 @@ export const narrativeCaptionManifest: ModuleManifest = {
   name: narrativeCaptionModuleRef.name,
   version: narrativeCaptionModuleRef.version,
   dependencies: [captionDependency, narrativeDependency, narrativeTemporalDependency],
-  types: [{ name: narrativeCaptionTypes.binding.name }],
+  types: [narrativeCaptionTypes.binding.name],
   capabilities: [],
   producers: [{
     name: narrativeCaptionProducers.projectTiming.name,
@@ -28,4 +28,4 @@ export const narrativeCaptionManifest: ModuleManifest = {
     result: { kind: "output" as const, name: "timing", type: captionTypes.timing },
   }],
 };
-export const narrativeCaptionDependency = { module: narrativeCaptionModuleRef } as const;
+export const narrativeCaptionDependency = narrativeCaptionModuleRef;

@@ -65,7 +65,7 @@ film.vertical {
 
 ```svs
 caption.dialogue {
-  stack-order: 70;
+
   x: 0.08;
   y: 0.76;
   width: 0.84;
@@ -81,7 +81,6 @@ caption.dialogue {
 
 | 属性 | 描述 |
 |---|---|
-| `stack-order` | 所有 Track 之间的 Z 轴层叠顺序（值越大越靠前） |
 | `x`、`y` | 位置，以画布比例表示（0–1） |
 | `width` | 宽度，以画布比例表示 |
 | `size` | 字体大小（像素） |
@@ -107,7 +106,7 @@ Style。字体家族、字重和字形只在这条精确字体边上声明一次
 
 ```svs
 caption.alice {
-  stack-order: 70;
+
   x: 0.08; y: 0.76; width: 0.84;
   size: 58;
   line-height: 0.96;
@@ -118,7 +117,7 @@ caption.alice {
 }
 
 caption.bob {
-  stack-order: 70;
+
   x: 0.08; y: 0.76; width: 0.84;
   size: 58;
   line-height: 0.96;
@@ -147,7 +146,7 @@ caption.bob {
 ## Visual Track Clip
 
 Visual Clip 将空间、源时间、像素处理与局部运动分开。`SpatialFrame` 负责位置和尺寸；
-`z`、fit 与可选的源时间偏映射是这次出现的直接事实。处理 Recipe 只复用图像与 Frame 的
+fit 与可选的源时间偏映射是这次出现的直接事实。处理 Recipe 只复用图像与 Frame 的
 绘制，而类型化 Motion 是仿射/透明度关键帧，不是封闭的效果名。
 
 ```svs
@@ -165,7 +164,6 @@ visual.product {
 
 | 属性 | 描述 |
 |---|---|
-| `z` | 直接的 Z 轴层叠顺序；重叠 Clip 不可静默共用 |
 | `fit` | `contain`、`cover`、`fit-width`、`fit-height`、`native`、`scale-down` 或 `stretch` |
 | `frame-x`、`frame-y` | 放置 Frame 内的对齐点 |
 | `content-x`、`content-y` | 素材内部独立选择的焦点 |
@@ -186,8 +184,7 @@ visual.product {
   <visual:Pose at="end" y="0" opacity="1"/>
 </visual:Motion>
 <visual:Clip media={product-media.media}
-  during={demo} frame={product-frame}
-  z="40" fit="contain"
+  during={demo} frame={product-frame} fit="contain"
   treatment={recipes.visual.product} motion={product-in}>
   <visual:Map/>
 </visual:Clip>
@@ -198,8 +195,8 @@ visual.product {
 
 ## 文本
 
-细粒度文字 Style 只拥有可复用的排版与 Paint。几何、具体形式的布局和绝对 `z`
-由每次 occurrence 直接拥有，因为这些事实会随同一 Style 的不同使用而改变。
+细粒度文字 Style 只拥有可复用的排版与 Paint。几何和具体形式的布局由每次 occurrence 直接拥有；
+它在 VisualScope 中的位置由父级成员序列拥有，因为这些事实会随同一 Style 的不同使用而改变。
 
 ```svs
 text.title {
@@ -223,7 +220,7 @@ text.title {
 <fonts:Face id="title-font" package="@fontsource-variable/inter" weight="900" style="normal"/>
 <text:Style id="title-style" recipe={recipes.text.title} font={title-font}/>
 <text:Flow id="meaning" timeline={speech.timeline} within={title-frame}
-  style={title-style} z="90" align="center" during={speech.window}>
+  style={title-style} align="center" during={speech.window}>
   MEANING
 </text:Flow>
 ```
@@ -354,7 +351,7 @@ Caption Recipe 不再重复家族、字重或字形。CJK 与 Emoji 即使由多
   }
 
   caption.primary {
-    stack-order: 70;
+
     x: 0.08;
     y: 0.74;
     width: 0.84;

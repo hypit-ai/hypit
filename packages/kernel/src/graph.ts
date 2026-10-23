@@ -12,7 +12,7 @@ import type {
   TypedRecord,
 } from "@hypit/protocol";
 
-import { normalizeValue, sameType, typeKey } from "@hypit/protocol";
+import { compareCodeUnits, normalizeValue, sameType, typeKey } from "@hypit/protocol";
 import { invariant } from "./error.js";
 import { resolveCapability, resolveProducer, verifyRecordStructure } from "./link.js";
 
@@ -92,7 +92,7 @@ function normalizeOperation(operation: OperationNode): OperationNode {
     producer: operation.producer,
     inputs: Object.fromEntries(
       Object.entries(operation.inputs)
-        .sort(([a], [b]) => a.localeCompare(b))
+        .sort(([a], [b]) => compareCodeUnits(a, b))
         .map(([name, ref]) => [name, normalizeRef(ref)]),
     ),
     result: normalizeResult(operation.result),
@@ -103,9 +103,9 @@ export function sealAuthorGraph(
   graph: Omit<AuthorGraph, "format">,
 ): AuthorGraph {
   const normalized = {
-    outputs: [...graph.outputs].map(normalizeOutput).sort((a, b) => a.id.localeCompare(b.id)),
-    candidates: [...graph.candidates].map(normalizeCandidate).sort((a, b) => a.id.localeCompare(b.id)),
-    operations: [...graph.operations].map(normalizeOperation).sort((a, b) => a.id.localeCompare(b.id)),
+    outputs: [...graph.outputs].map(normalizeOutput).sort((a, b) => compareCodeUnits(a.id, b.id)),
+    candidates: [...graph.candidates].map(normalizeCandidate).sort((a, b) => compareCodeUnits(a.id, b.id)),
+    operations: [...graph.operations].map(normalizeOperation).sort((a, b) => compareCodeUnits(a.id, b.id)),
   };
   return {
     format: "hypit.graph@1" as const,

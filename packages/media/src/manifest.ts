@@ -146,20 +146,20 @@ export const mediaMarkupSurfaces = [
 export const mediaManifest: ModuleManifest = {
   format: "hypit.module@1", name: mediaModuleRef.name, version: mediaModuleRef.version, dependencies: [blobDependency, temporalDependency],
   types: [
-    { name: mediaTypes.frameRange.name },
-    { name: mediaTypes.inspection.name },
-    { name: mediaTypes.streamSelection.name },
-    { name: mediaTypes.synchronized.name },
-    { name: mediaTypes.domainSpec.name },
-    { name: mediaTypes.timelineVisual.name },
-    { name: mediaTypes.timelineAudio.name },
-    { name: mediaTypes.muxed.name },
-    { name: mediaTypes.fontArtifact.name }, { name: mediaTypes.fontStack.name },
-    { name: mediaTypes.compositableSurface.name },
+    mediaTypes.frameRange.name,
+    mediaTypes.inspection.name,
+    mediaTypes.streamSelection.name,
+    mediaTypes.synchronized.name,
+    mediaTypes.domainSpec.name,
+    mediaTypes.timelineVisual.name,
+    mediaTypes.timelineAudio.name,
+    mediaTypes.muxed.name,
+    mediaTypes.fontArtifact.name, mediaTypes.fontStack.name,
+    mediaTypes.compositableSurface.name,
   ], capabilities: [], producers: [
     { name: mediaProducers.localDomain.name,
       inputs: [{ name: "media", type: mediaTypes.synchronized }, { name: "spec", type: mediaTypes.domainSpec }],
       result: { kind: "output" as const, name: "domain", type: temporalTypes.localDomain } },
   ],
 };
-export const mediaDependency = { module: mediaModuleRef } as const;
+export const mediaDependency = mediaModuleRef;

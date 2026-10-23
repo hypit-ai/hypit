@@ -23,7 +23,10 @@ function playable(type: import("@hypit/hypit/protocol").TypeRef): boolean {
   return sameType(type, compositionTypes.visualTrack) || sameType(type, compositionTypes.audioTrack);
 }
 
-export type BuiltTrack = StudioResolvedTrack;
+export type BuiltTrack = StudioResolvedTrack & {
+  /** Every Film occurrence of a visual Track; empty for AudioTrack. */
+  readonly visualOccurrences: readonly (readonly string[])[];
+};
 
 export type StudioProjection = {
   /** Server-only executed graph retained for exact Studio inverse traversal. */
@@ -37,9 +40,6 @@ export type StudioProjection = {
   readonly declarationIssues: readonly string[];
   readonly temporalBindings: ReadonlyMap<string, readonly StudioTemporalBinding[]>;
   readonly composition: Composition;
-  readonly timingOutput?: { readonly name: string; readonly ref: string };
-  readonly timingCandidateId?: string;
-  readonly timingCandidateOrigin: "run" | "source" | "none";
   readonly served: ReadonlyMap<string, ServedFile>;
   readonly canvas: { readonly width: number; readonly height: number; readonly clearColor: string };
   readonly frameRate: { readonly numerator: number; readonly denominator: number };
@@ -124,9 +124,6 @@ export async function resolveStudioProjection(input: {
   }
   if (executed.errors.length > 0) throw new Error(executed.errors.join("\n"));
 
-  const satisfactions = new Map(
-    input.run.run.graph.satisfactions.map((item) => [item.output, item.candidate]),
-  );
   const timingOutput = input.source.exports.find((target) => target.ref === input.timeRef);
   const timingRecord = executed.state.program.records.find((record) => record.id === input.timeRef);
   const timingType = timingOutput?.typeRef ?? timingRecord?.type;
@@ -150,7 +147,6 @@ export async function resolveStudioProjection(input: {
   const tracks: BuiltTrack[] = targets.flatMap((target) => {
     if (!playable(target.typeRef)) return [];
     const stored = selectedValue(executed.state, prepared.selections, target.ref);
-    const candidateId = satisfactions.get(target.ref);
     if (stored === undefined) {
       throw new Error(`Studio projection ${target.name} did not produce a Track.`);
     }
@@ -166,10 +162,9 @@ export async function resolveStudioProjection(input: {
       type: target.type,
       typeRef: target.typeRef,
       outputRef: target.ref,
-      ...(candidateId === undefined ? {} : { candidateId }),
-      candidateOrigin: candidateId === undefined ? "source" as const : "run" as const,
       role: projection.role,
       trace: projection.trace,
+      visualOccurrences: projection.visualOccurrences ?? [],
       ...(surfacePreview === undefined ? {} : { surfacePreview }),
       value: stored,
     }];
@@ -213,7 +208,6 @@ export async function resolveStudioProjection(input: {
       temporalDomainValueIds.add(record.id);
     }
   }
-  const timingCandidateId = satisfactions.get(input.timeRef);
   return {
     state: executed.state,
     source: input.source,
@@ -224,9 +218,6 @@ export async function resolveStudioProjection(input: {
     declarationIssues: declarations.issues,
     temporalBindings,
     composition,
-    timingOutput: { name: timingOutput?.name ?? timeline.id, ref: input.timeRef },
-    ...(timingCandidateId === undefined ? {} : { timingCandidateId }),
-    timingCandidateOrigin: timingCandidateId === undefined ? "source" : "run",
     served,
     canvas: composition.canvas,
     frameRate: rate,

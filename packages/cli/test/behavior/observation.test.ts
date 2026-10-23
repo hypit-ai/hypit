@@ -20,7 +20,7 @@ function view(
     id: "bld_20260903T000000000Z_0000000000",
     createdAt: Date.now(),
     activity,
-    cancellationRequested: false,
+
     targets: ["final.video"],
     requests: { total: pending + completed, completed },
     acceptedRecords: 0,

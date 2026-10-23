@@ -10,8 +10,7 @@ export function parseWhisperXLanguage(value: unknown, subject = "WhisperX langua
   return value;
 }
 
-export type WhisperXAlignmentRequest = {
-  readonly domainId: string;
+export type WhisperXTranscriptionRequest = {
   readonly audio: SpeechEvidenceAudio["artifact"];
   readonly sampleFrames: number;
   readonly language: WhisperXLanguage;

@@ -4,7 +4,7 @@ Visual Track is the plain picture-placement package. Its author model is deliber
 
 ```text
 Visual Clip = one picture source + absolute Window + Frame
-            + z + spatial map + source-time + optional treatment + optional typed Motion
+            + spatial map + source-time + optional treatment + optional typed Motion
 Visual Track = ordered set of Visual Clips
 ```
 
@@ -20,9 +20,9 @@ semantic roles, select audio, or own multi-Clip transitions.
 
 <visual:Track id="picture" timeline={program.timeline}>
   <visual:Clip id="speaker" media={speaker-media.media}
-    during={program.speaker} frame={full-frame} z="10" fit="cover"/>
+    during={program.speaker} frame={full-frame} fit="cover"/>
   <visual:Clip id="diagram" image={diagram} extent={diagram-extent}
-    during={explanation} frame={inset-frame} z="20" fit="contain"
+    during={explanation} frame={inset-frame} fit="contain"
     treatment={recipes.visual.diagram} motion={gentle-push}/>
 </visual:Track>
 ```
@@ -43,7 +43,6 @@ source-time; an optional treatment Recipe contains only reusable pixel and Frame
 
 | Properties | Meaning |
 | --- | --- |
-| `z` | Absolute picture stacking; required on the occurrence. |
 | `fit`, alignment, offsets and constraint | Convenient occurrence attributes that derive one source-to-picture `SpatialMap2D`. |
 | `mapping` | An explicit `SpatialMap2D` used instead of all fit attributes. |
 | `clip`, `radius`, `padding` | Outer geometry and the fitting inset. |
@@ -51,10 +50,9 @@ source-time; an optional treatment Recipe contains only reusable pixel and Frame
 | opacity, blur, brightness, contrast, saturation | Treatment of the sampled picture. |
 | `Map` / `source-time` | Optional Clip-local relation from target frames to timed-source frames. |
 
-Use distinct `z` values when relative paint order matters. Equal-`z` Clips are valid: the Track
-retains declaration order locally, and terminal rendering uses stable Track and Present identities
-as the remaining fallback. This guarantees deterministic execution without making Visual Track
-pretend it can prove every authored overlap aesthetically intentional.
+Clip declaration order is retained as the Track-local item sequence. Whole-film placement belongs to the
+parent `<film:Track id="...">` relation, not to a Clip or its reusable treatment Recipe. This lets
+the same VisualTrack be placed in another Film or nested Stack without rewriting its contents.
 
 An authored spatial Path may replace the treatment clip with `clip={path}`. Path coordinates remain
 in program-picture pixels. A typed `Motion` transforms the whole framed Clip with affine/opacity
@@ -74,7 +72,7 @@ the identical projection:
 ```svml
 <space:Map id="turned" xx="0" xy="-0.5" yx="0.5" yy="0" tx="920" ty="180"/>
 <visual:Clip image={diagram} extent={diagram-extent} mapping={turned}
-  during={explanation} frame={inset-frame} z="20"/>
+  during={explanation} frame={inset-frame}/>
 ```
 
 The explicit map is already in program-picture coordinates. `frame` still independently owns the
@@ -99,7 +97,7 @@ transparent.
   <visual:Map rate="1" wrap-from="start" wrap-until="end"/>
 </visual:SourceTime>
 
-<visual:Clip media={shot.media} during={story.outro} frame={full} z="10">
+<visual:Clip media={shot.media} during={story.outro} frame={full}>
   <visual:Map target-at="end" source-at="end" rate="1"/>
 </visual:Clip>
 ```

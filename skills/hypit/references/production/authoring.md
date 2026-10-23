@@ -117,14 +117,13 @@ caused them to complete.
 The Author Graph supplies primary Candidates. A Run may explicitly select another compatible
 Candidate for a Logical Output:
 
-- `<file>` admits project media as a zero-input Candidate;
+- `<file>` supplies project media as a zero-input Candidate;
 - `<build-record>` names one public Output from one earlier Build Result;
 - a Run Fragment computes one or more Candidates from its explicit inputs;
 - `<satisfy>` selects one declared Candidate for one Logical Output.
 
-Candidate selection is an implementation decision for this Run. Core checks nominal Type
-compatibility and plans the combined Author and Run graphs. It replaces the displaced upstream
-subgraph while preserving any upstream Outputs that the selected Candidate itself consumes.
+The selected Candidate must match the Logical Output's nominal Type. It supplies that Output for
+this Run together with any dependencies needed to produce the selected value.
 
 [Runs](runs.md#generate-material-while-composing) shows how to target prepared material while
 component work continues, then reuse that material for focused rendering and delivery.
@@ -156,8 +155,7 @@ alone does not. Write that exact choice into the Run. Results retain public Outp
 was exported into `assets/` or `output/`; inspect them before concluding that material is missing.
 A failed or cancelled Build may still contain completed public Outputs worth using. Reuse those
 Outputs rather than submitting their generation again to recover a later failure. A later Build
-that forwards an earlier Output does not copy its bytes. New structured Outputs also keep references
-to reused media inside them; wrapping a video in another value does not create another video file.
+can forward an earlier Output by reference. Structured Outputs can likewise refer to reused media.
 
 A `<file>` Candidate refers to the selected file. Replacing that file changes subsequent reads;
 removing it leaves a missing dependency. A new Build records the selected reference without copying

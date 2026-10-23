@@ -24,4 +24,4 @@ export const whisperXComponent = {
       },
     },
   ],
-} satisfies ProducerPackage & RefinementPackage;
+} satisfies { producers?: ProducerPackage; refinements?: RefinementPackage };

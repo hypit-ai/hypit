@@ -25,7 +25,7 @@ test("one Distribution resolves its internal and public package spellings", () =
 test("an external Author Package imports the active Distribution public API", async () => {
   installDistributionPackageResolution([process.cwd()]);
   const author = await import(String("@hypit/hypit/author")) as { readonly sealGraphFragment?: unknown };
-  const composition = await import(String("@hypit/composition")) as { readonly sealVisualTrack?: unknown };
+  const composition = await import(String("@hypit/composition")) as { readonly sealPresentVisualTrack?: unknown };
   assert.equal(typeof author.sealGraphFragment, "function");
-  assert.equal(typeof composition.sealVisualTrack, "function");
+  assert.equal(typeof composition.sealPresentVisualTrack, "function");
 });

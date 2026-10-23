@@ -196,7 +196,7 @@ export async function runExecutionCommand(input: {
           return `${item.id}: ${buildStatusView({ id: item.id, runtime: item }).work.state}`
             + requestProgress
             + Object.entries(buildProgressView(item).phases).map(([phase, count]) => ` · ${count} ${phase}`).join("")
-            + `${item.stop?.cause === "execution-failed" ? " · stopping after failure" : item.cancellationRequested ? " · cancelling" : ""}`
+            + `${item.stop?.cause === "execution-failed" ? " · stopping after failure" : item.stop?.cause === "user-cancelled" ? " · cancelling" : ""}`
             + `${item.issue === undefined ? "" : ` · ${item.issue.message}`}`;
         });
         const operationLines = args.presentation.verbose
@@ -367,7 +367,7 @@ export async function runExecutionCommand(input: {
     });
     const machine = {
       format: "hypit.cli-cancel@1" as const,
-      requested: active?.cancellationRequested === true,
+      requested: active?.stop?.cause === "user-cancelled",
       build,
     };
     const alreadyStopping = active?.stop?.cause === "execution-failed";

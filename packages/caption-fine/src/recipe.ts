@@ -21,7 +21,6 @@ const unitFractions = new Set([
 ]);
 
 const integers = new Set([
-  "stack-order",
   "lead-frames", "tail-frames",
   "max-lines", "max-words-per-line",
   "active-box-transition-frames", "active-response-frames",
@@ -73,7 +72,7 @@ const enums: Readonly<Record<string, readonly string[]>> = {
 
 export const fineCaptionRequiredRecipeProperties = [
   "align", "background", "fill",
-  "line-height", "padding", "radius", "size", "stack-order", "width", "x", "y",
+  "line-height", "padding", "radius", "size", "width", "x", "y",
 ] as const;
 
 export const fineCaptionOptionalRecipeProperties = [

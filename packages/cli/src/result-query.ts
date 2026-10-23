@@ -33,7 +33,7 @@ export async function browseBuildOutputHistory(
     for (let index = 0; index < page.results.length; index += 1) {
       const manifest = page.results[index]!;
       const sameSource = source === undefined
-        || resolve(request.projectRoot, manifest.source.id) === source;
+        || resolve(request.projectRoot, manifest.sourceId) === source;
       if (sameSource && buildResultOutput(manifest, request.output) !== undefined) matches.push(manifest);
       if (matches.length === request.limit) {
         const hasOlder = index < page.results.length - 1 || page.next !== undefined;

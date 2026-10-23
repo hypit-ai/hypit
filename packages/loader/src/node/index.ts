@@ -23,6 +23,11 @@ export type {
   LocatedNodePackageResource,
   LocateNodePackageOptions,
 } from "./location.js";
-export { verifyPackageContributions } from "../contribution.js";
+export {
+  logicalPackageAddressKey,
+  packageContributionOffers,
+  packageSelectionSatisfied,
+  verifyPackageContributions,
+} from "../contribution.js";
 export type * from "../types.js";
 export type * from "./types.js";

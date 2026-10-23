@@ -26,8 +26,8 @@ export const timelineManifest: ModuleManifest = {
   name: timelineModuleRef.name,
   version: timelineModuleRef.version,
   dependencies: [],
-  types: [{ name: timelineTypes.timeline.name }, { name: timelineTypes.clock.name }],
+  types: [timelineTypes.timeline.name, timelineTypes.clock.name],
   capabilities: [],
   producers: [],
 };
-export const timelineDependency = { module: timelineModuleRef } as const;
+export const timelineDependency = timelineModuleRef;

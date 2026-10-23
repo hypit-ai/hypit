@@ -85,7 +85,6 @@ inside its raw body, as described in [Script syntax](script-syntax.md).
 <sheet version="1">
   media.cover {
     fit: cover;
-    stack-order: 10;
   }
 </sheet>
 ```
@@ -113,8 +112,8 @@ Units such as `8f`, `250ms`, and `50%` remain strings until the consuming packag
 Recipe values do not evaluate graph references. Media, fonts, semantic ranges, and other graph
 values remain explicit Source inputs to the component that consumes them.
 
-Some packages, such as TextTemplate, explicitly define parameter precedence. That local behavior
-does not create global SVS inheritance. A Prompt Kit remains a reusable text program; image
+Some packages, such as TextTemplate, explicitly define parameter precedence for their own inputs.
+A Prompt Kit remains a reusable text program; image
 references, voice references, model parameters and generated Outputs stay explicit in Author Source.
 
 The `direction.svs` used above selects Text's own Recipe Frontend to produce a TextTemplate rather

@@ -12,6 +12,6 @@ export const runMarkupFrontend: RunFrontend = {
     return { author: document.author, imports: document.imports };
   },
   decode(source) {
-    return { document: parseRunDocument(source.name, decodeSourceText(source)) };
+    return parseRunDocument(source.name, decodeSourceText(source));
   },
 };

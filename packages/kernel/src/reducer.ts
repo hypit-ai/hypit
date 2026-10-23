@@ -13,7 +13,7 @@ import type {
   TypedRecord,
 } from "@hypit/protocol";
 
-import { normalizeValue, SvmlError } from "@hypit/protocol";
+import { compareCodeUnits, normalizeValue, SvmlError } from "@hypit/protocol";
 import { invariant } from "./error.js";
 import { resolveCapability, resolveProducer, verifyRecordStructure } from "./link.js";
 import { producerStep, verifyBuildPlan } from "./plan.js";
@@ -115,7 +115,7 @@ function schedule(state: BuildState): BuildState {
     commands.push(command);
   }
 
-  commands.sort((left, right) => left.id.localeCompare(right.id));
+  commands.sort((left, right) => compareCodeUnits(left.id, right.id));
   if (commands.length === 0) {
     const failed: BuildState = {
       ...state,

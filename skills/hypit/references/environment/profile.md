@@ -45,7 +45,7 @@ Keep these locations distinct:
 | Project `.hypit/results` | Finished Results and Outputs owned by this project |
 
 The selection file and execution directory must be different paths. CLI, Studio and creation
-commands address the same project context; there is no second CLI environment to initialize.
+commands address the same project context.
 Installed code, selected configuration and existing execution data remain separate.
 
 ## Read and edit the actual configuration
@@ -77,13 +77,12 @@ are the actual requirements, not as a replacement for a production's existing Pr
 | `bindings` | Complete capability keys mapped to Endpoint instance names |
 | Endpoint `pool` | Optional identity of a real shared account, deployment or compute quota |
 | `dataRoot` | Where this Runtime keeps execution state; changing it selects different state |
-| Optional `worker.executionMemoryMb` | Memory budget for Build execution processes; startup policy owned by the Runtime package |
+| Optional `worker.executionMemoryMb` | Memory budget available to each active Build; startup policy owned by the Runtime package |
 
 Merge documentation fragments into the corresponding existing objects. Retain other services,
 credential references and bindings the project uses. A fragment without `format` and `dataRoot`
 is not a complete Profile. Package installation makes an adapter available; declaring it here
-selects an instance. Configuration keys belong to that package, so a `baseUrl` or `apiKey` field
-from one Provider is not a universal schema for all Providers.
+selects an instance. Use the configuration keys documented by that Provider package.
 
 ## Connect Model, capability, Need and Endpoint
 
@@ -99,7 +98,7 @@ declaring and configuring `whisperx.local`, merge:
 ```json
 {
   "bindings": {
-    "@hypit/whisperx@1#whisperx-alignment": "whisperx.local"
+    "@hypit/whisperx@1#whisperx-transcription": "whisperx.local"
   }
 }
 ```
@@ -278,7 +277,8 @@ distinguishes useful intermediate evidence from the intended deliverable.
 | Browser download mirror | Used for the next required preparation; a healthy cached browser remains usable |
 | Profile used by an existing Studio session | Restart the session if it needs to load the edited selection |
 
-A new Build's execution context is not a snapshot of every external file or service.
-Read [Build execution scope](../production/builds.md#build-with-the-current-project-implementation)
-before restarting a coordinator or changing dependencies during active work.
+A new Build loads the current project implementation and selected configuration; external files and
+services retain their own lifetimes. Read
+[Build execution scope](../production/builds.md#build-with-the-current-project-implementation)
+before restarting the Worker or changing dependencies during active work.
 Do not restart everything after every edit, or expect a completed Build to rerun itself.

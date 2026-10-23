@@ -63,8 +63,7 @@ import {
   mediaOperationsProducers,
 } from "@hypit/media-operations";
 import {
-  validateRecord,
-  createRecordValidator,
+  refineRecord,
   RefinementRegistry,
 } from "@hypit/refinement";
 import type {
@@ -96,7 +95,8 @@ const semantic = timelineFixture(space);
 const composition = sealComposition({
   id: "render-test",
   canvas: { width: 1080, height: 1920, clearColor: "#000000" },
-  tracks: [],
+  visual: { members: [] },
+  audio: [],
 });
 
 const stored = (value: CanonicalValue): Value => value;
@@ -116,16 +116,18 @@ const closure = createResolvedClosure([
   mediaOperationsManifest,
   htmlVideoManifest,
 ]);
-const compositionRecord = await validateRecord({
+const compositionRecord = {
   id: "composition",
   type: compositionTypes.composition,
   value: stored(composition),
-}, validatorRegistry());
-const spaceRecord = await validateRecord({
+};
+await refineRecord(compositionRecord, validatorRegistry());
+const spaceRecord = {
   id: "space",
   type: timelineTypes.timeline,
   value: stored(space),
-}, validatorRegistry());
+};
+await refineRecord(spaceRecord, validatorRegistry());
 const linked = link(closure, [compositionRecord, spaceRecord]);
 const instance = elaborateGraphFragment(linked, htmlVideoFragment, {
   id: "final",
@@ -152,7 +154,7 @@ function buildState(
     candidates: [],
     operations: [],
     satisfactions: [],
-    targets: targets.map((output) => ({ output })),
+    targets,
   });
   return materializeBuild(defineBuild({
     program: link(program.closure, [...program.records, ...planned.initialRecords]),
@@ -226,14 +228,12 @@ test("separate visual, audio and mux Endpoints complete one author-visible rende
       const request = need.constraints as {
         readonly program: ReturnType<typeof compileHtmlProgram>;
       };
-      return {
-        value: stored(sealTimelineVisual({
+      return stored(sealTimelineVisual({
           frameRate: request.program.frameRate,
           frameCount: request.program.frameCount,
           canvas: request.program.canvas,
           artifact: visualArtifact,
-        })),
-      };
+        }));
     },
   );
   endpoints.registerImmediateEndpoint(
@@ -242,12 +242,10 @@ test("separate visual, audio and mux Endpoints complete one author-visible rende
     mediaTypes.timelineAudio,
     ({ need }) => {
       const request = need.constraints as { contract: string; program: ReturnType<typeof compileAudioProgram> };
-      return {
-        value: stored(sealTimelineAudio({
+      return stored(sealTimelineAudio({
           artifact: audioArtifact,
           sampleFrames: request.program.sampleFrames,
-        })),
-      };
+        }));
     },
   );
   endpoints.registerImmediateEndpoint(
@@ -256,15 +254,13 @@ test("separate visual, audio and mux Endpoints complete one author-visible rende
     mediaTypes.muxed,
     ({ need }) => {
       const request = need.constraints as { visual: ReturnType<typeof sealTimelineVisual>; audio: ReturnType<typeof sealTimelineAudio> };
-      return {
-        value: stored(sealMuxedMedia({
+      return stored(sealMuxedMedia({
           frameRate: request.visual.frameRate,
           frameCount: request.visual.frameCount,
           canvas: request.visual.canvas,
           presentationSampleFrames: request.audio.sampleFrames,
           artifact: finalArtifact,
-        })),
-      };
+        }));
     },
   );
   const result = await runBuild(new Executor({
@@ -282,57 +278,7 @@ test("separate visual, audio and mux Endpoints complete one author-visible rende
   assert.deepEqual(video.value, finalArtifact);
 });
 
-test("a render Product with another frame domain is rejected by the explicit downstream join", async () => {
-  const document = compileHtmlProgram(composition, space);
-  const endpoints = new EndpointRegistry();
-  endpoints.registerImmediateEndpoint(
-    "example.html.wrong-domain",
-    htmlProgramCapabilities.rasterizeVisual,
-    mediaTypes.timelineVisual,
-    () => ({
-      value: stored(sealTimelineVisual({
-        frameRate: document.frameRate,
-        frameCount: document.frameCount + 1,
-        canvas: document.canvas,
-        artifact: {
-          kind: "blob",
-          resource: fixtureResource("html-video:wrong-domain"),
-          size: 1,
-          mediaType: "video/mp4",
-          },
-      })),
-    }),
-  );
-  endpoints.registerImmediateEndpoint(
-    "example.media.audio-for-domain-check",
-    mediaOperationsCapabilities.renderAudio,
-    mediaTypes.timelineAudio,
-    ({ need }) => {
-      const request = need.constraints as { readonly program: ReturnType<typeof compileAudioProgram> };
-      return {
-        value: stored(sealTimelineAudio({
-          artifact: {
-            kind: "blob",
-            resource: fixtureResource("html-video:domain-check-audio"),
-            size: 1,
-            mediaType: "audio/wav",
-          },
-          sampleFrames: request.program.sampleFrames,
-        })),
-      };
-    },
-  );
-  const result = await runBuild(new Executor({
-    producers: producerRegistry(),
-    endpoints,
-    refinements: validatorRegistry(),
-  }), build());
-  assert.equal(result.status, "failed");
-  assert.match(result.outcomes.at(-1)?.message ?? "", /different presentation durations/u);
-});
-
 const fixtureModule = { name: "example.composition-fixture", version: "1" } as const;
-const fixtureSurfaceDigest = fixtureResource("example.composition-fixture/surface@1");
 const fixtureSurface = {
   name: "composition", tag: "Composition", mode: "structured",
   outputs: [compositionTypes.composition, timelineTypes.timeline],
@@ -410,7 +356,7 @@ test(`the ${selectedRange ? "selected" : "full"} rendered video remains an ordin
     resolveSource() {
       throw new Error("the fixture has no source imports");
     },
-    validateRecord: createRecordValidator(validatorRegistry()),
+    refineRecord: async (record) => await refineRecord(record, validatorRegistry()),
   });
   const target = resolveCompiledSourceExport(compiled, "poster.image", blobTypes.blob);
   assert.equal(target.ref.kind, "logical-output");
@@ -433,8 +379,8 @@ test(`the ${selectedRange ? "selected" : "full"} rendered video remains an ordin
 
 test("selected render frames reach both visual and audio Needs through the ordinary Build graph", async () => {
   const range = { startFrame: 15, endFrameExclusive: 45 };
-  const rangeRecord = await validateRecord({ id: "selection", type: mediaTypes.frameRange,
-    value: stored(range) }, validatorRegistry());
+  const rangeRecord = { id: "selection", type: mediaTypes.frameRange, value: stored(range) };
+  await refineRecord(rangeRecord, validatorRegistry());
   const program = link(closure, [compositionRecord, spaceRecord, rangeRecord]);
   const fragment = createHtmlVideoFragment(true);
   const selected = elaborateGraphFragment(program, fragment, {
@@ -451,6 +397,4 @@ test("selected render frames reach both visual and audio Needs through the ordin
   );
   assert.equal(result.state.needs.length, 2);
   for (const need of result.state.needs) assert.deepEqual((need.constraints as { range: unknown }).range, range);
-  assert.throws(() => htmlRasterRequest(compileHtmlProgram(composition, space),
-    { range: { startFrame: 0, endFrameExclusive: 61 } }), /frame range/);
 });

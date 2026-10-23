@@ -41,6 +41,7 @@ import { SqliteRuntimeState } from "../../src/sqlite-state.js";
 import {
   capabilities,
   createGreetingBuild,
+  createGreetingBuildFixture,
   createParallelGreetingBuild,
   manifest as greetingManifest,
   producers,
@@ -51,7 +52,6 @@ import {
   definition,
   durableBuildRequest,
   finishClaimedBuild,
-  fixtureTargets,
   projectRuntimeFixture,
   publication,
   resultDestination,
@@ -72,18 +72,18 @@ test("local call logs survive cleanup and remain attributed across concurrent su
         await new Promise((resolve) => setTimeout(resolve, 30));
         if (call === 2) throw new Error("render rejected");
         await context.reportProgress?.({ phase: "storing" });
-        return { value: (`call ${call}`) };
+        return `call ${call}`;
       } }] })],
-    producerPackages: [{ producers: [
+    producers: [
       { producer: producers.makePrompt, handler: () => ({ kind: "output", value: ("hello") }) },
       { producer: producers.requestText, handler: () => ({ kind: "need", constraints: { prompt: "hello" } }) },
-    ] }],
+    ],
   });
   const ids = ["bld_20260913T120000000Z_0000000001", "bld_20260913T120000000Z_0000000002"];
   const controller = new AbortController();
   let work: Promise<void> | undefined;
   try {
-    for (const id of ids) await runtime.build(durableBuildRequest(directory, id, createGreetingBuild({ targetOutputs: ["generated"] })));
+    for (const id of ids) await runtime.build(durableBuildRequest(directory, id, createGreetingBuildFixture({ targetOutputs: ["generated"] })));
     // The Worker records evidence with no CLI follower attached.
     work = runFixture(runtime, fixture.executionStore, { signal: controller.signal, idlePollMs: 2 });
     while (calls < 2) await new Promise((resolve) => setTimeout(resolve, 1));

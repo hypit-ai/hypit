@@ -41,6 +41,7 @@ import { SqliteRuntimeState } from "../../src/sqlite-state.js";
 import {
   capabilities,
   createGreetingBuild,
+  createGreetingBuildFixture,
   createParallelGreetingBuild,
   manifest as greetingManifest,
   producers,
@@ -51,7 +52,6 @@ import {
   definition,
   durableBuildRequest,
   finishClaimedBuild,
-  fixtureTargets,
   projectRuntimeFixture,
   publication,
   resultDestination,
@@ -98,7 +98,7 @@ test("concurrent durable Builds preserve action capacity and outcomes across fai
         try {
           await new Promise((resolve) => setTimeout(resolve, 40));
           if (id % 10 === 2) throw new Error("download failed");
-          return { status: "completed", result: { value: (`generated-${id}`) } };
+          return { status: "completed", result: `generated-${id}` };
         } finally { downloads--; }
       },
     } }],
@@ -106,10 +106,10 @@ test("concurrent durable Builds preserve action capacity and outcomes across fai
   const runtime = await createLocalRuntime({
     ...fixture,
     endpoints: [provider],
-    producerPackages: [{ producers: [
+    producers: [
       { producer: producers.makePrompt, handler: () => ({ kind: "output", value: ("hello") }) },
       { producer: producers.requestText, handler: () => ({ kind: "need", constraints: { prompt: "hello" } }) },
-    ] }],
+    ],
   });
   const controller = new AbortController();
   let work: Promise<void> | undefined;
@@ -118,7 +118,7 @@ test("concurrent durable Builds preserve action capacity and outcomes across fai
     for (let index = 0; index < 20; index++) {
       const id = `bld_20260906T120000000Z_${String(index).padStart(10, "0")}`;
       ids.push(id);
-      const request = durableBuildRequest(directory, id, createGreetingBuild({ targetOutputs: ["generated"] }));
+      const request = durableBuildRequest(directory, id, createGreetingBuildFixture({ targetOutputs: ["generated"] }));
       await runtime.build(request);
     }
     const deadline = setTimeout(() => controller.abort(), 20_000);

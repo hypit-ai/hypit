@@ -1,4 +1,3 @@
-import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
 import { createProducerPackageFacet } from "@hypit/hypit/producer";
 import { createMarkupSurfaceFacet } from "@hypit/hypit/markup";
 import { createStudioCompanionFacet } from "@hypit/studio-companion";
@@ -21,7 +20,7 @@ export const hypitPackage = {
   format: "hypit.package@1" as const,
   modules: [{ manifest: textFineManifest }],
   facets: [
-    ...[textFineComponent].flatMap((component) => [createProducerPackageFacet(component), createRefinementPackageFacet(component)]),
+    createProducerPackageFacet(textFineComponent.producers),
     createMarkupSurfaceFacet({
       module: textFineModuleRef,
       declaration: textFineMarkupSurfaces.find((item) => item.name === "style")!, handler: decodeTypographyStyleSurface,

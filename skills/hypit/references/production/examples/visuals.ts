@@ -1,4 +1,4 @@
-import { sealVisualTrack } from "@hypit/composition";
+import { sealPresentVisualTrack } from "@hypit/composition";
 import type { FrameSpan } from "@hypit/composition";
 import type { FontArtifactRef } from "@hypit/media";
 import type { Timeline } from "@hypit/timeline";
@@ -16,13 +16,12 @@ export function renderCard(input: {
   textColor: string;
   size: number;
   padding: number;
-  layer: number;
   entranceFrames: number;
 }) {
   const root = `${input.id}-box`;
   const length = input.span.endFrameExclusive - input.span.startFrame;
   const entranceEnd = Math.min(input.entranceFrames, length - 1);
-  return sealVisualTrack({
+  return sealPresentVisualTrack({
     id: input.id,
     timelineId: input.timeline.id,
     visualIr: VISUAL_IR_V1,
@@ -31,7 +30,6 @@ export function renderCard(input: {
       subjectId: input.id,
       span: input.span,
       order: 0,
-      z: input.layer,
       elements: [{
         kind: "box", id: root, order: 0,
         style: [

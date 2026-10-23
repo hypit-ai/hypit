@@ -190,13 +190,12 @@ export const visualClipMotionSchema: ValueSchema = object({
 });
 export const visualClipSpecSchema: ValueSchema = object({
   id: { schema: string },
-  treatment: { schema: visualFrameTreatmentSchema }, motion: { schema: visualClipMotionSchema, optional: true }, z: { schema: integer },
+  treatment: { schema: visualFrameTreatmentSchema }, motion: { schema: visualClipMotionSchema, optional: true },
 });
 const frameSpan = object({ startFrame: { schema: unsignedInteger }, endFrameExclusive: { schema: positiveInteger } });
 const resolvedClip = object({
   id: { schema: string }, subjectId: { schema: string }, span: { schema: frameSpan }, frame: { schema: spatialFrameSchema },
   treatment: { schema: visualFrameTreatmentSchema }, layers: { schema: { kind: "array", minItems: 1, items: resolvedLayer } }, motion: { schema: visualClipMotionSchema, optional: true },
-  order: { schema: unsignedInteger }, z: { schema: integer },
 });
 export const visualTrackSetSchema: ValueSchema = object({
   clips: { schema: { kind: "array", items: resolvedClip } },
@@ -233,7 +232,7 @@ const treatmentRecipeProperties = [
   { name: "radius", required: false, fallback: "0",
     summary: "Rounds the clipped corners by a pixel radius, and is read only for a `rounded` clip." },
   { name: "padding", required: false, fallback: "0",
-    summary: "Insets the picture from the Frame edges. It admits one, two or four values — all sides, then vertical and horizontal, then each side — which no single number can carry, so it is written as text: `padding: \"14\"` and `padding: \"8 12\"`. A bare number is refused." },
+    summary: "Insets the picture from the Frame edges. It accepts one, two or four values — all sides, then vertical and horizontal, then each side — which no single number can carry, so it is written as text: `padding: \"14\"` and `padding: \"8 12\"`. A bare number is refused." },
   { name: "border-width", required: false, fallback: "0",
     summary: "Draws a border of this pixel width, and draws none at `0`." },
   { name: "border-style", required: false, values: ["solid", "dashed", "dotted"], fallback: "solid",
@@ -253,8 +252,8 @@ export const visualTrackMarkupSurfaces: readonly (StructuredSurfaceDeclaration &
       visualTrackTypes.program,
       compositionTypes.visualTrack],
     vocabulary: {
-      summary: "Places ordinary visual Clips on one completed Timeline and composes them by explicit stack order.",
-      appearance: "Each Clip owns one source, one absolute Window and one Frame. Source-time, space, paint order, treatment and optional local motion remain independent choices.",
+      summary: "Places ordinary visual Clips on one completed Timeline; Film places the resulting Track in a VisualScope.",
+      appearance: "Each Clip owns one source, one absolute Window and one Frame. Source-time, space, treatment and optional local motion remain independent choices.",
       preview: previewImage("Track.png"),
       attributes: [
         { name: "id", kind: "identifier", required: true,
@@ -269,10 +268,8 @@ export const visualTrackMarkupSurfaces: readonly (StructuredSurfaceDeclaration &
               summary: "Names this Clip; the Track derives `<track>.clip.<index>` when it is absent." },
             { name: "frame", kind: "reference", required: true, accepts: [spatialTypes.frame],
               summary: "Chooses the Frame the Clip occupies in the program picture plane." },
-            { name: "z", kind: "literal", required: true,
-              summary: "Sets this occurrence's absolute picture stacking order." },
             { name: "treatment", kind: "reference", required: false, accepts: [recipeType],
-              summary: "Optionally chooses reusable image and Frame treatment; timing, fitting and stacking do not belong to it.",
+              summary: "Optionally chooses reusable image and Frame treatment; timing and fitting do not belong to it.",
               recipe: treatmentRecipeProperties },
             { name: "motion", kind: "reference", required: false, accepts: [visualTrackTypes.motion],
               summary: "Optionally applies a reusable typed Motion. Inline Pose children express the same value." },
@@ -315,15 +312,15 @@ export const visualTrackMarkupSurfaces: readonly (StructuredSurfaceDeclaration &
 </visual:Motion>
 
 <visual:Track id="cutaways" timeline={speech.timeline}>
-  <visual:Clip media={prepared.media} during={program.window} frame={full} z="10" fit="cover"/>
+  <visual:Clip media={prepared.media} during={program.window} frame={full} fit="cover"/>
   <visual:Clip id="bags" media={cutaway-bags.media} during={bags}
-    frame={full} z="20" fit="cover" treatment={recipes.visual.cutaway} motion={gentle-push}/>
+    frame={full} fit="cover" treatment={recipes.visual.cutaway} motion={gentle-push}/>
 </visual:Track>`,
       notes: [
         "A Track requires at least one Clip and accepts no text content.",
         "A Clip references one already resolved Window through `during`.",
         "A Clip names exactly one of `image`, `media` or `surface`; `extent` is required with `image` and refused otherwise.",
-        "`z`, fitting and source time belong to the occurrence and cannot hide inside a treatment Recipe.",
+        "The parent Film Scope owns this Track occurrence's position through sibling declaration order; fitting and source time remain properties of each Clip occurrence.",
         "An explicit `mapping` is mutually exclusive with every fit attribute. It is already in program-picture coordinates; the Frame still owns clipping and treatment.",
         "Omitting source time means bounded partial identity. Map children are refused on durationless still material.",
         "Map children control timed source coordinates, Sampling children animate source crop inside the Frame, and Pose children animate the complete framed Clip.",
@@ -402,15 +399,15 @@ export const visualTrackManifest: ModuleManifest = {
     compositionDependency,
   ],
   types: [
-    { name: visualTrackTypes.header.name },
-    { name: visualTrackTypes.motion.name },
-    { name: visualTrackTypes.sourceTime.name },
-    { name: visualTrackTypes.paintLayerSpec.name },
-    { name: visualTrackTypes.sampleLayerSpec.name },
-    { name: visualTrackTypes.layerSet.name },
-    { name: visualTrackTypes.clipSpec.name },
-    { name: visualTrackTypes.set.name },
-    { name: visualTrackTypes.program.name },
+    visualTrackTypes.header.name,
+    visualTrackTypes.motion.name,
+    visualTrackTypes.sourceTime.name,
+    visualTrackTypes.paintLayerSpec.name,
+    visualTrackTypes.sampleLayerSpec.name,
+    visualTrackTypes.layerSet.name,
+    visualTrackTypes.clipSpec.name,
+    visualTrackTypes.set.name,
+    visualTrackTypes.program.name,
   ],
   capabilities: [],
   producers: [
@@ -431,4 +428,4 @@ export const visualTrackManifest: ModuleManifest = {
   ],
 };
 
-export const visualTrackDependency = { module: visualTrackModuleRef } as const;
+export const visualTrackDependency = visualTrackModuleRef;

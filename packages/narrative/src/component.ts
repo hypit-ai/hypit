@@ -28,4 +28,4 @@ export const narrativeComponent = {
     { type: narrativeTypes.selection, handler: ({ value }) => assertNarrativeSelectionRefIdentity(valueOf<NarrativeSelectionRef>(value, "NarrativeSelection")) },
     { type: narrativeTypes.moment, handler: ({ value }) => assertNarrativeMomentRefIdentity(valueOf<NarrativeMomentRef>(value, "NarrativeMoment")) },
   ],
-} satisfies ProducerPackage & RefinementPackage;
+} satisfies { producers?: ProducerPackage; refinements?: RefinementPackage };

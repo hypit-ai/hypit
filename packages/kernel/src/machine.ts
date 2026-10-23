@@ -7,7 +7,7 @@ import type {
   Need,
   TypedRecord,
 } from "@hypit/protocol";
-import { sameCapability, sameType } from "@hypit/protocol";
+import { compareCodeUnits, sameCapability, sameType } from "@hypit/protocol";
 
 import { invariant } from "./error.js";
 import { resolveCapability, resolveProducer, verifyRecordStructure } from "./link.js";
@@ -31,14 +31,14 @@ function mergeCommands(
   added: readonly BuildCommand[],
 ): readonly BuildCommand[] {
   const retained = current.filter((command) => command.id !== removed);
-  const additions = [...added].sort((left, right) => left.id.localeCompare(right.id));
+  const additions = [...added].sort((left, right) => compareCodeUnits(left.id, right.id));
   const merged: BuildCommand[] = [];
   let left = 0;
   let right = 0;
   while (left < retained.length || right < additions.length) {
     const existing = retained[left];
     const addition = additions[right];
-    if (addition === undefined || existing !== undefined && existing.id.localeCompare(addition.id) < 0) {
+    if (addition === undefined || existing !== undefined && compareCodeUnits(existing.id, addition.id) < 0) {
       merged.push(existing!);
       left++;
     } else {

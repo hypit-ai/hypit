@@ -53,15 +53,15 @@ test("Run-only Fragment modules extend the execution closure without polluting t
   const prepared = runCompiler.prepareCompilation(compiled);
 
   assert.deepEqual(
-    compiled.author.program.closure.modules.map((item) => item.manifest.name),
+    compiled.author.program.closure.modules.map((item) => item.name),
     [laboratory.name, unused.name],
   );
   assert.deepEqual(
-    compiled.program.closure.modules.map((item) => item.manifest.name).sort(),
+    compiled.program.closure.modules.map((item) => item.name).sort(),
     [laboratory.name, previewModule.name, unused.name].sort(),
   );
   assert.deepEqual(
-    prepared.state.program.closure.modules.map((item) => item.manifest.name).sort(),
+    prepared.state.program.closure.modules.map((item) => item.name).sort(),
     [laboratory.name, previewModule.name].sort(),
     "the durable Build keeps only modules needed by its selected execution slice",
   );
@@ -201,7 +201,7 @@ test("a historical Output is materialized only when a selected Producer consumes
   assert.equal(prepared.state.plan.steps.length, 1);
   assert.equal(prepared.state.plan.steps[0]?.producer.name, consumeProducer.name);
   assert.deepEqual(prepared.compilation.materializedSupplies.map((record) => record.value), [("historical")]);
-  const forwarded = prepared.publication.outputs.find((output) => /::output::source\.result$/u.test(output.output));
+  const forwarded = prepared.publication.outputs.find((output) => output.name === "source.result");
   assert(forwarded !== undefined);
   assert.equal(forwarded.name, "source.result");
   assert.equal(forwarded.target, false);

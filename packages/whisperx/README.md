@@ -1,6 +1,6 @@
 # `@hypit/whisperx`
 
-Explicit WhisperX model-family capability for speech alignment. Importing this package selects
+Explicit WhisperX model-family capability for speech transcription evidence. Importing this package selects
 WhisperX; Runtime registration binds the resulting evidence Need to a concrete Endpoint. The package
 contains no credentials, Python environment or queue.
 
@@ -15,41 +15,44 @@ tarball, and its npm version can advance independently.
 
 The package also owns `@hypit/whisperx/cli` and therefore `hypit transcribe`. That command projects an
 explicit audio or video file to canonical evidence audio through `@hypit/media-local`, invokes the
-selected WhisperX alignment Endpoint, and writes an ordinary `hypit.transcript@1` file. It is an
+selected WhisperX transcription Endpoint, and writes a lossless `<speech:Transcript>` SVML Source. It is an
 immediate authoring operation: it creates no Author Graph, Build or Result, and its transcript stays
 on the input file's local clock.
 
 ```bash
-hypit transcribe reference.mp4 --language en --to notes/reference.transcript.json
+hypit transcribe reference.mp4 --language en --to notes/reference.transcript.svml
+```
+
+The generated Source exports `transcript`, so another author Source can use the same evidence without
+running the model again:
+
+```svml
+<import as="accepted-speech" source="./notes/reference.transcript.svml"/>
+<speechalign:Alignment id="opening" narrative={story}
+  segment={story.segment.opening} domain={opening-media.domain}
+  evidence={accepted-speech.transcript}/>
 ```
 
 The reusable transcript document and phrase-range operations belong to `@hypit/speech-evidence`.
 WhisperX owns only how evidence is obtained through this model family; media decoding remains with
 the local-media executor.
 
-`<whisperx:Alignment>` consumes one normalized `SynchronizedMedia`, its `LocalTemporalDomain`, one
-authored Script Segment and the owning Narrative. For a Segment containing Tokens it also requires an
-explicit lowercase two- or three-letter language code. The provider receives canonical evidence audio
-tagged with the selected local domain identity and returns provider-neutral
-`AlignedTranscriptEvidence` preserving that identity and exact sample span. The ordinary dependency
-`@hypit/narrative-speech-alignment` then performs the deterministic authored-Narrative mapping and
-publishes one `NarrativeAlignment`:
+`<whisperx:Transcription>` consumes one normalized `SynchronizedMedia` and an explicit lowercase
+two- or three-letter language code. The provider receives canonical evidence audio and returns
+provider-neutral `SpeechTranscriptEvidence` preserving its exact sample span:
 
 ```svml
-<whisperx:Alignment id="opening" narrative={story}
-  segment={story.segment.opening}
-  media={opening-media.media} domain={opening-media.domain}
-  language="ko"/>
+<whisperx:Transcription id="opening-transcription"
+  media={opening-media.media} language="ko"/>
+<speechalign:Alignment id="opening" narrative={story}
+  segment={story.segment.opening} domain={opening-media.domain}
+  evidence={opening-transcription.transcript}/>
 ```
 
-The result is `opening.alignment`. It contains semantic timing on the media-local domain, not media,
-not a Timeline and not presentation policy. `@hypit/narrative-temporal` Projection explicitly combines
-one or more `NarrativeAlignment + LocalTemporalDomain + equal-length Window` relations for a chosen
-Timeline and publishes ordinary absolute values.
-
-When the Segment has no Tokens, omit `language`. Its start and end map directly to the local domain's
-first and final frame, no evidence audio or WhisperX capability is requested, and the same
-`NarrativeAlignment` type is published.
+The first result is only `opening-transcription.transcript`. The separately imported
+`@hypit/narrative-speech-alignment` Surface combines that evidence with an authored Segment and local
+domain to publish `opening.alignment`. A Segment with no Tokens can use the alignment Surface without
+evidence; no WhisperX request is needed.
 
 For Chinese speech use `zh`. WhisperX may emit character-sized evidence units; local alignment maps
 them to Script's authored units while Caption continues to use Script's display wording and authored Cue boundaries.
@@ -68,7 +71,7 @@ The package validates only the language-code form; the selected Endpoint owns ac
     }
   },
   "bindings": {
-    "@hypit/whisperx@1#whisperx-alignment": "whisperx.local"
+    "@hypit/whisperx@1#whisperx-transcription": "whisperx.local"
   }
 }
 ```
@@ -79,6 +82,5 @@ hypit runtime up --runtime hypit.runtime.json --endpoint whisperx.local
 hypit build video.svrun --runtime hypit.runtime.json --follow
 ```
 
-The Provider README owns model cache and hardware choices. For reference analysis rather than an
-authored alignment, use `hypit transcribe source.mp4 --language ko --to transcript.json` with the
-selected Runtime.
+The Provider README owns model cache and hardware choices. To materialize editable evidence, use
+`hypit transcribe source.mp4 --language ko --to transcript.svml` with the selected Runtime.

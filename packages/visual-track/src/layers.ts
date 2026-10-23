@@ -153,9 +153,11 @@ export function createMediaLayerSet(): MediaLayerSet {
 }
 
 export function assertMediaLayerSet(value: MediaLayerSet): void {
-  assert(Array.isArray(value.layers), "MediaLayerSet is invalid.");
+  assert(value !== null && typeof value === "object" && !Array.isArray(value)
+    && Array.isArray(value.layers), "MediaLayerSet is invalid.");
   const ids = new Set<string>();
   for (const layer of value.layers) {
+    assert(layer !== null && typeof layer === "object" && !Array.isArray(layer), "Media layer is invalid.");
     assertMediaIdentity(layer.id, "Media layer id");
     assert(!ids.has(layer.id), `MediaLayerSet repeats layer ${layer.id}.`);
     ids.add(layer.id);

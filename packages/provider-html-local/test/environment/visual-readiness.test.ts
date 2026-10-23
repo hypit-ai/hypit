@@ -6,7 +6,7 @@ import puppeteer from "puppeteer-core";
 import sharp from "sharp";
 import { fineCaptionStyle, renderFineCaption, scheduleFineCaption } from "@hypit/caption-fine";
 import { MemoryResourceStore } from "@hypit/executor";
-import { sealComposition, sealVisualTrack } from "@hypit/composition";
+import { sealComposition, sealPresentVisualTrack } from "@hypit/composition";
 import type { VisualElement, VisualTextTypography } from "@hypit/composition";
 import { compileHtmlProgram, materializeHtmlProgram } from "@hypit/html-program";
 import { captionDocument, parseScript } from "@hypit/script";
@@ -189,19 +189,19 @@ test("compiled frame selection neither stages nor waits for unrelated image reso
   const red = await resources.put(await sharp({ create: { width: 64, height: 64, channels: 3, background: "#ff0000" } })
     .png().toBuffer(), "image/png");
   const space = sealTimeline({ id: "capture-scope", frameCount: 60, frameRate: { numerator: 30, denominator: 1 } });
-  const track = sealVisualTrack({ id: "visual", timelineId: space.id, visualIr: "hypit.visual-ir@1", presents: [
-    { id: "unavailable-early", order: 0, z: 0, span: { startFrame: 0, endFrameExclusive: 10 },
-      elements: [{ id: "unavailable", order: 0, kind: "image", artifact: unavailable,
-        style: [{ name: "width", value: "64px" }, { name: "height", value: "64px" }] }] },
-    { id: "broken-early", order: 1, z: 1, span: { startFrame: 10, endFrameExclusive: 30 },
-      elements: [{ id: "broken", order: 0, kind: "image", artifact: broken,
-        style: [{ name: "width", value: "64px" }, { name: "height", value: "64px" }] }] },
-    { id: "red-late", order: 2, z: 2, span: { startFrame: 30, endFrameExclusive: 60 },
-      elements: [{ id: "red", order: 0, kind: "image", artifact: red,
-        style: [{ name: "width", value: "64px" }, { name: "height", value: "64px" }] }] },
+  const track = sealPresentVisualTrack({ id: "visual", timelineId: space.id, visualIr: "hypit.visual-ir@1", presents: [
+    { id: "unavailable-early", span: { startFrame: 0, endFrameExclusive: 10 },
+      root: { id: "unavailable", kind: "image", artifact: unavailable,
+        style: [{ name: "width", value: "64px" }, { name: "height", value: "64px" }] } },
+    { id: "broken-early", span: { startFrame: 10, endFrameExclusive: 30 },
+      root: { id: "broken", kind: "image", artifact: broken,
+        style: [{ name: "width", value: "64px" }, { name: "height", value: "64px" }] } },
+    { id: "red-late", span: { startFrame: 30, endFrameExclusive: 60 },
+      root: { id: "red", kind: "image", artifact: red,
+        style: [{ name: "width", value: "64px" }, { name: "height", value: "64px" }] } },
   ] });
   const document = compileHtmlProgram(sealComposition({ id: "capture-scope",
-    canvas: { width: 64, height: 64, clearColor: "#000000" }, tracks: [track] }), space);
+    canvas: { width: 64, height: 64, clearColor: "#000000" }, visual: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) }, audio: [] }), space);
 
   const [artifact] = await rasterizeHtmlFrames({ program: document, frames: [45] },
     { resources, workers: 1, processTimeoutMs: 120_000, ...testBrowserOption() });
@@ -218,26 +218,26 @@ test("real capture keeps later Present animation local with picture content and 
     create: { width: 64, height: 64, channels: 3, background: "#000000" },
   }).png().toBuffer(), "image/png");
   const timeline = sealTimeline({ id: "local-animation", frameCount: 90, frameRate: { numerator: 30, denominator: 1 } });
-  const picture = sealVisualTrack({ id: "picture", timelineId: timeline.id, visualIr: "hypit.visual-ir@1", presents: [{
-    id: "picture", order: 0, z: 0, span: { startFrame: 0, endFrameExclusive: 90 },
-    elements: [{ id: "picture", order: 0, kind: "image", artifact: black,
+  const picture = sealPresentVisualTrack({ id: "picture", timelineId: timeline.id, visualIr: "hypit.visual-ir@1", presents: [{
+    id: "picture", span: { startFrame: 0, endFrameExclusive: 90 },
+    root: { id: "picture", kind: "image", artifact: black,
       style: [{ name: "position", value: "absolute" }, { name: "inset", value: 0 },
-        { name: "width", value: "64px" }, { name: "height", value: "64px" }] }],
+        { name: "width", value: "64px" }, { name: "height", value: "64px" }] },
   }] });
-  const animated = sealVisualTrack({ id: "animated", timelineId: timeline.id, visualIr: "hypit.visual-ir@1",
-    presents: [0, 30, 60].map((startFrame, order) => ({
-      id: `pose-${order + 1}`, order, z: 1, span: { startFrame, endFrameExclusive: startFrame + 30 },
-      elements: [{ id: "pose", order: 0, kind: "box", style: [
+  const animated = sealPresentVisualTrack({ id: "animated", timelineId: timeline.id, visualIr: "hypit.visual-ir@1",
+    presents: [0, 30, 60].map((startFrame, index) => ({
+      id: `pose-${index + 1}`, span: { startFrame, endFrameExclusive: startFrame + 30 },
+      root: { id: "pose", kind: "box", children: [], style: [
         { name: "position", value: "absolute" }, { name: "inset", value: 0 }, { name: "background", value: "#ffffff" },
       ], animation: { keyframes: [
         { atFrame: 0, style: [{ name: "opacity", value: 0 }] },
         { atFrame: 30, style: [{ name: "opacity", value: 1 }] },
-      ] } }],
+      ] } },
     })),
   });
   const document = compileHtmlProgram(sealComposition({ id: "local-animation", canvas: {
     width: 64, height: 64, clearColor: "#000000",
-  }, tracks: [picture, animated] }), timeline);
+  }, visual: { members: [picture, animated].map((track) => ({ kind: "track" as const, id: track.id, track })) }, audio: [] }), timeline);
   const frames = await rasterizeHtmlFrames({ program: document, frames: [15, 45, 75] }, {
     resources, workers: 2, processTimeoutMs: 120_000, ...testBrowserOption(),
   });
@@ -272,7 +272,7 @@ test("Fine Caption Cues stay isolated over Picture during reverse seeks and inde
 
   const recipe = (path: string, fill: string) => ({ path, properties: {
     align: "center", background: "#00000000", fill, "line-height": 1,
-    padding: "0", radius: 0, size: 72, "stack-order": 10, width: 1, x: 0.5, y: 0.5,
+    padding: "0", radius: 0, size: 72, width: 1, x: 0.5, y: 0.5,
     "anchor-x": "center", "anchor-y": "center", "inline-size": "fixed",
     karaoke: "off", "stroke-width": 0, "shadow-opacity": 0,
     "lead-frames": 0, "tail-frames": 0, handoff: "cut",
@@ -299,21 +299,21 @@ test("Fine Caption Cues stay isolated over Picture during reverse seeks and inde
   })) };
   const captions = renderFineCaption(scheduleFineCaption(timing, program, document), program, document,
     timeline, { xPx: 0, yPx: 0, widthPx: 320, heightPx: 180 });
-  assert.deepEqual(captions.presents.map(present => present.span), [
+  assert.deepEqual(captions.items.map(present => present.span), [
     { startFrame: 0, endFrameExclusive: 30 },
     { startFrame: 30, endFrameExclusive: 60 },
     { startFrame: 60, endFrameExclusive: 90 },
   ]);
 
-  const picture = sealVisualTrack({ id: "picture", timelineId: timeline.id,
-    visualIr: "hypit.visual-ir@1", presents: [{ id: "picture", order: 0, z: 0,
-      span: { startFrame: 0, endFrameExclusive: 90 }, elements: [{ id: "picture", order: 0,
+  const picture = sealPresentVisualTrack({ id: "picture", timelineId: timeline.id,
+    visualIr: "hypit.visual-ir@1", presents: [{ id: "picture",
+      span: { startFrame: 0, endFrameExclusive: 90 }, root: { id: "picture",
         kind: "image", artifact: black, style: [{ name: "position", value: "absolute" },
           { name: "inset", value: 0 }, { name: "width", value: "320px" }, { name: "height", value: "180px" }],
         animation: { keyframes: [{ atFrame: 0, style: [{ name: "opacity", value: 1 }] },
-          { atFrame: 90, style: [{ name: "opacity", value: 1 }] }] } }] }] });
+          { atFrame: 90, style: [{ name: "opacity", value: 1 }] }] } } }] });
   const html = compileHtmlProgram(sealComposition({ id: "fine-caption-isolation",
-    canvas: { width: 320, height: 180, clearColor: "#000000" }, tracks: [picture, captions] }), timeline);
+    canvas: { width: 320, height: 180, clearColor: "#000000" }, visual: { members: [picture, captions].map((track) => ({ kind: "track" as const, id: track.id, track })) }, audio: [] }), timeline);
 
   const assertCueColors = async (buffer: Uint8Array, wanted: "red" | "green" | "blue", label: string) => {
     const { data } = await sharp(buffer).removeAlpha().raw().toBuffer({ resolveWithObject: true });
@@ -384,23 +384,22 @@ test("terminal text and SVG mask sources retain their Present frame animations a
       { atProgress: 1, style: [{ name: "opacity", value: 0 }] }] }];
   const text = { style: [], animation, document: { paragraphs: [{ id: "p", inlines: [{ kind: "text" as const, id: "t", text: "A" }] }] },
     typography, paints: [{ kind: "fill" as const, paint: { kind: "solid" as const, color: "#ffffff" } }], sequences };
-  const elements: VisualElement[] = [
-    { id: "root", kind: "box", order: 0, style: [] },
-    { ...text, id: "flow", parent: "root", order: 1, kind: "text-flow", flow: {
+  const root: VisualElement = { id: "root", kind: "box", style: [], children: [
+    { ...text, id: "flow", kind: "text-flow", flow: {
       form: { kind: "area" }, inlineSize: "hug", blockSize: "hug", paddingPx: { inlineStart: 0, inlineEnd: 0, blockStart: 0, blockEnd: 0 },
       inlineAlign: "start", blockAlign: "start", wrap: "none", overflow: "visible", clipToFrame: false, columns: 1,
       columnGapPx: 0, metricEdge: "line-box" } },
-    { ...text, id: "path", parent: "root", order: 2, kind: "path-text",
+    { ...text, id: "path", kind: "path-text",
       path: [{ kind: "move", x: 0, y: 20 }, { kind: "line", x: 100, y: 20 }], side: "left", orientation: "follow",
       align: "start", overflow: "visible", startMarginPx: 0, endMarginPx: 0, reverse: false },
-    { id: "mask", parent: "root", order: 3, kind: "mask", mode: "alpha", maskElement: "mask-image", contentElement: "content",
+    { id: "mask", kind: "mask", mode: "alpha",
+      mask: { id: "mask-image", kind: "image", artifact: image, style: [], animation },
+      content: { id: "content", kind: "box", children: [], style: [{ name: "background", value: "#ffffff" }] },
       style: [{ name: "width", value: "64px" }, { name: "height", value: "64px" }] },
-    { id: "mask-image", parent: "mask", order: 4, kind: "image", artifact: image, style: [], animation },
-    { id: "content", parent: "mask", order: 5, kind: "box", style: [{ name: "background", value: "#ffffff" }] },
-  ];
-  const track = sealVisualTrack({ id: "visual", timelineId: space.id, visualIr: "hypit.visual-ir@1",
-    presents: [{ id: "later", order: 0, z: 0, span: { startFrame: 15, endFrameExclusive: 60 }, elements }] });
-  const compiled = compileHtmlProgram(sealComposition({ id: "animation", canvas: { width: 128, height: 128, clearColor: "#000000" }, tracks: [track] }), space);
+  ] };
+  const track = sealPresentVisualTrack({ id: "visual", timelineId: space.id, visualIr: "hypit.visual-ir@1",
+    presents: [{ id: "later", span: { startFrame: 15, endFrameExclusive: 60 }, root }] });
+  const compiled = compileHtmlProgram(sealComposition({ id: "animation", canvas: { width: 128, height: 128, clearColor: "#000000" }, visual: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) }, audio: [] }), space);
   const html = materializeHtmlProgram(compiled, artifact => artifact.resource === "res_font"
     ? "data:font/woff2;base64,AA==" : "data:image/png;base64,AA==");
   const browser = await puppeteer.launch({ executablePath: testBrowser(), headless: true, args: ["--no-sandbox"] });

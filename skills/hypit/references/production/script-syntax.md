@@ -203,8 +203,8 @@ adjacent semantic boundary:
 | `@{~name!}` | Place a Moment at the previous word's end. |
 
 Markers may sit between or outside Segments when the meaning crosses structural passages. For
-example, this Selection owns the complete Script program rather than borrowing the first and last
-word boundaries:
+example, this Selection covers the complete Script content from the first Segment start through the
+last Segment end rather than borrowing the first and last word boundaries:
 
 ```svml
 @{~whole}
@@ -213,8 +213,9 @@ word boundaries:
 @{/whole~}
 ```
 
-At a Script or Segment edge, the corresponding structural boundary remains available even when
-there is no neighboring word. Thus `@{videos} videos @{/videos}` covers exactly that word. Adjacent
+At a Segment edge, the corresponding structural boundary remains available even when there is no
+neighboring word. Script has no additional outer boundary: markers outside all Segments resolve to
+the nearest first or last Segment edge. Thus `@{videos} videos @{/videos}` covers exactly that word. Adjacent
 visual Windows can share a boundary at either side of the pause between words. To give that pause
 to the incoming picture, meet at the previous word's end:
 

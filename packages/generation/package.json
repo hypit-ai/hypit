@@ -14,8 +14,6 @@
     "activation": "./src/activation.ts"
   },
   "devDependencies": {
-    "@hypit/executor": "workspace:*",
-    "@hypit/refinement": "workspace:*",
     "@hypit/author": "workspace:*",
     "@hypit/blob": "workspace:*",
     "@hypit/producer": "workspace:*",

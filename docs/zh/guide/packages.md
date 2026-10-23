@@ -35,8 +35,9 @@ Skill、可执行 Distribution 和视频项目分别安装与更新。`@hypit/hy
 Source 使用 `@your-studio/scoreboard@1` 这样的逻辑 Module 地址。npm 安装的包版本决定实际实现，逻辑 `@1` 标识作者接口。视频 Build 使用这些已安装的版本；缺包时会报告安装所需的信息。
 
 升级已有作品前，先阅读目标发行版的迁移说明，再调整可执行程序和组件依赖。
-[0.3 项目迁移指南](https://github.com/hypit-ai/hypit/blob/main/migrations/0.3.md)
-说明旧项目语法与用法的迁移，并链接到 0.3.1 的 SDK 导入调整。迁移与验证时保留已有素材和 Results。
+[0.4 框架迁移指南](https://github.com/hypit-ai/hypit/blob/main/migrations/0.4.zh-CN.md)
+从 0.3.1 开始说明本轮变化；[0.3 项目迁移指南](https://github.com/hypit-ai/hypit/blob/main/migrations/0.3.zh-CN.md)
+覆盖更早的项目语法与用法，并链接到 0.3.1 的 SDK 导入调整。迁移与验证时保留已有素材和 Results。
 
 ## 编写与分享扩展
 

@@ -189,7 +189,8 @@ Agent 会检查环境，索要这条视频需要的凭据，生成素材并构�
 
 创建组件是正常的视频制作工作，组件通常留在拥有它的视频项目中。所有者希望分享时，可以把同一份包作为版本化 tarball 直接交付，也可以发布到自己的 npm scope 或私有 registry。希望某个组件由 Hypit 官方 Distribution 维护时，先通过 issue 说明它解决的共同产品需求；官方收录与普通的社区分享是两件事。
 
-[开发指南](https://hypit.ai/zh/guide/develop/)说明了前置条件、日常命令和仓库结构。
+[开发指南](https://hypit.ai/zh/guide/develop/)说明本地制作前置条件，以及组件、Model、Provider 与 Runtime
+集成的公共扩展指南。
 
 <table>
   <tr>
@@ -206,7 +207,7 @@ Agent 会检查环境，索要这条视频需要的凭据，生成素材并构�
   </tr>
   <tr>
     <td>旧项目升级</td>
-    <td><a href="./migrations/0.3.zh-CN.md">0.3 迁移指南</a> · <a href="./migrations/0.3.1.zh-CN.md">0.3.1 SDK 迁移指南</a></td>
+    <td><a href="./migrations/0.3.zh-CN.md">0.3 迁移指南</a> · <a href="./migrations/0.3.1.zh-CN.md">0.3.1 SDK 迁移指南</a> · <a href="./migrations/0.4.zh-CN.md">0.4 框架迁移指南</a></td>
   </tr>
 </table>
 

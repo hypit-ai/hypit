@@ -78,10 +78,10 @@ test("the local Provider returns only a new image Blob", async () => {
 
     need: request, resources, credentials: {},
   });
-  assertBlobRef(result.value);
-  assert.equal(result.value.mediaType, "image/png");
-  assert.equal(await resources.has(result.value.resource), true);
-  const output = await resources.get(result.value.resource);
+  assertBlobRef(result);
+  assert.equal(result.mediaType, "image/png");
+  assert.equal(await resources.has(result.resource), true);
+  const output = await resources.get(result.resource);
   assert(output !== undefined);
   const encoded = Buffer.from(output);
   assert.equal(encoded.readUInt32BE(16), 64);
@@ -105,8 +105,8 @@ test("the local Provider composes ordered Layers into exact Canvas pixels", asyn
 
     need: request, resources, credentials: {},
   });
-  assertBlobRef(result.value);
-  const output = await resources.get(result.value.resource);
+  assertBlobRef(result);
+  const output = await resources.get(result.resource);
   assert(output !== undefined);
   const probe = spawnSync(openCvPython, ["-c", [
     "import cv2, numpy as np, sys",

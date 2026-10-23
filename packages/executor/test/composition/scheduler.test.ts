@@ -236,7 +236,7 @@ test("a failure stops new work and preserves a result from an already running si
       await new Promise<void>((resolve) => setTimeout(resolve, 20));
       return {
         status: "completed",
-        result: { value: ("late sibling result") },
+        result: "late sibling result",
       };
     },
     poll() {
@@ -331,7 +331,7 @@ test("asynchronous actions expose progress before returning without treating it 
     },
     async collect(context) {
       await context.reportProgress?.({ phase: "Receiving output" });
-      return { status: "completed", result: { value: ("done") } };
+      return { status: "completed", result: "done" };
     },
   }, operations);
   const context: RuntimeExecutionContext = {
@@ -365,7 +365,7 @@ test("asynchronous actions expose progress before returning without treating it 
   const ready = await executor.advanceOperation(submitted!, context);
   const received = await executor.advanceOperation(ready, context);
   assert.equal(received.status, "received");
-  assert.deepEqual(received.completion, { value: ("done") });
+  assert.deepEqual(received.value, "done");
   assert.deepEqual(progress.slice(2), ["Reading remote result", "Receiving output"].map((phase) => ({
     endpoint: "generation.local", progress: { phase },
   })));
@@ -382,7 +382,7 @@ test("a temporary collection failure keeps remote completion and retries collect
       if (collections === 1) {
         return { status: "pending", handle: context.handle, progress: { phase: "retrying-collection" } };
       }
-      return { status: "completed", result: { value: ("done") }, receipt: { id: "one" } };
+      return { status: "completed", result: "done", receipt: { id: "one" } };
     },
   }, operations);
   const [first] = await new InProcessBuildScheduler(executor).run([submission("video", createGreetingBuild())]);
@@ -399,7 +399,7 @@ test("a temporary collection failure keeps remote completion and retries collect
   const received = await executor.advanceOperation(retry, { build: "video" });
   assert.equal(collections, 2);
   assert.equal(received.status, "received");
-  assert.deepEqual(received.completion, { value: ("done") });
+  assert.deepEqual(received.value, "done");
 });
 
 test("a submission error ends its attempt and a new Build can submit normally", async () => {
@@ -411,7 +411,7 @@ test("a submission error ends its attempt and a new Build can submit normally", 
       if (starts === 1) throw new Error("submission timed out without a receipt");
       return { status: "pending", handle: { job: "second" }, receipt: { id: "second" } };
     },
-    poll() { return { status: "completed", result: { value: ("done") } }; },
+    poll() { return { status: "completed", result: "done" }; },
   };
   const scheduler = new InProcessBuildScheduler(asyncExecutor(endpoint, operations));
   const [failed] = await scheduler.run([submission("first", createGreetingBuild())]);
@@ -472,7 +472,7 @@ test("request quantities govern concurrent admission, independent of whole-Need 
     active += 4; maximum = Math.max(maximum, active);
     await new Promise((resolve) => setTimeout(resolve, 10));
     active -= 4;
-    return { value: ("done") };
+    return "done";
   }, { scheduling: { resources: [{ id: "browsers", limit: 6 }], unitsForRequest: () => ({ browsers: 4 }) } });
   const results = await new InProcessBuildScheduler(new Executor({ producers: producerRegistry, endpoints }))
     .run(["a", "b"].map((id) => submission(id, createGreetingBuild())));

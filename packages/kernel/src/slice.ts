@@ -72,17 +72,17 @@ export function sliceExecution(
     outputs.add(id);
     visitCandidate(selectionByOutput.get(id)?.candidate ?? output.primary);
   };
-  runGraph.targets.forEach((target) => visitOutput(target.output));
+  runGraph.targets.forEach(visitOutput);
 
   const selectedOperations = graph.operations.filter((item) => operations.has(item.id));
   const authoredRecords = program.records.filter((record) => records.has(record.id));
   const executionSelections = selected.selections.filter((item) => outputs.has(item.output));
   const targetRecords = new Set<string>();
   for (const target of runGraph.targets) {
-    const selection = selectionByOutput.get(target.output);
-    const output = outputById.get(target.output);
+    const selection = selectionByOutput.get(target);
+    const output = outputById.get(target);
     if (selection === undefined || output === undefined) {
-      throw new Error(`execution slice has no selected source for ${target.output}`);
+      throw new Error(`execution slice has no selected source for ${target}`);
     }
     targetRecords.add(selection.record);
   }
@@ -103,14 +103,14 @@ export function sliceExecution(
   };
 
   const requiredModules = new Set<string>();
-  const modulesByKey = new Map(program.closure.modules.map((item) => [moduleKey(item.manifest), item]));
+  const modulesByKey = new Map(program.closure.modules.map((item) => [moduleKey(item), item]));
   const requireModule = (ref: ModuleRef): void => {
     const key = moduleKey(ref);
     if (requiredModules.has(key)) return;
     const resolved = modulesByKey.get(key);
     if (resolved === undefined) throw new Error(`execution slice refers to absent module ${key}`);
     requiredModules.add(key);
-    resolved.manifest.dependencies.forEach((item) => requireModule(item.module));
+    resolved.dependencies.forEach(requireModule);
   };
   selectedOperations.forEach((item) => requireModule(item.producer.module));
   initialRecords.forEach((item) => requireModule(item.type.module));
@@ -118,8 +118,7 @@ export function sliceExecution(
   authoredRecords.forEach((item) => requireModule(item.type.module));
 
   const closure = createResolvedClosure(program.closure.modules
-    .filter((item) => requiredModules.has(moduleKey(item.manifest)))
-    .map((item) => item.manifest));
+    .filter((item) => requiredModules.has(moduleKey(item))));
   const slicedProgram = link(closure, authoredRecords);
   verifyBuildPlan(slicedProgram, [
     ...initialRecords,

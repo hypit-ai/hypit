@@ -20,11 +20,11 @@ Composition into a video.
 
 <film:Film id="main" canvas={vertical.canvas} timeline={speech.timeline}
   appearance={recipes.film.vertical}>
-  <film:Track source={picture.visual}/>
+  <film:Track id="picture" source={picture.visual}/>
   <film:Track source={mix.audio}/>
-  <film:Track source={cards.visual}/>
-  <film:Track source={captions.visual}/>
-  <film:Track source={meaning.visual}/>
+  <film:Track id="cards" source={cards.visual}/>
+  <film:Track id="captions" source={captions.visual}/>
+  <film:Track id="meaning" source={meaning.visual}/>
 </film:Film>
 ```
 
@@ -51,25 +51,54 @@ Common outputs include:
 
 The public output is `{main.composition}`.
 
-## Visual order belongs to Presents
+## Visual order belongs to the parent Scope
 
-Film children select contributions; their source order does not define picture stacking. Each visual
-component publishes timed Presents with an absolute `z`, commonly authored through `stack-order` in
-its Recipe. Lower values paint behind higher values. Equal values use stable Track identity, then
-Track-local Present `order` and Present identity; use distinct values whenever the relative paint
-relation matters.
+Film children select and place contributions. Every visual `<film:Track>` and `<film:Stack>` carries
+an `id` owned by its immediate parent VisualScope. Siblings paint in declaration order from back to
+front. Components publish only their reusable Track-local programme and do not carry a position in an
+unknown future Film. A Stack closes its child VisualScope and enters the parent once at its declared
+position. Ids address authored occurrences and never act as hidden paint-order fallbacks. One
+VisualTrack may be reused through several distinct member ids.
 
 ```svs
 film.vertical { background: #09090B; }
-media.speaker { stack-order: 10; fit: cover; }
-media.card { stack-order: 40; fit: contain; }
-caption.base { stack-order: 70; }
-/* Fine Text writes z="90" on its Flow, Point or Path occurrence. */
+media.speaker { fit: cover; }
+media.card { fit: contain; }
+caption.base { }
 ```
 
-Presents from different Tracks can interleave. A Present may also own an internal element tree or a
-HTML visual when several pictures, graphics and text share layout or motion. Put content together
-when its behavior belongs together; keep independently useful contributions as peers.
+Items remain inside their owning Track's placement. When several pictures, graphics and text need
+interleaved local order because they share layout or motion, one component should own that programme
+and its internal element tree or HTML visual. Keep independently useful contributions as peer Tracks.
+
+## Close a local visual stack
+
+Use a Film Stack when a group must first become one picture and an adjustment should affect exactly
+that group:
+
+```svml
+<import as="adjust" from="@hypit/visual-adjustment@1"/>
+
+<adjust:Track id="look" timeline={speech.timeline}>
+  <adjust:Adjustment id="grade" during={speech.window}
+    appearance={recipes.look.cinematic}/>
+</adjust:Track>
+
+<film:Film id="main" canvas={vertical.canvas} timeline={speech.timeline}
+  appearance={recipes.film.vertical}>
+  <film:Track id="background" source={background.visual}/>
+  <film:Stack id="treated-subject">
+    <film:Track id="subject" source={subject.visual}/>
+    <film:Track id="look" source={look.visual}/>
+  </film:Stack>
+  <film:Track id="captions" source={captions.visual}/>
+  <film:Track source={dialogue.audio}/>
+</film:Film>
+```
+
+The Stack begins with transparency and enters its parent as one picture at its declaration position. The Adjustment
+transforms only the picture accumulated inside that Stack. AudioTracks remain at the Film root and
+never inherit visual Stack membership.
 
 ## Render the complete video
 
@@ -123,7 +152,7 @@ Timeline does not require speech or media:
 
 <film:Film id="main" canvas={canvas.canvas} timeline={animation.timeline}
   appearance={recipes.film.main}>
-  <film:Track source={conversation.visual}/>
+  <film:Track id="conversation" source={conversation.visual}/>
 </film:Film>
 <html:Video id="final" composition={main.composition} timeline={animation.timeline}/>
 ```

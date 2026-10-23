@@ -1,9 +1,9 @@
 import { rankingMarkupSurfaces, rankingModuleRef, rankingTypes } from "./index.js";
 import type { RankingProgram, RankingSchedule, RankingSoundEventPlan } from "./index.js";
-import { compositionTypes } from "@hypit/composition";
+import { audioTrackClips, compositionTypes } from "@hypit/composition";
 import type { AudioTrack } from "@hypit/composition";
 import type { StudioTrackCompanion, StudioTrackCompanionContext, StudioItemDraft, StudioInspectorFieldDeclaration, StudioSourceBindingDeclaration, StudioValuePresentation } from "@hypit/studio-companion";
-import { artifactPreview, authoredChildFor, previewLayer, requiredSurfaceValue, temporalLineageFor, temporalDomainSource } from "@hypit/studio-companion";
+import { artifactPreview, authoredChildFor, previewLayer, requiredSurfaceValue, temporalLineageFor, temporalDomainMarker } from "@hypit/studio-companion";
 
 
 const fontInspector: {
@@ -141,17 +141,17 @@ function projectRanking(context: StudioTrackCompanionContext): readonly StudioIt
   if (placement === undefined) return context.generic();
   const boardId = placement.id ?? context.track.outputRef;
   const outerTemporal = temporalLineageFor(context, boardId, "outer");
-  const outerSemanticSource = temporalDomainSource(outerTemporal);
+  const outerMarker = temporalDomainMarker(outerTemporal);
   const group: StudioItemDraft = {
-    id: `${context.track.outputRef}:item:${boardId}`,
+    id: `item:${boardId}`,
     authoredId: boardId,
-    ...(outerSemanticSource?.id === undefined ? {} : { markerId: outerSemanticSource.id }),
+    ...(outerMarker === undefined ? {} : { marker: outerMarker }),
     display: { title: boardId, layers: [] },
     startFrame: schedule.outer.startFrame,
     endFrameExclusive: schedule.outer.endFrameExclusive,
     stackOrder: Math.max(...context.spans.map((span) => span.stackOrder), 0),
-    elementRange: placement.range,
-    renderIds: context.spans.map((span) => span.id),
+    elementLocation: { path: placement.sourcePath, range: placement.range },
+    terminalLinks: context.spans.map((span) => ({ spanId: span.id })),
     presentation: { kind: "ranking", chrome: "group" },
     ...(outerTemporal === undefined ? {} : { temporal: outerTemporal }),
   };
@@ -161,15 +161,17 @@ function projectRanking(context: StudioTrackCompanionContext): readonly StudioIt
     const child = authoredChildFor(context, entry.itemId, [rankingTypes.itemSpec, rankingTypes.textItemShell]);
     const item = programItems.get(entry.itemId);
     const temporal = temporalLineageFor(context, entry.itemId, "mode" in entry ? "window" : "activation");
-    const semanticSource = temporalDomainSource(temporal);
+    const marker = temporalDomainMarker(temporal);
     const visible = "mode" in entry ? entry.window : entry.cumulative;
     const icon = item?.icon;
     const label = item !== undefined && "label" in item ? item.label : child?.attributes.label ?? entry.itemId;
     return [{
-      id: `${context.track.outputRef}:item:${entry.itemId}`,
+      id: `item:${entry.itemId}`,
       authoredId: entry.itemId,
-      renderIds: context.spans.filter((span) => span.subjectId === entry.itemId).map((span) => span.id),
-      ...(semanticSource?.id === undefined ? {} : { markerId: semanticSource.id }),
+      terminalLinks: context.spans.flatMap((span) => span.subjectId === entry.itemId
+        ? [{ spanId: span.id }]
+        : []),
+      ...(marker === undefined ? {} : { marker }),
       display: {
         title: label,
         layers: icon === undefined ? [] : [previewLayer(artifactPreview("image", icon.resource), "repeat-x")],
@@ -177,14 +179,14 @@ function projectRanking(context: StudioTrackCompanionContext): readonly StudioIt
       startFrame: visible.startFrame,
       endFrameExclusive: visible.endFrameExclusive,
       stackOrder: group.stackOrder + 1,
-      ...(child === undefined ? {} : { elementRange: child.range }),
+      ...(child === undefined ? {} : { elementLocation: { path: child.sourcePath, range: child.range } }),
       lane: "mode" in entry ? "reveal" : "activation",
       presentation: { kind: "ranking-reveal", chrome: "standard" },
       ...(temporal === undefined ? {} : { temporal }),
     }];
   }).sort((left, right) => left.startFrame - right.startFrame || left.id.localeCompare(right.id));
-  const childRenderIds = new Set(reveals.flatMap((item) => item.renderIds ?? []));
-  return [{ ...group, renderIds: group.renderIds!.filter((id) => !childRenderIds.has(id)) }, ...reveals];
+  const childSpanIds = new Set(reveals.flatMap((item) => item.terminalLinks ?? []).map((link) => link.spanId));
+  return [{ ...group, terminalLinks: group.terminalLinks!.filter((link) => !childSpanIds.has(link.spanId)) }, ...reveals];
 }
 
 const commonBindings: readonly StudioSourceBindingDeclaration[] = [
@@ -194,7 +196,7 @@ const commonBindings: readonly StudioSourceBindingDeclaration[] = [
 function projectRankingAudio(context: StudioTrackCompanionContext): readonly StudioItemDraft[] {
   const events = requiredSurfaceValue(context, "events") as RankingSoundEventPlan;
   const byId = new Map(events.events.map((event) => [event.id, event]));
-  const clips = new Map((context.track.value as AudioTrack).clips.map((clip) => [clip.id, clip]));
+  const clips = new Map(audioTrackClips(context.track.value as AudioTrack).map((clip) => [clip.id, clip]));
   const boardId = context.placement?.id ?? context.track.outputRef;
   return context.spans.map((span): StudioItemDraft => {
     const event = byId.get(span.id);
@@ -204,11 +206,12 @@ function projectRankingAudio(context: StudioTrackCompanionContext): readonly Stu
     const label = child?.attributes.label ?? event.itemId;
     const phase = event.kind === "appear" ? "Appear" : "Move";
     return {
-      id: `${context.track.outputRef}:item:${event.id}`,
+      id: `item:${event.id}`,
       authoredId: boardId,
       display: { title: `${label} · ${phase}`, layers: [previewLayer(artifactPreview("audio", clip.artifact.resource), "waveform")] },
       startFrame: span.startFrame, endFrameExclusive: span.endFrameExclusive, stackOrder: span.stackOrder,
-      ...(context.placement === undefined ? {} : { elementRange: context.placement.range }),
+      terminalLinks: [{ spanId: span.id }],
+      ...(context.placement === undefined ? {} : { elementLocation: { path: context.placement.sourcePath, range: context.placement.range } }),
       presentation: { kind: "ranking-sound", chrome: "standard" },
       inspector: [{
         id: "trigger", label: "Trigger", domain: "when", page: { id: "sound", label: "Sound" }, section: { id: "event", label: "Event" },
@@ -252,7 +255,7 @@ export const rankingStudioTrackCompanions: readonly StudioTrackCompanion[] = [
   {
     id: "column", role: "track",
     output: { type: compositionTypes.visualTrack, surface: "column", modules: [rankingModuleRef] },
-    family: "ranking", tone: "orange", label: "Ranking", icon: "ranking", requiredValues: ["schedule", "program"],
+    family: "ranking", tone: "orange", label: "Ranking", icon: "chart", requiredValues: ["schedule", "program"],
     bindings: [
       ...commonBindings,
       rankingStyle("column-style"),
@@ -263,7 +266,7 @@ export const rankingStudioTrackCompanions: readonly StudioTrackCompanion[] = [
       heightPx: 80, groupId: "ranking-reveals",
     },
     attachments: [{
-      id: "reveal", family: "ranking-reveal", tone: "orange-muted", label: "Reveals", icon: "ranking", facet: "visual",
+      id: "reveal", family: "ranking-reveal", tone: "orange-muted", label: "Reveals", icon: "chart", facet: "visual",
       lane: { heightPx: 40 },
       bindings: [
         { name: "label", writable: true },
@@ -282,7 +285,7 @@ export const rankingStudioTrackCompanions: readonly StudioTrackCompanion[] = [
   {
     id: "tier", role: "track",
     output: { type: compositionTypes.visualTrack, surface: "tier", modules: [rankingModuleRef] },
-    family: "ranking", tone: "orange", label: "Tier Board", icon: "ranking", requiredValues: ["schedule", "program"],
+    family: "ranking", tone: "orange", label: "Tier Board", icon: "chart", requiredValues: ["schedule", "program"],
     bindings: [
       ...commonBindings,
       rankingStyle("tier-style"),
@@ -294,7 +297,7 @@ export const rankingStudioTrackCompanions: readonly StudioTrackCompanion[] = [
     poster: { source: "surface-preview" },
     lane: { heightPx: 80, groupId: "tier-reveals" },
     attachments: [{
-      id: "reveal", family: "ranking-reveal", tone: "orange-muted", label: "Reveals", icon: "ranking", facet: "visual",
+      id: "reveal", family: "ranking-reveal", tone: "orange-muted", label: "Reveals", icon: "chart", facet: "visual",
       lane: { heightPx: 40 },
       bindings: [
         { name: "tier", writable: true },
@@ -313,7 +316,7 @@ export const rankingStudioTrackCompanions: readonly StudioTrackCompanion[] = [
   {
     id: "top-three", role: "track",
     output: { type: compositionTypes.visualTrack, surface: "top-three", modules: [rankingModuleRef] },
-    family: "ranking", tone: "orange", label: "Top Three", icon: "ranking", requiredValues: ["schedule", "program"],
+    family: "ranking", tone: "orange", label: "Top Three", icon: "chart", requiredValues: ["schedule", "program"],
     bindings: [
       ...commonBindings,
       rankingStyle("top-three-style"),
@@ -323,7 +326,7 @@ export const rankingStudioTrackCompanions: readonly StudioTrackCompanion[] = [
     poster: { source: "surface-preview" },
     lane: { heightPx: 80, groupId: "top-three-activations" },
     attachments: [{
-      id: "activation", family: "ranking-reveal", tone: "orange-muted", label: "Activations", icon: "ranking", facet: "visual",
+      id: "activation", family: "ranking-reveal", tone: "orange-muted", label: "Activations", icon: "chart", facet: "visual",
       lane: { heightPx: 40 },
       bindings: [
         { name: "label", writable: true },

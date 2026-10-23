@@ -43,7 +43,6 @@ See the [local renderer README](packages/provider-html-local/README.md) for brow
 | Studio interface translations | [Localizing Studio](packages/studio/LOCALIZATION.md) |
 | Compilation, Runs and Builds | [Runtime](https://hypit.ai/guide/runtime/) |
 | Naming, module boundaries, wire data | [Conventions](https://hypit.ai/guide/conventions/) |
-| Tests and environment-gated suites | [Testing](https://hypit.ai/guide/testing/) |
 
 English and Chinese documentation live side by side under `docs/` and `docs/zh/`. A change to one
 page belongs with the change to its counterpart.
@@ -56,6 +55,24 @@ CI runs these commands on code pull requests. Run them locally first:
 pnpm check         # TypeScript type-check
 pnpm test          # package and service-adapter tests
 ```
+
+Hypit tests are organized by the fact they own, not by a unit/integration/e2e pyramid:
+
+- `packages/<name>/test/` verifies package-owned values and behavior;
+- `packages/<name>/test/composition/` verifies one direct handoff;
+- `test/workflows/` verifies a small number of complete public flows;
+- `packages/<name>/test/environment/` files run only through an explicit
+  `node test/run.mjs environment <name>` selection.
+
+Use `node test/run.mjs package <name>` while changing one package and `node test/run.mjs workflow
+<name>` for a repository workflow. The default `pnpm test` suite excludes environment-owned browser,
+media, Python and process behavior.
+
+Before adding a test, identify the observable fact, its owner, and the failure that no existing test
+would reveal. Keep the test at that owner; a consumer tests only the relationship it uses. Do not
+mirror Manifest arrays, internal state objects or implementation call order. A fixture may reduce
+syntax, but must not choose a Model, Provider, Output, recovery rule or domain relation for its
+consumers. Delete tests with obsolete behavior rather than retaining them as project history.
 
 ## Package the Distribution
 

@@ -79,7 +79,7 @@ test("SQLite stores verified Build facts and Operation handles across reopen", a
     const buildDefinition = definition(initial);
     await first.builds.create("video", buildDefinition);
     const catalog = {
-      source: { path: "/project/main.svml" },
+      sourcePath: "/project/main.svml",
       publication: { outputs: [{
         name: "final.video",
         output: "document",
@@ -146,8 +146,8 @@ test("SQLite Operation updates preserve a terminal completion", async () => {
       status: "completed",
       acknowledgedAt: 2,
       endedAt: 3,
-      completion: {
-        value: ({ artifact: "video.mp4" }),
+      value: {
+        artifact: "video.mp4",
       },
     });
     assert.equal(completed.status, "completed");
@@ -174,8 +174,8 @@ function operationBranches(): readonly OperationSnapshot[] {
     { ...identity("submitting"), status: "submitting" },
     { ...identity("running"), status: "running", handle: { job: "running" }, acknowledgedAt: 11, wakeAt: 12 },
     { ...identity("collecting"), status: "collecting", handle: { job: "collecting" }, acknowledgedAt: 13, endedAt: 14, wakeAt: 15 },
-    { ...identity("received"), status: "received", completion: { value: "received" }, acknowledgedAt: 16, endedAt: 17 },
-    { ...identity("completed"), status: "completed", completion: { value: "completed" }, acknowledgedAt: 18, endedAt: 19 },
+    { ...identity("received"), status: "received", value: "received", acknowledgedAt: 16, endedAt: 17 },
+    { ...identity("completed"), status: "completed", value: "completed", acknowledgedAt: 18, endedAt: 19 },
     { ...identity("failed"), status: "failed", failure: { code: "REMOTE", message: "failed" }, endedAt: 20 },
     { ...identity("cancelled"), status: "cancelled", cancellation: { outcome: "confirmed" }, endedAt: 21 },
   ];
@@ -246,7 +246,7 @@ test("SQLite requires the facts owned by each stateful Operation branch", async 
     const omissions = [
       ["running", "handle"],
       ["collecting", "endedAt"],
-      ["received", "completion"],
+      ["received", "value"],
       ["completed", "acknowledgedAt"],
       ["failed", "failure"],
       ["cancelled", "cancellation"],
@@ -307,12 +307,17 @@ test("Execution stores scheduling facts, one decision and independent operator a
     const result = { root: "/projects/episode-12", path: ".hypit/results" } as const;
     const initial = createGreetingBuild();
     const buildDefinition = definition(initial);
-    const request = { build: "queued-build", executionPackages: ["example.component@1"], result } as const;
+    const request = {
+      build: "queued-build",
+      executionPackages: ["example.component@1"],
+      result,
+      context: { z: 2, a: 1 },
+    } as const;
     await state.submissions.prepare(request, { now: 100 });
     await state.submissions.commit({
       ...request,
       definition: buildDefinition,
-      catalog: { source: { path: "/project/main.svml" }, publication: { outputs: [] } },
+      catalog: { sourcePath: "/project/main.svml", publication: { outputs: [] } },
     });
     assert.equal(await state.submissions.read("queued-build"), undefined);
     assert.deepEqual((await state.execution.read("queued-build"))?.result, result);

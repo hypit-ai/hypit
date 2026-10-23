@@ -10,7 +10,7 @@ import type { BlobRef } from "@hypit/protocol";
 
 import {
   acceptedRecords,
-  compositeType,
+  structuredType,
   publication,
   videoType,
 } from "./repository-scenario.js";
@@ -20,7 +20,7 @@ test("internal progress and already published Outputs leave Result files untouch
   try {
     const result = await FileBuildResult.create(root, {
       id: "bld_20260902T100000000Z_0000000001",
-      source: { id: "/project/main.svml" },
+      sourceId: "/project/main.svml",
       publication: publication([{ name: "answer", output: "logical:answer", displayName: "Answer" }], ["answer"]),
     });
     const paths = ["result.json", ".writer.json"].map((name) => join(result.directory, name));
@@ -59,7 +59,7 @@ test("publishing and finishing preserve open readers of the previous Result file
   try {
     const result = await FileBuildResult.create(root, {
       id: "bld_20260902T100000000Z_0000000001",
-      source: { id: "/project/main.svml" },
+      sourceId: "/project/main.svml",
       publication: publication([{ name: "answer", output: "logical:answer" }], ["answer"]),
     });
     const manifestPath = join(result.directory, "result.json");
@@ -94,7 +94,7 @@ test("publication facts are rejected before a Result directory is created", asyn
   try {
     await assert.rejects(FileBuildResult.create(root, {
       id: "bld_20260902T100000000Z_0000000001",
-      source: { id: "main.svml" },
+      sourceId: "main.svml",
       publication: { outputs: [{
         name: "answer",
         output: "logical:answer",
@@ -113,12 +113,12 @@ test("a current Record must match the public Output type", async () => {
   try {
     const result = await FileBuildResult.create(root, {
       id: "bld_20260902T100000000Z_0000000001",
-      source: { id: "main.svml" },
+      sourceId: "main.svml",
       publication: publication([{ name: "answer", output: "logical:answer" }], ["answer"]),
     });
     await assert.rejects(result.sync({
       records: acceptedRecords({
-        records: [{ id: "record:answer", type: compositeType, value: (42) }],
+        records: [{ id: "record:answer", type: structuredType, value: (42) }],
         bindings: [{ output: "logical:answer", record: "record:answer" }],
       }),
       resources: { async open() { throw new Error("unexpected Resource read"); } },
@@ -135,7 +135,7 @@ test("public Output names are exact data keys, including JavaScript object names
   try {
     const result = await FileBuildResult.create(root, {
       id: "bld_20260902T100000000Z_0000000001",
-      source: { id: "main.svml" },
+      sourceId: "main.svml",
       publication: publication(names.map((name, index) => ({
         name,
         output: `logical:${String(index)}`,
@@ -165,7 +165,7 @@ test("a complete Result requires every declared target Output", async () => {
   try {
     const result = await FileBuildResult.create(root, {
       id: "bld_20260902T100000000Z_0000000001",
-      source: { id: "main.svml" },
+      sourceId: "main.svml",
       publication: publication([{ name: "answer", output: "logical:answer" }], ["answer"]),
     });
     await assert.rejects(result.finish({ outcome: "complete" }), /target Outputs are published: answer/u);

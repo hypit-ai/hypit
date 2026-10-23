@@ -34,10 +34,6 @@ export type SourceAssetRequest = {
   readonly range?: SourceRange;
 };
 
-export type ResolvedSourceAsset = {
-  readonly blob: BlobRef;
-};
-
 export type Awaitable<T> = T | Promise<T>;
 
 export type SourceResolver = (
@@ -48,7 +44,7 @@ export type SourceResolver = (
 export type SourceAssetResolver = (
   importer: SourceUnit,
   request: SourceAssetRequest,
-) => Awaitable<ResolvedSourceAsset>;
+) => Awaitable<BlobRef>;
 
 const utf8 = new TextDecoder("utf-8", { fatal: true });
 

@@ -27,10 +27,6 @@ async function produce(producer: ProducerRef, inputs: Record<string, { value: Va
   return await facet.handler({ inputs } as never);
 }
 
-test("Seedance activation and public definition share their component implementation", () => {
-  assert.equal(seedanceComponent, seedanceDefinition.component);
-});
-
 for (const [model, endpoint] of Object.entries(seedanceEndpointsByModel)) {
   test(`${model}: visual classification survives runtime binding, finalization and generation`, async () => {
     const { referenceImage, ...scalars } = settings;

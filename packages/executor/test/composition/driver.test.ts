@@ -86,9 +86,7 @@ test("the Scheduler can continue a returned state after its missing Endpoint is 
   endpoints.registerImmediateEndpoint("example:generation", capabilities.generation, types.generated, ({ need }) => {
     calls.fulfill += 1;
     assert.deepEqual(need.constraints, { prompt: "Greet Ada" });
-    return {
-      value: ("Hello, Ada!"),
-    };
+    return "Hello, Ada!";
   });
 
   const completed = await runBuild(driver, paused);
@@ -99,12 +97,8 @@ test("the Scheduler can continue a returned state after its missing Endpoint is 
 
 test("Endpoint Registry rejects an ambiguous Runtime Profile", async () => {
   const { producers, endpoints } = configuredRegistry();
-  endpoints.registerImmediateEndpoint("example:alpha", capabilities.generation, types.generated, () => ({
-    value: ("Alpha"),
-  }));
-  endpoints.registerImmediateEndpoint("example:beta", capabilities.generation, types.generated, () => ({
-    value: ("Beta"),
-  }));
+  endpoints.registerImmediateEndpoint("example:alpha", capabilities.generation, types.generated, () => "Alpha");
+  endpoints.registerImmediateEndpoint("example:beta", capabilities.generation, types.generated, () => "Beta");
 
   const driver = new Executor({ producers, endpoints });
   const ambiguous = await runBuild(driver, createGreetingBuild());
@@ -123,9 +117,7 @@ test("an Endpoint receives only declared credential slots and secrets never ente
     ({ credentials }) => {
       assert.deepEqual(Object.keys(credentials), ["apiKey"]);
       assert.equal(credentials.apiKey?.secret, "top-secret-value");
-      return {
-        value: ("Credentialed result"),
-      };
+      return "Credentialed result";
     },
     { credentials: { apiKey: credentialRef("test", "endpoint-key") } },
   );
@@ -156,7 +148,7 @@ test("a writable credential gives its Endpoint authority to replace only that de
       assert.equal(typeof credentials.apiKey?.replace, "function");
       await credentials.apiKey!.replace!({ secret: "new-secret" });
       assert.equal("credentialStore" in credentials.apiKey!, false);
-      return { value: ("Credentialed result") };
+      return "Credentialed result";
     },
     { credentials: { apiKey: credentialRef("test", "endpoint-key") } },
   );
@@ -185,9 +177,7 @@ test("request support checks only the deployment selected by an explicit binding
     wrongSupportCalls += 1;
     return { status: "unsupported", reason: "example request is unsupported" };
   } });
-  endpoints.registerImmediateEndpoint("example:compatible", capabilities.generation, types.generated, () => ({
-    value: ("Compatible"),
-  }), {
+  endpoints.registerImmediateEndpoint("example:compatible", capabilities.generation, types.generated, () => "Compatible", {
     supports: (need) => {
       const constraints = need.constraints as Readonly<Record<string, unknown>>;
       return constraints.prompt === "Greet Ada"
@@ -217,9 +207,7 @@ test("the same return Type cannot impersonate another exact capability", async (
     types.generated,
     () => {
       calls += 1;
-      return {
-        value: ("must not run"),
-      };
+      return "must not run";
     },
   );
   const result = await runBuild(new Executor({ producers, endpoints }), createGreetingBuild());
@@ -259,9 +247,7 @@ test("MemoryResourceStore keeps independent admissions and returns defensive cop
 
 test("Core still owns command readiness when Executor has every implementation", async () => {
   const { producers, endpoints } = configuredRegistry();
-  endpoints.registerImmediateEndpoint("example:cache", capabilities.generation, types.generated, () => ({
-    value: ("Hello, Ada!"),
-  }));
+  endpoints.registerImmediateEndpoint("example:cache", capabilities.generation, types.generated, () => "Hello, Ada!");
   const start = createGreetingBuild();
   assert.equal(start.outstanding[0]?.kind, "invoke-producer");
   const result = await runBuild(new Executor({ producers, endpoints }), start);
@@ -275,9 +261,7 @@ test("a Scheduler-owned execution failure ends its state and a new attempt start
     calls.fulfill += 1;
     attempts += 1;
     if (attempts === 1) throw new Error("temporary outage");
-    return {
-      value: ("Hello after retry"),
-    };
+    return "Hello after retry";
   });
 
   const driver = new Executor({ producers, endpoints });
@@ -298,7 +282,7 @@ test("shared action-rate declarations conflict when their periods differ", () =>
   for (const [id, periodMs] of [["a", 100], ["b", 200]] as const) {
     registry.registerAsyncEndpoint(id, capabilities.generation, types.generated, {
       start: () => ({ status: "pending", handle: { id } }),
-      poll: () => ({ status: "completed", result: { value: ("done") } }),
+      poll: () => ({ status: "completed", result: "done" }),
     }, { scheduling: { resources: [{ id: "pool:shared", limit: 10 }],
       actions: { submit: [{ id: "rate:shared/submit", limit: 1, periodMs }] } } });
   }

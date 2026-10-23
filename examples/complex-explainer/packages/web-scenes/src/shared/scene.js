@@ -1,6 +1,6 @@
 import { terminalSetup } from "./terminal.js";
 import { scene_styles } from "./scene-styles.js";
-import { sealVisualTrack } from "@hypit/composition";
+import { sealPresentVisualTrack } from "@hypit/composition";
 import { htmlVisual } from "@hypit/html-program";
 import { assertTemporalWindowFor } from "@hypit/temporal";
 const styles = (o) => Object.entries(o).map(([name, value]) => ({ name, value }));
@@ -111,7 +111,7 @@ export function scene(t, within, w, font, o, html, css, setup, events, entries, 
       },
     };
   });
-  return sealVisualTrack({
+  return sealPresentVisualTrack({
     id: o.id,
     timelineId: t.id,
     visualIr: "hypit.visual-ir@1",
@@ -119,7 +119,6 @@ export function scene(t, within, w, font, o, html, css, setup, events, entries, 
       {
         id: o.id,
         order: 0,
-        z: o.z,
         span: w.span,
         elements: [
           {

@@ -35,4 +35,4 @@ export const imageTransformComponent = {
       return { kind: "need", constraints: canonicalize(imageTransformRequest(source, program.operations)) };
     },
   }],
-} satisfies ProducerPackage & RefinementPackage;
+} satisfies { producers?: ProducerPackage; refinements?: RefinementPackage };

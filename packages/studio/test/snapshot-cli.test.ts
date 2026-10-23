@@ -43,7 +43,7 @@ test("Studio snapshots pass one typed HTML Program and only its selected Artifac
         assert.deepEqual(need.constraints.program, program);
         assert.deepEqual(need.constraints.frames, [3]);
         assert.deepEqual(Buffer.from((await resources.get(artifact.resource))!), bytes);
-        return { value: (canonicalize([await resources.put(bytes, "image/png")])) };
+        return canonicalize([await resources.put(bytes, "image/png")]);
       },
     } as Pick<CliRuntimeHost, "endpoints" | "invoke">;
     const application: CliRuntimeSelectionContext = {

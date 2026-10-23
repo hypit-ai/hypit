@@ -37,7 +37,6 @@ export const emojiRevealProducers = {
 } satisfies Record<string, ProducerRef>;
 
 const string = { kind: "string", minLength: 1 } as const;
-const integer = { kind: "number", integer: true } as const;
 const positiveInteger = { kind: "number", integer: true, minimum: 1 } as const;
 const positive = { kind: "number", minimum: 0.000001 } as const;
 const nonNegative = { kind: "number", minimum: 0 } as const;
@@ -56,7 +55,7 @@ export const emojiRevealStyleSchema: ValueSchema = object({
   paddingXPx: { schema: nonNegative }, paddingYPx: { schema: nonNegative },
   background: { schema: string }, borderColor: { schema: string }, borderWidthPx: { schema: nonNegative }, radiusPx: { schema: nonNegative },
   shadowColor: { schema: string }, shadowXPx: { schema: number }, shadowYPx: { schema: number }, shadowBlurPx: { schema: nonNegative }, shadowSpreadPx: { schema: number },
-  iconSizePx: { schema: positive }, revealFrames: { schema: positiveInteger }, stackingOrder: { schema: integer },
+  iconSizePx: { schema: positive }, revealFrames: { schema: positiveInteger },
 });
 const emojiRevealItemSchema: ValueSchema = object({
   spec: { schema: emojiRevealItemSpecSchema }, icon: { schema: blob }, activation: { schema: temporalInstantSchema, optional: true },
@@ -88,7 +87,6 @@ const recipe = [
   ["shadow-spread", "0", "Grows or shrinks the board shadow in pixels."],
   ["icon-size", "48", "Sets the square SVG viewport size in pixels."],
   ["reveal-frames", "6", "Sets the duration of one icon's overshoot-and-settle reveal."],
-  ["stack-order", "66", "Sets the strip's absolute visual stacking order."],
 ] as const;
 
 export const emojiRevealMarkupSurfaces = [
@@ -145,8 +143,8 @@ export const emojiRevealManifest: ModuleManifest = {
   format: "hypit.module@1", name: emojiRevealModuleRef.name, version: emojiRevealModuleRef.version,
   dependencies: [blobDependency, timelineDependency, spatialDependency, temporalDependency, compositionDependency],
   types: [
-    { name: emojiRevealTypes.header.name }, { name: emojiRevealTypes.style.name },
-    { name: emojiRevealTypes.itemSpec.name }, { name: emojiRevealTypes.set.name }, { name: emojiRevealTypes.program.name },
+    emojiRevealTypes.header.name, emojiRevealTypes.style.name,
+    emojiRevealTypes.itemSpec.name, emojiRevealTypes.set.name, emojiRevealTypes.program.name,
   ],
   capabilities: [],
   producers: [
@@ -166,4 +164,4 @@ export const emojiRevealManifest: ModuleManifest = {
   ],
 };
 
-export const emojiRevealDependency = { module: emojiRevealModuleRef } as const;
+export const emojiRevealDependency = emojiRevealModuleRef;

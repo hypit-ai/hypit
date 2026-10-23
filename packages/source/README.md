@@ -9,8 +9,9 @@ export. Source itself never guesses from a suffix or body and has no default par
 `SourceRange` is owned here because offsets locate authoring syntax inside a Source; graph Protocol
 values remain independent of parsers, text encodings and editor positions.
 
-A `ResolvedSourceAsset` contains exactly one Protocol `BlobRef` in its `blob` field. Source owns the
-resolution request and source range; byte transfer ownership remains with the Workspace.
+A `SourceAssetRequest` carries the written locator, media type, optional package-owned bytes and
+source range. The Workspace resolves it directly to one Protocol `BlobRef`; byte transfer,
+attachment identity and physical storage remain with the Workspace.
 
 `@hypit/source/text` is the optional adapter used by Hypit's self-described UTF-8 author files. It
 recognizes one bounded Header such as:

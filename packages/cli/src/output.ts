@@ -1,5 +1,6 @@
 import { relative, resolve, sep } from "node:path";
 
+import { compareCodeUnits } from "@hypit/protocol";
 import type { CanonicalValue } from "@hypit/protocol";
 
 import type { OperationalMachineView } from "./machine-view.js";
@@ -202,9 +203,10 @@ export type PlanNeed = {
   readonly capability: string;
   readonly status: "concrete" | "blocked" | "failed" | "unavailable";
   readonly endpoint?: string;
-  readonly summary?: {
-    readonly fields: Readonly<Record<string, string | number | boolean>>;
-  };
+  readonly summary?: readonly {
+    readonly at: readonly (string | number)[];
+    readonly value: string | number | boolean;
+  }[];
   readonly pending: readonly {
     readonly input: string;
     readonly record: string;
@@ -366,7 +368,7 @@ function renderAuthorCheck(
   ], colors));
   if (verbose && readable.length > 0) {
     lines.push("", colors.strong("Outputs"));
-    const ordered = [...readable].sort((left, right) => left.name.localeCompare(right.name));
+    const ordered = [...readable].sort((left, right) => compareCodeUnits(left.name, right.name));
     const width = Math.max(...ordered.map((item) => item.name.length));
     for (const item of ordered) {
       lines.push(`  ${colors.accent(item.name.padEnd(width))}  ${item.type}`);
@@ -421,31 +423,29 @@ function renderRunCheck(
   return `${lines.join("\n")}\n`;
 }
 
-/** `@hypit/seedance@1#seedance-2-mini` → `@hypit/seedance#seedance-2-mini`; the module version is verbose detail. */
-function capabilityLabel(name: string): string {
-  return name.replace(/@[^@#]+#/u, "#");
-}
-
-/** The author-facing part of a step id: the component and operation, without the Source path. */
-function stepLabel(step: string): string {
-  let decoded = step;
-  try { decoded = decodeURIComponent(step); } catch { /* keep the raw id */ }
-  const marker = "::component::";
-  const at = decoded.lastIndexOf(marker);
-  return at === -1 ? decoded : decoded.slice(at + marker.length);
+function summaryPath(at: readonly (string | number)[]): string {
+  if (at.length === 0) return "$";
+  return at.map((segment, index) => typeof segment === "number"
+    ? `[${segment}]`
+    : /^[A-Za-z_$][A-Za-z0-9_$]*$/u.test(segment)
+      ? `${index === 0 ? "" : "."}${segment}`
+      : `[${JSON.stringify(segment)}]`).join("");
 }
 
 function groupKey(need: PlanNeed): string {
-  const pending = need.pending.map((item) => item.input).sort().join(",");
-  if (need.summary === undefined) return `${need.status}|?${pending}|${need.issue ?? ""}`;
-  const fields = Object.entries(need.summary.fields).map(([name, value]) => `${name}=${String(value)}`);
-  return [need.status, "|", ...fields, "|", pending, "|", need.issue ?? ""].join(" ");
+  return JSON.stringify({
+    status: need.status,
+    summary: need.summary,
+    pending: need.pending.map((item) => item.input).sort(),
+    issue: need.issue,
+  });
 }
 
 function needSummaryText(needs: readonly PlanNeed[]): string {
   const first = needs[0]!;
   const parts: string[] = [];
-  for (const [name, value] of Object.entries(first.summary?.fields ?? {})) {
+  for (const { at, value } of first.summary ?? []) {
+    const name = summaryPath(at);
     if (typeof value === "boolean") {
       parts.push(value ? name : `no ${name}`);
     } else {
@@ -469,7 +469,7 @@ function groupedNeedLines(needs: readonly PlanNeed[], colors: Palette, verbose: 
     groups.set(key, [...(groups.get(key) ?? []), need]);
   }
   return [...groups.values()].map((group) => {
-    const who = group.length === 1 || verbose ? colors.dim(group.map((need) => stepLabel(need.step)).join(", ")) : "";
+    const who = group.length === 1 || verbose ? colors.dim(group.map((need) => need.step).join(", ")) : "";
     const count = `×${group.length}`.padStart(4);
     return `    ${colors.dim(count)}  ${needSummaryText(group)}${who.length === 0 ? "" : `  ${who}`}`;
   });
@@ -530,7 +530,7 @@ function renderPlan(
   if (view.machine.producerFailures.length > 0) {
     lines.push("", colors.strong("Producer failures"));
     for (const failure of view.machine.producerFailures) {
-      lines.push(`  ${colors.error(glyph(io, "×", "x"))} ${colors.accent(stepLabel(failure.step))}: ${failure.message}`);
+      lines.push(`  ${colors.error(glyph(io, "×", "x"))} ${colors.accent(failure.step)}: ${failure.message}`);
     }
   }
   if (view.machine.endpoints !== undefined) {
@@ -556,7 +556,7 @@ function renderPlan(
         : item.pricing.kind === "local"
           ? colors.dim("local, no Provider charge")
           : item.pricing.url;
-      lines.push(`  ${colors.accent(verbose ? item.capability : capabilityLabel(item.capability))}`);
+      lines.push(`  ${colors.accent(item.capability)}`);
       lines.push(`    ${where}${price === undefined ? "" : `  ·  ${price}`}`);
       const needs = new Set(group.map((endpoint) => endpoint.need));
       lines.push(...groupedNeedLines((view.machine.needs ?? []).filter((need) => needs.has(need.need)), colors, verbose));
@@ -568,7 +568,7 @@ function renderPlan(
     }
     if (byCapability.size > 0) lines.push("", colors.strong("Requests"));
     for (const [capability, needs] of byCapability) {
-      lines.push(`  ${colors.accent(verbose ? capability : capabilityLabel(capability))}`);
+      lines.push(`  ${colors.accent(capability)}`);
       lines.push(...groupedNeedLines(needs, colors, verbose));
     }
     lines.push("", colors.dim("Pass --runtime <profile> to see the Endpoint and price page behind each request."));
@@ -620,27 +620,24 @@ function pricingDocumentLines(document: PricingDocument, colors: Palette, verbos
 function pricingNeedLines(needs: readonly PlanNeed[], colors: Palette, verbose: boolean): string[] {
   if (verbose || needs.length < 2) return groupedNeedLines(needs, colors, verbose);
   const first = needs[0]!;
-  const sharedFields = Object.fromEntries(Object.entries(first.summary?.fields ?? {}).filter(([key, value]) => {
-    return needs.every((need) => need.summary?.fields[key] === value);
-  }));
+  const sharedFields = (first.summary ?? []).filter((field) => needs.every((need) =>
+    need.summary?.some((candidate) => JSON.stringify(candidate.at) === JSON.stringify(field.at)
+      && candidate.value === field.value) === true));
+  const sharedPaths = new Set(sharedFields.map((field) => JSON.stringify(field.at)));
   const sharedPending = needs.every((need) =>
     JSON.stringify(need.pending.map((input) => input.input).sort())
       === JSON.stringify(first.pending.map((input) => input.input).sort()));
   const common = needs.map(({ issue: _issue, ...need }) => ({
     ...need,
-    summary: {
-      fields: Object.fromEntries(Object.keys(sharedFields).map((key) => [key, need.summary!.fields[key]!])),
-    },
+    summary: sharedFields,
     pending: sharedPending ? need.pending : [],
   }));
   const varying = needs.map((need) => ({
     ...need,
-    summary: {
-      fields: Object.fromEntries(Object.entries(need.summary?.fields ?? {}).filter(([key]) => !Object.hasOwn(sharedFields, key))),
-    },
+    summary: (need.summary ?? []).filter((field) => !sharedPaths.has(JSON.stringify(field.at))),
     pending: sharedPending ? [] : need.pending,
   }));
-  const hasParameters = (need: PlanNeed) => Object.keys(need.summary?.fields ?? {}).length > 0
+  const hasParameters = (need: PlanNeed) => (need.summary?.length ?? 0) > 0
     || need.pending.length > 0 || need.issue !== undefined;
   return [
     ...(common.some(hasParameters) ? [`    ${needSummaryText(common)}`] : []),
@@ -697,7 +694,7 @@ function renderPricing(
   if (machine.producerFailures.length > 0) {
     lines.push("", colors.strong("Producer failures"));
     for (const failure of machine.producerFailures) {
-      lines.push(`  ${colors.error(glyph(io, "×", "x"))} ${colors.accent(stepLabel(failure.step))}: ${failure.message}`);
+      lines.push(`  ${colors.error(glyph(io, "×", "x"))} ${colors.accent(failure.step)}: ${failure.message}`);
     }
   }
   if (machine.noChargeRequestCount > 0 && !verbose) {
@@ -713,7 +710,7 @@ function renderPricing(
       : item.status === "ambiguous"
         ? colors.error(`several Endpoints: ${(item.endpoints ?? []).join(", ")}`)
         : colors.error("no Endpoint offers this demand");
-    lines.push(`  ${colors.accent(verbose ? item.capability : capabilityLabel(item.capability))}`);
+    lines.push(`  ${colors.accent(item.capability)}`);
     lines.push(`    ${selected} · ${item.requests.length} request${item.requests.length === 1 ? "" : "s"}`);
     lines.push(...pricingNeedLines(item.requests, colors, verbose));
     if (item.status === "resolved" && item.support === "not-evaluated") {
@@ -881,8 +878,8 @@ function commandHelp(topic: string, colors: Palette): readonly string[] | undefi
       "",
       "  hypit get <build-id> --output <name> --to <path> [--project <project>]",
       "",
-      "Scalar and Resource Outputs become files. A Composite Output becomes a directory",
-      "containing value.json and every Resource referenced by that value.",
+      "Inline Outputs become JSON files. File Outputs keep their original bytes.",
+      "Value-document Outputs become a directory containing value.json and referenced files.",
     ],
     history: [
       colors.accent(colors.strong("hypit history")),

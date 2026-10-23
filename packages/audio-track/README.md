@@ -4,7 +4,8 @@ Audio Track is the plain sound-placement package:
 
 ```text
 Audio Clip = normalized audio source + absolute Window + sampling + mix
-Audio Track = additive set of Audio Clips
+Audio Track authoring = additive set of Audio Clips
+terminal AudioTrack = closed source/mix signal graph
 ```
 
 Timeline supplies the program clock, not hidden audio. Each Clip names its own normalized source and
@@ -46,10 +47,11 @@ Speech, music, ambience and effects are equal Audio Clips. A source that helped 
 duration or anchors leaves no special marker in the audio-placement path. Reusing one normalized
 source in two Clips creates two independent occurrences.
 
-Audio Track has no generic `Presentation`, `Style` or `Use`. Ducking, crossfades, continuing speaker
-roles and other relationships spanning multiple Clips are ordinary components. They may calculate
-level automation—gain envelopes and audibility regions—and publish a normal terminal `AudioTrack`;
-the base package and Core do not acquire a catalogue of sound roles or effects.
+Audio Track has no generic `Presentation`, `Style` or `Use`. It lowers its Clips to source nodes and
+one additive mix in the terminal graph. Ducking, crossfades, continuing speaker roles and other
+relationships spanning multiple Clips remain ordinary components. They may calculate level
+automation or consume closed AudioTracks and publish a new processed graph; the base package and
+Core do not acquire a catalogue of sound roles or effects.
 
 Using synchronized media here does not make its picture visible. Author picture independently with
 [`@hypit/visual-track`](../visual-track/README.md).

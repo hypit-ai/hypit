@@ -7,7 +7,6 @@ import {
   decodeNarrativeInstantSurface,
   decodeNarrativeProjectionSurface,
   decodeNarrativeWindowSurface,
-  narrativeProjectionMarkupSurfaces,
   narrativeTemporalTypes,
 } from "@hypit/narrative-temporal";
 import { temporalTypes } from "@hypit/temporal";
@@ -76,13 +75,4 @@ test("Narrative Window reveals one complete semantic interval", async () => {
   assert.equal(output.components[0]?.fragment.operations.some((operation) => operation.producer.name === "compose-window"), true);
   assert.throws(() => decode(decodeNarrativeWindowSurface,
     '<semantic:Window id="bad" projection={story-time} during={reveal}/>'), /Selection or Segment/);
-});
-
-test("Narrative Projection Surfaces declare every private Record Type they emit", () => {
-  const projection = narrativeProjectionMarkupSurfaces.find((item) => item.name === "narrative-projection")!;
-  const instant = narrativeProjectionMarkupSurfaces.find((item) => item.name === "narrative-instant")!;
-  const window = narrativeProjectionMarkupSurfaces.find((item) => item.name === "narrative-window")!;
-  assert.ok(new Set(projection.outputs.map((type) => type.name)).has("NarrativeProjectionHeader"));
-  assert.ok(new Set(instant.outputs.map((type) => type.name)).has("NarrativeInstantSpec"));
-  assert.ok(new Set(window.outputs.map((type) => type.name)).has("TemporalWindowSpec"));
 });

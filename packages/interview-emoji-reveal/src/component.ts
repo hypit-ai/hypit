@@ -43,4 +43,4 @@ export const emojiRevealComponent = {
     )) }) },
   ],
   refinements: [{ type: emojiRevealTypes.program, handler: ({ value }) => assertEmojiRevealProgram(valueOf<EmojiRevealProgram>(value, "EmojiRevealProgram")) }],
-} satisfies ProducerPackage & RefinementPackage;
+} satisfies { producers?: ProducerPackage; refinements?: RefinementPackage };

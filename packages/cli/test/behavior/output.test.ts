@@ -138,7 +138,7 @@ test("plan names the Provider and price page behind each request, and points at 
       pricing: { kind: "page", url: "https://hypit.ai/commercial/pricing/" },
     },
     { need: "media:one", capability: "@hypit/media@1#inspect", status: "resolved", support: "supported", endpoint: "media.local", use: "@hypit/media-local", pricing: { kind: "local" } },
-    { need: "whisper:one", capability: "@hypit/whisperx@1#whisperx-alignment", status: "resolved", support: "supported", endpoint: "whisperx.remote", use: "@hypit/provider-example" },
+    { need: "whisper:one", capability: "@hypit/whisperx@1#whisperx-transcription", status: "resolved", support: "supported", endpoint: "whisperx.remote", use: "@hypit/provider-example" },
     {
       need: "image:one",
       capability: "@hypit/gpt-image@1#gpt-image-2",
@@ -165,7 +165,7 @@ test("plan names the Provider and price page behind each request, and points at 
     port: "request",
     capability: "@hypit/seedance@1#seedance-2-mini",
     status: "concrete",
-    summary: { fields: { prompt: "A concise scene", duration: 10, resolution: "720p" } },
+    summary: [{ at: ["prompt"], value: "A concise scene" }, { at: ["duration"], value: 10 }, { at: ["resolution"], value: "720p" }],
     pending: [],
   }, {
     need: "downstream:one",
@@ -176,17 +176,17 @@ test("plan names the Provider and price page behind each request, and points at 
     pending: [{ input: "source", record: "upstream:result", sourceStep: "upstream.generate" }],
   }] } });
   assert.match(output, /Providers and price pages/u);
-  assert.match(output, /@hypit\/seedance#seedance-2-mini\n\s+hypihub\.default \(@hypit\/provider-hypihub\)\s+·\s+https:\/\/hypit\.ai\/commercial\/pricing\//u);
+  assert.match(output, /@hypit\/seedance@1#seedance-2-mini\n\s+hypihub\.default \(@hypit\/provider-hypihub\)\s+·\s+https:\/\/hypit\.ai\/commercial\/pricing\//u);
   assert.match(output, /media\.local .*·\s+local, no Provider charge/u);
   assert.match(output, /whisperx\.remote .*·\s+price source unknown/u);
   assert.match(output, /Unsupported\s+1/u);
-  assert.match(output, /gpt-image#gpt-image-2\n\s+hypihub\.default: transparent background is available only at 1K; requested 2K\s+·\s+price source unknown/u);
+  assert.match(output, /gpt-image@1#gpt-image-2\n\s+hypihub\.default: transparent background is available only at 1K; requested 2K\s+·\s+price source unknown/u);
   assert.match(output, /prompt A concise scene · duration 10 · resolution 720p/u);
   assert.match(output, /downstream\.default \(@example\/provider-downstream\)/u);
   assert.doesNotMatch(output, /Requests not yet concrete/u);
-  assert.match(output, /downstream#generate[\s\S]*input produced during Build/u);
+  assert.match(output, /downstream@1#generate[\s\S]*input produced during Build/u);
   assert.doesNotMatch(output, /Pass --runtime/u);
-  assert.doesNotMatch(output, /seedance@1#/u);
+  assert.match(output, /seedance@1#/u);
 
   const verbose = capture({ ...human, verbose: true }, { kind: "plan", machine: { ...base, endpoints: [
     { need: "seedance:one", capability: "@hypit/seedance@1#seedance-2-mini", status: "ambiguous", support: "not-evaluated", endpoints: ["hypihub.default", "images.personal"] },
@@ -217,7 +217,7 @@ test("pricing presents Provider-owned material beside the corresponding Needs", 
       need: "seedance:one", step: "video::component::presenter.generate", port: "generation",
       capability: "@hypit/seedance@1#seedance-2", endpoint: "hypihub.default",
       status: "concrete",
-      summary: { fields: { duration: 5, resolution: "720p" } }, pending: [],
+      summary: [{ at: ["duration"], value: 5 }, { at: ["resolution"], value: "720p" }], pending: [],
     }, {
       need: "image:one", step: "video::component::portrait.generate", port: "generation",
       capability: "@hypit/gpt-image@1#gpt-image-2", endpoint: "images.personal", status: "concrete", pending: [],
@@ -276,7 +276,7 @@ test("pricing summarizes 24 no-charge requests and retains all 15 priced request
       const need = `${capability}:${index}`;
       entries.push({ need, capability, ...metadata });
       needs.push({ need, capability, step: need, port: "result", status: "concrete", pending: [],
-        summary: { fields: { quantity: index + 1 } } });
+        summary: [{ at: ["quantity"], value: index + 1 }] });
     }
   };
   add(24, "example.processing@1#prepare", {
@@ -297,7 +297,7 @@ test("pricing summarizes 24 no-charge requests and retains all 15 priced request
   assert.doesNotMatch(output, /example.processing/u);
   assert.equal(output.match(/"creditsPerUnit": 3/gu)?.length, 3);
   assert.match(output, /quantity 7/u);
-  assert.match(output, /example.work#draw/u);
+  assert.match(output, /example.work@1#draw/u);
   const detailed = createPricingOutput("build.svrun", entries, needs, true);
   assert.equal(detailed.groups.flatMap((group) => group.requests).length, 39);
 });
@@ -365,7 +365,8 @@ test("Provider summaries keep raw pricing available and shared parameters preser
   }));
   const needs = entries.map(({ need, capability }, index) => ({
     need, capability, step: need, port: "result", status: "concrete" as const, pending: [],
-    summary: { fields: { mode: "gold", duration: index === 0 ? 5 : 10, size: index === 2 ? "large" : "small" } },
+    summary: [{ at: ["mode"], value: "gold" }, { at: ["duration"], value: index === 0 ? 5 : 10 },
+      { at: ["size"], value: index === 2 ? "large" : "small" }],
   }));
   const machine = createPricingOutput("build.svrun", entries, needs);
   const presentation = { kind: "pricing", machine } as const;
@@ -469,7 +470,7 @@ test("Result help makes exact Output addressing explicit", () => {
   let output = "";
   writeCliHelp({ write(text) { output += text; } }, "get");
   assert.match(output, /--output <name> --to <path>/u);
-  assert.match(output, /Composite Output becomes a directory/u);
+  assert.match(output, /Value-document Outputs become a directory/u);
 });
 
 test("argument errors give command help in text and JSON without suggesting a stack trace", () => {

@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { modulePackageAbi } from "@hypit/protocol";
+import { compareCodeUnits, modulePackageAbi } from "@hypit/protocol";
 import { createAuthorFrontendFacet } from "@hypit/author";
 import { createRunFrontendFacet, runFragmentFacetAbi } from "@hypit/run";
 import { sourceFrontendPackageAbi } from "@hypit/source";
@@ -78,7 +78,10 @@ test("third-party Frontends discover same-named ABI requirements through physica
       { abi: sourceFrontendPackageAbi, name: "@logical/run@1" },
       { abi: sourceFrontendPackageAbi, name: "@logical/story@1" },
       { abi: sourceFrontendPackageAbi, name: "@unknown/child@1" },
-    ].sort((left, right) => `${left.abi}\u0000${left.name}`.localeCompare(`${right.abi}\u0000${right.name}`)));
+    ].sort((left, right) => compareCodeUnits(
+      JSON.stringify([left.abi, left.name]),
+      JSON.stringify([right.abi, right.name]),
+    )));
   } finally {
     await rm(root, { recursive: true, force: true });
   }

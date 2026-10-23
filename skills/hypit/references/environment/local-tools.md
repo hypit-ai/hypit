@@ -139,7 +139,7 @@ Program commands leave the Worker lifecycle alone:
 | Inspect their current state | `hypit programs status --endpoint <instance>` |
 | Stop helpers managed by Hypit | `hypit programs down --endpoint <instance>` |
 
-`runtime down` stops the Worker and its execution processes while leaving separately managed Programs available. This lets a later
+`runtime down` stops the Worker and its active Build work while leaving separately managed Programs available. This lets a later
 Build reuse an already warm local model. Use scoped `programs down` when a helper itself should stop.
 A healthy service stays warm across repeated `up` calls, while explicit preparation can still add
 newly requested resources. Ordinary Build submission may start the Worker, but does not install
@@ -156,10 +156,9 @@ entry point by hand. Contributor/operator commands in a service README are for d
 packaged service, not for creating a second project-local installation.
 
 Other tools keep their own entry points. [Video downloading](../production/video-downloads.md)
-uses explicit `hypit download prepare` followed by `hypit download`, without a Runtime Profile or
-Build. [Image operations](../production/image-operations.md) can use the local OpenCV Provider;
-its README owns the managed Python environment and optional `pythonExecutable` selection. These
-tools follow the same separation of preparation and use without inventing a Profile for every utility.
+uses explicit `hypit download prepare` followed by `hypit download`.
+[Image operations](../production/image-operations.md) can use the local OpenCV Provider; its README
+owns the managed Python environment and optional `pythonExecutable` selection.
 
 ## Prepare the local rendering browser
 
@@ -223,7 +222,7 @@ failure through its render diagnostics. Do not "repair" it by quietly trying ano
 
 ## Select local WhisperX explicitly
 
-Local and hosted WhisperX implement the same alignment capability. When local execution is chosen,
+Local and hosted WhisperX implement the same transcription capability. When local execution is chosen,
 merge this fragment into the Profile, retaining the other services the production uses:
 
 ```json
@@ -240,14 +239,14 @@ merge this fragment into the Profile, retaining the other services the productio
     }
   },
   "bindings": {
-    "@hypit/whisperx@1#whisperx-alignment": "whisperx.local"
+    "@hypit/whisperx@1#whisperx-transcription": "whisperx.local"
   }
 }
 ```
 
 This is a Korean alignment example on CPU using the modest-machine `small` model. Choose the actual
 model and languages for the production; these are not universal quality recommendations.
-The binding is needed when another selected Endpoint, such as HypiHub, also offers alignment.
+The binding is needed when another selected Endpoint, such as HypiHub, also offers transcription.
 
 | Setting | What it selects |
 | --- | --- |
@@ -403,7 +402,7 @@ metadata successfully may still redirect large files to another host; diagnose t
 - A remote authentication, account, quota, or model-catalogue error belongs to the remote Endpoint and
   [service connection](model-and-provider.md), even when the Worker happens to run locally.
 
-Project component and Profile edits apply to the next Build through its fresh execution context.
-For a Distribution or inherited shell-environment change, read
+The next Build loads current project component and Profile choices. For a Distribution or inherited
+shell-environment change, read
 [Build execution](../production/builds.md#build-with-the-current-project-implementation) before
-restarting the coordinator so active work is preserved.
+restarting the Worker so active work is preserved.

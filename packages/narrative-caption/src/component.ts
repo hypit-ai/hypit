@@ -28,4 +28,4 @@ export const narrativeCaptionComponent = {
     type: narrativeCaptionTypes.binding,
     handler: ({ value }) => assertNarrativeCaptionBindingIdentity(valueOf<NarrativeCaptionBinding>(value, "NarrativeCaptionBinding")),
   }],
-} satisfies ProducerPackage & RefinementPackage;
+} satisfies { producers?: ProducerPackage; refinements?: RefinementPackage };

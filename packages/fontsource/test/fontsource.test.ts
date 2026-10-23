@@ -28,12 +28,12 @@ test("Fontsource Face reads an installed package as data and preserves every Uni
     resolveReference: () => undefined,
     resolveAsset: (request) => {
       requests.push(request.from);
-      return { blob: {
+      return {
         kind: "blob",
         resource: fixtureResource(`fontsource:${request.from}`),
         size: 2_048,
         mediaType: request.mediaType,
-      } };
+      };
     },
   });
   assert.deepEqual(result.records[0]!.type, mediaTypes.fontArtifact);

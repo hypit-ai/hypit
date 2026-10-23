@@ -6,8 +6,8 @@ import {
 } from "./index.js";
 import { decodePixverseReferenceVideoSurface, decodePixverseVideoSurface } from "./surface.js";
 export const hypitPackage = { format: "hypit.package@1" as const, modules: [{ manifest: pixverseManifest }], facets: [
-  createProducerPackageFacet(pixverseComponent),
-  createRefinementPackageFacet(pixverseComponent),
+  createProducerPackageFacet(pixverseComponent.producers ?? []),
+  createRefinementPackageFacet(pixverseComponent.refinements ?? []),
   createMarkupSurfaceFacet({ module: pixverseModuleRef,
     declaration: pixverseMarkupSurfaces.find((item) => item.name === "video")!, handler: decodePixverseVideoSurface }),
   createMarkupSurfaceFacet({ module: pixverseModuleRef,

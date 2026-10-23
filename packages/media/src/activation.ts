@@ -13,7 +13,7 @@ export const hypitPackage = {
   format: "hypit.package@1" as const,
   modules: [{ manifest: mediaManifest }],
   facets: [
-    ...[mediaComponent].flatMap((component) => [createProducerPackageFacet(component), createRefinementPackageFacet(component)]),
+    ...[mediaComponent].flatMap((component) => [createProducerPackageFacet(component.producers ?? []), createRefinementPackageFacet(component.refinements ?? [])]),
     createMarkupSurfaceFacet({
       module: mediaModuleRef,
     declaration: mediaMarkupSurfaces.find((item) => item.name === "image")!,

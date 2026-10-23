@@ -1,8 +1,8 @@
 import { moduleKey, sameModule } from "@hypit/protocol";
 import { decodeSourceText } from "@hypit/source";
 import type {
+  ModuleManifest,
   ModuleRef,
-  ResolvedModule,
   TypedRecord,
 } from "@hypit/protocol";
 import type {
@@ -40,12 +40,12 @@ export const markupAuthorFrontendId = "@hypit/markup@1";
 
 type BoundSurface = {
   readonly tag: string;
-  readonly module: ResolvedModule;
+  readonly module: ModuleManifest;
   readonly surface: RegisteredSurface;
 };
 
-function resolvedModuleRef(module: ResolvedModule): ModuleRef {
-  return { name: module.manifest.name, version: module.manifest.version };
+function resolvedModuleRef(module: ModuleManifest): ModuleRef {
+  return { name: module.name, version: module.version };
 }
 
 function fail(source: MarkupSource, code: string, message: string, offset?: number): never {
@@ -56,8 +56,8 @@ function moduleForImport(
   source: MarkupSource,
   request: MarkupImportRequest,
   context: MarkupDecodeContext,
-  modules: ReadonlyMap<string, ResolvedModule>,
-): ResolvedModule {
+  modules: ReadonlyMap<string, ModuleManifest>,
+): ModuleManifest {
   const ref = context.resolveModule(request);
   const module = modules.get(moduleKey(ref));
   if (!module) {
@@ -73,9 +73,9 @@ function surfaceScope(
 ): Map<string, BoundSurface> {
   const scope = new Map<string, BoundSurface>();
   const aliases = new Set<string>();
-  const modules = new Map(context.closure.modules.map((item) => [moduleKey(item.manifest), item]));
-  const types = new Set(context.closure.modules.flatMap((item) => item.manifest.types.map((type) =>
-    `${moduleKey(item.manifest)}#${type.name}`)));
+  const modules = new Map(context.closure.modules.map((item) => [moduleKey(item), item]));
+  const types = new Set(context.closure.modules.flatMap((item) => item.types.map((type) =>
+    `${moduleKey(item)}#${type}`)));
   for (const request of imports) {
     if (request.alias !== undefined) {
       if (aliases.has(request.alias)) fail(source, "MARKUP_ALIAS_DUPLICATE", `Duplicate import alias "${request.alias}".`, request.range.start);
@@ -86,7 +86,7 @@ function surfaceScope(
     const moduleRef = resolvedModuleRef(module);
     const allowed = new Set([
       moduleKey(moduleRef),
-      ...module.manifest.dependencies.map((dependency) => moduleKey(dependency.module)),
+      ...module.dependencies.map(moduleKey),
     ]);
     for (const declaration of context.registry.surfaces(moduleRef)) {
       for (const output of declaration.outputs) {
@@ -295,7 +295,7 @@ export async function decodeMarkup(source: MarkupSource, context: MarkupDecodeCo
           fail(
             source,
             "MARKUP_SURFACE_EXPORT_UNKNOWN",
-            `Surface ${moduleKey(bound.module.manifest)}#${registered.surface} publishes unknown binding ${name}.`,
+            `Surface ${moduleKey(bound.module)}#${registered.surface} publishes unknown binding ${name}.`,
             opening.start,
           );
         }
@@ -303,7 +303,7 @@ export async function decodeMarkup(source: MarkupSource, context: MarkupDecodeCo
           fail(
             source,
             "MARKUP_SURFACE_EXPORT_DUPLICATE",
-            `Surface ${moduleKey(bound.module.manifest)}#${registered.surface} publishes ${name} more than once.`,
+            `Surface ${moduleKey(bound.module)}#${registered.surface} publishes ${name} more than once.`,
             opening.start,
           );
         }
@@ -323,7 +323,7 @@ export async function decodeMarkup(source: MarkupSource, context: MarkupDecodeCo
         fail(
           source,
           "MARKUP_SURFACE_RANGE",
-          `Surface ${moduleKey(bound.module.manifest)}#${registered.surface} returned an invalid source range.`,
+          `Surface ${moduleKey(bound.module)}#${registered.surface} returned an invalid source range.`,
           opening.start,
         );
       }
@@ -332,7 +332,7 @@ export async function decodeMarkup(source: MarkupSource, context: MarkupDecodeCo
         fail(
           source,
           "MARKUP_SURFACE_OUTPUT",
-          `Surface ${moduleKey(bound.module.manifest)}#${registered.surface} did not declare output type ${moduleKey(draft.type.module)}#${draft.type.name}.`,
+          `Surface ${moduleKey(bound.module)}#${registered.surface} did not declare output type ${moduleKey(draft.type.module)}#${draft.type.name}.`,
           draft.range.start,
         );
       }
@@ -356,7 +356,7 @@ export async function decodeMarkup(source: MarkupSource, context: MarkupDecodeCo
         fail(
           source,
           "MARKUP_COMPONENT_RANGE",
-          `Surface ${moduleKey(bound.module.manifest)}#${registered.surface} returned an invalid component source range.`,
+          `Surface ${moduleKey(bound.module)}#${registered.surface} returned an invalid component source range.`,
           opening.start,
         );
       }

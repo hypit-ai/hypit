@@ -200,7 +200,7 @@ class NodeFilesystemWorkspaceSession implements WorkspaceSession {
         blob: { ...blob },
         open: async () => (async function* () { yield Uint8Array.from(bytes); })(),
       });
-      return { blob };
+      return blob;
     }
     const relativeAsset = request.from.startsWith("./") || request.from.startsWith("../");
     let canonical: string;
@@ -249,7 +249,7 @@ class NodeFilesystemWorkspaceSession implements WorkspaceSession {
         openRange: (range) => createReadStream(canonical, { start: range.start, end: range.endExclusive - 1 }),
       });
     }
-    return { blob: { ...blob } };
+    return { ...blob };
   };
 
   attachments(): readonly BlobAttachment[] {

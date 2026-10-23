@@ -44,7 +44,7 @@ test("local HTML renderer Provider really renders a silent frame-exact MP4 with 
 
     need: request, resources, credentials: {},
   });
-  const value: CanonicalValue = output.value;
+  const value: CanonicalValue = output;
   verifyTimelineVisual(value);
   const visual = value as unknown as TimelineVisual;
   assert.equal(visual.frameCount, 12);

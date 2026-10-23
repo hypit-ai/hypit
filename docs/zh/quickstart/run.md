@@ -401,9 +401,9 @@ hypit get <build-id> \
   --to output/final.mp4
 ```
 
-`get` 把一个精确的 `build + output` 地址导出到必填的 `--to` 目的地。Scalar 写成 JSON 文件；
-Resource 原样写成一个文件；Composite 写成一个自足目录，其中 `value.json` 保存它的 Composite 值
-文档，被引用的 Resource 则按 Result 内的相对路径一起写入。目的地必须尚不存在。
+`get` 把一个精确的 `build + output` 地址导出到必填的 `--to` 目的地。`inline` 表示写成 JSON
+文件；`file` 表示按原始字节写成一个文件；`value-document` 表示写成一个自足目录，其中
+`value.json` 保存值与文件绑定，被引用的文件则按 Result 内的相对路径一起写入。目的地必须尚不存在。
 
 历史转发会透明地沿显式关系找到更早的 Result。这个过程不会创建 Build、修改 Result，或把
 副本写回 Result 仓库，也不需要 Runtime Profile。查看 Output 用 `inspect`；`get` 只负责显式

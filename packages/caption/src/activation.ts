@@ -11,7 +11,7 @@ export const hypitPackage = {
   format: "hypit.package@1" as const,
   modules: [{ manifest: captionManifest }],
   facets: [
-    ...[captionComponent].flatMap((component) => [createProducerPackageFacet(component), createRefinementPackageFacet(component)]),
+    ...[captionComponent].flatMap((component) => [createProducerPackageFacet(component.producers ?? []), createRefinementPackageFacet(component.refinements ?? [])]),
     createMarkupSurfaceFacet({ module: captionModuleRef,
     declaration: captionMarkupSurfaces.find((item) => item.name === "hidden")!, handler: decodeHiddenCaptionStyleSurface }),
   ],

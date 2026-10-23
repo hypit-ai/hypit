@@ -60,10 +60,10 @@ export const narrativeTemporalComponent = {
     projectionFacet(narrativeTemporalProducers.projectSegmentInstant, "segment", "segment"),
     projectionFacet(narrativeTemporalProducers.projectMomentInstant, "moment", "moment"),
   ])],
-} satisfies ProducerPackage & RefinementPackage;
+} satisfies { producers?: ProducerPackage; refinements?: RefinementPackage };
 
 function projectionFacet(producer: ProducerRef, inputName: "selection" | "segment" | "moment",
-  sourceKind: "selection" | "segment" | "moment"): NonNullable<ProducerPackage["producers"]>[number] {
+  sourceKind: "selection" | "segment" | "moment"): ProducerPackage[number] {
   return { producer, handler: ({ inputs }) => {
     const spec = valueOf<NarrativeInstantSpec>(inputs.spec?.value, "NarrativeInstantSpec");
     return { kind: "output", value: (canonicalize(projectNarrativeInstant({

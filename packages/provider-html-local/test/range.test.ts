@@ -8,6 +8,7 @@ import { EndpointRegistry, MemoryResourceStore } from "@hypit/executor";
 import { rasterizeHtmlProgram } from "../src/index.js";
 import { resolveExecutionOptions } from "../src/render.js";
 import { hypitPackage } from "../src/activation.js";
+import { runtimeEndpointAdapterFacetAbi } from "@hypit/runtime-local/extension";
 import type { RuntimeEndpointAdapterImplementation } from "@hypit/runtime-local/extension";
 import { endpointResourceClaims, installEndpoint } from "@hypit/endpoint";
 import { htmlProgramCapabilities } from "@hypit/html-program";
@@ -108,7 +109,9 @@ test("HTML claims actual browser count including a range shorter than workers", 
   const document = htmlRangeDocument({ kind: "blob", resource: "res_range_source", size: 1, mediaType: "video/mp4" });
   const request = { id: "visual", capability: htmlProgramCapabilities.rasterizeVisual,
     returns: mediaTypes.timelineVisual, constraints: canonicalize({ program: document }), result: "visual-result" };
-  const adapter = hypitPackage.facets[0]!.implementation as RuntimeEndpointAdapterImplementation;
+  const facet = hypitPackage.facets.find((item) => item.abi === runtimeEndpointAdapterFacetAbi);
+  assert.ok(facet);
+  const adapter = facet.implementation as RuntimeEndpointAdapterImplementation;
   for (const [workers, browserCapacity, expectedUnits] of [[4, 6, 4], [128, 128, 12]] as const) {
     const registry = new EndpointRegistry();
     const activation = await adapter.activate({

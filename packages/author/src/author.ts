@@ -8,7 +8,7 @@ import type {
   LinkedProgram,
   TypeRef,
 } from "@hypit/protocol";
-import { sameType, typeKey } from "@hypit/protocol";
+import { compareCodeUnits, sameType, typeKey } from "@hypit/protocol";
 
 import {
   bindAuthorFragment,
@@ -113,11 +113,11 @@ function normalizeComponent(component: AuthorComponent): AuthorComponent {
     fragment: component.fragment,
     inputs: Object.fromEntries(
       Object.entries(component.inputs)
-        .sort(([left], [right]) => left.localeCompare(right))
+        .sort(([left], [right]) => compareCodeUnits(left, right))
         .map(([name, ref]) => [name, normalizeRef(ref)]),
     ),
     outputs: Object.fromEntries(
-      Object.entries(component.outputs).sort(([left], [right]) => left.localeCompare(right)),
+      Object.entries(component.outputs).sort(([left], [right]) => compareCodeUnits(left, right)),
     ),
   };
 }
@@ -134,7 +134,7 @@ type CollectedAuthorGraph = {
 };
 
 function outputKey(component: string, output: string): string {
-  return `${component}\u0000${output}`;
+  return JSON.stringify([component, output]);
 }
 
 /** Phase one: collect every component and predeclare every public output before resolving any input. */
@@ -185,7 +185,7 @@ function collectAuthorGraph(
     components,
     outputs,
     ordered: [...components.values()].sort((left, right) =>
-      left.declaration.id.localeCompare(right.declaration.id)),
+      compareCodeUnits(left.declaration.id, right.declaration.id)),
   };
 }
 

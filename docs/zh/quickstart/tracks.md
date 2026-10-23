@@ -3,10 +3,10 @@ title: 轨道
 description: 对等 Track 组件——字幕、媒体、排版与作者声明的音频。
 ---
 
-每个进入最终合成的视听内容都是一个对等的 **Track**。Track 是扁平的（无嵌套）。每个视觉
-occurrence 都发布绝对 `z`：Fine Caption 等领域家族可以把它放在可复用 Recipe 中，基础
-Visual Clip 与 Fine Text 则直接声明。本页介绍 Caption、Media、Typography 与 Audio
-Track 的作者语法。
+每个进入最终合成的视听内容都是一个对等的 **Track**。Track 是一个闭合贡献，不是其他 Track 的容器；
+若若干 VisualTrack 的合成结果需要作为一张画面共同处理，Film 可以用 Stack 递归分组。每条 VisualTrack
+出现的 `id` 与同级序列位置由父 Film 或 Stack 持有；可复用 Track 值只保留自己的局部 programme。本页介绍
+Caption、Media、Typography 与 Audio Track 的作者语法。
 
 ## 字幕系统
 
@@ -33,7 +33,7 @@ Script → CaptionDocument + NarrativeCaptionBinding
 
 ```svs
 caption.primary {
-  stack-order: 70; x: 0.5; y: 0.88; width: 0.84;
+ x: 0.5; y: 0.88; width: 0.84;
   height: 0.22;
   anchor-x: center; anchor-y: bottom;
   size: 58; line-height: 1;
@@ -111,7 +111,7 @@ B-roll 是 Visual Clip 的一种剪辑用途，不是独立 Track 家族。一�
 
 ### visual:Track 与 visual:Clip
 
-位置是一条显式 Spatial Frame 边。fit、源时间映射与层叠顺序直接属于这次出现；像素处理
+位置是一条显式 Spatial Frame 边。fit 与源时间映射直接属于这次出现；像素处理
 Recipe 与类型化 Motion 都只是可选的复用值：
 
 ```svml
@@ -139,7 +139,7 @@ Recipe 与类型化 Motion 都只是可选的复用值：
 
 <visual:Track id="product-broll" timeline={speech.timeline}>
   <visual:Clip media={product-media.media} frame={product-frame}
-    during={product-demo} z="40" fit="contain"
+    during={product-demo} fit="contain"
     treatment={recipes.visual.product} motion={product-motion-in}>
     <visual:Map/>
   </visual:Clip>
@@ -205,6 +205,19 @@ Clip 模型也能表达全屏切换、分屏和角落小窗。公开 Clip 只有
 该包不会自动提取、规范化、duck 或分配 bus。同一 Track 内的多个 Clip 与多个对等 Audio
 Track 都会作为独立输入进入 Film。输出 `{music-bed.audio}` 是普通 `AudioTrack`。
 
+需要显式设置 gain，并把若干 AudioTrack 闭合成一个贡献时，使用 Audio Mix：
+
+```svml
+<import as="mix" from="@hypit/audio-mix@1"/>
+<mix:Track id="dialogue" timeline={speech.timeline}>
+  <mix:Input id="host" source={host.audio}/>
+  <mix:Input id="guest" source={guest.audio} gain="0.9"/>
+</mix:Track>
+```
+
+输出 `{dialogue.audio}` 仍是普通 AudioTrack。Film 只看到这个闭合输出；Audio Mix 不会归一化、限幅、
+发明 Master，也不会按 Track 名寻址。
+
 ## 文字叠加层
 
 在屏幕上显示的静态或定时文字——标题、标注、下方三分之一字幕条。
@@ -226,7 +239,7 @@ Track 都会作为独立输入进入 Film。输出 `{music-bed.audio}` 是普通
 <fonts:Face id="title-font" package="@fontsource-variable/inter" weight="900" style="normal"/>
 <text:Style id="title-style" recipe={recipes.text.title} font={title-font}/>
 <text:Flow id="title" timeline={speech.timeline} within={title-frame}
-  style={title-style} z="90" align="center" during={speech.window}>
+  style={title-style} align="center" during={speech.window}>
   EDIT MEANING, NOT TIMELINES
 </text:Flow>
 ```
@@ -238,7 +251,6 @@ Track 都会作为独立输入进入 Film。输出 `{music-bed.audio}` 是普通
 | `during` | 是 | 一个具名绝对 Window |
 | `within`、`point` 或 `path` | 是 | 与 `Flow`、`Point` 或 `Path` 对应的位置 |
 | `style` | 是 | 由 SVS Recipe 与精确字体字节编译出的 Style |
-| `z` | 是 | 这个 occurrence 的绝对层叠顺序；它不属于 Style |
 | 形式布局 | 否 | `Flow` 的对齐/换行、`Point` 的锚定或 `Path` 的边距/方向，只写在对应 occurrence 上 |
 
 每个 occurrence 都明确选择一种位置形式、一份精确 Style 和一个绝对时间表达式。`Flow`
@@ -246,7 +258,7 @@ Track 都会作为独立输入进入 Film。输出 `{music-bed.audio}` 是普通
 
 ```svml
 <text:Flow id="meaning" timeline={speech.timeline} within={title-frame}
-  style={title-style} z="90" align="center" during={speech.window}>
+  style={title-style} align="center" during={speech.window}>
   MEANING
 </text:Flow>
 ```
@@ -258,7 +270,6 @@ Track 都会作为独立输入进入 Film。输出 `{music-bed.audio}` 是普通
 | 时间 | 是 | `during={具名 Window}` |
 | 位置 | 是 | 与 occurrence 形式匹配的 `SpatialPoint`、`SpatialFrame` 或 `SpatialPath` |
 | `style` | 是 | 由 SVS Recipe 与精确字体字节共同编译出的 `text:Style` |
-| `z` | 是 | 这个 occurrence 的绝对层叠顺序 |
 | 形式布局 | 否 | 所选 `Flow`、`Point` 或 `Path` 直接声明的布局属性 |
 
 `speech.window` 表示完整 Timeline。作者声明的 Timeline Window，或者上游语义、节拍等
@@ -267,7 +278,7 @@ Track 都会作为独立输入进入 Film。输出 `{music-bed.audio}` 是普通
 ```svml
 <text:Style id="callout-style" recipe={recipes.text.callout} font={title-font}/>
 <text:Flow id="callout-copy" timeline={speech.timeline} within={callout-frame}
-  style={callout-style} z="90" during={program.callout}>
+  style={callout-style} during={program.callout}>
   EXACTLY THE RIGHT MOMENT
 </text:Flow>
 ```
@@ -277,7 +288,7 @@ Track 都会作为独立输入进入 Film。输出 `{music-bed.audio}` 是普通
 ```svml
 <wording:Value id="headline">EXACTLY THE RIGHT MOMENT</wording:Value>
 <text:Flow id="callout-copy" timeline={speech.timeline} content={headline}
-  within={callout-frame} style={callout-style} z="90" during={speech.window}/>
+  within={callout-frame} style={callout-style} during={speech.window}/>
 ```
 
 通用 `Text` 只提供字符；Typography 仍然拥有文档包装、位置、时间、样式与动画。作者需要富文本
@@ -409,8 +420,8 @@ npm install @hypit/comment-sticker
 
 `comment:Sticker` 必填 `id`、`frame`、`style` 与 `during`；`during` 引用具名绝对 Window。
 文案来自 `comment=` 属性或元素自身的文字，两个都给会被拒绝。可选的 `author`、`header` 与
-`meta` 各接受字符串或 Text 引用，`avatar` 接受一张图片；这里没有 `z`，层叠顺序来自
-recipe 的 `stack-order`。
+`meta` 各接受字符串或 Text 引用，`avatar` 接受一张图片；这里没有组件级 `z`。可选的
+`stack-order` Recipe 值只排列同一条 Track 内的 Sticker；Film 再把整条 Track 放进父 Scope。
 
 ```svml
 <comment:Style id="social" recipe={recipes.comment} font={ui-font}/>
@@ -466,13 +477,13 @@ recipe 的 `stack-order`。
   video="primary-moving" audio="none" span-authority="video" clock={clock}/>
 <visual:Track id="cards" timeline={speech.timeline}>
   <visual:Clip media={card-media.media} frame={card-frame}
-    during={demo} z="40" fit="cover" treatment={recipes.visual.card}/>
+    during={demo} fit="cover" treatment={recipes.visual.card}/>
 </visual:Track>
 
 <!-- Text: persistent title overlay -->
 <text:Style id="title-style" recipe={recipes.text.title} font={title-font}/>
 <text:Flow id="meaning" timeline={speech.timeline} within={title-frame}
-  style={title-style} z="90" align="center" during={speech.window}>
+  style={title-style} align="center" during={speech.window}>
   MEANING
 </text:Flow>
 
@@ -490,11 +501,11 @@ recipe 的 `stack-order`。
 
 <!-- 所有对等 Track 都进入 Film -->
 <film:Film id="main" canvas={vertical.canvas} timeline={speech.timeline} appearance={recipes.film.vertical}>
-  <film:Track source={picture.visual}/>
+  <film:Track id="picture" source={picture.visual}/>
   <film:Track source={mix.audio}/>
-  <film:Track source={cards.visual}/>
-  <film:Track source={captions.visual}/>
-  <film:Track source={meaning.visual}/>
+  <film:Track id="cards" source={cards.visual}/>
+  <film:Track id="captions" source={captions.visual}/>
+  <film:Track id="meaning" source={meaning.visual}/>
   <film:Track source={music-bed.audio}/>
 </film:Film>
 ```

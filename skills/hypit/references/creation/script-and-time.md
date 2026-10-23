@@ -21,8 +21,8 @@ the purpose of a passage, but the adopted wording appears in Source only once.
 
 Choose Script structure from the thought being expressed and the performance carrying it:
 
-- a **Segment** groups a performable passage around its thought, delivery and action; accepted media
-  can be aligned to it without becoming a compound semantic-media object;
+- a **Segment** groups a performable passage around its thought, delivery and action; alignment can
+  connect accepted media to that passage when downstream timing needs it;
 - a **Role Cue** assigns a spoken turn to a performer and carries that label into the model's dialogue;
 - **Dual Text** gives one authored unit separate display and pronunciation text;
 - `||` says that one on-screen **Caption Cue** hands off to the next after a complete Alignment Unit;
@@ -166,7 +166,7 @@ A chat animation, diagram or kinetic-text piece can instead be drawn entirely by
 messages and changes still carry meaning; the author chooses when the audience receives them and
 how long they need to read. Keep content and the named time values that drive it together in Source.
 An event can have an identity such as `question` or `reveal`, produced by a Timeline child or a
-standalone `time:Instant`, without inventing spoken words or a media-backed Segment. Film time is
+standalone `time:Instant`. Film time is
 declared through a Timeline with an explicit end; [composition and
 rendering](../production/rendering.md#compose-an-authored-animation) shows the form.
 

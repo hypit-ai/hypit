@@ -25,7 +25,7 @@ test("HypiHub exposes model groups beneath its own total capacity", async () => 
     capabilityConcurrency: { "seedance-2-mini": 2, transcription: 1 } }), registry);
   const requests = [
     need({}),
-    { ...need({}), capability: whisperXCapabilities.alignment, returns: speechEvidenceTypes.alignedTranscript },
+    { ...need({}), capability: whisperXCapabilities.transcription, returns: speechEvidenceTypes.transcript },
   ];
   for (const [index, request] of requests.entries()) {
     const selected = registry.select(request);
@@ -340,9 +340,9 @@ for (const mode of ['success', 'error', 'body-timeout'] as const) {
     const resources = new MemoryResourceStore();
     const artifact = await resources.put(wav(32_000), 'audio/wav');
     const request: Need = {
-      id: 'need:transcription-receipt', capability: whisperXCapabilities.alignment,
-      returns: speechEvidenceTypes.alignedTranscript,
-      constraints: whisperXRequestForEvidenceAudio(sealSpeechEvidenceAudio({ domainId: "receipt-test-domain", artifact, sampleFrames: 32_000 }), { language: 'en' }) as unknown as CanonicalValue,
+      id: 'need:transcription-receipt', capability: whisperXCapabilities.transcription,
+      returns: speechEvidenceTypes.transcript,
+      constraints: whisperXRequestForEvidenceAudio(sealSpeechEvidenceAudio({ artifact, sampleFrames: 32_000 }), { language: 'en' }) as unknown as CanonicalValue,
       result: 'record:transcription-receipt',
     };
     const messages: string[] = [];

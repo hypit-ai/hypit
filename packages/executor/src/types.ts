@@ -22,10 +22,6 @@ export type BlockedCommand = {
   readonly subject: string;
 };
 
-export type ProducerRegistration = {
-  readonly handler: ProducerHandler;
-};
-
 type EndpointRegistrationBase = {
   readonly id: string;
   readonly capability: CapabilityRef;

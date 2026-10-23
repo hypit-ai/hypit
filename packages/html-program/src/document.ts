@@ -2,23 +2,32 @@ import { assertCompositableSurfaceRef } from "@hypit/media";
 import type { CompositableSurfaceRef, FontArtifactRef } from "@hypit/media";
 import { timelineFrameCount } from "@hypit/timeline";
 import type { Timeline } from "@hypit/timeline";
-import { assertCompositionIdentity } from "@hypit/composition";
+import {
+  assertCompositionIdentity,
+  visualElements,
+  visualPresents,
+  visualScopeTrackOccurrences,
+  visualScopeTracks,
+} from "@hypit/composition";
 import type {
   Composition,
-  Track,
   VisualAnimation,
+  VisualAdjustment,
   VisualAttribute,
   VisualElement,
+  VisualItem,
   VisualPresent,
   VisualSourceTimeRational,
   VisualSourceTimePiece,
   VisualStyleDeclaration,
+  VisualScope,
   VisualTrack,
 } from "@hypit/composition";
-import { assertBlobRef, canonicalStringify, isResourceId } from "@hypit/hypit/protocol";
+import { assertBlobRef, canonicalStringify, compareCodeUnits, isResourceId } from "@hypit/hypit/protocol";
 import type { BlobRef, ResourceId } from "@hypit/hypit/protocol";
 import { VISUAL_IR_V1 } from "@hypit/composition";
 import { readHtmlVisual, htmlVisualHtml, htmlVisualScript } from "./html-visual.js";
+import { htmlAdjustmentScript, readHtmlAdjustment } from "./html-adjustment.js";
 import { presentationCaptureScopeRuntime } from "./capture-scope.js";
 import { presentationVisibilityScript } from "./visibility.js";
 import { frameSelectionRuntime, frameWorkIndexRuntime } from "./frame-work.js";
@@ -245,7 +254,7 @@ function exactFontStyle(element: VisualElement, stableId: StableDomId): string[]
 }
 
 type ElementContext = {
-  readonly trackId: string;
+  readonly occurrencePath: readonly string[];
   readonly presentId: string;
   readonly presentStart: string;
   readonly presentDuration: string;
@@ -262,10 +271,10 @@ type ElementContext = {
 
 /** Every emitted element, including SVG mask sources, keeps the same authored frame clock. */
 function elementPresentation(element: VisualElement, context: ElementContext) {
-  const id = context.stableId([context.trackId, context.presentId, element.id]);
+  const id = context.stableId(["visual-occurrence", ...context.occurrencePath, context.presentId, element.id]);
   const animationName = element.animation === undefined
     ? undefined
-    : context.stableId(["animation", context.trackId, context.presentId, element.id]);
+    : context.stableId(["animation", ...context.occurrencePath, context.presentId, element.id]);
   const animationDurationFrames = element.animation === undefined
     ? context.presentDurationFrames
     : Math.max(context.presentDurationFrames, element.animation.keyframes.at(-1)?.atFrame ?? 0);
@@ -295,28 +304,20 @@ function elementPresentation(element: VisualElement, context: ElementContext) {
 
 function renderElement(
   element: VisualElement,
-  children: ReadonlyMap<string, readonly VisualElement[]>,
   context: ElementContext,
 ): string {
   const { inlineStyle, commonAttributes, common } = elementPresentation(element, context);
-  const id = context.stableId([context.trackId, context.presentId, element.id]);
+  const id = context.stableId(["visual-occurrence", ...context.occurrencePath, context.presentId, element.id]);
   if (element.kind === "mask") {
-    const direct = children.get(element.id) ?? [];
-    const maskRoot = direct.find((child) => child.id === element.maskElement);
-    const contentRoot = direct.find((child) => child.id === element.contentElement);
-    if (maskRoot === undefined || contentRoot === undefined || direct.length !== 2) {
-      throw new Error(`Local mask ${element.id} is missing its declared owned roots.`);
-    }
-    const maskId = context.stableId([context.trackId, context.presentId, element.id, "mask"]);
+    const maskRoot = element.mask;
+    const contentRoot = element.content;
+    const maskId = context.stableId(["visual-occurrence", ...context.occurrencePath, context.presentId, element.id, "mask"]);
     const maskWidth = pixelDimension(element.style, "width");
     const maskHeight = pixelDimension(element.style, "height");
     const viewport = maskWidth === undefined || maskHeight === undefined
       ? ""
       : ` viewBox="0 0 ${maskWidth} ${maskHeight}" preserveAspectRatio="none"`;
-    const renderOwned = (child: VisualElement) => renderElement(child, children, context);
-    if ((children.get(maskRoot.id) ?? []).length !== 0) {
-      throw new Error(`Local mask ${element.id} mask source must be one terminal owned element.`);
-    }
+    const renderOwned = (child: VisualElement) => renderElement(child, context);
     const maskSource = (() => {
       const sourcePresentation = elementPresentation(maskRoot, context);
       if (maskRoot.kind === "text") {
@@ -352,15 +353,15 @@ function renderElement(
   }
   if (element.kind === "program") {
     const program = readHtmlVisual(element.program);
-    const slots = new Map((children.get(element.id) ?? []).map(child => [child.id, renderElement(child, children, context)]));
+    const slots = new Map(element.slots.map(slot => [slot.name, renderElement(slot.element, context)]));
     return `<div ${common}>${htmlVisualHtml(program, slots)}</div>`;
   }
-  const descendants = (children.get(element.id) ?? [])
-    .map((child) => renderElement(child, children, context))
-    .join("");
-  if (element.kind === "box") return `<div ${common}>${descendants}</div>`;
+  if (element.kind === "box") {
+    const descendants = element.children.map((child) => renderElement(child, context)).join("");
+    return `<div ${common}>${descendants}</div>`;
+  }
   const textContext = {
-    trackId: context.trackId,
+    occurrencePath: context.occurrencePath,
     presentId: context.presentId,
     durationFrames: context.presentDurationFrames,
     durationSeconds: context.presentDuration,
@@ -379,7 +380,7 @@ function renderElement(
     const body = element.paints === undefined
       ? escapeHtml(element.text)
       : renderGlyphPaintedString(element.text, element.paints, textContext);
-    return `<div ${common}>${body}${descendants}</div>`;
+    return `<div ${common}>${body}</div>`;
   }
   if (element.kind === "text-flow" || element.kind === "path-text") {
     return renderTerminalTextElement(element, textContext);
@@ -446,9 +447,10 @@ function renderElement(
 }
 
 function renderVisualPresent(
-  track: VisualTrack,
+  occurrencePath: readonly string[],
   present: VisualPresent,
   stackIndex: number,
+  paintPath: readonly number[],
   numerator: number,
   denominator: number,
   emittedFilterIds: Set<string>,
@@ -458,17 +460,9 @@ function renderVisualPresent(
 ): string {
   const start = frameSeconds(present.span.startFrame, numerator, denominator);
   const duration = frameSeconds(present.span.endFrameExclusive - present.span.startFrame, numerator, denominator);
-  const children = new Map<string, VisualElement[]>();
-  for (const element of present.elements) {
-    if (element.parent === undefined) continue;
-    const siblings = children.get(element.parent) ?? [];
-    siblings.push(element);
-    children.set(element.parent, siblings);
-  }
-  for (const siblings of children.values()) siblings.sort((left, right) => left.order - right.order || left.id.localeCompare(right.id));
-  const root = present.elements.find((element) => element.parent === undefined)!;
-  const contents = renderElement(root, children, {
-    trackId: track.id,
+  const root = present.root;
+  const contents = renderElement(root, {
+    occurrencePath,
     presentId: present.id,
     presentStart: start,
     presentDuration: duration,
@@ -482,15 +476,57 @@ function renderVisualPresent(
     stableId,
     frameSources,
   });
-  return `<div class="hypit-visual-present" data-hypit-track-id="${escapeHtml(track.id)}" data-hypit-present-id="${escapeHtml(present.id)}" data-hypit-present-start-frame="${present.span.startFrame}" data-hypit-present-end-frame="${present.span.endFrameExclusive}" data-hypit-present-order="${present.order}" data-hypit-z="${present.z}" style="position:absolute;inset:0;z-index:${stackIndex};overflow:hidden;pointer-events:none">${present.visibility === undefined ? contents : `<div data-hypit-visibility="${escapeHtml(JSON.stringify(present.visibility))}" style="position:absolute;inset:0">${contents}</div>`}</div>`;
+  return `<div class="hypit-visual-present" data-hypit-occurrence-path="${escapeHtml(JSON.stringify(occurrencePath))}" data-hypit-present-id="${escapeHtml(present.id)}" data-hypit-present-root-element-id="${escapeHtml(root.id)}" data-hypit-paint-path="${escapeHtml(JSON.stringify(paintPath))}" data-hypit-present-start-frame="${present.span.startFrame}" data-hypit-present-end-frame="${present.span.endFrameExclusive}" style="position:absolute;inset:0;z-index:${stackIndex};overflow:hidden;pointer-events:none">${present.visibility === undefined ? contents : `<div data-hypit-visibility="${escapeHtml(JSON.stringify(present.visibility))}" style="position:absolute;inset:0">${contents}</div>`}</div>`;
 }
 
-function renderAnimationRules(track: VisualTrack, present: VisualPresent, stableId: StableDomId): string[] {
+type RenderedAdjustment = {
+  readonly html: string;
+  readonly runtime: {
+    readonly id: string;
+    readonly occurrencePath: readonly string[];
+    readonly adjustmentId: string;
+    readonly startFrame: number;
+    readonly endFrameExclusive: number;
+    readonly visibility?: readonly { readonly startFrame: number; readonly endFrameExclusive: number }[];
+    readonly filter: string;
+    readonly opacity?: number;
+    readonly transform?: string;
+    readonly transformOrigin?: string;
+  };
+};
+
+function renderVisualAdjustment(
+  occurrencePath: readonly string[],
+  adjustment: VisualAdjustment,
+  stackIndex: number,
+  contents: string,
+  stableId: StableDomId,
+): RenderedAdjustment {
+  const program = readHtmlAdjustment(adjustment.program);
+  const id = stableId(["visual-adjustment", ...occurrencePath, adjustment.id]);
+  return {
+    html: `<div id="${id}" class="hypit-visual-adjustment" data-hypit-occurrence-path="${escapeHtml(JSON.stringify(occurrencePath))}" data-hypit-adjustment-id="${escapeHtml(adjustment.id)}" data-hypit-adjustment-start-frame="${adjustment.span.startFrame}" data-hypit-adjustment-end-frame="${adjustment.span.endFrameExclusive}" data-hypit-adjustment-filter="${escapeHtml(program.filter)}" style="position:absolute;inset:0;z-index:${stackIndex};overflow:hidden;pointer-events:none;filter:none">${contents}</div>`,
+    runtime: {
+      id,
+      occurrencePath,
+      adjustmentId: adjustment.id,
+      startFrame: adjustment.span.startFrame,
+      endFrameExclusive: adjustment.span.endFrameExclusive,
+      ...(adjustment.visibility === undefined ? {} : { visibility: adjustment.visibility.map((span) => ({ ...span })) }),
+      filter: program.filter,
+      ...(program.opacity === undefined ? {} : { opacity: program.opacity }),
+      ...(program.transform === undefined ? {} : { transform: program.transform }),
+      ...(program.transformOrigin === undefined ? {} : { transformOrigin: program.transformOrigin }),
+    },
+  };
+}
+
+function renderAnimationRules(occurrencePath: readonly string[], present: VisualPresent, stableId: StableDomId): string[] {
   const presentDurationFrames = present.span.endFrameExclusive - present.span.startFrame;
-  return present.elements.flatMap((element) => {
+  return visualElements(present.root).flatMap((element) => {
     if (element.animation === undefined) return [];
     const durationFrames = Math.max(presentDurationFrames, element.animation.keyframes.at(-1)?.atFrame ?? 0);
-    const name = stableId(["animation", track.id, present.id, element.id]);
+    const name = stableId(["animation", ...occurrencePath, present.id, element.id]);
     const keyframes: VisualAnimation["keyframes"] = element.animation.keyframes.at(-1)?.atFrame === durationFrames
       ? element.animation.keyframes
       : [...element.animation.keyframes, {
@@ -505,14 +541,15 @@ function renderAnimationRules(track: VisualTrack, present: VisualPresent, stable
   });
 }
 
-function orderedVisualPresents(tracks: readonly Track[]): Array<{ readonly track: VisualTrack; readonly present: VisualPresent }> {
-  return tracks
-    .filter((track): track is VisualTrack => track.kind === "visual")
-    .flatMap((track) => track.presents.map((present) => ({ track, present })))
-    .sort((left, right) => left.present.z - right.present.z
-      || left.track.id.localeCompare(right.track.id)
-      || left.present.order - right.present.order
-      || left.present.id.localeCompare(right.present.id));
+type OrderedVisualScopeEntry =
+  | { readonly memberId: string; readonly item: VisualItem }
+  | { readonly stack: Extract<VisualScope["members"][number], { readonly kind: "stack" }> };
+
+/** Scope member order and each Track's item order are already the complete paint programme. */
+function orderedVisualScopeEntries(scope: VisualScope): OrderedVisualScopeEntry[] {
+  return scope.members.flatMap((member): OrderedVisualScopeEntry[] => member.kind === "track"
+    ? member.track.items.map((item) => ({ memberId: member.id, item }))
+    : [{ stack: member }]);
 }
 
 function mergeFrameSpans(spans: readonly HtmlFrameSpan[]): HtmlFrameSpan[] {
@@ -549,10 +586,9 @@ function collectArtifacts(composition: Composition): HtmlArtifact[] {
     else if (!entry.always) entry.spans.push({ ...usage });
     artifacts.set(artifact.resource, entry);
   };
-  for (const track of composition.tracks) {
-    if (track.kind === "audio") continue;
-    for (const present of track.presents) {
-      for (const element of present.elements) {
+  for (const track of visualScopeTracks(composition.visual)) {
+    for (const present of visualPresents(track)) {
+      for (const element of visualElements(present.root)) {
         if (element.kind === "image" || element.kind === "video") add(element.artifact, present.span);
         if (element.kind === "surface") add(element.surface.artifact, present.span);
         // HtmlVisual HTML, CSS and setup are intentionally opaque. Their
@@ -577,15 +613,14 @@ function collectArtifacts(composition: Composition): HtmlArtifact[] {
   return [...artifacts.values()].map(({ artifact, always, spans }) => ({
     artifact,
     usage: always ? { kind: "always" as const } : { kind: "frames" as const, spans: mergeFrameSpans(spans) },
-  })).sort((left, right) => left.artifact.resource.localeCompare(right.artifact.resource));
+  })).sort((left, right) => compareCodeUnits(left.artifact.resource, right.artifact.resource));
 }
 
 function collectSurfaces(composition: Composition): CompositableSurfaceRef[] {
   const surfaces = new Map<ResourceId, CompositableSurfaceRef>();
-  for (const track of composition.tracks) {
-    if (track.kind !== "visual") continue;
-    for (const present of track.presents) {
-      for (const element of present.elements) {
+  for (const track of visualScopeTracks(composition.visual)) {
+    for (const present of visualPresents(track)) {
+      for (const element of visualElements(present.root)) {
         if (element.kind !== "surface") continue;
         const surface = structuredClone(element.surface);
         const existing = surfaces.get(surface.artifact.resource);
@@ -597,30 +632,28 @@ function collectSurfaces(composition: Composition): CompositableSurfaceRef[] {
     }
   }
   return [...surfaces.values()].sort((left, right) =>
-    left.artifact.resource.localeCompare(right.artifact.resource));
+    compareCodeUnits(left.artifact.resource, right.artifact.resource));
 }
 
 function collectFonts(composition: Composition): FontArtifactRef[] {
   const fonts = new Map<string, FontArtifactRef>();
-  for (const track of composition.tracks) {
-    if (track.kind !== "visual") continue;
-    for (const present of track.presents) {
-      for (const element of present.elements) {
+  for (const track of visualScopeTracks(composition.visual)) {
+    for (const present of visualPresents(track)) {
+      for (const element of visualElements(present.root)) {
         if (element.kind !== "text") continue;
         for (const font of element.fonts ?? []) fonts.set(canonicalStringify(font), font);
       }
     }
   }
-  for (const track of composition.tracks) {
-    if (track.kind !== "visual") continue;
-    for (const present of track.presents) {
-      for (const element of present.elements) {
+  for (const track of visualScopeTracks(composition.visual)) {
+    for (const present of visualPresents(track)) {
+      for (const element of visualElements(present.root)) {
         if (element.kind !== "text-flow" && element.kind !== "path-text") continue;
         for (const font of collectTerminalTextFonts(element)) fonts.set(canonicalStringify(font), font);
       }
     }
   }
-  return [...fonts.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([, font]) => font);
+  return [...fonts.entries()].sort(([left], [right]) => compareCodeUnits(left, right)).map(([, font]) => font);
 }
 
 function fontFormat(mediaType: string): string {
@@ -644,14 +677,14 @@ function renderFontFaces(composition: Composition, stableId: StableDomId): strin
 }
 
 function hasTerminalText(composition: Composition): boolean {
-  return composition.tracks.some((track) => track.kind === "visual"
-    && track.presents.some((present) => present.elements.some((element) =>
+  return visualScopeTracks(composition.visual).some((track) =>
+    visualPresents(track).some((present) => visualElements(present.root).some((element) =>
       element.kind === "text-flow" || element.kind === "path-text")));
 }
 
 function hasFrameAnimations(composition: Composition): boolean {
-  return composition.tracks.some((track) => track.kind === "visual"
-    && track.presents.some((present) => present.elements.some((element) => element.animation !== undefined)));
+  return visualScopeTracks(composition.visual).some((track) =>
+    visualPresents(track).some((present) => visualElements(present.root).some((element) => element.animation !== undefined)));
 }
 
 function frameAnimationRuntime(numerator: number, denominator: number): string {
@@ -794,21 +827,61 @@ function frameProgramRuntime(frameCount: number): string {
 
 function emitHtml(composition: Composition, timeline: Timeline, frameSources: HtmlFrameSource[]): string {
   const { numerator, denominator } = timeline.frameRate;
-  const visuals = orderedVisualPresents(composition.tracks);
+  const visualItems = visualScopeTrackOccurrences(composition.visual)
+    .flatMap((occurrence) => occurrence.member.track.items.map((item) => ({
+      occurrencePath: occurrence.path,
+      item,
+    })));
+  const visuals = visualItems.flatMap(({ occurrencePath, item }) => item.kind === "present"
+    ? [{ occurrencePath, present: item }]
+    : []);
   // One document, one set of glyph filter definitions. Keep definitions outside
   // temporal Present roots so a render can make an unrelated Present inert
   // without invalidating a selected Present's document-wide url(#id) reference.
   const emittedFilterIds = new Set<string>();
   const sharedGlyphFilterDefinitions: string[] = [];
   const stableId = createStableDomId();
-  const visualHtml = visuals.map(({ track, present }, index) => renderVisualPresent(track, present, index,
-    numerator, denominator, emittedFilterIds, sharedGlyphFilterDefinitions, stableId, frameSources)).join("\n    ");
+  const adjustments: RenderedAdjustment["runtime"][] = [];
+  const renderScope = (
+    scope: VisualScope,
+    includeClear: boolean,
+    scopePath: readonly string[],
+    paintPath: readonly number[],
+  ): string => {
+    let html = includeClear
+      ? `<div data-hypit-canvas-clear style="position:absolute;inset:0;z-index:0;background:${escapeHtml(composition.canvas.clearColor)};pointer-events:none"></div>`
+      : "";
+    const entries = orderedVisualScopeEntries(scope);
+    for (const [index, entry] of entries.entries()) {
+      const stackIndex = index + 1;
+      if ("stack" in entry) {
+        const childScopePath = [...scopePath, entry.stack.id];
+        const childPaintPath = [...paintPath, stackIndex];
+        const child = renderScope(entry.stack.scope, false, childScopePath, childPaintPath);
+        const id = stableId(["visual-stack", ...childScopePath]);
+        html += `\n    <div id="${id}" class="hypit-visual-stack" data-hypit-stack-id="${escapeHtml(entry.stack.id)}" data-hypit-stack-path="${escapeHtml(JSON.stringify(childScopePath))}" style="position:absolute;inset:0;z-index:${stackIndex};overflow:hidden;pointer-events:none;isolation:isolate">${child}</div>`;
+        continue;
+      }
+      const { item } = entry;
+      const occurrencePath = [...scopePath, entry.memberId];
+      if (item.kind === "present") {
+        html += `\n    ${renderVisualPresent(occurrencePath, item, stackIndex, [...paintPath, stackIndex],
+          numerator, denominator, emittedFilterIds, sharedGlyphFilterDefinitions, stableId, frameSources)}`;
+        continue;
+      }
+      const rendered = renderVisualAdjustment(occurrencePath, item, stackIndex, html, stableId);
+      html = rendered.html;
+      adjustments.push(rendered.runtime);
+    }
+    return html;
+  };
+  const visualHtml = renderScope(composition.visual, true, [], []);
   const sharedDefinitionsHtml = sharedGlyphFilterDefinitions.length === 0 ? ""
     : `<svg data-hypit-document-definitions aria-hidden="true" width="0" height="0" style="position:absolute;overflow:hidden"><defs>${sharedGlyphFilterDefinitions.join("")}</defs></svg>`;
-  const animationCss = visuals.flatMap(({ track, present }) => renderAnimationRules(track, present, stableId)).join("\n    ");
+  const animationCss = visuals.flatMap(({ occurrencePath, present }) => renderAnimationRules(occurrencePath, present, stableId)).join("\n    ");
   const fontCss = renderFontFaces(composition, stableId);
-  const programs = visuals.flatMap(({ track, present }) => present.elements.flatMap(element => element.kind !== "program" ? [] : [{
-    id: stableId([track.id, present.id, element.id]),
+  const programs = visuals.flatMap(({ occurrencePath, present }) => visualElements(present.root).flatMap(element => element.kind !== "program" ? [] : [{
+    id: stableId(["visual-occurrence", ...occurrencePath, present.id, element.id]),
     startFrame: present.span.startFrame,
     durationFrames: present.span.endFrameExclusive - present.span.startFrame,
     program: readHtmlVisual(element.program),
@@ -817,10 +890,12 @@ function emitHtml(composition: Composition, timeline: Timeline, frameSources: Ht
   const hasVisibility = visuals.some(({ present }) => present.visibility !== undefined);
   const programRuntime = programs.length === 0 ? "" : `<script>${htmlVisualScript(programs, numerator, denominator)}</script>`;
   const visibilityRuntime = hasVisibility ? `<script>${presentationVisibilityScript(numerator, denominator)}</script>` : "";
+  const adjustmentRuntime = adjustments.length === 0 ? "" : `<script>${htmlAdjustmentScript(adjustments)}</script>`;
   const duration = frameSeconds(timelineFrameCount(timeline), numerator, denominator);
   const fps = fpsRational(numerator, denominator);
   const frameCount = timelineFrameCount(timeline);
-  const needsFrameWork = hasFrameAnimations(composition) || hasTerminalText(composition) || programs.length > 0 || hasVisibility;
+  const needsFrameWork = hasFrameAnimations(composition) || hasTerminalText(composition)
+    || programs.length > 0 || hasVisibility || adjustments.length > 0;
   const frameRuntime = `\n  <script>\n    ${needsFrameWork ? frameWorkIndexRuntime : frameSelectionRuntime}\n  </script>
   <script>${presentationCaptureScopeRuntime}</script>${hasFrameAnimations(composition) || hasTerminalText(composition)
       ? `\n  <script>${hasFrameAnimations(composition) ? `\n    ${frameAnimationRuntime(numerator, denominator)}` : ""}${hasTerminalText(composition) ? `\n    ${terminalTextLayoutScript}` : ""}\n  </script>`
@@ -831,8 +906,8 @@ function emitHtml(composition: Composition, timeline: Timeline, frameSources: Ht
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <style>
-    html,body{margin:0;width:100%;height:100%;overflow:hidden;background:${composition.canvas.clearColor}}
-    [data-hypit-program-root]{position:relative;overflow:hidden;background:${composition.canvas.clearColor}}
+    html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent}
+    [data-hypit-program-root]{position:relative;overflow:hidden;background:transparent}
     *,*::before,*::after{box-sizing:border-box}
     ${fontCss}
     ${animationCss}
@@ -843,7 +918,7 @@ function emitHtml(composition: Composition, timeline: Timeline, frameSources: Ht
   <div data-hypit-program-root data-hypit-program-id="${escapeHtml(composition.id)}" data-hypit-width="${composition.canvas.width}" data-hypit-height="${composition.canvas.height}" data-hypit-frame-numerator="${numerator}" data-hypit-frame-denominator="${denominator}" data-hypit-frame-count="${frameCount}" style="width:${composition.canvas.width}px;height:${composition.canvas.height}px">
     ${sharedDefinitionsHtml}${sharedDefinitionsHtml.length === 0 ? "" : "\n    "}${visualHtml}
   </div>${frameRuntime}${programRuntime}
-  ${visibilityRuntime}
+  ${visibilityRuntime}${adjustmentRuntime}
   <script>${frameProgramRuntime(frameCount)}</script>
 </body>
 </html>
@@ -860,16 +935,16 @@ function normalizedDocument(value: HtmlProgram): HtmlProgram {
       .map((entry) => ({ artifact: { ...entry.artifact }, usage: entry.usage.kind === "always"
         ? { kind: "always" as const }
         : { kind: "frames" as const, spans: entry.usage.spans.map((span) => ({ ...span })) } }))
-      .sort((left, right) => left.artifact.resource.localeCompare(right.artifact.resource)),
+      .sort((left, right) => compareCodeUnits(left.artifact.resource, right.artifact.resource)),
     surfaces: [...value.surfaces]
       .map((surface) => structuredClone(surface))
-      .sort((left, right) => left.artifact.resource.localeCompare(right.artifact.resource)),
+      .sort((left, right) => compareCodeUnits(left.artifact.resource, right.artifact.resource)),
     frameSources: [...value.frameSources].map((source) => ({
       ...source,
       sourceFrame: { ...source.sourceFrame },
       sourceRate: { ...source.sourceRate },
       sourceFrameRate: { ...source.sourceFrameRate },
-    })).sort((left, right) => left.startFrame - right.startFrame || left.id.localeCompare(right.id)),
+    })).sort((left, right) => left.startFrame - right.startFrame || compareCodeUnits(left.id, right.id)),
     html: value.html,
   };
 }

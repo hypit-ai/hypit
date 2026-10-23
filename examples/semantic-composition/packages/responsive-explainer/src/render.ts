@@ -1,4 +1,4 @@
-import { sealVisualTrack } from "@hypit/composition";
+import { sealPresentVisualTrack } from "@hypit/composition";
 import type { VisualElement } from "@hypit/composition";
 import { htmlVisual } from "@hypit/html-program";
 import type { FontArtifactRef } from "@hypit/media";
@@ -7,7 +7,7 @@ import type { Timeline } from "@hypit/timeline";
 import type { SpatialFrame } from "@hypit/spatial";
 import type { TemporalInstant, TemporalWindow } from "@hypit/temporal";
 
-export type ExplainerOptions = { id: string; title: string; transitionFrames: number; stackingOrder: number };
+export type ExplainerOptions = { id: string; title: string; transitionFrames: number };
 
 /** One scene owns the moving performance viewport and the diagram it makes room for. */
 export function renderExplainer(timeline: Timeline, within: SpatialFrame, window: TemporalWindow,
@@ -29,7 +29,7 @@ export function renderExplainer(timeline: Timeline, within: SpatialFrame, window
   const clips = clipEnd <= clipStart ? [] : [{ startFrame: clipStart, endFrameExclusive: clipEnd,
     sourceStartFrame: clipStart - sourceWindow.span.startFrame }];
   const videos: VisualElement[] = clips.map((clip, i) => ({
-    id: `take-${i}`, parent: "scene", kind: "video", order: i + 1,
+    id: `take-${i}`, kind: "video",
     artifact: media.visual!.artifact, muted: true,
     style: [{ name: "position", value: "absolute" }, { name: "inset", value: 0 },
       { name: "width", value: "100%" }, { name: "height", value: "100%" }, { name: "object-fit", value: "cover" }],
@@ -39,7 +39,7 @@ export function renderExplainer(timeline: Timeline, within: SpatialFrame, window
         sourceAtStart: { numerator: clip.sourceStartFrame, denominator: 1 }, rate: { numerator: 1, denominator: 1 } }] },
   }));
   const labels: VisualElement[] = [options.title, "Intent", "Performance", "Composition"].map((text, i) => ({
-    id: `label-${i}`, parent: "scene", kind: "text", order: videos.length + i + 1, text, fonts,
+    id: `label-${i}`, kind: "text", text, fonts,
     style: [{ name: "font-size", value: `${i === 0 ? Math.round(within.widthPx * .035) : 23}px` }, { name: "color", value: "#f5eddc" },
       { name: "white-space", value: "nowrap" }],
   }));
@@ -71,10 +71,11 @@ export function renderExplainer(timeline: Timeline, within: SpatialFrame, window
         path.style.strokeDashoffset=String(900*(1-p));
       };`,
   });
-  return sealVisualTrack({ id: options.id, timelineId: timeline.id, visualIr: "hypit.visual-ir@1",
-    presents: [{ id: options.id, order: 0, z: options.stackingOrder, span: window.span,
-      elements: [{ id: "scene", kind: "program", order: 0, program,
+  return sealPresentVisualTrack({ id: options.id, timelineId: timeline.id, visualIr: "hypit.visual-ir@1",
+    presents: [{ id: options.id, span: window.span,
+      root: { id: "scene", kind: "program", program,
+        slots: [...videos, ...labels].map((element) => ({ name: element.id, element })),
         style: [{ name: "position", value: "absolute" }, { name: "left", value: `${within.xPx}px` },
           { name: "top", value: `${within.yPx}px` }, { name: "width", value: `${within.widthPx}px` },
-          { name: "height", value: `${within.heightPx}px` }] }, ...videos, ...labels] }] });
+          { name: "height", value: `${within.heightPx}px` }] } }] });
 }

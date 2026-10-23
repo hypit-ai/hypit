@@ -24,7 +24,7 @@ function operationEvent(operation: OperationSnapshot): CommandResult | undefined
     return {
       kind: "need-fulfilled",
       command: operation.command,
-      value: operation.completion.value,
+      value: operation.value,
     };
   }
   if (operation.status === "failed") {
@@ -131,7 +131,7 @@ export function createLocalResultWriter(
       if (await accept(event) && operation.status === "received") {
         await options.operationStore.update(operation.id, {
           status: "completed",
-          completion: operation.completion,
+          value: operation.value,
           acknowledgedAt: operation.acknowledgedAt,
           endedAt: operation.endedAt,
         });

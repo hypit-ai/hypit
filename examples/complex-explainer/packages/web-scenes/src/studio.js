@@ -27,17 +27,8 @@ export function sceneCompanions(module, tags) {
     tone: "violet",
     icon: "component",
     lane: { heightPx: 52 },
-    bindings: [{ name: "z", writable: true, fallback: spec.defaults.z }],
-    inspector: [
-      {
-        binding: "z",
-        label: "Drawing order",
-        domain: "where",
-        section: { id: "stack", label: "Stacking" },
-        control: "number",
-        number: { step: 1 },
-      },
-    ],
+    bindings: [],
+    inspector: [],
     project(context) {
       return context.generic().map((e) => ({
         ...e,

@@ -151,7 +151,7 @@ test("HypiHub portrait matting uses the video job lifecycle and stores transpare
   assert.equal(result.status, "completed");
   if (result.status !== "completed") return;
   assert.equal(submissions, 1);
-  const artifact = (result.result.value as unknown as { videos: [typeof source] }).videos[0];
+  const artifact = (result.result as unknown as { videos: [typeof source] }).videos[0];
   assert.equal(artifact.mediaType, "video/webm");
   assert.deepEqual(await resources.get(artifact.resource), new Uint8Array([4, 5, 6]));
 });

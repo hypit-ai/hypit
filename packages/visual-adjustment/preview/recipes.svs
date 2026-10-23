@@ -1,0 +1,15 @@
+<?svml using="@hypit/recipe@1"?>
+
+<sheet version="1">
+  film.preview { background: #0a0d14; }
+
+  look.move-right {
+    translate-x: 485;
+  }
+  look.middle-grade {
+    hue: 138;
+    saturation: 1.45;
+    contrast: 1.12;
+    blur: 3;
+  }
+</sheet>

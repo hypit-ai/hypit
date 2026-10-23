@@ -35,7 +35,7 @@ for (const fixture of [
       resolveReference: () => undefined,
       resolveAsset: (request) => {
         requests.push(request);
-        return { blob: artifact };
+        return artifact;
       },
     });
 
@@ -51,9 +51,9 @@ test("Video Surface rejects ambiguous extensions and non-video resolved artifact
     sourceName: "main.svml",
     element: { kind: "element", name: "media:Video", attributes, children: [], range },
     resolveReference: () => undefined,
-    resolveAsset: (request) => ({ blob: {
+    resolveAsset: (request) => ({
       kind: "blob", resource: fixtureResource("media:video-invalid"), size: 10, mediaType,
-    } }),
+    }),
   });
 
   await assert.rejects(async () => await decode({ id: "video", src: "./clip.bin" }), /known video extension/u);

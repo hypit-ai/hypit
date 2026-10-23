@@ -22,7 +22,7 @@ import type {
 import { studioParameterControls } from "@hypit/studio-companion";
 import { parameterOption } from "./parameter-values.js";
 import { compositionTypes } from "@hypit/composition";
-import { sameModule, sameType } from "@hypit/hypit/protocol";
+import { compareCodeUnits, sameModule, sameType } from "@hypit/hypit/protocol";
 import type { ModuleRef, ProducerRef, TypeRef } from "@hypit/hypit/protocol";
 
 import type { Placement } from "./observe.js";
@@ -35,7 +35,7 @@ const flatLane = {
 };
 
 const tones = new Set(["blue", "blue-muted", "green", "green-muted", "teal", "violet", "magenta", "magenta-muted", "orange", "orange-muted", "neutral"]);
-const icons = new Set(["brand", "captions", "component", "layers", "ranking", "text", "timeline", "video", "waveform"]);
+const icons = new Set(["brand", "captions", "chart", "component", "layers", "text", "timeline", "video", "waveform"]);
 const chromes = new Set(["standard", "group", "point", "compact"]);
 const layouts = new Set(["repeat-x", "cover", "contain", "storyboard", "waveform"]);
 const inspectorDomains = new Set(["where", "how", "when"]);
@@ -135,6 +135,14 @@ function validateItemDraftVocabulary(companion: StudioTrackCompanion, draft: Stu
   if (draft.presentation !== undefined
     && (!draft.presentation.kind.trim() || !chromes.has(draft.presentation.chrome))) {
     throw new Error(`Studio Track Companion ${companion.id} Item ${draft.id} has invalid presentation`);
+  }
+  const terminalLinks = new Set<string>();
+  for (const link of draft.terminalLinks ?? []) {
+    const key = JSON.stringify([link.spanId, link.elementId]);
+    if (!link.spanId.trim() || link.elementId !== undefined && !link.elementId.trim() || terminalLinks.has(key)) {
+      throw new Error(`Studio Track Companion ${companion.id} Item ${draft.id} has an invalid or repeated terminal link`);
+    }
+    terminalLinks.add(key);
   }
   for (const [index, layer] of draft.display.layers.entries()) {
     if (layer.kind === "text") {
@@ -337,7 +345,7 @@ export class StudioCompanionRegistry {
     const candidates = this.#tracks
       .filter((companion) => matches(companion, type, placement, siblingTypes))
       .map((companion) => ({ companion, score: specificity(companion) }))
-      .sort((left, right) => right.score - left.score || left.companion.id.localeCompare(right.companion.id));
+      .sort((left, right) => right.score - left.score || compareCodeUnits(left.companion.id, right.companion.id));
     const best = candidates[0];
     if (best === undefined) return undefined;
     const tied = candidates.filter((candidate) => candidate.score === best.score);
@@ -392,7 +400,6 @@ export class StudioCompanionRegistry {
         ...attachment.lane,
         attachedTo: attachment.lane.attachedTo ?? root.lane.groupId ?? root.groupId,
       },
-      references: root.references,
     }));
   }
 
@@ -411,8 +418,6 @@ export class StudioCompanionRegistry {
       icon: companion.icon ?? (sameType(track.typeRef, compositionTypes.audioTrack) ? "waveform" : "layers"),
       companion: companion.id,
       lane: companion.lane ?? flatLane,
-      ...(track.trace.placement === undefined ? {} : { authoredTag: track.trace.placement }),
-      references: track.trace.references.map(({ name, type }) => ({ name, type })),
     };
   }
 
@@ -434,7 +439,15 @@ export class StudioCompanionRegistry {
             layers: [surfaceLayer, ...draft.display.layers],
           },
         });
-    for (const draft of projected) validateItemDraftVocabulary(companion, draft);
+    const localIds = new Set<string>();
+    for (const draft of projected) {
+      validateItemDraftVocabulary(companion, draft);
+      const key = JSON.stringify([draft.lane ?? null, draft.id]);
+      if (!draft.id.trim() || localIds.has(key)) {
+        throw new Error(`Studio Companion ${companion.id} repeats Item ${draft.id} in one lane.`);
+      }
+      localIds.add(key);
+    }
     return projected;
   }
 
@@ -488,21 +501,21 @@ export class StudioCompanionRegistry {
 
 export function sealStudioItem(
   outputRef: string,
+  lane: string | undefined,
   draft: StudioItemDraft,
   fallback: StudioTrackBinding,
+  terminalTargets: StudioItem["terminalTargets"] = [],
   editHandles: readonly StudioEditHandle[] = [],
   inspector: StudioItem["inspector"] = [],
 ): StudioItem {
   return {
-    id: draft.id.startsWith(`${outputRef}:`) ? draft.id : `${outputRef}:${draft.id}`,
-    ...(draft.presentId === undefined ? {} : { presentId: draft.presentId }),
+    id: JSON.stringify(["item", outputRef, lane ?? null, draft.id]),
     authoredId: draft.authoredId,
-    ...(draft.selectionGroup === undefined ? {} : { selectionGroup: draft.selectionGroup }),
-    ...(draft.markerId === undefined ? {} : { markerId: draft.markerId }),
+    ...(draft.marker === undefined ? {} : { marker: draft.marker }),
     display: draft.display,
     startFrame: draft.startFrame,
     endFrameExclusive: draft.endFrameExclusive,
-    ...(draft.elementRange === undefined ? {} : { elementRange: draft.elementRange }),
+    ...(draft.elementLocation === undefined ? {} : { elementLocation: draft.elementLocation }),
     stackOrder: draft.stackOrder,
     presentation: draft.presentation ?? {
       kind: fallback.facet === "audio" ? "audio-clip" : "present",
@@ -511,6 +524,6 @@ export function sealStudioItem(
     ...(draft.temporal === undefined ? {} : { temporal: draft.temporal }),
     inspector,
     editHandles,
-    renderIds: draft.renderIds ?? (draft.presentId === undefined ? [] : [draft.presentId]),
+    terminalTargets,
   };
 }

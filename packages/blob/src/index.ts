@@ -14,11 +14,9 @@ export const blobManifest: ModuleManifest = {
   name: blobModuleRef.name,
   version: blobModuleRef.version,
   dependencies: [],
-  types: [{ name: blobTypes.blob.name }],
+  types: [blobTypes.blob.name],
   capabilities: [],
   producers: [],
 };
 
-export const blobDependency = {
-  module: blobModuleRef,
-} as const;
+export const blobDependency = blobModuleRef;

@@ -61,7 +61,7 @@ export function createLocalHtmlProvider(config: CreateLocalHtmlProviderOptions) 
             workers: execution.workers, maxWorkers,
             resources: context.resources, onProgress: progress.onProgress,
             ...(context.reportDiagnostic === undefined ? {} : { onDiagnostic: context.reportDiagnostic }) });
-          return { value: (canonicalize(visual)) };
+          return canonicalize(visual);
         } finally {
           await progress.flush();
         }
@@ -90,7 +90,7 @@ export function createLocalHtmlProvider(config: CreateLocalHtmlProviderOptions) 
             workers: execution.workers, maxWorkers,
             resources: context.resources, onProgress: progress.onProgress,
             ...(context.reportDiagnostic === undefined ? {} : { onDiagnostic: context.reportDiagnostic }) });
-          return { value: (canonicalize(frames)) };
+          return canonicalize(frames);
         } finally { await progress.flush(); }
       },
     }],

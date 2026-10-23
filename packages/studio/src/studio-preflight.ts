@@ -1,6 +1,6 @@
 import type { Candidate } from "@hypit/hypit/protocol";
 import { isBlobRef, sameType } from "@hypit/hypit/protocol";
-import type { StudioFilmCompanion } from "@hypit/studio-companion";
+import type { StudioFilmCompanion, StudioPlacementChild } from "@hypit/studio-companion";
 import { timelineTypes } from "@hypit/timeline";
 
 import type { CompiledSource } from "./compile.js";
@@ -23,13 +23,12 @@ export type StudioViewRequirement = {
   readonly ref: string;
   readonly type: string;
   readonly role: StudioViewRole;
-  readonly candidateId?: string;
   readonly trace: StudioTrace;
-  readonly candidatePolicy: "materialized-value" | "deterministic-derived";
+  /** Film-owned visual occurrences of this reusable Track value. */
+  readonly visualOccurrences?: readonly (readonly string[])[];
 };
 
 export type StudioInspection = {
-  readonly renderTargets: readonly string[];
   readonly filmComposition: string;
   readonly timeRef: string;
   readonly projections: readonly StudioViewRequirement[];
@@ -46,10 +45,6 @@ export class StudioPreflightError extends Error {
     this.name = "StudioPreflightError";
     this.issues = issues;
   }
-}
-
-function candidateIsMaterialized(candidate: Candidate | undefined): boolean {
-  return candidate?.root.kind === "value";
 }
 
 function localName(value: string): string {
@@ -123,16 +118,36 @@ export function inspectStudioRun(
   }
 
   // The selected Film companion declares membership and time-source vocabulary.
-  const filmTrackRefs = unique(chosen.placement.children.flatMap((child) => {
-    if (localName(child.tag) !== film.tracks.childSurface) return [];
-    const source = child.resolvedReferenceAttributes?.[film.tracks.sourceAttribute];
-    return source === undefined ? [] : [source];
-  })).flatMap((ref) => {
-    const output = outputFor(source, ref);
-    return output !== undefined && film.tracks.types.some((type) => sameType(type, output.typeRef))
-      ? [output.ref]
+  const trackUses = (
+    children: readonly StudioPlacementChild[],
+    parentPath: readonly string[] = [],
+  ): { readonly ref: string; readonly occurrencePath?: readonly string[] }[] => children.flatMap((child) => {
+    const tag = localName(child.tag);
+    if (tag === film.tracks.childSurface) {
+      const source = child.resolvedReferenceAttributes?.[film.tracks.sourceAttribute];
+      return source === undefined ? [] : [{
+        ref: source,
+        ...(child.id === undefined ? {} : { occurrencePath: [...parentPath, child.id] }),
+      }];
+    }
+    return film.tracks.containerSurfaces?.includes(tag) === true && child.id !== undefined
+      ? trackUses(child.children ?? [], [...parentPath, child.id])
       : [];
   });
+  const uses = trackUses(chosen.placement.children).flatMap((use) => {
+    const output = outputFor(source, use.ref);
+    return output !== undefined && film.tracks.types.some((type) => sameType(type, output.typeRef))
+      ? [{ ref: output.ref, ...(use.occurrencePath === undefined ? {} : { occurrencePath: use.occurrencePath }) }]
+      : [];
+  });
+  const filmTrackRefs = unique(uses.map((use) => use.ref));
+  const visualOccurrences = new Map<string, readonly (readonly string[])[]>();
+  for (const ref of filmTrackRefs) {
+    const paths = uses.flatMap((use) => use.ref === ref && use.occurrencePath !== undefined
+      ? [use.occurrencePath]
+      : []);
+    if (paths.length > 0) visualOccurrences.set(ref, paths);
+  }
   const times = film.timeSources.flatMap((sourceType) => {
     const value = referencedValueFor(source, chosen.placement!.resolvedReferenceAttributes?.[sourceType.attribute] ?? "");
     return value !== undefined && sameType(value.typeRef, sourceType.type) ? [value] : [];
@@ -149,50 +164,24 @@ export function inspectStudioRun(
   }
   const companionValueSet = new Set(companionValueRefs);
 
-  const projectionRefs = unique([
-    ...filmTrackRefs,
-    ...(timelineOutput === undefined ? [] : [timelineOutput.ref]),
-    ...companionValueRefs,
-  ]);
+  const projectionRefs = unique([...filmTrackRefs, ...companionValueRefs]);
   const projections: StudioViewRequirement[] = [];
-  const derived: Omit<StudioViewRequirement, "candidatePolicy">[] = [];
   for (const ref of projectionRefs) {
     const output = outputFor(source, ref);
     const role = roleFor(registry, source, ref) ?? (companionValueSet.has(ref) ? "supporting-value" : undefined);
     if (output === undefined || role === undefined) continue;
-    const candidateId = satisfactions.get(ref);
-    const candidate = candidateId === undefined ? undefined : candidates.get(candidateId);
-    if (candidateIsMaterialized(candidate)) {
-      projections.push({
-        name: output.name,
-        ref,
-        type: output.type,
-        role,
-        ...(candidateId === undefined ? {} : { candidateId }),
-        trace: traceFor(source, ref),
-        candidatePolicy: "materialized-value",
-      });
-      continue;
-    }
-    derived.push({
+    const occurrences = visualOccurrences.get(ref);
+    projections.push({
       name: output.name,
       ref,
       type: output.type,
       role,
-      ...(candidateId === undefined ? {} : { candidateId }),
       trace: traceFor(source, ref),
+      ...(occurrences === undefined ? {} : { visualOccurrences: occurrences }),
     });
-  }
-
-  if (derived.length > 0) {
-    projections.push(...derived.map((projection) => ({
-      ...projection,
-      candidatePolicy: "deterministic-derived" as const,
-    })));
   }
   if (issues.length > 0) throw new StudioPreflightError(issues);
   return {
-    renderTargets: targets.map((item) => item.ref),
     filmComposition: chosen.compositionRef,
     timeRef: timeOutput!.ref,
     projections,

@@ -47,7 +47,7 @@ export type BuildResultResourceBinding = {
 };
 
 /**
- * Durable encoding of one Composite value. Domain data stays ordinary canonical data while
+ * Durable encoding of one array or object value. Domain data stays ordinary canonical data while
  * Resource references live beside it, so reserved-looking domain objects cannot be
  * mistaken for persistence metadata.
  */
@@ -203,9 +203,9 @@ type BuildResultManifestBase = {
   /** Human-selected public Outputs to surface first; names must exist in `outputs`. */
   readonly highlightedOutputs?: readonly string[];
   /** Opaque author Source identity. A local application may choose a project-relative path. */
-  readonly source: { readonly id: string };
+  readonly sourceId: string;
   /** Opaque Run Source identity, when this Build was authored through one. */
-  readonly run?: { readonly id: string };
+  readonly runId?: string;
   /** Author-facing names of the Build's actual final goals. */
   readonly targets: readonly string[];
   readonly outputs: Readonly<Record<string, BuildResultOutput>>;
@@ -284,8 +284,8 @@ export type RepositoryBuildResultOutputLocation = {
 export type BuildResultSeed = {
   readonly id: string;
   readonly title?: string;
-  readonly source: { readonly id: string };
-  readonly run?: { readonly id: string };
+  readonly sourceId: string;
+  readonly runId?: string;
   readonly publication: PublicationPlan;
   /** Known file locations for referenced Resource identities, including nested uses. */
   readonly resourceReferences?: Readonly<Record<string, BuildResultFileRef>>;
@@ -357,8 +357,8 @@ export function assertPublicationPlan(
 
 /** Validate the one-name-per-Output public Result surface before storage is touched. */
 export function assertBuildResultSeed(seed: BuildResultSeed): void {
-  if (seed.source.id.trim().length === 0) throw new Error("Build Result Source identity must not be empty");
-  if (seed.run !== undefined && seed.run.id.trim().length === 0) {
+  if (seed.sourceId.trim().length === 0) throw new Error("Build Result Source identity must not be empty");
+  if (seed.runId !== undefined && seed.runId.trim().length === 0) {
     throw new Error("Build Result Run identity must not be empty");
   }
   if (seed.title !== undefined && seed.title.trim().length === 0) {
@@ -433,7 +433,7 @@ export type RepositoryBuildResultOutput = Omit<ResolvedBuildResultOutput, "direc
 
 /**
  * Storage-neutral description of one resolved public Output. Unlike `resolve`, this never opens a
- * Composite value document or Resource bytes. Forwarding remains internal: callers cannot use this
+ * Value document or Resource bytes. Forwarding remains internal: callers cannot use this
  * view to distinguish a forwarded Output from one produced by the named Build.
  */
 export type RepositoryBuildResultOutputDescription = {

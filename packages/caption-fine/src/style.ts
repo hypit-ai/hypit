@@ -184,8 +184,6 @@ export function fineCaptionParameters(
   const basePaint = glyphPaint(recipe, "");
   const cueEnter = choice(recipe, "cue-enter", fineCaptionOneShotMotions, "none");
   const parameters: FineCaptionParameters = {
-
-    stackingOrder: integer(recipe, "stack-order"),
     placement: {
       x: number(recipe, "x"),
       y: number(recipe, "y"),
@@ -293,9 +291,6 @@ export function fineCaptionParameters(
 }
 
 export function assertFineCaptionParameters(value: FineCaptionParameters): void {
-  if (!Number.isSafeInteger(value.stackingOrder) || value.stackingOrder < 0) {
-    throw new Error("Fine Caption stacking order is invalid");
-  }
   const nonNegative = [
     value.placement.x, value.placement.y, value.placement.width, value.typography.fontSizePx,
     value.layout.lineHeight, value.layout.wordGapPx, value.cueBox.paddingXPx,

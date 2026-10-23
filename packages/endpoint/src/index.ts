@@ -43,10 +43,6 @@ export type {
 
 export type Awaitable<T> = T | Promise<T>;
 
-export type EndpointFulfillment = {
-  readonly value: Value;
-};
-
 /** Deployment demand known from the finite BuildPlan before a concrete request exists. */
 export type EndpointDemand = {
   readonly capability: Need["capability"];
@@ -108,7 +104,7 @@ export type EndpointInvocationContext = {
 
 export type ImmediateEndpointHandler = (
   context: EndpointInvocationContext,
-) => Awaitable<EndpointFulfillment>;
+) => Awaitable<Value>;
 
 export type EndpointCheckpoint = (
   | { readonly status: "accepted" }
@@ -144,7 +140,7 @@ export type EndpointOutcome = (
       readonly wakeAt?: number;
       readonly progress?: OperationProgress;
     }
-  | { readonly status: "completed"; readonly result: EndpointFulfillment }
+  | { readonly status: "completed"; readonly result: Value }
   | { readonly status: "failed"; readonly failure: OperationFailure }
   /** Remote work ended; collect its existing artifacts in a separate short action. */
   | { readonly status: "ready"; readonly handle: CanonicalValue }

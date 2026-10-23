@@ -8,19 +8,19 @@ new media file.
 
 | Value source | Persisted representation |
 | --- | --- |
-| New Resource without an existing durable address | One file owned by this Build |
+| New `BlobRef` without an existing durable address | One file owned by this Build |
 | Explicit Workspace file | `external-file` with the Workspace's URI |
-| Resource from an earlier Result | `build-file` with its original `build` and `path` |
+| `BlobRef` from an earlier Result | `build-file` with its original `build` and `path` |
 | Entire earlier public Output | `build-output` pointing to its terminal Build and Output |
-| Composite value | A Value Document whose Resource bindings follow the same rules at every depth |
+| Array or object value | A Value Document whose `BlobRef` bindings follow the same rules at every depth |
 
 A local `build-file` omits `build` when its owner is the containing Result. When imported into another
-Build, its owner becomes explicit. Arrays and nested objects do not change ownership: a new Composite
-can save new structure while referencing old video, audio and images. Only newly produced Resources
-get new files. The encoder recognizes Resource values, independently of their domain Type or field name.
+Build, its owner becomes explicit. Arrays and nested objects do not change ownership: a new structured
+value can save new relationships while referencing old video, audio and images. Only newly produced
+blobs get new files. The encoder recognizes `BlobRef` leaves, independently of their domain Type or field name.
 
 An `external-file` stays live. Replacing that file changes subsequent reads; deleting it leaves an
-unavailable dependency. The stored size describes the file when admitted; `describeFile` and public
+unavailable dependency. The stored size describes the file when recorded; `describeFile` and public
 Output resolution obtain its current size. Readers use the explicit address without searching for
 alternatives or comparing file contents.
 
@@ -52,8 +52,8 @@ addresses; its default opens Workspace `file:` URIs. A custom repository or addr
 another physical implementation without changing Result identity or publication semantics.
 
 `describeOutput` reports domain `type` separately from storage `representation`. The representation is
-`inline`, `file`, or `value-document`; it does not claim that the domain value is intrinsically a
-Scalar, Resource, or Composite. Forwarding remains hidden behind this resolved description.
+`inline`, `file`, or `value-document`; it does not claim a domain value category. Forwarding remains
+hidden behind this resolved description.
 
 A `complete` outcome is valid only after every target named by the Publication Plan has been published.
 Failed and cancelled Results may intentionally retain a partial Output set. This is a local per-Build
@@ -63,7 +63,7 @@ closure check, not a central Result index or an attempt to infer missing work.
 to group multiple uses of a file. Separate files remain separate even when their bytes happen to match.
 
 An explicit `hypit get` export collects the selected Output's referenced bytes into its destination.
-Composite exports rewrite bindings to local files, including references with different owners but the
+Value-document exports rewrite bindings to local files, including references with different owners but the
 same relative filename. This makes that export self-contained; ordinary Build publication preserves
 references. Moving editable projects also requires preserving or updating their external file addresses.
 

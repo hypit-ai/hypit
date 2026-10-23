@@ -196,8 +196,8 @@ a versioned tarball or published under the owner's npm scope or private registry
 component maintained in Hypit's official Distribution begin with an issue describing the shared
 product need; official inclusion is separate from normal community sharing.
 
-The [Development Guide](https://hypit.ai/guide/develop/) covers the prerequisites, the daily
-commands and the repository layout.
+The [Development Guide](https://hypit.ai/guide/develop/) covers local production prerequisites and
+the public extension guides for components, Models, Providers and Runtime integration.
 
 <table>
   <tr>
@@ -214,7 +214,7 @@ commands and the repository layout.
   </tr>
   <tr>
     <td>Upgrading existing projects</td>
-    <td><a href="./migrations/0.3.md">0.3 migration guide</a> · <a href="./migrations/0.3.1.md">0.3.1 SDK migration guide</a></td>
+    <td><a href="./migrations/0.3.md">0.3 migration guide</a> · <a href="./migrations/0.3.1.md">0.3.1 SDK migration guide</a> · <a href="./migrations/0.4.md">0.4 framework migration guide</a></td>
   </tr>
 </table>
 

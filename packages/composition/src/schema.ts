@@ -32,14 +32,17 @@ const styleDeclaration: ValueSchema = { kind: "oneOf", variants: VISUAL_STYLE_NA
 const attribute = object({ name: { schema: string }, value: { schema: { kind: "string" } } });
 const keyframe = object({ atFrame: { schema: integer }, easing: { schema: { kind: "string", enum: ["linear", "ease-in", "ease-out", "ease-in-out"] }, optional: true }, style: { schema: { kind: "array", minItems: 1, items: styleDeclaration } } });
 const animation = object({ keyframes: { schema: { kind: "array", minItems: 2, items: keyframe } } });
-const base = { id: { schema: string }, parent: { schema: string, optional: true }, order: { schema: integer }, style: { schema: { kind: "array", items: styleDeclaration } }, attributes: { schema: { kind: "array", items: attribute }, optional: true }, animation: { schema: animation, optional: true } } as const;
-export const visualBoxSchema: ValueSchema = object({ ...base, kind: { schema: { kind: "literal", value: "box" } } });
+const base = { id: { schema: string }, style: { schema: { kind: "array", items: styleDeclaration } }, attributes: { schema: { kind: "array", items: attribute }, optional: true }, animation: { schema: animation, optional: true } } as const;
+// ValueSchema intentionally has no recursive reference primitive. Composition's
+// owner refinement validates each nested node exactly.
+const visualNodeEnvelope = object({}, true);
+export const visualBoxSchema: ValueSchema = object({ ...base, kind: { schema: { kind: "literal", value: "box" } }, children: { schema: { kind: "array", items: visualNodeEnvelope } } });
 export const visualMaskSchema: ValueSchema = object({
   ...base,
   kind: { schema: { kind: "literal", value: "mask" } },
   mode: { schema: { kind: "string", enum: ["alpha", "luminance"] } },
-  maskElement: { schema: string },
-  contentElement: { schema: string },
+  mask: { schema: visualNodeEnvelope },
+  content: { schema: visualNodeEnvelope },
 });
 export const visualTextSchema: ValueSchema = object({ ...base, kind: { schema: { kind: "literal", value: "text" } }, text: { schema: { kind: "string" } }, fonts: { schema: { kind: "array", minItems: 1, items: fontArtifactSchema } } });
 const finiteNumber = { kind: "number" } as const;
@@ -159,17 +162,27 @@ const pathTextElement = object({ ...base, kind: { schema: { kind: "literal", val
 export const visualImageSchema: ValueSchema = object({ ...base, kind: { schema: { kind: "literal", value: "image" } }, artifact: { schema: mediaBlobRef } });
 export const visualVideoSchema: ValueSchema = object({ ...base, kind: { schema: { kind: "literal", value: "video" } }, artifact: { schema: mediaBlobRef }, sourceTime: { schema: visualSourceTimeMapSchema }, muted: { schema: { kind: "boolean" }, optional: true } });
 export const visualSurfaceSchema: ValueSchema = object({ ...base, kind: { schema: { kind: "literal", value: "surface" } }, surface: { schema: compositableSurfaceSchema }, sourceTime: { schema: visualSourceTimeMapSchema, optional: true } });
-export const visualProgramSchema: ValueSchema = object({ ...base, kind: { schema: { kind: "literal", value: "program" } }, program: { schema: object({ format: { schema: string }, payload: { schema: object({}, true) }, artifacts: { schema: { kind: "array", items: mediaBlobRef } } }) } });
+const visualProgramCarrierSchema = object({ format: { schema: string }, payload: { schema: object({}, true) }, artifacts: { schema: { kind: "array", items: mediaBlobRef } } });
+export const visualProgramSchema: ValueSchema = object({
+  ...base,
+  kind: { schema: { kind: "literal", value: "program" } },
+  program: { schema: visualProgramCarrierSchema },
+  slots: { schema: { kind: "array", items: object({ name: { schema: string }, element: { schema: visualNodeEnvelope } }) } },
+});
 export const visualElementSchema: ValueSchema = { kind: "oneOf", variants: [visualBoxSchema, visualMaskSchema, visualTextSchema, textFlowElement, pathTextElement, visualImageSchema, visualVideoSchema, visualSurfaceSchema, visualProgramSchema] };
 const span = object({ startFrame: { schema: integer }, endFrameExclusive: { schema: integer } });
-const present = object({ id: { schema: string }, order: { schema: integer }, z: { schema: signedInteger }, subjectId: { schema: string, optional: true }, span: { schema: span }, visibility: { schema: { kind: "array", items: span }, optional: true }, elements: { schema: { kind: "array", minItems: 1, items: visualElementSchema } } });
-export const visualTrackSchema: ValueSchema = object({ kind: { schema: { kind: "literal", value: "visual" } }, timelineId: { schema: string }, visualIr: { schema: { kind: "literal", value: VISUAL_IR_V1 } }, id: { schema: string }, presents: { schema: { kind: "array", items: present } } });
+const visualItemBase = { id: { schema: string }, subjectId: { schema: string, optional: true }, span: { schema: span }, visibility: { schema: { kind: "array", items: span }, optional: true } } as const;
+export const visualPresentSchema: ValueSchema = object({ ...visualItemBase, kind: { schema: { kind: "literal", value: "present" } }, root: { schema: visualElementSchema } });
+export const visualAdjustmentSchema: ValueSchema = object({ ...visualItemBase, kind: { schema: { kind: "literal", value: "adjustment" } }, program: { schema: visualProgramCarrierSchema } });
+export const visualItemSchema: ValueSchema = { kind: "oneOf", variants: [visualPresentSchema, visualAdjustmentSchema] };
+export const visualTrackSchema: ValueSchema = object({ kind: { schema: { kind: "literal", value: "visual" } }, timelineId: { schema: string }, visualIr: { schema: { kind: "literal", value: VISUAL_IR_V1 } }, id: { schema: string }, items: { schema: { kind: "array", items: visualItemSchema } } });
 export const audioSampleSpanSchema = object({ startSample: { schema: integer }, endSampleExclusive: { schema: { kind: "number", integer: true, minimum: 1 } } });
 export const audioGainEnvelopeSchema: ValueSchema = { kind: "array", minItems: 1, items: object({
-  sample: { schema: integer }, gain: { schema: { kind: "number", minimum: 0, maximum: 64 } },
+  sample: { schema: integer }, gain: { schema: { kind: "number", minimum: 0 } },
 }) };
 const audioClip = object({
   id: { schema: string },
+  subjectId: { schema: string, optional: true },
   artifact: { schema: audioBlobRef },
   target: { schema: audioSampleSpanSchema },
   sourceTime: { schema: object({
@@ -181,11 +194,27 @@ const audioClip = object({
       wrap: { schema: audioSampleSpanSchema, optional: true },
     }) } },
   }) },
-  gain: { schema: { kind: "number", minimum: 0, maximum: 64 } },
+  gain: { schema: { kind: "number", minimum: 0 } },
   fadeInSamples: { schema: integer },
   fadeOutSamples: { schema: integer },
   gainEnvelope: { schema: audioGainEnvelopeSchema, optional: true },
   audibility: { schema: { kind: "array", items: audioSampleSpanSchema }, optional: true },
 });
-export const audioTrackSchema: ValueSchema = object({ kind: { schema: { kind: "literal", value: "audio" } }, timelineId: { schema: string }, id: { schema: string }, clips: { schema: { kind: "array", items: audioClip } } });
-export const compositionSchema: ValueSchema = object({ id: { schema: string }, canvas: { schema: object({ width: { schema: integer }, height: { schema: integer }, clearColor: { schema: string } }) }, tracks: { schema: { kind: "array", items: { kind: "oneOf", variants: [visualTrackSchema, audioTrackSchema] } } } });
+const audioSignalRef = object({ node: { schema: string }, port: { schema: { kind: "literal", value: "signal" } } });
+const audioProcessProgram = object({ format: { schema: string }, payload: { schema: object({}, true) }, artifacts: { schema: { kind: "array", items: mediaBlobRef } } });
+const audioGraphNode: ValueSchema = { kind: "oneOf", variants: [
+  object({ kind: { schema: { kind: "literal", value: "silence" } }, id: { schema: string } }),
+  object({ kind: { schema: { kind: "literal", value: "source" } }, id: { schema: string }, clip: { schema: audioClip } }),
+  object({ kind: { schema: { kind: "literal", value: "mix" } }, id: { schema: string }, inputs: { schema: { kind: "array", minItems: 1, items: audioSignalRef } } }),
+  object({ kind: { schema: { kind: "literal", value: "process" } }, id: { schema: string }, inputs: { schema: object({}, true) }, program: { schema: audioProcessProgram } }),
+] };
+export const audioTrackSchema: ValueSchema = object({ kind: { schema: { kind: "literal", value: "audio" } }, timelineId: { schema: string }, id: { schema: string }, graph: { schema: object({ nodes: { schema: { kind: "array", minItems: 1, items: audioGraphNode } }, output: { schema: audioSignalRef } }) } });
+const visualScopeMemberSchema: ValueSchema = { kind: "oneOf", variants: [
+  object({ kind: { schema: { kind: "literal", value: "track" } }, id: { schema: string }, track: { schema: visualTrackSchema } }),
+  // ValueSchema intentionally has no recursive reference primitive. The
+  // refinement validates every nested scope exactly; this envelope only keeps
+  // admission domain-neutral instead of adding a Core feature for one type.
+  object({ kind: { schema: { kind: "literal", value: "stack" } }, id: { schema: string }, scope: { schema: object({}, true) } }),
+] };
+export const visualScopeSchema: ValueSchema = object({ members: { schema: { kind: "array", items: visualScopeMemberSchema } } });
+export const compositionSchema: ValueSchema = object({ id: { schema: string }, canvas: { schema: object({ width: { schema: integer }, height: { schema: integer }, clearColor: { schema: string } }) }, visual: { schema: visualScopeSchema }, audio: { schema: { kind: "array", items: audioTrackSchema } } });

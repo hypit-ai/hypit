@@ -19,7 +19,7 @@ export const hypitPackage = {
     manifest: imageOperationsManifest,
   }],
   facets: [
-    ...[imageTransformComponent, imageComposeComponent].flatMap((component) => [createProducerPackageFacet(component), createRefinementPackageFacet(component)]),{
+    ...[imageTransformComponent, imageComposeComponent].flatMap((component) => [createProducerPackageFacet(component.producers ?? []), createRefinementPackageFacet(component.refinements ?? [])]),{
     ...createMarkupSurfaceFacet({
       module: imageOperationsModuleRef,
       declaration: imageOperationsMarkupSurfaces.find((item) => item.name === "program")!,

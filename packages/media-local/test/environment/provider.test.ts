@@ -170,7 +170,7 @@ async function fulfillInline(resources: MemoryResourceStore, request: Need): Pro
     resources,
     credentials: {},
   });
-  return result.value;
+  return result;
 }
 
 async function handlerFor(request: Need): Promise<{ handler: ImmediateEndpointHandler; registration: EndpointRegistration }> {
@@ -193,7 +193,7 @@ async function inspectArtifact(resources: MemoryResourceStore, source: Awaited<R
     resources,
     credentials: {},
   });
-  const value = result.value;
+  const value = result;
   verifyMediaInspection(value);
   return value as unknown as MediaInspection;
 }
@@ -221,7 +221,7 @@ async function normalizeArtifact(args: {
     resources: args.resources,
     credentials: {},
   });
-  const value = result.value;
+  const value = result;
   verifySynchronizedMedia(value);
   return value as unknown as SynchronizedMedia;
 }
@@ -257,8 +257,6 @@ test("local media Provider enumerates attached pictures and jointly normalizes 3
       selection, frameRate: selectionRequest.frameRate });
     assert.equal(typed.frameDomain.frameCount, 30);
     assert.equal(synchronizedMediaSampleFrames(typed), 48_000);
-    assert.equal("basisResourceId" in typed, false);
-    assert.equal("narrativeDigest" in typed, false);
     assert.equal(await resources.has(typed.visual!.artifact.resource), true);
     assert.equal(await resources.has(typed.audio!.artifact.resource), true);
 
@@ -415,7 +413,6 @@ test("local media Provider derives one exact 16 kHz mono WhisperX evidence artif
     const resources = new MemoryResourceStore();
     const source = await resources.put(await readFile(sourcePath), "audio/wav");
     const constraints = canonicalize({
-      domainId: "provider-media-test-domain",
       source,
       sourceSampleFrames: 48_001,
       evidenceSampleFrames: 16_000,
@@ -429,7 +426,6 @@ test("local media Provider derives one exact 16 kHz mono WhisperX evidence artif
     const value = await fulfillInline(resources, request);
     assertSpeechEvidenceAudioIdentity(value as unknown as SpeechEvidenceAudio);
     const evidence = value as unknown as SpeechEvidenceAudio;
-    assert.equal(evidence.domainId, "provider-media-test-domain");
     assert.equal(evidence.sampleFrames, 16_000);
     const inspected = await inspectArtifact(resources, evidence.artifact);
     const audio = inspected.streams.find((stream) => stream.kind === "audio");
@@ -556,8 +552,8 @@ test("local media Provider transforms A/V and extracts ordinary audio and frame 
         resources,
         credentials: {},
       });
-      assertBlobRef(result.value);
-      return result.value;
+      assertBlobRef(result);
+      return result;
     };
 
     const transformed = await executeArtifact(need(
@@ -733,9 +729,9 @@ test("StillVideo converts authored RGB pictures to tagged BT.709 in both render 
         resources,
         credentials: {},
       });
-      assertBlobRef(result.value);
-      assert.equal(result.value.mediaType, "video/mp4");
-      const artifact = result.value;
+      assertBlobRef(result);
+      assert.equal(result.mediaType, "video/mp4");
+      const artifact = result;
       const bytes = await resources.get(artifact.resource);
       assert(bytes !== undefined);
       const path = join(root, `${id}.mp4`);

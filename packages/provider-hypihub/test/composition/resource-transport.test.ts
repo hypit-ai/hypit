@@ -110,7 +110,7 @@ test("HypiHub stores both preview JSON and ordinary speech JSON as audio Resourc
       resources,
       credentials: { apiKey: { secret: "test-key" } },
     });
-    const set = result.value as Record<string, unknown>;
+    const set = result as Record<string, unknown>;
     const audios = set.audios as Array<{ resource: `res_${string}` }>;
     assert.equal(audios.length, item.previews ? 2 : 1);
     for (const audio of audios) assert.equal(await resources.has(audio.resource), true);
@@ -312,16 +312,15 @@ test("HypiHub stops before paid submission when a reference upload fails", async
   assert.doesNotMatch(outcome.status === "failed" ? outcome.failure.message : "", /must-not-leak/u);
 });
 
-for (const language of ["en", "ko"]) test(`HypiHub forwards ${language} for the Provider-neutral WhisperX alignment capability`, async () => {
+for (const language of ["en", "ko"]) test(`HypiHub forwards ${language} for the Provider-neutral WhisperX transcription capability`, async () => {
   const resources = new MemoryResourceStore();
   const bytes = wav(32_000);
   const artifact = await resources.put(bytes, "audio/wav");
   const request: Need = {
     id: "need:hypihub-whisperx",
-    capability: whisperXCapabilities.alignment,
-    returns: speechEvidenceTypes.alignedTranscript,
+    capability: whisperXCapabilities.transcription,
+    returns: speechEvidenceTypes.transcript,
     constraints: whisperXRequestForEvidenceAudio(sealSpeechEvidenceAudio({
-      domainId: "hypihub-test-domain",
       artifact,
       sampleFrames: 32_000,
     }), { language }) as unknown as CanonicalValue,
@@ -391,8 +390,7 @@ for (const language of ["en", "ko"]) test(`HypiHub forwards ${language} for the 
     credentials: { apiKey: { secret: "test-key" } },
   });
   assert.equal(submitted, true);
-  assert.deepEqual(result.value, ({
-    domainId: "hypihub-test-domain",
+  assert.deepEqual(result, ({
     sampleFrames: 32_000,
     passages: [{
     startSample: 1_600,

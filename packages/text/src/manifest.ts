@@ -132,10 +132,10 @@ export const textManifest: ModuleManifest = {
   version: textModuleRef.version,
   dependencies: [],
   types: [
-    { name: textTypes.text.name },
-    { name: textTypes.template.name },
-    { name: textTypes.bindings.name },
-    { name: textTypes.binding.name },
+    textTypes.text.name,
+    textTypes.template.name,
+    textTypes.bindings.name,
+    textTypes.binding.name,
   ],
   capabilities: [],
   producers: [
@@ -164,4 +164,4 @@ export const textManifest: ModuleManifest = {
   ],
 };
 
-export const textDependency = { module: textModuleRef } as const;
+export const textDependency = textModuleRef;

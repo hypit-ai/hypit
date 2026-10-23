@@ -10,7 +10,7 @@ import { decodeSourceText } from "@hypit/source";
 
 const rawSourceAdapter = (unit: import("@hypit/source").SourceUnit) => ({ unit, frontend: "test.frontend@1" });
 
-test("an in-root Source whose basename starts with .. is admitted", async () => {
+test("an in-root Source whose basename starts with .. is accepted", async () => {
   const parent = await mkdtemp(join(tmpdir(), "hypit-workspace-dotdot-name-"));
   const root = join(parent, "project");
   try {
@@ -57,7 +57,7 @@ test("a Host-resolved package asset stays inside the resolver's explicit root", 
       from: "package:@acme/brand-fonts/files/brand.woff2",
       mediaType: "font/woff2",
     });
-    assert.equal(resolved.blob.mediaType, "font/woff2");
+    assert.equal(resolved.mediaType, "font/woff2");
     assert.equal((await session.attachments()).length, 1);
   } finally {
     await rm(parent, { recursive: true, force: true });

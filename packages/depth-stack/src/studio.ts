@@ -2,7 +2,7 @@ import { depthStackMarkupSurfaces, depthStackModuleRef } from "./index.js";
 import type { DepthStackProgram } from "./index.js";
 import { compositionTypes } from "@hypit/composition";
 import type { StudioTrackCompanion, StudioTrackCompanionContext, StudioItemDraft, StudioInspectorFieldDeclaration } from "@hypit/studio-companion";
-import { requiredSurfaceValue, temporalLineageFor, temporalDomainSource } from "@hypit/studio-companion";
+import { requiredSurfaceValue, temporalLineageFor, temporalDomainMarker } from "@hypit/studio-companion";
 
 const deckProperties = (depthStackMarkupSurfaces
   .find((surface) => surface.name === "track")?.vocabulary.attributes
@@ -34,7 +34,6 @@ placeDeck([
   "previous-rotation-mode", "previous-stacking-step", "next-x-step", "next-y-step", "next-scale-step",
   "next-rotation-step", "next-rotation-mode", "next-stacking-step",
 ], "where", "Depth", "Card Stack");
-placeDeck(["stack-order"], "where", "Frame", "Stacking");
 placeDeck(["clip", "radius", "padding"], "where", "Frame", "Geometry");
 placeDeck([
   "fit", "frame-x", "frame-y", "content-x", "content-y", "fit-offset-x", "fit-offset-y", "fit-constraint",
@@ -84,22 +83,21 @@ function projectDeck(context: StudioTrackCompanionContext): readonly StudioItemD
   return program.cards.map((card, index): StudioItemDraft => {
     const child = children.get(card.id);
     const temporal = temporalLineageFor(context, card.id, "activation");
-    const markerId = temporalDomainSource(temporal)?.id;
+    const marker = temporalDomainMarker(temporal);
     const endFrameExclusive = program.cards[index + 1]?.activationFrame ?? program.terminalFrame;
     const renders = context.spans.filter((span) => span.id === card.id || span.subjectId === card.id);
-    const render = renders[0];
     const appearance = child?.referenceAttributes.appearance
       ?? context.placement?.referenceAttributes.appearance;
     return {
-      id: `${context.track.outputRef}:item:${card.id}`,
+      id: `item:${card.id}`,
       authoredId: card.id,
-      ...(markerId === undefined ? {} : { markerId }),
+      ...(marker === undefined ? {} : { marker }),
       display: { title: cardTitle(card), layers: [] },
       startFrame: card.activationFrame,
       endFrameExclusive,
-      stackOrder: program.spec.stackingOrder ?? render?.stackOrder ?? 0,
-      ...(child === undefined ? {} : { elementRange: child.range }),
-      ...(render === undefined ? {} : { presentId: render.id, renderIds: renders.map((span) => span.id) }),
+      stackOrder: renders[0]?.stackOrder ?? 0,
+      ...(child === undefined ? {} : { elementLocation: { path: child.sourcePath, range: child.range } }),
+      terminalLinks: renders.map((span) => ({ spanId: span.id })),
       ...(appearance === undefined ? {} : { parameterReferences: { appearance } }),
       presentation: { kind: "deck-card", chrome: "standard" },
       ...(temporal === undefined ? {} : { temporal }),

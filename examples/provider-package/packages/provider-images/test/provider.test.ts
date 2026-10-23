@@ -66,7 +66,7 @@ test("project Provider maps a reference, retains its receipt and collects throug
   const start = await endpoint.start(context); assert.equal(start.status, "pending");
   const ready = await endpoint.poll({ ...context, handle: start.handle }); assert.equal(ready.status, "ready");
   const collected = await endpoint.collect!({ ...context, handle: ready.handle }); assert.equal(collected.status, "completed");
-  const images = (collected.result.value as unknown as { images: BlobRef[] }).images;
+  const images = (collected.result as unknown as { images: BlobRef[] }).images;
   assert.equal(images[0]?.mediaType, "image/webp");
   assert.deepEqual(await resources.get(images[0]!.resource), new Uint8Array([4, 5, 6]));
   assert.deepEqual(calls, ["/rates", "/uploads", "/tasks", "/tasks/received-task", "/output.webp"]);

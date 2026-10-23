@@ -21,7 +21,7 @@ const manifest: ModuleManifest = {
   name: moduleRef.name,
   version: moduleRef.version,
   dependencies: [],
-  types: [{ name: valueType.name }],
+  types: [valueType.name],
   capabilities: [],
   producers: [{
     name: advanceProducer.name,

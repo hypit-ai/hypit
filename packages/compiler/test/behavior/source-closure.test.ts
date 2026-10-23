@@ -17,7 +17,7 @@ const manifest: ModuleManifest = {
   name: moduleRef.name,
   version: moduleRef.version,
   dependencies: [],
-  types: [{ name: identityType.name }],
+  types: [identityType.name],
   capabilities: [],
   producers: [],
 };
@@ -98,7 +98,7 @@ test("Source Closure hygienizes author provenance across imported Sources", asyn
   });
   assert.equal(compiled.provenance.elements.length, 2);
   const bySource = new Map(compiled.provenance.elements.map((item) => [item.sourceName, item] as const));
-  assert.equal(bySource.get("main")?.records[0]?.id, "/project/main::record::value");
-  assert.equal(bySource.get("child")?.records[0]?.id, "/project/child::record::value");
+  assert.equal(bySource.get("main")?.records[0]?.id, 'source:["/project/main","record","value"]');
+  assert.equal(bySource.get("child")?.records[0]?.id, 'source:["/project/child","record","value"]');
   assert.notEqual(bySource.get("main")?.inputs[0]?.id, bySource.get("child")?.inputs[0]?.id);
 });

@@ -66,7 +66,7 @@ function projectFineText(context: StudioTrackCompanionContext): readonly StudioI
     id: occurrence.id,
     startFrame: occurrence.span.startFrame,
     endFrameExclusive: occurrence.span.endFrameExclusive,
-    stackOrder: occurrence.placement.z,
+    stackOrder: 0,
     sourceTypes: [textFineTypes.itemSpec, textFineTypes.plainItemSpec],
   }], "typography-item", "standard")[0];
   if (item === undefined) return [];
@@ -76,15 +76,15 @@ function projectFineText(context: StudioTrackCompanionContext): readonly StudioI
     ...item,
     authoredId: context.placement?.id ?? occurrence.id,
     display: { ...item.display, title: context.placement?.id ?? occurrence.id, layers: label.length === 0 ? [] : [textLayer(label)] },
-    ...(context.placement === undefined ? {} : { elementRange: context.placement.range }),
+    ...(context.placement === undefined ? {} : { elementLocation: { path: context.placement.sourcePath, range: context.placement.range } }),
     ...(temporal === undefined ? {} : { temporal }),
   }];
 }
 
 const placementBindings: Readonly<Record<"flow" | "point" | "path", readonly StudioSourceBindingDeclaration[]>> = {
-  flow: ["z", "inline-size", "block-size", "padding", "align", "block-align", "wrap", "overflow", "max-lines", "minimum-scale", "clip", "columns", "column-gap", "metric-edge"].map((name) => ({ name, writable: true })),
-  point: ["z", "anchor-inline", "anchor-block"].map((name) => ({ name, writable: true })),
-  path: ["z", "side", "orientation", "start-margin", "end-margin", "align", "reverse", "overflow"].map((name) => ({ name, writable: true })),
+  flow: ["inline-size", "block-size", "padding", "align", "block-align", "wrap", "overflow", "max-lines", "minimum-scale", "clip", "columns", "column-gap", "metric-edge"].map((name) => ({ name, writable: true })),
+  point: ["anchor-inline", "anchor-block"].map((name) => ({ name, writable: true })),
+  path: ["side", "orientation", "start-margin", "end-margin", "align", "reverse", "overflow"].map((name) => ({ name, writable: true })),
 };
 
 const placementOptions = new Map<string, readonly string[]>([
@@ -101,7 +101,7 @@ function occurrenceInspector(form: "flow" | "point" | "path"): readonly StudioIn
   const direct = placementBindings[form].map(({ name }) => {
     const options = placementOptions.get(`${name}:${form}`) ?? placementOptions.get(name);
     return {
-      binding: name, label: title(name), ...typographyPlace("where", "Layout", name === "z" ? "Stacking" : title(form)),
+      binding: name, label: title(name), ...typographyPlace("where", "Layout", title(form)),
       control: options === undefined ? (name === "padding" ? "text" as const : "number" as const) : "select" as const,
       ...(options === undefined ? {} : { options }),
     };

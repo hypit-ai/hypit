@@ -4,7 +4,7 @@ import { assertAttributes, assertEmptyElement, textAttribute, createMarkupSurfac
 import { canonicalize, sameType } from "@hypit/hypit/protocol";
 import { sealGraphFragment } from "@hypit/hypit/author";
 import { presenterStyle, presenterTypes } from "./presenter.js";
-import { sealVisualTrack, compositionTypes } from "@hypit/composition";
+import { sealPresentVisualTrack, compositionTypes } from "@hypit/composition";
 import { timelineTypes } from "@hypit/timeline";
 import { spatialTypes } from "@hypit/spatial";
 import { temporalTypes } from "@hypit/temporal";
@@ -25,8 +25,7 @@ export function installPortraitTransition(module, manifest, component) {
   manifest.producers.push({
     name: "portrait-transition",
     inputs,
-    outputs: [{ name: "visual", type: compositionTypes.visualTrack }],
-    needs: [],
+    result: { kind: "output", name: "visual", type: compositionTypes.visualTrack },
   });
   const fragment = sealGraphFragment({
     inputs,
@@ -76,7 +75,7 @@ export function installPortraitTransition(module, manifest, component) {
 };`,
       });
       const id = window.subjectId,
-        visual = sealVisualTrack({
+        visual = sealPresentVisualTrack({
           id,
           timelineId: timeline.id,
           visualIr: "hypit.visual-ir@1",
@@ -85,7 +84,6 @@ export function installPortraitTransition(module, manifest, component) {
                 {
                   id,
                   order: 0,
-                  z: 60,
                   span: window.span,
                   elements: [
                     {
@@ -107,10 +105,7 @@ export function installPortraitTransition(module, manifest, component) {
               ]
             : [],
         });
-      return {
-        outputs: { visual: (canonicalize(visual)) },
-        needs: {},
-      };
+      return { kind: "output", value: canonicalize(visual) };
     },
   });
   return createMarkupSurfaceFacet({

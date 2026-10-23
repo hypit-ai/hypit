@@ -43,13 +43,14 @@ test("Caption Companion projects Cue text and Style from public domain values", 
   };
   const base: StudioItemDraft = {
     id: "captions.track:cue-1", authoredId: "captions", display: { title: "cue-1", layers: [] },
-    startFrame: 8, endFrameExclusive: 24, stackOrder: 70, presentId: "cue-1",
-    elementRange: { start: 0, end: 80 },
+    startFrame: 8, endFrameExclusive: 24, stackOrder: 70,
+    terminalLinks: [{ spanId: "cue-1" }],
+    elementLocation: { path: "captions.svml", range: { start: 0, end: 80 } },
   };
   const context = {
     track: {
       name: "captions.track", type: "VisualTrack", typeRef: compositionTypes.visualTrack, outputRef: "captions.track",
-      candidateOrigin: "source", role: "track",
+      role: "track",
       trace: {
         surface: "caption", module: { name: "@hypit/caption-fine", version: "1" }, authoredId: "captions",
         outputPorts: [{ name: "schedule", ref: "captions.schedule", type: "FineCaptionSchedule" }, { name: "timing", ref: "captions.timing", type: "CaptionTiming" }],
@@ -61,7 +62,7 @@ test("Caption Companion projects Cue text and Style from public domain values", 
           typeRef: captionTypes.timing,
         }],
       },
-      value: { visualIr: "hypit.visual-ir@1", id: "captions", presents: [] },
+      value: { visualIr: "hypit.visual-ir@1", id: "captions", items: [] },
     },
     spans: [{ id: "cue-1", startFrame: 8, endFrameExclusive: 24, stackOrder: 70 }],
     values: new Map<string, unknown>([["captions.schedule", schedule], ["captions.timing", {timelineId:"speech",documentId:document.id,units:schedule.cues[0]!.units}], ["story.caption", document]]),
@@ -106,7 +107,7 @@ test("Caption Uses stay in Inspector while Cues remain independent of rendered c
   const context = {
     track: {
       name: "captions.track", type: "VisualTrack", typeRef: compositionTypes.visualTrack,
-      outputRef: "captions.track", candidateOrigin: "source", role: "track", value: undefined,
+      outputRef: "captions.track", role: "track", value: undefined,
       trace: {
         references: [
           { input: "document", name: "document", type: "CaptionDocument", typeRef: captionTypes.document, ref: "document" },
@@ -130,8 +131,8 @@ test("Caption Uses stay in Inspector while Cues remain independent of rendered c
   } satisfies StudioTrackCompanionContext;
   assert.deepEqual(projectCaption(context), []);
   const objects=projectCaptionUses(context);
-  assert.deepEqual(objects.map(item=>[item.title,item.elementRange,item.inspector?.find(field=>field.id==="scope")?.value]),[
-    ["base",{start:0,end:8},"All matching cues"],["hidden",{start:10,end:18},"hidden"],
+  assert.deepEqual(objects.map(item=>[item.title,item.elementLocation,item.inspector?.find(field=>field.id==="scope")?.value]),[
+    ["base",{path:"captions.svml",range:{start:0,end:8}},"All matching cues"],["hidden",{path:"captions.svml",range:{start:10,end:18}},"hidden"],
   ]);
   assert.ok(objects.every(item=>item.parameterReferences?.style===item.title));
 });

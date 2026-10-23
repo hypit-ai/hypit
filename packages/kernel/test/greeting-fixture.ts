@@ -34,7 +34,7 @@ function initialState(program: Parameters<typeof planBuild>[0], graph: AuthorGra
     candidates: [],
     operations: [],
     satisfactions: [],
-    targets: targets.map((output) => ({ output })),
+    targets,
   });
   return materializeBuild(defineBuild({
     program: link(program.closure, [...program.records, ...planned.initialRecords]),
@@ -55,14 +55,10 @@ export const manifest: ModuleManifest = {
   version: moduleRef.version,
   dependencies: [],
   types: [
-    {
-      name: types.intent.name,
-    },
-    { name: types.prompt.name },
-    { name: types.generated.name },
-    {
-      name: types.document.name,
-    },
+    types.intent.name,
+    types.prompt.name,
+    types.generated.name,
+    types.document.name,
   ],
   capabilities: [{ name: capabilities.generation.name, returns: types.generated }],
   producers: [

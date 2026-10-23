@@ -20,7 +20,7 @@ test("native evidence preserves variable-rate timestamps and half-open bounds ac
     assert.deepEqual(selected.map(frame => frame.at), [0.1, 0.3]);
     assert.equal((await readdir(join(directory, "selected"))).length, 2);
     let output = "";
-    await runMediaCli(["media", "tiles", source, "--start", "0", "--end", "0.6", "--every-frame", "--columns", "2", "--rows", "1",
+    await runMediaCli(["media", "grid", source, "--pages", "--start", "0", "--end", "0.6", "--every-frame", "--columns", "2", "--rows", "1",
       "--to", "grids", "--json"], { write: text => { output += text; } }, directory);
     const grids = JSON.parse(output).grids;
     assert.deepEqual(grids.map((grid: { frames: { at: number }[] }) => grid.frames.map(frame => frame.at)), [[0, 0.1], [0.3, 0.5]]);
@@ -29,6 +29,6 @@ test("native evidence preserves variable-rate timestamps and half-open bounds ac
     await runMediaCli(["media", "frames", source, "--start", "0.05", "--end", "0.5", "--every-frame", "--to", "files", "--json"],
       { write: text => { output += text; } }, directory);
     assert.deepEqual(JSON.parse(output).frames.map((frame: { at: number }) => frame.at), [0.1, 0.3]);
-    await assert.rejects(runMediaCli(["media", "tiles", source, "--every-frame", "--every", "0.1", "--to", "bad"], { write() {} }, directory), /cannot be combined/u);
+    await assert.rejects(runMediaCli(["media", "grid", source, "--pages", "--every-frame", "--every", "0.1", "--to", "bad"], { write() {} }, directory), /cannot be combined/u);
   } finally { await rm(directory, { recursive: true, force: true }); }
 });

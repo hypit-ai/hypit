@@ -2,7 +2,7 @@ import { commentStickerMarkupSurfaces, commentStickerModuleRef, commentStickerTy
 import type { CommentStickerProgram } from "./index.js";
 import { compositionTypes } from "@hypit/composition";
 import type { StudioTrackCompanion, StudioTrackCompanionContext, StudioItemDraft, StudioInspectorFieldDeclaration, StudioSourceBindingDeclaration } from "@hypit/studio-companion";
-import { artifactPreview, childItems, previewLayer, requiredSurfaceValue, temporalLineageFor, temporalDomainSource, textLayer } from "@hypit/studio-companion";
+import { artifactPreview, childItems, previewLayer, requiredSurfaceValue, temporalLineageFor, temporalDomainMarker, textLayer } from "@hypit/studio-companion";
 
 const frameParameters: readonly StudioSourceBindingDeclaration[] = [
   { name: "within" },
@@ -82,7 +82,7 @@ function projectComments(context: StudioTrackCompanionContext): readonly StudioI
     const item = program.items[index];
     if (item === undefined) return projected;
     const temporal = temporalLineageFor(context, item.id, "window");
-    const semanticSource = temporalDomainSource(temporal);
+    const marker = temporalDomainMarker(temporal);
     return {
       ...projected,
       display: {
@@ -92,9 +92,7 @@ function projectComments(context: StudioTrackCompanionContext): readonly StudioI
           textLayer(item.content.comment),
         ],
       },
-      ...(semanticSource?.id === undefined
-        ? {}
-        : { markerId: semanticSource.id }),
+      ...(marker === undefined ? {} : { marker }),
       ...(temporal === undefined ? {} : { temporal }),
     };
   });

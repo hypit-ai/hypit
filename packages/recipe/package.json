@@ -17,6 +17,7 @@
   },
   "devDependencies": {
     "@hypit/compiler": "workspace:*",
+    "@hypit/kernel": "workspace:*",
     "@hypit/markup": "workspace:*"
   }
 }

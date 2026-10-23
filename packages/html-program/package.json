@@ -5,8 +5,7 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
-    "./playback": "./src/playback.ts"
+    ".": "./src/index.ts"
   },
   "hypit": {
     "activation": "./src/activation.ts"

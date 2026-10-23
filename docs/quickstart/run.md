@@ -474,11 +474,11 @@ hypit get <build-id> \
   --to output/final.mp4
 ```
 
-`get` exports one exact `build + output` address to the required `--to` destination. A Scalar becomes
-a JSON file. A Resource becomes one file containing its original bytes. A Composite becomes a
-self-contained directory: `value.json` holds its Composite value document and the Resource files it
-references keep their Result-relative paths inside that directory. The destination must not already
-exist.
+`get` exports one exact `build + output` address to the required `--to` destination. An `inline`
+representation becomes a JSON file. A `file` representation becomes one file containing its original
+bytes. A `value-document` representation becomes a self-contained directory: `value.json` holds the
+value and file bindings, while the referenced files keep their Result-relative paths inside that
+directory. The destination must not already exist.
 
 A forwarded historical Output is resolved transparently to its declared earlier Result. This does
 not create a Build, alter a Result or copy anything back into Result storage, and the Runtime Profile

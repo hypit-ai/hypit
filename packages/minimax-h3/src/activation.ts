@@ -5,8 +5,8 @@ import { minimaxH3Component, minimaxH3Definition, minimaxH3Manifest, minimaxH3Mo
   minimaxH3MarkupSurfaces } from "./index.js";
 import { decodeMinimaxFrameVideoSurface, decodeMinimaxReferenceVideoSurface, decodeMinimaxTextVideoSurface } from "./surface.js";
 export const hypitPackage = { format: "hypit.package@1" as const, modules: [{ manifest: minimaxH3Manifest }], facets: [
-  createProducerPackageFacet(minimaxH3Component),
-  createRefinementPackageFacet(minimaxH3Component),
+  createProducerPackageFacet(minimaxH3Component.producers ?? []),
+  createRefinementPackageFacet(minimaxH3Component.refinements ?? []),
   createMarkupSurfaceFacet({ module: minimaxH3ModuleRef,
     declaration: minimaxH3MarkupSurfaces.find((item) => item.name === "text-video")!, handler: decodeMinimaxTextVideoSurface }),
   createMarkupSurfaceFacet({ module: minimaxH3ModuleRef,

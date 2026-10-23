@@ -64,7 +64,7 @@
   }
 
   caption.original-girl {
-    stack-order: 70;
+
     x: 0.5;
     y: 0.5;
     width: 0.88;
@@ -118,7 +118,7 @@
   }
 
   caption.original-guy {
-    stack-order: 70;
+
     x: 0.5;
     y: 0.5;
     width: 0.88;
@@ -172,7 +172,7 @@
   }
 
   caption.pepe {
-    stack-order: 70;
+
     x: 0.5;
     y: 0.5;
     width: 0.88;
@@ -226,7 +226,7 @@
   }
 
   caption.doge {
-    stack-order: 70;
+
     x: 0.5;
     y: 0.5;
     width: 0.88;
@@ -280,7 +280,7 @@
   }
 
   caption.retinol-idol {
-    stack-order: 70;
+
     x: 0.5;
     y: 0.5;
     width: 0.88;
@@ -334,7 +334,7 @@
   }
 
   caption.retinol-tboy {
-    stack-order: 70;
+
     x: 0.5;
     y: 0.5;
     width: 0.88;
@@ -388,7 +388,7 @@
   }
 
   caption.jock {
-    stack-order: 70;
+
     x: 0.5;
     y: 0.5;
     width: 0.88;
@@ -442,7 +442,7 @@
   }
 
   caption.nerd {
-    stack-order: 70;
+
     x: 0.5;
     y: 0.5;
     width: 0.88;

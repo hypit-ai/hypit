@@ -54,4 +54,4 @@ export const temporalComponent = {
       valueOf<TemporalInstant>(inputs.end?.value, "TemporalInstant end"),
     )) }) },
   ],
-} satisfies ProducerPackage & RefinementPackage;
+} satisfies { producers?: ProducerPackage; refinements?: RefinementPackage };

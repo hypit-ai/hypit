@@ -127,7 +127,7 @@ test("HypiHub doctor leaves expired OAuth refresh validity unknown without misid
     credentials: { apiKey: { secret: encodeOAuth2Credential({
       accessToken: "expired", refreshToken: "unverified-refresh", expiresAt: Date.now() - 1_000,
     }) } },
-    capabilities: [whisperXCapabilities.alignment],
+    capabilities: [whisperXCapabilities.transcription],
   });
   assert.equal(diagnostics[0]?.code, "HYPIHUB_OAUTH_REFRESH_UNCHECKED");
   assert.equal(diagnostics[0]?.severity, "warning");
@@ -143,13 +143,13 @@ test("HypiHub doctor checks the authenticated catalogue only when actively invok
     return Response.json({ data: [{ id: "victor-upmeet/whisperx", endpoints: ["transcriptions"] }] });
   } }, {
     credentials: { apiKey: { secret: "test-key" } },
-    capabilities: [whisperXCapabilities.alignment],
+    capabilities: [whisperXCapabilities.transcription],
   });
   assert.equal(calls, 1);
   assert.deepEqual(diagnostics, []);
 });
 
-test("HypiHub doctor recognizes canonical cards without legacy aliases or substituting variants", async () => {
+test("HypiHub doctor recognizes the canonical cards returned by the service", async () => {
   const cards = [
     { id: "gpt-image-2", endpoints: ["images", "image_edits"] },
     { id: "seedream-5-lite", endpoints: ["images", "image_edits"] },

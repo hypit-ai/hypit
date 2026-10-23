@@ -17,11 +17,11 @@ export const narrativeManifest: ModuleManifest = {
   format: "hypit.module@1", name: narrativeModuleRef.name, version: narrativeModuleRef.version,
   dependencies: [],
   types: [
-    { name: narrativeTypes.narrative.name },
-    { name: narrativeTypes.segmentRef.name },
-    { name: narrativeTypes.selection.name },
-    { name: narrativeTypes.moment.name },
+    narrativeTypes.narrative.name,
+    narrativeTypes.segmentRef.name,
+    narrativeTypes.selection.name,
+    narrativeTypes.moment.name,
   ],
   capabilities: [], producers: [],
 };
-export const narrativeDependency = { module: narrativeModuleRef } as const;
+export const narrativeDependency = narrativeModuleRef;

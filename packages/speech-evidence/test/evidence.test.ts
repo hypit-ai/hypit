@@ -1,10 +1,10 @@
 import { timelineSampleFrames, sealTimeline } from "@hypit/timeline";
 import { sealSynchronizedMedia } from "@hypit/media";
 import {
-  assertAlignedTranscriptEvidenceIdentity,
   assertSpeechEvidenceAudioIdentity,
-  sealAlignedTranscriptEvidence,
+  assertSpeechTranscriptEvidence,
   sealSpeechEvidenceAudio,
+  sealSpeechTranscriptEvidence,
   speechEvidenceSampleBoundary,
   speechEvidenceProducers,
 } from "@hypit/speech-evidence";
@@ -22,9 +22,8 @@ test("speech evidence uses integer rational boundary projection rather than floa
   assert.equal(timelineSampleFrames(ntsc, 48_000), 48_048);
 });
 
-test("SpeechEvidenceAudio identifies its source domain and exact sample span", () => {
+test("SpeechEvidenceAudio carries only canonical bytes and their exact sample span", () => {
   const value = sealSpeechEvidenceAudio({
-    domainId: "speech-domain",
     artifact: {
       kind: "blob",
       resource: fixtureResource("evidence"),
@@ -34,13 +33,12 @@ test("SpeechEvidenceAudio identifies its source domain and exact sample span", (
     sampleFrames: 16_000,
   });
   assert.doesNotThrow(() => assertSpeechEvidenceAudioIdentity(value));
-  assert.throws(() => assertSpeechEvidenceAudioIdentity({ ...value, domainId: "" }), /identity/u);
   assert.throws(() => assertSpeechEvidenceAudioIdentity({ ...value, sampleFrames: 0 }), /identity/u);
+  assert.throws(() => sealSpeechEvidenceAudio({ ...value, debug: true } as never), /unsupported field debug/u);
 });
 
-test("AlignedTranscriptEvidence validates the complete provider-neutral observation", () => {
-  const value = sealAlignedTranscriptEvidence({
-    domainId: "speech-domain",
+test("SpeechTranscriptEvidence validates the complete provider-neutral observation", () => {
+  const value = sealSpeechTranscriptEvidence({
     sampleFrames: 16_000,
     passages: [{
       startSample: 0,
@@ -50,22 +48,27 @@ test("AlignedTranscriptEvidence validates the complete provider-neutral observat
       speechActivity: [{ startSample: 800, endSampleExclusive: 4_200 }],
     }],
   });
-  assert.doesNotThrow(() => assertAlignedTranscriptEvidenceIdentity(value));
-  assert.throws(() => sealAlignedTranscriptEvidence({
+  assert.doesNotThrow(() => assertSpeechTranscriptEvidence(value));
+  assert.throws(() => sealSpeechTranscriptEvidence({
     ...value,
     passages: [{ ...value.passages[0]!, words: [{ text: "hello", startSample: 1_000 }] }],
   }), /word is invalid/u);
-  assert.throws(() => sealAlignedTranscriptEvidence({
+  assert.throws(() => sealSpeechTranscriptEvidence({
     ...value,
     passages: [{ ...value.passages[0]!, chars: [{ char: "h", wordIndex: 2 }] }],
   }), /character is invalid/u);
-  assert.throws(() => sealAlignedTranscriptEvidence({
+  assert.throws(() => sealSpeechTranscriptEvidence({
     ...value,
     passages: [{ ...value.passages[0]!, speechActivity: [{ startSample: 0, endSampleExclusive: 16_001 }] }],
   }), /speech activity is invalid/u);
+  assert.throws(() => sealSpeechTranscriptEvidence({ ...value, debug: true } as never), /unsupported field debug/u);
+  assert.throws(() => sealSpeechTranscriptEvidence({
+    ...value,
+    passages: [{ ...value.passages[0]!, words: [{ ...value.passages[0]!.words[0]!, debug: true }] }],
+  } as never), /word has unsupported field debug/u);
 });
 
-test("Speech Evidence owns projection from one matching normalized media domain", async () => {
+test("Speech Evidence projects canonical audio directly from normalized media", async () => {
   const project = speechEvidenceComponent.producers.find(
     (item) => item.producer.name === speechEvidenceProducers.projectAudio.name,
   )!;
@@ -75,20 +78,13 @@ test("Speech Evidence owns projection from one matching normalized media domain"
       kind: "blob", resource: fixtureResource("speech-evidence:source"), size: 384_044, mediaType: "audio/wav",
     } },
   });
-  const run = (frameCount: number) => project.handler({ inputs: {
+  const result = await project.handler({ inputs: {
     media: { value: (media) },
-    domain: { value: ({
-      id: "speech-domain", frameRate: media.frameDomain.frameRate, frameCount,
-    }) },
   } } as never);
-
-  const result = await run(60);
   assert.equal(result.kind, "need");
   assert.deepEqual(result.constraints, {
-    domainId: "speech-domain",
     source: media.audio!.artifact,
     sourceSampleFrames: 96_000,
     evidenceSampleFrames: 32_000,
   });
-  await assert.rejects(async () => run(59), /does not describe its normalized media/u);
 });

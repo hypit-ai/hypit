@@ -154,7 +154,7 @@ The useful pieces of a project package are:
 | Surface | Validate authored attributes and children, resolve typed references, emit inert Records, Components and Fragments |
 | Fragment | Wire the finite computation graph and publish outputs |
 | Producer | Compute the immutable state or render program from declared inputs |
-| Activation | Register the Manifest, deterministic handlers and Markup facets with their matching Facet ABI |
+| Activation | Export the package's Author, Producer, Refinement and Markup contributions through the installed public helpers |
 | Vocabulary and preview | Explain the role and show a recognizable, configured example |
 | Optional Studio Companion | Project meaningful editor Items, real parameter bindings and temporal lineage without changing video rendering |
 

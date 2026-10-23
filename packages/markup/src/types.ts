@@ -1,5 +1,6 @@
 import type {
   CanonicalValue,
+  BlobRef,
   ModuleRef,
   ResolvedModuleClosure,
   Value,
@@ -98,7 +99,7 @@ export type RawSurfaceInput = {
   readonly openingStart: number;
   readonly contentStart: number;
   readonly attributes: Readonly<Record<string, MarkupAttributeValue>>;
-  readonly resolveAsset: (request: AuthorSourceAssetRequest) => Awaitable<import("@hypit/author").ResolvedAuthorSourceAsset>;
+  readonly resolveAsset: (request: AuthorSourceAssetRequest) => Awaitable<BlobRef>;
 };
 
 export type RawSurfaceOutput = SurfaceDecodeOutput & {
@@ -116,7 +117,7 @@ export type StructuredSurfaceInput = {
    * A component output has a ref and Type but no compile-time Record value.
    */
   readonly resolveReference: (path: string) => SurfaceResolvedReference | undefined;
-  readonly resolveAsset: (request: AuthorSourceAssetRequest) => Awaitable<import("@hypit/author").ResolvedAuthorSourceAsset>;
+  readonly resolveAsset: (request: AuthorSourceAssetRequest) => Awaitable<BlobRef>;
 };
 
 export type SurfaceResolvedReference = {
@@ -224,7 +225,7 @@ export type MarkupDecodeContext = {
   readonly registry: MarkupSurfaceRegistryLike;
   readonly resolveModule: (request: MarkupImportRequest) => ModuleRef;
   readonly sourceImports?: readonly ResolvedAuthorSourceImport[];
-  readonly resolveAsset?: (request: AuthorSourceAssetRequest) => Awaitable<import("@hypit/author").ResolvedAuthorSourceAsset>;
+  readonly resolveAsset?: (request: AuthorSourceAssetRequest) => Awaitable<BlobRef>;
 };
 
 export type MarkupDecodeResult = {

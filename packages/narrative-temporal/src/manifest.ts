@@ -24,7 +24,7 @@ export const narrativeTemporalProducers = {
 export const narrativeTemporalManifest: ModuleManifest = {
   format: "hypit.module@1", name: narrativeTemporalModuleRef.name, version: narrativeTemporalModuleRef.version,
   dependencies: [narrativeDependency, temporalDependency, timelineDependency],
-  types: Object.values(narrativeTemporalTypes).map((type) => ({ name: type.name })), capabilities: [], producers: [{
+  types: Object.values(narrativeTemporalTypes).map((type) => type.name), capabilities: [], producers: [{
     name: narrativeTemporalProducers.materializeSegmentBoundaries.name,
     inputs: [{ name: "narrative", type: narrativeTypes.narrative }, { name: "segment", type: narrativeTypes.segmentRef },
       { name: "domain", type: temporalTypes.localDomain }],
@@ -62,4 +62,4 @@ export const narrativeTemporalManifest: ModuleManifest = {
     result: { kind: "output" as const, name: "instant", type: temporalTypes.instant },
   }],
 };
-export const narrativeTemporalDependency = { module: narrativeTemporalModuleRef } as const;
+export const narrativeTemporalDependency = narrativeTemporalModuleRef;

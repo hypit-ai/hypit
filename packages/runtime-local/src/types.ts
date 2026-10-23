@@ -47,9 +47,9 @@ export type CreateLocalRuntimeOptions = {
   readonly openBuildResultRepository: (location: BuildResultRepositoryLocation) => Awaitable<BuildResultRepositoryOpened>;
   readonly credentialStore: CredentialStore;
   /** Deterministic implementations injected directly by an embedding. Installed packages arrive as facets. */
-  readonly producerPackages?: readonly ProducerPackage[];
+  readonly producers?: ProducerPackage;
   /** Type-owner validation rules injected directly by an embedding. */
-  readonly refinementPackages?: readonly RefinementPackage[];
+  readonly refinements?: RefinementPackage;
   /** Load the complete physical package closure named by a claimed Build. */
   readonly loadProducerPackages?: (specifiers: readonly string[]) => Awaitable<readonly LoadedPackage[]>;
   readonly endpoints?: readonly EndpointInstance[];

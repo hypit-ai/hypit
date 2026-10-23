@@ -17,8 +17,9 @@ await mkdir(project);
 const env = {
   ...process.env,
   HYPIT_STATE_HOME: join(root, "state"),
-  // Downloaded package bytes may be reused; project, node_modules and Runtime state stay fresh.
-  npm_config_cache: process.env.npm_config_cache || join(root, "npm-cache"),
+  // Package installation is part of this isolated candidate. Do not inherit a user cache whose
+  // permissions, configuration or partial entries belong to another environment.
+  npm_config_cache: join(root, "npm-cache"),
 };
 // Old shell hints must not redirect the installed launcher, Worker or capture child.
 env.HYPIT_DISTRIBUTION_ROOT = join(root, "stale-distribution");

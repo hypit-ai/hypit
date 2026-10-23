@@ -40,8 +40,8 @@ export async function fixture(root: string, id = "bld_20260902T110000000Z_000000
   const result = await FileBuildResult.create(join(root, ".hypit", "results"), {
     id,
     title: "episode-stage",
-    source: { id: source },
-    run: { id: "build.svrun" },
+    sourceId: source,
+    runId: "build.svrun",
     publication: publication([{ name: "stage.value", output: "logical:stage" }], ["stage.value"]),
   });
   await result.sync({

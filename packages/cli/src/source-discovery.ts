@@ -4,8 +4,9 @@ import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { authorFrontendsFromFacets } from "@hypit/author";
 import type { AuthorFrontend } from "@hypit/author";
 import { physicalPackageName, resolveNodePackageSource } from "@hypit/loader/node";
+import { logicalPackageAddressKey } from "@hypit/loader";
 import type { LogicalPackageAddress, LoadedPackage } from "@hypit/loader";
-import { modulePackageAbi } from "@hypit/protocol";
+import { compareCodeUnits, moduleKey, modulePackageAbi } from "@hypit/protocol";
 import { runFragmentFacetAbi, runFrontendsFromFacets } from "@hypit/run";
 import type { RunFrontend } from "@hypit/run";
 import { sourceFrontendPackageAbi } from "@hypit/source";
@@ -20,10 +21,6 @@ function selectedPackage(request: string): string {
   const version = request.lastIndexOf("@");
   if (version <= 0) throw new Error(`Package request ${request} must end in @version`);
   return physicalPackageName(request);
-}
-
-function addressKey(value: LogicalPackageAddress): string {
-  return `${value.abi}\u0000${value.name}`;
 }
 
 /**
@@ -65,7 +62,7 @@ export async function discoverSourcePackages(
   const fragmentOwners = new Map<string, string>();
   for (const item of packages) {
     for (const module of item.contribution.modules ?? []) {
-      for (const request of [`${module.manifest.name}@${module.manifest.version}`, ...(module.specifiers ?? [])]) {
+      for (const request of [moduleKey(module.manifest), ...(module.specifiers ?? [])]) {
         moduleOwners.set(request, item.specifier);
       }
     }
@@ -76,7 +73,7 @@ export async function discoverSourcePackages(
   }
 
   const requireLogical = (address: LogicalPackageAddress, physical: string | undefined): void => {
-    logical.set(addressKey(address), address);
+    logical.set(logicalPackageAddressKey(address), address);
     selected.add(physical ?? selectedPackage(address.name));
   };
   const resolveImportedSource = (
@@ -144,6 +141,7 @@ export async function discoverSourcePackages(
   await discover(canonicalSource, root);
   return {
     selected: [...selected].sort(),
-    logical: [...logical.values()].sort((left, right) => addressKey(left).localeCompare(addressKey(right))),
+    logical: [...logical.values()].sort((left, right) =>
+      compareCodeUnits(logicalPackageAddressKey(left), logicalPackageAddressKey(right))),
   };
 }

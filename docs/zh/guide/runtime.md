@@ -61,7 +61,7 @@ hypit runtime init
 
 ```json
 "bindings": {
-  "@hypit/whisperx@1#whisperx-alignment": "whisperx.local"
+  "@hypit/whisperx@1#whisperx-transcription": "whisperx.local"
 }
 ```
 

@@ -109,6 +109,21 @@ function normalizeObservations(
 ): Observations {
   const placements: Placement[] = observations.placements.map((placement) => {
     const own = decorate(compiled, placement.sourcePath, placement.range);
+    const normalizeChild = (child: typeof placement.children[number]): typeof child => {
+      const held = decorate(compiled, child.sourcePath, child.range);
+      return {
+        ...child,
+        ...(held.element === undefined ? {} : {
+          authorElement: held.element.id,
+          authorEndpoints: held.endpoints,
+          resolvedReferenceAttributes: held.references,
+          records: [...held.records.values()],
+          outputs: [...held.outputs.values()],
+          values: child.values.map((value) => ({ ...value, id: held.records.get(value.id) ?? value.id })),
+        }),
+        ...(child.children === undefined ? {} : { children: child.children.map(normalizeChild) }),
+      };
+    };
     return {
       ...placement,
       ...(own.element === undefined ? {} : {
@@ -123,20 +138,7 @@ function normalizeObservations(
         })),
         values: placement.values.map((value) => ({ ...value, id: own.records.get(value.id) ?? value.id })),
       }),
-      children: placement.children.map((child) => {
-        const held = decorate(compiled, child.sourcePath, child.range);
-        return {
-          ...child,
-          ...(held.element === undefined ? {} : {
-            authorElement: held.element.id,
-            authorEndpoints: held.endpoints,
-            resolvedReferenceAttributes: held.references,
-            records: [...held.records.values()],
-            outputs: [...held.outputs.values()],
-            values: child.values.map((value) => ({ ...value, id: held.records.get(value.id) ?? value.id })),
-          }),
-        };
-      }),
+      children: placement.children.map(normalizeChild),
     };
   });
   return { placements, temporalDomains: observations.temporalDomains };

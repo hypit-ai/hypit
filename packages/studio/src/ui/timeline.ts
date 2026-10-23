@@ -158,7 +158,6 @@ export function createTimeline(store: Store): Timeline {
     readonly start: number;
     readonly end: number;
     readonly id: string;
-    readonly selectionGroup?: string;
   }[] = [];
   let domainNodes: readonly {
     readonly node: HTMLElement;
@@ -605,7 +604,7 @@ export function createTimeline(store: Store): Timeline {
   const buildTrack = (
     snapshot: StudioSnapshot,
     track: StudioSnapshot["tracks"][number],
-    nextItemNodes: { node: HTMLElement; start: number; end: number; id: string; selectionGroup?: string }[],
+    nextItemNodes: { node: HTMLElement; start: number; end: number; id: string }[],
     attached = false,
   ): void => {
     const totalHeight = track.binding.lane.heightPx;
@@ -704,7 +703,7 @@ export function createTimeline(store: Store): Timeline {
           store.select(item.id, "timeline");
         });
         node.addEventListener("dblclick", () => store.seek(item.startFrame, "timeline"));
-        nextItemNodes.push({ node, start: item.startFrame, end: item.endFrameExclusive, id: item.id, ...(item.selectionGroup === undefined ? {} : { selectionGroup: item.selectionGroup }) });
+        nextItemNodes.push({ node, start: item.startFrame, end: item.endFrameExclusive, id: item.id });
       lane.append(node);
     }
     trackBody.append(lane);
@@ -747,7 +746,7 @@ export function createTimeline(store: Store): Timeline {
       ));
       rows.append(group);
     }
-    const nextItemNodes: { node: HTMLElement; start: number; end: number; id: string; selectionGroup?: string }[] = [];
+    const nextItemNodes: { node: HTMLElement; start: number; end: number; id: string }[] = [];
     for (const track of snapshot.tracks) {
       const attachedTo = track.binding.lane.attachedTo;
       if (attachedTo !== undefined) continue;
@@ -780,11 +779,11 @@ export function createTimeline(store: Store): Timeline {
     timelineTime.textContent = frameTimecode(head.frame, snapshot.timeline.frameRate);
     const chosen = selection.kind === "item" ? store.item(selection.itemId) : undefined;
     for (const item of itemNodes) {
-      const selected = chosen !== undefined && (chosen.id === item.id
-        || (chosen.selectionGroup !== undefined && chosen.selectionGroup === item.selectionGroup));
+      const selected = chosen?.id === item.id;
       item.node.classList.toggle("selected", selected);
       item.node.setAttribute("aria-pressed", String(selected));
       item.node.classList.toggle("live", head.frame >= item.start && head.frame < item.end);
+      item.node.classList.toggle("preview-omitted", state.preview.omittedItemIds.has(item.id));
     }
     for (const item of domainNodes) {
       const inside = item.kind === "span" && head.frame >= item.start && head.frame < item.end;

@@ -80,15 +80,14 @@ for (const language of ["en", "ko"]) test(`local Provider preserves ${language} 
     const resources = new MemoryResourceStore();
     const artifact = await resources.put(expected, "audio/wav");
     const evidenceAudio = sealSpeechEvidenceAudio({
-      domainId: "provider-test-domain",
       artifact,
       sampleFrames: 32_000,
     });
     const constraints = whisperXRequestForEvidenceAudio(evidenceAudio, { language });
     const need: Need = {
       id: "need:whisperx-loopback",
-      capability: whisperXCapabilities.alignment,
-      returns: speechEvidenceTypes.alignedTranscript,
+      capability: whisperXCapabilities.transcription,
+      returns: speechEvidenceTypes.transcript,
       constraints,
       result: "record:whisperx-loopback",
     };
@@ -108,9 +107,8 @@ for (const language of ["en", "ko"]) test(`local Provider preserves ${language} 
       credentials: {},
     });
     assert.equal(stagedMatches, true);
-    const value = output.value;
+    const value = output;
     assert.equal((value as { readonly passages?: readonly unknown[] }).passages?.length, 1);
-    assert.equal((value as { readonly domainId?: string }).domainId, evidenceAudio.domainId);
     assert.equal((value as { readonly sampleFrames?: number }).sampleFrames, evidenceAudio.sampleFrames);
     assert.equal(speechEvidenceTypes.audio.name, "SpeechEvidenceAudio");
   } finally {

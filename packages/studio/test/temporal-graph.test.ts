@@ -43,7 +43,7 @@ test("Studio reads Instant lineage and author authority from executed graph edge
       id: "deck.card::cue", subjectId: "card", timelineId: "speech", frame: 42,
     }),
     record("cards", "@hypit/depth-stack", "DepthStackCardSet", { cards: [{ id: "card", activationFrame: 42 }] }),
-    record("track", "@hypit/composition", "VisualTrack", { presents: [] }),
+    record("track", "@hypit/composition", "VisualTrack", { items: [] }),
     record("unused-point", "@hypit/temporal", "TemporalInstant", {
       id: "unused::cue", subjectId: "unused", timelineId: "speech", frame: 7,
     }),
@@ -59,7 +59,7 @@ test("Studio reads Instant lineage and author authority from executed graph edge
   const opaque = executedTemporalBindings(state, selections, "visual");
   assert.deepEqual(opaque[0]?.projection, {
     kind: "instant", expression: "42f", reference: "absolute", frame: 42,
-    source: { timelineId: "speech", type: type("@hypit/temporal", "TemporalInstant"), kind: "resolved", id: "deck.card::cue" },
+    source: { scope: "timeline", timelineId: "speech", type: type("@hypit/temporal", "TemporalInstant"), kind: "resolved", id: "deck.card::cue" },
     authority: { kind: "fixed" },
   });
   const bindings = executedTemporalBindings(state, selections, "visual", (sourceType, value) => {
@@ -75,9 +75,9 @@ test("Studio reads Instant lineage and author authority from executed graph edge
     id: "deck.card::cue",
     projection: {
       kind: "instant", expression: "moment.cue", reference: "moment.cue", frame: 42,
-      source: { timelineId: "speech", type: type("@hypit/narrative", "NarrativeMoment"), kind: "moment", id: "cue",
+      source: { scope: "timeline", timelineId: "speech", type: type("@hypit/narrative", "NarrativeMoment"), kind: "moment", id: "cue",
         domain: { companion: "narrative", id: "story-on-speech" } },
-      authority: { kind: "domain", source: { timelineId: "speech", type: type("@hypit/narrative", "NarrativeMoment"), kind: "moment", id: "cue",
+      authority: { kind: "domain", source: { scope: "timeline", timelineId: "speech", type: type("@hypit/narrative", "NarrativeMoment"), kind: "moment", id: "cue",
         domain: { companion: "narrative", id: "story-on-speech" } }, boundary: "cue" },
     },
     consumers: [{
@@ -110,7 +110,7 @@ test("Studio reads author parameter authority declared by the Temporal Spec", ()
       id: "card.activation", subjectId: "card", timelineId: "main", frame: 42,
     }),
     record("cards", "@hypit/depth-stack", "DepthStackCardSet", { cards: [{ id: "card", activationFrame: 42 }] }),
-    record("track", "@hypit/composition", "VisualTrack", { presents: [] }),
+    record("track", "@hypit/composition", "VisualTrack", { items: [] }),
   ];
   const steps = [
     step("project", "@hypit/temporal", "project-program-instant", { timeline: "timeline", spec: "point-spec" }, { instant: "point" }),
@@ -133,6 +133,7 @@ test("Studio reads author parameter authority declared by the Temporal Spec", ()
     reference: "absolute",
     frame: 42,
     source: {
+      scope: "timeline",
       timelineId: "main",
       type: type("@hypit/timeline", "Timeline"),
       kind: "timeline",

@@ -3,16 +3,16 @@ import { request as httpRequest } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Readable } from "node:stream";
-import { sealAlignedTranscriptEvidence, speechEvidenceTypes } from "@hypit/speech-evidence";
-import type { AlignedTranscriptEvidence } from "@hypit/speech-evidence";
-import type { EndpointInvocationContext, EndpointFulfillment } from "@hypit/hypit/endpoint";
+import { sealSpeechTranscriptEvidence, speechEvidenceTypes } from "@hypit/speech-evidence";
+import type { SpeechTranscriptEvidence } from "@hypit/speech-evidence";
+import type { EndpointInvocationContext } from "@hypit/hypit/endpoint";
 import { canonicalize } from "@hypit/hypit/protocol";
 import type { CanonicalValue } from "@hypit/hypit/protocol";
 import { defineEndpoint } from "@hypit/hypit/endpoint";
 import {
   assertWhisperXEvidenceWav,
   interpretWhisperXTranscript,
-  verifyWhisperXAlignmentRequest,
+  verifyWhisperXTranscriptionRequest,
   whisperXCapabilities,
 } from "@hypit/whisperx";
 import type { WhisperXTranscriptResponse } from "@hypit/whisperx";
@@ -121,9 +121,7 @@ async function limitedJson(response: Response, maxBytes: number, subject: string
   }
 }
 
-function result(value: CanonicalValue): EndpointFulfillment {
-  return { value };
-}
+function result(value: CanonicalValue): CanonicalValue { return value; }
 
 export function createLocalWhisperXProvider(config: CreateLocalWhisperXProviderOptions) {
   const baseUrl = new URL(config.baseUrl ?? localWhisperXDefaults.baseUrl);
@@ -151,10 +149,10 @@ export function createLocalWhisperXProvider(config: CreateLocalWhisperXProviderO
     defaultConcurrency: config.defaultConcurrency ?? 1,
     capabilities: [{
       lifecycle: "immediate" as const,
-      capability: whisperXCapabilities.alignment,
-      returns: speechEvidenceTypes.alignedTranscript,
+      capability: whisperXCapabilities.transcription,
+      returns: speechEvidenceTypes.transcript,
       handler: async (context: EndpointInvocationContext) => {
-        const request = verifyWhisperXAlignmentRequest(context.need.constraints);
+        const request = verifyWhisperXTranscriptionRequest(context.need.constraints);
         const audio = await context.resources.get(request.audio.resource);
         assert(audio !== undefined && audio.byteLength === request.audio.size,
           `WhisperX evidence Artifact ${request.audio.resource} is unavailable or has changed`);
@@ -198,8 +196,7 @@ export function createLocalWhisperXProvider(config: CreateLocalWhisperXProviderO
             "WhisperX transcription response is invalid");
           const response = raw.value as WhisperXServiceResponse;
           const passages = interpretWhisperXResponse(response, request.sampleFrames);
-          const evidence: AlignedTranscriptEvidence = sealAlignedTranscriptEvidence({
-            domainId: request.domainId,
+          const evidence: SpeechTranscriptEvidence = sealSpeechTranscriptEvidence({
             sampleFrames: request.sampleFrames,
             passages,
           });

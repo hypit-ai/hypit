@@ -6,8 +6,8 @@ import { fileURLToPath } from "node:url";
 
 import { blobTypes } from "@hypit/hypit/blob";
 import { defineEndpoint } from "@hypit/hypit/endpoint";
-import type { EndpointFulfillment, EndpointInvocationContext } from "@hypit/hypit/endpoint";
-import type { CanonicalValue } from "@hypit/hypit/protocol";
+import type { EndpointInvocationContext } from "@hypit/hypit/endpoint";
+import type { CanonicalValue, Value } from "@hypit/hypit/protocol";
 import {
   assertImageComposeRequest,
   assertImageTransformRequest,
@@ -105,7 +105,7 @@ export function createLocalOpenCvImageProvider(config: CreateLocalOpenCvImagePro
     kind: "transform" | "compose",
     need: ImageTransformRequest | ImageComposeRequest,
     context: EndpointInvocationContext,
-  ): Promise<EndpointFulfillment> => {
+  ): Promise<Value> => {
     const sources = kind === "transform"
       ? [(need as ImageTransformRequest).source]
       : imageComposeSources(need as ImageComposeRequest);
@@ -153,7 +153,7 @@ export function createLocalOpenCvImageProvider(config: CreateLocalOpenCvImagePro
       const mediaType = kind === "transform"
         ? imageTransformOutputMediaType(need as ImageTransformRequest)
         : "image/png";
-      return { value: await context.resources.put(await readFile(output), mediaType) };
+      return await context.resources.put(await readFile(output), mediaType);
     } finally {
       await rm(work, { recursive: true, force: true }).catch(() => {});
     }
@@ -168,13 +168,13 @@ export function createLocalOpenCvImageProvider(config: CreateLocalOpenCvImagePro
       lifecycle: "immediate" as const,
       capability: imageOperationsCapabilities.transform,
       returns: blobTypes.blob,
-      handler: async (context): Promise<EndpointFulfillment> =>
+      handler: async (context): Promise<Value> =>
         await execute("transform", transformRequest(context.need.constraints), context),
     }, {
       lifecycle: "immediate" as const,
       capability: imageOperationsCapabilities.compose,
       returns: blobTypes.blob,
-      handler: async (context): Promise<EndpointFulfillment> =>
+      handler: async (context): Promise<Value> =>
         await execute("compose", composeRequest(context.need.constraints), context),
     }],
   });

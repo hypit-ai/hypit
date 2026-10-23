@@ -17,7 +17,7 @@ import {
   MarkupSurfaceRegistry,
   createMarkupAuthorFrontend,
 } from "@hypit/markup";
-import { createRecordValidator, RefinementRegistry } from "@hypit/refinement";
+import { refineRecord, RefinementRegistry } from "@hypit/refinement";
 
 function buildState(
   program: Parameters<typeof planBuild>[0],
@@ -30,7 +30,7 @@ function buildState(
     candidates: [],
     operations: [],
     satisfactions: [],
-    targets: targets.map((output) => ({ output })),
+    targets,
   });
   return materializeBuild(defineBuild({
     program: link(program.closure, [...program.records, ...planned.initialRecords]),
@@ -274,7 +274,7 @@ test("self-described Spatial Surfaces produce explicit static geometry", async (
     </svml>`),
     closure,
     frontends,
-    validateRecord: createRecordValidator(refinements),
+    refineRecord: async (record) => await refineRecord(record, refinements),
     resolveSource() { throw new Error("Spatial fixture imports no Source files."); },
   });
   assert.equal(resolveCompiledSourceExport(compiled, "vertical.canvas", spatialTypes.canvas).ref.kind, "record");

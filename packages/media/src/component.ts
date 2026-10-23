@@ -26,4 +26,4 @@ export const mediaComponent = {
       return { kind: "output", value: (canonicalize(mediaLocalTemporalDomain(spec.id, media))) };
     } },
   ],
-} satisfies ProducerPackage & RefinementPackage;
+} satisfies { producers?: ProducerPackage; refinements?: RefinementPackage };

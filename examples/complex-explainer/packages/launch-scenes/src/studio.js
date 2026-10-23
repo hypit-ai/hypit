@@ -12,12 +12,12 @@ const fields = {
 };
 export function sceneCompanions(module, tags) {
   return Object.entries(tags).map(([tag, spec]) => {
-    const inspector = [...fields[tag], ["z", "Drawing order", "number"]].map(
+    const inspector = fields[tag].map(
       ([binding, label, control]) => ({
         binding,
         label,
         control,
-        domain: ["y", "z"].includes(binding) ? "where" : "how",
+        domain: binding === "y" ? "where" : "how",
         section: { id: "title", label: "Title" },
         ...(binding === "y" ? { unit: "%", number: { scale: 100, step: 1 } } : {}),
         ...(["size", "subtitle-size", "subtitle-gap"].includes(binding)

@@ -179,9 +179,10 @@ passage, its affinity normally chooses a neighboring word boundary:
 | `@{name!}` | Moment at the next word's start: right affinity. |
 | `@{~name!}` | Moment at the previous word's end: left affinity. |
 
-At structural edges, the parser retains the corresponding Segment or program boundary rather than
-inventing a neighboring word. Selection and Moment ids share one namespace. Selections can overlap,
-cross and span Segments; unlike tags, they do not need to nest.
+At structural edges, the parser retains the corresponding Segment boundary rather than inventing a
+neighboring word. Before the first Segment and after the last Segment, both affinities resolve to that
+nearest Segment boundary; Script adds no separate outer anchor. Selection and Moment ids share one
+namespace. Selections can overlap, cross and span Segments; unlike tags, they do not need to nest.
 
 To join two visual Selections without exposing their inter-word pause, match affinity on both sides:
 

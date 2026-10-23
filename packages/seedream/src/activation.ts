@@ -5,8 +5,8 @@ import { seedreamComponent, seedreamDefinition, seedreamManifest, seedreamModule
   seedreamMarkupSurfaces } from "./index.js";
 import { decodeSeedreamReferenceImageSurface, decodeSeedreamTextImageSurface } from "./surface.js";
 export const hypitPackage = { format: "hypit.package@1" as const, modules: [{ manifest: seedreamManifest }], facets: [
-  createProducerPackageFacet(seedreamComponent),
-  createRefinementPackageFacet(seedreamComponent),
+  createProducerPackageFacet(seedreamComponent.producers ?? []),
+  createRefinementPackageFacet(seedreamComponent.refinements ?? []),
   createMarkupSurfaceFacet({ module: seedreamModuleRef,
     declaration: seedreamMarkupSurfaces.find((item) => item.name === "text-image")!, handler: decodeSeedreamTextImageSurface }),
   createMarkupSurfaceFacet({ module: seedreamModuleRef,

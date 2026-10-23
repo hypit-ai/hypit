@@ -4,7 +4,7 @@ Trusted local ffprobe/ffmpeg owner. It exposes the same concrete local-media beh
 orthogonal ports:
 
 - a Provider port implements `@hypit/media-operations` Needs against a Build's ResourceStore;
-- a file port inspects or creates files explicitly named by an authoring tool;
+- `@hypit/media-local/files` inspects or creates files explicitly named by an authoring tool;
 - `@hypit/media-local/cli` presents that file port as `hypit media`.
 
 The Provider is Runtime configuration and is never imported by author `.svml`. The file and CLI ports
@@ -25,8 +25,16 @@ paths, subprocesses and ffprobe output remain here.
 hypit media probe reference.mp4
 hypit media cut reference.mp4 --start 12 --end 19.5 --to assets/hook.mp4
 hypit media frames reference.mp4 --at 12.4,13.1 --to notes/hook-frames
-hypit media tile reference.mp4 --start 12 --end 19.5 --to notes/hook-grid.jpg
-hypit media tiles reference.mp4 --ranges notes/ranges.json --to notes/grids
+hypit media grid reference.mp4 --start 12 --end 19.5 --no-time --to notes/pictures.jpg
+hypit media grid reference.mp4 --start 12 --end 19.5 --header --to notes/evidence.jpg
+hypit media grid reference.mp4 --start 12 --end 19.5 --waveform --to notes/hook-grid.jpg
+hypit media grid reference.mp4 --start 12 --end 19.5 --spectrogram --to notes/frequency-grid.png
+hypit media grid reference.mp4 --start 12 --end 19.5 --transcript notes/transcript.svml \
+  --waveform --spectrogram --frame-marker-color '#59d8ff' --to notes/word-grid.png
+hypit media grid reference.mp4 --pages --ranges notes/ranges.json --format png --to notes/grids
+hypit media waveform reference.mp4 --start 12 --end 19.5 --to notes/hook-waveform.png
+hypit media spectrogram reference.mp4 --around 'glass breaks' --transcript notes/transcript.svml \
+  --pixels-per-second 240 --to notes/glass-break-frequency.png
 hypit media boundaries reference.mp4
 ```
 
@@ -38,9 +46,30 @@ They therefore live beside the decoder that establishes that clock. `HtmlProgram
 `html-program` concern, and capturing Studio's current `HtmlProgram` remains a Studio concern; the word
 “frame” does not create a central package.
 
-`tile` and `tiles` use the same grid-layout helper exported for Studio snapshot presentation. Reusing
-that pure layout does not transfer frame acquisition or Runtime authority. Transcript-aware ranges
-consume `hypit.transcript@1`; parsing and phrase matching are owned by `@hypit/speech-evidence`, while
+`grid` observes frames first, then independently composes optional cell annotations, a page header,
+an amplitude waveform and a frequency spectrogram. Any of those presentation parts may be omitted.
+Time annotations are shown by default; `--no-time` removes cell times and attached audio time axes,
+producing picture-only cells when neither a transcript nor an audio view is supplied. `--transcript`
+adds width-adaptive word context using the actual decoded frame time even when that time is not printed;
+`--word-context` chooses an explicit radius. `--header` adds only the source name, page source-time range
+and frame count. Attached audio views number their frame markers and matching cells. Exact requested and decoded
+times remain in `--json`, independently of what is drawn. Single grids use their destination extension;
+paged grids choose JPEG or lossless PNG with `--format`.
+
+`waveform` and `spectrogram` are equal, independent source-clock observations. A waveform exposes
+amplitude and is useful for transients, envelopes and pauses. A spectrogram exposes frequency over time
+and is useful for tonal content, noise, speech texture and effects. Either or both may occupy their own
+track beneath a grid, and each is also a standalone command. `--pixels-per-second` keeps time density
+stable across intervals; `--around` selects a transcript phrase. Waveform filter and amplitude scale do
+not configure the spectrogram; frequency scale, frequency range and dynamic range do not configure the
+waveform. Both can split channels, choose a stream, hide their time axis and share the grid's independently
+selected frame-marker color.
+
+Audio-only media can produce either audio observation but not a frame grid, while a silent video cannot
+produce an audio observation. Multiple audio streams require an explicit container stream index. Reusing
+these local presentation functions does not transfer frame acquisition or Runtime authority. Transcript-aware ranges
+consume a `<speech:Transcript>` SVML Source; exact decoding and phrase matching are owned by
+`@hypit/speech-evidence`, while
 this package only joins those ranges to file decoding.
 
 ```ts

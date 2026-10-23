@@ -295,7 +295,7 @@ export const mediaOperationsComponent = {
       },
     },
   ],
-} satisfies ProducerPackage & RefinementPackage;
+} satisfies { producers?: ProducerPackage; refinements?: RefinementPackage };
 
 /** Convenience set: public media refinements must accompany the operation Producers. */
 export const mediaOperationsComponents = [mediaComponent, mediaOperationsComponent] as const;

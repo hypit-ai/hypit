@@ -23,21 +23,10 @@ function shim(): string {
     root.style.height = (root.getAttribute('data-hypit-height') || '0') + 'px';
   }
 
-  var visualClips = [];
-  for (var clip of document.querySelectorAll('.hypit-visual-present')) {
-    visualClips.push({
-      element: clip,
-      startFrame: Number(clip.getAttribute('data-hypit-present-start-frame')),
-      endFrame: Number(clip.getAttribute('data-hypit-present-end-frame'))
-    });
-  }
   // Sampling runs are separate video elements with their own absolute spans.
   // Addressing only their containing Present makes every run paint at once.
   var media = [];
   for (var element of document.querySelectorAll('.hypit-visual-present video')) {
-    var present = element.closest('.hypit-visual-present');
-    var ownStart = element.getAttribute('data-start');
-    var ownDuration = element.getAttribute('data-duration');
     media.push({
       element: element,
       url: element.getAttribute('data-hypit-src'),
@@ -247,11 +236,11 @@ function shim(): string {
       element.muted = muted || scrubbing;
       if (!inside) { cancelSeek(element); element.pause(); continue; }
       var interval = Math.max(0, record.mediaEnd - record.mediaStart);
-      var advanced = (local + frameSeconds / 2) * record.rate;
+      var advanced = local * record.rate;
       var target = record.mediaStart + advanced;
       if (record.loop && interval > 0) target = record.mediaStart + ((record.phase + advanced) % interval);
       else target = Math.min(target, Math.max(record.mediaStart, record.mediaEnd - 0.000001));
-      if (scrubbing || local >= record.duration - frameSeconds - 0.000001) {
+      if (scrubbing) {
         element.pause();
         waits.push(seekDecoded(element, target));
       } else {
@@ -259,7 +248,7 @@ function shim(): string {
         if (element.readyState === 0) continue;
         if (!element.seeking && Math.abs(element.currentTime - target) > 0.08) element.currentTime = target;
         element.playbackRate = record.rate;
-        placeAudioGain(record, currentSeconds + frameSeconds / 2);
+        placeAudioGain(record, currentSeconds);
         if (element.paused) {
           var started = element.play();
           if (started) started.catch(function () {});

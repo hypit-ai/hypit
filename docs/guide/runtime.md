@@ -63,7 +63,7 @@ binding states which instance to use. For example, with an explicitly configured
 
 ```json
 "bindings": {
-  "@hypit/whisperx@1#whisperx-alignment": "whisperx.local"
+  "@hypit/whisperx@1#whisperx-transcription": "whisperx.local"
 }
 ```
 

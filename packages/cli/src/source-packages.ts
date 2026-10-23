@@ -3,10 +3,8 @@ import {
 } from "@hypit/loader/node";
 import type {
   LoadedPackage,
-  LogicalPackageAddress,
 } from "@hypit/loader";
-import type { NodePackageSelectionRequest } from "@hypit/loader/node";
-import { modulePackageAbi } from "@hypit/protocol";
+import { packageSelectionSatisfied } from "@hypit/loader";
 
 import type { CliDistribution } from "./distribution.js";
 
@@ -45,34 +43,6 @@ async function discover(
   return selection;
 }
 
-function offerCounts(packages: readonly LoadedPackage[]): ReadonlyMap<string, number> {
-  const counts = new Map<string, number>();
-  for (const item of packages) {
-    const offers = [
-      ...(item.contribution.modules ?? []).flatMap((module) => [
-        `${module.manifest.name}@${module.manifest.version}`,
-        ...(module.specifiers ?? []),
-      ].map((name) => ({ abi: modulePackageAbi, name }))),
-      ...(item.contribution.facets ?? []).flatMap((facet) =>
-        facet.address === undefined ? [] : [{ abi: facet.abi, name: facet.address }]),
-    ];
-    for (const address of new Set(offers.map((offer) => `${offer.abi}\u0000${offer.name}`))) {
-      counts.set(address, (counts.get(address) ?? 0) + 1);
-    }
-  }
-  return counts;
-}
-
-function selectionSatisfied(
-  selection: NodePackageSelectionRequest,
-  packages: readonly LoadedPackage[],
-): boolean {
-  const installed = new Set(packages.map((item) => item.specifier));
-  const counts = offerCounts(packages);
-  return selection.selected.every((item) => installed.has(item))
-    && (selection.logical ?? []).every((address) => counts.get(`${address.abi}\u0000${address.name}`) === 1);
-}
-
 /** Load only the installed packages reached by recursive Frontend discovery. */
 export async function loadDiscoveredSourcePackages(
   distribution: CliSourcePackageDiscovery,
@@ -81,7 +51,7 @@ export async function loadDiscoveredSourcePackages(
   let packages = distribution.bootstrapPackages;
   while (true) {
     const selection = await discover(distribution, options, packages);
-    if (selectionSatisfied(selection, packages)) return packages;
+    if (packageSelectionSatisfied(selection, packages)) return packages;
     const loaded = await loadNodePackageSelection(selection, options.packageRoot, {
       ...(options.distributionPackageRoot === undefined
         ? {}

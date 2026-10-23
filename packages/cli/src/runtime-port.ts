@@ -30,8 +30,8 @@ export type CliDiagnostic = {
 };
 
 export type CliBuildCatalogDescriptor = {
-  readonly source: { readonly path: string };
-  readonly run?: { readonly path: string };
+  readonly sourcePath: string;
+  readonly runPath?: string;
   readonly publication: PublicationPlan;
 };
 
@@ -41,10 +41,9 @@ export type CliBuildView = {
   readonly activity: "submitting" | "ready" | "running" | "waiting" | "saving-result";
   readonly outcome?: "complete" | "failed" | "cancelled";
   readonly issue?: { readonly scope: "result" | "cleanup"; readonly message: string };
-  readonly cancellationRequested: boolean;
   readonly stop?: { readonly cause: "user-cancelled" | "execution-failed"; readonly reason?: string };
-  readonly source?: { readonly path: string };
-  readonly run?: { readonly path: string };
+  readonly sourcePath?: string;
+  readonly runPath?: string;
   readonly targets: readonly string[];
   readonly requests?: { readonly total: number; readonly completed: number };
   readonly acceptedRecords: number;
@@ -183,6 +182,6 @@ export type CliRuntimeHost = {
   openInspection(queries: readonly CliEndpointQuery[]): Promise<CliRuntimeInspection>;
   endpoints(queries: readonly CliEndpointQuery[]): Promise<readonly CliEndpointObservation[]>;
   pricing(queries: readonly CliEndpointQuery[]): Promise<readonly CliEndpointPricing[]>;
-  invoke(need: Need, resources: ResourceStore, observation?: CliInvocationObservation): Promise<{ readonly value: Value }>;
+  invoke(need: Need, resources: ResourceStore, observation?: CliInvocationObservation): Promise<Value>;
   openTransientExecution(): Promise<CliTransientExecution>;
 };

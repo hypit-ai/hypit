@@ -91,7 +91,7 @@ test("transient execution follows capability opt-in rather than pricing and keep
             remoteCalls += 1;
             assert.deepEqual(need.constraints, { prompt: "Greet Ada" });
             assert.equal(credentials.apiKey?.secret, "available");
-            return { value: ("Hello, Ada!") };
+            return "Hello, Ada!";
           },
         }],
       }),
@@ -110,7 +110,7 @@ test("transient execution follows capability opt-in rather than pricing and keep
           lifecycle: "immediate",
           handler: () => {
             localCalls += 1;
-            return { value: ("wrong") };
+            return "wrong";
           },
         }],
       }),
@@ -214,7 +214,7 @@ test("Runtime invoke executes one immediate Need through the selected Endpoint a
           handler: async ({ need, credentials, reportProgress, reportDiagnostic }) => {
             await reportProgress?.({ phase: "Aligning words" });
             await reportDiagnostic?.({ level: "info", message: "Timing ready" });
-            return { value: ({ seen: need.constraints, key: credentials.apiKey?.secret ?? null }) };
+            return { seen: need.constraints, key: credentials.apiKey?.secret ?? null };
           },
         }],
       }),
@@ -231,8 +231,8 @@ test("Runtime invoke executes one immediate Need through the selected Endpoint a
           returns,
           lifecycle: "asynchronous",
           endpoint: {
-            start: async () => ({ status: "completed" as const, result: { value: (null) } }),
-            poll: async () => ({ status: "completed" as const, result: { value: (null) } }),
+            start: async () => ({ status: "completed" as const, result: null }),
+            poll: async () => ({ status: "completed" as const, result: null }),
           },
         }],
       }),
@@ -248,9 +248,7 @@ test("Runtime invoke executes one immediate Need through the selected Endpoint a
       registry,
       reportProgress: async (event) => { messages.push(event.phase); },
       reportDiagnostic: async (event) => { messages.push(event.message); },
-    }), {
-      value: ({ seen: { question: "what happens?" }, key: "configured" }),
-    });
+    }), { seen: { question: "what happens?" }, key: "configured" });
     assert.deepEqual(messages, ["Aligning words", "Timing ready"]);
     await assert.rejects(invokeRuntimeConfigNeed(path, need(missing), resources, { registry }), /No Endpoint in .* serves example\.model@1#transcribe/u);
     await assert.rejects(invokeRuntimeConfigNeed(path, need(generate), resources, { registry }), /asynchronous capability/u);

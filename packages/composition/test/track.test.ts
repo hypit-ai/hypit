@@ -6,7 +6,7 @@ import { registerTypeRefinements } from "@hypit/refinement";
 import { createResolvedClosure } from "@hypit/kernel";
 import { canonicalize } from "@hypit/protocol";
 import type { BlobRef } from "@hypit/protocol";
-import { RefinementRegistry, validateValue } from "@hypit/refinement";
+import { RefinementRegistry, refineValue } from "@hypit/refinement";
 import { blobManifest } from "@hypit/blob";
 import type { FontArtifactRef } from "@hypit/media";
 import { mediaManifest } from "@hypit/media";
@@ -19,15 +19,25 @@ import { VISUAL_IR_V1 } from "@hypit/composition";
 
 import {
   assertCompositionIdentity,
+  assertAudioTrackIdentity,
   assertVisualTrackIdentity,
+  audioGraphFromClips,
   compositionComponent,
   compositionManifest,
   compositionTypes,
   sealAudioTrack,
   sealComposition,
+  sealPresentVisualTrack,
   sealVisualTrack,
+  visualScopeTrackOccurrences,
 } from "../src/index.js";
-import type { VisualTrack } from "../src/index.js";
+import type { PresentVisualTrack, VisualTrack } from "../src/index.js";
+
+const scope = (...tracks: VisualTrack[]) => ({ members: tracks.map((track) => ({
+  kind: "track" as const,
+  id: track.id,
+  track,
+})) });
 
 const videoContractManifests = [blobManifest, narrativeManifest, mediaManifest, timelineManifest,
   speechEvidenceManifest, recipeManifest, spatialManifest, compositionManifest] as const;
@@ -47,23 +57,20 @@ const audio: BlobRef = {
 function fixture() {
   const timeline = sealTimeline({ id: "test-space", frameCount: 120, frameRate: { numerator: 30, denominator: 1 },
   });
-  const visual = sealVisualTrack({ timelineId: "test-space",
+  const visual = sealPresentVisualTrack({ timelineId: "test-space",
     visualIr: "hypit.visual-ir@1",
     id: "caption",
     presents: [{
       id: "cue-1",
-      order: 0,
-      z: 100,
       span: { startFrame: 0, endFrameExclusive: 60 },
-      elements: [
-        { id: "root", order: 0, kind: "box", style: [{ name: "position", value: "absolute" }] },
-        { id: "text", parent: "root", order: 1, kind: "text", text: "Hello", fonts: [font], style: [] },
-      ],
+      root: { id: "root", kind: "box", children: [
+        { id: "text", kind: "text", text: "Hello", fonts: [font], style: [] },
+      ], style: [{ name: "position", value: "absolute" }] },
     }],
   });
   const sound = sealAudioTrack({ timelineId: "test-space",
     id: "speech",
-    clips: [{
+    graph: audioGraphFromClips([{
       id: "speech",
       artifact: audio,
       target: { startSample: 0, endSampleExclusive: 192_000 },
@@ -74,7 +81,7 @@ function fixture() {
       gain: 1,
       fadeInSamples: 0,
       fadeOutSamples: 0,
-    }],
+    }]),
   });
   return { timeline, visual, sound };
 }
@@ -85,10 +92,12 @@ test("Composition accepts self-contained peer VisualTrack and AudioTrack values"
   const composition = sealComposition({
     id: "main",
     canvas: { width: 1080, height: 1920, clearColor: "#000000" },
-    tracks: [sound, visual],
+    visual: scope(visual),
+    audio: [sound],
   });
   assert.doesNotThrow(() => assertCompositionIdentity(composition, timeline));
-  assert.deepEqual(composition.tracks.map((track) => track.id), ["speech", "caption"]);
+  assert.deepEqual([composition.audio[0]?.id, composition.visual.members[0]?.kind === "track"
+    ? composition.visual.members[0].track.id : undefined], ["speech", "caption"]);
 });
 
 test("Composition accepts case-insensitive hexadecimal canvas colors", () => {
@@ -96,44 +105,150 @@ test("Composition accepts case-insensitive hexadecimal canvas colors", () => {
   const composition = sealComposition({
     id: "uppercase-color",
     canvas: { width: 480, height: 854, clearColor: "#09090B" },
-    tracks: [visual],
+    visual: scope(visual), audio: [],
   });
   assert.doesNotThrow(() => assertCompositionIdentity(composition, timeline));
 });
 
+test("AudioTrack is one closed DAG with explicit silence, mix and process references", () => {
+  const { timeline, sound } = fixture();
+  assert.doesNotThrow(() => assertCompositionIdentity(sealComposition({
+    id: "audio-graph", canvas: { width: 1, height: 1, clearColor: "#000000" },
+    visual: scope(), audio: [sound],
+  }), timeline));
+  const cyclic = sealAudioTrack({ timelineId: timeline.id, id: "cycle", graph: {
+    nodes: [
+      { kind: "process", id: "a", inputs: { signal: { node: "b", port: "signal" } },
+        program: { format: "example.process@1", payload: {}, artifacts: [] } },
+      { kind: "process", id: "b", inputs: { signal: { node: "a", port: "signal" } },
+        program: { format: "example.process@1", payload: {}, artifacts: [] } },
+    ],
+    output: { node: "a", port: "signal" },
+  } });
+  assert.throws(() => assertCompositionIdentity(sealComposition({
+    id: "cycle", canvas: { width: 1, height: 1, clearColor: "#000000" },
+    visual: scope(), audio: [cyclic],
+  }), timeline), /contains a cycle/u);
+  const unreachable = sealAudioTrack({ timelineId: timeline.id, id: "unreachable", graph: {
+    nodes: [{ kind: "silence", id: "used" }, { kind: "silence", id: "unused" }],
+    output: { node: "used", port: "signal" },
+  } });
+  assert.throws(() => assertAudioTrackIdentity(unreachable, timeline), /unreachable nodes/u);
+  const sourceNode = sound.graph.nodes.find((node) => node.kind === "source");
+  assert.ok(sourceNode?.kind === "source");
+  const malformed = sealAudioTrack({ timelineId: timeline.id, id: "malformed", graph: {
+    nodes: [{ kind: "process", id: "bad", inputs: { signal: { node: "source", port: "signal" } },
+      program: { format: "example.process@1", payload: [] as never, artifacts: [] } },
+    { kind: "source", id: "source", clip: sourceNode.clip }],
+    output: { node: "bad", port: "signal" },
+  } });
+  assert.throws(() => assertAudioTrackIdentity(malformed, timeline), /payload must be an object/u);
+});
+
+test("VisualTrack keeps source-owning Presents and backdrop Adjustments in one ordered item sequence", () => {
+  const { timeline, visual } = fixture();
+  const adjusted = sealVisualTrack({
+    timelineId: visual.timelineId,
+    visualIr: visual.visualIr,
+    id: "adjusted-caption",
+    items: [
+      visual.items[0]!,
+      {
+        kind: "adjustment",
+        id: "grade",
+        span: { startFrame: 0, endFrameExclusive: 60 },
+        program: {
+          format: "example.color-grade@1",
+          payload: { exposure: 0.25 },
+          artifacts: [],
+        },
+      },
+    ],
+  });
+
+  assert.doesNotThrow(() => assertVisualTrackIdentity(adjusted, timeline));
+  assert.deepEqual(adjusted.items.map((item) => item.kind), ["present", "adjustment"]);
+  assert.equal(adjusted.items[1]?.kind === "adjustment" ? adjusted.items[1].program.format : undefined,
+    "example.color-grade@1");
+  assert.equal(Object.hasOwn(adjusted.items[1]!, "elements"), false);
+});
+
+test("VisualTrack constructors preserve explicit Visual Item discriminants", () => {
+  const { visual } = fixture();
+  const present = visual.items[0]!;
+  assert.throws(() => sealVisualTrack({
+    timelineId: visual.timelineId,
+    visualIr: visual.visualIr,
+    id: "misspelled-item",
+    items: [{
+      kind: "adjusment",
+      id: "grade",
+      span: { startFrame: 0, endFrameExclusive: 60 },
+      program: { format: "example.color-grade@1", payload: {}, artifacts: [] },
+    }] as never,
+  }), /invalid Visual Item kind adjusment/u);
+  assert.throws(() => sealPresentVisualTrack({
+    timelineId: visual.timelineId,
+    visualIr: visual.visualIr,
+    id: "wrong-present-kind",
+    presents: [{ ...present, kind: "adjustment" }] as never,
+  }), /received non-Present kind adjustment/u);
+  assert.throws(() => sealVisualTrack({
+    timelineId: visual.timelineId,
+    visualIr: visual.visualIr,
+    id: "missing-items",
+  } as never), /requires an items array/u);
+});
+
+test("Visual Adjustment validates only shared time facts and its package-owned programme carrier", () => {
+  const { timeline } = fixture();
+  const invalid = sealVisualTrack({
+    timelineId: timeline.id,
+    visualIr: VISUAL_IR_V1,
+    id: "invalid-adjustment",
+    items: [{
+      kind: "adjustment",
+      id: "grade",
+      span: { startFrame: 0, endFrameExclusive: 60 },
+      program: { format: "", payload: {}, artifacts: [] },
+    }],
+  });
+  assert.throws(() => assertVisualTrackIdentity(invalid, timeline), /program\.format/u);
+});
+
 test("VisualTrack accepts authored backdrop compositing", () => {
   const { timeline, visual, sound } = fixture();
-  const content = structuredClone(visual) as VisualTrack;
-  const first = content.presents[0]!.elements[0]!;
-  const invasive = sealVisualTrack({...content,
+  const content = structuredClone(visual) as PresentVisualTrack;
+  const first = content.items[0]!.root;
+  const invasive = sealPresentVisualTrack({...content,
     presents: [{
-      ...content.presents[0]!,
-      elements: [{ ...first, style: [{ name: "backdrop-filter", value: "blur(20px)" }] }],
+      ...content.items[0]!,
+      root: { ...first, style: [{ name: "backdrop-filter", value: "blur(20px)" }] },
     }],
   });
   const composition = sealComposition({
     id: "invasive",
     canvas: { width: 1080, height: 1920, clearColor: "#000000" },
-    tracks: [sound, invasive],
+    visual: scope(invasive), audio: [sound],
   });
   assert.doesNotThrow(() => assertCompositionIdentity(composition, timeline));
 });
 
 test("VisualTrack style values cannot smuggle a second declaration", () => {
   const { timeline, visual } = fixture();
-  const content = structuredClone(visual) as VisualTrack;
-  const first = content.presents[0]!.elements[0]!;
-  const smuggled = sealVisualTrack({...content,
+  const content = structuredClone(visual) as PresentVisualTrack;
+  const first = content.items[0]!.root;
+  const smuggled = sealPresentVisualTrack({...content,
     presents: [{
-      ...content.presents[0]!,
-      elements: [{ ...first, style: [{ name: "color", value: "red;backdrop-filter:blur(20px)" }] }],
+      ...content.items[0]!,
+      root: { ...first, style: [{ name: "color", value: "red;backdrop-filter:blur(20px)" }] },
     }],
   });
   assert.throws(
     () => assertCompositionIdentity(sealComposition({
       id: "smuggled",
       canvas: { width: 1080, height: 1920, clearColor: "#000000" },
-      tracks: [smuggled],
+      visual: scope(smuggled), audio: [],
     }), timeline),
     /escapes its declaration/,
   );
@@ -141,26 +256,26 @@ test("VisualTrack style values cannot smuggle a second declaration", () => {
 
 test("VisualTrack cannot silently extend the versioned public Visual IR", () => {
   const { timeline, visual } = fixture();
-  const first = visual.presents[0]!.elements[0]!;
-  const unknownStyle = sealVisualTrack({...visual,
+  const first = visual.items[0]!.root;
+  const unknownStyle = sealPresentVisualTrack({...visual,
     presents: [{
-      ...visual.presents[0]!,
-      elements: [{ ...first, style: [{ name: "mask-image", value: "linear-gradient(black, transparent)" }] }],
+      ...visual.items[0]!,
+      root: { ...first, style: [{ name: "mask-image", value: "linear-gradient(black, transparent)" }] },
     }],
   });
   assert.throws(
     () => assertCompositionIdentity(sealComposition({
       id: "unknown-style",
       canvas: { width: 1080, height: 1920, clearColor: "#000000" },
-      tracks: [unknownStyle],
+      visual: scope(unknownStyle), audio: [],
     }), timeline),
     /outside hypit\.visual-ir@1/u,
   );
 
-  const fixedPosition = sealVisualTrack({...visual,
+  const fixedPosition = sealPresentVisualTrack({...visual,
     presents: [{
-      ...visual.presents[0]!,
-      elements: [{ ...first, style: [{ name: "position", value: "fixed" }] }],
+      ...visual.items[0]!,
+      root: { ...first, style: [{ name: "position", value: "fixed" }] },
     }],
   });
   assert.throws(
@@ -168,10 +283,10 @@ test("VisualTrack cannot silently extend the versioned public Visual IR", () => 
     /position has unsupported value fixed/u,
   );
 
-  const environmentBound = sealVisualTrack({...visual,
+  const environmentBound = sealPresentVisualTrack({...visual,
     presents: [{
-      ...visual.presents[0]!,
-      elements: [{ ...first, style: [{ name: "color", value: "var(--host-color)" }] }],
+      ...visual.items[0]!,
+      root: { ...first, style: [{ name: "color", value: "var(--host-color)" }] },
     }],
   });
   assert.throws(
@@ -191,28 +306,28 @@ test("VisualTrack explicitly binds the visual IR instead of trusting the Runtime
   );
 });
 
-test("the Type owner rejects an invalid VisualTrack at the shared Type-owner validator", async () => {
+test("the Type owner rejects duplicate identities inside the recursive Visual tree", async () => {
   const { visual } = fixture();
-  const present = visual.presents[0]!;
-  const invalid = sealVisualTrack({...visual,
+  const present = visual.items[0]!;
+  const invalid = sealPresentVisualTrack({...visual,
     presents: [{
       ...present,
-      elements: [
-        ...present.elements,
-        { id: "second-root", order: 2, kind: "box", style: [] },
-      ],
+      root: present.root.kind === "box" ? {
+        ...present.root,
+        children: [...present.root.children, { id: "text", kind: "box", children: [], style: [] }],
+      } : present.root,
     }],
   });
   const refinements = new RefinementRegistry();
   registerTypeRefinements(refinements, compositionComponent.refinements);
 
   await assert.rejects(
-    async () => await validateValue(
+    async () => await refineValue(
       compositionTypes.visualTrack,
       (canonicalize(invalid)),
       refinements,
     ),
-    /must contain exactly one root element/u,
+    /has duplicate element text/u,
   );
 });
 
@@ -223,44 +338,106 @@ test("Composition validates Track frame ranges against the explicitly connected 
   const composition = sealComposition({
     id: "foreign",
     canvas: { width: 1080, height: 1920, clearColor: "#000000" },
-    tracks: [visual],
+    visual: scope(visual), audio: [],
   });
   assert.throws(() => assertCompositionIdentity(composition, foreign), /outside Timeline/);
   assert.notDeepEqual(timeline, foreign);
 });
 
-test("one authoring Track may contribute independently stacked Presents", () => {
+test("one authoring Track owns its local Present declaration order", () => {
   const { timeline, visual } = fixture();
-  const content = structuredClone(visual) as VisualTrack;
+  const content = structuredClone(visual) as PresentVisualTrack;
   const second = {
-    ...structuredClone(content.presents[0]!),
+    ...structuredClone(content.items[0]!),
     id: "cue-2",
-    order: 0,
-    z: 30,
   };
-  const interleaved = sealVisualTrack({...content,
+  const interleaved = sealPresentVisualTrack({...content,
     presents: [
-      { ...content.presents[0]!, order: 1, z: 80 },
+      content.items[0]!,
       second,
     ],
   });
   const composition = sealComposition({
     id: "interleaved",
     canvas: { width: 1080, height: 1920, clearColor: "#000000" },
-    tracks: [interleaved],
+    visual: scope(interleaved), audio: [],
   });
   assert.doesNotThrow(() => assertCompositionIdentity(composition, timeline));
-  assert.deepEqual(interleaved.presents.map((present) => present.z), [30, 80]);
+  assert.deepEqual(interleaved.items.map((present) => present.id), ["cue-1", "cue-2"]);
+});
+
+test("visual ordering is array position and identities remain validation-only", () => {
+  const { timeline, visual } = fixture();
+  const present = visual.items[0]!;
+  const ordered = sealVisualTrack({
+    timelineId: visual.timelineId,
+    visualIr: visual.visualIr,
+    id: "ordered",
+    items: [{ ...structuredClone(present), id: "another" }, present],
+  });
+  assert.doesNotThrow(() => assertVisualTrackIdentity(ordered, timeline));
+  assert.deepEqual(ordered.items.map((item) => item.id), ["another", "cue-1"]);
+
+  assert.throws(() => assertCompositionIdentity(sealComposition({
+    id: "repeated-member-id",
+    canvas: { width: 1080, height: 1920, clearColor: "#000000" },
+    visual: { members: [
+      { kind: "track", id: "same", track: visual },
+      { kind: "track", id: "same", track: visual },
+    ] },
+    audio: [],
+  }), timeline), /duplicate member id same/u);
+});
+
+test("Composition audio is a multiset of closed signals rather than a map keyed by Track id", () => {
+  const { timeline, sound } = fixture();
+  const composition = sealComposition({
+    id: "repeated-signal",
+    canvas: { width: 1, height: 1, clearColor: "#000000" },
+    visual: { members: [] },
+    audio: [sound, structuredClone(sound)],
+  });
+  assert.doesNotThrow(() => assertCompositionIdentity(composition, timeline));
+  assert.equal(composition.audio.length, 2);
+  assert.deepEqual(composition.audio.map((track) => track.id), [sound.id, sound.id]);
+});
+
+test("Composition distinguishes reusable VisualTrack values from their Film-owned occurrences", () => {
+  const { timeline, visual } = fixture();
+  const composition = sealComposition({
+    id: "reused-visual",
+    canvas: { width: 1080, height: 1920, clearColor: "#000000" },
+    visual: { members: [
+      { kind: "track", id: "background", track: visual },
+      { kind: "stack", id: "inset", scope: { members: [
+        { kind: "track", id: "picture", track: visual },
+      ] } },
+    ] },
+    audio: [],
+  });
+  assert.doesNotThrow(() => assertCompositionIdentity(composition, timeline));
+  assert.deepEqual(visualScopeTrackOccurrences(composition.visual).map((item) => item.path), [
+    ["background"],
+    ["inset", "picture"],
+  ]);
+
+  assert.throws(() => assertCompositionIdentity(sealComposition({
+    ...composition,
+    visual: { members: [
+      { kind: "track", id: "same", track: visual },
+      { kind: "track", id: "same", track: visual },
+    ] },
+  }), timeline), /duplicate member id same/u);
 });
 
 test("Visual Present animations may finish before or after their visibility window without changing Track isolation", () => {
   const { timeline, visual } = fixture();
-  const present = visual.presents[0]!;
-  const root = present.elements[0]!;
-  const animated = sealVisualTrack({...visual,
+  const present = visual.items[0]!;
+  const root = present.root;
+  const animated = sealPresentVisualTrack({...visual,
     presents: [{
       ...present,
-      elements: [{
+      root: {
         ...root,
         animation: {
           keyframes: [
@@ -268,18 +445,18 @@ test("Visual Present animations may finish before or after their visibility wind
             { atFrame: 10, easing: "ease-out", style: [{ name: "opacity", value: 1 }] },
           ],
         },
-      }],
+      },
     }],
   });
   assert.doesNotThrow(() => assertCompositionIdentity(sealComposition({
     id: "animated",
     canvas: { width: 1080, height: 1920, clearColor: "#000000" },
-    tracks: [animated],
+    visual: scope(animated), audio: [],
   }), timeline));
-  const clipped = sealVisualTrack({...visual,
+  const clipped = sealPresentVisualTrack({...visual,
     presents: [{
       ...present,
-      elements: [{
+      root: {
         ...root,
         animation: {
           keyframes: [
@@ -287,18 +464,18 @@ test("Visual Present animations may finish before or after their visibility wind
             { atFrame: 90, easing: "ease-out", style: [{ name: "opacity", value: 1 }] },
           ],
         },
-      }],
+      },
     }],
   });
   assert.doesNotThrow(() => assertCompositionIdentity(sealComposition({
     id: "clipped-animation",
     canvas: { width: 1080, height: 1920, clearColor: "#000000" },
-    tracks: [clipped],
+    visual: scope(clipped), audio: [],
   }), timeline));
-  const invasive = sealVisualTrack({...visual,
+  const invasive = sealPresentVisualTrack({...visual,
     presents: [{
       ...present,
-      elements: [{
+      root: {
         ...root,
         animation: {
           keyframes: [
@@ -306,12 +483,12 @@ test("Visual Present animations may finish before or after their visibility wind
             { atFrame: 60, style: [{ name: "backdrop-filter", value: "blur(20px)" }] },
           ],
         },
-      }],
+      },
     }],
   });
   assert.doesNotThrow(() => assertCompositionIdentity(sealComposition({
     id: "animated-invasive",
     canvas: { width: 1080, height: 1920, clearColor: "#000000" },
-    tracks: [invasive],
+    visual: scope(invasive), audio: [],
   }), timeline));
 });

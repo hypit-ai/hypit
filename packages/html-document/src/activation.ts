@@ -14,8 +14,8 @@ export const hypitPackage = {
       declaration: htmlDocumentMarkupSurfaces[0],
       handler: decodeHtmlDocumentSurface,
     }),
-    createProducerPackageFacet(htmlDocumentComponent),
-    createRefinementPackageFacet(htmlDocumentComponent),
+    createProducerPackageFacet(htmlDocumentComponent.producers ?? []),
+    createRefinementPackageFacet(htmlDocumentComponent.refinements ?? []),
   ],
 };
 export default hypitPackage;

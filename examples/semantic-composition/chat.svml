@@ -27,7 +27,7 @@
     <chat:Message id="reveal" sender="Leo" side="right" at={animation.reveal} text="I left the whole scene editable."/>
   </chat:Scene>
   <film:Film id="main" canvas={canvas.canvas} timeline={animation.timeline} appearance={style.film.main}>
-    <film:Track source={conversation.visual}/>
+    <film:Track id="conversation" source={conversation.visual}/>
   </film:Film>
   <html:Video id="final" composition={main.composition} timeline={animation.timeline}/>
 </svml>

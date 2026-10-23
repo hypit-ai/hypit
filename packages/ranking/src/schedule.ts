@@ -309,7 +309,7 @@ export function assertTriggeredRankingCandidateSet(value: TriggeredRankingCandid
     assert(!itemIds.has(entry.itemId), `TriggeredRankingCandidateSet repeats ${entry.itemId}.`);
     itemIds.add(entry.itemId);
     frame(entry.activation.frame, `TriggeredRankingCandidateSet.entries.${index}.activation.frame`);
-    assertTemporalInstantFor(entry.activation, { subjectId: entry.itemId });
+    assertTemporalInstantFor(entry.activation, {});
   }
 }
 
@@ -343,10 +343,10 @@ export function buildTriggeredRankingSchedule(input: {
   assert(input.header.variant === "top-three", "Only TopThree uses the triggered Ranking schedule.");
   assert(input.items.items.length > 0, "Ranking requires at least one Item.");
   assertTriggeredRankingCandidateSet(input.candidates);
-  assertTemporalWindowFor(input.outer, { subjectId: input.header.id, timeline: input.timeline });
-  assertTemporalInstantFor(input.terminal, { subjectId: input.header.id, timeline: input.timeline });
+  assertTemporalWindowFor(input.outer, { timeline: input.timeline });
+  assertTemporalInstantFor(input.terminal, { timeline: input.timeline });
   for (const candidate of input.candidates.entries) {
-    assertTemporalInstantFor(candidate.activation, { subjectId: candidate.itemId, timeline: input.timeline });
+    assertTemporalInstantFor(candidate.activation, { timeline: input.timeline });
   }
   const expected = new Set(input.items.items.map((item) => item.id));
   const received = new Set(input.candidates.entries.map((entry) => entry.itemId));
@@ -396,7 +396,7 @@ function assertRankingWindowSet(value: RankingWindowSet, label: string): void {
     frame(entry.window.span.endFrameExclusive, `${label}.entries.${index}.window.span.endFrameExclusive`);
     assert(entry.window.span.endFrameExclusive > entry.window.span.startFrame,
       `${label}.entries.${index}.window is empty.`);
-    assertTemporalWindowFor(entry.window, { subjectId: entry.itemId });
+    assertTemporalWindowFor(entry.window, {});
   }
 }
 
@@ -418,7 +418,7 @@ function appendRankingWindow<T extends TierBoardItemSpec | ColumnItemSpec>(
   assert(spec.variant === variant, `${label} window requires a ${label} Item.`);
   assert(!spec.preset, `Preset ${label} Item ${spec.id} cannot consume a Selection window.`);
   assert(!set.entries.some((entry) => entry.itemId === spec.id), `${label} Item ${spec.id} already has a Selection window.`);
-  assertTemporalWindowFor(window, { subjectId: spec.id });
+  assertTemporalWindowFor(window, {});
   const result: RankingWindowSet = {
     entries: [...set.entries, { itemId: spec.id, window: structuredClone(window) }]
       .sort((left, right) => left.itemId.localeCompare(right.itemId)),
@@ -458,7 +458,7 @@ function buildWindowedRankingSchedule(input: {
   assert(input.items.variant === input.variant, `${label} Schedule requires ${label} Items.`);
   assert(input.items.items.length > 0, `${label} requires at least one Item.`);
   assertRankingWindowSet(input.windows, `${label}WindowSet`);
-  assertTemporalWindowFor(input.outer, { subjectId: input.header.id, timeline: input.timeline });
+  assertTemporalWindowFor(input.outer, { timeline: input.timeline });
   frame(input.outer.span.startFrame, `${label} outer window start`);
   frame(input.outer.span.endFrameExclusive, `${label} outer window end`);
   assert(input.outer.span.endFrameExclusive > input.outer.span.startFrame, `${label} outer window is empty.`);
@@ -472,7 +472,7 @@ function buildWindowedRankingSchedule(input: {
     || left.window.span.endFrameExclusive - right.window.span.endFrameExclusive
     || left.itemId.localeCompare(right.itemId));
   for (const entry of orderedWindows) {
-    assertTemporalWindowFor(entry.window, { subjectId: entry.itemId, timeline: input.timeline });
+    assertTemporalWindowFor(entry.window, { timeline: input.timeline });
     assert(entry.window.span.startFrame >= input.outer.span.startFrame
       && entry.window.span.endFrameExclusive <= input.outer.span.endFrameExclusive,
     `${label} Item ${entry.itemId} window is outside the outer window.`);

@@ -64,8 +64,8 @@ export const hypitPackage = {
   format: "hypit.package@1" as const,
   modules: [{ manifest }],
   facets: [
-    createProducerPackageFacet(component),
-    createRefinementPackageFacet(component),
+    createProducerPackageFacet(component.producers ?? []),
+    createRefinementPackageFacet(component.refinements ?? []),
     ...surfaces.map((declaration) => createMarkupSurfaceFacet({
       module: moduleRef, declaration, handler: decodeTrack,
     })),

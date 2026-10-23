@@ -22,8 +22,6 @@ export type OperationContext = {
   readonly pool?: string;
 };
 
-export type OperationCompletion = { readonly value: Value };
-
 export type OperationFailure = {
   readonly code: string;
   readonly message: string;
@@ -66,13 +64,13 @@ export type OperationState =
     }
   | {
       readonly status: "received";
-      readonly completion: OperationCompletion;
+      readonly value: Value;
       readonly acknowledgedAt: number;
       readonly endedAt: number;
     }
   | {
       readonly status: "completed";
-      readonly completion: OperationCompletion;
+      readonly value: Value;
       readonly acknowledgedAt: number;
       readonly endedAt: number;
     }

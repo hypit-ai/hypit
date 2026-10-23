@@ -5,26 +5,36 @@ Provider-neutral acoustic and word-alignment observations. Evidence is not the a
 External package authors import these contracts from `@hypit/speech-evidence`; their logical
 Module identity remains `@hypit/speech-evidence@1`.
 
-`SpeechEvidenceAudio` carries canonical 16 kHz mono WAV bytes, their exact sample count and the
-`LocalTemporalDomain` identity from which they were projected. `AlignedTranscriptEvidence` preserves
-that domain identity and sample span while adding measured passages, words, characters and speech
-activity. Providers therefore return evidence for the same explicit source domain rather than an
-unidentified transcript that a later package must reconnect by inspecting Media.
+`SpeechEvidenceAudio` carries canonical 16 kHz mono WAV bytes and their exact sample count.
+`SpeechTranscriptEvidence` preserves that sample span while adding measured passages, words,
+characters and speech activity. These are source-clock observations: they do not claim a semantic
+Segment, a local frame domain or a Timeline position.
 
 The package also owns the provider-neutral `project-speech-evidence-audio` Capability and its
-deterministic request Producer. That Producer verifies one `SynchronizedMedia` value against its
-explicit `LocalTemporalDomain`, then requests the exact 16 kHz mono projection. A media Provider may
-implement the bytes, but media operations do not own the acoustic-evidence contract.
+deterministic request Producer. That Producer requests the exact 16 kHz mono projection of one
+`SynchronizedMedia` value. A media Provider may implement the bytes, but media operations do not own
+the acoustic-evidence contract.
 
 ## Transcript evidence document
 
-`hypit.transcript@1` is the portable file view written by model-specific transcription tools. This
-package owns its parsing and its exact word/phrase range operations because those operations concern
-speech evidence, not FFmpeg and not a Timeline. A local-media inspection tool may use the returned
-seconds ranges to select frames, but it does not acquire ownership of transcript meaning.
+`<speech:Transcript>` is the lossless author-file form of `SpeechTranscriptEvidence`. The JSON body
+contains exactly the provider-neutral evidence value, inside an ordinary `.svml` Source that can be
+compiled and referenced like any other author input:
+
+```svml
+<import as="speech" from="@hypit/speech-evidence@1"/>
+<speech:Transcript id="performance">
+{ "sampleFrames": 32000, "passages": [] }
+</speech:Transcript>
+```
+
+`hypit transcribe` writes this form. The package owns its exact codec and word/phrase inspection
+views because those operations concern speech evidence, not FFmpeg and not a Timeline. A local-media
+inspection tool may project sample coordinates to seconds to select frames, but it does not acquire
+ownership of transcript meaning.
 
 `wordsAt` uses half-open word spans and preserves overlaps. `phraseRanges` matches whole consecutive
 words, preserves repeated occurrences and returns each measured range; it never guesses which
 occurrence an author intended. Missing word times remain missing rather than being inferred as
-silence. These values stay on the transcript input's local clock until an explicit semantic mapping
-projects evidence onto authored Narrative.
+silence. These values stay on the transcript input's local clock until an explicit alignment
+operation combines the evidence with a local temporal domain and authored Narrative.

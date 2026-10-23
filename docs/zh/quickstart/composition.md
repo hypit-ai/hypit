@@ -19,11 +19,11 @@ Film 是普通作者组件。它把显式选择的 VisualTrack、AudioTrack 与�
 
 <film:Film id="main" canvas={vertical.canvas} timeline={speech.timeline}
   appearance={recipes.film.vertical}>
-  <film:Track source={picture.visual}/>
+  <film:Track id="picture" source={picture.visual}/>
   <film:Track source={mix.audio}/>
-  <film:Track source={cards.visual}/>
-  <film:Track source={captions.visual}/>
-  <film:Track source={meaning.visual}/>
+  <film:Track id="cards" source={cards.visual}/>
+  <film:Track id="captions" source={captions.visual}/>
+  <film:Track id="meaning" source={meaning.visual}/>
 </film:Film>
 ```
 
@@ -50,23 +50,49 @@ Audio Clip，并在这里显式选择两边产出的 Track。
 
 公开输出是 `{main.composition}`。
 
-## 画面顺序属于 Present
+## 画面顺序属于父 Scope
 
-Film 子项负责选择贡献，并不通过书写顺序定义画面堆叠。每个视觉组件发布带绝对 `z` 的
-定时 Present，通常由 Recipe 中的 `stack-order` 声明。数值小的先绘制；相同数值依次采用
-稳定的 Track 身份、Track 内 Present `order` 和 Present 身份。相对绘制关系确有意义时，作者
-应声明不同数值。
+Film 子项负责选择并放置贡献。每个视觉 `<film:Track>` 与 `<film:Stack>` 都携带由直属父
+VisualScope 拥有的 `id`；同级成员按声明顺序从后向前绘制。组件只发布可复用的 Track 局部 programme，
+不携带它在未知未来 Film 中的位置。Stack 封闭子 VisualScope，并在自身声明的位置作为一张画面进入父
+Scope。id 只负责寻址，不会暗中参与绘制顺序。同一个 VisualTrack 可以通过不同成员 id 重复放置。
 
 ```svs
 film.vertical { background: #09090B; }
-media.speaker { stack-order: 10; fit: cover; }
-media.card { stack-order: 40; fit: contain; }
-caption.base { stack-order: 70; }
-/* Fine Text 在 Flow、Point 或 Path occurrence 上直接写 z="90"。 */
+media.speaker { fit: cover; }
+media.card { fit: contain; }
+caption.base { }
 ```
 
-不同 Track 的 Present 可以交错。若多张画面、图形与文字共享布局或运动，一个 Present
-也可以拥有内部元素树或浏览器程序。共享行为的内容放在一起；仍可独立使用的贡献保持并列。
+item 保持在所属 Track 的放置关系内。若多张画面、图形与文字因为共享布局或运动而需要局部交错顺序，
+应由一个组件拥有该 programme 及其内部元素树或浏览器程序；仍可独立使用的贡献保持为并列 Track。
+
+## 闭合局部视觉栈
+
+若一组画面需要先合成为一张 Picture，并让一个 Adjustment 只作用于该组，使用 Film Stack：
+
+```svml
+<import as="adjust" from="@hypit/visual-adjustment@1"/>
+
+<adjust:Track id="look" timeline={speech.timeline}>
+  <adjust:Adjustment id="grade" during={speech.window}
+    appearance={recipes.look.cinematic}/>
+</adjust:Track>
+
+<film:Film id="main" canvas={vertical.canvas} timeline={speech.timeline}
+  appearance={recipes.film.vertical}>
+  <film:Track id="background" source={background.visual}/>
+  <film:Stack id="treated-subject">
+    <film:Track id="subject" source={subject.visual}/>
+    <film:Track id="look" source={look.visual}/>
+  </film:Stack>
+  <film:Track id="captions" source={captions.visual}/>
+  <film:Track source={dialogue.audio}/>
+</film:Film>
+```
+
+Stack 从透明画面开始，在父 Scope 中按自身声明位置作为一张画面进入。Adjustment 只变换该 Stack 内已经累积的
+画面。AudioTrack 保持在 Film 根上，不会继承视觉 Stack 的归属。
 
 ## 渲染完整视频
 
@@ -118,7 +144,7 @@ Timeline 不要求语音或媒体：
 
 <film:Film id="main" canvas={canvas.canvas} timeline={animation.timeline}
   appearance={recipes.film.main}>
-  <film:Track source={conversation.visual}/>
+  <film:Track id="conversation" source={conversation.visual}/>
 </film:Film>
 <html:Video id="final" composition={main.composition} timeline={animation.timeline}/>
 ```

@@ -164,7 +164,7 @@ export function createVideoProvider(options: {
       const mediaType = response.headers.get("content-type")?.split(";")[0]?.trim();
       if (!mediaType?.startsWith("video/")) throw new Error("Video service returned a non-video result");
       const artifact = await context.resources.put(new Uint8Array(await response.arrayBuffer()), mediaType);
-      return { status: "completed", result: { value: (canonicalize(sealGeneratedVideoSet({ videos: [artifact] }))) } };
+      return { status: "completed", result: canonicalize(sealGeneratedVideoSet({ videos: [artifact] })) };
     },
   };
   return defineEndpoint({

@@ -61,7 +61,7 @@ offer the same capability, `bindings` says which one serves it, keyed by the cap
 
 ```json
 "bindings": {
-  "@hypit/whisperx@1#whisperx-alignment": "whisperx.local"
+  "@hypit/whisperx@1#whisperx-transcription": "whisperx.local"
 }
 ```
 
@@ -137,7 +137,7 @@ Runtime working Resources remain internal and Build-local; there is no ResourceS
 a Result has an outcome, history is read from the project Result repository, not Runtime SQLite.
 The submission passes known Resource references to the Result writer, separately from the execution
 graph. Staging bytes for a running Build does not make them new Result files: external and reused
-resources keep their addresses even when a Producer embeds them inside a new Composite value.
+resources keep their addresses even when a Producer embeds them inside a new array or object value.
 
 While execution advances, Result synchronization publishes newly accepted public Outputs. The
 repository leaves its files or objects untouched when no new public Output is available; internal

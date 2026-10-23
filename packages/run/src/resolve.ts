@@ -3,11 +3,10 @@ import {
   exportRunFragment,
   resolveCompiledSourceExport,
 } from "@hypit/author";
-import { canonicalize, sameType } from "@hypit/protocol";
+import { canonicalize, compareCodeUnits, moduleKey, sameType } from "@hypit/protocol";
 import type {
   Candidate,
   GraphValueRef,
-  ModuleRef,
   OperationNode,
   TypedRecord,
 } from "@hypit/protocol";
@@ -23,10 +22,6 @@ import type {
   RunDocument,
 } from "./types.js";
 
-function moduleRequest(ref: ModuleRef): string {
-  return `${ref.name}@${ref.version}`;
-}
-
 /** Module closure additions required only by the selected Run implementations. */
 export function collectRunModuleRequests(
   document: RunDocument,
@@ -36,11 +31,11 @@ export function collectRunModuleRequests(
   const requests = new Set<string>();
   for (const declaration of document.candidates) {
     if (declaration.kind === "value") {
-      requests.add(moduleRequest(declaration.type.module));
+      requests.add(moduleKey(declaration.type.module));
       continue;
     }
     if (declaration.kind === "file") {
-      requests.add(moduleRequest(declaration.type.module));
+      requests.add(moduleKey(declaration.type.module));
       continue;
     }
     if (declaration.kind !== "fragment") continue;
@@ -48,9 +43,9 @@ export function collectRunModuleRequests(
     if (packageName === undefined) throw new Error(`Run Fragment alias ${declaration.using.alias} is not imported`);
     const fragment = fragments.resolve(packageName, declaration.using.name);
     if (fragment === undefined) throw new Error(`${packageName} exports no Run Fragment ${declaration.using.name}`);
-    for (const input of fragment.inputs) requests.add(moduleRequest(input.type.module));
-    for (const operation of fragment.operations) requests.add(moduleRequest(operation.producer.module));
-    for (const item of fragment.exports) requests.add(moduleRequest(item.type.module));
+    for (const input of fragment.inputs) requests.add(moduleKey(input.type.module));
+    for (const operation of fragment.operations) requests.add(moduleKey(operation.producer.module));
+    for (const item of fragment.exports) requests.add(moduleKey(item.type.module));
   }
   return [...requests].sort();
 }
@@ -190,7 +185,7 @@ export async function resolveRunDocument(
       candidate,
     } as const;
   });
-  const targets = document.targets.map((item) => ({ output: logicalOutput(context, item.output) }));
+  const targets = document.targets.map((item) => logicalOutput(context, item));
   const resolvedCandidates = [...candidates.values()];
   const resolvedOperations = [...operations.values()];
   const graph = sealRunGraph({
@@ -203,8 +198,8 @@ export async function resolveRunDocument(
   return {
     document,
     graph,
-    candidates: Object.fromEntries([...candidateNames.entries()].sort(([left], [right]) => left.localeCompare(right))),
-    candidateSources: Object.fromEntries([...candidateSources.entries()].sort(([left], [right]) => left.localeCompare(right))),
-    satisfactionNames: Object.fromEntries([...satisfactionNames.entries()].sort(([left], [right]) => left.localeCompare(right))),
+    candidates: Object.fromEntries([...candidateNames.entries()].sort(([left], [right]) => compareCodeUnits(left, right))),
+    candidateSources: Object.fromEntries([...candidateSources.entries()].sort(([left], [right]) => compareCodeUnits(left, right))),
+    satisfactionNames: Object.fromEntries([...satisfactionNames.entries()].sort(([left], [right]) => compareCodeUnits(left, right))),
   };
 }

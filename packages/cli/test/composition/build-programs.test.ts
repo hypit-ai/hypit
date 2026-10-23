@@ -42,20 +42,18 @@ function distribution(
         facets: [createRunFrontendFacet({
         id: "@hypit/markup/run@1",
         discover: () => ({ author: { source: authorSource }, imports: [] }),
-        decode: () => ({ document: {
+        decode: () => ({
           format: "hypit.run-document@1",
           author: { source: authorSource },
           imports: [],
-          targets: [{ output: "result" }],
+          targets: ["result"],
           candidates: [],
           satisfactions: [],
-        } }),
-        }), ...(producerError === undefined ? [] : [createProducerPackageFacet({
-          producers: [{
+        }),
+        }), ...(producerError === undefined ? [] : [createProducerPackageFacet([{
             producer: { module: { name: "example.value", version: "1" }, name: "produce" },
             handler() { throw new Error(producerError); },
-          }],
-        })])],
+          }])])],
       },
     }],
     createCompiler: () => ({
@@ -75,17 +73,17 @@ function distribution(
       compileResolvedSource: async (entry: { readonly unit: { readonly id: string } }) => ({
         closure: { entry: entry.unit.id, units: [] },
         provenance: { format: "hypit.author-provenance@1", elements: [] },
-        program: { closure: { format: "hypit.closure@1", modules: [{ manifest: {
+        program: { closure: { format: "hypit.closure@1", modules: [{
           format: "hypit.module@1",
           name: "example.value",
           version: "1",
           dependencies: [],
-          types: [{ name: "Value" }],
+          types: ["Value"],
           capabilities: [],
           producers: producerError === undefined ? [] : [{
             name: "produce", inputs: [], result: { kind: "output" as const, name: "result", type: { module: { name: "example.value", version: "1" }, name: "Value" } },
           }],
-        } }] }, records: [] },
+        }] }, records: [] },
         graph: {
           format: "hypit.graph@1",
           outputs: [{
@@ -116,7 +114,7 @@ function distribution(
         attachments: [],
       }),
       extendExecutionProgram: (program: unknown) => program,
-      async validateRecord(program: LinkedProgram, record: TypedRecord) {
+      async refineRecord(program: LinkedProgram, record: TypedRecord) {
         verifyRecordStructure(program.closure, record);
       },
     }),
@@ -229,7 +227,7 @@ test("Build confirms durable submission before following stable work progress", 
       return {
         id: request.id,
         state: {
-          targets: [{ output: "result" }],
+          targets: ["result"],
           plan: { format: "hypit.plan@1", steps: [], goals: [] },
           records: [],
         },
@@ -237,7 +235,7 @@ test("Build confirms durable submission before following stable work progress", 
           id: request.id,
           createdAt: Date.now(),
           activity: "ready",
-          cancellationRequested: false,
+
           targets: ["result"],
           requests: { total: 0, completed: 0 },
           acceptedRecords: 0,

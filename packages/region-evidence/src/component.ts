@@ -23,4 +23,4 @@ export const regionEvidenceComponent = {
     valueOf<Timeline>(inputs.timeline?.value, "Timeline"),
   )) }) }],
   refinements: [{ type: regionEvidenceTypes.evidence, handler: ({ value }) => assertRegionEvidence(valueOf<RegionEvidence>(value, "RegionEvidence")) }],
-} satisfies ProducerPackage & RefinementPackage;
+} satisfies { producers?: ProducerPackage; refinements?: RefinementPackage };

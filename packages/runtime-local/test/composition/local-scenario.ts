@@ -10,11 +10,11 @@ import { rm } from "node:fs/promises";
 import { join } from "node:path";
 
 import {
-  createGreetingBuild,
-  types,
+  type RuntimeBuildFixture,
 } from "../execution-scenario.js";
+import type { BuildState } from "@hypit/protocol";
 
-export function definition(state: ReturnType<typeof createGreetingBuild>, program = state.program) {
+export function definition(state: BuildState, program = state.program) {
   return defineBuild({
     program,
     plan: state.plan,
@@ -53,92 +53,41 @@ export function resultDestination(directory: string) {
 
 export function publication(
   outputs: readonly { readonly name: string; readonly ref: { readonly id: string } }[],
-  state: ReturnType<typeof createGreetingBuild>,
+  fixture: RuntimeBuildFixture,
 ) {
-  const targets = fixtureTargets(state);
-  const selected = new Set(targets);
-  const outputTypes = new Map([
-    ["prompt", types.prompt],
-    ["generated", types.generated],
-    ["document", types.document],
-    ["side-generated", types.generated],
-    ["side-document", types.document],
-  ]);
-  return { outputs: outputs.map((published) => ({
-    name: published.name,
-    output: published.ref.id,
-    type: (() => {
-      const type = outputTypes.get(published.ref.id)
-        ?? (published.ref.id.startsWith("generated-") ? types.generated : undefined);
-      if (type === undefined) throw new Error(`Fixture has no Type for ${published.ref.id}`);
-      return type;
-    })(),
-    target: selected.has(published.ref.id),
-    source: { kind: "current-record" as const, record: fixtureRecord(state, published.ref.id) },
-  })) };
-}
-
-export function fixtureOutput(record: string): string | undefined {
-  if (record === "prompt:root") return "prompt";
-  if (record === "generated:root" || record === "generated:placeholder") return "generated";
-  if (record === "document:root") return "document";
-  if (record === "generated:side") return "side-generated";
-  if (record === "document:side") return "side-document";
-  const generation = /^generated:(.+)$/u.exec(record)?.[1];
-  return generation === undefined ? undefined : `generated-${generation}`;
-}
-
-export function fixtureRecord(state: ReturnType<typeof createGreetingBuild>, output: string): string {
-  const stepId = output === "prompt"
-    ? "make-prompt"
-    : output === "generated"
-      ? state.plan.steps.some((step) => step.id === "request-text") ? "request-text" : "placeholder-text"
-      : output === "document"
-        ? "assemble"
-        : output === "side-generated"
-          ? "side-placeholder"
-          : output === "side-document"
-            ? "side-assemble"
-            : output.startsWith("generated-")
-              ? `generate-${output.slice("generated-".length)}`
-              : undefined;
-  const step = state.plan.steps.find((item) => item.id === stepId);
-  const record = step === undefined
-    ? state.plan.goals.find((goal) => fixtureOutput(goal) === output)
-    : step.result.record;
-  if (record === undefined) throw new Error(`Fixture has no selected Record for Output ${output}`);
-  return record;
-}
-
-export function fixtureTargets(state: ReturnType<typeof createGreetingBuild>): readonly string[] {
-  return state.plan.goals.map((record) => {
-    const output = fixtureOutput(record);
-    if (output === undefined) throw new Error(`Fixture has no Output for goal ${record}`);
-    return output;
-  });
+  return { outputs: outputs.map((published) => {
+    const output = fixture.outputs[published.ref.id];
+    if (output === undefined) throw new Error(`Fixture has no Output ${published.ref.id}`);
+    return {
+      name: published.name,
+      output: output.output,
+      type: output.type,
+      target: output.goal,
+      source: { kind: "current-record" as const, record: output.record },
+    };
+  }) };
 }
 
 export function durableBuildRequest(
   directory: string,
   id: string,
-  initial: ReturnType<typeof createGreetingBuild>,
+  fixture: RuntimeBuildFixture,
 ) {
-  const targets = fixtureTargets(initial);
+  const targets = Object.values(fixture.outputs).filter((output) => output.goal);
   const publishedOutputs = targets.map((output, index) => ({
     name: `target.${index + 1}`,
-    ref: { kind: "logical-output" as const, id: output },
+    ref: { kind: "logical-output" as const, id: output.output },
   }));
   return {
     id,
-    definition: definition(initial),
+    definition: definition(fixture.state),
     catalog: {
-      source: { path: join(directory, "main.svml") },
-      publication: publication(publishedOutputs, initial),
+      sourcePath: join(directory, "main.svml"),
+      publication: publication(publishedOutputs, fixture),
     },
     result: resultDestination(directory),
   } as const;
 }
-
 
 export async function finishClaimedBuild(
   runtime: Awaited<ReturnType<typeof createLocalRuntime>>,

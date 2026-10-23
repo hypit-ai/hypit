@@ -7,7 +7,6 @@ import { recipeFrontendId } from "@hypit/hypit/recipe";
 
 import type { ServedFile } from "./compile.js";
 import type { StudioDomain } from "./domain.js";
-import type { Observations } from "./observe.js";
 import { resolveStudioProjection } from "./projection.js";
 import { renderStudioHtmlProgram } from "./preview/render.js";
 import type { RunPlan } from "./run.js";
@@ -15,7 +14,6 @@ import type { StudioSnapshot } from "./shared.js";
 import type { StudioCompanionRegistry } from "./studio-registry.js";
 import { snapshot } from "./snapshot.js";
 import { inspectStudioRun } from "./studio-preflight.js";
-import type { StudioViewRequirement } from "./studio-preflight.js";
 import type { StudioSourceFile } from "./parameters.js";
 import type { BuildState } from "@hypit/hypit/protocol";
 import type { Placement } from "./observe.js";
@@ -53,8 +51,6 @@ export type StudioSession = {
   readonly document: import("@hypit/html-program").HtmlProgram;
   readonly visualHtml: string;
   readonly material: ReadonlyMap<string, ServedFile>;
-  readonly observations: Observations;
-  readonly projections: readonly StudioViewRequirement[];
   readonly temporalEdit: {
     readonly state: BuildState;
     readonly files: readonly StudioSourceFile[];
@@ -75,6 +71,7 @@ export async function readStudioSession(input: {
   const inspection = inspectStudioRun(input.registry, source, input.run);
   const outputRefs = [
     inspection.filmComposition,
+    inspection.timeRef,
     ...inspection.projections.map((projection) => projection.ref),
   ];
   const built = await resolveStudioProjection({
@@ -119,8 +116,6 @@ export async function readStudioSession(input: {
       surfaces: input.domain.surfaces,
     }),
     material: built.served,
-    observations: source.observations,
-    projections: inspection.projections,
     temporalEdit: {
       state: built.state,
       files,

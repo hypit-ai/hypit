@@ -1,5 +1,5 @@
 import type { RunGraph } from "./types.js";
-import { normalizeValue } from "@hypit/protocol";
+import { compareCodeUnits, normalizeValue } from "@hypit/protocol";
 
 export class RunGraphError extends Error {
   readonly code: string;
@@ -19,11 +19,11 @@ function content(graph: RunGraph): RunGraph {
   return {
     format: "hypit.run-graph@1",
     records: graph.records.map((record) => ({ ...record, value: normalizeValue(record.value) }))
-      .sort((left, right) => left.id.localeCompare(right.id)),
-    candidates: [...graph.candidates].sort((left, right) => left.id.localeCompare(right.id)),
-    operations: [...graph.operations].sort((left, right) => left.id.localeCompare(right.id)),
-    satisfactions: [...graph.satisfactions].sort((left, right) => left.output.localeCompare(right.output)),
-    targets: [...graph.targets].sort((left, right) => left.output.localeCompare(right.output)),
+      .sort((left, right) => compareCodeUnits(left.id, right.id)),
+    candidates: [...graph.candidates].sort((left, right) => compareCodeUnits(left.id, right.id)),
+    operations: [...graph.operations].sort((left, right) => compareCodeUnits(left.id, right.id)),
+    satisfactions: [...graph.satisfactions].sort((left, right) => compareCodeUnits(left.output, right.output)),
+    targets: [...graph.targets].sort(),
   };
 }
 
@@ -60,7 +60,7 @@ export function verifyRunGraph(graph: RunGraph): void {
   assert(graph.targets.length > 0, "EMPTY_RUN_TARGETS", "Run Graph has no Targets");
   const targets = new Set<string>();
   for (const target of graph.targets) {
-    assert(!targets.has(target.output), "DUPLICATE_RUN_TARGET", `Run Graph repeats Target ${target.output}`);
-    targets.add(target.output);
+    assert(!targets.has(target), "DUPLICATE_RUN_TARGET", `Run Graph repeats Target ${target}`);
+    targets.add(target);
   }
 }

@@ -8,7 +8,7 @@ const KEYS = new Set([
   "center-x", "top-y", "slot-size", "slot-gap", "padding-x", "padding-y",
   "background", "border-color", "border-width", "radius",
   "shadow-color", "shadow-x", "shadow-y", "shadow-blur", "shadow-spread",
-  "icon-size", "reveal-frames", "stack-order",
+  "icon-size", "reveal-frames",
 ]);
 
 function fail(recipe: Recipe, message: string): never { throw new Error(`Emoji Reveal Recipe ${recipe.path} ${message}`); }
@@ -40,7 +40,7 @@ export function decodeEmojiRevealStyle(id: string, recipe: Recipe): EmojiRevealS
     shadowColor: text(recipe, "shadow-color", "#000000B8"), shadowXPx: numeric(recipe, "shadow-x", 9),
     shadowYPx: numeric(recipe, "shadow-y", 10), shadowBlurPx: numeric(recipe, "shadow-blur", 0),
     shadowSpreadPx: numeric(recipe, "shadow-spread", 0), iconSizePx: numeric(recipe, "icon-size", 48),
-    revealFrames: integer(recipe, "reveal-frames", 6), stackingOrder: integer(recipe, "stack-order", 66),
+    revealFrames: integer(recipe, "reveal-frames", 6),
   };
   assertEmojiRevealStyle(style);
   return canonicalize(style) as unknown as EmojiRevealStyle;

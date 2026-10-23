@@ -56,6 +56,9 @@ services/whisperx/build/
 **/__pycache__/
 *.py[cod]
 services/whisperx/src/*.egg-info/
+packages/provider-whisperx-local/runtime/build/
+packages/provider-whisperx-local/runtime/.venv/
+packages/provider-whisperx-local/runtime/src/*.egg-info/
 services/image-opencv/.venv/
 services/image-opencv/**/__pycache__/
 services/media-lambda/build/

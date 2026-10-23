@@ -23,7 +23,7 @@ export const hypitPackage = {
   format: "hypit.package@1" as const,
   modules: [{ manifest: spatialManifest }],
   facets: [
-    ...[spatialComponent].flatMap((component) => [createProducerPackageFacet(component), createRefinementPackageFacet(component)]),
+    ...[spatialComponent].flatMap((component) => [createProducerPackageFacet(component.producers ?? []), createRefinementPackageFacet(component.refinements ?? [])]),
     createMarkupSurfaceFacet({ module: spatialModuleRef,
     declaration: spatialMarkupSurfaces.find((item) => item.name === "canvas")!, handler: decodeCanvasSurface }),
     createMarkupSurfaceFacet({ module: spatialModuleRef,

@@ -14,7 +14,7 @@ or [updates](#let-the-installation-channel-own-updates) for the current question
 | Part | What it supplies | Where changes belong |
 | --- | --- | --- |
 | Hypit Skill | Production judgment and navigation | The Skill's own installation channel |
-| Executable Distribution, `@hypit/hypit` | CLI, embedded Core and product-selected default packages | Its npm/release installation |
+| Executable Distribution, `@hypit/hypit` | CLI and product-selected default packages | Its npm/release installation |
 | Video project | Sources, Runs, assets, project packages, selected Profile and Results | The project's files and package lock |
 
 An installed Skill does not install the executable. Installing the executable does not connect an
@@ -100,8 +100,8 @@ dependency deliberately; a Hypit or Skill update does not upgrade every project'
 Preserve project assets, Results and current Run selections during an update. A newer executable is
 not a reason to regenerate accepted material. [Output reuse](../production/authoring.md#reuse-produced-work-explicitly)
 owns choosing compatible produced values, including useful Outputs from failed Builds.
-If a release changes authoring requirements, make the relevant project change explicitly from its
-documented meaning rather than guessing a migration or silently substituting another capability.
+If a release changes authoring requirements, apply the documented project changes and check the
+affected Source and Run.
 
 ## Let the installation channel own updates
 
@@ -161,16 +161,14 @@ and the useful update or explicitly chosen alternative; do not pretend the optio
 
 ## Project changes and execution code
 
-Project component and Profile changes apply to a new Build through its execution context. Updating
-the Distribution or the environment inherited by an active Worker concerns that process's lifetime.
+New Builds load current project components and Profile choices. Updating the Distribution or the
+environment inherited by an active Worker concerns that Worker's lifetime.
 Use [configuration changes](profile.md#know-when-a-change-takes-effect) before restarting it, and
 preserve active work and accepted Outputs.
 
 Every npm package carries its ordinary code dependencies in its own manifest and lockfile context.
 The package manager installs them with the Distribution or project that owns the package. Runtime
-preparation is reserved for Provider-declared Programs and other runtime materials; it does not create
-a second npm installation plane.
+preparation handles Provider-declared Programs and other runtime materials.
 
-A contributor checkout is an explicit development choice. Use one when the user has selected it;
-ordinary production, project components and project Model/Provider extensions use the installed
-public interfaces.
+Ordinary production, project components and project Model/Provider extensions use the installed
+public interfaces. Use a contributor checkout only when the user selects repository development.

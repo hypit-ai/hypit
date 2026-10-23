@@ -7,8 +7,7 @@ import {
   createImageComposeFragment,
   decodeImageComposeSurface,
   imageComposeComponent,
-  imageOperationsCapabilities,
-  imageOperationsManifest,
+  imageComposeProducers,
   imageComposeTypes,
   sealImageComposeLayerSpec,
   sealImageComposeOptions,
@@ -40,23 +39,27 @@ test("Image Compose is an ordered Layer graph with no privileged base image", ()
     "image:layers:append:0001", "image:layers:append:0002", "image:layers:empty",
   ].sort());
   assert.deepEqual(fragment.exports.map((output) => output.name), ["image"]);
-  const result = imageOperationsManifest.producers.at(-1)?.result;
-  assert.deepEqual(result?.kind === "need" ? result.capability : undefined,
-    imageOperationsCapabilities.compose);
 });
 
 test("component data flow preserves explicit Canvas, Frame and paint order", async () => {
-  const [create, append, request] = imageComposeComponent.producers;
-  const empty = await create!.handler({ inputs: {} } as never);
+  const producer = (name: string) => {
+    const found = imageComposeComponent.producers.find((item) => item.producer.name === name);
+    assert.ok(found);
+    return found;
+  };
+  const create = producer(imageComposeProducers.createLayers.name);
+  const append = producer(imageComposeProducers.appendLayer.name);
+  const request = producer(imageComposeProducers.request.name);
+  const empty = await create.handler({ inputs: {} } as never);
   assert.equal(empty.kind, "output");
-  const appended = await append!.handler({ inputs: {
+  const appended = await append.handler({ inputs: {
     layers: record("layers", imageComposeTypes.layerSet, empty.value),
     source: record("source", blobTypes.blob, source),
     frame: record("frame", spatialTypes.frame, (frame as unknown as CanonicalValue)),
     spec: record("spec", imageComposeTypes.layerSpec, (spec as unknown as CanonicalValue)),
   } } as never);
   assert.equal(appended.kind, "output");
-  const result = await request!.handler({ inputs: {
+  const result = await request.handler({ inputs: {
     canvas: record("canvas", spatialTypes.canvas, (canvas as unknown as CanonicalValue)),
     options: record("options", imageComposeTypes.options, (options as unknown as CanonicalValue)),
     layers: record("layers", imageComposeTypes.layerSet, appended.value),

@@ -43,8 +43,6 @@ export const captionFineMarkupSurfaces: readonly (StructuredSurfaceDeclaration &
           { name: "recipe", kind: "reference", required: true, accepts: [recipeType],
             summary: "Chooses the Recipe that carries Cue geometry, Paint and local motion.",
             recipe: [
-              { name: "stack-order", required: true,
-                summary: "Places this Style's Cues in the composition drawing order, low behind high." },
               { name: "x", required: true,
                 summary: "Places the Cue box horizontally as a fraction of the selected Frame's width." },
               { name: "y", required: true,
@@ -349,14 +347,14 @@ export const captionFineManifest: ModuleManifest = {
   name: captionFineModuleRef.name,
   version: captionFineModuleRef.version,
   dependencies: [
-    { module: captionModuleRef },
+    captionModuleRef,
     compositionDependency,
     mediaDependency,
     spatialDependency,
     timelineDependency,
     regionEvidenceDependency, temporalDependency,
   ],
-  types: [{ name: captionFineTypes.schedule.name }],
+  types: [captionFineTypes.schedule.name],
   capabilities: [],
   producers: [
     {

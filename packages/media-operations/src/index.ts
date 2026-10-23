@@ -12,6 +12,9 @@ export {
 } from "./fragment.js";
 export {
   compileAudioProgram,
+  audioGainProcess,
+  readAudioGainProcess,
+  AUDIO_GAIN_PROCESS_FORMAT,
   sealAudioProgram,
   verifyAudioProgram,
 } from "./audio-program.js";

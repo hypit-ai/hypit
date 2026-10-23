@@ -109,14 +109,14 @@ async function decodeMediaAssetSurface(
   const source = stringAttribute(element, "src");
   const mediaType = mediaTypeFor(element, source, kind, known);
   const resolved = await resolveAsset({ from: source, mediaType, range: element.range });
-  if (!resolved.blob.mediaType.startsWith(`${kind}/`)) {
+  if (!resolved.mediaType.startsWith(`${kind}/`)) {
     throw new Error(`${element.name}.src did not resolve to an ${kind} artifact`);
   }
   return {
     records: [{
       id,
       type: blobTypes.blob,
-      value: resolved.blob,
+      value: resolved,
       range: element.range,
     }],
     components: [],
@@ -177,7 +177,7 @@ export const decodeMediaFontSurface: StructuredSurfaceHandler = async ({ element
     const mediaType = mediaTypeFor(declaration.element, declaration.source, "font", FONT_MEDIA_TYPES);
     const resolved = await resolveAsset({ from: declaration.source, mediaType, range: declaration.element.range });
     sources.push({
-      artifact: resolved.blob,
+      artifact: resolved,
       ...(declaration.unicodeRange === undefined ? {} : { unicodeRange: declaration.unicodeRange }),
     });
   }

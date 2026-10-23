@@ -1,4 +1,4 @@
-import { isBlobRef, mapValueBlobs, sameType } from "@hypit/protocol";
+import { compareCodeUnits, isBlobRef, mapValueBlobs, sameType } from "@hypit/protocol";
 import type { BlobRef, CanonicalValue, TypedRecord } from "@hypit/protocol";
 
 import type {
@@ -209,7 +209,7 @@ export async function syncBuildResultOutputs(input: {
       `Logical Output ${published.output} has the wrong type for published Output ${published.name}`);
     return [{ published, record }];
   }).sort((left, right) => outputRank(left.record, left.forward) - outputRank(right.record, right.forward)
-    || left.published.name.localeCompare(right.published.name));
+    || compareCodeUnits(left.published.name, right.published.name));
 
   if (ready.length === 0) {
     return { changed: false, manifest: input.manifest, writer: input.writer };

@@ -35,8 +35,8 @@ const inputs = [
 export const manifest: ModuleManifest = { format: "hypit.module@1", ...module,
   dependencies: [compositionTypes.visualTrack, mediaTypes.fontStack, timelineTypes.timeline,
     spatialTypes.frame, temporalTypes.window, temporalTypes.instant]
-    .map(type => ({ module: type.module })),
-  types: [{ name: optionsType.name }], capabilities: [],
+    .map(type => type.module),
+  types: [optionsType.name], capabilities: [],
   producers: [{ name: producer.name, inputs, result: { kind: "output" as const, name: "visual", type: compositionTypes.visualTrack } }],
 };
 const fragment = sealGraphFragment({ inputs, operations: [{ id: "compose", producer,
@@ -48,12 +48,12 @@ const valueOf = <T>(record: TypedRecord | undefined): T => {
   if (record?.value === undefined) throw new Error("Explainer inputs are missing.");
   return record.value as T;
 };
-const component: ProducerPackage & RefinementPackage = { producers: [{ producer, handler: ({ inputs }) => ({ kind: "output", value: (canonicalize(renderExplainer(valueOf<Timeline>(inputs.timeline),
+const component: { producers?: ProducerPackage; refinements?: RefinementPackage } = { producers: [{ producer, handler: ({ inputs }) => ({ kind: "output", value: (canonicalize(renderExplainer(valueOf<Timeline>(inputs.timeline),
     valueOf<SpatialFrame>(inputs.within), valueOf<TemporalWindow>(inputs.window), valueOf<TemporalInstant>(inputs.reveal),
     valueOf<SynchronizedMedia>(inputs.media), valueOf<TemporalWindow>(inputs.sourceWindow),
     valueOf<FontStackRef>(inputs.font).faces, valueOf<ExplainerOptions>(inputs.options)))) }) }] };
 export const decodeSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
-  assertAttributes(element, ["id", "timeline", "within", "font", "media", "source-window", "reveal", "title", "transition-frames", "stack-order", ...temporalWindowAttributeNames]);
+  assertAttributes(element, ["id", "timeline", "within", "font", "media", "source-window", "reveal", "title", "transition-frames", ...temporalWindowAttributeNames]);
   assertEmptyElement(element);
   const id = textAttribute(element, "id");
   const reference = (name: string, type: TypeRef): SurfaceResolvedReference => {
@@ -69,7 +69,7 @@ export const decodeSurface: StructuredSurfaceHandler = ({ element, resolveRefere
   // Reveal is already absolute; the outer Window independently controls this scene's lifetime.
   const reveal = resolveTemporalInstantReference({ element, resolveReference, attribute: "reveal" });
   const options: ExplainerOptions = { id, title: textAttribute(element, "title"),
-    transitionFrames: Number(textAttribute(element, "transition-frames")), stackingOrder: Number(textAttribute(element, "stack-order")) };
+    transitionFrames: Number(textAttribute(element, "transition-frames")) };
   return { records: [{ id: `${id}.options`, type: optionsType,
       value: (canonicalize(options)), range: element.range }],
     components: [{ id, fragment,
@@ -85,7 +85,7 @@ const declaration = { name: "scene", tag: "Scene", mode: "structured" as const,
   outputs: [compositionTypes.visualTrack, optionsType],
   vocabulary: { summary: "A continuously playing performance makes room for a diagram on a semantic Moment.",
     attributes: [
-      ...["id", "title", "transition-frames", "stack-order"].map(name => ({ name, kind: "literal" as const, required: true, summary: name })),
+      ...["id", "title", "transition-frames"].map(name => ({ name, kind: "literal" as const, required: true, summary: name })),
       ...temporalContextAttributeVocabulary,
       ...[{ name: "within", type: spatialTypes.frame },
         { name: "font", type: mediaTypes.fontStack }, { name: "media", type: mediaTypes.synchronized },
@@ -93,10 +93,10 @@ const declaration = { name: "scene", tag: "Scene", mode: "structured" as const,
         .map(({ name, type }) => ({ name, kind: "reference" as const, required: true, accepts: [type], summary: name })),
       ...temporalWindowAttributeVocabulary,
     ], ports: [{ name: "visual", type: compositionTypes.visualTrack, summary: "The coordinated scene." }],
-    example: '<explainer:Scene id="scene" timeline={speech.timeline} within={within} font={font} media={presenter.media} source-window={speech.presenter} during={speech.window} reveal={reveal} title="How it works" transition-frames="18" stack-order="0"/>',
+    example: '<explainer:Scene id="scene" timeline={speech.timeline} within={within} font={font} media={presenter.media} source-window={speech.presenter} during={speech.window} reveal={reveal} title="How it works" transition-frames="18"/>',
   },
 };
 export const hypitPackage = { format: "hypit.package@1" as const, modules: [{ manifest }],
-  facets: [createProducerPackageFacet(component), createRefinementPackageFacet(component),
+  facets: [createProducerPackageFacet(component.producers ?? []), createRefinementPackageFacet(component.refinements ?? []),
     createMarkupSurfaceFacet({ module, declaration, handler: decodeSurface })] };
 export default hypitPackage;

@@ -114,10 +114,10 @@ test("the complete Studio session displays an unconsumed Instant alongside a pla
   <media:Image id="picture" src="./pixel.png"/>
   <visual:Track id="track" timeline={program.timeline}>
     <visual:Clip id="still" image={picture} extent={extent}
-      during={program.window} frame={canvas.bounds} z="0"/>
+      during={program.window} frame={canvas.bounds}/>
   </visual:Track>
   <film:Film id="film" canvas={canvas.canvas} timeline={program.timeline} appearance={look.film.main}>
-    <film:Track source={track.visual}/>
+    <film:Track id="track" source={track.visual}/>
   </film:Film>`, "film.composition");
   const session = await readStudioSession({ ...input, revision: 1, workspaceRoot: input.root });
   assert.deepEqual(session.declarationIssues, []);
@@ -125,5 +125,11 @@ test("the complete Studio session displays an unconsumed Instant alongside a pla
   assert.deepEqual(locators.items.map(item => item.label).sort(), ["offset", "standalone", "unused"]);
   assert.equal(session.snapshot.timeline.frameCount, 90);
   assert.equal(session.snapshot.tracks.length, 1);
+  assert.deepEqual(session.snapshot.tracks[0]?.items[0]?.terminalTargets, [{
+    kind: "visual-present",
+    occurrencePath: ["track"],
+    presentId: "still",
+    elementId: "still:frame",
+  }]);
   assert.ok(session.visualHtml.includes("<!doctype html>"));
 });

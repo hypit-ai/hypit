@@ -20,35 +20,39 @@ The public representation has these parts:
 | Part | What it means |
 | --- | --- |
 | Track | Named picture contribution belonging to one Timeline |
-| Present | An independently timed and stacked appearance |
+| Present | An independently timed appearance inside its owning Track |
 | `span` | Program frames from `startFrame` through the frame before `endFrameExclusive` |
-| `stacking` | Absolute paint order among Presents; higher order appears above lower order |
+| Item position | The back-to-front operation position in the Track's `items` sequence |
 | Elements | One rooted tree of boxes, text, media, masks, compositable surfaces or renderer programs |
 | Animation | Keyframes relative to the containing Present's start |
 
-Use several Presents when items have separate lifetimes or stacking positions. A persistent board
+Use several Presents when items have separate lifetimes or local operation positions. Their declaration
+sequence is their operation sequence. A persistent board
 can keep its settled rows visible while later rows enter. Its domain program decides those spans
 and states; the drawing output makes them explicit.
 
-Track grouping is an authoring boundary; each Present has its own paint order among the film's
-appearances. Its element tree supplies local layout and compositing scope. Use that tree or a browser
+Track grouping is an authoring boundary. The component orders its Presents locally; the parent Film
+places the completed Track through its position in a VisualScope member sequence. A Film Stack closes a
+child VisualScope and places the resulting picture once in its parent scope. A Present's element tree supplies local layout
+and compositing scope. Use that tree or a browser
 program for content that moves, clips or changes layout together. The final DOM follows these owned
 visual relationships rather than the nesting of tags in Source.
 
 ## A working drawing function
 
 [visuals.ts](examples/visuals.ts) contains `renderCard`, a complete pure drawing function using
-`sealVisualTrack` from `@hypit/composition`. It receives a projected span and a resolved Frame,
+`sealPresentVisualTrack` from `@hypit/composition`. It receives a projected span and a resolved Frame,
 draws a colored box with exact-font text, and optionally fades in relative to the Present's start.
-Its colors, size, padding, layer and entrance duration are supplied by the caller. These drawing-function
+Its colors, size, padding and entrance duration are supplied by the caller. These drawing-function
 arguments need not all become Surface parameters: the owning component can supply its fixed design
 and expose only the inputs the production needs.
 
 The root uses Canvas coordinates. The text child uses the root's local coordinates, so padding is
 added once. When a component computes child geometry in Canvas space, subtract the parent's origin
 before writing child `left` and `top`.
-Present `order` is local to its owning Visual Track, while `z` places that Present in the final Film
-paint order. Element `order` is local again to the containing Present.
+Present position is local to its owning Visual Track. The parent Film or Stack membership places the
+whole Track. Ordered box children use their array position; mask roles and program slots are named.
+Ids name objects and occurrences, but never break ordering ties or change paint order.
 
 The function is the drawing part of a package. Connect it to a Producer with matching typed inputs,
 then publish the Track through the Fragment and Surface as described in

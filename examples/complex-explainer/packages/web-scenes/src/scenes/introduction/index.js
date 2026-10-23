@@ -52,7 +52,7 @@ export function renderIntro(t, c, w, font, o, events, m) {
 
 <visual:Track timeline="{program.timeline}">
   <visual:Clip id="host" media="{host.media}" during="{program.host}"
-    frame="{portrait.frame}" z="10" fit="cover" />
+    frame="{portrait.frame}" fit="cover" />
 </visual:Track>
 
 <ranking:Board timeline="{program.timeline}">
@@ -64,8 +64,8 @@ export function renderIntro(t, c, w, font, o, events, m) {
 </caption:Track>
 
 <film:Film timeline="{program.timeline}">
-  <film:Track source="{presenter.visual}" />
-  <film:Track source="{board.visual}" />
+  <film:Track id="presenter" source="{presenter.visual}" />
+  <film:Track id="board" source="{board.visual}" />
 </film:Film>`;
   return scene(
     t,

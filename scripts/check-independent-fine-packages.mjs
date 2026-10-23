@@ -113,9 +113,9 @@ try {
   assert.deepEqual(captionPackage.contribution.modules?.map(({ manifest }) => manifest.name), ["@hypit/caption-fine"]);
   assert.deepEqual(textPackage.contribution.modules?.map(({ manifest }) => manifest.name), ["@hypit/text-fine"]);
   assert.equal(producerPackagesFromFacets(captionPackage.contribution.facets ?? []).length, 1);
-  assert.equal(refinementPackagesFromFacets(captionPackage.contribution.facets ?? []).length, 1);
+  assert.equal(refinementPackagesFromFacets(captionPackage.contribution.facets ?? []).length, 0);
   assert.equal(producerPackagesFromFacets(textPackage.contribution.facets ?? []).length, 1);
-  assert.equal(refinementPackagesFromFacets(textPackage.contribution.facets ?? []).length, 1);
+  assert.equal(refinementPackagesFromFacets(textPackage.contribution.facets ?? []).length, 0);
 
   const captionStudio = studioContributionFromPackage(
     captionPackage.specifier,

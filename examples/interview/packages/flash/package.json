@@ -16,7 +16,7 @@
     "@hypit/hypit": "workspace:*"
   },
   "dependencies": {
-    "@hypit/composition": "^0.1.0",
+    "@hypit/composition": "workspace:^0.2.0",
     "@hypit/spatial": "^0.1.0",
     "@hypit/temporal": "^0.1.0",
     "@hypit/timeline": "^0.1.0"

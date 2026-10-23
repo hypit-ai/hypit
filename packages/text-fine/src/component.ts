@@ -90,4 +90,4 @@ export const textFineComponent = {
       )) }),
     },
   ],
-} satisfies ProducerPackage & RefinementPackage;
+} satisfies { producers?: ProducerPackage; refinements?: RefinementPackage };

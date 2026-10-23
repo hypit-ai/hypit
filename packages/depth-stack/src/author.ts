@@ -34,7 +34,6 @@ const DECK_KEYS = [
   "next-rotation-mode", "next-opacity-step", "next-stacking-step",
   "next-brightness-step", "next-contrast-step", "next-saturation-step",
   "reflow-frames", "reflow-easing", "playback-future", "playback-past",
-  "stack-order",
 ] as const;
 
 function fail(recipe: Recipe, message: string): never {
@@ -176,7 +175,6 @@ export function decodeDepthStackSpec(recipe: Recipe): DepthStackSpec {
       easing: oneOf(recipe, "reflow-easing", ["linear", "ease-in", "ease-out", "ease-in-out"] as const, "ease-in-out"),
     },
     treatment: decodeVisualFrameTreatment(frameRecipe),
-    stackingOrder: integer(recipe, "stack-order", 30),
   });
 }
 

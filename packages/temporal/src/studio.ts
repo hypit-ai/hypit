@@ -106,7 +106,7 @@ export const commonTemporalStudioRelations: readonly StudioTemporalRelationCompa
     const reference = spec.projection?.ref;
     return { kind: "instant", expression: pointExpression(spec),
       reference: typeof reference === "string" ? reference : "absolute", frame: point.frame,
-      source: { timelineId: point.timelineId, type: timeline.type, kind: "timeline", id: clock.id },
+      source: { scope: "timeline", timelineId: point.timelineId, type: timeline.type, kind: "timeline", id: clock.id },
       authority: authority ?? { kind: "fixed" } };
   },
 }, {
@@ -137,7 +137,7 @@ export const commonTemporalStudioRelations: readonly StudioTemporalRelationCompa
     const spec = value<AuthorSpec>(specInput, "Shift Spec");
     const authority = parameterAuthority(spec, specInput.record);
     if (authority !== undefined) return { kind: "instant", expression: `${held.frame}f`, reference: "absolute",
-      frame: held.frame, source: { timelineId: held.timelineId, type: output.type, kind: "resolved", id: held.id }, authority };
+      frame: held.frame, source: { scope: "timeline", timelineId: held.timelineId, type: output.type, kind: "resolved", id: held.id }, authority };
     const upstream = trace("instant");
     return upstream?.kind !== "instant" ? undefined : { ...upstream, frame: held.frame };
   },

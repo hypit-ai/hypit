@@ -11,7 +11,7 @@ import type { MarkupSurfaceRegistryLike, RegisteredSurface } from "@hypit/markup
 import { inspectorFieldsForBindings, resolveTimelineEditHandles, sourceBindingsForDraft } from "../src/parameters.js";
 import { serializeParameterValue, validateParameterValue } from "../src/parameter-values.js";
 
-const temporalIdentity = { timelineId: "speech", narrativeId: "story" } as const;
+const temporalIdentity = { scope: "timeline", timelineId: "speech", narrativeId: "story" } as const;
 const narrativeSourceIdentity = { ...temporalIdentity,
   domain: { companion: "script", id: "story" },
   type: { module: { name: "@hypit/narrative", version: "1" }, name: "NarrativeReference" } } as const;
@@ -35,7 +35,6 @@ const temporalDomain: StudioTemporalDomainView = {
     startFrame: 0,
     endFrameExclusive: 12,
   }],
-  provenance: { output: "speech", origin: "run", status: "resolved", errors: [] },
   source: { path: "main.svml", content: { start: 0, end: 100 } },
 };
 
@@ -167,11 +166,11 @@ test("absolute Window edits work without a semantic lane and use the Companion's
       projection: {
         kind: "window",
         start: {
-          kind: "instant", expression: "1f", reference: "absolute", frame: 1, source: { timelineId: "animation", type: timelineSourceType, kind: "timeline", id: "animation" },
+          kind: "instant", expression: "1f", reference: "absolute", frame: 1, source: { scope: "timeline", timelineId: "animation", type: timelineSourceType, kind: "timeline", id: "animation" },
           authority: { kind: "parameter", binding: "from", relation: "direct" },
         },
         end: {
-          kind: "instant", expression: "20f", reference: "absolute", frame: 20, source: { timelineId: "animation", type: timelineSourceType, kind: "timeline", id: "animation" },
+          kind: "instant", expression: "20f", reference: "absolute", frame: 20, source: { scope: "timeline", timelineId: "animation", type: timelineSourceType, kind: "timeline", id: "animation" },
           authority: { kind: "parameter", binding: "until", relation: "direct" },
         },
         startFrame: 1, endFrameExclusive: 20,
@@ -235,7 +234,7 @@ test("parameter Source paths stay relative to the author workspace", () => {
     draft: {
       id: "item:item", authoredId: "item", display: { title: "item", layers: [] },
       startFrame: 1, endFrameExclusive: 2, stackOrder: 0,
-      elementRange: { start: 0, end: text.length },
+      elementLocation: { path: "main.svml", range: { start: 0, end: text.length } },
     },
     declarations: [{ name: "start", writable: true }],
   });
@@ -266,7 +265,8 @@ test("nested declared references reach the font attribute, not the referring Sty
     root: "/workspace", files: [{ path: "main.svml", text, language: "svml" }],
     placement: track, placements: [track, style, font],
     draft: { id: "track:item", authoredId: "track", display: { title: "track", layers: [] },
-      startFrame: 0, endFrameExclusive: 10, stackOrder: 0, elementRange: track.range },
+      startFrame: 0, endFrameExclusive: 10, stackOrder: 0,
+      elementLocation: { path: track.sourcePath, range: track.range } },
     declarations: [{ name: "style", referenced: [{ name: "font", referenced: [{ name: "family", writable: true }] }] }],
   });
   const family = parameters.find(parameter => parameter.binding === "style.font.family");
@@ -335,9 +335,9 @@ test("a derived Item follows its actual Style and Companion-owned Recipe present
   };
 
   const draft = {
-    id: "captions:cue:2", authoredId: "captions", presentId: "cue:2", display: { title: "cue:2", layers: [] },
+    id: "captions:cue:2", authoredId: "captions", terminalLinks: [{ spanId: "cue:2" }], display: { title: "cue:2", layers: [] },
     startFrame: 0, endFrameExclusive: 10, stackOrder: 70,
-    elementRange: track.range,
+    elementLocation: { path: track.sourcePath, range: track.range },
     parameterReferences: { layout: "alternate-caption" },
   } as const;
   const parameters = sourceBindingsForDraft({

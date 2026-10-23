@@ -51,14 +51,13 @@ import {
   definition,
   durableBuildRequest,
   finishClaimedBuild,
-  fixtureTargets,
   projectRuntimeFixture,
   publication,
   resultDestination,
   runFixture,
 } from "./local-scenario.js";
 
-test("a selected file is staged once and remains referenced in the produced Composite Result", async () => {
+test("a selected file is staged once and remains referenced in the produced structured Result value", async () => {
   const directory = await mkdtemp(join(tmpdir(), "hypit-local-bld_20260902T120000009Z_0000000001-"));
   const initial = createGreetingBuild();
   const bytes = new Uint8Array([4, 3, 2, 1]);
@@ -79,7 +78,7 @@ test("a selected file is staged once and remains referenced in the produced Comp
   });
   let attachmentOpens = 0;
   let endpointCalls = 0;
-  const components: ProducerPackage & RefinementPackage = {
+  const components: { producers: ProducerPackage; refinements?: RefinementPackage } = {
     producers: [{
       producer: producers.makePrompt,
       handler: ({ inputs }) => ({ kind: "output", value: inputs.intent!.value }),
@@ -103,7 +102,7 @@ test("a selected file is staged once and remains referenced in the produced Comp
         const source = (need.constraints as { readonly source: typeof historical }).source;
         assert.equal(await resources.has(source.resource), true);
         assert.deepEqual(await resources.get(source.resource), bytes);
-        return { value: ({ image: source }) };
+        return { image: source };
       },
     }],
   });
@@ -112,14 +111,14 @@ test("a selected file is staged once and remains referenced in the produced Comp
     await writeFile(inputPath, bytes);
     const runtime = await createLocalRuntime({
       ...projectRuntimeFixture(directory),
-      producerPackages: [components], refinementPackages: [components],
+      producers: components.producers,
       endpoints: [endpoint],
     });
     await runtime.build({
       id: "bld_20260902T120000009Z_0000000001",
       definition: buildDefinition,
       catalog: {
-        source: { path: join(directory, "main.svml") },
+        sourcePath: join(directory, "main.svml"),
         publication: { outputs: [{ name: "final.document", output: "document", target: true,
           type: types.document,
           source: { kind: "current-record", record: "document:root" } }] },
@@ -149,7 +148,7 @@ test("a selected file is staged once and remains referenced in the produced Comp
     const results = new FileBuildResultRepository(join(directory, "results"));
     const resolved = (await results.resolve("bld_20260902T120000009Z_0000000001", "final.document"))!;
     assert.equal(resolved.value.kind, "value");
-    if (resolved.value.kind !== "value") throw new Error("expected composite");
+    if (resolved.value.kind !== "value") throw new Error("expected value document");
     assert.deepEqual(resolved.value.document.resources.map((binding) => binding.file), [{
       kind: "external-file", uri: pathToFileURL(inputPath).href, size: bytes.length, mediaType: historical.mediaType,
     }]);

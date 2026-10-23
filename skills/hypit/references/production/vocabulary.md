@@ -67,8 +67,7 @@ and elements. Those two places contain the useful reason and the exact choice.
 
 When the work introduces a new visual role, structure, state change, interaction, or crafted behavior,
 create a project Author Package under the project's `packages/`. This is a normal part of making a
-video. Do not patch Hypit Core, the CLI, or an installed Distribution package to implement one video's
-component. Author the behavior in the video's project package and select it through normal imports.
+video. Author the behavior there and select it through the project's imports.
 
 Keep the boundary useful:
 
@@ -109,16 +108,12 @@ with a drawing example. [System relationships](system.md) places it in the compl
 
 ## Let ordinary package management own distribution
 
-The project's package manager installs and versions components. Hypit loads only packages selected
-by Source or Run imports and their declared dependencies. Project packages resolve from the project;
-embedded Core comes from the selected Distribution, while its product-selected default packages are
-ordinary dependencies installed with it. Independently published project packages—including
-`@hypit/*` packages—follow ordinary project-first package resolution.
-Hypit does not scan the dependency tree for possible components.
+The project's package manager installs and versions components. Source and Run imports select the
+packages the production uses. Project packages and independently published packages resolve through
+the project's installed dependencies; the selected Distribution supplies its own default packages.
 
 Keep a new component project-local while it serves this work. If its owner later wants to use it
 across projects, send a versioned tarball or publish an npm/private-registry release and pin it in the
-consumer project's `package.json` and lockfile. Sharing changes where the same package is installed;
-it does not change the component model or require a Hypit-specific registry.
+consumer project's `package.json` and lockfile. Sharing changes where the same package is installed.
 
 [Sharing a project package](component-sharing.md) owns the packaging, identity and upgrade details.

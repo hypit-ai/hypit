@@ -38,7 +38,7 @@ export const manifest: ModuleManifest = {
   name: moduleRef.name,
   version: moduleRef.version,
   dependencies: [],
-  types: Object.values(types).map((type) => ({ name: type.name })),
+  types: Object.values(types).map((type) => type.name),
   capabilities: [{ name: capabilities.generation.name, returns: types.generated }],
   producers: [
     {
@@ -70,11 +70,23 @@ const outputRecords = {
   document: "document:root",
 } as const;
 
-export function createGreetingBuild(options?: {
+export type RuntimeBuildFixture = {
+  readonly state: BuildState;
+  /** Logical Outputs and Records produced by this execution scenario. */
+  readonly outputs: Readonly<Record<string, {
+    readonly output: string;
+    readonly type: TypeRef;
+    readonly goal: boolean;
+    readonly record: string;
+  }>>;
+};
+
+export function createGreetingBuildFixture(options?: {
   readonly generationRealization?: "primary" | "placeholder";
   readonly targetOutputs?: readonly (keyof typeof outputRecords)[];
-}): BuildState {
+}): RuntimeBuildFixture {
   const targets = options?.targetOutputs ?? ["document"];
+  const selected = new Set<string>(targets);
   const unknown = targets.find((target) => outputRecords[target] === undefined);
   if (unknown !== undefined) throw new Error(`unknown Runtime scenario target ${unknown}`);
   const demandGenerated = targets.includes("generated") || targets.includes("document");
@@ -115,7 +127,7 @@ export function createGreetingBuild(options?: {
       result: { kind: "output", name: "document", record: outputRecords.document },
     });
   }
-  const definition = defineBuild({
+  const state = materializeBuild(defineBuild({
     program: link(createResolvedClosure([manifest]), [{
       id: "intent:root",
       type: types.intent,
@@ -126,13 +138,33 @@ export function createGreetingBuild(options?: {
       steps,
       goals: targets.map((target) => target === "generated" ? generatedRecord : outputRecords[target]),
     },
+  }), []);
+  const output = (name: keyof typeof outputRecords, type: TypeRef, record: string) => ({
+    output: name,
+    type,
+    goal: selected.has(name),
+    record,
   });
-  return materializeBuild(definition, []);
+  return {
+    state,
+    outputs: {
+      prompt: output("prompt", types.prompt, outputRecords.prompt),
+      ...(demandGenerated ? { generated: output("generated", types.generated, generatedRecord) } : {}),
+      ...(targets.includes("document") ? { document: output("document", types.document, outputRecords.document) } : {}),
+    },
+  };
 }
 
-export function createParallelGreetingBuild(generationCount = 2): BuildState {
+export function createGreetingBuild(options?: {
+  readonly generationRealization?: "primary" | "placeholder";
+  readonly targetOutputs?: readonly (keyof typeof outputRecords)[];
+}): BuildState {
+  return createGreetingBuildFixture(options).state;
+}
+
+export function createParallelGreetingBuildFixture(generationCount = 2): RuntimeBuildFixture {
   const generations = ["a", "b", "c"].slice(0, generationCount);
-  return materializeBuild(defineBuild({
+  const state = materializeBuild(defineBuild({
     program: link(createResolvedClosure([manifest]), [{
       id: "intent:root",
       type: types.intent,
@@ -159,4 +191,25 @@ export function createParallelGreetingBuild(generationCount = 2): BuildState {
       goals: generations.map((suffix) => `generated:${suffix}`),
     },
   }), []);
+  return {
+    state,
+    outputs: Object.fromEntries([
+      ["prompt", {
+        output: "prompt",
+        type: types.prompt,
+        goal: false,
+        record: outputRecords.prompt,
+      }],
+      ...generations.map((suffix) => [`generated-${suffix}`, {
+        output: `generated-${suffix}`,
+        type: types.generated,
+        goal: true,
+        record: `generated:${suffix}`,
+      }] as const),
+    ]),
+  };
+}
+
+export function createParallelGreetingBuild(generationCount = 2): BuildState {
+  return createParallelGreetingBuildFixture(generationCount).state;
 }

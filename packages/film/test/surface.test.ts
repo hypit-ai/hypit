@@ -6,8 +6,9 @@ import {
   compositionDependency,
   compositionManifest,
   compositionTypes,
+  audioGraphFromClips,
   sealAudioTrack,
-  sealVisualTrack,
+  sealPresentVisualTrack,
 } from "@hypit/composition";
 import { mediaManifest } from "@hypit/media";
 import type { Track } from "@hypit/composition";
@@ -54,7 +55,7 @@ import {
   createMarkupAuthorFrontend,
 } from "@hypit/markup";
 import type { StructuredElement, SurfaceResolvedReference } from "@hypit/markup";
-import { createRecordValidator, RefinementRegistry } from "@hypit/refinement";
+import { refineRecord, RefinementRegistry } from "@hypit/refinement";
 
 function buildState(
   program: Parameters<typeof planBuild>[0],
@@ -67,7 +68,7 @@ function buildState(
     candidates: [],
     operations: [],
     satisfactions: [],
-    targets: targets.map((output) => ({ output })),
+    targets,
   });
   return materializeBuild(defineBuild({
     program: link(program.closure, [...program.records, ...planned.initialRecords]),
@@ -76,7 +77,6 @@ function buildState(
 }
 
 const fixtureModule = { name: "example.film-fixture", version: "1" } as const;
-const fixtureSurfaceDigest = fixtureResource("example.film-fixture/inputs-surface@1");
 const fixtureSurface = {
   name: "inputs", tag: "Inputs", mode: "structured",
   outputs: [timelineTypes.timeline, compositionTypes.visualTrack, compositionTypes.audioTrack],
@@ -97,14 +97,14 @@ const fixtureManifest: ModuleManifest = {
 const space = sealTimeline({ id: "test-space", frameCount: 60, frameRate: { numerator: 30, denominator: 1 },
 });
 const semantic = timelineFixture(space);
-const visual = sealVisualTrack({ timelineId: "test-space",
+const visual = sealPresentVisualTrack({ timelineId: "test-space",
   visualIr: "hypit.visual-ir@1",
   id: "visual",
   presents: [],
 });
 const audio = sealAudioTrack({ timelineId: "test-space",
   id: "audio",
-  clips: [],
+  graph: audioGraphFromClips([]),
 });
 
 const closure = createResolvedClosure([
@@ -181,7 +181,7 @@ async function compileFilm(options: { readonly styles?: string; readonly tracks?
       <fixture:Inputs/>
       <space:Canvas id="vertical" width="1080" height="1920"/>
       <film:Film id="main" canvas={vertical.canvas} timeline={semantic} appearance={recipes.film.vertical}>
-        ${options.tracks ?? '<film:Track source={visual}/><film:Track source={audio}/>'}
+        ${options.tracks ?? '<film:Track id="picture" source={visual}/><film:Track source={audio}/>'}
       </film:Film>
     </svml>`),
     closure,
@@ -189,7 +189,7 @@ async function compileFilm(options: { readonly styles?: string; readonly tracks?
     resolveSource() {
       return source("/project/recipes.svs", options.styles ?? validStyles);
     },
-    validateRecord: createRecordValidator(validatorRegistry()),
+    refineRecord: async (record) => await refineRecord(record, validatorRegistry()),
   });
 }
 
@@ -198,9 +198,10 @@ test("the official Film Surface validates SVS and lowers dynamic peer Tracks", a
   const program = compiled.program.records.find((record) => record.type.name === filmTypes.program.name);
   assert.ok(program);
   assert.deepEqual(program.value, {
-
     id: "main",
     clearColor: "#09090B",
+    visual: { members: [{ kind: "track", id: "picture", slot: 0 }] },
+    audio: [1],
   });
   const target = resolveCompiledSourceExport(compiled, "main.composition", compositionTypes.composition);
   assert.equal(target.ref.kind, "logical-output");
@@ -215,6 +216,27 @@ test("the official Film Surface validates SVS and lowers dynamic peer Tracks", a
       ].sort());
 });
 
+test("Film preserves recursive visual Stack structure and keeps AudioTrack at the root", async () => {
+  const compiled = await compileFilm({ tracks: `
+    <film:Stack id="foreground">
+      <film:Stack id="titles"><film:Track id="title" source={visual}/></film:Stack>
+    </film:Stack>
+    <film:Track source={audio}/>` });
+  const program = compiled.program.records.find((record) => record.type.name === filmTypes.program.name);
+  assert.deepEqual(program?.value, {
+    id: "main",
+    clearColor: "#09090B",
+    visual: { members: [{ kind: "stack", id: "foreground", members: [
+      { kind: "stack", id: "titles", members: [{ kind: "track", id: "title", slot: 0 }] },
+    ] }] },
+    audio: [1],
+  });
+  await assert.rejects(
+    compileFilm({ tracks: '<film:Stack id="invalid"><film:Track source={audio}/></film:Stack>' }),
+    /inside Stack must reference VisualTrack/u,
+  );
+});
+
 test("Film rejects an invalid package-owned Recipe during check", async () => {
   await assert.rejects(
     compileFilm({ styles: `<sheet version="1">film.vertical { width: 1080; }</sheet>` }),
@@ -222,13 +244,26 @@ test("Film rejects an invalid package-owned Recipe during check", async () => {
   );
 });
 
-test("Film rejects a repeated Track reference during check, before executing its inputs", async () => {
-  for (const track of ["visual", "audio"]) {
-    await assert.rejects(
-      compileFilm({ tracks: `<film:Track source={${track}}/><film:Track source={${track}}/>` }),
-      /cannot include the same Track more than once/u,
-    );
-  }
+test("Film reuses one VisualTrack through named occurrences and rejects a duplicate root Audio SourceRef", async () => {
+  const compiled = await compileFilm({ tracks: `
+    <film:Track id="background" source={visual}/>
+    <film:Stack id="inset"><film:Track id="picture" source={visual}/></film:Stack>
+  ` });
+  const program = compiled.program.records.find((record) => record.type.name === filmTypes.program.name);
+  assert.deepEqual(program?.value, {
+    id: "main", clearColor: "#09090B",
+    visual: { members: [
+      { kind: "track", id: "background", slot: 0 },
+      { kind: "stack", id: "inset", members: [
+        { kind: "track", id: "picture", slot: 0 },
+      ] },
+    ] },
+    audio: [],
+  });
+  await assert.rejects(
+    compileFilm({ tracks: '<film:Track source={audio}/><film:Track source={audio}/>' }),
+    /same AudioTrack more than once/u,
+  );
 });
 
 test("Film distinguishes component output ports and resolves duplicate aliases", async () => {
@@ -252,13 +287,33 @@ test("Film distinguishes component output ports and resolves duplicate aliases",
     const element: StructuredElement = { kind: "element", name: "film:Film", range,
       attributes: { id: "main", canvas: { kind: "reference", path: "canvas" },
         timeline: { kind: "reference", path: "timeline" }, appearance: { kind: "reference", path: "appearance" } },
-      children: paths.map(path => ({ kind: "element", name: "film:Track", range, children: [],
-        attributes: { source: { kind: "reference", path } } })),
+      children: paths.map((path, index) => ({ kind: "element", name: "film:Track", range, children: [],
+        attributes: {
+          source: { kind: "reference", path },
+          ...(refs.get(path)?.type.name === compositionTypes.visualTrack.name
+            ? { id: `visual-${index + 1}` }
+            : {}),
+        } })),
     };
     return decodeFilmSurface({ element, sourceName: "main.svml", resolveReference: path => refs.get(path),
       resolveAsset: () => { throw new Error("Film reads explicit references only"); } });
   };
   const compiled = await decode(["board.visual", "board.audio", "other.visual"]);
   assert.deepEqual(compiled.components[0]?.inputs["track-2"], refs.get("board.audio")!.ref);
-  assert.throws(() => decode(["board.visual", "board-alias.visual"]), /cannot include the same Track more than once/u);
+  const aliased = await decode(["board.visual", "board-alias.visual"]);
+  assert.equal(aliased.components[0]?.fragment.inputs.filter((input) => input.name.startsWith("track-")).length, 1);
+});
+
+test("Film requires placement only on visual Track memberships", async () => {
+  await assert.rejects(compileFilm({ tracks: '<film:Track source={visual}/>' }),
+    /requires exactly id, source/u);
+  await assert.rejects(compileFilm({ tracks: '<film:Track id="audio" source={audio}/>' }),
+    /requires exactly source/u);
+});
+
+test("Film uses sibling array position for paint order and reserves ids for identity", async () => {
+  await assert.rejects(compileFilm({ tracks: [
+    '<film:Track id="same" source={visual}/>',
+    '<film:Track id="same" source={visual}/>',
+  ].join("") }), /duplicate visual member id same/u);
 });

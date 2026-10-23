@@ -1,5 +1,6 @@
 import { isResourceId } from "./canonical.js";
 import type { ResourceId } from "./identity.js";
+import { compareCodeUnits } from "./order.js";
 
 export type CanonicalValue =
   | null
@@ -143,12 +144,12 @@ export function normalizeValue(value: unknown, subject = "Value"): Value {
       mediaType: item.mediaType,
     };
   }
-  const result: Record<string, Value> = {};
-  for (const [key, child] of Object.entries(item).sort(([left], [right]) => left.localeCompare(right))) {
+  const entries: [string, Value][] = [];
+  for (const [key, child] of Object.entries(item).sort(([left], [right]) => compareCodeUnits(left, right))) {
     if (child === undefined) throw new Error(`${subject}.${key} is undefined.`);
-    result[key] = normalizeValue(child, `${subject}.${key}`);
+    entries.push([key, normalizeValue(child, `${subject}.${key}`)]);
   }
-  return result;
+  return Object.fromEntries(entries);
 }
 
 /** Transform every BlobRef leaf while preserving the surrounding value structure and paths. */

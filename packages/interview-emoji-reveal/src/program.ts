@@ -1,7 +1,7 @@
 import { assertTimelineIdentity } from "@hypit/timeline";
 import type { Timeline } from "@hypit/timeline";
-import { assertVisualTrackIdentity, sealVisualTrack } from "@hypit/composition";
-import type { VisualAnimation, VisualElement, VisualTrack } from "@hypit/composition";
+import { assertVisualTrackIdentity, sealPresentVisualTrack } from "@hypit/composition";
+import type { PresentVisualTrack, VisualAnimation, VisualElement } from "@hypit/composition";
 import { canonicalize } from "@hypit/hypit/protocol";
 import type { BlobRef } from "@hypit/hypit/protocol";
 import { assertSpatialFrame } from "@hypit/spatial";
@@ -49,7 +49,6 @@ export function assertEmojiRevealStyle(value: EmojiRevealStyle): void {
   finite(value.shadowSpreadPx, "EmojiRevealStyle.shadowSpreadPx"); positive(value.iconSizePx, "EmojiRevealStyle.iconSizePx");
   assert(value.iconSizePx <= value.slotSizePx, "EmojiRevealStyle.iconSizePx cannot exceed its slot.");
   assert(Number.isSafeInteger(value.revealFrames) && value.revealFrames > 0, "EmojiRevealStyle.revealFrames must be a positive integer.");
-  assert(Number.isSafeInteger(value.stackingOrder), "EmojiRevealStyle.stackingOrder must be an integer.");
 }
 
 export function createEmojiRevealSet(): EmojiRevealSet { return { items: [] }; }
@@ -71,7 +70,7 @@ export function appendEmojiRevealItem(set: EmojiRevealSet, timeline: Timeline, s
   assertEmojiRevealSet(set); assertTimelineIdentity(timeline); assertEmojiRevealItemSpec(spec);
   assert(!spec.preset, `Emoji Reveal Item ${spec.id} with preset=true cannot have an activation.`);
   assertIconImage(icon, `Emoji Reveal Item ${spec.id} icon`);
-  assertTemporalInstantFor(activation, { subjectId: spec.id, timeline: timeline });
+  assertTemporalInstantFor(activation, { timeline });
   assert(!set.items.some((item) => item.spec.id === spec.id), `Duplicate Emoji Reveal Item ${spec.id}.`);
   return { items: [...set.items, { spec: structuredClone(spec), icon: structuredClone(icon), activation: structuredClone(activation) }] };
 }
@@ -89,7 +88,7 @@ export function finalizeEmojiReveal(
 ): EmojiRevealProgram {
   assertEmojiRevealHeader(header); assertTimelineIdentity(timeline); assertEmojiRevealStyle(style); assertEmojiRevealSet(set);
   assertIconImage(placeholder, "Emoji Reveal placeholder");
-  assertTemporalWindowFor(outer, { subjectId: header.id, timeline: timeline });
+  assertTemporalWindowFor(outer, { timeline });
   assert(set.items.length > 0, "Emoji Reveal requires at least one Item.");
   let previous = outer.span.startFrame - 1;
   let revealStarted = false;
@@ -173,11 +172,11 @@ function settledAnimation(duration: number, visible: boolean): VisualAnimation {
 }
 
 function iconElement(input: {
-  readonly id: string; readonly parent: string; readonly order: number; readonly artifact: BlobRef;
+  readonly id: string; readonly artifact: BlobRef;
   readonly x: number; readonly y: number; readonly size: number; readonly animation: VisualAnimation;
 }): VisualElement {
   return {
-    id: input.id, parent: input.parent, order: input.order, kind: "image", artifact: structuredClone(input.artifact), animation: input.animation,
+    id: input.id, kind: "image", artifact: structuredClone(input.artifact), animation: input.animation,
     style: [
       { name: "height", value: px(input.size) }, { name: "left", value: px(input.x) }, { name: "object-fit", value: "contain" },
       { name: "overflow", value: "visible" }, { name: "position", value: "absolute" }, { name: "top", value: px(input.y) },
@@ -186,10 +185,10 @@ function iconElement(input: {
   };
 }
 
-export function renderEmojiReveal(within: SpatialFrame, timeline: Timeline, program: EmojiRevealProgram): VisualTrack {
+export function renderEmojiReveal(within: SpatialFrame, timeline: Timeline, program: EmojiRevealProgram): PresentVisualTrack {
   assertSpatialFrame(within); assertTimelineIdentity(timeline); assertEmojiRevealProgram(program);
   assert(program.timelineId === timeline.id, "EmojiRevealProgram belongs to another Timeline.");
-  assertTemporalWindowFor(program.outer, { subjectId: program.id, timeline: timeline });
+  assertTemporalWindowFor(program.outer, { timeline });
   const { style } = program;
   const count = program.items.length;
   const width = style.paddingXPx * 2 + style.slotSizePx * count + style.gapPx * (count - 1);
@@ -201,13 +200,8 @@ export function renderEmojiReveal(within: SpatialFrame, timeline: Timeline, prog
   assert(top >= within.yPx && top + height + Math.max(0, style.shadowYPx) <= within.yPx + within.heightPx,
     "Emoji Reveal strip is outside its placement Frame.");
   const duration = program.outer.span.endFrameExclusive - program.outer.span.startFrame;
-  const elements: VisualElement[] = [{
-    id: "root", order: 0, kind: "box", style: [
-      { name: "height", value: px(height) }, { name: "left", value: px(left) }, { name: "overflow", value: "visible" },
-      { name: "position", value: "absolute" }, { name: "top", value: px(top) }, { name: "width", value: px(width) },
-    ],
-  }, {
-    id: "board", parent: "root", order: 1, kind: "box", style: [
+  const children: VisualElement[] = [{
+    id: "board", kind: "box", children: [], style: [
       { name: "background-color", value: style.background },
       { name: "border", value: `${px(style.borderWidthPx)} solid ${style.borderColor}` },
       { name: "border-radius", value: px(style.radiusPx) },
@@ -221,25 +215,30 @@ export function renderEmojiReveal(within: SpatialFrame, timeline: Timeline, prog
     const preset = !("activation" in item);
     const atFrame = preset ? 0 : item.activation.frame - program.outer.span.startFrame;
     const parentId = `slot-${index + 1}`;
-    elements.push({
-      id: parentId, parent: "root", order: 2 + index * 3, kind: "box", style: [
+    children.push({
+      id: parentId, kind: "box", children: [
+        iconElement({ id: `${parentId}-placeholder`, artifact: program.placeholder,
+          x: (style.slotSizePx - style.iconSizePx) / 2, y: (style.slotSizePx - style.iconSizePx) / 2,
+          size: style.iconSizePx, animation: preset ? settledAnimation(duration, false) : questionAnimation(atFrame, duration) }),
+        iconElement({ id: `${parentId}-icon`, artifact: item.icon,
+          x: (style.slotSizePx - style.iconSizePx) / 2, y: (style.slotSizePx - style.iconSizePx) / 2,
+          size: style.iconSizePx, animation: preset ? settledAnimation(duration, true) : revealAnimation(atFrame, duration, style.revealFrames) }),
+      ], style: [
         { name: "height", value: px(style.slotSizePx) }, { name: "left", value: px(x) }, { name: "overflow", value: "visible" },
         { name: "position", value: "absolute" }, { name: "top", value: px(style.paddingYPx) }, { name: "width", value: px(style.slotSizePx) },
       ],
     });
-    elements.push(
-      iconElement({ id: `${parentId}-placeholder`, parent: parentId, order: 3 + index * 3, artifact: program.placeholder,
-        x: (style.slotSizePx - style.iconSizePx) / 2, y: (style.slotSizePx - style.iconSizePx) / 2,
-        size: style.iconSizePx, animation: preset ? settledAnimation(duration, false) : questionAnimation(atFrame, duration) }),
-      iconElement({ id: `${parentId}-icon`, parent: parentId, order: 4 + index * 3, artifact: item.icon,
-        x: (style.slotSizePx - style.iconSizePx) / 2, y: (style.slotSizePx - style.iconSizePx) / 2,
-        size: style.iconSizePx, animation: preset ? settledAnimation(duration, true) : revealAnimation(atFrame, duration, style.revealFrames) }),
-    );
   });
-  const track = sealVisualTrack({
+  const root: VisualElement = {
+    id: "root", kind: "box", children, style: [
+      { name: "height", value: px(height) }, { name: "left", value: px(left) }, { name: "overflow", value: "visible" },
+      { name: "position", value: "absolute" }, { name: "top", value: px(top) }, { name: "width", value: px(width) },
+    ],
+  };
+  const track = sealPresentVisualTrack({
     timelineId: timeline.id, visualIr: "hypit.visual-ir@1", id: program.id,
-    presents: [{ id: program.id, order: 0, z: style.stackingOrder, subjectId: program.id,
-      span: { ...program.outer.span }, elements }],
+    presents: [{ id: program.id, subjectId: program.id,
+      span: { ...program.outer.span }, root }],
   });
   assertVisualTrackIdentity(track, timeline); return track;
 }

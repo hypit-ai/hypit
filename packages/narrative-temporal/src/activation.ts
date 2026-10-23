@@ -15,7 +15,7 @@ export const hypitPackage = {
       temporalDeclarations: narrativeStudioTemporalDeclarations,
       temporalRelations: narrativeStudioTemporalRelations,
     }),
-    ...[narrativeTemporalComponent].flatMap((component) => [createProducerPackageFacet(component), createRefinementPackageFacet(component)]),
+    ...[narrativeTemporalComponent].flatMap((component) => [createProducerPackageFacet(component.producers ?? []), createRefinementPackageFacet(component.refinements ?? [])]),
     createMarkupSurfaceFacet({ module: narrativeTemporalModuleRef,
       declaration: narrativeProjectionMarkupSurfaces.find((item) => item.name === "narrative-projection")!, handler: decodeNarrativeProjectionSurface }),
     createMarkupSurfaceFacet({ module: narrativeTemporalModuleRef,

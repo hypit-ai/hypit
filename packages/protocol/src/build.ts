@@ -91,10 +91,6 @@ export type AuthorGraph = {
   readonly operations: readonly OperationNode[];
 };
 
-export type BuildTarget = {
-  readonly output: LogicalOutputId;
-};
-
 export type Satisfaction = {
   readonly output: LogicalOutputId;
   readonly candidate: CandidateId;
@@ -122,7 +118,7 @@ export type RunGraph = {
   readonly candidates: readonly Candidate[];
   readonly operations: readonly OperationNode[];
   readonly satisfactions: readonly Satisfaction[];
-  readonly targets: readonly BuildTarget[];
+  readonly targets: readonly LogicalOutputId[];
 };
 
 export type LinkedProgram = {

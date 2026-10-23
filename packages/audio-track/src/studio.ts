@@ -7,7 +7,7 @@ import {
   previewLayer,
   requiredSurfaceValue,
   temporalLineageFor,
-  temporalDomainSource,
+  temporalDomainMarker,
 } from "@hypit/studio-companion";
 import { audioClipDefaults } from "./surface.js";
 import { audioTrackModuleRef, audioTrackTypes } from "./manifest.js";
@@ -27,14 +27,14 @@ function projectAudio(context: StudioTrackCompanionContext) {
   return childItems(context, clips, "audio-clip", "standard").map((item, index) => {
     const clip = clips[index]!;
     const temporal = temporalLineageFor(context, clip.id, "window");
-    const semanticSource = temporalDomainSource(temporal);
+    const marker = temporalDomainMarker(temporal);
     return {
       ...item,
       display: {
         title: authoredItemTitle(context, item.authoredId, clip.sourceTypes, ["source"]),
         layers: [previewLayer(clip.preview, "waveform")],
       },
-      ...(semanticSource?.id === undefined ? {} : { markerId: semanticSource.id }),
+      ...(marker === undefined ? {} : { marker }),
       ...(temporal === undefined ? {} : { temporal }),
     };
   });
@@ -63,7 +63,7 @@ export const audioTrackStudioTrackCompanions: readonly StudioTrackCompanion[] = 
       section: { id: "mix", label: "Mix" },
       control: "number",
       unit: "%",
-      number: { scale: 100, minimum: 0, maximum: 6400, step: 1 },
+      number: { scale: 100, minimum: 0, step: 1 },
     },
     ...(["fade-in", "fade-out"] as const).map((binding) => ({
       binding,

@@ -2,7 +2,7 @@ import { assertTimelineIdentity } from "@hypit/timeline";
 import type { Timeline } from "@hypit/timeline";
 import {
   assertVisualTrackIdentity,
-  sealVisualTrack,
+  sealPresentVisualTrack,
 } from "@hypit/composition";
 import type {
   VisualAnimation,
@@ -10,7 +10,7 @@ import type {
   VisualStyleDeclaration,
   VisualTextFlow,
   VisualTextTypography,
-  VisualTrack,
+  PresentVisualTrack,
 } from "@hypit/composition";
 import { assertFontArtifactRef } from "@hypit/media";
 import { assertBlobRef, canonicalize } from "@hypit/hypit/protocol";
@@ -217,7 +217,6 @@ function realized(
     style: structuredClone(style),
     content: structuredClone(content),
     ...(avatar === undefined ? {} : { avatar: structuredClone(avatar) }),
-    order: set.items.length,
   };
   const ids = new Set(set.items.map((item) => item.id));
   assert(!ids.has(addition.id), `Comment Sticker already contains Item ${addition.id}.`);
@@ -236,7 +235,7 @@ export function appendProjectedCommentSticker(
   window: TemporalWindow,
   avatar?: BlobRef,
 ): CommentStickerSet {
-  assertTemporalWindowFor(window, { subjectId: spec.id, timeline: timeline });
+  assertTemporalWindowFor(window, { timeline });
   return realized(set, header, timeline, frame, style, spec, content, window, avatar);
 }
 
@@ -255,7 +254,6 @@ export function assertCommentStickerProgram(value: CommentStickerProgram): void 
     assertCommentStickerStyle(item.style);
     assertCommentStickerContent(item.content);
     if (item.avatar !== undefined) assertAvatar(item.avatar);
-    assert(Number.isSafeInteger(item.order) && item.order >= 0, `Comment Sticker Item ${item.id} order is invalid.`);
   }
 }
 
@@ -358,8 +356,6 @@ function typography(value: CommentStickerTextStyle): VisualTextTypography {
 
 function textElement(input: {
   readonly id: string;
-  readonly parent: string;
-  readonly order: number;
   readonly text: string;
   readonly style: CommentStickerTextStyle;
   readonly x: number;
@@ -370,8 +366,6 @@ function textElement(input: {
 }): VisualElement {
   return {
     id: input.id,
-    parent: input.parent,
-    order: input.order,
     kind: "text-flow",
     document: { paragraphs: [{ id: `${input.id}-paragraph`, inlines: [{ kind: "text", id: `${input.id}-copy`, text: input.text }] }] },
     typography: typography(input.style),
@@ -396,7 +390,6 @@ function textElement(input: {
 }
 
 function bodyElement(input: {
-  readonly parent: string;
   readonly text: string;
   readonly style: CommentStickerStyle["body"];
   readonly x: number;
@@ -422,8 +415,6 @@ function bodyElement(input: {
   };
   return {
     id: "body",
-    parent: input.parent,
-    order: 6,
     kind: "text-flow",
     document: { paragraphs: [{ id: "body-paragraph", inlines: [{ kind: "text", id: "body-copy", text: input.text }] }] },
     typography: { ...bodyTypography, trackingPx: input.style.sizePx * -0.02 },
@@ -451,7 +442,7 @@ function initial(author: string): string {
   return [...author.replace(/^@/u, "").trim()][0]?.toUpperCase() ?? "";
 }
 
-function stickerElements(item: CommentStickerItemProgram): readonly VisualElement[] {
+function stickerRoot(item: CommentStickerItemProgram): VisualElement {
   const { style, frame, content } = item;
   const duration = item.span.endFrameExclusive - item.span.startFrame;
   const tailHeight = style.card.tail.enabled ? style.card.tail.heightPx : 0;
@@ -471,27 +462,9 @@ function stickerElements(item: CommentStickerItemProgram): readonly VisualElemen
   const bodyHeight = cardHeight - bodyY - bodyBottom;
   assert(bodyHeight > 0, `Comment Sticker ${item.id} frame is too short for its text.`);
   const animation = motionAnimation(style, duration);
-  const elements: VisualElement[] = [{
-    id: "root",
-    order: 0,
-    kind: "box",
-    style: [
-      { name: "height", value: px(frame.heightPx) },
-      { name: "left", value: px(frame.xPx) },
-      { name: "overflow", value: "visible" },
-      { name: "position", value: "absolute" },
-      { name: "top", value: px(frame.yPx) },
-      { name: "transform", value: transform(0, style.card.rotationDeg, 1) },
-      { name: "transform-origin", value: "center center" },
-      { name: "width", value: px(frame.widthPx) },
-    ],
-    ...(animation === undefined ? {} : { animation }),
-  }, {
-    id: "card",
-    parent: "root",
-    order: 1,
-    kind: "box",
-    style: [
+  const cardChildren: VisualElement[] = [];
+  const rootChildren: VisualElement[] = [];
+  const cardStyle: VisualStyleDeclaration[] = [
       { name: "background-color", value: style.card.background },
       { name: "border", value: `${px(style.card.borderWidthPx)} solid ${style.card.borderColor}` },
       { name: "border-radius", value: px(style.card.radiusPx) },
@@ -503,14 +476,12 @@ function stickerElements(item: CommentStickerItemProgram): readonly VisualElemen
       { name: "position", value: "absolute" },
       { name: "top", value: "0px" },
       { name: "width", value: "100%" },
-    ],
-  }];
+    ];
   if (style.card.tail.enabled) {
-    elements.push({
+    rootChildren.push({
       id: "tail",
-      parent: "root",
-      order: 2,
       kind: "box",
+      children: [],
       style: [
         { name: "background-color", value: style.card.background },
         { name: "clip-path", value: "polygon(0 0,100% 0,0 100%)" },
@@ -523,10 +494,8 @@ function stickerElements(item: CommentStickerItemProgram): readonly VisualElemen
     });
   }
   if (item.avatar !== undefined) {
-    elements.push({
+    cardChildren.push({
       id: "avatar",
-      parent: "card",
-      order: 3,
       kind: "image",
       artifact: structuredClone(item.avatar),
       style: [
@@ -543,11 +512,19 @@ function stickerElements(item: CommentStickerItemProgram): readonly VisualElemen
       ],
     });
   } else if (showInitial) {
-    elements.push({
+    cardChildren.push({
       id: "avatar",
-      parent: "card",
-      order: 3,
       kind: "box",
+      children: [textElement({
+        id: "avatar-initial",
+        text: initial(content.author!),
+        style: { ...style.header, sizePx: style.avatar.sizePx * 0.42, weight: 850, lineHeight: 1, color: style.avatar.textColor },
+        x: 0,
+        y: style.avatar.sizePx * 0.28,
+        width: style.avatar.sizePx,
+        height: style.avatar.sizePx * 0.5,
+        align: "center",
+      })],
       style: [
         { name: "align-items", value: "center" },
         { name: "background", value: style.avatar.background },
@@ -562,46 +539,50 @@ function stickerElements(item: CommentStickerItemProgram): readonly VisualElemen
         { name: "top", value: px(style.card.paddingYPx) },
         { name: "width", value: px(style.avatar.sizePx) },
       ],
-    }, textElement({
-      id: "avatar-initial",
-      parent: "avatar",
-      order: 4,
-      text: initial(content.author!),
-      style: { ...style.header, sizePx: style.avatar.sizePx * 0.42, weight: 850, lineHeight: 1, color: style.avatar.textColor },
-      x: 0,
-      y: style.avatar.sizePx * 0.28,
-      width: style.avatar.sizePx,
-      height: style.avatar.sizePx * 0.5,
-      align: "center",
-    }));
+    });
   }
-  elements.push(
-    textElement({ id: "header", parent: "card", order: 5, text: displayHeader(content), style: style.header,
+  cardChildren.push(
+    textElement({ id: "header", text: displayHeader(content), style: style.header,
       x: contentX, y: headerY, width: contentWidth, height: headerHeight }),
-    bodyElement({ parent: "card", text: content.comment, style: style.body,
+    bodyElement({ text: content.comment, style: style.body,
       x: contentX, y: bodyY, width: contentWidth, height: bodyHeight }),
   );
   if (content.meta !== undefined) {
-    elements.push(textElement({ id: "meta", parent: "card", order: 7, text: content.meta, style: style.meta,
+    cardChildren.push(textElement({ id: "meta", text: content.meta, style: style.meta,
       x: contentX, y: cardHeight - style.card.paddingYPx - metaHeight, width: contentWidth, height: metaHeight }));
   }
-  return elements;
+  rootChildren.unshift({ id: "card", kind: "box", children: cardChildren, style: cardStyle });
+  return {
+    id: "root",
+    kind: "box",
+    children: rootChildren,
+    style: [
+      { name: "height", value: px(frame.heightPx) },
+      { name: "left", value: px(frame.xPx) },
+      { name: "overflow", value: "visible" },
+      { name: "position", value: "absolute" },
+      { name: "top", value: px(frame.yPx) },
+      { name: "transform", value: transform(0, style.card.rotationDeg, 1) },
+      { name: "transform-origin", value: "center center" },
+      { name: "width", value: px(frame.widthPx) },
+    ],
+    ...(animation === undefined ? {} : { animation }),
+  };
 }
 
-export function renderCommentSticker(timeline: Timeline, program: CommentStickerProgram): VisualTrack {
+export function renderCommentSticker(timeline: Timeline, program: CommentStickerProgram): PresentVisualTrack {
   assertTimelineIdentity(timeline);
   assertCommentStickerProgram(program);
-  const track = sealVisualTrack({
+  const track = sealPresentVisualTrack({
     timelineId: timeline.id,
     visualIr: "hypit.visual-ir@1",
     id: program.id,
-    presents: program.items.map((item) => ({
+    presents: [...program.items].sort((left, right) => left.style.stackingOrder - right.style.stackingOrder)
+      .map((item) => ({
       id: item.id,
-      order: item.order,
-      z: item.style.stackingOrder,
       subjectId: item.subjectId,
       span: { ...item.span },
-      elements: stickerElements(item),
+      root: stickerRoot(item),
     })),
   });
   assertVisualTrackIdentity(track, timeline);

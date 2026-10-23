@@ -62,4 +62,4 @@ export const imageComposeComponent = {
     type: imageComposeTypes.layerSet,
     handler: ({ value }) => assertImageComposeLayerSet(valueOf<ImageComposeLayerSet>(value, "ImageComposeLayerSet")),
   }],
-} satisfies ProducerPackage & RefinementPackage;
+} satisfies { producers?: ProducerPackage; refinements?: RefinementPackage };

@@ -171,9 +171,7 @@ test("a module can use Markup's generic structured parser without adding another
     version: module.version,
     dependencies: [],
     types: [
-      {
-        name: type.name,
-      },
+      type.name,
     ],
     capabilities: [],
     producers: [],

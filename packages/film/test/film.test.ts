@@ -2,7 +2,7 @@ import { blobManifest } from "@hypit/blob";
 import { sealTimeline, timelineManifest, timelineTypes } from "@hypit/timeline";
 import type { Timeline } from "@hypit/timeline";
 import { registerTypeRefinements } from "@hypit/refinement";
-import { compositionComponent, compositionManifest, compositionTypes, sealAudioTrack, sealVisualTrack } from "@hypit/composition";
+import { audioGraphFromClips, compositionComponent, compositionManifest, compositionTypes, sealAudioTrack, sealPresentVisualTrack, sealVisualTrack } from "@hypit/composition";
 import type { Composition, Track } from "@hypit/composition";
 import { mediaManifest } from "@hypit/media";
 import type { FontArtifactRef } from "@hypit/media";
@@ -22,27 +22,17 @@ import {
   planBuild,
   sealAuthorGraph,
 } from "@hypit/kernel";
-import { ProducerRegistry, Executor } from "@hypit/executor";
-import { InProcessBuildScheduler } from "@hypit/hypit/runtime";
 import {
   bindAuthorFragment,
   elaborateGraphFragment,
   mergeFragmentContributions,
 } from "@hypit/author";
 import { appendFilmAudioTrack, appendFilmVisualTrack, compileFilmComposition, createFilmAssemblyFragment, createFilmTrackSet, filmManifest, filmProducers, filmTypes, sealFilmProgram } from "@hypit/film";
-import { compileHtmlProgram, htmlProgramFragment, htmlProgramManifest, htmlProgramProducers, htmlProgramTypes } from "@hypit/html-program";
-import type { AuthorGraph, BuildState, CanonicalValue, Value, TypedRecord } from "@hypit/protocol";
+import { compileHtmlProgram, htmlProgramFragment, htmlProgramManifest, htmlProgramProducers } from "@hypit/html-program";
+import type { AuthorGraph, CanonicalValue, Value } from "@hypit/protocol";
 import { renderFineTextOccurrence, stillTextMotion } from "@hypit/text-fine";
 import type { TextStyle } from "@hypit/text-fine";
-import { validateRecord, RefinementRegistry } from "@hypit/refinement";
-
-async function runBuild(executor: Executor, state: BuildState) {
-  return (await new InProcessBuildScheduler(executor).run([{
-    id: "film-test",
-    definition: { format: "hypit.build-definition@1", program: state.program, plan: state.plan },
-    facts: [],
-  }]))[0]!;
-}
+import { refineRecord, RefinementRegistry } from "@hypit/refinement";
 
 const space = sealTimeline({ id: "test-space", frameCount: 120, frameRate: { numerator: 30, denominator: 1 },
 });
@@ -59,9 +49,13 @@ const canvas = sealCanvas({
   heightPx: 1920,
 });
 const filmProgram = sealFilmProgram({
-
   id: "main-film",
   clearColor: "#000000",
+  visual: { members: [
+    { kind: "track", id: "background", slot: 1 },
+    { kind: "track", id: "title", slot: 0 },
+  ] },
+  audio: [2],
 });
 const titleFont: FontArtifactRef = {
   sources: [{ artifact: {
@@ -88,7 +82,7 @@ const titleVisual = renderFineTextOccurrence(space, {
     id: "title",
     span: { startFrame: 10, endFrameExclusive: 100 },
     placement: {
-      kind: "flow", z: 60, frame: { xPx: 86.4, yPx: 192, widthPx: 907.2, heightPx: 384 },
+      kind: "flow", frame: { xPx: 86.4, yPx: 192, widthPx: 907.2, heightPx: 384 },
       flow: {
         inlineSize: "fixed", blockSize: "fixed",
         paddingPx: { inlineStart: 0, inlineEnd: 0, blockStart: 0, blockEnd: 0 },
@@ -100,26 +94,19 @@ const titleVisual = renderFineTextOccurrence(space, {
     style: titleStyle,
     motion: stillTextMotion(),
 });
-const background = sealVisualTrack({ timelineId: "test-space",
+const background = sealPresentVisualTrack({ timelineId: "test-space",
   visualIr: "hypit.visual-ir@1",
   id: "background-track",
   presents: [{
     id: "background",
-    order: 0,
-    z: 0,
     span: { startFrame: 0, endFrameExclusive: 120 },
-    elements: [{ id: "root", kind: "box", order: 0, style: [{ name: "background-color", value: "#223344" }] }],
+    root: { id: "root", kind: "box", children: [], style: [{ name: "background-color", value: "#223344" }] },
   }],
 });
 const audio = sealAudioTrack({ timelineId: "test-space",
   id: "empty-audio-track",
-  clips: [],
+  graph: audioGraphFromClips([]),
 });
-
-function valueOf(record: TypedRecord | undefined): CanonicalValue {
-  assert(record, "missing Producer input");
-  return record.value;
-}
 
 function stored(value: CanonicalValue): Value {
   return value;
@@ -144,7 +131,10 @@ const records = await Promise.all([
   { id: "title", type: compositionTypes.visualTrack, value: stored(titleVisual) },
   { id: "background", type: compositionTypes.visualTrack, value: stored(background) },
   { id: "audio", type: compositionTypes.audioTrack, value: stored(audio) },
-].map(async (record) => await validateRecord(record, validatorRegistry())));
+].map(async (record) => {
+  await refineRecord(record, validatorRegistry());
+  return record;
+}));
 const linked = link(closure, records);
 
 const filmFragment = createFilmAssemblyFragment({
@@ -193,7 +183,7 @@ function build(target: string) {
     candidates: [],
     operations: [],
     satisfactions: [],
-    targets: [{ output: target }],
+    targets: [target],
   });
   return materializeBuild(defineBuild({
     program: link(linked.closure, [...linked.records, ...planned.initialRecords]),
@@ -222,42 +212,38 @@ test("Film stops at Composition and HTML compilation remains an ordinary downstr
   );
 });
 
-test("the scheduled Producers fold peer Tracks, then independently compile the Composition", async () => {
-  const registry = new ProducerRegistry();
-  registry.registerProducer(filmProducers.createTrackSet, () => ({ kind: "output", value: stored(createFilmTrackSet()) }));
-  registry.registerProducer(filmProducers.appendVisualTrack, ({ inputs }) => ({ kind: "output", value: stored(appendFilmVisualTrack(
-      valueOf(inputs.set) as never,
-      valueOf(inputs.timeline) as typeof space,
-      valueOf(inputs.track) as never,
-    )) }));
-  registry.registerProducer(filmProducers.appendAudioTrack, ({ inputs }) => ({ kind: "output", value: stored(appendFilmAudioTrack(
-      valueOf(inputs.set) as never,
-      valueOf(inputs.timeline) as typeof space,
-      valueOf(inputs.track) as never,
-    )) }));
-  registry.registerProducer(filmProducers.compileComposition, ({ inputs }) => ({ kind: "output", value: stored(compileFilmComposition(
-      valueOf(inputs.program) as never,
-      valueOf(inputs.canvas) as typeof canvas,
-      valueOf(inputs.timeline) as typeof space,
-      valueOf(inputs.set) as never,
-    )) }));
-  registry.registerProducer(htmlProgramProducers.compile, ({ inputs }) => ({ kind: "output", value: stored(compileHtmlProgram(
-      valueOf(inputs.composition) as never,
-      valueOf(inputs.timeline) as typeof space,
-    )) }));
-
-  const result = await runBuild(new Executor({ producers: registry, refinements: validatorRegistry() }), build("main.program"));
-  assert.equal(result.status, "complete");
-  const documentRecord = result.state.records.find((record) => record.type.module.name === htmlProgramTypes.program.module.name);
-  assert(documentRecord);
-  const document = valueOf(documentRecord) as { readonly html: string };
+test("Film folds peer Tracks, then hands an ordinary Composition to HTML", () => {
+  let set = createFilmTrackSet();
+  set = appendFilmVisualTrack(set, space, titleVisual);
+  set = appendFilmVisualTrack(set, space, background);
+  set = appendFilmAudioTrack(set, space, audio);
+  const composition = compileFilmComposition(filmProgram, canvas, space, set);
+  assert.deepEqual(composition.audio.map((track) => track.id), ["empty-audio-track"]);
+  assert.deepEqual(composition.visual.members.map((member) => member.kind === "track" ? member.track.id : member.id),
+    ["background-track", "title"]);
+  const document = compileHtmlProgram(composition, space);
   assert.match(document.html, /data-hypit-text-run="title-text"/u);
-  assert.match(document.html, /background-track/u);
-  assert.equal(result.state.records.filter((record) => record.type.name === filmTypes.trackSet.name).length, 4);
+  assert.match(document.html, /data-hypit-occurrence-path="\[&quot;background&quot;\]"/u);
 });
 
-test("Film rejects duplicate Track ids before Composition", () => {
+test("FilmTrackSet permits a reusable VisualTrack value in more than one input slot", () => {
   const set = appendFilmVisualTrack(createFilmTrackSet(), space, background);
   const duplicate = sealVisualTrack({...background });
-  assert.throws(() => appendFilmVisualTrack(set, space, duplicate), /already contains Track id/u);
+  const reused = appendFilmVisualTrack(set, space, duplicate);
+  assert.equal(reused.tracks.length, 2);
+  assert.notEqual(reused.tracks[0], reused.tracks[1]);
+});
+
+test("Film root preserves repeated closed audio signals independently of AudioTrack id", () => {
+  let set = createFilmTrackSet();
+  set = appendFilmAudioTrack(set, space, audio);
+  set = appendFilmAudioTrack(set, space, structuredClone(audio));
+  const composition = compileFilmComposition(sealFilmProgram({
+    id: "repeated-audio",
+    clearColor: "#000000",
+    visual: { members: [] },
+    audio: [0, 1],
+  }), canvas, space, set);
+  assert.equal(composition.audio.length, 2);
+  assert.deepEqual(composition.audio.map((track) => track.id), [audio.id, audio.id]);
 });

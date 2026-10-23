@@ -25,15 +25,9 @@ export const generationManifest: ModuleManifest = {
   version: generationModuleRef.version,
   dependencies: [blobDependency],
   types: [
-    {
-      name: generationTypes.audioSet.name,
-    },
-    {
-      name: generationTypes.imageSet.name,
-    },
-    {
-      name: generationTypes.videoSet.name,
-    },
+    generationTypes.audioSet.name,
+    generationTypes.imageSet.name,
+    generationTypes.videoSet.name,
   ],
   capabilities: [],
   producers: [

@@ -106,24 +106,23 @@ export const textPathMotionSchema: ValueSchema = object({
 });
 
 export const textFlowPlacementPolicySchema: ValueSchema = object({
-  z: { schema: signedInteger }, flow: { schema: areaFlow },
+  flow: { schema: areaFlow },
 });
 export const textPointPlacementPolicySchema: ValueSchema = object({
-  z: { schema: signedInteger },
   anchorInline: { schema: enumString(["start", "center", "end"]) },
   anchorBlock: { schema: enumString(["start", "center", "end"]) },
 });
 export const textPathPlacementPolicySchema: ValueSchema = object({
-  z: { schema: signedInteger }, side: { schema: enumString(["left", "right"]) },
+  side: { schema: enumString(["left", "right"]) },
   orientation: { schema: enumString(["follow", "upright"]) },
   startMarginPx: { schema: { kind: "number", minimum: 0 } }, endMarginPx: { schema: { kind: "number", minimum: 0 } },
   align: { schema: enumString(["start", "center", "end"]) }, reverse: { schema: { kind: "boolean" } },
   overflow: { schema: enumString(["visible", "clip"]) },
 });
 export const textPlacementSchema: ValueSchema = { kind: "oneOf", variants: [
-  object({ kind: { schema: { kind: "literal", value: "flow" } }, z: { schema: signedInteger }, frame: { schema: spatialFrameSchema }, flow: { schema: areaFlow } }),
-  object({ kind: { schema: { kind: "literal", value: "point" } }, z: { schema: signedInteger }, point: { schema: spatialPointSchema }, anchorInline: { schema: enumString(["start", "center", "end"]) }, anchorBlock: { schema: enumString(["start", "center", "end"]) } }),
-  object({ kind: { schema: { kind: "literal", value: "path" } }, z: { schema: signedInteger }, path: { schema: spatialPathSchema }, side: { schema: enumString(["left", "right"]) }, orientation: { schema: enumString(["follow", "upright"]) }, startMarginPx: { schema: { kind: "number", minimum: 0 } }, endMarginPx: { schema: { kind: "number", minimum: 0 } }, align: { schema: enumString(["start", "center", "end"]) }, reverse: { schema: { kind: "boolean" } }, overflow: { schema: enumString(["visible", "clip"]) }, marginMotion: { schema: textPathMotionSchema, optional: true } }),
+  object({ kind: { schema: { kind: "literal", value: "flow" } }, frame: { schema: spatialFrameSchema }, flow: { schema: areaFlow } }),
+  object({ kind: { schema: { kind: "literal", value: "point" } }, point: { schema: spatialPointSchema }, anchorInline: { schema: enumString(["start", "center", "end"]) }, anchorBlock: { schema: enumString(["start", "center", "end"]) } }),
+  object({ kind: { schema: { kind: "literal", value: "path" } }, path: { schema: spatialPathSchema }, side: { schema: enumString(["left", "right"]) }, orientation: { schema: enumString(["follow", "upright"]) }, startMarginPx: { schema: { kind: "number", minimum: 0 } }, endMarginPx: { schema: { kind: "number", minimum: 0 } }, align: { schema: enumString(["start", "center", "end"]) }, reverse: { schema: { kind: "boolean" } }, overflow: { schema: enumString(["visible", "clip"]) }, marginMotion: { schema: textPathMotionSchema, optional: true } }),
 ] };
 export const textItemSpecSchema: ValueSchema = object({
   id: { schema: string },
@@ -151,7 +150,7 @@ const documentChildren = [
     summary: "One paragraph of the occurrence's document. It holds direct text, Span runs and Break line breaks in the order they are written, and can be drawn in a Style of its own.",
     attributes: [
       { name: "id", kind: "identifier", required: false, summary: "Names this paragraph inside the document; an omitted id is generated from the paragraph's position." },
-      { name: "style", kind: "reference", required: false, accepts: [textFineTypes.style], summary: "Redraws the whole paragraph in another compiled Style, whose typography and Paint replace the item's: the paragraph is shaped with that Style's exact font and set at its size, weight and slant, and painted in its fills, outlines, glows, shadows, boxes and decorations. Geometry, layout and stacking remain facts of the enclosing occurrence." },
+      { name: "style", kind: "reference", required: false, accepts: [textFineTypes.style], summary: "Redraws the whole paragraph in another compiled Style, whose typography and Paint replace the item's: the paragraph is shaped with that Style's exact font and set at its size, weight and slant, and painted in its fills, outlines, glows, shadows, boxes and decorations. Geometry and layout remain facts of the enclosing occurrence." },
     ],
     text: "Direct text between the nested elements is one run of the paragraph, drawn in the paragraph's own Style.",
     children: [
@@ -159,7 +158,7 @@ const documentChildren = [
         summary: "One run of the paragraph set apart from its neighbours, drawn in a Style, shaped under a language or laid out in a writing direction of its own.",
         attributes: [
           { name: "id", kind: "identifier", required: false, summary: "Names this run inside the paragraph; an omitted id is generated from the run's position." },
-          { name: "style", kind: "reference", required: false, accepts: [textFineTypes.style], summary: "Redraws this run alone in another compiled Style, whose typography and Paint replace the paragraph's: the run is shaped with that Style's exact font and set at its size, weight and slant, and painted in its fills, outlines, glows, shadows, boxes and decorations. Geometry, layout and stacking remain facts of the enclosing occurrence." },
+          { name: "style", kind: "reference", required: false, accepts: [textFineTypes.style], summary: "Redraws this run alone in another compiled Style, whose typography and Paint replace the paragraph's: the run is shaped with that Style's exact font and set at its size, weight and slant, and painted in its fills, outlines, glows, shadows, boxes and decorations. Geometry and layout remain facts of the enclosing occurrence." },
           { name: "language", kind: "literal", required: false, summary: "Names the language tag this run alone is shaped under." },
           { name: "direction", kind: "literal", required: false, values: ["auto", "ltr", "rtl"], summary: "Decides the base writing direction of this run alone." },
         ],
@@ -178,7 +177,6 @@ const fineTextCommonAttributes = [
   { name: "id", kind: "identifier", required: true, summary: "Names this independent text occurrence and both compiled outputs." },
   { name: "timeline", kind: "reference", required: true, accepts: [timelineTypes.timeline], summary: "The absolute Timeline on which this occurrence is placed." },
   { name: "style", kind: "reference", required: true, accepts: [textFineTypes.style], summary: "Chooses the compiled fine-text Style." },
-  { name: "z", kind: "literal", required: true, summary: "Sets this occurrence's absolute picture stacking position; it is not part of the reusable Style." },
   { name: "motion", kind: "reference", required: false, accepts: [textFineTypes.motion], summary: "Chooses the Motion; an omitted Motion is still." },
   { name: "content", kind: "reference", required: false, accepts: [textTypes.text], summary: "Reads ordinary graph Text as one plain run; otherwise the element owns its inline document." },
   ...fineTextWindowAttributeVocabulary,
@@ -192,7 +190,7 @@ const fineTextPorts = [
 export const textFineMarkupSurfaces = [
     { name: "style", tag: "Style", mode: "structured", outputs: [textFineTypes.style],
       vocabulary: {
-        summary: "One named bound TextStyle: reusable typography and ordered Paint, with exact font bytes. Placement, layout and stacking belong to each occurrence.",
+        summary: "One named bound TextStyle: reusable typography and ordered Paint, with exact font bytes. Placement and layout belong to each occurrence; Film places the resulting Track.",
         attributes: [
           { name: "id", kind: "identifier", required: true,
             summary: "Names this Style, under which occurrences and Spans reference it." },
@@ -425,7 +423,7 @@ export const textFineMarkupSurfaces = [
         children: documentChildren,
         text: "Direct text is the occurrence's whole document, read as one paragraph.",
         ports: fineTextPorts,
-        example: `<text:Flow id="title" timeline={film.timeline} within={title-frame} style={title-style} z="40" align="center" block-align="center" during={film.window}>EDIT MEANING</text:Flow>`,
+        example: `<text:Flow id="title" timeline={film.timeline} within={title-frame} style={title-style} align="center" block-align="center" during={film.window}>EDIT MEANING</text:Flow>`,
         notes: [
           "This is one occurrence, not a container. Compose its `.visual` beside media, captions and other visual outputs.",
           "Timing is absolute: `during` consumes an existing Window. Timeline or domain author packages declare the Window first.",
@@ -444,7 +442,7 @@ export const textFineMarkupSurfaces = [
         children: documentChildren,
         text: "Direct text is the occurrence's whole document, read as one paragraph.",
         ports: fineTextPorts,
-        example: `<text:Point id="label" timeline={film.timeline} point={label-point} style={label-style} z="40" anchor-inline="start" during={label-window}>ORBIT</text:Point>`,
+        example: `<text:Point id="label" timeline={film.timeline} point={label-point} style={label-style} anchor-inline="start" during={label-window}>ORBIT</text:Point>`,
         notes: ["This is one occurrence, not a container; semantic sources can supply a resolved Window without becoming part of this text surface."],
       },
     },
@@ -466,7 +464,7 @@ export const textFineMarkupSurfaces = [
         children: documentChildren,
         text: "Direct text is the occurrence's whole document, read as one paragraph.",
         ports: fineTextPorts,
-        example: `<text:Path id="orbit-copy" timeline={film.timeline} path={orbit} style={orbit-style} z="40" path-motion={orbit-travel} during={orbit-window}>FOLLOW THE CURVE</text:Path>`,
+        example: `<text:Path id="orbit-copy" timeline={film.timeline} path={orbit} style={orbit-style} path-motion={orbit-travel} during={orbit-window}>FOLLOW THE CURVE</text:Path>`,
         notes: ["This is one occurrence, not a container; Path-specific layout and margin motion belong here, not to the reusable Style or general Motion."],
       },
     },
@@ -510,17 +508,17 @@ export const textFineManifest: ModuleManifest = {
   version: textFineModuleRef.version,
   dependencies: [timelineDependency, spatialDependency, mediaDependency, compositionDependency, textDependency, temporalDependency],
   types: [
-    { name: textFineTypes.style.name },
-    { name: textFineTypes.motion.name },
-    { name: textFineTypes.pathMotion.name },
-    { name: textFineTypes.flowPlacementPolicy.name },
-    { name: textFineTypes.pointPlacementPolicy.name },
-    { name: textFineTypes.pathPlacementPolicy.name },
-    { name: textFineTypes.placement.name },
-    { name: textFineTypes.occurrence.name },
-    { name: textFineTypes.itemSpec.name },
-    { name: textFineTypes.plainItemSpec.name },
-    { name: textFineTypes.maskSpec.name },
+    textFineTypes.style.name,
+    textFineTypes.motion.name,
+    textFineTypes.pathMotion.name,
+    textFineTypes.flowPlacementPolicy.name,
+    textFineTypes.pointPlacementPolicy.name,
+    textFineTypes.pathPlacementPolicy.name,
+    textFineTypes.placement.name,
+    textFineTypes.occurrence.name,
+    textFineTypes.itemSpec.name,
+    textFineTypes.plainItemSpec.name,
+    textFineTypes.maskSpec.name,
   ],
   capabilities: [],
   producers: [

@@ -102,7 +102,7 @@ test("status --watch follows active execution, then reads its finished Result", 
     id: "build-watch",
     createdAt: 1,
     activity: "running" as const,
-    cancellationRequested: false,
+
     targets: [],
     acceptedRecords: 0,
     outstandingCommands: 1,
@@ -136,7 +136,7 @@ test("status --watch follows active execution, then reads its finished Result", 
           return {
             format: "hypit.build-result@1",
             id: "build-watch",
-            source: { path: "main.svml" },
+            sourcePath: "main.svml",
             targets: [],
             finishedAt: 2,
             outcome: "complete",
@@ -184,7 +184,7 @@ test("status reads a finished project Result without a Runtime", async () => {
           return {
             format: "hypit.build-result@1",
             id: build,
-            source: { path: "main.svml" },
+            sourcePath: "main.svml",
             targets: [],
             finishedAt: 2,
             outcome: "complete",
@@ -218,7 +218,7 @@ test("finished status defaults to the Result outcome without repeating internal 
           return {
             format: "hypit.build-result@1",
             id: "build-finished",
-            source: { path: "main.svml" },
+            sourcePath: "main.svml",
             targets: ["final.video"],
             finishedAt: 2,
             outcome: "complete",
@@ -246,7 +246,7 @@ test("status separates execution from Result only while the Result is being save
     createdAt: 1,
     activity: "saving-result" as const,
     outcome: "complete" as const,
-    cancellationRequested: false,
+
     targets: ["final.video"],
     acceptedRecords: 1,
     outstandingCommands: 0,
@@ -281,7 +281,7 @@ test("status preserves Runtime decision and attention when its Result Store is u
     activity: "saving-result" as const,
     outcome: "failed" as const,
     issue: { scope: "result" as "result" | "cleanup", message: "S3 unavailable" },
-    cancellationRequested: false,
+
     targets: [],
     acceptedRecords: 0,
     outstandingCommands: 0,
@@ -419,7 +419,7 @@ test("cancelling a completed Build reports that no cancellation was requested", 
           return {
             format: "hypit.build-result@1",
             id: "build-complete",
-            source: { path: "main.svml" },
+            sourcePath: "main.svml",
             targets: [],
             finishedAt: 2,
             outcome: "complete",
@@ -451,7 +451,7 @@ test("cancelling a completed Build reports that no cancellation was requested", 
 test("cancelling an already failed execution preserves and reports its stop reason", async () => {
   const stop = { cause: "execution-failed", reason: "Original execution failure" } as const;
   const active = {
-    id: "build-stopping", createdAt: 1, activity: "waiting", cancellationRequested: false, stop,
+    id: "build-stopping", createdAt: 1, activity: "waiting", stop,
     targets: [], acceptedRecords: 0, outstandingCommands: 0, operations: [],
   } as const;
   const control = runtimeControl({ async cancel() { return active; }, async close() {} });
@@ -480,7 +480,7 @@ test("a stopped Worker ends observation with scoped evidence commands, not a Res
     openRuntimeHost: async () => ({
       openControl: async () => ({
         inspect: async () => ({
-          id: "waiting-build", createdAt: Date.now(), activity: "waiting", cancellationRequested: false,
+          id: "waiting-build", createdAt: Date.now(), activity: "waiting",
           targets: [], acceptedRecords: 0, outstandingCommands: 1, operations: [],
         }),
         close() { closed = true; },

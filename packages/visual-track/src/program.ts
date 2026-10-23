@@ -1,5 +1,5 @@
-import { assertVisualTrackIdentity, sealVisualTrack } from "@hypit/composition";
-import type { VisualTrack } from "@hypit/composition";
+import { assertVisualTrackIdentity, sealPresentVisualTrack } from "@hypit/composition";
+import type { PresentVisualTrack } from "@hypit/composition";
 import { canonicalize } from "@hypit/hypit/protocol";
 import { assertSpatialFrame, assertSpatialPath } from "@hypit/spatial";
 import type { SpatialPath } from "@hypit/spatial";
@@ -12,7 +12,7 @@ import {
   assertMediaIdentity,
   assertMediaLayerSet,
 } from "./layers.js";
-import { lowerVisualClipElements } from "./lower.js";
+import { lowerVisualClipRoot } from "./lower.js";
 import { assertVisualClipMotion, poseAnimation } from "./motion.js";
 import { assertVisualFrameTreatment } from "./frame-treatment.js";
 import { assertMediaLayerPrograms, assertResolvedSampleLayer, resolveMediaLayerPrograms } from "./spatial.js";
@@ -47,10 +47,10 @@ export function bindVisualClipMotion(spec: VisualClipSpec, motion: VisualClipMot
 }
 
 export function assertVisualClipSpec(value: VisualClipSpec): void {
+  assert(value !== null && typeof value === "object" && !Array.isArray(value), "VisualClipSpec is invalid.");
   assertMediaIdentity(value.id, "VisualClipSpec.id");
   assertVisualFrameTreatment(value.treatment, "VisualClipSpec.treatment");
   if (value.motion !== undefined) assertVisualClipMotion(value.motion, "VisualClipSpec.motion");
-  assert(Number.isSafeInteger(value.z), "VisualClipSpec.z must be an integer.");
 }
 
 export function sealVisualClipSpec(value: VisualClipSpec): VisualClipSpec {
@@ -64,6 +64,7 @@ export function sealVisualTrackHeader(value: VisualTrackHeader): VisualTrackHead
 }
 
 export function assertVisualTrackHeader(value: VisualTrackHeader): void {
+  assert(value !== null && typeof value === "object" && !Array.isArray(value), "VisualTrackHeader is invalid.");
   assertMediaIdentity(value.id, "VisualTrackHeader.id");
 }
 
@@ -72,7 +73,9 @@ export function createVisualTrackSet(): VisualTrackSet {
 }
 
 export function assertVisualTrackSet(value: VisualTrackSet): void {
-  assert(Array.isArray(value.clips), "VisualTrackSet is invalid.");
+  assert(value !== null && typeof value === "object" && !Array.isArray(value)
+    && Array.isArray(value.clips), "VisualTrackSet is invalid.");
+  assertVisualClipPrograms(value.clips, "VisualTrackSet");
 }
 
 /** Component entry point: source facts, absolute placement and visual treatment are already explicit. */
@@ -92,7 +95,7 @@ export function appendVisualClip(
   assert(layers.layers.length > 0, `Visual Clip ${spec.id} requires at least one layer.`);
   assertSpatialFrame(frame);
   assertVisualClipSpec(spec);
-  assertTemporalWindowFor(window, { subjectId: spec.id, timeline });
+  assertTemporalWindowFor(window, { timeline });
   const resolvedLayers = resolveMediaLayerPrograms(layers, frame, spec.treatment);
   const duration = window.span.endFrameExclusive - window.span.startFrame;
   if (spec.motion !== undefined) {
@@ -100,15 +103,13 @@ export function appendVisualClip(
     poseAnimation(spec.motion, duration);
   }
   const addition: VisualClipProgram = {
-    id: window.id,
+    id: spec.id,
     subjectId: spec.id,
     span: { ...window.span },
     frame: { ...frame },
     treatment: structuredClone(spec.treatment),
     layers: structuredClone(resolvedLayers),
     ...(spec.motion === undefined ? {} : { motion: structuredClone(spec.motion) }),
-    order: set.clips.length,
-    z: spec.z,
   };
   assert(!set.clips.some((clip) => clip.id === addition.id), `Visual Track ${header.id} already contains ${addition.id}.`);
   return { clips: [...set.clips, addition] };
@@ -133,15 +134,17 @@ function assertSampleLayerForTimeline(layer: MediaSampleLayerProgram, timeline: 
   assert(layer.sourceTime !== undefined, `${label} requires source time.`);
 }
 
-function assertClip(clip: VisualClipProgram, timeline: Timeline, label: string): void {
+function assertClip(clip: VisualClipProgram, label: string): void {
+  assert(clip !== null && typeof clip === "object" && !Array.isArray(clip), `${label} is invalid.`);
   assertMediaIdentity(clip.id, `${label}.id`);
   assertMediaIdentity(clip.subjectId, `${label}.subjectId`);
+  assert(clip.span !== null && typeof clip.span === "object" && !Array.isArray(clip.span),
+    `${label}.span is invalid.`);
   assert(
     Number.isSafeInteger(clip.span.startFrame)
       && Number.isSafeInteger(clip.span.endFrameExclusive)
       && clip.span.startFrame >= 0
-      && clip.span.endFrameExclusive > clip.span.startFrame
-      && clip.span.endFrameExclusive <= timelineFrameCount(timeline),
+      && clip.span.endFrameExclusive > clip.span.startFrame,
     `${label}.span is invalid.`,
   );
   assertSpatialFrame(clip.frame);
@@ -150,10 +153,21 @@ function assertClip(clip: VisualClipProgram, timeline: Timeline, label: string):
     assertVisualClipMotion(clip.motion, `${label}.motion`);
     poseAnimation(clip.motion, clip.span.endFrameExclusive - clip.span.startFrame);
   }
-  assert(Number.isSafeInteger(clip.order) && clip.order >= 0, `${label}.order is invalid.`);
-  assert(Number.isSafeInteger(clip.z), `${label}.z is invalid.`);
-  assert(clip.layers.length > 0, `${label} requires layers.`);
+  assert(Array.isArray(clip.layers) && clip.layers.length > 0, `${label} requires layers.`);
   assertMediaLayerPrograms(clip.layers);
+}
+
+function assertVisualClipPrograms(clips: readonly VisualClipProgram[], label: string): void {
+  const ids = new Set<string>();
+  for (const [index, clip] of clips.entries()) {
+    assertClip(clip, `${label}.clips.${index}`);
+    assert(!ids.has(clip.id), `${label} repeats ${clip.id}.`);
+    ids.add(clip.id);
+  }
+}
+
+function assertClipForTimeline(clip: VisualClipProgram, timeline: Timeline, label: string): void {
+  assert(clip.span.endFrameExclusive <= timelineFrameCount(timeline), `${label}.span is outside Timeline.`);
   for (const layer of clip.layers) {
     if (layer.kind === "sample") assertSampleLayerForTimeline(layer, timeline, `${label}.${layer.id}`);
   }
@@ -162,7 +176,7 @@ function assertClip(clip: VisualClipProgram, timeline: Timeline, label: string):
 function normalizeProgram(value: VisualTrackProgram): VisualTrackProgram {
   return {
     id: value.id,
-    clips: [...value.clips].map((clip) => structuredClone(clip)).sort((left, right) => left.id.localeCompare(right.id)),
+    clips: value.clips.map((clip) => structuredClone(clip)),
   };
 }
 
@@ -180,34 +194,32 @@ export function finalizeVisualTrack(set: VisualTrackSet, header: VisualTrackHead
 }
 
 export function assertVisualTrackProgram(value: VisualTrackProgram): void {
+  assert(value !== null && typeof value === "object" && !Array.isArray(value)
+    && Array.isArray(value.clips), "VisualTrackProgram is invalid.");
   assertMediaIdentity(value.id, "VisualTrackProgram.id");
-  assert(Array.isArray(value.clips) && value.clips.length > 0, "VisualTrackProgram is empty.");
+  assert(value.clips.length > 0, "VisualTrackProgram is empty.");
+  assertVisualClipPrograms(value.clips, "VisualTrackProgram");
 }
 
 export function assertVisualTrackProgramIdentity(value: VisualTrackProgram, timeline: Timeline): void {
   assertVisualTrackProgram(value);
   assertTimelineIdentity(timeline);
-  const ids = new Set<string>();
   for (const clip of value.clips) {
-    assert(!ids.has(clip.id), `VisualTrackProgram repeats ${clip.id}.`);
-    ids.add(clip.id);
-    assertClip(clip, timeline, `Visual Clip ${clip.id}`);
+    assertClipForTimeline(clip, timeline, `Visual Clip ${clip.id}`);
   }
 }
 
-export function projectVisualTrack(timeline: Timeline, program: VisualTrackProgram): VisualTrack {
+export function projectVisualTrack(timeline: Timeline, program: VisualTrackProgram): PresentVisualTrack {
   assertVisualTrackProgramIdentity(program, timeline);
-  const track = sealVisualTrack({
+  const track = sealPresentVisualTrack({
     timelineId: timeline.id,
     visualIr: "hypit.visual-ir@1",
     id: program.id,
     presents: program.clips.map((clip) => ({
       id: clip.id,
-      order: clip.order,
-      z: clip.z,
       subjectId: clip.subjectId,
       span: { ...clip.span },
-      elements: lowerVisualClipElements(clip, timeline),
+      root: lowerVisualClipRoot(clip, timeline),
     })),
   });
   assertVisualTrackIdentity(track, timeline);

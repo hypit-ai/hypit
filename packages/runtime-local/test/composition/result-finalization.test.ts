@@ -41,7 +41,9 @@ import { SqliteRuntimeState } from "../../src/sqlite-state.js";
 import {
   capabilities,
   createGreetingBuild,
+  createGreetingBuildFixture,
   createParallelGreetingBuild,
+  createParallelGreetingBuildFixture,
   manifest as greetingManifest,
   producers,
   types,
@@ -51,7 +53,6 @@ import {
   definition,
   durableBuildRequest,
   finishClaimedBuild,
-  fixtureTargets,
   projectRuntimeFixture,
   publication,
   resultDestination,
@@ -64,7 +65,7 @@ test("a completed public file moves into its Build Result and leaves no Runtime 
   const workStore = new FileResourceStore(join(directory, ".hypit", "work", id));
   const initial = createGreetingBuild({ generationRealization: "placeholder", targetOutputs: ["generated"] });
   const buildDefinition = definition(initial);
-  const components: ProducerPackage & RefinementPackage = {
+  const components: { producers: ProducerPackage; refinements?: RefinementPackage } = {
     producers: [{
       producer: producers.makePrompt,
       handler: () => ({ kind: "output", value: ("make a clip") }),
@@ -76,13 +77,13 @@ test("a completed public file moves into its Build Result and leaves no Runtime 
   try {
     const runtime = await createLocalRuntime({
       ...projectRuntimeFixture(directory),
-      producerPackages: [components], refinementPackages: [components],
+      producers: components.producers,
     });
     await runtime.build({
       id,
       definition: buildDefinition,
       catalog: {
-        source: { path: join(directory, "main.svml") },
+        sourcePath: join(directory, "main.svml"),
         publication: { outputs: [{ name: "clip.video", output: "generated", target: true,
           type: types.generated,
           source: { kind: "current-record", record: "generated:placeholder" } }] },
@@ -110,8 +111,9 @@ test("a completed public file moves into its Build Result and leaves no Runtime 
 
 test("a failed Build keeps public Outputs completed before removing active Runtime state", async () => {
   const directory = await mkdtemp(join(tmpdir(), "hypit-local-bld_20260902T120000005Z_0000000001-"));
-  const initial = createGreetingBuild();
-  const components: ProducerPackage & RefinementPackage = {
+  const buildFixture = createGreetingBuildFixture();
+  const initial = buildFixture.state;
+  const components: { producers: ProducerPackage; refinements?: RefinementPackage } = {
     producers: [{
       producer: producers.makePrompt,
       handler: () => ({ kind: "output", value: ("Greet Ada") }),
@@ -138,19 +140,19 @@ test("a failed Build keeps public Outputs completed before removing active Runti
   try {
     const runtime = await createLocalRuntime({
       ...projectRuntimeFixture(directory),
-      producerPackages: [components], refinementPackages: [components],
+      producers: components.producers,
       endpoints: [endpoint],
     });
     await runtime.build({
       id: "bld_20260902T120000005Z_0000000001",
       definition: definition(initial),
       catalog: {
-        source: { path: join(directory, "main.svml") },
+        sourcePath: join(directory, "main.svml"),
         publication: publication([{
           name: "prompt.text", ref: { id: "prompt" },
         }, { name: "generated.text", ref: { id: "generated" } }, {
           name: "final.document", ref: { id: "document" },
-        }], initial),
+        }], buildFixture),
       },
       result: resultDestination(directory),
     });
@@ -172,17 +174,18 @@ test("a failed Build keeps public Outputs completed before removing active Runti
 for (const phase of ["submit", "poll"] as const) {
   test(`a ${phase} failure retains an already received sibling Output in the final Result`, async () => {
     const directory = await mkdtemp(join(tmpdir(), "hypit-local-sibling-result-"));
-    const initial = createParallelGreetingBuild();
+    const buildFixture = createParallelGreetingBuildFixture();
+    const initial = buildFixture.state;
     let starts = 0;
     let polls = 0;
-    const components: ProducerPackage & RefinementPackage = { producers: [
+    const components: { producers: ProducerPackage; refinements?: RefinementPackage } = { producers: [
       { producer: producers.makePrompt, handler: () => ({ kind: "output", value: ("hello") }) },
       { producer: producers.requestText, handler: () => ({ kind: "need", constraints: {} }) },
     ] };
     const finish = async (id: number) => {
       if (id === 1) return { status: "failed" as const, failure: { code: "EXAMPLE_FAILURE", message: "first request failed" } };
       await new Promise<void>((resolve) => setTimeout(resolve, 10));
-      return { status: "completed" as const, result: { value: ("retained sibling output") } };
+      return { status: "completed" as const, result: "retained sibling output" };
     };
     const endpoint = defineEndpoint({
       instance: "generation.siblings", pool: "generation.siblings", defaultConcurrency: 2,
@@ -194,10 +197,10 @@ for (const phase of ["submit", "poll"] as const) {
         poll({ handle }) { polls++; return finish((handle as { id: number }).id); },
       } }],
     });
-    const runtime = await createLocalRuntime({ ...projectRuntimeFixture(directory), producerPackages: [components], refinementPackages: [components], endpoints: [endpoint] });
+    const runtime = await createLocalRuntime({ ...projectRuntimeFixture(directory), producers: components.producers, endpoints: [endpoint] });
     try {
       const id = "bld_20260906T110000000Z_0000000001";
-      await runtime.build(durableBuildRequest(directory, id, initial));
+      await runtime.build(durableBuildRequest(directory, id, buildFixture));
       assert.equal((await finishClaimedBuild(runtime)).outcome, "failed");
       const result = await new FileBuildResultRepository(join(directory, "results")).read(id);
       assert.equal(result?.failure, "first request failed");
@@ -217,7 +220,7 @@ test("an interrupted Result write finishes explicitly without rerunning the Buil
   const initial = createGreetingBuild({ generationRealization: "placeholder" });
   let generationCalls = 0;
   let rejectSync = true;
-  const components: ProducerPackage & RefinementPackage = {
+  const components: { producers: ProducerPackage; refinements?: RefinementPackage } = {
     producers: [{
       producer: producers.makePrompt,
       handler: () => ({ kind: "output", value: ("Greet Ada") }),
@@ -269,13 +272,13 @@ test("an interrupted Result write finishes explicitly without rerunning the Buil
     const runtime = await createLocalRuntime({
       ...fixture,
       openBuildResultRepository: openRepository,
-      producerPackages: [components], refinementPackages: [components],
+      producers: components.producers,
     });
     await runtime.build({
       id: "bld_20260902T120000006Z_0000000001",
       definition: definition(initial),
       catalog: {
-        source: { path: join(directory, "main.svml") },
+        sourcePath: join(directory, "main.svml"),
         publication: { outputs: [{ name: "final.document", output: "document", target: true,
           type: types.document,
           source: { kind: "current-record", record: "document:root" } }] },
@@ -324,7 +327,7 @@ test("a failed Result creation leaves no active Build", async () => {
       id: "bld_20260902T120000007Z_0000000001",
       definition: definition(initial),
       catalog: {
-        source: { path: join(directory, "main.svml") },
+        sourcePath: join(directory, "main.svml"),
         publication: { outputs: [{ name: "final.document", output: "document", target: true,
           type: types.document,
           source: { kind: "current-record", record: "document:root" } }] },

@@ -134,7 +134,7 @@ export const decodeFontsourceFaceSurface: StructuredSurfaceHandler = async ({
       range: element.range,
     });
     sources.push({
-      artifact: resolved.blob,
+      artifact: resolved,
       ...(file.unicodeRange === undefined ? {} : { unicodeRange: file.unicodeRange }),
     });
   }

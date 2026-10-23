@@ -52,17 +52,17 @@ test("a draining carrier finishes its existing Build while a new carrier shares 
       const server=${JSON.stringify(endpoint)};
       async function call(path,name){return (await fetch(server+path,{method:'POST',body:JSON.stringify({name,pid:process.pid})})).json();}
       let calls=0;
-      export default {format:'hypit.package@1',modules:[{manifest:${JSON.stringify(manifest)}}],facets:[{abi:'hypit.producer-package@1',implementation:{producers:[
+      export default {format:'hypit.package@1',modules:[{manifest:${JSON.stringify(manifest)}}],facets:[{abi:'hypit.producer-package@1',implementation:[
         {producer:${JSON.stringify(producers.makePrompt)},handler:async({inputs})=>{
           if(++calls!==1)throw Error('Build module state leaked');
           const name=inputs.intent.value.name;await call('/local',name);return {kind:'output',value:name};
         }},
         {producer:${JSON.stringify(producers.requestText)},handler:({inputs})=>({kind:'need',constraints:{prompt:inputs.prompt.value}})}
-      ]}},createRuntimeEndpointAdapterFacet({use:'fixture-rotation',activate(context){return {endpoint:defineEndpoint({
+      ]},createRuntimeEndpointAdapterFacet({use:'fixture-rotation',activate(context){return {endpoint:defineEndpoint({
         instance:context.instance,pool:context.pool,defaultConcurrency:1,
         capabilities:[{lifecycle:'asynchronous',capability:${JSON.stringify(capabilities.generation)},returns:${JSON.stringify(types.generated)},endpoint:{
           async start({need,operation}){const name=need.constraints.prompt;await call('/start',name);return {status:'pending',handle:{name},receipt:{id:operation},wakeAt:Date.now()+50};},
-          async poll({handle}){const result=await call('/poll',handle.name);return result.complete?{status:'completed',result:{value:handle.name}}:{status:'pending',handle,wakeAt:Date.now()+50};}
+          async poll({handle}){const result=await call('/poll',handle.name);return result.complete?{status:'completed',result:handle.name}:{status:'pending',handle,wakeAt:Date.now()+50};}
         }}]})};}})]};
     `);
     // A deliberately tiny soft budget exercises retirement without allocating large buffers.
@@ -77,11 +77,11 @@ test("a draining carrier finishes its existing Build while a new carrier shares 
       const request={build:id,executionPackages:['fixture-rotation'],result:{root,path:'results'},
         context:{format:'hypit.local-execution@1',packageRoot:root,hostStateRoot:join(root,'host'),distributionPackageRoot:distribution,profile:profileValue}};
       await state.submissions.prepare(request);
-      await repository.create({id,source:{id:'main.svml'},publication:{outputs:[{
+      await repository.create({id,sourceId:'main.svml',publication:{outputs:[{
         name:target,output:target,target:true,type:types[target],source:{kind:'current-record',record},
       }]}});
       await state.submissions.commit({...request,definition:{...base,program:{...base.program,records:base.program.records.map(r=>r.id==='intent:root'?{...r,value:({name})}:r)}},
-        catalog:{source:{path:join(root,'main.svml')},publication:{outputs:[{
+        catalog:{sourcePath: join(root,'main.svml'),publication:{outputs:[{
           name:target,output:target,target:true,type:types[target],source:{kind:'current-record',record},
         }]}}});
       return id;

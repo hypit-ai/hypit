@@ -41,6 +41,7 @@ import { SqliteRuntimeState } from "../../src/sqlite-state.js";
 import {
   capabilities,
   createGreetingBuild,
+  createGreetingBuildFixture,
   createParallelGreetingBuild,
   manifest as greetingManifest,
   producers,
@@ -51,7 +52,6 @@ import {
   definition,
   durableBuildRequest,
   finishClaimedBuild,
-  fixtureTargets,
   projectRuntimeFixture,
   publication,
   resultDestination,
@@ -60,11 +60,11 @@ import {
 
 test("project local Runtime advances, polls and cancels work with replaceable packages", async () => {
   const directory = await mkdtemp(join(tmpdir(), "hypit-local-"));
-  const initial = createGreetingBuild();
-  const targets = fixtureTargets(initial);
+  const buildFixture = createGreetingBuildFixture();
+  const initial = buildFixture.state;
   const publishedOutputs = [{
     name: "final.document",
-    ref: { kind: "logical-output" as const, id: targets[0]! },
+    ref: { kind: "logical-output" as const, id: "document" },
   }, {
     name: "prompt.text",
     ref: { kind: "logical-output" as const, id: "prompt" },
@@ -73,8 +73,8 @@ test("project local Runtime advances, polls and cancels work with replaceable pa
     ref: { kind: "logical-output" as const, id: "generated" },
   }];
   const catalog = {
-    source: { path: join(directory, "main.svml") },
-    publication: publication(publishedOutputs, initial),
+    sourcePath: join(directory, "main.svml"),
+    publication: publication(publishedOutputs, buildFixture),
   };
   let promptCalls = 0;
   let requestCalls = 0;
@@ -82,7 +82,7 @@ test("project local Runtime advances, polls and cancels work with replaceable pa
   let starts = 0;
   let polls = 0;
   let cancels = 0;
-  const components: ProducerPackage & RefinementPackage = {
+  const components: { producers: ProducerPackage; refinements?: RefinementPackage } = {
     producers: [
       {
         producer: producers.makePrompt,
@@ -151,7 +151,7 @@ test("project local Runtime advances, polls and cancels work with replaceable pa
   try {
     firstRuntime = await createLocalRuntime({
       ...projectRuntimeFixture(directory),
-      producerPackages: [components], refinementPackages: [components],
+      producers: components.producers,
       endpoints: [endpointInstance],
     });
     const first = await firstRuntime.build({
@@ -168,7 +168,7 @@ test("project local Runtime advances, polls and cancels work with replaceable pa
     assert.equal(starts, 1);
     assert.equal(polls, 0);
     assert.equal("work" in firstRuntime, false, "execution lifecycle belongs to the Runtime Host");
-    const otherRuntime = await createLocalRuntime({ ...projectRuntimeFixture(directory), producerPackages: [components], refinementPackages: [components], endpoints:[endpointInstance] });
+    const otherRuntime = await createLocalRuntime({ ...projectRuntimeFixture(directory), producers: components.producers, endpoints:[endpointInstance] });
     try {
       assert.equal(await otherRuntime.workOnce(), undefined);
       await assert.rejects(otherRuntime.workOnce({build:"bld_20260902T120000001Z_0000000001"}), /another execution context/u);
@@ -194,7 +194,7 @@ test("project local Runtime advances, polls and cancels work with replaceable pa
     ]);
     assert.deepEqual(buildResult?.targets, ["final.document"]);
 
-    await firstRuntime.build(durableBuildRequest(directory, "bld_20260902T120000002Z_0000000001", createGreetingBuild()));
+    await firstRuntime.build(durableBuildRequest(directory, "bld_20260902T120000002Z_0000000001", createGreetingBuildFixture()));
     await firstRuntime.workOnce();
     await finishClaimedBuild(firstRuntime);
     const followed = await firstRuntime.inspect("bld_20260902T120000002Z_0000000001");
@@ -204,12 +204,12 @@ test("project local Runtime advances, polls and cancels work with replaceable pa
     const followedStatus = await firstRuntime.inspect("bld_20260902T120000002Z_0000000001");
     assert.equal(followedStatus, undefined);
 
-    const waiting = await firstRuntime.build(durableBuildRequest(directory, "bld_20260902T120000003Z_0000000001", createGreetingBuild()));
+    const waiting = await firstRuntime.build(durableBuildRequest(directory, "bld_20260902T120000003Z_0000000001", createGreetingBuildFixture()));
     assert("view" in waiting);
     assert.equal(waiting.view.activity, "ready");
     await firstRuntime.workOnce();
     const requested = await firstRuntime.cancel("bld_20260902T120000003Z_0000000001");
-    assert.equal(requested?.cancellationRequested, true);
+    assert.equal(requested?.stop?.cause, "user-cancelled");
     const cancelled = await finishClaimedBuild(firstRuntime);
     assert.equal(cancelled.outcome, "cancelled");
     assert.equal(cancels, 1);
@@ -222,9 +222,10 @@ test("project local Runtime advances, polls and cancels work with replaceable pa
 
 test("an immediate Command left in started state fails its Build without invoking the Producer again", async () => {
   const directory = await mkdtemp(join(tmpdir(), "hypit-local-command-receipt-"));
-  const initial = createGreetingBuild({ generationRealization: "placeholder" });
+  const buildFixture = createGreetingBuildFixture({ generationRealization: "placeholder" });
+  const initial = buildFixture.state;
   let calls = 0;
-  const components: ProducerPackage & RefinementPackage = {
+  const components: { producers: ProducerPackage; refinements?: RefinementPackage } = {
     producers: [{
       producer: producers.makePrompt,
       handler: () => {
@@ -237,9 +238,9 @@ test("an immediate Command left in started state fails its Build without invokin
   try {
     runtime = await createLocalRuntime({
       ...projectRuntimeFixture(directory),
-      producerPackages: [components], refinementPackages: [components],
+      producers: components.producers,
     });
-    const submitted = await runtime.build(durableBuildRequest(directory, "bld_20260902T120000008Z_0000000001", initial));
+    const submitted = await runtime.build(durableBuildRequest(directory, "bld_20260902T120000008Z_0000000001", buildFixture));
     const command = submitted.state.outstanding[0];
     assert.ok(command);
     const state = new SqliteRuntimeState(join(directory, ".hypit", "runtime.sqlite"));

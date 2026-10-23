@@ -1,5 +1,6 @@
 import type {
   AuthorGraph,
+  BlobRef,
   GraphValueRef,
   LinkedProgram,
   ResolvedModuleClosure,
@@ -8,7 +9,6 @@ import type {
 } from "@hypit/protocol";
 import { sameType, typeKey } from "@hypit/protocol";
 import type {
-  ResolvedSourceAsset,
   SourceAssetRequest,
   SourceAssetResolver,
   SourceImportRequest,
@@ -20,7 +20,6 @@ import type {
 import type { AuthorComponent, AuthorValueRef } from "./author.js";
 
 export type AuthorSourceUnit = SourceUnit;
-export type AuthorFrontendSourceUnit = AuthorSourceUnit;
 export type AuthorSourceImport = SourceImportRequest;
 
 export type AuthorSourceDiscovery = {
@@ -29,7 +28,6 @@ export type AuthorSourceDiscovery = {
 };
 
 export type AuthorSourceAssetRequest = SourceAssetRequest;
-export type ResolvedAuthorSourceAsset = ResolvedSourceAsset;
 export type AuthorSourceResolver = SourceResolver;
 export type AuthorSourceAssetResolver = SourceAssetResolver;
 
@@ -71,7 +69,7 @@ export type Awaitable<T> = T | Promise<T>;
 export type AuthorSourceDecodeContext = {
   readonly closure: ResolvedModuleClosure;
   readonly imports: readonly ResolvedAuthorSourceImport[];
-  readonly resolveAsset: (request: AuthorSourceAssetRequest) => Awaitable<ResolvedAuthorSourceAsset>;
+  readonly resolveAsset: (request: AuthorSourceAssetRequest) => Awaitable<BlobRef>;
 };
 
 export type DecodedAuthorSource = {
@@ -84,8 +82,8 @@ export type DecodedAuthorSource = {
 
 export type AuthorFrontend = {
   readonly id: string;
-  discover(source: AuthorFrontendSourceUnit): Awaitable<AuthorSourceDiscovery>;
-  decode(source: AuthorFrontendSourceUnit, context: AuthorSourceDecodeContext): Awaitable<DecodedAuthorSource>;
+  discover(source: SourceUnit): Awaitable<AuthorSourceDiscovery>;
+  decode(source: SourceUnit, context: AuthorSourceDecodeContext): Awaitable<DecodedAuthorSource>;
 };
 
 export interface AuthorFrontendRegistryLike {
@@ -120,7 +118,7 @@ export class AuthorFrontendRegistry implements AuthorFrontendRegistryLike {
   }
 }
 
-export type AuthorRecordValidator = (
+export type AuthorRecordRefiner = (
   record: TypedRecord,
 ) => Awaitable<void>;
 

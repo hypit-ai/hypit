@@ -10,7 +10,7 @@ import type { BlobRef } from "@hypit/protocol";
 
 import {
   acceptedRecords,
-  compositeType,
+  structuredType,
   publication,
   videoType,
 } from "./repository-scenario.js";
@@ -48,7 +48,7 @@ test("filesystem decodes Result and writer data before exposing it", async () =>
     await mkdir(directory, { recursive: true });
     await writeFile(join(directory, "result.json"), JSON.stringify({
       format: "hypit.build-result@1",
-      source: { id: "main.svml" },
+      sourceId: "main.svml",
       targets: ["video"],
       outputs: {
         video: {
@@ -62,7 +62,7 @@ test("filesystem decodes Result and writer data before exposing it", async () =>
 
     const writer = await repository.create({
       id: unfinished,
-      source: { id: "main.svml" },
+      sourceId: "main.svml",
       publication: publication([]),
     });
     await writeFile(join(buildResultDirectory(root, unfinished), ".writer.json"), JSON.stringify({
@@ -79,7 +79,7 @@ test("filesystem decodes Result and writer data before exposing it", async () =>
   }
 });
 
-test("reserved-looking domain objects remain ordinary Composite data", async () => {
+test("reserved-looking domain objects remain ordinary domain data", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-result-json-reference-"));
   const id = "bld_20260902T100000000Z_0000000001";
   try {
@@ -87,7 +87,7 @@ test("reserved-looking domain objects remain ordinary Composite data", async () 
     await mkdir(join(directory, "values"), { recursive: true });
     await writeFile(join(directory, "result.json"), JSON.stringify({
       format: "hypit.build-result@1",
-      source: { id: "main.svml" },
+      sourceId: "main.svml",
       targets: ["value"],
       outcome: "complete",
       finishedAt: 1,
@@ -100,7 +100,7 @@ test("reserved-looking domain objects remain ordinary Composite data", async () 
     }));
     const resolved = await new FileBuildResultRepository(root).resolve(id, "value");
     assert.equal(resolved?.value.kind, "value");
-    if (resolved?.value.kind !== "value") throw new Error("expected Composite Result value");
+    if (resolved?.value.kind !== "value") throw new Error("expected Result value document");
     assert.deepEqual(resolved.value.document.value, {
       nested: { kind: "build-output", build: id, output: "value" },
     });
@@ -109,7 +109,7 @@ test("reserved-looking domain objects remain ordinary Composite data", async () 
   }
 });
 
-test("describing a Composite Output reads only its manifest", async () => {
+test("describing a value-document Output reads only its manifest", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-result-describe-"));
   const id = "bld_20260902T100000020Z_0000000001";
   try {
@@ -117,11 +117,11 @@ test("describing a Composite Output reads only its manifest", async () => {
     await mkdir(directory, { recursive: true });
     await writeFile(join(directory, "result.json"), JSON.stringify({
       format: "hypit.build-result@1",
-      source: { id: "main.svml" },
+      sourceId: "main.svml",
       targets: ["take"],
       outcome: "complete",
       finishedAt: 1,
-      outputs: { take: { type: compositeType, value: { kind: "value", path: "values/missing.json" } } },
+      outputs: { take: { type: structuredType, value: { kind: "value", path: "values/missing.json" } } },
     }));
     const repository = new FileBuildResultRepository(root);
     const description = await repository.describeOutput(id, "take");

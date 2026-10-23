@@ -25,8 +25,8 @@ const module = { name: "@example/chat-scene", version: "1" } as const;
 const types = Object.fromEntries(["Options", "Message", "Messages"].map(name => [name, { module, name }])) as Record<"Options" | "Message" | "Messages", TypeRef>;
 const producers = Object.fromEntries(["empty", "append", "render"].map(name => [name, { module, name }])) as Record<"empty" | "append" | "render", { module: typeof module; name: string }>;
 export const manifest: ModuleManifest = { format: "hypit.module@1", ...module,
-  dependencies: [compositionTypes.visualTrack, mediaTypes.fontStack, timelineTypes.timeline, spatialTypes.frame, temporalTypes.instant].map(type => ({ module: type.module })),
-  types: Object.values(types).map(type => ({ name: type.name })), capabilities: [], producers: [
+  dependencies: [compositionTypes.visualTrack, mediaTypes.fontStack, timelineTypes.timeline, spatialTypes.frame, temporalTypes.instant].map(type => type.module),
+  types: Object.values(types).map(type => type.name), capabilities: [], producers: [
     { name: "empty", inputs: [], result: { kind: "output" as const, name: "messages", type: types.Messages } },
     { name: "append", inputs: [{ name: "messages", type: types.Messages }, { name: "message", type: types.Message },
       { name: "at", type: temporalTypes.instant }, { name: "timeline", type: timelineTypes.timeline }], result: { kind: "output" as const, name: "messages", type: types.Messages } },
@@ -40,12 +40,12 @@ const valueOf = <T>(record: TypedRecord | undefined): T => {
   return record.value as T;
 };
 const value = (data: unknown) => ((canonicalize(data)));
-const component: ProducerPackage & RefinementPackage = { producers: [
+const component: { producers?: ProducerPackage; refinements?: RefinementPackage } = { producers: [
   { producer: producers.empty, handler: () => ({ kind: "output", value: value([]) }) },
   { producer: producers.append, handler: ({ inputs }) => {
     const message = valueOf<Omit<Message, "at">>(inputs.message), at = valueOf<TemporalInstant>(inputs.at);
     const messages = valueOf<Message[]>(inputs.messages);
-    assertTemporalInstantFor(at, { subjectId: message.id, timeline: valueOf<Timeline>(inputs.timeline) });
+    assertTemporalInstantFor(at, { timeline: valueOf<Timeline>(inputs.timeline) });
     if (messages.some(item => item.id === message.id) || (messages.at(-1)?.at.frame ?? -1) > at.frame) throw new Error("Chat messages need unique ids and chronological arrival times.");
     return { kind: "output", value: value([...messages, { ...message, at }]) };
   } },
@@ -109,7 +109,7 @@ const declaration = { name: "scene", tag: "Scene", mode: "structured" as const,
   },
 };
 export const hypitPackage = { format: "hypit.package@1" as const, modules: [{ manifest }],
-  facets: [createProducerPackageFacet(component), createRefinementPackageFacet(component),
+  facets: [createProducerPackageFacet(component.producers ?? []), createRefinementPackageFacet(component.refinements ?? []),
     createMarkupSurfaceFacet({ module, declaration, handler: decodeSurface })] };
 export default hypitPackage;
 import { createRefinementPackageFacet } from "@hypit/hypit/refinement";

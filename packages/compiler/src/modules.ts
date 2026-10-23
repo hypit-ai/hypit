@@ -1,5 +1,5 @@
 import { createResolvedClosure } from "@hypit/kernel";
-import { moduleKey } from "@hypit/protocol";
+import { compareCodeUnits, moduleIdentity, moduleKey } from "@hypit/protocol";
 import type {
   ModuleManifest,
   ModuleRef,
@@ -36,15 +36,16 @@ export class ModulePackageRegistry implements ModulePackageRegistryLike {
 
   register(value: RegisteredModulePackage): void {
     const ref = manifestRef(value.manifest);
-    const key = moduleKey(ref);
-    const existing = this.#manifests.get(key);
+    const display = moduleKey(ref);
+    const identity = moduleIdentity(ref);
+    const existing = this.#manifests.get(identity);
     if (existing !== undefined) {
-      throw new CompilerError("DUPLICATE_MODULE_PACKAGE", `Module package ${key} is already registered`, key);
+      throw new CompilerError("DUPLICATE_MODULE_PACKAGE", `Module package ${display} is already registered`, display);
     }
-    const specifiers = new Set([key, ...(value.specifiers ?? [])]);
+    const specifiers = new Set([display, ...(value.specifiers ?? [])]);
     for (const specifier of specifiers) {
       if (specifier.length === 0) {
-        throw new CompilerError("EMPTY_MODULE_SPECIFIER", `${key} declares an empty import specifier`, key);
+        throw new CompilerError("EMPTY_MODULE_SPECIFIER", `${display} declares an empty import specifier`, display);
       }
       const owner = this.#specifiers.get(specifier);
       if (owner !== undefined) {
@@ -55,8 +56,8 @@ export class ModulePackageRegistry implements ModulePackageRegistryLike {
         );
       }
     }
-    this.#manifests.set(key, value.manifest);
-    for (const specifier of specifiers) this.#specifiers.set(specifier, key);
+    this.#manifests.set(identity, value.manifest);
+    for (const specifier of specifiers) this.#specifiers.set(specifier, identity);
   }
 
   resolve(request: string): ModuleRef | undefined {
@@ -75,16 +76,17 @@ export class ModulePackageRegistry implements ModulePackageRegistryLike {
       }
       included.set(key, manifest);
       for (const dependency of manifest.dependencies) {
-        const dependencyKey = moduleKey(dependency.module);
-        const resolved = this.#manifests.get(dependencyKey);
+        const dependencyIdentity = moduleIdentity(dependency);
+        const dependencyDisplay = moduleKey(dependency);
+        const resolved = this.#manifests.get(dependencyIdentity);
         if (resolved === undefined) {
           throw new CompilerError(
             "MISSING_MODULE_DEPENDENCY",
-            `${key} requires unregistered module ${dependencyKey}`,
-            dependencyKey,
+            `${moduleKey(manifestRef(manifest))} requires unregistered module ${dependencyDisplay}`,
+            dependencyDisplay,
           );
         }
-        visit(dependencyKey);
+        visit(dependencyIdentity);
       }
     };
 
@@ -97,7 +99,7 @@ export class ModulePackageRegistry implements ModulePackageRegistryLike {
     }
     return createResolvedClosure(
       [...included.values()].sort((left, right) =>
-        moduleKey(manifestRef(left)).localeCompare(moduleKey(manifestRef(right))),
+        compareCodeUnits(moduleKey(manifestRef(left)), moduleKey(manifestRef(right))),
       ),
     );
   }

@@ -23,6 +23,15 @@ test("canonical values have stable key order and preserve array order", () => {
   assert.notEqual(canonicalStringify([1, 2]), canonicalStringify([2, 1]));
 });
 
+test("canonical values preserve every own object key as data", () => {
+  const input = Object.fromEntries([["__proto__", { kept: true }], ["constructor", "value"]]);
+  const canonical = canonicalize(input) as Record<string, unknown>;
+  assert.equal(Object.hasOwn(canonical, "__proto__"), true);
+  assert.deepEqual(canonical["__proto__"], { kept: true });
+  assert.equal(canonical.constructor, "value");
+  assert.deepEqual(normalizeValue(input), canonical);
+});
+
 test("canonicalization normalizes negative zero and is idempotent", () => {
   const once = canonicalize({ z: [1, { y: "x" }], a: -0 });
   assert.deepEqual(canonicalize(once), once);
@@ -51,13 +60,13 @@ test("BlobRef keeps one opaque structural schema and one Protocol runtime assert
     kind: "blob", resource: `res_${"a".repeat(400)}`, size: 1, mediaType: "application/octet-stream",
   }));
   for (const value of [
-    { kind: "blob", resource: "sha256:abc", size: 1, mediaType: "image/png" },
+    { kind: "blob", resource: "artifact/abc", size: 1, mediaType: "image/png" },
     { kind: "blob", resource: "res_a", size: -1, mediaType: "image/png" },
     { kind: "blob", resource: "res_a", size: 1, mediaType: "" },
   ]) assert.throws(() => assertBlobRef(value), /BlobRef/u);
 });
 
-test("one recursive Value admits BlobRef leaves at every depth", () => {
+test("one recursive Value accepts BlobRef leaves at every depth", () => {
   const image = { kind: "blob" as const, resource: "res_image" as const, size: 4, mediaType: "image/png" };
   const audio = { kind: "blob" as const, resource: "res_audio" as const, size: 8, mediaType: "audio/wav" };
   const normalized = normalizeValue({ z: [image, { sound: audio }], a: -0 });
@@ -79,10 +88,10 @@ test("one recursive Value admits BlobRef leaves at every depth", () => {
 
 test("the reserved blob tag is validated by the same Value boundary at every depth", () => {
   assert.throws(() => normalizeValue({ nested: {
-    kind: "blob", resource: "sha256:old", size: 1, mediaType: "image/png",
+    kind: "blob", resource: "artifact/old", size: 1, mediaType: "image/png",
   } }), /nested.*BlobRef/u);
   assert.throws(() => normalizeValue({
-    kind: "blob", resource: "res_image", size: 1, mediaType: "image/png", digest: "legacy",
+    kind: "blob", resource: "res_image", size: 1, mediaType: "image/png", extra: true,
   }), /BlobRef/u);
   assert.throws(() => normalizeValue({ value: Number.NaN }), /finite/u);
   assert.throws(() => normalizeValue({ value: undefined }), /undefined/u);

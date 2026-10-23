@@ -19,7 +19,7 @@ When adapting these production directions with the current Kit, arrange person a
 responsibilities where they apply. A derived view can stay brief where its references already
 establish the facts; the `person` and `setting` blocks can be omitted. The Kit supplies Capture once.
 Set the output aspect ratio, such as `9:16`, on the model. Connect the stated reference images as
-actual model inputs. The historical directions below retain their production wording and order.
+actual model inputs. The directions below retain their original production wording and order.
 
 These renditions preserve complete production directions as evidence, including additional
 time-of-day, brightness, exposure, or lighting language that belonged to those particular shots.

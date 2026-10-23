@@ -56,10 +56,10 @@ export const htmlDocumentManifest: ModuleManifest = {
   dependencies: [
     compositionDependency,
     timelineDependency,
-    { module: htmlProgramModuleRef },
-    { module: mediaOperationsModuleRef },
+    htmlProgramModuleRef,
+    mediaOperationsModuleRef,
   ],
-  types: [{ name: htmlDocumentTypes.document.name }],
+  types: [htmlDocumentTypes.document.name],
   capabilities: [],
   producers: [{
     name: htmlDocumentProducers.compile.name,

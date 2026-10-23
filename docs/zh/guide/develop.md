@@ -21,36 +21,6 @@ description: 开始 Hypit 开发工作。
 这一步准备浏览器，不依赖 pnpm 放行依赖安装脚本。
 使用 `hypit doctor --runtime <profile>` 检查缺失环境；诊断不会安装浏览器。
 
-## 日常工作流
-
-```bash
-corepack enable
-pnpm install --frozen-lockfile # 拉取代码或改动依赖之后
-pnpm check            # TypeScript 类型检查
-pnpm test             # 完整测试套件
-```
-
-| 命令 | 实际执行什么 |
-|---|---|
-| `pnpm check` | `tsc -p tsconfig.json --noEmit` |
-| `pnpm test` | 通过 Node test runner 运行 package、service-adapter 与仓库边界测试 |
-
-关于受环境开关控制的测试与测试写法，参见 [测试](./testing.md)。
-
-## 仓库结构
-
-```text
-hypit/
-├── packages/              workspace packages
-├── docs/                  VitePress documentation site
-├── examples/              runnable example sources
-├── services/              本地媒体与转写服务
-├── test/                  repository boundary tests and shared fixtures
-├── package.json           root workspace manifest
-├── pnpm-workspace.yaml    package, service and example-component workspaces
-└── tsconfig.json          TypeScript config
-```
-
 ## 指南目录
 
 | 指南 | 主题 |
@@ -61,5 +31,4 @@ hypit/
 | [模型与 Provider](./providers.md) | 选择账户与 API，开发 Model 或 Provider 包 |
 | [Runtime](./runtime.md) | Profile、Workspace、执行与生命周期边界 |
 | [Studio 本地化](https://github.com/hypit-ai/hypit/blob/main/packages/studio/LOCALIZATION.md) | 翻译界面文案，加载本地 JSON 或已安装的语言包 |
-| [测试](./testing.md) | 测试运行器、写法、示例、boundary tests |
 | [代码规范](./conventions.md) | 命名、模块边界、wire 数据、TypeScript 配置 |

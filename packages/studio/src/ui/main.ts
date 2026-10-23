@@ -61,6 +61,8 @@ app.innerHTML = `
       <aside class="workspace-panel">
         <div class="pane-heading workspace-heading" data-workspace-heading>
           <div class="pane-title">${icon("tune")}<h2>${uiLabel("inspector.properties")}</h2></div>
+          <div class="inspector-session-actions" data-inspector-session-actions></div>
+          <div class="inspector-domain-tabs" data-inspector-domain-tabs></div>
         </div>
         <div class="workspace-scroll">
           <section class="workspace-section">
@@ -124,6 +126,8 @@ shell.insertBefore(createHandle({
 }), app.querySelector<HTMLElement>("[data-timeline]")!);
 const inspector = app.querySelector<HTMLElement>("[data-inspector]")!;
 const workspaceHeading = app.querySelector<HTMLElement>("[data-workspace-heading]")!;
+const inspectorSessionActions = app.querySelector<HTMLElement>("[data-inspector-session-actions]")!;
+const inspectorDomainTabs = app.querySelector<HTMLElement>("[data-inspector-domain-tabs]")!;
 const meta = app.querySelector<HTMLElement>("[data-meta]")!;
 const project = app.querySelector<HTMLElement>("[data-project]")!;
 const status = app.querySelector<HTMLElement>("[data-status]")!;
@@ -213,18 +217,34 @@ const inspectorDomainByItem = new Map<string, StudioInspectorDomain>();
 const inspectorPageByItem = new Map<string, string>();
 
 function defaultWorkspaceHeading(): void {
-  workspaceHeading.className = "pane-heading workspace-heading";
-  workspaceHeading.innerHTML = `<div class="pane-title">${icon("tune")}<h2>${uiLabel("inspector.properties")}</h2></div>`;
+  inspectorSessionActions.replaceChildren();
+  inspectorDomainTabs.replaceChildren();
+  workspaceHeading.classList.remove("has-inspector-domains");
+}
+
+function previewParticipation(item: StudioItem): void {
+  inspectorSessionActions.replaceChildren();
+  if (!item.terminalTargets.some((target) => target.kind === "visual-adjustment")) return;
+  const included = !store.current()?.preview.omittedItemIds.has(item.id);
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = `inspector-preview-participation${included ? " active" : ""}`;
+  button.setAttribute("aria-pressed", String(included));
+  button.innerHTML = `${icon("eye")}<span>${uiLabel("inspector.include-in-preview")}</span>`;
+  button.addEventListener("click", () => store.setItemPreviewIncluded(item.id, !included));
+  inspectorSessionActions.append(button);
 }
 
 function inspectorHeading(
-  itemId: string,
+  item: StudioItem,
   domains: readonly StudioInspectorDomain[],
   active: StudioInspectorDomain,
   select: (domain: StudioInspectorDomain) => void,
 ): void {
-  workspaceHeading.className = "pane-heading workspace-heading inspector-domain-tabs";
-  workspaceHeading.replaceChildren(...domains.map((domain) => {
+  defaultWorkspaceHeading();
+  previewParticipation(item);
+  workspaceHeading.classList.toggle("has-inspector-domains", domains.length > 0);
+  inspectorDomainTabs.replaceChildren(...domains.map((domain) => {
     const presentation = domainPresentation[domain];
     const button = document.createElement("button");
     button.type = "button";
@@ -233,7 +253,7 @@ function inspectorHeading(
     button.innerHTML = `${icon(presentation.icon)}<strong>${uiLabel(presentation.label)}</strong>`;
     button.setAttribute("aria-pressed", String(domain === active));
     button.addEventListener("click", () => {
-      inspectorDomainByItem.set(itemId, domain);
+      inspectorDomainByItem.set(item.id, domain);
       select(domain);
     });
     return button;
@@ -454,12 +474,12 @@ function scalarDraftControl(
     value.textContent = "Opaque value";
     return value;
   }
-  return parameterControl({ kind: "item", itemId: "" }, {
+  return parameterControl({
     id: label, label, domain: "how", section: { id: "record", label: "" },
     control,
     ...(schema.kind === "string" && schema.enum !== undefined ? { options: schema.enum } : {}),
     schema, value: held ?? null, ...(presentation === undefined ? {} : { valuePresentation: presentation }),
-  }, change);
+  }, change, true);
 }
 
 function recordDraftControl(
@@ -483,7 +503,7 @@ function recordDraftControl(
   return fields;
 }
 
-function structuredControl(owner: ParameterOwner, parameter: StudioItem["inspector"][number], change: (value: CanonicalValue) => void): HTMLElement {
+function structuredControl(parameter: StudioItem["inspector"][number], change: (value: CanonicalValue) => void): HTMLElement {
   const declaredSchema = parameter.schema;
   const shell = document.createElement("div");
   shell.className = "parameter-structured";
@@ -515,7 +535,7 @@ function structuredControl(owner: ParameterOwner, parameter: StudioItem["inspect
     if (schema === undefined) return;
     if (variants.length) {
       const active = variants.find(variant => variant.schema === schema)!;
-      shell.append(parameterControl(owner, {
+      shell.append(parameterControl({
         ...parameter, control: "select", value: variants.indexOf(active),
         options: variants.map((variant, index) => ({ value: index, label: textValue(variant.value) })),
       }, (next) => {
@@ -628,31 +648,29 @@ function structuredControl(owner: ParameterOwner, parameter: StudioItem["inspect
 }
 
 function parameterControl(
-  owner: ParameterOwner,
   parameter: StudioItem["inspector"][number],
   change?: (value: CanonicalValue) => void,
+  draft = false,
 ): HTMLElement {
-  const editable = parameter.edit !== undefined || change !== undefined;
-  const commit = change ?? ((value: CanonicalValue) => commitControl(owner, parameter, value));
-  if (editable && parameter.control === "record" && parameter.schema !== undefined && parameterRecordVariants(parameter.schema).length) {
-    return structuredControl(owner, parameter, commit);
+  if (change !== undefined && parameter.control === "record" && parameter.schema !== undefined && parameterRecordVariants(parameter.schema).length) {
+    return structuredControl(parameter, change);
   }
   const row = document.createElement("div");
-  row.className = `parameter-row ${!editable ? "parameter-readonly" : "parameter-editable"} control-${parameter.control}`;
+  row.className = `parameter-row ${change === undefined ? "parameter-readonly" : "parameter-editable"} control-${parameter.control}`;
   const name = document.createElement("span");
   name.className = "parameter-label";
   name.textContent = parameter.label;
   name.title = parameter.summary ?? parameter.label;
   const right = document.createElement("span");
   right.className = "parameter-right parameter-control";
-  if (!editable) {
+  if (change === undefined) {
     const value = document.createElement("span");
     value.className = "parameter-display";
     let displayValue = textValue(parameter.value);
     let unitLabel = parameter.unit;
     if (parameter.control === "number") {
       try {
-        const numeric = parameterNumber(change && parameter.value === null ? 0 : parameter.value, parameter.number);
+        const numeric = parameterNumber(parameter.value, parameter.number);
         displayValue = String(numeric.value);
         unitLabel = numeric.suffix || parameter.unit;
       } catch { /* Keep the actual value visible when it is not a scalar. */ }
@@ -667,6 +685,7 @@ function parameterControl(
     row.append(name, right);
     return row;
   }
+  const commit = change;
   let unitLabel = parameter.unit;
   if (parameter.control === "select") {
     right.append(selectControl(parameter, commit));
@@ -684,7 +703,7 @@ function parameterControl(
       right.append(palette);
     }
   } else if (parameter.control === "list" || parameter.control === "record") {
-    right.append(structuredControl(owner, parameter, commit));
+    right.append(structuredControl(parameter, commit));
   } else {
     if (parameter.multiline && parameter.control === "text") {
       const value = document.createElement("textarea"); value.className = "parameter-value parameter-multiline";
@@ -700,8 +719,8 @@ function parameterControl(
     if (value.type === "checkbox") value.checked = parameter.value === true || parameter.value === "true";
     else if (parameter.control === "number") {
       try {
-        const numeric = parameterNumber(change && parameter.value === null ? 0 : parameter.value, parameter.number);
-        value.type = "number"; value.inputMode = "decimal"; value.value = change && parameter.value === null ? "" : String(numeric.value);
+        const numeric = parameterNumber(draft && parameter.value === null ? 0 : parameter.value, parameter.number);
+        value.type = "number"; value.inputMode = "decimal"; value.value = draft && parameter.value === null ? "" : String(numeric.value);
         const schema = parameter.schema?.kind === "number" ? parameter.schema : undefined;
         const scale = parameter.number?.scale ?? 1;
         const minimum = parameter.number?.minimum ?? (schema?.minimum === undefined ? undefined : schema.minimum * scale);
@@ -722,7 +741,7 @@ function parameterControl(
       if (value.type === "checkbox") {
         commit(value.checked);
       } else if (parameter.control === "number") {
-        if (change) commit(Number.isFinite(value.valueAsNumber) ? value.valueAsNumber : null);
+        if (draft) commit(Number.isFinite(value.valueAsNumber) ? value.valueAsNumber : null);
         else if (value.reportValidity()) commit(value.valueAsNumber);
       } else {
         commit(value.value);
@@ -740,6 +759,15 @@ function parameterControl(
   return row;
 }
 
+function persistedParameterControl(
+  owner: ParameterOwner,
+  parameter: StudioItem["inspector"][number],
+): HTMLElement {
+  return parameterControl(parameter, parameter.edit === undefined
+    ? undefined
+    : (value) => commitControl(owner, parameter, value));
+}
+
 function parameterGroups(owner: ParameterOwner, fields: readonly StudioItem["inspector"][number][]): readonly HTMLElement[] {
   const groups = new Map<string, StudioItem["inspector"][number][]>();
   for (const field of fields) {
@@ -750,7 +778,7 @@ function parameterGroups(owner: ParameterOwner, fields: readonly StudioItem["ins
   }
   return [...groups].map(([key, values]) => {
     const [, label = ""] = key.split("\u0000");
-    return group(label, values.map((parameter) => parameterControl(owner, parameter)), "parameter-group inspector-field-group");
+    return group(label, values.map((parameter) => persistedParameterControl(owner, parameter)), "parameter-group inspector-field-group");
   });
 }
 
@@ -839,9 +867,7 @@ function renderInspector(snapshot: StudioSnapshot, itemId: string | undefined): 
         property("inspector.frames", String(snapshot.timeline.frameCount), "property-number"),
       ]),
       uiGroup("inspector.build", [
-        property("inspector.targets", snapshot.run.targets
-          .map((target) => target.split("::output::").at(-1) ?? target)
-          .join(", ") || "—", "property-code"),
+        property("inspector.targets", snapshot.run.targets.join(", ") || "—", "property-code"),
         property("inspector.candidates", String(snapshot.run.satisfactions.length), "property-number"),
       ]),
     );
@@ -851,6 +877,7 @@ function renderInspector(snapshot: StudioSnapshot, itemId: string | undefined): 
     || track?.inspectorObjects.some((object) => object.inspector.some((field) => field.domain === domain)) === true);
   if (domains.length === 0) {
     defaultWorkspaceHeading();
+    previewParticipation(item);
     const empty = document.createElement("div");
     empty.className = "inspector-empty";
     uiText(empty, "inspector.empty");
@@ -860,7 +887,7 @@ function renderInspector(snapshot: StudioSnapshot, itemId: string | undefined): 
   const remembered = inspectorDomainByItem.get(item.id);
   const activeDomain = remembered !== undefined && domains.includes(remembered) ? remembered : domains[0]!;
   inspectorDomainByItem.set(item.id, activeDomain);
-  inspectorHeading(item.id, domains, activeDomain, () => renderInspector(snapshot, item.id));
+  inspectorHeading(item, domains, activeDomain, () => renderInspector(snapshot, item.id));
 
   const domainFields = item.inspector.filter((field) => field.domain === activeDomain);
   const pages = new Map<string, { readonly label: string; readonly fields: typeof domainFields }>();
@@ -1000,7 +1027,7 @@ store.subscribe(({ snapshot, selection, playhead }) => {
       && domain.id === selection.domainId)?.items.find((item) => item.id === selection.itemId)
     : undefined;
   // Rebuilding this every frame of playback would be DOM churn for no change.
-  const describes = `${snapshot.revision}:${selection.kind}:${chosen?.id ?? chosenDomain?.id ?? ""}`;
+  const describes = `${snapshot.revision}:${selection.kind}:${chosen?.id ?? chosenDomain?.id ?? ""}:${chosen === undefined ? "" : String(!store.current()?.preview.omittedItemIds.has(chosen.id))}`;
   if (describes !== described) {
     described = describes;
     if (selection.kind === "temporal-domain") {
@@ -1018,8 +1045,8 @@ store.subscribe(({ snapshot, selection, playhead }) => {
   // Only what was chosen is outlined. What is merely drawn at this frame is
   // already said by the gutter bars, and a second outline for it made a board
   // look picked when one of its rows was.
-  if (chosen?.elementRange !== undefined) {
-    highlights.push({ range: chosen.elementRange, tone: "element" });
+  if (chosen?.elementLocation?.path === snapshot.source.path) {
+    highlights.push({ range: chosen.elementLocation.range, tone: "element" });
   }
   if (chosenDomain?.range !== undefined) highlights.push({ range: chosenDomain.range, tone: "binding" });
 
@@ -1061,15 +1088,19 @@ code.element.addEventListener("click", (event) => {
   const span = spanAtOffset(state.snapshot, offset);
   // Prose is anywhere a marker was written; whether an Item also covers that
   // offset only decides which Item to select, not whether the click counts.
+  const itemRange = item?.elementLocation?.path === state.snapshot.source.path
+    ? item.elementLocation.range
+    : undefined;
   const inProse = span !== undefined
-    && (item?.elementRange === undefined
-      || !(offset >= item.elementRange.start && offset <= item.elementRange.end));
+    && (itemRange === undefined || !(offset >= itemRange.start && offset <= itemRange.end));
   if (inProse) {
     // An Item is named after itself and remembers what placed it, so a marker
     // finds the Items it put there through the second, not the first.
     const bound = state.snapshot.tracks
       .flatMap((track) => track.items)
-      .find((item) => item.markerId === span.itemId || item.authoredId === span.itemId);
+      .find((item) => item.marker?.companion === span.companion
+        && item.marker.domainId === span.domainId
+        && item.marker.itemId === span.itemId);
     // A marker that places nothing still sits inside one that does, so the
     // enclosing Item stays selected rather than leaving the inspector blank.
     const target = bound?.id ?? item?.id;

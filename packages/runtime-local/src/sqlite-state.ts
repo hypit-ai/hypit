@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import { isDeepStrictEqual } from "node:util";
 
 import type {
   BuildDefinition,
@@ -13,6 +14,7 @@ import type {
   Value,
 } from "@hypit/hypit/protocol";
 import { assertBuildId, normalizeValue, valueBlobRefs } from "@hypit/hypit/protocol";
+import { assertPublicationPlan } from "@hypit/hypit/result";
 import { applyOperationUpdate, capacityUnits } from "@hypit/hypit/runtime";
 import type {
   BuildSnapshot,
@@ -162,12 +164,6 @@ function parseCredentials(value: unknown): OperationContext["credentials"] {
   }));
 }
 
-function parseCompletion(value: unknown): { readonly value: Value } {
-  const completion = object(value, "SQLite Operation completion");
-  exactKeys(completion, ["value"], "SQLite Operation completion");
-  return { value: normalizeValue(completion.value, "SQLite Operation completion value") };
-}
-
 function parseFailure(value: unknown): { readonly code: string; readonly message: string } {
   const failure = object(value, "SQLite Operation failure");
   exactKeys(failure, ["code", "message"], "SQLite Operation failure");
@@ -284,10 +280,10 @@ function parseOperationSnapshot(row: Row): OperationSnapshot {
     };
   }
   if (row.status === "received" || row.status === "completed") {
-    exactKeys(facts, [...commonKeys, "completion", "acknowledgedAt", "endedAt"], `SQLite ${row.status} Operation payload`);
+    exactKeys(facts, [...commonKeys, "value", "acknowledgedAt", "endedAt"], `SQLite ${row.status} Operation payload`);
     const completed = {
       ...common,
-      completion: parseCompletion(facts.completion),
+      value: normalizeValue(facts.value, "SQLite Operation value"),
       acknowledgedAt: nonNegativeTime(facts.acknowledgedAt, `SQLite ${row.status} Operation acknowledgement time`),
       endedAt: nonNegativeTime(facts.endedAt, `SQLite ${row.status} Operation end time`),
     };
@@ -379,10 +375,16 @@ class SqliteBuildStore implements BuildStore {
 function parseCatalogEntry(row: Row): BuildCatalogEntry {
   assert(typeof row.build_id === "string", "SQLite Build Catalog row has no build id");
   assert(typeof row.descriptor_json === "string", "SQLite Build Catalog row has no descriptor");
-  const descriptor = JSON.parse(row.descriptor_json) as BuildCatalogDescriptor;
+  const descriptor = object(JSON.parse(row.descriptor_json) as unknown, "SQLite Build Catalog descriptor");
+  exactKeys(descriptor, ["sourcePath", "runPath", "publication"], "SQLite Build Catalog descriptor");
+  assertPublicationPlan(descriptor.publication, { build: row.build_id });
   return {
-    ...descriptor,
     build: row.build_id,
+    sourcePath: nonEmptyString(descriptor.sourcePath, "SQLite Build Catalog Source path"),
+    ...(descriptor.runPath === undefined
+      ? {}
+      : { runPath: nonEmptyString(descriptor.runPath, "SQLite Build Catalog Run path") }),
+    publication: descriptor.publication,
   };
 }
 
@@ -425,15 +427,18 @@ function parseExecutionRequest(row: Row, subject: string): BuildExecutionRequest
   const executionPackages = JSON.parse(row.execution_packages_json) as unknown;
   assert(Array.isArray(executionPackages) && executionPackages.every((item) => typeof item === "string"),
     `SQLite ${subject} execution packages are invalid`);
-  const result = JSON.parse(row.result_location_json) as Partial<BuildExecutionRequest["result"]>;
-  assert(typeof result.root === "string" && result.root.length > 0
-    && typeof result.path === "string" && result.path.length > 0,
-    `SQLite ${subject} Result location is invalid`);
+  const result = object(JSON.parse(row.result_location_json) as unknown, `SQLite ${subject} Result location`);
+  exactKeys(result, ["root", "path"], `SQLite ${subject} Result location`);
   return {
     build: row.build_id,
-    ...(typeof row.context_json === "string" ? { context: JSON.parse(row.context_json) as NonNullable<BuildExecutionRequest["context"]> } : {}),
+    ...(typeof row.context_json === "string"
+      ? { context: normalizeValue(JSON.parse(row.context_json) as unknown, `SQLite ${subject} execution context`) }
+      : {}),
     executionPackages,
-    result: result as BuildExecutionRequest["result"],
+    result: {
+      root: nonEmptyString(result.root, `SQLite ${subject} Result root`),
+      path: nonEmptyString(result.path, `SQLite ${subject} Result path`),
+    },
   };
 }
 
@@ -503,9 +508,9 @@ class SqlitePendingBuildStore implements PendingBuildStore {
       const row = this.#database.prepare("SELECT * FROM hypit_submissions WHERE build_id = ?").get(request.build) as Row | undefined;
       if (row === undefined) throw new Error(`Build submission ${request.build} was not prepared`);
       const submission = parsePendingBuildSubmission(row);
-      assert(JSON.stringify(submission.executionPackages) === JSON.stringify(request.executionPackages)
-        && JSON.stringify(submission.result) === JSON.stringify(request.result)
-        && JSON.stringify(submission.context) === JSON.stringify(request.context),
+      assert(isDeepStrictEqual(submission.executionPackages, request.executionPackages)
+        && isDeepStrictEqual(submission.result, request.result)
+        && isDeepStrictEqual(submission.context, request.context),
       `Build submission ${request.build} does not match its prepared state`);
       this.#database.prepare(`
         INSERT INTO hypit_builds (build_id, definition_json) VALUES (?, ?)
@@ -1275,20 +1280,6 @@ export class SqliteRuntimeState {
         tokens REAL NOT NULL, updated_at INTEGER NOT NULL
       ) STRICT;
     `);
-    if (!options.readOnly) transaction(database, () => {
-      for (const table of ["hypit_submissions", "hypit_executions"]) {
-        const columns = database.prepare(`PRAGMA table_info(${table})`).all() as Row[];
-        if (!columns.some((column) => column.name === "context_json")) database.exec(`ALTER TABLE ${table} ADD COLUMN context_json TEXT`);
-        if (table === "hypit_executions" && !columns.some((column) => column.name === "started_at")) database.exec("ALTER TABLE hypit_executions ADD COLUMN started_at INTEGER");
-      }
-    });
-    // Add the nullable live-activity column without touching any accepted facts or Results.
-    if (!options.readOnly) transaction(database, () => {
-      if (!(database.prepare("PRAGMA table_info(hypit_command_executions)").all() as Row[])
-        .some((column) => column.name === "activity_json")) {
-        database.exec("ALTER TABLE hypit_command_executions ADD COLUMN activity_json TEXT");
-      }
-    });
     this.builds = new SqliteBuildStore(database);
     this.operations = new SqliteOperationStore(database);
     this.commandExecutions = new SqliteCommandExecutionStore(database);

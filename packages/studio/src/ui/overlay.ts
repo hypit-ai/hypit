@@ -1,4 +1,5 @@
 import type { StudioItem, StudioSnapshot } from "../shared.js";
+import type { StudioTerminalTarget } from "../shared.js";
 import { intentTones } from "./markers.js";
 import type { Store } from "./selection.js";
 
@@ -14,7 +15,8 @@ export type Box = {
   readonly widthPx: number; readonly heightPx: number;
 };
 
-export type Measure = (renderId: string) => (Box & { readonly stackOrder: number }) | undefined;
+type PresentTarget = Extract<StudioTerminalTarget, { readonly kind: "visual-present" }>;
+export type Measure = (target: PresentTarget) => (Box & { readonly paintPath: readonly number[] }) | undefined;
 
 export type Overlay = {
   readonly element: SVGSVGElement;
@@ -73,9 +75,9 @@ export function createOverlay(store: Store, measure: Measure): Overlay {
    * it ended up. A Present that has not mounted has no box to draw.
    */
   const drawnParts = (item: StudioItem) => {
-    const ids = item.renderIds.length > 0 ? item.renderIds : item.presentId === undefined ? [] : [item.presentId];
-    return ids.flatMap((id) => {
-      const found = measure(id);
+    return item.terminalTargets.flatMap((ref) => {
+      if (ref.kind !== "visual-present") return [];
+      const found = measure(ref);
       return found === undefined ? [] : [found];
     });
   };
@@ -136,8 +138,15 @@ export function createOverlay(store: Store, measure: Measure): Overlay {
       // Hit individual parts, not the empty space inside a group's union box.
       const hits = items.flatMap((item) => drawnParts(item)
         .filter((part) => inside(part, x, y))
-        .map((part) => ({ item, order: part.stackOrder })))
-        .sort((left, right) => right.order - left.order);
+        .map((part) => ({ item, path: part.paintPath })))
+        .sort((left, right) => {
+          const length = Math.max(left.path.length, right.path.length);
+          for (let index = 0; index < length; index += 1) {
+            const difference = (right.path[index] ?? -1) - (left.path[index] ?? -1);
+            if (difference !== 0) return difference;
+          }
+          return 0;
+        });
       return [...new Map(hits.map(({ item }) => [item.id, item])).values()];
   };
   return {

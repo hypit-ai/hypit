@@ -201,10 +201,10 @@ model limits declared by those Endpoints. Builds share only those actual resourc
 can advance together.
 
 Immediate work releases its capacity when it returns. An asynchronous Provider operation keeps its
-claim while that same accepted operation is being polled to completion. Losing the execution process
-ends the attempt and preserves available remote receipts; it does not resubmit the paid request.
+claim while that same accepted operation is being polled to completion. An interrupted attempt
+preserves available remote receipts; it does not resubmit the paid request.
 When an action fails, the attempt ends and local reservations are released. Any last-observed remote
-status remains evidence, rather than a condition the old Build must resolve before the next attempt.
+status remains evidence for deciding how to continue.
 
 `activity --verbose --json` exposes actual resource claims when capacity explains a wait.
 Task occupancy, overlapping network actions and starts permitted per time period are different
@@ -244,11 +244,10 @@ Check the reported state afterward. Detaching the observer does not send this ca
 cancellation request cannot undo already completed Provider work. Preserve completed usable Outputs
 and leave unrelated Builds alone.
 
-`runtime down` stops the coordinator and its execution processes for that Runtime. An unfinished
-Build that loses its execution context ends that attempt; starting the Worker again does not resume
-it. Completed Outputs and recorded receipts remain available for explicit reuse in a new Build.
-Stopping the Worker does not itself cancel remote Provider work; use `cancel` for a selected Build
-while its execution context is available.
+`runtime down` stops that Runtime's Worker. Its unfinished Builds end; starting the Worker again does
+not resume them. Completed Outputs and recorded receipts remain available for explicit reuse in a
+new Build. Stopping the Worker does not itself cancel remote Provider work; use `cancel` for a
+selected active Build.
 
 ## Browse and export project Results
 
@@ -266,9 +265,9 @@ Outputs from earlier work; this inventory does not mean those files were generat
 `history` finds one named Output across Results, including reuse; it does not select one for the
 current Run. `get` exports one named Output to one explicit destination:
 
-- a Scalar becomes a JSON file;
-- a Resource becomes one streamed file;
-- a Composite becomes a directory containing `value.json` and its referenced Resources.
+- a value with no referenced files becomes a JSON file;
+- a file Output becomes one file with its original bytes;
+- a structured value with referenced files becomes a directory containing `value.json` and those files.
 
 The destination remains a user-facing export. The original Result stays in the project's
 `.hypit/results` directory on the machine running Hypit.
@@ -300,18 +299,18 @@ those Results and the authored work to another machine or collaborator.
 
 ## Build with the current project implementation
 
-Each normal local Build receives its own loaded project implementation and selected Provider
-configuration. Edit project components or the Profile, then create a new Build;
+Each new local Build loads the current project implementation and selected Provider configuration.
+Edit project components or the Profile, then create a new Build;
 previously started work keeps its loaded implementation. Reuse completed material through the Run
 when changing composition. Warm services such as WhisperX remain available across Builds.
 
 Concurrent Builds share execution infrastructure; remote waiting does not reserve a whole-Build slot.
-A lost executor ends its affected attempts; completed Outputs and available remote receipts are
-retained. Continue with a new Build and explicit reuse. This execution boundary does not freeze files
-that a component chooses to read later.
+A lost Worker ends its affected attempts; completed Outputs and available remote receipts are
+retained. Continue with a new Build and explicit reuse. Files that a component reads later retain
+their own filesystem lifetime.
 
-Changing the installed Distribution or the coordinator's inherited shell environment is a separate
-bootstrap change. Inspect `hypit activity` before restarting that Worker. External writable credential
+Changing the installed Distribution or the Worker's inherited shell environment requires restarting
+the Worker. Inspect `hypit activity` first. External writable credential
 stores may expose updated values directly; environment-backed credentials use the environment in
-which the coordinator was started. `hypit runtime down` stops the Worker and its active executors;
+which the Worker was started. `hypit runtime down` stops the Worker and its active Builds;
 Managed Programs have their own lifetime.

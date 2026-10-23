@@ -83,8 +83,12 @@ function authoredElements(placements: readonly Placement[]): readonly AuthorElem
   ]);
 }
 
-function sameRange(left: Range | undefined, right: Range | undefined): boolean {
-  return left !== undefined && right !== undefined && left.start === right.start && left.end === right.end;
+function sameLocation(
+  candidate: { readonly sourcePath: string; readonly range: Range },
+  location: StudioParameterDraft["elementLocation"],
+): boolean {
+  return location !== undefined && candidate.sourcePath === location.path
+    && candidate.range.start === location.range.start && candidate.range.end === location.range.end;
 }
 
 function elementFor(placement: StudioPlacement, draft: StudioParameterDraft): AuthorElement | undefined {
@@ -116,7 +120,7 @@ function elementFor(placement: StudioPlacement, draft: StudioParameterDraft): Au
       range: child.range,
     })),
   ];
-  return candidates.find((candidate) => sameRange(candidate.range, draft.elementRange))
+  return candidates.find((candidate) => sameLocation(candidate, draft.elementLocation))
     ?? candidates.find((candidate) => candidate.id === draft.authoredId);
 }
 
@@ -380,7 +384,11 @@ export function composeParameterDeclarations(input: {
     const key = target?.authorElement ?? `${target?.sourcePath}:${target?.range.start}`;
     if (companion !== undefined && seen.has(key)) throw new Error(`Circular Studio parameter reference at ${path}.`);
     if (companion !== undefined) inspector.push(...companion.inspector.map(field => ({ ...field, binding: `${path}.${field.binding}` })));
-    const next = target === undefined ? undefined : elementFor(target, { ...input.draft, authoredId: target.id ?? "", elementRange: target.range });
+    const next = target === undefined ? undefined : elementFor(target, {
+      ...input.draft,
+      authoredId: target.id ?? "",
+      elementLocation: { path: target.sourcePath, range: target.range },
+    });
     const nested = [...(declaration.referenced ?? []), ...(companion?.bindings ?? [])];
     return { ...declaration, referenced: expand(nested, next, path, new Set([...seen, key])) };
   });

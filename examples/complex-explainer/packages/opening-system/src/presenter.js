@@ -1,7 +1,7 @@
 import { assertAttributes, assertEmptyElement, createMarkupSurfaceFacet, optionalTextAttribute, textAttribute } from "@hypit/hypit/markup";
 import { canonicalize, sameType } from "@hypit/hypit/protocol";
 import { sealGraphFragment } from "@hypit/hypit/author";
-import { compositionTypes, sealVisualTrack } from "@hypit/composition";
+import { compositionTypes, sealPresentVisualTrack } from "@hypit/composition";
 import { mediaTypes, verifySynchronizedMedia } from "@hypit/media";
 import { spatialTypes } from "@hypit/spatial";
 import { recipeType } from "@hypit/hypit/recipe";
@@ -88,7 +88,7 @@ function resolvePresenter(timeline, id, program) {
         ];
       });
     }
-    for (const present of use.visual.presents) {
+    for (const present of use.visual.items) {
       const visibility = intersect(visible, present.visibility ?? [present.span]);
       if (visibility.length > 0) presents.push({
         ...present,
@@ -97,7 +97,7 @@ function resolvePresenter(timeline, id, program) {
       });
     }
   }
-  return sealVisualTrack({ id, timelineId: timeline.id, visualIr: "hypit.visual-ir@1", presents });
+  return sealPresentVisualTrack({ id, timelineId: timeline.id, visualIr: "hypit.visual-ir@1", presents });
 }
 
 function ordinaryPresenter(timeline, window, frame, sources, fit, sample, spec) {
@@ -129,7 +129,7 @@ function ordinaryPresenter(timeline, window, frame, sources, fit, sample, spec) 
       } },
     });
   }
-  if (layers.length === 0) return sealVisualTrack({ id: window.subjectId, timelineId: timeline.id, visualIr: "hypit.visual-ir@1", presents: [] });
+  if (layers.length === 0) return sealPresentVisualTrack({ id: window.subjectId, timelineId: timeline.id, visualIr: "hypit.visual-ir@1", presents: [] });
   const header = { id: window.subjectId };
   const set = appendVisualClip(createVisualTrackSet(), header, timeline, { layers }, frame, { ...spec, id: window.subjectId }, window);
   return projectVisualTrack(timeline, finalizeVisualTrack(set, header, timeline));
@@ -150,7 +150,7 @@ function authored(value, label) {
 
 export function installPresenter(module, manifest, component) {
   const types = presenterTypes(module);
-  manifest.types.push(...Object.values(types).map((type) => ({ name: type.name })));
+  manifest.types.push(...Object.values(types).map((type) => type.name));
   const producers = {
     source: { module, name: "presenter-source" },
     combineSources: { module, name: "combine-presenter-sources" },
@@ -168,29 +168,29 @@ export function installPresenter(module, manifest, component) {
     { name: producers.source.name, inputs: [
       { name: "spec", type: types.sourceSpec }, { name: "media", type: mediaTypes.synchronized },
       { name: "window", type: temporalTypes.window }, { name: "timeline", type: timelineTypes.timeline },
-    ], outputs: [{ name: "sources", type: types.sources }], needs: [] },
-    { name: producers.combineSources.name, inputs: [{ name: "left", type: types.sources }, { name: "right", type: types.sources }], outputs: [{ name: "sources", type: types.sources }], needs: [] },
-    { name: producers.create.name, inputs: [], outputs: [{ name: "program", type: types.program }], needs: [] },
-    { name: producers.append.name, inputs: [{ name: "program", type: types.program }, { name: "window", type: temporalTypes.window }, { name: "visual", type: compositionTypes.visualTrack }], outputs: [{ name: "program", type: types.program }], needs: [] },
-    { name: producers.resolve.name, inputs: [{ name: "program", type: types.program }, { name: "timeline", type: timelineTypes.timeline }, { name: "header", type: types.header }], outputs: [{ name: "visual", type: compositionTypes.visualTrack }], needs: [] },
+    ], result: { kind: "output", name: "sources", type: types.sources } },
+    { name: producers.combineSources.name, inputs: [{ name: "left", type: types.sources }, { name: "right", type: types.sources }], result: { kind: "output", name: "sources", type: types.sources } },
+    { name: producers.create.name, inputs: [], result: { kind: "output", name: "program", type: types.program } },
+    { name: producers.append.name, inputs: [{ name: "program", type: types.program }, { name: "window", type: temporalTypes.window }, { name: "visual", type: compositionTypes.visualTrack }], result: { kind: "output", name: "program", type: types.program } },
+    { name: producers.resolve.name, inputs: [{ name: "program", type: types.program }, { name: "timeline", type: timelineTypes.timeline }, { name: "header", type: types.header }], result: { kind: "output", name: "visual", type: compositionTypes.visualTrack } },
   );
   component.producers.push(
-    { producer: producers.source, handler: ({ inputs }) => ({ outputs: { sources: stored(sourcesValue([sourceValue(valueOf(inputs.spec, "PresenterSourceSpec"), valueOf(inputs.media, "SynchronizedMedia"), valueOf(inputs.window, "TemporalWindow"), valueOf(inputs.timeline, "Timeline"))])) }, needs: {} }) },
-    { producer: producers.combineSources, handler: ({ inputs }) => ({ outputs: { sources: stored(sourcesValue([...valueOf(inputs.left, "PresenterSources").sources, ...valueOf(inputs.right, "PresenterSources").sources])) }, needs: {} }) },
-    { producer: producers.create, handler: () => ({ outputs: { program: stored({ uses: [] }) }, needs: {} }) },
-    { producer: producers.append, handler: ({ inputs }) => ({ outputs: { program: stored({ uses: [...valueOf(inputs.program, "PresenterProgram").uses, { window: valueOf(inputs.window, "TemporalWindow"), visual: valueOf(inputs.visual, "VisualTrack") }] }) }, needs: {} }) },
-    { producer: producers.resolve, handler: ({ inputs }) => ({ outputs: { visual: stored(resolvePresenter(valueOf(inputs.timeline, "Timeline"), valueOf(inputs.header, "PresenterHeader").id, valueOf(inputs.program, "PresenterProgram"))) }, needs: {} }) },
+    { producer: producers.source, handler: ({ inputs }) => ({ kind: "output", value: stored(sourcesValue([sourceValue(valueOf(inputs.spec, "PresenterSourceSpec"), valueOf(inputs.media, "SynchronizedMedia"), valueOf(inputs.window, "TemporalWindow"), valueOf(inputs.timeline, "Timeline"))])) }) },
+    { producer: producers.combineSources, handler: ({ inputs }) => ({ kind: "output", value: stored(sourcesValue([...valueOf(inputs.left, "PresenterSources").sources, ...valueOf(inputs.right, "PresenterSources").sources])) }) },
+    { producer: producers.create, handler: () => ({ kind: "output", value: stored({ uses: [] }) }) },
+    { producer: producers.append, handler: ({ inputs }) => ({ kind: "output", value: stored({ uses: [...valueOf(inputs.program, "PresenterProgram").uses, { window: valueOf(inputs.window, "TemporalWindow"), visual: valueOf(inputs.visual, "VisualTrack") }] }) }) },
+    { producer: producers.resolve, handler: ({ inputs }) => ({ kind: "output", value: stored(resolvePresenter(valueOf(inputs.timeline, "Timeline"), valueOf(inputs.header, "PresenterHeader").id, valueOf(inputs.program, "PresenterProgram"))) }) },
   );
 
   const ordinaryInputs = [...common, { name: "frame", type: spatialTypes.frame }, { name: "fit", type: spatialTypes.fit },
     { name: "sample", type: visualTrackTypes.sampleLayerSpec },
     { name: "spec", type: visualTrackTypes.clipSpec }];
-  manifest.producers.push({ name: producers.ordinary.name, inputs: ordinaryInputs, outputs: [{ name: "visual", type: compositionTypes.visualTrack }], needs: [] });
-  component.producers.push({ producer: producers.ordinary, handler: ({ inputs }) => ({ outputs: { visual: stored(ordinaryPresenter(
+  manifest.producers.push({ name: producers.ordinary.name, inputs: ordinaryInputs, result: { kind: "output", name: "visual", type: compositionTypes.visualTrack } });
+  component.producers.push({ producer: producers.ordinary, handler: ({ inputs }) => ({ kind: "output", value: stored(ordinaryPresenter(
     valueOf(inputs.timeline, "Timeline"), valueOf(inputs.window, "TemporalWindow"),
     valueOf(inputs.frame, "SpatialFrame"), valueOf(inputs.sources, "PresenterSources"), valueOf(inputs.fit, "ContentFit"),
     valueOf(inputs.sample, "MediaSampleLayerSpec"), valueOf(inputs.spec, "VisualClipSpec"),
-  )) }, needs: {} }) });
+  )) }) });
   const ordinaryFragment = sealGraphFragment({ inputs: ordinaryInputs, operations: [{ id: "render", producer: producers.ordinary,
     inputs: Object.fromEntries(ordinaryInputs.map((port) => [port.name, input(port.name)])), result: { kind: "output", name: "visual" } }],
   exports: [{ name: "visual", type: compositionTypes.visualTrack, root: operation("render") }] });
@@ -224,15 +224,13 @@ export function installPresenter(module, manifest, component) {
       ...recipeValue,
       properties: Object.fromEntries(Object.entries(recipeValue.properties).filter(([name]) => keys.includes(name))),
     });
-    const stackingOrder = recipeValue.properties["stack-order"];
-    if (!Number.isSafeInteger(stackingOrder)) throw Error(`Presenter appearance ${recipeValue.path} requires integer stack-order.`);
     const sampleKeys = [...visualMaterialKeys.fit, ...visualMaterialKeys.sample, ...visualMaterialKeys.frame];
     const treatmentKeys = [...visualMaterialKeys.sample, ...visualMaterialKeys.frame];
     const style = presenterStyle(ordinaryFragment, {
       frame,
       fit: bind("fit", spatialTypes.fit, decodeMediaFit(selectedRecipe(visualMaterialKeys.fit))),
       sample: bind("sample", sampleType, decodeMediaSampleSpec(selectedRecipe(sampleKeys), "content", "timed", undefined, true)),
-      spec: bind("spec", specType, decodeVisualClipSpec(selectedRecipe(treatmentKeys), { id, z: stackingOrder })),
+      spec: bind("spec", specType, decodeVisualClipSpec(selectedRecipe(treatmentKeys), { id })),
     });
     records.push({ id, type: types.style, value: stored(style), range: element.range });
     return { records, components: [] };

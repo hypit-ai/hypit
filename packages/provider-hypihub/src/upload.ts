@@ -375,7 +375,7 @@ export class HypiHubUploader {
     assert(input.bytes.byteLength > 0, "HypiHub reference Resource is empty");
     const startedAt = Date.now();
     // Required wire checksum, not a Resource identity or a reuse key.
-    const digest = createHash("sha256").update(input.bytes).digest("hex");
+    const checksumSha256 = createHash("sha256").update(input.bytes).digest("hex");
     this.log(`upload started bytes=${input.bytes.byteLength} mime=${input.mediaType}`);
     let policy: Record<string, unknown>;
     const policyStartedAt = Date.now();
@@ -390,7 +390,7 @@ export class HypiHubUploader {
           mime_type: input.mediaType,
           purpose: input.purpose ?? "reference",
           ...(input.isPersonReference === undefined ? {} : { is_person_reference: input.isPersonReference }),
-          sha256: digest,
+          sha256: checksumSha256,
           head_base64: Buffer.from(input.bytes.subarray(0, 512)).toString("base64"),
         }),
       });

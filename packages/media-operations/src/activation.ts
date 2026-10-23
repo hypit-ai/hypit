@@ -19,7 +19,7 @@ export const hypitPackage = {
   format: "hypit.package@1" as const,
   modules: [{ manifest: mediaOperationsManifest }],
   facets: [
-    ...[mediaOperationsComponent].flatMap((component) => [createProducerPackageFacet(component), createRefinementPackageFacet(component)]),createRunFragmentFacet({
+    ...[mediaOperationsComponent].flatMap((component) => [createProducerPackageFacet(component.producers ?? []), createRefinementPackageFacet(component.refinements ?? [])]),createRunFragmentFacet({
     name: "@hypit/media-operations@1",
     fragments: {
       "still-video": stillVideoFragment,

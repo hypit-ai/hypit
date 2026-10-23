@@ -7,14 +7,11 @@ import { parseStructuredElement } from "@hypit/markup";
 import type { SurfaceResolvedReference } from "@hypit/markup";
 import { sealText, textTypes } from "@hypit/text";
 
-import mimoNodePackage from "../src/activation.js";
 import {
   decodeMimoVoiceCloneSurface,
   decodeMimoVoiceDesignSurface,
   mimoSpeechEndpoints,
-  mimoSpeechMarkupSurfaces,
   mimoSpeechModels,
-  mimoSpeechPorts,
   sealMimoSpeechRequest,
 } from "../src/index.js";
 
@@ -61,12 +58,6 @@ test("MiMo Speech declares the two exact audio request shapes", () => {
   assert.throws(() => sealMimoSpeechRequest("mimo-v2.5-tts-voiceclone", {
     text: ["Do not rewrite me."],
   }), /voiceReference is required/u);
-});
-
-test("the installed author package contributes the two explicit speech operations", () => {
-  assert.equal(mimoNodePackage.format, "hypit.package@1");
-  assert.equal(mimoNodePackage.modules[0]?.manifest.version, "1");
-  assert.deepEqual(mimoSpeechMarkupSurfaces.map((surface) => surface.name), ["voiceDesign", "voiceClone"]);
 });
 
 test("VoiceDesign publishes one reusable voice reference", async () => {

@@ -94,4 +94,4 @@ export const commentStickerComponent = {
     type: commentStickerTypes.program,
     handler: ({ value }) => assertCommentStickerProgram(valueOf<CommentStickerProgram>(value, "CommentStickerProgram")),
   }],
-} satisfies ProducerPackage & RefinementPackage;
+} satisfies { producers?: ProducerPackage; refinements?: RefinementPackage };

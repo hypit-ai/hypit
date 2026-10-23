@@ -14,7 +14,7 @@ import type {
   ProducerRef,
   TypeRef,
 } from "@hypit/protocol";
-import { sameType, typeKey } from "@hypit/protocol";
+import { compareCodeUnits, sameType, typeKey } from "@hypit/protocol";
 
 export type FragmentInputRef = {
   readonly kind: "fragment-input";
@@ -142,7 +142,7 @@ function normalizeOperation(operation: FragmentOperation): FragmentOperation {
     producer: operation.producer,
     inputs: Object.fromEntries(
       Object.entries(operation.inputs)
-        .sort(([left], [right]) => left.localeCompare(right))
+        .sort(([left], [right]) => compareCodeUnits(left, right))
         .map(([name, ref]) => [name, normalizeFragmentRef(ref)]),
     ),
     result: operation.result.kind === "output"
@@ -167,9 +167,9 @@ function fragmentContent(fragment: GraphFragment): GraphFragment {
     format: "hypit.fragment@1",
     inputs: [...fragment.inputs]
       .map((input) => ({ name: input.name, type: input.type }))
-      .sort((left, right) => left.name.localeCompare(right.name)),
-    operations: [...fragment.operations].map(normalizeOperation).sort((left, right) => left.id.localeCompare(right.id)),
-    exports: [...fragment.exports].map(normalizeExport).sort((left, right) => left.name.localeCompare(right.name)),
+      .sort((left, right) => compareCodeUnits(left.name, right.name)),
+    operations: [...fragment.operations].map(normalizeOperation).sort((left, right) => compareCodeUnits(left.id, right.id)),
+    exports: [...fragment.exports].map(normalizeExport).sort((left, right) => compareCodeUnits(left.name, right.name)),
   };
 }
 
@@ -312,7 +312,7 @@ export function elaborateGraphFragment(
   exactKeys(request.inputs, fragment.inputs.map((input) => input.name), request.id);
   const inputs = Object.fromEntries(
     Object.entries(request.inputs)
-      .sort(([left], [right]) => left.localeCompare(right))
+      .sort(([left], [right]) => compareCodeUnits(left, right))
       .map(([name, ref]) => [name, normalizeGraphRef(ref)]),
   );
   const operationIds = new Map(fragment.operations.map((operation) => [

@@ -36,9 +36,9 @@ const manifest: ModuleManifest = {
   version: laboratory.version,
   dependencies: [],
   types: [
-    { name: sampleType.name },
-    { name: measurementType.name },
-    { name: reportType.name },
+    sampleType.name,
+    measurementType.name,
+    reportType.name,
   ],
   capabilities: [],
   producers: [
@@ -69,7 +69,7 @@ function buildState(linked: LinkedProgram, graph: AuthorGraph, targets: readonly
     candidates: [],
     operations: [],
     satisfactions: [],
-    targets: targets.map((output) => ({ output })),
+    targets,
   });
   return materializeBuild(defineBuild({
     program: link(linked.closure, [...linked.records, ...planned.initialRecords]),

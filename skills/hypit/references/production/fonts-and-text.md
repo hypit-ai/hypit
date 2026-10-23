@@ -100,19 +100,20 @@ The following excerpt assumes the named Fonts, layout Frames, Timeline and Recip
 </typo:Style>
 <copy:Value id="headline">A useful idea, clearly shown.</copy:Value>
 <typo:Flow id="opening-title" timeline={speech.timeline} content={headline}
-  within={title-frame} style={headline-style} z="20" align="center"
+  within={title-frame} style={headline-style} align="center"
   during={speech.opening}/>
 ```
 
 Include `opening-title.visual` in Film. The Style supplies reusable typography and Paint; the
-occurrence supplies content, placement, form-specific layout, layer order and absolute time. Use the
+occurrence supplies content, placement, form-specific layout and absolute time. Its whole-film layer
+is declared once where `opening-title.visual` enters Film. Use the
 Timeline's named full Window for a title that lasts throughout the program, or another named Window
 such as `speech.opening` for a shorter appearance. A semantic
 or musical domain projects its own evidence to a Window before a fine-text occurrence consumes it.
 
 For the example above, `look.text.title` can be the Recipe
-`text.title { size: 54; weight: 400; }`, matching the selected headline face. The direct `z="20"`
-remains visible at the occurrence where it affects composition.
+`text.title { size: 54; weight: 400; }`, matching the selected headline face. Place the resulting
+Track with `<film:Track id="opening-title" source={opening-title.visual}/>`.
 
 | Placement | Input and use |
 | --- | --- |
@@ -134,7 +135,7 @@ An occurrence can take graph Text through `content={...}`, or own an inline docu
 ```
 
 A paragraph or Span Style replaces that run's complete typography and Paint, including its font
-and size. The outer occurrence continues to supply placement and layer order.
+and size. The outer occurrence continues to supply placement; Film places its completed Track.
 
 Typography Motion can act on the occurrence or stagger words and graphemes. Use the installed Motion
 vocabulary for its frame offsets and normalized sequence positions. For a new speech-text layout

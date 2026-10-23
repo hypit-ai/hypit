@@ -51,17 +51,16 @@ export const manifest = {
         temporalTypes.window,
         temporalTypes.duration, temporalTypes.extent, temporalTypes.shiftSpec,
         { module: visualTrackModuleRef, name: "VisualTrackProgram" },
-      ].map((t) => [t.module.name, { module: t.module }]),
+      ].map((t) => [t.module.name, t.module]),
     ).values(),
   ],
-  types: [{ name: "Options" }, { name: "Items" }],
+  types: ["Options", "Items"],
   capabilities: [],
   producers: [
     {
       name: "title",
       inputs: [...common, port("font", mediaTypes.fontArtifact), port("bounce", temporalTypes.instant)],
-      outputs: [port("track", compositionTypes.visualTrack)],
-      needs: [],
+      result: { kind: "output", ...port("track", compositionTypes.visualTrack) },
     },
     {
       name: "timer",
@@ -71,21 +70,18 @@ export const manifest = {
         port("logo", mediaTypes.blobArtifact),
         port("stop", temporalTypes.instant),
       ],
-      outputs: [port("track", compositionTypes.visualTrack)],
-      needs: [],
+      result: { kind: "output", ...port("track", compositionTypes.visualTrack) },
     },
-    { name: "flag", inputs: [...common, port("logo", mediaTypes.blobArtifact)], outputs: [port("track", compositionTypes.visualTrack)], needs: [] },
+    { name: "flag", inputs: [...common, port("logo", mediaTypes.blobArtifact)], result: { kind: "output", ...port("track", compositionTypes.visualTrack) } },
     {
       name: "veil",
       inputs: common,
-      outputs: [port("track", compositionTypes.visualTrack)],
-      needs: [],
+      result: { kind: "output", ...port("track", compositionTypes.visualTrack) },
     },
     {
       name: "empty",
       inputs: [],
-      outputs: [port("items", itemsType)],
-      needs: [],
+      result: { kind: "output", ...port("items", itemsType) },
     },
     ...["image", "video"].map((kind) => ({
       name: "append-" + kind,
@@ -98,14 +94,12 @@ export const manifest = {
           kind === "image" ? mediaTypes.blobArtifact : mediaTypes.synchronized,
         ),
       ],
-      outputs: [port("items", itemsType)],
-      needs: [],
+      result: { kind: "output", ...port("items", itemsType) },
     })),
     {
       name: "stage",
       inputs: [...common, port("items", itemsType)],
-      outputs: [port("track", compositionTypes.visualTrack)],
-      needs: [],
+      result: { kind: "output", ...port("track", compositionTypes.visualTrack) },
     },
   ],
 };
@@ -114,7 +108,7 @@ const valueOf = (r) => {
   return r.value;
 };
 const val = (v) => ((canonicalize(v)));
-const output = (name, v) => ({ outputs: { [name]: val(v) }, needs: {} });
+const output = (_name, v) => ({ kind: "output", value: val(v) });
 const component = {
   producers: [
     { producer: producer("flag"), handler: ({inputs: i}) => output("track", renderFlag(valueOf(i.timeline), valueOf(i.within), valueOf(i.window), valueOf(i.options), i.logo.value)) },
@@ -217,7 +211,6 @@ function decode(kind) {
         throw Error(name + " must be finite");
       o[camel(name)] = v;
     }
-    if (!Number.isSafeInteger(o.z)) throw Error("z must be an integer");
     if (
       kind === "Stage" &&
       (!["contain", "cover"].includes(o.fit) ||
@@ -502,8 +495,8 @@ export const hypitPackage = {
   format: "hypit.package@1",
   modules: [{ manifest }],
   facets: [
-    createProducerPackageFacet(component),
-    createRefinementPackageFacet(component),
+    createProducerPackageFacet(component.producers ?? []),
+    createRefinementPackageFacet(component.refinements ?? []),
     ...declarations.map((declaration) =>
       createMarkupSurfaceFacet({
         module,

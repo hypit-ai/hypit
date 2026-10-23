@@ -200,7 +200,7 @@ export function describeSchema(schema: ValueSchema, indent = ""): string[] {
         const inner = describeSchema(field.schema, step);
         lines.push(`${indent}${name}${field.optional === true ? " (optional)" : ""}: ${inner[0]!.trimStart()}`, ...inner.slice(1));
       }
-      if (schema.allowUnknown === true) lines.push(`${indent}… further fields are admitted`);
+      if (schema.allowUnknown === true) lines.push(`${indent}… further fields are accepted`);
       return lines;
     }
     case "oneOf": {

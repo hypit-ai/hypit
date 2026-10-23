@@ -49,6 +49,7 @@ function projectedInstant(
         || typeof projection?.id !== "string") return undefined;
       const boundary = typeof spec?.boundary === "string" ? spec.boundary : "point";
       const temporalSource = {
+        scope: "timeline" as const,
         timelineId: held.timelineId,
         type: source.type,
         kind: recognized.kind,

@@ -48,7 +48,7 @@ test("build-record selects one exact Result Output without leaking its storage a
       name: module.name,
       version: module.version,
       dependencies: [],
-      types: [{ name: videoType.name }],
+      types: [videoType.name],
       capabilities: [],
       producers: [{
         name: producer.name,
@@ -103,8 +103,8 @@ test("build-record selects one exact Result Output without leaking its storage a
     const resultsRoot = join(root, ".hypit", "results");
     const result = await FileBuildResult.create(resultsRoot, {
       id: "bld_20260902T110000001Z_0000000001",
-      source: { id: join(root, "main.svml") },
-      run: { id: join(root, "prior.svrun") },
+      sourceId: join(root, "main.svml"),
+      runId: join(root, "prior.svrun"),
       publication: publication([{ name: "shot.video", output: "logical:video", type: videoType }], ["shot.video"]),
     });
     const bytes = new TextEncoder().encode("prior video bytes");
@@ -197,7 +197,7 @@ test("build-record selects one exact Result Output without leaking its storage a
       ]);
       assert(resolved !== undefined);
       assert(stored?.value.kind === "value");
-      if (stored?.value.kind !== "value") throw new Error("expected composite");
+      if (stored?.value.kind !== "value") throw new Error("expected value document");
       const files = new Map<string, typeof stored.value.document.resources[number]["file"]>();
       for (const binding of stored.value.document.resources) {
         files.set(fileReferenceIdentity(stored.build, binding.file), binding.file);
@@ -217,7 +217,7 @@ test("build-record selects one exact Result Output without leaking its storage a
       };
     };
 
-    // New Composite records may wrap imported values at arbitrary depth. Their Resource ownership
+    // New structured records may wrap imported values at arbitrary depth. Their Resource ownership
     // must survive multiple Builds, including a mix of old media and newly produced bytes.
     let imported = await materializeImport(loaded, "bld_20260902T110000001Z_0000000001");
     const owner = "bld_20260902T110000001Z_0000000001";
@@ -226,7 +226,7 @@ test("build-record selects one exact Result Output without leaking its storage a
       if (rootValue === undefined) throw new Error("expected materialized supply");
       const extra = { kind: "blob" as const, resource: `res_${id}`, size: 1, mediaType: "image/png" };
       const current = await repository.create({
-        id, source: { id: authorFile },
+        id, sourceId: authorFile,
         publication: publication([{ name: "shot.video", output: "wrapped", record: "record:wrapped", type: videoType }], ["shot.video"]),
         resourceReferences: imported.resultResourceReferences,
       });
@@ -242,7 +242,7 @@ test("build-record selects one exact Result Output without leaking its storage a
       assert.deepEqual(await readdir(join(current.directory, "files")), ["file-0001.png"]);
       const saved = await repository.resolve(id, "shot.video");
       assert.equal(saved?.value.kind, "value");
-      if (saved?.value.kind !== "value") throw new Error("expected composite");
+      if (saved?.value.kind !== "value") throw new Error("expected value document");
       const original = saved.value.document.resources.find((binding) => binding.file.mediaType === "video/mp4")!;
       assert.deepEqual(original.file, { kind: "build-file", build: owner, path: "files/file-0001.mp4", size: bytes.length, mediaType: "video/mp4" });
       const received: number[] = [];
@@ -283,7 +283,7 @@ test("build-record selects one exact Result Output without leaking its storage a
     }]);
     const preparedExternal = externalRun.compiler.prepareCompilation(externalRun);
     for (const id of ["bld_20260902T110000004Z_0000000001", "bld_20260902T110000005Z_0000000001"]) {
-      const current = await repository.create({ id, source: { id: authorFile },
+      const current = await repository.create({ id, sourceId: authorFile,
         publication: preparedExternal.publication,
         resourceReferences: externalRun.resultResourceReferences });
       await current.sync({ records: preparedExternal.state.records,
@@ -307,7 +307,7 @@ test("build-record selects one exact Result Output without leaking its storage a
   }
 });
 
-test("Composite Result resources rebuild each shared container once", async () => {
+test("Result value-document resources rebuild each shared container once", async () => {
   const count = 400;
   let visited = 0;
   class CountedArray extends Array<null> {
@@ -322,13 +322,13 @@ test("Composite Result resources rebuild each shared container once", async () =
     read: async (build) => ({
       format: "hypit.build-result@1" as const,
       id: build,
-      source: { id: "main.svml" },
+      sourceId: "main.svml",
       targets: [],
       outputs: {},
       outcome: "complete" as const,
       finishedAt: 1,
     }),
-    resolve: async () => ({ build: "owner", output: "composite", type: valueType, value: {
+    resolve: async () => ({ build: "owner", output: "structured", type: valueType, value: {
       kind: "value" as const,
       path: "values/value-0001.json",
       document: {
@@ -340,7 +340,7 @@ test("Composite Result resources rebuild each shared container once", async () =
     describeFile: async () => file,
     openFile: async () => undefined,
   };
-  const resolved = await resolveBuildResultValue(repository, "owner", "composite");
+  const resolved = await resolveBuildResultValue(repository, "owner", "structured");
   assert.equal(visited, count, "the root array is rebuilt once rather than once per Resource binding");
   assert.equal(resolved?.attachments?.length, 1, "one historical file identity remains one lazy attachment");
 });

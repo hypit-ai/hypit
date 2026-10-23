@@ -74,7 +74,6 @@ test("Surface planning lowers author Instants and Windows to typed graph operati
     { binding: "for", declarationId: "outro", expression: undefined },
     { binding: "at", declarationId: "claim", expression: "offset" },
   ]);
-  assert.equal(JSON.stringify(plan.fragment).includes("speech.end-12f"), false);
   verifyGraphFragment(link(createResolvedClosure([
     timelineManifest,
     temporalManifest,

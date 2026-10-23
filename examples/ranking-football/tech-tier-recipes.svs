@@ -55,7 +55,7 @@
   media.still-here {  shadows: 0 18 34 -8 #000000E6; }
 
   caption.primary {
-    stack-order: 70;
+
     x: 0.5;
     y: 0.55;
     width: 0.88;

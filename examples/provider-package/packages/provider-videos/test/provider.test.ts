@@ -77,7 +77,7 @@ test("project video Provider uploads a reference, retains its receipt and collec
   const start = await endpoint.start(context); assert.equal(start.status, "pending");
   const ready = await endpoint.poll({ ...context, handle: start.handle }); assert.equal(ready.status, "ready");
   const collected = await endpoint.collect!({ ...context, handle: ready.handle }); assert.equal(collected.status, "completed");
-  const videos = (collected.result.value as unknown as { videos: BlobRef[] }).videos;
+  const videos = (collected.result as unknown as { videos: BlobRef[] }).videos;
   assert.equal(videos[0]?.mediaType, "video/mp4");
   assert.deepEqual(await resources.get(videos[0]!.resource), new Uint8Array([4, 5, 6]));
   assert.deepEqual(calls, ["/rates", "/uploads", "/videos", "/videos/received-job", "/output.mp4"]);
@@ -97,7 +97,7 @@ test("project video Provider reports its narrower service range without changing
   const supported = endpointOffers(provider)[0]!.supports!(
     need({ ...prompted, duration: [5], resolution: ["720p"], aspectRatio: ["9:16"] }));
   assert.equal(supported.status, "supported");
-  // The Model admits both of these; this Endpoint is what narrows them.
+  // The Model accepts both of these; this Endpoint is what narrows them.
   const tooLong = endpointOffers(provider)[0]!.supports!(need({ ...prompted, duration: [12], resolution: ["720p"], aspectRatio: ["9:16"] }));
   assert.equal(tooLong.status, "unsupported");
   assert.match(tooLong.status === "unsupported" ? tooLong.reason : "", /at most 10 seconds, not 12/u);

@@ -15,24 +15,33 @@ import {
   appendStillMediaLayer,
   appendSurfaceMediaLayer,
   appendTimedMediaLayer,
+  assertMediaLayerSet,
+  assertMediaPaintLayerSpec,
+  assertMediaSampleLayerSpec,
   createMediaLayerSet,
 } from "./layers.js";
 import { visualTrackProducers, visualTrackTypes } from "./manifest.js";
 import {
   appendVisualClip,
+  assertVisualClipSpec,
+  assertVisualTrackHeader,
   assertVisualTrackProgram,
+  assertVisualTrackSet,
   bindVisualClipMotion,
   bindVisualClipPath,
   createVisualTrackSet,
   finalizeVisualTrack,
   projectVisualTrack,
 } from "./program.js";
+import { assertVisualClipMotion } from "./motion.js";
+import { assertVisualSourceTimeSpec } from "./source-time.js";
 import type {
   MediaLayerSet,
   MediaPaintLayerSpec,
   MediaSampleLayerSpec,
   VisualClipMotion,
   VisualClipSpec,
+  VisualSourceTimeSpec,
   VisualTrackHeader,
   VisualTrackProgram,
   VisualTrackSet,
@@ -116,8 +125,24 @@ export const visualTrackComponent = {
       valueOf<Timeline>(inputs.timeline?.value, "Timeline"), valueOf<VisualTrackProgram>(inputs.program?.value, "VisualTrackProgram"),
     )) }) },
   ],
-  refinements: [{
-    type: visualTrackTypes.program,
-    handler: ({ value }) => assertVisualTrackProgram(valueOf<VisualTrackProgram>(value, "VisualTrackProgram")),
-  }],
-} satisfies ProducerPackage & RefinementPackage;
+  refinements: [
+    { type: visualTrackTypes.header,
+      handler: ({ value }) => assertVisualTrackHeader(valueOf<VisualTrackHeader>(value, "VisualTrackHeader")) },
+    { type: visualTrackTypes.motion,
+      handler: ({ value }) => assertVisualClipMotion(valueOf<VisualClipMotion>(value, "VisualClipMotion"), "VisualClipMotion") },
+    { type: visualTrackTypes.sourceTime,
+      handler: ({ value }) => assertVisualSourceTimeSpec(valueOf<VisualSourceTimeSpec>(value, "VisualSourceTimeSpec")) },
+    { type: visualTrackTypes.paintLayerSpec,
+      handler: ({ value }) => assertMediaPaintLayerSpec(valueOf<MediaPaintLayerSpec>(value, "MediaPaintLayerSpec")) },
+    { type: visualTrackTypes.sampleLayerSpec,
+      handler: ({ value }) => assertMediaSampleLayerSpec(valueOf<MediaSampleLayerSpec>(value, "MediaSampleLayerSpec")) },
+    { type: visualTrackTypes.layerSet,
+      handler: ({ value }) => assertMediaLayerSet(valueOf<MediaLayerSet>(value, "MediaLayerSet")) },
+    { type: visualTrackTypes.clipSpec,
+      handler: ({ value }) => assertVisualClipSpec(valueOf<VisualClipSpec>(value, "VisualClipSpec")) },
+    { type: visualTrackTypes.set,
+      handler: ({ value }) => assertVisualTrackSet(valueOf<VisualTrackSet>(value, "VisualTrackSet")) },
+    { type: visualTrackTypes.program,
+      handler: ({ value }) => assertVisualTrackProgram(valueOf<VisualTrackProgram>(value, "VisualTrackProgram")) },
+  ],
+} satisfies { producers?: ProducerPackage; refinements?: RefinementPackage };

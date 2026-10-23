@@ -16,10 +16,15 @@ test("a pure-MG work keeps its declared extent even when a Studio Item extends b
     state: executedGraph({ programRecords: [], steps: [], records: [] }),
     tracks: [{ outputRef: "art.visual", name: "art.visual", type: compositionTypes.visualTrack.name,
       typeRef: compositionTypes.visualTrack, role: "track",
-      trace: { outputPorts: [], references: [] }, candidateOrigin: "source", value: { presents: [{ id: "scene", order: 0, z: 0, span: { startFrame: 0, endFrameExclusive: 150 } }] } }],
+      trace: { outputPorts: [], references: [] }, visualOccurrences: [["foreground", "visual"]], value: {
+        kind: "visual", timelineId: "work", visualIr: "hypit.visual-ir@1", id: "visual", items: [
+        { kind: "present", id: "scene", span: { startFrame: 0, endFrameExclusive: 150 },
+          root: { id: "root", kind: "box", children: [], style: [] } },
+        { kind: "adjustment", id: "grade", span: { startFrame: 10, endFrameExclusive: 80 },
+          program: { format: "hypit.html-adjustment@1", payload: { filter: "contrast(1.1)" }, artifacts: [] } },
+      ] } }],
     timeline: { id: "work", frameCount: 90, frameRate: { numerator: 30, denominator: 1 } },
     values: new Map(), temporalDomainValues: [], temporalValues: [], temporalBindings: new Map(),
-    timingCandidateOrigin: "none",
   };
   const result = snapshot(new StudioCompanionRegistry(fallbackStudioTrackCompanions), built, {
     revision: 1, path: "main.svml", text: "", run: { path: "main.svrun", targets: [], satisfactions: [] },
@@ -28,11 +33,15 @@ test("a pure-MG work keeps its declared extent even when a Studio Item extends b
   });
   assert.equal(result.timeline.frameCount, 90); assert.equal(result.timeline.durationSec, 3);
   assert.equal(result.tracks[0]!.items[0]!.endFrameExclusive, 150);
+  assert.deepEqual(result.tracks[0]!.items[0]!.terminalTargets, [{ kind: "visual-present", occurrencePath: ["foreground", "visual"], presentId: "scene" }]);
+  assert.equal(result.tracks[0]!.items[1]!.display.title, "grade");
+  assert.deepEqual(result.tracks[0]!.items[1]!.terminalTargets, [{ kind: "visual-adjustment", occurrencePath: ["foreground", "visual"], adjustmentId: "grade" }]);
+  assert.deepEqual(result.tracks[0]!.items[1]!.presentation, { kind: "adjustment", chrome: "compact" });
   assert.equal("clips" in result.tracks[0]!, false);
   assert.equal(result.temporalDomains.length, 1);
   assert.equal(result.temporalDomains[0]!.id, "absolute-declarations");
   assert.deepEqual(result.temporalDomains[0]!.items, []);
-  assert.equal("timing" in result.provenance, false);
+  assert.equal("provenance" in result, false);
 });
 
 test("the common declaration row displays Instants without duplicating Window intervals", () => {
@@ -65,7 +74,6 @@ test("the common declaration row displays Instants without duplicating Window in
       { output: "direct.value", record: "run-window" },
       { output: "projected.value", record: "computed-instant" },
     ]),
-    timingCandidateOrigin: "none",
   };
   const declaration = (id: string, module: typeof directModule, surface: string): StudioTemporalDeclarationCompanion => ({
     id, match: { module, surface }, project: ({ placement: found }: { placement: StudioPlacement }) => found.id === undefined

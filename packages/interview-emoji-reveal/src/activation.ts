@@ -9,8 +9,8 @@ export const hypitPackage = {
   format: "hypit.package@1" as const,
   modules: [{ manifest: emojiRevealManifest }],
   facets: [
-    createProducerPackageFacet(emojiRevealComponent),
-    createRefinementPackageFacet(emojiRevealComponent),
+    createProducerPackageFacet(emojiRevealComponent.producers ?? []),
+    createRefinementPackageFacet(emojiRevealComponent.refinements ?? []),
     createMarkupSurfaceFacet({ module: emojiRevealModuleRef, declaration: emojiRevealMarkupSurfaces.find((item) => item.name === "style")!, handler: decodeEmojiRevealStyleSurface }),
     createMarkupSurfaceFacet({ module: emojiRevealModuleRef, declaration: emojiRevealMarkupSurfaces.find((item) => item.name === "emojiReveal")!, handler: decodeEmojiRevealTrackSurface }),
   ],

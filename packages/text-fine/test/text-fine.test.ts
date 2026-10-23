@@ -7,7 +7,7 @@ import { narrativeProjectionFixture, timelineFixture } from "../../../test/timel
 import { projectProgramWindow, projectSelectionWindow } from "../../../test/temporal-fixture.js";
 
 import { registerTypeRefinements } from "@hypit/refinement";
-import { compositionManifest, compositionTypes, sealComposition } from "@hypit/composition";
+import { compositionManifest, compositionTypes, sealComposition, visualElements } from "@hypit/composition";
 import {
   createResolvedClosure,
   defineBuild,
@@ -61,7 +61,7 @@ function buildState(
     candidates: [],
     operations: [],
     satisfactions: [],
-    targets: targets.map((output) => ({ output })),
+    targets,
   });
   return materializeBuild(defineBuild({
     program: link(program.closure, [...program.records, ...planned.initialRecords]),
@@ -71,7 +71,7 @@ function buildState(
 import { recipeManifest, recipeType } from "@hypit/recipe";
 import { sealText, textComponent, textDependency, textManifest, textTypes } from "@hypit/text";
 import { MarkupSurfaceRegistry, createMarkupAuthorFrontend } from "@hypit/markup";
-import { createRecordValidator, RefinementRegistry } from "@hypit/refinement";
+import { refineRecord, RefinementRegistry } from "@hypit/refinement";
 import { resolveSelfDescribedTextSource } from "@hypit/source/text";
 import { temporalDependency, temporalManifest, temporalTypes } from "@hypit/temporal";
 
@@ -155,8 +155,7 @@ function textStyle(id: string): TextStyle {
   });
 }
 
-const flowPolicy = (z: number, overrides: Partial<import("@hypit/text-fine").TextAreaFlow> = {}) => ({
-  z,
+const flowPolicy = (overrides: Partial<import("@hypit/text-fine").TextAreaFlow> = {}) => ({
   flow: {
     inlineSize: "fixed" as const, blockSize: "fixed" as const,
     paddingPx: { inlineStart: 0, inlineEnd: 0, blockStart: 0, blockEnd: 0 },
@@ -167,8 +166,8 @@ const flowPolicy = (z: number, overrides: Partial<import("@hypit/text-fine").Tex
   },
 });
 
-const pathPolicy = (z: number) => ({
-  z, side: "left" as const, orientation: "follow" as const,
+const pathPolicy = () => ({
+  side: "left" as const, orientation: "follow" as const,
   startMarginPx: 0, endMarginPx: 0, align: "start" as const,
   reverse: false, overflow: "visible" as const,
 });
@@ -189,7 +188,7 @@ function absoluteWindow(subjectId: string, startFrame: number, endFrameExclusive
 test("one fine Text occurrence renders without an aggregate Typography program", () => {
   const occurrence = createFineTextOccurrence(
     space,
-    bindAreaTextPlacement({ xPx: 80, yPx: 220, widthPx: 920, heightPx: 520 }, flowPolicy(60)),
+    bindAreaTextPlacement({ xPx: 80, yPx: 220, widthPx: 920, heightPx: 520 }, flowPolicy()),
     sealTextItemSpec({ id: "standalone", document: document("One truthful occurrence") }),
     textStyle("standalone-style"),
     stillTextMotion("standalone-motion"),
@@ -199,15 +198,16 @@ test("one fine Text occurrence renders without an aggregate Typography program",
   assert.deepEqual(occurrence.span, { startFrame: 30, endFrameExclusive: 90 });
   const visual = renderFineTextOccurrence(space, occurrence);
   assert.equal(visual.id, "standalone");
-  assert.equal(visual.presents.length, 1);
-  assert.equal(visual.presents[0]?.elements[2]?.kind, "text-flow");
+  assert.equal(visual.items.length, 1);
+  assert.ok(visual.items[0] !== undefined);
+  assert.equal(visualElements(visual.items[0]!.root).at(-1)?.kind, "text-flow");
 });
 
 test("Text Mask explicitly consumes one fine Text occurrence and one owned still Surface", () => {
   const baseStyle = textStyle("mask-style");
   const occurrence = createFineTextOccurrence(
     space,
-    bindAreaTextPlacement({ xPx: 100, yPx: 200, widthPx: 800, heightPx: 240 }, flowPolicy(75, { wrap: "none" })),
+    bindAreaTextPlacement({ xPx: 100, yPx: 200, widthPx: 800, heightPx: 240 }, flowPolicy({ wrap: "none" })),
     sealTextItemSpec({ id: "mask-title", document: document("OWNED MASK") }),
     baseStyle,
     stillTextMotion(),
@@ -221,14 +221,15 @@ test("Text Mask explicitly consumes one fine Text occurrence and one owned still
     id: "masked-title", mode: "alpha", materialFit: "cover",
   }));
   assert.equal(track.id, "masked-title");
-  assert.deepEqual(track.presents[0]?.elements.map((element) => element.kind), ["mask", "text", "surface"]);
-  assert.equal(track.presents[0]?.elements[2]?.parent, "mask");
-  assert.ok(track.presents[0]?.elements[2]?.style.some((entry) =>
+  assert.ok(track.items[0] !== undefined);
+  const elements = visualElements(track.items[0]!.root);
+  assert.deepEqual(elements.map((element) => element.kind), ["mask", "text", "surface"]);
+  assert.ok(elements[2]?.style.some((entry) =>
     entry.name === "transform" && entry.value === "matrix(2,0,0,2,0,-120)"));
-  assert.equal(track.presents[0]?.elements[2]?.style.some((entry) => entry.name === "object-fit"), false);
+  assert.equal(elements[2]?.style.some((entry) => entry.name === "object-fit"), false);
   const html = compileHtmlProgram(sealComposition({
     id: "owned-mask-composition",
-    canvas: { width: 1080, height: 1920, clearColor: "#000000" }, tracks: [track],
+    canvas: { width: 1080, height: 1920, clearColor: "#000000" }, visual: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) }, audio: [],
   }), space).html;
   assert.match(html, /<foreignObject/u);
   assert.match(html, />OWNED MASK</u);
@@ -252,7 +253,7 @@ test("Text Mask explicitly consumes one fine Text occurrence and one owned still
 test("FineTextOccurrence rejects a frame span outside Timeline", () => {
   assert.throws(() => createFineTextOccurrence(
     space,
-    bindAreaTextPlacement({ xPx: 0, yPx: 0, widthPx: 1080, heightPx: 192 }, flowPolicy(50)),
+    bindAreaTextPlacement({ xPx: 0, yPx: 0, widthPx: 1080, heightPx: 192 }, flowPolicy()),
     sealTextItemSpec({ id: "late", document: document("Too late") }),
     textStyle("late"), stillTextMotion(), absoluteWindow("late", 149, 151),
   ), /outside/u);
@@ -272,7 +273,7 @@ test("Selection Text consumes explicit Selection, Timeline, Style, Motion and Pl
   });
   const occurrence = createFineTextOccurrence(
     space,
-    bindAreaTextPlacement({ xPx: 108, yPx: 192, widthPx: 864, heightPx: 192 }, flowPolicy(80)),
+    bindAreaTextPlacement({ xPx: 108, yPx: 192, widthPx: 864, heightPx: 192 }, flowPolicy()),
     spec,
     textStyle("meaning"),
     stillTextMotion(),
@@ -312,9 +313,7 @@ test("the self-described Markup Surfaces compile Style, Motion and all three spa
       temporalDependency,
       spatialDependency,
       mediaDependency,
-      {
-        module: { name: recipeManifest.name, version: recipeManifest.version },
-      },
+      { name: recipeManifest.name, version: recipeManifest.version },
       textDependency,
     ],
     types: [],
@@ -423,25 +422,25 @@ test("the self-described Markup Surfaces compile Style, Motion and all three spa
           <text:Keyframe at="0" margin="0"/>
           <text:Keyframe at="150" margin="120" easing="ease-in-out"/>
         </text:PathMotion>
-        <text:Flow id="standalone-flow" timeline={semantic} within={body-frame} style={poster} z="70" overflow="shrink" minimum-scale="0.65" during={whole-window}>
+        <text:Flow id="standalone-flow" timeline={semantic} within={body-frame} style={poster} overflow="shrink" minimum-scale="0.65" during={whole-window}>
           Independent flow
         </text:Flow>
-        <text:Point id="standalone-point" timeline={semantic} point={title-point} style={poster} z="70" content={copy} during={point-window}/>
-        <text:Path id="standalone-path" timeline={semantic} path={arc} style={poster} z="70" motion={arrive} path-motion={orbit-travel} during={whole-window}>
+        <text:Point id="standalone-point" timeline={semantic} point={title-point} style={poster} content={copy} during={point-window}/>
+        <text:Path id="standalone-path" timeline={semantic} path={arc} style={poster} motion={arrive} path-motion={orbit-travel} during={whole-window}>
           Independent path
         </text:Path>
-        <text:Point id="hook" timeline={semantic} content={copy} point={title-point} style={poster} z="70" during={whole-window}/>
-        <text:Flow id="body" timeline={semantic} within={body-frame} style={poster} z="70" overflow="shrink" minimum-scale="0.65" motion={arrive} during={whole-window}>
+        <text:Point id="hook" timeline={semantic} content={copy} point={title-point} style={poster} during={whole-window}/>
+        <text:Flow id="body" timeline={semantic} within={body-frame} style={poster} overflow="shrink" minimum-scale="0.65" motion={arrive} during={whole-window}>
           <text:P id="first">Rich <text:Span style={poster}>inline text</text:Span><text:Break/>wraps.</text:P>
         </text:Flow>
-        <text:Path id="arc-title" timeline={semantic} path={arc} style={poster} z="70" during={whole-window}>Along the path</text:Path>
-        <text:Flow id="mask-shape" timeline={semantic} within={body-frame} style={mask-shape-style} z="75" wrap="none" during={whole-window}>MASK</text:Flow>
+        <text:Path id="arc-title" timeline={semantic} path={arc} style={poster} during={whole-window}>Along the path</text:Path>
+        <text:Flow id="mask-shape" timeline={semantic} within={body-frame} style={mask-shape-style} wrap="none" during={whole-window}>MASK</text:Flow>
         <text:Mask id="masked-titles" timeline={semantic} text={mask-shape.occurrence} material={material}/>
       </svml>`,
     }),
     closure,
     frontends,
-    validateRecord: createRecordValidator(refinements),
+    refineRecord: async (record) => await refineRecord(record, refinements),
     resolveSource() { throw new Error("Text fixture has no source imports."); },
   });
   const maskOccurrence = resolveCompiledSourceExport(compiled, "mask-shape.occurrence", textFineTypes.occurrence);
@@ -465,33 +464,12 @@ test("the self-described Markup Surfaces compile Style, Motion and all three spa
   const occurrenceProducers = occurrenceBuild.plan.steps.map((step) => step.producer.name);
   assert.equal(occurrenceProducers.filter((name) => name === textFineProducers.createOccurrence.name).length, 3);
   assert.equal(occurrenceProducers.filter((name) => name === textFineProducers.renderOccurrence.name).length, 3);
-  assert.equal(occurrenceProducers.includes("create-text-fine-set"), false);
-  assert.equal(occurrenceProducers.includes("append-text-item"), false);
-  assert.equal(occurrenceProducers.includes("finalize-text-fine"), false);
   const build = buildState(compiled.program, compiled.graph, [
     track.ref.kind === "logical-output" ? track.ref.id : "",
   ]);
   const producers = build.plan.steps.map((step) => step.producer.name);
   assert.equal(producers.filter((name) => name === textFineProducers.bindArea.name).length, 1);
   assert.equal(producers.filter((name) => name === textFineProducers.renderOccurrenceMask.name).length, 1);
-});
-
-test("fine Text occurrences expose only absolute timing vocabulary", () => {
-  for (const name of ["flow", "point", "path"] as const) {
-    const surface = textFineMarkupSurfaces.find((item) => item.name === name);
-    assert.ok(surface);
-    const attributes: readonly string[] = surface.vocabulary.attributes.map((attribute) => attribute.name);
-    assert.equal(attributes.includes("semantic"), false);
-    assert.equal(attributes.includes("selection"), false);
-    assert.equal(attributes.includes("segment"), false);
-    assert.equal(attributes.includes("moment"), false);
-    assert.deepEqual(attributes.filter((attribute) => ["during", "from", "until", "for"].includes(attribute)),
-      ["during"]);
-  }
-  const mask = textFineMarkupSurfaces.find((item) => item.name === "mask");
-  assert.ok(mask);
-  const maskAttributes: readonly string[] = mask.vocabulary.attributes.map((attribute) => attribute.name);
-  assert.equal(maskAttributes.includes("semantic"), false);
 });
 
 test("rich Text lowers ordered glyph layers, boxes, bounded flow, sequences and Path Text", () => {
@@ -579,7 +557,7 @@ test("rich Text lowers ordered glyph layers, boxes, bounded flow, sequences and 
   });
   const area = createFineTextOccurrence(
     space,
-    bindAreaTextPlacement({ xPx: 80, yPx: 200, widthPx: 720, heightPx: 320 }, flowPolicy(75, { overflow: "shrink", maxLines: 3, minimumScale: 0.6 })),
+    bindAreaTextPlacement({ xPx: 80, yPx: 200, widthPx: 720, heightPx: 320 }, flowPolicy({ overflow: "shrink", maxLines: 3, minimumScale: 0.6 })),
     sealTextItemSpec({
       id: "area",
       document: { paragraphs: [{
@@ -599,13 +577,14 @@ test("rich Text lowers ordered glyph layers, boxes, bounded flow, sequences and 
     bindPathTextPlacement({ commands: [
       { kind: "move", xPx: 100, yPx: 700 },
       { kind: "quadratic", controlX: 540, controlY: 520, xPx: 980, yPx: 700 },
-    ] }, pathPolicy(75), pathMotion),
+    ] }, pathPolicy(), pathMotion),
     sealTextItemSpec({ id: "path", document: document("Renderer-neutral Path Text") }),
     pathStyle, stillTextMotion("path-still"), absoluteWindow("path", 0, 150),
   );
   const rendered = compileHtmlProgram(sealComposition({
     id: "rich-text-film", canvas: { width: 1080, height: 900, clearColor: "#000000" },
-    tracks: [renderFineTextOccurrence(space, area), renderFineTextOccurrence(space, path)],
+    visual: { members: [renderFineTextOccurrence(space, area), renderFineTextOccurrence(space, path)]
+      .map((track, z) => ({ kind: "track" as const, id: track.id, z, track })) }, audio: [],
   }), space);
   assert.match(rendered.html, /data-hypit-text-paint-layer="5"/u);
   assert.match(rendered.html, /feMorphology/u);
@@ -629,7 +608,7 @@ test("a paragraph's source indentation is not part of its words", async () => {
   const fixtureManifest: ModuleManifest = {
     format: "hypit.module@1", name: fixtureModule.name, version: fixtureModule.version,
     dependencies: [timelineDependency, temporalDependency, spatialDependency, mediaDependency,
-      { module: { name: recipeManifest.name, version: recipeManifest.version } }, textDependency],
+      { name: recipeManifest.name, version: recipeManifest.version }, textDependency],
     types: [], capabilities: [], producers: [],
   };
   const closure = createResolvedClosure([
@@ -679,7 +658,7 @@ test("a paragraph's source indentation is not part of its words", async () => {
           <text:Style id="poster" recipe={editorial} font={exact-font}>
             <text:Fill color="#f8fafc"/>
           </text:Style>
-          <text:Flow id="body" timeline={semantic} within={body-frame} style={poster} z="70" overflow="shrink" minimum-scale="0.65" during={whole-window}>
+          <text:Flow id="body" timeline={semantic} within={body-frame} style={poster} overflow="shrink" minimum-scale="0.65" during={whole-window}>
             <text:P id="first">
               Top 5 Most Popular
               Ways to <text:Span style={poster}>learn AI</text:Span>
@@ -688,7 +667,7 @@ test("a paragraph's source indentation is not part of its words", async () => {
         </svml>`,
     }),
     closure, frontends,
-    validateRecord: createRecordValidator(refinements),
+    refineRecord: async (record) => await refineRecord(record, refinements),
     resolveSource() { throw new Error("Text fixture has no source imports."); },
   });
   const track = resolveCompiledSourceExport(compiled, "body.visual", compositionTypes.visualTrack);

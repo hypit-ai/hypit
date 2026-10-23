@@ -1,7 +1,6 @@
 import { loadDiscoveredSourcePackages } from "@hypit/hypit/cli";
 import type { CliDistribution } from "@hypit/hypit/cli";
 import { producerPackagesFromFacets, registerProducerFacets } from "@hypit/hypit/producer";
-import { createResolvedClosure } from "@hypit/hypit/kernel";
 import { ProducerRegistry } from "@hypit/hypit/executor";
 import {
   AuthorFrontendRegistry,
@@ -15,20 +14,16 @@ import {
 import type { MarkupSurfaceRegistryLike } from "@hypit/hypit/markup";
 import type { LoadedPackage, PackageContribution } from "@hypit/hypit/loader";
 import { ModulePackageRegistry, Compiler } from "@hypit/hypit/compiler";
-import type { ModuleRef, ResolvedModuleClosure } from "@hypit/hypit/protocol";
+import type { ModuleRef } from "@hypit/hypit/protocol";
 import { refinementPackagesFromFacets, registerTypeRefinements, RefinementRegistry } from "@hypit/hypit/refinement";
 
 export type StudioDomain = {
   readonly packages: readonly LoadedPackage[];
   readonly contributions: readonly PackageContribution[];
-  readonly compiler: Compiler;
   readonly createCompiler: (surfaces?: MarkupSurfaceRegistryLike) => Compiler;
-  readonly closure: ResolvedModuleClosure;
   readonly surfaces: MarkupSurfaceRegistry;
   readonly producers: ProducerRegistry;
   readonly refinements: RefinementRegistry;
-  readonly resolveModule: (specifier: string) => ModuleRef | undefined;
-  readonly frontends: (surfaces?: MarkupSurfaceRegistryLike) => AuthorFrontendRegistry;
 };
 
 /**
@@ -50,10 +45,6 @@ export async function loadStudioDomain(input: {
       : { distributionPackageRoot: input.distribution.packageRoot }),
   });
   const contributions = packages.map((item) => item.contribution);
-  const manifests = contributions.flatMap((item) =>
-    (item.modules ?? []).map((module) => module.manifest));
-  const closure = createResolvedClosure(manifests);
-
   const modules = new Map<string, ModuleRef>();
   const moduleRegistry = new ModulePackageRegistry();
   for (const contribution of contributions) {
@@ -89,21 +80,13 @@ export async function loadStudioDomain(input: {
   const refinements = new RefinementRegistry();
   for (const contribution of contributions) {
     const facets = contribution.facets ?? [];
-    for (const item of producerPackagesFromFacets(facets)) registerProducerFacets(producers, item.producers ?? []);
-    for (const item of refinementPackagesFromFacets(facets)) registerTypeRefinements(refinements, item.refinements ?? []);
+    for (const item of producerPackagesFromFacets(facets)) registerProducerFacets(producers, item);
+    for (const item of refinementPackagesFromFacets(facets)) registerTypeRefinements(refinements, item);
   }
 
   return {
     packages,
     contributions,
-    compiler: input.distribution.createCompiler({
-      workspaceRoot: input.workspaceRoot,
-      packageRoot: input.packageRoot,
-      ...(input.distribution.packageRoot === undefined
-        ? {}
-        : { distributionPackageRoot: input.distribution.packageRoot }),
-      packageContributions: contributions,
-    }),
     createCompiler(registry) {
       if (registry === undefined) {
         return input.distribution.createCompiler({
@@ -129,11 +112,8 @@ export async function loadStudioDomain(input: {
         }),
       });
     },
-    closure,
     surfaces,
     producers,
     refinements,
-    resolveModule,
-    frontends(registry = surfaces) { return domainFrontends(registry); },
   };
 }

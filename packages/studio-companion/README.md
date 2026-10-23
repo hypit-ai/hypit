@@ -29,7 +29,7 @@ export const companions: readonly StudioTrackCompanion[] = [{
   },
   family: "score-strip",
   label: "Score strip",
-  icon: "ranking",
+  icon: "chart",
   tone: "orange",
   lane: { heightPx: 64 },
   poster: { source: "surface-preview" },
@@ -53,14 +53,16 @@ Each lane occupies one timeline row. Items overlap in ascending `stackOrder`,
 with later projected Items above earlier ones when orders tie. Studio keeps
 overlapping Items mounted and raises the selected Item within its lane;
 selection does not change the rendered composition or write stacking back to Source.
-Expose `presentId` or `renderIds` for visual Items so picture selection can
-address the same Item shown in the timeline. Attached lanes represent distinct
+Expose `terminalLinks` so Studio can resolve each author Item to the terminal spans that realize it.
+The Companion names component-owned span identity, not Film occurrence paths or renderer addresses.
+Attached lanes represent distinct
 Companion projections, not extra rows allocated to avoid temporal overlap.
 
 An Item's timeline interval describes the operation being edited; its rendered
 parts may remain visible afterward. Associate every relevant phase through
-`renderIds` (for example, an entrance and the settled object). Studio picks the
-currently visible part in rendered stacking order and selects the same Item,
+`terminalLinks` (for example, an entrance and the settled object), using `elementId`
+when the Present root is broader than the intended selection boundary. Studio picks the
+currently visible part by its renderer-declared paint path and selects the same Item,
 without extending its editable interval. Give the parent the board or background
 parts and its children their own parts when they should be independently selectable.
 The component decides this granularity. A composite can remain one selectable Item.
@@ -107,11 +109,12 @@ ordered layers, `startFrame`, `endFrameExclusive` and `stackOrder`. Useful optio
 
 | Field/helper | Purpose |
 | --- | --- |
-| `selectionGroup` | Link disjoint displayed intervals of one author Item; selection highlights them together without changing their independent timing |
 | `presentation` | Name the Item kind and choose `standard`, `group`, `point` or `compact` chrome (a single-line primary label) |
+| `marker` | Relate the Item to one exact `{ companion, domainId, itemId }` temporal object |
+| `elementLocation` | Locate the author object with both its Source path and range |
 | `textLayer(text)` | Put explicit domain text in the timeline body |
 | `previewLayer(artifactPreview(kind, resource), layout)` | Show a declared image/video/audio Resource with a finite layout; Studio resolves transport |
-| `renderIds` | Relate an Item to its actual rendered elements |
+| `terminalLinks` | Relate an author Item to one or more component-owned terminal span ids; `elementId` can narrow visual selection without exposing renderer occurrence identity |
 | `parameterReferences` | Select exact per-Item authored references, such as the Style really used by this Cue |
 | `temporal` | Carry the executed Instant/Window lineage and its edit authority |
 | `lane` and Companion `attachments` | Put child Items on a declared additional lane, with its own bindings and Inspector |
@@ -264,7 +267,7 @@ mutations. Official companions also use explicit field tables: an undeclared
 new domain property fails Companion loading instead of inheriting UI from its name.
 
 `referenced` follows declared authored-element references; `recipe` names an explicit path through
-authored references to one SVS Recipe and its admitted properties. These paths are independent of
+authored references to one SVS Recipe and its declared properties. These paths are independent of
 the `inspector` field table. Keep shared values shared: editing a Recipe affects its consumers, while
 an Item-specific `parameterReferences` override must identify the actual authored value it uses.
 
@@ -305,7 +308,7 @@ board's reveals. Neither form changes the compiled video model.
       id: `rule:${child.id}`,
       authoredId: child.id,
       title: child.id,
-      elementRange: child.range,
+      elementLocation: { path: child.sourcePath, range: child.range },
     }]) ?? [],
   }],
 }

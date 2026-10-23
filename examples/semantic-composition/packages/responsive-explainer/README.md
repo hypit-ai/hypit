@@ -12,20 +12,21 @@ already available:
 <explainer:Scene id="scene" timeline={speech.timeline}
   within={canvas.bounds} font={font} media={speaker-media.media} source-window={speech.speaker}
   during={speech.window} reveal={demonstrate} title="Make room for meaning"
-  transition-frames="24" stack-order="0"/>
+  transition-frames="24"/>
 
 <film:Film id="main" canvas={canvas.canvas} timeline={speech.timeline} appearance={look.film}>
-  <film:Track source={scene.visual}/>
+  <film:Track id="scene" source={scene.visual}/>
   <film:Track source={mix.audio}/>
-  <film:Track source={captions.visual}/>
+  <film:Track id="captions" source={captions.visual}/>
 </film:Film>
 ```
 
 `during` accepts a resolved Window. `reveal` accepts an absolute Instant, such as the output projected from
 `@{demonstrate!}` before the relevant word. Rewriting the Script or using another delivery changes
 the upstream projected frame while retaining the layout behavior.
-`transition-frames` is the duration of that change, separate from the scene's lifetime. `stack-order`
-places this scene among other contributions. The caller supplies its title and exact fonts.
+`transition-frames` is the duration of that change, separate from the scene's lifetime. The
+`<film:Track id="...">` membership names and places this scene among other contributions. The caller supplies
+its title and exact fonts.
 
 The explicit source Window exactly matches the media length. The component intersects that Window
 with its own lifetime and preserves the corresponding source offset. The

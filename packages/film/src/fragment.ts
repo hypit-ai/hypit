@@ -15,7 +15,6 @@ function assertTrackInputs(tracks: readonly FilmTrackInput[]): FilmTrackInput[] 
   const names = new Set(["program", "canvas", "timeline"]);
   return [...tracks]
     .map((track) => ({ name: track.name.trim(), kind: track.kind }))
-    .sort((left, right) => left.name.localeCompare(right.name))
     .map((track) => {
       if (!track.name) throw new Error("Film Track input name must not be empty.");
       if (names.has(track.name)) throw new Error(`Film Track input name ${track.name} is reserved or duplicated.`);

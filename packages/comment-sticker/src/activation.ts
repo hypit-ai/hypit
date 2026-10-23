@@ -19,7 +19,7 @@ export const hypitPackage = {
     manifest: commentStickerManifest,
   }],
   facets: [
-    ...[commentStickerComponent].flatMap((component) => [createProducerPackageFacet(component), createRefinementPackageFacet(component)]),
+    ...[commentStickerComponent].flatMap((component) => [createProducerPackageFacet(component.producers ?? []), createRefinementPackageFacet(component.refinements ?? [])]),
     createMarkupSurfaceFacet({
       module: commentStickerModuleRef,
     declaration: commentStickerMarkupSurfaces.find((item) => item.name === "style")!,

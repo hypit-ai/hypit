@@ -56,6 +56,23 @@ Asynchronous resources must be prepared before drawing. A frame callback may
 not race capture. The page ABI and Provider readiness checks settle declared
 fonts, images and frame listeners before pixels are accepted.
 
+## HTML picture adjustments
+
+`hypit.html-adjustment@1` is the renderer-owned format for applying CSS `filter`,
+`opacity` and affine `transform` facts to the picture already accumulated below an
+Adjustment's visual stack position. Construct it with `htmlAdjustment(...)` and place the
+returned programme on a Composition `VisualAdjustment`.
+
+The compiler folds Visual Items in each VisualScope's local stack order. A Present appends
+its owned source picture; an Adjustment wraps the complete local picture prefix; a
+later Present stays outside that wrapper. Canvas clear color is the root picture; nested
+Stacks begin from transparency and enter their parent as one picture. At every requested absolute frame, an Adjustment applies its programme
+inside `span` and optional `visibility`, and is the identity outside them.
+Unsupported Adjustment formats fail at compilation. The current HTML format
+does not accept URL filters or Artifact dependencies; formats that own LUTs,
+masks or other resources should define and validate their own payload instead
+of hiding those facts in this one.
+
 ## Ownership rules
 
 - Visual semantics stay in Composition and component packages.
@@ -71,7 +88,12 @@ source language.
 
 ## Browser playback
 
-Hosts import `injectRuntimeShim` from `@hypit/html-program/playback` to add
-frame playback to materialized HTML. The script provides `__hypitSeekFrame`,
+Hosts use `@hypit/html-playback` to add frame playback to a compiled `HtmlProgram`
+and `AudioProgram`. The adapter provides `__hypitSeekFrame`,
 `__hypitPlayFrame` and `__hypitSetMuted`; the host supplies playback controls
 and serves the referenced materials.
+
+When the document contains Visual Adjustments, its renderer runtime additionally exposes
+`__hypitSetAdjustmentBypassed(occurrencePath, adjustmentId, bypassed)`. Studio uses this exact-addressed
+control for temporary comparison. Its default state is always false, it is not serialized into the
+`HtmlProgram`, and Providers do not call it during capture or export.

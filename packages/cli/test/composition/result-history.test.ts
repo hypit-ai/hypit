@@ -87,7 +87,7 @@ test("builds, history, inspect and get read project Build Results without openin
       format: "hypit.cli-get@1",
       build: "bld_20260902T110000000Z_0000000001",
       output: "stage.value",
-      type: "example.result@1/Value",
+      type: "example.result@1#Value",
       representation: "inline",
       path: destination,
     });
@@ -119,7 +119,7 @@ test("history scans older pages for matches and compares project-relative source
     ]) {
       const writer = await repository.create({
         id,
-        source: { id: "other.svml" },
+        sourceId: "other.svml",
         publication: publication([]),
       });
       await writer.finish({ outcome: "failed", failure: "fixture without the requested Output" });
@@ -138,11 +138,11 @@ test("history scans older pages for matches and compares project-relative source
   }
 });
 
-test("get exports Resource bytes and a self-contained Composite directory", async () => {
+test("get exports file bytes and a self-contained value-document directory", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-cli-get-"));
   const build = "bld_20260902T110000010Z_0000000001";
   const videoType = { module: { name: "example.media", version: "1" }, name: "Video" } satisfies TypeRef;
-  const compositeType = { module: { name: "example.speech", version: "1" }, name: "CompositeValue" } satisfies TypeRef;
+  const structuredType = { module: { name: "example.speech", version: "1" }, name: "StructuredValue" } satisfies TypeRef;
   const bytes = new TextEncoder().encode("video bytes");
   const video = {
     kind: "blob",
@@ -153,10 +153,10 @@ test("get exports Resource bytes and a self-contained Composite directory", asyn
   try {
     const result = await FileBuildResult.create(join(root, ".hypit", "results"), {
       id: build,
-      source: { id: join(root, "main.svml") },
+      sourceId: join(root, "main.svml"),
       publication: publication([
         { name: "final.video", output: "logical:video", type: videoType },
-        { name: "final.take", output: "logical:take", type: compositeType },
+        { name: "final.take", output: "logical:take", type: structuredType },
       ], ["final.video"]),
     });
     await result.sync({
@@ -164,7 +164,7 @@ test("get exports Resource bytes and a self-contained Composite directory", asyn
           { id: "record:video", type: videoType, value: video },
           {
             id: "record:take",
-            type: compositeType,
+            type: structuredType,
             value: ({ words: ["hello"], media: { artifact: video } }),
           },
         ],
@@ -193,14 +193,14 @@ test("get exports Resource bytes and a self-contained Composite directory", asyn
     assert.equal(resource.output, "final.video");
     assert.equal(new TextDecoder().decode(await readFile(resourceDestination)), "video bytes");
 
-    const compositeDestination = join(root, "output", "final-take");
-    const composite = await jsonCommand([
-      "get", build, "--output", "final.take", "--to", compositeDestination,
+    const valueDocumentDestination = join(root, "output", "final-take");
+    const valueDocument = await jsonCommand([
+      "get", build, "--output", "final.take", "--to", valueDocumentDestination,
     ], root) as { readonly representation: string; readonly path: string };
-    assert.equal(composite.representation, "value-document");
-    assert.equal(composite.path, compositeDestination);
-    assert.equal((await stat(compositeDestination)).isDirectory(), true);
-    const document = JSON.parse(await readFile(join(compositeDestination, "value.json"), "utf8")) as {
+    assert.equal(valueDocument.representation, "value-document");
+    assert.equal(valueDocument.path, valueDocumentDestination);
+    assert.equal((await stat(valueDocumentDestination)).isDirectory(), true);
+    const document = JSON.parse(await readFile(join(valueDocumentDestination, "value.json"), "utf8")) as {
       readonly format: string;
       readonly value: { readonly words: readonly string[]; readonly media: { readonly artifact: null } };
       readonly resources: readonly [{ readonly file: { readonly path: string } }];
@@ -209,7 +209,7 @@ test("get exports Resource bytes and a self-contained Composite directory", asyn
     assert.deepEqual(document.value.words, ["hello"]);
     assert.equal(document.value.media.artifact, null);
     assert.equal(
-      new TextDecoder().decode(await readFile(join(compositeDestination, document.resources[0].file.path))),
+      new TextDecoder().decode(await readFile(join(valueDocumentDestination, document.resources[0].file.path))),
       "video bytes",
     );
   } finally {

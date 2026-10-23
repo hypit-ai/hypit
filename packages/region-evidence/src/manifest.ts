@@ -36,8 +36,8 @@ export const regionEvidenceManifest: ModuleManifest = {
   format: "hypit.module@1",
   name: regionEvidenceModuleRef.name,
   version: regionEvidenceModuleRef.version,
-  dependencies: [spatialDependency, { module: recipeType.module }, timelineDependency],
-  types: [{ name: regionEvidenceTypes.evidence.name }],
+  dependencies: [spatialDependency, recipeType.module, timelineDependency],
+  types: [regionEvidenceTypes.evidence.name],
   capabilities: [],
   producers: [{
     name: regionEvidenceProducers.resolve.name,
@@ -49,4 +49,4 @@ export const regionEvidenceManifest: ModuleManifest = {
     result: { kind: "output" as const, name: "evidence", type: regionEvidenceTypes.evidence },
   }],
 };
-export const regionEvidenceDependency = { module: regionEvidenceModuleRef } as const;
+export const regionEvidenceDependency = regionEvidenceModuleRef;

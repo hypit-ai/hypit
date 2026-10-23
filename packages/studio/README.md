@@ -36,7 +36,7 @@ The upper-left library is intentionally not a filesystem browser:
   from the project's Result Repository. Saving a Result and an issue requiring attention remain
   visible, with the source Run and available progress or failure reason.
 - Artifacts show top-level file Outputs whose declared MIME type is image, video or audio,
-  including files already published by ongoing Builds. Composite Outputs retain their structure:
+  including files already published by ongoing Builds. Value-document Outputs retain their structure:
   the library does not extract their embedded resources. Forwarded file Outputs resolve to their
   owner; references to the same owner file share one card and retain their origins. Highlighted
   Outputs sort first, without excluding other media.
@@ -142,6 +142,12 @@ file remains intact and its error is shown. Unsent text stays in the browser. Ag
 a separate, planned connection; **Send comment** currently saves the note only.
 
 ### Composition editing
+
+The Properties heading remains stable while package-owned **Where / When / How** domains appear beneath it.
+When a selected terminal operation supports temporary preview participation, **Include in preview** controls
+that Item in the current Studio session. Several Items can be omitted independently. Seeking, playback and
+recompilation preserve live Item choices, while Comments, Result previews, Source and export remain authoritative.
+Reloading the page clears the preview mask.
 
 The selected targets must reach one Film and its resolved time source. Studio rejects several
 distinct Films in one view; use separate Runs/sessions for those. A Timeline supplies the complete

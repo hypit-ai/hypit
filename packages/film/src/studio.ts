@@ -11,6 +11,7 @@ export const filmStudioCompanions: readonly StudioFilmCompanion[] = [{
   timeSources: [{ attribute: "timeline", type: timelineTypes.timeline }],
   tracks: {
     childSurface: "Track",
+    containerSurfaces: ["Stack"],
     sourceAttribute: "source",
     types: [compositionTypes.visualTrack, compositionTypes.audioTrack],
   },

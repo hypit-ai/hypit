@@ -35,8 +35,8 @@ const manifest: ModuleManifest = {
   version: moduleRef.version,
   dependencies: [],
   types: [
-    { name: promptType.name },
-    { name: mediaType.name },
+    promptType.name,
+    mediaType.name,
   ],
   capabilities: [],
   producers: [defaultProducer, previewProducer].map((producer) => ({
@@ -137,7 +137,7 @@ test("Run Markup compilation consumes decode output without repeating package di
     name: "build.svrun",
     text: `<?svml using="@hypit/markup/run@1"?>\n<svrun version="1"><author source="./main.svml"/><target output="left"/></svrun>`,
   }), frontends);
-  assert.equal(compiled.document.targets[0]?.output, "left");
+  assert.equal(compiled.targets[0], "left");
 });
 
 test("Run Fragments enter the Host only through the selected Run facet ABI", () => {
@@ -160,7 +160,7 @@ test("one multi-export Fragment declaration remains one execution", async () => 
   const compilation = fixture();
   const fragments = new RunFragmentRegistry();
   fragments.register({ name: "@example/run-preview", fragments: { shared: previewFragment() } });
-  const run = await resolveRunDocument(compiled.document, {
+  const run = await resolveRunDocument(compiled, {
     compilation,
     fragments,
   });
@@ -180,7 +180,7 @@ test("a Run Fragment may own an ordinary literal input", async () => {
   const compilation = fixture();
   const fragments = new RunFragmentRegistry();
   fragments.register({ name: "@example/run-preview", fragments: { shared: previewFragment() } });
-  const run = await resolveRunDocument(compiled.document, { compilation, fragments });
+  const run = await resolveRunDocument(compiled, { compilation, fragments });
   assert.deepEqual(run.graph.records, [
     {
       id: "record:run:card:prompt",
@@ -223,8 +223,8 @@ test("a Value source is selected structurally before it is materialized", async 
     <satisfy output="left" candidate="fixed"/>
   </svrun>`);
   const compilation = fixture();
-  assert.equal(compiled.document.candidates[0]?.kind, "value");
-  const run = await resolveRunDocument(compiled.document, {
+  assert.equal(compiled.candidates[0]?.kind, "value");
+  const run = await resolveRunDocument(compiled, {
     compilation,
     fragments: new RunFragmentRegistry(),
   });
@@ -237,7 +237,7 @@ test("a Value source is selected structurally before it is materialized", async 
   assert.throws(() => defineBuild({
     program: compilation.program,
     plan: planned.plan,
-  }), /record:run:source:fixed/u, "a supply declaration cannot cross the BuildDefinition boundary as a fake Record");
+  }), /record:run:source:fixed/u, "a supply declaration stays outside BuildDefinition Records");
   const state = realize(compilation, run, [{
     id: planned.selectedSupplies[0]!.record,
     type: planned.selectedSupplies[0]!.type,
@@ -255,8 +255,8 @@ test("a File source is an ordinary Blob Candidate", async () => {
     <satisfy output="left" candidate="approved"/>
   </svrun>`);
   const compilation = fixture();
-  assert.equal(compiled.document.candidates[0]?.kind, "file");
-  const run = await resolveRunDocument(compiled.document, {
+  assert.equal(compiled.candidates[0]?.kind, "file");
+  const run = await resolveRunDocument(compiled, {
     compilation,
     fragments: new RunFragmentRegistry(),
   });
@@ -277,11 +277,11 @@ test("a Build Output source stays a structural zero-input Candidate until planni
     <build-record id="prior" build="prior-build" output="friendly-shot"/>
     <satisfy output="right" candidate="prior"/>
   </svrun>`);
-  const run = await resolveRunDocument(compiled.document, {
+  const run = await resolveRunDocument(compiled, {
     compilation,
     fragments: new RunFragmentRegistry(),
   });
-  assert.equal(compiled.document.candidates[0]?.kind, "build-output");
+  assert.equal(compiled.candidates[0]?.kind, "build-output");
   const candidate = run.graph.satisfactions[0]!.candidate;
   assert.deepEqual(run.candidateSources[candidate], {
     kind: "build-output",
@@ -316,10 +316,10 @@ test("duplicate satisfactions fail at the author-written Run edge", () => {
 test("a Target-only source still compiles one mandatory Run Graph", async () => {
   const compiled = await compileDocument(`<svrun version="1"><author source="./main.svml"/><target output="left"/></svrun>`);
   const compilation = fixture();
-  const run = await resolveRunDocument(compiled.document, {
+  const run = await resolveRunDocument(compiled, {
     compilation,
     fragments: new RunFragmentRegistry(),
   });
   assert.equal(run.graph.operations.length, 0);
-  assert.equal(run.graph.targets[0]?.output, "left");
+  assert.equal(run.graph.targets[0], "left");
 });

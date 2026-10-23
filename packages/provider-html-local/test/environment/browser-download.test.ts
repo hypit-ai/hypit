@@ -9,6 +9,7 @@ import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises
 import { tmpdir } from "node:os";
 import { dirname, join, relative } from "node:path";
 import { canonicalize } from "@hypit/protocol";
+import { runtimeEndpointAdapterFacetAbi } from "@hypit/runtime-local/extension";
 import type { RuntimeEndpointAdapterImplementation } from "@hypit/runtime-local/extension";
 import { hypitPackage } from "../../src/activation.js";
 import { browserDownloadUrl, browserExecutablePath, installHtmlBrowser, recommendedBrowserVersion, requireBrowserExecutable } from "../../src/browser.js";
@@ -40,7 +41,9 @@ test("Profile mirror reaches the real preparation command and installs its archi
   t.after(() => new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve())));
   const address = server.address() as import("node:net").AddressInfo;
   const baseUrl = `http://127.0.0.1:${address.port}/chrome`;
-  const adapter = hypitPackage.facets[0]!.implementation as RuntimeEndpointAdapterImplementation;
+  const facet = hypitPackage.facets.find((item) => item.abi === runtimeEndpointAdapterFacetAbi);
+  assert.ok(facet);
+  const adapter = facet.implementation as RuntimeEndpointAdapterImplementation;
   const activation = await adapter.activate({
     hostStateRoot: directory, dataRoot: directory, instance: "render", pool: "machine",
     config: canonicalize({ browserCacheDirectory: "cache", browserDownloadBaseUrl: `${baseUrl}/` }),

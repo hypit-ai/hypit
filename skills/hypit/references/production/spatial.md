@@ -90,7 +90,7 @@ The matrix maps source-local pixels directly into program-picture pixels:
 
 <visual:Track id="graphic" timeline={program.timeline}>
   <visual:Clip image={poster} extent={poster-size} during={program.title}
-    frame={layout.full} z="20" mapping={turned}/>
+    frame={layout.full} mapping={turned}/>
 </visual:Track>
 ```
 
@@ -137,7 +137,7 @@ already available:
 </time:Timeline>
 <visual:Track id="presenter" timeline={speech.timeline}>
   <visual:Clip id="opening" media={opening-media.media} during={speech.opening}
-    frame={presenter-frame} z="20" fit="cover" treatment={look.presenter}/>
+    frame={presenter-frame} fit="cover" treatment={look.presenter}/>
 </visual:Track>
 ```
 
@@ -171,7 +171,7 @@ for a moving crop or a slow push-in while a card's outline stays still:
 
 ```svml
 <visual:Clip media={prepared.media} during={detail}
-  frame={detail-frame} z="20" fit="cover" treatment={look.detail}>
+  frame={detail-frame} fit="cover" treatment={look.detail}>
   <visual:Sampling at="start" zoom="1"/>
   <visual:Sampling at="end" zoom="1.08" y="-18"/>
 </visual:Clip>

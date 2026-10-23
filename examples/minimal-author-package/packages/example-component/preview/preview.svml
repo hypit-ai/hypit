@@ -13,6 +13,7 @@
   <import as="mediaop" from="@hypit/media-operations@1"/>
   <import as="time" from="@hypit/timeline-author@1"/>
   <import as="whisperx" from="@hypit/whisperx@1"/>
+  <import as="speechalign" from="@hypit/narrative-speech-alignment@1"/>
   <import as="semantic" from="@hypit/narrative-temporal@1"/>
   <import as="space" from="@hypit/spatial@1"/>
   <import as="film" from="@hypit/film@1"/>
@@ -31,8 +32,9 @@
   <wording:Value id="direction">A neutral catalogue card in a quiet studio.</wording:Value>
   <seedance:TextVideo id="take" model="mini" prompt={direction} duration="4" generate-audio="true"/>
   <mediaop:Normalize id="take-media" source={take.video} recipe={recipes.media.aroll} clock={clock}/>
-  <whisperx:Alignment id="showcase-semantic" narrative={story}
-    segment={story.segment.showcase} media={take-media.media} domain={take-media.domain} language="en"/>
+  <whisperx:Transcription id="showcase-semantic-transcription" media={take-media.media} language="en"/>
+  <speechalign:Alignment id="showcase-semantic" narrative={story}
+    segment={story.segment.showcase} domain={take-media.domain} evidence={showcase-semantic-transcription.transcript}/>
   <time:Timeline id="speech" clock={clock} end="showcase-semantic.end">
     <time:Window id="showcase-semantic" from="start" for={take-media.extent}/>
   </time:Timeline>
@@ -45,14 +47,14 @@
     <audio:Clip id="showcase-semantic-source" source={take-media.media} during={speech.showcase-semantic}/>
   </audio:Track>
   <visual:Track id="speech-picture" timeline={speech.timeline}>
-    <visual:Clip id="showcase-semantic-source" media={take-media.media} during={speech.showcase-semantic} frame={speech-frame} z="0" fit="cover"/>
+    <visual:Clip id="showcase-semantic-source" media={take-media.media} during={speech.showcase-semantic} frame={speech-frame} fit="cover"/>
   </visual:Track>
 
   <example:Box id="box" timeline={speech.timeline} within={vertical.bounds}/>
   <film:Film id="main" canvas={vertical.canvas} timeline={speech.timeline} appearance={recipes.film.vertical}>
-    <film:Track source={speech-picture.visual}/>
+    <film:Track id="speech-picture" source={speech-picture.visual}/>
     <film:Track source={speech-sound.audio}/>
-    <film:Track source={box.visual}/>
+    <film:Track id="box" source={box.visual}/>
   </film:Film>
   <html:Video id="final" composition={main.composition} timeline={speech.timeline}/>
 </svml>

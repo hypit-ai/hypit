@@ -15,7 +15,7 @@ test("inspection chooses its scope before following any Output reference", async
   const names = ["final", "important", ...Array.from({ length: 50 }, (_, i) => `unused-${i}`)];
   const manifest: BuildResultManifest = {
     format: "hypit.build-result@1",
-    id: "bld_20260913T093030369Z_55907CDA9E", source: { id: "main.svml" },
+    id: "bld_20260913T093030369Z_55907CDA9E", sourceId: "main.svml",
     targets: ["final"], highlightedOutputs: ["important"],
     outputs: Object.fromEntries(names.map((name) => [name, {
       type: valueType,
@@ -51,7 +51,7 @@ test("status groups identical active requests and retains late failures without 
   }));
   const runtime: BuildView = {
     id: "build", createdAt: 0, targets: ["final"], activity: "running",
-    cancellationRequested: false, acceptedRecords: 0, outstandingCommands: 1,
+ acceptedRecords: 0, outstandingCommands: 1,
     operations: [...pending,
       { id: "done", endpoint: "chosen", status: "completed" as const, receipt: { id: "completed-remote" } },
       { id: "failed", endpoint: "chosen", status: "failed" as const, receipt: { id: "failed-remote" },
@@ -77,7 +77,7 @@ test("finished status retains completed receipts only when requested", () => {
   const result: BuildResultManifest = {
     format: "hypit.build-result@1",
     id: "bld_20260913T093030369Z_55907CDA9E",
-    source: { id: "main.svml" },
+    sourceId: "main.svml",
     targets: [],
     outcome: "complete",
     finishedAt: 1,

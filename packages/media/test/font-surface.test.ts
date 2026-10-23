@@ -21,12 +21,10 @@ test("Font Surface turns explicit author bytes and face metadata into one exact 
     resolveAsset: (request) => {
       requests.push(request);
       return {
-        blob: {
           kind: "blob",
           resource: fixtureResource("font:inter-bold"),
           size: 2_048,
           mediaType: request.mediaType,
-        },
       };
     },
   });
@@ -82,12 +80,10 @@ test("Font Surface preserves package assets and Unicode-range shards as one exac
     },
     resolveReference: () => undefined,
     resolveAsset: (request) => ({
-      blob: {
         kind: "blob",
         resource: fixtureResource(`font:${request.from}`),
         size: 1_024,
         mediaType: request.mediaType,
-      },
     }),
   });
   assert.deepEqual(result.records[0]!.value, ({

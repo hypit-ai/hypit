@@ -220,7 +220,6 @@ export type VisualClipSpec = {
   readonly id: string;
   readonly treatment: VisualFrameTreatment;
   readonly motion?: VisualClipMotion;
-  readonly z: number;
 };
 
 export type VisualClipProgram = {
@@ -232,10 +231,6 @@ export type VisualClipProgram = {
   readonly treatment: VisualFrameTreatment;
   readonly layers: readonly MediaLayerProgram[];
   readonly motion?: VisualClipMotion;
-  /** Stable declaration order inside the owning Visual Track. */
-  readonly order: number;
-  /** Author-owned absolute picture stacking position. */
-  readonly z: number;
 };
 
 export type VisualTrackProgram = {

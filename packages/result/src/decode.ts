@@ -8,6 +8,7 @@ import {
   assertPublicationPlan,
 } from "./types.js";
 import type {
+  BuildResultFileRef,
   BuildResultManifest,
   BuildResultOutput,
   BuildResultOutputValue,
@@ -75,11 +76,29 @@ function resultPath(value: unknown, subject: string): string {
   return value;
 }
 
+function fileRef(value: unknown, subject: string): BuildResultFileRef {
+  assertBuildResultFileRef(value, subject);
+  if (value.kind === "external-file") {
+    return {
+      kind: "external-file",
+      uri: value.uri,
+      size: value.size,
+      mediaType: value.mediaType,
+    };
+  }
+  return {
+    kind: "build-file",
+    ...(value.build === undefined ? {} : { build: value.build }),
+    path: value.path,
+    size: value.size,
+    mediaType: value.mediaType,
+  };
+}
+
 function outputValue(value: unknown, subject: string): BuildResultOutputValue {
   const item = object(value, subject);
   if (item.kind === "build-file" || item.kind === "external-file") {
-    assertBuildResultFileRef(item, subject);
-    return { ...item };
+    return fileRef(item, subject);
   }
   if (item.kind === "build-output") {
     return {
@@ -198,8 +217,8 @@ export function decodeBuildResultManifest(
   const id = buildId(build, "Build Result address");
   const item = object(value, subject);
   if (item.format !== "hypit.build-result@1") throw new Error(`${subject} is not a Hypit Build Result`);
-  const source = object(item.source, `${subject}.source`);
-  const run = item.run === undefined ? undefined : object(item.run, `${subject}.run`);
+  const sourceId = text(item.sourceId, `${subject}.sourceId`);
+  const runId = optionalText(item.runId, `${subject}.runId`);
   const title = optionalText(item.title, `${subject}.title`);
   const note = optionalText(item.note, `${subject}.note`);
   const highlightedOutputs = item.highlightedOutputs === undefined
@@ -217,18 +236,20 @@ export function decodeBuildResultManifest(
     throw new Error(`${subject} must be either unfinished or have both outcome and finishedAt`);
   }
   const failure = optionalString(item.failure, `${subject}.failure`);
-  if (item.executionLog !== undefined) assertBuildResultFileRef(item.executionLog, `${subject}.executionLog`);
+  const executionLog = item.executionLog === undefined
+    ? undefined
+    : fileRef(item.executionLog, `${subject}.executionLog`);
   const manifest = {
     format: "hypit.build-result@1" as const,
     id,
     ...(title === undefined ? {} : { title }),
     ...(note === undefined ? {} : { note }),
     ...(highlightedOutputs === undefined ? {} : { highlightedOutputs }),
-    source: { id: text(source.id, `${subject}.source.id`) },
-    ...(run === undefined ? {} : { run: { id: text(run.id, `${subject}.run.id`) } }),
+    sourceId,
+    ...(runId === undefined ? {} : { runId }),
     targets: texts(item.targets, `${subject}.targets`),
     outputs: outputs(item.outputs, `${subject}.outputs`),
-    ...(item.executionLog === undefined ? {} : { executionLog: item.executionLog }),
+    ...(executionLog === undefined ? {} : { executionLog }),
     ...(item.operations === undefined ? {} : { operations: operationReceipts(item.operations, `${subject}.operations`) }),
   };
   if (outcome === undefined) {
@@ -303,8 +324,7 @@ export function decodeBuildResultWriterState(
   return {
     ...(item.resourceReferences === undefined ? {} : { resourceReferences: Object.fromEntries(
       Object.entries(object(item.resourceReferences, `${subject}.resourceReferences`)).map(([resource, reference]) => {
-        assertBuildResultFileRef(reference, `${subject}.resourceReferences.${resource}`);
-        return [resource, reference];
+        return [resource, fileRef(reference, `${subject}.resourceReferences.${resource}`)];
       }),
     ) }),
     resources: pathMap(item.resources, `${subject}.resources`),
@@ -317,6 +337,33 @@ export function decodeBuildResultValueDocument(
   value: unknown,
   subject = "Build Result value",
 ): BuildResultValueDocument {
-  assertBuildResultValueDocument(value, subject);
-  return value;
+  const item = object(value, subject);
+  if (item.format !== "hypit.result-value@1") throw new Error(`${subject} is not a Result value document`);
+  const canonical = (raw: unknown, location: string): import("@hypit/protocol").CanonicalValue => {
+    if (raw === null || typeof raw === "boolean" || typeof raw === "string") return raw;
+    if (typeof raw === "number" && Number.isFinite(raw)) return raw;
+    if (Array.isArray(raw)) return raw.map((child, index) => canonical(child, `${location}[${index}]`));
+    const record = object(raw, location);
+    return Object.fromEntries(Object.entries(record).map(([name, child]) => [name, canonical(child, `${location}.${name}`)]));
+  };
+  if (!Array.isArray(item.resources)) throw new Error(`${subject}.resources must be an array`);
+  const document: BuildResultValueDocument = {
+    format: "hypit.result-value@1",
+    value: canonical(item.value, `${subject}.value`),
+    resources: item.resources.map((raw, index) => {
+      const binding = object(raw, `${subject}.resources[${index}]`);
+      if (!Array.isArray(binding.at)) throw new Error(`${subject}.resources[${index}].at must be an array`);
+      const at = binding.at.map((segment, segmentIndex) => {
+        if (typeof segment === "string") return segment;
+        if (typeof segment === "number" && Number.isSafeInteger(segment) && segment >= 0) return segment;
+        throw new Error(`${subject}.resources[${index}].at[${segmentIndex}] is invalid`);
+      });
+      return {
+        at,
+        file: fileRef(binding.file, `${subject}.resources[${index}].file`),
+      };
+    }),
+  };
+  assertBuildResultValueDocument(document, subject);
+  return document;
 }

@@ -1,5 +1,5 @@
 export type {
-  AlignedTranscriptEvidence,
+  SpeechTranscriptEvidence,
   SpeechActivitySpan,
   SpeechCharacterEvidence,
   SpeechTranscriptPassage,

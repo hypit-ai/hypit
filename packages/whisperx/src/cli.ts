@@ -9,10 +9,10 @@ import {
   selectCliEndpoint,
 } from "@hypit/hypit/cli";
 import type { CliApplicationContext, CliCommandModule, CliIo, CliRuntimeHost } from "@hypit/hypit/cli";
-import { speechEvidenceFile } from "@hypit/media-local";
+import { speechEvidenceFile } from "@hypit/media-local/files";
 import type { Need } from "@hypit/hypit/protocol";
-import { sealSpeechEvidenceAudio, speechEvidenceTypes, transcriptDocumentFromEvidence } from "@hypit/speech-evidence";
-import type { AlignedTranscriptEvidence } from "@hypit/speech-evidence";
+import { sealSpeechEvidenceAudio, speechEvidenceTypes, speechTranscriptSource } from "@hypit/speech-evidence";
+import type { SpeechTranscriptEvidence } from "@hypit/speech-evidence";
 
 import { whisperXRequestForEvidenceAudio } from "./evidence.js";
 import { whisperXCapabilities } from "./manifest.js";
@@ -83,9 +83,9 @@ export function transcribeEnvironment(application: CliApplicationContext): Trans
 }
 
 export function writeTranscribeHelp(io: CliIo): void {
-  io.write("hypit transcribe\nEstablish word times with the WhisperX alignment Endpoint selected by the Runtime Profile.\n\n"
-    + "  hypit transcribe <audio|video> --to <transcript.json> --language <code> [--runtime <profile>] [--project <directory>]\n\n"
-    + "The local media capability projects 16 kHz mono evidence; WhisperX owns alignment and the transcript view.\n"
+  io.write("hypit transcribe\nCreate editable speech evidence through the WhisperX transcription Endpoint selected by the Runtime Profile.\n\n"
+    + "  hypit transcribe <audio|video> --to <name.transcript.svml> --language <code> [--runtime <profile>] [--project <directory>]\n\n"
+    + "The local media capability projects 16 kHz mono audio; WhisperX returns exact provider-neutral evidence.\n"
     + "This is one immediate request: no Build or Result state is created.\n");
 }
 
@@ -104,11 +104,11 @@ export async function runTranscribeCli(
   const evidence = await speechEvidenceFile(source);
   const resources = createCliScratchResources();
   const artifact = await resources.put(evidence.bytes, "audio/wav");
-  const audio = sealSpeechEvidenceAudio({ domainId: "cli-transcribe", artifact, sampleFrames: evidence.sampleFrames });
+  const audio = sealSpeechEvidenceAudio({ artifact, sampleFrames: evidence.sampleFrames });
   const need: Need = {
     id: "need:hypit-transcribe",
-    capability: whisperXCapabilities.alignment,
-    returns: speechEvidenceTypes.alignedTranscript,
+    capability: whisperXCapabilities.transcription,
+    returns: speechEvidenceTypes.transcript,
     constraints: whisperXRequestForEvidenceAudio(audio, { language }),
     result: "record:hypit-transcribe",
   };
@@ -124,23 +124,23 @@ export async function runTranscribeCli(
     },
     reportDiagnostic: async (diagnostic) => { report?.(`  · ${diagnostic.message}\n`); },
   });
-  const aligned = fulfillment.value as unknown as AlignedTranscriptEvidence;
-  const file = transcriptDocumentFromEvidence(aligned, { source, language });
-  const words = file.passages.reduce((total, passage) => total + passage.words.length, 0);
-  await writeNew(to, `${JSON.stringify(file, null, 2)}\n`);
+  const transcript = fulfillment as unknown as SpeechTranscriptEvidence;
+  const words = transcript.passages.reduce((total, passage) => total + passage.words.length, 0);
+  const audioSeconds = transcript.sampleFrames / 16_000;
+  await writeNew(to, speechTranscriptSource("transcript", transcript));
   const view = { format: "hypit.whisperx-transcribe@1", source, language,
-    audio_seconds: file.audio_seconds, extracted: evidence.extracted, ...cliEndpointView(endpoint),
-    passages: file.passages.length, words, path: to };
+    audio_seconds: audioSeconds, extracted: evidence.extracted, ...cliEndpointView(endpoint),
+    passages: transcript.passages.length, words, path: to };
   if (parsed.json) io.write(`${JSON.stringify(view, null, 2)}\n`);
-  else io.write(`✓ Transcript written\n\n  ${words} words in ${file.passages.length} passage${
-    file.passages.length === 1 ? "" : "s"} over ${file.audio_seconds}s\n  ${to}\n`);
+  else io.write(`✓ Transcript written\n\n  ${words} words in ${transcript.passages.length} passage${
+    transcript.passages.length === 1 ? "" : "s"} over ${audioSeconds}s\n  ${to}\n`);
 }
 
 export const cliCommandModules = [{
   format: "hypit.cli-command@1",
   id: "@hypit/whisperx",
   commands: ["transcribe"],
-  writeRootHelp(io) { io.write("\nSpeech alignment\n  transcribe\n  hypit transcribe --help for inputs and Runtime selection\n"); },
+  writeRootHelp(io) { io.write("\nSpeech evidence\n  transcribe\n  hypit transcribe --help for inputs and Runtime selection\n"); },
   writeHelp(_argv, io) { writeTranscribeHelp(io); },
   async run(argv, io, context) { await runTranscribeCli(argv, io, transcribeEnvironment(context)); },
 }] as const satisfies readonly CliCommandModule[];

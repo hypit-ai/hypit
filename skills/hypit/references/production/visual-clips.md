@@ -8,7 +8,7 @@ Frames, and [timing](timing.md) owns absolute and projected time.
 
 ```text
 Visual Clip = picture source + absolute Window + Frame
-            + z + spatial mapping + source-time + optional treatment + optional Motion
+            + spatial mapping + source-time + optional treatment + optional Motion
 Visual Track = a set of Visual Clips
 ```
 
@@ -20,9 +20,9 @@ Visual Track = a set of Visual Clips
 
 <visual:Track id="picture" timeline={program.timeline}>
   <visual:Clip id="speaker" media={speaker-media.media}
-    during={program.speaker} frame={layout.full} z="10" fit="cover"/>
+    during={program.speaker} frame={layout.full} fit="cover"/>
   <visual:Clip id="photo" image={product} extent={product-extent}
-    during={example} frame={layout.detail} z="20" fit="contain"
+    during={example} frame={layout.detail} fit="contain"
     treatment={look.visual.still} motion={photo-push}/>
 </visual:Track>
 ```
@@ -59,7 +59,7 @@ Use rate zero to hold a frame and a negative rate for reverse traversal. A Map w
 target bounds but no rate, anchors or wrap fits the selected source interval across its target.
 
 ```svml
-<visual:Clip media={shot.media} during={story.outro} frame={layout.full} z="10">
+<visual:Clip media={shot.media} during={story.outro} frame={layout.full}>
   <visual:Map target-at="end" source-at="end" rate="1"/>
 </visual:Clip>
 ```
@@ -67,9 +67,9 @@ target bounds but no rate, anchors or wrap fits the selected source interval acr
 Stills have no source clock and therefore use no temporal Map. `space:Map` and `visual:Map` answer
 different questions.
 
-Use distinct `z` values when relative paint order matters. Equal-`z` Clips are legal and use stable
-declaration and identity order. Sampling changes which source pixels appear; Pose or `motion` moves
-the complete framed occurrence.
+Clip declaration order becomes the Track-local item sequence. Whole-film ordering is separate: the parent
+`film:Track` occurrence supplies its own `id`, and its sibling position supplies paint order. Sampling changes which source pixels appear;
+Pose or `motion` moves the complete framed occurrence.
 
 ## Put shared behavior in a component
 

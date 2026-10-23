@@ -10,7 +10,7 @@ import type { StructuredSurfaceHandler, SurfaceResolvedReference } from "@hypit/
 import {
   assertVisualTrackIdentity,
   compositionTypes,
-  sealVisualTrack,
+  sealPresentVisualTrack,
 } from "@hypit/composition";
 import type {
   VisualElement,
@@ -47,7 +47,6 @@ type FlashOptions = {
   readonly attackFrames: number;
   readonly holdFrames: number;
   readonly decayFrames: number;
-  readonly stackingOrder: number;
 };
 
 const manifest: ModuleManifest = {
@@ -55,8 +54,8 @@ const manifest: ModuleManifest = {
   name: moduleRef.name,
   version: moduleRef.version,
   dependencies: [timelineTypes.timeline, temporalTypes.window, spatialTypes.frame, compositionTypes.visualTrack]
-    .map((type) => ({ module: type.module })),
-  types: [{ name: optionsType.name }],
+    .map((type) => type.module),
+  types: [optionsType.name],
   capabilities: [],
   producers: [{
     name: renderProducer.name,
@@ -86,7 +85,6 @@ function assertOptions(value: FlashOptions): void {
   ] as const) {
     assert(Number.isSafeInteger(frames) && frames >= 0, `Flash ${name} must be a non-negative frame count.`);
   }
-  assert(Number.isSafeInteger(value.stackingOrder), "Flash z must be an integer.");
 }
 
 function px(value: number): string {
@@ -124,13 +122,13 @@ function renderFlash(
   marks.set(duration, 0);
   const element: VisualElement = total === 0 ? {
     id: "root",
-    order: 0,
     kind: "box",
+    children: [],
     style: [...style, { name: "opacity", value: options.intensity }],
   } : {
     id: "root",
-    order: 0,
     kind: "box",
+    children: [],
     style,
     animation: {
       keyframes: [...marks]
@@ -138,24 +136,22 @@ function renderFlash(
         .map(([atFrame, opacity]) => ({ atFrame, style: [{ name: "opacity", value: opacity }] })),
     },
   };
-  const track = sealVisualTrack({
+  const track = sealPresentVisualTrack({
     id: options.id,
     timelineId: timeline.id,
     visualIr: "hypit.visual-ir@1",
     presents: [{
       id: options.id,
       subjectId: options.id,
-      order: 0,
-      z: options.stackingOrder,
       span: { ...window.span },
-      elements: [element],
+      root: element,
     }],
   });
   assertVisualTrackIdentity(track, timeline);
   return track;
 }
 
-const component: ProducerPackage & RefinementPackage = {
+const component: { producers?: ProducerPackage; refinements?: RefinementPackage } = {
   producers: [{
     producer: renderProducer,
     handler: ({ inputs }) => {
@@ -188,7 +184,7 @@ function integerAttribute(element: Parameters<StructuredSurfaceHandler>[0]["elem
 
 const decodeFlash: StructuredSurfaceHandler = ({ element, resolveReference }) => {
   assertAttributes(element, [
-    "id", "timeline", "within", "color", "intensity", "attack", "hold", "decay", "z",
+    "id", "timeline", "within", "color", "intensity", "attack", "hold", "decay",
     ...temporalWindowAttributeNames,
   ]);
   assertEmptyElement(element);
@@ -210,7 +206,6 @@ const decodeFlash: StructuredSurfaceHandler = ({ element, resolveReference }) =>
     attackFrames: integerAttribute(element, "attack"),
     holdFrames: integerAttribute(element, "hold"),
     decayFrames: integerAttribute(element, "decay"),
-    stackingOrder: integerAttribute(element, "z"),
   };
   assertOptions(options);
   const optionsId = `${id}.options`;
@@ -275,12 +270,12 @@ const declaration = {
       ...temporalContextAttributeVocabulary,
       { name: "within", kind: "reference" as const, required: true, accepts: [spatialTypes.frame], summary: "Sets the painted Frame." },
       ...temporalWindowAttributeVocabulary,
-      ...["color", "intensity", "attack", "hold", "decay", "z"].map((name) => ({
+      ...["color", "intensity", "attack", "hold", "decay"].map((name) => ({
         name, kind: "literal" as const, required: true, summary: `Sets ${name}.`,
       })),
     ],
     ports: [{ name: "visual", type: compositionTypes.visualTrack, summary: "The flash as an ordinary VisualTrack." }],
-    example: '<flash:Flash id="hit" timeline={speech.timeline} within={vertical.bounds} during={hit-window} z="80" color="#FFFFFF" intensity="0.28" attack="2" hold="1" decay="5"/>',
+    example: '<flash:Flash id="hit" timeline={speech.timeline} within={vertical.bounds} during={hit-window} color="#FFFFFF" intensity="0.28" attack="2" hold="1" decay="5"/>',
   },
 };
 
@@ -288,8 +283,8 @@ export const hypitPackage = {
   format: "hypit.package@1" as const,
   modules: [{ manifest }],
   facets: [
-    createProducerPackageFacet(component),
-    createRefinementPackageFacet(component),
+    createProducerPackageFacet(component.producers ?? []),
+    createRefinementPackageFacet(component.refinements ?? []),
     createMarkupSurfaceFacet({ module: moduleRef, declaration, handler: decodeFlash }),
   ],
 };

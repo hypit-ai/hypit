@@ -1,23 +1,25 @@
 import { assertSpeechEvidenceAudioIdentity } from "@hypit/speech-evidence";
 import type { SpeechEvidenceAudio } from "@hypit/speech-evidence";
-import type { WhisperXAlignmentRequest, WhisperXLanguage } from "./types.js";
+import type { WhisperXLanguage, WhisperXTranscriptionRequest } from "./types.js";
 import { parseWhisperXLanguage } from "./types.js";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
 
-/** Verify the Provider-neutral request carried by the WhisperX alignment capability. */
-export function verifyWhisperXAlignmentRequest(value: unknown): WhisperXAlignmentRequest {
+/** Verify the Provider-neutral request carried by the WhisperX transcription capability. */
+export function verifyWhisperXTranscriptionRequest(value: unknown): WhisperXTranscriptionRequest {
   assert(value !== null && typeof value === "object" && !Array.isArray(value),
-    "WhisperX alignment request must be an object");
-  const request = value as WhisperXAlignmentRequest;
-  assert(typeof request.domainId === "string" && request.domainId.length > 0
-    && request.audio?.kind === "blob"
+    "WhisperX transcription request must be an object");
+  const request = value as WhisperXTranscriptionRequest;
+  const allowed = new Set(["audio", "sampleFrames", "language"]);
+  const unexpected = Object.keys(request).find((field) => !allowed.has(field));
+  assert(unexpected === undefined, `WhisperX transcription request has unsupported field ${unexpected}`);
+  assert(request.audio?.kind === "blob"
     && request.audio.mediaType === "audio/wav"
     && Number.isSafeInteger(request.sampleFrames)
     && request.sampleFrames > 0,
-  "WhisperX alignment request is invalid");
+  "WhisperX transcription request is invalid");
   parseWhisperXLanguage(request.language);
   return request;
 }
@@ -61,10 +63,9 @@ export function assertWhisperXEvidenceWav(bytes: Uint8Array, sampleFrames: numbe
 export function whisperXRequestForEvidenceAudio(
   evidence: SpeechEvidenceAudio,
   options: { readonly language: WhisperXLanguage },
-): WhisperXAlignmentRequest {
+): WhisperXTranscriptionRequest {
   assertSpeechEvidenceAudioIdentity(evidence);
   return {
-    domainId: evidence.domainId,
     audio: evidence.artifact,
     sampleFrames: evidence.sampleFrames,
     language: parseWhisperXLanguage(options.language),

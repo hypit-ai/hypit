@@ -97,8 +97,8 @@ test("Window composition keeps its own identity while accepting independent endp
 
 test("resolved Instants validate only absolute execution identity", () => {
   const value = instant("point", { ref: "absolute", at: frames(40) });
-  assert.doesNotThrow(() => assertTemporalInstantFor(value, { subjectId: "subject", timeline }));
-  assert.throws(() => assertTemporalInstantFor(value, { subjectId: "subject", timeline: { ...timeline, id: "other" } }), /different Timeline/u);
+  assert.doesNotThrow(() => assertTemporalInstantFor(value, { timeline }));
+  assert.throws(() => assertTemporalInstantFor(value, { timeline: { ...timeline, id: "other" } }), /different Timeline/u);
 });
 
 test("frame and authored durations enter one exact sample-boundary rule", () => {

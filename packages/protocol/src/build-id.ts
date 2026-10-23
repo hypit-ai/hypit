@@ -14,8 +14,8 @@ function timestampText(value: number): string {
 /**
  * Create the one public, chronologically sortable Build identity form.
  *
- * The nonce exists only to keep independent submissions in the same millisecond distinct. It is
- * not a content digest and has no reuse, equality or storage semantics.
+ * The nonce exists only to keep independent submissions in the same millisecond distinct. It has
+ * no reuse, equality or storage semantics.
  */
 export function orderedBuildId(createdAt: number, nonce: string): string {
   assert(/^[0-9A-Z]{10}$/u.test(nonce), "Build nonce must be ten upper-case alphanumeric characters");

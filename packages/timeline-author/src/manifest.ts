@@ -39,7 +39,7 @@ export const timelineAuthorManifest: ModuleManifest = {
   name: timelineAuthorModuleRef.name,
   version: timelineAuthorModuleRef.version,
   dependencies: [timelineDependency, temporalDependency],
-  types: Object.values(timelineAuthorTypes).map((type) => ({ name: type.name })),
+  types: Object.values(timelineAuthorTypes).map((type) => type.name),
   capabilities: [],
   producers: [
     { name: timelineAuthorProducers.origin.name, inputs: [{ name: "clock", type: timelineTypes.clock }], result: { kind: "output" as const, name: "point", type: timelineAuthorTypes.point } },

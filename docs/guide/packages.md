@@ -54,8 +54,9 @@ video uses those installed versions. Missing packages are reported with the info
 install them.
 
 When upgrading an existing production, read the selected release's migration notes before changing
-its executable or component dependencies. The [0.3 project migration guide](https://github.com/hypit-ai/hypit/blob/main/migrations/0.3.md)
-covers older project syntax and usage, and links to the 0.3.1 SDK import changes. Keep existing
+its executable or component dependencies. The [0.4 framework migration guide](https://github.com/hypit-ai/hypit/blob/main/migrations/0.4.md)
+starts from 0.3.1; the [0.3 project migration guide](https://github.com/hypit-ai/hypit/blob/main/migrations/0.3.md)
+covers older project syntax and usage and links to the 0.3.1 SDK import changes. Keep existing
 material and Results while verifying the migrated work.
 
 ## Write and share an extension

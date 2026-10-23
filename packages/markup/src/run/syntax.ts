@@ -9,7 +9,6 @@ import type {
   RunFileSource,
   RunValueSource,
   RunSatisfaction,
-  RunTarget,
 } from "@hypit/run";
 import {
   parseStructuredElement,
@@ -90,10 +89,10 @@ function importDeclaration(element: StructuredElement): RunImport {
   return { from: stringAttribute(element, "from")!, as: stringAttribute(element, "as")! };
 }
 
-function target(element: StructuredElement): RunTarget {
+function target(element: StructuredElement): string {
   exactAttributes(element, ["output"]);
   empty(element);
-  return { output: stringAttribute(element, "output")! };
+  return stringAttribute(element, "output")!;
 }
 
 function valueSource(element: StructuredElement): RunValueSource {
@@ -229,7 +228,7 @@ function parseRunDocumentBody(name: string, text: string): RunDocument {
 
   let author: { readonly source: string } | undefined;
   const imports: RunImport[] = [];
-  const targets: RunTarget[] = [];
+  const targets: string[] = [];
   const candidates: RunCandidateDeclaration[] = [];
   const satisfactions: RunSatisfaction[] = [];
   const satisfiedOutputs = new Set<string>();
@@ -269,7 +268,7 @@ function parseRunDocumentBody(name: string, text: string): RunDocument {
 
   unique(imports.map((item) => item.as), "Run import alias", root);
   unique(candidates.map((item) => item.id), "Candidate declaration", root);
-  unique(targets.map((item) => item.output), "Run target", root);
+  unique(targets, "Run target", root);
   if (targets.length === 0) fail(root, "RUN_TARGETS", "<svrun> requires at least one <target>");
   return {
     format: "hypit.run-document@1",

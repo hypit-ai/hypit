@@ -3,7 +3,7 @@ import { assertAttributes, assertEmptyElement, textAttribute, createMarkupSurfac
 import { canonicalize, sameType } from "@hypit/hypit/protocol";
 import { sealGraphFragment } from "@hypit/hypit/author";
 import { presenterStyle, presenterTypes } from "./presenter.js";
-import { sealVisualTrack, compositionTypes } from "@hypit/composition";
+import { sealPresentVisualTrack, compositionTypes } from "@hypit/composition";
 import { timelineTypes } from "@hypit/timeline";
 import { spatialTypes } from "@hypit/spatial";
 import { temporalTypes } from "@hypit/temporal";
@@ -24,8 +24,7 @@ export function installReframe(module, manifest, component) {
   manifest.producers.push({
     name: "reframe",
     inputs,
-    outputs: [{ name: "visual", type: compositionTypes.visualTrack }],
-    needs: [],
+    result: { kind: "output", name: "visual", type: compositionTypes.visualTrack },
   });
   const fragment = sealGraphFragment({
     inputs,
@@ -68,7 +67,7 @@ export function installReframe(module, manifest, component) {
         setup: `const view=root.querySelector('.viewport');return f=>{const p=Math.max(0,Math.min(1,f/Math.max(1,data.duration-1))),q=p*p*(3-2*p),a=data.from,b=data.to;Object.assign(view.style,{left:(a.xPx+(b.xPx-a.xPx)*q)+'px',top:(a.yPx+(b.yPx-a.yPx)*q)+'px',width:(a.widthPx+(b.widthPx-a.widthPx)*q)+'px',height:(a.heightPx+(b.heightPx-a.heightPx)*q)+'px'});};`,
       });
       const id = window.subjectId,
-        visual = sealVisualTrack({
+        visual = sealPresentVisualTrack({
           id,
           timelineId: timeline.id,
           visualIr: "hypit.visual-ir@1",
@@ -77,7 +76,6 @@ export function installReframe(module, manifest, component) {
                 {
                   id,
                   order: 0,
-                  z: 60,
                   span: window.span,
                   elements: [
                     {
@@ -99,10 +97,7 @@ export function installReframe(module, manifest, component) {
               ]
             : [],
         });
-      return {
-        outputs: { visual: (canonicalize(visual)) },
-        needs: {},
-      };
+      return { kind: "output", value: canonicalize(visual) };
     },
   });
   return createMarkupSurfaceFacet({

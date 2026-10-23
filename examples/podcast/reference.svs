@@ -28,7 +28,7 @@
   }
 
   caption.original-girl {
-    stack-order: 70;
+
     x: 0.5;
     y: 0.5;
     width: 0.88;
@@ -82,7 +82,7 @@
   }
 
   caption.original-guy {
-    stack-order: 70;
+
     x: 0.5;
     y: 0.5;
     width: 0.88;

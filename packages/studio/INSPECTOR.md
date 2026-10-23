@@ -67,7 +67,7 @@ still own the write. Failed validation or recompilation does not publish a parti
 ```
 
 `unit` is a label, not an instruction to append text. `suffixes` explicitly declares a string-valued
-number and retains whichever admitted suffix the current source uses. It does not convert `%` into
+number and retains whichever accepted suffix the current source uses. It does not convert `%` into
 pixels or seconds into frames. `scale` is positive; displayed value = authored magnitude × scale.
 Limits and step in `number` refer to displayed values. A number schema's limits and integer setting
 also inform the input when no presentation override is provided. Empty input is not silently zero.

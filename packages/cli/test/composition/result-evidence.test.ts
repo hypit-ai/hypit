@@ -42,7 +42,7 @@ test("a failed Result exposes task receipts and credential references without a 
   const id = "bld_20260906T110000000Z_0000000001";
   try {
     const result = await FileBuildResult.create(join(root, ".hypit", "results"), {
-      id, source: { id: "main.svml" }, publication: publication([]),
+      id, sourceId: "main.svml", publication: publication([]),
     });
     const operation = {
       operation: "op-1", command: "need-1", endpoint: "selected-account", pool: "my-pool",
@@ -74,7 +74,7 @@ test("logs reads finished evidence without a Runtime and clearly limits the tail
   try {
     const id = "bld_20260913T130000000Z_0000000001";
     const result = await FileBuildResult.create(join(root, ".hypit/results"), {
-      id, source: { id: "main.svml" }, publication: publication([]),
+      id, sourceId: "main.svml", publication: publication([]),
     });
     const records = ["started", "completed"].map((kind, time) => ({ format: "hypit.execution-log@1", time, kind, endpoint: "renderer", command: "c1" }));
     await result.finish({ outcome: "complete", executionLog: (async function* () {
@@ -100,7 +100,7 @@ test("logs reports unavailable evidence as unsuccessful, while an existing empty
       if (state === "no-log") await fixture(root);
       if (state === "empty-log") {
         const result = await FileBuildResult.create(join(root, ".hypit/results"), {
-          id: "bld_20260902T110000001Z_0000000001", source: { id: "main.svml" }, publication: publication([]),
+          id: "bld_20260902T110000001Z_0000000001", sourceId: "main.svml", publication: publication([]),
         });
         await result.finish({ outcome: "complete", executionLog: (async function* () {})() });
       }

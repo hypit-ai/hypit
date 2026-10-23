@@ -65,16 +65,12 @@ const manifest: ModuleManifest = {
   version: moduleRef.version,
   dependencies: [],
   types: [
-    { name: types.head.name },
-    { name: types.duration.name },
-    { name: types.image.name },
-    { name: types.imageSet.name },
-    {
-      name: types.product.name,
-    },
-    ...[types.a, types.b, types.c, types.d, types.combined].map((type) => ({
-      name: type.name,
-    })),
+    types.head.name,
+    types.duration.name,
+    types.image.name,
+    types.imageSet.name,
+    types.product.name,
+    ...[types.a, types.b, types.c, types.d, types.combined].map((type) => type.name),
   ],
   capabilities: [{ name: seedanceCapability.name, returns: types.image }],
   producers: [
@@ -275,7 +271,7 @@ function startSelected(
     candidates: [],
     operations: [],
     satisfactions,
-    targets: targets.map((outputId) => ({ output: outputId })),
+    targets: targets.map((outputId) => outputId),
   });
   return materializeBuild(defineBuild({
     program: link(program.closure, [...program.records, ...planned.initialRecords]),
@@ -387,7 +383,7 @@ function createCaseGGraph(roots: "value" | "operation"): AuthorGraph {
 test("Case G: two single-output full-input Candidates share both upstream Values", () => {
   const program = createProgram();
   const graph = createCaseGGraph("value");
-  const planned = planBuild(program, graph, { format: "hypit.run-graph@1", records: [], candidates: [], operations: [], satisfactions: [], targets: [{ output: "c.result" }] });
+  const planned = planBuild(program, graph, { format: "hypit.run-graph@1", records: [], candidates: [], operations: [], satisfactions: [], targets: ["c.result"] });
   const state = startSelected(program, graph, ["c.result"]);
   assert.deepEqual(stepIds(state), ["b1", "b2", "c"]);
   assert.equal(state.records.some((record) => record.id === "provided:A"), true);
@@ -452,7 +448,7 @@ function createOperationIdentityGraph(
 test("two Candidates that name one OperationId demand exactly one execution", () => {
   const program = createProgram();
   const graph = createOperationIdentityGraph("shared");
-  const planned = planBuild(program, graph, { format: "hypit.run-graph@1", records: [], candidates: [], operations: [], satisfactions: [], targets: [{ output: "left" }, { output: "right" }] });
+  const planned = planBuild(program, graph, { format: "hypit.run-graph@1", records: [], candidates: [], operations: [], satisfactions: [], targets: ["left", "right"] });
   const state = startSelected(program, graph, ["left", "right"]);
   assert.deepEqual(stepIds(state), ["left-operation"]);
   assert.deepEqual(
@@ -468,7 +464,7 @@ test("one independent Candidate may explicitly satisfy multiple compatible Logic
     { output: "left", candidate: "shared-candidate" },
     { output: "right", candidate: "shared-candidate" },
   ];
-  const planned = planBuild(program, graph, { format: "hypit.run-graph@1", records: [], candidates: [], operations: [], satisfactions, targets: [{ output: "left" }, { output: "right" }] });
+  const planned = planBuild(program, graph, { format: "hypit.run-graph@1", records: [], candidates: [], operations: [], satisfactions, targets: ["left", "right"] });
   const state = startSelected(program, graph, ["left", "right"], satisfactions);
   assert.deepEqual(stepIds(state), ["left-operation"]);
   assert.deepEqual(
@@ -477,7 +473,7 @@ test("one independent Candidate may explicitly satisfy multiple compatible Logic
   );
 });
 
-test("different OperationIds are never content-deduplicated", () => {
+test("different OperationIds remain distinct when their definitions match", () => {
   const program = createProgram();
   const graph = createOperationIdentityGraph("distinct");
   const state = startSelected(program, graph, ["left", "right"]);

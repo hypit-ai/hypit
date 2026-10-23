@@ -1,4 +1,4 @@
-import { sealComposition, sealVisualTrack } from "@hypit/composition";
+import { sealComposition, sealPresentVisualTrack } from "@hypit/composition";
 import { EndpointRegistry } from "@hypit/executor";
 import type { EndpointRegistration } from "@hypit/executor";
 import type { ImmediateEndpointHandler } from "@hypit/endpoint";
@@ -12,25 +12,25 @@ import { createLocalHtmlProvider } from "../src/index.js";
 
 export function htmlProviderDocument(surface?: CompositableSurfaceRef) {
   const timeline = sealTimeline({ id: "test-space", frameCount: 12, frameRate: { numerator: 12, denominator: 1 } });
-  const track = sealVisualTrack({ timelineId: "test-space", visualIr: "hypit.visual-ir@1", id: "provider-fixture",
-    presents: [{ id: "card", span: { startFrame: 0, endFrameExclusive: 12 }, order: 0, z: 10, elements: [
-      { id: "background", order: 0, kind: "box", style: [
+  const track = sealPresentVisualTrack({ timelineId: "test-space", visualIr: "hypit.visual-ir@1", id: "provider-fixture",
+    presents: [{ id: "card", span: { startFrame: 0, endFrameExclusive: 12 }, root:
+      { id: "background", kind: "box", children: [
+        ...(surface === undefined ? [] : [{
+          id: "surface", kind: "surface" as const, surface,
+          style: [
+            { name: "position" as const, value: "absolute" }, { name: "left" as const, value: "0px" },
+            { name: "top" as const, value: "0px" }, { name: "width" as const, value: "1px" },
+            { name: "height" as const, value: "1px" },
+          ],
+        }]),
+      ], style: [
         { name: "position", value: "absolute" }, { name: "inset", value: 0 }, { name: "background", value: "#261447" },
-      ] },
-      ...(surface === undefined ? [] : [{
-        id: "surface", parent: "background", order: 1, kind: "surface" as const, surface,
-        style: [
-          { name: "position" as const, value: "absolute" }, { name: "left" as const, value: "0px" },
-          { name: "top" as const, value: "0px" }, { name: "width" as const, value: "1px" },
-          { name: "height" as const, value: "1px" },
-        ],
-      }]),
-    ] }],
+      ] } }],
   });
   return compileHtmlProgram(sealComposition({
     id: "local-html-provider-fixture",
     canvas: { width: 160, height: 96, clearColor: "#000000" },
-    tracks: [track],
+    visual: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) }, audio: [],
   }), timeline);
 }
 

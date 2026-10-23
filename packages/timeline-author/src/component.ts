@@ -41,4 +41,4 @@ export const timelineAuthorComponent = {
     { producer: timelineAuthorProducers.instant, handler: ({ inputs }) => ({ kind: "output", value: output(materializeInstant(valueOf<Timeline>(inputs.timeline?.value, "Timeline"), valueOf<ConstructionPoint>(inputs.point?.value, "ConstructionPoint"), valueOf<ConstructionIdentitySpec>(inputs.spec?.value, "ConstructionIdentitySpec"))) }) },
     { producer: timelineAuthorProducers.window, handler: ({ inputs }) => ({ kind: "output", value: output(materializeWindow(valueOf<Timeline>(inputs.timeline?.value, "Timeline"), valueOf<ConstructionSpan>(inputs.span?.value, "ConstructionSpan"), valueOf<ConstructionIdentitySpec>(inputs.spec?.value, "ConstructionIdentitySpec"))) }) },
   ],
-} satisfies ProducerPackage & RefinementPackage;
+} satisfies { producers?: ProducerPackage; refinements?: RefinementPackage };

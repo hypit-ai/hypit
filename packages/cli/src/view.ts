@@ -6,7 +6,8 @@ import type {
   RepositoryBuildResultOutputDescription,
 } from "@hypit/result";
 import { buildResultOutput } from "@hypit/result";
-import { buildIdCreatedAt } from "@hypit/protocol";
+import { buildIdCreatedAt, compareCodeUnits } from "@hypit/protocol";
+import { typeKey } from "@hypit/protocol";
 import type { TypeRef } from "@hypit/protocol";
 import type { CliBuildView as BuildView } from "./runtime-port.js";
 import { commandHint } from "./command-hint.js";
@@ -102,7 +103,7 @@ export type CliBuildStatusView = {
 };
 
 export function cliTypeName(type: TypeRef): string {
-  return `${type.module.name}@${type.module.version}/${type.name}`;
+  return typeKey(type);
 }
 
 export function projectPath(path: string, projectRoot: string): string {
@@ -148,7 +149,7 @@ function orderedOutputNames(manifest: BuildResultManifest): readonly string[] {
   return names.sort((left, right) => {
     const leftRank = targets.has(left) ? 0 : highlighted.has(left) ? 1 : 2;
     const rightRank = targets.has(right) ? 0 : highlighted.has(right) ? 1 : 2;
-    return leftRank - rightRank || left.localeCompare(right);
+    return leftRank - rightRank || compareCodeUnits(left, right);
   });
 }
 
@@ -190,7 +191,7 @@ export function buildStatusView(options: {
       ...((options.runtime?.outcome ?? options.result?.outcome) === undefined
         ? {}
         : { outcome: options.runtime?.outcome ?? options.result!.outcome }),
-      ...(options.runtime?.cancellationRequested === true ? { cancellationRequested: true } : {}),
+      ...(options.runtime?.stop?.cause === "user-cancelled" ? { cancellationRequested: true } : {}),
       ...(options.runtime?.stop === undefined ? {} : { stop: options.runtime.stop }),
       ...(options.runtime?.requests === undefined ? {} : { requests: options.runtime.requests }),
     },
@@ -262,8 +263,8 @@ export async function buildResultView(
     createdAt: buildCreatedAtIso(manifest.id),
     ...(manifest.finishedAt === undefined ? {} : { finishedAt: new Date(manifest.finishedAt).toISOString() }),
     outcome: manifest.outcome ?? "open",
-    source: projectPath(manifest.source.id, options.projectRoot),
-    ...(manifest.run === undefined ? {} : { run: projectPath(manifest.run.id, options.projectRoot) }),
+    source: projectPath(manifest.sourceId, options.projectRoot),
+    ...(manifest.runId === undefined ? {} : { run: projectPath(manifest.runId, options.projectRoot) }),
     targetCount: manifest.targets.length,
     targets: manifest.targets,
     outputCount: available.length,

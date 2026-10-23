@@ -1,6 +1,6 @@
 import { palette } from "@explainer/visual-language";
 import { flagSetup } from "./flag-cloth.js";
-import { sealVisualTrack } from "@hypit/composition";
+import { sealPresentVisualTrack } from "@hypit/composition";
 import { htmlVisual } from "@hypit/html-program";
 import { assertTemporalWindowFor } from "@hypit/temporal";
 
@@ -40,7 +40,7 @@ function text(id, parent, value, font, size, color) {
 }
 function track(timeline, within, window, o, program, children = [], presents) {
   assertTemporalWindowFor(window, { subjectId: o.id, timeline: timeline });
-  return sealVisualTrack({
+  return sealPresentVisualTrack({
     id: o.id,
     timelineId: timeline.id,
     visualIr: "hypit.visual-ir@1",
@@ -48,7 +48,6 @@ function track(timeline, within, window, o, program, children = [], presents) {
       {
         id: o.id,
         order: 0,
-        z: o.z,
         span: window.span,
         elements: [
           {
@@ -271,7 +270,6 @@ export function renderStage(timeline, within, window, items, o) {
     presents.push({
       id: `${o.id}.${item.id}`,
       order: index,
-      z: o.z,
       subjectId: item.id,
       span: { startFrame: start, endFrameExclusive: end },
       elements: [

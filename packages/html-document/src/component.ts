@@ -24,4 +24,4 @@ export const htmlDocumentComponent = {
     type: htmlDocumentTypes.document,
     handler: ({ value }) => assertHtmlDocument(value),
   }],
-} satisfies ProducerPackage & RefinementPackage;
+} satisfies { producers?: ProducerPackage; refinements?: RefinementPackage };

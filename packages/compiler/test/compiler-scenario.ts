@@ -33,7 +33,7 @@ const laboratoryManifest: ModuleManifest = {
   name: laboratory.name,
   version: laboratory.version,
   dependencies: [],
-  types: [{ name: resultType.name }],
+  types: [resultType.name],
   capabilities: [],
   producers: [{
     name: producer.name,
@@ -63,7 +63,7 @@ const assetSurface = {
 } as const;
 const assetManifest: ModuleManifest = {
   ...emptyManifest(assetLaboratory.name),
-  types: [{ name: assetType.name }],
+  types: [assetType.name],
 };
 
 export function compiler(
@@ -117,9 +117,7 @@ export const previewProducer = { module: previewModule, name: "preview" } satisf
 export const consumeProducer = { module: previewModule, name: "consume" } satisfies ProducerRef;
 export const previewManifest: ModuleManifest = {
   ...emptyManifest(previewModule.name),
-  dependencies: [{
-    module: laboratory,
-  }],
+  dependencies: [laboratory],
   producers: [{
     name: previewProducer.name,
     inputs: [],
@@ -192,7 +190,7 @@ export function assetCompiler(environment: { readonly root: string } | { readonl
       range: element.range,
     });
     return {
-      records: [{ id, type: assetType, value: resolved.blob, range: element.range }],
+      records: [{ id, type: assetType, value: resolved, range: element.range }],
       components: [],
     };
     },
@@ -237,7 +235,7 @@ export function memoryWorkspace(sourceText: string, assetBytes: Uint8Array): Wor
             mediaType: request.mediaType,
           };
           attachment = { blob, open: async function* () { yield Uint8Array.from(bytes); } };
-          return { blob: { ...blob } };
+          return { ...blob };
         },
         attachments() {
           return attachment === undefined

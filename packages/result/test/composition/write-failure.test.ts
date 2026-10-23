@@ -10,7 +10,7 @@ import type { BlobRef } from "@hypit/protocol";
 
 import {
   acceptedRecords,
-  compositeType,
+  structuredType,
   publication,
   videoType,
 } from "./repository-scenario.js";
@@ -20,7 +20,7 @@ test("a failed filesystem sync cannot make a later resource inherit stale bytes"
   try {
     const result = await FileBuildResult.create(root, {
       id: "bld_20260924T100000000Z_0000000001",
-      source: { id: "/project/main.svml" },
+      sourceId: "/project/main.svml",
       publication: publication(["a", "b", "z"].map((name) => ({ name, output: name })), ["a", "b", "z"]),
     });
     const snapshot = (names: readonly string[]) => acceptedRecords({
@@ -60,7 +60,7 @@ test("Result writer recovers one numeric cursor across file extensions and the 9
     manifest: {
       format: "hypit.build-result@1",
       id: "bld_20260924T110000000Z_0000000001",
-      source: { id: "main.svml" },
+      sourceId: "main.svml",
       targets: ["image"],
       outputs: {},
     },
@@ -95,7 +95,7 @@ test("Result writer bounds resource writes and drains started work before a fail
     manifest: {
       format: "hypit.build-result@1" as const,
       id: "bld_20260924T110000001Z_0000000001",
-      source: { id: "main.svml" },
+      sourceId: "main.svml",
       targets: ["images"],
       outputs: {},
     },

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { sealComposition, sealVisualTrack, VISUAL_IR_V1 } from "@hypit/composition";
+import { sealComposition, sealPresentVisualTrack, VISUAL_IR_V1 } from "@hypit/composition";
 import { sealTimeline } from "@hypit/timeline";
 import { fixtureResource } from "../../../test/fixture-resource.js";
 import {
@@ -25,20 +25,17 @@ function fixture() {
     ...picture,
     resource: fixtureResource("html-document:second-picture"),
   };
-  const track = sealVisualTrack({
+  const track = sealPresentVisualTrack({
     timelineId: timeline.id,
     visualIr: VISUAL_IR_V1,
     id: "picture",
     presents: [{
       id: "picture",
-      order: 0,
-      z: 0,
       span: { startFrame: 0, endFrameExclusive: timeline.frameCount },
-      elements: [
-        { id: "root", order: 0, kind: "box", style: [] },
-        { id: "image", parent: "root", order: 1, kind: "image", artifact: picture, style: [] },
-        { id: "second-image", parent: "root", order: 2, kind: "image", artifact: secondPicture, style: [] },
-      ],
+      root: { id: "root", kind: "box", children: [
+        { id: "image", kind: "image", artifact: picture, style: [] },
+        { id: "second-image", kind: "image", artifact: secondPicture, style: [] },
+      ], style: [] },
     }],
   });
   return {
@@ -47,7 +44,7 @@ function fixture() {
     composition: sealComposition({
       id: "document",
       canvas: { width: 1920, height: 1080, clearColor: "#000000" },
-      tracks: [track],
+      visual: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) }, audio: [],
     }),
   };
 }
@@ -120,4 +117,19 @@ test("HTML Document rejects picture and sound that disagree on their frame clock
     sampleFrames: 48_000,
   } };
   assert.throws(() => assertHtmlDocument(invalid), /same frame clock/u);
+});
+
+test("HTML Document inserts extracted author scripts as literal text", () => {
+  const { composition, timeline } = fixture();
+  const document = compileHtmlDocument(composition, timeline);
+  const token = "window.__hypitLiteral='$&-$`-$\'';";
+  const withLiteral = {
+    ...document,
+    program: {
+      ...document.program,
+      html: document.program.html.replace("</body>", () => `<script>${token}</script></body>`),
+    },
+  };
+  const html = materializeHtmlDocument(withLiteral, (artifact) => `/materials/${artifact.resource}`);
+  assert.ok(html.includes(token));
 });

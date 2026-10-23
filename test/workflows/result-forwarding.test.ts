@@ -25,7 +25,7 @@ const manifest: ModuleManifest = {
   name: moduleRef.name,
   version: moduleRef.version,
   dependencies: [],
-  types: [{ name: videoType.name }],
+  types: [videoType.name],
   capabilities: [],
   producers: [{
     name: producer.name,
@@ -123,8 +123,8 @@ test("a real Run forwards recursive Result value through the single scheduler wi
     ]);
     const prior = await repository.create({
       id: priorId,
-      source: { id: join(root, "prior.svml") },
-      run: { id: join(root, "prior.svrun") },
+      sourceId: join(root, "prior.svml"),
+      runId: join(root, "prior.svrun"),
       publication: currentPublication("record:prior-video"),
     });
     await prior.sync({
@@ -176,7 +176,7 @@ test("a real Run forwards recursive Result value through the single scheduler wi
     const workspace = await compiler.openEntry(runFile);
     const loaded = await runCompiler.compileResolvedSource(workspace.entry, workspace);
     const prepared = runCompiler.prepareCompilation(loaded);
-    assert.deepEqual(loaded.materializedSupplies, [], "forward-only history never becomes a fake Core Record");
+    assert.deepEqual(loaded.materializedSupplies, [], "forward-only history remains a structural supply");
     assert.deepEqual(prepared.publication.outputs[0]?.source, {
       kind: "historical-output",
       build: priorId,
@@ -198,8 +198,8 @@ test("a real Run forwards recursive Result value through the single scheduler wi
 
     const forwarded = await repository.create({
       id: currentId,
-      source: { id: authorFile },
-      run: { id: runFile },
+      sourceId: authorFile,
+      runId: runFile,
       publication: prepared.publication,
     });
     await forwarded.sync({
@@ -226,7 +226,7 @@ test("a real Run forwards recursive Result value through the single scheduler wi
 
     const manifest = await repository.read(currentId);
     assert.equal(manifest?.outcome, "complete");
-    assert.equal(manifest?.operations, undefined, "Result keeps no empty Runtime snapshot or synthetic receipt");
+    assert.equal(manifest?.operations, undefined, "a Build with no executed operations publishes no operation entries");
   } finally {
     await rm(root, { recursive: true, force: true });
   }

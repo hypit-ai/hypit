@@ -1,6 +1,51 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { phraseRanges, wordsAt } from "../src/transcript-document.js";
+import { createResolvedClosure } from "@hypit/hypit/kernel";
+import { decodeMarkup, MarkupSurfaceRegistry } from "@hypit/hypit/markup";
+import {
+  decodeSpeechTranscriptSurface,
+  decodeSpeechTranscriptSource,
+  phraseRanges,
+  speechEvidenceManifest,
+  speechEvidenceMarkupSurfaces,
+  speechEvidenceModuleRef,
+  speechTranscriptSource,
+  transcriptWordsFromEvidence,
+  wordsAt,
+} from "../src/index.js";
+
+test("editable transcript Source compiles back to the exact evidence Record", async () => {
+  const evidence = {
+    sampleFrames: 32_000,
+    passages: [{
+      startSample: 800,
+      endSampleExclusive: 20_000,
+      words: [{ text: "<你好 & café>", startSample: 1_600, endSampleExclusive: 6_400, score: 0.97 }],
+      chars: [{ char: "你", wordIndex: 0, startSample: 1_600, endSampleExclusive: 2_400, score: 0.92 }],
+      speechActivity: [{ startSample: 1_200, endSampleExclusive: 7_000 }],
+    }],
+  };
+  const source = speechTranscriptSource("opening", evidence);
+  assert.match(source, /<speech:Transcript id="opening">/u);
+  assert.doesNotMatch(source, /<你好/u);
+  assert.deepEqual(decodeSpeechTranscriptSource(source), evidence);
+  const registry = new MarkupSurfaceRegistry();
+  registry.registerRaw({
+    module: speechEvidenceModuleRef,
+    declaration: speechEvidenceMarkupSurfaces[0],
+    handler: decodeSpeechTranscriptSurface,
+  });
+  const compiled = await decodeMarkup({
+    name: "opening.transcript.svml",
+    text: source.slice(source.indexOf("<svml>")),
+  }, {
+    closure: createResolvedClosure([speechEvidenceManifest]),
+    registry,
+    resolveModule: () => speechEvidenceModuleRef,
+  });
+  assert.deepEqual(compiled.records.find((record) => record.id === "opening")?.value, evidence);
+  assert.deepEqual(transcriptWordsFromEvidence(evidence), [{ text: "<你好 & café>", start: 0.1, end: 0.4 }]);
+});
 
 test("word annotations retain missing times and distinguish word boundaries, overlap and gaps", () => {
   const words = [
@@ -11,6 +56,8 @@ test("word annotations retain missing times and distinguish word boundaries, ove
   assert.deepEqual(wordsAt(words, 0.7).active.map((word) => word.text), ["world", "yes"]);
   assert.deepEqual(wordsAt(words, 1).active, []);
   assert.ok(wordsAt(words, 1).context.some((word) => word.text === "untimed" && word.start === undefined));
+  assert.deepEqual(wordsAt(words, 0.4, 0).context.map((word) => word.text), ["world"]);
+  assert.throws(() => wordsAt(words, 0.4, -1), /word context must be a non-negative whole number/);
 });
 
 test("phrase location preserves repeated occurrences and multilingual word boundaries", () => {

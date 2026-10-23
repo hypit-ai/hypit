@@ -46,25 +46,25 @@ const tags = {
     name: "component-workshop",
     render: renderComponentWorkshop,
     assets: ["v0", "v1", "v2", "v3", "v4", "v5"],
-    defaults: { z: 10 },
+    defaults: {},
   },
   SemanticWorkshop: {
     name: "semantic-workshop",
     render: renderSemanticWorkshop,
     assets: ["creatify", "higgsfield"],
-    defaults: { z: 10 },
+    defaults: {},
   },
   DeliveryWorkshop: {
     name: "delivery-workshop",
     render: renderDeliveryWorkshop,
     assets: ["film", "clone", "water", "reference", "host", "thumb1", "thumb2", "thumb3"],
-    defaults: { z: 10 },
+    defaults: {},
   },
   CodeJourney: {
     name: "code-journey",
     render: renderCodeJourney,
     assets: ["codex", "remotion", "hyperframes", "ranking", "podcast", "interview", "target"],
-    defaults: { z: 10 },
+    defaults: {},
   },
   Outro: {
     name: "outro",
@@ -78,7 +78,7 @@ const tags = {
       "portraits-3",
       "portraits-4",
     ],
-    defaults: { z: 10 },
+    defaults: {},
   },
   Road: {
     name: "road",
@@ -100,7 +100,7 @@ const tags = {
       "thumb-f",
       "thumb-g",
     ],
-    defaults: { z: 10 },
+    defaults: {},
   },
   Introduction: {
     name: "intro",
@@ -118,7 +118,7 @@ const tags = {
       "hypit-podcast",
       "hypit-interview",
     ],
-    defaults: { z: 10 },
+    defaults: {},
   },
   Comparison: {
     name: "comparison",
@@ -135,7 +135,7 @@ const tags = {
       "logo-a",
       "logo-b",
     ],
-    defaults: { z: 10 },
+    defaults: {},
   },
 };
 const images = new Set([
@@ -187,13 +187,13 @@ export const manifest = {
         temporalTypes.window,
         temporalTypes.instant,
         temporalTypes.duration, temporalTypes.extent, temporalTypes.shiftSpec,
-      ].map((t) => [t.module.name, { module: t.module }]),
+      ].map((t) => [t.module.name, t.module]),
     ).values(),
   ],
-  types: [{ name: "Options" }, { name: "Events" }],
+  types: ["Options", "Events"],
   capabilities: [],
   producers: [
-    { name: "empty", inputs: [], outputs: [port("events", events)], needs: [] },
+    { name: "empty", inputs: [], result: { kind: "output", ...port("events", events) } },
     {
       name: "append",
       inputs: [
@@ -202,14 +202,12 @@ export const manifest = {
         port("options", options),
         port("at", temporalTypes.instant),
       ],
-      outputs: [port("events", events)],
-      needs: [],
+      result: { kind: "output", ...port("events", events) },
     },
     ...Object.keys(tags).map((tag) => ({
       name: tags[tag].name,
       inputs: ins(tag),
-      outputs: [port("track", compositionTypes.visualTrack)],
-      needs: [],
+      result: { kind: "output", ...port("track", compositionTypes.visualTrack) },
     })),
   ],
 };
@@ -218,7 +216,7 @@ const valueOf = (r) => {
     return r.value;
   },
   value = (v) => ((canonicalize(v))),
-  out = (n, v) => ({ outputs: { [n]: value(v) }, needs: {} });
+  out = (_name, v) => ({ kind: "output", value: value(v) });
 const component = {
   producers: [
     { producer: producer("empty"), handler: () => out("events", []) },
@@ -285,7 +283,6 @@ function decode(tag) {
       if (v !== undefined && typeof v !== "string") throw Error(n + " must be literal");
       opts[n] = typeof d === "number" ? Number(v ?? d) : (v ?? d);
     }
-    if (!Number.isSafeInteger(opts.z)) throw Error("z must be integer");
     const records = [
         {
           id: id + ".options",
@@ -392,8 +389,8 @@ export const hypitPackage = {
   format: "hypit.package@1",
   modules: [{ manifest }],
   facets: [
-    createProducerPackageFacet(component),
-    createRefinementPackageFacet(component),
+    createProducerPackageFacet(component.producers ?? []),
+    createRefinementPackageFacet(component.refinements ?? []),
     createStudioTrackCompanionFacet(sceneCompanions(module, tags)),
     ...Object.keys(tags).map((tag) =>
       createMarkupSurfaceFacet({

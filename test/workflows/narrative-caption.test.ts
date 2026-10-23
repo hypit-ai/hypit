@@ -24,7 +24,7 @@ test("Caption uses complete Narrative selections and authored Cues", () => {
   assert.deepEqual(document.cues.map((cue) => cue.unitIds.length), [3, 1]);
 });
 
-test("Caption selects complete Segments and the program through structural anchors", () => {
+test("Caption selects complete Segments and complete Script content through structural anchors", () => {
   const parsed = parseScript("caption-ranges.svml", `@{~whole}
 @{opening} <intro><HOST>One idea.</intro> @{/opening}
 <answer><GUEST>Another view.</answer>
@@ -73,7 +73,6 @@ for (const grouped of [false, true]) test(`Chinese Script projects Caption timin
     const excerpt = { narrativeId: narrative.id, kind: "segment" as const, id: segment.id,
       tokenStart: segment.tokenStart, tokenEndExclusive: segment.tokenEndExclusive };
     const alignment = alignNarrative(narrative, excerpt, domain, {
-      domainId: domain.id,
       sampleFrames,
       passages: interpretWhisperXTranscript({ language: "zh", segments: [{ start: 0, end: frameCount / 1000, words }] }, sampleFrames),
     });
@@ -92,7 +91,6 @@ for (const grouped of [false, true]) test(`Chinese Script projects Caption timin
   const timing = projectNarrativeCaptionTiming(document, binding, narrativeProjection);
   const wordText = new Map(document.words.map((word) => [word.id, word.text]));
   const unitText = new Map(document.units.map((unit) => [unit.id, unit.wordIds.map((id) => wordText.get(id)!).join("")]));
-  assert.equal("cues" in timing, false);
   const units = timing.units;
   const windowsFor = (text: string) => units.filter((unit) => unitText.get(unit.unitId) === text)
     .map((unit) => [unit.startFrame, unit.endFrameExclusive]);

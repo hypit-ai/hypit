@@ -27,4 +27,4 @@ export const imageComposeProducers = {
   request: { module: imageOperationsModuleRef, name: "request-image-compose" },
 } satisfies Record<string, ProducerRef>;
 
-export const imageOperationsDependency = { module: imageOperationsModuleRef } as const;
+export const imageOperationsDependency = imageOperationsModuleRef;

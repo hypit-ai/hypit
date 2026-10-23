@@ -54,7 +54,7 @@ export function createVideoCompiler(options: CliCompilerOptions) {
     installMarkupSurfaceFacets(facets, surfaces);
     installAuthorFrontendFacets(facets, frontends);
     for (const pack of refinementPackagesFromFacets(facets)) {
-      registerTypeRefinements(refinements, pack.refinements ?? []);
+      registerTypeRefinements(refinements, pack);
     }
   }
   frontends.register(createMarkupAuthorFrontend({

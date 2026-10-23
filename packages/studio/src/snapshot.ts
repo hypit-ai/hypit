@@ -5,23 +5,26 @@ import { composeParameterDeclarations } from "./parameters.js";
  * The Timeline owns the work range. Companions project selectable Items onto
  * that range without extending it or requiring component-specific editor code.
  */
-import { relative } from "node:path";
+import { isAbsolute, relative } from "node:path";
 
 import type { MarkupSurfaceRegistryLike } from "@hypit/hypit/markup";
-import { compositionTypes } from "@hypit/composition";
+import { audioTrackClips, compositionTypes } from "@hypit/composition";
+import type { AudioTrack, VisualTrack } from "@hypit/composition";
+import type { TypeRef } from "@hypit/hypit/protocol";
 import { timelineFrameCount } from "@hypit/timeline";
 import { temporalTypes } from "@hypit/temporal";
 import type { TemporalInstant } from "@hypit/temporal";
 import { sameModule, sameType } from "@hypit/hypit/protocol";
 
 import type {
-  CandidateProvenance,
   StudioItem,
   StudioSnapshot,
+  StudioTerminalTarget,
   Range,
   TemporalDomainView,
   StudioTrack,
 } from "./shared.js";
+import type { StudioSpan, StudioTerminalLink } from "@hypit/studio-companion";
 import type { Placement } from "./observe.js";
 import type { StudioProjection } from "./projection.js";
 import type { ExecutedGraph } from "./temporal-graph.js";
@@ -34,30 +37,17 @@ import { inspectorFieldsForBindings, resolveTimelineEditHandles, sourceBindingsF
 import type { StudioSourceFile } from "./parameters.js";
 import { temporalAuthorBindings } from "./temporal-inverse.js";
 
-type Present = {
-  readonly id: string;
-  readonly subjectId?: string;
-  readonly span: { readonly startFrame: number; readonly endFrameExclusive: number };
-  readonly z: number;
-};
-
 const timelineBandHeightPx = 15;
 
 /** Resolved facts consumed by snapshot projection; execution services and stored materials stay outside it. */
 export type SnapshotProjection = Pick<StudioProjection,
   "source" | "tracks" | "values" | "temporalDomainValues" | "temporalValues"
-  | "temporalBindings" | "timeline" | "timingOutput" | "timingCandidateId" | "timingCandidateOrigin"> & {
+  | "temporalBindings" | "timeline"> & {
     readonly state: ExecutedGraph;
   };
 
 /** Sound is placed in samples rather than frames, in the canonical 48 kHz. */
 const SAMPLE_RATE = 48_000;
-
-type AudioClip = {
-  readonly id: string;
-  readonly subjectId?: string;
-  readonly target: { readonly startSample: number; readonly endSampleExclusive: number };
-};
 
 /**
  * Both kinds of Track say the same thing in their own domain: a named span.
@@ -65,23 +55,35 @@ type AudioClip = {
  * knowing which package made either.
  */
 function spans(
+  type: TypeRef,
   track: unknown,
   frameRate: { readonly numerator: number; readonly denominator: number },
-): readonly { id: string; subjectId?: string; startFrame: number; endFrameExclusive: number; stackOrder: number }[] {
-  const held = track as { presents?: readonly Present[]; clips?: readonly AudioClip[] } | undefined;
-  if (held?.presents !== undefined) {
-    return held.presents.map((present) => ({
-      id: present.id,
-      ...(present.subjectId === undefined ? {} : { subjectId: present.subjectId }),
-      startFrame: present.span.startFrame,
-      endFrameExclusive: present.span.endFrameExclusive,
-      stackOrder: present.z,
+  visualOccurrences: readonly (readonly string[])[],
+): readonly ResolvedStudioSpan[] {
+  if (sameType(type, compositionTypes.visualTrack)) {
+    return (track as VisualTrack).items.map((item, index) => ({
+      id: item.id,
+      ...(item.subjectId === undefined ? {} : { subjectId: item.subjectId }),
+      terminalKind: item.kind === "present" ? "visual-present" as const : "visual-adjustment" as const,
+      targets: visualOccurrences.map((occurrencePath): StudioTerminalTarget => item.kind === "present"
+        ? { kind: "visual-present", occurrencePath, presentId: item.id }
+        : { kind: "visual-adjustment", occurrencePath, adjustmentId: item.id }),
+      startFrame: item.span.startFrame,
+      endFrameExclusive: item.span.endFrameExclusive,
+      // Studio derives a paint index from the terminal Track sequence. It is a
+      // view concern, not metadata carried by the visual item itself.
+      stackOrder: index,
     }));
   }
+  if (!sameType(type, compositionTypes.audioTrack)) {
+    throw new Error(`Studio cannot project terminal spans for ${type.module.name}@${type.module.version}#${type.name}.`);
+  }
   const perSecond = frameRate.numerator / frameRate.denominator;
-  return (held?.clips ?? []).map((clip) => ({
+  return audioTrackClips(track as AudioTrack).map((clip) => ({
     id: clip.id,
     ...(clip.subjectId === undefined ? {} : { subjectId: clip.subjectId }),
+    terminalKind: "audio" as const,
+    targets: [],
     startFrame: Math.floor(clip.target.startSample / SAMPLE_RATE * perSecond),
     endFrameExclusive: Math.max(
       Math.floor(clip.target.startSample / SAMPLE_RATE * perSecond) + 1,
@@ -92,38 +94,82 @@ function spans(
   }));
 }
 
-/** Where an authored id was written, whatever kind of thing it names. */
-type Located = { readonly id: string; readonly range: Range };
+type ResolvedStudioSpan = StudioSpan & {
+  readonly terminalKind: "visual-present" | "visual-adjustment" | "audio";
+  readonly targets: readonly StudioTerminalTarget[];
+};
 
-function authored(placements: readonly Placement[]): readonly Located[] {
+function resolveTerminalTargets(
+  spans: readonly ResolvedStudioSpan[],
+  links: readonly StudioTerminalLink[] | undefined,
+): readonly StudioTerminalTarget[] {
+  if (links === undefined) return [];
+  const found: StudioTerminalTarget[] = [];
+  for (const link of links) {
+    const span = spans.find((candidate) => candidate.id === link.spanId);
+    if (span === undefined) throw new Error(`Studio terminal link '${link.spanId}' does not name a terminal span.`);
+    for (const target of span.targets) {
+      found.push(target.kind === "visual-present" && link.elementId !== undefined
+        ? { ...target, elementId: link.elementId }
+        : target);
+    }
+  }
+  const seen = new Set<string>();
+  return found.filter((target) => {
+    const key = JSON.stringify(target);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+/** Where an authored id was written, whatever kind of thing it names. */
+type Located = { readonly id: string; readonly path: string; readonly range: Range };
+
+function presentationPath(root: string, path: string): string {
+  return isAbsolute(path) ? relative(root, path) : path;
+}
+
+function authored(root: string, placements: readonly Placement[]): readonly Located[] {
   const found: Located[] = [];
   for (const placement of placements) {
-    if (placement.id !== undefined) found.push({ id: placement.id, range: placement.range });
+    if (placement.id !== undefined) found.push({
+      id: placement.id,
+      path: presentationPath(root, placement.sourcePath),
+      range: placement.range,
+    });
     for (const child of placement.children) {
-      if (child.id !== undefined) found.push({ id: child.id, range: child.range });
+      if (child.id !== undefined) found.push({
+        id: child.id,
+        path: presentationPath(root, child.sourcePath),
+        range: child.range,
+      });
     }
   }
   return found;
+}
+
+function presentationDraft(root: string, draft: StudioItemDraft): StudioItemDraft {
+  return draft.elementLocation === undefined ? draft : {
+    ...draft,
+    elementLocation: {
+      path: presentationPath(root, draft.elementLocation.path),
+      range: draft.elementLocation.range,
+    },
+  };
 }
 
 /** Package Companions project their own temporal facts onto Studio's absolute ruler. */
 function temporalDomains(
   registry: StudioCompanionRegistry,
   built: SnapshotProjection,
+  workspaceRoot: string,
 ): readonly TemporalDomainView[] {
-  const provenance: CandidateProvenance = {
-    output: built.timingOutput?.name ?? "Timeline",
-    ...(built.timingOutput?.ref === undefined ? {} : { outputRef: built.timingOutput.ref }),
-    ...(built.timingCandidateId === undefined ? {} : { candidateId: built.timingCandidateId }),
-    origin: built.timingCandidateOrigin,
-    status: "resolved",
-    errors: [],
-  };
   return built.source.observations.temporalDomains.flatMap((source) => {
     const projected = registry.projectTemporalDomain({ source, values: built.temporalDomainValues, timeline: built.timeline });
     return projected.filter((view) => view.timelineId === built.timeline.id).map((view) => ({ ...view, companion: source.companion,
-      presentation: registry.temporalDomainPresentation(source.companion), provenance,
-      source: { path: source.sourcePath, content: source.content } }));
+      presentation: registry.temporalDomainPresentation(source.companion),
+      source: { path: presentationPath(workspaceRoot, source.sourcePath), content: source.content } }));
   });
 }
 
@@ -132,6 +178,7 @@ function temporalDeclarationDomain(
   registry: StudioCompanionRegistry,
   built: SnapshotProjection,
   source: { readonly path: string; readonly text: string },
+  workspaceRoot: string,
 ): TemporalDomainView {
   const values = new Map(built.temporalValues.map((item) => [item.id, item] as const));
   const declarations = built.source.observations.placements.flatMap((placement) =>
@@ -153,14 +200,6 @@ function temporalDeclarationDomain(
       ...(range === undefined ? {} : { range }) });
     seen.add(draft.output);
   }
-  const provenance: CandidateProvenance = {
-    output: built.timingOutput?.name ?? "Timeline",
-    ...(built.timingOutput?.ref === undefined ? {} : { outputRef: built.timingOutput.ref }),
-    ...(built.timingCandidateId === undefined ? {} : { candidateId: built.timingCandidateId }),
-    origin: built.timingCandidateOrigin,
-    status: "resolved",
-    errors: [],
-  };
   return {
     id: "absolute-declarations",
     companion: "studio#absolute-declarations",
@@ -170,8 +209,7 @@ function temporalDeclarationDomain(
     anchors,
     items,
     editItems: [],
-    provenance,
-    source: { path: source.path, content: { start: 0, end: source.text.length } },
+    source: { path: presentationPath(workspaceRoot, source.path), content: { start: 0, end: source.text.length } },
   };
 }
 
@@ -187,11 +225,14 @@ export function snapshot(registry: StudioCompanionRegistry, built: SnapshotProje
   readonly sourceFiles: readonly StudioSourceFile[];
   readonly surfaces: MarkupSurfaceRegistryLike;
 }): StudioSnapshot {
-  const located = authored(built.source.observations.placements);
-  const domains = [...temporalDomains(registry, built), temporalDeclarationDomain(registry, built, input)];
+  const located = authored(input.workspaceRoot, built.source.observations.placements);
+  const domains = [
+    ...temporalDomains(registry, built, input.workspaceRoot),
+    temporalDeclarationDomain(registry, built, input, input.workspaceRoot),
+  ];
   const tracks: StudioTrack[] = [];
   for (const item of built.tracks) {
-    const projectedSpans = spans(item.value, input.frameRate);
+    const projectedSpans = spans(item.typeRef, item.value, input.frameRate, item.visualOccurrences);
     const binding = registry.bindTrack(item);
     const placement = item.trace.module === undefined ? undefined
       : built.source.observations.placements.find((candidate) =>
@@ -202,14 +243,17 @@ export function snapshot(registry: StudioCompanionRegistry, built: SnapshotProje
       const identity = span.subjectId ?? span.id;
       const where = located.find((candidate) => candidate.id === identity);
       return {
-        id: `${item.outputRef}:${span.id}`,
-        ...(sameType(item.typeRef, compositionTypes.visualTrack) ? { presentId: span.id } : {}),
+        id: `terminal:${span.id}`,
+        terminalLinks: [{ spanId: span.id }],
         authoredId: identity,
         display: { title: identity, layers: [] },
         startFrame: span.startFrame,
         endFrameExclusive: span.endFrameExclusive,
-        ...(where === undefined ? {} : { elementRange: where.range }),
+        ...(where === undefined ? {} : { elementLocation: { path: where.path, range: where.range } }),
         stackOrder: span.stackOrder,
+        ...(span.terminalKind === "visual-adjustment"
+          ? { presentation: { kind: "adjustment", chrome: "compact" as const } }
+          : {}),
       };
     });
     const companionContext = {
@@ -278,24 +322,27 @@ export function snapshot(registry: StudioCompanionRegistry, built: SnapshotProje
         placements: built.source.observations.placements,
       });
       return {
-        id: draft.id.startsWith(`${item.outputRef}:`) ? draft.id : `${item.outputRef}:inspector:${draft.id}`,
+        id: JSON.stringify(["inspector", item.outputRef, draft.id]),
         group: label,
         title: draft.title,
-        ...(draft.elementRange === undefined ? {} : { elementRange: draft.elementRange }),
+        ...(draft.elementLocation === undefined ? {} : { elementLocation: {
+          path: presentationPath(input.workspaceRoot, draft.elementLocation.path),
+          range: draft.elementLocation.range,
+        } }),
         inspector: inspectorFieldsForBindings(draft, bindings, declarations.inspector),
       };
     });
     const items: StudioItem[] = drafts
       .filter(({ draft }) => draft.lane === undefined)
-      .map(({ draft, inspector, editHandles }) => sealStudioItem(item.outputRef, draft, binding, editHandles, inspector));
-    const provenance: CandidateProvenance = {
-      output: item.name,
-      outputRef: item.outputRef,
-      ...(item.candidateId === undefined ? {} : { candidateId: item.candidateId }),
-      origin: item.candidateOrigin,
-      status: "resolved",
-      errors: [],
-    };
+      .map(({ draft, inspector, editHandles }) => sealStudioItem(
+        item.outputRef,
+        undefined,
+        presentationDraft(input.workspaceRoot, draft),
+        binding,
+        resolveTerminalTargets(projectedSpans, draft.terminalLinks),
+        editHandles,
+        inspector,
+      ));
     tracks.push({
       id: item.outputRef,
       label: item.name,
@@ -303,37 +350,42 @@ export function snapshot(registry: StudioCompanionRegistry, built: SnapshotProje
       items,
       inspectorObjects,
       binding,
-      provenance,
     });
     for (const attachment of registry.trackAttachments(item)) {
       const attachedDrafts = drafts.filter(({ draft }) => draft.lane === attachment.attachmentId);
       if (attachedDrafts.length === 0) continue;
       tracks.push({
-        id: `${item.outputRef}::studio::${attachment.attachmentId}`,
+        id: JSON.stringify(["track", item.outputRef, attachment.attachmentId]),
         label: attachment.label ?? attachment.attachmentId ?? item.name,
         row: 0,
         items: attachedDrafts.map(({ draft, inspector, editHandles }) =>
-          sealStudioItem(item.outputRef, draft, attachment, editHandles, inspector)),
+          sealStudioItem(
+            item.outputRef,
+            attachment.attachmentId,
+            presentationDraft(input.workspaceRoot, draft),
+            attachment,
+            resolveTerminalTargets(projectedSpans, draft.terminalLinks),
+            editHandles,
+            inspector,
+          )),
         inspectorObjects: [],
         binding: attachment,
-        provenance,
       });
     }
   }
-  // Root lanes retain Film's authored organizational order. A Present's z is
-  // local compositing data and cannot define the order of a Track containing
-  // independently stacked items. Companion-declared Attachment Tracks stay
-  // beside the root Track that produced them in this list.
+  // Root lanes retain Film's authored organizational order. Track-local paint
+  // position cannot define the order of a lane containing several Items.
+  // Companion-declared Attachment Tracks stay beside their owning root Track.
   const rows = tracks.map((track, row) => ({ ...track, row }));
 
   const frameCount = timelineFrameCount(built.timeline);
   return {
     revision: input.revision,
     source: {
-      path: input.path,
+      path: presentationPath(input.workspaceRoot, input.path),
       text: input.text,
       files: input.sourceFiles.map((file) => ({
-        path: relative(input.workspaceRoot, file.path),
+        path: presentationPath(input.workspaceRoot, file.path),
         text: file.text,
         language: file.language,
         role: file.role ?? "dependency",
@@ -354,13 +406,5 @@ export function snapshot(registry: StudioCompanionRegistry, built: SnapshotProje
     tracks: rows,
     temporalDomains: domains,
     preview: input.preview,
-    provenance: {
-      picture: "resolved",
-      note: note(built),
-    },
   };
-}
-
-function note(_built: SnapshotProjection): string {
-  return "Composition and timing are resolved from the selected Run Source.";
 }

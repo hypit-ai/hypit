@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { visualElements } from "@hypit/composition";
 import type { HtmlVisual } from "@hypit/html-program";
 import type { FontStackRef } from "@hypit/media";
 import type { Timeline } from "@hypit/timeline";
@@ -28,7 +29,7 @@ test("the same chat renderer consumes authored and word-bound events; changing p
     ], { id: "chat", title: "Launch", entranceFrames: 10 });
   };
   const program = (value: ReturnType<typeof scene>) => {
-    const element = value.presents[0]!.elements.find(element => element.kind === "program")!;
+    const element = visualElements(value.items[0]!.root).find(element => element.kind === "program")!;
     assert.equal(element.kind, "program");
     return element.program.payload as unknown as HtmlVisual;
   };

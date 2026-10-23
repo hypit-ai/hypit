@@ -1,4 +1,5 @@
 import type { BuildResultManifest } from "@hypit/result";
+import { compareCodeUnits } from "@hypit/protocol";
 
 import type { CliBuildSubmission, CliBuildView, CliRuntimeControl } from "./runtime-port.js";
 import { commandHint } from "./command-hint.js";
@@ -29,7 +30,7 @@ function progressPhases(view: CliBuildView): Readonly<Record<string, number>> {
     const label = formatOperationProgress(command.progress);
     phases.set(label, (phases.get(label) ?? 0) + 1);
   }
-  return Object.fromEntries([...phases].sort(([left], [right]) => left.localeCompare(right)));
+  return Object.fromEntries([...phases].sort(([left], [right]) => compareCodeUnits(left, right)));
 }
 
 function progressState(view: CliBuildView): BuildProgressView["state"] {
@@ -66,7 +67,6 @@ export function buildObservationKey(view: CliBuildView): string {
     state: progressState(view),
     outcome: view.outcome,
     issue: view.issue,
-    cancellationRequested: view.cancellationRequested,
     stop: view.stop,
     requests: view.requests,
     phases: progressPhases(view),
@@ -84,7 +84,7 @@ export function activityObservationKey(
   return JSON.stringify({
     worker,
     builds: [...builds]
-      .sort((left, right) => left.id.localeCompare(right.id))
+      .sort((left, right) => compareCodeUnits(left.id, right.id))
       .map((view) => [view.id, buildObservationKey(view)]),
   });
 }

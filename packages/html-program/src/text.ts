@@ -15,7 +15,7 @@ import { canonicalStringify } from "@hypit/hypit/protocol";
 type TerminalTextElement = VisualTextFlowElement | VisualPathTextElement;
 
 export type TextRenderContext = {
-  readonly trackId: string;
+  readonly occurrencePath: readonly string[];
   readonly presentId: string;
   readonly durationFrames: number;
   readonly durationSeconds: string;
@@ -675,7 +675,7 @@ function allDocumentPaints(element: TerminalTextElement): VisualColorPaint[] {
 }
 
 function svgPaintId(paint: VisualColorPaint, context: TextRenderContext): string {
-  return context.stableId([context.trackId, context.presentId, "text-paint", canonicalStringify(paint)]);
+  return context.stableId(["visual-occurrence", ...context.occurrencePath, context.presentId, "text-paint", canonicalStringify(paint)]);
 }
 
 function svgPaintValue(paint: VisualColorPaint, context: TextRenderContext): string {
@@ -762,7 +762,7 @@ export function renderTerminalTextElement(element: TerminalTextElement, context:
   const clockAttributes = `data-hypit-text-clock data-hypit-text-start-frame="${context.presentStartFrame}" data-hypit-text-duration-frames="${context.durationFrames}" data-hypit-text-frame-numerator="${context.programNumerator}" data-hypit-text-frame-denominator="${context.programDenominator}"`;
   const sequenceAttributes = element.sequences.length === 0 ? "" : ` data-hypit-text-sequences="${context.escape(JSON.stringify(element.sequences))}"`;
   if (element.kind === "path-text") {
-    const pathId = context.stableId([context.trackId, context.presentId, element.id, "path"]);
+    const pathId = context.stableId(["visual-occurrence", ...context.occurrencePath, context.presentId, element.id, "path"]);
     const anchor = element.align === "start" ? "start" : element.align === "end" ? "end" : "middle";
     const offset = element.marginAnimation?.keyframes[0]?.startMarginPx
       ?? (element.align === "start" ? element.startMarginPx : element.align === "end" ? "100%" : "50%");

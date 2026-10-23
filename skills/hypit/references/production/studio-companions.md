@@ -56,8 +56,8 @@ this with the board and its independent reveals.
 
 Use `inspectorObjects` for authored rules that configure a Track but are not timeline occurrences.
 For example, Caption keeps Style Uses in its Inspector while Cue Items occupy its Timeline. The
-Use can still show its authored scope and expose its Style controls without pretending that the
-scope is a draggable occurrence.
+Use shows its authored scope and Style controls in the Inspector; Cue Items remain the draggable
+Timeline occurrences.
 
 ```ts
 inspectorObjects: [{
@@ -72,16 +72,19 @@ Use `attachments` for independently represented child content such as Ranking re
 child is a real Track with its own Items and time identity; an Inspector object is not. Keep this
 distinction instead of turning every author rule into another timeline row.
 
-## Connect the picture to the Item
+## Connect terminal spans to the Item
 
-Associate the actual rendered parts with `presentId` or `renderIds`. All phases belonging to the
-same item can select that item: entrance, movement and settled appearance. Give the board/background
-parts to the parent and the reveal's parts to its child when separate selection is useful.
+Associate an Item with the terminal spans that realize it through `terminalLinks`. The Component
+owns those span identities; Studio resolves their actual Film occurrences and renderer targets.
+Use an optional package-owned `elementId` when one visual span draws a broader root than the intended
+selection boundary. Multiple phases can link to one Item, such as entrance, movement and settled
+appearance. Give board/background spans to the parent and reveal spans to its child when separate
+selection is useful.
 
-The renderer's explicit `subjectId` can associate multiple rendered phases with one domain item;
-the Companion carries their actual ids into `renderIds`. Studio uses the visible parts at the
-current frame. This preserves selection after an icon lands without duplicating animation geometry
-in the Companion. A preset with no separately exposed child remains part of the parent Item.
+Studio uses the visible linked parts at the current frame. This preserves selection after an icon
+lands without duplicating animation geometry in the Companion. A terminal operation that transforms
+accumulated picture can also be included or omitted from the Studio preview through the same Item
+relationship; that session choice does not change Source, Results or export.
 
 Picture selection and timeline selection identify the same authored object. If position and size
 are exposed choices, its declared Inspector fields can adjust them.
@@ -171,7 +174,7 @@ all through normal compilation. A separate offset remains a separate local decis
 
 Keep the Companion separate from the component's Producers. External packages declare and import
 `@hypit/studio-companion` alongside relevant public `@hypit/hypit/*` APIs, with the Distribution as
-their framework development dependency. Add `createStudioTrackCompanionFacet(companions)` to the
+their development dependency. Add `createStudioTrackCompanionFacet(companions)` to the
 existing activation's `facets`, retaining its author and producer contributions. Ship the compiled
 Companion through the package's normal activation entry.
 

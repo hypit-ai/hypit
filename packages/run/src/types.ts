@@ -13,10 +13,6 @@ import type {
 export type { RunGraph } from "@hypit/protocol";
 import type { SourceUnit } from "@hypit/source";
 
-export type RunSourceUnit = SourceUnit;
-
-export type RunFrontendSourceUnit = RunSourceUnit;
-
 export type RunAuthorSourceRequest = {
   readonly source: string;
 };
@@ -24,10 +20,6 @@ export type RunAuthorSourceRequest = {
 export type RunImport = {
   readonly from: string;
   readonly as: string;
-};
-
-export type RunTarget = {
-  readonly output: string;
 };
 
 export type RunValueSource = {
@@ -91,7 +83,7 @@ export type RunDocument = {
   readonly format: "hypit.run-document@1";
   readonly author: RunAuthorSourceRequest;
   readonly imports: readonly RunImport[];
-  readonly targets: readonly RunTarget[];
+  readonly targets: readonly string[];
   readonly candidates: readonly RunCandidateDeclaration[];
   readonly satisfactions: readonly RunSatisfaction[];
 };
@@ -101,14 +93,10 @@ export type RunSourceDiscovery = {
   readonly imports: readonly RunImport[];
 };
 
-export type DecodedRunSource = {
-  readonly document: RunDocument;
-};
-
 export type RunFrontend = {
   readonly id: string;
-  discover(source: RunFrontendSourceUnit): RunSourceDiscovery | Promise<RunSourceDiscovery>;
-  decode(source: RunFrontendSourceUnit): DecodedRunSource | Promise<DecodedRunSource>;
+  discover(source: SourceUnit): RunSourceDiscovery | Promise<RunSourceDiscovery>;
+  decode(source: SourceUnit): RunDocument | Promise<RunDocument>;
 };
 
 export interface RunFrontendRegistryLike {

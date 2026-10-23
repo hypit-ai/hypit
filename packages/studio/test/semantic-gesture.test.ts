@@ -15,7 +15,7 @@ const anchors: readonly StudioTemporalDomainAnchor[] = narrative.anchors.map((an
 const selection = narrative.selections[0]!;
 const narrativeType = { module: { name: "@hypit/narrative", version: "1" }, name: "NarrativeReference" } as const;
 const domainIdentity = { companion: "script", id: "story" } as const;
-const temporalSource = { kind: "selection", id: "proof", narrativeId: "story", timelineId: "film", type: narrativeType, domain: domainIdentity } as const;
+const temporalSource = { scope: "timeline", kind: "selection", id: "proof", narrativeId: "story", timelineId: "film", type: narrativeType, domain: domainIdentity } as const;
 const endpoint = (boundary: "start" | "end", frame: number): StudioTemporalInstantProjection => ({
   kind: "instant", expression: `selection.${boundary}`, reference: `selection.${boundary}`, source: temporalSource, frame,
   authority: { kind: "domain", source: temporalSource, boundary },

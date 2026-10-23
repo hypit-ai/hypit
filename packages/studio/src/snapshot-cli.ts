@@ -12,7 +12,7 @@ import { assertHtmlProgram, selectHtmlArtifacts } from "@hypit/html-program";
 import type { HtmlProgram } from "@hypit/html-program";
 import { htmlFrameRequest, htmlProgramCapabilities, htmlProgramTypes, verifyHtmlFrameImages } from "@hypit/html-program";
 import type { Need } from "@hypit/hypit/protocol";
-import { snapshotFrameLabel, writeFrameGrid } from "@hypit/media-local";
+import { snapshotFrameAnnotation, writeFrameGrid } from "@hypit/media-local/files";
 
 const OPTIONS = ["--studio", "--to", "--at-frame", "--start-frame", "--end-frame-exclusive", "--step-frames", "--grid", "--cell", "--runtime", "--project"];
 
@@ -103,8 +103,8 @@ export async function runSnapshotCli(argv: readonly string[], io: CliIo, applica
       reportProgress: async progress => { report?.(`  · ${progress.phase}\n`); },
       reportDiagnostic: async diagnostic => { report?.(`  · ${diagnostic.message}\n`); },
     });
-    verifyHtmlFrameImages(fulfilled.value);
-    const images = fulfilled.value;
+    verifyHtmlFrameImages(fulfilled);
+    const images = fulfilled;
     if (images.length !== frames.length) throw new Error(`Requested ${frames.length} frames, received ${images.length}`);
     await mkdir(dirname(to), { recursive: true });
     staging = await mkdtemp(join(dirname(to), ".hypit-snapshot-"));
@@ -123,7 +123,7 @@ export async function runSnapshotCli(argv: readonly string[], io: CliIo, applica
       for (let offset = 0; offset < files.length; offset += count) {
         const page = [];
         for (const file of files.slice(offset, offset + count)) page.push({ path: join(staging, `frame-${String(file.frame).padStart(9, "0")}.png`),
-          label: await snapshotFrameLabel(file.frame, file.seconds, cell) });
+          annotation: await snapshotFrameAnnotation(file.frame, file.seconds, cell) });
         const name = `grid-${String(grids.length + 1).padStart(3, "0")}.jpg`;
         await writeFrameGrid(page, join(staging, name), cell, columns);
         grids.push(join(to, name));

@@ -16,6 +16,8 @@ import type {
   StudioTemporalDomainItem,
   StudioTemporalDomainView,
   StudioTemporalLineage,
+  StudioTemporalMarker,
+  StudioSourceLocation,
   StudioTemporalProjection,
   StudioTemporalSource,
   StudioTimelineGesture,
@@ -35,6 +37,8 @@ export type {
   StudioInspectorField,
   StudioInspectorDomain,
   StudioTemporalLineage,
+  StudioTemporalMarker,
+  StudioSourceLocation,
   StudioTemporalProjection,
   StudioTemporalSource,
   StudioTimelinePresentation,
@@ -42,8 +46,19 @@ export type {
   StudioTrackFamily,
 } from "@hypit/studio-companion";
 
-export type CandidateOrigin = "run" | "source" | "none";
-export type CandidateStatus = "resolved" | "unresolved";
+/** Renderer addresses resolved privately by Studio from terminal spans. */
+export type StudioTerminalTarget =
+  | {
+      readonly kind: "visual-present";
+      readonly occurrencePath: readonly string[];
+      readonly presentId: string;
+      readonly elementId?: string;
+    }
+  | {
+      readonly kind: "visual-adjustment";
+      readonly occurrencePath: readonly string[];
+      readonly adjustmentId: string;
+    };
 
 
 /** Studio-owned interpretation of a terminal projection. */
@@ -61,50 +76,26 @@ export type StudioTrackBinding = {
   /** Studio-local partition key for an attached projection. */
   readonly attachmentId?: string;
   readonly lane: StudioLaneDescription;
-  readonly authoredTag?: string;
-  readonly references: readonly { readonly name: string; readonly type: string }[];
 };
 
-/**
- * The graph edge that made a Studio projection exist. This is deliberately
- * small: it identifies the Run output and candidate without pulling the whole
- * build graph or artifact history into the browser.
- */
-export type CandidateProvenance = {
-  readonly output: string;
-  readonly outputRef?: string;
-  readonly candidateId?: string;
-  readonly origin: CandidateOrigin;
-  readonly status: CandidateStatus;
-  readonly errors: readonly string[];
-};
-
-/**
- * One Visual Present, which is the whole of what a Track says about a picture:
- * an identity, a span and where it sits in the stack. The box it paints into is
- * measured from the rendered picture rather than restated here, because motion
- * moves it and only the picture knows where it ended up.
- */
+/** One terminal Track item projected onto Studio's shared timeline. */
 export type StudioItem = {
   /** Studio identity. Output-qualified so sibling Track Items cannot collide. */
   readonly id: string;
-  /** Renderer identity, present only when this Item paints a Visual Present. */
-  readonly presentId?: string;
-  /** The authored id this Present is named after, when it names one. */
+  /** The authored id this terminal item is named after, when it names one. */
   readonly authoredId: string;
-  readonly selectionGroup?: string;
-  /** The Script marker that placed it, when something said put it there. */
-  readonly markerId?: string;
+  /** The exact package/domain Item that placed it, when one did. */
+  readonly marker?: StudioTemporalMarker;
   readonly display: StudioItemDisplay;
   readonly startFrame: number;
   readonly endFrameExclusive: number;
   /** Where that authored tag was written. */
-  readonly elementRange?: Range;
+  readonly elementLocation?: StudioSourceLocation;
   readonly stackOrder: number;
   readonly presentation: StudioTimelinePresentation;
   readonly temporal?: StudioTemporalLineage;
-  /** Rendering identities implementing this author Item; optional for non-visual Items. */
-  readonly renderIds: readonly string[];
+  /** Studio-private renderer targets resolved from package-owned terminal links. */
+  readonly terminalTargets: readonly StudioTerminalTarget[];
   /** Companion-selected writable fields; hidden source bindings never cross into this surface. */
   readonly inspector: readonly StudioInspectorField[];
   readonly editHandles: readonly StudioEditHandle[];
@@ -115,7 +106,7 @@ export type StudioInspectorObject = {
   /** Package-owned grouping label, such as Presentation Rules. */
   readonly group: string;
   readonly title: string;
-  readonly elementRange?: Range;
+  readonly elementLocation?: StudioSourceLocation;
   readonly inspector: readonly StudioInspectorField[];
 };
 
@@ -129,8 +120,6 @@ export type StudioTrack = {
   /** Track-owned author objects that are rules or parameters, not timeline occurrences. */
   readonly inspectorObjects: readonly StudioInspectorObject[];
   readonly binding: StudioTrackBinding;
-  /** Which resolved Run candidate produced this Track, or why it did not. */
-  readonly provenance: CandidateProvenance;
 };
 
 export type TemporalDomainAnchor = StudioTemporalDomainAnchor;
@@ -242,11 +231,6 @@ export type StudioSnapshot = {
   readonly temporalDomains: readonly TemporalDomainView[];
   /** The Tracks, compiled into the document the renderer photographs. */
   readonly preview: { readonly kind: "html-program"; readonly srcdoc: string };
-  readonly provenance: {
-    readonly picture: "resolved";
-    /** What the badges above are standing for, in one sentence. */
-    readonly note: string;
-  };
 };
 
 /** The complete author mutation vocabulary exposed by Studio. */

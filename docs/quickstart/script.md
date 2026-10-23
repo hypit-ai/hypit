@@ -204,11 +204,11 @@ Every marker begins with `@{` and ends with `}`; `/`, `!` and `~` are inside. Na
 The `~` suffix/prefix controls whether the boundary snaps to the left or right. Default open is
 right-absorbing; default close is left-absorbing.
 
-The complete Script has exactly `2M + 2N + 2` ordered semantic anchors: two for every Token, two for
-every Segment, and the Program start/end. At the outer cuts, affinity keeps coincident meanings
-distinct: `@{~id}` before the first Segment chooses Program start while `@{id}` chooses that Segment's
-start; `@{/id}` after the final Segment chooses that Segment's end while `@{/id~}` chooses Program end.
-Their frames may coincide after alignment, but their author identities do not.
+The complete Script has exactly `2M + 2N` ordered semantic anchors: two for every Token and two for
+every Segment. It does not add separate outer or program anchors. Before the first Segment, either
+affinity resolves to that Segment's start; after the final Segment, either affinity resolves to that
+Segment's end. Inside or between Segments, affinity still chooses the neighboring Token or Segment
+boundary named by the marker position.
 
 ### Multiple named Selections
 

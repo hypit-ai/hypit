@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { visualElements } from "@hypit/composition";
 import type { BlobRef } from "@hypit/hypit/protocol";
 import type { TemporalInstant } from "@hypit/temporal";
 import { sealTimeline } from "@hypit/timeline";
@@ -25,7 +26,7 @@ function iconScales(revealFrames: number): readonly (readonly [number, string])[
     },
     items: [{ spec: { id: "one", preset: false }, icon, activation: instant("one", 30) }],
   });
-  const element = track.presents[0]!.elements.find((candidate) => candidate.id === "slot-1-icon");
+  const element = visualElements(track.items[0]!.root).find((candidate) => candidate.id === "slot-1-icon");
   return (element?.animation?.keyframes ?? []).map((keyframe) => [
     keyframe.atFrame,
     String(keyframe.style.find((declaration) => declaration.name === "transform")?.value),

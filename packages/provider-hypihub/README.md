@@ -1,7 +1,7 @@
 # `@hypit/provider-hypihub`
 
 Thin Hypit Runtime Provider for a HypiHub deployment. It is an optional default gateway for
-paid generation and WhisperX alignment requests. Select it for a chosen HypiHub account, with OAuth
+paid generation and WhisperX transcription requests. Select it for a chosen HypiHub account, with OAuth
 or an API key in the configured Credential Store; other Providers remain ordinary Profile choices.
 
 The implementation uses public Hypit Provider APIs and the Generation and Speech Evidence packages.
@@ -22,7 +22,7 @@ An actual refresh rejection calls for reconnecting the selected account.
 
 Its mapping table declares the image/video/speech model capabilities it implements, including image edits and
 image-to-video first-frame inputs, submits jobs, polls them, downloads the first-class assets and
-admits them into the current Build's working byte area. Image references use HypiHub's documented
+stores them in the current Build's working byte area. Image references use HypiHub's documented
 `reference_images` object shape (`[{ "url": "…" }]`); video references use the public
 `reference_image_urls`, `reference_videos`, and `reference_audios` fields. A single reference video
 remains in `reference_videos`; `ref_video_url` is reserved for a model's source-video port. First/last-frame images use `first_frame` and `last_frame`.
@@ -124,7 +124,7 @@ Runtime Profile example:
 }
 ```
 
-Remote transcription exposes the same `@hypit/whisperx` alignment capability implemented by the local
+Remote transcription exposes the same `@hypit/whisperx` transcription capability implemented by the local
 WhisperX Provider. The Runtime Profile selects which Endpoint serves it. Run
 `hypit auth login hypihub.default --runtime hypit.runtime.json` to sign in with HypiHub OAuth when
 choosing HypiHub. A Profile may set `baseUrl`

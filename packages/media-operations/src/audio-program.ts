@@ -1,7 +1,7 @@
 import { clockFrameSampleBoundary, timelineFrameCount, timelineFrameSampleBoundary } from "@hypit/timeline";
 import type { Timeline } from "@hypit/timeline";
-import { assertAudioLevelAutomation, assertCompositionIdentity } from "@hypit/composition";
-import type { Composition } from "@hypit/composition";
+import { assertAudioLevelAutomation, assertAudioTrackIdentity, assertCompositionIdentity, sealComposition } from "@hypit/composition";
+import type { AudioClip, AudioProcessProgram, AudioSignalRef, AudioTrack, Composition } from "@hypit/composition";
 import { assertBlobRef, canonicalize } from "@hypit/hypit/protocol";
 
 import type { AudioProgram } from "./types.js";
@@ -27,6 +27,49 @@ function exactSourceEnd(sourceAtStart: { readonly numerator: number; readonly de
   const result = numerator / denominator;
   assert(result >= 0n && result <= BigInt(Number.MAX_SAFE_INTEGER), `${label} is invalid`);
   return Number(result);
+}
+
+export const AUDIO_GAIN_PROCESS_FORMAT = "hypit.audio-gain@1" as const;
+
+export function audioGainProcess(gain: number): AudioProcessProgram {
+  assert(Number.isFinite(gain) && gain >= 0, "Audio Gain process is invalid");
+  return { format: AUDIO_GAIN_PROCESS_FORMAT, payload: canonicalize({ gain }) as AudioProcessProgram["payload"], artifacts: [] };
+}
+
+export function readAudioGainProcess(program: AudioProcessProgram): number {
+  if (program.format !== AUDIO_GAIN_PROCESS_FORMAT || program.artifacts.length !== 0) {
+    throw new Error(`Audio compiler does not support Process format ${program.format}.`);
+  }
+  const payload = program.payload as { readonly gain?: unknown };
+  if (Object.keys(payload).join("\u0000") !== "gain" || typeof payload.gain !== "number"
+    || !Number.isFinite(payload.gain) || payload.gain < 0) {
+    throw new Error("Audio Gain process payload is invalid.");
+  }
+  return payload.gain;
+}
+
+type RoutedClip = { readonly clip: AudioClip; readonly path: readonly string[]; readonly gain: number };
+
+function structuralId(parts: readonly string[]): string {
+  return parts.map((part) => `${part.length}:${part}`).join(":");
+}
+
+function routedTrackClips(track: AudioTrack, rootIndex: number): RoutedClip[] {
+  assertAudioTrackIdentity(track);
+  const nodes = new Map(track.graph.nodes.map((node) => [node.id, node] as const));
+  const route = (reference: AudioSignalRef, path: readonly string[]): RoutedClip[] => {
+    const node = nodes.get(reference.node)!;
+    if (node.kind === "silence") return [];
+    if (node.kind === "source") return [{ clip: node.clip, path: [...path, "source", node.id], gain: 1 }];
+    if (node.kind === "mix") return node.inputs.flatMap((input, index) =>
+      route(input, [...path, "mix", node.id, "input", String(index)]));
+    if (Object.keys(node.inputs).some((port) => port !== "signal")) {
+      throw new Error(`Audio Process ${track.id}.${node.id} has ports unsupported by ${node.program.format}.`);
+    }
+    const gain = readAudioGainProcess(node.program);
+    return route(node.inputs.signal!, [...path, "process", node.id]).map((entry) => ({ ...entry, gain: entry.gain * gain }));
+  };
+  return route(track.graph.output, ["audio", String(rootIndex), "track", track.id]);
 }
 
 export function sealAudioProgram(value: AudioProgram): AudioProgram {
@@ -75,7 +118,7 @@ export function verifyAudioProgram(value: unknown): asserts value is AudioProgra
       && Number.isSafeInteger(clip.mixEndSampleExclusive) && clip.mixEndSampleExclusive > clip.mixStartSample
       && clip.targetStartSample >= clip.mixStartSample && clip.targetEndSampleExclusive <= clip.mixEndSampleExclusive,
     `AudioProgram clip ${clip.id} mix interval is invalid`);
-    assert(Number.isFinite(clip.gain) && clip.gain >= 0 && clip.gain <= 64,
+    assert(Number.isFinite(clip.gain) && clip.gain >= 0,
       `AudioProgram clip ${clip.id} gain is invalid`);
     assertAudioLevelAutomation(clip, { startSample: clip.targetStartSample, endSampleExclusive: clip.targetEndSampleExclusive }, item.sampleFrames);
     const mixLength = clip.mixEndSampleExclusive - clip.mixStartSample;
@@ -89,10 +132,13 @@ export function verifyAudioProgram(value: unknown): asserts value is AudioProgra
 
 export function compileAudioProgram(composition: Composition, timeline: Timeline): AudioProgram {
   assertCompositionIdentity(composition, timeline);
+  // Composition owns the additive root multiset. Canonicalize here as well as
+  // in official constructors so an equivalent value from any package lowers
+  // to the same private route ordinals.
+  const canonicalComposition = sealComposition(composition);
   const frameCount = timelineFrameCount(timeline);
-  const clips = composition.tracks
-    .filter((track) => track.kind === "audio")
-    .flatMap((track) => track.clips.flatMap((clip) => {
+  const clips = canonicalComposition.audio
+    .flatMap((track, rootIndex) => routedTrackClips(track, rootIndex).flatMap(({ clip, path, gain: routeGain }) => {
       if (clip.artifact.mediaType !== "audio/wav") {
         throw new Error(`Audio clip ${track.id}.${clip.id} must be normalized to canonical WAV before mixing`);
       }
@@ -102,7 +148,7 @@ export function compileAudioProgram(composition: Composition, timeline: Timeline
           `${track.id}.${clip.id} piece ${pieceIndex} source start`);
         const wrap = piece.wrap;
         return {
-        id: `${track.id}:${clip.id}:${String(pieceIndex).padStart(4, "0")}`,
+        id: structuralId([...path, "clip", clip.id, "piece", String(pieceIndex)]),
         artifact: {
           kind: "blob" as const,
           resource: clip.artifact.resource,
@@ -121,7 +167,11 @@ export function compileAudioProgram(composition: Composition, timeline: Timeline
         playbackRate: piece.rate.numerator / piece.rate.denominator,
         mixStartSample: clip.target.startSample,
         mixEndSampleExclusive: clip.target.endSampleExclusive,
-        gain: clip.gain,
+        gain: (() => {
+          const gain = clip.gain * routeGain;
+          assert(Number.isFinite(gain), `Audio clip ${track.id}.${clip.id} composed gain is not finite`);
+          return gain;
+        })(),
         fadeInSamples: clip.fadeInSamples,
         fadeOutSamples: clip.fadeOutSamples,
         ...(clip.gainEnvelope === undefined ? {} : { gainEnvelope: clip.gainEnvelope }),
@@ -133,7 +183,7 @@ export function compileAudioProgram(composition: Composition, timeline: Timeline
       };
       });
     }));
-  return sealAudioProgram({
+  const program = sealAudioProgram({
     frameRate: { ...timeline.frameRate },
     frameCount,
     sampleRate: 48_000,
@@ -141,4 +191,6 @@ export function compileAudioProgram(composition: Composition, timeline: Timeline
     clips,
     mix: { normalize: false, limiter: "none" },
   });
+  verifyAudioProgram(program);
+  return program;
 }

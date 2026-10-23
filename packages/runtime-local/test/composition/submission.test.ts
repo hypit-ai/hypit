@@ -41,6 +41,7 @@ import { SqliteRuntimeState } from "../../src/sqlite-state.js";
 import {
   capabilities,
   createGreetingBuild,
+  createGreetingBuildFixture,
   createParallelGreetingBuild,
   manifest as greetingManifest,
   producers,
@@ -51,14 +52,13 @@ import {
   definition,
   durableBuildRequest,
   finishClaimedBuild,
-  fixtureTargets,
   projectRuntimeFixture,
   publication,
   resultDestination,
   runFixture,
 } from "./local-scenario.js";
 
-test("a project directory alias admits its Source and stores a project-relative Result path", async () => {
+test("a project directory alias accepts its Source and stores a project-relative Result path", async () => {
   const parent = await realpath(await mkdtemp(join(tmpdir(), "hypit-local-project-alias-")));
   try {
     const directory = join(parent, "project");
@@ -77,10 +77,10 @@ test("a project directory alias admits its Source and stores a project-relative 
       { code: "SOURCE_OUTSIDE_ROOT" });
     const runtime = await createLocalRuntime(projectRuntimeFixture(directory));
     try {
-      const request = durableBuildRequest(root, "bld_20260916T150000000Z_0000000001", createGreetingBuild());
-      await runtime.build({ ...request, catalog: { ...request.catalog, source: { path: session.entry.unit.id } } });
+      const request = durableBuildRequest(root, "bld_20260916T150000000Z_0000000001", createGreetingBuildFixture());
+      await runtime.build({ ...request, catalog: { ...request.catalog, sourcePath: session.entry.unit.id } });
       const result = await new FileBuildResultRepository(join(directory, "results")).read(request.id);
-      assert.equal(result?.source.id, "main.svml");
+      assert.equal(result?.sourceId, "main.svml");
     } finally { await runtime.close(); }
   } finally { await rm(parent, { recursive: true, force: true }); }
 });
@@ -94,7 +94,7 @@ test("a forward-only Build completes with no Core records or Producer work", asy
     const repository = new FileBuildResultRepository(join(directory, "results"));
     const prior = await repository.create({
       id: priorId,
-      source: { id: "main.svml" },
+      sourceId: "main.svml",
       publication: { outputs: [{ name: "document", output: "document", target: true,
         type: types.document,
         source: { kind: "current-record", record: "record:document" } }] },
@@ -116,7 +116,7 @@ test("a forward-only Build completes with no Core records or Producer work", asy
         id: buildId,
         definition: empty,
         catalog: {
-          source: { path: join(directory, "main.svml") },
+          sourcePath: join(directory, "main.svml"),
           publication: { outputs: [{
             name: "document",
             output: "forwarded-document",

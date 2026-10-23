@@ -1,12 +1,8 @@
 import type { PublicationPlan } from "@hypit/hypit/result";
 
 export type BuildCatalogDescriptor = {
-  readonly source: {
-    readonly path: string;
-  };
-  readonly run?: {
-    readonly path: string;
-  };
+  readonly sourcePath: string;
+  readonly runPath?: string;
   readonly publication: PublicationPlan;
 };
 

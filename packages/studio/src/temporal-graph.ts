@@ -58,7 +58,7 @@ function fixedInstant(record: TypedRecord): StudioTemporalInstantProjection | un
         expression: `${held.frame as number}f`,
         reference: "absolute",
         frame: held.frame as number,
-        source: { timelineId: held.timelineId, type: record.type, kind: "resolved", id: held.id },
+        source: { scope: "timeline", timelineId: held.timelineId, type: record.type, kind: "resolved", id: held.id },
         authority: { kind: "fixed" },
       };
 }

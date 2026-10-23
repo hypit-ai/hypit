@@ -92,8 +92,6 @@ test("primary stream selection excludes Grok's MJPEG attached picture and observ
   assert.equal(selection.videoStreamIndex, 0);
   assert.equal(selection.audioStreamIndex, 1);
   assert.equal(selection.spanAuthority, "video");
-  assert.equal("basisResourceId" in selection, false);
-  assert.equal("narrativeDigest" in selection, false);
 });
 
 test("multiple moving streams without one default fail closed instead of guessing by index or size", () => {

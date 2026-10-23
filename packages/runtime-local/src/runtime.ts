@@ -97,8 +97,8 @@ export async function createLocalRuntime(
   const producers = new ProducerRegistry();
   const endpoints = new EndpointRegistry();
   const refinements = new RefinementRegistry();
-  for (const pack of options.producerPackages ?? []) registerProducerFacets(producers, pack.producers ?? []);
-  for (const pack of options.refinementPackages ?? []) registerTypeRefinements(refinements, pack.refinements ?? []);
+  registerProducerFacets(producers, options.producers ?? []);
+  registerTypeRefinements(refinements, options.refinements ?? []);
   for (const endpoint of options.endpoints ?? []) await installEndpoint(endpoint, endpoints);
   applyEndpointBindings(endpoints, options.bindings);
   const loadedProducerPackages = new Set<string>();
@@ -113,8 +113,8 @@ export async function createLocalRuntime(
       const fresh = loaded.filter((item) => !loadedProducerPackages.has(item.specifier));
       for (const item of fresh) {
         const facets = item.contribution.facets ?? [];
-        for (const pack of producerPackagesFromFacets(facets)) registerProducerFacets(producers, pack.producers ?? []);
-        for (const pack of refinementPackagesFromFacets(facets)) registerTypeRefinements(refinements, pack.refinements ?? []);
+        for (const pack of producerPackagesFromFacets(facets)) registerProducerFacets(producers, pack);
+        for (const pack of refinementPackagesFromFacets(facets)) registerTypeRefinements(refinements, pack);
       }
       for (const item of fresh) loadedProducerPackages.add(item.specifier);
     });
@@ -253,9 +253,9 @@ export async function createLocalRuntime(
         await opened.repository.create({
           id: request.id,
           ...(resultRequest.title === undefined ? {} : { title: resultRequest.title }),
-          source: { id: projectPath(resultRequest.repository.root, request.catalog.source.path) },
-          ...(request.catalog.run === undefined ? {} : {
-            run: { id: projectPath(resultRequest.repository.root, request.catalog.run.path) },
+          sourceId: projectPath(resultRequest.repository.root, request.catalog.sourcePath),
+          ...(request.catalog.runPath === undefined ? {} : {
+            runId: projectPath(resultRequest.repository.root, request.catalog.runPath),
           }),
           publication: request.catalog.publication,
           ...(resultRequest.resourceReferences === undefined ? {} : { resourceReferences: resultRequest.resourceReferences }),

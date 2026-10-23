@@ -613,7 +613,6 @@ function flowPlacementPolicy(element: StructuredElement): TextFlowPlacementPolic
   const padding = splitNumbers(text(element, "padding", "0"), `${element.name}.padding`, 4);
   const overflow = enumText(element, "overflow", ["visible", "clip", "ellipsis", "shrink"] as const, "visible");
   return {
-    z: integer(element, "z"),
     flow: {
       inlineSize: enumText(element, "valueOf-size", ["hug", "fixed"] as const, "fixed"),
       blockSize: enumText(element, "block-size", ["hug", "fixed"] as const, "fixed"),
@@ -634,7 +633,6 @@ function flowPlacementPolicy(element: StructuredElement): TextFlowPlacementPolic
 
 function pointPlacementPolicy(element: StructuredElement): TextPointPlacementPolicy {
   return {
-    z: integer(element, "z"),
     anchorInline: enumText(element, "anchor-valueOf", ["start", "center", "end"] as const, "center"),
     anchorBlock: enumText(element, "anchor-block", ["start", "center", "end"] as const, "center"),
   };
@@ -642,7 +640,6 @@ function pointPlacementPolicy(element: StructuredElement): TextPointPlacementPol
 
 function pathPlacementPolicy(element: StructuredElement): TextPathPlacementPolicy {
   return {
-    z: integer(element, "z"),
     side: enumText(element, "side", ["left", "right"] as const, "left"),
     orientation: enumText(element, "orientation", ["follow", "upright"] as const, "follow"),
     startMarginPx: numeric(element, "start-margin", 0),
@@ -716,10 +713,10 @@ function decodeFineTextOccurrenceSurface(form: FineTextForm): StructuredSurfaceH
     const geometryAttribute = form === "flow" ? "within" : form;
     const geometryType = form === "flow" ? spatialTypes.frame : form === "point" ? spatialTypes.point : spatialTypes.path;
     allowed(element, [
-      "id", "timeline", geometryAttribute, "style", "motion", "content", "z",
+      "id", "timeline", geometryAttribute, "style", "motion", "content",
       ...(form === "flow" ? FLOW_ATTRIBUTES : form === "point" ? POINT_ATTRIBUTES : PATH_ATTRIBUTES),
       ...fineTextWindowAttributeNames,
-    ], ["id", "timeline", geometryAttribute, "style", "z"]);
+    ], ["id", "timeline", geometryAttribute, "style"]);
     const id = text(element, "id");
     const context = resolveTemporalContext({ element, resolveReference });
     const window = resolveTemporalWindowReference({ element, resolveReference });

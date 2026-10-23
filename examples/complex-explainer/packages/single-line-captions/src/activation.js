@@ -20,7 +20,7 @@ const manifest = {
   ...module,
   dependencies: [
     ...captionFineManifest.dependencies,
-    { module: captionFineModuleRef },
+    captionFineModuleRef,
   ],
   types: [],
   capabilities: [],
@@ -89,25 +89,21 @@ const handler = (ctx) => {
     }),
   };
 };
-const producers = {
-      producers: [
+const producers = [
         {
           producer,
           handler: ({ inputs: i }) => ({
-            outputs: {
-              schedule: (canonicalize(
+            kind: "output",
+            value: (canonicalize(
                   singleLineSchedule(
                     valueOf(i.timing),
                     valueOf(i.program),
                     valueOf(i.document),
                   ),
                 )),
-            },
-            needs: {},
           }),
         },
-      ],
-};
+      ];
 export const hypitPackage = {
   format: "hypit.package@1",
   modules: [{ manifest }],

@@ -6,6 +6,8 @@ import { join } from "node:path";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 
+import { renderWaveform } from "@hypit/media-local/files";
+
 import type { ServedFile } from "./compile.js";
 
 export type StudioStoryboard = {
@@ -113,12 +115,7 @@ export async function createStudioStoryboard(file: ServedFile): Promise<StudioSt
 
 /** Decode the low-resolution waveform outside the playback browser. */
 export async function createStudioWaveform(file: ServedFile): Promise<Uint8Array> {
-  return withMediaFile(file, (path) => run("ffmpeg", [
-    "-hide_banner", "-loglevel", "error", "-threads", "1",
-    "-i", path, "-filter_complex_threads", "1",
-    "-filter_complex", "[0:a:0]aresample=8000,showwavespic=s=2048x56:colors=white:scale=lin:filter=peak",
-    "-frames:v", "1", "-an", "-f", "image2pipe", "-vcodec", "png", "pipe:1",
-  ], 1024 * 1024));
+  return withMediaFile(file, (path) => renderWaveform(path, { width: 2048, height: 56 }));
 }
 
 async function withMediaFile<T>(file: ServedFile, use: (path: string) => Promise<T>): Promise<T> {

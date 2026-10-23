@@ -10,6 +10,7 @@
   <import as="gpt" from="@hypit/gpt-image@1"/>
   <import as="mediaop" from="@hypit/media-operations@1"/>
   <import as="whisperx" from="@hypit/whisperx@1"/>
+  <import as="speechalign" from="@hypit/narrative-speech-alignment@1"/>
   <import as="semantic" from="@hypit/narrative-temporal@1"/>
   <import as="narrative-caption" from="@hypit/narrative-caption@1"/>
   <import as="time" from="@hypit/timeline-author@1"/>
@@ -180,12 +181,15 @@
   <mediaop:Normalize id="first-place-rule-media" source={first-place-rule-take.video}
     video="primary-moving" audio="default" span-authority="video" clock={clock}/>
 
-  <whisperx:Alignment id="uber-rule-semantic" narrative={story}
-    segment={story.segment.uber-rule} media={uber-rule-media.media} domain={uber-rule-media.domain} language="en"/>
-  <whisperx:Alignment id="shortcuts-rule-semantic" narrative={story}
-    segment={story.segment.shortcuts-rule} media={shortcuts-rule-media.media} domain={shortcuts-rule-media.domain} language="en"/>
-  <whisperx:Alignment id="first-place-rule-semantic" narrative={story}
-    segment={story.segment.first-place-rule} media={first-place-rule-media.media} domain={first-place-rule-media.domain} language="en"/>
+  <whisperx:Transcription id="uber-rule-semantic-transcription" media={uber-rule-media.media} language="en"/>
+  <speechalign:Alignment id="uber-rule-semantic" narrative={story}
+    segment={story.segment.uber-rule} domain={uber-rule-media.domain} evidence={uber-rule-semantic-transcription.transcript}/>
+  <whisperx:Transcription id="shortcuts-rule-semantic-transcription" media={shortcuts-rule-media.media} language="en"/>
+  <speechalign:Alignment id="shortcuts-rule-semantic" narrative={story}
+    segment={story.segment.shortcuts-rule} domain={shortcuts-rule-media.domain} evidence={shortcuts-rule-semantic-transcription.transcript}/>
+  <whisperx:Transcription id="first-place-rule-semantic-transcription" media={first-place-rule-media.media} language="en"/>
+  <speechalign:Alignment id="first-place-rule-semantic" narrative={story}
+    segment={story.segment.first-place-rule} domain={first-place-rule-media.domain} evidence={first-place-rule-semantic-transcription.transcript}/>
 
   <time:Timeline id="speech" clock={clock} end="first-place-rule-semantic.end">
     <time:Window id="uber-rule-semantic" from="start" for={uber-rule-media.extent}/>
@@ -214,9 +218,9 @@
     <audio:Clip id="first-place-rule-semantic-source" source={first-place-rule-media.media} during={speech.first-place-rule-semantic}/>
   </audio:Track>
   <visual:Track id="speech-picture" timeline={speech.timeline}>
-    <visual:Clip id="uber-rule-semantic-source" media={uber-rule-media.media} during={speech.uber-rule-semantic} frame={full-frame} z="10" fit="cover"/>
-    <visual:Clip id="shortcuts-rule-semantic-source" media={shortcuts-rule-media.media} during={speech.shortcuts-rule-semantic} frame={full-frame} z="10" fit="cover"/>
-    <visual:Clip id="first-place-rule-semantic-source" media={first-place-rule-media.media} during={speech.first-place-rule-semantic} frame={full-frame} z="10" fit="cover"/>
+    <visual:Clip id="uber-rule-semantic-source" media={uber-rule-media.media} during={speech.uber-rule-semantic} frame={full-frame} fit="cover"/>
+    <visual:Clip id="shortcuts-rule-semantic-source" media={shortcuts-rule-media.media} during={speech.shortcuts-rule-semantic} frame={full-frame} fit="cover"/>
+    <visual:Clip id="first-place-rule-semantic-source" media={first-place-rule-media.media} during={speech.first-place-rule-semantic} frame={full-frame} fit="cover"/>
   </visual:Track>
 
   <audio-track:Track id="music-bed" timeline={speech.timeline}>
@@ -254,24 +258,24 @@
   </emoji:EmojiReveal>
 
   <flash:Flash id="uber-flash" timeline={speech.timeline} within={vertical.bounds}
-    during={uber-flash-window} z="80"
+    during={uber-flash-window}
     color="#2A9DFF" intensity="0.28" attack="2" hold="1" decay="5"/>
   <flash:Flash id="shortcuts-flash" timeline={speech.timeline} within={vertical.bounds}
-    during={shortcuts-flash-window} z="80"
+    during={shortcuts-flash-window}
     color="#A855F7" intensity="0.28" attack="2" hold="1" decay="5"/>
   <flash:Flash id="first-place-flash" timeline={speech.timeline} within={vertical.bounds}
-    during={first-place-flash-window} z="80"
+    during={first-place-flash-window}
     color="#F2B832" intensity="0.28" attack="2" hold="1" decay="5"/>
 
   <film:Film id="main" canvas={vertical.canvas} timeline={speech.timeline}
     appearance={recipes.film.vertical}>
-    <film:Track source={speech-picture.visual}/>
+    <film:Track id="speech-picture" source={speech-picture.visual}/>
     <film:Track source={speech-sound.audio}/>
-    <film:Track source={captions.visual}/>
-    <film:Track source={rule-reveal.visual}/>
-    <film:Track source={uber-flash.visual}/>
-    <film:Track source={shortcuts-flash.visual}/>
-    <film:Track source={first-place-flash.visual}/>
+    <film:Track id="captions" source={captions.visual}/>
+    <film:Track id="rule-reveal" source={rule-reveal.visual}/>
+    <film:Track id="uber-flash" source={uber-flash.visual}/>
+    <film:Track id="shortcuts-flash" source={shortcuts-flash.visual}/>
+    <film:Track id="first-place-flash" source={first-place-flash.visual}/>
     <film:Track source={music-bed.audio}/>
     <film:Track source={rule-reveal-sfx.audio}/>
   </film:Film>

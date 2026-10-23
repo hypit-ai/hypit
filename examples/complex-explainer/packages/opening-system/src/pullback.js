@@ -3,7 +3,7 @@ import { assertAttributes, assertEmptyElement, textAttribute, createMarkupSurfac
 import { canonicalize } from "@hypit/hypit/protocol";
 import { sealGraphFragment } from "@hypit/hypit/author";
 import { presenterStyle, presenterTypes } from "./presenter.js";
-import { sealVisualTrack, compositionTypes } from "@hypit/composition";
+import { sealPresentVisualTrack, compositionTypes } from "@hypit/composition";
 import { timelineTypes } from "@hypit/timeline";
 import { spatialTypes } from "@hypit/spatial";
 import { temporalTypes } from "@hypit/temporal";
@@ -25,8 +25,7 @@ export function installPullback(module, manifest, component, optionsType, mode="
   manifest.producers.push({
     name: mode,
     inputs,
-    outputs: [{ name: "visual", type: compositionTypes.visualTrack }],
-    needs: [],
+    result: { kind: "output", name: "visual", type: compositionTypes.visualTrack },
   });
   const fragment = sealGraphFragment({
     inputs,
@@ -76,7 +75,7 @@ export function installPullback(module, manifest, component, optionsType, mode="
         setup: `const picture=root.querySelector('.picture'),videos=[...picture.querySelectorAll('video')];return frame=>{const p=Math.max(0,Math.min(1,frame/Math.max(1,data.duration-1))),scale=1+(data.scale-1)*Math.pow(1-p,4);picture.style.transform='scale('+scale+')';picture.style.opacity=data.fade?String(1-p*p*(3-2*p)):'1';videos.forEach((v,i)=>v.style.visibility=frame>=data.spans[i].start&&frame<data.spans[i].end?'inherit':'hidden');};`,
       });
       const id = window.subjectId,
-        visual = sealVisualTrack({
+        visual = sealPresentVisualTrack({
           id,
           timelineId: timeline.id,
           visualIr: "hypit.visual-ir@1",
@@ -85,7 +84,6 @@ export function installPullback(module, manifest, component, optionsType, mode="
                 {
                   id,
                   order: 0,
-                  z: 0,
                   span: window.span,
                   elements: [
                     {
@@ -107,10 +105,7 @@ export function installPullback(module, manifest, component, optionsType, mode="
               ]
             : [],
         });
-      return {
-        outputs: { visual: (canonicalize(visual)) },
-        needs: {},
-      };
+      return { kind: "output", value: canonicalize(visual) };
     },
   });
   return createMarkupSurfaceFacet({

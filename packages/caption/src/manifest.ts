@@ -76,8 +76,8 @@ export const captionMarkupSurfaces = [{
 export const captionManifest: ModuleManifest = {
   format: "hypit.module@1", name: captionModuleRef.name, version: captionModuleRef.version,
   dependencies: [temporalDependency], types: [
-    { name: captionTypes.document.name }, { name: captionTypes.header.name }, { name: captionTypes.filter.name },
-    { name: captionTypes.style.name }, { name: captionTypes.program.name }, { name: captionTypes.timing.name },
+    captionTypes.document.name, captionTypes.header.name, captionTypes.filter.name,
+    captionTypes.style.name, captionTypes.program.name, captionTypes.timing.name,
   ], capabilities: [], producers: [{
     name: captionProducers.create.name,
     inputs: [{ name: "document", type: captionTypes.document }, { name: "header", type: captionTypes.header }],
@@ -94,4 +94,4 @@ export const captionManifest: ModuleManifest = {
     result: { kind: "output" as const, name: "program", type: captionTypes.program },
   }],
 };
-export const captionDependency = { module: captionModuleRef } as const;
+export const captionDependency = captionModuleRef;

@@ -24,7 +24,6 @@ export type ProducerHandlerResult = {
  */
 export type ProducerHandlerContext = {
   readonly command: InvokeProducerCommand;
-  readonly producer: ProducerRef;
   readonly inputs: Readonly<Record<string, TypedRecord>>;
 };
 
@@ -56,9 +55,7 @@ export function registerProducerFacets(
 }
 
 /** Producer-owned deterministic implementations; it selects no Provider or Runtime infrastructure. */
-export type ProducerPackage = {
-  readonly producers?: readonly ProducerFacet[];
-};
+export type ProducerPackage = readonly ProducerFacet[];
 
 export const producerPackageFacetAbi = "hypit.producer-package@1";
 
@@ -68,15 +65,11 @@ export type ProducerPackageFacet = Facet & {
 };
 
 /** Convert one package's Producer-owned implementations into an opaque package Facet. */
-export function createProducerPackageFacet(value: unknown): ProducerPackageFacet {
-  const item = value !== null && typeof value === "object"
-    ? value as ProducerPackage
-    : {};
+export function createProducerPackageFacet(producers: ProducerPackage): ProducerPackageFacet {
+  if (!Array.isArray(producers)) throw new Error("Producer package must be an array of Producer facets");
   return {
     abi: producerPackageFacetAbi,
-    implementation: {
-      ...(item.producers === undefined ? {} : { producers: item.producers }),
-    },
+    implementation: producers,
   };
 }
 

@@ -18,10 +18,10 @@ With the named inputs already declared:
 
 <film:Film id="main" canvas={canvas.canvas} timeline={speech.timeline}
   appearance={look.film.main}>
-  <film:Track source={picture.visual}/>
+  <film:Track id="picture" source={picture.visual}/>
   <film:Track source={mix.audio}/>
-  <film:Track source={coverage.visual}/>
-  <film:Track source={captions.visual}/>
+  <film:Track id="coverage" source={coverage.visual}/>
+  <film:Track id="captions" source={captions.visual}/>
   <film:Track source={music.audio}/>
 </film:Film>
 <html:Video id="final" composition={main.composition} timeline={speech.timeline}/>
@@ -31,8 +31,29 @@ An example Film Recipe is `film.main { background: #18212A; }`. Canvas supplies 
 the Timeline supplies program time. `picture.visual` is a Visual Track output and `mix.audio` is an
 Audio Track output. Include every wanted output explicitly: placing the same normalized media in a
 Visual Clip and an Audio Clip is what makes both its picture and its audio present.
-Layer order is authored in the Visual Tracks' Presents, so moving these Film children does not
-reorder the picture.
+Each visual Film child has a sibling-unique `id` owned by its immediate parent scope. Siblings paint in
+declaration order from back to front, so moving a child changes how that complete contribution is
+composited. The member `id` names this placement, so one VisualTrack value may be reused at several
+explicitly named positions. Identity does not participate in paint order.
+
+When several visual contributions must first become one picture, place them in a Film Stack. The
+Stack's declaration position places that closed picture in its parent; its children keep their own local order:
+
+```svml
+<film:Track id="background" source={background.visual}/>
+<film:Stack id="treated-subject">
+  <film:Track id="subject" source={subject.visual}/>
+  <film:Track id="look" source={look.visual}/>
+</film:Stack>
+<film:Track id="captions" source={captions.visual}/>
+```
+
+This is the appropriate scope for a Visual Adjustment that should affect `subject.visual` without
+affecting the background or captions. Keep AudioTrack selections at the Film root; visual grouping
+does not create an audio bus.
+Root AudioTracks are additive signals rather than a map keyed by Track id. Selecting two independently
+produced signals with the same value id keeps both contributions; intentional repeated routing of one
+source should be expressed by the component or Audio Mix that owns that relationship.
 
 `main.composition` is the assembled work, usable in Studio. `final.video` asks for an encoded video.
 A compatible Composition from another component can also feed the HTML Video Surface. Pure A-roll may
@@ -61,7 +82,7 @@ explicit end and pass it to the components, Film and HTML Video:
   <chat:Message id="answer" sender="Leo" side="right" at={animation.answer} text="Let's go."/>
 </chat:Scene>
 <film:Film id="main" canvas={canvas.canvas} timeline={animation.timeline} appearance={look.film.main}>
-  <film:Track source={conversation.visual}/>
+  <film:Track id="conversation" source={conversation.visual}/>
 </film:Film>
 <html:Video id="final" composition={main.composition} timeline={animation.timeline}/>
 ```
@@ -73,7 +94,7 @@ requested frame; the Film's background supplies the canvas color. With no AudioT
 video is silent. Render ranges and worker settings apply in the same way as for spoken work.
 
 Media, Typography, Audio and the graphic Tracks accept this same Timeline. Visual and Audio Clips
-receive ordinary media and Windows explicitly; the Timeline does not contain or discover media. Caption
+receive their media and Windows explicitly; Timeline supplies the absolute time values. Caption
 uses its speech-linked document; authored chat text belongs to the chat scene. The working example
 `examples/semantic-composition/chat.svml` and its `@example/chat-scene` package show the complete
 code-only composition, including scrolling and arbitrary message arrivals.
@@ -102,8 +123,8 @@ explains choosing the reuse boundary.
 
 ## Execution and capacity
 
-The HTML program compiler lowers the selected Composition, and the selected rasterization Provider produces its picture. Timeline audio is prepared
-from the included AudioTracks, then picture and sound are muxed into the delivered file. A Runtime
+The selected HTML renderer produces the Composition's picture. Timeline audio is prepared from the
+included AudioTracks, then picture and sound are muxed into the delivered file. A Runtime
 can bind these capabilities to different compatible Endpoints.
 
 Before the first local render, or when browser startup reports a missing executable, follow

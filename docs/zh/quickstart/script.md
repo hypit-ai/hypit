@@ -188,10 +188,10 @@ Selection 是内联声明的具名语义**范围**。每个名字只能有一对
 
 `~` 后缀/前缀控制边界是吸附到左边还是右边。默认的打开标记为右吸附；默认的关闭标记为左吸附。
 
-完整 Script 严格拥有 `2M + 2N + 2` 个有序语义锚点：每个 Token 两个、每个 Segment 两个，
-再加 Program 自己的首尾。最外侧切口仍用 affinity 区分语义：第一个 Segment 前的 `@{~id}`
-选择 Program start，`@{id}` 选择首 Segment start；末 Segment 后的 `@{/id}` 选择末 Segment end，
-`@{/id~}` 选择 Program end。对齐后它们可能落在同一帧，但作者身份并不相同。
+完整 Script 严格拥有 `2M + 2N` 个有序语义锚点：每个 Token 两个、每个 Segment 两个，
+不会额外生成外层或 Program 首尾锚点。在第一个 Segment 之前，两种 affinity 都落到该
+Segment 的 start；在最后一个 Segment 之后，两种 affinity 都落到该 Segment 的 end。
+在 Segment 内部或两个 Segment 之间，affinity 仍按标记位置选择相邻的 Token 或 Segment 边界。
 
 ### 多个具名 Selection
 

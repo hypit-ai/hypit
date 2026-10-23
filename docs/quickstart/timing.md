@@ -20,6 +20,7 @@ or Script.
 ```svml
 <import as="mediaop" from="@hypit/media-operations@1"/>
 <import as="whisperx" from="@hypit/whisperx@1"/>
+<import as="speechalign" from="@hypit/narrative-speech-alignment@1"/>
 <import as="semantic" from="@hypit/narrative-temporal@1"/>
 <import as="time" from="@hypit/timeline-author@1"/>
 <import as="media" from="@hypit/media@1"/>
@@ -48,17 +49,40 @@ semantic picture changes, sound events or another consumer needs Script position
 accepted performance:
 
 ```svml
-<whisperx:Alignment id="opening-alignment" narrative={story}
-  segment={story.segment.opening} media={opening-media.media}
-  domain={opening-media.domain} language="en"/>
-<whisperx:Alignment id="answer-alignment" narrative={story}
-  segment={story.segment.answer} media={answer-media.media}
-  domain={answer-media.domain} language="en"/>
+<whisperx:Transcription id="opening-transcription"
+  media={opening-media.media} language="en"/>
+<speechalign:Alignment id="opening-alignment" narrative={story}
+  segment={story.segment.opening} domain={opening-media.domain}
+  evidence={opening-transcription.transcript}/>
+<whisperx:Transcription id="answer-transcription"
+  media={answer-media.media} language="en"/>
+<speechalign:Alignment id="answer-alignment" narrative={story}
+  segment={story.segment.answer} domain={answer-media.domain}
+  evidence={answer-transcription.transcript}/>
 ```
 
-Each output is only a `NarrativeAlignment`: Segment and word boundaries measured on that local
-domain. It does not contain media and does not choose a Timeline position. A Segment with no Tokens
-omits `language`; its boundaries are the local domain boundaries and no acoustic request is needed.
+Each Transcription publishes only `SpeechTranscriptEvidence`. Each Alignment publishes only a
+`NarrativeAlignment`: Segment and word boundaries measured on that local domain. Neither result
+contains media or chooses a Timeline position. A Segment with no Tokens uses
+`<speechalign:Alignment>` without `evidence`; its boundaries are the local domain boundaries and no
+acoustic request is needed.
+
+To retain and edit the observation, materialize it before the Build and import that Source:
+
+```bash
+hypit transcribe opening.mp4 --language en --to opening.transcript.svml
+```
+
+```svml
+<import as="accepted-speech" source="./opening.transcript.svml"/>
+<speechalign:Alignment id="opening-alignment" narrative={story}
+  segment={story.segment.opening} domain={opening-media.domain}
+  evidence={accepted-speech.transcript}/>
+```
+
+The file stores exact 16 kHz sample boundaries. Correcting those boundaries changes the derived
+semantic and Caption timing on the next Build; it does not require changing Script meaning, media
+placement or the Alignment operation.
 
 ## Construct the absolute Timeline
 
@@ -106,9 +130,9 @@ offset is needed.
 ```svml
 <visual:Track id="picture" timeline={speech.timeline}>
   <visual:Clip id="opening" media={opening-media.media} during={speech.opening}
-    frame={speech-frame} z="10" fit="cover"/>
+    frame={speech-frame} fit="cover"/>
   <visual:Clip id="answer" media={answer-media.media} during={speech.answer}
-    frame={speech-frame} z="10" fit="cover"/>
+    frame={speech-frame} fit="cover"/>
 </visual:Track>
 
 <audio:Track id="mix" timeline={speech.timeline}>

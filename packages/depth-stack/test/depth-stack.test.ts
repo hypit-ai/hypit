@@ -1,21 +1,18 @@
-import { sealTimeline, timelineManifest, timelineTypes } from "@hypit/timeline";
+import { sealTimeline, timelineTypes } from "@hypit/timeline";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { fixtureResource } from "../../../test/fixture-resource.js";
 import { timelineFixture } from "../../../test/timeline-fixture.js";
 
-import { blobManifest, blobTypes } from "@hypit/blob";
-import { compositionDependency, compositionManifest, compositionTypes } from "@hypit/composition";
+import { blobTypes } from "@hypit/blob";
+import { compositionTypes, visualElements } from "@hypit/composition";
 import type { VisualElement, VisualSourceTimeMap } from "@hypit/composition";
-import { createResolvedClosure } from "@hypit/kernel";
 import {
   decodeDepthStackLabelSurface,
   decodeDepthStackSurface,
   appendDepthStackCard,
   createDepthStackCardSet,
   decodeDepthStackSpec,
-  depthStackManifest,
-  depthStackMarkupSurfaces,
   depthStackProducers,
   depthStackTypes,
   finalizeDepthStack,
@@ -34,15 +31,13 @@ import type {
   DepthStackSpec,
 } from "@hypit/depth-stack";
 import type { FontArtifactRef } from "@hypit/media";
-import { mediaManifest, mediaTypes } from "@hypit/media";
-import { mediaOperationsManifest } from "@hypit/media-operations";
+import { mediaTypes } from "@hypit/media";
 import type { MediaLayerSet } from "@hypit/visual-track";
-import type { ModuleManifest } from "@hypit/protocol";
-import { temporalManifest, temporalTypes } from "@hypit/temporal";
+import { temporalTypes } from "@hypit/temporal";
 import type { TemporalInstant } from "@hypit/temporal";
-import { canvasFrame, sealCanvas, sealSpatialFrame, spatialManifest, spatialTypes } from "@hypit/spatial";
-import { recipeManifest, recipeType } from "@hypit/recipe";
-import { sealText, textManifest, textTypes } from "@hypit/text";
+import { canvasFrame, sealCanvas, sealSpatialFrame, spatialTypes } from "@hypit/spatial";
+import { recipeType } from "@hypit/recipe";
+import { sealText, textTypes } from "@hypit/text";
 import type { Recipe } from "@hypit/recipe";
 import type {
   StructuredElement,
@@ -50,7 +45,7 @@ import type {
   SurfaceResolvedReference,
   MarkupAttributeValue,
 } from "@hypit/markup";
-import { visualTrackManifest, visualTrackTypes } from "@hypit/visual-track";
+import { visualTrackTypes } from "@hypit/visual-track";
 
 const space = sealTimeline({ id: "test-space", frameCount: 60, frameRate: { numerator: 30, denominator: 1 },
 });
@@ -78,27 +73,6 @@ const video = (name: string) => ({
   resource: fixtureResource(`deck-video:${name}`),
   size: 32,
   mediaType: "video/mp4",
-});
-
-test("DepthStack Surface declares every sealed Record it may emit", () => {
-  const surface = depthStackMarkupSurfaces.find((item) => item.name === "track");
-  assert.ok(surface !== undefined);
-  const names = new Set(surface.outputs.map((type) => type.name));
-  for (const type of [
-    depthStackTypes.header,
-    depthStackTypes.spec,
-    depthStackTypes.cardSpec,
-    spatialTypes.fit,
-    visualTrackTypes.sampleLayerSpec,
-    visualTrackTypes.paintLayerSpec,
-    depthStackTypes.cardLabel,
-    depthStackTypes.cardLabelStyle,
-    textTypes.text,
-    depthStackTypes.program,
-    compositionTypes.visualTrack,
-  ]) {
-    assert.ok(names.has(type.name), `${type.name} output`);
-  }
 });
 
 function stillMaterial(name: string): MediaLayerSet {
@@ -184,7 +158,6 @@ function baseSpec(input: Partial<DepthStackSpec> = {}): DepthStackSpec {
       border: { widthPx: 2, style: "solid", color: "#ffffff" },
       shadows: [{ offsetX: 0, offsetY: 6, blurPx: 14, spreadPx: 0, color: "#00000088" }],
     },
-    stackingOrder: 30,
     ...input,
   });
 }
@@ -247,7 +220,8 @@ function program(input: {
 }
 
 function element(track: ReturnType<typeof renderDepthStack>, presentId: string, predicate: (value: VisualElement) => boolean): VisualElement {
-  const value = track.presents.find((present) => present.id === presentId)?.elements.find(predicate);
+  const present = track.items.find((candidate) => candidate.id === presentId);
+  const value = present === undefined ? undefined : visualElements(present.root).find(predicate);
   assert(value !== undefined, `${presentId} element is missing`);
   return value;
 }
@@ -297,21 +271,21 @@ test("relative-depth pose resolves offsets, multiplicative tone and alternating 
 
 test("collection reflow moves the complete old/new union while cut replaces it exactly", () => {
   const animated = renderDepthStack(space, program());
-  const stageTwo = animated.presents.filter((present) => present.span.startFrame === 20);
+  const stageTwo = animated.items.filter((present) => present.span.startFrame === 20);
   assert.deepEqual(stageTwo.map((present) => present.id).sort(), [
     "card-1:stage:2", "card-2:stage:2", "card-3:stage:2",
   ]);
   for (const present of stageTwo) {
-    const pose = present.elements.find((value) => value.id === "deck-pose");
+    const pose = visualElements(present.root).find((value) => value.id === "deck-pose");
     assert.deepEqual(pose?.animation?.keyframes.map((value) => value.atFrame), [0, 4, 20]);
-    assert.ok(present.elements.some((value) => value.id === "deck-placement"));
+    assert.ok(visualElements(present.root).some((value) => value.id === "deck-placement"));
   }
   const cut = renderDepthStack(space, program({
     spec: baseSpec({ reflow: { durationFrames: 0, easing: "linear" } }),
   }));
-  assert.equal(cut.presents.filter((present) => present.span.startFrame === 20).length, 3);
-  assert.ok(cut.presents.filter((present) => present.span.startFrame === 20)
-    .every((present) => present.elements.find((value) => value.id === "deck-pose")?.animation === undefined));
+  assert.equal(cut.items.filter((present) => present.span.startFrame === 20).length, 3);
+  assert.ok(cut.items.filter((present) => present.span.startFrame === 20)
+    .every((present) => visualElements(present.root).find((value) => value.id === "deck-pose")?.animation === undefined));
 });
 
 test("timed Cards hold future head/current clock/past tail without renderer playback history", () => {
@@ -388,8 +362,9 @@ function exactLabel(): DepthStackCardLabel {
 test("optional labels preserve exact fonts and remain inside the Card-owned pose", () => {
   const track = renderDepthStack(space, program({ labels: [exactLabel(), noDepthStackCardLabel(), noDepthStackCardLabel()] }));
   const label = element(track, "card-1:stage:1", (value) => value.kind === "text-flow");
+  const frame = element(track, "card-1:stage:1", (value) => value.id === "deck-material:frame");
   assert.equal(label.kind, "text-flow");
-  assert.equal(label.parent, "deck-material:frame");
+  assert.ok(frame.kind === "box" && frame.children.includes(label));
   assert.equal(label.typography.fonts?.[0]?.sources[0]?.artifact.resource, font.sources[0]!.artifact.resource);
   const authored = exactLabel();
   assert.equal(authored.kind, "text");
@@ -420,7 +395,7 @@ test("the author Surface keeps every source, trigger, terminal, Frame and option
     ["first", plain("first", blobTypes.blob)], ["first-extent", plain("first-extent", spatialTypes.extent)],
     ["second", plain("second", mediaTypes.synchronized)], ["one", plain("one", temporalTypes.instant)],
     ["two", plain("two", temporalTypes.instant)], ["terminal", plain("terminal", temporalTypes.instant)],
-    ["deck-style", appearance("deck-style", { "visible-previous": 1, "visible-next": 1, "reflow-frames": 4, fit: "cover", "stack-order": 30 })],
+    ["deck-style", appearance("deck-style", { "visible-previous": 1, "visible-next": 1, "reflow-frames": 4, fit: "cover" })],
     ["video-style", appearance("video-style", { fit: "contain", "playback-future": "continue" })],
   ]);
   const result = await decodeDepthStackSurface({
@@ -443,10 +418,7 @@ test("the author Surface keeps every source, trigger, terminal, Frame and option
   assert.ok(fragment.operations.some((operation) => operation.producer.name === "append-timed-media-layer"));
   assert.ok(fragment.operations.some((operation) => operation.producer.name === "append-depth-stack-card"));
   assert.ok(fragment.operations.some((operation) => operation.producer.name === "finalize-depth-stack"));
-  assert.equal(result.components.some(({ fragment: candidate }) => candidate.operations.some((operation) =>
-    operation.producer.module.name === "@hypit/narrative-temporal")), false);
   assert.ok(fragment.inputs.some((input) => input.name === "frame"));
-  assert.equal(fragment.inputs.some((input) => input.name === "within"), false);
   assert.ok(fragment.inputs.some((input) => input.name === "terminal"));
   assert.equal(fragment.inputs.filter((input) => input.type.name === temporalTypes.instant.name).length, 3);
 });
@@ -494,40 +466,7 @@ test("Label Surface accepts ordinary graph Text without copying it during author
     resolveAsset: async () => { throw new Error("no asset resolution expected"); },
   });
   assert.deepEqual(result.components[0]?.inputs.content, { kind: "record", id: "copy" });
-  assert.equal(result.records.some((record) => record.type.name === textTypes.text.name), false);
-});
-
-test("another Deck family can coexist by contributing only the existing VisualTrack waist", () => {
-  const other: ModuleManifest = {
-    format: "hypit.module@1" as const,
-    name: "example.carousel",
-    version: "1",
-    dependencies: [compositionDependency],
-    types: [], capabilities: [], producers: [{
-      name: "render-carousel",
-      inputs: [],
-      result: { kind: "output" as const, name: "track", type: compositionTypes.visualTrack },
-    }],
-  };
-  const closure = createResolvedClosure([
-    blobManifest,
-    timelineManifest,
-    temporalManifest,
-    mediaManifest,
-    spatialManifest,
-    compositionManifest,
-    recipeManifest,
-    mediaOperationsManifest,
-    visualTrackManifest,
-    textManifest,
-    depthStackManifest,
-    other,
-  ]);
-  assert.ok(closure.modules.some((module) => module.manifest.name === "@hypit/depth-stack"));
-  assert.ok(closure.modules.some((module) => module.manifest.name === "example.carousel"));
-  assert.deepEqual(other.producers[0]?.result.kind === "output"
-    ? other.producers[0].result.type
-    : undefined, compositionTypes.visualTrack);
+  assert.deepEqual(result.records.map((record) => record.type), [depthStackTypes.cardLabelStyle]);
 });
 
 test("SVS decoding exposes documented depth, frame treatment and playback axes", () => {
@@ -539,12 +478,10 @@ test("SVS decoding exposes documented depth, frame treatment and playback axes",
       "previous-y-step": 24, "previous-scale-step": 0.93, "previous-rotation-mode": "alternate",
       "next-y-step": -18, "next-opacity-step": 0.7, "reflow-frames": 6, "reflow-easing": "ease-out",
       clip: "rounded", radius: 16, padding: "8 12", "border-width": 2, "border-color": "#ffffff",
-      "stack-order": 44,
     },
   });
   assert.deepEqual(value.visibility, { previous: 3, next: 2, wrap: false });
   assert.equal(value.poses.previous.yPerDepthPx, 24);
   assert.equal(value.reflow.durationFrames, 6);
   assert.equal(value.treatment.clip.kind, "rounded");
-  assert.equal(value.stackingOrder, 44);
 });

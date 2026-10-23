@@ -119,7 +119,7 @@ export type ModelModule<Key extends string = string> = {
   readonly module: ModuleRef;
   readonly manifest: ModuleManifest;
   readonly operations: Readonly<Record<Key, ModelOperation>>;
-  readonly component: (ProducerPackage & RefinementPackage) & {
+  readonly component: { producers: ProducerPackage; refinements: RefinementPackage } & {
     readonly refinements: readonly TypeRefinement[];
     readonly producers: readonly ProducerFacet[];
   };
@@ -181,8 +181,8 @@ export function defineModelModule<const Key extends string>(options: {
       format: "hypit.module@1",
       name: options.module.name,
       version: options.module.version,
-      dependencies: dependencyModules.map((module) => ({ module })),
-      types: options.operations.map((item) => ({ name: item.requestTypeName })),
+      dependencies: dependencyModules,
+      types: options.operations.map((item) => item.requestTypeName),
       capabilities: options.operations.map((item) => ({
         name: item.capabilityName,
         returns: item.returns,
@@ -270,7 +270,7 @@ export type ExactModelModule<Key extends string = string> = {
   readonly manifest: ModuleManifest;
   /** Keyed by the endpoint keys declared by the module. */
   readonly endpoints: Readonly<Record<Key, ExactModelEndpoint>>;
-  readonly component: (ProducerPackage & RefinementPackage) & {
+  readonly component: { producers: ProducerPackage; refinements: RefinementPackage } & {
     readonly refinements: readonly TypeRefinement[];
     readonly producers: readonly ProducerFacet[];
   };
@@ -372,7 +372,7 @@ export function defineFieldModelModule<const Key extends string>(
   }));
   const fieldDependencies = fieldData.flatMap((item) => [
     ...(sameModule(item.spec.result.primary.producer.module, options.module)
-      ? [] : [{ module: item.spec.result.primary.producer.module }]),
+      ? [] : [item.spec.result.primary.producer.module]),
     ...(item.spec.ports.ports.some((port) => port.value.kind === "media") ? [blobDependency] : []),
     ...(item.spec.ports.ports.some((port) => port.value.kind === "text") ? [textDependency] : []),
   ]);
@@ -381,18 +381,16 @@ export function defineFieldModelModule<const Key extends string>(
     ...model.manifest,
     dependencies: [...model.manifest.dependencies, ...fieldDependencies]
       .filter((item, index, dependencies) => dependencies.findIndex((candidate) =>
-        sameModule(candidate.module, item.module)) === index),
+        sameModule(candidate, item)) === index),
     types: [
       ...model.manifest.types,
       ...endpointData.flatMap((item) => [
-        {
-          name: item.draftType.name,
-        },
+        item.draftType.name,
         ...Object.values(item.mediaBindings).map((binding) => {
           const port = item.spec.ports.ports.find((candidate): candidate is GenerationMediaPort =>
             candidate.name === binding.port && candidate.value.kind === "media");
           assert(port !== undefined, `${item.spec.key} media binding ${binding.port} has no port`);
-          return { name: binding.type.name };
+          return binding.type.name;
         }),
       ]),
     ],

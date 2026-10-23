@@ -112,7 +112,7 @@ const frameSpan = object({ startFrame: { schema: unsignedInteger }, endFrameExcl
 const item = object({
   id: { schema: string }, span: { schema: frameSpan },
   frame: { schema: spatialFrameSchema }, style: { schema: style }, content: { schema: content },
-  avatar: { schema: blobRef, optional: true }, order: { schema: unsignedInteger },
+  avatar: { schema: blobRef, optional: true },
 });
 
 export const commentStickerHeaderSchema: ValueSchema = object({
@@ -146,7 +146,7 @@ export const commentStickerMarkupSurfaces = [
             summary: "Chooses the Recipe that decides the card's appearance and its enter, hold and exit motion.",
             recipe: [
               { name: "stack-order", required: false, fallback: "62",
-                summary: "Sets the stacking order every card drawn in this Style takes among the Program's visual Tracks." },
+                summary: "Sets the Track-local paint order shared by cards drawn in this Style." },
               { name: "background", required: false, fallback: "#ffffff",
                 summary: "Fills the card body, and the tail that hangs beneath it." },
               { name: "border-color", required: false, fallback: "#0000000e",
@@ -328,12 +328,12 @@ export const commentStickerManifest: ModuleManifest = {
   version: commentStickerModuleRef.version,
   dependencies: [blobDependency, timelineDependency, spatialDependency, temporalDependency, mediaDependency, compositionDependency, textDependency],
   types: [
-    { name: commentStickerTypes.header.name },
-    { name: commentStickerTypes.style.name },
-    { name: commentStickerTypes.itemSpec.name },
-    { name: commentStickerTypes.content.name },
-    { name: commentStickerTypes.set.name },
-    { name: commentStickerTypes.program.name },
+    commentStickerTypes.header.name,
+    commentStickerTypes.style.name,
+    commentStickerTypes.itemSpec.name,
+    commentStickerTypes.content.name,
+    commentStickerTypes.set.name,
+    commentStickerTypes.program.name,
   ],
   capabilities: [],
   producers: [
@@ -361,4 +361,4 @@ export const commentStickerManifest: ModuleManifest = {
   ],
 };
 
-export const commentStickerDependency = { module: commentStickerModuleRef } as const;
+export const commentStickerDependency = commentStickerModuleRef;

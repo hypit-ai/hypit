@@ -80,7 +80,7 @@ filters whose content it presents within that window.
 
 For a keyword layout, Script can mark `useful{emphasis}`. The family reads that attribute from the
 CaptionDocument and gives it a visual role within the complete Cue. The word role and the time
-window answer different questions; an emphasis attribute does not invent another time language.
+window answer different questions; the Use's upstream Window supplies its time.
 
 ## Design a family-specific schedule
 

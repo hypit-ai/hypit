@@ -21,9 +21,9 @@ function activeBuild(id: string, root: string): BuildView {
     createdAt: buildIdCreatedAt(id)!,
     activity: "saving-result",
     outcome: "complete",
-    cancellationRequested: false,
-    source: { path: `${root}/author/main.svml` },
-    run: { path: `${root}/runs/build.svrun` },
+
+    sourcePath: `${root}/author/main.svml`,
+    runPath: `${root}/runs/build.svrun`,
     targets: ["final.video"],
     acceptedRecords: 1,
     outstandingCommands: 0,
@@ -37,8 +37,8 @@ test("Studio library joins this environment's Builds with project Build Result f
   const manifests = [relevant, unrelated].map((entry) => ({
     format: "hypit.build-result@1" as const,
     id: entry.id,
-    source: { id: entry.source!.path },
-    ...(entry.run === undefined ? {} : { run: { id: entry.run.path } }),
+    sourceId: entry.sourcePath!,
+    ...(entry.runPath === undefined ? {} : { runId: entry.runPath }),
     targets: ["final.video"],
     finishedAt: entry.createdAt,
     outcome: "complete" as const,
@@ -149,8 +149,8 @@ test("Studio opens project Build Results without a Runtime or ResourceStore", as
     await writeFile(join(directory, "result.json"), `${JSON.stringify({
       format: "hypit.build-result@1",
       title: "First cut",
-      source: { id: join(root, "main.svml") },
-      run: { id: join(root, "build.svrun") },
+      sourceId: join(root, "main.svml"),
+      runId: join(root, "build.svrun"),
       targets: ["final.video"],
       finishedAt: 200,
       outcome: "complete",
@@ -196,13 +196,13 @@ test("Studio opens project Build Results without a Runtime or ResourceStore", as
 
 const mediaTypeRef = { module: { name: "example", version: "1" }, name: "Media" };
 
-test("media listing includes active files, follows file references and leaves Composite Outputs unopened", async () => {
+test("media listing includes active files, follows file references and leaves value-document Outputs unopened", async () => {
   const owner = "bld_20260902T130000010Z_0000000001";
   const active = "bld_20260902T130000011Z_0000000001";
   const image = { type: mediaTypeRef, value: { kind: "build-file" as const, path: "files/portrait.png", mediaType: "image/png", size: 100 } };
   const manifests: import("@hypit/result").BuildResultManifest[] = [{
-    format: "hypit.build-result@1", id: owner, source: { id: "/project/main.svml" },
-    run: { id: "/project/earlier.svrun" }, targets: ["portrait.image"], outcome: "failed", finishedAt: 300,
+    format: "hypit.build-result@1", id: owner, sourceId: "/project/main.svml",
+    runId: "/project/earlier.svrun", targets: ["portrait.image"], outcome: "failed", finishedAt: 300,
     failure: "Rendering failed", highlightedOutputs: ["portrait.image"],
     outputs: {
       "portrait.image": image,
@@ -211,8 +211,8 @@ test("media listing includes active files, follows file references and leaves Co
       "semantic.take": { type: mediaTypeRef, value: { kind: "value", path: "values/semantic.json" } },
     },
   }, {
-    format: "hypit.build-result@1", id: active, source: { id: "/project/main.svml" },
-    run: { id: "/project/current.svrun" }, targets: ["final.video"],
+    format: "hypit.build-result@1", id: active, sourceId: "/project/main.svml",
+    runId: "/project/current.svrun", targets: ["final.video"],
     outputs: {
       "reused.image": { type: mediaTypeRef, value: { kind: "build-output", build: owner, output: "portrait.image" } },
       "voice.audio": { type: mediaTypeRef, value: { kind: "build-file", path: "files/voice.wav", mediaType: "audio/wav", size: 80 } },
@@ -236,15 +236,15 @@ test("media listing includes active files, follows file references and leaves Co
     },
     async resolve(_build, output) {
       resolved.push(output);
-      assert.equal(output, "reused.image", "No Composite value or non-media file should be opened");
+      assert.equal(output, "reused.image", "No value document or non-media file should be opened");
       return { ...image, build: owner, output: "portrait.image" };
     },
     async describeFile(_build, file) { return file; },
     async openFile() { throw new Error("Listing never reads media bytes"); },
   };
   const view: BuildView = {
-    ...activeBuild(active, "/project"), source: { path: "/project/main.svml" },
-    run: { path: "/project/current.svrun" }, activity: "running", requests: { total: 4, completed: 2 },
+    ...activeBuild(active, "/project"), sourcePath: "/project/main.svml",
+    runPath: "/project/current.svrun", activity: "running", requests: { total: 4, completed: 2 },
   };
   const input = { workspaceRoot: "/project", results, runtime: { async activity() { return { builds: [view], capacity: [] }; } } };
   const tasks = await readStudioLibrary({ ...input, section: "tasks" });
@@ -283,7 +283,7 @@ test("Studio groups repeated external file references and retains both Build use
     const results = new FileBuildResultRepository(join(root, "results"));
     const type = { module: { name: "example", version: "1" }, name: "Image" };
     for (const id of ["bld_20260902T130000000Z_0000000001", "bld_20260902T130000001Z_0000000001"]) {
-      const writer = await results.create({ id, source: { id: join(root, "main.svml") },
+      const writer = await results.create({ id, sourceId: join(root, "main.svml"),
         publication: { outputs: [{ name: "portrait", output: "portrait", target: true,
           type,
           source: { kind: "current-record", record: "image" } }] },

@@ -49,9 +49,9 @@ components can complete their local layout and motion. Hypit supplies shared aut
 interfaces for both existing and project-defined components.
 
 The work has one finite Timeline and one Canvas. Prepared media has local domains and Extents;
-domain projectors can translate local evidence through equal-length absolute Windows without becoming
-Timeline contents. Semantic alignment, musical beats and authored events are peer sources of absolute
-time. Visual and Audio Clips consume ordinary media occurrences with explicit Windows. Time can contain speech, gaps, overlaps or
+domain projectors translate local evidence into absolute Windows that components can consume.
+Semantic alignment, musical beats and authored events are peer sources of absolute time. Visual and
+Audio Clips connect prepared media to explicit Windows. Time can contain speech, gaps, overlaps or
 wholly authored animation. Space can contain independent contributions or a coordinated scene with
 its own internal tree. [System relationships](references/production/system.md) explains this adaptive
 organization and connects it to materials and execution.
@@ -79,8 +79,7 @@ authored components would lose. [Video direction](references/playbooks/craft/vid
 owns that decision and the distinction between understanding footage and using it as model input.
 
 A-roll names the performance carrying a passage. Its normalized Extent may construct Timeline and its
-local domain may project meaning; after those contributions, picture and sound use the same ordinary
-media as any other material. Place its picture through a Visual Clip or project scene, and its sound
+local domain may project meaning. Place its picture through a Visual Clip or project scene, and its sound
 through an Audio Clip, each with an explicit absolute Window and sampling choice. Choose what leads the picture
 from the current idea. A direct cut or continuous movement can each express that change. Spatial
 grouping and timing are independent choices, so a whole scene can respond to a Moment and separate

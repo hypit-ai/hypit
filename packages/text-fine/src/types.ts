@@ -39,18 +39,15 @@ export type TextPathMotion = {
 };
 
 export type TextFlowPlacementPolicy = {
-  readonly z: number;
   readonly flow: TextAreaFlow;
 };
 
 export type TextPointPlacementPolicy = {
-  readonly z: number;
   readonly anchorInline: "start" | "center" | "end";
   readonly anchorBlock: "start" | "center" | "end";
 };
 
 export type TextPathPlacementPolicy = {
-  readonly z: number;
   readonly side: "left" | "right";
   readonly orientation: "follow" | "upright";
   readonly startMarginPx: number;

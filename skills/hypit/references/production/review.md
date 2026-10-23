@@ -81,8 +81,9 @@ Use whichever view can answer the current question:
 - Once frame positions are known, use [snapshot](snapshots.md) to inspect the existing `HtmlProgram`
   directly. Select individual states or continuous frames; keep the surrounding handoffs visible.
   The locations can come from semantic events, the playhead or authored clock time.
-- On an encoded Result, focused media operations such as frames, cut, and tile can expose exact
-  pixels, adjacent frames, or a short passage.
+- On an encoded Result, focused media operations such as frames, cut and grid can expose exact pixels,
+  adjacent frames or a short passage. Waveforms expose amplitude and transients; spectrograms expose
+  frequency content. Attach either or both to a grid when their relation to sampled pictures matters.
 - Open Studio when interactive playback, parameter editing or a component's Companion helps the
   current work. Seek projected domain evidence or select Track Items to inspect their place in the composition.
 - Use a [range render](rendering.md#choose-a-render-interval-in-frames) when the question requires

@@ -53,14 +53,14 @@ export const temporalManifest: ModuleManifest = {
   version: temporalModuleRef.version,
   dependencies: [timelineDependency],
   types: [
-    { name: temporalTypes.duration.name },
-    { name: temporalTypes.extent.name },
-    { name: temporalTypes.shiftSpec.name },
-    { name: temporalTypes.localDomain.name },
-    { name: temporalTypes.instantSpec.name },
-    { name: temporalTypes.instant.name },
-    { name: temporalTypes.windowSpec.name },
-    { name: temporalTypes.window.name },
+    temporalTypes.duration.name,
+    temporalTypes.extent.name,
+    temporalTypes.shiftSpec.name,
+    temporalTypes.localDomain.name,
+    temporalTypes.instantSpec.name,
+    temporalTypes.instant.name,
+    temporalTypes.windowSpec.name,
+    temporalTypes.window.name,
   ],
   capabilities: [],
   producers: [
@@ -85,7 +85,7 @@ export const temporalManifest: ModuleManifest = {
       result: { kind: "output" as const, name: "window", type: temporalTypes.window } },
   ],
 };
-export const temporalDependency = { module: temporalModuleRef } as const;
+export const temporalDependency = temporalModuleRef;
 
 export const localTemporalDomainSchema: ValueSchema = object({
   id: { schema: string },

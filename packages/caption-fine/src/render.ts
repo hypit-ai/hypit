@@ -2,7 +2,7 @@ import { assertTimelineIdentity, timelineFrameCount } from "@hypit/timeline";
 import type { Timeline } from "@hypit/timeline";
 import { assertCaptionProgramForDocument } from "@hypit/caption";
 import type { CaptionProgram } from "@hypit/caption";
-import { assertVisualTrackIdentity, sealVisualTrack } from "@hypit/composition";
+import { assertVisualTrackIdentity, sealPresentVisualTrack } from "@hypit/composition";
 import type {
   VisualAnimation,
   VisualBoxElement,
@@ -13,7 +13,7 @@ import type {
   VisualStyleDeclaration,
   VisualTextElement,
   VisualTextPaintLayer,
-  VisualTrack,
+  PresentVisualTrack,
 } from "@hypit/composition";
 import type { CaptionDocument, CaptionDisplayWord, CaptionUnit } from "@hypit/caption";
 import { assertRegionEvidence } from "@hypit/region-evidence";
@@ -675,13 +675,30 @@ function cueElements(
   trackedPlacement?: {
     readonly frames: readonly (SpatialFrame | null)[];
   },
-): VisualElement[] {
-  type UnorderedVisualElement = Omit<VisualBoxElement, "order"> | Omit<VisualTextElement, "order"> | Omit<VisualProgramElement, "order">;
-  const elements: VisualElement[] = [];
-  let order = 0;
-  const push = (element: UnorderedVisualElement): void => {
-    elements.push({ ...element, order } as VisualElement);
-    order += 1;
+): VisualElement {
+  type DetachedVisualElement = Omit<VisualBoxElement, "children"> | VisualTextElement | Omit<VisualProgramElement, "slots">;
+  const nodes = new Map<string, { readonly element: DetachedVisualElement; readonly children: string[] }>();
+  const roots: string[] = [];
+  const push = (element: DetachedVisualElement, parent?: string): void => {
+    if (nodes.has(element.id)) throw new Error(`Fine Caption repeats visual element ${element.id}`);
+    nodes.set(element.id, { element, children: [] });
+    if (parent === undefined) roots.push(element.id);
+    else {
+      const owner = nodes.get(parent);
+      if (owner === undefined) throw new Error(`Fine Caption visual parent ${parent} is not declared`);
+      owner.children.push(element.id);
+    }
+  };
+  const build = (id: string): VisualElement => {
+    const node = nodes.get(id);
+    if (node === undefined) throw new Error(`Fine Caption visual element ${id} is missing`);
+    const children = node.children.map(build);
+    if (node.element.kind === "box") return { ...node.element, children };
+    if (node.element.kind === "program") {
+      return { ...node.element, slots: children.map((element) => ({ name: element.id, element })) };
+    }
+    if (children.length > 0) throw new Error(`Fine Caption terminal element ${id} owns children`);
+    return node.element;
   };
   const placementAnimation = trackedPlacement === undefined
     ? undefined
@@ -750,14 +767,12 @@ function cueElements(
   });
   push({
     id: "cue-motion",
-    parent: "placement",
     kind: "box",
     style: [{ name: "display", value: "inline-grid" }, { name: "transform-origin", value: "center center" }],
     ...(cueMotion === undefined ? {} : { animation: cueMotion }),
-  });
+  }, "placement");
   push({
     id: "cue-loop",
-    parent: "cue-motion",
     kind: "box",
     style: [
       { name: "display", value: "inline-flex" },
@@ -765,10 +780,9 @@ function cueElements(
       { name: "transform-origin", value: "center center" },
     ],
     ...(cueLoop === undefined ? {} : { animation: cueLoop }),
-  });
+  }, "cue-motion");
   push({
     id: "cue",
-    parent: "cue-loop",
     kind: "box",
     style: [
       { name: "background", value: parameters.cueBox.background },
@@ -794,10 +808,10 @@ function cueElements(
       { name: "text-align", value: parameters.layout.textAlign },
       { name: "width", value: parameters.layout.inlineSize === "fixed" ? "100%" : "max-content" },
     ],
-  });
+  }, "cue-loop");
 
   const pushSeparator = (id: string, parent: string): void => push({
-    id, parent, kind: "text", text: " ", fonts,
+    id, kind: "text", text: " ", fonts,
     style: [
       { name: "display", value: "inline" },
       { name: "font-size", value: "0px" },
@@ -805,13 +819,13 @@ function cueElements(
       { name: "line-height", value: "0" },
       { name: "white-space", value: "normal" },
     ],
-  });
+  }, parent);
 
   if (parameters.activeBox.mode === "trail" && parameters.activeBox.continuity === "joined") {
     // Fine owns this drawing program. The renderer only executes its existing HtmlVisual
     // format; it learns nothing about captions, activation units or their layout rules.
     push({
-      id: "joined-boxes", parent: "cue", kind: "program",
+      id: "joined-boxes", kind: "program",
       style: [
         { name: "position", value: "absolute" }, { name: "inset", value: "0" },
         { name: "padding", value: `${compactNumber(parameters.cueBox.paddingYPx)}px ${compactNumber(parameters.cueBox.paddingXPx)}px` },
@@ -827,27 +841,27 @@ function cueElements(
           paddingX: parameters.activeBox.paddingXPx, paddingY: parameters.activeBox.paddingYPx,
         },
       }),
-    });
-    push({ id: "joined-layout", parent: "joined-boxes", kind: "box",
+    }, "cue");
+    push({ id: "joined-layout", kind: "box",
       style: [{ name: "visibility", value: "hidden" }],
       attributes: [{ name: "data-fine-box-layout", value: "" }],
-    });
+    }, "joined-boxes");
     // The complete stationary Cue supplies layout, including the inactive suffix. Its actual
     // word fragments determine the background; decoration contributes no width to text flow.
     for (const [index, words] of atomWords.entries()) {
-      if (index > 0 && rowStarts.has(index)) push({ id: `joined-break-${index}`, parent: "joined-layout", kind: "box",
+      if (index > 0 && rowStarts.has(index)) push({ id: `joined-break-${index}`, kind: "box",
         style: [{ name: "display", value: "block" }, { name: "height", value: "0" }],
-      });
+      }, "joined-layout");
       if (!rowStarts.has(index) && words[0]!.separatorBefore === " ") pushSeparator(`joined-gap-${index}`, "joined-layout");
       const groupId = `joined-group-${index}`;
-      push({ id: groupId, parent: "joined-layout", kind: "box", style: [...atomFlow(words), { name: "max-width", value: "100%" }] });
+      push({ id: groupId, kind: "box", style: [...atomFlow(words), { name: "max-width", value: "100%" }] }, "joined-layout");
       const gaps = wordGaps(words);
       for (const [wordIndex, word] of words.entries()) {
-        push({ id: `${groupId}-word-${wordIndex}`, parent: groupId, kind: "text", text: word.text, fonts,
+        push({ id: `${groupId}-word-${wordIndex}`, kind: "text", text: word.text, fonts,
           style: [...transparentGlyphStyle(parameters),
             ...(uniformGap(gaps) === undefined ? spacedStyle(gaps[wordIndex] ?? false) : [])],
           attributes: [{ name: "data-fine-box-word", value: "" }],
-        });
+        }, groupId);
       }
     }
     for (const [index, atom] of atoms.entries()) {
@@ -855,11 +869,11 @@ function cueElements(
       const next = atoms[index + 1];
       const nextStart = next === undefined ? durationFrames : atomFrames.get(next.id)?.start;
       if (nextStart === undefined) throw new Error("Fine Caption is missing timing for the next Atom");
-      push({ id: `joined-box-${index + 1}`, parent: "joined-boxes", kind: "box",
+      push({ id: `joined-box-${index + 1}`, kind: "box",
         style: [{ name: "position", value: "absolute" }, { name: "inset", value: "0" }],
         animation: activeBoxAnimation(parameters, timing.start, nextStart, durationFrames, "current"),
         attributes: [{ name: "data-caption-active-box", value: "joined" }],
-      });
+      }, "joined-boxes");
     }
   }
 
@@ -880,10 +894,9 @@ function cueElements(
     if (atomIndex > 0 && rowStarts.has(atomIndex)) {
       push({
         id: `line-break-${atomIndex}`,
-        parent: "cue",
         kind: "box",
         style: [{ name: "display", value: "block" }, { name: "height", value: "0" }],
-      });
+      }, "cue");
     }
     if (!rowStarts.has(atomIndex) && atomGaps[atomIndex]) pushSeparator(`gap-${atomIndex}`, "cue");
     const entryAnimation = atomLifecycleAnimation(parameters, timing.start, timing.end, durationFrames);
@@ -897,7 +910,6 @@ function cueElements(
     );
     push({
       id: entryId,
-      parent: "cue",
       kind: "box",
       style: [
         { name: "display", value: "inline-flex" },
@@ -905,10 +917,9 @@ function cueElements(
         { name: "transform-origin", value: "center center" },
       ],
       ...(entryAnimation === undefined ? {} : { animation: entryAnimation }),
-    });
+    }, "cue");
     push({
       id: loopId,
-      parent: entryId,
       kind: "box",
       style: [
         { name: "display", value: "inline-flex" },
@@ -916,10 +927,9 @@ function cueElements(
         { name: "transform-origin", value: "center center" },
       ],
       ...(atomLoop === undefined ? {} : { animation: atomLoop }),
-    });
+    }, entryId);
     push({
       id: responseId,
-      parent: loopId,
       kind: "box",
       style: [
         { name: "display", value: "inline-flex" },
@@ -927,23 +937,21 @@ function cueElements(
         { name: "transform-origin", value: "center center" },
       ],
       ...(responseAnimation === undefined ? {} : { animation: responseAnimation }),
-    });
+    }, loopId);
     push({
       id: atomId,
-      parent: responseId,
       kind: "box",
       style: [
         ...atomFlow(atomWords[atomIndex]!),
         { name: "position", value: "relative" },
       ],
       attributes: [{ name: "data-caption-atom", value: atom.id }],
-    });
+    }, responseId);
     const useIsolatedBox = parameters.activeBox.mode !== "off"
       && !(parameters.activeBox.mode === "trail" && parameters.activeBox.continuity === "joined");
     if (useIsolatedBox) {
       push({
         id: `${atomId}-box`,
-        parent: atomId,
         kind: "box",
         style: [
           { name: "background", value: parameters.activeBox.background },
@@ -965,16 +973,16 @@ function cueElements(
           durationFrames,
         ),
         attributes: [{ name: "data-caption-active-box", value: "isolated" }],
-      });
+      }, atomId);
     }
     const graphemes = parameters.motion.atomReveal === "typewriter"
       ? surfaces.map((text) =>
         [...new Intl.Segmenter("und", { granularity: "grapheme" }).segment(text)].map((part) => part.segment))
       : [];
     const graphemeCount = graphemes.reduce((sum, word) => sum + word.length, 0);
-    const pushText = (element: Omit<VisualTextElement, "order">, wordIndex: number): void => {
+    const pushText = (element: VisualTextElement, parent: string, wordIndex: number): void => {
       if (parameters.motion.atomReveal !== "typewriter") {
-        push(element);
+        push(element, parent);
         return;
       }
       // Reveal complete glyphs, not fractions of a Word's width. Variable-width Latin letters,
@@ -982,7 +990,6 @@ function cueElements(
       const isMargin = (name: string): boolean => name.startsWith("margin-");
       push({
         id: element.id,
-        ...(element.parent === undefined ? {} : { parent: element.parent }),
         kind: "box",
         style: [
           { name: "display", value: "inline" },
@@ -990,7 +997,7 @@ function cueElements(
           ...element.style.filter(({ name }) => isMargin(name) || name === "opacity"),
         ],
         ...(element.attributes === undefined ? {} : { attributes: element.attributes }),
-      });
+      }, parent);
       const preceding = graphemes.slice(0, wordIndex).reduce((sum, word) => sum + word.length, 0);
       const { attributes: _attributes, ...glyph } = element;
       for (const [index, text] of (graphemes[wordIndex] ?? []).entries()) {
@@ -1000,14 +1007,13 @@ function cueElements(
         push({
           ...glyph,
           id: `${element.id}-grapheme-${index + 1}`,
-          parent: element.id,
           text,
           style: [
             ...element.style.filter(({ name }) => !isMargin(name) && name !== "opacity"),
             { name: "display", value: "inline" },
           ],
           animation: activationStepAnimation("trail", revealFrame, durationFrames, durationFrames),
-        });
+        }, element.id);
       }
     };
     for (const [wordIndex, wordId] of atom.wordIds.entries()) {
@@ -1015,7 +1021,6 @@ function cueElements(
       if (text === undefined) throw new Error(`Fine Caption Atom references unknown word ${wordId}`);
       pushText({
         id: `${atomId}-base-${wordIndex + 1}`,
-        parent: atomId,
         kind: "text",
         text,
         style: [
@@ -1024,7 +1029,7 @@ function cueElements(
         ],
         ...glyphPaintFields(parameters.basePaint),
         fonts,
-      }, wordIndex);
+      }, atomId, wordIndex);
     }
     const addActivatedTextLayer = (
       suffix: string,
@@ -1035,7 +1040,6 @@ function cueElements(
       const activeTiming = mode === "current" ? activationTiming : timing;
       push({
         id: activeId,
-        parent: atomId,
         kind: "box",
         style: [
           ...(wordGap === true ? [{ name: "column-gap", value: gapPx }] as const : []),
@@ -1050,12 +1054,11 @@ function cueElements(
           ? karaokeWipeAnimation(parameters, mode, activeTiming.start, activeTiming.end, durationFrames)
           : activationStepAnimation(mode, activeTiming.start, activeTiming.end, durationFrames),
         attributes: [{ name: kind === "glyph" ? "data-caption-karaoke" : "data-caption-active-underline", value: mode }],
-      });
+      }, atomId);
       for (const [wordIndex, wordId] of atom.wordIds.entries()) {
         const text = wordText.get(wordId)!.text;
         pushText({
           id: `${activeId}-${wordIndex + 1}`,
-          parent: activeId,
           kind: "text",
           text,
           style: [
@@ -1068,7 +1071,7 @@ function cueElements(
           ...(kind === "glyph" ? glyphPaintFields(parameters.activePaint) : {}),
           fonts,
           attributes: [{ name: kind === "glyph" ? "data-caption-active-word" : "data-caption-underlined-word", value: wordId }],
-        }, wordIndex);
+        }, activeId, wordIndex);
       }
     };
     if (parameters.karaoke.mode !== "off") addActivatedTextLayer("active", parameters.karaoke.mode, "glyph");
@@ -1076,7 +1079,8 @@ function cueElements(
       addActivatedTextLayer("underline", parameters.activeUnderline.mode, "underline");
     }
   }
-  return elements;
+  if (roots.length !== 1) throw new Error("Fine Caption Cue must produce one visual root");
+  return build(roots[0]!);
 }
 
 export function renderFineCaption(
@@ -1086,7 +1090,7 @@ export function renderFineCaption(
   timeline: Timeline,
   within: SpatialFrame,
   regions?: RegionEvidence,
-): VisualTrack {
+): PresentVisualTrack {
   assertFineCaptionSchedule(schedule);
   assertCaptionProgramForDocument(program, document);
   if (schedule.documentId !== document.id) throw new Error("Fine Caption received another CaptionDocument");
@@ -1116,7 +1120,7 @@ export function renderFineCaption(
     }
     return new Map(regions.series.map((series) => [series.id, series]));
   })();
-  const presents = schedule.cues.flatMap((cue, order) => {
+  const presents = schedule.cues.flatMap((cue) => {
     const authoredCue = cueById.get(cue.cueId);
     if (authoredCue === undefined) throw new Error(`Fine Caption Schedule references unknown authored Cue ${cue.cueId}`);
     const atoms = cue.units.map((timing) => atomById.get(timing.unitId));
@@ -1153,14 +1157,12 @@ export function renderFineCaption(
     }]));
     return [{
       id: cue.id,
-      order,
-      z: parameters.stackingOrder,
       span: { startFrame, endFrameExclusive },
       visibility,
-      elements: cueElements(resolvedAtoms, atomFrames, parameters, wordText, durationFrames, cue.styleId, within, trackedPlacement),
+      root: cueElements(resolvedAtoms, atomFrames, parameters, wordText, durationFrames, cue.styleId, within, trackedPlacement),
     }];
   });
-  const track = sealVisualTrack({
+  const track = sealPresentVisualTrack({
     timelineId: timeline.id,
     visualIr: "hypit.visual-ir@1",
     id: program.id,

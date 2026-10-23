@@ -16,7 +16,7 @@ export const hypitPackage = {
   format: "hypit.package@1" as const,
   modules: [{ manifest: fishAudioSpeechManifest }],
   facets: [
-    ...[fishAudioSpeechComponent].flatMap((component) => [createProducerPackageFacet(component), createRefinementPackageFacet(component)]),
+    ...[fishAudioSpeechComponent].flatMap((component) => [createProducerPackageFacet(component.producers ?? []), createRefinementPackageFacet(component.refinements ?? [])]),
     createMarkupSurfaceFacet({
       module: fishAudioSpeechModuleRef,
       declaration: fishAudioSpeechMarkupSurfaces.find((item) => item.name === "voiceDesign")!,

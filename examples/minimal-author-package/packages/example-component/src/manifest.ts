@@ -32,15 +32,15 @@ export const exampleProducers = {
 export const exampleManifest: ModuleManifest = {
   format: "hypit.module@1", name: exampleModuleRef.name, version: exampleModuleRef.version,
   dependencies: [
-    { module: blobTypes.blob.module },
-    { module: compositionTypes.visualTrack.module },
-    { module: mediaTypes.fontStack.module },
-    { module: spatialTypes.frame.module },
-    { module: timelineTypes.timeline.module },
-    { module: recipeType.module },
-    { module: temporalTypes.window.module },
+    blobTypes.blob.module,
+    compositionTypes.visualTrack.module,
+    mediaTypes.fontStack.module,
+    spatialTypes.frame.module,
+    timelineTypes.timeline.module,
+    recipeType.module,
+    temporalTypes.window.module,
   ],
-  types: Object.values(exampleTypes).map(({ name }) => ({ name })),
+  types: Object.values(exampleTypes).map(({ name }) => name),
   capabilities: [],
   producers: Object.values(exampleProducers).map((producer) => ({
     name: producer.name,

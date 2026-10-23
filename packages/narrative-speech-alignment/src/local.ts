@@ -1,6 +1,6 @@
 import type { Narrative, NarrativeSegmentRef } from "@hypit/narrative";
 import type { NarrativeAlignment } from "@hypit/narrative-temporal";
-import type { AlignedTranscriptEvidence } from "@hypit/speech-evidence";
+import type { SpeechTranscriptEvidence } from "@hypit/speech-evidence";
 import type { LocalTemporalDomain } from "@hypit/temporal";
 
 import { locateAlignedSegmentTiming } from "./locate.js";
@@ -31,14 +31,10 @@ export function alignNarrative(
   narrative: Narrative,
   excerpt: NarrativeSegmentRef,
   domain: LocalTemporalDomain,
-  evidence: AlignedTranscriptEvidence,
+  evidence: SpeechTranscriptEvidence,
 ): NarrativeAlignment {
   const localNarrative = segmentNarrative(narrative, excerpt);
-  if (evidence.domainId !== domain.id) {
-    throw new Error(`Narrative alignment ${excerpt.id} evidence belongs to another local domain.`);
-  }
   const basis: AlignmentBasis = {
-    domainId: domain.id,
     frameDomain: { frameRate: domain.frameRate, frameCount: domain.frameCount },
     segments: [{ segmentId: excerpt.id, startFrame: 0, endFrameExclusive: domain.frameCount }],
   };

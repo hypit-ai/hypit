@@ -72,12 +72,12 @@ decodes each chosen interval once and retains the source's actual timestamps, in
 frame rates:
 
 ```bash
-hypit media tiles reference.mp4 --start 8 --end 9 --every-frame \
+hypit media grid reference.mp4 --pages --start 8 --end 9 --every-frame \
   --columns 4 --rows 3 --cell 480 --to evidence/reference-motion
 ```
 
-`media frames --every-frame` saves individual images; `media tiles --ranges ranges.json
---every-frame` follows several selected intervals. `--transcript` adds the words around each
+`media frames --every-frame` saves individual images; `media grid --pages --ranges ranges.json --every-frame`
+follows several selected intervals. `--transcript` adds the words around each
 actual frame. [Reference understanding](../creation/reference-video.md) connects these views to
 coarse and fine observation.
 

@@ -58,7 +58,7 @@ export function renderSemanticWorkshop(t, c, w, font, o, events, m) {
   ><div class="voice-shape">${Array.from({ length: 85 }, (_, i) => `<i style="--i:${i}"></i>`).join("")}</div><div class="voice-chip">♫　新的配音</div></div
 >
 <div class="script-source work-window"
-  >${bar("main.svml")}<pre><span>&lt;script id="story"&gt;</span><br>  &lt;intro&gt;<br>    &lt;HOST&gt; 今天的 <em>@winner</em> 第一名<em>@/winner</em>，<br>    就是 <em>@product!</em> Hypit。<br>  &lt;/intro&gt;<br><span>&lt;/script&gt;</span><br><br><span>&lt;visual:Track</span> timeline={program.timeline}<span>&gt;</span><br>  <span>&lt;visual:Clip</span> media={product.media}<br>    frame={layout.product} z="20" fit="cover"<br>    at=<em>{story.moment.product}</em> for="2s"<span>/&gt;</span><br><span>&lt;/visual:Track&gt;</span></pre></div
+  >${bar("main.svml")}<pre><span>&lt;script id="story"&gt;</span><br>  &lt;intro&gt;<br>    &lt;HOST&gt; 今天的 <em>@winner</em> 第一名<em>@/winner</em>，<br>    就是 <em>@product!</em> Hypit。<br>  &lt;/intro&gt;<br><span>&lt;/script&gt;</span><br><br><span>&lt;visual:Track</span> timeline={program.timeline}<span>&gt;</span><br>  <span>&lt;visual:Clip</span> media={product.media}<br>    frame={layout.product} fit="cover"<br>    at=<em>{story.moment.product}</em> for="2s"<span>/&gt;</span><br><span>&lt;/visual:Track&gt;</span></pre></div
 >${pointer}`;
   return scene(t, c, w, font, o, html, workCss + studioCss + css, workSetup + animation, events, {
     creatify: { image: m.creatify },

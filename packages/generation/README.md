@@ -1,7 +1,7 @@
 # `@hypit/generation`
 
 Optional standard Products for generated audio, images and video. A generated set is an ordered,
-non-empty collection of admitted Blob references. It has no universal maximum count: request count
+non-empty collection of accepted Blob references. It has no universal maximum count: request count
 belongs to the Model contract, and a narrower service quota belongs to the selected Endpoint.
 
 Generation does not own a universal request envelope, input-port ontology, Model registry, Provider

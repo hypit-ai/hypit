@@ -18,6 +18,8 @@ export type State = {
   readonly snapshot: StudioSnapshot;
   readonly selection: Selection;
   readonly playhead: Playhead;
+  /** Session-local omissions used only while evaluating the Studio preview. */
+  readonly preview: { readonly omittedItemIds: ReadonlySet<string> };
 };
 
 export type Store = {
@@ -41,6 +43,8 @@ export type Store = {
   focus(frame: number, itemId: string | undefined, origin: Origin): void;
   clearSelection(): void;
   seek(frame: number, origin: Origin | "play"): void;
+  setItemPreviewIncluded(itemId: string, included: boolean): void;
+  resetPreviewMask(): void;
   subscribe(listener: (state: State) => void): void;
 };
 
@@ -62,7 +66,9 @@ export function itemAtOffset(snapshot: StudioSnapshot, offset: number): StudioIt
   let best: StudioItem | undefined;
   let bestScore = Number.POSITIVE_INFINITY;
   for (const item of items) {
-    const score = within(item.elementRange);
+    const score = item.elementLocation?.path === snapshot.source.path
+      ? within(item.elementLocation.range)
+      : Number.POSITIVE_INFINITY;
     if (score < bestScore) {
       bestScore = score;
       best = item;
@@ -75,13 +81,14 @@ export function createStore(): Store {
   let snapshot: StudioSnapshot | undefined;
   let selection: Selection = { kind: "none" };
   let playhead: Playhead = { frame: 0, origin: "timeline" };
+  let omittedItemIds = new Set<string>();
   const listeners: ((state: State) => void)[] = [];
 
   const items = (): readonly StudioItem[] => snapshot?.tracks.flatMap((track) => track.items) ?? [];
 
   const emit = (): void => {
     if (snapshot === undefined) return;
-    const state: State = { snapshot, selection, playhead };
+    const state: State = { snapshot, selection, playhead, preview: { omittedItemIds } };
     for (const listener of listeners) listener(state);
   };
 
@@ -89,7 +96,7 @@ export function createStore(): Store {
     Math.max(0, Math.min(Math.round(frame), (snapshot?.timeline.frameCount ?? 1) - 1));
 
   return {
-    current: () => snapshot === undefined ? undefined : { snapshot, selection, playhead },
+    current: () => snapshot === undefined ? undefined : { snapshot, selection, playhead, preview: { omittedItemIds } },
     item: (itemId) => items().find((item) => item.id === itemId),
     itemsAt(frame) {
       return items()
@@ -110,6 +117,10 @@ export function createStore(): Store {
         selection = { kind: "none" };
       }
       playhead = { frame: clamp(playhead.frame), origin: playhead.origin };
+      const available = new Set(items()
+        .filter((item) => item.terminalTargets.some((target) => target.kind === "visual-adjustment"))
+        .map((item) => item.id));
+      omittedItemIds = new Set([...omittedItemIds].filter((id) => available.has(id)));
       emit();
     },
     select(itemId, origin) {
@@ -148,9 +159,23 @@ export function createStore(): Store {
       playhead = { frame: next, origin };
       emit();
     },
+    setItemPreviewIncluded(itemId, included) {
+      const item = items().find((candidate) => candidate.id === itemId);
+      if (item === undefined || !item.terminalTargets.some((target) => target.kind === "visual-adjustment")) return;
+      const next = new Set(omittedItemIds);
+      if (included) next.delete(itemId); else next.add(itemId);
+      if (next.size === omittedItemIds.size && [...next].every((id) => omittedItemIds.has(id))) return;
+      omittedItemIds = next;
+      emit();
+    },
+    resetPreviewMask() {
+      if (omittedItemIds.size === 0) return;
+      omittedItemIds = new Set();
+      emit();
+    },
     subscribe(listener) {
       listeners.push(listener);
-      if (snapshot !== undefined) listener({ snapshot, selection, playhead });
+      if (snapshot !== undefined) listener({ snapshot, selection, playhead, preview: { omittedItemIds } });
     },
   };
 }

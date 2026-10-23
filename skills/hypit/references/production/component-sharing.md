@@ -11,7 +11,7 @@ same across that boundary.
 
 A component normally begins under the video project's `packages/` directory. Give it an owner-scoped name,
 such as `@studio/score-strip`. Sharing it means giving the other project that package's code, assets,
-and usage instructions. Neither author nor consumer needs a Hypit repository checkout.
+and usage instructions through an installable package.
 
 Keep the same name when distributing it. The Source import names its logical Module ABI:
 
@@ -46,7 +46,7 @@ Select the intended new release in the consumer project, inspect its changed voc
 relevant, check the actual Source/Run and review the changed behavior. New Builds load that selected
 implementation; restart an existing Studio session to load package-code changes. Reuse compatible
 media through Run Candidates while recomputing the component being revised. The package's own
-release notes describe any required author changes; no Build upgrades or migrates it automatically.
+release notes describe any required author changes.
 
 ## Send a tarball to another person
 
@@ -60,8 +60,8 @@ npm pack
 ```
 
 For `@studio/score-strip` version `1.2.0`, npm creates `studio-score-strip-1.2.0.tgz`. Send that file.
-This route needs no registry account or publication. The consumer can keep it under the video
-project's `vendor/` directory and install it from that project:
+The consumer can keep the tarball under the video project's `vendor/` directory and install it from
+that project:
 
 ```bash
 npm install ./vendor/studio-score-strip-1.2.0.tgz
@@ -90,8 +90,8 @@ like these to the package that already owns the component:
 }
 ```
 
-The description and keywords help npm search; they do not define the component ABI. The README should
-show the visual role, a copyable Source import and element example, the package's public outputs, and
+The description and keywords help npm search. The README should show the visual role, a copyable
+Source import and element example, the package's public outputs, and
 the selected Hypit release used to check it. Include the Surface poster and, when motion or state is
 central to the idea, a short representative clip or animation. The source repository, publisher,
 license and selected release give a recipient the facts needed to choose whether to install it.
@@ -127,15 +127,15 @@ An executable Author Package uses the public APIs it needs, such as `@hypit/hypi
 Declare `@hypit/hypit` as a compatible peer and development dependency, and domain packages such as
 `@hypit/composition` or `@hypit/caption` as ordinary dependencies. A Studio Companion also declares
 compatibility with `@hypit/studio-companion` through a peer dependency. Its release contains its own
-code and assets; the selected host supplies the framework APIs. Check the package from a
+code and assets; the selected host supplies those public APIs. Check the package from a
 separate consumer project so local source links do not conceal omitted files or dependencies.
 
 Package code runs as trusted JavaScript in the host process. The recipient chooses which package and
 release to install.
 
-## Data packages remain data
+## Share a Prompt Kit as data
 
-A Prompt Kit can export an `.svs` Source through ordinary package `exports` without activation code:
+A Prompt Kit can export an `.svs` Source through ordinary package `exports`:
 
 ```xml
 <import as="ugc" source="@studio/image-kits/phone-ugc-v1"/>

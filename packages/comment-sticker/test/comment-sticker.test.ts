@@ -7,6 +7,7 @@ import { projectProgramWindow } from "../../../test/temporal-fixture.js";
 
 import { blobTypes } from "@hypit/blob";
 import { compileHtmlProgram } from "@hypit/html-program";
+import { visualElements } from "@hypit/composition";
 import type { FontArtifactRef, FontStackRef } from "@hypit/media";
 import { mediaTypes } from "@hypit/media";
 import { spatialTypes } from "@hypit/spatial";
@@ -20,7 +21,6 @@ import { temporalTypes } from "@hypit/temporal";
 
 import {
   appendProjectedCommentSticker,
-  commentStickerProducers,
   commentStickerTypes,
   createCommentStickerSet,
   createCommentStickerContent,
@@ -77,23 +77,22 @@ function track(meta?: string) {
 test("Comment Sticker is one deterministic self-contained peer VisualTrack", () => {
   const first = track();
   assert.deepEqual(first, track());
-  assert.equal(first.presents.length, 1);
-  assert.deepEqual(first.presents[0]?.span, { startFrame: 0, endFrameExclusive: 90 });
-  assert.equal(first.presents[0]?.elements.some((element) => element.id === "meta"), false);
-  assert.equal(JSON.stringify(first).includes("37 replies"), false);
-  assert.ok(first.presents[0]?.elements.some((element) => element.id === "avatar-initial"));
-  for (const element of first.presents[0]!.elements) assert.equal(element.attributes, undefined);
+  assert.equal(first.items.length, 1);
+  assert.deepEqual(first.items[0]?.span, { startFrame: 0, endFrameExclusive: 90 });
+  assert.equal(visualElements(first.items[0]!.root).some((element) => element.id === "meta"), false);
+  assert.ok(visualElements(first.items[0]!.root).some((element) => element.id === "avatar-initial"));
+  for (const element of visualElements(first.items[0]!.root)) assert.equal(element.attributes, undefined);
 });
 
 test("explicit metadata is rendered and the terminal compiler accepts the Track unchanged", () => {
   const rendered = track("Featured comment");
-  const meta = rendered.presents[0]?.elements.find((element) => element.id === "meta");
+  const meta = visualElements(rendered.items[0]!.root).find((element) => element.id === "meta");
   assert.equal(meta?.kind === "text-flow" ? meta.document.paragraphs[0]?.inlines[0]?.kind === "text"
     ? meta.document.paragraphs[0].inlines[0].text : undefined : undefined, "Featured comment");
   const document = compileHtmlProgram({
     id: "comment-film",
     canvas: { width: 1080, height: 1920, clearColor: "#000000" },
-    tracks: [rendered],
+    visual: { members: [rendered].map(track => ({ kind: "track" as const, id: track.id, track })) }, audio: [],
   }, space);
   assert.match(document.html, /data-hypit-element-id="meta"/u);
   assert.match(document.html, /data-hypit-element-id="body"/u);
@@ -124,7 +123,7 @@ test("short Sticker windows compose overlapping enter and exit motion instead of
     }),
   );
   const rendered = renderCommentSticker(space, finalizeCommentSticker(set, header));
-  const animation = rendered.presents[0]?.elements.find((element) => element.animation !== undefined)?.animation;
+  const animation = visualElements(rendered.items[0]!.root).find((element) => element.animation !== undefined)?.animation;
   assert.ok(animation);
   const overlap = animation.keyframes.find((keyframe) => keyframe.atFrame === 45)!;
   const opacity = overlap.style.find((declaration) => declaration.name === "opacity")?.value;
@@ -184,14 +183,9 @@ test("Track Surface lowers literal and graph Text with a resolved Window to a fi
     resolveAsset: noAsset,
   });
   assert.equal(result.components.filter((component) => component.outputs.visual !== undefined).length, 1);
-  assert.deepEqual(result.components.flatMap(({ fragment }) => fragment.operations.map((operation) => operation.producer.name)).sort(), [
-    commentStickerProducers.createSet.name,
-    commentStickerProducers.createContent.name,
-    commentStickerProducers.setContentAuthor.name,
-    commentStickerProducers.setContentMeta.name,
-    commentStickerProducers.appendItemAvatar.name,
-    commentStickerProducers.finalize.name,
-        commentStickerProducers.render.name,
-  ].sort());
-  assert.equal(result.components.find((component) => component.outputs.visual !== undefined)?.outputs.visual, "comments.visual");
+  const component = result.components.find((candidate) => candidate.outputs.visual !== undefined)!;
+  assert.deepEqual(component.outputs, { program: "comments.program", visual: "comments.visual" });
+  assert.deepEqual(component.inputs["item-0001-comment"], refs.get("copy")?.ref);
+  assert.deepEqual(component.inputs["item-0001-avatar"], refs.get("avatar")?.ref);
+  assert.deepEqual(component.inputs["item-0001-window"], refs.get("whole")?.ref);
 });

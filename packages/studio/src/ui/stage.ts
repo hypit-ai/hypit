@@ -1,10 +1,11 @@
 import { uiLabel, uiAttribute, uiText, uiAttr, userText } from "./i18n.js";
 import { createArtifactPreview } from "./artifact-preview.js";
-import type { StudioArtifactView, StudioSnapshot } from "../shared.js";
+import type { StudioArtifactView, StudioSnapshot, StudioTerminalTarget } from "../shared.js";
 import { createOverlay } from "./overlay.js";
 import { icon, setIcon } from "./icons.js";
 import { createScrubPreview } from "./scrub-preview.js";
 import type { State, Store } from "./selection.js";
+import { createHtmlPreviewAdapter, type HtmlPreviewWindow } from "./html-preview-adapter.js";
 
 export type Stage = {
   readonly element: HTMLElement;
@@ -33,7 +34,10 @@ export function createStage(store: Store, selectedArtifact: (id: string | undefi
   element.innerHTML = `
     <div class="stage-heading">
       <div class="stage-title">${icon("preview")}<strong>${uiLabel("player.preview")}</strong></div>
-      <button type="button" class="stage-return" hidden>${uiLabel("player.back-to-composition")}</button>
+      <div class="stage-heading-actions">
+        <div class="stage-preview-mask" hidden><span></span><button type="button">${uiLabel("player.preview-reset")}</button></div>
+        <button type="button" class="stage-return" hidden>${uiLabel("player.back-to-composition")}</button>
+      </div>
     </div>
     <div class="stage-viewport">
       <div class="stage-scaler">
@@ -75,21 +79,24 @@ export function createStage(store: Store, selectedArtifact: (id: string | undefi
    * of its enter and exit, and selecting an Item lands the playhead on exactly
    * the frame where that displacement is largest.
    */
-  const measure = (renderId: string): { xPx: number; yPx: number; widthPx: number; heightPx: number; stackOrder: number } | undefined => {
+  type PresentTarget = Extract<StudioTerminalTarget, { readonly kind: "visual-present" }>;
+  const measure = (renderRef: PresentTarget): { xPx: number; yPx: number; widthPx: number; heightPx: number; paintPath: readonly number[] } | undefined => {
     const document_ = iframe.contentDocument;
     if (document_ === null) return undefined;
-    const present = document_.querySelector(`[data-hypit-present-id="${CSS.escape(renderId)}"]`);
+    const occurrencePath = JSON.stringify(renderRef.occurrencePath);
+    const present = document_.querySelector(
+      `[data-hypit-occurrence-path="${CSS.escape(occurrencePath)}"][data-hypit-present-id="${CSS.escape(renderRef.presentId)}"]`,
+    );
     if (present === null) return undefined;
     const current = store.current();
     if (current === undefined) return undefined;
-    const frameRate = fps(current.snapshot);
-    const start = Number(present.getAttribute("data-start"));
-    const end = start + Number(present.getAttribute("data-duration"));
-    if (current.playhead.frame < Math.round(start * frameRate)
-      || current.playhead.frame >= Math.round(end * frameRate)) return undefined;
-    // The present spans the whole canvas; the drawn box is its frame element.
-    const drawn = present?.querySelector(`[data-hypit-element-id="${CSS.escape(`${renderId}:frame`)}"]`)
-      ?? present?.querySelector("[data-hypit-element-id]");
+    const start = Number(present.getAttribute("data-hypit-present-start-frame"));
+    const end = Number(present.getAttribute("data-hypit-present-end-frame"));
+    if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end)
+      || current.playhead.frame < start || current.playhead.frame >= end) return undefined;
+    const elementId = renderRef.elementId ?? present.getAttribute("data-hypit-present-root-element-id");
+    if (elementId === null) return undefined;
+    const drawn = present.querySelector(`[data-hypit-element-id="${CSS.escape(elementId)}"]`);
     if (drawn === null || drawn === undefined) return undefined;
     for (let ancestor: Element | null = drawn; ancestor !== null; ancestor = ancestor.parentElement) {
       const style = document_.defaultView!.getComputedStyle(ancestor);
@@ -97,8 +104,10 @@ export function createStage(store: Store, selectedArtifact: (id: string | undefi
     }
     const box = drawn.getBoundingClientRect();
     if (box.width === 0 && box.height === 0) return undefined;
+    const paintPath = JSON.parse(present.getAttribute("data-hypit-paint-path") ?? "null") as unknown;
+    if (!Array.isArray(paintPath) || paintPath.some((part) => !Number.isSafeInteger(part) || part < 0)) return undefined;
     return { xPx: box.left, yPx: box.top, widthPx: box.width, heightPx: box.height,
-      stackOrder: Number(document_.defaultView!.getComputedStyle(present).zIndex) || 0 };
+      paintPath: paintPath as number[] };
   };
 
   // The overlay is a sibling of the iframe inside the scaler, so it inherits the
@@ -155,7 +164,6 @@ export function createStage(store: Store, selectedArtifact: (id: string | undefi
   const playIcon = element.querySelector<HTMLElement>("[data-icon]")!;
   const mute = element.querySelector<HTMLButtonElement>("[data-mute]")!;
   const muteIcon = element.querySelector<HTMLElement>("[data-mute-icon]")!;
-
   type SeekWindow = Window & {
     __hypitSeekFrame?: (frame: number) => Promise<boolean>;
     __hypitPlayFrame?: (frame: number) => Promise<boolean>;
@@ -173,6 +181,7 @@ export function createStage(store: Store, selectedArtifact: (id: string | undefi
   let fromFrame = 0;
   let began = 0;
   let placed = 0;
+  const previewAdapter = createHtmlPreviewAdapter();
 
   const seekPicture = (frame: number): void => {
     const request = ++placed;
@@ -294,6 +303,18 @@ export function createStage(store: Store, selectedArtifact: (id: string | undefi
     setIcon(playIcon, media !== undefined && !media.paused ? "pause" : "play");
     uiAttr(play, "aria-label", media !== undefined && !media.paused ? "player.pause" : "player.play");
   });
+  const previewMask = element.querySelector<HTMLElement>(".stage-preview-mask")!;
+  const previewMaskLabel = previewMask.querySelector<HTMLElement>("span")!;
+  previewMask.querySelector<HTMLButtonElement>("button")!.addEventListener("click", () => store.resetPreviewMask());
+  const effectivePreviewMask = (): ReadonlySet<string> =>
+    reviewMode || artifactPreview.selected !== undefined ? new Set() : state?.preview.omittedItemIds ?? new Set();
+  const applyPreviewMask = (): void => {
+    if (state === undefined || !ready) return;
+    previewAdapter.apply(state.snapshot, effectivePreviewMask());
+    const count = artifactPreview.selected === undefined && !reviewMode ? state.preview.omittedItemIds.size : 0;
+    previewMask.hidden = count === 0;
+    if (count > 0) uiText(previewMaskLabel, "player.preview-exclusions", { count });
+  };
   viewport.append(artifactPreview.element);
   const compositionTime = (): void => {
     if (state === undefined || artifactPreview.selected !== undefined) return;
@@ -330,6 +351,7 @@ export function createStage(store: Store, selectedArtifact: (id: string | undefi
     uiAttr(play, "aria-label", "player.play");
     fit();
     if (state !== undefined && ready) seekPicture(state.playhead.frame);
+    applyPreviewMask();
   };
   back.addEventListener("click", returnToComposition);
 
@@ -345,14 +367,17 @@ export function createStage(store: Store, selectedArtifact: (id: string | undefi
     uiAttr(next, "aria-label", "player.forward-5-seconds");
     artifactPreview.open(artifact, muted);
     selectedArtifact(artifact.id);
+    applyPreviewMask();
   };
 
   const previewReady = (): void => {
     if (ready) return;
     ready = true;
+    previewAdapter.mount(iframe.contentWindow as HtmlPreviewWindow);
     compositionTime();
     if (state !== undefined) seekPicture(state.playhead.frame);
     applyMuted();
+    applyPreviewMask();
     // The box could not be measured until now.
     overlay.refresh();
   };
@@ -373,12 +398,14 @@ export function createStage(store: Store, selectedArtifact: (id: string | undefi
       mounted = value.snapshot.revision;
       if (artifactPreview.selected === undefined) stop();
       ready = false;
+      previewAdapter.unmount();
       const preview = value.snapshot.preview;
       iframe.srcdoc = preview.srcdoc;
       fit();
     }
     if (first) fit();
     compositionTime();
+    applyPreviewMask();
 
     // Playing and scrubbing are different requests: one lets material run on
     // its own clock, the other moves it. Asking a decoder for a fresh seek
@@ -406,6 +433,7 @@ export function createStage(store: Store, selectedArtifact: (id: string | undefi
       overlay.element.style.display = enabled ? "none" : "";
       closeSelectionMenu();
       if (!enabled) scrubPreview.clear();
+      applyPreviewMask();
     },
     pause() { stop(); artifactPreview.media?.pause(); },
     showComposition() { if (artifactPreview.selected !== undefined) returnToComposition(); },

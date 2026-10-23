@@ -16,7 +16,8 @@ import { mediaOperationsCapabilities } from "@hypit/media-operations";
 import { isStreamingResourceStore } from "@hypit/hypit/endpoint";
 import { speechEvidenceCapabilities, speechEvidenceTypes } from "@hypit/speech-evidence";
 import { defineEndpoint } from "@hypit/hypit/endpoint";
-import type { EndpointFulfillment, EndpointInvocationContext } from "@hypit/hypit/endpoint";
+import type { EndpointInvocationContext } from "@hypit/hypit/endpoint";
+import type { Value } from "@hypit/hypit/protocol";
 
 export const localMediaProviderModuleRef = { name: "@hypit/media-local", version: "1" } as const;
 
@@ -39,8 +40,8 @@ function positiveInteger(value: number, subject: string): number {
   return value;
 }
 
-function fulfillment(result: MediaOperationResult): EndpointFulfillment {
-  return { value: result.value };
+function fulfillment(result: MediaOperationResult): Value {
+  return result.value;
 }
 
 /**
@@ -71,7 +72,7 @@ export function createLocalMediaProvider(config: CreateLocalMediaProviderOptions
   });
   const operation = (
     execute: (env: MediaExecutionEnvironment, constraints: never) => Promise<MediaOperationResult>,
-  ) => async (context: EndpointInvocationContext): Promise<EndpointFulfillment> =>
+  ) => async (context: EndpointInvocationContext): Promise<Value> =>
     fulfillment(await execute(environment(context), context.need.constraints as never));
 
   return defineEndpoint({

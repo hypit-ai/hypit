@@ -10,7 +10,7 @@ import type { BlobRef } from "@hypit/protocol";
 
 import {
   acceptedRecords,
-  compositeType,
+  structuredType,
   publication,
   videoType,
 } from "./repository-scenario.js";
@@ -26,7 +26,7 @@ test("filesystem Results have one public name per Output and browse newest first
   try {
     await assert.rejects(repository.create({
       id: "bld_20260902T100000000Z_0000000001",
-      source: { id: "/project/main.svml" },
+      sourceId: "/project/main.svml",
       publication: publication([
         { name: "video", output: "logical:video" },
         { name: "duplicate", output: "logical:video" },
@@ -36,7 +36,7 @@ test("filesystem Results have one public name per Output and browse newest first
     for (const id of ids) {
       const writer = await repository.create({
         id,
-        source: { id: "/project/main.svml" },
+        sourceId: "/project/main.svml",
         publication: publication([{ name: "video", output: "logical:video" }], ["video"]),
       });
       await writer.finish({ outcome: "failed", failure: "ordering fixture" });

@@ -93,7 +93,6 @@ export function assertDepthStackSpec(value: DepthStackSpec): void {
   assert(["linear", "ease-in", "ease-out", "ease-in-out"].includes(value.reflow.easing),
     "DepthStackSpec.reflow.easing is invalid.");
   assertVisualFrameTreatment(value.treatment, "DepthStackSpec.treatment");
-  assert(Number.isSafeInteger(value.stackingOrder), "DepthStackSpec.stackingOrder must be an integer.");
 }
 
 export function sealDepthStackSpec(value: DepthStackSpec): DepthStackSpec {
@@ -231,7 +230,7 @@ export function appendDepthStackCard(
   spec: DepthStackCardSpec,
   activation: TemporalInstant,
 ): DepthStackCardSet {
-  assertTemporalInstantFor(activation, { subjectId: spec.id, timeline: timeline });
+  assertTemporalInstantFor(activation, { timeline });
   return appendDepthStackCardAtFrame(set, material, label, spec, activation.frame);
 }
 
@@ -271,7 +270,7 @@ export function finalizeDepthStack(
   terminal: TemporalInstant,
   timeline: Timeline,
 ): DepthStackProgram {
-  assertTemporalInstantFor(terminal, { subjectId: header.id, timeline: timeline });
+  assertTemporalInstantFor(terminal, { timeline });
   return finalizeDepthStackAtFrame(set, header, frame, spec, terminal.frame, timeline);
 }
 

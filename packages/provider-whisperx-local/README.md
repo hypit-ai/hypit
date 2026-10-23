@@ -1,6 +1,6 @@
 # @hypit/provider-whisperx-local
 
-Trusted local Provider for the explicit `@hypit/whisperx#whisperx-alignment` capability. Its
+Trusted local Provider for the explicit `@hypit/whisperx#whisperx-transcription` capability. Its
 `runtime/` directory owns the warm Python service and frozen environment used through `/health`
 and `/transcribe`.
 
@@ -26,7 +26,7 @@ createLocalWhisperXProvider({
 The service must be on loopback because this protocol deliberately passes a local staged path. A
 future persistent remote Provider should use an Artifact URL or request payload owned by that
 Provider; it is a different deployment package but must return the same
-`AlignedTranscriptEvidence` type. Lambda is deliberately not the target for this warm model.
+`SpeechTranscriptEvidence` type. Lambda is deliberately not the target for this warm model.
 
 The configured model, device, compute mode and batch size are checked through `/health` before use.
 This prevents a warm process with an incompatible inference configuration from accepting work.

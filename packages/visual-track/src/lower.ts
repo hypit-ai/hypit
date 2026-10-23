@@ -21,12 +21,11 @@ import type {
 
 function px(value: number): string { return `${value}px`; }
 
-function box(id: string, order: number, parent: string | undefined, animation?: VisualAnimation, transformOrigin = "center center"): VisualElement {
+function box(id: string, children: readonly VisualElement[], animation?: VisualAnimation, transformOrigin = "center center"): VisualElement {
   return {
     id,
-    ...(parent === undefined ? {} : { parent }),
-    order,
     kind: "box",
+    children,
     style: [
       { name: "height", value: "100%" },
       { name: "left", value: 0 },
@@ -112,12 +111,10 @@ function filter(layer: MediaSampleLayerProgram): string {
 function sampleElements(
   layer: MediaSampleLayerProgram,
   clip: VisualClipProgram,
-  parent: string,
-  order: { value: number },
   timeline: Timeline,
   sourceTimeOverrides: Readonly<Record<string, VisualSourceTimeMap>>,
   samplingAnimationOverrides: Readonly<Record<string, VisualAnimation | null>>,
-): VisualElement[] {
+): VisualElement {
   const sourceCenter = mapSpatialPoint({
     xPx: layer.source.extent.widthPx / 2,
     yPx: layer.source.extent.heightPx / 2,
@@ -134,9 +131,8 @@ function sampleElements(
   const durationFrames = clip.span.endFrameExclusive - clip.span.startFrame;
   const samplingElement: VisualElement = {
     id: sampling,
-    parent,
-    order: order.value++,
     kind: "box",
+    children: [],
     style: [
       { name: "height", value: "100%" },
       { name: "left", value: 0 },
@@ -177,9 +173,8 @@ function sampleElements(
   }
   const appearanceElement: VisualElement = {
     id: appearance,
-    parent: sampling,
-    order: order.value++,
     kind: "box",
+    children: [],
     style: appearanceStyle,
   };
   const mappingStyle: VisualStyleDeclaration[] = [
@@ -193,9 +188,8 @@ function sampleElements(
   ];
   const mappingElement: VisualElement = {
     id: mapping,
-    parent: appearance,
-    order: order.value++,
     kind: "box",
+    children: [],
     style: mappingStyle,
   };
   // Filter lives after source mapping, so blur remains measured in program-picture pixels. The
@@ -215,14 +209,13 @@ function sampleElements(
     { name: "width", value: overscanPx === 0 ? "100%" : px(layer.source.extent.widthPx + (overscanPx * 2)) },
   ];
   if (layer.source.kind === "still") {
-    return [samplingElement, appearanceElement, mappingElement, {
+    const media: VisualElement = {
       id: layer.id,
-      parent: mapping,
-      order: order.value++,
       kind: "image",
       artifact: structuredClone(layer.source.artifact),
       style: mediaStyle,
-    }];
+    };
+    return { ...samplingElement, children: [{ ...appearanceElement, children: [{ ...mappingElement, children: [media] }] }] };
   }
   const sourceTiming = layer.source.kind === "timed"
     ? { frameRate: layer.source.frameRate, frameCount: layer.source.frameCount }
@@ -231,14 +224,13 @@ function sampleElements(
       : undefined;
   if (sourceTiming === undefined) {
     if (layer.source.kind !== "surface") throw new Error(`Timed Media layer ${layer.id} has no timing.`);
-    return [samplingElement, appearanceElement, mappingElement, {
+    const media: VisualElement = {
       id: layer.id,
-      parent: mapping,
-      order: order.value++,
       kind: "surface",
       surface: structuredClone(layer.source.surface),
       style: mediaStyle,
-    }];
+    };
+    return { ...samplingElement, children: [{ ...appearanceElement, children: [{ ...mappingElement, children: [media] }] }] };
   }
   const sourceTime = sourceTimeOverrides[layer.id]
     ?? (layer.sourceTime?.kind === "map" ? layer.sourceTime.value : resolveVisualSourceTime({
@@ -249,45 +241,40 @@ function sampleElements(
       ...(layer.sourceTime?.kind !== "spec" ? {} : { spec: layer.sourceTime.value }),
     }));
   if (layer.source.kind === "timed") {
-    return [samplingElement, appearanceElement, mappingElement, {
+    const media: VisualElement = {
       id: layer.id,
-      parent: mapping,
-      order: order.value++,
       kind: "video",
       artifact: structuredClone(layer.source.artifact),
       sourceTime,
       muted: true,
       style: mediaStyle,
-    }];
+    };
+    return { ...samplingElement, children: [{ ...appearanceElement, children: [{ ...mappingElement, children: [media] }] }] };
   }
-  return [samplingElement, appearanceElement, mappingElement, {
+  const media: VisualElement = {
     id: layer.id,
-    parent: mapping,
-    order: order.value++,
     kind: "surface",
     surface: structuredClone(layer.source.surface),
     sourceTime,
     style: mediaStyle,
-  }];
+  };
+  return { ...samplingElement, children: [{ ...appearanceElement, children: [{ ...mappingElement, children: [media] }] }] };
 }
 
 function layerElements(
   layer: MediaLayerProgram,
   clip: VisualClipProgram,
-  parent: string,
-  order: { value: number },
   timeline: Timeline,
   sourceTimeOverrides: Readonly<Record<string, VisualSourceTimeMap>>,
   samplingAnimationOverrides: Readonly<Record<string, VisualAnimation | null>>,
-): VisualElement[] {
+): VisualElement {
   if (layer.kind === "sample") {
-    return sampleElements(layer, clip, parent, order, timeline, sourceTimeOverrides, samplingAnimationOverrides);
+    return sampleElements(layer, clip, timeline, sourceTimeOverrides, samplingAnimationOverrides);
   }
-  return [{
+  return {
     id: layer.id,
-    parent,
-    order: order.value++,
     kind: "box",
+    children: [],
     style: [
       { name: "background", value: paint(layer.paint) },
       { name: "height", value: "100%" },
@@ -297,11 +284,11 @@ function layerElements(
       { name: "top", value: 0 },
       { name: "width", value: "100%" },
     ],
-  }];
+  };
 }
 
 /** Lower one independent Clip through the fixed wrapper stack from the visual spec. */
-export function lowerVisualClipElements(
+export function lowerVisualClipRoot(
   clip: VisualClipProgram,
   timeline: Timeline,
   options: {
@@ -309,18 +296,37 @@ export function lowerVisualClipElements(
     /** Implementation-level reuse hook for collection components with their own explicit clock. */
     readonly sourceTimeOverrides?: Readonly<Record<string, VisualSourceTimeMap>>;
     readonly samplingAnimationOverrides?: Readonly<Record<string, VisualAnimation | null>>;
-    /** Attach the visual material subtree below another component-owned wrapper. */
-    readonly placementParent?: string;
   } = {},
-): readonly VisualElement[] {
+): VisualElement {
   const durationFrames = clip.span.endFrameExclusive - clip.span.startFrame;
-  const order = { value: 0 };
   const root = `${clip.id}:placement`;
-  const elements: VisualElement[] = [{
-    id: root,
-    ...(options.placementParent === undefined ? {} : { parent: options.placementParent }),
-    order: order.value++,
+  const layers = clip.layers.map((layer) => layerElements(
+    layer,
+    clip,
+    timeline,
+    options.sourceTimeOverrides ?? {},
+    options.samplingAnimationOverrides ?? {},
+  ));
+  const frame: VisualElement = {
+    id: `${clip.id}:frame`,
     kind: "box",
+    children: layers,
+    style: frameStyles(clip.treatment, clip.frame),
+  };
+  const motion = options.poseAnimationOverride === undefined
+    ? poseAnimation(clip.motion, durationFrames)
+    : options.poseAnimationOverride ?? undefined;
+  const motionOrigin = clip.motion?.keyframes[0];
+  const pose = box(
+    `${clip.id}:pose`,
+    [frame],
+    motion,
+    motionOrigin === undefined ? "center center" : `${motionOrigin.originX * 100}% ${motionOrigin.originY * 100}%`,
+  );
+  return {
+    id: root,
+    kind: "box",
+    children: [pose],
     style: [
       { name: "height", value: px(clip.frame.heightPx) },
       { name: "left", value: px(clip.frame.xPx) },
@@ -328,26 +334,5 @@ export function lowerVisualClipElements(
       { name: "top", value: px(clip.frame.yPx) },
       { name: "width", value: px(clip.frame.widthPx) },
     ],
-  }];
-  const parent = `${clip.id}:pose`;
-  const motion = options.poseAnimationOverride === undefined
-    ? poseAnimation(clip.motion, durationFrames)
-    : options.poseAnimationOverride ?? undefined;
-  const motionOrigin = clip.motion?.keyframes[0];
-  elements.push(box(parent, order.value++, root, motion,
-    motionOrigin === undefined ? "center center" : `${motionOrigin.originX * 100}% ${motionOrigin.originY * 100}%`));
-  const frame = `${clip.id}:frame`;
-  elements.push({ id: frame, parent, order: order.value++, kind: "box", style: frameStyles(clip.treatment, clip.frame) });
-  for (const layer of clip.layers) {
-    elements.push(...layerElements(
-      layer,
-      clip,
-      frame,
-      order,
-      timeline,
-      options.sourceTimeOverrides ?? {},
-      options.samplingAnimationOverrides ?? {},
-    ));
-  }
-  return elements;
+  };
 }

@@ -79,7 +79,7 @@ function taskView(
   view: BuildView,
   result?: BuildResultManifest,
 ): StudioTaskView {
-  if (view.source === undefined) throw new Error(`Active Build ${view.id} has no source`);
+  if (view.sourcePath === undefined) throw new Error(`Active Build ${view.id} has no source`);
   const detail = view.issue?.message ?? view.stop?.reason;
   return {
     id: view.id,
@@ -91,8 +91,8 @@ function taskView(
     status: taskStatus(view),
     ...(detail === undefined ? {} : { detail }),
     ...(view.requests === undefined ? {} : { requests: view.requests }),
-    source: presentedPath(root, view.source.path),
-    ...(view.run === undefined ? {} : { run: presentedPath(root, view.run.path) }),
+    source: presentedPath(root, view.sourcePath),
+    ...(view.runPath === undefined ? {} : { run: presentedPath(root, view.runPath) }),
     targets: result?.targets ?? view.targets,
     operations: view.operations.map((operation) => ({
       status: operation.status === "received" ? "pending" : operation.status,
@@ -115,8 +115,8 @@ function resultTaskView(root: string, result: FinishedBuildResultManifest): Stud
     ongoing: false,
     status: result.outcome,
     ...(result.failure === undefined ? {} : { detail: result.failure }),
-    source: presentedPath(root, result.source.id),
-    ...(result.run === undefined ? {} : { run: presentedPath(root, result.run.id) }),
+    source: presentedPath(root, result.sourceId),
+    ...(result.runId === undefined ? {} : { run: presentedPath(root, result.runId) }),
     targets: result.targets,
     operations: [],
   };
@@ -134,7 +134,7 @@ async function artifactsForResults(
 ): Promise<readonly StudioArtifactView[]> {
   const nested = await Promise.all(manifests.flatMap((manifest) =>
     Object.entries(manifest.outputs).map(async ([output, entry]): Promise<StudioArtifactView[]> => {
-      // Composite Outputs remain intact. Listing media never opens their Value Documents.
+      // Value-document Outputs remain intact. Listing media never opens their documents.
       if (entry.value.kind !== "build-file" && entry.value.kind !== "external-file" && entry.value.kind !== "build-output") return [];
       const description = entry.value.kind === "build-file" || entry.value.kind === "external-file"
         ? { representation: "file" as const, mediaType: entry.value.mediaType, size: entry.value.size }
@@ -146,8 +146,8 @@ async function artifactsForResults(
         : await repository.resolve(manifest.id, output);
       if (resolved === undefined || (resolved.value.kind !== "build-file" && resolved.value.kind !== "external-file")) return [];
       const file = resolved.value;
-      const source = presentedPath(root, manifest.source.id);
-      const run = manifest.run === undefined ? undefined : presentedPath(root, manifest.run.id);
+      const source = presentedPath(root, manifest.sourceId);
+      const run = manifest.runId === undefined ? undefined : presentedPath(root, manifest.runId);
       return [{
         id: fileReferenceIdentity(resolved.build, file),
         build: manifest.id,
@@ -186,24 +186,24 @@ export async function readStudioLibrary(input: StudioLibraryRequest & {
   // Read activity before Results so a Build that finishes during this query is still represented.
   const active = input.runtime === undefined || input.before !== undefined
     ? [] : (await input.runtime.activity()).builds;
-  const views = active.filter((view) => view.source !== undefined && matches({
+  const views = active.filter((view) => view.sourcePath !== undefined && matches({
     id: view.id,
-    source: view.source.path,
-    ...(view.run === undefined ? {} : { run: view.run.path }),
+    source: view.sourcePath,
+    ...(view.runPath === undefined ? {} : { run: view.runPath }),
   }));
   let page = input.build === undefined
     ? await input.results.browse({ limit: 25, ...(input.before === undefined ? {} : { before: input.before }) })
     : { results: [await input.results.read(input.build)].filter((item): item is BuildResultManifest => item !== undefined) };
   const manifests = page.results.filter((manifest) => matches({
     id: manifest.id,
-    source: manifest.source.id,
-    ...(manifest.run === undefined ? {} : { run: manifest.run.id }),
+    source: manifest.sourceId,
+    ...(manifest.runId === undefined ? {} : { run: manifest.runId }),
   }));
   const resultsByBuild = new Map(manifests.map((manifest) => [manifest.id, manifest]));
   await Promise.all(views.filter((view) => !resultsByBuild.has(view.id)).map(async (view) => {
     const result = await input.results.read(view.id);
-    if (result !== undefined && matches({ id: result.id, source: result.source.id,
-      ...(result.run === undefined ? {} : { run: result.run.id }) })) resultsByBuild.set(view.id, result);
+    if (result !== undefined && matches({ id: result.id, source: result.sourceId,
+      ...(result.runId === undefined ? {} : { run: result.runId }) })) resultsByBuild.set(view.id, result);
   }));
   let artifacts: readonly StudioArtifactView[] = [];
   if (input.section === "artifacts") {
@@ -217,8 +217,8 @@ export async function readStudioLibrary(input: StudioLibraryRequest & {
       artifacts = mergeStudioArtifacts([...artifacts,
         ...await artifactsForResults(input.workspaceRoot, input.results, page.results.filter((manifest) => matches({
           id: manifest.id,
-          source: manifest.source.id,
-          ...(manifest.run === undefined ? {} : { run: manifest.run.id }),
+          source: manifest.sourceId,
+          ...(manifest.runId === undefined ? {} : { run: manifest.runId }),
         })), input.media)]);
     }
   }

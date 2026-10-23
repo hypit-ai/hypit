@@ -247,7 +247,7 @@ function endpoint(client: TokenDanceClient, pollIntervalMs: number, maxOperation
         assert(route !== undefined && handle.route === route.key, "TokenDance collection route differs");
         await context.reportProgress?.({ phase: "Receiving generated video" });
         const blobs = await store(client, [httpsUrl(handle.url, "TokenDance handle")], context.resources);
-        return { status: "completed", result: { value: route.packageResult(blobs) }, receipt: { id: handle.taskId } };
+        return { status: "completed", result: route.packageResult(blobs), receipt: { id: handle.taskId } };
       } catch (error) {
         return retrying(error, context.handle, pollIntervalMs) ?? failure(error);
       }
@@ -273,7 +273,7 @@ export function createTokenDanceProvider(options: CreateTokenDanceProviderOption
     assert(Array.isArray(response.data) && response.data.length > 0, "TokenDance image response has no data");
     const urls = response.data.map((item, index) => httpsUrl(object(item, `TokenDance image ${index + 1}`).url, `TokenDance image ${index + 1}`));
     await context.reportProgress?.({ phase: "Receiving generated images" });
-    return { value: route.packageResult(await store(client, urls, context.resources)) };
+    return route.packageResult(await store(client, urls, context.resources));
   };
   return defineEndpoint({
     instance: options.instance ?? "tokendance.default", pool: options.pool ?? options.instance ?? "tokendance.default",

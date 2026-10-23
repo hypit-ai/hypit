@@ -18,15 +18,18 @@ formats. The service's flat-background MP4 option is a different output treatmen
 ```svml
 <import as="mediaop" from="@hypit/media-operations@1"/>
 <import as="whisperx" from="@hypit/whisperx@1"/>
+<import as="speechalign" from="@hypit/narrative-speech-alignment@1"/>
 <import as="semantic" from="@hypit/narrative-temporal@1"/>
 <import as="media" from="@hypit/media@1"/>
 
 <time:Clock id="clock" frame-rate="30"/>
 <mediaop:Normalize id="cutout-media" source={cutout.video} clock={clock}
   video="primary-moving" audio="default" span-authority="video"/>
-<whisperx:Alignment id="opening-alignment" narrative={story}
-  segment={story.segment.opening} media={cutout-media.media}
-  domain={cutout-media.domain} language="en"/>
+<whisperx:Transcription id="opening-transcription"
+  media={cutout-media.media} language="en"/>
+<speechalign:Alignment id="opening-alignment" narrative={story}
+  segment={story.segment.opening} domain={cutout-media.domain}
+  evidence={opening-transcription.transcript}/>
 <time:Timeline id="speech" clock={clock} end="opening.end">
   <time:Window id="opening" from="start" for={cutout-media.extent}/>
 </time:Timeline>
@@ -54,13 +57,13 @@ For example, this alternative uses the existing program's Timeline and an author
   video="primary-moving" audio="none" span-authority="video"/>
 <visual:Track id="overlay" timeline={speech.timeline}>
   <visual:Clip media={overlay-media.media} during={example}
-    frame={overlay-frame} z="30" fit="contain" treatment={look.visual.overlay}/>
+    frame={overlay-frame} fit="contain" treatment={look.visual.overlay}/>
 </visual:Track>
 ```
 
-The Frame, treatment Recipe and Selection belong to the composition. Add `overlay.visual` to Film;
-the Clip's direct `z` sets its stacking order. The performance underneath continues to supply
-semantic time.
+The Frame, treatment Recipe and Selection belong to the composition. Add `overlay.visual` to Film
+with the desired `<film:Track id="...">`; that parent membership names the occurrence, while its sibling position sets paint order. The
+performance underneath continues to supply semantic time.
 
 The same processed clip can serve either role; matting does not choose its Track or timeline.
 The local media Provider's Transform currently emits opaque MP4. When a clip also needs trimming

@@ -1,11 +1,11 @@
 <?svml using="@hypit/recipe@1"?>
 <sheet version="1">
   film.main { background: #090f1b; }
-  media.hidden { stack-order: 0; fit: cover; opacity: 0; }
-  media.full { stack-order: 0; fit: cover; clip: frame; }
-  media.upper { stack-order: 60; fit: cover; frame-y: 0.3; content-y: 0.3; clip: frame; }
+  media.hidden { fit: cover; opacity: 0; }
+  media.full { fit: cover; clip: frame; }
+  media.upper { fit: cover; frame-y: 0.3; content-y: 0.3; clip: frame; }
   caption.primary {
-    stack-order: 70; x: 0.5; y: 0.79; width: 0.90; height: 0.13;
+ x: 0.5; y: 0.79; width: 0.90; height: 0.13;
     anchor-x: center; anchor-y: bottom; align: center; block-align: end; inline-size: fixed;
     wrap: word; size: 68; line-height: 1.1; fill: #EDE7DE; stroke-color: #10121e; stroke-width: 6;
   shadow-color: #2b1f30;

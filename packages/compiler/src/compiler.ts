@@ -3,14 +3,15 @@ import type {
   AuthorFrontendRegistryLike,
   AuthorSourceDiscovery,
   CompiledSourceClosure,
-  AuthorRecordValidator,
+  AuthorRecordRefiner,
 } from "@hypit/author";
 import type { ResolvedSource, SourceUnit } from "@hypit/source";
 import type { BlobAttachment, Workspace, WorkspaceSession } from "@hypit/workspace";
 import type { BlobRef, LinkedProgram } from "@hypit/protocol";
+import { compareCodeUnits, moduleKey } from "@hypit/protocol";
 import {
   RefinementRegistry,
-  createRecordValidator,
+  refineRecord,
 } from "@hypit/refinement";
 import type { RefinementRegistryLike } from "@hypit/refinement";
 
@@ -25,7 +26,7 @@ type DiscoveredUnit = {
 };
 
 function attachmentKey(blob: BlobRef): string {
-  return `${blob.resource}\u0000${blob.mediaType}`;
+  return JSON.stringify([blob.resource, blob.mediaType]);
 }
 
 export function mergeAttachments(groups: readonly (readonly BlobAttachment[])[]): readonly BlobAttachment[] {
@@ -51,7 +52,7 @@ export function mergeAttachments(groups: readonly (readonly BlobAttachment[])[])
     });
   }
   return [...merged.values()]
-    .sort((left, right) => attachmentKey(left.blob).localeCompare(attachmentKey(right.blob)));
+    .sort((left, right) => compareCodeUnits(attachmentKey(left.blob), attachmentKey(right.blob)));
 }
 
 async function discoverClosure(
@@ -101,11 +102,12 @@ export type CompiledAuthorSource = CompiledSourceClosure & {
 /** Domain-neutral compiler from a resolved Author Source to a verified Source Closure and Graph. */
 export class Compiler {
   readonly #options: CompilerOptions;
-  readonly #validateRecord: AuthorRecordValidator;
+  readonly #refineRecord: AuthorRecordRefiner;
 
   constructor(options: CompilerOptions) {
     this.#options = options;
-    this.#validateRecord = createRecordValidator(options.refinements ?? new RefinementRegistry());
+    const refinements = options.refinements ?? new RefinementRegistry();
+    this.#refineRecord = async (record) => await refineRecord(record, refinements);
   }
 
   supportsFrontend(id: string): boolean {
@@ -153,7 +155,7 @@ export class Compiler {
       },
       resolveSource: workspace.resolveSource,
       resolveAsset: workspace.resolveAsset,
-      validateRecord: this.#validateRecord,
+      refineRecord: this.#refineRecord,
     });
     return {
       ...compilation,
@@ -165,16 +167,16 @@ export class Compiler {
    * Add modules used only by Run implementations. Author records stay unchanged.
    */
   extendExecutionProgram(program: LinkedProgram, requests: readonly string[]): LinkedProgram {
-    const existing = program.closure.modules.map((item) => `${item.manifest.name}@${item.manifest.version}`);
+    const existing = program.closure.modules.map(moduleKey);
     if (requests.every((request) => existing.includes(request))) return program;
     const closure = this.#options.modules.createClosure([...existing, ...requests]);
     return link(closure, program.records);
   }
 
   /** Validate one selected Run value through the same Type-owner boundary as authored Records. */
-  async validateRecord(program: LinkedProgram, record: import("@hypit/protocol").TypedRecord): Promise<void> {
+  async refineRecord(program: LinkedProgram, record: import("@hypit/protocol").TypedRecord): Promise<void> {
     verifyRecordStructure(program.closure, record);
-    await this.#validateRecord(record);
+    await this.#refineRecord(record);
   }
 
 }

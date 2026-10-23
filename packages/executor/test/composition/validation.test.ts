@@ -30,8 +30,8 @@ import type {
 import {
   RefinementError,
   RefinementRegistry,
-  validateRecord,
-  validateValue,
+  refineRecord,
+  refineValue,
 } from "@hypit/refinement";
 
 const contractModule = { name: "example.measurement-contract", version: "1.0.0" } as const;
@@ -61,16 +61,12 @@ const contractManifest: ModuleManifest = {
   name: contractModule.name,
   version: contractModule.version,
   dependencies: [],
-  types: [{
-    name: measurementType.name,
-  }],
+  types: [measurementType.name],
   capabilities: [],
   producers: [],
 };
 
-const contractDependency = {
-  module: contractModule,
-};
+const contractDependency = contractModule;
 
 const sensorManifest: ModuleManifest = {
   format: "hypit.module@1",
@@ -98,7 +94,7 @@ const reportManifest: ModuleManifest = {
   name: reportModule.name,
   version: reportModule.version,
   dependencies: [contractDependency],
-  types: [{ name: reportType.name }],
+  types: [reportType.name],
   capabilities: [],
   producers: [{
     name: reportProducer.name,
@@ -180,7 +176,7 @@ function buildState(linked: LinkedProgram, graph: AuthorGraph, targets: readonly
     candidates: [],
     operations: [],
     satisfactions: [],
-    targets: targets.map((output) => ({ output })),
+    targets,
   });
   return materializeBuild(defineBuild({
     program: link(linked.closure, [...linked.records, ...planned.initialRecords]),
@@ -256,9 +252,7 @@ async function providerBuild(measured: number) {
     "example:measurement-endpoint",
     measurementCapability,
     measurementType,
-    () => ({
-      value: ({ value: measured, unit: "ticks" }),
-    }),
+    () => ({ value: measured, unit: "ticks" }),
   );
   return await runBuild(
     new Executor({ producers: hosts, endpoints, refinements: registry() }),
@@ -284,14 +278,13 @@ test("authored values cross the Type owner's validation gate without carrying va
     value: ({ value: 10, unit: "ticks" }),
   });
   verifyRecordStructure(linked.closure, raw);
-  const admitted = await validateRecord(raw, registry());
-  verifyRecordStructure(linked.closure, admitted);
-  assert.deepEqual(admitted, raw);
+  await refineRecord(raw, registry());
+  verifyRecordStructure(linked.closure, raw);
 });
 
 test("Type validation errors remain machine distinguishable", async () => {
   await assert.rejects(
-    () => validateValue(
+    () => refineValue(
       measurementType,
       ({ value: 9, unit: "ticks" }),
       registry(),

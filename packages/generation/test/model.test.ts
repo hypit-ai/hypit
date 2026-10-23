@@ -34,8 +34,10 @@ test("a Model can own a structured request without the field helper", async () =
     }],
   });
   assert.equal(model.operations.render.capability.name, "structured-render");
-  assert.deepEqual(model.manifest.dependencies, [{ module: { name: "@hypit/generation", version: "1" } }]);
-  const producer = model.component.producers[0]!;
+  assert.deepEqual(model.manifest.dependencies, [{ name: "@hypit/generation", version: "1" }]);
+  const producer = model.component.producers.find((item) =>
+    item.producer.name === model.operations.render.producer.name);
+  assert.ok(producer);
   const result = await producer.handler({ inputs: {
     request: { value: ({ regions: [{ mask: "subject", weight: 0.8 }] }) },
   } } as never);
@@ -75,7 +77,7 @@ test("the optional field helper derives dependencies only from the fields and se
       result: standardGenerationResults.image,
     }],
   });
-  assert.deepEqual(scalarModel.manifest.dependencies, [{ module: { name: "@hypit/generation", version: "1" } }]);
+  assert.deepEqual(scalarModel.manifest.dependencies, [{ name: "@hypit/generation", version: "1" }]);
 });
 
 const ports = defineModelFields({
@@ -101,7 +103,7 @@ const definition = defineFieldModelModule({
 test("the field helper extends the opaque Model contract without duplicating its core declarations", () => {
   const endpoint = definition.endpoints.image;
   assert.equal(definition.manifest.capabilities.filter((item) => item.name === endpoint.capability.name).length, 1);
-  assert.equal(definition.manifest.types.filter((item) => item.name === endpoint.requestType.name).length, 1);
+  assert.equal(definition.manifest.types.filter((item) => item === endpoint.requestType.name).length, 1);
   assert.equal(definition.manifest.producers.filter((item) => item.name === endpoint.producer.name).length, 1);
   assert.equal(definition.component.refinements.filter((item) => item.type.name === endpoint.requestType.name).length, 1);
   assert.equal(definition.component.producers.filter((item) => item.producer.name === endpoint.producer.name).length, 1);

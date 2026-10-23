@@ -15,7 +15,7 @@ import {
 import { createReadStream } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
-import { assertOrderedBuildId, buildIdCreatedAt, sameType } from "@hypit/protocol";
+import { assertOrderedBuildId, buildIdCreatedAt, compareCodeUnits, sameType } from "@hypit/protocol";
 import type { BlobRef, TypeRef } from "@hypit/protocol";
 
 import type {
@@ -251,7 +251,7 @@ export async function browseBuildResults(
     .filter((entry) => entry.isDirectory() && /^\d{4}-\d{2}-\d{2}$/u.test(entry.name))
     .map((entry) => entry.name)
     .filter((bucket) => beforeBucket === undefined || bucket <= beforeBucket)
-    .sort((left, right) => right.localeCompare(left));
+    .sort((left, right) => compareCodeUnits(right, left));
   const found: FinishedBuildResultManifest[] = [];
   for (const bucket of buckets) {
     const bucketDirectory = join(directory, bucket);
@@ -266,7 +266,7 @@ export async function browseBuildResults(
         return buildResultDateBucket(build) === bucket
           && (request.before === undefined || build < request.before);
       })
-      .sort((left, right) => right.localeCompare(left));
+      .sort((left, right) => compareCodeUnits(right, left));
     for (const build of ordered) {
       const manifest = await readBuildResult(join(bucketDirectory, build));
       if (manifest?.outcome === undefined || manifest.finishedAt === undefined) continue;
@@ -419,8 +419,8 @@ export class FileBuildResult {
       format: "hypit.build-result@1",
       id: seed.id,
       ...(seed.title === undefined ? {} : { title: seed.title }),
-      source: seed.source,
-      ...(seed.run === undefined ? {} : { run: seed.run }),
+      sourceId: seed.sourceId,
+      ...(seed.runId === undefined ? {} : { runId: seed.runId }),
       targets: publication.outputs.filter((output) => output.target).map((output) => output.name),
       outputs: {},
     };

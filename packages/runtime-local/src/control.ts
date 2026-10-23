@@ -50,10 +50,9 @@ function buildView(input: {
     ...(input.execution?.attention === undefined ? {} : {
       issue: { scope: input.execution.attention.step, message: input.execution.attention.error },
     }),
-    cancellationRequested: input.execution?.stop?.cause === "user-cancelled",
     ...(input.execution?.stop === undefined ? {} : { stop: input.execution.stop }),
-    ...(input.catalog?.source === undefined ? {} : { source: input.catalog.source }),
-    ...(input.catalog?.run === undefined ? {} : { run: input.catalog.run }),
+    ...(input.catalog?.sourcePath === undefined ? {} : { sourcePath: input.catalog.sourcePath }),
+    ...(input.catalog?.runPath === undefined ? {} : { runPath: input.catalog.runPath }),
     targets,
     ...(requests === undefined ? {} : { requests }),
     acceptedRecords: state?.records.length ?? 0,

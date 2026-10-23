@@ -2,18 +2,19 @@ import { assertTimelineIdentity, timelineFrameSampleBoundary, timelineSampleFram
 import type { Timeline } from "@hypit/timeline";
 import {
   assertAudioTrackIdentity,
+  audioGraphFromClips,
   assertVisualTrackIdentity,
   sealAudioTrack,
-  sealVisualTrack,
+  sealPresentVisualTrack,
 } from "@hypit/composition";
 import type {
   AudioClip,
   AudioTrack,
   VisualAnimation,
   VisualElement,
-  VisualPresent,
+  VisualPresentDraft,
   VisualStyleDeclaration,
-  VisualTrack,
+  PresentVisualTrack,
 } from "@hypit/composition";
 import { synchronizedMediaSampleFrames, verifySynchronizedMedia } from "@hypit/media";
 
@@ -62,8 +63,7 @@ function boxShadow(value: RankingBoardPaint["shadow"]): string {
 
 function absoluteBox(input: {
   readonly id: string;
-  readonly order: number;
-  readonly parent?: string;
+  readonly children?: readonly VisualElement[];
   readonly x: number;
   readonly y: number;
   readonly width: number;
@@ -73,9 +73,8 @@ function absoluteBox(input: {
 }): VisualElement {
   return {
     id: input.id,
-    ...(input.parent === undefined ? {} : { parent: input.parent }),
-    order: input.order,
     kind: "box",
+    children: input.children ?? [],
     style: [
       { name: "height", value: px(input.height) },
       { name: "left", value: px(input.x) },
@@ -115,8 +114,6 @@ function textStyle(value: RankingTextStyle, align: "left" | "center" | "right" =
 
 function simpleText(input: {
   readonly id: string;
-  readonly order: number;
-  readonly parent?: string;
   readonly text: string;
   readonly typography: RankingTextStyle;
   readonly x: number;
@@ -129,8 +126,6 @@ function simpleText(input: {
 }): VisualElement {
   return {
     id: input.id,
-    ...(input.parent === undefined ? {} : { parent: input.parent }),
-    order: input.order,
     kind: "text",
     text: input.text,
     fonts: structuredClone(input.typography.fonts),
@@ -149,8 +144,6 @@ function simpleText(input: {
 
 function iconElement(input: {
   readonly id: string;
-  readonly order: number;
-  readonly parent: string;
   readonly artifact: TierBoardItem["icon"];
   readonly x: number;
   readonly y: number;
@@ -160,8 +153,6 @@ function iconElement(input: {
 }): VisualElement {
   return {
     id: input.id,
-    parent: input.parent,
-    order: input.order,
     kind: "image",
     artifact: structuredClone(input.artifact),
     style: [
@@ -177,22 +168,27 @@ function iconElement(input: {
   };
 }
 
+type LayeredPresent = VisualPresentDraft & {
+  readonly layer: number;
+  readonly sequence: number;
+};
+
 function present(input: {
   readonly id: string;
   readonly subjectId: string;
   readonly start: number;
   readonly end: number;
-  readonly order: number;
-  readonly z: number;
-  readonly elements: readonly VisualElement[];
-}): VisualPresent {
+  readonly sequence: number;
+  readonly layer: number;
+  readonly root: VisualElement;
+}): LayeredPresent {
   return {
     id: input.id,
-    order: input.order,
-    z: input.z,
+    layer: input.layer,
+    sequence: input.sequence,
     subjectId: input.subjectId,
     span: { startFrame: input.start, endFrameExclusive: input.end },
-    elements: input.elements,
+    root: input.root,
   };
 }
 
@@ -250,24 +246,24 @@ function tierItemAnimation(
   })));
 }
 
-function sealTrack(timeline: Timeline, id: string, presents: readonly VisualPresent[]): VisualTrack {
-  const value = sealVisualTrack({ timelineId: timeline.id, visualIr: "hypit.visual-ir@1", id, presents });
+function sealTrack(timeline: Timeline, id: string, presents: readonly LayeredPresent[]): PresentVisualTrack {
+  const ordered = [...presents]
+    .sort((left, right) => left.layer - right.layer || left.sequence - right.sequence || left.id.localeCompare(right.id))
+    .map(({ layer: _layer, sequence: _sequence, ...item }) => item);
+  const value = sealPresentVisualTrack({ timelineId: timeline.id, visualIr: "hypit.visual-ir@1", id, presents: ordered });
   assertVisualTrackIdentity(value, timeline);
   return value;
 }
 
-export function renderTierBoard(timeline: Timeline, program: TierBoardProgram): VisualTrack {
+export function renderTierBoard(timeline: Timeline, program: TierBoardProgram): PresentVisualTrack {
   assertTimelineIdentity(timeline);
   assertTierBoardProgram(program);
   const { within, frame, style, schedule } = program;
   const geometry = tierBoardGeometry(frame.widthPx, frame.heightPx, style);
   const localStage = tierStageGeometry(within.widthPx, within.heightPx, style);
   const stage = { ...localStage, centerX: within.xPx + localStage.centerX, centerY: within.yPx + localStage.centerY };
-  const presents: VisualPresent[] = [];
-  const boardElements: VisualElement[] = [absoluteBox({
-    id: "tier-board-root", order: 0,
-    x: frame.xPx, y: frame.yPx, width: frame.widthPx, height: frame.heightPx,
-  })];
+  const presents: LayeredPresent[] = [];
+  const boardChildren: VisualElement[] = [];
   const labelTypography: RankingTextStyle = {
     fonts: structuredClone(style.fonts),
     sizePx: geometry.rowHeight * style.labelSizeRatio,
@@ -279,8 +275,25 @@ export function renderTierBoard(timeline: Timeline, program: TierBoardProgram): 
     const root = `tier-row-${row.id}`;
     const y = index * geometry.rowHeight;
     const last = index === style.rows.length - 1;
-    boardElements.push(absoluteBox({
-      id: root, parent: "tier-board-root", order: boardElements.length,
+    const rowChildren: VisualElement[] = [];
+    rowChildren.push(absoluteBox({
+      id: `${root}-content`,
+      x: geometry.labelWidth, y: 0, width: frame.widthPx - geometry.labelWidth, height: geometry.rowHeight,
+      style: [{ name: "background", value: style.boardColor }],
+    }));
+    rowChildren.push(simpleText({
+      id: `${root}-label`,
+      text: row.label, typography: labelTypography, x: 0, y: 0,
+      width: geometry.labelWidth, height: geometry.rowHeight,
+      style: [
+        { name: "background", value: row.color },
+        { name: "border-right", value: `${px(style.borderWidthPx)} solid ${style.borderColor}` },
+        { name: "box-sizing", value: "border-box" },
+      ],
+    }));
+    boardChildren.push(absoluteBox({
+      id: root,
+      children: rowChildren,
       x: 0, y, width: frame.widthPx, height: geometry.rowHeight,
       style: [
         { name: "border-top", value: `${px(style.borderWidthPx)} solid ${style.borderColor}` },
@@ -290,25 +303,14 @@ export function renderTierBoard(timeline: Timeline, program: TierBoardProgram): 
         { name: "box-sizing", value: "border-box" },
       ],
     }));
-    boardElements.push(absoluteBox({
-      id: `${root}-content`, parent: root, order: boardElements.length,
-      x: geometry.labelWidth, y: 0, width: frame.widthPx - geometry.labelWidth, height: geometry.rowHeight,
-      style: [{ name: "background", value: style.boardColor }],
-    }));
-    boardElements.push(simpleText({
-      id: `${root}-label`, parent: root, order: boardElements.length,
-      text: row.label, typography: labelTypography, x: 0, y: 0,
-      width: geometry.labelWidth, height: geometry.rowHeight,
-      style: [
-        { name: "background", value: row.color },
-        { name: "border-right", value: `${px(style.borderWidthPx)} solid ${style.borderColor}` },
-        { name: "box-sizing", value: "border-box" },
-      ],
-    }));
   }
+  const boardRoot = absoluteBox({
+    id: "tier-board-root", children: boardChildren,
+    x: frame.xPx, y: frame.yPx, width: frame.widthPx, height: frame.heightPx,
+  });
   presents.push(present({
     id: `${program.id}:board`, subjectId: program.id, start: schedule.outer.startFrame, end: schedule.outer.endFrameExclusive,
-    order: 0, z: style.boardStackingOrder, elements: boardElements,
+    sequence: 0, layer: style.boardStackingOrder, root: boardRoot,
   }));
   const entries = new Map(schedule.entries.map((entry) => [entry.itemId, entry]));
   const rowCounts = new Map<string, number>();
@@ -327,9 +329,11 @@ export function renderTierBoard(timeline: Timeline, program: TierBoardProgram): 
       size: cell.size,
     };
     const root = `tier-item-${item.id}`;
-    const itemElements = (animationValue?: VisualAnimation): VisualElement[] => [
+    const itemRoot = (animationValue?: VisualAnimation): VisualElement =>
       absoluteBox({
-        id: root, order: 0,
+        id: root,
+        children: [iconElement({ id: "icon", artifact: item.icon, x: 0, y: 0,
+          size: cell.size, radius, fit: style.iconFit })],
         x: absoluteCell.x, y: absoluteCell.y, width: cell.size, height: cell.size,
         style: [
           { name: "border-radius", value: px(radius) },
@@ -339,10 +343,7 @@ export function renderTierBoard(timeline: Timeline, program: TierBoardProgram): 
           { name: "transform-origin", value: "center center" },
         ],
         ...(animationValue === undefined ? {} : { animation: animationValue }),
-      }),
-      iconElement({ id: "icon", parent: root, order: 1, artifact: item.icon, x: 0, y: 0,
-        size: cell.size, radius, fit: style.iconFit }),
-    ];
+      });
     if (entry.mode === "reveal") {
       assert(!item.preset, `TierBoard reveal ${item.id} cannot be preset.`);
       const duration = entry.window.endFrameExclusive - entry.window.startFrame;
@@ -354,18 +355,18 @@ export function renderTierBoard(timeline: Timeline, program: TierBoardProgram): 
         id: `${program.id}:item:${item.id}:reveal`, subjectId: item.id,
         start: entry.window.startFrame,
         end: entry.window.endFrameExclusive,
-        order: index + 1,
-        z: item.stackingOrder ?? (item.entry === "drop" ? style.stageStackingOrder : style.itemStackingOrder),
-        elements: itemElements(rootAnimation),
+        sequence: index + 1,
+        layer: item.stackingOrder ?? (item.entry === "drop" ? style.stageStackingOrder : style.itemStackingOrder),
+        root: itemRoot(rootAnimation),
       }));
     }
     if (entry.settled.endFrameExclusive > entry.settled.startFrame) presents.push(present({
       id: `${program.id}:item:${item.id}:settled`, subjectId: item.id,
       start: entry.settled.startFrame,
       end: entry.settled.endFrameExclusive,
-      order: index + 1,
-      z: item.stackingOrder ?? style.itemStackingOrder,
-      elements: itemElements(),
+      sequence: index + 1,
+      layer: item.stackingOrder ?? style.itemStackingOrder,
+      root: itemRoot(),
     }));
   }
   return sealTrack(timeline, program.id, presents);
@@ -461,11 +462,11 @@ function columnRevealAnimation(input: {
   ]);
 }
 
-export function renderColumn(timeline: Timeline, program: ColumnProgram): VisualTrack {
+export function renderColumn(timeline: Timeline, program: ColumnProgram): PresentVisualTrack {
   assertTimelineIdentity(timeline);
   assertColumnProgram(program);
   const { within, frame, style, schedule } = program;
-  const presents: VisualPresent[] = [];
+  const presents: LayeredPresent[] = [];
   const entries = new Map(schedule.entries.map((entry) => [entry.itemId, entry]));
   const cellSize = style.rowHeightPx;
   const columnGap = Math.max(8, Math.round(cellSize * 0.16));
@@ -474,28 +475,25 @@ export function renderColumn(timeline: Timeline, program: ColumnProgram): Visual
   const requiredHeight = style.paddingPx * 2 + program.items.length * cellSize
     + Math.max(0, program.items.length - 1) * style.rowGapPx;
   assert(requiredHeight <= frame.heightPx, "Column rows do not fit inside its Frame.");
-  const boardElements: VisualElement[] = [absoluteBox({
-    id: "column-board", order: 0, x: frame.xPx, y: frame.yPx, width: frame.widthPx, height: frame.heightPx,
-    style: boardStyle(style.board),
-  })];
+  const boardChildren: VisualElement[] = [];
   for (const [index, item] of program.items.entries()) {
     const y = style.paddingPx + index * (cellSize + style.rowGapPx);
     const color = rankColor(style.rankColors, item.rank - 1);
-    boardElements.push(absoluteBox({
-      id: `column-rank-cell-${item.rank}`, parent: "column-board", order: boardElements.length,
+    boardChildren.push(absoluteBox({
+      id: `column-rank-cell-${item.rank}`,
+      children: [simpleText({
+        id: `column-rank-${item.rank}`,
+        text: String(item.rank), typography: { ...style.text, color: "#ffffff", sizePx: Math.max(style.text.sizePx, cellSize * 0.48) },
+        x: 0, y: 0, width: cellSize, height: cellSize,
+      })],
       x: style.paddingPx, y, width: cellSize, height: cellSize,
       style: [
         { name: "background", value: color },
         { name: "border-radius", value: px(Math.max(4, Math.round(cellSize * 0.075))) },
       ],
     }));
-    boardElements.push(simpleText({
-      id: `column-rank-${item.rank}`, parent: `column-rank-cell-${item.rank}`, order: boardElements.length,
-      text: String(item.rank), typography: { ...style.text, color: "#ffffff", sizePx: Math.max(style.text.sizePx, cellSize * 0.48) },
-      x: 0, y: 0, width: cellSize, height: cellSize,
-    }));
-    boardElements.push(absoluteBox({
-      id: `column-content-cell-${item.rank}`, parent: "column-board", order: boardElements.length,
+    boardChildren.push(absoluteBox({
+      id: `column-content-cell-${item.rank}`,
       x: style.paddingPx + cellSize + columnGap, y, width: contentSize, height: contentSize,
       style: [
         { name: "background", value: "#000000b8" },
@@ -506,8 +504,13 @@ export function renderColumn(timeline: Timeline, program: ColumnProgram): Visual
       ],
     }));
   }
+  const boardRoot = absoluteBox({
+    id: "column-board", children: boardChildren,
+    x: frame.xPx, y: frame.yPx, width: frame.widthPx, height: frame.heightPx,
+    style: boardStyle(style.board),
+  });
   presents.push(present({ id: `${program.id}:board`, subjectId: program.id, start: schedule.outer.startFrame, end: schedule.outer.endFrameExclusive,
-    order: 0, z: style.boardStackingOrder, elements: boardElements }));
+    sequence: 0, layer: style.boardStackingOrder, root: boardRoot }));
   for (const [index, item] of program.items.entries()) {
     const entry = entries.get(item.id)!;
     const x = frame.xPx + style.paddingPx + cellSize + columnGap;
@@ -518,10 +521,17 @@ export function renderColumn(timeline: Timeline, program: ColumnProgram): Visual
     const stageCenterY = within.yPx + Math.round(within.heightPx * style.stagePoint.y);
     const entryCenterY = within.yPx + within.heightPx + style.stageSizePx * 0.25;
     const root = `column-item-${item.id}`;
-    const itemElements = (animationValue?: VisualAnimation): VisualElement[] => {
+    const itemRoot = (animationValue?: VisualAnimation): VisualElement => {
       const iconSize = Math.min(style.iconSizePx, contentSize);
-      const elements: VisualElement[] = [absoluteBox({
-        id: root, order: 0, x, y, width: contentSize, height: contentSize,
+      const content = item.icon !== undefined ? iconElement({ id: "icon", artifact: item.icon,
+        x: (contentSize - iconSize) / 2, y: (contentSize - iconSize) / 2, size: iconSize,
+        radius: style.iconRadiusPx, fit: style.iconFit }) : simpleText({
+        id: "label", text: item.label,
+        typography: { ...style.text, color: "#111315", sizePx: Math.max(12, contentSize * 0.16) },
+        x: contentSize * 0.06, y: 0, width: contentSize * 0.88, height: contentSize,
+      });
+      return absoluteBox({
+        id: root, children: [content], x, y, width: contentSize, height: contentSize,
         style: [
           { name: "background", value: "#fffffffa" },
           { name: "border-radius", value: px(Math.min(style.iconRadiusPx, contentSize / 2)) },
@@ -529,16 +539,7 @@ export function renderColumn(timeline: Timeline, program: ColumnProgram): Visual
           { name: "transform-origin", value: "center center" },
         ],
         ...(animationValue === undefined ? {} : { animation: animationValue }),
-      })];
-      if (item.icon !== undefined) elements.push(iconElement({ id: "icon", parent: root, order: elements.length, artifact: item.icon,
-        x: (contentSize - iconSize) / 2, y: (contentSize - iconSize) / 2, size: iconSize,
-        radius: style.iconRadiusPx, fit: style.iconFit }));
-      else elements.push(simpleText({
-        id: "label", parent: root, order: elements.length, text: item.label,
-        typography: { ...style.text, color: "#111315", sizePx: Math.max(12, contentSize * 0.16) },
-        x: contentSize * 0.06, y: 0, width: contentSize * 0.88, height: contentSize,
-      }));
-      return elements;
+      });
     };
     if (entry.mode === "reveal") {
       const duration = entry.window.endFrameExclusive - entry.window.startFrame;
@@ -550,12 +551,12 @@ export function renderColumn(timeline: Timeline, program: ColumnProgram): Visual
       });
       presents.push(present({
         id: `${program.id}:item:${item.id}:stage`, subjectId: item.id, start: entry.window.startFrame, end: entry.window.endFrameExclusive,
-        order: item.rank, z: item.stackingOrder ?? style.stageStackingOrder, elements: itemElements(rootAnimation),
+        sequence: item.rank, layer: item.stackingOrder ?? style.stageStackingOrder, root: itemRoot(rootAnimation),
       }));
     }
     if (entry.settled.endFrameExclusive > entry.settled.startFrame) presents.push(present({
       id: `${program.id}:item:${item.id}:settled`, subjectId: item.id, start: entry.settled.startFrame, end: entry.settled.endFrameExclusive,
-      order: item.rank, z: item.stackingOrder ?? style.itemStackingOrder, elements: itemElements(),
+      sequence: item.rank, layer: item.stackingOrder ?? style.itemStackingOrder, root: itemRoot(),
     }));
   }
   return sealTrack(timeline, program.id, presents);
@@ -576,17 +577,14 @@ function activeAccentAnimation(duration: number, activeFrames: number): VisualAn
   ]);
 }
 
-export function renderTopThree(timeline: Timeline, program: TopThreeProgram): VisualTrack {
+export function renderTopThree(timeline: Timeline, program: TopThreeProgram): PresentVisualTrack {
   assertTimelineIdentity(timeline);
   assertTopThreeProgram(program);
   const { frame, style, schedule } = program;
-  const boardElements: VisualElement[] = [absoluteBox({
-    id: "top-slots-root", order: 0,
-    x: frame.xPx, y: frame.yPx, width: frame.widthPx, height: frame.heightPx,
-  })];
-  for (const [index] of program.items.entries()) {
-    boardElements.push(absoluteBox({
-      id: `top-slot-${index + 1}`, parent: "top-slots-root", order: index + 1,
+  const boardRoot = absoluteBox({
+    id: "top-slots-root",
+    children: program.items.map((_, index) => absoluteBox({
+      id: `top-slot-${index + 1}`,
       x: topSlotX(program, index) - frame.xPx,
       y: frame.heightPx * style.baselineY - style.iconSizePx / 2,
       width: style.iconSizePx, height: style.iconSizePx,
@@ -594,11 +592,12 @@ export function renderTopThree(timeline: Timeline, program: TopThreeProgram): Vi
         { name: "border", value: `${px(style.ringWidthPx)} solid ${rankColor(style.slotColors, index)}55` },
         { name: "border-radius", value: px(style.iconRadiusPx) },
       ],
-    }));
-  }
-  const presents: VisualPresent[] = [present({
+    })),
+    x: frame.xPx, y: frame.yPx, width: frame.widthPx, height: frame.heightPx,
+  });
+  const presents: LayeredPresent[] = [present({
     id: `${program.id}:slots`, subjectId: program.id, start: schedule.outer.startFrame, end: schedule.outer.endFrameExclusive,
-    order: 0, z: style.boardStackingOrder, elements: boardElements,
+    sequence: 0, layer: style.boardStackingOrder, root: boardRoot,
   })];
   for (const [index, item] of program.items.entries()) {
     const entry = schedule.entries[index]!;
@@ -608,22 +607,17 @@ export function renderTopThree(timeline: Timeline, program: TopThreeProgram): Vi
     const activeFrames = entry.stage.endFrameExclusive - entry.triggerFrame;
     const root = `top-item-${item.id}`;
     const accent = "accent";
-    const itemElements = (active: boolean): VisualElement[] => {
-      const elements: VisualElement[] = [absoluteBox({
-        id: root, order: 0, x, y, width: style.iconSizePx,
-        height: style.iconSizePx + style.labelGapPx + style.text.sizePx * style.text.lineHeight,
-        ...(active ? { animation: directItemAnimation(duration,
-          fitRankingEntranceMotion(duration, style.motion.appearFrames, style.motion.moveFrames, false).appearFrames) } : {}),
-      })];
-      if (active) elements.push(absoluteBox({ id: accent, parent: root, order: 1, x: 0, y: 0, width: style.iconSizePx, height: style.iconSizePx,
+    const itemRoot = (active: boolean): VisualElement => {
+      const children: VisualElement[] = [];
+      if (active) children.push(absoluteBox({ id: accent, x: 0, y: 0, width: style.iconSizePx, height: style.iconSizePx,
         style: [
           { name: "border", value: `${px(style.ringWidthPx)} solid ${rankColor(style.slotColors, index)}` },
           { name: "border-radius", value: px(style.iconRadiusPx) },
           { name: "box-sizing", value: "border-box" },
         ], animation: activeAccentAnimation(duration, activeFrames) }));
-      if (item.icon !== undefined) elements.push(iconElement({ id: "icon", parent: root, order: 2, artifact: item.icon,
+      if (item.icon !== undefined) children.push(iconElement({ id: "icon", artifact: item.icon,
         x: 0, y: 0, size: style.iconSizePx, radius: style.iconRadiusPx, fit: style.iconFit }));
-      else elements.push(simpleText({ id: "rank", parent: root, order: 2, text: String(index + 1),
+      else children.push(simpleText({ id: "rank", text: String(index + 1),
         typography: { ...style.text, color: rankColor(style.slotColors, index), sizePx: style.iconSizePx * 0.45 },
         x: 0, y: 0, width: style.iconSizePx, height: style.iconSizePx }));
       // The label's box is one line box, and a line box is not the ink: accents reach above it and
@@ -631,19 +625,24 @@ export function renderTopThree(timeline: Timeline, program: TopThreeProgram): Vi
       // box grows by one line box's worth of leading at each end and its top moves up by the same,
       // so the text stays where it was painted and only the clip rectangle moves.
       const labelSlack = style.text.sizePx * 0.25;
-      elements.push(simpleText({ id: "label", parent: root, order: 3, text: item.label, typography: style.text,
+      children.push(simpleText({ id: "label", text: item.label, typography: style.text,
         x: -style.slotGapPx / 2, y: style.iconSizePx + style.labelGapPx - labelSlack,
         width: style.iconSizePx + style.slotGapPx,
         height: style.text.sizePx * style.text.lineHeight + labelSlack * 2 }));
-      return elements;
+      return absoluteBox({
+        id: root, children, x, y, width: style.iconSizePx,
+        height: style.iconSizePx + style.labelGapPx + style.text.sizePx * style.text.lineHeight,
+        ...(active ? { animation: directItemAnimation(duration,
+          fitRankingEntranceMotion(duration, style.motion.appearFrames, style.motion.moveFrames, false).appearFrames) } : {}),
+      });
     };
     presents.push(present({
       id: `${program.id}:item:${item.id}:stage`, subjectId: item.id, start: entry.stage.startFrame, end: entry.stage.endFrameExclusive,
-      order: index + 1, z: item.stackingOrder ?? style.itemStackingOrder, elements: itemElements(true),
+      sequence: index + 1, layer: item.stackingOrder ?? style.itemStackingOrder, root: itemRoot(true),
     }));
     if (entry.settled.endFrameExclusive > entry.settled.startFrame) presents.push(present({
       id: `${program.id}:item:${item.id}:settled`, subjectId: item.id, start: entry.settled.startFrame, end: entry.settled.endFrameExclusive,
-      order: index + 1, z: item.stackingOrder ?? style.itemStackingOrder, elements: itemElements(false),
+      sequence: index + 1, layer: item.stackingOrder ?? style.itemStackingOrder, root: itemRoot(false),
     }));
   }
   return sealTrack(timeline, program.id, presents);
@@ -694,7 +693,7 @@ export function renderRankingAudio(
     if (sounds[kind] !== undefined) assert(clips.some((clip) => clip.id.endsWith(`:${kind}`)),
       `Ranking ${kind} sound has no matching visual event.`);
   }
-  const track = sealAudioTrack({ timelineId: timeline.id, id: `${plan.id}.audio`, clips });
+  const track = sealAudioTrack({ timelineId: timeline.id, id: `${plan.id}.audio`, graph: audioGraphFromClips(clips) });
   assertAudioTrackIdentity(track, timeline);
   return track;
 }

@@ -11,9 +11,31 @@ export {
   visualTextSequenceSchema,
   visualTextTypographySchema,
   visualTrackSchema,
+  visualAdjustmentSchema, visualPresentSchema, visualItemSchema,
+  visualScopeSchema,
   visualBoxSchema, visualMaskSchema, visualTextSchema, visualImageSchema, visualVideoSchema, visualSurfaceSchema, visualProgramSchema, visualElementSchema,
 } from "./schema.js";
-export { assertAudioTrackIdentity, assertCompositionIdentity, assertVisualTrackIdentity, sealAudioTrack, sealComposition, sealVisualTrack } from "./track.js";
+export {
+  assertAudioTrackIdentity,
+  audioGraphFromClips,
+  audioSignal,
+  audioTrackClips,
+  assertCompositionIdentity,
+  assertVisualTextAppearance,
+  assertVisualTrackIdentity,
+  assertVisualScopeIdentity,
+  sealAudioTrack,
+  sealComposition,
+  sealPresentVisualTrack,
+  sealVisualTrack,
+  sealVisualScope,
+  visualScopeTrackOccurrences,
+  visualScopeTracks,
+  visualAdjustments,
+  visualElementChildren,
+  visualElements,
+  visualPresents,
+} from "./track.js";
 export { animatableLocalStyles } from "./track.js";
 export { visualCompositionVocabulary } from "./introspection.js";
 export type * from "./track.js";

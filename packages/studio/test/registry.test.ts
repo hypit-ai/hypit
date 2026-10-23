@@ -37,7 +37,7 @@ test("Inspector objects stay out of the Timeline while child Tracks remain avail
   };
   const registry = new StudioCompanionRegistry([companion]);
   const track = { typeRef: compositionTypes.visualTrack, outputRef: "cards.visual", name: "cards", type: "VisualTrack",
-    candidateOrigin: "source", role: "track", value: {}, trace: { references: [], outputPorts: [] } } as const;
+    role: "track", value: {}, trace: { references: [], outputPorts: [] } } as const;
   assert.deepEqual(registry.trackAttachments(track).map(item => item.attachmentId), ["objects"]);
   const context = { track, values: new Map(), spans: [], temporalBindings: [], temporalDomains: [], generic: () => [] };
   const [draft] = registry.projectTrack(context);
@@ -51,4 +51,22 @@ test("Inspector objects stay out of the Timeline while child Tracks remain avail
     inspectorObjects: [{ ...companion.inspectorObjects![0]!, project: () => [rule!.draft, rule!.draft] }],
   }]);
   assert.throws(() => invalid.projectInspectorObjects(context), /repeats Inspector object/);
+});
+
+test("the Host owns item identity and rejects only package-local lane collisions", () => {
+  const base: StudioTrackCompanion = {
+    id: "local-items", role: "track", family: "visual",
+    output: { type: compositionTypes.visualTrack },
+    project: () => [
+      { id: "same", authoredId: "first", display: { title: "First", layers: [] }, startFrame: 0, endFrameExclusive: 1, stackOrder: 0 },
+      { id: "same", authoredId: "attached", lane: "details", display: { title: "Attached", layers: [] }, startFrame: 0, endFrameExclusive: 1, stackOrder: 0 },
+    ],
+  };
+  const registry = new StudioCompanionRegistry([base]);
+  const track = { typeRef: compositionTypes.visualTrack, outputRef: "owner", name: "owner", type: "VisualTrack",
+    role: "track", value: {}, trace: { references: [], outputPorts: [] } } as const;
+  const context = { track, values: new Map(), spans: [], temporalBindings: [], temporalDomains: [], generic: () => [] };
+  assert.equal(registry.projectTrack(context).length, 2);
+  const invalid = new StudioCompanionRegistry([{ ...base, project: () => [base.project!(context)[0]!, base.project!(context)[0]!] }]);
+  assert.throws(() => invalid.projectTrack(context), /repeats Item same in one lane/u);
 });

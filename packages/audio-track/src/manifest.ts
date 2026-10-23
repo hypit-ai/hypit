@@ -53,7 +53,7 @@ const clipSpec = object({
 });
 const frameSpan = object({ startFrame: { schema: integer }, endFrameExclusive: { schema: integer } });
 const clip = object({
-  id: { schema: string }, window: { schema: frameSpan },
+  id: { schema: string }, subjectId: { schema: string }, window: { schema: frameSpan },
   source: { schema: object({ artifact: { schema: blobRefSchema(["audio/wav"]) }, sampleFrames: { schema: { kind: "number", integer: true, minimum: 1 } } }) },
   sourceTime: { schema: sourceTime },
   mix: { schema: object({ gain: { schema: number }, fadeInSamples: { schema: integer }, fadeOutSamples: { schema: integer } }) },
@@ -149,11 +149,11 @@ export const audioTrackManifest: ModuleManifest = {
   version: audioTrackModuleRef.version,
   dependencies: [mediaDependency, timelineDependency, temporalDependency, compositionDependency],
   types: [
-    { name: audioTrackTypes.header.name },
-    { name: audioTrackTypes.sourceTime.name },
-    { name: audioTrackTypes.clipSpec.name },
-    { name: audioTrackTypes.set.name },
-    { name: audioTrackTypes.program.name },
+    audioTrackTypes.header.name,
+    audioTrackTypes.sourceTime.name,
+    audioTrackTypes.clipSpec.name,
+    audioTrackTypes.set.name,
+    audioTrackTypes.program.name,
   ],
   capabilities: [],
   producers: [
@@ -164,4 +164,4 @@ export const audioTrackManifest: ModuleManifest = {
   ],
 };
 
-export const audioTrackDependency = { module: audioTrackModuleRef } as const;
+export const audioTrackDependency = audioTrackModuleRef;

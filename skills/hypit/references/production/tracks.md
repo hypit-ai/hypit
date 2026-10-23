@@ -12,6 +12,8 @@ shared inputs.
 | Place speech, music, narration, ambience or effects | [Audio Clip](audio-clips.md) | AudioTrack |
 | Present Script display words at resolved Cue times | [Caption](caption-presentation.md) | package-owned VisualTrack |
 | Supply independent writing | [Typography/Text](fonts-and-text.md) | package-owned VisualTrack |
+| Apply color, blur, opacity or affine treatment to an accumulated picture | Visual Adjustment inside the intended Film Stack | VisualTrack |
+| Close several sound contributions with explicit gain | [Audio Clip](audio-clips.md#combine-closed-audio-contributions) | AudioTrack |
 | Coordinate continuing sources, transitions, ducking, layout or state | [Project component](track-authoring.md) | declared VisualTrack and/or AudioTrack |
 
 These are starting points, not a catalogue of visual roles. Images, text and video can share a scene
@@ -39,9 +41,12 @@ event.
 
 ## Assemble the intended film
 
-Film receives Canvas, Timeline and each selected visual/audio output. Components establish appearance
-and paint order. Include picture and sound explicitly, and select one intended route for each audible
-source.
+Film receives Canvas, Timeline and each selected visual/audio output. Components establish their
+local picture programmes; the parent Film scope establishes order between complete visual
+contributions through named `id`/`z` memberships. Film Stack closes a local group of VisualTracks
+when that composite needs one shared treatment. Audio remains outside visual Stacks; combine it into
+a closed AudioTrack before Film when shared gain or routing is required. Include picture and sound
+explicitly, and select one intended route for each audible source.
 
 [Rendering](rendering.md#assemble-the-picture-and-sound) shows Film assembly and delivery.
 [Review](review.md) judges the resulting picture, performance and complete mix.

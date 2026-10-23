@@ -211,7 +211,7 @@ export const audioProgramSchema: ValueSchema = {
         playbackRate: { schema: { kind: "number" } },
         mixStartSample: { schema: integer },
         mixEndSampleExclusive: { schema: { kind: "number", integer: true, minimum: 1 } },
-        gain: { schema: { kind: "number", minimum: 0, maximum: 64 } },
+        gain: { schema: { kind: "number", minimum: 0 } },
         fadeInSamples: { schema: integer },
         fadeOutSamples: { schema: integer },
         gainEnvelope: { schema: audioGainEnvelopeSchema, optional: true },
@@ -424,30 +424,16 @@ export const mediaOperationsManifest: ModuleManifest = {
     timelineDependency,
     compositionDependency,
     temporalDependency,
-    { module: recipeModuleRef },
+    recipeModuleRef,
   ],
   types: [
-    {
-      name: mediaOperationsTypes.selectionRequest.name,
-    },
-    {
-      name: mediaOperationsTypes.audioProgram.name,
-    },
-    {
-      name: mediaOperationsTypes.transformProgram.name,
-    },
-    {
-      name: mediaOperationsTypes.audioExtractionRequest.name,
-    },
-    {
-      name: mediaOperationsTypes.frameExtractionRequest.name,
-    },
-    {
-      name: mediaOperationsTypes.stillVideoRequest.name,
-    },
-    {
-      name: mediaOperationsTypes.stillVideoLayout.name,
-    },
+    mediaOperationsTypes.selectionRequest.name,
+    mediaOperationsTypes.audioProgram.name,
+    mediaOperationsTypes.transformProgram.name,
+    mediaOperationsTypes.audioExtractionRequest.name,
+    mediaOperationsTypes.frameExtractionRequest.name,
+    mediaOperationsTypes.stillVideoRequest.name,
+    mediaOperationsTypes.stillVideoLayout.name,
   ],
   capabilities: [
     { name: mediaOperationsCapabilities.inspect.name, returns: mediaTypes.inspection },

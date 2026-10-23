@@ -26,7 +26,6 @@
     "@hypit/producer": "workspace:*",
     "@hypit/composition": "workspace:*",
     "@hypit/kernel": "workspace:*",
-    "@hypit/executor": "workspace:*",
     "@hypit/author": "workspace:*",
     "@hypit/source": "workspace:*",
     "@hypit/html-program": "workspace:*",

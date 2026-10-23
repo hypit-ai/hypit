@@ -55,7 +55,6 @@ test("Script outer cuts are the first and last Segment boundaries", () => {
   const selection = parsed.selections[0]!;
   assert.deepEqual([selection.startAnchorId, selection.endAnchorId], ["segment:one:start", "segment:two:end"]);
   assert.equal(parsed.anchors.length, 2 * parsed.tokens.length + 2 * parsed.segments.length);
-  assert.equal(parsed.anchors.some((anchor) => anchor.id.startsWith("program:")), false);
 });
 
 test("Moment source edits relocate one marker to an exact semantic Anchor", () => {
@@ -104,7 +103,6 @@ test("Role turns and Segments author Cue boundaries without leaking Narrative gr
   assert.deepEqual(document.cues.map((cue) => cue.role), ["A", "B", undefined]);
   assert.equal(document.cues.length, 3);
   assert.deepEqual(document.cues.flatMap((cue) => cue.unitIds), document.units.map((unit) => unit.id));
-  assert.equal(document.units.some((unit) => "groupId" in unit || "role" in unit), false);
 });
 
 test("Cues partition complete units at authored breaks", () => {

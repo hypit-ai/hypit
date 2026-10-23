@@ -7,11 +7,9 @@ import { parseStructuredElement } from "@hypit/markup";
 import type { SurfaceResolvedReference } from "@hypit/markup";
 import { sealText, textTypes } from "@hypit/text";
 
-import elevenLabsNodePackage from "../src/activation.js";
 import {
   decodeElevenLabsVoiceDesignSurface,
   elevenLabsSpeechEndpoints,
-  elevenLabsSpeechMarkupSurfaces,
   elevenLabsSpeechModels,
   sealElevenLabsSpeechRequest,
 } from "../src/index.js";
@@ -49,8 +47,6 @@ test("ElevenLabs Speech declares the exact voice design request shape", () => {
     text: ["A voice sample with enough detail to make the test intent clear."],
     voiceDescription: ["a".repeat(1001)],
   }), /voiceDescription.+1000/u);
-  assert.equal(elevenLabsNodePackage.format, "hypit.package@1");
-  assert.deepEqual(elevenLabsSpeechMarkupSurfaces.map((surface) => surface.name), ["voiceDesign"]);
 });
 
 test("VoiceDesign publishes one reusable voice reference", async () => {

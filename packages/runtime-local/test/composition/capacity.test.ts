@@ -41,6 +41,7 @@ import { SqliteRuntimeState } from "../../src/sqlite-state.js";
 import {
   capabilities,
   createGreetingBuild,
+  createGreetingBuildFixture,
   createParallelGreetingBuild,
   manifest as greetingManifest,
   producers,
@@ -51,7 +52,6 @@ import {
   definition,
   durableBuildRequest,
   finishClaimedBuild,
-  fixtureTargets,
   projectRuntimeFixture,
   publication,
   resultDestination,
@@ -75,7 +75,7 @@ test("one local Worker admits later Builds while preserving shared Endpoint capa
   let markSecondStarted: (() => void) | undefined;
   const secondStarted = new Promise<void>((resolve) => { markSecondStarted = resolve; });
   let unrestrictedStarts = 0;
-  const components: ProducerPackage & RefinementPackage = {
+  const components: { producers: ProducerPackage; refinements?: RefinementPackage } = {
     producers: [
       {
         producer: producers.makePrompt,
@@ -132,7 +132,7 @@ test("one local Worker admits later Builds while preserving shared Endpoint capa
         mostLimited = Math.max(mostLimited, limitedActive);
         await new Promise((resolve) => setTimeout(resolve, 80));
         limitedActive -= 1;
-        return { value: ("Hello") };
+        return "Hello";
       },
     }],
   });
@@ -156,14 +156,14 @@ test("one local Worker admits later Builds while preserving shared Endpoint capa
         },
         remove: (...args) => fixture.buildStore.remove!(...args),
       },
-      producerPackages: [components], refinementPackages: [components],
+      producers: components.producers,
       endpoints: [endpoint],
     });
-    await runtime.build(durableBuildRequest(directory, "bld_20260902T120000010Z_0000000001", createGreetingBuild()));
+    await runtime.build(durableBuildRequest(directory, "bld_20260902T120000010Z_0000000001", createGreetingBuildFixture()));
     controller = new AbortController();
     work = runFixture(runtime, fixture.executionStore, { idlePollMs: 5, signal: controller.signal });
     await firstStarted;
-    await runtime.build(durableBuildRequest(directory, "bld_20260902T120000011Z_0000000001", createGreetingBuild()));
+    await runtime.build(durableBuildRequest(directory, "bld_20260902T120000011Z_0000000001", createGreetingBuildFixture()));
     const results = new FileBuildResultRepository(join(directory, "results"));
     // Waiting without a deadline for an outcome that never arrives is indistinguishable from a
     // suite that has stopped: no assertion fails and nothing further is printed. Carry the last

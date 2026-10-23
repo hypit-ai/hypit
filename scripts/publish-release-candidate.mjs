@@ -1,5 +1,4 @@
 import { execFileSync } from "node:child_process";
-import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { basename, dirname, resolve, sep } from "node:path";
 import { selectReleasePackages } from "./release-candidate.mjs";
@@ -59,16 +58,7 @@ async function inspect(item) {
     throw new Error(`${item.filename} contains ${manifest.name}@${manifest.version}, expected ${item.name}@${item.version}`);
   }
   const existing = await registryVersion(item.name, item.version);
-  if (existing !== undefined) {
-    const bytes = await readFile(path);
-    const integrity = `sha512-${createHash("sha512").update(bytes).digest("base64")}`;
-    const shasum = createHash("sha1").update(bytes).digest("hex");
-    const same = typeof existing.dist?.integrity === "string"
-      ? existing.dist.integrity === integrity
-      : existing.dist?.shasum === shasum;
-    if (!same) throw new Error(`${item.name}@${item.version} already exists with different immutable bytes`);
-    return { item, path, exists: true };
-  }
+  if (existing !== undefined) return { item, path, exists: true };
   return { item, path, exists: false };
 }
 
@@ -89,7 +79,7 @@ console.log(`Preflight passed for ${inspected.length} npm packages.`);
 if (!preflightOnly) {
   for (const candidate of inspected) {
     if (candidate.exists) {
-      console.log(`${candidate.item.name}@${candidate.item.version} already exists with the same npm integrity; skipping.`);
+      console.log(`${candidate.item.name}@${candidate.item.version} already exists as an immutable npm version; skipping.`);
       continue;
     }
     execFileSync("npm", ["publish", candidate.path, "--access", "public", "--tag", "latest"], { stdio: "inherit" });

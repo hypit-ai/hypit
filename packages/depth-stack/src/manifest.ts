@@ -79,7 +79,7 @@ export const depthStackSpecSchema: ValueSchema = object({
   visibility: { schema: object({ previous: { schema: unsignedInteger }, next: { schema: unsignedInteger }, wrap: { schema: { kind: "boolean" } } }) },
   poses: { schema: object({ current: { schema: pose }, previous: { schema: poseStep }, next: { schema: poseStep } }) },
   reflow: { schema: object({ durationFrames: { schema: unsignedInteger }, easing: { schema: enumString(["linear", "ease-in", "ease-out", "ease-in-out"]) } }) },
-  treatment: { schema: visualFrameTreatmentSchema }, stackingOrder: { schema: integer },
+  treatment: { schema: visualFrameTreatmentSchema },
 });
 export const depthStackCardSpecSchema: ValueSchema = object({
   id: { schema: string }, playback: { schema: playback },
@@ -228,8 +228,6 @@ export const depthStackMarkupSurfaces = [
                 summary: "Sets how many Frames the stack takes to settle into its new poses after a Card is dealt." },
               { name: "reflow-easing", required: false, values: ["linear", "ease-in", "ease-out", "ease-in-out"], fallback: "ease-in-out",
                 summary: "Shapes that settling over its Frames." },
-              { name: "stack-order", required: false, fallback: "30",
-                summary: "Sets the base stacking order the deck takes among the Film's visual Tracks, which each Card's own depth stacking is added to." },
               { name: "clip", required: false, values: ["none", "frame", "rounded"], fallback: "frame",
                 summary: "Decides whether a Card is clipped to its Frame, to a rounded Frame, or not at all." },
               { name: "radius", required: false, fallback: "0",
@@ -363,13 +361,13 @@ export const depthStackManifest: ModuleManifest = {
   format: "hypit.module@1", name: depthStackModuleRef.name, version: depthStackModuleRef.version,
   dependencies: [timelineDependency, spatialDependency, temporalDependency, mediaDependency, visualTrackDependency, compositionDependency, textDependency],
   types: [
-    { name: depthStackTypes.header.name },
-    { name: depthStackTypes.spec.name },
-    { name: depthStackTypes.cardSpec.name },
-    { name: depthStackTypes.cardLabel.name },
-    { name: depthStackTypes.cardLabelStyle.name },
-    { name: depthStackTypes.cardSet.name },
-    { name: depthStackTypes.program.name },
+    depthStackTypes.header.name,
+    depthStackTypes.spec.name,
+    depthStackTypes.cardSpec.name,
+    depthStackTypes.cardLabel.name,
+    depthStackTypes.cardLabelStyle.name,
+    depthStackTypes.cardSet.name,
+    depthStackTypes.program.name,
   ], capabilities: [],
   producers: [
     { name: depthStackProducers.bindLabelText.name, inputs: [{ name: "style", type: depthStackTypes.cardLabelStyle }, { name: "content", type: textTypes.text }], result: { kind: "output" as const, name: "label", type: depthStackTypes.cardLabel } },
@@ -388,4 +386,4 @@ export const depthStackManifest: ModuleManifest = {
     ], result: { kind: "output" as const, name: "track", type: compositionTypes.visualTrack } },
   ],
 };
-export const depthStackDependency = { module: depthStackModuleRef } as const;
+export const depthStackDependency = depthStackModuleRef;

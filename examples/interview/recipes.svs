@@ -10,7 +10,7 @@
   }
 
   caption.boy {
-    stack-order: 70;
+
     x: 0.5;
     y: 0.5;
     width: 0.88;
@@ -57,7 +57,7 @@
   }
 
   caption.wife {
-    stack-order: 70;
+
     x: 0.5;
     y: 0.5;
     width: 0.88;
@@ -104,7 +104,7 @@
   }
 
   caption.ada {
-    stack-order: 70;
+
     x: 0.5;
     y: 0.5;
     width: 0.88;
@@ -151,7 +151,7 @@
   }
 
   caption.wojak {
-    stack-order: 70;
+
     x: 0.5;
     y: 0.5;
     width: 0.88;
@@ -215,7 +215,7 @@
     shadow-spread: 0;
     icon-size: 54;
     reveal-frames: 6;
-    stack-order: 66;
+
   }
 
   film.vertical {

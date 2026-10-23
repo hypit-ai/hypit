@@ -54,4 +54,4 @@ export const textComponent = {
             )) }),
     },
   ],
-} satisfies ProducerPackage & RefinementPackage;
+} satisfies { producers?: ProducerPackage; refinements?: RefinementPackage };

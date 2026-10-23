@@ -19,7 +19,7 @@ test("typed child values recover an omitted authored id without ordinal guessing
       attributes: {}, attributeValueRanges: {}, references: [], referenceAttributes: {}, referenceTypes: {},
     },
     track: {
-      name: "track", type: "Track", typeRef: itemType, outputRef: "track", candidateOrigin: "source", role: "track",
+      name: "track", type: "Track", typeRef: itemType, outputRef: "track", role: "track",
       trace: { references: [], outputPorts: [] }, value: undefined,
     },
     spans: [], values: new Map(), temporalBindings: [], temporalDomains: [], generic: () => [],

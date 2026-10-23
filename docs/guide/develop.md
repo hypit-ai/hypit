@@ -21,36 +21,6 @@ Before the first local render, run `hypit programs up --runtime <profile> --endp
 This browser preparation does not depend on pnpm allowing dependency install scripts.
 Use `hypit doctor --runtime <profile>` to inspect missing setup without installing it.
 
-## Daily workflow
-
-```bash
-corepack enable
-pnpm install --frozen-lockfile # after pulling or changing dependencies
-pnpm check            # TypeScript type-check
-pnpm test             # full test suite
-```
-
-| Command | What it runs |
-|---|---|
-| `pnpm check` | `tsc -p tsconfig.json --noEmit` |
-| `pnpm test` | package, service-adapter and repository-boundary tests through Node's test runner |
-
-See [Testing](./testing.md) for environment-gated tests and test patterns.
-
-## Repository layout
-
-```text
-hypit/
-├── packages/              workspace packages
-├── docs/                  VitePress documentation site
-├── examples/              runnable example sources
-├── services/              local media and transcription services
-├── test/                  repository boundary tests and shared fixtures
-├── package.json           root workspace manifest
-├── pnpm-workspace.yaml    package, service and example-component workspaces
-└── tsconfig.json          TypeScript config
-```
-
 ## Guide contents
 
 | Guide | Topic |
@@ -61,5 +31,4 @@ hypit/
 | [Models and Providers](./providers.md) | Select accounts and APIs; develop a Model or Provider package |
 | [Runtime](./runtime.md) | Profile, Workspace, execution and lifecycle boundaries |
 | [Studio localization](https://github.com/hypit-ai/hypit/blob/main/packages/studio/LOCALIZATION.md) | Translate interface messages; load a local JSON file or an installed language pack |
-| [Testing](./testing.md) | Test runner, patterns, examples, boundary tests |
 | [Conventions](./conventions.md) | Naming, module boundaries, wire data, TypeScript config |

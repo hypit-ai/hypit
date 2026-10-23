@@ -18,7 +18,7 @@ export type BuildResultExport = {
   readonly path: string;
 };
 
-type CompositeResultOutput = Omit<RepositoryBuildResultOutput, "value"> & {
+type ValueDocumentResultOutput = Omit<RepositoryBuildResultOutput, "value"> & {
   readonly value: Extract<RepositoryBuildResultOutput["value"], { readonly kind: "value" }>;
 };
 
@@ -75,9 +75,9 @@ async function exportFile(
   }
 }
 
-async function exportComposite(
+async function exportValueDocument(
   repository: BuildResultRepository,
-  resolvedOutput: CompositeResultOutput,
+  resolvedOutput: ValueDocumentResultOutput,
   target: string,
 ): Promise<void> {
   assert(!await pathExists(target), `Export destination ${target} already exists`);
@@ -131,7 +131,7 @@ export async function exportBuildResultOutput(
   if (resolvedOutput === undefined) throw new Error(`Build ${build} Output ${output} cannot be resolved`);
   const target = resolve(destination);
   if (resolvedOutput.value.kind === "value") {
-    await exportComposite(repository, { ...resolvedOutput, value: resolvedOutput.value }, target);
+    await exportValueDocument(repository, { ...resolvedOutput, value: resolvedOutput.value }, target);
   } else if ((resolvedOutput.value.kind === "build-file" || resolvedOutput.value.kind === "external-file")) {
     const resource = resolvedOutput.value;
     await exportFile(target, async (temporary) => {
@@ -141,9 +141,9 @@ export async function exportBuildResultOutput(
       );
     });
   } else {
-    const scalar = resolvedOutput.value.value;
+    const inlineValue = resolvedOutput.value.value;
     await exportFile(target, async (temporary) => {
-      await writeFile(temporary, `${JSON.stringify(scalar, null, 2)}\n`, { flag: "wx" });
+      await writeFile(temporary, `${JSON.stringify(inlineValue, null, 2)}\n`, { flag: "wx" });
     });
   }
   return {

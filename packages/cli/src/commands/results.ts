@@ -54,7 +54,7 @@ export async function runProjectResultCommand(input: {
       createdAt: buildCreatedAtIso(manifest.id),
       ...(manifest.title === undefined ? {} : { title: manifest.title }),
       outcome: manifest.outcome,
-      ...(manifest.run === undefined ? {} : { run: projectPath(manifest.run.id, projectRoot) }),
+      ...(manifest.runId === undefined ? {} : { run: projectPath(manifest.runId, projectRoot) }),
       targetCount: manifest.targets.length,
       ...(args.presentation.verbose ? {
         targets: manifest.targets.slice(0, args.limit),

@@ -14,7 +14,7 @@ export const hypitPackage = {
   format: "hypit.package@1" as const,
   modules: [{ manifest: regionEvidenceManifest }],
   facets: [
-    ...[regionEvidenceComponent].flatMap((component) => [createProducerPackageFacet(component), createRefinementPackageFacet(component)]),createMarkupSurfaceFacet({
+    ...[regionEvidenceComponent].flatMap((component) => [createProducerPackageFacet(component.producers ?? []), createRefinementPackageFacet(component.refinements ?? [])]),createMarkupSurfaceFacet({
     module: regionEvidenceModuleRef,
     declaration: regionEvidenceMarkupSurface,
     handler: decodeRegionEvidenceSurface,

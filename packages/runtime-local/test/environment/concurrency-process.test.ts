@@ -71,18 +71,18 @@ for (const scenario of scenarios) {
         const server=${JSON.stringify(endpoint)};
         async function call(path,name){const response=await fetch(server+path,{method:'POST',body:JSON.stringify({name,pid:process.pid,rss:process.memoryUsage().rss})});return response.json();}
         let localCount=0;
-        export default {format:'hypit.package@1',modules:[{manifest:${JSON.stringify(manifest)}}],facets:[{abi:'hypit.producer-package@1',implementation:{producers:[
+        export default {format:'hypit.package@1',modules:[{manifest:${JSON.stringify(manifest)}}],facets:[{abi:'hypit.producer-package@1',implementation:[
           {producer:${JSON.stringify(producers.makePrompt)},handler:async({inputs})=>{
             if(++localCount!==1)throw Error('Component state leaked between Builds');
             const name=inputs.intent.value.name;await call('/a',name);
             return {kind:'output',value:name};
           }},
           {producer:${JSON.stringify(producers.requestText)},handler:({inputs})=>({kind:'need',constraints:{prompt:inputs.prompt.value}})}
-        ]}},createRuntimeEndpointAdapterFacet({use:'fixture-concurrency',activate(context){
+        ]},createRuntimeEndpointAdapterFacet({use:'fixture-concurrency',activate(context){
           return {endpoint:defineEndpoint({instance:context.instance,pool:context.pool,
             defaultConcurrency:${scenario.capacity},actionLimits:{submit:{concurrency:${scenario.capacity}}},capabilities:[{lifecycle:'asynchronous',capability:${JSON.stringify(capabilities.generation)},returns:${JSON.stringify(types.generated)},endpoint:{
               async start({need,operation}){const name=need.constraints.prompt;await call('/submit',name);return {status:'pending',handle:{name},receipt:{id:operation},wakeAt:Date.now()+250};},
-              async poll({handle}){const result=await call('/poll',handle.name);return result.complete?{status:'completed',result:{value:handle.name}}:{status:'pending',handle,wakeAt:Date.now()+1000};}
+              async poll({handle}){const result=await call('/poll',handle.name);return result.complete?{status:'completed',result:handle.name}:{status:'pending',handle,wakeAt:Date.now()+1000};}
             }}]})};
         }})]};
       `);
@@ -100,13 +100,13 @@ for (const scenario of scenarios) {
           context: { format: "hypit.local-execution@1", packageRoot: root, hostStateRoot: join(root,"host"), distributionPackageRoot: distribution, profile: profileValue },
         };
         await state.submissions.prepare(request);
-        await repository.create({ id, source: { id: "main.svml" }, publication: { outputs: [{
+        await repository.create({ id, sourceId: "main.svml", publication: { outputs: [{
           name: "generated", output: "generated", target: true, type: types.generated, source: { kind: "current-record", record: "generated:root" },
         }] } });
         await state.submissions.commit({ ...request,
           definition: { ...base, program: { ...base.program, records: base.program.records.map((record) => record.id === "intent:root"
             ? { ...record, value: ({ name: String(index) }) } : record) } },
-          catalog: { source: { path: join(root,"main.svml") }, publication: { outputs: [{
+          catalog: { sourcePath: join(root,"main.svml"), publication: { outputs: [{
             name:"generated",output:"generated",target:true,type:types.generated,source:{kind:"current-record",record:"generated:root"},
           }] } },
         });

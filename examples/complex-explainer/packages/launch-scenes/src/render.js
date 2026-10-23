@@ -1,4 +1,4 @@
-import { sealVisualTrack } from "@hypit/composition";
+import { sealPresentVisualTrack } from "@hypit/composition";
 import { htmlVisual } from "@hypit/html-program";
 import { assertTemporalWindowFor } from "@hypit/temporal";
 const sty = (o) => Object.entries(o).map(([name, value]) => ({ name, value }));
@@ -9,7 +9,7 @@ const esc = (s) =>
   );
 function seal(t, within, w, o, html, css, setup, data, children = []) {
   assertTemporalWindowFor(w, { subjectId: o.id, timeline: t });
-  return sealVisualTrack({
+  return sealPresentVisualTrack({
     id: o.id,
     timelineId: t.id,
     visualIr: "hypit.visual-ir@1",
@@ -17,7 +17,6 @@ function seal(t, within, w, o, html, css, setup, data, children = []) {
       {
         id: o.id,
         order: 0,
-        z: o.z,
         span: w.span,
         elements: [
           {

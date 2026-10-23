@@ -3,14 +3,6 @@ import type { CapabilityRef, ModuleRef, ProducerRef, TypeRef } from "./identity.
 /** Logical package address for immutable semantic Modules. */
 export const modulePackageAbi = "hypit.module@1";
 
-export type ModuleDependency = {
-  readonly module: ModuleRef;
-};
-
-export type TypeDeclaration = {
-  readonly name: string;
-};
-
 export type PortDeclaration = {
   readonly name: string;
   readonly type: TypeRef;
@@ -43,24 +35,15 @@ export type ModuleManifest = {
   readonly format: "hypit.module@1";
   readonly name: string;
   readonly version: string;
-  readonly dependencies: readonly ModuleDependency[];
-  readonly types: readonly TypeDeclaration[];
+  readonly dependencies: readonly ModuleRef[];
+  readonly types: readonly string[];
   readonly capabilities: readonly CapabilityDeclaration[];
   readonly producers: readonly ProducerDeclaration[];
 };
 
-export type ResolvedModule = {
-  readonly manifest: ModuleManifest;
-};
-
 export type ResolvedModuleClosure = {
   readonly format: "hypit.closure@1";
-  readonly modules: readonly ResolvedModule[];
-};
-
-export type ResolvedTypeDeclaration = {
-  readonly name: string;
-  readonly ref: TypeRef;
+  readonly modules: readonly ModuleManifest[];
 };
 
 export type ResolvedProducerDeclaration = ProducerDeclaration & {

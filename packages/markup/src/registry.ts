@@ -79,6 +79,6 @@ export class MarkupSurfaceRegistry implements MarkupSurfaceRegistryLike {
   }
 
   surfaces(module: ModuleRef): readonly RegisteredSurface[] {
-    return [...(this.#byModule.get(`${module.name}@${module.version}`) ?? [])];
+    return [...(this.#byModule.get(moduleKey(module)) ?? [])];
   }
 }

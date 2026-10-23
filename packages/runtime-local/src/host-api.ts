@@ -52,10 +52,9 @@ export type BuildView = {
   readonly activity: BuildActivity;
   readonly outcome?: BuildCompletion["outcome"];
   readonly issue?: { readonly scope: "result" | "cleanup"; readonly message: string };
-  readonly cancellationRequested: boolean;
   readonly stop?: BuildExecutionStop;
-  readonly source?: { readonly path: string };
-  readonly run?: { readonly path: string };
+  readonly sourcePath?: string;
+  readonly runPath?: string;
   readonly targets: readonly string[];
   /** External Needs in the frozen Build Plan and the subset already accepted by Core. */
   readonly requests?: { readonly total: number; readonly completed: number };
@@ -259,7 +258,7 @@ export type LocalRuntimeHost = {
    * The creation-time boundary for observation, transcription and other quick capabilities; it
    * creates no Build, Result or state, and refuses asynchronous capabilities.
    */
-  invoke(need: Need, resources: ResourceStore, observation?: RuntimeInvocationObservation): Promise<{ readonly value: Value }>;
+  invoke(need: Need, resources: ResourceStore, observation?: RuntimeInvocationObservation): Promise<Value>;
   /** Open one disposable authoring execution. It creates no Build, Result or recoverable Operation. */
   openTransientExecution(): Promise<RuntimeHostTransientExecution>;
   runWorker(readyFile: string, owner: string, execution?: { readonly dataRoot: string }): Promise<void>;

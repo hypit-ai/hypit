@@ -68,7 +68,7 @@ authorship; different colors or fonts alone can remain Fine Style choices.
 
 ```svs
 caption.primary {
-  stack-order: 70;
+
   x: 0.5; y: 0.9; width: 0.84; height: 0.22;
   anchor-x: center; anchor-y: bottom;
   align: center; block-align: end; inline-size: fixed;

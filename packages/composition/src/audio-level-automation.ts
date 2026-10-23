@@ -15,7 +15,7 @@ export function assertAudioLevelAutomation(value: AudioLevelAutomation, target: 
     let previous = -1;
     for (const point of value.gainEnvelope) {
       if (!Number.isSafeInteger(point.sample) || point.sample <= previous || point.sample > totalSamples
-        || !Number.isFinite(point.gain) || point.gain < 0 || point.gain > 64) throw new Error("Audio gain envelope point is invalid.");
+        || !Number.isFinite(point.gain) || point.gain < 0) throw new Error("Audio gain envelope point is invalid.");
       previous = point.sample;
     }
   }

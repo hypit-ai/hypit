@@ -12,10 +12,12 @@ import {
   audioTrackModuleRef,
   audioTrackProducers,
   appendAudioClip,
+  assertAudioTrackSet,
   createAudioTrackSet,
   createAudioTrackFragment,
   finalizeAudioTrack,
   renderAudioTrack,
+  resolveAudioSourceTime,
   sealAudioClipSpec,
   sealAudioTrackHeader,
   decodeAudioTrackSurface,
@@ -23,7 +25,7 @@ import {
 import type { AudioClipSpec, AudioSourceTimeSpec, AudioTrackSet } from "@hypit/audio-track";
 import { blobManifest } from "@hypit/blob";
 import { registerTypeRefinements } from "@hypit/refinement";
-import { sealComposition, compositionManifest, compositionTypes } from "@hypit/composition";
+import { audioGraphFromClips, audioTrackClips, sealComposition, compositionManifest, compositionTypes } from "@hypit/composition";
 import {
   createResolvedClosure,
   defineBuild,
@@ -47,7 +49,7 @@ import { spatialManifest } from "@hypit/spatial";
 import { recipeManifest } from "@hypit/recipe";
 import { temporalManifest } from "@hypit/temporal";
 import { MarkupSurfaceRegistry, createMarkupAuthorFrontend } from "@hypit/markup";
-import { createRecordValidator, RefinementRegistry } from "@hypit/refinement";
+import { refineRecord, RefinementRegistry } from "@hypit/refinement";
 import { resolveSelfDescribedTextSource } from "@hypit/source/text";
 
 function buildState(
@@ -61,7 +63,7 @@ function buildState(
     candidates: [],
     operations: [],
     satisfactions: [],
-    targets: targets.map((output) => ({ output })),
+    targets,
   });
   return materializeBuild(defineBuild({
     program: link(program.closure, [...program.records, ...planned.initialRecords]),
@@ -161,19 +163,33 @@ function programTrack(source: SynchronizedMedia, clipSpec: TestAudioClipSpec) {
 test("partial identity and end alignment preserve exact silence and source head/tail semantics", () => {
   const short = media("short", 48_000);
   const start = programTrack(short, spec());
-  assert.deepEqual(start.clips[0]?.target, { startSample: 0, endSampleExclusive: 96_000 });
-  assert.deepEqual(start.clips[0]?.sourceTime, { sourceSampleFrames: 48_000, pieces: [{
+  assert.deepEqual(audioTrackClips(start)[0]?.target, { startSample: 0, endSampleExclusive: 96_000 });
+  assert.deepEqual(audioTrackClips(start)[0]?.sourceTime, { sourceSampleFrames: 48_000, pieces: [{
     target: { startSample: 0, endSampleExclusive: 48_000 },
     sourceAtStart: { numerator: 0, denominator: 1 }, rate: { numerator: 1, denominator: 1 },
   }] });
 
   const endAligned = rateSpec({ targetAt: endPoint(), sourceAt: endPoint() });
   const end = programTrack(short, spec({ sourceTime: endAligned }));
-  assert.deepEqual(end.clips[0]?.sourceTime.pieces[0]?.target, { startSample: 48_000, endSampleExclusive: 96_000 });
+  assert.deepEqual(audioTrackClips(end)[0]?.sourceTime.pieces[0]?.target, { startSample: 48_000, endSampleExclusive: 96_000 });
 
   const long = programTrack(media("long", 144_000), spec({ sourceTime: endAligned }));
-  assert.deepEqual(long.clips[0]?.target, { startSample: 0, endSampleExclusive: 96_000 });
-  assert.deepEqual(long.clips[0]?.sourceTime.pieces[0]?.sourceAtStart, { numerator: 48_000, denominator: 1 });
+  assert.deepEqual(audioTrackClips(long)[0]?.target, { startSample: 0, endSampleExclusive: 96_000 });
+  assert.deepEqual(audioTrackClips(long)[0]?.sourceTime.pieces[0]?.sourceAtStart, { numerator: 48_000, denominator: 1 });
+});
+
+test("fractional rates contract authored bounds to exact source-sample boundaries", () => {
+  const sourceTime = resolveAudioSourceTime({
+    timeline: space,
+    sourceSampleFrames: 100,
+    targetSampleFrames: 10,
+    spec: rateSpec({ rate: { numerator: 2, denominator: 3 } }),
+  });
+  assert.deepEqual(sourceTime.pieces, [{
+    target: { startSample: 0, endSampleExclusive: 9 },
+    sourceAtStart: { numerator: 0, denominator: 1 },
+    rate: { numerator: 2, denominator: 3 },
+  }]);
 });
 
 test("periodic maps preserve one source interval and an exact phase", () => {
@@ -183,12 +199,12 @@ test("periodic maps preserve one source interval and an exact phase", () => {
   };
   const start = programTrack(media("loop", 48_000), spec({ projection,
     sourceTime: rateSpec({ wrap: fullBounds() }) }));
-  assert.deepEqual(start.clips[0]?.sourceTime.pieces[0]?.wrap, { startSample: 0, endSampleExclusive: 48_000 });
-  assert.deepEqual(start.clips[0]?.sourceTime.pieces[0]?.sourceAtStart, { numerator: 0, denominator: 1 });
-  assert.deepEqual(start.clips[0]?.target, { startSample: 0, endSampleExclusive: 120_000 });
+  assert.deepEqual(audioTrackClips(start)[0]?.sourceTime.pieces[0]?.wrap, { startSample: 0, endSampleExclusive: 48_000 });
+  assert.deepEqual(audioTrackClips(start)[0]?.sourceTime.pieces[0]?.sourceAtStart, { numerator: 0, denominator: 1 });
+  assert.deepEqual(audioTrackClips(start)[0]?.target, { startSample: 0, endSampleExclusive: 120_000 });
   const end = programTrack(media("loop", 48_000), spec({ projection,
     sourceTime: rateSpec({ targetAt: endPoint(), sourceAt: endPoint(), wrap: fullBounds() }) }));
-  assert.deepEqual(end.clips[0]?.sourceTime.pieces[0]?.sourceAtStart, { numerator: 24_000, denominator: 1 });
+  assert.deepEqual(audioTrackClips(end)[0]?.sourceTime.pieces[0]?.sourceAtStart, { numerator: 24_000, denominator: 1 });
 });
 
 test("bounded pitch-preserving fit succeeds exactly or fails without truncation", () => {
@@ -196,7 +212,7 @@ test("bounded pitch-preserving fit succeeds exactly or fails without truncation"
     projection: { start: { ref: "timeline.start" }, end: { ref: "absolute", at: { unit: "seconds", numerator: 4, denominator: 1 } } },
     sourceTime: { relations: [{ kind: "fit", target: fullBounds(), source: fullBounds(), minRate: 0.4, maxRate: 0.6 }] },
   }));
-  assert.deepEqual(fitted.clips[0]?.sourceTime.pieces[0]?.rate, { numerator: 1, denominator: 2 });
+  assert.deepEqual(audioTrackClips(fitted)[0]?.sourceTime.pieces[0]?.rate, { numerator: 1, denominator: 2 });
   assert.throws(() => programTrack(media("fit-fail", 96_000), spec({
     projection: { start: { ref: "timeline.start" }, end: { ref: "absolute", at: { unit: "seconds", numerator: 4, denominator: 1 } } },
     sourceTime: { relations: [{ kind: "fit", target: fullBounds(), source: fullBounds(), minRate: 0.8, maxRate: 1.2 }] },
@@ -207,9 +223,9 @@ test("exact audio rates are not rejected by an arbitrary playback-mode ceiling",
   const track = programTrack(media("fast", 12_288_000), spec({
     sourceTime: rateSpec({ rate: { numerator: 128, denominator: 1 } }),
   }));
-  assert.deepEqual(track.clips[0]?.sourceTime.pieces[0]?.rate, { numerator: 128, denominator: 1 });
+  assert.deepEqual(audioTrackClips(track)[0]?.sourceTime.pieces[0]?.rate, { numerator: 128, denominator: 1 });
   const program = compileAudioProgram(sealComposition({
-    id: "fast", canvas: { width: 1, height: 1, clearColor: "#000000" }, tracks: [track],
+    id: "fast", canvas: { width: 1, height: 1, clearColor: "#000000" }, visual: { members: [] }, audio: [track],
   }), space);
   assert.equal(program.clips[0]?.playbackRate, 128);
 });
@@ -226,11 +242,11 @@ test("source bounds and fades quantize once into the same sample domain", () => 
       fadeOut: { unit: "milliseconds", value: 200 },
     },
   }));
-  assert.deepEqual(track.clips[0]?.sourceTime.pieces[0]?.sourceAtStart, { numerator: 12_000, denominator: 1 });
-  assert.deepEqual(track.clips[0]?.sourceTime.pieces[0]?.target, { startSample: 0, endSampleExclusive: 96_000 });
-  assert.equal(track.clips[0]?.gain, 0.25);
-  assert.equal(track.clips[0]?.fadeInSamples, 4_800);
-  assert.equal(track.clips[0]?.fadeOutSamples, 9_600);
+  assert.deepEqual(audioTrackClips(track)[0]?.sourceTime.pieces[0]?.sourceAtStart, { numerator: 12_000, denominator: 1 });
+  assert.deepEqual(audioTrackClips(track)[0]?.sourceTime.pieces[0]?.target, { startSample: 0, endSampleExclusive: 96_000 });
+  assert.equal(audioTrackClips(track)[0]?.gain, 0.25);
+  assert.equal(audioTrackClips(track)[0]?.fadeInSamples, 4_800);
+  assert.equal(audioTrackClips(track)[0]?.fadeOutSamples, 9_600);
   assert.throws(() => programTrack(media("fade", 24_000), spec({
     mix: { gain: 1, fadeIn: { unit: "seconds", numerator: 3, denominator: 1 }, fadeOut: zero },
   })), /fade exceeds its Window/u);
@@ -260,7 +276,7 @@ test("frame-authored fades share their Clip boundaries on a rational clock", () 
       appendProgramAudioItem(createAudioTrackSet(), header, ntscSemantic, media("sting", 48_000), clip),
       header,
     ));
-    const rendered = track.clips[0]!;
+    const rendered = audioTrackClips(track)[0]!;
     const length = rendered.target.endSampleExclusive - rendered.target.startSample;
     assert.equal(rendered.fadeInSamples, length, `fade-in from frame ${startFrame}`);
     assert.equal(rendered.fadeOutSamples, length, `fade-out from frame ${startFrame}`);
@@ -282,12 +298,12 @@ test("piecewise audio maps preserve silent gaps while execution keeps one Clip-g
     ] },
     mix: { gain: 0.5, fadeIn: second, fadeOut: second },
   }));
-  assert.deepEqual(track.clips[0]?.sourceTime.pieces.map((piece) => piece.target), [
+  assert.deepEqual(audioTrackClips(track)[0]?.sourceTime.pieces.map((piece) => piece.target), [
     { startSample: 0, endSampleExclusive: 48_000 },
     { startSample: 96_000, endSampleExclusive: 144_000 },
   ]);
   const program = compileAudioProgram(sealComposition({
-    id: "piecewise", canvas: { width: 1, height: 1, clearColor: "#000000" }, tracks: [track],
+    id: "piecewise", canvas: { width: 1, height: 1, clearColor: "#000000" }, visual: { members: [] }, audio: [track],
   }), space);
   assert.deepEqual(program.clips.map((clip) => ({
     target: [clip.targetStartSample, clip.targetEndSampleExclusive],
@@ -319,8 +335,28 @@ test("resolved Windows place independent Clips regardless of their upstream sour
     id: "hit",
   }));
   const track = renderAudioTrack(space, finalizeAudioTrack(set, header));
-  assert.equal(track.clips.length, 2);
-  assert.deepEqual(track.clips.map((clip) => clip.target.startSample), [48_000, 144_000]);
+  assert.equal(audioTrackClips(track).length, 2);
+  assert.deepEqual(audioTrackClips(track).map((clip) => clip.target.startSample), [48_000, 144_000]);
+});
+
+test("one resolved Window can time distinct Audio Clip occurrences", () => {
+  const shared = projectProgramWindow({ itemId: "shared-window", semantic,
+    projection: { start: { ref: "timeline.start" }, end: { ref: "absolute", at: { unit: "seconds", numerator: 1, denominator: 1 } } } });
+  let set = appendAudioClip(createAudioTrackSet(), header, space, media("first", 48_000), spec({ id: "first" }), shared);
+  set = appendAudioClip(set, header, space, media("second", 48_000), spec({ id: "second" }), shared);
+  assert.deepEqual(set.clips.map((clip) => clip.id), ["first", "second"]);
+  assert.deepEqual(set.clips.map((clip) => clip.window), [shared.span, shared.span]);
+});
+
+test("AudioTrackSet refinement validates every accumulated Clip and its identity", () => {
+  const shared = projectProgramWindow({ itemId: "shared-window", semantic,
+    projection: { start: { ref: "timeline.start" }, end: { ref: "absolute", at: { unit: "seconds", numerator: 1, denominator: 1 } } } });
+  const set = appendAudioClip(createAudioTrackSet(), header, space, media("first", 48_000), spec({ id: "first" }), shared);
+  assert.doesNotThrow(() => assertAudioTrackSet(set));
+  assert.throws(() => assertAudioTrackSet({ clips: [set.clips[0]!, structuredClone(set.clips[0]!)] }),
+    /duplicate Clip first/u);
+  assert.throws(() => assertAudioTrackSet({ clips: [{ ...set.clips[0]!, source: undefined } as never] }),
+    /source is invalid/u);
 });
 
 test("one Track with overlaps and two peer Tracks compile to the same mix", () => {
@@ -332,18 +368,18 @@ test("one Track with overlaps and two peer Tracks compile to the same mix", () =
     kind: "audio" as const,
     id: "combined",
     timelineId: space.id,
-    clips: [
-      { ...first.clips[0]!, id: "a" },
-      { ...second.clips[0]!, id: "b" },
-    ],
+    graph: audioGraphFromClips([
+      { ...audioTrackClips(first)[0]!, id: "a" },
+      { ...audioTrackClips(second)[0]!, id: "b" },
+    ]),
   };
   const peerProgram = compileAudioProgram(sealComposition({
     id: "peer", canvas: { width: 1, height: 1, clearColor: "#000000" },
-    tracks: [first, second],
+    visual: { members: [] }, audio: [first, second],
   }), space);
   const combinedProgram = compileAudioProgram(sealComposition({
     id: "combined", canvas: { width: 1, height: 1, clearColor: "#000000" },
-    tracks: [combined],
+    visual: { members: [] }, audio: [combined],
   }), space);
   assert.deepEqual(
     peerProgram.clips.map(({ id: _id, ...clip }) => clip),
@@ -365,7 +401,6 @@ test("dynamic Fragment keeps every material and temporal dependency as an explic
 
 test("the self-described Audio Surface parses into the same finite Producer graph", async () => {
   const fixtureModule = { name: "example.audio-inputs", version: "1" } as const;
-  const fixtureSurfaceDigest = fixtureResource("example.audio-inputs/surface@1");
   const fixtureSurface = {
     name: "inputs", tag: "Inputs", mode: "structured",
     outputs: [mediaTypes.synchronized, timelineTypes.timeline, temporalTypes.window],
@@ -433,7 +468,7 @@ test("the self-described Audio Surface parses into the same finite Producer grap
     }),
     closure,
     frontends,
-    validateRecord: createRecordValidator(refinements),
+    refineRecord: async (record) => await refineRecord(record, refinements),
     resolveSource() { throw new Error("Audio fixture has no source imports."); },
   });
   const trackExport = resolveCompiledSourceExport(compiled, "sound.audio", compositionTypes.audioTrack);

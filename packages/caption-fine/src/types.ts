@@ -87,7 +87,6 @@ export type FineCaptionOneShotMotion =
   | "wipe-down";
 
 export type FineCaptionParameters = {
-  readonly stackingOrder: number;
   readonly placement: {
     readonly x: number;
     readonly y: number;

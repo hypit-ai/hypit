@@ -1,4 +1,4 @@
-import { sealVisualTrack } from "@hypit/composition";
+import { sealPresentVisualTrack } from "@hypit/composition";
 import type { Timeline } from "@hypit/timeline";
 import type { SpatialFrame } from "@hypit/spatial";
 import { assertBlobRef, canonicalize } from "@hypit/hypit/protocol";
@@ -23,17 +23,17 @@ function image(record: TypedRecord | undefined): BlobRef | undefined {
 }
 function render(kind: string, timeline: Timeline, within: SpatialFrame, image?: BlobRef) {
   const frames = timeline.frameCount;
-  return sealVisualTrack({
+  return sealPresentVisualTrack({
     timelineId: timeline.id,
     visualIr: VISUAL_IR_V1,
     id: `example-${kind}`,
-    presents: [{ id: `present-${kind}`, order: 0, z: 0, span: { startFrame: 0, endFrameExclusive: frames }, elements: [{
-      id: `${kind}-root`, kind: "box", order: 0,
+    presents: [{ id: `present-${kind}`, span: { startFrame: 0, endFrameExclusive: frames }, root: {
+      id: `${kind}-root`, kind: "box",
+      children: kind === "image" && image !== undefined ? [{ id: `${kind}-content`, kind: "image" as const, artifact: image, style: [{ name: "position", value: "absolute" }, { name: "left", value: 0 }, { name: "top", value: 0 }, { name: "width", value: "100%" }, { name: "height", value: "100%" }, { name: "object-fit", value: "contain" }] }] : [],
       style: [{ name: "position", value: "absolute" }, { name: "left", value: `${within.xPx}px` },
         { name: "top", value: `${within.yPx}px` }, { name: "width", value: `${within.widthPx}px` },
         { name: "height", value: `${within.heightPx}px` }, { name: "background-color", value: "#6b7280" }],
-    }, ...(kind === "image" && image !== undefined ? [{ id: `${kind}-content`, parent: `${kind}-root`, kind: "image" as const, artifact: image, order: 1, style: [{ name: "position", value: "absolute" }, { name: "left", value: 0 }, { name: "top", value: 0 }, { name: "width", value: "100%" }, { name: "height", value: "100%" }, { name: "object-fit", value: "contain" }] }] : []),
-    ] }],
+    } }],
   });
 }
 const producer = (kind: string): { readonly handler: ProducerHandler } => ({ handler: ({ inputs }) => ({ kind: "output", value: output(render(kind,
@@ -52,4 +52,4 @@ export const exampleComponent = {
     { type: exampleTypes.text, handler: () => {} },
     { type: exampleTypes.imageSlot, handler: () => {} },
   ],
-} satisfies ProducerPackage & RefinementPackage;
+} satisfies { producers?: ProducerPackage; refinements?: RefinementPackage };

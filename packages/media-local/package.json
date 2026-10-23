@@ -1,13 +1,13 @@
 {
   "name": "@hypit/media-local",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
     "./cli": "./src/cli.ts",
-    "./files": "./src/files.ts"
+    "./files": "./src/file-port.ts"
   },
   "files": [
     "dist",

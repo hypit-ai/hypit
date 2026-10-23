@@ -7,14 +7,11 @@ import { parseStructuredElement } from "@hypit/markup";
 import type { SurfaceResolvedReference } from "@hypit/markup";
 import { sealText, textTypes } from "@hypit/text";
 
-import fishAudioNodePackage from "../src/activation.js";
 import {
   decodeFishAudioVoiceCloneSurface,
   decodeFishAudioVoiceDesignSurface,
   fishAudioSpeechEndpoints,
-  fishAudioSpeechMarkupSurfaces,
   fishAudioSpeechModels,
-  fishAudioSpeechPorts,
   sealFishAudioSpeechRequest,
 } from "../src/index.js";
 
@@ -61,12 +58,6 @@ test("Fish Audio Speech declares the two exact audio request shapes", () => {
   assert.throws(() => sealFishAudioSpeechRequest("voice-clone", {
     text: ["Do not rewrite me."],
   }), /voiceReference is required/u);
-});
-
-test("the installed author package contributes the two explicit speech operations", () => {
-  assert.equal(fishAudioNodePackage.format, "hypit.package@1");
-  assert.equal(fishAudioNodePackage.modules[0]?.manifest.version, "1");
-  assert.deepEqual(fishAudioSpeechMarkupSurfaces.map((surface) => surface.name), ["voiceDesign", "voiceClone"]);
 });
 
 test("VoiceDesign publishes one reusable voice reference", async () => {

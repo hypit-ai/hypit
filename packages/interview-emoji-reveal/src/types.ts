@@ -26,7 +26,6 @@ export type EmojiRevealStyle = {
   readonly shadowSpreadPx: number;
   readonly iconSizePx: number;
   readonly revealFrames: number;
-  readonly stackingOrder: number;
 };
 
 export type EmojiRevealItem =

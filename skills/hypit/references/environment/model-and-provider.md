@@ -232,18 +232,18 @@ generation has already succeeded.
 
 Inspect the Model vocabulary, its README and the service's API. Reuse a compatible implementation
 when present; otherwise create the needed `packages/provider-…` in this production. A project
-extension uses public interfaces and does not require an official framework release.
+extension lives with the production and uses the installed public interfaces.
 
 Follow one actual request:
 
 1. Identify the exact capability, input roles and result type. A new Model owns new author semantics;
    another API for an existing Model belongs in its Provider.
-2. Map text, scalar parameters and every supplied media role/field to the real API. Declare actual
+2. Map the request fields and every supplied reference role to the real API. Declare actual
    service limits through `supports`, including what is knowable before generated inputs exist.
    Account-visible catalogue evidence can refine availability when the service provides it.
-3. Implement immediate execution or the real `start`, `poll` and `collect` lifecycle. Checkpoint
-   an acknowledged task receipt promptly; Runtime owns continued scheduling. Report progress and
-   preserve public failure evidence without exposing credentials or signed URLs.
+3. Implement immediate execution or the real `start`, `poll` and `collect` lifecycle. Save an
+   acknowledged task receipt promptly so Runtime can continue the accepted operation. Report
+   progress and preserve public failure evidence without exposing credentials or signed URLs.
 4. Store returned media through `context.resources` and return the declared result type. Configure
    capacity for the actual resource and expose the service's price source and applicable units.
 5. Compile and install the package with the project's package manager, select its `use` and bindings,
@@ -255,8 +255,7 @@ covers image/video/audio references, first/last frames, required visual-referenc
 result collection. Its mappings, limits and transport are examples to adapt, not a new shared API.
 Implement only the service capabilities this work needs.
 
-The Provider's `supports` response describes its actual range without narrowing the shared Model or
-silently changing an author's request.
+The Provider's `supports` response describes the requests that implementation can execute.
 
 ## Use the public SDK
 
@@ -296,8 +295,6 @@ Use current API documentation and the installed implementation to pursue a propo
 A relevant [release update](distribution.md#check-and-update-the-relevant-installation), configuration
 change or project adapter repair can move the work forward. Report the actual change and what was
 verified; a repaired installation's success is distinct from the original release's behavior.
-Framework maintenance follows its repository instructions; this Skill owns production and public
-package extensions.
 
 Keep independent work moving when a capability is unavailable, and explain the specific deliverable
 still waiting for it. Preserve the user's chosen service and intended result while resolving that gap.

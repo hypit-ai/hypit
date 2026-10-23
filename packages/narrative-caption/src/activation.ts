@@ -14,7 +14,7 @@ export const hypitPackage = {
   format: "hypit.package@1" as const,
   modules: [{ manifest: narrativeCaptionManifest }],
   facets: [
-    ...[narrativeCaptionComponent].flatMap((component) => [createProducerPackageFacet(component), createRefinementPackageFacet(component)]),createMarkupSurfaceFacet({
+    ...[narrativeCaptionComponent].flatMap((component) => [createProducerPackageFacet(component.producers ?? []), createRefinementPackageFacet(component.refinements ?? [])]),createMarkupSurfaceFacet({
     module: narrativeCaptionModuleRef,
     declaration: narrativeCaptionTimingMarkupSurface,
     handler: decodeNarrativeCaptionTimingSurface,

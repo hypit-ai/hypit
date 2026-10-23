@@ -46,7 +46,7 @@ not Run declarations.
 
 Replace `bld_...` with the actual Build id found through Results. The `output` from the earlier Result is the
 name in that Result; the `satisfy output` is the current Author Output. These selections preserve
-media, its duration and its NarrativeAlignment without pretending they are one compound object.
+the media, local domain and NarrativeAlignment independently.
 A changed Caption or MG can then recompute downstream. Marker and display-only edits may also
 preserve the alignment; use the
 [reuse table](authoring.md#reuse-produced-work-explicitly) to distinguish them from changed speech or media.
@@ -145,8 +145,9 @@ contain ordinary `BlobRef` objects at any depth; it does not need a separate top
 Use `build-record` for structured Outputs already held in Results, where their associated media
 resources can be resolved with them.
 
-A Composite export's `value.json` is a Result transport document with separate resource bindings,
-not the direct Value accepted by a Run `<value>`. [Project handoff](../creation/project-files.md#hand-over-an-editable-production)
+When `hypit get` exports a structured value that references files, the destination contains
+`value.json` and those files. That exported document is for transport; a Run `<value>` reads the
+Value itself. [Project handoff](../creation/project-files.md#hand-over-an-editable-production)
 explains retaining its Result for structured reuse in another project location.
 
 Fragment input `value` supplies a scalar: number, boolean, null or text. Structured inputs use

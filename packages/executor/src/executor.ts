@@ -1,6 +1,6 @@
 import { resolveProducer } from "@hypit/kernel";
 import type { ProducerHandlerResult } from "@hypit/producer";
-import type { EndpointCredential, EndpointFulfillment, EndpointOutcome } from "@hypit/endpoint";
+import type { EndpointCredential, EndpointOutcome } from "@hypit/endpoint";
 import { endpointResourceClaims } from "@hypit/endpoint";
 import type {
   BuildState,
@@ -9,11 +9,12 @@ import type {
   FulfillNeedCommand,
   InvokeProducerCommand,
   TypedRecord,
+  Value,
 } from "@hypit/protocol";
 import { capabilityKey, producerKey, typeKey } from "@hypit/protocol";
 import {
   RefinementRegistry,
-  validateValue,
+  refineValue,
 } from "@hypit/refinement";
 import type { RefinementRegistryLike } from "@hypit/refinement";
 import type {
@@ -172,8 +173,8 @@ export class Executor {
     indexedRecord?: (id: string) => TypedRecord | undefined,
   ): CommandClassification {
     if (command.kind === "invoke-producer") {
-      const registration = this.producers.producer(command.producer);
-      if (registration === undefined) {
+      const handler = this.producers.producer(command.producer);
+      if (handler === undefined) {
         return {
           status: "blocked",
           blocked: {
@@ -189,9 +190,8 @@ export class Executor {
           command,
           resources: [],
           run: async () =>
-            registration.handler({
+            handler({
               command: structuredClone(command),
-              producer: structuredClone(command.producer),
               inputs: this.#producerInputs(state, command, indexedRecord),
             }),
         },
@@ -260,17 +260,17 @@ export class Executor {
   async #endpointEvent(
     state: BuildState,
     executable: Extract<Executable, { readonly endpointId: string }>,
-    result: EndpointFulfillment,
+    value: Value,
   ): Promise<CommandResult> {
-    await validateValue(
+    await refineValue(
       executable.command.need.returns,
-      result.value,
+      value,
       this.refinements,
     );
     return {
       kind: "need-fulfilled",
       command: executable.command.id,
-      value: result.value,
+      value,
     } as const;
   }
 
@@ -282,8 +282,8 @@ export class Executor {
     if (snapshot.status === "received" || snapshot.status === "completed") {
       const command = state.outstanding.find((item) => item.id === snapshot.command);
       if (command?.kind !== "fulfill-need") return undefined;
-      await validateValue(command.need.returns, snapshot.completion.value, this.refinements);
-      return { kind: "need-fulfilled", command: snapshot.command, value: snapshot.completion.value };
+      await refineValue(command.need.returns, snapshot.value, this.refinements);
+      return { kind: "need-fulfilled", command: snapshot.command, value: snapshot.value };
     }
     if (snapshot.status === "failed") {
       const failure = snapshot.failure;
@@ -312,7 +312,7 @@ export class Executor {
     if (operation?.status !== "received") return;
     await this.operations!.update(id, {
       status: "completed",
-      completion: operation.completion,
+      value: operation.value,
       acknowledgedAt: operation.acknowledgedAt,
       endedAt: operation.endedAt,
     });
@@ -497,7 +497,7 @@ export class Executor {
     return await operations.update(operation.id, {
       status: "received", ...facts, acknowledgedAt,
       endedAt: recorded.status === "collecting" ? recorded.endedAt : Date.now(),
-      completion: outcome.result, progress: { phase: "ready-to-accept" },
+      value: outcome.result, progress: { phase: "ready-to-accept" },
     });
   }
 
@@ -526,7 +526,7 @@ export class Executor {
         if (result.kind === "output") {
           const port = producer.result;
           if (port.kind !== "output") throw new Error("Producer returned an output but declares a Need");
-          await validateValue(port.type, result.value, this.refinements);
+          await refineValue(port.type, result.value, this.refinements);
         }
         const content = {
           kind: "producer-completed",

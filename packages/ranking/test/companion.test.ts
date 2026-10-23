@@ -12,7 +12,8 @@ test("each Ranking surface has independent visual and audio Companions", () => {
     const visual = companions.find((entry) => entry.output.type.name === compositionTypes.visualTrack.name)!;
     assert.equal(audio.label, "Ranking Sounds");
     assert.ok(audio.inspector?.some((field) => field.binding === "style.appear-gain" && field.number?.scale === 100));
-    assert.ok(visual.inspector?.every((field) => !field.binding.includes("gain") && !field.binding.includes("sound-fade")));
+    const audioBindings = new Set(audio.inspector?.map((field) => field.binding));
+    assert.ok(visual.inspector?.every((field) => !audioBindings.has(field.binding)));
   }
 });
 
@@ -34,8 +35,11 @@ test("audio uses exact event identities and emitted clips, with shared recipe ow
   const context = {
     track: {
       name: "board.audio", type: "AudioTrack", typeRef: compositionTypes.audioTrack,
-      outputRef: "board.audio", candidateOrigin: "source", role: "track",
-      value: { clips: [{ id: "opaque-event-id", artifact: { resource: "res_sound" } }] },
+      outputRef: "board.audio", role: "track",
+      value: { graph: {
+        nodes: [{ kind: "source", id: "source", clip: { id: "opaque-event-id", artifact: { resource: "res_sound" } } }],
+        output: { node: "source", port: "signal" },
+      } },
       trace: { references: [], outputPorts: [{ name: "events", ref: "board.events" }] },
     },
     placement: {
@@ -60,7 +64,7 @@ test("audio uses exact event identities and emitted clips, with shared recipe ow
   assert.equal(items.length, 1);
   assert.equal(items[0]!.display.title, "Player One · Move");
   assert.equal(items[0]!.authoredId, "board");
-  assert.deepEqual(items[0]!.elementRange, context.placement!.range);
+  assert.deepEqual(items[0]!.elementLocation, { path: context.placement!.sourcePath, range: context.placement!.range });
   assert.equal(items[0]!.temporal, undefined);
   assert.equal(items[0]!.inspector![0]!.value, "Player One · Move · 90f");
   assert.deepEqual([items[0]!.startFrame, items[0]!.endFrameExclusive], [90, 99]);

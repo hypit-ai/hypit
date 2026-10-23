@@ -41,7 +41,7 @@ function placeCaption(names: readonly string[], domain: "where" | "how" | "when"
   for (const name of names) captionPlacement.set(name, captionPlace(domain, page, section));
 }
 
-placeCaption(["stack-order", "x", "y", "width", "height", "anchor-x", "anchor-y"], "where", "placement", "region");
+placeCaption(["x", "y", "width", "height", "anchor-x", "anchor-y"], "where", "placement", "region");
 placeCaption([
   "align", "block-align", "inline-size", "wrap", "max-lines", "max-words-per-line", "direction",
   "line-height", "letter-spacing", "word-gap",
@@ -134,7 +134,8 @@ export function projectCaptionContents(context: StudioTrackCompanionContext): re
       id: `${context.track.outputRef}:cue:${cue.id}`, authoredId: cue.id,
       display: { title: `#${index + 1}`, layers: [{ kind: "text", role: "content", text: cueText(document, cue.unitIds) }] },
       startFrame, endFrameExclusive, stackOrder: 0,
-      renderIds: schedule.cues.filter(item => item.cueId === cue.id).map(item => item.id),
+      terminalLinks: schedule.cues.filter((item) => item.cueId === cue.id).flatMap((item) =>
+        context.spans.flatMap((span) => span.id === item.id ? [{ spanId: span.id }] : [])),
       presentation: { kind: "caption-cue", chrome: "standard" },
       inspector: [
         { id: "range", label: "Range", domain: "when", section: { id: "cue", label: "Cue" }, value: `${startFrame}–${endFrameExclusive}`, unit: "f" },
@@ -156,7 +157,7 @@ export function projectCaptionUses(context: StudioTrackCompanionContext): readon
       id: `use:${use.id}`,
       authoredId: use.id,
       title: use.styleId,
-      ...(child === undefined ? {} : { elementRange: child.range }),
+      ...(child === undefined ? {} : { elementLocation: { path: child.sourcePath, range: child.range } }),
       parameterReferences: { style: use.styleId },
       inspector: [
         { id: "order", label: "Order", domain: "how", section: { id: "rule", label: "Rule" }, value: index + 1 },

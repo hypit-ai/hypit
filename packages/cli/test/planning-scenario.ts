@@ -32,7 +32,7 @@ const manifest: ModuleManifest = {
   name: moduleRef.name,
   version: moduleRef.version,
   dependencies: [],
-  types: Object.values(types).map((type) => ({ name: type.name })),
+  types: Object.values(types).map((type) => type.name),
   capabilities: [{ name: capability.name, returns: types.generated }],
   producers: [{
     name: producers.makePrompt.name,

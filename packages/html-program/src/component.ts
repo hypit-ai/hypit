@@ -6,9 +6,11 @@ import type { CanonicalValue, Value } from "@hypit/hypit/protocol";
 import { canonicalize } from "@hypit/hypit/protocol";
 
 import { compileHtmlProgram } from "./document.js";
+import { assertHtmlProgram } from "./document.js";
+import type { HtmlProgram } from "./types.js";
 import type { MediaFrameRange } from "@hypit/media";
-import { htmlRasterRequest } from "./execution.js";
-import { htmlProgramProducers } from "./manifest.js";
+import { htmlRasterRequest, verifyHtmlFrameImages } from "./execution.js";
+import { htmlProgramProducers, htmlProgramTypes } from "./manifest.js";
 
 function valueOf(value: Value, subject: string): CanonicalValue {
   if (value === undefined) throw new Error(`${subject} is missing`);
@@ -30,4 +32,8 @@ export const htmlProgramComponent = {
         inputs.range === undefined ? {} : { range: valueOf(inputs.range.value, "MediaFrameRange") as unknown as MediaFrameRange },
       ) }),
   }))],
-} satisfies ProducerPackage & RefinementPackage;
+  refinements: [
+    { type: htmlProgramTypes.program, handler: ({ value }) => assertHtmlProgram(value as unknown as HtmlProgram) },
+    { type: htmlProgramTypes.frameImages, handler: ({ value }) => verifyHtmlFrameImages(value) },
+  ],
+} satisfies { producers?: ProducerPackage; refinements?: RefinementPackage };

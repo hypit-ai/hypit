@@ -8,6 +8,7 @@
   <import as="seedance" from="@hypit/seedance@1"/>
   <import as="mediaop" from="@hypit/media-operations@1"/>
   <import as="whisperx" from="@hypit/whisperx@1"/>
+  <import as="speechalign" from="@hypit/narrative-speech-alignment@1"/>
   <import as="semantic" from="@hypit/narrative-temporal@1"/>
   <import as="time" from="@hypit/timeline-author@1"/>
   <import as="webscene" from="@explainer/web-scenes@1"/>
@@ -34,120 +35,137 @@
     <seedance:Reference audio={assets.voice-reference}/>
   </seedance:ReferenceVideo>
   <mediaop:Normalize id="opening-media" source={opening-generation.video} clock={assets.clock} video="primary-moving" audio="default" span-authority="video"/>
-  <whisperx:Alignment id="opening" narrative={copy.story}
-    segment={copy.story.segment.opening} media={opening-media.media} domain={opening-media.domain} language="zh"/>
+  <whisperx:Transcription id="opening-transcription" media={opening-media.media} language="zh"/>
+  <speechalign:Alignment id="opening" narrative={copy.story}
+    segment={copy.story.segment.opening} domain={opening-media.domain} evidence={opening-transcription.transcript}/>
   <seedance:ReferenceVideo id="introduction-generation" model="mini" prompt={direction.introduction-prompt} duration="11" resolution="720p" aspect-ratio="9:16" generate-audio="true">
     <seedance:Reference image={assets.presenter-reference} person-reference="true"/>
     <seedance:Reference audio={assets.voice-reference}/>
   </seedance:ReferenceVideo>
   <mediaop:Normalize id="introduction-media" source={introduction-generation.video} clock={assets.clock} video="primary-moving" audio="default" span-authority="video"/>
-  <whisperx:Alignment id="introduction" narrative={copy.story}
-    segment={copy.story.segment.introduction} media={introduction-media.media} domain={introduction-media.domain} language="zh"/>
+  <whisperx:Transcription id="introduction-transcription" media={introduction-media.media} language="zh"/>
+  <speechalign:Alignment id="introduction" narrative={copy.story}
+    segment={copy.story.segment.introduction} domain={introduction-media.domain} evidence={introduction-transcription.transcript}/>
   <seedance:ReferenceVideo id="competitors-generation" model="mini" prompt={direction.competitors-prompt} duration="8" resolution="720p" aspect-ratio="9:16" generate-audio="true">
     <seedance:Reference image={assets.presenter-reference} person-reference="true"/>
     <seedance:Reference audio={assets.voice-reference}/>
   </seedance:ReferenceVideo>
   <mediaop:Normalize id="competitors-media" source={competitors-generation.video} clock={assets.clock} video="primary-moving" audio="default" span-authority="video"/>
-  <whisperx:Alignment id="competitors" narrative={copy.story}
-    segment={copy.story.segment.competitors} media={competitors-media.media} domain={competitors-media.domain} language="zh"/>
+  <whisperx:Transcription id="competitors-transcription" media={competitors-media.media} language="zh"/>
+  <speechalign:Alignment id="competitors" narrative={copy.story}
+    segment={copy.story.segment.competitors} domain={competitors-media.domain} evidence={competitors-transcription.transcript}/>
   <seedance:ReferenceVideo id="two-roads-generation" model="mini" prompt={direction.two-roads-prompt} duration="6" resolution="720p" aspect-ratio="9:16" generate-audio="true">
     <seedance:Reference image={assets.presenter-reference} person-reference="true"/>
     <seedance:Reference audio={assets.voice-reference}/>
   </seedance:ReferenceVideo>
   <mediaop:Normalize id="two-roads-media" source={two-roads-generation.video} clock={assets.clock} video="primary-moving" audio="default" span-authority="video"/>
-  <whisperx:Alignment id="two-roads" narrative={copy.story}
-    segment={copy.story.segment.two-roads} media={two-roads-media.media} domain={two-roads-media.domain} language="zh"/>
+  <whisperx:Transcription id="two-roads-transcription" media={two-roads-media.media} language="zh"/>
+  <speechalign:Alignment id="two-roads" narrative={copy.story}
+    segment={copy.story.segment.two-roads} domain={two-roads-media.domain} evidence={two-roads-transcription.transcript}/>
   <seedance:ReferenceVideo id="editor-road-generation" model="mini" prompt={direction.editor-road-prompt} duration="8" resolution="720p" aspect-ratio="9:16" generate-audio="true">
     <seedance:Reference image={assets.presenter-reference} person-reference="true"/>
     <seedance:Reference audio={assets.voice-reference}/>
   </seedance:ReferenceVideo>
   <mediaop:Normalize id="editor-road-media" source={editor-road-generation.video} clock={assets.clock} video="primary-moving" audio="default" span-authority="video"/>
-  <whisperx:Alignment id="editor-road" narrative={copy.story}
-    segment={copy.story.segment.editor-road} media={editor-road-media.media} domain={editor-road-media.domain} language="zh"/>
+  <whisperx:Transcription id="editor-road-transcription" media={editor-road-media.media} language="zh"/>
+  <speechalign:Alignment id="editor-road" narrative={copy.story}
+    segment={copy.story.segment.editor-road} domain={editor-road-media.domain} evidence={editor-road-transcription.transcript}/>
   <seedance:ReferenceVideo id="keyframe-cost-generation" model="mini" prompt={direction.keyframe-cost-prompt} duration="13" resolution="720p" aspect-ratio="9:16" generate-audio="true">
     <seedance:Reference image={assets.presenter-reference} person-reference="true"/>
     <seedance:Reference audio={assets.voice-reference}/>
   </seedance:ReferenceVideo>
   <mediaop:Normalize id="keyframe-cost-media" source={keyframe-cost-generation.video} clock={assets.clock} video="primary-moving" audio="default" span-authority="video"/>
-  <whisperx:Alignment id="keyframe-cost" narrative={copy.story}
-    segment={copy.story.segment.keyframe-cost} media={keyframe-cost-media.media} domain={keyframe-cost-media.domain} language="zh"/>
+  <whisperx:Transcription id="keyframe-cost-transcription" media={keyframe-cost-media.media} language="zh"/>
+  <speechalign:Alignment id="keyframe-cost" narrative={copy.story}
+    segment={copy.story.segment.keyframe-cost} domain={keyframe-cost-media.domain} evidence={keyframe-cost-transcription.transcript}/>
   <seedance:ReferenceVideo id="code-road-generation" model="mini" prompt={direction.code-road-prompt} duration="6" resolution="720p" aspect-ratio="9:16" generate-audio="true">
     <seedance:Reference image={assets.presenter-reference} person-reference="true"/>
     <seedance:Reference audio={assets.voice-reference}/>
   </seedance:ReferenceVideo>
   <mediaop:Normalize id="code-road-media" source={code-road-generation.video} clock={assets.clock} video="primary-moving" audio="default" span-authority="video"/>
-  <whisperx:Alignment id="code-road" narrative={copy.story}
-    segment={copy.story.segment.code-road} media={code-road-media.media} domain={code-road-media.domain} language="zh"/>
+  <whisperx:Transcription id="code-road-transcription" media={code-road-media.media} language="zh"/>
+  <speechalign:Alignment id="code-road" narrative={copy.story}
+    segment={copy.story.segment.code-road} domain={code-road-media.domain} evidence={code-road-transcription.transcript}/>
   <seedance:ReferenceVideo id="reuse-cost-generation" model="mini" prompt={direction.reuse-cost-prompt} duration="8" resolution="720p" aspect-ratio="9:16" generate-audio="true">
     <seedance:Reference image={assets.presenter-reference} person-reference="true"/>
     <seedance:Reference audio={assets.voice-reference}/>
   </seedance:ReferenceVideo>
   <mediaop:Normalize id="reuse-cost-media" source={reuse-cost-generation.video} clock={assets.clock} video="primary-moving" audio="default" span-authority="video"/>
-  <whisperx:Alignment id="reuse-cost" narrative={copy.story}
-    segment={copy.story.segment.reuse-cost} media={reuse-cost-media.media} domain={reuse-cost-media.domain} language="zh"/>
+  <whisperx:Transcription id="reuse-cost-transcription" media={reuse-cost-media.media} language="zh"/>
+  <speechalign:Alignment id="reuse-cost" narrative={copy.story}
+    segment={copy.story.segment.reuse-cost} domain={reuse-cost-media.domain} evidence={reuse-cost-transcription.transcript}/>
   <seedance:ReferenceVideo id="timing-cost-generation" model="mini" prompt={direction.timing-cost-prompt} duration="8" resolution="720p" aspect-ratio="9:16" generate-audio="true">
     <seedance:Reference image={assets.presenter-reference} person-reference="true"/>
     <seedance:Reference audio={assets.voice-reference}/>
   </seedance:ReferenceVideo>
   <mediaop:Normalize id="timing-cost-media" source={timing-cost-generation.video} clock={assets.clock} video="primary-moving" audio="default" span-authority="video"/>
-  <whisperx:Alignment id="timing-cost" narrative={copy.story}
-    segment={copy.story.segment.timing-cost} media={timing-cost-media.media} domain={timing-cost-media.domain} language="zh"/>
+  <whisperx:Transcription id="timing-cost-transcription" media={timing-cost-media.media} language="zh"/>
+  <speechalign:Alignment id="timing-cost" narrative={copy.story}
+    segment={copy.story.segment.timing-cost} domain={timing-cost-media.domain} evidence={timing-cost-transcription.transcript}/>
   <seedance:ReferenceVideo id="water-break-generation" model="mini" prompt={direction.water-break-prompt} duration="4" resolution="720p" aspect-ratio="9:16" generate-audio="true">
     <seedance:Reference image={assets.presenter-reference} person-reference="true"/>
     <seedance:Reference audio={assets.voice-reference}/>
   </seedance:ReferenceVideo>
   <mediaop:Normalize id="water-break-media" source={water-break-generation.video} clock={assets.clock} video="primary-moving" audio="default" span-authority="video"/>
-  <whisperx:Alignment id="water-break" narrative={copy.story}
-    segment={copy.story.segment.water-break} media={water-break-media.media} domain={water-break-media.domain} language="zh"/>
+  <whisperx:Transcription id="water-break-transcription" media={water-break-media.media} language="zh"/>
+  <speechalign:Alignment id="water-break" narrative={copy.story}
+    segment={copy.story.segment.water-break} domain={water-break-media.domain} evidence={water-break-transcription.transcript}/>
   <seedance:ReferenceVideo id="synthesis-generation" model="mini" prompt={direction.synthesis-prompt} duration="5" resolution="720p" aspect-ratio="9:16" generate-audio="true">
     <seedance:Reference image={assets.presenter-reference} person-reference="true"/>
     <seedance:Reference audio={assets.voice-reference}/>
   </seedance:ReferenceVideo>
   <mediaop:Normalize id="synthesis-media" source={synthesis-generation.video} clock={assets.clock} video="primary-moving" audio="default" span-authority="video"/>
-  <whisperx:Alignment id="synthesis" narrative={copy.story}
-    segment={copy.story.segment.synthesis} media={synthesis-media.media} domain={synthesis-media.domain} language="zh"/>
+  <whisperx:Transcription id="synthesis-transcription" media={synthesis-media.media} language="zh"/>
+  <speechalign:Alignment id="synthesis" narrative={copy.story}
+    segment={copy.story.segment.synthesis} domain={synthesis-media.domain} evidence={synthesis-transcription.transcript}/>
   <seedance:ReferenceVideo id="components-generation" model="mini" prompt={direction.components-prompt} duration="12" resolution="720p" aspect-ratio="9:16" generate-audio="true">
     <seedance:Reference image={assets.presenter-reference} person-reference="true"/>
     <seedance:Reference audio={assets.voice-reference}/>
   </seedance:ReferenceVideo>
   <mediaop:Normalize id="components-media" source={components-generation.video} clock={assets.clock} video="primary-moving" audio="default" span-authority="video"/>
-  <whisperx:Alignment id="components" narrative={copy.story}
-    segment={copy.story.segment.components} media={components-media.media} domain={components-media.domain} language="zh"/>
+  <whisperx:Transcription id="components-transcription" media={components-media.media} language="zh"/>
+  <speechalign:Alignment id="components" narrative={copy.story}
+    segment={copy.story.segment.components} domain={components-media.domain} evidence={components-transcription.transcript}/>
   <seedance:ReferenceVideo id="semantic-time-generation" model="mini" prompt={direction.semantic-time-prompt} duration="5" resolution="720p" aspect-ratio="9:16" generate-audio="true">
     <seedance:Reference image={assets.presenter-reference} person-reference="true"/>
     <seedance:Reference audio={assets.voice-reference}/>
   </seedance:ReferenceVideo>
   <mediaop:Normalize id="semantic-time-media" source={semantic-time-generation.video} clock={assets.clock} video="primary-moving" audio="default" span-authority="video"/>
-  <whisperx:Alignment id="semantic-time" narrative={copy.story}
-    segment={copy.story.segment.semantic-time} media={semantic-time-media.media} domain={semantic-time-media.domain} language="zh"/>
+  <whisperx:Transcription id="semantic-time-transcription" media={semantic-time-media.media} language="zh"/>
+  <speechalign:Alignment id="semantic-time" narrative={copy.story}
+    segment={copy.story.segment.semantic-time} domain={semantic-time-media.domain} evidence={semantic-time-transcription.transcript}/>
   <seedance:ReferenceVideo id="semantic-demo-generation" model="mini" prompt={direction.semantic-demo-prompt} duration="10" resolution="720p" aspect-ratio="9:16" generate-audio="true">
     <seedance:Reference image={assets.presenter-reference} person-reference="true"/>
     <seedance:Reference audio={assets.voice-reference}/>
   </seedance:ReferenceVideo>
   <mediaop:Normalize id="semantic-demo-media" source={semantic-demo-generation.video} clock={assets.clock} video="primary-moving" audio="default" span-authority="video"/>
-  <whisperx:Alignment id="semantic-demo" narrative={copy.story}
-    segment={copy.story.segment.semantic-demo} media={semantic-demo-media.media} domain={semantic-demo-media.domain} language="zh"/>
+  <whisperx:Transcription id="semantic-demo-transcription" media={semantic-demo-media.media} language="zh"/>
+  <speechalign:Alignment id="semantic-demo" narrative={copy.story}
+    segment={copy.story.segment.semantic-demo} domain={semantic-demo-media.domain} evidence={semantic-demo-transcription.transcript}/>
   <seedance:ReferenceVideo id="result-generation" model="mini" prompt={direction.result-prompt} duration="8" resolution="720p" aspect-ratio="9:16" generate-audio="true">
     <seedance:Reference image={assets.presenter-reference} person-reference="true"/>
     <seedance:Reference audio={assets.voice-reference}/>
   </seedance:ReferenceVideo>
   <mediaop:Normalize id="result-media" source={result-generation.video} clock={assets.clock} video="primary-moving" audio="default" span-authority="video"/>
-  <whisperx:Alignment id="result" narrative={copy.story}
-    segment={copy.story.segment.result} media={result-media.media} domain={result-media.domain} language="zh"/>
+  <whisperx:Transcription id="result-transcription" media={result-media.media} language="zh"/>
+  <speechalign:Alignment id="result" narrative={copy.story}
+    segment={copy.story.segment.result} domain={result-media.domain} evidence={result-transcription.transcript}/>
   <seedance:ReferenceVideo id="reference-reveal-generation" model="mini" prompt={direction.reference-reveal-prompt} duration="5" resolution="720p" aspect-ratio="9:16" generate-audio="true">
     <seedance:Reference image={assets.presenter-reference} person-reference="true"/>
     <seedance:Reference audio={assets.voice-reference}/>
   </seedance:ReferenceVideo>
   <mediaop:Normalize id="reference-reveal-media" source={reference-reveal-generation.video} clock={assets.clock} video="primary-moving" audio="default" span-authority="video"/>
-  <whisperx:Alignment id="reference-reveal" narrative={copy.story}
-    segment={copy.story.segment.reference-reveal} media={reference-reveal-media.media} domain={reference-reveal-media.domain} language="zh"/>
+  <whisperx:Transcription id="reference-reveal-transcription" media={reference-reveal-media.media} language="zh"/>
+  <speechalign:Alignment id="reference-reveal" narrative={copy.story}
+    segment={copy.story.segment.reference-reveal} domain={reference-reveal-media.domain} evidence={reference-reveal-transcription.transcript}/>
   <seedance:ReferenceVideo id="closing-generation" model="mini" prompt={direction.closing-prompt} duration="11" resolution="720p" aspect-ratio="9:16" generate-audio="true">
     <seedance:Reference image={assets.presenter-reference} person-reference="true"/>
     <seedance:Reference audio={assets.voice-reference}/>
   </seedance:ReferenceVideo>
   <mediaop:Normalize id="closing-media" source={closing-generation.video} clock={assets.clock} video="primary-moving" audio="default" span-authority="video"/>
-  <whisperx:Alignment id="closing" narrative={copy.story}
-    segment={copy.story.segment.closing} media={closing-media.media} domain={closing-media.domain} language="zh"/>
+  <whisperx:Transcription id="closing-transcription" media={closing-media.media} language="zh"/>
+  <speechalign:Alignment id="closing" narrative={copy.story}
+    segment={copy.story.segment.closing} domain={closing-media.domain} evidence={closing-transcription.transcript}/>
   <mediaop:Normalize id="code-demo-media" source={assets.code-demo} clock={assets.clock} video="primary-moving" audio="none" span-authority="video"/>
   <mediaop:Normalize id="readme-demo-media" source={assets.readme-demo} clock={assets.clock} video="primary-moving" audio="none" span-authority="video"/>
   <mediaop:Normalize id="price-creatify-media" source={assets.price-creatify} clock={assets.clock} video="primary-moving" audio="none" span-authority="video"/>
@@ -660,25 +678,25 @@
 
   <!-- Final assembly: contributions and render targets -->
   <film:Film id="main" canvas={assets.canvas.canvas} timeline={program.timeline} appearance={look.film.main}>
-    <film:Track source={presenter.visual}/>
+    <film:Track id="presenter" source={presenter.visual}/>
     <film:Track source={voice.audio}/>
     <film:Track source={music.audio}/>
     <film:Track source={pixel-effects.audio}/>
-    <film:Track source={captions.visual}/>
-    <film:Track source={opening-title.visual}/>
-    <film:Track source={series-timer.visual}/>
-    <film:Track source={road-flag.visual}/>
-    <film:Track source={closing-road-flag.visual}/>
-    <film:Track source={opening-montage.visual}/>
-    <film:Track source={montage-label.visual}/>
-    <film:Track source={intro-scene.visual}/>
-    <film:Track source={competitor-scene.visual}/>
-    <film:Track source={editor-journey.visual}/>
-    <film:Track source={code-journey.visual}/>
-    <film:Track source={component-workshop.visual}/>
-    <film:Track source={semantic-workshop.visual}/>
-    <film:Track source={delivery-workshop.visual}/>
-    <film:Track source={outro-scene.visual}/>
+    <film:Track id="captions" source={captions.visual}/>
+    <film:Track id="opening-title" source={opening-title.visual}/>
+    <film:Track id="series-timer" source={series-timer.visual}/>
+    <film:Track id="road-flag" source={road-flag.visual}/>
+    <film:Track id="closing-road-flag" source={closing-road-flag.visual}/>
+    <film:Track id="opening-montage" source={opening-montage.visual}/>
+    <film:Track id="montage-label" source={montage-label.visual}/>
+    <film:Track id="intro-scene" source={intro-scene.visual}/>
+    <film:Track id="competitor-scene" source={competitor-scene.visual}/>
+    <film:Track id="editor-journey" source={editor-journey.visual}/>
+    <film:Track id="code-journey" source={code-journey.visual}/>
+    <film:Track id="component-workshop" source={component-workshop.visual}/>
+    <film:Track id="semantic-workshop" source={semantic-workshop.visual}/>
+    <film:Track id="delivery-workshop" source={delivery-workshop.visual}/>
+    <film:Track id="outro-scene" source={outro-scene.visual}/>
   </film:Film>
   <html:Video id="complete-film" composition={main.composition} timeline={program.timeline}/>
   <!-- Consecutive export ranges for limited temporary disk space. -->

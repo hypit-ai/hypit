@@ -131,7 +131,7 @@ export function createImageProvider(options: {
       const mediaType = response.headers.get("content-type")?.split(";")[0]?.trim();
       if (!mediaType?.startsWith("image/")) throw new Error("Image service returned a non-image result");
       const artifact = await context.resources.put(new Uint8Array(await response.arrayBuffer()), mediaType);
-      return { status: "completed", result: { value: (canonicalize(sealGeneratedImageSet({ images: [artifact] }))) } };
+      return { status: "completed", result: canonicalize(sealGeneratedImageSet({ images: [artifact] })) };
     },
   };
   return defineEndpoint({

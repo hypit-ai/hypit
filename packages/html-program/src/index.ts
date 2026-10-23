@@ -14,4 +14,6 @@ export type { HtmlRasterRequest, HtmlFrameRequest, HtmlFrameImages } from "./exe
 export type * from "./types.js";
 export { htmlVisual, HTML_VISUAL_FORMAT } from "./html-visual.js";
 export type { HtmlVisual } from "./html-visual.js";
+export { htmlAdjustment, readHtmlAdjustment, HTML_ADJUSTMENT_FORMAT } from "./html-adjustment.js";
+export type { HtmlAdjustment } from "./html-adjustment.js";
 export { htmlFrameSelectionPrelude } from "./frame-work.js";

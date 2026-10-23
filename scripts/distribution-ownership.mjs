@@ -2,11 +2,6 @@ import { globSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
-const productRoots = [
-  "@hypit/cli",
-  "@hypit/markup",
-];
-
 async function manifest(root, path) {
   return JSON.parse(await readFile(resolve(root, path), "utf8"));
 }
@@ -52,7 +47,7 @@ export async function distributionEmbeddedPackageDirectories(repositoryRoot) {
   };
   for (const name of workspaceDependencies(rootManifest)) independent(name);
 
-  const roots = new Set(productRoots);
+  const roots = new Set();
   for (const use of rootManifest.hypit?.cli?.use ?? []) {
     const name = packageName(use);
     if (name !== undefined) roots.add(name);

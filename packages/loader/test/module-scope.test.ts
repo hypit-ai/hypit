@@ -31,7 +31,7 @@ test("an official project extension keeps Build-local module state", async () =>
   } finally { a.close(); b.close(); await rm(root, { recursive: true, force: true }); }
 });
 
-test("Build module scopes preserve old bindings and read new ESM and CommonJS dependencies", async () => {
+test("Build module scopes preserve captured bindings while loading later ESM and CommonJS dependencies", async () => {
   const root = await realpath(await mkdtemp(join(tmpdir(), "hypit-module-scope-")));
   const a = new NodeModuleScope(); const b = new NodeModuleScope();
   try {

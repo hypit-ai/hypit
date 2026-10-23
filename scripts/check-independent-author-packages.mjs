@@ -124,11 +124,11 @@ try {
   const producerPackages = (item) => producerPackagesFromFacets(item.contribution.facets ?? []);
   const refinementPackages = (item) => refinementPackagesFromFacets(item.contribution.facets ?? []);
   assert.equal(producerPackages(timeline).length, 1);
-  assert.equal(refinementPackages(timeline).length, 1);
+  assert.equal(refinementPackages(timeline).length, 0);
   assert.equal(producerPackages(script).length, 0);
   assert.equal(refinementPackages(script).length, 0);
   assert.equal(producerPackages(film).length, 1);
-  assert.equal(refinementPackages(film).length, 1);
+  assert.equal(refinementPackages(film).length, 0);
   assert.equal(producerPackages(imageOperations).length, 2);
   assert.equal(refinementPackages(imageOperations).length, 2);
   assert.equal(producerPackages(mediaOperations).length, 1);

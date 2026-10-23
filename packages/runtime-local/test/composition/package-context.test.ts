@@ -41,6 +41,7 @@ import { SqliteRuntimeState } from "../../src/sqlite-state.js";
 import {
   capabilities,
   createGreetingBuild,
+  createGreetingBuildFixture,
   createParallelGreetingBuild,
   manifest as greetingManifest,
   producers,
@@ -51,7 +52,6 @@ import {
   definition,
   durableBuildRequest,
   finishClaimedBuild,
-  fixtureTargets,
   projectRuntimeFixture,
   publication,
   resultDestination,
@@ -81,8 +81,7 @@ test("project local runtime accepts components loaded from an installed package"
       modules: [{ manifest }],
       facets: [{
         abi: "hypit.producer-package@1",
-        implementation: {
-          producers: [
+        implementation: [
           {
             producer: producer("make-prompt"),
             handler({ inputs }) {
@@ -102,8 +101,7 @@ test("project local runtime accepts components loaded from an installed package"
               return { kind: "output", value: { text: inputs.generated.value } };
             },
           },
-          ],
-        },
+        ],
       }],
     };
   `, "utf8");
@@ -115,7 +113,7 @@ test("project local runtime accepts components loaded from an installed package"
         return await loadNodePackageSelection(specifiers, installedRoot);
       },
     });
-    const selected = createGreetingBuild({ generationRealization: "placeholder" });
+    const selected = createGreetingBuildFixture({ generationRealization: "placeholder" });
     const result = await runtime.build({
       ...durableBuildRequest(runtimeRoot, "bld_20260902T120000012Z_0000000001", selected),
       executionPackages: ["example-greeting-components"],
@@ -135,7 +133,7 @@ test("project local runtime accepts components loaded from an installed package"
 test("project local runtime remembers the complete package closure across incremental Builds", async () => {
   const directory = await mkdtemp(join(tmpdir(), "hypit-local-component-closure-"));
   const loadedSelections: string[][] = [];
-  const sharedComponents: ProducerPackage & RefinementPackage = {
+  const sharedComponents: { producers: ProducerPackage; refinements?: RefinementPackage } = {
     refinements: [{ type: types.intent, handler() {} }],
     producers: [
       {
@@ -169,7 +167,7 @@ test("project local runtime remembers the complete package closure across increm
         ...specifiers.map((specifier) => ({ specifier, contribution: { format: "hypit.package@1" as const } })),
         { specifier: "example-shared-components", contribution: {
           format: "hypit.package@1" as const,
-          facets: [createProducerPackageFacet(sharedComponents), createRefinementPackageFacet(sharedComponents)],
+          facets: [createProducerPackageFacet(sharedComponents.producers), createRefinementPackageFacet(sharedComponents.refinements ?? [])],
         } },
       ];
     },
@@ -180,7 +178,7 @@ test("project local runtime remembers the complete package closure across increm
       ["bld_20260902T120000014Z_0000000001", "example-feature-b"],
       ["bld_20260902T120000015Z_0000000001", "example-shared-components"],
     ] as const) {
-      const initial = createGreetingBuild({ generationRealization: "placeholder" });
+      const initial = createGreetingBuildFixture({ generationRealization: "placeholder" });
       await runtime.build({
         ...durableBuildRequest(directory, id, initial),
         executionPackages: [specifier],

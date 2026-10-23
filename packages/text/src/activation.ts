@@ -17,7 +17,7 @@ export const hypitPackage = {
   format: "hypit.package@1" as const,
   modules: [{ manifest: textManifest }],
   facets: [
-    ...[textComponent].flatMap((component) => [createProducerPackageFacet(component), createRefinementPackageFacet(component)]),
+    ...[textComponent].flatMap((component) => [createProducerPackageFacet(component.producers ?? []), createRefinementPackageFacet(component.refinements ?? [])]),
     createAuthorFrontendFacet(textRecipeFrontend),
     createMarkupSurfaceFacet({
       module: textModuleRef,

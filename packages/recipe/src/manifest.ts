@@ -9,9 +9,7 @@ export const recipeManifest: ModuleManifest = {
   name: recipeModuleRef.name,
   version: recipeModuleRef.version,
   dependencies: [],
-  types: [{
-    name: recipeType.name,
-  }],
+  types: [recipeType.name],
   capabilities: [],
   producers: [],
 };

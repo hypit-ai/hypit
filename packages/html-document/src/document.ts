@@ -238,5 +238,5 @@ export function materializeHtmlDocument(
   }, {once:true});
 })();
 </script>`;
-  return html.replace("</body>", driver + "</body>");
+  return html.replace("</body>", () => driver + "</body>");
 }

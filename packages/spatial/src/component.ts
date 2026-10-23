@@ -39,4 +39,4 @@ export const spatialComponent = {
     { type: spatialTypes.map2D, handler: ({ value }) => assertSpatialMap2D(valueOf<SpatialMap2D>(value, "SpatialMap2D")) },
     { type: spatialTypes.fit, handler: ({ value }) => assertContentFit(valueOf<ContentFit>(value, "ContentFit")) },
   ],
-} satisfies ProducerPackage & RefinementPackage;
+} satisfies { producers?: ProducerPackage; refinements?: RefinementPackage };

@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { resolve } from "node:path";
 
-import { isBlobRef, orderedBuildId } from "@hypit/protocol";
+import { isBlobRef, moduleKey, orderedBuildId } from "@hypit/protocol";
 import { parseSourceHeader } from "@hypit/source/text";
 import { buildResultOutput } from "@hypit/result";
 
@@ -214,7 +214,7 @@ export async function runCli(
           author: projectPath(loaded.authorSource, effectiveWorkspaceRoot),
           frontend: selectedFrontend,
           targetCount: loaded.document.targets.length,
-          targets: loaded.document.targets.map((item) => item.output),
+          targets: loaded.document.targets,
           candidates: loaded.document.candidates.length,
           satisfactions: loaded.document.satisfactions.length,
           historicalOutputCount: loaded.unresolvedHistoricalOutputs.length,
@@ -239,7 +239,7 @@ export async function runCli(
         !item.name.includes(".__") && !/\.binding-\d+$/u.test(item.name) && !item.name.endsWith(".bindings"));
       const outputs = authorFacing.filter((item) => item.ref.kind === "logical-output");
       const values = authorFacing.filter((item) => item.ref.kind !== "logical-output");
-      const modules = result.program.closure.modules.map((item) => `${item.manifest.name}@${item.manifest.version}`);
+      const modules = result.program.closure.modules.map(moduleKey);
       const machine = {
         format: "hypit.cli-check@1" as const,
         sourceKind: "author" as const,
@@ -535,7 +535,7 @@ export async function runCli(
       const candidate = loaded.run.satisfactionNames[selection.output];
       return output === undefined || candidate === undefined ? [] : [{ output, candidate }];
     });
-    const targets = loaded.run.document.targets.map((item) => item.output);
+    const targets = loaded.run.document.targets;
     const unsupportedRequestCount = endpoints?.filter((item) => item.support === "unsupported").length ?? 0;
     const unresolvedRequestCount = endpoints?.filter((item) => item.status === "unresolved" || item.status === "ambiguous").length ?? 0;
     const localRequestCount = endpoints?.filter((item) => item.status === "resolved" && item.pricing?.kind === "local").length ?? 0;

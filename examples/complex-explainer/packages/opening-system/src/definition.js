@@ -1,7 +1,6 @@
 export const module = { name: "@explainer/opening-system", version: "1" };
 export const defaults = {
   Veil: {
-    z: 20,
     pattern: "mesh",
     cell: 12,
     amount: 0.26,
@@ -10,7 +9,6 @@ export const defaults = {
     "fade-frames": 6,
   },
   Title: {
-    z: 40,
     title: "Hypit",
     subtitle: "一分钟了解",
     seconds: 60,
@@ -20,7 +18,6 @@ export const defaults = {
     "title-size": 0.19,
   },
   Timer: {
-    z: 80,
     title: "Hypit",
     subtitle: "VIDEO FRAMEWORK",
     seconds: 60,
@@ -33,9 +30,8 @@ export const defaults = {
     "flag-speed": 0.25,
     "entrance-frames": 7,
   },
-  Flag: { z: 35, x: 0.17, y: 0.81, width: 0.66, height: 0.17, "flag-color": "#fa67aa", "flag-amplitude": 0.04, "flag-speed": 0.25 },
+  Flag: { x: 0.17, y: 0.81, width: 0.66, height: 0.17, "flag-color": "#fa67aa", "flag-amplitude": 0.04, "flag-speed": 0.25 },
   Stage: {
-    z: 10,
     x: 0,
     y: 0.263,
     width: 1,

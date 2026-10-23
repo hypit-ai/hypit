@@ -1,26 +1,20 @@
 import type { StudioTrackCompanion, StudioTrackCompanionContext, StudioItemDraft } from "@hypit/studio-companion";
-import { artifactPreview, previewLayer, temporalLineageFor, temporalDomainSource } from "@hypit/studio-companion";
-import { compositionTypes } from "@hypit/composition";
-import { timelineTypes } from "@hypit/timeline";
+import { artifactPreview, previewLayer, temporalLineageFor, temporalDomainMarker } from "@hypit/studio-companion";
+import { audioTrackClips, compositionTypes, visualElements } from "@hypit/composition";
+import type { AudioTrack, VisualElement, VisualMediaElement } from "@hypit/composition";
 
 type TerminalVisualTrack = {
-  readonly presents?: readonly {
+  readonly items?: readonly {
+    readonly kind?: string;
     readonly id: string;
     readonly subjectId?: string;
-    readonly elements?: readonly {
-      readonly kind?: string;
-      readonly artifact?: { readonly resource?: string };
-    }[];
+    readonly root?: Parameters<typeof visualElements>[0];
   }[];
 };
 
-type TerminalAudioTrack = {
-  readonly clips?: readonly {
-    readonly id: string;
-    readonly subjectId?: string;
-    readonly artifact?: { readonly resource?: string };
-  }[];
-};
+function isVisualMediaElement(element: VisualElement): element is VisualMediaElement {
+  return element.kind === "image" || element.kind === "video";
+}
 
 function withTemporalLineage(
   context: StudioTrackCompanionContext,
@@ -28,23 +22,31 @@ function withTemporalLineage(
 ): StudioItemDraft {
   const temporal = temporalLineageFor(context, item.authoredId);
   if (temporal === undefined) return item;
-  const domainSource = temporalDomainSource(temporal);
+  const marker = temporalDomainMarker(temporal);
   return {
     ...item,
-    ...(domainSource?.id === undefined
-      ? {}
-      : { markerId: domainSource.id }),
+    ...(marker === undefined ? {} : { marker }),
     temporal,
   };
 }
 
 function projectTerminalVisual(context: StudioTrackCompanionContext): readonly StudioItemDraft[] {
-  const presents = new Map(((context.track.value as TerminalVisualTrack).presents ?? [])
-    .map((present) => [present.id, present] as const));
-  return context.generic().map((item) => {
-    const present = item.presentId === undefined ? undefined : presents.get(item.presentId);
-    const material = present?.elements?.find((element) =>
-      (element.kind === "image" || element.kind === "video") && element.artifact?.resource !== undefined);
+  const visualItems = new Map(((context.track.value as TerminalVisualTrack).items ?? [])
+    .map((item) => [item.id, item] as const));
+  return context.generic().map((item, index) => {
+    const terminal = visualItems.get(context.spans[index]?.id ?? "");
+    if (terminal?.kind === "adjustment") {
+      return withTemporalLineage(context, {
+        ...item,
+        ...(terminal.subjectId === undefined ? {} : { authoredId: terminal.subjectId }),
+        display: { title: terminal.subjectId ?? terminal.id, layers: [] },
+        presentation: { kind: "adjustment", chrome: "compact" },
+      });
+    }
+    const present = terminal?.kind === "present" ? terminal : undefined;
+    const material = present?.root === undefined ? undefined : visualElements(present.root).find(
+      (element): element is VisualMediaElement => isVisualMediaElement(element) && element.artifact.resource.length > 0,
+    );
     const resource = material?.artifact?.resource;
     return withTemporalLineage(context, {
       ...item,
@@ -59,7 +61,7 @@ function projectTerminalVisual(context: StudioTrackCompanionContext): readonly S
 }
 
 function projectTerminalAudio(context: StudioTrackCompanionContext): readonly StudioItemDraft[] {
-  const clips = new Map(((context.track.value as TerminalAudioTrack).clips ?? [])
+  const clips = new Map(audioTrackClips(context.track.value as AudioTrack)
     .map((clip) => [clip.id, clip] as const));
   return context.generic().map((item, index) => {
     const clip = clips.get(context.spans[index]?.id ?? "");
@@ -78,11 +80,6 @@ function projectTerminalAudio(context: StudioTrackCompanionContext): readonly St
 
 /** Cross-domain terminal protocols understood even when no Companion is installed. */
 export const fallbackStudioTrackCompanions: readonly StudioTrackCompanion[] = [
-  {
-    id: "@hypit/studio#timeline", role: "timeline", output: { type: timelineTypes.timeline },
-    family: "timeline", tone: "teal", label: "Timeline", icon: "brand",
-    lane: { heightPx: 45 },
-  },
   {
     id: "@hypit/studio#audio-track", role: "track", output: { type: compositionTypes.audioTrack },
     family: "audio", tone: "green", icon: "waveform",

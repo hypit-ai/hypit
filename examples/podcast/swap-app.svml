@@ -9,6 +9,7 @@
   <import as="seedance" from="@hypit/seedance@1"/>
   <import as="mediaop" from="@hypit/media-operations@1"/>
   <import as="whisperx" from="@hypit/whisperx@1"/>
+  <import as="speechalign" from="@hypit/narrative-speech-alignment@1"/>
   <import as="semantic" from="@hypit/narrative-temporal@1"/>
   <import as="narrative-caption" from="@hypit/narrative-caption@1"/>
   <import as="time" from="@hypit/timeline-author@1"/>
@@ -182,12 +183,15 @@
   <mediaop:Normalize id="lifestyle-media" source={lifestyle-montage.video}
     video="primary-moving" audio="none" span-authority="video" clock={clock}/>
 
-  <whisperx:Alignment id="opening-semantic" narrative={story}
-    segment={story.segment.opening-question} media={opening-media.media} domain={opening-media.domain} language="en"/>
-  <whisperx:Alignment id="daily-cheatgpt-semantic" narrative={story}
-    segment={story.segment.daily-cheatgpt} media={daily-cheatgpt-media.media} domain={daily-cheatgpt-media.domain} language="en"/>
-  <whisperx:Alignment id="brain-is-asking-semantic" narrative={story}
-    segment={story.segment.brain-is-asking} media={brain-is-asking-media.media} domain={brain-is-asking-media.domain} language="en"/>
+  <whisperx:Transcription id="opening-semantic-transcription" media={opening-media.media} language="en"/>
+  <speechalign:Alignment id="opening-semantic" narrative={story}
+    segment={story.segment.opening-question} domain={opening-media.domain} evidence={opening-semantic-transcription.transcript}/>
+  <whisperx:Transcription id="daily-cheatgpt-semantic-transcription" media={daily-cheatgpt-media.media} language="en"/>
+  <speechalign:Alignment id="daily-cheatgpt-semantic" narrative={story}
+    segment={story.segment.daily-cheatgpt} domain={daily-cheatgpt-media.domain} evidence={daily-cheatgpt-semantic-transcription.transcript}/>
+  <whisperx:Transcription id="brain-is-asking-semantic-transcription" media={brain-is-asking-media.media} language="en"/>
+  <speechalign:Alignment id="brain-is-asking-semantic" narrative={story}
+    segment={story.segment.brain-is-asking} domain={brain-is-asking-media.domain} evidence={brain-is-asking-semantic-transcription.transcript}/>
 
   <time:Timeline id="speech" clock={clock} end="brain-is-asking-semantic.end">
     <time:Window id="opening-semantic" from="start" for={opening-media.extent}/>
@@ -208,9 +212,9 @@
     <audio:Clip id="brain-is-asking-semantic-source" source={brain-is-asking-media.media} during={speech.brain-is-asking-semantic}/>
   </audio:Track>
   <visual:Track id="speech-picture" timeline={speech.timeline}>
-    <visual:Clip id="opening-semantic-source" media={opening-media.media} during={speech.opening-semantic} frame={full-frame} z="10" fit="cover"/>
-    <visual:Clip id="daily-cheatgpt-semantic-source" media={daily-cheatgpt-media.media} during={speech.daily-cheatgpt-semantic} frame={full-frame} z="10" fit="cover"/>
-    <visual:Clip id="brain-is-asking-semantic-source" media={brain-is-asking-media.media} during={speech.brain-is-asking-semantic} frame={full-frame} z="10" fit="cover"/>
+    <visual:Clip id="opening-semantic-source" media={opening-media.media} during={speech.opening-semantic} frame={full-frame} fit="cover"/>
+    <visual:Clip id="daily-cheatgpt-semantic-source" media={daily-cheatgpt-media.media} during={speech.daily-cheatgpt-semantic} frame={full-frame} fit="cover"/>
+    <visual:Clip id="brain-is-asking-semantic-source" media={brain-is-asking-media.media} during={speech.brain-is-asking-semantic} frame={full-frame} fit="cover"/>
   </visual:Track>
 
   <audio-track:Track id="music-bed" timeline={speech.timeline}>
@@ -220,8 +224,7 @@
 
   <visual:Track id="lifestyle" timeline={speech.timeline}>
     <visual:Clip id="lifestyle-cutaway" media={lifestyle-media.media}
-      frame={full-frame} during={selection-lifestyle}
-      z="40" fit="cover">
+      frame={full-frame} during={selection-lifestyle} fit="cover">
       <visual:Map/>
     </visual:Clip>
   </visual:Track>
@@ -241,10 +244,10 @@
 
   <film:Film id="main" canvas={vertical.canvas} timeline={speech.timeline}
     appearance={recipes.film.vertical}>
-    <film:Track source={speech-picture.visual}/>
+    <film:Track id="speech-picture" source={speech-picture.visual}/>
     <film:Track source={speech-sound.audio}/>
-    <film:Track source={lifestyle.visual}/>
-    <film:Track source={captions.visual}/>
+    <film:Track id="lifestyle" source={lifestyle.visual}/>
+    <film:Track id="captions" source={captions.visual}/>
     <film:Track source={music-bed.audio}/>
   </film:Film>
 

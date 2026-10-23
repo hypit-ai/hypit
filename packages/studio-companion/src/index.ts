@@ -12,8 +12,8 @@ export type StudioIcon =
   | "brand"
   | "captions"
   | "component"
+  | "chart"
   | "layers"
-  | "ranking"
   | "text"
   | "timeline"
   | "video"
@@ -39,20 +39,30 @@ export type StudioTimelinePresentation = {
   readonly chrome: "standard" | "group" | "point" | "compact";
 };
 
-export type StudioTemporalSource = {
-  readonly timelineId: string;
+type StudioTemporalSourceBase = {
   /** Domain-owned Type and role; Studio does not enumerate future time domains. */
   readonly type: TypeRef;
   readonly kind: string;
   readonly id: string;
+};
+
+export type StudioConstructionTemporalSource = StudioTemporalSourceBase & {
+  readonly scope: "construction";
+};
+
+export type StudioTimelineTemporalSource = StudioTemporalSourceBase & {
+  readonly scope: "timeline";
+  readonly timelineId: string;
   /** Present only when a package Companion recognizes the domain-owned value. */
   readonly domain?: { readonly companion: string; readonly id: string };
 };
 
+export type StudioTemporalSource = StudioConstructionTemporalSource | StudioTimelineTemporalSource;
+
 export type StudioTemporalAuthority =
   | {
       readonly kind: "domain";
-      readonly source: StudioTemporalSource;
+      readonly source: StudioTimelineTemporalSource;
       readonly boundary: string;
     }
   | {
@@ -88,6 +98,18 @@ export type StudioTemporalLineage = {
   /** Exact executed Temporal value. Studio keeps this identity for inverse traversal. */
   readonly record: string;
   readonly projection: StudioTemporalProjection;
+};
+
+/** Exact package-owned temporal Item that placed a Studio occurrence. */
+export type StudioTemporalMarker = {
+  readonly companion: string;
+  readonly domainId: string;
+  readonly itemId: string;
+};
+
+export type StudioSourceLocation = {
+  readonly path: string;
+  readonly range: Range;
 };
 
 export type StudioTemporalConsumerInput = {
@@ -372,15 +394,6 @@ export type StudioLaneDescription = {
   readonly order?: number;
 };
 
-export type StudioCandidateProvenance = {
-  readonly output: string;
-  readonly outputRef?: string;
-  readonly candidateId?: string;
-  readonly origin: "run" | "source" | "none";
-  readonly status: "resolved" | "unresolved";
-  readonly errors: readonly string[];
-};
-
 export type StudioTemporalDomainAnchor = {
   readonly id: string;
   readonly frame: number;
@@ -440,7 +453,6 @@ export type StudioTemporalDomainView = {
   readonly items: readonly StudioTemporalDomainItem[];
   /** Domain-owned inverse targets retained for Track/Item editing but not drawn as Timeline rows. */
   readonly editItems: readonly StudioTemporalDomainItem[];
-  readonly provenance: StudioCandidateProvenance;
   /** Exact package-owned author source used only for inverse dispatch. */
   readonly source: {
     readonly path: string;
@@ -472,6 +484,8 @@ export type StudioPlacementChild = {
   readonly values: readonly StudioObservedValue[];
   readonly records?: readonly string[];
   readonly outputs?: readonly string[];
+  /** Structured descendants preserved for recursive author vocabularies. */
+  readonly children?: readonly StudioPlacementChild[];
 };
 
 export type StudioPlacement = {
@@ -527,8 +541,6 @@ export type StudioResolvedTrack = {
   /** Exact protocol identity used for every Companion decision. */
   readonly typeRef: TypeRef;
   readonly outputRef: string;
-  readonly candidateId?: string;
-  readonly candidateOrigin: "run" | "source" | "none";
   readonly role: StudioViewRole;
   readonly trace: StudioTrackTrace;
   readonly surfacePreview?: StudioMaterialPreview;
@@ -536,9 +548,18 @@ export type StudioResolvedTrack = {
 };
 
 export type StudioViewRole =
-  | "timeline"
   | "supporting-value"
   | "track";
+
+/**
+ * Author-side correspondence with one terminal span. Studio resolves the span
+ * to renderer-specific occurrences after package projection.
+ */
+export type StudioTerminalLink = {
+  readonly spanId: string;
+  /** Package-owned selection boundary inside a measurable visual Present. */
+  readonly elementId?: string;
+};
 
 export type StudioSpan = {
   readonly id: string;
@@ -557,15 +578,12 @@ export type StudioItemDraft = {
   readonly endFrameExclusive: number;
   /** Back-to-front timeline order. Ties preserve projection order. Selection raises only the timeline item. */
   readonly stackOrder: number;
-  readonly elementRange?: Range;
-  readonly markerId?: string;
-  readonly presentId?: string;
-  /** Rendered parts belonging to this Item. */
-  readonly renderIds?: readonly string[];
+  readonly elementLocation?: StudioSourceLocation;
+  readonly marker?: StudioTemporalMarker;
+  /** Terminal spans realizing this author Item. */
+  readonly terminalLinks?: readonly StudioTerminalLink[];
   /** Resolved author references that differ per derived Item, such as one Cue's actual Style. */
   readonly parameterReferences?: Readonly<Record<string, string>>;
-  /** Disjoint displayed intervals belonging to one selectable author Item. */
-  readonly selectionGroup?: string;
   /** Deliberately selected facts, presented beside bound Inspector fields. */
   readonly inspector?: readonly StudioInspectorValue[];
   readonly presentation?: StudioTimelinePresentation;
@@ -579,7 +597,7 @@ export type StudioInspectorObjectDraft = {
   readonly id: string;
   readonly authoredId: string;
   readonly title: string;
-  readonly elementRange?: Range;
+  readonly elementLocation?: StudioSourceLocation;
   readonly parameterReferences?: Readonly<Record<string, string>>;
   readonly inspector?: readonly StudioInspectorValue[];
 };
@@ -664,6 +682,8 @@ export type StudioFilmCompanion = {
   readonly timeSources: readonly { readonly attribute: string; readonly type: TypeRef }[];
   readonly tracks: {
     readonly childSurface: string;
+    /** Transparent authoring containers through which Track membership is followed. */
+    readonly containerSurfaces?: readonly string[];
     readonly sourceAttribute: string;
     readonly types: readonly TypeRef[];
   };
@@ -1018,7 +1038,7 @@ export function temporalLineageFor(
 }
 
 /** Unique domain-owned author identity carried by one projection, when there is one. */
-export function temporalDomainSource(lineage: StudioTemporalLineage | undefined): StudioTemporalSource | undefined {
+export function temporalDomainSource(lineage: StudioTemporalLineage | undefined): StudioTimelineTemporalSource | undefined {
   if (lineage === undefined) return undefined;
   const projection = lineage.projection;
   const endpoints = projection.kind === "instant" ? [projection] : [projection.start, projection.end];
@@ -1034,6 +1054,15 @@ export function temporalDomainSource(lineage: StudioTemporalLineage | undefined)
     && candidate.domain?.id === first.domain?.id)
     ? first
     : undefined;
+}
+
+export function temporalDomainMarker(lineage: StudioTemporalLineage | undefined): StudioTemporalMarker | undefined {
+  const source = temporalDomainSource(lineage);
+  return source?.domain === undefined ? undefined : {
+    companion: source.domain.companion,
+    domainId: source.domain.id,
+    itemId: source.id,
+  };
 }
 
 /** A package chooses which source references can name an otherwise unnamed Item. */
@@ -1074,17 +1103,16 @@ export function childItems(
     // Both correspondences are exact public facts: the Program item identity
     // and the renderer's declared subject. No renderer naming convention is
     // interpreted here.
-    const renders = context.spans.filter((span) => span.id === item.id || span.subjectId === authoredId);
-    const render = renders[0];
+    const occurrences = context.spans.filter((span) => span.id === item.id || span.subjectId === authoredId);
     return {
-      id: `${context.track.outputRef}:item:${item.id}`,
+      id: `item:${item.id}`,
       authoredId,
       display: { title: authoredId, layers: [] },
       startFrame: item.startFrame,
       endFrameExclusive: item.endFrameExclusive,
       stackOrder: item.stackOrder,
-      ...(child === undefined ? {} : { elementRange: child.range }),
-      ...(render === undefined ? {} : { presentId: render.id, renderIds: renders.map((span) => span.id) }),
+      ...(child === undefined ? {} : { elementLocation: { path: child.sourcePath, range: child.range } }),
+      terminalLinks: occurrences.map((span) => ({ spanId: span.id })),
       presentation: { kind, chrome },
     };
   });

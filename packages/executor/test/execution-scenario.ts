@@ -41,7 +41,7 @@ const manifest: ModuleManifest = {
   name: moduleRef.name,
   version: moduleRef.version,
   dependencies: [],
-  types: Object.values(types).map((type) => ({ name: type.name })),
+  types: Object.values(types).map((type) => type.name),
   capabilities: [{ name: capabilities.generation.name, returns: types.generated }],
   producers: [
     {
@@ -152,7 +152,7 @@ const chainManifest: ModuleManifest = {
   name: chainModule.name,
   version: chainModule.version,
   dependencies: [],
-  types: [{ name: chainType.name }],
+  types: [chainType.name],
   capabilities: [],
   producers: [{
     name: advanceProducer.name,

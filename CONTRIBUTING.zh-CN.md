@@ -38,7 +38,6 @@ pnpm install --frozen-lockfile
 | Studio 界面翻译 | [Studio 本地化](packages/studio/LOCALIZATION.md) |
 | 编译、Run 与 Build | [Runtime](https://hypit.ai/zh/guide/runtime/) |
 | 命名、模块边界、wire 数据 | [代码规范](https://hypit.ai/zh/guide/conventions/) |
-| 测试与依赖环境的测试套件 | [测试](https://hypit.ai/zh/guide/testing/) |
 
 中英文档分别位于 `docs/` 和 `docs/zh/`，改动一侧的页面时，请一并改动对应的另一侧。
 
@@ -50,6 +49,23 @@ pnpm install --frozen-lockfile
 pnpm check         # TypeScript 类型检查
 pnpm test          # 包与服务适配器测试
 ```
+
+Hypit 按事实归属组织测试，不使用含义模糊的 unit/integration/e2e 金字塔：
+
+- `packages/<name>/test/` 验证 package 自己拥有的值与行为；
+- `packages/<name>/test/composition/` 验证一次直接交接；
+- `test/workflows/` 只验证少量完整公共流程；
+- `packages/<name>/test/environment/` 中的文件只通过显式的
+  `node test/run.mjs environment <name>` 运行。
+
+修改单个 package 时可运行 `node test/run.mjs package <name>`；仓库流程使用
+`node test/run.mjs workflow <name>`。默认 `pnpm test` 不包含依赖浏览器、媒体工具、Python
+或真实进程环境的行为。
+
+新增测试前，应先说明可观察事实、事实 owner，以及哪个失败无法被现有测试发现。完整不变量只在 owner
+处验证；消费方只验证自己使用的关系。不要复述 Manifest 数组、内部状态对象或偶然调用顺序。Fixture
+可以减少语法，但不能替调用者选择 Model、Provider、Output、恢复规则或领域关系。行为被删除时，其测试
+也一起删除，不把测试集当作项目历史档案。
 
 ## 打包 Distribution
 

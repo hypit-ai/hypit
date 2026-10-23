@@ -19,6 +19,7 @@ Hypit 只有一条节目时间轴：`Timeline`。它只是 `{ id, frameRate, fra
 ```svml
 <import as="mediaop" from="@hypit/media-operations@1"/>
 <import as="whisperx" from="@hypit/whisperx@1"/>
+<import as="speechalign" from="@hypit/narrative-speech-alignment@1"/>
 <import as="semantic" from="@hypit/narrative-temporal@1"/>
 <import as="time" from="@hypit/timeline-author@1"/>
 <import as="media" from="@hypit/media@1"/>
@@ -46,17 +47,38 @@ Timeline 构造只需要媒体 Extent，不要求语义对齐。只有 Caption�
 需要已接受表演内部的 Script 位置时，才增加 Alignment：
 
 ```svml
-<whisperx:Alignment id="opening-alignment" narrative={story}
-  segment={story.segment.opening} media={opening-media.media}
-  domain={opening-media.domain} language="en"/>
-<whisperx:Alignment id="answer-alignment" narrative={story}
-  segment={story.segment.answer} media={answer-media.media}
-  domain={answer-media.domain} language="en"/>
+<whisperx:Transcription id="opening-transcription"
+  media={opening-media.media} language="en"/>
+<speechalign:Alignment id="opening-alignment" narrative={story}
+  segment={story.segment.opening} domain={opening-media.domain}
+  evidence={opening-transcription.transcript}/>
+<whisperx:Transcription id="answer-transcription"
+  media={answer-media.media} language="en"/>
+<speechalign:Alignment id="answer-alignment" narrative={story}
+  segment={story.segment.answer} domain={answer-media.domain}
+  evidence={answer-transcription.transcript}/>
 ```
 
-每个输出只是 `NarrativeAlignment`：在局部时间域上测得的 Segment 与单词边界。它不包含
-媒体，也不选择 Timeline 位置。没有 Token 的 Segment 省略 `language`，边界直接采用局部
-时间域边界，并且不发起声学请求。
+每次 Transcription 只发布 `SpeechTranscriptEvidence`；每次 Alignment 只发布
+`NarrativeAlignment`，也就是在局部时间域上测得的 Segment 与单词边界。两种结果都不包含
+媒体，也不选择 Timeline 位置。没有 Token 的 Segment 直接使用不带 `evidence` 的
+`<speechalign:Alignment>`，边界采用局部时间域边界，并且不发起声学请求。
+
+如果需要保留并修订观测，可以在 Build 前把它物化成文件，再导入该 Source：
+
+```bash
+hypit transcribe opening.mp4 --language en --to opening.transcript.svml
+```
+
+```svml
+<import as="accepted-speech" source="./opening.transcript.svml"/>
+<speechalign:Alignment id="opening-alignment" narrative={story}
+  segment={story.segment.opening} domain={opening-media.domain}
+  evidence={accepted-speech.transcript}/>
+```
+
+文件保存精确的 16 kHz 采样边界。修正这些边界后，下一次 Build 会重新得到对应的语义与
+Caption 时间；Script 含义、媒体放置和 Alignment 操作本身都无需改变。
 
 ## 构造绝对 Timeline
 
@@ -101,9 +123,9 @@ Timeline 声明是无环构造图。`end` 必填；每个具名 Instant 或 Wind
 ```svml
 <visual:Track id="picture" timeline={speech.timeline}>
   <visual:Clip id="opening" media={opening-media.media} during={speech.opening}
-    frame={speech-frame} z="10" fit="cover"/>
+    frame={speech-frame} fit="cover"/>
   <visual:Clip id="answer" media={answer-media.media} during={speech.answer}
-    frame={speech-frame} z="10" fit="cover"/>
+    frame={speech-frame} fit="cover"/>
 </visual:Track>
 
 <audio:Track id="mix" timeline={speech.timeline}>

@@ -9,10 +9,10 @@ import {
 import type { NodePackageSelectionRequest } from "@hypit/hypit/loader/node";
 import { hypitHostStateRoot } from "@hypit/hypit/cli";
 import { EndpointRegistry, Executor } from "@hypit/hypit/executor";
-import type { EndpointCredential, EndpointFulfillment, EndpointInstance, EndpointRegistrar, EndpointScheduling } from "@hypit/hypit/endpoint";
+import type { EndpointCredential, EndpointInstance, EndpointRegistrar, EndpointScheduling } from "@hypit/hypit/endpoint";
 import { endpointOffers, endpointResourceClaims, installEndpoint, verifyEndpointPricingDocument } from "@hypit/hypit/endpoint";
 import { assertBuildId, canonicalize, canonicalStringify, capabilityKey, parseCapabilityKey } from "@hypit/hypit/protocol";
-import type { CanonicalValue, CapabilityRef, Need } from "@hypit/hypit/protocol";
+import type { CanonicalValue, CapabilityRef, Need, Value } from "@hypit/hypit/protocol";
 import {
   CompositeCredentialStore,
   InProcessBuildScheduler,
@@ -886,7 +886,7 @@ export async function invokeRuntimeConfigNeed(
   need: Need,
   resources: ResourceStore,
   options: LoadRuntimeConfigOptions & RuntimeInvocationObservation = {},
-): Promise<EndpointFulfillment> {
+): Promise<Value> {
   const opened = await openRuntimeConfig(path, options.packageRoot);
   const { absolute, root, packageRoot } = opened;
   const document = scopedProfile(opened.document, { capabilities: [need.capability] });

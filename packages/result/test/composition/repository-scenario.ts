@@ -4,9 +4,9 @@ export const videoType: TypeRef = {
   module: { name: "example.media", version: "1" },
   name: "Video",
 };
-export const compositeType: TypeRef = {
+export const structuredType: TypeRef = {
   module: { name: "example.speech", version: "1" },
-  name: "CompositeValue",
+  name: "StructuredValue",
 };
 
 export function publication(

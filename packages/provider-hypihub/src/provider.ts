@@ -1,18 +1,18 @@
 import { capabilityKey } from "@hypit/hypit/protocol";
 import { readFileSync } from "node:fs";
 import type { RuntimeDoctorDiagnostic } from "@hypit/runtime-local/extension";
-import type { AsyncEndpoint, CredentialRef, EndpointCredential, EndpointFulfillment, EndpointInvocationContext, EndpointPollContext, EndpointPricingReader, EndpointStartContext, EndpointOutcome, ImmediateEndpointHandler, ResourceStore } from "@hypit/hypit/endpoint";
+import type { AsyncEndpoint, CredentialRef, EndpointCredential, EndpointInvocationContext, EndpointPollContext, EndpointPricingReader, EndpointStartContext, EndpointOutcome, ImmediateEndpointHandler, ResourceStore } from "@hypit/hypit/endpoint";
 import { credentialRef, EndpointServiceError, defineEndpoint, wakeAfter } from "@hypit/hypit/endpoint";
 import { EndpointHttpError, EndpointResponseError, EndpointTransportError, withRequestDeadline } from "@hypit/hypit/endpoint/http";
 import { selectWireModelForRequest } from "@hypit/generation/provider";
 import type { ProviderFieldRequest } from "@hypit/generation/provider";
 import { canonicalize } from "@hypit/hypit/protocol";
-import type { BlobRef, CanonicalValue, CapabilityRef } from "@hypit/hypit/protocol";
-import { sealAlignedTranscriptEvidence, speechEvidenceTypes } from "@hypit/speech-evidence";
+import type { BlobRef, CanonicalValue, CapabilityRef, Value } from "@hypit/hypit/protocol";
+import { sealSpeechTranscriptEvidence, speechEvidenceTypes } from "@hypit/speech-evidence";
 import {
   assertWhisperXEvidenceWav,
   interpretWhisperXTranscript,
-  verifyWhisperXAlignmentRequest,
+  verifyWhisperXTranscriptionRequest,
   whisperXCapabilities,
 } from "@hypit/whisperx";
 import type { WhisperXTranscriptResponse } from "@hypit/whisperx";
@@ -66,7 +66,7 @@ export type CreateHypiHubProviderOptions = {
   readonly uploadPartTimeoutMs?: number;
   readonly uploadPartAttempts?: number;
   readonly downloadAttempts?: number;
-  /** HypiHub model used for the Provider-neutral WhisperX alignment capability. */
+  /** HypiHub model used for the Provider-neutral WhisperX transcription capability. */
   readonly transcriptionModel?: string;
   readonly fetch?: typeof globalThis.fetch;
   /** Overrides HypiHub's negotiated upload transport for referenced Resources. */
@@ -318,7 +318,7 @@ function pricingAuth(credentials: Readonly<Record<string, EndpointCredential>>, 
 }
 
 function pricingModel(request: import("@hypit/hypit/endpoint").EndpointRequest, transcriptionModel: string): string | undefined {
-  if (capabilityKey(request.capability) === capabilityKey(whisperXCapabilities.alignment)) {
+  if (capabilityKey(request.capability) === capabilityKey(whisperXCapabilities.transcription)) {
     return transcriptionModel;
   }
   const route = hypiHubRouteForCapability(request.capability);
@@ -412,7 +412,7 @@ export async function diagnoseHypiHubProvider(
   const diagnostics: RuntimeDoctorDiagnostic[] = [];
   for (const capability of context.capabilities ?? []) {
     let available = false;
-    if (capabilityKey(capability) === capabilityKey(whisperXCapabilities.alignment)) {
+    if (capabilityKey(capability) === capabilityKey(whisperXCapabilities.transcription)) {
       available = cardEndpoints(cards.get(transcriptionModel)).includes("transcriptions");
     } else {
       const route = hypiHubRouteForCapability(capability);
@@ -437,7 +437,7 @@ async function complete(client: HypiHubClient, auth: HypiHubAuth, route: (typeof
   const response = await client.json(`/jobs/${encodeURIComponent(id)}/assets`, auth); const items = response.items;
   assert(Array.isArray(items) && items.length > 0, "HypiHub job has no assets"); const blobs: BlobRef[] = [];
   for (const item of items) { const asset = object(item, "HypiHub asset"); assert(typeof asset.url === "string", "HypiHub asset has no URL"); const downloaded = await client.download(asset.url); blobs.push(await artifacts.put(downloaded.bytes, downloaded.mediaType)); }
-  return { status: "completed", result: { value: route.packageResult(blobs) } };
+  return { status: "completed", result: route.packageResult(blobs) };
 }
 
 async function prepareGeneration(client: HypiHubClient, context: EndpointInvocationContext, publicAssetUrl: CreateHypiHubProviderOptions["publicAssetUrl"]) {
@@ -466,13 +466,13 @@ async function prepareGeneration(client: HypiHubClient, context: EndpointInvocat
   return { route, auth, compiled, operation: request.operation };
 }
 
-async function synthesizeAudio(client: HypiHubClient, context: EndpointInvocationContext, publicAssetUrl: CreateHypiHubProviderOptions["publicAssetUrl"]): Promise<EndpointFulfillment> {
+async function synthesizeAudio(client: HypiHubClient, context: EndpointInvocationContext, publicAssetUrl: CreateHypiHubProviderOptions["publicAssetUrl"]): Promise<Value> {
   const { route, auth, compiled, operation } = await prepareGeneration(client, context, publicAssetUrl);
   assert(route.media === "audio", "HypiHub audio capabilities use an immediate endpoint");
   await context.reportProgress?.({ phase: `Submitting HypiHub request: ${compiled.model} (${operation})` });
   const audio = await client.speech(auth, { model: compiled.model, ...(compiled.input as Record<string, unknown>) });
   const artifacts = await Promise.all(audio.map(async (item) => await context.resources.put(item.bytes, item.mediaType)));
-  return { value: route.packageResult(artifacts) };
+  return route.packageResult(artifacts);
 }
 
 function endpoint(client: HypiHubClient, pollIntervalMs: number, maxOperationMs: number, publicAssetUrl: CreateHypiHubProviderOptions["publicAssetUrl"]): AsyncEndpoint {
@@ -595,7 +595,7 @@ export function createHypiHubProvider(options: CreateHypiHubProviderOptions = {}
   const transcriptionModel = options.transcriptionModel?.trim() || "victor-upmeet/whisperx";
   const whisperXEndpoint: ImmediateEndpointHandler = async (context) => {
     try {
-      const request = verifyWhisperXAlignmentRequest(context.need.constraints);
+      const request = verifyWhisperXTranscriptionRequest(context.need.constraints);
       const bytes = await context.resources.get(request.audio.resource);
       assert(bytes !== undefined && bytes.byteLength === request.audio.size,
         `WhisperX evidence Resource ${request.audio.resource} is unavailable or has changed`);
@@ -617,13 +617,12 @@ export function createHypiHubProvider(options: CreateHypiHubProviderOptions = {}
         language: request.language,
         timestamp_granularities: ["segment", "word"],
       }, auth, async (message) => { await context.reportDiagnostic?.({ level: "info", message }); });
-      const evidence = sealAlignedTranscriptEvidence({
-        domainId: request.domainId,
+      const evidence = sealSpeechTranscriptEvidence({
         sampleFrames: request.sampleFrames,
         passages: interpretWhisperXTranscript(response as WhisperXTranscriptResponse, request.sampleFrames),
       });
       await context.reportProgress?.({ phase: "Word timing ready" });
-      return { value: (canonicalize(evidence)) };
+      return canonicalize(evidence);
     } catch (error) {
       throw new Error(failureMessage(error), { cause: error });
     }
@@ -654,8 +653,8 @@ export function createHypiHubProvider(options: CreateHypiHubProviderOptions = {}
         ? { capability: route.capability, returns: route.returns, lifecycle: "immediate" as const, handler: audioEndpoint, capacity: route.capability.name, ...(route.supports === undefined ? {} : { supports: route.supports }), ...(capabilityConcurrency[route.capability.name] === undefined ? {} : { maxConcurrency: capabilityConcurrency[route.capability.name]! }) }
         : { capability: route.capability, returns: route.returns, lifecycle: "asynchronous" as const, endpoint: asyncEndpoint, capacity: route.capability.name, ...(route.supports === undefined ? {} : { supports: route.supports }), ...(capabilityConcurrency[route.capability.name] === undefined ? {} : { maxConcurrency: capabilityConcurrency[route.capability.name]! }) }),
       {
-        capability: whisperXCapabilities.alignment,
-        returns: speechEvidenceTypes.alignedTranscript,
+        capability: whisperXCapabilities.transcription,
+        returns: speechEvidenceTypes.transcript,
         lifecycle: "immediate" as const,
         handler: whisperXEndpoint,
         capacity: "transcription",

@@ -50,7 +50,7 @@ const manifest: ModuleManifest = {
   name: testModule.name,
   version: testModule.version,
   dependencies: [narrativeTemporalDependency, compositionDependency],
-  types: [{ name: requestType.name }],
+  types: [requestType.name],
   capabilities: [],
   producers: [{
     name: generateProducer.name,
@@ -182,7 +182,7 @@ function buildState(linked: LinkedProgram, authorGraph: AuthorGraph, targets: re
     candidates: [],
     operations: [],
     satisfactions: [],
-    targets: targets.map((output) => ({ output })),
+    targets,
   });
   return materializeBuild(defineBuild({
     program: link(linked.closure, [...linked.records, ...planned.initialRecords]),
@@ -216,7 +216,7 @@ test("one FragmentInstance shares its generation Operation across all exports", 
   );
 });
 
-test("distinct Fragment instances never content-dedupe", () => {
+test("distinct Fragment instances retain independent Operation identities", () => {
   const linked = program();
   const opening = instance(linked, "opening");
   const closing = instance(linked, "closing");

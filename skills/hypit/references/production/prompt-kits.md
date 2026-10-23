@@ -157,5 +157,5 @@ does not create the reference edge.
 
 Keep a Kit project-local while it serves one project. When its owner wants the same program in other
 projects, export the `.svs` file from an ordinary versioned data package and import that package Source
-directly. [Component sharing](component-sharing.md#data-packages-remain-data) owns that distribution
-boundary; no activation code or Hypit-specific registry is involved.
+directly. [Component sharing](component-sharing.md#share-a-prompt-kit-as-data) owns that distribution
+boundary.

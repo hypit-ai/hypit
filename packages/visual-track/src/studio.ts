@@ -7,7 +7,7 @@ import type {
   StudioMaterialPreview,
   StudioSourceBindingDeclaration,
 } from "@hypit/studio-companion";
-import { artifactPreview, authoredItemTitle, childItems, previewLayer, requiredSurfaceValue, temporalLineageFor, temporalDomainSource } from "@hypit/studio-companion";
+import { artifactPreview, authoredItemTitle, childItems, previewLayer, requiredSurfaceValue, temporalLineageFor, temporalDomainMarker } from "@hypit/studio-companion";
 import { visualTreatmentDefaults } from "./author.js";
 import { visualTrackMarkupSurfaces, visualTrackModuleRef, visualTrackTypes } from "./manifest.js";
 import type { MediaLayerProgram, VisualTrackProgram } from "./types.js";
@@ -104,7 +104,6 @@ function clipOptions(name: string): readonly string[] {
 const fitOptions = clipOptions("fit");
 const fitConstraintOptions = clipOptions("fit-constraint");
 const directClipBindings: readonly StudioSourceBindingDeclaration[] = [
-  { name: "z", writable: true },
   { name: "fit", writable: true, fallback: "contain" },
   ...["frame-x", "frame-y", "content-x", "content-y"].map((name) => ({ name, writable: true, fallback: 0.5 })),
   ...["fit-offset-x", "fit-offset-y"].map((name) => ({ name, writable: true, fallback: 0 })),
@@ -113,7 +112,6 @@ const directClipBindings: readonly StudioSourceBindingDeclaration[] = [
 ];
 
 const directClipInspector: readonly StudioInspectorFieldDeclaration[] = [
-  { binding: "z", label: "Stack Order", ...mediaPlace("where", "Frame", "Stacking"), control: "number", number: { step: 1 } },
   { binding: "fit", label: "Fit", ...mediaPlace("where", "Fit", "Fit"), control: "select", options: fitOptions },
   ...["frame-x", "frame-y", "content-x", "content-y"].map((binding) => ({
     binding, label: title(binding), ...mediaPlace("where", "Fit", "Alignment"), control: "number" as const,
@@ -137,12 +135,12 @@ function materialPreview(
 
 function projectVisualItems(context: StudioTrackCompanionContext): readonly StudioItemDraft[] {
   const program = requiredSurfaceValue(context, "program") as VisualTrackProgram;
-  const clips = program.clips.map((clip) => ({
+  const clips = program.clips.map((clip, index) => ({
     id: clip.id,
     subjectId: clip.subjectId,
     startFrame: clip.span.startFrame,
     endFrameExclusive: clip.span.endFrameExclusive,
-    stackOrder: clip.z,
+    stackOrder: index,
     preview: materialPreview(clip.layers),
     temporalInput: "window",
     sourceTypes: [visualTrackTypes.clipSpec],
@@ -152,9 +150,12 @@ function projectVisualItems(context: StudioTrackCompanionContext): readonly Stud
       const clip = clips[index];
       if (clip === undefined) return projected;
       const temporal = temporalLineageFor(context, clip.id, clip.temporalInput);
-      const semanticSource = temporalDomainSource(temporal);
+      const marker = temporalDomainMarker(temporal);
       return {
         ...projected,
+        ...(projected.terminalLinks === undefined ? {} : {
+          terminalLinks: projected.terminalLinks.map((link) => ({ ...link, elementId: `${clip.id}:frame` })),
+        }),
         display: {
           ...projected.display,
           title: authoredItemTitle(context, projected.authoredId, clip.sourceTypes, ["image", "media", "surface"]),
@@ -162,9 +163,7 @@ function projectVisualItems(context: StudioTrackCompanionContext): readonly Stud
             layers: [previewLayer(clip.preview, clip.preview.kind === "video" ? "storyboard" : "repeat-x")],
           }),
         },
-        ...(semanticSource?.id === undefined
-          ? {}
-          : { markerId: semanticSource.id }),
+        ...(marker === undefined ? {} : { marker }),
         ...(temporal === undefined ? {} : { temporal }),
       };
     });

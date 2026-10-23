@@ -16,4 +16,4 @@ export const timelineComponent = {
     type: timelineTypes.timeline,
     handler: ({ value }) => assertTimelineIdentity(track(value)),
   }],
-} satisfies ProducerPackage & RefinementPackage;
+} satisfies { producers?: ProducerPackage; refinements?: RefinementPackage };

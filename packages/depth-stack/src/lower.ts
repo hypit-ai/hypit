@@ -1,17 +1,18 @@
 import type { Timeline } from "@hypit/timeline";
 import {
   assertVisualTrackIdentity,
-  sealVisualTrack,
+  sealPresentVisualTrack,
 } from "@hypit/composition";
 import type {
   VisualAnimation,
   VisualElement,
   VisualSourceTimeMap,
   VisualStyleDeclaration,
-  VisualTrack,
+  PresentVisualTrack,
+  VisualPresentDraft,
 } from "@hypit/composition";
 import {
-  lowerVisualClipElements,
+  lowerVisualClipRoot,
   resolveMediaLayerPrograms,
   resolveVisualSourceTime,
 } from "@hypit/visual-track";
@@ -84,12 +85,11 @@ function poseAnimation(input: {
   return { keyframes };
 }
 
-function rootBox(id: string, parent: string | undefined, order: number, style: VisualStyleDeclaration[], animation?: VisualAnimation): VisualElement {
+function rootBox(id: string, children: readonly VisualElement[], style: VisualStyleDeclaration[], animation?: VisualAnimation): VisualElement {
   return {
     id,
-    ...(parent === undefined ? {} : { parent }),
-    order,
     kind: "box",
+    children,
     style,
     ...(animation === undefined ? {} : { animation }),
   };
@@ -195,30 +195,27 @@ function sourceTimeFor(input: {
   );
 }
 
-function groupElements(input: {
+function groupRoot(input: {
   readonly program: DepthStackProgram;
-  readonly stageStart: number;
-  readonly stageEnd: number;
   readonly pose: DepthStackPose;
   readonly poseAnimation?: VisualAnimation;
-}): { readonly elements: VisualElement[]; readonly poseParent: string } {
+  readonly child: VisualElement;
+}): VisualElement {
   const frame = input.program.frame;
-  let order = 0;
-  const elements: VisualElement[] = [rootBox("deck-placement", undefined, order++, [
-    { name: "height", value: px(frame.heightPx) },
-    { name: "left", value: px(frame.xPx) },
-    { name: "position", value: "absolute" },
-    { name: "top", value: px(frame.yPx) },
-    { name: "width", value: px(frame.widthPx) },
-  ])];
-  elements.push(rootBox("deck-pose", "deck-placement", order++, [
+  const pose = rootBox("deck-pose", [input.child], [
     { name: "height", value: "100%" },
     { name: "position", value: "absolute" },
     { name: "transform-origin", value: "center center" },
     { name: "width", value: "100%" },
     ...poseStyle(input.pose),
-  ], input.poseAnimation));
-  return { elements, poseParent: "deck-pose" };
+  ], input.poseAnimation);
+  return rootBox("deck-placement", [pose], [
+    { name: "height", value: px(frame.heightPx) },
+    { name: "left", value: px(frame.xPx) },
+    { name: "position", value: "absolute" },
+    { name: "top", value: px(frame.yPx) },
+    { name: "width", value: px(frame.widthPx) },
+  ]);
 }
 
 function localFrame(frame: SpatialFrame): SpatialFrame {
@@ -230,12 +227,10 @@ function localFrame(frame: SpatialFrame): SpatialFrame {
   };
 }
 
-function labelElement(card: DepthStackCard, parent: string, order: number): VisualElement | undefined {
+function labelElement(card: DepthStackCard): VisualElement | undefined {
   if (card.label.kind === "none") return undefined;
   return {
     id: "deck-label",
-    parent,
-    order,
     kind: "text-flow",
     style: [{ name: "position", value: "absolute" }, { name: "inset", value: 0 }],
     document: structuredClone(card.label.document),
@@ -246,12 +241,21 @@ function labelElement(card: DepthStackCard, parent: string, order: number): Visu
   };
 }
 
+function appendBoxChild(root: VisualElement, targetId: string, child: VisualElement): VisualElement {
+  if (root.id === targetId) {
+    if (root.kind !== "box") throw new Error(`DepthStack target ${targetId} is not a Box.`);
+    return { ...root, children: [...root.children, child] };
+  }
+  if (root.kind !== "box") return root;
+  return { ...root, children: root.children.map((candidate) => appendBoxChild(candidate, targetId, child)) };
+}
+
 export function renderDepthStack(
   timeline: Timeline,
   program: DepthStackProgram,
-): VisualTrack {
+): PresentVisualTrack {
   assertDepthStackProgramIdentity(program, timeline);
-  const presents: VisualTrack["presents"][number][] = [];
+  const presents: VisualPresentDraft[] = [];
   for (let stageIndex = 0; stageIndex < program.cards.length; stageIndex += 1) {
     const stageStart = program.cards[stageIndex]!.activationFrame;
     const stageEnd = program.cards[stageIndex + 1]?.activationFrame ?? program.terminalFrame;
@@ -261,6 +265,14 @@ export function renderDepthStack(
     const cardIndices = stageIndex === 0 || program.spec.reflow.durationFrames === 0
       ? [...newState.keys()]
       : [...new Set([...oldState.keys(), ...newState.keys()])];
+    const stackingFor = (cardIndex: number): number => {
+      const oldDepth = oldState.get(cardIndex);
+      const newDepth = newState.get(cardIndex);
+      return newDepth === undefined
+        ? resolveDepthStackPose(program.spec, oldDepth ?? 0).stacking
+        : resolveDepthStackPose(program.spec, newDepth).stacking;
+    };
+    cardIndices.sort((left, right) => stackingFor(left) - stackingFor(right) || left - right);
     for (const cardIndex of cardIndices) {
       const card = program.cards[cardIndex]!;
       const oldDepth = oldState.get(cardIndex);
@@ -273,13 +285,6 @@ export function renderDepthStack(
         stageDuration,
         ...(oldDepth === undefined ? {} : { oldDepth }),
         ...(newDepth === undefined ? {} : { newDepth }),
-      });
-      const group = groupElements({
-        program,
-        stageStart,
-        stageEnd,
-        pose: staticPose,
-        ...(animation === undefined ? {} : { poseAnimation: animation }),
       });
       const relation = newDepth ?? (oldDepth === 0 ? -1 : oldDepth ?? 1);
       const sourceTimeOverrides: Record<string, VisualSourceTimeMap> = {};
@@ -297,30 +302,28 @@ export function renderDepthStack(
         frame: localFrame(program.frame),
         treatment: structuredClone(program.spec.treatment),
         layers: resolveMediaLayerPrograms(card.material, localFrame(program.frame), program.spec.treatment),
-        order: 0,
-        z: 0,
       };
-      const material = [...lowerVisualClipElements(mediaItem, timeline, {
-        placementParent: group.poseParent,
+      let material = lowerVisualClipRoot(mediaItem, timeline, {
         poseAnimationOverride: null,
         sourceTimeOverrides,
         samplingAnimationOverrides,
-      })].map((element) => ({ ...element, order: element.order + group.elements.length }));
-      const frameId = `${mediaItem.id}:frame`;
-      const label = labelElement(card, frameId, material.reduce((maximum, element) => Math.max(maximum, element.order), 0) + 1);
+      });
+      const label = labelElement(card);
+      if (label !== undefined) material = appendBoxChild(material, `${mediaItem.id}:frame`, label);
       presents.push({
         id: `${card.id}:stage:${stageIndex + 1}`,
-        order: presents.length,
-        z: program.spec.stackingOrder + (newDepth === undefined
-          ? resolveDepthStackPose(program.spec, oldDepth ?? 0).stacking
-          : resolveDepthStackPose(program.spec, newDepth).stacking),
         subjectId: card.id,
         span: { startFrame: stageStart, endFrameExclusive: stageEnd },
-        elements: [...group.elements, ...material, ...(label === undefined ? [] : [label])],
+        root: groupRoot({
+          program,
+          pose: staticPose,
+          ...(animation === undefined ? {} : { poseAnimation: animation }),
+          child: material,
+        }),
       });
     }
   }
-  const track = sealVisualTrack({
+  const track = sealPresentVisualTrack({
     timelineId: timeline.id,
     visualIr: "hypit.visual-ir@1",
     id: program.id,

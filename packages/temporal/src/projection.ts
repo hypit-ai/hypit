@@ -9,7 +9,7 @@ import type {
   TemporalExtent, TemporalShiftSpec,
 } from "./types.js";
 
-export type TemporalConsumption = { readonly timeline?: Timeline; readonly subjectId?: string };
+export type TemporalConsumption = { readonly timeline?: Timeline };
 
 export function assertTemporalInstantFor(instant: TemporalInstant, expected: TemporalConsumption): void {
   if (!instant.timelineId) throw new Error("Temporal Instant has no Timeline identity.");

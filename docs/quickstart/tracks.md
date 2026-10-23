@@ -3,10 +3,11 @@ title: Tracks
 description: Peer track components — captions, media, typography and authored audio.
 ---
 
-Every audiovisual contribution entering the final composition is a peer **Track**. Tracks are flat
-(no nesting). Every visual occurrence publishes an absolute `z`: a domain family such as Fine
-Caption may own it in a reusable Recipe, while base Visual Clips and Fine Text write it directly. This page
-covers Caption, Media, Typography and Audio Track authoring.
+Every audiovisual contribution entering the final composition is a peer **Track**. A Track is a
+closed contribution rather than a container for other Tracks. Film may recursively group visual
+Tracks in a Stack when their composite must be treated as one picture. The parent Film or Stack
+owns each visual occurrence's `id` and its position in the sibling sequence; the reusable Track value
+retains only its local programme. This page covers Caption, Media, Typography and Audio Track authoring.
 
 ## Caption system
 
@@ -36,7 +37,7 @@ A Style is a rendering intent resolved from one package-owned SVS Recipe:
 
 ```svs
 caption.primary {
-  stack-order: 70; x: 0.5; y: 0.88; width: 0.84;
+ x: 0.5; y: 0.88; width: 0.84;
   height: 0.22;
   anchor-x: center; anchor-y: bottom;
   size: 58;
@@ -188,7 +189,7 @@ to the occurrence; reusable pixel treatment and typed Motion remain optional val
 
 <visual:Track id="product-broll" timeline={speech.timeline}>
   <visual:Clip media={product-media.media} frame={product-frame}
-    during={product-demo} z="40" fit="contain"
+    during={product-demo} fit="contain"
     treatment={recipes.visual.product} motion={product-motion-in}>
     <visual:Map/>
   </visual:Clip>
@@ -265,6 +266,19 @@ The package performs no automatic extraction, normalization, ducking, or bus rou
 Clips in one Track and multiple peer Audio Tracks remain independent inputs to Film. The output is
 `{music-bed.audio}`, an ordinary `AudioTrack`.
 
+To apply explicit gain and close several AudioTracks into one contribution, use Audio Mix:
+
+```svml
+<import as="mix" from="@hypit/audio-mix@1"/>
+<mix:Track id="dialogue" timeline={speech.timeline}>
+  <mix:Input id="host" source={host.audio}/>
+  <mix:Input id="guest" source={guest.audio} gain="0.9"/>
+</mix:Track>
+```
+
+The output `{dialogue.audio}` is another ordinary AudioTrack. Film sees only that closed output;
+Audio Mix does not normalize, limit, invent a Master, or route by Track name.
+
 ## Text overlays
 
 Static or timed text displayed on screen — titles, callouts, lower thirds.
@@ -286,7 +300,7 @@ piece of editorial copy is one occurrence and one ordinary VisualTrack contribut
 <fonts:Face id="title-font" package="@fontsource-variable/inter" weight="900" style="normal"/>
 <text:Style id="title-style" recipe={recipes.text.title} font={title-font}/>
 <text:Flow id="title" timeline={speech.timeline} within={title-frame}
-  style={title-style} z="90" align="center" during={speech.window}>
+  style={title-style} align="center" during={speech.window}>
   EDIT MEANING, NOT TIMELINES
 </text:Flow>
 ```
@@ -298,7 +312,6 @@ piece of editorial copy is one occurrence and one ordinary VisualTrack contribut
 | `during` | yes | A named absolute Window |
 | `within`, `point`, or `path` | yes | Placement matching `Flow`, `Point`, or `Path` |
 | `style` | yes | Style compiled from an SVS Recipe plus exact font bytes |
-| `z` | yes | Absolute stacking for this occurrence; it is not part of Style |
 | form layout | no | `Flow` alignment/wrapping, `Point` anchors or `Path` margins and direction, written only on the matching occurrence |
 
 Each occurrence has one explicit placement form, one exact Style and one absolute time expression.
@@ -306,7 +319,7 @@ Each occurrence has one explicit placement form, one exact Style and one absolut
 
 ```svml
 <text:Flow id="meaning" timeline={speech.timeline} within={title-frame}
-  style={title-style} z="90" align="center" during={speech.window}>
+  style={title-style} align="center" during={speech.window}>
   MEANING
 </text:Flow>
 ```
@@ -318,7 +331,6 @@ Each occurrence has one explicit placement form, one exact Style and one absolut
 | timing | yes | `during={named-window}` |
 | placement | yes | `SpatialPoint`, `SpatialFrame` or `SpatialPath`, matching the occurrence form |
 | `style` | yes | A `text:Style` compiled from an SVS Recipe plus exact font bytes |
-| `z` | yes | Absolute stacking for this occurrence |
 | form layout | no | Direct layout attributes declared by the selected `Flow`, `Point` or `Path` form |
 
 `speech.window` covers the complete Timeline. An authored Timeline Window or an upstream semantic,
@@ -328,7 +340,7 @@ does not know which domain produced it:
 ```svml
 <text:Style id="callout-style" recipe={recipes.text.callout} font={title-font}/>
 <text:Flow id="callout-copy" timeline={speech.timeline} within={callout-frame}
-  style={callout-style} z="90" during={program.callout}>
+  style={callout-style} during={program.callout}>
   EXACTLY THE RIGHT MOMENT
 </text:Flow>
 ```
@@ -338,7 +350,7 @@ Graph-produced copy remains visible as an edge:
 ```svml
 <wording:Value id="headline">EXACTLY THE RIGHT MOMENT</wording:Value>
 <text:Flow id="callout-copy" timeline={speech.timeline} content={headline}
-  within={callout-frame} style={callout-style} z="90" during={speech.window}/>
+  within={callout-frame} style={callout-style} during={speech.window}/>
 ```
 
 The generic Text value supplies only characters. Typography still owns the item document wrapper,
@@ -386,7 +398,7 @@ family is refused by name.
 | `appear-sound`, `move-sound` | optional Synchronized Media |
 | `terminal` | the absolute Instant where the completed board settles. `TopThree` only |
 
-Use only the timing forms admitted by the selected package; do not infer a terminal or reveal model
+Use only the timing forms supported by the selected package; do not infer a terminal or reveal model
 from another component family.
 
 Optional sounds and reveal phases are valid only when the selected package declares them.
@@ -487,7 +499,8 @@ enter/hold/exit motion — and every key has a default, so a recipe may set only
 `comment:Sticker` requires `id`, `frame`, `style` and `during`, which references a named absolute
 Window. Its copy is either the `comment=` attribute or the element's own text — both is refused. The
 optional `author`, `header` and `meta` each take a string or a Text reference, `avatar` takes an
-image, and there is no `z`: stacking order comes from the recipe's `stack-order`.
+image, and there is no component-level `z`. Its optional `stack-order` Recipe value only orders
+stickers inside this one Track; Film places the completed Track among peer visual contributions.
 
 ```svml
 <comment:Style id="social" recipe={recipes.comment} font={ui-font}/>
@@ -544,13 +557,13 @@ All four track families together in one source file:
   video="primary-moving" audio="none" span-authority="video" clock={clock}/>
 <visual:Track id="cards" timeline={speech.timeline}>
   <visual:Clip media={card-media.media} frame={card-frame}
-    during={demo} z="40" fit="cover" treatment={recipes.visual.card}/>
+    during={demo} fit="cover" treatment={recipes.visual.card}/>
 </visual:Track>
 
 <!-- Text: persistent title overlay -->
 <text:Style id="title-style" recipe={recipes.text.title} font={title-font}/>
 <text:Flow id="meaning" timeline={speech.timeline} within={title-frame}
-  style={title-style} z="90" align="center" during={speech.window}>
+  style={title-style} align="center" during={speech.window}>
   MEANING
 </text:Flow>
 
@@ -568,14 +581,14 @@ All four track families together in one source file:
 
 <!-- All peer tracks feed into Film -->
 <film:Film id="main" canvas={vertical.canvas} timeline={speech.timeline} appearance={recipes.film.vertical}>
-  <film:Track source={picture.visual}/>
+  <film:Track id="picture" source={picture.visual}/>
   <film:Track source={mix.audio}/>
-  <film:Track source={cards.visual}/>
-  <film:Track source={captions.visual}/>
-  <film:Track source={meaning.visual}/>
+  <film:Track id="cards" source={cards.visual}/>
+  <film:Track id="captions" source={captions.visual}/>
+  <film:Track id="meaning" source={meaning.visual}/>
   <film:Track source={music-bed.audio}/>
 </film:Film>
 ```
 
-In this example, the Recipes place the ordinary source picture at 10, Clips at 40, captions at 70 and
-text at 90. Higher values paint on top; the author chooses these relationships for the composition.
+In this example, Film places the ordinary source picture at 0, Clips at 10, captions at 20 and text
+at 30. Higher values paint on top; each relation is visible at the parent Scope that owns it.

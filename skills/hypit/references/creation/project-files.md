@@ -70,11 +70,11 @@ hypit studio --run /path/to/video-project/build.svrun --project /path/to/video-p
 `paths` shows the resolved project and where its Runtime selection came from. Source imports and asset
 references inside files remain relative to their declaring file.
 
-For example, `hypit check authors/main.svml --asset-root /path/to/shared-media` admits intentionally
-referenced shared media. Keep the same relevant boundaries for subsequent commands. An ordinary
-project uses its own package installation. Embedded Core comes from the selected Distribution;
-product-selected default packages are ordinary dependencies installed with it. Independently
-distributed project packages, including `@hypit/*` packages, remain ordinary project dependencies.
+For example, `hypit check authors/main.svml --asset-root /path/to/shared-media` makes intentionally
+referenced shared media available. Keep the same relevant boundaries for subsequent commands. An
+ordinary project uses its own package installation. The selected Distribution supplies its default packages;
+independently distributed project packages, including `@hypit/*` packages, belong to the project's
+dependencies.
 [Distribution](../environment/distribution.md) explains locating that executable,
 and [component vocabulary](../production/vocabulary.md#let-ordinary-package-management-own-distribution)
 explains installing project packages.
@@ -93,7 +93,7 @@ project/
 │       ├── source.*
 │       ├── ANALYSIS.md
 │       ├── TIMELINE.md
-│       ├── transcript.json
+│       ├── transcript.svml
 │       ├── evidence/
 │       ├── PROGRESS.md          # only while understanding is in progress
 │       └── drafts/              # optional observation experiments
@@ -142,7 +142,7 @@ referenced in place; its documentary role does not require a duplicate.
   action relationships, source times and useful evidence paths. Concurrent picture, speech, Caption,
   Typography, MG, Effect and Audio behavior belong to the same connected account. These are reference
   timeline notes; the target's actual placements belong to the `time:Timeline` declaration in Source.
-- `transcript.json` is word-level speech evidence. It is evidence, not the director's interpretation.
+- `transcript.svml` is editable word-level speech evidence. It is evidence, not the director's interpretation.
 - `evidence/` contains only media worth reopening, with ordinary human-readable names.
 - `BRIEF.md` preserves the user's goal, facts, constraints, requested changes and
   [agreed paid scope](brief.md#brief-preserves-user-authority).
@@ -187,7 +187,7 @@ authored work and the produced values that its Runs select:
 - Sources, Recipes, Runs, project notes and referenced input assets, keeping their relative layout;
 - project component source or installed-release dependencies, `package.json`, its lockfile and any
   tarballs referenced by `file:` dependencies;
-- the completed Results used by `build-record` Candidates, including their media and Composite value
+- the completed Results used by `build-record` Candidates, including their media and value
   documents;
 - the intended Runtime configuration, with account access configured on the receiving machine through
   its own Credential Store.
@@ -211,9 +211,9 @@ attempt ends; an editable handoff carries authored work and required Results rat
 Runtime's execution state.
 
 `hypit get` is useful when handing over a particular output. Exported image/video/audio files can be
-selected as file Candidates. A Composite export contains `value.json` and its resource files for
-inspection and transport; that document uses the Result value format, whereas a Run `<value>` accepts
-the Value itself. To retain structured normalized media, local-domain or alignment reuse, keep
+selected as file Candidates. A structured value with referenced files exports as `value.json` beside
+those files for inspection and transport; a Run `<value>` accepts the Value itself. To retain
+structured normalized media, local-domain or alignment reuse, keep
 its Result available and select each required Output with `build-record`. [Builds and Results](../production/builds.md)
 explains Result reuse and export.
 

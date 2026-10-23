@@ -8,8 +8,8 @@ import {
 import { evaluateProducerPlan, ProducerRegistry } from "@hypit/executor";
 import type { EvaluatedProducerStep } from "@hypit/executor";
 import type { PackageContribution } from "@hypit/loader";
-import { capabilityKey } from "@hypit/protocol";
-import type { BuildDefinition, BuildState, CanonicalValue, CapabilityRef } from "@hypit/protocol";
+import { capabilityIdentity, capabilityKey, compareCodeUnits } from "@hypit/protocol";
+import type { BuildDefinition, BuildState, CanonicalValue, CapabilityRef, ValuePath } from "@hypit/protocol";
 import type { CliBuildCatalogDescriptor, CliEndpointQuery, CliRuntimeInspection } from "./runtime-port.js";
 import { plannedNeeds } from "@hypit/kernel";
 import {
@@ -24,24 +24,15 @@ export function createCatalogDescriptor(options: {
   readonly run?: { readonly path: string };
 }): CliBuildCatalogDescriptor {
   return {
-    source: { path: resolve(options.source) },
-    ...(options.run === undefined ? {} : { run: { path: resolve(options.run.path) } }),
+    sourcePath: resolve(options.source),
+    ...(options.run === undefined ? {} : { runPath: resolve(options.run.path) }),
     publication: options.publication,
   };
 }
 
-/** The author-facing component and operation, without the encoded Source identity. */
-function plannedStepLabel(step: string): string {
-  let decoded = step;
-  try { decoded = decodeURIComponent(step); } catch { /* keep the raw id */ }
-  const marker = "::component::";
-  const at = decoded.lastIndexOf(marker);
-  return at === -1 ? decoded : decoded.slice(at + marker.length);
-}
-
 function demandedCapabilities(state: BuildState): readonly CapabilityRef[] {
-  const found = new Map(plannedNeeds(state).map((need) => [capabilityKey(need.capability), need.capability]));
-  return [...found.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([, value]) => value);
+  const found = new Map(plannedNeeds(state).map((need) => [capabilityIdentity(need.capability), need.capability]));
+  return [...found.values()].sort((left, right) => compareCodeUnits(capabilityKey(left), capabilityKey(right)));
 }
 
 export type PlanEndpointView = {
@@ -72,10 +63,14 @@ export type PendingPlanInput = {
   readonly sourceStep?: string;
 };
 
-/** A bounded presentation of concrete scalar leaves, never a second request payload. */
-export type NeedSummary = {
-  readonly fields: Readonly<Record<string, string | number | boolean>>;
+export type NeedSummaryField = {
+  /** Exact path in the request value. Empty means the request itself is scalar. */
+  readonly at: ValuePath;
+  readonly value: string | number | boolean;
 };
+
+/** A bounded presentation of concrete scalar leaves, never a second request payload. */
+export type NeedSummary = readonly NeedSummaryField[];
 
 export type EvaluatedPlanNeed = {
   readonly status: "concrete" | "blocked" | "failed" | "unavailable";
@@ -118,33 +113,29 @@ function scalarSummary(value: CanonicalValue): string | number | boolean | undef
 }
 
 type SummaryField = {
-  readonly path: readonly string[];
+  readonly at: ValuePath;
   readonly value: string | number | boolean;
 };
 
 function collectSummaryFields(
   value: CanonicalValue,
-  path: readonly string[],
+  at: ValuePath,
   fields: SummaryField[],
 ): void {
   const scalar = scalarSummary(value);
   if (scalar !== undefined) {
-    if (path.length > 0) fields.push({ path, value: scalar });
+    fields.push({ at, value: scalar });
     return;
   }
   if (Array.isArray(value)) {
     for (const [index, item] of value.entries()) {
-      const tail = path[path.length - 1];
-      const itemPath = tail === undefined
-        ? [`[${index}]`]
-        : [...path.slice(0, -1), `${tail}[${index}]`];
-      collectSummaryFields(item, itemPath, fields);
+      collectSummaryFields(item, [...at, index], fields);
     }
     return;
   }
   if (value === null || typeof value !== "object") return;
   for (const [name, item] of Object.entries(value)) {
-    collectSummaryFields(item, [...path, name], fields);
+    collectSummaryFields(item, [...at, name], fields);
   }
 }
 
@@ -152,11 +143,7 @@ function collectSummaryFields(
 export function summarizeConstraints(constraints: CanonicalValue): NeedSummary {
   const collected: SummaryField[] = [];
   collectSummaryFields(constraints, [], collected);
-  const fields: Record<string, string | number | boolean> = {};
-  for (const field of collected) {
-    fields[field.path.join(".")] = field.value;
-  }
-  return { fields };
+  return collected;
 }
 
 function pendingPlanInputs(step: EvaluatedProducerStep | undefined): readonly PendingPlanInput[] {
@@ -184,10 +171,10 @@ export async function evaluatePlanNeeds(
   for (const contribution of contributions) {
     const facets = contribution.facets ?? [];
     for (const item of producerPackagesFromFacets(facets)) {
-      registerProducerFacets(producers, item.producers ?? []);
+      registerProducerFacets(producers, item);
     }
     for (const item of refinementPackagesFromFacets(facets)) {
-      registerTypeRefinements(refinements, item.refinements ?? []);
+      registerTypeRefinements(refinements, item);
     }
   }
   const evaluation = await evaluateProducerPlan(definition, producers, refinements);
@@ -298,9 +285,9 @@ export function assertPlannedRequests(
 ): void {
   const byNeed = new Map(endpoints.map((item) => [item.need, item]));
   const problems = [
-    ...evaluated.producerFailures.map((failure) => `${plannedStepLabel(failure.step)}: ${failure.message}`),
+    ...evaluated.producerFailures.map((failure) => `${failure.step}: ${failure.message}`),
     ...plannedNeeds(state).flatMap((planned) => {
-      const subject = plannedStepLabel(planned.step);
+      const subject = planned.step;
       const request = evaluated.needs.get(planned.need);
       if (request === undefined) return [`${subject}: request evaluation is missing`];
       const issue = request?.issue;

@@ -10,12 +10,12 @@ import type { BlobRef } from "@hypit/protocol";
 
 import {
   acceptedRecords,
-  compositeType,
+  structuredType,
   publication,
   videoType,
 } from "./repository-scenario.js";
 
-test("one same-Build resource backs a public video and a CompositeValue payload", async () => {
+test("one same-Build resource backs a public video and a structured value", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-build-result-"));
   const bytes = new Uint8Array([1, 2, 3, 4]);
   const video: BlobRef = {
@@ -27,12 +27,12 @@ test("one same-Build resource backs a public video and a CompositeValue payload"
   try {
     const result = await FileBuildResult.create(root, {
       id: "bld_20260902T100000000Z_0000000001",
-      source: { id: "/project/main.svml" },
-      run: { id: "/project/build.svrun" },
+      sourceId: "/project/main.svml",
+      runId: "/project/build.svrun",
       publication: publication([
         { name: "shot.video", output: "logical:shot-video", record: "record:video" },
-        { name: "shot.take", output: "logical:shot-take", record: "record:take", type: compositeType },
-        { name: "shot.take-copy", output: "logical:shot-take-copy", record: "record:take", type: compositeType },
+        { name: "shot.take", output: "logical:shot-take", record: "record:take", type: structuredType },
+        { name: "shot.take-copy", output: "logical:shot-take-copy", record: "record:take", type: structuredType },
         { name: "unused.video", output: "logical:unused" },
       ], ["shot.video"]),
     });
@@ -49,7 +49,7 @@ test("one same-Build resource backs a public video and a CompositeValue payload"
           { id: "record:video", type: videoType, value: video },
           {
             id: "record:take",
-            type: compositeType,
+            type: structuredType,
             value: ({ media: { visual: { artifact: video } } }),
           },
         ],

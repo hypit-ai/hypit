@@ -45,7 +45,7 @@ test("filesystem Workspace captures source text and asset identity once", async 
   const detached = await workspace.attachments();
   assert.deepEqual(await readAttachment(detached[0]), new Uint8Array([4, 5, 6, 7]),
     "attachment bytes are opened lazily; Runtime rejects them if they no longer match the captured identity");
-  assert.equal((await workspace.attachments())[0]?.blob.resource, firstAsset.blob.resource);
+  assert.equal((await workspace.attachments())[0]?.blob.resource, firstAsset.resource);
   await assert.rejects(
     async () => await workspace.resolveSource(entry.unit, {
       from: "../outside.svs",
@@ -102,7 +102,7 @@ test("an asset root widens bytes without widening Source imports", async () => {
   assert.equal((await workspace.resolveAsset(workspace.entry.unit, {
     from: "../library/shared.bin",
     mediaType: "application/octet-stream",
-  })).blob.size, 4);
+  })).size, 4);
   await assert.rejects(async () => await workspace.resolveSource(workspace.entry.unit, {
     from: "../library/shared.svs",
     alias: "shared",

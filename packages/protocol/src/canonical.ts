@@ -1,6 +1,7 @@
 import { SvmlError } from "./error.js";
 import type { ResourceId } from "./identity.js";
 import type { CanonicalValue } from "./value.js";
+import { compareCodeUnits } from "./order.js";
 
 function normalize(value: unknown, path: string): CanonicalValue {
   if (value === null || typeof value === "boolean" || typeof value === "string") return value;
@@ -12,14 +13,16 @@ function normalize(value: unknown, path: string): CanonicalValue {
     return value.map((item, index) => normalize(item, `${path}[${index}]`));
   }
   if (typeof value === "object") {
-    const result: Record<string, CanonicalValue> = {};
-    for (const [key, item] of Object.entries(value).sort(([left], [right]) => left.localeCompare(right))) {
+    const entries: [string, CanonicalValue][] = [];
+    for (const [key, item] of Object.entries(value).sort(([left], [right]) => compareCodeUnits(left, right))) {
       if (item === undefined) {
         throw new SvmlError("NON_CANONICAL_UNDEFINED", `${path}.${key} is undefined`);
       }
-      result[key] = normalize(item, `${path}.${key}`);
+      entries.push([key, normalize(item, `${path}.${key}`)]);
     }
-    return result;
+    // Object.fromEntries defines own data properties, including "__proto__".
+    // Assignment into {} would instead mutate the object's prototype.
+    return Object.fromEntries(entries);
   }
   throw new SvmlError("NON_CANONICAL_VALUE", `${path} contains ${typeof value}`);
 }

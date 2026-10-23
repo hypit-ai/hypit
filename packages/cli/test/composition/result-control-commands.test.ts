@@ -23,7 +23,7 @@ test("result finish writes only an already-decided Result that needs attention",
     activity: "saving-result" as const,
     outcome: "complete" as const,
     issue: { scope: "result" as const, message: "result store unavailable" },
-    cancellationRequested: false,
+
     targets: [],
     acceptedRecords: 1,
     outstandingCommands: 0,

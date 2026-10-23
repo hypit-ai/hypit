@@ -6,8 +6,8 @@ import type { AudioTrack, VisualTrack } from "@hypit/composition";
 import type { Canvas } from "@hypit/spatial";
 import type { Timeline } from "@hypit/timeline";
 
-import { filmProducers } from "./manifest.js";
-import { appendFilmAudioTrack, appendFilmVisualTrack, compileFilmComposition, createFilmTrackSet } from "./program.js";
+import { filmProducers, filmTypes } from "./manifest.js";
+import { appendFilmAudioTrack, appendFilmVisualTrack, assertFilmProgramIdentity, assertFilmTrackSetIdentity, compileFilmComposition, createFilmTrackSet } from "./program.js";
 import type { FilmProgram, FilmTrackSet } from "./types.js";
 
 function valueOf<T>(value: Value | undefined, subject: string): T {
@@ -47,4 +47,10 @@ export const filmComponent = {
         ))) }),
     },
   ],
-} satisfies ProducerPackage & RefinementPackage;
+  refinements: [
+    { type: filmTypes.program,
+      handler: ({ value }) => assertFilmProgramIdentity(valueOf<FilmProgram>(value, "FilmProgram")) },
+    { type: filmTypes.trackSet,
+      handler: ({ value }) => assertFilmTrackSetIdentity(valueOf<FilmTrackSet>(value, "FilmTrackSet")) },
+  ],
+} satisfies { producers?: ProducerPackage; refinements?: RefinementPackage };

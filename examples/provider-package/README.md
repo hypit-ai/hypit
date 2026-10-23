@@ -82,7 +82,7 @@ and the URL resolver sends that header when supplied. Replace this with the real
 documented transport; a field that the service cannot carry must be refused, never discarded.
 
 **The service's range is narrower than the Model's, and the Provider states that.** Seedance 2 Mini
-admits 480p/720p and 4–15 seconds; this illustrative service renders 720p up to 10 seconds. The
+accepts 480p/720p and 4–15 seconds; this illustrative service renders 720p up to 10 seconds. The
 Model is not edited for that. `supports` reports the difference before submission, so `plan` refuses
 the request with a reason instead of failing a paid job downstream:
 

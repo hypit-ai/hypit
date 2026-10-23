@@ -10,8 +10,9 @@ import type { SpatialFrame, SpatialPath, SpatialPoint } from "@hypit/spatial";
 import { assertTemporalWindowFor } from "@hypit/temporal";
 import type { TemporalWindow } from "@hypit/temporal";
 import {
+  assertVisualTextAppearance,
   assertVisualTrackIdentity,
-  sealVisualTrack,
+  sealPresentVisualTrack,
 } from "@hypit/composition";
 import type {
   VisualElement,
@@ -19,7 +20,7 @@ import type {
   VisualStyleDeclaration,
   VisualTextElement,
   VisualTextFlowElement,
-  VisualTrack,
+  PresentVisualTrack,
 } from "@hypit/composition";
 import { assertCompositableSurfaceRef } from "@hypit/media";
 import type { CompositableSurfaceRef } from "@hypit/media";
@@ -77,34 +78,7 @@ export function assertTextStyle(style: TextStyle): void {
   if (style.typography.fonts === undefined) {
     throw new Error("Official TextStyle requires an exact declared font stack.");
   }
-  assertVisualTrackIdentity({
-    kind: "visual",
-    timelineId: "text-style-validation",
-    visualIr: "hypit.visual-ir@1",
-    id: "text-style-validation",
-    presents: [{
-      id: "style",
-      order: 0,
-      z: 0,
-      span: { startFrame: 0, endFrameExclusive: 1 },
-      elements: [
-        { id: "root", kind: "box", order: 0, style: [] },
-        {
-          id: "text", parent: "root", kind: "text-flow", order: 1, style: [],
-          document: { paragraphs: [{ id: "paragraph", inlines: [{ kind: "text", id: "run", text: "M" }] }] },
-          typography: style.typography,
-          paints: style.paints,
-          flow: {
-            form: { kind: "area" }, inlineSize: "fixed", blockSize: "fixed",
-            paddingPx: { inlineStart: 0, inlineEnd: 0, blockStart: 0, blockEnd: 0 },
-            inlineAlign: "start", blockAlign: "start", wrap: "word", overflow: "visible",
-            clipToFrame: false, columns: 1, columnGapPx: 0, metricEdge: "line-box",
-          },
-          sequences: [],
-        },
-      ],
-    }],
-  });
+  assertVisualTextAppearance(style, `TextStyle ${style.id}`);
 }
 
 export function sealTextStyle(value: TextStyle): TextStyle {
@@ -197,7 +171,6 @@ export function materializePlainTextItem(spec: PlainTextItemSpec, content: Text)
 }
 
 export function assertTextPlacement(value: TextPlacement): void {
-  if (!Number.isSafeInteger(value.z)) throw new Error("Text placement z must be a safe integer.");
   if (value.kind === "flow") {
     assertSpatialFrame(value.frame);
     const flow = value.flow;
@@ -320,7 +293,7 @@ export function createFineTextOccurrence(
   assertTextItemSpec(spec);
   assertTextStyle(style);
   assertTextMotion(motion);
-  assertTemporalWindowFor(window, { subjectId: spec.id, timeline });
+  assertTemporalWindowFor(window, { timeline });
   const occurrence = canonicalize({
     timelineId: timeline.id,
     ...projectedItem(spec, style, motion, placement, window),
@@ -400,12 +373,10 @@ function pointFlow(item: TextItem): VisualTextFlowElement["flow"] {
   };
 }
 
-function terminalTextElement(item: TextItem, parent: string, order: number): VisualTextFlowElement | VisualPathTextElement {
+function terminalTextElement(item: TextItem): VisualTextFlowElement | VisualPathTextElement {
   if (item.placement.kind === "path") return {
     id: "text",
-    parent,
     kind: "path-text",
-    order,
     style: [{ name: "position", value: "absolute" }, { name: "inset", value: 0 }],
     document: item.document,
     typography: item.style.typography,
@@ -423,9 +394,7 @@ function terminalTextElement(item: TextItem, parent: string, order: number): Vis
   };
   return {
     id: "text",
-    parent,
     kind: "text-flow",
-    order,
     style: item.placement.kind === "point"
       ? [{ name: "position", value: "relative" }]
       : [{ name: "position", value: "absolute" }, { name: "inset", value: 0 }],
@@ -510,7 +479,7 @@ function maskTextElement(item: TextItem): VisualTextElement {
     style.push({ name: "font-feature-settings", value: typography.features.map(({ tag, enabled }) => `"${tag}" ${enabled ? 1 : 0}`).join(",") });
   }
   return {
-    id: "text", parent: "mask", kind: "text", order: 1,
+    id: "text", kind: "text",
     text: maskText(item), fonts, style,
     attributes: [
       ...(typography.language === undefined ? [] : [{ name: "lang", value: typography.language }]),
@@ -519,36 +488,33 @@ function maskTextElement(item: TextItem): VisualTextElement {
   };
 }
 
-function elements(item: TextItem): VisualElement[] {
+function elementRoot(item: TextItem): VisualElement {
   const rootStyle = baseBoxStyle(item.placement);
   const anchor = pointAnchorTransform(item);
   if (anchor !== undefined) rootStyle.push({ name: "transform", value: anchor });
-  const root: VisualElement = { id: "placement", kind: "box", order: 0, style: rootStyle };
+  const text = terminalTextElement(item);
   const motion: VisualElement = {
     id: "motion",
-    parent: "placement",
     kind: "box",
-    order: 1,
+    children: [text],
     style: item.placement.kind === "point"
       ? [{ name: "position", value: "relative" }]
       : [{ name: "position", value: "absolute" }, { name: "inset", value: 0 }],
     ...(item.motion.item === undefined ? {} : { animation: item.motion.item }),
   };
-  return [root, motion, terminalTextElement(item, "motion", 2)];
+  return { id: "placement", kind: "box", children: [motion], style: rootStyle };
 }
 
-export function renderFineTextOccurrence(timeline: Timeline, occurrence: FineTextOccurrence): VisualTrack {
+export function renderFineTextOccurrence(timeline: Timeline, occurrence: FineTextOccurrence): PresentVisualTrack {
   assertFineTextOccurrenceIdentity(occurrence, timeline);
-  const track = sealVisualTrack({
+  const track = sealPresentVisualTrack({
     timelineId: timeline.id,
     visualIr: "hypit.visual-ir@1",
     id: occurrence.id,
     presents: [{
       id: occurrence.id,
-      order: 0,
-      z: occurrence.placement.z,
       span: { ...occurrence.span },
-      elements: elements(occurrence),
+      root: elementRoot(occurrence),
     }],
   });
   assertVisualTrackIdentity(track, timeline);
@@ -560,17 +526,17 @@ function renderTextMaskItems(
   items: readonly TextItem[],
   material: CompositableSurfaceRef,
   spec: TextMaskSpec,
-): VisualTrack {
+): PresentVisualTrack {
   assertCompositableSurfaceRef(material);
   assertTextMaskSpec(spec);
   if (material.timing.kind !== "still") {
     throw new Error("Official Text Mask requires one explicit still material Surface; timed materials use an independent package.");
   }
-  const track = sealVisualTrack({
+  const track = sealPresentVisualTrack({
     timelineId: timeline.id,
     visualIr: "hypit.visual-ir@1",
     id: spec.id,
-    presents: items.map((item, order) => {
+    presents: items.map((item) => {
       if (item.placement.kind !== "flow") {
         throw new Error(`${item.id} non-Flow Text Mask must be materialized by an independent package.`);
       }
@@ -590,26 +556,22 @@ function renderTextMaskItems(
       );
       return {
         id: item.id,
-        order,
-        z: item.placement.z,
         span: { ...item.span },
-        elements: [
-          {
-            id: "mask", kind: "mask", order: 0, mode: spec.mode,
-            maskElement: "text", contentElement: "material", style,
+        root: {
+            id: "mask", kind: "mask", mode: spec.mode,
+            mask: maskTextElement(item),
+            content: {
+              id: "material", kind: "surface", surface: material,
+              style: [
+                { name: "position", value: "absolute" }, { name: "left", value: 0 }, { name: "top", value: 0 },
+                { name: "width", value: `${material.width}px` }, { name: "height", value: `${material.height}px` },
+                { name: "transform-origin", value: "0 0" },
+                { name: "transform", value: `matrix(${mapping.xx},${mapping.yx},${mapping.xy},${mapping.yy},${mapping.tx - item.placement.frame.xPx},${mapping.ty - item.placement.frame.yPx})` },
+              ],
+            },
+            style,
             ...(item.motion.item === undefined ? {} : { animation: item.motion.item }),
           },
-          maskTextElement(item),
-          {
-            id: "material", parent: "mask", kind: "surface", order: 2, surface: material,
-            style: [
-              { name: "position", value: "absolute" }, { name: "left", value: 0 }, { name: "top", value: 0 },
-              { name: "width", value: `${material.width}px` }, { name: "height", value: `${material.height}px` },
-              { name: "transform-origin", value: "0 0" },
-              { name: "transform", value: `matrix(${mapping.xx},${mapping.yx},${mapping.xy},${mapping.yy},${mapping.tx - item.placement.frame.xPx},${mapping.ty - item.placement.frame.yPx})` },
-            ],
-          },
-        ],
       };
     }),
   });
@@ -622,7 +584,7 @@ export function renderFineTextMask(
   occurrence: FineTextOccurrence,
   material: CompositableSurfaceRef,
   spec: TextMaskSpec,
-): VisualTrack {
+): PresentVisualTrack {
   assertFineTextOccurrenceIdentity(occurrence, timeline);
   return renderTextMaskItems(timeline, [occurrence], material, spec);
 }

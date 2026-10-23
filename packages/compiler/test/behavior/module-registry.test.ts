@@ -20,7 +20,7 @@ test("registered module imports close transitive module dependencies", () => {
   const base = emptyManifest("example.base");
   const feature: ModuleManifest = {
     ...emptyManifest("example.feature"),
-    dependencies: [{ module: { name: base.name, version: base.version } }],
+    dependencies: [{ name: base.name, version: base.version }],
   };
   const modules = new ModulePackageRegistry();
   modules.register({ manifest: base });
@@ -28,7 +28,7 @@ test("registered module imports close transitive module dependencies", () => {
 
   assert.deepEqual(modules.resolve("example.feature@stable"), { name: feature.name, version: feature.version });
   assert.deepEqual(
-    modules.createClosure(["example.feature@stable"]).modules.map((item) => item.manifest.name).sort(),
+    modules.createClosure(["example.feature@stable"]).modules.map((item) => item.name).sort(),
     ["example.base", "example.feature"],
   );
 });

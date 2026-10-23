@@ -32,7 +32,7 @@ export const hypitPackage = {
     manifest: rankingManifest,
   }],
   facets: [
-    ...[rankingComponent].flatMap((component) => [createProducerPackageFacet(component), createRefinementPackageFacet(component)]),
+    ...[rankingComponent].flatMap((component) => [createProducerPackageFacet(component.producers ?? []), createRefinementPackageFacet(component.refinements ?? [])]),
     ...facets.map(([surface, handler]) => createMarkupSurfaceFacet({
       module: rankingModuleRef,
       declaration: rankingMarkupSurfaces.find((item) => item.name === surface)!,

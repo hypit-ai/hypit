@@ -47,7 +47,7 @@ function buildState(
     candidates: [],
     operations: [],
     satisfactions: [],
-    targets: targets.map((output) => ({ output })),
+    targets,
   });
   return materializeBuild(defineBuild({
     program: link(program.closure, [...program.records, ...planned.initialRecords]),
@@ -59,7 +59,6 @@ const laboratory = { name: "example.recipe-card", version: "1" } as const;
 const cardType = { module: laboratory, name: "Card" } satisfies TypeRef;
 const cardAppearanceType = { module: laboratory, name: "CardAppearance" } satisfies TypeRef;
 const renderProducer = { module: laboratory, name: "render-card" } satisfies ProducerRef;
-const cardSurfaceDigest = "surface:example.recipe-card/card";
 const cardSurface = {
   name: "card", tag: "Card", mode: "structured", outputs: [cardAppearanceType],
 } as const;
@@ -68,12 +67,10 @@ const manifest: ModuleManifest = {
   format: "hypit.module@1",
   name: laboratory.name,
   version: laboratory.version,
-  dependencies: [{ module: { name: recipeManifest.name, version: recipeManifest.version } }],
+  dependencies: [{ name: recipeManifest.name, version: recipeManifest.version }],
   types: [
-    { name: cardType.name },
-    {
-      name: cardAppearanceType.name,
-    },
+    cardType.name,
+    cardAppearanceType.name,
   ],
   capabilities: [],
   producers: [{

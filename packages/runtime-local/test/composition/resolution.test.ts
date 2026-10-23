@@ -79,7 +79,7 @@ test("Endpoint inspection, doctor and invoke share one resolver: a contested cap
           instance: context.instance,
           pool: context.pool ?? context.instance,
           pricing: { kind: "local" },
-          capabilities: [{ capability, returns, lifecycle: "immediate", handler: () => ({ value: (answer) }) }],
+          capabilities: [{ capability, returns, lifecycle: "immediate", handler: () => answer }],
         }),
       }),
     }));
@@ -115,7 +115,7 @@ test("Endpoint inspection, doctor and invoke share one resolver: a contested cap
     assert.equal((await preflightRuntimeConfig(bound, { registry, capabilities: [generate] })).diagnostics
       .some((item) => item.code === "RUNTIME_CAPABILITY_AMBIGUOUS"), false);
     const fulfilled = await invokeRuntimeConfigNeed(bound, need, new MemoryResourceStore(), { registry });
-    assert.deepEqual(fulfilled.value, ("other"));
+    assert.deepEqual(fulfilled, ("other"));
 
     const wrong = join(root, "wrong.json");
     await writeFile(wrong, JSON.stringify(profile({ dataRoot: ".", endpoints, bindings: { [generateKey]: "local" } })));

@@ -96,18 +96,45 @@ The local `hypit media` commands expose the source at the scale needed:
 - `probe` gives duration, dimensions, frame rate and audio presence;
 - `cut` saves a selected passage as a clip;
 - `frames` extracts chosen moments or a range at a chosen interval;
-- `tile` and `tiles` arrange time-labeled frames for inspecting change, with optional word context;
+- `grid` arranges frames for inspecting change, with independently optional visible times, word context,
+  a page header, waveform and spectrogram;
+- `waveform` exposes amplitude over time for the selected audio stream;
+- `spectrogram` exposes frequency over time for the selected audio stream;
 - `boundaries` locates abrupt visual changes worth inspecting;
-- `fetch` saves a supported video link locally.
 
-For a close reading of motion, `frames --every-frame` and `tiles --every-frame` retain every original
+Use `grid --waveform` when amplitude, transients, pauses or the sound envelope in relation to sampled
+pictures is the question. Use `grid --spectrogram` when pitch, tonal bands, noise, speech texture or
+an effect's frequency content is the question. They are independent tracks and can be attached
+together. Each spans the page's source-time interval and uses numbered markers that correspond to
+the sampled frames. Standalone `waveform` and `spectrogram` accept audio files or videos that contain
+audio. A grid always requires video, and either audio observation requires audio; none invents a
+missing medium.
+
+When a file has several audio streams, select the index shown by `media probe` with `--audio-stream`.
+Use `--split-channels` when channel differences matter. Use `--frame-marker-color <color>` when another
+frame-time marker color reads more clearly against the attached audio observations. For a standalone
+view, `--pixels-per-second` keeps horizontal time density comparable across intervals; `--around` and
+`--transcript` can locate a spoken phrase. Waveform filter and amplitude scale belong only to amplitude
+inspection. Frequency scale, frequency range and dynamic range belong only to frequency inspection.
+
+Time labels are visible by default. `--no-time` removes cell times and attached audio time axes. Without
+a transcript or attached audio view it produces picture-only cells; an attached audio view retains
+the frame numbers needed to connect cells and markers. Combine it with `--transcript` when the words
+should remain visible without numeric time labels. Word context adapts to cell width; use `--word-context` when the question
+needs a fixed number of neighboring words. `--header` adds the
+source name, page range and frame count above the grid. These choices affect the image, while
+`--json` continues to report the requested and actual decoded times.
+
+For a close reading of motion, `frames --every-frame` and `grid --pages --every-frame` retain every original
 frame in the selected interval. Each interval is decoded continuously once, then the images are
 paginated at the requested cell size. Actual source timestamps preserve variable-rate footage.
-Use `--ranges` with `tiles` to visit several intervals, and `--transcript` to read their word context.
+Use `--ranges` with `grid --pages` to visit several intervals, and `--transcript` to read their word context.
+Choose `--format png` for lossless text and line evidence, or retain the smaller default JPEG pages
+when that distinction is not material.
 
 ```bash
-hypit media tiles references/ad/source.mp4 --start 6.8 --end 8.4 --every-frame \
-  --columns 4 --rows 3 --cell 480 --transcript references/ad/transcript.json \
+hypit media grid references/ad/source.mp4 --pages --start 6.8 --end 8.4 --every-frame \
+  --columns 4 --rows 3 --cell 480 --transcript references/ad/transcript.svml \
   --to references/ad/evidence/list-motion
 ```
 
@@ -134,15 +161,15 @@ exits. A few representative stills cannot supply that temporal account.
 
 ```bash
 hypit transcribe references/ad/source.mp4 \
-  --language en --to references/ad/transcript.json
+  --language en --to references/ad/transcript.svml
 
-hypit media tile references/ad/source.mp4 --start 0 --end 12 --every 1 \
-  --transcript references/ad/transcript.json \
+hypit media grid references/ad/source.mp4 --start 0 --end 12 --every 1 \
+  --transcript references/ad/transcript.svml \
   --to references/ad/evidence/opening.jpg
 
-hypit media tile references/ad/source.mp4 --start 6.8 --end 8.4 --every 0.1 \
-  --transcript references/ad/transcript.json --columns 4 --cell 480 \
-  --to references/ad/evidence/list-change.jpg
+hypit media grid references/ad/source.mp4 --start 6.8 --end 8.4 --every 0.1 \
+  --transcript references/ad/transcript.svml --columns 4 --cell 480 --waveform --spectrogram \
+  --to references/ad/evidence/list-change.png
 
 hypit media cut references/ad/source.mp4 --start 6.8 --end 8.4 --label-time \
   --to references/ad/evidence/list-change.mp4
@@ -156,9 +183,9 @@ media; its word times share that clock. Word labels sit below the picture so the
 and MG remain visible. Keep useful evidence under `evidence/` and use descriptive names that make it
 easy to reopen the relevant question.
 
-To inspect a spoken phrase, use `--around "the phrase" --transcript references/ad/transcript.json`
+To inspect a spoken phrase, use `--around "the phrase" --transcript references/ad/transcript.svml`
 in place of `--start` and `--end`. `--padding` adds surrounding time; repeated phrases can be selected
-with `--occurrence`. Use `tiles` with `--columns` and `--rows` to page a dense sequence into readable
+with `--occurrence`. Use `grid --pages` with `--columns` and `--rows` to page a dense sequence into readable
 grids. Keep the range broad enough to see the incoming and outgoing handoffs.
 
 For Caption, inspect each meaningfully different configuration: speaker treatment, placement,
@@ -194,7 +221,7 @@ Caption gives way to these central labels so each example reads as one unit.
 
 The word and picture enter together on each noun; the labels pop to size, settle briefly, and leave
 with their picture on the next cut. The increasingly short holds make the workload feel excessive.
-The 6.8–8.4 clip and list-change grid show the handoffs; word times are in transcript.json.
+The 6.8–8.4 clip and list-change grid show the handoffs; word times are in `transcript.svml`.
 ```
 
 These sections can overlap and contain finer timed notes where the work is dense. A persistent

@@ -7,12 +7,18 @@ import { projectMomentInstantFixture, projectSegmentWindow, projectSelectionWind
 
 import { createResolvedClosure } from "@hypit/kernel";
 import { blobManifest } from "@hypit/blob";
-import { compositionManifest } from "@hypit/composition";
+import { audioTrackClips, compositionManifest, visualElements } from "@hypit/composition";
+import type { VisualItem } from "@hypit/composition";
 import type { FontArtifactRef, SynchronizedMedia } from "@hypit/media";
 import { mediaManifest, mediaTypes } from "@hypit/media";
 import type { NarrativeSegmentRef, NarrativeMomentRef, NarrativeSelectionRef } from "@hypit/narrative";
 import { sealCanvas, sealSpatialFrame, spatialManifest } from "@hypit/spatial";
 import type { Recipe } from "@hypit/recipe";
+
+function itemElements(item: VisualItem | undefined) {
+  assert.equal(item?.kind, "present");
+  return visualElements(item!.root);
+}
 
 import {
   appendColumnItem,
@@ -57,7 +63,6 @@ import {
   renderTopThree,
   rankingComponent,
   rankingManifest,
-  rankingMarkupSurfaces,
   rankingProducers,
   rankingTypes,
   resolveTierBoardMotion,
@@ -352,14 +357,14 @@ test("TierBoard separates its board Frame from the outer placement Frame and hol
   const track = renderTierBoard(space, program);
   assert.deepEqual(value.entries.map((entry) => entry.itemId), ["preset", "early", "late"]);
   assert.deepEqual(program.items.map((item) => item.id), ["preset", "early", "late"]);
-  assert.equal(track.presents.some((item) => item.id.endsWith(":item:preset:reveal")), false);
-  assert.equal(track.presents.find((item) => item.id.endsWith(":item:preset:settled"))?.span.startFrame, 10);
-  const direct = track.presents.find((item) => item.id.endsWith(":item:early:reveal"))!;
-  const drop = track.presents.find((item) => item.id.endsWith(":item:late:reveal"))!;
+  assert.equal(track.items.some((item) => item.id.endsWith(":item:preset:reveal")), false);
+  assert.equal(track.items.find((item) => item.id.endsWith(":item:preset:settled"))?.span.startFrame, 10);
+  const direct = track.items.find((item) => item.id.endsWith(":item:early:reveal"))!;
+  const drop = track.items.find((item) => item.id.endsWith(":item:late:reveal"))!;
   assert.equal(direct.subjectId, "early");
-  assert.equal(track.presents.find((item) => item.id.endsWith(":item:early:settled"))?.subjectId, "early");
-  assert.equal(track.presents.find((item) => item.id.endsWith(":board"))?.subjectId, program.id);
-  assert.ok(direct.elements[0]?.animation);
+  assert.equal(track.items.find((item) => item.id.endsWith(":item:early:settled"))?.subjectId, "early");
+  assert.equal(track.items.find((item) => item.id.endsWith(":board"))?.subjectId, program.id);
+  assert.ok(itemElements(direct)[0]?.animation);
   const geometry = tierBoardGeometry(tierFrame.widthPx, tierFrame.heightPx, style);
   const stage = tierStageGeometry(canvas.widthPx, canvas.heightPx, style);
   assert.deepEqual({
@@ -367,7 +372,7 @@ test("TierBoard separates its board Frame from the outer placement Frame and hol
     gap: geometry.gap, iconSize: geometry.iconSize,
   }, { rowHeight: 140, labelWidth: 210, gap: 4, iconSize: 132 });
   assert.deepEqual(stage, { centerX: 216, centerY: 576, size: 168 });
-  const boardRow = track.presents.find((item) => item.id.endsWith(":board"))?.elements
+  const boardRow = itemElements(track.items.find((item) => item.id.endsWith(":board")))
     .find((item) => item.id === "tier-row-s");
   assert.equal(boardRow?.style.find((item) => item.name === "top")?.value, "0px");
   const relativeCell = tierCell(geometry, 0, 2);
@@ -391,7 +396,7 @@ test("TierBoard separates its board Frame from the outer placement Frame and hol
   assert.ok(curvedMiddle.y < ((stage.centerY - cell.size / 2) + cell.y) / 2,
     "drop motion follows an arc above the linear midpoint");
   assert.equal(fromHighTierItemPose(40, duration, stage, cell, 5, 8).x, cell.x);
-  assert.equal(drop.elements[0]?.animation?.keyframes.find((item) => item.atFrame === 20)
+  assert.equal(itemElements(drop)[0]?.animation?.keyframes.find((item) => item.atFrame === 20)
     ?.style.find((item) => item.name === "transform")?.value,
   "translate(-376px,146px) scale(1.272727) rotate(0deg)");
   assert.deepEqual(buildTierBoardSoundEvents(value, style, specs(owner, semantic)).events
@@ -434,11 +439,11 @@ test("Column consumes explicit disjoint reveal windows without changing them", (
   ]);
   const preset = value.entries.find((entry) => entry.itemId === "preset-rank-three")!;
   assert.deepEqual(preset, { itemId: "preset-rank-three", mode: "preset", settled: outerWindow.span });
-  const stages = track.presents.filter((item) => item.id.includes(":item:") && item.id.endsWith(":stage"));
+  const stages = track.items.filter((item) => item.id.includes(":item:") && item.id.endsWith(":stage"));
   assert.deepEqual(stages.map((item) => item.span.startFrame).sort((a, b) => a - b), [25, 65, 120]);
-  assert.equal(stages.find((item) => item.id.includes("overlap-rank-two"))?.elements.some((item) => item.kind === "image"), true);
-  assert.equal(track.presents.some((item) => item.id.endsWith(":item:preset-rank-three:stage")), false);
-  assert.equal(track.presents.find((item) => item.id.endsWith(":item:preset-rank-three:settled"))?.span.startFrame, 10);
+  assert.equal(itemElements(stages.find((item) => item.id.includes("overlap-rank-two"))).some((item) => item.kind === "image"), true);
+  assert.equal(track.items.some((item) => item.id.endsWith(":item:preset-rank-three:stage")), false);
+  assert.equal(track.items.find((item) => item.id.endsWith(":item:preset-rank-three:settled"))?.span.startFrame, 10);
 });
 
 test("Column rejects overlapping or out-of-bounds reveal windows", () => {
@@ -474,11 +479,11 @@ test("TopThree accepts one to three optional-image Items and removes active acce
   const value = schedule(owner, semantic);
   const program = buildTopThreeProgram(owner, frame, value, style, set);
   const track = renderTopThree(space, program);
-  const active = track.presents.find((item) => item.id.endsWith(":item:bronze:stage"))!;
-  const settled = track.presents.find((item) => item.id.endsWith(":item:bronze:settled"))!;
-  const accent = active.elements.find((item) => item.id === "accent");
+  const active = track.items.find((item) => item.id.endsWith(":item:bronze:stage"))!;
+  const settled = track.items.find((item) => item.id.endsWith(":item:bronze:settled"))!;
+  const accent = itemElements(active).find((item) => item.id === "accent");
   assert.equal(accent?.animation?.keyframes.at(-1)?.atFrame, value.entries[2]!.stage.endFrameExclusive - value.entries[2]!.triggerFrame);
-  assert.equal(settled.elements.some((item) => item.id === "accent"), false);
+  assert.equal(itemElements(settled).some((item) => item.id === "accent"), false);
   const fourth = topSpec("fourth");
   let tooMany = appendTopThreeItem(set, fourth);
   assert.throws(() => buildTopThreeProgram(owner, frame,
@@ -507,8 +512,8 @@ test("visual and sound event plans share exact phase frames while absent sound s
   sounds = appendRankingSound(sounds, "appear", sound("appear"));
   sounds = appendRankingSound(sounds, "move", sound("move"));
   const audio = renderRankingAudio(space, events, decoded.sound, sounds);
-  assert.deepEqual(audio.clips.map((clip) => clip.target.startSample), [40_000, 94_400, 104_000, 142_400]);
-  assert.deepEqual(audio.clips.map((clip) => clip.gain), [0.8, 0.6, 0.8, 0.6]);
+  assert.deepEqual(audioTrackClips(audio).map((clip) => clip.target.startSample), [40_000, 94_400, 104_000, 142_400]);
+  assert.deepEqual(audioTrackClips(audio).map((clip) => clip.gain), [0.8, 0.6, 0.8, 0.6]);
 });
 
 test("each component owns a distinct event law", () => {
@@ -637,13 +642,7 @@ test("all three author Surfaces preserve absolute temporal, spatial, font, image
   assert.deepEqual(Object.keys(column.components.find((component) => component.outputs.visual !== undefined)!.outputs).sort(), ["audio", "events", "program", "schedule", "visual"]);
 });
 
-test("Ranking Surfaces declare their sealed Records and icon Producers consume Blob values", async () => {
-  for (const name of ["column", "top-three"]) {
-    const surface = rankingMarkupSurfaces.find((item) => item.name === name);
-    assert.ok(surface?.outputs.some((type) => type.name === rankingTypes.header.name), `${name} header output`);
-    assert.ok(surface?.outputs.some((type) => type.name === rankingTypes.itemSpec.name), `${name} item output`);
-  }
-
+test("Ranking icon Producers consume Blob values", async () => {
   const producer = rankingComponent.producers.find((item) =>
     item.producer.name === rankingProducers.appendTierItem.name);
   assert.ok(producer !== undefined);

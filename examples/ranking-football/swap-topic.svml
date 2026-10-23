@@ -9,6 +9,7 @@
   <import as="seedance" from="@hypit/seedance@1"/>
   <import as="mediaop" from="@hypit/media-operations@1"/>
   <import as="whisperx" from="@hypit/whisperx@1"/>
+  <import as="speechalign" from="@hypit/narrative-speech-alignment@1"/>
   <import as="semantic" from="@hypit/narrative-temporal@1"/>
   <import as="narrative-caption" from="@hypit/narrative-caption@1"/>
   <import as="time" from="@hypit/timeline-author@1"/>
@@ -216,10 +217,12 @@
     video="primary-moving" audio="default" span-authority="video" clock={clock}/>
   <mediaop:Normalize id="sam-media" source={sam-take.video}
     video="primary-moving" audio="default" span-authority="video" clock={clock}/>
-  <whisperx:Alignment id="elon-semantic" narrative={story}
-    segment={story.segment.elon} media={elon-media.media} domain={elon-media.domain} language="en"/>
-  <whisperx:Alignment id="sam-semantic" narrative={story}
-    segment={story.segment.sam} media={sam-media.media} domain={sam-media.domain} language="en"/>
+  <whisperx:Transcription id="elon-semantic-transcription" media={elon-media.media} language="en"/>
+  <speechalign:Alignment id="elon-semantic" narrative={story}
+    segment={story.segment.elon} domain={elon-media.domain} evidence={elon-semantic-transcription.transcript}/>
+  <whisperx:Transcription id="sam-semantic-transcription" media={sam-media.media} language="en"/>
+  <speechalign:Alignment id="sam-semantic" narrative={story}
+    segment={story.segment.sam} domain={sam-media.domain} evidence={sam-semantic-transcription.transcript}/>
 
   <time:Timeline id="speech" clock={clock} end="sam-semantic.end">
     <time:Window id="elon-semantic" from="start" for={elon-media.extent}/>
@@ -270,8 +273,8 @@
   </visual:Motion>
 
   <visual:Track id="speech-picture" timeline={speech.timeline}>
-    <visual:Clip id="elon-semantic-source" media={elon-media.media} during={speech.elon-semantic} frame={speech-frame} z="0" fit="cover"/>
-    <visual:Clip id="sam-semantic-source" media={sam-media.media} during={speech.sam-semantic} frame={speech-frame} z="0" fit="cover"/>
+    <visual:Clip id="elon-semantic-source" media={elon-media.media} during={speech.elon-semantic} frame={speech-frame} fit="cover"/>
+    <visual:Clip id="sam-semantic-source" media={sam-media.media} during={speech.sam-semantic} frame={speech-frame} fit="cover"/>
   </visual:Track>
   <audio-track:Track id="music-bed" timeline={speech.timeline}>
     <audio-track:Clip source={soundtrack-media.media} during={speech.window}
@@ -303,55 +306,55 @@
   <visual:Track id="broll" timeline={speech.timeline}>
     <visual:Clip id="money-rain" image={broll-money-rain.image}
       extent={money-rain-extent} during={selection-money-rain}
-      frame={money-rain-frame} z="40" fit="cover" treatment={recipes.media.money-rain}
+      frame={money-rain-frame} fit="cover" treatment={recipes.media.money-rain}
       motion={broll-left}/>
     <visual:Clip id="twitter-x" image={broll-twitter-x.image}
       extent={twitter-x-extent} during={selection-twitter-x}
-      frame={twitter-x-frame} z="41" fit="cover" treatment={recipes.media.twitter-x}
+      frame={twitter-x-frame} fit="cover" treatment={recipes.media.twitter-x}
       motion={broll-right}/>
     <visual:Clip id="mars-rocket" image={broll-mars-rocket.image}
       extent={mars-rocket-extent} during={selection-mars-rocket}
-      frame={mars-rocket-frame} z="42" fit="cover" treatment={recipes.media.mars-rocket}
+      frame={mars-rocket-frame} fit="cover" treatment={recipes.media.mars-rocket}
       motion={broll-left}/>
     <visual:Clip id="market-crash" image={broll-market-crash.image}
       extent={market-crash-extent} during={selection-market-crash}
-      frame={market-crash-frame} z="43" fit="cover" treatment={recipes.media.market-crash}
+      frame={market-crash-frame} fit="cover" treatment={recipes.media.market-crash}
       motion={broll-wide}/>
     <visual:Clip id="richest-chair" image={broll-richest-chair.image}
       extent={richest-chair-extent} during={selection-richest-chair}
-      frame={richest-chair-frame} z="44" fit="cover" treatment={recipes.media.richest-chair}
+      frame={richest-chair-frame} fit="cover" treatment={recipes.media.richest-chair}
       motion={broll-right}/>
     <visual:Clip id="haircut-x" image={broll-haircut-x.image}
       extent={haircut-x-extent} during={selection-haircut-x}
-      frame={haircut-x-frame} z="45" fit="cover" treatment={recipes.media.haircut-x}
+      frame={haircut-x-frame} fit="cover" treatment={recipes.media.haircut-x}
       motion={broll-wide}/>
     <visual:Clip id="fired-friday" image={broll-fired-friday.image}
       extent={fired-friday-extent} during={selection-fired-friday}
-      frame={fired-friday-frame} z="46" fit="cover" treatment={recipes.media.fired-friday}
+      frame={fired-friday-frame} fit="cover" treatment={recipes.media.fired-friday}
       motion={broll-left}/>
     <visual:Clip id="company-quit" image={broll-company-quit.image}
       extent={company-quit-extent} during={selection-company-quit}
-      frame={company-quit-frame} z="47" fit="cover" treatment={recipes.media.company-quit}
+      frame={company-quit-frame} fit="cover" treatment={recipes.media.company-quit}
       motion={broll-right}/>
     <visual:Clip id="back-monday" image={broll-back-monday.image}
       extent={back-monday-extent} during={selection-back-monday}
-      frame={back-monday-frame} z="48" fit="cover" treatment={recipes.media.back-monday}
+      frame={back-monday-frame} fit="cover" treatment={recipes.media.back-monday}
       motion={broll-wide}/>
     <visual:Clip id="elon-lawsuit" image={broll-elon-lawsuit.image}
       extent={elon-lawsuit-extent} during={selection-elon-lawsuit}
-      frame={elon-lawsuit-frame} z="49" fit="cover" treatment={recipes.media.elon-lawsuit}
+      frame={elon-lawsuit-frame} fit="cover" treatment={recipes.media.elon-lawsuit}
       motion={broll-left}/>
     <visual:Clip id="google-fears" image={broll-google-fears.image}
       extent={google-fears-extent} during={selection-google-fears}
-      frame={google-fears-frame} z="50" fit="cover" treatment={recipes.media.google-fears}
+      frame={google-fears-frame} fit="cover" treatment={recipes.media.google-fears}
       motion={broll-right}/>
     <visual:Clip id="congress-grilled" image={broll-congress-grilled.image}
       extent={congress-grilled-extent} during={selection-congress-grilled}
-      frame={congress-grilled-frame} z="51" fit="cover" treatment={recipes.media.congress-grilled}
+      frame={congress-grilled-frame} fit="cover" treatment={recipes.media.congress-grilled}
       motion={broll-left}/>
     <visual:Clip id="still-here" image={broll-still-here.image}
       extent={still-here-extent} during={selection-still-here}
-      frame={still-here-frame} z="52" fit="cover" treatment={recipes.media.still-here}
+      frame={still-here-frame} fit="cover" treatment={recipes.media.still-here}
       motion={broll-wide}/>
   </visual:Track>
 
@@ -366,12 +369,12 @@
 
   <film:Film id="main" canvas={vertical.canvas} timeline={speech.timeline}
     appearance={recipes.film.vertical}>
-    <film:Track source={speech-picture.visual}/>
+    <film:Track id="speech-picture" source={speech-picture.visual}/>
     <film:Track source={speech-sound.audio}/>
-    <film:Track source={tech-tiers.visual}/>
+    <film:Track id="tech-tiers" source={tech-tiers.visual}/>
     <film:Track source={tech-tiers.audio}/>
-    <film:Track source={broll.visual}/>
-    <film:Track source={captions.visual}/>
+    <film:Track id="broll" source={broll.visual}/>
+    <film:Track id="captions" source={captions.visual}/>
     <film:Track source={music-bed.audio}/>
   </film:Film>
   <html:Video id="final" composition={main.composition}

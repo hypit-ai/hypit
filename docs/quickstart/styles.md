@@ -69,7 +69,7 @@ The first official Caption Style family keeps planning and rendering parameters 
 
 ```svs
 caption.dialogue {
-  stack-order: 70;
+
   x: 0.08;
   y: 0.76;
   width: 0.84;
@@ -85,7 +85,6 @@ caption.dialogue {
 
 | Property | Description |
 |---|---|
-| `stack-order` | Z-stacking order among all Tracks (higher = on top) |
 | `x`, `y` | Position as fraction of canvas (0–1) |
 | `width` | Width as fraction of canvas |
 | `size` | Font size in pixels |
@@ -111,7 +110,7 @@ Define multiple caption Recipes for different speakers:
 
 ```svs
 caption.alice {
-  stack-order: 70;
+
   x: 0.08; y: 0.76; width: 0.84;
   size: 58;
   line-height: 0.96;
@@ -122,7 +121,7 @@ caption.alice {
 }
 
 caption.bob {
-  stack-order: 70;
+
   x: 0.08; y: 0.76; width: 0.84;
   size: 58;
   line-height: 0.96;
@@ -151,8 +150,8 @@ Then select them with timed Uses in the Track:
 ## Visual Track Clips
 
 Visual Clips keep space, source-time, pixel treatment and local motion separate. A `SpatialFrame`
-owns position and size. `z`, fitting and the optional partial source-time relation are direct facts
-of this occurrence. A
+owns position and size. Fitting and the optional partial source-time relation are direct facts of
+this occurrence. A
 treatment Recipe may reuse image and Frame paint, while a typed Motion is reusable affine/opacity
 keyframes rather than a closed effect name.
 
@@ -171,7 +170,6 @@ visual.product {
 
 | Property | Description |
 |---|---|
-| `z` | Direct Z-stacking order; equal values use stable declaration and identity order |
 | `fit` | Direct `contain`, `cover`, `fit-width`, `fit-height`, `native`, `scale-down`, or `stretch` |
 | `frame-x`, `frame-y` | Alignment point inside the placement Frame |
 | `content-x`, `content-y` | Independently selected focal point inside the source |
@@ -192,8 +190,7 @@ Position remains an explicit graph edge:
   <visual:Pose at="end" y="0" opacity="1"/>
 </visual:Motion>
 <visual:Clip media={product-media.media}
-  during={demo} frame={product-frame}
-  z="40" fit="contain"
+  during={demo} frame={product-frame} fit="contain"
   treatment={recipes.visual.product} motion={product-in}>
   <visual:Map/>
 </visual:Clip>
@@ -206,7 +203,7 @@ video may ever need.
 ## Text
 
 Fine Text Style owns reusable typography and Paint only. The occurrence itself owns geometry,
-form-specific layout and absolute `z`, because those facts change from one use of a Style to another.
+form-specific layout and its `z` inside the containing VisualScope, because those facts change from one use of a Style to another.
 
 ```svs
 text.title {
@@ -230,7 +227,7 @@ Compiled with exact font bytes into a `text:Style`, then referenced by a concret
 <fonts:Face id="title-font" package="@fontsource-variable/inter" weight="900" style="normal"/>
 <text:Style id="title-style" recipe={recipes.text.title} font={title-font}/>
 <text:Flow id="meaning" timeline={speech.timeline} within={title-frame}
-  style={title-style} z="90" align="center" during={speech.window}>
+  style={title-style} align="center" during={speech.window}>
   MEANING
 </text:Flow>
 ```
@@ -376,7 +373,7 @@ A complete `recipes.svs` file for a four-take talking-head project:
   }
 
   caption.primary {
-    stack-order: 70;
+
     x: 0.08;
     y: 0.74;
     width: 0.84;

@@ -9,9 +9,25 @@ program payloads remain explicitly owned by their rendering package.
 
 ## VisualTrack
 
-`sealVisualTrack` accepts `id`, `timelineId`, `visualIr: VISUAL_IR_V1` and `presents` and returns
-a value with `kind: "visual"`. `assertVisualTrackIdentity(track, timeline)` also checks it against a
-specific Timeline. Both functions are exported from this package.
+`sealVisualTrack` accepts `id`, `timelineId`, `visualIr: VISUAL_IR_V1` and one ordered `items` union,
+and returns a value with `kind: "visual"`. `sealPresentVisualTrack` is the narrow constructor for the
+common Present-only subset; its `presents` input is construction syntax, while the returned terminal
+value still contains `items`. `assertVisualTrackIdentity(track, timeline)` checks either form of item
+against a specific Timeline. The constructors preserve the discriminated union at the JavaScript
+boundary: a missing `items` array, an unknown item `kind`, or a non-Present kind supplied to the
+Present-only constructor is rejected rather than reclassified.
+
+Every Visual Item shares `id`, optional `subjectId`, `span` and optional `visibility`. Its position in
+the Track's item array is its paint position.
+Its `kind` preserves the one ownership distinction a consumer cannot infer:
+
+- `present` owns new source pixels in one recursive `root` tree and composites them onto the picture;
+  its declared blend may also consult the backdrop;
+- `adjustment` owns a `{ format, payload, artifacts }` programme which transforms the picture already
+  accumulated below its stack position.
+
+Adjustment formats belong to their package and a renderer must explicitly support them. Composition
+does not enumerate effects, carry renderer selectors or store lists of affected Tracks.
 
 Each Present supplies:
 
@@ -19,14 +35,14 @@ Each Present supplies:
 | --- | --- |
 | `id`, optional `subjectId` | Appearance identity and, when useful, the domain entity it depicts |
 | `span` | `{ startFrame, endFrameExclusive }` in program frames |
-| `order` | Stable order among Presents emitted by this owning Track |
-| `z` | Author-owned absolute picture stacking position across Tracks |
-| `elements` | One rooted element tree owned by the Present |
+| `root` | One recursive element tree owned by the Present |
 
-Higher `z` paints later. Equal-`z` Presents use stable Track identity, Present `order` and Present
-identity as deterministic fallbacks; authors use distinct `z` values when that relative paint order
-matters. Element `order` values are distinct within a Present and determine order inside its tree. A child names
-its `parent`; its position is relative to that parent. Root positioning is relative to the Canvas.
+The parent VisualScope's member array paints from back to front. Items inside one Track use the same
+array law. Neither member id nor item id is a hidden paint-order fallback. The member id forms a
+recursive occurrence path through nested Stacks; Track `id` remains the identity of the reusable value.
+The same Track may therefore be placed more than once without being rewritten. Element children are
+recursive values rather than parent references; each child position is relative to its containing
+element, while the Present root is relative to the Canvas.
 Animation keyframes use `atFrame` offsets from the Present's start. Media sampling targets use the
 same local frame origin and map to exact source frames.
 
@@ -37,26 +53,37 @@ give each shape. `hypit vocabulary --visual visual-track` and focused element qu
 schemas through the installed Distribution.
 
 A `program` carries `{ format, payload, artifacts }`. The rendering package owns the object payload
-and supports named formats. It may place typed children in its own local structure, so video, text
+and supports named formats. It may place typed children in named slots, so video, text
 and graphics can share behavior while retaining explicit material dependencies. The parent
-relationship remains local to the Present; internal layout belongs to that program.
+relationship remains structural inside the Present; internal layout belongs to that program.
 
 ## AudioTrack
 
-An AudioTrack contributes explicit clips with source audio artifacts, target sample ranges, exact
-partial source-time maps, gain and fades. Target positions use the Timeline's canonical 48 kHz
-sample domain. Each non-overlapping affine source-time piece maps Clip-local target samples to
-source samples; uncovered target samples are silent. Use `timelineSampleFrames` and the
-temporal/media helpers when converting an authored event into that domain.
+An AudioTrack is one closed, single-output `AudioSignalGraph`. Its terminal nodes are deliberately
+small: `silence`, source `AudioClip`, additive `mix`, and package-owned `process`. References name an
+explicit node and signal port. The graph must be acyclic, every reference must resolve, and every
+node must contribute to the declared output; Composition does not retain disconnected metadata.
 
-`sealAudioTrack` and `assertAudioTrackIdentity` are the corresponding public constructors/checks.
-An Author Package can publish visual and audio Tracks as separate Outputs; the composition includes
-each selected Output explicitly.
+Source Clips own their audio artifacts, target sample ranges, exact partial source-time maps, gain
+and fades. Target positions use the Timeline's canonical 48 kHz sample domain. Process formats own
+their payload and input-port semantics; Composition carries and validates only the common programme
+envelope rather than maintaining an effect catalogue.
+
+`audioGraphFromClips` constructs the common source-plus-mix subset. `sealAudioTrack` and
+`assertAudioTrackIdentity` are the corresponding public constructors/checks, while
+`audioTrackClips` is an observation helper for consumers that need to enumerate source leaves. An
+AudioTrack without teaching Film or Core about its routing.
 
 ## Composition
 
-A Composition carries its id, Canvas with clear color, and peer Tracks. The Tracks retain their
-Timeline identity; assembly and rendering receive the corresponding Timeline separately.
+A Composition carries its id, Canvas with clear color, a recursive `VisualScope`, and root
+`AudioTrack[]`. A visual Scope contains placed Track members and nested Stack members. Both member
+kinds carry a sibling-unique `id`, and their array order paints from back to front. Their recursive
+path identifies one visual occurrence. Each Stack closes its children into one picture before entering
+its parent at that position. Audio outputs form a finite multiset of
+independent closed graphs and are additively combined at the Film root. Repeated signals and equal
+AudioTrack ids are valid; the Track id describes the reusable value, not a root routing key. The Tracks retain
+their Timeline identity; assembly and rendering receive the corresponding Timeline separately.
 `@hypit/film` is one author-facing way to assemble it;
 `@hypit/html-video` consumes it to produce a video.
 

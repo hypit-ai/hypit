@@ -3,8 +3,12 @@ import { realpathSync } from "node:fs";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 
-import { moduleKey, modulePackageAbi } from "@hypit/protocol";
-import { verifyPackageContributions } from "../contribution.js";
+import { moduleKey } from "@hypit/protocol";
+import {
+  logicalPackageAddressKey,
+  packageContributionOffers,
+  verifyPackageContributions,
+} from "../contribution.js";
 
 import type {
   LoadedPackage,
@@ -153,20 +157,6 @@ async function assertExternalDependencies(
   }
 }
 
-function addressKey(value: LogicalPackageAddress): string {
-  return `${value.abi}\u0000${value.name}`;
-}
-
-function offers(value: PackageContribution): readonly LogicalPackageAddress[] {
-  return [
-    ...(value.modules ?? []).flatMap((item) => [
-      moduleKey(item.manifest),
-      ...(item.specifiers ?? []),
-    ].map((name) => ({ abi: modulePackageAbi, name }))),
-    ...(value.facets ?? []).flatMap((facet) => facet.address === undefined ? [] : [{ abi: facet.abi, name: facet.address }]),
-  ];
-}
-
 /** Conventional physical package spelling for a logical @scope/name@version address. */
 export function physicalPackageName(logical: string): string {
   const slash = logical.startsWith("@") ? logical.indexOf("/", 1) : -1;
@@ -223,7 +213,7 @@ export async function loadNodePackageSelection(
       providedModules.add(key);
       for (const dependency of module.manifest.dependencies) {
         requirements.push({
-          key: moduleKey(dependency.module),
+          key: moduleKey(dependency),
           from: item.physical.root,
         });
       }
@@ -254,15 +244,15 @@ export async function loadNodePackageSelection(
 
   const offerOwners = new Map<string, Set<string>>();
   for (const item of activated.values()) {
-    for (const offer of offers(item.contribution)) {
-      const key = addressKey(offer);
+    for (const offer of packageContributionOffers(item.contribution)) {
+      const key = logicalPackageAddressKey(offer);
       const owners = offerOwners.get(key) ?? new Set<string>();
       owners.add(item.physical.json.name);
       offerOwners.set(key, owners);
     }
   }
   for (const address of normalized.logical ?? []) {
-    const providers = offerOwners.get(addressKey(address));
+    const providers = offerOwners.get(logicalPackageAddressKey(address));
     if (providers === undefined || providers.size === 0) throw new NodePackageSelectionMissingError(address);
     assert(providers.size === 1, `${address.abi} ${address.name} is provided by more than one selected package`);
   }

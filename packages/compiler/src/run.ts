@@ -18,7 +18,7 @@ import type {
   TypeRef,
   TypedRecord,
 } from "@hypit/protocol";
-import { normalizeValue, sameType } from "@hypit/protocol";
+import { compareCodeUnits, normalizeValue, sameType } from "@hypit/protocol";
 import {
   collectRunModuleRequests,
   compileRunSource,
@@ -41,7 +41,7 @@ export type RunAuthorCompiler = {
   openEntry(locator: string): Promise<WorkspaceSession>;
   compileResolvedSource(entry: ResolvedSource, workspace: WorkspaceSession): Promise<CompiledAuthorSource>;
   extendExecutionProgram(program: LinkedProgram, requests: readonly string[]): LinkedProgram;
-  validateRecord(program: LinkedProgram, record: TypedRecord): Promise<void>;
+  refineRecord(program: LinkedProgram, record: TypedRecord): Promise<void>;
 };
 
 export type RunCompilerOptions = {
@@ -125,7 +125,7 @@ export type PreparedBuild = {
 };
 
 type StructuralRunResolution = {
-  readonly decoded: Awaited<ReturnType<typeof compileRunSource>>;
+  readonly document: Awaited<ReturnType<typeof compileRunSource>>;
   readonly authorSource: ResolvedSource;
   readonly author: CompiledAuthorSource;
   readonly program: LinkedProgram;
@@ -166,7 +166,7 @@ async function valueFromWorkspace(
   from: string,
 ): Promise<Value> {
   const resolved = await workspace.resolveAsset(source, { from, mediaType: "application/json" });
-  const attachment = (await workspace.attachments()).find((item) => item.blob.resource === resolved.blob.resource);
+  const attachment = (await workspace.attachments()).find((item) => item.blob.resource === resolved.resource);
   if (attachment === undefined) throw new Error(`Workspace did not retain bytes for ${from}`);
   return decodeValue(await attachmentBytes(attachment), from);
 }
@@ -177,7 +177,7 @@ async function fileValueFromWorkspace(
   from: string,
   mediaType: string,
 ): Promise<Value> {
-  return (await workspace.resolveAsset(source, { from, mediaType })).blob;
+  return await workspace.resolveAsset(source, { from, mediaType });
 }
 
 function materializedSupply(
@@ -211,24 +211,24 @@ export class RunCompiler {
   }
 
   async #resolveStructure(source: ResolvedSource, workspace: WorkspaceSession): Promise<StructuralRunResolution> {
-    const decoded = await compileRunSource(source, this.#options.frontends);
+    const document = await compileRunSource(source, this.#options.frontends);
     const authorSource = await workspace.resolveSource(source.unit, {
-      from: decoded.document.author.source,
+      from: document.author.source,
       alias: "author",
     });
     const author = await this.#options.authorCompiler.compileResolvedSource(authorSource, workspace);
     const program = this.#options.authorCompiler.extendExecutionProgram(
       author.program,
-      collectRunModuleRequests(decoded.document, this.#options.fragments),
+      collectRunModuleRequests(document, this.#options.fragments),
     );
     const executionCompilation = program === author.program ? author : { ...author, program };
-    const run = await resolveRunDocument(decoded.document, {
+    const run = await resolveRunDocument(document, {
       compilation: executionCompilation,
       fragments: this.#options.fragments,
     });
     const plan = planBuild(program, author.graph, run.graph);
     return {
-      decoded,
+      document,
       authorSource,
       author,
       program,
@@ -259,10 +259,10 @@ export class RunCompiler {
 
   async #validateMaterialized(resolved: StructuralRunResolution, records: Iterable<TypedRecord>): Promise<void> {
     for (const record of resolved.plan.initialRecords) {
-      await this.#options.authorCompiler.validateRecord(resolved.program, record);
+      await this.#options.authorCompiler.refineRecord(resolved.program, record);
     }
     for (const record of records) {
-      await this.#options.authorCompiler.validateRecord(resolved.program, record);
+      await this.#options.authorCompiler.refineRecord(resolved.program, record);
     }
   }
 
@@ -281,8 +281,8 @@ export class RunCompiler {
       authorSource: resolved.authorSource.unit.id,
       author: resolved.author,
       program: resolved.program,
-      document: resolved.decoded.document,
-      unresolvedHistoricalOutputs: resolved.decoded.document.candidates.flatMap((item) => {
+      document: resolved.document,
+      unresolvedHistoricalOutputs: resolved.document.candidates.flatMap((item) => {
         const candidate = resolved.run.candidates[item.id];
         return item.kind === "build-output" && candidate !== undefined && resolved.selectedCandidates.has(candidate)
           ? [{ id: item.id, build: item.build, output: item.output }]
@@ -346,7 +346,7 @@ export class RunCompiler {
       run: structuralRun,
       selection: structuralPlan,
       historicalOutputs: Object.fromEntries(historicalOutputs),
-      materializedSupplies: [...materializedRecords.values()].sort((left, right) => left.id.localeCompare(right.id)),
+      materializedSupplies: [...materializedRecords.values()].sort((left, right) => compareCodeUnits(left.id, right.id)),
       attachments: mergeAttachments([author.attachments, await workspace.attachments(), buildAttachments]),
     };
   }
@@ -360,7 +360,7 @@ export class RunCompiler {
     }));
     const executionRun = {
       ...compilation.run.graph,
-      targets: compilation.run.graph.targets.filter((target) => !forwardOnlyOutputs.has(target.output)),
+      targets: compilation.run.graph.targets.filter((target) => !forwardOnlyOutputs.has(target)),
     };
     const sliced = sliceExecution(compilation.program, compilation.author.graph, executionRun, preliminary);
     const materializedById = new Map(compilation.materializedSupplies.map((record) => [record.id, record]));
@@ -373,7 +373,7 @@ export class RunCompiler {
       return record;
     });
     const initialRecords = [...sliced.initialRecords, ...suppliedRecords]
-      .sort((left, right) => left.id.localeCompare(right.id));
+      .sort((left, right) => compareCodeUnits(left.id, right.id));
     const sealedProgram = link(sliced.program.closure, [...sliced.program.records, ...initialRecords]);
     const definition = defineBuild({
       program: sealedProgram,
@@ -381,7 +381,7 @@ export class RunCompiler {
     });
     const state = materializeBuild(definition, []);
     const selections = new Map(preliminary.selections.map((selection) => [selection.output, selection]));
-    const targets = new Set(compilation.run.graph.targets.map((target) => target.output));
+    const targets = new Set(compilation.run.graph.targets);
     const names = new Set<string>();
     const outputs = new Set<string>();
     const publication: PublicationPlan = {

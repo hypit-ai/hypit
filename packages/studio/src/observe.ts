@@ -120,6 +120,24 @@ export function createObserver(
               return resolved === undefined ? [] : [[name, resolved.type.name]];
             }),
           );
+          const observeChild = (child: StructuredElement): import("@hypit/studio-companion").StudioPlacementChild => {
+            const childId = child.attributes.id;
+            return {
+              tag: child.name,
+              sourcePath: input.sourceName,
+              attributeValueRanges: child.attributeValueRanges ?? {},
+              ...(typeof childId === "string" ? { id: childId } : {}),
+              range: { start: child.range.start, end: child.range.end },
+              attributes: written(child),
+              references: referenced(child),
+              referenceAttributes: referenceAttributes(child),
+              referenceTypes: referenceTypes(child),
+              values: valuesFor(child.range),
+              children: child.children
+                .filter((descendant): descendant is StructuredElement => descendant.kind === "element")
+                .map(observeChild),
+            };
+          };
           placements.push({
             tag: input.element.name,
             module: { ...module },
@@ -144,21 +162,7 @@ export function createObserver(
             ],
             children: input.element.children
               .filter((child): child is StructuredElement => child.kind === "element")
-              .map((child) => {
-                const childId = child.attributes.id;
-                return {
-                  tag: child.name,
-                  sourcePath: input.sourceName,
-                  attributeValueRanges: child.attributeValueRanges ?? {},
-                  ...(typeof childId === "string" ? { id: childId } : {}),
-                  range: { start: child.range.start, end: child.range.end },
-                  attributes: written(child),
-                  references: referenced(child),
-                  referenceAttributes: referenceAttributes(child),
-                  referenceTypes: referenceTypes(child),
-                  values: valuesFor(child.range),
-                };
-              }),
+              .map(observeChild),
           });
           const sourceMap = registry.observeTemporalDomain(module, found.surface, {
             sourceName: input.sourceName,

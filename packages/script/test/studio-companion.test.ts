@@ -44,7 +44,6 @@ test("Studio observes and edits the compiler's Script body without changing its 
   assert.ok(projection);
   assert.deepEqual(projection.lanes.map((lane) => lane.id), ["maps", "evidence"]);
   assert.deepEqual(projection.lanes.map((lane) => lane.heightPx), [15, 15]);
-  assert.equal(projection.items.some((item) => item.laneId === "intent"), false);
   assert.equal(projection.editItems.some((item) => item.id === "beat"), true);
   const tokens = projection.items.filter((item) => item.kind === "span" && item.appearance === "compact");
   assert.deepEqual(tokens.map(token => token.label), parsed.tokens.map(token => token.text));

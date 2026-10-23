@@ -69,7 +69,7 @@
   /* Caption and stage share one horizontal center line. The caption remains
      above the lower stage and wins every occasional overlap through z-order. */
   caption.primary {
-    stack-order: 70;
+
     x: 0.67;
     y: 0.55;
     width: 0.60;

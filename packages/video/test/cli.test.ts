@@ -4,11 +4,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { createVideoDistribution, videoCommandModules } from "@hypit/video";
-import { runCli as runCommand, runCliApplication } from "@hypit/cli";
+import { createVideoDistribution } from "@hypit/video";
+import { cliCommandModules as videoCommandModules } from "@hypit/video/cli";
+import { loadDiscoveredSourcePackages, runCli as runCommand, runCliApplication } from "@hypit/cli";
 import { installDistributionPackageResolution } from "@hypit/loader/node";
-
-import { videoTestPackages } from "./packages.js";
 
 const videoDistribution = createVideoDistribution();
 
@@ -19,7 +18,7 @@ const runCli = (
   installDistributionPackageResolution(videoDistribution.packageRoot === undefined
     ? [] : [videoDistribution.packageRoot]);
   return runCliApplication([...argv, "--json"], io, {
-    distribution: { ...videoDistribution, bootstrapPackages: videoTestPackages },
+    distribution: videoDistribution,
     commandModules: videoCommandModules,
   });
 };
@@ -40,9 +39,17 @@ test("source package selection follows Run and Author imports", async () => {
   <author source="./main.svml"/>
   <target output="story"/>
 </svrun>`, "utf8");
+    const packages = await loadDiscoveredSourcePackages(videoDistribution, {
+      source: run,
+      workspaceRoot: root,
+      packageRoot: root,
+      ...(videoDistribution.packageRoot === undefined
+        ? {}
+        : { distributionPackageRoot: videoDistribution.packageRoot }),
+    });
     const discovered = await videoDistribution.discoverSourcePackages!(run, {
       workspaceRoot: root,
-      packages: videoTestPackages,
+      packages,
     });
     assert.deepEqual(discovered.selected, ["@hypit/markup", "@hypit/recipe", "@hypit/script"]);
   } finally {
@@ -111,7 +118,7 @@ test("check compiles a data-only package Source export without a project copy", 
   }
 });
 
-test("pricing keeps every planned generation after the old 20-request cutoff and exposes authored parameters", async () => {
+test("pricing keeps every planned generation and exposes authored parameters", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-pricing-"));
   try {
     const ids = Array.from({ length: 25 }, (_, index) => `portrait-${index}`);
@@ -132,7 +139,6 @@ test("pricing keeps every planned generation after the old 20-request cutoff and
     await runCommand(["pricing", source, "--project", root, "--runtime", join(root, "runtime.json"),
       "--json", "--limit", "1"], { write: (text) => { output += text; } }, {
       ...videoDistribution,
-      bootstrapPackages: videoTestPackages,
       openRuntimeHost: async (path, options) => ({
         ...await videoDistribution.openRuntimeHost(path, options),
         openInspection: async (queries) => {
@@ -175,8 +181,12 @@ test("pricing keeps every planned generation after the old 20-request cutoff and
     assert.equal(group.requests.length, 25);
     assert.deepEqual(group.pricingDocuments[0].data, { creditsPerImage: 2 });
     for (const request of group.requests) {
-      assert.equal(request.summary.fields["ports.resolution[0]"], "2K");
-      assert.equal(request.summary.fields["ports.aspectRatio[0]"], "9:16");
+      assert.ok(request.summary.some((field: { at: readonly (string | number)[]; value: unknown }) =>
+        field.at.length === 3 && field.at[0] === "ports" && field.at[1] === "resolution"
+        && field.at[2] === 0 && field.value === "2K"));
+      assert.ok(request.summary.some((field: { at: readonly (string | number)[]; value: unknown }) =>
+        field.at.length === 3 && field.at[0] === "ports" && field.at[1] === "aspectRatio"
+        && field.at[2] === 0 && field.value === "9:16"));
     }
   } finally {
     await rm(root, { recursive: true, force: true });

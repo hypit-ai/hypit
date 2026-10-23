@@ -444,8 +444,7 @@ function renderStillVideoNeed(value: CanonicalValue): RenderStillVideoNeed {
 
 function evidenceAudioNeed(value: CanonicalValue): ProjectSpeechEvidenceAudioNeed {
   const item = object(value, "ProjectSpeechEvidenceAudioNeed") as unknown as ProjectSpeechEvidenceAudioNeed;
-  assert(typeof item.domainId === "string" && item.domainId.length > 0
-    && item.source?.kind === "blob", "ProjectSpeechEvidenceAudioNeed is invalid");
+  assert(item.source?.kind === "blob", "ProjectSpeechEvidenceAudioNeed is invalid");
   assert(Number.isSafeInteger(item.sourceSampleFrames) && item.sourceSampleFrames > 0
     && Number.isSafeInteger(item.evidenceSampleFrames) && item.evidenceSampleFrames > 0
     && item.evidenceSampleFrames === speechEvidenceSampleBoundary(item.sourceSampleFrames),
@@ -1185,7 +1184,6 @@ export async function executeProjectSpeechEvidenceAudio(
     "Alignment evidence must be exact 16 kHz mono PCM s16");
     const artifact = await env.artifacts.putFile(output, "audio/wav");
     const evidence: SpeechEvidenceAudio = sealSpeechEvidenceAudio({
-      domainId: need.domainId,
       artifact,
       sampleFrames: need.evidenceSampleFrames,
     });

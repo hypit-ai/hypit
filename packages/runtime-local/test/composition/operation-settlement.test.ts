@@ -41,6 +41,7 @@ import { SqliteRuntimeState } from "../../src/sqlite-state.js";
 import {
   capabilities,
   createGreetingBuild,
+  createGreetingBuildFixture,
   createParallelGreetingBuild,
   manifest as greetingManifest,
   producers,
@@ -51,7 +52,6 @@ import {
   definition,
   durableBuildRequest,
   finishClaimedBuild,
-  fixtureTargets,
   projectRuntimeFixture,
   publication,
   resultDestination,
@@ -79,16 +79,17 @@ for (const cancellation of ["accepted", "unsupported", "failed-build", "host-fai
           if (failRead) { failRead = false; throw new Error("Runtime read interrupted"); }
           return await fixture.buildStore.read(build);
         },
-      }, producerPackages: [{ producers: [
+      }, producers: [
       { producer: producers.makePrompt, handler: () => ({ kind: "output", value: ("hello") }) },
       { producer: producers.requestText, handler: () => ({ kind: "need", constraints: { prompt: "hello" } }) },
-    ] }] });
+    ] });
     let runtime = await openRuntime();
     try {
       const first = "bld_20260905T120000001Z_0000000001";
       const second = "bld_20260905T120000002Z_0000000001";
-      const initial = createGreetingBuild({ targetOutputs: ["generated"] });
-      await runtime.build(durableBuildRequest(directory, first, initial));
+      const buildFixture = createGreetingBuildFixture({ targetOutputs: ["generated"] });
+      const initial = buildFixture.state;
+      await runtime.build(durableBuildRequest(directory, first, buildFixture));
       await runtime.workOnce();
       if (cancellation === "failed-build" || cancellation === "host-failure") {
         if (cancellation === "failed-build") {
@@ -115,7 +116,7 @@ for (const cancellation of ["accepted", "unsupported", "failed-build", "host-fai
       assert.equal(polls, 0);
       assert.equal(cancels, isFailure ? 0 : 1);
       assert.equal(remoteActive, 1, "local termination does not pretend the cloud task stopped");
-      await runtime.build(durableBuildRequest(directory, second, initial));
+      await runtime.build(durableBuildRequest(directory, second, buildFixture));
       await runtime.workOnce();
       assert.equal(starts, 2, "a new Build can perform its own execution attempt");
     } finally { await runtime.close(); await rm(directory, { recursive: true, force: true }); }

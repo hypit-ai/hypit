@@ -9,11 +9,15 @@ import type { Timeline } from "@hypit/timeline";
 import { audioTrackProducers, audioTrackTypes } from "./manifest.js";
 import {
   appendAudioClip,
+  assertAudioClipSpec,
+  assertAudioTrackHeader,
   assertAudioTrackProgram,
+  assertAudioTrackSet,
   createAudioTrackSet,
   finalizeAudioTrack,
   renderAudioTrack,
 } from "./program.js";
+import { assertAudioSourceTimeSpec } from "./source-time.js";
 import type { AudioClipSpec, AudioTrackHeader, AudioTrackProgram, AudioTrackSet } from "./types.js";
 
 function valueOf<T>(value: Value | undefined, label: string): T {
@@ -44,8 +48,16 @@ export const audioTrackComponent = {
       valueOf<AudioTrackProgram>(inputs.program?.value, "AudioTrackProgram"),
     )) }) },
   ],
-  refinements: [{
-    type: audioTrackTypes.program,
-    handler: ({ value }) => assertAudioTrackProgram(valueOf<AudioTrackProgram>(value, "AudioTrackProgram")),
-  }],
-} satisfies ProducerPackage & RefinementPackage;
+  refinements: [
+    { type: audioTrackTypes.header,
+      handler: ({ value }) => assertAudioTrackHeader(valueOf<AudioTrackHeader>(value, "AudioTrackHeader")) },
+    { type: audioTrackTypes.sourceTime,
+      handler: ({ value }) => assertAudioSourceTimeSpec(valueOf(value, "AudioSourceTime")) },
+    { type: audioTrackTypes.clipSpec,
+      handler: ({ value }) => assertAudioClipSpec(valueOf<AudioClipSpec>(value, "AudioClipSpec")) },
+    { type: audioTrackTypes.set,
+      handler: ({ value }) => assertAudioTrackSet(valueOf<AudioTrackSet>(value, "AudioTrackSet")) },
+    { type: audioTrackTypes.program,
+      handler: ({ value }) => assertAudioTrackProgram(valueOf<AudioTrackProgram>(value, "AudioTrackProgram")) },
+  ],
+} satisfies { producers?: ProducerPackage; refinements?: RefinementPackage };

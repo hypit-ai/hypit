@@ -60,7 +60,6 @@ export type DepthStackSpec = {
   readonly poses: DepthStackPoseModel;
   readonly reflow: DepthStackReflow;
   readonly treatment: VisualFrameTreatment;
-  readonly stackingOrder: number;
 };
 
 export type DepthStackCardPlayback = {

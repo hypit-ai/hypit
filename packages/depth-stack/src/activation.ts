@@ -19,7 +19,7 @@ export const hypitPackage = {
     manifest: depthStackManifest,
   }],
   facets: [
-    ...[depthStackComponent].flatMap((component) => [createProducerPackageFacet(component), createRefinementPackageFacet(component)]),
+    ...[depthStackComponent].flatMap((component) => [createProducerPackageFacet(component.producers ?? []), createRefinementPackageFacet(component.refinements ?? [])]),
     createMarkupSurfaceFacet({
       module: depthStackModuleRef,
     declaration: depthStackMarkupSurfaces.find((item) => item.name === "label")!,

@@ -7,8 +7,8 @@ export const hypitPackage = {
   format: "hypit.package@1" as const,
   modules: [{ manifest: exampleManifest }],
   facets: [
-    createProducerPackageFacet(exampleComponent),
-    createRefinementPackageFacet(exampleComponent),
+    createProducerPackageFacet(exampleComponent.producers ?? []),
+    createRefinementPackageFacet(exampleComponent.refinements ?? []),
     ...exampleMarkupSurfaces.map((declaration) => createMarkupSurfaceFacet({ module: exampleModuleRef, declaration, handler: decodeExampleSurface })),
   ],
 };

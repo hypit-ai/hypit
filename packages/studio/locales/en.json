@@ -70,6 +70,7 @@
       "other": "{count} items"
     },
     "inspector.instant": "Instant",
+    "inspector.include-in-preview": "Include in preview",
     "inspector.move-down": "Move down",
     "inspector.move-up": "Move up",
     "inspector.project": "Project",
@@ -150,6 +151,11 @@
     "player.pause": "Pause",
     "player.play": "Play",
     "player.preview": "Preview",
+    "player.preview-exclusions": {
+      "one": "{count} item excluded",
+      "other": "{count} items excluded"
+    },
+    "player.preview-reset": "Reset",
     "player.previous-frame": "Previous frame",
     "player.unmute": "Unmute",
     "source.changed-outside-studio": "Changed outside Studio",

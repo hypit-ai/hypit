@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import type { BlobRef } from "@hypit/protocol";
 
-import { MemoryResourceStore } from "@hypit/executor";
 import {
   bindModelArtifact,
   finalizeModelFieldBuilder,
@@ -81,12 +81,18 @@ const mapping: GenerationWireMapping = {
   constants: { return_last_frame: false },
 };
 
-async function artifacts() {
-  const store = new MemoryResourceStore();
+const artifact = (name: string, mediaType: string): BlobRef => ({
+  kind: "blob",
+  resource: `res_generation_${name}`,
+  size: 1,
+  mediaType,
+});
+
+function artifacts() {
   return {
-    image: await store.put(new Uint8Array([1]), "image/png"),
-    video: await store.put(new Uint8Array([2]), "video/mp4"),
-    audio: await store.put(new Uint8Array([3]), "audio/wav"),
+    image: artifact("image", "image/png"),
+    video: artifact("video", "video/mp4"),
+    audio: artifact("audio", "audio/wav"),
   };
 }
 
@@ -136,8 +142,8 @@ test("Model defaults are explicit in complete requests and absent from Provider 
   }), /defaultItems/u);
 });
 
-test("a media port enforces the media type its role demands", async () => {
-  const { image, audio } = await artifacts();
+test("a media port enforces the media type its role demands", () => {
+  const { image, audio } = artifacts();
   assert.throws(
     () => sealModelFieldRequest(table, {
       prompt: ["hi"],
@@ -156,8 +162,8 @@ test("a media port enforces the media type its role demands", async () => {
   assert.equal("model" in ok, false);
 });
 
-test("port combination rules enforce mutually exclusive input modes", async () => {
-  const { image } = await artifacts();
+test("port combination rules enforce mutually exclusive input modes", () => {
+  const { image } = artifacts();
   const base = { prompt: ["hi"], duration: [8], resolution: ["720p"] } as const;
   assert.throws(
     () => sealModelFieldRequest(table, {
@@ -178,7 +184,7 @@ test("port combination rules enforce mutually exclusive input modes", async () =
 });
 
 test("one mapping compiles every port shape and routes by port presence", async () => {
-  const { image, video, audio } = await artifacts();
+  const { image, video, audio } = artifacts();
   const request = sealModelFieldRequest(table, {
     prompt: ["hello"],
     duration: [8],
@@ -235,7 +241,7 @@ test("coverage rejects a mapping that forgets a port the model declares", () => 
 });
 
 test("runtime media stays on graph edges until a model-owned draft is finalized", async () => {
-  const { image, video, audio } = await artifacts();
+  const { image, video, audio } = artifacts();
   const base = sealModelFieldBuilder(table, {
     prompt: ["hello"], duration: [8], resolution: ["720p"],
   });
@@ -267,7 +273,7 @@ test("runtime media stays on graph edges until a model-owned draft is finalized"
 });
 
 test("media item fields can belong to URL preparation separately from the request body", async () => {
-  const { video } = await artifacts();
+  const { video } = artifacts();
   const transportMapping: GenerationWireMapping = { ...mapping, fields: { ...mapping.fields,
     excerpt: { as: "itemObject", field: "video_list", urlKey: "url", resourceFields: ["startSec"], fieldKeys: { endSec: "ends" } },
   } };

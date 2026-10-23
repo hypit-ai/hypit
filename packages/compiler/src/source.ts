@@ -1,7 +1,8 @@
 import { link, verifyRecordStructure } from "@hypit/kernel";
-import { isResourceId, sameType, typeKey } from "@hypit/protocol";
+import { compareCodeUnits, isResourceId, sameType, typeIdentity, typeKey } from "@hypit/protocol";
 import type {
   GraphValueRef,
+  BlobRef,
   ResolvedModuleClosure,
   TypeRef,
   TypedRecord,
@@ -10,6 +11,7 @@ import type {
   ResolvedSource,
   SourceAssetResolver,
   SourceResolver,
+  SourceUnit,
 } from "@hypit/source";
 import { elaborateAuthorGraph } from "@hypit/author";
 import type {
@@ -17,8 +19,7 @@ import type {
   AuthorElementProvenance,
   AuthorFrontend,
   AuthorFrontendRegistryLike,
-  AuthorFrontendSourceUnit,
-  AuthorRecordValidator,
+  AuthorRecordRefiner,
   AuthorSourceDiscovery,
   AuthorSourceExport,
   AuthorSourceIdentity,
@@ -26,7 +27,6 @@ import type {
   AuthorValueRef,
   CompiledSourceClosure,
   DecodedAuthorSource,
-  ResolvedAuthorSourceAsset,
   ResolvedAuthorSourceImport,
   SourceClosure,
   SourceClosureUnit,
@@ -43,12 +43,12 @@ export type CompileSourceClosureRequest = {
    * should pass that exact result back instead of executing Frontend discovery a second time.
    */
   readonly discover?: (
-    source: AuthorFrontendSourceUnit,
+    source: SourceUnit,
     frontend: AuthorFrontend,
   ) => Awaitable<AuthorSourceDiscovery>;
   readonly resolveSource: SourceResolver;
   readonly resolveAsset?: SourceAssetResolver;
-  readonly validateRecord?: AuthorRecordValidator;
+  readonly refineRecord?: AuthorRecordRefiner;
 };
 
 export class SourceClosureError extends Error {
@@ -77,7 +77,7 @@ function typeName(type: TypeRef): string {
 }
 
 function sourceKey(source: AuthorSourceUnit, frontend: string): string {
-  return `${source.id}\u0000${frontend}`;
+  return JSON.stringify([source.id, frontend]);
 }
 
 type HygienicSource = {
@@ -90,11 +90,11 @@ type HygienicSource = {
 };
 
 function hygienicId(kind: string, unit: string, local: string): string {
-  return `${unit}::${kind}::${local}`;
+  return `source:${JSON.stringify([unit, kind, local])}`;
 }
 
 function hygienizeSource(
-  source: AuthorFrontendSourceUnit,
+  source: SourceUnit,
   frontend: AuthorFrontend,
   decoded: DecodedAuthorSource,
   imports: readonly ResolvedAuthorSourceImport[],
@@ -175,7 +175,7 @@ function hygienizeSource(
         alias: item.request.alias,
         source: item.source,
       }))
-      .sort((left, right) => left.alias.localeCompare(right.alias)),
+      .sort((left, right) => compareCodeUnits(left.alias, right.alias)),
   };
   return {
     unit: unitContent,
@@ -268,7 +268,7 @@ export async function compileSourceClosure(
         records: compiled.records.filter((record) => publicRecordIds.has(record.id)),
       });
     }
-    const assets = new Map<string, ResolvedAuthorSourceAsset>();
+    const assets = new Map<string, BlobRef>();
     const rawDecoded = await frontend.decode(source, {
       closure: request.closure,
       imports: structuredClone(imports),
@@ -278,12 +278,12 @@ export async function compileSourceClosure(
         const existing = assets.get(assetRequest.from);
         if (existing !== undefined) {
           assert(
-            existing.blob.mediaType === assetRequest.mediaType,
+            existing.mediaType === assetRequest.mediaType,
             "SOURCE_ASSET_MEDIA_TYPE_CONFLICT",
             `${source.name} assigns conflicting media types to ${assetRequest.from}`,
             assetRequest.from,
           );
-          return { blob: existing.blob };
+          return existing;
         }
         assert(
           request.resolveAsset !== undefined,
@@ -291,8 +291,7 @@ export async function compileSourceClosure(
           `${source.name} requires source asset ${assetRequest.from}, but the Host has no asset resolver`,
           assetRequest.from,
         );
-        const resolved = await request.resolveAsset(rawSource, assetRequest);
-        const blob = resolved.blob;
+        const blob = await request.resolveAsset(rawSource, assetRequest);
         assert(blob.kind === "blob", "INVALID_SOURCE_ASSET", `${assetRequest.from} did not resolve to a BlobRef`);
         assert(isResourceId(blob.resource), "INVALID_SOURCE_ASSET_RESOURCE", `${assetRequest.from} has an invalid Resource identity`);
         assert(Number.isSafeInteger(blob.size) && blob.size >= 0, "INVALID_SOURCE_ASSET_SIZE", `${assetRequest.from} has an invalid size`);
@@ -302,14 +301,14 @@ export async function compileSourceClosure(
           `${assetRequest.from} resolved as ${blob.mediaType}, expected ${assetRequest.mediaType}`,
           assetRequest.from,
         );
-        assets.set(assetRequest.from, { blob });
-        return { blob };
+        assets.set(assetRequest.from, blob);
+        return blob;
       },
     });
     const validatedRecords: TypedRecord[] = [];
     for (const record of rawDecoded.records) {
       verifyRecordStructure(request.closure, record);
-      await request.validateRecord?.(record);
+      await request.refineRecord?.(record);
       validatedRecords.push(record);
     }
     const decoded: DecodedAuthorSource = {
@@ -329,7 +328,7 @@ export async function compileSourceClosure(
   for (const unit of ordered) {
     for (const identity of unit.identities) {
       assert(identity.id.length > 0, "EMPTY_SOURCE_IDENTITY", `${unit.unit.id} declares an empty public identity`);
-      const key = `${typeName(identity.namespace)}\u0000${identity.id}`;
+      const key = JSON.stringify([typeIdentity(identity.namespace), identity.id]);
       const existing = identities.get(key);
       assert(
         existing === undefined,
@@ -349,7 +348,7 @@ export async function compileSourceClosure(
   const components = ordered.flatMap((unit) => unit.components);
   const program = link(request.closure, records);
   const graph = elaborateAuthorGraph(program, components);
-  const units = ordered.map((unit) => unit.unit).sort((left, right) => left.id.localeCompare(right.id));
+  const units = ordered.map((unit) => unit.unit).sort((left, right) => compareCodeUnits(left.id, right.id));
   const sourceClosure: SourceClosure = {
     entry: entry.unit.id,
     units,
@@ -369,6 +368,6 @@ export async function compileSourceClosure(
         type: item.type,
         ref: graphRefForExport(item, componentsById),
       }))
-      .sort((left, right) => left.name.localeCompare(right.name)),
+      .sort((left, right) => compareCodeUnits(left.name, right.name)),
   };
 }

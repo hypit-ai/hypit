@@ -1,6 +1,6 @@
 import { assertAudioLevelAutomation } from "./audio-level-automation.js";
 import type { AudioLevelAutomation, AudioSampleSpan } from "./audio-level-automation.js";
-import { assertBlobRef, canonicalStringify } from "@hypit/hypit/protocol";
+import { assertBlobRef, canonicalStringify, compareCodeUnits } from "@hypit/hypit/protocol";
 import type { BlobRef, CanonicalValue } from "@hypit/hypit/protocol";
 
 import {
@@ -47,8 +47,6 @@ export type VisualAnimation = {
 
 export type VisualElementBase = {
   readonly id: string;
-  readonly parent?: string;
-  readonly order: number;
   readonly style: readonly VisualStyleDeclaration[];
   readonly attributes?: readonly VisualAttribute[];
   readonly animation?: VisualAnimation;
@@ -56,24 +54,30 @@ export type VisualElementBase = {
 
 export type VisualBoxElement = VisualElementBase & {
   readonly kind: "box";
+  /** Semantic sibling order, from back to front. */
+  readonly children: readonly VisualElement[];
 };
 
 /** A renderer-interpreted local program. Its format and payload belong to its rendering package. */
-export type VisualProgramElement = VisualElementBase & {
-  readonly kind: "program";
-  readonly program: {
-    readonly format: string;
-    readonly payload: { readonly [key: string]: CanonicalValue };
-    readonly artifacts: readonly BlobRef[];
-  };
+export type VisualProgram = {
+  readonly format: string;
+  readonly payload: { readonly [key: string]: CanonicalValue };
+  readonly artifacts: readonly BlobRef[];
 };
 
-/** A strictly local two-input mask. Both roots are direct owned children in the same Present. */
+export type VisualProgramElement = VisualElementBase & {
+  readonly kind: "program";
+  readonly program: VisualProgram;
+  /** Programme-defined named roles. Slot order has no paint meaning. */
+  readonly slots: readonly { readonly name: string; readonly element: VisualElement }[];
+};
+
+/** A strictly local two-input mask whose roles are explicit in the tree. */
 export type VisualMaskElement = VisualElementBase & {
   readonly kind: "mask";
   readonly mode: "alpha" | "luminance";
-  readonly maskElement: string;
-  readonly contentElement: string;
+  readonly mask: VisualElement;
+  readonly content: VisualElement;
 };
 
 export type VisualTextElement = VisualElementBase & {
@@ -353,27 +357,37 @@ export type VisualSurfaceElement = VisualElementBase & {
 /**
  * Structural elements and explicit renderer programs compose in one owned tree.
  *
- * A Present holds exactly one root; everything else names a `parent`, which can be a box,
- * mask or program. **Position is measured from that parent, not from the Canvas.** A component that computes
- * its layout in Canvas pixels and then nests its elements has to subtract the parent's own origin,
+ * A Present holds exactly one recursive root. **Position is measured from that parent, not from the Canvas.**
+ * A component that computes its layout in Canvas pixels and then nests its elements has to subtract the parent's own origin,
  * or every child lands offset by it — which draws without complaint and is wrong by exactly the
  * distance the parent sits from the corner.
  */
 export type VisualElement = VisualBoxElement | VisualProgramElement | VisualMaskElement | VisualTextElement | VisualTextFlowElement | VisualPathTextElement | VisualMediaElement | VisualSurfaceElement;
 
-export type VisualPresent = {
+export type VisualItemBase = {
   readonly id: string;
-  /** Stable order among Presents emitted by this owning Track. */
-  readonly order: number;
-  /** Author-owned absolute picture stacking position across Tracks. */
-  readonly z: number;
-  /** Optional domain entity implemented by this renderer Present. */
+  /** Optional domain entity implemented by this renderer item. */
   readonly subjectId?: string;
   readonly span: FrameSpan;
   /** Optional visible subranges in program frames; span remains the animation and sampling origin. */
   readonly visibility?: readonly FrameSpan[];
-  readonly elements: readonly VisualElement[];
 };
+
+export type VisualPresent = VisualItemBase & {
+  readonly kind: "present";
+  readonly root: VisualElement;
+};
+
+/** A source-free transformation of the Picture accumulated below this stack position. */
+export type VisualAdjustment = VisualItemBase & {
+  readonly kind: "adjustment";
+  readonly program: VisualProgram;
+};
+
+export type VisualItem = VisualPresent | VisualAdjustment;
+
+/** Narrow construction input for the common source-owning subset. */
+export type VisualPresentDraft = Omit<VisualPresent, "kind">;
 
 export type VisualTrack = {
   readonly kind: "visual";
@@ -382,8 +396,13 @@ export type VisualTrack = {
   /** The one terminal visual language shared by official video components. */
   readonly visualIr: typeof VISUAL_IR_V1;
   readonly id: string;
-  /** Author-owned contributions that Composition may interleave by absolute z. */
-  readonly presents: readonly VisualPresent[];
+  /** Author-owned contributions that Composition interleaves in their containing VisualScope. */
+  readonly items: readonly VisualItem[];
+};
+
+/** The ordinary source-owning subset returned by Present component constructors. */
+export type PresentVisualTrack = Omit<VisualTrack, "items"> & {
+  readonly items: readonly VisualPresent[];
 };
 
 export type AudioSourceTimeRational = {
@@ -423,15 +442,77 @@ export type AudioClip = AudioLevelAutomation & {
   readonly fadeOutSamples: number;
 };
 
+export type AudioSignalRef = {
+  readonly node: string;
+  readonly port: "signal";
+};
+
+/** Renderer-owned signal processor with explicit resources and typed input ports. */
+export type AudioProcessProgram = {
+  readonly format: string;
+  readonly payload: { readonly [key: string]: CanonicalValue };
+  readonly artifacts: readonly BlobRef[];
+};
+
+export type AudioGraphNode =
+  | { readonly kind: "silence"; readonly id: string }
+  | { readonly kind: "source"; readonly id: string; readonly clip: AudioClip }
+  | { readonly kind: "mix"; readonly id: string; readonly inputs: readonly AudioSignalRef[] }
+  | {
+      readonly kind: "process";
+      readonly id: string;
+      /** Port names and roles belong to the programme format; `signal` is the primary programme input. */
+      readonly inputs: Readonly<Record<string, AudioSignalRef>>;
+      readonly program: AudioProcessProgram;
+    };
+
+export type AudioSignalGraph = {
+  readonly nodes: readonly AudioGraphNode[];
+  readonly output: AudioSignalRef;
+};
+
 export type AudioTrack = {
   readonly kind: "audio";
   /** Timeline identity this terminal placement was rendered against. */
   readonly timelineId: string;
   readonly id: string;
-  readonly clips: readonly AudioClip[];
+  /** One closed, finite, single-output signal graph. */
+  readonly graph: AudioSignalGraph;
 };
 
 export type Track = VisualTrack | AudioTrack;
+
+export type VisualScopeTrackMember = {
+  readonly kind: "track";
+  /** Stable identity of this use of a Track inside its parent VisualScope. */
+  readonly id: string;
+  readonly track: VisualTrack;
+};
+
+export type VisualScopeStackMember = {
+  readonly kind: "stack";
+  /** Stable identity of this composited visual sub-tree inside its parent scope. */
+  readonly id: string;
+  readonly scope: VisualScope;
+};
+
+export type VisualScopeMember = VisualScopeTrackMember | VisualScopeStackMember;
+
+/**
+ * One recursively composited visual domain. Array position is the complete
+ * back-to-front order. Tracks contribute ordered visual
+ * programmes; a Stack closes a child domain and contributes its resulting
+ * picture as one programme to the parent domain.
+ */
+export type VisualScope = {
+  readonly members: readonly VisualScopeMember[];
+};
+
+/** One exact use of a VisualTrack, addressed independently of the reusable Track value. */
+export type VisualTrackOccurrence = {
+  readonly path: readonly string[];
+  readonly member: VisualScopeTrackMember;
+};
 
 export type Composition = {
   readonly id: string;
@@ -441,7 +522,9 @@ export type Composition = {
     /** Structural clear color beneath every VisualTrack. */
     readonly clearColor: string;
   };
-  readonly tracks: readonly Track[];
+  readonly visual: VisualScope;
+  /** Film-level audio is the additive sum of already closed AudioTrack outputs. */
+  readonly audio: readonly AudioTrack[];
 };
 
 /** The only local style properties accepted in element keyframes. */
@@ -826,6 +909,25 @@ function assertTextPaint(paint: VisualTextPaintLayer, label: string): void {
   assertBoxDecoration(paint.decoration, `${label}.decoration`);
 }
 
+/** Validate the reusable renderer-neutral appearance shared by text components. */
+export function assertVisualTextAppearance(
+  appearance: {
+    readonly typography: VisualTextTypography;
+    readonly paints: readonly VisualTextPaintLayer[];
+  },
+  label = "Visual text appearance",
+): void {
+  assertTypography(appearance.typography, `${label}.typography`);
+  const boxKeys = new Set<string>();
+  for (const [index, paint] of appearance.paints.entries()) {
+    assertTextPaint(paint, `${label}.paints.${index}`);
+    if (paint.kind !== "box") continue;
+    const key = `${paint.target}:${paint.continuity}`;
+    if (boxKeys.has(key)) throw new Error(`${label} repeats Box Paint ${key}.`);
+    boxKeys.add(key);
+  }
+}
+
 function assertTextFlow(flow: VisualTextFlow, label: string): void {
   if (!(["hug", "fixed"] as const).includes(flow.inlineSize)
     || !(["hug", "fixed"] as const).includes(flow.blockSize)
@@ -940,190 +1042,191 @@ function assertAnimation(animation: VisualAnimation | undefined, _durationFrames
   }
 }
 
-function assertPresent(present: VisualPresent, timeline: Timeline | undefined, trackId: string): void {
+function assertVisualItemBase(item: VisualItemBase, timeline: Timeline | undefined, trackId: string): void {
   const totalFrames = timeline === undefined ? Number.MAX_SAFE_INTEGER : timelineFrameCount(timeline);
-  assertNonEmpty(present.id, `${trackId} Present id`);
-  if (present.subjectId !== undefined) assertNonEmpty(present.subjectId, `${trackId}.${present.id} subjectId`);
-  assertFrameSpan(present.span, totalFrames, `${trackId}.${present.id}.span`);
-  let previousEnd = present.span.startFrame;
-  for (const span of present.visibility ?? []) {
-    assertFrameSpan(span, present.span.endFrameExclusive, `${trackId}.${present.id}.visibility`);
-    if (span.startFrame < previousEnd) throw new Error(`${trackId}.${present.id} visibility must be ordered within its span.`);
+  assertNonEmpty(item.id, `${trackId} Visual Item id`);
+  if (item.subjectId !== undefined) assertNonEmpty(item.subjectId, `${trackId}.${item.id} subjectId`);
+  assertFrameSpan(item.span, totalFrames, `${trackId}.${item.id}.span`);
+  let previousEnd = item.span.startFrame;
+  for (const span of item.visibility ?? []) {
+    assertFrameSpan(span, item.span.endFrameExclusive, `${trackId}.${item.id}.visibility`);
+    if (span.startFrame < previousEnd) throw new Error(`${trackId}.${item.id} visibility must be ordered within its span.`);
     previousEnd = span.endFrameExclusive;
   }
-  if (!Number.isSafeInteger(present.order) || present.order < 0) {
-    throw new Error(`${trackId}.${present.id} has invalid local order.`);
+}
+
+function assertVisualProgram(program: VisualProgram, label: string): void {
+  assertNonEmpty(program.format, `${label}.format`);
+  if (program.payload === null || typeof program.payload !== "object" || Array.isArray(program.payload)) {
+    throw new Error(`${label}.payload must be an object.`);
   }
-  if (!Number.isSafeInteger(present.z)) throw new Error(`${trackId}.${present.id} has invalid z.`);
-  if (present.elements.length === 0) throw new Error(`${trackId}.${present.id} must contain an element.`);
-  const elements = new Map<string, VisualElement>();
-  const roots: VisualElement[] = [];
-  const orders = new Set<number>();
-  for (const element of present.elements) {
-    assertNonEmpty(element.id, `${trackId}.${present.id} element id`);
-    if (elements.has(element.id)) throw new Error(`${trackId}.${present.id} has duplicate element ${element.id}.`);
-    if (!Number.isSafeInteger(element.order) || element.order < 0 || orders.has(element.order)) {
-      throw new Error(`${trackId}.${present.id}.${element.id} has invalid or duplicate order.`);
+  canonicalStringify(program.payload);
+  for (const artifact of program.artifacts) assertMediaArtifact(artifact, `${label}.artifacts`);
+}
+
+function assertAudioProcessProgram(program: AudioProcessProgram, label: string): void {
+  if (program === null || typeof program !== "object") throw new Error(`${label} must be an object.`);
+  if (typeof program.format !== "string") throw new Error(`${label}.format must be a string.`);
+  assertNonEmpty(program.format, `${label}.format`);
+  if (program.payload === null || typeof program.payload !== "object" || Array.isArray(program.payload)) {
+    throw new Error(`${label}.payload must be an object.`);
+  }
+  canonicalStringify(program.payload);
+  if (!Array.isArray(program.artifacts)) throw new Error(`${label}.artifacts must be an array.`);
+  for (const artifact of program.artifacts) assertBlobRef(artifact, `${label}.artifacts`);
+}
+
+function assertElement(
+  element: VisualElement,
+  present: VisualPresent,
+  trackId: string,
+  ids: Set<string>,
+): void {
+  if (element === null || typeof element !== "object" || Array.isArray(element)) {
+    throw new Error(`${trackId}.${present.id} contains an invalid element.`);
+  }
+  assertNonEmpty(element.id, `${trackId}.${present.id} element id`);
+  if (ids.has(element.id)) throw new Error(`${trackId}.${present.id} has duplicate element ${element.id}.`);
+  ids.add(element.id);
+  const label = `${trackId}.${present.id}.${element.id}`;
+  assertStyle(element.style, label);
+  assertAttributes(element.attributes, label);
+  assertAnimation(element.animation, present.span.endFrameExclusive - present.span.startFrame, label);
+
+  if (element.kind === "box") {
+    if (!Array.isArray(element.children)) throw new Error(`${label}.children is invalid.`);
+    for (const child of element.children) assertElement(child, present, trackId, ids);
+    return;
+  }
+  if (element.kind === "program") {
+    assertVisualProgram(element.program, `${label}.program`);
+    if (!Array.isArray(element.slots)) throw new Error(`${label}.slots is invalid.`);
+    const names = new Set<string>();
+    for (const slot of element.slots) {
+      assertNonEmpty(slot.name, `${label} slot name`);
+      if (names.has(slot.name)) throw new Error(`${label} has duplicate slot ${slot.name}.`);
+      names.add(slot.name);
+      assertElement(slot.element, present, trackId, ids);
     }
-    orders.add(element.order);
-    elements.set(element.id, element);
-    if (element.parent === undefined) roots.push(element);
-    assertStyle(element.style, `${trackId}.${present.id}.${element.id}`);
-    assertAttributes(element.attributes, `${trackId}.${present.id}.${element.id}`);
-    assertAnimation(
-      element.animation,
-      present.span.endFrameExclusive - present.span.startFrame,
-      `${trackId}.${present.id}.${element.id}`,
-    );
-    if (element.kind === "program") {
-      assertNonEmpty(element.program.format, `${element.id}.program.format`);
-      if (element.program.payload === null || typeof element.program.payload !== "object" || Array.isArray(element.program.payload)) throw new Error("Visual program payload must be an object.");
-      canonicalStringify(element.program.payload);
-      for (const artifact of element.program.artifacts) assertMediaArtifact(artifact, `${element.id}.program.artifacts`);
+    return;
+  }
+  if (element.kind === "mask") {
+    if (!["alpha", "luminance"].includes(element.mode)) throw new Error(`${label} has an invalid local mask.`);
+    assertElement(element.mask, present, trackId, ids);
+    assertElement(element.content, present, trackId, ids);
+    const mask = element.mask;
+    if (!["text", "text-flow", "path-text", "image", "surface"].includes(mask.kind)
+      || (mask.kind === "surface" && mask.surface.timing.kind !== "still")) {
+      throw new Error(`${label} mask source must be one terminal owned text, image or still Surface.`);
     }
-    if (element.kind === "image" || element.kind === "video") {
-      assertMediaArtifact(element.artifact, `${trackId}.${present.id}.${element.id}.artifact`);
-      if (!element.artifact.mediaType.startsWith(`${element.kind}/`)) {
-        throw new Error(`${trackId}.${present.id}.${element.id} media kind does not match its Artifact.`);
-      }
-      if (element.kind === "video") {
-        if (element.animation !== undefined) {
-          throw new Error(`${trackId}.${present.id}.${element.id} source time and animation must live on separate owned elements.`);
-        }
-        assertSourceTime(element.sourceTime, present.span.endFrameExclusive - present.span.startFrame,
-          `${trackId}.${present.id}.${element.id}.sourceTime`);
-      }
+    return;
+  }
+  if (element.kind === "image" || element.kind === "video") {
+    assertMediaArtifact(element.artifact, `${label}.artifact`);
+    if (!element.artifact.mediaType.startsWith(`${element.kind}/`)) {
+      throw new Error(`${label} media kind does not match its Artifact.`);
     }
-    if (element.kind === "text") {
-      const label = `${trackId}.${present.id}.${element.id}`;
-      assertExactFonts(element.fonts, `${label}.fonts`);
-      const ownedFontStyles = new Set(["font", "font-family", "font-style", "font-synthesis", "font-weight"]);
-      if (element.style.some((declaration) => ownedFontStyles.has(declaration.name))) {
-        throw new Error(`${label} exact fonts conflict with a raw font style.`);
+    if (element.kind === "video") {
+      if (element.animation !== undefined) {
+        throw new Error(`${label} source time and animation must live on separate owned elements.`);
       }
-      for (const [index, paint] of (element.paints ?? []).entries()) {
-        assertTextPaint(paint, `${label}.paints.${index}`);
-        // Box Paint decorates a laid-out run, and this element has no layout to decorate.
-        if (paint.kind === "box") throw new Error(`${label}.paints.${index} is Box Paint on a plain text element.`);
-      }
-      // Two ways to say the same thing render twice: the declared Paint draws the glyph, and the
-      // style would draw it again underneath.
-      const paintedStyles = new Set(["-webkit-text-stroke", "-webkit-text-stroke-color", "-webkit-text-stroke-width", "paint-order"]);
-      if (element.paints !== undefined && element.style.some((declaration) => paintedStyles.has(declaration.name))) {
-        throw new Error(`${label} declares glyph Paint beside a raw stroke style.`);
-      }
+      assertSourceTime(element.sourceTime, present.span.endFrameExclusive - present.span.startFrame,
+        `${label}.sourceTime`);
     }
-    if (element.kind === "text-flow" || element.kind === "path-text") {
-      const label = `${trackId}.${present.id}.${element.id}`;
-      assertTextDocument(element.document, element.typography, `${label}.document`);
-      assertTypography(element.typography, `${label}.typography`);
-      const boxKeys = new Set<string>();
-      for (const [index, paint] of element.paints.entries()) {
-        assertTextPaint(paint, `${label}.paints.${index}`);
-        if (paint.kind === "box") {
-          const key = `${paint.target}:${paint.continuity}`;
-          if (boxKeys.has(key)) throw new Error(`${label} repeats Box Paint ${key}.`);
-          boxKeys.add(key);
-        }
+    return;
+  }
+  if (element.kind === "text") {
+    assertExactFonts(element.fonts, `${label}.fonts`);
+    const ownedFontStyles = new Set(["font", "font-family", "font-style", "font-synthesis", "font-weight"]);
+    if (element.style.some((declaration) => ownedFontStyles.has(declaration.name))) {
+      throw new Error(`${label} exact fonts conflict with a raw font style.`);
+    }
+    for (const [index, paint] of (element.paints ?? []).entries()) {
+      assertTextPaint(paint, `${label}.paints.${index}`);
+      if (paint.kind === "box") throw new Error(`${label}.paints.${index} is Box Paint on a plain text element.`);
+    }
+    const paintedStyles = new Set(["-webkit-text-stroke", "-webkit-text-stroke-color", "-webkit-text-stroke-width", "paint-order"]);
+    if (element.paints !== undefined && element.style.some((declaration) => paintedStyles.has(declaration.name))) {
+      throw new Error(`${label} declares glyph Paint beside a raw stroke style.`);
+    }
+    return;
+  }
+  if (element.kind === "text-flow" || element.kind === "path-text") {
+    assertTextDocument(element.document, element.typography, `${label}.document`);
+    assertVisualTextAppearance(element, label);
+    assertTextSequences(element.sequences, present.span.endFrameExclusive - present.span.startFrame, `${label}.sequences`);
+    if (element.kind === "text-flow") assertTextFlow(element.flow, `${label}.flow`);
+    else {
+      assertPathCommands(element.path, `${label}.path`);
+      if (!(["left", "right"] as const).includes(element.side)
+        || !(["follow", "upright"] as const).includes(element.orientation)
+        || !(["start", "center", "end"] as const).includes(element.align)
+        || !(["visible", "clip"] as const).includes(element.overflow)) {
+        throw new Error(`${label} contains an unsupported Path Text enum.`);
       }
-      assertTextSequences(element.sequences, present.span.endFrameExclusive - present.span.startFrame, `${label}.sequences`);
-      if (element.kind === "text-flow") assertTextFlow(element.flow, `${label}.flow`);
-      else {
-        assertPathCommands(element.path, `${label}.path`);
-        if (!(["left", "right"] as const).includes(element.side)
-          || !(["follow", "upright"] as const).includes(element.orientation)
-          || !(["start", "center", "end"] as const).includes(element.align)
-          || !(["visible", "clip"] as const).includes(element.overflow)) {
-          throw new Error(`${label} contains an unsupported Path Text enum.`);
-        }
-        nonNegative(element.startMarginPx, `${label}.startMarginPx`);
-        nonNegative(element.endMarginPx, `${label}.endMarginPx`);
-        if (element.marginAnimation !== undefined) {
-          const frames = element.marginAnimation.keyframes;
-          if (frames.length < 2) throw new Error(`${label}.marginAnimation requires two keyframes.`);
-          let previous = -1;
-          for (const [index, keyframe] of frames.entries()) {
-            if (!Number.isSafeInteger(keyframe.atFrame) || keyframe.atFrame <= previous) {
-              throw new Error(`${label}.marginAnimation.${index} has an invalid frame.`);
-            }
-            nonNegative(keyframe.startMarginPx, `${label}.marginAnimation.${index}.startMarginPx`);
-            previous = keyframe.atFrame;
+      nonNegative(element.startMarginPx, `${label}.startMarginPx`);
+      nonNegative(element.endMarginPx, `${label}.endMarginPx`);
+      if (element.marginAnimation !== undefined) {
+        const frames = element.marginAnimation.keyframes;
+        if (frames.length < 2) throw new Error(`${label}.marginAnimation requires two keyframes.`);
+        let previous = -1;
+        for (const [index, keyframe] of frames.entries()) {
+          if (!Number.isSafeInteger(keyframe.atFrame) || keyframe.atFrame <= previous) {
+            throw new Error(`${label}.marginAnimation.${index} has an invalid frame.`);
           }
+          nonNegative(keyframe.startMarginPx, `${label}.marginAnimation.${index}.startMarginPx`);
+          previous = keyframe.atFrame;
         }
       }
     }
-    if (element.kind === "surface") {
-      assertCompositableSurfaceRef(element.surface, `${trackId}.${present.id}.${element.id}.surface`);
-      if (element.surface.timing.kind === "still" && element.sourceTime !== undefined) {
-        throw new Error(`${trackId}.${present.id}.${element.id} still Surface cannot have source time.`);
-      }
-      if (element.sourceTime !== undefined) {
-        if (element.animation !== undefined) {
-          throw new Error(`${trackId}.${present.id}.${element.id} source time and animation must live on separate owned elements.`);
-        }
-        if (element.surface.timing.kind !== "frames"
-          || element.sourceTime.sourceFrameCount !== element.surface.timing.frameCount
-          || element.sourceTime.sourceFrameRate.numerator !== element.surface.timing.frameRate.numerator
-          || element.sourceTime.sourceFrameRate.denominator !== element.surface.timing.frameRate.denominator) {
-          throw new Error(`${trackId}.${present.id}.${element.id} Surface source time differs from its typed timing.`);
-        }
-        assertSourceTime(element.sourceTime, present.span.endFrameExclusive - present.span.startFrame,
-          `${trackId}.${present.id}.${element.id}.sourceTime`);
-      }
-      if (element.surface.timing.kind === "frames") {
-        if (element.sourceTime === undefined) throw new Error(`${trackId}.${present.id}.${element.id} timed Surface requires source time.`);
-      }
-    }
-    if (element.kind === "mask") {
-      if (!["alpha", "luminance"].includes(element.mode)
-        || element.maskElement === element.contentElement) {
-        throw new Error(`${trackId}.${present.id}.${element.id} has an invalid local mask.`);
-      }
-    }
+    return;
   }
-  if (roots.length !== 1) throw new Error(`${trackId}.${present.id} must contain exactly one root element.`);
-  for (const element of present.elements) {
-    if (element.parent !== undefined && !elements.has(element.parent)) {
-      throw new Error(`${trackId}.${present.id}.${element.id} references a foreign parent.`);
+  if (element.kind === "surface") {
+    assertCompositableSurfaceRef(element.surface, `${label}.surface`);
+    if (element.surface.timing.kind === "still" && element.sourceTime !== undefined) {
+      throw new Error(`${label} still Surface cannot have source time.`);
     }
-    if (element.parent !== undefined && !["box", "mask", "program"].includes(elements.get(element.parent)?.kind ?? "")) {
-      throw new Error(`${trackId}.${present.id}.${element.id} must have a box, mask or program parent.`);
+    if (element.sourceTime !== undefined) {
+      if (element.animation !== undefined) {
+        throw new Error(`${label} source time and animation must live on separate owned elements.`);
+      }
+      if (element.surface.timing.kind !== "frames"
+        || element.sourceTime.sourceFrameCount !== element.surface.timing.frameCount
+        || element.sourceTime.sourceFrameRate.numerator !== element.surface.timing.frameRate.numerator
+        || element.sourceTime.sourceFrameRate.denominator !== element.surface.timing.frameRate.denominator) {
+        throw new Error(`${label} Surface source time differs from its typed timing.`);
+      }
+      assertSourceTime(element.sourceTime, present.span.endFrameExclusive - present.span.startFrame,
+        `${label}.sourceTime`);
     }
-    const visited = new Set<string>();
-    let cursor: VisualElement | undefined = element;
-    while (cursor?.parent !== undefined) {
-      if (visited.has(cursor.id)) throw new Error(`${trackId}.${present.id} contains an element cycle.`);
-      visited.add(cursor.id);
-      cursor = elements.get(cursor.parent);
+    if (element.surface.timing.kind === "frames" && element.sourceTime === undefined) {
+      throw new Error(`${label} timed Surface requires source time.`);
     }
+    return;
   }
-  for (const element of present.elements) {
-    if (element.kind !== "mask") continue;
-    const direct = present.elements.filter((candidate) => candidate.parent === element.id);
-    if (direct.length !== 2
-      || !direct.some((candidate) => candidate.id === element.maskElement)
-      || !direct.some((candidate) => candidate.id === element.contentElement)) {
-      throw new Error(`${trackId}.${present.id}.${element.id} must own exactly its declared mask and content roots.`);
-    }
-    const maskRoot = direct.find((candidate) => candidate.id === element.maskElement)!;
-    if (!["text", "text-flow", "path-text", "image", "surface"].includes(maskRoot.kind)
-      || (maskRoot.kind === "surface" && maskRoot.surface.timing.kind !== "still")
-      || present.elements.some((candidate) => candidate.parent === maskRoot.id)) {
-      throw new Error(`${trackId}.${present.id}.${element.id} mask source must be one terminal owned text, image or still Surface.`);
-    }
-  }
+  throw new Error(`${label} has invalid element kind ${String((element as { readonly kind?: unknown }).kind)}.`);
+}
+
+function assertPresent(present: VisualPresent, timeline: Timeline | undefined, trackId: string): void {
+  assertVisualItemBase(present, timeline, trackId);
+  assertElement(present.root, present, trackId, new Set());
+}
+
+function assertAdjustment(adjustment: VisualAdjustment, timeline: Timeline | undefined, trackId: string): void {
+  assertVisualItemBase(adjustment, timeline, trackId);
+  assertVisualProgram(adjustment.program, `${trackId}.${adjustment.id}.program`);
 }
 
 function normalizeStyle(style: readonly VisualStyleDeclaration[]): VisualStyleDeclaration[] {
   return [...style]
     .map((item) => ({ name: item.name, value: item.value }))
-    .sort((left, right) => left.name.localeCompare(right.name));
+    .sort((left, right) => compareCodeUnits(left.name, right.name));
 }
 
 function normalizeAttributes(attributes: readonly VisualAttribute[]): readonly VisualAttribute[] {
   return [...attributes]
     .map((item) => ({ name: item.name, value: item.value }))
-    .sort((left, right) => left.name.localeCompare(right.name));
+    .sort((left, right) => compareCodeUnits(left.name, right.name));
 }
 
 function normalizeAnimation(animation: VisualAnimation): VisualAnimation {
@@ -1141,20 +1244,27 @@ function normalizeAnimation(animation: VisualAnimation): VisualAnimation {
 function normalizeElement(element: VisualElement): VisualElement {
   const common = {
     id: element.id,
-    ...(element.parent === undefined ? {} : { parent: element.parent }),
-    order: element.order,
     style: normalizeStyle(element.style),
     ...(element.attributes === undefined ? {} : { attributes: normalizeAttributes(element.attributes) }),
     ...(element.animation === undefined ? {} : { animation: normalizeAnimation(element.animation) }),
   };
-  if (element.kind === "box") return { ...common, kind: "box" };
-  if (element.kind === "program") return { ...common, kind: "program", program: structuredClone(element.program) };
+  if (element.kind === "box") return {
+    ...common,
+    kind: "box",
+    children: element.children.map(normalizeElement),
+  };
+  if (element.kind === "program") return {
+    ...common,
+    kind: "program",
+    program: structuredClone(element.program),
+    slots: element.slots.map((slot) => ({ name: slot.name, element: normalizeElement(slot.element) })),
+  };
   if (element.kind === "mask") return {
     ...common,
     kind: "mask",
     mode: element.mode,
-    maskElement: element.maskElement,
-    contentElement: element.contentElement,
+    mask: normalizeElement(element.mask),
+    content: normalizeElement(element.content),
   };
   if (element.kind === "text") {
     return {
@@ -1233,57 +1343,145 @@ function normalizeElement(element: VisualElement): VisualElement {
 }
 
 function visualTrackContent(value: Omit<VisualTrack, "kind">): VisualTrack {
+  if (!Array.isArray(value.items)) {
+    throw new Error(`VisualTrack ${value.id} requires an items array.`);
+  }
   return {
     kind: "visual",
     timelineId: value.timelineId,
     visualIr: value.visualIr,
     id: value.id,
-    presents: [...value.presents]
-      .map((present) => ({
-        id: present.id,
-        order: present.order,
-        z: present.z,
-        ...(present.subjectId === undefined ? {} : { subjectId: present.subjectId }),
-        span: { ...present.span },
-        ...(present.visibility === undefined ? {} : { visibility: present.visibility.map(span => ({ ...span })) }),
-        elements: [...present.elements].map(normalizeElement).sort((a, b) => a.order - b.order || a.id.localeCompare(b.id)),
-      }))
-      .sort((a, b) => a.order - b.order || a.id.localeCompare(b.id)),
+    items: [...value.items]
+      .map((item): VisualItem => {
+        if (item === null || typeof item !== "object") {
+          throw new Error(`VisualTrack ${value.id} contains an invalid Visual Item.`);
+        }
+        const common = {
+          kind: item.kind,
+          id: item.id,
+          ...(item.subjectId === undefined ? {} : { subjectId: item.subjectId }),
+          span: { ...item.span },
+          ...(item.visibility === undefined ? {} : { visibility: item.visibility.map((span: FrameSpan) => ({ ...span })) }),
+        } as const;
+        if (item.kind === "present") {
+          return { ...common, kind: "present", root: normalizeElement(item.root) };
+        }
+        if (item.kind === "adjustment") {
+          return { ...common, kind: "adjustment", program: structuredClone(item.program) };
+        }
+        const invalid = item as { readonly id?: unknown; readonly kind?: unknown };
+        const id = typeof invalid.id === "string" && invalid.id.length > 0 ? invalid.id : "unknown";
+        throw new Error(`VisualTrack ${value.id}.${id} has invalid Visual Item kind ${String(invalid.kind)}.`);
+      }),
   };
 }
 
 function audioTrackContent(value: Omit<AudioTrack, "kind">): AudioTrack {
+  const signalKey = (reference: AudioSignalRef): string => `${reference.node}\u0000${reference.port}`;
+  const nodeContent = (node: AudioGraphNode): AudioGraphNode => {
+    if (node.kind === "mix") {
+      return {
+        kind: "mix",
+        id: node.id,
+        // A Mix input is a signal multiset: ordering has no audible meaning,
+        // while repeated references remain repeated contributions.
+        inputs: [...node.inputs].map((input) => ({ ...input }))
+          .sort((left, right) => compareCodeUnits(signalKey(left), signalKey(right))),
+      };
+    }
+    if (node.kind === "process") {
+      return {
+        kind: "process",
+        id: node.id,
+        inputs: Object.fromEntries(Object.entries(node.inputs)
+          .sort(([left], [right]) => compareCodeUnits(left, right))
+          .map(([port, input]) => [port, { ...input }])),
+        program: structuredClone(node.program),
+      };
+    }
+    return structuredClone(node);
+  };
   return {
     kind: "audio",
     timelineId: value.timelineId,
     id: value.id,
-    clips: [...value.clips]
-      .map((clip) => ({
-        id: clip.id,
-        ...(clip.subjectId === undefined ? {} : { subjectId: clip.subjectId }),
-        artifact: { ...clip.artifact },
-        target: { ...clip.target },
-        sourceTime: {
-          sourceSampleFrames: clip.sourceTime.sourceSampleFrames,
-          pieces: clip.sourceTime.pieces.map((piece) => ({
-            target: { ...piece.target },
-            sourceAtStart: { ...piece.sourceAtStart },
-            rate: { ...piece.rate },
-            ...(piece.wrap === undefined ? {} : { wrap: { ...piece.wrap } }),
-          })),
-        },
-        gain: clip.gain,
-        fadeInSamples: clip.fadeInSamples,
-        fadeOutSamples: clip.fadeOutSamples,
-        ...(clip.gainEnvelope === undefined ? {} : { gainEnvelope: clip.gainEnvelope.map(point => ({ ...point })) }),
-        ...(clip.audibility === undefined ? {} : { audibility: clip.audibility.map(span => ({ ...span })) }),
-      }))
-      .sort((a, b) => a.target.startSample - b.target.startSample || a.id.localeCompare(b.id)),
+    graph: {
+      nodes: [...value.graph.nodes].map(nodeContent)
+        .sort((left, right) => compareCodeUnits(left.id, right.id)),
+      output: { ...value.graph.output },
+    },
   };
+}
+
+export function audioSignal(node: string): AudioSignalRef {
+  return { node, port: "signal" };
+}
+
+export function audioGraphFromClips(clips: readonly AudioClip[]): AudioSignalGraph {
+  if (clips.length === 0) return { nodes: [{ kind: "silence", id: "silence" }], output: audioSignal("silence") };
+  const ordered = [...clips].map((clip) => structuredClone(clip))
+    .sort((left, right) => left.target.startSample - right.target.startSample || compareCodeUnits(left.id, right.id));
+  const sources = ordered.map((clip, index) => ({
+    kind: "source" as const,
+    id: `source-${String(index + 1).padStart(4, "0")}`,
+    clip,
+  }));
+  if (sources.length === 1) return { nodes: sources, output: audioSignal(sources[0]!.id) };
+  const mix: AudioGraphNode = { kind: "mix", id: "mix", inputs: sources.map((source) => audioSignal(source.id)) };
+  return { nodes: [...sources, mix], output: audioSignal(mix.id) };
+}
+
+export function audioTrackClips(track: AudioTrack): readonly AudioClip[] {
+  return track.graph.nodes.flatMap((node) => node.kind === "source" ? [node.clip] : []);
 }
 
 export function sealVisualTrack(value: Omit<VisualTrack, "kind">): VisualTrack {
   return visualTrackContent(value);
+}
+
+/** Construct the common Present-only subset while keeping the terminal value on the unified item waist. */
+export function sealPresentVisualTrack(
+  value: Omit<VisualTrack, "kind" | "items"> & { readonly presents: readonly VisualPresentDraft[] },
+): PresentVisualTrack {
+  if (!Array.isArray(value.presents)) {
+    throw new Error(`Present VisualTrack ${value.id} requires a presents array.`);
+  }
+  return visualTrackContent({
+    timelineId: value.timelineId,
+    visualIr: value.visualIr,
+    id: value.id,
+    items: value.presents.map((present, index) => {
+      if (present === null || typeof present !== "object") {
+        throw new Error(`Present VisualTrack ${value.id} contains an invalid Present at index ${index}.`);
+      }
+      const suppliedKind = (present as VisualPresentDraft & { readonly kind?: unknown }).kind;
+      if (suppliedKind !== undefined && suppliedKind !== "present") {
+        throw new Error(`Present VisualTrack ${value.id}.${present.id} received non-Present kind ${String(suppliedKind)}.`);
+      }
+      return { ...present, kind: "present" };
+    }),
+  }) as PresentVisualTrack;
+}
+
+export function visualPresents(track: VisualTrack): readonly VisualPresent[] {
+  return track.items.filter((item): item is VisualPresent => item.kind === "present");
+}
+
+/** Structural children of one visual node, preserving each relation's semantic order. */
+export function visualElementChildren(element: VisualElement): readonly VisualElement[] {
+  if (element.kind === "box") return element.children;
+  if (element.kind === "program") return element.slots.map((slot) => slot.element);
+  if (element.kind === "mask") return [element.mask, element.content];
+  return [];
+}
+
+/** Pre-order observation of one rooted visual tree. The returned array is derived, never identity. */
+export function visualElements(root: VisualElement): readonly VisualElement[] {
+  return [root, ...visualElementChildren(root).flatMap(visualElements)];
+}
+
+export function visualAdjustments(track: VisualTrack): readonly VisualAdjustment[] {
+  return track.items.filter((item): item is VisualAdjustment => item.kind === "adjustment");
 }
 
 export function sealAudioTrack(value: Omit<AudioTrack, "kind">): AudioTrack {
@@ -1292,6 +1490,9 @@ export function sealAudioTrack(value: Omit<AudioTrack, "kind">): AudioTrack {
 
 export function assertVisualTrackIdentity(track: VisualTrack, timeline?: Timeline): void {
   if (timeline !== undefined) assertTimelineIdentity(timeline);
+  if (track === null || typeof track !== "object" || Array.isArray(track)) {
+    throw new Error("VisualTrack is invalid.");
+  }
   if (track.kind !== "visual") throw new Error("VisualTrack kind is invalid.");
   if (track.visualIr !== VISUAL_IR_V1) throw new Error("Unsupported VisualTrack visual IR.");
   assertNonEmpty(track.timelineId, "VisualTrack timelineId");
@@ -1299,16 +1500,25 @@ export function assertVisualTrackIdentity(track: VisualTrack, timeline?: Timelin
     throw new Error(`VisualTrack ${track.id} belongs to Timeline ${track.timelineId}, not ${timeline.id}.`);
   }
   assertNonEmpty(track.id, "VisualTrack id");
-  const presentIds = new Set<string>();
-  for (const present of track.presents) {
-    if (presentIds.has(present.id)) throw new Error(`${track.id} has duplicate Present ${present.id}.`);
-    presentIds.add(present.id);
-    assertPresent(present, timeline, track.id);
+  if (!Array.isArray(track.items)) throw new Error(`VisualTrack ${track.id} items are invalid.`);
+  const itemIds = new Set<string>();
+  for (const item of track.items) {
+    if (item === null || typeof item !== "object" || Array.isArray(item)) {
+      throw new Error(`VisualTrack ${track.id} contains an invalid Visual Item.`);
+    }
+    if (itemIds.has(item.id)) throw new Error(`${track.id} has duplicate Visual Item ${item.id}.`);
+    itemIds.add(item.id);
+    if (item.kind === "present") assertPresent(item, timeline, track.id);
+    else if (item.kind === "adjustment") assertAdjustment(item, timeline, track.id);
+    else throw new Error(`${track.id}.${(item as { readonly id?: string }).id ?? "unknown"} has invalid Visual Item kind.`);
   }
 }
 
 export function assertAudioTrackIdentity(track: AudioTrack, timeline?: Timeline): void {
   if (timeline !== undefined) assertTimelineIdentity(timeline);
+  if (track === null || typeof track !== "object" || Array.isArray(track)) {
+    throw new Error("AudioTrack is invalid.");
+  }
   if (track.kind !== "audio") throw new Error("AudioTrack kind is invalid.");
   assertNonEmpty(track.timelineId, "AudioTrack timelineId");
   if (timeline !== undefined && track.timelineId !== timeline.id) {
@@ -1318,8 +1528,23 @@ export function assertAudioTrackIdentity(track: AudioTrack, timeline?: Timeline)
   const totalSamples = timeline === undefined
     ? Number.MAX_SAFE_INTEGER
     : timelineSampleFrames(timeline, 48_000);
+  if (track.graph === null || typeof track.graph !== "object" || !Array.isArray(track.graph.nodes)) {
+    throw new Error(`AudioTrack ${track.id} graph is invalid.`);
+  }
+  const nodes = new Map<string, AudioGraphNode>();
   const clipIds = new Set<string>();
-  for (const clip of track.clips) {
+  const references = new Map<string, readonly AudioSignalRef[]>();
+  for (const node of track.graph.nodes) {
+    assertNonEmpty(node.id, `${track.id} Audio node id`);
+    if (nodes.has(node.id)) throw new Error(`${track.id} has duplicate Audio node ${node.id}.`);
+    nodes.set(node.id, node);
+    if (node.kind === "silence") {
+      references.set(node.id, []);
+      continue;
+    }
+    if (node.kind === "source") {
+      references.set(node.id, []);
+      const clip = node.clip;
     if (clipIds.has(clip.id)) throw new Error(`${track.id} has duplicate clip ${clip.id}.`);
     clipIds.add(clip.id);
     assertNonEmpty(clip.id, `${track.id} clip id`);
@@ -1333,7 +1558,7 @@ export function assertAudioTrackIdentity(track: AudioTrack, timeline?: Timeline)
     }
     assertAudioSourceTime(clip.sourceTime, clip.target.endSampleExclusive - clip.target.startSample,
       `${track.id}.${clip.id}.sourceTime`);
-    if (!Number.isFinite(clip.gain) || clip.gain < 0 || clip.gain > 64) {
+    if (!Number.isFinite(clip.gain) || clip.gain < 0) {
       throw new Error(`${track.id}.${clip.id} gain is invalid.`);
     }
     assertAudioLevelAutomation(clip, clip.target, totalSamples);
@@ -1343,8 +1568,40 @@ export function assertAudioTrackIdentity(track: AudioTrack, timeline?: Timeline)
       || clip.fadeOutSamples > targetLength) {
       throw new Error(`${track.id}.${clip.id} fades are invalid.`);
     }
+      continue;
+    }
+    if (node.kind === "mix") {
+      if (!Array.isArray(node.inputs) || node.inputs.length === 0) throw new Error(`${track.id}.${node.id} Mix has no inputs.`);
+      references.set(node.id, node.inputs);
+      continue;
+    }
+    if (node.kind !== "process" || node.inputs === null || typeof node.inputs !== "object"
+      || node.inputs.signal === undefined) {
+      throw new Error(`${track.id}.${node.id} Process is invalid.`);
+    }
+    assertAudioProcessProgram(node.program, `${track.id}.${node.id}.program`);
+    references.set(node.id, Object.values(node.inputs));
   }
-}
+  const assertRef = (reference: AudioSignalRef, label: string): void => {
+    if (reference?.port !== "signal" || !nodes.has(reference.node)) throw new Error(`${label} is invalid.`);
+  };
+  assertRef(track.graph.output, `${track.id}.graph.output`);
+  for (const [node, inputs] of references) for (const [index, reference] of inputs.entries()) {
+    assertRef(reference, `${track.id}.${node}.inputs.${index}`);
+  }
+  const state = new Map<string, "visiting" | "visited">();
+  const reachable = new Set<string>();
+  const visit = (id: string): void => {
+    if (state.get(id) === "visiting") throw new Error(`${track.id} Audio graph contains a cycle at ${id}.`);
+    if (state.get(id) === "visited") return;
+    state.set(id, "visiting");
+    reachable.add(id);
+    for (const input of references.get(id) ?? []) visit(input.node);
+    state.set(id, "visited");
+  };
+  visit(track.graph.output.node);
+  if (reachable.size !== nodes.size) throw new Error(`${track.id} Audio graph contains unreachable nodes.`);
+  }
 
 function assertAudioSourceTimeRational(value: AudioSourceTimeRational, label: string, positive = false): void {
   if (!Number.isSafeInteger(value.numerator) || (positive ? value.numerator <= 0 : value.numerator < 0)
@@ -1406,15 +1663,44 @@ function assertAudioSourceTime(value: AudioSourceTimeMap, targetSamples: number,
   }
 }
 
-function trackKey(track: Track): string {
-  return `${track.kind}\u0000${track.id}`;
+function visualScopeContent(value: VisualScope): VisualScope {
+  return {
+    members: [...value.members].map((member): VisualScopeMember => member.kind === "track"
+      ? { kind: "track", id: member.id, track: structuredClone(member.track) }
+      : { kind: "stack", id: member.id, scope: visualScopeContent(member.scope) }),
+  };
+}
+
+export function sealVisualScope(value: VisualScope): VisualScope {
+  return visualScopeContent(value);
+}
+
+export function visualScopeTracks(scope: VisualScope): VisualTrack[] {
+  return scope.members.flatMap((member) => member.kind === "track"
+    ? [member.track]
+    : visualScopeTracks(member.scope));
+}
+
+export function visualScopeTrackOccurrences(
+  scope: VisualScope,
+  parentPath: readonly string[] = [],
+): VisualTrackOccurrence[] {
+  return scope.members.flatMap((member) => {
+    const path = [...parentPath, member.id];
+    return member.kind === "track"
+      ? [{ path, member }]
+      : visualScopeTrackOccurrences(member.scope, path);
+  });
 }
 
 function compositionContent(value: Composition): Composition {
   return {
     id: value.id,
     canvas: { ...value.canvas },
-    tracks: [...value.tracks].map((track) => structuredClone(track)).sort((a, b) => trackKey(a).localeCompare(trackKey(b))),
+    visual: visualScopeContent(value.visual),
+    audio: [...value.audio]
+      .map((track) => audioTrackContent({ timelineId: track.timelineId, id: track.id, graph: track.graph }))
+      .sort((left, right) => compareCodeUnits(canonicalStringify(left), canonicalStringify(right))),
   };
 }
 
@@ -1422,11 +1708,49 @@ export function sealComposition(value: Composition): Composition {
   return compositionContent(value);
 }
 
+function assertVisualScope(
+  scope: VisualScope,
+  timeline: Timeline | undefined,
+  label: string,
+): void {
+  if (scope === null || typeof scope !== "object" || !Array.isArray(scope.members)) {
+    throw new Error(`${label} is invalid.`);
+  }
+  const memberIds = new Set<string>();
+  for (const [index, member] of scope.members.entries()) {
+    const memberLabel = `${label}.members.${index}`;
+    if (member === null || typeof member !== "object") throw new Error(`${memberLabel} is invalid.`);
+    assertNonEmpty(member.id, `${memberLabel} id`);
+    if (memberIds.has(member.id)) throw new Error(`${label} contains duplicate member id ${member.id}.`);
+    memberIds.add(member.id);
+    if (member.kind === "track") {
+      assertVisualTrackIdentity(member.track, timeline);
+      continue;
+    }
+    if (member.kind !== "stack") throw new Error(`${memberLabel}.kind is invalid.`);
+    assertVisualScope(member.scope, timeline, `${memberLabel}.scope`);
+    if (!visualScopeTracks(member.scope).some((track) => track.items.some((item) => item.kind === "present"))) {
+      throw new Error(`${memberLabel} must contain a source-owning Present.`);
+    }
+  }
+}
+
+export function assertVisualScopeIdentity(scope: VisualScope, timeline?: Timeline): void {
+  if (timeline !== undefined) assertTimelineIdentity(timeline);
+  assertVisualScope(scope, timeline, "VisualScope");
+}
+
 export function assertCompositionIdentity(composition: Composition, timeline?: Timeline): void {
+  if (composition === null || typeof composition !== "object" || Array.isArray(composition)) {
+    throw new Error("Composition is invalid.");
+  }
   assertNonEmpty(composition.id, "Composition id");
   if (timeline !== undefined) assertTimelineIdentity(timeline);
   if (
-    !Number.isSafeInteger(composition.canvas.width)
+    composition.canvas === null
+    || typeof composition.canvas !== "object"
+    || Array.isArray(composition.canvas)
+    || !Number.isSafeInteger(composition.canvas.width)
     || composition.canvas.width <= 0
     || !Number.isSafeInteger(composition.canvas.height)
     || composition.canvas.height <= 0
@@ -1434,14 +1758,9 @@ export function assertCompositionIdentity(composition: Composition, timeline?: T
   ) {
     throw new Error("Composition canvas is invalid.");
   }
-  const ids = new Set<string>();
-  for (const track of composition.tracks) {
-    if (ids.has(track.id)) throw new Error(`Composition contains duplicate Track id ${track.id}.`);
-    ids.add(track.id);
-    if (track.kind === "visual") {
-      assertVisualTrackIdentity(track, timeline);
-    } else {
-      assertAudioTrackIdentity(track, timeline);
-    }
+  assertVisualScope(composition.visual, timeline, "Composition.visual");
+  if (!Array.isArray(composition.audio)) throw new Error("Composition.audio is invalid.");
+  for (const track of composition.audio) {
+    assertAudioTrackIdentity(track, timeline);
   }
 }

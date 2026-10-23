@@ -1,6 +1,5 @@
 export type {
   Awaitable,
-  ResolvedSourceAsset,
   ResolvedSource,
   SourceAssetRequest,
   SourceAssetResolver,

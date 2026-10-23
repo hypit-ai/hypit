@@ -185,7 +185,7 @@ export const imageOperationsMarkupSurfaces = [{
       example: `<image:Transform id="clean-shot" source={shot.image} program={soft-denoise}/>`,
       notes: [
         "The element is empty; it accepts no children and no text.",
-        "The published image is the transformed image itself, carrying no source digest, Provider name or copied upstream metadata.",
+        "The published image is the transformed image itself; its value contains only the resulting BlobRef.",
         "A Program on its own produces no image; naming it here is what runs it.",
       ],
     },
@@ -198,10 +198,10 @@ export const imageOperationsManifest: ModuleManifest = {
   version: imageOperationsModuleRef.version,
   dependencies: [blobDependency, spatialDependency],
   types: [
-    { name: imageTransformTypes.program.name },
-    { name: imageComposeTypes.options.name },
-    { name: imageComposeTypes.layerSpec.name },
-    { name: imageComposeTypes.layerSet.name },
+    imageTransformTypes.program.name,
+    imageComposeTypes.options.name,
+    imageComposeTypes.layerSpec.name,
+    imageComposeTypes.layerSet.name,
   ],
   capabilities: [
     { name: imageOperationsCapabilities.transform.name, returns: blobTypes.blob },

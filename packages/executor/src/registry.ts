@@ -11,12 +11,19 @@ import type {
   ProducerRegistrar,
 } from "@hypit/producer";
 import type { CapabilityRef, ProducerRef, TypeRef } from "@hypit/protocol";
-import { capabilityKey, producerKey, sameCapability, sameType } from "@hypit/protocol";
+import {
+  capabilityIdentity,
+  capabilityKey,
+  compareCodeUnits,
+  producerIdentity,
+  producerKey,
+  sameCapability,
+  sameType,
+} from "@hypit/protocol";
 import { capacityUnits, verifyCredentialRef } from "@hypit/runtime";
 
 import type {
   ProducerHandler,
-  ProducerRegistration,
   EndpointRegistration,
   EndpointSelection,
 } from "./types.js";
@@ -37,16 +44,17 @@ function verifyScheduling(scheduling: EndpointScheduling | undefined): void {
 }
 
 export class ProducerRegistry implements ProducerRegistrar {
-  readonly #producers = new Map<string, ProducerRegistration>();
+  readonly #producers = new Map<string, ProducerHandler>();
 
   registerProducer(producer: ProducerRef, handler: ProducerHandler): void {
-    const key = producerKey(producer);
-    if (this.#producers.has(key)) throw new Error(`producer ${key} is already registered`);
-    this.#producers.set(key, { handler });
+    const identity = producerIdentity(producer);
+    const display = producerKey(producer);
+    if (this.#producers.has(identity)) throw new Error(`producer ${display} is already registered`);
+    this.#producers.set(identity, handler);
   }
 
-  producer(ref: ProducerRef): ProducerRegistration | undefined {
-    return this.#producers.get(producerKey(ref));
+  producer(ref: ProducerRef): ProducerHandler | undefined {
+    return this.#producers.get(producerIdentity(ref));
   }
 }
 
@@ -74,7 +82,7 @@ export class EndpointRegistry implements EndpointRegistrar {
    */
   bind(capability: CapabilityRef, endpointId: string): void {
     if (!endpointId.trim()) throw new Error("binding endpoint id must not be empty");
-    this.#bindings.set(capabilityKey(capability), endpointId);
+    this.#bindings.set(capabilityIdentity(capability), endpointId);
   }
 
   /** Endpoint instance ids that registered at least one capability. */
@@ -102,9 +110,9 @@ export class EndpointRegistry implements EndpointRegistrar {
     return [...resources.entries()].filter(([, variants]) => variants.size > 1).map(([resource, variants]) => ({
       resource,
       limits: [...new Set([...variants.values()].map((variant) => variant.limit))].sort((a, b) => a - b),
-      settings: [...variants.keys()].sort((a, b) => a.localeCompare(b, "en", { numeric: true })),
+      settings: [...variants.keys()].sort(compareCodeUnits),
       endpointIds: [...new Set([...variants.values()].flatMap((variant) => [...variant.endpoints]))].sort(),
-    })).sort((a, b) => a.resource.localeCompare(b.resource));
+    })).sort((a, b) => compareCodeUnits(a.resource, b.resource));
   }
 
   /** Capabilities offered by more than one Endpoint, with the ids, for a deployment to bind. */
@@ -116,7 +124,7 @@ export class EndpointRegistry implements EndpointRegistrar {
       const bound = this.#bindings.get(key);
       found.push({ capability: registrations[0]!.capability, endpointIds: ids, ...(bound === undefined ? {} : { bound }) });
     }
-    return found.sort((left, right) => capabilityKey(left.capability).localeCompare(capabilityKey(right.capability)));
+    return found.sort((left, right) => compareCodeUnits(capabilityKey(left.capability), capabilityKey(right.capability)));
   }
 
   registerImmediateEndpoint(
@@ -128,14 +136,15 @@ export class EndpointRegistry implements EndpointRegistrar {
   ): void {
     if (!id.trim()) throw new Error("endpoint id must not be empty");
     verifyEndpointOptions(options);
-    const key = `${id}\n${capabilityKey(capability)}`;
+    const capabilityId = capabilityIdentity(capability);
+    const key = JSON.stringify([id, capabilityId]);
     if (this.#registrationKeys.has(key)) throw new Error(`endpoint ${id} already registers ${capabilityKey(capability)}`);
     const registration = { kind: "immediate" as const, id, capability, returns, handler, ...options };
     this.#registrationKeys.add(key);
     this.#registrations.push(registration);
-    const registrations = this.#registrationsByCapability.get(capabilityKey(capability)) ?? [];
+    const registrations = this.#registrationsByCapability.get(capabilityId) ?? [];
     registrations.push(registration);
-    this.#registrationsByCapability.set(capabilityKey(capability), registrations);
+    this.#registrationsByCapability.set(capabilityId, registrations);
   }
 
   registerAsyncEndpoint(
@@ -147,18 +156,19 @@ export class EndpointRegistry implements EndpointRegistrar {
   ): void {
     if (!id.trim()) throw new Error("endpoint id must not be empty");
     verifyEndpointOptions(options);
-    const key = `${id}\n${capabilityKey(capability)}`;
+    const capabilityId = capabilityIdentity(capability);
+    const key = JSON.stringify([id, capabilityId]);
     if (this.#registrationKeys.has(key)) throw new Error(`endpoint ${id} already registers ${capabilityKey(capability)}`);
     const registration = { kind: "asynchronous" as const, id, capability, returns, endpoint, ...options };
     this.#registrationKeys.add(key);
     this.#registrations.push(registration);
-    const registrations = this.#registrationsByCapability.get(capabilityKey(capability)) ?? [];
+    const registrations = this.#registrationsByCapability.get(capabilityId) ?? [];
     registrations.push(registration);
-    this.#registrationsByCapability.set(capabilityKey(capability), registrations);
+    this.#registrationsByCapability.set(capabilityId, registrations);
   }
 
   select(demand: EndpointDemand): EndpointSelection {
-    const key = capabilityKey(demand.capability);
+    const key = capabilityIdentity(demand.capability);
     const registrations = (this.#registrationsByCapability.get(key) ?? [])
       .filter((registration) => sameType(registration.returns, demand.returns));
     const bound = this.#bindings.get(key);

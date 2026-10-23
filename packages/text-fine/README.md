@@ -19,15 +19,15 @@ its evidence into an ordinary Window and pass that Window through `during`.
 <copy:Value id="headline-copy">A useful idea, clearly shown.</copy:Value>
 
 <typo:Flow id="headline" timeline={film.timeline} within={layout.headline}
-  style={title-style} z="40" align="center" block-align="center"
+  style={title-style} align="center" block-align="center"
   during={story-hook} content={headline-copy}/>
 
 <typo:Point id="chapter" timeline={film.timeline} point={layout.chapter}
-  style={label-style} z="40" anchor-inline="start"
+  style={label-style} anchor-inline="start"
   during={chapter-window}>CHAPTER ONE</typo:Point>
 
 <typo:Path id="orbit" timeline={film.timeline} path={layout.orbit}
-  style={orbit-style} z="40" motion={orbit-motion}
+  style={orbit-style} motion={orbit-motion}
   during={orbit-window}>
   FOLLOW THE CURVE
 </typo:Path>
@@ -62,10 +62,10 @@ Content has two explicit author forms:
 <copy:Value id="headline-copy">A useful idea, clearly shown.</copy:Value>
 
 <typo:Flow id="headline" timeline={film.timeline} content={headline-copy}
-  within={layout.headline} style={title-style} z="40" during={film.window}/>
+  within={layout.headline} style={title-style} during={film.window}/>
 
 <typo:Flow id="editorial" timeline={film.timeline} within={layout.editorial}
-  style={body-style} z="40" during={film.window}>
+  style={body-style} during={film.window}>
   <typo:P>Rich <typo:Span style={accent}>authored</typo:Span> typography.</typo:P>
 </typo:Flow>
 ```
@@ -79,8 +79,9 @@ through generic `Text`; it would require a separate explicit rich-document contr
 discoverable from the Surface vocabulary rather than from prose. A `style` on a `<typo:P>` or a
 `<typo:Span>` replaces the whole typography record, not only the paints: that paragraph or run is
 shaped with the referenced Style's own exact font at its own size, weight and slant, so one document
-can mix typefaces. Geometry, form-specific layout and `z` are direct occurrence attributes and never
-enter the reusable Style, so a paragraph or run cannot accidentally move or restack its occurrence.
+can mix typefaces. Geometry and form-specific layout are direct occurrence attributes and never enter
+the reusable Style. Whole-film placement belongs to the parent `<film:Track id="...">`, so a paragraph
+or run cannot accidentally move or restack its occurrence.
 
 There is no aggregate Typography Track or Typography-owned collection Program. Several independent
 occurrences remain several explicit `.visual` contributions; a coordinated text-led visual role is

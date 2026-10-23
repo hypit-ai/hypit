@@ -9,9 +9,6 @@ export {
 } from "./link.js";
 export {
   sealAuthorGraph,
-  resolveLogicalOutput,
-  resolveCandidate,
-  resolveOperation,
   verifyAuthorGraph,
 } from "./graph.js";
 export { planBuild, plannedNeeds } from "./plan.js";

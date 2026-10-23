@@ -185,7 +185,7 @@ function endpoint(client: PolloClient, pollIntervalMs: number, maxOperationMs: n
           const downloaded = await client.download(url);
           blobs.push(await context.resources.put(downloaded.bytes, downloaded.mediaType));
         }
-        return { status: "completed", result: { value: route.packageResult(blobs) }, receipt: { id: handle.taskId } };
+        return { status: "completed", result: route.packageResult(blobs), receipt: { id: handle.taskId } };
       } catch (error) {
         return retrying(error, context.handle, pollIntervalMs) ?? failure(error);
       }

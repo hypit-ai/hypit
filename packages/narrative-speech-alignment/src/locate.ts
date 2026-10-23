@@ -2,7 +2,7 @@ import type { Narrative, NarrativeToken } from "@hypit/narrative";
 import { clockFrameSampleBoundary } from "@hypit/timeline";
 import type { NarrativeAlignmentTiming } from "./types.js";
 import type {
-  AlignedTranscriptEvidence,
+  SpeechTranscriptEvidence,
   SpeechActivitySpan,
   SpeechCharacterEvidence,
   SpeechTranscriptPassage,
@@ -20,7 +20,6 @@ export type LocalSemanticTiming = NarrativeAlignmentTiming;
 
 /** Package-private clock used while aligning exactly one Segment's normalized media. */
 export type AlignmentBasis = {
-  readonly domainId: string;
   readonly frameDomain: {
     readonly frameRate: { readonly numerator: number; readonly denominator: number };
     readonly frameCount: number;
@@ -124,11 +123,8 @@ function validateBasis(narrative: Narrative, basis: AlignmentBasis): void {
   }
 }
 
-function validateEvidence(basis: AlignmentBasis, evidence: AlignedTranscriptEvidence): void {
+function validateEvidence(basis: AlignmentBasis, evidence: SpeechTranscriptEvidence): void {
   const limit = evidenceSampleFrames(basis);
-  if (evidence.domainId !== basis.domainId) {
-    fail("SPEECH_EVIDENCE_DOMAIN", "Aligned transcript evidence belongs to another local domain.");
-  }
   if (evidence.sampleFrames !== limit) {
     fail("SPEECH_EVIDENCE_SPAN", "Aligned transcript evidence sample span differs from its local frame domain.");
   }
@@ -162,7 +158,7 @@ function sampleMidpoint(value: {
 /** Assign acoustic evidence to authored Segments only where both clocks are explicitly connected. */
 function partitionEvidence(
   basis: AlignmentBasis,
-  evidence: AlignedTranscriptEvidence,
+  evidence: SpeechTranscriptEvidence,
 ): readonly SegmentEvidence[] {
   const ranges = basis.segments.map((segment) => ({
     segment,
@@ -427,7 +423,7 @@ function projectSampleTiming(
 export function locateAlignedSegmentTiming(
   narrative: Narrative,
   basis: AlignmentBasis,
-  evidence: AlignedTranscriptEvidence,
+  evidence: SpeechTranscriptEvidence,
 ): LocalSemanticTiming {
   validateBasis(narrative, basis);
   validateEvidence(basis, evidence);

@@ -24,7 +24,7 @@ export const hypitPackage = {
     manifest: gptImageCleanManifest,
   }],
   facets: [
-    ...[gptImageComponent].flatMap((component) => [createProducerPackageFacet(component), createRefinementPackageFacet(component)]),
+    ...[gptImageComponent].flatMap((component) => [createProducerPackageFacet(component.producers ?? []), createRefinementPackageFacet(component.refinements ?? [])]),
     createMarkupSurfaceFacet({
       module: gptImageModuleRef,
     declaration: gptImageMarkupSurfaces.find((item) => item.name === "image")!,

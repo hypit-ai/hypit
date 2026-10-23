@@ -83,4 +83,4 @@ export const depthStackComponent = {
     type: depthStackTypes.program,
     handler: ({ value }) => assertDepthStackProgram(valueOf<DepthStackProgram>(value, "DepthStackProgram")),
   }],
-} satisfies ProducerPackage & RefinementPackage;
+} satisfies { producers?: ProducerPackage; refinements?: RefinementPackage };

@@ -269,4 +269,4 @@ export const rankingComponent = {
     { type: rankingTypes.soundEvents,
       handler: ({ value }) => assertRankingSoundEventPlan(valueOf<RankingSoundEventPlan>(value, "RankingSoundEventPlan")) },
   ],
-} satisfies ProducerPackage & RefinementPackage;
+} satisfies { producers?: ProducerPackage; refinements?: RefinementPackage };

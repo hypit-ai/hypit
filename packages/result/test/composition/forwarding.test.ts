@@ -10,7 +10,7 @@ import type { BlobRef } from "@hypit/protocol";
 
 import {
   acceptedRecords,
-  compositeType,
+  structuredType,
   publication,
   videoType,
 } from "./repository-scenario.js";
@@ -20,7 +20,7 @@ test("an explicitly reused public output is a forward reference and copies no by
   try {
     const prior = await FileBuildResult.create(root, {
       id: "bld_20260902T100000001Z_0000000001",
-      source: { id: "/project/main.svml" },
+      sourceId: "/project/main.svml",
       publication: publication([{ name: "opening.video", output: "logical:opening-video", record: "record:opening" }], ["opening.video"]),
     });
     await prior.sync({
@@ -36,7 +36,7 @@ test("an explicitly reused public output is a forward reference and copies no by
     });
     const reused = {
       id: "bld_20260902T100000002Z_0000000002",
-      source: { id: "/project/main.svml" },
+      sourceId: "/project/main.svml",
       publication: { outputs: [{
         name: "shot.video", output: "logical:shot-video", target: true, type: videoType,
         source: { kind: "historical-output", build: "bld_20260902T100000001Z_0000000001", output: "opening.video" },
@@ -51,7 +51,7 @@ test("an explicitly reused public output is a forward reference and copies no by
     await assert.rejects(FileBuildResult.create(root, {
       ...reused,
       id: "bld_20260902T100000003Z_0000000003",
-      publication: { outputs: reused.publication.outputs.map((output) => ({ ...output, type: compositeType })) },
+      publication: { outputs: reused.publication.outputs.map((output) => ({ ...output, type: structuredType })) },
     }), /wrong type for its forwarded Logical Output/u);
     const result = await FileBuildResult.create(root, reused);
     const manifest = await result.sync({
@@ -84,14 +84,14 @@ test("an explicitly reused public output is a forward reference and copies no by
   }
 });
 
-test("a forward-only Composite is published from manifests without opening its missing value document", async () => {
+test("a forward-only structured value is published from manifests without opening its missing value document", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-result-manifest-forward-"));
   const priorId = "bld_20260902T100000030Z_0000000001";
   const nextId = "bld_20260902T100000031Z_0000000001";
   try {
     const prior = await FileBuildResult.create(root, {
       id: priorId,
-      source: { id: "/project/main.svml" },
+      sourceId: "/project/main.svml",
       publication: publication([{ name: "layout", output: "logical:layout" }], ["layout"]),
     });
     await prior.sync({
@@ -106,7 +106,7 @@ test("a forward-only Composite is published from manifests without opening its m
 
     const forwarded = await FileBuildResult.create(root, {
       id: nextId,
-      source: { id: "/project/main.svml" },
+      sourceId: "/project/main.svml",
       publication: { outputs: [{ name: "layout", output: "logical:layout", target: true, type: videoType,
         source: { kind: "historical-output", build: priorId, output: "layout" } }] },
     });
