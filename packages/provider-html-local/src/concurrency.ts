@@ -18,7 +18,10 @@ export function renderWorkerLimit(
   config: { readonly maxWorkers: number; readonly workers: "auto" | number },
   frameCount: number,
   fps: number,
+  gpuVideo = false,
 ): number {
+  // One GPU scene shares its source decoders and cache across the full timeline.
+  if (config.workers === "auto" && gpuVideo) return 1;
   return Math.min(config.maxWorkers, config.workers === "auto" ? Math.max(1, Math.ceil(frameCount / fps)) : frameCount);
 }
 

@@ -5,6 +5,8 @@ import type { ManagedProgram, ManagedProgramState } from "@hypit/runtime-local/e
 import { browserCacheDirectory, browserDownloadBaseUrl, browserDownloadUrl, browserExecutablePath, configuredBrowserPath, requireBrowserExecutable, selectedBrowserVersion } from "./browser.js";
 import type { BrowserOptions } from "./browser.js";
 import { runProcess } from "./process.js";
+import { electronCacheDirectory, electronDownloadUrl, electronExecutablePath, recommendedElectronVersion, requireElectronExecutable } from "./electron.js";
+import type { ElectronOptions } from "./electron.js";
 
 type MediaToolVersion =
   | { readonly state: "ready"; readonly version: string }
@@ -42,7 +44,7 @@ async function probeHtmlMediaTools(ffprobePath: string, ffmpegPath?: string): Pr
  * rasterization receives the same selected executable instead of invoking browser discovery.
  */
 export function localHtmlBrowserProgram(
-  input: BrowserOptions & {
+  input: BrowserOptions & ElectronOptions & {
     readonly id: string;
     readonly nodePath: string;
     readonly ffprobePath: string;
@@ -52,26 +54,43 @@ export function localHtmlBrowserProgram(
   const version = selectedBrowserVersion(input);
   const selectedPath = browserExecutablePath(input);
   const baseUrl = browserDownloadBaseUrl(input);
+  const electronPath = electronExecutablePath(input);
   const probeBrowser = async (): Promise<ManagedProgramState> => {
     try { await requireBrowserExecutable(selectedPath, version); }
     catch (error) { return { state: "down", detail: error instanceof Error ? error.message : String(error) }; }
     return { state: "ready" };
   };
+  const probeElectron = async (): Promise<ManagedProgramState> => {
+    if (electronPath === undefined) return { state: "ready" };
+    try { await requireElectronExecutable(electronPath); return { state: "ready" }; }
+    catch (error) { return { state: "down", detail: error instanceof Error ? error.message : String(error) }; }
+  };
+  const managedChrome = configuredBrowserPath(input) === undefined;
+  const managedElectron = electronPath !== undefined && input.electronPath === undefined;
   return {
     id: input.id,
-    ...(configuredBrowserPath(input) === undefined ? {
+    ...(managedChrome || managedElectron ? {
       // Projects sharing this installation also share the existing Program lifecycle lock/logs.
-      stateRoot: join(browserCacheDirectory(input), ".hypit-html-browser-program"),
+      stateRoot: join(managedChrome ? browserCacheDirectory(input) : electronCacheDirectory(input), ".hypit-html-browser-program"),
       installation: {
-        probe: probeBrowser,
-        commands: [{ label: `Install Chrome Headless Shell ${version} at ${selectedPath} from ${browserDownloadUrl(input)}`, command: input.nodePath, args: [
+        probe: async () => {
+          if (managedChrome) { const state = await probeBrowser(); if (state.state !== "ready") return state; }
+          return managedElectron ? probeElectron() : { state: "ready" as const };
+        },
+        commands: [...(managedChrome ? [{ label: `Install Chrome Headless Shell ${version} at ${selectedPath} from ${browserDownloadUrl(input)}`, command: input.nodePath, args: [
           "--import", import.meta.resolve("tsx"),
           fileURLToPath(new URL("./browser-install.js", import.meta.url)), browserCacheDirectory(input), version!,
           ...(baseUrl === undefined ? [] : [baseUrl]),
-        ] }],
+        ] }] : []), ...(managedElectron ? [{ label: `Install Electron ${recommendedElectronVersion} at ${electronPath} from ${electronDownloadUrl(input)}`, command: input.nodePath, args: [
+          "--import", import.meta.resolve("tsx"),
+          fileURLToPath(new URL("./electron-install.js", import.meta.url)), electronCacheDirectory(input),
+          ...(input.electronDownloadBaseUrl === undefined ? [] : [input.electronDownloadBaseUrl]),
+        ] }] : [])],
       },
     } : {}),
     async probe(): Promise<ManagedProgramState> {
+      const electron = await probeElectron();
+      if (electron.state !== "ready") return electron;
       const browser = await probeBrowser();
       if (browser.state !== "ready") return browser;
       return await probeHtmlMediaTools(input.ffprobePath, input.ffmpegPath);

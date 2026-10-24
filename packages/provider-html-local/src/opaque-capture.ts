@@ -5,22 +5,24 @@ type RenderWindow = Window & {
   __hypitFrameProgram: { prepare(): Promise<void>; applyFrame(frame: number): Promise<void> };
   __hypitHtmlVisualError?: string;
   __hypitCaptureRoots?: readonly Element[];
+  __hypitPrepareImages(): Promise<void>;
+  __hypitDrawVideoSources?(sources: readonly SourceFrameUpdate[]): Promise<void>;
 };
 
-export type SourceFrameUpdate = { readonly id: string; readonly url: string };
+export type SourceFrameUpdate = { readonly id: string; readonly url: string;
+  readonly sample?: { readonly frame: number; readonly fps: { readonly num: number; readonly den: number }; readonly reverse: boolean } };
 
-/**
- * Capture one already-composited page state as an opaque PNG. The Provider owns
- * the page ABI, exact source-frame overlays and CDP session directly; there is
- * no intermediate rendering engine or patched installed dependency.
- */
-export async function createOpaqueFrameCapture(page: Page, canvas: { readonly width: number; readonly height: number }) {
-  const cdp = await page.createCDPSession();
-  // MP4 has no alpha channel. The authored Canvas paints over this final matte.
-  await cdp.send("Emulation.setDefaultBackgroundColorOverride", { color: { r: 0, g: 0, b: 0, a: 1 } });
+/** Install page-owned resource readiness and prepare deterministic frame states. */
+export async function createFramePreparer(page: Pick<Page, "evaluate">) {
   // Image readiness belongs to this page. A seek can select a new image through
   // attributes, a CSS class or a pseudo-element after initial page readiness.
   await page.evaluate(() => {
+    // The Provider supplies compiler-declared video pixels in adjacent layers.
+    // Hide native pixels while retaining the elements for authored frame updates.
+    for (const video of Array.from(document.querySelectorAll<HTMLVideoElement>("video[data-hypit-source-frame]"))) {
+      video.dataset.hypitAuthoredVisibility = video.style.visibility;
+      video.style.visibility = "hidden";
+    }
     const decoded = new Map<string, Promise<void>>();
     const dirtyRoots = new Set<Element>();
     const animatedRoots = new Set<Element>();
@@ -46,7 +48,15 @@ export async function createOpaqueFrameCapture(page: Page, canvas: { readonly wi
       background(value: string, pending: Promise<unknown>[]) {
         for (const match of value.matchAll(/url\(\s*(?:"((?:\\.|[^"\\])*)"|'((?:\\.|[^'\\])*)'|([^\s"'()]+))\s*\)/gu)) {
           const url = (match[1] ?? match[2] ?? match[3] ?? "").trim();
-          if (url) pending.push(this.load(url));
+          if (url) {
+            const resource = new URL(url, document.baseURI);
+            const page = new URL(document.URL);
+            const fragment = resource.hash;
+            resource.hash = page.hash = "";
+            // Local SVG paint servers are resolved by this document's renderer.
+            if (fragment && resource.href === page.href) continue;
+            pending.push(this.load(url));
+          }
         }
       },
       style(style: CSSStyleDeclaration, pending: Promise<unknown>[]) {
@@ -55,6 +65,9 @@ export async function createOpaqueFrameCapture(page: Page, canvas: { readonly wi
         }
       },
       inlineSignature(value: string): string {
+        // Ordinary transform/opacity writes need no CSS parser. Escaped names
+        // still go through CSSOM so escaped resource functions are recognized.
+        if (!/\\|url\(|image-set\(|cross-fade\(|var\(/iu.test(value)) return "";
         const style = document.createElement("span").style;
         style.cssText = value;
         const candidates = [style.backgroundImage, style.maskImage, style.borderImageSource, style.listStyleImage, style.content];
@@ -239,14 +252,15 @@ export async function createOpaqueFrameCapture(page: Page, canvas: { readonly wi
   });
   return async (frame: number, sources: readonly SourceFrameUpdate[] = []) => {
     const start = performance.now();
-    await page.evaluate(async (input) => {
+    const prepareMs = await page.evaluate(async (input) => {
       const w = window as unknown as RenderWindow;
       await w.__hypitFrameProgram.applyFrame(input.frame);
       const active = new Set(input.sources.map(source => source.id));
       for (const image of Array.from(document.querySelectorAll<HTMLImageElement>('[data-hypit-source-frame-image]'))) {
         if (!active.has(image.dataset.hypitSourceFrameImage!)) image.style.display = 'none';
       }
-      await Promise.all(input.sources.map(async source => {
+      if (w.__hypitDrawVideoSources !== undefined) await w.__hypitDrawVideoSources(input.sources);
+      else await Promise.all(input.sources.map(async source => {
         const video = document.getElementById(source.id) as HTMLVideoElement | null;
         if (video === null) throw new Error(`HTML Program source element ${source.id} is missing.`);
         let image = document.querySelector<HTMLImageElement>(`[data-hypit-source-frame-image="${CSS.escape(source.id)}"]`);
@@ -268,20 +282,30 @@ export async function createOpaqueFrameCapture(page: Page, canvas: { readonly wi
         if (image.src !== source.url) image.src = source.url;
         await image.decode();
       }));
-    }, { frame, sources });
-    const sought = performance.now();
-    await page.evaluate(async () => {
-      const w = window as unknown as RenderWindow & { __hypitPrepareImages: () => Promise<void> };
+      const prepareStarted = performance.now();
       await w.__hypitPrepareImages();
       if (w.__hypitHtmlVisualError !== undefined) throw new Error(w.__hypitHtmlVisualError);
-    });
+      return performance.now() - prepareStarted;
+    }, { frame, sources });
     const prepared = performance.now();
+    return { seekMs: prepared - start - prepareMs, prepareMs };
+  };
+}
+
+/** Capture the prepared page state as an opaque PNG. */
+export async function createOpaqueFrameCapture(page: Page, canvas: { readonly width: number; readonly height: number }) {
+  const cdp = await page.createCDPSession();
+  // MP4 has no alpha channel. The authored Canvas paints over this final matte.
+  await cdp.send("Emulation.setDefaultBackgroundColorOverride", { color: { r: 0, g: 0, b: 0, a: 1 } });
+  const prepare = await createFramePreparer(page);
+  return async (frame: number, sources: readonly SourceFrameUpdate[] = []) => {
+    const timing = await prepare(frame, sources);
+    const started = performance.now();
     const result = await cdp.send("Page.captureScreenshot", {
       format: "png", optimizeForSpeed: true, fromSurface: true,
       captureBeyondViewport: false,
       clip: { x: 0, y: 0, width: canvas.width, height: canvas.height, scale: 1 },
     });
-    return { buffer: Buffer.from(result.data, "base64"),
-      seekMs: sought - start, prepareMs: prepared - sought, screenshotMs: performance.now() - prepared };
+    return { buffer: Buffer.from(result.data, "base64"), ...timing, screenshotMs: performance.now() - started };
   };
 }
