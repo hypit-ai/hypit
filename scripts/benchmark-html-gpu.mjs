@@ -90,15 +90,47 @@ if(args.job){
     command('ffmpeg',['-version']);command('ffprobe',['-version']);
     const { loadProject }=await import('./html-gpu-benchmark-fixtures.mjs');
     const fingerprint=createHash('sha256');
-    fingerprint.update(command('git',['rev-parse','HEAD']));fingerprint.update(command('git',['diff','HEAD','--']));
-    for(const file of [script,resolve(root,'scripts/html-gpu-benchmark-fixtures.mjs'),resolve(root,'scripts/html-gpu-benchmark-report.mjs')])fingerprint.update(await readFile(file));
-    for(const project of [videoProject,mgProject]){const data=await loadProject(project);fingerprint.update(JSON.stringify(data.program));for(const [artifact,bytes]of data.blobs){fingerprint.update(artifact.resource);fingerprint.update(bytes);}}
-    fingerprint.update(String(reps));const identity=fingerprint.digest('hex'),stateFile=resolve(directory,'state.json');
+    fingerprint.update(JSON.stringify({scheme:3,node:process.version,platform:process.platform,arch:process.arch,
+      cpu:cpus()[0]?.model,release:release(),memory:totalmem()}));
+    const isSource=file=>!/(?:^|\/)(?:test|dist|node_modules)(?:\/|$)/.test(file)&&/\.(?:[cm]?[jt]s|json|yaml)$/.test(file);
+    const sourceList=spawnSync('git',['ls-files','--cached','--others','--exclude-standard','-z','--',
+      'packages','package.json','pnpm-lock.yaml','tsconfig.json'],{encoding:'utf8',maxBuffer:4*MiB});
+    if(sourceList.status!==0)throw Error('Cannot enumerate benchmark source files: '+sourceList.stderr);
+    const sources=[...new Set(sourceList.stdout.split('\0').filter(file=>file&&isSource(file)))].sort();
+    const harness=['scripts/benchmark-html-gpu.mjs','scripts/html-gpu-benchmark-fixtures.mjs','scripts/html-gpu-benchmark-report.mjs'];
+    for(const file of [...sources,...harness]){fingerprint.update(file+'\0');fingerprint.update(await readFile(resolve(root,file)));fingerprint.update('\0');}
+    const inputs=[];
+    for(const project of [videoProject,mgProject]){const data=await loadProject(project);inputs.push(JSON.stringify(data.program));for(const [artifact,bytes]of data.blobs)inputs.push(artifact.resource,bytes);}
+    inputs.push(String(reps));for(const input of inputs){fingerprint.update(input);fingerprint.update('\0');}
+    const identity=fingerprint.digest('hex'),stateFile=resolve(directory,'state.json');
     let state;try{state=JSON.parse(await readFile(stateFile,'utf8'));}catch(e){if(e.code!=='ENOENT')throw e;}
-    if(state&&state.identity!==identity)throw Error('Source, fixtures or repetition count changed. Select a fresh --out directory.');
+    if(state&&state.identityScheme!==3){
+      const legacyHead=state.resumptions?.at(-1)?.head??state.head;
+      const oldFile=file=>{const result=spawnSync('git',['show',legacyHead+':'+file],{maxBuffer:4*MiB});
+        if(result.status!==0)throw Error('Cannot recover the legacy benchmark harness; select a fresh --out directory.');return result.stdout;};
+      const legacyHarness=harness.map(oldFile),oldRunner=legacyHarness[0].toString();
+      const stripIdentity=text=>{const a=text.indexOf("    const fingerprint=createHash('sha256');"),b=text.indexOf('\n    state??={',a)+1;
+        if(a<0||b<1)throw Error('Unrecognized benchmark identity format.');return text.slice(0,a)+'<identity>'+text.slice(b).replace('    state.identityScheme=3;\n','');};
+      const changed=command('git',['diff','--name-only',legacyHead,'--','packages','package.json','pnpm-lock.yaml','tsconfig.json'])
+        .split('\n').filter(file=>file&&isSource(file));
+      const untracked=spawnSync('git',['ls-files','--others','--exclude-standard','-z','--','packages'],{encoding:'utf8'});
+      if(untracked.status!==0||untracked.stdout.split('\0').some(file=>file&&isSource(file)))throw Error('Untracked production source prevents legacy resume.');
+      const sameHost=state.host.platform===process.platform&&state.host.release===release()&&state.host.node===process.version
+        &&state.host.cpu===cpus()[0]?.model&&state.host.totalMemoryMiB===totalmem()/MiB;
+      if(changed.length||!sameHost||stripIdentity(oldRunner)!==stripIdentity(await readFile(script,'utf8'))
+        ||!legacyHarness[1].equals(await readFile(resolve(root,harness[1])))||!legacyHarness[2].equals(await readFile(resolve(root,harness[2]))))
+        throw Error('Legacy benchmark source or host changed; select a fresh --out directory.');
+      const legacy=createHash('sha256').update(legacyHead);for(const bytes of [...legacyHarness,...inputs])legacy.update(bytes);
+      if(legacy.digest('hex')!==state.identity)throw Error('Legacy script and fixture fingerprint did not match.');
+      state.identityMigration={at:new Date().toISOString(),legacyHead,previous:state.identity,
+        reason:'Verified identical production source, measurement harness, fixtures and host before migrating to a source-content identity.'};
+      state.identity=identity;
+    }
+    if(state&&state.identity!==identity)throw Error('Source, fixtures, host or repetition count changed. Select a fresh --out directory.');
     state??={identity,head:command('git',['rev-parse','HEAD']),dirty:!!command('git',['status','--porcelain']),
       startedAt:new Date().toISOString(),host:{platform:process.platform,release:release(),cpu:cpus()[0]?.model,totalMemoryMiB:totalmem()/MiB,node:process.version},
       videoProject,mgProject,repetitions:reps,results:[]};
+    state.identityScheme=3;
     let readUsage;
     try{const {default:koffi}=await import('koffi');readUsage=koffi.load('/usr/lib/libproc.dylib').func('int proc_pid_rusage(int pid, int flavor, void *buffer)');}catch{}
     function processes(rootPid, observed) {

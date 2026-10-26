@@ -47,7 +47,8 @@ failed cases. Compare medians and ranges within the measured fixtures.
 
 Every job writes its logs, input, result and memory samples under `jobs/`.
 `state.json`, `summary.json` and `REPORT.md` update after each job. Rerunning the
-same command resumes remaining jobs when source and input fingerprints match.
+same command resumes remaining jobs when source, input and host fingerprints match.
+Documentation and test-only commits preserve the source-content identity.
 Completed failures stay in the report; use a fresh output directory for a new
 experiment. Concurrent runners sharing an output directory are rejected.
 
