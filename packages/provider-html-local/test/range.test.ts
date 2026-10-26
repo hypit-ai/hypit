@@ -68,8 +68,8 @@ test("the render deadline is global while stage deadlines are explicit deploymen
   assert.equal(defaults.initializationTimeoutMs, undefined);
   assert.equal(defaults.frameTimeoutMs, undefined);
   assert.equal(defaults.artifactStagingConcurrency, 4);
-  assert.equal(defaults.maxPendingFrameBytes, 256 * 1024 * 1024);
-  assert.equal(defaults.maxDecodedSourceBytes, 1024 * 1024 * 1024);
+  assert.equal(defaults.maxPendingFrameBytes, 128 * 1024 * 1024);
+  assert.equal(defaults.maxDecodedSourceBytes, 2304 * 1024 * 1024);
 
   const explicit = resolveExecutionOptions({ initializationTimeoutMs: 31_000, frameTimeoutMs: 16_000,
     artifactStagingConcurrency: 3, maxPendingFrameBytes: 12_345, maxDecodedSourceBytes: 54_321 });
