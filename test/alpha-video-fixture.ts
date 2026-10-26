@@ -4,9 +4,9 @@ import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { MemoryResourceStore } from "../packages/executor/src/index.js";
 export { MemoryResourceStore };
-import { executeInspectMedia, executeNormalizeMedia } from "../packages/media-local/src/execute.js";
+import { executeInspectMedia } from "../packages/media-local/src/execute.js";
 import type { MediaExecutionEnvironment } from "../packages/media-local/src/execute.js";
-import { verifyMediaInspection, verifySynchronizedMedia } from "@hypit/media";
+import { prepareMedia, verifyMediaInspection } from "@hypit/media";
 import { selectMediaStreams } from "@hypit/media-operations";
 import { canonicalize } from "@hypit/protocol";
 import type { BlobRef } from "@hypit/protocol";
@@ -66,19 +66,20 @@ export function testMediaEnvironment(resources: MemoryResourceStore): MediaExecu
   };
 }
 
-export async function normalizeTestVideo(resources: MemoryResourceStore, source: BlobRef, withAudio: boolean) {
+export async function prepareTestVideo(
+  resources: MemoryResourceStore,
+  source: BlobRef,
+  withAudio: boolean,
+  id = "test-video",
+) {
   const env = testMediaEnvironment(resources);
   const inspected = await executeInspectMedia(env, canonicalize({ source }));
   const inspection = inspected.value;
   verifyMediaInspection(inspection);
-  const frameRate = { numerator: 12, denominator: 1 };
   const selection = selectMediaStreams(inspection, {
-    video: { mode: "primary-moving" }, audio: { mode: withAudio ? "default" : "none" }, spanAuthority: "video", frameRate,
+    video: { mode: "primary-moving" }, audio: { mode: withAudio ? "default" : "none" }, spanAuthority: "video",
   });
-  const result = await executeNormalizeMedia(env, canonicalize({ source, inspection, selection, frameRate,
-    audio: { sampleRate: 48_000, channels: 2, codec: "pcm_s16le", loudness: "preserve" } }));
-  verifySynchronizedMedia(result.value);
-  return result.value;
+  return prepareMedia({ id, source, inspection, selection });
 }
 
 export async function writeTestArtifact(resources: MemoryResourceStore, source: BlobRef, path: string) {

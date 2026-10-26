@@ -6,7 +6,7 @@ import { timelineFixture } from "../../../test/timeline-fixture.js";
 
 import { blobTypes } from "@hypit/blob";
 import { compositionTypes, visualElements } from "@hypit/composition";
-import type { VisualElement, VisualSourceTimeMap } from "@hypit/composition";
+import type { VisualElement } from "@hypit/composition";
 import {
   decodeDepthStackLabelSurface,
   decodeDepthStackSurface,
@@ -31,10 +31,10 @@ import type {
   DepthStackSpec,
 } from "@hypit/depth-stack";
 import type { FontArtifactRef } from "@hypit/media";
-import { mediaTypes } from "@hypit/media";
+import { mediaTypes, preparedVisualExtent, prepareMedia } from "@hypit/media";
 import type { MediaLayerSet } from "@hypit/visual-track";
-import { temporalTypes } from "@hypit/temporal";
-import type { TemporalInstant } from "@hypit/temporal";
+import { defaultTemporalRelationSpec, temporalTypes, temporalValueInFrames } from "@hypit/temporal";
+import type { TemporalInstant, TemporalMap } from "@hypit/temporal";
 import { canvasFrame, sealCanvas, sealSpatialFrame, spatialTypes } from "@hypit/spatial";
 import { recipeType } from "@hypit/recipe";
 import { sealText, textTypes } from "@hypit/text";
@@ -98,7 +98,26 @@ function stillMaterial(name: string): MediaLayerSet {
   };
 }
 
-function timedMaterial(name: string): MediaLayerSet {
+function timedMaterial(
+  name: string,
+  frameRate = { numerator: 30, denominator: 1 },
+  frameCount = 12,
+): MediaLayerSet {
+  const prepared = prepareMedia({
+    id: `prepared-${name}`,
+    source: video(name),
+    inspection: { container: { formatNames: ["mp4"] }, streams: [{
+      kind: "video" as const, index: 0, codecType: "video" as const, codecName: "h264", role: "moving" as const,
+      disposition: { default: true, attachedPicture: false }, timingStatus: "admissible" as const,
+      timeBase: { numerator: frameRate.denominator, denominator: frameRate.numerator },
+      startPts: { ticks: "0", timeBase: { numerator: frameRate.denominator, denominator: frameRate.numerator } },
+      endPts: { ticks: String(frameCount), timeBase: { numerator: frameRate.denominator, denominator: frameRate.numerator } },
+      decodedUnitCount: frameCount, width: 120, height: 90,
+      sampleAspectRatio: { numerator: 1, denominator: 1 }, rotationDegrees: 0 as const,
+      averageFrameRate: frameRate, nominalFrameRate: frameRate,
+    }] },
+    selection: { videoStreamIndex: 0, spanAuthority: "video" },
+  });
   return {
 
     layers: [{
@@ -106,10 +125,8 @@ function timedMaterial(name: string): MediaLayerSet {
       kind: "sample",
       source: {
         kind: "timed",
-        artifact: video(name),
-        extent: { widthPx: 120, heightPx: 90 },
-        frameRate: { numerator: 30, denominator: 1 },
-        frameCount: 12,
+        media: prepared,
+        extent: preparedVisualExtent(prepared),
       },
       placement: { kind: "fit", fit: {
         sizing: "contain",
@@ -118,14 +135,7 @@ function timedMaterial(name: string): MediaLayerSet {
         offsetPx: { x: 0, y: 0 },
         constraint: "bounded",
       } },
-      sourceTime: { kind: "spec", value: { relations: [{
-        kind: "rate",
-        target: { from: { edge: "start", offsetFrames: 0 }, until: { edge: "end", offsetFrames: 0 } },
-        targetAt: { edge: "start", offsetFrames: 0 },
-        sourceAt: { edge: "start", offsetFrames: 0 },
-        rate: { numerator: 1, denominator: 1 },
-        source: { from: { edge: "start", offsetFrames: 0 }, until: { edge: "end", offsetFrames: 0 } },
-      }] } },
+      sampling: { kind: "relation", value: defaultTemporalRelationSpec() },
       appearance: { opacity: 1, filter: { blurPx: 0, brightness: 1, contrast: 1, saturation: 1 } },
     }],
   };
@@ -226,6 +236,27 @@ function element(track: ReturnType<typeof renderDepthStack>, presentId: string, 
   return value;
 }
 
+function mapFrames(map: TemporalMap) {
+  return map.stages[0]!.pieces.map((piece) => {
+    const position = (value: typeof piece.sourceAtStart) => {
+      const result = temporalValueInFrames(value, { frameRate: { numerator: 30, denominator: 1 } });
+      return { numerator: Number(result.numerator), denominator: Number(result.denominator) };
+    };
+    return {
+      target: {
+        startFrame: position(piece.target.start).numerator,
+        endFrameExclusive: position(piece.target.end).numerator,
+      },
+      sourceAtStart: position(piece.sourceAtStart),
+      rate: piece.rate,
+      ...(piece.wrap === undefined ? {} : { wrap: {
+        startFrame: position(piece.wrap.start).numerator,
+        endFrameExclusive: position(piece.wrap.end).numerator,
+      } }),
+    };
+  });
+}
+
 test("finite DepthStack state resolves previous-only, next-only, mixed and zero-neighbor boundaries", () => {
   const value = program({ triggers: [0, 10, 20, 30, 40], terminal: 60 });
   assert.deepEqual([...resolveDepthStackState(value, 0)], [[0, 0], [1, 1]]);
@@ -299,12 +330,13 @@ test("timed Cards hold future head/current clock/past tail without renderer play
   assert.equal(future.kind, "video");
   assert.equal(current.kind, "video");
   assert.equal(past.kind, "video");
-  assert.equal((future.sourceTime as VisualSourceTimeMap).pieces[0]?.rate.numerator, 0);
-  assert.deepEqual((current.sourceTime as VisualSourceTimeMap).pieces[0]?.target,
+  assert.equal(mapFrames(future.sampling)[0]?.rate.numerator, 0);
+  assert.deepEqual(mapFrames(current.sampling)[0]?.target,
     { startFrame: 0, endFrameExclusive: 12 });
-  assert.equal((current.sourceTime as VisualSourceTimeMap).pieces[0]?.wrap, undefined);
-  assert.equal((past.sourceTime as VisualSourceTimeMap).pieces[0]?.sourceAtStart.numerator, 11);
-  assert.equal((past.sourceTime as VisualSourceTimeMap).pieces[0]?.rate.numerator, 0);
+  assert.equal(mapFrames(current.sampling)[0]?.wrap, undefined);
+  assert.equal(mapFrames(past.sampling)[0]?.sourceAtStart.numerator, 12,
+    "the exact source end boundary is retained; terminal sampling owns its left-limit frame");
+  assert.equal(mapFrames(past.sampling)[0]?.rate.numerator, 0);
 });
 
 test("continue derives one explicit periodic clock and past hide removes the retained state", () => {
@@ -316,19 +348,31 @@ test("continue derives one explicit periodic clock and past hide removes the ret
   const past = element(continued, "card-1:stage:2", (value) => value.kind === "video");
   assert.equal(future.kind, "video");
   assert.equal(past.kind, "video");
-  assert(future.sourceTime !== undefined);
-  assert(past.sourceTime !== undefined);
-  assert.deepEqual(future.sourceTime.pieces[0]?.wrap, { startFrame: 0, endFrameExclusive: 12 });
-  assert.deepEqual(past.sourceTime.pieces[0]?.wrap, { startFrame: 0, endFrameExclusive: 12 });
+  assert.deepEqual(mapFrames(future.sampling)[0]?.wrap, { startFrame: 0, endFrameExclusive: 12 });
+  assert.deepEqual(mapFrames(past.sampling)[0]?.wrap, { startFrame: 0, endFrameExclusive: 12 });
   const derived = renderDepthStack(space, program({
     materials: [timedMaterial("one"), stillMaterial("two"), stillMaterial("three")],
     playbacks: [cardSpec("card-1", "continue"), cardSpec("card-2"), cardSpec("card-3")],
   }));
   const derivedPast = element(derived, "card-1:stage:2", (value) => value.kind === "video");
-  assert.deepEqual(derivedPast.kind === "video" ? derivedPast.sourceTime.pieces[0]?.wrap : undefined,
+  assert.deepEqual(derivedPast.kind === "video" ? mapFrames(derivedPast.sampling)[0]?.wrap : undefined,
     { startFrame: 0, endFrameExclusive: 12 });
   const hidden = program({ playbacks: [cardSpec("card-1", "hide"), cardSpec("card-2"), cardSpec("card-3")] });
   assert.equal(resolveDepthStackState(hidden, 1).has(0), false);
+});
+
+test("continue advances by exact programme time across a different source frame rate", () => {
+  const continued = renderDepthStack(space, program({
+    materials: [timedMaterial("one-24", { numerator: 24, denominator: 1 }, 12), stillMaterial("two"), stillMaterial("three")],
+    playbacks: [cardSpec("card-1", "continue"), cardSpec("card-2"), cardSpec("card-3")],
+  }));
+  const past = element(continued, "card-1:stage:2", (value) => value.kind === "video");
+  assert.equal(past.kind, "video");
+  const piece = past.kind === "video" ? past.sampling.stages[0]?.pieces[0] : undefined;
+  assert.ok(piece !== undefined);
+  const phase = temporalValueInFrames(piece.sourceAtStart, { frameRate: { numerator: 24, denominator: 1 } });
+  assert.deepEqual({ numerator: Number(phase.numerator), denominator: Number(phase.denominator) },
+    { numerator: 4, denominator: 1 });
 });
 
 const font: FontArtifactRef = {
@@ -393,7 +437,7 @@ test("the author Surface keeps every source, trigger, terminal, Frame and option
     ["within", plain("within", spatialTypes.frame)],
     ["frame", plain("frame", spatialTypes.frame)],
     ["first", plain("first", blobTypes.blob)], ["first-extent", plain("first-extent", spatialTypes.extent)],
-    ["second", plain("second", mediaTypes.synchronized)], ["one", plain("one", temporalTypes.instant)],
+    ["second", plain("second", mediaTypes.prepared)], ["one", plain("one", temporalTypes.instant)],
     ["two", plain("two", temporalTypes.instant)], ["terminal", plain("terminal", temporalTypes.instant)],
     ["deck-style", appearance("deck-style", { "visible-previous": 1, "visible-next": 1, "reflow-frames": 4, fit: "cover" })],
     ["video-style", appearance("video-style", { fit: "contain", "playback-future": "continue" })],

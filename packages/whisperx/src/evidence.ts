@@ -28,7 +28,7 @@ function fourCc(bytes: Uint8Array, offset: number): string {
   return String.fromCharCode(...bytes.subarray(offset, offset + 4));
 }
 
-/** Refuse evidence bytes that would require a Provider to normalize audio a second time. */
+/** Verify the exact evidence-audio representation accepted by WhisperX Providers. */
 export function assertWhisperXEvidenceWav(bytes: Uint8Array, sampleFrames: number): void {
   assert(bytes.byteLength >= 44 && fourCc(bytes, 0) === "RIFF" && fourCc(bytes, 8) === "WAVE",
     "WhisperX evidence Artifact is not a WAV file");

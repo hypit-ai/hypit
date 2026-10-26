@@ -66,8 +66,8 @@ from the earlier attempt in its Run.
 
 When a usable receipt does exist and gives access to a generated asset, the Agent can retrieve that
 asset as an ordinary project file and select it with `file` and `satisfy` in the new Run. This supplies
-the file Output; downstream preparation and alignment still run when needed. Completed normalized
-media, local-domain and alignment Outputs can instead be reused independently through the existing Result.
+the file Output; downstream preparation and alignment still run when needed. Completed prepared-media,
+local-domain and alignment Outputs can instead be reused independently through the existing Result.
 
 Use `status <build-id> --verbose` for task IDs, Endpoints and progress. Use
 `inspect <build-id> --verbose --json` for the Result's full retained execution records, including

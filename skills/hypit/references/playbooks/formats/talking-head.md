@@ -71,7 +71,7 @@ the actual duration; [media preparation](../../production/media.md) explains how
 align it. A Segment can contain several edited shots, Caption Cue separators, graphic changes and
 speaking turns. Choose its boundaries from the performance it carries.
 
-Normalize the produced speaking media, align its own audio to its Segment, construct its equal-length
+Prepare the produced speaking media, align its own audio to its Segment, construct its equal-length
 Timeline Window, and project that alignment through the local domain/Window relation. Keep that performance's sound
 when B-roll covers its picture. Place evidence on
 Selections and reveals on the component's declared timing inputs. A persistent board can continue

@@ -43,8 +43,8 @@ recursive occurrence path through nested Stacks; Track `id` remains the identity
 The same Track may therefore be placed more than once without being rewritten. Element children are
 recursive values rather than parent references; each child position is relative to its containing
 element, while the Present root is relative to the Canvas.
-Animation keyframes use `atFrame` offsets from the Present's start. Media sampling targets use the
-same local frame origin and map to exact source frames.
+Animation keyframes use `atFrame` offsets from the Present's start. Timed media carries an exact
+occurrence-local `TemporalMap`; terminal visual compilation alone resolves it onto decoded frames.
 
 The exported `VisualElement` union covers `box`, `mask`, `text`, `text-flow`, `path-text`, `image`,
 `video`, `surface` and `program`. Text carries exact FontArtifactRef values; images and videos carry BlobRefs;
@@ -64,15 +64,17 @@ small: `silence`, source `AudioClip`, additive `mix`, and package-owned `process
 explicit node and signal port. The graph must be acyclic, every reference must resolve, and every
 node must contribute to the declared output; Composition does not retain disconnected metadata.
 
-Source Clips own their audio artifacts, target sample ranges, exact partial source-time maps, gain
-and fades. Target positions use the Timeline's canonical 48 kHz sample domain. Process formats own
+Source Clips own only a selected `PreparedAudioSource`, its preparation relation, exact absolute target ranges,
+exact partial temporal sampling maps, gain and fades. Unrelated visual and container-selection facts stop at
+the Audio Track boundary. A terminal audio compiler resolves preparation, target, sampling and fade boundaries onto
+its 48 kHz execution domain together. Process formats own
 their payload and input-port semantics; Composition carries and validates only the common programme
 envelope rather than maintaining an effect catalogue.
 
 `audioGraphFromClips` constructs the common source-plus-mix subset. `sealAudioTrack` and
 `assertAudioTrackIdentity` are the corresponding public constructors/checks, while
 `audioTrackClips` is an observation helper for consumers that need to enumerate source leaves. An
-AudioTrack without teaching Film or Core about its routing.
+author package can therefore publish an AudioTrack without teaching Film or Core about its routing.
 
 ## Composition
 
@@ -87,7 +89,7 @@ their Timeline identity; assembly and rendering receive the corresponding Timeli
 `@hypit/film` is one author-facing way to assemble it;
 `@hypit/html-video` consumes it to produce a video.
 
-### Visibility without a new source-time origin
+### Visibility without a new sampling origin
 
 A VisualPresent may supply `visibility`, an ordered list of non-overlapping subranges in program
 frames, all inside its `span`. Omission means the full span; an empty list means never visible.

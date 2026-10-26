@@ -12,7 +12,7 @@ Adapt those relationships to a new work; its scene list and styling are choices 
 | [Complex spoken explainer](complex-explainer/README.md) | Coordinated project scenes, moving presenter framing, independent Caption, semantic graphic events and graphics-only intervals | Download its accepted media/Result bundle; render locally |
 
 The three generation entries use `reference.svml` and an adjacent `reference.svrun`. They generate
-their main images, recurring voice references and generated clips, then normalize media, align the
+their main images, recurring voice references and generated clips, then prepare media, align the
 Script where needed, and compose the video. They need no earlier Build Result or manually supplied
 presenter, host or scene image. The explainer instead opens a complete 137-second production with 17
 accepted performance clips, recorded demonstrations, pixel graphics and sound; its default Run reuses

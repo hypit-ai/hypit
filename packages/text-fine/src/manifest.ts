@@ -1,4 +1,4 @@
-import { timelineTypes, timelineDependency } from "@hypit/timeline";
+import { frameSpanSchema, timelineTypes, timelineDependency } from "@hypit/timeline";
 import { readFile } from "node:fs/promises";
 
 import {
@@ -57,11 +57,7 @@ export const textFineProducers = {
 } satisfies Record<string, ProducerRef>;
 
 const string = { kind: "string", minLength: 1 } as const;
-const number = { kind: "number" } as const;
-const positive = { kind: "number", minimum: 0.000001 } as const;
 const integer = { kind: "number", integer: true, minimum: 0 } as const;
-const positiveInteger = { kind: "number", integer: true, minimum: 1 } as const;
-const signedInteger = { kind: "number", integer: true } as const;
 const object = (fields: Readonly<Record<string, { readonly schema: ValueSchema; readonly optional?: boolean }>>): ValueSchema => ({ kind: "object", fields });
 const enumString = (values: readonly string[]): ValueSchema => ({ kind: "string", enum: values });
 
@@ -131,19 +127,11 @@ export const textItemSpecSchema: ValueSchema = object({
 export const plainTextItemSpecSchema: ValueSchema = object({
   id: { schema: string },
 });
-const span = object({ startFrame: { schema: integer }, endFrameExclusive: { schema: positiveInteger } });
 export const fineTextOccurrenceSchema: ValueSchema = object({
   timelineId: { schema: string },
-  id: { schema: string }, span: { schema: span }, placement: { schema: textPlacementSchema },
+  id: { schema: string }, span: { schema: frameSpanSchema }, placement: { schema: textPlacementSchema },
   document: { schema: visualTextDocumentSchema }, style: { schema: textStyleSchema }, motion: { schema: textMotionSchema },
 });
-const textMaskSpecSchema = object({
-
-  id: { schema: string }, mode: { schema: enumString(["alpha", "luminance"]) },
-  materialFit: { schema: enumString(["contain", "cover", "fill"]) },
-});
-
-
 /** The document an occurrence owns, written the same way inside a Point, Flow or Path. */
 const documentChildren = [
   { tag: "P", cardinality: "many",

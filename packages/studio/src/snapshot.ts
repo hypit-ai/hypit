@@ -12,7 +12,7 @@ import { audioTrackClips, compositionTypes } from "@hypit/composition";
 import type { AudioTrack, VisualTrack } from "@hypit/composition";
 import type { TypeRef } from "@hypit/hypit/protocol";
 import { timelineFrameCount } from "@hypit/timeline";
-import { temporalTypes } from "@hypit/temporal";
+import { resolveTemporalBoundary, temporalTypes } from "@hypit/temporal";
 import type { TemporalInstant } from "@hypit/temporal";
 import { sameModule, sameType } from "@hypit/hypit/protocol";
 
@@ -47,7 +47,6 @@ export type SnapshotProjection = Pick<StudioProjection,
   };
 
 /** Sound is placed in samples rather than frames, in the canonical 48 kHz. */
-const SAMPLE_RATE = 48_000;
 
 /**
  * Both kinds of Track say the same thing in their own domain: a named span.
@@ -78,16 +77,15 @@ function spans(
   if (!sameType(type, compositionTypes.audioTrack)) {
     throw new Error(`Studio cannot project terminal spans for ${type.module.name}@${type.module.version}#${type.name}.`);
   }
-  const perSecond = frameRate.numerator / frameRate.denominator;
   return audioTrackClips(track as AudioTrack).map((clip) => ({
     id: clip.id,
     ...(clip.subjectId === undefined ? {} : { subjectId: clip.subjectId }),
     terminalKind: "audio" as const,
     targets: [],
-    startFrame: Math.floor(clip.target.startSample / SAMPLE_RATE * perSecond),
+    startFrame: resolveTemporalBoundary(clip.target.start, { frameRate }, "inside"),
     endFrameExclusive: Math.max(
-      Math.floor(clip.target.startSample / SAMPLE_RATE * perSecond) + 1,
-      Math.ceil(clip.target.endSampleExclusive / SAMPLE_RATE * perSecond),
+      resolveTemporalBoundary(clip.target.start, { frameRate }, "inside") + 1,
+      resolveTemporalBoundary(clip.target.end, { frameRate }, "cover"),
     ),
     // Sound is under every picture, so it sits at the bottom of the timeline.
     stackOrder: Number.MIN_SAFE_INTEGER,

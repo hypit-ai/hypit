@@ -309,6 +309,45 @@ test("an asynchronous Endpoint starts once and is polled until complete", async 
   assert.equal((await operations.read(pending.operation))?.status, "completed");
 });
 
+test("a persisted remote acknowledgement survives a later submission failure", async () => {
+  const operations = memoryOperations();
+  let starts = 0;
+  let polls = 0;
+  const endpoint: AsyncEndpoint = {
+    async start(context) {
+      starts += 1;
+      await context.checkpoint?.({
+        status: "accepted",
+        handle: { remoteJob: "accepted-before-local-failure" },
+        receipt: { id: "accepted-before-local-failure" },
+      });
+      throw new Error("local work failed after the remote acknowledgement");
+    },
+    poll({ handle }) {
+      polls += 1;
+      assert.deepEqual(handle, { remoteJob: "accepted-before-local-failure" });
+      return { status: "completed", result: "recovered without another submission" };
+    },
+  };
+
+  const firstExecutor = asyncExecutor(endpoint, operations);
+  const [first] = await new InProcessBuildScheduler(firstExecutor)
+    .run([submission("checkpointed-submission", createGreetingBuild())]);
+  assert.equal(first?.status, "paused");
+  assert.equal(starts, 1);
+  const pending = first?.outcomes.find((entry) => entry.status === "pending");
+  assert.ok(pending?.operation);
+  const acknowledged = await operations.read(pending.operation);
+  assert.equal(acknowledged?.status, "running");
+  assert.deepEqual(acknowledged?.receipt, { id: "accepted-before-local-failure" });
+
+  const secondExecutor = asyncExecutor(endpoint, operations);
+  const [second] = await new InProcessBuildScheduler(secondExecutor).run([continuation(first!)]);
+  assert.equal(second?.status, "complete");
+  assert.equal(starts, 1);
+  assert.equal(polls, 1);
+});
+
 test("asynchronous actions expose progress before returning without treating it as acknowledgement", async () => {
   const operations = memoryOperations();
   const progress: unknown[] = [];

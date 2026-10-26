@@ -1,6 +1,7 @@
 import type { Facet } from "@hypit/hypit/facet";
 import { sameType } from "@hypit/hypit/protocol";
 import type { CanonicalValue, ModuleRef, ProducerRef, TypeRef, ValueSchema } from "@hypit/hypit/protocol";
+import type { FrameSpan } from "@hypit/timeline";
 
 export const studioCompanionFacetAbi = "hypit.studio-companion@1";
 
@@ -84,12 +85,10 @@ export type StudioTemporalInstantProjection = {
   readonly authority: StudioTemporalAuthority;
 };
 
-export type StudioTemporalWindowProjection = {
+export type StudioTemporalWindowProjection = FrameSpan & {
   readonly kind: "window";
   readonly start: StudioTemporalInstantProjection;
   readonly end: StudioTemporalInstantProjection;
-  readonly startFrame: number;
-  readonly endFrameExclusive: number;
 };
 
 export type StudioTemporalProjection = StudioTemporalInstantProjection | StudioTemporalWindowProjection;
@@ -181,7 +180,7 @@ export type StudioSourceBinding = {
   /** Author vocabulary name at the terminal source element. */
   readonly name: string;
   readonly value: CanonicalValue;
-  /** Public author value structure; absent only for legacy scalar bindings. */
+  /** Public author value structure; omitted for relationship-only bindings that are not typed fields. */
   readonly schema?: ValueSchema;
   readonly language: StudioParameterLanguage;
   readonly writable: boolean;
@@ -421,14 +420,12 @@ export type StudioTemporalDomainItem = {
   readonly editable?: boolean;
   /** Let the code pane follow this item's source range while the playhead crosses it. */
   readonly followPlayhead?: boolean;
-} & ({
+} & ((FrameSpan & {
   readonly kind: "span";
   readonly appearance: "block" | "compact";
   readonly startAnchorId: string;
   readonly endAnchorId: string;
-  readonly startFrame: number;
-  readonly endFrameExclusive: number;
-} | {
+}) | {
   readonly kind: "point";
   readonly appearance: "marker";
   readonly anchorId: string;
@@ -561,21 +558,17 @@ export type StudioTerminalLink = {
   readonly elementId?: string;
 };
 
-export type StudioSpan = {
+export type StudioSpan = FrameSpan & {
   readonly id: string;
   /** Exact public terminal provenance; never inferred from id syntax. */
   readonly subjectId?: string;
-  readonly startFrame: number;
-  readonly endFrameExclusive: number;
   readonly stackOrder: number;
 };
 
-export type StudioItemDraft = {
+export type StudioItemDraft = FrameSpan & {
   readonly id: string;
   readonly authoredId: string;
   readonly display: StudioItemDisplay;
-  readonly startFrame: number;
-  readonly endFrameExclusive: number;
   /** Back-to-front timeline order. Ties preserve projection order. Selection raises only the timeline item. */
   readonly stackOrder: number;
   readonly elementLocation?: StudioSourceLocation;
@@ -775,7 +768,7 @@ export type StudioTemporalDeclarationCompanion = {
 export type StudioTemporalConstraint =
   | { readonly kind: "instant"; readonly frame: number }
   | { readonly kind: "extent"; readonly frameCount: number }
-  | { readonly kind: "span"; readonly startFrame: number; readonly endFrameExclusive: number };
+  | (FrameSpan & { readonly kind: "span" });
 
 export type StudioTemporalRelationValue = {
   readonly record: string;
@@ -1083,17 +1076,15 @@ export function authoredItemTitle(
 
 export function childItems(
   context: StudioTrackCompanionContext,
-  items: readonly {
+  items: readonly (FrameSpan & {
     /** Exact identity of the projected domain item consumed by Temporal/renderer bindings. */
     readonly id: string;
     /** Exact author-owned Item realized by this projected item, when the identities differ. */
     readonly subjectId?: string;
-    readonly startFrame: number;
-    readonly endFrameExclusive: number;
     readonly stackOrder: number;
     /** Exact domain Spec types that may carry an omitted Source id. */
     readonly sourceTypes?: readonly TypeRef[];
-  }[],
+  })[],
   kind: StudioTimelinePresentation["kind"],
   chrome: StudioTimelinePresentation["chrome"],
 ): readonly StudioItemDraft[] {

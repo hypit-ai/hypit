@@ -82,7 +82,7 @@ export function createVideoDistribution(options: VideoDistributionOptions = {}):
     },
     openLocalRuntimeHost: openVideoLocalRuntime,
     openRuntimeHost: openVideoLocalRuntime,
-    openProjectResults: async (projectRoot, options) => {
+    openProjectResults: async (projectRoot) => {
       const opened = await openProjectBuildResultRepository(projectRoot);
       return {
         location: opened.location,

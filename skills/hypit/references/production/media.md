@@ -25,7 +25,7 @@ appear in the film. Align a Script Segment to a video's local domain when the pr
 that semantic timing relationship. [Runs](runs.md) owns explicit Result
 reuse. [Image operations](image-operations.md) owns still-image preparation.
 
-Normalization establishes moving media's frame clock, local domain and selected picture/audio
+Preparation establishes moving media's local domain, selected picture/audio streams and exact maps to source presentation time
 streams. `NarrativeAlignment` separately adds one Script Segment's local word/boundary positions.
 [Timeline construction](timeline.md) may consume the prepared Extent. A domain projector may consume
 the local domain with an equal-length Timeline Window. Neither operation changes the media value.
@@ -62,7 +62,7 @@ hypit media cut assets/voice.wav --keep 0.3:4.1 --keep 4.6:9.2 --to assets/narra
 The first form retains one interval; repeated `--keep` joins selected parts of the *same* recording.
 The command keeps existing audio and picture together and can write an ordinary MP4 or audio-only
 WAV. Import that output as `asset:Video` or `asset:Audio` for its intended use. If the edited
-delivery is a Script performance, normalize it; align its local domain when another contribution
+delivery is a Script performance, prepare it; align its local domain when another contribution
 needs positions inside that performance, as described below.
 Independent footage can instead enter a Visual Clip or another visual component, with source sound included
 when the work needs it. A file cut does not choose Script or Segment boundaries. The installed Video
@@ -75,26 +75,26 @@ An image reference can enter a model directly. A still placed as a Visual Clip n
 IntrinsicExtent as well. Inspect its dimensions with `hypit media probe <file>` and declare them
 with `space:Extent`; [spatial layout](spatial.md) explains extent versus destination Frame.
 
-## Prepare moving media on the program clock
+## Prepare moving media
 
 Clips can arrive with different frame rates, several streams or picture and sound of different
-lengths. Normalize selects the intended streams and expresses them on the program's frame clock,
-so their lengths and later playback can be combined precisely.
+lengths. Prepare selects the intended streams, preserves their exact local time and source relation,
+and leaves the Film clock to the consumer.
 
 The following excerpt prepares a performance and an independent soundtrack:
 
 ```svml
 <import as="mediaop" from="@hypit/media-operations@1"/>
 
-<time:Clock id="clock" frame-rate="30"/>
-<mediaop:Normalize id="performance-media" source={performance} clock={clock}
+<mediaop:Prepare id="performance-media" source={performance}
   video="primary-moving" audio="default" span-authority="video"/>
-<mediaop:Normalize id="music-media" source={music} clock={clock}
+<mediaop:Prepare id="music-media" source={music}
   video="none" audio="default" span-authority="audio"/>
 ```
 
-The Clock is an authored rate; the prepared media supplies the resulting length. Share the Clock
-across media that will join one program.
+The prepared media supplies an exact length independently of a Film Clock. Visual and Audio consumers
+each declare their own occurrence Window and exact sampling relation. The selected renderer evaluates only
+the signal it consumes; its decoder, frame grid, sample buffers and caches are execution details.
 
 - `video` selects the moving-picture stream, or `none` for audio-only material.
 - `audio` selects the embedded audio, or `none` when the material should carry no sound.
@@ -102,12 +102,12 @@ across media that will join one program.
 
 `primary-moving` excludes attached cover art. The default audio selection uses the default or
 unambiguous audio stream; select an explicit stream when the container has several intended choices.
-`hypit vocabulary @hypit/media-operations --tag Normalize` gives the supported selectors.
+`hypit vocabulary @hypit/media-operations --tag Prepare` gives the supported selectors.
 
-Normalization inspects the bytes and produces `{performance-media.media}`: a SynchronizedMedia value
-with an exact local frame count, optional picture and optional audio on the chosen Clock. Audio is
-prepared as a 48 kHz render stem with its level preserved. Balance, fades and music ducking remain
-mix decisions in [Audio Track and sound mix](../playbooks/craft/sound-mix.md).
+Preparation inspects the bytes and produces `{performance-media.media}`: a `PreparedMedia` value with
+an exact local domain, optional picture and optional audio, and explicit maps to source presentation
+time. It does not transcode or resample. Balance, fades and music ducking remain mix decisions in
+[Audio Track and sound mix](../playbooks/craft/sound-mix.md).
 
 ## Associate a performance with Script when its timing is consumed
 
@@ -164,7 +164,7 @@ semantic projection:
 </semantic:Projection>
 ```
 
-After projection, picture and sound use the ordinary normalized media with explicit absolute Windows.
+After projection, picture and sound use the ordinary prepared media with explicit absolute Windows.
 They do not retain or inspect this semantic relation. Audio-only A-roll uses the same projection chain
 without a dummy picture.
 
@@ -184,12 +184,12 @@ time-bearing clip, use StillVideo:
 <import as="mediaop" from="@hypit/media-operations@1"/>
 
 <mediaop:StillVideo id="opening-still" source={product} duration="6s" clock={clock}/>
-<mediaop:Normalize id="opening-media" source={opening-still.video}
-  video="primary-moving" audio="none" span-authority="video" clock={clock}/>
+<mediaop:Prepare id="opening-media" source={opening-still.video}
+  video="primary-moving" audio="none" span-authority="video"/>
 ```
 
 StillVideo produces a video-only Blob. Multiple `media:Still` children divide the authored
-duration by their optional weights. Normalization then makes that clip usable as prepared moving
+duration by their optional weights. Preparation then makes that clip usable as prepared moving
 media. Choose it when one or more held images need to become a time-bearing video Artifact; its role
 is assigned by the downstream Source relationships just like any other video.
 
@@ -200,14 +200,13 @@ is assigned by the downstream Source relationships just like any other video.
   <mediaop:Trim tail="0.25s"/>
   <mediaop:Retime rate="1.05"/>
 </mediaop:Transform>
-<mediaop:ExtractAudio id="voice-reference" source={edited.video} audio="default"/>
-<mediaop:ExtractFrame id="frame-reference" source={edited.video}
+<mediaop:ExtractAudio id="voice-reference" source={performance} audio="default"/>
+<mediaop:ExtractFrame id="frame-reference" source={performance}
   video="primary-moving" at="last"/>
 ```
 
-Transform applies its operations in order. These Outputs are Blobs; normalize an edited
-clip again when feeding it into a prepared-media input, and realign the edited performance when its
-timing changed and downstream consumers use that alignment. Extracted audio or a frame can directly
+Transform applies its operations in order and publishes another `PreparedMedia`; trim and positive
+rational retime therefore compose without creating intermediate files. Extracted audio or a frame can directly
 feed a compatible model reference port.
 `ExtractFrame` also accepts `first`, `frame:<index>` and `time:<seconds>`.
 
@@ -218,9 +217,9 @@ the operation that matches the asset's intended use.
 
 ## Keep original and processed material explicit
 
-A crop, background removal or flattened composite produces a selected asset. Normalization prepares
+A crop, background removal or flattened composite produces a selected asset. Preparation interprets
 that output; retain the original whenever the production may still need its pixels. A transparent
-video enters the same normalization and Visual Clip path as opaque video. A circular Clip or
+video enters the same preparation and Visual Clip path as opaque video. A circular Clip or
 rounded Frame instead masks Clip geometry; it does not remove the source background.
 
 When original and processed pictures both appear, retain both and connect each as an explicit media
@@ -230,7 +229,7 @@ visual source. Author that relation in the component.
 
 For a moving portrait, the installed `@hypit/volcengine-matting` package exposes `Portrait` with
 `source={performance.video}` and publishes `cutout.video`; query its vocabulary and README for
-transparent formats and current Provider support. Existing transparent material can enter Normalize
+transparent formats and current Provider support. Existing transparent material can enter Prepare
 directly. Removing a still reference's background does not establish transparency in generated video.
 
 Choose an operation for the material it actually accepts: a moving silhouette needs a video matte
@@ -239,10 +238,9 @@ or suitable keying operation; deterministic Image Operations do not silently tur
 preparing and judging footage for that use. A fixed flattened arrangement of still images can use
 [Image Compose](image-operations.md#flatten-a-fixed-still-image-arrangement) when that is the desired output.
 
-Operation order matters to the selected implementation. The current local Media Provider's Normalize
-preserves input alpha, while its Transform emits opaque MP4. When using that Transform for trimming
-or retiming a cutout performance, perform it before matting. Read the selected operation's output
-behavior rather than assuming every video operation preserves transparency.
+Pure trim and retime preserve the source and alpha interpretation until a consumer requests signal.
+Pixel-changing operations such as matting still own their output format; read the selected operation's
+output behavior rather than assuming every processed video preserves transparency.
 
 Trimming, retiming or replacing the performance changes its local temporal relation and requires a
 new local domain. Prepare new semantic timing as well when downstream consumers use it.

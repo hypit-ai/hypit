@@ -63,7 +63,7 @@ media before projecting evidence whose endpoints must remain meaningful.
 Visual and Audio placement is a separate decision:
 
 ```text
-SynchronizedMedia + Window -> visual / audio occurrence
+PreparedMedia + Window -> visual / audio occurrence
 ```
 
 Put a named Instant or Window inside Timeline when it participates in the construction DAG. After the

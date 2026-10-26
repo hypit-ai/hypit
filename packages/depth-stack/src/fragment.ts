@@ -30,7 +30,7 @@ export type DepthStackFragmentCard = {
 function sourceInput(card: DepthStackFragmentCard): GraphFragment["inputs"][number] {
   const type = card.sourceKind === "still"
     ? blobTypes.blob
-    : card.sourceKind === "timed" ? mediaTypes.synchronized : mediaTypes.compositableSurface;
+    : card.sourceKind === "timed" ? mediaTypes.prepared : mediaTypes.compositableSurface;
   return { name: card.sourceName, type };
 }
 
@@ -89,12 +89,13 @@ export function createDepthStackFragment(
     const producer = card.sourceKind === "still"
       ? visualTrackProducers.appendStillLayer
       : card.sourceKind === "timed" ? visualTrackProducers.appendTimedLayer : visualTrackProducers.appendSurfaceLayer;
+    const source = input(card.sourceName);
     operations.push({
       id: sampleId,
       producer,
       inputs: {
         layers,
-        source: input(card.sourceName),
+        source,
         ...(card.extentName === undefined ? {} : { extent: input(card.extentName) }),
         fit: input(card.fitName),
         spec: input(card.sampleSpecName),

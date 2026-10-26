@@ -49,7 +49,7 @@ function fixture(): ExecutedGraph {
       id: "clip.start", subjectId: "clip", timelineId: "main", frame: 10,
     }),
     record("extent", "@hypit/temporal", "TemporalExtent", {
-      frameRate: { numerator: 30, denominator: 1 }, frameCount: 20,
+      duration: { ticks: "2", timeBase: { numerator: 1, denominator: 3 } },
     }),
     record("end", "@hypit/temporal", "TemporalInstant", {
       id: "clip.end", subjectId: "clip", timelineId: "main", frame: 30,
@@ -137,7 +137,7 @@ test("move preserves duration while trim-end changes only the owned extent", () 
   ]);
 });
 
-test("Timeline Author Companion reverses its private Point, Extent and Span graph", () => {
+test("Timeline Author Companion reverses private Points and Extents through the shared FrameSpan", () => {
   const timelineModule = module("@hypit/timeline-author");
   const authorType = (name: string) => ({ module: timelineModule, name });
   const program = [
@@ -161,7 +161,7 @@ test("Timeline Author Companion reverses its private Point, Extent and Span grap
     { id: "from-extent", type: authorType("ConstructionExtent"), value: ({ frameCount: 10 }) },
     { id: "start-point", type: authorType("ConstructionPoint"), value: ({ frame: 10 }) },
     { id: "clip-extent", type: authorType("ConstructionExtent"), value: ({ frameCount: 20 }) },
-    { id: "clip-span", type: authorType("ConstructionSpan"), value: ({ startFrame: 10, endFrameExclusive: 30 }) },
+    { id: "clip-span", type: type("@hypit/timeline", "FrameSpan"), value: ({ startFrame: 10, endFrameExclusive: 30 }) },
     record("author-window", "@hypit/temporal", "TemporalWindow", {
       id: "main.clip", subjectId: "main.clip",
       start: { id: "main.clip.start", subjectId: "main.clip", timelineId: "main", frame: 10 },

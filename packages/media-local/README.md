@@ -85,37 +85,40 @@ The Endpoint:
 
 - bounds subprocess duration and ffprobe JSON size;
 - invokes binaries without a shell;
-- enumerates all streams and records ffprobe implementation identity;
+- enumerates all streams while the Runtime-owned toolchain reports its executable versions separately;
 - maps explicit stream indexes into ffmpeg instead of relying on `0:v:0` / `0:a:0` guesses;
-- uses the selected authority stream's presentation interval;
-- preserves source A/V offset through deterministic trim, delay, pad and crop operations;
-- emits a silent CFR visual and, when selected, an exact-length 48 kHz stereo PCM WAV;
-- transforms synchronized A/V, extracts generic reference audio and extracts exact source frames;
+- evaluates each selected signal through its Prepared Media map onto the shared local domain when a concrete operation needs bytes;
+- preserves source A/V offset as transparent visual gaps or silent audio gaps without reconstructing
+  span authority inside the Provider;
+- emits exactly the requested terminal signal: a silent CFR visual or an exact-length 48 kHz stereo PCM WAV;
+- evaluates source-preserving trim/retime relations privately, extracts generic reference audio and extracts exact source frames;
 - encodes authored image frames as ordinary finite video-only MP4 with explicit BT.709 conversion and
-  colour metadata before normalization;
+  colour metadata before preparation;
 - renders an explicit `AudioProgram` into one exact-length 48 kHz stereo PCM `TimelineAudio`;
 - muxes exactly one verified silent visual stream and one verified program-audio stream into MP4;
 - distinguishes AAC coding-frame padding from the authoritative packet presentation span.
 
-Normalize preserves alpha: transparent input becomes VP9 / `yuva420p` WebM, while opaque input
-uses H.264 / `yuv420p` MP4. The input pixel format and WebM alpha metadata determine the choice.
+During one `render-timeline-audio` request, selected sources and transform working files stay in that request's temporary
+directory. Only the final `TimelineAudio` Artifact enters the Build resource gateway; decoder intermediates are not Results.
+
+Private visual evaluation preserves alpha across trim/retime: transparent input becomes
+VP9 / `yuva420p` WebM, while opaque input uses H.264 / `yuv420p` MP4. The input pixel format and WebM alpha metadata
+determine the choice at each private execution step.
 Opaque H.264 / `yuv420p` video in Baseline, Main or High profiles up to level 4.1 may reuse its
 encoded frames when `media-local` proves that every decoded frame already has the requested ordinal,
 timestamp, duration, geometry, square pixels and zero display rotation. A single-video-stream MP4 is
 reused directly; another matching container is remuxed to a silent MP4 and inspected again. Inputs
 outside those provider-local copy criteria use the normal transcode path.
-Animated WebP is also normalized through an alpha-capable output. Transparent VP8/VP9 input uses libvpx
+Animated WebP is also evaluated through an alpha-capable output. Transparent VP8/VP9 input uses libvpx
 decoders so FFmpeg retains the alpha sidecar, including during PNG frame extraction.
-Transparent normalization requires an FFmpeg build with the `libvpx-vp9` encoder; the normal
+Transparent evaluation requires an FFmpeg build with the `libvpx-vp9` encoder; the normal
 process error reports a missing codec if a custom deployment does not provide it.
 The lossless alpha encoding uses libvpx row threading and its realtime effort profile. Those options
-change encoder work while preserving the decoded frames and public SynchronizedMedia value.
-These are this FFmpeg implementation's intermediate encodings; Source and Track inputs continue
-to use ordinary SynchronizedMedia. Transform currently emits opaque MP4, so perform trim/retime
-before matting when the resulting clip needs transparency.
+change encoder work while preserving the decoded frames. They are private to this FFmpeg implementation:
+author and Track inputs remain `PreparedMedia`, while pure trim/retime remains an exact prepared-time relation.
 
-The result is ordinary SynchronizedMedia. Timeline construction consumes its local domain; a Visual
-Clip or project scene consumes its transparent picture according to the authored relationship. The
+Timeline construction consumes PreparedMedia's exact Extent; a Visual Clip or project scene requests
+its transparent picture according to the authored relationship. The
 local HTML Provider extracts alpha-preserving PNGs and composites them against the authored
 Canvas and lower visual layers before encoding the final MP4.
 
@@ -125,11 +128,13 @@ guarantee every codec or filter for every task; an unsupported operation reports
 remain valid; the package neither pins a semantic Capability to one FFmpeg version nor mutates a
 system package manager.
 
-The reusable display-materialization capabilities—inspection, normalization, transform, extraction,
-StillVideo—also opt into transient authoring execution. Speech-evidence projection,
+The reusable byte operations—inspection, extraction and StillVideo—also opt into transient authoring execution. Speech-evidence projection,
 timeline-audio rendering and final muxing remain Build-only. This is declared per capability; the
 Runtime and Studio contain no media capability allowlist.
 
-Video-backed normalization is video-authoritative so an AAC packet tail cannot extend the program
-past its final picture. Audio-only normalization is audio-authoritative. Other implementations of these capabilities must preserve the same public values and timing laws;
-a different execution topology leaves author meaning unchanged.
+Visual and audio requests independently consume their own Prepared Media member map. Either selected
+signal may have established the shared domain: an audio-authoritative A/V value therefore yields
+transparent picture outside the visual member's mapped range, while a video-authoritative value yields
+silence outside the audio member's mapped range. Audio-only media require no visual frame rate. Other
+implementations of these capabilities must preserve the same public values and timing laws; a different
+execution topology leaves author meaning unchanged.

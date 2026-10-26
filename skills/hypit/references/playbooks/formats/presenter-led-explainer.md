@@ -27,7 +27,7 @@ number or comparison helps the viewer read that demonstration.
 
 ## Compose the performance and its presentation independently
 
-A generated clip supplies accepted performance media. Normalization supplies its local domain and
+A generated clip supplies accepted performance media. Preparation supplies its local domain and
 Extent; an equal-length Window locates it in Timeline. When demonstrations or graphics follow the
 performed words, alignment supplies local word timing and lets the projector publish their absolute
 values. The picture's arrangement can change several times during

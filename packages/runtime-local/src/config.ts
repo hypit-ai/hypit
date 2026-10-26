@@ -11,7 +11,7 @@ import { hypitHostStateRoot } from "@hypit/hypit/cli";
 import { EndpointRegistry, Executor } from "@hypit/hypit/executor";
 import type { EndpointCredential, EndpointInstance, EndpointRegistrar, EndpointScheduling } from "@hypit/hypit/endpoint";
 import { endpointOffers, endpointResourceClaims, installEndpoint, verifyEndpointPricingDocument } from "@hypit/hypit/endpoint";
-import { assertBuildId, canonicalize, canonicalStringify, capabilityKey, parseCapabilityKey } from "@hypit/hypit/protocol";
+import { assertBuildId, canonicalize, capabilityKey, parseCapabilityKey } from "@hypit/hypit/protocol";
 import type { CanonicalValue, CapabilityRef, Need, Value } from "@hypit/hypit/protocol";
 import {
   CompositeCredentialStore,
@@ -1324,11 +1324,11 @@ export async function createRuntimeResultControlFromConfig(
   path: string,
   options: LoadRuntimeConfigOptions = {},
 ): Promise<LocalResultWriter> {
-  const { root, packageRoot } = await openRuntimeConfig(path, options.packageRoot);
-  return createRuntimeResultWriter(root, { ...options, packageRoot });
+  const { root } = await openRuntimeConfig(path, options.packageRoot);
+  return createRuntimeResultWriter(root);
 }
 
-export function createRuntimeResultWriter(root: string, options: LoadRuntimeConfigOptions & { readonly packageRoot: string }): LocalResultWriter {
+export function createRuntimeResultWriter(root: string): LocalResultWriter {
   const state = new SqliteRuntimeState(statePath(root));
   return createLocalResultWriter({
     buildStore: state.builds,

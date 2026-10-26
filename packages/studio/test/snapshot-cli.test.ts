@@ -11,7 +11,9 @@ import { runSnapshotCli, studioDocumentUrl } from "../src/snapshot-cli.js";
 
 test("snapshot --studio requires an absolute HTTP URL", () => {
   assert.equal(studioDocumentUrl("http://localhost:5191"), "http://localhost:5191/__studio/document");
+  assert.equal(studioDocumentUrl("HTTPS://studio.example"), "https://studio.example/__studio/document");
   assert.throws(() => studioDocumentUrl("localhost:5191"), /--studio needs an http\(s\) Studio URL/u);
+  assert.throws(() => studioDocumentUrl("file:///tmp/studio"), /--studio needs an http\(s\) Studio URL/u);
 });
 
 test("Studio snapshots pass one typed HTML Program and only its selected Artifacts", async t => {
@@ -23,7 +25,7 @@ test("Studio snapshots pass one typed HTML Program and only its selected Artifac
     canvas: { width: 96, height: 64 }, artifacts: [
       { artifact: late, usage: { kind: "frames" as const, spans: [{ startFrame: 10, endFrameExclusive: 12 }] } },
       { artifact, usage: { kind: "always" as const } },
-    ], surfaces: [], frameSources: [],
+    ], surfaces: [], videoSources: [],
     html: '<!doctype html><div data-hypit-program-root data-hypit-frame-count="12"><script>const input="hypit-resource://res_program_image";</script><img data-hypit-resource-src="hypit-resource://res_late_image"></div>' };
   const fetched: string[] = [];
   t.mock.method(globalThis, "fetch", async (input: string | URL) => {
@@ -41,9 +43,14 @@ test("Studio snapshots pass one typed HTML Program and only its selected Artifac
         assert.equal(need.capability.name, "rasterize-frames");
         verifyHtmlFrameRequest(need.constraints);
         assert.deepEqual(need.constraints.program, program);
+        assert.deepEqual(need.constraints.picture, {
+          colorPrimaries: "bt709", colorTransfer: "srgb", colorMatrix: "rgb", colorRange: "full", bitDepth: 8,
+          alpha: { mode: "opaque", matte: "#000000" },
+        });
         assert.deepEqual(need.constraints.frames, [3]);
         assert.deepEqual(Buffer.from((await resources.get(artifact.resource))!), bytes);
-        return canonicalize([await resources.put(bytes, "image/png")]);
+        return canonicalize({ picture: need.constraints.picture,
+          frames: [{ frame: 3, artifact: await resources.put(bytes, "image/png") }] });
       },
     } as Pick<CliRuntimeHost, "endpoints" | "invoke">;
     const application: CliRuntimeSelectionContext = {

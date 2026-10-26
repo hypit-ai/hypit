@@ -15,7 +15,6 @@ import {
 } from "@hypit/hypit/runtime";
 import { installEndpoint } from "@hypit/hypit/endpoint";
 import { assertOrderedBuildId, parseCapabilityKey, valueBlobRefs } from "@hypit/hypit/protocol";
-import type { BuildDefinition } from "@hypit/hypit/protocol";
 import { refinementPackagesFromFacets, registerTypeRefinements, RefinementRegistry } from "@hypit/hypit/refinement";
 import { materializeBuild } from "@hypit/hypit/kernel";
 

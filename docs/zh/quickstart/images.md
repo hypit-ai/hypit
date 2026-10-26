@@ -81,4 +81,4 @@ Transform 与 Compose 索取两项不同的图像能力；默认的 `@hypit/prov
 <matte:Portrait id="cutout" source={performance.video}/>
 ```
 
-将 `cutout.video` 归一化，得到同步媒体及其局部时间域。如果它承载说话语义，就在该局部时间域上与 Script Segment 对齐，再通过等长的 Timeline Window 投影对齐证据。然后把规范化后的抠像作为普通 Visual Clip 放置。抠像改变画面背景，具体角色由编排决定。
+准备 `cutout.video`，得到 `PreparedMedia` 及其局部时间域。如果它承载说话语义，就在该局部时间域上与 Script Segment 对齐，再通过等长的 Timeline Window 投影对齐证据。然后把这份准备媒体作为普通 Visual Clip 放置。抠像改变画面背景，具体角色由编排决定。

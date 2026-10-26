@@ -28,7 +28,7 @@ for (const kind of ["audio", "visual"] as const) {
         id: `projected.${index}`, subjectId: id,
         window: { startFrame: index * 10, endFrameExclusive: index * 10 + 20 },
         span: { startFrame: index * 10, endFrameExclusive: index * 10 + 20 },
-        source: { artifact: { resource: "res_audio" } },
+        source: { media: { source: { kind: "blob", resource: "res_audio", size: 1, mediaType: "audio/wav" } } },
         layers: [{ kind: "sample", id: "picture", source: { kind: "still", artifact: { resource: "res_image" } } }],
       }));
     const program = { id: `track.${kind}`, clips };
@@ -57,11 +57,8 @@ for (const kind of ["audio", "visual"] as const) {
   });
 }
 
-test("audio source time stays explicit and gain remains a non-negative mixing control", () => {
+test("audio temporal sampling stays Clip-owned and gain remains a non-negative mixing control", () => {
   const companion = audioTrackStudioTrackCompanions[0]!;
-  const sourceTime = companion.bindings!.find(binding => binding.name === "source-time")!;
-  assert.equal(sourceTime.writable, undefined);
-  assert.equal(companion.inspector!.some(field => field.binding === sourceTime.name), false);
   const gain = companion.inspector!.find(field => field.binding === "gain")!;
   assert.equal(gain.domain, "how"); assert.equal(gain.number?.scale, 100);
 });

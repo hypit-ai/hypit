@@ -20,7 +20,7 @@ export const decodeWhisperXTranscriptionSurface: StructuredSurfaceHandler = ({ e
   const id = stringAttribute(element, "id");
   const records: SurfaceRecordDraft[] = [];
   const inputs: Record<string, SurfaceResolvedReference["ref"] | { kind: "record"; id: string }> = {
-    media: reference(element, "media", mediaTypes.synchronized, resolveReference).ref,
+    media: reference(element, "media", mediaTypes.prepared, resolveReference).ref,
   };
   const language = parseWhisperXLanguage(stringAttribute(element, "language"), `${element.name}.language`);
   const languageId = `${id}.language`;

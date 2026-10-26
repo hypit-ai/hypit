@@ -38,9 +38,9 @@ types for behavior tied to the words. For an authored animation, Timeline declar
 them directly from seconds or frames. A duration such as `12f` can still describe the component's
 local transition length.
 
-Media presentation, spatial layout and time each have their own inputs. A normalized clip supplies
-sampleable media; a Window states when the occurrence contributes; a separate source-time relation
-states which part of moving media is sampled. A Frame can locate the scene, while its internal HTML/CSS or element tree coordinates videos,
+Media presentation, spatial layout and time each have their own inputs. PreparedMedia supplies a
+finite local media domain; a Window states when the occurrence contributes; a separate temporal
+sampling relation states which part of moving media is sampled. A Frame can locate the scene, while its internal HTML/CSS or element tree coordinates videos,
 text, masks and graphics. Group content that shares behavior. Independent contributions can stay
 as peer Tracks with their own paint order.
 

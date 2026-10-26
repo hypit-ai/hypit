@@ -12,6 +12,7 @@ import {
 } from "@hypit/narrative-speech-alignment";
 import { locateAlignedSegmentTiming } from "../src/locate.js";
 import type { AlignmentBasis } from "../src/locate.js";
+import { exactTemporalValue } from "@hypit/temporal";
 
 type WordFixture = {
   readonly text: string;
@@ -58,9 +59,9 @@ function evidence(args: {
   readonly chars?: readonly SpeechCharacterEvidence[];
   readonly vad?: readonly { readonly startSec: number; readonly endSec: number }[];
 }): SpeechTranscriptEvidence {
-  const rate = args.basis.frameDomain.frameRate;
   return sealSpeechTranscriptEvidence({
-    sampleFrames: Math.round(args.basis.frameDomain.frameCount * 16_000 * rate.denominator / rate.numerator),
+    sampleFrames: Math.round(args.basis.unitCount * 16_000
+      * args.basis.timeBase.numerator / args.basis.timeBase.denominator),
     passages: [
       {
         words: args.words.map(wordEvidence),
@@ -81,13 +82,13 @@ function speechBasis(
   durationSec = 2,
 ): AlignmentBasis {
   if (narrative.segments.length !== 1) throw new Error("Test alignment requires one Segment.");
-  const frameDomain = { frameRate: { numerator: 1_000, denominator: 1 }, frameCount: Math.round(durationSec * 1_000) };
   return {
-    frameDomain,
+    timeBase: { numerator: 1, denominator: 1_000 },
+    unitCount: Math.round(durationSec * 1_000),
     segments: [{
       segmentId: narrative.segments[0]!.id,
-      startFrame: 0,
-      endFrameExclusive: Math.round(durationSec * 1_000),
+      startUnit: 0,
+      endUnitExclusive: Math.round(durationSec * 1_000),
     }],
   };
 }
@@ -128,7 +129,7 @@ test("exact transcript words cover every Script and Segment anchor", () => {
   assert.equal(map.tokens.length, 2);
   assert.equal(map.boundaries.length, 2 * narrative.tokens.length + 2 * narrative.segments.length);
   assert.deepEqual(
-    map.tokens.map((token) => [token.startFrame, token.endFrameExclusive]),
+    map.tokens.map((token) => [token.startUnit, token.endUnitExclusive]),
     [
       [100, 400],
       [500, 900],
@@ -158,7 +159,6 @@ test("a long exact transcript retains the same one-to-one semantic path", () => 
 
 test("a measured Segment-local map becomes a media-free NarrativeAlignment", () => {
   const narrative = parseScript("materialize.svml", "<line>Hello world.</line>");
-  const basis = speechBasis(narrative, 2);
   const map = locate(narrative, {
     words: [
       { text: "Hello", startSec: 0.1, endSec: 0.4 },
@@ -169,13 +169,15 @@ test("a measured Segment-local map becomes a media-free NarrativeAlignment", () 
   const alignment = materializeNarrativeAlignment(
     narrative,
     { narrativeId: narrative.id, kind: "segment", id: segment.id, tokenStart: segment.tokenStart, tokenEndExclusive: segment.tokenEndExclusive },
-    { id: "speech-domain", frameRate: { numerator: 1_000, denominator: 1 }, frameCount: 2_000 },
+    { id: "speech-domain", duration: exactTemporalValue({ numerator: 2n, denominator: 1n }) },
     map,
   );
   assert.deepEqual(alignment.tokens.map((token) => [token.text, token.startBoundaryId, token.endBoundaryId]),
     narrative.tokens.map((token) => [token.text, token.startAnchorId, token.endAnchorId]));
-  assert.equal(alignment.boundaries.find((boundary) => boundary.id === segment.startAnchorId)?.frame, 0);
-  assert.equal(alignment.boundaries.find((boundary) => boundary.id === segment.endAnchorId)?.frame, 2_000);
+  assert.deepEqual(alignment.boundaries.find((boundary) => boundary.id === segment.startAnchorId)?.at,
+    { ticks: "0", timeBase: { numerator: 1, denominator: 1 } });
+  assert.deepEqual(alignment.boundaries.find((boundary) => boundary.id === segment.endAnchorId)?.at,
+    { ticks: "2", timeBase: { numerator: 1, denominator: 1 } });
   assert.equal("media" in alignment, false);
 });
 
@@ -195,7 +197,7 @@ test("M:1 uses evidence character times instead of dividing a merged word by len
 
   assert.deepEqual(relations(narrative, merged), ["merge"]);
   assert.deepEqual(
-    map.tokens.map((token) => [token.startFrame, token.endFrameExclusive]),
+    map.tokens.map((token) => [token.startUnit, token.endUnitExclusive]),
     [
       [100, 360],
       [420, 780],
@@ -213,7 +215,7 @@ test("1:N wraps all evidence words in one Script token", () => {
 
   assert.deepEqual(relations(narrative, split), ["split"]);
   assert.deepEqual(
-    [map.tokens[0]?.startFrame, map.tokens[0]?.endFrameExclusive],
+    [map.tokens[0]?.startUnit, map.tokens[0]?.endUnitExclusive],
     [200, 820],
   );
 });
@@ -237,7 +239,7 @@ test("a recognized filler stays an insertion and does not absorb neighboring Scr
     "exact",
   ]);
   assert.deepEqual(
-    map.tokens.map((token) => [token.startFrame, token.endFrameExclusive]),
+    map.tokens.map((token) => [token.startUnit, token.endUnitExclusive]),
     [
       [100, 200],
       [400, 620],
@@ -263,7 +265,7 @@ test("an omitted Script word receives the complete unmeasured interval between n
     "exact",
   ]);
   assert.deepEqual(
-    [map.tokens[2]?.startFrame, map.tokens[2]?.endFrameExclusive],
+    [map.tokens[2]?.startUnit, map.tokens[2]?.endUnitExclusive],
     [400, 600],
   );
 });
@@ -276,7 +278,7 @@ test("VAD bounds contain missing tokens when a Script Segment has no recognized 
   });
 
   assert.deepEqual(
-    map.tokens.map((token) => [token.startFrame, token.endFrameExclusive]),
+    map.tokens.map((token) => [token.startUnit, token.endUnitExclusive]),
     [
       [400, 800],
       [800, 1_200],
@@ -295,8 +297,8 @@ test("overlapping evidence word windows reach the map overlapping", () => {
       { text: "two", startSec: 0.4, endSec: 0.8 },
     ],
   });
-  assert.deepEqual(map.tokens.map((token) => [token.startFrame, token.endFrameExclusive]), [[100, 500], [400, 800]]);
-  assert.equal(map.tokens[1]!.startFrame < map.tokens[0]!.endFrameExclusive, true, "the overlap survived");
+  assert.deepEqual(map.tokens.map((token) => [token.startUnit, token.endUnitExclusive]), [[100, 500], [400, 800]]);
+  assert.equal(map.tokens[1]!.startUnit < map.tokens[0]!.endUnitExclusive, true, "the overlap survived");
 });
 
 test("nested and untimed evidence still projects monotone Script boundaries", () => {
@@ -316,10 +318,10 @@ test("nested and untimed evidence still projects monotone Script boundaries", ()
     const map = locate(narrative, { words });
     for (const [index, token] of map.tokens.entries()) {
       const previous = map.tokens[index - 1];
-      assert.ok(token.endFrameExclusive > token.startFrame, source);
+      assert.ok(token.endUnitExclusive > token.startUnit, source);
       if (previous !== undefined) {
-        assert.ok(token.startFrame >= previous.startFrame, source);
-        assert.ok(token.endFrameExclusive >= previous.endFrameExclusive, source);
+        assert.ok(token.startUnit >= previous.startUnit, source);
+        assert.ok(token.endUnitExclusive >= previous.endUnitExclusive, source);
       }
     }
   }
@@ -332,14 +334,14 @@ test("locating is total: every Script token carries a window", () => {
     words: [{ text: "alpha" }, { text: "beta" }, { text: "gamma" }, { text: "delta" }],
   });
   assert.equal(blind.tokens.length, narrative.tokens.length);
-  assert.equal(blind.tokens.every((token) => Number.isSafeInteger(token.startFrame)
-    && Number.isSafeInteger(token.endFrameExclusive)
-    && token.endFrameExclusive > token.startFrame), true);
+  assert.equal(blind.tokens.every((token) => Number.isSafeInteger(token.startUnit)
+    && Number.isSafeInteger(token.endUnitExclusive)
+    && token.endUnitExclusive > token.startUnit), true);
 
   // The speaker said something else entirely; the Script is still fully located.
   const diverged = locate(narrative, { words: [{ text: "zzz", startSec: 0.2, endSec: 0.8 }] });
   assert.equal(diverged.tokens.length, narrative.tokens.length);
-  assert.equal(diverged.tokens.every((token) => token.endFrameExclusive > token.startFrame), true);
+  assert.equal(diverged.tokens.every((token) => token.endUnitExclusive > token.startUnit), true);
 });
 
 test("a collapsed WhisperX word is assigned the available interval between its neighbors", () => {
@@ -352,57 +354,57 @@ test("a collapsed WhisperX word is assigned the available interval between its n
       { text: "lot", startSec: 0.5, endSec: 0.8 },
     ],
   });
-  assert.deepEqual(map.tokens.map((token) => [token.startFrame, token.endFrameExclusive]), [
+  assert.deepEqual(map.tokens.map((token) => [token.startUnit, token.endUnitExclusive]), [
     [100, 400],
     [400, 500],
     [500, 800],
   ]);
 });
 
-test("three Script words may share the two video frames covered by one evidence word", () => {
+test("three Script words may share the two alignment units covered by one evidence word", () => {
   const narrative = parseScript("pigeonhole.svml", "<line>alpha beta gamma</line>");
   const original = speechBasis(narrative, 1);
-  const frameDomain = { frameRate: { numerator: 32, denominator: 1 }, frameCount: 32 };
   const basis: AlignmentBasis = {
     ...original,
-    frameDomain,
-    segments: [{ segmentId: "line", startFrame: 0, endFrameExclusive: 32 }],
+    timeBase: { numerator: 1, denominator: 32 },
+    unitCount: 32,
+    segments: [{ segmentId: "line", startUnit: 0, endUnitExclusive: 32 }],
   };
   const map = locateAlignedSegmentTiming(narrative, basis, evidence({
     basis,
     words: [{ text: "alphabetagamma", startSec: 10 / 32, endSec: 12 / 32 }],
   }));
-  assert.deepEqual(map.tokens.map((token) => [token.startFrame, token.endFrameExclusive]), [
+  assert.deepEqual(map.tokens.map((token) => [token.startUnit, token.endUnitExclusive]), [
     [10, 11],
     [10, 12],
     [11, 12],
   ]);
 });
 
-test("Evidence must cover the complete selected local frame domain", () => {
+test("Evidence must cover the complete private alignment grid", () => {
   const narrative = parseScript("affinity.svml", "<line>Hello world.</line>");
   const basis = speechBasis(narrative, 2);
   const mismatched = evidence({
     basis,
     words: [{ text: "Hello", startSec: 0.1, endSec: 0.4 }, { text: "world", startSec: 0.5, endSec: 0.9 }],
   });
-  const anotherFrameDomain = { frameRate: { numerator: 30, denominator: 1 }, frameCount: 61 };
   const anotherBasis: AlignmentBasis = {
     ...basis,
-    frameDomain: anotherFrameDomain,
-    segments: [{ segmentId: "line", startFrame: 0, endFrameExclusive: 61 }],
+    timeBase: { numerator: 1, denominator: 30 },
+    unitCount: 61,
+    segments: [{ segmentId: "line", startUnit: 0, endUnitExclusive: 61 }],
   };
   assert.throws(() => locateAlignedSegmentTiming(narrative, anotherBasis, mismatched), /sample span differs/u);
 });
 
-test("the final map is quantized once into the selected Timeline", () => {
-  const narrative = parseScript("frames.svml", "<line>Hello.</line>");
+test("the private alignment grid uses one exact rational sample conversion", () => {
+  const narrative = parseScript("grid.svml", "<line>Hello.</line>");
   const original = speechBasis(narrative, 1);
-  const frameDomain = { frameRate: { numerator: 30, denominator: 1 }, frameCount: 30 };
   const basis: AlignmentBasis = {
     ...original,
-    frameDomain,
-    segments: [{ segmentId: "line", startFrame: 0, endFrameExclusive: 30 }],
+    timeBase: { numerator: 1, denominator: 30 },
+    unitCount: 30,
+    segments: [{ segmentId: "line", startUnit: 0, endUnitExclusive: 30 }],
   };
   const map = locateAlignedSegmentTiming(narrative, basis, evidence({
     basis,
@@ -411,10 +413,10 @@ test("the final map is quantized once into the selected Timeline", () => {
     words: [{ text: "Hello", startSec: 0.111, endSec: 0.289 }],
   }));
   assert.deepEqual(
-    [map.tokens[0]?.startFrame, map.tokens[0]?.endFrameExclusive],
+    [map.tokens[0]?.startUnit, map.tokens[0]?.endUnitExclusive],
     [3, 9],
   );
-  assert.equal(map.boundaries.every((boundary) => Number.isSafeInteger(boundary.frame)), true);
+  assert.equal(map.boundaries.every((boundary) => Number.isSafeInteger(boundary.unit)), true);
 });
 
 test("a backwards character measurement is treated as missing token timing", () => {
@@ -430,7 +432,7 @@ test("a backwards character measurement is treated as missing token timing", () 
     ),
   });
   const middle = map.tokens[1]!;
-  assert.equal(middle.endFrameExclusive > middle.startFrame, true);
+  assert.equal(middle.endUnitExclusive > middle.startUnit, true);
 });
 
 test("exact segmentation differences have no word-count ceiling", () => {
@@ -440,7 +442,7 @@ test("exact segmentation differences have no word-count ceiling", () => {
     text, startSec: (100 + index * 200) / 1000, endSec: (200 + index * 200) / 1000,
   }));
   const map = locate(split, { words: letters, durationSec: 4 });
-  assert.deepEqual(map.tokens.slice(0, 3).map((token, index) => [split.tokens[index]!.text, token.startFrame, token.endFrameExclusive]),
+  assert.deepEqual(map.tokens.slice(0, 3).map((token, index) => [split.tokens[index]!.text, token.startUnit, token.endUnitExclusive]),
     [["用", 100, 200], [name, 300, 2200], ["做", 2300, 2400]]);
 
   const merged = parseScript("merged-zh.svml", "<line>这是非常自然的节奏</line>");
@@ -449,6 +451,6 @@ test("exact segmentation differences have no word-count ceiling", () => {
   const ends = starts.map(start => start + 0.08);
   const mergedMap = locate(merged, { words: [{ text, startSec: starts[0]!, endSec: ends.at(-1)! }],
     chars: characters(text, starts, ends), durationSec: 3 });
-  assert.deepEqual(mergedMap.tokens.map(token => [token.startFrame, token.endFrameExclusive]),
+  assert.deepEqual(mergedMap.tokens.map(token => [token.startUnit, token.endUnitExclusive]),
     starts.map((start, index) => [Math.round(start * 1000), Math.round(ends[index]! * 1000)]));
 });

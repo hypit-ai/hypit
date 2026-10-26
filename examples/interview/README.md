@@ -57,7 +57,7 @@ numbers to the wrong video.
 
 After the first Build, export its `final.video` and measure that actual footage, using Google Video
 Intelligence with face bounding boxes, another suitable detector, or manual observation. If graphics
-obstruct the detector, render a clean picture pass from the same normalized media. Use the actual
+obstruct the detector, render a clean picture pass from the same prepared media. Use the actual
 program frame count and 30 fps clock; identify WIFE across camera cuts, expand face boxes to include
 her hair, and write one normalized `[x,y,width,height]` or `null` per frame into a new
 `reference-heads.svs`. Keep interpolation within a continuous shot and one identity.
@@ -85,7 +85,7 @@ track; `caption.wife` already uses center/bottom anchoring so its text sits abov
 The untracked BOY continues to use his fixed Style position. A null WIFE region hides her Caption
 on that frame; it does not guess a new location.
 
-In the Run, select the first Build's normalized media, local domains and alignment Outputs as
+In the Run, select the first Build's prepared media, local domains and alignment Outputs as
 Candidates. For example, fill the actual Build id in:
 
 ```svml

@@ -16,5 +16,8 @@
   },
   "devDependencies": {
     "@hypit/hypit": "workspace:*"
+  },
+  "dependencies": {
+    "@hypit/timeline": "workspace:^0.1.1"
   }
 }

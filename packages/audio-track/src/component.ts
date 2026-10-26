@@ -2,7 +2,7 @@ import type { ProducerPackage } from "@hypit/hypit/producer";
 import type { RefinementPackage } from "@hypit/hypit/refinement";
 import type { Value } from "@hypit/hypit/protocol";
 import { canonicalize } from "@hypit/hypit/protocol";
-import type { SynchronizedMedia } from "@hypit/media";
+import type { PreparedMedia } from "@hypit/media";
 import type { TemporalWindow } from "@hypit/temporal";
 import type { Timeline } from "@hypit/timeline";
 
@@ -17,7 +17,6 @@ import {
   finalizeAudioTrack,
   renderAudioTrack,
 } from "./program.js";
-import { assertAudioSourceTimeSpec } from "./source-time.js";
 import type { AudioClipSpec, AudioTrackHeader, AudioTrackProgram, AudioTrackSet } from "./types.js";
 
 function valueOf<T>(value: Value | undefined, label: string): T {
@@ -34,7 +33,7 @@ export const audioTrackComponent = {
         valueOf<AudioTrackSet>(inputs.set?.value, "AudioTrackSet"),
         valueOf<AudioTrackHeader>(inputs.header?.value, "AudioTrackHeader"),
         valueOf<Timeline>(inputs.timeline?.value, "Timeline"),
-        valueOf<SynchronizedMedia>(inputs.media?.value, "SynchronizedMedia"),
+        valueOf<PreparedMedia>(inputs.media?.value, "PreparedMedia"),
         valueOf<AudioClipSpec>(inputs.spec?.value, "AudioClipSpec"),
         valueOf<TemporalWindow>(inputs.window?.value, "TemporalWindow"),
       ),
@@ -51,8 +50,6 @@ export const audioTrackComponent = {
   refinements: [
     { type: audioTrackTypes.header,
       handler: ({ value }) => assertAudioTrackHeader(valueOf<AudioTrackHeader>(value, "AudioTrackHeader")) },
-    { type: audioTrackTypes.sourceTime,
-      handler: ({ value }) => assertAudioSourceTimeSpec(valueOf(value, "AudioSourceTime")) },
     { type: audioTrackTypes.clipSpec,
       handler: ({ value }) => assertAudioClipSpec(valueOf<AudioClipSpec>(value, "AudioClipSpec")) },
     { type: audioTrackTypes.set,

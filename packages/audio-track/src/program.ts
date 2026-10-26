@@ -1,12 +1,22 @@
-import { assertTimelineIdentity, timelineFrameSampleBoundary, timelineSampleFrames } from "@hypit/timeline";
+import { assertFrameSpan, assertTimelineIdentity } from "@hypit/timeline";
 import type { Timeline } from "@hypit/timeline";
-import { assertAudioTrackIdentity, audioGraphFromClips, audioTrackClips, sealAudioTrack } from "@hypit/composition";
+import { assertAudioTrackIdentity, audioGraphFromClips, sealAudioTrack } from "@hypit/composition";
 import type { AudioClip, AudioTrack } from "@hypit/composition";
-import { synchronizedMediaSampleFrames, verifySynchronizedMedia } from "@hypit/media";
-import type { SynchronizedMedia } from "@hypit/media";
-import { assertBlobRef, canonicalize } from "@hypit/hypit/protocol";
-import { assertTemporalWindowFor, temporalDurationInSamples } from "@hypit/temporal";
-import type { TemporalWindow, TemporalDuration } from "@hypit/temporal";
+import { preparedAudioSource, verifyPreparedMedia } from "@hypit/media";
+import type { PreparedMedia } from "@hypit/media";
+import { canonicalize } from "@hypit/hypit/protocol";
+import {
+  assertTemporalMap,
+  assertTemporalRelationSpec,
+  assertTemporalWindowFor,
+  compareExactTemporalValues,
+  exactTemporalValueFromDuration,
+  exactTemporalValueFromFrames,
+  resolveTemporalRelation,
+  sealLocalTemporalDomain,
+  subtractExactTemporalValues,
+} from "@hypit/temporal";
+import type { TemporalWindow, TemporalDuration, TemporalRelationSpec } from "@hypit/temporal";
 
 import type {
   AudioClipSpec,
@@ -15,7 +25,6 @@ import type {
   AudioTrackProgram,
   AudioTrackSet,
 } from "./types.js";
-import { assertAudioSourceTimeSpec, defaultAudioSourceTimeSpec, resolveAudioSourceTime } from "./source-time.js";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -52,13 +61,23 @@ export function sealAudioClipSpec(value: AudioClipSpec): AudioClipSpec {
 export function assertAudioClipSpec(value: AudioClipSpec): void {
   assert(value !== null && typeof value === "object" && !Array.isArray(value), "AudioClipSpec is invalid.");
   assertIdentity(value.id, "AudioClipSpec.id");
-  if (value.sourceTime !== undefined) assertAudioSourceTimeSpec(value.sourceTime, "AudioClipSpec.sourceTime");
+  if (value.sampling !== undefined) assertAudioSampling(value.sampling, "AudioClipSpec.sampling");
   assert(value.mix !== null && typeof value.mix === "object" && !Array.isArray(value.mix),
     "AudioClipSpec.mix is invalid.");
   assert(Number.isFinite(value.mix.gain) && value.mix.gain >= 0,
     "AudioClipSpec gain is invalid.");
   assertDuration(value.mix.fadeIn, "AudioClipSpec fade in");
   assertDuration(value.mix.fadeOut, "AudioClipSpec fade out");
+}
+
+function assertAudioSampling(value: TemporalRelationSpec, label: string): void {
+  assertTemporalRelationSpec(value, label);
+  for (const [index, relation] of value.relations.entries()) {
+    if (relation.kind === "rate") {
+      assert(relation.rate.numerator > 0,
+        `${label}.relations.${index} requires a positive rate until the audio executor supports reverse or held sound.`);
+    }
+  }
 }
 
 export function createAudioTrackSet(): AudioTrackSet {
@@ -76,20 +95,17 @@ export function assertAudioTrackSet(value: AudioTrackSet): void {
   }
 }
 
-function sourceFacts(media: SynchronizedMedia): AudioClipProgram["source"] {
-  verifySynchronizedMedia(media);
-  assert(media.audio !== undefined, "Audio Track source has no explicitly normalized audio member.");
-  return {
-    artifact: structuredClone(media.audio.artifact),
-    sampleFrames: synchronizedMediaSampleFrames(media),
-  };
+function sourceFacts(media: PreparedMedia): AudioClipProgram["source"] {
+  verifyPreparedMedia(media);
+  assert(media.audio !== undefined, "Prepared Media source has no audio member.");
+  return { media: structuredClone(media) };
 }
 
 function realizedClips(
   set: AudioTrackSet,
   header: AudioTrackHeader,
   timeline: Timeline,
-  media: SynchronizedMedia,
+  media: PreparedMedia,
   spec: AudioClipSpec,
   window: TemporalWindow,
 ): AudioTrackSet {
@@ -99,15 +115,23 @@ function realizedClips(
   assertAudioClipSpec(spec);
   assertTemporalWindowFor(window, { timeline });
   const source = sourceFacts(media);
-  const fadeInSamples = fadeSamples(spec.mix.fadeIn, timeline, window.span.startFrame, 1);
-  const fadeOutSamples = fadeSamples(spec.mix.fadeOut, timeline, window.span.endFrameExclusive, -1);
+  const fadeIn = exactTemporalValueFromDuration(spec.mix.fadeIn, timeline);
+  const fadeOut = exactTemporalValueFromDuration(spec.mix.fadeOut, timeline);
   const addition = {
     id: spec.id,
     subjectId: spec.id,
     window: { ...window.span },
     source: structuredClone(source),
-    sourceTime: structuredClone(spec.sourceTime ?? defaultAudioSourceTimeSpec()),
-    mix: { gain: spec.mix.gain, fadeInSamples, fadeOutSamples },
+    sampling: resolveTemporalRelation({
+      target: sealLocalTemporalDomain({
+        id: `${spec.id}:occurrence`,
+        duration: exactTemporalValueFromFrames(window.span.endFrameExclusive - window.span.startFrame, timeline),
+      }),
+      source: media.domain,
+      clock: timeline,
+      ...(spec.sampling === undefined ? {} : { spec: spec.sampling }),
+    }),
+    mix: { gain: spec.mix.gain, fadeIn, fadeOut },
   } satisfies AudioClipProgram;
   const ids = new Set(set.clips.map((clip) => clip.id));
   assert(!ids.has(addition.id), `Audio Track ${header.id} already contains Clip ${addition.id}.`);
@@ -119,7 +143,7 @@ export function appendAudioClip(
   set: AudioTrackSet,
   header: AudioTrackHeader,
   timeline: Timeline,
-  media: SynchronizedMedia,
+  media: PreparedMedia,
   spec: AudioClipSpec,
   window: TemporalWindow,
 ): AudioTrackSet {
@@ -164,82 +188,55 @@ function assertAudioClipProgram(clip: AudioClipProgram, label: string): void {
     assert(clip !== null && typeof clip === "object" && !Array.isArray(clip), `${label} is invalid.`);
     assertIdentity(clip.id, `${label}.id`);
     assertIdentity(clip.subjectId, `${label}.subjectId`);
-    assert(clip.window !== null && typeof clip.window === "object" && !Array.isArray(clip.window),
-      `${label}.window is invalid.`);
-    assert(Number.isSafeInteger(clip.window.startFrame) && clip.window.startFrame >= 0
-      && Number.isSafeInteger(clip.window.endFrameExclusive)
-      && clip.window.endFrameExclusive > clip.window.startFrame, `Audio Clip ${clip.id} window is invalid.`);
+    try {
+      assertFrameSpan(clip.window);
+    } catch {
+      throw new Error(`Audio Clip ${clip.id} window is invalid.`);
+    }
     assert(clip.source !== null && typeof clip.source === "object" && !Array.isArray(clip.source),
       `${label}.source is invalid.`);
-    assertBlobRef(clip.source.artifact, `Audio Clip ${clip.id} source Artifact`);
-    assert(clip.source.artifact.mediaType === "audio/wav"
-      && Number.isSafeInteger(clip.source.sampleFrames) && clip.source.sampleFrames > 0,
-    `Audio Clip ${clip.id} source is invalid.`);
-    assertAudioSourceTimeSpec(clip.sourceTime, `Audio Clip ${clip.id} source time`);
+    verifyPreparedMedia(clip.source.media);
+    assertTemporalMap(clip.sampling);
+    assert(clip.sampling.stages.at(-1)?.source.id === clip.source.media.domain.id,
+      `Audio Clip ${clip.id} source Map does not end at its PreparedMedia domain.`);
     assert(clip.mix !== null && typeof clip.mix === "object" && !Array.isArray(clip.mix),
       `${label}.mix is invalid.`);
     assert(Number.isFinite(clip.mix.gain) && clip.mix.gain >= 0
-      && Number.isSafeInteger(clip.mix.fadeInSamples) && clip.mix.fadeInSamples >= 0
-      && Number.isSafeInteger(clip.mix.fadeOutSamples) && clip.mix.fadeOutSamples >= 0,
+      && compareExactTemporalValues(clip.mix.fadeIn, { ticks: "0", timeBase: { numerator: 1, denominator: 1 } }) >= 0
+      && compareExactTemporalValues(clip.mix.fadeOut, { ticks: "0", timeBase: { numerator: 1, denominator: 1 } }) >= 0,
     `Audio Clip ${clip.id} mix is invalid.`);
 }
 
-/**
- * A frame-authored fade is an interval attached to one Window edge. Derive its
- * sample length from those two absolute boundaries so rational clocks preserve
- * exactly the same interval as the Clip. Seconds and milliseconds remain free
- * durations and keep their ordinary duration conversion.
- */
-function fadeSamples(
-  duration: TemporalDuration,
-  timeline: Timeline,
-  edgeFrame: number,
-  direction: 1 | -1,
-): number {
-  if (duration.unit !== "frames") return temporalDurationInSamples(duration, timeline);
-  const otherFrame = edgeFrame + direction * duration.value;
-  if (otherFrame < 0 || otherFrame > timeline.frameCount) {
-    return temporalDurationInSamples(duration, timeline);
-  }
-  return Math.abs(timelineFrameSampleBoundary(timeline, otherFrame, 48_000)
-    - timelineFrameSampleBoundary(timeline, edgeFrame, 48_000));
-}
-
 function terminalClip(clip: AudioClipProgram, timeline: Timeline): AudioClip {
-  const windowStart = timelineFrameSampleBoundary(timeline, clip.window.startFrame, 48_000);
-  const windowEnd = timelineFrameSampleBoundary(timeline, clip.window.endFrameExclusive, 48_000);
-  const windowLength = windowEnd - windowStart;
-  assert(clip.mix.fadeInSamples <= windowLength && clip.mix.fadeOutSamples <= windowLength,
+  const target = {
+    start: exactTemporalValueFromFrames(clip.window.startFrame, timeline),
+    end: exactTemporalValueFromFrames(clip.window.endFrameExclusive, timeline),
+  };
+  const windowDuration = subtractExactTemporalValues(target.end, target.start);
+  assert(compareExactTemporalValues(clip.mix.fadeIn, windowDuration) <= 0
+    && compareExactTemporalValues(clip.mix.fadeOut, windowDuration) <= 0,
     `Audio Clip ${clip.id} fade exceeds its Window.`);
   return {
     id: clip.id,
     subjectId: clip.subjectId,
-    artifact: structuredClone(clip.source.artifact),
-    target: { startSample: windowStart, endSampleExclusive: windowEnd },
-    sourceTime: resolveAudioSourceTime({
-      timeline,
-      sourceSampleFrames: clip.source.sampleFrames,
-      targetSampleFrames: windowLength,
-      spec: clip.sourceTime,
-    }),
+    source: preparedAudioSource(clip.source.media),
+    preparation: structuredClone(clip.source.media.audio!.map),
+    target,
+    sampling: structuredClone(clip.sampling),
     gain: clip.mix.gain,
-    fadeInSamples: clip.mix.fadeInSamples,
-    fadeOutSamples: clip.mix.fadeOutSamples,
+    fadeIn: structuredClone(clip.mix.fadeIn),
+    fadeOut: structuredClone(clip.mix.fadeOut),
   };
 }
 
 export function renderAudioTrack(timeline: Timeline, program: AudioTrackProgram): AudioTrack {
   assertTimelineIdentity(timeline);
   assertAudioTrackProgram(program);
-  const totalSamples = timelineSampleFrames(timeline, 48_000);
   const track = sealAudioTrack({
     timelineId: timeline.id,
     id: program.id,
     graph: audioGraphFromClips(program.clips.map((clip) => terminalClip(clip, timeline))),
   });
-  for (const clip of audioTrackClips(track)) {
-    assert(clip.target.endSampleExclusive <= totalSamples, `Audio Clip ${clip.id} is outside Timeline.`);
-  }
   assertAudioTrackIdentity(track, timeline);
   return track;
 }

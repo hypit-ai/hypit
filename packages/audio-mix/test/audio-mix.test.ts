@@ -10,14 +10,27 @@ import { audioMixMarkupSurfaces, audioMixTypes, decodeAudioMixSurface } from "..
 import { compositionTypes } from "@hypit/composition";
 import { timelineTypes } from "@hypit/timeline";
 import { fixtureResource } from "../../../test/fixture-resource.js";
+import { frameRangeFixture, frameSamplingMapFixture } from "../../../test/temporal-fixture.js";
+import { exactTemporalValueFromFrames, exactTemporalZero, identityTemporalMap } from "@hypit/temporal";
 
 const timeline = sealTimeline({ id: "story", frameCount: 30, frameRate: { numerator: 30, denominator: 1 } });
+const audioDomain = { id: "fixture-materialization", duration: exactTemporalValueFromFrames(48_000,
+  { frameRate: { numerator: 48_000, denominator: 1 } }) };
 const source = sealAudioTrack({ timelineId: timeline.id, id: "voice", graph: audioGraphFromClips([{
-  id: "line", subjectId: "line", artifact: { kind: "blob", resource: fixtureResource("audio-mix:voice"), size: 1, mediaType: "audio/wav" },
-  target: { startSample: 0, endSampleExclusive: 48_000 },
-  sourceTime: { sourceSampleFrames: 48_000, pieces: [{ target: { startSample: 0, endSampleExclusive: 48_000 },
-    sourceAtStart: { numerator: 0, denominator: 1 }, rate: { numerator: 1, denominator: 1 } }] },
-  gain: 1, fadeInSamples: 0, fadeOutSamples: 0,
+  id: "line", subjectId: "line", source: {
+    source: { kind: "blob", resource: fixtureResource("audio-mix:voice"), size: 1, mediaType: "audio/wav" },
+    streamIndex: 0, presentationStart: exactTemporalZero(), sourceDomain: audioDomain,
+    interpretation: { sampleRate: 48_000, channels: 2 },
+  },
+  preparation: identityTemporalMap(audioDomain),
+  target: frameRangeFixture(0, 48_000, { numerator: 48_000, denominator: 1 }),
+  sampling: frameSamplingMapFixture({ targetFrameRate: { numerator: 48_000, denominator: 1 }, targetFrames: 48_000,
+    sourceFrameRate: { numerator: 48_000, denominator: 1 }, sourceFrames: 48_000,
+    pieces: [{ target: { startFrame: 0, endFrameExclusive: 48_000 },
+      sourceAtStart: { numerator: 0, denominator: 1 }, rate: { numerator: 1, denominator: 1 } }] }),
+  gain: 1,
+  fadeIn: { ticks: "0", timeBase: { numerator: 1, denominator: 1 } },
+  fadeOut: { ticks: "0", timeBase: { numerator: 1, denominator: 1 } },
 }]) });
 
 test("Audio Mix closes explicit gain branches into one DAG and Film-level compilation preserves them", () => {

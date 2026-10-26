@@ -134,12 +134,12 @@
 
   <space:Canvas id="vertical" width="720" height="1280"/>
   <time:Clock id="clock" frame-rate="30"/>
-  <mediaop:Normalize id="soundtrack-media" source={soundtrack}
-    video="none" audio="default" span-authority="audio" clock={clock}/>
-  <mediaop:Normalize id="ranking-appear-media" source={ranking-appear-sfx}
-    video="none" audio="default" span-authority="audio" clock={clock}/>
-  <mediaop:Normalize id="ranking-move-media" source={ranking-move-sfx}
-    video="none" audio="default" span-authority="audio" clock={clock}/>
+  <mediaop:Prepare id="soundtrack-media" source={soundtrack}
+    video="none" audio="default" span-authority="audio"/>
+  <mediaop:Prepare id="ranking-appear-media" source={ranking-appear-sfx}
+    video="none" audio="default" span-authority="audio"/>
+  <mediaop:Prepare id="ranking-move-media" source={ranking-move-sfx}
+    video="none" audio="default" span-authority="audio"/>
   <space:Frame id="speech-frame" within={vertical.bounds}
     left="0%" top="0%" right="100%" bottom="100%"/>
   <space:Frame id="column-frame" within={vertical.bounds}
@@ -170,10 +170,10 @@
   <space:AspectFrame id="museum-jawline-frame" within={vertical.bounds}
     x="75%" y="78%" width="50%" aspect={museum-jawline-extent} anchor="center"/>
 
-  <mediaop:Normalize id="messi-media" source={messi-take.video}
-    video="primary-moving" audio="default" span-authority="video" clock={clock}/>
-  <mediaop:Normalize id="ronaldo-media" source={ronaldo-take.video}
-    video="primary-moving" audio="default" span-authority="video" clock={clock}/>
+  <mediaop:Prepare id="messi-media" source={messi-take.video}
+    video="primary-moving" audio="default" span-authority="video"/>
+  <mediaop:Prepare id="ronaldo-media" source={ronaldo-take.video}
+    video="primary-moving" audio="default" span-authority="video"/>
   <whisperx:Transcription id="messi-semantic-transcription" media={messi-media.media} language="en"/>
   <speechalign:Alignment id="messi-semantic" narrative={story}
     segment={story.segment.messi} domain={messi-media.domain} evidence={messi-semantic-transcription.transcript}/>

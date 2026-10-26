@@ -2,7 +2,7 @@ import { assertAttributes, assertEmptyElement, createMarkupSurfaceFacet, optiona
 import { canonicalize, sameType } from "@hypit/hypit/protocol";
 import { sealGraphFragment } from "@hypit/hypit/author";
 import { compositionTypes, sealPresentVisualTrack } from "@hypit/composition";
-import { mediaTypes, verifySynchronizedMedia } from "@hypit/media";
+import { mediaTypes, verifyPreparedMedia } from "@hypit/media";
 import { spatialTypes } from "@hypit/spatial";
 import { recipeType } from "@hypit/hypit/recipe";
 import { temporalTypes, assertTemporalWindowFor } from "@hypit/temporal";
@@ -26,6 +26,7 @@ import {
   projectVisualTrack,
   visualTrackTypes,
 } from "@hypit/visual-track";
+import { preparedSampling } from "./frame-sampling.js";
 
 const input = (name) => ({ kind: "fragment-input", name });
 const operation = (id) => ({ kind: "fragment-operation", operation: id });
@@ -38,6 +39,7 @@ const stored = (value) => ((canonicalize(value)));
 export function presenterTypes(module) {
   return {
     style: { module, name: "PresenterStyle" },
+    plane: { module, name: "PresenterPlane" },
     sourceSpec: { module, name: "PresenterSourceSpec" },
     sources: { module, name: "PresenterSources" },
     program: { module, name: "PresenterProgram" },
@@ -45,14 +47,16 @@ export function presenterTypes(module) {
   };
 }
 
-export function presenterStyle(fragment, bindings = {}) {
-  return { fragment: sealGraphFragment(fragment), bindings };
+export function presenterStyle(fragment, bindings = {}, plane = "base") {
+  if (plane !== "base" && plane !== "overlay") throw Error(`Unknown Presenter plane ${plane}.`);
+  return { fragment: sealGraphFragment(fragment), bindings, plane };
 }
 
 function sourceValue(spec, media, window, timeline) {
-  verifySynchronizedMedia(media);
+  verifyPreparedMedia(media);
   assertTemporalWindowFor(window, { timeline });
-  if (media.visual === undefined) throw Error(`Presenter Source ${spec.id} has no visual stream.`);
+  if (media.visual === undefined)
+    throw Error(`Presenter Source ${spec.id} has no visual stream.`);
   return { id: spec.id, media: structuredClone(media), window: structuredClone(window) };
 }
 
@@ -73,7 +77,7 @@ function intersect(left, right) {
   }));
 }
 
-function resolvePresenter(timeline, id, program) {
+function resolvePresenter(timeline, id, program, plane) {
   const presents = [];
   for (const [index, use] of program.uses.entries()) {
     assertTemporalWindowFor(use.window, { timeline });
@@ -88,6 +92,7 @@ function resolvePresenter(timeline, id, program) {
         ];
       });
     }
+    if (use.plane !== plane) continue;
     for (const present of use.visual.items) {
       const visibility = intersect(visible, present.visibility ?? [present.span]);
       if (visibility.length > 0) presents.push({
@@ -104,29 +109,24 @@ function ordinaryPresenter(timeline, window, frame, sources, fit, sample, spec) 
   const layers = [];
   for (const source of sources.sources) {
     const startFrame = Math.max(source.window.span.startFrame, window.span.startFrame);
-    const availableEndFrameExclusive = source.window.span.startFrame + source.media.frameDomain.frameCount;
     const endFrameExclusive = Math.min(
       source.window.span.endFrameExclusive,
       window.span.endFrameExclusive,
-      availableEndFrameExclusive,
     );
     if (endFrameExclusive <= startFrame) continue;
-    const sourceStartFrame = startFrame - source.window.span.startFrame;
     const [layer] = appendTimedMediaLayer(createMediaLayerSet(), source.media, fit, {
       ...sample,
       id: `${window.subjectId}:${source.id}`,
     }).layers;
     layers.push({
       ...layer,
-      sourceTime: { kind: "map", value: {
-        sourceFrameRate: source.media.frameDomain.frameRate,
-        sourceFrameCount: source.media.frameDomain.frameCount,
-        pieces: [{
+      sampling: { kind: "map", value: preparedSampling(`${window.subjectId}:${source.id}`,
+        timeline.frameRate, window.span.endFrameExclusive - window.span.startFrame,
+        source.media.domain, [{
           target: { startFrame: startFrame - window.span.startFrame, endFrameExclusive: endFrameExclusive - window.span.startFrame },
-          sourceAtStart: { numerator: sourceStartFrame, denominator: 1 },
+          sourceAtStartFrame: startFrame - source.window.span.startFrame,
           rate: { numerator: 1, denominator: 1 },
-        }],
-      } },
+        }]) },
     });
   }
   if (layers.length === 0) return sealPresentVisualTrack({ id: window.subjectId, timelineId: timeline.id, visualIr: "hypit.visual-ir@1", presents: [] });
@@ -166,20 +166,20 @@ export function installPresenter(module, manifest, component) {
   ];
   manifest.producers.push(
     { name: producers.source.name, inputs: [
-      { name: "spec", type: types.sourceSpec }, { name: "media", type: mediaTypes.synchronized },
+      { name: "spec", type: types.sourceSpec }, { name: "media", type: mediaTypes.prepared },
       { name: "window", type: temporalTypes.window }, { name: "timeline", type: timelineTypes.timeline },
     ], result: { kind: "output", name: "sources", type: types.sources } },
     { name: producers.combineSources.name, inputs: [{ name: "left", type: types.sources }, { name: "right", type: types.sources }], result: { kind: "output", name: "sources", type: types.sources } },
     { name: producers.create.name, inputs: [], result: { kind: "output", name: "program", type: types.program } },
-    { name: producers.append.name, inputs: [{ name: "program", type: types.program }, { name: "window", type: temporalTypes.window }, { name: "visual", type: compositionTypes.visualTrack }], result: { kind: "output", name: "program", type: types.program } },
-    { name: producers.resolve.name, inputs: [{ name: "program", type: types.program }, { name: "timeline", type: timelineTypes.timeline }, { name: "header", type: types.header }], result: { kind: "output", name: "visual", type: compositionTypes.visualTrack } },
+    { name: producers.append.name, inputs: [{ name: "program", type: types.program }, { name: "window", type: temporalTypes.window }, { name: "visual", type: compositionTypes.visualTrack }, { name: "plane", type: types.plane }], result: { kind: "output", name: "program", type: types.program } },
+    { name: producers.resolve.name, inputs: [{ name: "program", type: types.program }, { name: "timeline", type: timelineTypes.timeline }, { name: "header", type: types.header }, { name: "plane", type: types.plane }], result: { kind: "output", name: "visual", type: compositionTypes.visualTrack } },
   );
   component.producers.push(
-    { producer: producers.source, handler: ({ inputs }) => ({ kind: "output", value: stored(sourcesValue([sourceValue(valueOf(inputs.spec, "PresenterSourceSpec"), valueOf(inputs.media, "SynchronizedMedia"), valueOf(inputs.window, "TemporalWindow"), valueOf(inputs.timeline, "Timeline"))])) }) },
+    { producer: producers.source, handler: ({ inputs }) => ({ kind: "output", value: stored(sourcesValue([sourceValue(valueOf(inputs.spec, "PresenterSourceSpec"), valueOf(inputs.media, "PreparedMedia"), valueOf(inputs.window, "TemporalWindow"), valueOf(inputs.timeline, "Timeline"))])) }) },
     { producer: producers.combineSources, handler: ({ inputs }) => ({ kind: "output", value: stored(sourcesValue([...valueOf(inputs.left, "PresenterSources").sources, ...valueOf(inputs.right, "PresenterSources").sources])) }) },
     { producer: producers.create, handler: () => ({ kind: "output", value: stored({ uses: [] }) }) },
-    { producer: producers.append, handler: ({ inputs }) => ({ kind: "output", value: stored({ uses: [...valueOf(inputs.program, "PresenterProgram").uses, { window: valueOf(inputs.window, "TemporalWindow"), visual: valueOf(inputs.visual, "VisualTrack") }] }) }) },
-    { producer: producers.resolve, handler: ({ inputs }) => ({ kind: "output", value: stored(resolvePresenter(valueOf(inputs.timeline, "Timeline"), valueOf(inputs.header, "PresenterHeader").id, valueOf(inputs.program, "PresenterProgram"))) }) },
+    { producer: producers.append, handler: ({ inputs }) => ({ kind: "output", value: stored({ uses: [...valueOf(inputs.program, "PresenterProgram").uses, { window: valueOf(inputs.window, "TemporalWindow"), visual: valueOf(inputs.visual, "VisualTrack"), plane: valueOf(inputs.plane, "PresenterPlane") }] }) }) },
+    { producer: producers.resolve, handler: ({ inputs }) => ({ kind: "output", value: stored(resolvePresenter(valueOf(inputs.timeline, "Timeline"), valueOf(inputs.header, "PresenterHeader").id, valueOf(inputs.program, "PresenterProgram"), valueOf(inputs.plane, "PresenterPlane"))) }) },
   );
 
   const ordinaryInputs = [...common, { name: "frame", type: spatialTypes.frame }, { name: "fit", type: spatialTypes.fit },
@@ -206,10 +206,13 @@ export function installPresenter(module, manifest, component) {
       { name: "id", kind: "identifier", required: true, summary: "Treatment identity." },
       { name: "frame", kind: "reference", required: true, accepts: [spatialTypes.frame], summary: "Presenter viewport." },
       { name: "appearance", kind: "reference", required: true, accepts: [recipeType], summary: "Presenter media appearance." },
+      { name: "plane", kind: "text", required: false, fallback: "base", summary: "Component-local compositing contribution: base or overlay." },
     ] },
   }, handler: ({ element, resolveReference }) => {
-    assertAttributes(element, ["id", "frame", "appearance"]); assertEmptyElement(element);
+    assertAttributes(element, ["id", "frame", "appearance", "plane"]); assertEmptyElement(element);
     const id = textAttribute(element, "id");
+    const plane = element.attributes.plane === undefined ? "base" : textAttribute(element, "plane");
+    if (plane !== "base" && plane !== "overlay") throw Error("PresenterFrame.plane must be base or overlay.");
     const frame = ref(element, "frame", spatialTypes.frame, resolveReference);
     const recipeValue = authored(ref(element, "appearance", recipeType, resolveReference), "Presenter appearance");
     const records = [];
@@ -231,7 +234,7 @@ export function installPresenter(module, manifest, component) {
       fit: bind("fit", spatialTypes.fit, decodeMediaFit(selectedRecipe(visualMaterialKeys.fit))),
       sample: bind("sample", sampleType, decodeMediaSampleSpec(selectedRecipe(sampleKeys), "content", "timed", undefined, true)),
       spec: bind("spec", specType, decodeVisualClipSpec(selectedRecipe(treatmentKeys), { id })),
-    });
+    }, plane);
     records.push({ id, type: types.style, value: stored(style), range: element.range });
     return { records, components: [] };
   } });
@@ -239,6 +242,7 @@ export function installPresenter(module, manifest, component) {
   const presenterFacet = createMarkupSurfaceFacet({ module, declaration: {
     name: "presenter", tag: "Presenter", mode: "structured", outputs: [
       types.header,
+      types.plane,
       types.sourceSpec,
       types.sources,
       types.program,
@@ -251,7 +255,7 @@ export function installPresenter(module, manifest, component) {
     ], children: [
       { tag: "Source", cardinality: "many", summary: "One native presenter media occurrence.", attributes: [
         { name: "id", kind: "identifier", required: true, summary: "Source identity." },
-        { name: "media", kind: "reference", required: true, accepts: [mediaTypes.synchronized], summary: "Normalized media." },
+        { name: "media", kind: "reference", required: true, accepts: [mediaTypes.prepared], summary: "Prepared media." },
         { name: "window", kind: "reference", required: true, accepts: [temporalTypes.window], summary: "Exact native Window." },
       ] },
       { tag: "Use", cardinality: "many", summary: "Selects presenter treatment over a Window; later Uses replace earlier ones.", attributes: [
@@ -259,7 +263,10 @@ export function installPresenter(module, manifest, component) {
         { name: "style", kind: "reference", required: true, accepts: [types.style], summary: "Presenter treatment." },
         ...temporalWindowAttributeVocabulary,
       ] },
-    ], ports: [{ name: "visual", type: compositionTypes.visualTrack, summary: "Presenter visual contribution." }] },
+    ], ports: [
+      { name: "base", type: compositionTypes.visualTrack, summary: "Presenter contribution composed below project scenes." },
+      { name: "overlay", type: compositionTypes.visualTrack, summary: "Presenter contribution composed above project scenes." },
+    ] },
   }, handler: ({ element, resolveReference }) => {
     assertAttributes(element, ["id", "timeline", "within"]);
     const id = textAttribute(element, "id");
@@ -274,17 +281,19 @@ export function installPresenter(module, manifest, component) {
         assertAttributes(child, ["id", "media", "window"]); assertEmptyElement(child);
         const sourceId = textAttribute(child, "id"), specId = `${id}.source.${sourceDeclarations.length + 1}`;
         records.push({ id: specId, type: types.sourceSpec, value: stored({ id: sourceId }), range: child.range });
-        sourceDeclarations.push({ specId, media: ref(child, "media", mediaTypes.synchronized, resolveReference), window: ref(child, "window", temporalTypes.window, resolveReference) });
+        sourceDeclarations.push({ specId, media: ref(child, "media", mediaTypes.prepared, resolveReference), window: ref(child, "window", temporalTypes.window, resolveReference) });
       } else if (tag === "Use") uses.push(child);
       else throw Error("Presenter accepts only Source and Use children.");
     }
     if (!sourceDeclarations.length || !uses.length) throw Error("Presenter requires at least one Source and one Use.");
     const sourceInputs = [{ name: "timeline", type: timelineTypes.timeline }, ...sourceDeclarations.flatMap((_, index) => [
-      { name: `spec-${index}`, type: types.sourceSpec }, { name: `media-${index}`, type: mediaTypes.synchronized }, { name: `window-${index}`, type: temporalTypes.window },
+      { name: `spec-${index}`, type: types.sourceSpec }, { name: `media-${index}`, type: mediaTypes.prepared }, { name: `window-${index}`, type: temporalTypes.window },
     ])];
-    const sourceOps = sourceDeclarations.map((_, index) => ({ id: `source-${index}`, producer: producers.source, inputs: {
-      spec: input(`spec-${index}`), media: input(`media-${index}`), window: input(`window-${index}`), timeline: input("timeline"),
-    }, result: { kind: "output", name: "sources" } }));
+    const sourceOps = sourceDeclarations.map((_, index) =>
+      ({ id: `source-${index}`, producer: producers.source, inputs: {
+        spec: input(`spec-${index}`), media: input(`media-${index}`),
+        window: input(`window-${index}`), timeline: input("timeline"),
+      }, result: { kind: "output", name: "sources" } }));
     let sourceRoots = sourceDeclarations.map((_, index) => `source-${index}`);
     let combineIndex = 0;
     while (sourceRoots.length > 1) {
@@ -319,17 +328,30 @@ export function installPresenter(module, manifest, component) {
         ...(needsWithin ? { within: within.ref } : {}),
         sources: { kind: "component-output", component: `${id}.__sources`, output: "sources" }, window: temporal.ref,
       }, outputs: { visual: `${useId}.visual` }, range: child.range });
-      collectorInputs.push({ name: `window-${index}`, type: temporalTypes.window }, { name: `visual-${index}`, type: compositionTypes.visualTrack });
+      const planeId = `${useId}.plane`;
+      records.push({ id: planeId, type: types.plane, value: stored(style.plane), range: child.range });
+      collectorInputs.push({ name: `window-${index}`, type: temporalTypes.window }, { name: `visual-${index}`, type: compositionTypes.visualTrack }, { name: `plane-${index}`, type: types.plane });
       bindings[`window-${index}`] = temporal.ref;
       bindings[`visual-${index}`] = { kind: "component-output", component: `${useId}.__style`, output: "visual" };
+      bindings[`plane-${index}`] = { kind: "record", id: planeId };
       const appendId = `append-${index}`;
-      ops.push({ id: appendId, producer: producers.append, inputs: { program: operation(previous), window: input(`window-${index}`), visual: input(`visual-${index}`) }, result: { kind: "output", name: "program" } });
+      ops.push({ id: appendId, producer: producers.append, inputs: { program: operation(previous), window: input(`window-${index}`), visual: input(`visual-${index}`), plane: input(`plane-${index}`) }, result: { kind: "output", name: "program" } });
       previous = appendId;
     }
-    ops.push({ id: "resolve", producer: producers.resolve, inputs: { program: operation(previous), timeline: input("timeline"), header: input("header") }, result: { kind: "output", name: "visual" } });
-    const collector = sealGraphFragment({ inputs: collectorInputs, operations: ops, exports: [{ name: "program", type: types.program, root: operation(previous) }, { name: "visual", type: compositionTypes.visualTrack, root: operation("resolve") }] });
-    components.push({ id, fragment: collector, inputs: bindings, outputs: { program: `${id}.program`, visual: `${id}.visual` }, range: element.range });
-    return { records, components, exports: [`${id}.program`, `${id}.visual`] };
+    for (const plane of ["base", "overlay"]) {
+      const planeId = `${id}.${plane}-plane`;
+      records.push({ id: planeId, type: types.plane, value: stored(plane), range: element.range });
+      collectorInputs.push({ name: `${plane}-plane`, type: types.plane });
+      bindings[`${plane}-plane`] = { kind: "record", id: planeId };
+      ops.push({ id: `resolve-${plane}`, producer: producers.resolve, inputs: { program: operation(previous), timeline: input("timeline"), header: input("header"), plane: input(`${plane}-plane`) }, result: { kind: "output", name: "visual" } });
+    }
+    const collector = sealGraphFragment({ inputs: collectorInputs, operations: ops, exports: [
+      { name: "program", type: types.program, root: operation(previous) },
+      { name: "base", type: compositionTypes.visualTrack, root: operation("resolve-base") },
+      { name: "overlay", type: compositionTypes.visualTrack, root: operation("resolve-overlay") },
+    ] });
+    components.push({ id, fragment: collector, inputs: bindings, outputs: { program: `${id}.program`, base: `${id}.base`, overlay: `${id}.overlay` }, range: element.range });
+    return { records, components, exports: [`${id}.program`, `${id}.base`, `${id}.overlay`] };
   } });
   return { types, styleFacet, presenterFacet };
 }

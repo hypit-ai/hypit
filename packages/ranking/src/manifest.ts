@@ -1,13 +1,14 @@
-import { timelineTypes, timelineDependency } from "@hypit/timeline";
+import { frameSpanSchema, timelineTypes, timelineDependency } from "@hypit/timeline";
 import { temporalContextAttributeVocabulary } from "@hypit/temporal/markup";
 import { readFile } from "node:fs/promises";
 
 import { blobDependency } from "@hypit/hypit/blob";
 import { compositionDependency, compositionTypes } from "@hypit/composition";
 import { mediaDependency, mediaTypes } from "@hypit/media";
+import { mediaOperationsModuleRef } from "@hypit/media-operations";
 
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/hypit/protocol";
-import { spatialDependency, spatialFrameSchema, spatialTypes } from "@hypit/spatial";
+import { spatialDependency, spatialTypes } from "@hypit/spatial";
 import { recipeType } from "@hypit/hypit/recipe";
 import { temporalDependency, temporalInstantSchema, temporalTypes, temporalWindowSchema } from "@hypit/temporal";
 import { temporalInstantAttributeVocabulary } from "@hypit/temporal/markup";
@@ -187,7 +188,6 @@ export const rankingItemSpecSetSchema: ValueSchema = object({
 
   variant: { schema: variants }, items: { schema: { kind: "array", items: rankingItemSpecSchema } },
 });
-const frameSpan = object({ startFrame: { schema: unsigned }, endFrameExclusive: { schema: unsigned } });
 export const triggeredRankingCandidateSetSchema: ValueSchema = object({
   entries: { schema: { kind: "array", items: object({
     itemId: { schema: string }, activation: { schema: temporalInstantSchema },
@@ -203,18 +203,18 @@ export const columnWindowSetSchema = rankingWindowSetSchema;
 const triggeredScheduleSchema: ValueSchema = object({
   id: { schema: string },
   variant: { schema: { kind: "literal", value: "top-three" } },
-  outer: { schema: frameSpan }, terminalFrame: { schema: unsigned },
+  outer: { schema: frameSpanSchema }, terminalFrame: { schema: unsigned },
   entries: { schema: { kind: "array", minItems: 1, items: object({
     itemId: { schema: string }, triggerFrame: { schema: unsigned },
-    stage: { schema: frameSpan }, cumulative: { schema: frameSpan }, settled: { schema: frameSpan },
+    stage: { schema: frameSpanSchema }, cumulative: { schema: frameSpanSchema }, settled: { schema: frameSpanSchema },
   }) } },
 });
 const windowedScheduleSchema = (variant: "tier-board" | "column"): ValueSchema => object({
-  id: { schema: string }, variant: { schema: { kind: "literal", value: variant } }, outer: { schema: frameSpan },
+  id: { schema: string }, variant: { schema: { kind: "literal", value: variant } }, outer: { schema: frameSpanSchema },
   entries: { schema: { kind: "array", minItems: 1, items: { kind: "oneOf", variants: [
-    object({ itemId: { schema: string }, mode: { schema: { kind: "literal", value: "preset" } }, settled: { schema: frameSpan } }),
+    object({ itemId: { schema: string }, mode: { schema: { kind: "literal", value: "preset" } }, settled: { schema: frameSpanSchema } }),
     object({ itemId: { schema: string }, mode: { schema: { kind: "literal", value: "reveal" } },
-      window: { schema: frameSpan }, settled: { schema: frameSpan },
+      window: { schema: frameSpanSchema }, settled: { schema: frameSpanSchema },
     }),
   ] } } },
 });
@@ -222,13 +222,6 @@ export const rankingScheduleSchema: ValueSchema = { kind: "oneOf", variants: [
   triggeredScheduleSchema, windowedScheduleSchema("tier-board"), windowedScheduleSchema("column"),
 ] };
 const styleSchema = (): ValueSchema => object({}, true);
-const setSchema = (): ValueSchema => object({
-  items: { schema: { kind: "array", items: object({}, true) } },
-});
-const programSchema = (): ValueSchema => object({
-  id: { schema: string }, frame: { schema: spatialFrameSchema },
-  schedule: { schema: rankingScheduleSchema }, style: { schema: object({}, true) }, items: { schema: { kind: "array", minItems: 1, items: object({}, true) } },
-}, true);
 export const rankingSoundStyleSchema = styleSchema();
 export const rankingSoundEventsSchema: ValueSchema = object({
   id: { schema: string }, variant: { schema: variants },
@@ -504,10 +497,10 @@ const allRankingMarkupSurfaces = [
             summary: "Spans the complete film clock when written as program, or projects the referenced Segment or Selection into the board lifetime." },
           { name: "style", kind: "reference", required: true, accepts: [rankingTypes.tierStyle],
             summary: "Chooses the TierBoardStyle this board is drawn in, and only that variant's." },
-          { name: "appear-sound", kind: "reference", required: false, accepts: [mediaTypes.synchronized],
-            summary: "Chooses the Synchronized Medium played as each Item appears." },
-          { name: "move-sound", kind: "reference", required: false, accepts: [mediaTypes.synchronized],
-            summary: "Chooses the Synchronized Medium played when a drop Item leaves the independent stage near the end of its window." },
+          { name: "appear-sound", kind: "reference", required: false, accepts: [mediaTypes.prepared],
+            summary: "Chooses prepared media played as each Item appears." },
+          { name: "move-sound", kind: "reference", required: false, accepts: [mediaTypes.prepared],
+            summary: "Chooses prepared media played when a drop Item leaves the independent stage near the end of its window." },
         ],
         children: [
           { tag: "TierItem", cardinality: "many",
@@ -574,10 +567,10 @@ const allRankingMarkupSurfaces = [
             summary: "Spans the complete film clock when written as program, or projects the referenced Segment or Selection into the Column lifetime." },
           { name: "style", kind: "reference", required: true, accepts: [rankingTypes.columnStyle],
             summary: "Chooses the ColumnStyle this board is drawn in, and only that variant's." },
-          { name: "appear-sound", kind: "reference", required: false, accepts: [mediaTypes.synchronized],
-            summary: "Chooses the Synchronized Medium played as each row appears." },
-          { name: "move-sound", kind: "reference", required: false, accepts: [mediaTypes.synchronized],
-            summary: "Chooses the Synchronized Medium played as a staged row moves into the settled column." },
+          { name: "appear-sound", kind: "reference", required: false, accepts: [mediaTypes.prepared],
+            summary: "Chooses the Prepared Media audio played as each row appears." },
+          { name: "move-sound", kind: "reference", required: false, accepts: [mediaTypes.prepared],
+            summary: "Chooses the Prepared Media audio played as a staged row moves into the settled column." },
         ],
         children: [
           { tag: "ColumnItem", cardinality: "many",
@@ -645,8 +638,8 @@ const allRankingMarkupSurfaces = [
             summary: "Chooses the named absolute Instant at which the completed board settles." },
           { name: "style", kind: "reference", required: true, accepts: [rankingTypes.topThreeStyle],
             summary: "Chooses the TopThreeStyle this board is drawn in, and only that variant's." },
-          { name: "appear-sound", kind: "reference", required: false, accepts: [mediaTypes.synchronized],
-            summary: "Chooses the Synchronized Medium played as each slot appears." },
+          { name: "appear-sound", kind: "reference", required: false, accepts: [mediaTypes.prepared],
+            summary: "Chooses the Prepared Media audio played as each slot appears." },
         ],
         children: [
           { tag: "TopThreeItem", cardinality: "many",
@@ -697,7 +690,7 @@ export const rankingMarkupSurfaces = allRankingMarkupSurfaces;
 
 export const rankingManifest: ModuleManifest = {
   format: "hypit.module@1", name: rankingModuleRef.name, version: rankingModuleRef.version,
-  dependencies: [blobDependency, mediaDependency, timelineDependency, spatialDependency, temporalDependency, compositionDependency, textDependency],
+  dependencies: [blobDependency, mediaDependency, mediaOperationsModuleRef, timelineDependency, spatialDependency, temporalDependency, compositionDependency, textDependency],
   types: [
     rankingTypes.header.name,
     rankingTypes.itemSpec.name,
@@ -794,7 +787,7 @@ export const rankingManifest: ModuleManifest = {
       rankingProducers.appendAppearSound,
       rankingProducers.appendMoveSound,
     ] as const).map((producer) => ({
-      name: producer.name, inputs: [{ name: "sounds", type: rankingTypes.sounds }, { name: "media", type: mediaTypes.synchronized }], result: { kind: "output" as const, name: "sounds", type: rankingTypes.sounds },
+      name: producer.name, inputs: [{ name: "sounds", type: rankingTypes.sounds }, { name: "media", type: mediaTypes.prepared }], result: { kind: "output" as const, name: "sounds", type: rankingTypes.sounds },
     })),
     { name: rankingProducers.renderAudio.name, inputs: [
       { name: "timeline", type: timelineTypes.timeline }, { name: "events", type: rankingTypes.soundEvents },

@@ -44,7 +44,7 @@ export const manifest = {
       [
         compositionTypes.visualTrack,
         mediaTypes.fontArtifact,
-        mediaTypes.synchronized,
+        mediaTypes.prepared,
         mediaTypes.blobArtifact,
         timelineTypes.timeline,
         spatialTypes.frame,
@@ -91,7 +91,7 @@ export const manifest = {
         port("window", temporalTypes.window),
         port(
           "asset",
-          kind === "image" ? mediaTypes.blobArtifact : mediaTypes.synchronized,
+          kind === "image" ? mediaTypes.blobArtifact : mediaTypes.prepared,
         ),
       ],
       result: { kind: "output", ...port("items", itemsType) },
@@ -300,7 +300,7 @@ function decode(kind) {
         const cid = textAttribute(child, "id"),
           isImage = child.attributes.image !== undefined;
         if (isImage === (child.attributes.video !== undefined))
-          throw Error("Item needs exactly one image or normalized video");
+          throw Error("Item needs exactly one image or prepared video");
         const iw = resolveTemporalWindowReference({ element: child, resolveReference });
         const key = "item" + ++n,
           optsId = id + "." + key,
@@ -318,11 +318,11 @@ function decode(kind) {
           ["window", temporalTypes.window, iw.ref],
           [
             "asset",
-            isImage ? mediaTypes.blobArtifact : mediaTypes.synchronized,
+            isImage ? mediaTypes.blobArtifact : mediaTypes.prepared,
             ref(
               child,
               isImage ? "image" : "video",
-              isImage ? mediaTypes.blobArtifact : mediaTypes.synchronized,
+              isImage ? mediaTypes.blobArtifact : mediaTypes.prepared,
             ),
           ],
         ]) {
@@ -445,7 +445,7 @@ const declarations = Object.keys(defaults).map((tag) => ({
               tag: "Item",
               cardinality: "many",
               summary:
-                "Image or normalized video, in its own projected Window. Later items paint above earlier items.",
+                "Image or prepared video, in its own projected Window. Later items paint above earlier items.",
               attributes: [
                 {
                   name: "id",
@@ -463,7 +463,7 @@ const declarations = Object.keys(defaults).map((tag) => ({
                   name: "video",
                   kind: "expression",
                   required: false,
-                  summary: "Normalized moving media",
+                  summary: "Prepared moving media",
                 },
                 {
                   name: "source-start-frame",

@@ -2,7 +2,9 @@ import { palette } from "@explainer/visual-language";
 import { flagSetup } from "./flag-cloth.js";
 import { sealPresentVisualTrack } from "@hypit/composition";
 import { htmlVisual } from "@hypit/html-program";
-import { assertTemporalWindowFor } from "@hypit/temporal";
+import { preparedVisualSource } from "@hypit/media";
+import { assertTemporalWindowFor, composeTemporalMaps } from "@hypit/temporal";
+import { preparedSampling } from "./frame-sampling.js";
 
 const digits = {
   0: ["11111", "10001", "10001", "10001", "10001", "10001", "11111"],
@@ -22,12 +24,10 @@ const dotSetup = `const patterns=data.digits, clock=root.querySelector('.clock')
 const showClock=(seconds)=>{const n=Math.max(0,Math.floor(Math.abs(seconds))),str=Math.floor(n/60)+':'+String(n%60).padStart(2,'0');if(str===previous)return;previous=str;let x=0,html='';for(const ch of str){const p=patterns[ch];for(let y=0;y<7;y++)for(let c=0;c<p[y].length;c++)if(p[y][c]==='1')html+='<rect x="'+(x+c)+'" y="'+y+'" width=".79" height=".79" rx=".035"/>';x+=p[0].length+1;}clock.setAttribute('viewBox','0 0 '+(x-1)+' 7');clock.innerHTML=html;};`;
 const style = (obj) =>
   Object.entries(obj).map(([name, value]) => ({ name, value }));
-function text(id, parent, value, font, size, color) {
+function text(id, value, font, size, color) {
   return {
     id,
-    parent,
     kind: "text",
-    order: id === "title" ? 1 : 2,
     text: value,
     fonts: [font],
     style: style({
@@ -47,24 +47,20 @@ function track(timeline, within, window, o, program, children = [], presents) {
     presents: presents ?? [
       {
         id: o.id,
-        order: 0,
         span: window.span,
-        elements: [
-          {
-            id: "scene",
-            kind: "program",
-            order: 0,
-            program,
-            style: style({
-              position: "absolute",
-              left: within.xPx + "px",
-              top: within.yPx + "px",
-              width: within.widthPx + "px",
-              height: within.heightPx + "px",
-            }),
-          },
-          ...children,
-        ],
+        root: {
+          id: "scene",
+          kind: "program",
+          program,
+          style: style({
+            position: "absolute",
+            left: within.xPx + "px",
+            top: within.yPx + "px",
+            width: within.widthPx + "px",
+            height: within.heightPx + "px",
+          }),
+          slots: children.map((element) => ({ name: element.id, element })),
+        },
       },
     ],
   });
@@ -125,8 +121,8 @@ return frame=>{
 };`,
     }),
     [
-      ...letters.map((letter, i) => ({ ...text(`letter-${i}`, "scene", letter, font, w * o.titleSize, o.color), order: 3 + i })),
-      text("subtitle", "scene", o.subtitle, font, w * 0.078, `${palette.ink}`),
+      ...letters.map((letter, i) => text(`letter-${i}`, letter, font, w * o.titleSize, o.color)),
+      text("subtitle", o.subtitle, font, w * 0.078, `${palette.ink}`),
     ],
   );
 }
@@ -165,7 +161,6 @@ export function renderTimer(timeline, within, window, font, o, logo, stop) {
     [
       text(
         "title",
-        "scene",
         o.title,
         font,
         within.widthPx * o.width * 0.16,
@@ -173,7 +168,6 @@ export function renderTimer(timeline, within, window, font, o, logo, stop) {
       ),
       text(
         "subtitle",
-        "scene",
         o.subtitle,
         font,
         within.widthPx * o.width * 0.067,
@@ -181,9 +175,7 @@ export function renderTimer(timeline, within, window, font, o, logo, stop) {
       ),
       {
         id: "flag-logo",
-        parent: "scene",
         kind: "image",
-        order: 3,
         artifact: logo,
         style: [],
       },
@@ -201,48 +193,26 @@ export function renderStage(timeline, within, window, items, o) {
     if (end <= start) continue;
     const w = within.widthPx,
       h = within.heightPx;
-    const artifact = item.media?.visual?.artifact ?? item.image;
+    const artifact = item.media?.source ?? item.image;
     if (!artifact) throw Error("Stage video needs prepared visual media.");
-    let sourceTime;
+    let sampling;
     if (item.media) {
-      const sourceRate = item.media.frameDomain.frameRate,
-        rate = {
-          numerator: sourceRate.numerator * timeline.frameRate.denominator,
-          denominator: sourceRate.denominator * timeline.frameRate.numerator,
-        };
-      const offset =
-        item.sourceStart +
-        ((start - item.window.span.startFrame) * rate.numerator) /
-          rate.denominator;
-      const last =
-        offset + ((end - start - 1) * rate.numerator) / rate.denominator;
-      if (last >= item.media.frameDomain.frameCount)
-        throw Error(
-          "Stage window exceeds the supplied video. Shorten its window or supply longer media.",
-        );
-      sourceTime = {
-        sourceFrameRate: sourceRate,
-        sourceFrameCount: item.media.frameDomain.frameCount,
-        pieces: [
+      if (!item.media.visual) throw Error("Stage video needs a selected visual member.");
+      sampling = composeTemporalMaps(preparedSampling(`${o.id}:${item.id ?? index}`, timeline.frameRate, end - start,
+        item.media.domain, [
           {
             target: { startFrame: 0, endFrameExclusive: end - start },
-            sourceAtStart: {
-              numerator: Math.round(offset * rate.denominator),
-              denominator: rate.denominator,
-            },
-            rate,
+            sourceAtStartFrame: item.sourceStart + start - item.window.span.startFrame,
+            rate: { numerator: 1, denominator: 1 },
           },
-        ],
-      };
+        ]), item.media.visual.map);
     }
     const children = ["back", "front"].map((id, i) => ({
       id,
-      parent: "scene",
-      order: i + 1,
       kind: item.media ? "video" : "image",
-      artifact,
+      ...(item.media ? { source: preparedVisualSource(item.media) } : { artifact }),
       muted: true,
-      ...(sourceTime ? { sourceTime } : {}),
+      ...(sampling ? { sampling } : {}),
       style: style({
         position: "absolute",
         inset: 0,
@@ -269,24 +239,20 @@ export function renderStage(timeline, within, window, items, o) {
     });
     presents.push({
       id: `${o.id}.${item.id}`,
-      order: index,
       subjectId: item.id,
       span: { startFrame: start, endFrameExclusive: end },
-      elements: [
-        {
-          id: "scene",
-          kind: "program",
-          order: 0,
-          program,
-          style: style({
-            position: "absolute",
-            inset: 0,
-            width: w + "px",
-            height: h + "px",
-          }),
-        },
-        ...children,
-      ],
+      root: {
+        id: "scene",
+        kind: "program",
+        program,
+        style: style({
+          position: "absolute",
+          inset: 0,
+          width: w + "px",
+          height: h + "px",
+        }),
+        slots: children.map((element) => ({ name: element.id, element })),
+      },
     });
   }
   return track(timeline, within, window, o, undefined, [], presents);
@@ -323,5 +289,5 @@ export function renderFlag(timeline, within, window, o, logo) {
   css: `:scope{pointer-events:none}.floor-cloth{position:absolute;left:${o.x*100}%;top:${o.y*100}%;width:${o.width*100}%;height:${o.height*100}%;filter:none}.flag-canvas{display:block;width:100%;height:100%;image-rendering:pixelated}.logo-resource{position:absolute;opacity:0;width:1px;height:1px}`,
   data: {fps:timeline.frameRate.numerator/timeline.frameRate.denominator,flagPose:'floor',flagColor:o.flagColor,flagAmplitude:o.flagAmplitude,flagSpeed:o.flagSpeed},
   setup: flagSetup+`const cloth=root.querySelector('.floor-cloth');return frame=>{cloth.style.opacity=Math.min(1,frame/12);drawFlag(frame);};`
- }), [{id:'flag-logo',parent:'scene',kind:'image',order:1,artifact:logo,style:[]}]);
+ }), [{id:'flag-logo',kind:'image',artifact:logo,style:[]}]);
 }

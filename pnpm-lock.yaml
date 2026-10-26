@@ -708,6 +708,9 @@ importers:
       '@hypit/temporal':
         specifier: workspace:^0.1.1
         version: link:../temporal
+      '@hypit/timeline':
+        specifier: workspace:^0.1.1
+        version: link:../timeline
     devDependencies:
       '@hypit/hypit':
         specifier: workspace:*
@@ -917,6 +920,9 @@ importers:
       '@hypit/media':
         specifier: workspace:^0.2.0
         version: link:../media
+      '@hypit/temporal':
+        specifier: workspace:^0.1.1
+        version: link:../temporal
       '@hypit/timeline':
         specifier: workspace:^0.1.1
         version: link:../timeline
@@ -987,6 +993,9 @@ importers:
       '@hypit/media':
         specifier: workspace:^0.2.0
         version: link:../media
+      '@hypit/media-operations':
+        specifier: workspace:^0.3.0
+        version: link:../media-operations
       '@hypit/spatial':
         specifier: workspace:^0.1.1
         version: link:../spatial
@@ -1320,12 +1329,18 @@ importers:
       '@hypit/composition':
         specifier: workspace:^0.2.0
         version: link:../composition
+      '@hypit/html-program':
+        specifier: workspace:^0.2.0
+        version: link:../html-program
       '@hypit/hypit':
         specifier: workspace:^0.4.0
         version: link:../..
       '@hypit/media-operations':
         specifier: workspace:^0.3.0
         version: link:../media-operations
+      '@hypit/temporal':
+        specifier: workspace:^0.1.1
+        version: link:../temporal
 
   packages/html-program:
     dependencies:
@@ -1335,6 +1350,9 @@ importers:
       '@hypit/media':
         specifier: workspace:^0.2.0
         version: link:../media
+      '@hypit/temporal':
+        specifier: workspace:^0.1.1
+        version: link:../temporal
       '@hypit/timeline':
         specifier: workspace:^0.1.1
         version: link:../timeline
@@ -1764,9 +1782,6 @@ importers:
       '@hypit/temporal':
         specifier: workspace:^0.1.1
         version: link:../temporal
-      '@hypit/timeline':
-        specifier: workspace:^0.1.1
-        version: link:../timeline
     devDependencies:
       '@hypit/hypit':
         specifier: workspace:*
@@ -1929,9 +1944,18 @@ importers:
       '@hypit/media':
         specifier: workspace:^0.2.0
         version: link:../media
+      '@hypit/temporal':
+        specifier: workspace:^0.1.1
+        version: link:../temporal
+      '@hypit/timeline':
+        specifier: workspace:^0.1.1
+        version: link:../timeline
       '@puppeteer/browsers':
         specifier: 3.2.2
         version: 3.2.2
+      mediabunny:
+        specifier: 1.62.1
+        version: 1.62.1
       puppeteer-core:
         specifier: 25.10.0
         version: 25.10.0
@@ -1969,12 +1993,12 @@ importers:
       '@hypit/script':
         specifier: workspace:*
         version: link:../script
-      '@hypit/timeline':
-        specifier: workspace:*
-        version: link:../timeline
       '@hypit/visual-track':
         specifier: workspace:*
         version: link:../visual-track
+      electron:
+        specifier: 45.0.0
+        version: 45.0.0
       sharp:
         specifier: 0.35.4
         version: 0.35.4(@types/node@24.10.1)
@@ -2199,6 +2223,9 @@ importers:
       '@hypit/media':
         specifier: workspace:^0.2.0
         version: link:../media
+      '@hypit/media-operations':
+        specifier: workspace:^0.3.0
+        version: link:../media-operations
       '@hypit/spatial':
         specifier: workspace:^0.1.1
         version: link:../spatial
@@ -2519,6 +2546,9 @@ importers:
       '@hypit/media':
         specifier: workspace:^0.2.0
         version: link:../media
+      '@hypit/temporal':
+        specifier: workspace:^0.1.1
+        version: link:../temporal
     devDependencies:
       '@hypit/hypit':
         specifier: workspace:*
@@ -2532,9 +2562,6 @@ importers:
       '@hypit/refinement':
         specifier: workspace:*
         version: link:../refinement
-      '@hypit/timeline':
-        specifier: workspace:*
-        version: link:../timeline
 
   packages/studio:
     dependencies:
@@ -2604,6 +2631,10 @@ importers:
         version: 0.35.4(@types/node@24.10.1)
 
   packages/studio-companion:
+    dependencies:
+      '@hypit/timeline':
+        specifier: workspace:^0.1.1
+        version: link:../timeline
     devDependencies:
       '@hypit/hypit':
         specifier: workspace:*
@@ -3013,6 +3044,9 @@ importers:
       '@hypit/markup':
         specifier: workspace:*
         version: link:../markup
+      '@hypit/media-operations':
+        specifier: workspace:*
+        version: link:../media-operations
       '@hypit/narrative':
         specifier: workspace:*
         version: link:../narrative
@@ -3253,6 +3287,14 @@ packages:
         optional: true
       search-insights:
         optional: true
+
+  '@electron-internal/extract-zip@1.0.6':
+    resolution: {integrity: sha512-/aQLgFDdCSnwChfUwqekSmE1q2dCTzhUy5saIHBb5vyYn5LzWaKPaIz1wM0lDMCZYBoIG4svJNvAJb6vkI8BuA==}
+    engines: {node: '>=22.12.0'}
+
+  '@electron/get@5.1.0':
+    resolution: {integrity: sha512-3kSBtG8ObcTVfXanm5vVJ6UnBLEVmVsRk1M+vGqCuMBV+XLCbJYuWQful+yIy0GQDsSlK0kHEriEHn7SPk4EnA==}
+    engines: {node: '>=22.12.0'}
 
   '@emnapi/runtime@1.11.3':
     resolution: {integrity: sha512-Xz4Tpyki7XyrpbUK1jR1AhdAdaXyhhY4lZ3neLodmhpuWfy2PAQN5B46sAiU4liOXGLkHypn/qU+jvfWSCYYLA==}
@@ -4127,6 +4169,12 @@ packages:
   '@shikijs/vscode-textmate@10.0.2':
     resolution: {integrity: sha512-83yeghZ2xxin3Nj8z1NMd/NCuca+gsYXswywDy5bHvwlWL8tpTQmzGeUuHd9FC3E/SBEMvzJRwWEOz5gGes9Qg==}
 
+  '@types/dom-mediacapture-transform@0.1.12':
+    resolution: {integrity: sha512-d7/QsLRwF864A5mgIM/YrfiglHoYn7zgCcAoJgW404r+2DwnNr7EBbLnCWpmOMgH8y0te73L1AV6H1bmauaWFw==}
+
+  '@types/dom-webcodecs@0.1.13':
+    resolution: {integrity: sha512-O5hkiFIcjjszPIYyUSyvScyvrBoV3NOEEZx/pMlsu44TKzWNkLVBBxnxJz42in5n3QIolYOcBYFCPZZ0h8SkwQ==}
+
   '@types/estree@1.0.9':
     resolution: {integrity: sha512-GhdPgy1el4/ImP05X05Uw4cw2/M93BCUmnEvWZNStlCzEKME4Fkk+YpoA5OiHNQmoS7Cafb8Xa3Pya8m1Qrzeg==}
 
@@ -4315,6 +4363,15 @@ packages:
   csstype@3.2.3:
     resolution: {integrity: sha512-z1HGKcYy2xA8AGQfwrn0PAy+PB7X/GSj3UVJW9qKyn43xWa+gl5nXmU4qqLMRzWVLFC8KusUX8T/0kCiOYpAIQ==}
 
+  debug@4.4.3:
+    resolution: {integrity: sha512-RGwwWnwQvkVfavKVt22FGLw+xYSdzARwm0ru6DhTVA3umU5hZc28V3kO4stgYryrTlLpuvgI9GiijltAjNbcqA==}
+    engines: {node: '>=6.0'}
+    peerDependencies:
+      supports-color: '*'
+    peerDependenciesMeta:
+      supports-color:
+        optional: true
+
   dequal@2.0.3:
     resolution: {integrity: sha512-0je+qPKHEMohvfRTCEo3CrPG6cAzAYgmzKyxRiYSSDkS6eGJdyVJm7WaYA5ECaAD9wLB2T4EEeymA5aFVcYXCA==}
     engines: {node: '>=6'}
@@ -4358,6 +4415,11 @@ packages:
     resolution: {integrity: sha512-qI4JLRKnSzqFqr7hAlS5xQDusBCjKSEG4t4+7aNrIQMHBcsC2TGEhuyABJdYkgSewL57PNLYEiibY2iPKhKpaA==}
     engines: {node: '>=20.19.0'}
 
+  electron@45.0.0:
+    resolution: {integrity: sha512-yjz4uhMBcO6L5X7CWgRMobf2EMJPnb9j4zuf+nu/TU/6E4Sqfx7fn/a2eACo4qngjml/0JnsoZhxYroJLxLd2w==}
+    engines: {node: '>= 22.12.0'}
+    hasBin: true
+
   emoji-regex-xs@1.0.0:
     resolution: {integrity: sha512-LRlerrMYoIDrT6jgpeZ2YYl/L8EulRTt5hQcYjy5AInh7HWXKimpqx68aknBFpGL2+/IcogTcaydJEgaTmOpDg==}
 
@@ -4375,6 +4437,10 @@ packages:
   entities@8.0.0:
     resolution: {integrity: sha512-zwfzJecQ/Uej6tusMqwAqU/6KL2XaB2VZ2Jg54Je6ahNBGNH6Ek6g3jjNCF0fG9EWQKGZNddNjU5F1ZQn/sBnA==}
     engines: {node: '>=20.19.0'}
+
+  env-paths@3.0.0:
+    resolution: {integrity: sha512-dtJUTepzMW3Lm/NPxRf3wP4642UWhjL2sQxc+ym2YMj1m/H2zDNQOlezafzkHwn6sMstjHTwG6iQQsctDW/b1A==}
+    engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
 
   esbuild@0.21.5:
     resolution: {integrity: sha512-mg3OPMV4hXywwpoDxu3Qda5xCKQi+vCTZq8S9J/EpkhB2HzKXq4SNFZE3+NK93JYxc8VMSep+lOUSC/RVKaBqw==}
@@ -4420,6 +4486,9 @@ packages:
 
   get-tsconfig@4.14.0:
     resolution: {integrity: sha512-yTb+8DXzDREzgvYmh6s9vHsSVCHeC0G3PI5bEXNBHtmshPnO+S5O7qgLEOn0I5QvMy6kpZN8K1NKGyilLb93wA==}
+
+  graceful-fs@4.2.11:
+    resolution: {integrity: sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ==}
 
   hast-util-to-html@9.0.5:
     resolution: {integrity: sha512-OguPdidb+fbHQSU4Q4ZiLKnzWo8Wwsf5bZfbvu7//a9oTYoqD/fWpe96NuHkoS9h0ccGOTe0C4NGXdtS0iObOw==}
@@ -4541,6 +4610,9 @@ packages:
   mdast-util-to-hast@13.2.1:
     resolution: {integrity: sha512-cctsq2wp5vTsLIcaymblUriiTcZd0CwWtCbLvrOzYCDZoWyMNV8sZ7krj09FSnsiJi3WVsHLM4k6Dq/yaPyCXA==}
 
+  mediabunny@1.62.1:
+    resolution: {integrity: sha512-lYzeerDwo9QLhBCipqQDXOSV7InvaIFplllZQviPO5rPwH+IUr8M1uvumk1olIUgMRGkPiInRriv25WFErUgMw==}
+
   micromark-util-character@2.1.1:
     resolution: {integrity: sha512-wv8tdUTJ3thSFFFJKtpYKOYiGP2+v96Hvk4Tu8KpCAsTMs6yi+nVmGh1syvSCsaxz45J6Jbw+9DD6g97+NV67Q==}
 
@@ -4565,6 +4637,9 @@ packages:
   modern-tar@0.8.5:
     resolution: {integrity: sha512-snEhs+6G5Tjd4I7tLCDOaoln2RgE0bD19RzEKgvgK2hZ5VKy3MpLhLTZ2fWpXSTg4K2cyPwp+VHATFJhxfnOeA==}
     engines: {node: '>=18.0.0'}
+
+  ms@2.1.3:
+    resolution: {integrity: sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==}
 
   nanoid@3.3.16:
     resolution: {integrity: sha512-bzlKTyNJ7+LdGIIwy8ijFpIqEQIvafahV7eYykJ8Cvh42EdJeODoJ6gUJXpQJvej1BddH8OqTXZNE/KfbWAu8Q==}
@@ -4608,6 +4683,10 @@ packages:
     peerDependenciesMeta:
       preact-render-to-string:
         optional: true
+
+  progress@2.0.3:
+    resolution: {integrity: sha512-7PiHtLll5LdnKIMw100I+8xJXR5gW2QwWYkT6iJva0bXitZKa/XMrSbdmg3r2Xnaidz9Qumd0VPaMrZlF9V9sA==}
+    engines: {node: '>=0.4.0'}
 
   property-information@7.2.0:
     resolution: {integrity: sha512-IAtzIB6sUiWaJYrX9smp3V46pBGbBeLFRGdh25kg1334VcBlD8HzhPeNIWQH9zhGmo2itIe25EHt9dQP7G5hmg==}
@@ -4694,6 +4773,10 @@ packages:
     resolution: {integrity: sha512-yDPMNjp4WyfYBkHnjIRLfca1i6KMyGCtsVgoKe/z1+6vukgaENdgGBZt+ZmKPc4gavvEZ5OgHfHdrazhgNyG7w==}
     engines: {node: '>=12'}
 
+  sumchecker@3.0.1:
+    resolution: {integrity: sha512-MvjXzkz/BOfyVDkG0oFOtBxHX2u3gKbMHIF/dXblZsgD3BWOFLmHovIpZY7BykJdAjcqRCBi1WYBNdEC9yI7vg==}
+    engines: {node: '>= 8.0'}
+
   superjson@2.2.6:
     resolution: {integrity: sha512-H+ue8Zo4vJmV2nRjpx86P35lzwDT3nItnIsocgumgr0hHMQ+ZGq5vrERg9kJBo5AWGmxZDhzDo+WVIJqkB0cGA==}
     engines: {node: '>=16'}
@@ -4729,6 +4812,10 @@ packages:
 
   undici-types@7.16.0:
     resolution: {integrity: sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw==}
+
+  undici@7.30.1:
+    resolution: {integrity: sha512-03KrMbjIFDWQR5RNPrSw3bd1r12JpyFQl9/yxjUbJtqkjmllqC5lFjZh6ujeuJCKr8EOQvRW872Oy/az+nLYxg==}
+    engines: {node: '>=20.18.1'}
 
   unist-util-is@6.0.1:
     resolution: {integrity: sha512-LsiILbtBETkDz8I9p1dQ0uyRUWuaQzd/cuEeS1hoRSyW5E5XGmTzlwY1OrNzzakGowI9Dr/I8HVaw4hTtnxy8g==}
@@ -5040,6 +5127,21 @@ snapshots:
       search-insights: 2.17.3
     transitivePeerDependencies:
       - '@algolia/client-search'
+
+  '@electron-internal/extract-zip@1.0.6': {}
+
+  '@electron/get@5.1.0':
+    dependencies:
+      debug: 4.4.3
+      env-paths: 3.0.0
+      graceful-fs: 4.2.11
+      progress: 2.0.3
+      semver: 7.8.5
+      sumchecker: 3.0.1
+    optionalDependencies:
+      undici: 7.30.1
+    transitivePeerDependencies:
+      - supports-color
 
   '@emnapi/runtime@1.11.3':
     dependencies:
@@ -5557,6 +5659,12 @@ snapshots:
 
   '@shikijs/vscode-textmate@10.0.2': {}
 
+  '@types/dom-mediacapture-transform@0.1.12':
+    dependencies:
+      '@types/dom-webcodecs': 0.1.13
+
+  '@types/dom-webcodecs@0.1.13': {}
+
   '@types/estree@1.0.9': {}
 
   '@types/hast@3.0.5':
@@ -5757,6 +5865,10 @@ snapshots:
 
   csstype@3.2.3: {}
 
+  debug@4.4.3:
+    dependencies:
+      ms: 2.1.3
+
   dequal@2.0.3: {}
 
   detect-libc@2.1.2: {}
@@ -5803,6 +5915,14 @@ snapshots:
       domelementtype: 3.0.0
       domhandler: 6.0.1
 
+  electron@45.0.0:
+    dependencies:
+      '@electron-internal/extract-zip': 1.0.6
+      '@electron/get': 5.1.0
+      '@types/node': 24.10.1
+    transitivePeerDependencies:
+      - supports-color
+
   emoji-regex-xs@1.0.0: {}
 
   emoji-regex@10.6.0: {}
@@ -5812,6 +5932,8 @@ snapshots:
   entities@7.0.1: {}
 
   entities@8.0.0: {}
+
+  env-paths@3.0.0: {}
 
   esbuild@0.21.5:
     optionalDependencies:
@@ -5890,6 +6012,8 @@ snapshots:
   get-tsconfig@4.14.0:
     dependencies:
       resolve-pkg-maps: 1.0.0
+
+  graceful-fs@4.2.11: {}
 
   hast-util-to-html@9.0.5:
     dependencies:
@@ -6023,6 +6147,11 @@ snapshots:
       unist-util-visit: 5.1.0
       vfile: 6.0.3
 
+  mediabunny@1.62.1:
+    dependencies:
+      '@types/dom-mediacapture-transform': 0.1.12
+      '@types/dom-webcodecs': 0.1.13
+
   micromark-util-character@2.1.1:
     dependencies:
       micromark-util-symbol: 2.0.1
@@ -6045,6 +6174,8 @@ snapshots:
   mitt@3.0.1: {}
 
   modern-tar@0.8.5: {}
+
+  ms@2.1.3: {}
 
   nanoid@3.3.16: {}
 
@@ -6079,6 +6210,8 @@ snapshots:
       source-map-js: 1.2.1
 
   preact@10.29.8: {}
+
+  progress@2.0.3: {}
 
   property-information@7.2.0: {}
 
@@ -6245,6 +6378,12 @@ snapshots:
     dependencies:
       ansi-regex: 6.2.2
 
+  sumchecker@3.0.1:
+    dependencies:
+      debug: 4.4.3
+    transitivePeerDependencies:
+      - supports-color
+
   superjson@2.2.6:
     dependencies:
       copy-anything: 4.0.5
@@ -6275,6 +6414,9 @@ snapshots:
   uhyphen@0.2.0: {}
 
   undici-types@7.16.0: {}
+
+  undici@7.30.1:
+    optional: true
 
   unist-util-is@6.0.1:
     dependencies:

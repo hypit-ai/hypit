@@ -1,4 +1,5 @@
 import type { HtmlProgram } from "@hypit/html-program";
+import type { VisualDeliverySpec } from "@hypit/media";
 import { assert, runProcess } from "./process.js";
 
 type ProbeStream = {
@@ -10,6 +11,11 @@ type ProbeStream = {
   readonly r_frame_rate?: unknown;
   readonly nb_read_frames?: unknown;
   readonly nb_frames?: unknown;
+  readonly pix_fmt?: unknown;
+  readonly color_range?: unknown;
+  readonly color_space?: unknown;
+  readonly color_transfer?: unknown;
+  readonly color_primaries?: unknown;
 };
 
 function parseRational(value: unknown, subject: string): { readonly numerator: bigint; readonly denominator: bigint } {
@@ -39,6 +45,7 @@ function outputFrameCount(stream: ProbeStream): number {
 export async function verifyOutput(args: {
   readonly path: string;
   readonly document: Pick<HtmlProgram, "frameRate" | "frameCount" | "canvas">;
+  readonly delivery: VisualDeliverySpec;
   readonly ffprobePath: string;
   readonly timeoutMs: number;
   readonly maxOutputBytes: number;
@@ -62,8 +69,18 @@ export async function verifyOutput(args: {
   const streams = (value as { readonly streams?: unknown }).streams;
   assert(Array.isArray(streams) && streams.length === 1, "Rendered visual must contain exactly one stream");
   const stream = streams[0] as ProbeStream;
-  assert(stream.codec_type === "video" && stream.codec_name === "h264",
+  assert(stream.codec_type === "video" && stream.codec_name === args.delivery.encoding.codec,
     "Rendered visual must contain one H.264 video stream and no audio");
+  assert(stream.pix_fmt === args.delivery.encoding.pixelFormat,
+    "Rendered visual pixel format differs from its delivery requirement");
+  assert(stream.color_range === "tv" && args.delivery.picture.colorRange === "limited",
+    "Rendered visual color range differs from its delivery requirement");
+  assert(stream.color_space === args.delivery.picture.colorMatrix,
+    "Rendered visual color matrix differs from its delivery requirement");
+  assert(stream.color_transfer === args.delivery.picture.colorTransfer,
+    "Rendered visual color transfer differs from its delivery requirement");
+  assert(stream.color_primaries === args.delivery.picture.colorPrimaries,
+    "Rendered visual color primaries differ from its delivery requirement");
   assert(stream.width === args.document.canvas.width && stream.height === args.document.canvas.height,
     "Rendered visual canvas differs from its document");
   const rate = parseRational(stream.avg_frame_rate ?? stream.r_frame_rate, "Rendered visual frame rate");

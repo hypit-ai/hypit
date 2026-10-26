@@ -52,21 +52,15 @@ export function installPortraitInset(module, manifest, component) {
       const { timeline, within, window, sources, frame } = Object.fromEntries(
           Object.entries(inputs).map(([k, r]) => [k, r.value]),
         ),
-        { clips, children } = placedVisualMedia(timeline, window, sources.sources);
+        { children } = placedVisualMedia(timeline, window, sources.sources);
       const program = htmlVisual({
         html:
           '<div class="viewport"><div class="inner">' +
           children.map((v) => "{{" + v.id + "}}").join("") +
           "</div></div>",
         css: `.viewport{position:absolute;overflow:hidden;border-radius:50%;border:4px solid ${palette.ink};box-shadow:0 0 0 5px #fa81b8,7px 9px 0 5px ${palette.ink}}.inner{position:absolute;inset:0;transform:scale(1.23);transform-origin:50% 28%}.inner>*{object-position:50% 28%!important}`,
-        data: {
-          frame,
-          spans: clips.map((c) => ({
-            start: c.span.startFrame - window.span.startFrame,
-            end: c.span.endFrameExclusive - window.span.startFrame,
-          })),
-        },
-        setup: `const view=root.querySelector('.viewport'),a=data.frame;Object.assign(view.style,{left:a.xPx+'px',top:a.yPx+'px',width:a.widthPx+'px',height:a.heightPx+'px'});const vs=[...root.querySelectorAll('video')];return f=>vs.forEach((v,i)=>v.style.visibility=f>=data.spans[i].start&&f<data.spans[i].end?'inherit':'hidden');`,
+        data: { frame },
+        setup: `const view=root.querySelector('.viewport'),a=data.frame;Object.assign(view.style,{left:a.xPx+'px',top:a.yPx+'px',width:a.widthPx+'px',height:a.heightPx+'px'});return()=>{};`,
       });
       const id = window.subjectId,
         visual = sealPresentVisualTrack({
@@ -77,24 +71,20 @@ export function installPortraitInset(module, manifest, component) {
             ? [
                 {
                   id,
-                  order: 0,
                   span: window.span,
-                  elements: [
-                    {
-                      id: "scene",
-                      kind: "program",
-                      order: 0,
-                      program,
-                      style: styles({
-                        position: "absolute",
-                        left: within.xPx + "px",
-                        top: within.yPx + "px",
-                        width: within.widthPx + "px",
-                        height: within.heightPx + "px",
-                      }),
-                    },
-                    ...children,
-                  ],
+                  root: {
+                    id: "scene",
+                    kind: "program",
+                    program,
+                    style: styles({
+                      position: "absolute",
+                      left: within.xPx + "px",
+                      top: within.yPx + "px",
+                      width: within.widthPx + "px",
+                      height: within.heightPx + "px",
+                    }),
+                    slots: children.map((element) => ({ name: element.id, element })),
+                  },
                 },
               ]
             : [],
@@ -145,7 +135,7 @@ export function installPortraitInset(module, manifest, component) {
           {
             id: textAttribute(element, "id"),
             type: types.style,
-            value: (canonicalize(presenterStyle(fragment, bindings))),
+            value: (canonicalize(presenterStyle(fragment, bindings, "overlay"))),
             range: element.range,
           },
         ],

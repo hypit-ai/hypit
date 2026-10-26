@@ -1,5 +1,5 @@
 import type { Narrative, NarrativeSegmentRef } from "@hypit/narrative";
-import { assertLocalTemporalDomain } from "@hypit/temporal";
+import { assertLocalTemporalDomain, exactTemporalZero } from "@hypit/temporal";
 import type { LocalTemporalDomain } from "@hypit/temporal";
 
 import { sealNarrativeAlignment } from "./identity.js";
@@ -30,8 +30,8 @@ export function materializeSegmentBoundaryAlignment(
     segment: { segmentId: segment.id, startBoundaryId: segment.startAnchorId, endBoundaryId: segment.endAnchorId },
     tokens: [],
     boundaries: [
-      { id: segment.startAnchorId, frame: 0 },
-      { id: segment.endAnchorId, frame: domain.frameCount },
+      { id: segment.startAnchorId, at: exactTemporalZero() },
+      { id: segment.endAnchorId, at: structuredClone(domain.duration) },
     ],
   }, domain);
 }

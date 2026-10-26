@@ -5,7 +5,7 @@ import type {
   CompiledSourceClosure,
   AuthorRecordRefiner,
 } from "@hypit/author";
-import type { ResolvedSource, SourceUnit } from "@hypit/source";
+import type { ResolvedSource } from "@hypit/source";
 import type { BlobAttachment, Workspace, WorkspaceSession } from "@hypit/workspace";
 import type { BlobRef, LinkedProgram } from "@hypit/protocol";
 import { compareCodeUnits, moduleKey } from "@hypit/protocol";

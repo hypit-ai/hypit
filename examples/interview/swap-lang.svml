@@ -161,17 +161,17 @@
     left="0%" top="0%" right="100%" bottom="100%"/>
   <time:Clock id="clock" frame-rate="30"/>
 
-  <mediaop:Normalize id="soundtrack-media" source={soundtrack}
-    video="none" audio="default" span-authority="audio" clock={clock}/>
-  <mediaop:Normalize id="rule-reveal-sound-media" source={rule-reveal-sound}
-    video="none" audio="default" span-authority="audio" clock={clock}/>
+  <mediaop:Prepare id="soundtrack-media" source={soundtrack}
+    video="none" audio="default" span-authority="audio"/>
+  <mediaop:Prepare id="rule-reveal-sound-media" source={rule-reveal-sound}
+    video="none" audio="default" span-authority="audio"/>
 
-  <mediaop:Normalize id="manifest-rule-media" source={manifest-rule-take.video}
-    video="primary-moving" audio="default" span-authority="video" clock={clock}/>
-  <mediaop:Normalize id="real-estate-rule-media" source={real-estate-rule-take.video}
-    video="primary-moving" audio="default" span-authority="video" clock={clock}/>
-  <mediaop:Normalize id="bitcoin-rule-media" source={bitcoin-rule-take.video}
-    video="primary-moving" audio="default" span-authority="video" clock={clock}/>
+  <mediaop:Prepare id="manifest-rule-media" source={manifest-rule-take.video}
+    video="primary-moving" audio="default" span-authority="video"/>
+  <mediaop:Prepare id="real-estate-rule-media" source={real-estate-rule-take.video}
+    video="primary-moving" audio="default" span-authority="video"/>
+  <mediaop:Prepare id="bitcoin-rule-media" source={bitcoin-rule-take.video}
+    video="primary-moving" audio="default" span-authority="video"/>
 
   <whisperx:Transcription id="manifest-rule-semantic-transcription" media={manifest-rule-media.media} language="es"/>
   <speechalign:Alignment id="manifest-rule-semantic" narrative={story}

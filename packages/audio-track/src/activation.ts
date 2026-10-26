@@ -7,7 +7,6 @@ import {
   audioTrackManifest,
   audioTrackModuleRef,
   decodeAudioTrackSurface,
-  decodeAudioSourceTimeSurface,
   audioTrackMarkupSurfaces,
 } from "./index.js";
 import { audioTrackStudioParameterCompanions, audioTrackStudioTrackCompanions } from "./studio.js";
@@ -21,11 +20,6 @@ export const hypitPackage = {
       module: audioTrackModuleRef,
       declaration: audioTrackMarkupSurfaces.find((item) => item.name === "track")!,
       handler: decodeAudioTrackSurface,
-    }),
-    createMarkupSurfaceFacet({
-      module: audioTrackModuleRef,
-      declaration: audioTrackMarkupSurfaces.find((item) => item.name === "source-time")!,
-      handler: decodeAudioSourceTimeSurface,
     }),
     createStudioCompanionFacet({
       tracks: audioTrackStudioTrackCompanions,

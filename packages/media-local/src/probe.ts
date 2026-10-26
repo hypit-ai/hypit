@@ -1,6 +1,5 @@
 import { sealMediaInspection } from "@hypit/media";
 import type { MediaAudioStream, MediaInspection, MediaOtherStream, MediaRational, MediaStream, MediaTimestamp, MediaVideoStream } from "@hypit/media";
-import type { BlobRef } from "@hypit/hypit/protocol";
 import { ffprobeDisplayRotation } from "./ffprobe-display.js";
 
 type JsonObject = Record<string, unknown>;
@@ -203,12 +202,8 @@ function timing(
   };
 }
 
-export function parseMediaInspection(args: {
-  readonly source: BlobRef;
-  readonly ffprobeVersion: string;
-  readonly value: unknown;
-}): MediaInspection {
-  const root = object(args.value);
+export function parseMediaInspection(value: unknown): MediaInspection {
+  const root = object(value);
   if (root === undefined) throw new Error("ffprobe output must be an object");
   const rawStreams = Array.isArray(root.streams) ? root.streams.map(object).filter((item): item is JsonObject => item !== undefined) : [];
   const streams = rawStreams as FfprobeStream[];

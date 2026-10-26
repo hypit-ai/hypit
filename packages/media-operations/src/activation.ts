@@ -3,7 +3,7 @@ import { createProducerPackageFacet } from "@hypit/hypit/producer";
 import { createMarkupSurfaceFacet } from "@hypit/hypit/markup";
 import { createRunFragmentFacet } from "@hypit/hypit/run";
 import {
-  decodeSynchronizedMediaSurface,
+  decodePreparedMediaSurface,
   decodeStillVideoSurface,
   decodeExtractAudioSurface,
   decodeExtractFrameSurface,
@@ -26,8 +26,8 @@ export const hypitPackage = {
     },
   }), createMarkupSurfaceFacet({
     module: mediaOperationsModuleRef,
-    declaration: mediaOperationsMarkupSurfaces.find((item) => item.name === "synchronized-media")!,
-    handler: decodeSynchronizedMediaSurface,
+    declaration: mediaOperationsMarkupSurfaces.find((item) => item.name === "prepared-media")!,
+    handler: decodePreparedMediaSurface,
   }), createMarkupSurfaceFacet({
     module: mediaOperationsModuleRef,
     declaration: mediaOperationsMarkupSurfaces.find((item) => item.name === "still-video")!,

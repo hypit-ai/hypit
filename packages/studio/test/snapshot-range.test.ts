@@ -33,6 +33,8 @@ test("a pure-MG work keeps its declared extent even when a Studio Item extends b
   });
   assert.equal(result.timeline.frameCount, 90); assert.equal(result.timeline.durationSec, 3);
   assert.equal(result.tracks[0]!.items[0]!.endFrameExclusive, 150);
+  assert.deepEqual(result.tracks[0]!.items[0]!.display.layers, [],
+    "the generic terminal projection does not guess a representative child of a Visual Present");
   assert.deepEqual(result.tracks[0]!.items[0]!.terminalTargets, [{ kind: "visual-present", occurrencePath: ["foreground", "visual"], presentId: "scene" }]);
   assert.equal(result.tracks[0]!.items[1]!.display.title, "grade");
   assert.deepEqual(result.tracks[0]!.items[1]!.terminalTargets, [{ kind: "visual-adjustment", occurrencePath: ["foreground", "visual"], adjustmentId: "grade" }]);

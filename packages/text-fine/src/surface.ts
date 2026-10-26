@@ -41,7 +41,6 @@ import {
 } from "./program.js";
 import type {
   TextFlowPlacementPolicy,
-  TextItemSpec,
   TextMotion,
   TextPathMotion,
   TextPathPlacementPolicy,
@@ -163,10 +162,6 @@ function propString(value: Recipe, name: string, fallback?: string): string {
   if (result === undefined && fallback !== undefined) return fallback;
   if (typeof result !== "string" || !result.trim()) throw new Error(`Text Recipe ${name} must be text.`);
   return result.trim();
-}
-
-function propBoolean(value: Recipe, name: string, fallback: boolean): boolean {
-  return booleanValue(value.properties[name], `Text Recipe ${name}`, fallback);
 }
 
 function exactFonts(
@@ -785,7 +780,7 @@ export const decodeTypographyFlowSurface = decodeFineTextOccurrenceSurface("flow
 export const decodeTypographyPointSurface = decodeFineTextOccurrenceSurface("point");
 export const decodeTypographyPathSurface = decodeFineTextOccurrenceSurface("path");
 
-function createMaskFragment(id: string): GraphFragment {
+function createMaskFragment(): GraphFragment {
   const inputs = [
     { name: "timeline", type: timelineTypes.timeline },
     { name: "occurrence", type: textFineTypes.occurrence },
@@ -820,7 +815,7 @@ export const decodeTypographyMaskSurface: StructuredSurfaceHandler = ({ element,
     mode: enumText(element, "mode", ["alpha", "luminance"] as const, "alpha"),
     materialFit: enumText(element, "fit", ["contain", "cover", "fill"] as const, "cover"),
   });
-  const fragment = createMaskFragment(id);
+  const fragment = createMaskFragment();
   return {
     records: [{ id: specId, type: textFineTypes.maskSpec, value: (spec), range: element.range }],
     components: [{

@@ -15,7 +15,11 @@ Immediate endpoints run once. Asynchronous endpoints start a task, store its han
 artifacts after remote completion. Polling uses the stored Need and handle without loading its whole
 Build. Credentials are resolved only for slots declared by the selected endpoint; simultaneous reads
 of the same credential are coalesced. Cancellation is best effort and never rolls back completed work.
-A failed action retains its receipt and error for the Result; the Executor does not retry or reconcile it.
+Before an asynchronous `start` returns, its Endpoint may checkpoint an accepted or ended remote task.
+The Executor persists that handle and optional receipt immediately. If later local work in the same
+submission throws, the acknowledged Operation remains runnable from `poll` or `collect`; it never
+falls back to `submit`. An unacknowledged failed action retains its error for the Result. The Executor
+does not infer remote work, reconcile unknown submissions or create another attempt.
 
 Immediate calls and asynchronous submit, poll and collect actions receive the same progress and
 diagnostic callbacks. Progress reaches the caller while the action is running; changes of phase also

@@ -8,10 +8,10 @@ It contains no clips, words, Tracks or central event registry.
 
 For spoken work, independent facts meet around that axis:
 
-1. Normalize accepted media into `SynchronizedMedia` plus a finite local temporal domain.
+1. Prepare accepted media as source-preserving `PreparedMedia` plus a finite exact local temporal domain.
 2. Construct Timeline from a DAG of named Instants, Windows and Extents with one required `end`.
 3. When a consumer needs positions inside performed speech, align its Script Segment on the local domain.
-4. Project requested semantic values through the equal-length Window; present ordinary media through independent Visual and Audio sources.
+4. Project requested semantic values through the explicitly placed Window; present ordinary media through independent Visual and Audio sources.
 
 This separation is useful: moving a passage changes absolute relationships without changing its media or local
 word evidence; reframing picture does not change audio; a pure animation needs Timeline but no media
@@ -28,19 +28,20 @@ or Script.
 <import as="audio" from="@hypit/audio-track@1"/>
 ```
 
-## Normalize local media
+## Prepare local media
 
-The Clock fixes the frame rate shared by the final Timeline and every local domain placed on it:
+Preparation selects the intended members and publishes an exact local domain and Extent without
+choosing the final Timeline's frame grid:
 
 ```svml
 <time:Clock id="clock" frame-rate="30"/>
-<mediaop:Normalize id="opening-media" source={opening-video.video}
-  video="primary-moving" audio="default" span-authority="video" clock={clock}/>
-<mediaop:Normalize id="answer-media" source={answer-video.video}
-  video="primary-moving" audio="default" span-authority="video" clock={clock}/>
+<mediaop:Prepare id="opening-media" source={opening-video.video}
+  video="primary-moving" audio="default" span-authority="video"/>
+<mediaop:Prepare id="answer-media" source={answer-video.video}
+  video="primary-moving" audio="default" span-authority="video"/>
 ```
 
-Normalization establishes media facts. It contains no Script meaning or program placement.
+Preparation establishes media facts. It contains no Script meaning, program placement or proxy file.
 
 ## Align meaning when the composition consumes it
 
@@ -96,16 +97,17 @@ Window is naturally published as an ordinary graph value:
 </time:Timeline>
 ```
 
-Each `for={...extent}` uses a resolved unpositioned duration. Generated speech may therefore
-determine Timeline length during ordinary graph evaluation. Use `from="opening.end+2s"` for a gap,
+Each `for={...extent}` resolves an exact unpositioned duration on this Timeline's Clock. The default
+`cover` rule retains a final partial frame. Generated speech may therefore determine Timeline length
+during ordinary graph evaluation. Use `from="opening.end+2s"` for a gap,
 `from="opening.end-12f"` for overlap, or `latest(a.end,b.end)` for parallel branches. A pure animation
 can simply declare `<time:Timeline id="animation" clock={clock} end="8s"/>`. The Timeline retains no
 media or source-domain identity.
 
 ## Project meaning independently
 
-Project semantic evidence by pairing each Alignment with its complete local domain and equal-length
-absolute Window:
+Project semantic evidence by pairing each Alignment with its complete local domain and explicitly
+placed absolute Window:
 
 ```svml
 <semantic:Projection id="story-time" narrative={story} timeline={speech.timeline}>
@@ -141,11 +143,11 @@ offset is needed.
 </audio:Track>
 ```
 
-Visual and Audio Clips are peer occurrences. The same normalized media can feed both, but selecting its picture never makes its audio
+Visual and Audio Clips are peer occurrences. The same prepared media can feed both, but selecting its picture never makes its audio
 audible automatically.
 
 ```text
-SynchronizedMedia + Window ──────────────────────────────→ Visual / Audio occurrence
+PreparedMedia + Window ──────────────────────────────────→ Visual / Audio occurrence
 
 NarrativeAlignment + LocalDomain + Window ──────────────→ absolute Instants / Windows
 

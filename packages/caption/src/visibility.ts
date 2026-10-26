@@ -1,4 +1,4 @@
-type FrameSpan = { readonly startFrame: number; readonly endFrameExclusive: number };
+import type { FrameSpan } from "@hypit/timeline";
 import type { CaptionProgram } from "./types.js";
 
 /** Later Uses replace this Cue's presentation inside their windows, including Hidden. */

@@ -37,7 +37,8 @@ test("audio uses exact event identities and emitted clips, with shared recipe ow
       name: "board.audio", type: "AudioTrack", typeRef: compositionTypes.audioTrack,
       outputRef: "board.audio", role: "track",
       value: { graph: {
-        nodes: [{ kind: "source", id: "source", clip: { id: "opaque-event-id", artifact: { resource: "res_sound" } } }],
+        nodes: [{ kind: "source", id: "source", clip: { id: "opaque-event-id",
+          source: { source: { kind: "blob", resource: "res_sound", size: 1, mediaType: "audio/wav" } } } }],
         output: { node: "source", port: "signal" },
       } },
       trace: { references: [], outputPorts: [{ name: "events", ref: "board.events" }] },

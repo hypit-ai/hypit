@@ -161,12 +161,12 @@
 
   <space:Canvas id="vertical" width="720" height="1280"/>
   <time:Clock id="clock" frame-rate="30"/>
-  <mediaop:Normalize id="soundtrack-media" source={soundtrack}
-    video="none" audio="default" span-authority="audio" clock={clock}/>
-  <mediaop:Normalize id="ranking-appear-media" source={ranking-appear-sfx}
-    video="none" audio="default" span-authority="audio" clock={clock}/>
-  <mediaop:Normalize id="ranking-move-media" source={ranking-move-sfx}
-    video="none" audio="default" span-authority="audio" clock={clock}/>
+  <mediaop:Prepare id="soundtrack-media" source={soundtrack}
+    video="none" audio="default" span-authority="audio"/>
+  <mediaop:Prepare id="ranking-appear-media" source={ranking-appear-sfx}
+    video="none" audio="default" span-authority="audio"/>
+  <mediaop:Prepare id="ranking-move-media" source={ranking-move-sfx}
+    video="none" audio="default" span-authority="audio"/>
   <space:Frame id="speech-frame" within={vertical.bounds}
     left="0%" top="0%" right="100%" bottom="100%"/>
   <space:Frame id="tier-frame" within={vertical.bounds}
@@ -213,10 +213,10 @@
   <space:AspectFrame id="still-here-frame" within={vertical.bounds}
     x="50%" y="70%" width="64%" aspect={still-here-extent} anchor="center"/>
 
-  <mediaop:Normalize id="elon-media" source={elon-take.video}
-    video="primary-moving" audio="default" span-authority="video" clock={clock}/>
-  <mediaop:Normalize id="sam-media" source={sam-take.video}
-    video="primary-moving" audio="default" span-authority="video" clock={clock}/>
+  <mediaop:Prepare id="elon-media" source={elon-take.video}
+    video="primary-moving" audio="default" span-authority="video"/>
+  <mediaop:Prepare id="sam-media" source={sam-take.video}
+    video="primary-moving" audio="default" span-authority="video"/>
   <whisperx:Transcription id="elon-semantic-transcription" media={elon-media.media} language="en"/>
   <speechalign:Alignment id="elon-semantic" narrative={story}
     segment={story.segment.elon} domain={elon-media.domain} evidence={elon-semantic-transcription.transcript}/>

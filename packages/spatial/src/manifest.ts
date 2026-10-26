@@ -1,16 +1,4 @@
 import type { ModuleManifest, ProducerRef, TypeRef } from "@hypit/hypit/protocol";
-import {
-  anchoredFrameProgramSchema,
-  aspectFrameProgramSchema,
-  canvasSchema,
-  contentFitSchema,
-  frameEdgesProgramSchema,
-  intrinsicExtentSchema,
-  spatialFrameSchema,
-  spatialPathSchema,
-  spatialPointSchema,
-} from "./schema.js";
-
 export const spatialModuleRef = { name: "@hypit/spatial", version: "1" } as const;
 export const spatialTypes = {
   canvas: { module: spatialModuleRef, name: "Canvas" },

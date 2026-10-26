@@ -31,7 +31,7 @@
 
   <wording:Value id="direction">A neutral catalogue card in a quiet studio.</wording:Value>
   <seedance:TextVideo id="take" model="mini" prompt={direction} duration="4" generate-audio="true"/>
-  <mediaop:Normalize id="take-media" source={take.video} recipe={recipes.media.aroll} clock={clock}/>
+  <mediaop:Prepare id="take-media" source={take.video} recipe={recipes.media.aroll}/>
   <whisperx:Transcription id="showcase-semantic-transcription" media={take-media.media} language="en"/>
   <speechalign:Alignment id="showcase-semantic" narrative={story}
     segment={story.segment.showcase} domain={take-media.domain} evidence={showcase-semantic-transcription.transcript}/>

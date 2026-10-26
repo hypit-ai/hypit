@@ -105,7 +105,7 @@ relationship among words and graphics. Both consume Script wording and semantic 
 behavior can keep these visuals together; [Caption authoring](caption-authoring.md) explains the
 specialized text inputs and the same freedom to compose.
 
-Give a reusable scene explicit normalized media sources, their exact absolute Windows, its outer
+Give a reusable scene explicit prepared media sources, their exact absolute Windows, its outer
 Window and the Moment that changes
 its layout through the Timeline and shared temporal projections. Replacing a product or rewriting the
 Script then changes content and semantic anchors while preserving the behavior. Source sampling comes

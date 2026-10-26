@@ -53,7 +53,7 @@ for the selected Caption, Style and event choices without exposing every interna
 
 The default Run explicitly selects 50 accepted Outputs from the bundled Result. Its remaining plan
 contains only local visual rendering, audio mixing and muxing. The included Profile has no generation
-account, credential store or transcription service. Material has already been normalized and given
+account, credential store or transcription service. Material has already been prepared and given
 its semantic timing; opening this example does not generate or transcribe it again.
 
 Submit `runs/render.svrun` to render the complete film. `runs/export-parts.svrun` instead renders five
@@ -76,7 +76,7 @@ explains joining exported parts. The archive also includes `productions/explaine
 | Where does the shared palette live without becoming another Track? | [Visual language](packages/visual-language/README.md) |
 | Which existing material should a new Build use? | [Render Run](productions/explainer/runs/render.svrun) |
 
-Generated and normalized Outputs remain in the entry Source where the Run can satisfy them explicitly.
+Generated and prepared-media Outputs remain in the entry Source where the Run can satisfy them explicitly.
 Changing a Cue boundary or graphic event does not require replacing the performance. A rewrite of the
 spoken words is different: supply new performance media with timing for that Script and select it in the Run.
 The retained generation declarations show the original direction but are not invoked by the default

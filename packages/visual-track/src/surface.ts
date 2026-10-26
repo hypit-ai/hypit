@@ -1,5 +1,5 @@
-import { resolveTemporalContext } from "@hypit/temporal/markup";
-import { assertEmptyElement as empty, assertAttributes as allowed, textAttribute as text, optionalTextAttribute as optionalText, type StructuredElement, type StructuredSurfaceHandler, type SurfaceComponentDraft, type SurfaceRecordDraft, type SurfaceResolvedReference, type MarkupAttributeValue } from "@hypit/hypit/markup";
+import { parseInlineTemporalRelation, resolveTemporalContext } from "@hypit/temporal/markup";
+import { assertEmptyElement as empty, assertAttributes as allowed, textAttribute as text, optionalTextAttribute as optionalText, type StructuredElement, type StructuredSurfaceHandler, type SurfaceRecordDraft, type SurfaceResolvedReference, type MarkupAttributeValue } from "@hypit/hypit/markup";
 import { sameType, type CanonicalValue, type TypeRef } from "@hypit/hypit/protocol";
 import { blobTypes } from "@hypit/hypit/blob";
 import { compositionTypes } from "@hypit/composition";
@@ -20,17 +20,13 @@ import {
 } from "./author.js";
 import { sealVisualClipMotion } from "./motion.js";
 import { sealVisualTrackHeader } from "./program.js";
-import { assertVisualSourceTimeSpec } from "./source-time.js";
 import { visualTrackProducers, visualTrackTypes } from "./manifest.js";
 import type {
   MediaSamplingMotion,
   VisualClipMotion,
   VisualMotionPosition,
-  VisualSourceTimeBounds,
-  VisualSourceTimePoint,
-  VisualSourceTimeRelation,
-  VisualSourceTimeSpec,
 } from "./types.js";
+import type { TemporalRelationSpec } from "@hypit/temporal";
 
 const input = (name: string) => ({ kind: "fragment-input" as const, name });
 const operation = (id: string) => ({ kind: "fragment-operation" as const, operation: id });
@@ -40,12 +36,6 @@ function numberValue(element: StructuredElement, name: string, fallback?: number
   if (raw === undefined && fallback !== undefined) return fallback;
   const value = Number(raw);
   if (!Number.isFinite(value)) throw new Error(`${element.name}.${name} must be a finite number.`);
-  return value;
-}
-
-function integerValue(element: StructuredElement, name: string): number {
-  const value = numberValue(element, name);
-  if (!Number.isSafeInteger(value)) throw new Error(`${element.name}.${name} must be an integer.`);
   return value;
 }
 
@@ -146,130 +136,6 @@ function sourceRecipe(element: StructuredElement, treatment: Recipe): Recipe {
   return { path: `${treatment.path}:source`, properties };
 }
 
-const SOURCE_TIME_MAP_ATTRIBUTES = [
-  "target-from", "target-until", "target-at", "source-at", "rate",
-  "source-from", "source-until", "wrap-from", "wrap-until",
-] as const;
-
-function sourceTimePoint(raw: string | undefined, fallback: "start" | "end", label: string): VisualSourceTimePoint {
-  const value = raw ?? fallback;
-  if (value === "start") return { edge: "start", offsetFrames: 0 };
-  if (value === "end") return { edge: "end", offsetFrames: 0 };
-  const fromStart = /^(?:start\+)?(\d+)f$/u.exec(value);
-  if (fromStart !== null) return { edge: "start", offsetFrames: Number(fromStart[1]) };
-  const fromEnd = /^end-(\d+)f$/u.exec(value);
-  if (fromEnd !== null) return { edge: "end", offsetFrames: -Number(fromEnd[1]) };
-  throw new Error(`${label} must be start, end, Nf, start+Nf or end-Nf.`);
-}
-
-function sourceTimeBounds(
-  element: StructuredElement,
-  prefix: "target" | "source" | "wrap",
-  required = false,
-): VisualSourceTimeBounds | undefined {
-  const from = optionalText(element, `${prefix}-from`);
-  const until = optionalText(element, `${prefix}-until`);
-  if (!required && from === undefined && until === undefined) return undefined;
-  return {
-    from: sourceTimePoint(from, "start", `${element.name}.${prefix}-from`),
-    until: sourceTimePoint(until, "end", `${element.name}.${prefix}-until`),
-  };
-}
-
-function divisor(left: number, right: number): number {
-  let a = Math.abs(left);
-  let b = Math.abs(right);
-  while (b !== 0) [a, b] = [b, a % b];
-  return a;
-}
-
-function sourceTimeRate(raw: string, label: string): { readonly numerator: number; readonly denominator: number } {
-  const fraction = /^(-?\d+)\/([1-9]\d*)$/u.exec(raw);
-  if (fraction !== null) {
-    const numerator = Number(fraction[1]);
-    const denominator = Number(fraction[2]);
-    if (!Number.isSafeInteger(numerator) || !Number.isSafeInteger(denominator)) throw new Error(`${label} is outside safe arithmetic.`);
-    const common = divisor(numerator, denominator);
-    return { numerator: numerator / common, denominator: denominator / common };
-  }
-  const decimal = /^(-?)(\d+)(?:\.(\d+))?$/u.exec(raw);
-  if (decimal === null) throw new Error(`${label} must be an exact integer, decimal or fraction.`);
-  const fractional = decimal[3] ?? "";
-  const denominator = 10 ** fractional.length;
-  const magnitude = Number(decimal[2]) * denominator + (fractional.length === 0 ? 0 : Number(fractional));
-  const numerator = decimal[1] === "-" ? -magnitude : magnitude;
-  if (!Number.isSafeInteger(numerator) || !Number.isSafeInteger(denominator)) throw new Error(`${label} is outside safe arithmetic.`);
-  const common = divisor(numerator, denominator);
-  return { numerator: numerator / common, denominator: denominator / common };
-}
-
-export function decodeVisualSourceTimeRelation(element: StructuredElement): VisualSourceTimeRelation {
-  allowed(element, SOURCE_TIME_MAP_ATTRIBUTES);
-  empty(element);
-  const target = sourceTimeBounds(element, "target", true)!;
-  const source = sourceTimeBounds(element, "source", true)!;
-  const hasRateRelation = element.attributes.rate !== undefined
-    || element.attributes["target-at"] !== undefined
-    || element.attributes["source-at"] !== undefined
-    || element.attributes["wrap-from"] !== undefined
-    || element.attributes["wrap-until"] !== undefined;
-  if (!hasRateRelation) return { kind: "fit", target, source };
-  const wrap = sourceTimeBounds(element, "wrap");
-  const relation: VisualSourceTimeRelation = {
-    kind: "rate",
-    target,
-    targetAt: sourceTimePoint(optionalText(element, "target-at"), "start", `${element.name}.target-at`),
-    sourceAt: sourceTimePoint(optionalText(element, "source-at"), "start", `${element.name}.source-at`),
-    rate: sourceTimeRate(optionalText(element, "rate") ?? "1", `${element.name}.rate`),
-    source,
-    ...(wrap === undefined ? {} : { wrap }),
-  };
-  return relation;
-}
-
-function inlineSourceTime(element: StructuredElement): VisualSourceTimeSpec | undefined {
-  const relations = element.children.flatMap((child) => child.kind === "element"
-    && (child.name.endsWith(":Map") || child.name === "Map") ? [decodeVisualSourceTimeRelation(child)] : []);
-  if (relations.length === 0) return undefined;
-  const value = { relations };
-  assertVisualSourceTimeSpec(value);
-  return value;
-}
-
-function sourceTimeFrom(
-  element: StructuredElement,
-  resolve: (path: string) => SurfaceResolvedReference | undefined,
-): VisualSourceTimeSpec | undefined {
-  const inline = inlineSourceTime(element);
-  if (element.attributes["source-time"] === undefined) return inline;
-  if (inline !== undefined) throw new Error(`${element.name} cannot combine source-time={SourceTime} with inline Map children.`);
-  const value = reference(element.attributes["source-time"], `${element.name}.source-time`, visualTrackTypes.sourceTime, resolve);
-  if (value.record === undefined) throw new Error(`${element.name}.source-time must resolve to an authored SourceTime value.`);
-  const spec = value.record.value as unknown as VisualSourceTimeSpec;
-  assertVisualSourceTimeSpec(spec);
-  return spec;
-}
-
-export const decodeVisualSourceTimeSurface: StructuredSurfaceHandler = ({ element }) => {
-  allowed(element, ["id"]);
-  const id = text(element, "id");
-  const relations: VisualSourceTimeRelation[] = [];
-  for (const child of element.children) {
-    if (child.kind === "text") {
-      if (child.value.trim().length > 0) throw new Error(`${element.name} accepts only Map children.`);
-      continue;
-    }
-    if (!child.name.endsWith(":Map") && child.name !== "Map") throw new Error(`${element.name} accepts only Map children.`);
-    relations.push(decodeVisualSourceTimeRelation(child));
-  }
-  const value = { relations };
-  assertVisualSourceTimeSpec(value);
-  return {
-    records: [{ id, type: visualTrackTypes.sourceTime, value: (value as never), range: element.range }],
-    components: [], exports: [id],
-  };
-};
-
 function treatmentRecipe(
   element: StructuredElement,
   resolve: (path: string) => SurfaceResolvedReference | undefined,
@@ -312,8 +178,12 @@ function appendLayers(operations: FragmentOperation[], prefix: string, layers: r
       const producer = layer.kind === "timed"
         ? layer.placementKind === "fit" ? visualTrackProducers.appendTimedLayer : visualTrackProducers.appendMappedTimedLayer
         : layer.placementKind === "fit" ? visualTrackProducers.appendSurfaceLayer : visualTrackProducers.appendMappedSurfaceLayer;
+      const source = input(layer.sourceName);
       operations.push({ id, producer, inputs: {
-        ...common, source: input(layer.sourceName),
+        ...common,
+        ...(layer.kind === "timed"
+          ? { media: source }
+          : { source }),
         [layer.placementKind === "fit" ? "fit" : "mapping"]: input(layer.placementName),
       }, result: { kind: "output" as const, name: "layers" } });
     }
@@ -414,7 +284,7 @@ type SourceLayerContext = {
   readonly defaultRecipe: Recipe;
   readonly sourceElement: StructuredElement;
   readonly source?: DeclaredVisualSource;
-  readonly sourceTime?: VisualSourceTimeSpec;
+  readonly sampling?: TemporalRelationSpec;
   readonly ignoreSiblingChildren?: boolean;
   readonly defaultLayerId?: string;
   readonly mapping?: SurfaceResolvedReference;
@@ -435,14 +305,14 @@ function declaredVisualSource(
   const present = VISUAL_SOURCE_ATTRIBUTES.filter((name) => element.attributes[name] !== undefined);
   if (present.length === 0) {
     if (element.attributes.extent !== undefined) throw new Error(`${element.name}.extent requires image={Artifact}.`);
-    if (element.attributes.audio !== undefined) throw new Error(`${element.name}.audio is no longer accepted; normalize the source explicitly and use media={...}.`);
+    if (element.attributes.audio !== undefined) throw new Error(`${element.name}.audio is no longer accepted; prepare the source explicitly and use media={...}.`);
     if (required) throw new Error(`${element.name} requires exactly one of image, media or surface.`);
     return undefined;
   }
   if (present.length !== 1) throw new Error(`${element.name} requires exactly one of image, media or surface.`);
   const kind = present[0]!;
   if (kind === "image") {
-    if (element.attributes.audio !== undefined) throw new Error(`${element.name}.audio is no longer accepted; normalize the source explicitly and use media={...}.`);
+    if (element.attributes.audio !== undefined) throw new Error(`${element.name}.audio is no longer accepted; prepare the source explicitly and use media={...}.`);
     return {
       kind,
       value: reference(element.attributes.image, `${element.name}.image`, blobTypes.blob, resolve),
@@ -450,9 +320,9 @@ function declaredVisualSource(
     };
   }
   if (element.attributes.extent !== undefined) throw new Error(`${element.name}.extent is only valid with image={Artifact}.`);
-  if (element.attributes.audio !== undefined) throw new Error(`${element.name}.audio is no longer accepted; normalize the source explicitly and use media={...}.`);
+  if (element.attributes.audio !== undefined) throw new Error(`${element.name}.audio is no longer accepted; prepare the source explicitly and use media={...}.`);
   return kind === "media"
-    ? { kind, value: reference(element.attributes.media, `${element.name}.media`, mediaTypes.synchronized, resolve) }
+    ? { kind, value: reference(element.attributes.media, `${element.name}.media`, mediaTypes.prepared, resolve) }
     : { kind, value: reference(element.attributes.surface, `${element.name}.surface`, mediaTypes.compositableSurface, resolve) };
 }
 
@@ -522,7 +392,7 @@ function sourceLayer(
     sourceKind,
     motion,
     context.source !== undefined,
-    context.sourceTime,
+    context.sampling,
   );
   state.addRecord(specName, `${context.trackId}.${layerSuffix}.spec`, visualTrackTypes.sampleLayerSpec, spec, element.range);
   const sourceName = `${layerSuffix}-source`;
@@ -543,7 +413,7 @@ function unitLayers(
     readonly element: StructuredElement;
     readonly appearance: Recipe;
     readonly directSource: DeclaredVisualSource;
-    readonly sourceTime?: VisualSourceTimeSpec;
+    readonly sampling?: TemporalRelationSpec;
     readonly mapping?: SurfaceResolvedReference;
     readonly allowFramePaint: boolean;
   },
@@ -562,7 +432,7 @@ function unitLayers(
     trackId: input.trackId, unitSuffix: input.unitSuffix, defaultRecipe: input.appearance,
     sourceElement: input.element, source: input.directSource,
     ...(input.mapping === undefined ? {} : { mapping: input.mapping }),
-    ...(input.sourceTime === undefined ? {} : { sourceTime: input.sourceTime }),
+    ...(input.sampling === undefined ? {} : { sampling: input.sampling }),
     ignoreSiblingChildren: true,
     defaultLayerId: "content",
   }, 1, resolve));
@@ -605,7 +475,7 @@ export const decodeVisualTrackSurface: StructuredSurfaceHandler = ({ element, re
       allowed(child, [
         "id", "frame", "treatment", "motion",
         "image", "media", "surface", "extent",
-        "clip", "source-time", "mapping", ...FIT_ATTRIBUTES, ...temporalWindowAttributeNames,
+        "clip", "mapping", ...FIT_ATTRIBUTES, ...temporalWindowAttributeNames,
       ]);
       const id = optionalText(child, "id") ?? `${trackId}.clip.${clipSuffix}`;
       const treatment = treatmentRecipe(child, resolveReference);
@@ -629,7 +499,7 @@ export const decodeVisualTrackSurface: StructuredSurfaceHandler = ({ element, re
       }
       const window = resolveTemporalWindowReference({ element: child, resolveReference });
       const directSource = declaredVisualSource(child, resolveReference, true)!;
-      const sourceTime = sourceTimeFrom(child, resolveReference);
+      const sampling = parseInlineTemporalRelation(child);
       const mapping = child.attributes.mapping === undefined ? undefined
         : reference(child.attributes.mapping, `${child.name}.mapping`, spatialTypes.map2D, resolveReference);
       if (mapping !== undefined && FIT_ATTRIBUTES.some((name) => child.attributes[name] !== undefined)) {
@@ -637,7 +507,7 @@ export const decodeVisualTrackSurface: StructuredSurfaceHandler = ({ element, re
       }
       validateUnitChildren(child);
       const layers = unitLayers(state, { trackId, unitSuffix: `clip-${clipSuffix}`, element: child, appearance: sourceAppearance,
-        directSource, ...(sourceTime === undefined ? {} : { sourceTime }), ...(mapping === undefined ? {} : { mapping }),
+        directSource, ...(sampling === undefined ? {} : { sampling }), ...(mapping === undefined ? {} : { mapping }),
         allowFramePaint: true }, resolveReference);
       const specName = `clip-${clipSuffix}-spec`;
       const windowName = `clip-${clipSuffix}-window`;

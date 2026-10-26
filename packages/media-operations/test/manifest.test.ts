@@ -10,7 +10,7 @@ import { fixtureResource } from "../../../test/fixture-resource.js";
 
 import {
   mediaOperationsTypes,
-  decodeSynchronizedMediaSurface,
+  decodePreparedMediaSurface,
   decodeExtractAudioSurface,
   decodeExtractFrameSurface,
   decodeTransformMediaSurface,
@@ -20,7 +20,7 @@ import {
   bindStillVideoSource,
   extractAudioFragment,
   extractFrameFragment,
-  synchronizedMediaFragment,
+  preparedMediaFragment,
   transformMediaFragment,
   stillVideoFragment,
 } from "../src/index.js";
@@ -32,17 +32,16 @@ test("the package exposes StillVideo as an ordinary Run Fragment", () => {
   assert.equal(fragments.resolve("@hypit/media-operations@1", "still-video"), stillVideoFragment);
 });
 
-test("the Normalize Surface makes inspection and normalization an explicit author graph branch", async () => {
-  const range = { source: "normalize.svml", start: 0, end: 1 };
-  const result = await decodeSynchronizedMediaSurface({
+test("the Prepare Surface makes inspection, selection and exact preparation an explicit author graph branch", async () => {
+  const range = { source: "prepare.svml", start: 0, end: 1 };
+  const result = await decodePreparedMediaSurface({
     sourceName: range.source,
     element: {
       kind: "element",
-      name: "pipeline:Normalize",
+      name: "mediaop:Prepare",
       attributes: {
         id: "motion",
         source: { kind: "reference", path: "generated" },
-        clock: { kind: "reference", path: "clock" },
         recipe: { kind: "reference", path: "policy" },
       },
       children: [],
@@ -50,16 +49,13 @@ test("the Normalize Surface makes inspection and normalization an explicit autho
     },
     resolveReference: (path) => path === "generated"
       ? { path, ref: { kind: "record", id: path }, type: blobTypes.blob }
-      : path === "clock"
-        ? { path, ref: { kind: "record", id: path }, type: timelineTypes.clock,
-          record: { value: ({ frameRate: { numerator: 30_000, denominator: 1_001 } }) } as never }
-        : path === "policy"
+      : path === "policy"
           ? { path, ref: { kind: "record", id: path }, type: recipeType,
             record: { value: ({ path, properties: { video: "primary-moving", audio: "none", "span-authority": "video" } }) } as never }
           : undefined,
     resolveAsset: async () => { throw new Error("no asset resolution expected"); },
   });
-  assert.deepEqual(result.components[0]?.fragment, synchronizedMediaFragment);
+  assert.deepEqual(result.components[0]?.fragment, preparedMediaFragment);
   assert.deepEqual(result.components[0]?.outputs, {
     media: "motion.media", domain: "motion.domain", extent: "motion.extent",
   });
@@ -68,14 +64,13 @@ test("the Normalize Surface makes inspection and normalization an explicit autho
     video: { mode: "primary-moving" },
     audio: { mode: "none" },
     spanAuthority: "video",
-    frameRate: { numerator: 30_000, denominator: 1_001 },
   });
 });
 
 test("media operations are ordinary graph branches over Blob", async () => {
   const range = { source: "operations.svml", start: 0, end: 1 };
   const resolveReference = (path: string) => path === "generated.media"
-    ? { path, ref: { kind: "record" as const, id: path }, type: mediaTypes.synchronized }
+    ? { path, ref: { kind: "record" as const, id: path }, type: mediaTypes.prepared }
     : path === "generated.video"
       ? { path, ref: { kind: "record" as const, id: path }, type: blobTypes.blob }
       : undefined;
@@ -95,13 +90,15 @@ test("media operations are ordinary graph branches over Blob", async () => {
     },
   });
   assert.deepEqual(transform.components[0]?.fragment, transformMediaFragment);
-  assert.deepEqual(transform.components[0]?.outputs, { video: "prepared.video" });
+  assert.deepEqual(transform.components[0]?.outputs, {
+    media: "prepared.media", domain: "prepared.domain", extent: "prepared.extent",
+  });
   const program = transform.records.find((record) => record.id === "prepared.program");
   assert.ok(program);
   assert.deepEqual(program.value, {
     operations: [
-      { kind: "trim", tailSec: 0.25 },
-      { kind: "retime", rate: 1.05 },
+      { kind: "trim", tail: { ticks: "25", timeBase: { numerator: 1, denominator: 100 } } },
+      { kind: "retime", rate: { numerator: 105, denominator: 100 } },
     ],
   });
 
@@ -129,7 +126,7 @@ test("media operations are ordinary graph branches over Blob", async () => {
   assert.deepEqual(frame.components[0]?.outputs, { image: "continuity.image" });
 });
 
-test("StillVideo stops at an ordinary MP4 branch before Normalize", async () => {
+test("StillVideo stops at an ordinary MP4 branch before media preparation", async () => {
   const range = { source: "still.svml", start: 0, end: 1 };
   const output = await decodeStillVideoSurface({
     sourceName: range.source,

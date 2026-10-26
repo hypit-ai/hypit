@@ -1,6 +1,7 @@
-import { userText, uiAttribute, uiText, uiAttr } from "./i18n.js";
+import { userText, uiAttribute, uiAttr } from "./i18n.js";
 import type { StudioSnapshot } from "../shared.js";
 import type { StudioEditHandle } from "@hypit/studio-companion";
+import type { FrameSpan } from "@hypit/timeline";
 import { icon, setIcon } from "./icons.js";
 import { mountMaterialPreview } from "./material-preview.js";
 import type { State, Store } from "./selection.js";
@@ -245,7 +246,7 @@ export function createTimeline(store: Store): Timeline {
   const absoluteWindowTarget = (
     edit: NonNullable<typeof activeEdit>,
     nextFrame: number,
-  ): { readonly startFrame: number; readonly endFrameExclusive: number } => {
+  ): FrameSpan => {
     if (state === undefined) return {
       startFrame: edit.item.startFrame,
       endFrameExclusive: edit.item.endFrameExclusive,
@@ -270,7 +271,7 @@ export function createTimeline(store: Store): Timeline {
   const previewWindow = (
     edit: NonNullable<typeof activeEdit>,
     nextFrame: number,
-  ): { readonly startFrame: number; readonly endFrameExclusive: number } | undefined => {
+  ): FrameSpan | undefined => {
     if (state === undefined) return undefined;
     const target = domainTarget(edit, nextFrame);
     if (target !== undefined) return domainGestureSpan(editDomain(state.snapshot, edit.handle)?.anchors ?? [], edit.handle, target);

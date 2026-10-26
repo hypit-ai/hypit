@@ -7,7 +7,6 @@ import type {
   LogicalOutput,
   OperationNode,
   OperationResult,
-  Value,
   TypeRef,
   TypedRecord,
 } from "@hypit/protocol";

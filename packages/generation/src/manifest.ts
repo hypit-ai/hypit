@@ -4,8 +4,6 @@ import {
 } from "@hypit/hypit/blob";
 import type { ModuleManifest, ProducerRef, TypeRef } from "@hypit/hypit/protocol";
 
-import { generatedAudioSetSchema, generatedImageSetSchema, generatedVideoSetSchema } from "./schema.js";
-
 export const generationModuleRef = { name: "@hypit/generation", version: "1" } as const;
 export const generationTypes = {
   audioSet: { module: generationModuleRef, name: "GeneratedAudioSet" },

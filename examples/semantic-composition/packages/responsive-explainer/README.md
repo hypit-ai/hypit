@@ -3,7 +3,7 @@
 One scene coordinates a playing performance and the diagram it makes room for. This intentionally
 small example can be adapted to the video's own visual idea; its HTML and motion live in `src/render.ts`.
 
-With normalized media, its exact source Window, a projected Instant, Canvas and exact FontStack
+With `PreparedMedia`, its exact source Window, a projected Instant, Canvas and exact FontStack
 already available:
 
 ```svml

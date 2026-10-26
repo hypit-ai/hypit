@@ -1,5 +1,6 @@
 import { temporalDependency, temporalTypes, temporalWindowSchema } from "@hypit/temporal";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/hypit/protocol";
+import { frameSpanSchema, timelineDependency } from "@hypit/timeline";
 
 export const captionModuleRef = { name: "@hypit/caption", version: "1" } as const;
 export const captionProducers = {
@@ -17,7 +18,6 @@ export const captionTypes = {
 } satisfies Record<string, TypeRef>;
 
 const string = { kind: "string", minLength: 1 } as const;
-const integer = { kind: "number", integer: true, minimum: 0 } as const;
 const object = (fields: Readonly<Record<string, { readonly schema: ValueSchema; readonly optional?: boolean }>>): ValueSchema => ({ kind: "object", fields });
 const captionDisplayWord = object({
   separatorBefore: { schema: { kind: "string", enum: ["", " "] } },
@@ -56,7 +56,10 @@ export const captionProgramSchema: ValueSchema = object({
     styleId: { schema: string }, role: { schema: string, optional: true },
   }) } },
 });
-const timedUnit = object({ unitId: { schema: string }, startFrame: { schema: integer }, endFrameExclusive: { schema: integer } });
+const timedUnit = object({
+  unitId: { schema: string },
+  ...(frameSpanSchema.kind === "object" ? frameSpanSchema.fields : {}),
+});
 export const captionTimingSchema: ValueSchema = object({
   timelineId: { schema: string },
   documentId: { schema: string },
@@ -75,7 +78,7 @@ export const captionMarkupSurfaces = [{
 
 export const captionManifest: ModuleManifest = {
   format: "hypit.module@1", name: captionModuleRef.name, version: captionModuleRef.version,
-  dependencies: [temporalDependency], types: [
+  dependencies: [temporalDependency, timelineDependency], types: [
     captionTypes.document.name, captionTypes.header.name, captionTypes.filter.name,
     captionTypes.style.name, captionTypes.program.name, captionTypes.timing.name,
   ], capabilities: [], producers: [{

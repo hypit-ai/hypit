@@ -31,14 +31,6 @@ function resolvedRecipe(
   return recipe(resolved, `${element.name}.appearance`);
 }
 
-function integer(element: StructuredElement, name: string): number {
-  const source = textAttribute(element, name);
-  if (!/^-?(?:0|[1-9][0-9]*)$/u.test(source)) throw new Error(`${element.name}.${name} must be an integer.`);
-  const value = Number(source);
-  if (!Number.isSafeInteger(value)) throw new Error(`${element.name}.${name} exceeds safe integer arithmetic.`);
-  return value;
-}
-
 export const decodeVisualAdjustmentSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
   assertAttributes(element, ["id", "timeline"]);
   const id = textAttribute(element, "id");

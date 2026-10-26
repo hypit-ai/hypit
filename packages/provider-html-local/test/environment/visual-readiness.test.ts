@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import test from "node:test";
@@ -13,7 +14,8 @@ import { captionDocument, parseScript } from "@hypit/script";
 import { sealTimeline } from "@hypit/timeline";
 import { browserExecutablePath } from "../../src/browser.js";
 import { createOpaqueFrameCapture } from "../../src/opaque-capture.js";
-import { rasterizeHtmlFrames } from "../../src/render.js";
+import { rasterizeHtmlFrames, rasterizeHtmlProgram } from "../../src/render.js";
+import { htmlProviderDelivery, htmlProviderPicture } from "../provider-scenario.js";
 
 const live = { skip: process.env.HYPIT_BROWSER_TESTS !== "1" };
 const testBrowser = () => process.env.HYPIT_TEST_CHROME_PATH ?? browserExecutablePath({});
@@ -56,7 +58,7 @@ test("capture waits for dynamic images and rejects broken images or exact fonts"
             else if (target !== null) target.classList.add("paint");
           } };
         }, { kind, origin });
-        const capture = await createOpaqueFrameCapture(page, { width: 64, height: 64 });
+        const capture = await createOpaqueFrameCapture(page, { width: 64, height: 64 }, "#000000");
         if (kind === "broken") await assert.rejects(capture(0), /image could not be decoded/u);
         else if (kind === "font") await assert.rejects(capture(0), /font could not be loaded/u);
         else {
@@ -65,6 +67,27 @@ test("capture waits for dynamic images and rejects broken images or exact fonts"
           const center = (32 * info.width + 32) * info.channels;
           assert.deepEqual([...data.subarray(center, center + 3)], [255, 0, 0]);
         }
+      } finally { await page.close(); }
+    });
+    await t.test("a decoded source frame occupies the compiler video normal-flow box", async () => {
+      const page = await browser.newPage();
+      try {
+        await page.setViewport({ width: 64, height: 64 });
+        await page.setContent(`<style>body{margin:0}.screen{width:64px;height:64px;overflow:hidden}.screen>*{width:64px;height:64px}</style>
+          <div class="screen"><video id="source" data-hypit-source-frame></video></div>`);
+        await page.evaluate(() => {
+          (window as unknown as { __hypitFrameProgram: unknown }).__hypitFrameProgram = {
+            async applyFrame() {},
+          };
+        });
+        const capture = await createOpaqueFrameCapture(page, { width: 64, height: 64 }, "#000000");
+        const frame = await capture(0, [{
+          id: "source",
+          url: `data:image/png;base64,${png.toString("base64")}`,
+        }]);
+        const { data, info } = await sharp(frame.buffer).raw().toBuffer({ resolveWithObject: true });
+        const center = (32 * info.width + 32) * info.channels;
+        assert.deepEqual([...data.subarray(center, center + 3)], [255, 0, 0]);
       } finally { await page.close(); }
     });
     await t.test("stable pages are discovered once and later inline resource changes stay local", async () => {
@@ -85,7 +108,7 @@ test("capture waits for dynamic images and rejects broken images or exact fonts"
             if (frame >= 2) document.getElementById("target")!.style.backgroundImage = `url(${origin}/local.png)`;
           } };
         }, origin);
-        const capture = await createOpaqueFrameCapture(page, { width: 64, height: 64 });
+        const capture = await createOpaqueFrameCapture(page, { width: 64, height: 64 }, "#000000");
         await capture(0);
         const initialReads = await page.evaluate(() => (window as unknown as { __styleReads: number }).__styleReads);
         assert.ok(initialReads >= 600, "the initial pass should discover the complete existing document");
@@ -119,7 +142,7 @@ test("capture waits for dynamic images and rejects broken images or exact fonts"
             if (time >= 1 / 30) selected.style.backgroundImage = `url(${origin}/scoped.png)`;
           } };
         }, origin);
-        const capture = await createOpaqueFrameCapture(page, { width: 64, height: 64 });
+        const capture = await createOpaqueFrameCapture(page, { width: 64, height: 64 }, "#000000");
         await capture(0);
         const initialReads = await page.evaluate(() => (window as unknown as { __styleReads: number }).__styleReads);
         assert.ok(initialReads <= 6, `one capture root unexpectedly caused ${initialReads} style reads`);
@@ -143,7 +166,7 @@ test("capture waits for dynamic images and rejects broken images or exact fonts"
           animation.pause();
           (window as unknown as { __hypitFrameProgram: unknown }).__hypitFrameProgram = { async applyFrame(time: number) { animation.currentTime = time * 1_000; } };
         }, origin);
-        const capture = await createOpaqueFrameCapture(page, { width: 64, height: 64 });
+        const capture = await createOpaqueFrameCapture(page, { width: 64, height: 64 }, "#000000");
         const first = await capture(0);
         const last = await capture(30);
         for (const [frame, expected] of [[first, [255, 0, 0]], [last, [0, 0, 255]]] as const) {
@@ -167,7 +190,7 @@ test("capture waits for dynamic images and rejects broken images or exact fonts"
             }
           } };
         }, origin);
-        const capture = await createOpaqueFrameCapture(page, { width: 64, height: 64 });
+        const capture = await createOpaqueFrameCapture(page, { width: 64, height: 64 }, "#000000");
         await capture(0);
         const frame = await capture(1);
         const { data, info } = await sharp(frame.buffer).raw().toBuffer({ resolveWithObject: true });
@@ -203,12 +226,27 @@ test("compiled frame selection neither stages nor waits for unrelated image reso
   const document = compileHtmlProgram(sealComposition({ id: "capture-scope",
     canvas: { width: 64, height: 64, clearColor: "#000000" }, visual: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) }, audio: [] }), space);
 
-  const [artifact] = await rasterizeHtmlFrames({ program: document, frames: [45] },
+  const captured = await rasterizeHtmlFrames({ program: document, picture: htmlProviderPicture(), frames: [45] },
     { resources, workers: 1, processTimeoutMs: 120_000, ...testBrowserOption() });
-  const pixels = await sharp((await resources.get(artifact!.resource))!).removeAlpha().raw().toBuffer();
+  const pixels = await sharp((await resources.get(captured.frames[0]!.artifact.resource))!).removeAlpha().raw().toBuffer();
   const center = (32 * 64 + 32) * 3;
   assert.deepEqual([...pixels.subarray(center, center + 3)], [255, 0, 0]);
-  await assert.rejects(rasterizeHtmlFrames({ program: document, frames: [15] },
+  if (process.env.HYPIT_TEST_ELECTRON_PATH !== undefined) {
+    const visual = await rasterizeHtmlProgram({ program: document, delivery: htmlProviderDelivery("high"),
+      range: { startFrame: 45, endFrameExclusive: 46 } }, {
+      renderer: "electron", electronPath: process.env.HYPIT_TEST_ELECTRON_PATH,
+      resources, workers: 1, processTimeoutMs: 120_000,
+    });
+    const decoded = spawnSync("ffmpeg", ["-v", "error", "-i", "pipe:0", "-frames:v", "1",
+      "-f", "rawvideo", "-pix_fmt", "rgb24", "pipe:1"], {
+      input: (await resources.get(visual.artifact.resource))!,
+    });
+    assert.equal(decoded.status, 0, decoded.stderr.toString());
+    const sample = [...decoded.stdout.subarray(center, center + 3)];
+    assert.ok(Math.abs(sample[0]! - 255) <= 4 && sample[1]! <= 4 && sample[2]! <= 4,
+      `Electron range render changed the selected red picture: ${JSON.stringify(sample)}`);
+  }
+  await assert.rejects(rasterizeHtmlFrames({ program: document, picture: htmlProviderPicture(), frames: [15] },
     { resources, workers: 1, processTimeoutMs: 120_000, ...testBrowserOption() }), /image could not be decoded/u);
 });
 
@@ -238,11 +276,12 @@ test("real capture keeps later Present animation local with picture content and 
   const document = compileHtmlProgram(sealComposition({ id: "local-animation", canvas: {
     width: 64, height: 64, clearColor: "#000000",
   }, visual: { members: [picture, animated].map((track) => ({ kind: "track" as const, id: track.id, track })) }, audio: [] }), timeline);
-  const frames = await rasterizeHtmlFrames({ program: document, frames: [15, 45, 75] }, {
+  const frames = await rasterizeHtmlFrames({ program: document, picture: htmlProviderPicture(),
+    frames: [15, 45, 75] }, {
     resources, workers: 2, processTimeoutMs: 120_000, ...testBrowserOption(),
   });
-  for (const [index, artifact] of frames.entries()) {
-    const pixels = await sharp((await resources.get(artifact.resource))!).removeAlpha().raw().toBuffer();
+  for (const [index, frame] of frames.frames.entries()) {
+    const pixels = await sharp((await resources.get(frame.artifact.resource))!).removeAlpha().raw().toBuffer();
     const center = (32 * 64 + 32) * 3;
     const sample = [...pixels.subarray(center, center + 3)];
     for (const channel of sample) assert.ok(Math.abs(channel - 128) <= 3,
@@ -342,7 +381,7 @@ test("Fine Caption Cues stay isolated over Picture during reverse seeks and inde
     try {
       await page.setViewport({ width: 320, height: 180 });
       await page.setContent(materialized);
-      const capture = await createOpaqueFrameCapture(page, { width: 320, height: 180 });
+      const capture = await createOpaqueFrameCapture(page, { width: 320, height: 180 }, "#000000");
       for (const [frame, color] of [[75, "blue"], [15, "red"], [45, "green"]] as const) {
         await assertCueColors((await capture(frame)).buffer, color, `direct reverse seek frame ${frame}`);
       }
@@ -352,11 +391,11 @@ test("Fine Caption Cues stay isolated over Picture during reverse seeks and inde
   const requested = [15, 45, 75];
   const expected = ["red", "green", "blue"] as const;
   for (const workers of [1, 3]) {
-    const rendered = await rasterizeHtmlFrames({ program: html, frames: requested }, {
+    const rendered = await rasterizeHtmlFrames({ program: html, picture: htmlProviderPicture(), frames: requested }, {
       resources, workers, processTimeoutMs: 120_000, ...testBrowserOption(),
     });
-    for (const [index, artifact] of rendered.entries()) {
-      await assertCueColors((await resources.get(artifact.resource))!, expected[index]!,
+    for (const [index, frame] of rendered.frames.entries()) {
+      await assertCueColors((await resources.get(frame.artifact.resource))!, expected[index]!,
         `worker count ${workers}, frame ${requested[index]}`);
     }
   }

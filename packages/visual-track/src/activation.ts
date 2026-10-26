@@ -5,7 +5,6 @@ import { createStudioCompanionFacet } from "@hypit/studio-companion";
 import {
   decodeVisualTrackSurface,
   decodeVisualMotionSurface,
-  decodeVisualSourceTimeSurface,
   visualTrackComponent,
   visualTrackManifest,
   visualTrackModuleRef,
@@ -27,11 +26,6 @@ export const hypitPackage = {
       module: visualTrackModuleRef,
       declaration: visualTrackMarkupSurfaces.find((item) => item.name === "motion")!,
       handler: decodeVisualMotionSurface,
-    }),
-    createMarkupSurfaceFacet({
-      module: visualTrackModuleRef,
-      declaration: visualTrackMarkupSurfaces.find((item) => item.name === "source-time")!,
-      handler: decodeVisualSourceTimeSurface,
     }),
     createStudioCompanionFacet({
       tracks: visualTrackStudioTrackCompanions,

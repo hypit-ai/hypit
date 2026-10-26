@@ -1,15 +1,15 @@
-import type { Timeline } from "@hypit/timeline";
+import { preparedVisualSource } from "@hypit/media";
 import type {
   VisualAnimation,
   VisualElement,
   VisualStyleDeclaration,
-  VisualSourceTimeMap,
 } from "@hypit/composition";
 import { mapSpatialPoint } from "@hypit/spatial";
 import type { SpatialFrame, SpatialPath } from "@hypit/spatial";
+import { composeTemporalMaps } from "@hypit/temporal";
+import type { TemporalMap } from "@hypit/temporal";
 
 import { poseAnimation, samplingAnimation } from "./motion.js";
-import { resolveVisualSourceTime } from "./source-time.js";
 import type {
   VisualFrameTreatment,
   MediaGradientStop,
@@ -111,8 +111,7 @@ function filter(layer: MediaSampleLayerProgram): string {
 function sampleElements(
   layer: MediaSampleLayerProgram,
   clip: VisualClipProgram,
-  timeline: Timeline,
-  sourceTimeOverrides: Readonly<Record<string, VisualSourceTimeMap>>,
+  samplingOverrides: Readonly<Record<string, TemporalMap>>,
   samplingAnimationOverrides: Readonly<Record<string, VisualAnimation | null>>,
 ): VisualElement {
   const sourceCenter = mapSpatialPoint({
@@ -217,13 +216,10 @@ function sampleElements(
     };
     return { ...samplingElement, children: [{ ...appearanceElement, children: [{ ...mappingElement, children: [media] }] }] };
   }
-  const sourceTiming = layer.source.kind === "timed"
-    ? { frameRate: layer.source.frameRate, frameCount: layer.source.frameCount }
-    : layer.source.kind === "surface" && layer.source.surface.timing.kind === "frames"
+  const sourceTiming = layer.source.kind === "surface" && layer.source.surface.timing.kind === "frames"
       ? { frameRate: layer.source.surface.timing.frameRate, frameCount: layer.source.surface.timing.frameCount }
       : undefined;
-  if (sourceTiming === undefined) {
-    if (layer.source.kind !== "surface") throw new Error(`Timed Media layer ${layer.id} has no timing.`);
+  if (layer.source.kind === "surface" && sourceTiming === undefined) {
     const media: VisualElement = {
       id: layer.id,
       kind: "surface",
@@ -232,20 +228,16 @@ function sampleElements(
     };
     return { ...samplingElement, children: [{ ...appearanceElement, children: [{ ...mappingElement, children: [media] }] }] };
   }
-  const sourceTime = sourceTimeOverrides[layer.id]
-    ?? (layer.sourceTime?.kind === "map" ? layer.sourceTime.value : resolveVisualSourceTime({
-      timeline,
-      sourceFrameRate: sourceTiming.frameRate,
-      sourceFrameCount: sourceTiming.frameCount,
-      targetFrameCount: durationFrames,
-      ...(layer.sourceTime?.kind !== "spec" ? {} : { spec: layer.sourceTime.value }),
-    }));
+  const temporalSampling = samplingOverrides[layer.id]
+    ?? (layer.sampling?.kind === "map" ? layer.sampling.value : undefined);
+  if (temporalSampling === undefined) throw new Error(`Timed Media layer ${layer.id} has no resolved sampling Map.`);
   if (layer.source.kind === "timed") {
+    if (layer.source.media.visual === undefined) throw new Error(`Timed Media layer ${layer.id} has no visual member.`);
     const media: VisualElement = {
       id: layer.id,
       kind: "video",
-      artifact: structuredClone(layer.source.artifact),
-      sourceTime,
+      source: preparedVisualSource(layer.source.media),
+      sampling: composeTemporalMaps(temporalSampling, layer.source.media.visual.map),
       muted: true,
       style: mediaStyle,
     };
@@ -255,7 +247,7 @@ function sampleElements(
     id: layer.id,
     kind: "surface",
     surface: structuredClone(layer.source.surface),
-    sourceTime,
+    sampling: structuredClone(temporalSampling),
     style: mediaStyle,
   };
   return { ...samplingElement, children: [{ ...appearanceElement, children: [{ ...mappingElement, children: [media] }] }] };
@@ -264,12 +256,11 @@ function sampleElements(
 function layerElements(
   layer: MediaLayerProgram,
   clip: VisualClipProgram,
-  timeline: Timeline,
-  sourceTimeOverrides: Readonly<Record<string, VisualSourceTimeMap>>,
+  samplingOverrides: Readonly<Record<string, TemporalMap>>,
   samplingAnimationOverrides: Readonly<Record<string, VisualAnimation | null>>,
 ): VisualElement {
   if (layer.kind === "sample") {
-    return sampleElements(layer, clip, timeline, sourceTimeOverrides, samplingAnimationOverrides);
+    return sampleElements(layer, clip, samplingOverrides, samplingAnimationOverrides);
   }
   return {
     id: layer.id,
@@ -290,11 +281,10 @@ function layerElements(
 /** Lower one independent Clip through the fixed wrapper stack from the visual spec. */
 export function lowerVisualClipRoot(
   clip: VisualClipProgram,
-  timeline: Timeline,
   options: {
     readonly poseAnimationOverride?: VisualAnimation | null;
     /** Implementation-level reuse hook for collection components with their own explicit clock. */
-    readonly sourceTimeOverrides?: Readonly<Record<string, VisualSourceTimeMap>>;
+    readonly samplingOverrides?: Readonly<Record<string, TemporalMap>>;
     readonly samplingAnimationOverrides?: Readonly<Record<string, VisualAnimation | null>>;
   } = {},
 ): VisualElement {
@@ -303,8 +293,7 @@ export function lowerVisualClipRoot(
   const layers = clip.layers.map((layer) => layerElements(
     layer,
     clip,
-    timeline,
-    options.sourceTimeOverrides ?? {},
+    options.samplingOverrides ?? {},
     options.samplingAnimationOverrides ?? {},
   ));
   const frame: VisualElement = {

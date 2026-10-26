@@ -55,7 +55,7 @@ export function installPullback(module, manifest, component, optionsType, mode="
           return [k, r.value];
         }),
       );
-      const { clips, children } = placedVisualMedia(timeline, window, sources.sources);
+      const { children } = placedVisualMedia(timeline, window, sources.sources);
       const duration = window.span.endFrameExclusive - window.span.startFrame;
       const program = htmlVisual({
         html:
@@ -67,12 +67,8 @@ export function installPullback(module, manifest, component, optionsType, mode="
           scale: options.scale,
           fade: isFade,
           duration,
-          spans: clips.map((c) => ({
-            start: c.span.startFrame - window.span.startFrame,
-            end: c.span.endFrameExclusive - window.span.startFrame,
-          })),
         },
-        setup: `const picture=root.querySelector('.picture'),videos=[...picture.querySelectorAll('video')];return frame=>{const p=Math.max(0,Math.min(1,frame/Math.max(1,data.duration-1))),scale=1+(data.scale-1)*Math.pow(1-p,4);picture.style.transform='scale('+scale+')';picture.style.opacity=data.fade?String(1-p*p*(3-2*p)):'1';videos.forEach((v,i)=>v.style.visibility=frame>=data.spans[i].start&&frame<data.spans[i].end?'inherit':'hidden');};`,
+        setup: `const picture=root.querySelector('.picture');return frame=>{const p=Math.max(0,Math.min(1,frame/Math.max(1,data.duration-1))),scale=1+(data.scale-1)*Math.pow(1-p,4);picture.style.transform='scale('+scale+')';picture.style.opacity=data.fade?String(1-p*p*(3-2*p)):'1';};`,
       });
       const id = window.subjectId,
         visual = sealPresentVisualTrack({
@@ -83,24 +79,20 @@ export function installPullback(module, manifest, component, optionsType, mode="
             ? [
                 {
                   id,
-                  order: 0,
                   span: window.span,
-                  elements: [
-                    {
-                      id: "scene",
-                      kind: "program",
-                      order: 0,
-                      program,
-                      style: styles({
-                        position: "absolute",
-                        left: within.xPx + "px",
-                        top: within.yPx + "px",
-                        width: within.widthPx + "px",
-                        height: within.heightPx + "px",
-                      }),
-                    },
-                    ...children,
-                  ],
+                  root: {
+                    id: "scene",
+                    kind: "program",
+                    program,
+                    style: styles({
+                      position: "absolute",
+                      left: within.xPx + "px",
+                      top: within.yPx + "px",
+                      width: within.widthPx + "px",
+                      height: within.heightPx + "px",
+                    }),
+                    slots: children.map((element) => ({ name: element.id, element })),
+                  },
                 },
               ]
             : [],

@@ -170,7 +170,8 @@ const images = new Set([
   "thumb-f",
   "thumb-g",
 ]);
-const assetType = (n) => (images.has(n) ? mediaTypes.blobArtifact : mediaTypes.synchronized);
+const assetType = (n) => (images.has(n) ? mediaTypes.blobArtifact : mediaTypes.prepared);
+const authoredAssetType = (n) => (images.has(n) ? mediaTypes.blobArtifact : mediaTypes.prepared);
 const ins = (tag) => [...common, ...tags[tag].assets.map((n) => port(n, assetType(n)))];
 export const manifest = {
   format: "hypit.module@1",
@@ -181,7 +182,7 @@ export const manifest = {
         compositionTypes.visualTrack,
         mediaTypes.blobArtifact,
         mediaTypes.fontArtifact,
-        mediaTypes.synchronized,
+        mediaTypes.prepared,
         timelineTypes.timeline,
         spatialTypes.frame,
         temporalTypes.window,
@@ -291,7 +292,8 @@ function decode(tag) {
           range: element.range,
         },
       ];
-    const inputs = ins(tag).filter((p) => p.name !== "events"),
+    const inputs = ins(tag).filter((p) => p.name !== "events")
+      .map((port) => spec.assets.includes(port.name) ? { ...port, type: authoredAssetType(port.name) } : port),
       bindings = {
         timeline: context.timeline.ref,
         within: ref(element, "within", spatialTypes.frame),
@@ -299,7 +301,7 @@ function decode(tag) {
         font: ref(element, "font", mediaTypes.fontArtifact),
         options: { kind: "record", id: id + ".options" },
       };
-    for (const n of spec.assets) bindings[n] = ref(element, n, assetType(n));
+    for (const n of spec.assets) bindings[n] = ref(element, n, authoredAssetType(n));
     const input = (name) => ({ kind: "fragment-input", name }),
       op = (operation) => ({ kind: "fragment-operation", operation }),
       operations = [

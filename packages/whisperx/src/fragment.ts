@@ -8,7 +8,7 @@ const input = (name: string) => ({ kind: "fragment-input" as const, name });
 const operation = (id: string) => ({ kind: "fragment-operation" as const, operation: id });
 
 export const whisperXTranscriptionFragment = sealGraphFragment({
-  inputs: [{ name: "media", type: mediaTypes.synchronized }, { name: "language", type: whisperXTypes.language }],
+  inputs: [{ name: "media", type: mediaTypes.prepared }, { name: "language", type: whisperXTypes.language }],
   operations: [
     { id: "prepare-evidence-audio", producer: speechEvidenceProducers.projectAudio,
       inputs: { media: input("media") }, result: { kind: "need" as const, name: "evidenceAudio" } },

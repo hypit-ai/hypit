@@ -16,42 +16,35 @@ function seal(t, within, w, o, html, css, setup, data, children = []) {
     presents: [
       {
         id: o.id,
-        order: 0,
         span: w.span,
-        elements: [
-          {
-            id: "scene",
-            kind: "program",
-            order: 0,
-            program: htmlVisual({
-              html: html + '<div class="font-resource">{{font}}</div>',
-              css:
-                ":scope{pointer-events:none}.font-resource{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden}" +
-                css,
-              setup:
-                `const family=getComputedStyle(root.querySelector('.font-resource>*')).fontFamily;root.style.fontFamily=family;` +
-                setup,
-              data,
-            }),
-            style: sty({
-              position: "absolute",
-              left: within.xPx + "px",
-              top: within.yPx + "px",
-              width: within.widthPx + "px",
-              height: within.heightPx + "px",
-            }),
-          },
-          {
+        root: {
+          id: "scene",
+          kind: "program",
+          program: htmlVisual({
+            html: html + '<div class="font-resource">{{font}}</div>',
+            css:
+              ":scope{pointer-events:none}.font-resource{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden}" +
+              css,
+            setup:
+              `const family=getComputedStyle(root.querySelector('.font-resource>*')).fontFamily;root.style.fontFamily=family;` +
+              setup,
+            data,
+          }),
+          style: sty({
+            position: "absolute",
+            left: within.xPx + "px",
+            top: within.yPx + "px",
+            width: within.widthPx + "px",
+            height: within.heightPx + "px",
+          }),
+          slots: [{ name: "font", element: {
             id: "font",
-            parent: "scene",
             kind: "text",
-            order: 1,
             text: "Hypit 字",
             fonts: [data.font],
             style: sty({ "font-size": "12px" }),
-          },
-          ...children,
-        ],
+          }}, ...children.map((element) => ({ name: element.id, element }))],
+        },
       },
     ],
   });

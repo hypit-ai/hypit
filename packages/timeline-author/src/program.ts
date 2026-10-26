@@ -1,26 +1,24 @@
 import {
-  assertTemporalExtentClock,
-  assertTemporalWindowFor,
   composeTemporalWindow,
   durationInFrames,
   projectProgramInstant,
+  resolveTemporalExtent,
 } from "@hypit/temporal";
 import type {
-  LocalTemporalDomain,
+  TemporalBoundaryPolicy,
   TemporalExtent,
   TemporalDuration,
   TemporalInstant,
   TemporalWindow,
 } from "@hypit/temporal";
 import { assertClockIdentity, sealTimeline } from "@hypit/timeline";
-import type { Clock, Timeline } from "@hypit/timeline";
+import type { Clock, FrameSpan, Timeline } from "@hypit/timeline";
 
 import type {
   ConstructionExtent,
   ConstructionIdentitySpec,
   ConstructionOffsetSpec,
   ConstructionPoint,
-  ConstructionSpan,
   TimelineAuthorHeader,
 } from "./types.js";
 
@@ -46,9 +44,12 @@ export function constructionDuration(clock: Clock, duration: TemporalDuration): 
   return { frameCount: Number(frames.numerator) };
 }
 
-export function constructionResolvedExtent(clock: Clock, extent: TemporalExtent): ConstructionExtent {
-  assertTemporalExtentClock(extent, clock);
-  return { frameCount: extent.frameCount };
+export function constructionResolvedExtent(
+  clock: Clock,
+  extent: TemporalExtent,
+  policy: TemporalBoundaryPolicy,
+): ConstructionExtent {
+  return { frameCount: resolveTemporalExtent(extent, clock, policy) };
 }
 
 export function constructionOffset(
@@ -73,28 +74,28 @@ export function constructionAliasPoint(point: ConstructionPoint): ConstructionPo
   return { frame: point.frame };
 }
 
-export function constructionSpan(start: ConstructionPoint, extent: ConstructionExtent): ConstructionSpan {
+export function constructionSpan(start: ConstructionPoint, extent: ConstructionExtent): FrameSpan {
   assert(extent.frameCount > 0, "Timeline construction Span must be non-empty.");
   return { startFrame: start.frame, endFrameExclusive: start.frame + extent.frameCount };
 }
 
-export function constructionSpanEnding(end: ConstructionPoint, extent: ConstructionExtent): ConstructionSpan {
+export function constructionSpanEnding(end: ConstructionPoint, extent: ConstructionExtent): FrameSpan {
   assert(extent.frameCount > 0, "Timeline construction Span must be non-empty.");
   const startFrame = end.frame - extent.frameCount;
   assert(startFrame >= 0, "Timeline construction Span resolves before start.");
   return { startFrame, endFrameExclusive: end.frame };
 }
 
-export function constructionSpanBetween(start: ConstructionPoint, end: ConstructionPoint): ConstructionSpan {
+export function constructionSpanBetween(start: ConstructionPoint, end: ConstructionPoint): FrameSpan {
   assert(end.frame > start.frame, "Timeline construction Span must be non-empty and ordered.");
   return { startFrame: start.frame, endFrameExclusive: end.frame };
 }
 
-export function constructionSpanStart(span: ConstructionSpan): ConstructionPoint {
+export function constructionSpanStart(span: FrameSpan): ConstructionPoint {
   return { frame: span.startFrame };
 }
 
-export function constructionSpanEnd(span: ConstructionSpan): ConstructionPoint {
+export function constructionSpanEnd(span: FrameSpan): ConstructionPoint {
   return { frame: span.endFrameExclusive };
 }
 
@@ -123,7 +124,7 @@ export function materializeInstant(
 
 export function materializeWindow(
   timeline: Timeline,
-  span: ConstructionSpan,
+  span: FrameSpan,
   spec: ConstructionIdentitySpec,
 ): TemporalWindow {
   identity(spec.id, "Window id");

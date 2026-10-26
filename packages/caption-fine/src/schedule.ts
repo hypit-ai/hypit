@@ -1,6 +1,7 @@
 import { assertCaptionProgramForDocument, assertCaptionTimingForDocument, captionUseVisibility } from "@hypit/caption";
 import type { CaptionProgram, CaptionTiming } from "@hypit/caption";
 import type { CaptionDocument } from "@hypit/caption";
+import type { FrameSpan } from "@hypit/timeline";
 
 import { assertFineCaptionParameters, FINE_CAPTION_FAMILY } from "./style.js";
 import type { FineCaptionParameters, FineCaptionSchedule, FineCaptionScheduledCue } from "./types.js";
@@ -9,11 +10,9 @@ function assertIntegerFrame(value: number, label: string): void {
   if (!Number.isSafeInteger(value) || value < 0) throw new Error(`${label} must be a non-negative integer Frame`);
 }
 
-type FineCaptionContentCue = {
+type FineCaptionContentCue = FrameSpan & {
   readonly id: string;
   readonly role?: string;
-  readonly startFrame: number;
-  readonly endFrameExclusive: number;
   readonly units: CaptionTiming["units"];
 };
 
@@ -37,7 +36,8 @@ function fineCaptionContentCues(timing: CaptionTiming, document: CaptionDocument
  *
  * Resolved unit timing stays untouched. `leadFrames` and `tailFrames` only
  * widen the visible envelope, and `cut` prevents adjacent Cues from competing
- * for the same handoff interval without shortening either Cue's spoken time.
+ * for the same handoff interval. A single shared boundary Frame is the
+ * floor/cover representation of a contiguous handoff, not simultaneous speech.
  */
 export function scheduleFineCaption(
   timing: CaptionTiming,
@@ -82,9 +82,12 @@ export function scheduleFineCaption(
       const role = roleByCue.get(cue.cueId);
       const previousIndex = previousByRole.get(role);
       const previous = previousIndex === undefined ? undefined : envelopes[previousIndex];
-      if (previous !== undefined && style.timing.handoff === "cut" && previous.timedEndFrameExclusive <= cue.timedStartFrame) {
-        const previousEnd = Math.max(previous.timedEndFrameExclusive, Math.min(previous.visibleEndFrameExclusive, cue.timedStartFrame));
-        envelopes[previousIndex!] = { ...previous, visibleEndFrameExclusive: previousEnd };
+      if (previous !== undefined && style.timing.handoff === "cut"
+        && previous.timedEndFrameExclusive <= cue.timedStartFrame + 1) {
+        const timedEndFrameExclusive = Math.min(previous.timedEndFrameExclusive, cue.timedStartFrame);
+        const previousEnd = Math.max(timedEndFrameExclusive,
+          Math.min(previous.visibleEndFrameExclusive, cue.timedStartFrame));
+        envelopes[previousIndex!] = { ...previous, timedEndFrameExclusive, visibleEndFrameExclusive: previousEnd };
         cue = { ...cue, visibleStartFrame: Math.min(cue.timedStartFrame, Math.max(cue.visibleStartFrame, previousEnd)) };
       }
       previousByRole.set(role, envelopes.length);

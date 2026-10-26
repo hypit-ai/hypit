@@ -35,7 +35,7 @@ Film 是普通作者组件。它把显式选择的 VisualTrack、AudioTrack 与�
 | `appearance` | 是 | Film Recipe，包括清屏颜色 |
 
 每个 `<film:Track>` 接受一个 VisualTrack 或 AudioTrack。Film 不会发现某个输出的“兄弟端口”。
-如果同一份规范化媒体要同时贡献画面和声音，就分别从它声明一个 Visual Clip 和一个
+如果同一份准备媒体要同时贡献画面和声音，就分别从它声明一个 Visual Clip 和一个
 Audio Clip，并在这里显式选择两边产出的 Track。
 
 常见输出包括：
@@ -162,5 +162,5 @@ hypit plan build.svrun
 `check` 在不调用外部服务的情况下验证导入、类型和图边。`plan` 编译选定 Run 并显示将要
 请求的 Operations。付费执行前应检查该计划。
 
-[时间与装配](./timing.md)解释规范化、Timeline 构造、媒体放置与语义投影；
+[时间与装配](./timing.md)解释媒体准备、Timeline 构造、媒体放置与语义投影；
 [Tracks](./tracks.md)解释 Visual 和 Audio 的作者形式。

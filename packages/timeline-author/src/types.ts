@@ -1,9 +1,8 @@
-import type { TemporalDuration } from "@hypit/temporal";
+import type { TemporalBoundaryPolicy, TemporalDuration } from "@hypit/temporal";
 
 export type TimelineAuthorHeader = { readonly id: string };
 export type ConstructionPoint = { readonly frame: number };
 export type ConstructionExtent = { readonly frameCount: number };
-export type ConstructionSpan = { readonly startFrame: number; readonly endFrameExclusive: number };
 export type TimelineAuthorBinding = {
   readonly binding: "end" | "at" | "from" | "until" | "for";
   readonly declarationId?: string;
@@ -14,6 +13,7 @@ export type TimelineAuthorBinding = {
 export type ConstructionOffsetSpec = { readonly direction: 1 | -1; readonly author?: TimelineAuthorBinding };
 export type ConstructionIdentitySpec = { readonly id: string; readonly subjectId?: string };
 export type ConstructionDurationSpec = { readonly duration: TemporalDuration; readonly author?: TimelineAuthorBinding };
+export type ConstructionResolutionSpec = { readonly policy: TemporalBoundaryPolicy };
 
 export type TimelineInstantDeclaration = {
   readonly id: string;

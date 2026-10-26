@@ -1019,7 +1019,7 @@ store.subscribe(({ snapshot, playhead }) => {
 let described = "";
 let scrolledTo = "";
 
-store.subscribe(({ snapshot, selection, playhead }) => {
+store.subscribe(({ snapshot, selection }) => {
   const origin = selection.kind === "none" ? undefined : selection.origin;
   const chosen = selection.kind === "item" ? store.item(selection.itemId) : undefined;
   const chosenDomain = selection.kind === "temporal-domain"

@@ -1,4 +1,8 @@
-export function placedVisualMedia(timeline, window, sources, parent = "scene") {
+import { preparedVisualSource } from "@hypit/media";
+import { composeTemporalMaps } from "@hypit/temporal";
+import { preparedSampling } from "./frame-sampling.js";
+
+export function placedVisualMedia(timeline, window, sources) {
   const clips = sources.flatMap((source) => {
     if (source.window.start.timelineId !== timeline.id || source.window.end.timelineId !== timeline.id)
       throw Error(`Visual source ${source.id} belongs to another Timeline.`);
@@ -7,22 +11,19 @@ export function placedVisualMedia(timeline, window, sources, parent = "scene") {
     const endFrameExclusive = Math.min(
       placed.endFrameExclusive,
       window.span.endFrameExclusive,
-      placed.startFrame + source.media.frameDomain.frameCount,
     );
     if (endFrameExclusive <= startFrame) return [];
     return [{
       source,
       span: { startFrame, endFrameExclusive },
-      sourceStartFrame: startFrame - placed.startFrame,
+      sourceAtStartFrame: startFrame - placed.startFrame,
     }];
   });
   const children = clips.map((clip, index) => ({
     id: "source-" + index,
-    parent,
     kind: "video",
-    order: index + 1,
     muted: true,
-    artifact: clip.source.media.visual.artifact,
+    source: preparedVisualSource(clip.source.media),
     style: Object.entries({
       position: "absolute",
       inset: 0,
@@ -30,19 +31,17 @@ export function placedVisualMedia(timeline, window, sources, parent = "scene") {
       height: "100%",
       "object-fit": "cover",
     }).map(([name, value]) => ({ name, value })),
-    sourceTime: {
-      sourceFrameRate: clip.source.media.frameDomain.frameRate,
-      sourceFrameCount: clip.source.media.frameDomain.frameCount,
-      pieces: [{
+    sampling: composeTemporalMaps(preparedSampling(`source-${index}`, timeline.frameRate,
+      window.span.endFrameExclusive - window.span.startFrame,
+      clip.source.media.domain, [{
         target: {
           startFrame: clip.span.startFrame - window.span.startFrame,
           endFrameExclusive:
             clip.span.endFrameExclusive - window.span.startFrame,
         },
-        sourceAtStart: { numerator: clip.sourceStartFrame, denominator: 1 },
+        sourceAtStartFrame: clip.sourceAtStartFrame,
         rate: { numerator: 1, denominator: 1 },
-      }],
-    },
+      }]), clip.source.media.visual.map),
   }));
   return { clips, children };
 }

@@ -4,7 +4,8 @@
 source-local domains and one absolute Timeline. It contains no speech, media, Caption or rendering
 policy.
 
-`NarrativeAlignment` locates Narrative boundaries on one `LocalTemporalDomain`.
+`NarrativeAlignment` locates Narrative boundaries as exact values on one `LocalTemporalDomain`; it
+does not quantize them onto a Timeline frame grid.
 `NarrativeProjection` maps one or more explicit `NarrativeAlignment + LocalTemporalDomain + Window`
 relations onto one
 Timeline. Narrative Selections, Moments and Segments can then project to ordinary absolute
@@ -23,7 +24,7 @@ The Projection owns only its Maps and publishes one reusable interpretation cont
 declarations explicitly choose that Projection when revealing a semantic object. `proof` is an
 ordinary `TemporalWindow`; `claim` is an ordinary `TemporalInstant`. General visual, audio, caption and typography components consume those
 values without receiving the Projection or learning Narrative source kinds. Selection/Segment/Moment
-dispatch remain owned here. The completed Projection stores absolute boundaries and no reusable
+dispatch remain owned here. The completed Projection stores the once-resolved absolute boundaries and no reusable
 local-to-absolute mapping identity.
 
 Projection reveals the exact semantic boundary. Author offsets remain ordinary absolute-time

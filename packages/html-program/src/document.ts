@@ -1,7 +1,7 @@
-import { assertCompositableSurfaceRef } from "@hypit/media";
+import { assertCompositableSurfaceRef, verifyPreparedVisualSource } from "@hypit/media";
 import type { CompositableSurfaceRef, FontArtifactRef } from "@hypit/media";
-import { timelineFrameCount } from "@hypit/timeline";
-import type { Timeline } from "@hypit/timeline";
+import { assertFrameSpan, timelineFrameCount } from "@hypit/timeline";
+import type { FrameSpan, Timeline } from "@hypit/timeline";
 import {
   assertCompositionIdentity,
   visualElements,
@@ -17,12 +17,11 @@ import type {
   VisualElement,
   VisualItem,
   VisualPresent,
-  VisualSourceTimeRational,
-  VisualSourceTimePiece,
   VisualStyleDeclaration,
   VisualScope,
-  VisualTrack,
 } from "@hypit/composition";
+import { assertTemporalMap, resolveTemporalBoundary, temporalValueInFrames } from "@hypit/temporal";
+import type { ExactTemporalValue, TemporalMap } from "@hypit/temporal";
 import { assertBlobRef, canonicalStringify, compareCodeUnits, isResourceId } from "@hypit/hypit/protocol";
 import type { BlobRef, ResourceId } from "@hypit/hypit/protocol";
 import { VISUAL_IR_V1 } from "@hypit/composition";
@@ -45,8 +44,7 @@ import type {
   ResourceUrlResolver,
   HtmlArtifact,
   HtmlProgram,
-  HtmlFrameSpan,
-  HtmlFrameSource,
+  HtmlVideoSource,
 } from "./types.js";
 import {
   collectTerminalTextFonts,
@@ -89,25 +87,16 @@ function fpsRational(numerator: number, denominator: number): string {
   return denominator === 1 ? String(numerator) : `${numerator}/${denominator}`;
 }
 
-function rationalDecimal(numerator: bigint, denominator: bigint): string {
-  if (denominator <= 0n) throw new Error("HTML renderer rational denominator must be positive.");
-  const scale = 1_000_000_000_000n;
-  const scaled = numerator * scale / denominator;
-  const whole = scaled / scale;
-  const remainder = scaled % scale;
-  if (remainder === 0n) return String(whole);
-  return `${whole}.${String(remainder).padStart(12, "0").replace(/0+$/u, "")}`;
-}
+type FrameRational = { readonly numerator: number; readonly denominator: number };
+type FrameSamplingPiece = {
+  readonly target: FrameSpan;
+  readonly sourceAtStart: FrameRational;
+  readonly rate: FrameRational;
+  readonly wrap?: FrameSpan;
+};
 
-function sourceSeconds(frame: VisualSourceTimeRational, frameRate: VisualSourceTimeRational): string {
-  return rationalDecimal(
-    BigInt(frame.numerator) * BigInt(frameRate.denominator),
-    BigInt(frame.denominator) * BigInt(frameRate.numerator),
-  );
-}
-
-function sourcePosition(piece: VisualSourceTimePiece, offset: number): {
-  readonly position: VisualSourceTimeRational;
+function sourcePosition(piece: FrameSamplingPiece, offset: number): {
+  readonly position: FrameRational;
   readonly cycle: bigint;
 } {
   const denominator = BigInt(piece.sourceAtStart.denominator) * BigInt(piece.rate.denominator);
@@ -115,7 +104,7 @@ function sourcePosition(piece: VisualSourceTimePiece, offset: number): {
     + BigInt(offset) * BigInt(piece.rate.numerator) * BigInt(piece.sourceAtStart.denominator);
   if (piece.wrap === undefined) {
     if (raw < 0n || raw > BigInt(Number.MAX_SAFE_INTEGER) || denominator > BigInt(Number.MAX_SAFE_INTEGER)) {
-      throw new Error("HTML renderer visual source time exceeds safe arithmetic.");
+      throw new Error("HTML renderer visual sampling exceeds safe arithmetic.");
     }
     return { position: { numerator: Number(raw), denominator: Number(denominator) }, cycle: 0n };
   }
@@ -125,19 +114,24 @@ function sourcePosition(piece: VisualSourceTimePiece, offset: number): {
   const cycle = delta >= 0n ? delta / length : -((-delta + length - 1n) / length);
   const wrapped = ((delta % length) + length) % length;
   const numerator = start + wrapped;
+  if (piece.rate.numerator < 0 && numerator === start) {
+    const end = BigInt(piece.wrap.endFrameExclusive) * denominator;
+    if (end > BigInt(Number.MAX_SAFE_INTEGER) || denominator > BigInt(Number.MAX_SAFE_INTEGER)) {
+      throw new Error("HTML renderer visual sampling exceeds safe arithmetic.");
+    }
+    return { position: { numerator: Number(end), denominator: Number(denominator) }, cycle: cycle - 1n };
+  }
   if (numerator > BigInt(Number.MAX_SAFE_INTEGER) || denominator > BigInt(Number.MAX_SAFE_INTEGER)) {
     throw new Error("HTML renderer visual sampling exceeds safe arithmetic.");
   }
   return { position: { numerator: Number(numerator), denominator: Number(denominator) }, cycle };
 }
 
-function sourceTimeRuns(piece: VisualSourceTimePiece): Array<{
-  readonly startFrame: number;
-  readonly endFrameExclusive: number;
-  readonly sourceFrame: VisualSourceTimeRational;
+function samplingRuns(piece: FrameSamplingPiece): Array<FrameSpan & {
+  readonly sourceFrame: FrameRational;
 }> {
   const length = piece.target.endFrameExclusive - piece.target.startFrame;
-  const runs: Array<{ startFrame: number; endFrameExclusive: number; sourceFrame: VisualSourceTimeRational }> = [];
+  const runs: Array<FrameSpan & { sourceFrame: FrameRational }> = [];
   // Keep a hold as the interval it is. HTMLMediaElement cannot accept a zero
   // playbackRate, but that browser limitation belongs to the render/preview
   // adapters; expanding the shared sampling description here would turn one
@@ -171,20 +165,78 @@ function sourceTimeRuns(piece: VisualSourceTimePiece): Array<{
   return runs;
 }
 
-function sampledPlaybackRate(
-  rate: VisualSourceTimeRational,
-  sourceFrameRate: VisualSourceTimeRational,
-  programNumerator: number,
-  programDenominator: number,
-): string {
-  // The exact zero rate remains in data-hypit-source-rate for adapters that
-  // place discrete frames. This positive fallback is only the legal native
-  // HTMLMediaElement value; preview adapters pause and seek held elements.
-  if (rate.numerator <= 0) return "1";
-  return rationalDecimal(
-    BigInt(rate.numerator) * BigInt(programNumerator) * BigInt(sourceFrameRate.denominator),
-    BigInt(rate.denominator) * BigInt(programDenominator) * BigInt(sourceFrameRate.numerator),
-  );
+function safeFrameRational(value: { readonly numerator: bigint; readonly denominator: bigint }, label: string): FrameRational {
+  let left = value.numerator < 0n ? -value.numerator : value.numerator;
+  let right = value.denominator;
+  while (right !== 0n) [left, right] = [right, left % right];
+  const divisor = left === 0n ? 1n : left;
+  const numerator = value.numerator / divisor;
+  const denominator = value.denominator / divisor;
+  if (numerator < BigInt(Number.MIN_SAFE_INTEGER) || numerator > BigInt(Number.MAX_SAFE_INTEGER)
+    || denominator <= 0n || denominator > BigInt(Number.MAX_SAFE_INTEGER)) {
+    throw new Error(`${label} exceeds safe frame arithmetic.`);
+  }
+  return { numerator: Number(numerator), denominator: Number(denominator) };
+}
+
+function frameValue(value: ExactTemporalValue, frameRate: FrameRational, label: string): FrameRational {
+  return safeFrameRational(temporalValueInFrames(value, { frameRate }), label);
+}
+
+function advanceFramePosition(
+  position: FrameRational,
+  from: FrameRational,
+  to: number,
+  rate: FrameRational,
+  label: string,
+): FrameRational {
+  const deltaNumerator = BigInt(to) * BigInt(from.denominator) - BigInt(from.numerator);
+  return safeFrameRational({
+    numerator: BigInt(position.numerator) * BigInt(from.denominator) * BigInt(rate.denominator)
+      + deltaNumerator * BigInt(rate.numerator) * BigInt(position.denominator),
+    denominator: BigInt(position.denominator) * BigInt(from.denominator) * BigInt(rate.denominator),
+  }, label);
+}
+
+/** Terminal HTML adapter: quantize one exact local Map only at the decoded-frame consumer. */
+function frameSamplingPieces(
+  map: TemporalMap,
+  timing: { readonly frameRate: { readonly numerator: number; readonly denominator: number }; readonly frameCount: number },
+  programFrameRate: FrameRational,
+): FrameSamplingPiece[] {
+  assertTemporalMap(map);
+  if (map.stages.length !== 1) {
+    throw new Error("HTML renderer requires one occurrence-to-source sampling stage.");
+  }
+  const stage = map.stages[0]!;
+  return stage.pieces.flatMap((piece) => {
+    const targetStart = frameValue(piece.target.start, programFrameRate, "Visual sampling target start");
+    const startFrame = resolveTemporalBoundary(piece.target.start, { frameRate: programFrameRate }, "cover");
+    const endFrameExclusive = resolveTemporalBoundary(piece.target.end, { frameRate: programFrameRate }, "cover");
+    if (endFrameExclusive <= startFrame) return [];
+    const rate = safeFrameRational({
+      numerator: BigInt(piece.rate.numerator) * BigInt(timing.frameRate.numerator)
+        * BigInt(programFrameRate.denominator),
+      denominator: BigInt(piece.rate.denominator) * BigInt(timing.frameRate.denominator)
+        * BigInt(programFrameRate.numerator),
+    }, "Visual sampling rate");
+    const sourceAtStart = advanceFramePosition(
+      frameValue(piece.sourceAtStart, timing.frameRate, "Visual sampling source start"),
+      targetStart,
+      startFrame,
+      rate,
+      "Visual sampling source start after target quantization",
+    );
+    return [{
+      target: { startFrame, endFrameExclusive },
+      sourceAtStart,
+      rate,
+      ...(piece.wrap === undefined ? {} : { wrap: {
+        startFrame: resolveTemporalBoundary(piece.wrap.start, { frameRate: timing.frameRate }, "cover"),
+        endFrameExclusive: resolveTemporalBoundary(piece.wrap.end, { frameRate: timing.frameRate }, "cover"),
+      } }),
+    }];
+  });
 }
 
 function percentage(frame: number, totalFrames: number): string {
@@ -266,7 +318,7 @@ type ElementContext = {
   readonly emittedFilterIds: Set<string>;
   readonly sharedGlyphFilterDefinitions: string[];
   readonly stableId: StableDomId;
-  readonly frameSources: HtmlFrameSource[];
+  readonly videoSources: HtmlVideoSource[];
 };
 
 /** Every emitted element, including SVG mask sources, keeps the same authored frame clock. */
@@ -385,22 +437,52 @@ function renderElement(
   if (element.kind === "text-flow" || element.kind === "path-text") {
     return renderTerminalTextElement(element, textContext);
   }
-  if ((element.kind === "video" || element.kind === "surface") && element.sourceTime !== undefined) {
-    const artifact = element.kind === "surface" ? element.surface.artifact : element.artifact;
+  if (element.kind === "video") {
+    context.videoSources.push({
+      kind: "media",
+      id,
+      startFrame: context.presentStartFrame,
+      endFrameExclusive: context.presentStartFrame + context.presentDurationFrames,
+      source: structuredClone(element.source),
+      sampling: structuredClone(element.sampling),
+    });
+    const media = [
+      `id="${id}"`,
+      `data-hypit-element-id="${escapeHtml(element.id)}"`,
+      "data-hypit-source-frame=\"media\"",
+      `data-hypit-start-frame="${context.presentStartFrame}"`,
+      `data-hypit-end-frame="${context.presentStartFrame + context.presentDurationFrames}"`,
+      `style="${escapeHtml(inlineStyle)}"`,
+      attributes(element.attributes).trim(),
+      "muted",
+      "playsinline",
+    ].filter(Boolean).join(" ");
+    return `<video ${media} ${deferredResource("src", element.source.source.resource)}></video>`;
+  }
+  if (element.kind === "surface" && element.sampling !== undefined) {
+    const artifact = element.surface.artifact;
+    const timing = element.surface.timing.kind === "frames"
+        ? { frameRate: element.surface.timing.frameRate, frameCount: element.surface.timing.frameCount }
+        : undefined;
+    if (timing === undefined) throw new Error(`Visual element ${element.id} has sampling without frame timing.`);
+    const pieces = frameSamplingPieces(element.sampling, timing, {
+      numerator: context.programNumerator, denominator: context.programDenominator,
+    });
     let part = 0;
-    return element.sourceTime.pieces.flatMap((piece) => sourceTimeRuns(piece).map((run) => {
+    return pieces.flatMap((piece) => samplingRuns(piece).map((run) => {
       part += 1;
       const startFrame = context.presentStartFrame + run.startFrame;
       const durationFrames = run.endFrameExclusive - run.startFrame;
       const partId = `${id}-sample-${String(part).padStart(4, "0")}`;
-      context.frameSources.push({
+      context.videoSources.push({
+        kind: "surface",
         id: partId,
         resource: artifact.resource,
         startFrame,
         endFrameExclusive: startFrame + durationFrames,
         sourceFrame: { ...run.sourceFrame },
         sourceRate: { ...piece.rate },
-        sourceFrameRate: { ...element.sourceTime!.sourceFrameRate },
+        sourceFrameRate: { ...timing.frameRate },
       });
       const media = [
         `id="${partId}"`,
@@ -410,18 +492,18 @@ function renderElement(
         `data-hypit-source-rate="${piece.rate.numerator}/${piece.rate.denominator}"`,
         `data-hypit-start-frame="${startFrame}"`,
         `data-hypit-end-frame="${startFrame + durationFrames}"`,
-        `data-hypit-source-fps="${element.sourceTime!.sourceFrameRate.numerator}/${element.sourceTime!.sourceFrameRate.denominator}"`,
+        `data-hypit-source-fps="${timing.frameRate.numerator}/${timing.frameRate.denominator}"`,
         `style="${escapeHtml(inlineStyle)}"`,
         attributes(element.attributes).trim(),
         "muted",
         "playsinline",
-        ...(element.kind === "surface" ? [
+        ...[
           `data-hypit-surface-resource="${element.surface.artifact.resource}"`,
           `data-hypit-alpha-mode="${element.surface.alphaMode}"`,
           `data-hypit-color-space="${element.surface.colorSpace}"`,
           `width="${element.surface.width}"`,
           `height="${element.surface.height}"`,
-        ] : []),
+        ],
       ].filter(Boolean).join(" ");
       return `<video ${media} ${deferredResource("src", artifact.resource)}></video>`;
     })).join("");
@@ -435,15 +517,11 @@ function renderElement(
       `height="${element.surface.height}"`,
     ].join(" ");
     if (element.surface.timing.kind === "still") return `<img ${common} ${surface} ${deferredResource("src", element.surface.artifact.resource)}/>`;
-    throw new Error(`Timed Surface ${element.id} has no source-time map.`);
+    throw new Error(`Timed Surface ${element.id} has no sampling Map.`);
   }
 
-  const media = [
-    element.kind === "video" && element.muted !== false ? "muted" : "",
-    element.kind === "video" ? "playsinline" : "",
-  ].filter(Boolean).join(" ");
-  if (element.kind === "image") return `<img ${common} ${media} ${deferredResource("src", element.artifact.resource)}/>`;
-  throw new Error(`Timed visual element ${element.id} has no source-time map.`);
+  if (element.kind === "image") return `<img ${common} ${deferredResource("src", element.artifact.resource)}/>`;
+  throw new Error("Timed visual element has no sampling Map.");
 }
 
 function renderVisualPresent(
@@ -456,7 +534,7 @@ function renderVisualPresent(
   emittedFilterIds: Set<string>,
   sharedGlyphFilterDefinitions: string[],
   stableId: StableDomId,
-  frameSources: HtmlFrameSource[],
+  videoSources: HtmlVideoSource[],
 ): string {
   const start = frameSeconds(present.span.startFrame, numerator, denominator);
   const duration = frameSeconds(present.span.endFrameExclusive - present.span.startFrame, numerator, denominator);
@@ -474,20 +552,18 @@ function renderVisualPresent(
     emittedFilterIds,
     sharedGlyphFilterDefinitions,
     stableId,
-    frameSources,
+    videoSources,
   });
   return `<div class="hypit-visual-present" data-hypit-occurrence-path="${escapeHtml(JSON.stringify(occurrencePath))}" data-hypit-present-id="${escapeHtml(present.id)}" data-hypit-present-root-element-id="${escapeHtml(root.id)}" data-hypit-paint-path="${escapeHtml(JSON.stringify(paintPath))}" data-hypit-present-start-frame="${present.span.startFrame}" data-hypit-present-end-frame="${present.span.endFrameExclusive}" style="position:absolute;inset:0;z-index:${stackIndex};overflow:hidden;pointer-events:none">${present.visibility === undefined ? contents : `<div data-hypit-visibility="${escapeHtml(JSON.stringify(present.visibility))}" style="position:absolute;inset:0">${contents}</div>`}</div>`;
 }
 
 type RenderedAdjustment = {
   readonly html: string;
-  readonly runtime: {
+  readonly runtime: FrameSpan & {
     readonly id: string;
     readonly occurrencePath: readonly string[];
     readonly adjustmentId: string;
-    readonly startFrame: number;
-    readonly endFrameExclusive: number;
-    readonly visibility?: readonly { readonly startFrame: number; readonly endFrameExclusive: number }[];
+    readonly visibility?: readonly FrameSpan[];
     readonly filter: string;
     readonly opacity?: number;
     readonly transform?: string;
@@ -552,8 +628,8 @@ function orderedVisualScopeEntries(scope: VisualScope): OrderedVisualScopeEntry[
     : [{ stack: member }]);
 }
 
-function mergeFrameSpans(spans: readonly HtmlFrameSpan[]): HtmlFrameSpan[] {
-  const result: HtmlFrameSpan[] = [];
+function mergeFrameSpans(spans: readonly FrameSpan[]): FrameSpan[] {
+  const result: FrameSpan[] = [];
   for (const span of [...spans].sort((left, right) => left.startFrame - right.startFrame
     || left.endFrameExclusive - right.endFrameExclusive)) {
     const previous = result.at(-1);
@@ -568,9 +644,9 @@ function mergeFrameSpans(spans: readonly HtmlFrameSpan[]): HtmlFrameSpan[] {
 }
 
 function collectArtifacts(composition: Composition): HtmlArtifact[] {
-  const artifacts = new Map<ResourceId, { artifact: BlobRef; always: boolean; spans: HtmlFrameSpan[] }>();
+  const artifacts = new Map<ResourceId, { artifact: BlobRef; always: boolean; spans: FrameSpan[] }>();
   const add = (artifact: Pick<BlobRef, "resource" | "size" | "mediaType">,
-    usage: "always" | HtmlFrameSpan): void => {
+    usage: "always" | FrameSpan): void => {
     const next: BlobRef = {
       kind: "blob",
       resource: artifact.resource,
@@ -589,7 +665,8 @@ function collectArtifacts(composition: Composition): HtmlArtifact[] {
   for (const track of visualScopeTracks(composition.visual)) {
     for (const present of visualPresents(track)) {
       for (const element of visualElements(present.root)) {
-        if (element.kind === "image" || element.kind === "video") add(element.artifact, present.span);
+        if (element.kind === "image") add(element.artifact, present.span);
+        if (element.kind === "video") add(element.source.source, present.span);
         if (element.kind === "surface") add(element.surface.artifact, present.span);
         // HtmlVisual HTML, CSS and setup are intentionally opaque. Their
         // declared dependencies stay conservative even though the visual root
@@ -797,15 +874,23 @@ function frameAnimationRuntime(numerator: number, denominator: number): string {
 
 function frameProgramRuntime(frameCount: number): string {
   return `(() => {
-    const presents = [...document.querySelectorAll('[data-hypit-present-start-frame]')].map(element => ({
-      element,
-      startFrame: Number(element.getAttribute('data-hypit-present-start-frame')),
-      endFrameExclusive: Number(element.getAttribute('data-hypit-present-end-frame')),
-    }));
+    let presents;
+    let prepared;
+    const initialize = spans => {
+      htmlPrepareFrameSelection(spans);
+      for (const initializer of htmlFrameProgramInitializers) initializer();
+      htmlFrameProgramInitializers.length = 0;
+      presents = [...document.querySelectorAll('[data-hypit-present-start-frame]')].map(element => ({
+        element,
+        startFrame: Number(element.getAttribute('data-hypit-present-start-frame')),
+        endFrameExclusive: Number(element.getAttribute('data-hypit-present-end-frame')),
+      }));
+    };
     const applyFrame = async frame => {
       if (!Number.isSafeInteger(frame) || frame < 0 || frame >= ${frameCount}) {
         throw new Error('HTML Program frame is outside its domain.');
       }
+      if (!htmlFrameSelectionPrepared) initialize();
       for (const present of presents) {
         present.element.style.display = frame >= present.startFrame && frame < present.endFrameExclusive ? '' : 'none';
       }
@@ -819,13 +904,21 @@ function frameProgramRuntime(frameCount: number): string {
     };
     Object.defineProperty(window, '__hypitFrameProgram', { configurable: false, writable: false, value: Object.freeze({
       frameCount: ${frameCount},
-      async prepare() { await document.fonts.ready; await applyFrame(0); },
+      prepare(spans) {
+        if (prepared !== undefined) return prepared;
+        prepared = (async () => {
+          initialize(spans);
+          await document.fonts.ready;
+          await applyFrame(spans?.[0]?.startFrame ?? 0);
+        })();
+        return prepared;
+      },
       applyFrame,
     }) });
   })();`;
 }
 
-function emitHtml(composition: Composition, timeline: Timeline, frameSources: HtmlFrameSource[]): string {
+function emitHtml(composition: Composition, timeline: Timeline, videoSources: HtmlVideoSource[]): string {
   const { numerator, denominator } = timeline.frameRate;
   const visualItems = visualScopeTrackOccurrences(composition.visual)
     .flatMap((occurrence) => occurrence.member.track.items.map((item) => ({
@@ -866,7 +959,7 @@ function emitHtml(composition: Composition, timeline: Timeline, frameSources: Ht
       const occurrencePath = [...scopePath, entry.memberId];
       if (item.kind === "present") {
         html += `\n    ${renderVisualPresent(occurrencePath, item, stackIndex, [...paintPath, stackIndex],
-          numerator, denominator, emittedFilterIds, sharedGlyphFilterDefinitions, stableId, frameSources)}`;
+          numerator, denominator, emittedFilterIds, sharedGlyphFilterDefinitions, stableId, videoSources)}`;
         continue;
       }
       const rendered = renderVisualAdjustment(occurrencePath, item, stackIndex, html, stableId);
@@ -888,17 +981,17 @@ function emitHtml(composition: Composition, timeline: Timeline, frameSources: Ht
   }]));
   const programCss = programs.map(entry => `@scope (#${entry.id}) { ${entry.program.css ?? ""} }`).join("\n");
   const hasVisibility = visuals.some(({ present }) => present.visibility !== undefined);
-  const programRuntime = programs.length === 0 ? "" : `<script>${htmlVisualScript(programs, numerator, denominator)}</script>`;
-  const visibilityRuntime = hasVisibility ? `<script>${presentationVisibilityScript(numerator, denominator)}</script>` : "";
-  const adjustmentRuntime = adjustments.length === 0 ? "" : `<script>${htmlAdjustmentScript(adjustments)}</script>`;
-  const duration = frameSeconds(timelineFrameCount(timeline), numerator, denominator);
-  const fps = fpsRational(numerator, denominator);
+  const initializer = (runtime: string): string =>
+    `<script>htmlRegisterFrameProgramInitializer(() => {\n${runtime}\n});</script>`;
+  const programRuntime = programs.length === 0 ? "" : initializer(htmlVisualScript(programs, numerator, denominator));
+  const visibilityRuntime = hasVisibility ? initializer(presentationVisibilityScript(numerator, denominator)) : "";
+  const adjustmentRuntime = adjustments.length === 0 ? "" : initializer(htmlAdjustmentScript(adjustments));
   const frameCount = timelineFrameCount(timeline);
   const needsFrameWork = hasFrameAnimations(composition) || hasTerminalText(composition)
     || programs.length > 0 || hasVisibility || adjustments.length > 0;
   const frameRuntime = `\n  <script>\n    ${needsFrameWork ? frameWorkIndexRuntime : frameSelectionRuntime}\n  </script>
   <script>${presentationCaptureScopeRuntime}</script>${hasFrameAnimations(composition) || hasTerminalText(composition)
-      ? `\n  <script>${hasFrameAnimations(composition) ? `\n    ${frameAnimationRuntime(numerator, denominator)}` : ""}${hasTerminalText(composition) ? `\n    ${terminalTextLayoutScript}` : ""}\n  </script>`
+      ? `\n  ${initializer(`${hasFrameAnimations(composition) ? `\n    ${frameAnimationRuntime(numerator, denominator)}` : ""}${hasTerminalText(composition) ? `\n    ${terminalTextLayoutScript}` : ""}`)}`
       : ""}`;
   return `<!doctype html>
 <html>
@@ -939,10 +1032,13 @@ function normalizedDocument(value: HtmlProgram): HtmlProgram {
     surfaces: [...value.surfaces]
       .map((surface) => structuredClone(surface))
       .sort((left, right) => compareCodeUnits(left.artifact.resource, right.artifact.resource)),
-    frameSources: [...value.frameSources].map((source) => ({
+    videoSources: [...value.videoSources].map((source) => source.kind === "media" ? ({
       ...source,
-      sourceFrame: { ...source.sourceFrame },
-      sourceRate: { ...source.sourceRate },
+      source: structuredClone(source.source),
+      sampling: structuredClone(source.sampling),
+    }) : ({
+      ...source,
+      sourceFrame: { ...source.sourceFrame }, sourceRate: { ...source.sourceRate },
       sourceFrameRate: { ...source.sourceFrameRate },
     })).sort((left, right) => left.startFrame - right.startFrame || compareCodeUnits(left.id, right.id)),
     html: value.html,
@@ -951,7 +1047,7 @@ function normalizedDocument(value: HtmlProgram): HtmlProgram {
 
 export function compileHtmlProgram(composition: Composition, timeline: Timeline): HtmlProgram {
   assertCompositionIdentity(composition, timeline);
-  const frameSources: HtmlFrameSource[] = [];
+  const videoSources: HtmlVideoSource[] = [];
   const content = normalizedDocument({
     visualIr: VISUAL_IR_V1,
     frameRate: { ...timeline.frameRate },
@@ -962,8 +1058,8 @@ export function compileHtmlProgram(composition: Composition, timeline: Timeline)
     },
     artifacts: collectArtifacts(composition),
     surfaces: collectSurfaces(composition),
-    frameSources,
-    html: emitHtml(composition, timeline, frameSources),
+    videoSources,
+    html: emitHtml(composition, timeline, videoSources),
   });
   return content;
 }
@@ -1005,22 +1101,30 @@ export function assertHtmlProgram(document: HtmlProgram): void {
     throw new Error("HtmlProgram Artifact placeholders do not match its declared dependencies.");
   }
   if (!Array.isArray(document.surfaces)) throw new Error("HtmlProgram Surface set is invalid.");
-  if (!Array.isArray(document.frameSources) || document.frameSources.some((source) =>
-    typeof source?.id !== "string" || source.id.length === 0 || !isResourceId(source.resource)
+  if (!Array.isArray(document.videoSources) || document.videoSources.some((source) =>
+    typeof source?.id !== "string" || source.id.length === 0
     || !Number.isSafeInteger(source.startFrame) || !Number.isSafeInteger(source.endFrameExclusive)
     || source.startFrame < 0 || source.endFrameExclusive <= source.startFrame
     || source.endFrameExclusive > document.frameCount
-    || !Number.isSafeInteger(source.sourceFrame?.numerator) || source.sourceFrame.numerator < 0
-    || !Number.isSafeInteger(source.sourceFrame?.denominator) || source.sourceFrame.denominator <= 0
-    || !Number.isSafeInteger(source.sourceRate?.numerator)
-    || !Number.isSafeInteger(source.sourceRate?.denominator) || source.sourceRate.denominator <= 0
-    || !Number.isSafeInteger(source.sourceFrameRate?.numerator) || source.sourceFrameRate.numerator <= 0
-    || !Number.isSafeInteger(source.sourceFrameRate?.denominator) || source.sourceFrameRate.denominator <= 0
-    || !declared.some((entry) => entry.artifact.resource === source.resource))) {
-    throw new Error("HtmlProgram frame-source plan is invalid.");
+    || (source.kind === "media" ? (() => {
+      try {
+        verifyPreparedVisualSource(source.source);
+        assertTemporalMap(source.sampling);
+        return !declared.some((entry) => entry.artifact.resource === source.source.source.resource)
+          || source.sampling.stages.at(-1)?.source.id !== source.source.sourceDomain.id;
+      } catch { return true; }
+    })() : source.kind !== "surface" || !isResourceId(source.resource)
+      || !Number.isSafeInteger(source.sourceFrame?.numerator) || source.sourceFrame.numerator < 0
+      || !Number.isSafeInteger(source.sourceFrame?.denominator) || source.sourceFrame.denominator <= 0
+      || !Number.isSafeInteger(source.sourceRate?.numerator)
+      || !Number.isSafeInteger(source.sourceRate?.denominator) || source.sourceRate.denominator <= 0
+      || !Number.isSafeInteger(source.sourceFrameRate?.numerator) || source.sourceFrameRate.numerator <= 0
+      || !Number.isSafeInteger(source.sourceFrameRate?.denominator) || source.sourceFrameRate.denominator <= 0
+      || !declared.some((entry) => entry.artifact.resource === source.resource)))) {
+    throw new Error("HtmlProgram video-source plan is invalid.");
   }
-  if (new Set(document.frameSources.map((source) => source.id)).size !== document.frameSources.length) {
-    throw new Error("HtmlProgram frame-source identities must be unique.");
+  if (new Set(document.videoSources.map((source) => source.id)).size !== document.videoSources.length) {
+    throw new Error("HtmlProgram video-source identities must be unique.");
   }
   const surfaceArtifacts = new Set<string>();
   for (const [index, surface] of document.surfaces.entries()) {
@@ -1055,16 +1159,12 @@ export function assertHtmlFrameIndex(document: HtmlProgram, frame: number): void
 /** Validate a Provider-owned half-open chunk of the document's exact frame domain. */
 export function assertHtmlFrameSpan(
   document: HtmlProgram,
-  span: HtmlFrameSpan,
+  span: FrameSpan,
 ): void {
   assertHtmlProgram(document);
-  if (
-    !Number.isSafeInteger(span.startFrame)
-    || !Number.isSafeInteger(span.endFrameExclusive)
-    || span.startFrame < 0
-    || span.endFrameExclusive <= span.startFrame
-    || span.endFrameExclusive > document.frameCount
-  ) {
+  try {
+    assertFrameSpan(span, document.frameCount);
+  } catch {
     throw new Error(
       `HTML renderer frame span [${span.startFrame}, ${span.endFrameExclusive}) is outside [0, ${document.frameCount}).`,
     );
@@ -1073,16 +1173,17 @@ export function assertHtmlFrameSpan(
 
 function assertHTMLFrameSelection(
   document: HtmlProgram,
-  selection: readonly HtmlFrameSpan[],
+  selection: readonly FrameSpan[],
 ): void {
   if (selection.length === 0) throw new Error("HTML renderer Artifact selection must not be empty");
   let previousEnd = 0;
   for (const [index, span] of selection.entries()) {
-    if (span === null || typeof span !== "object"
-      || !Number.isSafeInteger(span.startFrame) || !Number.isSafeInteger(span.endFrameExclusive)
-      || span.startFrame < 0 || span.endFrameExclusive <= span.startFrame
-      || span.endFrameExclusive > document.frameCount
-      || (index > 0 && span.startFrame < previousEnd)) {
+    try {
+      assertFrameSpan(span, document.frameCount);
+    } catch {
+      throw new Error("HTML renderer Artifact selection must contain ordered, disjoint spans inside the document frame domain");
+    }
+    if (index > 0 && span.startFrame < previousEnd) {
       throw new Error("HTML renderer Artifact selection must contain ordered, disjoint spans inside the document frame domain");
     }
     previousEnd = span.endFrameExclusive;
@@ -1090,8 +1191,8 @@ function assertHTMLFrameSelection(
 }
 
 function artifactUsageOverlaps(
-  usage: readonly HtmlFrameSpan[],
-  selection: readonly HtmlFrameSpan[],
+  usage: readonly FrameSpan[],
+  selection: readonly FrameSpan[],
 ): boolean {
   return usage.some((span) => {
     let low = 0;
@@ -1111,7 +1212,7 @@ function artifactUsageOverlaps(
  */
 export function selectHtmlArtifacts(
   document: HtmlProgram,
-  frameSelection?: readonly HtmlFrameSpan[],
+  frameSelection?: readonly FrameSpan[],
 ): readonly HtmlArtifact[] {
   assertHtmlProgram(document);
   if (frameSelection === undefined) return document.artifacts;

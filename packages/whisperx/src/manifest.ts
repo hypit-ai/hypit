@@ -19,13 +19,13 @@ export const whisperXMarkupSurfaces = [{
     mode: "structured",
     outputs: [whisperXTypes.language, speechEvidenceTypes.transcript],
     vocabulary: {
-      summary: "Transcribes normalized media into provider-neutral speech evidence in a fixed 16 kHz sample domain.",
+      summary: "Transcribes prepared media into provider-neutral speech evidence in a fixed 16 kHz sample domain.",
       attributes: [
         { name: "id", kind: "identifier", required: true,
           summary: "Names this transcription operation and its transcript output." },
         { name: "media", kind: "reference", required: true,
-          accepts: [mediaTypes.synchronized],
-          summary: "Selects the normalized media whose audio is transcribed." },
+          accepts: [mediaTypes.prepared],
+          summary: "Selects the prepared media whose mapped audio is transcribed." },
         { name: "language", kind: "literal", required: true,
           summary: "Explicitly states the spoken language code. The selected service owns the available transcription models." },
       ],

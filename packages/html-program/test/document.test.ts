@@ -15,6 +15,16 @@ import { VISUAL_IR_V1 } from "@hypit/composition";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { fixtureResource } from "../../../test/fixture-resource.js";
+import { frameRangeFixture, frameSamplingMapFixture } from "../../../test/temporal-fixture.js";
+import { exactTemporalValueFromFrames, exactTemporalZero, identityTemporalMap, sealTemporalMap } from "@hypit/temporal";
+import type { TemporalMap } from "@hypit/temporal";
+
+function directVideoSource(artifact: import("@hypit/hypit/protocol").BlobRef,
+  sampling: TemporalMap) {
+  return { source: artifact, streamIndex: 0, presentationStart: exactTemporalZero(),
+    sourceDomain: structuredClone(sampling.stages.at(-1)!.source),
+    interpretation: { codedWidth: 100, codedHeight: 100, sampleAspectRatio: { numerator: 1, denominator: 1 }, rotationDegrees: 0 as const } };
+}
 
 const fixtureFont: FontArtifactRef = {
   sources: [{ artifact: { kind: "blob", resource: fixtureResource("html-program:fixture-font"), size: 1_024, mediaType: "font/woff2" } }],
@@ -84,15 +94,26 @@ function fixture() {
     id: "sound",
     graph: audioGraphFromClips([{
       id: "main",
-      artifact: sound,
-      target: { startSample: 0, endSampleExclusive: 48_000 },
-      sourceTime: { sourceSampleFrames: 48_000, pieces: [{
-        target: { startSample: 0, endSampleExclusive: 48_000 },
+      source: (() => {
+        const domain = { id: "fixture-materialization", duration: exactTemporalValueFromFrames(48_000,
+          { frameRate: { numerator: 48_000, denominator: 1 } }) };
+        return { source: sound, streamIndex: 0, presentationStart: exactTemporalZero(),
+          sourceDomain: domain, interpretation: { sampleRate: 48_000, channels: 2 } };
+      })(),
+      preparation: (() => {
+        const domain = { id: "fixture-materialization", duration: exactTemporalValueFromFrames(48_000,
+          { frameRate: { numerator: 48_000, denominator: 1 } }) };
+        return identityTemporalMap(domain);
+      })(),
+      target: frameRangeFixture(0, 48_000, { numerator: 48_000, denominator: 1 }),
+      sampling: frameSamplingMapFixture({ targetFrameRate: { numerator: 48_000, denominator: 1 }, targetFrames: 48_000,
+        sourceFrameRate: { numerator: 48_000, denominator: 1 }, sourceFrames: 48_000,
+        pieces: [{ target: { startFrame: 0, endFrameExclusive: 48_000 },
         sourceAtStart: { numerator: 0, denominator: 1 }, rate: { numerator: 1, denominator: 1 },
-      }] },
+        }] }),
       gain: 1,
-      fadeInSamples: 0,
-      fadeOutSamples: 0,
+      fadeIn: { ticks: "0", timeBase: { numerator: 1, denominator: 1 } },
+      fadeOut: { ticks: "0", timeBase: { numerator: 1, denominator: 1 } },
     }]),
   });
   const composition = sealComposition({
@@ -528,7 +549,7 @@ test("HTML renderer emits compact absolute-frame animation without creating a Tr
   assert.ok(marker >= 0);
   const scriptStart = document.html.lastIndexOf("<script>", marker) + "<script>".length;
   const scriptEnd = document.html.indexOf("</script>", marker);
-  const { frameWorkIndexRuntime, htmlFrameSelectionPrelude } = await import("../src/frame-work.js");
+  const { frameWorkIndexRuntime } = await import("../src/frame-work.js");
   const runtime = `${frameWorkIndexRuntime}\n${document.html.slice(scriptStart, scriptEnd)}`;
   const toFrame = (milliseconds: number) => Math.round(milliseconds * 30 / 1_001);
   // The test page advances every animation that remains live after Hypit's
@@ -590,7 +611,9 @@ test("HTML renderer emits compact absolute-frame animation without creating a Tr
       });
       return element;
     });
-    runInNewContext(`${selection === undefined ? "" : htmlFrameSelectionPrelude(selection)}\n${runtime}`, {
+    runInNewContext(`${runtime}
+      htmlPrepareFrameSelection(${JSON.stringify(selection)});
+      for (const initialize of htmlFrameProgramInitializers) initialize();`, {
       document: { querySelectorAll: () => elements, documentElement: { getBoundingClientRect() {} }, timeline: {} },
       window: { addEventListener(_name: string, callback: typeof seek) { seek = callback; } },
       KeyframeEffect: class {
@@ -722,15 +745,15 @@ test("content-bound fonts and typed compositable Surfaces cross the same Artifac
               frameCount: 30,
             },
           },
-          sourceTime: {
-            sourceFrameRate: { numerator: 30, denominator: 1 },
-            sourceFrameCount: 30,
+          sampling: frameSamplingMapFixture({
+            targetFrameRate: space.frameRate, targetFrames: 30,
+            sourceFrameRate: { numerator: 30, denominator: 1 }, sourceFrames: 30,
             pieces: [{
               target: { startFrame: 0, endFrameExclusive: 30 },
               sourceAtStart: { numerator: 0, denominator: 1 },
               rate: { numerator: 1, denominator: 1 },
             }],
-          },
+          }),
           style: [{ name: "position", value: "absolute" }, { name: "inset", value: 0 }],
         },
       ] },
@@ -774,30 +797,25 @@ test("exact timed sampling keeps a held frame as one compact interval without ze
     presents: [{
       id: "sampled",
       span: { startFrame: 0, endFrameExclusive: 8 },
-      root: {
+      root: (() => {
+        const sampling = frameSamplingMapFixture({
+          targetFrameRate: timeline.frameRate, targetFrames: 8,
+          sourceFrameRate: { numerator: 30, denominator: 1 }, sourceFrames: 4,
+          pieces: [
+            { target: { startFrame: 0, endFrameExclusive: 6 }, sourceAtStart: { numerator: 2, denominator: 1 },
+              rate: { numerator: 1, denominator: 1 }, wrap: { startFrame: 0, endFrameExclusive: 4 } },
+            { target: { startFrame: 6, endFrameExclusive: 8 }, sourceAtStart: { numerator: 3, denominator: 1 },
+              rate: { numerator: 0, denominator: 1 } },
+          ],
+        });
+        return {
         id: "video",
         kind: "video",
-        artifact,
+        source: directVideoSource(artifact, sampling),
         muted: true,
-        sourceTime: {
-          sourceFrameRate: { numerator: 30, denominator: 1 },
-          sourceFrameCount: 4,
-          pieces: [
-            {
-              target: { startFrame: 0, endFrameExclusive: 6 },
-              sourceAtStart: { numerator: 2, denominator: 1 },
-              rate: { numerator: 1, denominator: 1 },
-              wrap: { startFrame: 0, endFrameExclusive: 4 },
-            },
-            {
-              target: { startFrame: 6, endFrameExclusive: 8 },
-              sourceAtStart: { numerator: 3, denominator: 1 },
-              rate: { numerator: 0, denominator: 1 },
-            },
-          ],
-        },
+        sampling,
         style: [{ name: "position", value: "absolute" }, { name: "inset", value: 0 }],
-      },
+      }; })(),
     }],
   });
   const document = compileHtmlProgram(sealComposition({
@@ -805,15 +823,57 @@ test("exact timed sampling keeps a held frame as one compact interval without ze
     canvas: { width: 100, height: 100, clearColor: "#000000" },
     visual: scope(track), audio: [],
   }), timeline);
-  assert.equal((document.html.match(/data-hypit-sampling-part=/gu) ?? []).length, 3);
-  assert.equal(document.frameSources.length, 3);
-  assert.deepEqual(document.frameSources.map(source => source.sourceFrame), [
-    { numerator: 2, denominator: 1 }, { numerator: 0, denominator: 1 }, { numerator: 3, denominator: 1 },
-  ]);
-  assert.equal((document.html.match(/data-hypit-resource-src="hypit-resource:\/\//gu) ?? []).length, 3);
+  assert.equal((document.html.match(/data-hypit-sampling-part=/gu) ?? []).length, 0);
+  assert.equal(document.videoSources.length, 1);
+  assert.equal(document.videoSources[0]?.kind, "media");
+  if (document.videoSources[0]?.kind !== "media") throw new Error("Expected direct media source");
+  assert.equal(document.videoSources[0].sampling.stages[0]?.pieces.length, 2);
+  assert.equal((document.html.match(/data-hypit-resource-src="hypit-resource:\/\//gu) ?? []).length, 1);
   assert.doesNotMatch(document.html, /<video\b[^>]*\ssrc=/u,
     "compiler-owned video stays inert while its exact slots remain statically readable");
-  assert.match(document.html, /data-hypit-source-rate="0\/1"[^>]*data-hypit-start-frame="6"[^>]*data-hypit-end-frame="8"/u);
+  assert.equal(document.videoSources[0].sampling.stages[0]?.pieces[1]?.rate.numerator, 0);
+});
+
+test("HTML terminal quantizes continuous sampling pieces without moving their source position", () => {
+  const timeline = sealTimeline({ id: "partial-piece", frameCount: 3, frameRate: { numerator: 30, denominator: 1 } });
+  const sourceFrameRate = { numerator: 24, denominator: 1 };
+  const boundary = exactTemporalValueFromFrames(1, { frameRate: { numerator: 48, denominator: 1 } });
+  const target = { id: "occurrence", duration: exactTemporalValueFromFrames(3, timeline) };
+  const source = { id: "materialization", duration: exactTemporalValueFromFrames(3, { frameRate: sourceFrameRate }) };
+  const sampling = sealTemporalMap({ stages: [{ target, source, pieces: [
+    {
+      target: { start: exactTemporalValueFromFrames(0, timeline), end: boundary },
+      sourceAtStart: exactTemporalValueFromFrames(0, { frameRate: sourceFrameRate }),
+      rate: { numerator: 1, denominator: 1 },
+    },
+    {
+      target: { start: boundary, end: target.duration },
+      sourceAtStart: boundary,
+      rate: { numerator: 1, denominator: 1 },
+    },
+  ] }] });
+  const track = sealPresentVisualTrack({ timelineId: timeline.id, visualIr: VISUAL_IR_V1, id: "partial-piece", presents: [{
+    id: "partial-piece",
+    span: { startFrame: 0, endFrameExclusive: 3 },
+    root: {
+      id: "video",
+      kind: "video",
+      source: directVideoSource({ kind: "blob", resource: fixtureResource("html-program:partial-piece"), size: 1, mediaType: "video/mp4" }, sampling),
+      muted: true,
+      sampling,
+      style: [],
+    },
+  }] });
+  const document = compileHtmlProgram(sealComposition({
+    id: "partial-piece",
+    canvas: { width: 100, height: 100, clearColor: "#000000" },
+    visual: scope(track),
+    audio: [],
+  }), timeline);
+  assert.equal(document.videoSources.length, 1);
+  assert.equal(document.videoSources[0]?.kind, "media");
+  if (document.videoSources[0]?.kind !== "media") throw new Error("Expected direct media source");
+  assert.deepEqual(document.videoSources[0].sampling, sampling);
 });
 
 test("a Track naming five takes still lowers to DOM identities a Windows path can hold", () => {
@@ -833,35 +893,28 @@ test("a Track naming five takes still lowers to DOM identities a Windows path ca
     presents: [{
       id: presentId,
       span: { startFrame: 0, endFrameExclusive: 8 },
-      root: {
+      root: (() => {
+        const sampling = frameSamplingMapFixture({
+          targetFrameRate: timeline.frameRate, targetFrames: 8,
+          sourceFrameRate: { numerator: 30, denominator: 1 }, sourceFrames: 8,
+          pieces: [
+            { target: { startFrame: 0, endFrameExclusive: 4 }, sourceAtStart: { numerator: 0, denominator: 1 }, rate: { numerator: 1, denominator: 1 } },
+            { target: { startFrame: 4, endFrameExclusive: 8 }, sourceAtStart: { numerator: 4, denominator: 1 }, rate: { numerator: 1, denominator: 1 } },
+          ],
+        });
+        return {
         id: `${presentId}:foreground`,
         kind: "video",
-        artifact: {
+        source: directVideoSource({
           kind: "blob" as const,
           resource: fixtureResource("html-program:long-identity-video"),
           size: 1_000,
           mediaType: "video/mp4",
-        },
+        }, sampling),
         muted: true,
-        // Sampling is what splits the element into parts, and each part appends its own suffix.
-        sourceTime: {
-          sourceFrameRate: { numerator: 30, denominator: 1 },
-          sourceFrameCount: 8,
-          pieces: [
-            {
-              target: { startFrame: 0, endFrameExclusive: 4 },
-              sourceAtStart: { numerator: 0, denominator: 1 },
-              rate: { numerator: 1, denominator: 1 },
-            },
-            {
-              target: { startFrame: 4, endFrameExclusive: 8 },
-              sourceAtStart: { numerator: 4, denominator: 1 },
-              rate: { numerator: 1, denominator: 1 },
-            },
-          ],
-        },
+        sampling,
         style: [{ name: "position", value: "absolute" }, { name: "inset", value: 0 }],
-      },
+      }; })(),
     }],
   });
   const document = compileHtmlProgram(sealComposition({
@@ -984,7 +1037,7 @@ test("sequential HtmlVisual work follows active and crossed spans instead of eve
 test("HTML visual setup is limited to Presents overlapping the render selection", async () => {
   const { runInNewContext } = await import("node:vm");
   const { htmlVisualScript } = await import("../src/html-visual.js");
-  const { frameWorkIndexRuntime, htmlFrameSelectionPrelude } = await import("../src/frame-work.js");
+  const { frameWorkIndexRuntime } = await import("../src/frame-work.js");
   const roots = new Map([
     ["early", { setups: 0, renders: 0 }],
     ["selected", { setups: 0, renders: 0 }],
@@ -995,8 +1048,9 @@ test("HTML visual setup is limited to Presents overlapping the render selection"
     { id: "selected", startFrame: 90, durationFrames: 30,
       program: { html: "", setup: "root.setups += 1; return () => { root.renders += 1; };" } },
   ];
-  runInNewContext(`${htmlFrameSelectionPrelude([{ startFrame: 100, endFrameExclusive: 101 }])}
-    ${frameWorkIndexRuntime}\n${htmlVisualScript(entries, 30, 1)}`, {
+  runInNewContext(`${frameWorkIndexRuntime}
+    htmlPrepareFrameSelection([{ startFrame: 100, endFrameExclusive: 101 }]);
+    ${htmlVisualScript(entries, 30, 1)}`, {
     window: { addEventListener() {} },
     document: { getElementById: (id: string) => roots.get(id) },
   });

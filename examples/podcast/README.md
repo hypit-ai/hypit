@@ -50,7 +50,7 @@ the projected Window if the actual montage needs more reading time. Exact word-t
 would use separate Clips and adjoining projected Windows instead.
 
 `shared-soundtrack.m4a` is the only supplied media asset on the final route. Images, voices and generated clips
-are generated; normalization, alignment, Caption and Film composition are explicit downstream work.
+are generated; preparation, alignment, Caption and Film composition are explicit downstream work.
 
 ## Run and refine
 

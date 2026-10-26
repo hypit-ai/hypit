@@ -179,7 +179,6 @@ export function executedTemporalBindings(
   relationFor?: FindTemporalRelation,
 ): readonly StudioTemporalBinding[] {
   const records = recordIndex(state);
-  const producers = producingSteps(state);
   const stepIds = closure(state, selections, output);
   const steps = state.plan.steps.filter((step) => stepIds.has(step.id));
   return [...records.values()]

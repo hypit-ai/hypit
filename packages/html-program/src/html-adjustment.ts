@@ -1,5 +1,6 @@
 import { canonicalize } from "@hypit/hypit/protocol";
 import type { VisualAdjustment } from "@hypit/composition";
+import type { FrameSpan } from "@hypit/timeline";
 
 export const HTML_ADJUSTMENT_FORMAT = "hypit.html-adjustment@1" as const;
 
@@ -49,18 +50,16 @@ export function readHtmlAdjustment(program: VisualAdjustment["program"]): HtmlAd
 const scriptJson = (value: unknown): string => JSON.stringify(value).replaceAll("<", "\\u003c");
 
 /** Apply each Adjustment from the absolute requested frame; prior seek order is not an input. */
-export function htmlAdjustmentScript(entries: readonly {
+export function htmlAdjustmentScript(entries: readonly (FrameSpan & {
   readonly id: string;
   readonly occurrencePath: readonly string[];
   readonly adjustmentId: string;
-  readonly startFrame: number;
-  readonly endFrameExclusive: number;
-  readonly visibility?: readonly { readonly startFrame: number; readonly endFrameExclusive: number }[];
+  readonly visibility?: readonly FrameSpan[];
   readonly filter: string;
   readonly opacity?: number;
   readonly transform?: string;
   readonly transformOrigin?: string;
-}[]): string {
+})[]): string {
   return `(() => {
     const entries = ${scriptJson(entries)}.map((entry, order) => ({
       ...entry,

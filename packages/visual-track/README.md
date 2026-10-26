@@ -4,7 +4,7 @@ Visual Track is the plain picture-placement package. Its author model is deliber
 
 ```text
 Visual Clip = one picture source + absolute Window + Frame
-            + spatial map + source-time + optional treatment + optional typed Motion
+            + spatial map + optional temporal Map + optional treatment + optional typed Motion
 Visual Track = ordered set of Visual Clips
 ```
 
@@ -27,10 +27,17 @@ semantic roles, select audio, or own multi-Clip transitions.
 </visual:Track>
 ```
 
-A public Clip accepts exactly one direct source form—`image` plus `extent`, normalized `media`, or a
-typed `surface`. Moving media is normalized before authoring; its
-factual frame count and frame rate remain source truth. The destination Window states when this
+A public Clip accepts exactly one direct source form—`image` plus `extent`, prepared `media`, or a
+typed `surface`. Moving media is prepared before authoring; its exact local domain and map to source
+presentation time remain source truth. The destination Window states when this
 occurrence exists in program time.
+
+The package's TypeScript component API also exposes an ordered `MediaLayerSet`. It is the lower-level
+material construction used when one authored visual role needs a paint backing, a repeated self-blur,
+or another explicit multi-sample relationship before it becomes one Clip Present. This does not make
+the `<visual:Clip>` Surface a multi-source guessing interface: its direct author syntax still has exactly
+one selected source, while a project component that owns shared multi-sample behavior constructs the
+layers deliberately.
 
 The ordinary source roles are intentionally equal. A-roll, B-roll, generated footage and imported
 graphics are all Clips. A source may have contributed duration and anchors while Timeline was built;
@@ -39,7 +46,7 @@ that prior contribution does not give its later visual occurrence a special Type
 ## Frame and source mapping
 
 `frame` is the outer destination rectangle. Independent Clip attributes control placement and
-source-time; an optional treatment Recipe contains only reusable pixel and Frame treatment:
+temporal sampling; an optional treatment Recipe contains only reusable pixel and Frame treatment:
 
 | Properties | Meaning |
 | --- | --- |
@@ -48,7 +55,7 @@ source-time; an optional treatment Recipe contains only reusable pixel and Frame
 | `clip`, `radius`, `padding` | Outer geometry and the fitting inset. |
 | border, shadows and `frame-paint` | Decoration owned by this Clip. |
 | opacity, blur, brightness, contrast, saturation | Treatment of the sampled picture. |
-| `Map` / `source-time` | Optional Clip-local relation from target frames to timed-source frames. |
+| `Map` child | Optional Clip-local relation from target-local time to prepared-media-local time. |
 
 Clip declaration order is retained as the Track-local item sequence. Whole-film placement belongs to the
 parent `<film:Track id="...">` relation, not to a Clip or its reusable treatment Recipe. This lets
@@ -79,31 +86,28 @@ The explicit map is already in program-picture coordinates. `frame` still indepe
 Clip's clipping and treatment boundary. This separation permits rotation, skew, reflection,
 off-Frame placement and exact reuse by source-local evidence without adding a layout mode.
 
-## Source time
+## Temporal sampling
 
-Omitting a Map means bounded partial identity: Clip-local target frame zero maps to source frame zero
-at native rate, and the picture becomes absent when either domain ends. There is no implicit hold,
-loop or stretch.
+Omitting a Map means bounded partial identity: Clip-local time zero maps to prepared-media-local time
+zero, and the picture becomes absent when either finite domain ends. There is no implicit hold, loop
+or stretch.
 
 One `Map` states an affine piece. `target-from`/`target-until` bound its target interval;
 `target-at`, `source-at` and the exact rational `rate` relate the two clocks;
 `source-from`/`source-until` bound the source domain. `wrap-from`/`wrap-until` make that source interval
 periodic. A Map without rate, anchors or wrap fits the selected source interval across its target
-interval. Multiple non-overlapping Maps form one partial function; uncovered target frames are
+interval. Multiple non-overlapping Maps form one partial function; uncovered target time is
 transparent.
 
 ```svml
-<visual:SourceTime id="native-loop">
-  <visual:Map rate="1" wrap-from="start" wrap-until="end"/>
-</visual:SourceTime>
-
 <visual:Clip media={shot.media} during={story.outro} frame={full}>
   <visual:Map target-at="end" source-at="end" rate="1"/>
 </visual:Clip>
 ```
 
-Visual rates may be zero for a held frame or negative for reverse traversal. A still image has no
-source clock and refuses Map; it simply remains visually active throughout the Clip Window while
+The relation stays exact in Composition and `HtmlProgram`. Only the selected renderer resolves it against decoded source samples.
+Source media may use a different or variable frame cadence from the Timeline; that cadence is a source fact, not a second programme clock. Visual rates may be zero for a hold or negative for reverse
+traversal. A still image has no temporal domain and refuses Map; it simply remains visually active throughout the Clip Window while
 Clip-local Motion may still animate it.
 
 Visual Track contains no generic `Presentation`, `Use`, `Sequence` or `Handoff`. A continuing
@@ -116,7 +120,7 @@ every picture occurrence needs, while a new visual role remains straightforward 
 component. The Track does not force authors to start from raw Composition IR, and it does not turn
 today's effect names into tomorrow's ceiling.
 
-Audio from synchronized media is never selected implicitly. Author the corresponding occurrence
+Audio from prepared media is never selected implicitly. Author the corresponding occurrence
 independently through [`@hypit/audio-track`](../audio-track/README.md).
 
 ## Distribution and Studio
@@ -132,6 +136,6 @@ Track is one plain producer of that type; another project or published component
 terminal value without depending on this package.
 
 The package's activation contributes both its authoring Surfaces and its Studio Companion. The
-Companion preserves Clip material, Frame, fit, source-time, treatment and typed Motion as separate
+Companion preserves Clip material, Frame, fit, treatment and typed Motion as separate
 author facts. Studio's generic terminal fallback can still display a Composition `VisualTrack` made
 by another package without interpreting it as a Visual Track Clip.

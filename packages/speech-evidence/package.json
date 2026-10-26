@@ -11,10 +11,10 @@
     "activation": "./src/activation.ts"
   },
   "dependencies": {
-    "@hypit/media": "workspace:^0.2.0"
+    "@hypit/media": "workspace:^0.2.0",
+    "@hypit/temporal": "workspace:^0.1.1"
   },
   "devDependencies": {
-    "@hypit/timeline": "workspace:*",
     "@hypit/producer": "workspace:*",
     "@hypit/protocol": "workspace:*",
     "@hypit/refinement": "workspace:*",

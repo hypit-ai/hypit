@@ -1,11 +1,4 @@
 import type { ModuleManifest, TypeRef } from "@hypit/hypit/protocol";
-import {
-  narrativeSegmentRefSchema,
-  narrativeSchema,
-  narrativeMomentSchema,
-  narrativeSelectionSchema,
-} from "./schema.js";
-
 export const narrativeModuleRef = { name: "@hypit/narrative", version: "1" } as const;
 export const narrativeTypes = {
   narrative: { module: narrativeModuleRef, name: "Narrative" },

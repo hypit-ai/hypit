@@ -125,7 +125,7 @@ Clipping, border, padding, shadow and frame paint belong to the outer Frame. The
 Recipe uses `clip: frame` for a rectangular clip, `clip: rounded` with a pixel `radius` for rounded
 corners, or `clip: none` to show overflow. A radius takes effect with the rounded clip.
 
-Here is a circular presenter inset; the normalized media, local domain and imported namespaces are
+Here is a circular presenter inset; the prepared media, local domain and imported namespaces are
 already available:
 
 ```svml
@@ -184,7 +184,7 @@ degrees, and `at` follows the source unit's active span from `start` to `end`, w
 intermediate keys. Sampling acts after the resolved static mapping; its movement can expose space inside the
 Frame. Choose the crop and motion together for the intended coverage.
 
-[Visual Track](visual-clips.md) places explicit footage through Clips and owns their source-time
+[Visual Track](visual-clips.md) places explicit footage through Clips and owns their temporal sampling
 inputs. Read its installed vocabulary for complete appearance and motion fields. A scene that
 coordinates the viewport with surrounding graphics can own the shared motion in its
 [component program](component-visuals.md#compose-video-and-graphics-in-one-html-visual).

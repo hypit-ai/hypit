@@ -16,13 +16,11 @@ test("the local media Provider declares its external toolchain without owning a 
   assert.equal(program.start, undefined);
 });
 
-test("local media opts only reusable display materialization into transient execution", () => {
+test("local media exposes only author-requested reusable operations as transient capabilities", () => {
   const provider = createLocalMediaProvider({});
   assert.deepEqual(endpointOffers(provider).filter((offer) => offer.transient === true)
     .map((offer) => offer.capability.name), [
     "inspect-media",
-    "normalize-media",
-    "transform-media",
     "extract-media-audio",
     "extract-media-frame",
     "render-still-video",

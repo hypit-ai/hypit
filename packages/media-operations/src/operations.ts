@@ -1,7 +1,18 @@
-import { verifyMediaInspection } from "@hypit/media";
-import type { MediaAudioStream, MediaInspection, MediaVideoStream } from "@hypit/media";
+import { mapPreparedMedia, verifyPreparedMedia } from "@hypit/media";
+import type { PreparedMedia } from "@hypit/media";
 import { canonicalize } from "@hypit/hypit/protocol";
 import type { BlobRef } from "@hypit/hypit/protocol";
+import { assertFrameSpan } from "@hypit/timeline";
+import {
+  assertExactTemporalValue,
+  compareExactTemporalValues,
+  exactTemporalZero,
+  scaleExactTemporalValue,
+  sealLocalTemporalDomain,
+  sealTemporalMap,
+  subtractExactTemporalValues,
+} from "@hypit/temporal";
+import type { ExactTemporalValue } from "@hypit/temporal";
 
 import type {
   AudioExtractionRequest,
@@ -41,27 +52,85 @@ export function verifyMediaTransformProgram(value: unknown): asserts value is Me
   for (const [index, raw] of program.operations.entries()) {
     const operation = object(raw, `MediaTransformProgram operation ${index}`);
     if (operation.kind === "trim") {
-      const start = operation.startSec;
-      const end = operation.endSec;
-      const tail = operation.tailSec;
+      const start = operation.start;
+      const end = operation.end;
+      const tail = operation.tail;
       assert(start !== undefined || end !== undefined || tail !== undefined,
-        `MediaTransformProgram trim ${index} must specify startSec, endSec or tailSec`);
-      if (start !== undefined) finiteNonNegative(start, `MediaTransformProgram trim ${index}.startSec`);
-      if (end !== undefined) finiteNonNegative(end, `MediaTransformProgram trim ${index}.endSec`);
-      if (tail !== undefined) finiteNonNegative(tail, `MediaTransformProgram trim ${index}.tailSec`);
+        `MediaTransformProgram trim ${index} must specify start, end or tail`);
+      if (start !== undefined) assertExactTemporalValue(start as ExactTemporalValue,
+        `MediaTransformProgram trim ${index}.start`);
+      if (end !== undefined) assertExactTemporalValue(end as ExactTemporalValue,
+        `MediaTransformProgram trim ${index}.end`);
+      if (tail !== undefined) assertExactTemporalValue(tail as ExactTemporalValue,
+        `MediaTransformProgram trim ${index}.tail`);
       assert(end === undefined || tail === undefined,
-        `MediaTransformProgram trim ${index} cannot specify both endSec and tailSec`);
+        `MediaTransformProgram trim ${index} cannot specify both end and tail`);
       if (start !== undefined && end !== undefined) {
-        assert((end as number) > (start as number),
-          `MediaTransformProgram trim ${index}.endSec must be after startSec`);
+        assert(compareExactTemporalValues(start as ExactTemporalValue, end as ExactTemporalValue) < 0,
+          `MediaTransformProgram trim ${index}.end must be after start`);
       }
       continue;
     }
     assert(operation.kind === "retime", `MediaTransformProgram operation ${index} kind is invalid`);
-    assert(typeof operation.rate === "number" && Number.isFinite(operation.rate) && operation.rate > 0
-      && operation.rate <= 100,
-    `MediaTransformProgram retime ${index}.rate must be in (0, 100]`);
+    const rate = object(operation.rate, `MediaTransformProgram retime ${index}.rate`);
+    assert(Number.isSafeInteger(rate.numerator) && (rate.numerator as number) > 0
+      && Number.isSafeInteger(rate.denominator) && (rate.denominator as number) > 0,
+    `MediaTransformProgram retime ${index}.rate must be a positive rational`);
   }
+}
+
+function nonNegative(value: ExactTemporalValue, label: string): void {
+  assert(compareExactTemporalValues(value, exactTemporalZero()) >= 0, `${label} must be non-negative`);
+}
+
+/** Ordered pure media-domain transformation; no decoder, codec or materialized Artifact participates. */
+export function transformPreparedMedia(
+  media: PreparedMedia,
+  program: MediaTransformProgram,
+  id: string,
+): PreparedMedia {
+  verifyPreparedMedia(media);
+  verifyMediaTransformProgram(program);
+  let current = media;
+  for (const [index, operation] of program.operations.entries()) {
+    const targetId = index === program.operations.length - 1 ? id : `${id}:stage-${index + 1}`;
+    const sourceDomain = current.domain;
+    let targetDuration: ExactTemporalValue;
+    let sourceAtStart = exactTemporalZero();
+    let rate = { numerator: 1, denominator: 1 };
+    if (operation.kind === "trim") {
+      const start = operation.start ?? exactTemporalZero();
+      nonNegative(start, `Media transform trim ${index}.start`);
+      const end = operation.end ?? (operation.tail === undefined
+        ? sourceDomain.duration
+        : subtractExactTemporalValues(sourceDomain.duration, operation.tail));
+      nonNegative(end, `Media transform trim ${index}.end`);
+      assert(compareExactTemporalValues(start, end) < 0
+        && compareExactTemporalValues(end, sourceDomain.duration) <= 0,
+      `Media transform trim ${index} lies outside domain ${sourceDomain.id}.`);
+      sourceAtStart = start;
+      targetDuration = subtractExactTemporalValues(end, start);
+    } else {
+      rate = { ...operation.rate };
+      targetDuration = scaleExactTemporalValue(sourceDomain.duration, {
+        numerator: operation.rate.denominator,
+        denominator: operation.rate.numerator,
+      });
+    }
+    const targetDomain = sealLocalTemporalDomain({ id: targetId, duration: targetDuration });
+    current = mapPreparedMedia(current, sealTemporalMap({
+      stages: [{
+        target: targetDomain,
+        source: sourceDomain,
+        pieces: [{
+          target: { start: exactTemporalZero(), end: targetDomain.duration },
+          sourceAtStart,
+          rate,
+        }],
+      }],
+    }));
+  }
+  return current;
 }
 
 export function sealMediaTransformProgram(value: MediaTransformProgram): MediaTransformProgram {
@@ -175,10 +244,10 @@ export function verifyStillVideoRequest(value: unknown): asserts value is StillV
   assert(Array.isArray(request.segments) && request.segments.length > 0, "StillVideoRequest needs at least one segment");
   let cursor = 0;
   for (const item of request.segments) {
-    const segment = object(item, "StillVideoRequest.segments[]");
+    object(item, "StillVideoRequest.segments[]");
+    const segment = item as StillVideoSegment;
+    assertFrameSpan(segment);
     assert(segment.startFrame === cursor, "StillVideoRequest segments must be contiguous from frame 0");
-    assert(Number.isSafeInteger(segment.endFrameExclusive) && (segment.endFrameExclusive as number) > cursor,
-      "StillVideoRequest segments must each hold at least one frame");
     cursor = segment.endFrameExclusive as number;
     if (segment.source !== undefined) {
       const source = object(segment.source, "StillVideoRequest.segments[].source");
@@ -205,43 +274,4 @@ export function bindStillVideoSource(request: StillVideoRequest, source: BlobRef
     ...request,
     segments: request.segments.map((segment, at) => at === index ? { ...segment, source } : segment),
   });
-}
-
-function uniqueDefault<T extends { readonly disposition: { readonly default: boolean }; readonly index: number }>(
-  values: readonly T[],
-  subject: string,
-): T {
-  assert(values.length > 0, `${subject} has no eligible stream`);
-  const defaults = values.filter((item) => item.disposition.default);
-  if (defaults.length === 1) return defaults[0]!;
-  assert(defaults.length === 0, `${subject} has multiple default streams: ${defaults.map((item) => item.index).join(", ")}`);
-  assert(values.length === 1, `${subject} is ambiguous: ${values.map((item) => item.index).join(", ")}`);
-  return values[0]!;
-}
-
-export function selectVideoStream(inspection: MediaInspection, selector: MediaVideoSelector): MediaVideoStream {
-  verifyMediaInspection(inspection);
-  verifyVideoSelector(selector, "Video selector");
-  const moving = inspection.streams.filter((item): item is MediaVideoStream =>
-    item.kind === "video" && item.role === "moving" && !item.disposition.attachedPicture
-      && item.timingStatus === "admissible" && item.startPts !== undefined && item.endPts !== undefined);
-  if (selector.mode === "primary-moving") return uniqueDefault(moving, "Primary moving video");
-  const result = moving.find((item) => item.index === selector.streamIndex);
-  assert(result !== undefined, `Video stream ${selector.streamIndex} is not an eligible moving stream`);
-  return result;
-}
-
-export function selectAudioStream(
-  inspection: MediaInspection,
-  selector: Exclude<MediaAudioSelector, { readonly mode: "none" }>,
-): MediaAudioStream {
-  verifyMediaInspection(inspection);
-  verifyAudioSelector(selector, "Audio selector", false);
-  const audio = inspection.streams.filter((item): item is MediaAudioStream =>
-    item.kind === "audio" && item.timingStatus === "admissible"
-      && item.startPts !== undefined && item.endPts !== undefined);
-  if (selector.mode === "default") return uniqueDefault(audio, "Default audio");
-  const result = audio.find((item) => item.index === selector.streamIndex);
-  assert(result !== undefined, `Audio stream ${selector.streamIndex} is not eligible`);
-  return result;
 }

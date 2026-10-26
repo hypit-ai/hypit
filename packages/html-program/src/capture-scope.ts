@@ -3,7 +3,7 @@
  * The consumer sees only DOM roots; Present and frame semantics stay here.
  */
 export const presentationCaptureScopeRuntime = String.raw`
-(() => {
+htmlRegisterFrameProgramInitializer(() => {
   const selected = [];
   const presents = [...document.querySelectorAll('[data-hypit-present-start-frame][data-hypit-present-end-frame]')];
   const media = (root) => [root, ...root.querySelectorAll('img,source,video,audio,image')];
@@ -13,12 +13,12 @@ export const presentationCaptureScopeRuntime = String.raw`
         const deferred = 'data-hypit-resource-' + attribute;
         const value = element.getAttribute(deferred);
         if (value === null) continue;
-        // Compiler-planned source-time video is decoded once by the Provider
+        // Compiler-planned temporal sampling is decoded once by the Provider
         // and supplied as exact source frames. Leaving its URL inert prevents
         // every browser Worker from independently traversing the same video.
         // Studio has no frame selection and therefore keeps native playback.
         if (htmlRequestedFrameSpans !== null && attribute === 'src'
-          && element.matches('video[data-hypit-sampling-part]')) continue;
+          && element.matches('video[data-hypit-source-frame]')) continue;
         element.setAttribute(attribute, value);
         element.removeAttribute(deferred);
       }
@@ -64,4 +64,4 @@ export const presentationCaptureScopeRuntime = String.raw`
     writable: false,
     configurable: false,
   });
-})();`;
+});`;

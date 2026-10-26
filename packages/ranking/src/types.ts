@@ -1,7 +1,7 @@
-import type { FrameSpan } from "@hypit/composition";
+import type { FrameSpan } from "@hypit/timeline";
 import type {
   FontArtifactRef,
-  SynchronizedMedia,
+  PreparedMedia,
 } from "@hypit/media";
 import type { BlobRef } from "@hypit/hypit/protocol";
 import type { SpatialFrame } from "@hypit/spatial";
@@ -272,6 +272,6 @@ export type RankingSoundEventPlan = {
 };
 
 export type RankingSoundSet = {
-  readonly appear?: SynchronizedMedia;
-  readonly move?: SynchronizedMedia;
+  readonly appear?: PreparedMedia;
+  readonly move?: PreparedMedia;
 };

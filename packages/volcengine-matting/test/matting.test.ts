@@ -7,7 +7,7 @@ import { decodePortraitMattingSurface } from "../src/surface.js";
 
 const source = { kind: "blob" as const, resource: "res_matting-source" as const, size: 4, mediaType: "video/mp4" };
 
-test("portrait matting binds a source video and publishes an ordinary video edge for Normalize", async () => {
+test("portrait matting binds a source video and publishes an ordinary video edge for Prepare", async () => {
   assert.deepEqual(sealPortraitMattingRequest({ source: [{ role: "video", artifact: source }], format: ["MOV"] }).ports.format, ["MOV"]);
   assert.deepEqual(sealPortraitMattingRequest({ source: [{ role: "video", artifact: source }] }).ports.format, ["WEBM"]);
   assert.throws(() => sealPortraitMattingRequest({ source: [{ role: "image", artifact: { ...source, mediaType: "image/png" } }] }), /video|role/u);

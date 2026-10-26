@@ -17,7 +17,7 @@ An `HtmlProgram` contains:
 The page exposes one ABI:
 
 ```ts
-window.__hypitFrameProgram.prepare(): Promise<void>
+window.__hypitFrameProgram.prepare(spans?: readonly FrameSpan[]): Promise<void>
 window.__hypitFrameProgram.applyFrame(frame: number): Promise<void>
 ```
 
@@ -26,8 +26,16 @@ window.__hypitFrameProgram.applyFrame(frame: number): Promise<void>
 does not require sequential playback, so independent workers can enter at any
 legal frame.
 
-`HtmlProgram.frameSources` is the compiler-owned source-time plan. A Provider
-uses it to decode exact video frames; it must not recover sampling semantics by
+`prepare(spans)` is the explicit execution boundary. With `spans`, the page first
+removes unrelated Presents while their resource URLs are still inert, then
+activates and initializes only the selected work. Without `spans`, it prepares
+the whole Program for playback. The Provider passes the same absolute selection
+to Artifact staging and to this page ABI; the page does not obtain render policy
+from a hidden browser global or infer it from worker assignment.
+
+`HtmlProgram.videoSources` is the compiler-owned terminal source-sampling plan. For direct media it keeps the selected
+visual stream and complete exact `TemporalMap`; for an already rendered Surface it keeps its frame relation. A Provider
+uses this plan to decode the source samples it needs; it must not recover sampling semantics by
 parsing generated markup. Resource URLs in the HTML remain inert
 `hypit-resource://` placeholders until execution materializes the program.
 
@@ -36,13 +44,18 @@ parsing generated markup. Resource URLs in the HTML remain inert
 This package also owns the method-neutral requests and result types for executing
 an `HtmlProgram`:
 
-- `@hypit/html-program@1#rasterize-visual` accepts a program and an optional
-  absolute half-open frame range, and returns `TimelineVisual`;
-- `@hypit/html-program@1#rasterize-frames` accepts any strictly increasing set
-  of absolute frames, and returns PNG BlobRefs in request order.
+- `@hypit/html-program@1#rasterize-visual` accepts a program, an explicit
+  `VisualDeliverySpec` and an optional absolute Timeline `FrameSpan`, and returns a
+  `TimelineVisual` that records the implemented requirement;
+- `@hypit/html-program@1#rasterize-frames` accepts an sRGB/full-range
+  `ImagePictureSpec` and any strictly increasing set of absolute frames, and returns a
+  self-describing `FrameImages` value with that picture interpretation, the original
+  absolute frame identities and matching PNG Artifacts.
 
 These Capabilities describe demanded results, not a browser, FFmpeg, a machine,
 or a particular Provider. `@hypit/provider-html-local` is one implementation.
+CPU PNG transfer, GPU shared textures and hardware encoder surfaces are Provider-private
+execution mechanisms and never become Programme fields or graph Results.
 
 ## HTML visuals
 
@@ -77,6 +90,7 @@ of hiding those facts in this one.
 
 - Visual semantics stay in Composition and component packages.
 - Absolute time stays in Timeline.
+- Half-open render selections reuse Timeline's `FrameSpan`; HTML adds only document-bound checks.
 - HTML lowering and the frame-page ABI stay here.
 - Browser lifecycle, filesystem staging, source decoding, screenshots and encoding stay in a Provider.
 - Audio program compilation stays in Media Operations; concrete audio processing and final mux stay in the

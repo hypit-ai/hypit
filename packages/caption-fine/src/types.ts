@@ -1,5 +1,6 @@
 import type { CaptionTimingUnit } from "@hypit/caption";
 import type { FontArtifactRef } from "@hypit/media";
+import type { FrameSpan } from "@hypit/timeline";
 
 export type FineCaptionGlyphPaint = {
   readonly fill: string;
@@ -173,7 +174,7 @@ export type FineCaptionParameters = {
 
 export type FineCaptionScheduledCue = {
   readonly cueId: string;
-  readonly visibility: readonly { readonly startFrame: number; readonly endFrameExclusive: number }[];
+  readonly visibility: readonly FrameSpan[];
   readonly id: string;
   readonly styleId: string;
   readonly timedStartFrame: number;

@@ -152,7 +152,7 @@ Audio-only A-roll is useful when a Segment is constructed without an on-camera s
 performance: a desktop point-of-view demonstration, a narration-led montage, a pure MG explanation,
 or a product-explanation passage inside an otherwise presenter-led work. Voice Clone
 uses the person's existing Voice Reference and the Segment's actual Script to produce that passage.
-The resulting audio is normalized like any other performed media and aligned when Caption or another
+The resulting audio is prepared like any other performed media and aligned when Caption or another
 semantic consumer needs positions inside it. An Audio Clip
 Source pairs that ordinary media with its exact Window while Visual Clips, Typography, MG, or another visual Track supplies what the
 viewer sees; no compound audio-only semantic object is required.

@@ -53,7 +53,7 @@ export function installPortraitTransition(module, manifest, component) {
       const { timeline, within, window, sources, from, to } = Object.fromEntries(
           Object.entries(inputs).map(([k, r]) => [k, r.value]),
         ),
-        { clips, children } = placedVisualMedia(timeline, window, sources.sources);
+        { children } = placedVisualMedia(timeline, window, sources.sources);
       const program = htmlVisual({
         html:
           '<div class="viewport"><div class="inner">' +
@@ -64,14 +64,13 @@ export function installPortraitTransition(module, manifest, component) {
           from,
           to,
           ink: palette.ink,
-          spans: clips.map(c=>({start:c.span.startFrame-window.span.startFrame,end:c.span.endFrameExclusive-window.span.startFrame})),
           duration: window.span.endFrameExclusive - window.span.startFrame,
         },
         setup: `const view=root.querySelector('.viewport'),inner=root.querySelector('.inner'),videos=[...inner.querySelectorAll('video')];return f=>{
  const p=Math.max(0,Math.min(1,f/Math.max(1,data.duration-1))),q=p*p*p*(p*(p*6-15)+10),a=data.from,b=data.to;
  Object.assign(view.style,{left:(a.xPx+(b.xPx-a.xPx)*q)+'px',top:(a.yPx+(b.yPx-a.yPx)*q)+'px',width:(a.widthPx+(b.widthPx-a.widthPx)*q)+'px',height:(a.heightPx+(b.heightPx-a.heightPx)*q)+'px',borderRadius:(50*q)+'%',border:(4*q)+'px solid '+data.ink,boxShadow:q===0?'none':'0 0 0 '+(5*q)+'px #fa81b8,'+(7*q)+'px '+(9*q)+'px 0 '+(5*q)+'px '+data.ink});
  inner.style.transform='scale('+(1+.23*q)+')';
- videos.forEach((v,i)=>{v.style.setProperty('object-position','50% '+(50-22*q)+'%','important');v.style.visibility=f>=data.spans[i].start&&f<data.spans[i].end?'inherit':'hidden'});
+ videos.forEach(v=>v.style.setProperty('object-position','50% '+(50-22*q)+'%','important'));
 };`,
       });
       const id = window.subjectId,
@@ -83,24 +82,20 @@ export function installPortraitTransition(module, manifest, component) {
             ? [
                 {
                   id,
-                  order: 0,
                   span: window.span,
-                  elements: [
-                    {
-                      id: "scene",
-                      kind: "program",
-                      order: 0,
-                      program,
-                      style: styles({
-                        position: "absolute",
-                        left: within.xPx + "px",
-                        top: within.yPx + "px",
-                        width: within.widthPx + "px",
-                        height: within.heightPx + "px",
-                      }),
-                    },
-                    ...children,
-                  ],
+                  root: {
+                    id: "scene",
+                    kind: "program",
+                    program,
+                    style: styles({
+                      position: "absolute",
+                      left: within.xPx + "px",
+                      top: within.yPx + "px",
+                      width: within.widthPx + "px",
+                      height: within.heightPx + "px",
+                    }),
+                    slots: children.map((element) => ({ name: element.id, element })),
+                  },
                 },
               ]
             : [],
@@ -152,7 +147,7 @@ export function installPortraitTransition(module, manifest, component) {
           {
             id: textAttribute(element, "id"),
             type: types.style,
-            value: (canonicalize(presenterStyle(fragment, bindings))),
+            value: (canonicalize(presenterStyle(fragment, bindings, "overlay"))),
             range: element.range,
           },
         ],

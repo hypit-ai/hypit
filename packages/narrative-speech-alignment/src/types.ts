@@ -25,17 +25,18 @@ export type AlignmentGroup = {
 
 export type TimedSpeechSegment = {
   readonly segmentId: string;
-  readonly startFrame: number;
-  readonly endFrameExclusive: number;
+  readonly startUnit: number;
+  readonly endUnitExclusive: number;
 };
 
 /** Private provider measurement resolved before publishing NarrativeAlignment. */
 export type NarrativeAlignmentTiming = {
+  readonly timeBase: { readonly numerator: number; readonly denominator: number };
   readonly tokens: readonly {
     readonly tokenId: string;
     readonly segmentId: string;
-    readonly startFrame: number;
-    readonly endFrameExclusive: number;
+    readonly startUnit: number;
+    readonly endUnitExclusive: number;
   }[];
-  readonly boundaries: readonly { readonly id: string; readonly frame: number }[];
+  readonly boundaries: readonly { readonly id: string; readonly unit: number }[];
 };

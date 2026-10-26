@@ -1,6 +1,6 @@
 import type { ProducerPackage, ProducerHandlerContext } from "@hypit/hypit/producer";
 import type { RefinementPackage } from "@hypit/hypit/refinement";
-import type { CompositableSurfaceRef, SynchronizedMedia } from "@hypit/media";
+import type { CompositableSurfaceRef, PreparedMedia } from "@hypit/media";
 import { assertBlobRef, canonicalize } from "@hypit/hypit/protocol";
 import type { BlobRef, Value } from "@hypit/hypit/protocol";
 import type { ContentFit, IntrinsicExtent, SpatialFrame, SpatialMap2D, SpatialPath } from "@hypit/spatial";
@@ -34,14 +34,12 @@ import {
   projectVisualTrack,
 } from "./program.js";
 import { assertVisualClipMotion } from "./motion.js";
-import { assertVisualSourceTimeSpec } from "./source-time.js";
 import type {
   MediaLayerSet,
   MediaPaintLayerSpec,
   MediaSampleLayerSpec,
   VisualClipMotion,
   VisualClipSpec,
-  VisualSourceTimeSpec,
   VisualTrackHeader,
   VisualTrackProgram,
   VisualTrackSet,
@@ -89,11 +87,11 @@ export const visualTrackComponent = {
       valueOf<MediaSampleLayerSpec>(inputs.spec?.value, "MediaSampleLayerSpec"),
     )) }) },
     { producer: visualTrackProducers.appendTimedLayer, handler: ({ inputs }) => ({ kind: "output", value: output(appendTimedMediaLayer(
-      valueOf<MediaLayerSet>(inputs.layers?.value, "MediaLayerSet"), valueOf<SynchronizedMedia>(inputs.source?.value, "SynchronizedMedia"),
+      valueOf<MediaLayerSet>(inputs.layers?.value, "MediaLayerSet"), valueOf<PreparedMedia>(inputs.media?.value, "PreparedMedia"),
       valueOf<ContentFit>(inputs.fit?.value, "ContentFit"), valueOf<MediaSampleLayerSpec>(inputs.spec?.value, "MediaSampleLayerSpec"),
     )) }) },
     { producer: visualTrackProducers.appendMappedTimedLayer, handler: ({ inputs }) => ({ kind: "output", value: output(appendMappedTimedMediaLayer(
-      valueOf<MediaLayerSet>(inputs.layers?.value, "MediaLayerSet"), valueOf<SynchronizedMedia>(inputs.source?.value, "SynchronizedMedia"),
+      valueOf<MediaLayerSet>(inputs.layers?.value, "MediaLayerSet"), valueOf<PreparedMedia>(inputs.media?.value, "PreparedMedia"),
       valueOf<SpatialMap2D>(inputs.mapping?.value, "SpatialMap2D"), valueOf<MediaSampleLayerSpec>(inputs.spec?.value, "MediaSampleLayerSpec"),
     )) }) },
     { producer: visualTrackProducers.appendSurfaceLayer, handler: ({ inputs }) => ({ kind: "output", value: output(appendSurfaceMediaLayer(
@@ -130,8 +128,6 @@ export const visualTrackComponent = {
       handler: ({ value }) => assertVisualTrackHeader(valueOf<VisualTrackHeader>(value, "VisualTrackHeader")) },
     { type: visualTrackTypes.motion,
       handler: ({ value }) => assertVisualClipMotion(valueOf<VisualClipMotion>(value, "VisualClipMotion"), "VisualClipMotion") },
-    { type: visualTrackTypes.sourceTime,
-      handler: ({ value }) => assertVisualSourceTimeSpec(valueOf<VisualSourceTimeSpec>(value, "VisualSourceTimeSpec")) },
     { type: visualTrackTypes.paintLayerSpec,
       handler: ({ value }) => assertMediaPaintLayerSpec(valueOf<MediaPaintLayerSpec>(value, "MediaPaintLayerSpec")) },
     { type: visualTrackTypes.sampleLayerSpec,

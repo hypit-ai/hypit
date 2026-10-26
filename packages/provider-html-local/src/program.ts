@@ -5,6 +5,8 @@ import type { ManagedProgram, ManagedProgramState } from "@hypit/runtime-local/e
 import { browserCacheDirectory, browserDownloadBaseUrl, browserDownloadUrl, browserExecutablePath, configuredBrowserPath, requireBrowserExecutable, selectedBrowserVersion } from "./browser.js";
 import type { BrowserOptions } from "./browser.js";
 import { runProcess } from "./process.js";
+import { electronExecutablePath, requireElectronExecutable, selectedHtmlRenderer } from "./electron.js";
+import type { ElectronOptions } from "./electron.js";
 
 type MediaToolVersion =
   | { readonly state: "ready"; readonly version: string }
@@ -41,25 +43,34 @@ async function probeHtmlMediaTools(ffprobePath: string, ffmpegPath?: string): Pr
  * This Provider owns browser selection and preparation. Probes never install;
  * rasterization receives the same selected executable instead of invoking browser discovery.
  */
-export function localHtmlBrowserProgram(
-  input: BrowserOptions & {
+export function localHtmlRendererProgram(
+  input: BrowserOptions & ElectronOptions & {
     readonly id: string;
     readonly nodePath: string;
     readonly ffprobePath: string;
     readonly ffmpegPath?: string;
   },
 ): ManagedProgram {
-  const version = selectedBrowserVersion(input);
-  const selectedPath = browserExecutablePath(input);
-  const baseUrl = browserDownloadBaseUrl(input);
+  const renderer = selectedHtmlRenderer(input);
+  const version = renderer === "chromium" ? selectedBrowserVersion(input) : undefined;
+  const selectedPath = renderer === "chromium" ? browserExecutablePath(input) : undefined;
+  const baseUrl = renderer === "chromium" ? browserDownloadBaseUrl(input) : undefined;
+  const electronPath = electronExecutablePath(input);
   const probeBrowser = async (): Promise<ManagedProgramState> => {
+    if (selectedPath === undefined) return { state: "ready" };
     try { await requireBrowserExecutable(selectedPath, version); }
     catch (error) { return { state: "down", detail: error instanceof Error ? error.message : String(error) }; }
     return { state: "ready" };
   };
+  const probeElectron = async (): Promise<ManagedProgramState> => {
+    if (electronPath === undefined) return { state: "ready" };
+    try { await requireElectronExecutable(electronPath); return { state: "ready" }; }
+    catch (error) { return { state: "down", detail: error instanceof Error ? error.message : String(error) }; }
+  };
+  const managedChrome = renderer === "chromium" && configuredBrowserPath(input) === undefined;
   return {
     id: input.id,
-    ...(configuredBrowserPath(input) === undefined ? {
+    ...(managedChrome ? {
       // Projects sharing this installation also share the existing Program lifecycle lock/logs.
       stateRoot: join(browserCacheDirectory(input), ".hypit-html-browser-program"),
       installation: {
@@ -72,6 +83,8 @@ export function localHtmlBrowserProgram(
       },
     } : {}),
     async probe(): Promise<ManagedProgramState> {
+      const electron = await probeElectron();
+      if (electron.state !== "ready") return electron;
       const browser = await probeBrowser();
       if (browser.state !== "ready") return browser;
       return await probeHtmlMediaTools(input.ffprobePath, input.ffmpegPath);

@@ -146,6 +146,22 @@ test("Fine Caption schedules visibility outside semantic Word timing and cuts on
   assert.equal(atom?.style.find((declaration) => declaration.name === "overflow-wrap")?.value, "anywhere");
 });
 
+test("Fine Caption cuts the one Frame shared by contiguous rounded Cues", () => {
+  const { document, program, projection } = fixture();
+  const units = projection.units.map((unit, index) => {
+    const spans = [[10, 20], [20, 31], [30, 40], [40, 50]] as const;
+    return { ...unit, startFrame: spans[index]![0], endFrameExclusive: spans[index]![1] };
+  });
+  const schedule = scheduleFineCaption({ ...projection, units }, program, document);
+  assert.deepEqual(schedule.cues.map((cue) => ({
+    timed: [cue.timedStartFrame, cue.timedEndFrameExclusive],
+    visible: [cue.visibleStartFrame, cue.visibleEndFrameExclusive],
+  })), [
+    { timed: [10, 30], visible: [6, 30] },
+    { timed: [30, 50], visible: [30, 56] },
+  ]);
+});
+
 test("Fine Caption intersects an authored tail with the renderer Timeline", () => {
   const { document, program, projection } = fixture();
   const schedule = scheduleFineCaption(projection, program, document);

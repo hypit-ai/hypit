@@ -1,15 +1,14 @@
 import { assert } from "./process.js";
 import { WeightedCapacity } from "./weighted-capacity.js";
 import type { CapacityLease } from "./weighted-capacity.js";
+import type { FrameSpan } from "@hypit/timeline";
 
 // Bound speculative work per process without making decoder tuning a public
 // rendering concept. Actual byte admission can stop the stream earlier.
 const defaultDecodeWindowFrames = 16;
 
-export type SourceFrameWindow = {
+export type SourceFrameWindow = FrameSpan & {
   readonly source: string;
-  readonly startFrame: number;
-  readonly endFrameExclusive: number;
 };
 
 export type DecodedSourceFrame = {

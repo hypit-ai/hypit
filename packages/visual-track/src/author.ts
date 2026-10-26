@@ -1,6 +1,7 @@
 import type { Recipe } from "@hypit/hypit/recipe";
 import { decodeContentFitProperties } from "@hypit/spatial";
 import type { ContentFit } from "@hypit/spatial";
+import type { TemporalRelationSpec } from "@hypit/temporal";
 
 import {
   sealMediaPaintLayerSpec,
@@ -14,7 +15,6 @@ import type {
   MediaPaintLayerSpec,
   MediaSampleLayerSpec,
   MediaSampleAppearance,
-  VisualSourceTimeSpec,
 } from "./types.js";
 
 function fail(recipe: Recipe, message: string): never {
@@ -141,13 +141,13 @@ export function decodeMediaSampleSpec(
   sourceKind: "still" | "timed" | "surface",
   samplingMotion?: MediaSampleLayerSpec["samplingMotion"],
   combinedClipAppearance = false,
-  sourceTime?: VisualSourceTimeSpec,
+  sampling?: TemporalRelationSpec,
 ): MediaSampleLayerSpec {
   assertKeys(recipe, [...FIT_KEYS, ...SAMPLE_KEYS, ...(combinedClipAppearance ? FRAME_KEYS : [])]);
-  if (sourceKind === "still" && sourceTime !== undefined) fail(recipe, "cannot apply source time to a still picture.");
+  if (sourceKind === "still" && sampling !== undefined) fail(recipe, "cannot apply temporal sampling to a still picture.");
   return sealMediaSampleLayerSpec({
     id,
-    ...(sourceTime === undefined ? {} : { sourceTime }),
+    ...(sampling === undefined ? {} : { sampling }),
     appearance: decodeMediaSampleAppearance(recipe),
     ...(samplingMotion === undefined ? {} : { samplingMotion }),
   });

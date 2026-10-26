@@ -1,4 +1,6 @@
-import { temporalProducers, temporalTypes } from "./index.js";
+import { temporalProducers } from "./index.js";
+import { resolveTemporalExtent } from "./extent.js";
+import type { TemporalExtent, TemporalBoundaryPolicy } from "./types.js";
 import type {
   StudioTemporalAuthority,
   StudioTemporalRelationCompanion,
@@ -15,10 +17,10 @@ export function formatTemporalPointEdit(reference: string, desired: number, base
 
 type Instant = { readonly id: string; readonly timelineId: string; readonly frame: number };
 type Timeline = { readonly id: string; readonly frameCount: number };
-type Extent = { readonly frameCount: number };
 type AuthorSpec = {
   readonly projection?: { readonly ref?: string; readonly at?: unknown; readonly offset?: unknown };
   readonly direction?: 1 | -1;
+  readonly resolution?: TemporalBoundaryPolicy;
   readonly author?: { readonly binding?: string; readonly relation?: "direct" | "after-start" | "before-end" };
 };
 
@@ -127,7 +129,10 @@ export const commonTemporalStudioRelations: readonly StudioTemporalRelationCompa
       ...(base === undefined ? { constraints: [{ input: "instant", target: { kind: "instant" as const, frame: baseFrame } }] } : {}),
       writes: [{ input: "spec", binding: spec.author.binding, replacement: `${count}f` }],
     }];
-    const held = value<Extent>(inputs.extent, "Extent").frameCount;
+    const timeline = value<{ readonly frameRate: { readonly numerator: number; readonly denominator: number } }>(
+      inputs.timeline, "Timeline");
+    const held = resolveTemporalExtent(value<TemporalExtent>(inputs.extent, "Extent"), timeline,
+      spec.resolution ?? "cover");
     return [{ constraints: [{ input: "instant", target: { kind: "instant", frame: target.frame - direction * held } }] }];
   },
   trace({ output, inputs, trace }) {
@@ -141,11 +146,4 @@ export const commonTemporalStudioRelations: readonly StudioTemporalRelationCompa
     const upstream = trace("instant");
     return upstream?.kind !== "instant" ? undefined : { ...upstream, frame: held.frame };
   },
-}, ...[temporalProducers.extentFromDomain, temporalProducers.extentFromDuration].map((producer): StudioTemporalRelationCompanion => ({
-  id: `common-${producer.name}`, match: { producer, output: "extent" },
-  invert({ target, output }) {
-    const current = value<Extent>(output, "Extent");
-    return target.kind === "extent" && target.frameCount === current.frameCount ? [{}] : [];
-  },
-  trace({ output }) { return { kind: "extent", frameCount: value<Extent>(output, "Extent").frameCount }; },
-}))];
+}];

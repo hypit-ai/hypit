@@ -3,17 +3,44 @@
 Trusted local implementation of:
 
 - `@hypit/html-program@1#rasterize-visual` → `TimelineVisual`;
-- `@hypit/html-program@1#rasterize-frames` → ordered PNG BlobRefs.
+- `@hypit/html-program@1#rasterize-frames` → self-describing sRGB PNG frame images.
 
-The Provider consumes the typed `HtmlProgram` directly. It serves the staged
-program to independent Puppeteer/Chrome processes, applies absolute integer
-frames through `window.__hypitFrameProgram`, decodes compiler-declared source
-video frames with FFmpeg, captures PNG pixels through Chrome DevTools Protocol,
-and streams ordered frames into one H.264 encoder. It has no external HTML video
-engine or producer dependency.
+The Provider consumes the typed `HtmlProgram` directly and offers two explicit
+execution implementations for the same visual Need:
+
+- `chromium` is the portable implementation. It obtains exact source samples
+  through FFmpeg, presents them to Chrome as PNG images, captures PNG frames
+  through Chrome DevTools Protocol and streams them into FFmpeg;
+- `electron` is the encoded-visual implementation. It decodes the compiler's
+  exact source samples inside the browser, transfers the composed frame as an
+  offscreen shared texture, encodes the resulting `VideoFrame` with WebCodecs
+  and uses FFmpeg only to mux the encoded H.264 stream into MP4. Neither the
+  source-video input side nor the composed-video output side crosses PNG.
+
+Both implementations apply absolute integer frames through
+`window.__hypitFrameProgram` and publish the same verified `TimelineVisual`.
+Renderer selection is deployment policy; it does not change `HtmlProgram`, Film,
+Composition, Prepared Media or the delivery requirement.
+
+For a range or sparse request, one typed absolute-frame selection drives both
+Artifact staging and `window.__hypitFrameProgram.prepare(selection)` in the
+actual Program page. Unselected Present roots are removed before their deferred
+URLs or component runtimes become active. Chromium and Electron therefore do
+not depend on different pre-document injection mechanisms, and an Electron
+capture shell does not need to copy hidden state into its child page.
+
+The visual Need also carries a `VisualDeliverySpec`. It, rather than this Provider's
+Runtime configuration, selects delivery quality, picture tags and the opaque matte. The
+Provider verifies the encoded stream against that requirement before publishing
+`TimelineVisual`. Browser/GPU choice, FFmpeg paths, concurrency and memory budgets remain
+deployment policy and do not enter the Result.
+Frame capture receives the minimal `ImagePictureSpec`, so its sRGB/full-range interpretation and
+matte are request semantics rather than a hidden local screenshot default. Its `FrameImages` result
+retains that picture interpretation and every original absolute frame identity. It does not receive
+video codec, quality, audio or container fields because it produces PNG pictures, not a finished video.
 
 Filesystem staging is private to this local Provider. `@hypit/html-program`
-retains only the portable program and its pure materialization function; it
+retains only the portable program and its pure frame function; it
 does not expose a Node project/staging subpath for hypothetical executors.
 Inspection of staged Compositable Surface files and probing the selected media
 tools are private here for the same reason: they validate inputs used by this
@@ -23,11 +50,14 @@ executor and do not establish a shared media-execution ABI.
 
 The Endpoint facet is `rasterize`. Runtime configuration owns deployment policy:
 
-- `workers`: fixed browser count or `auto`;
+- `renderer`: `chromium` (default) or `electron`;
+- `workers`: fixed browser-worker count or `auto`;
 - `maxWorkers`: automatic ceiling;
 - `defaultConcurrency`: whole requests admitted in this Endpoint pool;
-- `browserCapacity`: Chrome slots reserved across admitted requests;
-- `chromePath`, or exact `browserVersion` plus `browserCacheDirectory`;
+- `browserCapacity`: browser-worker slots reserved across admitted requests;
+- for `chromium`, `chromePath`, or exact `browserVersion` plus
+  `browserCacheDirectory`;
+- for `electron`, an explicit user-managed `electronPath`;
 - `ffmpegPath` and `ffprobePath`;
 - optional process/stage deadlines and byte budgets.
 
@@ -45,6 +75,34 @@ different system browser. `chromePath` selects a user-managed executable;
 `browserVersion` selects one exact managed Chrome for Testing version. The two
 selection modes are mutually exclusive.
 
+Electron is never downloaded, selected as a fallback or substituted for Chrome.
+Select it explicitly in the Runtime Profile and supply an executable from
+Electron 45 or newer:
+
+```json
+{
+  "endpoints": {
+    "html.gpu": {
+      "use": "@hypit/provider-html-local",
+      "pool": "local-render",
+      "config": {
+        "renderer": "electron",
+        "electronPath": "/Applications/Electron.app/Contents/MacOS/Electron",
+        "workers": 1
+      }
+    }
+  }
+}
+```
+
+An Electron Endpoint offers `rasterize-visual` only because its terminal product
+is encoded video. `rasterize-frames` intentionally remains a Chromium capability:
+its requested result consists of self-describing PNG images. A Runtime that needs
+both can configure and bind two Endpoint instances. Electron cannot be combined
+with Chrome-selection fields or software-only browser compositing. Unsupported
+shared-texture or H.264 WebCodecs configurations fail on that Endpoint; execution
+does not rewrite the request or switch implementations.
+
 ## Frame selection and parallelism
 
 A continuous request retains original absolute frame identities. A sparse request
@@ -52,24 +110,41 @@ accepts strictly increasing, non-contiguous frames. Workers are independent
 browser processes and may start at any requested frame; they do not wait for an
 earlier worker to traverse the program.
 
-The compiler's typed `frameSources` plan determines exact source-video samples,
-including reverse, hold, loop and rational-rate mappings. The Provider probes
-needed sources, decodes bounded windows lazily, shares decoded frames only within
-the current execution, and leases them under `maxDecodedSourceBytes`. Chrome does
-not independently decode those same videos. Arbitrary author HTML is not parsed
-to infer source-time semantics.
+The compiler's typed `videoSources` plan determines exact selected streams and source-video samples,
+including reverse, hold, loop and rational-rate mappings. The Chromium
+implementation compares the Map's exact rational source time with FFprobe's integer PTS ticks and
+stream time base, then decodes bounded FFmpeg windows lazily. It does not compare rounded decimal
+seconds or resample through an average frame rate. It
+shares decoded images only within the current execution and leases them under
+`maxDecodedSourceBytes`. The Electron implementation consumes the same plan with
+browser-side demux/decode and a request-local bounded sample cache. Arbitrary
+author HTML is not parsed to infer temporal sampling semantics.
 
-Completed PNGs enter a bounded ordered sink. FFmpeg is the necessary local
-serialization point for one MP4 stream, not a scheduler or shared metadata
-service. Capture of later frames can continue while earlier frames are encoded.
+At a source-frame boundary, negative-rate sampling selects the decoded interval
+on the boundary's left; positive and held sampling select the interval on its
+right. This is the Provider's terminal quantization of one continuous Temporal
+Map, not an adjustment to the authored relation.
+
+In the Chromium path, completed PNGs enter a bounded ordered sink. In the Electron
+path, shared textures are copied to bounded `VideoFrame` storage and enter
+WebCodecs in ordinal order; FFmpeg receives encoded H.264 only for container
+muxing. Capture of later frames can continue while earlier frames are encoded.
 Sparse frame output writes only requested PNGs and is bounded by
 `maxRenderedBytes`.
 
+`maxDecodedSourceBytes` and `maxPendingFrameBytes` are working-set admission
+budgets. One exact frame required for progress may be the sole resident value
+even when it is larger than the configured budget; speculative and concurrent
+values remain bounded. `maxRenderedBytes` is instead a hard result-size limit.
+When the final occurrence of one Electron source leaves the selected frame, its
+cursor, input and retained decoded samples are released together.
+
 ## Lifecycle and failure
 
-Each request owns its temporary directory, localhost server, Chrome processes,
-decoded-frame store and encoder. Nothing is shared across requests. Cancellation
-or failure closes page sessions, source leases, processes and resource I/O.
+Each request owns its temporary directory, localhost server, browser process or
+windows, decoded-source working set and encoder. Nothing is shared across
+requests. Cancellation or failure closes page sessions, decoded samples,
+shared-texture references, processes and resource I/O.
 Process-tree cleanup is best effort after abnormal exits; hard OS termination
 requires containment supplied by the deployment.
 
@@ -84,8 +159,17 @@ edits intentionally fall back to whole-document inspection.
 import { rasterizeHtmlProgram } from "@hypit/provider-html-local";
 
 const visual = await rasterizeHtmlProgram(
-  { program, range: { startFrame: 240, endFrameExclusive: 360 } },
-  { resources, workers: 4 },
+  {
+    program,
+    delivery,
+    range: { startFrame: 240, endFrameExclusive: 360 },
+  },
+  {
+    resources,
+    renderer: "electron",
+    electronPath: "/Applications/Electron.app/Contents/MacOS/Electron",
+    workers: 1,
+  },
 );
 ```
 

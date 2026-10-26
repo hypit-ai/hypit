@@ -1,5 +1,6 @@
 import { assertCaptionDocumentIdentity } from "./identity.js";
 import type { CaptionDocument, CaptionTiming } from "./types.js";
+import { assertFrameSpan } from "@hypit/timeline";
 
 export function assertCaptionTiming(timing: CaptionTiming): void {
   if (timing.timelineId.length === 0 || timing.documentId.length === 0) {
@@ -7,8 +8,12 @@ export function assertCaptionTiming(timing: CaptionTiming): void {
   }
   const unitIds = new Set<string>();
   for (const unit of timing.units) {
-    if (unit.unitId.length === 0 || unitIds.has(unit.unitId) || !Number.isSafeInteger(unit.startFrame)
-      || !Number.isSafeInteger(unit.endFrameExclusive) || unit.startFrame < 0 || unit.endFrameExclusive <= unit.startFrame) {
+    try {
+      assertFrameSpan(unit);
+    } catch {
+      throw new Error("CaptionTiming contains an invalid or repeated unit timing");
+    }
+    if (unit.unitId.length === 0 || unitIds.has(unit.unitId)) {
       throw new Error("CaptionTiming contains an invalid or repeated unit timing");
     }
     unitIds.add(unit.unitId);

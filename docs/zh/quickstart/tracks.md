@@ -100,7 +100,7 @@ CJK 口播可以直接书写。若一个只负责显示的 emoji 仍需跟随语
 
 ## Visual Clip 与 B-roll
 
-B-roll 是 Visual Clip 的一种剪辑用途，不是独立 Track 家族。一个 Clip 可以在语义或绝对窗口内放置图片、生成视频、已规范化含时素材或 Compositable Surface。
+B-roll 是 Visual Clip 的一种剪辑用途，不是独立 Track 家族。一个 Clip 可以在语义或绝对窗口内放置图片、生成视频、已准备的含时素材或 Compositable Surface。
 
 ```svml
 <import as="visual" from="@hypit/visual-track@1"/>
@@ -128,8 +128,8 @@ Recipe 与类型化 Motion 都只是可选的复用值：
 <space:Frame id="product-frame" within={vertical.bounds}
   left="8%" top="20%" right="92%" bottom="68%"/>
 
-<mediaop:Normalize id="product-media" source={product-motion.video}
-  video="primary-moving" audio="none" span-authority="video" clock={clock}/>
+<mediaop:Prepare id="product-media" source={product-motion.video}
+  video="primary-moving" audio="none" span-authority="video"/>
 
 <visual:Motion id="product-motion-in">
   <visual:Pose at="start" y="80" opacity="0" easing="ease-out"/>
@@ -160,18 +160,18 @@ Clip 模型也能表达全屏切换、分屏和角落小窗。公开 Clip 只有
 | 输入 | 值 | 含义 |
 |---|---|---|
 | `image={...}` + `extent={...}` | Blob + 作者声明的像素尺寸 | 没有自带时长的静态图 |
-| `media={...}` | `SynchronizedMedia` | 直接连接显式准备好的含时素材 |
+| `media={...}` | `PreparedMedia` | 直接连接显式准备好的含时素材 |
 | `surface={...}` | `CompositableSurfaceRef` | 直接连接带透明度语义的静态或含时 Surface |
 
-生成或导入的视频 Blob 经 `<mediaop:Normalize>` 进入 Track：它检查该 Blob、选出其中的流并放到同一个帧域上，输出的 `.media` 即 `media=` 所连接的值。`audio="none"` 只取画面，`audio="default"` 取源自带的声音，再由 `audio-gain` 调节。输入名必须显式，是为了绝不靠猜测把一个通用 Blob 当成图片或视频。
+生成或导入的视频 Blob 经 `<mediaop:Prepare>` 进入 Track：它检查该 Blob、选出其中的流，并保留精确的源时间关系而不选择 Film 帧钟；输出的 `.media` 即 `media=` 所连接的值。视觉消费者只在需要执行时，才按 Track 的 Timeline 求值。输入名必须显式，是为了绝不靠猜测把一个通用 Blob 当成图片或视频。
 
 **输出：**`{product-broll.program}` 与 `{product-broll.visual}`。音频始终在 Audio Track
-中单独声明；这里连接 SynchronizedMedia 不会顺带选择它的音频成员。
+中单独声明；这里连接 PreparedMedia 不会顺带选择它的音频成员。
 
 ## Audio Track
 
 `@hypit/audio-track` 把显式准备好的音频放进与视觉 Track 相同的 Timeline。`Clip`
-消费 `SynchronizedMedia`；先规范化已声明或生成的音频 Blob，再选择精确节目窗口与源时间关系：
+消费 `PreparedMedia`；先准备已声明或生成的音频 Blob，再选择精确节目窗口与源时间关系：
 
 ```svml
 <import as="media" from="@hypit/media@1"/>
@@ -181,8 +181,8 @@ Clip 模型也能表达全屏切换、分屏和角落小窗。公开 Clip 只有
 
 <time:Clock id="clock" frame-rate="30"/>
 <media:Audio id="music" src="./assets/music.wav"/>
-<mediaop:Normalize id="music-media" source={music}
-  video="none" audio="default" span-authority="audio" clock={clock}/>
+<mediaop:Prepare id="music-media" source={music}
+  video="none" audio="default" span-authority="audio"/>
 
 <audio:Track id="music-bed" timeline={speech.timeline}>
   <audio:Clip source={music-media.media} during={speech.window}
@@ -197,12 +197,12 @@ Clip 模型也能表达全屏切换、分屏和角落小窗。公开 Clip 只有
 |---|---|---|
 | `Track.id` | 是 | 稳定的 Audio Track 身份 |
 | `Track.timeline` | 是 | 定义精确采样域与帧域的 Timeline |
-| `Clip.source` | 是 | 显式选流并规范化后的 `SynchronizedMedia` |
+| `Clip.source` | 是 | 显式选流后的 `PreparedMedia` |
 | `during` | 是 | 具名绝对 Window |
-| `source-time` 或 `Map` 子节点 | 否 | 可复用或内联的目标时间到源时间偏函数；省略时为有界局部恒等映射 |
+| `Map` 子节点 | 否 | 该 Clip occurrence 自有的目标时间到源时间偏函数；省略时为有界局部恒等映射 |
 | `gain`、`fade-in`、`fade-out` | 否 | 显式的单 Clip 混音值 |
 
-该包不会自动提取、规范化、duck 或分配 bus。同一 Track 内的多个 Clip 与多个对等 Audio
+该包不会自动提取、物化、duck 或分配 bus。同一 Track 内的多个 Clip 与多个对等 Audio
 Track 都会作为独立输入进入 Film。输出 `{music-bed.audio}` 是普通 `AudioTrack`。
 
 需要显式设置 gain，并把若干 AudioTrack 闭合成一个贡献时，使用 Audio Mix：
@@ -331,7 +331,7 @@ npm install @hypit/ranking
 | `during` | 选中组件声明的时间形式 |
 | `style` | 对应的样式记录，且只接受本变体的 |
 | `terminal` | 完整板定格的绝对 Instant。仅 `TopThree` |
-| `appear-sound`、`move-sound` | 可选，Synchronized Media |
+| `appear-sound`、`move-sound` | 可选，带音频成员的 `PreparedMedia` |
 
 只使用所选包明确声明的时间形式；不要从另一个组件族推断 terminal 或 reveal 规则。
 
@@ -381,7 +381,7 @@ DepthStack 的直接子元素，自闭合，至少一张，按书写顺序发出
 
 | 属性 | 取值 |
 |---|---|
-| `source` | 必填——静态图片、Synchronized Medium 或 Compositable Surface |
+| `source` | 必填——静态图片、PreparedMedia 或 Compositable Surface |
 | `extent` | 静态图片必填，其余情况给了会被拒绝 |
 | `at` | 必填——具名绝对发牌 Instant |
 | `appearance` | 可选——它自己的 Recipe，否则沿用整叠的 |
@@ -473,8 +473,8 @@ npm install @hypit/comment-sticker
   left="10%" top="20%" right="90%" bottom="70%"/>
 
 <!-- Media：Selection 期间显示一个普通 Clip -->
-<mediaop:Normalize id="card-media" source={motion.video}
-  video="primary-moving" audio="none" span-authority="video" clock={clock}/>
+<mediaop:Prepare id="card-media" source={motion.video}
+  video="primary-moving" audio="none" span-authority="video"/>
 <visual:Track id="cards" timeline={speech.timeline}>
   <visual:Clip media={card-media.media} frame={card-frame}
     during={demo} fit="cover" treatment={recipes.visual.card}/>
@@ -487,10 +487,10 @@ npm install @hypit/comment-sticker
   MEANING
 </text:Flow>
 
-<!-- Audio：先规范化一份已声明素材，再把它放满整个节目 -->
+<!-- Audio：先准备一份已声明素材，再把它放满整个节目 -->
 <media:Audio id="music" src="./assets/music.wav"/>
-<mediaop:Normalize id="music-media" source={music}
-  video="none" audio="default" span-authority="audio" clock={clock}/>
+<mediaop:Prepare id="music-media" source={music}
+  video="none" audio="default" span-authority="audio"/>
 <audio:Track id="music-bed" timeline={speech.timeline}>
   <audio:Clip source={music-media.media} during={speech.window}
     gain="0.28" fade-in="600ms" fade-out="800ms">

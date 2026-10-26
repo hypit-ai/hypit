@@ -7,10 +7,11 @@ test("source decoder selects exact ordinal frames without time seeking or FPS re
   const argv = sourceFrameDecodeArguments({
     path: "source.mp4",
     window: { startFrame: 37, endFrameExclusive: 42 },
-    metadata: { width: 1920, height: 1080, videoCodec: "h264" },
+    metadata: { width: 1920, height: 1080, streamIndex: 2, timestamps: [0n],
+      timeBase: { numerator: 1n, denominator: 90_000n }, videoCodec: "h264" },
     platform: "linux",
   });
-  assert.deepEqual(argv.slice(0, 4), ["-v", "error", "-i", "source.mp4"]);
+  assert.deepEqual(argv.slice(0, 6), ["-v", "error", "-i", "source.mp4", "-map", "0:2"]);
   assert.ok(argv.includes("select=between(n\\,37\\,41)"));
   assert.equal(argv.includes("-ss"), false);
   assert.equal(argv.includes("-r"), false);

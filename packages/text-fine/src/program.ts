@@ -1,4 +1,4 @@
-import { assertTimelineIdentity, timelineFrameCount } from "@hypit/timeline";
+import { assertFrameSpan, assertTimelineIdentity, timelineFrameCount } from "@hypit/timeline";
 import type { Timeline } from "@hypit/timeline";
 import {
   assertSpatialFrame,
@@ -271,7 +271,9 @@ function projectedItem(
 function assertTextItemWithinTimeline(item: TextItem, timeline: Timeline): void {
   const total = timelineFrameCount(timeline);
   nonEmpty(item.id, "Text Item id");
-  if (item.span.startFrame < 0 || item.span.endFrameExclusive <= item.span.startFrame || item.span.endFrameExclusive > total) {
+  try {
+    assertFrameSpan(item.span, total);
+  } catch {
     throw new Error(`${item.id} is outside Timeline.`);
   }
   assertTextPlacement(item.placement);

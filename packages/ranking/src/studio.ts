@@ -208,7 +208,7 @@ function projectRankingAudio(context: StudioTrackCompanionContext): readonly Stu
     return {
       id: `item:${event.id}`,
       authoredId: boardId,
-      display: { title: `${label} · ${phase}`, layers: [previewLayer(artifactPreview("audio", clip.artifact.resource), "waveform")] },
+      display: { title: `${label} · ${phase}`, layers: [previewLayer(artifactPreview("audio", clip.source.source.resource), "waveform")] },
       startFrame: span.startFrame, endFrameExclusive: span.endFrameExclusive, stackOrder: span.stackOrder,
       terminalLinks: [{ spanId: span.id }],
       ...(context.placement === undefined ? {} : { elementLocation: { path: context.placement.sourcePath, range: context.placement.range } }),

@@ -39,7 +39,7 @@
   </text:Render>
   <seedance:TextVideo id="performance" model="mini" prompt={prompt}
     duration="5" aspect-ratio="9:16" generate-audio="true"/>
-  <mediaop:Normalize id="performance-media" source={performance.video} clock={clock}
+  <mediaop:Prepare id="performance-media" source={performance.video}
     video="primary-moving" audio="default" span-authority="video"/>
   <whisperx:Transcription id="opening-alignment-transcription" media={performance-media.media} language="en"/>
   <speechalign:Alignment id="opening-alignment" narrative={story}

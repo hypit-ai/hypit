@@ -2,7 +2,17 @@ import { clockFrameSampleBoundary, timelineFrameCount, timelineFrameSampleBounda
 import type { Timeline } from "@hypit/timeline";
 import { assertAudioLevelAutomation, assertAudioTrackIdentity, assertCompositionIdentity, sealComposition } from "@hypit/composition";
 import type { AudioClip, AudioProcessProgram, AudioSignalRef, AudioTrack, Composition } from "@hypit/composition";
-import { assertBlobRef, canonicalize } from "@hypit/hypit/protocol";
+import { canonicalize } from "@hypit/hypit/protocol";
+import { verifyPreparedAudioSource } from "@hypit/media";
+import {
+  addExactTemporalValues,
+  assertTemporalMap,
+  compareExactTemporalValues,
+  exactTemporalRational,
+  scaleExactTemporalValue,
+  subtractExactTemporalValues,
+} from "@hypit/temporal";
+import type { ExactTemporalValue, TemporalMapPiece } from "@hypit/temporal";
 
 import type { AudioProgram } from "./types.js";
 
@@ -10,23 +20,20 @@ function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
 
-function exactInteger(value: { readonly numerator: number; readonly denominator: number }, label: string): number {
-  assert(Number.isSafeInteger(value.numerator) && Number.isSafeInteger(value.denominator) && value.denominator > 0
-    && value.numerator % value.denominator === 0, `${label} must resolve to an exact source-sample boundary`);
-  const result = value.numerator / value.denominator;
-  assert(Number.isSafeInteger(result) && result >= 0, `${label} is invalid`);
-  return result;
+function sampleBoundary(value: ExactTemporalValue, label: string): number {
+  const exact = exactTemporalRational(value);
+  const numerator = exact.numerator * 48_000n;
+  const rounded = numerator >= 0n
+    ? (numerator * 2n + exact.denominator) / (exact.denominator * 2n)
+    : -((-numerator * 2n + exact.denominator) / (exact.denominator * 2n));
+  assert(rounded >= 0n && rounded <= BigInt(Number.MAX_SAFE_INTEGER), `${label} is outside sample arithmetic`);
+  return Number(rounded);
 }
 
-function exactSourceEnd(sourceAtStart: { readonly numerator: number; readonly denominator: number },
-  rate: { readonly numerator: number; readonly denominator: number }, targetLength: number, label: string): number {
-  const numerator = BigInt(sourceAtStart.numerator) * BigInt(rate.denominator)
-    + BigInt(targetLength) * BigInt(rate.numerator) * BigInt(sourceAtStart.denominator);
-  const denominator = BigInt(sourceAtStart.denominator) * BigInt(rate.denominator);
-  assert(numerator % denominator === 0n, `${label} must resolve to an exact source-sample boundary`);
-  const result = numerator / denominator;
-  assert(result >= 0n && result <= BigInt(Number.MAX_SAFE_INTEGER), `${label} is invalid`);
-  return Number(result);
+function sourceEnd(piece: TemporalMapPiece): ExactTemporalValue {
+  return addExactTemporalValues(piece.sourceAtStart, scaleExactTemporalValue(
+    subtractExactTemporalValues(piece.target.end, piece.target.start), piece.rate,
+  ));
 }
 
 export const AUDIO_GAIN_PROCESS_FORMAT = "hypit.audio-gain@1" as const;
@@ -73,6 +80,7 @@ function routedTrackClips(track: AudioTrack, rootIndex: number): RoutedClip[] {
 }
 
 export function sealAudioProgram(value: AudioProgram): AudioProgram {
+  verifyAudioProgram(value);
   return canonicalize(value) as unknown as AudioProgram;
 }
 
@@ -92,27 +100,38 @@ export function verifyAudioProgram(value: unknown): asserts value is AudioProgra
     assert(typeof clip.id === "string" && clip.id.length > 0 && !ids.has(clip.id),
       "AudioProgram clip id is empty or repeated");
     ids.add(clip.id);
-    assertBlobRef(clip.artifact, `AudioProgram clip ${clip.id} Artifact`);
-    assert(clip.artifact.mediaType === "audio/wav", `AudioProgram clip ${clip.id} must reference canonical WAV`);
+    assert(typeof clip.inputId === "string" && clip.inputId.length > 0,
+      `AudioProgram clip ${clip.id} input id is invalid`);
+    verifyPreparedAudioSource(clip.source);
+    assertTemporalMap(clip.preparation);
     assert(Number.isSafeInteger(clip.targetStartSample) && clip.targetStartSample >= 0
       && Number.isSafeInteger(clip.targetEndSampleExclusive)
       && clip.targetEndSampleExclusive > clip.targetStartSample
       && clip.targetEndSampleExclusive <= item.sampleFrames,
     `AudioProgram clip ${clip.id} target interval is invalid`);
-    assert(Number.isSafeInteger(clip.sourceStartSample) && clip.sourceStartSample >= 0,
-      `AudioProgram clip ${clip.id} source start is invalid`);
-    assert(Number.isSafeInteger(clip.sourceSampleFrames) && clip.sourceSampleFrames > 0
-      && Number.isSafeInteger(clip.sourceEndSampleExclusive)
-      && clip.sourceEndSampleExclusive > clip.sourceStartSample
-      && clip.sourceEndSampleExclusive <= clip.sourceSampleFrames,
-    `AudioProgram clip ${clip.id} source interval is invalid`);
-    const sourceLength = clip.sourceEndSampleExclusive - clip.sourceStartSample;
-    assert(typeof clip.sourceLoop === "boolean"
-      && Number.isSafeInteger(clip.sourcePhaseSample) && clip.sourcePhaseSample >= 0
-      && clip.sourcePhaseSample < sourceLength
-      && (clip.sourceLoop || clip.sourcePhaseSample === 0),
+    assert(Number.isSafeInteger(clip.preparedStartSample) && clip.preparedStartSample >= 0,
+      `AudioProgram clip ${clip.id} prepared start is invalid`);
+    assert(Number.isSafeInteger(clip.preparedSampleFrames) && clip.preparedSampleFrames > 0
+      && Number.isSafeInteger(clip.preparedEndSampleExclusive)
+      && clip.preparedEndSampleExclusive > clip.preparedStartSample
+      && clip.preparedEndSampleExclusive <= clip.preparedSampleFrames,
+    `AudioProgram clip ${clip.id} prepared interval is invalid`);
+    const preparedDomain = clip.preparation.stages[0]!.target;
+    const sourceDomain = clip.preparation.stages.at(-1)!.source;
+    assert(sampleBoundary(preparedDomain.duration, `AudioProgram clip ${clip.id} prepared duration`)
+      === clip.preparedSampleFrames,
+    `AudioProgram clip ${clip.id} prepared duration differs from its sample domain`);
+    assert(sourceDomain.id === clip.source.sourceDomain.id
+      && compareExactTemporalValues(sourceDomain.duration, clip.source.sourceDomain.duration) === 0,
+    `AudioProgram clip ${clip.id} preparation does not end at its selected audio source`);
+    const preparedLength = clip.preparedEndSampleExclusive - clip.preparedStartSample;
+    assert(typeof clip.loop === "boolean"
+      && Number.isSafeInteger(clip.loopPhaseSample) && clip.loopPhaseSample >= 0
+      && clip.loopPhaseSample < preparedLength
+      && (clip.loop || clip.loopPhaseSample === 0),
     `AudioProgram clip ${clip.id} loop phase is invalid`);
-    assert(Number.isFinite(clip.playbackRate) && clip.playbackRate > 0,
+    assert(Number.isSafeInteger(clip.playbackRate.numerator) && clip.playbackRate.numerator > 0
+      && Number.isSafeInteger(clip.playbackRate.denominator) && clip.playbackRate.denominator > 0,
       `AudioProgram clip ${clip.id} playback rate is invalid`);
     assert(Number.isSafeInteger(clip.mixStartSample) && clip.mixStartSample >= 0
       && Number.isSafeInteger(clip.mixEndSampleExclusive) && clip.mixEndSampleExclusive > clip.mixStartSample
@@ -126,8 +145,6 @@ export function verifyAudioProgram(value: unknown): asserts value is AudioProgra
       && Number.isSafeInteger(clip.fadeOutSamples) && clip.fadeOutSamples >= 0 && clip.fadeOutSamples <= mixLength,
     `AudioProgram clip ${clip.id} fade is invalid`);
   }
-  assert(item.mix?.normalize === false && item.mix?.limiter === "none",
-    "AudioProgram cannot hide normalization or limiting");
 }
 
 export function compileAudioProgram(composition: Composition, timeline: Timeline): AudioProgram {
@@ -139,45 +156,54 @@ export function compileAudioProgram(composition: Composition, timeline: Timeline
   const frameCount = timelineFrameCount(timeline);
   const clips = canonicalComposition.audio
     .flatMap((track, rootIndex) => routedTrackClips(track, rootIndex).flatMap(({ clip, path, gain: routeGain }) => {
-      if (clip.artifact.mediaType !== "audio/wav") {
-        throw new Error(`Audio clip ${track.id}.${clip.id} must be normalized to canonical WAV before mixing`);
-      }
-      return clip.sourceTime.pieces.map((piece, pieceIndex) => {
-        const targetLength = piece.target.endSampleExclusive - piece.target.startSample;
-        const sourceAtStart = exactInteger(piece.sourceAtStart,
+      assertTemporalMap(clip.sampling);
+      assert(clip.sampling.stages.length === 1,
+        `Audio clip ${track.id}.${clip.id} requires one occurrence-to-prepared sampling stage`);
+      const mixStartSample = sampleBoundary(clip.target.start, `${track.id}.${clip.id} target start`);
+      const mixEndSampleExclusive = sampleBoundary(clip.target.end, `${track.id}.${clip.id} target end`);
+      const fadeInSamples = sampleBoundary(addExactTemporalValues(clip.target.start, clip.fadeIn),
+        `${track.id}.${clip.id} fade in`) - mixStartSample;
+      const fadeOutSamples = mixEndSampleExclusive - sampleBoundary(
+        subtractExactTemporalValues(clip.target.end, clip.fadeOut), `${track.id}.${clip.id} fade out`);
+      return clip.sampling.stages[0]!.pieces.map((piece, pieceIndex) => {
+        const targetStart = sampleBoundary(addExactTemporalValues(clip.target.start, piece.target.start),
+          `${track.id}.${clip.id} piece ${pieceIndex} target start`);
+        const targetEnd = sampleBoundary(addExactTemporalValues(clip.target.start, piece.target.end),
+          `${track.id}.${clip.id} piece ${pieceIndex} target end`);
+        const sourceAtStart = sampleBoundary(piece.sourceAtStart,
           `${track.id}.${clip.id} piece ${pieceIndex} source start`);
         const wrap = piece.wrap;
         return {
         id: structuralId([...path, "clip", clip.id, "piece", String(pieceIndex)]),
-        artifact: {
-          kind: "blob" as const,
-          resource: clip.artifact.resource,
-          size: clip.artifact.size,
-          mediaType: clip.artifact.mediaType,
-        },
-        targetStartSample: clip.target.startSample + piece.target.startSample,
-        targetEndSampleExclusive: clip.target.startSample + piece.target.endSampleExclusive,
-        sourceSampleFrames: clip.sourceTime.sourceSampleFrames,
-        sourceStartSample: wrap?.startSample ?? sourceAtStart,
-        sourceEndSampleExclusive: wrap?.endSampleExclusive
-          ?? exactSourceEnd(piece.sourceAtStart, piece.rate, targetLength,
-            `${track.id}.${clip.id} piece ${pieceIndex} source end`),
-        sourceLoop: wrap !== undefined,
-        sourcePhaseSample: wrap === undefined ? 0 : sourceAtStart - wrap.startSample,
-        playbackRate: piece.rate.numerator / piece.rate.denominator,
-        mixStartSample: clip.target.startSample,
-        mixEndSampleExclusive: clip.target.endSampleExclusive,
+        inputId: structuralId([...path, "clip", clip.id]),
+        source: structuredClone(clip.source),
+        preparation: structuredClone(clip.preparation),
+        targetStartSample: targetStart,
+        targetEndSampleExclusive: targetEnd,
+        preparedSampleFrames: sampleBoundary(clip.preparation.stages[0]!.target.duration,
+          `${track.id}.${clip.id} prepared audio duration`),
+        preparedStartSample: wrap === undefined ? sourceAtStart
+          : sampleBoundary(wrap.start, `${track.id}.${clip.id} piece ${pieceIndex} wrap start`),
+        preparedEndSampleExclusive: wrap === undefined
+          ? sampleBoundary(sourceEnd(piece), `${track.id}.${clip.id} piece ${pieceIndex} source end`)
+          : sampleBoundary(wrap.end, `${track.id}.${clip.id} piece ${pieceIndex} wrap end`),
+        loop: wrap !== undefined,
+        loopPhaseSample: wrap === undefined ? 0 : sourceAtStart
+          - sampleBoundary(wrap.start, `${track.id}.${clip.id} piece ${pieceIndex} wrap phase`),
+        playbackRate: structuredClone(piece.rate),
+        mixStartSample,
+        mixEndSampleExclusive,
         gain: (() => {
           const gain = clip.gain * routeGain;
           assert(Number.isFinite(gain), `Audio clip ${track.id}.${clip.id} composed gain is not finite`);
           return gain;
         })(),
-        fadeInSamples: clip.fadeInSamples,
-        fadeOutSamples: clip.fadeOutSamples,
+        fadeInSamples,
+        fadeOutSamples,
         ...(clip.gainEnvelope === undefined ? {} : { gainEnvelope: clip.gainEnvelope }),
         ...(clip.audibility === undefined ? {} : { audibility: clip.audibility.flatMap((span) => {
-          const startSample = Math.max(span.startSample, clip.target.startSample + piece.target.startSample);
-          const endSampleExclusive = Math.min(span.endSampleExclusive, clip.target.startSample + piece.target.endSampleExclusive);
+          const startSample = Math.max(span.startSample, targetStart);
+          const endSampleExclusive = Math.min(span.endSampleExclusive, targetEnd);
           return endSampleExclusive <= startSample ? [] : [{ startSample, endSampleExclusive }];
         }) }),
       };
@@ -189,7 +215,6 @@ export function compileAudioProgram(composition: Composition, timeline: Timeline
     sampleRate: 48_000,
     sampleFrames: timelineFrameSampleBoundary(timeline, frameCount, 48_000),
     clips,
-    mix: { normalize: false, limiter: "none" },
   });
   verifyAudioProgram(program);
   return program;

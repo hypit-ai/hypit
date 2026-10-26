@@ -11,7 +11,6 @@ import type {
   CommandResult,
   Need,
   TypeRef,
-  Value,
 } from "@hypit/hypit/protocol";
 import { assertBuildId, normalizeValue, valueBlobRefs } from "@hypit/hypit/protocol";
 import { assertPublicationPlan } from "@hypit/hypit/result";

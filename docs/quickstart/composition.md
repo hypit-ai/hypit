@@ -36,7 +36,7 @@ Composition into a video.
 | `appearance` | yes | Film Recipe, including the clear color |
 
 Each `<film:Track>` accepts one VisualTrack or AudioTrack. Film does not discover sibling outputs.
-If one normalized source should contribute both picture and sound, author one Visual Clip and one
+If one PreparedMedia source should contribute both picture and sound, author one Visual Clip and one
 Audio Clip from that media; both resulting Tracks must then be selected here.
 
 Common outputs include:
@@ -171,5 +171,5 @@ hypit plan build.svrun
 `check` validates imports, types and graph edges without calling external services. `plan` compiles
 the selected Run and shows the Operations it would demand. Inspect that plan before paid execution.
 
-See [Timing & Assembly](./timing.md) for normalization, Timeline construction, media presentation and
+See [Timing & Assembly](./timing.md) for media preparation, Timeline construction, media presentation and
 semantic projection. See [Tracks](./tracks.md) for Visual and Audio authoring forms.

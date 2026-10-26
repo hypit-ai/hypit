@@ -1,10 +1,10 @@
 import { assertTimelineIdentity, timelineFrameCount } from "@hypit/timeline";
-import type { Timeline } from "@hypit/timeline";
+import type { FrameSpan, Timeline } from "@hypit/timeline";
 import {
   assertFontArtifactRef,
-  verifySynchronizedMedia,
+  verifyPreparedMedia,
 } from "@hypit/media";
-import type { SynchronizedMedia } from "@hypit/media";
+import type { PreparedMedia } from "@hypit/media";
 import { assertBlobRef, canonicalize } from "@hypit/hypit/protocol";
 import type { BlobRef } from "@hypit/hypit/protocol";
 import { verifyText } from "@hypit/hypit/text";
@@ -580,7 +580,7 @@ function assertWindowedRankingSchedule(value: TierBoardSchedule | ColumnSchedule
   assert(value.outer.endFrameExclusive > value.outer.startFrame, `${label}.outer is empty.`);
   assert(value.entries.length > 0, `${label}.entries is empty.`);
   const ids = new Set<string>();
-  const windows: Array<{ readonly itemId: string; readonly startFrame: number; readonly endFrameExclusive: number }> = [];
+  const windows: Array<FrameSpan & { readonly itemId: string }> = [];
   let tierRevealStarted = false;
   for (const [index, entry] of value.entries.entries()) {
     identity(entry.itemId, `${label}.entries.${index}.itemId`);
@@ -885,9 +885,9 @@ export function createRankingSoundSet(): RankingSoundSet {
   return {};
 }
 
-export function appendRankingSound(set: RankingSoundSet, kind: "appear" | "move", media: SynchronizedMedia): RankingSoundSet {
-  verifySynchronizedMedia(media);
-  assert(media.audio !== undefined, `Ranking ${kind} sound has no normalized audio.`);
+export function appendRankingSound(set: RankingSoundSet, kind: "appear" | "move", media: PreparedMedia): RankingSoundSet {
+  verifyPreparedMedia(media);
+  assert(media.audio !== undefined, `Ranking ${kind} sound has no selected audio member.`);
   assert(set[kind] === undefined, `Ranking ${kind} sound is already set.`);
   return canonicalize({ ...set, [kind]: structuredClone(media) }) as unknown as RankingSoundSet;
 }

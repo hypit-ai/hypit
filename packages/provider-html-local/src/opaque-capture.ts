@@ -2,25 +2,46 @@ import type { Page } from "puppeteer-core";
 
 /** The optional completion hooks supplied by the pinned HTML page runtime. */
 type RenderWindow = Window & {
-  __hypitFrameProgram: { prepare(): Promise<void>; applyFrame(frame: number): Promise<void> };
+  __hypitFrameProgram: {
+    prepare(spans?: readonly { readonly startFrame: number; readonly endFrameExclusive: number }[]): Promise<void>;
+    applyFrame(frame: number): Promise<void>;
+  };
   __hypitHtmlVisualError?: string;
   __hypitCaptureRoots?: readonly Element[];
+  __hypitPrepareImages(): Promise<void>;
+  __hypitDrawVideoSources?(sources: readonly SourceFrameUpdate[]): Promise<void>;
 };
 
-export type SourceFrameUpdate = { readonly id: string; readonly url: string };
+export type SourceFrameUpdate = {
+  readonly id: string;
+  readonly url: string;
+  readonly sample?:
+    | {
+        readonly kind: "frame";
+        readonly frame: number;
+        readonly fps: { readonly num: number; readonly den: number };
+        readonly streamIndex: number;
+        readonly reverse: boolean;
+      }
+    | {
+        readonly kind: "time";
+        readonly timestamp: number;
+        readonly streamIndex: number;
+        readonly reverse: boolean;
+      };
+};
 
-/**
- * Capture one already-composited page state as an opaque PNG. The Provider owns
- * the page ABI, exact source-frame overlays and CDP session directly; there is
- * no intermediate rendering engine or patched installed dependency.
- */
-export async function createOpaqueFrameCapture(page: Page, canvas: { readonly width: number; readonly height: number }) {
-  const cdp = await page.createCDPSession();
-  // MP4 has no alpha channel. The authored Canvas paints over this final matte.
-  await cdp.send("Emulation.setDefaultBackgroundColorOverride", { color: { r: 0, g: 0, b: 0, a: 1 } });
+/** Install page-owned readiness and prepare one deterministic frame state. */
+export async function createFramePreparer(page: Pick<Page, "evaluate">) {
   // Image readiness belongs to this page. A seek can select a new image through
   // attributes, a CSS class or a pseudo-element after initial page readiness.
   await page.evaluate(() => {
+    for (const video of Array.from(document.querySelectorAll<HTMLVideoElement>("video[data-hypit-source-frame]"))) {
+      video.dataset.hypitAuthoredVisibility = video.style.visibility;
+      video.dataset.hypitAuthoredDisplay = video.style.display;
+      video.style.visibility = "hidden";
+      video.style.display = "none";
+    }
     const decoded = new Map<string, Promise<void>>();
     const dirtyRoots = new Set<Element>();
     const animatedRoots = new Set<Element>();
@@ -238,15 +259,25 @@ export async function createOpaqueFrameCapture(page: Page, canvas: { readonly wi
     };
   });
   return async (frame: number, sources: readonly SourceFrameUpdate[] = []) => {
-    const start = performance.now();
-    await page.evaluate(async (input) => {
+    const started = performance.now();
+    const prepareMs = await page.evaluate(async (input) => {
       const w = window as unknown as RenderWindow;
+      const videos = Array.from(document.querySelectorAll<HTMLVideoElement>("video[data-hypit-source-frame]"));
+      // The decoded still stands in for the compiler-owned video element. Restore
+      // the authored box while the frame program runs so component code reads and
+      // writes its real layout, then remove that inert video from flow after the
+      // replacement has copied the resulting state.
+      for (const video of videos) {
+        video.style.visibility = video.dataset.hypitAuthoredVisibility ?? "";
+        video.style.display = video.dataset.hypitAuthoredDisplay ?? "";
+      }
       await w.__hypitFrameProgram.applyFrame(input.frame);
       const active = new Set(input.sources.map(source => source.id));
       for (const image of Array.from(document.querySelectorAll<HTMLImageElement>('[data-hypit-source-frame-image]'))) {
         if (!active.has(image.dataset.hypitSourceFrameImage!)) image.style.display = 'none';
       }
-      await Promise.all(input.sources.map(async source => {
+      if (w.__hypitDrawVideoSources !== undefined) await w.__hypitDrawVideoSources(input.sources);
+      else await Promise.all(input.sources.map(async source => {
         const video = document.getElementById(source.id) as HTMLVideoElement | null;
         if (video === null) throw new Error(`HTML Program source element ${source.id} is missing.`);
         let image = document.querySelector<HTMLImageElement>(`[data-hypit-source-frame-image="${CSS.escape(source.id)}"]`);
@@ -257,31 +288,50 @@ export async function createOpaqueFrameCapture(page: Page, canvas: { readonly wi
           video.insertAdjacentElement('afterend', image);
         }
         image.style.cssText = video.style.cssText;
-        image.style.visibility = video.dataset.hypitAuthoredVisibility ?? video.style.visibility;
+        image.style.visibility = video.style.visibility;
         image.style.display = video.style.display;
         image.width = video.width;
         image.height = video.height;
-        if (video.dataset.hypitAuthoredVisibility === undefined) {
-          video.dataset.hypitAuthoredVisibility = video.style.visibility;
-        }
-        video.style.visibility = 'hidden';
         if (image.src !== source.url) image.src = source.url;
         await image.decode();
       }));
-    }, { frame, sources });
-    const sought = performance.now();
-    await page.evaluate(async () => {
-      const w = window as unknown as RenderWindow & { __hypitPrepareImages: () => Promise<void> };
+      for (const video of videos) {
+        // This shared boundary is the sole owner of the temporary hidden state.
+        // A source adapter may read or copy the authored style above, but must
+        // not replace it before it is retained for the next absolute seek.
+        video.dataset.hypitAuthoredVisibility = video.style.visibility;
+        video.dataset.hypitAuthoredDisplay = video.style.display;
+        video.style.visibility = "hidden";
+        video.style.display = "none";
+      }
+      const prepareStarted = performance.now();
       await w.__hypitPrepareImages();
       if (w.__hypitHtmlVisualError !== undefined) throw new Error(w.__hypitHtmlVisualError);
-    });
-    const prepared = performance.now();
+      return performance.now() - prepareStarted;
+    }, { frame, sources });
+    return { seekMs: performance.now() - started - prepareMs, prepareMs };
+  };
+}
+
+/** Capture one prepared page state as an opaque PNG for the portable path or an authored frame result. */
+export async function createOpaqueFrameCapture(page: Page, canvas: { readonly width: number; readonly height: number },
+  matte: string) {
+  const cdp = await page.createCDPSession();
+  const match = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/iu.exec(matte);
+  if (match === null) throw new Error("HTML renderer matte must be an opaque hexadecimal color");
+  await cdp.send("Emulation.setDefaultBackgroundColorOverride", { color: {
+    r: Number.parseInt(match[1]!, 16), g: Number.parseInt(match[2]!, 16), b: Number.parseInt(match[3]!, 16), a: 1,
+  } });
+  const prepare = await createFramePreparer(page);
+  return async (frame: number, sources: readonly SourceFrameUpdate[] = []) => {
+    const timing = await prepare(frame, sources);
+    const started = performance.now();
     const result = await cdp.send("Page.captureScreenshot", {
       format: "png", optimizeForSpeed: true, fromSurface: true,
       captureBeyondViewport: false,
       clip: { x: 0, y: 0, width: canvas.width, height: canvas.height, scale: 1 },
     });
-    return { buffer: Buffer.from(result.data, "base64"),
-      seekMs: sought - start, prepareMs: prepared - sought, screenshotMs: performance.now() - prepared };
+    return { buffer: Buffer.from(result.data, "base64"), ...timing,
+      screenshotMs: performance.now() - started };
   };
 }

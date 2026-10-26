@@ -1,6 +1,7 @@
 import type { Narrative, NarrativeSegmentRef } from "@hypit/narrative";
 import type { NarrativeAlignment } from "@hypit/narrative-temporal";
 import type { SpeechTranscriptEvidence } from "@hypit/speech-evidence";
+import { resolveTemporalBoundary } from "@hypit/temporal";
 import type { LocalTemporalDomain } from "@hypit/temporal";
 
 import { locateAlignedSegmentTiming } from "./locate.js";
@@ -26,7 +27,7 @@ function segmentNarrative(narrative: Narrative, excerpt: NarrativeSegmentRef): N
   };
 }
 
-/** Align one normalized source locally without turning media into a semantic aggregate. */
+/** Align one acoustic evidence source locally without turning media into a semantic aggregate. */
 export function alignNarrative(
   narrative: Narrative,
   excerpt: NarrativeSegmentRef,
@@ -34,9 +35,15 @@ export function alignNarrative(
   evidence: SpeechTranscriptEvidence,
 ): NarrativeAlignment {
   const localNarrative = segmentNarrative(narrative, excerpt);
+  const evidenceClock = { frameRate: { numerator: 16_000, denominator: 1 } };
+  const expectedSamples = resolveTemporalBoundary(domain.duration, evidenceClock, "nearest");
+  if (evidence.sampleFrames !== expectedSamples) {
+    throw new Error("Speech evidence sample span differs from its local temporal domain.");
+  }
   const basis: AlignmentBasis = {
-    frameDomain: { frameRate: domain.frameRate, frameCount: domain.frameCount },
-    segments: [{ segmentId: excerpt.id, startFrame: 0, endFrameExclusive: domain.frameCount }],
+    timeBase: { numerator: 1, denominator: 16_000 },
+    unitCount: evidence.sampleFrames,
+    segments: [{ segmentId: excerpt.id, startUnit: 0, endUnitExclusive: evidence.sampleFrames }],
   };
   const timing = locateAlignedSegmentTiming(localNarrative, basis, evidence);
   return materializeNarrativeAlignment(localNarrative, {

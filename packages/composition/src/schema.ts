@@ -1,29 +1,24 @@
-import { compositableSurfaceSchema, fontArtifactSchema, mediaDependency } from "@hypit/media";
-import { timelineDependency } from "@hypit/timeline";
+import {
+  compositableSurfaceSchema,
+  fontArtifactSchema,
+  mediaDependency,
+  preparedAudioSourceSchema,
+  preparedVisualSourceSchema,
+} from "@hypit/media";
+import { frameSpanSchema, timelineDependency } from "@hypit/timeline";
+import { exactTemporalValueSchema, temporalDependency, temporalMapSchema } from "@hypit/temporal";
 import { blobRefSchema } from "@hypit/hypit/protocol";
 import type { ValueSchema } from "@hypit/hypit/protocol";
 import { VISUAL_IR_V1, VISUAL_STYLE_ENUM_VALUES_V1, VISUAL_STYLE_NAMES_V1 } from "./visual.js";
-export { mediaDependency, timelineDependency };
+export { mediaDependency, temporalDependency, timelineDependency };
 const string = { kind: "string", minLength: 1 } as const; const number = { kind: "number", minimum: 0 } as const;
 const integer = { kind: "number", integer: true, minimum: 0 } as const; const signedInteger = { kind: "number", integer: true } as const;
 const object = (
   fields: Readonly<Record<string, { readonly schema: ValueSchema; readonly optional?: boolean }>>,
   allowUnknown = false,
 ): ValueSchema => ({ kind: "object", fields, ...(allowUnknown ? { allowUnknown: true } : {}) });
-const audioBlobRef = blobRefSchema(["audio/wav"]);
 const mediaBlobRef = blobRefSchema();
 const positiveInteger = { kind: "number", integer: true, minimum: 1 } as const;
-const nonNegativeRational = object({ numerator: { schema: integer }, denominator: { schema: positiveInteger } });
-const signedRational = object({ numerator: { schema: signedInteger }, denominator: { schema: positiveInteger } });
-const sourceTimePiece = object({
-  target: { schema: object({ startFrame: { schema: integer }, endFrameExclusive: { schema: positiveInteger } }) },
-  sourceAtStart: { schema: nonNegativeRational }, rate: { schema: signedRational },
-  wrap: { schema: object({ startFrame: { schema: integer }, endFrameExclusive: { schema: positiveInteger } }), optional: true },
-});
-export const visualSourceTimeMapSchema = object({
-  sourceFrameRate: { schema: nonNegativeRational }, sourceFrameCount: { schema: positiveInteger },
-  pieces: { schema: { kind: "array", minItems: 1, items: sourceTimePiece } },
-});
 const styleDeclaration: ValueSchema = { kind: "oneOf", variants: VISUAL_STYLE_NAMES_V1.map((name) => object({
   name: { schema: { kind: "literal", value: name } }, value: { schema: Object.hasOwn(VISUAL_STYLE_ENUM_VALUES_V1, name)
     ? { kind: "string", enum: VISUAL_STYLE_ENUM_VALUES_V1[name as keyof typeof VISUAL_STYLE_ENUM_VALUES_V1] }
@@ -160,8 +155,8 @@ export const visualPathCommandSchema: ValueSchema = { kind: "oneOf", variants: [
 ] };
 const pathTextElement = object({ ...base, kind: { schema: { kind: "literal", value: "path-text" } }, document: { schema: visualTextDocumentSchema }, typography: { schema: visualTextTypographySchema }, paints: { schema: { kind: "array", items: visualTextPaintSchema } }, path: { schema: { kind: "array", minItems: 2, items: visualPathCommandSchema } }, side: { schema: enumString(["left", "right"]) }, orientation: { schema: enumString(["follow", "upright"]) }, startMarginPx: { schema: number }, endMarginPx: { schema: number }, align: { schema: enumString(["start", "center", "end"]) }, reverse: { schema: boolean }, overflow: { schema: enumString(["visible", "clip"]) }, sequences: { schema: { kind: "array", items: visualTextSequenceSchema } }, marginAnimation: { schema: object({ keyframes: { schema: { kind: "array", minItems: 2, items: object({ atFrame: { schema: integer }, startMarginPx: { schema: number }, easing: { schema: enumString(["linear", "ease-in", "ease-out", "ease-in-out"]), optional: true } }) } } }), optional: true } });
 export const visualImageSchema: ValueSchema = object({ ...base, kind: { schema: { kind: "literal", value: "image" } }, artifact: { schema: mediaBlobRef } });
-export const visualVideoSchema: ValueSchema = object({ ...base, kind: { schema: { kind: "literal", value: "video" } }, artifact: { schema: mediaBlobRef }, sourceTime: { schema: visualSourceTimeMapSchema }, muted: { schema: { kind: "boolean" }, optional: true } });
-export const visualSurfaceSchema: ValueSchema = object({ ...base, kind: { schema: { kind: "literal", value: "surface" } }, surface: { schema: compositableSurfaceSchema }, sourceTime: { schema: visualSourceTimeMapSchema, optional: true } });
+export const visualVideoSchema: ValueSchema = object({ ...base, kind: { schema: { kind: "literal", value: "video" } }, source: { schema: preparedVisualSourceSchema }, sampling: { schema: temporalMapSchema }, muted: { schema: { kind: "boolean" }, optional: true } });
+export const visualSurfaceSchema: ValueSchema = object({ ...base, kind: { schema: { kind: "literal", value: "surface" } }, surface: { schema: compositableSurfaceSchema }, sampling: { schema: temporalMapSchema, optional: true } });
 const visualProgramCarrierSchema = object({ format: { schema: string }, payload: { schema: object({}, true) }, artifacts: { schema: { kind: "array", items: mediaBlobRef } } });
 export const visualProgramSchema: ValueSchema = object({
   ...base,
@@ -170,8 +165,7 @@ export const visualProgramSchema: ValueSchema = object({
   slots: { schema: { kind: "array", items: object({ name: { schema: string }, element: { schema: visualNodeEnvelope } }) } },
 });
 export const visualElementSchema: ValueSchema = { kind: "oneOf", variants: [visualBoxSchema, visualMaskSchema, visualTextSchema, textFlowElement, pathTextElement, visualImageSchema, visualVideoSchema, visualSurfaceSchema, visualProgramSchema] };
-const span = object({ startFrame: { schema: integer }, endFrameExclusive: { schema: integer } });
-const visualItemBase = { id: { schema: string }, subjectId: { schema: string, optional: true }, span: { schema: span }, visibility: { schema: { kind: "array", items: span }, optional: true } } as const;
+const visualItemBase = { id: { schema: string }, subjectId: { schema: string, optional: true }, span: { schema: frameSpanSchema }, visibility: { schema: { kind: "array", items: frameSpanSchema }, optional: true } } as const;
 export const visualPresentSchema: ValueSchema = object({ ...visualItemBase, kind: { schema: { kind: "literal", value: "present" } }, root: { schema: visualElementSchema } });
 export const visualAdjustmentSchema: ValueSchema = object({ ...visualItemBase, kind: { schema: { kind: "literal", value: "adjustment" } }, program: { schema: visualProgramCarrierSchema } });
 export const visualItemSchema: ValueSchema = { kind: "oneOf", variants: [visualPresentSchema, visualAdjustmentSchema] };
@@ -183,20 +177,13 @@ export const audioGainEnvelopeSchema: ValueSchema = { kind: "array", minItems: 1
 const audioClip = object({
   id: { schema: string },
   subjectId: { schema: string, optional: true },
-  artifact: { schema: audioBlobRef },
-  target: { schema: audioSampleSpanSchema },
-  sourceTime: { schema: object({
-    sourceSampleFrames: { schema: { kind: "number", integer: true, minimum: 1 } },
-    pieces: { schema: { kind: "array", minItems: 1, items: object({
-      target: { schema: audioSampleSpanSchema },
-      sourceAtStart: { schema: object({ numerator: { schema: integer }, denominator: { schema: { kind: "number", integer: true, minimum: 1 } } }) },
-      rate: { schema: object({ numerator: { schema: { kind: "number", integer: true, minimum: 1 } }, denominator: { schema: { kind: "number", integer: true, minimum: 1 } } }) },
-      wrap: { schema: audioSampleSpanSchema, optional: true },
-    }) } },
-  }) },
+  source: { schema: preparedAudioSourceSchema },
+  preparation: { schema: temporalMapSchema },
+  target: { schema: object({ start: { schema: exactTemporalValueSchema }, end: { schema: exactTemporalValueSchema } }) },
+  sampling: { schema: temporalMapSchema },
   gain: { schema: { kind: "number", minimum: 0 } },
-  fadeInSamples: { schema: integer },
-  fadeOutSamples: { schema: integer },
+  fadeIn: { schema: exactTemporalValueSchema },
+  fadeOut: { schema: exactTemporalValueSchema },
   gainEnvelope: { schema: audioGainEnvelopeSchema, optional: true },
   audibility: { schema: { kind: "array", items: audioSampleSpanSchema }, optional: true },
 });

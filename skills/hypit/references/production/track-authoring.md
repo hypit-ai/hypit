@@ -123,7 +123,7 @@ the relevant implementation, rather than depending on a monorepo example directo
 When already selected by a project, `@hypit/interview-emoji-reveal` demonstrates persistent
 Moment-driven state and `@hypit/ranking` demonstrates reveal Windows and settled rows.
 `@hypit/visual-track` is the default example for ordinary Clip occurrences with independent Window,
-Frame, fit and source-time relations. Optional examples are evidence, not prerequisites.
+Frame, fit and temporal sampling relations. Optional examples are evidence, not prerequisites.
 
 Ranking's repository README links its implementation: `surface.ts` resolves authored time references,
 `fragment.ts` connects typed inputs, `schedule.ts` computes reveal and settled spans, `render.ts`

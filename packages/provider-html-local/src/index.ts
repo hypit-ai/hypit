@@ -2,7 +2,7 @@ export { createLocalHtmlProvider, localHtmlProviderModuleRef } from "./provider.
 export type {
   CreateLocalHtmlProviderOptions,
   HtmlBrowserGpu,
-  HtmlQuality,
+  HtmlRenderer,
   HtmlWorkers,
 } from "./provider.js";
 

@@ -1,4 +1,4 @@
-import { timelineTypes, timelineDependency } from "@hypit/timeline";
+import { frameSpanSchema, timelineTypes, timelineDependency } from "@hypit/timeline";
 import { temporalContextAttributeVocabulary } from "@hypit/temporal/markup";
 import { readFile } from "node:fs/promises";
 
@@ -53,11 +53,6 @@ const positiveInteger = { kind: "number", integer: true, minimum: 1 } as const;
 const object = (fields: Readonly<Record<string, { readonly schema: ValueSchema; readonly optional?: boolean }>>): ValueSchema => ({ kind: "object", fields });
 const enumString = (values: readonly string[]): ValueSchema => ({ kind: "string", enum: values });
 const blobRef = blobRefSchema();
-const duration: ValueSchema = { kind: "oneOf", variants: [
-  object({ unit: { schema: { kind: "literal", value: "frames" } }, value: { schema: integer } }),
-  object({ unit: { schema: { kind: "literal", value: "milliseconds" } }, value: { schema: integer } }),
-  object({ unit: { schema: { kind: "literal", value: "seconds" } }, numerator: { schema: integer }, denominator: { schema: positiveInteger } }),
-] };
 const textStyle = object({
   fonts: { schema: { kind: "array", minItems: 1, items: fontArtifactSchema } },
   sizePx: { schema: positive }, weight: { schema: positiveInteger }, lineHeight: { schema: positive }, color: { schema: string },
@@ -108,9 +103,8 @@ const itemSpec = object({
 
   id: { schema: string },
 });
-const frameSpan = object({ startFrame: { schema: unsignedInteger }, endFrameExclusive: { schema: positiveInteger } });
 const item = object({
-  id: { schema: string }, span: { schema: frameSpan },
+  id: { schema: string }, span: { schema: frameSpanSchema },
   frame: { schema: spatialFrameSchema }, style: { schema: style }, content: { schema: content },
   avatar: { schema: blobRef, optional: true },
 });

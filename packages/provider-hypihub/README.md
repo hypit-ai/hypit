@@ -93,7 +93,7 @@ For moving portraits, [Volcengine Matting](../volcengine-matting/README.md) maps
 `model: "matte-portrait-video"`, `ref_video_url` and `format` (`WEBM` by default, or `MOV`).
 Both formats carry transparency. The source video uses the same upload transport as other video
 references; the returned job uses the same polling and asset collection lifecycle. The selected
-account's `/v1/models` establishes availability. The processed video enters ordinary Normalize,
+account's `/v1/models` establishes availability. The processed video enters ordinary Prepare,
 then a Visual Clip or another ordinary media consumer; add semantic alignment separately when a
 Script relationship needs positions inside that performance.
 
@@ -160,6 +160,12 @@ Provider refreshes that value shortly before expiry or after an unauthorised res
 selected Store is writable. Its Endpoint receives only the credential slot it declared and a narrow
 operation for replacing that same slot; it cannot enumerate the Store, choose another key or read
 another Endpoint's credentials. A raw credential remains an ordinary static API key.
+
+One activated Provider instance owns one authentication session for that declared slot. Concurrent
+generation, transcription, upload and pricing calls therefore await the same refresh and reuse the
+rotated access token; they do not submit several refresh grants or compete to rewrite the Store.
+This session is process-local to the selected Provider instance, not a credential registry or a
+cross-host cache. Reconfiguring the Runtime reactivates the Provider.
 
 Refresh uses `oauthRequestTimeoutMs` during generation, transcription, uploads and pricing too.
 It completes before the subsequent API request starts its own deadline. A stalled refresh reports
@@ -228,7 +234,10 @@ admission budgets. Each accepts `concurrency` and `rate: { limit, periodMs }`, s
 These limits count lifecycle actions; Provider-specific upload parts and HTTP requests remain inside
 those actions. Synchronous speech and transcription retain their ordinary request capacity.
 
-A submission or collection error ends the local attempt. During polling, transport failures and HTTP
+A submission error before any remote acknowledgement ends the local attempt. Once a create response
+contains a job ID, the Provider checkpoints that handle and receipt before returning or interpreting
+later state; a subsequent local failure continues from that persisted job instead of submitting again.
+A collection error ends that action. During polling, transport failures and HTTP
 429/5xx preserve the same job handle and schedule another read; a standard `Retry-After` is honored,
 but the wake time never passes the original `operationTimeoutMs` deadline. Credential, response and
 other non-retryable errors still end the attempt. Known job IDs and credential references remain

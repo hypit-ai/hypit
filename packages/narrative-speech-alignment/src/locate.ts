@@ -1,11 +1,9 @@
 import type { Narrative, NarrativeToken } from "@hypit/narrative";
-import { clockFrameSampleBoundary } from "@hypit/timeline";
 import type { NarrativeAlignmentTiming } from "./types.js";
 import type {
   SpeechTranscriptEvidence,
   SpeechActivitySpan,
   SpeechCharacterEvidence,
-  SpeechTranscriptPassage,
   SpeechWordEvidence,
 } from "@hypit/speech-evidence";
 
@@ -18,28 +16,27 @@ export type LocalTimedSpeechToken = NarrativeAlignmentTiming["tokens"][number];
 export type LocalSemanticTimePoint = NarrativeAlignmentTiming["boundaries"][number];
 export type LocalSemanticTiming = NarrativeAlignmentTiming;
 
-/** Package-private clock used while aligning exactly one Segment's normalized media. */
+/** Package-private time grid used by the locator; the public Alignment stores exact time. */
 export type AlignmentBasis = {
-  readonly frameDomain: {
-    readonly frameRate: { readonly numerator: number; readonly denominator: number };
-    readonly frameCount: number;
-  };
+  /** Exact seconds represented by one private alignment unit. */
+  readonly timeBase: { readonly numerator: number; readonly denominator: number };
+  readonly unitCount: number;
   readonly segments: readonly [{
     readonly segmentId: string;
-    readonly startFrame: 0;
-    readonly endFrameExclusive: number;
+    readonly startUnit: 0;
+    readonly endUnitExclusive: number;
   }];
 };
 
-function alignmentFrameSampleBoundary(basis: AlignmentBasis, frame: number): number {
-  if (!Number.isSafeInteger(frame) || frame < 0 || frame > basis.frameDomain.frameCount) {
-    fail("SPEECH_FRAME", "Speech frame boundary is outside normalized media.");
+function alignmentUnitSampleBoundary(basis: AlignmentBasis, unit: number): number {
+  if (!Number.isSafeInteger(unit) || unit < 0 || unit > basis.unitCount) {
+    fail("SPEECH_GRID", "Speech alignment boundary is outside its private time grid.");
   }
-  try {
-    return clockFrameSampleBoundary(basis.frameDomain, frame, 16_000);
-  } catch {
-    fail("SPEECH_FRAME", "Speech sample domain exceeds safe arithmetic.");
-  }
+  const numerator = BigInt(unit) * 16_000n * BigInt(basis.timeBase.numerator);
+  const denominator = BigInt(basis.timeBase.denominator);
+  const sample = (numerator * 2n + denominator) / (denominator * 2n);
+  if (sample > BigInt(Number.MAX_SAFE_INTEGER)) fail("SPEECH_GRID", "Speech sample domain exceeds safe arithmetic.");
+  return Number(sample);
 }
 
 type MutableTiming = {
@@ -92,18 +89,18 @@ function validateSampleWindow(
 }
 
 function evidenceSampleFrames(basis: AlignmentBasis): number {
-  return alignmentFrameSampleBoundary(basis, basis.frameDomain.frameCount);
+  return alignmentUnitSampleBoundary(basis, basis.unitCount);
 }
 
 function validateBasis(narrative: Narrative, basis: AlignmentBasis): void {
-  const { numerator, denominator } = basis.frameDomain.frameRate;
+  const { numerator, denominator } = basis.timeBase;
   if (!Number.isSafeInteger(numerator) || numerator <= 0
     || !Number.isSafeInteger(denominator) || denominator <= 0) {
-    fail("SPEECH_FRAME_RATE", "Timeline frame rate must be a positive rational number.");
+    fail("SPEECH_GRID", "Speech alignment time base must be a positive rational number.");
   }
-  const frameCount = basis.frameDomain.frameCount;
+  const unitCount = basis.unitCount;
   if (narrative.segments.length !== 1 || basis.segments.length !== 1) {
-    fail("SPEECH_BASIS_SEGMENTS", "Speech alignment accepts normalized media for exactly one Segment.");
+    fail("SPEECH_BASIS_SEGMENTS", "Speech alignment accepts exactly one authored Segment.");
   }
   let previousEnd = 0;
   for (const [index, segment] of basis.segments.entries()) {
@@ -111,22 +108,22 @@ function validateBasis(narrative: Narrative, basis: AlignmentBasis): void {
     if (segment.segmentId !== expected.id) {
       fail("SPEECH_BASIS_SEGMENTS", `Alignment Segment ${segment.segmentId} does not match ${expected.id}.`);
     }
-    if (!Number.isSafeInteger(segment.startFrame) || !Number.isSafeInteger(segment.endFrameExclusive)
-      || segment.startFrame !== previousEnd || segment.endFrameExclusive <= segment.startFrame
-      || segment.endFrameExclusive > frameCount) {
-      fail("SPEECH_BASIS_SEGMENTS", `Alignment Segment ${segment.segmentId} has an invalid frame window.`);
+    if (!Number.isSafeInteger(segment.startUnit) || !Number.isSafeInteger(segment.endUnitExclusive)
+      || segment.startUnit !== previousEnd || segment.endUnitExclusive <= segment.startUnit
+      || segment.endUnitExclusive > unitCount) {
+      fail("SPEECH_BASIS_SEGMENTS", `Alignment Segment ${segment.segmentId} has an invalid unit window.`);
     }
-    previousEnd = segment.endFrameExclusive;
+    previousEnd = segment.endUnitExclusive;
   }
-  if (previousEnd !== frameCount) {
-    fail("SPEECH_BASIS_SEGMENTS", "Alignment Segments must cover Timeline exactly.");
+  if (previousEnd !== unitCount) {
+    fail("SPEECH_BASIS_SEGMENTS", "Alignment Segments must cover the private time grid exactly.");
   }
 }
 
 function validateEvidence(basis: AlignmentBasis, evidence: SpeechTranscriptEvidence): void {
   const limit = evidenceSampleFrames(basis);
   if (evidence.sampleFrames !== limit) {
-    fail("SPEECH_EVIDENCE_SPAN", "Aligned transcript evidence sample span differs from its local frame domain.");
+    fail("SPEECH_EVIDENCE_SPAN", "Aligned transcript evidence sample span differs from its alignment grid.");
   }
   for (const [passageIndex, passage] of evidence.passages.entries()) {
     validateSampleWindow(passage, limit, `Passage ${passageIndex + 1}`);
@@ -162,8 +159,8 @@ function partitionEvidence(
 ): readonly SegmentEvidence[] {
   const ranges = basis.segments.map((segment) => ({
     segment,
-    startSample: alignmentFrameSampleBoundary(basis, segment.startFrame),
-    endSampleExclusive: alignmentFrameSampleBoundary(basis, segment.endFrameExclusive),
+    startSample: alignmentUnitSampleBoundary(basis, segment.startUnit),
+    endSampleExclusive: alignmentUnitSampleBoundary(basis, segment.endUnitExclusive),
   }));
   const buckets = ranges.map(({ segment }) => ({
     sourceSegmentId: segment.segmentId,
@@ -347,8 +344,8 @@ function speechBounds(
         end: Math.max(...spans.map((span) => span.endSampleExclusive)),
       }
     : {
-        start: alignmentFrameSampleBoundary(basis, basisSegment.startFrame),
-        end: alignmentFrameSampleBoundary(basis, basisSegment.endFrameExclusive),
+        start: alignmentUnitSampleBoundary(basis, basisSegment.startUnit),
+        end: alignmentUnitSampleBoundary(basis, basisSegment.endUnitExclusive),
       };
 }
 
@@ -386,37 +383,37 @@ function fillMissingTiming(
   return values as MutableTiming[];
 }
 
-function floorFrameForEvidenceSample(basis: AlignmentBasis, sample: number): number {
-  const numerator = BigInt(sample) * BigInt(basis.frameDomain.frameRate.numerator);
-  const denominator = 16_000n * BigInt(basis.frameDomain.frameRate.denominator);
-  const frame = numerator / denominator;
-  if (frame > BigInt(Number.MAX_SAFE_INTEGER)) fail("SPEECH_FRAME", "Speech evidence exceeds the frame domain.");
-  return Number(frame);
+function floorUnitForEvidenceSample(basis: AlignmentBasis, sample: number): number {
+  const numerator = BigInt(sample) * BigInt(basis.timeBase.denominator);
+  const denominator = 16_000n * BigInt(basis.timeBase.numerator);
+  const unit = numerator / denominator;
+  if (unit > BigInt(Number.MAX_SAFE_INTEGER)) fail("SPEECH_GRID", "Speech evidence exceeds the alignment grid.");
+  return Number(unit);
 }
 
-function ceilFrameForEvidenceSample(basis: AlignmentBasis, sample: number): number {
-  const numerator = BigInt(sample) * BigInt(basis.frameDomain.frameRate.numerator);
-  const denominator = 16_000n * BigInt(basis.frameDomain.frameRate.denominator);
-  const frame = (numerator + denominator - 1n) / denominator;
-  if (frame > BigInt(Number.MAX_SAFE_INTEGER)) fail("SPEECH_FRAME", "Speech evidence exceeds the frame domain.");
-  return Number(frame);
+function ceilUnitForEvidenceSample(basis: AlignmentBasis, sample: number): number {
+  const numerator = BigInt(sample) * BigInt(basis.timeBase.denominator);
+  const denominator = 16_000n * BigInt(basis.timeBase.numerator);
+  const unit = (numerator + denominator - 1n) / denominator;
+  if (unit > BigInt(Number.MAX_SAFE_INTEGER)) fail("SPEECH_GRID", "Speech evidence exceeds the alignment grid.");
+  return Number(unit);
 }
 
-/** Project one completed sample timing onto every local video frame it touches. */
+/** Project one completed sample timing onto every private alignment unit it touches. */
 function projectSampleTiming(
   basis: AlignmentBasis,
   timing: MutableTiming,
-): { readonly startFrame: number; readonly endFrameExclusive: number } {
-  const frameCount = basis.frameDomain.frameCount;
-  const startFrame = Math.min(frameCount, floorFrameForEvidenceSample(basis, timing.startSample));
-  const endFrameExclusive = Math.min(
-    frameCount,
-    ceilFrameForEvidenceSample(basis, timing.endSampleExclusive),
+): { readonly startUnit: number; readonly endUnitExclusive: number } {
+  const unitCount = basis.unitCount;
+  const startUnit = Math.min(unitCount, floorUnitForEvidenceSample(basis, timing.startSample));
+  const endUnitExclusive = Math.min(
+    unitCount,
+    ceilUnitForEvidenceSample(basis, timing.endSampleExclusive),
   );
-  if (endFrameExclusive > startFrame) return { startFrame, endFrameExclusive };
+  if (endUnitExclusive > startUnit) return { startUnit, endUnitExclusive };
 
-  const containingFrame = Math.min(frameCount - 1, startFrame);
-  return { startFrame: containingFrame, endFrameExclusive: containingFrame + 1 };
+  const containingUnit = Math.min(unitCount - 1, startUnit);
+  return { startUnit: containingUnit, endUnitExclusive: containingUnit + 1 };
 }
 
 /** Locate every Script token from one provider-neutral acoustic evidence pass. */
@@ -450,21 +447,21 @@ export function locateAlignedSegmentTiming(
     timedTokens.push(...source.map((token, index): LocalTimedSpeechToken => {
       const timing = complete[index]!;
       const projected = projectSampleTiming(basis, timing);
-      const startFrame = Math.max(projected.startFrame, previousStart);
-      const endFrameExclusive = Math.max(projected.endFrameExclusive, previousEnd, startFrame + 1);
-      previousStart = startFrame;
-      previousEnd = endFrameExclusive;
+      const startUnit = Math.max(projected.startUnit, previousStart);
+      const endUnitExclusive = Math.max(projected.endUnitExclusive, previousEnd, startUnit + 1);
+      previousStart = startUnit;
+      previousEnd = endUnitExclusive;
       return {
         tokenId: token.id,
         segmentId: segment.id,
-        startFrame,
-        endFrameExclusive,
+        startUnit,
+        endUnitExclusive,
       };
     }));
     timedSegments.push({
       segmentId: segment.id,
-      startFrame: basisSegment.startFrame,
-      endFrameExclusive: basisSegment.endFrameExclusive,
+      startUnit: basisSegment.startUnit,
+      endUnitExclusive: basisSegment.endUnitExclusive,
     });
   }
 
@@ -474,13 +471,17 @@ export function locateAlignedSegmentTiming(
     if (anchor.kind === "segment-start" || anchor.kind === "segment-end") {
       const segment = segmentsById.get(anchor.segmentId)!;
       return [anchor.kind === "segment-start"
-        ? { id: anchor.id, frame: segment.startFrame }
-        : { id: anchor.id, frame: segment.endFrameExclusive }];
+        ? { id: anchor.id, unit: segment.startUnit }
+        : { id: anchor.id, unit: segment.endUnitExclusive }];
     }
     const token = tokensById.get(anchor.tokenId!)!;
     return [anchor.kind === "token-start"
-      ? { id: anchor.id, frame: token.startFrame }
-      : { id: anchor.id, frame: token.endFrameExclusive }];
+      ? { id: anchor.id, unit: token.startUnit }
+      : { id: anchor.id, unit: token.endUnitExclusive }];
   });
-  return { tokens: timedTokens, boundaries };
+  return {
+    timeBase: { ...basis.timeBase },
+    tokens: timedTokens,
+    boundaries,
+  };
 }

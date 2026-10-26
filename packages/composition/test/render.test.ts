@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { fixtureResource } from "../../../test/fixture-resource.js";
+import { frameSamplingMapFixture } from "../../../test/temporal-fixture.js";
 
 import {
   assertCompositableSurfaceRef,
@@ -103,23 +104,22 @@ test("exact fonts own font selection and cannot conflict with raw CSS font facts
   );
 });
 
-test("animated materialized Surfaces carry an explicit partial source-time function", () => {
-  const sourceTime = {
-    sourceFrameRate: { numerator: 30, denominator: 1 },
-    sourceFrameCount: 60,
-    pieces: [{
-      target: { startFrame: 0, endFrameExclusive: 60 },
+test("animated materialized Surfaces carry an explicit exact sampling relation", () => {
+  const sampling = frameSamplingMapFixture({
+    targetFrameRate: space.frameRate, targetFrames: 60,
+    sourceFrameRate: { numerator: 30, denominator: 1 }, sourceFrames: 60,
+    pieces: [{ target: { startFrame: 0, endFrameExclusive: 60 },
       sourceAtStart: { numerator: 0, denominator: 1 },
       rate: { numerator: 1, denominator: 1 },
     }],
-  } as const;
+  });
   const valid = sealPresentVisualTrack({ timelineId: "test-space",
     visualIr: "hypit.visual-ir@1",
     id: "surface-track",
     presents: [{
       id: "surface",
       span: { startFrame: 0, endFrameExclusive: 60 },
-      root: { id: "surface", kind: "surface", surface: animatedSurface, sourceTime, style: [] },
+      root: { id: "surface", kind: "surface", surface: animatedSurface, sampling, style: [] },
     }],
   });
   assert.doesNotThrow(() => assertCompositionIdentity(sealComposition({
@@ -148,7 +148,7 @@ test("animated materialized Surfaces carry an explicit partial source-time funct
     id: "invalid-surface-composition",
     canvas: { width: 1080, height: 1920, clearColor: "#000000" },
     visual: { members: [invalid].map(track => ({ kind: "track" as const, id: track.id, track })) }, audio: [],
-  }), space), /target interval is invalid/u);
+  }), space), /target domain differs from its occurrence/u);
 });
 
 test("a local mask owns exactly one mask root and one content root inside its Present", () => {

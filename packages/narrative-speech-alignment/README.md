@@ -1,9 +1,9 @@
 # `@hypit/narrative-speech-alignment`
 
-Provider-neutral deterministic timing locator for one authored Segment on a normalized local temporal
+Provider-neutral deterministic timing locator for one authored Segment on an exact local temporal
 domain. The package does not
 invoke Python, read audio, call a speech provider, use an LLM, infer speakers or retain multiple
-candidate paths. A runtime adapter preserves its raw provider artifact and supplies the normalized
+candidate paths. A runtime adapter preserves its raw provider artifact and supplies the provider-neutral
 word, character, score and speech-activity evidence used here in exact 16 kHz sample coordinates.
 
 This is an independently versioned and packaged algorithm, not a root SDK facade and not a WhisperX
@@ -16,12 +16,14 @@ sample span. A bounded monotonic M:N dynamic
 program accepts exact, split, merge, replacement, source-omission and evidence-insertion groups.
 Within a selected group, timed evidence characters determine Script token boundaries; word times
 and speech-activity bounds are fallbacks. Missing token runs receive continuous weighted windows
-between their measured neighbors instead of invented point timestamps. The result is quantized once
-into the supplied local frame domain and contains one timing for every Script token plus the Segment
-and token boundaries. Segment boundaries are exactly frame `0` and the local domain frame count.
+between their measured neighbors instead of invented point timestamps. The result preserves
+sample-derived boundaries as exact local time and contains one timing for every Script token plus the
+Segment and token boundaries. Segment boundaries are exactly local zero and the domain's exact
+duration. Quantization to frames happens later in Narrative Projection, after a Timeline Clock has
+been selected.
 
 The public Producer accepts Narrative, one Segment excerpt, its `LocalTemporalDomain` and
-`SpeechTranscriptEvidence` through explicit graph edges. It does not reopen `SynchronizedMedia` to
+`SpeechTranscriptEvidence` through explicit graph edges. It does not reopen `PreparedMedia` to
 recover audio or duration. Evidence carries a measured sample span but no local-domain or authored
 Segment identity; this deterministic step makes those associations explicitly and rejects a sample
 span that does not equal the supplied domain duration.
@@ -33,8 +35,7 @@ provider evidence and evidence imported from an editable `<speech:Transcript>` S
 `speechAlignmentComponent` exposes this Segment-local alignment as one enumerable deterministic Producer facet. Its
 identity is checked against `speechAlignmentManifest` and executes through the host-neutral compute
 port. Its graph boundary contains only Narrative, a local Temporal Domain, provider-neutral Evidence
-and NarrativeAlignment. Exact frame/sample conversion reuses Timeline's rational Clock arithmetic
-internally; the package has no Media, Driver, Provider, queue or credential authority.
+and NarrativeAlignment. The package has no Media, Driver, Provider, queue or credential authority.
 
 Caption display is outside this package. `@hypit/narrative-caption` combines an independently owned
 Caption document/binding with the resulting Narrative timing; it never asks this locator to infer
@@ -42,6 +43,6 @@ display text or display-unit timing.
 
 The result is the `@hypit/narrative-temporal` `NarrativeAlignment`, not media and not a Timeline.
 An explicit Narrative Projection from that package later combines one or more
-`NarrativeAlignment + LocalTemporalDomain + equal-length Window` relations for a chosen Timeline. Visual,
+`NarrativeAlignment + LocalTemporalDomain + placed Window` relations for a chosen Timeline. Visual,
 audio and caption consumers then request absolute Instants or Windows through that declared relation;
 Timeline and Core do not enumerate semantic event kinds.

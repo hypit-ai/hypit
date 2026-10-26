@@ -1,7 +1,6 @@
 import { sealPresentVisualTrack } from "@hypit/composition";
-import type { FrameSpan } from "@hypit/composition";
 import type { FontArtifactRef } from "@hypit/media";
-import type { Timeline } from "@hypit/timeline";
+import type { FrameSpan, Timeline } from "@hypit/timeline";
 import { VISUAL_IR_V1 } from "@hypit/composition";
 
 // The caller supplies its projected Window, resolved Frame and selected font faces.
@@ -29,9 +28,8 @@ export function renderCard(input: {
       id: `${input.id}-present`,
       subjectId: input.id,
       span: input.span,
-      order: 0,
-      elements: [{
-        kind: "box", id: root, order: 0,
+      root: {
+        kind: "box", id: root,
         style: [
           { name: "position", value: "absolute" },
           { name: "left", value: input.frame.x },
@@ -44,18 +42,19 @@ export function renderCard(input: {
           { atFrame: 0, style: [{ name: "opacity", value: 0 }] },
           { atFrame: entranceEnd, style: [{ name: "opacity", value: 1 }] },
         ] } } : {}),
-      }, {
-        kind: "text", id: `${input.id}-text`, parent: root, order: 1,
-        text: input.text, fonts: input.fonts,
-        style: [
-          { name: "position", value: "absolute" },
-          { name: "left", value: input.padding },
-          { name: "top", value: input.padding },
-          { name: "width", value: input.frame.width - 2 * input.padding },
-          { name: "color", value: input.textColor },
-          { name: "font-size", value: input.size },
-        ],
-      }],
+        children: [{
+          kind: "text", id: `${input.id}-text`,
+          text: input.text, fonts: input.fonts,
+          style: [
+            { name: "position", value: "absolute" },
+            { name: "left", value: input.padding },
+            { name: "top", value: input.padding },
+            { name: "width", value: input.frame.width - 2 * input.padding },
+            { name: "color", value: input.textColor },
+            { name: "font-size", value: input.size },
+          ],
+        }],
+      },
     }],
   });
 }

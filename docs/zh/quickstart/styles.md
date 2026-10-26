@@ -167,7 +167,7 @@ visual.product {
 | `fit` | `contain`、`cover`、`fit-width`、`fit-height`、`native`、`scale-down` 或 `stretch` |
 | `frame-x`、`frame-y` | 放置 Frame 内的对齐点 |
 | `content-x`、`content-y` | 素材内部独立选择的焦点 |
-| `source-time` / `Map` | 含时素材坐标的可复用或内联偏映射 |
+| `Map` 子节点 | 该 Clip occurrence 自有的含时素材坐标偏映射 |
 | `frame-paint` | 采样素材背后的纯色或渐变 Paint |
 | `clip`、`radius`、`padding` | 框裁切与内缩 |
 | `border-*`、`shadows` | 框自有的边框与有序阴影 |

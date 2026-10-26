@@ -1,5 +1,3 @@
-import type { HtmlFrameSpan } from "./types.js";
-
 /**
  * Page-local absolute-frame work lookup shared by HTML renderer runtime features.
  *
@@ -8,17 +6,24 @@ import type { HtmlFrameSpan } from "./types.js";
  * evaluators. Every render page derives and discards its own index.
  */
 export const frameSelectionRuntime = String.raw`
-const htmlRequestedFrameSpans = (() => {
-  const source = globalThis.__htmlRequestedFrameSpans;
-  if (source === undefined) return null;
+let htmlRequestedFrameSpans = null;
+let htmlFrameSelectionPrepared = false;
+const htmlFrameProgramInitializers = [];
+const htmlRegisterFrameProgramInitializer = (initializer) => {
+  if (htmlFrameSelectionPrepared) throw new Error('HTML Program runtime is already prepared.');
+  if (typeof initializer !== 'function') throw new Error('HTML Program initializer must be a function.');
+  htmlFrameProgramInitializers.push(initializer);
+};
+const htmlPrepareFrameSelection = (source) => {
+  if (htmlFrameSelectionPrepared) throw new Error('HTML Program runtime is already prepared.');
+  htmlFrameSelectionPrepared = true;
+  if (source === undefined) return;
   if (!Array.isArray(source)) throw new Error('HTML renderer requested frame spans must be an array.');
   let previousEnd = -1;
-  return Object.freeze(source.map((span) => {
-    if (!Array.isArray(span) || span.length !== 2) {
-      throw new Error('HTML renderer requested frame span must be a [start, end) pair.');
-    }
-    const startFrame = Number(span[0]);
-    const endFrameExclusive = Number(span[1]);
+  htmlRequestedFrameSpans = Object.freeze(source.map((span) => {
+    if (span === null || typeof span !== 'object') throw new Error('HTML renderer requested frame span must be an object.');
+    const startFrame = Number(span.startFrame);
+    const endFrameExclusive = Number(span.endFrameExclusive);
     if (!Number.isSafeInteger(startFrame) || !Number.isSafeInteger(endFrameExclusive)
       || startFrame < 0 || endFrameExclusive <= startFrame || startFrame < previousEnd) {
       throw new Error('HTML renderer requested frame spans must be ordered, disjoint and valid.');
@@ -26,7 +31,7 @@ const htmlRequestedFrameSpans = (() => {
     previousEnd = endFrameExclusive;
     return Object.freeze({ startFrame, endFrameExclusive });
   }));
-})();
+};
 const htmlSelectionOverlaps = (startFrame, endFrameExclusive) => {
   if (!Number.isSafeInteger(startFrame) || !Number.isSafeInteger(endFrameExclusive)
     || startFrame < 0 || endFrameExclusive <= startFrame) {
@@ -128,21 +133,3 @@ const htmlCreateFrameWorkIndex = (sourceEntries) => {
     },
   });
 };`;
-
-/**
- * A render-local hint installed before the compiled page runs. It describes
- * only absolute frame spans; worker assignment and capture machinery remain
- * private to the Provider.
- */
-export function htmlFrameSelectionPrelude(spans: readonly HtmlFrameSpan[]): string {
-  let previousEnd = -1;
-  const encoded = spans.map((span) => {
-    if (!Number.isSafeInteger(span.startFrame) || !Number.isSafeInteger(span.endFrameExclusive)
-      || span.startFrame < 0 || span.endFrameExclusive <= span.startFrame || span.startFrame < previousEnd) {
-      throw new Error("HTML renderer requested frame spans must be ordered, disjoint and valid.");
-    }
-    previousEnd = span.endFrameExclusive;
-    return [span.startFrame, span.endFrameExclusive];
-  });
-  return `Object.defineProperty(globalThis,"__htmlRequestedFrameSpans",{value:${JSON.stringify(encoded)},writable:false,configurable:false});`;
-}

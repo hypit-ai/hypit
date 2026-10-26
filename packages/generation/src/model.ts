@@ -9,9 +9,6 @@ import { sealGraphFragment } from "@hypit/hypit/author";
 import {
   bindGenerationMedia,
   bindGenerationText,
-  mediaBindingSchemaFromPort,
-  requestDraftSchemaFromPorts,
-  requestSchemaFromPorts,
   sealGenerationPortRequest,
   verifyGenerationMediaBinding,
   verifyRequestDraftAgainstPorts,
@@ -26,7 +23,7 @@ import type {
   GenerationMediaPort,
   GenerationPortTable,
 } from "./ports.js";
-import { generationModuleRef, generationProducers, generationTypes } from "./manifest.js";
+import { generationProducers, generationTypes } from "./manifest.js";
 import { textDependency, textTypes } from "@hypit/hypit/text";
 import type { Text } from "@hypit/hypit/text";
 import {
@@ -36,7 +33,6 @@ import {
   sameModule,
 } from "@hypit/hypit/protocol";
 import type {
-  CanonicalValue,
   CapabilityRef,
   ModuleManifest,
   ModuleRef,

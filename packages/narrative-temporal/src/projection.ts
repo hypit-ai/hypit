@@ -1,5 +1,5 @@
 import type { NarrativeSegmentRef, NarrativeMomentRef, NarrativeSelectionRef } from "@hypit/narrative";
-import { projectDomainFrame } from "@hypit/temporal";
+import { projectDomainPosition } from "@hypit/temporal";
 import type { LocalTemporalDomain, TemporalInstant, TemporalWindow } from "@hypit/temporal";
 import { assertTimelineIdentity, timelineFrameCount } from "@hypit/timeline";
 import type { Timeline } from "@hypit/timeline";
@@ -26,7 +26,7 @@ export function projectNarrativeAlignment(
     tokens: structuredClone(alignment.tokens),
     boundaries: alignment.boundaries.map((boundary) => ({
       id: boundary.id,
-      frame: projectDomainFrame(domain, window, timeline, boundary.frame),
+      frame: projectDomainPosition(domain, window, timeline, boundary.at),
     })),
   };
 }

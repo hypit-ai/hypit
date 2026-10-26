@@ -8,7 +8,7 @@ shared inputs.
 
 | Relationship | Starting point | Output |
 | --- | --- | --- |
-| Place an image, normalized video or surface | [Visual Clip](visual-clips.md) | VisualTrack |
+| Place an image, prepared video or surface | [Visual Clip](visual-clips.md) | VisualTrack |
 | Place speech, music, narration, ambience or effects | [Audio Clip](audio-clips.md) | AudioTrack |
 | Present Script display words at resolved Cue times | [Caption](caption-presentation.md) | package-owned VisualTrack |
 | Supply independent writing | [Typography/Text](fonts-and-text.md) | package-owned VisualTrack |
@@ -19,14 +19,14 @@ shared inputs.
 These are starting points, not a catalogue of visual roles. Images, text and video can share a scene
 when they share behavior.
 
-## Use synchronized media through independent occurrences
+## Use prepared media through independent occurrences
 
-Normalization can establish picture and sound streams on one local domain. Timeline may use its
+Preparation can establish picture and sound streams on one local domain. Timeline may use its
 Extent, while Visual and Audio Clips independently pair the media with an absolute Window:
 
 ```text
-normalized media + Window + visual sampling -> Visual Clip -> VisualTrack
-normalized media + Window + audio sampling  -> Audio Clip  -> AudioTrack
+prepared media + Window + visual sampling -> Visual Clip -> VisualTrack
+prepared media + Window + audio sampling  -> Audio Clip  -> AudioTrack
 ```
 
 This supports A-roll without coupling picture and sound. The picture can be covered or reframed

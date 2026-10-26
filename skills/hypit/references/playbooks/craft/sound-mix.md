@@ -36,7 +36,7 @@ When speech carries the idea, let the important words be readily understood in t
 Music and effects can yield around a name, number, claim, punchline or quiet reaction, then take
 more space in a pause or a passage led by action or music. Set that relationship through level,
 placement, fades, arrangement and the selected source, rather than assuming every moment needs the
-same balance. Normalization prepares a source; the audible balance is decided in the composition.
+same balance. Media preparation establishes the source domain; the audible balance is decided in the composition.
 
 Give each added sound an expressive reason. A comparison can share a motif; a reveal may earn one
 precise accent. A tactile process may be better carried by its small contact sounds than by a large

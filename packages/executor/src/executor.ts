@@ -258,7 +258,6 @@ export class Executor {
   }
 
   async #endpointEvent(
-    state: BuildState,
     executable: Extract<Executable, { readonly endpointId: string }>,
     value: Value,
   ): Promise<CommandResult> {
@@ -466,6 +465,10 @@ export class Executor {
         outcome = result.value;
       } else outcome = await invoke();
     } catch (error) {
+      const checkpointed = await operations.read(operation.id);
+      if (action === "submit" && (checkpointed?.status === "running" || checkpointed?.status === "collecting")) {
+        return checkpointed;
+      }
       return await operations.update(operation.id, {
         status: "failed", failure: { code: "ENDPOINT_ACTION_FAILED",
           message: `${action} failed: ${failureMessage(error)}` }, endedAt: Date.now(),
@@ -565,7 +568,7 @@ export class Executor {
         credentials: await this.#endpointCredentials(executable.registration),
         ...this.#endpointObservers(executable.endpointId, context),
       });
-      const event = await this.#endpointEvent(state, executable, result);
+      const event = await this.#endpointEvent(executable, result);
       await context?.recordExecution?.({ endpoint: executable.endpointId, kind: "completed" });
       return { status: "completed", event };
     } catch (error) {

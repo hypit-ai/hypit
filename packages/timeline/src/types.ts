@@ -11,7 +11,8 @@ export type Timeline = Clock & {
   readonly frameCount: number;
 };
 
-export type LocatedFrameSpan = {
+/** A half-open interval on one finite frame domain. */
+export type FrameSpan = {
   readonly startFrame: number;
   readonly endFrameExclusive: number;
 };

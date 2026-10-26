@@ -6,7 +6,6 @@ import {
 import type {
   VisualAnimation,
   VisualElement,
-  VisualSourceTimeMap,
   VisualStyleDeclaration,
   PresentVisualTrack,
   VisualPresentDraft,
@@ -14,13 +13,20 @@ import type {
 import {
   lowerVisualClipRoot,
   resolveMediaLayerPrograms,
-  resolveVisualSourceTime,
 } from "@hypit/visual-track";
 import type {
   VisualClipProgram,
   MediaSampleLayer,
 } from "@hypit/visual-track";
 import type { SpatialFrame } from "@hypit/spatial";
+import {
+  exactTemporalValueFromFrames,
+  moduloExactTemporalValue,
+  resolveTemporalRelation,
+  sealLocalTemporalDomain,
+  sealTemporalMap,
+} from "@hypit/temporal";
+import type { LocalTemporalDomain, TemporalMap } from "@hypit/temporal";
 
 import {
   assertDepthStackProgramIdentity,
@@ -32,10 +38,6 @@ import type {
   DepthStackPose,
   DepthStackProgram,
 } from "./types.js";
-
-function assert(condition: unknown, message: string): asserts condition {
-  if (!condition) throw new Error(message);
-}
 
 function px(value: number): string {
   return `${value}px`;
@@ -95,21 +97,10 @@ function rootBox(id: string, children: readonly VisualElement[], style: VisualSt
   };
 }
 
-function rational(numerator: number, denominator = 1) {
-  return { numerator, denominator };
-}
-
-function modulo(value: number, size: number): number {
-  return ((value % size) + size) % size;
-}
-
 function sourceTiming(layer: MediaSampleLayer): {
   readonly frameRate: { readonly numerator: number; readonly denominator: number };
   readonly frameCount: number;
 } | undefined {
-  if (layer.source.kind === "timed") {
-    return { frameRate: layer.source.frameRate, frameCount: layer.source.frameCount };
-  }
   if (layer.source.kind === "surface" && layer.source.surface.timing.kind === "frames") {
     return {
       frameRate: layer.source.surface.timing.frameRate,
@@ -119,43 +110,58 @@ function sourceTiming(layer: MediaSampleLayer): {
   return undefined;
 }
 
-function heldSourceTime(
-  timing: NonNullable<ReturnType<typeof sourceTiming>>,
-  targetFrames: number,
-  sourceFrame: number,
-): VisualSourceTimeMap {
-  return {
-    sourceFrameRate: { ...timing.frameRate },
-    sourceFrameCount: timing.frameCount,
-    pieces: [{
-      target: { startFrame: 0, endFrameExclusive: targetFrames },
-      sourceAtStart: rational(sourceFrame),
-      rate: rational(0),
-    }],
-  };
+function sourceDomain(layer: MediaSampleLayer): LocalTemporalDomain | undefined {
+  if (layer.source.kind === "timed") return layer.source.media.domain;
+  const timing = sourceTiming(layer);
+  if (timing === undefined) return undefined;
+  return sealLocalTemporalDomain({
+    id: `${layer.id}:surface`,
+    duration: exactTemporalValueFromFrames(timing.frameCount, { frameRate: timing.frameRate }),
+  });
 }
 
-function continuedSourceTime(input: {
-  readonly timing: NonNullable<ReturnType<typeof sourceTiming>>;
+function targetDomain(id: string, frames: number, timeline: Timeline): LocalTemporalDomain {
+  return sealLocalTemporalDomain({ id, duration: exactTemporalValueFromFrames(frames, timeline) });
+}
+
+function heldSampling(
+  id: string,
+  targetFrames: number,
+  sourceAtStart: import("@hypit/temporal").ExactTemporalValue,
+  timeline: Timeline,
+  source: LocalTemporalDomain,
+): TemporalMap {
+  const target = targetDomain(id, targetFrames, timeline);
+  return sealTemporalMap({ stages: [{ target, source, pieces: [{
+    target: { start: { ticks: "0", timeBase: { numerator: 1, denominator: 1 } }, end: target.duration },
+    sourceAtStart,
+    rate: { numerator: 0, denominator: 1 },
+  }] }] });
+}
+
+function continuedSampling(input: {
+  readonly id: string;
   readonly targetFrames: number;
   readonly absoluteStart: number;
   readonly activationFrame: number;
-}): VisualSourceTimeMap {
-  const length = input.timing.frameCount;
-  const phase = modulo(input.absoluteStart - input.activationFrame, length);
-  return {
-    sourceFrameRate: { ...input.timing.frameRate },
-    sourceFrameCount: input.timing.frameCount,
-    pieces: [{
-      target: { startFrame: 0, endFrameExclusive: input.targetFrames },
-      sourceAtStart: rational(phase),
-      rate: rational(1),
-      wrap: { startFrame: 0, endFrameExclusive: input.timing.frameCount },
+  readonly timeline: Timeline;
+  readonly source: LocalTemporalDomain;
+}): TemporalMap {
+  const target = targetDomain(input.id, input.targetFrames, input.timeline);
+  return sealTemporalMap({ stages: [{
+    target, source: input.source, pieces: [{
+      target: { start: { ticks: "0", timeBase: { numerator: 1, denominator: 1 } }, end: target.duration },
+      sourceAtStart: moduloExactTemporalValue(
+        exactTemporalValueFromFrames(input.absoluteStart - input.activationFrame, input.timeline),
+        input.source.duration,
+      ),
+      rate: { numerator: 1, denominator: 1 },
+      wrap: { start: { ticks: "0", timeBase: { numerator: 1, denominator: 1 } }, end: input.source.duration },
     }],
-  };
+  }] });
 }
 
-function sourceTimeFor(input: {
+function samplingFor(input: {
   readonly program: DepthStackProgram;
   readonly card: DepthStackCard;
   readonly layer: MediaSampleLayer;
@@ -163,35 +169,38 @@ function sourceTimeFor(input: {
   readonly stageStart: number;
   readonly stageDuration: number;
   readonly timeline: Timeline;
-}): VisualSourceTimeMap | undefined {
+}): TemporalMap | undefined {
   const timing = sourceTiming(input.layer);
-  if (timing === undefined) return undefined;
-  assert(timing.frameRate.numerator === input.timeline.frameRate.numerator
-    && timing.frameRate.denominator === input.timeline.frameRate.denominator,
-  `DepthStack Card ${input.card.id} timed material must be normalized to Timeline.`);
+  const source = sourceDomain(input.layer);
+  if (source === undefined) return undefined;
   if (input.relation === 0) {
-    if (input.layer.sourceTime?.kind === "map") return input.layer.sourceTime.value;
-    return resolveVisualSourceTime({
-      timeline: input.timeline,
-      sourceFrameRate: timing.frameRate,
-      sourceFrameCount: timing.frameCount,
-      targetFrameCount: input.stageDuration,
-      ...(input.layer.sourceTime?.kind !== "spec" ? {} : { spec: input.layer.sourceTime.value }),
+    if (input.layer.sampling?.kind === "map") return input.layer.sampling.value;
+    return resolveTemporalRelation({
+      target: targetDomain(`${input.card.id}:${input.layer.id}:stage`, input.stageDuration, input.timeline),
+      source,
+      clock: input.timeline,
+      ...(input.layer.sampling?.kind !== "relation" ? {} : { spec: input.layer.sampling.value }),
     });
   }
   const mode = input.relation > 0 ? input.card.playback.future : input.card.playback.past;
   if (mode === "continue") {
-    return continuedSourceTime({
-      timing,
+    return continuedSampling({
+      id: `${input.card.id}:${input.layer.id}:continue`,
       targetFrames: input.stageDuration,
       absoluteStart: input.stageStart,
       activationFrame: input.card.activationFrame,
+      timeline: input.timeline,
+      source,
     });
   }
-  return heldSourceTime(
-    timing,
+  return heldSampling(
+    `${input.card.id}:${input.layer.id}:hold`,
     input.stageDuration,
-    mode === "hold-tail" ? timing.frameCount - 1 : 0,
+    mode === "hold-tail"
+      ? timing === undefined ? source.duration : exactTemporalValueFromFrames(timing.frameCount - 1, { frameRate: timing.frameRate })
+      : { ticks: "0", timeBase: { numerator: 1, denominator: 1 } },
+    input.timeline,
+    source,
   );
 }
 
@@ -287,12 +296,12 @@ export function renderDepthStack(
         ...(newDepth === undefined ? {} : { newDepth }),
       });
       const relation = newDepth ?? (oldDepth === 0 ? -1 : oldDepth ?? 1);
-      const sourceTimeOverrides: Record<string, VisualSourceTimeMap> = {};
+      const samplingOverrides: Record<string, TemporalMap> = {};
       const samplingAnimationOverrides: Record<string, VisualAnimation | null> = {};
       for (const layer of card.material.layers) {
         if (layer.kind !== "sample") continue;
-        const sourceTime = sourceTimeFor({ program, card, layer, relation, stageStart, stageDuration, timeline });
-        if (sourceTime !== undefined) sourceTimeOverrides[layer.id] = sourceTime;
+        const sampling = samplingFor({ program, card, layer, relation, stageStart, stageDuration, timeline });
+        if (sampling !== undefined) samplingOverrides[layer.id] = sampling;
         if (relation !== 0 && layer.samplingMotion !== undefined) samplingAnimationOverrides[layer.id] = null;
       }
       const mediaItem: VisualClipProgram = {
@@ -303,9 +312,9 @@ export function renderDepthStack(
         treatment: structuredClone(program.spec.treatment),
         layers: resolveMediaLayerPrograms(card.material, localFrame(program.frame), program.spec.treatment),
       };
-      let material = lowerVisualClipRoot(mediaItem, timeline, {
+      let material = lowerVisualClipRoot(mediaItem, {
         poseAnimationOverride: null,
-        sourceTimeOverrides,
+        samplingOverrides,
         samplingAnimationOverrides,
       });
       const label = labelElement(card);

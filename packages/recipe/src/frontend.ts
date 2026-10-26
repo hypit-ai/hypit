@@ -11,7 +11,7 @@ export const recipeFrontend: AuthorFrontend = {
   discover() {
     return { modules: [moduleKey(recipeModuleRef)], sources: [] };
   },
-  decode(source, context) {
+  decode(source) {
     const parsed = parseRecipe(source.name, decodeSourceText(source));
     const records: TypedRecord[] = parsed.recipes.map((recipe) => ({
       id: recipe.value.path,

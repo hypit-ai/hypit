@@ -40,7 +40,7 @@ An upstream Narrative projection can publish `ranking` and `winner` from the rel
 Selection. When the performance changes, those projected Windows follow. Style defines how reveal
 and settling use the Window. TopThree instead accepts item `at` Instants and a terminal Instant.
 
-Each board publishes `.schedule`, `.program` and `.visual`. Optional normalized `appear-sound` or
+Each board publishes `.schedule`, `.program` and `.visual`. Optional prepared `appear-sound` or
 `move-sound` inputs add `.events` and `.audio` where that form supports them.
 The event plan drives the audio from the same appearance and movement timing
 as the visual animation. Include the wanted visual and audio

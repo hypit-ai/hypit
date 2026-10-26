@@ -1,4 +1,4 @@
-import type { FrameSpan } from "@hypit/composition";
+import type { FrameSpan } from "@hypit/timeline";
 import type { FontArtifactRef } from "@hypit/media";
 import type { BlobRef } from "@hypit/hypit/protocol";
 import type { SpatialFrame } from "@hypit/spatial";

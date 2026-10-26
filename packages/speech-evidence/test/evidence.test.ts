@@ -1,11 +1,10 @@
-import { timelineSampleFrames, sealTimeline } from "@hypit/timeline";
-import { sealSynchronizedMedia } from "@hypit/media";
+import { prepareMedia, preparedAudioSource } from "@hypit/media";
 import {
   assertSpeechEvidenceAudioIdentity,
   assertSpeechTranscriptEvidence,
   sealSpeechEvidenceAudio,
   sealSpeechTranscriptEvidence,
-  speechEvidenceSampleBoundary,
+  speechEvidenceSampleFrames,
   speechEvidenceProducers,
 } from "@hypit/speech-evidence";
 import assert from "node:assert/strict";
@@ -13,13 +12,13 @@ import test from "node:test";
 import { fixtureResource } from "../../../test/fixture-resource.js";
 import { speechEvidenceComponent } from "../src/component.js";
 
-test("speech evidence uses integer rational boundary projection rather than floating duration arithmetic", () => {
-  assert.equal(speechEvidenceSampleBoundary(0), 0);
-  assert.equal(speechEvidenceSampleBoundary(480_000), 160_000);
-  assert.equal(speechEvidenceSampleBoundary(480_001), 160_000);
-  assert.equal(speechEvidenceSampleBoundary(480_002), 160_001);
-  const ntsc = sealTimeline({ id: "test-space", frameCount: 30, frameRate: { numerator: 30_000, denominator: 1_001 } });
-  assert.equal(timelineSampleFrames(ntsc, 48_000), 48_048);
+test("speech evidence resolves exact local duration directly to its 16 kHz sample domain", () => {
+  assert.equal(speechEvidenceSampleFrames({ id: "one", duration: {
+    ticks: "480001", timeBase: { numerator: 1, denominator: 48000 },
+  } }), 160_000);
+  assert.equal(speechEvidenceSampleFrames({ id: "two", duration: {
+    ticks: "480002", timeBase: { numerator: 1, denominator: 48000 },
+  } }), 160_001);
 });
 
 test("SpeechEvidenceAudio carries only canonical bytes and their exact sample span", () => {
@@ -68,23 +67,32 @@ test("SpeechTranscriptEvidence validates the complete provider-neutral observati
   } as never), /word has unsupported field debug/u);
 });
 
-test("Speech Evidence projects canonical audio directly from normalized media", async () => {
+test("Speech Evidence projects only the selected audio source and its complete preparation relation", async () => {
   const project = speechEvidenceComponent.producers.find(
     (item) => item.producer.name === speechEvidenceProducers.projectAudio.name,
   )!;
-  const media = sealSynchronizedMedia({
-    frameDomain: { frameRate: { numerator: 30, denominator: 1 }, frameCount: 60 },
-    audio: { artifact: {
-      kind: "blob", resource: fixtureResource("speech-evidence:source"), size: 384_044, mediaType: "audio/wav",
-    } },
+  const source = {
+    kind: "blob" as const, resource: fixtureResource("speech-evidence:source"), size: 384_044, mediaType: "audio/wav",
+  };
+  const media = prepareMedia({
+    id: "speech",
+    source,
+    inspection: { container: { formatNames: ["wav"] }, streams: [{
+      kind: "audio", index: 0, codecType: "audio", codecName: "pcm_s16le",
+      disposition: { default: true, attachedPicture: false }, timingStatus: "admissible",
+      timeBase: { numerator: 1, denominator: 48_000 },
+      startPts: { ticks: "0", timeBase: { numerator: 1, denominator: 48_000 } },
+      endPts: { ticks: "96000", timeBase: { numerator: 1, denominator: 48_000 } },
+      decodedUnitCount: 96_000, sampleRate: 48_000, channels: 2, decodedSampleFrames: 96_000,
+    }] },
+    selection: { audioStreamIndex: 0, spanAuthority: "audio" },
   });
   const result = await project.handler({ inputs: {
     media: { value: (media) },
   } } as never);
   assert.equal(result.kind, "need");
   assert.deepEqual(result.constraints, {
-    source: media.audio!.artifact,
-    sourceSampleFrames: 96_000,
-    evidenceSampleFrames: 32_000,
+    source: preparedAudioSource(media),
+    preparation: media.audio!.map,
   });
 });

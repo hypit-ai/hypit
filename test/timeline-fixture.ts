@@ -2,6 +2,7 @@ import { sealTimeline } from "@hypit/timeline";
 import type { Timeline } from "@hypit/timeline";
 import { createNarrativeProjection, projectNarrativeAlignment } from "@hypit/narrative-temporal";
 import type { NarrativeProjection } from "@hypit/narrative-temporal";
+import { exactTemporalValueFromFrames } from "@hypit/temporal";
 
 type FixtureSegment = { readonly id: string; readonly frameCount: number };
 type FixtureAnchor = { readonly identity: string; readonly frame: number };
@@ -67,12 +68,15 @@ export function narrativeProjectionFixture(
     const startBoundaryId = `segment:${segment.id}:start`;
     const endBoundaryId = `segment:${segment.id}:end`;
     const boundaries = [
-      ...claimed.map((anchor) => ({ id: anchor.identity, frame: anchor.frame - startFrame })),
-      ...(claimed.some((anchor) => anchor.identity === startBoundaryId) ? [] : [{ id: startBoundaryId, frame: 0 }]),
-      ...(claimed.some((anchor) => anchor.identity === endBoundaryId) ? [] : [{ id: endBoundaryId, frame: segment.frameCount }]),
+      ...claimed.map((anchor) => ({ id: anchor.identity,
+        at: exactTemporalValueFromFrames(anchor.frame - startFrame, timeline) })),
+      ...(claimed.some((anchor) => anchor.identity === startBoundaryId) ? [] : [{ id: startBoundaryId,
+        at: exactTemporalValueFromFrames(0, timeline) }]),
+      ...(claimed.some((anchor) => anchor.identity === endBoundaryId) ? [] : [{ id: endBoundaryId,
+        at: exactTemporalValueFromFrames(segment.frameCount, timeline) }]),
     ];
     const domainId = `fixture:${segment.id}:domain`;
-    const domain = { id: domainId, frameRate: timeline.frameRate, frameCount: segment.frameCount };
+    const domain = { id: domainId, duration: exactTemporalValueFromFrames(segment.frameCount, timeline) };
     const window = {
       id: `fixture:${segment.id}:window`, subjectId: segment.id,
       start: { id: `fixture:${segment.id}:start`, subjectId: segment.id, timelineId: timeline.id, frame: startFrame },

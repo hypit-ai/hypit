@@ -1,13 +1,13 @@
-import type { FrameSpan, TriggerPoint, TriggeredSchedule } from "./types.js";
+import { assertFrameSpan } from "@hypit/timeline";
+import type { FrameSpan } from "@hypit/timeline";
+import type { TriggerPoint, TriggeredSchedule } from "./types.js";
 
 function assertFrame(frame: number, label: string): void {
   if (!Number.isSafeInteger(frame) || frame < 0) throw new Error(`${label} must be a non-negative frame.`);
 }
 
 function assertSpan(span: FrameSpan): void {
-  assertFrame(span.startFrame, "Triggered schedule outer start");
-  assertFrame(span.endFrameExclusive, "Triggered schedule outer end");
-  if (span.endFrameExclusive <= span.startFrame) throw new Error("Triggered schedule outer window is empty.");
+  assertFrameSpan(span);
 }
 
 export function resolveTriggeredSchedule(input: {

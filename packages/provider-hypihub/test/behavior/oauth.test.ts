@@ -4,7 +4,7 @@ import test from "node:test";
 import type { EndpointCredential } from "@hypit/endpoint";
 import { decodeOAuth2Credential, encodeOAuth2Credential } from "@hypit/runtime";
 
-import { createHypiHubAuth } from "../../src/oauth.js";
+import { createHypiHubAuth, createHypiHubAuthSession } from "../../src/oauth.js";
 
 test("HypiHub rotates OAuth through only its declared credential slot", async () => {
   let saved: string | undefined;
@@ -40,6 +40,37 @@ test("HypiHub rotates OAuth through only its declared credential slot", async ()
   assert.equal(decoded?.accessToken, "fresh-access");
   assert.equal(decoded?.refreshToken, "refresh-two");
   assert(decoded?.expiresAt !== undefined && decoded.expiresAt > Date.now());
+});
+
+test("one activated Provider credential session shares a concurrent OAuth refresh", async () => {
+  let refreshes = 0;
+  let replacements = 0;
+  let finishRefresh!: () => void;
+  const release = new Promise<void>((resolve) => { finishRefresh = resolve; });
+  const credential: EndpointCredential = {
+    secret: encodeOAuth2Credential({
+      accessToken: "expired-access",
+      refreshToken: "refresh-once",
+      expiresAt: 1,
+    }),
+    async replace() { replacements += 1; },
+  };
+  const session = createHypiHubAuthSession({
+    baseUrl: "https://hypit.ai/v1",
+    requestTimeoutMs: 1_000,
+    fetch: async () => {
+      refreshes += 1;
+      await release;
+      return Response.json({ access_token: "shared-access", expires_in: 3600 });
+    },
+  });
+
+  const tokens = Promise.all(Array.from({ length: 4 }, async () => await session.auth(credential).token()));
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  assert.equal(refreshes, 1);
+  finishRefresh();
+  assert.deepEqual(await tokens, Array(4).fill("shared-access"));
+  assert.equal(replacements, 1);
 });
 
 test("a static HypiHub API key remains an ordinary non-refreshing credential", async () => {

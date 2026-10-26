@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createResolvedClosure, link } from "@hypit/kernel";
 import { verifyGraphFragment } from "@hypit/author";
-import { temporalExtentFromDomain, temporalManifest } from "@hypit/temporal";
+import { exactTemporalValueFromFrames, temporalExtentFromDomain, temporalManifest } from "@hypit/temporal";
 import { timelineManifest } from "@hypit/timeline";
 
 import {
@@ -23,11 +23,11 @@ import {
 } from "@hypit/timeline-author";
 
 const clock = { frameRate: { numerator: 30, denominator: 1 } };
-const domain = { id: "voice", frameRate: clock.frameRate, frameCount: 90 };
+const domain = { id: "voice", duration: exactTemporalValueFromFrames(90, clock) };
 
 test("typed construction operations finalize Timeline before public values", () => {
   const start = constructionOrigin(clock);
-  const speech = constructionSpan(start, constructionResolvedExtent(clock, temporalExtentFromDomain(domain)));
+  const speech = constructionSpan(start, constructionResolvedExtent(clock, temporalExtentFromDomain(domain), "cover"));
   const tailStart = constructionOffset({ frame: speech.endFrameExclusive }, constructionDuration(clock, { unit: "frames", value: 12 }), { direction: 1 });
   const tail = constructionSpan(tailStart, constructionDuration(clock, { unit: "seconds", numerator: 3, denominator: 1 }));
   const timeline = finalizeTimeline({ id: "film" }, clock, constructionLatest({ frame: speech.endFrameExclusive }, { frame: tail.endFrameExclusive }));
@@ -50,6 +50,15 @@ test("construction rejects negative Point", () => {
   assert.throws(() => constructionOffset({ frame: 5 }, { frameCount: 6 }, { direction: -1 }), /before start/);
 });
 
+test("an exact media Extent resolves on the selected Clock with cover semantics", () => {
+  const extent = { duration: { ticks: "1", timeBase: { numerator: 1, denominator: 10 } } };
+  const ntsc = { frameRate: { numerator: 30_000, denominator: 1_001 } };
+  assert.deepEqual(constructionResolvedExtent(ntsc, extent, "cover"), { frameCount: 3 });
+  const timeline = finalizeTimeline({ id: "generated" }, ntsc,
+    constructionOffset(constructionOrigin(ntsc), constructionResolvedExtent(ntsc, extent, "cover"), { direction: 1 }));
+  assert.equal(timeline.frameCount, 3);
+});
+
 test("Surface planning lowers author Instants and Windows to typed graph operations", () => {
   const plan = compileTimelineAuthorFragment({
     id: "film",
@@ -67,6 +76,8 @@ test("Surface planning lowers author Instants and Windows to typed graph operati
   assert(plan.fragment.operations.some((item) => item.producer.name === "latest-point"));
   assert(plan.fragment.operations.some((item) => item.id === "decl:claim:point"));
   assert.deepEqual(plan.extentInputs, [{ name: "voice-extent", declarationId: "speech" }]);
+  assert.deepEqual(plan.inlineInputs.filter((item) => item.type.name === "ConstructionResolutionSpec")
+    .map((item) => item.value), [{ policy: "cover" }]);
   assert.deepEqual(plan.inlineInputs.flatMap((item) => item.author === undefined ? [] : [{
     binding: item.author.binding, declarationId: item.author.declarationId,
     expression: item.author.expression?.kind,

@@ -78,7 +78,7 @@ when the new material must preserve or transfer continuous temporal behavior tha
 authored components would lose. [Video direction](references/playbooks/craft/video-direction.md#let-footage-carry-temporal-behavior-that-matters)
 owns that decision and the distinction between understanding footage and using it as model input.
 
-A-roll names the performance carrying a passage. Its normalized Extent may construct Timeline and its
+A-roll names the performance carrying a passage. Its prepared Extent may construct Timeline and its
 local domain may project meaning. Place its picture through a Visual Clip or project scene, and its sound
 through an Audio Clip, each with an explicit absolute Window and sampling choice. Choose what leads the picture
 from the current idea. A direct cut or continuous movement can each express that change. Spatial
@@ -296,7 +296,7 @@ practical, revisit that choice and carry the improvement into the work and its n
 | imports, output references, literal values or Recipe rules | `references/production/source-syntax.md` |
 | choosing an existing Prompt Kit, assembling its wording or authoring a new one | `references/production/prompt-kits.md` |
 | Run syntax, material Targets, Candidates, Run Fragments or reusing produced media | `references/production/runs.md` |
-| supplying or reusing images/video/audio, model references, normalization, local domains, NarrativeAlignment, trims or processed variants | `references/production/media.md` |
+| supplying or reusing images/video/audio, model references, preparation, local domains, NarrativeAlignment, trims or processed variants | `references/production/media.md` |
 | placing independent images, prepared video or surfaces and choosing source playback | `references/production/visual-clips.md` |
 | placing independent music, narration, ambience or effects and selecting source playback | `references/production/audio-clips.md` |
 | downloading a reference or source video from a link with yt-dlp | `references/production/video-downloads.md` |

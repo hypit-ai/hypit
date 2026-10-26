@@ -1,8 +1,9 @@
 import {
   assertCompositableSurfaceRef,
-  verifySynchronizedMedia,
+  preparedVisualExtent,
+  verifyPreparedMedia,
 } from "@hypit/media";
-import type { CompositableSurfaceRef, SynchronizedMedia } from "@hypit/media";
+import type { CompositableSurfaceRef, PreparedMedia } from "@hypit/media";
 import { assertBlobRef, canonicalize } from "@hypit/hypit/protocol";
 import type { BlobRef } from "@hypit/hypit/protocol";
 import {
@@ -11,6 +12,7 @@ import {
   assertSpatialMap2D,
 } from "@hypit/spatial";
 import type { ContentFit, IntrinsicExtent, SpatialMap2D } from "@hypit/spatial";
+import { assertTemporalMap, assertTemporalRelationSpec, defaultTemporalRelationSpec } from "@hypit/temporal";
 
 import type {
   MediaGradientStop,
@@ -23,7 +25,6 @@ import type {
   MediaSamplingMotion,
   MediaVisualSource,
 } from "./types.js";
-import { assertVisualSourceTimeSpec, defaultVisualSourceTimeSpec } from "./source-time.js";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -112,10 +113,11 @@ export function assertMediaVisualSource(value: MediaVisualSource, label: string)
     return;
   }
   assert(value.kind === "timed", `${label}.kind is unsupported.`);
-  assertBlob(value.artifact, `${label}.artifact`, "video/");
-  assert(Number.isSafeInteger(value.frameRate.numerator) && value.frameRate.numerator > 0
-    && Number.isSafeInteger(value.frameRate.denominator) && value.frameRate.denominator > 0
-    && Number.isSafeInteger(value.frameCount) && value.frameCount > 0, `${label} timing is invalid.`);
+  verifyPreparedMedia(value.media);
+  assert(value.media.visual !== undefined, `${label}.media has no visual member.`);
+  const expected = preparedVisualExtent(value.media);
+  assert(value.extent.widthPx === expected.widthPx && value.extent.heightPx === expected.heightPx,
+    `${label} extent disagrees with its prepared visual interpretation.`);
 }
 
 export function assertMediaSampleLayerSpec(value: MediaSampleLayerSpec): void {
@@ -128,7 +130,7 @@ export function assertMediaSampleLayerSpec(value: MediaSampleLayerSpec): void {
   finite(filter.saturation, "MediaSampleLayerSpec.filter.saturation");
   assert(filter.blurPx >= 0 && filter.brightness >= 0 && filter.contrast >= 0 && filter.saturation >= 0,
     "MediaSampleLayerSpec filter values must be non-negative.");
-  if (value.sourceTime !== undefined) assertVisualSourceTimeSpec(value.sourceTime, "MediaSampleLayerSpec.sourceTime");
+  if (value.sampling !== undefined) assertTemporalRelationSpec(value.sampling, "MediaSampleLayerSpec.sampling");
   if (value.samplingMotion !== undefined) assertMediaSamplingMotion(value.samplingMotion, "MediaSampleLayerSpec.samplingMotion");
 }
 
@@ -172,21 +174,21 @@ export function assertMediaLayerSet(value: MediaLayerSet): void {
     else if (layer.placement.kind === "mapping") assertSpatialMap2D(layer.placement.mapping);
     else assert(false, `Media layer ${layer.id} placement is unsupported.`);
     if (layer.source.kind === "still") {
-      assert(layer.sourceTime === undefined, `Still Media layer ${layer.id} cannot have source time.`);
+      assert(layer.sampling === undefined, `Still Media layer ${layer.id} cannot have temporal sampling.`);
     } else {
-      const frames = layer.source.kind === "timed"
-        ? layer.source.frameCount
-        : layer.source.surface.timing.kind === "frames" ? layer.source.surface.timing.frameCount : undefined;
-      if (frames === undefined) {
-        assert(layer.sourceTime === undefined, `Still Surface layer ${layer.id} cannot have source time.`);
+      const timed = layer.source.kind === "timed"
+        || layer.source.surface.timing.kind === "frames";
+      if (!timed) {
+        assert(layer.sampling === undefined, `Still Surface layer ${layer.id} cannot have temporal sampling.`);
       } else {
-        assert(layer.sourceTime !== undefined, `Timed Media layer ${layer.id} requires source time.`);
-        if (layer.sourceTime.kind === "spec") assertVisualSourceTimeSpec(layer.sourceTime.value, `Media layer ${layer.id}.sourceTime`);
+        assert(layer.sampling !== undefined, `Timed Media layer ${layer.id} requires temporal sampling.`);
+        if (layer.sampling.kind === "relation") assertTemporalRelationSpec(layer.sampling.value, `Media layer ${layer.id}.sampling`);
+        else assertTemporalMap(layer.sampling.value);
       }
     }
     assertMediaSampleLayerSpec({
       id: layer.id,
-      ...(layer.sourceTime?.kind !== "spec" ? {} : { sourceTime: layer.sourceTime.value }),
+      ...(layer.sampling?.kind !== "relation" ? {} : { sampling: layer.sampling.value }),
       appearance: layer.appearance,
       ...(layer.samplingMotion === undefined ? {} : { samplingMotion: layer.samplingMotion }),
     });
@@ -220,7 +222,7 @@ function sampleLayer(
     kind: "sample",
     source: structuredClone(source),
     placement: structuredClone(placement),
-    ...(spec.sourceTime === undefined ? {} : { sourceTime: { kind: "spec", value: structuredClone(spec.sourceTime) } as const }),
+    ...(spec.sampling === undefined ? {} : { sampling: { kind: "relation", value: structuredClone(spec.sampling) } as const }),
     appearance: structuredClone(spec.appearance),
     ...(spec.samplingMotion === undefined ? {} : { samplingMotion: structuredClone(spec.samplingMotion) }),
   };
@@ -236,7 +238,7 @@ export function appendStillMediaLayer(
 ): MediaLayerSet {
   assertBlob(source, "Still Media source", "image/");
   assertIntrinsicExtent(extent);
-  assert(spec.sourceTime === undefined, "Still Media source cannot have source time.");
+  assert(spec.sampling === undefined, "Still Media source cannot have temporal sampling.");
   return append(set, sampleLayer(
     { kind: "still", artifact: structuredClone(source), extent: { ...extent } },
     { kind: "fit", fit: structuredClone(fit) }, spec,
@@ -253,7 +255,7 @@ export function appendMappedStillMediaLayer(
   assertBlob(source, "Still Media source", "image/");
   assertIntrinsicExtent(extent);
   assertSpatialMap2D(mapping);
-  assert(spec.sourceTime === undefined, "Still Media source cannot have source time.");
+  assert(spec.sampling === undefined, "Still Media source cannot have temporal sampling.");
   return append(set, sampleLayer(
     { kind: "still", artifact: structuredClone(source), extent: { ...extent } },
     { kind: "mapping", mapping: structuredClone(mapping) }, spec,
@@ -262,47 +264,40 @@ export function appendMappedStillMediaLayer(
 
 export function appendTimedMediaLayer(
   set: MediaLayerSet,
-  media: SynchronizedMedia,
+  media: PreparedMedia,
   fit: ContentFit,
   spec: MediaSampleLayerSpec,
 ): MediaLayerSet {
-  verifySynchronizedMedia(media);
-  assert(media.visual !== undefined, "Timed Media source has no normalized visual member.");
+  verifyPreparedMedia(media);
+  assert(media.visual !== undefined, "Prepared Media source has no visual member.");
   const source: MediaVisualSource = {
     kind: "timed",
-    artifact: structuredClone(media.visual.artifact),
-    extent: {
-      widthPx: media.visual.width,
-      heightPx: media.visual.height,
-    },
-    frameRate: { ...media.frameDomain.frameRate },
-    frameCount: media.frameDomain.frameCount,
+    media: structuredClone(media),
+    extent: preparedVisualExtent(media),
   };
   return append(set, sampleLayer(source, { kind: "fit", fit: structuredClone(fit) }, {
     ...spec,
-    sourceTime: spec.sourceTime ?? defaultVisualSourceTimeSpec(),
+    sampling: spec.sampling ?? defaultTemporalRelationSpec(),
   }));
 }
 
 export function appendMappedTimedMediaLayer(
   set: MediaLayerSet,
-  media: SynchronizedMedia,
+  media: PreparedMedia,
   mapping: SpatialMap2D,
   spec: MediaSampleLayerSpec,
 ): MediaLayerSet {
-  verifySynchronizedMedia(media);
-  assert(media.visual !== undefined, "Timed Media source has no normalized visual member.");
+  verifyPreparedMedia(media);
+  assert(media.visual !== undefined, "Prepared Media source has no visual member.");
   assertSpatialMap2D(mapping);
   const source: MediaVisualSource = {
     kind: "timed",
-    artifact: structuredClone(media.visual.artifact),
-    extent: { widthPx: media.visual.width, heightPx: media.visual.height },
-    frameRate: { ...media.frameDomain.frameRate },
-    frameCount: media.frameDomain.frameCount,
+    media: structuredClone(media),
+    extent: preparedVisualExtent(media),
   };
   return append(set, sampleLayer(source, { kind: "mapping", mapping: structuredClone(mapping) }, {
     ...spec,
-    sourceTime: spec.sourceTime ?? defaultVisualSourceTimeSpec(),
+    sampling: spec.sampling ?? defaultTemporalRelationSpec(),
   }));
 }
 
@@ -315,11 +310,11 @@ export function appendSurfaceMediaLayer(
   assertCompositableSurfaceRef(surface);
   let effectiveSpec = spec;
   if (surface.timing.kind === "frames") {
-    effectiveSpec = spec.sourceTime === undefined
-      ? sealMediaSampleLayerSpec({ ...spec, sourceTime: defaultVisualSourceTimeSpec() })
+    effectiveSpec = spec.sampling === undefined
+      ? sealMediaSampleLayerSpec({ ...spec, sampling: defaultTemporalRelationSpec() })
       : spec;
   } else {
-    assert(spec.sourceTime === undefined, "Still Media Surface cannot have source time.");
+    assert(spec.sampling === undefined, "Still Media Surface cannot have temporal sampling.");
   }
   return append(set, sampleLayer({
     kind: "surface",
@@ -338,11 +333,11 @@ export function appendMappedSurfaceMediaLayer(
   assertSpatialMap2D(mapping);
   let effectiveSpec = spec;
   if (surface.timing.kind === "frames") {
-    effectiveSpec = spec.sourceTime === undefined
-      ? sealMediaSampleLayerSpec({ ...spec, sourceTime: defaultVisualSourceTimeSpec() })
+    effectiveSpec = spec.sampling === undefined
+      ? sealMediaSampleLayerSpec({ ...spec, sampling: defaultTemporalRelationSpec() })
       : spec;
   } else {
-    assert(spec.sourceTime === undefined, "Still Media Surface cannot have source time.");
+    assert(spec.sampling === undefined, "Still Media Surface cannot have temporal sampling.");
   }
   return append(set, sampleLayer({
     kind: "surface",

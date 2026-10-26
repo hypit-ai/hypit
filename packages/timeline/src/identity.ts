@@ -1,4 +1,4 @@
-import type { Clock, Timeline } from "./types.js";
+import type { Clock, FrameSpan, Timeline } from "./types.js";
 
 export function sealClock(value: Clock): Clock {
   assertClockIdentity(value);
@@ -56,4 +56,23 @@ export function clockFrameSampleBoundary(clock: Clock, frame: number, sampleRate
   const value = (numerator * 2n + denominator) / (denominator * 2n);
   if (value < 0n || value > BigInt(Number.MAX_SAFE_INTEGER)) throw new Error("Timeline sample domain exceeds safe arithmetic.");
   return Number(value);
+}
+
+export function assertFrameSpan(value: unknown, frameCount?: number): asserts value is FrameSpan {
+  const span = value as FrameSpan | undefined;
+  if (span === null || typeof span !== "object"
+    || !Number.isSafeInteger(span.startFrame) || span.startFrame < 0
+    || !Number.isSafeInteger(span.endFrameExclusive) || span.endFrameExclusive <= span.startFrame
+    || (frameCount !== undefined && span.endFrameExclusive > frameCount)) {
+    throw new Error("Frame span must satisfy 0 <= startFrame < endFrameExclusive <= frameCount");
+  }
+}
+
+/** Quantize a selected span as a new zero-based sample interval on the same Clock. */
+export function clockFrameSpanSamples(span: FrameSpan, clock: Clock, sampleRate: number) {
+  assertFrameSpan(span);
+  const startSample = clockFrameSampleBoundary(clock, span.startFrame, sampleRate);
+  const sampleFrames = clockFrameSampleBoundary(clock,
+    span.endFrameExclusive - span.startFrame, sampleRate);
+  return { startSample, endSampleExclusive: startSample + sampleFrames, sampleFrames };
 }

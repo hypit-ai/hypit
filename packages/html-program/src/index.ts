@@ -9,11 +9,10 @@ export {
   htmlProgramProducers,
   htmlProgramTypes,
 } from "./manifest.js";
-export { htmlRasterRequest, verifyHtmlRasterRequest, htmlFrameRequest, verifyHtmlFrameRequest, verifyHtmlFrameImages } from "./execution.js";
+export { htmlRasterRequest, verifyHtmlRasterRequest, htmlFrameRequest, verifyHtmlFrameRequest, verifyHtmlFrameImages, verifyHtmlFrameImagesForRequest } from "./execution.js";
 export type { HtmlRasterRequest, HtmlFrameRequest, HtmlFrameImages } from "./execution.js";
 export type * from "./types.js";
 export { htmlVisual, HTML_VISUAL_FORMAT } from "./html-visual.js";
 export type { HtmlVisual } from "./html-visual.js";
 export { htmlAdjustment, readHtmlAdjustment, HTML_ADJUSTMENT_FORMAT } from "./html-adjustment.js";
 export type { HtmlAdjustment } from "./html-adjustment.js";
-export { htmlFrameSelectionPrelude } from "./frame-work.js";

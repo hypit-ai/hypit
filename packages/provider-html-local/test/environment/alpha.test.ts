@@ -10,11 +10,12 @@ import { appendVisualClip, appendTimedMediaLayer, createMediaLayerSet, createVis
   finalizeVisualTrack, projectVisualTrack, sealVisualClipSpec, sealMediaSampleLayerSpec,
   sealVisualTrackHeader } from "@hypit/visual-track";
 import { projectProgramWindow } from "../../../../test/temporal-fixture.js";
-import { MemoryResourceStore, ffmpegBytes, normalizeTestVideo, transparentVideoFixture, writeTestArtifact } from "../../../../test/alpha-video-fixture.js";
+import { MemoryResourceStore, ffmpegBytes, prepareTestVideo, transparentVideoFixture, writeTestArtifact } from "../../../../test/alpha-video-fixture.js";
 import sharp from "sharp";
 import { rasterizeHtmlProgram, rasterizeHtmlFrames } from "../../src/index.js";
+import { htmlProviderDelivery, htmlProviderPicture } from "../provider-scenario.js";
 
-test("transparent normalized media composites through an explicit Visual Clip in Chrome", {
+test("transparent Prepared Media composites through an explicit Visual Clip in Chrome and Electron", {
   skip: process.env.HYPIT_BROWSER_TESTS !== "1",
 }, async () => {
   const directory = process.env.HYPIT_ALPHA_PROOF_DIR ?? await mkdtemp(join(tmpdir(), "hypit-alpha-render-"));
@@ -23,12 +24,12 @@ test("transparent normalized media composites through an explicit Visual Clip in
     const resources = new MemoryResourceStore();
     const fixture = await transparentVideoFixture(directory, "webm");
     const source = await resources.put(fixture.bytes, fixture.mediaType);
-    const media = await normalizeTestVideo(resources, source, true);
-    const broll = await normalizeTestVideo(resources, source, false);
+    const media = await prepareTestVideo(resources, source, true, "speech");
+    const broll = await prepareTestVideo(resources, source, false, "broll");
     const fit = { sizing: "contain" as const, framePoint: { x: 0.5, y: 0.5 }, contentPoint: { x: 0.5, y: 0.5 },
       offsetPx: { x: 0, y: 0 }, constraint: "bounded" as const };
     const frame = { xPx: 0, yPx: 0, widthPx: 96, heightPx: 64 };
-    const space = sealTimeline({ id: "film", frameRate: media.frameDomain.frameRate, frameCount: media.frameDomain.frameCount });
+    const space = sealTimeline({ id: "film", frameRate: { numerator: 12, denominator: 1 }, frameCount: 12 });
     const header = sealVisualTrackHeader({ id: "broll" });
     const layers = appendTimedMediaLayer(createMediaLayerSet(), broll, fit, sealMediaSampleLayerSpec({ id: "cutout",
       appearance: { opacity: 1, filter: { blurPx: 0, brightness: 1, contrast: 1, saturation: 1 } },
@@ -54,7 +55,8 @@ test("transparent normalized media composites through an explicit Visual Clip in
     const brollVisual = projectVisualTrack(space, finalizeVisualTrack(items, header, space));
     const document = compileHtmlProgram(sealComposition({ id: "alpha-proof",
       canvas: { width: 192, height: 64, clearColor: "#143cdc" }, visual: { members: [speechVisual, brollVisual].map(track => ({ kind: "track" as const, id: track.id, track })) }, audio: [] }), space);
-    const rendered = await rasterizeHtmlProgram({ program: document }, { resources, workers: 2, quality: "high", processTimeoutMs: 120_000 });
+    const rendered = await rasterizeHtmlProgram({ program: document, delivery: htmlProviderDelivery("high") },
+      { resources, workers: 2, processTimeoutMs: 120_000 });
     const video = await writeTestArtifact(resources, rendered.artifact, join(directory, "speech-and-broll.mp4"));
     const pixels = ffmpegBytes(["-i", video, "-pix_fmt", "rgb24", "-f", "rawvideo", "pipe:1"]);
     assert.equal(pixels.length, 192 * 64 * 3 * 12);
@@ -67,9 +69,10 @@ test("transparent normalized media composites through an explicit Visual Clip in
       close(pixel(f, left + 32, 32), [240, 20, 20]);
       close(pixel(f, left + 60, 32), [130, 40, 120]);
     }
-    const snapshots = await rasterizeHtmlFrames({ program: document, frames: [0, 11] }, { resources, workers: 2 });
-    for (const snapshot of snapshots) {
-      const pixels = await sharp((await resources.get(snapshot.resource))!).removeAlpha().raw().toBuffer();
+    const snapshots = await rasterizeHtmlFrames({ program: document, picture: htmlProviderPicture(),
+      frames: [0, 11] }, { resources, workers: 2 });
+    for (const snapshot of snapshots.frames) {
+      const pixels = await sharp((await resources.get(snapshot.artifact.resource))!).removeAlpha().raw().toBuffer();
       const at = (x: number, y: number) => [...pixels.subarray((y * 192 + x) * 3, (y * 192 + x) * 3 + 3)];
       for (const left of [0, 96]) {
         close(at(left + 4, 4), [20, 60, 220]);
@@ -79,6 +82,25 @@ test("transparent normalized media composites through an explicit Visual Clip in
     }
     close(pixel(0, 18, 32), [240, 20, 20]);
     close(pixel(11, 18, 32), [20, 60, 220]);
+    if (process.env.HYPIT_TEST_ELECTRON_PATH !== undefined) {
+      const electronRendered = await rasterizeHtmlProgram({ program: document, delivery: htmlProviderDelivery("high") }, {
+        renderer: "electron", electronPath: process.env.HYPIT_TEST_ELECTRON_PATH,
+        resources, workers: 1, processTimeoutMs: 120_000,
+      });
+      const electronVideo = await writeTestArtifact(resources, electronRendered.artifact,
+        join(directory, "speech-and-broll-electron.mp4"));
+      const electronPixels = ffmpegBytes(["-i", electronVideo, "-pix_fmt", "rgb24", "-f", "rawvideo", "pipe:1"]);
+      assert.equal(electronPixels.length, pixels.length);
+      const electronPixel = (f: number, x: number, y: number) => [...electronPixels.subarray(
+        ((f * 64 + y) * 192 + x) * 3, ((f * 64 + y) * 192 + x) * 3 + 3)];
+      for (let f = 0; f < 12; f++) for (const left of [0, 96]) {
+        close(electronPixel(f, left + 4, 4), [20, 60, 220]);
+        close(electronPixel(f, left + 32, 32), [240, 20, 20]);
+        close(electronPixel(f, left + 60, 32), [130, 40, 120]);
+      }
+      close(electronPixel(0, 18, 32), [240, 20, 20]);
+      close(electronPixel(11, 18, 32), [20, 60, 220]);
+    }
   } finally {
     if (process.env.HYPIT_ALPHA_PROOF_DIR === undefined) await rm(directory, { recursive: true, force: true });
   }

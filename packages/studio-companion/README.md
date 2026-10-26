@@ -104,8 +104,8 @@ The port must exist in the Surface's public output mappings; inventing a port na
 does not make an internal Producer value observable. `requiredReferencedValue(context, input, type)`
 instead follows one exact typed author reference, such as a CaptionDocument.
 
-`project` returns `StudioItemDraft[]`. Each Item has an id, authored identity, display title and
-ordered layers, `startFrame`, `endFrameExclusive` and `stackOrder`. Useful optional fields include:
+`project` returns `StudioItemDraft[]`. Each Item composes Timeline's half-open `FrameSpan` with an id,
+authored identity, display title, ordered layers and `stackOrder`. Useful optional fields include:
 
 | Field/helper | Purpose |
 | --- | --- |

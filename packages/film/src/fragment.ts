@@ -1,7 +1,6 @@
 import { sealGraphFragment } from "@hypit/hypit/author";
 import type { FragmentOperation } from "@hypit/hypit/author";
 import { compositionTypes } from "@hypit/composition";
-import type { Track } from "@hypit/composition";
 import { spatialTypes } from "@hypit/spatial";
 import { timelineTypes } from "@hypit/timeline";
 

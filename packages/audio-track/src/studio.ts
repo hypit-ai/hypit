@@ -22,7 +22,7 @@ function projectAudio(context: StudioTrackCompanionContext) {
     endFrameExclusive: clip.window.endFrameExclusive,
     stackOrder: Number.MIN_SAFE_INTEGER,
     sourceTypes: [audioTrackTypes.clipSpec],
-    preview: artifactPreview("audio", clip.source.artifact.resource),
+    preview: artifactPreview("audio", clip.source.media.source.resource),
   }));
   return childItems(context, clips, "audio-clip", "standard").map((item, index) => {
     const clip = clips[index]!;
@@ -49,7 +49,6 @@ export const audioTrackStudioTrackCompanions: readonly StudioTrackCompanion[] = 
   icon: "waveform",
   bindings: [
     { name: "source" },
-    { name: "source-time" },
     { name: "gain", writable: true, fallback: audioClipDefaults.gain },
     { name: "fade-in", writable: true, fallback: audioClipDefaults["fade-in"] },
     { name: "fade-out", writable: true, fallback: audioClipDefaults["fade-out"] },

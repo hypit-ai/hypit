@@ -30,12 +30,6 @@ function text(element: StructuredElement, name: string, fallback?: string): stri
   if (typeof value !== "string" || !value.trim()) throw new Error(`${element.name}.${name} must be text.`);
   return value.trim();
 }
-function optionalText(element: StructuredElement, name: string): string | undefined {
-  const value = element.attributes[name];
-  if (value === undefined) return undefined;
-  if (typeof value !== "string" || !value.trim()) throw new Error(`${element.name}.${name} must be text.`);
-  return value.trim();
-}
 function reference(
   raw: MarkupAttributeValue | undefined,
   label: string,

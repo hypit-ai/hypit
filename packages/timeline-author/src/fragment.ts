@@ -142,8 +142,10 @@ export function compileTimelineAuthorFragment(options: TimelineAuthorFragmentOpt
       inputs.push({ name, type: temporalTypes.extent });
       extentInputs.push({ name, declarationId });
     }
+    const resolution = addInline(timelineAuthorTypes.resolution, { policy: "cover" }, "extent-resolution");
     return addOperation({ id: `decl:${declarationId}:extent`, producer: timelineAuthorProducers.resolvedExtent,
-      inputs: { clock: input("clock"), extent: input(name) }, result: { kind: "output" as const, name: "extent" } });
+      inputs: { clock: input("clock"), extent: input(name), resolution },
+      result: { kind: "output" as const, name: "extent" } });
   };
   const declarationExtent = (declaration: Extract<TimelineAuthorDeclaration, { readonly kind: "window" }>): FragmentOperationRef => {
     if (declaration.duration !== undefined) return durationExtent(declaration.duration,

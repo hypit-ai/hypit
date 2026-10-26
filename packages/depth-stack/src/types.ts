@@ -1,10 +1,10 @@
 import type {
-  FrameSpan,
   VisualTextDocument,
   VisualTextFlow,
   VisualTextPaintLayer,
   VisualTextTypography,
 } from "@hypit/composition";
+import type { FrameSpan } from "@hypit/timeline";
 import type {
   VisualFrameTreatment,
   MediaLayerSet,

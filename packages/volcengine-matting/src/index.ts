@@ -39,8 +39,8 @@ export const portraitMattingSurface = {
       { name: "format", kind: "literal" as const, required: false, values: ["WEBM", "MOV"],
         summary: "Transparent output container; defaults to WEBM." },
     ],
-    ports: [{ name: "video", type: blobTypes.blob, summary: "The processed video Artifact, before normalization." }],
+    ports: [{ name: "video", type: blobTypes.blob, summary: "The processed video Artifact, before media preparation." }],
     example: '<matte:Portrait id="cutout" source={performance.video}/>',
-    notes: ["The source determines duration and dimensions. Normalize the output before using it in a track."],
+    notes: ["The source determines duration and dimensions. Prepare the output before using it in a track."],
   },
 };

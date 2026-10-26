@@ -13,8 +13,10 @@ import {
 
 import { createLocalHtmlProvider } from "./provider.js";
 import { configuredBrowserPath, browserExecutablePath, selectedBrowserVersion } from "./browser.js";
-import type { HtmlBrowserGpu, HtmlQuality, HtmlWorkers } from "./provider.js";
-import { localHtmlBrowserProgram } from "./program.js";
+import type { HtmlBrowserGpu, HtmlWorkers } from "./provider.js";
+import { localHtmlRendererProgram } from "./program.js";
+import { electronExecutablePath, selectedHtmlRenderer } from "./electron.js";
+import type { ElectronOptions, HtmlRenderer } from "./electron.js";
 
 const localHTMLRuntimeAdapter = createRuntimeEndpointAdapterFacet({
   use: "@hypit/provider-html-local",
@@ -22,7 +24,7 @@ const localHTMLRuntimeAdapter = createRuntimeEndpointAdapterFacet({
     if (context.pool === undefined) throw new Error("local HTML renderer Provider Pool is required");
     const config = runtimeConfigObject(context.config, "local HTML renderer");
     runtimeConfigExact(config, [
-      "nodePath", "chromePath", "browserVersion", "browserCacheDirectory", "browserDownloadBaseUrl", "ffprobePath", "ffmpegPath", "workers", "maxWorkers", "quality", "browserGpu",
+      "nodePath", "renderer", "electronPath", "chromePath", "browserVersion", "browserCacheDirectory", "browserDownloadBaseUrl", "ffprobePath", "ffmpegPath", "workers", "maxWorkers", "browserGpu",
       "defaultConcurrency", "browserCapacity", "initializationTimeoutMs", "frameTimeoutMs", "processTimeoutMs", "maxProcessOutputBytes", "artifactStagingConcurrency", "maxPendingFrameBytes", "maxDecodedSourceBytes", "maxRenderedBytes",
     ], "local HTML renderer");
     runtimeConfigString(config.nodePath, "HTML renderer nodePath");
@@ -31,15 +33,22 @@ const localHTMLRuntimeAdapter = createRuntimeEndpointAdapterFacet({
     if (workers !== undefined && workers !== "auto") {
       runtimeConfigPositiveInteger(workers, "HTML renderer workers");
     }
-    const quality = runtimeConfigString(config.quality, "HTML renderer quality");
-    if (quality !== undefined && quality !== "draft" && quality !== "standard" && quality !== "high") {
-      throw new Error("HTML renderer quality is invalid");
-    }
     const browserGpu = runtimeConfigString(config.browserGpu, "HTML renderer browserGpu");
     if (browserGpu !== undefined && browserGpu !== "auto" && browserGpu !== "software" && browserGpu !== "hardware") {
       throw new Error("HTML renderer browserGpu is invalid");
     }
     const configuredNode = runtimeConfigString(config.nodePath, "HTML renderer nodePath");
+    const renderer = runtimeConfigString(config.renderer, "HTML renderer renderer");
+    if (renderer !== undefined && renderer !== "chromium" && renderer !== "electron") {
+      throw new Error("HTML renderer renderer must be chromium or electron");
+    }
+    const configuredElectron = runtimeConfigString(config.electronPath, "HTML renderer electronPath");
+    const electron: ElectronOptions = {
+      ...(renderer === undefined ? {} : { renderer: renderer as HtmlRenderer }),
+      ...(configuredElectron === undefined ? {} : { electronPath: resolve(context.dataRoot, configuredElectron) }),
+    };
+    const selectedRenderer = selectedHtmlRenderer(electron);
+    const selectedElectron = electronExecutablePath(electron);
     const configuredChrome = runtimeConfigString(config.chromePath, "HTML renderer chromePath");
     const browserVersion = runtimeConfigString(config.browserVersion, "HTML renderer browserVersion");
     const browserDownloadBaseUrl = runtimeConfigString(config.browserDownloadBaseUrl, "HTML renderer browserDownloadBaseUrl");
@@ -48,6 +57,7 @@ const localHTMLRuntimeAdapter = createRuntimeEndpointAdapterFacet({
       chromePath: resolve(context.dataRoot, configuredChrome),
     }) });
     const browser = {
+      ...electron,
       ...(browserVersion === undefined ? {} : { browserVersion }),
       ...(browserDownloadBaseUrl === undefined ? {} : { browserDownloadBaseUrl }),
       ...(chromePath === undefined ? {} : { chromePath }),
@@ -79,7 +89,6 @@ const localHTMLRuntimeAdapter = createRuntimeEndpointAdapterFacet({
         ffmpegPath,
         ...(workers === undefined ? {} : { workers: workers as HtmlWorkers }),
         ...(maxWorkers === undefined ? {} : { maxWorkers }),
-        ...(quality === undefined ? {} : { quality: quality as HtmlQuality }),
         ...(browserGpu === undefined ? {} : { browserGpu: browserGpu as HtmlBrowserGpu }),
         ...(defaultConcurrency === undefined ? {} : { defaultConcurrency }),
         ...(browserCapacity === undefined ? {} : { browserCapacity }),
@@ -92,7 +101,7 @@ const localHTMLRuntimeAdapter = createRuntimeEndpointAdapterFacet({
         ...(maxDecodedSourceBytes === undefined ? {} : { maxDecodedSourceBytes }),
         ...(maxRenderedBytes === undefined ? {} : { maxRenderedBytes }),
       }),
-      program: localHtmlBrowserProgram({
+      program: localHtmlRendererProgram({
         id: context.instance,
         nodePath,
         ...browser,
@@ -100,8 +109,11 @@ const localHTMLRuntimeAdapter = createRuntimeEndpointAdapterFacet({
         ffmpegPath,
       }),
       diagnose: async () => [
-        { severity: "info", code: "HTML_BROWSER_SELECTION", subject: context.instance,
-          message: `${chromePath === undefined ? `Managed Chrome Headless Shell ${selectedBrowserVersion(browser)} (${browserVersion === undefined ? "Provider recommendation" : "Profile version"})` : "Profile browser"}: ${browserExecutablePath(browser)}` },
+        ...(selectedRenderer === "electron"
+          ? [{ severity: "info" as const, code: "HTML_RENDERER_SELECTION", subject: context.instance,
+            message: `Electron shared-texture renderer: ${selectedElectron}` }]
+          : [{ severity: "info" as const, code: "HTML_RENDERER_SELECTION", subject: context.instance,
+            message: `${chromePath === undefined ? `Managed Chrome Headless Shell ${selectedBrowserVersion(browser)} (${browserVersion === undefined ? "Provider recommendation" : "Profile version"})` : "Profile browser"}: ${browserExecutablePath(browser)}` }]),
         ...await diagnoseRuntimeExecutable({ root: context.dataRoot, configured: configuredFfmpeg, fallback: "ffmpeg", subject: "FFmpeg" }),
         ...await diagnoseRuntimeExecutable({
           root: context.dataRoot,

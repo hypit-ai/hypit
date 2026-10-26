@@ -1,4 +1,5 @@
 import type { CanonicalValue } from "@hypit/hypit/protocol";
+import type { FrameSpan } from "@hypit/timeline";
 
 /** One author-visible word surface. Punctuation owned by the surface is preserved. */
 export type CaptionDisplayWord = {
@@ -61,10 +62,8 @@ export type CaptionProgram = {
   readonly uses: readonly CaptionUse[];
 };
 
-export type CaptionTimingUnit = {
+export type CaptionTimingUnit = FrameSpan & {
   readonly unitId: string;
-  readonly startFrame: number;
-  readonly endFrameExclusive: number;
 };
 
 export type CaptionTiming = {

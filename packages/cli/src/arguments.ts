@@ -476,15 +476,6 @@ function optionalPackageRoot(options: RawOptions): { readonly packageRoot?: stri
   return options.packageRoot === undefined ? {} : { packageRoot: options.packageRoot };
 }
 
-function rejectDuplicateProfile(command: "runtime" | "programs", profile: string | undefined, option: string | undefined): void {
-  if (profile !== undefined && option !== undefined) {
-    const detail = command === "runtime"
-      ? "accepts the Runtime Profile either positionally or with --runtime, not both"
-      : "reads all deployment selection from the Runtime Profile itself; provide that Profile only once";
-    throw new Error(`${command} ${detail}`);
-  }
-}
-
 export function usage(): string {
   return [
     "usage: hypit <command> [options]",

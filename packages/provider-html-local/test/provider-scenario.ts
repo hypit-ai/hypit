@@ -4,7 +4,8 @@ import type { EndpointRegistration } from "@hypit/executor";
 import type { ImmediateEndpointHandler } from "@hypit/endpoint";
 import { installEndpoint } from "@hypit/endpoint";
 import { compileHtmlProgram, htmlProgramCapabilities, htmlRasterRequest } from "@hypit/html-program";
-import { mediaTypes } from "@hypit/media";
+import { mediaTypes, sealVisualDeliverySpec, sealVisualPictureSpec } from "@hypit/media";
+import type { ImagePictureSpec, VisualDeliverySpec } from "@hypit/media";
 import type { CompositableSurfaceRef } from "@hypit/media";
 import type { Need } from "@hypit/protocol";
 import { sealTimeline } from "@hypit/timeline";
@@ -34,12 +35,29 @@ export function htmlProviderDocument(surface?: CompositableSurfaceRef) {
   }), timeline);
 }
 
+export function htmlProviderDelivery(
+  quality: VisualDeliverySpec["encoding"]["quality"] = "standard",
+): VisualDeliverySpec {
+  return sealVisualDeliverySpec({
+    picture: { colorPrimaries: "bt709", colorTransfer: "bt709", colorMatrix: "bt709",
+      colorRange: "limited", bitDepth: 8, alpha: { mode: "opaque", matte: "#000000" } },
+    encoding: { codec: "h264", pixelFormat: "yuv420p", quality },
+  });
+}
+
+export function htmlProviderPicture(): ImagePictureSpec {
+  return sealVisualPictureSpec({
+    colorPrimaries: "bt709", colorTransfer: "srgb", colorMatrix: "rgb",
+    colorRange: "full", bitDepth: 8, alpha: { mode: "opaque", matte: "#000000" },
+  });
+}
+
 export function htmlProviderNeed(document = htmlProviderDocument()): Need {
   return {
     id: "need:local-html-fixture",
     capability: htmlProgramCapabilities.rasterizeVisual,
     returns: mediaTypes.timelineVisual,
-    constraints: htmlRasterRequest(document),
+    constraints: htmlRasterRequest(document, htmlProviderDelivery()),
     result: "record:local-html-fixture",
   };
 }

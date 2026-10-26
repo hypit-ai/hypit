@@ -1,4 +1,4 @@
-import { timelineTypes, timelineDependency } from "@hypit/timeline";
+import { frameSpanSchema, timelineTypes, timelineDependency } from "@hypit/timeline";
 import { temporalContextAttributeVocabulary } from "@hypit/temporal/markup";
 import { readFile } from "node:fs/promises";
 
@@ -12,6 +12,7 @@ import {
   visualTextTypographySchema,
 } from "@hypit/composition";
 import { mediaDependency, mediaTypes } from "@hypit/media";
+import { mediaOperationsModuleRef } from "@hypit/media-operations";
 import {
   visualFrameTreatmentSchema,
   mediaLayerSetSchema,
@@ -97,7 +98,6 @@ export const depthStackCardLabelStyleSchema: ValueSchema = object({
   typography: { schema: visualTextTypographySchema }, paints: { schema: { kind: "array", items: visualTextPaintSchema } },
   flow: { schema: visualTextFlowSchema },
 });
-const frameSpan = object({ startFrame: { schema: unsignedInteger }, endFrameExclusive: { schema: positiveInteger } });
 const card = object({
   id: { schema: string }, activationFrame: { schema: unsignedInteger }, material: { schema: mediaLayerSetSchema },
   label: { schema: depthStackCardLabelSchema }, playback: { schema: playback },
@@ -109,7 +109,7 @@ export const depthStackCardSetSchema: ValueSchema = object({
   cards: { schema: { kind: "array", items: card } },
 });
 export const depthStackProgramSchema: ValueSchema = object({
-  id: { schema: string }, span: { schema: frameSpan },
+  id: { schema: string }, span: { schema: frameSpanSchema },
   terminalFrame: { schema: positiveInteger }, frame: { schema: spatialFrameSchema }, spec: { schema: depthStackSpecSchema },
   cards: { schema: { kind: "array", minItems: 1, items: card } },
 });
@@ -285,8 +285,8 @@ export const depthStackMarkupSurfaces = [
               { name: "id", kind: "identifier", required: true,
                 summary: "Names this Card within the deck." },
               { name: "source", kind: "reference", required: true,
-                accepts: [blobTypes.blob, mediaTypes.synchronized, mediaTypes.compositableSurface],
-                summary: "Chooses the picture the Card shows, as a still image Artifact, a Synchronized Medium or a Compositable Surface." },
+                accepts: [blobTypes.blob, mediaTypes.prepared, mediaTypes.compositableSurface],
+                summary: "Chooses the picture the Card shows, as a still image Artifact, prepared timed media or a Compositable Surface." },
               { name: "extent", kind: "reference", required: false, accepts: [spatialTypes.extent],
                 summary: "Gives a still image its pixel Extent, which timed and surface sources already carry." },
               ...temporalInstantAttributeVocabulary,
@@ -349,7 +349,7 @@ export const depthStackMarkupSurfaces = [
 </deck:DepthStack>`,
         notes: [
           "The deck requires at least one Card, and a Card is empty.",
-          "`extent` is required for a still image source and refused for a Synchronized Medium or a Compositable Surface.",
+          "`extent` is required for a still image source and refused for Prepared Media or a Compositable Surface.",
           "`until` consumes an absolute Instant; domain projection is declared upstream.",
           "Both Recipes are closed: any property outside the ones listed here is refused, and a Card without its own `appearance` reads the deck's Recipe for fit, sampling, frame Paint and playback.",
         ],
@@ -359,7 +359,7 @@ export const depthStackMarkupSurfaces = [
 
 export const depthStackManifest: ModuleManifest = {
   format: "hypit.module@1", name: depthStackModuleRef.name, version: depthStackModuleRef.version,
-  dependencies: [timelineDependency, spatialDependency, temporalDependency, mediaDependency, visualTrackDependency, compositionDependency, textDependency],
+  dependencies: [timelineDependency, spatialDependency, temporalDependency, mediaDependency, mediaOperationsModuleRef, visualTrackDependency, compositionDependency, textDependency],
   types: [
     depthStackTypes.header.name,
     depthStackTypes.spec.name,

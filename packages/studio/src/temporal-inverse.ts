@@ -3,6 +3,7 @@ import { isAbsolute, relative, resolve } from "node:path";
 import type { ProducerStep, Value, TypedRecord } from "@hypit/hypit/protocol";
 import { sameType } from "@hypit/hypit/protocol";
 import { temporalTypes } from "@hypit/temporal";
+import type { FrameSpan } from "@hypit/timeline";
 import type {
   StudioSourceBinding,
   StudioTemporalConstraint,
@@ -139,7 +140,7 @@ export function planTemporalInverse(input: {
   readonly state: ExecutedGraph;
   readonly rootRecord: string;
   readonly target: { readonly kind: "instant"; readonly frame: number }
-    | { readonly kind: "window"; readonly startFrame: number; readonly endFrameExclusive: number };
+    | (FrameSpan & { readonly kind: "window" });
   readonly bindings: readonly StudioSourceBinding[];
   readonly domainFrame: (projection: StudioTemporalInstantProjection) => number | undefined;
   readonly identify?: Parameters<typeof executedTemporalProjection>[2];

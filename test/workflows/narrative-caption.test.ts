@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { mediaLocalTemporalDomain } from "@hypit/media";
+import { sealLocalTemporalDomain } from "@hypit/temporal";
 import type { Narrative } from "@hypit/narrative";
 import { captionUnitsForNarrativeSelection, projectNarrativeCaptionTiming } from "@hypit/narrative-caption";
 import { captionDocument, narrativeCaptionBinding, narrativeValue, parseScript } from "@hypit/script";
@@ -9,8 +9,6 @@ import { createNarrativeProjection, projectNarrativeAlignment, selectionFrameSpa
 import { alignNarrative } from "@hypit/narrative-speech-alignment";
 import type { Timeline } from "@hypit/timeline";
 import { interpretWhisperXTranscript } from "@hypit/whisperx";
-
-import { fixtureResource } from "../fixture-resource.js";
 
 test("Caption uses complete Narrative selections and authored Cues", () => {
   const parsed = parseScript("caption.svml", "<line>one @{focus} two three @{/focus} || four</line>");
@@ -65,11 +63,8 @@ for (const grouped of [false, true]) test(`Chinese Script projects Caption timin
     evidenceWindows.push(words.map((word) => [Math.round(word.start * 1000), Math.round(word.end * 1000)]));
     const frameCount = durations[index]!;
     const sampleFrames = frameCount * 16;
-    const media = {
-      frameDomain: { frameRate: timeline.frameRate, frameCount },
-      audio: { artifact: { kind: "blob" as const, resource: fixtureResource(`zh:${index}`), size: 1, mediaType: "audio/wav" } },
-    };
-    const domain = mediaLocalTemporalDomain(`zh:${index}:domain`, media);
+    const domain = sealLocalTemporalDomain({ id: `zh:${index}:domain`,
+      duration: { ticks: String(frameCount), timeBase: { numerator: 1, denominator: 1000 } } });
     const excerpt = { narrativeId: narrative.id, kind: "segment" as const, id: segment.id,
       tokenStart: segment.tokenStart, tokenEndExclusive: segment.tokenEndExclusive };
     const alignment = alignNarrative(narrative, excerpt, domain, {

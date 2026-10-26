@@ -5,9 +5,10 @@ This package owns author syntax and lowering; [`@hypit/timeline`](../timeline/RE
 completed value `{ id, frameRate, frameCount }`.
 
 The official video Distribution installs this package as an ordinary default npm dependency. Its
-parser and construction values remain package-owned; downstream components consume only the public
-Timeline, Window and Instant values. Core and the Timeline value package do not know this author
-syntax exists.
+parser, construction Points and construction Extents remain package-owned. The package reuses
+Timeline's ordinary `FrameSpan` while assembling Windows; downstream components consume only the
+public Timeline, Window and Instant values. Core and the Timeline value package do not know this
+author syntax exists.
 
 Timeline is not a media Track, clip list, semantic anchor registry or hidden schedule. Its author
 graph does only two jobs:
@@ -36,8 +37,8 @@ The Timeline declaration publishes:
 - `program.outro`, plus its boundaries.
 
 Every named child is naturally addressable. There is no author-facing `export` attribute. Internal
-construction points, spans and extents are compiler values and never become another public time
-model.
+construction Points and Extents are compiler values; intermediate intervals use the same
+`FrameSpan` as every other finite frame domain and never become another public time model.
 
 ## Timeline declarations
 
@@ -84,8 +85,8 @@ root; it needs one resolvable `end`.
 ## Studio inverse
 
 Timeline Author retains the exact child declaration and binding on private literal Duration and
-Offset Specs. Its Studio Companion owns the inverse relations for private construction Points,
-Extents and Spans. Studio can therefore follow a consumed Window back through the executed author
+Offset Specs. Its Studio Companion owns the inverse relations for private construction Points and
+Extents and for the shared FrameSpan that connects them. Studio can therefore follow a consumed Window back through the executed author
 graph without learning Timeline Author's Producer vocabulary.
 
 For `from + for`, moving keeps `for` unchanged; trimming the leading edge rewrites `from` and `for`
@@ -99,10 +100,10 @@ editing concern to Core, or create a second author graph.
 
 ## Unknown generated duration
 
-`TemporalExtent` is an unpositioned frame count on one frame rate. Normalization publishes it only
-after an imported or generated asset is available. A Timeline Window can consume that ordinary graph
-value, so an unknown voice or video length may determine later boundaries and the final `end` without
-a phase state machine, callback or second Source run:
+`TemporalExtent` is an unpositioned exact duration with no output frame rate. Media preparation
+publishes it only after an imported or generated asset is available. A Timeline Window can consume
+that ordinary graph value, so an unknown voice or video length may determine later boundaries and the
+final `end` without a phase state machine, callback or second Source run:
 
 ```svml
 <time:Timeline id="film" clock={clock} end="outro.end">
@@ -114,18 +115,24 @@ a phase state machine, callback or second Source run:
 If generation itself requests this Timeline's end while the end depends on the generated result,
 that is a genuine dependency cycle rather than a scheduling problem.
 
+Timeline Author owns the conversion from the exact Extent to its selected Clock. The stable default
+is `cover`: its compiler writes that policy as a private construction input, and a duration between
+two frame boundaries retains the final partial frame. Literal frame
+durations remain exact author coordinates. Other consumers may deliberately choose `exact`, `inside`
+or `nearest`; a Provider does not choose this boundary policy implicitly.
+
 ## Local domains contribute, then disappear
 
 A prepared source may supply the `TemporalExtent` that determines a Window. That is its complete
 relationship with Timeline construction. The completed Timeline retains only its absolute domain and
 the named absolute values declared by its author graph.
 
-When a domain package must project local evidence, it consumes the complete local domain and the
-equal-length Window directly. The relation is exact native-speed translation: local frame zero maps
-to the Window start and the local exclusive end maps to the Window end. A length mismatch is an error;
-projection does not clip, loop, hold, stretch, resample or hide a source tail. The projector publishes
-ordinary absolute Instants and Windows and erases the construction relation. Visual and Audio then
-place ordinary normalized media independently.
+When a domain package must project local evidence, it consumes the complete exact local domain and
+its explicitly placed Window. Local zero maps to the Window start and the local exclusive end maps to
+the Window end; intermediate exact positions are resolved only on the selected Timeline Clock. More
+general trim, retime, reverse, hold and loop relationships are represented by Temporal Maps rather
+than being inferred by Timeline construction. The projector publishes ordinary absolute Instants and
+Windows and erases its proof inputs.
 
 A component consumes a completed Window or Instant; it never authors an anonymous time value on its
 own surface. Put a named child in Timeline when it participates in the construction DAG. When the

@@ -1,3 +1,5 @@
+import type { ExactTemporalValue } from "@hypit/temporal";
+
 export type NarrativeAlignmentToken = {
   readonly tokenId: string;
   readonly segmentId: string;
@@ -16,7 +18,7 @@ export type NarrativeAlignment = {
     readonly endBoundaryId: string;
   };
   readonly tokens: readonly NarrativeAlignmentToken[];
-  readonly boundaries: readonly { readonly id: string; readonly frame: number }[];
+  readonly boundaries: readonly { readonly id: string; readonly at: ExactTemporalValue }[];
 };
 
 /** One alignment after its domain-owned exact projection has erased its proof inputs. */

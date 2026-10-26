@@ -14,7 +14,7 @@ export const textRecipeFrontend: AuthorFrontend = {
   discover() {
     return { modules: [moduleKey(textModuleRef)], sources: [] };
   },
-  decode(source, context) {
+  decode(source) {
     const parsed = parseRecipe(source.name, decodeSourceText(source));
     const recipes = parsed.recipes.map((item) => item.value);
     const candidates = recipes

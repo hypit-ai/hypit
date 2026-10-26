@@ -4,7 +4,7 @@ import {
   registerProducerFacets,
 } from "@hypit/producer";
 import { registerTypeRefinements } from "@hypit/refinement";
-import { mediaManifest, mediaTypes, sealMuxedMedia, sealTimelineVisual, sealTimelineAudio } from "@hypit/media";
+import { mediaComponent, mediaManifest, mediaProducers, mediaTypes, sealMuxedMedia, sealTimelineVisual, sealTimelineAudio } from "@hypit/media";
 import { compositionComponent, compositionDependency, compositionManifest, compositionTypes, sealComposition } from "@hypit/composition";
 import type { Composition } from "@hypit/composition";
 import assert from "node:assert/strict";
@@ -50,6 +50,7 @@ import {
   htmlVideoManifest,
   htmlVideoMarkupSurfaces,
   htmlVideoModuleRef,
+  htmlVideoDeliverySpec,
 } from "@hypit/html-video";
 import {
   compileAudioProgram,
@@ -98,6 +99,7 @@ const composition = sealComposition({
   visual: { members: [] },
   audio: [],
 });
+const delivery = htmlVideoDeliverySpec();
 
 const stored = (value: CanonicalValue): Value => value;
 function valueOf(record: TypedRecord | undefined): CanonicalValue {
@@ -128,12 +130,15 @@ const spaceRecord = {
   value: stored(space),
 };
 await refineRecord(spaceRecord, validatorRegistry());
-const linked = link(closure, [compositionRecord, spaceRecord]);
+const deliveryRecord = { id: "delivery", type: mediaTypes.delivery, value: stored(delivery) };
+await refineRecord(deliveryRecord, validatorRegistry());
+const linked = link(closure, [compositionRecord, spaceRecord, deliveryRecord]);
 const instance = elaborateGraphFragment(linked, htmlVideoFragment, {
   id: "final",
   inputs: {
     composition: { kind: "record", id: compositionRecord.id },
     timeline: { kind: "record", id: spaceRecord.id },
+    delivery: { kind: "record", id: deliveryRecord.id },
   },
 });
 const contribution = bindAuthorFragment(instance, { video: "final.video" });
@@ -165,6 +170,7 @@ function buildState(
 function producerRegistry(): ProducerRegistry {
   const registry = new ProducerRegistry();
   registerProducerFacets(registry, mediaOperationsComponent.producers);
+  registerProducerFacets(registry, mediaComponent.producers);
   registerProducerFacets(registry, htmlProgramComponent.producers);
   registerProducerFacets(registry, timelineComponent.producers);
   return registry;
@@ -183,6 +189,7 @@ test("HTML renderer rendering is an explicit exact Need after ordinary document 
   assert.deepEqual(build().plan.steps.map((step) => step.producer.name).sort(), [
     htmlProgramProducers.compile.name,
     htmlProgramProducers.requestVisual.name,
+    mediaProducers.visualDelivery.name,
     mediaOperationsProducers.compileAudio.name,
     mediaOperationsProducers.renderAudio.name,
     mediaOperationsProducers.mux.name,
@@ -194,7 +201,7 @@ test("HTML renderer rendering is an explicit exact Need after ordinary document 
   assert.equal(result.state.needs.length, 2);
   const visual = result.state.needs.find((need) => need.capability.name === htmlProgramCapabilities.rasterizeVisual.name)!;
   assert.equal(visual.returns.name, mediaTypes.timelineVisual.name);
-  assert.deepEqual(visual.constraints, htmlRasterRequest(compileHtmlProgram(composition, space)));
+  assert.deepEqual(visual.constraints, htmlRasterRequest(compileHtmlProgram(composition, space), delivery.visual));
   const audio = result.state.needs.find((need) => need.capability.name === "render-timeline-audio")!;
   assert.equal(audio.returns.name, mediaTypes.timelineAudio.name);
   assert.equal(result.blocked.every((item) => item.reason === "missing-endpoint"), true);
@@ -227,11 +234,13 @@ test("separate visual, audio and mux Endpoints complete one author-visible rende
     ({ need }) => {
       const request = need.constraints as {
         readonly program: ReturnType<typeof compileHtmlProgram>;
+        readonly delivery: typeof delivery.visual;
       };
       return stored(sealTimelineVisual({
           frameRate: request.program.frameRate,
           frameCount: request.program.frameCount,
           canvas: request.program.canvas,
+          delivery: request.delivery,
           artifact: visualArtifact,
         }));
     },
@@ -244,6 +253,8 @@ test("separate visual, audio and mux Endpoints complete one author-visible rende
       const request = need.constraints as { contract: string; program: ReturnType<typeof compileAudioProgram> };
       return stored(sealTimelineAudio({
           artifact: audioArtifact,
+          sampleRate: 48_000,
+          channelLayout: "stereo",
           sampleFrames: request.program.sampleFrames,
         }));
     },
@@ -253,12 +264,14 @@ test("separate visual, audio and mux Endpoints complete one author-visible rende
     mediaOperationsCapabilities.mux,
     mediaTypes.muxed,
     ({ need }) => {
-      const request = need.constraints as { visual: ReturnType<typeof sealTimelineVisual>; audio: ReturnType<typeof sealTimelineAudio> };
+      const request = need.constraints as { visual: ReturnType<typeof sealTimelineVisual>;
+        audio: ReturnType<typeof sealTimelineAudio>; delivery: typeof delivery };
       return stored(sealMuxedMedia({
           frameRate: request.visual.frameRate,
           frameCount: request.visual.frameCount,
           canvas: request.visual.canvas,
           presentationSampleFrames: request.audio.sampleFrames,
+          delivery: request.delivery,
           artifact: finalArtifact,
         }));
     },
@@ -366,6 +379,7 @@ test(`the ${selectedRange ? "selected" : "full"} rendered video remains an ordin
   assert.deepEqual(state.plan.steps.map((step) => step.producer.name).sort(), [
     htmlProgramProducers.compile.name,
     selectedRange ? htmlProgramProducers.requestVisualRange.name : htmlProgramProducers.requestVisual.name,
+    mediaProducers.visualDelivery.name,
     mediaOperationsProducers.compileAudio.name,
     selectedRange ? mediaOperationsProducers.renderAudioRange.name : mediaOperationsProducers.renderAudio.name,
     mediaOperationsProducers.mux.name,
@@ -379,14 +393,15 @@ test(`the ${selectedRange ? "selected" : "full"} rendered video remains an ordin
 
 test("selected render frames reach both visual and audio Needs through the ordinary Build graph", async () => {
   const range = { startFrame: 15, endFrameExclusive: 45 };
-  const rangeRecord = { id: "selection", type: mediaTypes.frameRange, value: stored(range) };
+  const rangeRecord = { id: "selection", type: timelineTypes.frameSpan, value: stored(range) };
   await refineRecord(rangeRecord, validatorRegistry());
-  const program = link(closure, [compositionRecord, spaceRecord, rangeRecord]);
+  const program = link(closure, [compositionRecord, spaceRecord, deliveryRecord, rangeRecord]);
   const fragment = createHtmlVideoFragment(true);
   const selected = elaborateGraphFragment(program, fragment, {
     id: "selected", inputs: {
       composition: { kind: "record", id: compositionRecord.id },
       timeline: { kind: "record", id: spaceRecord.id },
+      delivery: { kind: "record", id: deliveryRecord.id },
       range: { kind: "record", id: rangeRecord.id },
     },
   });

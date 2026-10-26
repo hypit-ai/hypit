@@ -1,9 +1,9 @@
 import { blobDependency } from "@hypit/hypit/blob";
-import { mediaDependency, mediaTypes } from "@hypit/media";
-import { timelineDependency, timelineTypes } from "@hypit/timeline";
+import { mediaDependency, mediaTypes, preparedAudioSourceSchema } from "@hypit/media";
+import { frameSpanSchema, timelineDependency, timelineTypes } from "@hypit/timeline";
 import { recipeModuleRef, recipeType } from "@hypit/hypit/recipe";
 import { compositionDependency, compositionTypes, audioSampleSpanSchema, audioGainEnvelopeSchema } from "@hypit/composition";
-import { temporalDependency, temporalTypes } from "@hypit/temporal";
+import { exactTemporalValueSchema, temporalDependency, temporalMapSchema, temporalTypes } from "@hypit/temporal";
 import { blobTypes } from "@hypit/hypit/blob";
 import { blobRefSchema } from "@hypit/hypit/protocol";
 import type { CapabilityRef, ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/hypit/protocol";
@@ -20,8 +20,6 @@ export const mediaOperationsTypes = {
 } satisfies Record<string, TypeRef>;
 export const mediaOperationsCapabilities = {
   inspect: { module: mediaOperationsModuleRef, name: "inspect-media" },
-  normalize: { module: mediaOperationsModuleRef, name: "normalize-media" },
-  transform: { module: mediaOperationsModuleRef, name: "transform-media" },
   extractAudio: { module: mediaOperationsModuleRef, name: "extract-media-audio" },
   extractFrame: { module: mediaOperationsModuleRef, name: "extract-media-frame" },
   renderStill: { module: mediaOperationsModuleRef, name: "render-still-video" },
@@ -31,7 +29,6 @@ export const mediaOperationsCapabilities = {
 export const mediaOperationsProducers = {
   inspect: { module: mediaOperationsModuleRef, name: "request-media-inspection" },
   select: { module: mediaOperationsModuleRef, name: "select-media-streams" },
-  normalize: { module: mediaOperationsModuleRef, name: "request-media-normalization" },
   transform: { module: mediaOperationsModuleRef, name: "request-media-transform" },
   extractAudio: { module: mediaOperationsModuleRef, name: "request-audio-extraction" },
   extractFrame: { module: mediaOperationsModuleRef, name: "request-frame-extraction" },
@@ -63,13 +60,6 @@ export const mediaSelectionRequestSchema: ValueSchema = {
     video: { schema: { kind: "oneOf", variants: [mode("primary-moving"), streamMode, mode("none")] } },
     audio: { schema: { kind: "oneOf", variants: [mode("default"), streamMode, mode("none")] } },
     spanAuthority: { schema: { kind: "string", enum: ["video", "audio"] } },
-    frameRate: { schema: {
-      kind: "object",
-      fields: {
-        numerator: { schema: { kind: "number", integer: true, minimum: 1 } },
-        denominator: { schema: { kind: "number", integer: true, minimum: 1 } },
-      },
-    } },
   },
 };
 
@@ -86,16 +76,19 @@ const trimOperationSchema: ValueSchema = {
   kind: "object",
   fields: {
     kind: { schema: { kind: "literal", value: "trim" } },
-    startSec: { schema: nonNegativeNumber, optional: true },
-    endSec: { schema: nonNegativeNumber, optional: true },
-    tailSec: { schema: nonNegativeNumber, optional: true },
+    start: { schema: exactTemporalValueSchema, optional: true },
+    end: { schema: exactTemporalValueSchema, optional: true },
+    tail: { schema: exactTemporalValueSchema, optional: true },
   },
 };
 const retimeOperationSchema: ValueSchema = {
   kind: "object",
   fields: {
     kind: { schema: { kind: "literal", value: "retime" } },
-    rate: { schema: { kind: "number", minimum: 0.000001, maximum: 100 } },
+    rate: { schema: { kind: "object", fields: {
+      numerator: { schema: { kind: "number", integer: true, minimum: 1 } },
+      denominator: { schema: { kind: "number", integer: true, minimum: 1 } },
+    } } },
   },
 };
 export const mediaTransformProgramSchema: ValueSchema = {
@@ -166,8 +159,7 @@ export const stillVideoRequestSchema: ValueSchema = {
     segments: { schema: { kind: "array", items: {
       kind: "object",
       fields: {
-        startFrame: { schema: { kind: "number", integer: true, minimum: 0 } },
-        endFrameExclusive: { schema: { kind: "number", integer: true, minimum: 1 } },
+        ...(frameSpanSchema.kind === "object" ? frameSpanSchema.fields : {}),
         source: { optional: true, schema: blobRefSchema() },
       },
     } } },
@@ -180,8 +172,6 @@ export const stillVideoLayoutSchema: ValueSchema = {
     weights: { schema: { kind: "array", items: { kind: "number", minimum: 0 } } },
   },
 };
-
-const audioBlobRefSchema = blobRefSchema(["audio/wav"]);
 
 export const audioProgramSchema: ValueSchema = {
   kind: "object",
@@ -200,15 +190,23 @@ export const audioProgramSchema: ValueSchema = {
       kind: "object",
       fields: {
         id: { schema: { kind: "string", minLength: 1 } },
-        artifact: { schema: audioBlobRefSchema },
+        inputId: { schema: { kind: "string", minLength: 1 } },
+        source: { schema: preparedAudioSourceSchema },
+        preparation: { schema: temporalMapSchema },
         targetStartSample: { schema: integer },
         targetEndSampleExclusive: { schema: { kind: "number", integer: true, minimum: 1 } },
-        sourceSampleFrames: { schema: { kind: "number", integer: true, minimum: 1 } },
-        sourceStartSample: { schema: integer },
-        sourceEndSampleExclusive: { schema: { kind: "number", integer: true, minimum: 1 } },
-        sourceLoop: { schema: { kind: "boolean" } },
-        sourcePhaseSample: { schema: integer },
-        playbackRate: { schema: { kind: "number" } },
+        preparedSampleFrames: { schema: { kind: "number", integer: true, minimum: 1 } },
+        preparedStartSample: { schema: integer },
+        preparedEndSampleExclusive: { schema: { kind: "number", integer: true, minimum: 1 } },
+        loop: { schema: { kind: "boolean" } },
+        loopPhaseSample: { schema: integer },
+        playbackRate: { schema: {
+          kind: "object",
+          fields: {
+            numerator: { schema: { kind: "number", integer: true, minimum: 1 } },
+            denominator: { schema: { kind: "number", integer: true, minimum: 1 } },
+          },
+        } },
         mixStartSample: { schema: integer },
         mixEndSampleExclusive: { schema: { kind: "number", integer: true, minimum: 1 } },
         gain: { schema: { kind: "number", minimum: 0 } },
@@ -218,56 +216,43 @@ export const audioProgramSchema: ValueSchema = {
         audibility: { schema: { kind: "array", items: audioSampleSpanSchema }, optional: true },
       },
     } } },
-    mix: { schema: {
-      kind: "object",
-      fields: {
-        normalize: { schema: { kind: "literal", value: false } },
-        limiter: { schema: { kind: "literal", value: "none" } },
-      },
-    } },
   },
 };
 
 export const mediaOperationsMarkupSurfaces = [
     {
-      name: "synchronized-media", tag: "Normalize", mode: "structured",
-      outputs: [mediaOperationsTypes.selectionRequest, mediaTypes.domainSpec, mediaTypes.synchronized,
+      name: "prepared-media", tag: "Prepare", mode: "structured",
+      outputs: [mediaOperationsTypes.selectionRequest, mediaTypes.domainSpec, mediaTypes.prepared,
         temporalTypes.localDomain, temporalTypes.extent],
       vocabulary: {
-        summary:
-          "Inspects one Blob, selects its video and audio streams and normalizes them into SynchronizedMedia on one frame domain.",
+        summary: "Selects time-bearing members from one Blob and publishes execution-independent PreparedMedia.",
         attributes: [
           { name: "id", kind: "identifier", required: true,
-            summary: "Names the selection Record and the normalized media this element publishes." },
-          { name: "source", kind: "reference", required: true,
-            accepts: [blobTypes.blob],
-            summary: "Selects the media Artifact this element inspects and normalizes." },
+            summary: "Names the PreparedMedia and its exact local domain." },
+          { name: "source", kind: "reference", required: true, accepts: [blobTypes.blob],
+            summary: "Selects the immutable source media Artifact." },
           { name: "recipe", kind: "reference", required: false, accepts: [recipeType],
             summary: "Selects a Recipe containing video, audio and span-authority stream policy." },
           { name: "video", kind: "literal", required: false,
-            summary: "Decides which moving-image stream is carried: `primary-moving`, `none`, or `stream:<index>`." },
+            summary: "Selects `primary-moving`, `none`, or `stream:<index>`." },
           { name: "audio", kind: "literal", required: false,
-            summary: "Decides which audio stream is carried: `default`, `none`, or `stream:<index>`." },
-          { name: "span-authority", kind: "literal", required: false,
-            values: ["video", "audio"],
-            summary: "Decides which selected stream defines the extent the other is trimmed or padded to." },
-          { name: "clock", kind: "reference", required: true, accepts: [timelineTypes.clock],
-            summary: "Selects the authored frame clock shared with the programme." },
+            summary: "Selects `default`, `none`, or `stream:<index>`." },
+          { name: "span-authority", kind: "literal", required: false, values: ["video", "audio"],
+            summary: "Selects the member whose exact presentation span defines the prepared local domain." },
         ],
         ports: [
-          { name: "media", type: mediaTypes.synchronized,
-            summary: "The normalized SynchronizedMedia, addressed as `<id>.media`." },
+          { name: "media", type: mediaTypes.prepared,
+            summary: "The PreparedMedia, addressed as `<id>.media`." },
           { name: "domain", type: temporalTypes.localDomain,
-            summary: "Its source-local frame domain, addressed as `<id>.domain`." },
+            summary: "Its exact finite local domain, addressed as `<id>.domain`." },
           { name: "extent", type: temporalTypes.extent,
-            summary: "Its unpositioned normalized length, addressed as `<id>.extent`." },
+            summary: "Its exact unpositioned duration, addressed as `<id>.extent`." },
         ],
-        example: `<mediaop:Normalize id="music-media" source={music}
-  recipe={recipes.media.audio} clock={clock}/>`,
+        example: `<mediaop:Prepare id="shot-media" source={shot.video}
+  video="primary-moving" audio="default" span-authority="video"/>`,
         notes: [
-          "Write exactly one of recipe or the direct video/audio/span-authority attributes. Clock is always an explicit reference.",
-          "`primary-moving` excludes attached-picture streams, prefers one declared default and fails closed on an ambiguous container; `stream:<index>` is for a container the author genuinely knows.",
-          "Selecting embedded audio is a media fact only and makes no speaker or alignment claim.",
+          "Prepare inspects and selects source members but does not transcode, resample or choose a Film Clock.",
+          "Write exactly one of recipe or the direct video/audio/span-authority attributes.",
         ],
       },
     },
@@ -306,24 +291,25 @@ export const mediaOperationsMarkupSurfaces = [
         notes: [
           "Write exactly one of source or Still children. Frames are whole: each image gets the floor of its share and the leftover frames go to the largest remainders, so the split is deterministic and every image holds at least one frame.",
           "Images of different sizes are fitted into the first image's frame, letterboxed on black.",
-          "The result is a normal video Blob, not SynchronizedMedia or semantic evidence.",
-          "Use Normalize afterward exactly as for generated or imported moving video.",
+          "The result is a normal video Blob, not PreparedMedia or semantic evidence.",
+          "Use Prepare afterward exactly as for generated or imported moving video.",
           "Encoding is a render-still-video Need fulfilled by the selected media Provider; this Surface never invokes FFmpeg itself.",
         ],
       },
     },
     {
       name: "transform-media", tag: "Transform", mode: "structured",
-      outputs: [mediaOperationsTypes.transformProgram, blobTypes.blob],
+      outputs: [mediaOperationsTypes.transformProgram, mediaTypes.domainSpec, mediaTypes.prepared,
+        temporalTypes.localDomain, temporalTypes.extent],
       vocabulary: {
         summary:
-          "Runs an ordered trim and retime program over one already normalized SynchronizedMedia value.",
+          "Composes exact trim and retime relations over PreparedMedia without materializing another file.",
         attributes: [
           { name: "id", kind: "identifier", required: true,
-            summary: "Names the transform program Record and the transformed video this element publishes." },
+            summary: "Names the transformed PreparedMedia and its new local domain." },
           { name: "source", kind: "reference", required: true,
-            accepts: [mediaTypes.synchronized],
-            summary: "Selects the prepared SynchronizedMedia this element transforms." },
+            accepts: [mediaTypes.prepared],
+            summary: "Selects the PreparedMedia whose local domain is transformed." },
         ],
         children: [
           { tag: "Trim", cardinality: "many",
@@ -337,24 +323,28 @@ export const mediaOperationsMarkupSurfaces = [
                 summary: "Decides how many seconds are removed from the current end." },
             ] },
           { tag: "Retime", cardinality: "many",
-            summary: "Changes tempo by `rate` in the range (0, 100] while preserving pitch.",
+            summary: "Changes local media advance by one positive exact decimal ratio.",
             attributes: [
               { name: "rate", kind: "literal", required: true,
-                summary: "Decides the playback speed multiplier, above `0` and at most `100`." },
+                summary: "Decides source-local advance per target-local unit, such as `1.05` or `0.5`." },
             ] },
         ],
         ports: [
-          { name: "video", type: blobTypes.blob,
-            summary: "The transformed media Artifact, addressed as `<id>.video`." },
+          { name: "media", type: mediaTypes.prepared,
+            summary: "The transformed PreparedMedia, addressed as `<id>.media`." },
+          { name: "domain", type: temporalTypes.localDomain,
+            summary: "Its transformed local domain, addressed as `<id>.domain`." },
+          { name: "extent", type: temporalTypes.extent,
+            summary: "Its transformed exact duration, addressed as `<id>.extent`." },
         ],
-        example: `<mediaop:Transform id="prepared" source={shot-media.media}>
+        example: `<mediaop:Transform id="fast-shot" source={shot-media.media}>
   <mediaop:Trim tail="0.25s"/>
   <mediaop:Retime rate="1.05"/>
 </mediaop:Transform>`,
         notes: [
           "At least one `Trim` or `Retime` child is required, and children run in the order they are written.",
           "`Trim` cannot combine `end` and `tail`, and both children are written empty.",
-          "Normalization and stream selection are explicit upstream operations rather than hidden Transform policy.",
+          "The result retains the original source and composes target-to-source maps; no codec or output clock is selected.",
         ],
       },
     },
@@ -437,8 +427,6 @@ export const mediaOperationsManifest: ModuleManifest = {
   ],
   capabilities: [
     { name: mediaOperationsCapabilities.inspect.name, returns: mediaTypes.inspection },
-    { name: mediaOperationsCapabilities.normalize.name, returns: mediaTypes.synchronized },
-    { name: mediaOperationsCapabilities.transform.name, returns: blobTypes.blob },
     { name: mediaOperationsCapabilities.extractAudio.name, returns: blobTypes.blob },
     { name: mediaOperationsCapabilities.extractFrame.name, returns: blobTypes.blob },
     { name: mediaOperationsCapabilities.renderStill.name, returns: blobTypes.blob },
@@ -460,22 +448,13 @@ export const mediaOperationsManifest: ModuleManifest = {
       result: { kind: "output" as const, name: "selection", type: mediaTypes.streamSelection },
     },
     {
-      name: mediaOperationsProducers.normalize.name,
-      inputs: [
-        { name: "source", type: blobTypes.blob },
-        { name: "inspection", type: mediaTypes.inspection },
-        { name: "selection", type: mediaTypes.streamSelection },
-        { name: "request", type: mediaOperationsTypes.selectionRequest },
-      ],
-      result: { kind: "need" as const, name: "media", capability: mediaOperationsCapabilities.normalize },
-    },
-    {
       name: mediaOperationsProducers.transform.name,
       inputs: [
-        { name: "media", type: mediaTypes.synchronized },
+        { name: "media", type: mediaTypes.prepared },
         { name: "program", type: mediaOperationsTypes.transformProgram },
+        { name: "spec", type: mediaTypes.domainSpec },
       ],
-      result: { kind: "need" as const, name: "video", capability: mediaOperationsCapabilities.transform },
+      result: { kind: "output" as const, name: "media", type: mediaTypes.prepared },
     },
     {
       name: mediaOperationsProducers.extractAudio.name,
@@ -534,7 +513,7 @@ export const mediaOperationsManifest: ModuleManifest = {
     },
     {
       name: mediaOperationsProducers.renderAudioRange.name,
-      inputs: [{ name: "program", type: mediaOperationsTypes.audioProgram }, { name: "range", type: mediaTypes.frameRange }],
+      inputs: [{ name: "program", type: mediaOperationsTypes.audioProgram }, { name: "range", type: timelineTypes.frameSpan }],
       result: { kind: "need" as const, name: "audio", capability: mediaOperationsCapabilities.renderAudio },
     },
     {
@@ -542,6 +521,7 @@ export const mediaOperationsManifest: ModuleManifest = {
       inputs: [
         { name: "visual", type: mediaTypes.timelineVisual },
         { name: "audio", type: mediaTypes.timelineAudio },
+        { name: "delivery", type: mediaTypes.delivery },
       ],
       result: { kind: "need" as const, name: "media", capability: mediaOperationsCapabilities.mux },
     },

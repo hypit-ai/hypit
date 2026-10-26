@@ -198,7 +198,7 @@ every model. Keep secrets out of Sources, Runs, Profile JSON, command arguments,
 
 ## Set capacity at the resource it describes
 
-The Runtime Worker advances Builds. HTML renderer `workers` counts Chrome processes inside one
+The Runtime Worker advances Builds. HTML renderer `workers` counts browser workers inside one
 render Need. These are different controls; there is no extra Build-wide model concurrency setting.
 
 | Control | Responsibility |
@@ -206,8 +206,8 @@ render Need. These are different controls; there is no extra Build-wide model co
 | Provider request capacity, commonly `config.defaultConcurrency` | Simultaneous Needs across Builds using the resource |
 | Provider-specific model/action limits | Model quota or submit/poll/collect concurrency and rate; use that Provider's accepted fields |
 | Endpoint `pool` | Shared resource identity for instances consuming the same real quota |
-| HTML renderer `workers`, `maxWorkers` | Per-render Chrome count or automatic ceiling |
-| HTML renderer `browserCapacity` | Shared Chrome budget alongside the whole-request budget |
+| HTML renderer `workers`, `maxWorkers` | Per-render browser-worker count or automatic ceiling |
+| HTML renderer `browserCapacity` | Shared browser-worker budget alongside the whole-request budget |
 
 For example, merge this Endpoint entry for an intentionally chosen render budget:
 
@@ -231,6 +231,36 @@ Only one four-browser request fits the six-browser budget at once, even though t
 two. These numbers illustrate the relationship; choose them for the actual machine. HTML renderer
 reserves both budgets until the whole render finishes, including preparation and encoding.
 It does not release capacity each time one browser closes.
+
+The local HTML Provider selects its implementation explicitly. Omit `renderer` or use
+`"chromium"` for the portable visual-and-frame renderer. Use `"electron"` only with an explicit,
+user-managed `electronPath`; that Endpoint produces encoded visuals and does not offer PNG frame
+capture. It does not silently fall back to Chromium. Configure a second Chromium Endpoint when the
+same Runtime also needs frame-image capture:
+
+```json
+{
+  "endpoints": {
+    "html.gpu": {
+      "use": "@hypit/provider-html-local",
+      "pool": "local-render",
+      "config": {
+        "renderer": "electron",
+        "electronPath": "/Applications/Electron.app/Contents/MacOS/Electron",
+        "workers": 1
+      }
+    },
+    "html.frames": {
+      "use": "@hypit/provider-html-local",
+      "pool": "local-snapshots",
+      "config": {
+        "renderer": "chromium",
+        "workers": 2
+      }
+    }
+  }
+}
+```
 
 Instances sharing a pool must agree on its limits. Separate accounts do not share one merely because
 they offer the same model. Capacity coordination covers Builds sharing a Runtime Execution Store;

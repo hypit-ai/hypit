@@ -3,23 +3,21 @@
  * declares types alone so the browser never pulls a Node dependency through it.
  */
 
+import type { FrameSpan } from "@hypit/timeline";
+
 import type {
   Range,
   StudioItemDisplay,
   StudioIcon,
   StudioEditHandle,
   StudioLaneDescription,
-  StudioMaterialPreview,
   StudioInspectorField,
-  StudioInspectorDomain,
   StudioTemporalDomainAnchor,
   StudioTemporalDomainItem,
   StudioTemporalDomainView,
   StudioTemporalLineage,
   StudioTemporalMarker,
   StudioSourceLocation,
-  StudioTemporalProjection,
-  StudioTemporalSource,
   StudioTimelineGesture,
   StudioTimelinePresentation,
   StudioTimelineTone,
@@ -79,7 +77,7 @@ export type StudioTrackBinding = {
 };
 
 /** One terminal Track item projected onto Studio's shared timeline. */
-export type StudioItem = {
+export type StudioItem = FrameSpan & {
   /** Studio identity. Output-qualified so sibling Track Items cannot collide. */
   readonly id: string;
   /** The authored id this terminal item is named after, when it names one. */
@@ -87,8 +85,6 @@ export type StudioItem = {
   /** The exact package/domain Item that placed it, when one did. */
   readonly marker?: StudioTemporalMarker;
   readonly display: StudioItemDisplay;
-  readonly startFrame: number;
-  readonly endFrameExclusive: number;
   /** Where that authored tag was written. */
   readonly elementLocation?: StudioSourceLocation;
   readonly stackOrder: number;
@@ -246,12 +242,10 @@ export type StudioMutation =
             readonly frame: number;
             readonly domain?: import("@hypit/studio-companion").StudioTemporalDomainEditTarget;
           }
-        | {
+        | (FrameSpan & {
             readonly kind: "window";
-            readonly startFrame: number;
-            readonly endFrameExclusive: number;
             readonly domain?: import("@hypit/studio-companion").StudioTemporalDomainEditTarget;
-          };
+          });
     }
   | {
       readonly type: "parameter.adjust";

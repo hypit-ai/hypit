@@ -24,7 +24,7 @@ npm run build
 Window 和 Instant 输入来表达场景何时存在、何时变化。Source 可以从 Narrative Projection
 或直接 Timeline 声明取得这些具名值；组件在两种情况下使用同一接口。
 
-呈现已有说话表演时，把规范化媒体、它的绝对 occurrence Window 和呈现所需的源时间关系作为
+呈现已有说话表演时，把 PreparedMedia、它的绝对 occurrence Window 和呈现所需的源时间关系作为
 彼此独立的输入。其他视频输入使用相同媒体路径；Timeline 不保存 Clip 或素材位置。
 [响应式讲解场景](https://github.com/hypit-ai/hypit/tree/main/examples/semantic-composition/packages/responsive-explainer) 展示持续播放的视频如何在 HTML 场景里从全屏移到侧边竖屏。
 [聊天示例](https://github.com/hypit-ai/hypit/tree/main/examples/semantic-composition/packages/chat-scene) 展示同一个事件接口如何消费由直接声明或语义声明产生的 Instant。

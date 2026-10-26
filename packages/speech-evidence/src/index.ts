@@ -1,6 +1,9 @@
 import { assertBlobRef } from "@hypit/hypit/protocol";
 import { mediaDependency, mediaTypes } from "@hypit/media";
 import type { BlobRef, CapabilityRef, ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/hypit/protocol";
+import type { PreparedAudioSource } from "@hypit/media";
+import { assertLocalTemporalDomain, resolveTemporalBoundary } from "@hypit/temporal";
+import type { LocalTemporalDomain, TemporalMap } from "@hypit/temporal";
 export {
   decodeSpeechTranscriptEvidence,
   decodeSpeechTranscriptSource,
@@ -14,9 +17,9 @@ export type { FrameWords, TranscriptWord } from "./transcript-document.js";
 export { decodeSpeechTranscriptSurface } from "./surface.js";
 
 export type ProjectSpeechEvidenceAudioNeed = {
-  readonly source: BlobRef;
-  readonly sourceSampleFrames: number;
-  readonly evidenceSampleFrames: number;
+  readonly source: PreparedAudioSource;
+  /** Prepared-local to selected source-presentation relation. */
+  readonly preparation: TemporalMap;
 };
 
 export type SpeechEvidenceAudio = {
@@ -151,7 +154,7 @@ export const speechEvidenceManifest: ModuleManifest = {
   capabilities: [{ name: speechEvidenceCapabilities.projectAudio.name, returns: speechEvidenceTypes.audio }],
   producers: [{
     name: speechEvidenceProducers.projectAudio.name,
-    inputs: [{ name: "media", type: mediaTypes.synchronized }],
+    inputs: [{ name: "media", type: mediaTypes.prepared }],
     result: { kind: "need" as const, name: "evidenceAudio", capability: speechEvidenceCapabilities.projectAudio },
   }],
 };
@@ -171,13 +174,12 @@ function assertExactFields(value: unknown, fields: readonly string[], subject: s
   if (unexpected !== undefined) throw new Error(`${subject} has unsupported field ${unexpected}.`);
 }
 
-export function speechEvidenceSampleBoundary(masterSampleBoundary: number): number {
-  if (!Number.isSafeInteger(masterSampleBoundary) || masterSampleBoundary < 0) {
-    throw new Error("Speech evidence source sample boundary is invalid.");
-  }
-  const value = (BigInt(masterSampleBoundary) * 16_000n * 2n + 48_000n) / (48_000n * 2n);
-  if (value > BigInt(Number.MAX_SAFE_INTEGER)) throw new Error("Speech evidence sample boundary exceeds safe arithmetic.");
-  return Number(value);
+export function speechEvidenceSampleFrames(domain: LocalTemporalDomain): number {
+  assertLocalTemporalDomain(domain);
+  const value = resolveTemporalBoundary(domain.duration,
+    { frameRate: { numerator: 16_000, denominator: 1 } }, "nearest");
+  if (!Number.isSafeInteger(value) || value < 1) throw new Error("Speech evidence sample domain is invalid.");
+  return value;
 }
 
 export function sealSpeechEvidenceAudio(value: SpeechEvidenceAudio): SpeechEvidenceAudio {

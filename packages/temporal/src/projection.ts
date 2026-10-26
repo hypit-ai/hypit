@@ -2,6 +2,7 @@ import { assertTimelineIdentity, timelineFrameCount } from "@hypit/timeline";
 import type { Timeline } from "@hypit/timeline";
 
 import { add, compare, durationInFrames, quantizeBoundary, rational } from "./rational.js";
+import { resolveTemporalBoundary } from "./exact.js";
 import type { Rational } from "./rational.js";
 import type {
   TemporalInstantExpression, TemporalInstant,
@@ -82,14 +83,8 @@ export function shiftTemporalInstant(
   assertTemporalInstantFor(base, { timeline });
   if (spec.id.length === 0 || spec.subjectId.length === 0) throw new Error("Temporal shift identity is invalid.");
   if (spec.direction !== 1 && spec.direction !== -1) throw new Error("Temporal shift direction is invalid.");
-  if (extent.frameRate.numerator !== timeline.frameRate.numerator
-    || extent.frameRate.denominator !== timeline.frameRate.denominator) {
-    throw new Error("Temporal shift Extent uses another frame rate.");
-  }
-  if (!Number.isSafeInteger(extent.frameCount) || extent.frameCount < 0) {
-    throw new Error("Temporal shift Extent is invalid.");
-  }
-  return resolvedInstant(spec, timeline, base.frame + spec.direction * extent.frameCount);
+  const frameCount = resolveTemporalBoundary(extent.duration, timeline, spec.resolution ?? "cover");
+  return resolvedInstant(spec, timeline, base.frame + spec.direction * frameCount);
 }
 
 export function composeTemporalWindow(spec: TemporalWindowSpec, start: TemporalInstant, end: TemporalInstant): TemporalWindow {

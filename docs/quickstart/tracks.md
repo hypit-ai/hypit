@@ -161,7 +161,7 @@ absolute window.
 
 ### visual:Track and visual:Clip
 
-Placement is an explicit Spatial Frame edge. Fit, source-time mapping and stack order belong directly
+Placement is an explicit Spatial Frame edge. Fit, temporal sampling and stack order belong directly
 to the occurrence; reusable pixel treatment and typed Motion remain optional values.
 
 ```svml
@@ -178,8 +178,8 @@ to the occurrence; reusable pixel treatment and typed Motion remain optional val
 <space:Frame id="product-frame" within={vertical.bounds}
   left="8%" top="20%" right="92%" bottom="68%"/>
 
-<mediaop:Normalize id="product-media" source={product-motion.video}
-  video="primary-moving" audio="none" span-authority="video" clock={clock}/>
+<mediaop:Prepare id="product-media" source={product-motion.video}
+  video="primary-moving" audio="none" span-authority="video"/>
 
 <visual:Motion id="product-motion-in">
   <visual:Pose at="start" y="80" opacity="0" easing="ease-out"/>
@@ -215,23 +215,23 @@ Every direct Clip or sample Layer declares exactly one visual input form:
 | Input | Value | Meaning |
 |---|---|---|
 | `image={...}` + `extent={...}` | Blob + authored pixel extent | A durationless still image |
-| `media={...}` | `SynchronizedMedia` | Connect an explicitly prepared timed source directly |
+| `media={...}` | `PreparedMedia` | Connect an explicitly prepared timed source directly |
 | `surface={...}` | `CompositableSurfaceRef` | Connect an alpha-aware still or timed surface directly |
 
-A generated or imported video Blob reaches a Track through `<mediaop:Normalize>`, which inspects it,
-selects its streams and puts them on one frame domain; its `.media` output is what `media=` connects
-to. `audio="none"` carries the picture alone, and `audio="default"` carries the source's own sound,
-which `audio-gain` then scales. These forms are explicit so a generic Blob is never guessed to be an
-image or a video.
+A generated or imported video Blob reaches a Track through `<mediaop:Prepare>`, which inspects it,
+selects its streams and preserves their exact local temporal relations without choosing a Film clock;
+its `.media` output is what `media=` connects to. The visual consumer requests its execution material
+on the Track's Timeline only when needed. These forms are explicit so a generic Blob is never guessed
+to be an image or a video.
 
 **Outputs:** `{product-broll.program}` and `{product-broll.visual}`. Audio is always authored on an
-Audio Track; connecting synchronized media here never selects its audio member.
+Audio Track; connecting a PreparedMedia visual member here never selects its audio member.
 
 ## Audio tracks
 
 `@hypit/audio-track` places explicitly prepared audio on the same Timeline as the visual
-Tracks. A `Clip` consumes `SynchronizedMedia`; normalize a declared or generated audio Blob first,
-then choose its exact program Window and source-time relation:
+Tracks. A `Clip` consumes `PreparedMedia`; prepare a declared or generated audio Blob first,
+then choose its exact program Window and, when needed, an inline temporal Map:
 
 ```svml
 <import as="media" from="@hypit/media@1"/>
@@ -241,8 +241,8 @@ then choose its exact program Window and source-time relation:
 
 <time:Clock id="clock" frame-rate="30"/>
 <media:Audio id="music" src="./assets/music.wav"/>
-<mediaop:Normalize id="music-media" source={music}
-  video="none" audio="default" span-authority="audio" clock={clock}/>
+<mediaop:Prepare id="music-media" source={music}
+  video="none" audio="default" span-authority="audio"/>
 
 <audio:Track id="music-bed" timeline={speech.timeline}>
   <audio:Clip source={music-media.media} during={speech.window}
@@ -257,12 +257,12 @@ then choose its exact program Window and source-time relation:
 |---|---|---|
 | `Track.id` | yes | Stable Audio Track identity |
 | `Track.timeline` | yes | Timeline that defines the exact sample and frame domain |
-| `Clip.source` | yes | Explicitly selected and normalized `SynchronizedMedia` |
+| `Clip.source` | yes | Explicitly selected `PreparedMedia` |
 | `during` | yes | A named absolute Window |
-| `source-time` or `Map` children | no | Reusable or inline partial target-to-source relation; omission is bounded partial identity |
+| `Map` children | no | Clip-owned partial target-to-source relation; omission is bounded partial identity |
 | `gain`, `fade-in`, `fade-out` | no | Explicit per-Clip mix values |
 
-The package performs no automatic extraction, normalization, ducking, or bus routing. Multiple
+The package performs no automatic stream choice, loudness normalization, ducking, or bus routing. Multiple
 Clips in one Track and multiple peer Audio Tracks remain independent inputs to Film. The output is
 `{music-bed.audio}`, an ordinary `AudioTrack`.
 
@@ -395,7 +395,7 @@ family is refused by name.
 | `frame` | a `space:Frame` — the board's declared placement |
 | `during` | the timing form declared by the selected component |
 | `style` | the matching style record, and only that variant's |
-| `appear-sound`, `move-sound` | optional Synchronized Media |
+| `appear-sound`, `move-sound` | optional `PreparedMedia` with an audio member |
 | `terminal` | the absolute Instant where the completed board settles. `TopThree` only |
 
 Use only the timing forms supported by the selected package; do not infer a terminal or reveal model
@@ -455,7 +455,7 @@ A direct child of the stack, self-closing, at least one, and dealt in document o
 
 | Attribute | Takes |
 |---|---|
-| `source` | required — a still image, a Synchronized Medium, or a Compositable Surface |
+| `source` | required — a still image, PreparedMedia, or a Compositable Surface |
 | `extent` | required for a still image and refused for anything else |
 | `at` | required — a named absolute reveal Instant |
 | `appearance` | optional — its own Recipe, otherwise the stack's |
@@ -553,8 +553,8 @@ All four track families together in one source file:
   left="10%" top="20%" right="90%" bottom="70%"/>
 
 <!-- Media: one ordinary Clip used editorially as B-roll -->
-<mediaop:Normalize id="card-media" source={motion.video}
-  video="primary-moving" audio="none" span-authority="video" clock={clock}/>
+<mediaop:Prepare id="card-media" source={motion.video}
+  video="primary-moving" audio="none" span-authority="video"/>
 <visual:Track id="cards" timeline={speech.timeline}>
   <visual:Clip media={card-media.media} frame={card-frame}
     during={demo} fit="cover" treatment={recipes.visual.card}/>
@@ -567,10 +567,10 @@ All four track families together in one source file:
   MEANING
 </text:Flow>
 
-<!-- Audio: normalize one declared source, then place it for the complete program -->
+<!-- Audio: prepare one declared source, then place it for the complete program -->
 <media:Audio id="music" src="./assets/music.wav"/>
-<mediaop:Normalize id="music-media" source={music}
-  video="none" audio="default" span-authority="audio" clock={clock}/>
+<mediaop:Prepare id="music-media" source={music}
+  video="none" audio="default" span-authority="audio"/>
 <audio:Track id="music-bed" timeline={speech.timeline}>
   <audio:Clip source={music-media.media} during={speech.window}
     gain="0.28" fade-in="600ms" fade-out="800ms">

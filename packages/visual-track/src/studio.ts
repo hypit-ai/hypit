@@ -108,7 +108,6 @@ const directClipBindings: readonly StudioSourceBindingDeclaration[] = [
   ...["frame-x", "frame-y", "content-x", "content-y"].map((name) => ({ name, writable: true, fallback: 0.5 })),
   ...["fit-offset-x", "fit-offset-y"].map((name) => ({ name, writable: true, fallback: 0 })),
   { name: "fit-constraint", writable: true, fallback: "bounded" },
-  { name: "source-time" },
 ];
 
 const directClipInspector: readonly StudioInspectorFieldDeclaration[] = [
@@ -130,7 +129,8 @@ function materialPreview(
   const layer = layers.find((candidate) => candidate.kind === "sample");
   if (layer?.kind !== "sample") return undefined;
   if (layer.source.kind === "surface") return undefined;
-  return artifactPreview(layer.source.kind === "still" ? "image" : "video", layer.source.artifact.resource);
+  return artifactPreview(layer.source.kind === "still" ? "image" : "video",
+    layer.source.kind === "still" ? layer.source.artifact.resource : layer.source.media.source.resource);
 }
 
 function projectVisualItems(context: StudioTrackCompanionContext): readonly StudioItemDraft[] {

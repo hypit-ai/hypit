@@ -1,5 +1,4 @@
 import type {
-  FrameSpan,
   VisualAnimation,
   VisualColorPaint,
   VisualTextDocument,
@@ -8,6 +7,7 @@ import type {
   VisualTextSequenceAnimation,
   VisualTextTypography,
 } from "@hypit/composition";
+import type { FrameSpan } from "@hypit/timeline";
 import type { SpatialFrame, SpatialPath, SpatialPoint } from "@hypit/spatial";
 
 export type TextDocument = VisualTextDocument;

@@ -8,6 +8,7 @@ import type {
   StudioTemporalRelationTrace,
   StudioTemporalRelationValue,
 } from "@hypit/studio-companion";
+import type { FrameSpan } from "@hypit/timeline";
 
 import { timelineAuthorModuleRef, timelineAuthorProducers } from "./manifest.js";
 import type {
@@ -15,7 +16,6 @@ import type {
   ConstructionExtent,
   ConstructionOffsetSpec,
   ConstructionPoint,
-  ConstructionSpan,
 } from "./types.js";
 
 function output(
@@ -134,7 +134,7 @@ export const timelineAuthorStudioTemporalRelations: readonly StudioTemporalRelat
     id: "span-start", match: { producer: timelineAuthorProducers.spanStart, output: "point" },
     invert({ target, inputs }) {
       const desired = instant(target);
-      const current = value<ConstructionSpan>(inputs.span, "Span");
+      const current = value<FrameSpan>(inputs.span, "Span");
       return desired === undefined ? [] : [{ constraints: [{ input: "span", target: {
         kind: "span", startFrame: desired.frame, endFrameExclusive: current.endFrameExclusive,
       } }] }];
@@ -147,7 +147,7 @@ export const timelineAuthorStudioTemporalRelations: readonly StudioTemporalRelat
     id: "span-end", match: { producer: timelineAuthorProducers.spanEnd, output: "point" },
     invert({ target, inputs }) {
       const desired = instant(target);
-      const current = value<ConstructionSpan>(inputs.span, "Span");
+      const current = value<FrameSpan>(inputs.span, "Span");
       return desired === undefined ? [] : [{ constraints: [{ input: "span", target: {
         kind: "span", startFrame: current.startFrame, endFrameExclusive: desired.frame,
       } }] }];
@@ -166,7 +166,7 @@ export const timelineAuthorStudioTemporalRelations: readonly StudioTemporalRelat
       ] }];
     },
     trace({ output, trace }) {
-      const held = value<ConstructionSpan>(output, "Span");
+      const held = value<FrameSpan>(output, "Span");
       const start = pointTrace(trace("start")); const end = pointTrace(trace("end"));
       return start === undefined || end === undefined ? undefined : {
         kind: "window", start: withFrame(start, held.startFrame), end: withFrame(end, held.endFrameExclusive),
@@ -183,7 +183,7 @@ export const timelineAuthorStudioTemporalRelations: readonly StudioTemporalRelat
       ] }];
     },
     trace({ output, trace }) {
-      const held = value<ConstructionSpan>(output, "Span");
+      const held = value<FrameSpan>(output, "Span");
       const start = pointTrace(trace("start")); const length = trace("extent");
       if (start === undefined || length?.kind !== "extent") return undefined;
       const authority = parameterFromExtent(length, "after-start");
@@ -202,7 +202,7 @@ export const timelineAuthorStudioTemporalRelations: readonly StudioTemporalRelat
       ] }];
     },
     trace({ output, trace }) {
-      const held = value<ConstructionSpan>(output, "Span");
+      const held = value<FrameSpan>(output, "Span");
       const end = pointTrace(trace("end")); const length = trace("extent");
       if (end === undefined || length?.kind !== "extent") return undefined;
       const authority = parameterFromExtent(length, "before-end");

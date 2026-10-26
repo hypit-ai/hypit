@@ -11,10 +11,9 @@ test("Visual Studio keeps occurrence facts, treatment and typed Motion separate"
   assert.equal(companion.family, "visual");
   const bindings = new Map((companion.bindings ?? []).map((binding) => [binding.name, binding]));
 
-  for (const name of ["fit", "source-time", "treatment", "motion"]) {
+  for (const name of ["fit", "treatment", "motion"]) {
     assert.ok(bindings.has(name), `missing ${name}`);
   }
-  assert.equal(bindings.has("z"), false);
   assert.ok("recipe" in bindings.get("treatment")!);
   assert.equal("recipe" in bindings.get("motion")!, false);
 

@@ -9,10 +9,11 @@ import type { TemporalWindowProjection } from "../../../test/temporal-fixture.js
 import { sealComposition, visualElements } from "@hypit/composition";
 import type { VisualPresent } from "@hypit/composition";
 import { compileHtmlProgram } from "@hypit/html-program";
-import { mediaTypes } from "@hypit/media";
-import type { CompositableSurfaceRef, SynchronizedMedia } from "@hypit/media";
+import { mediaTypes, prepareMedia } from "@hypit/media";
+import type { CompositableSurfaceRef, PreparedMedia } from "@hypit/media";
 import { blobTypes } from "@hypit/blob";
-import { temporalTypes } from "@hypit/temporal";
+import { defaultTemporalRelationSpec, exactTemporalValueFromFrames, resolveTemporalRelation, temporalTypes,
+  temporalValueInFrames } from "@hypit/temporal";
 import {
   appendMediaPaintLayer,
   appendMappedStillMediaLayer,
@@ -29,7 +30,6 @@ import {
   finalizeVisualTrack,
   projectVisualTrack,
   poseAnimation,
-  resolveVisualSourceTime,
   sealVisualClipSpec,
   sealMediaPaintLayerSpec,
   sealMediaSampleLayerSpec,
@@ -38,7 +38,8 @@ import {
   visualTrackManifest,
   visualTrackTypes,
 } from "@hypit/visual-track";
-import type { VisualClipSpec, MediaLayerSet, VisualSourceTimeSpec } from "@hypit/visual-track";
+import type { VisualClipSpec, MediaLayerSet } from "@hypit/visual-track";
+import type { ExactTemporalValue, TemporalMapPiece, TemporalRelationSpec } from "@hypit/temporal";
 import type { NarrativeMomentRef, NarrativeSelectionRef } from "@hypit/narrative";
 import type { BlobRef } from "@hypit/protocol";
 import { spatialTypes } from "@hypit/spatial";
@@ -183,38 +184,49 @@ function stillLayers(): MediaLayerSet {
   return layers;
 }
 
-function timed(id = "timed", withAudio = true): SynchronizedMedia {
-  const sampleFrames = 96_000;
-  return {
-    frameDomain: {
-      frameRate: { numerator: 30, denominator: 1 },
-      frameCount: 60,
-    },
-    visual: {
-      artifact: { kind: "blob", resource: fixtureResource(`video:${id}`), size: 10_000, mediaType: "video/mp4" },
-      width: 720,
-      height: 1280,
-    },
-    ...(withAudio ? { audio: {
-      artifact: { kind: "blob" as const, resource: fixtureResource(`audio:${id}`), size: sampleFrames * 4, mediaType: "audio/wav" },
-    } } : {}),
+function preparedTimed(id = "timed", withAudio = true): PreparedMedia {
+  const videoStream = {
+    kind: "video" as const, index: 0, codecType: "video" as const, codecName: "h264", role: "moving" as const,
+    disposition: { default: true, attachedPicture: false }, timingStatus: "admissible" as const,
+    timeBase: { numerator: 1, denominator: 30 },
+    startPts: { ticks: "0", timeBase: { numerator: 1, denominator: 30 } },
+    endPts: { ticks: "60", timeBase: { numerator: 1, denominator: 30 } },
+    decodedUnitCount: 60, width: 720, height: 1280,
+    sampleAspectRatio: { numerator: 1, denominator: 1 }, rotationDegrees: 0 as const,
+    averageFrameRate: { numerator: 30, denominator: 1 }, nominalFrameRate: { numerator: 30, denominator: 1 },
   };
+  const audioStream = {
+    kind: "audio" as const, index: 1, codecType: "audio" as const, codecName: "pcm_s16le",
+    disposition: { default: true, attachedPicture: false }, timingStatus: "admissible" as const,
+    timeBase: { numerator: 1, denominator: 48_000 },
+    startPts: { ticks: "0", timeBase: { numerator: 1, denominator: 48_000 } },
+    endPts: { ticks: "96000", timeBase: { numerator: 1, denominator: 48_000 } },
+    decodedUnitCount: 96_000, sampleRate: 48_000, channels: 2, decodedSampleFrames: 96_000,
+  };
+  return prepareMedia({
+    id: `prepared-${id}`,
+    source: { kind: "blob", resource: fixtureResource(`source:${id}`), size: 10_000, mediaType: "video/mp4" },
+    inspection: { container: { formatNames: ["mp4"] }, streams: withAudio ? [videoStream, audioStream] : [videoStream] },
+    selection: { videoStreamIndex: 0, ...(withAudio ? { audioStreamIndex: 1 } : {}), spanAuthority: "video" },
+  });
 }
 
 function timedLayers(id: string, withAudio = true): MediaLayerSet {
-  return appendTimedMediaLayer(createMediaLayerSet(), timed(id, withAudio), fit, sealMediaSampleLayerSpec({
+  return appendTimedMediaLayer(createMediaLayerSet(), preparedTimed(id, withAudio), fit, sealMediaSampleLayerSpec({
 
     id: "video",
-    sourceTime: loopSourceTime(),
+    sampling: loopSampling(),
     appearance,
   }));
 }
 
-const startPoint = (offsetFrames = 0) => ({ edge: "start" as const, offsetFrames });
-const endPoint = (offsetFrames = 0) => ({ edge: "end" as const, offsetFrames });
+const startPoint = (offsetFrames = 0) => ({ edge: "start" as const,
+  offset: { unit: "frames" as const, value: offsetFrames } });
+const endPoint = (offsetFrames = 0) => ({ edge: "end" as const,
+  offset: { unit: "frames" as const, value: offsetFrames } });
 const fullBounds = () => ({ from: startPoint(), until: endPoint() });
 
-function loopSourceTime(): VisualSourceTimeSpec {
+function loopSampling(): TemporalRelationSpec {
   return { relations: [{
     kind: "rate",
     target: fullBounds(),
@@ -333,12 +345,12 @@ test("self-blur is two explicit samples of one Resource and collection keeps one
   assert.equal(blurred?.style.find((entry) => entry.name === "top")?.value, "-103px");
 });
 
-test("piecewise source time, Clip pose and picture sampling remain separate wrapper channels", () => {
+test("piecewise temporal sampling, Clip pose and picture sampling remain separate wrapper channels", () => {
   let layers = createMediaLayerSet();
-  layers = appendTimedMediaLayer(layers, timed(), fit, sealMediaSampleLayerSpec({
+  layers = appendTimedMediaLayer(layers, preparedTimed(), fit, sealMediaSampleLayerSpec({
 
     id: "video",
-    sourceTime: { relations: [
+    sampling: { relations: [
       {
         kind: "rate",
         target: { from: startPoint(), until: startPoint(30) },
@@ -384,23 +396,43 @@ test("piecewise source time, Clip pose and picture sampling remain separate wrap
   assert.deepEqual(samplingWrapper?.animation?.keyframes.map((entry) => entry.atFrame), [0, 60, 120]);
   const video = elements.find((element) => element.id === "video");
   assert.equal(video?.kind, "video");
-  assert.deepEqual(video.kind === "video" ? video.sourceTime?.pieces : undefined, [
+  const pieces = video.kind === "video" ? video.sampling.stages[0]?.pieces : undefined;
+  assert.deepEqual(pieces?.map((piece) => ({
+    target: {
+      startFrame: Number(temporalValueInFrames(piece.target.start, space).numerator),
+      endFrameExclusive: Number(temporalValueInFrames(piece.target.end, space).numerator),
+    },
+    sourceAtStart: (() => { const value = temporalValueInFrames(piece.sourceAtStart,
+      { frameRate: { numerator: 30, denominator: 1 } });
+    return { numerator: Number(value.numerator), denominator: Number(value.denominator) }; })(),
+    rate: piece.rate,
+  })), [
     { target: { startFrame: 0, endFrameExclusive: 30 }, sourceAtStart: { numerator: 10, denominator: 1 }, rate: { numerator: 1, denominator: 1 } },
     { target: { startFrame: 30, endFrameExclusive: 120 }, sourceAtStart: { numerator: 39, denominator: 1 }, rate: { numerator: 0, denominator: 1 } },
   ]);
 });
 
-test("Visual Track discards the audio member of synchronized media", () => {
-  const layers = appendTimedMediaLayer(createMediaLayerSet(), timed("with-audio"), fit, sealMediaSampleLayerSpec({
-    id: "video", appearance,
-  }));
-  const program = finalizeVisualTrack(appendProgramVisualClip(
+test("Prepared Media reaches the terminal visual program without an intermediate CFR artifact", () => {
+  const layers = appendTimedMediaLayer(
+    createMediaLayerSet(),
+    preparedTimed("alternate-rate"),
+    fit,
+    sealMediaSampleLayerSpec({ id: "video", appearance }),
+  );
+  const track = projectVisualTrack(space, finalizeVisualTrack(appendProgramVisualClip(
     createVisualTrackSet(), header, semantic, layers, frame, clipSpec(),
-  ), header, space);
-  const sample = program.clips[0]!.layers[0]!;
-  assert.equal(sample.kind, "sample");
-  assert.equal(sample.kind === "sample" && "audio" in sample.source, false);
-  assert.equal(projectVisualTrack(space, program).items.length, 1);
+  ), header, space));
+  const document = compileHtmlProgram(sealComposition({
+    id: "alternate-rate",
+    canvas: { width: 1080, height: 1920, clearColor: "#000000" },
+    visual: { members: [{ kind: "track", id: track.id, track }] },
+    audio: [],
+  }), space);
+  const source = document.videoSources[0];
+  assert.equal(source?.kind, "media");
+  if (source?.kind !== "media") throw new Error("Expected direct Prepared Media source");
+  assert.equal(source.source.streamIndex, 0);
+  assert.equal(source.source.source.resource, fixtureResource("source:alternate-rate"));
 });
 
 test("still and animated typed Surfaces use the same layer law without browser format guesses", () => {
@@ -421,7 +453,7 @@ test("still and animated typed Surfaces use the same layer law without browser f
     id: "still", appearance,
   }));
   layers = appendSurfaceMediaLayer(layers, animated, fit, sealMediaSampleLayerSpec({
-    id: "animated", sourceTime: loopSourceTime(), appearance,
+    id: "animated", sampling: loopSampling(), appearance,
   }));
   const elements = presentElements(projectVisualTrack(space, finalizeVisualTrack(appendProgramVisualClip(
     createVisualTrackSet(), header, semantic, layers, frame, clipSpec(),
@@ -429,20 +461,13 @@ test("still and animated typed Surfaces use the same layer law without browser f
   assert.equal(elements.find((element) => element.id === "still")?.kind, "surface");
   const moving = elements.find((element) => element.id === "animated");
   assert.equal(moving?.kind, "surface");
-  assert.ok(moving?.kind === "surface" && moving.sourceTime !== undefined);
+  assert.ok(moving?.kind === "surface" && moving.sampling !== undefined);
   const defaulted = appendSurfaceMediaLayer(createMediaLayerSet(), animated, fit, sealMediaSampleLayerSpec({
     id: "defaulted", appearance,
   }));
-  assert.equal(defaulted.layers[0]?.kind === "sample" ? defaulted.layers[0].sourceTime?.kind : undefined, "spec");
-  assert.deepEqual(defaulted.layers[0]?.kind === "sample" && defaulted.layers[0].sourceTime?.kind === "spec"
-    ? defaulted.layers[0].sourceTime.value.relations : undefined, [{
-    kind: "rate",
-    target: fullBounds(),
-    targetAt: startPoint(),
-    sourceAt: startPoint(),
-    rate: { numerator: 1, denominator: 1 },
-    source: fullBounds(),
-  }]);
+  assert.equal(defaulted.layers[0]?.kind === "sample" ? defaulted.layers[0].sampling?.kind : undefined, "relation");
+  assert.deepEqual(defaulted.layers[0]?.kind === "sample" && defaulted.layers[0].sampling?.kind === "relation"
+    ? defaulted.layers[0].sampling.value : undefined, defaultTemporalRelationSpec());
 });
 
 test("Visual Clips consume independent absolute Windows without becoming an exclusive lane", () => {
@@ -620,7 +645,7 @@ test("transparent, Paint, self-blur and alternate-source backing are only ordere
     element.kind === "box" && element.style.some((entry) => entry.name === "background")), false);
 });
 
-test("timed visual sources remain visual whether normalized media has audio or not", () => {
+test("timed visual sources remain visual whether PreparedMedia also selects audio or not", () => {
   const silent = timedLayers("silent", false);
   const program = finalizeVisualTrack(appendProgramVisualClip(
     createVisualTrackSet(), header, semantic, silent, frame, clipSpec(),
@@ -630,38 +655,48 @@ test("timed visual sources remain visual whether normalized media has audio or n
   assert.equal(audible.kind === "sample" && "audio" in audible.source, false);
 });
 
-test("visual source-time relations resolve partial identity, alignment, wrap, fit and reverse exactly", () => {
-  const resolve = (spec?: VisualSourceTimeSpec) => resolveVisualSourceTime({
-    timeline: space,
-    sourceFrameRate: { numerator: 30, denominator: 1 },
-    sourceFrameCount: 30,
-    targetFrameCount: 50,
-    ...(spec === undefined ? {} : { spec }),
+test("visual occurrences use the shared temporal relation algebra without frame-rate admission", () => {
+  const target = { id: "visual-occurrence", duration: exactTemporalValueFromFrames(50, space) };
+  const source = { id: "visual-source-domain", duration: exactTemporalValueFromFrames(30,
+    { frameRate: { numerator: 30, denominator: 1 } }) };
+  const resolve = (spec?: TemporalRelationSpec) => resolveTemporalRelation({ target, source, clock: space,
+    ...(spec === undefined ? {} : { spec }) });
+  const frames = (value: ExactTemporalValue, frameRate = space.frameRate) => {
+    const result = temporalValueInFrames(value, { frameRate });
+    return { numerator: Number(result.numerator), denominator: Number(result.denominator) };
+  };
+  const piece = (value: TemporalMapPiece) => ({
+    target: { startFrame: frames(value.target.start).numerator, endFrameExclusive: frames(value.target.end).numerator },
+    sourceAtStart: frames(value.sourceAtStart, { numerator: 30, denominator: 1 }),
+    rate: value.rate,
   });
-  assert.deepEqual(resolve().pieces.map((item) => item.target), [{ startFrame: 0, endFrameExclusive: 30 }]);
-  const endAligned: VisualSourceTimeSpec = { relations: [{
+  assert.deepEqual(resolve().stages[0]!.pieces.map(piece).map((item) => item.target),
+    [{ startFrame: 0, endFrameExclusive: 30 }]);
+  const endAligned: TemporalRelationSpec = { relations: [{
     kind: "rate", target: fullBounds(), targetAt: endPoint(), sourceAt: endPoint(),
     rate: { numerator: 1, denominator: 1 }, source: fullBounds(),
   }] };
-  assert.deepEqual(resolve(endAligned).pieces.map((item) => item.target), [{ startFrame: 20, endFrameExclusive: 50 }]);
+  assert.deepEqual(resolve(endAligned).stages[0]!.pieces.map(piece).map((item) => item.target),
+    [{ startFrame: 20, endFrameExclusive: 50 }]);
   assert.deepEqual(resolve({ relations: [{
     kind: "rate", target: fullBounds(), targetAt: endPoint(), sourceAt: endPoint(),
     rate: { numerator: 1, denominator: 1 }, source: fullBounds(), wrap: fullBounds(),
-  }] })
-    .pieces[0]?.sourceAtStart, { numerator: 10, denominator: 1 });
+  }] }).stages[0]!.pieces.map(piece)[0]?.sourceAtStart, { numerator: 10, denominator: 1 });
   assert.deepEqual(resolve({ relations: [{ kind: "fit", target: fullBounds(), source: fullBounds() }] })
-    .pieces[0]?.rate, { numerator: 3, denominator: 5 });
+    .stages[0]!.pieces[0]?.rate, { numerator: 3, denominator: 5 });
   assert.deepEqual(resolve({ relations: [{
-    kind: "rate", target: fullBounds(), targetAt: startPoint(), sourceAt: endPoint(-1),
+    kind: "rate", target: fullBounds(), targetAt: startPoint(), sourceAt: endPoint(),
     rate: { numerator: -1, denominator: 1 }, source: fullBounds(),
-  }] }).pieces[0], {
+  }] }).stages[0]!.pieces.map(piece)[0], {
     target: { startFrame: 0, endFrameExclusive: 30 },
-    sourceAtStart: { numerator: 29, denominator: 1 },
+    sourceAtStart: { numerator: 30, denominator: 1 },
     rate: { numerator: -1, denominator: 1 },
   });
-  assert.throws(() => resolveVisualSourceTime({
-    timeline: space, sourceFrameRate: { numerator: 24, denominator: 1 }, sourceFrameCount: 24, targetFrameCount: 30,
-  }), /normalized to Timeline frame rate/u);
+  const native24 = resolveTemporalRelation({ clock: space,
+    target: { id: "occurrence-24", duration: exactTemporalValueFromFrames(30, space) },
+    source: { id: "source-domain-24", duration: exactTemporalValueFromFrames(24,
+      { frameRate: { numerator: 24, denominator: 1 } }) } });
+  assert.equal(native24.stages[0]?.pieces.length, 1);
 });
 
 test("the graph keeps every source, extent, fit, frame, time and treatment input explicit", () => {
@@ -692,7 +727,7 @@ test("the Visual author Surface emits explicit graph edges for layers, absolute 
     ["clip-path", plain("clip-path", spatialTypes.path)],
     ["still", plain("still", blobTypes.blob)],
     ["extent", plain("extent", spatialTypes.extent)],
-    ["video", plain("video", mediaTypes.synchronized)],
+    ["video", plain("video", mediaTypes.prepared)],
     ["surface", plain("surface", mediaTypes.compositableSurface)],
     ["selection", plain("selection", temporalTypes.window)],
     ["answer-segment", plain("answer-segment", temporalTypes.window)],
@@ -740,7 +775,7 @@ test("the Visual author Surface emits explicit graph edges for layers, absolute 
   assert.ok(producers.includes("bind-visual-clip-path"));
   assert.ok(producers.includes("bind-visual-clip-motion"));
   assert.ok(fragment.inputs.some((entry) => entry.type.name === blobTypes.blob.name));
-  assert.ok(fragment.inputs.some((entry) => entry.type.name === mediaTypes.synchronized.name));
+  assert.ok(fragment.inputs.some((entry) => entry.type.name === mediaTypes.prepared.name));
   assert.ok(fragment.inputs.some((entry) => entry.type.name === spatialTypes.path.name));
   const clipSpecs = result.records.filter((entry) => entry.type.name === "VisualClipSpec");
   assert.equal(clipSpecs.length, 6);

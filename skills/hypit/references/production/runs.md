@@ -35,11 +35,11 @@ not Run declarations.
 <svrun version="1">
   <author source="./production.svml"/>
   <target output="final.video"/>
-  <build-record id="kept-media" build="bld_..." output="opening-normalized.media"/>
-  <build-record id="kept-domain" build="bld_..." output="opening-normalized.domain"/>
+  <build-record id="kept-media" build="bld_..." output="opening-prepared.media"/>
+  <build-record id="kept-domain" build="bld_..." output="opening-prepared.domain"/>
   <build-record id="kept-alignment" build="bld_..." output="opening-alignment.alignment"/>
-  <satisfy output="opening-normalized.media" candidate="kept-media"/>
-  <satisfy output="opening-normalized.domain" candidate="kept-domain"/>
+  <satisfy output="opening-prepared.media" candidate="kept-media"/>
+  <satisfy output="opening-prepared.domain" candidate="kept-domain"/>
   <satisfy output="opening-alignment.alignment" candidate="kept-alignment"/>
 </svrun>
 ```
@@ -65,8 +65,8 @@ A file can replace a byte-producing Output:
 <satisfy output="performance.video" candidate="supplied-performance"/>
 ```
 
-Here the file replaces the generated video bytes. Normalization and alignment still follow it.
-Selecting completed normalized media, local-domain and alignment Outputs preserves those facts
+Here the file replaces the generated video bytes. Preparation and alignment still follow it.
+Selecting completed prepared media, local-domain and alignment Outputs preserves those facts
 without preserving their later Timeline placement or Visual/Audio Clip use. Choose the Outputs whose meaning
 matches what should stay; the receiving Type identifies which kind of value fits each position.
 
@@ -113,7 +113,7 @@ The small [production Source](examples/production.svml), [Recipe](examples/look.
 these execution choices. Copy them together into a project. The simple performance request shows
 system wiring; the work's actual casting, references and direction come from its Treatment and Craft.
 
-`material.svrun` targets the opening alignment, which also demands normalization and the local domain.
+`material.svrun` targets the opening alignment, which also demands its speech-media adaptation and local domain.
 While it runs, the author can work on the title and its placement. Once those Outputs complete, select
 the media, domain and alignment with `build-record` in the production Run so rendering uses the produced
 performance and its word timing. If material is already available, use it directly. Choose Targets

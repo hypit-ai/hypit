@@ -1,20 +1,16 @@
 import type { StudioTrackCompanion, StudioTrackCompanionContext, StudioItemDraft } from "@hypit/studio-companion";
 import { artifactPreview, previewLayer, temporalLineageFor, temporalDomainMarker } from "@hypit/studio-companion";
-import { audioTrackClips, compositionTypes, visualElements } from "@hypit/composition";
-import type { AudioTrack, VisualElement, VisualMediaElement } from "@hypit/composition";
+import { audioTrackClips, compositionTypes } from "@hypit/composition";
+import type { AudioTrack, VisualElement } from "@hypit/composition";
 
 type TerminalVisualTrack = {
   readonly items?: readonly {
     readonly kind?: string;
     readonly id: string;
     readonly subjectId?: string;
-    readonly root?: Parameters<typeof visualElements>[0];
+    readonly root?: VisualElement;
   }[];
 };
-
-function isVisualMediaElement(element: VisualElement): element is VisualMediaElement {
-  return element.kind === "image" || element.kind === "video";
-}
 
 function withTemporalLineage(
   context: StudioTrackCompanionContext,
@@ -44,16 +40,12 @@ function projectTerminalVisual(context: StudioTrackCompanionContext): readonly S
       });
     }
     const present = terminal?.kind === "present" ? terminal : undefined;
-    const material = present?.root === undefined ? undefined : visualElements(present.root).find(
-      (element): element is VisualMediaElement => isVisualMediaElement(element) && element.artifact.resource.length > 0,
-    );
-    const resource = material?.artifact?.resource;
     return withTemporalLineage(context, {
       ...item,
       ...(present?.subjectId === undefined ? {} : { authoredId: present.subjectId }),
       display: {
         title: present?.subjectId ?? item.display.title,
-        layers: resource === undefined ? [] : [previewLayer(artifactPreview(material?.kind === "image" ? "image" : "video", resource), material?.kind === "image" ? "repeat-x" : "storyboard")],
+        layers: [],
       },
       presentation: { kind: "media-item", chrome: "standard" },
     });
@@ -65,7 +57,7 @@ function projectTerminalAudio(context: StudioTrackCompanionContext): readonly St
     .map((clip) => [clip.id, clip] as const));
   return context.generic().map((item, index) => {
     const clip = clips.get(context.spans[index]?.id ?? "");
-    const resource = clip?.artifact?.resource;
+    const resource = clip?.source.source.resource;
     return withTemporalLineage(context, {
       ...item,
       ...(clip?.subjectId === undefined ? {} : { authoredId: clip.subjectId }),

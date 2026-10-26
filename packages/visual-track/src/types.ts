@@ -1,5 +1,6 @@
-import type { FrameSpan, VisualEasing, VisualSourceTimeMap, VisualSourceTimeRational } from "@hypit/composition";
-import type { CompositableSurfaceRef, MediaRational } from "@hypit/media";
+import type { VisualEasing } from "@hypit/composition";
+import type { FrameSpan } from "@hypit/timeline";
+import type { CompositableSurfaceRef, PreparedMedia } from "@hypit/media";
 import type { BlobRef } from "@hypit/hypit/protocol";
 import type {
   ContentFit,
@@ -8,6 +9,7 @@ import type {
   SpatialMap2D,
   SpatialPath,
 } from "@hypit/spatial";
+import type { TemporalMap, TemporalRelationSpec } from "@hypit/temporal";
 
 /** Intrinsic visual truth resolved before Media authoring; never a Provider or lineage envelope. */
 export type MediaVisualSource =
@@ -18,10 +20,9 @@ export type MediaVisualSource =
     }
   | {
       readonly kind: "timed";
-      readonly artifact: BlobRef;
+      /** Logical source identity, selected signal facts and exact local domain. */
+      readonly media: PreparedMedia;
       readonly extent: IntrinsicExtent;
-      readonly frameRate: MediaRational;
-      readonly frameCount: number;
     }
   | {
       readonly kind: "surface";
@@ -29,42 +30,9 @@ export type MediaVisualSource =
       readonly extent: IntrinsicExtent;
     };
 
-/** Start/end-relative point in one target or source frame domain. */
-export type VisualSourceTimePoint = {
-  readonly edge: "start" | "end";
-  /** Positive from start, negative from end; zero names the edge itself. */
-  readonly offsetFrames: number;
-};
-
-export type VisualSourceTimeBounds = {
-  readonly from: VisualSourceTimePoint;
-  readonly until: VisualSourceTimePoint;
-};
-
-/** One author relation. Unknown target/source lengths are resolved only when the Clip is lowered. */
-export type VisualSourceTimeRelation =
-  | {
-      readonly kind: "rate";
-      readonly target: VisualSourceTimeBounds;
-      readonly targetAt: VisualSourceTimePoint;
-      readonly sourceAt: VisualSourceTimePoint;
-      readonly rate: VisualSourceTimeRational;
-      readonly source: VisualSourceTimeBounds;
-      readonly wrap?: VisualSourceTimeBounds;
-    }
-  | {
-      readonly kind: "fit";
-      readonly target: VisualSourceTimeBounds;
-      readonly source: VisualSourceTimeBounds;
-    };
-
-export type VisualSourceTimeSpec = {
-  readonly relations: readonly VisualSourceTimeRelation[];
-};
-
-export type MediaVisualSourceTime =
-  | { readonly kind: "spec"; readonly value: VisualSourceTimeSpec }
-  | { readonly kind: "map"; readonly value: VisualSourceTimeMap };
+export type MediaVisualSampling =
+  | { readonly kind: "relation"; readonly value: TemporalRelationSpec }
+  | { readonly kind: "map"; readonly value: TemporalMap };
 
 export type MediaGradientStop = {
   readonly offset: number;
@@ -123,8 +91,8 @@ export type MediaSamplePlacement =
 export type MediaSampleLayer = {
   readonly id: string;
   readonly kind: "sample";
-  /** Absent exactly for still material; timed material always carries source-time intent. */
-  readonly sourceTime?: MediaVisualSourceTime;
+  /** Absent exactly for still material; timed material always carries one occurrence-local sampling relation. */
+  readonly sampling?: MediaVisualSampling;
   readonly source: MediaVisualSource;
   readonly placement: MediaSamplePlacement;
   readonly appearance: MediaSampleAppearance;
@@ -149,12 +117,13 @@ export type MediaPaintLayerSpec = {
 export type MediaSampleLayerSpec = {
   readonly id: string;
   /** Omission means bounded partial identity for timed material. */
-  readonly sourceTime?: VisualSourceTimeSpec;
+  readonly sampling?: TemporalRelationSpec;
   readonly appearance: MediaSampleAppearance;
   readonly samplingMotion?: MediaSamplingMotion;
 };
 
 export type MediaLayerSet = {
+  /** Component-level material construction; the public Clip Surface still accepts one direct source. */
   readonly layers: readonly MediaLayer[];
 };
 

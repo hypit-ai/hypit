@@ -24,7 +24,7 @@
   <media:Image id="picture-b" src="./flush.png"/>
 
   <mediaop:StillVideo id="duration" source={picture-a} duration="5s" clock={clock}/>
-  <mediaop:Normalize id="duration-media" source={duration.video} clock={clock}
+  <mediaop:Prepare id="duration-media" source={duration.video}
     video="primary-moving" audio="none" span-authority="video"/>
   <time:Timeline id="speech" clock={clock} end="showcase.end">
     <time:Window id="showcase" from="start" for={duration-media.extent}/>

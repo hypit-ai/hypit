@@ -55,7 +55,7 @@ Output paths are package vocabulary, not inferred from the element's tag:
 - `copy:Value id="direction"` publishes `{direction}`;
 - an imported `media:Image id="logo"` publishes `{logo}`;
 - `gpt:Image id="portrait"` publishes `{portrait.image}`;
-- `pipeline:Normalize id="prepared"` publishes `{prepared.media}`;
+- `mediaop:Prepare id="prepared"` publishes `{prepared.media}`;
 - `time:Timeline id="speech"` publishes `{speech.timeline}`;
 - `typo:Flow id="title"` publishes `{title.occurrence}` and `{title.visual}`;
 - `visual:Track id="picture"` publishes `{picture.visual}` and `{picture.program}`;
@@ -157,8 +157,8 @@ are not executed.
 
 To reuse a prior Output, declare a `build-record` Candidate and select it with `satisfy`; the prior
 Result name and the current Logical Output name can differ. A raw MP4 file is a Blob Artifact, not
-normalized media or alignment evidence. Select Candidates by their real nominal Type and creative
-meaning, retaining normalization, local temporal-domain recovery or alignment where still needed.
+prepared media or alignment evidence. Select Candidates by their real nominal Type and creative
+meaning, retaining preparation, local temporal-domain recovery or alignment where still needed.
 [Runs](runs.md) explains complete Candidate forms,
 Fragment inputs and exports; [Authoring](authoring.md) owns the creative reuse decisions;
 the installed Fragment package owns its own input and export names.

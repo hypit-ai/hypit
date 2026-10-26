@@ -1,4 +1,4 @@
-import { assertTimelineIdentity, timelineFrameSampleBoundary, timelineSampleFrames } from "@hypit/timeline";
+import { assertTimelineIdentity } from "@hypit/timeline";
 import type { Timeline } from "@hypit/timeline";
 import {
   assertAudioTrackIdentity,
@@ -16,7 +16,9 @@ import type {
   VisualStyleDeclaration,
   PresentVisualTrack,
 } from "@hypit/composition";
-import { synchronizedMediaSampleFrames, verifySynchronizedMedia } from "@hypit/media";
+import { preparedAudioSource, verifyPreparedMedia } from "@hypit/media";
+import { addExactTemporalValues, compareExactTemporalValues, exactTemporalValueFromFrames,
+  resolveTemporalRelation, subtractExactTemporalValues } from "@hypit/temporal";
 
 import {
   assertColumnProgram,
@@ -36,7 +38,6 @@ import {
 } from "./tier.js";
 import type { TierCell, TierItemPose } from "./tier.js";
 import type {
-  ColumnItem,
   ColumnProgram,
   RankingBoardPaint,
   RankingSoundEventPlan,
@@ -45,7 +46,6 @@ import type {
   RankingTextStyle,
   TierBoardItem,
   TierBoardProgram,
-  TopThreeItem,
   TopThreeProgram,
 } from "./types.js";
 
@@ -372,11 +372,6 @@ export function renderTierBoard(timeline: Timeline, program: TierBoardProgram): 
   return sealTrack(timeline, program.id, presents);
 }
 
-function rowY(frameY: number, frameHeight: number, padding: number, count: number, index: number, height: number, gap: number): number {
-  const total = count * height + Math.max(0, count - 1) * gap;
-  return frameY + Math.max(padding, frameHeight - padding - total) + index * (height + gap);
-}
-
 function rankColor(colors: readonly string[], index: number): string {
   return colors[index % colors.length]!;
 }
@@ -658,35 +653,40 @@ export function renderRankingAudio(
   assertRankingSoundEventPlan(plan);
   assertRankingSoundStyle(style);
   assert(sounds.appear !== undefined || sounds.move !== undefined, "Ranking audio requires at least one authored sound.");
-  if (sounds.appear !== undefined) verifySynchronizedMedia(sounds.appear);
-  if (sounds.move !== undefined) verifySynchronizedMedia(sounds.move);
-  const totalSamples = timelineSampleFrames(timeline, 48_000);
+  if (sounds.appear !== undefined) verifyPreparedMedia(sounds.appear);
+  if (sounds.move !== undefined) verifyPreparedMedia(sounds.move);
+  const timelineEnd = exactTemporalValueFromFrames(timeline.frameCount, timeline);
   const clips: AudioClip[] = [];
   for (const event of plan.events) {
     const media = sounds[event.kind];
     if (media === undefined) continue;
-    const audio = media.audio;
-    assert(audio !== undefined, `Ranking ${event.kind} sound has no normalized audio.`);
-    const startSample = timelineFrameSampleBoundary(timeline, event.frame, 48_000);
+    const targetStart = exactTemporalValueFromFrames(event.frame, timeline);
     const fadeEndFrame = event.frame + style.fadeFrames;
     assert(fadeEndFrame <= timeline.frameCount,
       `Ranking sound ${event.id} fade exceeds Timeline.`);
-    const fadeSamples = timelineFrameSampleBoundary(timeline, fadeEndFrame, 48_000) - startSample;
-    const sourceSampleFrames = synchronizedMediaSampleFrames(media);
-    const length = Math.min(sourceSampleFrames, totalSamples - startSample);
-    assert(length > 0, `Ranking sound ${event.id} starts after Timeline.`);
-    assert(fadeSamples <= length, `Ranking sound ${event.id} fade exceeds its audible interval.`);
+    if (media.audio === undefined) throw new Error(`Ranking sound ${event.id} has no selected audio member.`);
+    const sourceDuration = media.domain.duration;
+    const available = subtractExactTemporalValues(timelineEnd, targetStart);
+    const targetDuration = compareExactTemporalValues(sourceDuration, available) <= 0 ? sourceDuration : available;
+    assert(compareExactTemporalValues(targetDuration,
+      { ticks: "0", timeBase: { numerator: 1, denominator: 1 } }) > 0,
+    `Ranking sound ${event.id} starts after Timeline.`);
+    const fadeIn = exactTemporalValueFromFrames(style.fadeFrames, timeline);
+    assert(compareExactTemporalValues(fadeIn, targetDuration) <= 0,
+      `Ranking sound ${event.id} fade exceeds its audible interval.`);
+    const sampling = resolveTemporalRelation({
+      clock: timeline,
+      target: { id: `${event.id}:occurrence`, duration: targetDuration },
+      source: structuredClone(media.domain),
+    });
     clips.push({
       id: event.id,
-      artifact: structuredClone(audio.artifact),
-      target: { startSample, endSampleExclusive: startSample + length },
-      sourceTime: { sourceSampleFrames, pieces: [{
-        target: { startSample: 0, endSampleExclusive: length },
-        sourceAtStart: { numerator: 0, denominator: 1 },
-        rate: { numerator: 1, denominator: 1 },
-      }] },
+      source: preparedAudioSource(media),
+      preparation: structuredClone(media.audio.map),
+      target: { start: targetStart, end: addExactTemporalValues(targetStart, targetDuration) },
+      sampling,
       gain: event.kind === "appear" ? style.appearGain : style.moveGain,
-      fadeInSamples: fadeSamples, fadeOutSamples: 0,
+      fadeIn, fadeOut: { ticks: "0", timeBase: { numerator: 1, denominator: 1 } },
     });
   }
   for (const kind of ["appear", "move"] as const) {

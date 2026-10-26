@@ -6,21 +6,21 @@ import type { CompositableSurfaceRef, TimelineVisual } from "@hypit/media";
 import type { CanonicalValue } from "@hypit/protocol";
 import { rasterizeHtmlProgram } from "../../src/index.js";
 import { browserExecutablePath } from "../../src/browser.js";
-import { localHtmlBrowserProgram } from "../../src/program.js";
-import { htmlProviderDocument, htmlProviderHandler, htmlProviderNeed } from "../provider-scenario.js";
+import { localHtmlRendererProgram } from "../../src/program.js";
+import { htmlProviderDelivery, htmlProviderDocument, htmlProviderHandler, htmlProviderNeed } from "../provider-scenario.js";
 
 test("an explicit browser renders without installing a managed replacement", async () => {
   const chromePath = process.env.HYPIT_TEST_CHROME_PATH ?? browserExecutablePath({});
-  const program = localHtmlBrowserProgram({ chromePath, id: "external", nodePath: process.execPath, ffprobePath: "ffprobe" });
+  const program = localHtmlRendererProgram({ chromePath, id: "external", nodePath: process.execPath, ffprobePath: "ffprobe" });
   assert.equal(program.installation, undefined);
   assert.equal((await program.probe()).state, "ready");
   const diagnostics: string[] = [];
-  const visual = await rasterizeHtmlProgram({ program: htmlProviderDocument() }, {
+  const visual = await rasterizeHtmlProgram({ program: htmlProviderDocument(), delivery: htmlProviderDelivery() }, {
     chromePath, resources: new MemoryResourceStore(), workers: 1,
     onDiagnostic: async event => { diagnostics.push(event.message); },
   });
   assert.equal(visual.frameCount, 12);
-  assert.ok(diagnostics.some(message => message.includes(`browser ${chromePath}`)));
+  assert.ok(diagnostics.some(message => message.includes(`executable ${chromePath}`)));
 });
 
 test("local HTML renderer Provider really renders a silent frame-exact MP4 with parallel workers", async () => {
@@ -50,4 +50,27 @@ test("local HTML renderer Provider really renders a silent frame-exact MP4 with 
   assert.equal(visual.frameCount, 12);
   assert.deepEqual(visual.canvas, { width: 160, height: 96 });
   assert.equal(await resources.has(visual.artifact.resource), true);
+});
+
+test("Electron renders the final visual through browser decode, shared texture and WebCodecs", {
+  skip: process.env.HYPIT_TEST_ELECTRON_PATH === undefined,
+}, async () => {
+  const resources = new MemoryResourceStore();
+  const diagnostics: string[] = [];
+  const visual = await rasterizeHtmlProgram({
+    program: htmlProviderDocument(),
+    delivery: htmlProviderDelivery(),
+  }, {
+    renderer: "electron",
+    electronPath: process.env.HYPIT_TEST_ELECTRON_PATH!,
+    ffmpegPath: "ffmpeg",
+    ffprobePath: "ffprobe",
+    workers: 1,
+    resources,
+    onDiagnostic: async event => { diagnostics.push(event.message); },
+  });
+  verifyTimelineVisual(visual);
+  assert.equal(visual.frameCount, 12);
+  assert.equal(await resources.has(visual.artifact.resource), true);
+  assert.ok(diagnostics.some(message => message.includes("browser decode, WebCodecs H.264 and FFmpeg mux")));
 });

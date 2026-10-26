@@ -1,11 +1,40 @@
 import { audioEnvelopeGainAt } from "@hypit/composition";
+import type { HtmlProgram } from "@hypit/html-program";
+import {
+  addExactTemporalValues,
+  evaluateTemporalMap,
+  exactTemporalRational,
+  exactTemporalValueFromFrames,
+} from "@hypit/temporal";
+
+type PlaybackVideoPlan = {
+  readonly id: string;
+  readonly timestamps: readonly (number | null)[];
+};
+
+function playbackVideoPlan(program: HtmlProgram | undefined): readonly PlaybackVideoPlan[] {
+  if (program === undefined) return [];
+  return program.videoSources.flatMap((source) => {
+    if (source.kind !== "media") return [];
+    const timestamps = Array.from({ length: source.endFrameExclusive - source.startFrame }, (_, frame) => {
+      const mapped = evaluateTemporalMap(source.sampling, exactTemporalValueFromFrames(frame, program));
+      if (mapped === undefined) return null;
+      const absolute = exactTemporalRational(addExactTemporalValues(source.source.presentationStart, mapped));
+      const seconds = Number(absolute.numerator) / Number(absolute.denominator);
+      if (!Number.isFinite(seconds)) throw new Error(`Playback video ${source.id} timestamp exceeds finite arithmetic`);
+      return seconds;
+    });
+    return [{ id: source.id, timestamps }];
+  });
+}
 
 /**
  * Browser playback adapter for one compiled HtmlProgram and AudioProgram.
  * The program owners retain picture, sound and frame facts; this adapter only
  * places both facts on one browser playback clock.
  */
-function shim(): string {
+function shim(videoPlan: readonly PlaybackVideoPlan[]): string {
+  const encodedVideoPlan = encodeURIComponent(JSON.stringify(videoPlan));
   return String.raw`
 <script>
 (function () {
@@ -18,6 +47,9 @@ function shim(): string {
   var currentSeconds = 0;
   var playing = false;
   var seekRevision = 0;
+  var directMediaPlans = new Map(JSON.parse(decodeURIComponent(${JSON.stringify(encodedVideoPlan)})).map(function (entry) {
+    return [entry.id, entry.timestamps];
+  }));
   if (root) {
     root.style.width = (root.getAttribute('data-hypit-width') || '0') + 'px';
     root.style.height = (root.getAttribute('data-hypit-height') || '0') + 'px';
@@ -27,14 +59,20 @@ function shim(): string {
   // Addressing only their containing Present makes every run paint at once.
   var media = [];
   for (var element of document.querySelectorAll('.hypit-visual-present video')) {
+    var timestamps = directMediaPlans.get(element.id);
+    var sourceFrame = element.getAttribute('data-hypit-source-frame');
+    var sourceRate = element.getAttribute('data-hypit-source-rate');
+    var sourceFps = element.getAttribute('data-hypit-source-fps');
+    if (!timestamps && (!sourceFrame || !sourceRate || !sourceFps)) continue;
     media.push({
       element: element,
       url: element.getAttribute('data-hypit-src'),
       startFrame: Number(element.getAttribute('data-hypit-start-frame')),
       endFrame: Number(element.getAttribute('data-hypit-end-frame')),
-      sourceFrame: element.getAttribute('data-hypit-source-frame').split('/').map(BigInt),
-      sourceRate: element.getAttribute('data-hypit-source-rate').split('/').map(BigInt),
-      sourceFps: element.getAttribute('data-hypit-source-fps').split('/').map(Number)
+      timestamps: timestamps,
+      sourceFrame: timestamps ? undefined : sourceFrame.split('/').map(BigInt),
+      sourceRate: timestamps ? undefined : sourceRate.split('/').map(BigInt),
+      sourceFps: timestamps ? undefined : sourceFps.split('/').map(Number)
     });
   }
   var audioContext;
@@ -162,6 +200,7 @@ function shim(): string {
   // Source time (seconds, decoded-frame centre) that a visual record shows at
   // one Program frame. A hold stays on its authored source frame.
   function sourceTarget(record, programFrame) {
+    if (record.timestamps) return record.timestamps[programFrame - record.startFrame];
     var sourceFrame;
     if (record.sourceRate[0] === 0n) sourceFrame = Number(record.sourceFrame[0] / record.sourceFrame[1]);
     else {
@@ -185,23 +224,29 @@ function shim(): string {
       var inside = programFrame >= record.startFrame && programFrame < record.endFrame;
       var element = record.element;
       prepareMedia(record, programFrame >= record.startFrame - 2 * fps && programFrame < record.endFrame + fps);
-      // Normalized picture Artifacts are deliberately silent. Program sound
+      // Materialized picture Artifacts are deliberately silent. Program sound
       // comes from the exact AudioTrack below rather than from a video sidecar.
       element.muted = true;
+      var target = inside ? sourceTarget(record, programFrame) : undefined;
+      inside = inside && target !== undefined && target !== null;
       if (!inside) {
         element.style.visibility = 'hidden';
         element.pause();
         // An upcoming Clip waits decoded on its entry frame, so the cut shows
         // that frame at once instead of whatever the decoder last held.
-        if (record.loaded && programFrame < record.startFrame) seekDecoded(element, sourceTarget(record, record.startFrame));
+        var entryTarget = programFrame < record.startFrame ? sourceTarget(record, record.startFrame) : undefined;
+        if (record.loaded && entryTarget !== undefined && entryTarget !== null) seekDecoded(element, entryTarget);
         else cancelSeek(element);
         continue;
       }
-      var target = sourceTarget(record, programFrame);
+      var directNext = record.timestamps && programFrame + 1 < record.endFrame
+        ? sourceTarget(record, programFrame + 1) : undefined;
+      var directRate = directNext === undefined || directNext === null ? 0 : (directNext - target) * fps;
       // A hold remains one compact target interval. Its exact zero source rate
       // cannot be assigned to HTMLMediaElement.playbackRate, so keep the native
       // decoder paused at the authored source frame instead.
-      if (scrubbing || record.sourceRate[0] <= 0n || programFrame === record.endFrame - 1) {
+      if (scrubbing || (record.timestamps ? directRate <= 0 : record.sourceRate[0] <= 0n)
+        || programFrame === record.endFrame - 1) {
         element.style.visibility = 'visible';
         element.pause();
         waits.push(seekDecoded(element, target));
@@ -222,7 +267,8 @@ function shim(): string {
       cancelSeek(element);
       if (element.readyState === 0) continue;
       if (!element.seeking && Math.abs(element.currentTime - target) > 0.08) element.currentTime = target;
-      element.playbackRate = Number(record.sourceRate[0]) / Number(record.sourceRate[1]) * fps * record.sourceFps[1] / record.sourceFps[0];
+      element.playbackRate = record.timestamps ? directRate
+        : Number(record.sourceRate[0]) / Number(record.sourceRate[1]) * fps * record.sourceFps[1] / record.sourceFps[0];
       if (element.paused) {
         var started = element.play();
         if (started) started.catch(function () {});
@@ -278,11 +324,11 @@ function shim(): string {
 </script>`;
 }
 
-export function injectHtmlPlayback(html: string, audio = ""): string {
+export function injectHtmlPlayback(html: string, audio = "", program?: HtmlProgram): string {
   // Take ownership before the renderer activates deferred resources. Otherwise
   // every video in a long Program allocates a decoder before the first frame.
   html = html.replace(/(<video\b[^>]*?)\s(?:data-hypit-resource-src|src)=/gu, '$1 preload="none" data-hypit-src=');
-  const script = audio + shim().replace("(function () {", `(function () {\n${audioEnvelopeGainAt.toString()}`);
+  const script = audio + shim(playbackVideoPlan(program)).replace("(function () {", `(function () {\n${audioEnvelopeGainAt.toString()}`);
   const at = html.lastIndexOf("</body>");
   return at < 0 ? html + script : html.slice(0, at) + script + html.slice(at);
 }

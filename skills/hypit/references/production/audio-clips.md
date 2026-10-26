@@ -1,12 +1,12 @@
 # Place sound through Audio Track
 
-Read this for normalized speech, music, ambience and effects. [Sound direction](../playbooks/craft/sound-mix.md)
+Read this for prepared speech, music, ambience and effects. [Sound direction](../playbooks/craft/sound-mix.md)
 owns mix judgment; this page owns the ordinary author relation.
 
 ## Place one ordinary Clip occurrence
 
 ```text
-Audio Clip = normalized audio source + absolute Window + source-time + mix
+Audio Clip = prepared audio source + absolute Window + optional temporal Map + mix
 Audio Track = additive set of Audio Clips
 ```
 
@@ -36,8 +36,9 @@ is heard. Reusing the same source in two Clips creates two audible occurrences.
 
 Omission uses bounded native playback from source start; source that ends before the Window leaves
 silence. `audio:Map` expresses target/source bounds, paired anchors, rate and optional periodic wrap.
-A fit Map stretches its source interval over its target while preserving pitch; `min-rate` and
-`max-rate` can bound the accepted change. Multiple non-overlapping Maps form one piecewise relation.
+A fit Map derives the exact rate that spans its source interval over its target. Multiple
+non-overlapping Maps form one piecewise relation. Use explicit target/source bounds when only part of
+either local domain should participate.
 
 `gain` is a linear multiplier. Fade lengths apply to the whole Clip Window. Overlapping Clips mix as
 peers.
@@ -65,6 +66,6 @@ sidechain control, reverb sends or role-specific behavior still belongs to the c
 that behavior.
 
 Audio Track publishes `.audio` for Film and `.program` for declared tooling. Film includes audio
-outputs explicitly. Using synchronized media in [Visual Track](visual-clips.md) does not select its
+outputs explicitly. Using prepared media in [Visual Track](visual-clips.md) does not select its
 audio, so include one intended voice path and avoid accidental duplication. At the Film root these
 closed signals add as a multiset: Track ids do not merge or replace equal-named signals.

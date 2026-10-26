@@ -3,12 +3,12 @@
 Audio Track is the plain sound-placement package:
 
 ```text
-Audio Clip = normalized audio source + absolute Window + sampling + mix
+Audio Clip = prepared audio source + absolute Window + sampling + mix
 Audio Track authoring = additive set of Audio Clips
 terminal AudioTrack = closed source/mix signal graph
 ```
 
-Timeline supplies the program clock, not hidden audio. Each Clip names its own normalized source and
+Timeline supplies the program clock, not hidden audio. Each Clip names its own prepared source and
 destination Window. The Track publishes `.program` for declared tooling and `.audio` as an ordinary
 peer contribution to Film.
 
@@ -35,16 +35,19 @@ upstream; Audio Track neither constructs time ranges nor recognizes semantic, be
 target start maps to source start at native rate, and excess Window time is silent. One `Map` relates
 target and source intervals through an exact positive rate; `wrap-from`/`wrap-until` makes a selected
 source interval periodic. A Map without rate, anchors or wrap fits its source interval across its
-target interval while preserving pitch; optional `min-rate`/`max-rate` bounds make that fit fail
-instead of silently exceeding an authored safety range. Multiple non-overlapping Maps form one
+target interval. Multiple non-overlapping Maps form one
 partial function, and gaps are silence.
 
 Audio deliberately does not inherit visual-only laws such as a zero-rate held frame or reverse
 picture sampling. It owns positive, pitch-preserving tempo mapping in the same small algebraic shape,
 without placing an audiovisual policy in Core.
 
+The terminal AudioTrack retains the exact absolute target interval, exact fades and exact Clip-local
+sampling Map. The AudioProgram compiler is the first layer that resolves those boundaries onto the
+48 kHz execution grid, so rational Timeline clocks do not acquire an earlier one-sample phase error.
+
 Speech, music, ambience and effects are equal Audio Clips. A source that helped determine Timeline
-duration or anchors leaves no special marker in the audio-placement path. Reusing one normalized
+duration or anchors leaves no special marker in the audio-placement path. Reusing one prepared
 source in two Clips creates two independent occurrences.
 
 Audio Track has no generic `Presentation`, `Style` or `Use`. It lowers its Clips to source nodes and
@@ -53,7 +56,7 @@ relationships spanning multiple Clips remain ordinary components. They may calcu
 automation or consume closed AudioTracks and publish a new processed graph; the base package and
 Core do not acquire a catalogue of sound roles or effects.
 
-Using synchronized media here does not make its picture visible. Author picture independently with
+Using PreparedMedia here consumes only its audio member and does not make its picture visible. Author picture independently with
 [`@hypit/visual-track`](../visual-track/README.md).
 
 ## Distribution and Studio

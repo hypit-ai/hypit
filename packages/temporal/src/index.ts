@@ -1,5 +1,5 @@
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/hypit/protocol";
-import { timelineDependency, timelineTypes } from "@hypit/timeline";
+import { frameSpanSchema, timelineDependency, timelineTypes } from "@hypit/timeline";
 
 const string = { kind: "string", minLength: 1 } as const;
 const unsignedInteger = { kind: "number", integer: true, minimum: 0 } as const;
@@ -16,14 +16,12 @@ const instant: ValueSchema = { kind: "oneOf", variants: [
   })),
   object({ ref: { schema: { kind: "literal", value: "absolute" } }, at: { schema: duration }, offset: { schema: duration, optional: true } }),
 ] };
-const frameSpanSchema: ValueSchema = object({
-  startFrame: { schema: unsignedInteger },
-  endFrameExclusive: { schema: { kind: "number", integer: true, minimum: 1 } },
-});
-
 export * from "./domain.js";
+export * from "./exact.js";
 export * from "./extent.js";
+export * from "./map.js";
 export * from "./projection.js";
+export * from "./relation.js";
 export * from "./schedule.js";
 export * from "./sample.js";
 export type * from "./types.js";
@@ -31,7 +29,9 @@ export type * from "./types.js";
 export const temporalModuleRef = { name: "@hypit/temporal", version: "1" } as const;
 export const temporalTypes = {
   duration: { module: temporalModuleRef, name: "TemporalDuration" },
+  exactValue: { module: temporalModuleRef, name: "ExactTemporalValue" },
   extent: { module: temporalModuleRef, name: "TemporalExtent" },
+  map: { module: temporalModuleRef, name: "TemporalMap" },
   shiftSpec: { module: temporalModuleRef, name: "TemporalShiftSpec" },
   localDomain: { module: temporalModuleRef, name: "LocalTemporalDomain" },
   instantSpec: { module: temporalModuleRef, name: "TemporalInstantSpec" },
@@ -54,7 +54,9 @@ export const temporalManifest: ModuleManifest = {
   dependencies: [timelineDependency],
   types: [
     temporalTypes.duration.name,
+    temporalTypes.exactValue.name,
     temporalTypes.extent.name,
+    temporalTypes.map.name,
     temporalTypes.shiftSpec.name,
     temporalTypes.localDomain.name,
     temporalTypes.instantSpec.name,
@@ -89,18 +91,55 @@ export const temporalDependency = temporalModuleRef;
 
 export const localTemporalDomainSchema: ValueSchema = object({
   id: { schema: string },
-  frameRate: { schema: object({
-    numerator: { schema: { kind: "number", integer: true, minimum: 1 } },
-    denominator: { schema: { kind: "number", integer: true, minimum: 1 } },
+  duration: { schema: object({
+    ticks: { schema: string },
+    timeBase: { schema: object({
+      numerator: { schema: { kind: "number", integer: true, minimum: 1 } },
+      denominator: { schema: { kind: "number", integer: true, minimum: 1 } },
+    }) },
   }) },
-  frameCount: { schema: { kind: "number", integer: true, minimum: 1 } },
 });
-export const temporalExtentSchema: ValueSchema = object({
-  frameRate: { schema: object({
+export const exactTemporalValueSchema: ValueSchema = object({
+  ticks: { schema: string },
+  timeBase: { schema: object({
     numerator: { schema: { kind: "number", integer: true, minimum: 1 } },
     denominator: { schema: { kind: "number", integer: true, minimum: 1 } },
   }) },
-  frameCount: { schema: unsignedInteger },
+});
+export const temporalExtentSchema: ValueSchema = object({ duration: { schema: exactTemporalValueSchema } });
+const temporalRangeSchema: ValueSchema = object({
+  start: { schema: exactTemporalValueSchema }, end: { schema: exactTemporalValueSchema },
+});
+const temporalRateSchema: ValueSchema = object({
+  numerator: { schema: integer }, denominator: { schema: { kind: "number", integer: true, minimum: 1 } },
+});
+const temporalRelativePointSchema: ValueSchema = object({
+  edge: { schema: { kind: "string", enum: ["start", "end"] } },
+  offset: { schema: duration },
+});
+const temporalRelativeRangeSchema: ValueSchema = object({
+  from: { schema: temporalRelativePointSchema }, until: { schema: temporalRelativePointSchema },
+});
+const temporalRelationSchema: ValueSchema = { kind: "oneOf", variants: [
+  object({ kind: { schema: { kind: "literal", value: "rate" } }, target: { schema: temporalRelativeRangeSchema },
+    targetAt: { schema: temporalRelativePointSchema }, sourceAt: { schema: temporalRelativePointSchema },
+    rate: { schema: temporalRateSchema }, source: { schema: temporalRelativeRangeSchema },
+    wrap: { schema: temporalRelativeRangeSchema, optional: true } }),
+  object({ kind: { schema: { kind: "literal", value: "fit" } }, target: { schema: temporalRelativeRangeSchema },
+    source: { schema: temporalRelativeRangeSchema } }),
+] };
+export const temporalRelationSpecSchema: ValueSchema = object({
+  relations: { schema: { kind: "array", minItems: 1, items: temporalRelationSchema } },
+});
+const temporalMapPieceSchema: ValueSchema = object({
+  target: { schema: temporalRangeSchema }, sourceAtStart: { schema: exactTemporalValueSchema },
+  rate: { schema: temporalRateSchema }, wrap: { schema: temporalRangeSchema, optional: true },
+});
+export const temporalMapSchema: ValueSchema = object({
+  stages: { schema: { kind: "array", minItems: 1, items: object({
+    target: { schema: localTemporalDomainSchema }, source: { schema: localTemporalDomainSchema },
+    pieces: { schema: { kind: "array", items: temporalMapPieceSchema } },
+  }) } },
 });
 export const temporalDurationSchema: ValueSchema = duration;
 const temporalAuthorParameterSchema: ValueSchema = object({
@@ -111,7 +150,9 @@ export const temporalShiftSpecSchema: ValueSchema = object({
   id: { schema: string }, subjectId: { schema: string },
   direction: { schema: { kind: "oneOf", variants: [
     { kind: "literal", value: 1 }, { kind: "literal", value: -1 },
-  ] } }, author: { schema: temporalAuthorParameterSchema, optional: true },
+  ] } },
+  resolution: { schema: { kind: "string", enum: ["exact", "cover", "inside", "nearest"] }, optional: true },
+  author: { schema: temporalAuthorParameterSchema, optional: true },
 });
 export const temporalInstantSpecSchema: ValueSchema = object({
   id: { schema: string }, subjectId: { schema: string }, projection: { schema: instant },

@@ -9,8 +9,10 @@ import { createResolvedClosure } from "@hypit/kernel";
 import { blobManifest } from "@hypit/blob";
 import { audioTrackClips, compositionManifest, visualElements } from "@hypit/composition";
 import type { VisualItem } from "@hypit/composition";
-import type { FontArtifactRef, SynchronizedMedia } from "@hypit/media";
+import type { FontArtifactRef, PreparedMedia } from "@hypit/media";
 import { mediaManifest, mediaTypes } from "@hypit/media";
+import { mediaOperationsManifest } from "@hypit/media-operations";
+import { exactTemporalValueFromFrames, exactTemporalZero, identityTemporalMap, temporalValueInFrames } from "@hypit/temporal";
 import type { NarrativeSegmentRef, NarrativeMomentRef, NarrativeSelectionRef } from "@hypit/narrative";
 import { sealCanvas, sealSpatialFrame, spatialManifest } from "@hypit/spatial";
 import type { Recipe } from "@hypit/recipe";
@@ -490,12 +492,16 @@ test("TopThree accepts one to three optional-image Items and removes active acce
     schedule(owner, [...semantic, fourth]), style, tooMany), /at most three/u);
 });
 
-const sound = (id: string): SynchronizedMedia => ({
-  frameDomain: { frameRate: { numerator: 30, denominator: 1 }, frameCount: 3 },
-  audio: {
-    artifact: { kind: "blob", resource: fixtureResource(`ranking-sound:${id}`), size: 128, mediaType: "audio/wav" },
-  },
-});
+const sound = (id: string): PreparedMedia => {
+  const domain = { id: `ranking-sound:${id}`, duration: exactTemporalValueFromFrames(4_800,
+    { frameRate: { numerator: 48_000, denominator: 1 } }) };
+  return {
+    source: { kind: "blob", resource: fixtureResource(`ranking-sound:${id}`), size: 128, mediaType: "audio/wav" },
+    domain,
+    audio: { streamIndex: 0, presentationStart: exactTemporalZero(), sourceDomain: domain,
+      map: identityTemporalMap(domain), interpretation: { sampleRate: 48_000, channels: 2 } },
+  };
+};
 
 test("visual and sound event plans share exact phase frames while absent sound stays an independent branch", () => {
   const owner = header("column", "sound-column");
@@ -512,7 +518,8 @@ test("visual and sound event plans share exact phase frames while absent sound s
   sounds = appendRankingSound(sounds, "appear", sound("appear"));
   sounds = appendRankingSound(sounds, "move", sound("move"));
   const audio = renderRankingAudio(space, events, decoded.sound, sounds);
-  assert.deepEqual(audioTrackClips(audio).map((clip) => clip.target.startSample), [40_000, 94_400, 104_000, 142_400]);
+  assert.deepEqual(audioTrackClips(audio).map((clip) => Number(temporalValueInFrames(clip.target.start,
+    { frameRate: { numerator: 48_000, denominator: 1 } }).numerator)), [40_000, 94_400, 104_000, 142_400]);
   assert.deepEqual(audioTrackClips(audio).map((clip) => clip.gain), [0.8, 0.6, 0.8, 0.6]);
 });
 
@@ -536,6 +543,7 @@ test("all three author Surfaces preserve absolute temporal, spatial, font, image
     timelineManifest,
     temporalManifest,
     mediaManifest,
+    mediaOperationsManifest,
     spatialManifest,
     compositionManifest,
     textManifest,
@@ -561,8 +569,8 @@ test("all three author Surfaces preserve absolute temporal, spatial, font, image
     ["terminal", plain("terminal", temporalTypes.instant)],
     ["icon-1", plain("icon-1", mediaTypes.blobArtifact)],
     ["icon-2", plain("icon-2", mediaTypes.blobArtifact)],
-    ["appear", plain("appear", mediaTypes.synchronized)],
-    ["move", plain("move", mediaTypes.synchronized)],
+    ["appear", plain("appear", mediaTypes.prepared)],
+    ["move", plain("move", mediaTypes.prepared)],
     ["font", inlineReference("font", mediaTypes.fontArtifact, font)],
     ["copy", inlineReference("copy", textTypes.text, sealText("Dynamic ranking copy"))],
   ]);
@@ -668,7 +676,7 @@ test("Ranking author Surfaces fail closed on impossible image and sound combinat
     ["frame", plain("frame", spatialTypes.frame)], ["outer", plain("outer", temporalTypes.window)],
     ["icon", plain("icon", mediaTypes.blobArtifact)],
     ["style", plain("style", rankingTypes.tierStyle)], ["style.sound", plain("style.sound", rankingTypes.soundStyle)],
-    ["move", plain("move", mediaTypes.synchronized)],
+    ["move", plain("move", mediaTypes.prepared)],
   ]);
   const common = { id: "bad", timeline: ref("semantic"), within: ref("frame"), frame: ref("frame"), during: ref("outer"), style: ref("style") };
   const context = (element: StructuredElement) => ({

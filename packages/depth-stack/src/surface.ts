@@ -12,7 +12,7 @@ import type { Recipe } from "@hypit/hypit/recipe";
 import { sealText, textTypes } from "@hypit/hypit/text";
 import { sealGraphFragment } from "@hypit/hypit/author";
 import type { AuthorValueRef } from "@hypit/hypit/author";
-import type { StructuredElement, StructuredSurfaceHandler, SurfaceComponentDraft, SurfaceRecordDraft, SurfaceResolvedReference, MarkupAttributeValue } from "@hypit/hypit/markup";
+import type { StructuredElement, StructuredSurfaceHandler, SurfaceRecordDraft, SurfaceResolvedReference, MarkupAttributeValue } from "@hypit/hypit/markup";
 
 import {
   decodeDepthStackCardSpec,
@@ -109,7 +109,7 @@ function labelText(element: StructuredElement): string {
   return value;
 }
 
-function labelFragment(id: string) {
+function labelFragment() {
   const input = (name: string) => ({ kind: "fragment-input" as const, name });
   const operation = { kind: "fragment-operation" as const, operation: "bind" };
   return sealGraphFragment({
@@ -162,7 +162,7 @@ export const decodeDepthStackLabelSurface: StructuredSurfaceHandler = ({ element
     empty(element);
     contentRef = reference(element.attributes.content, `${element.name}.content`, textTypes.text, resolveReference).ref;
   }
-  const fragment = labelFragment(id);
+  const fragment = labelFragment();
   return {
     records,
     components: [{ id, fragment, inputs: { style: { kind: "record", id: styleId }, content: contentRef }, outputs: { label: id }, range: element.range }],
@@ -200,9 +200,9 @@ export const decodeDepthStackSurface: StructuredSurfaceHandler = ({ element, res
     cardIndex += 1;
     const suffix = String(cardIndex).padStart(4, "0");
     const cardId = text(child, "id");
-    const source = oneOfReference(child.attributes.source, `${child.name}.source`, [blobTypes.blob, mediaTypes.synchronized, mediaTypes.compositableSurface], resolveReference);
+    const source = oneOfReference(child.attributes.source, `${child.name}.source`, [blobTypes.blob, mediaTypes.prepared, mediaTypes.compositableSurface], resolveReference);
     const sourceKind = sameType(source.type, blobTypes.blob) ? "still"
-      : sameType(source.type, mediaTypes.synchronized) ? "timed" : "surface";
+      : sameType(source.type, mediaTypes.prepared) ? "timed" : "surface";
     const extent = child.attributes.extent === undefined ? undefined
       : reference(child.attributes.extent, `${child.name}.extent`, spatialTypes.extent, resolveReference);
     if (sourceKind === "still" && extent === undefined) throw new Error(`${child.name}.extent is required for a still image.`);

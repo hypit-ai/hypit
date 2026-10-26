@@ -29,7 +29,7 @@ With the named inputs already declared:
 
 An example Film Recipe is `film.main { background: #18212A; }`. Canvas supplies the picture dimensions;
 the Timeline supplies program time. `picture.visual` is a Visual Track output and `mix.audio` is an
-Audio Track output. Include every wanted output explicitly: placing the same normalized media in a
+Audio Track output. Include every wanted output explicitly: placing the same prepared media in a
 Visual Clip and an Audio Clip is what makes both its picture and its audio present.
 Each visual Film child has a sibling-unique `id` owned by its immediate parent scope. Siblings paint in
 declaration order from back to front, so moving a child changes how that complete contribution is
@@ -89,7 +89,7 @@ explicit end and pass it to the components, Film and HTML Video:
 
 The example assumes the Canvas, font, Film Recipe and project package are declared. Timeline's `end`
 accepts seconds, milliseconds or frames and must end on a frame boundary. `Clock` remains the
-separate duration-free input for normalizing real media. Drawing code produces the picture at each
+separate duration-free input for resolving exact media extents and visual sampling. Drawing code produces the picture at each
 requested frame; the Film's background supplies the canvas color. With no AudioTrack, the delivered
 video is silent. Render ranges and worker settings apply in the same way as for spoken work.
 
@@ -117,7 +117,7 @@ For this example, the renderer evaluates the original page at seconds 8–12 and
 as a four-second clip starting at zero. An animation already in progress at second 8 keeps that state.
 
 **The range limits final rendering. Upstream generation still follows the selected graph.** Keep
-the Run Candidates for usable normalized media and alignment evidence when inspecting a Caption or MG revision.
+the Run Candidates for usable prepared media and alignment evidence when inspecting a Caption or MG revision.
 Inspect `hypit plan` for the work that remains before submission. [Authoring](authoring.md#reuse-produced-work-explicitly)
 explains choosing the reuse boundary.
 

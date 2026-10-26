@@ -38,7 +38,7 @@ creates new material. In **strict source editing**, the supplied footage is itse
 changed, and the direction states what changes and which motion, framing, timing or sound remains.
 A request can combine evidence from several materials, but each one still needs a stated job. These
 are model-input relationships, not separate kinds of Hypit work. An accepted result is ordinary Media
-and enters normalization, Timeline and presentation like any other material.
+and enters preparation, Timeline and presentation like any other material.
 
 Choose an excerpt that contains the useful action and, when relevant, its preparation or settling.
 Its range follows the relationship to preserve, the intended new duration and the selected model's
@@ -191,7 +191,7 @@ capability, and an opaque camera view can remain useful through cropping and ref
 The moving result needs its own alpha-producing operation. A transparent reference still alone
 does not establish transparency in generated video. Keep the original when the final work also uses
 its setting. [Media preparation](../../production/media.md#keep-original-and-processed-material-explicit)
-owns processing, alpha-preserving normalization and explicit use of those outputs. Judge the moving
+owns processing, alpha-preserving preparation and explicit use of those outputs. Judge the moving
 edge against its intended background, including shoulders, hair, hands, spill and changes in opacity.
 
 ## Give each input its own responsibility
@@ -285,7 +285,7 @@ reference inputs, not from a one-image-per-shot correspondence.
 
 A prompt-directed jump cut asks the generator for an edited rhythm; it does not inspect or trim the
 returned media. When produced footage needs a deterministic cut, speed change or trim, use the
-corresponding media operation before normalization and alignment. The edited media, local domain and
+corresponding media operation before preparation and alignment. The edited media, local domain and
 alignment remain separate facts.
 
 ## Size the request around the delivery
@@ -308,7 +308,7 @@ question and answer may belong together, a short line may gain a meaningful reac
 exchange may divide where its thought turns. Preserve the intended meaning and energy, then choose a
 supported duration.
 
-After production, normalized media supplies the real envelope. When the composition needs word
+After production, prepared media supplies the real envelope. When the composition needs word
 positions, alignment supplies them from the accepted performance. Use the material and any required
 timing to compose the piece. [Composition review](../../production/review.md)
 owns judging how Caption, MG, B-roll and other layers work with the produced performance.

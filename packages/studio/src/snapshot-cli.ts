@@ -9,8 +9,8 @@ import {
 } from "@hypit/hypit/cli";
 import type { CliIo, CliRuntimeSelectionContext } from "@hypit/hypit/cli";
 import { assertHtmlProgram, selectHtmlArtifacts } from "@hypit/html-program";
-import type { HtmlProgram } from "@hypit/html-program";
-import { htmlFrameRequest, htmlProgramCapabilities, htmlProgramTypes, verifyHtmlFrameImages } from "@hypit/html-program";
+import type { HtmlFrameRequest, HtmlProgram } from "@hypit/html-program";
+import { htmlFrameRequest, htmlProgramCapabilities, htmlProgramTypes, verifyHtmlFrameImagesForRequest } from "@hypit/html-program";
 import type { Need } from "@hypit/hypit/protocol";
 import { snapshotFrameAnnotation, writeFrameGrid } from "@hypit/media-local/files";
 
@@ -19,7 +19,9 @@ const OPTIONS = ["--studio", "--to", "--at-frame", "--start-frame", "--end-frame
 /** `--studio` is a base URL, not a host:port token. `new URL` otherwise throws TypeError. */
 export function studioDocumentUrl(studio: string): string {
   try {
-    return new URL("/__studio/document", studio).href;
+    const base = new URL(studio);
+    if (base.protocol !== "http:" && base.protocol !== "https:") throw new Error("unsupported protocol");
+    return new URL("/__studio/document", base).href;
   } catch {
     throw new Error(`--studio needs an http(s) Studio URL, got ${studio}`);
   }
@@ -63,7 +65,6 @@ export async function runSnapshotCli(argv: readonly string[], io: CliIo, applica
   if (!response.ok) throw new Error(`Studio HtmlProgram: HTTP ${response.status} ${await response.text()}`);
   const document = await response.json() as HtmlProgram;
   assertHtmlProgram(document);
-  const domain = document;
   const explicit = options.get("--at-frame");
   let frames: number[];
   if (explicit !== undefined) {
@@ -73,7 +74,7 @@ export async function runSnapshotCli(argv: readonly string[], io: CliIo, applica
     const start = integer(options.get("--start-frame"), "--start-frame");
     const end = integer(options.get("--end-frame-exclusive"), "--end-frame-exclusive");
     const step = integer(options.get("--step-frames") ?? "1", "--step-frames", 1);
-    if (end <= start || end > domain.frameCount) throw new Error(`The frame range must satisfy 0 <= start < end <= ${domain.frameCount}`);
+    if (end <= start || end > document.frameCount) throw new Error(`The frame range must satisfy 0 <= start < end <= ${document.frameCount}`);
     frames = Array.from({ length: Math.ceil((end - start) / step) }, (_, index) => start + index * step);
   }
   const grid = options.get("--grid")?.split("x");
@@ -93,8 +94,17 @@ export async function runSnapshotCli(argv: readonly string[], io: CliIo, applica
       if (!response.ok) throw new Error(`Studio material ${artifact.resource}: HTTP ${response.status}`);
       await resources.write(artifact, new Uint8Array(await response.arrayBuffer()));
     }
+    const request: HtmlFrameRequest = {
+      program: document,
+      picture: {
+        colorPrimaries: "bt709", colorTransfer: "srgb", colorMatrix: "rgb",
+        colorRange: "full", bitDepth: 8,
+        alpha: { mode: "opaque", matte: "#000000" },
+      },
+      frames,
+    };
     const need: Need = { id: "need:hypit-snapshot", capability: htmlProgramCapabilities.rasterizeFrames,
-      returns: htmlProgramTypes.frameImages, result: "record:hypit-snapshot", constraints: htmlFrameRequest({ program: document, frames }) };
+      returns: htmlProgramTypes.frameImages, result: "record:hypit-snapshot", constraints: htmlFrameRequest(request) };
     const { host, profile } = await openCliRuntimeHost(application, options.get("--runtime"), options.get("--project"));
     const endpoint = await selectCliEndpoint(host, need, profile);
     if (!json) io.write(`Capturing ${frames.length} frames through ${cliEndpointLine(endpoint)}\n`);
@@ -103,19 +113,22 @@ export async function runSnapshotCli(argv: readonly string[], io: CliIo, applica
       reportProgress: async progress => { report?.(`  · ${progress.phase}\n`); },
       reportDiagnostic: async diagnostic => { report?.(`  · ${diagnostic.message}\n`); },
     });
-    verifyHtmlFrameImages(fulfilled);
+    verifyHtmlFrameImagesForRequest(fulfilled, request);
     const images = fulfilled;
-    if (images.length !== frames.length) throw new Error(`Requested ${frames.length} frames, received ${images.length}`);
+    if (images.frames.length !== frames.length) {
+      throw new Error(`Requested ${frames.length} frames, received ${images.frames.length}`);
+    }
     await mkdir(dirname(to), { recursive: true });
     staging = await mkdtemp(join(dirname(to), ".hypit-snapshot-"));
     const files = [];
-    for (const [index, image] of images.entries()) {
+    for (const [index, image] of images.frames.entries()) {
       const frame = frames[index]!;
+      if (image.frame !== frame) throw new Error(`Requested frame ${frame}, received frame ${image.frame}`);
       const name = `frame-${String(frame).padStart(9, "0")}.png`;
-      const bytes = await resources.get(image.resource);
+      const bytes = await resources.get(image.artifact.resource);
       if (bytes === undefined) throw new Error(`Snapshot frame ${frame} is unavailable`);
       await writeFile(join(staging, name), bytes, { flag: "wx" });
-      files.push({ frame, seconds: frame * domain.frameRate.denominator / domain.frameRate.numerator, path: join(to, name) });
+      files.push({ frame, seconds: frame * document.frameRate.denominator / document.frameRate.numerator, path: join(to, name) });
     }
     const grids: string[] = [];
     if (columns !== undefined && rows !== undefined) {

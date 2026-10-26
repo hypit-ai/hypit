@@ -25,7 +25,7 @@ passing them in. The Surface resolves only completed Window and Instant referenc
 reads their frames. Seek any frame directly: pointer paths, springs, typing and transitions derive
 state from time.
 
-Prepared video inputs are SynchronizedMedia. Image inputs are Blob artifacts. `DeliveryWorkshop.reference` is the fictional drinking illustration; it is deliberately an image, without fabricating silent performance media or video. Media entries explicitly choose native playback, holding the last frame or looping where the scene needs it.
+Video inputs are `PreparedMedia`; each scene passes the selected source and exact sampling relation to the terminal visual program. Image inputs are Blob artifacts. `DeliveryWorkshop.reference` is the fictional drinking illustration; it is deliberately an image, without fabricating silent performance media or video. Media entries explicitly choose native playback, holding the last frame or looping where the scene needs it.
 
 Shared ordinary modules under `src/shared/` own html-visual assembly and media sampling, visual primitives, the route cards, terminal behavior and editor artwork. `@explainer/visual-language` supplies common palette and motion helpers. These code dependencies are not automatically separate Film Tracks.
 

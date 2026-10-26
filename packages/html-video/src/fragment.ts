@@ -1,8 +1,8 @@
 import { timelineTypes } from "@hypit/timeline";
-import { mediaTypes } from "@hypit/media";
 import { blobTypes } from "@hypit/hypit/blob";
 
 import { compositionTypes } from "@hypit/composition";
+import { mediaProducers, mediaTypes } from "@hypit/media";
 import { sealGraphFragment } from "@hypit/hypit/author";
 import { htmlProgramProducers } from "@hypit/html-program";
 import { mediaOperationsProducers } from "@hypit/media-operations";
@@ -15,9 +15,16 @@ export function createHtmlVideoFragment(selectedRange = false) {
     inputs: [
       { name: "composition", type: compositionTypes.composition },
       { name: "timeline", type: timelineTypes.timeline },
-      ...(selectedRange ? [{ name: "range", type: mediaTypes.frameRange }] : []),
+      { name: "delivery", type: mediaTypes.delivery },
+      ...(selectedRange ? [{ name: "range", type: timelineTypes.frameSpan }] : []),
     ],
     operations: [
+      {
+        id: "project-visual-delivery",
+        producer: mediaProducers.visualDelivery,
+        inputs: { delivery: input("delivery") },
+        result: { kind: "output" as const, name: "visual" },
+      },
       {
         id: "compile-program",
         producer: htmlProgramProducers.compile,
@@ -27,7 +34,8 @@ export function createHtmlVideoFragment(selectedRange = false) {
       {
         id: "request-visual",
         producer: selectedRange ? htmlProgramProducers.requestVisualRange : htmlProgramProducers.requestVisual,
-        inputs: { program: operation("compile-program"), ...(selectedRange ? { range: input("range") } : {}) },
+        inputs: { program: operation("compile-program"), delivery: operation("project-visual-delivery"),
+          ...(selectedRange ? { range: input("range") } : {}) },
         result: { kind: "need" as const, name: "visual" },
       },
       {
@@ -48,6 +56,7 @@ export function createHtmlVideoFragment(selectedRange = false) {
         inputs: {
           visual: operation("request-visual"),
           audio: operation("request-audio-render"),
+          delivery: input("delivery"),
         },
         result: { kind: "need" as const, name: "media" },
       },

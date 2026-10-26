@@ -35,8 +35,8 @@ appearance and meaningful events. Give the component absolute Window and Instant
 scene exists or changes. Source may obtain those named values from a Narrative Projection or direct
 Timeline declarations; the component uses the same interface in either case.
 
-For an existing spoken performance, consume the normalized media, its absolute occurrence Window and
-any source-time relation the presentation needs as separate inputs. Other video inputs use the same
+For an existing spoken performance, consume `PreparedMedia`, its absolute occurrence Window and
+any temporal sampling relation the presentation needs as separate inputs. Other video inputs use the same
 media path; Timeline contains neither clips nor source positions.
 The [responsive explainer example](https://github.com/hypit-ai/hypit/tree/main/examples/semantic-composition/packages/responsive-explainer)
 shows a continuously playing video moving from full screen to a side portrait inside an HTML scene.

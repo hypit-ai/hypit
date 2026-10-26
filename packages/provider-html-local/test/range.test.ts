@@ -3,19 +3,19 @@ import { tmpdir } from "node:os";
 import test from "node:test";
 import { setTimeout as delay } from "node:timers/promises";
 import type { ResourceIOOptions } from "@hypit/runtime";
-import { mediaFrameRangeSamples } from "@hypit/media";
 import { EndpointRegistry, MemoryResourceStore } from "@hypit/executor";
 import { rasterizeHtmlProgram } from "../src/index.js";
 import { resolveExecutionOptions } from "../src/render.js";
 import { hypitPackage } from "../src/activation.js";
 import { runtimeEndpointAdapterFacetAbi } from "@hypit/runtime-local/extension";
 import type { RuntimeEndpointAdapterImplementation } from "@hypit/runtime-local/extension";
-import { endpointResourceClaims, installEndpoint } from "@hypit/endpoint";
+import { endpointOffers, endpointResourceClaims, installEndpoint } from "@hypit/endpoint";
 import { htmlProgramCapabilities } from "@hypit/html-program";
 import { mediaTypes } from "@hypit/media";
 import { canonicalize } from "@hypit/protocol";
 import { distributeFrameRange, requestedFrameRanges, sourceFrameAt, sourceWindows, videoSlots } from "../src/sampling.js";
 import { htmlRangeDocument } from "./range-scenario.js";
+import { htmlProviderDelivery } from "./provider-scenario.js";
 
 test("a render deadline cancels resource preparation and awaits the reader's cleanup", async () => {
   class StalledResources extends MemoryResourceStore {
@@ -29,7 +29,7 @@ test("a render deadline cancels resource preparation and awaits the reader's cle
   const resources = new StalledResources();
   const document = htmlRangeDocument({ kind: "blob", resource: "res_waiting", size: 1, mediaType: "video/mp4" });
   // This test stops during resource preparation, before any browser is launched.
-  await assert.rejects(rasterizeHtmlProgram({ program: document }, { resources, chromePath: process.execPath, processTimeoutMs: 100 }),
+  await assert.rejects(rasterizeHtmlProgram({ program: document, delivery: htmlProviderDelivery() }, { resources, chromePath: process.execPath, processTimeoutMs: 100 }),
     /render timed out during preparing resources/u);
   assert.equal(resources.active, 0, "the failed render must not leave its reader running");
 });
@@ -52,25 +52,22 @@ test("the render deadline is global while stage deadlines are explicit deploymen
   assert.equal(explicit.maxDecodedSourceBytes, 54_321);
 });
 
-test("source selection retains loop, hold and fractional-speed sampling and shares decoded frames", () => {
+test("source selection retains loop, hold, fractional-speed and reverse sampling and shares decoded frames", () => {
   const document = htmlRangeDocument({ kind: "blob", resource: "res_range_source", size: 1, mediaType: "video/mp4" });
-  const slots = videoSlots(document.frameSources, resource => `hypit-resource://${resource}`);
+  const slots = videoSlots(document.videoSources, resource => `hypit-resource://${resource}`,
+    { frameRate: document.frameRate });
   assert.ok(slots.every(slot => slot.src === "hypit-resource://res_range_source"));
-  assert.equal(slots.length, 4, "the two-frame hold remains one slot instead of one slot per target frame");
-  const hold = slots.find((slot) => slot.sourceRate.numerator === 0n);
-  assert.ok(hold !== undefined);
-  assert.deepEqual({ startFrame: hold.startFrame, endFrameExclusive: hold.endFrameExclusive,
-    sourceAtStart: hold.sourceFrame, sourceRate: hold.sourceRate }, {
-    startFrame: 6, endFrameExclusive: 8,
-    sourceAtStart: { numerator: 3n, denominator: 1n }, sourceRate: { numerator: 0n, denominator: 1n },
-  });
+  assert.equal(slots.length, 1, "the terminal plan retains one source occurrence and its complete Map");
+  const timestampIndex = { timestamps: [0n, 1n, 2n, 3n],
+    timeBase: { numerator: 1n, denominator: 30n } };
+  const frames = new Map([[slots[0]!.sourceKey, timestampIndex]]);
   const range = { startFrame: 3, endFrameExclusive: 11 };
   const sampled = Array.from({ length: 8 }, (_, i) => {
     const frame = range.startFrame + i;
-    return sourceFrameAt(slots.find((s) => frame >= s.startFrame && frame < s.endFrameExclusive)!, frame);
+    return sourceFrameAt(slots[0]!, frame, timestampIndex);
   });
   assert.deepEqual(sampled, [1, 2, 3, 3, 3, 0, 0, 1]);
-  assert.deepEqual(sourceWindows(slots, range)[0]?.windows, [{ startFrame: 0, endFrameExclusive: 4 }]);
+  assert.deepEqual(sourceWindows(slots, range, frames)[0]?.windows, [{ startFrame: 0, endFrameExclusive: 4 }]);
   assert.deepEqual(distributeFrameRange(range, 3), [
     { startFrame: 3, endFrameExclusive: 5 }, { startFrame: 5, endFrameExclusive: 8 },
     { startFrame: 8, endFrameExclusive: 11 },
@@ -79,12 +76,14 @@ test("source selection retains loop, hold and fractional-speed sampling and shar
 
 test("reverse source time selects the same bounded decoded window without forward traversal", () => {
   const [slot] = videoSlots([{ id: "reverse", resource: "res_reverse", startFrame: 0, endFrameExclusive: 4,
-    sourceFrame: { numerator: 3, denominator: 1 }, sourceRate: { numerator: -1, denominator: 1 },
-    sourceFrameRate: { numerator: 30, denominator: 1 } }], () => "direct.mp4");
+    sourceFrame: { numerator: 4, denominator: 1 }, sourceRate: { numerator: -1, denominator: 1 },
+    kind: "surface", sourceFrameRate: { numerator: 30, denominator: 1 } }], () => "direct.mp4",
+  { frameRate: { numerator: 30, denominator: 1 } });
   assert.ok(slot !== undefined);
   assert.deepEqual(Array.from({ length: 4 }, (_, frame) => sourceFrameAt(slot, frame)), [3, 2, 1, 0]);
-  assert.deepEqual(sourceWindows([slot], { startFrame: 0, endFrameExclusive: 4 }), [{
-    src: "direct.mp4", fps: { num: 30, den: 1 }, windows: [{ startFrame: 0, endFrameExclusive: 4 }],
+  assert.deepEqual(sourceWindows([slot], { startFrame: 0, endFrameExclusive: 4 }, new Map()), [{
+    sourceKey: "direct.mp4\u00000", src: "direct.mp4", streamIndex: 0,
+    windows: [{ startFrame: 0, endFrameExclusive: 4 }],
   }]);
 });
 
@@ -99,20 +98,14 @@ test("page selection compacts arbitrary requested frames without inventing cover
   ]);
 });
 
-test("fractional frame rates keep selected audio duration on the output frame clock", () => {
-  assert.deepEqual(mediaFrameRangeSamples({ startFrame: 1, endFrameExclusive: 2 },
-    { numerator: 30000, denominator: 1001 }), { startSample: 1602, endSampleExclusive: 3204, sampleFrames: 1602 });
-});
-
-
 test("HTML claims actual browser count including a range shorter than workers", async () => {
   const document = htmlRangeDocument({ kind: "blob", resource: "res_range_source", size: 1, mediaType: "video/mp4" });
   const request = { id: "visual", capability: htmlProgramCapabilities.rasterizeVisual,
-    returns: mediaTypes.timelineVisual, constraints: canonicalize({ program: document }), result: "visual-result" };
+    returns: mediaTypes.timelineVisual, constraints: canonicalize({ program: document, delivery: htmlProviderDelivery() }), result: "visual-result" };
   const facet = hypitPackage.facets.find((item) => item.abi === runtimeEndpointAdapterFacetAbi);
   assert.ok(facet);
   const adapter = facet.implementation as RuntimeEndpointAdapterImplementation;
-  for (const [workers, browserCapacity, expectedUnits] of [[4, 6, 4], [128, 128, 12]] as const) {
+  for (const [workers, browserCapacity, expectedUnits] of [[4, 6, 4], [128, 128, 18]] as const) {
     const registry = new EndpointRegistry();
     const activation = await adapter.activate({
       hostStateRoot: tmpdir(), dataRoot: tmpdir(), instance: "render", pool: "machine",
@@ -123,8 +116,24 @@ test("HTML claims actual browser count including a range shorter than workers", 
     assert.equal(selected.status, "resolved");
     const claims = endpointResourceClaims(selected.registration.scheduling!, request);
     assert.deepEqual(claims.at(-1), { id: "capacity:machine/browsers", limit: browserCapacity, units: expectedUnits });
-    const single = { ...request, constraints: canonicalize({ program: document, range: { startFrame: 7, endFrameExclusive: 8 } }) };
+    const single = { ...request, constraints: canonicalize({ program: document, delivery: htmlProviderDelivery(), range: { startFrame: 7, endFrameExclusive: 8 } }) };
     assert.deepEqual(endpointResourceClaims(selected.registration.scheduling!, single).at(-1),
       { id: "capacity:machine/browsers", limit: browserCapacity, units: 1 });
   }
+});
+
+test("Runtime Profile selects Electron explicitly without constructing a managed Chrome program", async () => {
+  const facet = hypitPackage.facets.find(item => item.abi === runtimeEndpointAdapterFacetAbi);
+  assert.ok(facet);
+  const adapter = facet.implementation as RuntimeEndpointAdapterImplementation;
+  const activation = await adapter.activate({
+    hostStateRoot: tmpdir(), dataRoot: tmpdir(), instance: "html.gpu", pool: "machine",
+    config: canonicalize({ renderer: "electron", electronPath: "Electron" }),
+  });
+  assert.equal(activation.program?.installation, undefined);
+  assert.deepEqual(endpointOffers(activation.endpoint), [{
+    capability: htmlProgramCapabilities.rasterizeVisual,
+    returns: mediaTypes.timelineVisual,
+    endpoint: "html.gpu",
+  }]);
 });

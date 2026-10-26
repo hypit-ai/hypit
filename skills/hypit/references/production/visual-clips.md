@@ -1,6 +1,6 @@
 # Place pictures through Visual Track
 
-Read this when an image, normalized video or compositable Surface should appear in the finished
+Read this when an image, prepared video or compositable Surface should appear in the finished
 picture. [Media preparation](media.md) owns source facts, [spatial layout](spatial.md) owns destination
 Frames, and [timing](timing.md) owns absolute and projected time.
 
@@ -8,7 +8,7 @@ Frames, and [timing](timing.md) owns absolute and projected time.
 
 ```text
 Visual Clip = picture source + absolute Window + Frame
-            + spatial mapping + source-time + optional treatment + optional Motion
+            + spatial mapping + optional temporal Map + optional treatment + optional Motion
 Visual Track = a set of Visual Clips
 ```
 
@@ -34,7 +34,7 @@ extent or semantic evidence.
 A Clip takes one source form:
 
 - `image` with its pixel `extent` for a still;
-- normalized `media` for timed picture;
+- prepared `media` for timed picture;
 - a typed `surface` for compositable pixels.
 
 `during` accepts a resolved Window, including the complete `timeline.window`. Declare any direct

@@ -1,6 +1,8 @@
 import type { AudioLevelAutomation } from "@hypit/composition";
 import type { BlobRef } from "@hypit/hypit/protocol";
-import type { MediaFrameRange, MediaInspection, MediaRational, MediaStreamSelection, TimelineVisual, TimelineAudio } from "@hypit/media";
+import type { MediaDeliverySpec, MediaRational, PreparedAudioSource, TimelineVisual, TimelineAudio } from "@hypit/media";
+import type { FrameSpan } from "@hypit/timeline";
+import type { ExactTemporalValue, TemporalMap, TemporalRate } from "@hypit/temporal";
 
 export type MediaSelectionRequest = {
   readonly video:
@@ -12,7 +14,6 @@ export type MediaSelectionRequest = {
     | { readonly mode: "stream-index"; readonly streamIndex: number }
     | { readonly mode: "none" };
   readonly spanAuthority: "video" | "audio";
-  readonly frameRate: MediaRational;
 };
 
 export type InspectMediaNeed = {
@@ -31,18 +32,18 @@ export type MediaAudioSelector =
 export type MediaTransformOperation =
   | {
       readonly kind: "trim";
-      /** Seconds in the operation's current timeline, not necessarily the source timeline. */
-      readonly startSec?: number;
-      readonly endSec?: number;
-      readonly tailSec?: number;
+      /** Exact positions in the operation's current local domain. */
+      readonly start?: ExactTemporalValue;
+      readonly end?: ExactTemporalValue;
+      readonly tail?: ExactTemporalValue;
     }
   | {
       readonly kind: "retime";
-      /** Pitch-preserving tempo ratio; 2 means twice as fast and therefore half as long. */
-      readonly rate: number;
+      /** Source-local advance per one target-local unit. */
+      readonly rate: TemporalRate;
     };
 
-/** Ordered, deterministic A/V operations over already synchronized media. */
+/** Ordered, deterministic temporal operations over PreparedMedia. */
 export type MediaTransformProgram = {
   readonly operations: readonly MediaTransformOperation[];
 };
@@ -73,9 +74,7 @@ export type StillVideoLayout = {
 };
 
 /** One picture's span of the still video, in frames; `source` is bound one picture at a time. */
-export type StillVideoSegment = {
-  readonly startFrame: number;
-  readonly endFrameExclusive: number;
+export type StillVideoSegment = FrameSpan & {
   readonly source?: BlobRef;
 };
 
@@ -89,11 +88,6 @@ export type StillVideoRequest = {
     readonly pixelFormat: "yuv420p";
   };
   readonly segments: readonly StillVideoSegment[];
-};
-
-export type TransformMediaNeed = {
-  readonly media: import("@hypit/media").SynchronizedMedia;
-  readonly program: MediaTransformProgram;
 };
 
 export type ExtractAudioNeed = {
@@ -115,32 +109,24 @@ export type RenderStillVideoNeed = {
   readonly request: StillVideoRequest;
 };
 
-export type NormalizeMediaNeed = {
-  readonly source: BlobRef;
-  readonly inspection: MediaInspection;
-  readonly selection: MediaStreamSelection;
-  readonly frameRate: MediaRational;
-  readonly audio: {
-    readonly sampleRate: 48_000;
-    readonly channels: 2;
-    readonly codec: "pcm_s16le";
-    readonly loudness: "preserve";
-  };
-};
-
 export type AudioProgramClip = AudioLevelAutomation & {
   readonly id: string;
-  readonly artifact: BlobRef;
+  /** Renderer input group shared by all sampling pieces of one source Clip. */
+  readonly inputId: string;
+  readonly source: PreparedAudioSource;
+  /** Prepared-local to selected source-presentation relation. */
+  readonly preparation: TemporalMap;
   readonly targetStartSample: number;
   readonly targetEndSampleExclusive: number;
-  readonly sourceSampleFrames: number;
-  readonly sourceStartSample: number;
-  readonly sourceEndSampleExclusive: number;
-  readonly sourceLoop: boolean;
-  readonly sourcePhaseSample: number;
-  /** Tempo ratio; Audio execution preserves pitch. */
-  readonly playbackRate: number;
-  /** Complete owning Clip Window; fades do not restart at source-time piece boundaries. */
+  /** Sample domain and occurrence sampling positions before preparation is evaluated. */
+  readonly preparedSampleFrames: number;
+  readonly preparedStartSample: number;
+  readonly preparedEndSampleExclusive: number;
+  readonly loop: boolean;
+  readonly loopPhaseSample: number;
+  /** Exact tempo ratio; Audio execution preserves pitch. */
+  readonly playbackRate: MediaRational;
+  /** Complete owning Clip Window; fades do not restart at sampling-piece boundaries. */
   readonly mixStartSample: number;
   readonly mixEndSampleExclusive: number;
   readonly gain: number;
@@ -155,18 +141,15 @@ export type AudioProgram = {
   readonly sampleRate: 48_000;
   readonly sampleFrames: number;
   readonly clips: readonly AudioProgramClip[];
-  readonly mix: {
-    readonly normalize: false;
-    readonly limiter: "none";
-  };
 };
 
 export type RenderAudioNeed = {
   readonly program: AudioProgram;
-  readonly range?: MediaFrameRange;
+  readonly range?: FrameSpan;
 };
 
 export type MuxMediaNeed = {
   readonly visual: TimelineVisual;
   readonly audio: TimelineAudio;
+  readonly delivery: MediaDeliverySpec;
 };

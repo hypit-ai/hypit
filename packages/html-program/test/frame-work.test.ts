@@ -2,15 +2,15 @@ import assert from "node:assert/strict";
 import { runInNewContext } from "node:vm";
 import test from "node:test";
 
-import { frameWorkIndexRuntime, htmlFrameSelectionPrelude } from "../src/frame-work.js";
+import { frameWorkIndexRuntime } from "../src/frame-work.js";
 
 test("render-local frame selection uses compact absolute spans and defaults to the whole document", () => {
   const context: { result?: boolean[] } = {};
-  const prelude = htmlFrameSelectionPrelude([
-    { startFrame: 10, endFrameExclusive: 20 },
-    { startFrame: 40, endFrameExclusive: 41 },
-  ]);
-  runInNewContext(`${prelude}\n${frameWorkIndexRuntime}
+  runInNewContext(`${frameWorkIndexRuntime}
+    htmlPrepareFrameSelection([
+      { startFrame: 10, endFrameExclusive: 20 },
+      { startFrame: 40, endFrameExclusive: 41 },
+    ]);
     result = [
       htmlSelectionOverlaps(0, 10),
       htmlSelectionOverlaps(9, 11),
@@ -23,10 +23,11 @@ test("render-local frame selection uses compact absolute spans and defaults to t
   const unrestricted: { result?: boolean } = {};
   runInNewContext(`${frameWorkIndexRuntime}\nresult = htmlSelectionOverlaps(100, 200);`, unrestricted);
   assert.equal(unrestricted.result, true);
-  assert.throws(() => htmlFrameSelectionPrelude([
-    { startFrame: 5, endFrameExclusive: 10 },
-    { startFrame: 4, endFrameExclusive: 6 },
-  ]), /ordered, disjoint/u);
+  assert.throws(() => runInNewContext(`${frameWorkIndexRuntime}
+    htmlPrepareFrameSelection([
+      { startFrame: 5, endFrameExclusive: 10 },
+      { startFrame: 4, endFrameExclusive: 6 },
+    ]);`), /ordered, disjoint/u);
 });
 
 test("page-local frame work lookup preserves half-open spans and stable order", () => {

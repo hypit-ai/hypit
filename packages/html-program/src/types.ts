@@ -1,13 +1,11 @@
 
 import type { BlobRef, ResourceId } from "@hypit/hypit/protocol";
-import type { CompositableSurfaceRef } from "@hypit/media";
+import type { CompositableSurfaceRef, PreparedVisualSource } from "@hypit/media";
+import type { Clock, FrameSpan } from "@hypit/timeline";
+import type { TemporalMap } from "@hypit/temporal";
 import { VISUAL_IR_V1 } from "@hypit/composition";
 
-export type HtmlFrameDomain = {
-  readonly frameRate: {
-    readonly numerator: number;
-    readonly denominator: number;
-  };
+export type HtmlFrameDomain = Clock & {
   /** Legal frame indices are exactly [0, frameCount). */
   readonly frameCount: number;
 };
@@ -22,7 +20,7 @@ export type HtmlArtifactUsage =
   | {
       readonly kind: "frames";
       /** Ordered, disjoint absolute half-open spans where this Artifact can be observed. */
-      readonly spans: readonly HtmlFrameSpan[];
+      readonly spans: readonly FrameSpan[];
     };
 
 /** One byte dependency and the compiler's conservative proof of when it can be observed. */
@@ -31,15 +29,25 @@ export type HtmlArtifact = {
   readonly usage: HtmlArtifactUsage;
 };
 
-export type HtmlFrameSource = HtmlFrameSpan & {
+export type HtmlVideoSource = FrameSpan & {
   /** Document-local DOM identity of the compiled source occurrence. */
   readonly id: string;
-  /** Artifact resource whose exact decoded frames feed this occurrence. */
-  readonly resource: ResourceId;
-  readonly sourceFrame: { readonly numerator: number; readonly denominator: number };
-  readonly sourceRate: { readonly numerator: number; readonly denominator: number };
-  readonly sourceFrameRate: { readonly numerator: number; readonly denominator: number };
-};
+} & (
+  | {
+      readonly kind: "media";
+      readonly source: PreparedVisualSource;
+      /** Exact occurrence-local to source-presentation relation. */
+      readonly sampling: TemporalMap;
+    }
+  | {
+      readonly kind: "surface";
+      /** Already-materialized Surface resource whose decoded frames feed this occurrence. */
+      readonly resource: ResourceId;
+      readonly sourceFrame: { readonly numerator: number; readonly denominator: number };
+      readonly sourceRate: { readonly numerator: number; readonly denominator: number };
+      readonly sourceFrameRate: { readonly numerator: number; readonly denominator: number };
+    }
+);
 
 /** Portable, frame-addressed HTML visual program. */
 export type HtmlProgram = HtmlFrameDomain & {
@@ -49,16 +57,10 @@ export type HtmlProgram = HtmlFrameDomain & {
   readonly artifacts: readonly HtmlArtifact[];
   /** Typed Surface dependencies that a Runtime must verify before rasterization. */
   readonly surfaces: readonly CompositableSurfaceRef[];
-  /** Exact source-frame functions emitted alongside HTML; execution never parses them back out of markup. */
-  readonly frameSources: readonly HtmlFrameSource[];
+  /** Exact selected streams and sampling functions; execution never parses them back out of markup. */
+  readonly videoSources: readonly HtmlVideoSource[];
   /** Media URLs remain hypit-resource:// placeholders until a Runtime materializes them. */
   readonly html: string;
-};
-
-/** A half-open interval on the document frame clock, also used for local worker partitions. */
-export type HtmlFrameSpan = {
-  readonly startFrame: number;
-  readonly endFrameExclusive: number;
 };
 
 export type ResourceUrlResolver = (artifact: BlobRef) => string;

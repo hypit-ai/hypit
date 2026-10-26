@@ -43,7 +43,7 @@ test("WhisperX request contains canonical audio, its sample span and the chosen 
 
 test("SVML language reaches an independent transcription request", async () => {
   const refs = new Map<string, SurfaceResolvedReference>([
-    ["media", { path: "media", ref: { kind: "record", id: "media" }, type: mediaTypes.synchronized }],
+    ["media", { path: "media", ref: { kind: "record", id: "media" }, type: mediaTypes.prepared }],
   ]);
   for (const language of ["en", "zh", "es", "ko", "ja", "id", "yue", "zzz"]) {
     const output = await decodeWhisperXTranscriptionSurface({

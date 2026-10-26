@@ -2,7 +2,7 @@ import { parseHTML } from "linkedom";
 import type { Composition } from "@hypit/composition";
 import { assertHtmlProgram, compileHtmlProgram, materializeHtmlProgram } from "@hypit/html-program";
 import type { HtmlProgram, ResourceUrlResolver } from "@hypit/html-program";
-import { injectHtmlPlayback, materializePlaybackAudio } from "@hypit/html-playback";
+import { injectHtmlPlayback, lowerPlaybackAudio } from "@hypit/html-playback";
 import { compileAudioProgram, verifyAudioProgram } from "@hypit/media-operations";
 import type { AudioProgram } from "@hypit/media-operations";
 import type { Timeline } from "@hypit/timeline";
@@ -108,7 +108,7 @@ function renderDocumentProgram(
   assertHtmlProgram(program);
   verifyAudioProgram(audio);
   const html = materializeHtmlProgram(program, resolvePicture);
-  return injectHtmlPlayback(html, materializePlaybackAudio(audio, resolveAudio));
+  return injectHtmlPlayback(html, lowerPlaybackAudio(audio, resolveAudio), program);
 }
 
 /** Produce a browser page. Hosts resolve material to HTTP, relative or embedded URLs. */

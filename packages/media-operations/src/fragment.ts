@@ -12,7 +12,7 @@ import {
 const input = (name: string) => ({ kind: "fragment-input" as const, name });
 const operation = (id: string) => ({ kind: "fragment-operation" as const, operation: id });
 
-export const synchronizedMediaFragment = sealGraphFragment({
+export const preparedMediaFragment = sealGraphFragment({
   inputs: [
     { name: "source", type: blobTypes.blob },
     { name: "request", type: mediaOperationsTypes.selectionRequest },
@@ -32,20 +32,20 @@ export const synchronizedMediaFragment = sealGraphFragment({
       result: { kind: "output" as const, name: "selection" },
     },
     {
-      id: "normalize",
-      producer: mediaOperationsProducers.normalize,
+      id: "prepare",
+      producer: mediaProducers.prepare,
       inputs: {
         source: input("source"),
         inspection: operation("inspect"),
         selection: operation("select"),
-        request: input("request"),
+        spec: input("domain"),
       },
-      result: { kind: "need" as const, name: "media" },
+      result: { kind: "output" as const, name: "media" },
     },
     {
       id: "domain",
       producer: mediaProducers.localDomain,
-      inputs: { media: operation("normalize"), spec: input("domain") },
+      inputs: { media: operation("prepare") },
       result: { kind: "output" as const, name: "domain" },
     },
     {
@@ -57,8 +57,8 @@ export const synchronizedMediaFragment = sealGraphFragment({
   ],
   exports: [{
     name: "media",
-    type: mediaTypes.synchronized,
-    root: operation("normalize"),
+    type: mediaTypes.prepared,
+    root: operation("prepare"),
   }, {
     name: "domain",
     type: temporalTypes.localDomain,
@@ -72,21 +72,42 @@ export const synchronizedMediaFragment = sealGraphFragment({
 
 export const transformMediaFragment = sealGraphFragment({
   inputs: [
-    { name: "media", type: mediaTypes.synchronized },
+    { name: "media", type: mediaTypes.prepared },
     { name: "program", type: mediaOperationsTypes.transformProgram },
+    { name: "domain", type: mediaTypes.domainSpec },
   ],
   operations: [
     {
       id: "transform",
       producer: mediaOperationsProducers.transform,
-      inputs: { media: input("media"), program: input("program") },
-      result: { kind: "need" as const, name: "video" },
+      inputs: { media: input("media"), program: input("program"), spec: input("domain") },
+      result: { kind: "output" as const, name: "media" },
+    },
+    {
+      id: "domain",
+      producer: mediaProducers.localDomain,
+      inputs: { media: operation("transform") },
+      result: { kind: "output" as const, name: "domain" },
+    },
+    {
+      id: "extent",
+      producer: temporalProducers.extentFromDomain,
+      inputs: { domain: operation("domain") },
+      result: { kind: "output" as const, name: "extent" },
     },
   ],
   exports: [{
-    name: "video",
-    type: blobTypes.blob,
+    name: "media",
+    type: mediaTypes.prepared,
     root: operation("transform"),
+  }, {
+    name: "domain",
+    type: temporalTypes.localDomain,
+    root: operation("domain"),
+  }, {
+    name: "extent",
+    type: temporalTypes.extent,
+    root: operation("extent"),
   }],
 });
 

@@ -43,6 +43,34 @@ export type HypiHubAuth = {
   refresh(): Promise<string>;
 };
 
+export type HypiHubAuthSession = {
+  /**
+   * Resolve the authentication state for this activated Provider's one declared credential slot.
+   * Credential rotation remains inside that state, so concurrent Endpoint calls share refresh.
+   */
+  auth(credential: EndpointCredential): HypiHubAuth;
+};
+
+/**
+ * One activated HypiHub Provider owns one declared credential slot. Keep that slot's mutable OAuth
+ * interpretation at the Provider boundary instead of recreating it for every Endpoint invocation.
+ * Reconfiguring credentials reactivates the Provider; normal token rotation uses the slot's narrow
+ * replace authority and stays visible to every concurrent caller in this process.
+ */
+export function createHypiHubAuthSession(options: {
+  readonly baseUrl: string;
+  readonly requestTimeoutMs: number;
+  readonly fetch: typeof globalThis.fetch;
+}): HypiHubAuthSession {
+  let auth: HypiHubAuth | undefined;
+  return {
+    auth(credential) {
+      auth ??= createHypiHubAuth({ ...options, credential });
+      return auth;
+    },
+  };
+}
+
 /**
  * Interpret one declared HypiHub credential. Raw values are ordinary static API keys. OAuth values
  * use the host-neutral credential envelope written by the CLI. Rotation can replace only this

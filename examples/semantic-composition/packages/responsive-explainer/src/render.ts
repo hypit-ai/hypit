@@ -1,42 +1,52 @@
 import { sealPresentVisualTrack } from "@hypit/composition";
 import type { VisualElement } from "@hypit/composition";
 import { htmlVisual } from "@hypit/html-program";
-import type { FontArtifactRef } from "@hypit/media";
-import type { SynchronizedMedia } from "@hypit/media";
+import { preparedVisualSource, verifyPreparedMedia } from "@hypit/media";
+import type { FontArtifactRef, PreparedMedia } from "@hypit/media";
 import type { Timeline } from "@hypit/timeline";
 import type { SpatialFrame } from "@hypit/spatial";
+import { compareExactTemporalValues, composeTemporalMaps, exactTemporalValueFromFrames, sealTemporalMap } from "@hypit/temporal";
 import type { TemporalInstant, TemporalWindow } from "@hypit/temporal";
 
 export type ExplainerOptions = { id: string; title: string; transitionFrames: number };
 
 /** One scene owns the moving performance viewport and the diagram it makes room for. */
 export function renderExplainer(timeline: Timeline, within: SpatialFrame, window: TemporalWindow,
-  reveal: TemporalInstant, media: SynchronizedMedia, sourceWindow: TemporalWindow,
+  reveal: TemporalInstant, media: PreparedMedia, sourceWindow: TemporalWindow,
   fonts: readonly FontArtifactRef[], options: ExplainerOptions) {
   if (window.start.timelineId !== timeline.id || reveal.timelineId !== timeline.id)
     throw new Error("Explainer timing must belong to its Timeline.");
   if (!Number.isSafeInteger(options.transitionFrames) || options.transitionFrames < 1)
     throw new Error("Explainer transitionFrames must be a positive integer.");
   if (sourceWindow.start.timelineId !== timeline.id) throw new Error("Explainer source belongs to another Timeline.");
-  if (media.visual === undefined) throw new Error("Explainer media has no visual stream.");
-  if (media.frameDomain.frameCount !== sourceWindow.span.endFrameExclusive - sourceWindow.span.startFrame
-    || media.frameDomain.frameRate.numerator !== timeline.frameRate.numerator
-    || media.frameDomain.frameRate.denominator !== timeline.frameRate.denominator) {
-    throw new Error("Explainer media requires an equal-length native source Window.");
-  }
+  verifyPreparedMedia(media);
+  if (media.visual === undefined) throw new Error("Explainer media requires a visual source.");
+  const visual = media.visual;
+  const sourceWindowDuration = exactTemporalValueFromFrames(
+    sourceWindow.span.endFrameExclusive - sourceWindow.span.startFrame, timeline);
+  if (compareExactTemporalValues(media.domain.duration, sourceWindowDuration) !== 0)
+    throw new Error("Explainer media requires an equal-length source Window.");
   const clipStart = Math.max(sourceWindow.span.startFrame, window.span.startFrame);
   const clipEnd = Math.min(sourceWindow.span.endFrameExclusive, window.span.endFrameExclusive);
   const clips = clipEnd <= clipStart ? [] : [{ startFrame: clipStart, endFrameExclusive: clipEnd,
     sourceStartFrame: clipStart - sourceWindow.span.startFrame }];
   const videos: VisualElement[] = clips.map((clip, i) => ({
     id: `take-${i}`, kind: "video",
-    artifact: media.visual!.artifact, muted: true,
+    source: preparedVisualSource(media), muted: true,
     style: [{ name: "position", value: "absolute" }, { name: "inset", value: 0 },
       { name: "width", value: "100%" }, { name: "height", value: "100%" }, { name: "object-fit", value: "cover" }],
-    sourceTime: { sourceFrameRate: timeline.frameRate, sourceFrameCount: media.frameDomain.frameCount,
-      pieces: [{ target: { startFrame: clip.startFrame - window.span.startFrame,
-        endFrameExclusive: clip.endFrameExclusive - window.span.startFrame },
-        sourceAtStart: { numerator: clip.sourceStartFrame, denominator: 1 }, rate: { numerator: 1, denominator: 1 } }] },
+    sampling: composeTemporalMaps(sealTemporalMap({
+      stages: [{
+        target: { id: `take-${i}:occurrence`, duration: exactTemporalValueFromFrames(window.span.endFrameExclusive
+          - window.span.startFrame, timeline) },
+        source: media.domain,
+        pieces: [{ target: {
+          start: exactTemporalValueFromFrames(clip.startFrame - window.span.startFrame, timeline),
+          end: exactTemporalValueFromFrames(clip.endFrameExclusive - window.span.startFrame, timeline),
+        }, sourceAtStart: exactTemporalValueFromFrames(clip.sourceStartFrame, timeline),
+        rate: { numerator: 1, denominator: 1 } }],
+      }],
+    }), visual.map),
   }));
   const labels: VisualElement[] = [options.title, "Intent", "Performance", "Composition"].map((text, i) => ({
     id: `label-${i}`, kind: "text", text, fonts,

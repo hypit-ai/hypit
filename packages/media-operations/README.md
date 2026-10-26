@@ -1,64 +1,44 @@
 # `@hypit/media-operations`
 
-Provider-neutral media operation vocabulary. Ingestion contributes one ordinary finite Fragment:
+Provider-neutral media preparation and execution vocabulary. Preparation contributes one ordinary
+finite Fragment:
 
 ```text
-Blob
-  -> inspect-media Need
-  -> MediaInspection
-  -> deterministic stream selection
-  -> MediaStreamSelection
-  -> normalize-media Need
-  -> SynchronizedMedia
+Blob -> inspect-media Need -> MediaInspection
+     -> deterministic MediaStreamSelection
+     -> pure preparation
+     -> PreparedMedia + exact LocalTemporalDomain + TemporalExtent
 ```
 
 `MediaInspection` enumerates every container stream. The default moving-video policy excludes
 `attached_pic` streams, prefers one declared default, accepts one unambiguous remaining candidate,
-and otherwise fails closed. An explicit stream index is available when the author module genuinely
-knows which alternate stream it wants.
+and otherwise fails closed. An explicit stream index is available when the author genuinely knows
+which alternate stream is intended.
 
-Selecting embedded audio is a media fact only. This package never assigns Script meaning. A later
-speech alignment component may bind one normalized local domain to one authored Segment.
-
-The current normalization profile uses one source presentation origin, a requested rational video frame
-rate, and a 48 kHz stereo PCM render stem. It preserves input level: loudness/mastering remains a
-separate author policy. Its public `SynchronizedMedia` waist carries only the common frame domain,
-optional visual Artifact plus intrinsic extent, and optional audio Artifact. Stream indexes,
-authority choice and the trim/pad ledger remain in Selection and execution instead of travelling
-through every consumer. The field is named `frameDomain`, not `timeline`, because it describes the
-normalized source before any program placement.
-
-Normalization preserves transparency in the selected visual stream. The executing Provider owns
-the intermediate encoding; both opaque and transparent pictures use the same SynchronizedMedia
-value. Normalization also publishes the media's neutral local temporal domain. Speech alignment may
-describe Narrative boundaries on that domain; Timeline authoring may consume its Extent; a domain
-projector may map its boundaries through an equal-length Window. None of those relationships is embedded
-back into SynchronizedMedia.
-
-This package is the shared execution vocabulary. Speech authoring makes the boundary explicit:
-`<mediaop:Normalize>` produces `SynchronizedMedia + LocalTemporalDomain`; a speech provider and
-deterministic alignment produce `NarrativeAlignment`; Timeline authoring separately produces absolute
-Windows. Visual and Audio Tracks consume ordinary media plus the explicit Windows and sampling choices
-they declare; neither owns an implicit normalization policy.
-
-The frame clock is a separate program fact and can be shared by every Normalize and Timeline assembly:
+`PreparedMedia` retains the original Blob, selected members, exact local domain, display/audio
+interpretation and maps back to source presentation time. It chooses no Film frame rate and contains
+no execution representation. Selecting embedded audio remains a media fact only; Script meaning and program
+placement stay downstream.
 
 ```svml
 <time:Clock id="clock" frame-rate="30"/>
-<mediaop:Normalize id="shot-media" source={shot.video}
-  recipe={recipes.media.aroll} clock={clock}/>
+<mediaop:Prepare id="shot-media" source={shot.video}
+  recipe={recipes.media.aroll}/>
 ```
 
-An SVS recipe may centralize the stream policy (`video`, `audio` and `span-authority`); it does not
-hide the Normalize graph node or turn multiple sources into one opaque batch operation.
+Visual and Audio Tracks consume that prepared value with explicit Windows and sampling relations.
+Visual lowering keeps the exact selected stream and composed `TemporalMap` in the terminal visual program; audio lowering
+projects the selected audio source plus its preparation and occurrence maps before the terminal Audio Track enters Composition.
+`AudioProgram` then resolves only those audio facts. The selected renderer evaluates them with its
+own decoder and working formats. An SVS recipe may centralize stream selection without hiding the Prepare node.
 
 A still image becomes ordinary video before it enters that waist:
 
 ```svml
 <mediaop:StillVideo id="opening-still" source={opening-head.image}
   duration="6s" clock={clock}/>
-<mediaop:Normalize id="opening-media" source={opening-still.video}
-  video="primary-moving" audio="none" span-authority="video" clock={clock}/>
+<mediaop:Prepare id="opening-media" source={opening-still.video}
+  video="primary-moving" audio="none" span-authority="video"/>
 ```
 
 Several images spread over one literal duration the same way, each held for its share of the frames:
@@ -71,13 +51,13 @@ Several images spread over one literal duration the same way, each held for its 
 </mediaop:StillVideo>
 ```
 
-`StillVideo` returns a video-only MP4 `Blob`, not `SynchronizedMedia`. Its duration is an exact
+`StillVideo` returns a video-only MP4 `Blob`, not `PreparedMedia`. Its duration is an exact
 `TemporalDuration`; it must land on a positive whole frame count for the selected Clock and is never
 rounded. The Surface publishes that duration and the weights as Records; `plan-still-video` divides the whole frame count among the
 pictures (every picture holds at least one frame, the rest go by weight with leftovers to the largest
 remainders, earlier first), `bind-still-video-source` attaches each picture in authored order, and
 encoding is one `render-still-video` Need. Pictures of different sizes are fitted into the first one's
-frame and letterboxed. Inspection and normalization remain the same explicit steps used by imported
+frame and letterboxed. Inspection and preparation remain the same explicit steps used by imported
 or generated moving video. The resulting Blob is ordinary time-bearing visual media. Its later role
 comes entirely from the downstream Source relationships; StillVideo itself owns only the authored
 images, duration and frame clock.
@@ -85,21 +65,23 @@ images, duration and frame clock.
 The package also exposes the one-picture Run Fragment `still-video`. It takes `duration`, `clock`,
 `layout` and `source-0`. A Run can select its `video` export as a Candidate through `satisfy`.
 
-Four ordinary author operations reuse that same inspection/execution boundary:
+Preparation and pure transformation use the same source-preserving boundary:
 
 ```xml
-<mediaop:Normalize id="shot-media" source={shot.video}
-  video="primary-moving" audio="default" span-authority="video" clock={clock}/>
+<mediaop:Prepare id="shot-media" source={shot.video}
+  video="primary-moving" audio="default" span-authority="video"/>
 <mediaop:Transform id="prepared" source={shot-media.media}>
   <mediaop:Trim tail="0.25s"/>
   <mediaop:Retime rate="1.05"/>
 </mediaop:Transform>
 
-<mediaop:ExtractAudio id="voice-reference" source={prepared.video} audio="default"/>
-<mediaop:ExtractFrame id="continuity" source={prepared.video} video="primary-moving" at="last"/>
+<mediaop:ExtractAudio id="voice-reference" source={shot.video} audio="default"/>
+<mediaop:ExtractFrame id="continuity" source={shot.video} video="primary-moving" at="last"/>
 ```
 
-Every result is an ordinary `Blob`. Audio extraction emits a deterministic 48 kHz stereo PCM
+Transform returns another `PreparedMedia`. Ordered trim and positive rational retime compose exact
+temporal maps without decoding or encoding. Audio/frame extraction remain explicit Blob operations
+over a source Blob. Audio extraction emits a deterministic 48 kHz stereo PCM
 WAV but makes no NarrativeAlignment, speaker or semantic claim; it can therefore feed a later model
 reference port directly. Frame extraction supports `first`, `last`, `frame:<index>` and
 `time:<seconds>`. Transform operations are ordered author meaning and never an arbitrary FFmpeg string.
@@ -111,9 +93,15 @@ Composition -> pure AudioProgram -> render-timeline-audio Need -> TimelineAudio
 TimelineVisual + TimelineAudio -> mux-program-media Need -> MuxedMedia
 ```
 
+The mux request also receives the author-owned `MediaDeliverySpec`. It requires the visual
+result to carry the matching `VisualDeliverySpec` and the PCM result to match the requested
+sample rate and channel layout before asking a Provider to mux. The Provider may stream-copy
+the compatible visual stream; it must not use mux as an implicit correction or second render.
+
 Compiling an `AudioProgram` is ordinary deterministic code. Reading Artifact bytes, decoding,
 resampling, mixing, encoding or muxing is never a Producer shortcut: it is an explicit Provider
-Need. The program fixes exact 48 kHz sample boundaries, source-time-derived piece rates, gain/fades and the absence
+Need. The program is the terminal boundary that resolves exact placement, temporal sampling and fades
+onto 48 kHz samples; it also fixes gain and the absence
 of hidden normalization/limiting. The local FFmpeg Provider consumes the shared execution body. Other Providers implement the same
 public request and result semantics.
 

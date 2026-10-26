@@ -213,7 +213,7 @@ Runtime's execution state.
 `hypit get` is useful when handing over a particular output. Exported image/video/audio files can be
 selected as file Candidates. A structured value with referenced files exports as `value.json` beside
 those files for inspection and transport; a Run `<value>` accepts the Value itself. To retain
-structured normalized media, local-domain or alignment reuse, keep
+structured prepared media, local-domain or alignment reuse, keep
 its Result available and select each required Output with `build-record`. [Builds and Results](../production/builds.md)
 explains Result reuse and export.
 

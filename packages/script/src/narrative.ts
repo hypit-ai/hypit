@@ -174,7 +174,6 @@ function segmentSerializations(segment: ParsedNarrative["segments"][number]): {
 }
 
 export function narrativeSegmentExcerptValue(
-  parsed: ParsedNarrative,
   segment: ParsedNarrative["segments"][number],
   narrativeId: string,
 ): CanonicalValue {

@@ -1,8 +1,6 @@
-import { timelineDependency, timelineTypes } from "@hypit/timeline";
+import { frameSpanSchema, timelineDependency, timelineTypes } from "@hypit/timeline";
 import type { StructuredSurfaceDeclaration, SurfaceVocabulary } from "@hypit/hypit/markup";
-import type { Timeline } from "@hypit/timeline";
 import { temporalContextAttributeVocabulary } from "@hypit/temporal/markup";
-import { visualSourceTimeMapSchema } from "@hypit/composition";
 import { readFile } from "node:fs/promises";
 
 import { blobDependency, blobTypes } from "@hypit/hypit/blob";
@@ -11,6 +9,7 @@ import {
   compositableSurfaceSchema,
   mediaDependency,
   mediaTypes,
+  preparedMediaSchema,
 } from "@hypit/media";
 
 import { blobRefSchema } from "@hypit/hypit/protocol";
@@ -24,7 +23,7 @@ import {
   spatialTypes,
 } from "@hypit/spatial";
 import { recipeType } from "@hypit/hypit/recipe";
-import { temporalDependency, temporalTypes } from "@hypit/temporal";
+import { temporalDependency, temporalMapSchema, temporalRelationSpecSchema, temporalTypes } from "@hypit/temporal";
 import { temporalWindowAttributeVocabulary } from "@hypit/temporal/markup";
 
 const previewImage = (file: string) => ({
@@ -37,7 +36,6 @@ export const visualTrackModuleRef = { name: "@hypit/visual-track", version: "1" 
 export const visualTrackTypes = {
   header: { module: visualTrackModuleRef, name: "VisualTrackHeader" },
   motion: { module: visualTrackModuleRef, name: "VisualClipMotion" },
-  sourceTime: { module: visualTrackModuleRef, name: "VisualSourceTimeSpec" },
   paintLayerSpec: { module: visualTrackModuleRef, name: "MediaPaintLayerSpec" },
   sampleLayerSpec: { module: visualTrackModuleRef, name: "MediaSampleLayerSpec" },
   layerSet: { module: visualTrackModuleRef, name: "MediaLayerSet" },
@@ -66,34 +64,10 @@ export const visualTrackProducers = {
 const string = { kind: "string", minLength: 1 } as const;
 const number = { kind: "number" } as const;
 const unsigned = { kind: "number", minimum: 0 } as const;
-const integer = { kind: "number", integer: true } as const;
 const unsignedInteger = { kind: "number", integer: true, minimum: 0 } as const;
-const positiveInteger = { kind: "number", integer: true, minimum: 1 } as const;
 const object = (fields: Readonly<Record<string, { readonly schema: ValueSchema; readonly optional?: boolean }>>): ValueSchema => ({ kind: "object", fields });
 const blob = blobRefSchema();
-const rational = object({ numerator: { schema: positiveInteger }, denominator: { schema: positiveInteger } });
 const extent = intrinsicExtentSchema;
-const signedRational = object({ numerator: { schema: integer }, denominator: { schema: positiveInteger } });
-const sourceTimePoint = object({
-  edge: { schema: { kind: "string", enum: ["start", "end"] } },
-  offsetFrames: { schema: integer },
-});
-const sourceTimeBounds = object({ from: { schema: sourceTimePoint }, until: { schema: sourceTimePoint } });
-const sourceTimeRelation: ValueSchema = { kind: "oneOf", variants: [
-  object({
-    kind: { schema: { kind: "literal", value: "rate" } }, target: { schema: sourceTimeBounds },
-    targetAt: { schema: sourceTimePoint }, sourceAt: { schema: sourceTimePoint },
-    rate: { schema: signedRational }, source: { schema: sourceTimeBounds },
-    wrap: { schema: sourceTimeBounds, optional: true },
-  }),
-  object({
-    kind: { schema: { kind: "literal", value: "fit" } }, target: { schema: sourceTimeBounds },
-    source: { schema: sourceTimeBounds },
-  }),
-] };
-export const visualSourceTimeSpecSchema: ValueSchema = object({
-  relations: { schema: { kind: "array", minItems: 1, items: sourceTimeRelation } },
-});
 const stops = { kind: "array", minItems: 2, items: object({ offset: { schema: unsigned }, color: { schema: string } }) } as const;
 const paint: ValueSchema = { kind: "oneOf", variants: [
   object({ kind: { schema: { kind: "literal", value: "solid" } }, color: { schema: string } }),
@@ -120,23 +94,22 @@ export const mediaPaintLayerSpecSchema: ValueSchema = object({
 });
 export const mediaSampleLayerSpecSchema: ValueSchema = object({
 
-  id: { schema: string }, sourceTime: { schema: visualSourceTimeSpecSchema, optional: true },
+  id: { schema: string }, sampling: { schema: temporalRelationSpecSchema, optional: true },
   appearance: { schema: mediaSampleAppearanceSchema }, samplingMotion: { schema: mediaSamplingMotionSchema, optional: true },
 });
 const visualSource: ValueSchema = { kind: "oneOf", variants: [
   object({ kind: { schema: { kind: "literal", value: "still" } }, artifact: { schema: blob }, extent: { schema: extent } }),
   object({
-    kind: { schema: { kind: "literal", value: "timed" } }, artifact: { schema: blob }, extent: { schema: extent },
-    frameRate: { schema: rational }, frameCount: { schema: positiveInteger },
+    kind: { schema: { kind: "literal", value: "timed" } }, media: { schema: preparedMediaSchema }, extent: { schema: extent },
   }),
   object({ kind: { schema: { kind: "literal", value: "surface" } }, surface: { schema: compositableSurfaceSchema }, extent: { schema: extent } }),
 ] };
 const paintLayer = object({ id: { schema: string }, kind: { schema: { kind: "literal", value: "paint" } }, paint: { schema: paint }, opacity: { schema: unsigned } });
 const sampleLayer = object({
   id: { schema: string }, kind: { schema: { kind: "literal", value: "sample" } }, source: { schema: visualSource },
-  sourceTime: { schema: { kind: "oneOf", variants: [
-    object({ kind: { schema: { kind: "literal", value: "spec" } }, value: { schema: visualSourceTimeSpecSchema } }),
-    object({ kind: { schema: { kind: "literal", value: "map" } }, value: { schema: visualSourceTimeMapSchema } }),
+  sampling: { schema: { kind: "oneOf", variants: [
+    object({ kind: { schema: { kind: "literal", value: "relation" } }, value: { schema: temporalRelationSpecSchema } }),
+    object({ kind: { schema: { kind: "literal", value: "map" } }, value: { schema: temporalMapSchema } }),
   ] }, optional: true },
   placement: { schema: { kind: "oneOf", variants: [
     object({ kind: { schema: { kind: "literal", value: "fit" } }, fit: { schema: contentFitSchema } }),
@@ -151,9 +124,9 @@ export const mediaLayerSetSchema: ValueSchema = object({
 });
 const resolvedSampleLayer = object({
   id: { schema: string }, kind: { schema: { kind: "literal", value: "sample" } }, source: { schema: visualSource },
-  sourceTime: { schema: { kind: "oneOf", variants: [
-    object({ kind: { schema: { kind: "literal", value: "spec" } }, value: { schema: visualSourceTimeSpecSchema } }),
-    object({ kind: { schema: { kind: "literal", value: "map" } }, value: { schema: visualSourceTimeMapSchema } }),
+  sampling: { schema: { kind: "oneOf", variants: [
+    object({ kind: { schema: { kind: "literal", value: "relation" } }, value: { schema: temporalRelationSpecSchema } }),
+    object({ kind: { schema: { kind: "literal", value: "map" } }, value: { schema: temporalMapSchema } }),
   ] }, optional: true },
   mapping: { schema: spatialMap2DSchema },
   appearance: { schema: mediaSampleAppearanceSchema }, samplingMotion: { schema: mediaSamplingMotionSchema, optional: true },
@@ -192,9 +165,8 @@ export const visualClipSpecSchema: ValueSchema = object({
   id: { schema: string },
   treatment: { schema: visualFrameTreatmentSchema }, motion: { schema: visualClipMotionSchema, optional: true },
 });
-const frameSpan = object({ startFrame: { schema: unsignedInteger }, endFrameExclusive: { schema: positiveInteger } });
 const resolvedClip = object({
-  id: { schema: string }, subjectId: { schema: string }, span: { schema: frameSpan }, frame: { schema: spatialFrameSchema },
+  id: { schema: string }, subjectId: { schema: string }, span: { schema: frameSpanSchema }, frame: { schema: spatialFrameSchema },
   treatment: { schema: visualFrameTreatmentSchema }, layers: { schema: { kind: "array", minItems: 1, items: resolvedLayer } }, motion: { schema: visualClipMotionSchema, optional: true },
 });
 export const visualTrackSetSchema: ValueSchema = object({
@@ -253,7 +225,7 @@ export const visualTrackMarkupSurfaces: readonly (StructuredSurfaceDeclaration &
       compositionTypes.visualTrack],
     vocabulary: {
       summary: "Places ordinary visual Clips on one completed Timeline; Film places the resulting Track in a VisualScope.",
-      appearance: "Each Clip owns one source, one absolute Window and one Frame. Source-time, space, treatment and optional local motion remain independent choices.",
+      appearance: "Each Clip owns one source, one absolute Window and one Frame. Temporal sampling, space, treatment and optional local motion remain independent choices.",
       preview: previewImage("Track.png"),
       attributes: [
         { name: "id", kind: "identifier", required: true,
@@ -277,12 +249,10 @@ export const visualTrackMarkupSurfaces: readonly (StructuredSurfaceDeclaration &
               summary: "Clips the Clip to an authored Path." },
             { name: "image", kind: "reference", required: false, accepts: [blobTypes.blob],
               summary: "Shows a durationless still image as the Clip's direct source." },
-            { name: "media", kind: "reference", required: false, accepts: [mediaTypes.synchronized],
-              summary: "Shows an explicitly prepared timed source." },
+            { name: "media", kind: "reference", required: false, accepts: [mediaTypes.prepared],
+              summary: "Shows a prepared timed source; terminal rendering evaluates its selected stream and exact Map." },
             { name: "surface", kind: "reference", required: false, accepts: [mediaTypes.compositableSurface],
               summary: "Shows an alpha-aware still or timed Surface." },
-            { name: "source-time", kind: "reference", required: false, accepts: [visualTrackTypes.sourceTime],
-              summary: "Applies one reusable partial source-time relation. Inline Map children express the same value." },
             { name: "extent", kind: "reference", required: false, accepts: [spatialTypes.extent],
               summary: "Gives the still image its authored pixel Extent. The `fit` scales this Extent into the Frame, so what it decides is the shape: its width-to-height ratio has to be the picture's, and the pixel numbers themselves only have to hold that ratio. A generated picture's own size is the generator's to choose and is not knowable when the Source is written, so write the ratio you asked that generator for." },
             { name: "mapping", kind: "reference", required: false, accepts: [spatialTypes.map2D],
@@ -320,9 +290,9 @@ export const visualTrackMarkupSurfaces: readonly (StructuredSurfaceDeclaration &
         "A Track requires at least one Clip and accepts no text content.",
         "A Clip references one already resolved Window through `during`.",
         "A Clip names exactly one of `image`, `media` or `surface`; `extent` is required with `image` and refused otherwise.",
-        "The parent Film Scope owns this Track occurrence's position through sibling declaration order; fitting and source time remain properties of each Clip occurrence.",
+        "The parent Film Scope owns this Track occurrence's position through sibling declaration order; fitting and temporal sampling remain properties of each Clip occurrence.",
         "An explicit `mapping` is mutually exclusive with every fit attribute. It is already in program-picture coordinates; the Frame still owns clipping and treatment.",
-        "Omitting source time means bounded partial identity. Map children are refused on durationless still material.",
+        "Omitting a Map means bounded partial identity. Map children are refused on durationless still material.",
         "Map children control timed source coordinates, Sampling children animate source crop inside the Frame, and Pose children animate the complete framed Clip.",
         "Audio is authored independently through Audio Track; Visual Track never selects or emits it implicitly.",
       ],
@@ -355,34 +325,6 @@ export const visualTrackMarkupSurfaces: readonly (StructuredSurfaceDeclaration &
 </visual:Motion>`,
       notes: ["A Motion needs at least two ordered Poses and must resolve from the consuming Clip's start through its end."],
     },
-  }, {
-    name: "source-time", tag: "SourceTime", mode: "structured",
-    outputs: [visualTrackTypes.sourceTime],
-    vocabulary: {
-      summary: "Authors a reusable partial relation from Clip-local target frames to source-local frames.",
-      attributes: [{ name: "id", kind: "identifier", required: true, summary: "Names this SourceTime relation." }],
-      children: [{
-        tag: "Map", cardinality: "many", summary: "One affine piece; uncovered target frames are transparent.",
-        attributes: [
-          { name: "target-from", kind: "literal", required: false, summary: "Starts the target interval; defaults to start." },
-          { name: "target-until", kind: "literal", required: false, summary: "Ends the target interval exclusively; defaults to end." },
-          { name: "target-at", kind: "literal", required: false, summary: "Names the target anchor paired with source-at." },
-          { name: "source-at", kind: "literal", required: false, summary: "Names the source anchor paired with target-at." },
-          { name: "rate", kind: "literal", required: false, summary: "Exact signed source frames per target frame." },
-          { name: "source-from", kind: "literal", required: false, summary: "Starts the permitted or fitted source interval." },
-          { name: "source-until", kind: "literal", required: false, summary: "Ends the permitted or fitted source interval exclusively." },
-          { name: "wrap-from", kind: "literal", required: false, summary: "Starts an explicitly periodic source interval." },
-          { name: "wrap-until", kind: "literal", required: false, summary: "Ends an explicitly periodic source interval exclusively." },
-        ],
-      }],
-      example: `<visual:SourceTime id="native-loop">
-  <visual:Map source-at="start" rate="1" wrap-from="start" wrap-until="end"/>
-</visual:SourceTime>`,
-      notes: [
-        "Without rate, anchors or wrap, a Map fits source-from..source-until across its target interval.",
-        "With rate or anchors, missing points default to start and missing bounds default to the complete domain.",
-      ],
-    },
   }] as const;
 
 
@@ -401,7 +343,6 @@ export const visualTrackManifest: ModuleManifest = {
   types: [
     visualTrackTypes.header.name,
     visualTrackTypes.motion.name,
-    visualTrackTypes.sourceTime.name,
     visualTrackTypes.paintLayerSpec.name,
     visualTrackTypes.sampleLayerSpec.name,
     visualTrackTypes.layerSet.name,
@@ -415,8 +356,8 @@ export const visualTrackManifest: ModuleManifest = {
     { name: visualTrackProducers.appendPaintLayer.name, inputs: [{ name: "layers", type: visualTrackTypes.layerSet }, { name: "spec", type: visualTrackTypes.paintLayerSpec }], result: { kind: "output" as const, name: "layers", type: visualTrackTypes.layerSet } },
     { name: visualTrackProducers.appendStillLayer.name, inputs: [{ name: "layers", type: visualTrackTypes.layerSet }, { name: "source", type: blobTypes.blob }, { name: "extent", type: spatialTypes.extent }, { name: "fit", type: spatialTypes.fit }, { name: "spec", type: visualTrackTypes.sampleLayerSpec }], result: { kind: "output" as const, name: "layers", type: visualTrackTypes.layerSet } },
     { name: visualTrackProducers.appendMappedStillLayer.name, inputs: [{ name: "layers", type: visualTrackTypes.layerSet }, { name: "source", type: blobTypes.blob }, { name: "extent", type: spatialTypes.extent }, { name: "mapping", type: spatialTypes.map2D }, { name: "spec", type: visualTrackTypes.sampleLayerSpec }], result: { kind: "output" as const, name: "layers", type: visualTrackTypes.layerSet } },
-    { name: visualTrackProducers.appendTimedLayer.name, inputs: [{ name: "layers", type: visualTrackTypes.layerSet }, { name: "source", type: mediaTypes.synchronized }, { name: "fit", type: spatialTypes.fit }, { name: "spec", type: visualTrackTypes.sampleLayerSpec }], result: { kind: "output" as const, name: "layers", type: visualTrackTypes.layerSet } },
-    { name: visualTrackProducers.appendMappedTimedLayer.name, inputs: [{ name: "layers", type: visualTrackTypes.layerSet }, { name: "source", type: mediaTypes.synchronized }, { name: "mapping", type: spatialTypes.map2D }, { name: "spec", type: visualTrackTypes.sampleLayerSpec }], result: { kind: "output" as const, name: "layers", type: visualTrackTypes.layerSet } },
+    { name: visualTrackProducers.appendTimedLayer.name, inputs: [{ name: "layers", type: visualTrackTypes.layerSet }, { name: "media", type: mediaTypes.prepared }, { name: "fit", type: spatialTypes.fit }, { name: "spec", type: visualTrackTypes.sampleLayerSpec }], result: { kind: "output" as const, name: "layers", type: visualTrackTypes.layerSet } },
+    { name: visualTrackProducers.appendMappedTimedLayer.name, inputs: [{ name: "layers", type: visualTrackTypes.layerSet }, { name: "media", type: mediaTypes.prepared }, { name: "mapping", type: spatialTypes.map2D }, { name: "spec", type: visualTrackTypes.sampleLayerSpec }], result: { kind: "output" as const, name: "layers", type: visualTrackTypes.layerSet } },
     { name: visualTrackProducers.appendSurfaceLayer.name, inputs: [{ name: "layers", type: visualTrackTypes.layerSet }, { name: "source", type: mediaTypes.compositableSurface }, { name: "fit", type: spatialTypes.fit }, { name: "spec", type: visualTrackTypes.sampleLayerSpec }], result: { kind: "output" as const, name: "layers", type: visualTrackTypes.layerSet } },
     { name: visualTrackProducers.appendMappedSurfaceLayer.name, inputs: [{ name: "layers", type: visualTrackTypes.layerSet }, { name: "source", type: mediaTypes.compositableSurface }, { name: "mapping", type: spatialTypes.map2D }, { name: "spec", type: visualTrackTypes.sampleLayerSpec }], result: { kind: "output" as const, name: "layers", type: visualTrackTypes.layerSet } },
     { name: visualTrackProducers.createSet.name, inputs: [], result: { kind: "output" as const, name: "set", type: visualTrackTypes.set } },

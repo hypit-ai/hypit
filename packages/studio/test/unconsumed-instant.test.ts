@@ -87,7 +87,7 @@ test("Companion display requests resolve unused nested and standalone Instants",
 test("an unresolved locator upstream does not prevent other locators or the selected view", async (t) => {
   const input = await fixture(t, `
   <media:Video id="source" src="./source.mp4"/>
-  <mediaop:Normalize id="prepared" source={source} clock={clock}
+  <mediaop:Prepare id="prepared" source={source}
     video="primary-moving" audio="none" span-authority="video"/>
   <time:Timeline id="other" clock={clock} end="clip.end">
     <time:Window id="clip" from="start" for={prepared.extent}/>

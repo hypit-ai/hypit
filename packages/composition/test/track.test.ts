@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { fixtureResource } from "../../../test/fixture-resource.js";
+import { frameRangeFixture, frameSamplingMapFixture } from "../../../test/temporal-fixture.js";
 
 import { registerTypeRefinements } from "@hypit/refinement";
 import { createResolvedClosure } from "@hypit/kernel";
@@ -8,12 +9,14 @@ import { canonicalize } from "@hypit/protocol";
 import type { BlobRef } from "@hypit/protocol";
 import { RefinementRegistry, refineValue } from "@hypit/refinement";
 import { blobManifest } from "@hypit/blob";
-import type { FontArtifactRef } from "@hypit/media";
+import { preparedAudioSource } from "@hypit/media";
+import type { FontArtifactRef, PreparedMedia } from "@hypit/media";
 import { mediaManifest } from "@hypit/media";
 import { narrativeManifest } from "@hypit/narrative";
 import { timelineManifest, sealTimeline } from "@hypit/timeline";
 import { speechEvidenceManifest } from "@hypit/speech-evidence";
 import { spatialManifest } from "@hypit/spatial";
+import { exactTemporalValueFromFrames, exactTemporalZero, identityTemporalMap, sealTemporalMap } from "@hypit/temporal";
 import { recipeManifest } from "@hypit/recipe";
 import { VISUAL_IR_V1 } from "@hypit/composition";
 
@@ -54,6 +57,13 @@ const audio: BlobRef = {
   mediaType: "audio/wav",
 };
 
+function preparedAudio(): PreparedMedia {
+  const domain = { id: "fixture-materialization", duration: exactTemporalValueFromFrames(192_000,
+    { frameRate: { numerator: 48_000, denominator: 1 } }) };
+  return { source: audio, domain, audio: { streamIndex: 0, presentationStart: exactTemporalZero(),
+    sourceDomain: domain, map: identityTemporalMap(domain), interpretation: { sampleRate: 48_000, channels: 2 } } };
+}
+
 function fixture() {
   const timeline = sealTimeline({ id: "test-space", frameCount: 120, frameRate: { numerator: 30, denominator: 1 },
   });
@@ -72,15 +82,19 @@ function fixture() {
     id: "speech",
     graph: audioGraphFromClips([{
       id: "speech",
-      artifact: audio,
-      target: { startSample: 0, endSampleExclusive: 192_000 },
-      sourceTime: { sourceSampleFrames: 192_000, pieces: [{
-        target: { startSample: 0, endSampleExclusive: 192_000 },
+      source: preparedAudioSource(preparedAudio()),
+      preparation: preparedAudio().audio!.map,
+      target: frameRangeFixture(0, 192_000, { numerator: 48_000, denominator: 1 }),
+      sampling: frameSamplingMapFixture({
+        targetFrameRate: { numerator: 48_000, denominator: 1 }, targetFrames: 192_000,
+        sourceFrameRate: { numerator: 48_000, denominator: 1 }, sourceFrames: 192_000,
+        pieces: [{ target: { startFrame: 0, endFrameExclusive: 192_000 },
         sourceAtStart: { numerator: 0, denominator: 1 }, rate: { numerator: 1, denominator: 1 },
-      }] },
+        }],
+      }),
       gain: 1,
-      fadeInSamples: 0,
-      fadeOutSamples: 0,
+      fadeIn: { ticks: "0", timeBase: { numerator: 1, denominator: 1 } },
+      fadeOut: { ticks: "0", timeBase: { numerator: 1, denominator: 1 } },
     }]),
   });
   return { timeline, visual, sound };
@@ -98,6 +112,51 @@ test("Composition accepts self-contained peer VisualTrack and AudioTrack values"
   assert.doesNotThrow(() => assertCompositionIdentity(composition, timeline));
   assert.deepEqual([composition.audio[0]?.id, composition.visual.members[0]?.kind === "track"
     ? composition.visual.members[0].track.id : undefined], ["speech", "caption"]);
+});
+
+test("AudioTrack rejects a sampling domain that differs from its prepared audio domain", () => {
+  const { timeline, sound } = fixture();
+  const quantized = structuredClone(sound) as unknown as {
+    graph: { nodes: Array<{ kind: string; clip?: { sampling: { stages: Array<{
+      source: { duration: { ticks: string; timeBase: { numerator: number; denominator: number } } };
+    }> } } }> };
+  };
+  const source = quantized.graph.nodes.find((node) => node.kind === "source");
+  assert.ok(source?.clip !== undefined);
+  source.clip.sampling.stages.at(-1)!.source.duration = {
+    ticks: "960001", timeBase: { numerator: 1, denominator: 240_000 },
+  };
+  assert.throws(() => assertAudioTrackIdentity(quantized as never, timeline), /differs from its prepared audio domain/u);
+});
+
+test("VisualTrack carries exact logical source duration without a terminal materialization", () => {
+  const timeline = sealTimeline({ id: "story", frameRate: { numerator: 30, denominator: 1 }, frameCount: 7 });
+  const logicalSource = exactTemporalValueFromFrames(5, { frameRate: { numerator: 24, denominator: 1 } });
+  const sampling = sealTemporalMap({ stages: [{
+    target: { id: "occurrence", duration: exactTemporalValueFromFrames(7, timeline) },
+    source: { id: "source", duration: logicalSource },
+    pieces: [{
+      target: { start: exactTemporalZero(), end: exactTemporalValueFromFrames(7, timeline) },
+      sourceAtStart: exactTemporalZero(),
+      rate: { numerator: 25, denominator: 28 },
+    }],
+  }] });
+  const track = sealPresentVisualTrack({
+    id: "picture", timelineId: timeline.id, visualIr: "hypit.visual-ir@1",
+    presents: [{
+      id: "clip", span: { startFrame: 0, endFrameExclusive: 7 },
+      root: {
+        id: "source", kind: "video", source: {
+          source: { kind: "blob", resource: fixtureResource("video"), mediaType: "video/mp4", size: 1 },
+          streamIndex: 0, presentationStart: exactTemporalZero(),
+          sourceDomain: { id: "source", duration: logicalSource },
+          interpretation: { codedWidth: 1920, codedHeight: 1080, sampleAspectRatio: { numerator: 1, denominator: 1 }, rotationDegrees: 0 },
+        },
+        style: [], muted: true, sampling,
+      },
+    }],
+  });
+  assert.doesNotThrow(() => assertVisualTrackIdentity(track, timeline));
 });
 
 test("Composition accepts case-insensitive hexadecimal canvas colors", () => {

@@ -169,17 +169,17 @@
     left="0%" top="0%" right="100%" bottom="100%"/>
   <time:Clock id="clock" frame-rate="30"/>
 
-  <mediaop:Normalize id="soundtrack-media" source={soundtrack}
-    video="none" audio="default" span-authority="audio" clock={clock}/>
-  <mediaop:Normalize id="rule-reveal-sound-media" source={rule-reveal-sound}
-    video="none" audio="default" span-authority="audio" clock={clock}/>
+  <mediaop:Prepare id="soundtrack-media" source={soundtrack}
+    video="none" audio="default" span-authority="audio"/>
+  <mediaop:Prepare id="rule-reveal-sound-media" source={rule-reveal-sound}
+    video="none" audio="default" span-authority="audio"/>
 
-  <mediaop:Normalize id="uber-rule-media" source={uber-rule-take.video}
-    video="primary-moving" audio="default" span-authority="video" clock={clock}/>
-  <mediaop:Normalize id="shortcuts-rule-media" source={shortcuts-rule-take.video}
-    video="primary-moving" audio="default" span-authority="video" clock={clock}/>
-  <mediaop:Normalize id="first-place-rule-media" source={first-place-rule-take.video}
-    video="primary-moving" audio="default" span-authority="video" clock={clock}/>
+  <mediaop:Prepare id="uber-rule-media" source={uber-rule-take.video}
+    video="primary-moving" audio="default" span-authority="video"/>
+  <mediaop:Prepare id="shortcuts-rule-media" source={shortcuts-rule-take.video}
+    video="primary-moving" audio="default" span-authority="video"/>
+  <mediaop:Prepare id="first-place-rule-media" source={first-place-rule-take.video}
+    video="primary-moving" audio="default" span-authority="video"/>
 
   <whisperx:Transcription id="uber-rule-semantic-transcription" media={uber-rule-media.media} language="en"/>
   <speechalign:Alignment id="uber-rule-semantic" narrative={story}

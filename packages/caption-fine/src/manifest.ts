@@ -1,8 +1,7 @@
-import { temporalDependency, temporalTypes } from "@hypit/temporal";
+import { temporalDependency } from "@hypit/temporal";
 import type { StructuredSurfaceDeclaration, SurfaceVocabulary } from "@hypit/hypit/markup";
 import { temporalContextAttributeVocabulary, temporalWindowAttributeVocabulary } from "@hypit/temporal/markup";
 import { timelineDependency, timelineTypes } from "@hypit/timeline";
-import type { Timeline } from "@hypit/timeline";
 import { readFile } from "node:fs/promises";
 
 import { captionModuleRef, captionTypes } from "@hypit/caption";

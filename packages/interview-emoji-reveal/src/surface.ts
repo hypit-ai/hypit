@@ -1,5 +1,5 @@
 import { resolveTemporalContext } from "@hypit/temporal/markup";
-import { assertAttributes, assertEmptyElement, optionalTextAttribute, textAttribute, type MarkupAttributeValue, type StructuredSurfaceHandler, type SurfaceComponentDraft, type SurfaceRecordDraft, type SurfaceResolvedReference } from "@hypit/hypit/markup";
+import { assertAttributes, assertEmptyElement, optionalTextAttribute, textAttribute, type MarkupAttributeValue, type StructuredSurfaceHandler, type SurfaceRecordDraft, type SurfaceResolvedReference } from "@hypit/hypit/markup";
 import { blobTypes } from "@hypit/hypit/blob";
 import { sameType, type CanonicalValue, type TypeRef } from "@hypit/hypit/protocol";
 import { spatialTypes } from "@hypit/spatial";
@@ -15,11 +15,6 @@ import { decodeEmojiRevealStyle } from "./style.js";
 function reference(raw: MarkupAttributeValue | undefined, label: string, expected: TypeRef, resolve: (path: string) => SurfaceResolvedReference | undefined): SurfaceResolvedReference {
   if (typeof raw !== "object" || raw.kind !== "reference") throw new Error(`${label} must be a reference.`);
   const value = resolve(raw.path); if (value === undefined || !sameType(value.type, expected)) throw new Error(`${label} has the wrong Type.`);
-  return value;
-}
-function oneOfReference(raw: MarkupAttributeValue | undefined, label: string, expected: readonly TypeRef[], resolve: (path: string) => SurfaceResolvedReference | undefined): SurfaceResolvedReference {
-  if (typeof raw !== "object" || raw.kind !== "reference") throw new Error(`${label} must be a reference.`);
-  const value = resolve(raw.path); if (value === undefined || !expected.some((type) => sameType(value.type, type))) throw new Error(`${label} has the wrong Type.`);
   return value;
 }
 function valueOf<T>(value: SurfaceResolvedReference, label: string): T {

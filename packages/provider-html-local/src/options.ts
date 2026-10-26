@@ -1,17 +1,16 @@
 export type HtmlWorkers = number | "auto";
-export type HtmlQuality = "draft" | "standard" | "high";
 export type HtmlBrowserGpu = "auto" | "software" | "hardware";
+export type { HtmlRenderer } from "./electron.js";
 
-export type HtmlExecutionOptions = import("./browser.js").BrowserOptions & {
+export type HtmlExecutionOptions = import("./browser.js").BrowserOptions & import("./electron.js").ElectronOptions & {
   readonly ffprobePath?: string;
-  /** Selected FFmpeg command for both source extraction and final H.264 encoding. */
+  /** Selected FFmpeg command for portable source extraction/encoding and GPU H.264 muxing. */
   readonly ffmpegPath?: string;
   /** Parallel Chrome workers inside one render. This is separate from Provider request concurrency. */
   readonly workers?: HtmlWorkers;
   /** Upper bound for auto's browser reservation; explicit workers remain fixed. */
   readonly maxWorkers?: number;
-  readonly quality?: HtmlQuality;
-  /** Chrome's rasterizer, default hardware. Use software without a usable GPU. */
+  /** Browser compositor policy. Electron shared textures require auto or hardware. */
   readonly browserGpu?: HtmlBrowserGpu;
   readonly processTimeoutMs?: number;
   readonly initializationTimeoutMs?: number;
@@ -19,9 +18,9 @@ export type HtmlExecutionOptions = import("./browser.js").BrowserOptions & {
   readonly maxProcessOutputBytes?: number;
   /** Artifact staging lifecycles in flight inside one render. */
   readonly artifactStagingConcurrency?: number;
-  /** Bytes of completed, out-of-order PNGs retained while an MP4 waits for its next frame. */
+  /** Bytes of completed PNGs or GPU frames retained while output waits for its next frame. */
   readonly maxPendingFrameBytes?: number;
-  /** Bytes of decoded source PNGs resident in one render's reusable working set. */
+  /** Bytes of decoded source pictures resident in one render's reusable working set. */
   readonly maxDecodedSourceBytes?: number;
   readonly maxRenderedBytes?: number;
 };

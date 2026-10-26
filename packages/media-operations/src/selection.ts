@@ -2,7 +2,7 @@ import { sealMediaStreamSelection, verifyMediaInspection } from "@hypit/media";
 import type { MediaAudioStream, MediaInspection, MediaStreamSelection, MediaVideoStream } from "@hypit/media";
 import { canonicalize } from "@hypit/hypit/protocol";
 
-import type { MediaSelectionRequest } from "./types.js";
+import type { MediaAudioSelector, MediaSelectionRequest, MediaVideoSelector } from "./types.js";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -30,9 +30,6 @@ export function verifyMediaSelectionRequest(value: unknown): asserts value is Me
   assert(item.spanAuthority === "video" || item.spanAuthority === "audio", "MediaSelectionRequest authority is invalid");
   assert(item.spanAuthority === "video" ? item.video.mode !== "none" : item.audio.mode !== "none",
     "MediaSelectionRequest authority stream is disabled");
-  assert(Number.isSafeInteger(item.frameRate?.numerator) && item.frameRate.numerator > 0
-    && Number.isSafeInteger(item.frameRate?.denominator) && item.frameRate.denominator > 0,
-  "MediaSelectionRequest frame rate is invalid");
 }
 
 function selectUniqueDefault<T extends { readonly disposition: { readonly default: boolean }; readonly index: number }>(
@@ -47,9 +44,11 @@ function selectUniqueDefault<T extends { readonly disposition: { readonly defaul
   throw new Error(`${subject} is ambiguous: ${values.map((item) => item.index).join(", ")}`);
 }
 
-function selectedVideo(inspection: MediaInspection, request: MediaSelectionRequest): MediaVideoStream | undefined {
-  if (request.video.mode === "none") return undefined;
-  const videoRequest = request.video;
+export function selectVideoStream(
+  inspection: MediaInspection,
+  videoRequest: MediaVideoSelector,
+): MediaVideoStream {
+  verifyMediaInspection(inspection);
   const moving = inspection.streams.filter((stream): stream is MediaVideoStream =>
     stream.kind === "video"
       && stream.role === "moving"
@@ -69,9 +68,11 @@ function selectedVideo(inspection: MediaInspection, request: MediaSelectionReque
   return selected;
 }
 
-function selectedAudio(inspection: MediaInspection, request: MediaSelectionRequest): MediaAudioStream | undefined {
-  if (request.audio.mode === "none") return undefined;
-  const audioRequest = request.audio;
+export function selectAudioStream(
+  inspection: MediaInspection,
+  audioRequest: Exclude<MediaAudioSelector, { readonly mode: "none" }>,
+): MediaAudioStream {
+  verifyMediaInspection(inspection);
   const audio = inspection.streams.filter((stream): stream is MediaAudioStream =>
     stream.kind === "audio" && stream.timingStatus === "admissible"
       && stream.startPts !== undefined && stream.endPts !== undefined);
@@ -91,18 +92,12 @@ export function selectMediaStreams(
 ): MediaStreamSelection {
   verifyMediaInspection(inspection);
   verifyMediaSelectionRequest(request);
-  const video = selectedVideo(inspection, request);
-  const audio = selectedAudio(inspection, request);
+  const video = request.video.mode === "none" ? undefined : selectVideoStream(inspection, request.video);
+  const audio = request.audio.mode === "none" ? undefined : selectAudioStream(inspection, request.audio);
   assert(video !== undefined || audio !== undefined, "Media stream selection is empty");
-  const policy = request.video.mode === "stream-index" || request.audio.mode === "stream-index"
-    ? "explicit-streams@1" as const
-    : video !== undefined && audio !== undefined
-      ? "primary-moving-default-audio@1" as const
-      : video !== undefined ? "primary-moving@1" as const : "default-audio@1" as const;
   return sealMediaStreamSelection({
     ...(video === undefined ? {} : { videoStreamIndex: video.index }),
     ...(audio === undefined ? {} : { audioStreamIndex: audio.index }),
     spanAuthority: request.spanAuthority,
-    policy,
   });
 }

@@ -1,7 +1,7 @@
 export { compositionComponent } from "./component.js";
 export { compositionDependency, compositionManifest, compositionModuleRef, compositionTypes } from "./manifest.js";
 export {
-  audioTrackSchema, visualSourceTimeMapSchema,
+  audioTrackSchema,
   compositionSchema,
   visualColorPaintSchema,
   visualPathCommandSchema,

@@ -4,14 +4,14 @@ import { blobTypes } from "@hypit/hypit/blob";
 import { mediaTypes } from "@hypit/media";
 import { temporalTypes } from "@hypit/temporal";
 import { parseTemporalDuration } from "@hypit/temporal/markup";
-import { timelineTypes, type Clock } from "@hypit/timeline";
+import { timelineTypes } from "@hypit/timeline";
 import { recipeType, type Recipe } from "@hypit/hypit/recipe";
 
 import {
   extractAudioFragment,
   extractFrameFragment,
   createStillVideoFragment,
-  synchronizedMediaFragment,
+  preparedMediaFragment,
   transformMediaFragment,
 } from "./fragment.js";
 import { mediaOperationsTypes } from "./manifest.js";
@@ -102,6 +102,29 @@ function seconds(value: string, subject: string, allowZero = true): number {
   return result;
 }
 
+function exactSeconds(value: string, subject: string, allowZero = true): import("@hypit/temporal").ExactTemporalValue {
+  const match = /^(\d+)(?:\.(\d+))?(?:s)?$/u.exec(value.trim());
+  if (match === null) throw new Error(`${subject} must be seconds such as 0.25s or 2`);
+  const fraction = match[2] ?? "";
+  const ticks = `${match[1]}${fraction}`.replace(/^0+(?=\d)/u, "") || "0";
+  if (!allowZero && /^0+$/u.test(ticks)) throw new Error(`${subject} must be positive`);
+  const denominator = 10 ** fraction.length;
+  if (!Number.isSafeInteger(denominator)) throw new Error(`${subject} has too many decimal places`);
+  return { ticks, timeBase: { numerator: 1, denominator } };
+}
+
+function positiveRate(value: string, subject: string): { readonly numerator: number; readonly denominator: number } {
+  const match = /^(\d+)(?:\.(\d+))?$/u.exec(value.trim());
+  if (match === null) throw new Error(`${subject} must be a positive decimal ratio`);
+  const fraction = match[2] ?? "";
+  const numerator = Number(`${match[1]}${fraction}`);
+  const denominator = 10 ** fraction.length;
+  if (!Number.isSafeInteger(numerator) || numerator <= 0 || !Number.isSafeInteger(denominator)) {
+    throw new Error(`${subject} must be a positive safe rational`);
+  }
+  return { numerator, denominator };
+}
+
 function audioSelector(value: string): AudioExtractionRequest["audio"] {
   if (value === "default") return { mode: "default" };
   const match = /^stream:(\d+)$/u.exec(value);
@@ -139,17 +162,15 @@ function transformOperations(element: StructuredElement): readonly MediaTransfor
       }
       result.push({
         kind: "trim",
-        ...(typeof start === "string" ? { startSec: seconds(start, `${child.name}.start`) } : {}),
-        ...(typeof end === "string" ? { endSec: seconds(end, `${child.name}.end`, false) } : {}),
-        ...(typeof tail === "string" ? { tailSec: seconds(tail, `${child.name}.tail`, false) } : {}),
+        ...(typeof start === "string" ? { start: exactSeconds(start, `${child.name}.start`) } : {}),
+        ...(typeof end === "string" ? { end: exactSeconds(end, `${child.name}.end`, false) } : {}),
+        ...(typeof tail === "string" ? { tail: exactSeconds(tail, `${child.name}.tail`, false) } : {}),
       });
       continue;
     }
     if (name === "Retime") {
       exactAttributes(child, ["rate"]);
-      const rate = Number(text(child, "rate"));
-      if (!Number.isFinite(rate) || rate <= 0 || rate > 100) throw new Error(`${child.name}.rate must be in (0, 100].`);
-      result.push({ kind: "retime", rate });
+      result.push({ kind: "retime", rate: positiveRate(text(child, "rate"), `${child.name}.rate`) });
       continue;
     }
     throw new Error(`${element.name} accepts only Trim and Retime children.`);
@@ -158,8 +179,8 @@ function transformOperations(element: StructuredElement): readonly MediaTransfor
   return result;
 }
 
-export const decodeSynchronizedMediaSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
-  const required = ["id", "source", "clock"];
+export const decodePreparedMediaSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
+  const required = ["id", "source"];
   const optional = ["audio", "recipe", "span-authority", "video"];
   exactAttributes(element, required, optional);
   const hasRecipe = element.attributes.recipe !== undefined;
@@ -167,37 +188,26 @@ export const decodeSynchronizedMediaSurface: StructuredSurfaceHandler = ({ eleme
   if ((hasRecipe && policyCount !== 0) || (!hasRecipe && policyCount !== 3)) {
     throw new Error(`${element.name} requires exactly one of recipe or video/audio/span-authority.`);
   }
-  if (element.children.some((child) => child.kind === "element" || child.value.trim().length > 0)) {
-    throw new Error(`${element.name} must be empty.`);
-  }
+  empty(element);
   const id = text(element, "id");
   const source = ref(element.attributes.source, `${element.name}.source`, resolveReference);
-  const clock = typedReference(element.attributes.clock, `${element.name}.clock`, timelineTypes.clock, resolveReference);
-  const clockValue = clock.record?.value as unknown as Clock | undefined;
-  if (clockValue === undefined) throw new Error(`${element.name}.clock must be an authored Clock record.`);
-  const normalizationRecipe = hasRecipe ? authoredRecipe(element.attributes.recipe, `${element.name}.recipe`, resolveReference) : undefined;
-  const video = stream(normalizationRecipe === undefined ? text(element, "video") : recipeText(normalizationRecipe, "video", `${element.name}.recipe`), "video");
-  const audio = stream(normalizationRecipe === undefined ? text(element, "audio") : recipeText(normalizationRecipe, "audio", `${element.name}.recipe`), "audio");
-  const spanAuthority = normalizationRecipe === undefined
-    ? text(element, "span-authority")
-    : recipeText(normalizationRecipe, "span-authority", `${element.name}.recipe`);
+  const recipe = hasRecipe ? authoredRecipe(element.attributes.recipe, `${element.name}.recipe`, resolveReference) : undefined;
+  const video = stream(recipe === undefined ? text(element, "video") : recipeText(recipe, "video", `${element.name}.recipe`), "video");
+  const audio = stream(recipe === undefined ? text(element, "audio") : recipeText(recipe, "audio", `${element.name}.recipe`), "audio");
+  const spanAuthority = recipe === undefined ? text(element, "span-authority")
+    : recipeText(recipe, "span-authority", `${element.name}.recipe`);
   if (spanAuthority !== "video" && spanAuthority !== "audio") throw new Error(`${element.name}.span-authority must be video or audio.`);
-  const request = sealMediaSelectionRequest({
-    video,
-    audio,
-    spanAuthority,
-    frameRate: clockValue.frameRate,
-  });
   const requestId = `${id}.request`;
   const domainId = `${id}.domain-spec`;
   return {
     records: [
-      { id: requestId, type: mediaOperationsTypes.selectionRequest, value: (request), range: element.range },
-      { id: domainId, type: mediaTypes.domainSpec, value: ({ id }), range: element.range },
+      { id: requestId, type: mediaOperationsTypes.selectionRequest,
+        value: sealMediaSelectionRequest({ video, audio, spanAuthority }), range: element.range },
+      { id: domainId, type: mediaTypes.domainSpec, value: { id }, range: element.range },
     ],
     components: [{
       id,
-      fragment: synchronizedMediaFragment,
+      fragment: preparedMediaFragment,
       inputs: { source: source.ref, request: { kind: "record", id: requestId }, domain: { kind: "record", id: domainId } },
       outputs: { media: `${id}.media`, domain: `${id}.domain`, extent: `${id}.extent` },
       range: element.range,
@@ -282,14 +292,16 @@ export const decodeStillVideoSurface: StructuredSurfaceHandler = ({ element, res
 export const decodeTransformMediaSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
   exactAttributes(element, ["id", "source"]);
   const id = text(element, "id");
-  const source = typedReference(element.attributes.source, `${element.name}.source`, mediaTypes.synchronized, resolveReference);
+  const source = typedReference(element.attributes.source, `${element.name}.source`, mediaTypes.prepared, resolveReference);
   const program = sealMediaTransformProgram({
     operations: transformOperations(element),
   });
   const programId = `${id}.program`;
+  const domainId = `${id}.domain-spec`;
   return {
     records: [
       { id: programId, type: mediaOperationsTypes.transformProgram, value: (program), range: element.range },
+      { id: domainId, type: mediaTypes.domainSpec, value: { id }, range: element.range },
     ],
     components: [{
       id,
@@ -297,8 +309,9 @@ export const decodeTransformMediaSurface: StructuredSurfaceHandler = ({ element,
       inputs: {
         media: source.ref,
         program: { kind: "record", id: programId },
+        domain: { kind: "record", id: domainId },
       },
-      outputs: { video: `${id}.video` },
+      outputs: { media: `${id}.media`, domain: `${id}.domain`, extent: `${id}.extent` },
       range: element.range,
     }],
   };

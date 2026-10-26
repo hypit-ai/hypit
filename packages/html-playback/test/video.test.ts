@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import vm from "node:vm";
+import type { HtmlProgram } from "@hypit/html-program";
+import { exactTemporalValueFromFrames, identityTemporalMap } from "@hypit/temporal";
 import { injectHtmlPlayback } from "../src/index.js";
 
 test("playback owns deferred and direct video sources before renderer activation", () => {
@@ -9,6 +11,45 @@ test("playback owns deferred and direct video sources before renderer activation
   assert.match(html, /<video preload="none" data-hypit-src="short.mp4">/u);
   assert.doesNotMatch(html, /<video[^>]*\s(?:src|data-hypit-resource-src)=/u);
   assert.match(html, /<img data-hypit-resource-src="still.png">/u);
+});
+
+test("PreparedMedia preview samples the HtmlProgram TemporalMap instead of legacy CFR attributes", async () => {
+  const domain = { id: "direct-source", duration: exactTemporalValueFromFrames(30,
+    { frameRate: { numerator: 30, denominator: 1 } }) };
+  const program = {
+    frameRate: { numerator: 30, denominator: 1 }, frameCount: 3,
+    videoSources: [{ kind: "media", id: "direct", startFrame: 0, endFrameExclusive: 3,
+      source: { source: { kind: "blob", resource: "res_direct", size: 1, mediaType: "video/mp4" },
+        streamIndex: 0, presentationStart: { ticks: "2", timeBase: { numerator: 1, denominator: 1 } },
+        sourceDomain: domain, interpretation: { codedWidth: 16, codedHeight: 9,
+          sampleAspectRatio: { numerator: 1, denominator: 1 }, rotationDegrees: 0 } },
+      sampling: identityTemporalMap(domain) }],
+  } as unknown as HtmlProgram;
+  const attrs: Record<string, string> = {
+    "data-hypit-src": "direct.mp4", "data-hypit-start-frame": "0", "data-hypit-end-frame": "3",
+    "data-hypit-source-frame": "media",
+  };
+  const listeners = new Map<string, () => void>();
+  let currentTime = 0;
+  const video = { id: "direct", style: {}, readyState: 4, duration: 10, paused: true,
+    getAttribute: (name: string) => attrs[name] ?? null, closest: () => null,
+    setAttribute(name: string, value: string) { attrs[name] = value; },
+    removeAttribute(name: string) { delete attrs[name]; }, load() {},
+    get currentTime() { return currentTime; },
+    set currentTime(value: number) { currentTime = value; queueMicrotask(() => listeners.get("seeked")?.()); },
+    pause() {}, play() { return Promise.resolve(); },
+    addEventListener(name: string, listener: () => void) { listeners.set(name, listener); },
+    removeEventListener(name: string) { listeners.delete(name); },
+  };
+  const root = { style: {}, getAttribute: (name: string) => ({
+    "data-hypit-frame-numerator": "30", "data-hypit-frame-denominator": "1",
+  })[name] ?? null };
+  const window: Record<string, any> = { addEventListener() {}, __hypitFrameProgram: { async applyFrame() {} } };
+  const script = injectHtmlPlayback("", "", program).trim().slice("<script>".length, -"</script>".length);
+  vm.runInNewContext(script, { window, document: { querySelector: () => root,
+    querySelectorAll: (selector: string) => selector === ".hypit-visual-present video" ? [video] : [] } });
+  await window.__hypitSeekFrame(2);
+  assert.equal(currentTime, 2 + 2 / 30);
 });
 
 test("long preview releases remote Clips and cancels obsolete metadata waits", async () => {

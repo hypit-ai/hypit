@@ -3,7 +3,6 @@ import type {
   StudioArtifactView,
   StudioLibraryView,
   StudioSnapshot,
-  StudioSourceView,
   StudioTaskView,
 } from "../shared.js";
 import type { CodePane } from "./code.js";

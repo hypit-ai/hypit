@@ -4,10 +4,8 @@
  * This utility owns no media or rendering semantics. Callers keep those in the
  * payload and may query frames or ranges in any order, from any Worker.
  */
-export type FrameSpan = {
-  readonly startFrame: number;
-  readonly endFrameExclusive: number;
-};
+import { assertFrameSpan } from "@hypit/timeline";
+import type { FrameSpan } from "@hypit/timeline";
 
 type Entry<T> = FrameSpan & { readonly serial: number; readonly payload: T };
 type Node<T> = {
@@ -18,9 +16,10 @@ type Node<T> = {
   readonly right: Node<T> | undefined;
 };
 
-function assertSpan(span: FrameSpan): void {
-  if (!Number.isSafeInteger(span.startFrame) || !Number.isSafeInteger(span.endFrameExclusive)
-    || span.startFrame < 0 || span.endFrameExclusive <= span.startFrame) {
+function assertIndexSpan(span: FrameSpan): void {
+  try {
+    assertFrameSpan(span);
+  } catch {
     throw new Error("Frame span index entry is invalid");
   }
 }
@@ -82,7 +81,7 @@ export class FrameSpanIndex<T extends FrameSpan> {
 
   constructor(values: readonly T[]) {
     const entries = values.map((payload, serial): Entry<T> => {
-      assertSpan(payload);
+      assertIndexSpan(payload);
       return Object.freeze({
         startFrame: payload.startFrame,
         endFrameExclusive: payload.endFrameExclusive,
@@ -101,7 +100,7 @@ export class FrameSpanIndex<T extends FrameSpan> {
   }
 
   overlapping(span: FrameSpan): T[] {
-    assertSpan(span);
+    assertIndexSpan(span);
     const result: Entry<T>[] = [];
     collectOverlapping(this.#root, span, result);
     return result.sort((left, right) => left.serial - right.serial).map((entry) => entry.payload);

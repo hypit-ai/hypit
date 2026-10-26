@@ -3,10 +3,12 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { EndpointInvocationContext } from "@hypit/hypit/endpoint";
+import type { BlobRef } from "@hypit/hypit/protocol";
 import { sealTimelineVisual } from "@hypit/media";
-import type { MediaFrameRange, TimelineVisual } from "@hypit/media";
+import type { TimelineVisual } from "@hypit/media";
+import type { FrameSpan } from "@hypit/timeline";
 import { verifyCompositableSurfaceFile } from "./surface-validation.js";
-import { htmlFrameSelectionPrelude, verifyHtmlRasterRequest, verifyHtmlFrameRequest } from "@hypit/html-program";
+import { verifyHtmlRasterRequest, verifyHtmlFrameRequest } from "@hypit/html-program";
 import type { HtmlRasterRequest, HtmlFrameRequest, HtmlFrameImages } from "@hypit/html-program";
 import { isStreamingResourceStore } from "@hypit/hypit/endpoint";
 import type { HtmlExecutionOptions } from "./options.js";
@@ -17,13 +19,14 @@ import { autoWorkerLimit, renderWorkerLimit } from "./concurrency.js";
 import { requestedFrameRanges } from "./sampling.js";
 import { browserCacheDirectory, browserExecutablePath, configuredBrowserPath, requireBrowserExecutable, selectedBrowserVersion } from "./browser.js";
 import { htmlArtifactRelativePath, stageHtmlProgram } from "./stage.js";
+import { electronExecutablePath, requireElectronExecutable, selectedHtmlRenderer } from "./electron.js";
 
 export type HtmlRasterProgress =
   | { readonly phase: "staging" | "encoding" | "storing"; readonly elapsedMs: number }
   | { readonly phase: "decoding"; readonly completed: number; readonly total: number; readonly elapsedMs: number }
   | { readonly phase: "worker-progress"; readonly worker: number; readonly completed: number; readonly elapsedMs: number }
   | { readonly phase: "prepared"; readonly workers: number; readonly sourceFrames: number; readonly elapsedMs: number }
-  | { readonly phase: "worker-initializing" | "worker-start"; readonly worker: number; readonly range: MediaFrameRange;
+  | { readonly phase: "worker-initializing" | "worker-start"; readonly worker: number; readonly range: FrameSpan;
       readonly browserPid: number | undefined; readonly elapsedMs: number }
   | { readonly phase: "worker-complete"; readonly worker: number; readonly completed: number;
       readonly browserPid: number | undefined; readonly elapsedMs: number }
@@ -40,17 +43,24 @@ export function resolveExecutionOptions(options: HtmlExecutionOptions) {
   const workers = options.workers ?? "auto";
   assert(workers === "auto" || (Number.isSafeInteger(workers) && workers > 0),
     "workers must be auto or a positive safe integer");
-  const quality = options.quality ?? "standard";
-  assert(["draft", "standard", "high"].includes(quality), "HTML renderer quality is invalid");
   const browserGpu = options.browserGpu ?? "hardware";
   assert(["auto", "software", "hardware"].includes(browserGpu), "HTML renderer browserGpu is invalid");
+  const renderer = selectedHtmlRenderer(options);
+  if (renderer === "electron") {
+    assert(options.chromePath === undefined && options.browserVersion === undefined
+      && options.browserCacheDirectory === undefined && options.browserDownloadBaseUrl === undefined,
+    "Electron rendering cannot combine Chrome selection options");
+    assert(browserGpu !== "software", "Electron shared-texture rendering requires browserGpu auto or hardware");
+  }
   return {
+    renderer,
+    electronPath: electronExecutablePath(options),
     chromePath: configuredBrowserPath(options),
     browserVersion: selectedBrowserVersion(options),
     browserCacheDirectory: browserCacheDirectory(options),
     workers,
     maxWorkers: workers === "auto" ? positiveInteger(options.maxWorkers ?? autoWorkerLimit(), "maxWorkers") : workers,
-    quality, browserGpu,
+    browserGpu,
     ffmpegPath: options.ffmpegPath ?? "ffmpeg",
     ffprobePath: options.ffprobePath ?? "ffprobe",
     initializationTimeoutMs: options.initializationTimeoutMs === undefined
@@ -85,8 +95,13 @@ export async function rasterizeHtmlFrames(request: HtmlFrameRequest, options: Ht
 }
 
 async function capture(request: HtmlRasterRequest | HtmlFrameRequest, options: HtmlRasterOptions): Promise<TimelineVisual | HtmlFrameImages> {
-  const config = { ...resolveExecutionOptions(options), chromePath: browserExecutablePath(options) };
   const frames = "frames" in request ? request.frames : undefined;
+  const execution = resolveExecutionOptions(options);
+  if (frames !== undefined && execution.renderer === "electron") {
+    throw new Error("The Electron renderer produces encoded video; PNG frame capture requires a Chromium Endpoint");
+  }
+  const gpu = frames === undefined && execution.renderer === "electron";
+  const config = { ...execution, chromePath: gpu ? "" : browserExecutablePath(options) };
   const document = request.program;
   const range = frames === undefined
     ? (request as HtmlRasterRequest).range ?? { startFrame: 0, endFrameExclusive: document.frameCount }
@@ -115,12 +130,19 @@ async function capture(request: HtmlRasterRequest | HtmlFrameRequest, options: H
   };
   try {
     signal.throwIfAborted();
-    await requireBrowserExecutable(config.chromePath, config.browserVersion);
+    if (gpu) await requireElectronExecutable(config.electronPath!);
+    else await requireBrowserExecutable(config.chromePath, config.browserVersion);
     await options.onDiagnostic?.({ level: "info", message:
-      `Capture ${frameCount} frames; workers ${config.workers} (limit ${renderWorkerLimit(config, frameCount, document.frameRate.numerator / document.frameRate.denominator)}); opaque fast PNG; GPU ${config.browserGpu}; browser ${config.chromePath}`
+      `Capture ${frameCount} frames; workers ${config.workers} (limit ${renderWorkerLimit(config, frameCount,
+        document.frameRate.numerator / document.frameRate.denominator, gpu && document.videoSources.length > 0)}); `
+      + `${gpu ? "shared GPU texture" : "opaque fast PNG"}; GPU ${config.browserGpu}; executable ${gpu ? config.electronPath : config.chromePath}`
       + `; artifact staging concurrency ${config.artifactStagingConcurrency}`
       + `; decoded source budget ${config.maxDecodedSourceBytes} bytes`
-      + (frames === undefined ? `; quality ${config.quality}; ordered FFmpeg pipe; pending PNG budget ${config.maxPendingFrameBytes} bytes; encoder ${config.ffmpegPath}` : "; PNG output") });
+      + (frames === undefined
+        ? `; delivery quality ${(request as HtmlRasterRequest).delivery.encoding.quality}; `
+          + `${gpu ? "browser decode, WebCodecs H.264 and FFmpeg mux" : "ordered FFmpeg PNG pipe"}; `
+          + `pending frame budget ${config.maxPendingFrameBytes} bytes; FFmpeg ${config.ffmpegPath}`
+        : "; PNG output") });
     options.onProgress?.({ phase: "staging", elapsedMs: 0 });
     work = await mkdtemp(join(tmpdir(), "hypit-html-local-"));
     const read: import("./stage.js").HtmlArtifactReader = async (artifact, readSignal) => {
@@ -138,8 +160,11 @@ async function capture(request: HtmlRasterRequest | HtmlFrameRequest, options: H
         maxProbeOutputBytes: config.maxProcessOutputBytes, signal: probeSignal! }),
     });
     changePhase("preparing source media");
-    await runCaptureProcess({ document, range, ...(frames === undefined ? {} : { frames }), config, directory: work,
-      frameSelectionPrelude: htmlFrameSelectionPrelude(frameSelection),
+    await runCaptureProcess({ document, range,
+      ...(frames === undefined
+        ? { delivery: (request as HtmlRasterRequest).delivery }
+        : { frames, picture: (request as HtmlFrameRequest).picture }), config, directory: work,
+      frameSelection,
       artifactPaths: document.artifacts.map(({ artifact }) =>
         [artifact.resource, htmlArtifactRelativePath(document, artifact.resource)] as const),
     }, signal, (event) => {
@@ -164,14 +189,16 @@ async function capture(request: HtmlRasterRequest | HtmlFrameRequest, options: H
     let result: TimelineVisual | HtmlFrameImages;
     if (frames === undefined) {
       result = sealTimelineVisual({ frameRate: document.frameRate, frameCount, canvas: document.canvas,
+        delivery: (request as HtmlRasterRequest).delivery,
         artifact: await store(join(work, "visual.mp4"), "video/mp4") });
     } else {
-      const artifacts = [];
+      const artifacts: BlobRef[] = [];
       for (let index = 0; index < frames.length; index++) {
         signal.throwIfAborted();
         artifacts.push(await store(join(work, "frames", `${String(index).padStart(9, "0")}.png`), "image/png"));
       }
-      result = artifacts;
+      result = { picture: (request as HtmlFrameRequest).picture,
+        frames: frames.map((frame, index) => ({ frame, artifact: artifacts[index]! })) };
     }
     signal.throwIfAborted();
 

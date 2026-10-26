@@ -3,7 +3,6 @@ import { isAbsolute, relative, resolve, sep } from "node:path";
 import type {
   BuildResultManifest,
   BuildResultRepository,
-  RepositoryBuildResultOutputDescription,
 } from "@hypit/result";
 import { buildResultOutput } from "@hypit/result";
 import { buildIdCreatedAt, compareCodeUnits } from "@hypit/protocol";

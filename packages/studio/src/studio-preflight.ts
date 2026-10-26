@@ -1,7 +1,5 @@
-import type { Candidate } from "@hypit/hypit/protocol";
 import { isBlobRef, sameType } from "@hypit/hypit/protocol";
 import type { StudioFilmCompanion, StudioPlacementChild } from "@hypit/studio-companion";
-import { timelineTypes } from "@hypit/timeline";
 
 import type { CompiledSource } from "./compile.js";
 import type { Placement } from "./observe.js";
@@ -78,7 +76,7 @@ function filmForTarget(registry: StudioCompanionRegistry, source: CompiledSource
 
 /**
  * Video-domain policy is centralized here, inside Studio. Core still only
- * supplies the compiled graph and its exact BuildPlan/Need closure.
+ * supplies the AuthorGraph facts and their exact BuildPlan/Need closure.
  */
 export function inspectStudioRun(
   registry: StudioCompanionRegistry,
@@ -154,7 +152,6 @@ export function inspectStudioRun(
   });
   const timeOutput = times[0];
   if (times.length !== 1) issues.push("Film requires one traceable time source.");
-  const timelineOutput = timeOutput !== undefined && sameType(timeOutput.typeRef, timelineTypes.timeline) ? timeOutput : undefined;
   let companionValueRefs: readonly string[] = [];
   try {
     companionValueRefs = unique(filmTrackRefs.flatMap((ref) =>

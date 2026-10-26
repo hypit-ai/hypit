@@ -12,7 +12,7 @@ Segment, a local frame domain or a Timeline position.
 
 The package also owns the provider-neutral `project-speech-evidence-audio` Capability and its
 deterministic request Producer. That Producer requests the exact 16 kHz mono projection of one
-`SynchronizedMedia` value. A media Provider may implement the bytes, but media operations do not own
+`PreparedMedia` value, including its explicit audio time map. A media Provider may implement the bytes, but media operations do not own
 the acoustic-evidence contract.
 
 ## Transcript evidence document

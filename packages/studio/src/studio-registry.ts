@@ -17,7 +17,6 @@ import type {
   StudioTemporalRelationCompanion,
   StudioTemporalDomainSourceMap,
   StudioSourceBindingDeclaration,
-  StudioSpan,
 } from "@hypit/studio-companion";
 import { studioParameterControls } from "@hypit/studio-companion";
 import { parameterOption } from "./parameter-values.js";

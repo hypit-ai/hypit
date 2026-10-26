@@ -132,7 +132,7 @@ video sampling and font handling while participating in the program's HTML layou
 used by the program belong in its `artifacts` list; `htmlProgramResourceUri` supplies their resource
 URLs. The rendering environment materializes those references.
 
-For time-bearing footage, give the component ordinary normalized media, the absolute Window it needs
+For time-bearing footage, give the component ordinary prepared media, the absolute Window it needs
 and an explicit sampling choice. Intersect that Window with the containing Present, then derive the
 matching source-frame span from the authored sampling relation. Subtract the Present's start to obtain
 Present-local video sampling intervals. Moving or reframing a video does not itself choose or restart

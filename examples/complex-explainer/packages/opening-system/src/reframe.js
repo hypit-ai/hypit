@@ -75,24 +75,20 @@ export function installReframe(module, manifest, component) {
             ? [
                 {
                   id,
-                  order: 0,
                   span: window.span,
-                  elements: [
-                    {
-                      id: "scene",
-                      kind: "program",
-                      order: 0,
-                      program,
-                      style: styles({
-                        position: "absolute",
-                        left: within.xPx + "px",
-                        top: within.yPx + "px",
-                        width: within.widthPx + "px",
-                        height: within.heightPx + "px",
-                      }),
-                    },
-                    ...children,
-                  ],
+                  root: {
+                    id: "scene",
+                    kind: "program",
+                    program,
+                    style: styles({
+                      position: "absolute",
+                      left: within.xPx + "px",
+                      top: within.yPx + "px",
+                      width: within.widthPx + "px",
+                      height: within.heightPx + "px",
+                    }),
+                    slots: children.map((element) => ({ name: element.id, element })),
+                  },
                 },
               ]
             : [],
@@ -144,7 +140,7 @@ export function installReframe(module, manifest, component) {
           {
             id: textAttribute(element, "id"),
             type: types.style,
-            value: (canonicalize(presenterStyle(fragment, bindings))),
+            value: (canonicalize(presenterStyle(fragment, bindings, "overlay"))),
             range: element.range,
           },
         ],

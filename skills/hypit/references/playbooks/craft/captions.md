@@ -48,7 +48,7 @@ their complete, flat Unit CaptionTiming on the actual Timeline; a visual family 
 authored Cues and presents them. Reuse those units rather than retyping spoken words into independent Typography merely
 because it can draw the desired shape.
 
-Use the produced performance's normalized and aligned audio. A change to that audio, its speed or
+Use the produced performance's prepared media and aligned speech evidence. A change to that media, its speed or
 its cuts can change word timing and requires corresponding alignment. A visual-only restyle can
 reuse the same semantic and media outputs through the Run.
 

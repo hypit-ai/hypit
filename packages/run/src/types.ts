@@ -2,14 +2,7 @@ import type {
   CompiledSourceClosure,
   GraphFragment,
 } from "@hypit/author";
-import type {
-  Candidate,
-  CanonicalValue,
-  OperationNode,
-  RunGraph,
-  Satisfaction,
-  TypeRef,
-} from "@hypit/protocol";
+import type { CanonicalValue, RunGraph, TypeRef } from "@hypit/protocol";
 export type { RunGraph } from "@hypit/protocol";
 import type { SourceUnit } from "@hypit/source";
 

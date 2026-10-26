@@ -1,4 +1,5 @@
 import type { BlobRef } from "@hypit/hypit/protocol";
+import type { ExactTemporalValue, LocalTemporalDomain, TemporalMap } from "@hypit/temporal";
 
 export type MediaRational = {
   readonly numerator: number;
@@ -34,7 +35,7 @@ export type MediaVideoStream = MediaStreamBase & {
   readonly role: "moving" | "attached-picture" | "still";
   readonly width: number;
   readonly height: number;
-  /** Coded-pixel width/height become display geometry only after this ratio and rotation are normalized. */
+  /** Coded-pixel width/height become display geometry only after resolving this ratio and rotation. */
   readonly sampleAspectRatio: MediaRational;
   readonly rotationDegrees: 0 | 90 | 180 | 270;
   readonly averageFrameRate?: MediaRational;
@@ -69,31 +70,118 @@ export type MediaStreamSelection = {
   readonly videoStreamIndex?: number;
   readonly audioStreamIndex?: number;
   readonly spanAuthority: "video" | "audio";
-  readonly policy:
-    | "primary-moving@1"
-    | "default-audio@1"
-    | "primary-moving-default-audio@1"
-    | "explicit-streams@1";
 };
 
-export type SynchronizedMedia = {
-  /** The normalized source-local clock and extent; this is not a film Timeline. */
-  readonly frameDomain: {
-    readonly frameRate: MediaRational;
-    readonly frameCount: number;
-  };
-  readonly visual?: {
-    readonly artifact: BlobRef;
-    readonly width: number;
-    readonly height: number;
-  };
-  readonly audio?: {
-    readonly artifact: BlobRef;
+export type PreparedVisualMember = {
+  readonly streamIndex: number;
+  /** Original presentation timestamp corresponding to source-domain zero. */
+  readonly presentationStart: ExactTemporalValue;
+  readonly sourceDomain: LocalTemporalDomain;
+  /** Prepared-local to this member's source-presentation domain. */
+  readonly map: TemporalMap;
+  readonly interpretation: {
+    readonly codedWidth: number;
+    readonly codedHeight: number;
+    readonly sampleAspectRatio: MediaRational;
+    readonly rotationDegrees: 0 | 90 | 180 | 270;
   };
 };
 
-/** Identity for deriving an author-visible local temporal domain from normalized media. */
+export type PreparedAudioMember = {
+  readonly streamIndex: number;
+  /** Original presentation timestamp corresponding to source-domain zero. */
+  readonly presentationStart: ExactTemporalValue;
+  readonly sourceDomain: LocalTemporalDomain;
+  /** Prepared-local to this member's source-presentation domain. */
+  readonly map: TemporalMap;
+  readonly interpretation: {
+    readonly sampleRate: number;
+    readonly channels: number;
+    readonly channelLayout?: string;
+  };
+};
+
+/** Signal-specific terminal facts projected from PreparedMedia for visual execution. */
+export type PreparedVisualSource = {
+  readonly source: BlobRef;
+  readonly streamIndex: number;
+  /** Original presentation timestamp corresponding to source-domain zero. */
+  readonly presentationStart: ExactTemporalValue;
+  readonly sourceDomain: LocalTemporalDomain;
+  readonly interpretation: PreparedVisualMember["interpretation"];
+};
+
+/** Signal-specific terminal facts projected from PreparedMedia for audio execution. */
+export type PreparedAudioSource = {
+  readonly source: BlobRef;
+  readonly streamIndex: number;
+  /** Original presentation timestamp corresponding to source-domain zero. */
+  readonly presentationStart: ExactTemporalValue;
+  readonly sourceDomain: LocalTemporalDomain;
+  readonly interpretation: PreparedAudioMember["interpretation"];
+};
+
+/**
+ * Information-preserving, execution-independent interpretation of one selected
+ * time-bearing media source. Renderer evaluation and Film placement stay outside.
+ */
+export type PreparedMedia = {
+  readonly source: BlobRef;
+  readonly domain: LocalTemporalDomain;
+  readonly visual?: PreparedVisualMember;
+  readonly audio?: PreparedAudioMember;
+};
+
+/** Author-chosen identity for a PreparedMedia local temporal domain. */
 export type MediaDomainSpec = { readonly id: string };
+
+/** Stable picture requirements shared by encoded video and authored frame capture. */
+type VisualPictureBase = {
+  readonly bitDepth: 8;
+  readonly alpha: {
+    readonly mode: "opaque";
+    /** Final background used when the composed picture still contains transparency. */
+    readonly matte: string;
+  };
+};
+
+export type VideoPictureSpec = VisualPictureBase & {
+  readonly colorPrimaries: "bt709";
+  readonly colorTransfer: "bt709";
+  readonly colorMatrix: "bt709";
+  readonly colorRange: "limited";
+};
+
+export type ImagePictureSpec = VisualPictureBase & {
+  readonly colorPrimaries: "bt709";
+  readonly colorTransfer: "srgb";
+  readonly colorMatrix: "rgb";
+  readonly colorRange: "full";
+};
+
+export type VisualPictureSpec = VideoPictureSpec | ImagePictureSpec;
+
+/** Stable picture and coded-video requirements, independent of any encoder implementation. */
+export type VisualDeliverySpec = {
+  readonly picture: VideoPictureSpec;
+  readonly encoding: {
+    readonly codec: "h264";
+    readonly pixelFormat: "yuv420p";
+    /** Author-visible delivery target; encoder flags remain Provider policy. */
+    readonly quality: "draft" | "standard" | "high";
+  };
+};
+
+/** One author-owned terminal delivery requirement shared by visual rendering and mux. */
+export type MediaDeliverySpec = {
+  readonly visual: VisualDeliverySpec;
+  readonly audio: {
+    readonly codec: "aac";
+    readonly sampleRate: 48_000;
+    readonly channelLayout: "stereo";
+  };
+  readonly container: "mp4";
+};
 
 /** Silent, frame-exact visual output produced from a timeline composition. */
 export type TimelineVisual = {
@@ -103,12 +191,16 @@ export type TimelineVisual = {
     readonly width: number;
     readonly height: number;
   };
+  /** The visual delivery requirement implemented by this encoded result. */
+  readonly delivery: VisualDeliverySpec;
   readonly artifact: BlobRef;
 };
 
 /** Exact 48 kHz stereo PCM result of one explicit AudioProgram. */
 export type TimelineAudio = {
   readonly artifact: BlobRef;
+  readonly sampleRate: 48_000;
+  readonly channelLayout: "stereo";
   readonly sampleFrames: number;
 };
 
@@ -121,5 +213,6 @@ export type MuxedMedia = {
     readonly height: number;
   };
   readonly presentationSampleFrames: number;
+  readonly delivery: MediaDeliverySpec;
   readonly artifact: BlobRef;
 };

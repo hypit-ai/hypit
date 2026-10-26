@@ -1,7 +1,7 @@
 import type { Timeline } from "@hypit/timeline";
 import type { ProducerPackage, ProducerHandlerContext } from "@hypit/hypit/producer";
 import type { RefinementPackage } from "@hypit/hypit/refinement";
-import type { SynchronizedMedia } from "@hypit/media";
+import type { PreparedMedia } from "@hypit/media";
 import { assertBlobRef, canonicalize } from "@hypit/hypit/protocol";
 import type { BlobRef, Value } from "@hypit/hypit/protocol";
 import type { TemporalInstant, TemporalWindow } from "@hypit/temporal";
@@ -234,7 +234,7 @@ export const rankingComponent = {
       producer,
       handler: ({ inputs }: ProducerHandlerContext) => ({ kind: "output" as const, value: output(appendRankingSound(
         valueOf<RankingSoundSet>(inputs.sounds?.value, "RankingSoundSet"), kind,
-        valueOf<SynchronizedMedia>(inputs.media?.value, `Ranking ${kind} sound`),
+        valueOf<PreparedMedia>(inputs.media?.value, `Ranking ${kind} sound`),
       )) }),
     })),
     {

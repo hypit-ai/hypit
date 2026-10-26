@@ -85,7 +85,6 @@ test("primary stream selection excludes Grok's MJPEG attached picture and observ
     video: { mode: "primary-moving" },
     audio: { mode: "default" },
     spanAuthority: "video",
-    frameRate: { numerator: 30, denominator: 1 },
   });
   const selection = selectMediaStreams(inspection, request);
   verifyMediaStreamSelection(selection);
@@ -108,24 +107,21 @@ test("multiple moving streams without one default fail closed instead of guessin
     video: { mode: "primary-moving" },
     audio: { mode: "none" },
     spanAuthority: "video",
-    frameRate: { numerator: 30, denominator: 1 },
   });
   assert.throws(() => selectMediaStreams(ambiguous, request), /ambiguous/u);
   const explicit = sealMediaSelectionRequest({
     video: { mode: "stream-index", streamIndex: 3 },
     audio: { mode: "none" },
     spanAuthority: "video",
-    frameRate: { numerator: 30, denominator: 1 },
   });
   assert.equal(selectMediaStreams(ambiguous, explicit).videoStreamIndex, 3);
 });
 
-test("an attached picture cannot be forced into the moving-video normalization path", () => {
+test("an attached picture cannot be forced into the moving-video preparation path", () => {
   const request = sealMediaSelectionRequest({
     video: { mode: "stream-index", streamIndex: 2 },
     audio: { mode: "none" },
     spanAuthority: "video",
-    frameRate: { numerator: 30, denominator: 1 },
   });
   assert.throws(() => selectMediaStreams(grokInspection(), request), /not a moving visual stream/u);
 });

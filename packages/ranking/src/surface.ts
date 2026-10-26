@@ -267,7 +267,7 @@ function rankingSurface(variant: RankingVariant): StructuredSurfaceHandler {
     if (sound.moveName !== undefined && variant === "tier-board" && !hasDrop) throw new Error(`${element.name}.move-sound requires one drop TierItem.`);
     for (const [attribute, inputName] of [["appear-sound", sound.appearName], ["move-sound", sound.moveName]] as const) {
       if (inputName === undefined) continue;
-      inputs[inputName] = reference(element.attributes[attribute], `${element.name}.${attribute}`, mediaTypes.synchronized, resolveReference).ref;
+      inputs[inputName] = reference(element.attributes[attribute], `${element.name}.${attribute}`, mediaTypes.prepared, resolveReference).ref;
     }
     if (sound.appearName !== undefined || sound.moveName !== undefined) {
       if (typeof styleRaw !== "object" || styleRaw.kind !== "reference") throw new Error(`${element.name}.style must be a reference.`);

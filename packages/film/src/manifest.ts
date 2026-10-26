@@ -1,10 +1,9 @@
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/hypit/protocol";
 import { audioTrackSchema, compositionDependency, compositionTypes, visualTrackSchema } from "@hypit/composition";
 import { spatialDependency, spatialTypes } from "@hypit/spatial";
-import { recipeManifest, recipeModuleRef, recipeType } from "@hypit/hypit/recipe";
+import { recipeModuleRef, recipeType } from "@hypit/hypit/recipe";
 import { temporalContextAttributeVocabulary } from "@hypit/temporal/markup";
 import { timelineTypes, timelineDependency } from "@hypit/timeline";
-import type { Timeline } from "@hypit/timeline";
 
 export const filmModuleRef = { name: "@hypit/film", version: "1" } as const;
 export const filmTypes = {

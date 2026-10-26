@@ -38,8 +38,10 @@ focused material lowerer, but Deck is not a Visual Clip mode and exports only an
 
 The parent Recipe owns visibility, relative-depth pose progression, frame Paint and reflow. A Card
 Recipe may additionally select explicit future/past behavior. The Deck derives every held or
-continuing source-time map from the Card's declared activation and the current stage; it does not
+continuing temporal sampling map from the Card's declared activation and the current stage; it does not
 require a hidden looping mode on the material and never depends on renderer playback history.
+Continue advances by exact programme time while the source may keep a different or variable frame cadence.
+Only the selected renderer resolves that relation onto decoded source samples.
 
 Optional labels are separate exact-font values and are referenced by Cards. Filenames, URLs and
 media metadata are never treated as label truth.

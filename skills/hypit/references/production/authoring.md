@@ -110,7 +110,7 @@ is also a normal Target when the user requested that deliverable or the work gen
 independently now.
 
 Every public Author Output that completes while satisfying the demanded Target is stored in that
-Build Result and can be inspected or reused later. Derived public Outputs such as normalized media,
+Build Result and can be inspected or reused later. Derived public Outputs such as prepared media,
 a local temporal domain or alignment evidence therefore remain available when a downstream Target
 caused them to complete.
 
@@ -167,14 +167,14 @@ submitting the same paid media requests again. The following examples locate the
 
 | Current change | Keep through Candidates | Recompute or request |
 | --- | --- | --- |
-| Caption appearance, MG, an Effect or composition changes | Existing normalized media, local domains and alignment evidence that still apply | The changed visual systems and render |
+| Caption appearance, MG, an Effect or composition changes | Existing prepared media, local domains and alignment evidence that still apply | The changed visual systems and render |
 | Moment/Selection placement changes, with unchanged spoken tokens and alignment identities | The accepted media, local domains and alignment evidence | Current Script references, their projections and presentation |
 | Cue grouping, word attributes or display-only Dual wording changes without changing speech tokens | The accepted media, local domains and alignment evidence | The current CaptionDocument and its presentation |
-| Temporal placement or complete Timeline extent changes | The normalized media, local domains and alignment evidence | Timeline assembly, all affected projections, media occurrences and presentation |
+| Temporal placement or complete Timeline extent changes | The prepared media, local domains and alignment evidence | Timeline assembly, all affected projections, media occurrences and presentation |
 | Only some B-roll images must change | The existing performance, voice and all other still-useful media | The deliberately replaced images and their downstream composition |
-| The presenter changes while the spoken argument still fits | Unaffected B-roll, icons, music and other media that still serve the target | The new presenter images, affected performances, their normalization and semantic timing, and downstream composition |
+| The presenter changes while the spoken argument still fits | Unaffected B-roll, icons, music and other media that still serve the target | The new presenter images, affected performances, their preparation and semantic timing, and downstream composition |
 | A new product changes the demonstration or claims | Views and media whose content still fits the new Treatment | The affected product views, performance, Script-dependent timing and visual treatment |
-| The same video needs different normalization or semantic timing | Its generated video Output, or normalized media when that still applies | The affected normalization or alignment and downstream consumers |
+| The same video needs different stream selection, transformation or semantic timing | Its generated video Output, or prepared media when that still applies | The affected preparation, transformation or alignment and downstream consumers |
 | New spoken wording requires a new performance | Unaffected media and other still-useful inputs | The changed performance and the timing derived from it |
 
 Choose an Output upstream of the work being changed, with the same nominal Type and the intended

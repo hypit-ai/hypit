@@ -10,25 +10,51 @@ const alphaCodecs = new Set(["vp9", "vp8", "prores"]);
 export type SourceVideoMetadata = {
   readonly width: number;
   readonly height: number;
+  readonly streamIndex: number;
+  /** Exact presentation timestamp ticks in decode/display order for the selected stream. */
+  readonly timestamps: readonly bigint[];
+  readonly timeBase: { readonly numerator: bigint; readonly denominator: bigint };
   readonly videoCodec: string;
   readonly colorSpace?: { readonly colorTransfer?: string };
 };
 
 export async function probeSourceVideo(args: {
   readonly executable: string; readonly path: string; readonly timeoutMs: number;
+  readonly streamIndex: number;
   readonly maxOutputBytes: number; readonly signal?: AbortSignal;
 }): Promise<SourceVideoMetadata> {
-  const result = await runProcess({ executable: args.executable, argv: ["-v", "error", "-select_streams", "v:0",
-    "-show_entries", "stream=width,height,codec_name,color_transfer", "-of", "json", args.path],
+  assert(Number.isSafeInteger(args.streamIndex) && args.streamIndex >= 0, "HTML renderer source stream index is invalid");
+  const result = await runProcess({ executable: args.executable, argv: ["-v", "error", "-select_streams", String(args.streamIndex),
+    "-show_entries", "stream=index,width,height,codec_name,color_transfer,time_base:frame=best_effort_timestamp",
+    "-of", "json", args.path],
     timeoutMs: args.timeoutMs, maxOutputBytes: args.maxOutputBytes, ...(args.signal === undefined ? {} : { signal: args.signal }) });
-  const data = JSON.parse(Buffer.from(result.stdout).toString("utf8")) as { streams?: Array<Record<string, unknown>> };
+  const data = JSON.parse(Buffer.from(result.stdout).toString("utf8")) as {
+    streams?: Array<Record<string, unknown>>;
+    frames?: Array<Record<string, unknown>>;
+  };
   const stream = data.streams?.[0];
   const width = Number(stream?.width), height = Number(stream?.height);
   const codec = stream?.codec_name;
+  const streamIndex = Number(stream?.index);
+  const timeBaseMatch = typeof stream?.time_base === "string"
+    ? /^(?<numerator>-?[0-9]+)\/(?<denominator>[1-9][0-9]*)$/u.exec(stream.time_base)
+    : null;
+  const timeBase = timeBaseMatch?.groups === undefined ? undefined : {
+    numerator: BigInt(timeBaseMatch.groups.numerator!),
+    denominator: BigInt(timeBaseMatch.groups.denominator!),
+  };
+  const timestampValues = (data.frames ?? []).map(frame => frame.best_effort_timestamp);
+  const timestamps = timestampValues.every(value => typeof value === "number" || typeof value === "string")
+    && timestampValues.every(value => /^-?[0-9]+$/u.test(String(value)))
+    ? timestampValues.map(value => BigInt(String(value)))
+    : [];
   assert(Number.isSafeInteger(width) && width > 0 && Number.isSafeInteger(height) && height > 0
+    && streamIndex === args.streamIndex && timeBase !== undefined && timeBase.numerator > 0n
+    && timestamps.length > 0
+    && timestamps.every((timestamp, index) => index === 0 || timestamp >= timestamps[index - 1]!)
     && typeof codec === "string" && codec.length > 0, `HTML renderer source ${args.path} has no usable video stream`);
   const transfer = typeof stream?.color_transfer === "string" ? stream.color_transfer : undefined;
-  return { width, height, videoCodec: codec,
+  return { width, height, streamIndex, timestamps, timeBase, videoCodec: codec,
     ...(transfer === undefined ? {} : { colorSpace: { colorTransfer: transfer } }) };
 }
 
@@ -104,7 +130,7 @@ export function sourceFrameDecodeArguments(args: {
   if (alphaCodecs.has(codec)) {
     argv.push("-c:v", codec === "vp9" ? "libvpx-vp9" : codec === "vp8" ? "libvpx" : codec);
   }
-  argv.push("-i", args.path);
+  argv.push("-i", args.path, "-map", `0:${args.metadata.streamIndex}`);
   const filters: string[] = [];
   if (hdr && darwin) filters.push("format=nv12");
   // HtmlProgram asks for exact source-frame ordinals. Time seeking and FPS

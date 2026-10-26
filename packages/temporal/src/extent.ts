@@ -1,19 +1,27 @@
-import { assertClockIdentity } from "@hypit/timeline";
 import type { Clock } from "@hypit/timeline";
 
-import type { LocalTemporalDomain, TemporalDuration, TemporalExtent } from "./types.js";
-import type { Timeline } from "@hypit/timeline";
-import { assertTimelineIdentity } from "@hypit/timeline";
-import { durationInFrames } from "./rational.js";
+import {
+  assertExactTemporalValue,
+  compareExactTemporalValues,
+  exactTemporalValueFromDuration,
+  exactTemporalZero,
+  resolveTemporalBoundary,
+} from "./exact.js";
+import type {
+  LocalTemporalDomain,
+  TemporalBoundaryPolicy,
+  TemporalDuration,
+  TemporalExtent,
+} from "./types.js";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
 
 export function assertTemporalExtent(value: TemporalExtent): void {
-  assertClockIdentity(value);
-  assert(Number.isSafeInteger(value.frameCount) && value.frameCount >= 0,
-    "TemporalExtent.frameCount is invalid.");
+  assertExactTemporalValue(value.duration, "TemporalExtent.duration");
+  assert(compareExactTemporalValues(value.duration, exactTemporalZero()) >= 0,
+    "TemporalExtent.duration must be non-negative.");
 }
 
 export function sealTemporalExtent(value: TemporalExtent): TemporalExtent {
@@ -22,22 +30,18 @@ export function sealTemporalExtent(value: TemporalExtent): TemporalExtent {
 }
 
 export function temporalExtentFromDomain(domain: LocalTemporalDomain): TemporalExtent {
-  return sealTemporalExtent({ frameRate: structuredClone(domain.frameRate), frameCount: domain.frameCount });
+  return sealTemporalExtent({ duration: structuredClone(domain.duration) });
 }
 
-export function temporalExtentFromDuration(duration: TemporalDuration, timeline: Timeline): TemporalExtent {
-  assertTimelineIdentity(timeline);
-  const frames = durationInFrames(duration, timeline);
-  if (frames.denominator !== 1n || frames.numerator < 0n || frames.numerator > BigInt(Number.MAX_SAFE_INTEGER)) {
-    throw new Error("Temporal duration must resolve to an exact non-negative frame count.");
-  }
-  return { frameRate: structuredClone(timeline.frameRate), frameCount: Number(frames.numerator) };
+export function temporalExtentFromDuration(duration: TemporalDuration, clock: Clock): TemporalExtent {
+  return sealTemporalExtent({ duration: exactTemporalValueFromDuration(duration, clock) });
 }
 
-export function assertTemporalExtentClock(extent: TemporalExtent, clock: Clock): void {
+export function resolveTemporalExtent(
+  extent: TemporalExtent,
+  clock: Clock,
+  policy: TemporalBoundaryPolicy,
+): number {
   assertTemporalExtent(extent);
-  assertClockIdentity(clock);
-  assert(extent.frameRate.numerator === clock.frameRate.numerator
-    && extent.frameRate.denominator === clock.frameRate.denominator,
-  "TemporalExtent is not normalized to the selected Clock.");
+  return resolveTemporalBoundary(extent.duration, clock, policy);
 }

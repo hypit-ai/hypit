@@ -13,22 +13,50 @@ decides whether an audio artifact is a voice reference, soundtrack, evidence sou
 else, whether a video is a generation reference or another input, and which visual component uses
 an exact Font.
 
-The same module owns the deliberately narrow `SynchronizedMedia` contract used after technical
-normalization. It contains one common `frameRate`/`frameCount`, an optional visual Artifact with its
-intrinsic pixel extent, and an optional audio Artifact. Source stream indexes, selection authority,
-normalization ledgers and repeated codec/rate constants are not downstream media fields.
+The same module owns `PreparedMedia`: one immutable source Blob, one exact finite local domain and
+the selected visual/audio members' exact maps back to source presentation time. Visual interpretation
+retains coded extent, sample aspect ratio and rotation; audio interpretation retains its sample and
+channel facts. Decoding, Film placement, semantic evidence, renderer choice and
+Provider cache remain separate downstream values.
 
-## Normalized media stays neutral
+## Prepared media stays neutral
 
-Normalization also publishes a complete `LocalTemporalDomain` and `TemporalExtent`. A Timeline may
-use the Extent to determine its end, and a semantic projector may use the Domain with an equal-length
-Window to publish absolute anchors. Neither operation changes the media's identity or wraps it in an
-A-roll-specific value.
+Preparation also publishes a complete exact `LocalTemporalDomain` and clock-independent
+`TemporalExtent`. A Timeline may resolve the Extent on its own Clock to determine its end, and a
+semantic projector may use the Domain with a placed Window to publish absolute anchors. Neither
+operation changes the media's identity or wraps it in an A-roll-specific value.
 
-Visual and Audio Clips each accept the same ordinary `SynchronizedMedia` with an explicit
-absolute Window. They independently select the stream they need. A media value is therefore equally
+Visual and Audio author Clips each accept the same ordinary `PreparedMedia` with an explicit
+absolute Window. Each Clip contributes its own exact occurrence-to-prepared sampling relation. Visual lowering projects
+the selected visual stream and carries the composed relation into `HtmlProgram`; audio lowering carries the prepared source and
+its preparation relation into the terminal Audio Track, while `AudioProgram` lowers those audio-only facts onto samples. A media value is therefore equally
 usable as foreground performance, B-roll, music, an effect or a model input; its earlier contribution
 to Timeline construction is not observable downstream.
+
+`PreparedVisualSource` and `PreparedAudioSource` are signal-specific projections of source selection and interpretation.
+They choose no file format, frame grid, sample buffer, decoder or cache. A renderer may decode, cache or transcode privately,
+but those choices do not become graph values or fields of `PreparedMedia`.
+
+## Terminal delivery
+
+`VisualPictureSpec` is the common picture vocabulary: color interpretation, bit depth and alpha/matte
+policy. Its supported values remain exact rather than freely combinable: encoded video currently uses
+`VideoPictureSpec` for BT.709 limited range, while PNG frame capture uses `ImagePictureSpec` for sRGB full
+range. `MediaDeliverySpec` is the author-owned requirement for one finished file. It declares the picture
+profile and matte policy, coded video target, audio target and container once. The pure
+`project-visual-delivery` Producer derives the `VisualDeliverySpec` needed by a visual renderer;
+the complete value independently reaches final mux.
+
+`TimelineVisual` records the exact visual requirement implemented by its encoded Artifact.
+`TimelineAudio` records its PCM sample rate, channel layout and sample count. `MuxedMedia` records
+the complete delivery requirement. Final mux rejects inputs prepared for a different requirement;
+it does not silently transcode them or recover policy from a Provider configuration.
+
+These values do not contain encoder names, hardware choices, browser selection, texture handles,
+worker counts or cache budgets. Such facts belong to the selected Provider and Runtime Profile.
+The currently supported delivery family is opaque BT.709 limited-range 8-bit H.264/yuv420p video,
+48 kHz stereo AAC audio and MP4; unsupported requirements fail explicitly rather than being
+approximated.
 
 ## Font files
 

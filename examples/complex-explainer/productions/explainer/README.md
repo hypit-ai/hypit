@@ -26,7 +26,7 @@ The current production Run explicitly selects accepted Outputs. Read the plan be
 | A coordinated visual behavior | The owning project package under `../../packages/` |
 | Which accepted output is used | `runs/render.svrun` |
 
-Generated-material and normalization outputs remain explicit in the entry Source so the Run can satisfy them by name. Imported files own Script, raw resources and direction; moving an output into a private imported graph would remove that entry’s reuse boundary.
+Generated-material and preparation outputs remain explicit in the entry Source so the Run can satisfy them by name. Imported files own Script, raw resources and direction; moving an output into a private imported graph would remove that entry’s reuse boundary.
 
 ## Components
 

@@ -18,7 +18,11 @@ export function renderWorkerLimit(
   config: { readonly maxWorkers: number; readonly workers: "auto" | number },
   frameCount: number,
   fps: number,
+  gpuVideo = false,
 ): number {
+  // Extra scenes duplicate browser decoders for the same source. Keep automatic
+  // mode at one scene until a request explicitly chooses a larger worker count.
+  if (config.workers === "auto" && gpuVideo) return 1;
   return Math.min(config.maxWorkers, config.workers === "auto" ? Math.max(1, Math.ceil(frameCount / fps)) : frameCount);
 }
 

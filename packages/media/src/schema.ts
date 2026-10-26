@@ -1,11 +1,51 @@
 import { blobRefSchema } from "@hypit/hypit/protocol";
 import type { ValueSchema } from "@hypit/hypit/protocol";
+import { exactTemporalValueSchema, localTemporalDomainSchema, temporalMapSchema } from "@hypit/temporal";
 const string = { kind: "string", minLength: 1 } as const;
-const number = { kind: "number", minimum: 0 } as const;
-const seconds = { kind: "number", minimum: 0 } as const;
 const integer = { kind: "number", integer: true, minimum: 0 } as const;
 const object = (fields: Readonly<Record<string, { readonly schema: ValueSchema; readonly optional?: boolean }>>): ValueSchema => ({ kind: "object", fields });
 const rational = object({ numerator: { schema: { kind: "number", integer: true, minimum: 1 } }, denominator: { schema: { kind: "number", integer: true, minimum: 1 } } });
+const visualPictureBase = {
+  colorPrimaries: { schema: { kind: "literal", value: "bt709" } as const },
+  bitDepth: { schema: { kind: "literal", value: 8 } as const },
+  alpha: { schema: object({
+    mode: { schema: { kind: "literal", value: "opaque" } },
+    matte: { schema: { kind: "string", minLength: 7, maxLength: 7 } },
+  }) },
+} as const;
+const videoPictureSpecSchema: ValueSchema = object({
+  ...visualPictureBase,
+  colorTransfer: { schema: { kind: "literal", value: "bt709" } },
+  colorMatrix: { schema: { kind: "literal", value: "bt709" } },
+  colorRange: { schema: { kind: "literal", value: "limited" } },
+});
+const imagePictureSpecSchema: ValueSchema = object({
+  ...visualPictureBase,
+  colorTransfer: { schema: { kind: "literal", value: "srgb" } },
+  colorMatrix: { schema: { kind: "literal", value: "rgb" } },
+  colorRange: { schema: { kind: "literal", value: "full" } },
+});
+export const visualPictureSpecSchema: ValueSchema = {
+  kind: "oneOf",
+  variants: [videoPictureSpecSchema, imagePictureSpecSchema],
+};
+export const visualDeliverySpecSchema: ValueSchema = object({
+  picture: { schema: videoPictureSpecSchema },
+  encoding: { schema: object({
+    codec: { schema: { kind: "literal", value: "h264" } },
+    pixelFormat: { schema: { kind: "literal", value: "yuv420p" } },
+    quality: { schema: { kind: "string", enum: ["draft", "standard", "high"] } },
+  }) },
+});
+export const mediaDeliverySpecSchema: ValueSchema = object({
+  visual: { schema: visualDeliverySpecSchema },
+  audio: { schema: object({
+    codec: { schema: { kind: "literal", value: "aac" } },
+    sampleRate: { schema: { kind: "literal", value: 48_000 } },
+    channelLayout: { schema: { kind: "literal", value: "stereo" } },
+  }) },
+  container: { schema: { kind: "literal", value: "mp4" } },
+});
 const timestamp = object({ ticks: { schema: { kind: "string", minLength: 1, maxLength: 128 } }, timeBase: { schema: rational } });
 const disposition = object({ default: { schema: { kind: "boolean" } }, attachedPicture: { schema: { kind: "boolean" } } });
 const streamBase = {
@@ -30,25 +70,58 @@ export const mediaInspectionSchema: ValueSchema = object({
 export const mediaStreamSelectionSchema: ValueSchema = object({
   videoStreamIndex: { schema: integer, optional: true }, audioStreamIndex: { schema: integer, optional: true },
   spanAuthority: { schema: { kind: "string", enum: ["video", "audio"] } },
-  policy: { schema: { kind: "string", enum: ["primary-moving@1", "default-audio@1", "primary-moving-default-audio@1", "explicit-streams@1"] } },
 });
-export const synchronizedMediaSchema: ValueSchema = object({
-  frameDomain: { schema: object({ frameRate: { schema: rational },
-    frameCount: { schema: { kind: "number", integer: true, minimum: 1 } } }) },
-  visual: { schema: object({ artifact: { schema: blobRefSchema() },
-    width: { schema: { kind: "number", integer: true, minimum: 1 } }, height: { schema: { kind: "number", integer: true, minimum: 1 } },
-  }), optional: true },
-  audio: { schema: object({ artifact: { schema: blobRefSchema(["audio/wav"]) } }), optional: true },
+const preparedMemberBase = {
+  streamIndex: { schema: integer },
+  presentationStart: { schema: exactTemporalValueSchema },
+  sourceDomain: { schema: localTemporalDomainSchema },
+  map: { schema: temporalMapSchema },
+} as const;
+const preparedVisualInterpretation = object({
+  codedWidth: { schema: { kind: "number", integer: true, minimum: 1 } },
+  codedHeight: { schema: { kind: "number", integer: true, minimum: 1 } },
+  sampleAspectRatio: { schema: rational },
+  rotationDegrees: { schema: { kind: "oneOf", variants: [0, 90, 180, 270]
+    .map((value) => ({ kind: "literal" as const, value })) } },
 });
-
+const preparedAudioInterpretation = object({
+  sampleRate: { schema: { kind: "number", integer: true, minimum: 1 } },
+  channels: { schema: { kind: "number", integer: true, minimum: 1 } },
+  channelLayout: { schema: string, optional: true },
+});
+export const preparedMediaSchema: ValueSchema = object({
+  source: { schema: blobRefSchema() },
+  domain: { schema: localTemporalDomainSchema },
+  visual: { optional: true, schema: object({
+    ...preparedMemberBase,
+    interpretation: { schema: preparedVisualInterpretation },
+  }) },
+  audio: { optional: true, schema: object({
+    ...preparedMemberBase,
+    interpretation: { schema: preparedAudioInterpretation },
+  }) },
+});
+export const preparedVisualSourceSchema: ValueSchema = object({
+  source: { schema: blobRefSchema() }, streamIndex: { schema: integer },
+  presentationStart: { schema: exactTemporalValueSchema }, sourceDomain: { schema: localTemporalDomainSchema },
+  interpretation: { schema: preparedVisualInterpretation },
+});
+export const preparedAudioSourceSchema: ValueSchema = object({
+  source: { schema: blobRefSchema() }, streamIndex: { schema: integer },
+  presentationStart: { schema: exactTemporalValueSchema }, sourceDomain: { schema: localTemporalDomainSchema },
+  interpretation: { schema: preparedAudioInterpretation },
+});
 export const timelineVisualSchema: ValueSchema = object({ frameRate: { schema: rational }, frameCount: { schema: { kind: "number", integer: true, minimum: 1 } },
   canvas: { schema: object({ width: { schema: { kind: "number", integer: true, minimum: 1 } }, height: { schema: { kind: "number", integer: true, minimum: 1 } } }) },
+  delivery: { schema: visualDeliverySpecSchema },
   artifact: { schema: blobRefSchema() } });
 export const timelineAudioSchema: ValueSchema = object({ artifact: { schema: blobRefSchema(["audio/wav"]) },
+  sampleRate: { schema: { kind: "literal", value: 48_000 } }, channelLayout: { schema: { kind: "literal", value: "stereo" } },
   sampleFrames: { schema: { kind: "number", integer: true, minimum: 1 } } });
 export const muxedMediaSchema: ValueSchema = object({ frameRate: { schema: rational }, frameCount: { schema: { kind: "number", integer: true, minimum: 1 } },
   canvas: { schema: object({ width: { schema: { kind: "number", integer: true, minimum: 1 } }, height: { schema: { kind: "number", integer: true, minimum: 1 } } }) },
-  presentationSampleFrames: { schema: { kind: "number", integer: true, minimum: 1 } }, artifact: { schema: blobRefSchema(["video/mp4"]) } });
+  presentationSampleFrames: { schema: { kind: "number", integer: true, minimum: 1 } }, delivery: { schema: mediaDeliverySpecSchema },
+  artifact: { schema: blobRefSchema(["video/mp4"]) } });
 const fontSourceSchema: ValueSchema = object({
   artifact: { schema: blobRefSchema(["font/otf", "font/ttf", "font/woff", "font/woff2"]) },
   unicodeRange: { schema: { kind: "string", minLength: 3 }, optional: true },

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { runInNewContext } from "node:vm";
 import test from "node:test";
 
-import { frameWorkIndexRuntime, htmlFrameSelectionPrelude } from "../src/frame-work.js";
+import { frameWorkIndexRuntime } from "../src/frame-work.js";
 import { terminalTextLayoutScript } from "../src/text.js";
 
 test("terminal Text lazily prepares one persistent Animation per active Unit × Sequence", async () => {
@@ -156,8 +156,9 @@ test("terminal Text static layout ignores roots outside the render selection", a
     },
     getElementById() { return null; },
   };
-  runInNewContext(`${htmlFrameSelectionPrelude([{ startFrame: 100, endFrameExclusive: 101 }])}
-    ${frameWorkIndexRuntime}\n${terminalTextLayoutScript}`, { document, Element: MockElement, window });
+  runInNewContext(`${frameWorkIndexRuntime}
+    htmlPrepareFrameSelection([{ startFrame: 100, endFrameExclusive: 101 }]);
+    ${terminalTextLayoutScript}`, { document, Element: MockElement, window });
   assert.ok(ready);
   await ready;
   assert.deepEqual(rotations, [0, 2]);

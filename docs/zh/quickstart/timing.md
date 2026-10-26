@@ -8,10 +8,10 @@ Hypit 只有一条节目时间轴：`Timeline`。它只是 `{ id, frameRate, fra
 
 对于语音作品，几类独立事实围绕这条绝对时间轴组合：
 
-1. 把已接受素材规范化为 `SynchronizedMedia` 与有限的局部时间域；
+1. 把已接受素材准备为保留源关系的 `PreparedMedia` 与有限、精确的局部时间域；
 2. 用具名 Instant、Window 与 Extent 构造一个包含必需 `end` 的 Timeline DAG；
 3. 当消费者需要表演内部的语义位置时，在局部时间域上对齐对应 Script Segment；
-4. 把所需语义值通过等长 Window 投影，并让普通媒体独立进入 Visual 与 Audio Source。
+4. 把所需语义值通过显式放置的 Window 投影，并让普通媒体独立进入 Visual 与 Audio Source。
 
 这种分离很重要：移动一段内容不改变媒体和局部词时序；改变画面构图不改变声音；纯动效
 只需要 Timeline，不需要媒体或 Script。
@@ -27,19 +27,19 @@ Hypit 只有一条节目时间轴：`Timeline`。它只是 `{ id, frameRate, fra
 <import as="audio" from="@hypit/audio-track@1"/>
 ```
 
-## 规范化局部媒体
+## 准备局部媒体
 
-Clock 固定最终 Timeline 与所有局部时间域共享的帧率：
+准备操作选择所需成员，发布精确的局部时间域与 Extent，而不选择最终 Timeline 的帧格：
 
 ```svml
 <time:Clock id="clock" frame-rate="30"/>
-<mediaop:Normalize id="opening-media" source={opening-video.video}
-  video="primary-moving" audio="default" span-authority="video" clock={clock}/>
-<mediaop:Normalize id="answer-media" source={answer-video.video}
-  video="primary-moving" audio="default" span-authority="video" clock={clock}/>
+<mediaop:Prepare id="opening-media" source={opening-video.video}
+  video="primary-moving" audio="default" span-authority="video"/>
+<mediaop:Prepare id="answer-media" source={answer-video.video}
+  video="primary-moving" audio="default" span-authority="video"/>
 ```
 
-规范化只建立媒体事实，不包含 Script 含义或节目中的位置。
+准备只建立媒体事实，不包含 Script 含义、节目中的位置或代理文件。
 
 ## 在作品消费语义位置时进行对齐
 
@@ -91,15 +91,16 @@ Timeline 声明是无环构造图。`end` 必填；每个具名 Instant 或 Wind
 </time:Timeline>
 ```
 
-每个 `for={...extent}` 使用已经解析、但尚未定位的时长。因此，未知长度的生成语音可以在
-普通图求值中撑开 Timeline。`from="opening.end+2s"` 表示空隙，
+每个 `for={...extent}` 都会把精确但尚未定位的时长解析到当前 Timeline 的 Clock 上；默认
+`cover` 规则会保留最后一个不完整帧。因此，未知长度的生成语音可以在普通图求值中撑开
+Timeline。`from="opening.end+2s"` 表示空隙，
 `from="opening.end-12f"` 表示重叠，`latest(a.end,b.end)` 可以合并并行分支。纯动效可直接
 声明 `<time:Timeline id="animation" clock={clock} end="8s"/>`。Timeline 不保留媒体或局部
 时间域身份。
 
 ## 独立投影语义
 
-把每个 Alignment、完整局部时间域和等长绝对 Window 配对，投影语义证据：
+把每个 Alignment、完整局部时间域和显式放置的绝对 Window 配对，投影语义证据：
 
 ```svml
 <semantic:Projection id="story-time" narrative={story} timeline={speech.timeline}>
@@ -134,11 +135,11 @@ Timeline 声明是无环构造图。`end` 必填；每个具名 Instant 或 Wind
 </audio:Track>
 ```
 
-Visual 与 Audio Clip 是平等的媒体出现关系。同一份规范化媒体可以同时供两边使用，但选择画面绝不会自动让声音
+Visual 与 Audio Clip 是平等的媒体出现关系。同一份准备媒体可以同时供两边使用，但选择画面绝不会自动让声音
 进入成片。
 
 ```text
-SynchronizedMedia + Window ──────────────────────────────→ Visual / Audio occurrence
+PreparedMedia + Window ──────────────────────────────────→ Visual / Audio occurrence
 
 NarrativeAlignment + LocalDomain + Window ──────────────→ 绝对 Instant / Window
 

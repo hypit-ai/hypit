@@ -1,19 +1,17 @@
 import { compositionDependency, compositionTypes } from "@hypit/composition";
 import type { StructuredSurfaceDeclaration, SurfaceVocabulary } from "@hypit/hypit/markup";
-import { mediaDependency, mediaTypes } from "@hypit/media";
-import { blobRefSchema } from "@hypit/hypit/protocol";
+import { mediaDependency, mediaTypes, preparedMediaSchema } from "@hypit/media";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/hypit/protocol";
-import { temporalDependency, temporalTypes } from "@hypit/temporal";
+import { exactTemporalValueSchema, temporalDependency, temporalMapSchema, temporalRelationSpecSchema, temporalTypes } from "@hypit/temporal";
 import {
   temporalContextAttributeVocabulary,
   temporalWindowAttributeVocabulary,
 } from "@hypit/temporal/markup";
-import { timelineDependency, timelineTypes } from "@hypit/timeline";
+import { frameSpanSchema, timelineDependency, timelineTypes } from "@hypit/timeline";
 
 export const audioTrackModuleRef = { name: "@hypit/audio-track", version: "1" } as const;
 export const audioTrackTypes = {
   header: { module: audioTrackModuleRef, name: "AudioTrackHeader" },
-  sourceTime: { module: audioTrackModuleRef, name: "AudioSourceTime" },
   clipSpec: { module: audioTrackModuleRef, name: "AudioClipSpec" },
   set: { module: audioTrackModuleRef, name: "AudioTrackSet" },
   program: { module: audioTrackModuleRef, name: "AudioTrackProgram" },
@@ -35,32 +33,20 @@ const duration: ValueSchema = { kind: "oneOf", variants: [
   object({ unit: { schema: { kind: "literal", value: "milliseconds" } }, value: { schema: integer } }),
   object({ unit: { schema: { kind: "literal", value: "seconds" } }, numerator: { schema: integer }, denominator: { schema: { kind: "number", integer: true, minimum: 1 } } }),
 ] };
-const sourceTimePoint = object({ edge: { schema: { kind: "string", enum: ["start", "end"] } }, offset: { schema: duration } });
-const sourceTimeBounds = object({ from: { schema: sourceTimePoint }, until: { schema: sourceTimePoint } });
-const rational = object({ numerator: { schema: { kind: "number", integer: true, minimum: 1 } }, denominator: { schema: { kind: "number", integer: true, minimum: 1 } } });
-const sourceTimeRelation: ValueSchema = { kind: "oneOf", variants: [
-  object({ kind: { schema: { kind: "literal", value: "rate" } }, target: { schema: sourceTimeBounds },
-    targetAt: { schema: sourceTimePoint }, sourceAt: { schema: sourceTimePoint }, rate: { schema: rational },
-    source: { schema: sourceTimeBounds }, wrap: { schema: sourceTimeBounds, optional: true } }),
-  object({ kind: { schema: { kind: "literal", value: "fit" } }, target: { schema: sourceTimeBounds },
-    source: { schema: sourceTimeBounds }, minRate: { schema: number, optional: true }, maxRate: { schema: number, optional: true } }),
-] };
-const sourceTime = object({ relations: { schema: { kind: "array", minItems: 1, items: sourceTimeRelation } } });
 const clipSpec = object({
   id: { schema: string },
-  sourceTime: { schema: sourceTime, optional: true },
+  sampling: { schema: temporalRelationSpecSchema, optional: true },
   mix: { schema: object({ gain: { schema: number }, fadeIn: { schema: duration }, fadeOut: { schema: duration } }) },
 });
-const frameSpan = object({ startFrame: { schema: integer }, endFrameExclusive: { schema: integer } });
 const clip = object({
-  id: { schema: string }, subjectId: { schema: string }, window: { schema: frameSpan },
-  source: { schema: object({ artifact: { schema: blobRefSchema(["audio/wav"]) }, sampleFrames: { schema: { kind: "number", integer: true, minimum: 1 } } }) },
-  sourceTime: { schema: sourceTime },
-  mix: { schema: object({ gain: { schema: number }, fadeInSamples: { schema: integer }, fadeOutSamples: { schema: integer } }) },
+  id: { schema: string }, subjectId: { schema: string }, window: { schema: frameSpanSchema },
+  source: { schema: object({ media: { schema: preparedMediaSchema } }) },
+  sampling: { schema: temporalMapSchema },
+  mix: { schema: object({ gain: { schema: number }, fadeIn: { schema: exactTemporalValueSchema },
+    fadeOut: { schema: exactTemporalValueSchema } }) },
 });
 
 export const audioTrackHeaderSchema: ValueSchema = object({ id: { schema: string } });
-export const audioSourceTimeSchema: ValueSchema = sourceTime;
 export const audioClipSpecSchema: ValueSchema = clipSpec;
 export const audioTrackSetSchema: ValueSchema = object({ clips: { schema: { kind: "array", items: clip } } });
 export const audioTrackProgramSchema: ValueSchema = object({
@@ -70,13 +56,13 @@ export const audioTrackProgramSchema: ValueSchema = object({
 
 const clipInputs = [
   { name: "set", type: audioTrackTypes.set }, { name: "header", type: audioTrackTypes.header },
-  { name: "timeline", type: timelineTypes.timeline }, { name: "media", type: mediaTypes.synchronized },
+  { name: "timeline", type: timelineTypes.timeline }, { name: "media", type: mediaTypes.prepared },
   { name: "spec", type: audioTrackTypes.clipSpec }, { name: "window", type: temporalTypes.window },
 ] as const;
 
 export const audioTrackMarkupSurfaces: readonly (StructuredSurfaceDeclaration & { readonly vocabulary: SurfaceVocabulary })[] = [{
   name: "track", tag: "Track", mode: "structured",
-  outputs: [audioTrackTypes.header, audioTrackTypes.sourceTime, audioTrackTypes.clipSpec,
+  outputs: [audioTrackTypes.header, audioTrackTypes.clipSpec,
     audioTrackTypes.program, compositionTypes.audioTrack],
   vocabulary: {
     summary: "Places ordinary audio Clips on one completed Timeline and mixes them into one AudioTrack.",
@@ -86,11 +72,10 @@ export const audioTrackMarkupSurfaces: readonly (StructuredSurfaceDeclaration & 
     ],
     children: [{
       tag: "Clip", cardinality: "many",
-      summary: "One explicit audio source occurrence with its own Window, partial source-time relation and mix.",
+      summary: "One explicit audio source occurrence with its own Window, partial temporal sampling relation and mix.",
       attributes: [
         { name: "id", kind: "identifier", required: false, summary: "Names this Clip; the Track derives `<track>.clip.<index>` when absent." },
-        { name: "source", kind: "reference", required: true, accepts: [mediaTypes.synchronized], summary: "Selects normalized media containing the audio stream." },
-        { name: "source-time", kind: "reference", required: false, accepts: [audioTrackTypes.sourceTime], summary: "Applies one reusable partial source-time relation. Inline Map children express the same value." },
+        { name: "source", kind: "reference", required: true, accepts: [mediaTypes.prepared], summary: "Selects prepared media containing the audio stream; terminal audio execution evaluates its exact source Map." },
         ...temporalWindowAttributeVocabulary,
         { name: "gain", kind: "literal", required: false, summary: "Linear gain; defaults to `1`." },
         { name: "fade-in", kind: "literal", required: false, summary: "Exact fade-in length; defaults to `0f`." },
@@ -114,33 +99,6 @@ export const audioTrackMarkupSurfaces: readonly (StructuredSurfaceDeclaration & 
       "Omitting Map means bounded partial identity; uncovered target samples are silent.",
     ],
   },
-}, {
-  name: "source-time", tag: "SourceTime", mode: "structured",
-  outputs: [audioTrackTypes.sourceTime],
-  vocabulary: {
-    summary: "Authors one reusable partial relation from Clip-local target samples to source-local samples.",
-    attributes: [{ name: "id", kind: "identifier", required: true, summary: "Names this AudioSourceTime value." }],
-    children: [{ tag: "Map", cardinality: "many", summary: "One affine piece; uncovered target samples are silent.", attributes: [
-      { name: "target-from", kind: "literal", required: false, summary: "Starts the target interval; defaults to start." },
-      { name: "target-until", kind: "literal", required: false, summary: "Ends the target interval exclusively; defaults to end." },
-      { name: "target-at", kind: "literal", required: false, summary: "Names the target anchor paired with source-at." },
-      { name: "source-at", kind: "literal", required: false, summary: "Names the source anchor paired with target-at." },
-      { name: "rate", kind: "literal", required: false, summary: "Exact positive source samples per target sample; pitch is preserved." },
-      { name: "source-from", kind: "literal", required: false, summary: "Starts the permitted or fitted source interval." },
-      { name: "source-until", kind: "literal", required: false, summary: "Ends the permitted or fitted source interval exclusively." },
-      { name: "wrap-from", kind: "literal", required: false, summary: "Starts an explicitly periodic source interval." },
-      { name: "wrap-until", kind: "literal", required: false, summary: "Ends an explicitly periodic source interval exclusively." },
-      { name: "min-rate", kind: "literal", required: false, summary: "Optional lower safety bound for a fitted Map." },
-      { name: "max-rate", kind: "literal", required: false, summary: "Optional upper safety bound for a fitted Map." },
-    ] }],
-    example: `<audio:SourceTime id="native-loop">
-  <audio:Map rate="1" wrap-from="start" wrap-until="end"/>
-</audio:SourceTime>`,
-    notes: [
-      "Without rate, anchors or wrap, a Map fits the selected source interval across its target interval.",
-      "Audio rates are positive and pitch-preserving; silence is represented by an uncovered target interval.",
-    ],
-  },
 }] as const;
 
 export const audioTrackManifest: ModuleManifest = {
@@ -150,7 +108,6 @@ export const audioTrackManifest: ModuleManifest = {
   dependencies: [mediaDependency, timelineDependency, temporalDependency, compositionDependency],
   types: [
     audioTrackTypes.header.name,
-    audioTrackTypes.sourceTime.name,
     audioTrackTypes.clipSpec.name,
     audioTrackTypes.set.name,
     audioTrackTypes.program.name,

@@ -29,6 +29,26 @@
   <asset:Image id="presenter-reference" src="../assets/presenter-a464d354ce0d.png"/>
   <asset:Audio id="voice-reference" src="../assets/audio/voice-20260914-9.85s.mp3"/>
   <asset:Audio id="bgm-source" src="../assets/audio/bgm.m4a"/>
+  <!-- Accepted generated performances are project material. Their original model
+       requests remain in the author graph, while the active film consumes these
+       explicitly selected files and prepares them under the current media model. -->
+  <asset:Video id="accepted-opening" src="../assets/accepted-performances/opening.mp4"/>
+  <asset:Video id="accepted-introduction" src="../assets/accepted-performances/introduction.mp4"/>
+  <asset:Video id="accepted-competitors" src="../assets/accepted-performances/competitors.mp4"/>
+  <asset:Video id="accepted-two-roads" src="../assets/accepted-performances/two-roads.mp4"/>
+  <asset:Video id="accepted-editor-road" src="../assets/accepted-performances/editor-road.mp4"/>
+  <asset:Video id="accepted-keyframe-cost" src="../assets/accepted-performances/keyframe-cost.mp4"/>
+  <asset:Video id="accepted-code-road" src="../assets/accepted-performances/code-road.mp4"/>
+  <asset:Video id="accepted-reuse-cost" src="../assets/accepted-performances/reuse-cost.mp4"/>
+  <asset:Video id="accepted-timing-cost" src="../assets/accepted-performances/timing-cost.mp4"/>
+  <asset:Video id="accepted-water-break" src="../assets/accepted-performances/water-break.mp4"/>
+  <asset:Video id="accepted-synthesis" src="../assets/accepted-performances/synthesis.mp4"/>
+  <asset:Video id="accepted-components" src="../assets/accepted-performances/components.mp4"/>
+  <asset:Video id="accepted-semantic-time" src="../assets/accepted-performances/semantic-time.mp4"/>
+  <asset:Video id="accepted-semantic-demo" src="../assets/accepted-performances/semantic-demo.mp4"/>
+  <asset:Video id="accepted-result" src="../assets/accepted-performances/result.mp4"/>
+  <asset:Video id="accepted-reference-reveal" src="../assets/accepted-performances/reference-reveal.mp4"/>
+  <asset:Video id="accepted-closing" src="../assets/accepted-performances/closing.mp4"/>
   <asset:Video id="web-hypit" src="../assets/web/hypit-introduction-30fps.mp4"/>
   <asset:Video id="web-creatify" src="../assets/web/creatify-scroll-30fps.mp4"/>
   <asset:Video id="web-higgsfield" src="../assets/web/higgsfield-clean-v2-30fps.mp4"/>

@@ -194,7 +194,6 @@ export function assertCommentStickerSet(value: CommentStickerSet): void {
 function realized(
   set: CommentStickerSet,
   header: CommentStickerHeader,
-  timeline: Timeline,
   frame: SpatialFrame,
   style: CommentStickerStyle,
   spec: CommentStickerItemSpec,
@@ -236,7 +235,7 @@ export function appendProjectedCommentSticker(
   avatar?: BlobRef,
 ): CommentStickerSet {
   assertTemporalWindowFor(window, { timeline });
-  return realized(set, header, timeline, frame, style, spec, content, window, avatar);
+  return realized(set, header, frame, style, spec, content, window, avatar);
 }
 
 export function assertCommentStickerProgram(value: CommentStickerProgram): void {

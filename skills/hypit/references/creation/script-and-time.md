@@ -136,8 +136,8 @@ Script also represents passages without speech:
 ```
 
 `empty` is an ordinary Segment name; a name such as `product-detail` can express the passage's role.
-No words does not mean no semantics: the Segment retains its identity, and associated normalized
-media can provide its local duration. When a consumer needs that identity projected through the
+No words does not mean no semantics: the Segment retains its identity, and associated PreparedMedia
+can provide its local duration. When a consumer needs that identity projected through the
 actual media, NarrativeAlignment can have an empty unit array while still mapping the Segment
 boundaries; the Segment's existence alone does not require Alignment.
 The same Timeline and Track timing vocabulary apply to a wordless passage or an entire
@@ -221,7 +221,7 @@ energy while finding a performable shape, then estimate the affected wording aga
 applies this judgment to the selected model's request range.
 
 The estimate balances the intended speaking density and sizes generation; it supplies no timeline
-anchors. Once a generated clip is accepted, normalize it and use its actual extent to construct an
+anchors. Once a generated clip is accepted, prepare it and use its actual extent to construct an
 equal-length Timeline Window. When Caption, B-roll, MG, Effects or another consumer needs word
 positions, align the actual speech to its Script Segment and map that evidence through the
 domain/Window relation. The literal duration answers how much media to request. Alignment answers

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { chmod, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -11,9 +11,10 @@ import type { BlobRef } from "@hypit/protocol";
 import sharp from "sharp";
 import { rasterizeHtmlFrames, rasterizeHtmlProgram } from "../../src/index.js";
 import type { HtmlRasterProgress } from "../../src/index.js";
-import { htmlRangeDocument } from "../range-scenario.js";
+import { htmlRangeDocument, htmlRetiringSourceDocument } from "../range-scenario.js";
+import { htmlProviderDelivery, htmlProviderPicture } from "../provider-scenario.js";
 
-test("real selected renders sample video correctly across wrap, hold and fractional rates with independent browsers", async () => {
+test("real selected renders sample video correctly across wrap, hold, fractional and reverse rates with independent browsers", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-render-range-test-"));
   const browser = process.env.HYPIT_TEST_CHROME_PATH === undefined
     ? {} : { chromePath: process.env.HYPIT_TEST_CHROME_PATH };
@@ -30,8 +31,9 @@ test("real selected renders sample video correctly across wrap, hold and fractio
     const render = async (name: string, range: { startFrame: number; endFrameExclusive: number } | undefined,
       workers: number) => {
       const warnings: string[] = [];
-      const visual = await rasterizeHtmlProgram({ program: document, ...(range === undefined ? {} : { range }) },
-        { resources, workers, quality: "high", processTimeoutMs: 120000, ...browser,
+      const visual = await rasterizeHtmlProgram({ program: document, delivery: htmlProviderDelivery("high"),
+        ...(range === undefined ? {} : { range }) },
+        { resources, workers, processTimeoutMs: 120000, ...browser,
           maxPendingFrameBytes: 1, maxDecodedSourceBytes: 1,
           onProgress: (e) => events.push(e),
           onDiagnostic: async (event) => { if (event.level === "warning") warnings.push(event.message); } });
@@ -50,9 +52,19 @@ test("real selected renders sample video correctly across wrap, hold and fractio
     assert.equal(new Set(starts.map((e) => e.browserPid)).size, 3);
     const one = await render("one", { startFrame: 7, endFrameExclusive: 8 }, 4);
     const stride = 64 * 64 * 3, center = (32 * 64 + 32) * 3;
-    assert.equal(full.length, 12 * stride);
+    assert.equal(full.length, 18 * stride);
     assert.equal(selected.length, 8 * stride);
     assert.equal(one.length, stride);
+    const expected = [2, 3, 0, 1, 2, 3, 3, 3, 0, 0, 1, 1, 3, 2, 1, 0, 3, 2];
+    const samples = expected.map((_sourceFrame, frame) =>
+      [...full.subarray(frame * stride + center, frame * stride + center + 3)]);
+    for (const [frame, source] of expected.entries()) {
+      for (let channel = 0; channel < 3; channel++) {
+        const actual = full[frame * stride + center + channel]!;
+        assert.ok(Math.abs(actual - colors[source]![channel]!) < 12,
+          `frame ${frame} channel ${channel} was ${actual}, not source frame ${source} value ${colors[source]![channel]}; ${JSON.stringify(samples)}`);
+      }
+    }
     for (const [i, source] of [1, 2, 3, 3, 3, 0, 0, 1].entries()) {
       for (let channel = 0; channel < 3; channel++) {
         assert.ok(Math.abs(selected[i * stride + center + channel]! - colors[source]![channel]!) < 12);
@@ -60,24 +72,25 @@ test("real selected renders sample video correctly across wrap, hold and fractio
       }
     }
     for (let channel = 0; channel < 3; channel++) assert.ok(Math.abs(one[center + channel]! - colors[3]![channel]!) < 12);
-    const snapshots = await rasterizeHtmlFrames({ program: document, frames: [3, 7, 8, 11] },
+    const snapshots = await rasterizeHtmlFrames({ program: document, picture: htmlProviderPicture(),
+      frames: [3, 7, 8, 11] },
       { resources, workers: 2, ...browser });
     for (const [index, source] of [1, 3, 0, 1].entries()) {
-      const pixels = await sharp((await resources.get(snapshots[index]!.resource))!).removeAlpha().raw().toBuffer();
+      const pixels = await sharp((await resources.get(snapshots.frames[index]!.artifact.resource))!).removeAlpha().raw().toBuffer();
       for (let channel = 0; channel < 3; channel++) assert.ok(Math.abs(pixels[center + channel]! - colors[source]![channel]!) < 12);
     }
-    await assert.rejects(rasterizeHtmlProgram({ program: document, range: { startFrame: 7, endFrameExclusive: 8 } },
+    await assert.rejects(rasterizeHtmlProgram({ program: document, delivery: htmlProviderDelivery("high"), range: { startFrame: 7, endFrameExclusive: 8 } },
       { resources, workers: 2, initializationTimeoutMs: 1, processTimeoutMs: 30_000, ...browser }),
       /worker 0 initialization timed out/);
     assert.equal((await render("after-timeout", { startFrame: 7, endFrameExclusive: 8 }, 1)).length, stride);
 
     const controller = new AbortController();
-    const stopped = rasterizeHtmlProgram({ program: document }, { resources, workers: 4, signal: controller.signal, ...browser,
+    const stopped = rasterizeHtmlProgram({ program: document, delivery: htmlProviderDelivery("high") }, { resources, workers: 4, signal: controller.signal, ...browser,
       onProgress: (event) => { if (event.phase === "worker-start") controller.abort(new Error("stop this attempt")); } });
     const [failed, completed] = await Promise.allSettled([stopped, render("concurrent", undefined, 2)]);
     assert.equal(failed.status, "rejected");
     assert.equal(completed.status, "fulfilled");
-    if (completed.status === "fulfilled") assert.equal(completed.value.length, 12 * stride);
+    if (completed.status === "fulfilled") assert.equal(completed.value.length, 18 * stride);
 
     class StalledOutput extends MemoryResourceStore {
       active = false;
@@ -91,8 +104,101 @@ test("real selected renders sample video correctly across wrap, hold and fractio
     }
     const storeController = new AbortController();
     const outputResources = new StalledOutput();
-    await assert.rejects(rasterizeHtmlProgram({ program: document, range: { startFrame: 0, endFrameExclusive: 1 } },
+    await assert.rejects(rasterizeHtmlProgram({ program: document, delivery: htmlProviderDelivery("high"), range: { startFrame: 0, endFrameExclusive: 1 } },
       { resources: outputResources, workers: 1, signal: storeController.signal, ...browser }), /stop output storage/u);
     assert.equal(outputResources.active, false);
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test("Electron decodes exact source-video samples in the browser before shared-texture export", {
+  skip: process.env.HYPIT_TEST_ELECTRON_PATH === undefined,
+}, async () => {
+  const root = await mkdtemp(join(tmpdir(), "hypit-render-electron-source-test-"));
+  try {
+    const colors = [[240, 20, 20], [20, 220, 20], [20, 20, 240], [220, 220, 20]];
+    const raw = Buffer.concat(colors.map(color => Buffer.from(Array.from({ length: 64 * 64 }, () => color).flat())));
+    const source = join(root, "source.mp4");
+    const encoded = spawnSync("ffmpeg", ["-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "rgb24",
+      "-s", "64x64", "-r", "30", "-i", "pipe:0", "-vf",
+      "scale=out_color_matrix=bt709:out_range=tv,format=yuv420p,setparams=color_primaries=bt709:color_trc=bt709:colorspace=bt709:range=tv",
+      "-c:v", "libx264", "-crf", "0", "-color_range", "tv", "-colorspace", "bt709",
+      "-color_trc", "bt709", "-color_primaries", "bt709", source], { input: raw });
+    assert.equal(encoded.status, 0, encoded.stderr.toString());
+    const ffmpegLog = join(root, "ffmpeg.jsonl");
+    const ffmpegWrapper = join(root, "ffmpeg-wrapper.cjs");
+    await writeFile(ffmpegWrapper, `#!${process.execPath}\nconst fs=require("node:fs");\nconst cp=require("node:child_process");\nfs.appendFileSync(${JSON.stringify(ffmpegLog)},JSON.stringify(process.argv.slice(2))+"\\n");\nconst result=cp.spawnSync("ffmpeg",process.argv.slice(2),{stdio:"inherit"});\nif(result.error)throw result.error;process.exit(result.status??1);\n`);
+    await chmod(ffmpegWrapper, 0o755);
+    const resources = new MemoryResourceStore();
+    const sourceArtifact = await resources.put(await readFile(source), "video/mp4");
+    const document = htmlRangeDocument(sourceArtifact);
+    const render = async (name: string, range: { startFrame: number; endFrameExclusive: number } | undefined,
+      workers: number, maxDecodedSourceBytes?: number, maxPendingFrameBytes?: number,
+      program = document, diagnostics: string[] = []) => {
+      const visual = await rasterizeHtmlProgram({ program, delivery: htmlProviderDelivery("high"),
+        ...(range === undefined ? {} : { range }) }, {
+        renderer: "electron",
+        electronPath: process.env.HYPIT_TEST_ELECTRON_PATH!,
+        resources,
+        workers,
+        ...(maxDecodedSourceBytes === undefined ? {} : { maxDecodedSourceBytes }),
+        ...(maxPendingFrameBytes === undefined ? {} : { maxPendingFrameBytes }),
+        ffmpegPath: ffmpegWrapper,
+        processTimeoutMs: 120_000,
+        onDiagnostic: async diagnostic => { diagnostics.push(diagnostic.message); },
+      });
+      const output = join(root, `${name}.mp4`);
+      await writeFile(output, (await resources.get(visual.artifact.resource))!);
+      const decoded = spawnSync("ffmpeg", ["-v", "error", "-i", output,
+        "-f", "rawvideo", "-pix_fmt", "rgb24", "pipe:1"]);
+      assert.equal(decoded.status, 0, decoded.stderr.toString());
+      return decoded.stdout;
+    };
+    const full = await render("full", undefined, 1);
+    const selected = await render("selected", { startFrame: 3, endFrameExclusive: 11 }, 2, 1, 1);
+    const controller = new AbortController();
+    await assert.rejects(rasterizeHtmlProgram({ program: document, delivery: htmlProviderDelivery("high") }, {
+      renderer: "electron", electronPath: process.env.HYPIT_TEST_ELECTRON_PATH!, resources, workers: 2,
+      ffmpegPath: ffmpegWrapper, signal: controller.signal,
+      onProgress: event => { if (event.phase === "worker-start") controller.abort(new Error("stop Electron attempt")); },
+    }), /stop Electron attempt/u);
+    const recovered = await render("recovered", { startFrame: 7, endFrameExclusive: 8 }, 1, 1, 1);
+    const retirementDiagnostics: string[] = [];
+    await render("retired", undefined, 1, 1, 1, htmlRetiringSourceDocument(sourceArtifact), retirementDiagnostics);
+    const retiredStats = retirementDiagnostics.flatMap(message => [...message.matchAll(/video: (\{[^\n]+\})/gu)]
+      .map(match => JSON.parse(match[1]!) as { resident: number; cachedSamples: number; openSources: number })).at(-1);
+    assert.ok(retiredStats !== undefined);
+    assert.equal(retiredStats.resident, 0);
+    assert.equal(retiredStats.cachedSamples, 0);
+    assert.equal(retiredStats.openSources, 0);
+    const ffmpegCalls = (await readFile(ffmpegLog, "utf8")).trim().split("\n").map(line => JSON.parse(line) as string[]);
+    assert.equal(ffmpegCalls.length, 4, "completed Electron renders use FFmpeg only for final container muxing");
+    for (const call of ffmpegCalls) {
+      assert.ok(call.includes("copy"));
+      assert.equal(call.some(argument => /png|image2pipe/iu.test(argument)), false,
+        "neither source decoding nor encoded output may cross a PNG boundary");
+    }
+    const stride = 64 * 64 * 3;
+    const center = (32 * 64 + 32) * 3;
+    assert.equal(full.length, 18 * stride);
+    assert.equal(selected.length, 8 * stride);
+    assert.equal(recovered.length, stride);
+    const expected = [2, 3, 0, 1, 2, 3, 3, 3, 0, 0, 1, 1, 3, 2, 1, 0, 3, 2];
+    const samples = expected.map((_sourceFrame, frame) =>
+      [...full.subarray(frame * stride + center, frame * stride + center + 3)]);
+    for (const [frame, sourceFrame] of expected.entries()) {
+      for (let channel = 0; channel < 3; channel++) {
+        const actual = full[frame * stride + center + channel]!;
+        assert.ok(Math.abs(actual - colors[sourceFrame]![channel]!) < 16,
+          `frame ${frame} channel ${channel} was ${actual}, not source frame ${sourceFrame} value ${colors[sourceFrame]![channel]}; ${JSON.stringify(samples)}`);
+      }
+    }
+    for (const [frame, sourceFrame] of expected.slice(3, 11).entries()) {
+      for (let channel = 0; channel < 3; channel++) {
+        assert.ok(Math.abs(selected[frame * stride + center + channel]! - colors[sourceFrame]![channel]!) < 16);
+      }
+    }
+    for (let channel = 0; channel < 3; channel++) {
+      assert.ok(Math.abs(recovered[center + channel]! - colors[3]![channel]!) < 16);
+    }
   } finally { await rm(root, { recursive: true, force: true }); }
 });

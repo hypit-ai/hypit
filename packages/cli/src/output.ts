@@ -3,7 +3,6 @@ import { relative, resolve, sep } from "node:path";
 import { compareCodeUnits } from "@hypit/protocol";
 import type { CanonicalValue } from "@hypit/protocol";
 
-import type { OperationalMachineView } from "./machine-view.js";
 import { CliUsageError } from "./usage-error.js";
 
 export type CliTerminal = {

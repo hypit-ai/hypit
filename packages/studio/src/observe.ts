@@ -13,7 +13,6 @@ import type {
 import type { ModuleRef } from "@hypit/hypit/protocol";
 import type { StudioObservedValue, StudioPlacement, StudioTemporalDomainSourceMap } from "@hypit/studio-companion";
 
-import type { Range } from "./shared.js";
 import type { StudioCompanionRegistry } from "./studio-registry.js";
 
 export type ObservedValue = StudioObservedValue;

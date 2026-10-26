@@ -19,7 +19,7 @@ append that can be chained once per child.
 
 `ImageSlot` deliberately accepts only an image Blob. A raw video Blob does not carry the frame
 domain or target-to-source sampling relation required by a Visual video element; a component that
-needs timed footage should consume normalized media or a typed Surface and author that relation
+needs timed footage should consume `PreparedMedia` or a typed Surface and author that relation
 explicitly. The fixture stays small by not pretending those facts can be inferred from a MIME type.
 
 While the component belongs to one project, keep this directory under that project's `packages/`

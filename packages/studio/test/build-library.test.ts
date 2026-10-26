@@ -207,7 +207,7 @@ test("media listing includes active files, follows file references and leaves va
     outputs: {
       "portrait.image": image,
       "data.json": { type: mediaTypeRef, value: { kind: "build-file", path: "files/data.json", mediaType: "application/json", size: 20 } },
-      "normalized.video": { type: mediaTypeRef, value: { kind: "value", path: "values/normalized.json" } },
+      "prepared.video": { type: mediaTypeRef, value: { kind: "value", path: "values/prepared.json" } },
       "semantic.take": { type: mediaTypeRef, value: { kind: "value", path: "values/semantic.json" } },
     },
   }, {

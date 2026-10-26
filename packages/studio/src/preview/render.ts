@@ -1,7 +1,7 @@
 import type { Composition } from "@hypit/composition";
 import { compileHtmlProgram, materializeHtmlProgram } from "@hypit/html-program";
 import type { HtmlProgram } from "@hypit/html-program";
-import { materializePlaybackAudio } from "@hypit/html-playback";
+import { lowerPlaybackAudio } from "@hypit/html-playback";
 import { compileAudioProgram } from "@hypit/media-operations";
 import type { Timeline } from "@hypit/timeline";
 
@@ -37,7 +37,7 @@ export function renderStudioHtmlProgram(input: RenderInput): { readonly document
     }
     return `/__studio/material/${artifact.resource}`;
   });
-  const audio = materializePlaybackAudio(
+  const audio = lowerPlaybackAudio(
     compileAudioProgram(input.composition, input.timeline),
     (artifact) => {
       if (input.served?.has(artifact.resource) !== true) {
@@ -46,5 +46,5 @@ export function renderStudioHtmlProgram(input: RenderInput): { readonly document
       return `/__studio/material/${artifact.resource}`;
     },
   );
-  return { document, html, preview: injectRuntimeShim(html, audio) };
+  return { document, html, preview: injectRuntimeShim(html, audio, document) };
 }

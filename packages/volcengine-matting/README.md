@@ -23,7 +23,7 @@ formats. The service's flat-background MP4 option is a different output treatmen
 <import as="media" from="@hypit/media@1"/>
 
 <time:Clock id="clock" frame-rate="30"/>
-<mediaop:Normalize id="cutout-media" source={cutout.video} clock={clock}
+<mediaop:Prepare id="cutout-media" source={cutout.video}
   video="primary-moving" audio="default" span-authority="video"/>
 <whisperx:Transcription id="opening-transcription"
   media={cutout-media.media} language="en"/>
@@ -39,21 +39,22 @@ formats. The service's flat-background MP4 option is a different output treatmen
 </semantic:Projection>
 ```
 
-This excerpt assumes the performance and Script exist. Normalize keeps the transparent picture and
-prepares the selected embedded audio. WhisperX associates the Script Segment with the media-local
-domain; Timeline uses its Extent while semantic projection consumes the equal-length domain/Window
-relation and then discards it. Use `cutout-media.media` with `during={speech.opening}` in independent
-Visual and Audio Clips. Screen position and stack order remain visual choices.
+This excerpt assumes the performance and Script exist. Prepare preserves the selected transparent
+picture, audio and exact source relation for composition. The current WhisperX input is adapted
+separately from media preparation; it associates the Script Segment with the prepared local domain. Timeline
+uses the prepared Extent while semantic projection consumes the equal-length speech-domain/Window
+relation. Use `cutout-media.media` with `during={speech.opening}` in independent Visual and Audio
+Clips. Screen position and stack order remain visual choices.
 
-For independently timed footage, normalize `cutout.video` with `audio="none"` when its sound is
+For independently timed footage, prepare `cutout.video` with `audio="none"` when its sound is
 unwanted, then use `cutout-media.media` in a [Visual Clip](../visual-track/README.md). No semantic
-alignment is needed for that overlay. Existing transparency can enter Normalize directly.
+alignment is needed for that overlay. Existing transparency can enter Prepare directly.
 
 For example, this alternative uses the existing program's Timeline and an authored Selection:
 
 ```svml
 <import as="visual" from="@hypit/visual-track@1"/>
-<mediaop:Normalize id="overlay-media" source={cutout.video} clock={clock}
+<mediaop:Prepare id="overlay-media" source={cutout.video}
   video="primary-moving" audio="none" span-authority="video"/>
 <visual:Track id="overlay" timeline={speech.timeline}>
   <visual:Clip media={overlay-media.media} during={example}
@@ -65,9 +66,9 @@ The Frame, treatment Recipe and Selection belong to the composition. Add `overla
 with the desired `<film:Track id="...">`; that parent membership names the occurrence, while its sibling position sets paint order. The
 performance underneath continues to supply semantic time.
 
-The same processed clip can serve either role; matting does not choose its Track or timeline.
-The local media Provider's Transform currently emits opaque MP4. When a clip also needs trimming
-or retiming, apply that operation before matting, then normalize the cutout for its intended role.
+The same processed clip can serve either role; matting does not choose its Track or timeline. When
+a cutout needs trimming or retiming in the composition, apply `mediaop:Transform` to its prepared
+media. The relation remains lazy until a visual or audio consumer requests signal.
 
 Review motion, hair, hands, translucent edges and the selected speech against the intended
 background. Reuse `cutout.video` or the prepared Output through the Run when changing placement,

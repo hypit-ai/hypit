@@ -1,20 +1,19 @@
-import type { StudioEditHandle, StudioTemporalDomainAnchor, StudioTemporalDomainEditTarget, StudioTemporalInstantProjection } from "@hypit/studio-companion";
+import type { StudioEditHandle, StudioTemporalDomainAnchor, StudioTemporalDomainEditTarget } from "@hypit/studio-companion";
+import type { FrameSpan } from "@hypit/timeline";
 
 export type DomainTarget = StudioTemporalDomainEditTarget;
-
-type Span = { readonly startFrame: number; readonly endFrameExclusive: number };
 
 /** Project only the domain write exposed by the handle. This does not invert expressions. */
 export function domainGestureSpan(
   anchors: readonly StudioTemporalDomainAnchor[], handle: StudioEditHandle, target: DomainTarget,
-): Span | undefined {
+): FrameSpan | undefined {
   const domain = handle.domain;
   const temporal = handle.temporal;
   if (!domain || !temporal || target.kind !== domain.kind
     || target.companion !== domain.companion || target.domainId !== domain.domainId
     || target.itemId !== domain.itemId) return undefined;
   const byId = new Map(anchors.map((anchor, order) => [anchor.id, { ...anchor, order }]));
-  let span: Span;
+  let span: FrameSpan;
   if (domain.kind === "point" && target.kind === "point") {
     const previous = byId.get(domain.anchorId);
     const next = byId.get(target.anchorId);

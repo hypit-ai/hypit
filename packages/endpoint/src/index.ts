@@ -1,7 +1,6 @@
 import type {
   CanonicalValue,
   CapabilityRef,
-  ModuleRef,
   Need,
   Value,
   TypeRef,
@@ -12,7 +11,6 @@ import type {
   CredentialAcquisition,
   CredentialRef,
   CredentialValue,
-  ExecutionDiagnostic,
   OperationFailure,
   OperationProgress,
   CapacityResourceClaim,

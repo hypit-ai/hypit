@@ -3,7 +3,6 @@ import type {
   InvokeProducerCommand,
   ProducerRef,
   Value,
-  TypeRef,
   TypedRecord,
 } from "@hypit/protocol";
 import type { Facet } from "@hypit/facet";

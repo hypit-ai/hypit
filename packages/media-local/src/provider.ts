@@ -5,11 +5,9 @@ import {
   executeExtractFrame,
   executeInspectMedia,
   executeMuxProgramMedia,
-  executeNormalizeMedia,
   executeProjectSpeechEvidenceAudio,
   executeRenderTimelineAudio,
   executeRenderStillVideo,
-  executeTransformMedia,
 } from "./execute.js";
 import type { MediaExecutionEnvironment, MediaOperationResult } from "./execute.js";
 import { mediaOperationsCapabilities } from "@hypit/media-operations";
@@ -87,20 +85,6 @@ export function createLocalMediaProvider(config: CreateLocalMediaProviderOptions
         capability: mediaOperationsCapabilities.inspect,
         returns: mediaTypes.inspection,
         handler: operation(executeInspectMedia),
-      },
-      {
-        lifecycle: "immediate" as const,
-        transient: true,
-        capability: mediaOperationsCapabilities.normalize,
-        returns: mediaTypes.synchronized,
-        handler: operation(executeNormalizeMedia),
-      },
-      {
-        lifecycle: "immediate" as const,
-        transient: true,
-        capability: mediaOperationsCapabilities.transform,
-        returns: blobTypes.blob,
-        handler: operation(executeTransformMedia),
       },
       {
         lifecycle: "immediate" as const,

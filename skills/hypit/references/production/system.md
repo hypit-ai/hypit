@@ -5,18 +5,18 @@ delivery. [Production navigation](index.md) routes each relationship to its deta
 
 ## Material becomes useful through explicit relationships
 
-A supplied file, generated Output and reused Result can provide the same material Type. Normalize
-timed media to select its streams, establish a finite local temporal domain and publish its Extent.
+A supplied file, generated Output and reused Result can provide the same material Type. Prepare
+timed media to select its streams, establish a finite exact local temporal domain and publish its Extent.
 The work then decides how to use those facts.
 
 For spoken work, Script names meaningful passages and events. `NarrativeAlignment` locates one
-Segment on a source-local domain. The normalized medium supplies picture and sound. Connect the
+Segment on a source-local domain. The prepared medium supplies picture and sound. Connect the
 recording to alignment, picture and sound according to the relationships the production uses.
 
 A-roll names the performance carrying a passage. Its picture may fill the frame, move, disappear or
 be absent while its sound and semantic relationships continue. B-roll, generated shots, imported
 pictures, narration, music and effects each connect their media to the role they serve.
-[Media preparation](media.md) owns supplied material, normalization and processed variants.
+[Media preparation](media.md) owns supplied material, preparation and processed variants.
 
 ## Timeline publishes absolute time
 
@@ -46,12 +46,12 @@ and several components can respond to the same event. [Spatial layout](spatial.m
 A Visual Clip combines one picture source, an absolute Window, a destination Frame and source
 sampling. Its declaration contributes to Track-local item order; Film separately places the complete
 VisualTrack through a named parent membership. An Audio Clip combines one audio source, an absolute Window, source sampling and
-mix treatment. One synchronized medium can supply both occurrences.
+mix treatment. One prepared medium can supply both occurrences.
 
 Keep three times distinct:
 
 - Timeline time locates the contribution in the film;
-- source time selects a media sample;
+- temporal sampling selects a position in prepared media;
 - component-local time drives its visible state.
 
 Behavior spanning several occurrences—such as a continuing presenter, slideshow, crossfade or

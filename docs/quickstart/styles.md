@@ -149,8 +149,8 @@ Then select them with timed Uses in the Track:
 
 ## Visual Track Clips
 
-Visual Clips keep space, source-time, pixel treatment and local motion separate. A `SpatialFrame`
-owns position and size. Fitting and the optional partial source-time relation are direct facts of
+Visual Clips keep space, temporal sampling, pixel treatment and local motion separate. A `SpatialFrame`
+owns position and size. Fitting and the optional partial temporal sampling relation are direct facts of
 this occurrence. A
 treatment Recipe may reuse image and Frame paint, while a typed Motion is reusable affine/opacity
 keyframes rather than a closed effect name.
@@ -173,7 +173,7 @@ visual.product {
 | `fit` | Direct `contain`, `cover`, `fit-width`, `fit-height`, `native`, `scale-down`, or `stretch` |
 | `frame-x`, `frame-y` | Alignment point inside the placement Frame |
 | `content-x`, `content-y` | Independently selected focal point inside the source |
-| `source-time` / `Map` | Reusable or inline partial mapping for timed-source coordinates |
+| `Map` child | Clip-owned partial mapping for timed-source coordinates |
 | `frame-paint` | Solid or gradient Paint behind the sampled source |
 | `clip`, `radius`, `padding` | Frame clipping and inset |
 | `border-*`, `shadows` | Frame-owned border and ordered shadows |

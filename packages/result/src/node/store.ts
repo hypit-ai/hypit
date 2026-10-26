@@ -16,7 +16,7 @@ import { createReadStream } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
 import { assertOrderedBuildId, buildIdCreatedAt, compareCodeUnits, sameType } from "@hypit/protocol";
-import type { BlobRef, TypeRef } from "@hypit/protocol";
+import type { BlobRef } from "@hypit/protocol";
 
 import type {
   BuildResultResourceSource,
@@ -405,7 +405,7 @@ export class FileBuildResult {
     this.directory = resolve(directory);
   }
 
-  static async create(root: string, seed: BuildResultSeed, externalFiles: ExternalFileAccess = localExternalFiles): Promise<FileBuildResult> {
+  static async create(root: string, seed: BuildResultSeed): Promise<FileBuildResult> {
     assertOrderedBuildId(seed.id);
     assertBuildResultSeed(seed);
     const publication = await normalizePublicationPlan({
@@ -524,7 +524,7 @@ export class FileBuildResultRepository implements BuildResultRepository {
   }
 
   async create(seed: BuildResultSeed): Promise<FileBuildResult> {
-    return await FileBuildResult.create(this.root, seed, this.externalFiles);
+    return await FileBuildResult.create(this.root, seed);
   }
 
   async openWriter(build: string): Promise<FileBuildResult | undefined> {

@@ -1,6 +1,6 @@
 import type { BlobAttachment } from "@hypit/hypit/workspace";
 import type { ExecutorOptions, ProducerRegistry } from "@hypit/hypit/executor";
-import type { BuildDefinition, BuildState, CanonicalValue, CapabilityRef, Need, Value } from "@hypit/hypit/protocol";
+import type { BuildDefinition, BuildState, CapabilityRef, Need, Value } from "@hypit/hypit/protocol";
 import type {
   CapacityReservation,
   CredentialAcquisition,

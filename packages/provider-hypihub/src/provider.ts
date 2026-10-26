@@ -19,8 +19,8 @@ import type { WhisperXTranscriptResponse } from "@hypit/whisperx";
 import { hypiHubRouteForCapability, hypiHubRoutes } from "./routes.js";
 import type { HypiHubModelOperation } from "./routes.js";
 import { HypiHubUploader } from "./upload.js";
-import { createHypiHubAuth, hypiHubCredentialNeedsRefresh } from "./oauth.js";
-import type { HypiHubAuth } from "./oauth.js";
+import { createHypiHubAuth, createHypiHubAuthSession, hypiHubCredentialNeedsRefresh } from "./oauth.js";
+import type { HypiHubAuth, HypiHubAuthSession } from "./oauth.js";
 import { HypiHubHttpError, HypiHubServiceError, hypiHubJobFailure } from "./errors.js";
 
 function providerVersion(): string {
@@ -299,22 +299,12 @@ class HypiHubClient {
   }
 }
 
-function authFor(context: EndpointInvocationContext, client: HypiHubClient): HypiHubAuth {
-  return createHypiHubAuth({
-    credential: credential(context.credentials),
-    baseUrl: client.baseUrl,
-    requestTimeoutMs: client.oauthTimeout,
-    fetch: client.fetcher,
-  });
+function authFor(context: EndpointInvocationContext, session: HypiHubAuthSession): HypiHubAuth {
+  return session.auth(credential(context.credentials));
 }
 
-function pricingAuth(credentials: Readonly<Record<string, EndpointCredential>>, client: HypiHubClient): HypiHubAuth {
-  return createHypiHubAuth({
-    credential: credential(credentials),
-    baseUrl: client.baseUrl,
-    requestTimeoutMs: client.oauthTimeout,
-    fetch: client.fetcher,
-  });
+function pricingAuth(credentials: Readonly<Record<string, EndpointCredential>>, session: HypiHubAuthSession): HypiHubAuth {
+  return session.auth(credential(credentials));
 }
 
 function pricingModel(request: import("@hypit/hypit/endpoint").EndpointRequest, transcriptionModel: string): string | undefined {
@@ -328,7 +318,11 @@ function pricingModel(request: import("@hypit/hypit/endpoint").EndpointRequest, 
 }
 
 /** Read HypiHub's own current model-pricing document without calculating a request total. */
-function hypiHubPricingReader(client: HypiHubClient, transcriptionModel: string): EndpointPricingReader {
+function hypiHubPricingReader(
+  client: HypiHubClient,
+  transcriptionModel: string,
+  authSession: HypiHubAuthSession,
+): EndpointPricingReader {
   const documents = new Map<string, Promise<Record<string, unknown>>>();
   return async ({ request, credentials }) => {
     const model = pricingModel(request, transcriptionModel);
@@ -336,7 +330,7 @@ function hypiHubPricingReader(client: HypiHubClient, transcriptionModel: string)
     const path = `/pricing?model=${encodeURIComponent(model)}`;
     let pending = documents.get(model);
     if (pending === undefined) {
-      pending = credentials().then(async (resolved) => await client.json(path, pricingAuth(resolved, client)));
+      pending = credentials().then(async (resolved) => await client.json(path, pricingAuth(resolved, authSession)));
       documents.set(model, pending);
     }
     const response = await pending;
@@ -440,11 +434,16 @@ async function complete(client: HypiHubClient, auth: HypiHubAuth, route: (typeof
   return { status: "completed", result: route.packageResult(blobs) };
 }
 
-async function prepareGeneration(client: HypiHubClient, context: EndpointInvocationContext, publicAssetUrl: CreateHypiHubProviderOptions["publicAssetUrl"]) {
+async function prepareGeneration(
+  client: HypiHubClient,
+  authSession: HypiHubAuthSession,
+  context: EndpointInvocationContext,
+  publicAssetUrl: CreateHypiHubProviderOptions["publicAssetUrl"],
+) {
   const route = hypiHubRouteForCapability(context.need.capability);
   assert(route !== undefined, "HypiHub does not implement this exact capability");
   const request = route.prepare(context.need.constraints);
-  const auth = authFor(context, client);
+  const auth = authFor(context, authSession);
   await context.reportProgress?.({ phase: `Reading HypiHub model catalogue: ${request.model} (${request.operation})` });
   if (!await verifyModelRoute(client, auth, request.model, request.operation)) {
     await context.reportDiagnostic?.({ level: "warning",
@@ -466,8 +465,13 @@ async function prepareGeneration(client: HypiHubClient, context: EndpointInvocat
   return { route, auth, compiled, operation: request.operation };
 }
 
-async function synthesizeAudio(client: HypiHubClient, context: EndpointInvocationContext, publicAssetUrl: CreateHypiHubProviderOptions["publicAssetUrl"]): Promise<Value> {
-  const { route, auth, compiled, operation } = await prepareGeneration(client, context, publicAssetUrl);
+async function synthesizeAudio(
+  client: HypiHubClient,
+  authSession: HypiHubAuthSession,
+  context: EndpointInvocationContext,
+  publicAssetUrl: CreateHypiHubProviderOptions["publicAssetUrl"],
+): Promise<Value> {
+  const { route, auth, compiled, operation } = await prepareGeneration(client, authSession, context, publicAssetUrl);
   assert(route.media === "audio", "HypiHub audio capabilities use an immediate endpoint");
   await context.reportProgress?.({ phase: `Submitting HypiHub request: ${compiled.model} (${operation})` });
   const audio = await client.speech(auth, { model: compiled.model, ...(compiled.input as Record<string, unknown>) });
@@ -475,11 +479,17 @@ async function synthesizeAudio(client: HypiHubClient, context: EndpointInvocatio
   return route.packageResult(artifacts);
 }
 
-function endpoint(client: HypiHubClient, pollIntervalMs: number, maxOperationMs: number, publicAssetUrl: CreateHypiHubProviderOptions["publicAssetUrl"]): AsyncEndpoint {
+function endpoint(
+  client: HypiHubClient,
+  authSession: HypiHubAuthSession,
+  pollIntervalMs: number,
+  maxOperationMs: number,
+  publicAssetUrl: CreateHypiHubProviderOptions["publicAssetUrl"],
+): AsyncEndpoint {
   return {
     async start(context: EndpointStartContext) {
       try {
-        const { route, auth, compiled, operation } = await prepareGeneration(client, context, publicAssetUrl);
+        const { route, auth, compiled, operation } = await prepareGeneration(client, authSession, context, publicAssetUrl);
         assert(route.media !== "audio", "HypiHub audio capabilities use an immediate endpoint");
         const input = compiled.input as Record<string, unknown>;
         const path = operation === "image_edits" ? "/images/edits"
@@ -521,7 +531,7 @@ function endpoint(client: HypiHubClient, pollIntervalMs: number, maxOperationMs:
             receipt: { id: handle.jobId },
             failure: { code: "HYPIHUB_OPERATION_TIMEOUT", message: `HypiHub job ${handle.jobId} exceeded this Provider's operationTimeoutMs (${maxOperationMs}); remote outcome is unknown` } };
         }
-        const job = await client.json(`/jobs/${encodeURIComponent(handle.jobId)}`, authFor(context, client)); const status = job.status;
+        const job = await client.json(`/jobs/${encodeURIComponent(handle.jobId)}`, authFor(context, authSession)); const status = job.status;
         if (status === "queued" || status === "running" || status === "in_progress") return wakeAfter(canonicalize(handle), pollIntervalMs, Date.now(), { phase: String(status) });
         const rejected = hypiHubJobFailure(job, handle.jobId);
         if (rejected !== undefined) return { ...failure(rejected), receipt: { id: handle.jobId } };
@@ -536,7 +546,7 @@ function endpoint(client: HypiHubClient, pollIntervalMs: number, maxOperationMs:
         const handle = object(context.handle, "HypiHub handle") as unknown as Handle;
         const route = hypiHubRouteForCapability(context.need.capability);
         assert(route !== undefined && handle.route === capabilityKey(route.capability), "HypiHub collection route differs");
-        return await complete(client, authFor(context, client), route, handle.jobId, context.resources);
+        return await complete(client, authFor(context, authSession), route, handle.jobId, context.resources);
       } catch (error) { return retrying(error, context.handle, pollIntervalMs) ?? failure(error); }
     },
 
@@ -589,9 +599,14 @@ export function createHypiHubProvider(options: CreateHypiHubProviderOptions = {}
     downloadAttempts,
     fetcher: options.fetch ?? globalThis.fetch,
   });
-  const asyncEndpoint = endpoint(client, options.pollIntervalMs ?? 10_000, operationTimeoutMs, options.publicAssetUrl);
+  const authSession = createHypiHubAuthSession({
+    baseUrl: client.baseUrl,
+    requestTimeoutMs: client.oauthTimeout,
+    fetch: client.fetcher,
+  });
+  const asyncEndpoint = endpoint(client, authSession, options.pollIntervalMs ?? 10_000, operationTimeoutMs, options.publicAssetUrl);
   const audioEndpoint: ImmediateEndpointHandler = async (context) =>
-    await synthesizeAudio(client, context, options.publicAssetUrl);
+    await synthesizeAudio(client, authSession, context, options.publicAssetUrl);
   const transcriptionModel = options.transcriptionModel?.trim() || "victor-upmeet/whisperx";
   const whisperXEndpoint: ImmediateEndpointHandler = async (context) => {
     try {
@@ -600,7 +615,7 @@ export function createHypiHubProvider(options: CreateHypiHubProviderOptions = {}
       assert(bytes !== undefined && bytes.byteLength === request.audio.size,
         `WhisperX evidence Resource ${request.audio.resource} is unavailable or has changed`);
       assertWhisperXEvidenceWav(bytes, request.sampleFrames);
-      const auth = authFor(context, client);
+      const auth = authFor(context, authSession);
       if (!await verifyModelRoute(client, auth, transcriptionModel, "transcriptions")) {
         await context.reportDiagnostic?.({ level: "warning",
           message: `HypiHub model catalogue is temporarily unavailable for ${transcriptionModel}; proceeding without a support verdict` });
@@ -631,7 +646,7 @@ export function createHypiHubProvider(options: CreateHypiHubProviderOptions = {}
   return defineEndpoint({
     instance: options.instance ?? "hypihub.default", pool: options.pool ?? options.instance ?? "hypihub.default",
     pricing: { kind: "page", url: "https://hypit.ai/commercial/pricing/" },
-    readPricing: hypiHubPricingReader(pricingClient, transcriptionModel),
+    readPricing: hypiHubPricingReader(pricingClient, transcriptionModel, authSession),
     credentials: { apiKey: options.apiKey ?? credentialRef("local", "hypihub.oauth") },
     credentialInputs: { apiKey: {
       label: "HypiHub credential",

@@ -181,7 +181,7 @@ export function createRankingFragment(
       ["move", sound.moveName, rankingProducers.appendMoveSound],
     ] as const) {
       if (inputName === undefined) continue;
-      inputs.push({ name: inputName, type: mediaTypes.synchronized });
+      inputs.push({ name: inputName, type: mediaTypes.prepared });
       const id = `sound-${kind}`;
       operations.push({
         id, producer, inputs: { sounds, media: input(inputName) }, result: { kind: "output" as const, name: "sounds" },

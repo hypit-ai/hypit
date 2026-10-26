@@ -5,9 +5,9 @@ export {
 export {
   extractAudioFragment,
   extractFrameFragment,
-  synchronizedMediaFragment,
   stillVideoFragment,
   createStillVideoFragment,
+  preparedMediaFragment,
   transformMediaFragment,
 } from "./fragment.js";
 export {
@@ -21,10 +21,12 @@ export {
 export { mediaOperationsCapabilities, mediaOperationsManifest, mediaOperationsMarkupSurfaces, mediaOperationsModuleRef, mediaOperationsProducers, mediaOperationsTypes, audioProgramSchema, mediaSelectionRequestSchema, audioExtractionRequestSchema, frameExtractionRequestSchema, stillVideoRequestSchema, stillVideoLayoutSchema, mediaTransformProgramSchema } from "./manifest.js";
 export {
   sealMediaSelectionRequest,
+  selectAudioStream,
   selectMediaStreams,
+  selectVideoStream,
   verifyMediaSelectionRequest,
 } from "./selection.js";
-export { decodeSynchronizedMediaSurface, decodeStillVideoSurface } from "./surface.js";
+export { decodePreparedMediaSurface, decodeStillVideoSurface } from "./surface.js";
 export {
   decodeExtractAudioSurface,
   decodeExtractFrameSurface,
@@ -38,12 +40,11 @@ export {
   sealStillVideoRequest,
   planStillVideoSegments,
   bindStillVideoSource,
-  selectAudioStream,
-  selectVideoStream,
   verifyAudioExtractionRequest,
   verifyFrameExtractionRequest,
   verifyMediaTransformProgram,
   verifyStillVideoLayout,
   verifyStillVideoRequest,
+  transformPreparedMedia,
 } from "./operations.js";
 export type * from "./types.js";

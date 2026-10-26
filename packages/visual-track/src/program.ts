@@ -3,9 +3,9 @@ import type { PresentVisualTrack } from "@hypit/composition";
 import { canonicalize } from "@hypit/hypit/protocol";
 import { assertSpatialFrame, assertSpatialPath } from "@hypit/spatial";
 import type { SpatialPath } from "@hypit/spatial";
-import { assertTemporalWindowFor } from "@hypit/temporal";
+import { assertTemporalWindowFor, exactTemporalValueFromFrames, resolveTemporalRelation, sealLocalTemporalDomain } from "@hypit/temporal";
 import type { TemporalWindow } from "@hypit/temporal";
-import { assertTimelineIdentity, timelineFrameCount } from "@hypit/timeline";
+import { assertFrameSpan, assertTimelineIdentity, timelineFrameCount } from "@hypit/timeline";
 import type { Timeline } from "@hypit/timeline";
 
 import {
@@ -96,8 +96,33 @@ export function appendVisualClip(
   assertSpatialFrame(frame);
   assertVisualClipSpec(spec);
   assertTemporalWindowFor(window, { timeline });
-  const resolvedLayers = resolveMediaLayerPrograms(layers, frame, spec.treatment);
   const duration = window.span.endFrameExclusive - window.span.startFrame;
+  const resolvedLayers = resolveMediaLayerPrograms(layers, frame, spec.treatment).map((layer) => {
+    if (layer.kind !== "sample" || layer.source.kind === "still") return layer;
+    let sourceDomain;
+    if (layer.source.kind === "timed") {
+      sourceDomain = layer.source.media.domain;
+    } else {
+      if (layer.source.surface.timing.kind === "still") return layer;
+      const timing = { frameRate: layer.source.surface.timing.frameRate, frameCount: layer.source.surface.timing.frameCount };
+      sourceDomain = sealLocalTemporalDomain({
+        id: `${spec.id}:${layer.id}:surface`,
+        duration: exactTemporalValueFromFrames(timing.frameCount, { frameRate: timing.frameRate }),
+      });
+    }
+    return {
+      ...layer,
+      sampling: { kind: "map" as const, value: resolveTemporalRelation({
+        target: sealLocalTemporalDomain({
+          id: `${spec.id}:${layer.id}:occurrence`,
+          duration: exactTemporalValueFromFrames(duration, timeline),
+        }),
+        source: sourceDomain,
+        clock: timeline,
+        ...(layer.sampling?.kind !== "relation" ? {} : { spec: layer.sampling.value }),
+      }) },
+    };
+  });
   if (spec.motion !== undefined) {
     assertVisualClipMotion(spec.motion, `Visual Clip ${spec.id} motion`);
     poseAnimation(spec.motion, duration);
@@ -115,38 +140,26 @@ export function appendVisualClip(
   return { clips: [...set.clips, addition] };
 }
 
-function assertSampleLayerForTimeline(layer: MediaSampleLayerProgram, timeline: Timeline, label: string): void {
+function assertSampleLayer(layer: MediaSampleLayerProgram, label: string): void {
   assertResolvedSampleLayer(layer, label);
-  const timing = layer.source.kind === "timed"
-    ? { frameRate: layer.source.frameRate, frameCount: layer.source.frameCount }
-    : layer.source.kind === "surface" && layer.source.surface.timing.kind === "frames"
-      ? layer.source.surface.timing
-      : undefined;
-  if (timing === undefined) {
-    assert(layer.sourceTime === undefined, `${label} is still material and cannot have source time.`);
+  const timed = layer.source.kind === "timed"
+    || layer.source.kind === "surface" && layer.source.surface.timing.kind === "frames";
+  if (!timed) {
+    assert(layer.sampling === undefined, `${label} is still material and cannot have temporal sampling.`);
     return;
   }
-  assert(
-    timing.frameRate.numerator === timeline.frameRate.numerator
-      && timing.frameRate.denominator === timeline.frameRate.denominator,
-    `${label} is not normalized to Timeline frame rate.`,
-  );
-  assert(layer.sourceTime !== undefined, `${label} requires source time.`);
+  assert(layer.sampling !== undefined, `${label} requires temporal sampling.`);
 }
 
 function assertClip(clip: VisualClipProgram, label: string): void {
   assert(clip !== null && typeof clip === "object" && !Array.isArray(clip), `${label} is invalid.`);
   assertMediaIdentity(clip.id, `${label}.id`);
   assertMediaIdentity(clip.subjectId, `${label}.subjectId`);
-  assert(clip.span !== null && typeof clip.span === "object" && !Array.isArray(clip.span),
-    `${label}.span is invalid.`);
-  assert(
-    Number.isSafeInteger(clip.span.startFrame)
-      && Number.isSafeInteger(clip.span.endFrameExclusive)
-      && clip.span.startFrame >= 0
-      && clip.span.endFrameExclusive > clip.span.startFrame,
-    `${label}.span is invalid.`,
-  );
+  try {
+    assertFrameSpan(clip.span);
+  } catch {
+    throw new Error(`${label}.span is invalid.`);
+  }
   assertSpatialFrame(clip.frame);
   assertVisualFrameTreatment(clip.treatment, `${label}.treatment`);
   if (clip.motion !== undefined) {
@@ -169,7 +182,7 @@ function assertVisualClipPrograms(clips: readonly VisualClipProgram[], label: st
 function assertClipForTimeline(clip: VisualClipProgram, timeline: Timeline, label: string): void {
   assert(clip.span.endFrameExclusive <= timelineFrameCount(timeline), `${label}.span is outside Timeline.`);
   for (const layer of clip.layers) {
-    if (layer.kind === "sample") assertSampleLayerForTimeline(layer, timeline, `${label}.${layer.id}`);
+    if (layer.kind === "sample") assertSampleLayer(layer, `${label}.${layer.id}`);
   }
 }
 
@@ -219,7 +232,7 @@ export function projectVisualTrack(timeline: Timeline, program: VisualTrackProgr
       id: clip.id,
       subjectId: clip.subjectId,
       span: { ...clip.span },
-      root: lowerVisualClipRoot(clip, timeline),
+      root: lowerVisualClipRoot(clip),
     })),
   });
   assertVisualTrackIdentity(track, timeline);

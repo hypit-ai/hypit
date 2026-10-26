@@ -23,7 +23,7 @@ hypit studio --run build.svrun
 | `--project <directory>` | 设置 Source 访问与修改的项目边界。 |
 | `--port <number>` | 指定浏览器服务端口，默认请求 `5179`。 |
 
-所选目标需要指向一个 Film 及其 Timeline。规范化媒体可以提供 Timeline Extent；当作品消费语义位置时，可选投影再发布对应的 Script 锚点。纯动画同样使用 Timeline，只需声明结束时间，不需要表演媒体。两者都支持视觉组件与属性编辑。显示编排所需的素材应已通过 Run 提供。Studio 可以完成所选 Runtime 支持的媒体准备；生成和编码渲染通过 `hypit build` 提交。
+所选目标需要指向一个 Film 及其 Timeline。准备媒体可以提供 Timeline Extent；当作品消费语义位置时，可选投影再发布对应的 Script 锚点。纯动画同样使用 Timeline，只需声明结束时间，不需要表演媒体。两者都支持视觉组件与属性编辑。显示编排所需的素材应已通过 Run 提供。Studio 可以完成所选 Runtime 支持的媒体准备；生成和编码渲染通过 `hypit build` 提交。
 
 ## 在 Comments 一起看作品
 

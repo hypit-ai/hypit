@@ -2,9 +2,10 @@ import { mkdir, open, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import { materializeHtmlProgram, selectHtmlArtifacts } from "@hypit/html-program";
-import type { HtmlProgram, HtmlFrameSpan } from "@hypit/html-program";
+import type { HtmlProgram } from "@hypit/html-program";
 import type { CompositableSurfaceRef } from "@hypit/media";
 import type { BlobRef } from "@hypit/hypit/protocol";
+import type { FrameSpan } from "@hypit/timeline";
 
 /** Reads one execution resource. Whose store it comes from is the caller's business. */
 export type HtmlArtifactReader = (
@@ -54,7 +55,7 @@ export async function stageHtmlProgram(options: {
   readonly read: HtmlArtifactReader;
   readonly validateSurface?: HtmlSurfaceValidator;
   /** Whole-request absolute selection. Omit only when every frame may be rendered. */
-  readonly frameSelection?: readonly HtmlFrameSpan[];
+  readonly frameSelection?: readonly FrameSpan[];
   /** Maximum complete Artifact read/write/validation lifecycles in flight. */
   readonly maxConcurrentArtifacts?: number;
   readonly signal?: AbortSignal;

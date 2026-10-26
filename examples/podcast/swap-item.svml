@@ -179,17 +179,17 @@
     left="0%" top="0%" right="100%" bottom="100%"/>
   <time:Clock id="clock" frame-rate="30"/>
 
-  <mediaop:Normalize id="soundtrack-media" source={soundtrack}
-    video="none" audio="default" span-authority="audio" clock={clock}/>
+  <mediaop:Prepare id="soundtrack-media" source={soundtrack}
+    video="none" audio="default" span-authority="audio"/>
 
-  <mediaop:Normalize id="opening-media" source={opening-take.video}
-    video="primary-moving" audio="default" span-authority="video" clock={clock}/>
-  <mediaop:Normalize id="daily-retinol-media" source={daily-retinol-take.video}
-    video="primary-moving" audio="default" span-authority="video" clock={clock}/>
-  <mediaop:Normalize id="skin-is-asking-media" source={skin-is-asking-take.video}
-    video="primary-moving" audio="default" span-authority="video" clock={clock}/>
-  <mediaop:Normalize id="lifestyle-media" source={lifestyle-montage.video}
-    video="primary-moving" audio="none" span-authority="video" clock={clock}/>
+  <mediaop:Prepare id="opening-media" source={opening-take.video}
+    video="primary-moving" audio="default" span-authority="video"/>
+  <mediaop:Prepare id="daily-retinol-media" source={daily-retinol-take.video}
+    video="primary-moving" audio="default" span-authority="video"/>
+  <mediaop:Prepare id="skin-is-asking-media" source={skin-is-asking-take.video}
+    video="primary-moving" audio="default" span-authority="video"/>
+  <mediaop:Prepare id="lifestyle-media" source={lifestyle-montage.video}
+    video="primary-moving" audio="none" span-authority="video"/>
 
   <whisperx:Transcription id="opening-semantic-transcription" media={opening-media.media} language="en"/>
   <speechalign:Alignment id="opening-semantic" narrative={story}

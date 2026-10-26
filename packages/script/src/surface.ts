@@ -99,7 +99,7 @@ export function decodeScriptSurface(input: ScriptSurfaceInput): ScriptSurfaceOut
       ...parsed.segments.map((segment) => ({
         id: `${rawId}.segment.${segment.id}`,
         type: narrativeSegmentRefType,
-        value: (narrativeSegmentExcerptValue(parsed, segment, rawId)),
+        value: (narrativeSegmentExcerptValue(segment, rawId)),
         range: segment.range,
       })),
       ...parsed.segments.flatMap((segment) => [

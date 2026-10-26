@@ -1,8 +1,9 @@
 import { injectHtmlPlayback } from "@hypit/html-playback";
+import type { HtmlProgram } from "@hypit/html-program";
 
 /** Studio host notification layered over the shared browser playback adapter. */
-export function injectRuntimeShim(html: string, audio = ""): string {
-  const playback = injectHtmlPlayback(html, audio);
+export function injectRuntimeShim(html: string, audio = "", program?: HtmlProgram): string {
+  const playback = injectHtmlPlayback(html, audio, program);
   const ready = `window.__hypitFrameReady.then(function () {
     if (window.parent) window.parent.postMessage({ type: 'hypit-preview-ready' }, '*');
   });\n`;

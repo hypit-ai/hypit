@@ -25,7 +25,6 @@ import type {
   RawSurfaceHandler,
   MarkupSource,
   StructuredSurfaceHandler,
-  SurfaceComponentDraft,
   SurfaceDecodeOutput,
   SurfaceResolvedReference,
   RegisteredSurface,

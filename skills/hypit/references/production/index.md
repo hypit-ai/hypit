@@ -5,7 +5,7 @@ that every task must complete. [System relationships](system.md) explains the co
 Creation and the relevant [Format/Craft](../playbooks/index.md) supply the creative decisions.
 
 For performance-led work, including pure A-roll and short drama, author the intended passage in
-Script and let accepted normalized media establish its real extent. Place that extent in Timeline,
+Script and let accepted prepared media establish its real extent. Place that extent in Timeline,
 then present explicit picture and sound through Visual and Audio Tracks. Add NarrativeAlignment when
 Caption, semantic timing or another consumer needs positions inside the performed passage. Semantic
 organization remains valuable even when no consumer needs word-level timing or MG.
@@ -26,7 +26,7 @@ For a standalone asset edit, follow the actual material operation and deliver it
 
 | Current question | Owner |
 | --- | --- |
-| Files, generated/reused outputs, stream selection, normalization, local domains, semantic alignment or processed variants | [Media preparation](media.md) |
+| Files, generated/reused outputs, stream selection, preparation, local domains, semantic alignment or processed variants | [Media preparation](media.md) |
 | Timeline end, Instants, Windows, Extents, gaps and overlap | [Timeline](timeline.md) |
 | Semantic events, clock positions, offsets, durations and timing edits | [Timing](timing.md) |
 | Canvas, destination Frames, source extents, fit, crop and coordinates | [Spatial layout](spatial.md) |

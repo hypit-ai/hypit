@@ -1,8 +1,19 @@
-import { assertClockIdentity, assertTimelineIdentity } from "@hypit/timeline";
+import { assertTimelineIdentity } from "@hypit/timeline";
 import type { Timeline } from "@hypit/timeline";
 
+import {
+  assertExactTemporalValue,
+  compareExactTemporalValues,
+  exactTemporalZero,
+  resolveTemporalBoundary,
+} from "./exact.js";
 import { assertTemporalWindowFor } from "./projection.js";
-import type { LocalTemporalDomain, TemporalWindow } from "./types.js";
+import type {
+  ExactTemporalValue,
+  LocalTemporalDomain,
+  TemporalBoundaryPolicy,
+  TemporalWindow,
+} from "./types.js";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -19,39 +30,42 @@ export function sealLocalTemporalDomain(value: LocalTemporalDomain): LocalTempor
 
 export function assertLocalTemporalDomain(value: LocalTemporalDomain): void {
   assertIdentity(value.id, "LocalTemporalDomain.id");
-  assertClockIdentity(value);
-  assert(Number.isSafeInteger(value.frameCount) && value.frameCount > 0,
-    "LocalTemporalDomain.frameCount is invalid.");
+  assertExactTemporalValue(value.duration, "LocalTemporalDomain.duration");
+  assert(compareExactTemporalValues(value.duration, exactTemporalZero()) > 0,
+    "LocalTemporalDomain.duration must be positive.");
 }
 
 /**
- * Verify the exact, total coordinate relation used by a domain-owned projector.
- * The relation is deliberately not materialized as a reusable author value.
+ * Verify that one complete local domain owns the supplied Window. The default
+ * cover rule keeps the final partial output frame instead of truncating media.
  */
-export function assertExactDomainWindow(
+export function assertDomainWindow(
   domain: LocalTemporalDomain,
   window: TemporalWindow,
   timeline: Timeline,
+  policy: TemporalBoundaryPolicy = "cover",
 ): void {
   assertLocalTemporalDomain(domain);
   assertTimelineIdentity(timeline);
   assertTemporalWindowFor(window, { timeline });
-  assert(domain.frameRate.numerator === timeline.frameRate.numerator
-    && domain.frameRate.denominator === timeline.frameRate.denominator,
-  `Local temporal domain ${domain.id} is not normalized to Timeline ${timeline.id}.`);
-  assert(window.span.endFrameExclusive - window.span.startFrame === domain.frameCount,
+  const frameCount = resolveTemporalBoundary(domain.duration, timeline, policy);
+  assert(window.span.endFrameExclusive - window.span.startFrame === frameCount,
     `Window ${window.id} does not cover the complete local temporal domain ${domain.id}.`);
 }
 
-/** Project one closed local boundary through an exact domain-to-Window relation. */
-export function projectDomainFrame(
+/** Resolve one exact local boundary after the domain has been explicitly placed. */
+export function projectDomainPosition(
   domain: LocalTemporalDomain,
   window: TemporalWindow,
   timeline: Timeline,
-  frame: number,
+  position: ExactTemporalValue,
+  policy: TemporalBoundaryPolicy = "nearest",
 ): number {
-  assertExactDomainWindow(domain, window, timeline);
-  assert(Number.isSafeInteger(frame) && frame >= 0 && frame <= domain.frameCount,
-    `Local frame lies outside local temporal domain ${domain.id}.`);
-  return window.span.startFrame + frame;
+  assertDomainWindow(domain, window, timeline);
+  assertExactTemporalValue(position, "Local temporal position");
+  assert(compareExactTemporalValues(position, exactTemporalZero()) >= 0
+    && compareExactTemporalValues(position, domain.duration) <= 0,
+  `Local position lies outside local temporal domain ${domain.id}.`);
+  if (compareExactTemporalValues(position, domain.duration) === 0) return window.span.endFrameExclusive;
+  return window.span.startFrame + resolveTemporalBoundary(position, timeline, policy);
 }

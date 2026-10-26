@@ -1,9 +1,9 @@
-import { mediaFrameRangeSamples, verifyMediaFrameRange } from "@hypit/media";
+import { clockFrameSpanSamples, assertFrameSpan } from "@hypit/timeline";
 import { mediaComponent } from "@hypit/media";
 import type { ProducerPackage } from "@hypit/hypit/producer";
 import type { RefinementPackage } from "@hypit/hypit/refinement";
-import { verifyMediaInspection, verifyMediaStreamSelection, verifyMuxedMedia, verifyTimelineVisual, verifySynchronizedMedia, verifyTimelineAudio } from "@hypit/media";
-import type { MediaInspection, MediaStreamSelection, MuxedMedia, TimelineVisual, TimelineAudio } from "@hypit/media";
+import { sameVisualDeliverySpec, verifyMediaDeliverySpec, verifyMediaInspection, verifyMuxedMedia, verifyPreparedMedia, verifyTimelineVisual, verifyTimelineAudio } from "@hypit/media";
+import type { MediaDeliverySpec } from "@hypit/media";
 import { assertClockIdentity } from "@hypit/timeline";
 import type { Clock, Timeline } from "@hypit/timeline";
 import { durationInFrames } from "@hypit/temporal";
@@ -19,11 +19,11 @@ import {
 import { mediaOperationsProducers, mediaOperationsTypes } from "./manifest.js";
 import {
   selectMediaStreams,
+  selectAudioStream,
+  selectVideoStream,
   verifyMediaSelectionRequest,
 } from "./selection.js";
 import {
-  selectAudioStream,
-  selectVideoStream,
   bindStillVideoSource,
   planStillVideoSegments,
   sealStillVideoRequest,
@@ -32,6 +32,7 @@ import {
   verifyFrameExtractionRequest,
   verifyMediaTransformProgram,
   verifyStillVideoRequest,
+  transformPreparedMedia,
 } from "./operations.js";
 import type {
   AudioExtractionRequest,
@@ -40,14 +41,12 @@ import type {
   FrameExtractionRequest,
   InspectMediaNeed,
   MuxMediaNeed,
-  MediaSelectionRequest,
-  NormalizeMediaNeed,
   RenderAudioNeed,
   RenderStillVideoNeed,
   StillVideoLayout,
   StillVideoRequest,
-  TransformMediaNeed,
 } from "./types.js";
+import type { MediaDomainSpec, PreparedMedia } from "@hypit/media";
 
 function valueOf(value: Value, subject: string): CanonicalValue {
   if (value === undefined) throw new Error(`${subject} is missing`);
@@ -124,38 +123,14 @@ export const mediaOperationsComponent = {
       },
     },
     {
-      producer: mediaOperationsProducers.normalize,
-      handler: ({ inputs }) => {
-        const source = blob(inputs.source!.value, "Media normalization source");
-        const inspection = valueOf(inputs.inspection!.value, "MediaInspection");
-        const selection = valueOf(inputs.selection!.value, "MediaStreamSelection");
-        const request = valueOf(inputs.request!.value, "MediaSelectionRequest");
-        verifyMediaInspection(inspection);
-        verifyMediaStreamSelection(selection);
-        verifyMediaSelectionRequest(request);
-        const need: NormalizeMediaNeed = {
-          source,
-          inspection,
-          selection,
-          frameRate: request.frameRate,
-          audio: { sampleRate: 48_000, channels: 2, codec: "pcm_s16le", loudness: "preserve" },
-        };
-        return { kind: "need", constraints: canonicalize(need) };
-      },
-    },
-    {
       producer: mediaOperationsProducers.transform,
       handler: ({ inputs }) => {
-        const media = valueOf(inputs.media!.value, "SynchronizedMedia");
+        const media = valueOf(inputs.media!.value, "PreparedMedia") as unknown as PreparedMedia;
         const program = valueOf(inputs.program!.value, "MediaTransformProgram");
-        verifySynchronizedMedia(media);
+        const spec = valueOf(inputs.spec!.value, "MediaDomainSpec") as unknown as MediaDomainSpec;
+        verifyPreparedMedia(media);
         verifyMediaTransformProgram(program);
-        if (media.visual === undefined) throw new Error("Media transform requires a visual stream");
-        const need: TransformMediaNeed = {
-          media,
-          program,
-        };
-        return { kind: "need", constraints: canonicalize(need) };
+        return { kind: "output", value: canonicalize(transformPreparedMedia(media, program, spec.id)) };
       },
     },
     {
@@ -263,8 +238,8 @@ export const mediaOperationsComponent = {
       handler: ({ inputs }) => {
         const program = valueOf(inputs.program!.value, "AudioProgram");
         verifyAudioProgram(program);
-        const range = valueOf(inputs.range!.value, "MediaFrameRange");
-        verifyMediaFrameRange(range, program.frameCount);
+        const range = valueOf(inputs.range!.value, "FrameSpan");
+        assertFrameSpan(range, program.frameCount);
         const need: RenderAudioNeed = { program, range };
         return { kind: "need", constraints: canonicalize(need) };
       },
@@ -274,15 +249,24 @@ export const mediaOperationsComponent = {
       handler: ({ inputs }) => {
         const visual = valueOf(inputs.visual!.value, "TimelineVisual");
         const audio = valueOf(inputs.audio!.value, "TimelineAudio");
+        const delivery = valueOf(inputs.delivery!.value, "MediaDeliverySpec") as unknown as MediaDeliverySpec;
         verifyTimelineVisual(visual);
         verifyTimelineAudio(audio);
-        const { sampleFrames } = mediaFrameRangeSamples(
-          { startFrame: 0, endFrameExclusive: visual.frameCount }, visual.frameRate,
+        verifyMediaDeliverySpec(delivery);
+        if (!sameVisualDeliverySpec(visual.delivery, delivery.visual)) {
+          throw new Error("Rendered visual implements a different delivery requirement");
+        }
+        if (audio.sampleRate !== delivery.audio.sampleRate || audio.channelLayout !== delivery.audio.channelLayout) {
+          throw new Error("Rendered audio implements a different delivery requirement");
+        }
+        const { sampleFrames } = clockFrameSpanSamples(
+          { startFrame: 0, endFrameExclusive: visual.frameCount }, { frameRate: visual.frameRate },
+          48_000,
         );
         if (audio.sampleFrames !== sampleFrames) {
           throw new Error("Rendered visual and TimelineAudio have different presentation durations");
         }
-        const need: MuxMediaNeed = { visual, audio };
+        const need: MuxMediaNeed = { visual, audio, delivery };
         return { kind: "need", constraints: canonicalize(need) };
       },
     },

@@ -1,7 +1,4 @@
 import type { TypeRef, CapabilityRef } from "@hypit/protocol";
-import type {
-  ProducerHandler,
-} from "@hypit/producer";
 import type { EndpointRegistrationOptions, ImmediateEndpointHandler, AsyncEndpoint } from "@hypit/endpoint";
 
 export type {

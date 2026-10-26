@@ -4,6 +4,7 @@ import {
   resolveContentFit,
 } from "@hypit/spatial";
 import type { SpatialFrame } from "@hypit/spatial";
+import { assertTemporalMap } from "@hypit/temporal";
 
 import { assertVisualFrameTreatment, visualContentFrame } from "./frame-treatment.js";
 import {
@@ -62,9 +63,10 @@ export function assertMediaLayerPrograms(value: readonly MediaLayerProgram[]): v
     }
     assertMediaVisualSource(layer.source, `Media layer ${layer.id}.source`);
     assertSpatialMap2D(layer.mapping);
+    if (layer.sampling?.kind === "map") assertTemporalMap(layer.sampling.value);
     assertMediaSampleLayerSpec({
       id: layer.id,
-      ...(layer.sourceTime?.kind !== "spec" ? {} : { sourceTime: layer.sourceTime.value }),
+      ...(layer.sampling?.kind !== "relation" ? {} : { sampling: layer.sampling.value }),
       appearance: layer.appearance,
       ...(layer.samplingMotion === undefined ? {} : { samplingMotion: layer.samplingMotion }),
     });

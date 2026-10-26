@@ -2,7 +2,6 @@ import { randomBytes } from "node:crypto";
 import { resolve } from "node:path";
 
 import { isBlobRef, moduleKey, orderedBuildId } from "@hypit/protocol";
-import { parseSourceHeader } from "@hypit/source/text";
 import { buildResultOutput } from "@hypit/result";
 
 import { checkRunFile, collectRunFrontends, loadRunFile } from "./run-file.js";

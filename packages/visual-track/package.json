@@ -25,6 +25,7 @@
     "@hypit/html-program": "workspace:*",
     "@hypit/hypit": "workspace:*",
     "@hypit/media": "workspace:*",
+    "@hypit/media-operations": "workspace:*",
     "@hypit/studio-companion": "workspace:*",
     "@hypit/markup": "workspace:*",
     "@hypit/narrative": "workspace:*",

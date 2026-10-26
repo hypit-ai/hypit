@@ -7,8 +7,8 @@ export const timelineAuthorTypes = {
   header: { module: timelineAuthorModuleRef, name: "TimelineAuthorHeader" },
   point: { module: timelineAuthorModuleRef, name: "ConstructionPoint" },
   extent: { module: timelineAuthorModuleRef, name: "ConstructionExtent" },
-  span: { module: timelineAuthorModuleRef, name: "ConstructionSpan" },
   duration: { module: timelineAuthorModuleRef, name: "ConstructionDurationSpec" },
+  resolution: { module: timelineAuthorModuleRef, name: "ConstructionResolutionSpec" },
   offset: { module: timelineAuthorModuleRef, name: "ConstructionOffsetSpec" },
   identity: { module: timelineAuthorModuleRef, name: "ConstructionIdentitySpec" },
 } satisfies Record<string, TypeRef>;
@@ -44,25 +44,27 @@ export const timelineAuthorManifest: ModuleManifest = {
   producers: [
     { name: timelineAuthorProducers.origin.name, inputs: [{ name: "clock", type: timelineTypes.clock }], result: { kind: "output" as const, name: "point", type: timelineAuthorTypes.point } },
     { name: timelineAuthorProducers.duration.name, inputs: [{ name: "clock", type: timelineTypes.clock }, { name: "duration", type: timelineAuthorTypes.duration }], result: { kind: "output" as const, name: "extent", type: timelineAuthorTypes.extent } },
-    { name: timelineAuthorProducers.resolvedExtent.name, inputs: [{ name: "clock", type: timelineTypes.clock }, { name: "extent", type: temporalTypes.extent }], result: { kind: "output" as const, name: "extent", type: timelineAuthorTypes.extent } },
+    { name: timelineAuthorProducers.resolvedExtent.name, inputs: [{ name: "clock", type: timelineTypes.clock },
+      { name: "extent", type: temporalTypes.extent }, { name: "resolution", type: timelineAuthorTypes.resolution }],
+      result: { kind: "output" as const, name: "extent", type: timelineAuthorTypes.extent } },
     { name: timelineAuthorProducers.offset.name, inputs: [{ name: "point", type: timelineAuthorTypes.point }, { name: "extent", type: timelineAuthorTypes.extent }, { name: "spec", type: timelineAuthorTypes.offset }], result: { kind: "output" as const, name: "point", type: timelineAuthorTypes.point } },
     { name: timelineAuthorProducers.earliest.name, inputs: [{ name: "left", type: timelineAuthorTypes.point }, { name: "right", type: timelineAuthorTypes.point }], result: { kind: "output" as const, name: "point", type: timelineAuthorTypes.point } },
     { name: timelineAuthorProducers.latest.name, inputs: [{ name: "left", type: timelineAuthorTypes.point }, { name: "right", type: timelineAuthorTypes.point }], result: { kind: "output" as const, name: "point", type: timelineAuthorTypes.point } },
     { name: timelineAuthorProducers.aliasPoint.name, inputs: [{ name: "point", type: timelineAuthorTypes.point }], result: { kind: "output" as const, name: "point", type: timelineAuthorTypes.point } },
-    { name: timelineAuthorProducers.span.name, inputs: [{ name: "start", type: timelineAuthorTypes.point }, { name: "extent", type: timelineAuthorTypes.extent }], result: { kind: "output" as const, name: "span", type: timelineAuthorTypes.span } },
-    { name: timelineAuthorProducers.spanEnding.name, inputs: [{ name: "end", type: timelineAuthorTypes.point }, { name: "extent", type: timelineAuthorTypes.extent }], result: { kind: "output" as const, name: "span", type: timelineAuthorTypes.span } },
-    { name: timelineAuthorProducers.spanBetween.name, inputs: [{ name: "start", type: timelineAuthorTypes.point }, { name: "end", type: timelineAuthorTypes.point }], result: { kind: "output" as const, name: "span", type: timelineAuthorTypes.span } },
-    { name: timelineAuthorProducers.spanStart.name, inputs: [{ name: "span", type: timelineAuthorTypes.span }], result: { kind: "output" as const, name: "point", type: timelineAuthorTypes.point } },
-    { name: timelineAuthorProducers.spanEnd.name, inputs: [{ name: "span", type: timelineAuthorTypes.span }], result: { kind: "output" as const, name: "point", type: timelineAuthorTypes.point } },
+    { name: timelineAuthorProducers.span.name, inputs: [{ name: "start", type: timelineAuthorTypes.point }, { name: "extent", type: timelineAuthorTypes.extent }], result: { kind: "output" as const, name: "span", type: timelineTypes.frameSpan } },
+    { name: timelineAuthorProducers.spanEnding.name, inputs: [{ name: "end", type: timelineAuthorTypes.point }, { name: "extent", type: timelineAuthorTypes.extent }], result: { kind: "output" as const, name: "span", type: timelineTypes.frameSpan } },
+    { name: timelineAuthorProducers.spanBetween.name, inputs: [{ name: "start", type: timelineAuthorTypes.point }, { name: "end", type: timelineAuthorTypes.point }], result: { kind: "output" as const, name: "span", type: timelineTypes.frameSpan } },
+    { name: timelineAuthorProducers.spanStart.name, inputs: [{ name: "span", type: timelineTypes.frameSpan }], result: { kind: "output" as const, name: "point", type: timelineAuthorTypes.point } },
+    { name: timelineAuthorProducers.spanEnd.name, inputs: [{ name: "span", type: timelineTypes.frameSpan }], result: { kind: "output" as const, name: "point", type: timelineAuthorTypes.point } },
     { name: timelineAuthorProducers.finalize.name, inputs: [{ name: "header", type: timelineAuthorTypes.header }, { name: "clock", type: timelineTypes.clock }, { name: "end", type: timelineAuthorTypes.point }], result: { kind: "output" as const, name: "timeline", type: timelineTypes.timeline } },
     { name: timelineAuthorProducers.instant.name, inputs: [{ name: "timeline", type: timelineTypes.timeline }, { name: "point", type: timelineAuthorTypes.point }, { name: "spec", type: timelineAuthorTypes.identity }], result: { kind: "output" as const, name: "instant", type: temporalTypes.instant } },
-    { name: timelineAuthorProducers.window.name, inputs: [{ name: "timeline", type: timelineTypes.timeline }, { name: "span", type: timelineAuthorTypes.span }, { name: "spec", type: timelineAuthorTypes.identity }], result: { kind: "output" as const, name: "window", type: temporalTypes.window } },
+    { name: timelineAuthorProducers.window.name, inputs: [{ name: "timeline", type: timelineTypes.timeline }, { name: "span", type: timelineTypes.frameSpan }, { name: "spec", type: timelineAuthorTypes.identity }], result: { kind: "output" as const, name: "window", type: temporalTypes.window } },
   ],
 };
 
 export const timelineAuthorMarkupSurfaces = [{
   name: "timeline", tag: "Timeline", mode: "structured",
-  outputs: [...Object.values(timelineAuthorTypes), timelineTypes.timeline, temporalTypes.instant, temporalTypes.window],
+  outputs: [...Object.values(timelineAuthorTypes), timelineTypes.timeline, timelineTypes.frameSpan, temporalTypes.instant, temporalTypes.window],
   vocabulary: {
     summary: "Lowers a small acyclic Instant/Window author graph into one finite Timeline and scoped absolute anchors.",
     attributes: [

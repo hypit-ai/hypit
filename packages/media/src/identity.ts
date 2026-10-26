@@ -3,6 +3,12 @@ import {
   canonicalize,
 } from "@hypit/hypit/protocol";
 import type { BlobRef } from "@hypit/hypit/protocol";
+import {
+  assertExactTemporalValue,
+  assertLocalTemporalDomain,
+  assertTemporalMap,
+  compareExactTemporalValues,
+} from "@hypit/temporal";
 
 import type {
   MediaInspection,
@@ -12,8 +18,15 @@ import type {
   MediaStream,
   MediaStreamSelection,
   MediaTimestamp,
-  SynchronizedMedia,
+  MediaDeliverySpec,
+  PreparedAudioMember,
+  PreparedMedia,
+  PreparedAudioSource,
+  PreparedVisualSource,
+  PreparedVisualMember,
   TimelineAudio,
+  VisualDeliverySpec,
+  VisualPictureSpec,
 } from "./types.js";
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -40,6 +53,76 @@ function verifyRational(value: unknown, subject: string): asserts value is Media
   const item = object(value, subject);
   positiveInteger(item.numerator, `${subject}.numerator`);
   positiveInteger(item.denominator, `${subject}.denominator`);
+}
+
+function verifyHexColor(value: unknown, subject: string): asserts value is string {
+  assert(typeof value === "string" && /^#[0-9a-f]{6}$/iu.test(value), `${subject} must be an opaque hexadecimal color`);
+}
+
+export function sealVisualDeliverySpec(value: VisualDeliverySpec): VisualDeliverySpec {
+  verifyVisualDeliverySpec(value);
+  return canonicalize(value) as unknown as VisualDeliverySpec;
+}
+
+export function sealVisualPictureSpec<T extends VisualPictureSpec>(value: T): T {
+  verifyVisualPictureSpec(value);
+  return canonicalize(value) as unknown as T;
+}
+
+export function verifyVisualPictureSpec(value: unknown): asserts value is VisualPictureSpec {
+  const picture = object(value, "VisualPictureSpec") as unknown as VisualPictureSpec;
+  assert(picture.colorPrimaries === "bt709", "VisualPictureSpec color primaries are unsupported");
+  const video = picture.colorTransfer === "bt709" && picture.colorMatrix === "bt709" && picture.colorRange === "limited";
+  const image = picture.colorTransfer === "srgb" && picture.colorMatrix === "rgb" && picture.colorRange === "full";
+  assert(video || image, "VisualPictureSpec color interpretation is unsupported");
+  assert(picture.bitDepth === 8, "VisualPictureSpec bit depth is unsupported");
+  const alpha = object(picture.alpha, "VisualPictureSpec.alpha") as unknown as VisualPictureSpec["alpha"];
+  assert(alpha.mode === "opaque", "VisualPictureSpec alpha mode is unsupported");
+  verifyHexColor(alpha.matte, "VisualPictureSpec.alpha.matte");
+}
+
+export function sameVisualPictureSpec(left: VisualPictureSpec, right: VisualPictureSpec): boolean {
+  verifyVisualPictureSpec(left);
+  verifyVisualPictureSpec(right);
+  return JSON.stringify(canonicalize(left)) === JSON.stringify(canonicalize(right));
+}
+
+export function verifyVisualDeliverySpec(value: unknown): asserts value is VisualDeliverySpec {
+  const item = object(value, "VisualDeliverySpec") as unknown as VisualDeliverySpec;
+  verifyVisualPictureSpec(item.picture);
+  assert(item.picture.colorTransfer === "bt709" && item.picture.colorMatrix === "bt709"
+    && item.picture.colorRange === "limited", "VisualDeliverySpec picture is not a supported video interpretation");
+  const encoding = object(item.encoding, "VisualDeliverySpec.encoding") as unknown as VisualDeliverySpec["encoding"];
+  assert(encoding.codec === "h264", "VisualDeliverySpec video codec is unsupported");
+  assert(encoding.pixelFormat === "yuv420p", "VisualDeliverySpec pixel format is unsupported");
+  assert(encoding.quality === "draft" || encoding.quality === "standard" || encoding.quality === "high",
+    "VisualDeliverySpec quality is unsupported");
+}
+
+export function sealMediaDeliverySpec(value: MediaDeliverySpec): MediaDeliverySpec {
+  verifyMediaDeliverySpec(value);
+  return canonicalize(value) as unknown as MediaDeliverySpec;
+}
+
+export function verifyMediaDeliverySpec(value: unknown): asserts value is MediaDeliverySpec {
+  const item = object(value, "MediaDeliverySpec") as unknown as MediaDeliverySpec;
+  verifyVisualDeliverySpec(item.visual);
+  const audio = object(item.audio, "MediaDeliverySpec.audio") as unknown as MediaDeliverySpec["audio"];
+  assert(audio.codec === "aac", "MediaDeliverySpec audio codec is unsupported");
+  assert(audio.sampleRate === 48_000, "MediaDeliverySpec audio sample rate is unsupported");
+  assert(audio.channelLayout === "stereo", "MediaDeliverySpec audio channel layout is unsupported");
+  assert(item.container === "mp4", "MediaDeliverySpec container is unsupported");
+}
+
+export function projectVisualDeliverySpec(value: MediaDeliverySpec): VisualDeliverySpec {
+  verifyMediaDeliverySpec(value);
+  return sealVisualDeliverySpec(value.visual);
+}
+
+export function sameVisualDeliverySpec(left: VisualDeliverySpec, right: VisualDeliverySpec): boolean {
+  verifyVisualDeliverySpec(left);
+  verifyVisualDeliverySpec(right);
+  return JSON.stringify(canonicalize(left)) === JSON.stringify(canonicalize(right));
 }
 
 function verifyTimestamp(value: unknown, subject: string): asserts value is MediaTimestamp {
@@ -144,43 +227,86 @@ export function verifyMediaStreamSelection(value: unknown): asserts value is Med
   assert(item.spanAuthority === "video" || item.spanAuthority === "audio", "MediaStreamSelection authority is invalid");
   assert(item.spanAuthority === "video" ? item.videoStreamIndex !== undefined : item.audioStreamIndex !== undefined,
     "MediaStreamSelection authority stream is absent");
-  assert(item.policy === "primary-moving@1" || item.policy === "default-audio@1"
-    || item.policy === "primary-moving-default-audio@1" || item.policy === "explicit-streams@1",
-    "MediaStreamSelection policy is invalid");
 }
 
-export function sealSynchronizedMedia(value: SynchronizedMedia): SynchronizedMedia {
-  return canonicalize(value) as unknown as SynchronizedMedia;
+function verifyPreparedMember(
+  member: PreparedVisualMember | PreparedAudioMember,
+  preparedDomain: import("@hypit/temporal").LocalTemporalDomain,
+  label: string,
+): void {
+  nonNegativeInteger(member.streamIndex, `${label}.streamIndex`);
+  assertExactTemporalValue(member.presentationStart, `${label}.presentationStart`);
+  assertLocalTemporalDomain(member.sourceDomain);
+  assertTemporalMap(member.map);
+  assert(member.map.stages[0]?.target.id === preparedDomain.id
+    && compareExactTemporalValues(member.map.stages[0].target.duration, preparedDomain.duration) === 0,
+  `${label}.map does not begin at the PreparedMedia domain.`);
+  assert(member.map.stages.at(-1)?.source.id === member.sourceDomain.id
+    && compareExactTemporalValues(member.map.stages.at(-1)!.source.duration, member.sourceDomain.duration) === 0,
+  `${label}.map does not end at its source domain.`);
 }
 
-/** Exact 48 kHz sample span implied by one normalized frame domain. */
-export function synchronizedMediaSampleFrames(value: SynchronizedMedia): number {
-  const numerator = BigInt(value.frameDomain.frameCount) * 48_000n * BigInt(value.frameDomain.frameRate.denominator);
-  const denominator = BigInt(value.frameDomain.frameRate.numerator);
-  const rounded = (numerator * 2n + denominator) / (denominator * 2n);
-  assert(rounded > 0n && rounded <= BigInt(Number.MAX_SAFE_INTEGER),
-    "SynchronizedMedia frame domain has an invalid sample span");
-  return Number(rounded);
+export function sealPreparedMedia(value: PreparedMedia): PreparedMedia {
+  verifyPreparedMedia(value);
+  return canonicalize(value) as unknown as PreparedMedia;
 }
 
-export function verifySynchronizedMedia(value: unknown): asserts value is SynchronizedMedia {
-  const item = object(value, "SynchronizedMedia") as unknown as SynchronizedMedia;
-  const frameDomain = object(item.frameDomain, "SynchronizedMedia.frameDomain");
-  verifyRational(frameDomain.frameRate, "SynchronizedMedia.frameDomain.frameRate");
-  positiveInteger(frameDomain.frameCount, "SynchronizedMedia.frameDomain.frameCount");
-  synchronizedMediaSampleFrames(item);
-  assert(item.visual !== undefined || item.audio !== undefined, "SynchronizedMedia contains no media projection");
+export function verifyPreparedMedia(value: unknown): asserts value is PreparedMedia {
+  const item = object(value, "PreparedMedia") as unknown as PreparedMedia;
+  verifyBlob(item.source, "PreparedMedia.source");
+  assertLocalTemporalDomain(item.domain);
+  assert(item.visual !== undefined || item.audio !== undefined, "PreparedMedia selects no media member");
   if (item.visual !== undefined) {
-    const visual = object(item.visual, "SynchronizedMedia.visual");
-    verifyBlob(visual.artifact, "SynchronizedMedia.visual.artifact");
-    assert(visual.artifact.mediaType.startsWith("video/"), "SynchronizedMedia visual artifact is not video");
-    positiveInteger(visual.width, "SynchronizedMedia.visual.width");
-    positiveInteger(visual.height, "SynchronizedMedia.visual.height");
+    const visual = object(item.visual, "PreparedMedia.visual") as unknown as PreparedVisualMember;
+    verifyPreparedMember(visual, item.domain, "PreparedMedia.visual");
+    const interpretation = object(visual.interpretation, "PreparedMedia.visual.interpretation");
+    positiveInteger(interpretation.codedWidth, "PreparedMedia.visual.interpretation.codedWidth");
+    positiveInteger(interpretation.codedHeight, "PreparedMedia.visual.interpretation.codedHeight");
+    verifyRational(interpretation.sampleAspectRatio, "PreparedMedia.visual.interpretation.sampleAspectRatio");
+    assert(interpretation.rotationDegrees === 0 || interpretation.rotationDegrees === 90
+      || interpretation.rotationDegrees === 180 || interpretation.rotationDegrees === 270,
+    "PreparedMedia.visual.interpretation.rotationDegrees is invalid");
   }
   if (item.audio !== undefined) {
-    const audio = object(item.audio, "SynchronizedMedia.audio");
-    verifyBlob(audio.artifact, "SynchronizedMedia.audio.artifact");
-    assert(audio.artifact.mediaType === "audio/wav", "SynchronizedMedia audio artifact must be WAV");
+    const audio = object(item.audio, "PreparedMedia.audio") as unknown as PreparedAudioMember;
+    verifyPreparedMember(audio, item.domain, "PreparedMedia.audio");
+    const interpretation = object(audio.interpretation, "PreparedMedia.audio.interpretation");
+    positiveInteger(interpretation.sampleRate, "PreparedMedia.audio.interpretation.sampleRate");
+    positiveInteger(interpretation.channels, "PreparedMedia.audio.interpretation.channels");
+    if (interpretation.channelLayout !== undefined) {
+      assert(typeof interpretation.channelLayout === "string" && interpretation.channelLayout.length > 0,
+        "PreparedMedia.audio.interpretation.channelLayout is invalid");
+    }
+  }
+}
+
+export function verifyPreparedVisualSource(value: unknown): asserts value is PreparedVisualSource {
+  const item = object(value, "PreparedVisualSource") as unknown as PreparedVisualSource;
+  verifyBlob(item.source, "PreparedVisualSource.source");
+  nonNegativeInteger(item.streamIndex, "PreparedVisualSource.streamIndex");
+  assertExactTemporalValue(item.presentationStart, "PreparedVisualSource.presentationStart");
+  assertLocalTemporalDomain(item.sourceDomain);
+  const interpretation = object(item.interpretation, "PreparedVisualSource.interpretation");
+  positiveInteger(interpretation.codedWidth, "PreparedVisualSource.interpretation.codedWidth");
+  positiveInteger(interpretation.codedHeight, "PreparedVisualSource.interpretation.codedHeight");
+  verifyRational(interpretation.sampleAspectRatio, "PreparedVisualSource.interpretation.sampleAspectRatio");
+  assert(interpretation.rotationDegrees === 0 || interpretation.rotationDegrees === 90
+    || interpretation.rotationDegrees === 180 || interpretation.rotationDegrees === 270,
+  "PreparedVisualSource.interpretation.rotationDegrees is invalid");
+}
+
+export function verifyPreparedAudioSource(value: unknown): asserts value is PreparedAudioSource {
+  const item = object(value, "PreparedAudioSource") as unknown as PreparedAudioSource;
+  verifyBlob(item.source, "PreparedAudioSource.source");
+  nonNegativeInteger(item.streamIndex, "PreparedAudioSource.streamIndex");
+  assertExactTemporalValue(item.presentationStart, "PreparedAudioSource.presentationStart");
+  assertLocalTemporalDomain(item.sourceDomain);
+  const interpretation = object(item.interpretation, "PreparedAudioSource.interpretation");
+  positiveInteger(interpretation.sampleRate, "PreparedAudioSource.interpretation.sampleRate");
+  positiveInteger(interpretation.channels, "PreparedAudioSource.interpretation.channels");
+  if (interpretation.channelLayout !== undefined) {
+    assert(typeof interpretation.channelLayout === "string" && interpretation.channelLayout.length > 0,
+      "PreparedAudioSource.interpretation.channelLayout is invalid");
   }
 }
 
@@ -194,6 +320,7 @@ export function verifyTimelineVisual(value: unknown): asserts value is TimelineV
   positiveInteger(item.frameCount, "TimelineVisual.frameCount");
   positiveInteger(item.canvas?.width, "TimelineVisual.canvas.width");
   positiveInteger(item.canvas?.height, "TimelineVisual.canvas.height");
+  verifyVisualDeliverySpec(item.delivery);
   verifyBlob(item.artifact, "TimelineVisual.artifact");
   assert(item.artifact.mediaType.startsWith("video/"), "TimelineVisual Artifact must be video");
 }
@@ -206,6 +333,8 @@ export function verifyTimelineAudio(value: unknown): asserts value is TimelineAu
   const item = object(value, "TimelineAudio") as unknown as TimelineAudio;
   verifyBlob(item.artifact, "TimelineAudio.artifact");
   assert(item.artifact.mediaType === "audio/wav", "TimelineAudio Artifact must be WAV");
+  assert(item.sampleRate === 48_000, "TimelineAudio sample rate must be 48 kHz");
+  assert(item.channelLayout === "stereo", "TimelineAudio channel layout must be stereo");
   positiveInteger(item.sampleFrames, "TimelineAudio.sampleFrames");
 }
 
@@ -222,5 +351,6 @@ export function verifyMuxedMedia(value: unknown): asserts value is MuxedMedia {
   assert(item.presentationSampleFrames === expectedSampleFrames(item.frameCount, item.frameRate),
     "MuxedMedia presentation sample count differs from its frame domain");
   verifyBlob(item.artifact, "MuxedMedia.artifact");
+  verifyMediaDeliverySpec(item.delivery);
   assert(item.artifact.mediaType === "video/mp4", "MuxedMedia Artifact must be MP4");
 }

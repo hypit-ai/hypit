@@ -10,7 +10,7 @@ import type { StructuredSurfaceHandler, SurfaceResolvedReference } from "@hypit/
 import { compositionTypes } from "@hypit/composition";
 import { mediaTypes } from "@hypit/media";
 import type { FontStackRef } from "@hypit/media";
-import type { SynchronizedMedia } from "@hypit/media";
+import type { PreparedMedia } from "@hypit/media";
 import { timelineTypes } from "@hypit/timeline";
 import type { Timeline } from "@hypit/timeline";
 import { spatialTypes } from "@hypit/spatial";
@@ -29,17 +29,18 @@ const producer = { module, name: "compose" };
 const inputs = [
   { name: "timeline", type: timelineTypes.timeline }, { name: "within", type: spatialTypes.frame },
   { name: "window", type: temporalTypes.window }, { name: "reveal", type: temporalTypes.instant },
-  { name: "media", type: mediaTypes.synchronized }, { name: "sourceWindow", type: temporalTypes.window },
+  { name: "media", type: mediaTypes.prepared }, { name: "sourceWindow", type: temporalTypes.window },
   { name: "font", type: mediaTypes.fontStack }, { name: "options", type: optionsType },
 ];
 export const manifest: ModuleManifest = { format: "hypit.module@1", ...module,
-  dependencies: [compositionTypes.visualTrack, mediaTypes.fontStack, timelineTypes.timeline,
+  dependencies: [...[compositionTypes.visualTrack, mediaTypes.fontStack, timelineTypes.timeline,
     spatialTypes.frame, temporalTypes.window, temporalTypes.instant]
-    .map(type => type.module),
+    .map(type => type.module)],
   types: [optionsType.name], capabilities: [],
   producers: [{ name: producer.name, inputs, result: { kind: "output" as const, name: "visual", type: compositionTypes.visualTrack } }],
 };
-const fragment = sealGraphFragment({ inputs, operations: [{ id: "compose", producer,
+const fragment = sealGraphFragment({ inputs, operations: [
+  { id: "compose", producer,
   inputs: Object.fromEntries(inputs.map(input => [input.name, { kind: "fragment-input" as const, name: input.name }])),
   result: { kind: "output" as const, name: "visual" } }],
   exports: [{ name: "visual", type: compositionTypes.visualTrack, root: { kind: "fragment-operation", operation: "compose" } }],
@@ -50,7 +51,7 @@ const valueOf = <T>(record: TypedRecord | undefined): T => {
 };
 const component: { producers?: ProducerPackage; refinements?: RefinementPackage } = { producers: [{ producer, handler: ({ inputs }) => ({ kind: "output", value: (canonicalize(renderExplainer(valueOf<Timeline>(inputs.timeline),
     valueOf<SpatialFrame>(inputs.within), valueOf<TemporalWindow>(inputs.window), valueOf<TemporalInstant>(inputs.reveal),
-    valueOf<SynchronizedMedia>(inputs.media), valueOf<TemporalWindow>(inputs.sourceWindow),
+    valueOf<PreparedMedia>(inputs.media), valueOf<TemporalWindow>(inputs.sourceWindow),
     valueOf<FontStackRef>(inputs.font).faces, valueOf<ExplainerOptions>(inputs.options)))) }) }] };
 export const decodeSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
   assertAttributes(element, ["id", "timeline", "within", "font", "media", "source-window", "reveal", "title", "transition-frames", ...temporalWindowAttributeNames]);
@@ -75,7 +76,7 @@ export const decodeSurface: StructuredSurfaceHandler = ({ element, resolveRefere
     components: [{ id, fragment,
       inputs: { timeline: timeline.ref, within: reference("within", spatialTypes.frame).ref,
         font: reference("font", mediaTypes.fontStack).ref,
-        media: reference("media", mediaTypes.synchronized).ref,
+        media: reference("media", mediaTypes.prepared).ref,
         sourceWindow: reference("source-window", temporalTypes.window).ref,
         window: window.ref, reveal: reveal.ref,
         options: { kind: "record", id: `${id}.options` } }, outputs: { visual: `${id}.visual` }, range: element.range }],
@@ -88,7 +89,7 @@ const declaration = { name: "scene", tag: "Scene", mode: "structured" as const,
       ...["id", "title", "transition-frames"].map(name => ({ name, kind: "literal" as const, required: true, summary: name })),
       ...temporalContextAttributeVocabulary,
       ...[{ name: "within", type: spatialTypes.frame },
-        { name: "font", type: mediaTypes.fontStack }, { name: "media", type: mediaTypes.synchronized },
+        { name: "font", type: mediaTypes.fontStack }, { name: "media", type: mediaTypes.prepared },
         { name: "source-window", type: temporalTypes.window }, { name: "reveal", type: temporalTypes.instant }]
         .map(({ name, type }) => ({ name, kind: "reference" as const, required: true, accepts: [type], summary: name })),
       ...temporalWindowAttributeVocabulary,

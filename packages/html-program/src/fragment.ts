@@ -1,5 +1,4 @@
 import { compositionTypes } from "@hypit/composition";
-import type { Composition } from "@hypit/composition";
 import { sealGraphFragment } from "@hypit/hypit/author";
 import { timelineTypes } from "@hypit/timeline";
 

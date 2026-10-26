@@ -20,7 +20,8 @@ import {
   speechTranscriptSource,
   type SpeechTranscriptEvidence,
 } from "@hypit/speech-evidence";
-import { composeTemporalWindow, type LocalTemporalDomain, type TemporalWindow } from "@hypit/temporal";
+import { composeTemporalWindow, exactTemporalValueFromFrames,
+  type LocalTemporalDomain, type TemporalWindow } from "@hypit/temporal";
 import type { Timeline } from "@hypit/timeline";
 
 function segmentEvidence(sampleFrames: number, text: string, startSample: number, endSampleExclusive: number): SpeechTranscriptEvidence {
@@ -60,8 +61,7 @@ test("a Selection between two Segments becomes the Window between their independ
   const parts = narrative.segments.map((segment, index) => {
     const domain: LocalTemporalDomain = {
       id: `domain-${segment.id}`,
-      frameRate: timeline.frameRate,
-      frameCount: 10,
+      duration: exactTemporalValueFromFrames(10, timeline),
     };
     const excerpt = {
       narrativeId: narrative.id,
@@ -108,10 +108,9 @@ test("editing transcript sample boundaries changes derived absolute timing witho
   const binding = narrativeCaptionBinding(parsed, document.id, narrative.id);
   const domain: LocalTemporalDomain = {
     id: "performance-domain",
-    frameRate: { numerator: 1_000, denominator: 1 },
-    frameCount: 2_000,
+    duration: { ticks: "2", timeBase: { numerator: 1, denominator: 1 } },
   };
-  const timeline: Timeline = { id: "film", frameRate: domain.frameRate, frameCount: 5_000 };
+  const timeline: Timeline = { id: "film", frameRate: { numerator: 1_000, denominator: 1 }, frameCount: 5_000 };
   const placement: TemporalWindow = {
     id: "performance",
     subjectId: segment.id,

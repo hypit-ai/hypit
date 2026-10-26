@@ -37,9 +37,11 @@ The reusable transcript document and phrase-range operations belong to `@hypit/s
 WhisperX owns only how evidence is obtained through this model family; media decoding remains with
 the local-media executor.
 
-`<whisperx:Transcription>` consumes one normalized `SynchronizedMedia` and an explicit lowercase
+`<whisperx:Transcription>` consumes one `PreparedMedia` and an explicit lowercase
 two- or three-letter language code. The provider receives canonical evidence audio and returns
-provider-neutral `SpeechTranscriptEvidence` preserving its exact sample span:
+provider-neutral `SpeechTranscriptEvidence` preserving its exact sample span. Trimming or retiming
+the prepared value changes the evidence audio and its local sample domain; WhisperX never silently
+returns to the original source:
 
 ```svml
 <whisperx:Transcription id="opening-transcription"

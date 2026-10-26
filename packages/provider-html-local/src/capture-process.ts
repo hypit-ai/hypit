@@ -3,6 +3,7 @@ import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { killRenderTree } from "./process-tree.js";
 import type { HtmlRasterProgress } from "./render.js";
+import { electronEnvironment } from "./electron.js";
 
 const cleanupMs = 5_000;
 
@@ -10,7 +11,11 @@ const cleanupMs = 5_000;
 export type CaptureProcessInput = {
   readonly config: {
     readonly maxProcessOutputBytes: number;
+    readonly renderer: import("./electron.js").HtmlRenderer;
+    readonly electronPath?: string | undefined;
   };
+  readonly frames?: readonly number[];
+  readonly directory?: string;
 };
 
 /** One disposable execution, with no persisted state or resubmission behavior. */
@@ -23,11 +28,19 @@ export async function runCaptureProcess<T extends CaptureProcessInput>(
 ): Promise<void> {
   signal.throwIfAborted();
   await new Promise<void>((resolve, reject) => {
-    const child = spawn(process.execPath, [
+    const gpu = input.frames === undefined && input.config.renderer === "electron";
+    if (gpu && (input.config.electronPath === undefined || input.directory === undefined)) {
+      reject(new Error("Electron capture requires its selected executable and staged directory"));
+      return;
+    }
+    const child = spawn(gpu ? input.config.electronPath! : process.execPath, gpu ? [
+      fileURLToPath(new URL("../src/gpu-worker.cjs", import.meta.url)), input.directory!, entry.href,
+    ] : [
       "--import", import.meta.resolve("tsx"),
       "--import", new URL("./capture-exit.js", import.meta.url).href,
       fileURLToPath(entry),
     ], {
+      ...(gpu ? { env: electronEnvironment() } : {}),
       detached: process.platform !== "win32", windowsHide: true,
       stdio: ["ignore", "pipe", "pipe", "ipc"],
     });

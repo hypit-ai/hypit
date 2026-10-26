@@ -42,17 +42,6 @@ function exactKeys(
   );
 }
 
-function subsetKeys(
-  actual: Readonly<Record<string, unknown>>,
-  declared: readonly string[],
-  subject: string,
-): void {
-  const allowed = new Set(declared);
-  for (const name of Object.keys(actual)) {
-    invariant(allowed.has(name), "PORT_BINDING_MISMATCH", `${subject} binds undeclared port ${name}`, subject);
-  }
-}
-
 type ResolvedSource = {
   readonly record: RecordId;
   readonly type: TypeRef;

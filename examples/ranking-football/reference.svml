@@ -176,12 +176,12 @@
 
   <space:Canvas id="vertical" width="720" height="1280"/>
   <time:Clock id="clock" frame-rate="30"/>
-  <mediaop:Normalize id="soundtrack-media" source={soundtrack}
-    video="none" audio="default" span-authority="audio" clock={clock}/>
-  <mediaop:Normalize id="ranking-appear-media" source={ranking-appear-sfx}
-    video="none" audio="default" span-authority="audio" clock={clock}/>
-  <mediaop:Normalize id="ranking-move-media" source={ranking-move-sfx}
-    video="none" audio="default" span-authority="audio" clock={clock}/>
+  <mediaop:Prepare id="soundtrack-media" source={soundtrack}
+    video="none" audio="default" span-authority="audio"/>
+  <mediaop:Prepare id="ranking-appear-media" source={ranking-appear-sfx}
+    video="none" audio="default" span-authority="audio"/>
+  <mediaop:Prepare id="ranking-move-media" source={ranking-move-sfx}
+    video="none" audio="default" span-authority="audio"/>
   <space:Frame id="speech-frame" within={vertical.bounds}
     left="0%" top="0%" right="100%" bottom="100%"/>
   <space:Frame id="tier-frame" within={vertical.bounds}
@@ -216,12 +216,12 @@
   <space:AspectFrame id="hat-trick-frame" within={vertical.bounds}
     x="72%" y="80%" width="46%" aspect={hat-trick-extent} anchor="center"/>
 
-  <!-- Real Build path: generated video -> one shared normalization waist ->
+  <!-- Real Build path: generated video -> one shared preparation waist ->
        measured alignment. -->
-  <mediaop:Normalize id="ronaldo-media" source={ronaldo-take.video}
-    video="primary-moving" audio="default" span-authority="video" clock={clock}/>
-  <mediaop:Normalize id="messi-media" source={messi-take.video}
-    video="primary-moving" audio="default" span-authority="video" clock={clock}/>
+  <mediaop:Prepare id="ronaldo-media" source={ronaldo-take.video}
+    video="primary-moving" audio="default" span-authority="video"/>
+  <mediaop:Prepare id="messi-media" source={messi-take.video}
+    video="primary-moving" audio="default" span-authority="video"/>
   <whisperx:Transcription id="ronaldo-semantic-transcription" media={ronaldo-media.media} language="en"/>
   <speechalign:Alignment id="ronaldo-semantic" narrative={story}
     segment={story.segment.ronaldo} domain={ronaldo-media.domain} evidence={ronaldo-semantic-transcription.transcript}/>
