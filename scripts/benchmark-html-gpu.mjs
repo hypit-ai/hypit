@@ -7,6 +7,7 @@ import { parseArgs } from 'node:util';
 import { createHash } from 'node:crypto';
 import { cpus, totalmem, release } from 'node:os';
 import { setTimeout as delay } from 'node:timers/promises';
+import { writeBenchmarkReport } from './html-gpu-benchmark-report.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 process.chdir(root);
@@ -90,7 +91,7 @@ if(args.job){
     const { loadProject }=await import('./html-gpu-benchmark-fixtures.mjs');
     const fingerprint=createHash('sha256');
     fingerprint.update(command('git',['rev-parse','HEAD']));fingerprint.update(command('git',['diff','HEAD','--']));
-    for(const file of [script,resolve(root,'scripts/html-gpu-benchmark-fixtures.mjs')])fingerprint.update(await readFile(file));
+    for(const file of [script,resolve(root,'scripts/html-gpu-benchmark-fixtures.mjs'),resolve(root,'scripts/html-gpu-benchmark-report.mjs')])fingerprint.update(await readFile(file));
     for(const project of [videoProject,mgProject]){const data=await loadProject(project);fingerprint.update(JSON.stringify(data.program));for(const [artifact,bytes]of data.blobs){fingerprint.update(artifact.resource);fingerprint.update(bytes);}}
     fingerprint.update(String(reps));const identity=fingerprint.digest('hex'),stateFile=resolve(directory,'state.json');
     let state;try{state=JSON.parse(await readFile(stateFile,'utf8'));}catch(e){if(e.code!=='ENOENT')throw e;}
@@ -120,19 +121,7 @@ if(args.job){
     function stats(){return{at:new Date().toISOString(),swap:command('sysctl',['vm.swapusage']),thermal:command('pmset',['-g','therm'])};}
     const median=xs=>{xs=[...xs].sort((a,b)=>a-b);return xs.length%2?xs[Math.floor(xs.length/2)]:(xs[xs.length/2-1]+xs[xs.length/2])/2;};
     async function summarize(){
-      const groups={};
-      for(const result of state.results)for(const item of result.exports??[])if(item.group){
-        const key=item.group+' / '+JSON.stringify(item.config);(groups[key]??=[]).push({...item,passed:result.passed,peakRssMiB:result.peakRssMiB,peakFootprintMiB:result.peakFootprintMiB});}
-      const rows=Object.entries(groups).map(([key,all])=>{const good=all.filter(x=>x.passed),times=good.map(x=>x.seconds);return{key,completed:good.length,failed:all.length-good.length,
-        medianSeconds:times.length?median(times):null,minSeconds:times.length?Math.min(...times):null,maxSeconds:times.length?Math.max(...times):null,
-        medianPeakRssMiB:good.length?median(good.map(x=>x.peakRssMiB)):null,medianPeakFootprintMiB:good.length&&readUsage?median(good.map(x=>x.peakFootprintMiB)):null,
-        decoderStarts:good.map(x=>x.videoStats?.reduce((s,v)=>s+v.decoderStarts,0)),
-      };});
-      const summary={status:state.status??'running',head:state.head,host:state.host,repetitions:reps,completedJobs:state.results.length,
-        failedJobs:state.results.filter(r=>!r.passed).map(r=>r.id),rows};
-      await json(resolve(directory,'summary.json'),summary);
-      const f=n=>n==null?'n/a':n.toFixed(3);
-      await writeFile(resolve(directory,'REPORT.md'),`# HTML GPU benchmark\n\nStatus: ${summary.status}. Head: ${state.head}. Repetitions: ${reps}.\n\nExport seconds include Provider preparation, capture, encode, mux, full decode validation and storage. Independent frame-ID checks run afterward. Memory is sampled every 250 ms across the isolated export host and its descendants during export, including resource setup during the export phase. Normal desktop activity remains uncontrolled. RSS and macOS physical footprint are distinct from retained sample allocation and exclusive GPU memory. Each job uses a fresh Node process; managed Electron download caches persist.\n\n| Group and configuration | Completed | Failed | Median seconds | Range, seconds | Median peak RSS, MiB | Median peak physical footprint, MiB |\n| --- | --- | --- | --- | --- | --- | --- |\n${rows.map(r=>`| ${r.key} | ${r.completed} | ${r.failed} | ${f(r.medianSeconds)} | ${f(r.minSeconds)} to ${f(r.maxSeconds)} | ${f(r.medianPeakRssMiB)} | ${f(r.medianPeakFootprintMiB)} |`).join('\n')}\n\nFailed jobs: ${summary.failedJobs.join(', ')||'none'}. Full diagnostics, frame-ID observations, resource samples, environment snapshots and process cleanup results are in state.json and jobs/. The 4K cases use 1080p sources or scaled MG with authored Canvas raster resolutions.\n`);
+      await writeBenchmarkReport(directory,state);
       await json(stateFile,state);
     }
     async function run(id,items){
@@ -168,7 +157,7 @@ if(args.job){
     }
     const item=(id,doc,config,group,verify)=>({id,doc,config,group,verify});
     const repeat=async(group,doc,configs)=>{for(let r=0;r<reps&&!stopping;r++)for(let i=0;i<configs.length;i++){const k=(i+r)%configs.length,id=`${group}-c${k}-r${r+1}`;await run(id,[item(id,doc,configs[k],group)]);}};
-    state.status='running';await summarize();
+    state.status='running';delete state.finishedAt;await summarize();
     await run('warmup',[{id:'warmup',doc:'video',config:{},range:{startFrame:0,endFrameExclusive:120}}]);
     await run('accuracy-defaults',[item('accuracy-defaults','accuracy',{},undefined,'accuracy')]);
     await run('defaults-video',[item('defaults-video','video',{},'defaults','video')]);
@@ -180,10 +169,11 @@ if(args.job){
       {workers:1,maxDecodedSourceBytes:4096*MiB,maxPendingFrameBytes:128*MiB},
     ]);
     await repeat('queue','mg',[128,256,512].map(n=>({workers:4,maxPendingFrameBytes:n*MiB})));
-    const workerOptions=[1,2,3,4,6,8,'auto'];
+    const workerOptions=[1,2,3,4,5,6,7,8,'auto'];
     for(const workers of workerOptions)await run('workers-screen-'+workers,[item('workers-screen-'+workers,'mg',{workers},'workers')]);
     const ranked=state.results.flatMap(r=>r.passed?(r.exports??[]):[]).filter(r=>r.group==='workers'&&r.id.startsWith('workers-screen-')).sort((a,b)=>a.seconds-b.seconds);
     const finalists=[];for(const row of ranked)if(!finalists.some(c=>c.workers===row.config.workers)&&finalists.length<2)finalists.push(row.config);
+    if(!finalists.some(config=>config.workers==='auto'))finalists.push({workers:'auto'});
     state.workerFinalists=finalists;await summarize();
     for(let r=1;r<reps&&!stopping;r++)for(let i=0;i<finalists.length;i++){const config=finalists[(r+i)%finalists.length],id=`workers-final-${config.workers}-r${r+1}`;await run(id,[item(id,'mg',config,'workers')]);}
     for(const config of finalists){const id='accuracy-workers-'+config.workers;await run(id,[item(id,'mg',config,undefined,'mg')]);}
