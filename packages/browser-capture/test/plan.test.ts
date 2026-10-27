@@ -38,9 +38,9 @@ test("plans are validated before a browser opens and shorthand selectors become 
   assert.equal(planSelector("#go"), "#go");
 });
 
-async function replay(work: string, plan: CapturePlan, cursor: "none" | "page" = "none"): Promise<CapturePlanReport> {
+async function replay(work: string, plan: CapturePlan, cursor: "none" | "page" = "none", scale = 1): Promise<CapturePlanReport> {
   let report: CapturePlanReport | undefined;
-  await withCapture({ launch: { executablePath, defaultViewport: { width: 640, height: 480, deviceScaleFactor: 1 } } },
+  await withCapture({ launch: { executablePath, defaultViewport: { width: 640, height: 480, deviceScaleFactor: scale } } },
     async (session) => { report = await runCapturePlan(session, plan, { directory: join(work, "take"), baseDirectory: work, cursor, fps: 30 }); });
   return report!;
 }
@@ -52,7 +52,9 @@ async function colorAt(video: string, seconds: number): Promise<number[]> {
   return [...stdout.subarray(0, 3)];
 }
 
-test("a plan replays real actions, reports their recorded time and target boxes, and leaves the footage clean", {
+// Scale 1 records through the screencast; scale 2 through repeated screenshots, which must not
+// swallow the take's clicks and keys.
+for (const scale of [1, 2]) test(`a plan replays real actions at scale ${scale}, reports their recorded time and target boxes, and leaves the footage clean`, {
   skip: ready, timeout: 60_000,
 }, async () => {
   const work = await mkdtemp(join(tmpdir(), "hypit-capture-plan-"));
@@ -71,7 +73,7 @@ test("a plan replays real actions, reports their recorded time and target boxes,
         { action: "scroll", dy: 600, durationMs: 300 },
         { action: "pause", ms: 700 },
       ],
-    });
+    }, "none", scale);
     assert.equal(report.failed, null);
     assert.equal(report.steps.length, 9);
     const click = report.steps[2]!;
@@ -84,7 +86,7 @@ test("a plan replays real actions, reports their recorded time and target boxes,
     assert.equal(saved.format, "hypit.capture-plan@1");
     assert.equal(saved.recording?.path, "recording.mp4", "saved evidence holds no machine-specific path");
     assert.doesNotMatch(JSON.stringify(saved), new RegExp(work.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&"), "u"));
-    assert.equal(saved.recording?.width, 640);
+    assert.equal(saved.recording?.width, 640 * scale, "the recording keeps the device pixels");
     assert.equal(saved.recording?.frameRate, 30, "the recording is re-timed to a constant rate for media normalization");
     const recipe = await readFile(join(work, "take", "steps.svs"), "utf8");
     assert.match(recipe, /walkthrough\.take \{\s+passed: true;/u);

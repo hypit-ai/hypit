@@ -2,8 +2,8 @@
 <sheet version="1">
   walkthrough.take {
     passed: true;
-    viewport: {"width":1280,"height":800,"scale":1};
-    duration: 12.167;
-    steps: [{"index":0,"action":"pause","start":0,"end":0.801},{"index":1,"action":"dismiss","start":1.402,"end":1.908},{"index":2,"action":"click","start":2.51,"end":2.864,"pointer":[1182,53],"box":[1127,32,109,41]},{"index":3,"action":"wait","start":3.465,"end":3.469},{"index":4,"action":"fill","start":4.07,"end":4.422,"pointer":[470,176],"box":[290,154,360,43]},{"index":5,"action":"type","start":4.573,"end":5.735,"pointer":[470,176],"box":[290,154,360,43]},{"index":6,"action":"click","start":6.337,"end":6.681,"pointer":[365,269],"box":[290,244,150,49]},{"index":7,"action":"click","start":7.282,"end":7.629,"pointer":[352,336]},{"index":8,"action":"wait","start":8.23,"end":8.274},{"index":9,"action":"pause","start":8.875,"end":10.377}];
+    viewport: {"width":1280,"height":800,"scale":2};
+    duration: 13.433;
+    steps: [{"index":0,"action":"pause","start":0,"end":0.801},{"index":1,"action":"dismiss","start":1.402,"end":1.913},{"index":2,"action":"click","start":2.514,"end":2.962,"pointer":[1182,53],"box":[1127,32,109,41]},{"index":3,"action":"wait","start":3.563,"end":3.566},{"index":4,"action":"fill","start":4.167,"end":4.617,"pointer":[470,176],"box":[290,154,360,43]},{"index":5,"action":"type","start":4.769,"end":6.751,"pointer":[470,176],"box":[290,154,360,43]},{"index":6,"action":"click","start":7.352,"end":7.764,"pointer":[365,269],"box":[290,244,150,49]},{"index":7,"action":"click","start":8.366,"end":8.765,"pointer":[352,336]},{"index":8,"action":"wait","start":9.365,"end":9.491},{"index":9,"action":"pause","start":10.091,"end":11.592}];
   }
 </sheet>

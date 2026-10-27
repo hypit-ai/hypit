@@ -17,7 +17,7 @@
   <time:Timeline id="program" clock={clock} end="board.end">
     <time:Window id="board" from="start" for={recording-media.extent}/>
   </time:Timeline>
-  <spatial:Canvas id="canvas" width="1280" height="720"/>
+  <spatial:Canvas id="canvas" width="1920" height="1080"/>
 
   <walk:Walkthrough id="demo" timeline={program.timeline} within={canvas.bounds}
     media={recording-media.media} source-window={program.board} during={program.board}

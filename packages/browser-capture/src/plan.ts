@@ -167,6 +167,9 @@ function planUrl(url: string, base: string): string {
   return /^[a-z][a-z\d+.-]*:/iu.test(url) ? url : pathToFileURL(resolve(base, url)).href;
 }
 
+/** Delivers one page input; the recorder may hold frame capture around it. */
+type Input = (send: () => Promise<unknown>) => Promise<void>;
+
 const sleep = (ms: number) => new Promise((done) => setTimeout(done, ms));
 
 /** Exactly one visible element (or the chosen `index`); several are an error rather than a guess. */
@@ -220,7 +223,7 @@ const CURSOR_SCRIPT = `(() => {
   };
 })()`;
 
-async function dismissDialogs(page: Page) {
+async function dismissDialogs(page: Page, input: Input) {
   for (let attempt = 0; attempt < 3; attempt++) {
     const closed = await page.evaluate(() => {
       const dialogs = Array.from(document.querySelectorAll<HTMLElement>('[role="dialog"],[aria-modal="true"]'))
@@ -232,7 +235,7 @@ async function dismissDialogs(page: Page) {
       return "escape";
     });
     if (closed === "none") break;
-    if (closed === "escape") await page.keyboard.press("Escape");
+    if (closed === "escape") await input(() => page.keyboard.press("Escape"));
     await sleep(500);
   }
   // Overlays that are not dialogs (promotion toasts, cookie notes) often expose only a labelled close button.
@@ -241,6 +244,75 @@ async function dismissDialogs(page: Page) {
       if (button.offsetParent !== null) button.click();
     }
   });
+}
+
+/**
+ * Record the take as timestamped frames, assembled into a constant-rate file afterwards so encoding
+ * never competes with the page for time. Headless Chrome's screencast and native recorder deliver
+ * CSS pixels only, so at a device scale above 1 the frames are repeated screenshots instead: sharp
+ * enough to zoom into, at roughly 15 fps on a 2560 × 1600 page. At scale 1 the screencast is used,
+ * which is smoother. `stop()` returns an FFmpeg concat list whose durations hold every frame until
+ * the next one, starting at the recording's first instant.
+ */
+async function startFrameRecorder(page: Page, directory: string, viewport: { width: number; height: number; scale: number }) {
+  const begin = Date.now() / 1000;
+  const frames: Array<{ file: string; at: number }> = [];
+  let written = Promise.resolve();
+  const keep = (at: number, bytes: Uint8Array) => {
+    if (frames.length > 0 && at <= frames.at(-1)!.at) return;
+    const file = join(directory, `${String(frames.length).padStart(6, "0")}.png`);
+    frames.push({ file, at: Math.max(0, at) });
+    written = written.then(() => writeFile(file, bytes));
+  };
+  let finish: () => Promise<void>;
+  let input: Input = async (send) => { await send(); };
+  if (viewport.scale > 1) {
+    // Chrome drops mouse and key events dispatched while a screenshot is being taken, so input
+    // waits for the capture in flight and pauses the loop until it has been delivered.
+    let running = true, holding = 0;
+    let capture: Promise<unknown> = Promise.resolve();
+    const loop = (async () => {
+      while (running) {
+        if (holding > 0) { await sleep(4); continue; }
+        const at = Date.now() / 1000 - begin;
+        // A navigation can interrupt one capture; the next one continues the take.
+        capture = page.screenshot({ type: "png", optimizeForSpeed: true }).then((bytes) => keep(at, bytes), () => sleep(30));
+        await capture;
+      }
+    })();
+    input = async (send) => {
+      holding++;
+      try { await capture; await send(); } finally { holding--; }
+    };
+    finish = async () => { running = false; await loop; };
+  } else {
+    const client = await page.createCDPSession();
+    client.on("Page.screencastFrame", (event) => {
+      void client.send("Page.screencastFrameAck", { sessionId: event.sessionId }).catch(() => {});
+      keep((event.metadata.timestamp ?? Date.now() / 1000) - begin, Buffer.from(event.data, "base64"));
+    });
+    await client.send("Page.startScreencast", { format: "png", everyNthFrame: 1 });
+    finish = async () => { await client.send("Page.stopScreencast").catch(() => {}); await client.detach().catch(() => {}); };
+  }
+  return {
+    input,
+    async stop(): Promise<string> {
+      const end = Date.now() / 1000 - begin;
+      await finish();
+      await written;
+      if (frames.length === 0) {
+        // A page that never repainted still has a picture: hold its current state for the take.
+        keep(0, await page.screenshot({ type: "png" }));
+        await written;
+      }
+      frames[0]!.at = 0;
+      const entries = frames.map((frame, i) => `file '${frame.file}'\nduration ${(Math.max((frames[i + 1]?.at ?? end) - frame.at, 0.001)).toFixed(6)}`);
+      const list = join(directory, "frames.ffconcat");
+      // The concat demuxer ignores the last entry's duration unless the file is repeated.
+      await writeFile(list, `ffconcat version 1.0\n${entries.join("\n")}\nfile '${frames.at(-1)!.file}'\n`);
+      return list;
+    },
+  };
 }
 
 /**
@@ -305,16 +377,15 @@ export async function runCapturePlan(session: CaptureSession, input: CapturePlan
     log(`Logged in as ${user}`);
   }
 
-  // Chrome writes a frame only when the page changes. A still screen would leave gaps that media
-  // normalization rightly rejects, so the native file is re-timed to a constant rate afterwards.
   const fps = options.fps ?? 30;
-  const native = await mkdtemp(join(tmpdir(), "hypit-capture-plan-"));
-  const recording = await session.record({ path: join(native, "native.mp4"), fps });
-  // The native recorder's first frame follows the start call; step times are measured from here.
+  const frames = await mkdtemp(join(tmpdir(), "hypit-capture-plan-"));
+  const recording = await startFrameRecorder(page, frames, viewport);
+  const deliver = recording.input;
+  // Step times and frame times share this origin: the recording's first instant.
   const t0 = performance.now();
   const stamp = () => Number(((performance.now() - t0) / 1000).toFixed(3));
   const pointerTo = async (x: number, y: number, press: boolean) => {
-    await page.mouse.move(x, y, { steps: 12 });
+    await deliver(() => page.mouse.move(x, y, { steps: 12 }));
     if (cursor === "page") await page.evaluate((x, y, press) => (window as any).__hypitCursor?.(x, y, press), x, y, press);
     await sleep(cursor === "page" ? 400 : 150);
   };
@@ -352,8 +423,8 @@ export async function runCapturePlan(session: CaptureSession, input: CapturePlan
           case "assert": break;
           case "pause": await sleep(step.ms ?? 1000); break;
           case "screenshot": break;
-          case "dismiss": await dismissDialogs(page); break;
-          case "press": if (element) await element.focus(); await page.keyboard.press(step.key as Parameters<Page["keyboard"]["press"]>[0]); break;
+          case "dismiss": await dismissDialogs(page, deliver); break;
+          case "press": if (element) await element.focus(); await deliver(() => page.keyboard.press(step.key as Parameters<Page["keyboard"]["press"]>[0])); break;
           case "hover": pointer = await center(element!); await pointerTo(...pointer, false); break;
           case "click":
           case "dblclick": {
@@ -363,14 +434,14 @@ export async function runCapturePlan(session: CaptureSession, input: CapturePlan
             }
             pointer = await center(element!, step.at);
             await pointerTo(...pointer, true);
-            await page.mouse.click(...pointer, { count: step.action === "dblclick" ? 2 : 1 });
+            await deliver(() => page.mouse.click(...pointer!, { count: step.action === "dblclick" ? 2 : 1 }));
             break;
           }
           case "fill":
           case "type":
             pointer = await center(element!);
             await pointerTo(...pointer, true);
-            await page.mouse.click(...pointer);
+            await deliver(() => page.mouse.click(...pointer!));
             if (step.action === "fill") {
               // Replace existing text the way a person would, then enter the new value at once.
               const hadText = await element!.evaluate((el) => {
@@ -379,15 +450,19 @@ export async function runCapturePlan(session: CaptureSession, input: CapturePlan
                 const selection = window.getSelection(); selection?.removeAllRanges(); selection?.addRange(range);
                 return (el.textContent ?? "") !== "";
               });
-              if (hadText) await page.keyboard.press("Backspace");
-              await page.keyboard.sendCharacter(step.value!);
+              if (hadText) await deliver(() => page.keyboard.press("Backspace"));
+              await deliver(() => page.keyboard.sendCharacter(step.value!));
             } else {
-              await page.keyboard.type(step.value!, { delay: step.delayMs ?? 40 });
+              // One key at a time, so frames are captured between keystrokes.
+              for (const character of step.value!) {
+                await deliver(() => page.keyboard.type(character));
+                await sleep(step.delayMs ?? 40);
+              }
             }
             break;
           case "scroll": {
             const [x, y] = element ? await center(element) : [viewport.width / 2, viewport.height / 2];
-            await page.mouse.move(x, y);
+            await deliver(() => page.mouse.move(x, y));
             const dx = step.dx ?? 0, dy = step.dy ?? 400;
             // Distance follows elapsed time, so the glide lasts durationMs however long each wheel event takes.
             const duration = step.durationMs ?? 0, begin = performance.now();
@@ -395,7 +470,7 @@ export async function runCapturePlan(session: CaptureSession, input: CapturePlan
             for (;;) {
               const progress = duration > 0 ? Math.min(1, (performance.now() - begin) / duration) : 1;
               const eased = progress < 0.5 ? 2 * progress * progress : 1 - (-2 * progress + 2) ** 2 / 2;
-              await page.mouse.wheel({ deltaX: dx * (eased - sent), deltaY: dy * (eased - sent) });
+              await deliver(() => page.mouse.wheel({ deltaX: dx * (eased - sent), deltaY: dy * (eased - sent) }));
               sent = eased;
               if (progress >= 1) break;
               await sleep(16);
@@ -414,10 +489,12 @@ export async function runCapturePlan(session: CaptureSession, input: CapturePlan
             }
             to = [Math.min(Math.max(to[0], 4), viewport.width - 4), Math.min(Math.max(to[1], 4), viewport.height - 4)];
             await pointerTo(...from, true);
-            await page.mouse.down();
-            await page.mouse.move(...to, { steps: 24 });
+            await deliver(() => page.mouse.down());
+            for (let part = 1; part <= 24; part++) {
+              await deliver(() => page.mouse.move(from[0] + (to[0] - from[0]) * part / 24, from[1] + (to[1] - from[1]) * part / 24));
+            }
             if (cursor === "page") await page.evaluate((x, y) => (window as any).__hypitCursor?.(x, y, false), ...to);
-            await page.mouse.up();
+            await deliver(() => page.mouse.up());
             pointer = [Math.round(to[0]), Math.round(to[1])];
             break;
           }
@@ -425,7 +502,7 @@ export async function runCapturePlan(session: CaptureSession, input: CapturePlan
             const file = resolve(base, step.file!);
             if (element) {
               const [chooser] = await Promise.all([page.waitForFileChooser({ timeout }), (async () => {
-                pointer = await center(element!); await pointerTo(...pointer, true); await page.mouse.click(...pointer);
+                pointer = await center(element!); await pointerTo(...pointer, true); await deliver(() => page.mouse.click(...pointer!));
               })()]);
               await chooser.accept([file]);
             } else {
@@ -456,16 +533,17 @@ export async function runCapturePlan(session: CaptureSession, input: CapturePlan
   }
   let video: CaptureOutput | null = null;
   try {
-    const raw = await recording.stop();
+    const list = await recording.stop();
     const path = join(directory, "recording.mp4");
-    await promisify(execFile)(options.ffmpegPath ?? "ffmpeg", ["-v", "error", "-n", "-i", raw.path, "-vf", `fps=${fps}`,
-      "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "18", "-preset", "medium", "-movflags", "+faststart", "-an", path]);
+    await promisify(execFile)(options.ffmpegPath ?? "ffmpeg", ["-v", "error", "-n", "-f", "concat", "-safe", "0", "-i", list,
+      "-vf", `fps=${fps},format=yuv420p`, "-c:v", "libx264", "-crf", "14", "-preset", "medium", "-tune", "stillimage",
+      "-movflags", "+faststart", "-an", path], { maxBuffer: 16 * 1024 * 1024 });
     const probe = await probeMedia(path, { ...(options.ffprobePath === undefined ? {} : { ffprobePath: options.ffprobePath }) });
     if (!probe.hasVideo) throw new Error(`Recording ${path} has no readable video stream`);
-    video = { kind: "video", path, url: raw.url, width: probe.width, height: probe.height, format: "mp4",
+    video = { kind: "video", path, url: page.url(), width: probe.width, height: probe.height, format: "mp4",
       duration: probe.duration, frameRate: probe.frameRate, hasAudio: false };
     log(`Saved ${path} (${probe.width}×${probe.height}, ${probe.duration.toFixed(2)}s at ${fps} fps)`);
-  } finally { await rm(native, { recursive: true, force: true }); }
+  } finally { await rm(frames, { recursive: true, force: true }); }
   return await save(report(failed, video, steps));
 }
 

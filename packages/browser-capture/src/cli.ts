@@ -16,6 +16,7 @@ export function writeCaptureHelp(io: CliIo): void {
 
 Plan options (replay a JSON step plan while recording it):
   --to <directory>            New or empty directory for recording.mp4, steps.json, steps.svs, screenshots/
+  --scale <number>            Device pixels per CSS pixel; plans default to 2 for sharp zooms
   --cursor none|page          none (default): clean footage, the composition draws the cursor
                               from steps.json; page: draw a cursor into the recording
   --fps <number>              Constant frame rate of recording.mp4 (default 30; needs ffmpeg)
@@ -215,8 +216,9 @@ export async function runCaptureCli(argv: readonly string[], io: CliIo, cwd = pr
     launch.userDataDir = captureProfileDirectory(values.profile);
   }
   if (values["storage-state"] !== undefined) options = { ...options, storageState: resolve(cwd, values["storage-state"]) };
-  if (values.viewport || values.scale) {
-    const viewport = { width: 1280, height: 720, deviceScaleFactor: 1, ...launch.defaultViewport };
+  // A walkthrough is usually zoomed into later, so plans record at 2 device pixels per CSS pixel.
+  if (values.viewport || values.scale || command === "plan") {
+    const viewport = { width: 1280, height: 720, deviceScaleFactor: command === "plan" ? 2 : 1, ...launch.defaultViewport };
     if (values.viewport) {
       const match = /^(\d+)x(\d+)$/.exec(values.viewport);
       if (!match || Number(match[1]) < 1 || Number(match[2]) < 1) throw new Error("--viewport needs positive WIDTHxHEIGHT");

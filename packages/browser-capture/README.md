@@ -90,9 +90,14 @@ The output directory must be new or empty. It receives `recording.mp4`, `screens
 `steps.svs` and `steps.json` (`hypit.capture-plan@1`): per step `start`/`end` seconds measured from the recording's
 start, the target `box` and `pointer` in CSS pixels, any checkpoint screenshot and `skipped` reason,
 plus the viewport and scale, the recording's probed metadata, an optional login check and `failed`.
-Chrome's native recorder writes a frame only when the page changes, so the plan re-times its
-recording to a constant `fps` (default 30) H.264 file with FFmpeg (`ffmpegPath`, default `ffmpeg`);
-media normalization rejects the long frame gaps of a still screen. `capturePlanRecipe` renders the
+A plan records timestamped frames and assembles them afterwards into a constant `fps` (default 30)
+H.264 file with FFmpeg (`ffmpegPath`, default `ffmpeg`); media normalization rejects the long frame
+gaps a change-only recording leaves on a still screen. Headless Chrome's native recorder and
+screencast deliver CSS pixels only, so above device scale 1 the frames are repeated screenshots:
+sharp enough to zoom into, at about 15 page frames per second for a 2560 × 1600 take. Mouse and key
+events wait for the screenshot in flight, because Chrome drops input dispatched during a capture.
+At scale 1 the smoother screencast is used. The CLI records plans at scale 2 unless `--scale` says
+otherwise. `capturePlanRecipe` renders the
 report as `steps.svs`, a `walkthrough.take` Recipe (`passed`, `viewport`, `duration`, `steps` with
 `start`, `end`, `pointer`, `box`) that a composition imports as Source. Relative `startUrl`, `goto`
 and `upload` paths resolve from `baseDirectory` (the plan file's directory in the CLI).

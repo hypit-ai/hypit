@@ -115,7 +115,10 @@ Puppeteer selectors; `text=` and `role=…[name='…']` shorthands are accepted.
 
 The output directory must be new; a retake gets its own directory, so a good take is never
 overwritten. It receives `recording.mp4` (H.264 at a constant 30 fps, or `--fps`, ready for
-normalization; FFmpeg must be on `PATH`), `screenshots/`, `steps.json` and `steps.svs`. Each step in `steps.json`
+normalization; FFmpeg must be on `PATH`). Plans record at 2 device pixels per CSS pixel by default,
+so a 1440 × 900 viewport becomes a 2880 × 1800 recording that stays sharp when the composition zooms
+in; the page itself then updates at about 15 frames per second. `--scale 1` records a smoother but
+softer take, which can suit a long scrolling tour shown without zoom. The take also contains `screenshots/`, `steps.json` and `steps.svs`. Each step in `steps.json`
 has `start` and `end` seconds on the recording's clock, the target `box` and `pointer` in CSS pixels
 (multiply by the reported `viewport.scale` for video pixels), and `failed` names the step that stopped
 the take. Before calling a clip usable, read `steps.json`, look at the checkpoint screenshots and
