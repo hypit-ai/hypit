@@ -99,6 +99,34 @@ async function recordingInfo(path: string, ffprobe: string): Promise<Omit<Captur
     ...(media.frameRate > 0 ? { frameRate: media.frameRate } : {}) };
 }
 
+/**
+ * Headless Chrome names itself "HeadlessChrome" in the user agent and its client hints. Replace both
+ * together: a user agent whose client hints disagree (or are missing) is itself a bot signal, and
+ * verification widgets then refuse to load. A headed browser already reports itself normally.
+ */
+async function ordinaryPage(browser: Browser, page: Page | null): Promise<void> {
+  if (page === null) return;
+  const native = await browser.userAgent();
+  if (!native.includes("HeadlessChrome/")) return;
+  // The same brands a headed Chrome of this version reports.
+  const full = /HeadlessChrome\/([\d.]+)/u.exec(native)?.[1] ?? "0.0.0.0", major = full.split(".")[0]!;
+  const brands = (version: (major: string, full: string) => string) => [
+    { brand: "Not:A-Brand", version: version("99", "99.0.0.0") },
+    { brand: "Chromium", version: version(major, full) },
+    { brand: "Google Chrome", version: version(major, full) },
+  ];
+  const platform = { darwin: "macOS", win32: "Windows", linux: "Linux" }[process.platform as string] ?? "Linux";
+  await page.setUserAgent({ userAgent: native.replace("HeadlessChrome/", "Chrome/"), userAgentMetadata: {
+    brands: brands((m) => m), fullVersionList: brands((_m, f) => f), platform, platformVersion: "",
+    architecture: process.arch.startsWith("arm") ? "arm" : "x86", model: "", mobile: false, bitness: "64",
+  } }).catch(() => {});
+}
+
+async function presentOrdinaryBrowser(browser: Browser): Promise<void> {
+  browser.on("targetcreated", (target) => { void target.page().then((page) => ordinaryPage(browser, page)).catch(() => {}); });
+  for (const page of await browser.pages()) await ordinaryPage(browser, page);
+}
+
 async function launchCaptureBrowser(options: CaptureOptions): Promise<Browser> {
   const launch = { ...options.launch };
   if ((launch.channel || launch.executablePath) && options.browser !== undefined) {
@@ -120,10 +148,7 @@ async function launchCaptureBrowser(options: CaptureOptions): Promise<Browser> {
     ignoreDefaultArgs: ignored,
     args: [...(launch.args ?? []), "--disable-blink-features=AutomationControlled"],
   });
-  const userAgent = (await browser.userAgent()).replace("HeadlessChrome/", "Chrome/");
-  const ordinary = async (page: Page | null) => { await page?.setUserAgent({ userAgent }).catch(() => {}); };
-  browser.on("targetcreated", (target) => { void target.page().then(ordinary).catch(() => {}); });
-  for (const page of await browser.pages()) await ordinary(page);
+  await presentOrdinaryBrowser(browser);
   if (options.storageState === undefined) return browser;
   try {
     const state = JSON.parse(await readFile(options.storageState, "utf8")) as {
@@ -185,7 +210,7 @@ export async function withCapture(
   };
   try {
     const page = await browser.newPage();
-    await page.setUserAgent({ userAgent: (await browser.userAgent()).replace("HeadlessChrome/", "Chrome/") });
+    await ordinaryPage(browser, page);
     if (options.timeoutMs !== undefined) {
       page.setDefaultTimeout(options.timeoutMs);
       page.setDefaultNavigationTimeout(options.timeoutMs);

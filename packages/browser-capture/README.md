@@ -118,7 +118,7 @@ page and records only an account label.
 
 Every capture browser starts without Chrome's `--enable-automation` switch, with
 `--disable-blink-features=AutomationControlled` (so `navigator.webdriver` is false) and with
-"HeadlessChrome" replaced by "Chrome" in the user agent. Sites otherwise serve bot-specific pages,
+"HeadlessChrome" replaced by "Chrome" in the user agent and, consistently, in its client hints (a headed browser is left as it is). Sites otherwise serve bot-specific pages,
 and verification widgets such as Cloudflare Turnstile refuse the session, including when a person
 logs in by hand. This presents the browser as an ordinary one; it does not solve a challenge.
 
