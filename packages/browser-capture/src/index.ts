@@ -110,10 +110,20 @@ async function launchCaptureBrowser(options: CaptureOptions): Promise<Browser> {
       `Capture browser is not installed at ${launch.executablePath}. Run hypit capture install-browser with the same version and cache selection, or select an installed compatible browser.`);
   }
   if (launch.userDataDir !== undefined) await mkdir(launch.userDataDir, { recursive: true, mode: 0o700 });
+  // Present the browser as an ordinary one (no automation switch or flag, no "HeadlessChrome" in
+  // the user agent). Sites otherwise serve bot-specific pages, and verification widgets refuse the
+  // person who is logging in by hand.
+  const ignored = launch.ignoreDefaultArgs === true ? true : [...(launch.ignoreDefaultArgs || []), "--enable-automation"];
   const browser = await puppeteer.launch({
     defaultViewport: { width: 1280, height: 720, deviceScaleFactor: 1 },
     ...launch,
+    ignoreDefaultArgs: ignored,
+    args: [...(launch.args ?? []), "--disable-blink-features=AutomationControlled"],
   });
+  const userAgent = (await browser.userAgent()).replace("HeadlessChrome/", "Chrome/");
+  const ordinary = async (page: Page | null) => { await page?.setUserAgent({ userAgent }).catch(() => {}); };
+  browser.on("targetcreated", (target) => { void target.page().then(ordinary).catch(() => {}); });
+  for (const page of await browser.pages()) await ordinary(page);
   if (options.storageState === undefined) return browser;
   try {
     const state = JSON.parse(await readFile(options.storageState, "utf8")) as {
@@ -175,6 +185,7 @@ export async function withCapture(
   };
   try {
     const page = await browser.newPage();
+    await page.setUserAgent({ userAgent: (await browser.userAgent()).replace("HeadlessChrome/", "Chrome/") });
     if (options.timeoutMs !== undefined) {
       page.setDefaultTimeout(options.timeoutMs);
       page.setDefaultNavigationTimeout(options.timeoutMs);

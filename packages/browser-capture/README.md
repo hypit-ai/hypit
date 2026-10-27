@@ -114,6 +114,14 @@ Clicks whose selector or element text names a paid or destructive operation are 
 step has `authorized: true`. `loginCheck` fetches the product's own session endpoint from inside the
 page and records only an account label.
 
+## An ordinary browser
+
+Every capture browser starts without Chrome's `--enable-automation` switch, with
+`--disable-blink-features=AutomationControlled` (so `navigator.webdriver` is false) and with
+"HeadlessChrome" replaced by "Chrome" in the user agent. Sites otherwise serve bot-specific pages,
+and verification widgets such as Cloudflare Turnstile refuse the session, including when a person
+logs in by hand. This presents the browser as an ordinary one; it does not solve a challenge.
+
 ## Login state
 
 `CaptureOptions.storageState` imports a `{ cookies, origins }` file (Playwright's storageState
