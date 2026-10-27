@@ -114,15 +114,21 @@ Puppeteer selectors; `text=` and `role=…[name='…']` shorthands are accepted.
 `durationMs` glides, which reads better for a website tour than a jump.
 
 The output directory must be new; a retake gets its own directory, so a good take is never
-overwritten. It receives `recording.mp4`, `screenshots/` and `steps.json`. Each step in `steps.json`
+overwritten. It receives `recording.mp4` (H.264 at a constant 30 fps, or `--fps`, ready for
+normalization; FFmpeg must be on `PATH`), `screenshots/`, `steps.json` and `steps.svs`. Each step in `steps.json`
 has `start` and `end` seconds on the recording's clock, the target `box` and `pointer` in CSS pixels
 (multiply by the reported `viewport.scale` for video pixels), and `failed` names the step that stopped
 the take. Before calling a clip usable, read `steps.json`, look at the checkpoint screenshots and
 watch the recording: an operation-tested clip is not yet proof that the requested result appeared.
 
 The recording has no cursor by default. Draw the cursor, click ripple, zoom or highlight in the
-composition from `steps.json`, where they can follow the narration's words and change without a
-retake. `--cursor page` draws a cursor into the page when the footage itself must carry it.
+composition from the take's steps, where they can change without a retake. `steps.svs` holds the
+same steps as a `walkthrough.take` Recipe that Source imports directly
+(`<import as="take" source="./captures/take/steps.svs"/>`, then `{take.walkthrough.take}`). The
+repository's [product walkthrough example](https://github.com/hypit-ai/hypit/tree/main/examples/product-walkthrough)
+has a project component that presents a take on a screen card with a cursor, click ripples and a
+camera that moves in on each action; copy it into a video's `packages/` like any project component.
+`--cursor page` draws a cursor into the page when the footage itself must carry it.
 
 Clicking a control whose selector or text names a paid or destructive operation (generate, buy,
 checkout, subscribe, delete, remove, send, pay, publish, submit…) is refused unless that step carries

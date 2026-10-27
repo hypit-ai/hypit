@@ -1,5 +1,5 @@
 import { readFile, stat } from "node:fs/promises";
-import { resolve } from "node:path";
+import { dirname, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 import type { CliCommandModule, CliIo } from "@hypit/hypit/cli";
@@ -15,10 +15,10 @@ export function writeCaptureHelp(io: CliIo): void {
   hypit capture install-browser
 
 Plan options (replay a JSON step plan while recording it):
-  --to <directory>            New or empty directory for recording.mp4, steps.json, screenshots/
+  --to <directory>            New or empty directory for recording.mp4, steps.json, steps.svs, screenshots/
   --cursor none|page          none (default): clean footage, the composition draws the cursor
                               from steps.json; page: draw a cursor into the recording
-  --fps <number>              Maximum recording frame rate
+  --fps <number>              Constant frame rate of recording.mp4 (default 30; needs ffmpeg)
   --login-check <url>         Product session endpoint that must return a user before recording
 
 Screenshot options:
@@ -131,6 +131,7 @@ export async function runCaptureCli(argv: readonly string[], io: CliIo, cwd = pr
   let options: CaptureOptions = {};
   let script: CaptureScript;
   let planReport: CapturePlanReport | undefined;
+  let planDirectory: string | undefined;
   if (command === "plan" || command === "login") {
     for (const name of ["full-page", "selector", "clip", "transparent", "wait-for", "wait-ms"] as const) {
       if (values[name] !== undefined) throw new Error(`--${name} belongs to capture screenshot`);
@@ -146,10 +147,11 @@ export async function runCaptureCli(argv: readonly string[], io: CliIo, cwd = pr
     const planPath = resolve(cwd, source);
     const plan = parseCapturePlan(JSON.parse(await readFile(planPath, "utf8")));
     const directory = resolve(cwd, values.to);
+    planDirectory = directory;
     const fps = numeric(values.fps, "--fps");
     const cursor = values.cursor as "none" | "page" | undefined;
     script = async (session) => {
-      planReport = await runCapturePlan(session, plan, { directory, baseDirectory: cwd, log: session.log,
+      planReport = await runCapturePlan(session, plan, { directory, baseDirectory: dirname(planPath), log: session.log,
         ...(cursor === undefined ? {} : { cursor }), ...(fps === undefined ? {} : { fps }),
         ...(values["login-check"] === undefined ? {} : { loginCheck: values["login-check"] }) });
     };
@@ -228,8 +230,12 @@ export async function runCaptureCli(argv: readonly string[], io: CliIo, cwd = pr
     if (io.writeProgress) io.writeProgress(`${text}\n`);
     else if (!values.json) io.write(`${text}\n`);
   };
-  const show = (output: CaptureOutput) => progress(`Saved ${output.path} (${output.width}×${output.height}${
-    output.duration === undefined ? "" : `, ${output.duration.toFixed(2)}s`})`);
+  // A plan's native recording is an intermediate file; the plan reports its own deliverables.
+  const deliverable = (output: CaptureOutput) => planDirectory === undefined || output.path.startsWith(`${planDirectory}${sep}`);
+  const show = (output: CaptureOutput) => {
+    if (deliverable(output)) progress(`Saved ${output.path} (${output.width}×${output.height}${
+      output.duration === undefined ? "" : `, ${output.duration.toFixed(2)}s`})`);
+  };
   // Loading the browser library is specific to capture; ordinary Hypit commands do not load it.
   const { withCapture, openCaptureLogin } = await import("@hypit/browser-capture");
   if (command === "login") {
@@ -240,8 +246,9 @@ export async function runCaptureCli(argv: readonly string[], io: CliIo, cwd = pr
       : `Profile ${values.profile} saved; pass --profile ${values.profile} to capture with this login.\n`);
     return;
   }
-  const outputs = await withCapture({ ...options, launch, ...(timeoutMs === undefined ? {} : { timeoutMs }) },
+  const captured = await withCapture({ ...options, launch, ...(timeoutMs === undefined ? {} : { timeoutMs }) },
     async (session) => await script({ ...session, args, log: progress }), show);
+  const outputs = [...captured.filter(deliverable), ...(planReport?.recording ? [planReport.recording] : [])];
   if (planReport !== undefined) {
     if (values.json) io.write(`${JSON.stringify({ format: "hypit.capture@1", outputs, plan: planReport }, null, 2)}\n`);
     else io.write(planReport.failed === null

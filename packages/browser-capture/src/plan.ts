@@ -1,5 +1,10 @@
-import { mkdir, readdir, writeFile } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { execFile } from "node:child_process";
+import { mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join, resolve, sep } from "node:path";
+import { pathToFileURL } from "node:url";
+import { promisify } from "node:util";
+import { probeMedia } from "@hypit/media-local/files";
 import type { ElementHandle, Page } from "puppeteer-core";
 import type { CaptureOutput, CaptureSession } from "./index.js";
 
@@ -63,17 +68,20 @@ export type CapturePlanStep = {
 };
 
 export type CapturePlanOptions = {
-  /** New or empty directory receiving recording.mp4, steps.json and screenshots/. */
+  /** New or empty directory receiving recording.mp4, steps.json, steps.svs and screenshots/. */
   readonly directory: string;
   /**
    * `none` (default) keeps the footage clean so the composition can draw a cursor, zoom or highlight
    * from steps.json; `page` draws a cursor into the recorded page.
    */
   readonly cursor?: "none" | "page";
+  /** Constant frame rate of recording.mp4 (default 30). */
   readonly fps?: number;
+  readonly ffmpegPath?: string;
+  readonly ffprobePath?: string;
   /** Overrides the plan's `loginCheck`. */
   readonly loginCheck?: string;
-  /** Resolves relative `upload` files; defaults to the working directory. */
+  /** Resolves relative `startUrl`, `goto` and `upload` paths; defaults to the working directory. */
   readonly baseDirectory?: string;
   log?(message: string): void;
 };
@@ -152,6 +160,11 @@ export function planSelector(selector: string): string {
     return `::-p-aria(${name}[role=${JSON.stringify(role[1])}])`;
   }
   return selector;
+}
+
+/** A URL with a scheme stays as written; anything else is a local file beside the plan. */
+function planUrl(url: string, base: string): string {
+  return /^[a-z][a-z\d+.-]*:/iu.test(url) ? url : pathToFileURL(resolve(base, url)).href;
 }
 
 const sleep = (ms: number) => new Promise((done) => setTimeout(done, ms));
@@ -245,10 +258,12 @@ export async function runCapturePlan(session: CaptureSession, input: CapturePlan
   const viewportSize = page.viewport() ?? { width: 1280, height: 720, deviceScaleFactor: 1 };
   const viewport = { width: viewportSize.width, height: viewportSize.height, scale: viewportSize.deviceScaleFactor ?? 1 };
   if (cursor === "page") await page.evaluateOnNewDocument(CURSOR_SCRIPT);
+  const base = resolve(options.baseDirectory ?? process.cwd());
+  const startUrl = planUrl(plan.startUrl, base);
 
   let startLoads = 1;
   for (let load = 1; ; load++) {
-    await page.goto(plan.startUrl, { waitUntil: "domcontentloaded" });
+    await page.goto(startUrl, { waitUntil: "domcontentloaded" });
     if (plan.startUntil === undefined) { await sleep(1200); break; }
     try {
       await page.waitForSelector(planSelector(plan.startUntil), { visible: true, timeout: plan.startTimeoutMs ?? 15_000 });
@@ -264,8 +279,14 @@ export async function runCapturePlan(session: CaptureSession, input: CapturePlan
   const loginCheck = options.loginCheck ?? plan.loginCheck;
   const report = (failed: string | null, recording: CaptureOutput | null, steps: CapturePlanStepReport[]): CapturePlanReport =>
     ({ format: "hypit.capture-plan@1", startUrl: plan.startUrl, startLoads, viewport, cursor, auth, failed, recording, steps });
+  // Saved evidence stays portable: local paths under the take or the plan become relative.
+  const local = [[`${directory}${sep}`, ""], [`${pathToFileURL(base).href}/`, "./"], [`${base}${sep}`, "./"]] as const;
+  const portable = (_key: string, value: unknown) => typeof value === "string"
+    ? local.reduce((text, [prefix, replacement]) => text.startsWith(prefix) ? replacement + text.slice(prefix.length) : text, value)
+    : value;
   const save = async (value: CapturePlanReport) => {
-    await writeFile(join(directory, "steps.json"), `${JSON.stringify(value, null, 2)}\n`);
+    await writeFile(join(directory, "steps.json"), `${JSON.stringify(value, portable, 2)}\n`);
+    await writeFile(join(directory, "steps.svs"), capturePlanRecipe(value));
     return value;
   };
   if (loginCheck !== undefined) {
@@ -284,7 +305,11 @@ export async function runCapturePlan(session: CaptureSession, input: CapturePlan
     log(`Logged in as ${user}`);
   }
 
-  const recording = await session.record({ path: join(directory, "recording.mp4"), ...(options.fps === undefined ? {} : { fps: options.fps }) });
+  // Chrome writes a frame only when the page changes. A still screen would leave gaps that media
+  // normalization rightly rejects, so the native file is re-timed to a constant rate afterwards.
+  const fps = options.fps ?? 30;
+  const native = await mkdtemp(join(tmpdir(), "hypit-capture-plan-"));
+  const recording = await session.record({ path: join(native, "native.mp4"), fps });
   // The native recorder's first frame follows the start call; step times are measured from here.
   const t0 = performance.now();
   const stamp = () => Number(((performance.now() - t0) / 1000).toFixed(3));
@@ -322,7 +347,7 @@ export async function runCapturePlan(session: CaptureSession, input: CapturePlan
       try {
         if (step.target !== undefined) element = await findTarget(page, step, step.target, timeout);
         switch (step.action) {
-          case "goto": await page.goto(step.url!, { waitUntil: "domcontentloaded" }); break;
+          case "goto": await page.goto(planUrl(step.url!, base), { waitUntil: "domcontentloaded" }); break;
           case "wait": await page.waitForSelector(planSelector(step.for!), { visible: true, timeout }); break;
           case "assert": break;
           case "pause": await sleep(step.ms ?? 1000); break;
@@ -397,7 +422,7 @@ export async function runCapturePlan(session: CaptureSession, input: CapturePlan
             break;
           }
           case "upload": {
-            const file = resolve(options.baseDirectory ?? process.cwd(), step.file!);
+            const file = resolve(base, step.file!);
             if (element) {
               const [chooser] = await Promise.all([page.waitForFileChooser({ timeout }), (async () => {
                 pointer = await center(element!); await pointerTo(...pointer, true); await page.mouse.click(...pointer);
@@ -429,6 +454,39 @@ export async function runCapturePlan(session: CaptureSession, input: CapturePlan
     failed = `steps[${steps.length}]: ${error instanceof Error ? error.message.split("\n")[0] : String(error)}`;
     await session.screenshot({ path: join(directory, "screenshots", "failed.png") }).catch(() => undefined);
   }
-  const video = await recording.stop();
+  let video: CaptureOutput | null = null;
+  try {
+    const raw = await recording.stop();
+    const path = join(directory, "recording.mp4");
+    await promisify(execFile)(options.ffmpegPath ?? "ffmpeg", ["-v", "error", "-n", "-i", raw.path, "-vf", `fps=${fps}`,
+      "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "18", "-preset", "medium", "-movflags", "+faststart", "-an", path]);
+    const probe = await probeMedia(path, { ...(options.ffprobePath === undefined ? {} : { ffprobePath: options.ffprobePath }) });
+    if (!probe.hasVideo) throw new Error(`Recording ${path} has no readable video stream`);
+    video = { kind: "video", path, url: raw.url, width: probe.width, height: probe.height, format: "mp4",
+      duration: probe.duration, frameRate: probe.frameRate, hasAudio: false };
+    log(`Saved ${path} (${probe.width}×${probe.height}, ${probe.duration.toFixed(2)}s at ${fps} fps)`);
+  } finally { await rm(native, { recursive: true, force: true }); }
   return await save(report(failed, video, steps));
+}
+
+/**
+ * The same take as an SVS Recipe (`walkthrough.take`), so a composition can import it as Source:
+ * `<import as="take" source="./captures/take/steps.svs"/>` then `{take.walkthrough.take}`.
+ * Only what drawing needs is kept: timing, pointer and box of every step that ran.
+ */
+export function capturePlanRecipe(report: CapturePlanReport): string {
+  const steps = report.steps.filter((step) => step.skipped === undefined).map((step) => ({
+    index: step.index, action: step.action, start: step.start, end: step.end,
+    ...(step.pointer ? { pointer: step.pointer } : {}), ...(step.box ? { box: step.box } : {}),
+  }));
+  return `<?svml using="@hypit/recipe@1"?>
+<sheet version="1">
+  walkthrough.take {
+    passed: ${report.failed === null && report.recording !== null};
+    viewport: ${JSON.stringify(report.viewport)};
+    duration: ${report.recording?.duration ?? 0};
+    steps: ${JSON.stringify(steps)};
+  }
+</sheet>
+`;
 }

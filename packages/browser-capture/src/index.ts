@@ -13,7 +13,7 @@ import { captureBrowserExecutablePath } from "./browser.js";
 export { captureBrowserExecutablePath, installCaptureBrowser } from "./browser.js";
 
 export type { CaptureBrowserOptions } from "./browser.js";
-export { parseCapturePlan, planSelector, runCapturePlan } from "./plan.js";
+export { capturePlanRecipe, parseCapturePlan, planSelector, runCapturePlan } from "./plan.js";
 export type { CapturePlan, CapturePlanAction, CapturePlanOptions, CapturePlanReport, CapturePlanStep, CapturePlanStepReport } from "./plan.js";
 
 export type CaptureOptions = {

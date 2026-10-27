@@ -41,7 +41,7 @@ test("plans are validated before a browser opens and shorthand selectors become 
 async function replay(work: string, plan: CapturePlan, cursor: "none" | "page" = "none"): Promise<CapturePlanReport> {
   let report: CapturePlanReport | undefined;
   await withCapture({ launch: { executablePath, defaultViewport: { width: 640, height: 480, deviceScaleFactor: 1 } } },
-    async (session) => { report = await runCapturePlan(session, plan, { directory: join(work, "take"), cursor, fps: 30 }); });
+    async (session) => { report = await runCapturePlan(session, plan, { directory: join(work, "take"), baseDirectory: work, cursor, fps: 30 }); });
   return report!;
 }
 
@@ -82,7 +82,14 @@ test("a plan replays real actions, reports their recorded time and target boxes,
     assert.ok(report.steps[6]!.skipped, "an optional missing target is skipped, not failed");
     const saved = JSON.parse(await readFile(join(work, "take", "steps.json"), "utf8")) as CapturePlanReport;
     assert.equal(saved.format, "hypit.capture-plan@1");
+    assert.equal(saved.recording?.path, "recording.mp4", "saved evidence holds no machine-specific path");
+    assert.doesNotMatch(JSON.stringify(saved), new RegExp(work.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&"), "u"));
     assert.equal(saved.recording?.width, 640);
+    assert.equal(saved.recording?.frameRate, 30, "the recording is re-timed to a constant rate for media normalization");
+    const recipe = await readFile(join(work, "take", "steps.svs"), "utf8");
+    assert.match(recipe, /walkthrough\.take \{\s+passed: true;/u);
+    assert.ok(recipe.includes(`"pointer":[${click.pointer!.join(",")}]`), "the Recipe carries what the composition draws from");
+    assert.doesNotMatch(recipe, /"index":6/u, "skipped steps are left out");
     // Step times are on the recording's clock: the page is red before the click and blue after it.
     const video = join(work, "take", "recording.mp4");
     const before = await colorAt(video, Math.max(0, click.start - 0.4));
@@ -103,6 +110,7 @@ test("guarded clicks, ambiguous targets and reused output directories stop the t
     assert.match(guarded.failed ?? "", /^steps\[0\]: GUARDED_ACTION/);
     assert.ok(existsSync(join(work, "take", "screenshots", "failed.png")));
     assert.ok(existsSync(join(work, "take", "recording.mp4")), "the partial take is kept for diagnosis");
+    assert.match(await readFile(join(work, "take", "steps.svs"), "utf8"), /passed: false;/u);
     await assert.rejects(replay(work, { startUrl, steps: [] }), /must be new or empty/);
     await rm(join(work, "take"), { recursive: true });
     const ambiguous = await replay(work, { startUrl, steps: [{ action: "hover", target: ".twin" }] });

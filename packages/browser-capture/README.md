@@ -86,10 +86,16 @@ recording it, and `hypit capture plan <plan.json> --to <directory>` is the CLI f
 unless the step chooses an `index`; `asset: { attribute, value }` additionally checks an exact
 identity. `optional: true` skips a step whose target never appears.
 
-The output directory must be new or empty. It receives `recording.mp4`, `screenshots/` and
-`steps.json` (`hypit.capture-plan@1`): per step `start`/`end` seconds measured from the recording's
+The output directory must be new or empty. It receives `recording.mp4`, `screenshots/`,
+`steps.svs` and `steps.json` (`hypit.capture-plan@1`): per step `start`/`end` seconds measured from the recording's
 start, the target `box` and `pointer` in CSS pixels, any checkpoint screenshot and `skipped` reason,
 plus the viewport and scale, the recording's probed metadata, an optional login check and `failed`.
+Chrome's native recorder writes a frame only when the page changes, so the plan re-times its
+recording to a constant `fps` (default 30) H.264 file with FFmpeg (`ffmpegPath`, default `ffmpeg`);
+media normalization rejects the long frame gaps of a still screen. `capturePlanRecipe` renders the
+report as `steps.svs`, a `walkthrough.take` Recipe (`passed`, `viewport`, `duration`, `steps` with
+`start`, `end`, `pointer`, `box`) that a composition imports as Source. Relative `startUrl`, `goto`
+and `upload` paths resolve from `baseDirectory` (the plan file's directory in the CLI).
 The take stops at the first failed step, keeps the partial recording and saves
 `screenshots/failed.png`; the CLI exits non-zero. `cursor: "none"` (default) leaves footage clean for
 a composition-drawn cursor; `cursor: "page"` draws one into the page.
