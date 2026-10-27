@@ -301,7 +301,7 @@ practical, revisit that choice and carry the improvement into the work and its n
 | placing independent images, prepared video or surfaces and choosing source playback | `references/production/visual-clips.md` |
 | placing independent music, narration, ambience or effects and selecting source playback | `references/production/audio-clips.md` |
 | downloading a reference or source video from a link with yt-dlp | `references/production/video-downloads.md` |
-| capturing a website, recording a page interaction or exporting a local HTML graphic | `references/production/browser-capture.md` |
+| capturing a website, recording a page interaction or product walkthrough (plan replay, logged-in profiles) or exporting a local HTML graphic | `references/production/browser-capture.md` |
 | composing, correcting, resizing, cropping or cutting out an image | `references/production/image-operations.md` |
 | selecting original/cutout footage or preparing transparency before presentation | `references/production/media.md` |
 | Canvas, Frames, aspect, fitting, cropping or coordinate relationships | `references/production/spatial.md` |

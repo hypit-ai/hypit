@@ -7,7 +7,7 @@ Result or Runtime; completed recordings reuse `@hypit/media-local`'s explicit fi
 forking a second ffprobe parser. The package's CLI contribution uses the installed Hypit CLI host.
 
 This package also owns the `@hypit/browser-capture/cli` contribution used by the Distribution for
-`hypit capture screenshot` and `hypit capture run`. See `hypit capture --help`
+`hypit capture screenshot`, `hypit capture run`, `hypit capture plan` and `hypit capture login`. See `hypit capture --help`
 for command options. Puppeteer Core is a pinned Distribution dependency, so a plain video project
 needs no browser-library installation or private `node_modules` import path.
 `hypit capture install-browser` explicitly prepares the package's tested Chrome for Testing revision
@@ -73,6 +73,39 @@ Outputs include absolute `path`, `kind`, `url`, `width`, `height`, `format`, plu
 and `hasAudio` for video when available. Helpers refuse overwrites; a failed capture removes only its
 own incomplete output. The CLI prints completed paths as work progresses; `--json` returns the
 complete output list as `hypit.capture@1`.
+
+## Plan replay
+
+`runCapturePlan(session, plan, options)` replays a JSON step plan in the session's page while
+recording it, and `hypit capture plan <plan.json> --to <directory>` is the CLI form.
+`parseCapturePlan` validates a plan before a browser opens. The start page (and optional
+`startUntil` selector, with `startRetries`) loads before the recording starts. Steps are `goto`,
+`wait`, `assert`, `dismiss`, `hover`, `click`, `dblclick`, `fill`, `type`, `press`, `scroll`, `pause`,
+`screenshot`, `drag` and `upload`. Targets are Puppeteer selectors, and `planSelector` translates
+`text=` and `role=…[name='…']` shorthands. A target must resolve to exactly one visible element
+unless the step chooses an `index`; `asset: { attribute, value }` additionally checks an exact
+identity. `optional: true` skips a step whose target never appears.
+
+The output directory must be new or empty. It receives `recording.mp4`, `screenshots/` and
+`steps.json` (`hypit.capture-plan@1`): per step `start`/`end` seconds measured from the recording's
+start, the target `box` and `pointer` in CSS pixels, any checkpoint screenshot and `skipped` reason,
+plus the viewport and scale, the recording's probed metadata, an optional login check and `failed`.
+The take stops at the first failed step, keeps the partial recording and saves
+`screenshots/failed.png`; the CLI exits non-zero. `cursor: "none"` (default) leaves footage clean for
+a composition-drawn cursor; `cursor: "page"` draws one into the page.
+
+Clicks whose selector or element text names a paid or destructive operation are refused unless the
+step has `authorized: true`. `loginCheck` fetches the product's own session endpoint from inside the
+page and records only an account label.
+
+## Login state
+
+`CaptureOptions.storageState` imports a `{ cookies, origins }` file (Playwright's storageState
+shape): cookies are set on launch and each origin's localStorage is restored before page scripts
+run. `captureProfileDirectory(name)` names a persistent profile outside projects
+(`~/.cache/hypit/capture-profiles/<name>`, or `HYPIT_CAPTURE_PROFILES`); the CLI's `--profile` uses it
+as `userDataDir`. `openCaptureLogin(options, url)` and `hypit capture login <url> --profile <name>`
+open a visible browser on that profile for a person to log in, resolving when the window closes.
 
 ## Project scripts
 
