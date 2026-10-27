@@ -105,6 +105,11 @@ The take stops at the first failed step, keeps the partial recording and saves
 `screenshots/failed.png`; the CLI exits non-zero. `cursor: "none"` (default) leaves footage clean for
 a composition-drawn cursor; `cursor: "page"` draws one into the page.
 
+`prepare` steps run before the recording starts and are not reported; `locale` sets
+`Accept-Language`, `navigator.language` and `navigator.languages`. A `scroll` with `durationMs` is a
+page-side eased animation of the scroller under the pointer that scrolls in that direction (or the
+document); without it, the scroll is wheel input.
+
 Clicks whose selector or element text names a paid or destructive operation are refused unless the
 step has `authorized: true`. `loginCheck` fetches the product's own session endpoint from inside the
 page and records only an account label.

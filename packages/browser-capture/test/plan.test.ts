@@ -167,3 +167,28 @@ test("exported login state restores cookies and origin storage, and the login ch
     await rm(work, { recursive: true, force: true });
   }
 });
+
+test("prepare steps run before the recording, the page sees the plan's locale, and a glide scrolls the page past a carousel", {
+  skip: ready, timeout: 60_000,
+}, async () => {
+  const work = await mkdtemp(join(tmpdir(), "hypit-capture-plan-prepare-"));
+  try {
+    await writeFile(join(work, "page.html"), `<style>body{margin:0;height:3000px;background:#ff0000}
+      #rail{position:absolute;top:150px;left:0;width:640px;overflow-x:auto;white-space:nowrap}
+      #rail div{display:inline-block;width:400px;height:200px;background:#333}</style>
+      <button id="warm" onclick="document.body.style.background='#0000ff'">Warm</button><p id="lang"></p>
+      <div id="rail"><div></div><div></div><div></div></div>
+      <script>document.getElementById('lang').textContent='lang:'+navigator.language</script>`);
+    const report = await replay(work, { startUrl: "./page.html", locale: "fr-FR",
+      prepare: [{ action: "click", target: "#warm" }],
+      steps: [{ action: "wait", for: "text=lang:fr-FR" }, { action: "scroll", dy: 900, durationMs: 300 }, { action: "pause", ms: 300 }] });
+    assert.equal(report.failed, null);
+    assert.deepEqual(report.steps.map((step) => step.action), ["wait", "scroll", "pause"], "prepare steps are not part of the take");
+    const first = await colorAt(join(work, "take", "recording.mp4"), 0);
+    assert.ok(first[0]! < 60 && first[2]! > 3 * first[0]!, `the take starts in the prepared state ${first}`);
+    // The pointer starts over the horizontal rail; the page, not the rail, must move, leaving only blue.
+    const last = await colorAt(join(work, "take", "recording.mp4"), report.recording!.duration! - 0.2);
+    assert.ok(last[2]! > 220, `the page scrolled past the rail ${last}`);
+    assert.throws(() => parseCapturePlan({ startUrl: "x", locale: "not a tag", steps: [] }), /language tag/);
+  } finally { await rm(work, { recursive: true, force: true }); }
+});

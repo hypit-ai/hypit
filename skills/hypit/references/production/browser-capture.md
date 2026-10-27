@@ -103,7 +103,13 @@ generation). Then write one JSON plan per shot and replay it:
 hypit capture plan shots/templates.json --to captures/templates-take1 --viewport 1440x900
 ```
 
-The start page loads before recording begins, so loading stays out of the shot. Each step waits for
+The start page loads before recording begins, so loading stays out of the shot. `prepare` holds
+steps that run before the recording, such as scrolling once through a long page so lazily loaded
+videos and images are already present in the take; end it where the take should begin
+(`{ "action": "scroll", "dy": -100000 }`). Use wheel scrolls (no `durationMs`) there, because some
+sites load media only in response to real wheel input. `locale` (for example `"en-US"`) sets the
+language the page sees, so a site does not offer a translation or switch language because of the
+recording machine. Each step waits for
 exactly one visible target and stops the take at the first failure. Actions are `goto {url}`,
 `wait {for}`, `assert`, `dismiss`, `hover`, `click`, `dblclick`, `fill {value}`, `type {value, delayMs}`,
 `press {key}`, `scroll {dy, dx, durationMs}`, `pause {ms}`, `screenshot`, `drag {toward | dx, dy}` and
@@ -111,7 +117,8 @@ exactly one visible target and stops the take at the first failure. Actions are 
 for a deliberately repeated control, `optional: true` for a banner that may not appear, and
 `asset: { attribute, value }` to require an exact identity on the chosen element. Targets are
 Puppeteer selectors; `text=` and `role=…[name='…']` shorthands are accepted. A `scroll` with
-`durationMs` glides, which reads better for a website tour than a jump.
+`durationMs` glides: the page animates the scroller under the pointer that moves in that direction
+(or the document), which reads better for a website tour than a jump.
 
 The output directory must be new; a retake gets its own directory, so a good take is never
 overwritten. It receives `recording.mp4` (H.264 at a constant 30 fps, or `--fps`, ready for

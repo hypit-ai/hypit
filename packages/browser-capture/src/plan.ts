@@ -22,6 +22,13 @@ export type CapturePlan = {
   readonly startTimeoutMs?: number;
   /** The product's own session endpoint; a visible workspace is not proof of login. */
   readonly loginCheck?: string;
+  /**
+   * Language the page should see (`Accept-Language` and `navigator.language`), e.g. "en-US", so a
+   * site does not offer a translation or switch language because of the recording machine.
+   */
+  readonly locale?: string;
+  /** Unrecorded steps before the take, e.g. scrolling once through a page so lazy media is loaded. */
+  readonly prepare?: readonly CapturePlanStep[];
   readonly steps: readonly CapturePlanStep[];
 };
 
@@ -127,8 +134,10 @@ export function parseCapturePlan(value: unknown): CapturePlan {
   if (plan === null || typeof plan !== "object" || Array.isArray(plan)) throw new Error("A capture plan must be a JSON object");
   if (typeof plan.startUrl !== "string" || plan.startUrl === "") throw new Error("A capture plan needs startUrl");
   if (!Array.isArray(plan.steps)) throw new Error("A capture plan needs a steps array");
-  plan.steps.forEach((step, index) => {
-    const at = `steps[${index}]`;
+  if (plan.locale !== undefined && !/^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$/u.test(plan.locale)) throw new Error("locale must be a language tag such as en-US");
+  if (plan.prepare !== undefined && !Array.isArray(plan.prepare)) throw new Error("prepare must be a steps array");
+  [...(plan.prepare ?? []).map((step, index) => [step, `prepare[${index}]`] as const),
+    ...plan.steps.map((step, index) => [step, `steps[${index}]`] as const)].forEach(([step, at]) => {
     if (step === null || typeof step !== "object") throw new Error(`${at} must be an object`);
     if (!ACTIONS.has(step.action)) throw new Error(`${at}: unknown action ${String(step.action)}`);
     if (NEEDS_TARGET.has(step.action) && typeof step.target !== "string") throw new Error(`${at}: ${step.action} needs target`);
@@ -165,6 +174,33 @@ export function planSelector(selector: string): string {
 /** A URL with a scheme stays as written; anything else is a local file beside the plan. */
 function planUrl(url: string, base: string): string {
   return /^[a-z][a-z\d+.-]*:/iu.test(url) ? url : pathToFileURL(resolve(base, url)).href;
+}
+
+/**
+ * Page-side eased scroll of the scrollable element under (x, y), or the document. Kept as source
+ * text: a transpiled function can carry helpers that do not exist inside the page.
+ */
+function glideScript(x: number, y: number, dx: number, dy: number, duration: number): string {
+  return `new Promise((done) => {
+    let node = document.elementFromPoint(${x}, ${y});
+    while (node && node !== document.body && node !== document.documentElement) {
+      // Only a container that scrolls in the requested direction: a horizontal carousel under the
+      // pointer must not absorb a vertical page scroll.
+      const style = getComputedStyle(node);
+      const vertical = ${dy} !== 0 && /(auto|scroll)/.test(style.overflowY) && node.scrollHeight > node.clientHeight;
+      const horizontal = ${dx} !== 0 && /(auto|scroll)/.test(style.overflowX) && node.scrollWidth > node.clientWidth;
+      if (vertical || horizontal) break;
+      node = node.parentElement;
+    }
+    const scroller = node && node !== document.body && node !== document.documentElement ? node : document.scrollingElement;
+    const left = scroller.scrollLeft, top = scroller.scrollTop, begin = performance.now();
+    const frame = (now) => {
+      const t = Math.min(1, (now - begin) / ${duration}), e = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+      scroller.scrollTo(left + ${dx} * e, top + ${dy} * e);
+      if (t < 1) requestAnimationFrame(frame); else done();
+    };
+    requestAnimationFrame(frame);
+  })`;
 }
 
 /** Delivers one page input; the recorder may hold frame capture around it. */
@@ -260,7 +296,7 @@ async function startFrameRecorder(page: Page, directory: string, viewport: { wid
   let written = Promise.resolve();
   const keep = (at: number, bytes: Uint8Array) => {
     if (frames.length > 0 && at <= frames.at(-1)!.at) return;
-    const file = join(directory, `${String(frames.length).padStart(6, "0")}.png`);
+    const file = join(directory, `${String(frames.length).padStart(6, "0")}.${bytes[0] === 0xff ? "jpg" : "png"}`);
     frames.push({ file, at: Math.max(0, at) });
     written = written.then(() => writeFile(file, bytes));
   };
@@ -276,7 +312,7 @@ async function startFrameRecorder(page: Page, directory: string, viewport: { wid
         if (holding > 0) { await sleep(4); continue; }
         const at = Date.now() / 1000 - begin;
         // A navigation can interrupt one capture; the next one continues the take.
-        capture = page.screenshot({ type: "png", optimizeForSpeed: true }).then((bytes) => keep(at, bytes), () => sleep(30));
+        capture = page.screenshot({ type: "jpeg", quality: 92, optimizeForSpeed: true }).then((bytes) => keep(at, bytes), () => sleep(30));
         await capture;
       }
     })();
@@ -330,6 +366,12 @@ export async function runCapturePlan(session: CaptureSession, input: CapturePlan
   const viewportSize = page.viewport() ?? { width: 1280, height: 720, deviceScaleFactor: 1 };
   const viewport = { width: viewportSize.width, height: viewportSize.height, scale: viewportSize.deviceScaleFactor ?? 1 };
   if (cursor === "page") await page.evaluateOnNewDocument(CURSOR_SCRIPT);
+  if (plan.locale !== undefined) {
+    const languages = [plan.locale, plan.locale.split("-")[0]!].filter((value, i, all) => all.indexOf(value) === i);
+    await page.setExtraHTTPHeaders({ "Accept-Language": `${languages.join(",")};q=0.9` });
+    await page.evaluateOnNewDocument(`Object.defineProperty(navigator, "language", { get: () => ${JSON.stringify(plan.locale)} });
+      Object.defineProperty(navigator, "languages", { get: () => ${JSON.stringify(languages)} });`);
+  }
   const base = resolve(options.baseDirectory ?? process.cwd());
   const startUrl = planUrl(plan.startUrl, base);
 
@@ -378,11 +420,9 @@ export async function runCapturePlan(session: CaptureSession, input: CapturePlan
   }
 
   const fps = options.fps ?? 30;
-  const frames = await mkdtemp(join(tmpdir(), "hypit-capture-plan-"));
-  const recording = await startFrameRecorder(page, frames, viewport);
-  const deliver = recording.input;
-  // Step times and frame times share this origin: the recording's first instant.
-  const t0 = performance.now();
+  // Until the recording starts, input goes straight to the page.
+  let deliver: Input = async (send) => { await send(); };
+  let t0 = performance.now();
   const stamp = () => Number(((performance.now() - t0) / 1000).toFixed(3));
   const pointerTo = async (x: number, y: number, press: boolean) => {
     await deliver(() => page.mouse.move(x, y, { steps: 12 }));
@@ -404,17 +444,15 @@ export async function runCapturePlan(session: CaptureSession, input: CapturePlan
     return file;
   };
 
-  const steps: CapturePlanStepReport[] = [];
-  let failed: string | null = null;
-  try {
-    for (const [index, step] of plan.steps.entries()) {
+  /** Run one step; `recorded` steps keep their checkpoint screenshot. */
+  const perform = async (step: CapturePlanStep, index: number, recorded: boolean): Promise<CapturePlanStepReport> => {
       const start = stamp();
       const url = page.url();
       const timeout = step.timeoutMs ?? 10_000;
       let element: ElementHandle<Element> | undefined;
       let pointer: [number, number] | undefined;
       let skipped: string | undefined;
-      log(`${index}: ${step.action}${step.note ? ` — ${step.note}` : ""}`);
+      log(`${recorded ? "" : "prepare "}${index}: ${step.action}${step.note ? ` — ${step.note}` : ""}`);
       try {
         if (step.target !== undefined) element = await findTarget(page, step, step.target, timeout);
         switch (step.action) {
@@ -464,8 +502,13 @@ export async function runCapturePlan(session: CaptureSession, input: CapturePlan
             const [x, y] = element ? await center(element) : [viewport.width / 2, viewport.height / 2];
             await deliver(() => page.mouse.move(x, y));
             const dx = step.dx ?? 0, dy = step.dy ?? 400;
-            // Distance follows elapsed time, so the glide lasts durationMs however long each wheel event takes.
             const duration = step.durationMs ?? 0, begin = performance.now();
+            if (duration > 0) {
+              // A glide is animated by the page itself: no stream of wheel events competes with frame
+              // capture, and the scroller under the pointer (or the target's) moves on every paint.
+              await page.evaluate(glideScript(x, y, dx, dy, duration));
+              break;
+            }
             let sent = 0;
             for (;;) {
               const progress = duration > 0 ? Math.min(1, (performance.now() - begin) / duration) : 1;
@@ -519,13 +562,31 @@ export async function runCapturePlan(session: CaptureSession, input: CapturePlan
       }
       const box = element && !skipped ? await boxOf(element) : undefined;
       await element?.dispose();
-      const screenshot = step.action === "screenshot" || step.screenshot ? await shot(index, step.name) : undefined;
-      steps.push({ index, action: step.action, note: step.note ?? null, start, end: stamp(), url,
+      const screenshot = recorded && (step.action === "screenshot" || step.screenshot) ? await shot(index, step.name) : undefined;
+      const entry = { index, action: step.action, note: step.note ?? null, start, end: stamp(), url,
         ...(box ? { box } : {}), ...(pointer ? { pointer } : {}), ...(screenshot ? { screenshot } : {}),
         ...(skipped ? { skipped } : {}),
-        ...(step.asset && !skipped ? { asset: { ...step.asset, verified: true as const } } : {}) });
+        ...(step.asset && !skipped ? { asset: { ...step.asset, verified: true as const } } : {}) };
       await sleep(step.settleMs ?? 600);
+      return entry;
+  };
+
+  // Preparation runs before the recording: warming lazily loaded media, reaching a start state.
+  for (const [index, step] of (plan.prepare ?? []).entries()) {
+    try { await perform(step, index, false); }
+    catch (error) {
+      return await save(report(`prepare[${index}]: ${error instanceof Error ? error.message.split("\n")[0] : String(error)}`, null, []));
     }
+  }
+  const frames = await mkdtemp(join(tmpdir(), "hypit-capture-plan-"));
+  const recording = await startFrameRecorder(page, frames, viewport);
+  deliver = recording.input;
+  // Step times and frame times share this origin: the recording's first instant.
+  t0 = performance.now();
+  const steps: CapturePlanStepReport[] = [];
+  let failed: string | null = null;
+  try {
+    for (const [index, step] of plan.steps.entries()) steps.push(await perform(step, index, true));
     await sleep(1200);
   } catch (error) {
     failed = `steps[${steps.length}]: ${error instanceof Error ? error.message.split("\n")[0] : String(error)}`;
