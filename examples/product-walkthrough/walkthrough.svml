@@ -1,0 +1,30 @@
+<?svml using="@hypit/markup@1"?>
+<svml>
+  <import as="time" from="@hypit/timeline-author@1"/>
+  <import as="spatial" from="@hypit/spatial@1"/>
+  <import as="asset" from="@hypit/media@1"/>
+  <import as="mediaop" from="@hypit/media-operations@1"/>
+  <import as="walk" from="@example/screen-walkthrough@1"/>
+  <import as="film" from="@hypit/film@1"/>
+  <import as="html" from="@hypit/html-video@1"/>
+  <import as="take" source="./captures/board/steps.svs"/>
+  <import as="style" source="./walkthrough.svs"/>
+
+  <asset:Video id="recording" src="./captures/board/recording.mp4"/>
+  <time:Clock id="clock" frame-rate="30"/>
+  <mediaop:Normalize id="recording-media" source={recording} clock={clock}
+    video="primary-moving" audio="none" span-authority="video"/>
+  <time:Timeline id="program" clock={clock} end="board.end">
+    <time:Window id="board" from="start" for={recording-media.extent}/>
+  </time:Timeline>
+  <spatial:Canvas id="canvas" width="1280" height="720"/>
+
+  <walk:Walkthrough id="demo" timeline={program.timeline} within={canvas.bounds}
+    media={recording-media.media} source-window={program.board} during={program.board}
+    take={take.walkthrough.take} zoom="1.7"/>
+
+  <film:Film id="main" canvas={canvas.canvas} timeline={program.timeline} appearance={style.film.main}>
+    <film:Track source={demo.visual}/>
+  </film:Film>
+  <html:Video id="final" composition={main.composition} timeline={program.timeline}/>
+</svml>
