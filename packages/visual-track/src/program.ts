@@ -1,12 +1,12 @@
-import { assertVisualTrackIdentity, sealPresentVisualTrack } from "@hypit/composition";
-import type { PresentVisualTrack } from "@hypit/composition";
+import { assertVisualProgram, assertVisualTrackIdentity, sealVisualTrack } from "@hypit/composition";
+import type { VisualPresent, VisualTrack } from "@hypit/composition";
 import { canonicalize } from "@hypit/hypit/protocol";
 import { assertSpatialFrame, assertSpatialPath } from "@hypit/spatial";
 import type { SpatialPath } from "@hypit/spatial";
 import { assertTemporalWindowFor, exactTemporalValueFromFrames, resolveTemporalRelation, sealLocalTemporalDomain } from "@hypit/temporal";
 import type { TemporalWindow } from "@hypit/temporal";
 import { assertFrameSpan, assertTimelineIdentity, timelineFrameCount } from "@hypit/timeline";
-import type { Timeline } from "@hypit/timeline";
+import type { FrameSpan, Timeline } from "@hypit/timeline";
 
 import {
   assertMediaIdentity,
@@ -22,6 +22,7 @@ import type {
   VisualClipProgram,
   VisualClipMotion,
   VisualClipSpec,
+  VisualTransitionSpec,
   VisualTrackHeader,
   VisualTrackProgram,
   VisualTrackSet,
@@ -69,13 +70,14 @@ export function assertVisualTrackHeader(value: VisualTrackHeader): void {
 }
 
 export function createVisualTrackSet(): VisualTrackSet {
-  return { clips: [] };
+  return { clips: [], transitions: [] };
 }
 
 export function assertVisualTrackSet(value: VisualTrackSet): void {
   assert(value !== null && typeof value === "object" && !Array.isArray(value)
-    && Array.isArray(value.clips), "VisualTrackSet is invalid.");
+    && Array.isArray(value.clips) && Array.isArray(value.transitions), "VisualTrackSet is invalid.");
   assertVisualClipPrograms(value.clips, "VisualTrackSet");
+  assertVisualTransitions(value.transitions, value.clips, "VisualTrackSet");
 }
 
 /** Component entry point: source facts, absolute placement and visual treatment are already explicit. */
@@ -137,7 +139,104 @@ export function appendVisualClip(
     ...(spec.motion === undefined ? {} : { motion: structuredClone(spec.motion) }),
   };
   assert(!set.clips.some((clip) => clip.id === addition.id), `Visual Track ${header.id} already contains ${addition.id}.`);
-  return { clips: [...set.clips, addition] };
+  return { clips: [...set.clips, addition], transitions: set.transitions };
+}
+
+export function assertVisualTransitionSpec(value: VisualTransitionSpec): void {
+  assert(value !== null && typeof value === "object" && !Array.isArray(value), "VisualTransitionSpec is invalid.");
+  assertMediaIdentity(value.id, "VisualTransitionSpec.id");
+  assertMediaIdentity(value.outgoingClipId, "VisualTransitionSpec.outgoingClipId");
+  assertMediaIdentity(value.incomingClipId, "VisualTransitionSpec.incomingClipId");
+  assert(value.outgoingClipId !== value.incomingClipId, "Visual Transition requires two different Clips.");
+  assertVisualProgram(value.effect, "VisualTransitionSpec.effect");
+}
+
+function transitionIntersection(outgoing: VisualClipProgram, incoming: VisualClipProgram): FrameSpan {
+  return {
+    startFrame: Math.max(outgoing.span.startFrame, incoming.span.startFrame),
+    endFrameExclusive: Math.min(outgoing.span.endFrameExclusive, incoming.span.endFrameExclusive),
+  };
+}
+
+/** Derive the one interval owned by a Transition relation from its two Clip occurrences. */
+export function visualTransitionSpan(
+  transition: VisualTransitionSpec,
+  clips: readonly VisualClipProgram[],
+): FrameSpan {
+  assertVisualTransitionSpec(transition);
+  const outgoing = clips.find((clip) => clip.id === transition.outgoingClipId);
+  const incoming = clips.find((clip) => clip.id === transition.incomingClipId);
+  assert(outgoing !== undefined, `Visual Transition references missing outgoing Clip ${transition.outgoingClipId}.`);
+  assert(incoming !== undefined, `Visual Transition references missing incoming Clip ${transition.incomingClipId}.`);
+  return transitionIntersection(outgoing, incoming);
+}
+
+function assertTransition(
+  transition: VisualTransitionSpec,
+  clips: readonly VisualClipProgram[],
+  label: string,
+): void {
+  assertVisualTransitionSpec(transition);
+  const outgoingIndex = clips.findIndex((clip) => clip.id === transition.outgoingClipId);
+  const incomingIndex = clips.findIndex((clip) => clip.id === transition.incomingClipId);
+  assert(outgoingIndex >= 0, `${label} references missing outgoing Clip ${transition.outgoingClipId}.`);
+  assert(incomingIndex >= 0, `${label} references missing incoming Clip ${transition.incomingClipId}.`);
+  assert(incomingIndex === outgoingIndex + 1,
+    `${label} requires outgoing and incoming Clips to be adjacent in Track paint order.`);
+  const outgoing = clips[outgoingIndex]!;
+  const incoming = clips[incomingIndex]!;
+  assert(outgoing.span.startFrame < incoming.span.startFrame
+    && outgoing.span.endFrameExclusive < incoming.span.endFrameExclusive,
+  `${label} requires an outgoing Clip that starts and ends before the incoming Clip.`);
+  const intersection = visualTransitionSpan(transition, clips);
+  assert(intersection.startFrame < intersection.endFrameExclusive,
+    `${label} requires overlapping Clip Windows.`);
+}
+
+function assertVisualTransitions(
+  transitions: readonly VisualTransitionSpec[],
+  clips: readonly VisualClipProgram[],
+  label: string,
+): void {
+  const ids = new Set<string>();
+  const clipIds = new Set(clips.map((clip) => clip.id));
+  const incoming = new Set<string>();
+  const outgoing = new Set<string>();
+  for (const [index, transition] of transitions.entries()) {
+    const item = `${label}.transitions.${index}`;
+    assertTransition(transition, clips, item);
+    assert(!clipIds.has(transition.id), `${label} Transition ${transition.id} conflicts with a Clip id.`);
+    assert(!ids.has(transition.id), `${label} repeats Transition ${transition.id}.`);
+    assert(!incoming.has(transition.incomingClipId),
+      `${label} repeats incoming Transition for ${transition.incomingClipId}.`);
+    assert(!outgoing.has(transition.outgoingClipId),
+      `${label} repeats outgoing Transition for ${transition.outgoingClipId}.`);
+    ids.add(transition.id);
+    incoming.add(transition.incomingClipId);
+    outgoing.add(transition.outgoingClipId);
+  }
+  for (let left = 0; left < transitions.length; left += 1) for (let right = left + 1; right < transitions.length; right += 1) {
+    const a = transitions[left]!;
+    const b = transitions[right]!;
+    const shared = a.outgoingClipId === b.outgoingClipId || a.outgoingClipId === b.incomingClipId
+      || a.incomingClipId === b.outgoingClipId || a.incomingClipId === b.incomingClipId;
+    const aSpan = visualTransitionSpan(a, clips);
+    const bSpan = visualTransitionSpan(b, clips);
+    const overlaps = aSpan.startFrame < bSpan.endFrameExclusive && bSpan.startFrame < aSpan.endFrameExclusive;
+    assert(!shared || !overlaps, `${label} has simultaneous Transitions ${a.id} and ${b.id} sharing one Clip.`);
+  }
+}
+
+export function appendVisualTransition(
+  set: VisualTrackSet,
+  spec: VisualTransitionSpec,
+): VisualTrackSet {
+  assertVisualTrackSet(set);
+  assertVisualTransitionSpec(spec);
+  const transition = structuredClone(spec);
+  const next = { clips: set.clips, transitions: [...set.transitions, transition] };
+  assertVisualTrackSet(next);
+  return next;
 }
 
 function assertSampleLayer(layer: MediaSampleLayerProgram, label: string): void {
@@ -190,6 +289,7 @@ function normalizeProgram(value: VisualTrackProgram): VisualTrackProgram {
   return {
     id: value.id,
     clips: value.clips.map((clip) => structuredClone(clip)),
+    transitions: value.transitions.map((transition) => structuredClone(transition)),
   };
 }
 
@@ -203,15 +303,16 @@ export function finalizeVisualTrack(set: VisualTrackSet, header: VisualTrackHead
   assertVisualTrackSet(set);
   assertVisualTrackHeader(header);
   assert(set.clips.length > 0, "Visual Track requires at least one Clip.");
-  return sealVisualTrackProgram({ id: header.id, clips: set.clips }, timeline);
+  return sealVisualTrackProgram({ id: header.id, clips: set.clips, transitions: set.transitions }, timeline);
 }
 
 export function assertVisualTrackProgram(value: VisualTrackProgram): void {
   assert(value !== null && typeof value === "object" && !Array.isArray(value)
-    && Array.isArray(value.clips), "VisualTrackProgram is invalid.");
+    && Array.isArray(value.clips) && Array.isArray(value.transitions), "VisualTrackProgram is invalid.");
   assertMediaIdentity(value.id, "VisualTrackProgram.id");
   assert(value.clips.length > 0, "VisualTrackProgram is empty.");
   assertVisualClipPrograms(value.clips, "VisualTrackProgram");
+  assertVisualTransitions(value.transitions, value.clips, "VisualTrackProgram");
 }
 
 export function assertVisualTrackProgramIdentity(value: VisualTrackProgram, timeline: Timeline): void {
@@ -222,18 +323,67 @@ export function assertVisualTrackProgramIdentity(value: VisualTrackProgram, time
   }
 }
 
-export function projectVisualTrack(timeline: Timeline, program: VisualTrackProgram): PresentVisualTrack {
+export function projectVisualTrack(timeline: Timeline, program: VisualTrackProgram): VisualTrack {
   assertVisualTrackProgramIdentity(program, timeline);
-  const track = sealPresentVisualTrack({
+  const base = new Map(program.clips.map((clip): readonly [string, VisualPresent] => [clip.id, {
+    kind: "present",
+    id: clip.id,
+    subjectId: clip.subjectId,
+    span: { ...clip.span },
+    root: lowerVisualClipRoot(clip),
+  }]));
+  const transitions = program.transitions.map((transition) => ({
+    transition,
+    span: visualTransitionSpan(transition, program.clips),
+  }));
+  const hidden = new Map<string, FrameSpan[]>();
+  for (const { transition, span } of transitions) for (const clipId of [transition.outgoingClipId, transition.incomingClipId]) {
+    const spans = hidden.get(clipId) ?? [];
+    spans.push({ ...span });
+    hidden.set(clipId, spans);
+  }
+  const visibleSpans = (clip: VisualPresent): FrameSpan[] => {
+    const exclusions = [...(hidden.get(clip.id) ?? [])].sort((left, right) => left.startFrame - right.startFrame);
+    const result: FrameSpan[] = [];
+    let cursor = clip.span.startFrame;
+    for (const exclusion of exclusions) {
+      if (cursor < exclusion.startFrame) result.push({ startFrame: cursor, endFrameExclusive: exclusion.startFrame });
+      cursor = Math.max(cursor, exclusion.endFrameExclusive);
+    }
+    if (cursor < clip.span.endFrameExclusive) result.push({ startFrame: cursor, endFrameExclusive: clip.span.endFrameExclusive });
+    return result;
+  };
+  const transitionsByIncoming = new Map(transitions.map((resolved) => [resolved.transition.incomingClipId, resolved]));
+  const items = program.clips.flatMap((clip) => {
+    const present = base.get(clip.id)!;
+    const visibility = visibleSpans(present);
+    const authored = visibility.length === 1
+      && visibility[0]!.startFrame === present.span.startFrame
+      && visibility[0]!.endFrameExclusive === present.span.endFrameExclusive
+      ? present
+      : { ...present, visibility };
+    const resolved = transitionsByIncoming.get(clip.id);
+    if (resolved === undefined) return [authored];
+    const { transition, span } = resolved;
+    const outgoing = base.get(transition.outgoingClipId)!;
+    const incoming = base.get(transition.incomingClipId)!;
+    return [{
+      kind: "process" as const,
+      id: transition.id,
+      subjectId: transition.id,
+      span: { ...span },
+      inputs: [
+        { name: "outgoing", contribution: structuredClone(outgoing) },
+        { name: "incoming", contribution: structuredClone(incoming) },
+      ],
+      program: structuredClone(transition.effect),
+    }, authored];
+  });
+  const track = sealVisualTrack({
     timelineId: timeline.id,
     visualIr: "hypit.visual-ir@1",
     id: program.id,
-    presents: program.clips.map((clip) => ({
-      id: clip.id,
-      subjectId: clip.subjectId,
-      span: { ...clip.span },
-      root: lowerVisualClipRoot(clip),
-    })),
+    items,
   });
   assertVisualTrackIdentity(track, timeline);
   return track;

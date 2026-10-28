@@ -3,7 +3,7 @@ import { fontsourceModuleRef } from "./manifest.js";
 
 export const fontsourceStudioParameterCompanions: readonly StudioParameterCompanion[] = [{
   id: "face",
-  match: { module: fontsourceModuleRef, surface: "face" },
+  match: { module: fontsourceModuleRef, declaration: "face" },
   bindings: [
     { name: "package" },
     { name: "weight", writable: true },

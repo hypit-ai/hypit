@@ -1,7 +1,7 @@
 import { BuildMachine, resolveCapability, resolveProducer } from "@hypit/kernel";
+import type { BuildView } from "@hypit/kernel";
 import type {
   BuildDefinition,
-  BuildState,
   ProducerRef,
   TypeRef,
 } from "@hypit/protocol";
@@ -75,7 +75,7 @@ export type EvaluatedProducerStep = {
 
 export type ProducerPlanEvaluation = {
   /** Disposable Build view after every currently runnable pure Producer was evaluated once. */
-  readonly state: BuildState;
+  readonly state: BuildView;
   /** One graph-level result for every Step in the finite BuildPlan. */
   readonly steps: readonly EvaluatedProducerStep[];
   /** Supplied and produced Record declarations, including values that are not established yet. */
@@ -132,7 +132,7 @@ function recordDeclarations(definition: BuildDefinition): readonly RecordDeclara
 
 function evaluateGraph(
   definition: BuildDefinition,
-  state: BuildState,
+  state: BuildView,
   failures: ReadonlyMap<string, string>,
   unavailable: ReadonlyMap<string, string>,
 ): Pick<ProducerPlanEvaluation, "steps" | "records"> {

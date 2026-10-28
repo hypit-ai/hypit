@@ -1,6 +1,6 @@
 import { assertBlobRef } from "@hypit/hypit/protocol";
 import { mediaDependency, mediaTypes } from "@hypit/media";
-import type { BlobRef, CapabilityRef, ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/hypit/protocol";
+import type { BlobRef, ModuleManifest, ValueSchema } from "@hypit/hypit/protocol";
 import type { PreparedAudioSource } from "@hypit/media";
 import { assertLocalTemporalDomain, resolveTemporalBoundary } from "@hypit/temporal";
 import type { LocalTemporalDomain, TemporalMap } from "@hypit/temporal";
@@ -13,8 +13,20 @@ export {
   transcriptWordsFromEvidence,
   wordsAt,
 } from "./transcript-document.js";
-export type { FrameWords, TranscriptWord } from "./transcript-document.js";
-export { decodeSpeechTranscriptSurface } from "./surface.js";
+export type { FrameWords, TranscriptWord } from "./transcript-document.js";export { speechTranscriptMarkupDeclaration } from "./declaration.js";
+export { speechTranscriptAuthorDeclaration } from "./declaration.js";
+export {
+  speechEvidenceCapabilities,
+  speechEvidenceModuleRef,
+  speechEvidenceProducers,
+  speechEvidenceTypes,
+} from "./contract.js";
+import {
+  speechEvidenceCapabilities,
+  speechEvidenceModuleRef,
+  speechEvidenceProducers,
+  speechEvidenceTypes,
+} from "./contract.js";
 
 export type ProjectSpeechEvidenceAudioNeed = {
   readonly source: PreparedAudioSource;
@@ -110,41 +122,6 @@ export const speechTranscriptEvidenceFields = {
 } as const satisfies Readonly<Record<string, { readonly schema: ValueSchema; readonly optional?: boolean }>>;
 
 export const speechTranscriptEvidenceSchema: ValueSchema = object(speechTranscriptEvidenceFields);
-export const speechEvidenceModuleRef = { name: "@hypit/speech-evidence", version: "1" } as const;
-export const speechEvidenceTypes = {
-  audio: { module: speechEvidenceModuleRef, name: "SpeechEvidenceAudio" },
-  transcript: { module: speechEvidenceModuleRef, name: "SpeechTranscriptEvidence" },
-} satisfies Record<string, TypeRef>;
-export const speechEvidenceCapabilities = {
-  projectAudio: { module: speechEvidenceModuleRef, name: "project-speech-evidence-audio" },
-} satisfies Record<string, CapabilityRef>;
-export const speechEvidenceProducers = {
-  projectAudio: { module: speechEvidenceModuleRef, name: "request-speech-evidence-audio" },
-} satisfies Record<string, ProducerRef>;
-export const speechEvidenceMarkupSurfaces = [{
-  name: "transcript",
-  tag: "Transcript",
-  mode: "raw",
-  outputs: [speechEvidenceTypes.transcript],
-  vocabulary: {
-    summary: "Publishes editable, provider-neutral speech transcript evidence in the canonical 16 kHz sample domain.",
-    attributes: [{ name: "id", kind: "identifier", required: true,
-      summary: "Names the SpeechTranscriptEvidence Record." }],
-    text: "A JSON object containing exact sampleFrames and passages with words, characters, speech activity and optional scores.",
-    ports: [{ name: "", type: speechEvidenceTypes.transcript,
-      summary: "The complete editable SpeechTranscriptEvidence value." }],
-    example: `<speech:Transcript id="opening">
-{
-  "sampleFrames": 160000,
-  "passages": []
-}
-</speech:Transcript>`,
-    notes: [
-      "Sample boundaries are exact integers in a fixed 16 kHz mono audio domain; this Surface does not carry media, Provider or LocalTemporalDomain identity.",
-      "Use the package serializer when materializing model output so text that could form Markup boundaries is Unicode-escaped.",
-    ],
-  },
-}] as const;
 export const speechEvidenceManifest: ModuleManifest = {
   format: "hypit.module@1",
   name: speechEvidenceModuleRef.name,

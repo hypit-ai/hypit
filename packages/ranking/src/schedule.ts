@@ -5,7 +5,7 @@ import {
   verifyPreparedMedia,
 } from "@hypit/media";
 import type { PreparedMedia } from "@hypit/media";
-import { assertBlobRef, canonicalize } from "@hypit/hypit/protocol";
+import { assertBlobRef, canonicalize, compareCodeUnits } from "@hypit/hypit/protocol";
 import type { BlobRef } from "@hypit/hypit/protocol";
 import { verifyText } from "@hypit/hypit/text";
 import type { Text } from "@hypit/hypit/text";
@@ -353,7 +353,7 @@ export function buildTriggeredRankingSchedule(input: {
   assert(expected.size === received.size && [...expected].every((id) => received.has(id)),
     "Ranking Items and item-owned Moments differ.");
   const ordered = [...input.candidates.entries].sort((left, right) =>
-    left.activation.frame - right.activation.frame || left.itemId.localeCompare(right.itemId));
+    left.activation.frame - right.activation.frame || compareCodeUnits(left.itemId, right.itemId));
   const resolved = resolveTriggeredSchedule({
     outer: { ...input.outer.span },
     terminalFrame: input.terminal.frame,
@@ -421,7 +421,7 @@ function appendRankingWindow<T extends TierBoardItemSpec | ColumnItemSpec>(
   assertTemporalWindowFor(window, {});
   const result: RankingWindowSet = {
     entries: [...set.entries, { itemId: spec.id, window: structuredClone(window) }]
-      .sort((left, right) => left.itemId.localeCompare(right.itemId)),
+      .sort((left, right) => compareCodeUnits(left.itemId, right.itemId)),
   };
   assertRankingWindowSet(result, `${label}WindowSet`);
   return canonicalize(result) as unknown as RankingWindowSet;
@@ -470,7 +470,7 @@ function buildWindowedRankingSchedule(input: {
   const orderedWindows = [...input.windows.entries].sort((left, right) =>
     left.window.span.startFrame - right.window.span.startFrame
     || left.window.span.endFrameExclusive - right.window.span.endFrameExclusive
-    || left.itemId.localeCompare(right.itemId));
+    || compareCodeUnits(left.itemId, right.itemId));
   for (const entry of orderedWindows) {
     assertTemporalWindowFor(entry.window, { timeline: input.timeline });
     assert(entry.window.span.startFrame >= input.outer.span.startFrame
@@ -490,7 +490,7 @@ function buildWindowedRankingSchedule(input: {
   const windowOrder = new Map(orderedWindows.map((entry, index) => [entry.itemId, index]));
   const authorOrder = new Map(authoredItems.map((item, index) => [item.id, index]));
   const items = input.variant === "column"
-    ? [...authoredItems].sort((left, right) => (left as ColumnItemSpec).rank - (right as ColumnItemSpec).rank || left.id.localeCompare(right.id))
+    ? [...authoredItems].sort((left, right) => (left as ColumnItemSpec).rank - (right as ColumnItemSpec).rank || compareCodeUnits(left.id, right.id))
     : [...authoredItems].sort((left, right) => {
         if (left.preset !== right.preset) return left.preset ? -1 : 1;
         if (left.preset) return authorOrder.get(left.id)! - authorOrder.get(right.id)!;
@@ -607,7 +607,7 @@ function assertWindowedRankingSchedule(value: TierBoardSchedule | ColumnSchedule
     windows.push({ itemId: entry.itemId, ...entry.window });
   }
   windows.sort((left, right) => left.startFrame - right.startFrame
-    || left.endFrameExclusive - right.endFrameExclusive || left.itemId.localeCompare(right.itemId));
+    || left.endFrameExclusive - right.endFrameExclusive || compareCodeUnits(left.itemId, right.itemId));
   for (let index = 1; index < windows.length; index += 1) {
     assert(windows[index]!.startFrame >= windows[index - 1]!.endFrameExclusive,
       `${label} windows ${windows[index - 1]!.itemId} and ${windows[index]!.itemId} overlap.`);
@@ -764,7 +764,7 @@ export function buildColumnProgram(header: RankingHeader, withinValue: SpatialFr
   assertSpatialFrame(frameValue);
   assertColumnStyle(style);
   windowedIdsEqual(schedule, set.items);
-  const items = [...set.items].map((item) => structuredClone(item)).sort((left, right) => left.rank - right.rank || left.id.localeCompare(right.id));
+  const items = [...set.items].map((item) => structuredClone(item)).sort((left, right) => left.rank - right.rank || compareCodeUnits(left.id, right.id));
   const result: ColumnProgram = { id: header.id, within: structuredClone(withinValue), frame: structuredClone(frameValue), schedule: structuredClone(schedule), style: structuredClone(style), items };
   assertColumnProgram(result);
   return canonicalize(result) as unknown as ColumnProgram;
@@ -839,7 +839,7 @@ export function buildTierBoardSoundEvents(schedule: RankingSchedule, style: Tier
       ...(spec.entry === "drop" && phases.moveEndFrame !== undefined
         ? [event(schedule.id, entry.itemId, "move", entry.window.startFrame + phases.moveStartFrame)]
         : [])];
-  }).sort((left, right) => left.frame - right.frame || left.kind.localeCompare(right.kind) || left.id.localeCompare(right.id));
+  }).sort((left, right) => left.frame - right.frame || compareCodeUnits(left.kind, right.kind) || compareCodeUnits(left.id, right.id));
   return sealEvents(schedule.id, schedule.variant, events);
 }
 
@@ -854,7 +854,7 @@ export function buildColumnSoundEvents(schedule: RankingSchedule, style: ColumnS
     return [event(schedule.id, entry.itemId, "appear", entry.window.startFrame),
       ...(fitted.mode === "direct" ? []
         : [event(schedule.id, entry.itemId, "move", entry.window.endFrameExclusive - fitted.moveFrames)])];
-  }).sort((left, right) => left.frame - right.frame || left.kind.localeCompare(right.kind) || left.id.localeCompare(right.id));
+  }).sort((left, right) => left.frame - right.frame || compareCodeUnits(left.kind, right.kind) || compareCodeUnits(left.id, right.id));
   return sealEvents(schedule.id, schedule.variant, events);
 }
 

@@ -31,15 +31,15 @@ for (const kind of ["audio", "visual"] as const) {
         source: { media: { source: { kind: "blob", resource: "res_audio", size: 1, mediaType: "audio/wav" } } },
         layers: [{ kind: "sample", id: "picture", source: { kind: "still", artifact: { resource: "res_image" } } }],
       }));
-    const program = { id: `track.${kind}`, clips };
+    const program = { id: `track.${kind}`, clips, ...(kind === "visual" ? { transitions: [] } : {}) };
     const typeRef = kind === "audio" ? compositionTypes.audioTrack : compositionTypes.visualTrack;
     const children = subjects.map(child);
     const context: StudioTrackCompanionContext = {
       track: { name: `track.${kind}`, outputRef: `track.${kind}`, type: typeRef.name, typeRef,
-        role: "track", value: program,
+        value: program,
         trace: { outputPorts: [{ name: "program", ref: "track.program" }], references: [] } },
       placement: {
-        sourcePath: "main.svml", tag: `${kind}:Track`, module: typeRef.module, surface: "track",
+        sourcePath: "main.svml", tag: `${kind}:Track`, module: typeRef.module, declaration: "track",
         range: { start: 0, end: 100 }, records: [], values: [], outputs: [`track.${kind}`],
         outputPorts: [{ name: "program", ref: "track.program" }], children,
         attributes: {}, attributeValueRanges: {}, referenceAttributes: {}, referenceTypes: {}, references: [],

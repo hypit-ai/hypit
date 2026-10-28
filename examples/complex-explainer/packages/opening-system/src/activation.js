@@ -5,9 +5,9 @@ import { installPullback } from "./pullback.js";
 import { installPresenter } from "./presenter.js";
 import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
 import { createProducerPackageFacet } from "@hypit/hypit/producer";
-import { assertAttributes, assertEmptyElement, createMarkupSurfaceFacet, textAttribute } from "@hypit/hypit/markup";
+import { createMarkupDeclarationFacet } from "@hypit/hypit/markup";
 import { canonicalize, sameType } from "@hypit/hypit/protocol";
-import { sealGraphFragment } from "@hypit/hypit/author";
+import { createAuthorDeclarationFacet, declarationField, sealGraphFragment } from "@hypit/hypit/author";
 import { compositionTypes } from "@hypit/composition";
 import { mediaTypes } from "@hypit/media";
 import { timelineTypes } from "@hypit/timeline";
@@ -15,13 +15,13 @@ import { spatialTypes } from "@hypit/spatial";
 import { temporalTypes } from "@hypit/temporal";
 import { visualTrackModuleRef } from "@hypit/visual-track";
 import {
-  resolveTemporalWindowReference,
-  resolveTemporalInstantReference,
-  resolveTemporalContext,
-  temporalWindowAttributeNames,
-  temporalWindowAttributeVocabulary,
-  temporalContextAttributeVocabulary,
-} from "@hypit/temporal/markup";
+  resolveAuthorWindow,
+  resolveAuthorInstant,
+  resolveAuthorTimeline,
+  temporalWindowFieldShape,
+  temporalContextFieldShape,
+  temporalInstantFieldShape,
+} from "@hypit/temporal/author";
 import { renderTitle, renderTimer, renderFlag, renderStage, renderVeil } from "./render.js";
 import { module, defaults } from "./definition.js";
 import { studioFacet } from "./studio.js";
@@ -175,38 +175,67 @@ const component = {
   ],
 };
 const camel = (s) => s.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
-function decode(kind) {
-  return ({ element, resolveReference }) => {
-    const values = defaults[kind];
-    assertAttributes(element, [
-      "id",
-      "timeline",
-      "within",
-      ...(kind === "Title" ? ["bounce-at"] : []),
-      ...(kind === "Timer" ? ["stop-at"] : []),
-      ...(["Title", "Timer"].includes(kind) ? ["font"] : []),
-      ...(["Timer", "Flag"].includes(kind) ? ["logo"] : []),
-      ...Object.keys(values),
-      ...temporalWindowAttributeNames,
-    ]);
-    const id = textAttribute(element, "id"),
-      context = resolveTemporalContext({ element, resolveReference });
-    const win = resolveTemporalWindowReference({ element, resolveReference });
-    const ref = (el, name, t) => {
-      const raw = el.attributes[name];
-      if (typeof raw !== "object" || raw.kind !== "reference")
-        throw Error(name + " must be a reference");
-      const found = resolveReference(raw.path);
-      if (!found || !sameType(found.type, t))
-        throw Error(name + " has the wrong type");
-      return found.ref;
-    };
+const literal = (element, name, required = true) => {
+  const field = declarationField(element, name);
+  if (field === undefined && !required) return undefined;
+  if (field?.kind !== "literal" || !field.value.trim()) throw Error(`${element.name}.${name} must be text`);
+  return field.value.trim();
+};
+const resolved = async (element, name, type, resolveReference) => {
+  const field = declarationField(element, name);
+  if (field?.kind !== "reference") throw Error(`${element.name}.${name} must be a reference`);
+  const found = await resolveReference(field.path);
+  if (!found || !sameType(found.type, type)) throw Error(`${element.name}.${name} has the wrong type`);
+  return found;
+};
+function compiler(kind) {
+  const values = defaults[kind];
+  return {
+    module,
+    declaration: kind.toLowerCase(),
+    outputs: [optionsType, itemsType, compositionTypes.visualTrack],
+    shape: {
+      summary: {
+        Flag: "An independent foreshortened cloth flag beneath the composition.",
+        Veil: "An independent patterned veil placed above footage and below foreground graphics.",
+        Title: "Transparent opening clock and two-level headline in a pink window card.",
+        Timer: "Persistent topic plaque with a countdown that turns coral and counts overtime.",
+        Stage: "Clear foreground media with the same moving picture enlarged, blurred and dimmed behind it.",
+      }[kind],
+      fields: [
+        { name: "id", kind: "identifier", required: true, summary: "Declaration identity." },
+        temporalContextFieldShape,
+        temporalWindowFieldShape,
+        { name: "within", kind: "reference", required: true, accepts: [spatialTypes.frame], summary: "Picture frame." },
+        ...(kind === "Title" ? [{ ...temporalInstantFieldShape, name: "bounce-at", summary: "Resolved Instant when the title jumps." }] : []),
+        ...(kind === "Timer" ? [{ ...temporalInstantFieldShape, name: "stop-at", summary: "Resolved Instant that freezes the overtime display and flashes." }] : []),
+        ...(["Title", "Timer"].includes(kind) ? [{ name: "font", kind: "reference", required: true, accepts: [mediaTypes.fontArtifact], summary: "Font." }] : []),
+        ...(["Timer", "Flag"].includes(kind) ? [{ name: "logo", kind: "reference", required: true, accepts: [mediaTypes.blobArtifact], summary: "Logo." }] : []),
+        ...Object.keys(values).map((name) => ({ name, kind: "literal", required: false, summary: `${name}; default ${values[name]}` })),
+      ],
+      children: kind === "Stage" ? [{ name: "Item", cardinality: "many", summary: "Image or prepared video, in its own projected Window. Later items paint above earlier items.", fields: [
+        { name: "id", kind: "identifier", required: true, summary: "Item identity" },
+        { name: "image", kind: "reference", required: false, accepts: [mediaTypes.blobArtifact], summary: "Image artifact" },
+        { name: "video", kind: "reference", required: false, accepts: [mediaTypes.prepared], summary: "Prepared moving media" },
+        { name: "source-start-frame", kind: "literal", required: false, summary: "First source frame, default zero" },
+        temporalWindowFieldShape,
+      ] }] : [],
+    },
+    bindings(element) {
+      const id = literal(element, "id");
+      return [{ name: `${id}.visual`, ref: { kind: "component-output", component: id, output: "visual" }, type: compositionTypes.visualTrack }];
+    },
+    async compile({ declaration: element, resolveReference }) {
+    const id = literal(element, "id"),
+      timeline = await resolveAuthorTimeline(element, resolveReference),
+      win = await resolveAuthorWindow(element, resolveReference);
     const o = { id };
     for (const [name, d] of Object.entries(values)) {
-      const raw = element.attributes[name];
-      if (raw !== undefined && typeof raw !== "string")
+      const raw = declarationField(element, name);
+      if (raw !== undefined && raw.kind !== "literal")
         throw Error(name + " must be literal");
-      const v = typeof d === "number" ? Number(raw ?? d) : (raw ?? d);
+      const authored = raw?.value;
+      const v = typeof d === "number" ? Number(authored ?? d) : (authored ?? d);
       if (typeof v === "number" && !Number.isFinite(v))
         throw Error(name + " must be finite");
       o[camel(name)] = v;
@@ -257,17 +286,17 @@ function decode(kind) {
       ];
     const inputs = [...common],
       bindings = {
-        timeline: context.timeline.ref,
-        within: ref(element, "within", spatialTypes.frame),
+        timeline: timeline.ref,
+        within: (await resolved(element, "within", spatialTypes.frame, resolveReference)).ref,
         window: win.ref,
         options: { kind: "record", id: id + ".options" },
       };
     if (kind === "Title") {
-      const bounce = resolveTemporalInstantReference({ element, resolveReference, attribute: "bounce-at" });
+      const bounce = await resolveAuthorInstant(element, resolveReference, "bounce-at");
       inputs.push(port("bounce", temporalTypes.instant)); bindings.bounce = bounce.ref;
     }
     if (kind === "Timer") {
-      const stop = resolveTemporalInstantReference({ element, resolveReference, attribute: "stop-at" });
+      const stop = await resolveAuthorInstant(element, resolveReference, "stop-at");
       inputs.push(port("stop",temporalTypes.instant));bindings.stop=stop.ref;
     }
     const input = (name) => ({ kind: "fragment-input", name }),
@@ -283,28 +312,21 @@ function decode(kind) {
       let previous = "empty",
         n = 0;
       for (const child of element.children) {
-        if (child.kind === "text") {
-          if (child.value.trim()) throw Error("Stage accepts Item children");
-          continue;
-        }
-        if (child.name.split(":").at(-1) !== "Item")
+        if (child.name !== "Item")
           throw Error("Stage accepts Item children");
-        assertAttributes(child, [
-          "id",
-          "image",
-          "video",
-          "source-start-frame",
-          ...temporalWindowAttributeNames,
-        ]);
-        assertEmptyElement(child);
-        const cid = textAttribute(child, "id"),
-          isImage = child.attributes.image !== undefined;
-        if (isImage === (child.attributes.video !== undefined))
+        const cid = literal(child, "id"),
+          image = declarationField(child, "image"),
+          video = declarationField(child, "video"),
+          isImage = image !== undefined;
+        if (isImage === (video !== undefined))
           throw Error("Item needs exactly one image or prepared video");
-        const iw = resolveTemporalWindowReference({ element: child, resolveReference });
+        const iw = await resolveAuthorWindow(child, resolveReference);
         const key = "item" + ++n,
           optsId = id + "." + key,
-          sourceStart = Number(child.attributes["source-start-frame"] ?? 0);
+          sourceStartField = declarationField(child, "source-start-frame"),
+          sourceStart = Number(sourceStartField?.value ?? 0);
+        if (sourceStartField !== undefined && sourceStartField.kind !== "literal")
+          throw Error("source-start-frame must be literal");
         if (!Number.isSafeInteger(sourceStart) || sourceStart < 0)
           throw Error("source-start-frame must be nonnegative integer");
         records.push({
@@ -319,11 +341,7 @@ function decode(kind) {
           [
             "asset",
             isImage ? mediaTypes.blobArtifact : mediaTypes.prepared,
-            ref(
-              child,
-              isImage ? "image" : "video",
-              isImage ? mediaTypes.blobArtifact : mediaTypes.prepared,
-            ),
+            (await resolved(child, isImage ? "image" : "video", isImage ? mediaTypes.blobArtifact : mediaTypes.prepared, resolveReference)).ref,
           ],
         ]) {
           inputs.push(port(key + "-" + suffix, t));
@@ -353,14 +371,13 @@ function decode(kind) {
         result: { kind: "output", name: "track" },
       });
     } else {
-      assertEmptyElement(element);
       if (["Title", "Timer"].includes(kind)) {
         inputs.push(port("font", mediaTypes.fontArtifact));
-        bindings.font = ref(element, "font", mediaTypes.fontArtifact);
+        bindings.font = (await resolved(element, "font", mediaTypes.fontArtifact, resolveReference)).ref;
       }
       if (["Timer", "Flag"].includes(kind)) {
         inputs.push(port("logo", mediaTypes.blobArtifact));
-        bindings.logo = ref(element, "logo", mediaTypes.blobArtifact);
+        bindings.logo = (await resolved(element, "logo", mediaTypes.blobArtifact, resolveReference)).ref;
       }
       operations.push({
         id: "render",
@@ -391,126 +408,32 @@ function decode(kind) {
           range: element.range,
         },
       ],
-      exports: [id + ".visual"],
     };
+  },
   };
 }
-const declarations = Object.keys(defaults).map((tag) => ({
-  name: tag.toLowerCase(),
-  tag,
-  mode: "structured",
-  outputs: [
-    optionsType,
-    itemsType,
-    compositionTypes.visualTrack,
-  ],
-  vocabulary: {
-    summary: {
-      Flag: "An independent foreshortened cloth flag beneath the composition.",
-      Veil: "An independent patterned veil placed above footage and below foreground graphics.",
-      Title:
-        "Transparent opening clock and two-level headline in a pink window card.",
-      Timer:
-        "Persistent topic plaque with a countdown that turns coral and counts overtime.",
-      Stage:
-        "Clear foreground media with the same moving picture enlarged, blurred and dimmed behind it.",
-    }[tag],
-    attributes: [
-      ...(tag === "Title" ? [{ name: "bounce-at", kind: "reference", required: true, accepts: [temporalTypes.instant], summary: "Resolved Instant when the title jumps." }] : []),
-      ...(tag === "Timer" ? [{name:"stop-at",kind:"reference",required:true,accepts:[temporalTypes.instant],summary:"Resolved Instant that freezes the overtime display and flashes."}] : []),
-      ...temporalContextAttributeVocabulary,
-      ...temporalWindowAttributeVocabulary,
-      ...[
-        "id",
-        "within",
-        ...(["Title", "Timer"].includes(tag) ? ["font"] : []),
-        ...(["Timer", "Flag"].includes(tag) ? ["logo"] : []),
-      ].map((name) => ({
-        name,
-        kind: "expression",
-        required: true,
-        summary: name,
-      })),
-      ...Object.keys(defaults[tag]).map((name) => ({
-        name,
-        kind: "literal",
-        required: false,
-        summary: `${name}; default ${defaults[tag][name]}`,
-      })),
-    ],
-    children:
-      tag === "Stage"
-        ? [
-            {
-              tag: "Item",
-              cardinality: "many",
-              summary:
-                "Image or prepared video, in its own projected Window. Later items paint above earlier items.",
-              attributes: [
-                {
-                  name: "id",
-                  kind: "identifier",
-                  required: true,
-                  summary: "Item identity",
-                },
-                {
-                  name: "image",
-                  kind: "expression",
-                  required: false,
-                  summary: "Image artifact",
-                },
-                {
-                  name: "video",
-                  kind: "expression",
-                  required: false,
-                  summary: "Prepared moving media",
-                },
-                {
-                  name: "source-start-frame",
-                  kind: "literal",
-                  required: false,
-                  summary: "First source frame, default zero",
-                },
-                ...temporalWindowAttributeVocabulary,
-              ],
-            },
-          ]
-        : [],
-    ports: [
-      {
-        name: "visual",
-        type: compositionTypes.visualTrack,
-        summary: "Visual contribution, explicitly connected to Film",
-      },
-    ],
-  },
-}));
+const declarations = Object.keys(defaults).map(compiler);
+const markupDeclarations = Object.keys(defaults).map((tag) => ({ name: tag.toLowerCase(), tag }));
 const pullback = installPullback(module, manifest, component, optionsType);
 const fadeOut = installPullback(module, manifest, component, optionsType, "fade-out");
 const reframe = installReframe(module, manifest, component);
 const portraitTransition = installPortraitTransition(module, manifest, component);
 const portraitInset = installPortraitInset(module, manifest, component);
 const presenter = installPresenter(module, manifest, component);
+const styles = [pullback, fadeOut, reframe, portraitTransition, portraitInset];
 export const hypitPackage = {
   format: "hypit.package@1",
   modules: [{ manifest }],
   facets: [
     createProducerPackageFacet(component.producers ?? []),
     createRefinementPackageFacet(component.refinements ?? []),
-    ...declarations.map((declaration) =>
-      createMarkupSurfaceFacet({
-        module,
-        declaration,
-        handler: decode(declaration.tag),
-      }),
-    ),
-    pullback,
-    fadeOut,
-    reframe,
-    portraitTransition,
-    portraitInset,
-    presenter.styleFacet,
-    presenter.presenterFacet,
+    ...[
+      ...declarations,
+      ...styles.map((style) => style.declaration),
+      ...presenter.declarations,
+    ].map((declaration) => createAuthorDeclarationFacet(declaration)),
+    ...[...markupDeclarations, ...styles.map((style) => style.markup), ...presenter.markup]
+      .map((declaration) => createMarkupDeclarationFacet({ module, declaration })),
     studioFacet,
   ],
 };

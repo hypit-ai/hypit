@@ -43,7 +43,7 @@ test("Seedream quality becomes the HiAPI resolution tier and 3K is unsupported",
     model: "seedream-5.0-lite/image-to-image",
     input: { prompt: "a cup", aspect_ratio: "9:16", resolution: "4K", image_urls: ["https://example.test/reference"] },
   });
-  const high = sealSeedreamRequest({ ...request.ports, quality: ["high"] });
+  const high = sealSeedreamRequest({ ...request.fields, quality: ["high"] });
   assert.equal(seedream.supports({ capability: seedream.capability, returns: seedream.returns, constraints: constraints(high) }).status, "unsupported");
 });
 

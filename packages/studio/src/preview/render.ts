@@ -2,7 +2,7 @@ import type { Composition } from "@hypit/composition";
 import { compileHtmlProgram, materializeHtmlProgram } from "@hypit/html-program";
 import type { HtmlProgram } from "@hypit/html-program";
 import { lowerPlaybackAudio } from "@hypit/html-playback";
-import { compileAudioProgram } from "@hypit/media-operations";
+import { compileAudioProgram } from "@hypit/audio-program";
 import type { Timeline } from "@hypit/timeline";
 
 import { injectRuntimeShim } from "./runtime-shim.js";

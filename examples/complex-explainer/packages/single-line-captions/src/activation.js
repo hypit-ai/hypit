@@ -1,15 +1,15 @@
 import { captionFineStudioTrackCompanions } from "@hypit/caption-fine/studio";
 import { createProducerPackageFacet } from "@hypit/hypit/producer";
 import { createStudioTrackCompanionFacet } from "@hypit/studio-companion";
-import { createMarkupSurfaceFacet } from "@hypit/hypit/markup";
-import { sealGraphFragment } from "@hypit/hypit/author";
+import { createMarkupDeclarationFacet } from "@hypit/hypit/markup";
+import { createAuthorDeclarationFacet, sealGraphFragment } from "@hypit/hypit/author";
 import { canonicalize } from "@hypit/hypit/protocol";
 import {
   captionFineManifest,
   captionFineModuleRef,
   captionFineProducers,
-  captionFineMarkupSurfaces,
-  decodeFineCaptionTrackSurface,
+  captionFineMarkupDeclarations,
+  fineCaptionTrackAuthorDeclaration,
   scheduleFineCaption,
   assertFineCaptionSchedule,
 } from "@hypit/caption-fine";
@@ -61,8 +61,11 @@ export function singleLineSchedule(timing, program, document) {
   assertFineCaptionSchedule(result);
   return result;
 }
-const handler = (ctx) => {
-  const result = decodeFineCaptionTrackSurface(ctx);
+const declaration = {
+  ...fineCaptionTrackAuthorDeclaration,
+  module,
+  async compile(context) {
+  const result = await fineCaptionTrackAuthorDeclaration.compile(context);
   return {
     ...result,
     components: result.components.map((component) => {
@@ -88,6 +91,7 @@ const handler = (ctx) => {
       return { ...component, fragment: replacement };
     }),
   };
+  },
 };
 const producers = [
         {
@@ -115,10 +119,10 @@ export const hypitPackage = {
         output: { ...companion.output, modules: [module] },
       })),
     ),
-    createMarkupSurfaceFacet({
+    createAuthorDeclarationFacet(declaration),
+    createMarkupDeclarationFacet({
       module,
-      declaration: captionFineMarkupSurfaces.find((s) => s.name === "caption"),
-      handler,
+      declaration: captionFineMarkupDeclarations.find((item) => item.name === "caption"),
     }),
   ],
 };

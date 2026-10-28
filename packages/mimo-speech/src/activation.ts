@@ -1,32 +1,19 @@
 import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
 import { createProducerPackageFacet } from "@hypit/hypit/producer";
-import { createMarkupSurfaceFacet } from "@hypit/hypit/markup";
-
-import {
-  decodeMimoVoiceCloneSurface,
-  decodeMimoVoiceDesignSurface,
-  mimoSpeechComponent,
-  mimoSpeechDefinition,
-  mimoSpeechManifest,
-  mimoSpeechMarkupSurfaces,
-  mimoSpeechModuleRef,
-} from "./index.js";
+import { createAuthorDeclarationFacet } from "@hypit/hypit/author";
+import { createMarkupDeclarationFacet } from "@hypit/hypit/markup";
+import { mimoSpeechComponent, mimoSpeechManifest, mimoSpeechModuleRef } from "./index.js";
+import { mimoSpeechAuthorDeclarations, mimoSpeechMarkupDeclarations } from "./declaration.js";
 
 export const hypitPackage = {
   format: "hypit.package@1" as const,
   modules: [{ manifest: mimoSpeechManifest }],
   facets: [
     ...[mimoSpeechComponent].flatMap((component) => [createProducerPackageFacet(component.producers ?? []), createRefinementPackageFacet(component.refinements ?? [])]),
-    createMarkupSurfaceFacet({
-      module: mimoSpeechModuleRef,
-      declaration: mimoSpeechMarkupSurfaces.find((item) => item.name === "voiceDesign")!,
-      handler: decodeMimoVoiceDesignSurface,
-    }),
-    createMarkupSurfaceFacet({
-      module: mimoSpeechModuleRef,
-      declaration: mimoSpeechMarkupSurfaces.find((item) => item.name === "voiceClone")!,
-      handler: decodeMimoVoiceCloneSurface,
-    }),
+    ...mimoSpeechAuthorDeclarations.map(createAuthorDeclarationFacet),
+    ...mimoSpeechMarkupDeclarations.map((declaration) =>
+      createMarkupDeclarationFacet({ module: mimoSpeechModuleRef, declaration })),
+
   ],
 };
 

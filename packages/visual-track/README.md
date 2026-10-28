@@ -4,19 +4,29 @@ Visual Track is the plain picture-placement package. Its author model is deliber
 
 ```text
 Visual Clip = one picture source + absolute Window + Frame
-            + spatial map + optional temporal Map + optional treatment + optional typed Motion
-Visual Track = ordered set of Visual Clips
+            + spatial map + optional temporal Map/Curve + optional treatment + optional typed Motion
+Transition = two adjacent, overlapping Visual Clips + a package-owned effect
+Visual Track = ordered Clips + explicit Transition relations
 ```
+
+That model is owned by the package's syntax-neutral Author declarations. They define Clip source
+selection, typed references, `Map`/`Sampling`/`Pose` children, Records and graph lowering without
+receiving a Markup syntax tree. SVML contributes only the `Track` and `Motion` spellings. Temporal relation literals are parsed by
+Temporal's value-level API, while this package decides where those relations are used.
 
 The Track consumes one completed Timeline. It publishes `.program` for
 declared tooling and `.visual` for Film. It does not discover media or anchors from Timeline, infer
-semantic roles, select audio, or own multi-Clip transitions.
+semantic roles, select audio, or derive Transition participants from timing proximity.
 
 ```svml
+<import as="transition" from="@hypit/visual-transition@1"/>
+
 <visual:Motion id="gentle-push">
   <visual:Pose at="start" scale="1.08" easing="ease-out"/>
   <visual:Pose at="end" scale="1"/>
 </visual:Motion>
+
+<transition:CrossDissolve id="soft-mix" easing="ease-in-out"/>
 
 <visual:Track id="picture" timeline={program.timeline}>
   <visual:Clip id="speaker" media={speaker-media.media}
@@ -24,6 +34,8 @@ semantic roles, select audio, or own multi-Clip transitions.
   <visual:Clip id="diagram" image={diagram} extent={diagram-extent}
     during={explanation} frame={inset-frame} fit="contain"
     treatment={recipes.visual.diagram} motion={gentle-push}/>
+  <visual:Transition id="speaker-to-diagram"
+    outgoing="speaker" incoming="diagram" effect={soft-mix}/>
 </visual:Track>
 ```
 
@@ -35,7 +47,7 @@ occurrence exists in program time.
 The package's TypeScript component API also exposes an ordered `MediaLayerSet`. It is the lower-level
 material construction used when one authored visual role needs a paint backing, a repeated self-blur,
 or another explicit multi-sample relationship before it becomes one Clip Present. This does not make
-the `<visual:Clip>` Surface a multi-source guessing interface: its direct author syntax still has exactly
+the `<visual:Clip>` declaration a multi-source guessing interface: its direct author syntax still has exactly
 one selected source, while a project component that owns shared multi-sample behavior constructs the
 layers deliberately.
 
@@ -55,7 +67,7 @@ temporal sampling; an optional treatment Recipe contains only reusable pixel and
 | `clip`, `radius`, `padding` | Outer geometry and the fitting inset. |
 | border, shadows and `frame-paint` | Decoration owned by this Clip. |
 | opacity, blur, brightness, contrast, saturation | Treatment of the sampled picture. |
-| `Map` child | Optional Clip-local relation from target-local time to prepared-media-local time. |
+| `Map` / `Curve` child | Optional Clip-local relation from target-local time to prepared-media-local time. |
 
 Clip declaration order is retained as the Track-local item sequence. Whole-film placement belongs to the
 parent `<film:Track id="...">` relation, not to a Clip or its reusable treatment Recipe. This lets
@@ -99,9 +111,19 @@ periodic. A Map without rate, anchors or wrap fits the selected source interval 
 interval. Multiple non-overlapping Maps form one partial function; uncovered target time is
 transparent.
 
+One `Curve` states a monotone cubic source-position piece. Target position is the linear parameter;
+`source-at-start`, `source-control-1`, `source-control-2` and `source-at-end` are exact positions in
+the prepared-media domain. This describes the position relation itself, so frame blending, optical
+flow and other reconstruction policies do not enter the Track value.
+
 ```svml
 <visual:Clip media={shot.media} during={story.outro} frame={full}>
   <visual:Map target-at="end" source-at="end" rate="1"/>
+</visual:Clip>
+
+<visual:Clip media={shot.media} during={story.ramp} frame={full}>
+  <visual:Curve source-at-start="start" source-control-1="start+250ms"
+    source-control-2="end-250ms" source-at-end="end"/>
 </visual:Clip>
 ```
 
@@ -110,10 +132,39 @@ Source media may use a different or variable frame cadence from the Timeline; th
 traversal. A still image has no temporal domain and refuses Map; it simply remains visually active throughout the Clip Window while
 Clip-local Motion may still animate it.
 
-Visual Track contains no generic `Presentation`, `Use`, `Sequence` or `Handoff`. A continuing
-presenter, crossfade, slideshow or coordinated reveal is shared behavior and therefore belongs to an
-ordinary project/author component. Such a component may use the public visual primitives and still
-publish the same terminal `VisualTrack`; Core and Film learn no new role.
+## Transitions
+
+`Transition` is a relation between two existing Clip occurrences, not a third picture source.
+`outgoing` and `incoming` name the participants explicitly, and `effect` references a separately
+authored `VisualTransitionEffect`. The two Clips must overlap and be neighbours in Track paint order,
+with the outgoing Clip starting and ending first. Their complete intersection is the Transition span;
+authors do not repeat that fact as a `during` Window. There are no hidden handles, freeze frames,
+repeated samples or inferred edit points. The Program retains only the relation; projection and
+Studio derive the intersection from the participant Windows instead of caching a second span fact.
+
+```svml
+<transition:CrossDissolve id="soft-mix" easing="ease-in-out"/>
+
+<visual:Track id="sequence" timeline={program.timeline}>
+  <visual:Clip id="wide" media={wide.media} during={wide-window} frame={full} fit="cover"/>
+  <visual:Clip id="close" media={close.media} during={close-window} frame={full} fit="cover"/>
+  <visual:Transition id="wide-to-close"
+    outgoing="wide" incoming="close" effect={soft-mix}/>
+</visual:Track>
+```
+
+Each Clip keeps evaluating its own temporal Map during the overlap. Projection supplies both Presents
+as independently timed inputs to a generic Composition `VisualProcess`; the effect package decides how
+they combine. Visual Track knows no transition catalogue. Studio shows the relation on an attached
+Transitions lane and follows `effect` to that package's parameter companion.
+
+`@hypit/visual-transition` supplies the official Dissolve, Dip, Push, Slide, Wipe, Iris, Zoom Dissolve
+and Blur Dissolve effects. Other packages can publish the same `VisualTransitionEffect` Type without
+changing this package, Composition or Film.
+
+Visual Track still contains no generic `Presentation`, `Use`, `Sequence` or inferred `Handoff`.
+Multi-shot choreography, slideshows, shared masks and coordinated visual/audio behavior remain
+ordinary project/author components that publish the same terminal `VisualTrack`.
 
 This is the package's incremental boundary: the plain Clip supplies the stable operations almost
 every picture occurrence needs, while a new visual role remains straightforward to author as a
@@ -135,7 +186,7 @@ The stable terminal [`VisualTrack`](../composition/README.md) type is owned by C
 Track is one plain producer of that type; another project or published component may produce the same
 terminal value without depending on this package.
 
-The package's activation contributes both its authoring Surfaces and its Studio Companion. The
+The package's activation contributes both its author declarations and its Studio Companion. The
 Companion preserves Clip material, Frame, fit, treatment and typed Motion as separate
-author facts. Studio's generic terminal fallback can still display a Composition `VisualTrack` made
+author facts, and presents Cross Dissolve relations in their own attached lane. Studio's generic terminal fallback can still display a Composition `VisualTrack` made
 by another package without interpreting it as a Visual Track Clip.

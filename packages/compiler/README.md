@@ -20,8 +20,8 @@ resolution authority.
 
 `ModulePackageRegistry` maps author import spellings to exact, already trusted manifests and closes
 their declared Resource dependencies. It does not install npm packages or execute module code. An
-embedding application must register the manifests and matching Frontend/Surface implementations it
-has chosen to trust.
+embedding application must register the manifests and matching Frontend/package declaration
+implementations it has chosen to trust.
 
 `Compiler` requires the host-neutral `Workspace` contract. The reference CLI explicitly selects
 `@hypit/workspace/node`, where every recursive Source import is confined to the canonical root
@@ -29,9 +29,9 @@ that owns the importing SourceUnit, symlink escapes are rejected and each edge i
 first bytes read for that compilation. The Host may explicitly mount another Source root; the
 Compiler sees only the resulting Workspace units and does not know whether that root came from an
 installed data package, Git, memory or another source. Another Host can supply a different
-Workspace without changing Frontends, Surfaces, Source Closure identity or Core.
+Workspace without changing Frontends, package declarations, Source Closure identity or Core.
 
-The Workspace session owns a separate Source Asset capability. A Frontend/Surface may request an
+The Workspace session owns a separate Source Asset capability. A Frontend or package declaration compiler may request an
 asset and assign its exact media type, but it never receives a path, filesystem handle or ambient
 read authority. The Workspace returns a `BlobRef`, the compiler binds that reference into the
 requesting SourceUnit, and the session exposes defensive generic `BlobAttachment`s whose `blob`
@@ -55,13 +55,14 @@ Core for a finite BuildPlan. The Author Graph remains unchanged. There is no Aut
 shortcut.
 
 `prepareCompilation` turns that completed structural selection into a `PreparedBuild`: it derives
-one immutable `PublicationPlan`, seals the `BuildDefinition`, and exposes its materialized read view.
+one immutable `PublicationIntent`, seals the `BuildDefinition`, and exposes the Kernel's disposable
+`BuildView`.
 The publication binds each public Author name to its selected Logical Output, target membership, display name and either a
 current Record source or an exact historical Result address. CLI catalogs, Runtime submission and
-Result writing project this plan; they do not repeat Candidate selection or reconstruct forwarding.
+Result writing consume this intent; they do not repeat Candidate selection or reconstruct forwarding.
 
 The package contains no Script, video, Provider, queue, credentials or rendering knowledge. A
-non-video application can use it with only its own manifests, Frontends, Surfaces and chosen
+non-video application can use it with only its own manifests, Frontends, declarations and chosen
 Workspace implementation.
 
 Package installation, third-party code loading and sandbox execution remain Host

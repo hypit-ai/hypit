@@ -20,10 +20,14 @@ export * from "./domain.js";
 export * from "./exact.js";
 export * from "./extent.js";
 export * from "./map.js";
+export { parseTemporalDuration } from "./literal.js";
+export * from "./relation-literal.js";
 export * from "./projection.js";
+export * from "./rate-profile.js";
 export * from "./relation.js";
 export * from "./schedule.js";
 export * from "./sample.js";
+export * from "./validation.js";
 export type * from "./types.js";
 
 export const temporalModuleRef = { name: "@hypit/temporal", version: "1" } as const;
@@ -110,7 +114,7 @@ export const temporalExtentSchema: ValueSchema = object({ duration: { schema: ex
 const temporalRangeSchema: ValueSchema = object({
   start: { schema: exactTemporalValueSchema }, end: { schema: exactTemporalValueSchema },
 });
-const temporalRateSchema: ValueSchema = object({
+export const temporalRateSchema: ValueSchema = object({
   numerator: { schema: integer }, denominator: { schema: { kind: "number", integer: true, minimum: 1 } },
 });
 const temporalRelativePointSchema: ValueSchema = object({
@@ -127,14 +131,24 @@ const temporalRelationSchema: ValueSchema = { kind: "oneOf", variants: [
     wrap: { schema: temporalRelativeRangeSchema, optional: true } }),
   object({ kind: { schema: { kind: "literal", value: "fit" } }, target: { schema: temporalRelativeRangeSchema },
     source: { schema: temporalRelativeRangeSchema } }),
+  object({ kind: { schema: { kind: "literal", value: "cubic" } }, target: { schema: temporalRelativeRangeSchema },
+    sourceAtStart: { schema: temporalRelativePointSchema }, sourceControl1: { schema: temporalRelativePointSchema },
+    sourceControl2: { schema: temporalRelativePointSchema }, sourceAtEnd: { schema: temporalRelativePointSchema } }),
 ] };
 export const temporalRelationSpecSchema: ValueSchema = object({
   relations: { schema: { kind: "array", minItems: 1, items: temporalRelationSchema } },
 });
-const temporalMapPieceSchema: ValueSchema = object({
-  target: { schema: temporalRangeSchema }, sourceAtStart: { schema: exactTemporalValueSchema },
-  rate: { schema: temporalRateSchema }, wrap: { schema: temporalRangeSchema, optional: true },
-});
+const temporalMapPieceSchema: ValueSchema = { kind: "oneOf", variants: [
+  object({
+    target: { schema: temporalRangeSchema }, sourceAtStart: { schema: exactTemporalValueSchema },
+    rate: { schema: temporalRateSchema }, wrap: { schema: temporalRangeSchema, optional: true },
+  }),
+  object({
+    target: { schema: temporalRangeSchema }, sourceAtStart: { schema: exactTemporalValueSchema },
+    sourceControl1: { schema: exactTemporalValueSchema }, sourceControl2: { schema: exactTemporalValueSchema },
+    sourceAtEnd: { schema: exactTemporalValueSchema },
+  }),
+] };
 export const temporalMapSchema: ValueSchema = object({
   stages: { schema: { kind: "array", minItems: 1, items: object({
     target: { schema: localTemporalDomainSchema }, source: { schema: localTemporalDomainSchema },

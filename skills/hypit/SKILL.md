@@ -50,7 +50,7 @@ interfaces for both existing and project-defined components.
 
 The work has one finite Timeline and one Canvas. Prepared media has local domains and Extents;
 domain projectors translate local evidence into absolute Windows that components can consume.
-Semantic alignment, musical beats and authored events are peer sources of absolute time. Visual and
+Semantic alignment, project- or ecosystem-provided musical beats, and authored events are peer sources of absolute time. Visual and
 Audio Clips connect prepared media to explicit Windows. Time can contain speech, gaps, overlaps or
 wholly authored animation. Space can contain independent contributions or a coordinated scene with
 its own internal tree. [System relationships](references/production/system.md) explains this adaptive
@@ -117,7 +117,7 @@ Treatment.
 
 For A-roll, B-roll, Caption, MG or sound relationships, read the Craft that owns the directing question.
 Craft supplies judgment and model-selection guidance; installed vocabulary, Kits and package-local
-documentation supply the exact Surfaces, request wording, inputs and limits.
+documentation supply the exact declarations, request wording, inputs and limits.
 
 ## Prepare for the work at hand
 
@@ -305,7 +305,7 @@ practical, revisit that choice and carry the improvement into the work and its n
 | selecting original/cutout footage or preparing transparency before presentation | `references/production/media.md` |
 | Canvas, Frames, aspect, fitting, cropping or coordinate relationships | `references/production/spatial.md` |
 | choosing or finding fonts, using local font files, multilingual text, Emoji or Typography | `references/production/fonts-and-text.md` |
-| which installed Surface to use, or whether to write a project component | `references/production/vocabulary.md` |
+| which installed declaration to use, or whether to write a project component | `references/production/vocabulary.md` |
 | sharing a component, Prompt Kit, Model, or Provider across projects | `references/production/component-sharing.md` |
 | constructing Timeline end, Instants, Windows, Extents, gaps, overlap or a pure MG work | `references/production/timeline.md` |
 | choosing content ownership and composing visual/audio contributions | `references/production/tracks.md` |

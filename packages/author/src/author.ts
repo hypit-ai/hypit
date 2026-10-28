@@ -250,7 +250,12 @@ export function elaborateAuthorGraph(
           `${component.declaration.id}.${input.name} wants ${typeName(input.type)} but receives ${typeName(record.type)}`,
           component.declaration.id,
         );
-        inputs[input.name] = { kind: "record", id: record.id };
+        Object.defineProperty(inputs, input.name, {
+          value: { kind: "record", id: record.id },
+          enumerable: true,
+          configurable: true,
+          writable: true,
+        });
         continue;
       }
       const binding = collected.outputs.get(outputKey(ref.component, ref.output));
@@ -266,7 +271,12 @@ export function elaborateAuthorGraph(
         `${component.declaration.id}.${input.name} wants ${typeName(input.type)} but receives ${typeName(binding.type)}`,
         component.declaration.id,
       );
-      inputs[input.name] = { kind: "logical-output", id: binding.id };
+      Object.defineProperty(inputs, input.name, {
+        value: { kind: "logical-output", id: binding.id },
+        enumerable: true,
+        configurable: true,
+        writable: true,
+      });
     }
     const instance = elaborateGraphFragment(program, component.fragment, {
       id: `author:${component.declaration.id}`,

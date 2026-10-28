@@ -1,9 +1,9 @@
-import { createMarkupSurfaceFacet } from "@hypit/hypit/markup";
+import { createAuthorDeclarationFacet } from "@hypit/hypit/author";
+import { createMarkupDeclarationFacet } from "@hypit/hypit/markup";
 import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
 import { createProducerPackageFacet } from "@hypit/hypit/producer";
-
-import { emojiRevealComponent, emojiRevealManifest, emojiRevealMarkupSurfaces, emojiRevealModuleRef } from "./index.js";
-import { decodeEmojiRevealStyleSurface, decodeEmojiRevealTrackSurface } from "./surface.js";
+import { emojiRevealComponent, emojiRevealManifest, emojiRevealModuleRef } from "./index.js";
+import { emojiRevealAuthorDeclarations, emojiRevealMarkupDeclarations } from "./declaration.js";
 
 export const hypitPackage = {
   format: "hypit.package@1" as const,
@@ -11,8 +11,10 @@ export const hypitPackage = {
   facets: [
     createProducerPackageFacet(emojiRevealComponent.producers ?? []),
     createRefinementPackageFacet(emojiRevealComponent.refinements ?? []),
-    createMarkupSurfaceFacet({ module: emojiRevealModuleRef, declaration: emojiRevealMarkupSurfaces.find((item) => item.name === "style")!, handler: decodeEmojiRevealStyleSurface }),
-    createMarkupSurfaceFacet({ module: emojiRevealModuleRef, declaration: emojiRevealMarkupSurfaces.find((item) => item.name === "emojiReveal")!, handler: decodeEmojiRevealTrackSurface }),
+    ...emojiRevealAuthorDeclarations.map(createAuthorDeclarationFacet),
+    ...emojiRevealMarkupDeclarations.map((declaration) =>
+      createMarkupDeclarationFacet({ module: emojiRevealModuleRef, declaration })),
+
   ],
 };
 export default hypitPackage;

@@ -38,7 +38,7 @@ test("service restrictions leave the model request valid and reject before resol
   await assert.rejects(compile(route, constraints, upload), /background option only at 1K/);
   assert.equal(resolved, 0);
 
-  const supported = sealGptImage2Request({ ...request.ports, resolution: ["1K"] }) as unknown as CanonicalValue;
+  const supported = sealGptImage2Request({ ...request.fields, resolution: ["1K"] }) as unknown as CanonicalValue;
   assert.equal(route.supports!({ capability: route.capability, returns: route.returns, constraints: supported }).status, "supported");
   await compile(route, supported, upload);
   assert.equal(resolved, 1);
@@ -48,7 +48,7 @@ test("HypiHub GPT image requests use canonical edit references and the authored 
   const route = hypiHubRoutes.find((item) => item.capability.name === "gpt-image-2");
   assert.ok(route);
   const result = await compile(route, {
-    ports: {
+    fields: {
       prompt: ["edit"],
       aspectRatio: ["1:1"],
       resolution: ["1K"],
@@ -65,7 +65,7 @@ test("HypiHub GPT image requests use canonical edit references and the authored 
     reference_images: [{ url: "data:image/png;base64,AQID" }],
   });
 
-  const unsupported = { ports: {
+  const unsupported = { fields: {
     prompt: ["cutout"], aspectRatio: ["1:1"], resolution: ["2K"], background: ["opaque"],
   } } as unknown as CanonicalValue;
   assert.deepEqual(route.supports?.({
@@ -79,8 +79,8 @@ test("HypiHub GPT image requests use canonical edit references and the authored 
   await assert.rejects(compile(route, unsupported, resolve), /background option only at 1K/u);
 
   for (const constraints of [
-    { ports: { prompt: ["portrait"], aspectRatio: ["5:4"], resolution: ["2K"] } },
-    { ports: { prompt: ["portrait"], aspectRatio: ["3:1"], resolution: ["4K"] } },
+    { fields: { prompt: ["portrait"], aspectRatio: ["5:4"], resolution: ["2K"] } },
+    { fields: { prompt: ["portrait"], aspectRatio: ["3:1"], resolution: ["4K"] } },
   ]) {
     const support: EndpointSupport | undefined = route.supports?.({
       capability: route.capability,
@@ -92,8 +92,8 @@ test("HypiHub GPT image requests use canonical edit references and the authored 
   }
 
   for (const constraints of [
-    { ports: { prompt: ["portrait"], aspectRatio: ["auto"], resolution: ["4K"] } },
-    { ports: { prompt: ["portrait"], aspectRatio: ["5:4"], resolution: ["4K"] } },
+    { fields: { prompt: ["portrait"], aspectRatio: ["auto"], resolution: ["4K"] } },
+    { fields: { prompt: ["portrait"], aspectRatio: ["5:4"], resolution: ["4K"] } },
   ]) {
     assert.deepEqual(route.supports?.({
       capability: route.capability,
@@ -140,7 +140,7 @@ test("HypiHub Seedance sends reference images through the public top-level field
   const route = hypiHubRoutes.find((item) => item.capability.name === "seedance-2");
   assert.ok(route);
   const result = await compile(route, {
-    ports: {
+    fields: {
       prompt: ["animate"],
       duration: [5],
       resolution: ["720p"],
@@ -212,7 +212,7 @@ test("HypiHub MiMo Speech mappings use the public audio speech fields", async ()
   const voiceDesign = hypiHubRoutes.find((item) => item.capability.name === "mimo-v2.5-tts-voicedesign");
   assert.ok(voiceDesign);
   const result = await compile(voiceDesign, {
-    ports: { text: ["hello"], voiceDescription: ["warm and calm"] },
+    fields: { text: ["hello"], voiceDescription: ["warm and calm"] },
   }, resolve);
   assert.equal(result.model, "mimo-v2.5-tts-voicedesign");
   assert.deepEqual(result.input, { input: "hello", voice_description: "warm and calm" });
@@ -220,7 +220,7 @@ test("HypiHub MiMo Speech mappings use the public audio speech fields", async ()
   const voiceClone = hypiHubRoutes.find((item) => item.capability.name === "mimo-v2.5-tts-voiceclone");
   assert.ok(voiceClone);
   const cloned = await compile(voiceClone, {
-    ports: {
+    fields: {
       text: ["hello again"],
       instruction: ["quiet and direct"],
       voiceReference: [{ role: "audio", artifact: { ...image, mediaType: "audio/wav" } }],
@@ -236,17 +236,17 @@ test("HypiHub MiMo Speech mappings use the public audio speech fields", async ()
 
 test("Seedance person metadata reaches resource transport without changing video request fields", async () => {
   for (const route of hypiHubRoutes.filter((item) => item.capability.module.name === "@hypit/seedance")) {
-    for (const port of ["referenceImage", "referenceVideo", "firstFrame", "lastFrame"] as const) {
+    for (const field of ["referenceImage", "referenceVideo", "firstFrame", "lastFrame"] as const) {
       for (const flag of [true, false]) {
         const fields = { personReference: flag };
         const seen: unknown[] = [];
-        const result = await compile(route, { ports: {
+        const result = await compile(route, { fields: {
           prompt: ["animate"], duration: [5],
-          [port]: [{ role: port === "referenceVideo" ? "video" : "image", artifact: image, fields }],
+          [field]: [{ role: field === "referenceVideo" ? "video" : "image", artifact: image, fields }],
         } }, async (_artifact, metadata) => { seen.push(metadata); return "https://media.test/ref"; });
         assert.deepEqual(seen, [fields]);
-        const wireField = { referenceImage: "reference_image_urls", referenceVideo: "reference_videos", firstFrame: "first_frame", lastFrame: "last_frame" }[port];
-        assert.deepEqual((result.input as Record<string, unknown>)[wireField], port.startsWith("reference") ? ["https://media.test/ref"] : "https://media.test/ref");
+        const wireField = { referenceImage: "reference_image_urls", referenceVideo: "reference_videos", firstFrame: "first_frame", lastFrame: "last_frame" }[field];
+        assert.deepEqual((result.input as Record<string, unknown>)[wireField], field.startsWith("reference") ? ["https://media.test/ref"] : "https://media.test/ref");
         assert.equal(JSON.stringify(result.input).includes("person"), false);
       }
     }
@@ -257,7 +257,7 @@ test("exact model identity survives reference mode and preview selection", async
   const lite = hypiHubRoutes.find((item) => item.capability.name === "seedream-5-lite")!;
   const preview = hypiHubRoutes.find((item) => item.capability.name === "grok-imagine-video-1.5-preview")!;
   for (const images of [[], [{ role: "image", artifact: image }]]) {
-    const request = { ports: { prompt: ["A scene"], ...(images.length ? { images } : {}) } };
+    const request = { fields: { prompt: ["A scene"], ...(images.length ? { images } : {}) } };
     assert.equal((await compile(lite, request, resolve)).model, "seedream-5-lite");
     assert.equal((await compile(preview, request, resolve)).model, "grok-imagine-video-1.5-preview");
   }
@@ -267,7 +267,7 @@ test("canonical image models keep generation and edit operations distinct", asyn
   for (const name of ["gpt-image-2", "seedream-5-lite", "nano-banana-2", "nano-banana-pro"]) {
     const route = hypiHubRoutes.find((item) => item.capability.name === name)!;
     for (const images of [[], [{ role: "image", artifact: image }]]) {
-      const prepared = route.prepare({ ports: { prompt: ["A scene"], images } });
+      const prepared = route.prepare({ fields: { prompt: ["A scene"], images } });
       assert.equal(prepared.model, name);
       assert.equal(prepared.operation, images.length ? "image_edits" : "images");
       const compiled = await prepared.compile(resolve);

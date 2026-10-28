@@ -1,7 +1,6 @@
 import { placedVisualMedia } from "./placed-visual-media.js";
-import { assertAttributes, assertEmptyElement, textAttribute, createMarkupSurfaceFacet } from "@hypit/hypit/markup";
 import { canonicalize } from "@hypit/hypit/protocol";
-import { sealGraphFragment } from "@hypit/hypit/author";
+import { declarationField, sealGraphFragment } from "@hypit/hypit/author";
 import { presenterStyle, presenterTypes } from "./presenter.js";
 import { sealPresentVisualTrack, compositionTypes } from "@hypit/composition";
 import { timelineTypes } from "@hypit/timeline";
@@ -100,17 +99,15 @@ export function installPullback(module, manifest, component, optionsType, mode="
       return { kind: "output", value: canonicalize(visual) };
     },
   });
-  return createMarkupSurfaceFacet({
-    module,
+  return {
     declaration: {
-      name: mode,
-      tag,
-      mode: "structured",
+    module,
+    declaration: mode,
       outputs: [types.style, optionsType],
-      vocabulary: {
+      shape: {
         summary:
           isFade?"Fade placed footage to transparent across this Use.":"Fast-to-slow pullback of placed footage, settling at ordinary full-frame geometry.",
-        attributes: [
+        fields: [
           {
             name: "id",
             kind: "identifier",
@@ -125,12 +122,19 @@ export function installPullback(module, manifest, component, optionsType, mode="
           }]:[]),
         ],
       },
-    },
-    handler: ({ element }) => {
-      assertAttributes(element, isFade?["id"]:["id", "scale"]);
-      assertEmptyElement(element);
-      const id = textAttribute(element, "id"),
-        scale = isFade?1:Number(element.attributes.scale ?? 1.5);
+      bindings(element) {
+        const idField = declarationField(element, "id");
+        if (idField?.kind !== "literal" || !idField.value.trim()) throw Error(`${tag}.id must be text`);
+        const id = idField.value.trim();
+        return [{ name: id, ref: { kind: "record", id }, type: types.style }];
+      },
+    async compile({ declaration: element }) {
+      const idField = declarationField(element, "id");
+      if (idField?.kind !== "literal" || !idField.value.trim()) throw Error(`${tag}.id must be text`);
+      const id = idField.value.trim();
+      const scaleField = declarationField(element, "scale");
+      if (scaleField !== undefined && scaleField.kind !== "literal") throw Error(`${tag}.scale must be literal`);
+      const scale = isFade?1:Number(scaleField?.value ?? 1.5);
       if (!Number.isFinite(scale) || scale < 1)
         throw Error("Pullback scale must be at least 1");
       const options = {
@@ -155,5 +159,7 @@ export function installPullback(module, manifest, component, optionsType, mode="
         components: [],
       };
     },
-  });
+    },
+    markup: { name: mode, tag },
+  };
 }

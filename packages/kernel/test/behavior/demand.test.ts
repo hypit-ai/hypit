@@ -11,7 +11,6 @@ import {
   sealAuthorGraph,
 } from "@hypit/kernel";
 import type {
-  BuildState,
   Candidate,
   CanonicalValue,
   AuthorGraph,
@@ -25,6 +24,7 @@ import type {
   Satisfaction,
   TypeRef,
 } from "@hypit/protocol";
+import type { BuildView } from "@hypit/kernel";
 
 const moduleRef = { name: "example.kernel-demand", version: "0.0.0" } as const;
 const types = {
@@ -264,7 +264,7 @@ function startSelected(
   graph: AuthorGraph,
   targets: readonly string[],
   satisfactions: readonly Satisfaction[] = [],
-): BuildState {
+): BuildView {
   const planned = planBuild(program, graph, {
     format: "hypit.run-graph@1",
     records: [],
@@ -279,7 +279,7 @@ function startSelected(
   }), []);
 }
 
-function fixture(targets: readonly string[], satisfactions: readonly Satisfaction[] = []): BuildState {
+function fixture(targets: readonly string[], satisfactions: readonly Satisfaction[] = []): BuildView {
   const program = createProgram();
   const graph = createImageGraph();
   return startSelected(program, graph, targets, satisfactions);
@@ -289,7 +289,7 @@ function choose(outputId: string, candidateId: string): Satisfaction {
   return { output: outputId, candidate: candidateId };
 }
 
-function stepIds(state: BuildState): string[] {
+function stepIds(state: BuildView): string[] {
   return state.plan.steps.map((step) => step.id).sort();
 }
 

@@ -8,14 +8,14 @@ import { parameterAuthorValue, serializeParameterValue } from "../src/parameter-
 
 const module = { name: "@project/pan", version: "1" } as const;
 const companion: StudioParameterCompanion = {
-  id: "pan", match: { module, surface: "pan" },
+  id: "pan", match: { module, declaration: "pan" },
   bindings: [{ name: "distance", writable: true, fallback: 0.25 }],
   inspector: [{ binding: "distance", label: "Travel", domain: "where", section: { id: "path", label: "Path" },
     control: "number", number: { scale: 100 }, unit: "%" }],
 };
 const text = '<x:Track id="view" style={pan}/><p:Pan id="pan"/>';
 function placement(id: string, start: number, end: number): StudioPlacement {
-  return { id, module, surface: id === "pan" ? "pan" : "track", tag: id === "pan" ? "p:Pan" : "x:Track",
+  return { id, module, declaration: id === "pan" ? "pan" : "track", tag: id === "pan" ? "p:Pan" : "x:Track",
     sourcePath: "main.svml", range: { start, end }, records: [id], values: [], outputs: [], outputPorts: [], children: [],
     attributes: { id }, attributeValueRanges: {}, references: [], referenceAttributes: {}, referenceTypes: {} };
 }

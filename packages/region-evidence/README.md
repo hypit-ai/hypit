@@ -4,6 +4,9 @@ Frame-exact external spatial evidence. The package relates prepared region obser
 Timeline and resolves normalized boxes inside an explicit program-picture Frame. It performs no
 detection, identity inference, interpolation or source-to-picture placement discovery.
 
+The package owns the declaration shape and graph lowering below. Markup contributes only the
+`Evidence` spelling; other author frontends can provide the same declaration directly.
+
 ```svml
 <import as="region" from="@hypit/region-evidence@1"/>
 <region:Evidence id="heads" within={vertical.bounds} timeline={program.timeline}

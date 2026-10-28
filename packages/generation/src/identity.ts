@@ -29,13 +29,6 @@ export function assertGenerationBlobRef(
   }
 }
 
-/** Canonical request value; Core supplies the enclosing Need identity. */
-export function sealGenerationRequest<T extends object>(
-  content: T,
-): T {
-  return canonicalize(content) as unknown as T;
-}
-
 export function sealGeneratedImageSet(content: GeneratedImageSet): GeneratedImageSet {
   assert(content.images.length > 0, "Generated image set is empty");
   content.images.forEach((artifact) => assertGenerationBlobRef(artifact, "image/"));

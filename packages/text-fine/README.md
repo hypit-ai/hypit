@@ -1,13 +1,18 @@
 # `@hypit/text-fine`
 
 This package is the fine-text family for independently authored titles, labels and short editorial
-copy. Its preferred author surfaces are occurrences rather than an aggregate text Track:
+copy. Its preferred author declarations are occurrences rather than an aggregate text Track:
 
 - `Flow` flows one document inside a SpatialFrame;
 - `Point` hangs one document from a SpatialPoint;
 - `Path` sets one document along a SpatialPath.
 
-Each occurrence takes an explicit Timeline and absolute Window, publishes its package-owned
+The package owns the declaration grammar and lowering for Style, Motion, PathMotion, Flow, Point,
+Path, Mask and their nested rich-text and Paint structures. Markup only supplies their spelling.
+Other authoring frontends can invoke the same declarations without reproducing typography parsing,
+mixed-content ordering, placement policy or graph assembly.
+
+Each occurrence requires an explicit Timeline and absolute Window, publishes its package-owned
 `.occurrence` for Studio and sibling text tools, and publishes `.visual` for Film. It does not own a
 Timeline, Narrative or semantic projection. A semantic, beat or other upstream domain can project
 its evidence into an ordinary Window and pass that Window through `during`.
@@ -34,7 +39,7 @@ its evidence into an ordinary Window and pass that Window through `during`.
 ```
 
 `during` accepts a resolved absolute Window, including the complete `film.window`. Declare direct
-clock ranges through Timeline authoring before passing them here. These surfaces have no `semantic`, `selection`,
+clock ranges through Timeline authoring before passing them here. These declarations have no `semantic`, `selection`,
 `segment` or `moment` attribute: semantic time is one possible producer of a Window, not a special
 capability every visual component must carry.
 
@@ -76,7 +81,7 @@ content owns a bounded rich `VisualTextDocument`. Dynamic rich text is intention
 through generic `Text`; it would require a separate explicit rich-document contract.
 
 `<typo:P>`, `<typo:Span>` and `<typo:Break>` are declared children of every occurrence, so they are
-discoverable from the Surface vocabulary rather than from prose. A `style` on a `<typo:P>` or a
+discoverable from the package-owned declaration grammar rather than from prose. A `style` on a `<typo:P>` or a
 `<typo:Span>` replaces the whole typography record, not only the paints: that paragraph or run is
 shaped with the referenced Style's own exact font at its own size, weight and slant, so one document
 can mix typefaces. Geometry and form-specific layout are direct occurrence attributes and never enter

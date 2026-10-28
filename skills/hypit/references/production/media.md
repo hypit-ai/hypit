@@ -14,11 +14,11 @@ Keep source facts, preparation and use distinct:
 | Material or use | What the next consumer needs |
 | --- | --- |
 | Still image, including a transparent cutout | Bytes and its real dimensions for independent placement; the component supplies its display Window. |
-| Video, with or without audio or transparency | Selected streams, local duration and a frame clock when entering prepared-media composition inputs. |
+| Video, with or without audio or transparency | Selected streams, an exact local presentation domain and the stream interpretation needed by downstream picture or sound consumers. |
 | Audio | The selected audio stream and prepared local time; its role can be a Script performance, music, narration or an effect. |
 | Compositable surface | Its declared pixels, extent and any animation information; use the producing package's output directly. |
 | Code-authored text, shapes or a scene | The component's data and resources; it can draw directly without an intermediate media file. |
-| A model reference | The exact image, video or audio input accepted by that model's Surface; prepare only the form that Surface declares. |
+| A model reference | The exact image, video or audio input accepted by that model's declaration; prepare only the form that declaration accepts. |
 
 Files, generated Outputs and earlier Results are sources of these values. A reference need not
 appear in the film. Align a Script Segment to a video's local domain when the production consumes
@@ -43,7 +43,7 @@ File declarations publish a **Blob**, a reference to the file's bytes, under the
 ```
 
 Use `{product}`, `{performance}` and `{music}` as inputs that accept these Blobs. A model
-Surface can publish the same kind of value under an output path, such as `{portrait.image}` or
+declaration can publish the same kind of value under an output path, such as `{portrait.image}` or
 `{opening.video}`. The package vocabulary gives that path. File paths are relative to their Source;
 [project setup](../creation/project-files.md#establish-the-project-boundary) explains the declared project boundaries.
 
@@ -127,7 +127,7 @@ them on the accepted media's local domain:
 ```
 
 Set `language` to the performed language supported by the selected WhisperX Endpoint. Transcription
-supplies timed evidence; the independent alignment Surface associates it with Script. The result
+supplies timed evidence; the independent alignment declaration associates it with Script. The result
 `opening-semantic.alignment` is `NarrativeAlignment`: Segment and Token boundaries on the named local
 domain. It carries no media and no Timeline position.
 
@@ -193,20 +193,34 @@ duration by their optional weights. Preparation then makes that clip usable as p
 media. Choose it when one or more held images need to become a time-bearing video Artifact; its role
 is assigned by the downstream Source relationships just like any other video.
 
-## Edit bytes at an explicit point in the graph
+## Derive or extract media explicitly
 
 ```svml
 <mediaop:Transform id="edited" source={performance-media.media}>
   <mediaop:Trim tail="0.25s"/>
   <mediaop:Retime rate="1.05"/>
 </mediaop:Transform>
+<mediaop:Transform id="ramped" source={performance-media.media}>
+  <mediaop:Retime>
+    <mediaop:Rate at="start" value="1"/>
+    <mediaop:Rate at="end-1s" value="1/8"/>
+    <mediaop:Rate at="end" value="1"/>
+  </mediaop:Retime>
+</mediaop:Transform>
 <mediaop:ExtractAudio id="voice-reference" source={performance} audio="default"/>
 <mediaop:ExtractFrame id="frame-reference" source={performance}
   video="primary-moving" at="last"/>
 ```
 
-Transform applies its operations in order and publishes another `PreparedMedia`; trim and positive
-rational retime therefore compose without creating intermediate files. Extracted audio or a frame can directly
+Transform applies its operations in order and publishes another `PreparedMedia`; trim and retime
+therefore compose without creating intermediate files. A leaf `Retime` uses one non-zero rational
+rate; a negative rate traverses the complete current local domain in reverse. A nested profile uses
+ordered `Rate` knots across the complete source. The first and last knots name opposite edges,
+intermediate positions stay strictly ordered, and each adjacent pair is integrated into an exact
+target-to-source curve after the actual PreparedMedia duration is known; rate changes linearly over
+that derived target interval. Use `start`, `end`, seconds
+or milliseconds from either edge; native source-frame numbers are not local-time coordinates.
+Extracted audio or a frame can directly
 feed a compatible model reference port.
 `ExtractFrame` also accepts `first`, `frame:<index>` and `time:<seconds>`.
 

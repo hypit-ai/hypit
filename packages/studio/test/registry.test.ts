@@ -9,21 +9,21 @@ import { StudioCompanionRegistry } from "../src/studio-registry.js";
 test("Companion origin matching includes the exact module version", () => {
   const moduleV1 = { name: "@example/track", version: "1" } as const;
   const companion: StudioTrackCompanion = {
-    id: "example", role: "track", family: "example",
-    output: { type: compositionTypes.visualTrack, surface: "track", modules: [moduleV1] },
+    id: "example", family: "example",
+    output: { type: compositionTypes.visualTrack, declaration: "track", modules: [moduleV1] },
   };
   const registry = new StudioCompanionRegistry([companion]);
-  assert.equal(registry.trackCompanionFor(compositionTypes.visualTrack, { surface: "track", module: moduleV1 }, []), companion);
+  assert.equal(registry.trackCompanionFor(compositionTypes.visualTrack, { declaration: "track", module: moduleV1 }, []), companion);
   assert.equal(registry.trackCompanionFor(
     compositionTypes.visualTrack,
-    { surface: "track", module: { ...moduleV1, version: "2" } },
+    { declaration: "track", module: { ...moduleV1, version: "2" } },
     [],
   ), undefined);
 });
 
 test("Inspector objects stay out of the Timeline while child Tracks remain available", () => {
   const companion: StudioTrackCompanion = {
-    id: "cards", role: "track", family: "cards", tone: "blue",
+    id: "cards", family: "cards", tone: "blue",
     output: { type: compositionTypes.visualTrack },
     inspectorObjects: [{
       id: "rules", label: "Presentation Rules",
@@ -37,7 +37,7 @@ test("Inspector objects stay out of the Timeline while child Tracks remain avail
   };
   const registry = new StudioCompanionRegistry([companion]);
   const track = { typeRef: compositionTypes.visualTrack, outputRef: "cards.visual", name: "cards", type: "VisualTrack",
-    role: "track", value: {}, trace: { references: [], outputPorts: [] } } as const;
+    value: {}, trace: { references: [], outputPorts: [] } } as const;
   assert.deepEqual(registry.trackAttachments(track).map(item => item.attachmentId), ["objects"]);
   const context = { track, values: new Map(), spans: [], temporalBindings: [], temporalDomains: [], generic: () => [] };
   const [draft] = registry.projectTrack(context);
@@ -53,9 +53,9 @@ test("Inspector objects stay out of the Timeline while child Tracks remain avail
   assert.throws(() => invalid.projectInspectorObjects(context), /repeats Inspector object/);
 });
 
-test("the Host owns item identity and rejects only package-local lane collisions", () => {
+test("Companions own lane-local Item identity and the Host rejects only collisions in that scope", () => {
   const base: StudioTrackCompanion = {
-    id: "local-items", role: "track", family: "visual",
+    id: "local-items", family: "visual",
     output: { type: compositionTypes.visualTrack },
     project: () => [
       { id: "same", authoredId: "first", display: { title: "First", layers: [] }, startFrame: 0, endFrameExclusive: 1, stackOrder: 0 },
@@ -64,9 +64,25 @@ test("the Host owns item identity and rejects only package-local lane collisions
   };
   const registry = new StudioCompanionRegistry([base]);
   const track = { typeRef: compositionTypes.visualTrack, outputRef: "owner", name: "owner", type: "VisualTrack",
-    role: "track", value: {}, trace: { references: [], outputPorts: [] } } as const;
+    value: {}, trace: { references: [], outputPorts: [] } } as const;
   const context = { track, values: new Map(), spans: [], temporalBindings: [], temporalDomains: [], generic: () => [] };
   assert.equal(registry.projectTrack(context).length, 2);
   const invalid = new StudioCompanionRegistry([{ ...base, project: () => [base.project!(context)[0]!, base.project!(context)[0]!] }]);
   assert.throws(() => invalid.projectTrack(context), /repeats Item same in one lane/u);
+});
+
+test("Studio groups Track facets by compiler provenance rather than authored labels", () => {
+  const registry = new StudioCompanionRegistry([{
+    id: "visual", family: "visual", output: { type: compositionTypes.visualTrack },
+  }]);
+  const binding = registry.bindTrack({
+    typeRef: compositionTypes.visualTrack,
+    outputRef: "scene.visual",
+    name: "scene.visual",
+    type: "VisualTrack",
+    value: {},
+    trace: { authorElement: "author-element-7", authoredId: "scene", references: [], outputPorts: [] },
+  });
+  assert.deepEqual(binding.group, { kind: "author-element", element: "author-element-7" });
+  assert.equal(binding.label, "scene");
 });

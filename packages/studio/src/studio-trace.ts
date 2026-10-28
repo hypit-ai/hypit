@@ -1,10 +1,8 @@
 import type { CompiledSource } from "./compile.js";
 import type { Placement } from "./observe.js";
 import type { StudioCompanionRegistry } from "./studio-registry.js";
-import type { StudioViewRole, StudioTrackTrace } from "@hypit/studio-companion";
+import type { StudioTrackTrace } from "@hypit/studio-companion";
 import type { TypeRef } from "@hypit/hypit/protocol";
-
-export type { StudioViewRole } from "@hypit/studio-companion";
 
 export type StudioTraceDependency = {
   readonly name: string;
@@ -57,19 +55,19 @@ export function lastPlacementTag(source: CompiledSource, ref: string): string {
   return lastTag(placementFor(source, ref));
 }
 
-export function roleFor(
+export function isStudioTrack(
   registry: StudioCompanionRegistry,
   source: CompiledSource,
   ref: string,
-): StudioViewRole | undefined {
+): boolean {
   const output = outputFor(source, ref);
-  if (output === undefined) return undefined;
+  if (output === undefined) return false;
   const placement = placementFor(source, ref);
   const placementTypes = placement?.outputs.flatMap((candidate) => {
     const found = outputFor(source, candidate);
     return found === undefined ? [] : [found.typeRef];
   }) ?? [];
-  return registry.classifyOutput(output.typeRef, placement, placementTypes);
+  return registry.trackCompanionFor(output.typeRef, placement, placementTypes) !== undefined;
 }
 
 export function traceFor(source: CompiledSource, ref: string): StudioTrace {
@@ -91,8 +89,9 @@ export function traceFor(source: CompiledSource, ref: string): StudioTrace {
     }];
   });
   return {
+    ...(placement.authorElement === undefined ? {} : { authorElement: placement.authorElement }),
     placement: placement.tag,
-    surface: placement.surface,
+    declaration: placement.declaration,
     module: { ...placement.module },
     ...(placement.id === undefined ? {} : { authoredId: placement.id }),
     outputPorts: placement.outputPorts.map((port) => {
@@ -108,7 +107,7 @@ export function traceFor(source: CompiledSource, ref: string): StudioTrace {
   };
 }
 
-/** Additional same-Surface values a Companion requires beyond the terminal Track. */
+/** Additional same-declaration values a Companion requires beyond the terminal Track. */
 export function tracedStudioValues(
   registry: StudioCompanionRegistry,
   source: CompiledSource,

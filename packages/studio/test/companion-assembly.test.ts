@@ -18,15 +18,14 @@ test("a Source-selected package contributes its Companion without a second Studi
         format: "hypit.package@1",
         facets: [createStudioTrackCompanionFacet([{
           id: "cards",
-          role: "track",
           family: "cards",
-          output: { type: compositionTypes.visualTrack, surface: "track", modules: [module] },
+          output: { type: compositionTypes.visualTrack, declaration: "track", modules: [module] },
         }])],
       },
     }],
   });
   assert.equal(
-    registry.trackCompanionFor(compositionTypes.visualTrack, { surface: "track", module }, [])?.id,
+    registry.trackCompanionFor(compositionTypes.visualTrack, { declaration: "track", module }, [])?.id,
     "@project/cards#cards",
   );
 });

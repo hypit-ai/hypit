@@ -21,7 +21,7 @@ Choose a Kit whose fixed assumptions serve that intention:
 | A speaking performer, podcast, street encounter, video call, silent B-roll, or motion/camera transfer | The installed `@hypit/seedance-kits` README and its corresponding exported template |
 
 These are packaged Sources, so their README and exported `.svs` files supply the template names,
-Text slots, defaults and Recipe choices. A package's Surface vocabulary serves a different role:
+Text slots, defaults and Recipe choices. A package's declaration vocabulary serves a different role:
 `hypit vocabulary @hypit/text --tag Render` describes assembly, and the selected model's vocabulary
 describes generation. Read the chosen template when its fixed text or a choice's exact wording matters.
 
@@ -151,7 +151,7 @@ after that binding. Their order is authored and visible.
 
 The rendered `{prompt}` is an ordinary Text Output. Connect it to a model's prompt port, or target it
 in a small Run and inspect or export that Result before using the Kit elsewhere. This checks the
-assembled words without calling the image or video model. The model Surface still owns aspect ratio,
+assembled words without calling the image or video model. The model declaration still owns aspect ratio,
 duration, resolution and reference Resource children; prose describing what a reference supplies
 does not create the reference edge.
 

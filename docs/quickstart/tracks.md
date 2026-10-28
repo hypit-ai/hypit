@@ -93,7 +93,7 @@ glow and underline; Cue/Pill Paint; three independent glyph/Pill/underline activ
 and layered Cue, Alignment-Unit, active-response and loop motion. Missing optional dimensions resolve
 deterministically to no decoration or motion. Unknown properties are rejected.
 
-The package groups those properties as **Where**, **How** and **When** in its Surface declaration,
+The package groups those properties as **Where**, **How** and **When** in its Author Declaration,
 so Studio can present the same author contract without maintaining a Caption-specific property list.
 `lead-frames` and `tail-frames` form an explicit visible Schedule around the spoken Cue;
 `handoff: cut` prevents adjacent visible envelopes from competing, while `overlap` preserves both.
@@ -154,6 +154,7 @@ absolute window.
 
 ```svml
 <import as="visual" from="@hypit/visual-track@1"/>
+<import as="transition" from="@hypit/visual-transition@1"/>
 <import as="time" from="@hypit/timeline-author@1"/>
 <import as="wording" from="@hypit/text@1"/>
 <time:Clock id="clock" frame-rate="30"/>
@@ -196,6 +197,21 @@ to the occurrence; reusable pixel treatment and typed Motion remain optional val
 </visual:Track>
 ```
 
+`visual:Map` adds an exact affine source-time piece. For nonlinear source position, use a monotone
+`visual:Curve`; its target parameter is linear and its four required values are positions in the
+prepared-media domain:
+
+```svml
+<visual:Clip media={product-media.media} frame={product-frame}
+  during={product-demo} fit="contain">
+  <visual:Curve source-at-start="start" source-control-1="start+250ms"
+    source-control-2="end-250ms" source-at-end="end"/>
+</visual:Clip>
+```
+
+The Curve declares only `target time -> source position`. Frame blending or optical flow remains a
+renderer policy rather than a property of the Track relation.
+
 `left`, `top`, `right` and `bottom` are edge coordinates inside the parent Frame; `right` and
 `bottom` are not CSS-style margins. A Frame covering the middle 84% of the canvas horizontally is
 `left="8%" right="92%"`, and `right="8%"` would place its right edge to the left of its left edge,
@@ -207,8 +223,44 @@ already owns the exact affine relation, declare a `<space:Map>` and pass it thro
 instead of all fit attributes. The Clip's `frame` still independently controls clipping and Frame
 treatment.
 The same Clip model also covers full-canvas cutaways, split screens and corner overlays. A public
-Clip has one source. Relationships spanning several sources or Clips belong to a component rather
-than a built-in Sequence grammar.
+Clip has one source. A Transition explicitly relates two adjacent Clip occurrences and references a
+package-owned effect; broader relationships spanning several sources or Clips belong to a component
+rather than a built-in Sequence grammar.
+
+### Transition between Clips
+
+Give both Clips their actual overlapping Windows, author an effect, then name the relation explicitly.
+Their complete intersection is the Transition span; Hypit does not infer the participants from timing,
+ask the author to repeat that span, or invent source handles.
+The Clips must be neighbours in Track order, with the outgoing Clip starting and ending first;
+containment or multi-picture choreography is a component relationship rather than an ordinary handoff.
+
+```svml
+<transition:CrossDissolve id="soft-mix" easing="ease-in-out"/>
+
+<visual:Track id="cut" timeline={speech.timeline}>
+  <visual:Clip id="wide" media={wide.media} during={wide-window} frame={full} fit="cover"/>
+  <visual:Clip id="close" media={close.media} during={close-window} frame={full} fit="cover"/>
+  <visual:Transition id="wide-to-close"
+    outgoing="wide" incoming="close" effect={soft-mix}/>
+</visual:Track>
+```
+
+Both Clips keep their own temporal Maps during the overlap. Visual Track validates the relationship;
+the selected package owns how the two independently timed pictures combine. More involved visual/audio
+coordination remains component behavior.
+
+The official package also provides `DipToColor`, `Push`, `Slide`, `LinearWipe`, `Iris`,
+`ZoomDissolve`, and `BlurDissolve`. For example:
+
+```svml
+<transition:Push id="push-left" direction="left" easing="ease-in-out"/>
+<transition:LinearWipe id="wipe-right" direction="right"/>
+<transition:BlurDissolve id="blur-mix" radius="24"/>
+```
+
+The declaration produces an effect value; the same `visual:Transition` relation selects whichever
+effect the edit requires. A direct cut needs no Transition declaration.
 
 Every direct Clip or sample Layer declares exactly one visual input form:
 
@@ -259,12 +311,19 @@ then choose its exact program Window and, when needed, an inline temporal Map:
 | `Track.timeline` | yes | Timeline that defines the exact sample and frame domain |
 | `Clip.source` | yes | Explicitly selected `PreparedMedia` |
 | `during` | yes | A named absolute Window |
-| `Map` children | no | Clip-owned partial target-to-source relation; omission is bounded partial identity |
+| `Map` / `Curve` children | no | Clip-owned partial target-to-source relation; omission is bounded partial identity |
+| `reconstruction` | no | Explicit package-owned signal reconstruction; omission is ordinary point sampling |
 | `gain`, `fade-in`, `fade-out` | no | Explicit per-Clip mix values |
 
 The package performs no automatic stream choice, loudness normalization, ducking, or bus routing. Multiple
 Clips in one Track and multiple peer Audio Tracks remain independent inputs to Film. The output is
 `{music-bed.audio}`, an ordinary `AudioTrack`.
+
+The default local renderer evaluates affine, reverse, hold, wrap, gap, cubic and multi-stage Maps as
+source-position relations under ordinary point sampling. To keep pitch under a constant speed change,
+declare `<stretch:PreservePitch id="natural"/>` from `@hypit/audio-stretch@1` and reference it with
+`reconstruction={natural}`. The speed remains solely in `Map`; the local Provider currently supports
+PreservePitch for a complete positive-affine, non-looping relation and accurately rejects other forms.
 
 To apply explicit gain and close several AudioTracks into one contribution, use Audio Mix:
 
@@ -446,7 +505,7 @@ npm install @hypit/depth-stack
 
 ### deck:DepthStack
 
-`id`, `timeline`, `within`, `frame`, `appearance` and `until` are required. `until` references a named
+`id`, `timeline`, `frame`, `appearance` and `until` are required. `until` references a named
 absolute Instant, whether it came from a Narrative Projection or a direct time declaration.
 
 ### deck:Card
@@ -468,7 +527,7 @@ give both and it is refused. `size`, `color`, `align`, `block` and `padding` are
 
 ```svml
 <space:Frame id="deck-frame" within={vertical.bounds} left="44%" top="60%" right="98%" bottom="88%"/>
-<deck:DepthStack id="deck" timeline={speech.timeline} within={vertical.bounds}
+<deck:DepthStack id="deck" timeline={speech.timeline}
   frame={deck-frame} appearance={recipes.deck.stack} until={done}>
   <deck:Card id="card-spatial" source={icon-spatial} extent={square} at={deal-one}/>
   <deck:Card id="card-type" source={icon-type} extent={square} at={deal-two}/>

@@ -64,7 +64,7 @@ test("a custom Model result does not acquire Generation as a semantic Module dep
 test("the optional field helper derives dependencies only from the fields and selectors it uses", () => {
   const scalarFields = defineModelFields({
     model: "scalar-image",
-    ports: [{ name: "count", value: { kind: "number", integer: true }, minItems: 1, maxItems: 1 }],
+    fields: [{ name: "count", value: { kind: "number", integer: true }, minItems: 1, maxItems: 1 }],
     requires: [],
   });
   const scalarModel = defineFieldModelModule({
@@ -73,16 +73,16 @@ test("the optional field helper derives dependencies only from the fields and se
       key: "image",
       requestTypeName: "ScalarImageRequest",
       producerName: "request-scalar-image",
-      ports: scalarFields,
+      fields: scalarFields,
       result: standardGenerationResults.image,
     }],
   });
   assert.deepEqual(scalarModel.manifest.dependencies, [{ name: "@hypit/generation", version: "1" }]);
 });
 
-const ports = defineModelFields({
+const fields = defineModelFields({
   model: "graph-native-image",
-  ports: [
+  fields: [
     { name: "prompt", value: { kind: "text" }, minItems: 1, maxItems: 1 },
     { name: "images", value: { kind: "media", accepts: ["image"] }, minItems: 1, maxItems: 3 },
   ],
@@ -95,7 +95,7 @@ const definition = defineFieldModelModule({
     key: "image",
     requestTypeName: "GraphNativeImageRequest",
     producerName: "request-graph-native-image",
-    ports,
+    fields,
     result: standardGenerationResults.image,
   }],
 });
@@ -118,10 +118,10 @@ test("media binding reaches the finalized exact-model request", async () => {
     size: 4,
     mediaType: "image/png",
   };
-  const draft = sealModelFieldBuilder(ports, { prompt: ["draw it"] });
-  const mediaPort = ports.ports.find((port) => port.name === "images");
-  assert.ok(mediaPort?.value.kind === "media");
-  const binding = sealModelArtifactBinding(mediaPort as never, { role: "image" });
+  const draft = sealModelFieldBuilder(fields, { prompt: ["draw it"] });
+  const mediaField = fields.fields.find((field) => field.name === "images");
+  assert.ok(mediaField?.value.kind === "media");
+  const binding = sealModelArtifactBinding(mediaField as never, { role: "image" });
   const bindFacet = definition.component.producers.find((facet) => facet.producer.name === endpoint.mediaBindings.images?.producer.name);
   assert.ok(bindFacet);
   const bound = await bindFacet.handler({ inputs: {
@@ -135,7 +135,7 @@ test("media binding reaches the finalized exact-model request", async () => {
   const finalized = await finalizeFacet.handler({ inputs: { draft: { value: bound.value } } } as never);
   assert.equal(finalized.kind, "output");
   assert.deepEqual(finalized.value, {
-    ports: {
+    fields: {
       images: [{ artifact, role: "image" }],
       prompt: ["draw it"],
     },
@@ -147,20 +147,20 @@ test("one authored Text edge fills the exact model prompt before finalization", 
   const textFacet = definition.component.producers.find((facet) =>
     facet.producer.name === endpoint.textBindings.prompt?.producer.name);
   assert.ok(textFacet);
-  const draft = sealModelFieldBuilder(ports, {});
+  const draft = sealModelFieldBuilder(fields, {});
   const bound = await textFacet.handler({ inputs: {
     draft: { value: (draft) },
     text: { value: (sealText("draw it")) },
   } } as never);
   assert.equal(bound.kind, "output");
-  assert.deepEqual((bound.value as { ports: unknown }).ports, { prompt: ["draw it"] });
+  assert.deepEqual((bound.value as { fields: unknown }).fields, { prompt: ["draw it"] });
 });
 
 test("the dynamic Fragment exposes every Text and media edge as an explicit semantic input", () => {
   const fragment = createFieldModelPrimaryFragment(definition.endpoints.image!, [
-    { name: "first", port: "images" },
-    { name: "second", port: "images" },
-  ], [{ name: "prompt", port: "prompt" }]);
+    { name: "first", field: "images" },
+    { name: "second", field: "images" },
+  ], [{ name: "prompt", field: "prompt" }]);
   assert.deepEqual(fragment.inputs.map((input) => input.name), [
     "draft", "first:artifact", "first:binding", "prompt:text", "second:artifact", "second:binding",
   ]);
@@ -174,9 +174,9 @@ test("the dynamic Fragment exposes every Text and media edge as an explicit sema
   ]);
 });
 
-test("a Model Surface may publish the complete result and an explicit primary independently", () => {
+test("a Model Fragment may publish the complete result and an explicit primary independently", () => {
   const endpoint = definition.endpoints.image!;
-  const fragment = createFieldModelGenerationFragment(endpoint, [], [{ name: "prompt", port: "prompt" }], {
+  const fragment = createFieldModelGenerationFragment(endpoint, [], [{ name: "prompt", field: "prompt" }], {
     result: "images",
     primary: "image",
   });
@@ -195,17 +195,17 @@ test("model input rules run during assembly while complete-request rules wait fo
   const checked = defineFieldModelModule({
     module: { name: "@test/compare-images", version: "1" },
     endpoints: [{
-      key: "compare", requestTypeName: "CompareRequest", producerName: "compare", ports,
+      key: "compare", requestTypeName: "CompareRequest", producerName: "compare", fields,
       result: standardGenerationResults.image,
       validateInputs(request) {
-        for (const value of request.ports.images ?? []) {
+        for (const value of request.fields.images ?? []) {
           if (typeof value === "object" && value.artifact.mediaType === "image/gif") {
             throw new Error("comparison references must be still images");
           }
         }
       },
       validateRequest(request) {
-        if (request.ports.prompt?.[0] === "compare" && request.ports.images?.length !== 2) {
+        if (request.fields.prompt?.[0] === "compare" && request.fields.images?.length !== 2) {
           throw new Error("compare requires two reference images");
         }
       },
@@ -215,7 +215,7 @@ test("model input rules run during assembly while complete-request rules wait fo
   const bind = checked.component.producers.find((item) => item.producer.name === endpoint.mediaBindings.images!.producer.name)!;
   const finalize = checked.component.producers.find((item) => item.producer.name === endpoint.finalizeProducer.name)!;
   const artifact = { kind: "blob" as const, resource: fixtureResource("compare-image"), size: 4, mediaType: "image/png" };
-  const initial = (sealModelFieldBuilder(ports, { prompt: ["compare"] }));
+  const initial = (sealModelFieldBuilder(fields, { prompt: ["compare"] }));
   const bindImage = async (draft: unknown, mediaType: string) => await bind.handler({ inputs: {
     draft: { value: draft }, binding: { value: ({ role: "image" }) },
     artifact: { value: { ...artifact, mediaType } },
@@ -235,7 +235,7 @@ test("model input rules run during assembly while complete-request rules wait fo
   const requestValidator = checked.component.refinements.find((item) => item.type.name === endpoint.requestType.name)!;
   await requestValidator.handler({ value: complete.value } as never);
 
-  // Another model using the same common port vocabulary has not acquired this model's GIF rule.
+  // Another Model using the same common field vocabulary has not acquired this Model's GIF rule.
   assert.doesNotThrow(() => definition.endpoints.image.sealRequest({
     prompt: ["draw"], images: [{ role: "image", artifact: { ...artifact, mediaType: "image/gif" } }],
   }));

@@ -1,4 +1,8 @@
 export { narrativeCaptionComponent } from "./component.js";
+export {
+  narrativeCaptionTimingAuthorDeclaration,
+  narrativeCaptionTimingFragment,
+} from "./declaration.js";
 export { NarrativeCaptionTimingError } from "./error.js";
 export { assertNarrativeCaptionBindingFor, assertNarrativeCaptionBindingIdentity } from "./identity.js";
 export {
@@ -10,6 +14,5 @@ export {
 } from "./manifest.js";
 export { projectNarrativeCaptionTiming } from "./project.js";
 export { narrativeCaptionBindingSchema } from "./schema.js";
-export { captionUnitsForNarrativeSelection } from "./selection.js";
-export { decodeNarrativeCaptionTimingSurface, narrativeCaptionTimingMarkupSurface } from "./surface.js";
+export { captionUnitsForNarrativeSelection } from "./selection.js";export { narrativeCaptionTimingMarkupDeclaration } from "./declaration.js";
 export type * from "./types.js";

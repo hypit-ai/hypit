@@ -4,6 +4,11 @@
 source-local domains and one absolute Timeline. It contains no speech, media, Caption or rendering
 policy.
 
+Its `Projection`, `Instant` and `Window` author declarations are package-owned and syntax-neutral.
+They receive only typed references, construct the projection graph, and publish ordinary Temporal
+values. SVML supplies tag spelling through Markup; the package compiler—not the Markup parser—owns
+Selection/Segment/Moment dispatch and the meaning of each `Map` child.
+
 `NarrativeAlignment` locates Narrative boundaries as exact values on one `LocalTemporalDomain`; it
 does not quantize them onto a Timeline frame grid.
 `NarrativeProjection` maps one or more explicit `NarrativeAlignment + LocalTemporalDomain + Window`

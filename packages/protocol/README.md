@@ -3,8 +3,9 @@
 Data contracts shared across package boundaries.
 
 This package defines module manifests, nominal references, typed values, author and run graphs,
-build plans, Core commands, command results, build facts and build state. It also parses a module
-manifest from JSON without loading executable package code.
+build plans, Core commands, command results, build facts and neutral publication intent. It also
+parses a module manifest from JSON without loading executable package code. The materialized
+`BuildView` belongs to `@hypit/kernel`; it is not a protocol document.
 
 Protocol contains no source parser, package loader, runtime, filesystem access or video vocabulary.
 Source units and source ranges belong to `@hypit/source`; Protocol records only graph and execution
@@ -14,3 +15,6 @@ each occurrence as `{ at, blob }`, while `mapValueBlobs` returns `BlobMappedValu
 those leaves; neither API assigns media-domain meaning to the bytes.
 Packages own their types, producers and capabilities by module name and version. Core and Hosts
 communicate through those names and the values declared here.
+`PublicationIntent` carries only the selected public name, Logical Output, Type, target membership
+and explicit current-or-historical source. Result repositories consume that intent but keep paths,
+writer state and physical storage out of Protocol and Compiler.

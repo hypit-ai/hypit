@@ -210,7 +210,7 @@ export function assertVisualStyleV1(
   if (/(?:-webkit-)?image-set\s*\(/iu.test(value)) {
     throw new Error(`${label} must use typed Artifact references instead of CSS image-set().`);
   }
-  if (/[;{}]/u.test(value)) {
+  if (/[;<{}\\]/u.test(value)) {
     throw new Error(`${label} contains a style value that escapes its declaration.`);
   }
   if (/!important|[\u0000-\u001f\u007f]/iu.test(value)) {

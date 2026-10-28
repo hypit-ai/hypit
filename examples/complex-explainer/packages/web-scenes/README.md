@@ -4,7 +4,7 @@ Eight project-owned scenes combine accepted media with frame-addressable HTML an
 
 ## Scene map
 
-| Surface | Source folder | What belongs together |
+| Declaration | Source folder | What belongs together |
 | --- | --- | --- |
 | Introduction | `src/scenes/introduction/` | Website/code demonstrations, app icons and paired example cards |
 | Comparison | `src/scenes/comparison/` | Two product demonstrations and their visual comparison |
@@ -19,9 +19,9 @@ Each folder owns `index.js` (content and resource slots), `styles.js` (appearanc
 
 ## Inputs and time
 
-Each Surface receives Timeline, Canvas, font, an absolute Window, its explicit assets and named `Beat`
+Each declaration receives Timeline, Canvas, font, an absolute Window, its explicit assets and named `Beat`
 children. Source obtains those values from Narrative Projection or direct time declarations before
-passing them in. The Surface resolves only completed Window and Instant references; local animation
+passing them in. Its compiler resolves only completed Window and Instant references; local animation
 reads their frames. Seek any frame directly: pointer paths, springs, typing and transitions derive
 state from time.
 

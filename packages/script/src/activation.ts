@@ -1,22 +1,17 @@
-import { createMarkupSurfaceFacet } from "@hypit/hypit/markup";
+import { createAuthorDeclarationFacet } from "@hypit/hypit/author";
+import { createMarkupDeclarationFacet } from "@hypit/hypit/markup";
 import { createStudioCompanionFacet } from "@hypit/studio-companion";
-
-import {
-  decodeScriptSurface,
-  scriptManifest,
-  scriptModuleRef,
-  scriptMarkupSurfaces,
-} from "./index.js";
+import { scriptAuthorDeclaration, scriptManifest, scriptMarkupDeclaration, scriptModuleRef } from "./index.js";
 import { scriptStudioTemporalDomains } from "./studio.js";
 
 export const hypitPackage = {
   format: "hypit.package@1" as const,
   modules: [{ manifest: scriptManifest }],
   facets: [
-    createMarkupSurfaceFacet({
+    createAuthorDeclarationFacet(scriptAuthorDeclaration),
+    createMarkupDeclarationFacet({
       module: scriptModuleRef,
-      declaration: scriptMarkupSurfaces.find((item) => item.name === "script")!,
-      handler: decodeScriptSurface,
+      declaration: scriptMarkupDeclaration,
     }),
     createStudioCompanionFacet({ temporalDomains: scriptStudioTemporalDomains }),
   ],

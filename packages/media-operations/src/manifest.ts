@@ -1,9 +1,8 @@
 import { blobDependency } from "@hypit/hypit/blob";
-import { mediaDependency, mediaTypes, preparedAudioSourceSchema } from "@hypit/media";
+import { mediaDependency, mediaTypes } from "@hypit/media";
 import { frameSpanSchema, timelineDependency, timelineTypes } from "@hypit/timeline";
 import { recipeModuleRef, recipeType } from "@hypit/hypit/recipe";
-import { compositionDependency, compositionTypes, audioSampleSpanSchema, audioGainEnvelopeSchema } from "@hypit/composition";
-import { exactTemporalValueSchema, temporalDependency, temporalMapSchema, temporalTypes } from "@hypit/temporal";
+import { exactTemporalValueSchema, temporalDependency, temporalRateSchema, temporalTypes } from "@hypit/temporal";
 import { blobTypes } from "@hypit/hypit/blob";
 import { blobRefSchema } from "@hypit/hypit/protocol";
 import type { CapabilityRef, ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/hypit/protocol";
@@ -11,7 +10,6 @@ import type { CapabilityRef, ModuleManifest, ProducerRef, TypeRef, ValueSchema }
 export const mediaOperationsModuleRef = { name: "@hypit/media-operations", version: "1" } as const;
 export const mediaOperationsTypes = {
   selectionRequest: { module: mediaOperationsModuleRef, name: "MediaSelectionRequest" },
-  audioProgram: { module: mediaOperationsModuleRef, name: "AudioProgram" },
   transformProgram: { module: mediaOperationsModuleRef, name: "MediaTransformProgram" },
   audioExtractionRequest: { module: mediaOperationsModuleRef, name: "AudioExtractionRequest" },
   frameExtractionRequest: { module: mediaOperationsModuleRef, name: "FrameExtractionRequest" },
@@ -23,23 +21,16 @@ export const mediaOperationsCapabilities = {
   extractAudio: { module: mediaOperationsModuleRef, name: "extract-media-audio" },
   extractFrame: { module: mediaOperationsModuleRef, name: "extract-media-frame" },
   renderStill: { module: mediaOperationsModuleRef, name: "render-still-video" },
-  renderAudio: { module: mediaOperationsModuleRef, name: "render-timeline-audio" },
-  mux: { module: mediaOperationsModuleRef, name: "mux-program-media" },
 } satisfies Record<string, CapabilityRef>;
 export const mediaOperationsProducers = {
   inspect: { module: mediaOperationsModuleRef, name: "request-media-inspection" },
   select: { module: mediaOperationsModuleRef, name: "select-media-streams" },
-  transform: { module: mediaOperationsModuleRef, name: "request-media-transform" },
+  transform: { module: mediaOperationsModuleRef, name: "transform-prepared-media" },
   extractAudio: { module: mediaOperationsModuleRef, name: "request-audio-extraction" },
   extractFrame: { module: mediaOperationsModuleRef, name: "request-frame-extraction" },
   planStill: { module: mediaOperationsModuleRef, name: "plan-still-video" },
   renderStill: { module: mediaOperationsModuleRef, name: "request-still-video" },
   bindStill: { module: mediaOperationsModuleRef, name: "bind-still-video-source" },
-  compileAudio: { module: mediaOperationsModuleRef, name: "compile-audio-program" },
-  renderAudio: { module: mediaOperationsModuleRef, name: "request-audio-render" },
-  renderAudioRange: { module: mediaOperationsModuleRef, name: "request-audio-range" },
-  mux: { module: mediaOperationsModuleRef, name: "request-media-mux" },
-  projectMuxed: { module: mediaOperationsModuleRef, name: "project-muxed-media" },
 } satisfies Record<string, ProducerRef>;
 
 const integer = { kind: "number", integer: true, minimum: 0 } as const;
@@ -85,9 +76,26 @@ const retimeOperationSchema: ValueSchema = {
   kind: "object",
   fields: {
     kind: { schema: { kind: "literal", value: "retime" } },
-    rate: { schema: { kind: "object", fields: {
-      numerator: { schema: { kind: "number", integer: true, minimum: 1 } },
-      denominator: { schema: { kind: "number", integer: true, minimum: 1 } },
+    rate: { schema: temporalRateSchema },
+  },
+};
+const transformRelativePointSchema: ValueSchema = {
+  kind: "object",
+  fields: {
+    edge: { schema: { kind: "string", enum: ["start", "end"] } },
+    offset: { schema: exactTemporalValueSchema },
+  },
+};
+const retimeProfileOperationSchema: ValueSchema = {
+  kind: "object",
+  fields: {
+    kind: { schema: { kind: "literal", value: "retime-profile" } },
+    knots: { schema: { kind: "array", minItems: 2, items: {
+      kind: "object",
+      fields: {
+        at: { schema: transformRelativePointSchema },
+        rate: { schema: temporalRateSchema },
+      },
     } } },
   },
 };
@@ -95,7 +103,7 @@ export const mediaTransformProgramSchema: ValueSchema = {
   kind: "object",
   fields: {
     operations: { schema: { kind: "array", minItems: 1, items: {
-      kind: "oneOf", variants: [trimOperationSchema, retimeOperationSchema],
+      kind: "oneOf", variants: [trimOperationSchema, retimeOperationSchema, retimeProfileOperationSchema],
     } } },
   },
 };
@@ -173,236 +181,6 @@ export const stillVideoLayoutSchema: ValueSchema = {
   },
 };
 
-export const audioProgramSchema: ValueSchema = {
-  kind: "object",
-  fields: {
-    frameRate: { schema: {
-      kind: "object",
-      fields: {
-        numerator: { schema: { kind: "number", integer: true, minimum: 1 } },
-        denominator: { schema: { kind: "number", integer: true, minimum: 1 } },
-      },
-    } },
-    frameCount: { schema: { kind: "number", integer: true, minimum: 1 } },
-    sampleRate: { schema: { kind: "literal", value: 48_000 } },
-    sampleFrames: { schema: { kind: "number", integer: true, minimum: 1 } },
-    clips: { schema: { kind: "array", items: {
-      kind: "object",
-      fields: {
-        id: { schema: { kind: "string", minLength: 1 } },
-        inputId: { schema: { kind: "string", minLength: 1 } },
-        source: { schema: preparedAudioSourceSchema },
-        preparation: { schema: temporalMapSchema },
-        targetStartSample: { schema: integer },
-        targetEndSampleExclusive: { schema: { kind: "number", integer: true, minimum: 1 } },
-        preparedSampleFrames: { schema: { kind: "number", integer: true, minimum: 1 } },
-        preparedStartSample: { schema: integer },
-        preparedEndSampleExclusive: { schema: { kind: "number", integer: true, minimum: 1 } },
-        loop: { schema: { kind: "boolean" } },
-        loopPhaseSample: { schema: integer },
-        playbackRate: { schema: {
-          kind: "object",
-          fields: {
-            numerator: { schema: { kind: "number", integer: true, minimum: 1 } },
-            denominator: { schema: { kind: "number", integer: true, minimum: 1 } },
-          },
-        } },
-        mixStartSample: { schema: integer },
-        mixEndSampleExclusive: { schema: { kind: "number", integer: true, minimum: 1 } },
-        gain: { schema: { kind: "number", minimum: 0 } },
-        fadeInSamples: { schema: integer },
-        fadeOutSamples: { schema: integer },
-        gainEnvelope: { schema: audioGainEnvelopeSchema, optional: true },
-        audibility: { schema: { kind: "array", items: audioSampleSpanSchema }, optional: true },
-      },
-    } } },
-  },
-};
-
-export const mediaOperationsMarkupSurfaces = [
-    {
-      name: "prepared-media", tag: "Prepare", mode: "structured",
-      outputs: [mediaOperationsTypes.selectionRequest, mediaTypes.domainSpec, mediaTypes.prepared,
-        temporalTypes.localDomain, temporalTypes.extent],
-      vocabulary: {
-        summary: "Selects time-bearing members from one Blob and publishes execution-independent PreparedMedia.",
-        attributes: [
-          { name: "id", kind: "identifier", required: true,
-            summary: "Names the PreparedMedia and its exact local domain." },
-          { name: "source", kind: "reference", required: true, accepts: [blobTypes.blob],
-            summary: "Selects the immutable source media Artifact." },
-          { name: "recipe", kind: "reference", required: false, accepts: [recipeType],
-            summary: "Selects a Recipe containing video, audio and span-authority stream policy." },
-          { name: "video", kind: "literal", required: false,
-            summary: "Selects `primary-moving`, `none`, or `stream:<index>`." },
-          { name: "audio", kind: "literal", required: false,
-            summary: "Selects `default`, `none`, or `stream:<index>`." },
-          { name: "span-authority", kind: "literal", required: false, values: ["video", "audio"],
-            summary: "Selects the member whose exact presentation span defines the prepared local domain." },
-        ],
-        ports: [
-          { name: "media", type: mediaTypes.prepared,
-            summary: "The PreparedMedia, addressed as `<id>.media`." },
-          { name: "domain", type: temporalTypes.localDomain,
-            summary: "Its exact finite local domain, addressed as `<id>.domain`." },
-          { name: "extent", type: temporalTypes.extent,
-            summary: "Its exact unpositioned duration, addressed as `<id>.extent`." },
-        ],
-        example: `<mediaop:Prepare id="shot-media" source={shot.video}
-  video="primary-moving" audio="default" span-authority="video"/>`,
-        notes: [
-          "Prepare inspects and selects source members but does not transcode, resample or choose a Film Clock.",
-          "Write exactly one of recipe or the direct video/audio/span-authority attributes.",
-        ],
-      },
-    },
-    {
-      name: "still-video", tag: "StillVideo", mode: "structured",
-      outputs: [temporalTypes.duration, mediaOperationsTypes.stillVideoLayout, mediaOperationsTypes.stillVideoRequest, blobTypes.blob],
-      vocabulary: {
-        summary: "Spreads one or more authored images over an explicit duration as an ordinary video-only MP4 Blob on a frame clock.",
-        attributes: [
-          { name: "id", kind: "identifier", required: true,
-            summary: "Names the still-video operation and the MP4 Artifact it publishes." },
-          { name: "source", kind: "reference", required: false, accepts: [blobTypes.blob],
-            summary: "Selects the one authored image held for the full video; write Still children instead for several images." },
-          { name: "duration", kind: "literal", required: true,
-            summary: "Sets the video's exact temporal length, such as 6s or 150f; it must resolve to a whole frame on the selected clock." },
-          { name: "clock", kind: "reference", required: true, accepts: [timelineTypes.clock],
-            summary: "Selects the frame clock used by the generated MP4." },
-        ],
-        children: [
-          { tag: "Still", cardinality: "many",
-            summary: "One image in authored order; the duration is divided among the Still children by weight, equally unless weights say otherwise.",
-            attributes: [
-              { name: "source", kind: "reference", required: true, accepts: [blobTypes.blob],
-                summary: "Selects the authored image whose first decoded frame is held for this share." },
-              { name: "weight", kind: "literal", required: false,
-                summary: "Sets this image's share of the duration relative to its siblings, such as 2; every Still weighs 1 unless written." },
-            ] },
-        ],
-        ports: [{ name: "video", type: blobTypes.blob,
-          summary: "The ordinary video-only MP4 Artifact, addressed as `<id>.video`." }],
-        example: `<mediaop:StillVideo id="kitchen-stills" duration="6s" clock={clock}>
-  <mediaop:Still source={counter}/>
-  <mediaop:Still source={basil} weight="2"/>
-  <mediaop:Still source={board}/>
-</mediaop:StillVideo>`,
-        notes: [
-          "Write exactly one of source or Still children. Frames are whole: each image gets the floor of its share and the leftover frames go to the largest remainders, so the split is deterministic and every image holds at least one frame.",
-          "Images of different sizes are fitted into the first image's frame, letterboxed on black.",
-          "The result is a normal video Blob, not PreparedMedia or semantic evidence.",
-          "Use Prepare afterward exactly as for generated or imported moving video.",
-          "Encoding is a render-still-video Need fulfilled by the selected media Provider; this Surface never invokes FFmpeg itself.",
-        ],
-      },
-    },
-    {
-      name: "transform-media", tag: "Transform", mode: "structured",
-      outputs: [mediaOperationsTypes.transformProgram, mediaTypes.domainSpec, mediaTypes.prepared,
-        temporalTypes.localDomain, temporalTypes.extent],
-      vocabulary: {
-        summary:
-          "Composes exact trim and retime relations over PreparedMedia without materializing another file.",
-        attributes: [
-          { name: "id", kind: "identifier", required: true,
-            summary: "Names the transformed PreparedMedia and its new local domain." },
-          { name: "source", kind: "reference", required: true,
-            accepts: [mediaTypes.prepared],
-            summary: "Selects the PreparedMedia whose local domain is transformed." },
-        ],
-        children: [
-          { tag: "Trim", cardinality: "many",
-            summary: "Removes time from the head or the tail, taking at least one of `start`, `end` or `tail` in seconds.",
-            attributes: [
-              { name: "start", kind: "literal", required: false,
-                summary: "Decides where the kept span begins, as seconds from the current start, such as `0.25s` or `2`." },
-              { name: "end", kind: "literal", required: false,
-                summary: "Decides where the kept span ends, as positive seconds from the current start." },
-              { name: "tail", kind: "literal", required: false,
-                summary: "Decides how many seconds are removed from the current end." },
-            ] },
-          { tag: "Retime", cardinality: "many",
-            summary: "Changes local media advance by one positive exact decimal ratio.",
-            attributes: [
-              { name: "rate", kind: "literal", required: true,
-                summary: "Decides source-local advance per target-local unit, such as `1.05` or `0.5`." },
-            ] },
-        ],
-        ports: [
-          { name: "media", type: mediaTypes.prepared,
-            summary: "The transformed PreparedMedia, addressed as `<id>.media`." },
-          { name: "domain", type: temporalTypes.localDomain,
-            summary: "Its transformed local domain, addressed as `<id>.domain`." },
-          { name: "extent", type: temporalTypes.extent,
-            summary: "Its transformed exact duration, addressed as `<id>.extent`." },
-        ],
-        example: `<mediaop:Transform id="fast-shot" source={shot-media.media}>
-  <mediaop:Trim tail="0.25s"/>
-  <mediaop:Retime rate="1.05"/>
-</mediaop:Transform>`,
-        notes: [
-          "At least one `Trim` or `Retime` child is required, and children run in the order they are written.",
-          "`Trim` cannot combine `end` and `tail`, and both children are written empty.",
-          "The result retains the original source and composes target-to-source maps; no codec or output clock is selected.",
-        ],
-      },
-    },
-    {
-      name: "extract-audio", tag: "ExtractAudio", mode: "structured",
-      outputs: [mediaOperationsTypes.audioExtractionRequest, blobTypes.blob],
-      vocabulary: {
-        summary:
-          "Extracts one audio stream from a Blob as a deterministic 48 kHz stereo PCM WAV Artifact.",
-        attributes: [
-          { name: "id", kind: "identifier", required: true,
-            summary: "Names the extraction request Record and the extracted audio this element publishes." },
-          { name: "source", kind: "reference", required: true,
-            accepts: [blobTypes.blob],
-            summary: "Selects the media Artifact this element extracts audio from." },
-          { name: "audio", kind: "literal", required: true,
-            summary: "Decides which audio stream is extracted: `default` or `stream:<index>`." },
-        ],
-        ports: [
-          { name: "audio", type: blobTypes.blob,
-            summary: "The extracted WAV Artifact, addressed as `<id>.audio`." },
-        ],
-        example: '<mediaop:ExtractAudio id="voice-reference" source={prepared.video} audio="default"/>',
-        notes: [
-          "The element accepts no children and no text content, and the output container, codec, sample rate and channel count are fixed.",
-          "The result makes no speaker or alignment claim, so it can feed a model reference port directly.",
-        ],
-      },
-    },
-    {
-      name: "extract-frame", tag: "ExtractFrame", mode: "structured",
-      outputs: [mediaOperationsTypes.frameExtractionRequest, blobTypes.blob],
-      vocabulary: {
-        summary: "Extracts one still frame from a Blob as a PNG Artifact.",
-        attributes: [
-          { name: "id", kind: "identifier", required: true,
-            summary: "Names the extraction request Record and the extracted image this element publishes." },
-          { name: "source", kind: "reference", required: true,
-            accepts: [blobTypes.blob],
-            summary: "Selects the media Artifact this element extracts a frame from." },
-          { name: "video", kind: "literal", required: true,
-            summary: "Decides which moving-image stream the frame is taken from: `primary-moving` or `stream:<index>`." },
-          { name: "at", kind: "literal", required: true,
-            summary: "Decides which frame is taken: `first`, `last`, `frame:<index>` or `time:<seconds>`." },
-        ],
-        ports: [
-          { name: "image", type: blobTypes.blob,
-            summary: "The extracted PNG Artifact, addressed as `<id>.image`." },
-        ],
-        example: '<mediaop:ExtractFrame id="continuity" source={prepared.video} video="primary-moving" at="last"/>',
-        notes: [
-          "The element accepts no children and no text content, and the output format is fixed to PNG.",
-          "`time:<seconds>` is written as a non-negative number with an optional `s`, such as `time:0.25s`.",
-        ],
-      },
-    },
-  ] as const;
-
 
 export const mediaOperationsManifest: ModuleManifest = {
   format: "hypit.module@1",
@@ -412,13 +190,11 @@ export const mediaOperationsManifest: ModuleManifest = {
     blobDependency,
     mediaDependency,
     timelineDependency,
-    compositionDependency,
     temporalDependency,
     recipeModuleRef,
   ],
   types: [
     mediaOperationsTypes.selectionRequest.name,
-    mediaOperationsTypes.audioProgram.name,
     mediaOperationsTypes.transformProgram.name,
     mediaOperationsTypes.audioExtractionRequest.name,
     mediaOperationsTypes.frameExtractionRequest.name,
@@ -430,8 +206,6 @@ export const mediaOperationsManifest: ModuleManifest = {
     { name: mediaOperationsCapabilities.extractAudio.name, returns: blobTypes.blob },
     { name: mediaOperationsCapabilities.extractFrame.name, returns: blobTypes.blob },
     { name: mediaOperationsCapabilities.renderStill.name, returns: blobTypes.blob },
-    { name: mediaOperationsCapabilities.renderAudio.name, returns: mediaTypes.timelineAudio },
-    { name: mediaOperationsCapabilities.mux.name, returns: mediaTypes.muxed },
   ],
   producers: [
     {
@@ -497,38 +271,6 @@ export const mediaOperationsManifest: ModuleManifest = {
         { name: "request", type: mediaOperationsTypes.stillVideoRequest },
       ],
       result: { kind: "need" as const, name: "video", capability: mediaOperationsCapabilities.renderStill },
-    },
-    {
-      name: mediaOperationsProducers.compileAudio.name,
-      inputs: [
-        { name: "composition", type: compositionTypes.composition },
-        { name: "timeline", type: timelineTypes.timeline },
-      ],
-      result: { kind: "output" as const, name: "program", type: mediaOperationsTypes.audioProgram },
-    },
-    {
-      name: mediaOperationsProducers.renderAudio.name,
-      inputs: [{ name: "program", type: mediaOperationsTypes.audioProgram }],
-      result: { kind: "need" as const, name: "audio", capability: mediaOperationsCapabilities.renderAudio },
-    },
-    {
-      name: mediaOperationsProducers.renderAudioRange.name,
-      inputs: [{ name: "program", type: mediaOperationsTypes.audioProgram }, { name: "range", type: timelineTypes.frameSpan }],
-      result: { kind: "need" as const, name: "audio", capability: mediaOperationsCapabilities.renderAudio },
-    },
-    {
-      name: mediaOperationsProducers.mux.name,
-      inputs: [
-        { name: "visual", type: mediaTypes.timelineVisual },
-        { name: "audio", type: mediaTypes.timelineAudio },
-        { name: "delivery", type: mediaTypes.delivery },
-      ],
-      result: { kind: "need" as const, name: "media", capability: mediaOperationsCapabilities.mux },
-    },
-    {
-      name: mediaOperationsProducers.projectMuxed.name,
-      inputs: [{ name: "media", type: mediaTypes.muxed }],
-      result: { kind: "output" as const, name: "video", type: blobTypes.blob },
     },
   ],
 };

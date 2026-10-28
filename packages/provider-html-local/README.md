@@ -17,6 +17,12 @@ execution implementations for the same visual Need:
   and uses FFmpeg only to mux the encoded H.264 stream into MP4. Neither the
   source-video input side nor the composed-video output side crosses PNG.
 
+The Electron implementation carries its pinned Mediabunny browser runtime and
+corresponding MPL source inside this Provider package. It is a private decoder
+implementation, not a dependency installed into the author's TypeScript
+environment; its WebCodecs ambient declarations therefore cannot change a
+consumer's global DOM types.
+
 Both implementations apply absolute integer frames through
 `window.__hypitFrameProgram` and publish the same verified `TimelineVisual`.
 Renderer selection is deployment policy; it does not change `HtmlProgram`, Film,
@@ -128,7 +134,12 @@ Map, not an adjustment to the authored relation.
 In the Chromium path, completed PNGs enter a bounded ordered sink. In the Electron
 path, shared textures are copied to bounded `VideoFrame` storage and enter
 WebCodecs in ordinal order; FFmpeg receives encoded H.264 only for container
-muxing. Capture of later frames can continue while earlier frames are encoded.
+muxing. The copy is a GPU surface blit into an encoder-compatible canvas, not a
+CPU bitmap or PNG round trip. Current macOS VideoToolbox rejects Electron's
+imported shared image as a direct encoder input, so the Provider keeps that
+machine-local compatibility boundary. Encoded chunks cross to the main process
+in bounded batches before their ordered stream write. Capture of later frames can
+continue while earlier frames are encoded.
 Sparse frame output writes only requested PNGs and is bounded by
 `maxRenderedBytes`.
 

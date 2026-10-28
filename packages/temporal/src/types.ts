@@ -112,14 +112,23 @@ export type TemporalRelation =
       readonly kind: "fit";
       readonly target: TemporalRelativeRange;
       readonly source: TemporalRelativeRange;
+    }
+  | {
+      /** Cubic source position over a linearly parameterized target range. */
+      readonly kind: "cubic";
+      readonly target: TemporalRelativeRange;
+      readonly sourceAtStart: TemporalRelativePoint;
+      readonly sourceControl1: TemporalRelativePoint;
+      readonly sourceControl2: TemporalRelativePoint;
+      readonly sourceAtEnd: TemporalRelativePoint;
     };
 
 export type TemporalRelationSpec = {
   readonly relations: readonly TemporalRelation[];
 };
 
-/** One piece of a target-to-source temporal relation. Missing target ranges are gaps. */
-export type TemporalMapPiece = {
+/** One exact affine piece. Missing target ranges are gaps. */
+export type TemporalAffineMapPiece = {
   readonly target: TemporalRange;
   readonly sourceAtStart: ExactTemporalValue;
   /** Zero holds, a negative numerator reverses, and any other rational scales. */
@@ -127,6 +136,22 @@ export type TemporalMapPiece = {
   /** Optional source interval used for looping this piece. */
   readonly wrap?: TemporalRange;
 };
+
+/**
+ * One exact cubic source-position piece with a linear target parameter.
+ * Monotone controls keep every interior position inside the source domain;
+ * direction changes and holds are expressed by adjacent pieces.
+ */
+export type TemporalCubicMapPiece = {
+  readonly target: TemporalRange;
+  readonly sourceAtStart: ExactTemporalValue;
+  readonly sourceControl1: ExactTemporalValue;
+  readonly sourceControl2: ExactTemporalValue;
+  readonly sourceAtEnd: ExactTemporalValue;
+};
+
+/** One piece of a target-to-source temporal relation. */
+export type TemporalMapPiece = TemporalAffineMapPiece | TemporalCubicMapPiece;
 
 /** One independently meaningful relation between two named finite domains. */
 export type TemporalMapStage = {

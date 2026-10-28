@@ -14,25 +14,25 @@ facts can fully serve a one-off scene; useful Caption controls can coexist with 
 
 ## Choose useful Items and lanes
 
-Match the component's actual Module ABI, Surface and terminal output Type. Generic VisualTrack or
+Match the component's actual Module ABI, author declaration and terminal output Type. Generic VisualTrack or
 AudioTrack Items are enough for ordinary Clip occurrences. Use `project(context)` when the author needs
-domain meaning that the terminal drawing no longer contains. A Surface preview supplies a useful
+domain meaning that the terminal drawing no longer contains. A package preview supplies a useful
 static recognition image; live Items and editable bindings come from the Companion.
 
 Generic Studio projection recognizes the terminal Type, not the component's creative role. A custom
 Caption can therefore render correct subtitles yet appear as a generic blue visual lane with
 opaque ids when its package has no matching Companion. Inspect the selected Companion and its
-Module/Surface match before treating this as misplaced content or moving visuals between Tracks.
+Module/declaration match before treating this as misplaced content or moving visuals between Tracks.
 The package declares its role; Studio does not infer one from a tag name or the text in a picture.
 
 When adapting an existing family, carry forward its editor meaning wherever the public content,
-schedule and author identities still agree. Reuse its Companion with the actual Module/Surface
+schedule and author identities still agree. Reuse its Companion with the actual Module/declaration
 identity, or adapt its projection for the changed behavior. Preserve useful Cue/Use or item/event
 relationships along with rendering. A rendering wrapper alone does not activate that integration.
 
 For example, a board can expose its outer lifetime and its individual reveal events. Publish the
-deterministic schedule/program needed to describe these from the same Surface, then request its
-exact output port through `requiredValues`. `requiredSurfaceValue(context, "schedule")` reads that
+deterministic schedule/program needed to describe these from the same declaration, then request its
+exact output port through `requiredValues`. `requiredDeclarationValue(context, "schedule")` reads that
 published output. `requiredReferencedValue` reads an exact typed author reference instead.
 
 | Declaration | Authoring meaning |
@@ -117,7 +117,7 @@ appearance, content and sound. Each Companion chooses useful pages and sections 
 | `color` | Exact hex color, optionally with suggested `swatches`. |
 | `list` / `record` | A schema-described ordered list or named set of values, saved together when editing ends and the value is complete. |
 
-For a Surface with a literal `label` attribute, a minimal declaration is:
+For an author declaration with a literal `label` field, a minimal Companion binding is:
 
 ```ts
 bindings: [{ name: "label", writable: true }],
@@ -127,7 +127,7 @@ inspector: [{
 }],
 ```
 
-The Surface already owns `label`; the Companion exposes it. A width stored as `"78%"` can use
+The author declaration already owns `label`; the Companion exposes it. A width stored as `"78%"` can use
 `control: "number", number: { suffixes: ["%", "px"] }`: editing 42 retains the existing suffix.
 An opacity stored as `0.78` can use `unit: "%", number: { scale: 100, minimum: 0, maximum: 100 }`:
 the control shows 78 and entering 42 writes 0.42. `unit` alone is a display label. Suffix handling
@@ -135,7 +135,7 @@ retains an authored unit; it does not convert percentages to pixels.
 
 A Style can own its controls independently of the Track that consumes it. The Track declares
 `{ name: "style", companion: true }`; the Style's package contributes
-`createStudioCompanionFacet({ parameters: [{ id, match: { module, surface }, bindings, inspector }] })`.
+`createStudioCompanionFacet({ parameters: [{ id, match: { module, declaration }, bindings, inspector }] })`.
 Its field names are local to that Style. Studio follows the reference and combines those fields
 with the Use's time controls. This works for a new project motion Style as well as a familiar
 framed visual. Shared Style edits continue to affect its other Uses.

@@ -7,13 +7,17 @@ import {
   verifyRecordStructure,
 } from "@hypit/kernel";
 import type { BuildCandidateSelection, PlannedExecution } from "@hypit/kernel";
+import type { BuildView } from "@hypit/kernel";
+import type {
+  AuthorDocument,
+} from "@hypit/author";
 import type {
   BlobAttachment,
   WorkspaceSession,
 } from "@hypit/workspace";
 import type {
   BuildDefinition,
-  BuildState,
+  PublicationIntent,
   Value,
   TypeRef,
   TypedRecord,
@@ -31,7 +35,6 @@ import type {
 } from "@hypit/run";
 import type { LinkedProgram } from "@hypit/protocol";
 import type { ResolvedSource, SourceUnit } from "@hypit/source";
-import type { PublicationPlan } from "@hypit/result";
 
 import type { CompiledAuthorSource } from "./compiler.js";
 import { mergeAttachments } from "./compiler.js";
@@ -40,6 +43,7 @@ import { mergeAttachments } from "./compiler.js";
 export type RunAuthorCompiler = {
   openEntry(locator: string): Promise<WorkspaceSession>;
   compileResolvedSource(entry: ResolvedSource, workspace: WorkspaceSession): Promise<CompiledAuthorSource>;
+  openAuthorDocument(source: ResolvedSource): Promise<AuthorDocument>;
   extendExecutionProgram(program: LinkedProgram, requests: readonly string[]): LinkedProgram;
   refineRecord(program: LinkedProgram, record: TypedRecord): Promise<void>;
 };
@@ -82,6 +86,7 @@ export type CompiledRun = {
   readonly source: string;
   readonly authorSource: string;
   readonly author: CompiledAuthorSource;
+  readonly authorDocument: AuthorDocument;
   /** Author program rebound to the union closure required by Author and selected Run code. */
   readonly program: LinkedProgram;
   readonly run: RunCompilation;
@@ -117,17 +122,18 @@ export type PreparedBuild = {
   /** Compiler-only explanation of how the two graphs became the execution plan. */
   readonly selections: readonly BuildCandidateSelection[];
   /** Public Result surface and source ownership derived from the same structural selection. */
-  readonly publication: PublicationPlan;
+  readonly publication: PublicationIntent;
   /** Immutable authority persisted once for every fresh Runtime Build. */
   readonly definition: BuildDefinition;
   /** Materialized plan/read view; durable Stores persist Definition + Facts instead. */
-  readonly state: BuildState;
+  readonly state: BuildView;
 };
 
 type StructuralRunResolution = {
   readonly document: Awaited<ReturnType<typeof compileRunSource>>;
   readonly authorSource: ResolvedSource;
   readonly author: CompiledAuthorSource;
+  readonly authorDocument: AuthorDocument;
   readonly program: LinkedProgram;
   readonly run: RunCompilation;
   readonly plan: PlannedExecution;
@@ -216,6 +222,7 @@ export class RunCompiler {
       from: document.author.source,
       alias: "author",
     });
+    const authorDocument = await this.#options.authorCompiler.openAuthorDocument(authorSource);
     const author = await this.#options.authorCompiler.compileResolvedSource(authorSource, workspace);
     const program = this.#options.authorCompiler.extendExecutionProgram(
       author.program,
@@ -231,6 +238,7 @@ export class RunCompiler {
       document,
       authorSource,
       author,
+      authorDocument,
       program,
       run,
       plan,
@@ -295,7 +303,7 @@ export class RunCompiler {
   /** Compile both source graphs in one read-once Workspace session selected by the Host. */
   async compileResolvedSource(source: ResolvedSource, workspace: WorkspaceSession): Promise<CompiledRun> {
     const resolved = await this.#resolveStructure(source, workspace);
-    const { author, program, run: structuralRun, plan: structuralPlan } = resolved;
+    const { author, authorDocument, program, run: structuralRun, plan: structuralPlan } = resolved;
     const locateHistoricalOutput = this.#options.locateHistoricalOutput;
     const resolveHistoricalOutput = this.#options.resolveHistoricalOutput;
     const buildAttachments: BlobAttachment[] = [];
@@ -342,6 +350,7 @@ export class RunCompiler {
       source: source.unit.id,
       authorSource: resolved.authorSource.unit.id,
       author,
+      authorDocument,
       program,
       run: structuralRun,
       selection: structuralPlan,
@@ -384,7 +393,7 @@ export class RunCompiler {
     const targets = new Set(compilation.run.graph.targets);
     const names = new Set<string>();
     const outputs = new Set<string>();
-    const publication: PublicationPlan = {
+    const publication: PublicationIntent = {
       outputs: compilation.author.exports.flatMap((item) => {
         if (item.ref.kind === "operation-result") {
           throw new Error(`public output ${item.name} was not lowered to a stable Record or Logical Output`);
@@ -405,7 +414,7 @@ export class RunCompiler {
         const candidateSource = selection === undefined
           ? undefined
           : compilation.run.candidateSources[selection.candidate];
-        let source: PublicationPlan["outputs"][number]["source"] = selection === undefined
+        let source: PublicationIntent["outputs"][number]["source"] = selection === undefined
           ? { kind: "current-record", record: outputId }
           : { kind: "current-record", record: selection.record };
         if (selection !== undefined && candidateSource?.kind === "build-output") {

@@ -12,8 +12,8 @@ import type { CompiledSource, ServedFile } from "./compile.js";
 import type { StudioDomain } from "./domain.js";
 import { executeStudioProjection, MemoryResourceStore } from "./execute.js";
 import type { RunPlan } from "./run.js";
-import type { StudioViewRequirement } from "./studio-preflight.js";
-import { studioSurfacePreview } from "./surface-preview.js";
+import type { StudioTrackRequirement } from "./studio-preflight.js";
+import { studioDeclarationPreview } from "./declaration-preview.js";
 import { executedTemporalBindings } from "./temporal-graph.js";
 import type { StudioCompanionRegistry } from "./studio-registry.js";
 import { resolveStudioDeclarations } from "./temporal-declarations.js";
@@ -75,7 +75,7 @@ export async function resolveStudioProjection(input: {
   readonly outputRefs: readonly string[];
   readonly compositionRef: string;
   readonly timeRef: string;
-  readonly projections: readonly StudioViewRequirement[];
+  readonly tracks: readonly StudioTrackRequirement[];
   /** Runtime-owned execution for capabilities explicitly safe outside a Build. */
   readonly transientExecution?: RuntimeHostTransientExecution;
 }): Promise<StudioProjection> {
@@ -143,29 +143,28 @@ export async function resolveStudioProjection(input: {
       throw new Error(`Studio composition Resource ${artifact.resource} has no Run attachment.`);
     }
   }
-  const projectionByRef = new Map(input.projections.map((projection) => [projection.ref, projection]));
+  const trackByRef = new Map(input.tracks.map((track) => [track.ref, track]));
   const tracks: BuiltTrack[] = targets.flatMap((target) => {
     if (!playable(target.typeRef)) return [];
     const stored = selectedValue(executed.state, prepared.selections, target.ref);
     if (stored === undefined) {
       throw new Error(`Studio projection ${target.name} did not produce a Track.`);
     }
-    const projection = projectionByRef.get(target.ref);
-    if (projection === undefined) {
+    const track = trackByRef.get(target.ref);
+    if (track === undefined) {
       throw new Error(`Studio projection ${target.name} has no Studio trace.`);
     }
-    const surfacePreview = projection.trace.module === undefined || projection.trace.surface === undefined
+    const declarationPreview = track.trace.module === undefined || track.trace.declaration === undefined
       ? undefined
-      : studioSurfacePreview(input.domain, projection.trace.module, projection.trace.surface);
+      : studioDeclarationPreview(input.registry, track.trace.module, track.trace.declaration);
     return [{
       name: target.name,
       type: target.type,
       typeRef: target.typeRef,
       outputRef: target.ref,
-      role: projection.role,
-      trace: projection.trace,
-      visualOccurrences: projection.visualOccurrences ?? [],
-      ...(surfacePreview === undefined ? {} : { surfacePreview }),
+      trace: track.trace,
+      visualOccurrences: track.visualOccurrences ?? [],
+      ...(declarationPreview === undefined ? {} : { declarationPreview }),
       value: stored,
     }];
   });
@@ -186,8 +185,8 @@ export async function resolveStudioProjection(input: {
   }
   // Companion traces carry exact qualified references. Resolve those references from
   // the executed projection so deterministic upstream Producers are visible too.
-  for (const projection of input.projections) {
-    for (const reference of projection.trace.references) {
+  for (const track of input.tracks) {
+    for (const reference of track.trace.references) {
       const stored = selectedValue(executed.state, prepared.selections, reference.ref);
       if (stored !== undefined) values.set(reference.ref, stored);
     }

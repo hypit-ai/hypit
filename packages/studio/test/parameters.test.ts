@@ -6,7 +6,6 @@ import type {
   StudioTemporalDomainView,
   StudioTemporalLineage,
 } from "@hypit/studio-companion";
-import type { MarkupSurfaceRegistryLike, RegisteredSurface } from "@hypit/markup";
 
 import { inspectorFieldsForBindings, resolveTimelineEditHandles, sourceBindingsForDraft } from "../src/parameters.js";
 import { serializeParameterValue, validateParameterValue } from "../src/parameter-values.js";
@@ -223,7 +222,7 @@ test("parameter Source paths stay relative to the author workspace", () => {
       sourcePath: "main.svml",
       tag: "Item",
       module: { name: "example", version: "1" },
-      surface: "track",
+      declaration: "track",
       id: "item",
       range: { start: 0, end: text.length },
       records: [], values: [], outputs: [], outputPorts: [], children: [],
@@ -247,7 +246,7 @@ test("nested declared references reach the font attribute, not the referring Sty
   const text = '<Font family="montserrat"/>';
   const base = (id: string): StudioPlacement => ({
     id, sourcePath: "main.svml", tag: "Test", module: { name: "example", version: "1" },
-    surface: "test", range: { start: 0, end: text.length }, records: [], values: [],
+    declaration: "test", range: { start: 0, end: text.length }, records: [], values: [],
     outputs: [`main::record::${id}`], outputPorts: [], children: [], attributes: {},
     attributeValueRanges: {}, referenceAttributes: {}, referenceTypes: {}, references: [],
   });
@@ -285,15 +284,15 @@ test("a derived Item follows its actual Style and Companion-owned Recipe present
   const placement = (input: {
     id: string;
     module: string;
-    surface: string;
+    declaration: string;
     references: Readonly<Record<string, string>>;
     resolvedReferences?: Readonly<Record<string, string>>;
     outputs?: readonly string[];
   }): StudioPlacement => ({
     sourcePath: "main.svml",
-    tag: input.surface,
+    tag: input.declaration,
     module: { name: input.module, version: "1" },
-    surface: input.surface,
+    declaration: input.declaration,
     id: input.id,
     range: { start: 0, end: main.length },
     records: [], values: [], outputs: input.outputs ?? [], outputPorts: [], children: [], attributes: {},
@@ -302,38 +301,18 @@ test("a derived Item follows its actual Style and Companion-owned Recipe present
     references: Object.values(input.references),
   });
   const track = placement({
-    id: "captions", module: "@hypit/caption-fine", surface: "track",
+    id: "captions", module: "@hypit/caption-fine", declaration: "track",
     references: { layout: "baseline-layout" },
     resolvedReferences: { layout: "main::record::baseline-layout" },
   });
   const layout = placement({
-    id: "baseline-layout", module: "@example/layout", surface: "layout",
+    id: "baseline-layout", module: "@example/layout", declaration: "layout",
     references: {}, outputs: ["main::record::baseline-layout"],
   });
   const style = placement({
-    id: "alternate-caption", module: "@hypit/caption-fine", surface: "style",
+    id: "alternate-caption", module: "@hypit/caption-fine", declaration: "style",
     references: { recipe: "recipes.caption.alt" },
   });
-  const surface = {
-    module: { name: "@hypit/caption-fine", version: "1" },
-    surface: "style", tag: "Style", mode: "structured", outputs: [],
-    vocabulary: { summary: "Caption Style", example: "<Style/>", attributes: [{
-      name: "recipe", kind: "reference", required: true, summary: "Recipe",
-      recipe: [
-        { name: "x", required: true, summary: "Horizontal position" },
-        { name: "handoff", required: false, summary: "Cue handoff", values: ["cut", "overlap"] },
-        { name: "colors", required: false, summary: "Ordered colors", schema: colors },
-      ],
-    }] },
-    handler: () => ({ records: [], components: [], exports: [] }),
-  } as RegisteredSurface;
-  const surfaces: MarkupSurfaceRegistryLike = {
-    resolve(module, name) {
-      return module.name === surface.module.name && name === surface.surface ? surface : undefined;
-    },
-    surfaces() { return [surface]; },
-  };
-
   const draft = {
     id: "captions:cue:2", authoredId: "captions", terminalLinks: [{ spanId: "cue:2" }], display: { title: "cue:2", layers: [] },
     startFrame: 0, endFrameExclusive: 10, stackOrder: 70,

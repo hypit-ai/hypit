@@ -14,7 +14,7 @@ test("each Grok contract owns its seven-reference model limit", () => {
       prompt: ["animate"], aspectRatio: [model === "grok-imagine-video" ? "16:9" : "auto"],
       resolution: ["720p"], duration: [6],
     } as const;
-    assert.equal(sealGrokImagineRequest(model, { ...base, images: references(7) }).ports.images?.length, 7);
+    assert.equal(sealGrokImagineRequest(model, { ...base, images: references(7) }).fields.images?.length, 7);
     assert.throws(() => sealGrokImagineRequest(model, { ...base, images: references(8) }), /at most 7/u);
   }
 });

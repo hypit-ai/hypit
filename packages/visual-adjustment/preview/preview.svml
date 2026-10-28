@@ -8,6 +8,7 @@
   <import as="time" from="@hypit/timeline-author@1"/>
   <import as="visual" from="@hypit/visual-track@1"/>
   <import as="adjust" from="@hypit/visual-adjustment@1"/>
+  <import as="treatment" from="@hypit/visual-treatment@1"/>
   <import as="space" from="@hypit/spatial@1"/>
   <import as="film" from="@hypit/film@1"/>
   <import as="html" from="@hypit/html-video@1"/>
@@ -34,11 +35,16 @@
       during={program.window} frame={badge-frame} fit="contain"/>
   </visual:Track>
 
+  <treatment:Transform id="move-right" x="485"/>
+  <treatment:Color id="middle-grade" hue="138" saturation="1.45" contrast="1.12"/>
+  <treatment:Blur id="middle-blur" radius="3"/>
+
   <adjust:Track id="move" timeline={program.timeline}>
-    <adjust:Adjustment id="move-right" during={program.window} appearance={recipes.look.move-right}/>
+    <adjust:Adjustment id="move-right" during={program.window} effect={move-right}/>
   </adjust:Track>
   <adjust:Track id="grade" timeline={program.timeline}>
-    <adjust:Adjustment id="middle-grade" during={program.middle} appearance={recipes.look.middle-grade}/>
+    <adjust:Adjustment id="middle-grade" during={program.middle} effect={middle-grade}/>
+    <adjust:Adjustment id="middle-blur" during={program.middle} effect={middle-blur}/>
   </adjust:Track>
 
   <film:Film id="main" canvas={canvas.canvas} timeline={program.timeline} appearance={recipes.film.preview}>

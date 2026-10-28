@@ -73,13 +73,13 @@ function projectTerminalAudio(context: StudioTrackCompanionContext): readonly St
 /** Cross-domain terminal protocols understood even when no Companion is installed. */
 export const fallbackStudioTrackCompanions: readonly StudioTrackCompanion[] = [
   {
-    id: "@hypit/studio#audio-track", role: "track", output: { type: compositionTypes.audioTrack },
+    id: "@hypit/studio#audio-track", output: { type: compositionTypes.audioTrack },
     family: "audio", tone: "green", icon: "waveform",
     project: projectTerminalAudio,
     lane: { heightPx: 48 },
   },
   {
-    id: "@hypit/studio#visual-track", role: "track", output: { type: compositionTypes.visualTrack },
+    id: "@hypit/studio#visual-track", output: { type: compositionTypes.visualTrack },
     family: "visual", tone: "blue", icon: "video",
     project: projectTerminalVisual,
     lane: { heightPx: 76 },

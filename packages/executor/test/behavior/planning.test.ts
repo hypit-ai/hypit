@@ -4,7 +4,8 @@ import test from "node:test";
 // Executor owns Command classification and its observable reasons.
 
 import { evaluateProducerPlan, ProducerRegistry } from "@hypit/executor";
-import type { BuildDefinition, BuildState } from "@hypit/protocol";
+import type { BuildDefinition } from "@hypit/protocol";
+import type { BuildView } from "@hypit/kernel";
 
 import {
   createGreetingBuild,
@@ -12,7 +13,7 @@ import {
 } from "../execution-scenario.js";
 import { createChainDefinition } from "../execution-scenario.js";
 
-function definitionFrom(state: BuildState): BuildDefinition {
+function definitionFrom(state: BuildView): BuildDefinition {
   return {
     format: "hypit.build-definition@1",
     program: state.program,

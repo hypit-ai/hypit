@@ -1,4 +1,5 @@
 import type { StudioSnapshot, StudioTerminalTarget } from "../shared.js";
+import { studioItemAddressKey } from "../shared.js";
 
 type AdjustmentTarget = Extract<StudioTerminalTarget, { readonly kind: "visual-adjustment" }>;
 
@@ -23,10 +24,10 @@ export function createHtmlPreviewAdapter() {
     targetWindow?.__hypitSetAdjustmentBypassed?.(target.occurrencePath, target.adjustmentId, bypassed);
   };
 
-  const apply = (snapshot: StudioSnapshot, omittedItemIds: ReadonlySet<string>): void => {
+  const apply = (snapshot: StudioSnapshot, omittedItemKeys: ReadonlySet<string>): void => {
     const desired = new Map<string, AdjustmentTarget>();
     for (const item of snapshot.tracks.flatMap((track) => track.items)) {
-      if (!omittedItemIds.has(item.id)) continue;
+      if (!omittedItemKeys.has(studioItemAddressKey(item.address))) continue;
       for (const target of item.terminalTargets) {
         if (target.kind === "visual-adjustment") desired.set(key(target), target);
       }

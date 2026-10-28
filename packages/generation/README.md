@@ -4,10 +4,9 @@ Optional standard Products for generated audio, images and video. A generated se
 non-empty collection of accepted Blob references. It has no universal maximum count: request count
 belongs to the Model contract, and a narrower service quota belongs to the selected Endpoint.
 
-Generation does not own a universal request envelope, input-port ontology, Model registry, Provider
-choice, credential, queue or retry policy. Every Model package owns its complete canonical request
-Type, validator, exact Capability and result Type. Core carries that request opaquely as the concrete
-Need constraints.
+Every Model package owns its complete canonical request Type, validator, exact Capability and result
+Type. Core carries that request opaquely as the concrete Need constraints. Provider choice,
+credentials, queues and retries remain Runtime concerns.
 
 ## Model contract
 
@@ -32,7 +31,7 @@ const model = defineModelModule({
 ```
 
 The helper only emits the request Type, Capability, Producer and Need Fragment. Request-building
-Producers and authoring Surfaces are ordinary Model-package code. A Model is not required to classify
+Producers and author declarations are ordinary Model-package code. A Model is not required to classify
 its inputs as text, media or scalar.
 
 Existing field-oriented packages may use `@hypit/generation/model-fields`. That subpath is an
@@ -41,6 +40,9 @@ Endpoint; only the complete Model-validated request does. `defineFieldModelModul
 draft, binding and finalize Producers on `defineModelModule()`; it does not declare a second model
 facet or rebuild the request Capability separately.
 
+`@hypit/generation/model-fields/author` contains the corresponding optional declaration-compiler
+assembly helper. It is nested under `model-fields` because it composes that optional field vocabulary.
+
 A required scalar field may declare Model-owned `defaultItems`. It may then be absent from the
 authoring draft, but request finalization inserts the value and every complete request carries it
 explicitly. Provider mappings have no defaulting mechanism: deployments can rename or encode a
@@ -48,14 +50,13 @@ value, but cannot decide what an omitted Model field means. `defaultItems` is fo
 scalar defaults; context-dependent finalization remains ordinary Model-owned Producer logic.
 
 An activated Model package contributes its Module Manifest once. Package and vocabulary views read
-the Manifest's fully qualified Capabilities and result Types through the ordinary package loader;
-there is no Model registry or discovery facet.
+the Manifest's fully qualified Capabilities and result Types through the ordinary package loader.
 
 The standard media Products are also optional. A Model explicitly selects its result Type and, when
-an authoring Fragment wants one artifact, the ordinary selector Producer it uses. Generation no
-longer infers a result from a field table. `createFieldModelGenerationFragment()` lets a Model
-Surface publish the complete result, an explicitly selected primary artifact, or both; the output
-names and choice remain owned by that Surface.
+an authoring Fragment wants one artifact, the ordinary selector Producer it uses.
+`createFieldModelGenerationFragment()` lets a Model
+declaration publish the complete result, an explicitly selected primary artifact, or both; the output
+names and choice remain owned by that declaration.
 
 ## Provider adapter
 

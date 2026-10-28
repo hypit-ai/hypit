@@ -9,22 +9,15 @@ export {
   sealImageComposeLayerSpec,
   sealImageComposeOptions,
 } from "./compose-program.js";
-export { decodeImageComposeSurface } from "./compose-surface.js";
 export type * from "./compose-types.js";
 export { imageTransformComponent } from "./component.js";
-export { imageTransformFragment } from "./fragment.js";
 export {
-  imageComposeProducers,
-  imageComposeTypes,
-  imageOperationsCapabilities,
-  imageOperationsDependency,
-  imageOperationsManifest,
-  imageOperationsMarkupSurfaces,
-  imageOperationsModuleRef,
-  imageTransformProducers,
-  imageTransformProgramSchema,
-  imageTransformTypes,
-} from "./manifest.js";
+  imageComposeAuthorDeclaration,
+  imageOperationsAuthorDeclarations,
+  imageTransformAuthorDeclaration,
+  imageTransformProgramAuthorDeclaration,
+} from "./declaration.js";
+export { imageTransformFragment } from "./fragment.js";export { imageComposeProducers, imageComposeTypes, imageOperationsCapabilities, imageOperationsDependency, imageOperationsManifest, imageOperationsModuleRef, imageTransformProducers, imageTransformProgramSchema, imageTransformTypes } from "./manifest.js";
 export { imageTransformOperationSchema } from "./operation-schema.js";
 export {
   assertImageComposeRequest,
@@ -39,9 +32,5 @@ export type * from "./execution-types.js";
 export {
   sealImageTransformProgram,
   verifyImageTransformProgram,
-} from "./program.js";
-export {
-  decodeImageTransformProgramSurface,
-  decodeImageTransformSurface,
-} from "./surface.js";
+} from "./program.js";export { imageOperationsMarkupDeclarations } from "./declaration.js";
 export type * from "./types.js";

@@ -15,6 +15,54 @@ export {
   resolveCompiledSourceExport,
 } from "./source.js";
 export {
+  AuthorDeclarationError,
+  AuthorDeclarationRegistry,
+  compileAuthorDeclarations,
+  declarationBody,
+  declarationField,
+} from "./declaration.js";
+export type {
+  AuthorComponentDraft,
+  AuthorDeclaration,
+  AuthorDeclarationBinding,
+  AuthorDeclarationBindingContext,
+  AuthorDeclarationBodyNode,
+  AuthorDeclarationBodyPart,
+  AuthorDeclarationChild,
+  AuthorDeclarationChildrenShape,
+  AuthorDeclarationCompileContext,
+  AuthorDeclarationCompiler,
+  AuthorDeclarationDraft,
+  AuthorDeclarationField,
+  AuthorDeclarationFieldKind,
+  AuthorDeclarationFieldShape,
+  AuthorDeclarationFieldValue,
+  AuthorDeclarationLiteral,
+  AuthorDeclarationOutput,
+  AuthorDeclarationReference,
+  AuthorDeclarationRegistryLike,
+  AuthorDeclarationShape,
+  AuthorDeclarationChildShape,
+  AuthorRecordDraft,
+  AuthorResolvedReference,
+  CompileAuthorDeclarationsOptions,
+} from "./declaration.js";
+export type {
+  AuthorDocument,
+  AuthorDocumentContainer,
+  AuthorDocumentDeclaration,
+  AuthorDocumentField,
+  AuthorDocumentFrontend,
+  AuthorDocumentImport,
+  AuthorDocumentNodeId,
+  AuthorDocumentOperation,
+} from "./document.js";
+export {
+  authorDeclarationFacetAbi,
+  createAuthorDeclarationFacet,
+  installAuthorDeclarationFacets,
+} from "./declaration-facet.js";
+export {
   authorFrontendsFromFacets,
   createAuthorFrontendFacet,
   installAuthorFrontendFacets,
@@ -31,6 +79,7 @@ export type {
   AuthorSourceDecodeContext,
   AuthorSourceDiscovery,
   AuthorSourceAssetRequest,
+  AuthorSourceAssetReader,
   AuthorSourceAssetResolver,
   AuthorSourceExport,
   AuthorSourceIdentity,

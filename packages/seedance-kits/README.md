@@ -15,7 +15,7 @@ Import a selected public Source from the installed package, for example
 version; Source Closure reads that Source and its relative dependencies without copying it into the
 video project or reaching through a physical `../../packages/...` path.
 
-Each Kit is rendered by the domain-neutral `text:Render` Surface. Its Text output then feeds one of
+Each Kit is rendered by the domain-neutral `text:Render` declaration. Its Text output then feeds one of
 the three low-level `@hypit/seedance` invocation modes. Reference media and duration remain
 ordinary explicit graph edges:
 
@@ -95,7 +95,7 @@ These files are reusable packaged authoring material. When one production needs 
 structure, author a project-local Text Template and import that Source explicitly rather than
 modifying the installed package. A Kit is not a Core restriction or a hidden media-generation wrapper.
 Reference order, duration, audio generation and output aspect ratio remain explicit on the model
-Surface. Setting a prompt option cannot create a media reference or execute a postprocess.
+declaration. Setting a prompt option cannot create a media reference or execute a postprocess.
 
 ## Speaker: edited UGC from one useful view
 

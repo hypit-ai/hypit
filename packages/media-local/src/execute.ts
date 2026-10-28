@@ -1,4 +1,3 @@
-import { audioLevelAutomationFilter } from "./audio-level-automation.js";
 import { randomUUID } from "node:crypto";
 import { createReadStream } from "node:fs";
 import { copyFile, mkdir, mkdtemp, open, readFile, rm, stat, writeFile } from "node:fs/promises";
@@ -11,26 +10,27 @@ import { assertSpeechEvidenceAudioIdentity, sealSpeechEvidenceAudio, speechEvide
 import type { ProjectSpeechEvidenceAudioNeed, SpeechEvidenceAudio } from "@hypit/speech-evidence";
 import {
   verifyAudioExtractionRequest,
-  verifyAudioProgram,
   verifyFrameExtractionRequest,
   type ExtractAudioNeed,
   type ExtractFrameNeed,
   type InspectMediaNeed,
-  type MuxMediaNeed,
-  type RenderAudioNeed,
   type RenderStillVideoNeed,
   verifyStillVideoRequest,
 } from "@hypit/media-operations";
-import type { AudioProgram, AudioProgramClip, MediaTransformOperation } from "@hypit/media-operations";
+import { verifyAudioProgram } from "@hypit/audio-program";
+import type { AudioProgram, RenderAudioNeed } from "@hypit/audio-program";
+import { readPreservePitch } from "@hypit/audio-stretch";
+import type { MuxMediaNeed } from "@hypit/media-delivery";
 import { assertBlobRef, canonicalize } from "@hypit/hypit/protocol";
 import type { BlobRef, CanonicalValue, Value } from "@hypit/hypit/protocol";
-import { addExactTemporalValues, assertTemporalMap, compareExactTemporalValues, exactTemporalZero, resolveTemporalBoundary, scaleExactTemporalValue, subtractExactTemporalValues } from "@hypit/temporal";
-import type { ExactTemporalValue, TemporalMap, TemporalMapStage } from "@hypit/temporal";
+import { addExactTemporalValues, assertTemporalMap, compareExactTemporalValues, isAffineTemporalMapPiece, resolveTemporalBoundary, scaleExactTemporalValue, subtractExactTemporalValues } from "@hypit/temporal";
+import type { ExactTemporalValue, TemporalMapStage } from "@hypit/temporal";
 
 import { runBoundedMediaProcess } from "./process.js";
 import { parseMediaInspection } from "./probe.js";
 import { parseAnimatedWebp } from "./webp.js";
 import type { AnimatedWebp } from "./webp.js";
+import { CanonicalPcmReader, planPositiveAffineReconstruction, renderAudioProgramWav } from "./audio-render.js";
 
 /**
  * Where the bytes live and which binaries transform them.
@@ -106,11 +106,6 @@ type AudioRenderSource = {
   readonly artifact: BlobRef;
   readonly sampleRate: 48_000;
   readonly sampleFrames: number;
-};
-
-type AudioRenderSourceNeed = {
-  readonly source: PreparedAudioSource;
-  readonly preparation: TemporalMap;
 };
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -315,13 +310,6 @@ type AudioRenderSourceBaseNeed = {
   readonly streamIndex: number;
 };
 
-function audioRenderSourceNeed(value: CanonicalValue): AudioRenderSourceNeed {
-  const item = object(value, "AudioRenderSourceNeed") as unknown as AudioRenderSourceNeed;
-  verifyPreparedAudioSource(item.source);
-  assertTemporalMap(item.preparation);
-  return item;
-}
-
 function extractAudioNeed(value: CanonicalValue): ExtractAudioNeed {
   const item = object(value, "ExtractAudioNeed") as unknown as ExtractAudioNeed;
   assert(item.source?.kind === "blob", "ExtractAudioNeed is invalid");
@@ -410,32 +398,9 @@ function atempo(rate: number): string[] {
   return filters;
 }
 
-function audioClipFilter(clip: AudioProgramClip, inputIndex: number, outputIndex: number,
-  window: { readonly startSample: number; readonly endSampleExclusive: number }): string {
-  const length = clip.targetEndSampleExclusive - clip.targetStartSample;
-  const preparedLength = clip.preparedEndSampleExclusive - clip.preparedStartSample;
-  const left = Math.max(window.startSample, clip.targetStartSample);
-  const right = Math.min(window.endSampleExclusive, clip.targetEndSampleExclusive);
-  const filters = [
-    `atrim=start_sample=${clip.preparedStartSample}:end_sample=${clip.preparedEndSampleExclusive}`,
-    "asetpts=PTS-STARTPTS",
-    ...(clip.loop ? [`aloop=loop=-1:size=${preparedLength}:start=0`] : []),
-    ...(clip.loopPhaseSample === 0 ? [] : [
-      `atrim=start_sample=${clip.loopPhaseSample}`,
-      "asetpts=PTS-STARTPTS",
-    ]),
-    ...atempo(clip.playbackRate.numerator / clip.playbackRate.denominator),
-    `atrim=start_sample=0:end_sample=${length}`,
-    `apad=whole_len=${length}`,
-    `atrim=start_sample=0:end_sample=${length}`,
-    `volume=${clip.gain.toPrecision(15)}`,
-    ...audioLevelAutomationFilter(clip),
-    // Crop after tempo, looping and envelopes, keeping their original phase.
-    `atrim=start_sample=${left - clip.targetStartSample}:end_sample=${right - clip.targetStartSample}`,
-    "asetpts=N/SR/TB",
-    `adelay=${left - window.startSample}S:all=1`,
-  ];
-  return `[${inputIndex}:a:0]${filters.join(",")}[clip${outputIndex}]`;
+function decimal(value: number): string {
+  assert(Number.isFinite(value), "Media execution produced a non-finite number");
+  return value.toPrecision(15);
 }
 
 async function assertCanonicalWav(args: {
@@ -566,150 +531,15 @@ async function decodeAudioRenderSource(
     await rm(work, { recursive: true, force: true }).catch(() => {});
   }
 }
-function isZero(value: import("@hypit/temporal").ExactTemporalValue): boolean {
-  return compareExactTemporalValues(value, exactTemporalZero()) === 0;
-}
-
-function preparedTransformOperations(map: TemporalMap): readonly MediaTransformOperation[] {
-  const stages = map.stages.slice(0, -1);
-  const operations: MediaTransformOperation[] = [];
-  for (const [index, stage] of [...stages].reverse().entries()) {
-    assert(stage.pieces.length === 1, `Prepared Media execution stage ${index} is not affine.`);
-    const piece = stage.pieces[0]!;
-    assert(isZero(piece.target.start)
-      && compareExactTemporalValues(piece.target.end, stage.target.duration) === 0
-      && piece.wrap === undefined,
-    `Prepared Media execution stage ${index} is not a complete affine domain map.`);
-    const sourceEnd = addExactTemporalValues(piece.sourceAtStart,
-      scaleExactTemporalValue(stage.target.duration, piece.rate));
-    if (piece.rate.numerator === piece.rate.denominator) {
-      if (!isZero(piece.sourceAtStart)
-        || compareExactTemporalValues(sourceEnd, stage.source.duration) !== 0) {
-        operations.push({ kind: "trim", start: piece.sourceAtStart, end: sourceEnd });
-      }
-      continue;
-    }
-    assert(isZero(piece.sourceAtStart)
-      && compareExactTemporalValues(sourceEnd, stage.source.duration) === 0,
-    `Prepared Media execution stage ${index} combines retime with an unsupported offset.`);
-    operations.push({ kind: "retime", rate: piece.rate });
-  }
-  return operations;
-}
-
 async function decodePreparedAudioBase(
   env: MediaExecutionEnvironment,
-  need: AudioRenderSourceNeed,
+  source: PreparedAudioSource,
 ): Promise<AudioRenderSource> {
   return await decodeAudioRenderSource(env, {
-    source: need.source.source,
-    streamIndex: need.source.streamIndex,
-    sourceDuration: need.source.sourceDomain.duration,
+    source: source.source,
+    streamIndex: source.streamIndex,
+    sourceDuration: source.sourceDomain.duration,
   });
-}
-
-function initialMemberStage(map: TemporalMap): TemporalMapStage {
-  const stage = map.stages.at(-1);
-  assert(stage !== undefined, "Prepared Media member map has no source alignment stage");
-  assert(stage.pieces.length === 1,
-    "Prepared Media source alignment must contain exactly one signal piece");
-  const piece = stage.pieces[0]!;
-  assert(piece.wrap === undefined && piece.rate.numerator === piece.rate.denominator,
-    "Prepared Media source alignment must preserve the selected signal rate");
-  return stage;
-}
-
-async function alignAudioRenderSource(
-  env: MediaExecutionEnvironment,
-  media: AudioRenderSource,
-  map: TemporalMap,
-): Promise<AudioRenderSource> {
-  const stage = initialMemberStage(map);
-  const piece = stage.pieces[0]!;
-  const clock = { frameRate: { numerator: media.sampleRate, denominator: 1 } } as const;
-  const targetSamples = resolveTemporalBoundary(stage.target.duration, clock, "nearest");
-  const targetStart = resolveTemporalBoundary(piece.target.start, clock, "nearest");
-  const targetEnd = resolveTemporalBoundary(piece.target.end, clock, "nearest");
-  const sourceStart = resolveTemporalBoundary(piece.sourceAtStart, clock, "nearest");
-  const contentSamples = targetEnd - targetStart;
-  assert(targetSamples > 0 && contentSamples > 0 && sourceStart + contentSamples <= media.sampleFrames,
-    "Prepared audio source alignment leaves its decoded source domain");
-  if (targetStart === 0 && targetEnd === targetSamples
-    && sourceStart === 0 && targetSamples === media.sampleFrames) return media;
-
-  const work = await mkdtemp(join(tmpdir(), "hypit-media-align-audio-"));
-  try {
-    const input = join(work, "audio.wav");
-    const output = join(work, "aligned.wav");
-    await stageArtifact(env, media.artifact, input);
-    const filters = [
-      `atrim=start_sample=${sourceStart}:end_sample=${sourceStart + contentSamples}`,
-      "asetpts=N/SR/TB",
-      `adelay=${targetStart}S:all=1`,
-      `apad=whole_len=${targetSamples}`,
-      `atrim=start_sample=0:end_sample=${targetSamples}`,
-      "asetpts=N/SR/TB",
-    ];
-    await runProcess({
-      executable: env.ffmpegPath,
-      argv: ["-y", "-i", input, "-vn", "-af", filters.join(","),
-        "-c:a", "pcm_s16le", "-ar", String(media.sampleRate), "-ac", "2", output],
-      timeoutMs: env.processTimeoutMs,
-      maxStdoutBytes: 64 * 1024,
-      ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
-    });
-    return sealAudioRenderSource({
-      artifact: await env.artifacts.putFile(output, "audio/wav"),
-      sampleRate: 48_000,
-      sampleFrames: targetSamples,
-    });
-  } finally {
-    await rm(work, { recursive: true, force: true }).catch(() => {});
-  }
-}
-
-async function transformAudioRenderSource(
-  env: MediaExecutionEnvironment,
-  media: AudioRenderSource,
-  operations: readonly MediaTransformOperation[],
-): Promise<AudioRenderSource> {
-  const plan = compileAudioTransformPlan(media, operations);
-  const work = await mkdtemp(join(tmpdir(), "hypit-audio-render-transform-"));
-  try {
-    const input = join(work, "audio.wav");
-    const output = join(work, "transformed.wav");
-    await stageArtifact(env, media.artifact, input);
-    await runProcess({
-      executable: env.ffmpegPath,
-      argv: ["-y", "-i", input, "-vn", "-af", plan.audioFilters.join(","),
-        "-c:a", "pcm_s16le", "-ar", "48000", "-ac", "2", output],
-      timeoutMs: env.processTimeoutMs,
-      maxStdoutBytes: 64 * 1024,
-      ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
-    });
-    return sealAudioRenderSource({
-      artifact: await env.artifacts.putFile(output, "audio/wav"),
-      sampleRate: 48_000,
-      sampleFrames: plan.sampleFrames,
-    });
-  } finally {
-    await rm(work, { recursive: true, force: true }).catch(() => {});
-  }
-}
-
-/** Decode one selected audio source into the terminal renderer's private PCM workspace. */
-async function prepareAudioRenderSource(
-  env: MediaExecutionEnvironment,
-  need: AudioRenderSourceNeed,
-): Promise<AudioRenderSource> {
-  need = audioRenderSourceNeed(canonicalize(need));
-  const base = await decodePreparedAudioBase(env, need);
-  verifyAudioRenderSource(base);
-  const aligned = await alignAudioRenderSource(env, base, need.preparation);
-  const operations = preparedTransformOperations(need.preparation);
-  const value = operations.length === 0 ? aligned : await transformAudioRenderSource(env, aligned, operations);
-  verifyAudioRenderSource(value);
-  return value;
 }
 
 /**
@@ -808,66 +638,6 @@ export async function executeRenderStillVideo(
   } finally {
     await rm(work, { recursive: true, force: true }).catch(() => {});
   }
-}
-
-type AudioTransformFilters = {
-  readonly audio: readonly string[];
-  readonly durationSec: number;
-};
-
-function decimal(value: number): string {
-  assert(Number.isFinite(value), "Media transform produced a non-finite time");
-  return value.toPrecision(15);
-}
-
-function temporalSeconds(value: import("@hypit/temporal").ExactTemporalValue): number {
-  const ticks = Number(BigInt(value.ticks));
-  const seconds = ticks * value.timeBase.numerator / value.timeBase.denominator;
-  assert(Number.isFinite(seconds), "Media transform exact time exceeds executable numeric range");
-  return seconds;
-}
-
-function compileAudioTransformFilters(
-  initialDurationSec: number,
-  operations: readonly MediaTransformOperation[],
-): AudioTransformFilters {
-  let durationSec = initialDurationSec;
-  const audioFilters: string[] = ["asetpts=N/SR/TB"];
-  for (const [index, operation] of operations.entries()) {
-    if (operation.kind === "trim") {
-      const start = operation.start === undefined ? 0 : temporalSeconds(operation.start);
-      const end = operation.end === undefined ? (operation.tail === undefined
-        ? durationSec
-        : durationSec - temporalSeconds(operation.tail)) : temporalSeconds(operation.end);
-      assert(start >= 0 && start < durationSec,
-        `Media transform trim ${index} starts outside its current ${durationSec}s timeline`);
-      assert(end > start && end <= durationSec + 1e-9,
-        `Media transform trim ${index} ends outside its current ${durationSec}s timeline`);
-      const boundedEnd = Math.min(end, durationSec);
-      audioFilters.push(`atrim=start=${decimal(start)}:end=${decimal(boundedEnd)}`, "asetpts=N/SR/TB");
-      durationSec = boundedEnd - start;
-      continue;
-    }
-    const rate = operation.rate.numerator / operation.rate.denominator;
-    audioFilters.push(...atempo(rate));
-    durationSec /= rate;
-  }
-  return { audio: audioFilters, durationSec };
-}
-
-function compileAudioTransformPlan(
-  media: AudioRenderSource,
-  operations: readonly MediaTransformOperation[],
-): { readonly audioFilters: readonly string[]; readonly sampleFrames: number } {
-  const filters = compileAudioTransformFilters(media.sampleFrames / media.sampleRate, operations);
-  const sampleFrames = Math.max(1, Math.round(filters.durationSec * media.sampleRate));
-  const audioFilters = [...filters.audio];
-  audioFilters.push(
-    `apad=whole_len=${sampleFrames}`,
-    `atrim=start_sample=0:end_sample=${sampleFrames}`,
-    "asetpts=N/SR/TB",
-  );
-  return { audioFilters, sampleFrames };
 }
 
 /** Generic model-reference audio: no Narrative or alignment claim is introduced. */
@@ -988,6 +758,8 @@ function speechStageFilter(
     segments.push(label);
   };
   for (const [pieceIndex, piece] of stage.pieces.entries()) {
+    assert(isAffineTemporalMapPiece(piece),
+      `Speech evidence audio map stage ${index} is outside this renderer's affine capability.`);
     assert(piece.wrap === undefined, `Speech evidence audio map stage ${index} cannot contain wrap.`);
     assert(piece.rate.numerator > 0, `Speech evidence audio map stage ${index} requires a positive rate.`);
     const targetStart = speechSampleBoundary(piece.target.start);
@@ -1094,68 +866,91 @@ export async function executeRenderTimelineAudio(
   const clips = program.clips.filter((clip) => clip.targetStartSample < window.endSampleExclusive
     && clip.targetEndSampleExclusive > window.startSample);
   const work = await mkdtemp(join(tmpdir(), "hypit-media-audio-"));
+  const readers = new Set<CanonicalPcmReader>();
   try {
     const rendererEnv = await privateMediaExecutionEnvironment(env, join(work, "decoded-sources"));
-    const artifacts = new Map<string, { source: BlobRef; path: string; inputIndex: number; sampleFrames: number }>();
+    const sources = new Map<string, {
+      readonly source: PreparedAudioSource;
+      readonly path: string;
+      readonly reader: CanonicalPcmReader;
+    }>();
+    const clipSources = new Map<string, CanonicalPcmReader>();
+    const clipSourcePaths = new Map<string, string>();
     for (const clip of clips) {
-      const existing = artifacts.get(clip.inputId);
-      if (existing !== undefined) {
-        assert(existing.sampleFrames === clip.preparedSampleFrames,
-          `Audio renderer input ${clip.inputId} has conflicting sample counts in one program`);
-        continue;
+      const key = `${clip.source.source.resource}\u0000${clip.source.streamIndex}`;
+      let decoded = sources.get(key);
+      if (decoded === undefined) {
+        const path = join(work, `source-${sources.size}.wav`);
+        const renderSource = await decodePreparedAudioBase(rendererEnv, clip.source);
+        await stageArtifact(rendererEnv, renderSource.artifact, path);
+        const audio = await assertCanonicalWav({
+          path,
+          ffprobePath: env.ffprobePath,
+          timeoutMs: env.processTimeoutMs,
+          maxProbeOutputBytes: env.maxProbeOutputBytes,
+          ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
+        });
+        assert(audio.decodedSampleFrames === renderSource.sampleFrames,
+          `Audio renderer source ${clip.id} differs from its decoded domain`);
+        const reader = new CanonicalPcmReader(path, renderSource.sampleFrames);
+        readers.add(reader);
+        decoded = { source: clip.source, path, reader };
+        sources.set(key, decoded);
+      } else {
+        assert(compareExactTemporalValues(decoded.source.sourceDomain.duration,
+          clip.source.sourceDomain.duration) === 0,
+        `Audio renderer source ${clip.id} reuses one stream with a different domain`);
       }
-      const inputIndex = artifacts.size;
-      const path = join(work, `input-${inputIndex}.wav`);
-      const renderSource = await prepareAudioRenderSource(rendererEnv, {
-        source: clip.source,
-        preparation: clip.preparation,
-      });
-      await stageArtifact(rendererEnv, renderSource.artifact, path);
-      const audio = await assertCanonicalWav({
-        path,
-        ffprobePath: env.ffprobePath,
+      clipSources.set(clip.id, decoded.reader);
+      clipSourcePaths.set(clip.id, decoded.path);
+    }
+
+    const reconstructed = new Map<string, CanonicalPcmReader>();
+    for (const clip of clips) {
+      if (clip.reconstruction === undefined) continue;
+      readPreservePitch(clip.reconstruction);
+      const plan = planPositiveAffineReconstruction(clip);
+      const source = clipSources.get(clip.id);
+      const sourcePath = clipSourcePaths.get(clip.id);
+      assert(source !== undefined && sourcePath !== undefined,
+        `Audio renderer Clip ${clip.id} has no decoded source for reconstruction`);
+      assert(plan.sourceEndSampleExclusive <= source.sampleFrames,
+        `Audio renderer Clip ${clip.id} reconstruction exceeds its selected source`);
+      const path = join(work, `reconstructed-${reconstructed.size}.wav`);
+      const tempo = atempo(plan.rate);
+      const filters = [
+        `atrim=start_sample=${plan.sourceStartSample}:end_sample=${plan.sourceEndSampleExclusive}`,
+        "asetpts=N/SR/TB",
+        ...tempo,
+        `apad=whole_len=${plan.targetSampleFrames}`,
+        `atrim=start_sample=0:end_sample=${plan.targetSampleFrames}`,
+        "asetpts=N/SR/TB",
+      ];
+      await runProcess({
+        executable: env.ffmpegPath,
+        argv: ["-y", "-i", sourcePath, "-af", filters.join(","), "-vn",
+          "-c:a", "pcm_s16le", "-ar", "48000", "-ac", "2", path],
         timeoutMs: env.processTimeoutMs,
-        maxProbeOutputBytes: env.maxProbeOutputBytes,
+        maxStdoutBytes: 64 * 1024,
         ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
       });
-      assert(audio.decodedSampleFrames === clip.preparedSampleFrames,
-        `Audio renderer input ${clip.inputId} sample count differs from its program`);
-      artifacts.set(clip.inputId, {
-        source: renderSource.artifact,
-        path,
-        inputIndex,
-        sampleFrames: audio.decodedSampleFrames,
-      });
+      const reader = new CanonicalPcmReader(path, plan.targetSampleFrames);
+      readers.add(reader);
+      reconstructed.set(clip.id, reader);
     }
 
     const output = join(work, "program.wav");
-    const argv = ["-y"];
-    for (const item of artifacts.values()) argv.push("-i", item.path);
-    if (clips.length === 0) {
-      argv.push(
-        "-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo",
-        "-af", `atrim=start_sample=0:end_sample=${window.sampleFrames},asetpts=N/SR/TB`,
-      );
-    } else {
-      const chains = clips.map((clip, index) => {
-        const inputIndex = artifacts.get(clip.inputId)!.inputIndex;
-        return audioClipFilter(clip, inputIndex, index, window);
-      });
-      const labels = clips.map((_clip, index) => `[clip${index}]`).join("");
-      chains.push(
-        `${labels}amix=inputs=${clips.length}:duration=longest:dropout_transition=0:normalize=0,`
-        + `apad=whole_len=${window.sampleFrames},atrim=start_sample=0:end_sample=${window.sampleFrames},`
-        + "asetpts=N/SR/TB[out]",
-      );
-      argv.push("-filter_complex", chains.join(";"), "-map", "[out]");
-    }
-    argv.push("-c:a", "pcm_s16le", "-ar", "48000", "-ac", "2", output);
-    await runProcess({
-      executable: env.ffmpegPath,
-      argv,
-      timeoutMs: env.processTimeoutMs,
-      maxStdoutBytes: 64 * 1024,
-      ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
+    await renderAudioProgramWav({
+      path: output,
+      program,
+      startSample: window.startSample,
+      sampleFrames: window.sampleFrames,
+      sourceForClip: (clip) => {
+        const reader = clipSources.get(clip.id);
+        assert(reader !== undefined, `Audio renderer Clip ${clip.id} has no decoded source`);
+        return reader;
+      },
+      reconstructedForClip: (clip) => reconstructed.get(clip.id),
     });
     const artifact = await env.artifacts.putFile(output, "audio/wav");
     const audio = await assertCanonicalWav({
@@ -1175,6 +970,7 @@ export async function executeRenderTimelineAudio(
     });
     return inlineResult(canonicalize(value));
   } finally {
+    for (const reader of readers) reader.close();
     await rm(work, { recursive: true, force: true }).catch(() => {});
   }
 }

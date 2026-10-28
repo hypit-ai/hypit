@@ -1,7 +1,7 @@
 import { sealMediaDeliverySpec } from "@hypit/media";
 import type { MediaDeliverySpec, VisualDeliverySpec } from "@hypit/media";
 
-/** Explicit standard delivery selected by the HTML video authoring surface. */
+/** Explicit standard delivery selected by the HTML Video author declaration. */
 export function htmlVideoDeliverySpec(
   quality: VisualDeliverySpec["encoding"]["quality"] = "standard",
 ): MediaDeliverySpec {

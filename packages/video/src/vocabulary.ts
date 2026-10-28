@@ -2,30 +2,30 @@ import { readdir, readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 
 import type { CliIo } from "@hypit/hypit/cli";
+import { authorDeclarationFacetAbi } from "@hypit/hypit/author";
+import type {
+  AuthorDeclarationCompiler,
+  AuthorDeclarationFieldShape,
+} from "@hypit/hypit/author";
 import {
   animatableLocalStyles,
   visualCompositionVocabulary,
 } from "@hypit/composition";
-import { markupSurfaceFacetAbi } from "@hypit/hypit/markup";
-import type {
-  RegisteredSurface,
-  SurfaceAttributeVocabulary,
-  SurfacePortVocabulary,
-  SurfaceVocabulary,
-} from "@hypit/hypit/markup";
+import { markupDeclarationFacetAbi } from "@hypit/hypit/markup";
+import type { RegisteredMarkupDeclaration } from "@hypit/hypit/markup";
 import { loadNodePackageSelection, locateNodePackage, distributionPackageRoots } from "@hypit/hypit/loader/node";
 import type { NodePackageLoadOptions } from "@hypit/hypit/loader/node";
-import { moduleKey, typeKey } from "@hypit/hypit/protocol";
+import { compareCodeUnits, moduleKey, typeKey } from "@hypit/hypit/protocol";
 import type { ModuleManifest, ValueSchema } from "@hypit/hypit/protocol";
 import { findProjectRoot } from "@hypit/hypit/project";
 import { VISUAL_STYLE_ENUM_VALUES_V1, VISUAL_STYLE_NAMES_V1 } from "@hypit/composition";
 
 /**
- * What a Source may write: installed packages, their Module Capabilities and declared Surfaces.
+ * What a Source may write: installed packages, their Module Capabilities and author Declarations.
  *
  * The manifest is the authority; this prints it. A system you never inspected is a system you are
  * about to invent, so the listing shows every scope and the project's own `packages/`, and a named
- * package answers with its own Surfaces only, not with everything it happens to depend on.
+ * package answers with its own Declarations only, not with everything it happens to depend on.
  */
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -106,7 +106,7 @@ export async function listPackages(projectRoot: string, distributionRoot?: strin
         if (pack.specifier !== name) continue;
         for (const module of pack.contribution.modules ?? []) capabilities.push(...manifestCapabilities(module.manifest));
         for (const facet of pack.contribution.facets ?? []) {
-          if (facet.abi === markupSurfaceFacetAbi) tags.push((facet.implementation as RegisteredSurface).tag);
+          if (facet.abi === markupDeclarationFacetAbi) tags.push((facet.implementation as RegisteredMarkupDeclaration).tag);
         }
       }
     } catch (error) { unreadable = error instanceof Error ? error.message : String(error); }
@@ -115,7 +115,7 @@ export async function listPackages(projectRoot: string, distributionRoot?: strin
       ...(manifest.description === undefined ? {} : { description: manifest.description }),
       tags: [...new Set(tags)].sort(),
       ...(capabilities.length === 0 ? {} : { capabilities: capabilities.toSorted((left, right) =>
-        `${left.module}#${left.name}`.localeCompare(`${right.module}#${right.name}`)) }),
+        compareCodeUnits(`${left.module}#${left.name}`, `${right.module}#${right.name}`)) }),
       ...(unreadable === undefined ? {} : { unreadable }),
     });
   }
@@ -123,24 +123,18 @@ export async function listPackages(projectRoot: string, distributionRoot?: strin
 }
 
 // ---------------------------------------------------------------------------------------------------
-// Surfaces
+// Declarations
 
-export type SurfaceListing = {
+export type DeclarationListing = {
   readonly package: string;
-  readonly module: RegisteredSurface["module"];
-  readonly surface: string;
+  readonly module: RegisteredMarkupDeclaration["module"];
+  readonly declaration: string;
   readonly tag: string;
-  readonly mode: RegisteredSurface["mode"];
-  readonly outputs: RegisteredSurface["outputs"];
-  readonly vocabulary?: unknown;
+  readonly body?: RegisteredMarkupDeclaration["body"];
+  readonly outputs: AuthorDeclarationCompiler["outputs"];
+  readonly shape: AuthorDeclarationCompiler["shape"];
   readonly readme?: string;
 };
-
-function printableVocabulary(value: SurfaceVocabulary | undefined): unknown {
-  if (value === undefined) return undefined;
-  // The poster is a file the manifest opens; the listing names it and does not read it.
-  return { ...value, ...(value.preview === undefined ? {} : { preview: { mediaType: value.preview.mediaType, path: value.preview.path } }) };
-}
 
 function readmePath(name: string, projectRoot: string, distributionRoot?: string): string | undefined {
   try {
@@ -153,38 +147,45 @@ function readmePath(name: string, projectRoot: string, distributionRoot?: string
   } catch { return undefined; }
 }
 
-export async function listSurfaces(
+export async function listDeclarations(
   projectRoot: string,
   packages: readonly string[],
   tags?: readonly string[],
   distributionRoot?: string,
-): Promise<readonly SurfaceListing[]> {
+): Promise<readonly DeclarationListing[]> {
   assert(packages.length > 0, "name at least one package");
   const loaded = await loadNodePackageSelection(packages, projectRoot, loading(distributionRoot));
   const named = new Set(packages);
   const wanted = tags === undefined ? undefined : new Set(tags);
-  const surfaces: SurfaceListing[] = [];
+  const declarations: DeclarationListing[] = [];
   for (const pack of loaded) {
     // Loading a package brings its dependencies with it; the answer is about the ones named.
     if (!named.has(pack.specifier)) continue;
-    for (const facet of pack.contribution.facets ?? []) {
-      if (facet.abi !== markupSurfaceFacetAbi) continue;
-      const surface = facet.implementation as RegisteredSurface;
-      if (wanted !== undefined && !wanted.has(surface.tag) && !wanted.has(surface.surface)) continue;
+    const facets = pack.contribution.facets ?? [];
+    const compilers = facets
+      .filter((facet) => facet.abi === authorDeclarationFacetAbi)
+      .map((facet) => facet.implementation as AuthorDeclarationCompiler);
+    for (const facet of facets) {
+      if (facet.abi !== markupDeclarationFacetAbi) continue;
+      const syntax = facet.implementation as RegisteredMarkupDeclaration;
+      if (wanted !== undefined && !wanted.has(syntax.tag) && !wanted.has(syntax.declaration)) continue;
+      const compiler = compilers.find((candidate) => moduleKey(candidate.module) === moduleKey(syntax.module)
+        && candidate.declaration === syntax.declaration);
+      if (compiler === undefined) throw new Error(`${moduleKey(syntax.module)}#${syntax.declaration} has Markup spelling but no Author Declaration compiler.`);
       const readme = readmePath(pack.specifier, projectRoot, distributionRoot);
-      surfaces.push({
+      declarations.push({
         package: pack.specifier,
-        module: surface.module,
-        surface: surface.surface,
-        tag: surface.tag,
-        mode: surface.mode,
-        outputs: surface.outputs,
-        ...(surface.vocabulary === undefined ? {} : { vocabulary: printableVocabulary(surface.vocabulary) }),
+        module: syntax.module,
+        declaration: syntax.declaration,
+        tag: syntax.tag,
+        ...(syntax.body === undefined ? {} : { body: syntax.body }),
+        outputs: compiler.outputs,
+        shape: compiler.shape,
         ...(readme === undefined ? {} : { readme }),
       });
     }
   }
-  return surfaces;
+  return declarations;
 }
 
 // ---------------------------------------------------------------------------------------------------
@@ -249,52 +250,35 @@ export function visualSchema(shape?: string): {
 // ---------------------------------------------------------------------------------------------------
 // Command
 
-function attributeLine(attribute: SurfaceAttributeVocabulary): string {
-  const shape = attribute.values !== undefined ? attribute.values.join(" | ")
-    : attribute.accepts !== undefined ? attribute.accepts.map((type) => type.name).join(" | ")
-    : attribute.kind;
-  return `      ${attribute.name}${attribute.required ? "" : "?"}  ${shape}  ${attribute.summary}`;
+function fieldLine(field: AuthorDeclarationFieldShape): string {
+  const shape = field.values !== undefined ? field.values.join(" | ")
+    : field.accepts !== undefined ? field.accepts.map((type) => type.name).join(" | ")
+    : field.kind;
+  return `      ${field.name}${field.required ? "" : "?"}  ${shape}  ${field.summary}`;
 }
 
-function moduleSpecifier(surface: SurfaceListing): string {
-  return `${surface.module.name}@${surface.module.version}`;
+function moduleSpecifier(declaration: DeclarationListing): string {
+  return `${declaration.module.name}@${declaration.module.version}`;
 }
 
-function sourceImport(surface: SurfaceListing, vocabulary: SurfaceVocabulary): string {
-  const prefixedTag = vocabulary.example.match(/<([A-Za-z_][A-Za-z0-9_.-]*):([A-Za-z_][A-Za-z0-9_.-]*)\b/u);
-  const alias = prefixedTag?.[2] === surface.tag ? prefixedTag[1] : undefined;
-  return alias === undefined
-    ? `<import from="${moduleSpecifier(surface)}"/>`
-    : `<import as="${alias}" from="${moduleSpecifier(surface)}"/>`;
-}
-
-function portLine(port: SurfacePortVocabulary): string {
-  const type = `${port.type.name} (${port.type.module.name}@${port.type.module.version})`;
-  return `      ${port.name}  ${type}  ${port.summary}`;
-}
-
-function surfaceText(surface: SurfaceListing): string {
-  const vocabulary = surface.vocabulary as SurfaceVocabulary | undefined;
+function declarationText(declaration: DeclarationListing): string {
   const lines = [
-    `  <${surface.tag}>  ${surface.mode}`,
-    `    package  ${surface.package}`,
-    `    module   ${moduleSpecifier(surface)}`,
+    `  <${declaration.tag}>  ${declaration.body ?? "structured"}`,
+    `    package  ${declaration.package}`,
+    `    module   ${moduleSpecifier(declaration)}`,
+    `    import   <import from="${moduleSpecifier(declaration)}"/>`,
+    `    ${declaration.shape.summary}`,
   ];
-  if (vocabulary !== undefined) {
-    lines.push(`    import   ${sourceImport(surface, vocabulary)}`);
-    lines.push(`    ${vocabulary.summary}`);
-    if (vocabulary.appearance !== undefined) lines.push(`    ${vocabulary.appearance}`);
-    if (vocabulary.attributes.length > 0) lines.push("    attributes", ...vocabulary.attributes.map(attributeLine));
-    for (const child of vocabulary.children ?? []) {
-      lines.push(`    child <${child.tag}> (${child.cardinality})  ${child.summary}`, ...(child.attributes ?? []).map(attributeLine));
+  if (declaration.shape.fields.length > 0) lines.push("    fields", ...declaration.shape.fields.map(fieldLine));
+  if (Array.isArray(declaration.shape.children)) {
+    for (const child of declaration.shape.children) {
+      lines.push(`    child <${child.name}> (${child.cardinality})  ${child.summary}`,
+        ...child.fields.map(fieldLine));
     }
-    if (vocabulary.ports !== undefined && vocabulary.ports.length > 0) {
-      lines.push("    ports", ...vocabulary.ports.map(portLine));
-    }
-    lines.push("    example", ...vocabulary.example.split("\n").map((line) => `      ${line}`));
-    for (const note of vocabulary.notes ?? []) lines.push(`    note: ${note}`);
   }
-  if (surface.readme !== undefined) lines.push(`    README ${surface.readme}`);
+  if (declaration.outputs.length > 0) lines.push("    outputs", ...declaration.outputs.map((type) =>
+    `      ${type.name} (${type.module.name}@${type.module.version})`));
+  if (declaration.readme !== undefined) lines.push(`    README ${declaration.readme}`);
   return lines.join("\n");
 }
 
@@ -304,7 +288,7 @@ export function writeVocabularyHelp(io: CliIo): void {
     "What a Source may write. Prints installed package manifests; no Runtime Profile, no request, no state.",
     "",
     "  hypit vocabulary                         every installed package with its tags and capabilities",
-    "  hypit vocabulary <package…> [--tag <tag>] the Surfaces a package declares: module, import, attributes, children, ports, example",
+    "  hypit vocabulary <package…> [--tag <tag>] the author Declarations a package contributes",
     "  hypit vocabulary --visual [<shape>]      the value shapes and rules a drawing Producer must emit",
     "",
     "Read the package README the listing names before writing its elements. Add --json for a machine view.",
@@ -365,8 +349,8 @@ export async function runVocabularyCli(
     return;
   }
 
-  const surfaces = await listSurfaces(projectRoot, packages, tags.length === 0 ? undefined : tags, distributionRoot);
-  if (json) { io.write(`${JSON.stringify({ projectRoot, packages, surfaces }, null, 2)}\n`); return; }
-  assert(surfaces.length > 0, `${packages.join(", ")} ${packages.length === 1 ? "declares" : "declare"} no Markup Surface${tags.length === 0 ? "" : ` tagged ${tags.join(", ")}`}`);
-  io.write(`${surfaces.map(surfaceText).join("\n\n")}\n`);
+  const declarations = await listDeclarations(projectRoot, packages, tags.length === 0 ? undefined : tags, distributionRoot);
+  if (json) { io.write(`${JSON.stringify({ projectRoot, packages, declarations }, null, 2)}\n`); return; }
+  assert(declarations.length > 0, `${packages.join(", ")} ${packages.length === 1 ? "declares" : "declare"} no author Declaration${tags.length === 0 ? "" : ` tagged ${tags.join(", ")}`}`);
+  io.write(`${declarations.map(declarationText).join("\n\n")}\n`);
 }

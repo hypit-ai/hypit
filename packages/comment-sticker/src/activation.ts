@@ -1,16 +1,10 @@
 import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
 import { createProducerPackageFacet } from "@hypit/hypit/producer";
-import { createMarkupSurfaceFacet } from "@hypit/hypit/markup";
+import { createAuthorDeclarationFacet } from "@hypit/hypit/author";
+import { createMarkupDeclarationFacet } from "@hypit/hypit/markup";
 import { createStudioTrackCompanionFacet } from "@hypit/studio-companion";
-
-import {
-  commentStickerComponent,
-  commentStickerManifest,
-  commentStickerModuleRef,
-  decodeCommentStickerStyleSurface,
-  decodeCommentStickerTrackSurface,
-  commentStickerMarkupSurfaces,
-} from "./index.js";
+import { commentStickerComponent, commentStickerManifest, commentStickerModuleRef } from "./index.js";
+import { commentStickerAuthorDeclarations, commentStickerMarkupDeclarations } from "./declaration.js";
 import { commentStickerStudioTrackCompanions } from "./studio.js";
 
 export const hypitPackage = {
@@ -20,16 +14,10 @@ export const hypitPackage = {
   }],
   facets: [
     ...[commentStickerComponent].flatMap((component) => [createProducerPackageFacet(component.producers ?? []), createRefinementPackageFacet(component.refinements ?? [])]),
-    createMarkupSurfaceFacet({
-      module: commentStickerModuleRef,
-    declaration: commentStickerMarkupSurfaces.find((item) => item.name === "style")!,
-      handler: decodeCommentStickerStyleSurface,
-    }),
-    createMarkupSurfaceFacet({
-      module: commentStickerModuleRef,
-    declaration: commentStickerMarkupSurfaces.find((item) => item.name === "track")!,
-      handler: decodeCommentStickerTrackSurface,
-    }),
+    ...commentStickerAuthorDeclarations.map(createAuthorDeclarationFacet),
+    ...commentStickerMarkupDeclarations.map((declaration) =>
+      createMarkupDeclarationFacet({ module: commentStickerModuleRef, declaration })),
+
     createStudioTrackCompanionFacet(commentStickerStudioTrackCompanions),
   ],
 };

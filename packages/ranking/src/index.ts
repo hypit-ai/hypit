@@ -14,13 +14,5 @@ export {
 export { rankingComponent } from "./component.js";
 export { createRankingFragment } from "./fragment.js";
 export type { RankingFragmentItem, RankingFragmentSound } from "./fragment.js";
-export { rankingWindowSetSchema, tierBoardWindowSetSchema, columnWindowSetSchema, triggeredRankingCandidateSetSchema, rankingDependency, rankingHeaderSchema, rankingItemSpecSchema, rankingTextItemShellSchema, rankingItemSpecSetSchema, rankingManifest, rankingMarkupSurfaces, rankingModuleRef, rankingProducers, rankingScheduleSchema, rankingSoundEventsSchema, rankingSoundSetSchema, rankingSoundStyleSchema, rankingTypes } from "./manifest.js";
-export {
-  decodeColumnStyleSurface,
-  decodeColumnSurface,
-  decodeTierBoardStyleSurface,
-  decodeTierBoardSurface,
-  decodeTopThreeStyleSurface,
-  decodeTopThreeSurface,
-} from "./surface.js";
+export { rankingWindowSetSchema, tierBoardWindowSetSchema, columnWindowSetSchema, triggeredRankingCandidateSetSchema, rankingDependency, rankingHeaderSchema, rankingItemSpecSchema, rankingTextItemShellSchema, rankingItemSpecSetSchema, rankingManifest, rankingModuleRef, rankingProducers, rankingScheduleSchema, rankingSoundEventsSchema, rankingSoundSetSchema, rankingSoundStyleSchema, rankingTypes } from "./manifest.js";
 export type * from "./types.js";

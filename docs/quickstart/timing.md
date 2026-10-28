@@ -155,5 +155,5 @@ Instant / Window / TemporalExtent DAG ──────────────
 ```
 
 Components ultimately consume Timeline plus absolute Instants or Windows. A domain projection
-publishes those values upstream; general component Surfaces do not accept Script objects or carry
+publishes those values upstream; general component declarations do not accept Script objects or carry
 the projector.

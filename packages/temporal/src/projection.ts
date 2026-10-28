@@ -1,5 +1,6 @@
 import { assertTimelineIdentity, timelineFrameCount } from "@hypit/timeline";
 import type { Timeline } from "@hypit/timeline";
+import { compareCodeUnits } from "@hypit/hypit/protocol";
 
 import { add, compare, durationInFrames, quantizeBoundary, rational } from "./rational.js";
 import { resolveTemporalBoundary } from "./exact.js";
@@ -9,12 +10,19 @@ import type {
   TemporalInstantSpec, TemporalWindow, TemporalWindowSpec, WindowRelation,
   TemporalExtent, TemporalShiftSpec,
 } from "./types.js";
+import {
+  assertTemporalInstant,
+  assertTemporalInstantExpression,
+  assertTemporalInstantSpec,
+  assertTemporalShiftSpec,
+  assertTemporalWindow,
+  assertTemporalWindowSpec,
+} from "./validation.js";
 
 export type TemporalConsumption = { readonly timeline?: Timeline };
 
 export function assertTemporalInstantFor(instant: TemporalInstant, expected: TemporalConsumption): void {
-  if (!instant.timelineId) throw new Error("Temporal Instant has no Timeline identity.");
-  if (!Number.isSafeInteger(instant.frame) || instant.frame < 0) throw new Error("Temporal Instant frame is invalid.");
+  assertTemporalInstant(instant);
   if (expected.timeline !== undefined) {
     assertTimelineIdentity(expected.timeline);
     if (instant.timelineId !== expected.timeline.id) throw new Error("Temporal Instant belongs to a different Timeline.");
@@ -23,7 +31,7 @@ export function assertTemporalInstantFor(instant: TemporalInstant, expected: Tem
 }
 
 export function assertTemporalWindowFor(window: TemporalWindow, expected: TemporalConsumption): void {
-  if (!window.subjectId) throw new Error("Temporal Window has no authored identity.");
+  assertTemporalWindow(window);
   assertTemporalInstantFor(window.start, expected);
   assertTemporalInstantFor(window.end, expected);
   if (window.start.timelineId !== window.end.timelineId) throw new Error("Temporal Window endpoints belong to different Timelines.");
@@ -45,6 +53,7 @@ function evaluateProgramInstant(expression: TemporalInstantExpression, timeline:
 }
 
 export function projectTemporalInstant(expression: TemporalInstantExpression, timeline: Timeline): number {
+  assertTemporalInstantExpression(expression);
   assertTimelineIdentity(timeline);
   const totalFrames = timelineFrameCount(timeline);
   const raw = evaluateProgramInstant(expression, timeline);
@@ -57,7 +66,9 @@ export function projectTemporalInstant(expression: TemporalInstantExpression, ti
 }
 
 export function resolvedInstant(spec: Pick<TemporalInstantSpec, "id" | "subjectId">, timeline: Timeline, frame: number): TemporalInstant {
-  if (spec.id.length === 0) throw new Error("Temporal Instant id must not be empty.");
+  if (spec.id.trim().length === 0 || spec.subjectId.trim().length === 0) {
+    throw new Error("Temporal Instant identity must not be empty.");
+  }
   assertTimelineIdentity(timeline);
   if (!Number.isSafeInteger(frame) || frame < 0 || frame > timelineFrameCount(timeline)) {
     throw new Error("Temporal Instant falls outside Timeline.");
@@ -69,6 +80,7 @@ export function projectProgramInstant(input: {
   readonly itemId: string; readonly subjectId: string; readonly timeline: Timeline;
   readonly projection: TemporalInstantExpression;
 }): TemporalInstant {
+  assertTemporalInstantSpec({ id: input.itemId, subjectId: input.subjectId, projection: input.projection });
   return resolvedInstant({ id: input.itemId, subjectId: input.subjectId }, input.timeline,
     projectTemporalInstant(input.projection, input.timeline));
 }
@@ -79,6 +91,7 @@ export function shiftTemporalInstant(
   base: TemporalInstant,
   extent: TemporalExtent,
 ): TemporalInstant {
+  assertTemporalShiftSpec(spec);
   assertTimelineIdentity(timeline);
   assertTemporalInstantFor(base, { timeline });
   if (spec.id.length === 0 || spec.subjectId.length === 0) throw new Error("Temporal shift identity is invalid.");
@@ -88,8 +101,9 @@ export function shiftTemporalInstant(
 }
 
 export function composeTemporalWindow(spec: TemporalWindowSpec, start: TemporalInstant, end: TemporalInstant): TemporalWindow {
-  if (spec.id.length === 0) throw new Error("Temporal Window id must not be empty.");
-  if (!spec.subjectId) throw new Error("Temporal Window subjectId must not be empty.");
+  assertTemporalWindowSpec(spec);
+  assertTemporalInstant(start);
+  assertTemporalInstant(end);
   if (start.timelineId !== end.timelineId) throw new Error("Temporal Window endpoints must belong to one Timeline.");
   if (end.frame < start.frame) throw new Error("Temporal Window endpoints are reversed.");
   if (end.frame === start.frame) throw new Error("Temporal Window endpoints produce a zero window.");
@@ -100,7 +114,7 @@ export function composeTemporalWindow(spec: TemporalWindowSpec, start: TemporalI
 export function assertWindowRelation(windows: readonly TemporalWindow[], relation: WindowRelation): readonly TemporalWindow[] {
   if (relation === "independent") return windows;
   const ordered = [...windows].sort((left, right) => left.span.startFrame - right.span.startFrame
-    || left.span.endFrameExclusive - right.span.endFrameExclusive || left.id.localeCompare(right.id));
+    || left.span.endFrameExclusive - right.span.endFrameExclusive || compareCodeUnits(left.id, right.id));
   for (let index = 1; index < ordered.length; index += 1) {
     const previous = ordered[index - 1];
     const current = ordered[index];

@@ -1,10 +1,10 @@
 import { canonicalize } from "@hypit/hypit/protocol";
 import type { BlobRef, CanonicalValue, CapabilityRef } from "@hypit/hypit/protocol";
 
-import { isMediaPort } from "./ports.js";
-import type { GenerationMediaValue, GenerationPortTable } from "./ports.js";
-import { presentPorts } from "./request.js";
-import type { GenerationRequest } from "./request.js";
+import { isArtifactField } from "./fields.js";
+import type { ModelArtifactValue, ModelFieldTable } from "./fields.js";
+import { presentModelFields } from "./request.js";
+import type { ModelFieldRequest } from "./request.js";
 
 /** Per-reference fields consumed by the service's resource transport rather than its generation body. */
 export type GenerationArtifactUrlResolver = (
@@ -13,7 +13,7 @@ export type GenerationArtifactUrlResolver = (
 ) => Promise<string>;
 
 /**
- * How one service names the fields of one model's declared input ports.
+ * How one service names the fields of one Model's declared input fields.
  *
  * A mapping is optional Provider-local data over one already validated Model
  * request. The Provider may depend one-way on that Model's public contract;
@@ -49,7 +49,7 @@ export type GenerationWireRoute = {
 export type GenerationWireMapping = {
   /**
    * The exact Capability implemented, named as data. Binding the module version
-   * here keeps a port change visible: a mapping written for one model version
+   * here keeps a field change visible: a mapping written for one Model version
    * cannot silently serve another.
    */
   readonly capability: CapabilityRef;
@@ -91,39 +91,39 @@ export function selectWireModel(mapping: GenerationWireMapping, present: Readonl
       return route.model;
     }
   }
-  throw new Error(`${mapping.capability.name} has no route for ports ${[...present].sort().join(", ")}`);
+  throw new Error(`${mapping.capability.name} has no route for fields ${[...present].sort().join(", ")}`);
 }
 
 /** Select one service model from the concrete request emitted by its Producer. */
 export function selectWireModelForRequest(
   mapping: GenerationWireMapping,
-  request: GenerationRequest,
+  request: ModelFieldRequest,
 ): string {
   const unsupported = unsupportedRequestField(mapping, request);
   assert(unsupported === undefined,
     `${mapping.capability.name} request contains ${unsupported} this Provider cannot map`);
-  const present = new Set(presentPorts(request));
+  const present = new Set(presentModelFields(request));
   return selectWireModel(mapping, present);
 }
 
-function resourceFields(item: GenerationMediaValue, names: readonly string[] = []) {
+function resourceFields(item: ModelArtifactValue, names: readonly string[] = []) {
   return Object.fromEntries(names.filter((name) => item.fields?.[name] !== undefined)
     .map((name) => [name, item.fields![name]!]));
 }
 
 /**
- * Compile one port-shaped request into one service payload. The engine needs
+ * Compile one field-shaped request into one service payload. The engine needs
  * only the mapping and the request, never the model package.
  */
 export function planWireRequest(
   mapping: GenerationWireMapping,
-  request: GenerationRequest,
+  request: ModelFieldRequest,
 ): GenerationWirePlan {
   const model = selectWireModelForRequest(mapping, request);
   const input: Record<string, GenerationWireValuePlan> = { ...(mapping.constants ?? {}) };
 
-  for (const [port, field] of Object.entries(mapping.fields)) {
-    const supplied = request.ports[port];
+  for (const [name, field] of Object.entries(mapping.fields)) {
+    const supplied = request.fields[name];
     if (supplied === undefined) continue;
     if (field.as === "value") {
       input[field.field] = supplied[0] as CanonicalValue;
@@ -132,20 +132,20 @@ export function planWireRequest(
     } else if (field.as === "valueArray") {
       input[field.field] = supplied as readonly CanonicalValue[];
     } else if (field.as === "url") {
-      const item = supplied[0] as GenerationMediaValue;
+      const item = supplied[0] as ModelArtifactValue;
       input[field.field] = {
         kind: "generation-resource",
         artifact: item.artifact,
         fields: resourceFields(item, field.resourceFields),
       };
     } else if (field.as === "urlArray") {
-      input[field.field] = (supplied as readonly GenerationMediaValue[]).map((item) => ({
+      input[field.field] = (supplied as readonly ModelArtifactValue[]).map((item) => ({
         kind: "generation-resource" as const,
         artifact: item.artifact,
         fields: resourceFields(item, field.resourceFields),
       }));
     } else {
-      const media = supplied as readonly GenerationMediaValue[];
+      const media = supplied as readonly ModelArtifactValue[];
       input[field.field] = media.map((item) => ({
         [field.urlKey]: {
           kind: "generation-resource" as const,
@@ -194,19 +194,19 @@ export async function materializeWireRequest(
 
 /** Describe only a supplied value the mapping cannot carry; no model table or saved verdict. */
 function unsupportedRequestField(mapping: GenerationWireMapping, value: unknown): string | undefined {
-  const request = value as GenerationRequest | undefined;
-  if (request === undefined || request === null || request.ports === null || typeof request.ports !== "object") {
-    return "invalid ports";
+  const request = value as ModelFieldRequest | undefined;
+  if (request === undefined || request === null || request.fields === null || typeof request.fields !== "object") {
+    return "invalid fields";
   }
-  for (const [port, supplied] of Object.entries(request.ports)) {
-    const field = mapping.fields[port];
-    if (field === undefined) return `port ${port}`;
+  for (const [fieldName, supplied] of Object.entries(request.fields)) {
+    const field = mapping.fields[fieldName];
+    if (field === undefined) return `field ${fieldName}`;
     if (field.as !== "url" && field.as !== "urlArray" && field.as !== "itemObject") continue;
-    for (const item of supplied as readonly GenerationMediaValue[]) {
+    for (const item of supplied as readonly ModelArtifactValue[]) {
       for (const name of Object.keys(item.fields ?? {})) {
         if (!field.resourceFields?.includes(name)
           && !(field.as === "itemObject" && Object.hasOwn(field.fieldKeys, name))) {
-          return `field ${port}.${name}`;
+          return `field ${fieldName}.${name}`;
         }
       }
     }
@@ -220,34 +220,34 @@ export function mappingSupportsRequest(mapping: GenerationWireMapping, value: un
 }
 
 /**
- * Check structural port coverage and required item fields against the model declaration.
+ * Check structural field coverage and required item fields against the model declaration.
  *
  * A service may omit optional item capabilities. mappingSupportsRequest and final compilation
  * additionally refuse requests that actually supply such an unmapped field.
  */
-export function assertMappingCoversPorts(
-  table: GenerationPortTable,
+export function assertMappingCoversFields(
+  table: ModelFieldTable,
   mapping: GenerationWireMapping,
 ): void {
   assert(mapping.capability.name === table.model,
-    `mapping names Capability ${mapping.capability.name} but the port table declares ${table.model}`);
-  const declared = new Map(table.ports.map((port) => [port.name, port]));
+    `mapping names Capability ${mapping.capability.name} but the field table declares ${table.model}`);
+  const declared = new Map(table.fields.map((field) => [field.name, field]));
   Object.keys(mapping.fields).forEach((name) => assert(declared.has(name),
-    `${table.model} mapping names undeclared port ${name}`));
+    `${table.model} mapping names undeclared field ${name}`));
 
-  for (const port of table.ports) {
-    const field = mapping.fields[port.name];
-    assert(field !== undefined, `${table.model} mapping does not cover port ${port.name}`);
-    const subject = `${table.model} mapping for port ${port.name}`;
-    if (isMediaPort(port)) {
-      const media = port.value;
+  for (const modelField of table.fields) {
+    const field = mapping.fields[modelField.name];
+    assert(field !== undefined, `${table.model} mapping does not cover field ${modelField.name}`);
+    const subject = `${table.model} mapping for field ${modelField.name}`;
+    if (isArtifactField(modelField)) {
+      const media = modelField.value;
       const itemFields = media.itemFields ?? [];
       assert(itemFields.length > 0 || media.accepts.length === 1,
-        `${subject} accepts ${media.accepts.join(", ")}; declare one port per media role so each maps to one wire field`);
+        `${subject} accepts ${media.accepts.join(", ")}; declare one field per media role so each maps to one wire field`);
       assert(field.as === "url" || field.as === "urlArray" || field.as === "itemObject",
         `${subject} must resolve media to a URL`);
       if (field.as === "url") {
-        assert(port.maxItems === 1, `${subject} uses url but the port is not a single value`);
+        assert(modelField.maxItems === 1, `${subject} uses url but the field is not a single value`);
       }
       const mappedFields = [
         ...(field.resourceFields ?? []),
@@ -261,26 +261,26 @@ export function assertMappingCoversPorts(
         `${subject} maps unknown item field ${name}`);
       continue;
     }
-    if (port.maxItems === undefined || port.maxItems > 1) {
-      assert(field.as === "valueArray", `${subject} must use valueArray because the port accepts several values`);
+    if (modelField.maxItems === undefined || modelField.maxItems > 1) {
+      assert(field.as === "valueArray", `${subject} must use valueArray because the field accepts several values`);
       continue;
     }
-    // A single-value port may still be written as a wire array when the service types it that way.
+    // A single-value field may still be written as a wire array when the service types it that way.
     assert(field.as === "value" || field.as === "string" || field.as === "valueArray",
       `${subject} must write a scalar or a single-element array`);
   }
 
   const emitted = Object.values(mapping.fields).map((field) => field.field);
   assert(new Set(emitted).size === emitted.length,
-    `${table.model} mapping writes one wire field from two ports`);
+    `${table.model} mapping writes one wire field from two model fields`);
   Object.keys(mapping.constants ?? {}).forEach((name) => assert(!emitted.includes(name),
-    `${table.model} mapping constant ${name} collides with a mapped port`));
+    `${table.model} mapping constant ${name} collides with a mapped field`));
 
   assert(mapping.routes.length > 0, `${table.model} mapping declares no route`);
   mapping.routes.forEach((route, index) => {
     assert(route.model.trim().length > 0, `${table.model} route ${index} has an empty service model`);
     (route.whenPresent ?? []).forEach((name) => assert(declared.has(name),
-      `${table.model} route ${index} names undeclared port ${name}`));
+      `${table.model} route ${index} names undeclared field ${name}`));
     const unconditional = route.whenPresent === undefined || route.whenPresent.length === 0;
     assert(unconditional === (index === mapping.routes.length - 1),
       `${table.model} must end with exactly one unconditional route`);

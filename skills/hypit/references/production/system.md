@@ -25,8 +25,8 @@ to share. Its author graph can use known durations or Extents resolved after med
 
 Semantic timing is one source of absolute values. A Narrative projection combines Alignment, its
 local domain and an equal-length Timeline Window, then publishes the requested Selection, Moment or
-Segment boundaries as ordinary Instants and Windows. Musical beats and other local domains can offer
-parallel projectors. Components consume the resolved values.
+Segment boundaries as ordinary Instants and Windows. Project and ecosystem packages can offer
+parallel projectors for musical beats or other local domains. Components consume the resolved values.
 
 [Timeline](timeline.md) owns construction; [Timing](timing.md) owns choosing direct or projected time
 and the forms accepted by components.
@@ -54,9 +54,11 @@ Keep three times distinct:
 - temporal sampling selects a position in prepared media;
 - component-local time drives its visible state.
 
-Behavior spanning several occurrences—such as a continuing presenter, slideshow, crossfade or
-ducking relationship—belongs to a component. It can publish ordinary VisualTrack and/or AudioTrack
-outputs for Film. [Tracks](tracks.md) routes ordinary Clips and richer components.
+An ordinary picture handoff between two adjacent overlapping Visual Clips is an explicit Visual
+Transition. Behavior beyond that relation—such as a continuing presenter, slideshow, shared mask,
+cross-Track handoff, visual/audio transition or ducking relationship—belongs to a component. It can
+publish ordinary VisualTrack and/or AudioTrack outputs for Film. [Tracks](tracks.md) routes ordinary
+Clips, Transitions and richer components.
 
 Caption is another peer relation: a document owns displayed Words, correspondence Units and authored
 Cues; CaptionTiming owns complete absolute Unit boundaries; and a Caption family owns visible

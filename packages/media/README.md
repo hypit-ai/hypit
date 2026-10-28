@@ -13,6 +13,11 @@ decides whether an audio artifact is a voice reference, soundtrack, evidence sou
 else, whether a video is a generation reference or another input, and which visual component uses
 an exact Font.
 
+Media's syntax-neutral Author declarations own these fields, conditional Font shape, asset requests,
+reference Types and output Records. Markup contributes only the Image, Audio, Video, Font and
+FontStack spellings. Asset resolution remains an explicit compiler capability, and FontStack may
+reference authored Font Records regardless of their textual order.
+
 The same module owns `PreparedMedia`: one immutable source Blob, one exact finite local domain and
 the selected visual/audio members' exact maps back to source presentation time. Visual interpretation
 retains coded extent, sample aspect ratio and rotation; audio interpretation retains its sample and
@@ -70,7 +75,7 @@ The source can be a project font, a user-supplied file, or an npm package resour
 `package:@company/brand-fonts/files/brand.woff2`. The Host stages its bytes as an ordinary resource;
 the render machine does not need that font installed.
 Project-relative assets make the Source portable. The supported filename extensions are `.ttf`,
-`.otf`, `.woff` and `.woff2`. The Surface has no selector for a face within a `.ttc`/`.otc` collection;
+`.otf`, `.woff` and `.woff2`. The declaration has no selector for a face within a `.ttc`/`.otc` collection;
 use the intended standalone face. Weight/style metadata describes that face, not a synthetic transform.
 
 Caption Fine and Typography Styles can consume this value as their primary `font` or an explicit

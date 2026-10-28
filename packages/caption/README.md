@@ -3,6 +3,9 @@
 External components import `@hypit/caption`. Source uses the `@hypit/caption@1` Module
 identity for shared declarations such as `Hidden`.
 
+`Hidden` is owned by Caption's syntax-neutral Author declaration compiler. Markup contributes the
+`Hidden` tag spelling, while direct and textual authorship produce the same `CaptionStyle` Record.
+
 Caption has independent content, timing and presentation structures: CaptionDocument owns display
 Words, correspondence Units and authored Cues; CaptionTiming locates every Unit; and each rendering
 family presents those Cues before timed Uses choose how they appear. A Use may begin inside a Cue. It
@@ -43,7 +46,7 @@ remain independent and can intentionally display simultaneous captions.
 
 ## Rendering-family extension
 
-A family owns its Style, schedule, renderer and Track Surface. It can use ordinary VisualTrack
+A family owns its Style, schedule, renderer and Track declaration. It can use ordinary VisualTrack
 objects or an explicit HTML visual; no central renderer dispatch is required.
 
 The public helpers and Types are in [index.ts](src/index.ts):
@@ -70,7 +73,7 @@ not split `<display|speech>` text, and elapsed Cue progress is not a replacement
 The content query helpers for Role and attributes remain here. Narrative Selection-to-unit queries
 belong to `@hypit/narrative-caption`; neither defines the Use time language.
 
-See Fine's [Surface](../caption-fine/src/surface.ts), [schedule](../caption-fine/src/schedule.ts) and
+See Fine's [declaration compiler](../caption-fine/src/declaration.ts), [schedule](../caption-fine/src/schedule.ts) and
 [renderer](../caption-fine/src/render.ts) for a concrete implementation. New family behavior belongs
 in its own project package. The selected family interprets its own Styles; mixed-family dispatch,
 when useful, is an explicit component responsibility.

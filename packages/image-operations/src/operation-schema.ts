@@ -8,7 +8,7 @@ const stringEnum = (values: readonly string[]): ValueSchema => ({ kind: "string"
 const object = (fields: Readonly<Record<string, { readonly schema: ValueSchema; readonly optional?: boolean }>>): ValueSchema => ({ kind: "object", fields });
 const color: ValueSchema = { kind: "string", minLength: 7, maxLength: 9 };
 
-/** Declarative mirror of the closed transform vocabulary, shared by every author Surface. */
+/** Declarative mirror of the closed transform vocabulary, shared by every author declaration. */
 export const imageTransformOperationSchema: ValueSchema = {
   kind: "oneOf",
   variants: [

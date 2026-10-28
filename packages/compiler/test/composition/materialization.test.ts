@@ -33,7 +33,7 @@ test("source assets become graph values and a Host transfer bundle without closu
   assert.notEqual(second.attachments[0]?.blob.resource, attachment?.blob.resource);
 });
 
-test("an installed package Surface can contribute embedded bytes without an author file or network", async () => {
+test("an installed package declaration can contribute embedded bytes without an author file or network", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-embedded-assets-"));
   const file = join(root, "main.svml");
   await writeFile(file, `<?svml using="@hypit/markup@1"?>

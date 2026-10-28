@@ -251,10 +251,21 @@ function attributeGroup(file: StudioSourceFile, target: AuthorElement, draft: St
     if (target.references[name] !== undefined) { writable = false; value[name] = target.references[name]!; continue; }
     value[name] = target.attributes[name] ?? target.references[name] ?? "";
     const before = file.text.slice(target.range.start, range.start);
-    const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const prefix = new RegExp(`\\s+${escaped}\\s*=\\s*["']$`, "u").exec(before);
-    if (!prefix) throw new Error(`Cannot locate scalar attribute ${name}.`);
-    ranges[name] = { start: prefix.index, end: range.end - target.range.start + 1 };
+    const located = ((): number | undefined => {
+      let cursor = before.length - 1;
+      if (cursor < 0 || (before[cursor] !== "\"" && before[cursor] !== "'")) return undefined;
+      while (cursor > 0 && /\s/u.test(before[cursor - 1]!)) cursor -= 1;
+      if (cursor === 0 || before[cursor - 1] !== "=") return undefined;
+      cursor -= 1;
+      while (cursor > 0 && /\s/u.test(before[cursor - 1]!)) cursor -= 1;
+      if (cursor < name.length || before.slice(cursor - name.length, cursor) !== name) return undefined;
+      cursor -= name.length;
+      if (cursor === 0 || !/\s/u.test(before[cursor - 1]!)) return undefined;
+      while (cursor > 0 && /\s/u.test(before[cursor - 1]!)) cursor -= 1;
+      return cursor;
+    })();
+    if (located === undefined) throw new Error(`Cannot locate scalar attribute ${name}.`);
+    ranges[name] = { start: located, end: range.end - target.range.start + 1 };
   }
   const schema = parameterRecordSchema(declaration.schema, value);
   for (const [name, held] of Object.entries(value)) {
@@ -380,7 +391,7 @@ export function composeParameterDeclarations(input: {
       ? candidate.records.includes(resolved) || candidate.outputs.includes(resolved)
       : candidate.id === reference && candidate.sourcePath === owner?.sourcePath);
     const companion = declaration.companion && target !== undefined
-      ? input.registry.parameterCompanionFor(target.module, target.surface) : undefined;
+      ? input.registry.parameterCompanionFor(target.module, target.declaration) : undefined;
     const key = target?.authorElement ?? `${target?.sourcePath}:${target?.range.start}`;
     if (companion !== undefined && seen.has(key)) throw new Error(`Circular Studio parameter reference at ${path}.`);
     if (companion !== undefined) inspector.push(...companion.inspector.map(field => ({ ...field, binding: `${path}.${field.binding}` })));

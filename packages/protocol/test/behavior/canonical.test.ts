@@ -99,7 +99,7 @@ test("the reserved blob tag is validated by the same Value boundary at every dep
 
 test("Build ids cannot address a parent or nested path", () => {
   assert.doesNotThrow(() => assertBuildId("build-19"));
-  for (const value of ["..", ".", "episode/19", "episode\\19", " padded "]) {
+  for (const value of ["..", ".", "episode/19", "episode\\19", " padded ", "c:", "d:build"]) {
     assert.throws(() => assertBuildId(value), /Build id/u);
   }
 });

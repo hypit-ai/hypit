@@ -7,7 +7,6 @@ import type {
   StudioInspectorObjectDraft,
   StudioFilmCompanion,
   StudioLaneAttachment,
-  StudioViewRole,
   StudioResolvedTrack,
   StudioTemporalDomainAdjustment,
   StudioTemporalDomainProjectionInput,
@@ -25,9 +24,9 @@ import { compareCodeUnits, sameModule, sameType } from "@hypit/hypit/protocol";
 import type { ModuleRef, ProducerRef, TypeRef } from "@hypit/hypit/protocol";
 
 import type { Placement } from "./observe.js";
-import type { StudioItem, StudioTrackBinding } from "./shared.js";
+import type { StudioItem, StudioItemAddress, StudioTrackBinding } from "./shared.js";
 
-export type { StudioItemDraft, StudioViewRole, StudioSpan } from "@hypit/studio-companion";
+export type { StudioItemDraft, StudioSpan } from "@hypit/studio-companion";
 
 const flatLane = {
   heightPx: 52,
@@ -113,7 +112,12 @@ function validateCompanionVocabulary(companion: StudioTrackCompanion): void {
     if (!object.label.trim()) throw new Error(`Studio Companion ${companion.id} Inspector object ${object.id} has no label`);
     validateInspector(`Studio Companion ${companion.id} Inspector object ${object.id}`, object.bindings, object.inspector);
   }
+  const attachmentIds = new Set<string>();
   for (const attachment of companion.attachments ?? []) {
+    if (!attachment.id.trim() || attachmentIds.has(attachment.id)) {
+      throw new Error(`Studio Track Companion ${companion.id} has a duplicate or empty attachment id`);
+    }
+    attachmentIds.add(attachment.id);
     if (attachment.tone !== undefined && !tones.has(attachment.tone)) {
       throw new Error(`Studio Track Companion ${companion.id} attachment ${attachment.id} selects unsupported tone ${attachment.tone}`);
     }
@@ -160,9 +164,9 @@ function validateItemDraftVocabulary(companion: StudioTrackCompanion, draft: Stu
       if (typeof source.resource !== "string" || source.resource.length === 0) {
         throw new Error(`Studio Track Companion ${companion.id} Item ${draft.id} has invalid Artifact source`);
       }
-    } else if (source.kind !== "surface-preview"
-      || source.module.length === 0 || source.version.length === 0 || source.surface.length === 0) {
-      throw new Error(`Studio Track Companion ${companion.id} Item ${draft.id} has invalid Surface preview source`);
+    } else if (source.kind !== "declaration-preview"
+      || source.module.length === 0 || source.version.length === 0 || source.declaration.length === 0) {
+      throw new Error(`Studio Track Companion ${companion.id} Item ${draft.id} has invalid declaration preview source`);
     }
   }
 }
@@ -170,12 +174,12 @@ function validateItemDraftVocabulary(companion: StudioTrackCompanion, draft: Stu
 function matches(
   companion: StudioTrackCompanion,
   type: TypeRef,
-  placement: Pick<Placement, "surface" | "module"> | undefined,
+  placement: Pick<Placement, "declaration" | "module"> | undefined,
   siblingTypes: readonly TypeRef[],
 ): boolean {
   const rule = companion.output;
   return sameType(rule.type, type)
-    && (rule.surface === undefined || rule.surface === placement?.surface)
+    && (rule.declaration === undefined || rule.declaration === placement?.declaration)
     && (rule.modules === undefined || (placement !== undefined
       && rule.modules.some((module) => sameModule(module, placement.module))))
     && (rule.siblingType === undefined || siblingTypes.some((candidate) => sameType(candidate, rule.siblingType!)));
@@ -183,7 +187,7 @@ function matches(
 
 function specificity(companion: StudioTrackCompanion): number {
   const rule = companion.output;
-  return (rule.surface === undefined ? 0 : 8)
+  return (rule.declaration === undefined ? 0 : 8)
     + (rule.siblingType === undefined ? 0 : 4)
     + (rule.modules === undefined ? 0 : 2);
 }
@@ -252,38 +256,48 @@ export class StudioCompanionRegistry {
     return found[0];
   }
 
-  parameterCompanionFor(module: ModuleRef, surface: string): StudioParameterCompanion | undefined {
-    const found = this.#parameters.filter(companion => sameModule(companion.match.module, module) && companion.match.surface === surface);
-    if (found.length > 1) throw new Error(`Studio Parameter companions are ambiguous for ${module.name}#${surface}.`);
+  declarationPreview(module: ModuleRef, declaration: string) {
+    const found = this.#tracks.filter((companion) => companion.preview !== undefined
+      && companion.output.declaration === declaration
+      && (companion.output.modules ?? []).some((candidate) => sameModule(candidate, module)));
+    if (found.length > 1) {
+      throw new Error(`Studio declaration preview is ambiguous for ${module.name}@${module.version}#${declaration}.`);
+    }
+    return found[0]?.preview;
+  }
+
+  parameterCompanionFor(module: ModuleRef, declaration: string): StudioParameterCompanion | undefined {
+    const found = this.#parameters.filter(companion => sameModule(companion.match.module, module) && companion.match.declaration === declaration);
+    if (found.length > 1) throw new Error(`Studio Parameter companions are ambiguous for ${module.name}#${declaration}.`);
     return found[0];
   }
 
   filmCompanionFor(
     type: TypeRef,
-    placement: Pick<Placement, "surface" | "module"> | undefined,
+    placement: Pick<Placement, "declaration" | "module"> | undefined,
   ): StudioFilmCompanion | undefined {
     if (placement === undefined) return undefined;
     const found = this.#films.filter((companion) =>
       sameType(companion.match.outputType, type)
-      && companion.match.surface === placement.surface
+      && companion.match.declaration === placement.declaration
       && sameModule(companion.match.module, placement.module));
-    if (found.length > 1) throw new Error(`Studio Film companions are ambiguous for ${placement.module.name}#${placement.surface}.`);
+    if (found.length > 1) throw new Error(`Studio Film companions are ambiguous for ${placement.module.name}#${placement.declaration}.`);
     return found[0];
   }
 
-  temporalDomainCompanionFor(module: ModuleRef, surface: string): StudioTemporalDomainCompanion | undefined {
+  temporalDomainCompanionFor(module: ModuleRef, declaration: string): StudioTemporalDomainCompanion | undefined {
     const found = this.#temporalDomains.filter((companion) =>
-      sameModule(companion.match.module, module) && companion.match.surface === surface);
-    if (found.length > 1) throw new Error(`Studio Temporal Domain companions are ambiguous for ${module.name}@${module.version}#${surface}.`);
+      sameModule(companion.match.module, module) && companion.match.declaration === declaration);
+    if (found.length > 1) throw new Error(`Studio Temporal Domain companions are ambiguous for ${module.name}@${module.version}#${declaration}.`);
     return found[0];
   }
 
   observeTemporalDomain(
     module: ModuleRef,
-    surface: string,
+    declaration: string,
     input: Parameters<StudioTemporalDomainCompanion["observe"]>[0],
   ): StudioTemporalDomainSourceMap | undefined {
-    const companion = this.temporalDomainCompanionFor(module, surface);
+    const companion = this.temporalDomainCompanionFor(module, declaration);
     const found = companion?.observe(input);
     return companion === undefined || found === undefined
       ? undefined
@@ -298,9 +312,9 @@ export class StudioCompanionRegistry {
 
   projectTemporalDeclarations(placement: Placement): readonly StudioTemporalDeclarationDraft[] {
     const found = this.#temporalDeclarations.filter((companion) =>
-      sameModule(companion.match.module, placement.module) && companion.match.surface === placement.surface);
+      sameModule(companion.match.module, placement.module) && companion.match.declaration === placement.declaration);
     if (found.length > 1) {
-      throw new Error(`Studio Temporal Declaration companions are ambiguous for ${placement.module.name}@${placement.module.version}#${placement.surface}.`);
+      throw new Error(`Studio Temporal Declaration companions are ambiguous for ${placement.module.name}@${placement.module.version}#${placement.declaration}.`);
     }
     return found[0]?.project({ placement }) ?? [];
   }
@@ -338,7 +352,7 @@ export class StudioCompanionRegistry {
 
   trackCompanionFor(
     type: TypeRef,
-    placement: Pick<Placement, "surface" | "module"> | undefined,
+    placement: Pick<Placement, "declaration" | "module"> | undefined,
     siblingTypes: readonly TypeRef[],
   ): StudioTrackCompanion | undefined {
     const candidates = this.#tracks
@@ -354,14 +368,6 @@ export class StudioCompanionRegistry {
     return best.companion;
   }
 
-  classifyOutput(
-    type: TypeRef,
-    placement: Placement | undefined,
-    siblingTypes: readonly TypeRef[],
-  ): StudioViewRole | undefined {
-    return this.trackCompanionFor(type, placement, siblingTypes)?.role;
-  }
-
   requiredValuePorts(
     type: TypeRef,
     placement: Placement | undefined,
@@ -371,9 +377,9 @@ export class StudioCompanionRegistry {
   }
 
   #trackCompanion(track: StudioResolvedTrack): StudioTrackCompanion & { readonly family: StudioTrackBinding["family"] } {
-    const placement = track.trace.surface === undefined || track.trace.module === undefined
+    const placement = track.trace.declaration === undefined || track.trace.module === undefined
       ? undefined
-      : { surface: track.trace.surface, module: track.trace.module };
+      : { declaration: track.trace.declaration, module: track.trace.module };
     const siblingTypes = track.trace.outputPorts.flatMap((item) => item.typeRef === undefined ? [] : [item.typeRef]);
     const companion = this.trackCompanionFor(track.typeRef, placement, siblingTypes);
     const family = companion?.family;
@@ -391,13 +397,13 @@ export class StudioCompanionRegistry {
       tone: attachment.tone ?? companion.tone ?? "neutral",
       ...(attachment.label === undefined ? {} : { label: attachment.label }),
       facet: attachment.facet,
-      groupId: root.groupId,
+      group: root.group,
       icon: attachment.icon,
       companion: `${companion.id}:${attachment.id}`,
       attachmentId: attachment.id,
       lane: {
         ...attachment.lane,
-        attachedTo: attachment.lane.attachedTo ?? root.lane.groupId ?? root.groupId,
+        attachedTo: attachment.lane.attachedTo ?? root.lane.groupId ?? "root",
       },
     }));
   }
@@ -413,7 +419,9 @@ export class StudioCompanionRegistry {
       tone: companion.tone ?? "neutral",
       ...(label === undefined ? {} : { label }),
       facet: sameType(track.typeRef, compositionTypes.audioTrack) ? "audio" : "visual",
-      groupId: track.trace.authoredId ?? track.outputRef,
+      group: track.trace.authorElement === undefined
+        ? { kind: "output", output: track.outputRef }
+        : { kind: "author-element", element: track.trace.authorElement },
       icon: companion.icon ?? (sameType(track.typeRef, compositionTypes.audioTrack) ? "waveform" : "layers"),
       companion: companion.id,
       lane: companion.lane ?? flatLane,
@@ -423,11 +431,11 @@ export class StudioCompanionRegistry {
   projectTrack(input: StudioTrackCompanionContext): readonly StudioItemDraft[] {
     const companion = this.#trackCompanion(input.track);
     const drafts = companion.project?.(input) ?? input.generic();
-    const preview = input.surfacePreview;
-    const surfaceLayer: StudioItemDraft["display"]["layers"][number] | undefined = preview === undefined
+    const preview = input.declarationPreview;
+    const declarationLayer: StudioItemDraft["display"]["layers"][number] | undefined = preview === undefined
       ? undefined
       : { kind: "preview", role: "decoration", preview, layout: "repeat-x" };
-    const projected: readonly StudioItemDraft[] = companion.poster?.source !== "surface-preview" || surfaceLayer === undefined
+    const projected: readonly StudioItemDraft[] = companion.poster?.source !== "declaration-preview" || declarationLayer === undefined
       ? drafts
       : drafts.map((draft) => draft.lane !== undefined
       ? draft
@@ -435,7 +443,7 @@ export class StudioCompanionRegistry {
           ...draft,
           display: {
             ...draft.display,
-            layers: [surfaceLayer, ...draft.display.layers],
+            layers: [declarationLayer, ...draft.display.layers],
           },
         });
     const localIds = new Set<string>();
@@ -499,8 +507,7 @@ export class StudioCompanionRegistry {
 }
 
 export function sealStudioItem(
-  outputRef: string,
-  lane: string | undefined,
+  address: StudioItemAddress,
   draft: StudioItemDraft,
   fallback: StudioTrackBinding,
   terminalTargets: StudioItem["terminalTargets"] = [],
@@ -508,7 +515,8 @@ export function sealStudioItem(
   inspector: StudioItem["inspector"] = [],
 ): StudioItem {
   return {
-    id: JSON.stringify(["item", outputRef, lane ?? null, draft.id]),
+    id: draft.id,
+    address,
     authoredId: draft.authoredId,
     ...(draft.marker === undefined ? {} : { marker: draft.marker }),
     display: draft.display,

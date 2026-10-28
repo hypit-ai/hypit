@@ -7,9 +7,10 @@ import type {
   StudioMaterialPreview,
   StudioSourceBindingDeclaration,
 } from "@hypit/studio-companion";
-import { artifactPreview, authoredItemTitle, childItems, previewLayer, requiredSurfaceValue, temporalLineageFor, temporalDomainMarker } from "@hypit/studio-companion";
-import { visualTreatmentDefaults } from "./author.js";
-import { visualTrackMarkupSurfaces, visualTrackModuleRef, visualTrackTypes } from "./manifest.js";
+import { artifactPreview, authoredItemTitle, childItems, previewLayer, requiredDeclarationValue, temporalLineageFor, temporalDomainMarker } from "@hypit/studio-companion";
+import { visualMaterialKeys, visualMaterialOptions, visualTreatmentDefaults } from "./author.js";
+import { visualTrackModuleRef, visualTrackTypes } from "./manifest.js";
+import { visualTransitionSpan } from "./program.js";
 import type { MediaLayerProgram, VisualTrackProgram } from "./types.js";
 
 const frameParameters: readonly StudioSourceBindingDeclaration[] = [
@@ -29,15 +30,17 @@ const extentParameters: readonly StudioSourceBindingDeclaration[] = [
   { name: "height", writable: true },
 ];
 
-const visualTrackSurface = visualTrackMarkupSurfaces.find((surface) => surface.name === "track");
-const visualClipAttributes = visualTrackSurface?.vocabulary.children?.find((child) => child.tag === "Clip")?.attributes ?? [];
+const visualTreatmentProperties = [...visualMaterialKeys.sample, ...visualMaterialKeys.frame].map((name) => ({
+  name,
+  values: visualMaterialOptions[name],
+}));
 
 function title(name: string): string {
   return name.split("-").map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`).join(" ");
 }
 
-function valuesFor(property: { readonly name: string }): readonly string[] | undefined {
-  return "values" in property ? (property as { readonly values: readonly string[] }).values : undefined;
+function valuesFor(property: { readonly name: string; readonly values: readonly string[] | undefined }): readonly string[] | undefined {
+  return property.values;
 }
 
 type MediaPlacement = Pick<StudioInspectorFieldDeclaration, "domain" | "page" | "section">;
@@ -65,8 +68,7 @@ function treatmentRecipe(): {
   readonly bindings: readonly import("@hypit/studio-companion").StudioRecipeBindingDeclaration[];
   readonly inspector: readonly StudioInspectorFieldDeclaration[];
 } {
-  const attribute = visualClipAttributes.find((candidate) => candidate.name === "treatment");
-  const properties = attribute !== undefined && "recipe" in attribute ? attribute.recipe : [];
+  const properties = visualTreatmentProperties;
   return {
     bindings: properties.map(({ name: property }) => ({ name: property,
       ...(Object.hasOwn(visualTreatmentDefaults, property) ? { fallback: visualTreatmentDefaults[property as keyof typeof visualTreatmentDefaults] } : {}),
@@ -82,7 +84,6 @@ function treatmentRecipe(): {
         binding: `treatment.${property.name}`,
         label: title(property.name),
         ...placement,
-        ...(property.summary === undefined ? {} : { summary: property.summary }),
         control,
         ...(mediaPercentProperties.has(property.name) ? { unit: "%", number: { scale: 100, step: 1 } } : {}),
         ...(mediaPixelProperties.has(property.name) ? { unit: "px", number: { step: 1 } } : {}),
@@ -95,8 +96,7 @@ function treatmentRecipe(): {
 export const visualClipTreatmentStudioFields = treatmentRecipe();
 
 function clipOptions(name: string): readonly string[] {
-  const attribute = visualClipAttributes.find((candidate) => candidate.name === name);
-  const options = attribute === undefined ? undefined : valuesFor(attribute);
+  const options = visualMaterialOptions[name];
   if (options === undefined) throw new Error(`Visual Studio requires declared values for Clip.${name}.`);
   return options;
 }
@@ -134,7 +134,7 @@ function materialPreview(
 }
 
 function projectVisualItems(context: StudioTrackCompanionContext): readonly StudioItemDraft[] {
-  const program = requiredSurfaceValue(context, "program") as VisualTrackProgram;
+  const program = requiredDeclarationValue(context, "program") as VisualTrackProgram;
   const clips = program.clips.map((clip, index) => ({
     id: clip.id,
     subjectId: clip.subjectId,
@@ -145,7 +145,7 @@ function projectVisualItems(context: StudioTrackCompanionContext): readonly Stud
     temporalInput: "window",
     sourceTypes: [visualTrackTypes.clipSpec],
   }));
-  return childItems(context, clips, "visual-clip", "standard")
+  const clipItems = childItems(context, clips, "visual-clip", "standard")
     .map((projected, index) => {
       const clip = clips[index];
       if (clip === undefined) return projected;
@@ -167,14 +167,34 @@ function projectVisualItems(context: StudioTrackCompanionContext): readonly Stud
         ...(temporal === undefined ? {} : { temporal }),
       };
     });
+  const transitions = program.transitions.map((transition) => {
+    const span = visualTransitionSpan(transition, program.clips);
+    return {
+      id: transition.id,
+      subjectId: transition.id,
+      startFrame: span.startFrame,
+      endFrameExclusive: span.endFrameExclusive,
+      stackOrder: program.clips.findIndex((clip) => clip.id === transition.incomingClipId),
+      sourceTypes: [visualTrackTypes.transitionSpec],
+    };
+  });
+  const transitionItems = childItems(context, transitions, "visual-transition", "compact")
+    .map((projected) => {
+      return {
+        ...projected,
+        lane: "transitions",
+        display: { title: "Transition", layers: [] },
+      };
+    });
+  return [...clipItems, ...transitionItems];
 }
 
 const frameSizeParameters = new Set(["width", "height"]);
 
 export const visualTrackStudioTrackCompanions: readonly StudioTrackCompanion[] = [
   {
-    id: "visual", role: "track",
-    output: { type: compositionTypes.visualTrack, surface: "track", modules: [visualTrackModuleRef] },
+    id: "visual",
+    output: { type: compositionTypes.visualTrack, declaration: "track", modules: [visualTrackModuleRef] },
     family: "visual", tone: "blue", icon: "video",
     bindings: [
       { name: "extent", referenced: extentParameters },
@@ -201,6 +221,21 @@ export const visualTrackStudioTrackCompanions: readonly StudioTrackCompanion[] =
       ...directClipInspector,
       ...visualClipTreatmentStudioFields.inspector,
     ],
+    attachments: [{
+      id: "transitions",
+      family: "visual-transition",
+      tone: "blue-muted",
+      label: "Transitions",
+      icon: "layers",
+      facet: "visual",
+      lane: { heightPx: 32 },
+      bindings: [
+        { name: "outgoing" },
+        { name: "incoming" },
+        { name: "effect", companion: true },
+      ],
+      inspector: [],
+    }],
     requiredValues: ["program"], project: projectVisualItems,
     lane: { heightPx: 76 },
   },

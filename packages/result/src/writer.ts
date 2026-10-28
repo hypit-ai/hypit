@@ -1,5 +1,11 @@
 import { compareCodeUnits, isBlobRef, mapValueBlobs, sameType } from "@hypit/protocol";
-import type { BlobRef, CanonicalValue, TypedRecord } from "@hypit/protocol";
+import type {
+  BlobRef,
+  CanonicalValue,
+  PublicationIntent,
+  PublicationOutputIntent,
+  TypedRecord,
+} from "@hypit/protocol";
 
 import type {
   BuildResultFileRef,
@@ -10,8 +16,6 @@ import type {
   BuildResultValueDocument,
   BuildResultValuePath,
   HistoricalBuildOutputRef,
-  OutputPublication,
-  PublicationPlan,
 } from "./types.js";
 import { buildResultOutput, defineBuildResultOutput } from "./types.js";
 
@@ -19,7 +23,7 @@ export type BuildResultWriterState = {
   readonly resources: Readonly<Record<string, string>>;
   readonly resourceReferences?: Readonly<Record<string, BuildResultFileRef>>;
   readonly values: Readonly<Record<string, string>>;
-  readonly publication: PublicationPlan;
+  readonly publication: PublicationIntent;
 };
 
 export type BuildResultWriteTarget = {
@@ -125,7 +129,7 @@ function scalar(value: unknown): value is null | boolean | number | string {
 }
 
 type ReadyOutput = {
-  readonly published: OutputPublication;
+  readonly published: PublicationOutputIntent;
   readonly record?: TypedRecord;
   readonly forward?: HistoricalBuildOutputRef;
 };

@@ -20,7 +20,7 @@ test("Present visibility updates only absolute active-set changes across arbitra
   const a = element("a", [{ startFrame: 2, endFrameExclusive: 5 }, { startFrame: 8, endFrameExclusive: 10 }]);
   const b = element("b", [{ startFrame: 4, endFrameExclusive: 9 }]);
   let seek: (event: { detail: { frame: number } }) => void = () => {};
-  runInNewContext(`${frameWorkIndexRuntime}\n${presentationVisibilityScript(30, 1)}`, {
+  runInNewContext(`${frameWorkIndexRuntime}\n${presentationVisibilityScript()}`, {
     window: { addEventListener: (_: string, callback: typeof seek) => { seek = callback; } },
     document: { querySelectorAll: () => [a, b] },
     Set,

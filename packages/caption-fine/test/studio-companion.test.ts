@@ -50,9 +50,8 @@ test("Caption Companion projects Cue text and Style from public domain values", 
   const context = {
     track: {
       name: "captions.track", type: "VisualTrack", typeRef: compositionTypes.visualTrack, outputRef: "captions.track",
-      role: "track",
       trace: {
-        surface: "caption", module: { name: "@hypit/caption-fine", version: "1" }, authoredId: "captions",
+        declaration: "caption", module: { name: "@hypit/caption-fine", version: "1" }, authoredId: "captions",
         outputPorts: [{ name: "schedule", ref: "captions.schedule", type: "FineCaptionSchedule" }, { name: "timing", ref: "captions.timing", type: "CaptionTiming" }],
         references: [{
           input: "document", name: "story.caption", ref: "story.caption", type: "CaptionDocument",
@@ -107,7 +106,7 @@ test("Caption Uses stay in Inspector while Cues remain independent of rendered c
   const context = {
     track: {
       name: "captions.track", type: "VisualTrack", typeRef: compositionTypes.visualTrack,
-      outputRef: "captions.track", role: "track", value: undefined,
+      outputRef: "captions.track", value: undefined,
       trace: {
         references: [
           { input: "document", name: "document", type: "CaptionDocument", typeRef: captionTypes.document, ref: "document" },
@@ -118,7 +117,7 @@ test("Caption Uses stay in Inspector while Cues remain independent of rendered c
     },
     placement: {
       sourcePath: "captions.svml", tag: "Caption", module: { name: "@hypit/caption-fine", version: "1" },
-      surface: "caption", range: { start: 0, end: 20 }, records: [], values: [], outputs: [], outputPorts: [],
+      declaration: "caption", range: { start: 0, end: 20 }, records: [], values: [], outputs: [], outputPorts: [],
       attributes: {}, attributeValueRanges: {}, references: [], referenceAttributes: {}, referenceTypes: {},
       children: uses.map((use, i) => ({
         sourcePath: "captions.svml", tag: "Use", id: use.id, range: { start: i * 10, end: i * 10 + 8 },

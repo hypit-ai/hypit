@@ -12,9 +12,10 @@ shared inputs.
 | Place speech, music, narration, ambience or effects | [Audio Clip](audio-clips.md) | AudioTrack |
 | Present Script display words at resolved Cue times | [Caption](caption-presentation.md) | package-owned VisualTrack |
 | Supply independent writing | [Typography/Text](fonts-and-text.md) | package-owned VisualTrack |
-| Apply color, blur, opacity or affine treatment to an accumulated picture | Visual Adjustment inside the intended Film Stack | VisualTrack |
+| Apply color, blur, opacity or affine treatment to an accumulated picture | Visual Adjustment with a package-owned treatment inside the intended Film Stack | VisualTrack |
+| Hand off between two adjacent overlapping Visual Clips | Visual Transition with a package-owned effect | VisualTrack |
 | Close several sound contributions with explicit gain | [Audio Clip](audio-clips.md#combine-closed-audio-contributions) | AudioTrack |
-| Coordinate continuing sources, transitions, ducking, layout or state | [Project component](track-authoring.md) | declared VisualTrack and/or AudioTrack |
+| Coordinate continuing sources, cross-Track or visual/audio transitions, ducking, layout or state | [Project component](track-authoring.md) | declared VisualTrack and/or AudioTrack |
 
 These are starting points, not a catalogue of visual roles. Images, text and video can share a scene
 when they share behavior.

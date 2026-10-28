@@ -41,7 +41,7 @@ test("Seedream quality and ratio select the Ark pixel size", async () => {
 
 test("MiniMax text-to-video without an aspect ratio is reported unsupported", () => {
   const request = sealMinimaxH3Request({ prompt: ["a kite"], duration: [5] });
-  assert.deepEqual(request.ports.resolution, ["2K"]);
+  assert.deepEqual(request.fields.resolution, ["2K"]);
   const minimax = route({ name: "@hypit/minimax-h3", version: "1" }, "minimax-h3");
   const support = minimax.supports({ capability: minimax.capability, returns: minimax.returns, constraints: request as unknown as CanonicalValue });
   assert.equal(support.status, "unsupported");

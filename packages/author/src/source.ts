@@ -10,6 +10,7 @@ import type {
 import { sameType, typeKey } from "@hypit/protocol";
 import type {
   SourceAssetRequest,
+  SourceAssetReader,
   SourceAssetResolver,
   SourceImportRequest,
   SourceRange,
@@ -18,6 +19,7 @@ import type {
 } from "@hypit/source";
 
 import type { AuthorComponent, AuthorValueRef } from "./author.js";
+import type { AuthorDocumentFrontend } from "./document.js";
 
 export type AuthorSourceUnit = SourceUnit;
 export type AuthorSourceImport = SourceImportRequest;
@@ -30,6 +32,7 @@ export type AuthorSourceDiscovery = {
 export type AuthorSourceAssetRequest = SourceAssetRequest;
 export type AuthorSourceResolver = SourceResolver;
 export type AuthorSourceAssetResolver = SourceAssetResolver;
+export type AuthorSourceAssetReader = SourceAssetReader;
 
 export type AuthorSourceExport = {
   readonly name: string;
@@ -70,6 +73,7 @@ export type AuthorSourceDecodeContext = {
   readonly closure: ResolvedModuleClosure;
   readonly imports: readonly ResolvedAuthorSourceImport[];
   readonly resolveAsset: (request: AuthorSourceAssetRequest) => Awaitable<BlobRef>;
+  readonly readAsset?: (request: AuthorSourceAssetRequest) => Awaitable<Uint8Array>;
 };
 
 export type DecodedAuthorSource = {
@@ -82,6 +86,8 @@ export type DecodedAuthorSource = {
 
 export type AuthorFrontend = {
   readonly id: string;
+  /** Present only when this Frontend supports lossless author-document editing. */
+  readonly document?: AuthorDocumentFrontend;
   discover(source: SourceUnit): Awaitable<AuthorSourceDiscovery>;
   decode(source: SourceUnit, context: AuthorSourceDecodeContext): Awaitable<DecodedAuthorSource>;
 };

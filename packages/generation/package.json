@@ -8,6 +8,7 @@
     ".": "./src/index.ts",
     "./model": "./src/model-contract.ts",
     "./model-fields": "./src/model-fields.ts",
+    "./model-fields/author": "./src/model-fields-author.ts",
     "./provider": "./src/provider.ts"
   },
   "hypit": {

@@ -18,6 +18,7 @@ import type {
   WorkspaceSession,
 } from "../index.js";
 import { WorkspaceError } from "../index.js";
+import { compareCodeUnits } from "@hypit/protocol";
 import type { BlobRef } from "@hypit/protocol";
 
 function isWithin(root: string, path: string): boolean {
@@ -184,10 +185,7 @@ class NodeFilesystemWorkspaceSession implements WorkspaceSession {
     importer: SourceUnit,
     request: SourceAssetRequest,
   ) => {
-    const importerRoot = this.#sourceRoots.get(importer.id);
-    if (importerRoot === undefined) {
-      throw new WorkspaceError("UNKNOWN_SOURCE_IMPORTER", `${importer.id} is outside this Workspace`, importer.id);
-    }
+    this.#importerRoot(importer);
     if (request.bytes !== undefined) {
       const bytes = Uint8Array.from(request.bytes);
       const blob: BlobRef = {
@@ -202,6 +200,50 @@ class NodeFilesystemWorkspaceSession implements WorkspaceSession {
       });
       return blob;
     }
+    const canonical = await this.#assetPath(importer, request);
+    let identity = this.#assetIdentity.get(canonical);
+    if (identity === undefined) {
+      const size = (await stat(canonical)).size;
+      identity = { resource: `res_${randomUUID()}`, size };
+      this.#assetIdentity.set(canonical, identity);
+    }
+    const blob: BlobRef = {
+      kind: "blob",
+      resource: identity.resource,
+      size: identity.size,
+      mediaType: request.mediaType,
+    };
+    const attachmentKey = `${blob.resource}\u0000${blob.mediaType}`;
+    if (!this.#attachments.has(attachmentKey)) {
+      this.#attachments.set(attachmentKey, {
+        blob: { ...blob },
+        location: pathToFileURL(canonical).href,
+        open: () => createReadStream(canonical),
+        openRange: (range) => createReadStream(canonical, { start: range.start, end: range.endExclusive - 1 }),
+      });
+    }
+    return { ...blob };
+  };
+
+  readonly readAsset = async (
+    importer: SourceUnit,
+    request: SourceAssetRequest,
+  ): Promise<Uint8Array> => {
+    this.#importerRoot(importer);
+    if (request.bytes !== undefined) return Uint8Array.from(request.bytes);
+    return Uint8Array.from(await readFile(await this.#assetPath(importer, request)));
+  };
+
+  #importerRoot(importer: SourceUnit): string {
+    const importerRoot = this.#sourceRoots.get(importer.id);
+    if (importerRoot === undefined) {
+      throw new WorkspaceError("UNKNOWN_SOURCE_IMPORTER", `${importer.id} is outside this Workspace`, importer.id);
+    }
+    return importerRoot;
+  }
+
+  async #assetPath(importer: SourceUnit, request: SourceAssetRequest): Promise<string> {
+    const importerRoot = this.#importerRoot(importer);
     const relativeAsset = request.from.startsWith("./") || request.from.startsWith("../");
     let canonical: string;
     let allowedRoots: readonly string[];
@@ -228,35 +270,14 @@ class NodeFilesystemWorkspaceSession implements WorkspaceSession {
         canonical,
       );
     }
-    let identity = this.#assetIdentity.get(canonical);
-    if (identity === undefined) {
-      const size = (await stat(canonical)).size;
-      identity = { resource: `res_${randomUUID()}`, size };
-      this.#assetIdentity.set(canonical, identity);
-    }
-    const blob: BlobRef = {
-      kind: "blob",
-      resource: identity.resource,
-      size: identity.size,
-      mediaType: request.mediaType,
-    };
-    const attachmentKey = `${blob.resource}\u0000${blob.mediaType}`;
-    if (!this.#attachments.has(attachmentKey)) {
-      this.#attachments.set(attachmentKey, {
-        blob: { ...blob },
-        location: pathToFileURL(canonical).href,
-        open: () => createReadStream(canonical),
-        openRange: (range) => createReadStream(canonical, { start: range.start, end: range.endExclusive - 1 }),
-      });
-    }
-    return { ...blob };
-  };
+    return canonical;
+  }
 
   attachments(): readonly BlobAttachment[] {
     return [...this.#attachments.values()]
       .sort((left, right) => {
-        const byResource = left.blob.resource.localeCompare(right.blob.resource);
-        return byResource === 0 ? left.blob.mediaType.localeCompare(right.blob.mediaType) : byResource;
+        const byResource = compareCodeUnits(left.blob.resource, right.blob.resource);
+        return byResource === 0 ? compareCodeUnits(left.blob.mediaType, right.blob.mediaType) : byResource;
       })
       .map((item) => ({ ...item, blob: { ...item.blob } }));
   }
@@ -271,7 +292,7 @@ export type NodeFilesystemWorkspaceOptions = {
   readonly externalSourceResolver?: NodeFilesystemExternalSourceResolver;
   /** Host-owned resolver for explicit non-relative asset locators, each with its own read boundary. */
   readonly externalAssetResolver?: NodeFilesystemExternalAssetResolver;
-  /** Selects a Frontend for each resolved Source. Defaults to the legacy self-described text adapter. */
+  /** Selects a Frontend for each resolved Source. Defaults to the self-described text adapter. */
   readonly sourceAdapter?: NodeFilesystemSourceAdapter;
 };
 

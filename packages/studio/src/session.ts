@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { relative } from "node:path";
 
-import { markupAuthorFrontendId } from "@hypit/hypit/markup";
+import { markupDeclarationAuthorFrontendId } from "@hypit/hypit/markup";
 import type { CliTransientExecution as RuntimeHostTransientExecution } from "@hypit/hypit/cli";
 import { recipeFrontendId } from "@hypit/hypit/recipe";
 
@@ -15,7 +15,7 @@ import type { StudioCompanionRegistry } from "./studio-registry.js";
 import { snapshot } from "./snapshot.js";
 import { inspectStudioRun } from "./studio-preflight.js";
 import type { StudioSourceFile } from "./parameters.js";
-import type { BuildState } from "@hypit/hypit/protocol";
+import type { BuildView } from "@hypit/hypit/kernel";
 import type { Placement } from "./observe.js";
 
 function sourceFiles(run: RunPlan): readonly StudioSourceFile[] {
@@ -28,7 +28,7 @@ function sourceFiles(run: RunPlan): readonly StudioSourceFile[] {
         ? "svrun" as const
         : unit?.frontend === recipeFrontendId
           ? "svs" as const
-          : unit?.frontend === markupAuthorFrontendId
+          : unit?.frontend === markupDeclarationAuthorFrontendId
             ? "svml" as const
             : undefined;
       if (language === undefined) return [];
@@ -52,7 +52,7 @@ export type StudioSession = {
   readonly visualHtml: string;
   readonly material: ReadonlyMap<string, ServedFile>;
   readonly temporalEdit: {
-    readonly state: BuildState;
+    readonly state: BuildView;
     readonly files: readonly StudioSourceFile[];
     readonly placements: readonly Placement[];
   };
@@ -72,7 +72,8 @@ export async function readStudioSession(input: {
   const outputRefs = [
     inspection.filmComposition,
     inspection.timeRef,
-    ...inspection.projections.map((projection) => projection.ref),
+    ...inspection.tracks.map((track) => track.ref),
+    ...inspection.requiredValues,
   ];
   const built = await resolveStudioProjection({
     source,
@@ -82,7 +83,7 @@ export async function readStudioSession(input: {
     outputRefs,
     compositionRef: inspection.filmComposition,
     timeRef: inspection.timeRef,
-    projections: inspection.projections,
+    tracks: inspection.tracks,
     ...(input.transientExecution === undefined ? {} : { transientExecution: input.transientExecution }),
   });
   const rendered = renderStudioHtmlProgram({
@@ -103,17 +104,12 @@ export async function readStudioSession(input: {
       run: {
         path: relative(input.workspaceRoot, input.run.runPath),
         targets: input.run.targets,
-        satisfactions: input.run.run.graph.satisfactions.map((item) => ({
-          output: item.output,
-          candidate: item.candidate,
-        })),
       },
       canvas: built.canvas,
       frameRate: built.frameRate,
       preview: { kind: "html-program", srcdoc: rendered.preview },
       workspaceRoot: input.workspaceRoot,
       sourceFiles: files,
-      surfaces: input.domain.surfaces,
     }),
     material: built.served,
     temporalEdit: {

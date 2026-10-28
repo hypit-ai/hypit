@@ -1,4 +1,5 @@
-import type { StudioItem, StudioSnapshot } from "../shared.js";
+import type { StudioItem, StudioItemAddress, StudioSnapshot } from "../shared.js";
+import { sameStudioItemAddress, studioItemAddressKey } from "../shared.js";
 
 /**
  * Which pane the user acted in. Panes ignore events they originated, which is
@@ -9,7 +10,7 @@ export type Origin = "timeline" | "code" | "video";
 
 export type Selection =
   | { readonly kind: "none" }
-  | { readonly kind: "item"; readonly itemId: string; readonly origin: Origin }
+  | { readonly kind: "item"; readonly item: StudioItemAddress; readonly origin: Origin }
   | { readonly kind: "temporal-domain"; readonly companion: string; readonly domainId: string; readonly itemId: string; readonly origin: Origin };
 
 export type Playhead = { readonly frame: number; readonly origin: Origin | "play" };
@@ -19,31 +20,31 @@ export type State = {
   readonly selection: Selection;
   readonly playhead: Playhead;
   /** Session-local omissions used only while evaluating the Studio preview. */
-  readonly preview: { readonly omittedItemIds: ReadonlySet<string> };
+  readonly preview: { readonly omittedItemKeys: ReadonlySet<string> };
 };
 
 export type Store = {
   /** Undefined until the first snapshot arrives. */
   current(): State | undefined;
-  item(itemId: string): StudioItem | undefined;
+  item(address: StudioItemAddress): StudioItem | undefined;
   /** Items covering a frame, topmost track first. */
   itemsAt(frame: number): readonly StudioItem[];
   load(snapshot: StudioSnapshot): void;
   /** Select without moving the playhead; timeline inspection must not destroy position. */
-  select(itemId: string, origin: Origin): void;
+  select(address: StudioItemAddress, origin: Origin): void;
   /** Select one package-contributed temporal-domain item without moving the playhead. */
   selectTemporalDomainItem(companion: string, domainId: string, itemId: string, origin: Origin): void;
   /** Select and seek to the Item start, used by source navigation. */
-  selectItem(itemId: string, origin: Origin): void;
+  selectItem(address: StudioItemAddress, origin: Origin): void;
   /**
    * Look at one instant, optionally selecting an Item there. Used when the thing
    * an author pointed at is a Script range rather than an Item, which has no
    * first frame of its own to jump to.
    */
-  focus(frame: number, itemId: string | undefined, origin: Origin): void;
+  focus(frame: number, item: StudioItemAddress | undefined, origin: Origin): void;
   clearSelection(): void;
   seek(frame: number, origin: Origin | "play"): void;
-  setItemPreviewIncluded(itemId: string, included: boolean): void;
+  setItemPreviewIncluded(item: StudioItemAddress, included: boolean): void;
   resetPreviewMask(): void;
   subscribe(listener: (state: State) => void): void;
 };
@@ -81,14 +82,14 @@ export function createStore(): Store {
   let snapshot: StudioSnapshot | undefined;
   let selection: Selection = { kind: "none" };
   let playhead: Playhead = { frame: 0, origin: "timeline" };
-  let omittedItemIds = new Set<string>();
+  let omittedItemKeys = new Set<string>();
   const listeners: ((state: State) => void)[] = [];
 
   const items = (): readonly StudioItem[] => snapshot?.tracks.flatMap((track) => track.items) ?? [];
 
   const emit = (): void => {
     if (snapshot === undefined) return;
-    const state: State = { snapshot, selection, playhead, preview: { omittedItemIds } };
+    const state: State = { snapshot, selection, playhead, preview: { omittedItemKeys } };
     for (const listener of listeners) listener(state);
   };
 
@@ -96,8 +97,8 @@ export function createStore(): Store {
     Math.max(0, Math.min(Math.round(frame), (snapshot?.timeline.frameCount ?? 1) - 1));
 
   return {
-    current: () => snapshot === undefined ? undefined : { snapshot, selection, playhead, preview: { omittedItemIds } },
-    item: (itemId) => items().find((item) => item.id === itemId),
+    current: () => snapshot === undefined ? undefined : { snapshot, selection, playhead, preview: { omittedItemKeys } },
+    item: (address) => items().find((item) => sameStudioItemAddress(item.address, address)),
     itemsAt(frame) {
       return items()
         .filter((item) => frame >= item.startFrame && frame < item.endFrameExclusive)
@@ -108,7 +109,7 @@ export function createStore(): Store {
       // A recompiled Source may have dropped the selected Item, and its frame
       // count may have moved under the playhead.
       const held = selection;
-      if (held.kind === "item" && !items().some((item) => item.id === held.itemId)) {
+      if (held.kind === "item" && !items().some((item) => sameStudioItemAddress(item.address, held.item))) {
         selection = { kind: "none" };
       }
       if (held.kind === "temporal-domain"
@@ -119,14 +120,14 @@ export function createStore(): Store {
       playhead = { frame: clamp(playhead.frame), origin: playhead.origin };
       const available = new Set(items()
         .filter((item) => item.terminalTargets.some((target) => target.kind === "visual-adjustment"))
-        .map((item) => item.id));
-      omittedItemIds = new Set([...omittedItemIds].filter((id) => available.has(id)));
+        .map((item) => studioItemAddressKey(item.address)));
+      omittedItemKeys = new Set([...omittedItemKeys].filter((key) => available.has(key)));
       emit();
     },
-    select(itemId, origin) {
-      const item = items().find((candidate) => candidate.id === itemId);
+    select(address, origin) {
+      const item = items().find((candidate) => sameStudioItemAddress(candidate.address, address));
       if (item === undefined) return;
-      selection = { kind: "item", itemId, origin };
+      selection = { kind: "item", item: address, origin };
       emit();
     },
     selectTemporalDomainItem(companion, domainId, itemId, origin) {
@@ -135,16 +136,16 @@ export function createStore(): Store {
       selection = { kind: "temporal-domain", companion, domainId, itemId, origin };
       emit();
     },
-    selectItem(itemId, origin) {
-      const item = items().find((candidate) => candidate.id === itemId);
+    selectItem(address, origin) {
+      const item = items().find((candidate) => sameStudioItemAddress(candidate.address, address));
       if (item === undefined) return;
-      selection = { kind: "item", itemId, origin };
+      selection = { kind: "item", item: address, origin };
       playhead = { frame: clamp(item.startFrame), origin };
       emit();
     },
-    focus(frame, itemId, origin) {
-      const item = itemId === undefined ? undefined : items().find((candidate) => candidate.id === itemId);
-      selection = item === undefined ? { kind: "none" } : { kind: "item", itemId: item.id, origin };
+    focus(frame, address, origin) {
+      const item = address === undefined ? undefined : items().find((candidate) => sameStudioItemAddress(candidate.address, address));
+      selection = item === undefined ? { kind: "none" } : { kind: "item", item: item.address, origin };
       playhead = { frame: clamp(frame), origin };
       emit();
     },
@@ -159,23 +160,24 @@ export function createStore(): Store {
       playhead = { frame: next, origin };
       emit();
     },
-    setItemPreviewIncluded(itemId, included) {
-      const item = items().find((candidate) => candidate.id === itemId);
+    setItemPreviewIncluded(address, included) {
+      const item = items().find((candidate) => sameStudioItemAddress(candidate.address, address));
       if (item === undefined || !item.terminalTargets.some((target) => target.kind === "visual-adjustment")) return;
-      const next = new Set(omittedItemIds);
-      if (included) next.delete(itemId); else next.add(itemId);
-      if (next.size === omittedItemIds.size && [...next].every((id) => omittedItemIds.has(id))) return;
-      omittedItemIds = next;
+      const key = studioItemAddressKey(address);
+      const next = new Set(omittedItemKeys);
+      if (included) next.delete(key); else next.add(key);
+      if (next.size === omittedItemKeys.size && [...next].every((candidate) => omittedItemKeys.has(candidate))) return;
+      omittedItemKeys = next;
       emit();
     },
     resetPreviewMask() {
-      if (omittedItemIds.size === 0) return;
-      omittedItemIds = new Set();
+      if (omittedItemKeys.size === 0) return;
+      omittedItemKeys = new Set();
       emit();
     },
     subscribe(listener) {
       listeners.push(listener);
-      if (snapshot !== undefined) listener({ snapshot, selection, playhead, preview: { omittedItemIds } });
+      if (snapshot !== undefined) listener({ snapshot, selection, playhead, preview: { omittedItemKeys } });
     },
   };
 }

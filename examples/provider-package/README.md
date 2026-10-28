@@ -66,9 +66,9 @@ The Model declares the request; this Provider decides how the service receives i
 differ from the image example, and each is the reason the video example exists.
 
 **The reference vocabulary is wider, and each role maps to its own field.** The Model declares
-`referenceImage`, `referenceVideo` and `referenceAudio` as separate ports precisely so each can map
+`referenceImage`, `referenceVideo` and `referenceAudio` as separate fields precisely so each can map
 to one wire field — a service that mixes them into one array cannot tell the roles apart. An image
-reference also requires a boolean `personReference` classification, which is why those ports use
+reference also requires a boolean `personReference` classification, which is why those fields use
 `itemObject` rather than `urlArray`: the item field travels with the URL it belongs to.
 
 ```json
@@ -113,8 +113,7 @@ request-level checks and transport tests as well:
 a mapping that forgets a reference role or an item field fails at load rather than after a paid
 generation returns the wrong video. Model-owned defaults are inserted while its request is
 finalized, so the Provider always receives an explicit canonical value and only projects it onto
-the service's field names. The lifecycle test asserts the mapping against the Model's own port
-table.
+the service's field names. The lifecycle test asserts the mapping against the Model's own field table.
 
 ## Make it a package in the production
 

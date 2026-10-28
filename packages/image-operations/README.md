@@ -11,6 +11,10 @@ They share one package because they have the same owner, installation decision a
 lifecycle. They do not share one Capability: a Provider may accurately implement either or both.
 The package contains no OpenCV, filesystem, queue or Provider policy.
 
+The package also owns the syntax-neutral Program, Transform and Compose declarations and their graph
+lowering. Markup contributes only their tag spelling; Providers remain selected later from the two
+explicit Capabilities.
+
 ```xml
 <import as="image" from="@hypit/image-operations@1"/>
 

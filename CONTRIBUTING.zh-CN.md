@@ -78,7 +78,7 @@ Hypit 按事实归属组织测试，不使用含义模糊的 unit/integration/e2
 视频领域 SDK 改为独立安装的包。组件代码使用 `@hypit/hypit/composition` 等旧根子路径时，
 需要改为从 `@hypit/composition` 导入，并在组件自己的 `dependencies` 中声明该包。
 Timeline、Temporal、Spatial、Media、Narrative、Caption、Generation、HTML Program、证据与
-投影包同理。使用子路径 API 时，以所属包实际导出为准，例如 `@hypit/temporal/markup`、
+投影包同理。使用子路径 API 时，以所属包实际导出为准，例如 `@hypit/temporal/author`、
 `@hypit/temporal/studio`。通用宿主 API 继续由 `@hypit/hypit/*` 提供。
 SVML 的逻辑 Module 引用仍保持 `@1`，这里改变的是 npm 归属和 TypeScript 导入路径。
 

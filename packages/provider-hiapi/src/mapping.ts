@@ -11,7 +11,7 @@ export type HiApiMapping = GenerationWireMapping & { readonly media: "image" | "
 /**
  * HiAPI model IDs and the `input` fields each documents. A model whose HiAPI ID depends on the
  * request shape (text, frames or references) lists one route per shape; the first route whose
- * ports are present wins. `personReference` is accepted on Seedance visual references and not
+ * fields are present wins. `personReference` is accepted on Seedance visual references and not
  * transmitted: HiAPI has no field for it.
  */
 const seedanceFields = {

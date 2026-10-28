@@ -5,12 +5,12 @@ import {
   materializeBuild,
 } from "@hypit/kernel";
 import type {
-  BuildState,
   ModuleManifest,
   ProducerRef,
   ProducerStep,
   TypeRef,
 } from "@hypit/protocol";
+import type { BuildView } from "@hypit/kernel";
 
 const moduleRef = { name: "example.greeting", version: "0.0.0" } as const;
 const types = {
@@ -49,7 +49,7 @@ const manifest: ModuleManifest = {
   }],
 };
 
-export function createGreetingBuild(options?: { readonly targetOutputs?: readonly ("prompt" | "document")[] }): BuildState {
+export function createGreetingBuild(options?: { readonly targetOutputs?: readonly ("prompt" | "document")[] }): BuildView {
   const targets = options?.targetOutputs ?? ["document"];
   const steps: ProducerStep[] = [{
     id: "make-prompt",

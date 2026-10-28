@@ -30,14 +30,14 @@ test("frames travel as one ordered images array", async () => {
   });
 });
 
-test("Seedance ports BeatAPI has no field for are dropped when off and refused when on", async () => {
+test("Seedance fields BeatAPI cannot represent are accepted only when absent", async () => {
   const mini = route("@hypit/seedance", "seedance-2-mini");
-  const ports = {
+  const fields = {
     prompt: ["A handheld tracking shot through a crowded neon night market."],
     duration: [5], resolution: ["720p"], aspectRatio: ["adaptive"],
     generateAudio: [false], webSearch: [false],
   };
-  assert.deepEqual(await mini.prepare(constraints(sealSeedanceRequest("seedance-2-mini", ports))).compile(resolve), {
+  assert.deepEqual(await mini.prepare(constraints(sealSeedanceRequest("seedance-2-mini", fields))).compile(resolve), {
     model: "seedance-2-mini",
     prompt: "A handheld tracking shot through a crowded neon night market.",
     duration: 5,
@@ -46,7 +46,7 @@ test("Seedance ports BeatAPI has no field for are dropped when off and refused w
   });
 
   for (const stated of [{ generateAudio: [true] }, { webSearch: [true] }]) {
-    const request = sealSeedanceRequest("seedance-2-mini", { ...ports, ...stated });
+    const request = sealSeedanceRequest("seedance-2-mini", { ...fields, ...stated });
     assert.equal(mini.supports({ capability: mini.capability, returns: mini.returns, constraints: constraints(request) }).status,
       "unsupported");
   }
@@ -61,7 +61,7 @@ test("BeatAPI's narrower Nano Banana quota does not narrow the model contract", 
   const request = sealNanoBananaRequest("nano-banana-2", {
     prompt: ["compose"], aspectRatio: ["1:1"], resolution: ["1K"], outputFormat: ["png"], images,
   });
-  assert.equal(request.ports.images?.length, 11);
+  assert.equal(request.fields.images?.length, 11);
   assert.deepEqual(nano.supports({ capability: nano.capability, returns: nano.returns, constraints: constraints(request) }), {
     status: "unsupported",
     reason: "BeatAPI nano-banana-2 accepts up to ten reference images",

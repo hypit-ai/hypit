@@ -1,5 +1,6 @@
 import type { StudioItem, StudioSnapshot } from "../shared.js";
 import type { StudioTerminalTarget } from "../shared.js";
+import { studioItemAddressKey } from "../shared.js";
 import { intentTones } from "./markers.js";
 import type { Store } from "./selection.js";
 
@@ -15,8 +16,8 @@ export type Box = {
   readonly widthPx: number; readonly heightPx: number;
 };
 
-type PresentTarget = Extract<StudioTerminalTarget, { readonly kind: "visual-present" }>;
-export type Measure = (target: PresentTarget) => (Box & { readonly paintPath: readonly number[] }) | undefined;
+type VisualTarget = Extract<StudioTerminalTarget, { readonly kind: "visual-present" | "visual-process" }>;
+export type Measure = (target: VisualTarget) => (Box & { readonly paintPath: readonly number[] }) | undefined;
 
 export type Overlay = {
   readonly element: SVGSVGElement;
@@ -76,7 +77,7 @@ export function createOverlay(store: Store, measure: Measure): Overlay {
    */
   const drawnParts = (item: StudioItem) => {
     return item.terminalTargets.flatMap((ref) => {
-      if (ref.kind !== "visual-present") return [];
+      if (ref.kind !== "visual-present" && ref.kind !== "visual-process") return [];
       const found = measure(ref);
       return found === undefined ? [] : [found];
     });
@@ -125,7 +126,7 @@ export function createOverlay(store: Store, measure: Measure): Overlay {
   store.subscribe(({ snapshot, selection }) => {
     last = {
       snapshot,
-      selected: selection.kind === "item" ? store.item(selection.itemId) : undefined,
+      selected: selection.kind === "item" ? store.item(selection.item) : undefined,
     };
     draw();
   });
@@ -147,7 +148,7 @@ export function createOverlay(store: Store, measure: Measure): Overlay {
           }
           return 0;
         });
-      return [...new Map(hits.map(({ item }) => [item.id, item])).values()];
+      return [...new Map(hits.map(({ item }) => [studioItemAddressKey(item.address), item])).values()];
   };
   return {
     element,

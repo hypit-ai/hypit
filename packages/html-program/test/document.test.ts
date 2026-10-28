@@ -4,6 +4,7 @@ import {
   assertHtmlFrameSpan,
   compileHtmlProgram,
   htmlAdjustment,
+  htmlVisual,
   htmlProgramTime,
   materializeHtmlProgram,
 } from "@hypit/html-program";
@@ -16,7 +17,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { fixtureResource } from "../../../test/fixture-resource.js";
 import { frameRangeFixture, frameSamplingMapFixture } from "../../../test/temporal-fixture.js";
-import { exactTemporalValueFromFrames, exactTemporalZero, identityTemporalMap, sealTemporalMap } from "@hypit/temporal";
+import { exactTemporalValueFromFrames, exactTemporalZero, identityTemporalMap, isAffineTemporalMapPiece, sealTemporalMap } from "@hypit/temporal";
 import type { TemporalMap } from "@hypit/temporal";
 
 function directVideoSource(artifact: import("@hypit/hypit/protocol").BlobRef,
@@ -43,6 +44,13 @@ const replaceVisualTrack = (composition: Composition, id: string, track: VisualT
     ? { kind: "track" as const, id: member.id, track }
     : member) },
 });
+const staticAdjustment = (filter: string) => htmlAdjustment({ keyframes: [{
+  at: 0,
+  filter,
+  opacity: 1,
+  transform: "none",
+  transformOrigin: "50% 50%",
+}] });
 
 function fixture() {
   const timeline = sealTimeline({ id: "test-space", frameCount: 30, frameRate: { numerator: 30_000, denominator: 1_001 },
@@ -136,7 +144,8 @@ test("HTML renderer flattens generic peer visual Track Presents without absorbin
     { kind: "frames", spans: [{ startFrame: 0, endFrameExclusive: 30 }] });
   assert.deepEqual(document.artifacts.find(({ artifact }) => artifact.resource === fixtureFont.sources[0]!.artifact.resource)?.usage,
     { kind: "always" });
-  assert.ok(document.html.includes(`data-hypit-resource-src="hypit-resource://${picture.resource}"`));
+  const pictureId = document.artifacts.find(({ artifact }) => artifact.resource === picture.resource)!.id;
+  assert.ok(document.html.includes(`data-hypit-artifact-src="hypit-artifact://${pictureId}"`));
   assert.doesNotMatch(document.html, /<img\b[^>]*\ssrc=/u,
     "compiler-owned images stay inert until the page applies its render selection");
   assert.ok(document.html.indexOf('data-hypit-occurrence-path="[&quot;lower&quot;]"')
@@ -151,6 +160,77 @@ test("HTML renderer flattens generic peer visual Track Presents without absorbin
   assert.match(document.html, /-webkit-text-stroke:4px #000000/u);
   assert.doesNotMatch(document.html, /<feMorphology/u);
   assert.doesNotMatch(document.html, /speech-visual-track|caption-track/u);
+});
+
+test("HTML renderer preserves independent input clocks inside a Visual Process", () => {
+  const { composition, timeline } = fixture();
+  const processTrack = sealVisualTrack({
+    timelineId: timeline.id,
+    visualIr: VISUAL_IR_V1,
+    id: "process",
+    items: [{
+      kind: "process",
+      id: "handoff",
+      span: { startFrame: 10, endFrameExclusive: 20 },
+      inputs: [{
+        name: "outgoing",
+        contribution: {
+          kind: "present",
+          id: "outgoing",
+          span: { startFrame: 0, endFrameExclusive: 20 },
+          root: { kind: "box", id: "outgoing-root", style: [], children: [] },
+        },
+      }, {
+        name: "incoming",
+        contribution: {
+          kind: "present",
+          id: "incoming",
+          span: { startFrame: 10, endFrameExclusive: 30 },
+          root: { kind: "box", id: "incoming-root", style: [], children: [] },
+        },
+      }],
+      program: htmlVisual({
+        html: "<div>{{outgoing}}{{incoming}}</div>",
+        setup: "return localFrame => { root.dataset.localFrame = String(localFrame); };",
+      }),
+    }],
+  });
+  const document = compileHtmlProgram(sealComposition({
+    ...composition,
+    visual: scope(processTrack),
+  }), timeline);
+  assert.match(document.html, /data-hypit-process-id="handoff"/u);
+  assert.match(document.html, /data-hypit-present-id="outgoing"[^>]*data-hypit-contribution-start-frame="0"/u);
+  assert.match(document.html, /data-hypit-present-id="incoming"[^>]*data-hypit-contribution-start-frame="10"/u);
+  assert.match(document.html, /new Function\('root', 'data', 'context'/u);
+});
+
+test("Programme-local Artifact ids do not depend on Resource-id substring order", () => {
+  const timeline = sealTimeline({ id: "artifact-prefix", frameCount: 1, frameRate: { numerator: 1, denominator: 1 } });
+  const artifacts: readonly import("@hypit/hypit/protocol").BlobRef[] = [
+    { kind: "blob" as const, resource: "res_prefix", size: 1, mediaType: "image/png" },
+    { kind: "blob" as const, resource: "res_prefix_long", size: 1, mediaType: "image/png" },
+  ];
+  const track = sealPresentVisualTrack({
+    timelineId: timeline.id,
+    visualIr: VISUAL_IR_V1,
+    id: "pictures",
+    presents: artifacts.map((artifact, index) => ({
+      id: `picture-${index}`,
+      span: { startFrame: 0, endFrameExclusive: 1 },
+      root: { id: `image-${index}`, kind: "image" as const, artifact, style: [] },
+    })),
+  });
+  const document = compileHtmlProgram(sealComposition({
+    id: "artifact-prefix",
+    canvas: { width: 1, height: 1, clearColor: "#000000" },
+    visual: scope(track),
+    audio: [],
+  }), timeline);
+  const ids = document.artifacts.map((entry) => entry.id);
+  assert.equal(ids.length, 2);
+  for (const id of ids) assert.ok(document.html.includes(`hypit-artifact://${id}`));
+  assert.doesNotMatch(document.html, /hypit-artifact:\/\/res_prefix/u);
 });
 
 test("one VisualTrack paints by declaration order rather than item identity", () => {
@@ -237,14 +317,14 @@ test("HTML renderer folds Adjustments around the accumulated picture in visual s
         kind: "adjustment",
         id: "soften",
         span: { startFrame: 0, endFrameExclusive: 30 },
-        program: htmlAdjustment({ filter: "blur(4px)" }),
+        program: staticAdjustment("blur(4px)"),
       },
       {
         kind: "adjustment",
         id: "grade",
         span: { startFrame: 4, endFrameExclusive: 24 },
         visibility: [{ startFrame: 6, endFrameExclusive: 20 }],
-        program: htmlAdjustment({ filter: "saturate(1.2) contrast(1.05)" }),
+        program: staticAdjustment("saturate(1.2) contrast(1.05)"),
       },
     ],
   });
@@ -257,8 +337,8 @@ test("HTML renderer folds Adjustments around the accumulated picture in visual s
   const words = html.indexOf('data-hypit-present-id="words"');
   assert.ok(grade >= 0 && grade < soften && soften < clear && clear < picture && picture < words,
     "later Adjustments wrap the earlier picture while later Presents remain outside");
-  assert.match(html, /data-hypit-adjustment-filter="blur\(4px\)"/u);
-  assert.match(html, /data-hypit-adjustment-filter="saturate\(1\.2\) contrast\(1\.05\)"/u);
+  assert.match(html, /blur\(4px\)/u);
+  assert.match(html, /saturate\(1\.2\) contrast\(1\.05\)/u);
   assert.match(html, /htmlCreateFrameWorkIndex/u);
 });
 
@@ -273,7 +353,7 @@ test("recursive Visual Stack closes child compositing before entering its parent
       kind: "adjustment",
       id: "child-grade",
       span: { startFrame: 0, endFrameExclusive: 30 },
-      program: htmlAdjustment({ filter: "contrast(1.1)" }),
+      program: staticAdjustment("contrast(1.1)"),
     }],
   });
   const nested = sealComposition({
@@ -331,14 +411,14 @@ test("HTML Adjustment activity is an absolute-frame function across arbitrary se
     startFrame: 4,
     endFrameExclusive: 24,
     visibility: [{ startFrame: 6, endFrameExclusive: 10 }, { startFrame: 16, endFrameExclusive: 20 }],
-    filter: "blur(4px)",
+    keyframes: [{ at: 0, filter: "blur(4px)", opacity: 1, transform: "none", transformOrigin: "50% 50%" }],
   }, {
     id: "peer-grade",
     occurrencePath: ["right"],
     adjustmentId: "grade",
     startFrame: 4,
     endFrameExclusive: 24,
-    filter: "contrast(1.1)",
+    keyframes: [{ at: 0, filter: "contrast(1.1)", opacity: 1, transform: "none", transformOrigin: "50% 50%" }],
   }])}`, {
     document: { getElementById: (id: string) => id === "grade" ? element : peer },
     window: window_,
@@ -361,6 +441,57 @@ test("HTML Adjustment activity is an absolute-frame function across arbitrary se
   assert.equal(window_.__hypitSetAdjustmentBypassed?.(["missing"], "grade", true), false);
   seek({ detail: { frame: 24 } });
   assert.equal(element.style.filter, "none");
+});
+
+test("HTML Adjustment samples dynamic effect keyframes on occurrence-local progress", async () => {
+  const { runInNewContext } = await import("node:vm");
+  const { htmlAdjustmentScript } = await import("../src/html-adjustment.js");
+  const { frameWorkIndexRuntime } = await import("../src/frame-work.js");
+  const element = { style: { filter: "uninitialized", opacity: "1", transform: "none", transformOrigin: "50% 50%" } };
+  let seek: (event: { detail: { frame: number } }) => void = () => {};
+  let animationCount = 0;
+  class Effect {
+    constructor(readonly target: typeof element, readonly keyframes: readonly Record<string, string | number>[]) {}
+  }
+  class AnimationProbe {
+    constructor(readonly effect: Effect) { animationCount += 1; }
+    pause() {}
+    cancel() {}
+    set currentTime(value: number) {
+      const state = this.effect.keyframes.find(({ offset }) => offset === value / 1000);
+      if (state === undefined) throw new Error(`Fixture has no exact state at ${value}.`);
+      this.effect.target.style.filter = String(state.filter);
+      this.effect.target.style.opacity = String(state.opacity);
+      this.effect.target.style.transform = String(state.transform);
+      this.effect.target.style.transformOrigin = String(state.transformOrigin);
+    }
+  }
+  runInNewContext(`${frameWorkIndexRuntime}\n${htmlAdjustmentScript([{
+    id: "pulse",
+    occurrencePath: ["scope"],
+    adjustmentId: "pulse",
+    startFrame: 10,
+    endFrameExclusive: 13,
+    keyframes: [
+      { at: 0, filter: "blur(0px)", opacity: 1, transform: "none", transformOrigin: "50% 50%" },
+      { at: 0.5, filter: "blur(12px)", opacity: 1, transform: "none", transformOrigin: "50% 50%" },
+      { at: 1, filter: "blur(0px)", opacity: 1, transform: "none", transformOrigin: "50% 50%" },
+    ],
+  }])}`, {
+    Animation: AnimationProbe,
+    KeyframeEffect: Effect,
+    document: { getElementById: () => element, timeline: {} },
+    getComputedStyle: () => element.style,
+    window: { addEventListener: (_name: string, callback: typeof seek) => { seek = callback; } },
+  });
+  assert.equal(animationCount, 1);
+  seek({ detail: { frame: 10 } });
+  assert.equal(element.style.filter, "blur(0px)");
+  seek({ detail: { frame: 11 } });
+  assert.equal(element.style.filter, "blur(12px)");
+  seek({ detail: { frame: 12 } });
+  assert.equal(element.style.filter, "blur(0px)");
+  assert.equal(animationCount, 1);
 });
 
 test("Text shrink preserves authored hug sizing and trims metrics inside the content box", () => {
@@ -465,10 +596,11 @@ test("Text shrink preserves authored hug sizing and trims metrics inside the con
 test("visual Artifact placeholders are materialized only by the Runtime boundary", () => {
   const { composition, picture, sound, timeline } = fixture();
   const document = compileHtmlProgram(composition, timeline);
-  assert.match(document.html, /hypit-resource:\/\/res_/u);
+  assert.match(document.html, /hypit-artifact:\/\/artifact-/u);
+  assert.doesNotMatch(document.html, new RegExp(picture.resource, "u"));
   const resolved = materializeHtmlProgram(document,
     (artifact) => `https://assets.example/${artifact.resource}?x=1&y=2`);
-  assert.doesNotMatch(resolved, /hypit-resource:\/\//u);
+  assert.doesNotMatch(resolved, /hypit-artifact:\/\//u);
   assert.match(resolved, new RegExp(`https://assets\\.example/${picture.resource}\\?x=1&amp;y=2`, "u"));
   assert.doesNotMatch(resolved, new RegExp(sound.resource, "u"));
   assert.equal(document.html.includes("assets.example"), false, "materialization must not mutate the compiled document");
@@ -777,7 +909,7 @@ test("content-bound fonts and typed compositable Surfaces cross the same Artifac
   assert.match(document.html, /data-hypit-color-space="srgb"/u);
   const materialized = materializeHtmlProgram(document,
     (artifact) => `https://assets.example/${artifact.resource}?token=1&part=2`);
-  assert.doesNotMatch(materialized, /hypit-resource:\/\//u);
+  assert.doesNotMatch(materialized, /hypit-artifact:\/\//u);
   assert.match(materialized, new RegExp(font.sources[0]!.artifact.resource, "u"));
   assert.match(materialized, new RegExp(surfaceResource, "u"));
 });
@@ -828,10 +960,12 @@ test("exact timed sampling keeps a held frame as one compact interval without ze
   assert.equal(document.videoSources[0]?.kind, "media");
   if (document.videoSources[0]?.kind !== "media") throw new Error("Expected direct media source");
   assert.equal(document.videoSources[0].sampling.stages[0]?.pieces.length, 2);
-  assert.equal((document.html.match(/data-hypit-resource-src="hypit-resource:\/\//gu) ?? []).length, 1);
+  assert.equal((document.html.match(/data-hypit-artifact-src="hypit-artifact:\/\//gu) ?? []).length, 1);
   assert.doesNotMatch(document.html, /<video\b[^>]*\ssrc=/u,
     "compiler-owned video stays inert while its exact slots remain statically readable");
-  assert.equal(document.videoSources[0].sampling.stages[0]?.pieces[1]?.rate.numerator, 0);
+  const heldPiece = document.videoSources[0].sampling.stages[0]?.pieces[1];
+  assert.ok(heldPiece && isAffineTemporalMapPiece(heldPiece));
+  assert.equal(heldPiece.rate.numerator, 0);
 });
 
 test("HTML terminal quantizes continuous sampling pieces without moving their source position", () => {
@@ -943,7 +1077,7 @@ test("HTML visuals own local HTML while retaining typed child resources and form
       root: { id: "root", kind: "program", style: [], slots: [{ name: "photo", element: {
         id: "photo", kind: "image", artifact: picture, style: [],
       } }], program: htmlVisual({
-        html: `<section class="viewport">{{photo}}<img class="opaque" src="hypit-resource://${opaqueArtifact.resource}"><svg><path d="M0 0H20"/></svg></section>`,
+        html: `<section class="viewport">{{photo}}<img class="opaque" src="hypit-artifact://${opaqueArtifact.resource}"><svg><path d="M0 0H20"/></svg></section>`,
         css: '.viewport { backdrop-filter:blur(4px); display:grid; }',
         setup: 'return frame => { root.dataset.frame = String(frame); };',
       }, [opaqueArtifact]) } }] });
@@ -955,9 +1089,11 @@ test("HTML visuals own local HTML while retaining typed child resources and form
   assert.deepEqual(document.artifacts.find(({ artifact }) => artifact.resource === picture.resource)?.usage,
     { kind: "frames", spans: [{ startFrame: 0, endFrameExclusive: 30 }] });
   assert.ok(document.html.includes('<section class="viewport">'));
-  assert.ok(document.html.includes(`class="opaque" src="hypit-resource://${opaqueArtifact.resource}"`),
-    "opaque HtmlVisual markup is not rewritten by the structural compiler");
-  assert.ok(document.html.includes(`data-hypit-resource-src="hypit-resource://${picture.resource}"`),
+  const opaqueId = document.artifacts.find(({ artifact }) => artifact.resource === opaqueArtifact.resource)!.id;
+  const pictureId = document.artifacts.find(({ artifact }) => artifact.resource === picture.resource)!.id;
+  assert.ok(document.html.includes(`class="opaque" src="hypit-artifact://${opaqueId}"`),
+    "opaque HtmlVisual structure keeps its authored HTML while declared locators use Programme identities");
+  assert.ok(document.html.includes(`data-hypit-artifact-src="hypit-artifact://${pictureId}"`),
     "a typed child keeps the structural compiler's selection-gated resource behavior");
   assert.ok(document.html.includes('@scope'));
   const missing = structuredClone(composition);
@@ -980,7 +1116,7 @@ test("HTML visual state follows direct seeks and reports authored evaluation fai
   };
   runInNewContext(`${frameWorkIndexRuntime}\n${htmlVisualScript([{ id: "scene", startFrame: 30, durationFrames: 90,
     program: { html: "", setup: 'return frame => { if(frame===60) throw new Error("bad pose"); root.frame=frame; };' },
-  }], 30, 1)}`, { window, document: { getElementById: () => root } });
+  }])}`, { window, document: { getElementById: () => root } });
   seek({ detail: { frame: 75 } });
   assert.equal(root.frame, 45);
   seek({ detail: { frame: 36 } });
@@ -997,7 +1133,7 @@ test("inactive programs settle once, while re-entry and repeated active seeks st
   let seek: (event: { detail: { frame: number } }) => void = () => {};
   runInNewContext(`${frameWorkIndexRuntime}\n${htmlVisualScript([{ id: "scene", startFrame: 30, durationFrames: 30,
     program: { html: "", setup: 'return frame => { root.frames.push(frame); root.painted=root.ready; };' },
-  }], 30, 1)}`, { window: { addEventListener: (_: string, callback: typeof seek) => { seek = callback; } },
+  }])}`, { window: { addEventListener: (_: string, callback: typeof seek) => { seek = callback; } },
     document: { getElementById: () => root } });
   seek({ detail: { frame: 15 } });
   assert.deepEqual(root.frames, [0]);
@@ -1025,7 +1161,7 @@ test("sequential HtmlVisual work follows active and crossed spans instead of eve
   }));
   const roots = new Map(entries.map(entry => [entry.id, { calls: 0 }]));
   let seek: (event: { detail: { frame: number } }) => void = () => {};
-  runInNewContext(`${frameWorkIndexRuntime}\n${htmlVisualScript(entries, 30, 1)}`, {
+  runInNewContext(`${frameWorkIndexRuntime}\n${htmlVisualScript(entries)}`, {
     window: { addEventListener: (_: string, callback: typeof seek) => { seek = callback; } },
     document: { getElementById: (id: string) => roots.get(id) },
   });
@@ -1050,7 +1186,7 @@ test("HTML visual setup is limited to Presents overlapping the render selection"
   ];
   runInNewContext(`${frameWorkIndexRuntime}
     htmlPrepareFrameSelection([{ startFrame: 100, endFrameExclusive: 101 }]);
-    ${htmlVisualScript(entries, 30, 1)}`, {
+    ${htmlVisualScript(entries)}`, {
     window: { addEventListener() {} },
     document: { getElementById: (id: string) => roots.get(id) },
   });
@@ -1065,7 +1201,7 @@ test("an asynchronous HTML visual reports its unsupported frame behavior instead
   const window = { addEventListener() {}, __hypitHtmlVisualError: undefined as string | undefined };
   runInNewContext(`${frameWorkIndexRuntime}\n${htmlVisualScript([{ id: "scene", startFrame: 0, durationFrames: 30,
     program: { html: "", setup: 'return async frame => { await Promise.resolve(); throw new Error("late drawing failure"); };' },
-  }], 30, 1)}`, { window, document: { getElementById: () => ({}) } });
+  }])}`, { window, document: { getElementById: () => ({}) } });
   assert.match(window.__hypitHtmlVisualError!, /must be synchronous/u);
   await new Promise(resolve => setImmediate(resolve));
   assert.match(window.__hypitHtmlVisualError!, /late drawing failure/u);

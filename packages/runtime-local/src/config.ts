@@ -1,7 +1,7 @@
 import { fileExecutionLogs } from "./log.js";
 import { constants } from "node:fs";
 import { access, readFile, rm, stat } from "node:fs/promises";
-import { dirname, relative, resolve, sep } from "node:path";
+import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 
 import {
   loadNodePackageSelection,
@@ -11,7 +11,7 @@ import { hypitHostStateRoot } from "@hypit/hypit/cli";
 import { EndpointRegistry, Executor } from "@hypit/hypit/executor";
 import type { EndpointCredential, EndpointInstance, EndpointRegistrar, EndpointScheduling } from "@hypit/hypit/endpoint";
 import { endpointOffers, endpointResourceClaims, installEndpoint, verifyEndpointPricingDocument } from "@hypit/hypit/endpoint";
-import { assertBuildId, canonicalize, capabilityKey, parseCapabilityKey } from "@hypit/hypit/protocol";
+import { assertBuildId, canonicalize, capabilityKey, compareCodeUnits, parseCapabilityKey } from "@hypit/hypit/protocol";
 import type { CanonicalValue, CapabilityRef, Need, Value } from "@hypit/hypit/protocol";
 import {
   CompositeCredentialStore,
@@ -192,7 +192,7 @@ function entry(value: unknown, instance: string, subject: string, poolAllowed = 
 
 function entries(value: unknown, subject: string, poolAllowed = false): readonly LocalRuntimeAdapterSelection[] {
   const values = object(value ?? {}, subject);
-  return Object.entries(values).sort(([left], [right]) => left.localeCompare(right)).map(([instance, item]) => {
+  return Object.entries(values).sort(([left], [right]) => compareCodeUnits(left, right)).map(([instance, item]) => {
     requiredString(instance, `${subject} instance`);
     return entry(item, instance, `${subject}.${instance}`, poolAllowed);
   });
@@ -202,7 +202,7 @@ function bindings(value: unknown, endpoints: readonly LocalRuntimeAdapterSelecti
   const values = object(value ?? {}, "$runtime.bindings");
   const instances = new Set(endpoints.map((item) => item.instance));
   const result: Record<string, string> = {};
-  for (const [key, target] of Object.entries(values).sort(([left], [right]) => left.localeCompare(right))) {
+  for (const [key, target] of Object.entries(values).sort(([left], [right]) => compareCodeUnits(left, right))) {
     parseCapabilityKey(key);
     const instance = requiredString(target, `$runtime.bindings.${key}`);
     if (!instances.has(instance)) {
@@ -507,7 +507,7 @@ class TransientSessionCapacity {
   }
 
   async run<T>(resources: readonly TransientResourceClaim[], task: () => Promise<T>): Promise<T> {
-    const ordered = [...resources].sort((left, right) => left.id.localeCompare(right.id));
+    const ordered = [...resources].sort((left, right) => compareCodeUnits(left.id, right.id));
     for (const resource of ordered) capacityUnits(resource);
     while (ordered.some((resource) => (this.#active.get(resource.id) ?? 0) + capacityUnits(resource) > resource.limit)) {
       await new Promise<void>((resolveWait) => this.#waiters.add(resolveWait));
@@ -724,12 +724,17 @@ async function resolveEndpointCredentials(
           : `Configure it with: hypit auth login ${slot.endpoint} --runtime ${profile}`}`);
     }
     const writable = await writableCredentialStore(store, slot.ref);
-    credentials[slot.slot] = {
-      ...value,
-      ...(writable === undefined ? {} : {
-        replace: async (replacement: CredentialValue) => await writable.put(slot.ref, replacement),
-      }),
-    };
+    Object.defineProperty(credentials, slot.slot, {
+      value: {
+        ...value,
+        ...(writable === undefined ? {} : {
+          replace: async (replacement: CredentialValue) => await writable.put(slot.ref, replacement),
+        }),
+      },
+      enumerable: true,
+      configurable: true,
+      writable: true,
+    });
   }
   return credentials;
 }
@@ -974,7 +979,7 @@ function buildWorkPath(root: string, build: string): string {
   const work = resolve(root, "work");
   const target = resolve(work, build);
   const relation = relative(work, target);
-  if (relation.length === 0 || relation === ".." || relation.startsWith(`..${sep}`)) {
+  if (relation.length === 0 || relation === ".." || relation.startsWith(`..${sep}`) || isAbsolute(relation)) {
     throw new Error(`Build ${build} leaves Runtime work root ${work}`);
   }
   return target;
@@ -1125,7 +1130,12 @@ async function inspectOpenedRuntimeConfig(
         for (const slot of activation.endpoint.credentials) {
           const value = await stores.store.resolve(slot.ref);
           if (value !== undefined) {
-            credentials[slot.slot] = value;
+            Object.defineProperty(credentials, slot.slot, {
+              value,
+              enumerable: true,
+              configurable: true,
+              writable: true,
+            });
             continue;
           }
           missing = true;

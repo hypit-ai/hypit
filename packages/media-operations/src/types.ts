@@ -1,8 +1,7 @@
-import type { AudioLevelAutomation } from "@hypit/composition";
 import type { BlobRef } from "@hypit/hypit/protocol";
-import type { MediaDeliverySpec, MediaRational, PreparedAudioSource, TimelineVisual, TimelineAudio } from "@hypit/media";
+import type { MediaRational } from "@hypit/media";
 import type { FrameSpan } from "@hypit/timeline";
-import type { ExactTemporalValue, TemporalMap, TemporalRate } from "@hypit/temporal";
+import type { ExactTemporalValue, TemporalRate } from "@hypit/temporal";
 
 export type MediaSelectionRequest = {
   readonly video:
@@ -41,7 +40,24 @@ export type MediaTransformOperation =
       readonly kind: "retime";
       /** Source-local advance per one target-local unit. */
       readonly rate: TemporalRate;
+    }
+  | {
+      readonly kind: "retime-profile";
+      /** Complete, ordered traversal of the current source domain. */
+      readonly knots: readonly MediaTransformRateKnot[];
     };
+
+/** One inward offset from a current PreparedMedia domain edge. */
+export type MediaTransformRelativePoint = {
+  readonly edge: "start" | "end";
+  readonly offset: ExactTemporalValue;
+};
+
+/** One source-local position and its signed source-per-target rate. */
+export type MediaTransformRateKnot = {
+  readonly at: MediaTransformRelativePoint;
+  readonly rate: TemporalRate;
+};
 
 /** Ordered, deterministic temporal operations over PreparedMedia. */
 export type MediaTransformProgram = {
@@ -107,49 +123,4 @@ export type ExtractFrameNeed = {
 /** Every segment of the request carries its picture by the time the Need is made. */
 export type RenderStillVideoNeed = {
   readonly request: StillVideoRequest;
-};
-
-export type AudioProgramClip = AudioLevelAutomation & {
-  readonly id: string;
-  /** Renderer input group shared by all sampling pieces of one source Clip. */
-  readonly inputId: string;
-  readonly source: PreparedAudioSource;
-  /** Prepared-local to selected source-presentation relation. */
-  readonly preparation: TemporalMap;
-  readonly targetStartSample: number;
-  readonly targetEndSampleExclusive: number;
-  /** Sample domain and occurrence sampling positions before preparation is evaluated. */
-  readonly preparedSampleFrames: number;
-  readonly preparedStartSample: number;
-  readonly preparedEndSampleExclusive: number;
-  readonly loop: boolean;
-  readonly loopPhaseSample: number;
-  /** Exact tempo ratio; Audio execution preserves pitch. */
-  readonly playbackRate: MediaRational;
-  /** Complete owning Clip Window; fades do not restart at sampling-piece boundaries. */
-  readonly mixStartSample: number;
-  readonly mixEndSampleExclusive: number;
-  readonly gain: number;
-  readonly fadeInSamples: number;
-  readonly fadeOutSamples: number;
-};
-
-/** Pure, provider-independent audio program. Executing it is always a Provider Need. */
-export type AudioProgram = {
-  readonly frameRate: MediaRational;
-  readonly frameCount: number;
-  readonly sampleRate: 48_000;
-  readonly sampleFrames: number;
-  readonly clips: readonly AudioProgramClip[];
-};
-
-export type RenderAudioNeed = {
-  readonly program: AudioProgram;
-  readonly range?: FrameSpan;
-};
-
-export type MuxMediaNeed = {
-  readonly visual: TimelineVisual;
-  readonly audio: TimelineAudio;
-  readonly delivery: MediaDeliverySpec;
 };

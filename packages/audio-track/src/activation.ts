@@ -1,14 +1,9 @@
 import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
 import { createProducerPackageFacet } from "@hypit/hypit/producer";
-import { createMarkupSurfaceFacet } from "@hypit/hypit/markup";
+import { createAuthorDeclarationFacet } from "@hypit/hypit/author";
+import { createMarkupDeclarationFacet } from "@hypit/hypit/markup";
 import { createStudioCompanionFacet } from "@hypit/studio-companion";
-import {
-  audioTrackComponent,
-  audioTrackManifest,
-  audioTrackModuleRef,
-  decodeAudioTrackSurface,
-  audioTrackMarkupSurfaces,
-} from "./index.js";
+import { audioTrackComponent, audioTrackManifest, audioTrackAuthorDeclarations, audioTrackMarkupDeclarations, audioTrackModuleRef } from "./index.js";
 import { audioTrackStudioParameterCompanions, audioTrackStudioTrackCompanions } from "./studio.js";
 
 export const hypitPackage = {
@@ -16,11 +11,11 @@ export const hypitPackage = {
   modules: [{ manifest: audioTrackManifest }],
   facets: [
     ...[audioTrackComponent].flatMap((component) => [createProducerPackageFacet(component.producers ?? []), createRefinementPackageFacet(component.refinements ?? [])]),
-    createMarkupSurfaceFacet({
+    ...audioTrackAuthorDeclarations.map((declaration) => createAuthorDeclarationFacet(declaration)),
+    ...audioTrackMarkupDeclarations.map((declaration) => createMarkupDeclarationFacet({
       module: audioTrackModuleRef,
-      declaration: audioTrackMarkupSurfaces.find((item) => item.name === "track")!,
-      handler: decodeAudioTrackSurface,
-    }),
+      declaration,
+    })),
     createStudioCompanionFacet({
       tracks: audioTrackStudioTrackCompanions,
       parameters: audioTrackStudioParameterCompanions,

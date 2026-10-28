@@ -18,3 +18,4 @@ export {
   defineBuild,
 } from "./reducer.js";
 export { BuildMachine, materializeBuild } from "./machine.js";
+export type { BuildView } from "./view.js";

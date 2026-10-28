@@ -7,22 +7,22 @@ import type {
 import { blobDependency, blobTypes } from "@hypit/hypit/blob";
 import { sealGraphFragment } from "@hypit/hypit/author";
 import {
-  bindGenerationMedia,
-  bindGenerationText,
-  sealGenerationPortRequest,
-  verifyGenerationMediaBinding,
-  verifyRequestDraftAgainstPorts,
-  verifyRequestAgainstPorts,
+  bindModelArtifact,
+  bindModelText,
+  sealModelFieldRequest,
+  verifyModelArtifactBinding,
+  verifyModelFieldBuilder,
+  verifyModelFieldRequest,
 } from "./request.js";
 import type {
-  GenerationMediaBinding,
-  GenerationRequest,
-  GenerationRequestDraft,
+  ModelArtifactBinding,
+  ModelFieldBuilder,
+  ModelFieldRequest,
 } from "./request.js";
 import type {
-  GenerationMediaPort,
-  GenerationPortTable,
-} from "./ports.js";
+  ModelArtifactField,
+  ModelFieldTable,
+} from "./fields.js";
 import { generationProducers, generationTypes } from "./manifest.js";
 import { textDependency, textTypes } from "@hypit/hypit/text";
 import type { Text } from "@hypit/hypit/text";
@@ -42,22 +42,22 @@ import type {
 } from "@hypit/hypit/protocol";
 
 /**
- * One exact model endpoint. The model declares which input ports it accepts;
+ * One exact model operation. The Model declares which input fields it accepts;
  * its request Schema and semantic validator are derived from that declaration,
- * so the Capability name, the accepted media roles and the port cardinalities
+ * so the Capability name, accepted media roles and field cardinalities
  * have exactly one source of truth.
  */
-export type FieldModelEndpointSpec = {
+export type FieldModelOperationSpec = {
   readonly key: string;
   readonly requestTypeName: string;
   readonly producerName: string;
-  readonly ports: GenerationPortTable;
+  readonly fields: ModelFieldTable;
   /** The model-owned result contract. Standard generated-media products are optional conveniences. */
   readonly result: FieldModelResultContract;
-  /** Additional complete-request rules, after port and supplied-input validation. */
-  readonly validateRequest?: (request: GenerationRequest) => void;
+  /** Additional complete-request rules, after field and supplied-input validation. */
+  readonly validateRequest?: (request: ModelFieldRequest) => void;
   /** Pure, synchronous checks of supplied values, in drafts and complete requests; throw to reject. */
-  readonly validateInputs?: (inputs: GenerationRequestDraft) => void;
+  readonly validateInputs?: (inputs: ModelFieldBuilder) => void;
 };
 
 export type FieldModelResultContract = {
@@ -124,7 +124,7 @@ export type ModelModule<Key extends string = string> = {
 /**
  * Define only the irreducible Model contract: request Type, exact Capability,
  * result Type and the Producer that turns a complete request into a Need.
- * Request-building Producers and authoring Surfaces remain ordinary code in
+ * Request-building Producers and author declarations remain ordinary code in
  * the Model package and are not classified by Generation.
  */
 export function defineModelModule<const Key extends string>(options: {
@@ -211,7 +211,7 @@ export function defineModelModule<const Key extends string>(options: {
   };
 }
 
-export type ExactModelEndpoint = {
+export type FieldModelOperation = {
   readonly key: string;
   readonly requestType: TypeRef;
   readonly capability: CapabilityRef;
@@ -220,52 +220,52 @@ export type ExactModelEndpoint = {
   readonly result: FieldModelResultContract;
   readonly draftType: TypeRef;
   readonly finalizeProducer: ProducerRef;
-  readonly mediaBindings: Readonly<Record<string, ExactModelMediaBindingEndpoint>>;
-  readonly textBindings: Readonly<Record<string, ExactModelTextBindingEndpoint>>;
-  readonly ports: GenerationPortTable;
+  readonly mediaBindings: Readonly<Record<string, ModelArtifactBindingOperation>>;
+  readonly textBindings: Readonly<Record<string, ModelTextBindingOperation>>;
+  readonly fields: ModelFieldTable;
   readonly validateRequest: (request: unknown) => void;
   readonly validateDraft: (draft: unknown) => void;
-  readonly sealRequest: (ports: GenerationRequest["ports"]) => GenerationRequest;
+  readonly sealRequest: (fields: ModelFieldRequest["fields"]) => ModelFieldRequest;
   readonly fragment: ReturnType<typeof sealGraphFragment>;
 };
 
-export type ExactModelMediaBindingEndpoint = {
-  readonly port: string;
+export type ModelArtifactBindingOperation = {
+  readonly field: string;
   readonly type: TypeRef;
   readonly producer: ProducerRef;
 };
 
-export type ExactModelTextBindingEndpoint = {
-  readonly port: string;
+export type ModelTextBindingOperation = {
+  readonly field: string;
   readonly producer: ProducerRef;
 };
 
-export type ExactModelMediaInput = {
+export type ModelArtifactInput = {
   /** Stable local input name inside this Fragment shape. */
   readonly name: string;
-  /** Exact model media port receiving the artifact. */
-  readonly port: string;
+  /** Exact Model field receiving the artifact. */
+  readonly field: string;
 };
 
-export type ExactModelTextInput = {
+export type ModelTextInput = {
   /** Stable local input name inside this Fragment shape. */
   readonly name: string;
-  /** Exact model text port receiving the Text value. */
-  readonly port: string;
+  /** Exact Model field receiving the Text value. */
+  readonly field: string;
 };
 
-export type ExactModelFragmentPublication = {
+export type FieldModelFragmentPublication = {
   /** Publishes the Model's complete result value without interpreting it. */
   readonly result?: string;
   /** Publishes the result selected by the Model's explicit primary Producer. */
   readonly primary?: string;
 };
 
-export type ExactModelModule<Key extends string = string> = {
+export type FieldModelModule<Key extends string = string> = {
   readonly module: ModuleRef;
   readonly manifest: ModuleManifest;
   /** Keyed by the endpoint keys declared by the module. */
-  readonly endpoints: Readonly<Record<Key, ExactModelEndpoint>>;
+  readonly endpoints: Readonly<Record<Key, FieldModelOperation>>;
   readonly component: { producers: ProducerPackage; refinements: RefinementPackage } & {
     readonly refinements: readonly TypeRefinement[];
     readonly producers: readonly ProducerFacet[];
@@ -274,29 +274,29 @@ export type ExactModelModule<Key extends string = string> = {
 
 export type DefineFieldModelModuleOptions<Key extends string = string> = {
   readonly module: ModuleRef;
-  readonly endpoints: readonly (Omit<FieldModelEndpointSpec, "key"> & { readonly key: Key })[];
+  readonly endpoints: readonly (Omit<FieldModelOperationSpec, "key"> & { readonly key: Key })[];
 };
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
 
-function fieldEndpointRefs(module: ModuleRef, spec: FieldModelEndpointSpec) {
+function fieldEndpointRefs(module: ModuleRef, spec: FieldModelOperationSpec) {
   const draftType = { module, name: `${spec.requestTypeName}Draft` };
   const finalizeProducer = { module, name: `finalize-${spec.producerName}` };
-  const mediaBindings = Object.fromEntries(spec.ports.ports
-    .filter((port): port is GenerationMediaPort => port.value.kind === "media")
-    .map((port) => [port.name, {
-      port: port.name,
-      type: { module, name: `${spec.requestTypeName}${pascal(port.name)}Binding` },
-      producer: { module, name: `bind-${spec.producerName}-${port.name}` },
-    } satisfies ExactModelMediaBindingEndpoint]));
-  const textBindings = Object.fromEntries(spec.ports.ports
-    .filter((port) => port.value.kind === "text")
-    .map((port) => [port.name, {
-      port: port.name,
-      producer: { module, name: `bind-${spec.producerName}-${port.name}-text` },
-    } satisfies ExactModelTextBindingEndpoint]));
+  const mediaBindings = Object.fromEntries(spec.fields.fields
+    .filter((field): field is ModelArtifactField => field.value.kind === "media")
+    .map((field) => [field.name, {
+      field: field.name,
+      type: { module, name: `${spec.requestTypeName}${pascal(field.name)}Binding` },
+      producer: { module, name: `bind-${spec.producerName}-${field.name}` },
+    } satisfies ModelArtifactBindingOperation]));
+  const textBindings = Object.fromEntries(spec.fields.fields
+    .filter((field) => field.value.kind === "text")
+    .map((field) => [field.name, {
+      field: field.name,
+      producer: { module, name: `bind-${spec.producerName}-${field.name}-text` },
+    } satisfies ModelTextBindingOperation]));
   return {
     draftType,
     finalizeProducer,
@@ -331,22 +331,22 @@ function inlineValue<T>(
  */
 export function defineFieldModelModule<const Key extends string>(
   options: DefineFieldModelModuleOptions<Key>,
-): ExactModelModule<Key> {
+): FieldModelModule<Key> {
   assert(options.module.name.trim().length > 0 && options.module.version.trim().length > 0,
     "Exact model module identity is invalid");
   assert(options.endpoints.length > 0, `${options.module.name} declares no exact model endpoint`);
   const keys = options.endpoints.map((item) => item.key);
   assert(new Set(keys).size === keys.length, `${options.module.name} repeats an endpoint key`);
-  const models = options.endpoints.map((item) => item.ports.model);
+  const models = options.endpoints.map((item) => item.fields.model);
   assert(new Set(models).size === models.length, `${options.module.name} repeats an exact model`);
   const fieldData = options.endpoints.map((spec) => {
     const validateRequest = (request: unknown): void => {
-      verifyRequestAgainstPorts(spec.ports, request);
+      verifyModelFieldRequest(spec.fields, request);
       spec.validateInputs?.(request);
       spec.validateRequest?.(request);
     };
     const validateDraft = (draft: unknown): void => {
-      verifyRequestDraftAgainstPorts(spec.ports, draft);
+      verifyModelFieldBuilder(spec.fields, draft);
       spec.validateInputs?.(draft);
     };
     return { spec, validateRequest, validateDraft, ...fieldEndpointRefs(options.module, spec) };
@@ -355,7 +355,7 @@ export function defineFieldModelModule<const Key extends string>(
     module: options.module,
     operations: fieldData.map((item) => ({
       key: item.spec.key,
-      capabilityName: item.spec.ports.model,
+      capabilityName: item.spec.fields.model,
       requestTypeName: item.spec.requestTypeName,
       producerName: item.spec.producerName,
       returns: item.spec.result.type,
@@ -369,8 +369,8 @@ export function defineFieldModelModule<const Key extends string>(
   const fieldDependencies = fieldData.flatMap((item) => [
     ...(sameModule(item.spec.result.primary.producer.module, options.module)
       ? [] : [item.spec.result.primary.producer.module]),
-    ...(item.spec.ports.ports.some((port) => port.value.kind === "media") ? [blobDependency] : []),
-    ...(item.spec.ports.ports.some((port) => port.value.kind === "text") ? [textDependency] : []),
+    ...(item.spec.fields.fields.some((field) => field.value.kind === "media") ? [blobDependency] : []),
+    ...(item.spec.fields.fields.some((field) => field.value.kind === "text") ? [textDependency] : []),
   ]);
 
   const manifest: ModuleManifest = {
@@ -383,9 +383,9 @@ export function defineFieldModelModule<const Key extends string>(
       ...endpointData.flatMap((item) => [
         item.draftType.name,
         ...Object.values(item.mediaBindings).map((binding) => {
-          const port = item.spec.ports.ports.find((candidate): candidate is GenerationMediaPort =>
-            candidate.name === binding.port && candidate.value.kind === "media");
-          assert(port !== undefined, `${item.spec.key} media binding ${binding.port} has no port`);
+          const field = item.spec.fields.fields.find((candidate): candidate is ModelArtifactField =>
+            candidate.name === binding.field && candidate.value.kind === "media");
+          assert(field !== undefined, `${item.spec.key} artifact binding ${binding.field} has no field`);
           return binding.type.name;
         }),
       ]),
@@ -419,7 +419,7 @@ export function defineFieldModelModule<const Key extends string>(
     ],
   };
 
-  const endpoints = Object.fromEntries(endpointData.map((item): [Key, ExactModelEndpoint] => {
+  const endpoints = Object.fromEntries(endpointData.map((item): [Key, FieldModelOperation] => {
     return [item.spec.key, {
       key: item.spec.key,
       requestType: item.operation.requestType,
@@ -431,23 +431,23 @@ export function defineFieldModelModule<const Key extends string>(
       finalizeProducer: item.finalizeProducer,
       mediaBindings: item.mediaBindings,
       textBindings: item.textBindings,
-      ports: item.spec.ports,
+      fields: item.spec.fields,
       validateRequest: item.validateRequest,
       validateDraft: item.validateDraft,
-      sealRequest(ports) {
-        const request = sealGenerationPortRequest(item.spec.ports, ports);
+      sealRequest(fields) {
+        const request = sealModelFieldRequest(item.spec.fields, fields);
         item.spec.validateInputs?.(request);
         item.spec.validateRequest?.(request);
         return request;
       },
       fragment: item.operation.fragment,
-    } satisfies ExactModelEndpoint];
+    } satisfies FieldModelOperation];
   }));
 
   return {
     module: model.module,
     manifest,
-    endpoints: endpoints as Readonly<Record<Key, ExactModelEndpoint>>,
+    endpoints: endpoints as Readonly<Record<Key, FieldModelOperation>>,
     component: {
       refinements: [
         ...model.component.refinements,
@@ -464,15 +464,15 @@ export function defineFieldModelModule<const Key extends string>(
           ...Object.values(item.mediaBindings).map((binding) => ({
             producer: binding.producer,
             handler: ({ inputs }: ProducerHandlerContext) => {
-              const draft = inlineValue<GenerationRequestDraft>(inputs.draft!.value, `${item.spec.key} draft`);
-              const value = inlineValue<GenerationMediaBinding>(inputs.binding!.value, `${binding.port} binding`);
-              const port = item.spec.ports.ports.find((candidate): candidate is GenerationMediaPort =>
-                candidate.name === binding.port && candidate.value.kind === "media");
-              assert(port !== undefined, `${item.spec.key} media binding ${binding.port} has no port`);
-              verifyGenerationMediaBinding(port, value);
+              const draft = inlineValue<ModelFieldBuilder>(inputs.draft!.value, `${item.spec.key} draft`);
+              const value = inlineValue<ModelArtifactBinding>(inputs.binding!.value, `${binding.field} binding`);
+              const field = item.spec.fields.fields.find((candidate): candidate is ModelArtifactField =>
+                candidate.name === binding.field && candidate.value.kind === "media");
+              assert(field !== undefined, `${item.spec.key} artifact binding ${binding.field} has no field`);
+              verifyModelArtifactBinding(field, value);
               const artifact = inputs.artifact!.value;
-              assert(isBlobRef(artifact), `${binding.port} artifact must be a Blob`);
-              const bound = bindGenerationMedia(item.spec.ports, draft, binding.port, value, artifact);
+              assert(isBlobRef(artifact), `${binding.field} artifact must be a Blob`);
+              const bound = bindModelArtifact(item.spec.fields, draft, binding.field, value, artifact);
               endpoints[item.spec.key]!.validateDraft(bound);
               return { kind: "output" as const, value: (canonicalize(bound)) };
             },
@@ -480,9 +480,9 @@ export function defineFieldModelModule<const Key extends string>(
           ...Object.values(item.textBindings).map((binding) => ({
             producer: binding.producer,
             handler: ({ inputs }: ProducerHandlerContext) => {
-              const draft = inlineValue<GenerationRequestDraft>(inputs.draft!.value, `${item.spec.key} draft`);
-              const text = inlineValue<Text>(inputs.text!.value, `${binding.port} Text`);
-              const bound = bindGenerationText(item.spec.ports, draft, binding.port, text);
+              const draft = inlineValue<ModelFieldBuilder>(inputs.draft!.value, `${item.spec.key} draft`);
+              const text = inlineValue<Text>(inputs.text!.value, `${binding.field} Text`);
+              const bound = bindModelText(item.spec.fields, draft, binding.field, text);
               endpoints[item.spec.key]!.validateDraft(bound);
               return { kind: "output" as const, value: (canonicalize(bound)) };
             },
@@ -491,9 +491,9 @@ export function defineFieldModelModule<const Key extends string>(
             producer: item.finalizeProducer,
             handler: ({ inputs }: ProducerHandlerContext) => {
               const endpoint = endpoints[item.spec.key]!;
-              const draft = inlineValue<GenerationRequestDraft>(inputs.draft!.value, `${item.spec.key} draft`);
+              const draft = inlineValue<ModelFieldBuilder>(inputs.draft!.value, `${item.spec.key} draft`);
               endpoint.validateDraft(draft);
-              return { kind: "output" as const, value: (canonicalize(endpoint.sealRequest(draft.ports))) };
+              return { kind: "output" as const, value: (canonicalize(endpoint.sealRequest(draft.fields))) };
             },
           },
         ]),
@@ -502,16 +502,16 @@ export function defineFieldModelModule<const Key extends string>(
   };
 }
 
-export function exactModelMediaInputNames(name: string): {
+export function modelArtifactInputNames(name: string): {
   readonly artifact: string;
   readonly binding: string;
 } {
-  assert(name.trim().length > 0, "Exact model media input name is empty");
+  assert(name.trim().length > 0, "Model artifact input name is empty");
   return { artifact: `${name}:artifact`, binding: `${name}:binding` };
 }
 
-export function exactModelTextInputName(name: string): string {
-  assert(name.trim().length > 0, "Exact model text input name is empty");
+export function modelTextInputName(name: string): string {
+  assert(name.trim().length > 0, "Model Text input name is empty");
   return `${name}:text`;
 }
 
@@ -521,14 +521,14 @@ export function exactModelTextInputName(name: string): string {
  * the fold only constructs the Provider-facing request after those inputs are
  * available.
  */
-export function createExactModelGenerationFragment(
-  endpoint: ExactModelEndpoint,
-  mediaInputs: readonly ExactModelMediaInput[] = [],
-  textInputs: readonly ExactModelTextInput[] = [],
-  publication: ExactModelFragmentPublication,
+export function createFieldModelGenerationFragment(
+  endpoint: FieldModelOperation,
+  mediaInputs: readonly ModelArtifactInput[] = [],
+  textInputs: readonly ModelTextInput[] = [],
+  publication: FieldModelFragmentPublication,
 ) {
   const names = [...mediaInputs, ...textInputs].map((item) => item.name);
-  assert(new Set(names).size === names.length, "Exact model input names must be unique");
+  assert(new Set(names).size === names.length, "Model input names must be unique");
   const inputs = [{ name: "draft", type: endpoint.draftType }];
   const operations: Array<{
     readonly id: string;
@@ -541,11 +541,11 @@ export function createExactModelGenerationFragment(
   let draft = input("draft") as ReturnType<typeof input> | ReturnType<typeof operation>;
 
   for (const [index, item] of textInputs.entries()) {
-    const binding = endpoint.textBindings[item.port];
-    assert(binding !== undefined, `${endpoint.ports.model} has no text port ${item.port}`);
-    const inputName = exactModelTextInputName(item.name);
+    const binding = endpoint.textBindings[item.field];
+    assert(binding !== undefined, `${endpoint.fields.model} has no text field ${item.field}`);
+    const inputName = modelTextInputName(item.name);
     inputs.push({ name: inputName, type: textTypes.text });
-    const id = `bind-text:${String(index + 1).padStart(4, "0")}:${item.port}`;
+    const id = `bind-text:${String(index + 1).padStart(4, "0")}:${item.field}`;
     operations.push({
       id,
       producer: binding.producer,
@@ -556,12 +556,12 @@ export function createExactModelGenerationFragment(
   }
 
   for (const [index, item] of mediaInputs.entries()) {
-    const binding = endpoint.mediaBindings[item.port];
-    assert(binding !== undefined, `${endpoint.ports.model} has no media port ${item.port}`);
-    const inputNames = exactModelMediaInputNames(item.name);
+    const binding = endpoint.mediaBindings[item.field];
+    assert(binding !== undefined, `${endpoint.fields.model} has no artifact field ${item.field}`);
+    const inputNames = modelArtifactInputNames(item.name);
     inputs.push({ name: inputNames.binding, type: binding.type });
     inputs.push({ name: inputNames.artifact, type: blobTypes.blob });
-    const id = `bind:${String(index + 1).padStart(4, "0")}:${item.port}`;
+    const id = `bind:${String(index + 1).padStart(4, "0")}:${item.field}`;
     operations.push({
       id,
       producer: binding.producer,
@@ -588,14 +588,14 @@ export function createExactModelGenerationFragment(
     result: { kind: "need" as const, name: "generation" },
   });
   assert(publication.result !== undefined || publication.primary !== undefined,
-    `${endpoint.ports.model} Fragment publishes neither its result nor its primary value`);
+    `${endpoint.fields.model} Fragment publishes neither its result nor its primary value`);
   assert(publication.result === undefined || publication.result.trim().length > 0,
-    `${endpoint.ports.model} result publication name is empty`);
+    `${endpoint.fields.model} result publication name is empty`);
   assert(publication.primary === undefined || publication.primary.trim().length > 0,
-    `${endpoint.ports.model} primary publication name is empty`);
+    `${endpoint.fields.model} primary publication name is empty`);
   assert(publication.result === undefined || publication.primary === undefined
     || publication.result !== publication.primary,
-    `${endpoint.ports.model} result and primary publication names must differ`);
+    `${endpoint.fields.model} result and primary publication names must differ`);
   const exports: Array<{ readonly name: string; readonly type: TypeRef;
     readonly root: ReturnType<typeof operation> }> = [];
   if (publication.result !== undefined) {
@@ -619,13 +619,13 @@ export function createExactModelGenerationFragment(
   });
 }
 
-/** Authoring convenience for Surfaces that intentionally publish one primary artifact. */
-export function createExactModelPrimaryGenerationFragment(
-  endpoint: ExactModelEndpoint,
-  mediaInputs: readonly ExactModelMediaInput[] = [],
-  textInputs: readonly ExactModelTextInput[] = [],
+/** Authoring convenience for declarations that intentionally publish one primary artifact. */
+export function createFieldModelPrimaryFragment(
+  endpoint: FieldModelOperation,
+  mediaInputs: readonly ModelArtifactInput[] = [],
+  textInputs: readonly ModelTextInput[] = [],
 ) {
-  return createExactModelGenerationFragment(endpoint, mediaInputs, textInputs, {
+  return createFieldModelGenerationFragment(endpoint, mediaInputs, textInputs, {
     primary: endpoint.result.primary.output,
   });
 }

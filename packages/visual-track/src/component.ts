@@ -1,5 +1,6 @@
 import type { ProducerPackage, ProducerHandlerContext } from "@hypit/hypit/producer";
 import type { RefinementPackage } from "@hypit/hypit/refinement";
+import { assertVisualProgram } from "@hypit/composition";
 import type { CompositableSurfaceRef, PreparedMedia } from "@hypit/media";
 import { assertBlobRef, canonicalize } from "@hypit/hypit/protocol";
 import type { BlobRef, Value } from "@hypit/hypit/protocol";
@@ -23,6 +24,8 @@ import {
 import { visualTrackProducers, visualTrackTypes } from "./manifest.js";
 import {
   appendVisualClip,
+  appendVisualTransition,
+  assertVisualTransitionSpec,
   assertVisualClipSpec,
   assertVisualTrackHeader,
   assertVisualTrackProgram,
@@ -40,6 +43,7 @@ import type {
   MediaSampleLayerSpec,
   VisualClipMotion,
   VisualClipSpec,
+  VisualTransitionSpec,
   VisualTrackHeader,
   VisualTrackProgram,
   VisualTrackSet,
@@ -109,6 +113,10 @@ export const visualTrackComponent = {
         value.set, value.header, value.timeline, value.layers, value.frame, value.spec, value.window,
       )) };
     } },
+    { producer: visualTrackProducers.appendTransition, handler: ({ inputs }) => ({ kind: "output", value: output(appendVisualTransition(
+      valueOf<VisualTrackSet>(inputs.set?.value, "VisualTrackSet"),
+      valueOf<VisualTransitionSpec>(inputs.spec?.value, "VisualTransitionSpec"),
+    )) }) },
     { producer: visualTrackProducers.bindClipPath, handler: ({ inputs }) => ({ kind: "output", value: output(bindVisualClipPath(
       valueOf<VisualClipSpec>(inputs.spec?.value, "VisualClipSpec"), valueOf<SpatialPath>(inputs.path?.value, "SpatialPath"),
     )) }) },
@@ -136,6 +144,10 @@ export const visualTrackComponent = {
       handler: ({ value }) => assertMediaLayerSet(valueOf<MediaLayerSet>(value, "MediaLayerSet")) },
     { type: visualTrackTypes.clipSpec,
       handler: ({ value }) => assertVisualClipSpec(valueOf<VisualClipSpec>(value, "VisualClipSpec")) },
+    { type: visualTrackTypes.transitionEffect,
+      handler: ({ value }) => assertVisualProgram(valueOf<VisualTransitionSpec["effect"]>(value, "VisualTransitionEffect"), "VisualTransitionEffect") },
+    { type: visualTrackTypes.transitionSpec,
+      handler: ({ value }) => assertVisualTransitionSpec(valueOf<VisualTransitionSpec>(value, "VisualTransitionSpec")) },
     { type: visualTrackTypes.set,
       handler: ({ value }) => assertVisualTrackSet(valueOf<VisualTrackSet>(value, "VisualTrackSet")) },
     { type: visualTrackTypes.program,

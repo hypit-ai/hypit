@@ -184,7 +184,7 @@ export function distributionPackageRoots(root: string): readonly string[] {
     }
     for (const source of sources as string[]) {
       const name = packageName(source);
-      if (manifest.dependencies?.[name] === undefined) {
+      if (!Object.hasOwn(manifest.dependencies ?? {}, name)) {
         throw new Error(`${path} must declare default package source ${name} as a dependency`);
       }
       const located = ancestorPackage(name, join(current, "__hypit_defaults__.mjs"));
@@ -363,8 +363,9 @@ export function resolveNodePackageExecutable(
     const defaultName = name.split("/").at(-1)!;
     if (executable === undefined || executable === defaultName) target = declared;
   } else if (declared !== undefined) {
-    if (executable !== undefined) target = declared[executable];
-    else if (Object.keys(declared).length === 1) target = Object.values(declared)[0];
+    if (executable !== undefined) {
+      if (Object.hasOwn(declared, executable)) target = declared[executable];
+    } else if (Object.keys(declared).length === 1) target = Object.values(declared)[0];
   }
   if (target === undefined) {
     throw new Error(`${name} does not declare${executable === undefined ? " one unambiguous executable" : ` executable ${executable}`}`);

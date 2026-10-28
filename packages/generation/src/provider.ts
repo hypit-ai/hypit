@@ -3,6 +3,7 @@
  * Model packages do not depend on this entry point, and Providers may implement adapters directly.
  */
 export {
+  assertMappingCoversFields,
   mappingSupportsRequest,
   materializeWireRequest,
   planWireRequest,
@@ -20,4 +21,4 @@ export type {
   GenerationWireValuePlan,
 } from "./mapping.js";
 /** Request shape understood by the optional field-mapping helper, not by Generation itself. */
-export type { GenerationRequest as ProviderFieldRequest } from "./request.js";
+export type { ModelFieldRequest as ProviderFieldRequest } from "./request.js";

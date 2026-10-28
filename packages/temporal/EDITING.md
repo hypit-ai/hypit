@@ -3,11 +3,11 @@
 Studio edits the declaration that produced an absolute time value; it does not ask the consuming
 component to reverse an arbitrary projection.
 
-The Markup helper records an optional, data-only `author` parameter on the exact `TemporalInstantSpec`
-or `TemporalShiftSpec` it creates. It names the owning binding and whether the endpoint is direct or
-derived from a duration. Studio reads that fact from the executed graph; it does not inspect component
-attribute names. A reference has no local parameter authority: its producer remains the only place
-that may declare an inverse.
+The package-owned declaration compiler records an optional, data-only `author` parameter on the exact
+`TemporalInstantSpec` or `TemporalShiftSpec` it creates. It names the owning binding and whether the
+endpoint is direct or derived from a duration. Studio reads that fact from the executed graph; it does
+not inspect component attribute names. A reference has no local parameter authority: its producer
+remains the only place that may declare an inverse.
 
 ## Named absolute declarations
 
@@ -40,7 +40,8 @@ recompilation.
 
 This division is intentional:
 
-- `@hypit/temporal/markup` owns absolute literal/reference construction;
+- `@hypit/timeline-author` owns absolute Clock, Timeline, Window and Instant construction;
+- `@hypit/temporal` owns exact time values, relations and syntax-neutral literal parsing;
 - a domain package owns projection and domain-specific writeback;
 - `@hypit/temporal` validates resolved absolute values;
 - the component owns only what the value means for its behavior.

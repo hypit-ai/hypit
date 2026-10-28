@@ -1,6 +1,5 @@
 import type {
   BuildPlan,
-  BuildState,
   CapabilityRef,
   AuthorGraph,
   GraphValueRef,
@@ -25,6 +24,7 @@ import {
   resolveOperation,
   verifyAuthorGraph,
 } from "./graph.js";
+import type { BuildView } from "./view.js";
 import { resolveCapability, resolveProducer } from "./link.js";
 
 function exactKeys(
@@ -70,7 +70,7 @@ export type PlannedNeed = {
 const planStepIndexes = new WeakMap<BuildPlan, ReadonlyMap<string, ProducerStep>>();
 
 /** Every external requirement of the BuildPlan, one entry per request, in step order. */
-export function plannedNeeds(state: BuildState): readonly PlannedNeed[] {
+export function plannedNeeds(state: BuildView): readonly PlannedNeed[] {
   const found: PlannedNeed[] = [];
   for (const step of state.plan.steps) {
     if (step.result.kind !== "need") continue;

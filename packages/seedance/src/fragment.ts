@@ -36,7 +36,7 @@ export function createSeedanceGenerationFragment(endpoint: FieldModelOperation) 
   });
 }
 
-/** Request assembly used by author Surfaces whose media references may be runtime outputs. */
+/** Request assembly used by author declarations whose media references may be runtime outputs. */
 export function createSeedanceAssembledGenerationFragment(
   endpoint: FieldModelOperation,
   mediaInputs: readonly ModelArtifactInput[] = [],

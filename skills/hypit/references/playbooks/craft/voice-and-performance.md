@@ -165,7 +165,7 @@ delivery have different jobs.
 Each vendor's speech models are one package with its own Source import: `@hypit/mimo-speech`
 (Xiaomi MiMo Voice Design and Voice Clone), `@hypit/fishaudio-speech` (Fish Audio Voice Design and
 Voice Clone) and `@hypit/elevenlabs-speech` (ElevenLabs Voice Design). Use `hypit vocabulary` with a
-package name for its author Surfaces. A voice reference designed by one package is an ordinary audio
+package name for its author declarations. A voice reference designed by one package is an ordinary audio
 Resource that another package's Voice Clone accepts. The Source chooses those model semantics; the
 Runtime Profile independently chooses the Endpoint that can perform them.
 

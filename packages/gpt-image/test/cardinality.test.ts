@@ -10,6 +10,6 @@ const references = (count: number) => Array.from({ length: count }, (_, index) =
 
 test("GPT Image owns its sixteen-reference model limit", () => {
   const base = { prompt: ["compose"], aspectRatio: ["1:1"], resolution: ["1K"] } as const;
-  assert.equal(sealGptImage2Request({ ...base, images: references(16) }).ports.images?.length, 16);
+  assert.equal(sealGptImage2Request({ ...base, images: references(16) }).fields.images?.length, 16);
   assert.throws(() => sealGptImage2Request({ ...base, images: references(17) }), /at most 16/u);
 });

@@ -14,12 +14,12 @@ test("typed child values recover an omitted authored id without ordinal guessing
   };
   const context = {
     placement: {
-      sourcePath: "main.svml", tag: "Track", module: itemType.module, surface: "track", id: "track",
+      sourcePath: "main.svml", tag: "Track", module: itemType.module, declaration: "track", id: "track",
       range: { start: 0, end: 50 }, records: [], values: [], outputs: [], outputPorts: [], children: [child],
       attributes: {}, attributeValueRanges: {}, references: [], referenceAttributes: {}, referenceTypes: {},
     },
     track: {
-      name: "track", type: "Track", typeRef: itemType, outputRef: "track", role: "track",
+      name: "track", type: "Track", typeRef: itemType, outputRef: "track",
       trace: { references: [], outputPorts: [] }, value: undefined,
     },
     spans: [], values: new Map(), temporalBindings: [], temporalDomains: [], generic: () => [],

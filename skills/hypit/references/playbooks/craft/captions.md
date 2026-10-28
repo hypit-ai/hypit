@@ -192,7 +192,7 @@ Direct the presentation through three related layers:
 | Choice | What it decides |
 | --- | --- |
 | **Family** | The structural visual language and scheduling behavior the Caption can express: uniform flowing words, independently arranged phrases, speaker-attached shapes, or another authored relationship. |
-| **Recipe and resolved Style** | One coherent treatment within that family. An SVS Recipe gathers a useful combination; the family's Style Surface resolves it with fonts or other explicit resources. Role or Selection applications can choose among those Styles. |
+| **Recipe and resolved Style** | One coherent treatment within that family. An SVS Recipe gathers a useful combination; the family's Style declaration resolves it with fonts or other explicit resources. Role or Selection applications can choose among those Styles. |
 | **Parameters** | The individual decisions inside that treatment: placement and anchors, usable width, wrapping, typography, Paint and boxes, active-word response, Cue motion, reveal, lead, tail and handoff. |
 
 The installed family vocabulary owns exact parameter names and accepted values. Craft owns how the
@@ -220,7 +220,7 @@ moving placement point without changing the verbal pipeline.
   </caption-fine:Caption>
 ```
 
-This excerpt assumes the imported Surfaces, fonts and Styles already declared in the Source.
+This excerpt assumes the imported declarations, fonts and Styles already present in the Source.
 Use the owning package README and `hypit vocabulary @hypit/caption-fine` for current Recipe fields.
 Keep one coherent interpretation of the Script across speakers and styles; different colors do not
 require unrelated transcripts or separately invented timing.

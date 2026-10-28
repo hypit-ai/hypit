@@ -1,6 +1,6 @@
 # Choosing and extending author vocabulary
 
-Read this when deciding which installed Surface should express a Treatment role, or whether the
+Read this when deciding which installed declaration should express a Treatment role, or whether the
 production needs a new project Author Package.
 
 ## Search from the role
@@ -23,26 +23,26 @@ hypit vocabulary @hypit/media-operations --tag StillVideo
 hypit vocabulary --visual text
 ```
 
-Use a focused package and tag query before the first use of an unfamiliar Surface in the current
+Use a focused package and tag query before the first use of an unfamiliar declaration in the current
 production. Query it again when the selected package or Distribution changes, or when `hypit check`
 shows that an assumed declaration is not the installed one. Once the declaration is established in
 the current context, ordinary edits do not require repeating the same query.
 
 With no package argument, the command lists every package visible to the current Distribution and
 project together with its tags and models. Use that inventory when the role is clear but the owner is
-not. A focused package query then reports Surface attributes, children, ports, examples, and designed
+not. A focused package query then reports declaration fields, children, outputs, examples, and designed
 previews, including the logical Module import when one physical package contributes several Modules.
 The package README supplies exact behavior that is local to that installed implementation.
 When the question requires more detail, inspect the relevant implementation and exported API. An
 existing component can also provide a useful implementation example for a new project package.
 
 Run Fragment libraries have a separate interface. A package can provide
-Candidates while declaring no Markup Surfaces. Read [Runs](runs.md) and the library's
+Candidates without an author declaration. Read [Runs](runs.md) and the library's
 package-local Fragment documentation for those inputs and exports.
 
 ## Connect model references as typed inputs
 
-Read the model Surface's reference roles and per-input metadata as well as its prompt parameters.
+Read the model declaration's reference roles and per-input metadata as well as its prompt parameters.
 The prompt gives direction; the actual edges supply media and the declared facts needed to use it.
 Seedance requires `person-reference="true|false"` on every image/video reference: true if the supplied
 material contains a person, false otherwise. Audio must omit it. Its installed README owns the required
@@ -52,9 +52,9 @@ media preparation without adding service instructions to the creative prompt.
 
 ## Choose a component for its behavior
 
-An installed Surface fits when its semantic role, inputs and outputs, temporal behavior, composition
+An installed declaration fits when its semantic role, inputs and outputs, temporal behavior, composition
 ownership, and visual range match the intended work. Parameter differences such as words, colors,
-spacing, or ordinary media inputs belong to authored configuration when the Surface already exposes
+spacing, or ordinary media inputs belong to authored configuration when the declaration already exposes
 them.
 
 A catalogue preview helps identify the component's visual role. Its declared inputs and behavior
@@ -90,7 +90,7 @@ such as `@hypit/caption@1`. Declare the domain packages you import as ordinary d
 declare compatibility with the Hypit and Companion host APIs through peer dependencies. When learning
 from language-internal source, translate its private workspace imports to public Hypit SDK paths.
 
-Describe the Surface's role, attributes and outputs with a small valid example so a future author
+Describe the declaration's role, fields and outputs with a small valid example so a future author
 can select it. A visual preview makes its appearance recognizable; Studio shows the actual
 configuration used in a production.
 

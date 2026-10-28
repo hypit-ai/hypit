@@ -23,7 +23,7 @@ import type {
   DepthStackSpec,
 } from "./types.js";
 
-const DECK_KEYS = [
+export const depthStackRecipeKeys = [
   "visible-previous", "visible-next", "wrap",
   "current-x", "current-y", "current-scale", "current-rotation", "current-opacity", "current-stacking",
   "current-brightness", "current-contrast", "current-saturation",
@@ -35,6 +35,15 @@ const DECK_KEYS = [
   "next-brightness-step", "next-contrast-step", "next-saturation-step",
   "reflow-frames", "reflow-easing", "playback-future", "playback-past",
 ] as const;
+
+/** Finite choices accepted by the Depth Stack Recipe decoder. */
+export const depthStackRecipeOptions: Readonly<Record<string, readonly string[] | undefined>> = {
+  "previous-rotation-mode": ["linear", "alternate"],
+  "next-rotation-mode": ["linear", "alternate"],
+  "reflow-easing": ["linear", "ease-in", "ease-out", "ease-in-out"],
+  "playback-future": ["hold-head", "continue"],
+  "playback-past": ["hold-tail", "continue", "hide"],
+};
 
 function fail(recipe: Recipe, message: string): never {
   throw new Error(`DepthStack Recipe ${recipe.path} ${message}`);
@@ -118,7 +127,7 @@ function step(
 
 function assertKnownKeys(recipe: Recipe): void {
   const allowed = new Set<string>([
-    ...DECK_KEYS,
+    ...depthStackRecipeKeys,
     ...visualMaterialKeys.fit,
     ...visualMaterialKeys.sample,
     ...visualMaterialKeys.frame,
@@ -126,6 +135,14 @@ function assertKnownKeys(recipe: Recipe): void {
   const unknown = Object.keys(recipe.properties).filter((key) => !allowed.has(key));
   if (unknown.length > 0) fail(recipe, `does not accept ${unknown.join(", ")}.`);
 }
+
+/** Complete public property set accepted by a Depth Stack appearance Recipe. */
+export const depthStackAppearanceRecipeKeys = [
+  ...depthStackRecipeKeys,
+  ...visualMaterialKeys.fit,
+  ...visualMaterialKeys.sample,
+  ...visualMaterialKeys.frame,
+] as const;
 
 export function decodeDepthStackSpec(recipe: Recipe): DepthStackSpec {
   assertKnownKeys(recipe);

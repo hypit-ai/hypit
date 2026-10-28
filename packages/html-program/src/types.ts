@@ -1,5 +1,5 @@
 
-import type { BlobRef, ResourceId } from "@hypit/hypit/protocol";
+import type { BlobRef } from "@hypit/hypit/protocol";
 import type { CompositableSurfaceRef, PreparedVisualSource } from "@hypit/media";
 import type { Clock, FrameSpan } from "@hypit/timeline";
 import type { TemporalMap } from "@hypit/temporal";
@@ -25,8 +25,16 @@ export type HtmlArtifactUsage =
 
 /** One byte dependency and the compiler's conservative proof of when it can be observed. */
 export type HtmlArtifact = {
+  /** Programme-local identity used by generated markup; independent of Blob storage identity. */
+  readonly id: string;
   readonly artifact: BlobRef;
   readonly usage: HtmlArtifactUsage;
+};
+
+export type HtmlSurface = {
+  /** Programme-local Artifact identity referenced by Surface markers and sampled occurrences. */
+  readonly artifactId: string;
+  readonly surface: CompositableSurfaceRef;
 };
 
 export type HtmlVideoSource = FrameSpan & {
@@ -41,8 +49,8 @@ export type HtmlVideoSource = FrameSpan & {
     }
   | {
       readonly kind: "surface";
-      /** Already-materialized Surface resource whose decoded frames feed this occurrence. */
-      readonly resource: ResourceId;
+      /** Already-materialized Surface Artifact whose decoded frames feed this occurrence. */
+      readonly artifactId: string;
       readonly sourceFrame: { readonly numerator: number; readonly denominator: number };
       readonly sourceRate: { readonly numerator: number; readonly denominator: number };
       readonly sourceFrameRate: { readonly numerator: number; readonly denominator: number };
@@ -56,11 +64,11 @@ export type HtmlProgram = HtmlFrameDomain & {
   /** Every byte resource referenced by the HTML template, with its conservative temporal usage. */
   readonly artifacts: readonly HtmlArtifact[];
   /** Typed Surface dependencies that a Runtime must verify before rasterization. */
-  readonly surfaces: readonly CompositableSurfaceRef[];
+  readonly surfaces: readonly HtmlSurface[];
   /** Exact selected streams and sampling functions; execution never parses them back out of markup. */
   readonly videoSources: readonly HtmlVideoSource[];
-  /** Media URLs remain hypit-resource:// placeholders until a Runtime materializes them. */
+  /** Media URLs remain hypit-artifact:// placeholders until a Runtime materializes them. */
   readonly html: string;
 };
 
-export type ResourceUrlResolver = (artifact: BlobRef) => string;
+export type ResourceUrlResolver = (artifact: BlobRef, id: string) => string;

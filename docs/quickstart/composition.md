@@ -78,10 +78,13 @@ that group:
 
 ```svml
 <import as="adjust" from="@hypit/visual-adjustment@1"/>
+<import as="treatment" from="@hypit/visual-treatment@1"/>
+
+<treatment:Color id="cinematic" contrast="1.08" saturation="0.9" hue="-2"/>
 
 <adjust:Track id="look" timeline={speech.timeline}>
   <adjust:Adjustment id="grade" during={speech.window}
-    appearance={recipes.look.cinematic}/>
+    effect={cinematic}/>
 </adjust:Track>
 
 <film:Film id="main" canvas={vertical.canvas} timeline={speech.timeline}

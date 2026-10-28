@@ -31,13 +31,13 @@ test("Seedance requests become the ModelArk input Monid relays", async () => {
 test("Monid applies its narrower Wan output quota after model validation", () => {
   const route = monidRouteForCapability({ module: { name: "@hypit/wan", version: "1" }, name: "wan-2.7-image" })!;
   const request = sealWanRequest("wan-2.7-image", { prompt: ["variations"], count: [12] });
-  assert.equal(request.ports.count?.[0], 12);
+  assert.equal(request.fields.count?.[0], 12);
   assert.deepEqual(route.supports({ capability: route.capability, returns: route.returns,
     constraints: request as unknown as CanonicalValue }), {
     status: "unsupported",
     reason: "Wan renders at most 4 pictures outside an image set, not 12",
   });
-  const set = sealWanRequest("wan-2.7-image", { ...request.ports, imageSet: [true] });
+  const set = sealWanRequest("wan-2.7-image", { ...request.fields, imageSet: [true] });
   assert.equal(route.supports({ capability: route.capability, returns: route.returns,
     constraints: set as unknown as CanonicalValue }).status, "supported");
 });

@@ -1,7 +1,8 @@
-import { createMarkupSurfaceFacet } from "@hypit/hypit/markup";
+import { createAuthorDeclarationFacet } from "@hypit/hypit/author";
+import { createMarkupDeclarationFacet } from "@hypit/hypit/markup";
 import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
 import { createProducerPackageFacet } from "@hypit/hypit/producer";
-import { decodeExampleSurface, exampleComponent, exampleManifest, exampleMarkupSurfaces, exampleModuleRef } from "./index.js";
+import { exampleAuthorDeclarations, exampleComponent, exampleManifest, exampleMarkupDeclarations, exampleModuleRef } from "./index.js";
 
 export const hypitPackage = {
   format: "hypit.package@1" as const,
@@ -9,7 +10,8 @@ export const hypitPackage = {
   facets: [
     createProducerPackageFacet(exampleComponent.producers ?? []),
     createRefinementPackageFacet(exampleComponent.refinements ?? []),
-    ...exampleMarkupSurfaces.map((declaration) => createMarkupSurfaceFacet({ module: exampleModuleRef, declaration, handler: decodeExampleSurface })),
+    ...exampleAuthorDeclarations.map(createAuthorDeclarationFacet),
+    ...exampleMarkupDeclarations.map((declaration) => createMarkupDeclarationFacet({ module: exampleModuleRef, declaration })),
   ],
 };
 export default hypitPackage;

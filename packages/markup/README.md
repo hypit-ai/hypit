@@ -1,82 +1,91 @@
 # `@hypit/markup`
 
-Official XML-like Author Frontend normally used by `.svml` source units. The suffix has no parser
-authority. Hypit's default self-described text adapter selects this Frontend with
-`<?svml using="@hypit/markup@1"?>`; another Workspace can bind it directly. Markup owns only the `<svml>` envelope,
-the leading Import Prologue, namespace binding, generic structured elements and dispatch to
-package-owned Markup Surface facets.
+XML-like Author Frontend for `.svml` source units. The filename suffix does not select a parser;
+the Workspace binds this Frontend explicitly, normally through
+`<?svml using="@hypit/markup@1"?>`.
 
-The package has no built-in Script, media or video vocabulary. `<script>` is accepted only when an
-imported package contributes that tag through a locked Markup Surface facet. The semantic Module
-Manifest contains no XML or parser fact. The current registry is for trusted official/in-process use; it is not a security
-sandbox for third-party parser code.
+Markup owns the `<svml>` envelope, the leading import prologue, tag and attribute syntax, and the
+lossless author document. Package semantics belong to `@hypit/author` declaration compilers.
+
+## Package declarations
+
+An imported package contributes two independent facts:
+
+- an Author declaration compiler defines fields, children, bindings, outputs and compilation;
+- a Markup declaration facet assigns that declaration a tag spelling.
+
+The facet ABI is `hypit.markup-declaration@1`. Its implementation contains the Module reference,
+declaration name, tag and optional `body: "opaque"` parsing mode.
+
+```ts
+createMarkupDeclarationFacet({
+  module: { name: "@example/text", version: "1" },
+  declaration: { name: "document", tag: "Document" },
+});
+```
+
+`MarkupDeclarationRegistry` stores these spellings. `createMarkupDeclarationAuthorFrontend()` uses
+that registry together with an `AuthorDeclarationRegistryLike`; Markup does not interpret a
+package's declaration or graph semantics.
+
+## Author syntax
+
+Imports precede body declarations:
 
 ```svml
 <?svml using="@hypit/markup@1"?>
 <svml>
-  <import from="@hypit/script@1"/>
-  <import as="recipes" source="./recipes.svs"/>
+  <import from="@example/text@1" as="text"/>
+  <import source="./shared.svml" as="shared"/>
 
-  <script id="story">
-    <opening><ALICE>Hello.</opening>
-  </script>
+  <text:Document id="story" source={shared.copy}>
+    Hello.
+  </text:Document>
 </svml>
 ```
 
-## Author syntax
+`from` selects a logical Module ABI. `source` imports another decoded Source and requires an `as`
+alias. A source import exposes only that Source's public bindings; it is not textual inclusion.
+Markup receives resolved modules and source dependencies from the Compiler Host and does not read
+files or select parsers. One logical Module may be imported only once in a Source, and two imports
+may not bind the same tag spelling; Markup reports the ambiguity instead of choosing by import order.
 
-Imports must precede body declarations. `from="@scope/package@1"` selects a logical Module ABI from
-an installed package; `source="./other.svs"` selects another SourceUnit. A Host may also resolve a
-non-relative Source locator such as an explicitly exported package Source; this is the same Markup
-construct and does not give Markup package-manager knowledge. An `as` alias prefixes that module's
-tags or that Source's public bindings. A Source import is not textual inclusion and does not make
-its private graph identifiers public. Aliasing does not rewrite authored Narrative
-identities: separately declaring two Scripts named `story` in one closure is a conflict, even when
-their binding paths use different import aliases.
+Attribute values are quoted strings or whole-value references such as `source={shared.copy}`.
+Braces contain a binding path, not JavaScript. Structured text and quoted attributes decode the
+standard `lt`, `gt`, `amp`, `quot` and `apos` entities. Comments use `<!-- ... -->`.
 
-Attributes are quoted strings or whole-value references such as `source={portrait.image}`. Braces
-contain a binding path, not JavaScript. The receiving Surface owns literal number/boolean parsing,
-expression units, allowed children and output names. There is no universal `.image` or `.track`
-suffix. Generic structured text and quoted attributes decode `&lt;`, `&gt;`, `&amp;`, `&quot;` and
-`&apos;`; a raw Surface such as Script owns its own body grammar and escapes. Comments use
-`<!-- ... -->` outside raw bodies.
+Source order does not determine declaration dependencies. Markup first projects the complete
+document to Author declarations. `@hypit/author` then resolves their symbolic bindings and compiles
+them in dependency order.
 
-Put values before structured Surfaces that resolve them. During decoding, `resolveReference` sees
-imported public values, earlier authored Records and earlier Component output declarations. It can
-inspect an inline Recipe immediately but cannot inspect a generated value that has not run.
-Arbitrary forward references are not a general author-language guarantee. These declaration-order
-requirements are distinct from execution order, which follows graph dependencies and demanded
-Outputs.
+## Structured and opaque bodies
 
-## Frontend implementation
+Structured declarations receive decoded text, ordered children and package-neutral field values.
+Their compiler shape determines which fields and children are valid.
 
-Decoding has two passes. `discoverMarkup` reads only the root and complete leading Import Prologue.
-After Compiler supplies one immutable resolved closure, `decodeMarkup` freezes the visible Surface
-scope and parses the body. A raw Surface receives the source cursor immediately after its opening
-tag and must return the cursor after its own close; a structured Surface receives Markup's generic
-element tree.
+An opaque declaration receives the exact text between its opening and closing tags. This is useful
+when a package owns a continuous embedded language. The Markup registry needs `body: "opaque"` so
+the parser can find the declaration boundary without interpreting the body.
 
-A Surface may contribute three kinds of inert data:
+## Author document
 
-- authored typed Record drafts;
-- parser-independent Author Component drafts;
-- content-addressed Graph Fragments used by those components.
+`parseMarkupDocument()` retains comments, whitespace, quote spelling, attribute order, body text and
+source spans. `printMarkupDocument()` returns the untouched source byte-for-byte.
 
-Raw and Structured Surface handlers are asynchronous and receive one narrow `resolveAsset()`
-capability. This is the only way a Surface can turn an author-written asset locator into a
-content-addressed `BlobRef`; Markup never exposes filesystem APIs or a resolved local path. The
-Compiler Host, not the Surface, owns containment, read-once behavior and byte transfer. A handler
-that does not request assets remains unchanged apart from being awaitable.
+`createMarkupDocumentFrontend()` projects that representation to the neutral Author Document model.
+Its operations edit only the addressed ranges: fields, body text, declarations and imports. Field
+addition and replacement are distinct operations, so an editor cannot silently turn a stale replace
+into a new field. The neutral projection includes current imports; clients do not inspect the opaque
+Frontend representation to discover them. Package
+tags used for insertion are resolved from the same `MarkupDeclarationRegistry` used for parsing.
+Opaque text is written verbatim; structured text is entity-escaped.
 
-Markup validates source ranges, duplicate identities, Facet-declared Record types and complete
-Fragment references. It strips diagnostic ranges before sealing one `hypit.author-module@1`, so
-source reflow does not change author semantics. It does not expand Fragments while reading the
-body. Surface handlers can resolve references through the scoped decoder context described above;
-after all drafts are collected, `@hypit/author` resolves their graph wiring and emits the Core
-Graph. That later graph pass does not make future authored Records available to an earlier decoder.
+## Assets and source dependencies
 
-Direct `decodeMarkup()` calls require every source import to be supplied as an already resolved
-namespace. The reference `compileSourceClosure()` orchestration in `@hypit/compiler` recursively
-discovers those SourceUnits. Each dependency arrives with its own resolved Frontend; Markup never
-chooses a dependency parser. The compiler decodes dependencies first and then calls Markup
-with their locked public exports. Markup itself never reads a file or guesses a Frontend.
+Declaration compilers receive the Host's narrow `resolveAsset()` and optional `readAsset()`
+capabilities. Markup does not expose filesystem paths, package-manager state or resource discovery.
+
+`decodeMarkupDeclarations()` accepts already decoded source imports. Each `<import source="..."
+as="..."/>` must match one supplied dependency exactly before its exports enter declaration scope.
+The Compiler owns recursive source discovery and calls each dependency through its selected
+Frontend.

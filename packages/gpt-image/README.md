@@ -18,7 +18,7 @@ The one physical package exposes two independently importable logical modules:
 - `@hypit/gpt-image/clean@1`: generation followed by an explicit shared image transform
   Program, exporting one cleaned image while retaining both operations in the graph.
 
-Both modules own an `Image` Markup Surface. They use the same author shape, so choosing the clean
+Both modules expose an `Image` author declaration. They use the same author shape, so choosing the clean
 module changes the visible graph expansion rather than the document structure:
 
 ```svml
@@ -46,13 +46,13 @@ Omitting it leaves that choice to the model and selected Provider. Provider-spec
 including which resolution tiers accept an explicit background choice, are reported by that
 Provider before generation.
 
-`prompt` is an ordinary `Text` graph edge. Every `Reference` is an ordinary image Artifact edge;
-the Surface does not copy runtime media into request metadata. The raw module expands to request
+`prompt` is an ordinary `Text` graph edge. Every `Reference` is an ordinary image Artifact edge.
+The raw module expands to request
 assembly, generation and primary-image selection. The clean module then adds its package-owned
 `gptImageCleanupProgram` and the shared `Transform` Need as one further visible operation. The
 generic image-operations package owns the Program shape and operation semantics; this package owns
 the selected cleanup recipe.
 
-The Surface implementation belongs to this package. The public
+The declaration compiler belongs to this package. The public
 `@hypit/generation/model` helpers remain responsible only for the exact request and Fragment
-shell; they own no author-Surface registry or model syntax.
+shell; they own no author syntax registry or model syntax.

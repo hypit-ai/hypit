@@ -4,11 +4,17 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { AuthorFrontendRegistry, sealGraphFragment } from "@hypit/hypit/author";
+import {
+  AuthorDeclarationRegistry,
+  AuthorFrontendRegistry,
+  declarationField,
+  sealGraphFragment,
+  type AuthorDeclarationCompiler,
+} from "@hypit/hypit/author";
 import { resolveBuildResultValue } from "@hypit/hypit/cli";
 import { Compiler, ModulePackageRegistry, RunCompiler } from "@hypit/hypit/compiler";
 import { EndpointRegistry, Executor, ProducerRegistry } from "@hypit/hypit/executor";
-import { createMarkupAuthorFrontend, MarkupSurfaceRegistry } from "@hypit/hypit/markup";
+import { createMarkupDeclarationAuthorFrontend, MarkupDeclarationRegistry } from "@hypit/hypit/markup";
 import { runMarkupFrontend } from "@hypit/hypit/markup/run";
 import type { ModuleManifest, ProducerRef, TypeRef } from "@hypit/hypit/protocol";
 import { locateRepositoryBuildResultOutput, FileBuildResultRepository } from "@hypit/hypit/result/node";
@@ -52,28 +58,32 @@ const fragment = sealGraphFragment({
 function authorCompiler(root: string): Compiler {
   const modules = new ModulePackageRegistry();
   modules.register({ manifest });
-  const surfaces = new MarkupSurfaceRegistry();
-  surfaces.registerStructured({
+  const declarations = new AuthorDeclarationRegistry();
+  declarations.register({
     module: moduleRef,
-    declaration: { name: "video", tag: "Video", mode: "structured", outputs: [] },
-    handler: ({ element }) => {
-      const id = element.attributes.id;
-      if (typeof id !== "string") throw new Error("Video id is required");
-      return {
-        records: [],
-        components: [{
-          id,
-          fragment,
-          inputs: {},
-          outputs: { video: `${id}.video` },
-          range: element.range,
-        }],
-      };
+    declaration: "video",
+    outputs: [videoType],
+    shape: {
+      summary: "Produces one workflow Video.",
+      fields: [{ name: "id", kind: "identifier", required: true, summary: "Names the Video." }],
     },
-  });
+    bindings(declaration) {
+      const id = declarationField(declaration, "id");
+      if (id?.kind !== "literal") throw new Error("Video id is required");
+      return [{ name: `${id.value}.video`, ref: { kind: "component-output", component: id.value, output: "video" }, type: videoType }];
+    },
+    compile({ declaration }) {
+      const id = declarationField(declaration, "id");
+      if (id?.kind !== "literal") throw new Error("Video id is required");
+      return { records: [], components: [{ id: id.value, fragment, inputs: {}, outputs: { video: `${id.value}.video` }, range: declaration.range }] };
+    },
+  } satisfies AuthorDeclarationCompiler);
+  const syntax = new MarkupDeclarationRegistry();
+  syntax.register({ module: moduleRef, declaration: "video", tag: "Video" });
   const frontends = new AuthorFrontendRegistry();
-  frontends.register(createMarkupAuthorFrontend({
-    registry: surfaces,
+  frontends.register(createMarkupDeclarationAuthorFrontend({
+    syntax,
+    compilers: declarations,
     resolveModule(request) {
       const resolved = modules.resolve(request.from);
       if (resolved === undefined) throw new Error(`unknown module ${request.from}`);

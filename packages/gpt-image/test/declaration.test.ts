@@ -1,0 +1,105 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+
+import { blobTypes } from "@hypit/blob";
+import type { AuthorDeclarationCompiler, AuthorResolvedReference } from "@hypit/author";
+import { textTypes } from "@hypit/text";
+import { compileMarkupDeclaration } from "../../../test/compile-markup-declaration.js";
+
+import {
+  cleanGptImageAuthorDeclaration,
+  gptImageAuthorDeclaration,
+  gptImageMarkupDeclarations,
+} from "../src/declaration.js";
+
+const refs = new Map<string, AuthorResolvedReference>([
+  ["prompt", {
+    path: "prompt",
+    ref: { kind: "component-output", component: "assembled-prompt", output: "text" },
+    type: textTypes.text,
+  }],
+  ...["person.image", "product.image"].map((path) => [path, {
+    path,
+    ref: { kind: "component-output" as const, component: path.split(".")[0]!, output: "image" },
+    type: blobTypes.blob,
+  }] as const),
+]);
+
+async function decode(source: string, compiler: AuthorDeclarationCompiler) {
+  return await compileMarkupDeclaration({
+    source,
+    module: compiler.module,
+    alias: "gpt",
+    compilers: [compiler],
+    syntax: gptImageMarkupDeclarations.filter((item) => item.module.name === compiler.module.name)
+      .map((item) => item.declaration),
+    references: refs,
+  });
+}
+
+const authored = `<gpt:Image id="holding" prompt={prompt} aspect-ratio="9:21" resolution="2K" background="auto">
+  <gpt:Reference image={person.image}/>
+  <gpt:Reference image={product.image}/>
+</gpt:Image>`;
+
+test("GPT Image declaration keeps Text and every reference image on explicit graph edges", async () => {
+  const result = await decode(authored, gptImageAuthorDeclaration);
+  const component = result.components[0]!;
+  assert.deepEqual(component.inputs["prompt:text"], {
+    kind: "component-output", component: "assembled-prompt", output: "text",
+  });
+  assert.deepEqual(component.inputs["image-0001:artifact"], {
+    kind: "component-output", component: "person", output: "image",
+  });
+  assert.deepEqual(component.inputs["image-0002:artifact"], {
+    kind: "component-output", component: "product", output: "image",
+  });
+  assert.deepEqual(component.outputs, { image: "holding.image" });
+  const draft = result.records.find((record) => record.id === "holding.draft");
+  assert.ok(draft);
+  assert.deepEqual((draft.value as { fields?: unknown }).fields, {
+    aspectRatio: ["9:21"],
+    resolution: ["2K"],
+    background: ["auto"],
+  });
+  assert.equal(result.records.filter((record) => record.id.endsWith(".binding")).length, 2);
+  assert.equal(result.records.some((record) => record.id.endsWith(".cleanup")), false);
+  assert.deepEqual(result.components[0]?.fragment.operations.map((operation) => operation.id), [
+    "bind-text:0001:prompt",
+    "bind:0001:images",
+    "bind:0002:images",
+    "finalize-request",
+    "generate",
+    "select-primary-image",
+  ]);
+});
+
+test("clean GPT Image declaration adds its package-owned cleanup as one visible downstream operation", async () => {
+  const result = await decode(authored, cleanGptImageAuthorDeclaration);
+  const component = result.components[0]!;
+  assert.deepEqual(component.inputs.cleanup, { kind: "record", id: "holding.cleanup" });
+  assert.ok(result.records.some((record) => record.id === "holding.cleanup"));
+  assert.deepEqual(result.components[0]?.fragment.operations.map((operation) => operation.id).toSorted(), [
+    "bind-text:0001:prompt",
+    "bind:0001:images",
+    "bind:0002:images",
+    "clean-image",
+    "finalize-request",
+    "generate",
+    "select-primary-image",
+  ].toSorted());
+  const clean = result.components[0]?.fragment.operations.find((operation) => operation.id === "clean-image");
+  assert.deepEqual(clean?.inputs.source, { kind: "fragment-operation", operation: "select-primary-image" });
+  assert.deepEqual(clean?.inputs.program, { kind: "fragment-input", name: "cleanup" });
+});
+
+test("GPT Image declaration rejects hidden inline prompts and undeclared child shapes", async () => {
+  await assert.rejects(
+    decode('<gpt:Image id="bad" prompt="inline" aspect-ratio="9:16" resolution="2K"/>', gptImageAuthorDeclaration),
+    /must be a reference/u,
+  );
+  await assert.rejects(
+    decode('<gpt:Image id="bad" prompt={prompt} aspect-ratio="9:16" resolution="2K"><gpt:Audio audio={person.image}/></gpt:Image>', gptImageAuthorDeclaration),
+    /does not declare child Audio/u,
+  );
+});

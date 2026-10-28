@@ -1,4 +1,6 @@
 
+import { compareCodeUnits } from "@hypit/hypit/protocol";
+
 import { ScriptSyntaxError } from "./error.js";
 import {
   cleanProjection,
@@ -439,7 +441,6 @@ export function parseScript(
     speech: string,
     caption: string,
     start: number,
-    _end: number,
     captureCaptionRegion = true,
     sourcePositions?: readonly number[],
   ): void => {
@@ -477,7 +478,7 @@ export function parseScript(
     const addLiteral = (part: string, start: number): void => {
       for (const piece of literalPieces(part, start, true)) {
         spokenParts.push(piece.value);
-        addText(piece.value, shared ? piece.value : emittedCaption ? "" : caption!, piece.start, piece.end, false, piece.positions);
+        addText(piece.value, shared ? piece.value : emittedCaption ? "" : caption!, piece.start, false, piece.positions);
         emittedCaption = true;
       }
     };
@@ -666,7 +667,7 @@ export function parseScript(
       offset += 1;
     }
     const raw = source.slice(textStart, offset);
-    for (const piece of literalPieces(raw, textStart)) addText(piece.value, piece.value, piece.start, piece.end, true, piece.positions);
+    for (const piece of literalPieces(raw, textStart)) addText(piece.value, piece.value, piece.start, true, piece.positions);
     if (source[offset] === "{") {
       const block = parseAttributeBlock(source.slice(offset), offset);
       if (!runText || /\s$/u.test(runText)) {
@@ -823,7 +824,7 @@ export function parseScript(
     segments,
     tokens,
     turns,
-    selections: [...selections].sort(([left], [right]) => left.localeCompare(right)).map(([, selection]) => {
+    selections: [...selections].sort(([left], [right]) => compareCodeUnits(left, right)).map(([, selection]) => {
       const open = anchored(selection.open);
       const close = anchored(selection.close);
       return {
@@ -834,7 +835,7 @@ export function parseScript(
         close,
       };
     }),
-    moments: [...moments].sort(([left], [right]) => left.localeCompare(right)).map(([, moment]) => {
+    moments: [...moments].sort(([left], [right]) => compareCodeUnits(left, right)).map(([, moment]) => {
       const value = anchored(moment);
       return { ...value, anchorId: value.boundary.anchorId };
     }),

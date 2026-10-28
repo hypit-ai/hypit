@@ -6,6 +6,7 @@ import { assertFrameSpan } from "@hypit/timeline";
 import {
   assertExactTemporalValue,
   compareExactTemporalValues,
+  integrateTemporalRateProfile,
   exactTemporalZero,
   scaleExactTemporalValue,
   sealLocalTemporalDomain,
@@ -19,6 +20,7 @@ import type {
   FrameExtractionRequest,
   MediaAudioSelector,
   MediaTransformProgram,
+  MediaTransformRelativePoint,
   MediaVideoSelector,
   StillVideoLayout,
   StillVideoRequest,
@@ -71,16 +73,50 @@ export function verifyMediaTransformProgram(value: unknown): asserts value is Me
       }
       continue;
     }
-    assert(operation.kind === "retime", `MediaTransformProgram operation ${index} kind is invalid`);
-    const rate = object(operation.rate, `MediaTransformProgram retime ${index}.rate`);
-    assert(Number.isSafeInteger(rate.numerator) && (rate.numerator as number) > 0
-      && Number.isSafeInteger(rate.denominator) && (rate.denominator as number) > 0,
-    `MediaTransformProgram retime ${index}.rate must be a positive rational`);
+    if (operation.kind === "retime") {
+      const rate = object(operation.rate, `MediaTransformProgram retime ${index}.rate`);
+      assert(Number.isSafeInteger(rate.numerator) && (rate.numerator as number) !== 0
+        && Number.isSafeInteger(rate.denominator) && (rate.denominator as number) > 0,
+      `MediaTransformProgram retime ${index}.rate must be a non-zero rational`);
+      continue;
+    }
+    assert(operation.kind === "retime-profile", `MediaTransformProgram operation ${index} kind is invalid`);
+    assert(Array.isArray(operation.knots) && operation.knots.length >= 2,
+      `MediaTransformProgram retime profile ${index} requires at least two knots`);
+    for (const [knotIndex, rawKnot] of operation.knots.entries()) {
+      const knot = object(rawKnot, `MediaTransformProgram retime profile ${index}.knot ${knotIndex}`);
+      const at = object(knot.at, `MediaTransformProgram retime profile ${index}.knot ${knotIndex}.at`);
+      assert(at.edge === "start" || at.edge === "end",
+        `MediaTransformProgram retime profile ${index}.knot ${knotIndex}.at.edge is invalid`);
+      assertExactTemporalValue(at.offset as ExactTemporalValue,
+        `MediaTransformProgram retime profile ${index}.knot ${knotIndex}.at.offset`);
+      nonNegative(at.offset as ExactTemporalValue,
+        `MediaTransformProgram retime profile ${index}.knot ${knotIndex}.at.offset`);
+      const rate = object(knot.rate, `MediaTransformProgram retime profile ${index}.knot ${knotIndex}.rate`);
+      assert(Number.isSafeInteger(rate.numerator)
+        && Number.isSafeInteger(rate.denominator) && (rate.denominator as number) > 0,
+      `MediaTransformProgram retime profile ${index}.knot ${knotIndex}.rate must be rational`);
+    }
   }
 }
 
 function nonNegative(value: ExactTemporalValue, label: string): void {
   assert(compareExactTemporalValues(value, exactTemporalZero()) >= 0, `${label} must be non-negative`);
+}
+
+function transformPosition(
+  point: MediaTransformRelativePoint,
+  duration: ExactTemporalValue,
+  label: string,
+): ExactTemporalValue {
+  nonNegative(point.offset, `${label}.offset`);
+  const value = point.edge === "start"
+    ? point.offset
+    : subtractExactTemporalValues(duration, point.offset);
+  assert(compareExactTemporalValues(value, exactTemporalZero()) >= 0
+    && compareExactTemporalValues(value, duration) <= 0,
+  `${label} lies outside the current PreparedMedia domain.`);
+  return value;
 }
 
 /** Ordered pure media-domain transformation; no decoder, codec or materialized Artifact participates. */
@@ -98,6 +134,32 @@ export function transformPreparedMedia(
     let targetDuration: ExactTemporalValue;
     let sourceAtStart = exactTemporalZero();
     let rate = { numerator: 1, denominator: 1 };
+    if (operation.kind === "retime-profile") {
+      const knots = operation.knots.map((knot, knotIndex) => ({
+        sourceAt: transformPosition(knot.at, sourceDomain.duration,
+          `Media transform retime profile ${index}.knot ${knotIndex}`),
+        rate: { ...knot.rate },
+      }));
+      const first = knots[0]!.sourceAt;
+      const last = knots.at(-1)!.sourceAt;
+      const forward = compareExactTemporalValues(first, exactTemporalZero()) === 0
+        && compareExactTemporalValues(last, sourceDomain.duration) === 0;
+      const reverse = compareExactTemporalValues(first, sourceDomain.duration) === 0
+        && compareExactTemporalValues(last, exactTemporalZero()) === 0;
+      assert(forward || reverse,
+        `Media transform retime profile ${index} must traverse the complete current source from one edge to the other.`);
+      for (let knotIndex = 1; knotIndex < knots.length; knotIndex += 1) {
+        const order = compareExactTemporalValues(knots[knotIndex - 1]!.sourceAt, knots[knotIndex]!.sourceAt);
+        assert(forward ? order < 0 : order > 0,
+          `Media transform retime profile ${index} source knots must remain ${forward ? "increasing" : "decreasing"}.`);
+      }
+      current = mapPreparedMedia(current, integrateTemporalRateProfile({
+        targetId,
+        source: sourceDomain,
+        knots,
+      }));
+      continue;
+    }
     if (operation.kind === "trim") {
       const start = operation.start ?? exactTemporalZero();
       nonNegative(start, `Media transform trim ${index}.start`);
@@ -112,9 +174,10 @@ export function transformPreparedMedia(
       targetDuration = subtractExactTemporalValues(end, start);
     } else {
       rate = { ...operation.rate };
+      sourceAtStart = operation.rate.numerator < 0 ? sourceDomain.duration : exactTemporalZero();
       targetDuration = scaleExactTemporalValue(sourceDomain.duration, {
         numerator: operation.rate.denominator,
-        denominator: operation.rate.numerator,
+        denominator: Math.abs(operation.rate.numerator),
       });
     }
     const targetDomain = sealLocalTemporalDomain({ id: targetId, duration: targetDuration });

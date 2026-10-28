@@ -1,12 +1,14 @@
 import { discoverSourcePackages } from "@hypit/hypit/cli";
 import {
-  createMarkupAuthorFrontend,
-  MarkupSurfaceRegistry,
+  createMarkupDeclarationAuthorFrontend,
+  MarkupDeclarationRegistry,
 } from "@hypit/hypit/markup";
+import { AuthorDeclarationRegistry } from "@hypit/hypit/author";
 import type { LoadedPackage } from "@hypit/hypit/loader";
 
-const markupFrontend = createMarkupAuthorFrontend({
-  registry: new MarkupSurfaceRegistry(),
+const markupFrontend = createMarkupDeclarationAuthorFrontend({
+  syntax: new MarkupDeclarationRegistry(),
+  compilers: new AuthorDeclarationRegistry(),
   resolveModule(request) {
     throw new Error(`Markup discovery unexpectedly resolved Module ${request.from}`);
   },

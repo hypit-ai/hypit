@@ -1,19 +1,21 @@
-import { textFineMarkupSurfaces, textFineModuleRef, textFineTypes } from "./manifest.js";
+import { textFineModuleRef, textFineTypes } from "./manifest.js";
+import { fineTextStyleRecipeOptions, fineTextStyleRecipeProperties } from "./declaration.js";
 import type { FineTextOccurrence, TextItem } from "./types.js";
 import { compositionTypes } from "@hypit/composition";
 import type { StudioTrackCompanion, StudioTrackCompanionContext, StudioItemDraft, StudioInspectorFieldDeclaration, StudioSourceBindingDeclaration } from "@hypit/studio-companion";
-import { childItems, requiredSurfaceValue, temporalLineageFor, textLayer } from "@hypit/studio-companion";
+import { childItems, requiredDeclarationValue, temporalLineageFor, textLayer } from "@hypit/studio-companion";
 
-const typographyProperties = (textFineMarkupSurfaces
-  .find((surface) => surface.name === "style")?.vocabulary.attributes
-  .find((attribute) => attribute.name === "recipe")?.recipe ?? []);
+const typographyProperties = fineTextStyleRecipeProperties.map((name) => ({
+  name,
+  values: fineTextStyleRecipeOptions[name],
+}));
 
 function title(name: string): string {
   return name.split("-").map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`).join(" ");
 }
 
 function valuesFor(property: typeof typographyProperties[number]): readonly string[] | undefined {
-  return "values" in property ? property.values : undefined;
+  return property.values;
 }
 
 type TypographyPlacement = Pick<StudioInspectorFieldDeclaration, "domain" | "page" | "section">;
@@ -44,7 +46,6 @@ const typographyInspector: readonly StudioInspectorFieldDeclaration[] = typograp
   const options = valuesFor(property);
   return {
     binding: `style.${property.name}`, label: title(property.name), ...placement,
-    ...(property.summary === undefined ? {} : { summary: property.summary }),
     control: options !== undefined ? "select" : typographyColorProperties.has(property.name) ? "color"
       : typographyTextProperties.has(property.name) ? "text" : "number",
     ...(options === undefined ? {} : { options }),
@@ -61,7 +62,7 @@ function textOf(item: Pick<TextItem, "document">): string {
 }
 
 function projectFineText(context: StudioTrackCompanionContext): readonly StudioItemDraft[] {
-  const occurrence = requiredSurfaceValue(context, "occurrence") as FineTextOccurrence;
+  const occurrence = requiredDeclarationValue(context, "occurrence") as FineTextOccurrence;
   const item = childItems(context, [{
     id: occurrence.id,
     startFrame: occurrence.span.startFrame,
@@ -112,8 +113,8 @@ function occurrenceInspector(form: "flow" | "point" | "path"): readonly StudioIn
 function fineTextCompanion(form: "flow" | "point" | "path"): StudioTrackCompanion {
   const geometry = form === "flow" ? "within" : form;
   return {
-    id: form, role: "track",
-    output: { type: compositionTypes.visualTrack, surface: form, modules: [textFineModuleRef] },
+    id: form,
+    output: { type: compositionTypes.visualTrack, declaration: form, modules: [textFineModuleRef] },
     family: "typography", tone: "violet", icon: "text",
     bindings: [
       { name: geometry },

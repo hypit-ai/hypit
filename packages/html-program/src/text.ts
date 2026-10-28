@@ -6,7 +6,6 @@ import type {
   VisualTextFlowElement,
   VisualTextPaintLayer,
   VisualTextRunStyle,
-  VisualTextSequenceAnimation,
   VisualTextTypography,
   VisualVectorPathCommand,
 } from "@hypit/composition";
@@ -467,18 +466,6 @@ type UnitIndices = {
   grapheme: number;
 };
 
-function unitAnimationCss(
-  _element: TerminalTextElement,
-  _unit: VisualTextSequenceAnimation["unit"],
-  _index: number,
-  _context: TextRenderContext,
-): string[] {
-  // Unit-local animation is installed once as typed WAAPI keyframes after
-  // exact-font layout. HTML renderer owns the frame clock and seeks those
-  // persistent animations; no renderer script samples wall time.
-  return [];
-}
-
 function styleAttribute(values: readonly string[], escape: TextRenderContext["escape"]): string {
   return values.length === 0 ? "" : ` style="${escape(values.join(";"))}"`;
 }
@@ -531,7 +518,6 @@ function renderDocument(
       "position:relative",
       "display:inline-grid",
       ...boxCss(paints, "grapheme", "isolated"),
-      ...unitAnimationCss(element, "grapheme", graphemeIndex, context),
     ];
     return `<span data-hypit-text-unit-grapheme="${graphemeIndex}"${styleAttribute(styles, context.escape)}>${tailHtml(paints, "grapheme", context, "isolated")}${renderGlyphPaint(value, paints, context)}</span>`;
   };
@@ -553,7 +539,6 @@ function renderDocument(
         return `<span data-hypit-text-unit-word="${wordIndex}"${styleAttribute([
           "position:relative",
           ...boxCss(paints, "word", "isolated"),
-          ...unitAnimationCss(element, "word", wordIndex, context),
         ], context.escape)}>${tailHtml(paints, "word", context, "isolated")}${wordContent}</span>`;
       }).join("");
       const runStyle = [
@@ -565,7 +550,6 @@ function renderDocument(
         ...boxCss(paints, "run"),
         ...boxCss(paints, "word", "joined"),
         ...boxCss(paints, "grapheme", "joined"),
-        ...unitAnimationCss(element, "run", runIndex, context),
       ];
       return `<span data-hypit-text-run="${context.escape(inline.id)}" data-hypit-text-unit-run="${runIndex}" ${textLanguageAttributes(typography, context.escape, inline.language, inline.direction)}${styleAttribute(runStyle, context.escape)}>${tailHtml(paints, "run", context)}${tailHtml(paints, "word", context, "joined")}${tailHtml(paints, "grapheme", context, "joined")}${runContents}</span>`;
     }).join("");
@@ -573,7 +557,6 @@ function renderDocument(
       "position:relative",
       `margin:${number(paragraphTypography.paragraphBeforePx)}px 0 ${number(paragraphTypography.paragraphAfterPx)}px 0`,
       ...boxCss(paragraphPaints, "paragraph"),
-      ...unitAnimationCss(element, "paragraph", paragraphIndex, context),
     ];
     const isFirstParagraph = paragraphPosition === 0;
     const isLastParagraph = paragraphPosition === document.paragraphs.length - 1;
@@ -740,20 +723,20 @@ function renderPathDocument(element: VisualPathTextElement, context: TextRenderC
       const text = segmentRun(inline.text, inline.language ?? typography.language).map((segment) => {
         if (!segment.wordLike) return graphemes(segment.text, inline.language ?? typography.language).map((value) => {
           const index = indices.grapheme++;
-          return `<tspan data-hypit-text-unit-grapheme="${index}"${styleAttribute(unitAnimationCss(element, "grapheme", index, context), context.escape)}>${context.escape(value)}</tspan>`;
+          return `<tspan data-hypit-text-unit-grapheme="${index}">${context.escape(value)}</tspan>`;
         }).join("");
         const word = indices.word++;
         const value = graphemes(segment.text, inline.language ?? typography.language).map((item) => {
           const index = indices.grapheme++;
-          return `<tspan data-hypit-text-unit-grapheme="${index}"${styleAttribute(unitAnimationCss(element, "grapheme", index, context), context.escape)}>${context.escape(item)}</tspan>`;
+          return `<tspan data-hypit-text-unit-grapheme="${index}">${context.escape(item)}</tspan>`;
         }).join("");
-        return `<tspan data-hypit-text-unit-word="${word}"${styleAttribute(unitAnimationCss(element, "word", word, context), context.escape)}>${value}</tspan>`;
+        return `<tspan data-hypit-text-unit-word="${word}">${value}</tspan>`;
       }).join("");
-      const style = [...typographyCss(typography, context.exactFontFamily), ...svgGlyphLayerCss(paint, context), ...unitAnimationCss(element, "run", runIndex, context)];
+      const style = [...typographyCss(typography, context.exactFontFamily), ...svgGlyphLayerCss(paint, context)];
       return `<tspan data-hypit-text-unit-run="${runIndex}" ${textLanguageAttributes(typography, context.escape, inline.language, inline.direction)}${styleAttribute(style, context.escape)}>${text}</tspan>`;
     }).join("");
     const separator = paragraphPosition === 0 ? "" : " ";
-    return `${separator}<tspan data-hypit-text-unit-paragraph="${paragraphIndex}"${styleAttribute(unitAnimationCss(element, "paragraph", paragraphIndex, context), context.escape)}>${content}</tspan>`;
+    return `${separator}<tspan data-hypit-text-unit-paragraph="${paragraphIndex}">${content}</tspan>`;
   }).join("");
 }
 

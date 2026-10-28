@@ -11,7 +11,7 @@ component.
 
 ## A minimal project Track Companion
 
-Suppose `@studio/score-strip@1` already owns a `track` Surface that emits a public VisualTrack and
+Suppose `@studio/score-strip@1` already owns a `track` declaration that emits a public VisualTrack and
 accepts a literal string `label` attribute. The Companion can reuse generic terminal Items while
 adding package-specific presentation and one Inspector field:
 
@@ -21,10 +21,9 @@ import type { StudioTrackCompanion } from "@hypit/studio-companion";
 
 export const companions: readonly StudioTrackCompanion[] = [{
   id: "score-strip",
-  role: "track",
   output: {
     type: compositionTypes.visualTrack,
-    surface: "track",
+    declaration: "track",
     modules: [{ name: "@studio/score-strip", version: "1" }],
   },
   family: "score-strip",
@@ -32,7 +31,7 @@ export const companions: readonly StudioTrackCompanion[] = [{
   icon: "chart",
   tone: "orange",
   lane: { heightPx: 64 },
-  poster: { source: "surface-preview" },
+  poster: { source: "declaration-preview" },
   bindings: [{ name: "label", writable: true }],
   inspector: [{
     binding: "label",
@@ -44,10 +43,10 @@ export const companions: readonly StudioTrackCompanion[] = [{
 }];
 ```
 
-The names and lane height are this example's choices. Use the real Module ABI, Surface name,
+The names and lane height are this example's choices. Use the real Module ABI, declaration name,
 nominal output Type and authored input names of the component. A Companion does not create a new
 author attribute. Omitting `project` uses generic terminal Items; `poster` adds the declared
-Surface preview when one exists, without changing the component's rendered video.
+declaration preview when one exists, without changing the component's rendered video.
 
 Each lane occupies one timeline row. Items overlap in ascending `stackOrder`,
 with later projected Items above earlier ones when orders tie. Studio keeps
@@ -67,6 +66,11 @@ without extending its editable interval. Give the parent the board or background
 parts and its children their own parts when they should be independently selectable.
 The component decides this granularity. A composite can remain one selectable Item.
 
+`StudioItemDraft.id` is local to one projected Track lane. Keep it meaningful inside the component;
+do not prefix it with an output ref or encode a global tuple. Studio combines the Track's structured
+address with that local id for selection and writeback. `requiredValues` names same-declaration values
+needed while projecting the Track; those values do not become Tracks or browser-facing view roles.
+
 Merge the facet into the package's existing activation. In this example `authorContribution`
 exports its existing modules, deterministic component and Markup facets:
 
@@ -85,7 +89,7 @@ export default {
 ```
 
 Point the package's existing `hypit.activation` at that combined export and include the compiled
-Companion file in the package. Keep the real modules, Producers and Surface facets; a Companion-only
+Companion file in the package. Keep the real modules, Producers and declaration facets; a Companion-only
 replacement would remove the component itself. Use the active Distribution's adapter ABI, as
 described in the [Studio README](../studio/README.md), rather than a `workspace:*` dependency in an
 external project.
@@ -98,9 +102,9 @@ Restart the Studio process after changing activation or package code.
 ## Project domain Items and material
 
 A terminal VisualTrack is enough for generic display. When it loses meaningful domain structure,
-publish a deterministic schedule/program output from the same Surface and name its port in
-`requiredValues`. Inside `project(context)`, retrieve it with `requiredSurfaceValue(context, "schedule")`.
-The port must exist in the Surface's public output mappings; inventing a port name in a Companion
+publish a deterministic schedule/program output from the same declaration and name its port in
+`requiredValues`. Inside `project(context)`, retrieve it with `requiredDeclarationValue(context, "schedule")`.
+The port must exist in the declaration's public output mappings; inventing a port name in a Companion
 does not make an internal Producer value observable. `requiredReferencedValue(context, input, type)`
 instead follows one exact typed author reference, such as a CaptionDocument.
 
@@ -144,7 +148,7 @@ fallback tries only the terminal object's exact `subjectId`/`authoredId`; render
 are not alternate guesses.
 
 Track Companions match terminal outputs by complete `TypeRef` and their authoring origin by complete
-`ModuleRef + Surface`; Film and temporal-domain Companions use the same versioned origin match. Short Type
+`ModuleRef + declaration`; Film and temporal-domain Companions use the same versioned origin match. Short Type
 and module names remain available for UI text and diagnostics but never decide which Companion is
 allowed to interpret a value.
 
@@ -172,13 +176,13 @@ Script Studio uses this protocol for Narrative, but common Studio neither import
 reserves segment, word, Selection or Moment slots. Another package can contribute beat, shot or
 motion-event domains through the same protocol.
 
-A temporal-declaration Companion instead matches one author Surface and names only the output ports
+A temporal-declaration Companion instead matches one author declaration and names only the output ports
 whose primary values are author-visible absolute Instants. It does not choose their color,
 row or editing behavior. These exact outputs are display requests even when no Track consumes them.
 Studio evaluates them under the existing display-execution permissions and displays resolved primary
 Instants in one read-only `Instants` row. Unresolved requests are reported without blocking Film
 preview. Windows remain author values used by Track Items and their editing
-lineage, without an additional common-row block. This keeps Surface port knowledge in the owning package while
+lineage, without an additional common-row block. This keeps declaration output knowledge in the owning package while
 letting common Studio understand only the shared absolute temporal types. Do not export a Timeline's
 root range, automatically derived Window boundaries or internal helper values as separate declarations.
 
@@ -186,7 +190,7 @@ root range, automatically derived Window boundaries or internal helper values as
 createStudioCompanionFacet({
   temporalDeclarations: [{
     id: "window",
-    match: { module: myModule, surface: "window" },
+    match: { module: myModule, declaration: "window" },
     project: ({ placement }) => placement.id === undefined ? [] : [{
       id: placement.id,
       output: placement.outputPorts.find((port) => port.name === "window")!.ref,
@@ -271,7 +275,7 @@ authored references to one SVS Recipe and its declared properties. These paths a
 the `inspector` field table. Keep shared values shared: editing a Recipe affects its consumers, while
 an Item-specific `parameterReferences` override must identify the actual authored value it uses.
 
-Verify the integration in an ordinary Run: the intended Module/Surface matches, the expected Item
+Verify the integration in an ordinary Run: the intended Module/declaration matches, the expected Item
 is selected, its field reaches the correct Source or Recipe, and changing it recomputes the preview.
 For domain handles, verify the exact point/span identity and its other consumers too. Read-only derived timing
 is preferable to an invented inverse. The Companion explains the component; its Producers remain
@@ -334,7 +338,7 @@ The package that authors the referenced object contributes through
 ```ts
 {
   id: "slide",
-  match: { module: myModule, surface: "slide" },
+  match: { module: myModule, declaration: "slide" },
   bindings: [{ name: "distance", writable: true, fallback: 0.25 }],
   inspector: [{
     binding: "distance", label: "Travel", domain: "where",
@@ -344,7 +348,7 @@ The package that authors the referenced object contributes through
 }
 ```
 
-Studio resolves the actual reference and matches its Module/Surface. It prefixes this object's
+Studio resolves the actual reference and matches its Module/declaration. It prefixes this object's
 bindings and fields under the consumer reference; the example becomes `style.distance`.
 Nested `referenced` and `recipe` bindings use the same composition. The Use retains its own
 Window and time gestures. Several Uses referencing one Style edit the same source object.

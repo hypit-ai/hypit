@@ -6,6 +6,7 @@ import { narrativeProjectionFixture, timelineFixture } from "../../../test/timel
 import { projectMomentInstantFixture, projectSegmentWindow, projectSelectionWindow } from "../../../test/temporal-fixture.js";
 
 import { createResolvedClosure } from "@hypit/kernel";
+import type { AuthorDeclarationCompiler, AuthorResolvedReference } from "@hypit/author";
 import { blobManifest } from "@hypit/blob";
 import { audioTrackClips, compositionManifest, visualElements } from "@hypit/composition";
 import type { VisualItem } from "@hypit/composition";
@@ -49,15 +50,9 @@ import {
   createTopThreeItemSet,
   createTriggeredRankingCandidateSet,
   decodeColumnStyle,
-  decodeColumnStyleSurface,
-  decodeColumnSurface,
   directTierItemPose,
   decodeTierBoardStyle,
-  decodeTierBoardStyleSurface,
-  decodeTierBoardSurface,
   decodeTopThreeStyle,
-  decodeTopThreeStyleSurface,
-  decodeTopThreeSurface,
   fromHighTierItemPose,
   renderColumn,
   renderRankingAudio,
@@ -90,12 +85,17 @@ import { recipeType } from "@hypit/recipe";
 import { sealText, textManifest, textTypes } from "@hypit/text";
 import { temporalManifest, temporalTypes } from "@hypit/temporal";
 import type { TemporalWindow } from "@hypit/temporal";
-import type {
-  StructuredElement,
-  StructuredNode,
-  SurfaceResolvedReference,
-  MarkupAttributeValue,
-} from "@hypit/markup";
+import { compileMarkupDeclaration } from "../../../test/compile-markup-declaration.js";
+import {
+  columnAuthorDeclaration,
+  columnStyleAuthorDeclaration,
+  rankingMarkupDeclarations,
+  tierBoardAuthorDeclaration,
+  tierBoardStyleAuthorDeclaration,
+  topThreeAuthorDeclaration,
+  topThreeStyleAuthorDeclaration,
+} from "../src/declaration.js";
+import { rankingModuleRef } from "../src/index.js";
 
 const space = sealTimeline({ id: "test-space", frameCount: 240, frameRate: { numerator: 30, denominator: 1 },
 });
@@ -537,7 +537,7 @@ test("each component owns a distinct event law", () => {
 
 });
 
-test("all three author Surfaces preserve absolute temporal, spatial, font, image and optional sound graph edges", async () => {
+test("all three author declarations preserve absolute temporal, spatial, font, image and optional sound graph edges", async () => {
   createResolvedClosure([
     blobManifest,
     timelineManifest,
@@ -549,15 +549,12 @@ test("all three author Surfaces preserve absolute temporal, spatial, font, image
     textManifest,
     rankingManifest,
   ]);
-  const range = { source: "ranking.svml", start: 0, end: 1 };
-  const ref = (path: string): MarkupAttributeValue => ({ kind: "reference", path });
-  const node = (name: string, attributes: Record<string, MarkupAttributeValue>, children: StructuredNode[] = []): StructuredElement => ({ kind: "element", name, attributes, children, range });
-  const plain = (path: string, type: SurfaceResolvedReference["type"]): SurfaceResolvedReference => ({ path, ref: { kind: "record", id: path }, type });
-  const inlineReference = (path: string, type: SurfaceResolvedReference["type"], value: unknown): SurfaceResolvedReference => ({
+  const plain = (path: string, type: AuthorResolvedReference["type"]): AuthorResolvedReference => ({ path, ref: { kind: "record", id: path }, type });
+  const inlineReference = (path: string, type: AuthorResolvedReference["type"], value: unknown): AuthorResolvedReference => ({
     path, ref: { kind: "record", id: path }, type,
-    record: { value } as never,
+    record: { id: path, type, value } as never,
   });
-  const references = new Map<string, SurfaceResolvedReference>([
+  const references = new Map<string, AuthorResolvedReference>([
     ["semantic", plain("semantic", timelineTypes.timeline)],
     ["frame", plain("frame", spatialTypes.frame)],
     ["outer", plain("outer", temporalTypes.window)],
@@ -574,19 +571,18 @@ test("all three author Surfaces preserve absolute temporal, spatial, font, image
     ["font", inlineReference("font", mediaTypes.fontArtifact, font)],
     ["copy", inlineReference("copy", textTypes.text, sealText("Dynamic ranking copy"))],
   ]);
+  const decode = async (source: string, compiler: AuthorDeclarationCompiler) => await compileMarkupDeclaration({
+    source, module: rankingModuleRef, alias: "ranking", compilers: [compiler],
+    syntax: rankingMarkupDeclarations, references,
+  });
   const styleCases = [
-    ["tier-style", rankingTypes.tierStyle, decodeTierBoardStyleSurface, { rows: [{ id: "s", label: "S", color: "#ef4444" }, { id: "a", label: "A", color: "#22c55e" }] }],
-    ["column-style", rankingTypes.columnStyle, decodeColumnStyleSurface, {}],
-    ["top-style", rankingTypes.topThreeStyle, decodeTopThreeStyleSurface, {}],
+    ["tier-style", "TierBoardStyle", rankingTypes.tierStyle, tierBoardStyleAuthorDeclaration, { rows: [{ id: "s", label: "S", color: "#ef4444" }, { id: "a", label: "A", color: "#22c55e" }] }],
+    ["column-style", "ColumnStyle", rankingTypes.columnStyle, columnStyleAuthorDeclaration, {}],
+    ["top-style", "TopThreeStyle", rankingTypes.topThreeStyle, topThreeStyleAuthorDeclaration, {}],
   ] as const;
-  for (const [id, type, handler, properties] of styleCases) {
+  for (const [id, tag, type, compiler, properties] of styleCases) {
     references.set(`${id}-recipe`, inlineReference(`${id}-recipe`, recipeType, recipe(id, properties)));
-    const result = await handler({
-      sourceName: "ranking.svml",
-      element: node(`ranking:${type.name.replace(/Style$/u, "Style")}`, { id, recipe: ref(`${id}-recipe`), font: ref("font") }),
-      resolveReference: (path) => references.get(path),
-      resolveAsset: async () => { throw new Error("no asset resolution expected"); },
-    });
+    const result = await decode(`<ranking:${tag} id="${id}" recipe={${id}-recipe} font={font}/>`, compiler);
     assert.deepEqual(result.records.map((record) => record.id), [id, `${id}.sound`]);
     const visualRecord = result.records[0]!;
     const soundRecord = result.records[1]!;
@@ -594,29 +590,24 @@ test("all three author Surfaces preserve absolute temporal, spatial, font, image
     references.set(`${id}.sound`, { path: `${id}.sound`, ref: { kind: "record", id: `${id}.sound` }, type: rankingTypes.soundStyle, record: soundRecord as never });
   }
   const cases = [
-    [decodeTierBoardSurface, node("ranking:TierBoard", {
-      id: "tier", timeline: ref("semantic"), within: ref("frame"), frame: ref("frame"), during: ref("outer"),
-      style: ref("tier-style"),
-    }, [node("ranking:TierItem", { id: "tier-one", tier: "s", entry: "drop", icon: ref("icon-1"), during: ref("ranking-segment") })])],
-    [decodeColumnSurface, node("ranking:Column", {
-      id: "column", timeline: ref("semantic"), within: ref("frame"), frame: ref("frame"), during: ref("ranking-segment"),
-      style: ref("column-style"),
-      "appear-sound": ref("appear"), "move-sound": ref("move"),
-    }, [
-      node("ranking:ColumnItem", { id: "column-one", rank: "1", label: ref("copy"), during: ref("column-reveal") }),
-      node("ranking:ColumnItem", { id: "column-two", rank: "5", preset: "true", label: "Two", icon: ref("icon-2") }),
-    ])],
-    [decodeTopThreeSurface, node("ranking:TopThree", {
-      id: "top", timeline: ref("semantic"), frame: ref("frame"), during: ref("outer"),
-      terminal: ref("terminal"), style: ref("top-style"),
-    }, [node("ranking:TopThreeItem", { label: "First", at: ref("moment-one") }), node("ranking:TopThreeItem", { label: "Second", icon: ref("icon-1"), at: ref("moment-two") })])],
+    [tierBoardAuthorDeclaration, `<ranking:TierBoard id="tier" timeline={semantic} within={frame} frame={frame} during={outer} style={tier-style}>
+      <ranking:TierItem id="tier-one" tier="s" entry="drop" icon={icon-1} during={ranking-segment}/>
+    </ranking:TierBoard>`],
+    [columnAuthorDeclaration, `<ranking:Column id="column" timeline={semantic} within={frame} frame={frame} during={ranking-segment}
+      style={column-style} appear-sound={appear} move-sound={move}>
+      <ranking:ColumnItem id="column-one" rank="1" label={copy} during={column-reveal}/>
+      <ranking:ColumnItem id="column-two" rank="5" preset="true" label="Two" icon={icon-2}/>
+    </ranking:Column>`],
+    [topThreeAuthorDeclaration, `<ranking:TopThree id="top" timeline={semantic} frame={frame} during={outer}
+      terminal={terminal} style={top-style}>
+      <ranking:TopThreeItem label="First" at={moment-one}/>
+      <ranking:TopThreeItem label="Second" icon={icon-1} at={moment-two}/>
+    </ranking:TopThree>`],
   ] as const;
-  for (const [handler, element] of cases) {
-    const result = await handler({
-      sourceName: "ranking.svml", element,
-      resolveReference: (path) => references.get(path),
-      resolveAsset: async () => { throw new Error("no asset resolution expected"); },
-    });
+  const decodedCases = [];
+  for (const [compiler, source] of cases) {
+    const result = await decode(source, compiler);
+    decodedCases.push(result);
     assert.equal(result.components.filter((component) => component.outputs.visual !== undefined).length, 1);
     const fragment = result.components.find((candidate) => candidate.fragment.exports.some((output) => output.name === "visual"))!.fragment;
     assert.ok(fragment.exports.some((output) => output.name === "schedule"));
@@ -626,22 +617,14 @@ test("all three author Surfaces preserve absolute temporal, spatial, font, image
     assert.equal(result.components.some(({ fragment }) => fragment.operations.some((operation) =>
       operation.producer.module.name === "@hypit/narrative-temporal")), false);
   }
-  const programTier = await decodeTierBoardSurface({
-    sourceName: "ranking.svml", element: cases[0][1],
-    resolveReference: (path) => references.get(path),
-    resolveAsset: async () => { throw new Error("no asset resolution expected"); },
-  });
+  const programTier = decodedCases[0]!;
   const tierFragment = programTier.components.find((candidate) => candidate.fragment.exports.some((output) => output.name === "visual"))!.fragment;
   assert.equal(tierFragment.inputs.find((input) => input.name === "outer")?.type.name, "TemporalWindow");
   assert.equal(programTier.components.some(({ fragment }) => fragment.operations.some((operation) =>
     operation.producer.module.name === "@hypit/temporal")), false);
   assert.equal(programTier.components.some(({ fragment }) => fragment.operations.some((operation) =>
     operation.producer.module.name === "@hypit/narrative-temporal")), false);
-  const column = await decodeColumnSurface({
-    sourceName: "ranking.svml", element: cases[1][1],
-    resolveReference: (path) => references.get(path),
-    resolveAsset: async () => { throw new Error("no asset resolution expected"); },
-  });
+  const column = decodedCases[1]!;
   const columnFragment = column.components.find((candidate) => candidate.fragment.exports.some((output) => output.name === "visual"))!.fragment;
   const audio = columnFragment.exports.find((output) => output.name === "audio");
   assert.ok(columnFragment.operations.some((operation) => operation.producer.name === rankingProducers.materializeTextItem.name));
@@ -667,28 +650,23 @@ test("Ranking icon Producers consume Blob values", async () => {
   assert.deepEqual((set as { readonly items: readonly { readonly icon: unknown }[] }).items[0]?.icon, icon);
 });
 
-test("Ranking author Surfaces fail closed on impossible image and sound combinations", async () => {
-  const range = { source: "ranking.svml", start: 0, end: 1 };
-  const ref = (path: string): MarkupAttributeValue => ({ kind: "reference", path });
-  const plain = (path: string, type: SurfaceResolvedReference["type"]): SurfaceResolvedReference => ({ path, ref: { kind: "record", id: path }, type });
-  const references = new Map<string, SurfaceResolvedReference>([
+test("Ranking author declarations fail closed on impossible image and sound combinations", async () => {
+  const plain = (path: string, type: AuthorResolvedReference["type"]): AuthorResolvedReference => ({ path, ref: { kind: "record", id: path }, type });
+  const references = new Map<string, AuthorResolvedReference>([
     ["semantic", plain("semantic", timelineTypes.timeline)],
     ["frame", plain("frame", spatialTypes.frame)], ["outer", plain("outer", temporalTypes.window)],
     ["icon", plain("icon", mediaTypes.blobArtifact)],
     ["style", plain("style", rankingTypes.tierStyle)], ["style.sound", plain("style.sound", rankingTypes.soundStyle)],
     ["move", plain("move", mediaTypes.prepared)],
   ]);
-  const common = { id: "bad", timeline: ref("semantic"), within: ref("frame"), frame: ref("frame"), during: ref("outer"), style: ref("style") };
-  const context = (element: StructuredElement) => ({
-    sourceName: "ranking.svml", element, resolveReference: (path: string) => references.get(path),
-    resolveAsset: async () => { throw new Error("no asset resolution expected"); },
-  });
-  assert.throws(() => decodeTierBoardSurface(context({
-    kind: "element", name: "ranking:TierBoard", attributes: common,
-    children: [{ kind: "element", name: "ranking:TierItem", attributes: { tier: "s", entry: "direct", during: ref("outer") }, children: [], range }], range,
-  })), /icon/u);
-  assert.throws(() => decodeTierBoardSurface(context({
-    kind: "element", name: "ranking:TierBoard", attributes: { ...common, "move-sound": ref("move") },
-    children: [{ kind: "element", name: "ranking:TierItem", attributes: { tier: "s", entry: "direct", icon: ref("icon"), during: ref("outer") }, children: [], range }], range,
-  })), /move-sound/u);
+  const decode = async (source: string) => await compileMarkupDeclaration({ source, module: rankingModuleRef,
+    alias: "ranking", compilers: [tierBoardAuthorDeclaration], syntax: rankingMarkupDeclarations, references });
+  await assert.rejects(async () => await decode(`<ranking:TierBoard id="bad" timeline={semantic} within={frame}
+    frame={frame} during={outer} style={style}>
+    <ranking:TierItem tier="s" entry="direct" during={outer}/>
+  </ranking:TierBoard>`), /icon/u);
+  await assert.rejects(async () => await decode(`<ranking:TierBoard id="bad" timeline={semantic} within={frame}
+    frame={frame} during={outer} style={style} move-sound={move}>
+    <ranking:TierItem tier="s" entry="direct" icon={icon} during={outer}/>
+  </ranking:TierBoard>`), /move-sound/u);
 });

@@ -46,6 +46,12 @@ export type SourceAssetResolver = (
   request: SourceAssetRequest,
 ) => Awaitable<BlobRef>;
 
+/** Read explicitly addressed author input without exposing a Host path or storage implementation. */
+export type SourceAssetReader = (
+  importer: SourceUnit,
+  request: SourceAssetRequest,
+) => Awaitable<Uint8Array>;
+
 const utf8 = new TextDecoder("utf-8", { fatal: true });
 
 /** Explicit adapter for textual Frontends; Source itself remains byte-oriented. */

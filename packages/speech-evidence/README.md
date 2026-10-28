@@ -33,6 +33,10 @@ views because those operations concern speech evidence, not FFmpeg and not a Tim
 inspection tool may project sample coordinates to seconds to select frames, but it does not acquire
 ownership of transcript meaning.
 
+The Transcript Author declaration owns ID validation, evidence decoding and the resulting typed
+Record. Markup declares only the `Transcript` tag and that its body is opaque package text. The
+Frontend therefore preserves JSON exactly and never parses it as nested Markup.
+
 `wordsAt` uses half-open word spans and preserves overlaps. `phraseRanges` matches whole consecutive
 words, preserves repeated occurrences and returns each measured range; it never guesses which
 occurrence an author intended. Missing word times remain missing rather than being inferred as

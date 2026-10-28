@@ -1,8 +1,4 @@
 import { frameSpanSchema, timelineTypes, timelineDependency } from "@hypit/timeline";
-import { temporalContextAttributeVocabulary } from "@hypit/temporal/markup";
-import { readFile } from "node:fs/promises";
-
-import { blobTypes } from "@hypit/hypit/blob";
 import {
   compositionDependency,
   compositionTypes,
@@ -11,7 +7,7 @@ import {
   visualTextPaintSchema,
   visualTextTypographySchema,
 } from "@hypit/composition";
-import { mediaDependency, mediaTypes } from "@hypit/media";
+import { mediaDependency } from "@hypit/media";
 import { mediaOperationsModuleRef } from "@hypit/media-operations";
 import {
   visualFrameTreatmentSchema,
@@ -22,16 +18,8 @@ import {
 
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/hypit/protocol";
 import { spatialDependency, spatialFrameSchema, spatialTypes } from "@hypit/spatial";
-import { recipeType } from "@hypit/hypit/recipe";
 import { temporalDependency, temporalTypes } from "@hypit/temporal";
-import { temporalInstantAttributeVocabulary } from "@hypit/temporal/markup";
 import { textDependency, textTypes } from "@hypit/hypit/text";
-
-const previewImage = (file: string) => ({
-  mediaType: "image/png",
-  path: `preview/${file}`,
-  open: async () => Uint8Array.from(await readFile(new URL(`../preview/${file}`, import.meta.url))),
-});
 
 export const depthStackModuleRef = { name: "@hypit/depth-stack", version: "1" } as const;
 export const depthStackTypes = {
@@ -118,243 +106,6 @@ const finalizeInputs = [
   { name: "frame", type: spatialTypes.frame }, { name: "spec", type: depthStackTypes.spec },
   { name: "timeline", type: timelineTypes.timeline },
 ] as const;
-
-export const depthStackMarkupSurfaces = [
-    { name: "label", tag: "Label", mode: "structured", outputs: [textTypes.text, depthStackTypes.cardLabelStyle, depthStackTypes.cardLabel],
-      vocabulary: {
-        summary: "Binds label copy to one exact font stack and one label appearance, and publishes the label a Card carries.",
-        attributes: [
-          { name: "id", kind: "identifier", required: true,
-            summary: "Names this label so a Card can reference it." },
-          { name: "content", kind: "reference", required: false, accepts: [textTypes.text],
-            summary: "Chooses an existing Text as the label copy in place of the element's own text." },
-          { name: "font", kind: "reference", required: true, accepts: [mediaTypes.fontStack],
-            summary: "Chooses the exact font stack the label is set in." },
-          { name: "size", kind: "literal", required: false,
-            summary: "Sets the type size of the label copy in pixels." },
-          { name: "color", kind: "literal", required: false,
-            summary: "Sets the color the label copy is painted in." },
-          { name: "align", kind: "literal", required: false, values: ["start", "center", "end", "justify"],
-            summary: "Places the copy across the inline axis of the label box." },
-          { name: "block", kind: "literal", required: false, values: ["start", "center", "end"],
-            summary: "Places the copy along the block axis of the label box." },
-          { name: "padding", kind: "literal", required: false,
-            summary: "Sets the padding in pixels on every edge of the label box." },
-        ],
-        ports: [
-          { name: "", type: depthStackTypes.cardLabel,
-            summary: "The bound label, addressed by the element's own id." },
-        ],
-        text: "The element's own text is the label copy whenever `content` is absent; writing both is refused.",
-        example: `<deck:Label id="proof-label-style" content={proof-label}
-  font={fonts.ui} size="34" color="#ffffff"/>`,
-        notes: [
-          "`size` defaults to 34, `color` to `#ffffff`, `align` to `center`, `block` to `end` and `padding` to 20.",
-          "The element accepts no child elements; filenames, URLs and media metadata are never read as label copy.",
-        ],
-      } },
-    { name: "track", tag: "DepthStack", mode: "structured", outputs: [
-      depthStackTypes.header, depthStackTypes.spec, depthStackTypes.cardSpec,
-      spatialTypes.fit, visualTrackTypes.sampleLayerSpec, visualTrackTypes.paintLayerSpec,
-      depthStackTypes.cardLabel, depthStackTypes.cardLabelStyle, textTypes.text,
-      depthStackTypes.program, compositionTypes.visualTrack,
-    ],
-      vocabulary: {
-        summary: "Deals ordered Cards into one Frame, each at its own Moment, and publishes the deck and the VisualTrack it renders to.",
-        appearance: "One leaning pile of overlapping picture Cards inside a single Frame, every Card drawn over the same rectangle and told apart only by its pose. The Card most recently dealt sits in front, upright and at full size; each Card dealt before it stands one step further behind — shifted down, smaller, tilted, fainter and duller with every step — and each Card still to come peeks out the opposite way. A Card is its own still, timed or surface picture fitted into that Frame, optionally over a painted Frame, inside a rounded clip and behind a border and shadows, and may carry a line of label copy. Cards arrive in document order: at each Card's Moment the whole collection deterministically reflows into its new depth poses.",
-        preview: previewImage("DepthStack.png"),
-        attributes: [
-          { name: "id", kind: "identifier", required: true,
-            summary: "Names this deck so its Program and Track can be referenced elsewhere in the Source." },
-          ...temporalContextAttributeVocabulary,
-          { name: "frame", kind: "reference", required: true, accepts: [spatialTypes.frame],
-            summary: "Chooses the Frame the whole stack occupies." },
-          { name: "appearance", kind: "reference", required: true, accepts: [recipeType],
-            summary: "Chooses the Recipe for visibility, depth poses, frame Paint, motion and reflow, and the Recipe every Card falls back to.",
-            recipe: [
-              { name: "visible-previous", required: false, fallback: "2",
-                summary: "Sets how many Cards dealt before the current one stay on screen behind it." },
-              { name: "visible-next", required: false, fallback: "1",
-                summary: "Sets how many Cards still to be dealt stay on screen behind the current one." },
-              { name: "wrap", required: false, fallback: "false",
-                summary: "Decides whether depth wraps around the ends of the deck so the first and last Cards are neighbours." },
-              { name: "current-x", required: false, fallback: "0",
-                summary: "Offsets the current Card horizontally within the Frame in pixels." },
-              { name: "current-y", required: false, fallback: "0",
-                summary: "Offsets the current Card vertically within the Frame in pixels." },
-              { name: "current-scale", required: false, fallback: "1",
-                summary: "Scales the current Card about its own center." },
-              { name: "current-rotation", required: false, fallback: "0",
-                summary: "Tilts the current Card in degrees about its own center." },
-              { name: "current-opacity", required: false, fallback: "1",
-                summary: "Sets the opacity the current Card is drawn at." },
-              { name: "current-stacking", required: false, fallback: "0",
-                summary: "Places the current Card in the deck's own stacking order, above the Cards behind it." },
-              { name: "current-brightness", required: false, fallback: "1",
-                summary: "Sets the brightness the current Card is toned to." },
-              { name: "current-contrast", required: false, fallback: "1",
-                summary: "Sets the contrast the current Card is toned to." },
-              { name: "current-saturation", required: false, fallback: "1",
-                summary: "Sets the saturation the current Card is toned to." },
-              { name: "previous-x-step", required: false, fallback: "0",
-                summary: "Shifts each already dealt Card horizontally by this many pixels for every step it stands behind the current one." },
-              { name: "previous-y-step", required: false, fallback: "28",
-                summary: "Shifts each already dealt Card vertically by this many pixels for every step it stands behind the current one." },
-              { name: "previous-scale-step", required: false, fallback: "0.94",
-                summary: "Scales each already dealt Card by this factor for every step it stands behind the current one." },
-              { name: "previous-rotation-step", required: false, fallback: "-2.5",
-                summary: "Tilts each already dealt Card by this many degrees for every step it stands behind the current one." },
-              { name: "previous-rotation-mode", required: false, values: ["linear", "alternate"], fallback: "alternate",
-                summary: "Decides whether that tilt accumulates in one direction or alternates side to side with each step of depth." },
-              { name: "previous-opacity-step", required: false, fallback: "0.82",
-                summary: "Multiplies the opacity of each already dealt Card for every step it stands behind the current one." },
-              { name: "previous-stacking-step", required: false, fallback: "-1",
-                summary: "Moves each already dealt Card this far down the deck's stacking order for every step it stands behind the current one." },
-              { name: "next-x-step", required: false, fallback: "0",
-                summary: "Shifts each undealt Card horizontally by this many pixels for every step it stands ahead of the current one." },
-              { name: "next-y-step", required: false, fallback: "-20",
-                summary: "Shifts each undealt Card vertically by this many pixels for every step it stands ahead of the current one." },
-              { name: "next-scale-step", required: false, fallback: "0.92",
-                summary: "Scales each undealt Card by this factor for every step it stands ahead of the current one." },
-              { name: "next-rotation-step", required: false, fallback: "2",
-                summary: "Tilts each undealt Card by this many degrees for every step it stands ahead of the current one." },
-              { name: "next-rotation-mode", required: false, values: ["linear", "alternate"], fallback: "alternate",
-                summary: "Decides whether that tilt accumulates in one direction or alternates side to side with each step of depth." },
-              { name: "next-opacity-step", required: false, fallback: "0.72",
-                summary: "Multiplies the opacity of each undealt Card for every step it stands ahead of the current one." },
-              { name: "next-stacking-step", required: false, fallback: "-1",
-                summary: "Moves each undealt Card this far down the deck's stacking order for every step it stands ahead of the current one." },
-              { name: "reflow-frames", required: false, fallback: "8",
-                summary: "Sets how many Frames the stack takes to settle into its new poses after a Card is dealt." },
-              { name: "reflow-easing", required: false, values: ["linear", "ease-in", "ease-out", "ease-in-out"], fallback: "ease-in-out",
-                summary: "Shapes that settling over its Frames." },
-              { name: "clip", required: false, values: ["none", "frame", "rounded"], fallback: "frame",
-                summary: "Decides whether a Card is clipped to its Frame, to a rounded Frame, or not at all." },
-              { name: "radius", required: false, fallback: "0",
-                summary: "Rounds the corners a `rounded` clip cuts to, in pixels." },
-              { name: "padding", required: false, fallback: "0",
-                summary: "Insets the picture from the Card's Frame in pixels, written as one, two or four edge values." },
-              { name: "border-width", required: false, fallback: "0",
-                summary: "Sets the thickness of the border drawn around a Card in pixels, and at `0` no border is drawn at all." },
-              { name: "border-style", required: false, values: ["solid", "dashed", "dotted"], fallback: "solid",
-                summary: "Selects the stroke that border is drawn with." },
-              { name: "border-color", required: false,
-                summary: "Colors that border, and is required whenever `border-width` is not `0`." },
-              { name: "shadows", required: false, fallback: "none",
-                summary: "Casts shadows behind a Card, as `x y blur spread color` entries separated by semicolons." },
-              { name: "fit", required: false, values: ["contain", "cover", "fit-width", "fit-height", "native", "scale-down", "stretch"], fallback: "contain",
-                summary: "Decides how a Card's picture is sized against the Card's Frame." },
-              { name: "frame-x", required: false, fallback: "0.5",
-                summary: "Picks the horizontal point of the Card's Frame the picture is anchored to, as a fraction of its width." },
-              { name: "frame-y", required: false, fallback: "0.5",
-                summary: "Picks the vertical point of the Card's Frame the picture is anchored to, as a fraction of its height." },
-              { name: "content-x", required: false, fallback: "0.5",
-                summary: "Picks the horizontal point of the picture that meets that Frame point, as a fraction of its width." },
-              { name: "content-y", required: false, fallback: "0.5",
-                summary: "Picks the vertical point of the picture that meets that Frame point, as a fraction of its height." },
-              { name: "fit-offset-x", required: false, fallback: "0",
-                summary: "Nudges the fitted picture horizontally in pixels after it is anchored." },
-              { name: "fit-offset-y", required: false, fallback: "0",
-                summary: "Nudges the fitted picture vertically in pixels after it is anchored." },
-              { name: "fit-constraint", required: false, values: ["bounded", "free"], fallback: "bounded",
-                summary: "Decides whether the fitted picture is held inside the Card's Frame or allowed to run past it." },
-              { name: "frame-paint", required: false, fallback: "transparent",
-                summary: "Fills the Card's Frame behind its picture, as a color, `linear(angle;stops)` or `radial(x,y;stops)`." },
-              { name: "opacity", required: false, fallback: "1",
-                summary: "Sets the opacity the Card's picture is sampled at, before any depth pose is applied." },
-              { name: "blur", required: false, fallback: "0",
-                summary: "Blurs the Card's picture by this radius in pixels." },
-              { name: "brightness", required: false, fallback: "1",
-                summary: "Sets the brightness the Card's picture is sampled at, before any depth tone is applied." },
-              { name: "contrast", required: false, fallback: "1",
-                summary: "Sets the contrast the Card's picture is sampled at, before any depth tone is applied." },
-              { name: "saturation", required: false, fallback: "1",
-                summary: "Sets the saturation the Card's picture is sampled at, before any depth tone is applied." },
-              { name: "playback-future", required: false, values: ["hold-head", "continue"], fallback: "hold-head",
-                summary: "Decides what a Card shows before it is dealt: its first frame held, or its own timeline running on." },
-              { name: "playback-past", required: false, values: ["hold-tail", "continue", "hide"], fallback: "hold-tail",
-                summary: "Decides what a Card shows once its material is spent: its last frame held, its own timeline running on, or nothing." },
-            ] },
-          { name: "until", kind: "expression", required: true, accepts: [temporalTypes.instant],
-            summary: "Ends the deck at an already resolved Instant or an authored absolute time such as 8s." },
-        ],
-        children: [
-          { tag: "Card", cardinality: "many",
-            summary: "One card of the stack, dealt at its own event in document order.",
-            attributes: [
-              { name: "id", kind: "identifier", required: true,
-                summary: "Names this Card within the deck." },
-              { name: "source", kind: "reference", required: true,
-                accepts: [blobTypes.blob, mediaTypes.prepared, mediaTypes.compositableSurface],
-                summary: "Chooses the picture the Card shows, as a still image Artifact, prepared timed media or a Compositable Surface." },
-              { name: "extent", kind: "reference", required: false, accepts: [spatialTypes.extent],
-                summary: "Gives a still image its pixel Extent, which timed and surface sources already carry." },
-              ...temporalInstantAttributeVocabulary,
-              { name: "appearance", kind: "reference", required: false, accepts: [recipeType],
-                summary: "Chooses this Card's own Recipe in place of the deck's, adding explicit future and past playback.",
-                recipe: [
-                  { name: "fit", required: false, values: ["contain", "cover", "fit-width", "fit-height", "native", "scale-down", "stretch"], fallback: "contain",
-                    summary: "Decides how this Card's picture is sized against the Card's Frame." },
-                  { name: "frame-x", required: false, fallback: "0.5",
-                    summary: "Picks the horizontal point of the Card's Frame the picture is anchored to, as a fraction of its width." },
-                  { name: "frame-y", required: false, fallback: "0.5",
-                    summary: "Picks the vertical point of the Card's Frame the picture is anchored to, as a fraction of its height." },
-                  { name: "content-x", required: false, fallback: "0.5",
-                    summary: "Picks the horizontal point of the picture that meets that Frame point, as a fraction of its width." },
-                  { name: "content-y", required: false, fallback: "0.5",
-                    summary: "Picks the vertical point of the picture that meets that Frame point, as a fraction of its height." },
-                  { name: "fit-offset-x", required: false, fallback: "0",
-                    summary: "Nudges the fitted picture horizontally in pixels after it is anchored." },
-                  { name: "fit-offset-y", required: false, fallback: "0",
-                    summary: "Nudges the fitted picture vertically in pixels after it is anchored." },
-                  { name: "fit-constraint", required: false, values: ["bounded", "free"], fallback: "bounded",
-                    summary: "Decides whether the fitted picture is held inside the Card's Frame or allowed to run past it." },
-                  { name: "frame-paint", required: false, fallback: "transparent",
-                    summary: "Fills this Card's Frame behind its picture, as a color, `linear(angle;stops)` or `radial(x,y;stops)`." },
-                  { name: "opacity", required: false, fallback: "1",
-                    summary: "Sets the opacity this Card's picture is sampled at, before any depth pose is applied." },
-                  { name: "blur", required: false, fallback: "0",
-                    summary: "Blurs this Card's picture by this radius in pixels." },
-                  { name: "brightness", required: false, fallback: "1",
-                    summary: "Sets the brightness this Card's picture is sampled at, before any depth tone is applied." },
-                  { name: "contrast", required: false, fallback: "1",
-                    summary: "Sets the contrast this Card's picture is sampled at, before any depth tone is applied." },
-                  { name: "saturation", required: false, fallback: "1",
-                    summary: "Sets the saturation this Card's picture is sampled at, before any depth tone is applied." },
-                  { name: "playback-future", required: false, values: ["hold-head", "continue"], fallback: "hold-head",
-                    summary: "Decides what this Card shows before it is dealt: its first frame held, or its own timeline running on." },
-                  { name: "playback-past", required: false, values: ["hold-tail", "continue", "hide"], fallback: "hold-tail",
-                    summary: "Decides what this Card shows once its material is spent: its last frame held, its own timeline running on, or nothing." },
-                ] },
-              { name: "label", kind: "reference", required: false, accepts: [depthStackTypes.cardLabel],
-                summary: "Chooses the bound label this Card carries; without it the Card is unlabelled." },
-            ] },
-        ],
-        ports: [
-          { name: "program", type: depthStackTypes.program,
-            summary: "The resolved deck: its span, its Frame, its spec and its ordered Cards." },
-          { name: "visual", type: compositionTypes.visualTrack,
-            summary: "The rendered deck, an ordinary peer VisualTrack." },
-        ],
-        example: `<deck:DepthStack
-  id="proof-stack"
-  timeline={speech.timeline}
-  frame={layout.proof-stack}
-  until={proof-end}
-  appearance={recipes.deck.proof}
->
-  <deck:Card id="proof-1" source={proof1.image} extent={proof1.extent}
-    at={proof1} label={proof-label-style}/>
-  <deck:Card id="proof-2" source={proof2.video} at={proof2}/>
-</deck:DepthStack>`,
-        notes: [
-          "The deck requires at least one Card, and a Card is empty.",
-          "`extent` is required for a still image source and refused for Prepared Media or a Compositable Surface.",
-          "`until` consumes an absolute Instant; domain projection is declared upstream.",
-          "Both Recipes are closed: any property outside the ones listed here is refused, and a Card without its own `appearance` reads the deck's Recipe for fit, sampling, frame Paint and playback.",
-        ],
-      } },
-  ] as const;
 
 
 export const depthStackManifest: ModuleManifest = {

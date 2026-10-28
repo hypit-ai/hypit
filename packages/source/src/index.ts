@@ -2,6 +2,7 @@ export type {
   Awaitable,
   ResolvedSource,
   SourceAssetRequest,
+  SourceAssetReader,
   SourceAssetResolver,
   SourceImportRequest,
   SourceResolver,

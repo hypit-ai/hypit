@@ -147,4 +147,4 @@ Instant / Window / TemporalExtent DAG ──────────────
 ```
 
 组件最终只消费 Timeline 与绝对 Instant/Window。领域投影在上游发布这些值；通用组件的
-Surface 不接受 Script 对象，也不携带投影器。
+Author Declaration 不接受 Script 对象，也不携带投影器。

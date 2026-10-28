@@ -261,11 +261,13 @@ The Provider's `supports` response describes the requests that implementation ca
 
 | Public import | Accurate interface owner |
 | --- | --- |
-| `@hypit/generation/model` | Model ports and Producer/Need construction |
-| `@hypit/generation` | Generated-media values and request/mapping helpers |
+| `@hypit/generation/model` | Model-owned request Type, Capability and Producer/Need construction |
+| `@hypit/generation/model-fields` | Optional field-oriented request builder for Models that choose that shape |
+| `@hypit/generation/provider` | Optional Provider-local field and resource transport projection |
+| `@hypit/generation` | Generated-media result values |
 | `@hypit/hypit/endpoint` | Execution, resources, credentials, support, receipts and capacity |
 | `@hypit/runtime-local/extension` | Profile activation, diagnostics and Managed Programs for the official local Runtime |
-| `@hypit/hypit/author`, `producer`, `refinement`, `markup` | Author graphs, deterministic Producers, owner-defined Type refinement and Markup Surfaces respectively |
+| `@hypit/hypit/author`, `producer`, `refinement`, `markup` | Author declarations/graphs, deterministic Producers, owner-defined Type refinement and Markup spelling respectively |
 
 These packages' READMEs ship with the Distribution and own precise APIs. Use the selected
 `@hypit/hypit` release as the extension's development dependency; ship compiled JavaScript and normal

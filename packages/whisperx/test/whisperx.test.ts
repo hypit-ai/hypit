@@ -1,6 +1,6 @@
 import { mediaTypes } from "@hypit/media";
-import { parseStructuredElement } from "@hypit/markup";
-import type { SurfaceResolvedReference } from "@hypit/markup";
+import { AuthorDeclarationRegistry, compileAuthorDeclarations } from "@hypit/author";
+import type { AuthorResolvedReference } from "@hypit/author";
 import { sealSpeechEvidenceAudio } from "@hypit/speech-evidence";
 import type { SpeechEvidenceAudio } from "@hypit/speech-evidence";
 import assert from "node:assert/strict";
@@ -8,12 +8,13 @@ import test from "node:test";
 import { fixtureResource } from "../../../test/fixture-resource.js";
 
 import {
-  decodeWhisperXTranscriptionSurface,
   parseWhisperXLanguage,
   verifyWhisperXTranscriptionRequest,
   whisperXComponent,
   whisperXProducers,
   whisperXRequestForEvidenceAudio,
+  whisperXTranscriptionAuthorDeclaration,
+  whisperXModuleRef,
 } from "@hypit/whisperx";
 
 function evidenceAudio(): SpeechEvidenceAudio {
@@ -42,16 +43,27 @@ test("WhisperX request contains canonical audio, its sample span and the chosen 
 });
 
 test("SVML language reaches an independent transcription request", async () => {
-  const refs = new Map<string, SurfaceResolvedReference>([
+  const refs = new Map<string, AuthorResolvedReference>([
     ["media", { path: "media", ref: { kind: "record", id: "media" }, type: mediaTypes.prepared }],
   ]);
+  const registry = new AuthorDeclarationRegistry();
+  registry.register(whisperXTranscriptionAuthorDeclaration);
   for (const language of ["en", "zh", "es", "ko", "ja", "id", "yue", "zzz"]) {
-    const output = await decodeWhisperXTranscriptionSurface({
+    const output = await compileAuthorDeclarations({
       sourceName: "speech.svml",
-      element: parseStructuredElement({ name: "speech.svml", text:
-        `<whisperx:Transcription id="speech" media={media} language="${language}"/>`,
-      }, 0).element,
-      resolveReference: (path: string) => refs.get(path),
+      declarations: [{
+        module: whisperXModuleRef,
+        name: "transcription",
+        fields: [
+          { name: "id", value: { kind: "literal", value: "speech" } },
+          { name: "media", value: { kind: "reference", path: "media" } },
+          { name: "language", value: { kind: "literal", value: language } },
+        ],
+        children: [],
+        range: { start: 0, end: 1 },
+      }],
+      registry,
+      resolveReference: (path) => refs.get(path),
       resolveAsset: () => { throw new Error("No assets expected"); },
     });
     assert.deepEqual(output.components[0]?.outputs, { transcript: "speech.transcript" });

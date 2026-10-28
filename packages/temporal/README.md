@@ -28,17 +28,23 @@ frame rate. The consumer resolves it on a selected Clock with one explicit `exac
 or `nearest` boundary rule. `cover` is the normal whole-media rule because it retains the final
 partial output frame.
 
-`TemporalMap` is a partial relation: omitted target ranges are gaps, rate zero is hold, negative rate
-is reverse and `wrap` expresses loop. Composition preserves a sequence of independently meaningful
+`TemporalMap` is a partial relation: omitted target ranges are gaps. An affine piece uses an exact
+rational rate; rate zero is hold, a negative rate is reverse and `wrap` expresses loop. A cubic piece
+uses four exact source positions over a linearly parameterized target range. Its controls must be
+monotone, so one piece has one direction; holds and direction changes use adjacent pieces.
+Composition preserves a sequence of independently meaningful
 stages rather than flattening them through a registry. The relation answers where target time reads
 source time; visual interpolation and audio resampling remain signal-domain responsibilities.
 At a cyclic boundary, a negative-rate Map keeps the left-hand `wrap.end` representative while a
 positive-rate Map keeps the right-hand `wrap.start` representative. Terminal signal consumers use
 that orientation when choosing a discrete frame or sample; the Map itself remains continuous and exact.
 
-Author syntax does not live in the main contract entry. The same owner exposes
-`@hypit/temporal/markup`: declaration packages use its construction helpers, while component
-surfaces use its reference-only Instant and Window resolvers.
+Exact duration, rate, relative-point, affine-relation and cubic-relation parsing is part of this package's
+syntax-neutral value contract and is exported from the main entry. Author packages can therefore
+construct exact Maps without importing Markup. Absolute Instant and Window author construction belongs to `@hypit/timeline-author`,
+because it selects one completed Timeline and lowers author relationships into a graph.
+Consumers declare references to completed Timeline, Instant and Window values in their own
+syntax-neutral Author Declaration shapes.
 Domain packages such as `@hypit/narrative-temporal` project their own values into these
 common types. Visual, audio, caption, typography and project components receive only the completed
 Instant or Window plus the Timeline they already consume.

@@ -70,6 +70,6 @@ project must declare, and its examples do not limit what the work may combine or
 ## Continue at the owner
 
 Once a playbook identifies the needed role or relationship, use `hypit vocabulary <package>` and the
-owning package README for exact Surfaces, ports, fields, and model options. Creation references own
+owning package README for exact declarations, ports, fields, and model options. Creation references own
 the work's understanding and intention; Production references own Source, Run, preview, Build, and
 Result behavior. Project files own the facts and decisions of the current work.

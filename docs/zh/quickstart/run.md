@@ -172,7 +172,8 @@ Hypit 永远不会猜测两个名字代表同一份作者意图。每次执行 `
 
 Planner 会同时读取完整 Author Graph 与 Run Graph：裁剪所选 Candidate 替代掉的默认 Operation，同时保留该 Candidate 自身仍然消费的 Author Output。这是一次新的 Build，而非旧 Build 的延续。复用生成视频时，媒体准备以及作品确实需要的对齐仍在下游；分别复用准备媒体、局部时间域和 NarrativeAlignment 时，会保留这些事实，但不会冻结之后的 Timeline 放置或呈现。字幕、MG 和渲染只在仍被所选路线需要时计算。选择哪些 Output，取决于哪些内容应该保留不变。
 
-Core 不再给 Candidate 标注 `exact` 或 `substitute`。选择 Candidate 本身就是这次运行的明确实现决定。系统校验类型兼容性，但不猜测创作等价性，也不把这种判断作为冗余元信息沿整条图传播。
+选择 Candidate 本身就是这次运行的明确实现决定。Core 校验类型兼容性；`exact`、`substitute`
+之类对创作等价性的猜测不属于 Candidate 数据。
 
 ### 使用已有文件
 

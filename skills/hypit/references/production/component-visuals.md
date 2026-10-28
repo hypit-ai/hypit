@@ -21,12 +21,15 @@ The public representation has these parts:
 | --- | --- |
 | Track | Named picture contribution belonging to one Timeline |
 | Present | An independently timed appearance inside its owning Track |
+| Process | A package-owned operation over named, independently timed picture contributions |
 | `span` | Program frames from `startFrame` through the frame before `endFrameExclusive` |
 | Item position | The back-to-front operation position in the Track's `items` sequence |
 | Elements | One rooted tree of boxes, text, media, masks, compositable surfaces or renderer programs |
 | Animation | Keyframes relative to the containing Present's start |
 
-Use several Presents when items have separate lifetimes or local operation positions. Their declaration
+Use several Presents when items have separate lifetimes or local operation positions. Use a Process only
+when one picture operation genuinely needs several named contributions while preserving each input clock.
+Their declaration
 sequence is their operation sequence. A persistent board
 can keep its settled rows visible while later rows enter. Its domain program decides those spans
 and states; the drawing output makes them explicit.
@@ -44,7 +47,7 @@ visual relationships rather than the nesting of tags in Source.
 `sealPresentVisualTrack` from `@hypit/composition`. It receives a projected span and a resolved Frame,
 draws a colored box with exact-font text, and optionally fades in relative to the Present's start.
 Its colors, size, padding and entrance duration are supplied by the caller. These drawing-function
-arguments need not all become Surface parameters: the owning component can supply its fixed design
+arguments need not all become author fields: the owning component can supply its fixed design
 and expose only the inputs the production needs.
 
 The root uses Canvas coordinates. The text child uses the root's local coordinates, so padding is
@@ -55,8 +58,8 @@ whole Track. Ordered box children use their array position; mask roles and progr
 Ids name objects and occurrences, but never break ordering ties or change paint order.
 
 The function is the drawing part of a package. Connect it to a Producer with matching typed inputs,
-then publish the Track through the Fragment and Surface as described in
-[Track authoring](track-authoring.md#connect-the-implementation-at-its-real-boundaries). Surface outputs
+then publish the Track through the Fragment and Author Declaration as described in
+[Track authoring](track-authoring.md#connect-the-implementation-at-its-real-boundaries). Declaration outputs
 map the Fragment's export name to a public Source name such as `answers.track`.
 
 Use `timelineFrameCount` from `@hypit/timeline` for the full Timeline's frame count and
@@ -79,8 +82,8 @@ shapes above for their supported values. Motion uses frame-indexed keyframes. Me
 describes which source frame to show at each part of a Present; it is needed for timed video playback,
 trims, loops and holds. A Visual Clip is useful when that is the whole role.
 
-Carry asset and font references through declared inputs. Source assets can be resolved at the
-Surface's asset boundary; generated media remains a graph reference until its Producer runs.
+Carry asset and font references through declared inputs. Source assets can be resolved through the
+Author compiler's narrow asset capability; generated media remains a graph reference until its Producer runs.
 The drawing function receives those values. For a visual preparation that reads bytes or invokes an
 external tool, use its preparation capability and pass the resulting material into drawing.
 
@@ -122,15 +125,20 @@ material, amplitude or timing choices rather than the renderer's internal constr
 
 For shared opacity or a filter, put the affected content under the element that owns the treatment.
 A translucent panel can use backdrop filtering; its painted position and browser compositing scope
-determine which background it affects. A transition can own both participating pictures and their
-handoff. Choose the scope from the visible relationship, keeping independently useful contributions
-as peer Presents. These are ordinary composition choices within the same rendering path.
+determine which background it affects. A transition relation can project two peer Presents into a
+Visual Process whose `outgoing` and `incoming` inputs keep their original clocks; the selected effect
+package owns the handoff programme. Choose the scope from the visible relationship, keeping independently
+useful contributions as peer Presents outside the relation. These are ordinary composition choices within
+the same rendering path.
 
 Use ordinary typed children for prepared video, images and exact-font text. A `{{child-id}}` slot in
 the HTML places each direct child exactly once. These children retain their declared resources,
 video sampling and font handling while participating in the program's HTML layout. Extra artifacts
-used by the program belong in its `artifacts` list; `htmlProgramResourceUri` supplies their resource
-URLs. The rendering environment materializes those references.
+used by the program belong in its `artifacts` list; `htmlArtifactUri` supplies an inert
+locator for that declared dependency. Compilation replaces authored dependency locators with
+Programme-local Artifact ids, and the rendering environment resolves those ids through the paired
+Blob references. Component HTML therefore does not treat Result-store resource ids as document
+identity.
 
 For time-bearing footage, give the component ordinary prepared media, the absolute Window it needs
 and an explicit sampling choice. Intersect that Window with the containing Present, then derive the

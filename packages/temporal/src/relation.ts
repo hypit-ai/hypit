@@ -63,6 +63,13 @@ export function assertTemporalRelationSpec(value: TemporalRelationSpec, label = 
     const item = `${label}.relations.${index}`;
     assert(relation !== null && typeof relation === "object" && !Array.isArray(relation), `${item} is invalid.`);
     assertRange(relation.target, `${item}.target`);
+    if (relation.kind === "cubic") {
+      assertPoint(relation.sourceAtStart, `${item}.sourceAtStart`);
+      assertPoint(relation.sourceControl1, `${item}.sourceControl1`);
+      assertPoint(relation.sourceControl2, `${item}.sourceControl2`);
+      assertPoint(relation.sourceAtEnd, `${item}.sourceAtEnd`);
+      continue;
+    }
     assertRange(relation.source, `${item}.source`);
     if (relation.kind === "fit") continue;
     assert(relation.kind === "rate", `${item}.kind is invalid.`);
@@ -155,6 +162,15 @@ function clippedTarget(input: {
 function resolveRelation(relation: TemporalRelation, target: LocalTemporalDomain, source: LocalTemporalDomain,
   clock: Clock, label: string): TemporalMapPiece {
   const targetRange = range(relation.target, target, clock, `${label}.target`);
+  if (relation.kind === "cubic") {
+    return {
+      target: targetRange,
+      sourceAtStart: position(relation.sourceAtStart, source, clock, `${label}.sourceAtStart`),
+      sourceControl1: position(relation.sourceControl1, source, clock, `${label}.sourceControl1`),
+      sourceControl2: position(relation.sourceControl2, source, clock, `${label}.sourceControl2`),
+      sourceAtEnd: position(relation.sourceAtEnd, source, clock, `${label}.sourceAtEnd`),
+    };
+  }
   const sourceRange = range(relation.source, source, clock, `${label}.source`);
   if (relation.kind === "fit") {
     const targetLength = subtract(exactTemporalRational(targetRange.end), exactTemporalRational(targetRange.start));

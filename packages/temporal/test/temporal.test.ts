@@ -14,9 +14,12 @@ import {
   evaluateTemporalMap,
   exactTemporalValueFromFrames,
   identityTemporalMap,
+  integrateTemporalRateProfile,
   moduloExactTemporalValue,
   projectDomainPosition,
   projectProgramInstant,
+  parseTemporalRelationFields,
+  parseTemporalCubicRelationFields,
   resolveTemporalBoundary,
   resolveTemporalRelation,
   sealTemporalMap,
@@ -31,6 +34,42 @@ const frames = (value: number) => ({ unit: "frames" as const, value });
 const seconds = (numerator: number, denominator = 1) => ({ unit: "seconds" as const, numerator, denominator });
 const instant = (id: string, projection: import("../src/index.js").TemporalInstantExpression) =>
   projectProgramInstant({ itemId: id, subjectId: "subject", timeline, projection });
+
+test("Temporal relation literals are parsed without a Frontend", () => {
+  assert.deepEqual(parseTemporalRelationFields({
+    "target-at": "end",
+    "source-at": "end",
+    rate: "1.5",
+    "wrap-from": "start+250ms",
+    "wrap-until": "end-250ms",
+  }, "Map"), {
+    kind: "rate",
+    target: { from: { edge: "start", offset: seconds(0) }, until: { edge: "end", offset: seconds(0) } },
+    targetAt: { edge: "end", offset: seconds(0) },
+    sourceAt: { edge: "end", offset: seconds(0) },
+    rate: { numerator: 3, denominator: 2 },
+    source: { from: { edge: "start", offset: seconds(0) }, until: { edge: "end", offset: seconds(0) } },
+    wrap: {
+      from: { edge: "start", offset: { unit: "milliseconds", value: 250 } },
+      until: { edge: "end", offset: { unit: "milliseconds", value: 250 } },
+    },
+  });
+});
+
+test("cubic relation literals name source positions without encoding an editor easing mode", () => {
+  assert.deepEqual(parseTemporalCubicRelationFields({
+    "target-from": "start", "target-until": "end",
+    "source-at-start": "start", "source-control-1": "start+250ms",
+    "source-control-2": "end-250ms", "source-at-end": "end",
+  }, "Curve"), {
+    kind: "cubic",
+    target: { from: { edge: "start", offset: seconds(0) }, until: { edge: "end", offset: seconds(0) } },
+    sourceAtStart: { edge: "start", offset: seconds(0) },
+    sourceControl1: { edge: "start", offset: { unit: "milliseconds", value: 250 } },
+    sourceControl2: { edge: "end", offset: { unit: "milliseconds", value: 250 } },
+    sourceAtEnd: { edge: "end", offset: seconds(0) },
+  });
+});
 
 test("TemporalExtent preserves an exact unpositioned duration without owning a Clock", () => {
   const extent = temporalExtentFromDomain({
@@ -116,6 +155,43 @@ test("Temporal Maps compose identity, scale, reverse, hold, loop and gaps withou
   assert.deepEqual(evaluateTemporalMap(map, { ticks: "7", timeBase: { numerator: 1, denominator: 2 } }),
     { ticks: "1", timeBase: { numerator: 1, denominator: 1 } });
   assert.deepEqual(evaluateTemporalMap(identityTemporalMap(target), target.duration), target.duration);
+});
+
+test("cubic Map pieces evaluate exact monotone source positions without a curve registry", () => {
+  const value = (ticks: string, denominator = 1) => ({ ticks, timeBase: { numerator: 1, denominator } });
+  const target = { id: "ramp", duration: value("4") };
+  const source = { id: "footage", duration: value("10") };
+  const map = sealTemporalMap({ stages: [{ target, source, pieces: [{
+    target: { start: value("0"), end: target.duration },
+    sourceAtStart: value("0"),
+    sourceControl1: value("0"),
+    sourceControl2: value("8"),
+    sourceAtEnd: value("8"),
+  }] }] });
+  assert.deepEqual(evaluateTemporalMap(map, value("1")), value("5", 4));
+  assert.deepEqual(evaluateTemporalMap(map, value("2")), value("4"));
+  assert.equal(temporalMapDirectionAt(map, value("2")), 1);
+  assert.throws(() => sealTemporalMap({ stages: [{ target, source, pieces: [{
+    target: { start: value("0"), end: target.duration },
+    sourceAtStart: value("0"), sourceControl1: value("8"), sourceControl2: value("2"), sourceAtEnd: value("6"),
+  }] }] }), /controls must be monotone/u);
+});
+
+test("a signed rate profile integrates to one exact cubic target-to-source Map", () => {
+  const value = (ticks: string, denominator = 1) => ({ ticks, timeBase: { numerator: 1, denominator } });
+  const source = { id: "footage", duration: value("10") };
+  const map = integrateTemporalRateProfile({
+    targetId: "ramped",
+    source,
+    knots: [
+      { sourceAt: value("0"), rate: { numerator: 1, denominator: 1 } },
+      { sourceAt: value("5"), rate: { numerator: 1, denominator: 2 } },
+      { sourceAt: value("10"), rate: { numerator: 1, denominator: 1 } },
+    ],
+  });
+  assert.deepEqual(map.stages[0]?.target.duration, value("40", 3));
+  assert.deepEqual(evaluateTemporalMap(map, value("20", 3)), value("5"));
+  assert.deepEqual(evaluateTemporalMap(map, value("40", 3)), value("10"));
 });
 
 test("a reverse wrapped Map preserves the left-hand representative at its cyclic boundary", () => {

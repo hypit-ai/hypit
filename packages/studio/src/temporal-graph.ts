@@ -1,6 +1,6 @@
 import { sameType } from "@hypit/hypit/protocol";
-import type { BuildState, ProducerRef, ProducerStep, Value, TypeRef, TypedRecord } from "@hypit/hypit/protocol";
-import type { BuildCandidateSelection } from "@hypit/hypit/kernel";
+import type { ProducerRef, ProducerStep, Value, TypeRef, TypedRecord } from "@hypit/hypit/protocol";
+import type { BuildCandidateSelection, BuildView } from "@hypit/hypit/kernel";
 import { temporalTypes } from "@hypit/temporal";
 import type {
   StudioTemporalBinding,
@@ -24,7 +24,7 @@ export type FindTemporalRelation = (
 ) => StudioTemporalRelationCompanion | undefined;
 
 /** Executed graph facts needed for Studio lineage; scheduling and Runtime state stay outside this boundary. */
-export type ExecutedGraph = Pick<BuildState, "program" | "plan" | "records">;
+export type ExecutedGraph = Pick<BuildView, "program" | "plan" | "records">;
 
 function valueOf(value: Value): unknown | undefined {
   return value;

@@ -9,18 +9,17 @@ import {
   outputFor,
   referencedValueFor,
   placementFor,
-  roleFor,
+  isStudioTrack,
   traceFor,
   tracedStudioValues,
   unique,
 } from "./studio-trace.js";
-import type { StudioViewRole, StudioTrace } from "./studio-trace.js";
+import type { StudioTrace } from "./studio-trace.js";
 
-export type StudioViewRequirement = {
+export type StudioTrackRequirement = {
   readonly name: string;
   readonly ref: string;
   readonly type: string;
-  readonly role: StudioViewRole;
   readonly trace: StudioTrace;
   /** Film-owned visual occurrences of this reusable Track value. */
   readonly visualOccurrences?: readonly (readonly string[])[];
@@ -29,7 +28,9 @@ export type StudioViewRequirement = {
 export type StudioInspection = {
   readonly filmComposition: string;
   readonly timeRef: string;
-  readonly projections: readonly StudioViewRequirement[];
+  readonly tracks: readonly StudioTrackRequirement[];
+  /** Values explicitly required by Track Companions, never projected as Tracks. */
+  readonly requiredValues: readonly string[];
 };
 
 /** Run selection facts required by Studio preflight; compilation callbacks and attachments stay outside it. */
@@ -121,14 +122,14 @@ export function inspectStudioRun(
     parentPath: readonly string[] = [],
   ): { readonly ref: string; readonly occurrencePath?: readonly string[] }[] => children.flatMap((child) => {
     const tag = localName(child.tag);
-    if (tag === film.tracks.childSurface) {
+    if (tag === film.tracks.childDeclaration) {
       const source = child.resolvedReferenceAttributes?.[film.tracks.sourceAttribute];
       return source === undefined ? [] : [{
         ref: source,
         ...(child.id === undefined ? {} : { occurrencePath: [...parentPath, child.id] }),
       }];
     }
-    return film.tracks.containerSurfaces?.includes(tag) === true && child.id !== undefined
+    return film.tracks.containerDeclarations?.includes(tag) === true && child.id !== undefined
       ? trackUses(child.children ?? [], [...parentPath, child.id])
       : [];
   });
@@ -159,20 +160,15 @@ export function inspectStudioRun(
   } catch (error) {
     issues.push(error instanceof Error ? error.message : String(error));
   }
-  const companionValueSet = new Set(companionValueRefs);
-
-  const projectionRefs = unique([...filmTrackRefs, ...companionValueRefs]);
-  const projections: StudioViewRequirement[] = [];
-  for (const ref of projectionRefs) {
+  const tracks: StudioTrackRequirement[] = [];
+  for (const ref of filmTrackRefs) {
     const output = outputFor(source, ref);
-    const role = roleFor(registry, source, ref) ?? (companionValueSet.has(ref) ? "supporting-value" : undefined);
-    if (output === undefined || role === undefined) continue;
+    if (output === undefined || !isStudioTrack(registry, source, ref)) continue;
     const occurrences = visualOccurrences.get(ref);
-    projections.push({
+    tracks.push({
       name: output.name,
       ref,
       type: output.type,
-      role,
       trace: traceFor(source, ref),
       ...(occurrences === undefined ? {} : { visualOccurrences: occurrences }),
     });
@@ -181,6 +177,7 @@ export function inspectStudioRun(
   return {
     filmComposition: chosen.compositionRef,
     timeRef: timeOutput!.ref,
-    projections,
+    tracks,
+    requiredValues: companionValueRefs,
   };
 }

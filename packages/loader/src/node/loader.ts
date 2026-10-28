@@ -3,7 +3,7 @@ import { realpathSync } from "node:fs";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 
-import { moduleKey } from "@hypit/protocol";
+import { compareCodeUnits, moduleKey } from "@hypit/protocol";
 import {
   logicalPackageAddressKey,
   packageContributionOffers,
@@ -258,7 +258,7 @@ export async function loadNodePackageSelection(
   }
 
   const packages: LoadedPackage[] = [...activated.values()]
-    .sort((left, right) => left.physical.json.name.localeCompare(right.physical.json.name))
+    .sort((left, right) => compareCodeUnits(left.physical.json.name, right.physical.json.name))
     .map((item) => ({
       specifier: item.physical.json.name,
       contribution: item.contribution,

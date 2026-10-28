@@ -1,6 +1,6 @@
 # `@hypit/fishaudio-speech`
 
-Exact model contracts and author Surfaces for Fish Audio Voice Design and Voice Clone.
+Exact model contracts and author declarations for Fish Audio Voice Design and Voice Clone.
 
 The package owns two distinct speech operations:
 
@@ -10,7 +10,7 @@ The package owns two distinct speech operations:
 
 It contains no API URL, credential, retry, queue or Fish Audio wire encoding. Those belong to a
 Runtime Endpoint such as `@hypit/provider-hypihub`. Both models return the shared
-`GeneratedAudioSet`; the author Surfaces expose its primary member as an ordinary audio Resource.
+`GeneratedAudioSet`; the author declarations expose its primary member as an ordinary audio Resource.
 
 ```xml
 <import as="fish" from="@hypit/fishaudio-speech@1"/>

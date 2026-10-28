@@ -1,5 +1,10 @@
 # @hypit/html-video
 
+The package-owned `video` declaration consumes a completed Composition and Timeline, then authors an
+explicit delivery requirement and optional frame range. Markup supplies only the `Video` spelling.
+Renderer and Endpoint selection remain downstream Build concerns, and the package has no runtime
+dependency on Temporal or its Markup helpers.
+
 `@hypit/html-video` is the author-facing video assembly that selects Hypit's HTML
 visual path:
 
@@ -11,7 +16,7 @@ Omitting delivery publishes a private standard BT.709 H.264/AAC MP4 requirement 
 author graph. `quality="draft|standard|high"` changes that explicit standard requirement;
 advanced author packages can instead pass a `MediaDeliverySpec` through `delivery`.
 
-The package contributes only the `html` author Surface and its orchestration
+The package contributes only the `html` author declaration and its orchestration
 Fragment. It:
 
 1. compiles the selected Composition and Timeline with `@hypit/html-program`;

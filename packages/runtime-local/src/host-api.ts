@@ -1,6 +1,7 @@
 import type { BlobAttachment } from "@hypit/hypit/workspace";
 import type { ExecutorOptions, ProducerRegistry } from "@hypit/hypit/executor";
-import type { BuildDefinition, BuildState, CapabilityRef, Need, Value } from "@hypit/hypit/protocol";
+import type { BuildDefinition, CapabilityRef, Need, Value } from "@hypit/hypit/protocol";
+import type { BuildView as CoreBuildView } from "@hypit/hypit/kernel";
 import type {
   CapacityReservation,
   CredentialAcquisition,
@@ -18,13 +19,13 @@ import type { RuntimeDoctorDiagnostic } from "@hypit/runtime-local/extension";
 
 export type RuntimeHostActiveBuildSubmission = {
   readonly id: string;
-  readonly state: BuildState;
+  readonly state: CoreBuildView;
   readonly view: BuildView;
 };
 
 export type RuntimeHostFinishedBuildSubmission = {
   readonly id: string;
-  readonly state: BuildState;
+  readonly state: CoreBuildView;
   readonly completion: BuildCompletion;
 };
 
@@ -151,7 +152,7 @@ export type RuntimeHostDoctorResult = {
  */
 export type RuntimeHostTransientExecution = {
   evaluate(input: {
-    readonly state: BuildState;
+    readonly state: CoreBuildView;
     readonly producers: ProducerRegistry;
     readonly refinements: NonNullable<ExecutorOptions["refinements"]>;
     readonly resources: ResourceStore;

@@ -1,7 +1,12 @@
+export { mediaOperationsComponent } from "./component.js";
 export {
-  mediaOperationsComponent,
-  mediaOperationsComponents,
-} from "./component.js";
+  extractAudioAuthorDeclaration,
+  extractFrameAuthorDeclaration,
+  mediaOperationsAuthorDeclarations,
+  preparedMediaAuthorDeclaration,
+  stillVideoAuthorDeclaration,
+  transformMediaAuthorDeclaration,
+} from "./declaration.js";
 export {
   extractAudioFragment,
   extractFrameFragment,
@@ -9,29 +14,14 @@ export {
   createStillVideoFragment,
   preparedMediaFragment,
   transformMediaFragment,
-} from "./fragment.js";
-export {
-  compileAudioProgram,
-  audioGainProcess,
-  readAudioGainProcess,
-  AUDIO_GAIN_PROCESS_FORMAT,
-  sealAudioProgram,
-  verifyAudioProgram,
-} from "./audio-program.js";
-export { mediaOperationsCapabilities, mediaOperationsManifest, mediaOperationsMarkupSurfaces, mediaOperationsModuleRef, mediaOperationsProducers, mediaOperationsTypes, audioProgramSchema, mediaSelectionRequestSchema, audioExtractionRequestSchema, frameExtractionRequestSchema, stillVideoRequestSchema, stillVideoLayoutSchema, mediaTransformProgramSchema } from "./manifest.js";
+} from "./fragment.js";export { mediaOperationsCapabilities, mediaOperationsManifest, mediaOperationsModuleRef, mediaOperationsProducers, mediaOperationsTypes, mediaSelectionRequestSchema, audioExtractionRequestSchema, frameExtractionRequestSchema, stillVideoRequestSchema, stillVideoLayoutSchema, mediaTransformProgramSchema } from "./manifest.js";
 export {
   sealMediaSelectionRequest,
   selectAudioStream,
   selectMediaStreams,
   selectVideoStream,
   verifyMediaSelectionRequest,
-} from "./selection.js";
-export { decodePreparedMediaSurface, decodeStillVideoSurface } from "./surface.js";
-export {
-  decodeExtractAudioSurface,
-  decodeExtractFrameSurface,
-  decodeTransformMediaSurface,
-} from "./surface.js";
+} from "./selection.js";export { mediaOperationsMarkupDeclarations } from "./declaration.js";
 export {
   sealAudioExtractionRequest,
   sealFrameExtractionRequest,

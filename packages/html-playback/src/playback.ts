@@ -88,6 +88,7 @@ function shim(videoPlan: readonly PlaybackVideoPlan[]): string {
       loop: element.getAttribute('data-loop') === 'true',
       phase: parseFloat(element.getAttribute('data-phase') || '0') || 0,
       rate: parseFloat(element.getAttribute('data-playback-rate') || '1') || 1,
+      preservesPitch: element.getAttribute('data-preserves-pitch') === 'true',
       gain: Number(element.getAttribute('data-gain') ?? '1'),
       levelAutomation: JSON.parse(decodeURIComponent(element.getAttribute('data-level-automation') || '%7B%7D'))
     });
@@ -278,6 +279,7 @@ function shim(videoPlan: readonly PlaybackVideoPlan[]): string {
       var local = currentSeconds - record.start;
       var inside = local >= 0 && local < record.duration;
       var element = record.element;
+      element.preservesPitch = record.preservesPitch;
       prepareMedia(record, local >= -2 && local < record.duration + 1);
       element.muted = muted || scrubbing;
       if (!inside) { cancelSeek(element); element.pause(); continue; }
@@ -327,7 +329,7 @@ function shim(videoPlan: readonly PlaybackVideoPlan[]): string {
 export function injectHtmlPlayback(html: string, audio = "", program?: HtmlProgram): string {
   // Take ownership before the renderer activates deferred resources. Otherwise
   // every video in a long Program allocates a decoder before the first frame.
-  html = html.replace(/(<video\b[^>]*?)\s(?:data-hypit-resource-src|src)=/gu, '$1 preload="none" data-hypit-src=');
+  html = html.replace(/(<video\b[^>]*?)\s(?:data-hypit-artifact-src|src)=/gu, '$1 preload="none" data-hypit-src=');
   const script = audio + shim(playbackVideoPlan(program)).replace("(function () {", `(function () {\n${audioEnvelopeGainAt.toString()}`);
   const at = html.lastIndexOf("</body>");
   return at < 0 ? html + script : html.slice(0, at) + script + html.slice(at);

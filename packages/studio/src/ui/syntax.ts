@@ -1,5 +1,5 @@
 /**
- * A tokenizer for SVML's own surface syntax.
+ * A tokenizer for SVML source syntax.
  *
  * Recognize the common Markup shell and Script prose for highlighting, without
  * validating package-owned Surfaces. The Script
@@ -104,7 +104,7 @@ export function tokenizeSvml(source: string): readonly Token[] {
       cursor = nameStart + name[0].length;
       cursor = tokenizeAttributes(source, cursor, push);
 
-      // Script's Raw Surface has its own prose grammar.
+      // Script's opaque declaration has its own prose grammar.
       if (!closing && localName(name[0]) === "script" && source[cursor - 2] !== "/") {
         cursor = tokenizeScriptBody(source, cursor, name[0], push);
       }

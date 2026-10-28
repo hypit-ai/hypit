@@ -19,7 +19,6 @@ import {
 } from "@hypit/executor";
 import { InProcessBuildScheduler } from "@hypit/runtime";
 import type {
-  BuildState,
   CapabilityRef,
   AuthorGraph,
   LinkedProgram,
@@ -27,6 +26,7 @@ import type {
   ProducerRef,
   TypeRef,
 } from "@hypit/protocol";
+import type { BuildView } from "@hypit/kernel";
 import {
   RefinementError,
   RefinementRegistry,
@@ -48,7 +48,7 @@ const measureProducer = { module: sensorModule, name: "measure" } satisfies Prod
 const requestProducer = { module: sensorModule, name: "request-measurement" } satisfies ProducerRef;
 const reportProducer = { module: reportModule, name: "write-report" } satisfies ProducerRef;
 
-async function runBuild(executor: Executor, state: BuildState) {
+async function runBuild(executor: Executor, state: BuildView) {
   return (await new InProcessBuildScheduler(executor).run([{
     id: "validation-test",
     definition: { format: "hypit.build-definition@1", program: state.program, plan: state.plan },
@@ -204,7 +204,7 @@ test("three independent packages communicate through an owner-validated nominal 
 
 });
 
-test("a structurally valid but semantically invalid Producer value never enters BuildState", async () => {
+test("a structurally valid but semantically invalid Producer value never enters BuildView", async () => {
   const linked = program();
   const result = await runBuild(new Executor({
     producers: hosts(3),

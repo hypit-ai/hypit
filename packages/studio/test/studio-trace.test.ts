@@ -11,7 +11,7 @@ import { compiledSourceScenario } from "./compiled-source-scenario.js";
 
 test("Track traces retain direct references to author Records", () => {
   const placement: StudioPlacement = {
-    sourcePath: "main.svml", tag: "caption-fine:Caption", surface: "track",
+    sourcePath: "main.svml", tag: "caption-fine:Caption", declaration: "track",
     module: { name: "@hypit/caption-fine", version: "1" }, id: "captions",
     range: { start: 0, end: 1 }, records: [], values: [],
     outputs: ["source::output::captions.track"],

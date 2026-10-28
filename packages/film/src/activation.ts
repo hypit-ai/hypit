@@ -1,11 +1,9 @@
 import { createProducerPackageFacet } from "@hypit/hypit/producer";
 import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
-import { createMarkupSurfaceFacet } from "@hypit/hypit/markup";
+import { createAuthorDeclarationFacet } from "@hypit/hypit/author";
+import { createMarkupDeclarationFacet } from "@hypit/hypit/markup";
 import { createStudioCompanionFacet } from "@hypit/studio-companion";
-import {
-  decodeFilmSurface, filmComponent, filmManifest, filmModuleRef,
-  filmMarkupSurfaces,
-} from "./index.js";
+import { filmComponent, filmManifest, filmModuleRef, filmAuthorDeclarations, filmMarkupDeclarations } from "./index.js";
 import { filmStudioCompanions } from "./studio.js";
 
 export const hypitPackage = {
@@ -14,10 +12,11 @@ export const hypitPackage = {
   facets: [
     createProducerPackageFacet(filmComponent.producers),
     createRefinementPackageFacet(filmComponent.refinements ?? []),
-    createMarkupSurfaceFacet({
+    ...filmAuthorDeclarations.map((declaration) => createAuthorDeclarationFacet(declaration)),
+    ...filmMarkupDeclarations.map((declaration) => createMarkupDeclarationFacet({
       module: filmModuleRef,
-      declaration: filmMarkupSurfaces.find((item) => item.name === "film")!, handler: decodeFilmSurface,
-    }),
+      declaration,
+    })),
     createStudioCompanionFacet({ films: filmStudioCompanions }),
   ],
 };

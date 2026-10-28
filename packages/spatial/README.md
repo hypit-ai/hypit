@@ -20,6 +20,11 @@ Canvas is deliberately not a container. Visual components own clipping, Paint, d
 motion. A Frame may extend outside the Canvas and may be reused anywhere its numbers mean the same
 thing.
 
+The package's Author declarations own the semantic shapes and lowering for Canvas, Point, Path,
+Extent, Map and the three Frame constructors. Markup contributes only their tag spellings. Direct
+Author declarations and Markup therefore use the same validation, reference Types and graph
+fragments; declaration order does not determine reference availability.
+
 ```svml
 <space:Canvas id="vertical" width="1080" height="1920"/>
 <space:Frame id="safe" within={vertical.bounds}

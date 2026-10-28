@@ -9,7 +9,7 @@ export type HtmlVisual = {
   readonly html: string;
   /** CSS in an @scope rooted at this program's element. */
   readonly css?: string;
-  /** Function body with (root, data) arguments; returns a synchronous render(localFrame) function. */
+  /** Function body with (root, data, context) arguments; returns a synchronous render(localFrame) function. */
   readonly setup?: string;
   readonly data?: CanonicalValue;
 };
@@ -53,7 +53,7 @@ export function htmlVisualScript(entries: readonly {
   readonly startFrame: number;
   readonly durationFrames: number;
   readonly program: HtmlVisual;
-}[], _numerator: number, _denominator: number): string {
+}[]): string {
   return `(() => {
     const fail = error => { window.__hypitHtmlVisualError = String(error?.stack || error); };
     const entries = ${scriptJson(entries)}.filter(entry =>
@@ -62,7 +62,9 @@ export function htmlVisualScript(entries: readonly {
       const root = document.getElementById(entry.id);
       try {
         const render = entry.program.setup === undefined ? () => {} :
-          new Function('root', 'data', entry.program.setup)(root, entry.program.data);
+          new Function('root', 'data', 'context', entry.program.setup)(root, entry.program.data, {
+            durationFrames: entry.durationFrames,
+          });
         if (typeof render !== 'function') throw new Error('HTML visual setup must return render(localFrame).');
         return { ...entry, order, render, region: undefined };
       } catch (error) { fail(error); return { ...entry, order, render: () => {}, region: undefined }; }

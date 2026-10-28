@@ -1,4 +1,5 @@
 import { createProducerPackageFacet } from "@hypit/hypit/producer";
+import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
 import { temporalManifest } from "./index.js";
 import { temporalComponent } from "./component.js";
 import { createStudioCompanionFacet } from "@hypit/studio-companion";
@@ -9,6 +10,7 @@ export const hypitPackage = {
   modules: [{ manifest: temporalManifest }],
   facets: [
     createProducerPackageFacet(temporalComponent.producers),
+    createRefinementPackageFacet(temporalComponent.refinements ?? []),
     createStudioCompanionFacet({ temporalRelations: commonTemporalStudioRelations }),
   ],
 };

@@ -18,11 +18,11 @@ import { compiledSourceScenario } from "./compiled-source-scenario.js";
 const filmModule = { name: "@example/film", version: "1" } as const;
 const companion: StudioFilmCompanion = {
   id: "film",
-  match: { module: filmModule, surface: "film", outputType: compositionTypes.composition },
+  match: { module: filmModule, declaration: "film", outputType: compositionTypes.composition },
   timeSources: [{ attribute: "semantic", type: timelineTypes.timeline }, { attribute: "space", type: timelineTypes.timeline }],
   tracks: {
-    childSurface: "Track",
-    containerSurfaces: ["Stack"],
+    childDeclaration: "Track",
+    containerDeclarations: ["Stack"],
     sourceAttribute: "source",
     types: [compositionTypes.visualTrack],
   },
@@ -30,14 +30,13 @@ const companion: StudioFilmCompanion = {
 
 const visualCompanion: StudioTrackCompanion = {
   id: "visual",
-  role: "track",
   family: "visual",
   output: { type: compositionTypes.visualTrack },
 };
 
 function placement(id: string): StudioPlacement {
   return {
-    sourcePath: "main.svml", tag: "Film", module: filmModule, surface: "film", id,
+    sourcePath: "main.svml", tag: "Film", module: filmModule, declaration: "film", id,
     range: { start: 0, end: 1 }, records: [], values: [], outputs: [`${id}.composition`], outputPorts: [],
     children: [], attributes: {}, attributeValueRanges: {}, referenceAttributes: {}, referenceTypes: {}, references: [],
   };
@@ -97,9 +96,9 @@ test("Studio preserves every Film occurrence of one reusable VisualTrack", () =>
   } satisfies StudioPlacement;
   const source = compiledSourceScenario({
     placements: [
-      { ...visual, module: { name: "@example/visual", version: "1" }, surface: "visual",
+      { ...visual, module: { name: "@example/visual", version: "1" }, declaration: "visual",
         outputs: ["visual.visual"] },
-      { ...timeline, module: { name: "@example/timeline", version: "1" }, surface: "timeline",
+      { ...timeline, module: { name: "@example/timeline", version: "1" }, declaration: "timeline",
         outputs: ["timeline.timeline"] },
       film,
     ],
@@ -116,7 +115,7 @@ test("Studio preserves every Film occurrence of one reusable VisualTrack", () =>
   const registry = new StudioCompanionRegistry([visualCompanion], { films: [companion] });
   const inspection = inspectStudioRun(registry, source, run);
   assert.deepEqual(
-    inspection.projections.find((projection) => projection.ref === "visual.visual")?.visualOccurrences,
+    inspection.tracks.find((track) => track.ref === "visual.visual")?.visualOccurrences,
     [["background"], ["inset", "picture"]],
   );
 });

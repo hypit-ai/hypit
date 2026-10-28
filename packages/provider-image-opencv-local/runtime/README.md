@@ -1,7 +1,7 @@
 # Local OpenCV Provider runtime
 
-This is the locked Python material owned and shipped by `@hypit/provider-image-opencv-local`. It is
-not a second npm package, author Surface, queue, service daemon or part of Core.
+This directory contains the locked Python environment material shipped by
+`@hypit/provider-image-opencv-local`; the npm package owns its Provider adapter and lifecycle.
 
 For an ordinary installed Distribution, select the Provider and let `hypit runtime up` create and
 reuse this environment in the machine Program Home. The commands below are only for a contributor
@@ -30,4 +30,4 @@ Then configure the Provider with the environment's interpreter:
 The Provider starts one bounded, shell-free Python process for each admitted Need. The ordinary
 SVML Runtime Scheduler owns concurrency. The Python process reads only its explicit temporary input
 and Program files and writes one explicit output image; it has no network, Resource Store, author
-source or BuildState API.
+source or BuildView API.

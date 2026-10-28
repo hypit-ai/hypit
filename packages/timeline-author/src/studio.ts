@@ -32,7 +32,7 @@ const localName = (tag: string) => tag.slice(tag.lastIndexOf(":") + 1);
 
 export const timelineAuthorStudioTemporalDeclarations: readonly StudioTemporalDeclarationCompanion[] = [{
   id: "timeline-declarations",
-  match: { module: timelineAuthorModuleRef, surface: "timeline" },
+  match: { module: timelineAuthorModuleRef, declaration: "timeline" },
   project({ placement }) {
     return placement.children.flatMap((child) => {
       if (child.id === undefined || localName(child.tag) !== "Instant") return [];
@@ -42,7 +42,7 @@ export const timelineAuthorStudioTemporalDeclarations: readonly StudioTemporalDe
   },
 }, {
   id: "instant-declaration",
-  match: { module: timelineAuthorModuleRef, surface: "instant" },
+  match: { module: timelineAuthorModuleRef, declaration: "instant" },
   project({ placement }) {
     if (placement.id === undefined) return [];
     const found = output(placement, "instant", placement.id);

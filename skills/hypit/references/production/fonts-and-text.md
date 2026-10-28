@@ -63,7 +63,7 @@ Windows Fonts and `%WINDIR%\Fonts` or `%LOCALAPPDATA%\Microsoft\Windows\Fonts` o
 `fc-list` on systems with Fontconfig. Search the relevant font locations or use the operating
 system's font information to identify the face and file. A local `.ttf`, `.otf`, `.woff` or `.woff2`
 face can enter the same asset path as a supplied font. A `.ttc`/`.otc` collection contains multiple
-faces; the current Font Surface has no collection-face selector. Obtain the intended standalone
+faces; the current Font declaration has no collection-face selector. Obtain the intended standalone
 face, or export it with a font tool when permitted, before declaring it.
 
 ## Find a face when the available choices do not fit

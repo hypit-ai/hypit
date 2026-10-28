@@ -1,7 +1,6 @@
 export {
   assertBuildResultValueDocument,
   assertBuildResultSeed,
-  assertPublicationPlan,
   buildResultOutput,
   defineBuildResultOutput,
 } from "./types.js";

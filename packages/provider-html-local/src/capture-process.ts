@@ -34,7 +34,7 @@ export async function runCaptureProcess<T extends CaptureProcessInput>(
       return;
     }
     const child = spawn(gpu ? input.config.electronPath! : process.execPath, gpu ? [
-      fileURLToPath(new URL("../src/gpu-worker.cjs", import.meta.url)), input.directory!, entry.href,
+      fileURLToPath(new URL("../runtime/gpu-worker.cjs", import.meta.url)), input.directory!, entry.href,
     ] : [
       "--import", import.meta.resolve("tsx"),
       "--import", new URL("./capture-exit.js", import.meta.url).href,

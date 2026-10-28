@@ -1,6 +1,6 @@
 import type { RefinementPackage } from "@hypit/hypit/refinement";
 import type { ProducerPackage } from "@hypit/hypit/producer";
-import { projectVisualDeliverySpec, verifyMediaDeliverySpec, verifyMediaInspection, verifyMediaStreamSelection, verifyMuxedMedia, verifyPreparedMedia, verifyTimelineVisual, verifyTimelineAudio, verifyVisualDeliverySpec } from "./identity.js";
+import { projectVisualDeliverySpec, verifyMediaDeliverySpec, verifyMediaDomainSpec, verifyMediaInspection, verifyMediaStreamSelection, verifyMuxedMedia, verifyPreparedMedia, verifyTimelineVisual, verifyTimelineAudio, verifyVisualDeliverySpec } from "./identity.js";
 import type { MediaDomainSpec, PreparedMedia } from "./types.js";
 import { canonicalize } from "@hypit/hypit/protocol";
 import type { Value } from "@hypit/hypit/protocol";
@@ -8,6 +8,7 @@ import { mediaProducers } from "./manifest.js";
 import { mediaTypes } from "./manifest.js";
 import { prepareMedia } from "./prepared.js";
 import { assertBlobRef } from "@hypit/hypit/protocol";
+import { assertCompositableSurfaceRef, assertFontArtifactRef, assertFontStackRef } from "./render.js";
 function valueOf(value: Value | undefined, subject: string): unknown { if (value === undefined) throw new Error(`${subject} is missing`); return value; }
 export const mediaComponent = {
   refinements: [
@@ -19,6 +20,16 @@ export const mediaComponent = {
     { type: mediaTypes.timelineVisual, handler: ({ value }) => verifyTimelineVisual(valueOf(value, "TimelineVisual")) },
     { type: mediaTypes.timelineAudio, handler: ({ value }) => verifyTimelineAudio(valueOf(value, "TimelineAudio")) },
     { type: mediaTypes.muxed, handler: ({ value }) => verifyMuxedMedia(valueOf(value, "MuxedMedia")) },
+    { type: mediaTypes.domainSpec, handler: ({ value }) => verifyMediaDomainSpec(valueOf(value, "MediaDomainSpec")) },
+    { type: mediaTypes.fontArtifact, handler: ({ value }) => assertFontArtifactRef(
+      valueOf(value, "FontArtifactRef") as Parameters<typeof assertFontArtifactRef>[0],
+    ) },
+    { type: mediaTypes.fontStack, handler: ({ value }) => assertFontStackRef(
+      valueOf(value, "FontStackRef") as Parameters<typeof assertFontStackRef>[0],
+    ) },
+    { type: mediaTypes.compositableSurface, handler: ({ value }) => assertCompositableSurfaceRef(
+      valueOf(value, "CompositableSurfaceRef") as Parameters<typeof assertCompositableSurfaceRef>[0],
+    ) },
   ],
   producers: [
     { producer: mediaProducers.prepare, handler: ({ inputs }) => {
@@ -29,6 +40,7 @@ export const mediaComponent = {
       const spec = valueOf(inputs.spec!.value, "MediaDomainSpec") as MediaDomainSpec;
       verifyMediaInspection(inspection);
       verifyMediaStreamSelection(selection);
+      verifyMediaDomainSpec(spec);
       return { kind: "output", value: canonicalize(prepareMedia({ id: spec.id, source, inspection, selection })) };
     } },
     { producer: mediaProducers.localDomain, handler: ({ inputs }) => {

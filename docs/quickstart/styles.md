@@ -301,7 +301,7 @@ order. `podcast-v1` and `call-v1` read the corresponding
 finite values. The selected Kit file is the authority for allowed values and defaults.
 
 Model, resolution, duration and reference media are not template policy. They stay on the exact
-model Surface and graph edges.
+model declaration and graph edges.
 
 ## Exact font declarations
 

@@ -9,9 +9,8 @@
   },
   "files": [
     "dist",
-    "src/browser-video.mjs",
-    "src/gpu-encoder.cjs",
-    "src/gpu-worker.cjs",
+    "runtime",
+    "vendor/mediabunny",
     "README.md"
   ],
   "hypit": {
@@ -26,7 +25,6 @@
     "@hypit/temporal": "workspace:^0.1.1",
     "@hypit/timeline": "workspace:^0.1.1",
     "@puppeteer/browsers": "3.2.2",
-    "mediabunny": "1.62.1",
     "puppeteer-core": "25.10.0",
     "tsx": "4.21.0"
   },
@@ -48,6 +46,7 @@
     "@hypit/runtime-local": "workspace:*",
     "@hypit/script": "workspace:*",
     "@hypit/visual-track": "workspace:*",
+    "mediabunny": "1.62.1",
     "electron": "45.0.0",
     "sharp": "0.35.4"
   }

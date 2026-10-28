@@ -52,8 +52,8 @@ returns to the original source:
 ```
 
 The first result is only `opening-transcription.transcript`. The separately imported
-`@hypit/narrative-speech-alignment` Surface combines that evidence with an authored Segment and local
-domain to publish `opening.alignment`. A Segment with no Tokens can use the alignment Surface without
+`@hypit/narrative-speech-alignment` declaration combines that evidence with an authored Segment and local
+domain to publish `opening.alignment`. A Segment with no Tokens can use the alignment declaration without
 evidence; no WhisperX request is needed.
 
 For Chinese speech use `zh`. WhisperX may emit character-sized evidence units; local alignment maps

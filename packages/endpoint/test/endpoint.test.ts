@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   defineEndpoint,
+  endpointResourceClaims,
   endpointOffers,
   installEndpoint,
   wakeAfter,
@@ -107,6 +108,31 @@ test("an asynchronous Endpoint cannot opt into disposable execution", () => {
       },
     }],
   }), /cannot be transient and asynchronous/u);
+});
+
+test("credential input validation ignores inherited object properties", () => {
+  assert.throws(() => defineEndpoint({
+    instance: "example.inherited-slot",
+    pool: "example.inherited-slot",
+    credentialInputs: { toString: { label: "not configured" } },
+    capabilities: [{
+      lifecycle: "immediate",
+      capability: capabilities.generation,
+      returns: types.generated,
+      handler: () => "unused",
+    }],
+  }), /credential input toString has no configured CredentialRef/u);
+});
+
+test("request quantities ignore inherited capacity resource names", () => {
+  assert.deepEqual(endpointResourceClaims({
+    resources: [{ id: "toString", limit: 1 }],
+    unitsForRequest: () => ({}),
+  }, {
+    capability: capabilities.generation,
+    returns: types.generated,
+    constraints: null,
+  }), [{ id: "toString", limit: 1 }]);
 });
 
 test("wakeAfter turns polling policy into an explicit Runtime wake hint", () => {

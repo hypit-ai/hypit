@@ -11,11 +11,24 @@ import type {
 
 const NAME = /^[A-Za-z_][A-Za-z0-9_.:-]*/u;
 const ALIAS = /^[a-z][a-z0-9_-]{0,63}$/u;
-const REFERENCE = /^[A-Za-z_][A-Za-z0-9_.:-]*(?:\.[A-Za-z_][A-Za-z0-9_.:-]*)*$/u;
+// A dot separates reference segments; it is not also a segment character. Keeping those roles
+// distinct makes rejection linear and gives `a.b` one unambiguous parse.
+const REFERENCE = /^[A-Za-z_][A-Za-z0-9_:-]*(?:\.[A-Za-z_][A-Za-z0-9_:-]*)*$/u;
 
-type OpeningTag = {
+export type MarkupAttributeSyntax = {
   readonly name: string;
+  readonly nameRange: SourceRange;
+  readonly value: MarkupAttributeValue;
+  /** Entire quoted literal or braced reference. */
+  readonly valueTokenRange: SourceRange;
+  readonly range: SourceRange;
+};
+
+export type OpeningTag = {
+  readonly name: string;
+  readonly nameRange: SourceRange;
   readonly attributes: Readonly<Record<string, MarkupAttributeValue>>;
+  readonly attributeSyntax: readonly MarkupAttributeSyntax[];
   readonly attributeValueRanges: Readonly<Record<string, SourceRange>>;
   readonly start: number;
   readonly end: number;
@@ -98,19 +111,35 @@ export function parseOpeningTag(source: MarkupSource, start: number): OpeningTag
   const parsedName = parseName(source, start + 1);
   let cursor = parsedName.end;
   const attributes: Record<string, MarkupAttributeValue> = {};
+  const attributeSyntax: MarkupAttributeSyntax[] = [];
   const attributeValueRanges: Record<string, SourceRange> = {};
   while (cursor < source.text.length) {
     cursor = skipSpace(source.text, cursor);
     if (source.text.startsWith("/>", cursor)) {
       return {
-        name: parsedName.value, attributes, attributeValueRanges, start, end: cursor + 2, selfClosing: true,
+        name: parsedName.value,
+        nameRange: { start: start + 1, end: parsedName.end },
+        attributes,
+        attributeSyntax,
+        attributeValueRanges,
+        start,
+        end: cursor + 2,
+        selfClosing: true,
       };
     }
     if (source.text[cursor] === ">") {
       return {
-        name: parsedName.value, attributes, attributeValueRanges, start, end: cursor + 1, selfClosing: false,
+        name: parsedName.value,
+        nameRange: { start: start + 1, end: parsedName.end },
+        attributes,
+        attributeSyntax,
+        attributeValueRanges,
+        start,
+        end: cursor + 1,
+        selfClosing: false,
       };
     }
+    const attributeStart = cursor;
     const attribute = parseName(source, cursor);
     if (Object.hasOwn(attributes, attribute.value)) {
       fail(source, "MARKUP_ATTRIBUTE_DUPLICATE", `Duplicate attribute "${attribute.value}".`, cursor);
@@ -124,6 +153,13 @@ export function parseOpeningTag(source: MarkupSource, start: number): OpeningTag
       enumerable: true,
       configurable: true,
       writable: true,
+    });
+    attributeSyntax.push({
+      name: attribute.value,
+      nameRange: { start: attributeStart, end: attribute.end },
+      value: value.value,
+      valueTokenRange: { start: cursor, end: value.end },
+      range: { start: attributeStart, end: value.end },
     });
     attributeValueRanges[attribute.value] = { start: value.valueStart, end: value.valueEnd };
     cursor = value.end;
@@ -242,6 +278,7 @@ function importRequest(source: MarkupSource, opening: OpeningTag): MarkupImportR
 
 export function discoverMarkup(source: MarkupSource): MarkupDiscovery {
   let cursor = skipTrivia(source, 0);
+  const rootStart = cursor;
   const root = parseOpeningTag(source, cursor);
   if (root.name !== "svml" || root.selfClosing) fail(source, "MARKUP_ROOT", "Document must open with <svml>.", cursor);
   if (Object.keys(root.attributes).length) fail(source, "MARKUP_ROOT_ATTRIBUTE", "<svml> declares no attributes.", cursor);
@@ -255,7 +292,7 @@ export function discoverMarkup(source: MarkupSource): MarkupDiscovery {
     imports.push(importRequest(source, opening));
     cursor = imports.at(-1)!.range.end;
   }
-  return { imports, bodyStart: cursor };
+  return { imports, rootStart, bodyStart: cursor };
 }
 
 export function closeDocument(source: MarkupSource, start: number): number {

@@ -1,15 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { fixtureResource } from "../../../test/fixture-resource.js";
-
-import {
-  decodeImageTransformProgramSurface,
-  imageTransformComponent,
-  imageTransformFragment,
-  imageTransformProducers,
-  imageTransformTypes,
-  sealImageTransformProgram,
-} from "@hypit/image-operations";
+import { imageTransformComponent, imageTransformFragment, imageTransformProducers, imageTransformTypes, sealImageTransformProgram } from "@hypit/image-operations";
 import { blobTypes } from "@hypit/blob";
 import type { CanonicalValue, TypedRecord } from "@hypit/protocol";
 
@@ -38,36 +30,6 @@ test("Program sealing validates ordered generic image operations", () => {
   assert.throws(() => sealImageTransformProgram({
     operations: [{ kind: "encode", format: "png" }, { kind: "blur", sigma: 1 }],
   }), /encode must be final/u);
-});
-
-test("the official Surface separates Program declaration from Transform use", async () => {
-  const output = await decodeImageTransformProgramSurface({
-    sourceName: "image.svml",
-    element: {
-      kind: "element",
-      name: "image:Program",
-      attributes: { id: "soft-denoise" },
-      range: { start: 0, end: 100 },
-      children: [{
-        kind: "element",
-        name: "image:Denoise",
-        attributes: {},
-        children: [],
-        range: { start: 10, end: 30 },
-      }, {
-        kind: "element",
-        name: "image:Encode",
-        attributes: { format: "png" },
-        children: [],
-        range: { start: 31, end: 50 },
-      }],
-    },
-    resolveReference: () => undefined,
-    resolveAsset: async () => { throw new Error("no asset expected"); },
-  });
-  assert.equal(output.records.length, 1);
-  assert.deepEqual(output.records[0]?.type, imageTransformTypes.program);
-  assert.deepEqual(output.records[0]?.value, (denoiseProgram as unknown as CanonicalValue));
 });
 
 test("the Transform Fragment carries source and Program into one image Need", async () => {

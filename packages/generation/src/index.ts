@@ -4,7 +4,6 @@ export {
   sealGeneratedAudioSet,
   sealGeneratedImageSet,
   sealGeneratedVideoSet,
-  sealGenerationRequest,
   verifyGeneratedImageSet,
   verifyGeneratedAudioSet,
   verifyGeneratedVideoSet,
@@ -14,6 +13,5 @@ export {
   generatedImageSetSchema,
   generatedAudioSetSchema,
   generatedVideoSetSchema,
-  generationObjectSchema,
 } from "./schema.js";
 export type * from "./types.js";

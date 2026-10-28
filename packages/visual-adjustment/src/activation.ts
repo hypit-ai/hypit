@@ -1,10 +1,12 @@
-import { createMarkupSurfaceFacet } from "@hypit/hypit/markup";
+import { createAuthorDeclarationFacet } from "@hypit/hypit/author";
+import { createMarkupDeclarationFacet } from "@hypit/hypit/markup";
 import { createProducerPackageFacet } from "@hypit/hypit/producer";
 import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
 import { createStudioCompanionFacet } from "@hypit/studio-companion";
 import { visualAdjustmentComponent } from "./component.js";
-import { visualAdjustmentManifest, visualAdjustmentMarkupSurfaces, visualAdjustmentModuleRef } from "./manifest.js";
-import { decodeVisualAdjustmentSurface } from "./surface.js";
+import { visualAdjustmentManifest, visualAdjustmentModuleRef } from "./manifest.js";
+import { visualAdjustmentMarkupDeclarations } from "./declaration.js";
+import { visualAdjustmentAuthorDeclarations } from "./declaration.js";
 import { visualAdjustmentStudioTrackCompanions } from "./studio.js";
 
 export const hypitPackage = {
@@ -13,8 +15,11 @@ export const hypitPackage = {
   facets: [
     createProducerPackageFacet(visualAdjustmentComponent.producers),
     createRefinementPackageFacet(visualAdjustmentComponent.refinements),
-    createMarkupSurfaceFacet({ module: visualAdjustmentModuleRef,
-      declaration: visualAdjustmentMarkupSurfaces[0]!, handler: decodeVisualAdjustmentSurface }),
+    ...visualAdjustmentAuthorDeclarations.map((declaration) => createAuthorDeclarationFacet(declaration)),
+    ...visualAdjustmentMarkupDeclarations.map((declaration) => createMarkupDeclarationFacet({
+      module: visualAdjustmentModuleRef,
+      declaration,
+    })),
     createStudioCompanionFacet({ tracks: visualAdjustmentStudioTrackCompanions }),
   ],
 };

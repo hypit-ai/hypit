@@ -20,7 +20,7 @@ diagnostics.
 | A model's prompt text | `@image1` | That model's reference notation, when its Kit declares it. |
 | An absolute-time declaration | `<time:Instant id="cue" timeline={film.timeline} at={claim}/>` | A named Instant produced from an already resolved value. |
 
-Braces and at-signs have no global substitution rule. The receiving Surface owns its body's grammar.
+Braces and at-signs have no global substitution rule. The receiving declaration owns its body's grammar.
 
 ## Structure, grouping and display attributes
 

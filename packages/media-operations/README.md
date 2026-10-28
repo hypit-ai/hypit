@@ -1,5 +1,9 @@
 # `@hypit/media-operations`
 
+Author declarations and graph lowering are owned by this package. Markup supplies only the public
+`Prepare`, `StillVideo`, `Transform`, `ExtractAudio` and `ExtractFrame` spellings; the same operations
+can be constructed through another author frontend without changing their media semantics.
+
 Provider-neutral media preparation and execution vocabulary. Preparation contributes one ordinary
 finite Fragment:
 
@@ -29,8 +33,9 @@ placement stay downstream.
 Visual and Audio Tracks consume that prepared value with explicit Windows and sampling relations.
 Visual lowering keeps the exact selected stream and composed `TemporalMap` in the terminal visual program; audio lowering
 projects the selected audio source plus its preparation and occurrence maps before the terminal Audio Track enters Composition.
-`AudioProgram` then resolves only those audio facts. The selected renderer evaluates them with its
-own decoder and working formats. An SVS recipe may centralize stream selection without hiding the Prepare node.
+`@hypit/audio-program` then projects absolute programme boundaries onto its sample grid while retaining
+both maps. The selected renderer evaluates them with its own decoder and working formats. An SVS
+recipe may centralize stream selection without hiding the Prepare node.
 
 A still image becomes ordinary video before it enters that waist:
 
@@ -53,7 +58,7 @@ Several images spread over one literal duration the same way, each held for its 
 
 `StillVideo` returns a video-only MP4 `Blob`, not `PreparedMedia`. Its duration is an exact
 `TemporalDuration`; it must land on a positive whole frame count for the selected Clock and is never
-rounded. The Surface publishes that duration and the weights as Records; `plan-still-video` divides the whole frame count among the
+rounded. The declaration publishes that duration and the weights as Records; `plan-still-video` divides the whole frame count among the
 pictures (every picture holds at least one frame, the rest go by weight with leftovers to the largest
 remainders, earlier first), `bind-still-video-source` attaches each picture in authored order, and
 encoding is one `render-still-video` Need. Pictures of different sizes are fitted into the first one's
@@ -75,36 +80,47 @@ Preparation and pure transformation use the same source-preserving boundary:
   <mediaop:Retime rate="1.05"/>
 </mediaop:Transform>
 
+<mediaop:Transform id="bullet-time" source={shot-media.media}>
+  <mediaop:Retime>
+    <mediaop:Rate at="start" value="1"/>
+    <mediaop:Rate at="end-1s" value="1/8"/>
+    <mediaop:Rate at="end" value="1"/>
+  </mediaop:Retime>
+</mediaop:Transform>
+
 <mediaop:ExtractAudio id="voice-reference" source={shot.video} audio="default"/>
 <mediaop:ExtractFrame id="continuity" source={shot.video} video="primary-moving" at="last"/>
 ```
 
-Transform returns another `PreparedMedia`. Ordered trim and positive rational retime compose exact
-temporal maps without decoding or encoding. Audio/frame extraction remain explicit Blob operations
+Transform returns another `PreparedMedia`. Ordered trim, constant retime and complete rate profiles compose exact
+temporal maps without decoding or encoding. A profile's first and last `Rate` must name opposite source
+edges and every intermediate `at` must remain strictly ordered. `start`, `end`, offsets such as
+`end-500ms`, and exact integer, decimal or fractional rates let the declaration wait for the connected
+PreparedMedia's actual duration. Adjacent Rate knots define a source interval; linear rate change over
+target time is integrated exactly into one cubic source-position piece, and that interval uniquely
+determines its target duration. A zero rate may occur at one knot, but two adjacent zero rates cannot
+define finite time; a hold needs an explicit target duration elsewhere. Profiles do not hide cuts,
+repetition or source overlap inside `Retime`.
+
+Audio/frame extraction remain explicit Blob operations
 over a source Blob. Audio extraction emits a deterministic 48 kHz stereo PCM
 WAV but makes no NarrativeAlignment, speaker or semantic claim; it can therefore feed a later model
 reference port directly. Frame extraction supports `first`, `last`, `frame:<index>` and
 `time:<seconds>`. Transform operations are ordered author meaning and never an arbitrary FFmpeg string.
 
-The same package also owns two provider-neutral media completion paths/capabilities:
+Transform exposes only constructors whose target domains are unambiguous. Trim derives its duration
+from a selected source interval. Constant Retime derives it from source duration and the absolute
+rate; a negative rate starts at the source end and reverses traversal. Profile Retime derives every
+target segment by integrating the signed endpoint rates across its explicit source interval. These
+declarations are not free-standing temporal maps: the connected PreparedMedia supplies the concrete
+finite source domain, and Transform immediately resolves a named target domain and exact map.
 
-```text
-Composition -> pure AudioProgram -> render-timeline-audio Need -> TimelineAudio
-TimelineVisual + TimelineAudio -> mux-program-media Need -> MuxedMedia
-```
+The target-parameterized cubic relation used by Clips instead receives its target domain from the
+occurrence Window. Both paths produce the same `TemporalMap` cubic pieces; their author syntax differs
+because different facts are already known. Reconstruction quality remains a Renderer decision, not a
+rate-profile field.
 
-The mux request also receives the author-owned `MediaDeliverySpec`. It requires the visual
-result to carry the matching `VisualDeliverySpec` and the PCM result to match the requested
-sample rate and channel layout before asking a Provider to mux. The Provider may stream-copy
-the compatible visual stream; it must not use mux as an implicit correction or second render.
-
-Compiling an `AudioProgram` is ordinary deterministic code. Reading Artifact bytes, decoding,
-resampling, mixing, encoding or muxing is never a Producer shortcut: it is an explicit Provider
-Need. The program is the terminal boundary that resolves exact placement, temporal sampling and fades
-onto 48 kHz samples; it also fixes gain and the absence
-of hidden normalization/limiting. The local FFmpeg Provider consumes the shared execution body. Other Providers implement the same
-public request and result semantics.
-
-AudioProgram preserves AudioClip `gainEnvelope` and `audibility` on the full program sample
-clock. The [Composition definition](../composition/README.md#audio-level-automation-on-the-program-clock)
-owns their semantics; the program does not reinterpret source choice or presentation precedence.
+The terminal audio Programme and final audiovisual delivery are deliberately not operations on
+prepared material. `@hypit/audio-program` owns Composition-to-sample-plan lowering and its renderer
+capability; `@hypit/media-delivery` owns compatibility checking and mux assembly. A physical Provider
+may implement all three packages' capabilities without merging their public ownership.

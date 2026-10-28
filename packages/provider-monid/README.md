@@ -50,7 +50,7 @@ and a request renders at most four pictures outside an image set. An image set r
 files, so collection downloads each one.
 
 The endpoints also document a custom colour palette and per-image bounding boxes. Neither has a
-representation in the model port vocabulary, which carries scalars and media rather than object
+representation in the Model field vocabulary, which carries scalars and media rather than object
 arrays, so the Provider transmits neither.
 
 Reference media are uploaded through the workspace file system Monid provides for this purpose

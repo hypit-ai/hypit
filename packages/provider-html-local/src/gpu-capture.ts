@@ -17,8 +17,8 @@ export async function gpuCapturePages({ width, height }: { width: number; height
   const encoder = `/__hypit_encoder_${randomUUID()}.html`;
   const decoder = `/__hypit_decoder_${randomUUID()}.mjs`;
   const video = `/__hypit_video_${randomUUID()}.mjs`;
-  const bundle = await readFile(new URL("../../bundles/mediabunny.min.mjs", import.meta.resolve("mediabunny")), "utf8");
-  const videoModule = await readFile(new URL("../src/browser-video.mjs", import.meta.url), "utf8");
+  const bundle = await readFile(new URL("../vendor/mediabunny/dist/bundles/mediabunny.min.mjs", import.meta.url), "utf8");
+  const videoModule = await readFile(new URL("../runtime/browser-video.mjs", import.meta.url), "utf8");
   const html = (matte: string) => `<!doctype html><meta charset="utf-8"><style>
 html,body{margin:0;background:${matte};overflow:hidden}
 iframe{position:absolute;left:0;top:0;width:${width}px;height:${height}px;border:0}
@@ -60,7 +60,7 @@ export async function createGpuCapture(input: CaptureInput, origin: string,
   let transferring = false;
   let closing = false, bytesWritten = 0, chunks = 0, lastTimestamp = -1;
   const encoding = new BrowserWindow({ show: false, width: 300, height: 200, webPreferences: {
-    preload: fileURLToPath(new URL("../src/gpu-encoder.cjs", import.meta.url)), sandbox: false, backgroundThrottling: false,
+    preload: fileURLToPath(new URL("../runtime/gpu-encoder.cjs", import.meta.url)), sandbox: false, backgroundThrottling: false,
   } });
   const fail = (error: unknown) => { if (!closing) controller.abort(error instanceof Error ? error : new Error(String(error))); };
   writer.on("error", fail);
@@ -104,13 +104,23 @@ export async function createGpuCapture(input: CaptureInput, origin: string,
   const captureError = (event: IpcMainEvent, error: string) => { if (trusted(event)) fail(new Error(error)); };
   ipcMain.on("hypit-observed", observed);
   ipcMain.on("hypit-capture-error", captureError);
-  ipcMain.handle("hypit-encoded", async (event, bytes: Uint8Array, timestamp: number) => {
+  ipcMain.handle("hypit-encoded", async (event,
+    batch: Array<{ readonly bytes: Uint8Array; readonly timestamp: number }>) => {
     assert(event.sender === encoding.webContents, "Unexpected encoder sender");
     signal.throwIfAborted();
-    assert(timestamp > lastTimestamp && chunks < frameCount, "Encoder emitted an unexpected frame timestamp");
-    lastTimestamp = timestamp; chunks++; bytesWritten += bytes.byteLength;
+    assert(Array.isArray(batch) && batch.length > 0 && batch.length <= 8,
+      "Encoder emitted an invalid output batch");
+    const buffers: Buffer[] = [];
+    for (const item of batch) {
+      assert(item?.bytes instanceof Uint8Array && Number.isSafeInteger(item.timestamp)
+        && item.timestamp > lastTimestamp && chunks < frameCount,
+      "Encoder emitted an unexpected frame timestamp");
+      lastTimestamp = item.timestamp; chunks++; bytesWritten += item.bytes.byteLength;
+      buffers.push(Buffer.from(item.bytes.buffer, item.bytes.byteOffset, item.bytes.byteLength));
+    }
     assert(bytesWritten <= config.maxRenderedBytes, "HTML renderer output exceeds its byte limit");
-    await new Promise<void>((resolve, reject) => writer.write(Buffer.from(bytes), error => error ? reject(error) : resolve()));
+    await new Promise<void>((resolve, reject) => writer.write(Buffer.concat(buffers),
+      error => error ? reject(error) : resolve()));
   });
   const closeScene = (scene: Scene) => {
     scene.pending?.reject(signal.reason ?? new Error("GPU capture closed")); scene.pending = undefined;

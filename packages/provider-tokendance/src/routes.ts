@@ -53,12 +53,12 @@ export type TokenDanceRoute = TokenDanceMapping & {
   readonly packageResult: (artifacts: readonly BlobRef[]) => Value;
 };
 
-function scalar(request: ProviderFieldRequest, port: string): string | number | boolean | undefined {
-  const value = request.ports[port]?.[0];
+function scalar(request: ProviderFieldRequest, field: string): string | number | boolean | undefined {
+  const value = request.fields[field]?.[0];
   return typeof value === "string" || typeof value === "number" || typeof value === "boolean" ? value : undefined;
 }
-function present(request: ProviderFieldRequest, port: string): boolean {
-  return (request.ports[port]?.length ?? 0) > 0;
+function present(request: ProviderFieldRequest, field: string): boolean {
+  return (request.fields[field]?.length ?? 0) > 0;
 }
 function strings(value: unknown): readonly string[] {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string" && item.length > 0) : [];
@@ -88,7 +88,7 @@ function rejection(mapping: GenerationWireMapping, request: ProviderFieldRequest
   }
   if (mapping.capability.module.name === "@hypit/minimax-h3") {
     const hasMedia = ["referenceImage", "referenceVideo", "referenceAudio", "firstFrame", "lastFrame"]
-      .some((port) => present(request, port));
+      .some((field) => present(request, field));
     if (!hasMedia && (ratio === undefined || ratio === "adaptive")) {
       return "MiniMax H3 text-to-video on TokenDance requires an explicit aspect-ratio";
     }

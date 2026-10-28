@@ -29,9 +29,9 @@ alternatives or comparing file contents.
 Workspace attachments may supply a `location` URI. The Node compiler preserves it, and the CLI maps
 these addresses and explicitly imported Result files to the compilation's Resource identities. It
 passes that map as `BuildResultSeed.resourceReferences` alongside the compiler's immutable
-`PublicationPlan`.
+`PublicationIntent`.
 
-`PublicationPlan.outputs` is the single publication authority for public name, Logical Output,
+`PublicationIntent.outputs` is the single publication authority for public name, Logical Output,
 public Type, target membership and source ownership. Type describes what is published; source only
 describes where this Build obtains that value. A source is either the current Build's accepted Record
 or an exact historical `(Build, public Output)` address. The repository normalizes only those
@@ -55,7 +55,7 @@ another physical implementation without changing Result identity or publication 
 `inline`, `file`, or `value-document`; it does not claim a domain value category. Forwarding remains
 hidden behind this resolved description.
 
-A `complete` outcome is valid only after every target named by the Publication Plan has been published.
+A `complete` outcome is valid only after every target named by the Publication Intent has been published.
 Failed and cancelled Results may intentionally retain a partial Output set. This is a local per-Build
 closure check, not a central Result index or an attempt to infer missing work.
 

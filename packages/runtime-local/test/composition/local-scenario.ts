@@ -12,9 +12,9 @@ import { join } from "node:path";
 import {
   type RuntimeBuildFixture,
 } from "../execution-scenario.js";
-import type { BuildState } from "@hypit/protocol";
+import type { BuildView } from "@hypit/kernel";
 
-export function definition(state: BuildState, program = state.program) {
+export function definition(state: BuildView, program = state.program) {
   return defineBuild({
     program,
     plan: state.plan,

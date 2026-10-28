@@ -34,7 +34,7 @@ test("HypiHub publishes GPT Image request limits through its Endpoint offer", ()
     capability: offer.capability,
     returns: offer.returns,
     constraints: {
-      ports: {
+      fields: {
         prompt: ["cutout"], aspectRatio: ["1:1"], resolution: ["2K"], background: ["opaque"],
       },
     },
@@ -110,7 +110,7 @@ test("HypiHub reads model pricing for a concrete canonical request", async () =>
     capability: { module: { name: "@hypit/gpt-image", version: "1" }, name: "gpt-image-2" },
     returns: generationTypes.imageSet,
     constraints: {
-      ports: { prompt: ["A portrait."], aspectRatio: ["9:16"], resolution: ["1K"] },
+      fields: { prompt: ["A portrait."], aspectRatio: ["9:16"], resolution: ["1K"] },
     },
   } as const;
   const [document] = await provider.readPricing!({
@@ -180,7 +180,7 @@ test("HypiHub declares both MiMo speech capabilities; who serves them is the Pro
     id: `need:hypihub-${endpoint.key}`,
     capability: endpoint.capability,
     returns: endpoint.returns,
-    constraints: { ports: {} },
+    constraints: { fields: {} },
     result: `record:hypihub-${endpoint.key}`,
   }));
   assert.ok(needs.every((item) => registry.select(item).status === "resolved"));

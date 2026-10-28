@@ -2,11 +2,11 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { audioGraphFromClips, sealAudioTrack } from "@hypit/composition";
-import { compileAudioProgram } from "@hypit/media-operations";
+import { compileAudioProgram } from "@hypit/audio-program";
 import { sealComposition } from "@hypit/composition";
 import { sealTimeline } from "@hypit/timeline";
 import { appendAudioMixInput, assertAudioMixSet, createAudioMixSet, finalizeAudioMix } from "../src/index.js";
-import { audioMixMarkupSurfaces, audioMixTypes, decodeAudioMixSurface } from "../src/index.js";
+import { audioMixTypes } from "../src/index.js";
 import { compositionTypes } from "@hypit/composition";
 import { timelineTypes } from "@hypit/timeline";
 import { fixtureResource } from "../../../test/fixture-resource.js";
@@ -76,26 +76,6 @@ test("Audio Mix identity is independent of declaration order while retaining rep
     visual: { members: [] }, audio: [track],
   }), timeline);
   assert.deepEqual(program(forward), program(reversed));
-});
-
-test("Audio Mix Surface declares and wires its complete author path", async () => {
-  assert.deepEqual(audioMixMarkupSurfaces[0]?.outputs,
-    [audioMixTypes.header, audioMixTypes.inputSpec, compositionTypes.audioTrack]);
-  const range = { source: "mix.svml", start: 0, end: 1 };
-  const output = await decodeAudioMixSurface({ sourceName: "mix.svml", element: {
-    kind: "element", name: "mix:Track", range,
-    attributes: { id: "dialogue", timeline: { kind: "reference", path: "story.timeline" } },
-    children: [{ kind: "element", name: "mix:Input", range, children: [], attributes: {
-      id: "voice", source: { kind: "reference", path: "voice.audio" }, gain: "0.5",
-    } }],
-  }, resolveReference: (path) => path === "story.timeline"
-    ? { path, type: timelineTypes.timeline, ref: { kind: "record", id: path } }
-    : path === "voice.audio"
-      ? { path, type: compositionTypes.audioTrack, ref: { kind: "record", id: path } }
-      : undefined,
-  resolveAsset: () => { throw new Error("Audio Mix reads explicit references only"); } });
-  assert.deepEqual(output.records.map((record) => record.type), [audioMixTypes.header, audioMixTypes.inputSpec]);
-  assert.equal(output.components[0]?.outputs.audio, "dialogue.audio");
 });
 
 test("composed gain remains an ordinary finite signal value", () => {

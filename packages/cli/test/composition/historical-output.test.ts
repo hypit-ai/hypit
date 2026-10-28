@@ -13,8 +13,14 @@ import {
   ownedFileReference,
 } from "@hypit/result/node";
 import { ModulePackageRegistry, Compiler } from "@hypit/compiler";
-import { AuthorFrontendRegistry, sealGraphFragment } from "@hypit/author";
-import { createMarkupAuthorFrontend, MarkupSurfaceRegistry } from "@hypit/markup";
+import {
+  AuthorDeclarationRegistry,
+  AuthorFrontendRegistry,
+  declarationField,
+  sealGraphFragment,
+  type AuthorDeclarationCompiler,
+} from "@hypit/author";
+import { createMarkupDeclarationAuthorFrontend, MarkupDeclarationRegistry } from "@hypit/markup";
 import type { CapabilityRef, ModuleManifest, ProducerRef, TypeRef, TypedRecord } from "@hypit/protocol";
 import { runMarkupFrontend } from "@hypit/markup/run";
 import { NodeFilesystemWorkspace } from "@hypit/workspace/node";
@@ -72,22 +78,32 @@ test("build-record selects one exact Result Output without leaking its storage a
     });
     const modules = new ModulePackageRegistry();
     modules.register({ manifest });
-    const surfaces = new MarkupSurfaceRegistry();
-    surfaces.registerStructured({
+    const declarations = new AuthorDeclarationRegistry();
+    declarations.register({
       module,
-      declaration: { name: "video", tag: "Video", mode: "structured", outputs: [] },
-      handler: ({ element }) => {
-        const id = element.attributes.id;
-        if (typeof id !== "string") throw new Error("Video id is required");
-        return {
-          records: [],
-          components: [{ id, fragment, inputs: {}, outputs: { video: `${id}.video` }, range: element.range }],
-        };
+      declaration: "video",
+      outputs: [videoType],
+      shape: {
+        summary: "Produces one test Video.",
+        fields: [{ name: "id", kind: "identifier", required: true, summary: "Names the Video." }],
       },
-    });
+      bindings(declaration) {
+        const id = declarationField(declaration, "id");
+        if (id?.kind !== "literal") throw new Error("Video id is required");
+        return [{ name: `${id.value}.video`, ref: { kind: "component-output", component: id.value, output: "video" }, type: videoType }];
+      },
+      compile({ declaration }) {
+        const id = declarationField(declaration, "id");
+        if (id?.kind !== "literal") throw new Error("Video id is required");
+        return { records: [], components: [{ id: id.value, fragment, inputs: {}, outputs: { video: `${id.value}.video` }, range: declaration.range }] };
+      },
+    } satisfies AuthorDeclarationCompiler);
+    const syntax = new MarkupDeclarationRegistry();
+    syntax.register({ module, declaration: "video", tag: "Video" });
     const authorFrontends = new AuthorFrontendRegistry();
-    authorFrontends.register(createMarkupAuthorFrontend({
-      registry: surfaces,
+    authorFrontends.register(createMarkupDeclarationAuthorFrontend({
+      syntax,
+      compilers: declarations,
       resolveModule(request) {
         const resolved = modules.resolve(request.from);
         if (resolved === undefined) throw new Error(`unknown module ${request.from}`);

@@ -63,11 +63,11 @@ deployment and executing a video Build have separate lifetimes.
 
 Develop a project package against `@hypit/generation/model`, `@hypit/generation`,
 `@hypit/hypit/author`, `@hypit/hypit/producer`, `@hypit/hypit/refinement` and `@hypit/hypit/markup`.
-Declare the exact request ports, parameter values, result type and capability. Its author Surface
+Declare the complete request shape and validator, result type and capability. Its author declaration
 connects prompt Text and reference media to the request, then publishes the resulting media as a
 normal graph Output.
 
-The [Generation Model authoring API](https://github.com/hypit-ai/hypit/blob/main/packages/generation/README.md#exact-model-authoring) includes a
+The [Generation Model authoring API](https://github.com/hypit-ai/hypit/blob/main/packages/generation/README.md#model-contract) includes a
 request definition and explains activation. The package owns the model interface; credentials and
 HTTP mapping belong to the Provider.
 
@@ -80,8 +80,8 @@ import { defineEndpointPackage } from "@hypit/hypit/endpoint";
 import type { AsyncEndpoint, CredentialRef, EndpointRequest } from "@hypit/hypit/endpoint";
 ```
 
-Implement the exact capabilities and result types the service supports. Map request ports to the
-service API, resolve the declared credentials, and return its results. An immediate operation
+Implement the exact capabilities and result types the service supports. Adapt each selected Model's
+complete request to the service API, resolve the declared credentials, and return its results. An immediate operation
 returns directly; a remote task can submit an ID, poll for completion and collect the output files.
 Concurrency and action limits belong to the Endpoint's resource declarations.
 

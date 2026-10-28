@@ -10,7 +10,7 @@ export function validateSeedanceAudio(artifact: BlobRef, subject = "Seedance ref
 
 /** Missing references in a draft remain graph inputs; only supplied audio is checked. */
 export function validateSeedanceInputs(request: ModelFieldBuilder): void {
-  for (const value of request.ports.referenceAudio ?? []) {
+  for (const value of request.fields.referenceAudio ?? []) {
     if (typeof value === "object" && value.role === "audio") validateSeedanceAudio(value.artifact);
   }
 }

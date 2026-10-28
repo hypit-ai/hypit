@@ -11,11 +11,14 @@ import {
 } from "./execute.js";
 import type { MediaExecutionEnvironment, MediaOperationResult } from "./execute.js";
 import { mediaOperationsCapabilities } from "@hypit/media-operations";
+import { audioProgramCapabilities } from "@hypit/audio-program";
+import { mediaDeliveryCapabilities } from "@hypit/media-delivery";
 import { isStreamingResourceStore } from "@hypit/hypit/endpoint";
 import { speechEvidenceCapabilities, speechEvidenceTypes } from "@hypit/speech-evidence";
 import { defineEndpoint } from "@hypit/hypit/endpoint";
 import type { EndpointInvocationContext } from "@hypit/hypit/endpoint";
 import type { Value } from "@hypit/hypit/protocol";
+import { supportsLocalAudioProgram, supportsLocalSpeechEvidenceAudio } from "./support.js";
 
 export const localMediaProviderModuleRef = { name: "@hypit/media-local", version: "1" } as const;
 
@@ -111,17 +114,19 @@ export function createLocalMediaProvider(config: CreateLocalMediaProviderOptions
         lifecycle: "immediate" as const,
         capability: speechEvidenceCapabilities.projectAudio,
         returns: speechEvidenceTypes.audio,
+        supports: (request) => supportsLocalSpeechEvidenceAudio(request.constraints),
         handler: operation(executeProjectSpeechEvidenceAudio),
       },
       {
         lifecycle: "immediate" as const,
-        capability: mediaOperationsCapabilities.renderAudio,
+        capability: audioProgramCapabilities.render,
         returns: mediaTypes.timelineAudio,
+        supports: (request) => supportsLocalAudioProgram(request.constraints),
         handler: operation(executeRenderTimelineAudio),
       },
       {
         lifecycle: "immediate" as const,
-        capability: mediaOperationsCapabilities.mux,
+        capability: mediaDeliveryCapabilities.mux,
         returns: mediaTypes.muxed,
         handler: operation(executeMuxProgramMedia),
       },

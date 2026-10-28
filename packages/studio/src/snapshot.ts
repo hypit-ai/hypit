@@ -7,7 +7,6 @@ import { composeParameterDeclarations } from "./parameters.js";
  */
 import { isAbsolute, relative } from "node:path";
 
-import type { MarkupSurfaceRegistryLike } from "@hypit/hypit/markup";
 import { audioTrackClips, compositionTypes } from "@hypit/composition";
 import type { AudioTrack, VisualTrack } from "@hypit/composition";
 import type { TypeRef } from "@hypit/hypit/protocol";
@@ -63,9 +62,11 @@ function spans(
     return (track as VisualTrack).items.map((item, index) => ({
       id: item.id,
       ...(item.subjectId === undefined ? {} : { subjectId: item.subjectId }),
-      terminalKind: item.kind === "present" ? "visual-present" as const : "visual-adjustment" as const,
+      terminalKind: item.kind === "present" ? "visual-present" as const
+        : item.kind === "process" ? "visual-process" as const : "visual-adjustment" as const,
       targets: visualOccurrences.map((occurrencePath): StudioTerminalTarget => item.kind === "present"
         ? { kind: "visual-present", occurrencePath, presentId: item.id }
+        : item.kind === "process" ? { kind: "visual-process", occurrencePath, processId: item.id }
         : { kind: "visual-adjustment", occurrencePath, adjustmentId: item.id }),
       startFrame: item.span.startFrame,
       endFrameExclusive: item.span.endFrameExclusive,
@@ -93,7 +94,7 @@ function spans(
 }
 
 type ResolvedStudioSpan = StudioSpan & {
-  readonly terminalKind: "visual-present" | "visual-adjustment" | "audio";
+  readonly terminalKind: "visual-present" | "visual-process" | "visual-adjustment" | "audio";
   readonly targets: readonly StudioTerminalTarget[];
 };
 
@@ -221,7 +222,6 @@ export function snapshot(registry: StudioCompanionRegistry, built: SnapshotProje
   readonly preview: StudioSnapshot["preview"];
   readonly workspaceRoot: string;
   readonly sourceFiles: readonly StudioSourceFile[];
-  readonly surfaces: MarkupSurfaceRegistryLike;
 }): StudioSnapshot {
   const located = authored(input.workspaceRoot, built.source.observations.placements);
   const domains = [
@@ -230,13 +230,14 @@ export function snapshot(registry: StudioCompanionRegistry, built: SnapshotProje
   ];
   const tracks: StudioTrack[] = [];
   for (const item of built.tracks) {
+    const rootAddress = { output: item.outputRef } as const;
     const projectedSpans = spans(item.typeRef, item.value, input.frameRate, item.visualOccurrences);
     const binding = registry.bindTrack(item);
     const placement = item.trace.module === undefined ? undefined
       : built.source.observations.placements.find((candidate) =>
         candidate.id === item.trace.authoredId
         && sameModule(candidate.module, item.trace.module!)
-        && candidate.surface === item.trace.surface);
+        && candidate.declaration === item.trace.declaration);
     const generic = (): readonly StudioItemDraft[] => projectedSpans.map((span) => {
       const identity = span.subjectId ?? span.id;
       const where = located.find((candidate) => candidate.id === identity);
@@ -257,7 +258,7 @@ export function snapshot(registry: StudioCompanionRegistry, built: SnapshotProje
     const companionContext = {
       track: item,
       ...(placement === undefined ? {} : { placement }),
-      ...(item.surfacePreview === undefined ? {} : { surfacePreview: item.surfacePreview }),
+      ...(item.declarationPreview === undefined ? {} : { declarationPreview: item.declarationPreview }),
       spans: projectedSpans,
       values: built.values,
       temporalBindings: built.temporalBindings.get(item.outputRef) ?? [],
@@ -320,7 +321,7 @@ export function snapshot(registry: StudioCompanionRegistry, built: SnapshotProje
         placements: built.source.observations.placements,
       });
       return {
-        id: JSON.stringify(["inspector", item.outputRef, draft.id]),
+        id: draft.id,
         group: label,
         title: draft.title,
         ...(draft.elementLocation === undefined ? {} : { elementLocation: {
@@ -333,8 +334,7 @@ export function snapshot(registry: StudioCompanionRegistry, built: SnapshotProje
     const items: StudioItem[] = drafts
       .filter(({ draft }) => draft.lane === undefined)
       .map(({ draft, inspector, editHandles }) => sealStudioItem(
-        item.outputRef,
-        undefined,
+        { track: rootAddress, item: draft.id },
         presentationDraft(input.workspaceRoot, draft),
         binding,
         resolveTerminalTargets(projectedSpans, draft.terminalLinks),
@@ -342,7 +342,7 @@ export function snapshot(registry: StudioCompanionRegistry, built: SnapshotProje
         inspector,
       ));
     tracks.push({
-      id: item.outputRef,
+      address: rootAddress,
       label: item.name,
       row: 0,
       items,
@@ -350,16 +350,18 @@ export function snapshot(registry: StudioCompanionRegistry, built: SnapshotProje
       binding,
     });
     for (const attachment of registry.trackAttachments(item)) {
-      const attachedDrafts = drafts.filter(({ draft }) => draft.lane === attachment.attachmentId);
+      const attachmentId = attachment.attachmentId;
+      if (attachmentId === undefined) throw new Error("Studio attachment has no local identity.");
+      const attachedDrafts = drafts.filter(({ draft }) => draft.lane === attachmentId);
       if (attachedDrafts.length === 0) continue;
+      const attachmentAddress = { output: item.outputRef, attachment: attachmentId } as const;
       tracks.push({
-        id: JSON.stringify(["track", item.outputRef, attachment.attachmentId]),
-        label: attachment.label ?? attachment.attachmentId ?? item.name,
+        address: attachmentAddress,
+        label: attachment.label ?? attachmentId,
         row: 0,
         items: attachedDrafts.map(({ draft, inspector, editHandles }) =>
           sealStudioItem(
-            item.outputRef,
-            attachment.attachmentId,
+            { track: attachmentAddress, item: draft.id },
             presentationDraft(input.workspaceRoot, draft),
             attachment,
             resolveTerminalTargets(projectedSpans, draft.terminalLinks),

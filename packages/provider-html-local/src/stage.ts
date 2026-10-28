@@ -37,9 +37,9 @@ function extension(mediaType: string): string {
   return found;
 }
 
-export function htmlArtifactRelativePath(document: HtmlProgram, resource: string): string {
-  const index = document.artifacts.findIndex((entry) => entry.artifact.resource === resource);
-  if (index < 0) throw new Error(`HTML Program Artifact ${resource} is not declared`);
+export function htmlArtifactRelativePath(document: HtmlProgram, id: string): string {
+  const index = document.artifacts.findIndex((entry) => entry.id === id);
+  if (index < 0) throw new Error(`HTML Program Artifact ${id} is not declared`);
   return `artifacts/asset-${index}${extension(document.artifacts[index]!.artifact.mediaType)}`;
 }
 
@@ -65,7 +65,7 @@ export async function stageHtmlProgram(options: {
   const signal = options.signal === undefined ? controller.signal : AbortSignal.any([options.signal, controller.signal]);
   signal.throwIfAborted();
   const selectedResources = new Set(selectHtmlArtifacts(document, options.frameSelection)
-    .map((entry) => entry.artifact.resource));
+    .map((entry) => entry.id));
   const maxConcurrentArtifacts = options.maxConcurrentArtifacts ?? 1;
   if (!Number.isSafeInteger(maxConcurrentArtifacts) || maxConcurrentArtifacts < 1) {
     throw new Error("HTML renderer Artifact staging concurrency must be a positive safe integer");
@@ -73,15 +73,15 @@ export async function stageHtmlProgram(options: {
   const artifactDirectory = join(directory, "artifacts");
   await mkdir(artifactDirectory, { recursive: true });
   const selected = document.artifacts.map((entry, index) => ({ entry, index }))
-    .filter(({ entry }) => selectedResources.has(entry.artifact.resource));
+    .filter(({ entry }) => selectedResources.has(entry.id));
   // Paths remain a deterministic function of the complete compiled Document.
   // Unselected compiler-owned media keep a missing local URL in inert markup;
   // selected roots can only activate Artifacts admitted above.
-  const paths = new Map(document.artifacts.map((entry, index) => [entry.artifact.resource,
+  const paths = new Map(document.artifacts.map((entry, index) => [entry.id,
     `./artifacts/asset-${index}${extension(entry.artifact.mediaType)}`]));
-  const surfaces = new Map(document.surfaces.map((surface) => [surface.artifact.resource, surface]));
+  const surfaces = new Map(document.surfaces.map((binding) => [binding.artifactId, binding.surface]));
   if (options.validateSurface === undefined
-    && selected.some(({ entry }) => surfaces.has(entry.artifact.resource))) {
+    && selected.some(({ entry }) => surfaces.has(entry.id))) {
     throw new Error("HTML renderer Runtime has no Surface-byte validator");
   }
   let nextArtifact = 0;
@@ -102,7 +102,7 @@ export async function stageHtmlProgram(options: {
         const chunks = opened instanceof Uint8Array
           ? (async function* () { yield opened; })()
           : opened;
-        const surface = surfaces.get(artifact.resource);
+        const surface = surfaces.get(selectedArtifact.entry.id);
         let size = 0;
         const path = join(artifactDirectory, name);
         const target = await open(path, "w");
@@ -140,9 +140,9 @@ export async function stageHtmlProgram(options: {
   signal.throwIfAborted();
   if (failure !== undefined) throw failure;
   // All writes have settled before the caller can remove the staged directory.
-  const html = materializeHtmlProgram(document, (artifact) => {
-    const path = paths.get(artifact.resource);
-    if (path === undefined) throw new Error(`HTML renderer Artifact ${artifact.resource} has no materialized path`);
+  const html = materializeHtmlProgram(document, (artifact, id) => {
+    const path = paths.get(id);
+    if (path === undefined) throw new Error(`HTML renderer Artifact ${id} has no materialized path`);
     return path;
   });
   await writeFile(join(directory, "index.html"), html, { encoding: "utf8", signal });

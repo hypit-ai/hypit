@@ -1,10 +1,10 @@
 import { assertFrameSpan, assertTimelineIdentity } from "@hypit/timeline";
 import type { Timeline } from "@hypit/timeline";
-import { assertAudioTrackIdentity, audioGraphFromClips, sealAudioTrack } from "@hypit/composition";
+import { assertAudioReconstructionProgram, assertAudioTrackIdentity, audioGraphFromClips, sealAudioTrack } from "@hypit/composition";
 import type { AudioClip, AudioTrack } from "@hypit/composition";
 import { preparedAudioSource, verifyPreparedMedia } from "@hypit/media";
 import type { PreparedMedia } from "@hypit/media";
-import { canonicalize } from "@hypit/hypit/protocol";
+import { canonicalize, compareCodeUnits } from "@hypit/hypit/protocol";
 import {
   assertTemporalMap,
   assertTemporalRelationSpec,
@@ -62,6 +62,9 @@ export function assertAudioClipSpec(value: AudioClipSpec): void {
   assert(value !== null && typeof value === "object" && !Array.isArray(value), "AudioClipSpec is invalid.");
   assertIdentity(value.id, "AudioClipSpec.id");
   if (value.sampling !== undefined) assertAudioSampling(value.sampling, "AudioClipSpec.sampling");
+  if (value.reconstruction !== undefined) {
+    assertAudioReconstructionProgram(value.reconstruction, "AudioClipSpec.reconstruction");
+  }
   assert(value.mix !== null && typeof value.mix === "object" && !Array.isArray(value.mix),
     "AudioClipSpec.mix is invalid.");
   assert(Number.isFinite(value.mix.gain) && value.mix.gain >= 0,
@@ -72,12 +75,6 @@ export function assertAudioClipSpec(value: AudioClipSpec): void {
 
 function assertAudioSampling(value: TemporalRelationSpec, label: string): void {
   assertTemporalRelationSpec(value, label);
-  for (const [index, relation] of value.relations.entries()) {
-    if (relation.kind === "rate") {
-      assert(relation.rate.numerator > 0,
-        `${label}.relations.${index} requires a positive rate until the audio executor supports reverse or held sound.`);
-    }
-  }
 }
 
 export function createAudioTrackSet(): AudioTrackSet {
@@ -131,6 +128,7 @@ function realizedClips(
       clock: timeline,
       ...(spec.sampling === undefined ? {} : { spec: spec.sampling }),
     }),
+    ...(spec.reconstruction === undefined ? {} : { reconstruction: structuredClone(spec.reconstruction) }),
     mix: { gain: spec.mix.gain, fadeIn, fadeOut },
   } satisfies AudioClipProgram;
   const ids = new Set(set.clips.map((clip) => clip.id));
@@ -154,7 +152,7 @@ function normalizeProgram(value: AudioTrackProgram): AudioTrackProgram {
   return {
 
     id: value.id,
-    clips: [...value.clips].map((clip) => structuredClone(clip)).sort((left, right) => left.id.localeCompare(right.id)),
+    clips: [...value.clips].map((clip) => structuredClone(clip)).sort((left, right) => compareCodeUnits(left.id, right.id)),
   };
 }
 
@@ -197,6 +195,9 @@ function assertAudioClipProgram(clip: AudioClipProgram, label: string): void {
       `${label}.source is invalid.`);
     verifyPreparedMedia(clip.source.media);
     assertTemporalMap(clip.sampling);
+    if (clip.reconstruction !== undefined) {
+      assertAudioReconstructionProgram(clip.reconstruction, `${label}.reconstruction`);
+    }
     assert(clip.sampling.stages.at(-1)?.source.id === clip.source.media.domain.id,
       `Audio Clip ${clip.id} source Map does not end at its PreparedMedia domain.`);
     assert(clip.mix !== null && typeof clip.mix === "object" && !Array.isArray(clip.mix),
@@ -223,6 +224,7 @@ function terminalClip(clip: AudioClipProgram, timeline: Timeline): AudioClip {
     preparation: structuredClone(clip.source.media.audio!.map),
     target,
     sampling: structuredClone(clip.sampling),
+    ...(clip.reconstruction === undefined ? {} : { reconstruction: structuredClone(clip.reconstruction) }),
     gain: clip.mix.gain,
     fadeIn: structuredClone(clip.mix.fadeIn),
     fadeOut: structuredClone(clip.mix.fadeOut),

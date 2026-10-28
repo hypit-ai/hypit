@@ -1,6 +1,5 @@
 import { resolve } from "node:path";
 
-import type { PublicationPlan } from "@hypit/result";
 import {
   producerPackagesFromFacets,
   registerProducerFacets,
@@ -9,7 +8,8 @@ import { evaluateProducerPlan, ProducerRegistry } from "@hypit/executor";
 import type { EvaluatedProducerStep } from "@hypit/executor";
 import type { PackageContribution } from "@hypit/loader";
 import { capabilityIdentity, capabilityKey, compareCodeUnits } from "@hypit/protocol";
-import type { BuildDefinition, BuildState, CanonicalValue, CapabilityRef, ValuePath } from "@hypit/protocol";
+import type { BuildDefinition, CanonicalValue, CapabilityRef, PublicationIntent, ValuePath } from "@hypit/protocol";
+import type { BuildView } from "@hypit/kernel";
 import type { CliBuildCatalogDescriptor, CliEndpointQuery, CliRuntimeInspection } from "./runtime-port.js";
 import { plannedNeeds } from "@hypit/kernel";
 import {
@@ -20,7 +20,7 @@ import {
 
 export function createCatalogDescriptor(options: {
   readonly source: string;
-  readonly publication: PublicationPlan;
+  readonly publication: PublicationIntent;
   readonly run?: { readonly path: string };
 }): CliBuildCatalogDescriptor {
   return {
@@ -30,7 +30,7 @@ export function createCatalogDescriptor(options: {
   };
 }
 
-function demandedCapabilities(state: BuildState): readonly CapabilityRef[] {
+function demandedCapabilities(state: BuildView): readonly CapabilityRef[] {
   const found = new Map(plannedNeeds(state).map((need) => [capabilityIdentity(need.capability), need.capability]));
   return [...found.values()].sort((left, right) => compareCodeUnits(capabilityKey(left), capabilityKey(right)));
 }
@@ -81,7 +81,7 @@ export type EvaluatedPlanNeed = {
 };
 
 export type EvaluatedPlan = {
-  readonly state: BuildState;
+  readonly state: BuildView;
   readonly needs: ReadonlyMap<string, EvaluatedPlanNeed>;
   /** Every deterministic Producer failure, independent of whether that Step declares a Need. */
   readonly producerFailures: readonly {
@@ -214,7 +214,7 @@ export async function evaluatePlanNeeds(
 
 /** The complete pre-Build requests shared by Endpoint selection and Provider pricing reads. */
 export function plannedEndpointQueries(
-  state: BuildState,
+  state: BuildView,
   evaluated: EvaluatedPlan,
 ): readonly CliEndpointQuery[] {
   const planned = plannedNeeds(state);
@@ -237,8 +237,6 @@ export function plannedEndpointQueries(
 /** Resolve every planned request independently; concrete constraints exercise Endpoint `supports`. */
 export async function describePlanEndpoints(
   inspection: Pick<CliRuntimeInspection, "endpoints">,
-  _state: BuildState,
-  _evaluated: EvaluatedPlan,
 ): Promise<readonly PlanEndpointView[]> {
   return (await inspection.endpoints()).map((item) => ({
     need: item.need,
@@ -257,8 +255,6 @@ export async function describePlanEndpoints(
 /** Read Provider-owned pricing material relevant to each planned request. */
 export async function describePlanPricing(
   inspection: Pick<CliRuntimeInspection, "pricing">,
-  _state: BuildState,
-  _evaluated: EvaluatedPlan,
 ): Promise<readonly PlanPricingView[]> {
   const pricing = await inspection.pricing();
   return pricing.map((item): PlanPricingView => ({
@@ -279,7 +275,7 @@ export async function describePlanPricing(
 
 /** Reject known failures and concrete requests that cannot be submitted; blocked requests remain future work. */
 export function assertPlannedRequests(
-  state: BuildState,
+  state: BuildView,
   evaluated: EvaluatedPlan,
   endpoints: readonly PlanEndpointView[],
 ): void {
@@ -323,8 +319,7 @@ export function assertPlannedRequests(
 
 export async function preflightPlan(
   inspection: Pick<CliRuntimeInspection, "preflight">,
-  state: BuildState,
-  _endpoints: readonly PlanEndpointView[],
+  state: BuildView,
 ) {
   const capabilities = demandedCapabilities(state);
   const result = await inspection.preflight();
@@ -347,7 +342,7 @@ export function assertPreflight(preflight: Awaited<ReturnType<typeof preflightPl
 
 /** Every request in step order, joined to its own Endpoint resolution. */
 export function describePlanNeeds(
-  state: BuildState,
+  state: BuildView,
   evaluated: EvaluatedPlan,
   endpoints: readonly PlanEndpointView[],
 ): readonly PlanNeedView[] {

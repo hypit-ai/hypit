@@ -59,7 +59,7 @@ test("an exact media Extent resolves on the selected Clock with cover semantics"
   assert.equal(timeline.frameCount, 3);
 });
 
-test("Surface planning lowers author Instants and Windows to typed graph operations", () => {
+test("Timeline author planning lowers Instants and Windows to typed graph operations", () => {
   const plan = compileTimelineAuthorFragment({
     id: "film",
     end: "latest(speech.end,outro.end)",

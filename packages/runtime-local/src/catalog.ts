@@ -1,9 +1,9 @@
-import type { PublicationPlan } from "@hypit/hypit/result";
+import type { PublicationIntent } from "@hypit/hypit/protocol";
 
 export type BuildCatalogDescriptor = {
   readonly sourcePath: string;
   readonly runPath?: string;
-  readonly publication: PublicationPlan;
+  readonly publication: PublicationIntent;
 };
 
 export type BuildCatalogEntry = BuildCatalogDescriptor & {

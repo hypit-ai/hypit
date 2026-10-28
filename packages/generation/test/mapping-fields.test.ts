@@ -1,15 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { materializeWireRequest, mappingSupportsRequest, planWireRequest } from "../src/mapping.js";
-import type { GenerationWireMapping } from "../src/mapping.js";
-import type { GenerationRequest as ModelFieldRequest } from "../src/request.js";
+import { materializeWireRequest, mappingSupportsRequest, planWireRequest } from "@hypit/generation/provider";
+import type { GenerationWireMapping, ProviderFieldRequest } from "@hypit/generation/provider";
 
 const mapping: GenerationWireMapping = {
   capability: { module: { name: "example", version: "1" }, name: "video" },
   routes: [{ model: "video" }], fields: { image: { as: "url", field: "image" } },
 };
-const request = (fields?: Record<string, boolean>): ModelFieldRequest => ({
-  ports: { image: [{ role: "image", artifact: {
+const request = (fields?: Record<string, boolean>): ProviderFieldRequest => ({
+  fields: { image: [{ role: "image", artifact: {
     kind: "blob", resource: "res_image", mediaType: "image/png", size: 1,
   }, ...(fields === undefined ? {} : { fields }) }] },
 });

@@ -32,7 +32,8 @@ const distribution = join(root, "distribution");
 let passed = false;
 try {
   const tarball = await packIndependentPackage("packages/audio-track", output);
-  const dependencies = await packConsumerDependencies(["audio-track"], output);
+  const stretchTarball = await packIndependentPackage("packages/audio-stretch", output, { buildPublicTypes: false });
+  const dependencies = await packConsumerDependencies(["audio-track", "audio-stretch"], output);
   await mkdir(consumer);
   await writeFile(join(consumer, "package.json"), `${JSON.stringify({
     name: "audio-track-independent-consumer",
@@ -48,6 +49,7 @@ try {
     "--legacy-peer-deps",
     ...dependencies,
     tarball,
+    stretchTarball,
   ], {
     cwd: consumer,
     stdio: "inherit",
@@ -68,21 +70,32 @@ try {
   await access(join(installedRoot, "dist", "studio.js"));
   await access(join(installedRoot, "README.md"));
   await assert.rejects(access(join(installedRoot, "src", "activation.ts")));
+  const installedStretchRoot = join(consumer, "node_modules", "@hypit", "audio-stretch");
+  const installedStretchManifest = JSON.parse(await readFile(join(installedStretchRoot, "package.json"), "utf8"));
+  assert.equal(installedStretchManifest.private, undefined);
+  assert.equal(installedStretchManifest.exports["."], "./dist/index.js");
+  assert.equal(installedStretchManifest.hypit.activation, "./dist/activation.js");
+  assert.deepEqual(installedStretchManifest.dependencies,
+    await releasedPackageDependencyMap("packages/audio-stretch", "dependencies"));
+  await access(join(installedStretchRoot, "dist", "activation.js"));
+  await access(join(installedStretchRoot, "README.md"));
 
   await mkdir(join(distribution, "packages"), { recursive: true });
   const rootManifest = await consumerHostManifest();
   assert.equal(rootManifest.exports["./audio-track"], undefined);
   assert.ok((await defaultPackageNames()).has("@hypit/audio-track"));
+  assert.ok((await defaultPackageNames()).has("@hypit/audio-stretch"));
   assert.equal((await distributionEmbeddedPackageDirectories(repositoryRoot)).has("audio-track"), false);
+  assert.equal((await distributionEmbeddedPackageDirectories(repositoryRoot)).has("audio-stretch"), false);
   await writeFile(join(distribution, "package.json"), `${JSON.stringify(rootManifest, null, 2)}\n`);
   for (const entry of await readdir(join(repositoryRoot, "packages"), { withFileTypes: true })) {
-    if (!entry.isDirectory() || entry.name === "audio-track") continue;
+    if (!entry.isDirectory() || entry.name === "audio-track" || entry.name === "audio-stretch") continue;
     await symlink(join(repositoryRoot, "packages", entry.name), join(distribution, "packages", entry.name),
       process.platform === "win32" ? "junction" : "dir");
   }
 
   installDistributionPackageResolution([distribution]);
-  const loaded = await loadNodePackageSelection(["@hypit/audio-track"], consumer, {
+  const loaded = await loadNodePackageSelection(["@hypit/audio-track", "@hypit/audio-stretch"], consumer, {
     fallbackRoots: [distribution],
   });
   const audioTrack = loaded.find((item) => item.specifier === "@hypit/audio-track");
@@ -98,12 +111,18 @@ try {
   );
   assert.equal(studio.tracks.length, 1);
   assert.equal(studio.tracks[0]?.output.type.name, compositionTypes.audioTrack.name);
-  assert.equal(studio.tracks[0]?.output.surface, "track");
+  assert.equal(studio.tracks[0]?.output.declaration, "track");
+  const audioStretch = loaded.find((item) => item.specifier === "@hypit/audio-stretch");
+  assert.ok(audioStretch);
+  assert.deepEqual(audioStretch.contribution.modules?.map(({ manifest }) => [manifest.name, manifest.version]), [
+    ["@hypit/audio-stretch", "1"],
+  ]);
 
   const lock = await readFile(join(consumer, "package-lock.json"), "utf8");
   assert.ok(lock.includes(tarball.split(/[\\/]/u).at(-1)));
+  assert.ok(lock.includes(stretchTarball.split(/[\\/]/u).at(-1)));
   passed = true;
-  console.log(`Independent Audio Track consumer passed: ${tarball}`);
+  console.log(`Independent Audio Track consumer passed: ${tarball}, ${stretchTarball}`);
 } finally {
   if (passed) await rm(root, { recursive: true, force: true });
   else console.error(`Independent Audio Track consumer retained at ${root}`);

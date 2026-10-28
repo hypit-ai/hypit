@@ -54,6 +54,13 @@ Each consumer declares an ordinary `Text` input in its own Fragment. No consumer
 registry or video-specific branch exists in Core. A static literal may still be written inline for
 convenience; a value produced elsewhere stays an explicit graph edge all the way to the consumer.
 
+`Value` and `Render` now have package-owned syntax-neutral Author Declarations. They own their fields,
+children, Type constraints, scalar decoding and Fragment lowering; Markup owns only the `Value` and
+`Render` spellings. Direct callers and Markup therefore produce the same Records and Components, and
+a Render may refer to a Text declaration written later in the Source. The TextTemplate SVS Frontend
+remains in this package because it projects generic Recipes into the same Text-owned template meaning;
+it is not a second authoring implementation or an independent package boundary.
+
 Consumer-owned structure does not move into this package. Rich typography, Ranking layout, Sticker
 fields and Deck label appearance remain in their respective packages. Caption's ordered display
 Atoms/Words also remain Caption author truth rather than being flattened into generic `Text`.

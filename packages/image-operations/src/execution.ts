@@ -101,7 +101,7 @@ export function assertImageComposeRequest(value: ImageComposeRequest): void {
   assert(value !== null && typeof value === "object", "Image compose request must be an object");
   assert(value.canvas !== undefined, "Image compose canvas is required");
   assertCanvas(value.canvas); color(value.background, "Image compose background", false);
-  assert(value.layers.length > 0 && value.layers.length <= 64, "Image compose requires one to 64 Layers");
+  assert(value.layers.length > 0, "Image compose requires at least one Layer");
   value.layers.forEach((layer, index) => {
     image(layer.source, `Raster Layer ${index + 1}.source`); assertSpatialFrame(layer.frame);
     assert(["contain", "cover", "stretch"].includes(layer.fit), `Raster Layer ${index + 1}.fit is invalid`);

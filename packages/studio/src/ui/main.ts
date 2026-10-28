@@ -1,6 +1,7 @@
 import { bindDropdown } from "./dropdown.js";
 import { uiLabel, uiAttribute, uiText, uiAttr, userText, languageMenu, initializeI18n, type Message } from "./i18n.js";
-import type { StudioItem, StudioFailure, StudioInspectorDomain, StudioMutation, StudioSnapshot } from "../shared.js";
+import type { StudioItem, StudioItemAddress, StudioFailure, StudioInspectorDomain, StudioMutation, StudioSnapshot } from "../shared.js";
+import { sameStudioTrackAddress, studioItemAddressKey } from "../shared.js";
 import type { CanonicalValue, ValueSchema } from "@hypit/hypit/protocol";
 import type { StudioValuePresentation } from "@hypit/studio-companion";
 import { parameterAuthorValue, parameterControlForPresentation, parameterControlForSchema, parameterNumber, parameterOption, parameterRecordSchema, parameterRecordVariants, validateParameterValue } from "../parameter-values.js";
@@ -225,13 +226,13 @@ function defaultWorkspaceHeading(): void {
 function previewParticipation(item: StudioItem): void {
   inspectorSessionActions.replaceChildren();
   if (!item.terminalTargets.some((target) => target.kind === "visual-adjustment")) return;
-  const included = !store.current()?.preview.omittedItemIds.has(item.id);
+  const included = !store.current()?.preview.omittedItemKeys.has(studioItemAddressKey(item.address));
   const button = document.createElement("button");
   button.type = "button";
   button.className = `inspector-preview-participation${included ? " active" : ""}`;
   button.setAttribute("aria-pressed", String(included));
   button.innerHTML = `${icon("eye")}<span>${uiLabel("inspector.include-in-preview")}</span>`;
-  button.addEventListener("click", () => store.setItemPreviewIncluded(item.id, !included));
+  button.addEventListener("click", () => store.setItemPreviewIncluded(item.address, !included));
   inspectorSessionActions.append(button);
 }
 
@@ -253,7 +254,7 @@ function inspectorHeading(
     button.innerHTML = `${icon(presentation.icon)}<strong>${uiLabel(presentation.label)}</strong>`;
     button.setAttribute("aria-pressed", String(domain === active));
     button.addEventListener("click", () => {
-      inspectorDomainByItem.set(item.id, domain);
+      inspectorDomainByItem.set(studioItemAddressKey(item.address), domain);
       select(domain);
     });
     return button;
@@ -273,7 +274,7 @@ type ParameterOwner = Extract<StudioMutation, { readonly type: "parameter.adjust
 function restoreParameterControls(): void {
   const current = store.current();
   if (current?.selection.kind === "item") {
-    renderInspector(current.snapshot, current.selection.itemId);
+    renderInspector(current.snapshot, current.selection.item);
   }
 }
 
@@ -829,7 +830,7 @@ function trackInspectorGroups(
     const fields = document.createElement("div");
     fields.className = "inspector-object-fields";
     fields.append(...parameterGroups(
-      { kind: "track-object", trackId: track.id, objectId: object.id },
+      { kind: "track-object", track: track.address, objectId: object.id },
       object.inspector.filter((field) => field.domain === domain),
     ));
     details.append(summary, fields);
@@ -842,10 +843,10 @@ function trackInspectorGroups(
  * layout rather than a floating card, so it can never cover the frame being
  * inspected or the transport used to reach it.
  */
-function renderInspector(snapshot: StudioSnapshot, itemId: string | undefined): void {
-  const item = itemId === undefined ? undefined : store.item(itemId);
+function renderInspector(snapshot: StudioSnapshot, address: StudioItemAddress | undefined): void {
+  const item = address === undefined ? undefined : store.item(address);
   const track = item === undefined ? undefined : snapshot.tracks.find((candidate) =>
-    candidate.items.some((candidateItem) => candidateItem.id === item.id));
+    sameStudioTrackAddress(candidate.address, item.address.track));
 
   if (item === undefined) {
     defaultWorkspaceHeading();
@@ -868,7 +869,6 @@ function renderInspector(snapshot: StudioSnapshot, itemId: string | undefined): 
       ]),
       uiGroup("inspector.build", [
         property("inspector.targets", snapshot.run.targets.join(", ") || "—", "property-code"),
-        property("inspector.candidates", String(snapshot.run.satisfactions.length), "property-number"),
       ]),
     );
     return;
@@ -884,10 +884,11 @@ function renderInspector(snapshot: StudioSnapshot, itemId: string | undefined): 
     inspector.replaceChildren(empty);
     return;
   }
-  const remembered = inspectorDomainByItem.get(item.id);
+  const itemKey = studioItemAddressKey(item.address);
+  const remembered = inspectorDomainByItem.get(itemKey);
   const activeDomain = remembered !== undefined && domains.includes(remembered) ? remembered : domains[0]!;
-  inspectorDomainByItem.set(item.id, activeDomain);
-  inspectorHeading(item, domains, activeDomain, () => renderInspector(snapshot, item.id));
+  inspectorDomainByItem.set(itemKey, activeDomain);
+  inspectorHeading(item, domains, activeDomain, () => renderInspector(snapshot, item.address));
 
   const domainFields = item.inspector.filter((field) => field.domain === activeDomain);
   const pages = new Map<string, { readonly label: string; readonly fields: typeof domainFields }>();
@@ -900,12 +901,12 @@ function renderInspector(snapshot: StudioSnapshot, itemId: string | undefined): 
   const pageIds = [...pages.keys()];
   if (pageIds.length === 0) {
     inspector.replaceChildren(
-      ...parameterGroups({ kind: "item", itemId: item.id }, commonFields),
+      ...parameterGroups({ kind: "item", item: item.address }, commonFields),
       ...(track === undefined ? [] : trackInspectorGroups(track, activeDomain)),
     );
     return;
   }
-  const memoryKey = `${item.id}:${activeDomain}`;
+  const memoryKey = `${itemKey}:${activeDomain}`;
   const rememberedPage = inspectorPageByItem.get(memoryKey);
   const activePage = rememberedPage !== undefined && pages.has(rememberedPage) ? rememberedPage : pageIds[0]!;
   inspectorPageByItem.set(memoryKey, activePage);
@@ -922,14 +923,14 @@ function renderInspector(snapshot: StudioSnapshot, itemId: string | undefined): 
       button.append(label);
       button.addEventListener("click", () => {
         inspectorPageByItem.set(memoryKey, id);
-        renderInspector(snapshot, item.id);
+        renderInspector(snapshot, item.address);
       });
       return button;
     }));
   }
   inspector.replaceChildren(
     ...(pageIds.length > 1 ? [subtabs] : []),
-    ...parameterGroups({ kind: "item", itemId: item.id }, [...commonFields, ...(page?.fields ?? [])]),
+    ...parameterGroups({ kind: "item", item: item.address }, [...commonFields, ...(page?.fields ?? [])]),
     ...(track === undefined ? [] : trackInspectorGroups(track, activeDomain)),
   );
 }
@@ -992,7 +993,7 @@ function renderTemporalDomainInspector(snapshot: StudioSnapshot, companion: stri
       control.disabled = true;
       uiText(status, "common.saving"); status.className = "status saving";
       void applyStudioMutation({ type: "timeline.adjust", revision: snapshot.revision,
-        itemId: choice.studioItem.id, gesture: choice.handle.gesture,
+        item: choice.studioItem.address, gesture: choice.handle.gesture,
         target: temporal.kind === "instant" ? { kind: "instant", frame: span.startFrame, domain: choice.target }
           : { kind: "window", ...span, domain: choice.target },
       }).then(() => { uiText(status, "common.saved"); status.className = "status saved"; })
@@ -1021,19 +1022,19 @@ let scrolledTo = "";
 
 store.subscribe(({ snapshot, selection }) => {
   const origin = selection.kind === "none" ? undefined : selection.origin;
-  const chosen = selection.kind === "item" ? store.item(selection.itemId) : undefined;
+  const chosen = selection.kind === "item" ? store.item(selection.item) : undefined;
   const chosenDomain = selection.kind === "temporal-domain"
     ? snapshot.temporalDomains.find((domain) => domain.companion === selection.companion
       && domain.id === selection.domainId)?.items.find((item) => item.id === selection.itemId)
     : undefined;
   // Rebuilding this every frame of playback would be DOM churn for no change.
-  const describes = `${snapshot.revision}:${selection.kind}:${chosen?.id ?? chosenDomain?.id ?? ""}:${chosen === undefined ? "" : String(!store.current()?.preview.omittedItemIds.has(chosen.id))}`;
+  const describes = `${snapshot.revision}:${selection.kind}:${chosen === undefined ? chosenDomain?.id ?? "" : studioItemAddressKey(chosen.address)}:${chosen === undefined ? "" : String(!store.current()?.preview.omittedItemKeys.has(studioItemAddressKey(chosen.address)))}`;
   if (describes !== described) {
     described = describes;
     if (selection.kind === "temporal-domain") {
       renderTemporalDomainInspector(snapshot, selection.companion, selection.domainId, selection.itemId);
     }
-    else renderInspector(snapshot, chosen?.id);
+    else renderInspector(snapshot, chosen?.address);
   }
 
   // Source outlines are selection affordances, not a second always-on syntax
@@ -1103,7 +1104,7 @@ code.element.addEventListener("click", (event) => {
         && item.marker.itemId === span.itemId);
     // A marker that places nothing still sits inside one that does, so the
     // enclosing Item stays selected rather than leaving the inspector blank.
-    const target = bound?.id ?? item?.id;
+    const target = bound?.address ?? item?.address;
     if (target === undefined) {
       store.selectTemporalDomainItem(span.companion, span.domainId, span.itemId, "code");
       store.seek(span.startFrame, "code");
@@ -1112,7 +1113,7 @@ code.element.addEventListener("click", (event) => {
     return;
   }
   if (item === undefined) store.clearSelection();
-  else store.selectItem(item.id, "code");
+  else store.selectItem(item.address, "code");
 });
 
 window.addEventListener("keydown", (event) => {
@@ -1174,7 +1175,7 @@ function applyFailure(failure: StudioFailure): void {
   // value visible in the field.
   const current = store.current();
   if (current === undefined) return;
-  if (current.selection.kind === "item") renderInspector(current.snapshot, current.selection.itemId);
+  if (current.selection.kind === "item") renderInspector(current.snapshot, current.selection.item);
   else if (current.selection.kind === "temporal-domain") renderTemporalDomainInspector(current.snapshot,
     current.selection.companion, current.selection.domainId, current.selection.itemId);
 }

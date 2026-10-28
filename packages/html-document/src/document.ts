@@ -3,21 +3,15 @@ import type { Composition } from "@hypit/composition";
 import { assertHtmlProgram, compileHtmlProgram, materializeHtmlProgram } from "@hypit/html-program";
 import type { HtmlProgram, ResourceUrlResolver } from "@hypit/html-program";
 import { injectHtmlPlayback, lowerPlaybackAudio } from "@hypit/html-playback";
-import { compileAudioProgram, verifyAudioProgram } from "@hypit/media-operations";
-import type { AudioProgram } from "@hypit/media-operations";
+import type { PlaybackResourceUrlResolver } from "@hypit/html-playback";
+import { compileAudioProgram, verifyAudioProgram } from "@hypit/audio-program";
+import type { AudioProgram } from "@hypit/audio-program";
 import type { Timeline } from "@hypit/timeline";
-import { assertBlobRef } from "@hypit/hypit/protocol";
-import type { BlobRef } from "@hypit/hypit/protocol";
 
 export type HtmlDocument = {
   readonly format: "hypit.html-document@1";
   readonly program: HtmlProgram;
   readonly audio: AudioProgram;
-  /** Structural pairs of document-local identities and Result-rebindable artifacts. */
-  readonly resources: {
-    readonly artifacts: readonly { readonly id: string; readonly artifact: BlobRef }[];
-    readonly surfaces: readonly { readonly id: string; readonly artifact: BlobRef }[];
-  };
 };
 
 export type HtmlDocumentPlaybackOptions = {
@@ -34,52 +28,6 @@ export function compileHtmlDocument(composition: Composition, timeline: Timeline
     format: "hypit.html-document@1",
     program,
     audio,
-    resources: {
-      artifacts: program.artifacts.map(({ artifact }) => ({ id: artifact.resource, artifact })),
-      surfaces: program.surfaces.map(({ artifact }) => ({ id: artifact.resource, artifact })),
-    },
-  };
-}
-
-/**
- * Result storage recursively rebinds BlobRefs, while compiled HTML deliberately
- * addresses document-local resource identities. Reconstruct those identities
- * at materialization time without a repository, reverse index or global table.
- */
-function boundProgram(document: HtmlDocument): HtmlProgram {
-  const resources = document.resources;
-  if (resources === null || typeof resources !== "object"
-    || !Array.isArray(resources.artifacts) || !Array.isArray(resources.surfaces)) {
-    throw new Error("HTML document material pairs are required");
-  }
-  const restore = (
-    artifacts: readonly BlobRef[],
-    bindings: readonly { readonly id: string; readonly artifact: BlobRef }[],
-    label: string,
-  ): BlobRef[] => {
-    if (artifacts.length !== bindings.length) throw new Error(`HTML document ${label} pairs are incomplete`);
-    const ids = new Set<string>();
-    return artifacts.map((artifact, index) => {
-      const binding = bindings[index];
-      if (typeof binding?.id !== "string" || binding.id.length === 0 || ids.has(binding.id)) {
-        throw new Error(`HTML document ${label} repeats or omits a local identity`);
-      }
-      assertBlobRef(binding.artifact, `HTML document ${label} ${index}`);
-      assertBlobRef(artifact, `HTML document ${label} value ${index}`);
-      if (artifact.resource !== binding.artifact.resource || artifact.size !== binding.artifact.size
-        || artifact.mediaType !== binding.artifact.mediaType) {
-        throw new Error(`HTML document ${label} pair ${index} disagrees after material rebinding`);
-      }
-      ids.add(binding.id);
-      return { ...artifact, resource: binding.id as BlobRef["resource"] };
-    });
-  };
-  const artifacts = restore(document.program.artifacts.map((entry) => entry.artifact), resources.artifacts, "Artifact");
-  const surfaces = restore(document.program.surfaces.map((surface) => surface.artifact), resources.surfaces, "Surface");
-  return {
-    ...document.program,
-    artifacts: document.program.artifacts.map((entry, index) => ({ ...entry, artifact: artifacts[index]! })),
-    surfaces: document.program.surfaces.map((surface, index) => ({ ...surface, artifact: surfaces[index]! })),
   };
 }
 
@@ -89,7 +37,7 @@ export function assertHtmlDocument(value: unknown): asserts value is HtmlDocumen
     throw new Error("Unsupported HTML document format");
   }
   const document = value as HtmlDocument;
-  const program = boundProgram(document);
+  const program = document.program;
   assertHtmlProgram(program);
   verifyAudioProgram(document.audio);
   if (program.frameCount !== document.audio.frameCount
@@ -103,7 +51,7 @@ function renderDocumentProgram(
   program: HtmlProgram,
   audio: AudioProgram,
   resolvePicture: ResourceUrlResolver,
-  resolveAudio: ResourceUrlResolver,
+  resolveAudio: PlaybackResourceUrlResolver,
 ): string {
   assertHtmlProgram(program);
   verifyAudioProgram(audio);
@@ -114,20 +62,15 @@ function renderDocumentProgram(
 /** Produce a browser page. Hosts resolve material to HTTP, relative or embedded URLs. */
 export function materializeHtmlDocument(
   document: HtmlDocument,
-  resolve: ResourceUrlResolver,
+  resolve: PlaybackResourceUrlResolver,
   options: HtmlDocumentPlaybackOptions = {},
 ): string {
   assertHtmlDocument(document);
-  const program = boundProgram(document);
-  const materials = new Map(document.resources.artifacts.map((binding) => [binding.id, binding.artifact]));
+  const program = document.program;
   const rendered = renderDocumentProgram(
     program,
     document.audio,
-    (artifact) => {
-      const material = materials.get(artifact.resource);
-      if (material === undefined) throw new Error("HTML document picture material has no structural pair");
-      return resolve(material);
-    },
+    (artifact) => resolve(artifact),
     resolve,
   );
   const { document: page } = parseHTML(rendered);

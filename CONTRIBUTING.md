@@ -86,7 +86,7 @@ Video-domain SDKs are independently installed packages. Component code using a f
 such as `@hypit/hypit/composition`, must import from `@hypit/composition` and declare that package
 in its own `dependencies`. The same applies to Timeline, Temporal, Spatial, Media, Narrative,
 Caption, Generation, HTML Program, evidence and projection packages. Import the subpath exported by
-the owning package when using an API such as `@hypit/temporal/markup` or `@hypit/temporal/studio`.
+the owning package when using an API such as `@hypit/temporal/author` or `@hypit/temporal/studio`.
 Generic host APIs remain under `@hypit/hypit/*`. Logical SVML module references retain their `@1`
 identities; this change concerns npm ownership and TypeScript imports.
 

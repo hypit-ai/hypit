@@ -8,6 +8,11 @@ Audio Track authoring = additive set of Audio Clips
 terminal AudioTrack = closed source/mix signal graph
 ```
 
+Its package-owned declaration shape owns Track, Clip and nested Map/Curve structure. Exact duration,
+relative-point, rate and cubic-position literal parsing comes from Temporal's syntax-neutral API; Markup contributes
+only tag and field spelling. Audio Track depends on Temporal because its ClipSpec and terminal
+program genuinely contain Window and Map values.
+
 Timeline supplies the program clock, not hidden audio. Each Clip names its own prepared source and
 destination Window. The Track publishes `.program` for declared tooling and `.audio` as an ordinary
 peer contribution to Film.
@@ -33,18 +38,30 @@ upstream; Audio Track neither constructs time ranges nor recognizes semantic, be
 
 `gain` is a linear multiplier and fades default to zero. Omitting Map means bounded partial identity:
 target start maps to source start at native rate, and excess Window time is silent. One `Map` relates
-target and source intervals through an exact positive rate; `wrap-from`/`wrap-until` makes a selected
+target and source intervals through an exact rational rate; `wrap-from`/`wrap-until` makes a selected
 source interval periodic. A Map without rate, anchors or wrap fits its source interval across its
 target interval. Multiple non-overlapping Maps form one
 partial function, and gaps are silence.
 
-Audio deliberately does not inherit visual-only laws such as a zero-rate held frame or reverse
-picture sampling. It owns positive, pitch-preserving tempo mapping in the same small algebraic shape,
-without placing an audiovisual policy in Core.
+`Curve` supplies a monotone cubic source-position piece over a target range. Its four required source
+positions are `source-at-start`, `source-control-1`, `source-control-2` and `source-at-end`; target
+bounds are optional. It is the same exact temporal relation used by visual occurrences, not an audio
+effect or a named speed mode. The chosen audio Renderer remains responsible for reconstruction. The
+default local Renderer evaluates affine, reverse, hold, wrap, gap, cubic and multi-stage occurrence
+and preparation maps as source-position relations. It performs ordinary signal resampling; a component
+that requires another reconstruction must reference an explicit package-owned `reconstruction` value
+instead of relying on a hidden Renderer mode. `@hypit/audio-stretch` supplies the official
+`PreservePitch` value; its speed remains in the Map rather than being repeated in the reconstruction.
+
+Audio Track preserves the same exact target-to-source relation algebra without deciding how a sound
+terminal reconstructs zero, reverse or changing rates. A selected Renderer owns that signal policy
+and its supported subset; the Track does not encode one Provider's resampler or time-stretch limits as
+author law.
 
 The terminal AudioTrack retains the exact absolute target interval, exact fades and exact Clip-local
-sampling Map. The AudioProgram compiler is the first layer that resolves those boundaries onto the
-48 kHz execution grid, so rational Timeline clocks do not acquire an earlier one-sample phase error.
+sampling Map. AudioProgram projects absolute programme and mix boundaries onto the 48 kHz execution
+grid while retaining that complete Map, so rational Timeline clocks do not acquire an earlier
+one-sample phase error and a renderer does not inherit a premature playback mode.
 
 Speech, music, ambience and effects are equal Audio Clips. A source that helped determine Timeline
 duration or anchors leaves no special marker in the audio-placement path. Reusing one prepared

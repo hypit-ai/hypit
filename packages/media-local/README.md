@@ -3,7 +3,8 @@
 Trusted local ffprobe/ffmpeg owner. It exposes the same concrete local-media behavior through three
 orthogonal ports:
 
-- a Provider port implements `@hypit/media-operations` Needs against a Build's ResourceStore;
+- a Provider port implements material operations, audio Programme rendering and media delivery Needs
+  against a Build's ResourceStore;
 - `@hypit/media-local/files` inspects or creates files explicitly named by an authoring tool;
 - `@hypit/media-local/cli` presents that file port as `hypit media`.
 
@@ -16,8 +17,9 @@ a root `@hypit/hypit` facade. Another Provider implements the same Needs against
 contracts rather than importing this Provider's process code.
 
 The local process runner is shared by the Provider and file ports, so bounds, shell avoidance and
-failure reporting do not fork into two executors. Domain contracts remain in `@hypit/media-operations`;
-paths, subprocesses and ffprobe output remain here.
+failure reporting do not fork into two executors. Material contracts remain in
+`@hypit/media-operations`, audio Programme execution in `@hypit/audio-program`, and terminal assembly
+in `@hypit/media-delivery`; paths, subprocesses and ffprobe output remain here.
 
 ## File authoring and inspection
 
@@ -94,7 +96,7 @@ The Endpoint:
 - evaluates source-preserving trim/retime relations privately, extracts generic reference audio and extracts exact source frames;
 - encodes authored image frames as ordinary finite video-only MP4 with explicit BT.709 conversion and
   colour metadata before preparation;
-- renders an explicit `AudioProgram` into one exact-length 48 kHz stereo PCM `TimelineAudio`;
+- renders a supported explicit `AudioProgram` into one exact-length 48 kHz stereo PCM `TimelineAudio`;
 - muxes exactly one verified silent visual stream and one verified program-audio stream into MP4;
 - distinguishes AAC coding-frame padding from the authoritative packet presentation span.
 
@@ -115,7 +117,8 @@ Transparent evaluation requires an FFmpeg build with the `libvpx-vp9` encoder; t
 process error reports a missing codec if a custom deployment does not provide it.
 The lossless alpha encoding uses libvpx row threading and its realtime effort profile. Those options
 change encoder work while preserving the decoded frames. They are private to this FFmpeg implementation:
-author and Track inputs remain `PreparedMedia`, while pure trim/retime remains an exact prepared-time relation.
+author and Track inputs remain `PreparedMedia`, while temporal transformation remains an exact
+prepared-time relation rather than an FFmpeg operation identity.
 
 Timeline construction consumes PreparedMedia's exact Extent; a Visual Clip or project scene requests
 its transparent picture according to the authored relationship. The
@@ -138,3 +141,14 @@ transparent picture outside the visual member's mapped range, while a video-auth
 silence outside the audio member's mapped range. Audio-only media require no visual frame rate. Other
 implementations of these capabilities must preserve the same public values and timing laws; a different
 execution topology leaves author meaning unchanged.
+
+The local audio Renderer evaluates the complete occurrence and Prepared Media maps as one signal
+pullback. Affine, reverse, hold, wrap, gap, cubic and multi-stage relations therefore use the same
+execution path. Selected source streams are decoded once per request to canonical 48 kHz stereo PCM;
+the Renderer reads them through a bounded page cache, applies Clip automation and adds the resulting
+signals in output blocks. It does not infer pitch-preserving stretch from a temporal relation: such a
+reconstruction policy is an explicit Clip reconstruction with its own programme owner. The Provider
+implements `@hypit/audio-stretch` PreservePitch for a complete positive-affine, non-looping occurrence;
+other relations or reconstruction formats are accurately unsupported rather than silently resampled.
+Speech-evidence projection remains intentionally narrower and reports its positive-affine, non-looping
+signal boundary instead of rewriting the preserved media relation.

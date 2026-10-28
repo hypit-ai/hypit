@@ -12,12 +12,7 @@ import {
   FileBuildResultRepository,
   ownedFileReference,
 } from "@hypit/result/node";
-import { ModulePackageRegistry, Compiler } from "@hypit/compiler";
-import { AuthorFrontendRegistry, sealGraphFragment } from "@hypit/author";
-import { createMarkupAuthorFrontend, MarkupSurfaceRegistry } from "@hypit/markup";
-import type { CapabilityRef, ModuleManifest, ProducerRef, TypeRef, TypedRecord } from "@hypit/protocol";
-import { runMarkupFrontend } from "@hypit/markup/run";
-import { NodeFilesystemWorkspace } from "@hypit/workspace/node";
+import type { CapabilityRef, TypeRef, TypedRecord } from "@hypit/protocol";
 
 import type { CliDistribution } from "../../src/distribution.js";
 import { cliDistribution } from "../distribution-scenario.js";

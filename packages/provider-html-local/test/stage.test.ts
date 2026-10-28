@@ -117,7 +117,7 @@ test("document staging reads only Artifacts whose compiler usage overlaps the wh
         root: { id: "late", kind: "image" as const, style: [], artifact: late } },
       { id: "opaque", span: { startFrame: 20, endFrameExclusive: 30 },
         root: { id: "opaque", kind: "program" as const, style: [], slots: [],
-          program: htmlVisual({ html: `<img src="hypit-resource://${always.resource}">` }, [always]) } },
+          program: htmlVisual({ html: `<img src="hypit-artifact://${always.resource}">` }, [always]) } },
     ] });
   const document = compileHtmlProgram(sealComposition({ id: "main",
     canvas: { width: 64, height: 64, clearColor: "#000000" }, visual: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) }, audio: [] }), space);
@@ -132,8 +132,8 @@ test("document staging reads only Artifacts whose compiler usage overlaps the wh
     assert.deepEqual(reads, [always.resource, first.resource], "opaque dependencies remain conservative");
     assert.deepEqual(await readdir(join(directory, "artifacts")), ["asset-0.png", "asset-1.png"]);
     const html = await readFile(join(directory, "index.html"), "utf8");
-    assert.match(html, /data-hypit-resource-src="\.\/artifacts\/asset-1\.png"/u);
-    assert.match(html, /data-hypit-resource-src="\.\/artifacts\/asset-2\.png"/u,
+    assert.match(html, /data-hypit-artifact-src="\.\/artifacts\/asset-1\.png"/u);
+    assert.match(html, /data-hypit-artifact-src="\.\/artifacts\/asset-2\.png"/u,
       "unselected compiler media keep an inert deterministic path without reading bytes");
   } finally { await rm(directory, { recursive: true, force: true }); }
 });
@@ -204,6 +204,7 @@ test("staging gives opaque Resource identities portable local names and writes c
     assert.deepEqual([...await readFile(join(directory, "artifacts", files[0]!))], [1, 2, 3, 4, 5]);
     const html = await readFile(join(directory, "index.html"), "utf8");
     assert.ok(html.includes(`./artifacts/${files[0]}`));
-    assert.ok(document.html.includes(resource), "materialization does not rewrite the portable document");
+    assert.doesNotMatch(document.html, new RegExp(resource, "u"),
+      "the portable document addresses Programme-local identities rather than Result-store resources");
   } finally { await rm(directory, { recursive: true, force: true }); }
 });

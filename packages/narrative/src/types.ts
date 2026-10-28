@@ -25,7 +25,7 @@ export type NarrativeTurn = {
 
 export type NarrativeSelection = {
   readonly id: string;
-  /** The exact semantic anchors chosen by the author Surface's affinity syntax. */
+  /** The exact semantic anchors chosen by the author declaration's affinity syntax. */
   readonly startAnchorId: string;
   readonly endAnchorId: string;
 };
@@ -38,7 +38,7 @@ export type NarrativeSelectionRef = NarrativeSelection & {
 
 export type NarrativeMoment = {
   readonly id: string;
-  /** The exact semantic anchor chosen by the author Surface's affinity syntax. */
+  /** The exact semantic anchor chosen by the author declaration's affinity syntax. */
   readonly anchorId: string;
 };
 

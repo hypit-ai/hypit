@@ -40,6 +40,13 @@ A fit Map derives the exact rate that spans its source interval over its target.
 non-overlapping Maps form one piecewise relation. Use explicit target/source bounds when only part of
 either local domain should participate.
 
+The default local renderer evaluates affine, reverse, hold, wrap, gap, cubic and multi-stage Maps
+under ordinary point sampling. When a constant-speed occurrence must retain pitch, declare
+`<stretch:PreservePitch id="natural"/>` from `@hypit/audio-stretch@1` and pass
+`reconstruction={natural}` to the Clip. Keep the speed only in `audio:Map`; the reconstruction value
+does not repeat it. The local renderer currently accepts PreservePitch for one complete positive,
+non-looping affine relation and rejects other shapes instead of approximating them.
+
 `gain` is a linear multiplier. Fade lengths apply to the whole Clip Window. Overlapping Clips mix as
 peers.
 

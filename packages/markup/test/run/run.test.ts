@@ -11,7 +11,8 @@ import {
 } from "@hypit/kernel";
 import { sealGraphFragment } from "@hypit/author";
 import type { CompiledSourceClosure } from "@hypit/author";
-import type { BuildState, ModuleManifest, ProducerRef, TypeRef } from "@hypit/protocol";
+import type { ModuleManifest, ProducerRef, TypeRef } from "@hypit/protocol";
+import type { BuildView } from "@hypit/kernel";
 import {
   compileRunSource,
   createRunFragmentFacet,
@@ -102,7 +103,7 @@ function realize(
   compilation: CompiledSourceClosure,
   run: Awaited<ReturnType<typeof resolveRunDocument>>,
   supplied: readonly import("@hypit/protocol").TypedRecord[] = [],
-): BuildState {
+): BuildView {
   const planned = planBuild(compilation.program, compilation.graph, run.graph);
   return materializeBuild(defineBuild({
     program: link(compilation.program.closure, [

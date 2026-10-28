@@ -66,16 +66,6 @@ export const captionTimingSchema: ValueSchema = object({
   units: { schema: { kind: "array", items: timedUnit } },
 });
 
-export const captionMarkupSurfaces = [{
-  name: "hidden", tag: "Hidden", mode: "structured", outputs: [captionTypes.style],
-  vocabulary: {
-    summary: "Declares a Caption Style that contributes no rendering when selected by Use.",
-    attributes: [{ name: "id", kind: "identifier", required: true, summary: "Names the hidden Style." }],
-    example: '<caption:Hidden id="hidden"/>',
-    notes: ["Hidden is a complete Style choice; it uses ordinary Use precedence and changes no speech or semantic anchors."],
-  },
-}] as const;
-
 export const captionManifest: ModuleManifest = {
   format: "hypit.module@1", name: captionModuleRef.name, version: captionModuleRef.version,
   dependencies: [temporalDependency, timelineDependency], types: [

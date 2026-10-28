@@ -1,15 +1,8 @@
 import { createProducerPackageFacet } from "@hypit/hypit/producer";
-import { createMarkupSurfaceFacet } from "@hypit/hypit/markup";
+import { createAuthorDeclarationFacet } from "@hypit/hypit/author";
+import { createMarkupDeclarationFacet } from "@hypit/hypit/markup";
 import { createStudioCompanionFacet } from "@hypit/studio-companion";
-
-import {
-  captionFineComponent,
-  captionFineManifest,
-  captionFineModuleRef,
-  decodeFineCaptionStyleSurface,
-  decodeFineCaptionTrackSurface,
-  captionFineMarkupSurfaces,
-} from "./index.js";
+import { captionFineComponent, captionFineAuthorDeclarations, captionFineManifest, captionFineMarkupDeclarations, captionFineModuleRef } from "./index.js";
 import { captionFineStudioParameterCompanions, captionFineStudioTrackCompanions } from "./studio.js";
 
 export const hypitPackage = {
@@ -19,16 +12,12 @@ export const hypitPackage = {
   }],
   facets: [
     createProducerPackageFacet(captionFineComponent.producers),
-    createMarkupSurfaceFacet({
+    ...captionFineAuthorDeclarations.map((declaration) => createAuthorDeclarationFacet(declaration)),
+    ...captionFineMarkupDeclarations.map((declaration) => createMarkupDeclarationFacet({
       module: captionFineModuleRef,
-      declaration: captionFineMarkupSurfaces.find((item) => item.name === "style")!,
-      handler: decodeFineCaptionStyleSurface,
-    }),
-    createMarkupSurfaceFacet({
-      module: captionFineModuleRef,
-      declaration: captionFineMarkupSurfaces.find((item) => item.name === "caption")!,
-      handler: decodeFineCaptionTrackSurface,
-    }),
+      declaration,
+    })),
+
     createStudioCompanionFacet({
       tracks: captionFineStudioTrackCompanions,
       parameters: captionFineStudioParameterCompanions,

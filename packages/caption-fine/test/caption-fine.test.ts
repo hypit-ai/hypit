@@ -495,35 +495,6 @@ test("Caption handoff follows placed time and retains simultaneous spoken envelo
   assert.equal(track.items.filter(present => present.span.startFrame <= 25 && present.span.endFrameExclusive > 25).length, 2);
 });
 
-
-test("Caption Surface wires one Timeline to both ordinary and tracked-region rendering", async () => {
-  const { decodeFineCaptionTrackSurface } = await import("../src/surface.js");
-  const { timelineTypes } = await import("@hypit/timeline");
-  const { captionTypes } = await import("@hypit/caption");
-  const { regionEvidenceTypes } = await import("@hypit/region-evidence");
-  const { spatialTypes } = await import("@hypit/spatial");
-  const types = { timeline: timelineTypes.timeline, document: captionTypes.document,
-    timing: captionTypes.timing, within: spatialTypes.frame, program: captionTypes.program, regions: regionEvidenceTypes.evidence };
-  for (const tracking of [false, true]) {
-    const names = tracking ? ["timeline", "document", "timing", "within", "regions"] as const
-      : ["timeline", "document", "timing", "within"] as const;
-    const attributes = Object.fromEntries(names.map(name => [name, { kind: "reference" as const, path: name }]));
-    const result = await decodeFineCaptionTrackSurface({ sourceName: "caption.svml",
-      element: { kind: "element", name: "fine:Caption", attributes: { id: "captions", ...attributes },
-        children: [], range: { start: 0, end: 1 } },
-      resolveReference(path) {
-        const type = types[path as keyof typeof types];
-        return type === undefined ? undefined : { path, type, ref: { kind: "record", id: path } };
-      },
-      resolveAsset() { throw new Error("Caption assembly uses declared inputs."); },
-    });
-    const component = result.components[0]!;
-    const fragment = component.fragment;
-    assert.deepEqual(Object.keys(component.inputs).sort(), fragment.inputs.map(input => input.name).sort());
-    assert.deepEqual(component.inputs.timeline, { kind: "record", id: "timeline" });
-  }
-});
-
 test("a Use beginning inside a Cue changes presentation without changing words or animation time", () => {
   const { document, program } = fixture("<line>test1 || test2 @{select} test3 || test4 @{/select}</line>");
   const timeline = sealTimeline({ id: "test-space", frameCount: 90, frameRate: { numerator: 30, denominator: 1 } });
@@ -569,38 +540,6 @@ test("Caption time windows select presentation, while Role filters preserve simu
   assert.deepEqual(schedule.cues[0]!.units,overlap.units.slice(2));
   assert.throws(() => scheduleFineCaption({...projection,units:[]},program,document), /must cover CaptionDocument units exactly/u);
   assert.deepEqual(scheduleFineCaption(projection,{...program,uses:[],styles:[]},document).cues,[]);
-});
-
-test("Caption Uses are either unbounded or consume one declared Window", async () => {
-  const { decodeFineCaptionTrackSurface } = await import("../src/surface.js");
-  const { parseStructuredElement } = await import("@hypit/markup");
-  const { timelineTypes } = await import("@hypit/timeline");
-  const { captionTypes } = await import("@hypit/caption");
-  const { temporalTypes } = await import("@hypit/temporal");
-  const { spatialTypes } = await import("@hypit/spatial");
-  const refs: Record<string, import("@hypit/protocol").TypeRef> = { timeline: timelineTypes.timeline, document: captionTypes.document,
-    timing: captionTypes.timing, within: spatialTypes.frame,
-    style: captionTypes.style, window: temporalTypes.window, instant: temporalTypes.instant };
-  const decode = async (body:string,extra="") => decodeFineCaptionTrackSurface({sourceName:"caption.svml",
-    element:parseStructuredElement({name:"caption.svml",text:`<fine:Caption id="captions" document={document} timing={timing} timeline={timeline} within={within} ${extra}>${body}</fine:Caption>`},0).element,
-    resolveReference(path){const type=refs[path];return type===undefined?undefined:{path,type,ref:{kind:"record" as const,id:path}};},
-    resolveAsset(){throw new Error("No assets");},
-  });
-  for (const time of ['', 'during={window}']) {
-    const result=await decode(`<fine:Use style={style} ${time}/>`);
-    const track=result.components.find(component=>component.id==="captions")!;
-    assert.ok(track.outputs.program);
-    const fragment=track.fragment;
-    assert.equal(fragment.inputs.find(port=>port.name==="timing")?.type.name,"CaptionTiming");
-    assert.equal(fragment.inputs.some(port=>port.name.endsWith("-window")), time !== "");
-    assert.equal(fragment.inputs.some(port=>port.name==="program"),false);
-  }
-  for (const time of ['during="timeline"', 'from="2s" for="2s"', 'until="3s" for="12f"', 'from="2s" until="5s"']) {
-    await assert.rejects(()=>decode(`<fine:Use style={style} ${time}/>`));
-  }
-  await assert.rejects(()=>decode('<fine:Use style={style}/>', 'semantic={window}'));
-  await assert.rejects(()=>decode('', 'program={old}'),/requires id, document, timing, timeline, within/);
-  await assert.rejects(()=>decode('<fine:Use style={style} selection={window}/>'),/optional id, role, during/);
 });
 
 test("Fine uses author separators in ordinary text, shared groups, active copies and joined boxes", () => {

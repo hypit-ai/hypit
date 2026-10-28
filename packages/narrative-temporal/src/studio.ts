@@ -23,7 +23,7 @@ function output(
 
 export const narrativeStudioTemporalDeclarations: readonly StudioTemporalDeclarationCompanion[] = [{
   id: "instant-declaration",
-  match: { module: narrativeTemporalModuleRef, surface: "narrative-instant" },
+  match: { module: narrativeTemporalModuleRef, declaration: "narrative-instant" },
   project: ({ placement }) => {
     const found = output(placement, "instant");
     return found === undefined ? [] : [found];

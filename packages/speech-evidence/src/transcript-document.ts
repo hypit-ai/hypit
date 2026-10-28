@@ -66,13 +66,13 @@ export function decodeSpeechTranscriptSource(
   assert(source.includes('<import as="speech" from="@hypit/speech-evidence@1"/>'),
     `${subject}: expected the speech-evidence import`);
   const opening = /<speech:Transcript id="[a-z][a-z0-9_-]{0,63}">/u.exec(source);
-  assert(opening !== null && opening.index !== undefined, `${subject}: expected one speech:Transcript Surface`);
+  assert(opening !== null && opening.index !== undefined, `${subject}: expected one speech:Transcript declaration`);
   const contentStart = opening.index + opening[0].length;
   const close = "</speech:Transcript>";
   const closeStart = source.indexOf(close, contentStart);
   assert(closeStart >= 0, `${subject}: speech:Transcript is not closed`);
   assert(source.indexOf("<speech:Transcript", contentStart) < 0,
-    `${subject}: expected exactly one speech:Transcript Surface`);
+    `${subject}: expected exactly one speech:Transcript declaration`);
   return decodeSpeechTranscriptEvidence(source.slice(contentStart, closeStart).trim(), subject);
 }
 

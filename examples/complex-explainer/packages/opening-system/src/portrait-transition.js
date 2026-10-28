@@ -1,8 +1,7 @@
 import { palette } from "@explainer/visual-language";
 import { placedVisualMedia } from "./placed-visual-media.js";
-import { assertAttributes, assertEmptyElement, textAttribute, createMarkupSurfaceFacet } from "@hypit/hypit/markup";
 import { canonicalize, sameType } from "@hypit/hypit/protocol";
-import { sealGraphFragment } from "@hypit/hypit/author";
+import { declarationField, sealGraphFragment } from "@hypit/hypit/author";
 import { presenterStyle, presenterTypes } from "./presenter.js";
 import { sealPresentVisualTrack, compositionTypes } from "@hypit/composition";
 import { timelineTypes } from "@hypit/timeline";
@@ -103,17 +102,15 @@ export function installPortraitTransition(module, manifest, component) {
       return { kind: "output", value: canonicalize(visual) };
     },
   });
-  return createMarkupSurfaceFacet({
-    module,
+  return {
     declaration: {
-      name: "portrait-transition",
-      tag: "PortraitTransition",
-      mode: "structured",
+    module,
+    declaration: "portrait-transition",
       outputs: [types.style],
-      vocabulary: {
+      shape: {
         summary:
           "A continuous full-frame performance move into the project's circular presenter inset.",
-        attributes: [
+        fields: [
           {
             name: "id",
             kind: "identifier",
@@ -129,15 +126,18 @@ export function installPortraitTransition(module, manifest, component) {
           })),
         ],
       },
-    },
-    handler: ({ element, resolveReference }) => {
-      assertAttributes(element, ["id", "from", "to"]);
-      assertEmptyElement(element);
+      bindings(element) {
+        const value = declarationField(element, "id");
+        if (value?.kind !== "literal" || !value.value.trim()) throw Error("PortraitTransition.id must be text");
+        const id = value.value.trim();
+        return [{ name: id, ref: { kind: "record", id }, type: types.style }];
+      },
+    async compile({ declaration: element, resolveReference }) {
       const bindings = {};
       for (const n of ["from", "to"]) {
-        const a = element.attributes[n];
+        const a = declarationField(element, n);
         if (a?.kind !== "reference") throw Error(n + " needs Frame");
-        const r = resolveReference(a.path);
+        const r = await resolveReference(a.path);
         if (!r || !sameType(r.type, spatialTypes.frame))
           throw Error(n + " needs Frame");
         bindings[n] = r;
@@ -145,7 +145,7 @@ export function installPortraitTransition(module, manifest, component) {
       return {
         records: [
           {
-            id: textAttribute(element, "id"),
+            id: declarationField(element, "id").value.trim(),
             type: types.style,
             value: (canonicalize(presenterStyle(fragment, bindings, "overlay"))),
             range: element.range,
@@ -154,5 +154,7 @@ export function installPortraitTransition(module, manifest, component) {
         components: [],
       };
     },
-  });
+    },
+    markup: { name: "portrait-transition", tag: "PortraitTransition" },
+  };
 }

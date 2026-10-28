@@ -6,14 +6,14 @@ import { exactTemporalValueFromFrames, identityTemporalMap } from "@hypit/tempor
 import { injectHtmlPlayback } from "../src/index.js";
 
 test("playback owns deferred and direct video sources before renderer activation", () => {
-  const html = injectHtmlPlayback('<body><video data-hypit-resource-src="long.mp4"></video><video src="short.mp4"></video><img data-hypit-resource-src="still.png"></body>');
+  const html = injectHtmlPlayback('<body><video data-hypit-artifact-src="long.mp4"></video><video src="short.mp4"></video><img data-hypit-artifact-src="still.png"></body>');
   assert.match(html, /<video preload="none" data-hypit-src="long.mp4">/u);
   assert.match(html, /<video preload="none" data-hypit-src="short.mp4">/u);
-  assert.doesNotMatch(html, /<video[^>]*\s(?:src|data-hypit-resource-src)=/u);
-  assert.match(html, /<img data-hypit-resource-src="still.png">/u);
+  assert.doesNotMatch(html, /<video[^>]*\s(?:src|data-hypit-artifact-src)=/u);
+  assert.match(html, /<img data-hypit-artifact-src="still.png">/u);
 });
 
-test("PreparedMedia preview samples the HtmlProgram TemporalMap instead of legacy CFR attributes", async () => {
+test("PreparedMedia preview samples the HtmlProgram TemporalMap as its timing authority", async () => {
   const domain = { id: "direct-source", duration: exactTemporalValueFromFrames(30,
     { frameRate: { numerator: 30, denominator: 1 } }) };
   const program = {

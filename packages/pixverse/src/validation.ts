@@ -7,7 +7,7 @@ import type { PixverseModel } from "./index.js";
  */
 export function pixverseRequestValidator(model: PixverseModel): (request: ModelFieldRequest) => void {
   return (request) => {
-    if (request.ports.referenceVideo !== undefined || request.ports.duration !== undefined) return;
+    if (request.fields.referenceVideo !== undefined || request.fields.duration !== undefined) return;
     throw new Error(`${model} requires duration`);
   };
 }

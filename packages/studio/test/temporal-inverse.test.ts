@@ -78,7 +78,7 @@ const placement: Placement = {
   sourcePath: "/project/main.svml",
   tag: "Clip",
   module: module("@example/clip"),
-  surface: "clip",
+  declaration: "clip",
   range: { start: 0, end: source.length },
   authorEndpoints: { from: "author:from", for: "author:for" },
   records: ["start-spec", "duration", "shift-spec", "window-spec"],
@@ -188,7 +188,7 @@ test("Timeline Author Companion reverses private Points and Extents through the 
   const text = '<time:Window id="clip" from="10f" for="20f"/>';
   const child: Placement = {
     sourcePath: "/project/main.svml", authorEndpoints: { from: "child:from", for: "child:for" },
-    tag: "time:Window", module: timelineModule, surface: "window", range: { start: 0, end: text.length },
+    tag: "time:Window", module: timelineModule, declaration: "window", range: { start: 0, end: text.length },
     records: ["from-spec", "for-spec"], attributes: { from: "10f", for: "20f" }, referenceAttributes: {},
     values: [], outputs: [], outputPorts: [], references: [], referenceTypes: {},
     attributeValueRanges: {

@@ -88,7 +88,6 @@ export async function writableCredentialStore(
   ref: CredentialRef,
 ): Promise<WritableCredentialStore | undefined> {
   verifyCredentialRef(ref);
-  if (store instanceof CompositeCredentialStore) return await store.writable(ref);
   return isWritableCredentialStore(store) && store.owns(ref) ? store : undefined;
 }
 
@@ -96,7 +95,7 @@ export async function writableCredentialStore(
  * Compose independently selected stores without a central store-name registry. Every implementation
  * sees the exact CredentialRef and must decline names it does not own. Ambiguous ownership fails.
  */
-export class CompositeCredentialStore implements CredentialStore {
+export class CompositeCredentialStore implements WritableCredentialStore {
   readonly #stores: readonly CredentialStore[];
 
   constructor(stores: readonly CredentialStore[]) {
@@ -111,7 +110,24 @@ export class CompositeCredentialStore implements CredentialStore {
     return resolved[0];
   }
 
-  async writable(ref: CredentialRef): Promise<WritableCredentialStore | undefined> {
+  owns(ref: CredentialRef): boolean {
+    verifyCredentialRef(ref);
+    return this.#writableOwner(ref) !== undefined;
+  }
+
+  async put(ref: CredentialRef, value: CredentialValue): Promise<void> {
+    const owner = this.#writableOwner(ref);
+    assert(owner !== undefined, `CredentialRef store ${ref.store} has no writable owner`);
+    await owner.put(ref, value);
+  }
+
+  async delete(ref: CredentialRef): Promise<boolean> {
+    const owner = this.#writableOwner(ref);
+    assert(owner !== undefined, `CredentialRef store ${ref.store} has no writable owner`);
+    return await owner.delete(ref);
+  }
+
+  #writableOwner(ref: CredentialRef): WritableCredentialStore | undefined {
     verifyCredentialRef(ref);
     const candidates: WritableCredentialStore[] = [];
     for (const store of this.#stores) {

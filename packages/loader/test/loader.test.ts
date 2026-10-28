@@ -250,3 +250,21 @@ test("explicit default owners resolve nested capabilities without node_modules h
     await rm(distribution, { recursive: true, force: true });
   }
 });
+
+test("default package ownership requires an own dependency declaration", async () => {
+  const project = await mkdtemp(join(tmpdir(), "hypit-default-own-project-"));
+  const distribution = await mkdtemp(join(tmpdir(), "hypit-default-own-distribution-"));
+  try {
+    await writeFile(join(distribution, "package.json"), JSON.stringify({
+      name: "test-distribution",
+      hypit: { packageSources: ["toString"] },
+    }));
+    await assert.rejects(
+      loadNodePackageSelection(["missing-package"], project, { fallbackRoots: [distribution] }),
+      /must declare default package source toString as a dependency/u,
+    );
+  } finally {
+    await rm(project, { recursive: true, force: true });
+    await rm(distribution, { recursive: true, force: true });
+  }
+});

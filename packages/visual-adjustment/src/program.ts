@@ -1,11 +1,10 @@
-import { assertVisualTrackIdentity, sealVisualTrack } from "@hypit/composition";
+import { assertVisualItemSequence, assertVisualProgram, assertVisualTrackIdentity, sealVisualTrack } from "@hypit/composition";
 import type { VisualTrack } from "@hypit/composition";
 import { assertTemporalWindowFor } from "@hypit/temporal";
 import type { TemporalWindow } from "@hypit/temporal";
 import { assertTimelineIdentity } from "@hypit/timeline";
 import type { Timeline } from "@hypit/timeline";
-import { readHtmlAdjustment } from "@hypit/html-program";
-import type { VisualAdjustmentHeader, VisualAdjustmentSet, VisualAdjustmentSpec } from "./types.js";
+import type { VisualAdjustmentEffect, VisualAdjustmentHeader, VisualAdjustmentSet, VisualAdjustmentSpec } from "./types.js";
 
 function nonEmpty(value: string, label: string): void {
   if (!value.trim()) throw new Error(`${label} must not be empty.`);
@@ -28,21 +27,21 @@ export function assertVisualAdjustmentSpec(value: VisualAdjustmentSpec): void {
     throw new Error("VisualAdjustmentSpec is invalid.");
   }
   nonEmpty(value.id, "VisualAdjustmentSpec.id");
-  readHtmlAdjustment(value.program);
+  assertVisualProgram(value.effect, "VisualAdjustmentSpec.effect");
+}
+
+export function assertVisualAdjustmentEffect(value: VisualAdjustmentEffect): void {
+  assertVisualProgram(value, "VisualAdjustmentEffect");
 }
 
 export function assertVisualAdjustmentSet(value: VisualAdjustmentSet): void {
   if (value === null || typeof value !== "object" || Array.isArray(value) || !Array.isArray(value.items)) {
     throw new Error("VisualAdjustmentSet is invalid.");
   }
-  assertVisualTrackIdentity({
-    kind: "visual",
-    timelineId: "visual-adjustment-set",
-    visualIr: "hypit.visual-ir@1",
-    id: "visual-adjustment-set",
-    items: value.items,
-  });
-  for (const item of value.items) readHtmlAdjustment(item.program);
+  assertVisualItemSequence(value.items, undefined, "VisualAdjustmentSet");
+  for (const item of value.items) {
+    if (item.kind !== "adjustment") throw new Error("VisualAdjustmentSet accepts only Adjustment items.");
+  }
 }
 
 export function appendVisualAdjustment(
@@ -63,9 +62,8 @@ export function appendVisualAdjustment(
   return { items: [...set.items, {
     kind: "adjustment",
     id: spec.id,
-    subjectId: spec.id,
     span: { ...window.span },
-    program: structuredClone(spec.program),
+    program: structuredClone(spec.effect),
   }] };
 }
 

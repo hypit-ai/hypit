@@ -8,7 +8,7 @@ Frames, and [timing](timing.md) owns absolute and projected time.
 
 ```text
 Visual Clip = picture source + absolute Window + Frame
-            + spatial mapping + optional temporal Map + optional treatment + optional Motion
+            + spatial mapping + optional temporal Map/Curve + optional treatment + optional Motion
 Visual Track = a set of Visual Clips
 ```
 
@@ -51,7 +51,7 @@ The Window states when the occurrence contributes. For moving media, omission us
 playback from source start; source that ends before the Window leaves the remaining picture empty.
 
 Use `visual:Map` children for another relation. Target bounds select Clip-local time; source bounds
-select source frames; paired anchors and an exact rate relate the two clocks. `wrap-from` and
+select positions in the prepared-media local domain; paired anchors and an exact rate relate the two clocks. `wrap-from` and
 `wrap-until` make a source interval periodic. Multiple non-overlapping Maps form one piecewise
 relation and retain transparent gaps.
 
@@ -64,18 +64,40 @@ target bounds but no rate, anchors or wrap fits the selected source interval acr
 </visual:Clip>
 ```
 
-Stills have no source clock and therefore use no temporal Map. `space:Map` and `visual:Map` answer
+Use `visual:Curve` when source position changes nonlinearly over target time. Its four source
+positions must be monotone inside the prepared-media domain; adjacent pieces express a stop or
+direction change. This is a sampling relation, not a visual effect or a reconstruction-quality mode.
+Durations written with `f` use the Film Clock; they do not name native source-frame ordinals. Use
+source-local time or edge-relative positions unless a media operation has explicitly resolved a
+native frame to its presentation position.
+
+```svml
+<visual:Clip media={shot.media} during={story.ramp} frame={layout.full}>
+  <visual:Curve source-at-start="start" source-control-1="start+250ms"
+    source-control-2="end-250ms" source-at-end="end"/>
+</visual:Clip>
+```
+
+Stills have no source clock and therefore use no temporal Map. `space:Map` and `visual:Map`/`visual:Curve` answer
 different questions.
 
 Clip declaration order becomes the Track-local item sequence. Whole-film ordering is separate: the parent
 `film:Track` occurrence supplies its own `id`, and its sibling position supplies paint order. Sampling changes which source pixels appear;
 Pose or `motion` moves the complete framed occurrence.
 
+## Relate one ordinary handoff explicitly
+
+When two adjacent Clips overlap and the outgoing Clip starts and ends first, declare a
+`visual:Transition` and supply an effect such as `transition:CrossDissolve`, `transition:Push`,
+`transition:LinearWipe` or `transition:BlurDissolve`. The complete overlap is
+the interval; do not repeat it as another Window. Each Clip keeps its own source sampling.
+
 ## Put shared behavior in a component
 
-A continuing presenter, crossfade, slideshow or coordinated reveal owns behavior across several
-occurrences. Implement that relationship as a project or reusable component, using Visual Track
-builders where useful and publishing a VisualTrack for Film.
+A continuing presenter, slideshow, shared mask, cross-Track handoff, coordinated reveal or visual/audio
+transition owns behavior beyond one adjacent two-Clip picture relation. Implement that relationship as
+a project or reusable component, using Visual Track builders where useful and publishing a VisualTrack
+and, when needed, an AudioTrack for Film.
 
 Components can define local author vocabularies that fit their shared content. Caption, for example,
 uses a persistent document and timed Uses; a presenter component may similarly expose its own roles

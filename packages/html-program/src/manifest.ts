@@ -44,6 +44,7 @@ export const htmlProgramSchema: ValueSchema = {
     artifacts: { schema: { kind: "array", items: {
       kind: "object",
       fields: {
+        id: { schema: { kind: "string", minLength: 1 } },
         artifact: { schema: blobRefSchema() },
         usage: { schema: { kind: "oneOf", variants: [
           { kind: "object", fields: { kind: { schema: { kind: "literal", value: "always" } } } },
@@ -54,7 +55,10 @@ export const htmlProgramSchema: ValueSchema = {
         ] } },
       },
     } } },
-    surfaces: { schema: { kind: "array", items: compositableSurfaceSchema } },
+    surfaces: { schema: { kind: "array", items: { kind: "object", fields: {
+      artifactId: { schema: { kind: "string", minLength: 1 } },
+      surface: { schema: compositableSurfaceSchema },
+    } } } },
     videoSources: { schema: { kind: "array", items: { kind: "oneOf", variants: [{ kind: "object", fields: {
       id: { schema: { kind: "string", minLength: 1 } },
       kind: { schema: { kind: "literal", value: "media" } },
@@ -63,7 +67,7 @@ export const htmlProgramSchema: ValueSchema = {
     } }, { kind: "object", fields: {
       id: { schema: { kind: "string", minLength: 1 } },
       kind: { schema: { kind: "literal", value: "surface" } },
-      resource: { schema: { kind: "string", minLength: 1 } },
+      artifactId: { schema: { kind: "string", minLength: 1 } },
       ...(frameSpanSchema.kind === "object" ? frameSpanSchema.fields : {}),
       sourceFrame: { schema: { kind: "object", fields: {
         numerator: { schema: nonNegativeInteger }, denominator: { schema: positiveInteger },

@@ -214,16 +214,3 @@ export type CommandFailedFact = BuildFactBase & {
 
 /** Fixed Core facts, not an extensible event or patch system. */
 export type BuildFact = ProducerAppliedFact | NeedAppliedFact | CommandFailedFact;
-
-/** Materialized read/execution view. Durable Stores persist Definition + Facts, never this object. */
-export type BuildState = {
-  readonly format: "hypit.build@1";
-  readonly program: LinkedProgram;
-  readonly plan: BuildPlan;
-  readonly status: "active" | "complete" | "failed";
-  readonly records: readonly TypedRecord[];
-  readonly steps: readonly StepState[];
-  readonly needs: readonly Need[];
-  readonly outstanding: readonly BuildCommand[];
-  readonly diagnostics: readonly BuildDiagnostic[];
-};

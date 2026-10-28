@@ -51,7 +51,7 @@ A-roll-only or B-roll-only.
 | Current question | Owner |
 | --- | --- |
 | What should share a component, and which choices should become inputs? | [Component design](component-design.md) |
-| How do I connect Surface, projections, Fragment and Producers? | [Track authoring](track-authoring.md) |
+| How do I connect Author Declaration, projections, Fragment and Producers? | [Track authoring](track-authoring.md) |
 | How do I draw elements, video, graphics and frame-driven motion? | [Component visuals](component-visuals.md) |
 | How do I create a new Caption layout using existing wording and timing? | [Caption authoring](caption-authoring.md) |
 | How do I expose meaningful Studio Items and actual author controls? | [Studio Companions](studio-companions.md) |

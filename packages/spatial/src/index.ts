@@ -1,4 +1,15 @@
 export { spatialComponent } from "./component.js";
+export {
+  spatialAnchoredFrameAuthorDeclaration,
+  spatialAspectFrameAuthorDeclaration,
+  spatialAuthorDeclarations,
+  spatialCanvasAuthorDeclaration,
+  spatialExtentAuthorDeclaration,
+  spatialFrameAuthorDeclaration,
+  spatialMapAuthorDeclaration,
+  spatialPathAuthorDeclaration,
+  spatialPointAuthorDeclaration,
+} from "./declaration.js";
 export { contentFitPropertyNames, decodeContentFitProperties } from "./author.js";
 export {
   anchoredFrameFragment,
@@ -6,14 +17,7 @@ export {
   contentFitFragment,
   frameEdgesFragment,
 } from "./fragment.js";
-export * from "./geometry.js";
-export {
-  spatialDependency,
-  spatialManifest, spatialMarkupSurfaces,
-  spatialModuleRef,
-  spatialProducers,
-  spatialTypes,
-} from "./manifest.js";
+export * from "./geometry.js";export { spatialDependency, spatialManifest, spatialModuleRef, spatialProducers, spatialTypes } from "./manifest.js";
 export {
   contentFitSchema,
   intrinsicExtentSchema,
@@ -21,15 +25,5 @@ export {
   spatialMap2DSchema,
   spatialPathSchema,
   spatialPointSchema,
-} from "./schema.js";
-export {
-  decodeAnchoredFrameSurface,
-  decodeAspectFrameSurface,
-  decodeCanvasSurface,
-  decodeExtentSurface,
-  decodeFrameSurface,
-  decodeMapSurface,
-  decodePathSurface,
-  decodePointSurface,
-} from "./surface.js";
+} from "./schema.js";export { spatialMarkupDeclarations, spatialPointMarkupDeclaration } from "./declaration.js";
 export type * from "./types.js";

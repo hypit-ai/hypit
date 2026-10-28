@@ -14,15 +14,18 @@ import type {
   VisualAnimation,
   VisualAdjustment,
   VisualAttribute,
+  VisualContribution,
   VisualElement,
   VisualItem,
   VisualPresent,
+  VisualProcess,
   VisualStyleDeclaration,
   VisualScope,
 } from "@hypit/composition";
-import { assertTemporalMap, resolveTemporalBoundary, temporalValueInFrames } from "@hypit/temporal";
+import { visualProcesses } from "@hypit/composition";
+import { assertTemporalMap, isAffineTemporalMapPiece, resolveTemporalBoundary, temporalValueInFrames } from "@hypit/temporal";
 import type { ExactTemporalValue, TemporalMap } from "@hypit/temporal";
-import { assertBlobRef, canonicalStringify, compareCodeUnits, isResourceId } from "@hypit/hypit/protocol";
+import { assertBlobRef, canonicalStringify, compareCodeUnits } from "@hypit/hypit/protocol";
 import type { BlobRef, ResourceId } from "@hypit/hypit/protocol";
 import { VISUAL_IR_V1 } from "@hypit/composition";
 import { readHtmlVisual, htmlVisualHtml, htmlVisualScript } from "./html-visual.js";
@@ -54,8 +57,9 @@ import {
 } from "./text.js";
 
 const NANOSECONDS = 1_000_000_000n;
-const RESOURCE_URI = /hypit-resource:\/\/(res_[a-zA-Z0-9._:-]+)/gu;
-const SURFACE_RESOURCE = /data-hypit-surface-resource="(res_[a-zA-Z0-9._:-]+)"/gu;
+const ARTIFACT_URI = /hypit-artifact:\/\/([A-Za-z][A-Za-z0-9._:-]*)/gu;
+const SURFACE_ARTIFACT = /data-hypit-surface-artifact="([A-Za-z][A-Za-z0-9._:-]*)"/gu;
+const PROGRAM_RESOURCE_ID = /^[A-Za-z][A-Za-z0-9._:-]*$/u;
 
 function escapeHtml(value: string): string {
   return value
@@ -210,6 +214,9 @@ function frameSamplingPieces(
   }
   const stage = map.stages[0]!;
   return stage.pieces.flatMap((piece) => {
+    if (!isAffineTemporalMapPiece(piece)) {
+      throw new Error("HTML timed Surface adapter does not support cubic temporal sampling.");
+    }
     const targetStart = frameValue(piece.target.start, programFrameRate, "Visual sampling target start");
     const startFrame = resolveTemporalBoundary(piece.target.start, { frameRate: programFrameRate }, "cover");
     const endFrameExclusive = resolveTemporalBoundary(piece.target.end, { frameRate: programFrameRate }, "cover");
@@ -248,14 +255,14 @@ function percentage(frame: number, totalFrames: number): string {
   return `${whole}.${String(remainder).padStart(9, "0").replace(/0+$/u, "")}%`;
 }
 
-export function htmlProgramResourceUri(resource: ResourceId): string {
-  if (!isResourceId(resource)) throw new Error("HTML renderer Resource id is invalid.");
-  return `hypit-resource://${resource}`;
+export function htmlArtifactUri(id: string): string {
+  if (!PROGRAM_RESOURCE_ID.test(id)) throw new Error("HTML Programme Artifact id is invalid.");
+  return `hypit-artifact://${id}`;
 }
 
 /** Keep compiler-owned media inert until the page has applied its render selection. */
-function deferredResource(attribute: "src" | "href", resource: ResourceId): string {
-  return `data-hypit-resource-${attribute}="${escapeHtml(htmlProgramResourceUri(resource))}"`;
+function deferredArtifact(attribute: "src" | "href", id: string): string {
+  return `data-hypit-artifact-${attribute}="${escapeHtml(htmlArtifactUri(id))}"`;
 }
 
 function css(style: readonly VisualStyleDeclaration[]): string {
@@ -394,10 +401,10 @@ function renderElement(
         return `<foreignObject x="0" y="0" width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml" style="position:relative;width:100%;height:100%">${renderOwned(maskRoot)}</div></foreignObject>`;
       }
       if (maskRoot.kind === "image") {
-        return `<image ${sourcePresentation.common} x="0" y="0" width="100%" height="100%" preserveAspectRatio="none" ${deferredResource("href", maskRoot.artifact.resource)}/>`;
+        return `<image ${sourcePresentation.common} x="0" y="0" width="100%" height="100%" preserveAspectRatio="none" ${deferredArtifact("href", maskRoot.artifact.resource)}/>`;
       }
       if (maskRoot.kind === "surface" && maskRoot.surface.timing.kind === "still") {
-        return `<image ${sourcePresentation.common} data-hypit-surface-resource="${maskRoot.surface.artifact.resource}" x="0" y="0" width="100%" height="100%" preserveAspectRatio="none" ${deferredResource("href", maskRoot.surface.artifact.resource)}/>`;
+        return `<image ${sourcePresentation.common} data-hypit-surface-artifact="${maskRoot.surface.artifact.resource}" x="0" y="0" width="100%" height="100%" preserveAspectRatio="none" ${deferredArtifact("href", maskRoot.surface.artifact.resource)}/>`;
       }
       throw new Error(`Local mask ${element.id} requires a terminal owned text, image or still Surface mask source.`);
     })();
@@ -457,7 +464,7 @@ function renderElement(
       "muted",
       "playsinline",
     ].filter(Boolean).join(" ");
-    return `<video ${media} ${deferredResource("src", element.source.source.resource)}></video>`;
+    return `<video ${media} ${deferredArtifact("src", element.source.source.resource)}></video>`;
   }
   if (element.kind === "surface" && element.sampling !== undefined) {
     const artifact = element.surface.artifact;
@@ -477,7 +484,7 @@ function renderElement(
       context.videoSources.push({
         kind: "surface",
         id: partId,
-        resource: artifact.resource,
+        artifactId: artifact.resource,
         startFrame,
         endFrameExclusive: startFrame + durationFrames,
         sourceFrame: { ...run.sourceFrame },
@@ -498,29 +505,29 @@ function renderElement(
         "muted",
         "playsinline",
         ...[
-          `data-hypit-surface-resource="${element.surface.artifact.resource}"`,
+          `data-hypit-surface-artifact="${element.surface.artifact.resource}"`,
           `data-hypit-alpha-mode="${element.surface.alphaMode}"`,
           `data-hypit-color-space="${element.surface.colorSpace}"`,
           `width="${element.surface.width}"`,
           `height="${element.surface.height}"`,
         ],
       ].filter(Boolean).join(" ");
-      return `<video ${media} ${deferredResource("src", artifact.resource)}></video>`;
+      return `<video ${media} ${deferredArtifact("src", artifact.resource)}></video>`;
     })).join("");
   }
   if (element.kind === "surface") {
     const surface = [
-      `data-hypit-surface-resource="${element.surface.artifact.resource}"`,
+      `data-hypit-surface-artifact="${element.surface.artifact.resource}"`,
       `data-hypit-alpha-mode="${element.surface.alphaMode}"`,
       `data-hypit-color-space="${element.surface.colorSpace}"`,
       `width="${element.surface.width}"`,
       `height="${element.surface.height}"`,
     ].join(" ");
-    if (element.surface.timing.kind === "still") return `<img ${common} ${surface} ${deferredResource("src", element.surface.artifact.resource)}/>`;
+    if (element.surface.timing.kind === "still") return `<img ${common} ${surface} ${deferredArtifact("src", element.surface.artifact.resource)}/>`;
     throw new Error(`Timed Surface ${element.id} has no sampling Map.`);
   }
 
-  if (element.kind === "image") return `<img ${common} ${deferredResource("src", element.artifact.resource)}/>`;
+  if (element.kind === "image") return `<img ${common} ${deferredArtifact("src", element.artifact.resource)}/>`;
   throw new Error("Timed visual element has no sampling Map.");
 }
 
@@ -535,6 +542,7 @@ function renderVisualPresent(
   sharedGlyphFilterDefinitions: string[],
   stableId: StableDomId,
   videoSources: HtmlVideoSource[],
+  captureRoot: boolean,
 ): string {
   const start = frameSeconds(present.span.startFrame, numerator, denominator);
   const duration = frameSeconds(present.span.endFrameExclusive - present.span.startFrame, numerator, denominator);
@@ -554,7 +562,70 @@ function renderVisualPresent(
     stableId,
     videoSources,
   });
-  return `<div class="hypit-visual-present" data-hypit-occurrence-path="${escapeHtml(JSON.stringify(occurrencePath))}" data-hypit-present-id="${escapeHtml(present.id)}" data-hypit-present-root-element-id="${escapeHtml(root.id)}" data-hypit-paint-path="${escapeHtml(JSON.stringify(paintPath))}" data-hypit-present-start-frame="${present.span.startFrame}" data-hypit-present-end-frame="${present.span.endFrameExclusive}" style="position:absolute;inset:0;z-index:${stackIndex};overflow:hidden;pointer-events:none">${present.visibility === undefined ? contents : `<div data-hypit-visibility="${escapeHtml(JSON.stringify(present.visibility))}" style="position:absolute;inset:0">${contents}</div>`}</div>`;
+  return `<div class="hypit-visual-present"${captureRoot ? " data-hypit-capture-root" : ""} data-hypit-occurrence-path="${escapeHtml(JSON.stringify(occurrencePath))}" data-hypit-present-id="${escapeHtml(present.id)}" data-hypit-present-root-element-id="${escapeHtml(root.id)}" data-hypit-paint-path="${escapeHtml(JSON.stringify(paintPath))}" data-hypit-contribution-start-frame="${present.span.startFrame}" data-hypit-contribution-end-frame="${present.span.endFrameExclusive}" style="position:absolute;inset:0;z-index:${stackIndex};overflow:hidden;pointer-events:none">${present.visibility === undefined ? contents : `<div data-hypit-visibility="${escapeHtml(JSON.stringify(present.visibility))}" style="position:absolute;inset:0">${contents}</div>`}</div>`;
+}
+
+function contributionInputPath(
+  occurrencePath: readonly string[],
+  process: VisualProcess,
+  name: string,
+): readonly string[] {
+  return [...occurrencePath, `process:${process.id}`, `input:${name}`];
+}
+
+function renderVisualProcess(
+  occurrencePath: readonly string[],
+  process: VisualProcess,
+  stackIndex: number,
+  paintPath: readonly number[],
+  numerator: number,
+  denominator: number,
+  emittedFilterIds: Set<string>,
+  sharedGlyphFilterDefinitions: string[],
+  stableId: StableDomId,
+  videoSources: HtmlVideoSource[],
+  captureRoot: boolean,
+): string {
+  const id = stableId(["visual-process", ...occurrencePath, process.id]);
+  const program = readHtmlVisual(process.program);
+  const slots = new Map(process.inputs.map((input, index) => [input.name, renderVisualContribution(
+    contributionInputPath(occurrencePath, process, input.name),
+    input.contribution,
+    index + 1,
+    [...paintPath, index + 1],
+    numerator,
+    denominator,
+    emittedFilterIds,
+    sharedGlyphFilterDefinitions,
+    stableId,
+    videoSources,
+    false,
+  )]));
+  const contents = htmlVisualHtml(program, slots);
+  const visible = process.visibility === undefined
+    ? contents
+    : `<div data-hypit-visibility="${escapeHtml(JSON.stringify(process.visibility))}" style="position:absolute;inset:0">${contents}</div>`;
+  return `<div id="${id}" class="hypit-visual-process"${captureRoot ? " data-hypit-capture-root" : ""} data-hypit-occurrence-path="${escapeHtml(JSON.stringify(occurrencePath))}" data-hypit-process-id="${escapeHtml(process.id)}" data-hypit-paint-path="${escapeHtml(JSON.stringify(paintPath))}" data-hypit-contribution-start-frame="${process.span.startFrame}" data-hypit-contribution-end-frame="${process.span.endFrameExclusive}" style="position:absolute;inset:0;z-index:${stackIndex};overflow:hidden;pointer-events:none">${visible}</div>`;
+}
+
+function renderVisualContribution(
+  occurrencePath: readonly string[],
+  contribution: VisualContribution,
+  stackIndex: number,
+  paintPath: readonly number[],
+  numerator: number,
+  denominator: number,
+  emittedFilterIds: Set<string>,
+  sharedGlyphFilterDefinitions: string[],
+  stableId: StableDomId,
+  videoSources: HtmlVideoSource[],
+  captureRoot: boolean,
+): string {
+  return contribution.kind === "present"
+    ? renderVisualPresent(occurrencePath, contribution, stackIndex, paintPath, numerator, denominator,
+        emittedFilterIds, sharedGlyphFilterDefinitions, stableId, videoSources, captureRoot)
+    : renderVisualProcess(occurrencePath, contribution, stackIndex, paintPath, numerator, denominator,
+        emittedFilterIds, sharedGlyphFilterDefinitions, stableId, videoSources, captureRoot);
 }
 
 type RenderedAdjustment = {
@@ -564,10 +635,7 @@ type RenderedAdjustment = {
     readonly occurrencePath: readonly string[];
     readonly adjustmentId: string;
     readonly visibility?: readonly FrameSpan[];
-    readonly filter: string;
-    readonly opacity?: number;
-    readonly transform?: string;
-    readonly transformOrigin?: string;
+    readonly keyframes: ReturnType<typeof readHtmlAdjustment>["keyframes"];
   };
 };
 
@@ -581,7 +649,7 @@ function renderVisualAdjustment(
   const program = readHtmlAdjustment(adjustment.program);
   const id = stableId(["visual-adjustment", ...occurrencePath, adjustment.id]);
   return {
-    html: `<div id="${id}" class="hypit-visual-adjustment" data-hypit-occurrence-path="${escapeHtml(JSON.stringify(occurrencePath))}" data-hypit-adjustment-id="${escapeHtml(adjustment.id)}" data-hypit-adjustment-start-frame="${adjustment.span.startFrame}" data-hypit-adjustment-end-frame="${adjustment.span.endFrameExclusive}" data-hypit-adjustment-filter="${escapeHtml(program.filter)}" style="position:absolute;inset:0;z-index:${stackIndex};overflow:hidden;pointer-events:none;filter:none">${contents}</div>`,
+    html: `<div id="${id}" class="hypit-visual-adjustment" data-hypit-occurrence-path="${escapeHtml(JSON.stringify(occurrencePath))}" data-hypit-adjustment-id="${escapeHtml(adjustment.id)}" data-hypit-adjustment-start-frame="${adjustment.span.startFrame}" data-hypit-adjustment-end-frame="${adjustment.span.endFrameExclusive}" style="position:absolute;inset:0;z-index:${stackIndex};overflow:hidden;pointer-events:none;filter:none">${contents}</div>`,
     runtime: {
       id,
       occurrencePath,
@@ -589,10 +657,7 @@ function renderVisualAdjustment(
       startFrame: adjustment.span.startFrame,
       endFrameExclusive: adjustment.span.endFrameExclusive,
       ...(adjustment.visibility === undefined ? {} : { visibility: adjustment.visibility.map((span) => ({ ...span })) }),
-      filter: program.filter,
-      ...(program.opacity === undefined ? {} : { opacity: program.opacity }),
-      ...(program.transform === undefined ? {} : { transform: program.transform }),
-      ...(program.transformOrigin === undefined ? {} : { transformOrigin: program.transformOrigin }),
+      keyframes: program.keyframes,
     },
   };
 }
@@ -686,14 +751,23 @@ function collectArtifacts(composition: Composition): HtmlArtifact[] {
         }
       }
     }
+    for (const process of visualProcesses(track)) {
+      for (const artifact of process.program.artifacts) add(artifact, "always");
+    }
   }
-  return [...artifacts.values()].map(({ artifact, always, spans }) => ({
-    artifact,
-    usage: always ? { kind: "always" as const } : { kind: "frames" as const, spans: mergeFrameSpans(spans) },
-  })).sort((left, right) => compareCodeUnits(left.artifact.resource, right.artifact.resource));
+  return [...artifacts.values()]
+    .sort((left, right) => compareCodeUnits(left.artifact.resource, right.artifact.resource))
+    .map(({ artifact, always, spans }, index) => ({
+      id: `artifact-${String(index + 1).padStart(4, "0")}`,
+      artifact,
+      usage: always ? { kind: "always" as const } : { kind: "frames" as const, spans: mergeFrameSpans(spans) },
+    }));
 }
 
-function collectSurfaces(composition: Composition): CompositableSurfaceRef[] {
+function collectSurfaces(
+  composition: Composition,
+  artifactIds: ReadonlyMap<ResourceId, string>,
+): HtmlProgram["surfaces"][number][] {
   const surfaces = new Map<ResourceId, CompositableSurfaceRef>();
   for (const track of visualScopeTracks(composition.visual)) {
     for (const present of visualPresents(track)) {
@@ -709,7 +783,11 @@ function collectSurfaces(composition: Composition): CompositableSurfaceRef[] {
     }
   }
   return [...surfaces.values()].sort((left, right) =>
-    compareCodeUnits(left.artifact.resource, right.artifact.resource));
+    compareCodeUnits(left.artifact.resource, right.artifact.resource)).map((surface) => {
+    const artifactId = artifactIds.get(surface.artifact.resource);
+    if (artifactId === undefined) throw new Error("HTML Programme Surface has no declared Artifact.");
+    return { artifactId, surface };
+  });
 }
 
 function collectFonts(composition: Composition): FontArtifactRef[] {
@@ -744,7 +822,7 @@ function renderFontFaces(composition: Composition, stableId: StableDomId): strin
   return collectFonts(composition).flatMap((font) => font.sources.map((source) => [
       "@font-face{",
       `font-family:${exactFontFamily(font, stableId)};`,
-      `src:url(\"${htmlProgramResourceUri(source.artifact.resource)}\") format(\"${fontFormat(source.artifact.mediaType)}\");`,
+      `src:url(\"${htmlArtifactUri(source.artifact.resource)}\") format(\"${fontFormat(source.artifact.mediaType)}\");`,
       `font-weight:${font.weight};`,
       `font-style:${font.style};`,
       "font-display:block;",
@@ -880,10 +958,10 @@ function frameProgramRuntime(frameCount: number): string {
       htmlPrepareFrameSelection(spans);
       for (const initializer of htmlFrameProgramInitializers) initializer();
       htmlFrameProgramInitializers.length = 0;
-      presents = [...document.querySelectorAll('[data-hypit-present-start-frame]')].map(element => ({
+      presents = [...document.querySelectorAll('[data-hypit-contribution-start-frame]')].map(element => ({
         element,
-        startFrame: Number(element.getAttribute('data-hypit-present-start-frame')),
-        endFrameExclusive: Number(element.getAttribute('data-hypit-present-end-frame')),
+        startFrame: Number(element.getAttribute('data-hypit-contribution-start-frame')),
+        endFrameExclusive: Number(element.getAttribute('data-hypit-contribution-end-frame')),
       }));
     };
     const applyFrame = async frame => {
@@ -918,6 +996,27 @@ function frameProgramRuntime(frameCount: number): string {
   })();`;
 }
 
+type ContributionOccurrences = {
+  readonly presents: readonly { readonly occurrencePath: readonly string[]; readonly present: VisualPresent }[];
+  readonly processes: readonly { readonly occurrencePath: readonly string[]; readonly process: VisualProcess }[];
+};
+
+function contributionOccurrences(
+  occurrencePath: readonly string[],
+  contribution: VisualContribution,
+): ContributionOccurrences {
+  if (contribution.kind === "present") return { presents: [{ occurrencePath, present: contribution }], processes: [] };
+  const children = contribution.inputs.map((input) => contributionOccurrences(
+    contributionInputPath(occurrencePath, contribution, input.name),
+    input.contribution,
+  ));
+  return {
+    presents: children.flatMap((child) => child.presents),
+    // Inputs settle before their owner so a recursive programme may read the complete requested input state.
+    processes: [...children.flatMap((child) => child.processes), { occurrencePath, process: contribution }],
+  };
+}
+
 function emitHtml(composition: Composition, timeline: Timeline, videoSources: HtmlVideoSource[]): string {
   const { numerator, denominator } = timeline.frameRate;
   const visualItems = visualScopeTrackOccurrences(composition.visual)
@@ -925,9 +1024,11 @@ function emitHtml(composition: Composition, timeline: Timeline, videoSources: Ht
       occurrencePath: occurrence.path,
       item,
     })));
-  const visuals = visualItems.flatMap(({ occurrencePath, item }) => item.kind === "present"
-    ? [{ occurrencePath, present: item }]
-    : []);
+  const contributions = visualItems.flatMap(({ occurrencePath, item }) => item.kind === "adjustment"
+    ? []
+    : [contributionOccurrences(occurrencePath, item)]);
+  const visuals = contributions.flatMap((entry) => entry.presents);
+  const processes = contributions.flatMap((entry) => entry.processes);
   // One document, one set of glyph filter definitions. Keep definitions outside
   // temporal Present roots so a render can make an unrelated Present inert
   // without invalidating a selected Present's document-wide url(#id) reference.
@@ -957,9 +1058,9 @@ function emitHtml(composition: Composition, timeline: Timeline, videoSources: Ht
       }
       const { item } = entry;
       const occurrencePath = [...scopePath, entry.memberId];
-      if (item.kind === "present") {
-        html += `\n    ${renderVisualPresent(occurrencePath, item, stackIndex, [...paintPath, stackIndex],
-          numerator, denominator, emittedFilterIds, sharedGlyphFilterDefinitions, stableId, videoSources)}`;
+      if (item.kind !== "adjustment") {
+        html += `\n    ${renderVisualContribution(occurrencePath, item, stackIndex, [...paintPath, stackIndex],
+          numerator, denominator, emittedFilterIds, sharedGlyphFilterDefinitions, stableId, videoSources, true)}`;
         continue;
       }
       const rendered = renderVisualAdjustment(occurrencePath, item, stackIndex, html, stableId);
@@ -973,18 +1074,24 @@ function emitHtml(composition: Composition, timeline: Timeline, videoSources: Ht
     : `<svg data-hypit-document-definitions aria-hidden="true" width="0" height="0" style="position:absolute;overflow:hidden"><defs>${sharedGlyphFilterDefinitions.join("")}</defs></svg>`;
   const animationCss = visuals.flatMap(({ occurrencePath, present }) => renderAnimationRules(occurrencePath, present, stableId)).join("\n    ");
   const fontCss = renderFontFaces(composition, stableId);
-  const programs = visuals.flatMap(({ occurrencePath, present }) => visualElements(present.root).flatMap(element => element.kind !== "program" ? [] : [{
+  const programs = [...visuals.flatMap(({ occurrencePath, present }) => visualElements(present.root).flatMap(element => element.kind !== "program" ? [] : [{
     id: stableId(["visual-occurrence", ...occurrencePath, present.id, element.id]),
     startFrame: present.span.startFrame,
     durationFrames: present.span.endFrameExclusive - present.span.startFrame,
     program: readHtmlVisual(element.program),
-  }]));
+  }])), ...processes.map(({ occurrencePath, process }) => ({
+    id: stableId(["visual-process", ...occurrencePath, process.id]),
+    startFrame: process.span.startFrame,
+    durationFrames: process.span.endFrameExclusive - process.span.startFrame,
+    program: readHtmlVisual(process.program),
+  }))];
   const programCss = programs.map(entry => `@scope (#${entry.id}) { ${entry.program.css ?? ""} }`).join("\n");
-  const hasVisibility = visuals.some(({ present }) => present.visibility !== undefined);
+  const hasVisibility = visuals.some(({ present }) => present.visibility !== undefined)
+    || processes.some(({ process }) => process.visibility !== undefined);
   const initializer = (runtime: string): string =>
     `<script>htmlRegisterFrameProgramInitializer(() => {\n${runtime}\n});</script>`;
-  const programRuntime = programs.length === 0 ? "" : initializer(htmlVisualScript(programs, numerator, denominator));
-  const visibilityRuntime = hasVisibility ? initializer(presentationVisibilityScript(numerator, denominator)) : "";
+  const programRuntime = programs.length === 0 ? "" : initializer(htmlVisualScript(programs));
+  const visibilityRuntime = hasVisibility ? initializer(presentationVisibilityScript()) : "";
   const adjustmentRuntime = adjustments.length === 0 ? "" : initializer(htmlAdjustmentScript(adjustments));
   const frameCount = timelineFrameCount(timeline);
   const needsFrameWork = hasFrameAnimations(composition) || hasTerminalText(composition)
@@ -1025,13 +1132,13 @@ function normalizedDocument(value: HtmlProgram): HtmlProgram {
     frameCount: value.frameCount,
     canvas: { ...value.canvas },
     artifacts: [...value.artifacts]
-      .map((entry) => ({ artifact: { ...entry.artifact }, usage: entry.usage.kind === "always"
+      .map((entry) => ({ id: entry.id, artifact: { ...entry.artifact }, usage: entry.usage.kind === "always"
         ? { kind: "always" as const }
         : { kind: "frames" as const, spans: entry.usage.spans.map((span) => ({ ...span })) } }))
-      .sort((left, right) => compareCodeUnits(left.artifact.resource, right.artifact.resource)),
+      .sort((left, right) => compareCodeUnits(left.id, right.id)),
     surfaces: [...value.surfaces]
       .map((surface) => structuredClone(surface))
-      .sort((left, right) => compareCodeUnits(left.artifact.resource, right.artifact.resource)),
+      .sort((left, right) => compareCodeUnits(left.artifactId, right.artifactId)),
     videoSources: [...value.videoSources].map((source) => source.kind === "media" ? ({
       ...source,
       source: structuredClone(source.source),
@@ -1048,6 +1155,20 @@ function normalizedDocument(value: HtmlProgram): HtmlProgram {
 export function compileHtmlProgram(composition: Composition, timeline: Timeline): HtmlProgram {
   assertCompositionIdentity(composition, timeline);
   const videoSources: HtmlVideoSource[] = [];
+  const artifacts = collectArtifacts(composition);
+  const artifactIds = new Map(artifacts.map((entry) => [entry.artifact.resource, entry.id] as const));
+  let html = emitHtml(composition, timeline, videoSources);
+  html = html
+    .replace(ARTIFACT_URI, (_uri, resource: string) => {
+      const artifactId = artifactIds.get(resource as ResourceId);
+      if (artifactId === undefined) throw new Error(`HTML Programme references undeclared Artifact ${resource}.`);
+      return htmlArtifactUri(artifactId);
+    })
+    .replace(SURFACE_ARTIFACT, (_marker, resource: string) => {
+      const artifactId = artifactIds.get(resource as ResourceId);
+      if (artifactId === undefined) throw new Error(`HTML Programme references undeclared Surface ${resource}.`);
+      return `data-hypit-surface-artifact="${artifactId}"`;
+    });
   const content = normalizedDocument({
     visualIr: VISUAL_IR_V1,
     frameRate: { ...timeline.frameRate },
@@ -1056,10 +1177,15 @@ export function compileHtmlProgram(composition: Composition, timeline: Timeline)
       width: composition.canvas.width,
       height: composition.canvas.height,
     },
-    artifacts: collectArtifacts(composition),
-    surfaces: collectSurfaces(composition),
-    videoSources,
-    html: emitHtml(composition, timeline, videoSources),
+    artifacts,
+    surfaces: collectSurfaces(composition, artifactIds),
+    videoSources: videoSources.map((source) => {
+      if (source.kind !== "surface") return source;
+      const artifactId = artifactIds.get(source.artifactId as ResourceId);
+      if (artifactId === undefined) throw new Error("HTML Programme sampled Surface has no declared Artifact.");
+      return { ...source, artifactId };
+    }),
+    html,
   });
   return content;
 }
@@ -1083,6 +1209,7 @@ export function assertHtmlProgram(document: HtmlProgram): void {
   if (!document.html.startsWith("<!doctype html>")) throw new Error("HtmlProgram HTML is invalid.");
   const declared = [...document.artifacts];
   if (declared.some((entry) => {
+    if (typeof entry?.id !== "string" || !PROGRAM_RESOURCE_ID.test(entry.id)) return true;
     const item = entry?.artifact;
     if (!isBlobRef(item)) return true;
     if (entry.usage?.kind === "always") return Object.keys(entry.usage).length !== 1;
@@ -1092,12 +1219,24 @@ export function assertHtmlProgram(document: HtmlProgram): void {
       || span.startFrame < 0 || span.endFrameExclusive <= span.startFrame
       || span.endFrameExclusive > document.frameCount)) return true;
     return JSON.stringify(mergeFrameSpans(entry.usage.spans)) !== JSON.stringify(entry.usage.spans);
-  }) || new Set(declared.map((entry) => entry.artifact.resource)).size !== declared.length) {
+  }) || new Set(declared.map((entry) => entry.id)).size !== declared.length) {
     throw new Error("HtmlProgram Artifact set is invalid.");
   }
-  const referenced = [...document.html.matchAll(RESOURCE_URI)].map((match) => match[1] as ResourceId);
+  const resourceMetadata = new Map<string, { readonly size: number; readonly mediaType: string }>();
+  for (const entry of declared) {
+    const existing = resourceMetadata.get(entry.artifact.resource);
+    if (existing !== undefined
+      && (existing.size !== entry.artifact.size || existing.mediaType !== entry.artifact.mediaType)) {
+      throw new Error(`HtmlProgram Artifact ${entry.artifact.resource} has conflicting metadata.`);
+    }
+    resourceMetadata.set(entry.artifact.resource, {
+      size: entry.artifact.size,
+      mediaType: entry.artifact.mediaType,
+    });
+  }
+  const referenced = [...document.html.matchAll(ARTIFACT_URI)].map((match) => match[1]!);
   const actual = [...new Set(referenced)].sort();
-  if (JSON.stringify(actual) !== JSON.stringify(declared.map((entry) => entry.artifact.resource).sort())) {
+  if (JSON.stringify(actual) !== JSON.stringify(declared.map((entry) => entry.id).sort())) {
     throw new Error("HtmlProgram Artifact placeholders do not match its declared dependencies.");
   }
   if (!Array.isArray(document.surfaces)) throw new Error("HtmlProgram Surface set is invalid.");
@@ -1110,38 +1249,44 @@ export function assertHtmlProgram(document: HtmlProgram): void {
       try {
         verifyPreparedVisualSource(source.source);
         assertTemporalMap(source.sampling);
-        return !declared.some((entry) => entry.artifact.resource === source.source.source.resource)
+          return !declared.some((entry) => entry.artifact.resource === source.source.source.resource)
           || source.sampling.stages.at(-1)?.source.id !== source.source.sourceDomain.id;
       } catch { return true; }
-    })() : source.kind !== "surface" || !isResourceId(source.resource)
+    })() : source.kind !== "surface" || typeof source.artifactId !== "string"
+      || !PROGRAM_RESOURCE_ID.test(source.artifactId)
       || !Number.isSafeInteger(source.sourceFrame?.numerator) || source.sourceFrame.numerator < 0
       || !Number.isSafeInteger(source.sourceFrame?.denominator) || source.sourceFrame.denominator <= 0
       || !Number.isSafeInteger(source.sourceRate?.numerator)
       || !Number.isSafeInteger(source.sourceRate?.denominator) || source.sourceRate.denominator <= 0
       || !Number.isSafeInteger(source.sourceFrameRate?.numerator) || source.sourceFrameRate.numerator <= 0
       || !Number.isSafeInteger(source.sourceFrameRate?.denominator) || source.sourceFrameRate.denominator <= 0
-      || !declared.some((entry) => entry.artifact.resource === source.resource)))) {
+      || !declared.some((entry) => entry.id === source.artifactId)))) {
     throw new Error("HtmlProgram video-source plan is invalid.");
   }
   if (new Set(document.videoSources.map((source) => source.id)).size !== document.videoSources.length) {
     throw new Error("HtmlProgram video-source identities must be unique.");
   }
   const surfaceArtifacts = new Set<string>();
-  for (const [index, surface] of document.surfaces.entries()) {
-    assertCompositableSurfaceRef(surface, `HtmlProgram.surfaces.${index}`);
-    if (surfaceArtifacts.has(surface.artifact.resource)) {
+  for (const [index, binding] of document.surfaces.entries()) {
+    if (binding === null || typeof binding !== "object" || !PROGRAM_RESOURCE_ID.test(binding.artifactId)) {
+      throw new Error("HtmlProgram Surface binding is invalid.");
+    }
+    const surface = binding.surface;
+    assertCompositableSurfaceRef(surface, `HtmlProgram.surfaces.${index}.surface`);
+    if (surfaceArtifacts.has(binding.artifactId)) {
       throw new Error("HtmlProgram Surface set repeats an Artifact.");
     }
-    surfaceArtifacts.add(surface.artifact.resource);
-    const artifact = declared.find((entry) => entry.artifact.resource === surface.artifact.resource)?.artifact;
+    surfaceArtifacts.add(binding.artifactId);
+    const artifact = declared.find((entry) => entry.id === binding.artifactId)?.artifact;
     if (artifact === undefined
+      || artifact.resource !== surface.artifact.resource
       || artifact.size !== surface.artifact.size
       || artifact.mediaType !== surface.artifact.mediaType) {
       throw new Error("HtmlProgram Surface is not bound to its declared Artifact.");
     }
   }
   const referencedSurfaces = [...new Set(
-    [...document.html.matchAll(SURFACE_RESOURCE)].map((match) => match[1]!),
+    [...document.html.matchAll(SURFACE_ARTIFACT)].map((match) => match[1]!),
   )].sort();
   if (JSON.stringify(referencedSurfaces) !== JSON.stringify([...surfaceArtifacts].sort())) {
     throw new Error("HtmlProgram Surface markers do not match its typed dependencies.");
@@ -1227,11 +1372,11 @@ export function materializeHtmlProgram(
   resolve: ResourceUrlResolver,
 ): string {
   assertHtmlProgram(document);
-  const artifacts = new Map(document.artifacts.map((entry) => [entry.artifact.resource, entry.artifact]));
-  return document.html.replace(RESOURCE_URI, (_uri, resource: ResourceId) => {
-    const artifact = artifacts.get(resource);
-    if (artifact === undefined) throw new Error(`HTML renderer Resource ${resource} is undeclared.`);
-    return escapeHtml(resolve(artifact));
+  const artifacts = new Map(document.artifacts.map((entry) => [entry.id, entry.artifact]));
+  return document.html.replace(ARTIFACT_URI, (_uri, id: string) => {
+    const artifact = artifacts.get(id);
+    if (artifact === undefined) throw new Error(`HTML renderer Programme Artifact ${id} is undeclared.`);
+    return escapeHtml(resolve(artifact, id));
   });
 }
 

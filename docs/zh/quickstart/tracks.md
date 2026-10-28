@@ -69,7 +69,7 @@ Cue 成员由 Script 的 Segment、Role 和作者写出的 `||` 决定；样式�
 Fine 不是一组互斥预设。基础/激活渐变、描边、阴影、长阴影、外发光、下划线、Pill
 和动画均为正交维度。文字、下划线和 Pill 各自选择 `off | current | trail`；因此可以直接表达“文字保留已读色，但 Pill 只跟随当前词”。`active-box-continuity: joined` 会把已读前缀在每个真实换行片段内连成一个背景，而不是给每个词分别套胶囊。
 
-包在 Surface 声明中把参数分成 **Where / How / When**，Studio 直接消费这份作者协议，无需再维护字幕专用参数全集。`lead-frames`、`tail-frames` 先产生显式可见 Schedule；`handoff: cut` 负责相邻 Cue 的交接，`overlap` 则保留双方包络。二者都不会修改 Karaoke 使用的原始词帧。
+包在 Author Declaration 中把参数分成 **Where / How / When**，Studio 直接消费这份作者协议，无需再维护字幕专用参数全集。`lead-frames`、`tail-frames` 先产生显式可见 Schedule；`handoff: cut` 负责相邻 Cue 的交接，`overlap` 则保留双方包络。二者都不会修改 Karaoke 使用的原始词帧。
 
 `wrap: word` 优先在完整 Alignment Unit 之间换行；单个显示单元若比 Region 还宽，会继续在内部回退换行，不会逃出范围。`max-words-per-line` 直接构造真实行；声明 `max-lines` 后，超过行数预算的 Cue 会被拒绝，不会裁掉文字、描边、阴影或外发光。Cue 分界由 Script 的结构和 `||` 决定。
 
@@ -104,6 +104,7 @@ B-roll 是 Visual Clip 的一种剪辑用途，不是独立 Track 家族。一�
 
 ```svml
 <import as="visual" from="@hypit/visual-track@1"/>
+<import as="transition" from="@hypit/visual-transition@1"/>
 <import as="time" from="@hypit/timeline-author@1"/>
 <import as="wording" from="@hypit/text@1"/>
 <time:Clock id="clock" frame-rate="30"/>
@@ -146,14 +147,59 @@ Recipe 与类型化 Motion 都只是可选的复用值：
 </visual:Track>
 ```
 
+`visual:Map` 增加一段精确仿射源时间关系。源位置需要非线性变化时，使用单调的
+`visual:Curve`；target 参数保持线性，四个必填值都是 PreparedMedia 局部域里的位置：
+
+```svml
+<visual:Clip media={product-media.media} frame={product-frame}
+  during={product-demo} fit="contain">
+  <visual:Curve source-at-start="start" source-control-1="start+250ms"
+    source-control-2="end-250ms" source-at-end="end"/>
+</visual:Clip>
+```
+
+Curve 只声明 `target time -> source position`。补帧或光流属于 Renderer 政策，不进入 Track 关系。
+
 `left`、`top`、`right`、`bottom` 是父 Frame 内的边坐标；`right` 和 `bottom` 不是 CSS 式外边距。
 Narrative 投影可以在上游发布 `product-demo`；Visual Track 只消费完成的 Window。同一个
 fit 是构造 Clip 源局部平面到节目画面 `SpatialMap2D` 的常用入口；解析后的 Program 保存 Map，
 而不是另存一个“内容框”。当组件或源局部证据已经拥有精确仿射关系时，可以声明
 `<space:Map>`，并用 `mapping={...}` 代替全部 fit 属性。Clip 的 `frame` 仍独立负责裁剪和外框处理。
 同一个
-Clip 模型也能表达全屏切换、分屏和角落小窗。公开 Clip 只有一个来源；跨多个来源或
-多个 Clip 的关系属于组件，而不是基础 Track 内置的 Sequence 语法。
+Clip 模型也能表达全屏切换、分屏和角落小窗。公开 Clip 只有一个来源。Transition 显式连接两个相邻
+Clip occurrence，并引用由效果包拥有的 effect；更广泛的多来源、多 Clip 关系属于组件，而不是内置 Sequence 语法。
+
+### Clip 之间的 Transition
+
+先让两个 Clip 各自声明真实且重叠的 Window，再制作 effect 并显式指认关系。两个 Window 的完整交集就是
+Transition span；Hypit 不根据时间邻近猜参与者、不要求作者重复声明交集，也不虚构 source handle。
+两个 Clip 必须在 Track 顺序中相邻，且 outgoing 先开始、先结束；包含关系或多画面编排属于组件关系，
+不是普通镜头交接。
+
+```svml
+<transition:CrossDissolve id="soft-mix" easing="ease-in-out"/>
+
+<visual:Track id="cut" timeline={speech.timeline}>
+  <visual:Clip id="wide" media={wide.media} during={wide-window} frame={full} fit="cover"/>
+  <visual:Clip id="close" media={close.media} during={close-window} frame={full} fit="cover"/>
+  <visual:Transition id="wide-to-close"
+    outgoing="wide" incoming="close" effect={soft-mix}/>
+</visual:Track>
+```
+
+重叠期间两个 Clip 仍分别使用自己的 TemporalMap。Visual Track 只验证关系，效果包负责如何组合两张各自含时的
+画面；更复杂的视听联动仍由组件负责。
+
+官方包还提供 `DipToColor`、`Push`、`Slide`、`LinearWipe`、`Iris`、`ZoomDissolve` 和
+`BlurDissolve`。例如：
+
+```svml
+<transition:Push id="push-left" direction="left" easing="ease-in-out"/>
+<transition:LinearWipe id="wipe-right" direction="right"/>
+<transition:BlurDissolve id="blur-mix" radius="24"/>
+```
+
+声明产生一个效果值；同一个 `visual:Transition` 关系按剪辑需要选择相应效果。直接切镜不需要声明 Transition。
 
 每个直接 Clip 或采样 Layer 都必须且只能声明一种视觉输入形式：
 
@@ -199,11 +245,17 @@ Clip 模型也能表达全屏切换、分屏和角落小窗。公开 Clip 只有
 | `Track.timeline` | 是 | 定义精确采样域与帧域的 Timeline |
 | `Clip.source` | 是 | 显式选流后的 `PreparedMedia` |
 | `during` | 是 | 具名绝对 Window |
-| `Map` 子节点 | 否 | 该 Clip occurrence 自有的目标时间到源时间偏函数；省略时为有界局部恒等映射 |
+| `Map` / `Curve` 子节点 | 否 | 该 Clip occurrence 自有的目标时间到源时间偏函数；省略时为有界局部恒等映射 |
+| `reconstruction` | 否 | 显式、由包拥有的信号重建；省略时采用普通逐点取样 |
 | `gain`、`fade-in`、`fade-out` | 否 | 显式的单 Clip 混音值 |
 
 该包不会自动提取、物化、duck 或分配 bus。同一 Track 内的多个 Clip 与多个对等 Audio
 Track 都会作为独立输入进入 Film。输出 `{music-bed.audio}` 是普通 `AudioTrack`。
+
+默认本地 Renderer 会在普通逐点取样下，把 affine、reverse、hold、wrap、gap、cubic 与多阶段 Map
+统一作为源位置关系求值。若恒速变速需要保持音高，从 `@hypit/audio-stretch@1` 声明
+`<stretch:PreservePitch id="natural"/>`，再以 `reconstruction={natural}` 显式引用。速度仍只存在于 Map；
+本地 Provider 当前对完整的正向、非循环仿射关系支持 PreservePitch，并准确拒绝其他形态。
 
 需要显式设置 gain，并把若干 AudioTrack 闭合成一个贡献时，使用 Audio Mix：
 
@@ -372,7 +424,7 @@ npm install @hypit/depth-stack
 
 ### deck:DepthStack
 
-`id`、`timeline`、`within`、`frame`、`appearance` 与 `until` 全部必填。`until` 引用具名
+`id`、`timeline`、`frame`、`appearance` 与 `until` 全部必填。`until` 引用具名
 绝对 Instant；它既可以来自 Narrative Projection，也可以来自直接时间声明。
 
 ### deck:Card
@@ -393,7 +445,7 @@ DepthStack 的直接子元素，自闭合，至少一张，按书写顺序发出
 
 ```svml
 <space:Frame id="deck-frame" within={vertical.bounds} left="44%" top="60%" right="98%" bottom="88%"/>
-<deck:DepthStack id="deck" timeline={speech.timeline} within={vertical.bounds}
+<deck:DepthStack id="deck" timeline={speech.timeline}
   frame={deck-frame} appearance={recipes.deck.stack} until={done}>
   <deck:Card id="card-spatial" source={icon-spatial} extent={square} at={deal-one}/>
   <deck:Card id="card-type" source={icon-type} extent={square} at={deal-two}/>

@@ -3,7 +3,7 @@ import test from "node:test";
 import type { StudioEditHandle, StudioTemporalDomainAnchor, StudioTemporalInstantProjection } from "@hypit/studio-companion";
 import { adjustScriptSelection, parseScript } from "@hypit/script";
 import { projectProgramInstant } from "@hypit/temporal";
-import { parseTemporalInstant } from "@hypit/temporal/markup";
+import { parseTimelineInstantExpression } from "@hypit/timeline-author";
 import { chooseDomainGesture, domainGestureSpan } from "../src/temporal-edit.js";
 import { formatTemporalPointEdit } from "@hypit/temporal/studio";
 
@@ -113,7 +113,7 @@ test("clock expressions retain units until edited and edited values reproject to
     const space = { id: "clock", frameCount: 300, frameRate };
     const locate = (value: string) => projectProgramInstant({
       itemId: "point", subjectId: "point", timeline: { ...space },
-      projection: parseTemporalInstant(value, "point") as import("@hypit/temporal").TemporalInstantExpression,
+      projection: parseTimelineInstantExpression(value, "point"),
     }).frame;
     assert.equal(locate("2s"), Math.round(2 * frameRate.numerator / frameRate.denominator));
     assert.equal(locate("60f"), 60);

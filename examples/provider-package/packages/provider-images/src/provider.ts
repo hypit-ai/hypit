@@ -46,10 +46,10 @@ function address(value: string): string {
 }
 
 function support(request: EndpointRequest) {
-  const ports = (request.constraints as unknown as ProviderFieldRequest).ports;
-  const unsupported = ports.resolution?.[0] !== "1K"
-    || !["1:1", "9:16", "16:9"].includes(String(ports.aspectRatio?.[0]))
-    || Object.keys(ports).some((port) => !(port in mapping.fields));
+  const fields = (request.constraints as unknown as ProviderFieldRequest).fields;
+  const unsupported = fields.resolution?.[0] !== "1K"
+    || !["1:1", "9:16", "16:9"].includes(String(fields.aspectRatio?.[0]))
+    || Object.keys(fields).some((field) => !(field in mapping.fields));
   return unsupported
     ? { status: "unsupported" as const, reason: "This service offers 1K at 1:1, 9:16 or 16:9, without background control" }
     : { status: "supported" as const };

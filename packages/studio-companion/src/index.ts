@@ -353,10 +353,10 @@ export type StudioEditHandle = {
 export type StudioPreviewSource =
   | { readonly kind: "artifact"; readonly resource: string }
   | {
-      readonly kind: "surface-preview";
+      readonly kind: "declaration-preview";
       readonly module: string;
       readonly version: string;
-      readonly surface: string;
+      readonly declaration: string;
     };
 
 export type StudioMaterialPreview = {
@@ -492,7 +492,7 @@ export type StudioPlacement = {
   readonly sourcePath: string;
   readonly tag: string;
   readonly module: { readonly name: string; readonly version: string };
-  readonly surface: string;
+  readonly declaration: string;
   readonly id?: string;
   readonly range: Range;
   readonly records: readonly string[];
@@ -510,8 +510,10 @@ export type StudioPlacement = {
 };
 
 export type StudioTrackTrace = {
+  /** Exact compilation-local author element that produced this Track. */
+  readonly authorElement?: string;
   readonly placement?: string;
-  readonly surface?: string;
+  readonly declaration?: string;
   readonly module?: ModuleRef;
   readonly authoredId?: string;
   readonly outputPorts: readonly {
@@ -521,7 +523,7 @@ export type StudioTrackTrace = {
     readonly typeRef?: TypeRef;
   }[];
   readonly references: readonly {
-    /** Exact authored input attribute when this is a direct Surface reference. */
+    /** Exact authored input attribute when this is a direct declaration reference. */
     readonly input?: string;
     readonly name: string;
     readonly ref: string;
@@ -538,15 +540,10 @@ export type StudioResolvedTrack = {
   /** Exact protocol identity used for every Companion decision. */
   readonly typeRef: TypeRef;
   readonly outputRef: string;
-  readonly role: StudioViewRole;
   readonly trace: StudioTrackTrace;
-  readonly surfacePreview?: StudioMaterialPreview;
+  readonly declarationPreview?: StudioMaterialPreview;
   readonly value: unknown;
 };
-
-export type StudioViewRole =
-  | "supporting-value"
-  | "track";
 
 /**
  * Author-side correspondence with one terminal span. Studio resolves the span
@@ -598,8 +595,8 @@ export type StudioInspectorObjectDraft = {
 export type StudioTrackCompanionContext = {
   readonly track: StudioResolvedTrack;
   readonly placement?: StudioPlacement;
-  /** Package-owned Surface preview resolved by Studio from the selected domain. */
-  readonly surfacePreview?: StudioMaterialPreview;
+  /** Package-owned declaration preview resolved by Studio from the selected domain. */
+  readonly declarationPreview?: StudioMaterialPreview;
   readonly spans: readonly StudioSpan[];
   readonly values: ReadonlyMap<string, unknown>;
   /** Temporal values in this Track's actual executed dependency closure. */
@@ -619,10 +616,9 @@ export type StudioInspectorObjectCompanion = {
 
 export type StudioTrackCompanion = {
   readonly id: string;
-  readonly role: StudioViewRole;
   readonly output: {
     readonly type: TypeRef;
-    readonly surface?: string;
+    readonly declaration?: string;
     readonly modules?: readonly ModuleRef[];
     readonly siblingType?: TypeRef;
   };
@@ -631,12 +627,18 @@ export type StudioTrackCompanion = {
   readonly tone?: StudioTimelineTone;
   readonly label?: string;
   readonly icon?: StudioIcon;
-  /** Opts root timeline Items into the component's package-owned Surface preview. */
-  readonly poster?: { readonly source: "surface-preview" };
+  /** Package-owned visual sample for this exact author declaration. */
+  readonly preview?: {
+    readonly mediaType: string;
+    readonly path: string;
+    readonly open: () => Promise<Uint8Array>;
+  };
+  /** Opts root timeline Items into the component's package-owned declaration preview. */
+  readonly poster?: { readonly source: "declaration-preview" };
   readonly attachments?: readonly StudioLaneAttachment[];
   /** Non-timeline author objects shown only in this Track's Inspector. */
   readonly inspectorObjects?: readonly StudioInspectorObjectCompanion[];
-  /** Same-Surface output values required to project this Track for Studio. */
+  /** Same-declaration output values required to project this Track for Studio. */
   readonly requiredValues?: readonly string[];
   readonly lane?: StudioLaneDescription;
   /** Exact author endpoints required by Inspector fields or timeline inverses. */
@@ -649,7 +651,7 @@ export type StudioTrackCompanion = {
 /** Parameters owned by an authored object, independently of its consumers. */
 export type StudioParameterCompanion = {
   readonly id: string;
-  readonly match: { readonly module: ModuleRef; readonly surface: string };
+  readonly match: { readonly module: ModuleRef; readonly declaration: string };
   readonly bindings: readonly StudioSourceBindingDeclaration[];
   readonly inspector: readonly StudioInspectorFieldDeclaration[];
 };
@@ -669,14 +671,14 @@ export type StudioFilmCompanion = {
   readonly id: string;
   readonly match: {
     readonly module: ModuleRef;
-    readonly surface: string;
+    readonly declaration: string;
     readonly outputType: TypeRef;
   };
   readonly timeSources: readonly { readonly attribute: string; readonly type: TypeRef }[];
   readonly tracks: {
-    readonly childSurface: string;
+    readonly childDeclaration: string;
     /** Transparent authoring containers through which Track membership is followed. */
-    readonly containerSurfaces?: readonly string[];
+    readonly containerDeclarations?: readonly string[];
     readonly sourceAttribute: string;
     readonly types: readonly TypeRef[];
   };
@@ -711,7 +713,7 @@ export type StudioTemporalDomainProjectionInput = {
 /** A package projects its own temporal facts and receives its own inverse edits. */
 export type StudioTemporalDomainCompanion = {
   readonly id: string;
-  readonly match: { readonly module: ModuleRef; readonly surface: string };
+  readonly match: { readonly module: ModuleRef; readonly declaration: string };
   /** Inline values required to build the domain view after execution. */
   readonly valueTypes: readonly TypeRef[];
   /** Domain reference Types that may appear in executed Temporal lineage. */
@@ -729,14 +731,14 @@ export type StudioTemporalDomainCompanion = {
   } | undefined;
   readonly observe: (input: {
     readonly sourceName: string;
-    /** Raw Surfaces receive Source text; structured Surfaces can rely on their decoded attributes/range. */
+    /** Opaque declarations receive Source text; structured declarations can rely on decoded fields and range. */
     readonly source?: string;
     readonly tag: string;
-    /** Exact whole element range for raw and structured Surfaces alike. */
+    /** Exact whole element range for opaque and structured declarations alike. */
     readonly range: Range;
     /** Raw grammars may expose their body boundaries for package-owned parsing. */
     readonly contentStart?: number;
-    /** Authoritative end returned by the raw Surface after it parsed its own grammar. */
+    /** Authoritative end returned after an opaque declaration parsed its own grammar. */
     readonly nextOffset?: number;
     readonly attributes: Readonly<Record<string, unknown>>;
   }) => Omit<StudioTemporalDomainSourceMap, "companion"> | undefined;
@@ -752,7 +754,7 @@ export type StudioTemporalDomainCompanion = {
 export type StudioTemporalDeclarationDraft = {
   readonly id: string;
   readonly label?: string;
-  /** Exact qualified logical output selected by the owning Surface Companion. */
+  /** Exact qualified logical output selected by the owning declaration Companion. */
   readonly output: string;
   readonly range?: Range;
 };
@@ -760,7 +762,7 @@ export type StudioTemporalDeclarationDraft = {
 /** Declares author-visible temporal outputs without choosing their common Studio presentation. */
 export type StudioTemporalDeclarationCompanion = {
   readonly id: string;
-  readonly match: { readonly module: ModuleRef; readonly surface: string };
+  readonly match: { readonly module: ModuleRef; readonly declaration: string };
   readonly project: (input: { readonly placement: StudioPlacement }) => readonly StudioTemporalDeclarationDraft[];
 };
 
@@ -935,15 +937,15 @@ export type StudioLaneAttachment = {
   readonly inspector?: readonly StudioInspectorFieldDeclaration[];
 };
 
-export function sameSurfaceValue(context: StudioTrackCompanionContext, port: string): unknown {
+export function sameDeclarationValue(context: StudioTrackCompanionContext, port: string): unknown {
   const ref = context.track.trace.outputPorts.find((candidate) => candidate.name === port)?.ref;
   return ref === undefined ? undefined : context.values.get(ref);
 }
 
-export function requiredSurfaceValue(context: StudioTrackCompanionContext, port: string): unknown {
-  const value = sameSurfaceValue(context, port);
+export function requiredDeclarationValue(context: StudioTrackCompanionContext, port: string): unknown {
+  const value = sameDeclarationValue(context, port);
   if (value === undefined) {
-    throw new Error(`Studio Companion ${context.track.type} requires same-Surface value port ${port}`);
+    throw new Error(`Studio Companion ${context.track.type} requires same-declaration value port ${port}`);
   }
   return value;
 }

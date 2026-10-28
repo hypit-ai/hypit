@@ -1,10 +1,9 @@
 import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
 import { createProducerPackageFacet } from "@hypit/hypit/producer";
-import { createMarkupSurfaceFacet } from "@hypit/hypit/markup";
+import { createAuthorDeclarationFacet } from "@hypit/hypit/author";
+import { createMarkupDeclarationFacet } from "@hypit/hypit/markup";
 import { createStudioCompanionFacet } from "@hypit/studio-companion";
-import { decodeNarrativeInstantSurface, decodeNarrativeProjectionSurface, decodeNarrativeWindowSurface,
-  narrativeProjectionMarkupSurfaces, narrativeTemporalComponent,
-  narrativeTemporalManifest, narrativeTemporalModuleRef } from "./index.js";
+import { narrativeTemporalComponent, narrativeTemporalAuthorDeclarations, narrativeTemporalManifest, narrativeTemporalMarkupDeclarations, narrativeTemporalModuleRef } from "./index.js";
 import { narrativeStudioTemporalDeclarations, narrativeStudioTemporalRelations } from "./studio.js";
 
 export const hypitPackage = {
@@ -16,12 +15,12 @@ export const hypitPackage = {
       temporalRelations: narrativeStudioTemporalRelations,
     }),
     ...[narrativeTemporalComponent].flatMap((component) => [createProducerPackageFacet(component.producers ?? []), createRefinementPackageFacet(component.refinements ?? [])]),
-    createMarkupSurfaceFacet({ module: narrativeTemporalModuleRef,
-      declaration: narrativeProjectionMarkupSurfaces.find((item) => item.name === "narrative-projection")!, handler: decodeNarrativeProjectionSurface }),
-    createMarkupSurfaceFacet({ module: narrativeTemporalModuleRef,
-      declaration: narrativeProjectionMarkupSurfaces.find((item) => item.name === "narrative-instant")!, handler: decodeNarrativeInstantSurface }),
-    createMarkupSurfaceFacet({ module: narrativeTemporalModuleRef,
-      declaration: narrativeProjectionMarkupSurfaces.find((item) => item.name === "narrative-window")!, handler: decodeNarrativeWindowSurface }),
+    ...narrativeTemporalAuthorDeclarations.map((declaration) => createAuthorDeclarationFacet(declaration)),
+    ...narrativeTemporalMarkupDeclarations.map((declaration) => createMarkupDeclarationFacet({
+      module: narrativeTemporalModuleRef,
+      declaration,
+    })),
+
   ],
 };
 export default hypitPackage;

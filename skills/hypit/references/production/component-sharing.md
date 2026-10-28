@@ -92,7 +92,7 @@ like these to the package that already owns the component:
 
 The description and keywords help npm search. The README should show the visual role, a copyable
 Source import and element example, the package's public outputs, and
-the selected Hypit release used to check it. Include the Surface poster and, when motion or state is
+the selected Hypit release used to check it. Include the declaration's poster and, when motion or state is
 central to the idea, a short representative clip or animation. The source repository, publisher,
 license and selected release give a recipient the facts needed to choose whether to install it.
 
@@ -102,7 +102,7 @@ After installation, inspect the package's own declarations:
 hypit vocabulary @studio/score-strip
 ```
 
-That output explains the installed release's Surfaces and vocabulary. npm or the selected private
+That output explains the installed release's declarations and vocabulary. npm or the selected private
 registry remains the authority for package bytes and versions; the project lockfile records the
 consumer's exact choice.
 

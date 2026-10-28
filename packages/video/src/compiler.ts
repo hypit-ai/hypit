@@ -1,11 +1,16 @@
 import type { CliCompilerOptions } from "@hypit/hypit/cli";
 import { refinementPackagesFromFacets, registerTypeRefinements, RefinementRegistry } from "@hypit/hypit/refinement";
 import { ModulePackageRegistry, Compiler } from "@hypit/hypit/compiler";
-import { AuthorFrontendRegistry, installAuthorFrontendFacets } from "@hypit/hypit/author";
 import {
-  createMarkupAuthorFrontend,
-  installMarkupSurfaceFacets,
-  MarkupSurfaceRegistry,
+  AuthorDeclarationRegistry,
+  AuthorFrontendRegistry,
+  installAuthorDeclarationFacets,
+  installAuthorFrontendFacets,
+} from "@hypit/hypit/author";
+import {
+  createMarkupDeclarationAuthorFrontend,
+  installMarkupDeclarationFacets,
+  MarkupDeclarationRegistry,
 } from "@hypit/hypit/markup";
 import {
   resolveNodePackageResourceSpecifier,
@@ -45,20 +50,23 @@ export function createVideoWorkspace(options: Pick<CliCompilerOptions,
 /** Assemble the Markup compiler Host from only the packages selected for this invocation. */
 export function createVideoCompiler(options: CliCompilerOptions) {
   const modules = new ModulePackageRegistry();
-  const surfaces = new MarkupSurfaceRegistry();
+  const declarations = new AuthorDeclarationRegistry();
+  const syntax = new MarkupDeclarationRegistry();
   const frontends = new AuthorFrontendRegistry();
   const refinements = new RefinementRegistry();
   for (const item of options.packageContributions) {
     for (const module of item.modules ?? []) modules.register(module);
     const facets = item.facets ?? [];
-    installMarkupSurfaceFacets(facets, surfaces);
+    installAuthorDeclarationFacets(facets, declarations);
+    installMarkupDeclarationFacets(facets, syntax);
     installAuthorFrontendFacets(facets, frontends);
     for (const pack of refinementPackagesFromFacets(facets)) {
       registerTypeRefinements(refinements, pack);
     }
   }
-  frontends.register(createMarkupAuthorFrontend({
-    registry: surfaces,
+  frontends.register(createMarkupDeclarationAuthorFrontend({
+    syntax,
+    compilers: declarations,
     resolveModule(request) {
       const resolved = modules.resolve(request.from);
       if (resolved === undefined) throw new Error(`No selected author package satisfies ${request.from}`);

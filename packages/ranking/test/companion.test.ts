@@ -4,9 +4,9 @@ import { compositionTypes } from "@hypit/composition";
 import type { StudioTrackCompanionContext } from "@hypit/studio-companion";
 import { rankingStudioTrackCompanions } from "../src/studio.js";
 
-test("each Ranking surface has independent visual and audio Companions", () => {
-  for (const surface of ["column", "tier", "top-three"]) {
-    const companions = rankingStudioTrackCompanions.filter((entry) => entry.output.surface === surface);
+test("each Ranking declaration has independent visual and audio Companions", () => {
+  for (const declaration of ["column", "tier", "top-three"]) {
+    const companions = rankingStudioTrackCompanions.filter((entry) => entry.output.declaration === declaration);
     assert.equal(companions.length, 2);
     const audio = companions.find((entry) => entry.output.type.name === compositionTypes.audioTrack.name)!;
     const visual = companions.find((entry) => entry.output.type.name === compositionTypes.visualTrack.name)!;
@@ -35,7 +35,7 @@ test("audio uses exact event identities and emitted clips, with shared recipe ow
   const context = {
     track: {
       name: "board.audio", type: "AudioTrack", typeRef: compositionTypes.audioTrack,
-      outputRef: "board.audio", role: "track",
+      outputRef: "board.audio",
       value: { graph: {
         nodes: [{ kind: "source", id: "source", clip: { id: "opaque-event-id",
           source: { source: { kind: "blob", resource: "res_sound", size: 1, mediaType: "audio/wav" } } } }],
@@ -45,7 +45,7 @@ test("audio uses exact event identities and emitted clips, with shared recipe ow
     },
     placement: {
       sourcePath: "ranking.svml", tag: "Tier", module: { name: "@hypit/ranking", version: "1" },
-      surface: "tier", id: "board", range: { start: 0, end: 100 }, records: [], values: [], outputs: [],
+      declaration: "tier", id: "board", range: { start: 0, end: 100 }, records: [], values: [], outputs: [],
       outputPorts: [], attributes: {}, attributeValueRanges: {}, references: [], referenceAttributes: {},
       referenceTypes: {},
       children: [{

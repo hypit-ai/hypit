@@ -20,6 +20,7 @@
     "@hypit/studio-companion": "workspace:^0.1.3"
   },
   "devDependencies": {
+    "@hypit/audio-program": "workspace:*",
     "@hypit/compiler": "workspace:*",
     "@hypit/hypit": "workspace:*",
     "@hypit/studio-companion": "workspace:*",

@@ -1,6 +1,6 @@
 import { assertAudioLevelAutomation } from "./audio-level-automation.js";
 import type { AudioLevelAutomation } from "./audio-level-automation.js";
-import { assertBlobRef, canonicalStringify, compareCodeUnits } from "@hypit/hypit/protocol";
+import { assertBlobRef, canonicalize, canonicalStringify, compareCodeUnits } from "@hypit/hypit/protocol";
 import type { BlobRef, CanonicalValue } from "@hypit/hypit/protocol";
 
 import {
@@ -368,13 +368,31 @@ export type VisualPresent = VisualItemBase & {
   readonly root: VisualElement;
 };
 
+/**
+ * A derived picture contribution with named, independently timed inputs.
+ *
+ * Inputs are owned values rather than graph references, so the recursive structure cannot contain
+ * cycles or depend on a central visual-node registry. The programme owns the meaning of its port
+ * names; each input keeps its own absolute span, animation origin and media sampling relation.
+ */
+export type VisualProcess = VisualItemBase & {
+  readonly kind: "process";
+  readonly inputs: readonly {
+    readonly name: string;
+    readonly contribution: VisualContribution;
+  }[];
+  readonly program: VisualProgram;
+};
+
+export type VisualContribution = VisualPresent | VisualProcess;
+
 /** A source-free transformation of the Picture accumulated below this stack position. */
 export type VisualAdjustment = VisualItemBase & {
   readonly kind: "adjustment";
   readonly program: VisualProgram;
 };
 
-export type VisualItem = VisualPresent | VisualAdjustment;
+export type VisualItem = VisualContribution | VisualAdjustment;
 
 /** Narrow construction input for the common source-owning subset. */
 export type VisualPresentDraft = Omit<VisualPresent, "kind">;
@@ -407,6 +425,8 @@ export type AudioClip = AudioLevelAutomation & {
   readonly target: TemporalRange;
   /** Exact Clip-local target-to-prepared relation. */
   readonly sampling: TemporalMap;
+  /** Omission means ordinary point sampling; a value explicitly selects another reconstruction. */
+  readonly reconstruction?: AudioReconstructionProgram;
   readonly gain: number;
   readonly fadeIn: ExactTemporalValue;
   readonly fadeOut: ExactTemporalValue;
@@ -423,6 +443,43 @@ export type AudioProcessProgram = {
   readonly payload: { readonly [key: string]: CanonicalValue };
   readonly artifacts: readonly BlobRef[];
 };
+
+/**
+ * Package-owned reconstruction of one sampled source occurrence.
+ *
+ * TemporalMap continues to say which source position belongs to each target
+ * position. This programme says how those positions become an audible signal;
+ * renderers must never infer it from the shape or rate of the Map.
+ */
+export type AudioReconstructionProgram = {
+  readonly format: string;
+  readonly payload: { readonly [key: string]: CanonicalValue };
+  readonly artifacts: readonly BlobRef[];
+};
+
+/** Scalar action in the base audio signal algebra, shared by authoring and programme lowering. */
+export const AUDIO_GAIN_PROCESS_FORMAT = "hypit.audio-gain@1" as const;
+
+export function audioGainProcess(gain: number): AudioProcessProgram {
+  if (!Number.isFinite(gain) || gain < 0) throw new Error("Audio Gain process is invalid.");
+  return {
+    format: AUDIO_GAIN_PROCESS_FORMAT,
+    payload: canonicalize({ gain }) as AudioProcessProgram["payload"],
+    artifacts: [],
+  };
+}
+
+export function readAudioGainProcess(program: AudioProcessProgram): number {
+  if (program.format !== AUDIO_GAIN_PROCESS_FORMAT || program.artifacts.length !== 0) {
+    throw new Error(`Audio programme does not support Process format ${program.format}.`);
+  }
+  const payload = program.payload as { readonly gain?: unknown };
+  if (Object.keys(payload).join("\u0000") !== "gain" || typeof payload.gain !== "number"
+    || !Number.isFinite(payload.gain) || payload.gain < 0) {
+    throw new Error("Audio Gain process payload is invalid.");
+  }
+  return payload.gain;
+}
 
 export type AudioGraphNode =
   | { readonly kind: "silence"; readonly id: string }
@@ -575,6 +632,9 @@ function assertAttributes(attributes: readonly VisualAttribute[] | undefined, la
   for (const attribute of attributes ?? []) {
     if (!/^(?:data-[a-z0-9-]+|aria-[a-z0-9-]+|role|title|lang|dir)$/u.test(attribute.name)) {
       throw new Error(`${label} contains unsafe attribute ${attribute.name}.`);
+    }
+    if (attribute.name.startsWith("data-hypit-")) {
+      throw new Error(`${label} contains reserved attribute ${attribute.name}.`);
     }
     if (attribute.name === "lang" && !/^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$/u.test(attribute.value)) {
       throw new Error(`${label} contains invalid lang ${attribute.value}.`);
@@ -881,7 +941,6 @@ function assertTextFlow(flow: VisualTextFlow, label: string): void {
 
 function assertTextSequences(
   sequences: readonly VisualTextSequenceAnimation[],
-  _durationFrames: number,
   label: string,
 ): void {
   const ids = new Set<string>();
@@ -935,7 +994,7 @@ function assertPathCommands(path: readonly VisualVectorPathCommand[], label: str
   }
 }
 
-function assertAnimation(animation: VisualAnimation | undefined, _durationFrames: number, label: string): void {
+function assertAnimation(animation: VisualAnimation | undefined, label: string): void {
   if (animation === undefined) return;
   if (animation.keyframes.length < 2) throw new Error(`${label} animation must contain at least two keyframes.`);
   let previous = -1;
@@ -977,7 +1036,7 @@ function assertVisualItemBase(item: VisualItemBase, timeline: Timeline | undefin
   }
 }
 
-function assertVisualProgram(program: VisualProgram, label: string): void {
+export function assertVisualProgram(program: VisualProgram, label = "Visual Program"): void {
   assertNonEmpty(program.format, `${label}.format`);
   if (program.payload === null || typeof program.payload !== "object" || Array.isArray(program.payload)) {
     throw new Error(`${label}.payload must be an object.`);
@@ -986,7 +1045,10 @@ function assertVisualProgram(program: VisualProgram, label: string): void {
   for (const artifact of program.artifacts) assertMediaArtifact(artifact, `${label}.artifacts`);
 }
 
-function assertAudioProcessProgram(program: AudioProcessProgram, label: string): void {
+export function assertAudioReconstructionProgram(
+  program: AudioReconstructionProgram,
+  label = "Audio Reconstruction Program",
+): void {
   if (program === null || typeof program !== "object") throw new Error(`${label} must be an object.`);
   if (typeof program.format !== "string") throw new Error(`${label}.format must be a string.`);
   assertNonEmpty(program.format, `${label}.format`);
@@ -996,6 +1058,10 @@ function assertAudioProcessProgram(program: AudioProcessProgram, label: string):
   canonicalStringify(program.payload);
   if (!Array.isArray(program.artifacts)) throw new Error(`${label}.artifacts must be an array.`);
   for (const artifact of program.artifacts) assertBlobRef(artifact, `${label}.artifacts`);
+}
+
+function assertAudioProcessProgram(program: AudioProcessProgram, label: string): void {
+  assertAudioReconstructionProgram(program, label);
 }
 
 function assertElement(
@@ -1014,7 +1080,7 @@ function assertElement(
   const label = `${trackId}.${present.id}.${element.id}`;
   assertStyle(element.style, label);
   assertAttributes(element.attributes, label);
-  assertAnimation(element.animation, present.span.endFrameExclusive - present.span.startFrame, label);
+  assertAnimation(element.animation, label);
 
   if (element.kind === "box") {
     if (!Array.isArray(element.children)) throw new Error(`${label}.children is invalid.`);
@@ -1080,7 +1146,7 @@ function assertElement(
   if (element.kind === "text-flow" || element.kind === "path-text") {
     assertTextDocument(element.document, element.typography, `${label}.document`);
     assertVisualTextAppearance(element, label);
-    assertTextSequences(element.sequences, present.span.endFrameExclusive - present.span.startFrame, `${label}.sequences`);
+    assertTextSequences(element.sequences, `${label}.sequences`);
     if (element.kind === "text-flow") assertTextFlow(element.flow, `${label}.flow`);
     else {
       assertPathCommands(element.path, `${label}.path`);
@@ -1132,6 +1198,32 @@ function assertElement(
 function assertPresent(present: VisualPresent, timeline: Timeline | undefined, trackId: string): void {
   assertVisualItemBase(present, timeline, trackId);
   assertElement(present.root, present, trackId, new Set(), timeline);
+}
+
+function assertVisualContribution(
+  contribution: VisualContribution,
+  timeline: Timeline | undefined,
+  owner: string,
+): void {
+  if (contribution.kind === "present") {
+    assertPresent(contribution, timeline, owner);
+    return;
+  }
+  assertVisualItemBase(contribution, timeline, owner);
+  assertVisualProgram(contribution.program, `${owner}.${contribution.id}.program`);
+  if (!Array.isArray(contribution.inputs) || contribution.inputs.length === 0) {
+    throw new Error(`${owner}.${contribution.id} Visual Process requires named inputs.`);
+  }
+  const names = new Set<string>();
+  for (const [index, input] of contribution.inputs.entries()) {
+    if (input === null || typeof input !== "object") {
+      throw new Error(`${owner}.${contribution.id}.inputs.${index} is invalid.`);
+    }
+    assertNonEmpty(input.name, `${owner}.${contribution.id}.inputs.${index}.name`);
+    if (names.has(input.name)) throw new Error(`${owner}.${contribution.id} repeats input ${input.name}.`);
+    names.add(input.name);
+    assertVisualContribution(input.contribution, timeline, `${owner}.${contribution.id}.${input.name}`);
+  }
 }
 
 function assertAdjustment(adjustment: VisualAdjustment, timeline: Timeline | undefined, trackId: string): void {
@@ -1250,6 +1342,25 @@ function normalizeElement(element: VisualElement): VisualElement {
   };
 }
 
+function normalizeVisualContribution(value: VisualContribution): VisualContribution {
+  const common = {
+    id: value.id,
+    ...(value.subjectId === undefined ? {} : { subjectId: value.subjectId }),
+    span: { ...value.span },
+    ...(value.visibility === undefined ? {} : { visibility: value.visibility.map((span) => ({ ...span })) }),
+  } as const;
+  if (value.kind === "present") return { ...common, kind: "present", root: normalizeElement(value.root) };
+  return {
+    ...common,
+    kind: "process",
+    inputs: value.inputs.map((input) => ({
+      name: input.name,
+      contribution: normalizeVisualContribution(input.contribution),
+    })),
+    program: structuredClone(value.program),
+  };
+}
+
 function visualTrackContent(value: Omit<VisualTrack, "kind">): VisualTrack {
   if (!Array.isArray(value.items)) {
     throw new Error(`VisualTrack ${value.id} requires an items array.`);
@@ -1271,9 +1382,7 @@ function visualTrackContent(value: Omit<VisualTrack, "kind">): VisualTrack {
           span: { ...item.span },
           ...(item.visibility === undefined ? {} : { visibility: item.visibility.map((span: FrameSpan) => ({ ...span })) }),
         } as const;
-        if (item.kind === "present") {
-          return { ...common, kind: "present", root: normalizeElement(item.root) };
-        }
+        if (item.kind === "present" || item.kind === "process") return normalizeVisualContribution(item);
         if (item.kind === "adjustment") {
           return { ...common, kind: "adjustment", program: structuredClone(item.program) };
         }
@@ -1373,7 +1482,20 @@ export function sealPresentVisualTrack(
 }
 
 export function visualPresents(track: VisualTrack): readonly VisualPresent[] {
-  return track.items.filter((item): item is VisualPresent => item.kind === "present");
+  return track.items.flatMap((item) => item.kind === "adjustment" ? [] : visualContributionPresents(item));
+}
+
+export function visualContributionPresents(contribution: VisualContribution): readonly VisualPresent[] {
+  return contribution.kind === "present"
+    ? [contribution]
+    : contribution.inputs.flatMap((input) => visualContributionPresents(input.contribution));
+}
+
+export function visualProcesses(track: VisualTrack): readonly VisualProcess[] {
+  const processes = (contribution: VisualContribution): VisualProcess[] => contribution.kind === "present"
+    ? []
+    : [contribution, ...contribution.inputs.flatMap((input) => processes(input.contribution))];
+  return track.items.flatMap((item) => item.kind === "adjustment" ? [] : processes(item));
 }
 
 /** Structural children of one visual node, preserving each relation's semantic order. */
@@ -1409,17 +1531,27 @@ export function assertVisualTrackIdentity(track: VisualTrack, timeline?: Timelin
     throw new Error(`VisualTrack ${track.id} belongs to Timeline ${track.timelineId}, not ${timeline.id}.`);
   }
   assertNonEmpty(track.id, "VisualTrack id");
-  if (!Array.isArray(track.items)) throw new Error(`VisualTrack ${track.id} items are invalid.`);
+  assertVisualItemSequence(track.items, timeline, track.id);
+}
+
+/** Validate one author-owned visual sequence without inventing a Track carrier. */
+export function assertVisualItemSequence(
+  items: readonly VisualItem[],
+  timeline?: Timeline,
+  owner = "Visual sequence",
+): void {
+  if (timeline !== undefined) assertTimelineIdentity(timeline);
+  if (!Array.isArray(items)) throw new Error(`${owner} items are invalid.`);
   const itemIds = new Set<string>();
-  for (const item of track.items) {
+  for (const item of items) {
     if (item === null || typeof item !== "object" || Array.isArray(item)) {
-      throw new Error(`VisualTrack ${track.id} contains an invalid Visual Item.`);
+      throw new Error(`${owner} contains an invalid Visual Item.`);
     }
-    if (itemIds.has(item.id)) throw new Error(`${track.id} has duplicate Visual Item ${item.id}.`);
+    if (itemIds.has(item.id)) throw new Error(`${owner} has duplicate Visual Item ${item.id}.`);
     itemIds.add(item.id);
-    if (item.kind === "present") assertPresent(item, timeline, track.id);
-    else if (item.kind === "adjustment") assertAdjustment(item, timeline, track.id);
-    else throw new Error(`${track.id}.${(item as { readonly id?: string }).id ?? "unknown"} has invalid Visual Item kind.`);
+    if (item.kind === "present" || item.kind === "process") assertVisualContribution(item, timeline, owner);
+    else if (item.kind === "adjustment") assertAdjustment(item, timeline, owner);
+    else throw new Error(`${owner}.${(item as { readonly id?: string }).id ?? "unknown"} has invalid Visual Item kind.`);
   }
 }
 
@@ -1472,6 +1604,9 @@ export function assertAudioTrackIdentity(track: AudioTrack, timeline?: Timeline)
     }
     const targetDuration = subtractExactTemporalValues(clip.target.end, clip.target.start);
     assertSampling(clip.sampling, `${track.id}.${clip.id}.sampling`, targetDuration);
+    if (clip.reconstruction !== undefined) {
+      assertAudioReconstructionProgram(clip.reconstruction, `${track.id}.${clip.id}.reconstruction`);
+    }
     const preparedDomain = clip.preparation.stages[0]!.target;
     if (compareExactTemporalValues(clip.sampling.stages.at(-1)!.source.duration,
       preparedDomain.duration) !== 0
@@ -1595,7 +1730,7 @@ function assertVisualScope(
     }
     if (member.kind !== "stack") throw new Error(`${memberLabel}.kind is invalid.`);
     assertVisualScope(member.scope, timeline, `${memberLabel}.scope`);
-    if (!visualScopeTracks(member.scope).some((track) => track.items.some((item) => item.kind === "present"))) {
+    if (!visualScopeTracks(member.scope).some((track) => visualPresents(track).length > 0)) {
       throw new Error(`${memberLabel} must contain a source-owning Present.`);
     }
   }

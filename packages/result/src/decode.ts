@@ -1,11 +1,16 @@
-import { assertOrderedBuildId, createCapabilityRef, createModuleRef, createTypeRef } from "@hypit/protocol";
+import {
+  assertOrderedBuildId,
+  assertPublicationIntent,
+  createCapabilityRef,
+  createModuleRef,
+  createTypeRef,
+} from "@hypit/protocol";
 import type { CapabilityRef, TypeRef } from "@hypit/protocol";
 
 import {
   assertBuildResultFileRef,
   assertBuildResultPath,
   assertBuildResultValueDocument,
-  assertPublicationPlan,
 } from "./types.js";
 import type {
   BuildResultFileRef,
@@ -284,11 +289,11 @@ export function decodeBuildResultWriterState(
   subject = "Build Result writer state",
 ): BuildResultWriterState {
   const item = object(value, subject);
-  const publication = object(item.publication, `${subject}.publication`);
-  if (!Array.isArray(publication.outputs)) throw new Error(`${subject}.publication.outputs must be an array`);
+  const rawPublication = object(item.publication, `${subject}.publication`);
+  if (!Array.isArray(rawPublication.outputs)) throw new Error(`${subject}.publication.outputs must be an array`);
   const names = new Set<string>();
   const logicalOutputs = new Set<string>();
-  const publishedOutputs = publication.outputs.map((value, index) => {
+  const publishedOutputs = rawPublication.outputs.map((value, index) => {
     const published = object(value, `${subject}.publication.outputs[${index}]`);
     const name = text(published.name, `${subject}.publication.outputs[${index}].name`);
     const output = text(published.output, `${subject}.publication.outputs[${index}].output`);
@@ -319,8 +324,8 @@ export function decodeBuildResultWriterState(
       },
     };
   });
-  const publicationPlan = { outputs: publishedOutputs };
-  assertPublicationPlan(publicationPlan);
+  const publication = { outputs: publishedOutputs };
+  assertPublicationIntent(publication);
   return {
     ...(item.resourceReferences === undefined ? {} : { resourceReferences: Object.fromEntries(
       Object.entries(object(item.resourceReferences, `${subject}.resourceReferences`)).map(([resource, reference]) => {
@@ -329,7 +334,7 @@ export function decodeBuildResultWriterState(
     ) }),
     resources: pathMap(item.resources, `${subject}.resources`),
     values: pathMap(item.values, `${subject}.values`),
-    publication: publicationPlan,
+    publication,
   };
 }
 

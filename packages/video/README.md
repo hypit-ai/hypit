@@ -32,8 +32,8 @@ Installing or importing an arbitrary Source package never grants it CLI or proce
 
 `createVideoDistribution()` supplies the generic CLI Host with video-product choices:
 
-- `createVideoCompiler()` assembles the selected Author Frontends, Markup Surfaces, Modules and
-  refinements for one invocation;
+- `createVideoCompiler()` assembles the selected Author Frontends, package declaration compilers,
+  Markup spellings, Modules and refinements for one invocation;
 - `createVideoWorkspace()` resolves Source and asset imports from the project and selected
   Distribution without treating arbitrary package directories as projects;
 - `discoverVideoSourcePackages()` discovers the closure named by explicit Run and Author imports;
@@ -53,7 +53,7 @@ hypit vocabulary --visual text
 ```
 
 The command reports installed Author-package manifests, their fully qualified Capabilities and their
-declared Surfaces. Capability identity and result Type come directly from the named package's Module
+declared author tags. Capability identity and result Type come directly from the named package's Module
 Manifest after ordinary package loading; dependency capabilities are not attributed to the package
 being listed. It does not keep a registry, scan the network, install packages or make creative
 choices. Package managers and the project lockfile own physical package versions; Source imports own

@@ -19,7 +19,7 @@ Keep discovery tied to the question being answered:
 | What is needed | Where the useful evidence lives |
 | --- | --- |
 | An executable or prepared local service | `hypit paths`, package-manager records, the selected Profile and Provider-documented tool locations |
-| Surface syntax or reusable behavior | Installed vocabulary, the owning package's documentation and a relevant component example |
+| Declaration syntax or reusable behavior | Installed vocabulary, the owning package's documentation and a relevant component example |
 | This production's inputs and completed work | Supplied files, its notes, Sources, Runs and project Result history, including explicitly linked shared assets |
 
 Follow a path beyond the project when a supplied location, recorded dependency or documented tool

@@ -61,7 +61,7 @@ Kit. A factual screenshot or product proof instead gets its authority from the f
 ## Choose the representation the argument needs
 
 A tier board, ordered column and comparison chart have different state and motion. Inspect a plausible
-Surface and use its public inputs. When the work needs a new structure or reveal behavior, create a
+declaration and use its public inputs. When the work needs a new structure or reveal behavior, create a
 project Track rather than modifying an installed package or forcing unrelated attributes onto it.
 
 Watch the current claim, the icon's movement, the board state and the supporting image together.

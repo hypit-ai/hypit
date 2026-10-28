@@ -4,13 +4,14 @@ import {
   exactTemporalValue,
   exactTemporalZero,
 } from "./exact.js";
-import { add, compare, multiply, rational, subtract } from "./rational.js";
+import { add, compare, divide, multiply, rational, subtract } from "./rational.js";
 import type { Rational } from "./rational.js";
 import { assertLocalTemporalDomain } from "./domain.js";
 import type {
   ExactTemporalValue,
   LocalTemporalDomain,
   TemporalMap,
+  TemporalAffineMapPiece,
   TemporalMapPiece,
   TemporalMapStage,
 } from "./types.js";
@@ -39,10 +40,31 @@ function stagePiece(stage: TemporalMapStage, targetAt: ExactTemporalValue): Temp
   });
 }
 
+export function isAffineTemporalMapPiece(piece: TemporalMapPiece): piece is TemporalAffineMapPiece {
+  return "rate" in piece;
+}
+
+function cubicPosition(piece: Exclude<TemporalMapPiece, TemporalAffineMapPiece>, target: Rational): Rational {
+  const start = exactTemporalRational(piece.target.start);
+  const length = subtract(exactTemporalRational(piece.target.end), start);
+  const u = divide(subtract(target, start), length);
+  const oneMinusU = subtract(rational(1n), u);
+  const square = (value: Rational) => multiply(value, value);
+  const cube = (value: Rational) => multiply(square(value), value);
+  const three = rational(3n);
+  return add(
+    add(multiply(cube(oneMinusU), exactTemporalRational(piece.sourceAtStart)),
+      multiply(multiply(three, multiply(square(oneMinusU), u)), exactTemporalRational(piece.sourceControl1))),
+    add(multiply(multiply(three, multiply(oneMinusU, square(u))), exactTemporalRational(piece.sourceControl2)),
+      multiply(cube(u), exactTemporalRational(piece.sourceAtEnd))),
+  );
+}
+
 function stageValue(stage: TemporalMapStage, targetAt: ExactTemporalValue): ExactTemporalValue | undefined {
   const piece = stagePiece(stage, targetAt);
   if (piece === undefined) return undefined;
   const target = exactTemporalRational(targetAt);
+  if (!isAffineTemporalMapPiece(piece)) return exactTemporalValue(cubicPosition(piece, target));
   const delta = subtract(target, exactTemporalRational(piece.target.start));
   const rate = rational(BigInt(piece.rate.numerator), BigInt(piece.rate.denominator));
   let source = add(exactTemporalRational(piece.sourceAtStart), multiply(delta, rate));
@@ -75,13 +97,29 @@ function assertPiece(
     assert(compareExactTemporalValues(previousEnd, piece.target.start) <= 0,
       `Temporal Map pieces overlap in target domain ${target.id}.`);
   }
-  assert(Number.isSafeInteger(piece.rate.numerator), "Temporal Map rate numerator is invalid.");
-  assert(Number.isSafeInteger(piece.rate.denominator) && piece.rate.denominator > 0,
-    "Temporal Map rate denominator is invalid.");
   const sourceStart = exactTemporalRational(piece.sourceAtStart);
   const sourceDuration = exactTemporalRational(source.duration);
   assert(compare(sourceStart, rational(0n)) >= 0 && compare(sourceStart, sourceDuration) <= 0,
     `Temporal Map source position lies outside source domain ${source.id}.`);
+  if (!isAffineTemporalMapPiece(piece)) {
+    const control1 = exactTemporalRational(piece.sourceControl1);
+    const control2 = exactTemporalRational(piece.sourceControl2);
+    const sourceEnd = exactTemporalRational(piece.sourceAtEnd);
+    for (const value of [control1, control2, sourceEnd]) {
+      assert(compare(value, rational(0n)) >= 0 && compare(value, sourceDuration) <= 0,
+        `Temporal Map cubic position lies outside source domain ${source.id}.`);
+    }
+    const increasing = compare(sourceStart, control1) <= 0 && compare(control1, control2) <= 0
+      && compare(control2, sourceEnd) <= 0;
+    const decreasing = compare(sourceStart, control1) >= 0 && compare(control1, control2) >= 0
+      && compare(control2, sourceEnd) >= 0;
+    assert(increasing || decreasing,
+      "Temporal Map cubic controls must be monotone; split direction changes into adjacent pieces.");
+    return;
+  }
+  assert(Number.isSafeInteger(piece.rate.numerator), "Temporal Map rate numerator is invalid.");
+  assert(Number.isSafeInteger(piece.rate.denominator) && piece.rate.denominator > 0,
+    "Temporal Map rate denominator is invalid.");
   if (piece.wrap !== undefined) {
     const wrapStart = exactTemporalRational(piece.wrap.start);
     const wrapEnd = exactTemporalRational(piece.wrap.end);
@@ -176,7 +214,10 @@ export function temporalMapDirectionAt(
     if (current === undefined) return undefined;
     const piece = stagePiece(stage, current);
     if (piece === undefined) return undefined;
-    const stageDirection = Math.sign(piece.rate.numerator) as -1 | 0 | 1;
+    const stageDirection = isAffineTemporalMapPiece(piece)
+      ? Math.sign(piece.rate.numerator) as -1 | 0 | 1
+      : compareExactTemporalValues(piece.sourceAtStart, piece.sourceAtEnd) < 0 ? 1
+        : compareExactTemporalValues(piece.sourceAtStart, piece.sourceAtEnd) > 0 ? -1 : 0;
     direction = direction === 0 || stageDirection === 0
       ? 0
       : direction === stageDirection ? 1 : -1;

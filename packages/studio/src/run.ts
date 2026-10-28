@@ -13,7 +13,7 @@ import type { StudioBuildLibrary } from "./build-library.js";
 import { observedCompiledSource } from "./compile.js";
 import type { CompiledSource } from "./compile.js";
 import type { StudioDomain } from "./domain.js";
-import { createObserver } from "./observe.js";
+import { observeAuthorDocument } from "./observe.js";
 
 export type RunCompilation = {
   readonly graph: RunGraph;
@@ -45,9 +45,8 @@ export async function loadStudioRun(input: {
       frontends.register(frontend);
     }
   }
-  const observer = createObserver(input.domain.surfaces, input.registry);
   const compiler = new RunCompiler({
-    authorCompiler: input.domain.createCompiler(observer.surfaces),
+    authorCompiler: input.domain.createCompiler(),
     fragments,
     frontends,
     ...(input.buildLibrary === undefined ? {} : {
@@ -56,7 +55,10 @@ export async function loadStudioRun(input: {
     }),
   });
   const compiled = await compiler.compileEntry(input.run);
-  const source = await observedCompiledSource(compiled.author, observer.observations());
+  const source = await observedCompiledSource(
+    compiled.author,
+    observeAuthorDocument(compiled.authorDocument, compiled.author, input.registry),
+  );
   const targets = compiled.run.graph.targets;
   return {
     runPath: input.run,

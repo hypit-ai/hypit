@@ -54,9 +54,9 @@ test("the render deadline is global while stage deadlines are explicit deploymen
 
 test("source selection retains loop, hold, fractional-speed and reverse sampling and shares decoded frames", () => {
   const document = htmlRangeDocument({ kind: "blob", resource: "res_range_source", size: 1, mediaType: "video/mp4" });
-  const slots = videoSlots(document.videoSources, resource => `hypit-resource://${resource}`,
+  const slots = videoSlots(document.videoSources, resource => `media://${resource}`,
     { frameRate: document.frameRate });
-  assert.ok(slots.every(slot => slot.src === "hypit-resource://res_range_source"));
+  assert.ok(slots.every(slot => slot.src === "media://res_range_source"));
   assert.equal(slots.length, 1, "the terminal plan retains one source occurrence and its complete Map");
   const timestampIndex = { timestamps: [0n, 1n, 2n, 3n],
     timeBase: { numerator: 1n, denominator: 30n } };
@@ -75,7 +75,7 @@ test("source selection retains loop, hold, fractional-speed and reverse sampling
 });
 
 test("reverse source time selects the same bounded decoded window without forward traversal", () => {
-  const [slot] = videoSlots([{ id: "reverse", resource: "res_reverse", startFrame: 0, endFrameExclusive: 4,
+  const [slot] = videoSlots([{ id: "reverse", artifactId: "artifact-reverse", startFrame: 0, endFrameExclusive: 4,
     sourceFrame: { numerator: 4, denominator: 1 }, sourceRate: { numerator: -1, denominator: 1 },
     kind: "surface", sourceFrameRate: { numerator: 30, denominator: 1 } }], () => "direct.mp4",
   { frameRate: { numerator: 30, denominator: 1 } });

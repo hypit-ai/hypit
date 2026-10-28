@@ -89,9 +89,9 @@ test("project video Provider reports its narrower service range without changing
     instance: "videos.personal", pool: "videos.personal", baseUrl: "https://videos.example",
     apiKey: { store: "local", key: "videos.personal" },
   });
-  const need = (ports: Parameters<typeof sealSeedanceRequest>[1]) => ({
+  const need = (fields: Parameters<typeof sealSeedanceRequest>[1]) => ({
     id: "need:range", capability, returns: generationTypes.videoSet,
-    constraints: canonicalize(sealSeedanceRequest("seedance-2-mini", ports)), result: "record:range",
+    constraints: canonicalize(sealSeedanceRequest("seedance-2-mini", fields)), result: "record:range",
   });
   const prompted = { prompt: ["A slow push-in"], generateAudio: [true], webSearch: [false] };
   const supported = endpointOffers(provider)[0]!.supports!(

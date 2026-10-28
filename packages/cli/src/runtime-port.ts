@@ -1,13 +1,13 @@
 import type { BlobAttachment } from "@hypit/workspace";
-import type { PublicationPlan } from "@hypit/result";
 import type { ExecutorOptions, ProducerRegistry } from "@hypit/executor";
 import type {
   BuildDefinition,
-  BuildState,
   CapabilityRef,
   Need,
+  PublicationIntent,
   Value,
 } from "@hypit/protocol";
+import type { BuildView } from "@hypit/kernel";
 import type {
   CapacityReservation,
   CredentialAcquisition,
@@ -32,7 +32,7 @@ export type CliDiagnostic = {
 export type CliBuildCatalogDescriptor = {
   readonly sourcePath: string;
   readonly runPath?: string;
-  readonly publication: PublicationPlan;
+  readonly publication: PublicationIntent;
 };
 
 export type CliBuildView = {
@@ -67,7 +67,7 @@ export type CliBuildView = {
 
 export type CliBuildSubmission = {
   readonly id: string;
-  readonly state: BuildState;
+  readonly state: BuildView;
 } & ({ readonly view: CliBuildView } | {
   readonly completion: {
     readonly build: string;
@@ -137,7 +137,7 @@ export type CliRuntimeDoctorResult = { readonly dataRoot: string; readonly diagn
 
 export type CliTransientExecution = {
   evaluate(input: {
-    readonly state: BuildState;
+    readonly state: BuildView;
     readonly producers: ProducerRegistry;
     readonly refinements: NonNullable<ExecutorOptions["refinements"]>;
     readonly resources: ResourceStore;

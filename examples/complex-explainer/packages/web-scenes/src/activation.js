@@ -8,24 +8,16 @@ import { renderOutro } from "./scenes/outro/index.js";
 import { sceneCompanions } from "./studio.js";
 import { createStudioTrackCompanionFacet } from "@hypit/studio-companion";
 import { renderRoad } from "./scenes/editor-route/index.js";
-import { assertAttributes, assertEmptyElement, textAttribute, createMarkupSurfaceFacet } from "@hypit/hypit/markup";
+import { createMarkupDeclarationFacet } from "@hypit/hypit/markup";
 import { canonicalize, sameType } from "@hypit/hypit/protocol";
-import { sealGraphFragment } from "@hypit/hypit/author";
+import { createAuthorDeclarationFacet, declarationField, sealGraphFragment } from "@hypit/hypit/author";
 import { compositionTypes } from "@hypit/composition";
 import { mediaTypes } from "@hypit/media";
 import { timelineTypes } from "@hypit/timeline";
 import { spatialTypes } from "@hypit/spatial";
 import { temporalTypes, assertTemporalInstantFor } from "@hypit/temporal";
-import {
-  resolveTemporalContext,
-  resolveTemporalWindowReference,
-  resolveTemporalInstantReference,
-  temporalWindowAttributeNames,
-  temporalWindowAttributeVocabulary,
-  temporalContextAttributeVocabulary,
-  temporalInstantAttributeNames,
-  temporalInstantAttributeVocabulary,
-} from "@hypit/temporal/markup";
+import { resolveAuthorTimeline, resolveAuthorWindow, resolveAuthorInstant,
+  temporalContextFieldShape, temporalWindowFieldShape, temporalInstantFieldShape } from "@hypit/temporal/author";
 import { renderIntro, renderComparison } from "./render.js";
 const module = { name: "@explainer/web-scenes", version: "1" },
   type = (name) => ({ module, name }),
@@ -255,33 +247,52 @@ const component = {
     })),
   ],
 };
-function decode(tag) {
-  return ({ element, resolveReference }) => {
+const literal = (declaration, name) => {
+  const field = declarationField(declaration, name);
+  if (field?.kind !== "literal" || field.value.trim().length === 0) throw Error(`${declaration.name}.${name} must be text`);
+  return field.value.trim();
+};
+const resolved = async (declaration, name, expected, resolveReference) => {
+  const field = declarationField(declaration, name);
+  if (field?.kind !== "reference") throw Error(`${declaration.name}.${name} must be a reference`);
+  const found = await resolveReference(field.path);
+  if (!found || !sameType(found.type, expected)) throw Error(`${declaration.name}.${name} has wrong type`);
+  return found;
+};
+function compiler(tag) {
+  const spec = tags[tag];
+  return {
+    module,
+    declaration: spec.name,
+    outputs: [options, events, compositionTypes.visualTrack],
+    shape: {
+      summary: "One code-authored explainer scene with named temporal beats.",
+      fields: [
+        { name: "id", kind: "identifier", required: true, summary: "Names the scene." },
+        temporalContextFieldShape, temporalWindowFieldShape,
+        { name: "within", kind: "reference", required: true, accepts: [spatialTypes.frame], summary: "Places the scene." },
+        { name: "font", kind: "reference", required: true, accepts: [mediaTypes.fontArtifact], summary: "Selects its font." },
+        ...spec.assets.map((name) => ({ name, kind: "reference", required: true, accepts: [authoredAssetType(name)], summary: name })),
+        ...Object.keys(spec.defaults).map((name) => ({ name, kind: "literal", required: false, summary: name })),
+      ],
+      children: [{ name: "Beat", cardinality: "many", summary: "One named absolute scene event.", fields: [
+        { name: "name", kind: "literal", required: true, summary: "Behavioral event name." }, temporalInstantFieldShape,
+      ] }],
+    },
+    bindings(declaration) {
+      const id = literal(declaration, "id");
+      return [{ name: `${id}.visual`, ref: { kind: "component-output", component: id, output: "visual" }, type: compositionTypes.visualTrack }];
+    },
+    async compile({ declaration: element, resolveReference }) {
     const spec = tags[tag];
-    assertAttributes(element, [
-      "id",
-      "timeline",
-      "within",
-      "font",
-      ...spec.assets,
-      ...Object.keys(spec.defaults),
-      ...temporalWindowAttributeNames,
-    ]);
-    const id = textAttribute(element, "id"),
-      context = resolveTemporalContext({ element, resolveReference }),
-      window = resolveTemporalWindowReference({ element, resolveReference });
-    const ref = (el, n, t) => {
-      const raw = el.attributes[n];
-      if (typeof raw !== "object" || raw.kind !== "reference")
-        throw Error(n + " must be a reference");
-      const r = resolveReference(raw.path);
-      if (!r || !sameType(r.type, t)) throw Error(n + " has wrong type");
-      return r.ref;
-    };
+    const id = literal(element, "id"),
+      timeline = await resolveAuthorTimeline(element, resolveReference),
+      window = await resolveAuthorWindow(element, resolveReference);
     const opts = { id };
     for (const [n, d] of Object.entries(spec.defaults)) {
-      const v = element.attributes[n];
-      if (v !== undefined && typeof v !== "string") throw Error(n + " must be literal");
+      const authored = declarationField(element, n);
+      if (authored !== undefined && authored.kind !== "literal") throw Error(n + " must be literal");
+      const v = authored?.value;
       opts[n] = typeof d === "number" ? Number(v ?? d) : (v ?? d);
     }
     const records = [
@@ -295,13 +306,13 @@ function decode(tag) {
     const inputs = ins(tag).filter((p) => p.name !== "events")
       .map((port) => spec.assets.includes(port.name) ? { ...port, type: authoredAssetType(port.name) } : port),
       bindings = {
-        timeline: context.timeline.ref,
-        within: ref(element, "within", spatialTypes.frame),
+        timeline: timeline.ref,
+        within: (await resolved(element, "within", spatialTypes.frame, resolveReference)).ref,
         window: window.ref,
-        font: ref(element, "font", mediaTypes.fontArtifact),
+        font: (await resolved(element, "font", mediaTypes.fontArtifact, resolveReference)).ref,
         options: { kind: "record", id: id + ".options" },
       };
-    for (const n of spec.assets) bindings[n] = ref(element, n, authoredAssetType(n));
+    for (const n of spec.assets) bindings[n] = (await resolved(element, n, authoredAssetType(n), resolveReference)).ref;
     const input = (name) => ({ kind: "fragment-input", name }),
       op = (operation) => ({ kind: "fragment-operation", operation }),
       operations = [
@@ -315,17 +326,10 @@ function decode(tag) {
     let prev = "empty",
       count = 0;
     for (const ch of element.children) {
-      if (ch.kind === "text") {
-        if (ch.value.trim()) throw Error("Expected Beat");
-        continue;
-      }
-      if (ch.name.split(":").at(-1) !== "Beat") throw Error("Expected Beat");
-      assertAttributes(ch, ["name", ...temporalInstantAttributeNames]);
-      assertEmptyElement(ch);
-      const name = textAttribute(ch, "name"),
+      const name = literal(ch, "name"),
         key = "beat" + ++count,
         eid = id + "." + key,
-        at = resolveTemporalInstantReference({ element: ch, resolveReference });
+        at = await resolveAuthorInstant(ch, resolveReference);
       records.push({
         id: eid + ".options",
         type: options,
@@ -383,10 +387,11 @@ function decode(tag) {
           range: element.range,
         },
       ],
-      exports: [id + ".visual"],
     };
+    },
   };
 }
+const declarations = Object.keys(tags).map((tag) => compiler(tag));
 export const hypitPackage = {
   format: "hypit.package@1",
   modules: [{ manifest }],
@@ -394,64 +399,10 @@ export const hypitPackage = {
     createProducerPackageFacet(component.producers ?? []),
     createRefinementPackageFacet(component.refinements ?? []),
     createStudioTrackCompanionFacet(sceneCompanions(module, tags)),
-    ...Object.keys(tags).map((tag) =>
-      createMarkupSurfaceFacet({
-        module,
-        declaration: {
-          name: tags[tag].name,
-          tag,
-          mode: "structured",
-          outputs: [
-            options,
-            events,
-            compositionTypes.visualTrack,
-          ],
-          vocabulary: {
-            summary: "Project launch scene with phrase-driven visual beats.",
-            attributes: [
-              ...temporalContextAttributeVocabulary,
-              ...temporalWindowAttributeVocabulary,
-              ...["id", "within", "font", ...tags[tag].assets].map((name) => ({
-                name,
-                kind: "expression",
-                required: true,
-                summary: name,
-              })),
-              ...Object.keys(tags[tag].defaults).map((name) => ({
-                name,
-                kind: "literal",
-                required: false,
-                summary: name,
-              })),
-            ],
-            children: [
-              {
-                tag: "Beat",
-                cardinality: "many",
-                summary: "Named absolute event in the scene, produced upstream by semantic or direct time authoring.",
-                attributes: [
-                  {
-                    name: "name",
-                    kind: "literal",
-                    required: true,
-                    summary: "Behavioral event name",
-                  },
-                  ...temporalInstantAttributeVocabulary,
-                ],
-              },
-            ],
-            ports: [
-              {
-                name: "visual",
-                type: compositionTypes.visualTrack,
-                summary: "Visual contribution",
-              },
-            ],
-          },
-        },
-        handler: decode(tag),
-      }),
-    ),
+    ...declarations.map((declaration) => createAuthorDeclarationFacet(declaration)),
+    ...Object.entries(tags).map(([tag, spec]) => createMarkupDeclarationFacet({
+      module, declaration: { name: spec.name, tag, body: "structured" },
+    })),
   ],
 };
 export default hypitPackage;

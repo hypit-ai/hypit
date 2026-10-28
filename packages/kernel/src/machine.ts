@@ -1,7 +1,6 @@
 import type {
   BuildDefinition,
   BuildFact,
-  BuildState,
   BuildCommand,
   CommandResult,
   Need,
@@ -16,8 +15,9 @@ import {
   buildNeedCommand,
   buildProducerCommand,
   factForBuildResult,
-  initialBuildState,
+  initialBuildView,
 } from "./reducer.js";
+import type { BuildView } from "./view.js";
 
 function insertDependency(dependents: Map<string, string[]>, record: string, step: string): void {
   const found = dependents.get(record);
@@ -57,7 +57,7 @@ function mergeCommands(
  */
 export class BuildMachine {
   readonly definition: BuildDefinition;
-  #state: BuildState;
+  #state: BuildView;
   #proposal: BuildFact | undefined;
   readonly #records = new Map<string, TypedRecord>();
   readonly #needs = new Map<string, Need>();
@@ -70,7 +70,7 @@ export class BuildMachine {
 
   constructor(definition: BuildDefinition, facts: readonly BuildFact[] = []) {
     this.definition = structuredClone(definition);
-    this.#state = initialBuildState(this.definition);
+    this.#state = initialBuildView(this.definition);
     for (const record of this.#state.records) this.#records.set(record.id, record);
     for (const need of this.#state.needs) this.#needs.set(need.id, need);
     for (const command of this.#state.outstanding) this.#commands.set(command.id, command);
@@ -89,7 +89,7 @@ export class BuildMachine {
     for (const fact of facts) this.#applyAcceptedFact(fact);
   }
 
-  get status(): BuildState["status"] {
+  get status(): BuildView["status"] {
     return this.#state.status;
   }
 
@@ -102,7 +102,7 @@ export class BuildMachine {
   }
 
   /** Materialized read view. It is never the durable Store representation. */
-  view(): BuildState {
+  view(): BuildView {
     return this.#state;
   }
 
@@ -181,7 +181,7 @@ export class BuildMachine {
     let needs = this.#state.needs;
     let steps = this.#state.steps;
     let diagnostics = this.#state.diagnostics;
-    let status: BuildState["status"] = this.#state.status;
+    let status: BuildView["status"] = this.#state.status;
     const addedCommands: BuildCommand[] = [];
 
     if (fact.kind === "command-failed") {
@@ -255,6 +255,6 @@ export class BuildMachine {
 export function materializeBuild(
   definition: BuildDefinition,
   facts: readonly BuildFact[],
-): BuildState {
+): BuildView {
   return new BuildMachine(definition, facts).view();
 }

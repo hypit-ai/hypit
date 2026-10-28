@@ -1,17 +1,17 @@
-import { commentStickerMarkupSurfaces, commentStickerModuleRef, commentStickerTypes } from "./index.js";
+import { commentStickerModuleRef, commentStickerTypes } from "./index.js";
+import { commentStickerRecipeProperties } from "./author.js";
 import type { CommentStickerProgram } from "./index.js";
 import { compositionTypes } from "@hypit/composition";
+import { readFile } from "node:fs/promises";
 import type { StudioTrackCompanion, StudioTrackCompanionContext, StudioItemDraft, StudioInspectorFieldDeclaration, StudioSourceBindingDeclaration } from "@hypit/studio-companion";
-import { artifactPreview, childItems, previewLayer, requiredSurfaceValue, temporalLineageFor, temporalDomainMarker, textLayer } from "@hypit/studio-companion";
+import { artifactPreview, childItems, previewLayer, requiredDeclarationValue, temporalLineageFor, temporalDomainMarker, textLayer } from "@hypit/studio-companion";
 
 const frameParameters: readonly StudioSourceBindingDeclaration[] = [
   { name: "within" },
   ...["left", "top", "right", "bottom", "x", "y", "width", "height"].map((name) => ({ name, writable: true })),
 ];
 
-const commentProperties = (commentStickerMarkupSurfaces
-  .find((surface) => surface.name === "style")?.vocabulary.attributes
-  .find((attribute) => attribute.name === "recipe")?.recipe ?? []);
+const commentProperties = commentStickerRecipeProperties;
 
 function title(name: string): string {
   return name.split("-").map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`).join(" ");
@@ -62,14 +62,13 @@ const commentInspector: readonly StudioInspectorFieldDeclaration[] = commentProp
   const options = valuesFor(property);
   return {
     binding: `style.${property.name}`, label: title(property.name), ...placement,
-    ...(property.summary === undefined ? {} : { summary: property.summary }),
     control: options !== undefined ? "select" : commentColorProperties.has(property.name) ? "color" : "number",
     ...(options === undefined ? {} : { options }),
   };
 });
 
 function projectComments(context: StudioTrackCompanionContext): readonly StudioItemDraft[] {
-  const program = requiredSurfaceValue(context, "program") as CommentStickerProgram;
+  const program = requiredDeclarationValue(context, "program") as CommentStickerProgram;
   const items = program.items.map((item) => ({
     id: item.id,
     subjectId: item.subjectId,
@@ -100,9 +99,14 @@ function projectComments(context: StudioTrackCompanionContext): readonly StudioI
 
 export const commentStickerStudioTrackCompanions: readonly StudioTrackCompanion[] = [
   {
-    id: "track", role: "track",
-    output: { type: compositionTypes.visualTrack, surface: "track", modules: [commentStickerModuleRef] },
+    id: "track",
+    output: { type: compositionTypes.visualTrack, declaration: "track", modules: [commentStickerModuleRef] },
     family: "comment-sticker", tone: "orange", icon: "component",
+    preview: {
+      mediaType: "image/png",
+      path: "preview/Track.png",
+      open: async () => Uint8Array.from(await readFile(new URL("../preview/Track.png", import.meta.url))),
+    },
     bindings: [
       { name: "frame", referenced: frameParameters },
       {
@@ -125,7 +129,7 @@ export const commentStickerStudioTrackCompanions: readonly StudioTrackCompanion[
       })),
     ],
     requiredValues: ["program"], project: projectComments,
-    poster: { source: "surface-preview" },
+    poster: { source: "declaration-preview" },
     lane: { heightPx: 52 },
   },
 ];

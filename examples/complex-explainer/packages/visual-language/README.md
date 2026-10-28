@@ -8,7 +8,7 @@ same names. Scene packages import the representation their renderer needs.
 import { palette, paletteCss } from "@explainer/visual-language";
 ```
 
-This package declares no Hypit Module, Surface, Track or Companion. Sharing a design decision does
+This package declares no Hypit Module, Author Declaration, Track or Companion. Sharing a design decision does
 not by itself create a visible component. Scenes still own their geometry, typography, depth and
 motion; changing this palette alone does not implement a complete change of visual style.
 

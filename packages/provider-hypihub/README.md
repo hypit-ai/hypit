@@ -25,11 +25,11 @@ image-to-video first-frame inputs, submits jobs, polls them, downloads the first
 stores them in the current Build's working byte area. Image references use HypiHub's documented
 `reference_images` object shape (`[{ "url": "…" }]`); video references use the public
 `reference_image_urls`, `reference_videos`, and `reference_audios` fields. A single reference video
-remains in `reference_videos`; `ref_video_url` is reserved for a model's source-video port. First/last-frame images use `first_frame` and `last_frame`.
+remains in `reference_videos`; `ref_video_url` is reserved for a Model's source-video field. First/last-frame images use `first_frame` and `last_frame`.
 
 Seedance 2.5 (`@hypit/seedance` model `2.5`) maps to `seedance-2.5` and supports
 `480p`, `720p` and `1080p`. The Provider passes the authored `resolution` to `POST /v1/videos`;
-omitting it in the Seedance Surface defaults to `720p`.
+omitting it in the Seedance declaration defaults to `720p`.
 
 `@hypit/pixverse` models `pixverse-v6` and `pixverse-c1` map to `pixverse/v6` and `pixverse/c1` on
 `POST /v1/videos`. The model's own `quality` band travels as `resolution` and its duration as
@@ -54,8 +54,9 @@ Model identity and input mode are separate. The mapping uses HypiHub's canonical
 `pixverse/c1` and the individual Seedance names.
 An image request without references uses `/images/generations`; image edits use `/images/edits`
 with the same model name. Video requests use `/videos`, preserving reference images, reference
-videos and first/last frames in their distinct fields. Old operation-specific names are not needed
-to express these modes; compatibility with previously released clients belongs to the service.
+videos and first/last frames in their distinct fields. The selected Model capability and supplied
+fields determine the operation;
+compatibility for requests already released by the service remains a service concern.
 
 Seedream 5 Lite remains Lite across input modes, and Grok 1.5 Preview remains Preview.
 A deployment's current catalogue may offer
@@ -63,7 +64,7 @@ newer models or omit one implemented here. Availability and unsupported-input er
 service explanation; they do not imply expired credentials or authorize substituting another model.
 
 Before resolving or uploading references, the Provider prepares the exact model and operation from
-the authored ports and its mapping, then queries that model's authenticated directory entry. Image
+the authored fields and its mapping, then queries that Model's authenticated directory entry. Image
 editing is determined from the mapped media inputs, without manufacturing placeholder URLs or
 uploading to discover the request mode. The same preparation serves images, videos and speech.
 The request is then translated with real reference URLs and submitted to the selected operation.

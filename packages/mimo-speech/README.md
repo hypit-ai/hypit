@@ -1,6 +1,6 @@
 # `@hypit/mimo-speech`
 
-Exact model contracts and author Surfaces for Xiaomi MiMo V2.5 Voice Design and Voice Clone.
+Exact model contracts and author declarations for Xiaomi MiMo V2.5 Voice Design and Voice Clone.
 
 The package owns two distinct speech operations:
 
@@ -10,7 +10,7 @@ The package owns two distinct speech operations:
 
 It contains no API URL, credential, retry, queue or Xiaomi wire encoding. Those belong to a Runtime
 Endpoint implementing the selected speech capability. Both models return the shared `GeneratedAudioSet`;
-the author Surfaces expose its primary member as an ordinary audio Resource.
+the author declarations expose its primary member as an ordinary audio Resource.
 
 ```xml
 <import as="mimo" from="@hypit/mimo-speech@1"/>

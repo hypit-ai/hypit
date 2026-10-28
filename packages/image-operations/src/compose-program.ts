@@ -52,7 +52,6 @@ export function createImageComposeLayerSet(): ImageComposeLayerSet {
 export function assertImageComposeLayerSet(value: ImageComposeLayerSet): void {
   assert(Array.isArray(value.layers),
     "ImageComposeLayerSet is invalid.");
-  assert(value.layers.length <= 64, "ImageComposeLayerSet exceeds 64 Layers.");
   value.layers.forEach((layer, index) => {
     assertLayer(layer, `ImageComposeLayerSet.layers.${index + 1}`);
   });

@@ -269,6 +269,7 @@ function collectBindings(
   template: TextTemplate,
   result: Set<string>,
   locals: ReadonlySet<string>,
+  definitions: Map<TextExpression, Map<string, readonly string[]>>,
 ): void {
   const add = (id: string) => { if (!locals.has(id)) result.add(id); };
   const collectCondition = (item: TextCondition): void => {
@@ -288,39 +289,54 @@ function collectBindings(
     return;
   }
   if (value.kind === "sequence" || value.kind === "join") {
-    value.items.forEach((item) => collectBindings(item, template, result, locals));
+    value.items.forEach((item) => collectBindings(item, template, result, locals, definitions));
     return;
   }
   if (value.kind === "choice") {
     value.cases.forEach((item) => {
       collectCondition(item.when);
-      collectBindings(item.value, template, result, locals);
+      collectBindings(item.value, template, result, locals, definitions);
     });
-    if (value.otherwise !== undefined) collectBindings(value.otherwise, template, result, locals);
+    if (value.otherwise !== undefined) collectBindings(value.otherwise, template, result, locals, definitions);
     return;
   }
   if (value.kind === "optional") {
     collectCondition(value.when);
-    collectBindings(value.value, template, result, locals);
+    collectBindings(value.value, template, result, locals, definitions);
     return;
   }
   if (value.kind === "each") {
     add(value.binding);
-    collectBindings(value.value, template, result, new Set([...locals, value.as]));
+    collectBindings(value.value, template, result, new Set([...locals, value.as]), definitions);
     return;
   }
   if (value.kind === "replace" || value.kind === "transform") {
-    collectBindings(value.input, template, result, locals);
+    collectBindings(value.input, template, result, locals, definitions);
     return;
   }
   const definition = template.definitions?.[value.template];
-  if (definition !== undefined) collectBindings(definition, template, result, locals);
+  if (definition === undefined) return;
+  const scope = JSON.stringify([...locals].sort());
+  const cached = definitions.get(definition)?.get(scope);
+  if (cached !== undefined) {
+    cached.forEach((id) => result.add(id));
+    return;
+  }
+  const contributed = new Set<string>();
+  collectBindings(definition, template, contributed, locals, definitions);
+  let scopes = definitions.get(definition);
+  if (scopes === undefined) {
+    scopes = new Map();
+    definitions.set(definition, scopes);
+  }
+  scopes.set(scope, [...contributed]);
+  contributed.forEach((id) => result.add(id));
 }
 
 export function textTemplateBindingNames(template: TextTemplate): ReadonlySet<string> {
   verifyTextTemplate(template);
   const result = new Set<string>();
-  collectBindings(template.root, template, result, new Set());
+  collectBindings(template.root, template, result, new Set(), new Map());
   return result;
 }
 
@@ -357,51 +373,117 @@ function applyTransform(value: string, operation: TextTransform): string {
   return JSON.stringify(value);
 }
 
-function renderExpression(
+const TEXT_RENDER_CHARACTER_LIMIT = 8 * 1024 * 1024;
+
+type TextRenderBuffer = { readonly chunks: string[]; length: number };
+
+function appendRendered(output: TextRenderBuffer, value: string): void {
+  if (value.length === 0) return;
+  output.length += value.length;
+  assert(output.length <= TEXT_RENDER_CHARACTER_LIMIT,
+    `Text render exceeds the ${TEXT_RENDER_CHARACTER_LIMIT}-character output limit`);
+  output.chunks.push(value);
+}
+
+function renderExpressionValue(
   value: TextExpression,
   template: TextTemplate,
   bindings: Readonly<Record<string, TextBindingValue>>,
 ): string {
-  if (value.kind === "literal") return value.value;
-  if (value.kind === "slot") return scalarText(bindings[value.binding], `Text binding ${value.binding}`);
-  if (value.kind === "sequence") return value.items.map((item) => renderExpression(item, template, bindings)).join("");
+  const output: TextRenderBuffer = { chunks: [], length: 0 };
+  renderExpression(value, template, bindings, output);
+  return output.chunks.join("");
+}
+
+function replaceLiteral(value: string, from: string, to: string, all: boolean): string {
+  const output: TextRenderBuffer = { chunks: [], length: 0 };
+  let cursor = 0;
+  while (cursor <= value.length) {
+    const found = value.indexOf(from, cursor);
+    if (found < 0) {
+      appendRendered(output, value.slice(cursor));
+      break;
+    }
+    appendRendered(output, value.slice(cursor, found));
+    appendRendered(output, to);
+    cursor = found + from.length;
+    if (!all) {
+      appendRendered(output, value.slice(cursor));
+      break;
+    }
+  }
+  return output.chunks.join("");
+}
+
+function renderExpression(
+  value: TextExpression,
+  template: TextTemplate,
+  bindings: Readonly<Record<string, TextBindingValue>>,
+  output: TextRenderBuffer,
+): void {
+  if (value.kind === "literal") { appendRendered(output, value.value); return; }
+  if (value.kind === "slot") {
+    appendRendered(output, scalarText(bindings[value.binding], `Text binding ${value.binding}`));
+    return;
+  }
+  if (value.kind === "sequence") {
+    value.items.forEach((item) => renderExpression(item, template, bindings, output));
+    return;
+  }
   if (value.kind === "join") {
-    const items = value.items.map((item) => renderExpression(item, template, bindings));
-    return (value.omitEmpty === true ? items.filter((item) => item.length > 0) : items).join(value.separator);
+    let written = false;
+    for (const item of value.items) {
+      const rendered = renderExpressionValue(item, template, bindings);
+      if (value.omitEmpty === true && rendered.length === 0) continue;
+      if (written) appendRendered(output, value.separator);
+      appendRendered(output, rendered);
+      written = true;
+    }
+    return;
   }
   if (value.kind === "choice") {
     const selected = value.cases.filter((item) => matches(item.when, bindings));
     assert(selected.length <= 1, `Text choice matched ${selected.length} cases`);
-    if (selected.length === 1) return renderExpression(selected[0]!.value, template, bindings);
+    if (selected.length === 1) {
+      renderExpression(selected[0]!.value, template, bindings, output);
+      return;
+    }
     assert(value.otherwise !== undefined, "Text choice matched no case and has no otherwise branch");
-    return renderExpression(value.otherwise, template, bindings);
+    renderExpression(value.otherwise, template, bindings, output);
+    return;
   }
   if (value.kind === "optional") {
-    return matches(value.when, bindings) ? renderExpression(value.value, template, bindings) : "";
+    if (matches(value.when, bindings)) renderExpression(value.value, template, bindings, output);
+    return;
   }
   if (value.kind === "each") {
     const source = bindings[value.binding];
     assert(Array.isArray(source), `Text binding ${value.binding} must be a list`);
-    return source.map((item) => renderExpression(value.value, template, { ...bindings, [value.as]: item })).join(value.separator);
+    source.forEach((item, index) => {
+      if (index > 0) appendRendered(output, value.separator);
+      renderExpression(value.value, template, { ...bindings, [value.as]: item }, output);
+    });
+    return;
   }
   if (value.kind === "replace") {
-    let result = renderExpression(value.input, template, bindings);
+    let result = renderExpressionValue(value.input, template, bindings);
     for (const replacement of value.replacements) {
-      result = replacement.mode === "all"
-        ? result.replaceAll(replacement.from, replacement.to)
-        : result.replace(replacement.from, replacement.to);
+      result = replaceLiteral(result, replacement.from, replacement.to, replacement.mode === "all");
     }
-    return result;
+    appendRendered(output, result);
+    return;
   }
   if (value.kind === "transform") {
-    return value.transforms.reduce(
+    const result = value.transforms.reduce(
       (result, operation) => applyTransform(result, operation),
-      renderExpression(value.input, template, bindings),
+      renderExpressionValue(value.input, template, bindings),
     );
+    appendRendered(output, result);
+    return;
   }
   const definition = template.definitions?.[value.template];
   assert(definition !== undefined, `TextTemplate definition ${value.template} is missing`);
-  return renderExpression(definition, template, bindings);
+  renderExpression(definition, template, bindings, output);
 }
 
 export function renderText(template: TextTemplate, bindings: TextBindings): Text {
@@ -414,5 +496,5 @@ export function renderText(template: TextTemplate, bindings: TextBindings): Text
   for (const id of Object.keys(bindings.values)) {
     assert(known.has(id), `Text binding ${id} is not declared by the template`);
   }
-  return sealText(renderExpression(template.root, template, { ...template.defaults, ...bindings.values }));
+  return sealText(renderExpressionValue(template.root, template, { ...template.defaults, ...bindings.values }));
 }

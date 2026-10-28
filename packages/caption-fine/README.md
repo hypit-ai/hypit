@@ -5,6 +5,10 @@ active-word treatment and motion. It renders authored Cues whose tokens all obey
 type, Paint and motion rules. Spoken time and token order may change the state of that rule; a token
 does not carry a private visual role.
 
+The package owns the `Style`, `Caption`, `Use` and `Fallback` declaration meanings and lowers them
+to Caption records and graph components. Markup only spells those declarations. Another authoring
+frontend can invoke the same package declarations without recreating Caption assembly or validation.
+
 ```xml
 <caption-fine:Style id="primary" recipe={recipes.caption.primary} font={caption-font}/>
 

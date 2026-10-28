@@ -4,7 +4,12 @@ import type { LocalTemporalDomain, TemporalInstant, TemporalWindow } from "@hypi
 import { assertTimelineIdentity, timelineFrameCount } from "@hypit/timeline";
 import type { Timeline } from "@hypit/timeline";
 
-import { assertNarrativeAlignmentIdentity } from "./identity.js";
+import {
+  assertNarrativeAlignmentIdentity,
+  assertNarrativeInstantSpecIdentity,
+  assertNarrativeProjectionIdentity,
+  assertNarrativeProjectionPartsIdentity,
+} from "./identity.js";
 import type { NarrativeAlignment, NarrativeInstantSpec, NarrativeProjection, ProjectedNarrativeAlignment } from "./types.js";
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -35,6 +40,7 @@ export function createNarrativeProjection(id: string, narrativeId: string, timel
   parts: readonly ProjectedNarrativeAlignment[]): NarrativeProjection {
   assertTimelineIdentity(timeline);
   assert(id.length > 0 && narrativeId.length > 0, "NarrativeProjection identity is invalid.");
+  assertNarrativeProjectionPartsIdentity({ parts });
   const boundaryIds = new Set<string>();
   const segmentIds = new Set<string>();
   const tokenIds = new Set<string>();
@@ -55,7 +61,7 @@ export function createNarrativeProjection(id: string, narrativeId: string, timel
       `NarrativeProjection Boundary ${boundary.id} is outside Timeline.`);
     }
   }
-  return {
+  const projection = {
     id,
     narrativeId,
     timelineId: timeline.id,
@@ -63,6 +69,8 @@ export function createNarrativeProjection(id: string, narrativeId: string, timel
     tokens: parts.flatMap((part) => structuredClone(part.tokens)),
     boundaries: parts.flatMap((part) => structuredClone(part.boundaries)),
   };
+  assertNarrativeProjectionIdentity(projection);
+  return projection;
 }
 
 export function narrativeBoundaryFrame(projection: NarrativeProjection, boundaryId: string): number {
@@ -116,6 +124,8 @@ function narrativeBase(boundary: NarrativeInstantSpec["boundary"], projection: N
 export function projectNarrativeInstant(input: { readonly narrative: NarrativeProjection;
   readonly source: NarrativeSelectionRef | NarrativeMomentRef | NarrativeSegmentRef;
   readonly sourceKind: "selection" | "moment" | "segment"; readonly spec: NarrativeInstantSpec }): TemporalInstant {
+  assertNarrativeProjectionIdentity(input.narrative);
+  assertNarrativeInstantSpecIdentity(input.spec);
   const frame = narrativeBase(input.spec.boundary, input.narrative, input.source, input.sourceKind);
   assert(Number.isSafeInteger(frame) && frame >= 0, "Narrative projection frame is invalid.");
   return { id: input.spec.id, subjectId: input.spec.subjectId,

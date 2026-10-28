@@ -9,19 +9,19 @@ import {
 import type {
   CommandResult,
   BuildFact,
-  BuildState,
   FulfillNeedCommand,
   InvokeProducerCommand,
   Value,
 } from "@hypit/protocol";
+import type { BuildView } from "@hypit/kernel";
 
 import { createGreetingBuild, createParallelGreetingBuild } from "../greeting-fixture.js";
 
-function machineFor(state: BuildState): BuildMachine {
+function machineFor(state: BuildView): BuildMachine {
   return new BuildMachine(defineBuild({ program: state.program, plan: state.plan }));
 }
 
-function accept(machine: BuildMachine, event: CommandResult): BuildState {
+function accept(machine: BuildMachine, event: CommandResult): BuildView {
   assert.ok(machine.evaluate(event));
   machine.commit();
   return machine.view();

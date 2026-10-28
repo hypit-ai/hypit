@@ -87,7 +87,7 @@ change its implementation or define a new component instead of accumulating spec
 
 Keep revisions local as the scene grows. Separate independently edited scene bodies, styling and
 frame evaluation into ordinary source modules while sharing their actual mechanics. A palette,
-typing function or media-sampling helper can be an ordinary project dependency; it needs no Surface
+typing function or media-sampling helper can be an ordinary project dependency; it needs no Author Declaration
 or Track of its own. A shared package becomes useful when several components really use it.
 Source connects selected assets, semantic events and the component's external choices; these modules
 own their realization, including any fixed design specific to this piece.

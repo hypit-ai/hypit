@@ -79,24 +79,31 @@ export function createStage(store: Store, selectedArtifact: (id: string | undefi
    * of its enter and exit, and selecting an Item lands the playhead on exactly
    * the frame where that displacement is largest.
    */
-  type PresentTarget = Extract<StudioTerminalTarget, { readonly kind: "visual-present" }>;
-  const measure = (renderRef: PresentTarget): { xPx: number; yPx: number; widthPx: number; heightPx: number; paintPath: readonly number[] } | undefined => {
+  type VisualTarget = Extract<StudioTerminalTarget, { readonly kind: "visual-present" | "visual-process" }>;
+  const measure = (renderRef: VisualTarget): { xPx: number; yPx: number; widthPx: number; heightPx: number; paintPath: readonly number[] } | undefined => {
     const document_ = iframe.contentDocument;
     if (document_ === null) return undefined;
     const occurrencePath = JSON.stringify(renderRef.occurrencePath);
-    const present = document_.querySelector(
-      `[data-hypit-occurrence-path="${CSS.escape(occurrencePath)}"][data-hypit-present-id="${CSS.escape(renderRef.presentId)}"]`,
-    );
-    if (present === null) return undefined;
+    const contribution = renderRef.kind === "visual-present"
+      ? document_.querySelector(
+        `[data-hypit-occurrence-path="${CSS.escape(occurrencePath)}"][data-hypit-present-id="${CSS.escape(renderRef.presentId)}"]`,
+      )
+      : document_.querySelector(
+        `[data-hypit-occurrence-path="${CSS.escape(occurrencePath)}"][data-hypit-process-id="${CSS.escape(renderRef.processId)}"]`,
+      );
+    if (contribution === null) return undefined;
     const current = store.current();
     if (current === undefined) return undefined;
-    const start = Number(present.getAttribute("data-hypit-present-start-frame"));
-    const end = Number(present.getAttribute("data-hypit-present-end-frame"));
+    const start = Number(contribution.getAttribute("data-hypit-contribution-start-frame"));
+    const end = Number(contribution.getAttribute("data-hypit-contribution-end-frame"));
     if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end)
       || current.playhead.frame < start || current.playhead.frame >= end) return undefined;
-    const elementId = renderRef.elementId ?? present.getAttribute("data-hypit-present-root-element-id");
+    const elementId = renderRef.kind === "visual-present"
+      ? renderRef.elementId ?? contribution.getAttribute("data-hypit-present-root-element-id")
+      : undefined;
     if (elementId === null) return undefined;
-    const drawn = present.querySelector(`[data-hypit-element-id="${CSS.escape(elementId)}"]`);
+    const drawn = elementId === undefined ? contribution
+      : contribution.querySelector(`[data-hypit-element-id="${CSS.escape(elementId)}"]`);
     if (drawn === null || drawn === undefined) return undefined;
     for (let ancestor: Element | null = drawn; ancestor !== null; ancestor = ancestor.parentElement) {
       const style = document_.defaultView!.getComputedStyle(ancestor);
@@ -104,7 +111,7 @@ export function createStage(store: Store, selectedArtifact: (id: string | undefi
     }
     const box = drawn.getBoundingClientRect();
     if (box.width === 0 && box.height === 0) return undefined;
-    const paintPath = JSON.parse(present.getAttribute("data-hypit-paint-path") ?? "null") as unknown;
+    const paintPath = JSON.parse(contribution.getAttribute("data-hypit-paint-path") ?? "null") as unknown;
     if (!Array.isArray(paintPath) || paintPath.some((part) => !Number.isSafeInteger(part) || part < 0)) return undefined;
     return { xPx: box.left, yPx: box.top, widthPx: box.width, heightPx: box.height,
       paintPath: paintPath as number[] };
@@ -120,7 +127,7 @@ export function createStage(store: Store, selectedArtifact: (id: string | undefi
   scaler.addEventListener("click", (event) => {
     if (reviewMode) { toggle(); return; }
     const item = overlay.hitTest(event.clientX, event.clientY);
-    if (item !== undefined) store.select(item.id, "video");
+    if (item !== undefined) store.select(item.address, "video");
     else store.clearSelection();
   });
   // A broad component frame can cover smaller elements. Offer all actual
@@ -139,7 +146,7 @@ export function createStage(store: Store, selectedArtifact: (id: string | undefi
       const option = document.createElement("button"); option.type = "button";
       option.setAttribute("role", "menuitem"); option.textContent = hit.display.title;
       option.title = hit.id;
-      option.addEventListener("click", () => { store.select(hit.id, "video"); closeSelectionMenu(); });
+      option.addEventListener("click", () => { store.select(hit.address, "video"); closeSelectionMenu(); });
       menu.append(option);
     }
     element.append(menu);
@@ -307,11 +314,11 @@ export function createStage(store: Store, selectedArtifact: (id: string | undefi
   const previewMaskLabel = previewMask.querySelector<HTMLElement>("span")!;
   previewMask.querySelector<HTMLButtonElement>("button")!.addEventListener("click", () => store.resetPreviewMask());
   const effectivePreviewMask = (): ReadonlySet<string> =>
-    reviewMode || artifactPreview.selected !== undefined ? new Set() : state?.preview.omittedItemIds ?? new Set();
+    reviewMode || artifactPreview.selected !== undefined ? new Set() : state?.preview.omittedItemKeys ?? new Set();
   const applyPreviewMask = (): void => {
     if (state === undefined || !ready) return;
     previewAdapter.apply(state.snapshot, effectivePreviewMask());
-    const count = artifactPreview.selected === undefined && !reviewMode ? state.preview.omittedItemIds.size : 0;
+    const count = artifactPreview.selected === undefined && !reviewMode ? state.preview.omittedItemKeys.size : 0;
     previewMask.hidden = count === 0;
     if (count > 0) uiText(previewMaskLabel, "player.preview-exclusions", { count });
   };

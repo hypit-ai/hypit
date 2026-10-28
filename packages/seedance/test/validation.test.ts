@@ -30,22 +30,22 @@ async function produce(producer: ProducerRef, inputs: Record<string, { value: Va
 for (const [model, endpoint] of Object.entries(seedanceEndpointsByModel)) {
   test(`${model}: visual classification survives runtime binding, finalization and generation`, async () => {
     const { referenceImage, ...scalars } = settings;
-    for (const port of ["referenceImage", "referenceVideo", "firstFrame", "lastFrame"] as const) {
-      const role = port === "referenceVideo" ? "video" : "image";
+    for (const field of ["referenceImage", "referenceVideo", "firstFrame", "lastFrame"] as const) {
+      const role = field === "referenceVideo" ? "video" : "image";
       const artifact = { ...referenceImage[0]!.artifact, mediaType: role === "video" ? "video/mp4" : "image/png" };
-      const initial = { ...scalars, ...(port === "lastFrame" ? { firstFrame: referenceImage } : {}) };
+      const initial = { ...scalars, ...(field === "lastFrame" ? { firstFrame: referenceImage } : {}) };
       for (const fields of [undefined, {}, { personReference: "true" }]) {
         const binding = { role, ...(fields === undefined ? {} : { fields }) };
-        assert.throws(() => endpoint.sealRequest({ ...initial, [port]: [{ ...binding, artifact }] }), /personReference/);
-        await assert.rejects(produce(endpoint.mediaBindings[port]!.producer, {
-          draft: input(valueOf(sealModelFieldBuilder(endpoint.ports, initial))),
+        assert.throws(() => endpoint.sealRequest({ ...initial, [field]: [{ ...binding, artifact }] }), /personReference/);
+        await assert.rejects(produce(endpoint.mediaBindings[field]!.producer, {
+          draft: input(valueOf(sealModelFieldBuilder(endpoint.fields, initial))),
           binding: input(valueOf(binding)), artifact: input(artifact),
         }), /personReference/);
       }
       for (const flag of [true, false]) {
         const binding = { role, fields: { personReference: flag } };
-        const bound = await produce(endpoint.mediaBindings[port]!.producer, {
-          draft: input(valueOf(sealModelFieldBuilder(endpoint.ports, initial))),
+        const bound = await produce(endpoint.mediaBindings[field]!.producer, {
+          draft: input(valueOf(sealModelFieldBuilder(endpoint.fields, initial))),
           binding: input(valueOf(binding)), artifact: input(artifact),
         });
         assert.equal(bound.kind, "output");
@@ -54,7 +54,7 @@ for (const [model, endpoint] of Object.entries(seedanceEndpointsByModel)) {
         const generated = await produce(endpoint.producer, { request: input(finalized.value) });
         assert.equal(generated.kind, "need");
         const request = generated.constraints as unknown as ModelFieldRequest;
-        assert.deepEqual(request.ports[port], [{ ...binding, artifact }]);
+        assert.deepEqual(request.fields[field], [{ ...binding, artifact }]);
       }
     }
     assert.throws(() => endpoint.sealRequest({ ...settings,
@@ -65,17 +65,17 @@ for (const [model, endpoint] of Object.entries(seedanceEndpointsByModel)) {
   test(`${model}: M4A is rejected through runtime binding and complete request entry points`, async () => {
     for (const mediaType of ["audio/mp4", "audio/x-m4a"]) {
       const artifact = audio(mediaType);
-      const ports = { ...settings, referenceAudio: [{ role: "audio" as const, artifact }] };
+      const fields = { ...settings, referenceAudio: [{ role: "audio" as const, artifact }] };
       // The generic envelope can represent this media; the exact model owns its restriction.
-      const request = sealModelFieldBuilder(endpoint.ports, ports);
-      assert.throws(() => sealSeedanceRequest(endpoint.ports.model as keyof typeof seedanceEndpointsByModel, ports), /m4a/);
-      assert.throws(() => endpoint.sealRequest(ports), /m4a/);
+      const request = sealModelFieldBuilder(endpoint.fields, fields);
+      assert.throws(() => sealSeedanceRequest(endpoint.fields.model as keyof typeof seedanceEndpointsByModel, fields), /m4a/);
+      assert.throws(() => endpoint.sealRequest(fields), /m4a/);
       const validator = seedanceComponent.refinements.find((item) => item.type.name === endpoint.requestType.name)!;
       await assert.rejects(async () => validator.handler({ value: valueOf(request) } as never), /m4a/);
       await assert.rejects(produce(endpoint.finalizeProducer, { draft: input(valueOf(request)) }), /m4a/);
       await assert.rejects(produce(endpoint.producer, { request: input(valueOf(request)) }), /m4a/);
       await assert.rejects(produce(endpoint.mediaBindings.referenceAudio!.producer, {
-        draft: input(valueOf(sealModelFieldBuilder(endpoint.ports, settings))),
+        draft: input(valueOf(sealModelFieldBuilder(endpoint.fields, settings))),
         binding: input(valueOf({ role: "audio" })), artifact: input(artifact),
       }), /m4a/);
     }
@@ -85,7 +85,7 @@ for (const [model, endpoint] of Object.entries(seedanceEndpointsByModel)) {
     for (const mediaType of ["audio/wav", "audio/mpeg"]) {
       const artifact = audio(mediaType);
       const bound = await produce(endpoint.mediaBindings.referenceAudio!.producer, {
-        draft: input(valueOf(sealModelFieldBuilder(endpoint.ports, settings))),
+        draft: input(valueOf(sealModelFieldBuilder(endpoint.fields, settings))),
         binding: input(valueOf({ role: "audio" })), artifact: input(artifact),
       });
       assert.equal(bound.kind, "output");

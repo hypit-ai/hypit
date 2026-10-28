@@ -1,22 +1,15 @@
-import { createMarkupSurfaceFacet } from "@hypit/hypit/markup";
+import { createAuthorDeclarationFacet } from "@hypit/hypit/author";
+import { createMarkupDeclarationFacet } from "@hypit/hypit/markup";
 import { createStudioCompanionFacet } from "@hypit/studio-companion";
-import {
-  decodeFontsourceFaceSurface,
-  fontsourceManifest,
-  fontsourceMarkupSurfaces,
-  fontsourceModuleRef,
-  fontsourceStudioParameterCompanions,
-} from "./index.js";
+import { fontsourceAuthorDeclarations, fontsourceManifest, fontsourceMarkupDeclarations, fontsourceModuleRef, fontsourceStudioParameterCompanions } from "./index.js";
 
 export default {
   format: "hypit.package@1" as const,
   modules: [{ manifest: fontsourceManifest }],
   facets: [
-    createMarkupSurfaceFacet({
-      module: fontsourceModuleRef,
-      declaration: fontsourceMarkupSurfaces[0]!,
-      handler: decodeFontsourceFaceSurface,
-    }),
+    ...fontsourceAuthorDeclarations.map(createAuthorDeclarationFacet),
+    ...fontsourceMarkupDeclarations.map((declaration) =>
+      createMarkupDeclarationFacet({ module: fontsourceModuleRef, declaration })),
     createStudioCompanionFacet({ parameters: fontsourceStudioParameterCompanions }),
   ],
 };

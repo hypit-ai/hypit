@@ -3,41 +3,33 @@ import type { BlobRef, ObjectFieldSchema, ValueSchema } from "@hypit/hypit/proto
 import { verifyText } from "@hypit/hypit/text";
 import type { Text } from "@hypit/hypit/text";
 
-import { assertGenerationBlobRef, sealGenerationRequest } from "./identity.js";
-import { generationObjectSchema } from "./schema.js";
-import { assertGenerationPortTable, isMediaPort } from "./ports.js";
+import { assertGenerationBlobRef } from "./identity.js";
+import { objectSchema } from "./schema.js";
+import { assertModelFieldTable, isArtifactField } from "./fields.js";
 import type {
-  GenerationMediaPort,
-  GenerationMediaRole,
-  GenerationPort,
-  GenerationPortItemField,
-  GenerationPortScalarKind,
-  GenerationPortTable,
-  GenerationPortValue,
-} from "./ports.js";
+  ModelArtifactField,
+  ModelArtifactRole,
+  ModelArtifactItemField,
+  ModelField,
+  ModelScalarKind,
+  ModelFieldTable,
+  ModelFieldValue,
+} from "./fields.js";
 
-/**
- * The one request envelope every exact model uses. A Provider reads ports by
- * name and never learns a model-specific field layout, so the same wire mapping
- * mechanism serves every model and every service reselling it.
- */
-export type GenerationRequest = {
-  /** An absent port is an omitted key. A present port always carries at least one value. */
-  readonly ports: Readonly<Record<string, readonly GenerationPortValue[]>>;
+/** Request shape owned by the optional field-oriented Model adapter. */
+export type ModelFieldRequest = {
+  /** An absent field is an omitted key. A present field always carries at least one value. */
+  readonly fields: Readonly<Record<string, readonly ModelFieldValue[]>>;
 };
 
-/**
- * A request while graph inputs are still being attached. It is deliberately a
- * Providers can only receive the finalized request after the exact model
- * package has checked every port rule.
- */
-export type GenerationRequestDraft = {
-  readonly ports: Readonly<Record<string, readonly GenerationPortValue[]>>;
+/** Field request while graph inputs are still being attached. */
+export type ModelFieldBuilder = {
+  readonly fields: Readonly<Record<string, readonly ModelFieldValue[]>>;
 };
 
-/** Authored instructions for attaching one graph Blob edge to one media port. */
-export type GenerationMediaBinding = {
-  readonly role: GenerationMediaRole;
+/** Authored instructions for attaching one graph Blob edge to one artifact field. */
+export type ModelArtifactBinding = {
+  readonly role: ModelArtifactRole;
   readonly fields?: Readonly<Record<string, string | number | boolean>>;
 };
 
@@ -50,11 +42,11 @@ function plainObject(value: unknown, subject: string): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
-function mediaPrefix(role: GenerationMediaRole): "image/" | "video/" | "audio/" {
+function mediaPrefix(role: ModelArtifactRole): "image/" | "video/" | "audio/" {
   return `${role}/` as "image/" | "video/" | "audio/";
 }
 
-function scalarSchema(value: GenerationPortScalarKind): ValueSchema {
+function scalarSchema(value: ModelScalarKind): ValueSchema {
   if (value.kind === "text") return {
     kind: "string",
     minLength: 1,
@@ -75,26 +67,26 @@ function scalarSchema(value: GenerationPortScalarKind): ValueSchema {
   return { kind: "oneOf", variants: value.values.map((item) => ({ kind: "literal" as const, value: item })) };
 }
 
-function itemFieldsSchema(fields: readonly GenerationPortItemField[]): ValueSchema {
-  return generationObjectSchema(Object.fromEntries(fields.map((field) => [field.name, {
+function itemFieldsSchema(fields: readonly ModelArtifactItemField[]): ValueSchema {
+  return objectSchema(Object.fromEntries(fields.map((field) => [field.name, {
     schema: scalarSchema(field.value),
     ...(field.optional === true ? { optional: true } : {}),
   } satisfies ObjectFieldSchema])));
 }
 
-/** Schema for the non-artifact half of one media-port attachment. */
-export function mediaBindingSchemaFromPort(port: GenerationMediaPort): ValueSchema {
-  const fields = port.value.itemFields ?? [];
-  return generationObjectSchema({
-    role: { schema: { kind: "string", enum: [...port.value.accepts] } },
+/** Schema for the non-artifact half of one artifact-field attachment. */
+export function artifactBindingSchema(field: ModelArtifactField): ValueSchema {
+  const fields = field.value.itemFields ?? [];
+  return objectSchema({
+    role: { schema: { kind: "string", enum: [...field.value.accepts] } },
     ...(fields.length === 0 ? {} : { fields: { schema: itemFieldsSchema(fields) } }),
   });
 }
 
-function portItemSchema(port: GenerationPort): ValueSchema {
-  if (!isMediaPort(port)) return scalarSchema(port.value);
-  const media = port.value;
-  return generationObjectSchema({
+function fieldItemSchema(field: ModelField): ValueSchema {
+  if (!isArtifactField(field)) return scalarSchema(field.value);
+  const media = field.value;
+  return objectSchema({
     role: { schema: { kind: "string", enum: [...media.accepts] } },
     artifact: { schema: blobRefSchema() },
     ...(media.itemFields === undefined || media.itemFields.length === 0
@@ -103,7 +95,7 @@ function portItemSchema(port: GenerationPort): ValueSchema {
   });
 }
 
-export type GenerationPortSubset = {
+export type ModelFieldSubset = {
   /**
    * Ports supplied later rather than by this value. A duration-dependent
    * compilation authors everything else first and completes the request when
@@ -118,48 +110,48 @@ export type GenerationPortSubset = {
   readonly defer?: readonly string[];
 };
 
-/** Derive the Schema of the port map alone, optionally leaving some ports for later. */
-export function portsObjectSchema(
-  table: GenerationPortTable,
-  options: GenerationPortSubset = {},
+/** Derive the Schema of the field map alone, optionally leaving some fields for later. */
+export function modelFieldsSchema(
+  table: ModelFieldTable,
+  options: ModelFieldSubset = {},
 ): ValueSchema {
-  assertGenerationPortTable(table);
+  assertModelFieldTable(table);
   const omit = new Set(options.omit ?? []);
   const defer = new Set(options.defer ?? []);
-  omit.forEach((name) => assert(table.ports.some((port) => port.name === name),
-    `${table.model} cannot omit undeclared port ${name}`));
+  omit.forEach((name) => assert(table.fields.some((field) => field.name === name),
+    `${table.model} cannot omit undeclared field ${name}`));
   defer.forEach((name) => {
-    assert(table.ports.some((port) => port.name === name), `${table.model} cannot defer undeclared port ${name}`);
-    assert(!omit.has(name), `${table.model} cannot both omit and defer port ${name}`);
+    assert(table.fields.some((field) => field.name === name), `${table.model} cannot defer undeclared field ${name}`);
+    assert(!omit.has(name), `${table.model} cannot both omit and defer field ${name}`);
   });
-  return generationObjectSchema(Object.fromEntries(table.ports
-    .filter((port) => !omit.has(port.name))
-    .map((port) => [port.name, {
+  return objectSchema(Object.fromEntries(table.fields
+    .filter((field) => !omit.has(field.name))
+    .map((field) => [field.name, {
       schema: {
         kind: "array",
-        items: portItemSchema(port),
-        minItems: Math.max(1, port.minItems),
-        ...(port.maxItems === undefined ? {} : { maxItems: port.maxItems }),
+        items: fieldItemSchema(field),
+        minItems: Math.max(1, field.minItems),
+        ...(field.maxItems === undefined ? {} : { maxItems: field.maxItems }),
       },
-      ...(port.minItems === 0 || defer.has(port.name) ? { optional: true } : {}),
+      ...(field.minItems === 0 || defer.has(field.name) ? { optional: true } : {}),
     } satisfies ObjectFieldSchema])));
 }
 
-/** Derive the structural Schema of one model's request from its port table. */
-export function requestSchemaFromPorts(table: GenerationPortTable): ValueSchema {
-  return generationObjectSchema({
-    ports: { schema: portsObjectSchema(table) },
+/** Derive the structural Schema of one Model request from its field table. */
+export function modelFieldRequestSchema(table: ModelFieldTable): ValueSchema {
+  return objectSchema({
+    fields: { schema: modelFieldsSchema(table) },
   });
 }
 
 /** Structural schema for the model-owned request draft used by graph assembly. */
-export function requestDraftSchemaFromPorts(table: GenerationPortTable): ValueSchema {
-  return generationObjectSchema({
-    ports: { schema: portsObjectSchema(table, { defer: deferredPorts(table) }) },
+export function modelFieldBuilderSchema(table: ModelFieldTable): ValueSchema {
+  return objectSchema({
+    fields: { schema: modelFieldsSchema(table, { defer: deferredFields(table) }) },
   });
 }
 
-function verifyScalar(value: unknown, kind: GenerationPortScalarKind, subject: string): void {
+function verifyScalar(value: unknown, kind: ModelScalarKind, subject: string): void {
   if (kind.kind === "text") {
     assert(typeof value === "string" && value.length > 0, `${subject} must be non-empty text`);
     if (kind.maxChars !== undefined) {
@@ -189,10 +181,10 @@ function verifyScalar(value: unknown, kind: GenerationPortScalarKind, subject: s
   );
 }
 
-function verifyMediaItemFields(value: Record<string, unknown>, port: GenerationMediaPort, subject: string): void {
-  const media = port.value;
+function verifyMediaItemFields(value: Record<string, unknown>, field: ModelArtifactField, subject: string): void {
+  const media = field.value;
   const role = value.role;
-  assert(typeof role === "string" && media.accepts.includes(role as GenerationMediaRole),
+  assert(typeof role === "string" && media.accepts.includes(role as ModelArtifactRole),
     `${subject} role must be one of ${media.accepts.join(", ")}`);
   const declared = media.itemFields ?? [];
   if (declared.length === 0) {
@@ -220,125 +212,125 @@ function verifyMediaItemFields(value: Record<string, unknown>, port: GenerationM
   }
 }
 
-function verifyMediaValue(value: unknown, port: GenerationMediaPort, subject: string): void {
+function verifyMediaValue(value: unknown, field: ModelArtifactField, subject: string): void {
   const item = plainObject(value, subject);
-  verifyMediaItemFields(item, port, subject);
-  assertGenerationBlobRef(item.artifact, mediaPrefix(item.role as GenerationMediaRole));
+  verifyMediaItemFields(item, field, subject);
+  assertGenerationBlobRef(item.artifact, mediaPrefix(item.role as ModelArtifactRole));
 }
 
 /**
- * Full standalone verification against the port table. Core's generic schema
+ * Full standalone verification against the field table. Core's generic schema
  * type-owner validation runs first; this adds the facts a Schema cannot state, such as the
- * media type each role demands and the model's port combination rules.
+ * media type each role demands and the Model's field combination rules.
  */
-export function verifyPortsAgainstTable(
-  table: GenerationPortTable,
+export function verifyModelFields(
+  table: ModelFieldTable,
   value: unknown,
-  options: GenerationPortSubset = {},
+  options: ModelFieldSubset = {},
 ): void {
-  assertGenerationPortTable(table);
+  assertModelFieldTable(table);
   const omit = new Set(options.omit ?? []);
   const defer = new Set(options.defer ?? []);
-  const ports = plainObject(value, `${table.model} ports`);
-  const declared = new Map(table.ports.map((port) => [port.name, port]));
-  Object.keys(ports).forEach((name) => {
-    assert(declared.has(name), `${table.model} names undeclared port ${name}`);
-    assert(!omit.has(name), `${table.model} port ${name} is supplied later and must be absent here`);
+  const fields = plainObject(value, `${table.model} fields`);
+  const declared = new Map(table.fields.map((field) => [field.name, field]));
+  Object.keys(fields).forEach((name) => {
+    assert(declared.has(name), `${table.model} names undeclared field ${name}`);
+    assert(!omit.has(name), `${table.model} field ${name} is supplied later and must be absent here`);
   });
 
   const present = new Set<string>();
-  for (const port of table.ports) {
-    if (omit.has(port.name)) continue;
-    const subject = `${table.model} port ${port.name}`;
-    const supplied = ports[port.name];
+  for (const field of table.fields) {
+    if (omit.has(field.name)) continue;
+    const subject = `${table.model} field ${field.name}`;
+    const supplied = fields[field.name];
     if (supplied === undefined) {
-      assert(port.minItems === 0 || defer.has(port.name), `${subject} is required`);
+      assert(field.minItems === 0 || defer.has(field.name), `${subject} is required`);
       continue;
     }
     assert(Array.isArray(supplied), `${subject} must be an array`);
-    assert(supplied.length >= Math.max(1, port.minItems),
-      `${subject} needs at least ${Math.max(1, port.minItems)} value(s)`);
-    if (port.maxItems !== undefined) {
-      assert(supplied.length <= port.maxItems, `${subject} accepts at most ${port.maxItems} value(s)`);
+    assert(supplied.length >= Math.max(1, field.minItems),
+      `${subject} needs at least ${Math.max(1, field.minItems)} value(s)`);
+    if (field.maxItems !== undefined) {
+      assert(supplied.length <= field.maxItems, `${subject} accepts at most ${field.maxItems} value(s)`);
     }
-    present.add(port.name);
+    present.add(field.name);
     supplied.forEach((item, index) => {
-      const label = port.maxItems === 1 ? subject : `${subject}[${index}]`;
-      if (isMediaPort(port)) verifyMediaValue(item, port, label);
-      else verifyScalar(item, port.value, label);
+      const label = field.maxItems === 1 ? subject : `${subject}[${index}]`;
+      if (isArtifactField(field)) verifyMediaValue(item, field, label);
+      else verifyScalar(item, field.value, label);
     });
   }
 
   for (const requirement of table.requires) {
     if (requirement.kind === "atMostOneOf") {
-      const used = requirement.ports.filter((name) => present.has(name));
+      const used = requirement.fields.filter((name) => present.has(name));
       assert(used.length <= 1,
-        `${table.model} accepts at most one of ${requirement.ports.join(", ")} but received ${used.join(", ")}`);
+        `${table.model} accepts at most one of ${requirement.fields.join(", ")} but received ${used.join(", ")}`);
       continue;
     }
     if (requirement.kind === "requiresAnyOf") {
-      if (!present.has(requirement.port)) continue;
+      if (!present.has(requirement.field)) continue;
       const satisfied = requirement.anyOf.some((name) => present.has(name) || omit.has(name) || defer.has(name));
       assert(satisfied,
-        `${table.model} port ${requirement.port} needs at least one of ${requirement.anyOf.join(", ")}`);
+        `${table.model} field ${requirement.field} needs at least one of ${requirement.anyOf.join(", ")}`);
       continue;
     }
     if (requirement.kind === "weightedTotal") {
       const total = Object.entries(requirement.weights).reduce((sum, [name, weight]) => {
-        const supplied = ports[name];
+        const supplied = fields[name];
         return sum + (Array.isArray(supplied) ? supplied.length : 0) * weight;
       }, 0);
       assert(total <= requirement.maximum,
         `${table.model} uses ${total} of its ${requirement.maximum} shared ${Object.keys(requirement.weights).sort().join("/")} budget`);
       continue;
     }
-    if (!present.has(requirement.port)) continue;
+    if (!present.has(requirement.field)) continue;
     const missing = requirement.needs.filter((name) => !present.has(name) && !omit.has(name) && !defer.has(name));
     assert(missing.length === 0,
-      `${table.model} port ${requirement.port} also requires ${missing.join(", ")}`);
+      `${table.model} field ${requirement.field} also requires ${missing.join(", ")}`);
   }
 }
 
-function deferredPorts(table: GenerationPortTable): readonly string[] {
-  return table.ports
-    .filter((port) => isMediaPort(port) || port.value.kind === "text"
-      || (!isMediaPort(port) && port.defaultItems !== undefined))
-    .map((port) => port.name);
+function deferredFields(table: ModelFieldTable): readonly string[] {
+  return table.fields
+    .filter((field) => isArtifactField(field) || field.value.kind === "text"
+      || (!isArtifactField(field) && field.defaultItems !== undefined))
+    .map((field) => field.name);
 }
 
-export function verifyRequestDraftAgainstPorts(
-  table: GenerationPortTable,
+export function verifyModelFieldBuilder(
+  table: ModelFieldTable,
   value: unknown,
-): asserts value is GenerationRequestDraft {
+): asserts value is ModelFieldBuilder {
   const draft = plainObject(value, `${table.model} request draft`);
-  verifyPortsAgainstTable(table, draft.ports, { defer: deferredPorts(table) });
+  verifyModelFields(table, draft.fields, { defer: deferredFields(table) });
 }
 
-export function sealGenerationRequestDraft(
-  table: GenerationPortTable,
-  ports: Readonly<Record<string, readonly GenerationPortValue[]>>,
-): GenerationRequestDraft {
+export function sealModelFieldBuilder(
+  table: ModelFieldTable,
+  fields: Readonly<Record<string, readonly ModelFieldValue[]>>,
+): ModelFieldBuilder {
   const draft = canonicalize({
-    ports: Object.fromEntries(Object.entries(ports).filter(([, values]) => values.length > 0)),
-  }) as unknown as GenerationRequestDraft;
-  verifyRequestDraftAgainstPorts(table, draft);
+    fields: Object.fromEntries(Object.entries(fields).filter(([, values]) => values.length > 0)),
+  }) as unknown as ModelFieldBuilder;
+  verifyModelFieldBuilder(table, draft);
   return draft;
 }
 
-export function verifyGenerationMediaBinding(
-  port: GenerationMediaPort,
+export function verifyModelArtifactBinding(
+  field: ModelArtifactField,
   value: unknown,
-): asserts value is GenerationMediaBinding {
-  const binding = plainObject(value, `${port.name} media binding`);
-  verifyMediaItemFields(binding, port, `${port.name} media binding`);
+): asserts value is ModelArtifactBinding {
+  const binding = plainObject(value, `${field.name} artifact binding`);
+  verifyMediaItemFields(binding, field, `${field.name} artifact binding`);
 }
 
-export function sealGenerationMediaBinding(
-  port: GenerationMediaPort,
-  value: GenerationMediaBinding,
-): GenerationMediaBinding {
-  const binding = canonicalize(value) as unknown as GenerationMediaBinding;
-  verifyGenerationMediaBinding(port, binding);
+export function sealModelArtifactBinding(
+  field: ModelArtifactField,
+  value: ModelArtifactBinding,
+): ModelArtifactBinding {
+  const binding = canonicalize(value) as unknown as ModelArtifactBinding;
+  verifyModelArtifactBinding(field, binding);
   return binding;
 }
 
@@ -347,86 +339,85 @@ export function sealGenerationMediaBinding(
  * the Provider-facing value, while the Graph preserves where that Blob came
  * from; no lineage or project metadata is copied through the payload.
  */
-export function bindGenerationMedia(
-  table: GenerationPortTable,
-  draft: GenerationRequestDraft,
-  portName: string,
-  binding: GenerationMediaBinding,
+export function bindModelArtifact(
+  table: ModelFieldTable,
+  draft: ModelFieldBuilder,
+  fieldName: string,
+  binding: ModelArtifactBinding,
   artifact: BlobRef,
-): GenerationRequestDraft {
-  verifyRequestDraftAgainstPorts(table, draft);
-  const port = table.ports.find((candidate): candidate is GenerationMediaPort =>
-    candidate.name === portName && isMediaPort(candidate));
-  assert(port !== undefined, `${table.model} has no media port ${portName}`);
-  verifyGenerationMediaBinding(port, binding);
+): ModelFieldBuilder {
+  verifyModelFieldBuilder(table, draft);
+  const field = table.fields.find((candidate): candidate is ModelArtifactField =>
+    candidate.name === fieldName && isArtifactField(candidate));
+  assert(field !== undefined, `${table.model} has no artifact field ${fieldName}`);
+  verifyModelArtifactBinding(field, binding);
   const value = {
     role: binding.role,
     artifact,
     ...(binding.fields === undefined ? {} : { fields: binding.fields }),
   };
-  verifyMediaValue(value, port, `${table.model} port ${portName}`);
-  return sealGenerationRequestDraft(table, {
-    ...draft.ports,
-    [portName]: [...(draft.ports[portName] ?? []), value],
+  verifyMediaValue(value, field, `${table.model} field ${fieldName}`);
+  return sealModelFieldBuilder(table, {
+    ...draft.fields,
+    [fieldName]: [...(draft.fields[fieldName] ?? []), value],
   });
 }
 
-/** Attach one graph Text edge to an exact text port without hiding it in metadata. */
-export function bindGenerationText(
-  table: GenerationPortTable,
-  draft: GenerationRequestDraft,
-  portName: string,
+/** Attach one graph Text edge to an exact text field without hiding it in metadata. */
+export function bindModelText(
+  table: ModelFieldTable,
+  draft: ModelFieldBuilder,
+  fieldName: string,
   text: Text,
-): GenerationRequestDraft {
-  verifyRequestDraftAgainstPorts(table, draft);
+): ModelFieldBuilder {
+  verifyModelFieldBuilder(table, draft);
   verifyText(text);
-  const port = table.ports.find((candidate) =>
-    candidate.name === portName && candidate.value.kind === "text");
-  assert(port !== undefined, `${table.model} has no text port ${portName}`);
-  return sealGenerationRequestDraft(table, {
-    ...draft.ports,
-    [portName]: [...(draft.ports[portName] ?? []), text.value],
+  const field = table.fields.find((candidate) =>
+    candidate.name === fieldName && candidate.value.kind === "text");
+  assert(field !== undefined, `${table.model} has no text field ${fieldName}`);
+  return sealModelFieldBuilder(table, {
+    ...draft.fields,
+    [fieldName]: [...(draft.fields[fieldName] ?? []), text.value],
   });
 }
 
-export function finalizeGenerationRequestDraft(
-  table: GenerationPortTable,
-  draft: GenerationRequestDraft,
-): GenerationRequest {
-  verifyRequestDraftAgainstPorts(table, draft);
-  return sealGenerationPortRequest(table, draft.ports);
+export function finalizeModelFieldBuilder(
+  table: ModelFieldTable,
+  draft: ModelFieldBuilder,
+): ModelFieldRequest {
+  verifyModelFieldBuilder(table, draft);
+  return sealModelFieldRequest(table, draft.fields);
 }
 
-export function verifyRequestAgainstPorts(
-  table: GenerationPortTable,
+export function verifyModelFieldRequest(
+  table: ModelFieldTable,
   value: unknown,
-): asserts value is GenerationRequest {
-  assertGenerationPortTable(table);
+): asserts value is ModelFieldRequest {
+  assertModelFieldTable(table);
   const request = plainObject(value, `${table.model} request`);
-  verifyPortsAgainstTable(table, request.ports);
+  verifyModelFields(table, request.fields);
 }
 
-/** Build one canonical request for a model from its declared ports. */
-export function sealGenerationPortRequest(
-  table: GenerationPortTable,
-  ports: Readonly<Record<string, readonly GenerationPortValue[]>>,
-): GenerationRequest {
+/** Build one canonical request for a Model from its declared fields. */
+export function sealModelFieldRequest(
+  table: ModelFieldTable,
+  fields: Readonly<Record<string, readonly ModelFieldValue[]>>,
+): ModelFieldRequest {
   const stated = Object.fromEntries(
-    Object.entries(ports).filter(([, values]) => values !== undefined && values.length > 0),
+    Object.entries(fields).filter(([, values]) => values !== undefined && values.length > 0),
   );
-  const finalized = Object.fromEntries(table.ports.map((port) => [
-    port.name,
-    stated[port.name] ?? (!isMediaPort(port) ? port.defaultItems : undefined),
-  ]).filter((entry): entry is [string, readonly GenerationPortValue[]] => entry[1] !== undefined));
-  const content: GenerationRequest = {
-    ports: finalized,
-  };
-  const request = sealGenerationRequest(content);
-  verifyRequestAgainstPorts(table, request);
+  const finalized = Object.fromEntries(table.fields.map((field) => [
+    field.name,
+    stated[field.name] ?? (!isArtifactField(field) ? field.defaultItems : undefined),
+  ]).filter((entry): entry is [string, readonly ModelFieldValue[]] => entry[1] !== undefined));
+  const request = canonicalize({
+    fields: finalized,
+  }) as unknown as ModelFieldRequest;
+  verifyModelFieldRequest(table, request);
   return request;
 }
 
-/** Which ports this request actually populates; drives Provider routing and coverage. */
-export function presentPorts(request: GenerationRequest): ReadonlySet<string> {
-  return new Set(Object.keys(request.ports));
+/** Which fields this request actually populates; drives Provider routing and coverage. */
+export function presentModelFields(request: ModelFieldRequest): ReadonlySet<string> {
+  return new Set(Object.keys(request.fields));
 }

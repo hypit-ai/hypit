@@ -1,9 +1,9 @@
 # `@hypit/wan`
 
-Exact author/compute contracts and package-owned author Surfaces for Wan 2.7 Image and Wan 2.7 Image
+Exact author/compute contracts and package-owned declarations for Wan 2.7 Image and Wan 2.7 Image
 Pro.
 
-The model variants are separate endpoints with exact request validation. Their Surfaces publish the
+The model variants are separate endpoints with exact request validation. Their declarations publish the
 complete generated set as `<id>.images` and explicitly select its first item as the convenience
 Artifact `<id>.image`. The package contains no Provider selection, API key or network execution.
 The selected Provider implements its exact capability.
@@ -18,7 +18,7 @@ Import the model variant you mean and connect prompt and references as ordinary 
 <wan:ProImage id="hero" prompt={heroPrompt} resolution="4K"/>
 ```
 
-The Surface only lowers this syntax into the package's exact model request. It does not select a
+The declaration compiler only lowers this syntax into the package's exact model request. It does not select a
 Provider.
 
 Both variants accept prompts up to 5,000 characters and up to nine references, and render at `1K` or

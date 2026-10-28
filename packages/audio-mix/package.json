@@ -9,16 +9,15 @@
   "hypit": { "activation": "./src/activation.ts" },
   "peerDependencies": { "@hypit/hypit": "workspace:^0.4.0" },
   "devDependencies": {
+    "@hypit/audio-program": "workspace:*",
     "@hypit/author": "workspace:*", "@hypit/composition": "workspace:*",
     "@hypit/hypit": "workspace:*", "@hypit/markup": "workspace:*",
-    "@hypit/media-operations": "workspace:*", "@hypit/producer": "workspace:*",
+    "@hypit/producer": "workspace:*",
     "@hypit/protocol": "workspace:*", "@hypit/refinement": "workspace:*",
     "@hypit/temporal": "workspace:*", "@hypit/timeline": "workspace:*"
   },
   "dependencies": {
     "@hypit/composition": "workspace:^0.2.0",
-    "@hypit/media-operations": "workspace:^0.3.0",
-    "@hypit/temporal": "workspace:^0.1.1",
     "@hypit/timeline": "workspace:^0.1.1"
   }
 }

@@ -5,13 +5,13 @@ import {
   materializeBuild,
 } from "@hypit/kernel";
 import type {
-  BuildState,
   CapabilityRef,
   ModuleManifest,
   ProducerRef,
   ProducerStep,
   TypeRef,
 } from "@hypit/protocol";
+import type { BuildView } from "@hypit/kernel";
 
 export const moduleRef = { name: "example.runtime-scenario", version: "0.0.0" } as const;
 
@@ -71,7 +71,7 @@ const outputRecords = {
 } as const;
 
 export type RuntimeBuildFixture = {
-  readonly state: BuildState;
+  readonly state: BuildView;
   /** Logical Outputs and Records produced by this execution scenario. */
   readonly outputs: Readonly<Record<string, {
     readonly output: string;
@@ -158,7 +158,7 @@ export function createGreetingBuildFixture(options?: {
 export function createGreetingBuild(options?: {
   readonly generationRealization?: "primary" | "placeholder";
   readonly targetOutputs?: readonly (keyof typeof outputRecords)[];
-}): BuildState {
+}): BuildView {
   return createGreetingBuildFixture(options).state;
 }
 
@@ -210,6 +210,6 @@ export function createParallelGreetingBuildFixture(generationCount = 2): Runtime
   };
 }
 
-export function createParallelGreetingBuild(generationCount = 2): BuildState {
+export function createParallelGreetingBuild(generationCount = 2): BuildView {
   return createParallelGreetingBuildFixture(generationCount).state;
 }

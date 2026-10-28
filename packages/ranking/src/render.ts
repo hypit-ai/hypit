@@ -1,5 +1,6 @@
 import { assertTimelineIdentity } from "@hypit/timeline";
 import type { Timeline } from "@hypit/timeline";
+import { compareCodeUnits } from "@hypit/hypit/protocol";
 import {
   assertAudioTrackIdentity,
   audioGraphFromClips,
@@ -248,7 +249,7 @@ function tierItemAnimation(
 
 function sealTrack(timeline: Timeline, id: string, presents: readonly LayeredPresent[]): PresentVisualTrack {
   const ordered = [...presents]
-    .sort((left, right) => left.layer - right.layer || left.sequence - right.sequence || left.id.localeCompare(right.id))
+    .sort((left, right) => left.layer - right.layer || left.sequence - right.sequence || compareCodeUnits(left.id, right.id))
     .map(({ layer: _layer, sequence: _sequence, ...item }) => item);
   const value = sealPresentVisualTrack({ timelineId: timeline.id, visualIr: "hypit.visual-ir@1", id, presents: ordered });
   assertVisualTrackIdentity(value, timeline);

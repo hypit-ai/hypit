@@ -64,13 +64,13 @@ function address(value: string): string {
 }
 
 function serviceSupport(request: EndpointRequest) {
-  const ports = (request.constraints as unknown as ProviderFieldRequest).ports;
-  const duration = ports.duration?.[0];
+  const fields = (request.constraints as unknown as ProviderFieldRequest).fields;
+  const duration = fields.duration?.[0];
   if (typeof duration === "number" && duration > SUPPORTED_SECONDS) {
     return { status: "unsupported" as const,
       reason: `This service renders at most ${SUPPORTED_SECONDS} seconds, not ${duration}` };
   }
-  const resolution = ports.resolution?.[0];
+  const resolution = fields.resolution?.[0];
   if (resolution !== undefined && String(resolution) !== SUPPORTED_RESOLUTION) {
     return { status: "unsupported" as const,
       reason: `This service renders at ${SUPPORTED_RESOLUTION}, not ${String(resolution)}` };

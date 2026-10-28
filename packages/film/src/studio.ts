@@ -7,11 +7,11 @@ import { filmModuleRef } from "./manifest.js";
 /** Film owns the author vocabulary that selects its time source and peer Tracks. */
 export const filmStudioCompanions: readonly StudioFilmCompanion[] = [{
   id: "film",
-  match: { module: filmModuleRef, surface: "film", outputType: compositionTypes.composition },
+  match: { module: filmModuleRef, declaration: "film", outputType: compositionTypes.composition },
   timeSources: [{ attribute: "timeline", type: timelineTypes.timeline }],
   tracks: {
-    childSurface: "Track",
-    containerSurfaces: ["Stack"],
+    childDeclaration: "Track",
+    containerDeclarations: ["Stack"],
     sourceAttribute: "source",
     types: [compositionTypes.visualTrack, compositionTypes.audioTrack],
   },

@@ -53,6 +53,8 @@ export function isVideoUrl(value: string): boolean {
  * muxed; a site serving one muxed file is remuxed into that same requested container.
  */
 export async function downloadVideo(url: string, target: string, options: { readonly signal?: AbortSignal } = {}): Promise<void> {
+  const link = url.trim();
+  if (!isVideoUrl(link)) throw new Error(`Video link ${url} must be an http or https URL`);
   const container = extname(target).slice(1).toLowerCase();
   if (!["mp4", "mkv", "webm", "mov"].includes(container)) {
     throw new Error(`${target} must end in .mp4, .mkv, .webm or .mov`);
@@ -76,7 +78,7 @@ export async function downloadVideo(url: string, target: string, options: { read
         "--remux-video", container,
         "--format-sort", "res:1080,vcodec:h264",
         "--output", join(work, "video.%(ext)s"),
-        url,
+        "--", link,
       ], { timeout: 900_000, maxBuffer: 10 * 1024 * 1024, signal: options.signal });
     } catch (cause) {
       if (options.signal?.aborted) throw cause;

@@ -1,15 +1,15 @@
-import { createMarkupSurfaceFacet } from "@hypit/hypit/markup";
+import { createAuthorDeclarationFacet } from "@hypit/hypit/author";
+import { createMarkupDeclarationFacet } from "@hypit/hypit/markup";
 import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
 import { createProducerPackageFacet } from "@hypit/hypit/producer";
-import { seedreamComponent, seedreamDefinition, seedreamManifest, seedreamModuleRef,
-  seedreamMarkupSurfaces } from "./index.js";
-import { decodeSeedreamReferenceImageSurface, decodeSeedreamTextImageSurface } from "./surface.js";
+import { seedreamComponent, seedreamManifest, seedreamModuleRef } from "./index.js";
+import { seedreamAuthorDeclarations, seedreamMarkupDeclarations } from "./declaration.js";
 export const hypitPackage = { format: "hypit.package@1" as const, modules: [{ manifest: seedreamManifest }], facets: [
   createProducerPackageFacet(seedreamComponent.producers ?? []),
   createRefinementPackageFacet(seedreamComponent.refinements ?? []),
-  createMarkupSurfaceFacet({ module: seedreamModuleRef,
-    declaration: seedreamMarkupSurfaces.find((item) => item.name === "text-image")!, handler: decodeSeedreamTextImageSurface }),
-  createMarkupSurfaceFacet({ module: seedreamModuleRef,
-    declaration: seedreamMarkupSurfaces.find((item) => item.name === "reference-image")!, handler: decodeSeedreamReferenceImageSurface }),
+  ...seedreamAuthorDeclarations.map(createAuthorDeclarationFacet),
+  ...seedreamMarkupDeclarations.map((declaration) =>
+    createMarkupDeclarationFacet({ module: seedreamModuleRef, declaration })),
+
 ] };
 export default hypitPackage;

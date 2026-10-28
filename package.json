@@ -264,6 +264,7 @@
     "@hypit/image-operations": "workspace:*",
     "@hypit/interview-emoji-reveal": "workspace:*",
     "@hypit/media": "workspace:*",
+    "@hypit/media-delivery": "workspace:*",
     "@hypit/media-operations": "workspace:*",
     "@hypit/mimo-speech": "workspace:*",
     "@hypit/minimax-h3": "workspace:*",
@@ -316,6 +317,8 @@
     "@hypit/fontsource": "workspace:*",
     "@hypit/audio-track": "workspace:*",
     "@hypit/audio-mix": "workspace:*",
+    "@hypit/audio-stretch": "workspace:*",
+    "@hypit/audio-program": "workspace:*",
     "@hypit/caption-fine": "workspace:*",
     "@hypit/film": "workspace:*",
     "@hypit/provider-hypihub": "workspace:*",
@@ -325,7 +328,9 @@
     "@hypit/text-fine": "workspace:*",
     "@hypit/timeline-author": "workspace:*",
     "@hypit/visual-track": "workspace:*",
-    "@hypit/visual-adjustment": "workspace:*"
+    "@hypit/visual-adjustment": "workspace:*",
+    "@hypit/visual-treatment": "workspace:*",
+    "@hypit/visual-transition": "workspace:*"
   },
   "dependencies": {
     "@hypit/browser-capture": "workspace:^0.2.1",

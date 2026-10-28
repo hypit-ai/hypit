@@ -1,5 +1,6 @@
 import { userText, uiAttribute, uiAttr } from "./i18n.js";
-import type { StudioSnapshot } from "../shared.js";
+import type { StudioItemAddress, StudioSnapshot, StudioTrackGroup } from "../shared.js";
+import { sameStudioItemAddress, sameStudioTrackGroup, studioItemAddressKey } from "../shared.js";
 import type { StudioEditHandle } from "@hypit/studio-companion";
 import type { FrameSpan } from "@hypit/timeline";
 import { icon, setIcon } from "./icons.js";
@@ -158,7 +159,7 @@ export function createTimeline(store: Store): Timeline {
     readonly node: HTMLElement;
     readonly start: number;
     readonly end: number;
-    readonly id: string;
+    readonly address: StudioItemAddress;
   }[] = [];
   let domainNodes: readonly {
     readonly node: HTMLElement;
@@ -368,7 +369,7 @@ export function createTimeline(store: Store): Timeline {
     void applyStudioMutation({
       type: "timeline.adjust",
       revision: state.snapshot.revision,
-      itemId: edit.item.id,
+      item: edit.item.address,
       gesture: edit.handle.gesture,
       target,
     }).then(() => {
@@ -482,10 +483,10 @@ export function createTimeline(store: Store): Timeline {
   const attachedTracks = (
     snapshot: StudioSnapshot,
     slot: string,
-    groupId?: string,
+    group?: StudioTrackGroup,
   ): readonly StudioSnapshot["tracks"][number][] => snapshot.tracks
     .filter((track) => track.binding.lane.attachedTo === slot
-      && (groupId === undefined || track.binding.groupId === groupId))
+      && (group === undefined || sameStudioTrackGroup(track.binding.group, group)))
     .sort((left, right) => (left.binding.lane.order ?? 0) - (right.binding.lane.order ?? 0));
 
 
@@ -605,7 +606,7 @@ export function createTimeline(store: Store): Timeline {
   const buildTrack = (
     snapshot: StudioSnapshot,
     track: StudioSnapshot["tracks"][number],
-    nextItemNodes: { node: HTMLElement; start: number; end: number; id: string }[],
+    nextItemNodes: { node: HTMLElement; start: number; end: number; address: StudioItemAddress }[],
     attached = false,
   ): void => {
     const totalHeight = track.binding.lane.heightPx;
@@ -624,7 +625,8 @@ export function createTimeline(store: Store): Timeline {
 
     const trackBody = document.createElement("div");
     trackBody.className = "timeline-track";
-    trackBody.dataset.track = track.id;
+    trackBody.dataset.trackOutput = track.address.output;
+    if (track.address.attachment !== undefined) trackBody.dataset.trackAttachment = track.address.attachment;
     trackBody.style.height = `${totalHeight}px`;
     const materialMounts: {
       readonly target: HTMLElement;
@@ -698,13 +700,13 @@ export function createTimeline(store: Store): Timeline {
             };
             node.classList.add("editing");
             try { lanes.setPointerCapture(event.pointerId); } catch { /* local pointer */ }
-            store.select(item.id, "timeline");
+            store.select(item.address, "timeline");
             return;
           }
-          store.select(item.id, "timeline");
+          store.select(item.address, "timeline");
         });
         node.addEventListener("dblclick", () => store.seek(item.startFrame, "timeline"));
-        nextItemNodes.push({ node, start: item.startFrame, end: item.endFrameExclusive, id: item.id });
+        nextItemNodes.push({ node, start: item.startFrame, end: item.endFrameExclusive, address: item.address });
       lane.append(node);
     }
     trackBody.append(lane);
@@ -747,13 +749,13 @@ export function createTimeline(store: Store): Timeline {
       ));
       rows.append(group);
     }
-    const nextItemNodes: { node: HTMLElement; start: number; end: number; id: string }[] = [];
+    const nextItemNodes: { node: HTMLElement; start: number; end: number; address: StudioItemAddress }[] = [];
     for (const track of snapshot.tracks) {
       const attachedTo = track.binding.lane.attachedTo;
       if (attachedTo !== undefined) continue;
       buildTrack(snapshot, track, nextItemNodes);
-      const slot = track.binding.lane.groupId ?? track.binding.groupId;
-      const attachments = attachedTracks(snapshot, slot, track.binding.groupId);
+      const slot = track.binding.lane.groupId ?? "root";
+      const attachments = attachedTracks(snapshot, slot, track.binding.group);
       for (const attachment of attachments) {
         buildTrack(snapshot, attachment, nextItemNodes, true);
       }
@@ -778,13 +780,13 @@ export function createTimeline(store: Store): Timeline {
     playhead.classList.toggle("outside", position < 0 || position > lanes.clientWidth);
     playheadGrip.classList.toggle("outside", position < 0 || position > lanes.clientWidth);
     timelineTime.textContent = frameTimecode(head.frame, snapshot.timeline.frameRate);
-    const chosen = selection.kind === "item" ? store.item(selection.itemId) : undefined;
+    const chosen = selection.kind === "item" ? store.item(selection.item) : undefined;
     for (const item of itemNodes) {
-      const selected = chosen?.id === item.id;
+      const selected = chosen !== undefined && sameStudioItemAddress(chosen.address, item.address);
       item.node.classList.toggle("selected", selected);
       item.node.setAttribute("aria-pressed", String(selected));
       item.node.classList.toggle("live", head.frame >= item.start && head.frame < item.end);
-      item.node.classList.toggle("preview-omitted", state.preview.omittedItemIds.has(item.id));
+      item.node.classList.toggle("preview-omitted", state.preview.omittedItemKeys.has(studioItemAddressKey(item.address)));
     }
     for (const item of domainNodes) {
       const inside = item.kind === "span" && head.frame >= item.start && head.frame < item.end;

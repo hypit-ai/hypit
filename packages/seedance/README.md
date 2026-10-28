@@ -1,6 +1,6 @@
 # `@hypit/seedance`
 
-Exact Seedance author model module. It owns the request schema and exactly three invocation Surfaces;
+Exact Seedance author model module. It owns the request schema and exactly three invocation declarations;
 it does not contain service credentials, HTTP code, queues, runtime routing or usage-specific Prompt assembly.
 
 Its implementation uses the public Hypit author APIs and the `@hypit/generation` model APIs. The repository keeps
@@ -18,10 +18,10 @@ The three model invocation shapes are deliberately separate:
 
 - `TextVideo`: Prompt only; this is the only shape that exposes Web Search.
 - `FrameVideo`: required first frame and optional last frame.
-- `ReferenceVideo`: one or more image, video or audio references within the model's port limits.
+- `ReferenceVideo`: one or more image, video or audio references within the Model's field limits.
 
 All three preserve the remote result as one atomic `GeneratedVideoSet`, then expose its first ordered
-member as an ordinary `Blob`. Their prompt ports consume ordinary `Text`, so a Script projection,
+member as an ordinary `Blob`. Their prompt fields consume ordinary `Text`, so a Script projection,
 generic Text Template or third-party author module can feed them without becoming part of Seedance.
 
 `standard`, `fast`, `mini` and `2.5` select model variants independently of the invocation shape.
@@ -55,7 +55,7 @@ The Seedance package rejects reference audio declared as `audio/mp4` or `audio/x
 audio to WAV or MP3 before using it; `media:ExtractAudio` produces WAV and can consume an upstream
 component's media output. Renaming a file or changing its declared media type is not conversion.
 
-Known imports are checked during Surface decoding. Future audio stays a graph input and is checked
+Known imports are checked during declaration compilation. Future audio stays a graph input and is checked
 when its Blob arrives. The same rule applies to drafts, complete requests, planning and direct
 generation Producers. `sealSeedanceRequest` uses the endpoint's model-aware request builder;
 `seedanceComponent` and `seedanceDefinition.component` expose the same implementation.
@@ -80,7 +80,7 @@ Missing or non-boolean declarations are rejected; there is no default or automat
 Audio must omit this field. `FrameVideo` requires `first-frame-person-reference` and, when a last
 frame is supplied, `last-frame-person-reference`. A last-frame classification requires a last frame.
 
-| Supplied visual input | Authored attribute | Request port |
+| Supplied visual input | Authored attribute | Request field |
 | --- | --- | --- |
 | Each `Reference image={...}` | `person-reference` | `referenceImage` |
 | Each `Reference video={...}` | `person-reference` | `referenceVideo` |

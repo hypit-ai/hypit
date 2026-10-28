@@ -5,7 +5,8 @@ import { compositionTypes } from "@hypit/composition";
 import { mediaProducers, mediaTypes } from "@hypit/media";
 import { sealGraphFragment } from "@hypit/hypit/author";
 import { htmlProgramProducers } from "@hypit/html-program";
-import { mediaOperationsProducers } from "@hypit/media-operations";
+import { audioProgramProducers } from "@hypit/audio-program";
+import { mediaDeliveryProducers } from "@hypit/media-delivery";
 
 const input = (name: string) => ({ kind: "fragment-input" as const, name });
 const operation = (id: string) => ({ kind: "fragment-operation" as const, operation: id });
@@ -40,19 +41,19 @@ export function createHtmlVideoFragment(selectedRange = false) {
       },
       {
         id: "compile-audio-program",
-        producer: mediaOperationsProducers.compileAudio,
+        producer: audioProgramProducers.compile,
         inputs: { composition: input("composition"), timeline: input("timeline") },
         result: { kind: "output" as const, name: "program" },
       },
       {
         id: "request-audio-render",
-        producer: selectedRange ? mediaOperationsProducers.renderAudioRange : mediaOperationsProducers.renderAudio,
+        producer: selectedRange ? audioProgramProducers.renderRange : audioProgramProducers.render,
         inputs: { program: operation("compile-audio-program"), ...(selectedRange ? { range: input("range") } : {}) },
         result: { kind: "need" as const, name: "audio" },
       },
       {
         id: "request-mux",
-        producer: mediaOperationsProducers.mux,
+        producer: mediaDeliveryProducers.mux,
         inputs: {
           visual: operation("request-visual"),
           audio: operation("request-audio-render"),
@@ -62,7 +63,7 @@ export function createHtmlVideoFragment(selectedRange = false) {
       },
       {
         id: "project-video",
-        producer: mediaOperationsProducers.projectMuxed,
+        producer: mediaDeliveryProducers.projectVideo,
         inputs: { media: operation("request-mux") },
         result: { kind: "output" as const, name: "video" },
       },

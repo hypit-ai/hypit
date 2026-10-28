@@ -7,13 +7,13 @@ import {
   sealAuthorGraph,
 } from "@hypit/kernel";
 import type {
-  BuildState,
   CapabilityRef,
   AuthorGraph,
   ModuleManifest,
   ProducerRef,
   TypeRef,
 } from "@hypit/protocol";
+import type { BuildView } from "@hypit/kernel";
 export const moduleRef = { name: "example.greeting", version: "0.0.0" } as const;
 
 export const types = {
@@ -27,7 +27,7 @@ export const capabilities = {
   generation: { module: moduleRef, name: "generate-greeting-text" },
 } satisfies Record<string, CapabilityRef>;
 
-function initialState(program: Parameters<typeof planBuild>[0], graph: AuthorGraph, targets: readonly string[]): BuildState {
+function initialState(program: Parameters<typeof planBuild>[0], graph: AuthorGraph, targets: readonly string[]): BuildView {
   const planned = planBuild(program, graph, {
     format: "hypit.run-graph@1",
     records: [],
@@ -167,7 +167,7 @@ export function createGreetingBuild(options?: {
   readonly generationRealization?: "primary" | "placeholder";
   readonly includeSideTarget?: boolean;
   readonly targetOutputs?: readonly string[];
-}): BuildState {
+}): BuildView {
   const closure = createResolvedClosure([manifest]);
   const authored = ({
     id: "intent:root",

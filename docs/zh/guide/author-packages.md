@@ -16,7 +16,7 @@ npm install --save-dev @hypit/hypit@<selected-release>
 npm run build
 ```
 
-示例提供 TypeScript 构建配置、Manifest、Surface、Fragment、Producer、activation 和小型 preview Source。[包的 README](https://github.com/hypit-ai/hypit/blob/main/examples/minimal-author-package/packages/example-component/README.md) 介绍准确文件与设置。项目可以用普通包管理器的 workspace 或本地包依赖安装组件。
+示例提供 TypeScript 构建配置、Manifest、Author Declaration、Markup spelling、Fragment、Producer、activation 和小型 preview Source。[包的 README](https://github.com/hypit-ai/hypit/blob/main/examples/minimal-author-package/packages/example-component/README.md) 介绍准确文件与设置。项目可以用普通包管理器的 workspace 或本地包依赖安装组件。
 
 ## 给组件有用的接口
 
@@ -29,11 +29,11 @@ Window 和 Instant 输入来表达场景何时存在、何时变化。Source 可
 [响应式讲解场景](https://github.com/hypit-ai/hypit/tree/main/examples/semantic-composition/packages/responsive-explainer) 展示持续播放的视频如何在 HTML 场景里从全屏移到侧边竖屏。
 [聊天示例](https://github.com/hypit-ai/hypit/tree/main/examples/semantic-composition/packages/chat-scene) 展示同一个事件接口如何消费由直接声明或语义声明产生的 Instant。
 
-Style 一类 Surface 在裸作者 id 下公开其值，例如 `style={board-style}`；独立输出可以使用 `.visual`、`.audio`、`.track` 等有意义的后缀。在组件自己的 vocabulary 和 README 中说明名称与可用值。
+Style 一类声明在裸作者 id 下公开其值，例如 `style={board-style}`；独立输出可以使用 `.visual`、`.audio`、`.track` 等有意义的后缀。在组件自己的 vocabulary 和 README 中说明名称与可用值。
 
 ## 实现并查看场景
 
-作者包按职责使用 `@hypit/hypit/author`、`producer`、`refinement` 与 `markup` 等窄公共子路径，消费的领域值使用对应所有者的公开子路径。[组件结构](./component-anatomy.md) 介绍 Manifest、Surface、Fragment 和 Producer 如何配合。项目文案与素材作为输入，组件自己的面板、边框与装饰由实现绘制。
+作者包按职责使用 `@hypit/hypit/author`、`producer`、`refinement` 与 `markup` 等窄公共子路径，消费的领域值使用对应所有者的公开子路径。[组件结构](./component-anatomy.md) 介绍 Manifest、Author Declaration、Markup spelling、Fragment 和 Producer 如何配合。项目文案与素材作为输入，组件自己的面板、边框与装饰由实现绘制。
 
 preview Source 为作者提供可打开或渲染的小例子。查看能说明行为的状态：进入、关键变化、停留布局和退出。也要在实际编排中查看，这时内容、空间和时机才有具体用途。
 

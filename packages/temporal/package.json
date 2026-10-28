@@ -6,7 +6,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./markup": "./src/markup/index.ts",
+    "./author": "./src/author.ts",
     "./studio": "./src/studio.ts"
   },
   "hypit": {

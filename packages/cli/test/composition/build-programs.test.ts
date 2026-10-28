@@ -70,6 +70,13 @@ function distribution(
         };
       },
       supportsFrontend: () => false,
+      openAuthorDocument: async (source: { readonly unit: { readonly id: string; readonly name: string; readonly bytes: Uint8Array } }) => ({
+        source: source.unit,
+        root: { node: "root", declarations: [] },
+        containers: [{ node: "root", declarations: [] }],
+        declarations: [],
+        representation: undefined,
+      }),
       compileResolvedSource: async (entry: { readonly unit: { readonly id: string } }) => ({
         closure: { entry: entry.unit.id, units: [] },
         provenance: { format: "hypit.author-provenance@1", elements: [] },

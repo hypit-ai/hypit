@@ -77,7 +77,7 @@ export function videoSlots(
         endFrameExclusive: source.endFrameExclusive,
       };
     }
-    const src = pathFor(source.resource);
+    const src = pathFor(source.artifactId);
     return {
       kind: "surface",
       id: source.id,

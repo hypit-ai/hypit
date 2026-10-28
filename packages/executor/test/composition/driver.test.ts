@@ -11,11 +11,11 @@ import {
 } from "@hypit/executor";
 import { credentialRef, InProcessBuildScheduler } from "@hypit/runtime";
 import type { ScheduledBuildResult, WritableCredentialStore } from "@hypit/runtime";
-import type { BuildState } from "@hypit/protocol";
+import type { BuildView } from "@hypit/kernel";
 
 import { capabilities, createGreetingBuild, producers as greetingProducers, types } from "../execution-scenario.js";
 
-async function runBuild(executor: Executor, input: BuildState | ScheduledBuildResult) {
+async function runBuild(executor: Executor, input: BuildView | ScheduledBuildResult) {
   const request = "facts" in input
     ? { id: "driver-test", definition: input.definition, facts: input.facts }
     : { id: "driver-test", definition: {
@@ -108,7 +108,7 @@ test("Endpoint Registry rejects an ambiguous Runtime Profile", async () => {
 
 });
 
-test("an Endpoint receives only declared credential slots and secrets never enter BuildState", async () => {
+test("an Endpoint receives only declared credential slots and secrets never enter BuildView", async () => {
   const { producers, endpoints } = configuredRegistry();
   endpoints.registerImmediateEndpoint(
     "example:credentialed",
@@ -135,6 +135,27 @@ test("an Endpoint receives only declared credential slots and secrets never ente
   const completed = await runBuild(driver, createGreetingBuild());
   assert.equal(completed.status, "complete");
   assert.equal(JSON.stringify(completed.state).includes("top-secret-value"), false);
+});
+
+test("an Endpoint receives prototype-looking credential slots as ordinary data", async () => {
+  const { producers, endpoints } = configuredRegistry();
+  endpoints.registerImmediateEndpoint(
+    "example:prototype-credential",
+    capabilities.generation,
+    types.generated,
+    ({ credentials }) => {
+      assert.equal(Object.hasOwn(credentials, "__proto__"), true);
+      assert.equal(credentials.__proto__?.secret, "top-secret-value");
+      return "Credentialed result";
+    },
+    { credentials: Object.fromEntries([["__proto__", credentialRef("test", "endpoint-key")]]) },
+  );
+  const completed = await runBuild(new Executor({
+    producers,
+    endpoints,
+    credentials: { resolve: async () => ({ secret: "top-secret-value" }) },
+  }), createGreetingBuild());
+  assert.equal(completed.status, "complete");
 });
 
 test("a writable credential gives its Endpoint authority to replace only that declared slot", async () => {

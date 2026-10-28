@@ -1,5 +1,5 @@
 /** Page-private Present visibility. The shared index owns only interval lookup. */
-export function presentationVisibilityScript(_numerator: number, _denominator: number): string {
+export function presentationVisibilityScript(): string {
   return `(() => {
     const entries = [...document.querySelectorAll('[data-hypit-visibility]')].map((element, order) => ({
       element,

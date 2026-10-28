@@ -1,14 +1,14 @@
 import { MemoryResourceStore, Executor } from "@hypit/hypit/executor";
 import { InProcessBuildScheduler } from "@hypit/hypit/runtime";
 import type { ResourceStore } from "@hypit/hypit/runtime";
-import type { BuildState } from "@hypit/hypit/protocol";
+import type { BuildView } from "@hypit/hypit/kernel";
 import { capabilityKey } from "@hypit/hypit/protocol";
 import type { CliTransientExecution as RuntimeHostTransientExecution } from "@hypit/hypit/cli";
 
 import type { StudioDomain } from "./domain.js";
 
 export type Executed = {
-  readonly state: BuildState;
+  readonly state: BuildView;
   readonly status: string;
   readonly unserved: readonly { readonly capability: string; readonly count: number }[];
   readonly errors: readonly string[];
@@ -21,7 +21,7 @@ export type Executed = {
  */
 export async function executeStudioProjection(
   domain: StudioDomain,
-  state: BuildState,
+  state: BuildView,
   resources: ResourceStore,
   execution?: RuntimeHostTransientExecution,
 ): Promise<Executed> {

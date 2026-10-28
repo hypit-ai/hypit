@@ -29,6 +29,7 @@ const reportType = { module: laboratory, name: "Report" } satisfies TypeRef;
 const measureProducer = { module: laboratory, name: "measure" } satisfies ProducerRef;
 const reportProducer = { module: laboratory, name: "write-report" } satisfies ProducerRef;
 const echoProducer = { module: laboratory, name: "echo-sample" } satisfies ProducerRef;
+const protoProducer = { module: laboratory, name: "echo-prototype-slot" } satisfies ProducerRef;
 
 const manifest: ModuleManifest = {
   format: "hypit.module@1",
@@ -55,6 +56,11 @@ const manifest: ModuleManifest = {
     {
       name: echoProducer.name,
       inputs: [{ name: "sample", type: sampleType }],
+      result: { kind: "output" as const, name: "sample", type: sampleType },
+    },
+    {
+      name: protoProducer.name,
+      inputs: [{ name: "__proto__", type: sampleType }],
       result: { kind: "output" as const, name: "sample", type: sampleType },
     },
   ],
@@ -211,4 +217,25 @@ test("Author linking checks symbolic input types before Graph verification", () 
     () => elaborateAuthorGraph(program(), components),
     (error: unknown) => error instanceof AuthorGraphError && error.code === "AUTHOR_INPUT_TYPE_MISMATCH",
   );
+});
+
+test("Author linking preserves prototype-looking input names as graph data", () => {
+  const fragment = singleOperationFragment(
+    "__proto__",
+    sampleType,
+    protoProducer,
+    "sample",
+    sampleType,
+  );
+  const inputs = Object.fromEntries([["__proto__", { kind: "record", id: "sample:soil" }]]) as AuthorComponent["inputs"];
+  const elaborated = elaborateAuthorGraph(program(), [{
+    id: "prototype-input",
+    fragment,
+    inputs,
+    outputs: { result: "sample:prototype" },
+  }]);
+
+  const operation = elaborated.operations.find((item) => item.producer.name === protoProducer.name);
+  assert.equal(Object.hasOwn(operation?.inputs ?? {}, "__proto__"), true);
+  assert.deepEqual(operation?.inputs.__proto__, { kind: "record", id: "sample:soil" });
 });

@@ -1,14 +1,14 @@
-import { createMarkupSurfaceFacet } from "@hypit/hypit/markup";
+import { createAuthorDeclarationFacet } from "@hypit/hypit/author";
+import { createMarkupDeclarationFacet } from "@hypit/hypit/markup";
 import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
 import { createProducerPackageFacet } from "@hypit/hypit/producer";
-import { wanComponent, wanDefinition, wanManifest, wanModuleRef, wanMarkupSurfaces } from "./index.js";
-import { decodeWanImageSurface, decodeWanProImageSurface } from "./surface.js";
+import { wanComponent, wanManifest, wanModuleRef } from "./index.js";
+import { wanAuthorDeclarations, wanMarkupDeclarations } from "./declaration.js";
 export const hypitPackage = { format: "hypit.package@1" as const, modules: [{ manifest: wanManifest }], facets: [
   createProducerPackageFacet(wanComponent.producers ?? []),
   createRefinementPackageFacet(wanComponent.refinements ?? []),
-  createMarkupSurfaceFacet({ module: wanModuleRef,
-    declaration: wanMarkupSurfaces.find((item) => item.name === "image")!, handler: decodeWanImageSurface }),
-  createMarkupSurfaceFacet({ module: wanModuleRef,
-    declaration: wanMarkupSurfaces.find((item) => item.name === "pro-image")!, handler: decodeWanProImageSurface }),
+  ...wanAuthorDeclarations.map(createAuthorDeclarationFacet),
+  ...wanMarkupDeclarations.map((declaration) => createMarkupDeclarationFacet({ module: wanModuleRef, declaration })),
+
 ] };
 export default hypitPackage;

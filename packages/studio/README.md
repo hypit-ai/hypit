@@ -158,7 +158,7 @@ Track/Item edit remain hidden rather than becoming a third semantic-content row.
 no Narrative slot or Narrative-shaped fallback; a beat or shot package can contribute its own two
 or more lanes without changing Studio.
 
-Package-declared primary Instant outputs share one read-only locator row. Their owning Surface
+Package-declared primary Instant outputs share one read-only locator row. Their owning declaration
 Companions select the exact output ports; common Studio resolves the absolute time values. Windows
 remain available for authoring, Inspector references and Track/Item time editing; their consumed
 intervals are displayed by the corresponding Track Items rather than repeated in the common row.
@@ -244,7 +244,7 @@ Run Candidate. Use `build-record`/`satisfy` in the Run for explicit Output reuse
 [Inspector fields](INSPECTOR.md) describes Where/When/How grouping, numeric unit conversion,
 rich choices, fonts, color suggestions and exact Source writeback.
 
-The common author surface is `Track -> Item`. `Item` is only Studio's shared selection and
+The common author structure is `Track -> Item`. `Item` is only Studio's shared selection and
 presentation envelope: Visual and Audio packages retain their own Clip models, Typography retains
 its occurrence model, and project components retain their own domain names. Their Companions decide
 which domain objects become Items and declare each Item's title, interval, layers, Inspector facts,
@@ -266,13 +266,13 @@ External Companions compile against `@hypit/studio-companion` and the other publ
 subpaths, with `@hypit/hypit` as a development dependency. The active Distribution supplies those APIs
 at runtime. Ship the Companion's compiled JavaScript with its component package.
 
-The companion owns what its Track means: matching, required same-Surface values,
+The companion owns what its Track means: matching, required same-declaration values,
 Items, lane range, finite chrome, title and ordered text/material layers,
 source bindings, Inspector fields and executed temporal lineage. Inspector fields
 select real bindings or package-owned facts and organize them under the Studio-owned
 `Where / When / How` domains, optional companion-owned pages and sections. A
 source binding is never shown merely because Studio can reach it. Material layers carry a
-Resource id or Surface identity, never a Studio HTTP URL. Studio owns time formatting and transport resolution. Compact chrome shows one primary label;
+Resource id or declaration identity, never a Studio HTTP URL. Studio owns time formatting and transport resolution. Compact chrome shows one primary label;
 computed time remains available in its tooltip rather than competing with that label.
 Studio owns session-wide behavior and chrome: Companion assembly, single-row overlap display,
 fallback defaults, selection treatment, playback, zoom,

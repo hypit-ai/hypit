@@ -1,19 +1,22 @@
-import { depthStackMarkupSurfaces, depthStackModuleRef } from "./index.js";
-import type { DepthStackProgram } from "./index.js";
+import { visualMaterialOptions } from "@hypit/visual-track";
+import { depthStackAppearanceRecipeKeys, depthStackRecipeOptions } from "./author.js";
+import { depthStackModuleRef } from "./manifest.js";
+import type { DepthStackProgram } from "./types.js";
 import { compositionTypes } from "@hypit/composition";
 import type { StudioTrackCompanion, StudioTrackCompanionContext, StudioItemDraft, StudioInspectorFieldDeclaration } from "@hypit/studio-companion";
-import { requiredSurfaceValue, temporalLineageFor, temporalDomainMarker } from "@hypit/studio-companion";
+import { requiredDeclarationValue, temporalLineageFor, temporalDomainMarker } from "@hypit/studio-companion";
 
-const deckProperties = (depthStackMarkupSurfaces
-  .find((surface) => surface.name === "track")?.vocabulary.attributes
-  .find((attribute) => attribute.name === "appearance")?.recipe ?? []);
+const deckProperties = depthStackAppearanceRecipeKeys.map((name) => ({
+  name,
+  values: depthStackRecipeOptions[name] ?? visualMaterialOptions[name],
+}));
 
 function title(name: string): string {
   return name.split("-").map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`).join(" ");
 }
 
 function valuesFor(property: typeof deckProperties[number]): readonly string[] | undefined {
-  return "values" in property ? property.values : undefined;
+  return property.values;
 }
 
 type DeckPlacement = Pick<StudioInspectorFieldDeclaration, "domain" | "page" | "section">;
@@ -40,17 +43,16 @@ placeDeck([
 ], "where", "Frame", "Fit");
 placeDeck([
   "current-opacity", "current-brightness", "current-contrast", "current-saturation", "previous-opacity-step",
-  "next-opacity-step", "border-width", "border-style", "border-color", "shadows", "frame-paint", "opacity",
+  "previous-brightness-step", "previous-contrast-step", "previous-saturation-step", "next-opacity-step",
+  "next-brightness-step", "next-contrast-step", "next-saturation-step", "border-width", "border-style", "border-color", "shadows", "frame-paint", "opacity",
   "blur", "brightness", "contrast", "saturation",
 ], "how", "Appearance", "Paint");
 placeDeck(["playback-future", "playback-past"], "when", "Playback", "Card Clock");
 placeDeck(["reflow-frames", "reflow-easing"], "when", "Motion", "Reflow");
-placeDeck(["enter", "enter-frames", "enter-easing", "enter-direction", "enter-amount", "enter-origin"], "when", "Motion", "Enter");
-placeDeck(["sustain"], "when", "Motion", "Sustain");
-placeDeck(["exit", "exit-frames", "exit-easing", "exit-direction", "exit-amount", "exit-origin"], "when", "Motion", "Exit");
 
 const deckColorProperties = new Set(["border-color"]);
-const deckTextProperties = new Set(["padding", "shadows", "frame-paint", "sustain"]);
+const deckTextProperties = new Set(["padding", "shadows", "frame-paint"]);
+const deckBooleanProperties = new Set(["wrap"]);
 
 const deckInspector: readonly StudioInspectorFieldDeclaration[] = deckProperties.map((property) => {
   const placement = deckPlacement.get(property.name);
@@ -58,9 +60,8 @@ const deckInspector: readonly StudioInspectorFieldDeclaration[] = deckProperties
   const options = valuesFor(property);
   return {
     binding: `appearance.${property.name}`, label: title(property.name), ...placement,
-    ...(property.summary === undefined ? {} : { summary: property.summary }),
     control: options !== undefined ? "select" : deckColorProperties.has(property.name) ? "color"
-      : deckTextProperties.has(property.name) ? "text" : "number",
+      : deckTextProperties.has(property.name) ? "text" : deckBooleanProperties.has(property.name) ? "boolean" : "number",
     ...(options === undefined ? {} : { options }),
   };
 });
@@ -76,7 +77,7 @@ function cardTitle(card: DepthStackProgram["cards"][number]): string {
 }
 
 function projectDeck(context: StudioTrackCompanionContext): readonly StudioItemDraft[] {
-  const program = requiredSurfaceValue(context, "program") as DepthStackProgram;
+  const program = requiredDeclarationValue(context, "program") as DepthStackProgram;
   if (context.placement === undefined) return context.generic();
   const children = new Map(context.placement.children.flatMap((child) =>
     child.id === undefined ? [] : [[child.id, child] as const]));
@@ -107,8 +108,8 @@ function projectDeck(context: StudioTrackCompanionContext): readonly StudioItemD
 
 export const depthStackStudioTrackCompanions: readonly StudioTrackCompanion[] = [
   {
-    id: "track", role: "track",
-    output: { type: compositionTypes.visualTrack, surface: "track", modules: [depthStackModuleRef] },
+    id: "track",
+    output: { type: compositionTypes.visualTrack, declaration: "track", modules: [depthStackModuleRef] },
     family: "deck", tone: "orange", icon: "layers", requiredValues: ["program"],
     bindings: [
       { name: "source" },

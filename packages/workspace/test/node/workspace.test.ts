@@ -53,6 +53,12 @@ test("a Host-resolved package asset stays inside the resolver's explicit root", 
         return { root: installed, asset: fontPath };
       },
     }).open(entryPath);
+    const inspected = await session.readAsset!(session.entry.unit, {
+      from: "package:@acme/brand-fonts/files/brand.woff2",
+      mediaType: "font/woff2",
+    });
+    assert.equal(new TextDecoder().decode(inspected), "font bytes");
+    assert.equal((await session.attachments()).length, 0);
     const resolved = await session.resolveAsset(session.entry.unit, {
       from: "package:@acme/brand-fonts/files/brand.woff2",
       mediaType: "font/woff2",

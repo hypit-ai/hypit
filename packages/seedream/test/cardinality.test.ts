@@ -12,6 +12,6 @@ test("Seedream owns its fourteen-reference model limit", () => {
   const base = {
     prompt: ["compose"], aspectRatio: ["1:1"], quality: ["basic"], outputFormat: ["png"], nsfwCheck: [true],
   } as const;
-  assert.equal(sealSeedreamRequest({ ...base, images: references(14) }).ports.images?.length, 14);
+  assert.equal(sealSeedreamRequest({ ...base, images: references(14) }).fields.images?.length, 14);
   assert.throws(() => sealSeedreamRequest({ ...base, images: references(15) }), /at most 14/u);
 });

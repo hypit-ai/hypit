@@ -1,9 +1,9 @@
 import { resolveProducer } from "@hypit/kernel";
+import type { BuildView } from "@hypit/kernel";
 import type { ProducerHandlerResult } from "@hypit/producer";
 import type { EndpointCredential, EndpointOutcome } from "@hypit/endpoint";
 import { endpointResourceClaims } from "@hypit/endpoint";
 import type {
-  BuildState,
   CommandResult,
   BuildCommand,
   FulfillNeedCommand,
@@ -137,18 +137,23 @@ export class Executor {
         throw new Error(`Endpoint ${registration.id} credential ${slot} is unavailable from ${ref.store}:${ref.key}`);
       }
       const writable = await writableCredentialStore(this.credentials, ref);
-      resolved[slot] = {
-        ...value,
-        ...(writable === undefined ? {} : {
-          replace: async (replacement: CredentialValue) => await writable.put(ref, replacement),
-        }),
-      };
+      Object.defineProperty(resolved, slot, {
+        value: {
+          ...value,
+          ...(writable === undefined ? {} : {
+            replace: async (replacement: CredentialValue) => await writable.put(ref, replacement),
+          }),
+        },
+        enumerable: true,
+        configurable: true,
+        writable: true,
+      });
     }
     return resolved;
   }
 
   #producerInputs(
-    state: BuildState,
+    state: BuildView,
     command: InvokeProducerCommand,
     indexedRecord?: (id: string) => TypedRecord | undefined,
   ): Record<string, TypedRecord> {
@@ -168,7 +173,7 @@ export class Executor {
   }
 
   #classify(
-    state: BuildState,
+    state: BuildView,
     command: BuildCommand,
     indexedRecord?: (id: string) => TypedRecord | undefined,
   ): CommandClassification {
@@ -581,7 +586,7 @@ export class Executor {
   }
 
   #prepare(
-    state: BuildState,
+    state: BuildView,
     commands: readonly BuildCommand[],
     indexedRecord?: (id: string) => TypedRecord | undefined,
   ): RuntimePreparation {

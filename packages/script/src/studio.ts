@@ -108,7 +108,7 @@ const scriptTemporalSourceTypes = [narrativeTypes.segmentRef, narrativeTypes.sel
 
 export const scriptStudioTemporalDomains: readonly StudioTemporalDomainCompanion[] = [{
   id: "script",
-  match: { module: scriptModuleRef, surface: "script" },
+  match: { module: scriptModuleRef, declaration: "script" },
   valueTypes: [narrativeTypes.narrative, narrativeTemporalTypes.narrativeProjection],
   sourceTypes: scriptTemporalSourceTypes,
   presentation: { family: "narrative", tone: "teal", icon: "brand" },

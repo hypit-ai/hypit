@@ -182,10 +182,10 @@ test("pricing keeps every planned generation and exposes authored parameters", a
     assert.deepEqual(group.pricingDocuments[0].data, { creditsPerImage: 2 });
     for (const request of group.requests) {
       assert.ok(request.summary.some((field: { at: readonly (string | number)[]; value: unknown }) =>
-        field.at.length === 3 && field.at[0] === "ports" && field.at[1] === "resolution"
+        field.at.length === 3 && field.at[0] === "fields" && field.at[1] === "resolution"
         && field.at[2] === 0 && field.value === "2K"));
       assert.ok(request.summary.some((field: { at: readonly (string | number)[]; value: unknown }) =>
-        field.at.length === 3 && field.at[0] === "ports" && field.at[1] === "aspectRatio"
+        field.at.length === 3 && field.at[0] === "fields" && field.at[1] === "aspectRatio"
         && field.at[2] === 0 && field.value === "9:16"));
     }
   } finally {

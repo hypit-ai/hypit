@@ -7,6 +7,10 @@ Build a browser-playable document from a Composition and Timeline:
 <page:Document id="preview" composition={main.composition} timeline={animation.timeline}/>
 ```
 
+The package-owned declaration consumes those two completed values directly. It does not depend on
+Temporal or a Markup timeline helper; Markup contributes only the `Document` spelling, while direct
+APIs and other Frontends use the same declaration compiler.
+
 Select the document in the Run:
 
 ```xml
@@ -17,10 +21,10 @@ Select the document in the Run:
 </svrun>
 ```
 
-The `HtmlDocument` result contains a compiled `HtmlProgram`, its `AudioProgram`, and
-the referenced fonts, images, video and audio needed to materialize the document.
-The Result repository preserves those resources, while the Run selects the upstream
-material used to produce them.
+The `HtmlDocument` result contains a compiled `HtmlProgram` and its `AudioProgram`.
+The Programme gives every visual dependency a document-local identity separate from
+its Result-store Blob identity, so recursive Blob rebinding never requires a reverse
+resource table. The Run selects the upstream material used to produce the document.
 
 Hosts turn the result into HTML by supplying material URLs:
 

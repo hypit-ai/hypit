@@ -1,6 +1,7 @@
 import type {
   Awaitable,
   SourceAssetResolver,
+  SourceAssetReader,
   SourceResolver,
   ResolvedSource,
 } from "@hypit/source";
@@ -23,6 +24,7 @@ export interface WorkspaceSession {
   readonly entry: ResolvedSource;
   readonly resolveSource: SourceResolver;
   readonly resolveAsset: SourceAssetResolver;
+  readonly readAsset?: SourceAssetReader;
   attachments(): Awaitable<readonly BlobAttachment[]>;
 }
 

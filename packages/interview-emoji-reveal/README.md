@@ -6,7 +6,7 @@ Install in the video project alongside Hypit:
 npm install @hypit/interview-emoji-reveal
 ```
 
-The EmojiReveal Surface accepts one completed Timeline, an absolute outer Window and absolute reveal
+The EmojiReveal declaration accepts one completed Timeline, an absolute outer Window and absolute reveal
 Instants. A Narrative or other domain projector may publish those values upstream.
 
 Reusable Hypit author vocabulary for a top-of-frame icon answer strip.

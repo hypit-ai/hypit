@@ -98,7 +98,12 @@ test("Source Closure hygienizes author provenance across imported Sources", asyn
   });
   assert.equal(compiled.provenance.elements.length, 2);
   const bySource = new Map(compiled.provenance.elements.map((item) => [item.sourceName, item] as const));
-  assert.equal(bySource.get("main")?.records[0]?.id, 'source:["/project/main","record","value"]');
-  assert.equal(bySource.get("child")?.records[0]?.id, 'source:["/project/child","record","value"]');
+  const mainRecord = bySource.get("main")?.records[0]?.id;
+  const childRecord = bySource.get("child")?.records[0]?.id;
+  assert.ok(mainRecord);
+  assert.ok(childRecord);
+  assert.notEqual(mainRecord, childRecord);
+  assert.equal(compiled.program.records.some((record) => record.id === mainRecord), true);
+  assert.equal(compiled.program.records.some((record) => record.id === childRecord), true);
   assert.notEqual(bySource.get("main")?.inputs[0]?.id, bySource.get("child")?.inputs[0]?.id);
 });

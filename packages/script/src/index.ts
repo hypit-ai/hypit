@@ -1,7 +1,6 @@
 export { ScriptSyntaxError } from "./error.js";
 export { adjustScriptMoment, adjustScriptSelection, scriptAnchorEditSites } from "./edit.js";
-export { formatScript } from "./format.js";
-export { captionDocumentType, narrativeCaptionBindingType, narrativeSegmentRefType, narrativeMomentType, narrativeSelectionType, narrativeSchema, narrativeType, scriptManifest, scriptMarkupSurfaces, scriptModuleRef } from "./manifest.js";
+export { formatScript } from "./format.js";export { captionDocumentType, narrativeCaptionBindingType, narrativeSegmentRefType, narrativeMomentType, narrativeSelectionType, narrativeSchema, narrativeType, scriptManifest, scriptModuleRef } from "./manifest.js";
 export {
   captionDocument,
   captionDocumentValue,
@@ -17,5 +16,5 @@ export {
   serializeSpeech,
 } from "./narrative.js";
 export { parseScript } from "./parser.js";
-export { decodeScriptSurface } from "./surface.js";
+export { compileScriptDeclaration, scriptAuthorDeclaration } from "./declaration.js";export { scriptMarkupDeclaration } from "./declaration.js";
 export type * from "./types.js";

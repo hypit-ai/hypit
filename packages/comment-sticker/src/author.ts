@@ -5,19 +5,31 @@ import type { Recipe } from "@hypit/hypit/recipe";
 import { sealCommentStickerStyle } from "./program.js";
 import type { CommentStickerStyle, CommentStickerTextStyle } from "./types.js";
 
-const KEYS = new Set([
-  "stack-order",
-  "background", "border-color", "border-width", "radius", "padding-x", "padding-y", "gap", "rotation",
-  "shadow-color", "shadow-x", "shadow-y", "shadow-blur", "shadow-spread",
-  "tail", "tail-width", "tail-height", "tail-offset-x",
-  "avatar-fallback", "avatar-size", "avatar-border-width", "avatar-border-color", "avatar-background", "avatar-text-color",
-  "header-size", "header-weight", "header-line-height", "header-color",
-  "body-size", "body-weight", "body-line-height", "body-color", "body-max-lines",
-  "meta-size", "meta-weight", "meta-line-height", "meta-color",
-  "enter", "enter-frames", "enter-offset-y", "enter-start-scale", "enter-rotation-delta", "enter-easing",
-  "exit", "exit-frames", "exit-offset-y", "exit-easing",
-  "hold", "hold-amplitude-y", "hold-rotation-amplitude", "hold-period-frames",
-]);
+/** Recipe vocabulary owned by the style decoder and reused by Studio. */
+export const commentStickerRecipeProperties = [
+  { name: "stack-order" },
+  { name: "background" }, { name: "border-color" }, { name: "border-width" }, { name: "radius" },
+  { name: "padding-x" }, { name: "padding-y" }, { name: "gap" }, { name: "rotation" },
+  { name: "shadow-color" }, { name: "shadow-x" }, { name: "shadow-y" }, { name: "shadow-blur" },
+  { name: "shadow-spread" }, { name: "tail" }, { name: "tail-width" }, { name: "tail-height" },
+  { name: "tail-offset-x" }, { name: "avatar-fallback", values: ["none", "initial"] },
+  { name: "avatar-size" }, { name: "avatar-border-width" }, { name: "avatar-border-color" },
+  { name: "avatar-background" }, { name: "avatar-text-color" }, { name: "header-size" },
+  { name: "header-weight" }, { name: "header-line-height" }, { name: "header-color" },
+  { name: "body-size" }, { name: "body-weight" }, { name: "body-line-height" }, { name: "body-color" },
+  { name: "body-max-lines" }, { name: "meta-size" }, { name: "meta-weight" },
+  { name: "meta-line-height" }, { name: "meta-color" },
+  { name: "enter", values: ["none", "fade", "pop", "slide-pop"] }, { name: "enter-frames" },
+  { name: "enter-offset-y" }, { name: "enter-start-scale" }, { name: "enter-rotation-delta" },
+  { name: "enter-easing", values: ["linear", "ease-in", "ease-out", "ease-in-out", "out-back"] },
+  { name: "exit", values: ["none", "fade", "fade-up"] }, { name: "exit-frames" },
+  { name: "exit-offset-y" },
+  { name: "exit-easing", values: ["linear", "ease-in", "ease-out", "ease-in-out"] },
+  { name: "hold", values: ["none", "float"] }, { name: "hold-amplitude-y" },
+  { name: "hold-rotation-amplitude" }, { name: "hold-period-frames" },
+] as const;
+
+const KEYS = new Set<string>(commentStickerRecipeProperties.map(({ name }) => name));
 
 function fail(recipe: Recipe, message: string): never {
   throw new Error(`Comment Sticker Recipe ${recipe.path} ${message}`);

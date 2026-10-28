@@ -1,12 +1,7 @@
-import { compositionDependency, compositionTypes } from "@hypit/composition";
-import type { StructuredSurfaceDeclaration, SurfaceVocabulary } from "@hypit/hypit/markup";
+import { audioReconstructionProgramSchema, compositionDependency, compositionTypes } from "@hypit/composition";
 import { mediaDependency, mediaTypes, preparedMediaSchema } from "@hypit/media";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/hypit/protocol";
 import { exactTemporalValueSchema, temporalDependency, temporalMapSchema, temporalRelationSpecSchema, temporalTypes } from "@hypit/temporal";
-import {
-  temporalContextAttributeVocabulary,
-  temporalWindowAttributeVocabulary,
-} from "@hypit/temporal/markup";
 import { frameSpanSchema, timelineDependency, timelineTypes } from "@hypit/timeline";
 
 export const audioTrackModuleRef = { name: "@hypit/audio-track", version: "1" } as const;
@@ -15,6 +10,7 @@ export const audioTrackTypes = {
   clipSpec: { module: audioTrackModuleRef, name: "AudioClipSpec" },
   set: { module: audioTrackModuleRef, name: "AudioTrackSet" },
   program: { module: audioTrackModuleRef, name: "AudioTrackProgram" },
+  reconstruction: { module: audioTrackModuleRef, name: "AudioReconstruction" },
 } satisfies Record<string, TypeRef>;
 
 export const audioTrackProducers = {
@@ -36,12 +32,14 @@ const duration: ValueSchema = { kind: "oneOf", variants: [
 const clipSpec = object({
   id: { schema: string },
   sampling: { schema: temporalRelationSpecSchema, optional: true },
+  reconstruction: { schema: audioReconstructionProgramSchema, optional: true },
   mix: { schema: object({ gain: { schema: number }, fadeIn: { schema: duration }, fadeOut: { schema: duration } }) },
 });
 const clip = object({
   id: { schema: string }, subjectId: { schema: string }, window: { schema: frameSpanSchema },
   source: { schema: object({ media: { schema: preparedMediaSchema } }) },
   sampling: { schema: temporalMapSchema },
+  reconstruction: { schema: audioReconstructionProgramSchema, optional: true },
   mix: { schema: object({ gain: { schema: number }, fadeIn: { schema: exactTemporalValueSchema },
     fadeOut: { schema: exactTemporalValueSchema } }) },
 });
@@ -60,47 +58,6 @@ const clipInputs = [
   { name: "spec", type: audioTrackTypes.clipSpec }, { name: "window", type: temporalTypes.window },
 ] as const;
 
-export const audioTrackMarkupSurfaces: readonly (StructuredSurfaceDeclaration & { readonly vocabulary: SurfaceVocabulary })[] = [{
-  name: "track", tag: "Track", mode: "structured",
-  outputs: [audioTrackTypes.header, audioTrackTypes.clipSpec,
-    audioTrackTypes.program, compositionTypes.audioTrack],
-  vocabulary: {
-    summary: "Places ordinary audio Clips on one completed Timeline and mixes them into one AudioTrack.",
-    attributes: [
-      { name: "id", kind: "identifier", required: true, summary: "Names this Audio Track and prefixes unnamed Clips." },
-      ...temporalContextAttributeVocabulary,
-    ],
-    children: [{
-      tag: "Clip", cardinality: "many",
-      summary: "One explicit audio source occurrence with its own Window, partial temporal sampling relation and mix.",
-      attributes: [
-        { name: "id", kind: "identifier", required: false, summary: "Names this Clip; the Track derives `<track>.clip.<index>` when absent." },
-        { name: "source", kind: "reference", required: true, accepts: [mediaTypes.prepared], summary: "Selects prepared media containing the audio stream; terminal audio execution evaluates its exact source Map." },
-        ...temporalWindowAttributeVocabulary,
-        { name: "gain", kind: "literal", required: false, summary: "Linear gain; defaults to `1`." },
-        { name: "fade-in", kind: "literal", required: false, summary: "Exact fade-in length; defaults to `0f`." },
-        { name: "fade-out", kind: "literal", required: false, summary: "Exact fade-out length; defaults to `0f`." },
-      ],
-    }],
-    ports: [
-      { name: "program", type: audioTrackTypes.program, summary: "Resolved authored Clips for Studio and declared consumers." },
-      { name: "audio", type: compositionTypes.audioTrack, summary: "The AudioTrack Film composes with peer contributions." },
-    ],
-    example: `<audio:Track id="mix" timeline={program.timeline}>
-  <audio:Clip source={voice-media.media} during={program.voice}/>
-  <audio:Clip source={music-media.media} during={program.window} gain="0.18">
-    <audio:Map rate="1" wrap-from="start" wrap-until="end"/>
-  </audio:Clip>
-</audio:Track>`,
-    notes: [
-      "A Track requires at least one Clip and accepts no text content.",
-      "A Clip references one already resolved Window through `during`.",
-      "Project semantic, beat or other domain time upstream, then pass the resolved Window here.",
-      "Omitting Map means bounded partial identity; uncovered target samples are silent.",
-    ],
-  },
-}] as const;
-
 export const audioTrackManifest: ModuleManifest = {
   format: "hypit.module@1",
   name: audioTrackModuleRef.name,
@@ -111,6 +68,7 @@ export const audioTrackManifest: ModuleManifest = {
     audioTrackTypes.clipSpec.name,
     audioTrackTypes.set.name,
     audioTrackTypes.program.name,
+    audioTrackTypes.reconstruction.name,
   ],
   capabilities: [],
   producers: [

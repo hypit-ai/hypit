@@ -17,6 +17,7 @@
     "LOCALIZATION.md"
   ],
   "dependencies": {
+    "@hypit/audio-program": "workspace:^0.1.0",
     "@hypit/composition": "workspace:^0.2.0",
     "@hypit/html-program": "workspace:^0.2.0",
     "@hypit/html-playback": "workspace:^0.1.0",
@@ -44,6 +45,7 @@
     "@hypit/script": "workspace:*",
     "@hypit/temporal": "workspace:*",
     "@hypit/timeline": "workspace:*",
+    "@hypit/timeline-author": "workspace:*",
     "@hypit/video": "workspace:*",
     "@hypit/visual-track": "workspace:*",
     "sharp": "0.35.4"

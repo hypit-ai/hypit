@@ -6,7 +6,7 @@ Optional component, not installed with Hypit. Install in the video project:
 npm install @hypit/ranking
 ```
 
-The Track Surface accepts one completed Timeline plus absolute Windows and Instants. Those values
+The Track declarations accept one completed Timeline plus absolute Windows and Instants. Those values
 may be authored directly or published by a domain projector upstream.
 
 Ranking boards introduce an item, give its verdict, and retain its place while the next item is
@@ -56,16 +56,16 @@ installed tarball contains a second editable source tree:
 
 | File | What to learn from it |
 | --- | --- |
-| [surface.ts](https://github.com/hypit-ai/hypit/blob/main/packages/ranking/src/surface.ts) | `rankingSurface` resolves the board's already declared Window and item Window or Instant references, together with its content, layout and Style inputs. |
+| [declaration.ts](https://github.com/hypit-ai/hypit/blob/main/packages/ranking/src/declaration.ts) | The package-owned declaration compilers resolve the board's already declared Window and item Window or Instant references, together with content, layout and Style inputs. |
 | [fragment.ts](https://github.com/hypit-ai/hypit/blob/main/packages/ranking/src/fragment.ts) | `createRankingFragment` receives Timeline and wires typed content, time, layout and Style inputs into finite operations. |
 | [schedule.ts](https://github.com/hypit-ai/hypit/blob/main/packages/ranking/src/schedule.ts) | Compute reveal, activation and settled spans from the projected times. |
 | [component.ts](https://github.com/hypit-ai/hypit/blob/main/packages/ranking/src/component.ts) and [render.ts](https://github.com/hypit-ai/hypit/blob/main/packages/ranking/src/render.ts) | Build the ranking program and produce picture and optional sound from that schedule. |
-| [manifest.ts](https://github.com/hypit-ai/hypit/blob/main/packages/ranking/src/manifest.ts) and [activation.ts](https://github.com/hypit-ai/hypit/blob/main/packages/ranking/src/activation.ts) | Publish Types, Producers, Surface vocabulary and package contributions. |
+| [manifest.ts](https://github.com/hypit-ai/hypit/blob/main/packages/ranking/src/manifest.ts) and [activation.ts](https://github.com/hypit-ai/hypit/blob/main/packages/ranking/src/activation.ts) | Publish Types, Producers, declaration syntax and package contributions. |
 | [Ranking Companion](https://github.com/hypit-ai/hypit/blob/main/packages/ranking/src/studio.ts) | Read the same program, present persistent rows and activation lanes, and connect edits to actual Source inputs. |
 
 A project component can use these relationships with its own behavior. External TypeScript uses
 `@hypit/hypit/author`, `@hypit/hypit/producer`, `@hypit/hypit/refinement`,
-`@hypit/hypit/markup`, `@hypit/temporal/markup` and the appropriate domain APIs. Copy the relevant idea into
+`@hypit/hypit/markup`, `@hypit/temporal/author` and the appropriate domain APIs. Copy the relevant idea into
 the project's own package, with its own Module identity, instead of editing the installed Ranking.
 
 The Companion uses published values and temporal lineage, so a visible row and its reveal handle can

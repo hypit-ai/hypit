@@ -7,37 +7,15 @@ import { projectMomentWindow, projectProgramWindow, projectSegmentWindow, projec
 import type { TemporalWindowProjection } from "../../../test/temporal-fixture.js";
 
 import { sealComposition, visualElements } from "@hypit/composition";
-import type { VisualPresent } from "@hypit/composition";
+import type { VisualItem } from "@hypit/composition";
 import { compileHtmlProgram } from "@hypit/html-program";
 import { mediaTypes, prepareMedia } from "@hypit/media";
 import type { CompositableSurfaceRef, PreparedMedia } from "@hypit/media";
 import { blobTypes } from "@hypit/blob";
-import { defaultTemporalRelationSpec, exactTemporalValueFromFrames, resolveTemporalRelation, temporalTypes,
+import { defaultTemporalRelationSpec, evaluateTemporalMap, exactTemporalValueFromFrames, isAffineTemporalMapPiece, resolveTemporalRelation, temporalTypes,
   temporalValueInFrames } from "@hypit/temporal";
-import {
-  appendMediaPaintLayer,
-  appendMappedStillMediaLayer,
-  appendVisualClip,
-  assertVisualTrackSet,
-  appendStillMediaLayer,
-  appendSurfaceMediaLayer,
-  appendTimedMediaLayer,
-  bindVisualClipPath,
-  createMediaLayerSet,
-  createVisualTrackSet,
-  decodeMediaFramePaint,
-  decodeVisualTrackSurface,
-  finalizeVisualTrack,
-  projectVisualTrack,
-  poseAnimation,
-  sealVisualClipSpec,
-  sealMediaPaintLayerSpec,
-  sealMediaSampleLayerSpec,
-  sealVisualTrackHeader,
-  stillVisualTrackFragment,
-  visualTrackManifest,
-  visualTrackTypes,
-} from "@hypit/visual-track";
+import { appendMediaPaintLayer, appendMappedStillMediaLayer, appendVisualClip, appendVisualTransition, assertVisualTrackSet, appendStillMediaLayer, appendSurfaceMediaLayer, appendTimedMediaLayer, bindVisualClipPath, createMediaLayerSet, createVisualTrackSet, decodeMediaFramePaint, finalizeVisualTrack, projectVisualTrack, poseAnimation, sealVisualClipSpec, sealMediaPaintLayerSpec, sealMediaSampleLayerSpec, sealVisualTrackHeader, stillVisualTrackFragment, visualTrackManifest, visualTrackTypes, visualTransitionSpan } from "@hypit/visual-track";
+import { crossDissolveEffect } from "@hypit/visual-transition";
 import type { VisualClipSpec, MediaLayerSet } from "@hypit/visual-track";
 import type { ExactTemporalValue, TemporalMapPiece, TemporalRelationSpec } from "@hypit/temporal";
 import type { NarrativeMomentRef, NarrativeSelectionRef } from "@hypit/narrative";
@@ -45,9 +23,11 @@ import type { BlobRef } from "@hypit/protocol";
 import { spatialTypes } from "@hypit/spatial";
 import { recipeType } from "@hypit/recipe";
 import type { Recipe } from "@hypit/recipe";
-import type { StructuredElement, StructuredNode, SurfaceResolvedReference, MarkupAttributeValue } from "@hypit/markup";
 
-const presentElements = (present: VisualPresent) => visualElements(present.root);
+const presentElements = (item: VisualItem) => {
+  assert.equal(item.kind, "present");
+  return visualElements(item.root);
+};
 
 test("gradient frame paints preserve commas inside functional colors", () => {
   const paint = (value: string) => decodeMediaFramePaint({ path: "scrim", properties: { "frame-paint": value } }, "scrim")?.paint;
@@ -211,11 +191,15 @@ function preparedTimed(id = "timed", withAudio = true): PreparedMedia {
   });
 }
 
-function timedLayers(id: string, withAudio = true): MediaLayerSet {
+function timedLayers(
+  id: string,
+  withAudio = true,
+  sampling: TemporalRelationSpec = loopSampling(),
+): MediaLayerSet {
   return appendTimedMediaLayer(createMediaLayerSet(), preparedTimed(id, withAudio), fit, sealMediaSampleLayerSpec({
 
     id: "video",
-    sampling: loopSampling(),
+    sampling,
     appearance,
   }));
 }
@@ -334,9 +318,10 @@ test("self-blur is two explicit samples of one Resource and collection keeps one
     visual: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) }, audio: [],
   }), space);
   assert.equal(document.artifacts.length, 1);
-  assert.equal((document.html.match(new RegExp(source.resource, "gu")) ?? []).length, 2,
-    "HTML names the same declared Resource at both sampling sites");
-  assert.equal((document.html.match(/hypit-resource:\/\/res_/gu) ?? []).length, 2);
+  const artifactId = document.artifacts[0]!.id;
+  assert.equal((document.html.match(new RegExp(artifactId, "gu")) ?? []).length, 2,
+    "HTML names the same Programme-local Artifact at both sampling sites");
+  assert.equal((document.html.match(/hypit-artifact:\/\/artifact-/gu) ?? []).length, 2);
   const blurAppearance = presentElements(track.items[0]!).find((element) => element.id === "blurred:appearance");
   assert.equal(blurAppearance?.style.find((entry) => entry.name === "filter")?.value,
     "blur(24px) brightness(0.7) saturate(0.8)");
@@ -397,7 +382,9 @@ test("piecewise temporal sampling, Clip pose and picture sampling remain separat
   const video = elements.find((element) => element.id === "video");
   assert.equal(video?.kind, "video");
   const pieces = video.kind === "video" ? video.sampling.stages[0]?.pieces : undefined;
-  assert.deepEqual(pieces?.map((piece) => ({
+  assert.deepEqual(pieces?.map((piece) => {
+    assert.ok(isAffineTemporalMapPiece(piece));
+    return ({
     target: {
       startFrame: Number(temporalValueInFrames(piece.target.start, space).numerator),
       endFrameExclusive: Number(temporalValueInFrames(piece.target.end, space).numerator),
@@ -406,7 +393,7 @@ test("piecewise temporal sampling, Clip pose and picture sampling remain separat
       { frameRate: { numerator: 30, denominator: 1 } });
     return { numerator: Number(value.numerator), denominator: Number(value.denominator) }; })(),
     rate: piece.rate,
-  })), [
+  }); }), [
     { target: { startFrame: 0, endFrameExclusive: 30 }, sourceAtStart: { numerator: 10, denominator: 1 }, rate: { numerator: 1, denominator: 1 } },
     { target: { startFrame: 30, endFrameExclusive: 120 }, sourceAtStart: { numerator: 39, denominator: 1 }, rate: { numerator: 0, denominator: 1 } },
   ]);
@@ -433,6 +420,37 @@ test("Prepared Media reaches the terminal visual program without an intermediate
   if (source?.kind !== "media") throw new Error("Expected direct Prepared Media source");
   assert.equal(source.source.streamIndex, 0);
   assert.equal(source.source.source.resource, fixtureResource("source:alternate-rate"));
+});
+
+test("a cubic Clip relation remains exact through Prepared Media and the terminal visual program", () => {
+  const curve: TemporalRelationSpec = { relations: [{
+    kind: "cubic",
+    target: fullBounds(),
+    sourceAtStart: startPoint(),
+    sourceControl1: startPoint(),
+    sourceControl2: endPoint(),
+    sourceAtEnd: endPoint(),
+  }] };
+  const track = projectVisualTrack(space, finalizeVisualTrack(appendProgramVisualClip(
+    createVisualTrackSet(), header, semantic, timedLayers("cubic", false, curve), frame, clipSpec(),
+  ), header, space));
+  const document = compileHtmlProgram(sealComposition({
+    id: "cubic",
+    canvas: { width: 1080, height: 1920, clearColor: "#000000" },
+    visual: { members: [{ kind: "track", id: track.id, track }] },
+    audio: [],
+  }), space);
+  const source = document.videoSources[0];
+  assert.equal(source?.kind, "media");
+  if (source?.kind !== "media") throw new Error("Expected direct Prepared Media source");
+  assert.deepEqual(evaluateTemporalMap(source.sampling, exactTemporalValueFromFrames(30, space)), {
+    ticks: "5",
+    timeBase: { numerator: 1, denominator: 16 },
+  });
+  assert.deepEqual(evaluateTemporalMap(source.sampling, exactTemporalValueFromFrames(60, space)), {
+    ticks: "1",
+    timeBase: { numerator: 1, denominator: 1 },
+  });
 });
 
 test("still and animated typed Surfaces use the same layer law without browser format guesses", () => {
@@ -528,6 +546,108 @@ test("overlapping Clips retain their authored Track-local order", () => {
   assert.deepEqual(program.clips.map(({ id }) => id), ["first", "second"]);
 });
 
+test("a Transition applies a package-owned effect over the exact Clip intersection", () => {
+  const outgoingWindow = projectProgramWindow({ itemId: "outgoing-window", semantic,
+    projection: {
+      start: { ref: "absolute", at: { unit: "frames", value: 0 } },
+      end: { ref: "absolute", at: { unit: "frames", value: 60 } },
+    } });
+  const incomingWindow = projectProgramWindow({ itemId: "incoming-window", semantic,
+    projection: {
+      start: { ref: "absolute", at: { unit: "frames", value: 45 } },
+      end: { ref: "absolute", at: { unit: "frames", value: 100 } },
+    } });
+  let set = appendVisualClip(createVisualTrackSet(), header, space, stillLayers(), frame,
+    clipSpec({ id: "outgoing" }), outgoingWindow);
+  set = appendVisualClip(set, header, space, stillLayers(), frame,
+    clipSpec({ id: "incoming" }), incomingWindow);
+  const pair = set;
+  const effect = crossDissolveEffect("ease-in-out");
+  set = appendVisualTransition(set, {
+    id: "handoff", outgoingClipId: "outgoing", incomingClipId: "incoming", effect,
+  });
+  const program = finalizeVisualTrack(set, header, space);
+  assert.deepEqual(program.transitions, [{
+    id: "handoff", outgoingClipId: "outgoing", incomingClipId: "incoming", effect,
+  }]);
+  assert.deepEqual(visualTransitionSpan(program.transitions[0]!, program.clips),
+    { startFrame: 45, endFrameExclusive: 60 });
+  const projected = projectVisualTrack(space, program);
+  const process = projected.items.find((item) => item.kind === "process");
+  assert.ok(process?.kind === "process");
+  assert.deepEqual(process.span, { startFrame: 45, endFrameExclusive: 60 });
+  assert.deepEqual(process.inputs.map(({ name, contribution }) => ({ name, id: contribution.id })), [
+    { name: "outgoing", id: "outgoing" }, { name: "incoming", id: "incoming" },
+  ]);
+  assert.deepEqual(process.program, effect);
+
+  assert.throws(() => appendVisualTransition(pair, {
+    id: "reversed", outgoingClipId: "incoming", incomingClipId: "outgoing", effect,
+  }), /adjacent in Track paint order/u);
+  assert.throws(() => appendVisualTransition({
+    clips: [pair.clips[0]!, {
+      ...pair.clips[1]!, span: { startFrame: 60, endFrameExclusive: 100 },
+    }],
+    transitions: [],
+  }, {
+    id: "disjoint", outgoingClipId: "outgoing", incomingClipId: "incoming", effect,
+  }), /requires overlapping Clip Windows/u);
+  assert.throws(() => appendVisualTransition(pair, {
+    id: "outgoing", outgoingClipId: "outgoing", incomingClipId: "incoming", effect,
+  }), /conflicts with a Clip id/u);
+});
+
+test("a timed Transition reaches HTML with both Prepared Media clocks intact", () => {
+  const outgoingWindow = projectProgramWindow({ itemId: "timed-outgoing-window", semantic,
+    projection: {
+      start: { ref: "absolute", at: { unit: "frames", value: 0 } },
+      end: { ref: "absolute", at: { unit: "frames", value: 60 } },
+    } });
+  const incomingWindow = projectProgramWindow({ itemId: "timed-incoming-window", semantic,
+    projection: {
+      start: { ref: "absolute", at: { unit: "frames", value: 45 } },
+      end: { ref: "absolute", at: { unit: "frames", value: 100 } },
+    } });
+  let set = appendVisualClip(createVisualTrackSet(), header, space, timedLayers("transition-outgoing"), frame,
+    clipSpec({ id: "timed-outgoing" }), outgoingWindow);
+  set = appendVisualClip(set, header, space, timedLayers("transition-incoming"), { ...frame, xPx: 220 },
+    clipSpec({ id: "timed-incoming" }), incomingWindow);
+  set = appendVisualTransition(set, {
+    id: "timed-handoff",
+    outgoingClipId: "timed-outgoing",
+    incomingClipId: "timed-incoming",
+    effect: crossDissolveEffect(),
+  });
+  const track = projectVisualTrack(space, finalizeVisualTrack(set, header, space));
+  const process = track.items.find((item) => item.kind === "process");
+  assert.ok(process?.kind === "process");
+  assert.deepEqual(process.span, { startFrame: 45, endFrameExclusive: 60 });
+  assert.deepEqual(process.inputs.map(({ name, contribution }) => ({ name, span: contribution.span })), [
+    { name: "outgoing", span: { startFrame: 0, endFrameExclusive: 60 } },
+    { name: "incoming", span: { startFrame: 45, endFrameExclusive: 100 } },
+  ]);
+
+  const document = compileHtmlProgram(sealComposition({
+    id: "timed-transition",
+    canvas: { width: 1080, height: 1920, clearColor: "#000000" },
+    visual: { members: [{ kind: "track", id: track.id, track }] },
+    audio: [],
+  }), space);
+  const sourceSpans = new Map<string, { startFrame: number; endFrameExclusive: number }[]>();
+  for (const video of document.videoSources) {
+    if (video.kind !== "media") continue;
+    const spans = sourceSpans.get(video.source.source.resource) ?? [];
+    spans.push({ startFrame: video.startFrame, endFrameExclusive: video.endFrameExclusive });
+    sourceSpans.set(video.source.source.resource, spans);
+  }
+  assert.ok(sourceSpans.get(fixtureResource("source:transition-outgoing"))?.some((span) =>
+    span.startFrame === 0 && span.endFrameExclusive === 60));
+  assert.ok(sourceSpans.get(fixtureResource("source:transition-incoming"))?.some((span) =>
+    span.startFrame === 45 && span.endFrameExclusive === 100));
+  assert.match(document.html, /data-hypit-process-id="timed-handoff"/u);
+  assert.match(document.html, /mix-blend-mode:\s*plus-lighter/u);
+});
+
 test("one resolved Window can time distinct Visual Clip occurrences", () => {
   const shared = projectProgramWindow({ itemId: "shared-window", semantic,
     projection: { start: { ref: "timeline.start" }, end: { ref: "absolute", at: { unit: "frames", value: 30 } } } });
@@ -544,9 +664,9 @@ test("VisualTrackSet refinement validates accumulated Clips in declaration order
   const set = appendVisualClip(createVisualTrackSet(), header, space, stillLayers(), frame,
     clipSpec({ id: "first" }), shared);
   assert.doesNotThrow(() => assertVisualTrackSet(set));
-  assert.throws(() => assertVisualTrackSet({ clips: [set.clips[0]!, structuredClone(set.clips[0]!)] }),
+  assert.throws(() => assertVisualTrackSet({ clips: [set.clips[0]!, structuredClone(set.clips[0]!)], transitions: [] }),
     /repeats first/u);
-  assert.throws(() => assertVisualTrackSet({ clips: [{ ...set.clips[0]!, layers: [] }] }),
+  assert.throws(() => assertVisualTrackSet({ clips: [{ ...set.clips[0]!, layers: [] }], transitions: [] }),
     /requires layers/u);
 });
 
@@ -603,6 +723,7 @@ test("every documented Visual frame and fit remains one ordinary Clip instead of
   const track = projectVisualTrack(space, finalizeVisualTrack(set, header, space));
   assert.equal(track.items.length, sizings.length);
   for (const present of track.items) {
+    assert.equal(present.kind, "present");
     const placement = present.root;
     assert.equal(placement.kind, "box");
     assert.ok(placement.style.some((entry) => entry.name === "width" && typeof entry.value === "string"));
@@ -665,11 +786,13 @@ test("visual occurrences use the shared temporal relation algebra without frame-
     const result = temporalValueInFrames(value, { frameRate });
     return { numerator: Number(result.numerator), denominator: Number(result.denominator) };
   };
-  const piece = (value: TemporalMapPiece) => ({
+  const piece = (value: TemporalMapPiece) => {
+    assert.ok(isAffineTemporalMapPiece(value));
+    return ({
     target: { startFrame: frames(value.target.start).numerator, endFrameExclusive: frames(value.target.end).numerator },
     sourceAtStart: frames(value.sourceAtStart, { numerator: 30, denominator: 1 }),
     rate: value.rate,
-  });
+  }); };
   assert.deepEqual(resolve().stages[0]!.pieces.map(piece).map((item) => item.target),
     [{ startFrame: 0, endFrameExclusive: 30 }]);
   const endAligned: TemporalRelationSpec = { relations: [{
@@ -682,8 +805,10 @@ test("visual occurrences use the shared temporal relation algebra without frame-
     kind: "rate", target: fullBounds(), targetAt: endPoint(), sourceAt: endPoint(),
     rate: { numerator: 1, denominator: 1 }, source: fullBounds(), wrap: fullBounds(),
   }] }).stages[0]!.pieces.map(piece)[0]?.sourceAtStart, { numerator: 10, denominator: 1 });
-  assert.deepEqual(resolve({ relations: [{ kind: "fit", target: fullBounds(), source: fullBounds() }] })
-    .stages[0]!.pieces[0]?.rate, { numerator: 3, denominator: 5 });
+  const fitted = resolve({ relations: [{ kind: "fit", target: fullBounds(), source: fullBounds() }] })
+    .stages[0]!.pieces[0]!;
+  assert.ok(isAffineTemporalMapPiece(fitted));
+  assert.deepEqual(fitted.rate, { numerator: 3, denominator: 5 });
   assert.deepEqual(resolve({ relations: [{
     kind: "rate", target: fullBounds(), targetAt: startPoint(), sourceAt: endPoint(),
     rate: { numerator: -1, denominator: 1 }, source: fullBounds(),
@@ -703,80 +828,4 @@ test("the graph keeps every source, extent, fit, frame, time and treatment input
   assert.deepEqual(stillVisualTrackFragment.inputs.map((input) => input.name), [
     "clip-spec", "extent", "fit", "frame", "header", "sample-spec", "source", "timeline", "window",
   ]);
-});
-
-test("the Visual author Surface emits explicit graph edges for layers, absolute time and Clip layers", async () => {
-  const range = { source: "media-surface.svml", start: 0, end: 1 };
-  const ref = (path: string): MarkupAttributeValue => ({ kind: "reference", path });
-  const node = (name: string, attributes: Record<string, MarkupAttributeValue>, children: StructuredNode[] = []): StructuredElement => ({
-    kind: "element", name, attributes, children, range,
-  });
-  const appearance = (path: string, properties: Recipe["properties"]): SurfaceResolvedReference => ({
-    path,
-    ref: { kind: "record", id: path },
-    type: recipeType,
-    record: { value: ({ path, properties }) } as never,
-  });
-  const plain = (path: string, type: SurfaceResolvedReference["type"]): SurfaceResolvedReference => ({
-    path, ref: { kind: "record", id: path }, type,
-  });
-  const references = new Map<string, SurfaceResolvedReference>([
-    ["semantic", plain("semantic", timelineTypes.timeline)],
-    ["frame", plain("frame", spatialTypes.frame)],
-    ["mapping", plain("mapping", spatialTypes.map2D)],
-    ["clip-path", plain("clip-path", spatialTypes.path)],
-    ["still", plain("still", blobTypes.blob)],
-    ["extent", plain("extent", spatialTypes.extent)],
-    ["video", plain("video", mediaTypes.prepared)],
-    ["surface", plain("surface", mediaTypes.compositableSurface)],
-    ["selection", plain("selection", temporalTypes.window)],
-    ["answer-segment", plain("answer-segment", temporalTypes.window)],
-    ["inset-window", plain("inset-window", temporalTypes.window)],
-    ["still-style", appearance("still-style", {})],
-    ["card-style", appearance("card-style", { clip: "frame", "frame-paint": "#111111" })],
-    ["surface-style", appearance("surface-style", {})],
-    ["motion", plain("motion", visualTrackTypes.motion)],
-  ]);
-  const root = node("visual:Track", { id: "editorial", timeline: ref("semantic") }, [
-    node("visual:Clip", { id: "still-card", image: ref("still"), extent: ref("extent"), frame: ref("frame"), clip: ref("clip-path"), treatment: ref("still-style"), fit: "contain", during: ref("selection") }),
-    node("visual:Clip", { id: "segment-card", image: ref("still"), extent: ref("extent"), frame: ref("frame"), mapping: ref("mapping"), treatment: ref("still-style"), during: ref("answer-segment") }),
-    node("visual:Clip", { id: "proof", media: ref("video"), frame: ref("frame"), treatment: ref("card-style"), motion: ref("motion"), fit: "cover", during: ref("selection") }, [
-      node("visual:Map", { rate: "1", "wrap-from": "start", "wrap-until": "end" }),
-      node("visual:Sampling", { at: "start", zoom: "1" }),
-      node("visual:Sampling", { at: "end", zoom: "1.1", y: "-10", easing: "ease-out" }),
-    ]),
-    node("visual:Clip", { image: ref("still"), extent: ref("extent"), id: "presenter", frame: ref("frame"), clip: ref("clip-path"), treatment: ref("still-style"), during: ref("answer-segment") }, [
-      node("visual:Sampling", { at: "start", zoom: "1" }),
-      node("visual:Sampling", { at: "end", zoom: "1.08", x: "6" }),
-      node("visual:Pose", { at: "start", opacity: "0" }),
-      node("visual:Pose", { at: "end", opacity: "1" }),
-    ]),
-    node("visual:Clip", { image: ref("still"), extent: ref("extent"), id: "inset", frame: ref("frame"), treatment: ref("still-style"), during: ref("inset-window") }),
-    node("visual:Clip", { surface: ref("surface"), id: "alpha-overlay", frame: ref("frame"), treatment: ref("surface-style"), fit: "cover", during: ref("selection") }, [
-      node("visual:Map", { rate: "1", "wrap-from": "start", "wrap-until": "end" }),
-    ]),
-  ]);
-  const result = await decodeVisualTrackSurface({
-    sourceName: "media-surface.svml",
-    element: root,
-    resolveReference: (path) => references.get(path),
-    resolveAsset: async () => { throw new Error("no asset resolution expected"); },
-  });
-  const component = result.components.find((candidate) => candidate.outputs.visual !== undefined);
-  assert.ok(component !== undefined);
-  assert.deepEqual(Object.keys(component.outputs).sort(), ["program", "visual"]);
-  const fragment = result.components.find((candidate) => candidate.fragment.exports.some((output) => output.name === "visual"))!.fragment;
-  const producers = fragment.operations.map((entry) => entry.producer.name);
-  assert.ok(producers.includes("append-still-media-layer"));
-  assert.ok(producers.includes("append-mapped-still-media-layer"));
-  assert.ok(producers.includes("append-visual-clip"));
-  assert.ok(producers.includes("append-timed-media-layer"));
-  assert.ok(producers.includes("append-surface-media-layer"));
-  assert.ok(producers.includes("bind-visual-clip-path"));
-  assert.ok(producers.includes("bind-visual-clip-motion"));
-  assert.ok(fragment.inputs.some((entry) => entry.type.name === blobTypes.blob.name));
-  assert.ok(fragment.inputs.some((entry) => entry.type.name === mediaTypes.prepared.name));
-  assert.ok(fragment.inputs.some((entry) => entry.type.name === spatialTypes.path.name));
-  const clipSpecs = result.records.filter((entry) => entry.type.name === "VisualClipSpec");
-  assert.equal(clipSpecs.length, 6);
 });

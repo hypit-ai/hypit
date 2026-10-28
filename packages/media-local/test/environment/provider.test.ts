@@ -18,13 +18,18 @@ import type { ImmediateEndpointHandler } from "@hypit/endpoint";
 import { installEndpoint } from "@hypit/endpoint";
 import {
   mediaOperationsCapabilities,
-  sealAudioProgram,
   sealMediaSelectionRequest,
   selectMediaStreams,
   transformPreparedMedia,
 } from "@hypit/media-operations";
+import { audioProgramCapabilities, sealAudioProgram } from "@hypit/audio-program";
+import { preservePitch } from "@hypit/audio-stretch";
+import { mediaDeliveryCapabilities } from "@hypit/media-delivery";
 import { assertBlobRef, canonicalize } from "@hypit/protocol";
 import type { CapabilityRef, CanonicalValue, Need, TypeRef } from "@hypit/protocol";
+import { sealTemporalMap } from "@hypit/temporal";
+import type { TemporalMapPiece } from "@hypit/temporal";
+import { frameRangeFixture, frameSamplingMapFixture } from "../../../../test/temporal-fixture.js";
 
 import { createLocalMediaProvider } from "../../src/index.js";
 
@@ -53,6 +58,30 @@ function preparedAudioProgramSource(id: string, source: import("@hypit/protocol"
   });
   return { source: preparedAudioSource(media), preparation: media.audio!.map };
 }
+
+function audioSampling(
+  id: string,
+  targetFrames: number,
+  sourceFrames: number,
+  piece: {
+    readonly sourceAtStart?: { readonly numerator: number; readonly denominator: number };
+    readonly rate?: { readonly numerator: number; readonly denominator: number };
+    readonly wrap?: { readonly startFrame: number; readonly endFrameExclusive: number };
+  } = {},
+) {
+  return frameSamplingMapFixture({
+    targetId: `${id}:occurrence`, sourceId: id,
+    targetFrameRate: { numerator: 48_000, denominator: 1 }, targetFrames,
+    sourceFrameRate: { numerator: 48_000, denominator: 1 }, sourceFrames,
+    pieces: [{ target: { startFrame: 0, endFrameExclusive: targetFrames },
+      sourceAtStart: piece.sourceAtStart ?? { numerator: 0, denominator: 1 },
+      rate: piece.rate ?? { numerator: 1, denominator: 1 },
+      ...(piece.wrap === undefined ? {} : { wrap: piece.wrap }) }],
+  });
+}
+
+const audioTarget = (startSample: number, endSampleExclusive: number) =>
+  frameRangeFixture(startSample, endSampleExclusive, { numerator: 48_000, denominator: 1 });
 
 async function run(executable: string, args: readonly string[]): Promise<void> {
   await new Promise<void>((resolve, reject) => {
@@ -501,16 +530,11 @@ test("local media Provider renders one frame-domain audio program and muxes exac
       clips: [
         {
           id: "speech:first",
-          inputId: "speech:first",
           ...preparedAudioProgramSource("speech:first", first, 24_000),
+          sampling: audioSampling("speech:first", 24_000, 24_000),
+          target: audioTarget(0, 24_000),
           targetStartSample: 0,
           targetEndSampleExclusive: 24_000,
-          preparedSampleFrames: 24_000,
-          preparedStartSample: 0,
-          preparedEndSampleExclusive: 24_000,
-          loop: false,
-          loopPhaseSample: 0,
-          playbackRate: { numerator: 1, denominator: 1 },
           mixStartSample: 0,
           mixEndSampleExclusive: 24_000,
           gain: 1,
@@ -519,16 +543,11 @@ test("local media Provider renders one frame-domain audio program and muxes exac
         },
         {
           id: "speech:second",
-          inputId: "speech:second",
           ...preparedAudioProgramSource("speech:second", second, 24_000),
+          sampling: audioSampling("speech:second", 24_000, 24_000),
+          target: audioTarget(24_000, 48_000),
           targetStartSample: 24_000,
           targetEndSampleExclusive: 48_000,
-          preparedSampleFrames: 24_000,
-          preparedStartSample: 0,
-          preparedEndSampleExclusive: 24_000,
-          loop: false,
-          loopPhaseSample: 0,
-          playbackRate: { numerator: 1, denominator: 1 },
           mixStartSample: 24_000,
           mixEndSampleExclusive: 48_000,
           gain: 1,
@@ -539,7 +558,7 @@ test("local media Provider renders one frame-domain audio program and muxes exac
     });
     const audioRequest = need(
       "need:render-program-audio",
-      mediaOperationsCapabilities.renderAudio,
+      audioProgramCapabilities.render,
       mediaTypes.timelineAudio,
       canonicalize({ program }),
     );
@@ -558,7 +577,7 @@ test("local media Provider renders one frame-domain audio program and muxes exac
     });
     const muxRequest = need(
       "need:mux-program-media",
-      mediaOperationsCapabilities.mux,
+      mediaDeliveryCapabilities.mux,
       mediaTypes.muxed,
       canonicalize({ visual, audio, delivery }),
     );
@@ -620,7 +639,7 @@ test("local media Provider preserves the audio tail for a 30000/1001 frame domai
     });
     const muxValue = await fulfillInline(resources, need(
       "need:mux-ntsc-program-media",
-      mediaOperationsCapabilities.mux,
+      mediaDeliveryCapabilities.mux,
       mediaTypes.muxed,
       canonicalize({ visual, audio, delivery }),
     ));
@@ -653,16 +672,14 @@ test("local media Provider executes an end-aligned loop from the exact authored 
       sampleFrames: 48_000,
       clips: [{
         id: "loop:end",
-        inputId: "loop:end",
         ...preparedAudioProgramSource("loop:end", source, 100),
+        sampling: audioSampling("loop:end", 250, 100, {
+          sourceAtStart: { numerator: 50, denominator: 1 },
+          wrap: { startFrame: 0, endFrameExclusive: 100 },
+        }),
+        target: audioTarget(0, 250),
         targetStartSample: 0,
         targetEndSampleExclusive: 250,
-        preparedSampleFrames: 100,
-        preparedStartSample: 0,
-        preparedEndSampleExclusive: 100,
-        loop: true,
-        loopPhaseSample: 50,
-        playbackRate: { numerator: 1, denominator: 1 },
         mixStartSample: 0,
         mixEndSampleExclusive: 250,
         gain: 1,
@@ -672,7 +689,7 @@ test("local media Provider executes an end-aligned loop from the exact authored 
     });
     const value = await fulfillInline(resources, need(
       "need:render-loop-audio",
-      mediaOperationsCapabilities.renderAudio,
+      audioProgramCapabilities.render,
       mediaTypes.timelineAudio,
       canonicalize({ program }),
     ));
@@ -696,6 +713,99 @@ test("local media Provider executes an end-aligned loop from the exact authored 
   }
 });
 
+test("audio signal evaluation treats reverse, hold, cubic motion and gaps as peer TemporalMap relations", {
+  skip: !hasMediaBinaries,
+}, async () => {
+  const root = await mkdtemp(join(tmpdir(), "hypit-provider-media-signal-map-"));
+  try {
+    const resources = new MemoryResourceStore();
+    const source = await resources.put(rampWav(16), "audio/wav");
+    const at = (sample: number) => ({ ticks: String(sample), timeBase: { numerator: 1, denominator: 48_000 } }) as const;
+    const sampling = (id: string, piece: TemporalMapPiece) => sealTemporalMap({ stages: [{
+      target: { id: `${id}:occurrence`, duration: at(4) },
+      source: { id, duration: at(16) },
+      pieces: [piece],
+    }] });
+    const base = (id: string, start: number, map: ReturnType<typeof sampling>) => ({
+      id,
+      ...preparedAudioProgramSource(id, source, 16),
+      sampling: map,
+      target: audioTarget(start, start + 4),
+      targetStartSample: start,
+      targetEndSampleExclusive: start + 4,
+      mixStartSample: start,
+      mixEndSampleExclusive: start + 4,
+      gain: 1,
+      fadeInSamples: 0,
+      fadeOutSamples: 0,
+    });
+    const chained = preparedAudioProgramSource("prepared-chain", source, 16);
+    const preparedDomain = { id: "prepared-chain:prepared", duration: at(4) } as const;
+    const intermediateDomain = { id: "prepared-chain:intermediate", duration: at(8) } as const;
+    const preparation = sealTemporalMap({ stages: [{
+      target: preparedDomain,
+      source: intermediateDomain,
+      pieces: [{ target: { start: at(0), end: at(4) }, sourceAtStart: at(0),
+        rate: { numerator: 2, denominator: 1 } }],
+    }, {
+      target: intermediateDomain,
+      source: chained.source.sourceDomain,
+      pieces: [{ target: { start: at(0), end: at(8) }, sourceAtStart: at(0),
+        rate: { numerator: 2, denominator: 1 } }],
+    }] });
+    const preparedSampling = sealTemporalMap({ stages: [{
+      target: { id: "prepared-chain:occurrence", duration: at(4) },
+      source: preparedDomain,
+      pieces: [{ target: { start: at(0), end: at(4) }, sourceAtStart: at(0),
+        rate: { numerator: 1, denominator: 1 } }],
+    }] });
+    const program = sealAudioProgram({
+      frameRate: { numerator: 30, denominator: 1 }, frameCount: 30,
+      sampleRate: 48_000, sampleFrames: 48_000,
+      clips: [
+        base("reverse", 0, sampling("reverse", {
+          target: { start: at(0), end: at(4) }, sourceAtStart: at(4), rate: { numerator: -1, denominator: 1 },
+        })),
+        base("hold", 4, sampling("hold", {
+          target: { start: at(0), end: at(4) }, sourceAtStart: at(2), rate: { numerator: 0, denominator: 1 },
+        })),
+        base("curve", 8, sampling("curve", {
+          target: { start: at(0), end: at(4) }, sourceAtStart: at(0),
+          sourceControl1: at(0), sourceControl2: at(0), sourceAtEnd: at(4),
+        })),
+        base("gap", 12, sampling("gap", {
+          target: { start: at(0), end: at(2) }, sourceAtStart: at(0), rate: { numerator: 1, denominator: 1 },
+        })),
+        {
+          id: "prepared-chain", source: chained.source, preparation, sampling: preparedSampling,
+          target: audioTarget(16, 20), targetStartSample: 16, targetEndSampleExclusive: 20,
+          mixStartSample: 16, mixEndSampleExclusive: 20, gain: 1, fadeInSamples: 0, fadeOutSamples: 0,
+        },
+      ],
+    });
+    const value = await fulfillInline(resources, need(
+      "need:render-signal-map-audio", audioProgramCapabilities.render,
+      mediaTypes.timelineAudio, canonicalize({ program }),
+    ));
+    verifyTimelineAudio(value);
+    const wavPath = join(root, "signal-map.wav");
+    const rawPath = join(root, "signal-map.raw");
+    await writeFile(wavPath, (await resources.get((value as unknown as TimelineAudio).artifact.resource))!);
+    await run("ffmpeg", ["-v", "error", "-y", "-i", wavPath, "-f", "s16le", rawPath]);
+    const raw = await readFile(rawPath);
+    const values = (start: number, count: number) => Array.from({ length: count }, (_, index) =>
+      raw.readInt16LE((start + index) * 4));
+    assert.deepEqual(values(0, 4), [4, 3, 2, 1]);
+    assert.deepEqual(values(4, 4), [3, 3, 3, 3]);
+    assert.deepEqual(values(8, 4), [1, 1, 2, 3]);
+    assert.deepEqual(values(12, 4), [1, 2, 3, 0]);
+    assert.deepEqual(values(16, 4), [1, 5, 9, 13],
+      "occurrence and multi-stage preparation maps compose without a playback-mode rewrite");
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("audio range preserves loop phase, tempo and intersected fades from the full programme", { skip: !hasMediaBinaries }, async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-audio-range-"));
   try {
@@ -704,14 +814,16 @@ test("audio range preserves loop phase, tempo and intersected fades from the ful
     const program = sealAudioProgram({
       frameRate: { numerator: 30, denominator: 1 }, frameCount: 60,
       sampleRate: 48000, sampleFrames: 96000,
-      clips: [{ id: "loop", inputId: "loop", ...preparedAudioProgramSource("loop", source, 4800), targetStartSample: 0, targetEndSampleExclusive: 96000,
-        preparedSampleFrames: 4800, preparedStartSample: 0, preparedEndSampleExclusive: 4800,
-        loop: true, loopPhaseSample: 1700, playbackRate: { numerator: 5, denominator: 4 },
+      clips: [{ id: "loop", ...preparedAudioProgramSource("loop", source, 4800),
+        sampling: audioSampling("loop", 96000, 4800, { sourceAtStart: { numerator: 1700, denominator: 1 },
+          rate: { numerator: 5, denominator: 4 }, wrap: { startFrame: 0, endFrameExclusive: 4800 } }),
+        target: audioTarget(0, 96000),
+        targetStartSample: 0, targetEndSampleExclusive: 96000,
         mixStartSample: 0, mixEndSampleExclusive: 96000, gain: 0.8,
         fadeInSamples: 48000, fadeOutSamples: 30000 }],
     });
     const pcm = async (name: string, range?: { startFrame: number; endFrameExclusive: number }) => {
-      const value = await fulfillInline(resources, need(`need:${name}`, mediaOperationsCapabilities.renderAudio,
+      const value = await fulfillInline(resources, need(`need:${name}`, audioProgramCapabilities.render,
         mediaTypes.timelineAudio, canonicalize({ program, ...(range === undefined ? {} : { range }) })));
       verifyTimelineAudio(value);
       const audio = value as unknown as TimelineAudio;
@@ -734,6 +846,55 @@ test("audio range preserves loop phase, tempo and intersected fades from the ful
   } finally { await rm(root, { recursive: true, force: true }); }
 });
 
+test("pitch-preserving reconstruction follows the same explicit rate without changing pitch", {
+  skip: !hasMediaBinaries,
+}, async () => {
+  const root = await mkdtemp(join(tmpdir(), "hypit-audio-preserve-pitch-"));
+  try {
+    const sourcePath = join(root, "tone.wav");
+    await run("ffmpeg", [
+      "-v", "error", "-y", "-f", "lavfi", "-i", "sine=frequency=440:sample_rate=48000:duration=1",
+      "-c:a", "pcm_s16le", "-ar", "48000", "-ac", "2", sourcePath,
+    ]);
+    const resources = new MemoryResourceStore();
+    const source = await resources.put(await readFile(sourcePath), "audio/wav");
+    const makeProgram = (id: string, reconstruction?: ReturnType<typeof preservePitch>) => sealAudioProgram({
+      frameRate: { numerator: 30, denominator: 1 }, frameCount: 15,
+      sampleRate: 48_000, sampleFrames: 24_000,
+      clips: [{
+        id,
+        ...preparedAudioProgramSource(id, source, 48_000),
+        sampling: audioSampling(id, 24_000, 48_000, { rate: { numerator: 2, denominator: 1 } }),
+        ...(reconstruction === undefined ? {} : { reconstruction }),
+        target: audioTarget(0, 24_000),
+        targetStartSample: 0, targetEndSampleExclusive: 24_000,
+        mixStartSample: 0, mixEndSampleExclusive: 24_000,
+        gain: 1, fadeInSamples: 0, fadeOutSamples: 0,
+      }],
+    });
+    const crossings = async (name: string, program: ReturnType<typeof makeProgram>) => {
+      const value = await fulfillInline(resources, need(`need:${name}`, audioProgramCapabilities.render,
+        mediaTypes.timelineAudio, canonicalize({ program })));
+      verifyTimelineAudio(value);
+      const wav = join(root, `${name}.wav`), raw = join(root, `${name}.raw`);
+      await writeFile(wav, (await resources.get((value as unknown as TimelineAudio).artifact.resource))!);
+      await run("ffmpeg", ["-v", "error", "-y", "-i", wav, "-f", "s16le", raw]);
+      const pcm = await readFile(raw);
+      let count = 0;
+      for (let sample = 1; sample < 24_000; sample += 1) {
+        if (pcm.readInt16LE((sample - 1) * 4) <= 0 && pcm.readInt16LE(sample * 4) > 0) count += 1;
+      }
+      return count;
+    };
+    const ordinary = await crossings("ordinary", makeProgram("ordinary"));
+    const preserved = await crossings("preserved", makeProgram("preserved", preservePitch()));
+    assert.ok(ordinary >= 420 && ordinary <= 460, `Ordinary 2x sampling produced ${ordinary} cycles`);
+    assert.ok(preserved >= 200 && preserved <= 240, `Pitch-preserving 2x stretch produced ${preserved} cycles`);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("audio envelopes and audible regions preserve sample phase through gaps and range renders", { skip: !hasMediaBinaries }, async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-audio-presentation-"));
   try {
@@ -741,9 +902,10 @@ test("audio envelopes and audible regions preserve sample phase through gaps and
     const source = await resources.put(rampWav(4800), "audio/wav");
     const program = sealAudioProgram({
       frameRate: { numerator: 30, denominator: 1 }, frameCount: 12, sampleRate: 48000, sampleFrames: 19200,
-      clips: [{ id: "voice", inputId: "voice", ...preparedAudioProgramSource("voice", source, 4800), targetStartSample: 1600, targetEndSampleExclusive: 17600,
-        preparedSampleFrames: 4800, preparedStartSample: 0, preparedEndSampleExclusive: 4800,
-        loop: true, loopPhaseSample: 0, playbackRate: { numerator: 1, denominator: 1 },
+      clips: [{ id: "voice", ...preparedAudioProgramSource("voice", source, 4800),
+        sampling: audioSampling("voice", 16000, 4800, { wrap: { startFrame: 0, endFrameExclusive: 4800 } }),
+        target: audioTarget(1600, 17600),
+        targetStartSample: 1600, targetEndSampleExclusive: 17600,
         mixStartSample: 1600, mixEndSampleExclusive: 17600, gain: 1,
         fadeInSamples: 0, fadeOutSamples: 0,
         gainEnvelope: [{ sample: 1600, gain: 0 }, { sample: 17600, gain: 1 }],
@@ -751,7 +913,7 @@ test("audio envelopes and audible regions preserve sample phase through gaps and
       }],
     });
     const pcm = async (name: string, range?: { startFrame: number; endFrameExclusive: number }) => {
-      const value = await fulfillInline(resources, need(`need:${name}`, mediaOperationsCapabilities.renderAudio,
+      const value = await fulfillInline(resources, need(`need:${name}`, audioProgramCapabilities.render,
         mediaTypes.timelineAudio, canonicalize({ program, ...(range === undefined ? {} : { range }) })));
       verifyTimelineAudio(value);
       const path = join(root, `${name}.wav`), raw = join(root, `${name}.raw`);

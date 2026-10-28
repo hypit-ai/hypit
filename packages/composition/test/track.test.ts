@@ -313,6 +313,24 @@ test("VisualTrack style values cannot smuggle a second declaration", () => {
   );
 });
 
+test("VisualTrack style values cannot escape raw CSS text or encode resource functions", () => {
+  const { timeline, visual } = fixture();
+  const first = visual.items[0]!.root;
+  for (const value of ["red</style><script>", "u\\72 l(https://invalid.example/x)"]) {
+    const hostile = sealPresentVisualTrack({ ...visual, presents: [{ ...visual.items[0]!,
+      root: { ...first, style: [{ name: "color", value }] } }] });
+    assert.throws(() => assertVisualTrackIdentity(hostile, timeline), /escapes its declaration/u);
+  }
+});
+
+test("VisualTrack attributes cannot occupy the compiler namespace", () => {
+  const { timeline, visual } = fixture();
+  const first = visual.items[0]!.root;
+  const hostile = sealPresentVisualTrack({ ...visual, presents: [{ ...visual.items[0]!,
+    root: { ...first, attributes: [{ name: "data-hypit-artifact-src", value: "https://invalid.example/x" }] } }] });
+  assert.throws(() => assertVisualTrackIdentity(hostile, timeline), /reserved attribute/u);
+});
+
 test("VisualTrack cannot silently extend the versioned public Visual IR", () => {
   const { timeline, visual } = fixture();
   const first = visual.items[0]!.root;

@@ -55,6 +55,10 @@ test("one physical locator distinguishes CLI packages, resources and project own
     const canonicalResource = await realpath(resource);
     assert.equal(locateNodePackage("cli-only", options).root, canonicalCli);
     assert.equal(resolveNodePackageExecutable("cli-only", "tool", options), join(canonicalCli, "bin", "tool.mjs"));
+    assert.throws(
+      () => resolveNodePackageExecutable("cli-only", "toString", options),
+      /does not declare executable toString/u,
+    );
     assert.equal(resolveNodePackageResource("resource-only", "files/value.txt", options), join(canonicalResource, "files", "value.txt"));
     assert.throws(() => locateNodePackage("resource-only", {
       from: join(project, "package.mjs"),

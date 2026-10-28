@@ -133,7 +133,7 @@ try {
   );
   assert.equal(commentStudio.tracks.length, 1);
   assert.equal(commentStudio.tracks[0]?.output.type.name, compositionTypes.visualTrack.name);
-  assert.equal(commentStudio.tracks[0]?.output.surface, "track");
+  assert.equal(commentStudio.tracks[0]?.output.declaration, "track");
 
   const depthStudio = studioContributionFromPackage(
     depthPackage.specifier,
@@ -141,7 +141,7 @@ try {
   );
   assert.equal(depthStudio.tracks.length, 1);
   assert.equal(depthStudio.tracks[0]?.output.type.name, compositionTypes.visualTrack.name);
-  assert.equal(depthStudio.tracks[0]?.output.surface, "track");
+  assert.equal(depthStudio.tracks[0]?.output.declaration, "track");
 
   const emojiStudio = studioContributionFromPackage(
     emojiPackage.specifier,

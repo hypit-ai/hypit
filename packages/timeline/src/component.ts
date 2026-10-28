@@ -2,8 +2,8 @@ import type { RefinementPackage } from "@hypit/hypit/refinement";
 import type { ProducerPackage } from "@hypit/hypit/producer";
 import type { Value } from "@hypit/hypit/protocol";
 import { timelineTypes } from "./manifest.js";
-import { assertFrameSpan, assertTimelineIdentity } from "./identity.js";
-import type { FrameSpan, Timeline } from "./types.js";
+import { assertClockIdentity, assertFrameSpan, assertTimelineIdentity } from "./identity.js";
+import type { Clock, FrameSpan, Timeline } from "./types.js";
 
 function timeline(value: Value | undefined): Timeline {
   if (value === undefined) throw new Error("Timeline is missing.");
@@ -15,6 +15,9 @@ export const timelineComponent = {
   refinements: [{
     type: timelineTypes.timeline,
     handler: ({ value }) => assertTimelineIdentity(timeline(value)),
+  }, {
+    type: timelineTypes.clock,
+    handler: ({ value }) => assertClockIdentity(value as unknown as Clock),
   }, {
     type: timelineTypes.frameSpan,
     handler: ({ value }) => assertFrameSpan(value as unknown as FrameSpan),

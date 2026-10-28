@@ -1,5 +1,6 @@
 import { BuildMachine } from "@hypit/kernel";
-import type { BuildFact, BuildState, CommandResult } from "@hypit/protocol";
+import type { BuildView } from "@hypit/kernel";
+import type { BuildFact, CommandResult } from "@hypit/protocol";
 import { capacityUnits } from "./capacity.js";
 
 import type {
@@ -14,7 +15,7 @@ import type {
 
 type MutableBuild = {
   readonly id: string;
-  state: BuildState;
+  state: BuildView;
   readonly machine: BuildMachine;
   readonly facts: BuildFact[];
   readonly outcomes: SchedulerExecutionOutcome[];

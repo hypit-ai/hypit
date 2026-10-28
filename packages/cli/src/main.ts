@@ -326,9 +326,9 @@ export async function runCli(
       const evaluated = await evaluatePlanNeeds(result.definition, packageContributions);
       inspection = await host.openInspection(plannedEndpointQueries(evaluated.state, evaluated));
       const buildInspection = inspection;
-      const endpoints = await describePlanEndpoints(buildInspection, evaluated.state, evaluated);
+      const endpoints = await describePlanEndpoints(buildInspection);
       assertPlannedRequests(evaluated.state, evaluated, endpoints);
-      const preflight = await preflightPlan(buildInspection, evaluated.state, endpoints);
+      const preflight = await preflightPlan(buildInspection, evaluated.state);
       // Build is an execution boundary, not a provisioning command. The cheap
       // preflight must already be clean; `runtime up` is the explicit place for
       // installing or starting declared programs.
@@ -511,7 +511,7 @@ export async function runCli(
       if (planInspection === undefined) {
         throw new Error("pricing requires a Runtime; run hypit runtime init, select one with runtime use, or pass --runtime <profile>");
       }
-      const pricing = await describePlanPricing(planInspection, evaluated.state, evaluated);
+      const pricing = await describePlanPricing(planInspection);
       const needs = describePlanNeeds(evaluated.state, evaluated, pricing);
       writeCliOutput(io, args.presentation, {
         kind: "pricing",
@@ -524,8 +524,8 @@ export async function runCli(
       if (evaluated.producerFailures.length > 0) io.setExitCode?.(1);
       return;
     }
-    const endpoints = planInspection === undefined ? undefined : await describePlanEndpoints(planInspection, evaluated.state, evaluated);
-    const preflight = planInspection === undefined ? undefined : await preflightPlan(planInspection, evaluated.state, endpoints ?? []);
+    const endpoints = planInspection === undefined ? undefined : await describePlanEndpoints(planInspection);
+    const preflight = planInspection === undefined ? undefined : await preflightPlan(planInspection, evaluated.state);
     const needs = describePlanNeeds(evaluated.state, evaluated, endpoints ?? []);
     const outputNames = Object.fromEntries(result.compilation.author.exports.flatMap((item) =>
       item.ref.kind === "logical-output" ? [[item.ref.id, item.name]] : []));

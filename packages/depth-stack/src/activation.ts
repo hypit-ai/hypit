@@ -1,16 +1,9 @@
 import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
 import { createProducerPackageFacet } from "@hypit/hypit/producer";
-import { createMarkupSurfaceFacet } from "@hypit/hypit/markup";
+import { createAuthorDeclarationFacet } from "@hypit/hypit/author";
+import { createMarkupDeclarationFacet } from "@hypit/hypit/markup";
 import { createStudioTrackCompanionFacet } from "@hypit/studio-companion";
-
-import {
-  decodeDepthStackLabelSurface,
-  decodeDepthStackSurface,
-  depthStackComponent,
-  depthStackManifest,
-  depthStackModuleRef,
-  depthStackMarkupSurfaces,
-} from "./index.js";
+import { depthStackAuthorDeclarations, depthStackComponent, depthStackManifest, depthStackMarkupDeclarations, depthStackModuleRef } from "./index.js";
 import { depthStackStudioTrackCompanions } from "./studio.js";
 
 export const hypitPackage = {
@@ -20,16 +13,12 @@ export const hypitPackage = {
   }],
   facets: [
     ...[depthStackComponent].flatMap((component) => [createProducerPackageFacet(component.producers ?? []), createRefinementPackageFacet(component.refinements ?? [])]),
-    createMarkupSurfaceFacet({
+    ...depthStackAuthorDeclarations.map((declaration) => createAuthorDeclarationFacet(declaration)),
+    ...depthStackMarkupDeclarations.map((declaration) => createMarkupDeclarationFacet({
       module: depthStackModuleRef,
-    declaration: depthStackMarkupSurfaces.find((item) => item.name === "label")!,
-      handler: decodeDepthStackLabelSurface,
-    }),
-    createMarkupSurfaceFacet({
-      module: depthStackModuleRef,
-    declaration: depthStackMarkupSurfaces.find((item) => item.name === "track")!,
-      handler: decodeDepthStackSurface,
-    }),
+      declaration,
+    })),
+
     createStudioTrackCompanionFacet(depthStackStudioTrackCompanions),
   ],
 };

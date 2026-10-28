@@ -10,6 +10,7 @@ import type {
 import type {
   ResolvedSource,
   SourceAssetResolver,
+  SourceAssetReader,
   SourceResolver,
   SourceUnit,
 } from "@hypit/source";
@@ -48,6 +49,7 @@ export type CompileSourceClosureRequest = {
   ) => Awaitable<AuthorSourceDiscovery>;
   readonly resolveSource: SourceResolver;
   readonly resolveAsset?: SourceAssetResolver;
+  readonly readAsset?: SourceAssetReader;
   readonly refineRecord?: AuthorRecordRefiner;
 };
 
@@ -269,6 +271,7 @@ export async function compileSourceClosure(
       });
     }
     const assets = new Map<string, BlobRef>();
+    const readAssets = new Map<string, Uint8Array>();
     const rawDecoded = await frontend.decode(source, {
       closure: request.closure,
       imports: structuredClone(imports),
@@ -303,6 +306,22 @@ export async function compileSourceClosure(
         );
         assets.set(assetRequest.from, blob);
         return blob;
+      },
+      async readAsset(assetRequest) {
+        assert(assetRequest.from.trim().length > 0, "EMPTY_SOURCE_ASSET", `${source.name} requested an empty readable asset`);
+        assert(assetRequest.mediaType.trim().length > 0, "EMPTY_SOURCE_ASSET_MEDIA_TYPE", `${source.name} requested readable input without a media type`);
+        const key = `${assetRequest.from}\u0000${assetRequest.mediaType}`;
+        const existing = readAssets.get(key);
+        if (existing !== undefined) return Uint8Array.from(existing);
+        assert(
+          request.readAsset !== undefined,
+          "SOURCE_ASSET_READER_MISSING",
+          `${source.name} requires readable author input ${assetRequest.from}, but the Host has no asset reader`,
+          assetRequest.from,
+        );
+        const bytes = Uint8Array.from(await request.readAsset(rawSource, assetRequest));
+        readAssets.set(key, bytes);
+        return Uint8Array.from(bytes);
       },
     });
     const validatedRecords: TypedRecord[] = [];

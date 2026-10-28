@@ -1,9 +1,9 @@
 # `@hypit/minimax-h3`
 
-Exact author/compute contracts and package-owned author Surfaces for MiniMax H3 video generation.
+Exact author/compute contracts and package-owned declarations for MiniMax H3 video generation.
 
-Text, frame-guided and subject-reference modes are separate Surfaces rather than one dynamic
-port mode. Each produces an ordinary video Artifact. This package owns request semantics
+Text, frame-guided and subject-reference modes are separate declarations with their own exact
+field sets. Each produces an ordinary video Artifact. This package owns request semantics
 and validation only; Provider calls, credentials, retries and queueing belong to a Runtime Endpoint
 selected in the Runtime Profile.
 
@@ -17,7 +17,7 @@ selected in the Runtime Profile.
 </h3:ReferenceVideo>
 ```
 
-The Surface makes every prompt/media dependency an explicit graph edge and leaves execution to a Provider.
+The declaration compiler makes every prompt/media dependency an explicit graph edge and leaves execution to a Provider.
 `FrameVideo` accepts a first frame, a last frame, or both; either frame is an ordinary image Artifact edge.
 When `resolution` is omitted, the Model finalizes it as `2K`; the complete request sent to every
 Provider contains that value explicitly.

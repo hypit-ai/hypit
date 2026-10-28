@@ -1,12 +1,12 @@
-import { assertAttributes, assertEmptyElement, createMarkupSurfaceFacet, textAttribute } from "@hypit/hypit/markup";
+import { createMarkupDeclarationFacet } from "@hypit/hypit/markup";
 import { canonicalize, sameType } from "@hypit/hypit/protocol";
-import { sealGraphFragment } from "@hypit/hypit/author";
+import { createAuthorDeclarationFacet, declarationField, sealGraphFragment } from "@hypit/hypit/author";
+import type { AuthorDeclarationCompiler, AuthorResolvedReference } from "@hypit/hypit/author";
 import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
 import { createProducerPackageFacet } from "@hypit/hypit/producer";
 import type { ProducerPackage } from "@hypit/hypit/producer";
 import type { RefinementPackage } from "@hypit/hypit/refinement";
-import type { ModuleManifest } from "@hypit/hypit/protocol";
-import type { StructuredSurfaceHandler, SurfaceResolvedReference } from "@hypit/hypit/markup";
+import type { ModuleManifest, TypeRef } from "@hypit/hypit/protocol";
 import {
   assertVisualTrackIdentity,
   compositionTypes,
@@ -23,13 +23,6 @@ import {
   temporalTypes,
 } from "@hypit/temporal";
 import type { TemporalWindow } from "@hypit/temporal";
-import {
-  resolveTemporalWindowReference,
-  resolveTemporalContext,
-  temporalContextAttributeVocabulary,
-  temporalWindowAttributeNames,
-  temporalWindowAttributeVocabulary,
-} from "@hypit/temporal/markup";
 import {
   assertTimelineIdentity,
   timelineTypes,
@@ -170,114 +163,94 @@ const component: { producers?: ProducerPackage; refinements?: RefinementPackage 
   }],
 };
 
-function numberAttribute(element: Parameters<StructuredSurfaceHandler>[0]["element"], name: string): number {
-  const value = Number(textAttribute(element, name));
-  if (!Number.isFinite(value)) throw new Error(`${element.name}.${name} must be numeric.`);
+
+function literal(declaration: Parameters<AuthorDeclarationCompiler["bindings"]>[0], name: string): string {
+  const field = declarationField(declaration, name);
+  if (field?.kind !== "literal" || field.value.trim().length === 0) throw new Error(`${declaration.name}.${name} must be text.`);
+  return field.value.trim();
+}
+function numeric(declaration: Parameters<AuthorDeclarationCompiler["bindings"]>[0], name: string): number {
+  const value = Number(literal(declaration, name));
+  if (!Number.isFinite(value)) throw new Error(`${declaration.name}.${name} must be numeric.`);
   return value;
 }
-
-function integerAttribute(element: Parameters<StructuredSurfaceHandler>[0]["element"], name: string): number {
-  const value = numberAttribute(element, name);
-  if (!Number.isSafeInteger(value)) throw new Error(`${element.name}.${name} must be an integer.`);
+function integer(declaration: Parameters<AuthorDeclarationCompiler["bindings"]>[0], name: string): number {
+  const value = numeric(declaration, name);
+  if (!Number.isSafeInteger(value)) throw new Error(`${declaration.name}.${name} must be an integer.`);
   return value;
 }
-
-const decodeFlash: StructuredSurfaceHandler = ({ element, resolveReference }) => {
-  assertAttributes(element, [
-    "id", "timeline", "within", "color", "intensity", "attack", "hold", "decay",
-    ...temporalWindowAttributeNames,
-  ]);
-  assertEmptyElement(element);
-  const id = textAttribute(element, "id");
-  const context = resolveTemporalContext({ element, resolveReference });
-  const withinRaw = element.attributes.within;
-  if (typeof withinRaw !== "object" || withinRaw.kind !== "reference") {
-    throw new Error("Flash.within must be a Frame reference.");
-  }
-  const within = resolveReference(withinRaw.path);
-  if (within === undefined || !sameType(within.type, spatialTypes.frame)) {
-    throw new Error("Flash.within has the wrong Type.");
-  }
-  const window = resolveTemporalWindowReference({ element, resolveReference });
-  const options: FlashOptions = {
-    id,
-    color: textAttribute(element, "color"),
-    intensity: numberAttribute(element, "intensity"),
-    attackFrames: integerAttribute(element, "attack"),
-    holdFrames: integerAttribute(element, "hold"),
-    decayFrames: integerAttribute(element, "decay"),
-  };
-  assertOptions(options);
-  const optionsId = `${id}.options`;
-  const fragment = sealGraphFragment({
-    inputs: [
-      { name: "timeline", type: timelineTypes.timeline },
-      { name: "within", type: spatialTypes.frame },
-      { name: "window", type: temporalTypes.window },
-      { name: "options", type: optionsType },
-    ],
-    operations: [{
-      id: "render",
-      producer: renderProducer,
-      inputs: {
-        timeline: { kind: "fragment-input", name: "timeline" },
-        within: { kind: "fragment-input", name: "within" },
-        window: { kind: "fragment-input", name: "window" },
-        options: { kind: "fragment-input", name: "options" },
-      },
-      result: { kind: "output" as const, name: "visual" },
-    }],
-    exports: [{
-      name: "visual",
-      type: compositionTypes.visualTrack,
-      root: { kind: "fragment-operation", operation: "render" },
-    }],
-  });
-  return {
-    records: [
-      { id: optionsId, type: optionsType, value: (canonicalize(options)), range: element.range },
-    ],
-    components: [
-      {
-        id,
-        fragment,
-        inputs: {
-          timeline: context.timeline.ref,
-          within: within.ref,
-          window: window.ref,
-          options: { kind: "record", id: optionsId },
-        },
-        outputs: { visual: `${id}.visual` },
-        range: element.range,
-      },
-    ],
-    exports: [`${id}.visual`],
-  };
-};
-
-const declaration = {
-  name: "flash",
-  tag: "Flash",
-  mode: "structured" as const,
-  outputs: [
-    compositionTypes.visualTrack,
-    optionsType,
+async function reference(
+  declaration: Parameters<AuthorDeclarationCompiler["bindings"]>[0],
+  name: string,
+  type: TypeRef,
+  resolve: (path: string) => Promise<AuthorResolvedReference | undefined> | AuthorResolvedReference | undefined,
+): Promise<AuthorResolvedReference> {
+  const field = declarationField(declaration, name);
+  if (field?.kind !== "reference") throw new Error(`${declaration.name}.${name} must be a reference.`);
+  const found = await resolve(field.path);
+  if (found === undefined || !sameType(found.type, type)) throw new Error(`${declaration.name}.${name} has the wrong Type.`);
+  return found;
+}
+const flashFragment = sealGraphFragment({
+  inputs: [
+    { name: "timeline", type: timelineTypes.timeline },
+    { name: "within", type: spatialTypes.frame },
+    { name: "window", type: temporalTypes.window },
+    { name: "options", type: optionsType },
   ],
-  vocabulary: {
+  operations: [{
+    id: "render", producer: renderProducer,
+    inputs: {
+      timeline: { kind: "fragment-input", name: "timeline" },
+      within: { kind: "fragment-input", name: "within" },
+      window: { kind: "fragment-input", name: "window" },
+      options: { kind: "fragment-input", name: "options" },
+    },
+    result: { kind: "output", name: "visual" },
+  }],
+  exports: [{ name: "visual", type: compositionTypes.visualTrack, root: { kind: "fragment-operation", operation: "render" } }],
+});
+const authorDeclaration: AuthorDeclarationCompiler = {
+  module: moduleRef,
+  declaration: "flash",
+  outputs: [compositionTypes.visualTrack, optionsType],
+  shape: {
     summary: "Paints one project-owned color flash over an explicit Window.",
-    attributes: [
-      { name: "id", kind: "identifier" as const, required: true, summary: "Names the flash." },
-      ...temporalContextAttributeVocabulary,
-      { name: "within", kind: "reference" as const, required: true, accepts: [spatialTypes.frame], summary: "Sets the painted Frame." },
-      ...temporalWindowAttributeVocabulary,
+    fields: [
+      { name: "id", kind: "identifier", required: true, summary: "Names the flash." },
+      { name: "timeline", kind: "reference", required: true, accepts: [timelineTypes.timeline], summary: "Selects the Timeline." },
+      { name: "within", kind: "reference", required: true, accepts: [spatialTypes.frame], summary: "Sets the painted Frame." },
+      { name: "during", kind: "expression", required: true, accepts: [temporalTypes.window], summary: "Selects the Window." },
       ...["color", "intensity", "attack", "hold", "decay"].map((name) => ({
         name, kind: "literal" as const, required: true, summary: `Sets ${name}.`,
       })),
     ],
-    ports: [{ name: "visual", type: compositionTypes.visualTrack, summary: "The flash as an ordinary VisualTrack." }],
-    example: '<flash:Flash id="hit" timeline={speech.timeline} within={vertical.bounds} during={hit-window} color="#FFFFFF" intensity="0.28" attack="2" hold="1" decay="5"/>',
+  },
+  bindings(declaration) {
+    const id = literal(declaration, "id");
+    return [{ name: `${id}.visual`, ref: { kind: "component-output", component: id, output: "visual" }, type: compositionTypes.visualTrack }];
+  },
+  async compile({ declaration, resolveReference }) {
+    const id = literal(declaration, "id");
+    const timeline = await reference(declaration, "timeline", timelineTypes.timeline, resolveReference);
+    const within = await reference(declaration, "within", spatialTypes.frame, resolveReference);
+    const window = await reference(declaration, "during", temporalTypes.window, resolveReference);
+    const options: FlashOptions = {
+      id, color: literal(declaration, "color"), intensity: numeric(declaration, "intensity"),
+      attackFrames: integer(declaration, "attack"), holdFrames: integer(declaration, "hold"),
+      decayFrames: integer(declaration, "decay"),
+    };
+    assertOptions(options);
+    const optionsId = `${id}.options`;
+    return {
+      records: [{ id: optionsId, type: optionsType, value: canonicalize(options), range: declaration.range }],
+      components: [{ id, fragment: flashFragment, inputs: {
+        timeline: timeline.ref, within: within.ref, window: window.ref, options: { kind: "record", id: optionsId },
+      }, outputs: { visual: `${id}.visual` }, range: declaration.range }],
+    };
   },
 };
+const markupDeclaration = { name: "flash", tag: "Flash" } as const;
 
 export const hypitPackage = {
   format: "hypit.package@1" as const,
@@ -285,8 +258,8 @@ export const hypitPackage = {
   facets: [
     createProducerPackageFacet(component.producers ?? []),
     createRefinementPackageFacet(component.refinements ?? []),
-    createMarkupSurfaceFacet({ module: moduleRef, declaration, handler: decodeFlash }),
+    createAuthorDeclarationFacet(authorDeclaration),
+    createMarkupDeclarationFacet({ module: moduleRef, declaration: markupDeclaration }),
   ],
 };
-
 export default hypitPackage;

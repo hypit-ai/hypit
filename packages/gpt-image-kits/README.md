@@ -22,8 +22,8 @@ For a complete new character-and-scene image, supply all three as ordinary parag
 view may inherit its person or setting from connected references and omit those slots. Omitted
 blocks add no empty paragraphs. State the necessary reference responsibilities in the slot they
 affect. Each slot accepts an ordinary Text Output and can describe more than one person or relationship.
-The template produces Text; the image Surface consumes it. Actual reference Resources and model
-parameters are connected on that Surface.
+The template produces Text; the image declaration consumes it. Actual reference Resources and model
+parameters are connected on that declaration.
 
 ## Assemble the prompt
 

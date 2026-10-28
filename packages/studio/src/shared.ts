@@ -53,6 +53,11 @@ export type StudioTerminalTarget =
       readonly elementId?: string;
     }
   | {
+      readonly kind: "visual-process";
+      readonly occurrencePath: readonly string[];
+      readonly processId: string;
+    }
+  | {
       readonly kind: "visual-adjustment";
       readonly occurrencePath: readonly string[];
       readonly adjustmentId: string;
@@ -66,8 +71,8 @@ export type StudioTrackBinding = {
   /** Studio-local lane name. This is presentation, not an authored identity. */
   readonly label?: string;
   readonly facet: "visual" | "audio";
-  /** Visual/audio facets from one authored element share this identity. */
-  readonly groupId: string;
+  /** Visual/audio facets from one compiled author element share this identity. */
+  readonly group: StudioTrackGroup;
   readonly icon: StudioIcon;
   /** Stable Studio-local Track Companion id; fallbacks remain explicit too. */
   readonly companion: string;
@@ -76,10 +81,47 @@ export type StudioTrackBinding = {
   readonly lane: StudioLaneDescription;
 };
 
+export type StudioTrackGroup =
+  | { readonly kind: "author-element"; readonly element: string }
+  | { readonly kind: "output"; readonly output: string };
+
+export type StudioTrackAddress = {
+  readonly output: string;
+  readonly attachment?: string;
+};
+
+export type StudioItemAddress = {
+  readonly track: StudioTrackAddress;
+  readonly item: string;
+};
+
+export function sameStudioTrackAddress(left: StudioTrackAddress, right: StudioTrackAddress): boolean {
+  return left.output === right.output && left.attachment === right.attachment;
+}
+
+export function sameStudioItemAddress(left: StudioItemAddress, right: StudioItemAddress): boolean {
+  return sameStudioTrackAddress(left.track, right.track) && left.item === right.item;
+}
+
+/** Browser-local collection key; the public identity remains the structured address. */
+export function studioItemAddressKey(address: StudioItemAddress): string {
+  const attachment = address.track.attachment ?? "";
+  return `${address.track.output.length}:${address.track.output}${attachment.length}:${attachment}${address.item.length}:${address.item}`;
+}
+
+export function sameStudioTrackGroup(left: StudioTrackGroup, right: StudioTrackGroup): boolean {
+  if (left.kind !== right.kind) return false;
+  return left.kind === "author-element"
+    ? left.element === (right as Extract<StudioTrackGroup, { readonly kind: "author-element" }>).element
+    : left.output === (right as Extract<StudioTrackGroup, { readonly kind: "output" }>).output;
+}
+
 /** One terminal Track item projected onto Studio's shared timeline. */
 export type StudioItem = FrameSpan & {
-  /** Studio identity. Output-qualified so sibling Track Items cannot collide. */
+  /** Companion-local identity inside the owning Track. */
   readonly id: string;
+  /** Structured address used whenever an Item crosses its Track boundary. */
+  readonly address: StudioItemAddress;
   /** The authored id this terminal item is named after, when it names one. */
   readonly authoredId: string;
   /** The exact package/domain Item that placed it, when one did. */
@@ -107,8 +149,8 @@ export type StudioInspectorObject = {
 };
 
 export type StudioTrack = {
-  /** Exact LogicalOutput ref; labels are not identities. */
-  readonly id: string;
+  /** Exact LogicalOutput plus optional Companion-local attachment. */
+  readonly address: StudioTrackAddress;
   readonly label: string;
   /** Render order in the timeline; 0 is the top row. */
   readonly row: number;
@@ -208,7 +250,6 @@ export type StudioSnapshot = {
   readonly run: {
     readonly path: string;
     readonly targets: readonly string[];
-    readonly satisfactions: readonly { readonly output: string; readonly candidate: string }[];
   };
   /** The resolved picture plane. It is a preview snapshot, not another authored Canvas. */
   readonly canvas: {
@@ -234,7 +275,7 @@ export type StudioMutation =
   | {
       readonly type: "timeline.adjust";
       readonly revision: number;
-      readonly itemId: string;
+      readonly item: StudioItemAddress;
       readonly gesture: StudioTimelineGesture;
       readonly target:
         | {
@@ -251,8 +292,8 @@ export type StudioMutation =
       readonly type: "parameter.adjust";
       readonly revision: number;
       readonly owner:
-        | { readonly kind: "item"; readonly itemId: string }
-        | { readonly kind: "track-object"; readonly trackId: string; readonly objectId: string };
+        | { readonly kind: "item"; readonly item: StudioItemAddress }
+        | { readonly kind: "track-object"; readonly track: StudioTrackAddress; readonly objectId: string };
       readonly parameterId: string;
       readonly value: CanonicalValue;
     };

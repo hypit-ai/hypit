@@ -5,7 +5,7 @@ import type {
   Value,
   TypeRef,
 } from "@hypit/protocol";
-import { canonicalize, capabilityKey } from "@hypit/protocol";
+import { canonicalize, capabilityKey, compareCodeUnits } from "@hypit/protocol";
 import type {
   ResourceStore,
   CredentialAcquisition,
@@ -188,7 +188,7 @@ export function endpointResourceClaims(scheduling: EndpointScheduling, request: 
     if (!scheduling.resources.some((resource) => resource.id === id)) throw new Error(`Undeclared capacity resource ${id}`);
   }
   return scheduling.resources.map((resource) => {
-    const units = quantities[resource.id];
+    const units = Object.hasOwn(quantities, resource.id) ? quantities[resource.id] : undefined;
     const claim = units === undefined ? resource : { ...resource, units };
     capacityUnits(claim);
     return claim;
@@ -416,7 +416,7 @@ export function defineEndpoint(options: DefineEndpointOptions): EndpointInstance
     capacityConcurrency.set(capacity, concurrency);
   }
   const credentials = Object.fromEntries(Object.entries(options.credentials ?? {})
-    .sort(([left], [right]) => left.localeCompare(right))
+    .sort(([left], [right]) => compareCodeUnits(left, right))
     .map(([slot, ref]) => {
       assert(slot.trim().length > 0, "Endpoint credential slot is empty");
       verifyCredentialRef(ref);
@@ -424,10 +424,10 @@ export function defineEndpoint(options: DefineEndpointOptions): EndpointInstance
     }));
   const credentialInputs = options.credentialInputs ?? {};
   for (const slot of Object.keys(credentialInputs)) {
-    assert(slot in credentials, `Endpoint credential input ${slot} has no configured CredentialRef`);
+    assert(Object.hasOwn(credentials, slot), `Endpoint credential input ${slot} has no configured CredentialRef`);
   }
   const credentialDescriptions = Object.entries(credentials).map(([slot, ref]) => {
-    const input = credentialInputs[slot];
+    const input = Object.hasOwn(credentialInputs, slot) ? credentialInputs[slot] : undefined;
     const label = input?.label ?? slot;
     assert(label.trim().length > 0, `Endpoint credential ${slot} label is empty`);
     const kind = input?.kind ?? "secret";

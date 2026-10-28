@@ -14,11 +14,11 @@ import {
   InProcessBuildScheduler,
 } from "@hypit/runtime";
 import type { BuildStore, OperationSnapshot, OperationStore, OperationUpdate, RuntimeCommandExecutor, RuntimeExecutionContext, ScheduledBuild, ScheduledBuildResult } from "@hypit/runtime";
-import type { BuildState } from "@hypit/protocol";
+import type { BuildView } from "@hypit/kernel";
 import { capabilities, createGreetingBuild, createParallelGreetingBuild, producers as greetingProducers, types } from "../execution-scenario.js";
 import { completeChainStep, createChainDefinition } from "../execution-scenario.js";
 
-function submission(id: string, state: BuildState): ScheduledBuild {
+function submission(id: string, state: BuildView): ScheduledBuild {
   return {
     id,
     definition: { format: "hypit.build-definition@1", program: state.program, plan: state.plan },

@@ -1,6 +1,6 @@
-import { assertAudioTrackIdentity, audioSignal, sealAudioTrack } from "@hypit/composition";
+import { assertAudioTrackIdentity, audioGainProcess, audioSignal, sealAudioTrack } from "@hypit/composition";
 import type { AudioGraphNode, AudioSignalGraph, AudioSignalRef, AudioTrack } from "@hypit/composition";
-import { audioGainProcess } from "@hypit/media-operations";
+import { compareCodeUnits } from "@hypit/hypit/protocol";
 import { assertTimelineIdentity } from "@hypit/timeline";
 import type { Timeline } from "@hypit/timeline";
 import type { AudioMixHeader, AudioMixInputSpec, AudioMixSet } from "./types.js";
@@ -56,7 +56,7 @@ export function appendAudioMixInput(
   if (set.inputs.some((input) => input.spec.id === sealed.id)) throw new Error(`Audio Mix repeats Input ${sealed.id}.`);
   return {
     inputs: [...set.inputs, { spec: sealed, track: structuredClone(track) }]
-      .sort((left, right) => left.spec.id.localeCompare(right.spec.id)),
+      .sort((left, right) => compareCodeUnits(left.spec.id, right.spec.id)),
   };
 }
 

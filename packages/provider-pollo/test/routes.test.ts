@@ -35,6 +35,6 @@ test("Grok Imagine 1.5 sends its single image and takes only aspect-ratio auto",
   assert.deepEqual(await grok.prepare(constraints(request)).compile(resolve), { input: {
     prompt: "spin", resolution: "720p", duration: 8, image: "https://example.test/res_pollo_1",
   } });
-  const framed = sealGrokImagineRequest("grok-imagine-video-1.5-preview", { ...request.ports, aspectRatio: ["16:9"] });
+  const framed = sealGrokImagineRequest("grok-imagine-video-1.5-preview", { ...request.fields, aspectRatio: ["16:9"] });
   assert.equal(grok.supports({ capability: grok.capability, returns: grok.returns, constraints: constraints(framed) }).status, "unsupported");
 });

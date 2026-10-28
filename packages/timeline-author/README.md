@@ -4,6 +4,12 @@ Construct one finite absolute Timeline from a small acyclic graph of named Insta
 This package owns author syntax and lowering; [`@hypit/timeline`](../timeline/README.md) owns only the
 completed value `{ id, frameRate, frameCount }`.
 
+Its declaration compilers are syntax-neutral. They own fields, children, reference Types, expression
+parsing, bindings and graph construction; Markup contributes only the `Clock`, `Timeline`, `Window`
+and `Instant` tag spellings. Direct callers and Markup therefore construct the same declarations,
+and all local bindings are known before compilation, so a Timeline may reference a Clock written
+later in the Source.
+
 The official video Distribution installs this package as an ordinary default npm dependency. Its
 parser, construction Points and construction Extents remain package-owned. The package reuses
 Timeline's ordinary `FrameSpan` while assembling Windows; downstream components consume only the
@@ -82,6 +88,10 @@ range are errors.
 The graph may have several roots, branches and leaves. It needs no clip ordering or single content
 root; it needs one resolvable `end`.
 
+The exact literal codec for this Point grammar is package-owned as
+`parseTimelineInstantExpression()`. Temporal's main entry owns only the exact duration primitive;
+neither Markup nor a generic Temporal helper interprets Timeline Author expressions.
+
 ## Studio inverse
 
 Timeline Author retains the exact child declaration and binding on private literal Duration and
@@ -134,8 +144,8 @@ general trim, retime, reverse, hold and loop relationships are represented by Te
 than being inferred by Timeline construction. The projector publishes ordinary absolute Instants and
 Windows and erases its proof inputs.
 
-A component consumes a completed Window or Instant; it never authors an anonymous time value on its
-own surface. Put a named child in Timeline when it participates in the construction DAG. When the
+A component consumes a completed Window or Instant; it never authors an anonymous time value inside
+its own declaration. Put a named child in Timeline when it participates in the construction DAG. When the
 Timeline is already complete, publish an independent named value or consume a value supplied by a
 domain projection:
 

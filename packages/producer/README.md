@@ -30,9 +30,10 @@ Author Kit; import only the owner of each responsibility:
 | `@hypit/hypit/protocol` | Module manifests and serializable graph identities |
 | `@hypit/hypit/producer` | deterministic Producer handlers and Producer package facets |
 | `@hypit/hypit/refinement` | package-owned Type refinements and Refinement package facets |
-| `@hypit/hypit/author` | sealed Author Graph Fragments |
-| `@hypit/hypit/markup` | Markup Surface declarations and handlers |
-| `@hypit/temporal/markup` | author-time semantic Window/Instant projection helpers |
+| `@hypit/hypit/author` | syntax-neutral Author Declarations, compilers and sealed Graph Fragments |
+| `@hypit/hypit/markup` | Markup spelling for package-owned Author Declarations |
+| `@hypit/temporal` | exact duration, rate and relation values and literal parsing |
+| `@hypit/timeline-author` | authored absolute Clock, Timeline, Window and Instant construction |
 | `@hypit/composition` | peer Track values and renderer-independent visual representation |
 | `@hypit/studio-companion` (optional, in Companion code) | editor Item projection, Inspector bindings and executed temporal lineage |
 
@@ -50,15 +51,17 @@ dependencies must actually be included. A TypeScript entry can be used when the 
 Host supports it; a compiled JavaScript entry avoids depending on a TypeScript loader.
 
 The activation module connects the implementation pieces; this is a wiring excerpt, assuming the
-local Manifest, Producer/Refinement packages and Surface declarations/handlers already exist:
+local Manifest, Producer/Refinement packages, declaration compilers and Markup spellings already exist:
 
 ```ts
+import { createAuthorDeclarationFacet } from "@hypit/hypit/author";
 import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
-import { createMarkupSurfaceFacet } from "@hypit/hypit/markup";
+import { createMarkupDeclarationFacet } from "@hypit/hypit/markup";
 import { createProducerPackageFacet } from "@hypit/hypit/producer";
-import { manifest, moduleRef, surfaces } from "./manifest.js";
+import { authorDeclarations } from "./declaration.js";
+import { manifest, moduleRef } from "./manifest.js";
+import { markupDeclarations } from "./declaration.js";
 import { component } from "./component.js";
-import { decodeTrack } from "./surface.js";
 
 export const hypitPackage = {
   format: "hypit.package@1" as const,
@@ -66,17 +69,18 @@ export const hypitPackage = {
   facets: [
     createProducerPackageFacet(component.producers ?? []),
     createRefinementPackageFacet(component.refinements ?? []),
-    ...surfaces.map((declaration) => createMarkupSurfaceFacet({
-      module: moduleRef, declaration, handler: decodeTrack,
+    ...authorDeclarations.map(createAuthorDeclarationFacet),
+    ...markupDeclarations.map((declaration) => createMarkupDeclarationFacet({
+      module: moduleRef, declaration,
     })),
   ],
 };
 export default hypitPackage;
 ```
 
-If several Surfaces have different handlers, bind each declaration to its actual handler instead of
-mapping them all to `decodeTrack`. Surface metadata is registered through the Markup Surface facet;
-it does not make Markup syntax part of the semantic Module Manifest.
+The Author compiler owns fields, children, accepted reference Types, bindings and graph lowering.
+Markup owns only the tag and syntax projection into that declaration. A direct API or another Frontend
+can construct the same declaration without importing Markup.
 
 Structured handlers return `records`, `components` and optionally explicit `exports`; each component
 directly carries the Graph Fragment it instantiates.
@@ -101,10 +105,10 @@ Runtime.
 A component can render through the ordinary Track protocol without custom editor behavior. When it
 needs meaningful timeline Items or Inspector fields, put a Companion in a separate file and
 merge `createStudioTrackCompanionFacet(companions)` into the same activation's `facets`.
-Retain the existing Module, Producer and Surface contributions. The selected project's package
+Retain the existing Module, Producer, Author Declaration and Markup spelling contributions. The selected project's package
 supplies the extension; do not edit Studio's registry or add editor metadata to the domain Manifest.
 
 The [Studio Companion README](../studio-companion/README.md) owns the working declaration and activation
-example. Expose any required deterministic schedule/program values through actual Surface outputs,
+example. Expose any required deterministic schedule/program values through actual declaration outputs,
 and retain the real temporal input edges. The Companion describes those facts and writable Source
 parameters; it neither renders the video nor performs Source filesystem writes.

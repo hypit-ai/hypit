@@ -44,7 +44,7 @@ one Script that owns the work, or give genuinely separate Narratives distinct id
 
 ## Braces connect values
 
-`duration="5"` is literal attribute text interpreted by the receiving Surface.
+`duration="5"` is literal attribute text interpreted by the receiving declaration.
 `prompt={direction}` is a whole-value graph reference, checked against the declared input Type.
 `prompt="direction"` is a string, not that reference. Braces contain whole-value graph references.
 Use `copy:Render` with a TextTemplate and explicit bindings to assemble text; use the receiving
@@ -63,17 +63,17 @@ Output paths are package vocabulary, not inferred from the element's tag:
 
 Visual and Audio Tracks separately publish the picture and sound contributions selected in Film.
 
-Inspect `hypit vocabulary` for the actual Surface's exports and use the published path it reports.
+Inspect `hypit vocabulary` for the actual declaration's exports and use the published path it reports.
 Public bindings can be authored Records or realizable Logical Outputs. Script,
 Recipes and literal Text already exist as authored data; they are not Run Targets. The computed
 `prompt` from `copy:Render` is a Logical Output that can be targeted or satisfied by a Candidate.
-Name declarations before the structured Surfaces that resolve their inputs; the current Markup
-handlers inspect imported values and earlier declarations during decoding. Graph edges, rather than
-XML body order, schedule execution.
+Declaration order does not establish dependencies. Markup projects the complete Source into
+package-owned Author Declarations; their declared references determine compilation and graph edges
+determine execution. A later declaration can therefore be referenced without rearranging the Source.
 
 Different bodies have different readers. Script uses its own prose grammar; structured components
 declare their permitted attributes and children; Text has its own literal/template forms. In
-structured Markup, use the receiving Surface's declared attributes, children, literals, Recipes and
+structured Markup, use the receiving declaration's attributes, children, literals, Recipes and
 reference expressions, and escape `&`, `<`, `>`, `"`, and `'` as `&amp;`, `&lt;`, `&gt;`,
 `&quot;`, and `&apos;`; comments use `<!-- ... -->` outside raw bodies. Script owns the punctuation
 inside its raw body, as described in [Script syntax](script-syntax.md).

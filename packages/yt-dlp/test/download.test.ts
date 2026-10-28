@@ -69,6 +69,7 @@ test("download resolves its locked runtime from an installed package outside the
     assert.match(command, /yt-dlp/u);
     assert.ok(args.includes("--no-remote-components"));
     assert.ok(args.includes("--ignore-config"));
+    assert.equal(args.at(-2), "--");
     assert.equal(args.at(-1), "https://example.test/video");
     const output = args[args.indexOf("--output") + 1]!.replace("%(ext)s", "mp4");
     writeFileSync(output, "downloaded bytes");
@@ -81,6 +82,11 @@ test("download resolves its locked runtime from an installed package outside the
   await module.downloadVideo("https://example.test/video", target);
   assert.equal(await readFile(target, "utf8"), "downloaded bytes");
   assert.equal(calls, 3);
+});
+
+test("download rejects a non-http link before opening the tool environment", async () => {
+  await assert.rejects(downloadVideo("--plugin-dirs=/tmp/foreign", join(tmpdir(), "never.mp4")), /http or https URL/u);
+  await assert.rejects(downloadVideo("file:///tmp/video.mp4", join(tmpdir(), "never.mp4")), /http or https URL/u);
 });
 
 test("a single muxed source is remuxed into the requested target container", async (t) => {

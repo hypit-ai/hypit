@@ -9,7 +9,7 @@ graph.
 
 Execution is one immutable `BuildDefinition` followed by accepted `BuildFact` values. `BuildMachine`
 reconstructs the current view, emits the next commands and accepts their results. The materialized
-`BuildState` is a disposable view rather than durable authority.
+`BuildView` is a disposable view rather than durable authority.
 Within one live Build, the machine keeps disposable Record/Need/Command indexes, missing-input
 counts, reverse Record dependencies and the remaining Goals. A committed Fact therefore wakes only
 the steps whose inputs changed. These indexes are neither serialized nor shared across Builds and

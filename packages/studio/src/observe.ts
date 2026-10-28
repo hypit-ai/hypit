@@ -1,213 +1,176 @@
-/**
- * Watch a compile without changing it.
- *
- * A preview has to point at the words that produced a picture, and the compiler
- * does not carry that: an element's source range reaches its Surface and is
- * dropped when the Records it returns are sealed. Rather than decode the Source
- * a second time, both decorators here delegate to the real implementation and
- * keep what passes through.
- */
 import type {
-  MarkupSurfaceRegistryLike, RegisteredSurface, StructuredElement, StructuredSurfaceInput, SurfaceDecodeOutput,
-} from "@hypit/hypit/markup";
-import type { ModuleRef } from "@hypit/hypit/protocol";
-import type { StudioObservedValue, StudioPlacement, StudioTemporalDomainSourceMap } from "@hypit/studio-companion";
+  AuthorDeclarationChild,
+  AuthorDocument,
+  AuthorDocumentDeclaration,
+  AuthorElementProvenance,
+  AuthorValueRef,
+} from "@hypit/hypit/author";
+import type { CompiledAuthorSource } from "@hypit/hypit/compiler";
+import type { TypeRef } from "@hypit/hypit/protocol";
+import { decodeSourceText } from "@hypit/hypit/source";
+import type {
+  StudioObservedValue,
+  StudioPlacement,
+  StudioPlacementChild,
+  StudioTemporalDomainSourceMap,
+} from "@hypit/studio-companion";
 
 import type { StudioCompanionRegistry } from "./studio-registry.js";
 
 export type ObservedValue = StudioObservedValue;
-
-/** One authored element, where it was written, and what it produced. */
 export type Placement = StudioPlacement;
 
 export type Observations = {
   readonly placements: readonly Placement[];
-  /** Whatever the Surfaces mapped back onto the Source, such as a Script's markers. */
   readonly temporalDomains: readonly StudioTemporalDomainSourceMap[];
 };
 
-export type Observer = {
-  readonly surfaces: MarkupSurfaceRegistryLike;
-  readonly frontend: <T extends { readonly id: string }>(frontend: T) => T;
-  readonly observations: () => Observations;
-};
+type DeclarationNode = AuthorDocumentDeclaration | AuthorDeclarationChild;
 
-/**
- * Wrap the Surface registry and the markup Frontend a compile will use.
- *
- * Neither wrapper decides anything: the Surface still decodes the element and
- * the Frontend still decodes the Source. Only the positions they discard are
- * kept, which is why this stays correct as packages change.
- */
-/** Attributes the author wrote as plain text, by name. */
-function written(element: StructuredElement): Record<string, string> {
-  const held: Record<string, string> = {};
-  for (const [name, value] of Object.entries(element.attributes)) {
-    if (typeof value === "string") held[name] = value;
-  }
-  return held;
+function rangeOf(node: DeclarationNode): { readonly start: number; readonly end: number } {
+  if (node.range === undefined) throw new Error(`Author declaration ${node.name} has no source range.`);
+  return node.range;
 }
 
-/** Every whole-value reference an element points at, in written order. */
-function referenced(element: StructuredElement): string[] {
-  return Object.values(referenceAttributes(element));
+function literals(node: DeclarationNode): Readonly<Record<string, string>> {
+  return Object.fromEntries(node.fields.flatMap((field) =>
+    field.value.kind === "literal" ? [[field.name, field.value.value]] : []));
 }
 
-/** Whole-value references retained by attribute name for reversible interpretation. */
-function referenceAttributes(element: StructuredElement): Record<string, string> {
-  const held: Record<string, string> = {};
-  for (const [name, value] of Object.entries(element.attributes)) {
-    if (typeof value === "object" && value !== null
-      && (value as { kind?: string }).kind === "reference") {
-      held[name] = (value as { path: string }).path;
-    }
-  }
-  return held;
+function referenceAttributes(node: DeclarationNode): Readonly<Record<string, string>> {
+  return Object.fromEntries(node.fields.flatMap((field) =>
+    field.value.kind === "reference" ? [[field.name, field.value.path]] : []));
 }
 
-export function createObserver(
-  surfaces: MarkupSurfaceRegistryLike,
+function attributeValueRanges(
+  node: DeclarationNode,
+): Readonly<Record<string, { readonly start: number; readonly end: number }>> {
+  return Object.fromEntries(node.fields.flatMap((field) =>
+    field.value.range === undefined ? [] : [[field.name, { ...field.value.range }]]));
+}
+
+function authoredAttributes(node: DeclarationNode): Readonly<Record<string, unknown>> {
+  return Object.fromEntries(node.fields.map((field) => [field.name, field.value.kind === "literal"
+    ? field.value.value
+    : { kind: "reference", path: field.value.path }]));
+}
+
+function provenanceFor(
+  compiled: CompiledAuthorSource,
+  sourceName: string,
+  range: { readonly start: number; readonly end: number },
+): AuthorElementProvenance | undefined {
+  return compiled.provenance.elements.find((element) => element.sourceName === sourceName
+    && element.range.start === range.start && element.range.end === range.end);
+}
+
+function typeForRef(compiled: CompiledAuthorSource, ref: AuthorValueRef): TypeRef | undefined {
+  if (ref.kind === "record") return compiled.program.records.find((record) => record.id === ref.id)?.type;
+  const output = compiled.provenance.elements.flatMap((element) => element.outputs)
+    .find((candidate) => candidate.component === ref.component && candidate.name === ref.output);
+  return output === undefined ? undefined : compiled.graph.outputs.find((candidate) => candidate.id === output.id)?.type;
+}
+
+function observed(
+  compiled: CompiledAuthorSource,
+  provenance: AuthorElementProvenance | undefined,
+): readonly ObservedValue[] {
+  if (provenance === undefined) return [];
+  return provenance.records.flatMap((record) => {
+    const value = compiled.program.records.find((candidate) => candidate.id === record.id);
+    return value === undefined ? [] : [{ id: record.local, type: value.type, value: structuredClone(value.value) }];
+  });
+}
+
+function referenceTypes(
+  compiled: CompiledAuthorSource,
+  provenance: AuthorElementProvenance | undefined,
+): Readonly<Record<string, string>> {
+  if (provenance === undefined) return {};
+  return Object.fromEntries(provenance.inputs.flatMap((input) => {
+    if (input.ref === undefined) return [];
+    const type = typeForRef(compiled, input.ref);
+    return type === undefined ? [] : [[input.name, type.name]];
+  }));
+}
+
+function childPlacement(
+  child: AuthorDeclarationChild,
+  sourceName: string,
+  compiled: CompiledAuthorSource,
+): StudioPlacementChild {
+  const range = rangeOf(child);
+  const provenance = provenanceFor(compiled, sourceName, range);
+  const attributes = literals(child);
+  const references = referenceAttributes(child);
+  return {
+    tag: child.name,
+    sourcePath: sourceName,
+    ...(typeof attributes.id === "string" ? { id: attributes.id } : {}),
+    range: { ...range },
+    attributes,
+    attributeValueRanges: attributeValueRanges(child),
+    references: Object.values(references),
+    referenceAttributes: references,
+    referenceTypes: referenceTypes(compiled, provenance),
+    values: observed(compiled, provenance),
+    ...(provenance === undefined ? {} : {
+      authorElement: provenance.id,
+      authorEndpoints: Object.fromEntries(provenance.inputs.map((input) => [input.name, input.id])),
+      records: provenance.records.map((record) => record.local),
+      outputs: provenance.outputs.map((output) => output.local),
+    }),
+    children: child.children.map((descendant) => childPlacement(descendant, sourceName, compiled)),
+  };
+}
+
+/** Build Studio placement facts from the exact lossless document and compiled provenance. */
+export function observeAuthorDocument(
+  document: AuthorDocument,
+  compiled: CompiledAuthorSource,
   registry: StudioCompanionRegistry,
-): Observer {
-  const placements: Placement[] = [];
+): Observations {
+  const sourceName = document.source.name;
+  const source = decodeSourceText(document.source);
   const temporalDomains: StudioTemporalDomainSourceMap[] = [];
-
-  // A Frontend may reach a Surface by name or by walking a module's whole list,
-  // so both ways in are wrapped: an unwatched Surface decodes silently and the
-  // preview loses the tag that placed the picture.
-  const watch = (found: RegisteredSurface | undefined, module: ModuleRef): RegisteredSurface | undefined => {
-      // A raw Surface parses its own body and reports its own positions, so
-      // there is nothing here to recover.
-      if (found === undefined) return found;
-      if (found.mode !== "structured") {
-        const raw = found.handler as (input: RawInput) => unknown;
-        return {
-          ...found,
-          async handler(input: RawInput) {
-            const output = await raw(input);
-            const nextOffset = typeof output === "object" && output !== null
-              && Number.isInteger((output as { readonly nextOffset?: unknown }).nextOffset)
-              ? (output as { readonly nextOffset: number }).nextOffset
-              : undefined;
-            const sourceMap = registry.observeTemporalDomain(module, found.surface, {
-              ...input,
-              range: { start: input.openingStart, end: nextOffset ?? input.contentStart },
-              ...(nextOffset === undefined ? {} : { nextOffset }),
-            });
-            if (sourceMap !== undefined) temporalDomains.push(sourceMap);
-            return output;
-          },
-        } as RegisteredSurface;
-      }
-      const handler = found.handler as (input: StructuredSurfaceInput) => unknown;
-      return {
-        ...found,
-        async handler(input: StructuredSurfaceInput) {
-          const output = await handler(input) as SurfaceDecodeOutput;
-          const id = input.element.attributes.id;
-          const observed = output.records.map((record): ObservedValue => ({
-            id: record.id,
-            type: { module: { ...record.type.module }, name: record.type.name },
-            value: structuredClone(record.value),
-          }));
-          const valuesFor = (range: { readonly start: number; readonly end: number }): readonly ObservedValue[] =>
-            observed.filter((value) => output.records.some((record) =>
-              record.id === value.id && record.range.start === range.start && record.range.end === range.end));
-          const referenceTypes = (element: StructuredElement): Readonly<Record<string, string>> => Object.fromEntries(
-            Object.entries(referenceAttributes(element)).flatMap(([name, path]) => {
-              const resolved = input.resolveReference(path);
-              return resolved === undefined ? [] : [[name, resolved.type.name]];
-            }),
-          );
-          const observeChild = (child: StructuredElement): import("@hypit/studio-companion").StudioPlacementChild => {
-            const childId = child.attributes.id;
-            return {
-              tag: child.name,
-              sourcePath: input.sourceName,
-              attributeValueRanges: child.attributeValueRanges ?? {},
-              ...(typeof childId === "string" ? { id: childId } : {}),
-              range: { start: child.range.start, end: child.range.end },
-              attributes: written(child),
-              references: referenced(child),
-              referenceAttributes: referenceAttributes(child),
-              referenceTypes: referenceTypes(child),
-              values: valuesFor(child.range),
-              children: child.children
-                .filter((descendant): descendant is StructuredElement => descendant.kind === "element")
-                .map(observeChild),
-            };
-          };
-          placements.push({
-            tag: input.element.name,
-            module: { ...module },
-            sourcePath: input.sourceName,
-            attributeValueRanges: input.element.attributeValueRanges ?? {},
-            surface: found.surface,
-            ...(typeof id === "string" ? { id } : {}),
-            range: { start: input.element.range.start, end: input.element.range.end },
-            records: output.records.map((record) => record.id),
-            values: valuesFor(input.element.range),
-            outputs: output.components.flatMap((component) => Object.values(component.outputs)),
-            outputPorts: output.components.flatMap((component) =>
-              Object.entries(component.outputs).map(([name, ref]) => ({ name, ref }))),
-            attributes: written(input.element),
-            referenceAttributes: referenceAttributes(input.element),
-            referenceTypes: referenceTypes(input.element),
-            references: [
-              ...referenced(input.element),
-              ...input.element.children
-                .filter((child): child is StructuredElement => child.kind === "element")
-                .flatMap(referenced),
-            ],
-            children: input.element.children
-              .filter((child): child is StructuredElement => child.kind === "element")
-              .map(observeChild),
-          });
-          const sourceMap = registry.observeTemporalDomain(module, found.surface, {
-            sourceName: input.sourceName,
-            tag: input.element.name,
-            range: { start: input.element.range.start, end: input.element.range.end },
-            attributes: input.element.attributes,
-          });
-          if (sourceMap !== undefined) temporalDomains.push(sourceMap);
-          return output;
-        },
-      } as RegisteredSurface;
-  };
-
-  const watchedSurfaces: MarkupSurfaceRegistryLike = {
-    surfaces(module) {
-      return surfaces.surfaces(module).map((found) => watch(found, module)!) as readonly RegisteredSurface[];
-    },
-    resolve(module, surface) { return watch(surfaces.resolve(module, surface), module); },
-  };
-
-  return {
-    surfaces: watchedSurfaces,
-    frontend<T extends { readonly id: string }>(frontend: T): T { return frontend; },
-    observations: () => ({ placements, temporalDomains }),
-  };
+  const placements = document.declarations.map((declaration): Placement => {
+    const range = rangeOf(declaration);
+    const provenance = provenanceFor(compiled, sourceName, range);
+    const attributes = literals(declaration);
+    const references = referenceAttributes(declaration);
+    const children = declaration.children.map((child) => childPlacement(child, sourceName, compiled));
+    const temporalDomain = registry.observeTemporalDomain(declaration.module, declaration.name, {
+      sourceName,
+      source,
+      tag: declaration.name,
+      range: { ...range },
+      ...(declaration.textRange === undefined ? {} : { contentStart: declaration.textRange.start }),
+      nextOffset: range.end,
+      attributes: authoredAttributes(declaration),
+    });
+    if (temporalDomain !== undefined) temporalDomains.push(temporalDomain);
+    return {
+      tag: declaration.name,
+      module: { ...declaration.module },
+      sourcePath: sourceName,
+      declaration: declaration.name,
+      ...(typeof attributes.id === "string" ? { id: attributes.id } : {}),
+      range: { ...range },
+      records: provenance?.records.map((record) => record.local) ?? [],
+      values: observed(compiled, provenance),
+      outputs: provenance?.outputs.map((output) => output.local) ?? [],
+      outputPorts: provenance?.outputs.map((output) => ({ name: output.name, ref: output.local })) ?? [],
+      attributes,
+      attributeValueRanges: attributeValueRanges(declaration),
+      referenceAttributes: references,
+      referenceTypes: referenceTypes(compiled, provenance),
+      references: [...Object.values(references), ...children.flatMap((child) => child.references)],
+      children,
+      ...(provenance === undefined ? {} : {
+        authorElement: provenance.id,
+        authorEndpoints: Object.fromEntries(provenance.inputs.map((input) => [input.name, input.id])),
+      }),
+    };
+  });
+  return { placements, temporalDomains };
 }
-
-/** The Frontend registry a compile is handed, with every Frontend observed. */
-export function observeFrontends<R extends { resolve(id: string): unknown }>(
-  registry: R,
-  observer: Observer,
-): R {
-  return {
-    resolve(id: string) {
-      const frontend = registry.resolve(id) as { readonly id: string } | undefined;
-      return frontend === undefined ? undefined : observer.frontend(frontend);
-    },
-  } as unknown as R;
-}
-
-/** What a raw Surface is handed: the whole Source and where its body begins. */
-type RawInput = {
-  readonly sourceName: string;
-  readonly source: string;
-  readonly tag: string;
-  readonly openingStart: number;
-  readonly contentStart: number;
-  readonly attributes: Readonly<Record<string, unknown>>;
-};

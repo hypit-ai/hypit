@@ -16,7 +16,7 @@ import { createReadStream } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
 import { assertOrderedBuildId, buildIdCreatedAt, compareCodeUnits, sameType } from "@hypit/protocol";
-import type { BlobRef } from "@hypit/protocol";
+import type { BlobRef, PublicationIntent } from "@hypit/protocol";
 
 import type {
   BuildResultResourceSource,
@@ -27,12 +27,10 @@ import type {
   BuildResultPresentationUpdate,
   BuildResultSeed,
   BuildResultSync,
-  ResolvedBuildResultOutput,
   BuildResultRepository,
   RepositoryBuildResultOutput,
   RepositoryBuildResultOutputDescription,
   RepositoryBuildResultOutputLocation,
-  PublicationPlan,
   FinishedBuildResultManifest,
 } from "../types.js";
 import { assertBuildResultSeed, buildResultOutput, defineBuildResultOutput } from "../types.js";
@@ -48,6 +46,11 @@ import { replaceFile } from "@hypit/atomic-file";
 
 const manifestName = "result.json";
 const writerStateName = ".writer.json";
+
+/** File-repository-local resolution detail used only while opening contained files. */
+export type ResolvedFileBuildResultOutput = RepositoryBuildResultOutput & {
+  readonly directory: string;
+};
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -207,7 +210,7 @@ export function buildResultDirectory(root: string, build: string): string {
   const bucket = buildResultDateBucket(build)!;
   const target = resolve(directory, bucket, build);
   const relation = relative(directory, target);
-  assert(relation.length > 0 && relation !== ".." && !relation.startsWith(`..${sep}`),
+  assert(relation.length > 0 && relation !== ".." && !relation.startsWith(`..${sep}`) && !isAbsolute(relation),
     `Build ${build} leaves Build Result root ${directory}`);
   return target;
 }
@@ -228,7 +231,7 @@ function containedResultPath(directory: string, path: string): string {
   const root = resolve(directory);
   const absolute = resolve(root, path);
   const relation = relative(root, absolute);
-  assert(relation !== ".." && !relation.startsWith(`..${sep}`),
+  assert(relation !== ".." && !relation.startsWith(`..${sep}`) && !isAbsolute(relation),
     `Build Result path ${path} leaves ${root}`);
   return absolute;
 }
@@ -287,7 +290,7 @@ export async function resolveBuildResultOutput(
   build: string,
   output: string,
   externalFiles: ExternalFileAccess = localExternalFiles,
-): Promise<ResolvedBuildResultOutput | undefined> {
+): Promise<ResolvedFileBuildResultOutput | undefined> {
   const seen = new Set<string>();
   let currentBuild = build;
   let currentOutput = output;
@@ -367,12 +370,12 @@ export async function describeBuildResultOutput(
  * Result that owns its terminal value. This follows only caller-named addresses; it needs no reverse
  * index or global Result scan.
  */
-export async function normalizePublicationPlan(
+export async function resolvePublicationIntent(
   repository: {
     read(build: string): Promise<BuildResultManifest | undefined>;
   },
-  publication: PublicationPlan,
-): Promise<PublicationPlan> {
+  publication: PublicationIntent,
+): Promise<PublicationIntent> {
   return { outputs: await Promise.all(publication.outputs.map(async (published) => {
     if (published.source.kind === "current-record") return published;
     const sourceAddress = published.source;
@@ -408,7 +411,7 @@ export class FileBuildResult {
   static async create(root: string, seed: BuildResultSeed): Promise<FileBuildResult> {
     assertOrderedBuildId(seed.id);
     assertBuildResultSeed(seed);
-    const publication = await normalizePublicationPlan({
+    const publication = await resolvePublicationIntent({
       read: async (build) => await readBuildResult(buildResultDirectory(root, build)),
     }, seed.publication);
     const directory = buildResultDirectory(root, seed.id);

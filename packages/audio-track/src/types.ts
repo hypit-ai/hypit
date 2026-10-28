@@ -1,5 +1,6 @@
 import type { FrameSpan } from "@hypit/timeline";
 import type { PreparedMedia } from "@hypit/media";
+import type { AudioReconstructionProgram } from "@hypit/composition";
 import type {
   ExactTemporalValue,
   TemporalMap,
@@ -17,8 +18,13 @@ export type AudioClipSpec = {
   readonly id: string;
   /** Omission means bounded partial identity. */
   readonly sampling?: TemporalRelationSpec;
+  /** Omission means ordinary point sampling. */
+  readonly reconstruction?: AudioReconstructionProgram;
   readonly mix: AudioClipMix;
 };
+
+/** Public extension value produced by reconstruction-policy packages. */
+export type AudioReconstruction = AudioReconstructionProgram;
 
 export type AudioTrackHeader = {
   readonly id: string;
@@ -35,6 +41,7 @@ export type AudioClipProgram = {
   };
   /** Exact occurrence-local to PreparedMedia-local relation owned by this Clip. */
   readonly sampling: TemporalMap;
+  readonly reconstruction?: AudioReconstructionProgram;
   readonly mix: {
     readonly gain: number;
     readonly fadeIn: ExactTemporalValue;

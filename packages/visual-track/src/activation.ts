@@ -1,15 +1,9 @@
 import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
 import { createProducerPackageFacet } from "@hypit/hypit/producer";
-import { createMarkupSurfaceFacet } from "@hypit/hypit/markup";
+import { createAuthorDeclarationFacet } from "@hypit/hypit/author";
+import { createMarkupDeclarationFacet } from "@hypit/hypit/markup";
 import { createStudioCompanionFacet } from "@hypit/studio-companion";
-import {
-  decodeVisualTrackSurface,
-  decodeVisualMotionSurface,
-  visualTrackComponent,
-  visualTrackManifest,
-  visualTrackModuleRef,
-  visualTrackMarkupSurfaces,
-} from "./index.js";
+import { visualTrackComponent, visualTrackManifest, visualTrackModuleRef, visualTrackMarkupDeclarations, visualTrackAuthorDeclarations } from "./index.js";
 import { visualTrackStudioParameterCompanions, visualTrackStudioTrackCompanions } from "./studio.js";
 
 export const hypitPackage = {
@@ -17,16 +11,12 @@ export const hypitPackage = {
   modules: [{ manifest: visualTrackManifest }],
   facets: [
     ...[visualTrackComponent].flatMap((component) => [createProducerPackageFacet(component.producers ?? []), createRefinementPackageFacet(component.refinements ?? [])]),
-    createMarkupSurfaceFacet({
+    ...visualTrackAuthorDeclarations.map((declaration) => createAuthorDeclarationFacet(declaration)),
+    ...visualTrackMarkupDeclarations.map((declaration) => createMarkupDeclarationFacet({
       module: visualTrackModuleRef,
-      declaration: visualTrackMarkupSurfaces.find((item) => item.name === "track")!,
-      handler: decodeVisualTrackSurface,
-    }),
-    createMarkupSurfaceFacet({
-      module: visualTrackModuleRef,
-      declaration: visualTrackMarkupSurfaces.find((item) => item.name === "motion")!,
-      handler: decodeVisualMotionSurface,
-    }),
+      declaration,
+    })),
+
     createStudioCompanionFacet({
       tracks: visualTrackStudioTrackCompanions,
       parameters: visualTrackStudioParameterCompanions,

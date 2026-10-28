@@ -13,36 +13,6 @@ export const whisperXProducers = {
   request: { module: whisperXModuleRef, name: "request-whisperx-transcription" },
 } satisfies Record<string, ProducerRef>;
 
-export const whisperXMarkupSurfaces = [{
-    name: "transcription",
-    tag: "Transcription",
-    mode: "structured",
-    outputs: [whisperXTypes.language, speechEvidenceTypes.transcript],
-    vocabulary: {
-      summary: "Transcribes prepared media into provider-neutral speech evidence in a fixed 16 kHz sample domain.",
-      attributes: [
-        { name: "id", kind: "identifier", required: true,
-          summary: "Names this transcription operation and its transcript output." },
-        { name: "media", kind: "reference", required: true,
-          accepts: [mediaTypes.prepared],
-          summary: "Selects the prepared media whose mapped audio is transcribed." },
-        { name: "language", kind: "literal", required: true,
-          summary: "Explicitly states the spoken language code. The selected service owns the available transcription models." },
-      ],
-      ports: [
-        { name: "transcript", type: speechEvidenceTypes.transcript,
-          summary: "Provider-neutral word, character and speech-activity evidence in exact 16 kHz sample coordinates." },
-      ],
-      example: `<whisperx:Transcription id="opening-transcription"
-  media={opening-media.media} language="en"/>`,
-      notes: [
-        "This Surface does not read Narrative or LocalTemporalDomain and does not publish NarrativeAlignment.",
-        "Language is not inferred from Script text or audio.",
-        "Importing this package selects the WhisperX model family; the Runtime separately binds the transcription Need to an Endpoint.",
-      ],
-    },
-  }] as const;
-
 
 export const whisperXManifest: ModuleManifest = {
   format: "hypit.module@1",

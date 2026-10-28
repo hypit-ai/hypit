@@ -122,15 +122,16 @@ retains all Cues regardless of Style. Empty or uncovered time naturally produces
 
 ## Give Style, layout and rendering clear owners
 
-The Style Surface validates a Recipe and exact font references, then emits the common Caption Style
-shape with the new family's name and parameters. The Caption Surface accepts the document,
-Timeline and timed Use children; its Fragment assembles the Uses, performs the common timing join,
-and runs its own schedule and render operations. Register the new family's Producers and any new schedule Type in its own package.
+The Style declaration compiler validates a Recipe and exact font references, then emits the common
+Caption Style shape with the new family's name and parameters. The Caption declaration accepts the
+document, Timeline and timed Use children; its Fragment assembles the Uses, performs the common timing
+join, and runs its own schedule and render operations. Register the new family's Producers and any new
+schedule Type in its own package.
 
 The renderer owns typography, structural relationships, stacking and motion. Use the existing text
 shaping and Visual IR facilities with explicit font resources, including selected local font files,
 so the same faces reach the rendering machine.
-Read `@hypit/caption-fine`'s `surface.ts`, `schedule.ts` and `render.ts` as separate implementation
+Read `@hypit/caption-fine`'s `declaration.ts`, `schedule.ts` and `render.ts` as separate implementation
 examples. Reuse the common parts and replace the actual family behavior, including its parameter
 validation; renaming Fine while retaining its uniform-word assumption will not implement a structural
 keyword treatment.

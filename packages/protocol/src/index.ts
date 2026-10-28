@@ -12,6 +12,8 @@ export {
   valueBlobRefs,
 } from "./value.js";
 export type * from "./build.js";
+export { assertPublicationIntent } from "./publication.js";
+export type * from "./publication.js";
 export * from "./identity.js";
 export type * from "./module.js";
 export type * from "./value.js";

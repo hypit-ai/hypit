@@ -1,6 +1,6 @@
 ---
 title: Script
-description: The Script Surface — Segments, Role Cues, Dual Text, Selections, Moments and text projections.
+description: The Script declaration — Segments, Role Cues, Dual Text, Selections, Moments and text projections.
 ---
 
 The `<script>` element holds every word the narrator or speakers say. Script is **prose-first**: it
@@ -17,7 +17,7 @@ the pipeline reads the Script; the Script reads nothing.
 </script>
 ```
 
-The import `@hypit/script@1` activates the Script Surface. The `id` attribute lets other
+The import `@hypit/script@1` activates the Script declarations. The `id` attribute lets other
 components refer to the Script and its parts.
 
 ## Segments

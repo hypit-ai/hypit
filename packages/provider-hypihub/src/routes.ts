@@ -32,8 +32,8 @@ export type HypiHubRoute = (typeof hypiHubMappings)[number] & {
   readonly packageResult: (artifacts: readonly BlobRef[]) => Value;
 };
 
-function scalar(request: ProviderFieldRequest, port: string): string | number | boolean | undefined {
-  const value = request.ports[port]?.[0];
+function scalar(request: ProviderFieldRequest, field: string): string | number | boolean | undefined {
+  const value = request.fields[field]?.[0];
   return typeof value === "string" || typeof value === "number" || typeof value === "boolean" ? value : undefined;
 }
 
@@ -77,10 +77,10 @@ export const hypiHubRoutes: readonly HypiHubRoute[] = hypiHubMappings.map((mappi
       const rejection = hypiHubGenerationRejection(mapping, request);
       if (rejection !== undefined) throw new Error(rejection);
       const model = selectWireModelForRequest(mapping, request);
-      // Image editing is determined by authored media ports, before their URLs exist.
-      const hasReferences = Object.entries(mapping.fields).some(([port, field]) =>
+      // Image editing is determined by authored artifact fields, before their URLs exist.
+      const hasReferences = Object.entries(mapping.fields).some(([name, field]) =>
         (field.as === "url" || field.as === "urlArray" || field.as === "itemObject")
-          && (request.ports[port]?.length ?? 0) > 0);
+          && (request.fields[name]?.length ?? 0) > 0);
       const operation = mapping.media === "audio" ? "audio_speech" : mapping.media === "video" ? "videos"
         : hasReferences ? "image_edits" : "images";
       return {

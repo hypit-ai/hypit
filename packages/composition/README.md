@@ -19,15 +19,17 @@ Present-only constructor is rejected rather than reclassified.
 
 Every Visual Item shares `id`, optional `subjectId`, `span` and optional `visibility`. Its position in
 the Track's item array is its paint position.
-Its `kind` preserves the one ownership distinction a consumer cannot infer:
+Its `kind` preserves ownership distinctions a consumer cannot infer:
 
 - `present` owns new source pixels in one recursive `root` tree and composites them onto the picture;
   its declared blend may also consult the backdrop;
+- `process` owns named, independently timed `VisualContribution` inputs and a
+  `{ format, payload, artifacts }` programme that combines them into one picture contribution;
 - `adjustment` owns a `{ format, payload, artifacts }` programme which transforms the picture already
   accumulated below its stack position.
 
-Adjustment formats belong to their package and a renderer must explicitly support them. Composition
-does not enumerate effects, carry renderer selectors or store lists of affected Tracks.
+Process and Adjustment formats belong to their packages and a renderer must explicitly support them.
+Composition does not enumerate effects, carry renderer selectors or store lists of affected Tracks.
 
 Each Present supplies:
 
@@ -56,6 +58,11 @@ A `program` carries `{ format, payload, artifacts }`. The rendering package owns
 and supports named formats. It may place typed children in named slots, so video, text
 and graphics can share behavior while retaining explicit material dependencies. The parent
 relationship remains structural inside the Present; internal layout belongs to that program.
+
+A `VisualProcess` uses the same programme carrier but its named inputs are complete Present or nested
+Process contributions, not element slots. Each input therefore retains its own absolute span, local
+animation origin and media sampling relation. This is the terminal boundary for multi-picture operations
+such as a two-shot transition; the package that creates the process owns the input-role names and payload.
 
 ## AudioTrack
 
@@ -91,7 +98,7 @@ their Timeline identity; assembly and rendering receive the corresponding Timeli
 
 ### Visibility without a new sampling origin
 
-A VisualPresent may supply `visibility`, an ordered list of non-overlapping subranges in program
+A VisualPresent or VisualProcess may supply `visibility`, an ordered list of non-overlapping subranges in program
 frames, all inside its `span`. Omission means the full span; an empty list means never visible.
 `span` continues to define local animation and media-sampling time. This permits rule overrides or
 other partial visibility without cutting a program into restarted copies. The `HtmlProgram` applies

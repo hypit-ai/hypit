@@ -5,16 +5,16 @@ import {
   authoredItemTitle,
   childItems,
   previewLayer,
-  requiredSurfaceValue,
+  requiredDeclarationValue,
   temporalLineageFor,
   temporalDomainMarker,
 } from "@hypit/studio-companion";
-import { audioClipDefaults } from "./surface.js";
+import { audioClipDefaults } from "./declaration.js";
 import { audioTrackModuleRef, audioTrackTypes } from "./manifest.js";
 import type { AudioTrackProgram } from "./types.js";
 
 function projectAudio(context: StudioTrackCompanionContext) {
-  const program = requiredSurfaceValue(context, "program") as AudioTrackProgram;
+  const program = requiredDeclarationValue(context, "program") as AudioTrackProgram;
   const clips = program.clips.map((clip) => ({
     id: clip.id,
     subjectId: clip.subjectId,
@@ -42,8 +42,7 @@ function projectAudio(context: StudioTrackCompanionContext) {
 
 export const audioTrackStudioTrackCompanions: readonly StudioTrackCompanion[] = [{
   id: "track",
-  role: "track",
-  output: { type: compositionTypes.audioTrack, surface: "track", modules: [audioTrackModuleRef] },
+  output: { type: compositionTypes.audioTrack, declaration: "track", modules: [audioTrackModuleRef] },
   family: "audio",
   tone: "green",
   icon: "waveform",

@@ -14,7 +14,7 @@ function placement(sourcePath: string): StudioPlacement {
     sourcePath,
     tag: "example:Track",
     module: { name: "example.track", version: "1" },
-    surface: "track",
+    declaration: "track",
     id: "track",
     range: { start: 10, end: 20 },
     records: [],

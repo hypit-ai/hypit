@@ -1,11 +1,8 @@
+import { createAuthorDeclarationFacet } from "@hypit/hypit/author";
 import { createProducerPackageFacet } from "@hypit/hypit/producer";
-import { createMarkupSurfaceFacet } from "@hypit/hypit/markup";
+import { createMarkupDeclarationFacet } from "@hypit/hypit/markup";
 import { createStudioCompanionFacet } from "@hypit/studio-companion";
-import {
-  decodeAbsoluteInstantSurface, decodeAbsoluteWindowSurface, decodeClockSurface, decodeTimelineAuthorSurface, timelineAuthorComponent, timelineAuthorManifest,
-  timelineAuthorModuleRef,
-  timelineAuthorMarkupSurfaces,
-} from "./index.js";
+import { timelineAuthorComponent, timelineAuthorManifest, timelineAuthorModuleRef, timelineAuthorDeclarations, timelineAuthorMarkupDeclarations } from "./index.js";
 import { timelineAuthorStudioTemporalDeclarations, timelineAuthorStudioTemporalRelations } from "./studio.js";
 
 export const hypitPackage = {
@@ -18,15 +15,12 @@ export const hypitPackage = {
       temporalDeclarations: timelineAuthorStudioTemporalDeclarations,
       temporalRelations: timelineAuthorStudioTemporalRelations,
     }),
-    createProducerPackageFacet(timelineAuthorComponent.producers), createMarkupSurfaceFacet({
-    module: timelineAuthorModuleRef,
-    declaration: timelineAuthorMarkupSurfaces.find((item) => item.name === "timeline")!, handler: decodeTimelineAuthorSurface,
-  }), createMarkupSurfaceFacet({ module: timelineAuthorModuleRef,
-    declaration: timelineAuthorMarkupSurfaces.find(item => item.name === "clock")!, handler: decodeClockSurface,
-  }), createMarkupSurfaceFacet({ module: timelineAuthorModuleRef,
-    declaration: timelineAuthorMarkupSurfaces.find(item => item.name === "window")!, handler: decodeAbsoluteWindowSurface,
-  }), createMarkupSurfaceFacet({ module: timelineAuthorModuleRef,
-    declaration: timelineAuthorMarkupSurfaces.find(item => item.name === "instant")!, handler: decodeAbsoluteInstantSurface,
-  })],
+    createProducerPackageFacet(timelineAuthorComponent.producers),
+    ...timelineAuthorDeclarations.map((declaration) => createAuthorDeclarationFacet(declaration)),
+    ...timelineAuthorMarkupDeclarations.map((declaration) => createMarkupDeclarationFacet({
+      module: timelineAuthorModuleRef,
+      declaration,
+    })),
+       ],
 };
 export default hypitPackage;

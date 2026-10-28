@@ -1,11 +1,12 @@
 import { randomUUID } from "node:crypto";
 import { BuildMachine } from "@hypit/hypit/kernel";
+import type { BuildView } from "@hypit/hypit/kernel";
 import { isStreamingResourceStore } from "@hypit/hypit/runtime";
 import type {
   OperationSnapshot,
 } from "@hypit/hypit/runtime";
 import type { BuildExecutionSnapshot } from "./execution.js";
-import type { BuildState, CommandResult } from "@hypit/hypit/protocol";
+import type { CommandResult } from "@hypit/hypit/protocol";
 import type { BuildResultFinish, BuildResultOperation, BuildResultWriter } from "@hypit/hypit/result";
 
 import type {
@@ -107,7 +108,7 @@ export function createLocalResultWriter(
     }
   };
 
-  const acceptStoredResults = async (build: string): Promise<BuildState> => {
+  const acceptStoredResults = async (build: string): Promise<BuildView> => {
     const snapshot = await options.buildStore.read(build);
     assert(snapshot !== undefined, `Build ${build} has no durable execution state`);
     const machine = new BuildMachine(snapshot.definition, snapshot.facts);

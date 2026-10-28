@@ -17,6 +17,16 @@ test("annotations cannot create speech boundaries inside words or attached punct
   assert.equal(caption('hello,@{beat!} world'), 'hello, world');
 });
 
+test("comma-grouped numbers keep a hyphenated suffix as one lexical unit", () => {
+  assert.deepEqual(parse("a 1,000-word essay").tokens.map((token) => token.text),
+    ["a", "1,000-word", "essay"]);
+  assert.equal(parse("123,456,789-point").tokens[0]?.text, "123,456,789-point");
+  assert.equal(parse("1,000.5-word").tokens[0]?.text, "1,000.5-word");
+  for (const body of ["a 1,||000-word essay", "a 2020-||word essay"]) {
+    assert.throws(() => parse(body), /SCRIPT_CAPTION_BREAK_TOKEN_BOUNDARY/u);
+  }
+});
+
 test("comments do not divide words, and source edits retain the comment", () => {
   const source = '<line>hel<!-- note -->lo 한<!-- 설명 -->글. @{beat!}</line>';
   const parsed = parseScript("boundary", source);

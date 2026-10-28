@@ -84,7 +84,7 @@ The Kit assembles `person`, `shot` and `setting` after the fixed paragraph:
 </text:Render>
 ```
 
-These slots carry paragraphs, not individual appearance fields; the Kit allows `person` or `setting` to be omitted when a reference already supplies those facts. Pass `{portrait-prompt}` to the image Surface and connect reference images there. GPT Image 2 is the usual choice for this direction; `2K` often serves a full-screen picture or video reference, while `1K` can serve an inset. Aspect ratio and resolution are model parameters, not prompt words. The Kit package README owns its assembly interface.
+These slots carry paragraphs, not individual appearance fields; the Kit allows `person` or `setting` to be omitted when a reference already supplies those facts. Pass `{portrait-prompt}` to the image declaration and connect reference images there. GPT Image 2 is the usual choice for this direction; `2K` often serves a full-screen picture or video reference, while `1K` can serve an inset. Aspect ratio and resolution are model parameters, not prompt words. The Kit package README owns its assembly interface.
 
 ## Let references supply the facts they own
 

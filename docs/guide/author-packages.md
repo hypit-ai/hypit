@@ -23,7 +23,7 @@ npm install --save-dev @hypit/hypit@<selected-release>
 npm run build
 ```
 
-The example includes TypeScript build configuration, Manifest, Surface, Fragment, Producers,
+The example includes TypeScript build configuration, Manifest, Author Declaration, Markup spelling, Fragment, Producers,
 activation and a small preview Source. Its [README](https://github.com/hypit-ai/hypit/blob/main/examples/minimal-author-package/packages/example-component/README.md)
 explains the exact files and package setup. The project can use its package manager's workspace or
 local package dependency to install the component.
@@ -43,14 +43,14 @@ shows a continuously playing video moving from full screen to a side portrait in
 The [chat example](https://github.com/hypit-ai/hypit/tree/main/examples/semantic-composition/packages/chat-scene)
 shows the same event interface consuming Instants produced from either direct or semantic declarations.
 
-A Style-like Surface publishes its value under the bare authored id, such as `style={board-style}`.
+A Style-like declaration publishes its value under the bare authored id, such as `style={board-style}`.
 Separate outputs can use descriptive suffixes such as `.visual`, `.audio` or `.track`. Document the
 chosen names and the accepted values in the component's own vocabulary and README.
 
 ## Implement and inspect the scene
 
 Use the narrow `author`, `producer`, `refinement` and `markup` public subpaths for their respective
-responsibilities, and public domain subpaths for the values you consume. [Component Anatomy](./component-anatomy.md) explains how the Manifest, Surface, Fragment and
+responsibilities, and public domain subpaths for the values you consume. [Component Anatomy](./component-anatomy.md) explains how the Manifest, Author Declaration, Markup spelling, Fragment and
 Producer cooperate. Keep project copy and media as inputs; draw the component's own panels, frames
 and decoration in its implementation.
 

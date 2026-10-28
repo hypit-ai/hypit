@@ -13,10 +13,6 @@ import { AuthorFrontendRegistry, resolveCompiledSourceExport } from "@hypit/auth
 import { compileSourceClosure } from "@hypit/compiler";
 import type { ResolvedSource } from "@hypit/source";
 import { resolveSelfDescribedTextSource } from "@hypit/source/text";
-import {
-  MarkupSurfaceRegistry,
-  createMarkupAuthorFrontend,
-} from "@hypit/markup";
 import { refineRecord, RefinementRegistry } from "@hypit/refinement";
 
 function buildState(
@@ -36,33 +32,7 @@ function buildState(
     program: link(program.closure, [...program.records, ...planned.initialRecords]),
     plan: planned.plan,
   }), []);
-}
-
-import {
-  anchoredFrame,
-  aspectFrame,
-  decodeAnchoredFrameSurface,
-  decodeAspectFrameSurface,
-  decodeCanvasSurface,
-  decodeFrameSurface,
-  decodeMapSurface,
-  decodePathSurface,
-  decodePointSurface,
-  composeSpatialMaps,
-  mapIntrinsicExtentBounds,
-  mapSpatialFrameBounds,
-  mapSpatialFramePath,
-  mapSpatialPoint,
-  frameFromEdges,
-  resolveContentFit,
-  sealSpatialPath,
-  spatialComponent,
-  spatialManifest,
-  spatialMarkupSurfaces,
-  spatialModuleRef,
-  spatialProducers,
-  spatialTypes,
-} from "../src/index.js";
+}import { anchoredFrame, aspectFrame, composeSpatialMaps, mapIntrinsicExtentBounds, mapSpatialFrameBounds, mapSpatialFramePath, mapSpatialPoint, frameFromEdges, resolveContentFit, sealSpatialPath, spatialComponent, spatialManifest, spatialModuleRef, spatialProducers, spatialTypes } from "../src/index.js";
 import type { ContentFit, IntrinsicExtent, SpatialAnchor, SpatialFrame } from "../src/index.js";
 
 const parent: SpatialFrame = { xPx: 100, yPx: 200, widthPx: 800, heightPx: 1200 };
@@ -238,57 +208,3 @@ test("SpatialPath is typed geometry and rejects an empty or stateful command str
 function source(text: string): ResolvedSource {
   return resolveSelfDescribedTextSource({ id: "/project/main.svml", name: "main.svml", text: `<?svml using="@hypit/markup@1"?>\n${text}` });
 }
-
-test("self-described Spatial Surfaces produce explicit static geometry", async () => {
-  const closure = createResolvedClosure([spatialManifest]);
-  const surfaces = new MarkupSurfaceRegistry();
-  const register = (name: string, handler: Parameters<MarkupSurfaceRegistry["registerStructured"]>[0]["handler"]) => {
-    const declaration = spatialMarkupSurfaces.find((item) => item.name === name);
-    if (declaration === undefined) throw new Error(`missing Spatial Surface ${name}`);
-    surfaces.registerStructured({ module: spatialModuleRef, declaration, handler });
-  };
-  register("canvas", decodeCanvasSurface);
-  register("point", decodePointSurface);
-  register("path", decodePathSurface);
-  register("map", decodeMapSurface);
-  register("frame", decodeFrameSurface);
-  register("anchored-frame", decodeAnchoredFrameSurface);
-  register("aspect-frame", decodeAspectFrameSurface);
-  const frontends = new AuthorFrontendRegistry();
-  frontends.register(createMarkupAuthorFrontend({ registry: surfaces, resolveModule: () => spatialModuleRef }));
-  const refinements = new RefinementRegistry();
-  registerTypeRefinements(refinements, spatialComponent.refinements ?? []);
-  const compiled = await compileSourceClosure({
-    entry: source(`<svml>
-      <import as="space" from="@hypit/spatial@1"/>
-      <space:Canvas id="vertical" width="1080" height="1920"/>
-      <space:Point id="headline-origin" x="120" y="280"/>
-      <space:Path id="headline-path">
-        <space:Move x="120" y="280"/>
-        <space:Cubic control1-x="360" control1-y="180" control2-x="720" control2-y="380" x="960" y="280"/>
-      </space:Path>
-      <space:Map id="turned" xx="0" xy="-0.5" yx="0.5" yy="0" tx="920" ty="180"/>
-      <space:Frame id="safe" within={vertical.bounds} left="6%" top="4%" right="94%" bottom="96%"/>
-      <space:AnchoredFrame id="card" within={safe} x="50%" y="78%" width="82%" height="28%" anchor="center"/>
-      <space:AspectFrame id="sticker" within={safe} x="100%" y="100%" width="32%" aspect="9/16" anchor="bottom-right"/>
-    </svml>`),
-    closure,
-    frontends,
-    refineRecord: async (record) => await refineRecord(record, refinements),
-    resolveSource() { throw new Error("Spatial fixture imports no Source files."); },
-  });
-  assert.equal(resolveCompiledSourceExport(compiled, "vertical.canvas", spatialTypes.canvas).ref.kind, "record");
-  assert.equal(resolveCompiledSourceExport(compiled, "vertical.bounds", spatialTypes.frame).ref.kind, "record");
-  assert.equal(resolveCompiledSourceExport(compiled, "headline-origin", spatialTypes.point).ref.kind, "record");
-  assert.equal(resolveCompiledSourceExport(compiled, "headline-path", spatialTypes.path).ref.kind, "record");
-  assert.equal(resolveCompiledSourceExport(compiled, "turned", spatialTypes.map2D).ref.kind, "record");
-  const sticker = resolveCompiledSourceExport(compiled, "sticker", spatialTypes.frame);
-  assert.equal(sticker.ref.kind, "logical-output");
-  const build = buildState(compiled.program, compiled.graph, [
-    sticker.ref.kind === "logical-output" ? sticker.ref.id : "",
-  ]);
-  assert.deepEqual(build.plan.steps.map((step) => step.producer.name).sort(), [
-    spatialProducers.frameEdges.name,
-    spatialProducers.aspectFrame.name,
-  ].sort());
-});

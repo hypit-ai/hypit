@@ -27,6 +27,7 @@ import {
 } from "@hypit/executor";
 import { InProcessBuildScheduler } from "@hypit/hypit/runtime";
 import {
+  AuthorDeclarationRegistry,
   AuthorFrontendRegistry,
   bindAuthorFragment,
   elaborateGraphFragment,
@@ -44,45 +45,56 @@ import {
   htmlRasterRequest,
 } from "@hypit/html-program";
 import {
-  decodeHtmlVideoSurface,
   htmlVideoFragment,
   createHtmlVideoFragment,
+  htmlVideoAuthorDeclarations,
   htmlVideoManifest,
-  htmlVideoMarkupSurfaces,
+  htmlVideoMarkupDeclarations,
   htmlVideoModuleRef,
   htmlVideoDeliverySpec,
 } from "@hypit/html-video";
 import {
-  compileAudioProgram,
-  decodeExtractFrameSurface,
+  mediaOperationsAuthorDeclarations,
   mediaOperationsComponent,
-  mediaOperationsComponents,
-  mediaOperationsCapabilities,
   mediaOperationsManifest,
-  mediaOperationsMarkupSurfaces,
+  mediaOperationsMarkupDeclarations,
   mediaOperationsModuleRef,
   mediaOperationsProducers,
 } from "@hypit/media-operations";
+import {
+  audioProgramCapabilities,
+  audioProgramComponent,
+  audioProgramManifest,
+  audioProgramProducers,
+  compileAudioProgram,
+} from "@hypit/audio-program";
+import {
+  mediaDeliveryCapabilities,
+  mediaDeliveryComponent,
+  mediaDeliveryManifest,
+  mediaDeliveryProducers,
+} from "@hypit/media-delivery";
 import {
   refineRecord,
   RefinementRegistry,
 } from "@hypit/refinement";
 import type {
-  BuildState,
   CanonicalValue,
   ModuleManifest,
   Value,
   TypedRecord,
 } from "@hypit/protocol";
+import { sameCapability } from "@hypit/protocol";
+import type { BuildView } from "@hypit/kernel";
 import { isBlobRef } from "@hypit/protocol";
 import { recipeManifest } from "@hypit/recipe";
 import { temporalManifest } from "@hypit/temporal";
 import {
-  createMarkupAuthorFrontend,
-  MarkupSurfaceRegistry,
+  createMarkupDeclarationAuthorFrontend,
+  MarkupDeclarationRegistry,
 } from "@hypit/markup";
 
-async function runBuild(executor: Executor, state: BuildState) {
+async function runBuild(executor: Executor, state: BuildView) {
   return (await new InProcessBuildScheduler(executor).run([{
     id: "html-video-test",
     definition: { format: "hypit.build-definition@1", program: state.program, plan: state.plan },
@@ -115,6 +127,8 @@ const closure = createResolvedClosure([
   compositionManifest,
   recipeManifest,
   htmlProgramManifest,
+  audioProgramManifest,
+  mediaDeliveryManifest,
   mediaOperationsManifest,
   htmlVideoManifest,
 ]);
@@ -170,6 +184,8 @@ function buildState(
 function producerRegistry(): ProducerRegistry {
   const registry = new ProducerRegistry();
   registerProducerFacets(registry, mediaOperationsComponent.producers);
+  registerProducerFacets(registry, audioProgramComponent.producers);
+  registerProducerFacets(registry, mediaDeliveryComponent.producers);
   registerProducerFacets(registry, mediaComponent.producers);
   registerProducerFacets(registry, htmlProgramComponent.producers);
   registerProducerFacets(registry, timelineComponent.producers);
@@ -179,9 +195,9 @@ function producerRegistry(): ProducerRegistry {
 function validatorRegistry(): RefinementRegistry {
   const registry = new RefinementRegistry();
   registerTypeRefinements(registry, compositionComponent.refinements);
-  for (const component of mediaOperationsComponents) {
-    registerTypeRefinements(registry, component.refinements);
-  }
+  registerTypeRefinements(registry, mediaComponent.refinements);
+  registerTypeRefinements(registry, mediaOperationsComponent.refinements);
+  registerTypeRefinements(registry, audioProgramComponent.refinements);
   return registry;
 }
 
@@ -190,19 +206,21 @@ test("HTML renderer rendering is an explicit exact Need after ordinary document 
     htmlProgramProducers.compile.name,
     htmlProgramProducers.requestVisual.name,
     mediaProducers.visualDelivery.name,
-    mediaOperationsProducers.compileAudio.name,
-    mediaOperationsProducers.renderAudio.name,
-    mediaOperationsProducers.mux.name,
-    mediaOperationsProducers.projectMuxed.name,
+    audioProgramProducers.compile.name,
+    audioProgramProducers.render.name,
+    mediaDeliveryProducers.mux.name,
+    mediaDeliveryProducers.projectVideo.name,
   ].sort());
 
   const result = await runBuild(new Executor({ producers: producerRegistry(), refinements: validatorRegistry() }), build());
   assert.equal(result.status, "paused");
   assert.equal(result.state.needs.length, 2);
-  const visual = result.state.needs.find((need) => need.capability.name === htmlProgramCapabilities.rasterizeVisual.name)!;
+  const visual = result.state.needs.find((need) =>
+    sameCapability(need.capability, htmlProgramCapabilities.rasterizeVisual))!;
   assert.equal(visual.returns.name, mediaTypes.timelineVisual.name);
   assert.deepEqual(visual.constraints, htmlRasterRequest(compileHtmlProgram(composition, space), delivery.visual));
-  const audio = result.state.needs.find((need) => need.capability.name === "render-timeline-audio")!;
+  const audio = result.state.needs.find((need) =>
+    sameCapability(need.capability, audioProgramCapabilities.render))!;
   assert.equal(audio.returns.name, mediaTypes.timelineAudio.name);
   assert.equal(result.blocked.every((item) => item.reason === "missing-endpoint"), true);
 });
@@ -247,7 +265,7 @@ test("separate visual, audio and mux Endpoints complete one author-visible rende
   );
   endpoints.registerImmediateEndpoint(
     "example.media.audio-real",
-    mediaOperationsCapabilities.renderAudio,
+    audioProgramCapabilities.render,
     mediaTypes.timelineAudio,
     ({ need }) => {
       const request = need.constraints as { contract: string; program: ReturnType<typeof compileAudioProgram> };
@@ -261,7 +279,7 @@ test("separate visual, audio and mux Endpoints complete one author-visible rende
   );
   endpoints.registerImmediateEndpoint(
     "example.media.mux",
-    mediaOperationsCapabilities.mux,
+    mediaDeliveryCapabilities.mux,
     mediaTypes.muxed,
     ({ need }) => {
       const request = need.constraints as { visual: ReturnType<typeof sealTimelineVisual>;
@@ -292,9 +310,22 @@ test("separate visual, audio and mux Endpoints complete one author-visible rende
 });
 
 const fixtureModule = { name: "example.composition-fixture", version: "1" } as const;
-const fixtureSurface = {
-  name: "composition", tag: "Composition", mode: "structured",
+const fixtureDeclaration = {
+  module: fixtureModule,
+  declaration: "composition",
   outputs: [compositionTypes.composition, timelineTypes.timeline],
+  shape: { summary: "Supplies the test Composition and Timeline.", fields: [] },
+  bindings: () => [
+    { name: "composition", ref: { kind: "record" as const, id: "composition" }, type: compositionTypes.composition },
+    { name: "semantic", ref: { kind: "record" as const, id: "semantic" }, type: timelineTypes.timeline },
+  ],
+  compile: ({ declaration }: { readonly declaration: { readonly range: { readonly start: number; readonly end: number } } }) => ({
+    records: [
+      { id: "composition", type: compositionTypes.composition, value: stored(composition), range: declaration.range },
+      { id: "semantic", type: timelineTypes.timeline, value: stored(semantic), range: declaration.range },
+    ],
+    components: [],
+  }),
 } as const;
 const fixtureManifest: ModuleManifest = {
   format: "hypit.module@1",
@@ -324,31 +355,29 @@ test(`the ${selectedRange ? "selected" : "full"} rendered video remains an ordin
     compositionManifest,
     recipeManifest,
     htmlProgramManifest,
+    audioProgramManifest,
+    mediaDeliveryManifest,
     mediaOperationsManifest,
     htmlVideoManifest,
     fixtureManifest,
   ]);
-  const surfaces = new MarkupSurfaceRegistry();
-  surfaces.registerStructured({ module: fixtureModule, declaration: fixtureSurface, handler: ({ element }) => ({
-    records: [
-      { id: "composition", type: compositionTypes.composition, value: stored(composition), range: element.range },
-      { id: "semantic", type: timelineTypes.timeline, value: stored(semantic), range: element.range },
-    ],
-    components: [],
-  }) });
-  surfaces.registerStructured({
-    module: htmlVideoModuleRef,
-    declaration: htmlVideoMarkupSurfaces.find((item) => item.name === "video")!,
-    handler: decodeHtmlVideoSurface,
-  });
-  surfaces.registerStructured({
-    module: mediaOperationsModuleRef,
-    declaration: mediaOperationsMarkupSurfaces.find((item) => item.name === "extract-frame")!,
-    handler: decodeExtractFrameSurface,
-  });
+  const declarations = new AuthorDeclarationRegistry();
+  declarations.register(fixtureDeclaration);
+  for (const declaration of [...htmlVideoAuthorDeclarations, ...mediaOperationsAuthorDeclarations]) {
+    declarations.register(declaration);
+  }
+  const syntax = new MarkupDeclarationRegistry();
+  syntax.register({ module: fixtureModule, declaration: "composition", tag: "Composition" });
+  for (const declaration of htmlVideoMarkupDeclarations) {
+    syntax.register({ module: htmlVideoModuleRef, declaration: declaration.name, tag: declaration.tag });
+  }
+  for (const declaration of mediaOperationsMarkupDeclarations) {
+    syntax.register({ module: mediaOperationsModuleRef, declaration: declaration.name, tag: declaration.tag });
+  }
   const frontends = new AuthorFrontendRegistry();
-  frontends.register(createMarkupAuthorFrontend({
-    registry: surfaces,
+  frontends.register(createMarkupDeclarationAuthorFrontend({
+    syntax,
+    compilers: declarations,
     resolveModule(request) {
       if (request.from.startsWith("@hypit/html-video")) return htmlVideoModuleRef;
       if (request.from.startsWith("@hypit/media-operations")) return mediaOperationsModuleRef;
@@ -380,10 +409,10 @@ test(`the ${selectedRange ? "selected" : "full"} rendered video remains an ordin
     htmlProgramProducers.compile.name,
     selectedRange ? htmlProgramProducers.requestVisualRange.name : htmlProgramProducers.requestVisual.name,
     mediaProducers.visualDelivery.name,
-    mediaOperationsProducers.compileAudio.name,
-    selectedRange ? mediaOperationsProducers.renderAudioRange.name : mediaOperationsProducers.renderAudio.name,
-    mediaOperationsProducers.mux.name,
-    mediaOperationsProducers.projectMuxed.name,
+    audioProgramProducers.compile.name,
+    selectedRange ? audioProgramProducers.renderRange.name : audioProgramProducers.render.name,
+    mediaDeliveryProducers.mux.name,
+    mediaDeliveryProducers.projectVideo.name,
     mediaOperationsProducers.inspect.name,
     mediaOperationsProducers.extractFrame.name,
   ].sort());

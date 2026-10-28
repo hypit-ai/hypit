@@ -1,10 +1,7 @@
 import { frameSpanSchema, timelineDependency, timelineTypes } from "@hypit/timeline";
-import type { StructuredSurfaceDeclaration, SurfaceVocabulary } from "@hypit/hypit/markup";
-import { temporalContextAttributeVocabulary } from "@hypit/temporal/markup";
-import { readFile } from "node:fs/promises";
 
 import { blobDependency, blobTypes } from "@hypit/hypit/blob";
-import { compositionDependency, compositionTypes } from "@hypit/composition";
+import { compositionDependency, compositionTypes, visualProgramCarrierSchema } from "@hypit/composition";
 import {
   compositableSurfaceSchema,
   mediaDependency,
@@ -22,15 +19,7 @@ import {
   spatialMap2DSchema,
   spatialTypes,
 } from "@hypit/spatial";
-import { recipeType } from "@hypit/hypit/recipe";
 import { temporalDependency, temporalMapSchema, temporalRelationSpecSchema, temporalTypes } from "@hypit/temporal";
-import { temporalWindowAttributeVocabulary } from "@hypit/temporal/markup";
-
-const previewImage = (file: string) => ({
-  mediaType: "image/png",
-  path: `preview/${file}`,
-  open: async () => Uint8Array.from(await readFile(new URL(`../preview/${file}`, import.meta.url))),
-});
 
 export const visualTrackModuleRef = { name: "@hypit/visual-track", version: "1" } as const;
 export const visualTrackTypes = {
@@ -40,6 +29,8 @@ export const visualTrackTypes = {
   sampleLayerSpec: { module: visualTrackModuleRef, name: "MediaSampleLayerSpec" },
   layerSet: { module: visualTrackModuleRef, name: "MediaLayerSet" },
   clipSpec: { module: visualTrackModuleRef, name: "VisualClipSpec" },
+  transitionEffect: { module: visualTrackModuleRef, name: "VisualTransitionEffect" },
+  transitionSpec: { module: visualTrackModuleRef, name: "VisualTransitionSpec" },
   set: { module: visualTrackModuleRef, name: "VisualTrackSet" },
   program: { module: visualTrackModuleRef, name: "VisualTrackProgram" },
 } satisfies Record<string, TypeRef>;
@@ -55,6 +46,7 @@ export const visualTrackProducers = {
   appendMappedSurfaceLayer: { module: visualTrackModuleRef, name: "append-mapped-surface-media-layer" },
   createSet: { module: visualTrackModuleRef, name: "create-visual-track-set" },
   appendClip: { module: visualTrackModuleRef, name: "append-visual-clip" },
+  appendTransition: { module: visualTrackModuleRef, name: "append-visual-transition" },
   bindClipPath: { module: visualTrackModuleRef, name: "bind-visual-clip-path" },
   bindMotion: { module: visualTrackModuleRef, name: "bind-visual-clip-motion" },
   finalize: { module: visualTrackModuleRef, name: "finalize-visual-track" },
@@ -165,16 +157,25 @@ export const visualClipSpecSchema: ValueSchema = object({
   id: { schema: string },
   treatment: { schema: visualFrameTreatmentSchema }, motion: { schema: visualClipMotionSchema, optional: true },
 });
+export const visualTransitionEffectSchema: ValueSchema = visualProgramCarrierSchema;
+export const visualTransitionSpecSchema: ValueSchema = object({
+  id: { schema: string },
+  outgoingClipId: { schema: string },
+  incomingClipId: { schema: string },
+  effect: { schema: visualTransitionEffectSchema },
+});
 const resolvedClip = object({
   id: { schema: string }, subjectId: { schema: string }, span: { schema: frameSpanSchema }, frame: { schema: spatialFrameSchema },
   treatment: { schema: visualFrameTreatmentSchema }, layers: { schema: { kind: "array", minItems: 1, items: resolvedLayer } }, motion: { schema: visualClipMotionSchema, optional: true },
 });
 export const visualTrackSetSchema: ValueSchema = object({
   clips: { schema: { kind: "array", items: resolvedClip } },
+  transitions: { schema: { kind: "array", items: visualTransitionSpecSchema } },
 });
 export const visualTrackProgramSchema: ValueSchema = object({
   id: { schema: string },
   clips: { schema: { kind: "array", items: resolvedClip } },
+  transitions: { schema: { kind: "array", items: visualTransitionSpecSchema } },
 });
 export const visualTrackHeaderSchema: ValueSchema = object({
   id: { schema: string },
@@ -187,145 +188,6 @@ const clipInputs = [
   { name: "frame", type: spatialTypes.frame }, { name: "spec", type: visualTrackTypes.clipSpec },
   { name: "window", type: temporalTypes.window },
 ] as const;
-
-const treatmentRecipeProperties = [
-  { name: "opacity", required: false, fallback: "1",
-    summary: "Sets how opaque the sampled picture is drawn." },
-  { name: "blur", required: false, fallback: "0",
-    summary: "Blurs the sampled picture by a pixel radius." },
-  { name: "brightness", required: false, fallback: "1",
-    summary: "Scales the brightness of the sampled picture." },
-  { name: "contrast", required: false, fallback: "1",
-    summary: "Scales the contrast of the sampled picture." },
-  { name: "saturation", required: false, fallback: "1",
-    summary: "Scales the saturation of the sampled picture." },
-  { name: "clip", required: false, values: ["none", "frame", "rounded"], fallback: "frame",
-    summary: "Decides how the picture is clipped to the Frame." },
-  { name: "radius", required: false, fallback: "0",
-    summary: "Rounds the clipped corners by a pixel radius, and is read only for a `rounded` clip." },
-  { name: "padding", required: false, fallback: "0",
-    summary: "Insets the picture from the Frame edges. It accepts one, two or four values — all sides, then vertical and horizontal, then each side — which no single number can carry, so it is written as text: `padding: \"14\"` and `padding: \"8 12\"`. A bare number is refused." },
-  { name: "border-width", required: false, fallback: "0",
-    summary: "Draws a border of this pixel width, and draws none at `0`." },
-  { name: "border-style", required: false, values: ["solid", "dashed", "dotted"], fallback: "solid",
-    summary: "Chooses how the border is stroked." },
-  { name: "border-color", required: false,
-    summary: "Paints the border, which a non-zero `border-width` requires." },
-  { name: "shadows", required: false, fallback: "none",
-    summary: "Casts shadows behind the Frame, written as `x y blur spread color` entries separated by semicolons." },
-  { name: "frame-paint", required: false, fallback: "transparent",
-    summary: "Fills the whole Frame behind every layer with a color, `linear(angle;stops)` or `radial(x,y;stops)`." },
-] as const;
-
-export const visualTrackMarkupSurfaces: readonly (StructuredSurfaceDeclaration & { readonly vocabulary: SurfaceVocabulary })[] = [{
-    name: "track", tag: "Track", mode: "structured",
-    outputs: [spatialTypes.fit, visualTrackTypes.header, visualTrackTypes.paintLayerSpec, visualTrackTypes.sampleLayerSpec,
-      visualTrackTypes.layerSet, visualTrackTypes.clipSpec, visualTrackTypes.set,
-      visualTrackTypes.program,
-      compositionTypes.visualTrack],
-    vocabulary: {
-      summary: "Places ordinary visual Clips on one completed Timeline; Film places the resulting Track in a VisualScope.",
-      appearance: "Each Clip owns one source, one absolute Window and one Frame. Temporal sampling, space, treatment and optional local motion remain independent choices.",
-      preview: previewImage("Track.png"),
-      attributes: [
-        { name: "id", kind: "identifier", required: true,
-          summary: "Names this Track and prefixes the identity of every Clip and layer that does not name itself." },
-        ...temporalContextAttributeVocabulary,
-      ],
-      children: [
-        { tag: "Clip", cardinality: "many",
-          summary: "One independently timed source on its own Frame, optionally carrying Sampling and Pose keyframes.",
-          attributes: [
-            { name: "id", kind: "identifier", required: false,
-              summary: "Names this Clip; the Track derives `<track>.clip.<index>` when it is absent." },
-            { name: "frame", kind: "reference", required: true, accepts: [spatialTypes.frame],
-              summary: "Chooses the Frame the Clip occupies in the program picture plane." },
-            { name: "treatment", kind: "reference", required: false, accepts: [recipeType],
-              summary: "Optionally chooses reusable image and Frame treatment; timing and fitting do not belong to it.",
-              recipe: treatmentRecipeProperties },
-            { name: "motion", kind: "reference", required: false, accepts: [visualTrackTypes.motion],
-              summary: "Optionally applies a reusable typed Motion. Inline Pose children express the same value." },
-            { name: "clip", kind: "reference", required: false, accepts: [spatialTypes.path],
-              summary: "Clips the Clip to an authored Path." },
-            { name: "image", kind: "reference", required: false, accepts: [blobTypes.blob],
-              summary: "Shows a durationless still image as the Clip's direct source." },
-            { name: "media", kind: "reference", required: false, accepts: [mediaTypes.prepared],
-              summary: "Shows a prepared timed source; terminal rendering evaluates its selected stream and exact Map." },
-            { name: "surface", kind: "reference", required: false, accepts: [mediaTypes.compositableSurface],
-              summary: "Shows an alpha-aware still or timed Surface." },
-            { name: "extent", kind: "reference", required: false, accepts: [spatialTypes.extent],
-              summary: "Gives the still image its authored pixel Extent. The `fit` scales this Extent into the Frame, so what it decides is the shape: its width-to-height ratio has to be the picture's, and the pixel numbers themselves only have to hold that ratio. A generated picture's own size is the generator's to choose and is not knowable when the Source is written, so write the ratio you asked that generator for." },
-            { name: "mapping", kind: "reference", required: false, accepts: [spatialTypes.map2D],
-              summary: "Uses one explicit affine map from source-local pixels into the program picture plane instead of deriving one from fit attributes." },
-            { name: "fit", kind: "literal", required: false,
-              values: ["contain", "cover", "fit-width", "fit-height", "native", "scale-down", "stretch"],
-              summary: "Chooses contain, cover, fit-width, fit-height, native, scale-down or stretch; defaults to contain." },
-            { name: "frame-x", kind: "literal", required: false, summary: "Sets normalized horizontal destination alignment." },
-            { name: "frame-y", kind: "literal", required: false, summary: "Sets normalized vertical destination alignment." },
-            { name: "content-x", kind: "literal", required: false, summary: "Sets normalized horizontal source anchor." },
-            { name: "content-y", kind: "literal", required: false, summary: "Sets normalized vertical source anchor." },
-            { name: "fit-offset-x", kind: "literal", required: false, summary: "Offsets fitted content horizontally in pixels." },
-            { name: "fit-offset-y", kind: "literal", required: false, summary: "Offsets fitted content vertically in pixels." },
-            { name: "fit-constraint", kind: "literal", required: false, values: ["bounded", "free"], summary: "Chooses bounded or free alignment." },
-            ...temporalWindowAttributeVocabulary,
-          ] },
-      ],
-      ports: [
-        { name: "program", type: visualTrackTypes.program,
-          summary: "The resolved authored Clips retained for declared consumers such as Studio." },
-        { name: "visual", type: compositionTypes.visualTrack,
-          summary: "The rendered picture, an ordinary peer VisualTrack." },
-      ],
-      example: `<visual:Motion id="gentle-push">
-  <visual:Pose at="start" scale="1.08" easing="ease-out"/>
-  <visual:Pose at="end" scale="1"/>
-</visual:Motion>
-
-<visual:Track id="cutaways" timeline={speech.timeline}>
-  <visual:Clip media={prepared.media} during={program.window} frame={full} fit="cover"/>
-  <visual:Clip id="bags" media={cutaway-bags.media} during={bags}
-    frame={full} fit="cover" treatment={recipes.visual.cutaway} motion={gentle-push}/>
-</visual:Track>`,
-      notes: [
-        "A Track requires at least one Clip and accepts no text content.",
-        "A Clip references one already resolved Window through `during`.",
-        "A Clip names exactly one of `image`, `media` or `surface`; `extent` is required with `image` and refused otherwise.",
-        "The parent Film Scope owns this Track occurrence's position through sibling declaration order; fitting and temporal sampling remain properties of each Clip occurrence.",
-        "An explicit `mapping` is mutually exclusive with every fit attribute. It is already in program-picture coordinates; the Frame still owns clipping and treatment.",
-        "Omitting a Map means bounded partial identity. Map children are refused on durationless still material.",
-        "Map children control timed source coordinates, Sampling children animate source crop inside the Frame, and Pose children animate the complete framed Clip.",
-        "Audio is authored independently through Audio Track; Visual Track never selects or emits it implicitly.",
-      ],
-    },
-  }, {
-    name: "motion", tag: "Motion", mode: "structured",
-    outputs: [visualTrackTypes.motion],
-    vocabulary: {
-      summary: "Authors one reusable Clip-local affine and opacity Motion without naming an aesthetic effect.",
-      attributes: [{ name: "id", kind: "identifier", required: true, summary: "Names this Motion value." }],
-      children: [{
-        tag: "Pose", cardinality: "many", summary: "One complete visual state on the consuming Clip's local clock.",
-        attributes: [
-          { name: "at", kind: "literal", required: true, summary: "Places this state at start, end, Nf, end-Nf or a percentage." },
-          { name: "x", kind: "literal", required: false, summary: "Translates horizontally in picture pixels." },
-          { name: "y", kind: "literal", required: false, summary: "Translates vertically in picture pixels." },
-          { name: "scale", kind: "literal", required: false, summary: "Scales both axes." },
-          { name: "scale-x", kind: "literal", required: false, summary: "Scales the horizontal axis." },
-          { name: "scale-y", kind: "literal", required: false, summary: "Scales the vertical axis." },
-          { name: "rotate", kind: "literal", required: false, summary: "Rotates in degrees." },
-          { name: "opacity", kind: "literal", required: false, summary: "Sets opacity inside [0,1]." },
-          { name: "origin-x", kind: "literal", required: false, summary: "Sets normalized horizontal transform origin." },
-          { name: "origin-y", kind: "literal", required: false, summary: "Sets normalized vertical transform origin." },
-          { name: "easing", kind: "literal", required: false, summary: "Shapes the interval leaving this Pose." },
-        ],
-      }],
-      example: `<visual:Motion id="gentle-push">
-  <visual:Pose at="start" scale="1.08" easing="ease-out"/>
-  <visual:Pose at="end" scale="1"/>
-</visual:Motion>`,
-      notes: ["A Motion needs at least two ordered Poses and must resolve from the consuming Clip's start through its end."],
-    },
-  }] as const;
 
 
 export const visualTrackManifest: ModuleManifest = {
@@ -347,6 +209,8 @@ export const visualTrackManifest: ModuleManifest = {
     visualTrackTypes.sampleLayerSpec.name,
     visualTrackTypes.layerSet.name,
     visualTrackTypes.clipSpec.name,
+    visualTrackTypes.transitionEffect.name,
+    visualTrackTypes.transitionSpec.name,
     visualTrackTypes.set.name,
     visualTrackTypes.program.name,
   ],
@@ -362,6 +226,9 @@ export const visualTrackManifest: ModuleManifest = {
     { name: visualTrackProducers.appendMappedSurfaceLayer.name, inputs: [{ name: "layers", type: visualTrackTypes.layerSet }, { name: "source", type: mediaTypes.compositableSurface }, { name: "mapping", type: spatialTypes.map2D }, { name: "spec", type: visualTrackTypes.sampleLayerSpec }], result: { kind: "output" as const, name: "layers", type: visualTrackTypes.layerSet } },
     { name: visualTrackProducers.createSet.name, inputs: [], result: { kind: "output" as const, name: "set", type: visualTrackTypes.set } },
     { name: visualTrackProducers.appendClip.name, inputs: clipInputs, result: { kind: "output" as const, name: "set", type: visualTrackTypes.set } },
+    { name: visualTrackProducers.appendTransition.name, inputs: [
+      { name: "set", type: visualTrackTypes.set }, { name: "spec", type: visualTrackTypes.transitionSpec },
+    ], result: { kind: "output" as const, name: "set", type: visualTrackTypes.set } },
     { name: visualTrackProducers.bindClipPath.name, inputs: [{ name: "spec", type: visualTrackTypes.clipSpec }, { name: "path", type: spatialTypes.path }], result: { kind: "output" as const, name: "spec", type: visualTrackTypes.clipSpec } },
     { name: visualTrackProducers.bindMotion.name, inputs: [{ name: "spec", type: visualTrackTypes.clipSpec }, { name: "motion", type: visualTrackTypes.motion }], result: { kind: "output" as const, name: "spec", type: visualTrackTypes.clipSpec } },
     { name: visualTrackProducers.finalize.name, inputs: [{ name: "set", type: visualTrackTypes.set }, { name: "header", type: visualTrackTypes.header }, { name: "timeline", type: timelineTypes.timeline }], result: { kind: "output" as const, name: "program", type: visualTrackTypes.program } },

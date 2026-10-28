@@ -27,12 +27,12 @@ export type PolloRoute = PolloMapping & {
   readonly packageResult: (artifacts: readonly BlobRef[]) => Value;
 };
 
-function scalar(request: ProviderFieldRequest, port: string): string | number | boolean | undefined {
-  const value = request.ports[port]?.[0];
+function scalar(request: ProviderFieldRequest, field: string): string | number | boolean | undefined {
+  const value = request.fields[field]?.[0];
   return typeof value === "string" || typeof value === "number" || typeof value === "boolean" ? value : undefined;
 }
-function count(request: ProviderFieldRequest, port: string): number {
-  return request.ports[port]?.length ?? 0;
+function count(request: ProviderFieldRequest, field: string): number {
+  return request.fields[field]?.length ?? 0;
 }
 function strings(value: unknown): readonly string[] {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string" && item.length > 0) : [];

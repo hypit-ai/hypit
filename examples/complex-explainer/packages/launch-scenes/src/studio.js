@@ -27,10 +27,9 @@ export function sceneCompanions(module, tags) {
     );
     return {
       id: spec.name,
-      role: "track",
       output: {
         type: compositionTypes.visualTrack,
-        surface: spec.name,
+        declaration: spec.name,
         modules: [module],
       },
       family: "launch-scenes",

@@ -97,7 +97,7 @@ Seedance exposes model capabilities, not creative usages. `standard`, `fast`, `m
 choose the exact model independently of three invocation shapes. All shapes consume a complete
 ordinary `Text` prompt and output `{id.video}`.
 
-Seedance 2.5 uses the same Surfaces; it is not a Runtime substitution for another model. Its exact
+Seedance 2.5 uses the same declarations; it is not a Runtime substitution for another model. Its exact
 contract accepts 480p/720p/1080p, up to 30 image, 10 video and 10 audio references, and either `-1` for
 model-selected duration or an integer from 4 through 30 seconds:
 
@@ -180,7 +180,8 @@ edge. Extraction does not turn it into speech evidence or attach speaker meaning
 </seedance:ReferenceVideo>
 ```
 
-The same media-operation package exposes `Transform` for ordered trim/retime and `ExtractFrame` for
+The same media-operation package exposes `Transform` for ordered trim, constant retime and exact
+rate profiles resolved against the prepared source's actual duration, plus `ExtractFrame` for
 first, last, indexed or timestamped still extraction. Local FFmpeg implements these exact Needs. Another compatible Runtime Endpoint can be selected
 without changing the author graph.
 
@@ -188,7 +189,7 @@ without changing the author graph.
 
 `@hypit/seedance-kits` contains seven data-only Text Templates. A Kit is not a model wrapper: use
 generic `text:Render` to produce the prompt, then connect that Text and the real media references to
-the low-level Seedance Surface.
+the low-level Seedance declaration.
 
 Import the selected public Kit Source from its installed package. The package manager or active
 Distribution owns its installed version, while the Source Closure follows that explicit package

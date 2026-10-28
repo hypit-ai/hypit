@@ -6,7 +6,13 @@ import type { ProducerRef, Value } from "@hypit/hypit/protocol";
 import type { LocalTemporalDomain, TemporalWindow } from "@hypit/temporal";
 import type { Timeline } from "@hypit/timeline";
 
-import { assertNarrativeAlignmentIdentity } from "./identity.js";
+import {
+  assertNarrativeAlignmentIdentity,
+  assertNarrativeInstantSpecIdentity,
+  assertNarrativeProjectionHeaderIdentity,
+  assertNarrativeProjectionIdentity,
+  assertNarrativeProjectionPartsIdentity,
+} from "./identity.js";
 import { materializeSegmentBoundaryAlignment } from "./materialize.js";
 import { narrativeTemporalProducers, narrativeTemporalTypes } from "./manifest.js";
 import { createNarrativeProjection, projectNarrativeAlignment, projectNarrativeInstant } from "./projection.js";
@@ -19,7 +25,15 @@ function valueOf<T>(value: Value | undefined, subject: string): T {
 
 export const narrativeTemporalComponent = {
   refinements: [{ type: narrativeTemporalTypes.narrativeAlignment,
-    handler: ({ value }) => assertNarrativeAlignmentIdentity(valueOf<NarrativeAlignment>(value, "NarrativeAlignment")) }],
+    handler: ({ value }) => assertNarrativeAlignmentIdentity(valueOf<NarrativeAlignment>(value, "NarrativeAlignment")) },
+  { type: narrativeTemporalTypes.narrativeProjection,
+    handler: ({ value }) => assertNarrativeProjectionIdentity(valueOf<NarrativeProjection>(value, "NarrativeProjection")) },
+  { type: narrativeTemporalTypes.narrativeInstantSpec,
+    handler: ({ value }) => assertNarrativeInstantSpecIdentity(valueOf<NarrativeInstantSpec>(value, "NarrativeInstantSpec")) },
+  { type: narrativeTemporalTypes.narrativeProjectionParts,
+    handler: ({ value }) => assertNarrativeProjectionPartsIdentity(valueOf<NarrativeProjectionParts>(value, "NarrativeProjectionParts")) },
+  { type: narrativeTemporalTypes.narrativeProjectionHeader,
+    handler: ({ value }) => assertNarrativeProjectionHeaderIdentity(valueOf<NarrativeProjectionHeader>(value, "NarrativeProjectionHeader")) }],
   producers: [{
     producer: narrativeTemporalProducers.materializeSegmentBoundaries,
     handler: ({ inputs }) => ({ kind: "output", value: (canonicalize(materializeSegmentBoundaryAlignment(
@@ -42,6 +56,8 @@ export const narrativeTemporalComponent = {
     handler: ({ inputs }) => {
       const left = valueOf<NarrativeProjectionParts>(inputs.left?.value, "NarrativeProjectionParts");
       const right = valueOf<NarrativeProjectionParts>(inputs.right?.value, "NarrativeProjectionParts");
+      assertNarrativeProjectionPartsIdentity(left);
+      assertNarrativeProjectionPartsIdentity(right);
       return { kind: "output", value: (canonicalize({ parts: [...left.parts, ...right.parts] })) };
     },
   }, {
@@ -51,6 +67,8 @@ export const narrativeTemporalComponent = {
       const narrative = valueOf<Narrative>(inputs.narrative?.value, "Narrative");
       const timeline = valueOf<Timeline>(inputs.timeline?.value, "Timeline");
       const parts = valueOf<NarrativeProjectionParts>(inputs.parts?.value, "NarrativeProjectionParts");
+      assertNarrativeProjectionHeaderIdentity(header);
+      assertNarrativeProjectionPartsIdentity(parts);
       return { kind: "output", value: (canonicalize(
         createNarrativeProjection(header.id, narrative.id, timeline, parts.parts),
       )) };
@@ -66,6 +84,7 @@ function projectionFacet(producer: ProducerRef, inputName: "selection" | "segmen
   sourceKind: "selection" | "segment" | "moment"): ProducerPackage[number] {
   return { producer, handler: ({ inputs }) => {
     const spec = valueOf<NarrativeInstantSpec>(inputs.spec?.value, "NarrativeInstantSpec");
+    assertNarrativeInstantSpecIdentity(spec);
     return { kind: "output", value: (canonicalize(projectNarrativeInstant({
       narrative: valueOf<NarrativeProjection>(inputs.projection?.value, "NarrativeProjection"),
       source: valueOf<NarrativeSelectionRef | NarrativeSegmentRef | NarrativeMomentRef>(inputs[inputName]?.value, inputName),

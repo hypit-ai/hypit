@@ -1,18 +1,20 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createResolvedClosure } from "@hypit/hypit/kernel";
-import { decodeMarkup, MarkupSurfaceRegistry } from "@hypit/hypit/markup";
+import { AuthorDeclarationRegistry, installAuthorDeclarationFacets } from "@hypit/hypit/author";
 import {
-  decodeSpeechTranscriptSurface,
+  decodeMarkupDeclarations,
+  installMarkupDeclarationFacets,
+  MarkupDeclarationRegistry,
+} from "@hypit/hypit/markup";
+import {
   decodeSpeechTranscriptSource,
   phraseRanges,
-  speechEvidenceManifest,
-  speechEvidenceMarkupSurfaces,
   speechEvidenceModuleRef,
   speechTranscriptSource,
   transcriptWordsFromEvidence,
   wordsAt,
 } from "../src/index.js";
+import { hypitPackage } from "../src/activation.js";
 
 test("editable transcript Source compiles back to the exact evidence Record", async () => {
   const evidence = {
@@ -29,21 +31,19 @@ test("editable transcript Source compiles back to the exact evidence Record", as
   assert.match(source, /<speech:Transcript id="opening">/u);
   assert.doesNotMatch(source, /<你好/u);
   assert.deepEqual(decodeSpeechTranscriptSource(source), evidence);
-  const registry = new MarkupSurfaceRegistry();
-  registry.registerRaw({
-    module: speechEvidenceModuleRef,
-    declaration: speechEvidenceMarkupSurfaces[0],
-    handler: decodeSpeechTranscriptSurface,
-  });
-  const compiled = await decodeMarkup({
+  const compilers = new AuthorDeclarationRegistry();
+  const syntax = new MarkupDeclarationRegistry();
+  installAuthorDeclarationFacets(hypitPackage.facets, compilers);
+  installMarkupDeclarationFacets(hypitPackage.facets, syntax);
+  const declared = await decodeMarkupDeclarations({
     name: "opening.transcript.svml",
     text: source.slice(source.indexOf("<svml>")),
   }, {
-    closure: createResolvedClosure([speechEvidenceManifest]),
-    registry,
     resolveModule: () => speechEvidenceModuleRef,
+    syntax,
+    compilers,
   });
-  assert.deepEqual(compiled.records.find((record) => record.id === "opening")?.value, evidence);
+  assert.deepEqual(declared.records.find((record) => record.id === "opening")?.value, evidence);
   assert.deepEqual(transcriptWordsFromEvidence(evidence), [{ text: "<你好 & café>", start: 0.1, end: 0.4 }]);
 });
 

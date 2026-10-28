@@ -18,7 +18,7 @@
   },
   "bindings": {
     "@hypit/html-program@1#rasterize-visual": "html.local",
-    "@hypit/media-operations@1#render-timeline-audio": "media.local",
-    "@hypit/media-operations@1#mux-program-media": "media.local"
+    "@hypit/audio-program@1#render-timeline-audio": "media.local",
+    "@hypit/media-delivery@1#mux-program-media": "media.local"
   }
 }

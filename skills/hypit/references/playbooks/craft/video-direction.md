@@ -247,7 +247,7 @@ at that exact image is part of the intended action.
 Reference transfer and strict source editing are two uses within reference-directed generation, not
 additional invocation shapes or finished-work categories.
 
-Model-specific Surfaces and Prompt Kits are implementations of these relationships, not the Craft
+Model-specific declarations and Prompt Kits are implementations of these relationships, not the Craft
 itself. Kits produce ordinary Text; Source connects that Text and the actual references to the selected
 model request. The current Distribution may provide model-specific Kit packages such as
 `@hypit/seedance-kits`; their package documentation owns exact imports, slots, Recipe choices and

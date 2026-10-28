@@ -6,7 +6,6 @@ import {
 } from "@hypit/kernel";
 import type {
   BuildDefinition,
-  BuildState,
   CapabilityRef,
   CommandResult,
   InvokeProducerCommand,
@@ -15,6 +14,7 @@ import type {
   ProducerStep,
   TypeRef,
 } from "@hypit/protocol";
+import type { BuildView } from "@hypit/kernel";
 
 const moduleRef = { name: "example.executor-scenario", version: "0.0.0" } as const;
 
@@ -118,11 +118,11 @@ function greetingDefinition(realization: "primary" | "placeholder" = "primary"):
 
 export function createGreetingBuild(options?: {
   readonly generationRealization?: "primary" | "placeholder";
-}): BuildState {
+}): BuildView {
   return materializeBuild(greetingDefinition(options?.generationRealization), []);
 }
 
-export function createParallelGreetingBuild(generationCount = 2): BuildState {
+export function createParallelGreetingBuild(generationCount = 2): BuildView {
   const generations = ["a", "b", "c"].slice(0, generationCount);
   return materializeBuild(defineBuild({
     program: greetingProgram(),

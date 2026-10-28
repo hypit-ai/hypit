@@ -8,7 +8,7 @@ export const cliCommandModules = [{
   id: "@hypit/video",
   commands: ["vocabulary"],
   writeRootHelp(io) {
-    io.write("\nVideo author vocabulary\n  vocabulary\n  hypit vocabulary --help for package and Surface inspection\n");
+    io.write("\nVideo author vocabulary\n  vocabulary\n  hypit vocabulary --help for package and declaration inspection\n");
   },
   writeHelp(_argv, io) {
     writeVocabularyHelp(io);

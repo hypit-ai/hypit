@@ -213,3 +213,11 @@ export function decodeMediaPaintSpec(recipe: Recipe, id: string): MediaPaintLaye
 }
 
 export const visualMaterialKeys = { fit: FIT_KEYS, sample: SAMPLE_KEYS, frame: FRAME_KEYS } as const;
+
+/** Finite choices accepted by the visual material decoders. */
+export const visualMaterialOptions: Readonly<Record<string, readonly string[] | undefined>> = {
+  fit: ["contain", "cover", "fit-width", "fit-height", "native", "scale-down", "stretch"],
+  "fit-constraint": ["bounded", "free"],
+  clip: ["none", "frame", "rounded"],
+  "border-style": ["solid", "dashed", "dotted"],
+};

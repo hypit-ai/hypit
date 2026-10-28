@@ -1,3 +1,3 @@
-export { fontsourceManifest, fontsourceMarkupSurfaces, fontsourceModuleRef } from "./manifest.js";
-export { decodeFontsourceFaceSurface } from "./surface.js";
+export { fontsourceManifest, fontsourceModuleRef } from "./manifest.js";
+export { fontsourceAuthorDeclarations, fontsourceFaceAuthorDeclaration, fontsourceMarkupDeclarations } from "./declaration.js";
 export { fontsourceStudioParameterCompanions } from "./studio.js";

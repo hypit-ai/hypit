@@ -55,8 +55,8 @@ test("HTML Document composes independently compiled picture, sound and shared pl
   assert.doesNotThrow(() => assertHtmlDocument(document));
   assert.equal(document.program.frameCount, 60);
   assert.equal(document.audio.frameCount, 60);
-  assert.deepEqual(document.resources.artifacts.map((binding) => binding.id),
-    pictures.map((picture) => picture.resource).sort());
+  assert.deepEqual(document.program.artifacts.map((entry) => entry.artifact), pictures);
+  assert.equal(new Set(document.program.artifacts.map((entry) => entry.id)).size, pictures.length);
 
   const html = materializeHtmlDocument(document, (artifact) => `/materials/${artifact.resource}`, {
     autoplay: false,
@@ -82,19 +82,10 @@ test("document-local identities survive recursive Result material rebinding", ()
         ...entry,
         artifact: { ...entry.artifact, resource: reboundResource },
       })),
-      surfaces: original.program.surfaces.map((surface) => ({
-        ...surface,
-        artifact: { ...surface.artifact, resource: reboundResource },
-      })),
-    },
-    resources: {
-      artifacts: original.resources.artifacts.map((binding) => ({
+      surfaces: original.program.surfaces.map((binding) => ({
         ...binding,
-        artifact: { ...binding.artifact, resource: reboundResource },
-      })),
-      surfaces: original.resources.surfaces.map((binding) => ({
-        ...binding,
-        artifact: { ...binding.artifact, resource: reboundResource },
+        surface: { ...binding.surface,
+          artifact: { ...binding.surface.artifact, resource: reboundResource } },
       })),
     },
   };

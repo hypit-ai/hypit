@@ -89,7 +89,7 @@ can become a timed video through Media Operations's ordinary `still-video` Fragm
 Here `product-layout` is an Author value of Type `@hypit/media-operations@1#StillVideoLayout`,
 containing `{"weights":[1]}`; `product-image` is an authored image Blob. The package README owns the
 Fragment's exact inputs. [Media](media.md#give-a-still-a-duration-when-that-is-its-role) shows the
-simpler `StillVideo` Surface for authoring this directly in the Source.
+simpler `StillVideo` declaration for authoring this directly in the Source.
 
 Place imports after `author` and before execution declarations. `using` names a Fragment from an
 installed package. `from` on an input names a public value of the Run's Author entry, including a
@@ -156,5 +156,5 @@ Fragment input `value` supplies a scalar: number, boolean, null or text. Structu
 includes the computations that it requires.
 
 The installed package's Run Fragment documentation gives its package-specific inputs and exports.
-Surface vocabulary queries describe Markup tags; a Fragment-only package can therefore have no
+Declaration vocabulary queries describe Markup tags; a Fragment-only package can therefore have no
 entries in that query.

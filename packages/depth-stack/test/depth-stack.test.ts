@@ -7,24 +7,7 @@ import { timelineFixture } from "../../../test/timeline-fixture.js";
 import { blobTypes } from "@hypit/blob";
 import { compositionTypes, visualElements } from "@hypit/composition";
 import type { VisualElement } from "@hypit/composition";
-import {
-  decodeDepthStackLabelSurface,
-  decodeDepthStackSurface,
-  appendDepthStackCard,
-  createDepthStackCardSet,
-  decodeDepthStackSpec,
-  depthStackProducers,
-  depthStackTypes,
-  finalizeDepthStack,
-  noDepthStackCardLabel,
-  renderDepthStack,
-  resolveDepthStackPose,
-  resolveDepthStackState,
-  sealDepthStackCardLabel,
-  sealDepthStackCardSpec,
-  sealDepthStackHeader,
-  sealDepthStackSpec,
-} from "@hypit/depth-stack";
+import { appendDepthStackCard, createDepthStackCardSet, decodeDepthStackSpec, depthStackProducers, depthStackTypes, finalizeDepthStack, noDepthStackCardLabel, renderDepthStack, resolveDepthStackPose, resolveDepthStackState, sealDepthStackCardLabel, sealDepthStackCardSpec, sealDepthStackHeader, sealDepthStackSpec } from "@hypit/depth-stack";
 import type {
   DepthStackCardLabel,
   DepthStackProgram,
@@ -33,18 +16,12 @@ import type {
 import type { FontArtifactRef } from "@hypit/media";
 import { mediaTypes, preparedVisualExtent, prepareMedia } from "@hypit/media";
 import type { MediaLayerSet } from "@hypit/visual-track";
-import { defaultTemporalRelationSpec, temporalTypes, temporalValueInFrames } from "@hypit/temporal";
+import { defaultTemporalRelationSpec, isAffineTemporalMapPiece, temporalTypes, temporalValueInFrames } from "@hypit/temporal";
 import type { TemporalInstant, TemporalMap } from "@hypit/temporal";
 import { canvasFrame, sealCanvas, sealSpatialFrame, spatialTypes } from "@hypit/spatial";
 import { recipeType } from "@hypit/recipe";
 import { sealText, textTypes } from "@hypit/text";
 import type { Recipe } from "@hypit/recipe";
-import type {
-  StructuredElement,
-  StructuredNode,
-  SurfaceResolvedReference,
-  MarkupAttributeValue,
-} from "@hypit/markup";
 import { visualTrackTypes } from "@hypit/visual-track";
 
 const space = sealTimeline({ id: "test-space", frameCount: 60, frameRate: { numerator: 30, denominator: 1 },
@@ -238,6 +215,7 @@ function element(track: ReturnType<typeof renderDepthStack>, presentId: string, 
 
 function mapFrames(map: TemporalMap) {
   return map.stages[0]!.pieces.map((piece) => {
+    assert.ok(isAffineTemporalMapPiece(piece));
     const position = (value: typeof piece.sourceAtStart) => {
       const result = temporalValueInFrames(value, { frameRate: { numerator: 30, denominator: 1 } });
       return { numerator: Number(result.numerator), denominator: Number(result.denominator) };
@@ -421,96 +399,6 @@ test("optional labels preserve exact fonts and remain inside the Card-owned pose
 test("rendering is a pure absolute-frame result", () => {
   const value = program({ labels: [exactLabel(), noDepthStackCardLabel(), noDepthStackCardLabel()] });
   assert.deepEqual(renderDepthStack(space, value), renderDepthStack(space, structuredClone(value)));
-});
-
-test("the author Surface keeps every source, trigger, terminal, Frame and optional label as graph inputs", async () => {
-  const range = { source: "deck.svml", start: 0, end: 1 };
-  const ref = (path: string): MarkupAttributeValue => ({ kind: "reference", path });
-  const node = (name: string, attributes: Record<string, MarkupAttributeValue>, children: StructuredNode[] = []): StructuredElement => ({ kind: "element", name, attributes, children, range });
-  const plain = (path: string, type: SurfaceResolvedReference["type"]): SurfaceResolvedReference => ({ path, ref: { kind: "record", id: path }, type });
-  const appearance = (path: string, properties: Recipe["properties"]): SurfaceResolvedReference => ({
-    path, ref: { kind: "record", id: path }, type: recipeType,
-    record: { value: ({ path, properties }) } as never,
-  });
-  const references = new Map<string, SurfaceResolvedReference>([
-    ["timeline", plain("timeline", timelineTypes.timeline)],
-    ["within", plain("within", spatialTypes.frame)],
-    ["frame", plain("frame", spatialTypes.frame)],
-    ["first", plain("first", blobTypes.blob)], ["first-extent", plain("first-extent", spatialTypes.extent)],
-    ["second", plain("second", mediaTypes.prepared)], ["one", plain("one", temporalTypes.instant)],
-    ["two", plain("two", temporalTypes.instant)], ["terminal", plain("terminal", temporalTypes.instant)],
-    ["deck-style", appearance("deck-style", { "visible-previous": 1, "visible-next": 1, "reflow-frames": 4, fit: "cover" })],
-    ["video-style", appearance("video-style", { fit: "contain", "playback-future": "continue" })],
-  ]);
-  const result = await decodeDepthStackSurface({
-    sourceName: "deck.svml",
-    element: node("deck:DepthStack", {
-      id: "proof", timeline: ref("timeline"), frame: ref("frame"),
-      appearance: ref("deck-style"), until: ref("terminal"),
-    }, [
-      node("deck:Card", { id: "one", source: ref("first"), extent: ref("first-extent"), at: ref("one") }),
-      node("deck:Card", { id: "two", source: ref("second"), at: ref("two"), appearance: ref("video-style") }),
-    ]),
-    resolveReference: (path) => references.get(path),
-    resolveAsset: async () => { throw new Error("no asset resolution expected"); },
-  });
-  const component = result.components.find((candidate) => candidate.outputs.visual !== undefined);
-  assert.ok(component !== undefined);
-  assert.deepEqual(Object.keys(component.outputs).sort(), ["program", "visual"]);
-  const fragment = result.components.find((candidate) => candidate.fragment.exports.some((output) => output.name === "visual"))!.fragment;
-  assert.ok(fragment.operations.some((operation) => operation.producer.name === "append-still-media-layer"));
-  assert.ok(fragment.operations.some((operation) => operation.producer.name === "append-timed-media-layer"));
-  assert.ok(fragment.operations.some((operation) => operation.producer.name === "append-depth-stack-card"));
-  assert.ok(fragment.operations.some((operation) => operation.producer.name === "finalize-depth-stack"));
-  assert.ok(fragment.inputs.some((input) => input.name === "frame"));
-  assert.ok(fragment.inputs.some((input) => input.name === "terminal"));
-  assert.equal(fragment.inputs.filter((input) => input.type.name === temporalTypes.instant.name).length, 3);
-});
-
-test("Label Surface compiles explicit exact-font text rather than media metadata", async () => {
-  const range = { source: "deck.svml", start: 0, end: 1 };
-  const stack = { faces: [font] };
-  const result = await decodeDepthStackLabelSurface({
-    sourceName: "deck.svml",
-    element: {
-      kind: "element", name: "deck:Label", attributes: {
-        id: "proof-label", font: { kind: "reference", path: "font" }, size: "28", color: "#ffeecc",
-      }, children: [{ kind: "text", value: "Evidence", range }], range,
-    },
-    resolveReference: (path) => path === "font" ? {
-      path, ref: { kind: "record", id: path }, type: mediaTypes.fontStack,
-      record: { value: (stack) } as never,
-    } : undefined,
-    resolveAsset: async () => { throw new Error("no asset resolution expected"); },
-  });
-  assert.equal(result.components.length, 1);
-  assert.equal(result.components[0]?.outputs.label, "proof-label");
-  assert.equal(result.components[0]?.fragment.operations[0]?.producer.name, depthStackProducers.bindLabelText.name);
-  assert.ok(result.records.some((record) => record.type.name === depthStackTypes.cardLabelStyle.name));
-  assert.ok(result.records.some((record) => record.type.module.name === "@hypit/text" && record.type.name === "Text"));
-});
-
-test("Label Surface accepts ordinary graph Text without copying it during author compilation", async () => {
-  const range = { source: "deck.svml", start: 0, end: 1 };
-  const stack = { faces: [font] };
-  const result = await decodeDepthStackLabelSurface({
-    sourceName: "deck.svml",
-    element: {
-      kind: "element", name: "deck:Label", attributes: {
-        id: "dynamic-label", font: { kind: "reference", path: "font" }, content: { kind: "reference", path: "copy" },
-      }, children: [], range,
-    },
-    resolveReference: (path) => path === "font" ? {
-      path, ref: { kind: "record", id: path }, type: mediaTypes.fontStack,
-      record: { value: (stack) } as never,
-    } : path === "copy" ? {
-      path, ref: { kind: "record", id: path }, type: textTypes.text,
-      record: { value: (sealText("Dynamic evidence")) } as never,
-    } : undefined,
-    resolveAsset: async () => { throw new Error("no asset resolution expected"); },
-  });
-  assert.deepEqual(result.components[0]?.inputs.content, { kind: "record", id: "copy" });
-  assert.deepEqual(result.records.map((record) => record.type), [depthStackTypes.cardLabelStyle]);
 });
 
 test("SVS decoding exposes documented depth, frame treatment and playback axes", () => {

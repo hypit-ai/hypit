@@ -1,6 +1,6 @@
 import type { ResourceStore } from "@hypit/hypit/runtime";
-import type { BuildState, Candidate } from "@hypit/hypit/protocol";
-import type { BuildCandidateSelection } from "@hypit/hypit/kernel";
+import type { Candidate } from "@hypit/hypit/protocol";
+import type { BuildCandidateSelection, BuildView } from "@hypit/hypit/kernel";
 import { sameType } from "@hypit/hypit/protocol";
 import { temporalTypes } from "@hypit/temporal";
 import type { StudioObservedValue } from "@hypit/studio-companion";
@@ -33,7 +33,7 @@ export async function resolveStudioDeclarations(input: {
   readonly run: RunPlan;
   readonly registry: StudioCompanionRegistry;
   readonly domain: StudioDomain;
-  readonly resolved: BuildState;
+  readonly resolved: BuildView;
   readonly selections: readonly Pick<BuildCandidateSelection, "output" | "record">[];
   readonly resources: ResourceStore;
   readonly transientExecution?: CliTransientExecution;

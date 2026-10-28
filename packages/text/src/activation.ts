@@ -1,17 +1,8 @@
 import { createRefinementPackageFacet } from "@hypit/refinement";
 import { createProducerPackageFacet } from "@hypit/producer";
-import { createAuthorFrontendFacet } from "@hypit/author";
-import { createMarkupSurfaceFacet } from "@hypit/markup";
-
-import {
-  decodeTextRenderSurface,
-  decodeTextValueSurface,
-  textComponent,
-  textManifest,
-  textModuleRef,
-  textRecipeFrontend,
-  textMarkupSurfaces,
-} from "./index.js";
+import { createAuthorDeclarationFacet, createAuthorFrontendFacet } from "@hypit/author";
+import { createMarkupDeclarationFacet } from "@hypit/markup";
+import { textComponent, textAuthorDeclarations, textManifest, textMarkupDeclarations, textModuleRef, textRecipeFrontend } from "./index.js";
 
 export const hypitPackage = {
   format: "hypit.package@1" as const,
@@ -19,16 +10,12 @@ export const hypitPackage = {
   facets: [
     ...[textComponent].flatMap((component) => [createProducerPackageFacet(component.producers ?? []), createRefinementPackageFacet(component.refinements ?? [])]),
     createAuthorFrontendFacet(textRecipeFrontend),
-    createMarkupSurfaceFacet({
+    ...textAuthorDeclarations.map((declaration) => createAuthorDeclarationFacet(declaration)),
+    ...textMarkupDeclarations.map((declaration) => createMarkupDeclarationFacet({
       module: textModuleRef,
-    declaration: textMarkupSurfaces.find((item) => item.name === "value")!,
-      handler: decodeTextValueSurface,
-    }),
-    createMarkupSurfaceFacet({
-      module: textModuleRef,
-    declaration: textMarkupSurfaces.find((item) => item.name === "render")!,
-      handler: decodeTextRenderSurface,
-    }),
+      declaration,
+    })),
+
   ],
 };
 

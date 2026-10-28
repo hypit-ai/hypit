@@ -1,6 +1,6 @@
 # `@hypit/film`
 
-The Surface, Fragment and assembly Producers receive the same Timeline through a `timeline` input.
+The author declaration, Fragment and assembly Producers receive the same Timeline through a `timeline` input.
 Partial, overlapping or absent semantic coverage all use that complete range.
 
 Official package-owned assembly layer between peer Tracks and the generic Composition waist.
@@ -8,7 +8,7 @@ Film is an ordinary author component and an optional Target, not a Core root or 
 type.
 
 The official video Distribution installs Film as an ordinary default npm dependency. Film owns its
-author Surface, assembly Producers and Studio film companion together; the reusable companion is
+author declaration, assembly Producers and Studio film companion together; the reusable companion is
 published as `@hypit/film/studio`. Composition remains the shared value below it, so another author
 package can assemble the same public result without importing Film.
 
@@ -24,15 +24,19 @@ visual Track and Stack receives a sibling-unique `id` from its parent Scope. Sib
 the paint order, from back to front; Track-local item position follows the same rule. A Track value may
 be placed repeatedly through different member ids. Root audio contributions are additive and have no
 visual occurrence id or paint position. They are not keyed by AudioTrack id;
-selecting equal closed signals twice contributes twice. The author Surface still rejects writing the
+selecting equal closed signals twice contributes twice. The author declaration rejects writing the
 same Source reference twice and directs intentional repeated routing through Audio Mix.
 
-The official Structured Surface validates an imported generic SVS Recipe into a nominal
+The package-owned `film` declaration compiler validates an imported generic SVS Recipe into a nominal
 `FilmProgram`, receives Canvas and the selected time source through separate explicit edges,
 passes the Timeline directly, type-checks each `<film:Track source={...}/>` reference and generates
 the finite fold. Visual Tracks require `id`; Audio Tracks reject it. Canvas is the only
 dimension truth, Timeline is the only time-range truth, and FilmProgram owns only assembly
 identity and clear color.
+Its recursive Track/Stack grammar is expressed by a declaration-local child group in the syntax-neutral
+Author shape. Markup contributes only the `Film` spelling; direct callers and other Frontends use the
+same compiler. Film consumes a completed Timeline and has no runtime dependency on Temporal or its
+Markup helpers.
 Child order is visual structure, so Film needs no second numeric ordering channel. Visual occurrence
 identity belongs to Film; Track value identity, Present identity and timing remain in their own typed
 values. Final rendering is a separate author package and capability.

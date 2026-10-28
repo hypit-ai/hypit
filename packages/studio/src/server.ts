@@ -17,10 +17,11 @@ import { allowsStudioMutation } from "./mutation-origin.js";
 import { parameterAuthorValue, parameterOption, serializeParameterValue, serializeAttributeGroup, validateParameterValue } from "./parameter-values.js";
 import { readStudioSession } from "./session.js";
 import type { StudioSession } from "./session.js";
-import type { Range, StudioFailure, StudioLibraryRequest, StudioLibraryView, StudioMutation, StudioSnapshot } from "./shared.js";
+import type { Range, StudioFailure, StudioItemAddress, StudioLibraryRequest, StudioLibraryView, StudioMutation, StudioSnapshot, StudioTrackAddress } from "./shared.js";
+import { sameStudioItemAddress, sameStudioTrackAddress } from "./shared.js";
 import { createStudioStoryboard, createStudioWaveform } from "./storyboard.js";
 import type { StudioStoryboard } from "./storyboard.js";
-import { findSurfacePreview } from "./surface-preview.js";
+import { findDeclarationPreview } from "./declaration-preview.js";
 import { domainGestureSpan } from "./temporal-edit.js";
 import { planTemporalInverse, temporalAuthorBindings } from "./temporal-inverse.js";
 import { replaceSourceFiles } from "./source-transaction.js";
@@ -256,9 +257,11 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
     return new Map([...previousFiles].filter(([absolute]) => nextFiles.has(absolute)));
   };
 
-  const currentItem = (itemId: string): StudioSnapshot["tracks"][number]["items"][number] => {
-    const found = snapshot?.tracks.flatMap((track) => track.items).find((item) => item.id === itemId);
-    if (found === undefined) throw new Error(`Studio Item ${itemId} no longer exists.`);
+  const itemLabel = (address: StudioItemAddress): string => `${address.track.output}/${address.track.attachment ?? "root"}/${address.item}`;
+  const currentItem = (address: StudioItemAddress): StudioSnapshot["tracks"][number]["items"][number] => {
+    const found = snapshot?.tracks.flatMap((track) => track.items)
+      .find((item) => sameStudioItemAddress(item.address, address));
+    if (found === undefined) throw new Error(`Studio Item ${itemLabel(address)} no longer exists.`);
     return found;
   };
 
@@ -266,10 +269,10 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
     owner: Extract<StudioMutation, { readonly type: "parameter.adjust" }>["owner"],
   ): { readonly label: string; readonly inspector: StudioSnapshot["tracks"][number]["items"][number]["inspector"] } => {
     if (owner.kind === "item") {
-      const item = currentItem(owner.itemId);
-      return { label: `Item ${owner.itemId}`, inspector: item.inspector };
+      const item = currentItem(owner.item);
+      return { label: `Item ${itemLabel(owner.item)}`, inspector: item.inspector };
     }
-    const track = snapshot?.tracks.find((candidate) => candidate.id === owner.trackId);
+    const track = snapshot?.tracks.find((candidate) => sameStudioTrackAddress(candidate.address, owner.track));
     const object = track?.inspectorObjects.find((candidate) => candidate.id === owner.objectId);
     if (object === undefined) throw new Error(`Studio Inspector object ${owner.objectId} no longer exists.`);
     return { label: `Inspector object ${owner.objectId}`, inspector: object.inspector };
@@ -278,12 +281,12 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
   const timelinePatches = async (
     mutation: Extract<StudioMutation, { readonly type: "timeline.adjust" }>,
   ): Promise<readonly Patch[]> => {
-    const item = currentItem(mutation.itemId);
+    const item = currentItem(mutation.item);
     const handle = item.editHandles.find((candidate) =>
       candidate.operation === "timeline.adjust"
       && candidate.gesture === mutation.gesture
       && candidate.enabled);
-    if (handle === undefined) throw new Error(`Item ${mutation.itemId} does not allow ${mutation.gesture}.`);
+    if (handle === undefined) throw new Error(`Item ${itemLabel(mutation.item)} does not allow ${mutation.gesture}.`);
 
     const temporal = handle.temporal;
     if (temporal === undefined) throw new Error("This timeline Item has no authoring authority.");
@@ -320,7 +323,7 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
         || handle.domain.companion !== domainTarget.companion
         || handle.domain.domainId !== domainTarget.domainId
         || handle.domain.itemId !== domainTarget.itemId) {
-        throw new Error(`Item ${mutation.itemId} is not bound to the requested temporal-domain item.`);
+        throw new Error(`Item ${itemLabel(mutation.item)} is not bound to the requested temporal-domain item.`);
       }
       const current = snapshot;
       const domain = current?.temporalDomains.find((candidate) => candidate.companion === domainTarget.companion
@@ -449,14 +452,14 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
         ? undefined
         : (() => {
             const item = snapshot?.tracks.flatMap((track) => track.items)
-              .find((candidate) => candidate.id === mutation.itemId);
-            if (item === undefined) return `Item ${mutation.itemId} disappeared after recompilation.`;
+              .find((candidate) => sameStudioItemAddress(candidate.address, mutation.item));
+            if (item === undefined) return `Item ${itemLabel(mutation.item)} disappeared after recompilation.`;
             return mutation.target.kind === "instant"
               ? item.startFrame === mutation.target.frame ? undefined
-                : `Item ${mutation.itemId} resolved to frame ${item.startFrame}, not ${mutation.target.frame}.`
+                : `Item ${itemLabel(mutation.item)} resolved to frame ${item.startFrame}, not ${mutation.target.frame}.`
               : item.startFrame === mutation.target.startFrame
                   && item.endFrameExclusive === mutation.target.endFrameExclusive ? undefined
-                : `Item ${mutation.itemId} resolved to [${item.startFrame}, ${item.endFrameExclusive}), not [${mutation.target.startFrame}, ${mutation.target.endFrameExclusive}).`;
+                : `Item ${itemLabel(mutation.item)} resolved to [${item.startFrame}, ${item.endFrameExclusive}), not [${mutation.target.startFrame}, ${mutation.target.endFrameExclusive}).`;
           })();
       if (failure?.revision !== attempt && temporalMismatch === undefined) {
         server?.ws.send({ type: "custom", event: "studio:snapshot", data: snapshot });
@@ -575,8 +578,15 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
                 json(response, 400, { error: "Expected a Studio author mutation." });
                 return;
               }
+              const isTrackAddress = (value: unknown): value is StudioTrackAddress => typeof value === "object" && value !== null
+                && typeof (value as Partial<StudioTrackAddress>).output === "string"
+                && ((value as Partial<StudioTrackAddress>).attachment === undefined
+                  || typeof (value as Partial<StudioTrackAddress>).attachment === "string");
+              const isItemAddress = (value: unknown): value is StudioItemAddress => typeof value === "object" && value !== null
+                && isTrackAddress((value as Partial<StudioItemAddress>).track)
+                && typeof (value as Partial<StudioItemAddress>).item === "string";
               if (body.type === "timeline.adjust"
-                && (typeof body.itemId !== "string" || typeof body.gesture !== "string"
+                && (!isItemAddress(body.item) || typeof body.gesture !== "string"
                   || typeof body.target !== "object" || body.target === null)) {
                 json(response, 400, { error: "Expected a timeline gesture and target." });
                 return;
@@ -584,9 +594,9 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
               if (body.type === "parameter.adjust"
                 && (typeof body.parameterId !== "string" || body.value === undefined
                   || typeof body.owner !== "object" || body.owner === null
-                  || (body.owner.kind === "item" && typeof body.owner.itemId !== "string")
+                  || (body.owner.kind === "item" && !isItemAddress(body.owner.item))
                   || (body.owner.kind === "track-object"
-                    && (typeof body.owner.trackId !== "string" || typeof body.owner.objectId !== "string"))
+                    && (!isTrackAddress(body.owner.track) || typeof body.owner.objectId !== "string"))
                   || (body.owner.kind !== "item" && body.owner.kind !== "track-object"))) {
                 json(response, 400, { error: "Expected a parameter identity and value." });
                 return;
@@ -660,14 +670,14 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
           );
           return;
         }
-        if (url.pathname === "/__studio/surface-preview") {
+        if (url.pathname === "/__studio/declaration-preview") {
           void (async () => {
             const module = url.searchParams.get("module");
             const version = url.searchParams.get("version");
-            const surface = url.searchParams.get("surface");
-            const preview = module === null || version === null || surface === null
+            const declaration = url.searchParams.get("declaration");
+            const preview = module === null || version === null || declaration === null
               ? undefined
-              : findSurfacePreview(options.domain, { name: module, version }, surface);
+              : findDeclarationPreview(options.registry, { name: module, version }, declaration);
             if (preview === undefined) {
               response.statusCode = 404;
               response.end();

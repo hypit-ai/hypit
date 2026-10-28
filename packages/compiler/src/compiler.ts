@@ -1,5 +1,6 @@
 import { link, verifyRecordStructure } from "@hypit/kernel";
 import type {
+  AuthorDocument,
   AuthorFrontendRegistryLike,
   AuthorSourceDiscovery,
   CompiledSourceClosure,
@@ -95,7 +96,7 @@ export type CompilerOptions = {
 };
 
 export type CompiledAuthorSource = CompiledSourceClosure & {
-  /** Host-side transfer bundle; bytes are not serialized into Core BuildState. */
+  /** Host-side transfer bundle; bytes are not serialized into Core BuildView. */
   readonly attachments: readonly BlobAttachment[];
 };
 
@@ -122,6 +123,22 @@ export class Compiler {
   async compileEntry(locator: string): Promise<CompiledAuthorSource> {
     const workspace = await this.openEntry(locator);
     return await this.compileResolvedSource(workspace.entry, workspace);
+  }
+
+  /** Open the editable author projection of one already resolved Source revision. */
+  async openAuthorDocument(source: ResolvedSource): Promise<AuthorDocument> {
+    const frontend = this.#options.frontends.resolve(source.frontend);
+    if (frontend === undefined) {
+      throw new CompilerError("UNKNOWN_FRONTEND", `Frontend ${source.frontend} is not registered`, source.frontend);
+    }
+    if (frontend.document === undefined) {
+      throw new CompilerError(
+        "AUTHOR_DOCUMENT_UNAVAILABLE",
+        `Frontend ${source.frontend} does not expose an editable author document`,
+        source.frontend,
+      );
+    }
+    return await frontend.document.openDocument(source.unit);
   }
 
   /** Compile an explicitly resolved Source inside one already isolated Workspace. */
@@ -155,6 +172,7 @@ export class Compiler {
       },
       resolveSource: workspace.resolveSource,
       resolveAsset: workspace.resolveAsset,
+      ...(workspace.readAsset === undefined ? {} : { readAsset: workspace.readAsset }),
       refineRecord: this.#refineRecord,
     });
     return {

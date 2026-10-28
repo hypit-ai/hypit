@@ -1,4 +1,4 @@
-import { canonicalStringify } from "@hypit/hypit/protocol";
+import { canonicalStringify, compareCodeUnits } from "@hypit/hypit/protocol";
 import type { SourceRange } from "@hypit/hypit/source";
 import { captionDocument, narrativeValue } from "./narrative.js";
 import { parseScript } from "./parser.js";
@@ -119,7 +119,7 @@ function rewrite(input: AdjustmentInput, markers: readonly NamedAnchor[]): strin
   const insertions: Edit[] = [...groups].map(([offset, group]) => {
     group.sort((a, b) => a.order - b.order
       || (a.edge === "open" ? 0 : a.edge === "moment" ? 1 : 2) - (b.edge === "open" ? 0 : b.edge === "moment" ? 1 : 2)
-      || a.id.localeCompare(b.id));
+      || compareCodeUnits(a.id, b.id));
     const replacement = group.map(item => item.edge === "moment"
       ? `@{${item.affinity === "left" ? "~" : ""}${item.id}!}`
       : marker(item.id, item.edge, item.affinity)).join("");

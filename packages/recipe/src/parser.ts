@@ -114,22 +114,36 @@ function parseAttributes(
   offset: number,
 ): Readonly<Record<string, string>> {
   const attributes: Record<string, string> = {};
-  const attribute = /([a-z][a-z0-9-]*)\s*=\s*(["'])(.*?)\2/gu;
   let cursor = 0;
-  for (const match of raw.matchAll(attribute)) {
-    const start = match.index ?? 0;
-    if (raw.slice(cursor, start).trim().length > 0) {
+  while (cursor < raw.length) {
+    while (cursor < raw.length && /\s/u.test(raw[cursor]!)) cursor += 1;
+    if (cursor >= raw.length) break;
+    const start = cursor;
+    if (!/[a-z]/u.test(raw[cursor]!)) {
       fail(sourceName, "SVS_SHEET_ATTRIBUTE", "Malformed <sheet> attribute.", offset + cursor);
     }
-    const name = match[1] as string;
+    cursor += 1;
+    while (cursor < raw.length && /[a-z0-9-]/u.test(raw[cursor]!)) cursor += 1;
+    const name = raw.slice(start, cursor);
+    while (cursor < raw.length && /\s/u.test(raw[cursor]!)) cursor += 1;
+    if (raw[cursor] !== "=") {
+      fail(sourceName, "SVS_SHEET_ATTRIBUTE", "Malformed <sheet> attribute.", offset + cursor);
+    }
+    cursor += 1;
+    while (cursor < raw.length && /\s/u.test(raw[cursor]!)) cursor += 1;
+    const quote = raw[cursor];
+    if (quote !== "\"" && quote !== "'") {
+      fail(sourceName, "SVS_SHEET_ATTRIBUTE", "Malformed <sheet> attribute.", offset + cursor);
+    }
+    const close = raw.indexOf(quote, cursor + 1);
+    if (close < 0 || /[\n\r\u2028\u2029]/u.test(raw.slice(cursor + 1, close))) {
+      fail(sourceName, "SVS_SHEET_ATTRIBUTE", "Malformed <sheet> attribute.", offset + cursor);
+    }
     if (Object.hasOwn(attributes, name)) {
       fail(sourceName, "SVS_SHEET_ATTRIBUTE_DUPLICATE", `Duplicate sheet attribute ${name}.`, offset + start);
     }
-    attributes[name] = match[3] as string;
-    cursor = start + match[0].length;
-  }
-  if (raw.slice(cursor).trim().length > 0) {
-    fail(sourceName, "SVS_SHEET_ATTRIBUTE", "Malformed <sheet> attribute.", offset + cursor);
+    attributes[name] = raw.slice(cursor + 1, close);
+    cursor = close + 1;
   }
   const unknown = Object.keys(attributes).filter((name) => name !== "version" && name !== "id");
   if (unknown.length > 0) fail(sourceName, "SVS_SHEET_ATTRIBUTE", `Unknown sheet attribute ${unknown[0]}.`, offset);

@@ -165,8 +165,10 @@ async function capture(request: HtmlRasterRequest | HtmlFrameRequest, options: H
         ? { delivery: (request as HtmlRasterRequest).delivery }
         : { frames, picture: (request as HtmlFrameRequest).picture }), config, directory: work,
       frameSelection,
-      artifactPaths: document.artifacts.map(({ artifact }) =>
-        [artifact.resource, htmlArtifactRelativePath(document, artifact.resource)] as const),
+      artifactPaths: document.artifacts.flatMap(({ id, artifact }) => {
+        const path = htmlArtifactRelativePath(document, id);
+        return [[id, path] as const, [artifact.resource, path] as const];
+      }),
     }, signal, (event) => {
       if (event.phase === "prepared") changePhase("starting browsers");
       if (event.phase === "worker-start" && phase === "starting browsers") changePhase("capturing frames");

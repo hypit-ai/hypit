@@ -1,8 +1,8 @@
 import type { CaptionDocument, CaptionProgram, CaptionTiming } from "@hypit/caption";
 import { captionTypes } from "@hypit/caption";
 import { compositionTypes } from "@hypit/composition";
-import { fineCaptionEditableDefaults } from "./recipe.js";
-import { captionFineMarkupSurfaces, captionFineModuleRef } from "./manifest.js";
+import { fineCaptionEditableDefaults, fineCaptionRecipeSchema } from "./recipe.js";
+import { captionFineModuleRef } from "./manifest.js";
 import type { FineCaptionSchedule } from "./types.js";
 import type {
   StudioTrackCompanion,
@@ -11,19 +11,23 @@ import type {
   StudioInspectorObjectDraft,
   StudioInspectorFieldDeclaration,
 } from "@hypit/studio-companion";
-import { authoredChildFor, requiredReferencedValue, requiredSurfaceValue } from "@hypit/studio-companion";
+import { authoredChildFor, requiredReferencedValue, requiredDeclarationValue } from "@hypit/studio-companion";
 
-const styleSurface = captionFineMarkupSurfaces.find((surface) => surface.name === "style");
+if (fineCaptionRecipeSchema.kind !== "object") {
+  throw new Error("Fine Caption Recipe schema must be an object.");
+}
 
-const recipeVocabulary = styleSurface?.vocabulary.attributes
-  .find((attribute) => attribute.name === "recipe")?.recipe ?? [];
+const recipeProperties = Object.entries(fineCaptionRecipeSchema.fields).map(([name, field]) => ({
+  name,
+  values: field.schema.kind === "string" ? field.schema.enum : undefined,
+}));
 
 function title(name: string): string {
   return name.split("-").map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`).join(" ");
 }
 
-function valuesFor(property: typeof recipeVocabulary[number]): readonly string[] | undefined {
-  return "values" in property ? property.values : undefined;
+function valuesFor(property: typeof recipeProperties[number]): readonly string[] | undefined {
+  return property.values;
 }
 
 type CaptionPlacement = Pick<StudioInspectorFieldDeclaration, "domain" | "page" | "section">;
@@ -89,7 +93,7 @@ const captionTextProperties = new Set(["loop"]);
 const captionPercentProperties = new Set(["x", "y", "width", "height", "opacity", "active-opacity", "active-scale"]);
 const captionPixelProperties = new Set(["size", "letter-spacing", "word-gap", "radius", "stroke-width", "border-width", "shadow-blur", "glow-blur"]);
 
-export const captionFineInspectorFields: readonly StudioInspectorFieldDeclaration[] = recipeVocabulary.map((property) => {
+export const captionFineInspectorFields: readonly StudioInspectorFieldDeclaration[] = recipeProperties.map((property) => {
   const placement = captionPlacement.get(property.name);
   if (placement === undefined) throw new Error(`Caption Studio has no explicit Inspector declaration for ${property.name}.`);
   const options = valuesFor(property);
@@ -97,7 +101,6 @@ export const captionFineInspectorFields: readonly StudioInspectorFieldDeclaratio
     binding: `style.${property.name}`,
     label: title(property.name),
     ...placement,
-    summary: property.summary,
     control: options !== undefined ? "select" : captionColorProperties.has(property.name) ? "color"
       : captionTextProperties.has(property.name) ? "text" : "number",
     ...(options === undefined ? {} : { options }),
@@ -117,7 +120,7 @@ function cueText(document: CaptionDocument | undefined, unitIds: readonly string
 
 export function projectCaptionContents(context: StudioTrackCompanionContext): readonly StudioItemDraft[] {
   const timing = requiredReferencedValue(context, "timing", captionTypes.timing) as CaptionTiming;
-  const schedule = requiredSurfaceValue(context, "schedule") as FineCaptionSchedule;
+  const schedule = requiredDeclarationValue(context, "schedule") as FineCaptionSchedule;
   const document = requiredReferencedValue(context, "document", captionTypes.document) as CaptionDocument;
   if (document.id !== timing.documentId) throw new Error("Caption timing belongs to another CaptionDocument.");
   const units = new Map(timing.units.map((unit) => [unit.unitId, unit]));
@@ -150,7 +153,7 @@ export function projectCaption(context: StudioTrackCompanionContext): readonly S
 }
 
 export function projectCaptionUses(context: StudioTrackCompanionContext): readonly StudioInspectorObjectDraft[] {
-  const program = requiredSurfaceValue(context, "program") as CaptionProgram;
+  const program = requiredDeclarationValue(context, "program") as CaptionProgram;
   return program.uses.map((use, index) => {
     const child = authoredChildFor(context, use.id, []);
     return {
@@ -171,8 +174,8 @@ export function projectCaptionUses(context: StudioTrackCompanionContext): readon
 
 export const captionFineStudioTrackCompanions: readonly StudioTrackCompanion[] = [
   {
-    id: "track", role: "track",
-    output: { type: compositionTypes.visualTrack, surface: "caption", modules: [captionFineModuleRef] },
+    id: "track",
+    output: { type: compositionTypes.visualTrack, declaration: "caption", modules: [captionFineModuleRef] },
     family: "caption", tone: "magenta", icon: "captions",
     lane: { heightPx: 36 },
     inspectorObjects: [{
@@ -187,8 +190,8 @@ export const captionFineStudioTrackCompanions: readonly StudioTrackCompanion[] =
 ];
 
 export const captionFineStudioParameterCompanions: readonly import("@hypit/studio-companion").StudioParameterCompanion[] = [{
-  id: "style", match: { module: captionFineModuleRef, surface: "style" },
-  bindings: [{ name: "font", companion: true }, { name: "recipe", recipe: { bindings: recipeVocabulary.map(({ name }) => ({ name,
+  id: "style", match: { module: captionFineModuleRef, declaration: "style" },
+  bindings: [{ name: "font", companion: true }, { name: "recipe", recipe: { bindings: recipeProperties.map(({ name }) => ({ name,
     ...(Object.hasOwn(fineCaptionEditableDefaults, name) ? { fallback: fineCaptionEditableDefaults[name as keyof typeof fineCaptionEditableDefaults] } : {}),
   })) } }],
   inspector: [

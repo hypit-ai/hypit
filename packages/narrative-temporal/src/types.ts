@@ -30,7 +30,7 @@ export type ProjectedNarrativeAlignment = {
   readonly boundaries: readonly { readonly id: string; readonly frame: number }[];
 };
 
-/** Internal balanced aggregation value used by the author Surface. */
+/** Internal balanced aggregation value used by the author declaration. */
 export type NarrativeProjectionParts = {
   readonly parts: readonly ProjectedNarrativeAlignment[];
 };

@@ -1,6 +1,6 @@
 # Single shared caption row
 
-Uses the public fine-caption renderer and author surface. Incoming cues take the shared row, clipping only visible spans. Semantic timings stay unchanged. This is the project’s single-host presentation choice.
+Uses the public fine-caption renderer through a project Author Declaration. Incoming cues take the shared row, clipping only visible spans. Semantic timings stay unchanged. This is the project’s single-host presentation choice.
 
 ## Studio
 

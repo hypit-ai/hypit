@@ -1,12 +1,12 @@
-import { assertAttributes, assertEmptyElement, createMarkupSurfaceFacet, textAttribute } from "@hypit/hypit/markup";
+import { createMarkupDeclarationFacet } from "@hypit/hypit/markup";
 import { canonicalize, sameType } from "@hypit/hypit/protocol";
-import { sealGraphFragment } from "@hypit/hypit/author";
+import { createAuthorDeclarationFacet, declarationField, sealGraphFragment } from "@hypit/hypit/author";
+import type { AuthorDeclarationCompiler, AuthorResolvedReference } from "@hypit/hypit/author";
 import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
 import { createProducerPackageFacet } from "@hypit/hypit/producer";
 import type { ProducerPackage } from "@hypit/hypit/producer";
 import type { RefinementPackage } from "@hypit/hypit/refinement";
 import type { ModuleManifest, TypeRef, TypedRecord } from "@hypit/hypit/protocol";
-import type { StructuredSurfaceHandler, SurfaceResolvedReference } from "@hypit/hypit/markup";
 import { compositionTypes } from "@hypit/composition";
 import { mediaTypes } from "@hypit/media";
 import type { FontStackRef } from "@hypit/media";
@@ -17,9 +17,6 @@ import { spatialTypes } from "@hypit/spatial";
 import type { SpatialFrame } from "@hypit/spatial";
 import { temporalTypes } from "@hypit/temporal";
 import type { TemporalInstant, TemporalWindow } from "@hypit/temporal";
-import { resolveTemporalInstantReference, resolveTemporalWindowReference, temporalWindowAttributeNames,
-  temporalWindowAttributeVocabulary, resolveTemporalContext } from "@hypit/temporal/markup";
-import { temporalContextAttributeVocabulary } from "@hypit/temporal/markup";
 import { renderExplainer } from "./render.js";
 import type { ExplainerOptions } from "./render.js";
 
@@ -53,51 +50,67 @@ const component: { producers?: ProducerPackage; refinements?: RefinementPackage 
     valueOf<SpatialFrame>(inputs.within), valueOf<TemporalWindow>(inputs.window), valueOf<TemporalInstant>(inputs.reveal),
     valueOf<PreparedMedia>(inputs.media), valueOf<TemporalWindow>(inputs.sourceWindow),
     valueOf<FontStackRef>(inputs.font).faces, valueOf<ExplainerOptions>(inputs.options)))) }) }] };
-export const decodeSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
-  assertAttributes(element, ["id", "timeline", "within", "font", "media", "source-window", "reveal", "title", "transition-frames", ...temporalWindowAttributeNames]);
-  assertEmptyElement(element);
-  const id = textAttribute(element, "id");
-  const reference = (name: string, type: TypeRef): SurfaceResolvedReference => {
-    const raw = element.attributes[name];
-    if (typeof raw !== "object" || raw.kind !== "reference") throw new Error(`${name} must be a reference.`);
-    const value = resolveReference(raw.path);
-    if (value === undefined || !sameType(type, value.type)) throw new Error(`${name} has the wrong type.`);
-    return value;
-  };
-  const context = resolveTemporalContext({ element, resolveReference });
-  const timeline = context.timeline;
-  const window = resolveTemporalWindowReference({ element, resolveReference });
-  // Reveal is already absolute; the outer Window independently controls this scene's lifetime.
-  const reveal = resolveTemporalInstantReference({ element, resolveReference, attribute: "reveal" });
-  const options: ExplainerOptions = { id, title: textAttribute(element, "title"),
-    transitionFrames: Number(textAttribute(element, "transition-frames")) };
-  return { records: [{ id: `${id}.options`, type: optionsType,
-      value: (canonicalize(options)), range: element.range }],
-    components: [{ id, fragment,
-      inputs: { timeline: timeline.ref, within: reference("within", spatialTypes.frame).ref,
-        font: reference("font", mediaTypes.fontStack).ref,
-        media: reference("media", mediaTypes.prepared).ref,
-        sourceWindow: reference("source-window", temporalTypes.window).ref,
-        window: window.ref, reveal: reveal.ref,
-        options: { kind: "record", id: `${id}.options` } }, outputs: { visual: `${id}.visual` }, range: element.range }],
-    exports: [`${id}.visual`] };
-};
-const declaration = { name: "scene", tag: "Scene", mode: "structured" as const,
-  outputs: [compositionTypes.visualTrack, optionsType],
-  vocabulary: { summary: "A continuously playing performance makes room for a diagram on a semantic Moment.",
-    attributes: [
-      ...["id", "title", "transition-frames"].map(name => ({ name, kind: "literal" as const, required: true, summary: name })),
-      ...temporalContextAttributeVocabulary,
-      ...[{ name: "within", type: spatialTypes.frame },
-        { name: "font", type: mediaTypes.fontStack }, { name: "media", type: mediaTypes.prepared },
-        { name: "source-window", type: temporalTypes.window }, { name: "reveal", type: temporalTypes.instant }]
-        .map(({ name, type }) => ({ name, kind: "reference" as const, required: true, accepts: [type], summary: name })),
-      ...temporalWindowAttributeVocabulary,
-    ], ports: [{ name: "visual", type: compositionTypes.visualTrack, summary: "The coordinated scene." }],
-    example: '<explainer:Scene id="scene" timeline={speech.timeline} within={within} font={font} media={presenter.media} source-window={speech.presenter} during={speech.window} reveal={reveal} title="How it works" transition-frames="18"/>',
+
+function literal(declaration: Parameters<AuthorDeclarationCompiler["bindings"]>[0], name: string): string {
+  const field = declarationField(declaration, name);
+  if (field?.kind !== "literal" || field.value.trim().length === 0) throw new Error(`${declaration.name}.${name} must be text.`);
+  return field.value.trim();
+}
+async function reference(
+  declaration: Parameters<AuthorDeclarationCompiler["bindings"]>[0],
+  name: string,
+  type: TypeRef,
+  resolve: (path: string) => Promise<AuthorResolvedReference | undefined> | AuthorResolvedReference | undefined,
+): Promise<AuthorResolvedReference> {
+  const field = declarationField(declaration, name);
+  if (field?.kind !== "reference") throw new Error(`${declaration.name}.${name} must be a reference.`);
+  const value = await resolve(field.path);
+  if (value === undefined || !sameType(type, value.type)) throw new Error(`${declaration.name}.${name} has the wrong Type.`);
+  return value;
+}
+const authorDeclaration: AuthorDeclarationCompiler = {
+  module, declaration: "scene", outputs: [compositionTypes.visualTrack, optionsType],
+  shape: { summary: "Builds one responsive explainer scene.", fields: [
+    { name: "id", kind: "identifier", required: true, summary: "Names the scene." },
+    { name: "title", kind: "literal", required: true, summary: "Sets the title." },
+    { name: "transition-frames", kind: "literal", required: true, summary: "Sets the transition duration." },
+    { name: "timeline", kind: "reference", required: true, accepts: [timelineTypes.timeline], summary: "Selects the Timeline." },
+    { name: "within", kind: "reference", required: true, accepts: [spatialTypes.frame], summary: "Places the scene." },
+    { name: "font", kind: "reference", required: true, accepts: [mediaTypes.fontStack], summary: "Selects the font." },
+    { name: "media", kind: "reference", required: true, accepts: [mediaTypes.prepared], summary: "Selects prepared media." },
+    { name: "source-window", kind: "reference", required: true, accepts: [temporalTypes.window], summary: "Selects source time." },
+    { name: "reveal", kind: "expression", required: true, accepts: [temporalTypes.instant], summary: "Selects the reveal Instant." },
+    { name: "during", kind: "expression", required: true, accepts: [temporalTypes.window], summary: "Selects the scene Window." },
+  ] },
+  bindings(declaration) {
+    const id = literal(declaration, "id");
+    return [{ name: `${id}.visual`, ref: { kind: "component-output", component: id, output: "visual" }, type: compositionTypes.visualTrack }];
+  },
+  async compile({ declaration, resolveReference }) {
+    const id = literal(declaration, "id");
+    const options: ExplainerOptions = { id, title: literal(declaration, "title"),
+      transitionFrames: Number(literal(declaration, "transition-frames")) };
+    const refs = {
+      timeline: await reference(declaration, "timeline", timelineTypes.timeline, resolveReference),
+      within: await reference(declaration, "within", spatialTypes.frame, resolveReference),
+      font: await reference(declaration, "font", mediaTypes.fontStack, resolveReference),
+      media: await reference(declaration, "media", mediaTypes.prepared, resolveReference),
+      sourceWindow: await reference(declaration, "source-window", temporalTypes.window, resolveReference),
+      window: await reference(declaration, "during", temporalTypes.window, resolveReference),
+      reveal: await reference(declaration, "reveal", temporalTypes.instant, resolveReference),
+    };
+    return {
+      records: [{ id: `${id}.options`, type: optionsType, value: canonicalize(options), range: declaration.range }],
+      components: [{ id, fragment, inputs: {
+        timeline: refs.timeline.ref, within: refs.within.ref, font: refs.font.ref, media: refs.media.ref,
+        sourceWindow: refs.sourceWindow.ref, window: refs.window.ref, reveal: refs.reveal.ref,
+        options: { kind: "record", id: `${id}.options` },
+      }, outputs: { visual: `${id}.visual` }, range: declaration.range }],
+    };
   },
 };
+const markupDeclaration = { name: "scene", tag: "Scene" } as const;
 export const hypitPackage = { format: "hypit.package@1" as const, modules: [{ manifest }],
   facets: [createProducerPackageFacet(component.producers ?? []), createRefinementPackageFacet(component.refinements ?? []),
-    createMarkupSurfaceFacet({ module, declaration, handler: decodeSurface })] };
+    createAuthorDeclarationFacet(authorDeclaration), createMarkupDeclarationFacet({ module, declaration: markupDeclaration })] };
 export default hypitPackage;

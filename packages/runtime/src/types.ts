@@ -2,11 +2,11 @@ import type {
   BlobRef,
   BuildDefinition,
   BuildFact,
-  BuildState,
   CommandResult,
   BuildCommand,
   ResourceId,
 } from "@hypit/protocol";
+import type { BuildView } from "@hypit/kernel";
 import type { OperationSnapshot } from "./operations.js";
 
 export type RuntimeBlockedCommand = {
@@ -26,7 +26,7 @@ export type RuntimeRunnableCommand = {
 export type RuntimeResourceClaim = import("./capacity.js").CapacityResourceClaim;
 
 export type RuntimePreparation = {
-  readonly state: BuildState;
+  readonly state: BuildView;
   readonly runnable: readonly RuntimeRunnableCommand[];
   readonly blocked: readonly RuntimeBlockedCommand[];
 };
@@ -59,7 +59,7 @@ export type RuntimeExecutionResult =
 
 /** Build-local indexed execution view. Definition + Facts remain the only durable representation. */
 export type RuntimeBuildExecution = {
-  view(): BuildState;
+  view(): BuildView;
   commands(): readonly BuildCommand[];
   record(id: string): import("@hypit/protocol").TypedRecord | undefined;
 };
@@ -154,7 +154,7 @@ export type ScheduledBuildResult = {
   readonly definition: BuildDefinition;
   /** Accepted Facts, including those appended during this scheduler run. */
   readonly facts: readonly BuildFact[];
-  readonly state: BuildState;
+  readonly state: BuildView;
   readonly outcomes: readonly SchedulerExecutionOutcome[];
   readonly blocked: readonly RuntimeBlockedCommand[];
 };
@@ -163,7 +163,7 @@ export type BuildSchedulerOptions = {
   /** Optional durable authority. When present, every accepted Core Fact is appended. */
   readonly buildStore?: BuildStore;
   /** Called after an accepted event changes the materialized Build view. */
-  readonly onStateChange?: (build: string, state: BuildState) => Promise<void>;
+  readonly onStateChange?: (build: string, state: BuildView) => Promise<void>;
   /** Per-Build observation and capacity callbacks; they do not participate in scheduling decisions. */
   readonly executionContext?: (build: string) => Omit<RuntimeExecutionContext, "build">;
 };

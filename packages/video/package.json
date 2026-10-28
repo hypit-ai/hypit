@@ -15,6 +15,7 @@
   "dependencies": {
     "@hypit/audio-track": "workspace:^0.3.0",
     "@hypit/audio-mix": "workspace:^0.1.0",
+    "@hypit/audio-stretch": "workspace:^0.1.0",
     "@hypit/caption": "workspace:^0.1.1",
     "@hypit/caption-fine": "workspace:^0.2.1",
     "@hypit/composition": "workspace:^0.2.0",
@@ -61,6 +62,8 @@
     "@hypit/timeline-author": "workspace:^0.2.1",
     "@hypit/visual-track": "workspace:^0.3.0",
     "@hypit/visual-adjustment": "workspace:^0.1.0",
+    "@hypit/visual-treatment": "workspace:^0.1.0",
+    "@hypit/visual-transition": "workspace:^0.1.0",
     "@hypit/volcengine-matting": "workspace:^0.3.0",
     "@hypit/wan": "workspace:^0.3.0"
   },

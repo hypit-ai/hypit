@@ -19,7 +19,7 @@ import {
 } from "@hypit/generation/model-fields";
 import {
   createGptImageCleanFragment,
-  gptImage2Ports,
+  gptImage2Fields,
   gptImageCleanManifest,
   gptImageCleanupProgram,
   gptImageEndpoints,
@@ -38,7 +38,7 @@ import {
   createSeedanceAssembledGenerationFragment,
   seedanceEndpoints,
   seedanceManifest,
-  seedancePorts,
+  seedanceFields,
 } from "@hypit/seedance";
 import { spatialManifest } from "@hypit/spatial";
 import { recipeManifest } from "@hypit/recipe";
@@ -89,8 +89,8 @@ function fixture() {
   const closure = createResolvedClosure(manifests);
   const gpt = gptImageEndpoints.image!;
   const seedance = seedanceEndpoints.mini!;
-  const gptBindingPort = gptImage2Ports.ports.find((port) => port.name === "images");
-  const seedanceBindingPort = seedancePorts["seedance-2-mini"].ports.find((port) => port.name === "referenceImage");
+  const gptBindingPort = gptImage2Fields.fields.find((field) => field.name === "images");
+  const seedanceBindingPort = seedanceFields["seedance-2-mini"].fields.find((field) => field.name === "referenceImage");
   assert.ok(gptBindingPort?.value.kind === "media");
   assert.ok(seedanceBindingPort?.value.kind === "media");
   const records: Array<{
@@ -105,10 +105,10 @@ function fixture() {
 
   const gptFragments = {
     holding: createGptImageCleanFragment([
-      { name: "person", port: "images" }, { name: "product", port: "images" },
+      { name: "person", field: "images" }, { name: "product", field: "images" },
     ]),
-    walking: createGptImageCleanFragment([{ name: "holding", port: "images" }]),
-    interview: createGptImageCleanFragment([{ name: "holding", port: "images" }]),
+    walking: createGptImageCleanFragment([{ name: "holding", field: "images" }]),
+    interview: createGptImageCleanFragment([{ name: "holding", field: "images" }]),
   };
   const addGptInputs = (id: string, names: readonly string[]) => {
     add(`${id}.draft`, gpt.draftType, (sealGptImage2Draft({
@@ -120,9 +120,9 @@ function fixture() {
   addGptInputs("walking", ["holding"]);
   addGptInputs("interview", ["holding"]);
 
-  const seedanceMedia = ["holding", "walking", "interview"].map((name) => ({ name, port: "referenceImage" }));
+  const seedanceMedia = ["holding", "walking", "interview"].map((name) => ({ name, field: "referenceImage" }));
   const seedanceFragment = createSeedanceAssembledGenerationFragment(seedance, seedanceMedia);
-  add("montage.draft", seedance.draftType, (sealModelFieldBuilder(seedancePorts["seedance-2-mini"], {
+  add("montage.draft", seedance.draftType, (sealModelFieldBuilder(seedanceFields["seedance-2-mini"], {
       prompt: ["A fast montage from all three reference images."],
       resolution: ["720p"], aspectRatio: ["9:16"], duration: [6], generateAudio: [false], webSearch: [false],
     }) as unknown as CanonicalValue));

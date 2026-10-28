@@ -1,6 +1,6 @@
 ---
 title: Script
-description: Script Surface——Segment、Role Cue、Dual Text、Selection、Moment 与文本投影。
+description: Script 声明——Segment、Role Cue、Dual Text、Selection、Moment 与文本投影。
 ---
 
 `<script>` 元素承载旁白或讲者说出的每一个字。Script 以**散文为先**：它不包含时间码、不引用媒体、不设定样式、不携带生成参数。管线中的其他组件都会读取 Script；Script 本身不读取任何内容。
@@ -15,7 +15,7 @@ description: Script Surface——Segment、Role Cue、Dual Text、Selection、Mo
 </script>
 ```
 
-引入 `@hypit/script@1` 会激活 Script Surface。`id` 属性让其他组件可以引用该 Script 及其各部分。
+引入 `@hypit/script@1` 会激活 Script 声明。`id` 属性让其他组件可以引用该 Script 及其各部分。
 
 ## Segment
 

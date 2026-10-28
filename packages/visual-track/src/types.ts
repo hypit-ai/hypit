@@ -1,4 +1,4 @@
-import type { VisualEasing } from "@hypit/composition";
+import type { VisualEasing, VisualProgram } from "@hypit/composition";
 import type { FrameSpan } from "@hypit/timeline";
 import type { CompositableSurfaceRef, PreparedMedia } from "@hypit/media";
 import type { BlobRef } from "@hypit/hypit/protocol";
@@ -202,9 +202,22 @@ export type VisualClipProgram = {
   readonly motion?: VisualClipMotion;
 };
 
+/**
+ * A relation between two neighbouring Clip occurrences. The relation owns no source media and does
+ * not replace either Clip's sampling Map; it only describes how their already overlapping pictures
+ * are mixed over the exact intersection of their Windows.
+ */
+export type VisualTransitionSpec = {
+  readonly id: string;
+  readonly outgoingClipId: string;
+  readonly incomingClipId: string;
+  readonly effect: VisualProgram;
+};
+
 export type VisualTrackProgram = {
   readonly id: string;
   readonly clips: readonly VisualClipProgram[];
+  readonly transitions: readonly VisualTransitionSpec[];
 };
 
 export type VisualTrackHeader = {
@@ -213,4 +226,5 @@ export type VisualTrackHeader = {
 
 export type VisualTrackSet = {
   readonly clips: readonly VisualClipProgram[];
+  readonly transitions: readonly VisualTransitionSpec[];
 };

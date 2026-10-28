@@ -2,25 +2,22 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { blobTypes } from "@hypit/blob";
+import type { AuthorDeclarationCompiler, AuthorResolvedReference } from "@hypit/author";
 import { generationTypes } from "@hypit/generation";
-import { parseStructuredElement } from "@hypit/markup";
-import type { SurfaceResolvedReference } from "@hypit/markup";
 import { sealText, textTypes } from "@hypit/text";
+import { compileMarkupDeclaration } from "../../../test/compile-markup-declaration.js";
 
 import {
-  decodeMimoVoiceCloneSurface,
-  decodeMimoVoiceDesignSurface,
   mimoSpeechEndpoints,
   mimoSpeechModels,
   sealMimoSpeechRequest,
 } from "../src/index.js";
-
-function parsed(source: string) {
-  return parseStructuredElement({ name: "mimo.svml", text: source }, 0).element;
-}
+import { mimoSpeechModuleRef } from "../src/index.js";
+import { mimoSpeechMarkupDeclarations, mimoVoiceCloneAuthorDeclaration,
+  mimoVoiceDesignAuthorDeclaration } from "../src/declaration.js";
 
 const speech = sealText("Exact authored words stay exact.");
-const speechReference: SurfaceResolvedReference = {
+const speechReference: AuthorResolvedReference = {
   path: "story.segment.opening.speech",
   ref: { kind: "record", id: "story.segment.opening.speech" },
   type: textTypes.text,
@@ -30,7 +27,7 @@ const speechReference: SurfaceResolvedReference = {
     value: (speech),
   },
 };
-const voiceReference: SurfaceResolvedReference = {
+const voiceReference: AuthorResolvedReference = {
   path: "host.reference",
   ref: { kind: "record", id: "host.reference" },
   type: blobTypes.blob,
@@ -41,13 +38,12 @@ const voiceReference: SurfaceResolvedReference = {
   },
 };
 
-const context = (source: string, voice: SurfaceResolvedReference = voiceReference) => ({
-  sourceName: "mimo.svml",
-  element: parsed(source),
-  resolveReference: (path: string) => path === speechReference.path
-    ? speechReference : path === voice.path ? voice : undefined,
-  resolveAsset: () => { throw new Error("no asset"); },
-});
+async function decode(source: string, compiler: AuthorDeclarationCompiler,
+  voice: AuthorResolvedReference = voiceReference) {
+  return await compileMarkupDeclaration({ source, module: mimoSpeechModuleRef, alias: "mimo",
+    compilers: [compiler], syntax: mimoSpeechMarkupDeclarations,
+    references: new Map([[speechReference.path, speechReference], [voice.path, voice]]) });
+}
 
 test("MiMo Speech declares the two exact audio request shapes", () => {
   assert.deepEqual(mimoSpeechModels, ["mimo-v2.5-tts-voicedesign", "mimo-v2.5-tts-voiceclone"]);
@@ -61,9 +57,9 @@ test("MiMo Speech declares the two exact audio request shapes", () => {
 });
 
 test("VoiceDesign publishes one reusable voice reference", async () => {
-  const result = await decodeMimoVoiceDesignSurface(context(`<mimo:VoiceDesign id="host" speech={story.segment.opening.speech}>
+  const result = await decode(`<mimo:VoiceDesign id="host" speech={story.segment.opening.speech}>
     A clear, confident young woman with a grounded conversational tone.
-  </mimo:VoiceDesign>`));
+  </mimo:VoiceDesign>`, mimoVoiceDesignAuthorDeclaration);
   assert.deepEqual(result.components[0]!.outputs, { audio: "host.reference" });
   const exported = result.components[0]!.fragment.exports.find((item) => item.name === "audio");
   assert.deepEqual(exported?.type, blobTypes.blob);
@@ -72,28 +68,27 @@ test("VoiceDesign publishes one reusable voice reference", async () => {
     id: "story.segment.opening.speech",
   });
   const request = result.records[0]!.value as Record<string, unknown>;
-  assert.equal((request.ports as Record<string, unknown[]>).text, undefined);
+  assert.equal((request.fields as Record<string, unknown[]>).text, undefined);
 });
 
 test("VoiceClone binds an accepted audio Resource and publishes independent speech", async () => {
-  const result = await decodeMimoVoiceCloneSurface(context(`<mimo:VoiceClone id="narration" speech={story.segment.opening.speech} voice={host.reference}>
+  const result = await decode(`<mimo:VoiceClone id="narration" speech={story.segment.opening.speech} voice={host.reference}>
     Calm and restrained.
-  </mimo:VoiceClone>`));
+  </mimo:VoiceClone>`, mimoVoiceCloneAuthorDeclaration);
   assert.deepEqual(result.components[0]!.outputs, { audio: "narration.audio" });
   assert.deepEqual(result.components[0]!.inputs["voice:artifact"], { kind: "record", id: "host.reference" });
   assert.ok(result.components[0]!.inputs["voice:binding"] !== undefined);
 });
 
-test("VoiceClone refuses a known non-audio Resource", () => {
-  const image: SurfaceResolvedReference = {
+test("VoiceClone refuses a known non-audio Resource", async () => {
+  const image: AuthorResolvedReference = {
     ...voiceReference,
     record: {
       ...voiceReference.record!,
       value: { kind: "blob", resource: "res_image", size: 4, mediaType: "image/png" },
     },
   };
-  assert.throws(() => decodeMimoVoiceCloneSurface(context(
+  await assert.rejects(async () => await decode(
     `<mimo:VoiceClone id="narration" speech={story.segment.opening.speech} voice={host.reference}/>` ,
-    image,
-  )), /must reference audio media/u);
+    mimoVoiceCloneAuthorDeclaration, image), /must reference audio media/u);
 });

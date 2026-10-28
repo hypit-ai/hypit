@@ -18,7 +18,7 @@ These roles can be organized into files that suit the component's size:
 | Role | Responsibility |
 | --- | --- |
 | Manifest and Types | Name the values, Producers, inputs and outputs the package provides |
-| Surface | Read the authored element and resolve its explicit inputs |
+| Author Declaration | Define fields and children, resolve typed references and lower the authored element into graph data |
 | Fragment | Describe the operations and dependencies connecting those inputs to outputs |
 | Producer | Perform the declared computation |
 | Value and Style helpers | Validate inputs, apply documented defaults and decode the accepted Recipe properties |

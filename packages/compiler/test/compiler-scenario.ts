@@ -1,11 +1,20 @@
 import { ModulePackageRegistry, Compiler } from "@hypit/compiler";
-import { AuthorFrontendRegistry, sealGraphFragment } from "@hypit/author";
+import {
+  AuthorDeclarationRegistry,
+  AuthorFrontendRegistry,
+  declarationField,
+  sealGraphFragment,
+  type AuthorDeclarationCompiler,
+} from "@hypit/author";
 import type { AuthorSourceAssetRequest, AuthorSourceImport, AuthorSourceUnit } from "@hypit/author";
 import type { BlobRef, ModuleManifest, ModuleRef, ProducerRef, TypeRef } from "@hypit/protocol";
 import { resolveSelfDescribedTextSource } from "@hypit/source/text";
 import type { BlobAttachment, Workspace } from "@hypit/workspace";
 import { WorkspaceError } from "@hypit/workspace";
-import { createMarkupAuthorFrontend, MarkupSurfaceRegistry } from "@hypit/markup";
+import {
+  createMarkupDeclarationAuthorFrontend,
+  MarkupDeclarationRegistry,
+} from "@hypit/markup";
 import { NodeFilesystemWorkspace } from "@hypit/workspace/node";
 
 export const rawSourceAdapter = (unit: import("@hypit/source").SourceUnit) => ({ unit, frontend: "test.frontend@1" });
@@ -25,9 +34,7 @@ export function emptyManifest(name: string, version = "1"): ModuleManifest {
 export const laboratory = { name: "example.compiler-lab", version: "1" } as const;
 export const resultType = { module: laboratory, name: "Result" } satisfies TypeRef;
 const producer = { module: laboratory, name: "produce" } satisfies ProducerRef;
-const resultSurface = {
-  name: "result", tag: "Result", mode: "structured", outputs: [],
-} as const;
+const resultSyntax = { declaration: "result", tag: "Result" } as const;
 const laboratoryManifest: ModuleManifest = {
   format: "hypit.module@1",
   name: laboratory.name,
@@ -55,15 +62,63 @@ const fragment = sealGraphFragment({
     root: { kind: "fragment-operation", operation: "produce" },
   }],
 });
+const resultDeclaration: AuthorDeclarationCompiler = {
+  module: laboratory,
+  declaration: "result",
+  outputs: [resultType],
+  shape: {
+    summary: "Produces one test Result.",
+    fields: [{ name: "id", kind: "identifier", required: true, summary: "Names the Result." }],
+  },
+  bindings(declaration) {
+    const id = declarationField(declaration, "id");
+    if (id?.kind !== "literal") throw new Error("Result id is required");
+    return [{ name: `${id.value}.result`, ref: { kind: "component-output", component: id.value, output: "result" }, type: resultType }];
+  },
+  compile({ declaration }) {
+    const id = declarationField(declaration, "id");
+    if (id?.kind !== "literal") throw new Error("Result id is required");
+    return { records: [], components: [{ id: id.value, fragment, inputs: {}, outputs: { result: `${id.value}.result` }, range: declaration.range }] };
+  },
+};
 
 const assetLaboratory = { name: "example.asset-lab", version: "1" } as const;
 const assetType = { module: assetLaboratory, name: "Asset" } satisfies TypeRef;
-const assetSurface = {
-  name: "asset", tag: "Asset", mode: "structured", outputs: [assetType],
-} as const;
+const assetSyntax = { declaration: "asset", tag: "Asset" } as const;
 const assetManifest: ModuleManifest = {
   ...emptyManifest(assetLaboratory.name),
   types: [assetType.name],
+};
+const assetDeclaration: AuthorDeclarationCompiler = {
+  module: assetLaboratory,
+  declaration: "asset",
+  outputs: [assetType],
+  shape: {
+    summary: "Resolves one test Asset.",
+    fields: [
+      { name: "id", kind: "identifier", required: true, summary: "Names the Asset." },
+      { name: "src", kind: "literal", required: true, summary: "Selects its source." },
+    ],
+  },
+  bindings(declaration) {
+    const id = declarationField(declaration, "id");
+    if (id?.kind !== "literal") throw new Error("Asset id is required");
+    return [{ name: id.value, ref: { kind: "record", id: id.value }, type: assetType }];
+  },
+  async compile({ declaration, resolveAsset }) {
+    const id = declarationField(declaration, "id");
+    const src = declarationField(declaration, "src");
+    if (id?.kind !== "literal" || src?.kind !== "literal") throw new Error("Asset id and src are required");
+    const resolved = await resolveAsset({
+      from: src.value,
+      mediaType: "application/octet-stream",
+      ...(src.value === "package:example.asset-lab/embedded.bin"
+        ? { bytes: new Uint8Array([8, 6, 7, 5, 3, 0, 9]) }
+        : {}),
+      range: declaration.range,
+    });
+    return { records: [{ id: id.value, type: assetType, value: resolved, range: declaration.range }], components: [] };
+  },
 };
 
 export function compiler(
@@ -74,28 +129,14 @@ export function compiler(
   const modules = new ModulePackageRegistry();
   modules.register({ manifest: laboratoryManifest });
   for (const manifest of additional) modules.register({ manifest });
-  const surfaces = new MarkupSurfaceRegistry();
-  surfaces.registerStructured({
-    module: laboratory,
-    declaration: resultSurface,
-    handler: ({ element }) => {
-    const id = element.attributes.id;
-    if (typeof id !== "string") throw new Error("Result id is required");
-    return {
-      records: [],
-      components: [{
-        id,
-        fragment,
-        inputs: {},
-        outputs: { result: `${id}.result` },
-        range: element.range,
-      }],
-    };
-    },
-  });
+  const declarations = new AuthorDeclarationRegistry();
+  declarations.register(resultDeclaration);
+  const syntax = new MarkupDeclarationRegistry();
+  syntax.register({ module: laboratory, ...resultSyntax });
   const frontends = new AuthorFrontendRegistry();
-  const frontend = createMarkupAuthorFrontend({
-    registry: surfaces,
+  const frontend = createMarkupDeclarationAuthorFrontend({
+    syntax,
+    compilers: declarations,
     resolveModule(request): ModuleRef {
       const resolved = modules.resolve(request.from);
       if (resolved === undefined) throw new Error(`unknown module ${request.from}`);
@@ -161,43 +202,16 @@ export function assetCompiler(environment: { readonly root: string } | { readonl
   const modules = new ModulePackageRegistry();
   modules.register({ manifest: assetManifest });
   modules.register({ manifest: laboratoryManifest });
-  const surfaces = new MarkupSurfaceRegistry();
-  surfaces.registerStructured({
-    module: laboratory,
-    declaration: resultSurface,
-    handler: ({ element }) => {
-      const id = element.attributes.id;
-      if (typeof id !== "string") throw new Error("Result id is required");
-      return {
-        records: [],
-        components: [{ id, fragment, inputs: {}, outputs: { result: `${id}.result` }, range: element.range }],
-      };
-    },
-  });
-  surfaces.registerStructured({
-    module: assetLaboratory,
-    declaration: assetSurface,
-    handler: async ({ element, resolveAsset }) => {
-    const id = element.attributes.id;
-    const src = element.attributes.src;
-    if (typeof id !== "string" || typeof src !== "string") throw new Error("Asset id and src are required");
-    const resolved = await resolveAsset({
-      from: src,
-      mediaType: "application/octet-stream",
-      ...(src === "package:example.asset-lab/embedded.bin"
-        ? { bytes: new Uint8Array([8, 6, 7, 5, 3, 0, 9]) }
-        : {}),
-      range: element.range,
-    });
-    return {
-      records: [{ id, type: assetType, value: resolved, range: element.range }],
-      components: [],
-    };
-    },
-  });
+  const declarations = new AuthorDeclarationRegistry();
+  declarations.register(resultDeclaration);
+  declarations.register(assetDeclaration);
+  const syntax = new MarkupDeclarationRegistry();
+  syntax.register({ module: laboratory, ...resultSyntax });
+  syntax.register({ module: assetLaboratory, ...assetSyntax });
   const frontends = new AuthorFrontendRegistry();
-  frontends.register(createMarkupAuthorFrontend({
-    registry: surfaces,
+  frontends.register(createMarkupDeclarationAuthorFrontend({
+    syntax,
+    compilers: declarations,
     resolveModule(request): ModuleRef {
       const resolved = modules.resolve(request.from);
       if (resolved === undefined) throw new Error(`unknown module ${request.from}`);

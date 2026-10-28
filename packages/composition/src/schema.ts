@@ -157,7 +157,7 @@ const pathTextElement = object({ ...base, kind: { schema: { kind: "literal", val
 export const visualImageSchema: ValueSchema = object({ ...base, kind: { schema: { kind: "literal", value: "image" } }, artifact: { schema: mediaBlobRef } });
 export const visualVideoSchema: ValueSchema = object({ ...base, kind: { schema: { kind: "literal", value: "video" } }, source: { schema: preparedVisualSourceSchema }, sampling: { schema: temporalMapSchema }, muted: { schema: { kind: "boolean" }, optional: true } });
 export const visualSurfaceSchema: ValueSchema = object({ ...base, kind: { schema: { kind: "literal", value: "surface" } }, surface: { schema: compositableSurfaceSchema }, sampling: { schema: temporalMapSchema, optional: true } });
-const visualProgramCarrierSchema = object({ format: { schema: string }, payload: { schema: object({}, true) }, artifacts: { schema: { kind: "array", items: mediaBlobRef } } });
+export const visualProgramCarrierSchema = object({ format: { schema: string }, payload: { schema: object({}, true) }, artifacts: { schema: { kind: "array", items: mediaBlobRef } } });
 export const visualProgramSchema: ValueSchema = object({
   ...base,
   kind: { schema: { kind: "literal", value: "program" } },
@@ -167,13 +167,28 @@ export const visualProgramSchema: ValueSchema = object({
 export const visualElementSchema: ValueSchema = { kind: "oneOf", variants: [visualBoxSchema, visualMaskSchema, visualTextSchema, textFlowElement, pathTextElement, visualImageSchema, visualVideoSchema, visualSurfaceSchema, visualProgramSchema] };
 const visualItemBase = { id: { schema: string }, subjectId: { schema: string, optional: true }, span: { schema: frameSpanSchema }, visibility: { schema: { kind: "array", items: frameSpanSchema }, optional: true } } as const;
 export const visualPresentSchema: ValueSchema = object({ ...visualItemBase, kind: { schema: { kind: "literal", value: "present" } }, root: { schema: visualElementSchema } });
+export const visualProcessSchema: ValueSchema = object({
+  ...visualItemBase,
+  kind: { schema: { kind: "literal", value: "process" } },
+  inputs: { schema: { kind: "array", minItems: 1, items: object({
+    name: { schema: string },
+    // Recursive contribution shape is refined exactly by Composition.
+    contribution: { schema: visualNodeEnvelope },
+  }) } },
+  program: { schema: visualProgramCarrierSchema },
+});
 export const visualAdjustmentSchema: ValueSchema = object({ ...visualItemBase, kind: { schema: { kind: "literal", value: "adjustment" } }, program: { schema: visualProgramCarrierSchema } });
-export const visualItemSchema: ValueSchema = { kind: "oneOf", variants: [visualPresentSchema, visualAdjustmentSchema] };
+export const visualItemSchema: ValueSchema = { kind: "oneOf", variants: [visualPresentSchema, visualProcessSchema, visualAdjustmentSchema] };
 export const visualTrackSchema: ValueSchema = object({ kind: { schema: { kind: "literal", value: "visual" } }, timelineId: { schema: string }, visualIr: { schema: { kind: "literal", value: VISUAL_IR_V1 } }, id: { schema: string }, items: { schema: { kind: "array", items: visualItemSchema } } });
 export const audioSampleSpanSchema = object({ startSample: { schema: integer }, endSampleExclusive: { schema: { kind: "number", integer: true, minimum: 1 } } });
 export const audioGainEnvelopeSchema: ValueSchema = { kind: "array", minItems: 1, items: object({
   sample: { schema: integer }, gain: { schema: { kind: "number", minimum: 0 } },
 }) };
+export const audioReconstructionProgramSchema = object({
+  format: { schema: string },
+  payload: { schema: object({}, true) },
+  artifacts: { schema: { kind: "array", items: mediaBlobRef } },
+});
 const audioClip = object({
   id: { schema: string },
   subjectId: { schema: string, optional: true },
@@ -181,6 +196,7 @@ const audioClip = object({
   preparation: { schema: temporalMapSchema },
   target: { schema: object({ start: { schema: exactTemporalValueSchema }, end: { schema: exactTemporalValueSchema } }) },
   sampling: { schema: temporalMapSchema },
+  reconstruction: { schema: audioReconstructionProgramSchema, optional: true },
   gain: { schema: { kind: "number", minimum: 0 } },
   fadeIn: { schema: exactTemporalValueSchema },
   fadeOut: { schema: exactTemporalValueSchema },
@@ -188,7 +204,7 @@ const audioClip = object({
   audibility: { schema: { kind: "array", items: audioSampleSpanSchema }, optional: true },
 });
 const audioSignalRef = object({ node: { schema: string }, port: { schema: { kind: "literal", value: "signal" } } });
-const audioProcessProgram = object({ format: { schema: string }, payload: { schema: object({}, true) }, artifacts: { schema: { kind: "array", items: mediaBlobRef } } });
+const audioProcessProgram = audioReconstructionProgramSchema;
 const audioGraphNode: ValueSchema = { kind: "oneOf", variants: [
   object({ kind: { schema: { kind: "literal", value: "silence" } }, id: { schema: string } }),
   object({ kind: { schema: { kind: "literal", value: "source" } }, id: { schema: string }, clip: { schema: audioClip } }),

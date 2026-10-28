@@ -6,9 +6,10 @@ import { fileURLToPath } from "node:url";
 import test from "node:test";
 
 import type { CliIo } from "@hypit/cli";
-import { markupSurfaceFacetAbi } from "@hypit/markup";
+import { authorDeclarationFacetAbi } from "@hypit/author";
+import { markupDeclarationFacetAbi } from "@hypit/markup";
 
-import { listPackages, listSurfaces, runVocabularyCli, visualSchema } from "../src/vocabulary.js";
+import { listDeclarations, listPackages, runVocabularyCli, visualSchema } from "../src/vocabulary.js";
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 
@@ -58,10 +59,18 @@ test("vocabulary discovers bundled packages from a separate project without node
     await writeFile(join(directory, "activation.mjs"), activation ?? `export default {
       format: "hypit.package@1",
       facets: [{
-        abi: ${JSON.stringify(markupSurfaceFacetAbi)},
+        abi: ${JSON.stringify(authorDeclarationFacetAbi)},
         implementation: {
           module: { name: ${JSON.stringify(name)}, version: "1" },
-          surface: "card", tag: "Card", mode: "raw", outputs: [], handler: () => [],
+          declaration: "card", outputs: [],
+          shape: { summary: "Authors one Card.", fields: [] },
+          bindings: () => [], compile: () => ({ records: [], components: [] }),
+        },
+      }, {
+        abi: ${JSON.stringify(markupDeclarationFacetAbi)},
+        implementation: {
+          module: { name: ${JSON.stringify(name)}, version: "1" },
+          declaration: "card", tag: "Card", body: "opaque",
         },
       }],
     };`);
@@ -86,11 +95,11 @@ test("vocabulary discovers bundled packages from a separate project without node
 
     const named = io();
     await runVocabularyCli(["vocabulary", "@hypit/bundled", "--tag", "Card", "--json"], named.io, project, distribution);
-    const surfaces = JSON.parse(named.text()).surfaces;
-    assert.equal(surfaces.length, 1);
-    assert.equal(surfaces[0].package, "@hypit/bundled");
-    assert.equal(surfaces[0].tag, "Card");
-    assert.equal(basename(surfaces[0].readme), "README.md");
+    const declarations = JSON.parse(named.text()).declarations;
+    assert.equal(declarations.length, 1);
+    assert.equal(declarations[0].package, "@hypit/bundled");
+    assert.equal(declarations[0].tag, "Card");
+    assert.equal(basename(declarations[0].readme), "README.md");
 
     // Workspace links and project components must not duplicate the bundled listing.
     await packageAt(join(distribution, "node_modules", "@hypit", "bundled"), "@hypit/bundled");
@@ -138,14 +147,13 @@ test("vocabulary discovers bundled packages from a separate project without node
   }
 });
 
-test("a named package answers with its own Surfaces only", async () => {
-  const surfaces = await listSurfaces(repositoryRoot, ["@hypit/media-operations"], ["StillVideo"]);
-  assert.equal(surfaces.length, 1);
-  const [still] = surfaces;
+test("a named package answers with its own Declarations only", async () => {
+  const declarations = await listDeclarations(repositoryRoot, ["@hypit/media-operations"], ["StillVideo"]);
+  assert.equal(declarations.length, 1);
+  const [still] = declarations;
   assert.equal(still!.package, "@hypit/media-operations");
   assert.equal(still!.tag, "StillVideo");
-  const vocabulary = still!.vocabulary as { attributes: readonly { name: string }[] };
-  assert.ok(vocabulary.attributes.some((attribute) => attribute.name === "duration"));
+  assert.ok(still!.shape.fields.some((field) => field.name === "duration"));
   assert.ok(still!.readme !== undefined);
   assert.equal(basename(still!.readme), "README.md");
   assert.equal(basename(dirname(still!.readme)), "media-operations");
@@ -178,9 +186,9 @@ test("the human view distinguishes logical Modules contributed by one physical p
   await runVocabularyCli(["vocabulary", "@hypit/gpt-image", "--tag", "Image"], human.io, repositoryRoot);
   assert.match(human.text(), /package  @hypit\/gpt-image/u);
   assert.match(human.text(), /module   @hypit\/gpt-image@1/u);
-  assert.match(human.text(), /import   <import as="gpt" from="@hypit\/gpt-image@1"\/>/u);
+  assert.match(human.text(), /import   <import from="@hypit\/gpt-image@1"\/>/u);
   assert.match(human.text(), /module   @hypit\/gpt-image\/clean@1/u);
-  assert.match(human.text(), /import   <import as="gpt" from="@hypit\/gpt-image\/clean@1"\/>/u);
-  assert.match(human.text(), /image  Blob \(@hypit\/blob@1\)/u);
+  assert.match(human.text(), /import   <import from="@hypit\/gpt-image\/clean@1"\/>/u);
+  assert.match(human.text(), /Blob \(@hypit\/blob@1\)/u);
   assert.doesNotMatch(human.text(), /\{"name":"image"/u);
 });

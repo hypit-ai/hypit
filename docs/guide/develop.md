@@ -27,7 +27,7 @@ Use `hypit doctor --runtime <profile>` to inspect missing setup without installi
 |---|---|
 | [Making videos with an Agent](./skill.md) | Creative direction, service choices and editable projects |
 | [Packages and Extension](./packages.md) | Component, model and service ownership; installation and sharing |
-| [Adding an author package](./author-packages.md) | Step-by-step: new component, Surface, vocabulary and preview, activation |
+| [Adding an author package](./author-packages.md) | Step-by-step: new component, Author Declaration, vocabulary and preview, activation |
 | [Models and Providers](./providers.md) | Select accounts and APIs; develop a Model or Provider package |
 | [Runtime](./runtime.md) | Profile, Workspace, execution and lifecycle boundaries |
 | [Studio localization](https://github.com/hypit-ai/hypit/blob/main/packages/studio/LOCALIZATION.md) | Translate interface messages; load a local JSON file or an installed language pack |

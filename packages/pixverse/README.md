@@ -1,6 +1,6 @@
 # `@hypit/pixverse`
 
-Exact author/compute contracts and package-owned author Surfaces for PixVerse. The package carries
+Exact author/compute contracts and package-owned declarations for PixVerse. The package carries
 two exact models, `pixverse-v6` and `pixverse-c1`, and selects no Provider, API key or network
 execution. The selected Provider implements the exact capability.
 

@@ -6,7 +6,7 @@ import type { RefinementPackage } from "@hypit/hypit/refinement";
 import type { TemporalWindow } from "@hypit/temporal";
 import type { Timeline } from "@hypit/timeline";
 import { visualAdjustmentProducers, visualAdjustmentTypes } from "./manifest.js";
-import { appendVisualAdjustment, assertVisualAdjustmentSet, assertVisualAdjustmentSpec, createVisualAdjustmentSet, finalizeVisualAdjustmentTrack, sealVisualAdjustmentHeader } from "./program.js";
+import { appendVisualAdjustment, assertVisualAdjustmentEffect, assertVisualAdjustmentSet, assertVisualAdjustmentSpec, createVisualAdjustmentSet, finalizeVisualAdjustmentTrack, sealVisualAdjustmentHeader } from "./program.js";
 import type { VisualAdjustmentHeader, VisualAdjustmentSet, VisualAdjustmentSpec } from "./types.js";
 
 function valueOf<T>(value: Value | undefined, label: string): T {
@@ -39,6 +39,7 @@ export const visualAdjustmentComponent = {
   ],
   refinements: [
     { type: visualAdjustmentTypes.header, handler: ({ value }) => { sealVisualAdjustmentHeader(valueOf(value, "VisualAdjustmentHeader")); } },
+    { type: visualAdjustmentTypes.effect, handler: ({ value }) => { assertVisualAdjustmentEffect(valueOf(value, "VisualAdjustmentEffect")); } },
     { type: visualAdjustmentTypes.spec, handler: ({ value }) => { assertVisualAdjustmentSpec(valueOf(value, "VisualAdjustmentSpec")); } },
     { type: visualAdjustmentTypes.set, handler: ({ value }) => { assertVisualAdjustmentSet(valueOf(value, "VisualAdjustmentSet")); } },
   ],

@@ -11,7 +11,7 @@ import type { PendingBuildSubmission } from "./submission.js";
 import type { BuildCatalogEntry } from "./catalog.js";
 import type { BuildExecutionSnapshot } from "./execution.js";
 import type { BuildView } from "./host-api.js";
-import { buildIdCreatedAt } from "@hypit/hypit/protocol";
+import { buildIdCreatedAt, compareCodeUnits } from "@hypit/hypit/protocol";
 import { materializeBuild } from "@hypit/hypit/kernel";
 
 function buildView(input: {
@@ -114,7 +114,7 @@ export function createLocalRuntimeControl(
         builds: (await Promise.all([...submissions, ...executions].map(async (item) =>
           await inspect(item.build))))
           .filter((item): item is BuildView => item !== undefined)
-          .sort((left, right) => right.id.localeCompare(left.id)),
+          .sort((left, right) => compareCodeUnits(right.id, left.id)),
         capacity,
       };
     },

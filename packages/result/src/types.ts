@@ -2,11 +2,12 @@ import { assertOrderedBuildId } from "@hypit/protocol";
 import type {
   BlobRef,
   CanonicalValue,
+  PublicationIntent,
   TypeRef,
   CapabilityRef,
   TypedRecord,
 } from "@hypit/protocol";
-import { isTypeRef } from "@hypit/protocol";
+import { assertPublicationIntent } from "@hypit/protocol";
 
 /** The one durable conclusion of a finished Build. Active execution belongs to Runtime. */
 export type BuildResultOutcome = "complete" | "failed" | "cancelled";
@@ -252,28 +253,6 @@ export function defineBuildResultOutput(
   });
 }
 
-/** One public Output selected by compilation, including its durable publication source. */
-export type OutputPublication = {
-  readonly displayName?: string;
-  readonly name: string;
-  readonly output: string;
-  readonly target: boolean;
-  /** Expected public type, independent of where this Build obtains the value. */
-  readonly type: TypeRef;
-  readonly source:
-    | { readonly kind: "current-record"; readonly record: string }
-    | {
-        readonly kind: "historical-output";
-        readonly build: string;
-        readonly output: string;
-      };
-};
-
-/** Immutable publication facts derived once from the selected execution. */
-export type PublicationPlan = {
-  readonly outputs: readonly OutputPublication[];
-};
-
 /** One terminal historical Output address found without opening its value document or files. */
 export type RepositoryBuildResultOutputLocation = {
   readonly build: string;
@@ -286,74 +265,10 @@ export type BuildResultSeed = {
   readonly title?: string;
   readonly sourceId: string;
   readonly runId?: string;
-  readonly publication: PublicationPlan;
+  readonly publication: PublicationIntent;
   /** Known file locations for referenced Resource identities, including nested uses. */
   readonly resourceReferences?: Readonly<Record<string, BuildResultFileRef>>;
 };
-
-function assertTypeRef(value: unknown, subject: string): asserts value is TypeRef {
-  if (!isTypeRef(value)) throw new Error(`${subject} must be a Type reference`);
-}
-
-/** Validate immutable publication facts without consulting execution or repository state. */
-export function assertPublicationPlan(
-  publication: unknown,
-  options: { readonly build?: string } = {},
-): asserts publication is PublicationPlan {
-  if (publication === null || Array.isArray(publication) || typeof publication !== "object"
-    || !Array.isArray((publication as Readonly<Record<string, unknown>>).outputs)) {
-    throw new Error("Build Result publication must contain an outputs array");
-  }
-  const names = new Set<string>();
-  const outputs = new Set<string>();
-  for (const [index, raw] of (publication as { readonly outputs: readonly unknown[] }).outputs.entries()) {
-    if (raw === null || Array.isArray(raw) || typeof raw !== "object") {
-      throw new Error(`Published Output ${index} must be an object`);
-    }
-    const published = raw as Readonly<Record<string, unknown>>;
-    if (typeof published.name !== "string" || published.name.trim().length === 0) {
-      throw new Error("Published Output name must not be empty");
-    }
-    if (typeof published.output !== "string" || published.output.trim().length === 0) {
-      throw new Error(`Published Output ${published.name} has no Logical Output`);
-    }
-    if (published.displayName !== undefined
-      && (typeof published.displayName !== "string" || published.displayName.trim().length === 0)) {
-      throw new Error(`Published Output ${published.name} has an empty display name`);
-    }
-    if (typeof published.target !== "boolean") {
-      throw new Error(`Published Output ${published.name} target must be a boolean`);
-    }
-    assertTypeRef(published.type, `Published Output ${published.name} type`);
-    if (names.has(published.name)) throw new Error(`Published Output name ${published.name} is repeated`);
-    if (outputs.has(published.output)) {
-      throw new Error(`Logical Output ${published.output} has more than one published name`);
-    }
-    names.add(published.name);
-    outputs.add(published.output);
-    if (published.source === null || Array.isArray(published.source) || typeof published.source !== "object") {
-      throw new Error(`Logical Output ${published.output} has no publication source`);
-    }
-    const source = published.source as Readonly<Record<string, unknown>>;
-    if (source.kind === "current-record") {
-      if (typeof source.record !== "string" || source.record.trim().length === 0) {
-        throw new Error(`Logical Output ${published.output} has no current Record source`);
-      }
-      continue;
-    }
-    if (source.kind !== "historical-output") {
-      throw new Error(`Logical Output ${published.output} has an invalid publication source kind`);
-    }
-    if (typeof source.build !== "string" || source.build.trim().length === 0
-      || typeof source.output !== "string" || source.output.trim().length === 0) {
-      throw new Error(`Logical Output ${published.output} has an incomplete historical source`);
-    }
-    if (source.build === options.build) {
-      throw new Error(`Logical Output ${published.output} cannot forward to its own Build`);
-    }
-    assertOrderedBuildId(source.build);
-  }
-}
 
 /** Validate the one-name-per-Output public Result surface before storage is touched. */
 export function assertBuildResultSeed(seed: BuildResultSeed): void {
@@ -364,7 +279,7 @@ export function assertBuildResultSeed(seed: BuildResultSeed): void {
   if (seed.title !== undefined && seed.title.trim().length === 0) {
     throw new Error("Build Result title must not be empty");
   }
-  assertPublicationPlan(seed.publication, { build: seed.id });
+  assertPublicationIntent(seed.publication, { build: seed.id });
   for (const [resource, file] of Object.entries(seed.resourceReferences ?? {})) {
     if (resource.length === 0) throw new Error("Resource reference has no identity");
     assertBuildResultFileRef(file, `Resource ${resource}`);
@@ -417,19 +332,16 @@ export type BuildResultPage = {
   readonly next?: string;
 };
 
-export type ResolvedBuildResultOutput = {
+/** Storage-neutral terminal Output after explicit forwarding has been followed. */
+export type RepositoryBuildResultOutput = {
   readonly build: string;
   readonly output: string;
-  readonly directory: string;
   readonly type: TypeRef;
   readonly value:
     | BuildResultFileRef
     | { readonly kind: "inline"; readonly value: null | boolean | number | string }
     | { readonly kind: "value"; readonly path: string; readonly document: BuildResultValueDocument };
 };
-
-/** Storage-neutral resolved Output. Physical repositories never enter Build or Run identity. */
-export type RepositoryBuildResultOutput = Omit<ResolvedBuildResultOutput, "directory">;
 
 /**
  * Storage-neutral description of one resolved public Output. Unlike `resolve`, this never opens a

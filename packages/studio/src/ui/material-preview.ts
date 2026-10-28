@@ -21,9 +21,9 @@ function previewUrl(preview: StudioMaterialPreview): string {
   const query = new URLSearchParams({
     module: preview.source.module,
     version: preview.source.version,
-    surface: preview.source.surface,
+    declaration: preview.source.declaration,
   });
-  return `/__studio/surface-preview?${query.toString()}`;
+  return `/__studio/declaration-preview?${query.toString()}`;
 }
 
 function positiveHeader(response: Response, name: string): number | undefined {

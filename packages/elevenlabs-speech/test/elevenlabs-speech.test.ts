@@ -2,24 +2,21 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { blobTypes } from "@hypit/blob";
+import type { AuthorResolvedReference } from "@hypit/author";
 import { generationTypes } from "@hypit/generation";
-import { parseStructuredElement } from "@hypit/markup";
-import type { SurfaceResolvedReference } from "@hypit/markup";
 import { sealText, textTypes } from "@hypit/text";
+import { compileMarkupDeclaration } from "../../../test/compile-markup-declaration.js";
 
 import {
-  decodeElevenLabsVoiceDesignSurface,
   elevenLabsSpeechEndpoints,
   elevenLabsSpeechModels,
   sealElevenLabsSpeechRequest,
 } from "../src/index.js";
-
-function parsed(source: string) {
-  return parseStructuredElement({ name: "eleven.svml", text: source }, 0).element;
-}
+import { elevenLabsSpeechModuleRef } from "../src/index.js";
+import { elevenLabsSpeechMarkupDeclarations, elevenLabsVoiceDesignAuthorDeclaration } from "../src/declaration.js";
 
 const speech = sealText("Exact authored words stay exact.");
-const speechReference: SurfaceResolvedReference = {
+const speechReference: AuthorResolvedReference = {
   path: "story.segment.opening.speech",
   ref: { kind: "record", id: "story.segment.opening.speech" },
   type: textTypes.text,
@@ -29,13 +26,6 @@ const speechReference: SurfaceResolvedReference = {
     value: (speech),
   },
 };
-
-const context = (source: string) => ({
-  sourceName: "eleven.svml",
-  element: parsed(source),
-  resolveReference: (path: string) => path === speechReference.path ? speechReference : undefined,
-  resolveAsset: () => { throw new Error("no asset"); },
-});
 
 test("ElevenLabs Speech declares the exact voice design request shape", () => {
   assert.deepEqual(elevenLabsSpeechModels, ["eleven_ttv_v3"]);
@@ -50,9 +40,11 @@ test("ElevenLabs Speech declares the exact voice design request shape", () => {
 });
 
 test("VoiceDesign publishes one reusable voice reference", async () => {
-  const result = await decodeElevenLabsVoiceDesignSurface(context(`<eleven:VoiceDesign id="host" speech={story.segment.opening.speech}>
+  const result = await compileMarkupDeclaration({ source: `<eleven:VoiceDesign id="host" speech={story.segment.opening.speech}>
     A clear, confident young woman with a grounded conversational tone.
-  </eleven:VoiceDesign>`));
+  </eleven:VoiceDesign>`, module: elevenLabsSpeechModuleRef, alias: "eleven",
+    compilers: [elevenLabsVoiceDesignAuthorDeclaration], syntax: elevenLabsSpeechMarkupDeclarations,
+    references: new Map([[speechReference.path, speechReference]]) });
   assert.deepEqual(result.components[0]!.outputs, { audio: "host.reference" });
   const exported = result.components[0]!.fragment.exports.find((item) => item.name === "audio");
   assert.deepEqual(exported?.type, blobTypes.blob);

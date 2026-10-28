@@ -3,15 +3,7 @@ import test from "node:test";
 import { fixtureResource } from "../../../test/fixture-resource.js";
 
 import { blobTypes } from "@hypit/blob";
-import {
-  createImageComposeFragment,
-  decodeImageComposeSurface,
-  imageComposeComponent,
-  imageComposeProducers,
-  imageComposeTypes,
-  sealImageComposeLayerSpec,
-  sealImageComposeOptions,
-} from "@hypit/image-operations";
+import { createImageComposeFragment, imageComposeComponent, imageComposeProducers, imageComposeTypes, sealImageComposeLayerSpec, sealImageComposeOptions } from "@hypit/image-operations";
 import type { CanonicalValue, Value, TypeRef, TypedRecord } from "@hypit/protocol";
 import { sealCanvas, sealSpatialFrame, spatialTypes } from "@hypit/spatial";
 
@@ -69,32 +61,4 @@ test("component data flow preserves explicit Canvas, Frame and paint order", asy
     canvas, background: options.background,
     layers: [{ source, frame, fit: spec.fit, interpolation: spec.interpolation, opacity: spec.opacity }],
   });
-});
-
-test("the Surface declares once and paints child Layers in document order", async () => {
-  const references: Record<string, { type: TypeRef; record?: TypedRecord }> = {
-    portrait: { type: spatialTypes.canvas }, hero: { type: blobTypes.blob }, heroFrame: { type: spatialTypes.frame },
-  };
-  const output = await decodeImageComposeSurface({
-    sourceName: "main.svml",
-    element: {
-      kind: "element", name: "image:Compose", range: { start: 0, end: 200 },
-      attributes: { id: "poster", canvas: { kind: "reference", path: "portrait" }, background: "#00000000" },
-      children: [{
-        kind: "element", name: "image:Layer", range: { start: 20, end: 100 }, children: [],
-        attributes: {
-          source: { kind: "reference", path: "hero" }, frame: { kind: "reference", path: "heroFrame" },
-          fit: "cover", opacity: "0.8",
-        },
-      }],
-    },
-    resolveReference: (path) => {
-      const found = references[path];
-      return found === undefined ? undefined : { ...found, path, ref: { kind: "record", id: path } };
-    },
-    resolveAsset: async () => { throw new Error("no asset expected"); },
-  });
-  assert.equal(output.records.length, 2);
-  assert.equal(output.components.length, 1);
-  assert.deepEqual(output.components[0]?.outputs, { image: "poster.image" });
 });

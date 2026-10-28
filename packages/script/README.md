@@ -1,13 +1,14 @@
 # `@hypit/script`
 
-Official raw Script Surface for the Markup Frontend. It parses prose-first named Segment blocks,
+Package-owned Script author declaration. It parses prose-first named Segment blocks,
 newline-independent Role Cues, Dual Text, Selection and Moment syntax, and lowers them to a
 canonical authored Narrative value with exactly `2M + 2N` semantic anchor identities: both
 ends of every Token and Segment. Script adds no synthetic Narrative or program boundary anchors;
 absolute work boundaries belong to Timeline.
 
-The package is an ordinary statically declared Surface module. Core does not import it and does not
-know that Script, Segment or Narrative exist.
+Markup contributes only the opaque `<script>` spelling and preserves its body byte-for-byte in the
+lossless Author Document. The Script package alone owns body parsing, shape validation, bindings,
+Records and source ranges. Core and Markup do not know that Script, Segment or Narrative exist.
 
 The official video Distribution installs this package as an ordinary default npm dependency. Script
 owns its parser, formatter, source inverse and Studio temporal-domain facet; `@hypit/script/studio`
@@ -45,12 +46,19 @@ model: associated prepared media can determine duration, and NarrativeAlignment 
 Segment boundary relation with no word units when another contribution consumes that identity.
 
 The package exports its Manifest, `parseScript`, semantic/source-map projection helpers, a
-semantic-preserving formatter and the raw `decodeScriptSurface` handler. Source ranges and parser
+semantic-preserving formatter and its syntax-neutral author declaration compiler. The Markup
+declaration entry delegates to that same compiler for the current Host. Source ranges and parser
 state remain private to Script; its authored Narrative Record uses the Frontend-neutral type from
-`@hypit/narrative`, so third-party author surfaces can feed the same WhisperX, locator and caption
+`@hypit/narrative`, so third-party author declarations can feed the same WhisperX, locator and caption
 components without importing Script internals.
 
-The Surface exports one full Narrative plus narrow, immutable views:
+The semantic projection is intentionally not a printer: comments, trivia and equivalent spellings do
+not enter Narrative. Reversible editing comes from retaining the original Author Document alongside
+the projection. Compiler provenance associates the whole declaration with Narrative and Caption,
+each Segment with its three narrow views, and each Selection or Moment with its exact marker range.
+Studio therefore edits the owning source range instead of regenerating Script from semantic values.
+
+The declaration exports one full Narrative plus narrow, immutable views:
 
 - `script.segment.<id>` is a narrow `NarrativeSegmentRef` used to align generated or supplied media with one Segment;
 - `script.segment.<id>.dialogue` is ordinary `Text`: display-independent dialogue, including optional

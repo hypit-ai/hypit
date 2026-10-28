@@ -51,7 +51,7 @@ Track and Film elements arrange the resulting picture and sound. One Author entr
 work; imported Sources and project modules divide its meaningful responsibilities. A camera cut
 is not by itself a reason for another Source, Segment, component or Build.
 
-When a role first leads to an installed Surface in the current work, query its actual declaration
+When a role first leads to an installed declaration in the current work, query its actual declaration
 before writing the element:
 
 ```bash
@@ -61,7 +61,7 @@ hypit vocabulary @hypit/gpt-image --tag Image
 Use the logical Module import, tag, attributes, children, ports, and output paths that this project's
 selected installation reports. Query again when the selected package or Distribution has changed, or
 when an error shows that the assumed declaration is no longer the installed one; an already
-established Surface does not need to be rediscovered for every edit. After writing one coherent
+established declaration does not need to be rediscovered for every edit. After writing one coherent
 Source or Run change, check that actual entry:
 
 ```bash
@@ -81,7 +81,7 @@ When the desired measurement depends on generated footage, the first Build suppl
 Observe it, author the resulting data, and reuse the produced media in the next composition Build.
 [Caption tracking](../playbooks/craft/caption-tracking.md) describes this loop for head placement.
 
-## Give each production surface one job
+## Give each production source one job
 
 - An **Author Source** (`.svml`) owns the target Script, media requests, components, Tracks, Film, and
   public Outputs. It imports the vocabulary it uses and may import other Author or Recipe Sources.
@@ -97,7 +97,7 @@ their demanded Outputs or Candidate selections genuinely differ. Repeating one R
 Build; it does not create another production.
 
 Use [Source syntax](source-syntax.md) for language forms and [Runs](runs.md) for execution choices.
-`hypit vocabulary <package>` or a focused tag or visual query supplies the installed Surface's
+`hypit vocabulary <package>` or a focused tag or visual query supplies the installed declaration's
 attributes and outputs. Package-local documentation supplies its exact behavior and API. Source
 imports select author vocabulary; Runtime configuration selects external facilities.
 

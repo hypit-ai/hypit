@@ -28,8 +28,9 @@ recover audio or duration. Evidence carries a measured sample span but no local-
 Segment identity; this deterministic step makes those associations explicitly and rejects a sample
 span that does not equal the supplied domain duration.
 
-The package owns `<speechalign:Alignment>`. A token-bearing Segment requires `evidence`; an empty
-Segment maps directly to the supplied domain boundaries and omits it. The same Surface accepts live
+The package owns the syntax-neutral Alignment declaration; Markup contributes the
+`<speechalign:Alignment>` spelling only. A token-bearing Segment requires `evidence`; an empty
+Segment maps directly to the supplied domain boundaries and omits it. The same declaration accepts live
 provider evidence and evidence imported from an editable `<speech:Transcript>` Source.
 
 `speechAlignmentComponent` exposes this Segment-local alignment as one enumerable deterministic Producer facet. Its

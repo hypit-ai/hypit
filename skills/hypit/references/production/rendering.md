@@ -56,7 +56,7 @@ produced signals with the same value id keeps both contributions; intentional re
 source should be expressed by the component or Audio Mix that owns that relationship.
 
 `main.composition` is the assembled work, usable in Studio. `final.video` asks for an encoded video.
-A compatible Composition from another component can also feed the HTML Video Surface. Pure A-roll may
+A compatible Composition from another component can also feed the HTML Video declaration. Pure A-roll may
 need only one Visual Clip and one Audio Clip, with Caption when wanted. Additional coverage
 and graphics in this excerpt illustrate optional independent contributions.
 
@@ -138,7 +138,7 @@ and the selected Provider's README own those choices; the Source retains the sam
 Another Provider declares the request forms its deployment supports.
 
 A short interval reduces frame capture and source-frame extraction, but still prepares the document's
-declared assets and validates typed Surfaces. Extra browsers help only while the machine can use them;
+declared assets and validates typed visual surfaces. Extra browsers help only while the machine can use them;
 preparation and final encoding contribute separately. Reusing media through the Run avoids generation work; it does
 not preserve a previous render's temporary preparation.
 

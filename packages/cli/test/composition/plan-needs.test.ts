@@ -81,7 +81,7 @@ test("a structurally planned request stays blocked without creating partial cons
       preflighted = true;
       return { dataRoot: "/runtime", diagnostics: [] };
     },
-  } as Pick<CliRuntimeInspection, "preflight">, evaluated.state, endpoints);
+  } as Pick<CliRuntimeInspection, "preflight">, evaluated.state);
   assert.equal(preflighted, true);
 });
 
@@ -135,7 +135,7 @@ test("a generic request summary preserves scalar paths without recognizing domai
 
 test("a generic request summary follows nested objects and arrays without unwrapping envelopes", () => {
   const summary = summarizeConstraints({
-    ports: {
+    fields: {
       prompt: ["A short prompt"],
       resolution: ["2K"],
       referenceImage: [{
@@ -146,12 +146,12 @@ test("a generic request summary follows nested objects and arrays without unwrap
     output: { resolution: "1080p" },
   });
   assert.deepEqual(summary, [
-    { at: ["ports", "prompt", 0], value: "A short prompt" },
-    { at: ["ports", "resolution", 0], value: "2K" },
-    { at: ["ports", "referenceImage", 0, "role"], value: "image" },
-    { at: ["ports", "referenceImage", 0, "artifact", "resource"], value: "resource:1" },
-    { at: ["ports", "referenceImage", 0, "artifact", "mediaType"], value: "image/png" },
-    { at: ["ports", "referenceImage", 0, "artifact", "size"], value: 10 },
+    { at: ["fields", "prompt", 0], value: "A short prompt" },
+    { at: ["fields", "resolution", 0], value: "2K" },
+    { at: ["fields", "referenceImage", 0, "role"], value: "image" },
+    { at: ["fields", "referenceImage", 0, "artifact", "resource"], value: "resource:1" },
+    { at: ["fields", "referenceImage", 0, "artifact", "mediaType"], value: "image/png" },
+    { at: ["fields", "referenceImage", 0, "artifact", "size"], value: 10 },
     { at: ["output", "resolution"], value: "1080p" },
   ]);
 });

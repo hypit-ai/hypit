@@ -96,7 +96,7 @@ function parse(argv: readonly string[], cwd: string): LocalCommand {
     throw new Error(`${root} accepts the Runtime Profile either positionally or with --runtime, not both`);
   }
   const action = root === "runtime" || root === "programs" ? positional.shift() : undefined;
-  const profileValue = root === "_worker" ? positional.shift() : positional.shift();
+  const profileValue = positional.shift();
   if (positional.length > 0) throw new Error(`${root} received too many positional arguments`);
   const profile = runtime ?? (profileValue === undefined ? undefined : resolve(cwd, profileValue));
   return {

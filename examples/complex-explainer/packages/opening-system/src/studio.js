@@ -109,10 +109,9 @@ const names = {
 };
 const tracks = Object.entries(layouts).map(([kind, inspector]) => ({
   id: kind.toLowerCase(),
-  role: "track",
   output: {
     type: compositionTypes.visualTrack,
-    surface: kind.toLowerCase(),
+    declaration: kind.toLowerCase(),
     modules: [module],
   },
   family: "opening-system",
@@ -231,7 +230,7 @@ function frames(names) {
 const parameters = [
   {
     id: "pullback",
-    match: { module, surface: "pullback" },
+    match: { module, declaration: "pullback" },
     bindings: [{ name: "scale", writable: true, fallback: 1.5 }],
     inspector: [
       number("scale", "Initial magnification", "how", {
@@ -242,12 +241,12 @@ const parameters = [
   },
   {
     id: "portrait-inset",
-    match: { module, surface: "portrait-inset" },
+    match: { module, declaration: "portrait-inset" },
     ...frames(["frame"]),
   },
   {
     id: "reframe",
-    match: { module, surface: "reframe" },
+    match: { module, declaration: "reframe" },
     ...frames(["from", "to"]),
   },
 ];

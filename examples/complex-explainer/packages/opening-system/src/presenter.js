@@ -1,17 +1,11 @@
-import { assertAttributes, assertEmptyElement, createMarkupSurfaceFacet, optionalTextAttribute, textAttribute } from "@hypit/hypit/markup";
 import { canonicalize, sameType } from "@hypit/hypit/protocol";
-import { sealGraphFragment } from "@hypit/hypit/author";
+import { declarationField, sealGraphFragment } from "@hypit/hypit/author";
 import { compositionTypes, sealPresentVisualTrack } from "@hypit/composition";
 import { mediaTypes, verifyPreparedMedia } from "@hypit/media";
 import { spatialTypes } from "@hypit/spatial";
 import { recipeType } from "@hypit/hypit/recipe";
 import { temporalTypes, assertTemporalWindowFor } from "@hypit/temporal";
-import {
-  resolveTemporalWindowReference,
-  resolveTemporalContext,
-  temporalWindowAttributeNames,
-  temporalWindowAttributeVocabulary,
-} from "@hypit/temporal/markup";
+import { resolveAuthorTimeline, resolveAuthorWindow, temporalWindowFieldShape } from "@hypit/temporal/author";
 import { timelineTypes } from "@hypit/timeline";
 import {
   appendVisualClip,
@@ -135,12 +129,19 @@ function ordinaryPresenter(timeline, window, frame, sources, fit, sample, spec) 
   return projectVisualTrack(timeline, finalizeVisualTrack(set, header, timeline));
 }
 
-function ref(element, name, type, resolveReference) {
-  const raw = element.attributes[name];
+async function ref(element, name, type, resolveReference) {
+  const raw = declarationField(element, name);
   if (raw?.kind !== "reference") throw Error(`${element.name}.${name} must be a reference.`);
-  const value = resolveReference(raw.path);
+  const value = await resolveReference(raw.path);
   if (!value || !sameType(value.type, type)) throw Error(`${element.name}.${name} has the wrong Type.`);
   return value;
+}
+
+function literal(element, name, required = true) {
+  const field = declarationField(element, name);
+  if (field === undefined && !required) return undefined;
+  if (field?.kind !== "literal" || !field.value.trim()) throw Error(`${element.name}.${name} must be text.`);
+  return field.value.trim();
 }
 
 function authored(value, label) {
@@ -195,26 +196,28 @@ export function installPresenter(module, manifest, component) {
     inputs: Object.fromEntries(ordinaryInputs.map((port) => [port.name, input(port.name)])), result: { kind: "output", name: "visual" } }],
   exports: [{ name: "visual", type: compositionTypes.visualTrack, root: operation("render") }] });
 
-  const styleFacet = createMarkupSurfaceFacet({ module, declaration: {
-    name: "presenter-frame-style", tag: "PresenterFrame", mode: "structured", outputs: [
+  const styleDeclaration = { module, declaration: "presenter-frame-style", outputs: [
       types.style,
       spatialTypes.fit,
       visualTrackTypes.sampleLayerSpec,
       visualTrackTypes.clipSpec,
     ],
-    vocabulary: { summary: "Project presenter framing treatment.", attributes: [
+    shape: { summary: "Project presenter framing treatment.", fields: [
       { name: "id", kind: "identifier", required: true, summary: "Treatment identity." },
       { name: "frame", kind: "reference", required: true, accepts: [spatialTypes.frame], summary: "Presenter viewport." },
       { name: "appearance", kind: "reference", required: true, accepts: [recipeType], summary: "Presenter media appearance." },
-      { name: "plane", kind: "text", required: false, fallback: "base", summary: "Component-local compositing contribution: base or overlay." },
+      { name: "plane", kind: "literal", required: false, summary: "Component-local compositing contribution: base or overlay; defaults to base." },
     ] },
-  }, handler: ({ element, resolveReference }) => {
-    assertAttributes(element, ["id", "frame", "appearance", "plane"]); assertEmptyElement(element);
-    const id = textAttribute(element, "id");
-    const plane = element.attributes.plane === undefined ? "base" : textAttribute(element, "plane");
+    bindings(element) {
+      const id = literal(element, "id");
+      return [{ name: id, ref: { kind: "record", id }, type: types.style }];
+    },
+  async compile({ declaration: element, resolveReference }) {
+    const id = literal(element, "id");
+    const plane = literal(element, "plane", false) ?? "base";
     if (plane !== "base" && plane !== "overlay") throw Error("PresenterFrame.plane must be base or overlay.");
-    const frame = ref(element, "frame", spatialTypes.frame, resolveReference);
-    const recipeValue = authored(ref(element, "appearance", recipeType, resolveReference), "Presenter appearance");
+    const frame = await ref(element, "frame", spatialTypes.frame, resolveReference);
+    const recipeValue = authored(await ref(element, "appearance", recipeType, resolveReference), "Presenter appearance");
     const records = [];
     const bind = (name, type, value) => {
       const recordId = `${id}.${name}`;
@@ -237,10 +240,9 @@ export function installPresenter(module, manifest, component) {
     }, plane);
     records.push({ id, type: types.style, value: stored(style), range: element.range });
     return { records, components: [] };
-  } });
+  } };
 
-  const presenterFacet = createMarkupSurfaceFacet({ module, declaration: {
-    name: "presenter", tag: "Presenter", mode: "structured", outputs: [
+  const presenterDeclaration = { module, declaration: "presenter", outputs: [
       types.header,
       types.plane,
       types.sourceSpec,
@@ -248,40 +250,42 @@ export function installPresenter(module, manifest, component) {
       types.program,
       compositionTypes.visualTrack,
     ],
-    vocabulary: { summary: "Continuing presenter role owned by the explainer project.", attributes: [
+    shape: { summary: "Continuing presenter role owned by the explainer project.", fields: [
       { name: "id", kind: "identifier", required: true, summary: "Presenter identity." },
       { name: "timeline", kind: "reference", required: true, accepts: [timelineTypes.timeline], summary: "Completed Timeline." },
       { name: "within", kind: "reference", required: true, accepts: [spatialTypes.frame], summary: "Picture plane available to Presenter treatments that move beyond their local Frame." },
     ], children: [
-      { tag: "Source", cardinality: "many", summary: "One native presenter media occurrence.", attributes: [
+      { name: "Source", cardinality: "many", summary: "One native presenter media occurrence.", fields: [
         { name: "id", kind: "identifier", required: true, summary: "Source identity." },
         { name: "media", kind: "reference", required: true, accepts: [mediaTypes.prepared], summary: "Prepared media." },
         { name: "window", kind: "reference", required: true, accepts: [temporalTypes.window], summary: "Exact native Window." },
       ] },
-      { tag: "Use", cardinality: "many", summary: "Selects presenter treatment over a Window; later Uses replace earlier ones.", attributes: [
+      { name: "Use", cardinality: "many", summary: "Selects presenter treatment over a Window; later Uses replace earlier ones.", fields: [
         { name: "id", kind: "identifier", required: false, summary: "Use identity." },
         { name: "style", kind: "reference", required: true, accepts: [types.style], summary: "Presenter treatment." },
-        ...temporalWindowAttributeVocabulary,
+        temporalWindowFieldShape,
       ] },
-    ], ports: [
-      { name: "base", type: compositionTypes.visualTrack, summary: "Presenter contribution composed below project scenes." },
-      { name: "overlay", type: compositionTypes.visualTrack, summary: "Presenter contribution composed above project scenes." },
     ] },
-  }, handler: ({ element, resolveReference }) => {
-    assertAttributes(element, ["id", "timeline", "within"]);
-    const id = textAttribute(element, "id");
-    const context = resolveTemporalContext({ element, resolveReference });
-    const within = ref(element, "within", spatialTypes.frame, resolveReference);
+    bindings(element) {
+      const id = literal(element, "id");
+      return [
+        { name: `${id}.program`, ref: { kind: "component-output", component: id, output: "program" }, type: types.program },
+        { name: `${id}.base`, ref: { kind: "component-output", component: id, output: "base" }, type: compositionTypes.visualTrack },
+        { name: `${id}.overlay`, ref: { kind: "component-output", component: id, output: "overlay" }, type: compositionTypes.visualTrack },
+      ];
+    },
+  async compile({ declaration: element, resolveReference }) {
+    const id = literal(element, "id");
+    const timeline = await resolveAuthorTimeline(element, resolveReference);
+    const within = await ref(element, "within", spatialTypes.frame, resolveReference);
     const records = [{ id: `${id}.header`, type: types.header, value: stored({ id }), range: element.range }];
     const components = [], sourceDeclarations = [], uses = [];
     for (const child of element.children) {
-      if (child.kind === "text") { if (child.value.trim()) throw Error("Presenter accepts only Source and Use children."); continue; }
-      const tag = child.name.split(":").at(-1);
+      const tag = child.name;
       if (tag === "Source") {
-        assertAttributes(child, ["id", "media", "window"]); assertEmptyElement(child);
-        const sourceId = textAttribute(child, "id"), specId = `${id}.source.${sourceDeclarations.length + 1}`;
+        const sourceId = literal(child, "id"), specId = `${id}.source.${sourceDeclarations.length + 1}`;
         records.push({ id: specId, type: types.sourceSpec, value: stored({ id: sourceId }), range: child.range });
-        sourceDeclarations.push({ specId, media: ref(child, "media", mediaTypes.prepared, resolveReference), window: ref(child, "window", temporalTypes.window, resolveReference) });
+        sourceDeclarations.push({ specId, media: await ref(child, "media", mediaTypes.prepared, resolveReference), window: await ref(child, "window", temporalTypes.window, resolveReference) });
       } else if (tag === "Use") uses.push(child);
       else throw Error("Presenter accepts only Source and Use children.");
     }
@@ -309,22 +313,21 @@ export function installPresenter(module, manifest, component) {
     }
     const [sourceRoot] = sourceRoots;
     const sourceFragment = sealGraphFragment({ inputs: sourceInputs, operations: sourceOps, exports: [{ name: "sources", type: types.sources, root: operation(sourceRoot) }] });
-    components.push({ id: `${id}.__sources`, fragment: sourceFragment, inputs: { timeline: context.timeline.ref, ...Object.fromEntries(sourceDeclarations.flatMap((source, index) => [
+    components.push({ id: `${id}.__sources`, fragment: sourceFragment, inputs: { timeline: timeline.ref, ...Object.fromEntries(sourceDeclarations.flatMap((source, index) => [
       [`spec-${index}`, { kind: "record", id: source.specId }], [`media-${index}`, source.media.ref], [`window-${index}`, source.window.ref],
     ])) }, outputs: { sources: `${id}.__sources.value` }, range: element.range });
     const collectorInputs = [{ name: "timeline", type: timelineTypes.timeline }, { name: "header", type: types.header }];
-    const bindings = { timeline: context.timeline.ref, header: { kind: "record", id: `${id}.header` } };
+    const bindings = { timeline: timeline.ref, header: { kind: "record", id: `${id}.header` } };
     const ops = [{ id: "empty", producer: producers.create, inputs: {}, result: { kind: "output", name: "program" } }];
     let previous = "empty";
     for (const [index, child] of uses.entries()) {
-      assertAttributes(child, ["id", "style", ...temporalWindowAttributeNames]); assertEmptyElement(child);
-      const useId = optionalTextAttribute(child, "id") ?? `${id}.use.${index + 1}`;
-      const temporal = resolveTemporalWindowReference({ element: child, resolveReference });
-      const style = authored(ref(child, "style", types.style, resolveReference), "Presenter Style");
+      const useId = literal(child, "id", false) ?? `${id}.use.${index + 1}`;
+      const temporal = await resolveAuthorWindow(child, resolveReference);
+      const style = authored(await ref(child, "style", types.style, resolveReference), "Presenter Style");
       const needsWithin = style.fragment.inputs.some((port) => port.name === "within");
       components.push({ id: `${useId}.__style`, fragment: style.fragment, inputs: {
         ...Object.fromEntries(Object.entries(style.bindings).map(([name, value]) => [name, value.ref])),
-        timeline: context.timeline.ref,
+        timeline: timeline.ref,
         ...(needsWithin ? { within: within.ref } : {}),
         sources: { kind: "component-output", component: `${id}.__sources`, output: "sources" }, window: temporal.ref,
       }, outputs: { visual: `${useId}.visual` }, range: child.range });
@@ -351,7 +354,14 @@ export function installPresenter(module, manifest, component) {
       { name: "overlay", type: compositionTypes.visualTrack, root: operation("resolve-overlay") },
     ] });
     components.push({ id, fragment: collector, inputs: bindings, outputs: { program: `${id}.program`, base: `${id}.base`, overlay: `${id}.overlay` }, range: element.range });
-    return { records, components, exports: [`${id}.program`, `${id}.base`, `${id}.overlay`] };
-  } });
-  return { types, styleFacet, presenterFacet };
+    return { records, components };
+  } };
+  return {
+    types,
+    declarations: [styleDeclaration, presenterDeclaration],
+    markup: [
+      { name: "presenter-frame-style", tag: "PresenterFrame" },
+      { name: "presenter", tag: "Presenter" },
+    ],
+  };
 }

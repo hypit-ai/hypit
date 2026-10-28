@@ -1,7 +1,6 @@
 import type {
   BuildDefinition,
   BuildFact,
-  BuildState,
   BuildCommand,
   CommandResult,
   CommandId,
@@ -17,6 +16,7 @@ import { compareCodeUnits, normalizeValue, SvmlError } from "@hypit/protocol";
 import { invariant } from "./error.js";
 import { resolveCapability, resolveProducer, verifyRecordStructure } from "./link.js";
 import { producerStep, verifyBuildPlan } from "./plan.js";
+import type { BuildView } from "./view.js";
 
 function commandId(kind: "producer" | "need", subject: string): string {
   return `${kind}:${subject}`;
@@ -26,7 +26,7 @@ export function buildNeedCommand(need: Need): FulfillNeedCommand {
   return { kind: "fulfill-need", id: commandId("need", need.id), need };
 }
 
-export function buildProducerCommand(step: BuildState["plan"]["steps"][number]): InvokeProducerCommand {
+export function buildProducerCommand(step: BuildView["plan"]["steps"][number]): InvokeProducerCommand {
   return {
     kind: "invoke-producer",
     id: commandId("producer", step.id),
@@ -37,8 +37,8 @@ export function buildProducerCommand(step: BuildState["plan"]["steps"][number]):
 }
 
 function acceptedProducerResult(
-  state: Pick<BuildState, "program">,
-  step: BuildState["plan"]["steps"][number],
+  state: Pick<BuildView, "program">,
+  step: BuildView["plan"]["steps"][number],
   event: ProducerCompletedEvent,
 ): ProducerAppliedFact["result"] {
   const producer = resolveProducer(state.program.closure, step.producer);
@@ -73,7 +73,7 @@ function acceptedProducerResult(
   };
 }
 
-function goalsComplete(state: BuildState, records: ReadonlySet<string>): boolean {
+function goalsComplete(state: BuildView, records: ReadonlySet<string>): boolean {
   return state.plan.goals.every((goal) => records.has(goal));
 }
 
@@ -82,7 +82,7 @@ function goalsComplete(state: BuildState, records: ReadonlySet<string>): boolean
  * result is missing and every pending step whose inputs exist. Scheduling is incremental, so a
  * cheap Producer never waits behind an unrelated external request that happens to share a turn.
  */
-function schedule(state: BuildState): BuildState {
+function schedule(state: BuildView): BuildView {
   if (state.status !== "active") return state;
   const records = new Set(state.records.map((record) => record.id));
 
@@ -117,7 +117,7 @@ function schedule(state: BuildState): BuildState {
 
   commands.sort((left, right) => compareCodeUnits(left.id, right.id));
   if (commands.length === 0) {
-    const failed: BuildState = {
+    const failed: BuildView = {
       ...state,
       status: "failed",
       diagnostics: [
@@ -131,7 +131,7 @@ function schedule(state: BuildState): BuildState {
     return failed;
   }
 
-  const scheduled: BuildState = { ...state, outstanding: commands };
+  const scheduled: BuildView = { ...state, outstanding: commands };
   return scheduled;
 }
 
@@ -144,11 +144,10 @@ export function defineBuild(
 }
 
 /** Create the first disposable execution view for one immutable Definition. */
-export function initialBuildState(definition: BuildDefinition): BuildState {
+export function initialBuildView(definition: BuildDefinition): BuildView {
   invariant(definition.format === "hypit.build-definition@1", "UNSUPPORTED_BUILD_DEFINITION", definition.format);
   verifyBuildPlan(definition.program, [], definition.plan);
   return schedule({
-    format: "hypit.build@1",
     program: definition.program,
     plan: definition.plan,
     status: "active",
@@ -172,7 +171,7 @@ export type BuildFactLookup = {
  * BuildMachine supplies its private indexes.
  */
 export function factForBuildResult(
-  state: Pick<BuildState, "program" | "plan" | "steps" | "needs" | "records" | "outstanding">,
+  state: Pick<BuildView, "program" | "plan" | "steps" | "needs" | "records" | "outstanding">,
   event: CommandResult,
   indexed?: BuildFactLookup,
 ): BuildFact {

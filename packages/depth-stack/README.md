@@ -6,7 +6,7 @@ Install in the video project alongside Hypit:
 npm install @hypit/depth-stack
 ```
 
-The DepthStack Surface accepts `timeline={program.timeline}` plus absolute reveal and terminal Instants.
+The package-owned DepthStack declaration accepts `timeline={program.timeline}` plus absolute reveal and terminal Instants.
 Those Instants may be authored directly or published by a domain projector upstream.
 
 The official, deliberately narrow depth-stack Deck author package.
@@ -46,7 +46,7 @@ Only the selected renderer resolves that relation onto decoded source samples.
 Optional labels are separate exact-font values and are referenced by Cards. Filenames, URLs and
 media metadata are never treated as label truth.
 
-The Surface resolves named `TemporalInstant` references for every Card and for the terminal boundary.
+The declaration resolves named `TemporalInstant` references for every Card and for the terminal boundary.
 Card append and completion consume those Instants directly; they do not locate semantic identities or
 manufacture a one-frame terminal Window internally.
 

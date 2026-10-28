@@ -31,11 +31,11 @@ export function createGptImageCleanFragment(
   const operations: FragmentOperation[] = [];
   let draft = input("draft") as ReturnType<typeof input> | ReturnType<typeof operation>;
   for (const [index, item] of textInputs.entries()) {
-    const binding = endpoint.textBindings[item.port];
-    if (binding === undefined) throw new Error(`gpt-image-2 has no text port ${item.port}`);
+    const binding = endpoint.textBindings[item.field];
+    if (binding === undefined) throw new Error(`gpt-image-2 has no text field ${item.field}`);
     const name = modelTextInputName(item.name);
     inputs.push({ name, type: textTypes.text });
-    const id = `bind-text:${String(index + 1).padStart(4, "0")}:${item.port}`;
+    const id = `bind-text:${String(index + 1).padStart(4, "0")}:${item.field}`;
     operations.push({
       id,
       producer: binding.producer,
@@ -45,12 +45,12 @@ export function createGptImageCleanFragment(
     draft = operation(id);
   }
   for (const [index, item] of mediaInputs.entries()) {
-    const binding = endpoint.mediaBindings[item.port];
-    if (binding === undefined) throw new Error(`gpt-image-2 has no media port ${item.port}`);
+    const binding = endpoint.mediaBindings[item.field];
+    if (binding === undefined) throw new Error(`gpt-image-2 has no artifact field ${item.field}`);
     const inputNames = modelArtifactInputNames(item.name);
     inputs.push({ name: inputNames.binding, type: binding.type });
     inputs.push({ name: inputNames.artifact, type: blobTypes.blob });
-    const id = `bind:${String(index + 1).padStart(4, "0")}:${item.port}`;
+    const id = `bind:${String(index + 1).padStart(4, "0")}:${item.field}`;
     operations.push({
       id,
       producer: binding.producer,
@@ -86,8 +86,8 @@ export function createGptImageCleanFragment(
     },
   );
   const shape = [
-    ...textInputs.map((item) => `${item.name}=${item.port}:text`),
-    ...mediaInputs.map((item) => `${item.name}=${item.port}:media`),
+    ...textInputs.map((item) => `${item.name}=${item.field}:text`),
+    ...mediaInputs.map((item) => `${item.name}=${item.field}:media`),
   ].join(",") || "no-dynamic-inputs";
   return sealGraphFragment({
     inputs,

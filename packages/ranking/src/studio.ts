@@ -1,9 +1,11 @@
-import { rankingMarkupSurfaces, rankingModuleRef, rankingTypes } from "./index.js";
+import { rankingModuleRef, rankingTypes } from "./index.js";
+import { rankingRecipeProperties } from "./style.js";
+import { readFile } from "node:fs/promises";
 import type { RankingProgram, RankingSchedule, RankingSoundEventPlan } from "./index.js";
 import { audioTrackClips, compositionTypes } from "@hypit/composition";
 import type { AudioTrack } from "@hypit/composition";
 import type { StudioTrackCompanion, StudioTrackCompanionContext, StudioItemDraft, StudioInspectorFieldDeclaration, StudioSourceBindingDeclaration, StudioValuePresentation } from "@hypit/studio-companion";
-import { artifactPreview, authoredChildFor, previewLayer, requiredSurfaceValue, temporalLineageFor, temporalDomainMarker } from "@hypit/studio-companion";
+import { artifactPreview, authoredChildFor, previewLayer, requiredDeclarationValue, temporalLineageFor, temporalDomainMarker } from "@hypit/studio-companion";
 
 
 const fontInspector: {
@@ -40,10 +42,8 @@ function rankingValuePresentation(name: string): StudioValuePresentation | undef
   return undefined;
 }
 
-function rankingProperties(surface: "column-style" | "tier-style" | "top-three-style", audio = false) {
-  return (rankingMarkupSurfaces.find((candidate) => candidate.name === surface)
-    ?.vocabulary.attributes.find((attribute) => attribute.name === "recipe")?.recipe ?? [])
-    .filter((property) => soundProperties.has(property.name) === audio);
+function rankingProperties(declaration: "column-style" | "tier-style" | "top-three-style", audio = false) {
+  return rankingRecipeProperties(declaration).filter((property) => soundProperties.has(property.name) === audio);
 }
 
 function title(name: string): string {
@@ -107,8 +107,8 @@ const rankingInspectorPlacement = {
   "sound-fade-frames": place("when", "Sound", "Envelope"),
 } as const satisfies Readonly<Record<string, RankingInspectorPlacement>>;
 
-function rankingInspector(surface: "column-style" | "tier-style" | "top-three-style"): readonly StudioInspectorFieldDeclaration[] {
-  return [...fontInspector.fields, ...rankingProperties(surface).map((property) => {
+function rankingInspector(declaration: "column-style" | "tier-style" | "top-three-style"): readonly StudioInspectorFieldDeclaration[] {
+  return [...fontInspector.fields, ...rankingProperties(declaration).map((property) => {
     const placement = rankingInspectorPlacement[property.name as keyof typeof rankingInspectorPlacement];
     if (placement === undefined) throw new Error(`Ranking Studio has no explicit placement for ${property.name}.`);
     const valuePresentation = rankingValuePresentation(property.name);
@@ -116,17 +116,16 @@ function rankingInspector(surface: "column-style" | "tier-style" | "top-three-st
       binding: `style.${property.name}`,
       label: title(property.name),
       ...placement,
-      ...(property.summary === undefined ? {} : { summary: property.summary }),
       ...(valuePresentation === undefined ? {} : { valuePresentation }),
     };
   })];
 }
 
-function rankingStyle(surface: "column-style" | "tier-style" | "top-three-style", audio = false): StudioSourceBindingDeclaration {
+function rankingStyle(declaration: "column-style" | "tier-style" | "top-three-style", audio = false): StudioSourceBindingDeclaration {
   return {
     name: "style",
     ...(audio ? {} : { referenced: [fontInspector.binding] }),
-    recipe: { through: ["recipe"], bindings: rankingProperties(surface, audio).map(({ name, schema, fallback }) => ({
+    recipe: { through: ["recipe"], bindings: rankingProperties(declaration, audio).map(({ name, schema, fallback }) => ({
       name,
       schema,
       ...(fallback === undefined ? {} : { fallback }),
@@ -136,8 +135,8 @@ function rankingStyle(surface: "column-style" | "tier-style" | "top-three-style"
 
 function projectRanking(context: StudioTrackCompanionContext): readonly StudioItemDraft[] {
   const placement = context.placement;
-  const schedule = requiredSurfaceValue(context, "schedule") as RankingSchedule;
-  const program = requiredSurfaceValue(context, "program") as RankingProgram;
+  const schedule = requiredDeclarationValue(context, "schedule") as RankingSchedule;
+  const program = requiredDeclarationValue(context, "program") as RankingProgram;
   if (placement === undefined) return context.generic();
   const boardId = placement.id ?? context.track.outputRef;
   const outerTemporal = temporalLineageFor(context, boardId, "outer");
@@ -194,7 +193,7 @@ const commonBindings: readonly StudioSourceBindingDeclaration[] = [
 ];
 
 function projectRankingAudio(context: StudioTrackCompanionContext): readonly StudioItemDraft[] {
-  const events = requiredSurfaceValue(context, "events") as RankingSoundEventPlan;
+  const events = requiredDeclarationValue(context, "events") as RankingSoundEventPlan;
   const byId = new Map(events.events.map((event) => [event.id, event]));
   const clips = new Map(audioTrackClips(context.track.value as AudioTrack).map((clip) => [clip.id, clip]));
   const boardId = context.placement?.id ?? context.track.outputRef;
@@ -222,14 +221,14 @@ function projectRankingAudio(context: StudioTrackCompanionContext): readonly Stu
   });
 }
 
-function rankingAudioCompanion(surface: "column" | "tier" | "top-three"): StudioTrackCompanion {
-  const style = `${surface}-style` as const;
+function rankingAudioCompanion(declaration: "column" | "tier" | "top-three"): StudioTrackCompanion {
+  const style = `${declaration}-style` as const;
   return {
-    id: `${surface}-audio`, role: "track",
-    output: { type: compositionTypes.audioTrack, surface, modules: [rankingModuleRef] },
+    id: `${declaration}-audio`,
+    output: { type: compositionTypes.audioTrack, declaration, modules: [rankingModuleRef] },
     family: "audio", tone: "green", label: "Ranking Sounds", icon: "waveform",
     lane: { heightPx: 48 }, requiredValues: ["events"],
-    bindings: [{ name: "appear-sound" }, ...(surface === "top-three" ? [] : [{ name: "move-sound" }]), rankingStyle(style, true)],
+    bindings: [{ name: "appear-sound" }, ...(declaration === "top-three" ? [] : [{ name: "move-sound" }]), rankingStyle(style, true)],
     inspector: rankingProperties(style, true).map((property) => ({
       binding: `style.${property.name}`, label: property.name === "sound-fade-frames" ? "Fade In" : title(property.name),
       ...rankingInspectorPlacement[property.name as keyof typeof rankingInspectorPlacement],
@@ -250,18 +249,27 @@ const frameInspector: readonly StudioInspectorFieldDeclaration[] = frameParamete
     page: { id: "frame", label: "Frame" }, section: { id: "frame", label: "Frame" }, control: "number", number: { suffixes: ["%", "px"], step: 1 },
   }));
 
+function rankingPreview(file: string, mediaType = "image/png") {
+  return {
+    mediaType,
+    path: `preview/${file}`,
+    open: async () => Uint8Array.from(await readFile(new URL(`../preview/${file}`, import.meta.url))),
+  };
+}
+
 export const rankingStudioTrackCompanions: readonly StudioTrackCompanion[] = [
   ...(["column", "tier", "top-three"] as const).map(rankingAudioCompanion),
   {
-    id: "column", role: "track",
-    output: { type: compositionTypes.visualTrack, surface: "column", modules: [rankingModuleRef] },
+    id: "column",
+    output: { type: compositionTypes.visualTrack, declaration: "column", modules: [rankingModuleRef] },
     family: "ranking", tone: "orange", label: "Ranking", icon: "chart", requiredValues: ["schedule", "program"],
+    preview: rankingPreview("Column.svg", "image/svg+xml"),
     bindings: [
       ...commonBindings,
       rankingStyle("column-style"),
     ],
     inspector: [...frameInspector, ...rankingInspector("column-style")],
-    poster: { source: "surface-preview" },
+    poster: { source: "declaration-preview" },
     lane: {
       heightPx: 80, groupId: "ranking-reveals",
     },
@@ -283,9 +291,10 @@ export const rankingStudioTrackCompanions: readonly StudioTrackCompanion[] = [
     project: projectRanking,
   },
   {
-    id: "tier", role: "track",
-    output: { type: compositionTypes.visualTrack, surface: "tier", modules: [rankingModuleRef] },
+    id: "tier",
+    output: { type: compositionTypes.visualTrack, declaration: "tier", modules: [rankingModuleRef] },
     family: "ranking", tone: "orange", label: "Tier Board", icon: "chart", requiredValues: ["schedule", "program"],
+    preview: rankingPreview("TierBoard.svg", "image/svg+xml"),
     bindings: [
       ...commonBindings,
       rankingStyle("tier-style"),
@@ -294,7 +303,7 @@ export const rankingStudioTrackCompanions: readonly StudioTrackCompanion[] = [
       ...frameInspector,
       ...rankingInspector("tier-style"),
     ],
-    poster: { source: "surface-preview" },
+    poster: { source: "declaration-preview" },
     lane: { heightPx: 80, groupId: "tier-reveals" },
     attachments: [{
       id: "reveal", family: "ranking-reveal", tone: "orange-muted", label: "Reveals", icon: "chart", facet: "visual",
@@ -314,16 +323,17 @@ export const rankingStudioTrackCompanions: readonly StudioTrackCompanion[] = [
     project: projectRanking,
   },
   {
-    id: "top-three", role: "track",
-    output: { type: compositionTypes.visualTrack, surface: "top-three", modules: [rankingModuleRef] },
+    id: "top-three",
+    output: { type: compositionTypes.visualTrack, declaration: "top-three", modules: [rankingModuleRef] },
     family: "ranking", tone: "orange", label: "Top Three", icon: "chart", requiredValues: ["schedule", "program"],
+    preview: rankingPreview("TopThree.png"),
     bindings: [
       ...commonBindings,
       rankingStyle("top-three-style"),
       { name: "terminal" },
     ],
     inspector: [...frameInspector, ...rankingInspector("top-three-style")],
-    poster: { source: "surface-preview" },
+    poster: { source: "declaration-preview" },
     lane: { heightPx: 80, groupId: "top-three-activations" },
     attachments: [{
       id: "activation", family: "ranking-reveal", tone: "orange-muted", label: "Activations", icon: "chart", facet: "visual",

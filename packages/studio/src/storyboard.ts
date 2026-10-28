@@ -135,8 +135,8 @@ async function storyboardFromFile(path: string): Promise<StudioStoryboard> {
   // crisp on a 2x display while still being a small presentation derivative.
   const tileHeight = 80;
   const tileWidth = Math.max(1, Math.round(tileHeight * facts.width / facts.height));
-  // Short-form material gets a tile for every source frame. Longer material
-  // gradually reduces sampling density to keep the presentation atlas bounded.
+  // Short-form material gets a dense regular presentation-time sample. Longer material
+  // gradually reduces that UI sampling density to keep the presentation atlas bounded.
   const sampleFps = Math.min(facts.fps, 360 / facts.duration);
   const count = Math.max(1, Math.floor(facts.duration * sampleFps));
   const columns = Math.min(32, count);

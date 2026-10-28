@@ -27,7 +27,7 @@ description: 开始 Hypit 开发工作。
 |---|---|
 | [与 Agent 一起制作视频](./skill.md) | 创作方向、服务选择与可编辑项目 |
 | [包与扩展](./packages.md) | 组件、模型与服务的职责，安装与分享 |
-| [添加 Author 包](./author-packages.md) | 分步说明：新增组件、Surface、词表与预览图、activation |
+| [添加 Author 包](./author-packages.md) | 分步说明：新增组件、Author Declaration、词表与预览图、activation |
 | [模型与 Provider](./providers.md) | 选择账户与 API，开发 Model 或 Provider 包 |
 | [Runtime](./runtime.md) | Profile、Workspace、执行与生命周期边界 |
 | [Studio 本地化](https://github.com/hypit-ai/hypit/blob/main/packages/studio/LOCALIZATION.md) | 翻译界面文案，加载本地 JSON 或已安装的语言包 |

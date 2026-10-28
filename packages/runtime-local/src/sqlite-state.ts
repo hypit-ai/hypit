@@ -12,8 +12,8 @@ import type {
   Need,
   TypeRef,
 } from "@hypit/hypit/protocol";
-import { assertBuildId, normalizeValue, valueBlobRefs } from "@hypit/hypit/protocol";
-import { assertPublicationPlan } from "@hypit/hypit/result";
+import { assertBuildId, compareCodeUnits, normalizeValue, valueBlobRefs } from "@hypit/hypit/protocol";
+import { assertPublicationIntent } from "@hypit/hypit/protocol";
 import { applyOperationUpdate, capacityUnits } from "@hypit/hypit/runtime";
 import type {
   BuildSnapshot,
@@ -376,7 +376,7 @@ function parseCatalogEntry(row: Row): BuildCatalogEntry {
   assert(typeof row.descriptor_json === "string", "SQLite Build Catalog row has no descriptor");
   const descriptor = object(JSON.parse(row.descriptor_json) as unknown, "SQLite Build Catalog descriptor");
   exactKeys(descriptor, ["sourcePath", "runPath", "publication"], "SQLite Build Catalog descriptor");
-  assertPublicationPlan(descriptor.publication, { build: row.build_id });
+  assertPublicationIntent(descriptor.publication, { build: row.build_id });
   return {
     build: row.build_id,
     sourcePath: nonEmptyString(descriptor.sourcePath, "SQLite Build Catalog Source path"),
@@ -603,7 +603,7 @@ class SqliteOperationStore implements OperationStore {
       ORDER BY operation_id ASC
     `).all(...values) as Row[];
     return rows.map(parseOperationSnapshot)
-      .sort((left, right) => left.id.localeCompare(right.id));
+      .sort((left, right) => compareCodeUnits(left.id, right.id));
   }
 
   async update(id: string, update: OperationUpdate): Promise<OperationSnapshot> {
@@ -1056,7 +1056,7 @@ class SqliteBuildExecutionStore implements BuildExecutionStore {
   async acquireCapacity(request: CapacityAcquireRequest): Promise<CapacityAcquire> {
     nonNegativeInteger(request.now, "Resource acquisition time");
     assert(request.resources.length > 0, "Resources are empty");
-    const resources = [...request.resources].sort((left, right) => left.id.localeCompare(right.id));
+    const resources = [...request.resources].sort((left, right) => compareCodeUnits(left.id, right.id));
     assert(new Set(resources.map((resource) => resource.id)).size === resources.length, "Resources repeat an id");
     for (const resource of resources) capacityUnits(resource);
     return transaction(this.#database, () => {

@@ -12,6 +12,10 @@ const require = createRequire(import.meta.url);
 const typescript = require("typescript");
 const typescriptCli = require.resolve("typescript/bin/tsc");
 
+function compareCodeUnits(left, right) {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
 function npmCli() {
   const value = process.env.npm_execpath;
   if (!value?.endsWith("npm-cli.js")) {
@@ -105,7 +109,7 @@ async function embeddedPublicSpecifiers() {
     const manifest = JSON.parse(await readFile(resolve(repositoryRoot, "packages", directory, "package.json"), "utf8"));
     const publicSpecifier = [...new Set(values)].sort((left, right) => {
       const depth = left.split("/").length - right.split("/").length;
-      return depth === 0 ? left.localeCompare(right) : depth;
+      return depth === 0 ? compareCodeUnits(left, right) : depth;
     })[0];
     if (typeof manifest.name === "string" && publicSpecifier !== undefined) {
       specifiers.set(manifest.name, publicSpecifier);

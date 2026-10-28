@@ -1,17 +1,15 @@
-import { createMarkupSurfaceFacet } from "@hypit/hypit/markup";
+import { createAuthorDeclarationFacet } from "@hypit/hypit/author";
+import { createMarkupDeclarationFacet } from "@hypit/hypit/markup";
 import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
 import { createProducerPackageFacet } from "@hypit/hypit/producer";
-import {
-  nanoBananaComponent, nanoBananaDefinition, nanoBananaManifest, nanoBananaModuleRef,
-  nanoBananaMarkupSurfaces,
-} from "./index.js";
-import { decodeNanoBananaImageSurface, decodeNanoBananaProImageSurface } from "./surface.js";
+import { nanoBananaComponent, nanoBananaManifest, nanoBananaModuleRef } from "./index.js";
+import { nanoBananaAuthorDeclarations, nanoBananaMarkupDeclarations } from "./declaration.js";
 export const hypitPackage = { format: "hypit.package@1" as const, modules: [{ manifest: nanoBananaManifest }], facets: [
   createProducerPackageFacet(nanoBananaComponent.producers ?? []),
   createRefinementPackageFacet(nanoBananaComponent.refinements ?? []),
-  createMarkupSurfaceFacet({ module: nanoBananaModuleRef,
-    declaration: nanoBananaMarkupSurfaces.find((item) => item.name === "image")!, handler: decodeNanoBananaImageSurface }),
-  createMarkupSurfaceFacet({ module: nanoBananaModuleRef,
-    declaration: nanoBananaMarkupSurfaces.find((item) => item.name === "pro-image")!, handler: decodeNanoBananaProImageSurface }),
+  ...nanoBananaAuthorDeclarations.map(createAuthorDeclarationFacet),
+  ...nanoBananaMarkupDeclarations.map((declaration) =>
+    createMarkupDeclarationFacet({ module: nanoBananaModuleRef, declaration })),
+
 ] };
 export default hypitPackage;

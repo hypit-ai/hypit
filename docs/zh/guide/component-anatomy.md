@@ -14,7 +14,7 @@ description: 将场景的创作接口变成可复用的图贡献。
 | 部分 | 职责 |
 | --- | --- |
 | Manifest 与 Types | 命名包提供的值、Producer、输入和输出 |
-| Surface | 读取作者元素，解析明确输入 |
+| Author Declaration | 定义字段与子声明，解析具名类型引用，并把作者元素降为图数据 |
 | Fragment | 描述输入到输出之间的操作与依赖 |
 | Producer | 完成声明的计算 |
 | 值与样式辅助函数 | 验证输入、应用已说明的默认值、解析接受的 Recipe 属性 |

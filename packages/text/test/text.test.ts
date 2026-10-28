@@ -1,23 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { parseStructuredElement } from "@hypit/markup";
-import type { SurfaceResolvedReference } from "@hypit/markup";
 import { formatRecipeValue, parseRecipe, recipeType } from "@hypit/recipe";
-
-import {
-  bindText,
-  createTextRenderFragment,
-  decodeTextRenderSurface,
-  decodeTextValueSurface,
-  renderText,
-  sealText,
-  sealTextBinding,
-  sealTextBindings,
-  sealTextTemplate,
-  textTypes,
-  textTemplateFromRecipes,
-  verifyTextTemplate,
-} from "@hypit/text";
+import { bindText, createTextRenderFragment, renderText, sealText, sealTextBinding, sealTextBindings, sealTextTemplate, textTemplateBindingNames, textTypes, textTemplateFromRecipes, verifyTextTemplate } from "@hypit/text";
+import type { TextExpression } from "@hypit/text";
 
 test("Text Templates keep sheet closing text inside authored prompt text", () => {
   const prompt = "Show the literal </sheet> tag in the video";
@@ -113,6 +98,37 @@ test("text templates reject recursion and ambiguous choices", () => {
   }), sealTextBindings({ x: true })), /matched 2/u);
 });
 
+test("replace expressions insert authored replacement text literally", () => {
+  const template = sealTextTemplate({
+    root: {
+      kind: "replace",
+      input: { kind: "literal", value: "price: X" },
+      replacements: [
+        { from: "X", to: "$& USD", mode: "all" },
+        { from: "USD", to: "$$ USD", mode: "first" },
+      ],
+    },
+  });
+  assert.equal(renderText(template, sealTextBindings({})).value, "price: $& $$ USD");
+});
+
+function diamondTemplate(levels: number, leaf: TextExpression) {
+  const definitions: Record<string, TextExpression> = { leaf };
+  for (let level = 0; level < levels; level += 1) {
+    const target = level === 0 ? "leaf" : `d${level - 1}`;
+    definitions[`d${level}`] = { kind: "sequence", items: [
+      { kind: "call", template: target }, { kind: "call", template: target },
+    ] };
+  }
+  return sealTextTemplate({ definitions, root: { kind: "call", template: `d${levels - 1}` } });
+}
+
+test("TextTemplate collection memoizes diamond definitions and rendering remains bounded", () => {
+  assert.deepEqual([...textTemplateBindingNames(diamondTemplate(30, { kind: "slot", binding: "leaf" }))], ["leaf"]);
+  assert.throws(() => renderText(diamondTemplate(24, { kind: "literal", value: "x" }), sealTextBindings({})),
+    /output limit/u);
+});
+
 test("one definition keeps lexical each bindings without hiding its global uses", () => {
   const template = sealTextTemplate({
 
@@ -131,97 +147,4 @@ test("one definition keeps lexical each bindings without hiding its global uses"
   });
   assert.equal(renderText(template, sealTextBindings({ items: ["one", "two"], item: "global" })).value,
     "one, two / global");
-});
-
-test("Markup Text Surfaces expose literal and assembled Text as ordinary graph values", async () => {
-  const literal = parseStructuredElement({
-    name: "text.svml",
-    text: `<text:Value id="base">
-      Make a vertical product video.
-    </text:Value>`,
-  }, 0).element;
-  const authored = await decodeTextValueSurface({
-    sourceName: "text.svml",
-    element: literal,
-    resolveReference: () => undefined,
-    resolveAsset: () => { throw new Error("no asset"); },
-  });
-  assert.equal((authored.records[0]?.value as { value?: { value?: string } })?.value, "Make a vertical product video.");
-
-  const assembled = parseStructuredElement({
-    name: "text.svml",
-    text: `<text:Render id="prompt" template={kit}>
-      <text:Param name="camera" value="handheld"/>
-      <text:Param name="strict" value="true" type="boolean"/>
-      <text:Set name="dialogue" text={dialogue}/>
-      <text:Append name="references" text={first}/>
-      <text:Append name="references" text={second}/>
-    </text:Render>`,
-  }, 0).element;
-  const refs = new Map<string, SurfaceResolvedReference>([
-    ["kit", { path: "kit", ref: { kind: "record", id: "kit" }, type: textTypes.template }],
-    ["dialogue", { path: "dialogue", ref: { kind: "component-output", component: "script", output: "text" }, type: textTypes.text }],
-    ["first", { path: "first", ref: { kind: "record", id: "first" }, type: textTypes.text }],
-    ["second", { path: "second", ref: { kind: "record", id: "second" }, type: textTypes.text }],
-  ]);
-  const result = await decodeTextRenderSurface({
-    sourceName: "text.svml",
-    element: assembled,
-    resolveReference: (path) => refs.get(path),
-    resolveAsset: () => { throw new Error("no asset"); },
-  });
-  assert.equal(result.components.length, 1);
-  assert.deepEqual(result.components[0]?.outputs, { text: "prompt" });
-  assert.deepEqual(result.components[0]?.inputs["binding:binding-0001:text"], {
-    kind: "component-output", component: "script", output: "text",
-  });
-  const initial = result.records.find((record) => record.id === "prompt.bindings");
-  assert.deepEqual((initial?.value as { values?: unknown })?.values,
-    { camera: "handheld", strict: true });
-  assert.equal(result.records.filter((record) => record.type.name === "TextBinding").length, 3);
-});
-
-test("Text Render projects only declared SVS Recipe properties and lets explicit Params override them", async () => {
-  const template = sealTextTemplate({
-
-    defaults: { camera: "locked", energy: "natural" },
-    root: {
-      kind: "join",
-      separator: " / ",
-      items: [
-        { kind: "slot", binding: "camera" },
-        { kind: "slot", binding: "energy" },
-      ],
-    },
-  });
-  const element = parseStructuredElement({
-    name: "recipe.svml",
-    text: `<text:Render id="prompt" template={kit} recipe={recipes.shot}>
-      <text:Param name="energy" value="calm"/>
-    </text:Render>`,
-  }, 0).element;
-  const refs = new Map<string, SurfaceResolvedReference>([
-    ["kit", {
-      path: "kit", ref: { kind: "record", id: "kit" }, type: textTypes.template,
-      record: { id: "kit", type: textTypes.template, value: template },
-    }],
-    ["recipes.shot", {
-      path: "recipes.shot", ref: { kind: "record", id: "recipes.shot" }, type: recipeType,
-      record: { id: "recipes.shot", type: recipeType, value: {
-        path: "recipes.shot",
-        properties: { camera: "handheld", energy: "high", model: "mini" },
-      } },
-    }],
-  ]);
-  const result = await decodeTextRenderSurface({
-    sourceName: "recipe.svml",
-    element,
-    resolveReference: (path) => refs.get(path),
-    resolveAsset: () => { throw new Error("no asset"); },
-  });
-  const initial = result.records.find((record) => record.id === "prompt.bindings");
-  assert.deepEqual((initial?.value as { values?: unknown })?.values, {
-    camera: "handheld",
-    energy: "calm",
-  });
 });

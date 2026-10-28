@@ -19,6 +19,7 @@ import type {
   MediaStreamSelection,
   MediaTimestamp,
   MediaDeliverySpec,
+  MediaDomainSpec,
   PreparedAudioMember,
   PreparedMedia,
   PreparedAudioSource,
@@ -57,6 +58,12 @@ function verifyRational(value: unknown, subject: string): asserts value is Media
 
 function verifyHexColor(value: unknown, subject: string): asserts value is string {
   assert(typeof value === "string" && /^#[0-9a-f]{6}$/iu.test(value), `${subject} must be an opaque hexadecimal color`);
+}
+
+export function verifyMediaDomainSpec(value: unknown): asserts value is MediaDomainSpec {
+  const item = object(value, "MediaDomainSpec");
+  assert(typeof item.id === "string" && /^[A-Za-z][A-Za-z0-9_.:#-]{0,191}$/u.test(item.id),
+    "MediaDomainSpec.id is invalid");
 }
 
 export function sealVisualDeliverySpec(value: VisualDeliverySpec): VisualDeliverySpec {
@@ -200,6 +207,7 @@ function expectedSampleFrames(frameCount: number, frameRate: MediaRational): num
 }
 
 export function sealMediaInspection(value: MediaInspection): MediaInspection {
+  verifyMediaInspection(value);
   return canonicalize(value) as unknown as MediaInspection;
 }
 
@@ -215,6 +223,7 @@ export function verifyMediaInspection(value: unknown): asserts value is MediaIns
 }
 
 export function sealMediaStreamSelection(value: MediaStreamSelection): MediaStreamSelection {
+  verifyMediaStreamSelection(value);
   return canonicalize(value) as unknown as MediaStreamSelection;
 }
 
@@ -311,6 +320,7 @@ export function verifyPreparedAudioSource(value: unknown): asserts value is Prep
 }
 
 export function sealTimelineVisual(value: TimelineVisual): TimelineVisual {
+  verifyTimelineVisual(value);
   return canonicalize(value) as unknown as TimelineVisual;
 }
 
@@ -326,6 +336,7 @@ export function verifyTimelineVisual(value: unknown): asserts value is TimelineV
 }
 
 export function sealTimelineAudio(value: TimelineAudio): TimelineAudio {
+  verifyTimelineAudio(value);
   return canonicalize(value) as unknown as TimelineAudio;
 }
 
@@ -339,6 +350,7 @@ export function verifyTimelineAudio(value: unknown): asserts value is TimelineAu
 }
 
 export function sealMuxedMedia(value: MuxedMedia): MuxedMedia {
+  verifyMuxedMedia(value);
   return canonicalize(value) as unknown as MuxedMedia;
 }
 

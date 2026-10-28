@@ -18,7 +18,7 @@ outer Window; its message Instants trigger persistent state. `entrance-frames` c
 and scrolling duration independently of those triggers (default 10). Messages stay visible or scroll
 up as the conversation develops. Message times are on the film clock and must fall inside the Scene.
 
-The Surface uses the shared temporal helpers and expands children to a finite create/append/render
+The Author declaration compiler resolves the temporal inputs and expands children to a finite create/append/render
 graph. The rendering function receives Timeline, an explicit picture-plane Frame, Window and Instants, so it knows nothing about
 Script parsing, speech models or Runtime. The HTML visual evaluates any requested frame directly,
 including frames reached by scrubbing, range rendering or concurrent workers.

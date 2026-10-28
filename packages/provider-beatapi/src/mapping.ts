@@ -13,7 +13,7 @@ export type BeatApiMapping = GenerationWireMapping & { readonly media: "image" |
  *
  * BeatAPI carries the opening and closing frames as one ordered `images` array rather than two
  * fields. The mapping writes them to `first_frame` and `last_frame`, which routes.ts folds into
- * that array; a mapping cannot write one wire field from two ports.
+ * that array; a mapping cannot write one wire field from two Model fields.
  */
 const seedanceFields = {
   prompt: { as: "value", field: "prompt" },

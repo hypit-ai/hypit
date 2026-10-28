@@ -9,13 +9,15 @@ class Param {
   setValueAtTime(value: number, time: number) { this.events.push({ kind: "set", value, time }); }
   linearRampToValueAtTime(value: number, time: number) { this.events.push({ kind: "ramp", value, time }); }
 }
-function player(gain: number, levelAutomation: object = {}) {
+function player(gain: number, levelAutomation: object = {}, preservesPitch = false) {
   const nodes: { gain: Param; connect: () => void }[] = [];
   const attrs: Record<string,string> = {
     "data-start": "0", "data-duration": "4", "data-media-start": "0", "data-media-end": "4",
+    "data-preserves-pitch": String(preservesPitch),
     "data-gain": String(gain), "data-level-automation": encodeURIComponent(JSON.stringify(levelAutomation)),
   };
   const audio = { getAttribute: (name: string) => attrs[name] ?? null, currentTime: 0, readyState: 4,
+    preservesPitch: !preservesPitch,
     paused: true, volume: 0, muted: false, pause() { this.paused = true; },
     play() { this.paused = false; return Promise.resolve(); }, addEventListener() {}, removeEventListener() {} };
   const root = { style: {}, getAttribute: (name: string) => ({ "data-fps": "30", "data-composition-id": "test" })[name] ?? null };
@@ -38,6 +40,14 @@ test("preview preserves silence and gain above unity through the audio graph", a
     const p = player(gain); await p.play(30);
     assert.equal(p.audio.volume, 1);
     assert.equal(p.nodes[0]!.gain.events.at(-1)!.value, gain);
+  }
+});
+
+test("preview applies the reconstruction's explicit pitch policy instead of the browser default", async () => {
+  for (const preservesPitch of [false, true]) {
+    const p = player(1, {}, preservesPitch);
+    await p.play(30);
+    assert.equal(p.audio.preservesPitch, preservesPitch);
   }
 });
 

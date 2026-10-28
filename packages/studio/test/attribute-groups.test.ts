@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { parseStructuredElement } from "@hypit/markup";
+import { parseOpeningTag } from "@hypit/markup";
 import { audioTrackModuleRef } from "@hypit/audio-track";
 import type { StudioPlacement, StudioItemDraft, StudioTrackCompanion } from "@hypit/studio-companion";
 import { audioTrackStudioTrackCompanions } from "../../audio-track/src/studio.js";
@@ -8,13 +8,14 @@ import { sourceBindingsForDraft, inspectorFieldsForBindings } from "../src/param
 import { serializeAttributeGroup, validateParameterValue } from "../src/parameter-values.js";
 
 function fields(text: string, companion: Pick<StudioTrackCompanion, "bindings" | "inspector"> = audioTrackStudioTrackCompanions[0]!) {
-  const element = parseStructuredElement({ name: "main.svml", text }, 0).element;
-  const attributes = Object.fromEntries(Object.entries(element.attributes)
+  const opening = parseOpeningTag({ name: "main.svml", text }, 0);
+  const attributes = Object.fromEntries(Object.entries(opening.attributes)
     .flatMap(([name, value]) => typeof value === "string" ? [[name, value]] : []));
-  const placement: StudioPlacement = { ...element, id: "music", tag: element.name, surface: "item", module: audioTrackModuleRef,
+  const placement: StudioPlacement = { id: "music", tag: opening.name, declaration: "item", module: audioTrackModuleRef,
     attributes,
+    range: { start: opening.start, end: opening.end },
     sourcePath: "main.svml", references: [], referenceAttributes: {}, referenceTypes: {},
-    attributeValueRanges: element.attributeValueRanges ?? {},
+    attributeValueRanges: opening.attributeValueRanges,
     records: [], outputs: [], outputPorts: [], values: [], children: [],
   };
   const draft: StudioItemDraft = { id: "music", authoredId: "music", display: { title: "Music", layers: [] }, startFrame: 0, endFrameExclusive: 90, stackOrder: 0 };
