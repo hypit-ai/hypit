@@ -214,7 +214,17 @@ function compilePlanning(
     const output = resolveLogicalOutput(graph, ref.id);
     const candidate = resolveCandidate(graph, selectedCandidates.get(ref.id) ?? output.primary);
     let resolved: ResolvedSource;
-    if (candidate.root.kind === "value") {
+    if (candidate.root.kind === "record") {
+      const record = authored.get(candidate.root.id);
+      invariant(
+        record !== undefined,
+        "UNKNOWN_CANDIDATE_RECORD",
+        candidate.id + " references unknown authored Record " + candidate.root.id,
+        candidate.id,
+      );
+      resolved = { record: record.id, type: record.type };
+      pending.push(candidate.root);
+    } else if (candidate.root.kind === "value") {
       const record: TypedRecord = {
         id: candidate.root.record,
         type: candidate.type,

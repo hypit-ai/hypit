@@ -10,7 +10,11 @@ import type {
 } from "@hypit/protocol";
 import type { SourceRange } from "@hypit/source";
 
-import type { AuthorComponent, AuthorValueRef } from "./author.js";
+import type {
+  AuthorComponent,
+  AuthorRealizationSelection,
+  AuthorValueRef,
+} from "./author.js";
 import type {
   AuthorElementProvenanceDraft,
   AuthorInputProvenanceDraft,
@@ -130,9 +134,14 @@ export type AuthorComponentDraft = AuthorComponent & {
   readonly range: SourceRange;
 };
 
+export type AuthorRealizationSelectionDraft = AuthorRealizationSelection & {
+  readonly range: SourceRange;
+};
+
 export type AuthorDeclarationOutput = {
   readonly records: readonly AuthorRecordDraft[];
   readonly components: readonly AuthorComponentDraft[];
+  readonly realizations?: readonly AuthorRealizationSelectionDraft[];
   readonly identities?: readonly AuthorSourceIdentity[];
 };
 
@@ -335,6 +344,7 @@ type DeclarationProvenanceGroup = {
   readonly components: string[];
   readonly outputs: Array<{ readonly component: string; readonly name: string; readonly id: string }>;
   readonly inputs: AuthorInputProvenanceDraft[];
+  realizations?: AuthorRealizationSelection[];
 };
 
 function rangeKey(range: SourceRange): string {
@@ -574,6 +584,7 @@ export async function compileAuthorDeclarations(
   const componentIds = new Set<string>();
   const componentsById = new Map<string, AuthorComponent>();
   const identities: AuthorSourceIdentity[] = [];
+  const realizations: AuthorRealizationSelection[] = [];
   const provenance: AuthorElementProvenanceDraft[] = [];
   const resolvedReferences = new Map<string, AuthorResolvedReference>();
   const externalReferences = new Map<string, AuthorResolvedReference | null>();
@@ -680,6 +691,17 @@ export async function compileAuthorDeclarations(
       components.push(component);
       componentsById.set(component.id, component);
     }
+    for (const realization of output.realizations ?? []) {
+      assertRange(
+        item.declaration.range,
+        realization.range,
+        compilerKey(item.compiler.module, item.compiler.declaration) + " Realization",
+      );
+      realizations.push({
+        output: { ...realization.output },
+        record: { ...realization.record },
+      });
+    }
     identities.push(...(output.identities ?? []));
     const groups = declarationProvenanceGroups(item.declaration, resolvedReferences);
     const groupFor = (range: SourceRange): DeclarationProvenanceGroup => {
@@ -699,6 +721,13 @@ export async function compileAuthorDeclarations(
         name,
         id,
       })));
+    }
+    for (const realization of output.realizations ?? []) {
+      const group = groupFor(realization.range);
+      (group.realizations ??= []).push({
+        output: { ...realization.output },
+        record: { ...realization.record },
+      });
     }
     provenance.push(...groups.values());
   }
@@ -735,6 +764,7 @@ export async function compileAuthorDeclarations(
   return {
     records,
     components,
+    realizations,
     exports: exports.sort((left, right) => compareCodeUnits(left.name, right.name)),
     identities,
     provenance,

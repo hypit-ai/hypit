@@ -21,6 +21,7 @@ import type {
   AuthorFrontend,
   AuthorFrontendRegistryLike,
   AuthorRecordRefiner,
+  AuthorRealizationSelection,
   AuthorSourceDiscovery,
   AuthorSourceExport,
   AuthorSourceIdentity,
@@ -28,6 +29,7 @@ import type {
   AuthorValueRef,
   CompiledSourceClosure,
   DecodedAuthorSource,
+  RealizationSelection,
   ResolvedAuthorSourceImport,
   SourceClosure,
   SourceClosureUnit,
@@ -86,6 +88,7 @@ type HygienicSource = {
   readonly unit: SourceClosureUnit;
   readonly records: readonly TypedRecord[];
   readonly components: readonly AuthorComponent[];
+  readonly realizations: readonly AuthorRealizationSelection[];
   readonly exports: readonly AuthorSourceExport[];
   readonly identities: readonly AuthorSourceIdentity[];
   readonly provenance: readonly AuthorElementProvenance[];
@@ -168,6 +171,10 @@ function hygienizeSource(
     ])),
   }));
   const exports = decoded.exports.map((item) => ({ ...item, ref: mapRef(item.ref) }));
+  const realizations = (decoded.realizations ?? []).map((selection) => ({
+    output: mapRef(selection.output) as typeof selection.output,
+    record: mapRef(selection.record) as typeof selection.record,
+  }));
   const unitContent = {
     id: source.id,
     name: source.name,
@@ -183,6 +190,7 @@ function hygienizeSource(
     unit: unitContent,
     records,
     components,
+    realizations,
     exports,
     identities: decoded.identities ?? [],
     provenance: (decoded.provenance ?? []).map((element) => ({
@@ -206,6 +214,14 @@ function hygienizeSource(
         kind: input.kind,
         ...(input.ref === undefined ? {} : { ref: mapRef(input.ref) }),
       })),
+      ...(element.realizations === undefined
+        ? {}
+        : {
+            realizations: element.realizations.map((selection) => ({
+              output: mapRef(selection.output) as typeof selection.output,
+              record: mapRef(selection.record) as typeof selection.record,
+            })),
+          }),
     })),
   };
 }
@@ -373,10 +389,60 @@ export async function compileSourceClosure(
     units,
   };
   const componentsById = new Map(components.map((component) => [component.id, component]));
+  const recordsById = new Map(records.map((record) => [record.id, record]));
+  const outputsById = new Map(graph.outputs.map((output) => [output.id, output]));
+  const realizationByOutput = new Map<string, RealizationSelection>();
+  for (const selection of ordered.flatMap((unit) => unit.realizations)) {
+    const component = componentsById.get(selection.output.component);
+    assert(
+      component !== undefined,
+      "UNKNOWN_REALIZATION_OUTPUT",
+      "realization references unknown component " + selection.output.component,
+      selection.output.component,
+    );
+    const outputId = component.outputs[selection.output.output];
+    assert(
+      outputId !== undefined,
+      "UNKNOWN_REALIZATION_OUTPUT",
+      "realization references unknown output "
+        + selection.output.component + "." + selection.output.output,
+      selection.output.component + "." + selection.output.output,
+    );
+    const output = outputsById.get(outputId);
+    assert(
+      output !== undefined,
+      "UNKNOWN_REALIZATION_OUTPUT",
+      "realization references unknown Logical Output " + outputId,
+      outputId,
+    );
+    const record = recordsById.get(selection.record.id);
+    assert(
+      record !== undefined,
+      "UNKNOWN_REALIZATION_RECORD",
+      "realization references unknown Record " + selection.record.id,
+      selection.record.id,
+    );
+    assert(
+      sameType(output.type, record.type),
+      "REALIZATION_TYPE_MISMATCH",
+      "realization Record " + record.id + " is " + typeName(record.type)
+        + ", not " + typeName(output.type),
+      outputId,
+    );
+    assert(
+      !realizationByOutput.has(outputId),
+      "DUPLICATE_REALIZATION_SELECTION",
+      "Logical Output " + outputId + " has more than one authored realization",
+      outputId,
+    );
+    realizationByOutput.set(outputId, { output: outputId, record: record.id });
+  }
   return {
     closure: sourceClosure,
     program,
     graph,
+    realizations: [...realizationByOutput.values()]
+      .sort((left, right) => compareCodeUnits(left.output, right.output)),
     provenance: {
       format: "hypit.author-provenance@1",
       elements: ordered.flatMap((unit) => unit.provenance),

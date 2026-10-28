@@ -6,8 +6,10 @@ export type {
   AuthorComponent,
   AuthorComponentOutputRef,
   AuthorOutputBinding,
+  AuthorRealizationSelection,
   AuthorRecordRef,
   AuthorValueRef,
+  RealizationSelection,
 } from "./author.js";
 export {
   AuthorFrontendError,
@@ -44,6 +46,7 @@ export type {
   AuthorDeclarationShape,
   AuthorDeclarationChildShape,
   AuthorRecordDraft,
+  AuthorRealizationSelectionDraft,
   AuthorResolvedReference,
   CompileAuthorDeclarationsOptions,
 } from "./declaration.js";

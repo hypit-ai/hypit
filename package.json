@@ -288,6 +288,7 @@
     "@hypit/provider-whisperx-local": "workspace:*",
     "@hypit/ranking": "workspace:*",
     "@hypit/region-evidence": "workspace:*",
+    "@hypit/realization": "workspace:*",
     "@hypit/html-video": "workspace:*",
     "@hypit/runtime-local": "workspace:*",
     "@hypit/video": "workspace:*",

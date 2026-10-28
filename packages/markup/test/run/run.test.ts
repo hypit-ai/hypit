@@ -73,6 +73,7 @@ function fixture(): CompiledSourceClosure {
     closure: { entry: "main.svml", units: [] },
     program,
     graph,
+    realizations: [],
     exports: [
       { name: "prompt", type: promptType, ref: { kind: "record", id: prompt.id } },
       { name: "left", type: mediaType, ref: { kind: "logical-output", id: "left" } },

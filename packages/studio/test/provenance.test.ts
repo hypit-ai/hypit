@@ -47,6 +47,7 @@ test("Studio joins repeated local names through compiler-owned provenance", asyn
         { id: "b::output::visual", type, primary: "b-candidate" },
       ],
     },
+    realizations: [],
     exports: [{ name: "visual", type, ref: { kind: "logical-output", id: "a::output::visual" } }],
     provenance: { format: "hypit.author-provenance@1", elements: [
       element("a.svml", "a::output::visual"),

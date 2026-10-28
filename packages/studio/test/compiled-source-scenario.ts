@@ -34,6 +34,7 @@ export function compiledSourceScenario(input: {
           primary: `${output.ref}:candidate`,
         })),
       },
+      realizations: [],
       exports: input.exports.map((output) => ({
         name: output.name,
         type: output.type,

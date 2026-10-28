@@ -50,6 +50,7 @@ function normalizeRef(ref: GraphValueRef): GraphValueRef {
 }
 
 function normalizeRoot(root: CandidateRoot): CandidateRoot {
+  if (root.kind === "record") return { kind: "record", id: root.id };
   if (root.kind === "operation") {
     return { kind: "operation", result: { kind: "operation-result", operation: root.result.operation } };
   }
@@ -202,6 +203,23 @@ function verifyOperation(program: LinkedProgram, graph: AuthorGraph, operation: 
 }
 
 function verifyCandidateValue(program: LinkedProgram, graph: AuthorGraph, candidate: Candidate): void {
+  if (candidate.root.kind === "record") {
+    const record = programRecords(program).get(candidate.root.id);
+    invariant(
+      record !== undefined,
+      "UNKNOWN_CANDIDATE_RECORD",
+      candidate.id + " references unknown authored Record " + candidate.root.id,
+      candidate.id,
+    );
+    invariant(
+      sameType(record.type, candidate.type),
+      "CANDIDATE_RESULT_TYPE_MISMATCH",
+      candidate.id + " declares " + typeKey(candidate.type)
+        + " but Record " + record.id + " is " + typeKey(record.type),
+      candidate.id,
+    );
+    return;
+  }
   if (candidate.root.kind === "operation") {
     const supplied = operationResultType(program, resolveOperation(graph, candidate.root.result.operation));
     invariant(

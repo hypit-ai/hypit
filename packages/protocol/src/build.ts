@@ -72,6 +72,7 @@ export type OperationNode = {
 };
 
 export type CandidateRoot =
+  | RecordRef
   | { readonly kind: "value"; readonly record: RecordId; readonly value: Value }
   /** A zero-input value whose source is materialized only after this Candidate is selected. */
   | { readonly kind: "supply"; readonly record: RecordId }

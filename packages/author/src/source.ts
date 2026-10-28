@@ -18,7 +18,12 @@ import type {
   SourceUnit,
 } from "@hypit/source";
 
-import type { AuthorComponent, AuthorValueRef } from "./author.js";
+import type {
+  AuthorComponent,
+  AuthorRealizationSelection,
+  AuthorValueRef,
+  RealizationSelection,
+} from "./author.js";
 import type { AuthorDocumentFrontend } from "./document.js";
 
 export type AuthorSourceUnit = SourceUnit;
@@ -58,6 +63,7 @@ export type AuthorElementProvenanceDraft = {
   readonly components: readonly string[];
   readonly outputs: readonly { readonly component: string; readonly name: string; readonly id: string }[];
   readonly inputs: readonly AuthorInputProvenanceDraft[];
+  readonly realizations?: readonly AuthorRealizationSelection[];
 };
 
 export type ResolvedAuthorSourceImport = {
@@ -79,6 +85,7 @@ export type AuthorSourceDecodeContext = {
 export type DecodedAuthorSource = {
   readonly records: readonly TypedRecord[];
   readonly components: readonly AuthorComponent[];
+  readonly realizations?: readonly AuthorRealizationSelection[];
   readonly exports: readonly AuthorSourceExport[];
   readonly identities?: readonly AuthorSourceIdentity[];
   readonly provenance?: readonly AuthorElementProvenanceDraft[];
@@ -158,6 +165,7 @@ export type AuthorElementProvenance = {
     readonly id: string;
   }[];
   readonly inputs: readonly AuthorInputProvenance[];
+  readonly realizations?: readonly AuthorRealizationSelection[];
 };
 
 export type AuthorProvenance = {
@@ -181,6 +189,7 @@ export type CompiledSourceClosure = {
   readonly closure: SourceClosure;
   readonly program: LinkedProgram;
   readonly graph: AuthorGraph;
+  readonly realizations: readonly RealizationSelection[];
   readonly exports: readonly CompiledSourceExport[];
   readonly provenance: AuthorProvenance;
 };

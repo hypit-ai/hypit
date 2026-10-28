@@ -49,6 +49,7 @@
     "@hypit/provider-image-opencv-local": "workspace:^0.2.1",
     "@hypit/provider-whisperx-local": "workspace:^0.3.0",
     "@hypit/region-evidence": "workspace:^0.1.1",
+    "@hypit/realization": "workspace:^0.1.0",
     "@hypit/runtime-local": "workspace:^0.2.0",
     "@hypit/script": "workspace:^0.2.1",
     "@hypit/seedance": "workspace:^0.3.0",

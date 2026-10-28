@@ -16,8 +16,11 @@ import type {
   WorkspaceSession,
 } from "@hypit/workspace";
 import type {
+  AuthorGraph,
   BuildDefinition,
+  Candidate,
   PublicationIntent,
+  RunGraph,
   Value,
   TypeRef,
   TypedRecord,
@@ -38,6 +41,72 @@ import type { ResolvedSource, SourceUnit } from "@hypit/source";
 
 import type { CompiledAuthorSource } from "./compiler.js";
 import { mergeAttachments } from "./compiler.js";
+
+type EffectiveSelectionGraphs = {
+  readonly author: AuthorGraph;
+  readonly invocation: RunGraph;
+};
+
+/**
+ * Resolve durable author choices and transient Run overrides before Kernel planning.
+ * Run satisfaction wins for this invocation; absent overrides retain authored realization,
+ * and Kernel falls back to each output primary when neither exists.
+ */
+function effectiveSelectionGraphs(
+  author: CompiledAuthorSource,
+  invocation: RunGraph,
+): EffectiveSelectionGraphs {
+  const outputs = new Map(author.graph.outputs.map((output) => [output.id, output]));
+  const records = new Map(author.program.records.map((record) => [record.id, record]));
+  const usedCandidates = new Set([
+    ...author.graph.candidates.map((candidate) => candidate.id),
+    ...invocation.candidates.map((candidate) => candidate.id),
+  ]);
+  const realizationCandidates: Candidate[] = [];
+  const effective = new Map<string, string>();
+
+  for (const realization of author.realizations) {
+    const output = outputs.get(realization.output);
+    if (output === undefined) {
+      throw new Error("Authored realization references unknown Logical Output " + realization.output);
+    }
+    const record = records.get(realization.record);
+    if (record === undefined) {
+      throw new Error("Authored realization references unknown Record " + realization.record);
+    }
+    if (!sameType(output.type, record.type)) {
+      throw new Error("Authored realization Record has the wrong Type for " + output.id);
+    }
+    const id = "candidate:realization:" + JSON.stringify([output.id, record.id]);
+    if (usedCandidates.has(id)) {
+      throw new Error("Authored realization Candidate conflicts with " + id);
+    }
+    usedCandidates.add(id);
+    realizationCandidates.push({
+      id,
+      type: output.type,
+      root: { kind: "record", id: record.id },
+    });
+    effective.set(output.id, id);
+  }
+
+  for (const override of invocation.satisfactions) {
+    effective.set(override.output, override.candidate);
+  }
+
+  return {
+    author: {
+      ...author.graph,
+      candidates: [...author.graph.candidates, ...realizationCandidates],
+    },
+    invocation: {
+      ...invocation,
+      satisfactions: [...effective.entries()]
+        .sort(([left], [right]) => compareCodeUnits(left, right))
+        .map(([output, candidate]) => ({ output, candidate })),
+    },
+  };
+}
 
 /** The exact Author-compilation boundary required by Run compilation. */
 export type RunAuthorCompiler = {
@@ -233,7 +302,8 @@ export class RunCompiler {
       compilation: executionCompilation,
       fragments: this.#options.fragments,
     });
-    const plan = planBuild(program, author.graph, run.graph);
+    const effective = effectiveSelectionGraphs(author, run.graph);
+    const plan = planBuild(program, effective.author, effective.invocation);
     return {
       document,
       authorSource,
@@ -371,7 +441,13 @@ export class RunCompiler {
       ...compilation.run.graph,
       targets: compilation.run.graph.targets.filter((target) => !forwardOnlyOutputs.has(target)),
     };
-    const sliced = sliceExecution(compilation.program, compilation.author.graph, executionRun, preliminary);
+    const effective = effectiveSelectionGraphs(compilation.author, executionRun);
+    const sliced = sliceExecution(
+      compilation.program,
+      effective.author,
+      effective.invocation,
+      preliminary,
+    );
     const materializedById = new Map(compilation.materializedSupplies.map((record) => [record.id, record]));
     const suppliedRecords = sliced.selectedSupplies.map((supply) => {
       const record = materializedById.get(supply.record);
@@ -449,10 +525,11 @@ export class RunCompiler {
   /** Plan a distinct in-memory Run graph as a distinct compilation selection. */
   prepareVariant(compilation: CompiledRun, graph: RunCompilation["graph"]): PreparedBuild {
     const run = { ...compilation.run, graph };
+    const effective = effectiveSelectionGraphs(compilation.author, graph);
     return this.prepareCompilation({
       ...compilation,
       run,
-      selection: planBuild(compilation.program, compilation.author.graph, graph),
+      selection: planBuild(compilation.program, effective.author, effective.invocation),
     });
   }
 

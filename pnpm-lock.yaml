@@ -219,6 +219,9 @@ importers:
       '@hypit/ranking':
         specifier: workspace:*
         version: link:packages/ranking
+      '@hypit/realization':
+        specifier: workspace:*
+        version: link:packages/realization
       '@hypit/recipe':
         specifier: workspace:*
         version: link:packages/recipe
@@ -976,6 +979,9 @@ importers:
       '@hypit/markup':
         specifier: workspace:*
         version: link:../markup
+      '@hypit/realization':
+        specifier: workspace:*
+        version: link:../realization
 
   packages/composition:
     dependencies:
@@ -2361,6 +2367,21 @@ importers:
         specifier: 5.9.3
         version: 5.9.3
 
+  packages/realization:
+    devDependencies:
+      '@hypit/author':
+        specifier: workspace:*
+        version: link:../author
+      '@hypit/hypit':
+        specifier: workspace:*
+        version: link:../..
+      '@hypit/markup':
+        specifier: workspace:*
+        version: link:../markup
+      '@hypit/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+
   packages/recipe:
     dependencies:
       '@hypit/author':
@@ -3015,6 +3036,9 @@ importers:
       '@hypit/provider-whisperx-local':
         specifier: workspace:^0.3.0
         version: link:../provider-whisperx-local
+      '@hypit/realization':
+        specifier: workspace:^0.1.0
+        version: link:../realization
       '@hypit/region-evidence':
         specifier: workspace:^0.1.1
         version: link:../region-evidence

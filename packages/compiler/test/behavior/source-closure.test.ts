@@ -4,24 +4,45 @@ import test from "node:test";
 import { createResolvedClosure } from "@hypit/kernel";
 import {
   AuthorFrontendRegistry,
+  sealGraphFragment,
 } from "@hypit/author";
 import { SourceClosureError, compileSourceClosure } from "@hypit/compiler";
 import type { ResolvedSource } from "@hypit/source";
 import { resolveSelfDescribedTextSource } from "@hypit/source/text";
-import type { ModuleManifest, TypeRef } from "@hypit/protocol";
+import type { ModuleManifest, ProducerRef, TypeRef } from "@hypit/protocol";
 
 const moduleRef = { name: "example.identity", version: "1" } as const;
 const identityType = { module: moduleRef, name: "PublicIdentity" } satisfies TypeRef;
+const otherType = { module: moduleRef, name: "Other" } satisfies TypeRef;
+const produceIdentity = { module: moduleRef, name: "produce" } satisfies ProducerRef;
 const manifest: ModuleManifest = {
   format: "hypit.module@1",
   name: moduleRef.name,
   version: moduleRef.version,
   dependencies: [],
-  types: [identityType.name],
+  types: [identityType.name, otherType.name],
   capabilities: [],
-  producers: [],
+  producers: [{
+    name: produceIdentity.name,
+    inputs: [],
+    result: { kind: "output", name: "result", type: identityType },
+  }],
 };
 const frontendId = "example.identity-frontend@1";
+const identityFragment = sealGraphFragment({
+  inputs: [],
+  operations: [{
+    id: "produce",
+    producer: produceIdentity,
+    inputs: {},
+    result: { kind: "output", name: "result" },
+  }],
+  exports: [{
+    name: "result",
+    type: identityType,
+    root: { kind: "fragment-operation", operation: "produce" },
+  }],
+});
 
 function source(id: string, name: string): ResolvedSource {
   return resolveSelfDescribedTextSource({ id, name, text: `<?svml using="${frontendId}"?>\nidentity` });
@@ -106,4 +127,106 @@ test("Source Closure hygienizes author provenance across imported Sources", asyn
   assert.equal(compiled.program.records.some((record) => record.id === mainRecord), true);
   assert.equal(compiled.program.records.some((record) => record.id === childRecord), true);
   assert.notEqual(bySource.get("main")?.inputs[0]?.id, bySource.get("child")?.inputs[0]?.id);
+});
+
+test("Source Closure resolves authored realizations to hygienic graph identities", async () => {
+  const frontends = new AuthorFrontendRegistry();
+  frontends.register({
+    id: frontendId,
+    discover() {
+      return { modules: [], sources: [] };
+    },
+    decode() {
+      return {
+        records: [{ id: "accepted", type: identityType, value: "accepted" }],
+        components: [{
+          id: "generated",
+          fragment: identityFragment,
+          inputs: {},
+          outputs: { result: "generated.result" },
+        }],
+        realizations: [{
+          output: { kind: "component-output", component: "generated", output: "result" },
+          record: { kind: "record", id: "accepted" },
+        }],
+        exports: [],
+        provenance: [{
+          range: { start: 0, end: 8 },
+          records: ["accepted"],
+          components: ["generated"],
+          outputs: [{ component: "generated", name: "result", id: "generated.result" }],
+          inputs: [],
+          realizations: [{
+            output: { kind: "component-output", component: "generated", output: "result" },
+            record: { kind: "record", id: "accepted" },
+          }],
+        }],
+      };
+    },
+  });
+  const compiled = await compileSourceClosure({
+    entry: source("/project/main", "main"),
+    closure: createResolvedClosure([manifest]),
+    frontends,
+    resolveSource() {
+      throw new Error("unused");
+    },
+  });
+
+  assert.equal(compiled.realizations.length, 1);
+  const selection = compiled.realizations[0]!;
+  assert.notEqual(selection.output, "generated.result");
+  assert.notEqual(selection.record, "accepted");
+  assert.equal(compiled.graph.outputs.some((output) => output.id === selection.output), true);
+  assert.equal(compiled.program.records.some((record) => record.id === selection.record), true);
+  assert.deepEqual(compiled.provenance.elements[0]?.realizations, [{
+    output: {
+      kind: "component-output",
+      component: compiled.provenance.elements[0]?.components[0]?.id,
+      output: "result",
+    },
+    record: {
+      kind: "record",
+      id: compiled.provenance.elements[0]?.records[0]?.id,
+    },
+  }]);
+});
+
+test("Source Closure rejects a realization whose Record Type differs from its output", async () => {
+  const frontends = new AuthorFrontendRegistry();
+  frontends.register({
+    id: frontendId,
+    discover() {
+      return { modules: [], sources: [] };
+    },
+    decode() {
+      return {
+        records: [{ id: "accepted", type: otherType, value: "wrong type" }],
+        components: [{
+          id: "generated",
+          fragment: identityFragment,
+          inputs: {},
+          outputs: { result: "generated.result" },
+        }],
+        realizations: [{
+          output: { kind: "component-output", component: "generated", output: "result" },
+          record: { kind: "record", id: "accepted" },
+        }],
+        exports: [],
+      };
+    },
+  });
+
+  await assert.rejects(
+    compileSourceClosure({
+      entry: source("/project/main", "main"),
+      closure: createResolvedClosure([manifest]),
+      frontends,
+      resolveSource() {
+        throw new Error("unused");
+      },
+    }),
+    (error: unknown) => error instanceof SourceClosureError
+      && error.code === "REALIZATION_TYPE_MISMATCH",
+  );
 });

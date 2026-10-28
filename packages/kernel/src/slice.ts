@@ -63,7 +63,8 @@ export function sliceExecution(
     const candidate = candidateById.get(id);
     if (candidate === undefined) throw new Error(`execution slice refers to absent Candidate ${id}`);
     candidates.add(id);
-    if (candidate.root.kind === "operation") visitOperation(candidate.root.result.operation);
+    if (candidate.root.kind === "record") records.add(candidate.root.id);
+    else if (candidate.root.kind === "operation") visitOperation(candidate.root.result.operation);
   };
   const visitOutput = (id: string): void => {
     if (outputs.has(id)) return;

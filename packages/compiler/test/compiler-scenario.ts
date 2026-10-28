@@ -15,6 +15,12 @@ import {
   createMarkupDeclarationAuthorFrontend,
   MarkupDeclarationRegistry,
 } from "@hypit/markup";
+import {
+  realizationAuthorDeclarations,
+  realizationManifest,
+  realizationMarkupDeclarations,
+  realizationModuleRef,
+} from "@hypit/realization";
 import { NodeFilesystemWorkspace } from "@hypit/workspace/node";
 
 export const rawSourceAdapter = (unit: import("@hypit/source").SourceUnit) => ({ unit, frontend: "test.frontend@1" });
@@ -35,6 +41,7 @@ export const laboratory = { name: "example.compiler-lab", version: "1" } as cons
 export const resultType = { module: laboratory, name: "Result" } satisfies TypeRef;
 const producer = { module: laboratory, name: "produce" } satisfies ProducerRef;
 const resultSyntax = { declaration: "result", tag: "Result" } as const;
+const acceptedSyntax = { declaration: "accepted", tag: "Accepted" } as const;
 const laboratoryManifest: ModuleManifest = {
   format: "hypit.module@1",
   name: laboratory.name,
@@ -79,6 +86,35 @@ const resultDeclaration: AuthorDeclarationCompiler = {
     const id = declarationField(declaration, "id");
     if (id?.kind !== "literal") throw new Error("Result id is required");
     return { records: [], components: [{ id: id.value, fragment, inputs: {}, outputs: { result: `${id.value}.result` }, range: declaration.range }] };
+  },
+};
+
+const acceptedDeclaration: AuthorDeclarationCompiler = {
+  module: laboratory,
+  declaration: "accepted",
+  outputs: [resultType],
+  shape: {
+    summary: "Authors one accepted test Result.",
+    fields: [
+      { name: "id", kind: "identifier", required: true, summary: "Names the accepted Result." },
+      { name: "value", kind: "literal", required: true, summary: "Provides its value." },
+    ],
+  },
+  bindings(declaration) {
+    const id = declarationField(declaration, "id");
+    if (id?.kind !== "literal") throw new Error("Accepted id is required");
+    return [{ name: id.value, ref: { kind: "record", id: id.value }, type: resultType }];
+  },
+  compile({ declaration }) {
+    const id = declarationField(declaration, "id");
+    const value = declarationField(declaration, "value");
+    if (id?.kind !== "literal" || value?.kind !== "literal") {
+      throw new Error("Accepted id and value are required");
+    }
+    return {
+      records: [{ id: id.value, type: resultType, value: value.value, range: declaration.range }],
+      components: [],
+    };
   },
 };
 
@@ -128,11 +164,20 @@ export function compiler(
 ): Compiler {
   const modules = new ModulePackageRegistry();
   modules.register({ manifest: laboratoryManifest });
+  modules.register({ manifest: realizationManifest });
   for (const manifest of additional) modules.register({ manifest });
   const declarations = new AuthorDeclarationRegistry();
   declarations.register(resultDeclaration);
+  declarations.register(acceptedDeclaration);
+  realizationAuthorDeclarations.forEach((declaration) => declarations.register(declaration));
   const syntax = new MarkupDeclarationRegistry();
   syntax.register({ module: laboratory, ...resultSyntax });
+  syntax.register({ module: laboratory, ...acceptedSyntax });
+  realizationMarkupDeclarations.forEach((declaration) => syntax.register({
+    module: realizationModuleRef,
+    declaration: declaration.name,
+    tag: declaration.tag,
+  }));
   const frontends = new AuthorFrontendRegistry();
   const frontend = createMarkupDeclarationAuthorFrontend({
     syntax,
