@@ -4,7 +4,6 @@ import type { BlobRef, ModuleManifest, ValueSchema } from "@hypit/hypit/protocol
 import type { PreparedAudioSource } from "@hypit/media";
 import { assertLocalTemporalDomain, resolveTemporalBoundary } from "@hypit/temporal";
 import type { LocalTemporalDomain, TemporalMap } from "@hypit/temporal";
-export { speechTranscriptAuthorAdopter } from "./adoption.js";
 export {
   decodeSpeechTranscriptEvidence,
   decodeSpeechTranscriptSource,

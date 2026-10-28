@@ -21,4 +21,5 @@ explicit `primary="true"` or `record="…"` choice.
 The current decoder also recognizes candidate declarations, Run Fragments and `<satisfy>` while
 repository sources are migrated. They are isolated from the Invocation ABI and must not be used as
 new extension points. Long-lived files and accepted Result values belong in the Author Document;
-package-owned adoption turns typed external values into ordinary Author declarations and Records.
+project files enter through ordinary package-owned Author declarations. Historical Result values
+are repository migration inputs, not a permanent Author conversion protocol.
