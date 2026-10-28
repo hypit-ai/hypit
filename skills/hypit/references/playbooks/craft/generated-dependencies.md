@@ -31,7 +31,7 @@ A portrait may contribute identity while clothes, action and place change. A pro
 
 An existing image can serve the intended view directly. When the work asks for another picture, connect the images that carry its needed facts and describe their roles in the prompt. With several references, “reference 2” means the second image connected to this request; the actual image input gives that phrase its meaning. A request whose references already establish much of the picture may need only a short direction for the change. The selected image package owns the exact reference-input syntax.
 
-Keep useful prompts and source images with the project when later views may need the same relationship. [Image direction](image-direction.md) owns the picture's casting, framing, palette and capture language; [Run Candidates](../../production/authoring.md#reuse-produced-work-explicitly) explain reuse of completed Outputs.
+Keep useful prompts and source images with the project when later views may need the same relationship. [Image direction](image-direction.md) owns the picture's casting, framing, palette and capture language; [explicit realization choices](../../production/authoring.md#reuse-produced-work-explicitly) explain how accepted Outputs become project material.
 
 ## Carry the shared world into motion
 

@@ -45,7 +45,7 @@ operations; Builds use the selected installed code. A missing package is an inst
 Select the intended new release in the consumer project, inspect its changed vocabulary where
 relevant, check the actual Source/Run and review the changed behavior. New Builds load that selected
 implementation; restart an existing Studio session to load package-code changes. Reuse compatible
-media through Run Candidates while recomputing the component being revised. The package's own
+project media through authored realization choices while recomputing the component being revised. The package's own
 release notes describe any required author changes.
 
 ## Send a tarball to another person

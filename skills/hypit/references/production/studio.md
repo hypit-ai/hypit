@@ -145,8 +145,9 @@ Comments is a review view of the editable work; the exported file is the deliver
 
 Alongside the delivered video, a brief look at its editable production can make the handoff more
 tangible. When Studio is readily accessible to the user, open the finished work and share the session
-URL. Use a Run that reuses the completed prepared media, local domains and alignment evidence while keeping its Tracks and Recipes
-available for editing. Reuse a suitable existing session or launch one as described above.
+URL. Use the Author Source whose project resources, prepared media and evidence realize the finished
+work while keeping its Tracks and Recipes available for editing. Reuse a suitable existing session
+or launch one as described above.
 
 Point out something specific to this piece: a reveal tied to a word, the Caption styling, or a
 component parameter they can adjust. Let the actual work demonstrate the editing experience. For a
@@ -163,7 +164,7 @@ include when the user wants to continue editing on another machine.
 | Timeline | Projected domain evidence, resolved named Instants, plus component-projected Track Items and their visible intervals, materials or event lanes. A rectangle may describe occupancy, activation or persistent visibility; read the component's meaning. |
 | Inspector | With nothing selected, project, Canvas, time and Run facts. For a selected Item, its declared read-only facts and adjustable fields, organized under Where, When and How where applicable. |
 | Tasks | One card per Build, grouped into ongoing and finished. Active status and progress come from the selected Runtime; completed, failed and cancelled Builds come from project Results. Cards retain the source Run, times and any failure or attention reason. |
-| Artifacts | Image, video and audio file Outputs from project Results, including those already published by ongoing Builds. Use the sidebar to choose all media, videos, images or audio. View media on a Build opens its Outputs; opening the Artifacts tab returns to project media. Structured Outputs such as prepared media and NarrativeAlignment stay intact and do not add their internal files to this gallery. Click a card to view it in the central preview; video and audio have playback and a time slider. Back to composition returns to the existing composition position. Previewing a file does not select it as a Candidate in the Run. |
+| Artifacts | Image, video and audio file Outputs from project Results, including those already published by ongoing Builds. Use the sidebar to choose all media, videos, images or audio. View media on a Build opens its Outputs; opening the Artifacts tab returns to project media. Structured Outputs such as prepared media and NarrativeAlignment stay intact and do not add their internal files to this gallery. Click a card to view it in the central preview; video and audio have playback and a time slider. Back to composition returns to the existing composition position. Previewing a file does not modify the Author Source; accepting it requires an explicit project export and authored declaration. |
 
 A declared lane stays one row even when items overlap. Later items cover earlier ones at equal
 stacking order; selecting an item brings its full rectangle forward within that lane. This changes
@@ -185,18 +186,19 @@ saves, and Escape cancels. Renaming changes the displayed Output name in the fin
 not its reference identifier or media file.
 
 Use [Builds and Results](builds.md) to inspect Output names, export media, finish an incomplete Result,
-edit Result presentation metadata or select an earlier Output. Studio reads the same project Result
+or edit Result presentation metadata. Studio reads the same project Result
 repository. With no Runtime selected, finished Results remain accessible; preview works when its
 display closure needs no unresolved Endpoint work. Active Runtime status and transient Endpoint
 processing require the selected environment.
 
 Studio opens the selected work for interactive playback and editing. It creates no Build and submits
 no paid generation. It can evaluate deterministic Producers and the exact immediate capabilities a
-Provider permits for transient authoring, such as media inspection and frame or audio extraction. Select existing
-files or produced Outputs through the Run for the material the view needs. If a required generation
+Provider permits for transient authoring, such as media inspection and frame or audio extraction.
+The view reads project resources and authored realization choices, plus any Invocation-local override.
+If a required generation
 is still running, continue component work and open its resulting composition when the material is ready.
 
-[Runs](runs.md) explains selection and reuse. [Snapshots](snapshots.md) captures the current picture
+[Runs](runs.md) explains Targets and transient overrides. [Snapshots](snapshots.md) captures the current picture
 directly with `hypit snapshot --studio <this-studio-url>`. [Rendering](rendering.md) provides frame-range Builds
 for inspecting the composition as encoded media; choose the view that helps answer the current question.
 

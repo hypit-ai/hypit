@@ -139,7 +139,7 @@ than ordinary Recipes. This is the same file-extension convention with a differe
 This small Kit just joins two Text inputs. It does not generate a video. Fixed blocks and variable
 axes can be added when they express reusable direction; `@hypit/text` owns that template grammar.
 
-## Runs demand Outputs and choose Candidates
+## Runs demand Outputs
 
 For the Text example saved as `main.svml`, beside `direction.svs`:
 
@@ -155,13 +155,12 @@ A video Run usually targets the renderer's public video Output. Several Targets 
 several deliverables are wanted. Targets are public Output names; requests outside the demanded graph
 are not executed.
 
-To reuse a prior Output, declare a `build-record` Candidate and select it with `satisfy`; the prior
-Result name and the current Logical Output name can differ. A raw MP4 file is a Blob Artifact, not
-prepared media or alignment evidence. Select Candidates by their real nominal Type and creative
-meaning, retaining preparation, local temporal-domain recovery or alignment where still needed.
-[Runs](runs.md) explains complete Candidate forms,
-Fragment inputs and exports; [Authoring](authoring.md) owns the creative reuse decisions;
-the installed Fragment package owns its own input and export names.
+A Run may add an Invocation-local override for an existing authored Record, but it cannot introduce
+a file, value or computation. Accept durable material by declaring the project resource through the
+package that owns its meaning and selecting that Record in the Author Source. A raw MP4 file is a
+media asset, not prepared media or alignment evidence; preparation and evidence retain their nominal
+types and explicit relationships. [Runs](runs.md) explains Targets and transient overrides, while
+[Authoring](authoring.md) owns durable material choices.
 
 `hypit check <run>` checks Source and graph legality. `hypit plan <run> --runtime <profile>` exposes
 the selected graph and external requests without submitting them. A legal document can still describe a

@@ -188,14 +188,14 @@ within the agreed commission. Develop components, Recipes and semantic arrangeme
 runs. Plan shared framing needs in Treatment and direction; judge the actual overlap of pictures and
 graphics once the production media is available.
 
-Build around the directed material and existing Outputs. Locate the passage through its authored
+Build around the directed material and accepted project resources. Locate the passage through its authored
 events; for spoken work, use Script and any semantic timing the current composition actually
 consumes. Watch how MG, Caption, B-roll, Typography and Effects work together in the current picture.
 Prefer [snapshots](references/production/snapshots.md)
 for detailed states and continuous frame grids, and Studio playback for the passage with sound: the graphics make the idea clear,
 the Caption is easy to read, and the pictures and effects appear where and when they serve the
 passage. Adjust the owning Source or component to improve those relationships. Reuse produced media
-through Run Candidates. A useful change makes a comparison readable, lands a reveal on its word, or
+through the Author Source's explicit realization choices. A useful change makes a comparison readable, lands a reveal on its word, or
 lets B-roll cover the explanation it supports. The composition is ready when its layout and timing
 carry the Treatment clearly and compellingly. Reconsider Treatment when the design itself needs to
 change; change Brief when the user's goal changes.
@@ -225,14 +225,15 @@ practical, revisit that choice and carry the improvement into the work and its n
 - **Existing work.** Reuse serves the current commission. For a continuation, carry its completed
   work forward; for a new adaptation, develop the requested target from the supplied reference and
   changes. Judge connected earlier material against that Brief and Treatment. Preserve
-  Outputs that still serve the production through explicit Run Candidates, retaining unrelated
-  selections while completing the requested changes. Project Results can contain useful Outputs
-  even from failed Builds. Check `plan` for the intended remaining requests; reuse across Builds
-  requires an explicit selection. [Authoring](references/production/authoring.md#reuse-produced-work-explicitly)
-  explains choosing the Output that preserves material while allowing the current edit.
+  material that still serves the production as explicit project resources and realization choices,
+  retaining unrelated selections while completing the requested changes. Project Results can contain
+  useful Outputs even from failed Builds; export an accepted file into the project before authoring
+  it as durable material. Check `plan` for the intended remaining requests. [Authoring](references/production/authoring.md#reuse-produced-work-explicitly)
+  explains preserving material while allowing the current edit.
 - **Execution.** A Build is one execution attempt. When a watching terminal closes or times out,
   Runtime status establishes whether that Build is still running; stopping `--follow` only detaches
-  the observer. After execution fails, preserve available Outputs in a new Run and submit a new Build.
+  the observer. After execution fails, export accepted Outputs into the project, update the Author
+  Source, and submit a new Build.
   [Builds](references/production/builds.md#continue-after-a-failed-attempt) owns receipt and failure handling.
 - **Secrets.** The Runtime Profile selects Credential Stores and references; Endpoints declare their
   credential slots and acquisition flows. Manage credentials through `hypit auth` and the selected
@@ -295,7 +296,7 @@ practical, revisit that choice and carry the improvement into the work and its n
 | writing Sources, Recipes, and Runs, reusing produced work, adding a component | `references/production/authoring.md` |
 | imports, output references, literal values or Recipe rules | `references/production/source-syntax.md` |
 | choosing an existing Prompt Kit, assembling its wording or authoring a new one | `references/production/prompt-kits.md` |
-| Run syntax, material Targets, Candidates, Run Fragments or reusing produced media | `references/production/runs.md` |
+| Run syntax, Targets, transient overrides or accepting produced media into the project | `references/production/runs.md` |
 | supplying or reusing images/video/audio, model references, preparation, local domains, NarrativeAlignment, trims or processed variants | `references/production/media.md` |
 | placing independent images, prepared video or surfaces and choosing source playback | `references/production/visual-clips.md` |
 | placing independent music, narration, ambience or effects and selecting source playback | `references/production/audio-clips.md` |

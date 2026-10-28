@@ -86,7 +86,7 @@ then continue with the capability needed by the work.
 | A chosen service and stored credential | Reuse its explicit Profile selection and CredentialRef within the user's account choice |
 | Prepared local tools or model weights | Inspect the selected Provider's actual paths and configuration; reuse compatible resources there |
 | Project components and dependencies | Keep their package versions and lockfile; edit the project's own implementation where needed |
-| Generated or processed Outputs | Select them explicitly as Run Candidates so the next Build does not repeat that work |
+| Accepted generated or processed media | Export it to a project path, declare it through its owning package, and select that authored Record explicitly |
 
 Host tools and prepared resources have their own locations; creating another video project does not
 require copying a Python environment or browser into it. An existing cache can reduce preparation
@@ -97,7 +97,7 @@ keep project components with their project, or explicitly install an owner's ver
 sharing is needed. Its ordinary package manifest and lockfile select the implementation. Update that
 dependency deliberately; a Hypit or Skill update does not upgrade every project's component packages.
 
-Preserve project assets, Results and current Run selections during an update. A newer executable is
+Preserve project assets, Results and authored realization choices during an update. A newer executable is
 not a reason to regenerate accepted material. [Output reuse](../production/authoring.md#reuse-produced-work-explicitly)
 owns choosing compatible produced values, including useful Outputs from failed Builds.
 If a release changes authoring requirements, apply the documented project changes and check the

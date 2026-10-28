@@ -5,6 +5,7 @@
   <import as="audio" from="@hypit/audio-track@1"/>
   <import as="text" from="@hypit/text@1"/>
   <import as="asset" from="@hypit/media@1"/>
+  <import as="realization" from="@hypit/realization@1"/>
   <import as="gpt" from="@hypit/gpt-image@1"/>
   <import as="seedance" from="@hypit/seedance@1"/>
   <import as="mediaop" from="@hypit/media-operations@1"/>
@@ -41,6 +42,8 @@
   <gpt:Image id="presenter" prompt={presenter-prompt} aspect-ratio="9:16" resolution="2K"/>
   <asset:Audio id="presenter-voice" src="./assets/cat.wav"/>
   <asset:Audio id="soundtrack" src="./assets/shared-soundtrack.m4a"/>
+  <asset:Video id="accepted-ronaldo" src="./reused/ronaldo.mp4"/>
+  <asset:Video id="accepted-messi" src="./reused/messi.mp4"/>
   <asset:Audio id="ranking-appear-sfx" src="./assets/ranking-appear.wav"/>
   <asset:Audio id="ranking-move-sfx" src="./assets/ranking-move.wav"/>
   <text:Value id="ronaldo-icon-prompt">A photograph with the texture of real iPhone footage. Generate a close portrait, as one frame cut out of video actually shot on an iPhone: genuinely real rather than glossy, carrying the texture of video and not of a posed photograph. The background stays clearly visible, with no depth-of-field blur. Skin texture is fine and real, the light is natural, and no part of the picture is broken. tan Portuguese footballer in his late thirties with an angular rectangular face, high cheekbones, thick dark eyebrows, narrow brown eyes, a straight prominent nose, a square jaw, and a clean-shaven face. His short dark hair is faded at the sides and brushed sharply back from the forehead; he has a muscular neck, very broad athletic shoulders, and a focused expression. He wears a plain red shirt.. Keep the portrait centered, shoulders visible, and use a simple neutral background with no readable text or logos.</text:Value>
@@ -143,6 +146,8 @@
     <seedance:Reference image={presenter.image} person-reference="true"/>
     <seedance:Reference audio={presenter-voice}/>
   </seedance:ReferenceVideo>
+  <realization:Select output={ronaldo-take.video} record={accepted-ronaldo}/>
+  <realization:Select output={messi-take.video} record={accepted-messi}/>
 
   <space:Canvas id="vertical" width="720" height="1280"/>
   <time:Clock id="clock" frame-rate="30"/>

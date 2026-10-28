@@ -50,7 +50,7 @@ because it can draw the desired shape.
 
 Use the produced performance's prepared media and aligned speech evidence. A change to that media, its speed or
 its cuts can change word timing and requires corresponding alignment. A visual-only restyle can
-reuse the same semantic and media outputs through the Run.
+keep the same project-owned semantic evidence and selected media records.
 
 ## Design Cue rhythm with the Caption system
 

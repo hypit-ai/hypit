@@ -26,7 +26,8 @@ demonstrate the options. Locate meaningful events through Script, Timeline or th
 pass their resulting frame positions to the observation command. Frame selection does not change
 the authored timing relationship.
 
-Studio supplies its already compiled `HtmlProgram` and the material selected by the Run.
+Studio supplies its already compiled `HtmlProgram` and the material selected by the Author Source
+plus any Invocation-local override.
 This preserves declared fonts, images, video sampling, transparent Surfaces and resources used
 inside a component's HTML visual. The command sends one immediate request, keeping the original
 `HtmlProgram` clock and component-local clocks. It writes images directly into the chosen directory.
@@ -83,7 +84,7 @@ coarse and fine observation.
 
 ## After a composition change
 
-Keep accepted material selected in the Run, let Studio compile the updated Source, then capture the
+Keep accepted material selected in the Author Source, let Studio compile the updated Source, then capture the
 affected states and their handoffs. Carry discoveries back to the owning Source, component or
 Treatment. This is the preferred picture-review path. Use a
 [range render](rendering.md#choose-a-render-interval-in-frames) when a short encoded video with sound

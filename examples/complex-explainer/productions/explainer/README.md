@@ -12,7 +12,10 @@ hypit plan runs/render.svrun
 hypit studio --run runs/render.svrun
 ```
 
-The current production Run explicitly selects accepted Outputs. Read the plan before submitting a Build: composition edits should retain that selected material. The included local-only Profile is sufficient for opening and rendering this accepted work.
+The accepted performances and supporting media are ordinary project assets selected by the Author Source.
+The Run is only a saved Invocation target. Read the plan before submitting a Build; speech evidence is
+still produced by the explicitly authored transcription declarations unless the Source is changed to
+use project-owned transcript evidence.
 
 ## Where an edit belongs
 
@@ -24,9 +27,10 @@ The current production Run explicitly selects accepted Outputs. Read the plan be
 | Material outputs, media placement, Uses, scene events and Film | `authors/main.svml` |
 | Caption appearance and ordinary presentation | `recipes/composition.svs` |
 | A coordinated visual behavior | The owning project package under `../../packages/` |
-| Which accepted output is used | `runs/render.svrun` |
+| Which accepted performance file is used | `authors/assets.svml` and `authors/main.svml` |
 
-Generated-material and preparation outputs remain explicit in the entry Source so the Run can satisfy them by name. Imported files own Script, raw resources and direction; moving an output into a private imported graph would remove that entry’s reuse boundary.
+Generated-material and preparation relations remain explicit in the entry Source. Imported files own
+Script, raw resources and direction; the Run does not own material or historical Build addresses.
 
 ## Components
 
@@ -34,7 +38,7 @@ Generated-material and preparation outputs remain explicit in the entry Source s
 
 ## Export
 
-`runs/render.svrun` targets the complete film. `runs/export-parts.svrun` targets five consecutive ranges for machines with limited temporary disk. Each Build is a fresh execution attempt; the Run carries accepted material. The local profile currently requests eight rendering workers.
+`runs/render.svrun` targets the complete film. `runs/export-parts.svrun` targets five consecutive ranges for machines with limited temporary disk. Each Build is a fresh execution attempt; both files are target-only Invocation presets. The local profile currently requests eight rendering workers.
 
 After exporting the five named Outputs with `hypit get`, join their video streams without re-encoding:
 

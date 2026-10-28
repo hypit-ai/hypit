@@ -1,160 +1,109 @@
-# Runs, Targets and reuse
+# Runs and Targets
 
-Read this when choosing deliverables, reusing an Output, or selecting media for an execution. [Authoring](authoring.md#reuse-produced-work-explicitly) explains
-which produced value still fits an edit; [Builds](builds.md) explains finding and executing it.
+Read this when choosing the Outputs for one execution or saving a repeatable execution preset.
+[Authoring](authoring.md) explains the production Source and durable material choices;
+[Builds](builds.md) explains planning, submitting and inspecting the resulting Build.
 
-A Run says what this execution should complete and which existing or alternative values it should
-use. A **Target** names a deliverable Output. A **Candidate** supplies an Output needed along the
-way. The selected dependencies determine the work that remains.
-
-For example, changing a title can keep the produced performance media, its local temporal domain and
-its alignment evidence while producing a new final video. The Source describes the changed title;
-the Run keeps those independent completed Outputs.
-
-One Run uses these author-facing declarations:
-
-| Declaration | Role |
-| --- | --- |
-| `<author source="./main.svml"/>` | Select the Run's one Author entry. |
-| `<import as="media" from="@hypit/media-operations@1"/>` | Make one installed Run Fragment library available. |
-| `<target output="final.video"/>` | Demand one public Author Output; several Targets may be declared. |
-| `<file .../>` | Supply one project file as a typed zero-input Candidate. |
-| `<build-record .../>` | Supply one exact public Output from one earlier Build Result. |
-| `<value .../>` | Supply a serialized typed value from a JSON file. |
-| `<fragment ...>...</fragment>` | Instantiate a package Fragment whose exports become Candidates. |
-| `<satisfy output="..." candidate="..."/>` | Select one declared Candidate for one Author Logical Output. |
-
-The required order is Header, `<svrun>`, one `author`, then Fragment imports, followed by Targets and
-Candidate declarations. Runtime Profiles, Provider options, credentials, and output destinations are
-not Run declarations.
-
-## Select the Output that the current work needs
+A Run is an optional saved Invocation. It names one Author entry, one or more Target Outputs, and
+any choice that should apply only to this execution. It does not own project material or the
+production graph.
 
 ```svrun
 <?svml using="@hypit/markup/run@1"?>
 <svrun version="1">
   <author source="./production.svml"/>
   <target output="final.video"/>
-  <build-record id="kept-media" build="bld_..." output="opening-prepared.media"/>
-  <build-record id="kept-domain" build="bld_..." output="opening-prepared.domain"/>
-  <build-record id="kept-alignment" build="bld_..." output="opening-alignment.alignment"/>
-  <satisfy output="opening-prepared.media" candidate="kept-media"/>
-  <satisfy output="opening-prepared.domain" candidate="kept-domain"/>
-  <satisfy output="opening-alignment.alignment" candidate="kept-alignment"/>
 </svrun>
 ```
 
-Replace `bld_...` with the actual Build id found through Results. The `output` from the earlier Result is the
-name in that Result; the `satisfy output` is the current Author Output. These selections preserve
-the media, local domain and NarrativeAlignment independently.
-A changed Caption or MG can then recompute downstream. Marker and display-only edits may also
-preserve the alignment; use the
-[reuse table](authoring.md#reuse-produced-work-explicitly) to distinguish them from changed speech or media.
+Targets are public Outputs from the selected Author Source. A final video is the ordinary delivery
+Target. An image, prepared media value, transcript, alignment or another intermediate Output is also
+a useful Target when the current work needs that result independently.
 
-Each Run has one Author entry. Its Targets name public computed Outputs, such as `main.composition`
-for composition work, `final.video` for delivery, or an intermediate the work needs independently.
-The selected graph includes the dependencies needed to complete those Outputs.
+Runtime Profiles, Provider options, credentials, project files and output destinations remain in
+their own owners. Saving another Run against the same Source creates another execution preset, not
+another production.
 
-## Choose what the replacement supplies
+## Keep project material in the Author Source
 
-A file can replace a byte-producing Output:
+Media already chosen for the work is an ordinary project asset. Declare it with the package that
+owns its meaning, then connect it to the generated role it realizes:
 
-```svrun
-<file id="supplied-performance" type="@hypit/blob@1#Blob"
-  from="./assets/performance.mp4" media-type="video/mp4"/>
-<satisfy output="performance.video" candidate="supplied-performance"/>
+```svml
+<import as="asset" from="@hypit/media@1"/>
+<import as="realization" from="@hypit/realization@1"/>
+
+<asset:Video id="accepted-opening" src="./assets/opening.mp4"/>
+<realization:Select output={opening-generation.video} record={accepted-opening}/>
 ```
 
-Here the file replaces the generated video bytes. Preparation and alignment still follow it.
-Selecting completed prepared media, local-domain and alignment Outputs preserves those facts
-without preserving their later Timeline placement or Visual/Audio Clip use. Choose the Outputs whose meaning
-matches what should stay; the receiving Type identifies which kind of value fits each position.
+The selection is part of the authored production. A title, Caption, Timeline or rendering change
+continues to use that video without restating it in every Run. To use another performance, change
+the project asset or the authored selection and check the Source again.
 
-## Use a Fragment when a Candidate needs computation
+Project files can come from a generation Result, a camera, a download or another tool. Once placed
+in the project and declared, their origin does not alter composition. `hypit get` can export a public
+Result Output to a chosen location; use the file format and Author declaration owned by the receiving
+package afterward.
 
-A Run Fragment connects computations that produce a Candidate. For example, an authored still image
-can become a timed video through Media Operations's ordinary `still-video` Fragment:
+## Override a choice for one execution
+
+A saved Run may temporarily ask for the AuthorGraph primary implementation:
 
 ```svrun
-<import as="media" from="@hypit/media-operations@1"/>
-<fragment id="product-hold" using="media:still-video">
-  <input name="duration" value="5"/>
-  <input name="clock" from="clock"/>
-  <input name="layout" from="product-layout"/>
-  <input name="source-0" from="product-image"/>
-</fragment>
-<satisfy output="product-clip.video" candidate="product-hold.video"/>
+<override output="opening.video" primary="true"/>
 ```
 
-Here `product-layout` is an Author value of Type `@hypit/media-operations@1#StillVideoLayout`,
-containing `{"weights":[1]}`; `product-image` is an authored image Blob. The package README owns the
-Fragment's exact inputs. [Media](media.md#give-a-still-a-duration-when-that-is-its-role) shows the
-simpler `StillVideo` declaration for authoring this directly in the Source.
+This is useful for explicitly generating another take while the production continues to select the
+accepted one. The new Build does not change the durable selection by itself. Inspect the Result,
+place an accepted file in the project, and update the Author Source when the new take should become
+the production's material.
 
-Place imports after `author` and before execution declarations. `using` names a Fragment from an
-installed package. `from` on an input names a public value of the Run's Author entry, including a
-computed Output. The latter retains its own dependencies and any Candidate selection. It does not
-name another Run Candidate or automatically expose an imported Source's private bindings.
+A Run may also temporarily choose an existing authored Record:
 
-The resulting Candidate is named `product-hold.video`. Selecting it replaces the computation at
-`product-clip.video` while retaining the preparation and composition that consume that video.
+```svrun
+<override output="opening.video" record="alternate-opening"/>
+```
+
+The Record must already exist in the selected Author closure and have the exact Output Type. The
+override is local to this Invocation. It cannot introduce a file, value or computation.
 
 ## Generate material while composing
 
-Media requests depend on the Script, direction, references and requested duration. Once those
-choices are ready and the commission covers their cost, a Run can target the prepared material while
-component and Recipe work continues. Shared decisions such as where a presenter leaves room for
-an overlay belong in Treatment. Translate the material side into visible camera facts for image
-and video direction; pass the composition side as actual layout and event inputs. Independent
-requests can run while their downstream components are authored.
+Media requests depend on Script, direction, references and requested duration. Once those decisions
+are ready and the commission covers their cost, target the material Output while component and Recipe
+work continues:
+
+```svrun
+<?svml using="@hypit/markup/run@1"?>
+<svrun version="1">
+  <author source="./production.svml"/>
+  <target output="opening.video"/>
+</svrun>
+```
+
+Independent requests can run while downstream composition is authored. Read `hypit plan` before
+submitting paid work. The resulting public Output remains in its Build Result for inspection and
+export. Accepting it into the production means making it an ordinary project resource and editing
+the Author Source; a later Run only chooses what to execute.
 
 The small [production Source](examples/production.svml), [Recipe](examples/look.svs),
-[material Run](examples/material.svrun) and [production Run](examples/production.svrun) illustrate
-these execution choices. Copy them together into a project. The simple performance request shows
-system wiring; the work's actual casting, references and direction come from its Treatment and Craft.
+[material Run](examples/material.svrun), [production Run](examples/production.svrun), and focused
+[detail Run](examples/detail.svrun) illustrate target-only presets over one authored production.
 
-`material.svrun` targets the opening alignment, which also demands its speech-media adaptation and local domain.
-While it runs, the author can work on the title and its placement. Once those Outputs complete, select
-the media, domain and alignment with `build-record` in the production Run so rendering uses the produced
-performance and its word timing. If material is already available, use it directly. Choose Targets
-according to the dependencies the current work needs.
+## Choose the useful Target
 
-For a focused composition change, [detail.svrun](examples/detail.svrun) targets frames 30–90 from the
-same Source and reuses those prepared Outputs. Replace its example Build id with the actual Result id. The new
-Build evaluates the changed composition and selected render interval. The final Run can reuse the
-same material and evidence for full delivery.
+Target the narrowest Output that is independently useful now:
 
-[Rendering](rendering.md#choose-a-render-interval-in-frames) explains frame ranges and reuse;
-[Review](review.md) explains judging the actual arrangement. [Studio](studio.md) provides an
-interactive view when playback, parameter editing or a component's Companion is useful.
+- target generated media when reviewing or accepting a new take;
+- target transcript evidence when it should be inspected or edited before composition;
+- target the final video for delivery;
+- target named render parts when the delivery workflow intentionally assembles them later.
 
-## Preserve the choices that still apply
+Target slicing does not change the work's authored relationships. A narrow render may still depend on
+the media and timing used in that interval. `hypit plan` shows the actual selected dependencies and
+external Needs.
 
-Retain unrelated `satisfy` declarations when adding a new choice. Removing one restores the Author
-computation for that Output. A new Build does not infer reuse from matching names or unchanged prompts.
-Read the plan to see whether the changed selection leaves the intended generation, preparation and
-rendering work. [Rendering](rendering.md) explains why a short render interval still needs explicit
-upstream reuse.
-
-## Other value and export forms
-
-`<value id="settings" type="@owner/module@1#Settings" from="./settings.json"/>` supplies a typed
-serialized value as a Candidate. The file contains the Value itself, for example
-`{"enabled":true}`. The complete value must match the declared Type. A structured Value may also
-contain ordinary `BlobRef` objects at any depth; it does not need a separate top-level wrapper.
-Use `build-record` for structured Outputs already held in Results, where their associated media
-resources can be resolved with them.
-
-When `hypit get` exports a structured value that references files, the destination contains
-`value.json` and those files. That exported document is for transport; a Run `<value>` reads the
-Value itself. [Project handoff](../creation/project-files.md#hand-over-an-editable-production)
-explains retaining its Result for structured reuse in another project location.
-
-Fragment input `value` supplies a scalar: number, boolean, null or text. Structured inputs use
-`from` to reference typed Author values. Exports are addressed as `instance.export`; optional
-`<export name="video"/>` children choose which exports the instance exposes. Selecting an export
-includes the computations that it requires.
-
-The installed package's Run Fragment documentation gives its package-specific inputs and exports.
-Declaration vocabulary queries describe Markup tags; a Fragment-only package can therefore have no
-entries in that query.
+Use [Rendering](rendering.md#choose-a-render-interval-in-frames) for frame-range delivery and
+[Review](review.md) for judging the resulting arrangement. [Studio](studio.md) provides the interactive
+view of the same Author Source when playback, parameter editing or a component Companion is useful.

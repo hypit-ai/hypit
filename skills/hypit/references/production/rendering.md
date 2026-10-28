@@ -117,7 +117,7 @@ For this example, the renderer evaluates the original page at seconds 8–12 and
 as a four-second clip starting at zero. An animation already in progress at second 8 keeps that state.
 
 **The range limits final rendering. Upstream generation still follows the selected graph.** Keep
-the Run Candidates for usable prepared media and alignment evidence when inspecting a Caption or MG revision.
+usable media and evidence selected in the Author Source when inspecting a Caption or MG revision.
 Inspect `hypit plan` for the work that remains before submission. [Authoring](authoring.md#reuse-produced-work-explicitly)
 explains choosing the reuse boundary.
 
@@ -139,12 +139,12 @@ Another Provider declares the request forms its deployment supports.
 
 A short interval reduces frame capture and source-frame extraction, but still prepares the document's
 declared assets and validates typed visual surfaces. Extra browsers help only while the machine can use them;
-preparation and final encoding contribute separately. Reusing media through the Run avoids generation work; it does
+preparation and final encoding contribute separately. Reusing authored project media avoids generation work; it does
 not preserve a previous render's temporary preparation.
 
 For a local composition change, use [snapshot](snapshots.md) first to inspect the changed
 relationship and its handoffs in Studio's current `HtmlProgram`. Keep accepted material selected in
-the Run. Range rendering supplies an encoded clip when that is needed; render the complete
+the Author Source. Range rendering supplies an encoded clip when that is needed; render the complete
 deliverable when the composition is ready.
 While rendering, communicate the current phase and meaningful progress. The Provider reports
 decoding, browser startup, capture, encoding and storage; `hypit logs <build-id>` preserves their
@@ -154,8 +154,8 @@ Image decode and declared-font loading failures stop capture with an error. Repa
 resource in its owning Source or component, then retry with accepted media retained in the Run.
 
 A local render timeout ends that execution attempt and releases capacity after its work has stopped.
-Its failure and already completed Outputs belong to the Build Result. Continue through a new Run
-and Build that explicitly reuse the available media, as described in [Runs](runs.md).
+Its failure and already completed Outputs belong to the Build Result. Export accepted media into the
+project, update the Author Source, and continue with a new Build as described in [Runs](runs.md).
 
 Use [Builds and Results](builds.md) to submit, follow and retrieve `final.video` or `detail.video`.
 Use [Review](review.md) to judge the observed interval or complete deliverable against the intended work.

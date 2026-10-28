@@ -5,7 +5,8 @@ delivery. [Production navigation](index.md) routes each relationship to its deta
 
 ## Material becomes useful through explicit relationships
 
-A supplied file, generated Output and reused Result can provide the same material Type. Prepare
+A supplied file or generated Output can become the same project material Type once accepted through
+its package-owned Author declaration. Prepare
 timed media to select its streams, establish a finite exact local temporal domain and publish its Extent.
 The work then decides how to use those facts.
 
@@ -94,9 +95,9 @@ component scope, paint order and execution dependencies keep their own meanings.
 ## Source, Run, Runtime and Studio
 
 Author Source connects material requests, time and space values, components and deliverables.
-Recipes hold reusable treatments. A Run selects public Outputs as Targets and can reuse exact files
-or completed Result Outputs as Candidates. Reuse the narrowest value whose facts still serve the
-current edit.
+Recipes hold reusable treatments. A Run is an optional saved Invocation: it selects public Outputs
+as Targets and may temporarily override a generated role with another Record already authored in
+the same closure. Durable material and realization choices remain in the Author Source.
 
 A Build executes the demanded graph and records completed public Outputs in its Result. Runtime
 Profiles select already installed Providers, Endpoints and credentials for external work.

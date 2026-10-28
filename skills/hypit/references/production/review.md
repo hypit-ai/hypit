@@ -9,7 +9,8 @@ Use Studio playback to hear and feel the passage, and the exported file to judge
 
 [Studio](studio.md) explains launch, session reuse, displayed information, Source writeback and
 project Companions. [Timestamped Comments](studio.md#revise-from-timestamped-comments) connects user
-feedback to the owning production facts. [Builds and Results](builds.md) explains retrieval and explicit Output reuse.
+feedback to the owning production facts. [Builds and Results](builds.md) explains Result inspection,
+export and accepting a produced file into the project.
 
 For a collaborative review, [show the editable work before export](studio.md#review-before-export)
 and introduce both views: Comments for time-located direction, Studio for the timeline and exposed
@@ -158,7 +159,7 @@ which of those choices belong in this piece.
 | The intended story, shot logic, or visual system is wrong | `TREATMENT.md` |
 | Words, speakers, Cue membership, Selections, or Moments are wrong | the Author Source's Script |
 | Composition, authored parameters, or semantic/clock relation is wrong | Author Source or Recipe |
-| The wrong file or earlier Output is selected | Run Source |
+| The wrong project resource realizes a generated role | the Author Source's asset declaration or realization selection |
 | A reusable visual role cannot express or render its intended design | the project Author Package |
 
 Before changing the work, connect the composition problem to its consequence and the intended
@@ -168,7 +169,7 @@ around it. Watch the affected interval and its handoffs after the change, then j
 Film. If the result did not improve, revisit the explanation before making another adjustment.
 
 A request for different paid media is a production decision whose additional calls must be visible
-in `hypit plan`. Reuse the accepted Outputs for composition changes.
+in `hypit plan`. Keep accepted project material selected for composition changes.
 
 The composition is ready when its layout, readability and timing carry the Brief and Treatment
 clearly and compellingly. Continue when a change will improve that expression; deliver when it works,

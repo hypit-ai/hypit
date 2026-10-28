@@ -31,10 +31,10 @@ curl --fail --location 'https://storage.googleapis.com/hypit-public-assets/asset
 tar -xzf .hypit/media.tar.gz
 ```
 
-The archive contains source assets, one portable Result with 50 accepted Outputs and their resource
-files, and the finished film. It preserves the resource bindings inside composite values. It contains
-accepted material rather than generation history; private review notes, credentials and the original
-reference creator's footage are excluded. Media is hosted on Google Cloud Storage and stays outside Git.
+The archive contains source assets, historical Result files retained for inspection, and the finished
+film. The editable production uses project-owned assets rather than historical Build addresses;
+private review notes, credentials and the original reference creator's footage are excluded. Media is
+hosted on Google Cloud Storage and stays outside Git.
 After extraction, `.hypit/media.tar.gz` can be removed to reclaim the archive's download space.
 
 ```sh
@@ -51,10 +51,11 @@ this workspace's `FEEDBACK.json`; the Agent can read and resolve them while edit
 or scene code. Existing private review conversations are not included. The Inspector remains useful
 for the selected Caption, Style and event choices without exposing every internal scene dimension.
 
-The default Run explicitly selects 50 accepted Outputs from the bundled Result. Its remaining plan
-contains only local visual rendering, audio mixing and muxing. The included Profile has no generation
-account, credential store or transcription service. Material has already been prepared and given
-its semantic timing; opening this example does not generate or transcribe it again.
+The default Run is a target-only Invocation preset. Accepted performance and supporting media are
+ordinary project assets; media preparation and speech alignment remain explicit Author relations.
+The included Profile has no generation account or credential store. A Build that reaches the authored
+WhisperX declarations therefore needs an explicitly configured transcription path, or the project must
+replace those declarations with project-owned transcript evidence first.
 
 Submit `runs/render.svrun` to render the complete film. `runs/export-parts.svrun` instead renders five
 consecutive ranges for limited temporary disk space. Its local Profile requests eight rendering
@@ -74,13 +75,13 @@ explains joining exported parts. The archive also includes `productions/explaine
 | How do the presenter and opening graphics move? | [Opening system](packages/opening-system/README.md) |
 | How are cue boundaries and one-line captions handled? | [Caption package](packages/single-line-captions/README.md) |
 | Where does the shared palette live without becoming another Track? | [Visual language](packages/visual-language/README.md) |
-| Which existing material should a new Build use? | [Render Run](productions/explainer/runs/render.svrun) |
+| Which existing material should a new Build use? | [Assets](productions/explainer/authors/assets.svml) and [Main Source](productions/explainer/authors/main.svml) |
 
-Generated and prepared-media Outputs remain in the entry Source where the Run can satisfy them explicitly.
-Changing a Cue boundary or graphic event does not require replacing the performance. A rewrite of the
-spoken words is different: supply new performance media with timing for that Script and select it in the Run.
-The retained generation declarations show the original direction but are not invoked by the default
-Run. Configure an explicitly chosen Model/Provider path before requesting new material.
+Generated and prepared-media Outputs remain in the entry Source, while accepted files are normal Author
+resources. Changing a Cue boundary or graphic event does not require replacing the performance. A rewrite
+of the spoken words is different: provide new performance media and matching evidence for that Script.
+The retained generation declarations show the original direction; configure an explicitly chosen
+Model/Provider path before requesting new material.
 
 ## What this example teaches
 

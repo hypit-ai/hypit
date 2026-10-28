@@ -2,38 +2,4 @@
 <svrun version="1">
   <author source="../authors/main.svml"/>
   <target output="complete-film.video"/>
-  <build-record id="migrated-opening-alignment" build="bld_20261022T031625794Z_0IU9JFMWI6" output="opening.alignment"/>
-  <satisfy output="opening.alignment" candidate="migrated-opening-alignment"/>
-  <build-record id="migrated-introduction-alignment" build="bld_20261022T031625794Z_0IU9JFMWI6" output="introduction.alignment"/>
-  <satisfy output="introduction.alignment" candidate="migrated-introduction-alignment"/>
-  <build-record id="migrated-competitors-alignment" build="bld_20261022T031625794Z_0IU9JFMWI6" output="competitors.alignment"/>
-  <satisfy output="competitors.alignment" candidate="migrated-competitors-alignment"/>
-  <build-record id="migrated-two-roads-alignment" build="bld_20261022T031625794Z_0IU9JFMWI6" output="two-roads.alignment"/>
-  <satisfy output="two-roads.alignment" candidate="migrated-two-roads-alignment"/>
-  <build-record id="migrated-editor-road-alignment" build="bld_20261022T031625794Z_0IU9JFMWI6" output="editor-road.alignment"/>
-  <satisfy output="editor-road.alignment" candidate="migrated-editor-road-alignment"/>
-  <build-record id="migrated-keyframe-cost-alignment" build="bld_20261022T031625794Z_0IU9JFMWI6" output="keyframe-cost.alignment"/>
-  <satisfy output="keyframe-cost.alignment" candidate="migrated-keyframe-cost-alignment"/>
-  <build-record id="migrated-code-road-alignment" build="bld_20261022T031625794Z_0IU9JFMWI6" output="code-road.alignment"/>
-  <satisfy output="code-road.alignment" candidate="migrated-code-road-alignment"/>
-  <build-record id="migrated-reuse-cost-alignment" build="bld_20261022T031625794Z_0IU9JFMWI6" output="reuse-cost.alignment"/>
-  <satisfy output="reuse-cost.alignment" candidate="migrated-reuse-cost-alignment"/>
-  <build-record id="migrated-timing-cost-alignment" build="bld_20261022T031625794Z_0IU9JFMWI6" output="timing-cost.alignment"/>
-  <satisfy output="timing-cost.alignment" candidate="migrated-timing-cost-alignment"/>
-  <build-record id="migrated-water-break-alignment" build="bld_20261022T031625794Z_0IU9JFMWI6" output="water-break.alignment"/>
-  <satisfy output="water-break.alignment" candidate="migrated-water-break-alignment"/>
-  <build-record id="migrated-synthesis-alignment" build="bld_20261022T031625794Z_0IU9JFMWI6" output="synthesis.alignment"/>
-  <satisfy output="synthesis.alignment" candidate="migrated-synthesis-alignment"/>
-  <build-record id="migrated-components-alignment" build="bld_20261022T031625794Z_0IU9JFMWI6" output="components.alignment"/>
-  <satisfy output="components.alignment" candidate="migrated-components-alignment"/>
-  <build-record id="migrated-semantic-time-alignment" build="bld_20261022T031625794Z_0IU9JFMWI6" output="semantic-time.alignment"/>
-  <satisfy output="semantic-time.alignment" candidate="migrated-semantic-time-alignment"/>
-  <build-record id="migrated-semantic-demo-alignment" build="bld_20261022T031625794Z_0IU9JFMWI6" output="semantic-demo.alignment"/>
-  <satisfy output="semantic-demo.alignment" candidate="migrated-semantic-demo-alignment"/>
-  <build-record id="migrated-result-alignment" build="bld_20261022T031625794Z_0IU9JFMWI6" output="result.alignment"/>
-  <satisfy output="result.alignment" candidate="migrated-result-alignment"/>
-  <build-record id="migrated-reference-reveal-alignment" build="bld_20261022T031625794Z_0IU9JFMWI6" output="reference-reveal.alignment"/>
-  <satisfy output="reference-reveal.alignment" candidate="migrated-reference-reveal-alignment"/>
-  <build-record id="migrated-closing-alignment" build="bld_20261022T031625794Z_0IU9JFMWI6" output="closing.alignment"/>
-  <satisfy output="closing.alignment" candidate="migrated-closing-alignment"/>
 </svrun>

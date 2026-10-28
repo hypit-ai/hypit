@@ -150,11 +150,11 @@ referenced in place; its documentary role does not require a duplicate.
   creative terms, before implementation details.
 - `authors/`, `recipes/`, and `runs/` are the exact production implementation.
 - `PROGRESS.md` is a short photograph of the work now: the live question, what remains to examine or
-  make, next useful action, real blockers, active Build ids and reusable Results. Keep cost information
+  make, next useful action, real blockers, active Build ids and useful Results. Keep cost information
   relevant to the remaining work here when it affects the agreed budget. When handing work
   over, retain the relevant Run and Runtime Profile, exact Build id and public Output names needed
-  to continue. Run Candidates own
-  the actual reuse choices; the note points to them. Established conclusions belong in their owning
+  to continue. The Author Source owns durable project resources and realization choices; the note
+  points to them. Established conclusions belong in their owning
   document instead.
 
 Rewrite these files when the current truth changes. They are not logs. `PROGRESS.md` may exist beside
@@ -182,40 +182,35 @@ become an `asset`, a `draft`, or direct input to another production.
 ## Hand over an editable production
 
 A finished MP4 is a viewing deliverable. To continue making the piece, the recipient also needs the
-authored work and the produced values that its Runs select:
+authored work and the project resources its Author Source selects:
 
 - Sources, Recipes, Runs, project notes and referenced input assets, keeping their relative layout;
 - project component source or installed-release dependencies, `package.json`, its lockfile and any
   tarballs referenced by `file:` dependencies;
-- the completed Results used by `build-record` Candidates, including their media and value
-  documents;
+- every project asset, evidence document and other authored Record selected by the production;
 - the intended Runtime configuration, with account access configured on the receiving machine through
   its own Credential Store.
 
-For the default filesystem repository, preserving `.hypit/results/` intact with the project is the
-straightforward handoff. Include the hidden directory and keep its date/Build subdirectories. Some
-Results forward an Output to its original owning Build, so copying only the latest Build directory
-can omit media still in use. Archive or migrate completed Results explicitly when they should live
-outside the project.
+Results are execution history rather than dependencies of the authored production. Include
+`.hypit/results/` when the recipient needs prior Build evidence, diagnostics or Outputs that have not
+yet been accepted into the project. A self-contained editable production must not require a Result
+directory merely to resolve its selected material.
 
-External input files remain live dependencies, including when referenced inside structured Outputs.
-The Node workspace records their resolved file addresses. When moving to another machine, provide
-those inputs and update affected references to their new locations. Copying Result directories alone
-does not collect external files; an explicit `hypit get` export does collect the selected Output's
-referenced bytes.
+External input files remain live dependencies. When moving to another machine, provide those inputs
+and preserve or update their project-relative references. Copying Result directories does not collect
+project inputs; `hypit get` only exports a selected historical Output to an explicit destination.
 
 The recipient installs the selected Distribution and project dependencies, configures their Runtime,
-and inspects the received Results. Planning the intended Run shows whether its reuse choices still
-resolve and what new work remains. Active execution stays with the originating Runtime until that
-attempt ends; an editable handoff carries authored work and required Results rather than the originating
-Runtime's execution state.
+and checks the received Author Source. Planning the intended Run shows what new work remains. Active
+execution stays with the originating Runtime until that attempt ends; an editable handoff carries
+authored work and project resources rather than the originating Runtime's execution state.
 
-`hypit get` is useful when handing over a particular output. Exported image/video/audio files can be
-selected as file Candidates. A structured value with referenced files exports as `value.json` beside
-those files for inspection and transport; a Run `<value>` accepts the Value itself. To retain
-structured prepared media, local-domain or alignment reuse, keep
-its Result available and select each required Output with `build-record`. [Builds and Results](../production/builds.md)
-explains Result reuse and export.
+`hypit get` is useful when accepting or handing over a particular historical Output. Place an exported
+image, video or audio file at a project path, declare it through its owning package, and author the
+realization choice explicitly. A structured value with referenced files exports as `value.json`
+beside those files for inspection and transport; it enters Source only when its owning package defines
+a current Author declaration for that document. [Builds and Results](../production/builds.md) explains
+Result inspection and export.
 
 ## Resume from present facts
 
@@ -226,8 +221,8 @@ is not a reason to submit the same paid work again.
 
 A command interruption or missing reply can leave the Worker running. [Builds](../production/builds.md)
 explains how to identify active work and continue through a new Run after a failed attempt.
-Completed Outputs remain in Results without being exported as files. Keep or add their Run Candidates
-when revising downstream work; neither the notes nor an unchanged output name selects them automatically.
+Completed Outputs remain in Results without becoming production inputs. Export accepted material to
+the project and update the Author Source; neither notes nor an unchanged output name selects it automatically.
 
 ## Keep review notes with the work
 

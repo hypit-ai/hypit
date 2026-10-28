@@ -4,15 +4,15 @@ Read this when inspecting the work selected by a Run, obtaining spending authori
 Build, continuing after a failed attempt, following work after an observer disconnects, or retrieving
 completed Outputs.
 
-[Runs](runs.md) owns Candidate syntax and substitutes. [System relationships](system.md) explains
-how the selected graph becomes a Build, and [rendering](rendering.md) covers whole or partial video outputs.
+[Runs](runs.md) owns saved Invocation Targets and transient overrides. [System relationships](system.md)
+explains how the authored production becomes a Build, and [rendering](rendering.md) covers whole or partial video outputs.
 
 ## Reuse available Outputs and identify active Builds
 
-For a revision, identify the relevant Run and its completed Outputs, then preserve the still-useful
-ones with `build-record` and `satisfy`. Keep unrelated Candidate selections. [Authoring](authoring.md#reuse-produced-work-explicitly)
-explains which media, local-domain or alignment Output to keep without freezing the downstream edit. A failed
-Build can still supply completed Outputs; a missing exported file is not evidence of missing media.
+For a revision, identify the relevant Run and its completed Outputs. Export still-useful media into
+the project and record the durable choice in the Author Source. [Authoring](authoring.md#reuse-produced-work-explicitly)
+explains how project material and realization selection preserve media without freezing downstream edits.
+A failed Build can still contain completed Outputs; a missing exported file is not evidence of missing media.
 
 If the CLI or observation tool loses its reply while submitting or following a Build, inspect the
 local Runtime and project Results: the Worker may already be executing that Build.
@@ -31,7 +31,7 @@ that received the Build.
 
 Use the known Build id. If it was not returned, use project activity and Results to identify the
 submission from its Run, Source and submission time. Follow active work with `status --watch` and
-reuse completed Outputs. A closed terminal or interrupted
+inspect or export completed Outputs. A closed terminal or interrupted
 observation is distinct from a failed Provider request inside the Build. Finishing an incomplete
 Result is covered below and does not require regenerating media.
 
@@ -54,20 +54,19 @@ expand it when the cause needs earlier context; a closed terminal does not erase
 
 ## Continue after a failed attempt
 
-A failed Build leaves the work and evidence produced by that attempt. Prepare a new Run that selects
-its usable Outputs through `build-record` and `satisfy`, then submit a new Build for the remaining
-work. The next attempt's choices belong in that Run; the earlier Build retains its failure.
+A failed Build leaves the work and evidence produced by that attempt. Export any accepted file into
+the project, add or update its ordinary Author declaration and realization selection, then submit a
+new Build for the remaining work. The earlier Build retains its failure.
 
 When a Provider task-submission request times out without a task ID or another usable receipt,
 the Result can establish the request failure and absence of a receipt, while the remote outcome remains
 unknown. A later submission is a new Build. Assess its paid requests against the
-[agreed scope and cost](#work-within-the-agreed-paid-scope), and select any Outputs already available
-from the earlier attempt in its Run.
+[agreed scope and cost](#work-within-the-agreed-paid-scope), and carry any accepted files into the
+project before the next attempt.
 
 When a usable receipt does exist and gives access to a generated asset, the Agent can retrieve that
-asset as an ordinary project file and select it with `file` and `satisfy` in the new Run. This supplies
-the file Output; downstream preparation and alignment still run when needed. Completed prepared-media,
-local-domain and alignment Outputs can instead be reused independently through the existing Result.
+asset as an ordinary project file and declare it in the Author Source. Downstream preparation and
+alignment then run from that authored material when needed.
 
 Use `status <build-id> --verbose` for task IDs, Endpoints and progress. Use
 `inspect <build-id> --verbose --json` for the Result's full retained execution records, including
@@ -81,7 +80,8 @@ these details.
 user develops earlier from their request and reference evidence; it does not require a Run, a fully
 prepared environment or this command. Use the command when there is concrete execution to inspect.
 
-Plan the actual Run after its reuse choices and requested changes are expressed:
+Plan the actual Run after durable material choices are in the Author Source and requested execution
+choices are expressed:
 
 ```bash
 hypit check path/to/build.svrun
@@ -89,13 +89,12 @@ hypit plan path/to/build.svrun
 ```
 
 `check` validates the self-described Sources and graph without executing them. `plan` freezes the
-demanded subgraph after applying the Run's Candidate selections and lists every external Need that
-would be sent. Planning starts no external work.
+demanded subgraph after applying authored realization choices and Invocation overrides, then lists
+every external Need that would be sent. Planning starts no external work.
 
 Use the default reports to follow the remaining work. `--json` changes the encoding; `--verbose`
-expands the scope. A Run's Candidate count is not its count of new requests or generated assets:
-Candidates may supply existing values or select another Producer. Read demanded Needs to decide
-what will execute, and `pricing` to identify the subset that may incur a Provider charge.
+expands the scope. Read demanded Needs to decide what will execute, and `pricing` to identify the
+subset that may incur a Provider charge.
 
 With a selected Runtime Profile, the plan also names the Endpoint behind each request, applies that
 Endpoint's request-support rules, checks cheap readiness for the demanded capabilities, and shows the
@@ -112,8 +111,6 @@ hypit pricing path/to/build.svrun
 The default report groups matching requests by their selected Endpoint and pricing material, showing
 known parameters, request counts, and the Provider's rate summary or document with its source URL. Explicit
 no-charge work is summarized in one count. Missing pricing declarations and failed queries stay
-visible as uncertainty; a declared price page remains useful when the Provider supplies no document.
-
 Use the stated units and conditions together with authored duration, resolution, count, or other
 billing facts to calculate and explain the expected cost. Providers may publish several price tiers
 for one model; match the request to the applicable conditions. A future audio input may not have a
@@ -125,11 +122,11 @@ data. Both views include all pricing groups by default. `--limit <count>` shorte
 view; `--verbose` shows original documents and the no-charge work. Read the relevant groups and explain
 the expected cost of the described work, the account that would pay and any material uncertainty.
 
-Read the remaining Needs against this change. A Caption or MG-only revision should keep its existing
-media generation satisfied; replacing selected B-roll should leave the unchanged performance satisfied.
+Read the remaining Needs against this change. A Caption or MG-only revision should retain its accepted
+media realization; replacing selected B-roll should leave the unchanged performance selected.
 Rendering and other required processing may still appear as Needs. Explain each new media request
-from the user's goal or an explicit generation decision. If a request appears because a Candidate was
-lost or never selected, repair the Run and plan again before asking to spend or submitting work.
+from the user's goal or an explicit generation decision. If a request appears because an accepted
+project realization is missing, repair the Author Source and plan again before asking to spend or submitting work.
 
 ## Work within the agreed paid scope
 
@@ -167,8 +164,8 @@ hypit build path/to/build.svrun --title first-cut --follow
 ```
 
 Every invocation creates a fresh time-ordered Build id and one independent Result, even when the Run
-did not change. Cross-Build reuse requires explicit Run Candidates; repeating the same command does
-not resume the earlier Build or automatically select its Outputs. The optional title is a human-facing
+did not change. Repeating the same command does not resume an earlier Build or automatically alter the
+production's selected material. The optional title is a human-facing
 Result label; it does not replace the Build id or alter Source identity.
 
 Build performs a cheap preflight and submits only when the selected deployment slice is ready. It
@@ -230,7 +227,7 @@ hypit result finish <build-id>
 ```
 
 That command writes from already accepted execution facts and working Resources. It does not invoke a
-Producer, resubmit generation, or choose another Candidate. Use it only for the Result write named by
+Producer, resubmit generation, or alter a realization choice. Use it only for the Result write named by
 `status`. `hypit result discard <build-id>` applies only to an incomplete submission that never became
 active and has no Result to finish.
 
@@ -260,10 +257,9 @@ hypit get <build-id> --output <public-output-name> --to <destination>
 
 `builds` lists finished project Results newest first. `inspect` shows one Result's Targets,
 highlighted Outputs and outcome. Use `inspect <build-id> --output <public-output-name>` for a known
-Output, or `--verbose` to browse all available names and receipts. A Result can expose many forwarded
-Outputs from earlier work; this inventory does not mean those files were generated or copied again.
-`history` finds one named Output across Results, including reuse; it does not select one for the
-current Run. `get` exports one named Output to one explicit destination:
+Output, or `--verbose` to browse all available names and receipts. A Result can expose many public
+Outputs. `history` finds one named Output across Results; it does not select one for the current
+production. `get` exports one named Output to one explicit destination:
 
 - a value with no referenced files becomes a JSON file;
 - a file Output becomes one file with its original bytes;
@@ -281,8 +277,8 @@ hypit result edit <build-id> --title "podcast take · coral captions" \
 ```
 
 The title, note, and highlights live in that Result manifest. They do not rename its public Outputs
-or create a project-wide history index. Reuse still names the exact Build id and Output through the
-Run mechanism in `authoring.md`.
+or create a project-wide history index. Once exported, the receiving package's ordinary Author
+declaration owns how that file enters the production.
 
 ## Keep Results with the project
 
@@ -290,9 +286,9 @@ Result storage belongs to the video project at `.hypit/results`. Result listing,
 Studio's finished library all read that directory. Moving or archiving completed Results is ordinary
 project/file management performed after a Build; it is not a live Runtime repository choice.
 
-A submitted Build retains its exact project Result directory. Preserve any Result that
-still supplies a Run Candidate: exported files are optional copies, and explicit reuse may still
-reference Resources in the original Result.
+A submitted Build retains its exact project Result directory. Preserve a Result while its execution
+evidence or unexported files remain useful. Long-lived production material should live at explicit
+project paths rather than depend on Result cleanup policy.
 
 [Project handoff](../creation/project-files.md#hand-over-an-editable-production) explains carrying
 those Results and the authored work to another machine or collaborator.
@@ -301,12 +297,13 @@ those Results and the authored work to another machine or collaborator.
 
 Each new local Build loads the current project implementation and selected Provider configuration.
 Edit project components or the Profile, then create a new Build;
-previously started work keeps its loaded implementation. Reuse completed material through the Run
-when changing composition. Warm services such as WhisperX remain available across Builds.
+previously started work keeps its loaded implementation. Keep completed material through ordinary
+project assets and authored realization choices when changing composition. Warm services such as
+WhisperX remain available across Builds.
 
 Concurrent Builds share execution infrastructure; remote waiting does not reserve a whole-Build slot.
 A lost Worker ends its affected attempts; completed Outputs and available remote receipts are
-retained. Continue with a new Build and explicit reuse. Files that a component reads later retain
+retained. Continue with a new Build after carrying accepted files into the project. Files that a component reads later retain
 their own filesystem lifetime.
 
 Changing the installed Distribution or the Worker's inherited shell environment requires restarting

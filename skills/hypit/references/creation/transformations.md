@@ -137,7 +137,7 @@ Otherwise, avoid chains of intermediate pictures that exist only to feed the nex
 single shot split by a model's duration limit, reuse the same accepted visual authorities for each
 part unless the cut itself is designed around a literal boundary frame.
 
-Carry accepted media into the composition through Source and Run Candidates. Use Studio and rendered
+Carry accepted media into the composition through project resources and authored realization choices. Use Studio and rendered
 Results to develop Caption, MG, B-roll coverage, effects and sound around those assets. If a generated
 item fails its intended role, improve the responsible prompt, reference relation or shot design before
 deciding on another authorized request. Reconsider Treatment when the creative answer itself changes.
