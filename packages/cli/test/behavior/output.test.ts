@@ -393,6 +393,7 @@ test("run check treats historical reuse as a normal summary", () => {
       frontend: "@hypit/markup/run@1",
       targetCount: 1,
       targets: ["final.video"],
+      overrides: 0,
       candidates: 1,
       satisfactions: 1,
       historicalOutputCount: 1,

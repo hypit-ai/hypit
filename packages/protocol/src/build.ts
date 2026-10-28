@@ -97,6 +97,23 @@ export type Satisfaction = {
   readonly candidate: CandidateId;
 };
 
+/** Author-visible choice for one invocation; hygienic Candidate ids never cross this boundary. */
+export type InvocationChoice =
+  | { readonly kind: "primary" }
+  | { readonly kind: "record"; readonly record: RecordId };
+
+export type InvocationOverride = {
+  readonly output: LogicalOutputId;
+  readonly choice: InvocationChoice;
+};
+
+/** One source-neutral request to evaluate selected authored outputs. */
+export type Invocation = {
+  readonly format: "hypit.invocation@1";
+  readonly targets: readonly LogicalOutputId[];
+  readonly overrides: readonly InvocationOverride[];
+};
+
 export type ProducerStep = {
   readonly id: StepId;
   readonly producer: ProducerRef;

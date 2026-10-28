@@ -15,6 +15,7 @@ import {
 } from "./candidate.js";
 
 import { sealRunGraph } from "./graph.js";
+import { sealInvocation } from "./invocation.js";
 
 import type {
   ResolveRunDocumentContext,
@@ -186,6 +187,18 @@ export async function resolveRunDocument(
     } as const;
   });
   const targets = document.targets.map((item) => logicalOutput(context, item));
+  const invocation = sealInvocation({
+    targets,
+    overrides: document.overrides.map((item) => {
+      const output = logicalOutput(context, item.output);
+      if (item.choice.kind === "primary") return { output, choice: item.choice };
+      const ref = authorRef(context, item.choice.record);
+      if (ref.kind !== "record") {
+        throw new Error(`${item.choice.record} is not an authored Record`);
+      }
+      return { output, choice: { kind: "record" as const, record: ref.id } };
+    }),
+  });
   const resolvedCandidates = [...candidates.values()];
   const resolvedOperations = [...operations.values()];
   const graph = sealRunGraph({
@@ -197,6 +210,7 @@ export async function resolveRunDocument(
   });
   return {
     document,
+    invocation,
     graph,
     candidates: Object.fromEntries([...candidateNames.entries()].sort(([left], [right]) => compareCodeUnits(left, right))),
     candidateSources: Object.fromEntries([...candidateSources.entries()].sort(([left], [right]) => compareCodeUnits(left, right))),

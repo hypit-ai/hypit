@@ -19,6 +19,7 @@ import type {
   AuthorGraph,
   BuildDefinition,
   Candidate,
+  Invocation,
   PublicationIntent,
   RunGraph,
   Value,
@@ -54,13 +55,14 @@ type EffectiveSelectionGraphs = {
  */
 function effectiveSelectionGraphs(
   author: CompiledAuthorSource,
-  invocation: RunGraph,
+  invocation: Invocation,
+  legacy: RunGraph,
 ): EffectiveSelectionGraphs {
   const outputs = new Map(author.graph.outputs.map((output) => [output.id, output]));
   const records = new Map(author.program.records.map((record) => [record.id, record]));
   const usedCandidates = new Set([
     ...author.graph.candidates.map((candidate) => candidate.id),
-    ...invocation.candidates.map((candidate) => candidate.id),
+    ...legacy.candidates.map((candidate) => candidate.id),
   ]);
   const realizationCandidates: Candidate[] = [];
   const effective = new Map<string, string>();
@@ -90,8 +92,37 @@ function effectiveSelectionGraphs(
     effective.set(output.id, id);
   }
 
-  for (const override of invocation.satisfactions) {
+  for (const override of legacy.satisfactions) {
     effective.set(override.output, override.candidate);
+  }
+
+  for (const override of invocation.overrides) {
+    const output = outputs.get(override.output);
+    if (output === undefined) {
+      throw new Error("Invocation override references unknown Logical Output " + override.output);
+    }
+    if (override.choice.kind === "primary") {
+      effective.set(output.id, output.primary);
+      continue;
+    }
+    const record = records.get(override.choice.record);
+    if (record === undefined) {
+      throw new Error("Invocation override references unknown Record " + override.choice.record);
+    }
+    if (!sameType(output.type, record.type)) {
+      throw new Error("Invocation override Record has the wrong Type for " + output.id);
+    }
+    const id = "candidate:invocation-record:" + JSON.stringify([output.id, record.id]);
+    if (usedCandidates.has(id)) {
+      throw new Error("Invocation override Candidate conflicts with " + id);
+    }
+    usedCandidates.add(id);
+    realizationCandidates.push({
+      id,
+      type: output.type,
+      root: { kind: "record", id: record.id },
+    });
+    effective.set(output.id, id);
   }
 
   return {
@@ -100,7 +131,8 @@ function effectiveSelectionGraphs(
       candidates: [...author.graph.candidates, ...realizationCandidates],
     },
     invocation: {
-      ...invocation,
+      ...legacy,
+      targets: invocation.targets,
       satisfactions: [...effective.entries()]
         .sort(([left], [right]) => compareCodeUnits(left, right))
         .map(([output, candidate]) => ({ output, candidate })),
@@ -302,7 +334,7 @@ export class RunCompiler {
       compilation: executionCompilation,
       fragments: this.#options.fragments,
     });
-    const effective = effectiveSelectionGraphs(author, run.graph);
+    const effective = effectiveSelectionGraphs(author, run.invocation, run.graph);
     const plan = planBuild(program, effective.author, effective.invocation);
     return {
       document,
@@ -441,7 +473,10 @@ export class RunCompiler {
       ...compilation.run.graph,
       targets: compilation.run.graph.targets.filter((target) => !forwardOnlyOutputs.has(target)),
     };
-    const effective = effectiveSelectionGraphs(compilation.author, executionRun);
+    const effective = effectiveSelectionGraphs(compilation.author, {
+      ...compilation.run.invocation,
+      targets: executionRun.targets,
+    }, executionRun);
     const sliced = sliceExecution(
       compilation.program,
       effective.author,
@@ -525,7 +560,10 @@ export class RunCompiler {
   /** Plan a distinct in-memory Run graph as a distinct compilation selection. */
   prepareVariant(compilation: CompiledRun, graph: RunCompilation["graph"]): PreparedBuild {
     const run = { ...compilation.run, graph };
-    const effective = effectiveSelectionGraphs(compilation.author, graph);
+    const effective = effectiveSelectionGraphs(compilation.author, {
+      ...compilation.run.invocation,
+      targets: graph.targets,
+    }, graph);
     return this.prepareCompilation({
       ...compilation,
       run,

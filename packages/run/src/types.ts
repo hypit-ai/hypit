@@ -2,7 +2,7 @@ import type {
   CompiledSourceClosure,
   GraphFragment,
 } from "@hypit/author";
-import type { CanonicalValue, RunGraph, TypeRef } from "@hypit/protocol";
+import type { CanonicalValue, Invocation, RunGraph, TypeRef } from "@hypit/protocol";
 export type { RunGraph } from "@hypit/protocol";
 import type { SourceUnit } from "@hypit/source";
 
@@ -72,12 +72,21 @@ export type RunSatisfaction = {
   readonly candidate: string;
 };
 
+/** Source-level spelling of a transient invocation choice. */
+export type RunOverride = {
+  readonly output: string;
+  readonly choice:
+    | { readonly kind: "primary" }
+    | { readonly kind: "record"; readonly record: string };
+};
+
 export type RunDocument = {
   readonly format: "hypit.run-document@1";
   readonly author: RunAuthorSourceRequest;
   readonly imports: readonly RunImport[];
   readonly targets: readonly string[];
   readonly candidates: readonly RunCandidateDeclaration[];
+  readonly overrides: readonly RunOverride[];
   readonly satisfactions: readonly RunSatisfaction[];
 };
 
@@ -117,6 +126,8 @@ export type RunCandidateSource =
 
 export type RunCompilation = {
   readonly document: RunDocument;
+  /** Source-neutral invocation. Legacy graph contribution remains only until old Run declarations migrate. */
+  readonly invocation: Invocation;
   readonly graph: RunGraph;
   readonly candidates: Readonly<Record<string, string>>;
   /** Sources for zero-input Candidates, materialized only after global planning selects them. */

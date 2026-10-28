@@ -65,7 +65,7 @@ test("authored realization selects an existing Record without executing the prim
   });
 });
 
-test("transient Run satisfaction overrides an authored realization for one invocation", async () => {
+test("transient Invocation primary overrides an authored realization without exposing a Candidate id", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-realization-override-"));
   const authorFile = join(root, "main.svml");
   const runFile = join(root, "build.svrun");
@@ -83,30 +83,63 @@ test("transient Run satisfaction overrides an authored realization for one invoc
     "<?svml using=\"@hypit/markup/run@1\"?>",
     "<svrun version=\"1\">",
     "  <author source=\"./main.svml\"/>",
-    "  <import from=\"@example/preview\" as=\"preview\"/>",
     "  <target output=\"hello.result\"/>",
-    "  <fragment id=\"alternate\" using=\"preview:result\"/>",
-    "  <satisfy output=\"hello.result\" candidate=\"alternate.result\"/>",
+    "  <override output=\"hello.result\" primary=\"true\"/>",
     "</svrun>",
   ].join("\n"), "utf8");
 
   const frontends = new RunFrontendRegistry();
   frontends.register(runMarkupFrontend);
-  const fragments = new RunFragmentRegistry();
-  fragments.register({ name: "@example/preview", fragments: { result: previewFragment } });
   const runCompiler = new RunCompiler({
-    authorCompiler: compiler(root, [previewManifest]),
+    authorCompiler: compiler(root),
     frontends,
-    fragments,
+    fragments: new RunFragmentRegistry(),
   });
   const prepared = await runCompiler.prepareEntry(runFile);
 
   assert.equal(prepared.definition.plan.steps.length, 1);
-  assert.equal(prepared.definition.plan.steps[0]?.producer.name, previewProducer.name);
+  assert.equal(prepared.definition.plan.steps[0]?.producer.name, "produce");
   assert.notEqual(
     prepared.selections[0]?.record,
     prepared.compilation.author.realizations[0]?.record,
   );
+});
+
+test("transient Invocation Record override selects an existing Author value", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hypit-invocation-record-"));
+  const authorFile = join(root, "main.svml");
+  const runFile = join(root, "build.svrun");
+  await writeFile(authorFile, [
+    "<?svml using=\"@hypit/markup@1\"?>",
+    "<svml>",
+    "  <import as=\"lab\" from=\"example.compiler-lab@1\"/>",
+    "  <lab:Result id=\"hello\"/>",
+    "  <lab:Accepted id=\"accepted\" value=\"kept\"/>",
+    "</svml>",
+  ].join("\n"), "utf8");
+  await writeFile(runFile, [
+    "<?svml using=\"@hypit/markup/run@1\"?>",
+    "<svrun version=\"1\">",
+    "  <author source=\"./main.svml\"/>",
+    "  <target output=\"hello.result\"/>",
+    "  <override output=\"hello.result\" record=\"accepted\"/>",
+    "</svrun>",
+  ].join("\n"), "utf8");
+
+  const frontends = new RunFrontendRegistry();
+  frontends.register(runMarkupFrontend);
+  const runCompiler = new RunCompiler({
+    authorCompiler: compiler(root),
+    frontends,
+    fragments: new RunFragmentRegistry(),
+  });
+  const prepared = await runCompiler.prepareEntry(runFile);
+
+  assert.equal(prepared.definition.plan.steps.length, 0);
+  assert.equal(prepared.compilation.run.invocation.overrides[0]?.choice.kind, "record");
+  assert.equal(prepared.selections[0]?.record, prepared.compilation.run.invocation.overrides[0]?.choice.kind === "record"
+    ? prepared.compilation.run.invocation.overrides[0].choice.record
+    : undefined);
 });
 
 test("Run-only Fragment modules extend the execution closure without polluting the Author Graph", async () => {

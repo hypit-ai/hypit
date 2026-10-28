@@ -8,6 +8,7 @@ import type {
   RunImport,
   RunFileSource,
   RunValueSource,
+  RunOverride,
   RunSatisfaction,
 } from "@hypit/run";
 import {
@@ -206,6 +207,24 @@ function satisfaction(element: StructuredElement): RunSatisfaction {
   };
 }
 
+function override(element: StructuredElement): RunOverride {
+  exactAttributes(element, ["output", "primary", "record"]);
+  empty(element);
+  const output = stringAttribute(element, "output")!;
+  const primary = stringAttribute(element, "primary", false);
+  const record = stringAttribute(element, "record", false);
+  if ((primary === undefined) === (record === undefined)) {
+    fail(element, "RUN_OVERRIDE_CHOICE", `<override> ${output} requires exactly one of primary or record`);
+  }
+  if (primary !== undefined && primary !== "true") {
+    fail(element, "RUN_OVERRIDE_PRIMARY", `<override> ${output} primary must be true`);
+  }
+  return {
+    output,
+    choice: record === undefined ? { kind: "primary" } : { kind: "record", record },
+  };
+}
+
 function unique(values: readonly string[], subject: string, element: StructuredElement): void {
   const seen = new Set<string>();
   for (const value of values) {
@@ -230,8 +249,9 @@ function parseRunDocumentBody(name: string, text: string): RunDocument {
   const imports: RunImport[] = [];
   const targets: string[] = [];
   const candidates: RunCandidateDeclaration[] = [];
+  const overrides: RunOverride[] = [];
   const satisfactions: RunSatisfaction[] = [];
-  const satisfiedOutputs = new Set<string>();
+  const overriddenOutputs = new Set<string>();
   let bodyStarted = false;
   for (const child of elements(root)) {
     if (child.name === "author") {
@@ -250,16 +270,24 @@ function parseRunDocumentBody(name: string, text: string): RunDocument {
     bodyStarted = true;
     if (author === undefined) fail(child, "RUN_AUTHOR_MISSING", "<svrun> requires an opening <author> declaration");
     if (child.name === "target") targets.push(target(child));
+    else if (child.name === "override") {
+      const item = override(child);
+      if (overriddenOutputs.has(item.output)) {
+        fail(child, "RUN_OVERRIDE_DUPLICATE", `<override> repeats output ${item.output}`);
+      }
+      overriddenOutputs.add(item.output);
+      overrides.push(item);
+    }
     else if (child.name === "value") candidates.push(valueSource(child));
     else if (child.name === "file") candidates.push(file(child));
     else if (child.name === "build-record") candidates.push(buildOutput(child));
     else if (child.name === "fragment") candidates.push(fragment(child));
     else if (child.name === "satisfy") {
       const item = satisfaction(child);
-      if (satisfiedOutputs.has(item.output)) {
-        fail(child, "RUN_SATISFACTION_DUPLICATE", `<satisfy> repeats output ${item.output}`);
+      if (overriddenOutputs.has(item.output)) {
+        fail(child, "RUN_SATISFACTION_DUPLICATE", `Run selection repeats output ${item.output}`);
       }
-      satisfiedOutputs.add(item.output);
+      overriddenOutputs.add(item.output);
       satisfactions.push(item);
     }
     else fail(child, "RUN_CHILD", `<svrun> does not accept <${child.name}>`);
@@ -276,6 +304,7 @@ function parseRunDocumentBody(name: string, text: string): RunDocument {
     imports,
     targets,
     candidates,
+    overrides,
     satisfactions,
   };
 }

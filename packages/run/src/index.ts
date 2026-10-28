@@ -31,4 +31,9 @@ export {
   sealRunGraph,
   verifyRunGraph,
 } from "./graph.js";
+export {
+  InvocationError,
+  sealInvocation,
+  verifyInvocation,
+} from "./invocation.js";
 export type * from "./types.js";

@@ -48,6 +48,7 @@ function distribution(
           imports: [],
           targets: ["result"],
           candidates: [],
+          overrides: [],
           satisfactions: [],
         }),
         }), ...(producerError === undefined ? [] : [createProducerPackageFacet([{
@@ -80,6 +81,7 @@ function distribution(
       compileResolvedSource: async (entry: { readonly unit: { readonly id: string } }) => ({
         closure: { entry: entry.unit.id, units: [] },
         provenance: { format: "hypit.author-provenance@1", elements: [] },
+        realizations: [],
         program: { closure: { format: "hypit.closure@1", modules: [{
           format: "hypit.module@1",
           name: "example.value",

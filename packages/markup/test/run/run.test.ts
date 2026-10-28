@@ -54,7 +54,12 @@ function fixture(): CompiledSourceClosure {
     type: promptType,
     value: ("A deliberate preview."),
   };
-  const program = link(closure, [prompt]);
+  const accepted = {
+    id: "media:accepted",
+    type: mediaType,
+    value: ("Already accepted."),
+  };
+  const program = link(closure, [prompt, accepted]);
   const graph = sealAuthorGraph({
     outputs: ["left", "right"].map((id) => ({ id, type: mediaType, primary: "default:candidate" })),
     candidates: [{
@@ -76,6 +81,7 @@ function fixture(): CompiledSourceClosure {
     realizations: [],
     exports: [
       { name: "prompt", type: promptType, ref: { kind: "record", id: prompt.id } },
+      { name: "accepted", type: mediaType, ref: { kind: "record", id: accepted.id } },
       { name: "left", type: mediaType, ref: { kind: "logical-output", id: "left" } },
       { name: "right", type: mediaType, ref: { kind: "logical-output", id: "right" } },
     ],
@@ -140,6 +146,51 @@ test("Run Markup compilation consumes decode output without repeating package di
     text: `<?svml using="@hypit/markup/run@1"?>\n<svrun version="1"><author source="./main.svml"/><target output="left"/></svrun>`,
   }), frontends);
   assert.equal(compiled.targets[0], "left");
+});
+
+test("Run Markup lowers primary and Record overrides to a source-neutral Invocation", async () => {
+  const primary = await compileDocument(`<svrun version="1">
+    <author source="./main.svml"/>
+    <target output="left"/>
+    <override output="left" primary="true"/>
+  </svrun>`);
+  const compilation = fixture();
+  const primaryRun = await resolveRunDocument(primary, {
+    compilation,
+    fragments: new RunFragmentRegistry(),
+  });
+  assert.deepEqual(primaryRun.invocation, {
+    format: "hypit.invocation@1",
+    targets: ["left"],
+    overrides: [{ output: "left", choice: { kind: "primary" } }],
+  });
+
+  const record = await compileDocument(`<svrun version="1">
+    <author source="./main.svml"/>
+    <target output="left"/>
+    <override output="left" record="accepted"/>
+  </svrun>`);
+  const recordRun = await resolveRunDocument(record, {
+    compilation,
+    fragments: new RunFragmentRegistry(),
+  });
+  assert.deepEqual(recordRun.invocation.overrides, [{
+    output: "left",
+    choice: { kind: "record", record: "media:accepted" },
+  }]);
+  assert.equal(recordRun.graph.satisfactions.length, 0);
+});
+
+test("Run Markup rejects ambiguous or repeated Invocation overrides", () => {
+  assert.throws(() => parseRunDocument("bad.svrun", `<svrun version="1">
+    <author source="./main.svml"/><target output="left"/>
+    <override output="left" primary="true" record="accepted"/>
+  </svrun>`), /requires exactly one of primary or record/u);
+  assert.throws(() => parseRunDocument("bad.svrun", `<svrun version="1">
+    <author source="./main.svml"/><target output="left"/>
+    <override output="left" primary="true"/>
+    <satisfy output="left" candidate="legacy"/>
+  </svrun>`), /selection repeats output left/u);
 });
 
 test("Run Fragments enter the Host only through the selected Run facet ABI", () => {

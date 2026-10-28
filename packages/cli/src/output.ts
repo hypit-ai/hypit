@@ -81,6 +81,7 @@ export type RunCheckOutput = {
   readonly frontend: string;
   readonly targetCount: number;
   readonly targets: readonly string[];
+  readonly overrides: number;
   readonly candidates: number;
   readonly satisfactions: number;
   readonly historicalOutputCount?: number;
@@ -406,6 +407,7 @@ function renderRunCheck(
     ...(verbose ? [
       ["Author", shortPath(view.machine.author)] as const,
       ["Frontend", view.machine.frontend] as const,
+      ["Overrides", String(view.machine.overrides)] as const,
       ["Candidates", String(view.machine.candidates)] as const,
       ["Satisfactions", String(view.machine.satisfactions)] as const,
       ...(view.machine.steps === undefined ? [] : [["Steps", String(view.machine.steps)] as const]),

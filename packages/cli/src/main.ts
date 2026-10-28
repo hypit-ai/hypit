@@ -214,6 +214,7 @@ export async function runCli(
           frontend: selectedFrontend,
           targetCount: loaded.document.targets.length,
           targets: loaded.document.targets,
+          overrides: loaded.document.overrides.length,
           candidates: loaded.document.candidates.length,
           satisfactions: loaded.document.satisfactions.length,
           historicalOutputCount: loaded.unresolvedHistoricalOutputs.length,

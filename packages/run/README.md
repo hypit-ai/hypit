@@ -1,27 +1,24 @@
 # `@hypit/run`
 
-Syntax-neutral Run Source and complete Run Graph compiler.
+Syntax-neutral decoding of saved invocation presets.
 
 This package is outside Core and knows no XML, filename suffix, video type, Provider or Runtime
-configuration. Given a resolved Source, a registered `RunFrontend`, an already compiled
-Author Source and trusted Run Fragment registry, it produces:
+configuration. A registered `RunFrontend` decodes one source containing an Author source locator,
+Targets and optional transient overrides. Resolution against the compiled Author Source produces a
+source-neutral `hypit.invocation@1` value:
 
 ```text
-RunSourceClosure + RunDocument -> complete RunGraph
+saved preset + compiled Author Source -> Invocation { targets, overrides }
 ```
 
-The Run Graph always exists and binds the exact Author Graph. It contains Run Candidates,
-Operations, explicit Satisfaction edges and Targets. A run
-that selects only primary Candidates therefore still has identity and cannot be replaced by hidden
-CLI flags.
+An override selects either the AuthorGraph primary or an existing authored Record. Public presets
+never contain hygienic Candidate ids. CLI arguments and Studio sessions can construct the same
+Invocation without saving a Run source.
 
-`RunSourceClosure` separately binds original source bytes, Frontend id/implementation and decoded
-semantic meaning. `RunFragmentRegistry` accepts trusted Fragment packages only through the
-`hypit.run-fragment@1` Facet installer. Package loading does not interpret Fragment code.
+The optional XML-like spelling lives in `@hypit/markup/run`. Its `<override>` element requires an
+explicit `primary="true"` or `record="…"` choice.
 
-The optional official XML-like syntax lives in `@hypit/markup/run`. Another trusted Frontend can emit
-the same `RunDocument` without changing this package or Core.
-
-Run candidate sources use one literal vocabulary after decoding: `value`, `file` and
-`build-output`. The official syntax spells these as `<value>`, `<file>` and `<build-record>`; the
-last tag is authoring language only and decodes to an exact historical Build Output source.
+The current decoder also recognizes candidate declarations, Run Fragments and `<satisfy>` while
+repository sources are migrated. They are isolated from the Invocation ABI and must not be used as
+new extension points. Long-lived files and accepted Result values belong in the Author Document;
+package-owned adoption turns typed external values into ordinary Author declarations and Records.
