@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { AuthorDeclarationRegistry, installAuthorDeclarationFacets } from "@hypit/hypit/author";
+import {
+  AuthorAdopterRegistry,
+  AuthorDeclarationRegistry,
+  installAuthorAdopterFacets,
+  installAuthorDeclarationFacets,
+} from "@hypit/hypit/author";
 import {
   decodeMarkupDeclarations,
   installMarkupDeclarationFacets,
@@ -10,6 +15,8 @@ import {
   decodeSpeechTranscriptSource,
   phraseRanges,
   speechEvidenceModuleRef,
+  speechEvidenceTypes,
+  speechTranscriptAuthorAdopter,
   speechTranscriptSource,
   transcriptWordsFromEvidence,
   wordsAt,
@@ -45,6 +52,33 @@ test("editable transcript Source compiles back to the exact evidence Record", as
   });
   assert.deepEqual(declared.records.find((record) => record.id === "opening")?.value, evidence);
   assert.deepEqual(transcriptWordsFromEvidence(evidence), [{ text: "<你好 & café>", start: 0.1, end: 0.4 }]);
+});
+
+test("Speech Transcript adoption produces the same editable author value", async () => {
+  const evidence = {
+    sampleFrames: 16_000,
+    passages: [{
+      startSample: 0,
+      endSampleExclusive: 8_000,
+      words: [{ text: "hello", startSample: 0, endSampleExclusive: 8_000 }],
+      chars: [],
+    }],
+  };
+  const adopters = new AuthorAdopterRegistry();
+  installAuthorAdopterFacets(hypitPackage.facets, adopters);
+  const plan = await adopters.adopt(speechTranscriptAuthorAdopter.ref, {
+    type: speechEvidenceTypes.transcript,
+    value: evidence,
+  }, { id: "accepted" });
+  assert.equal(plan.result, "accepted");
+  assert.equal(plan.resources.length, 0);
+  assert.deepEqual(plan.declarations[0], {
+    module: speechEvidenceModuleRef,
+    name: "transcript",
+    fields: [{ name: "id", value: { kind: "literal", value: "accepted" } }],
+    children: [],
+    text: JSON.stringify(evidence, null, 2),
+  });
 });
 
 test("word annotations retain missing times and distinguish word boundaries, overlap and gaps", () => {

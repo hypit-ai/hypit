@@ -2,6 +2,19 @@ export {
   AuthorGraphError,
   elaborateAuthorGraph,
 } from "./author.js";
+export { AuthorAdopterRegistry } from "./adoption.js";
+export type {
+  AuthorAdopter,
+  AuthorAdopterRef,
+  AuthorAdoptionPlan,
+  AuthorResourcePlacement,
+  AuthorValueOffer,
+} from "./adoption.js";
+export {
+  authorAdopterFacetAbi,
+  createAuthorAdopterFacet,
+  installAuthorAdopterFacets,
+} from "./adoption-facet.js";
 export type {
   AuthorComponent,
   AuthorComponentOutputRef,

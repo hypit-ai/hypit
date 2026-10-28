@@ -37,6 +37,11 @@ The Transcript Author declaration owns ID validation, evidence decoding and the 
 Record. Markup declares only the `Transcript` tag and that its body is opaque package text. The
 Frontend therefore preserves JSON exactly and never parses it as nested Markup.
 
+The package also exports the explicit `@hypit/speech-evidence@1#transcript` author adopter. Given a
+typed `SpeechTranscriptEvidence` offer and `{ "id": "…" }`, it proposes the same editable
+`<speech:Transcript>` declaration. It does not read a Result repository, choose a Logical Output or
+write a Source; the Host applies and compiles the proposed Author transaction.
+
 `wordsAt` uses half-open word spans and preserves overlaps. `phraseRanges` matches whole consecutive
 words, preserves repeated occurrences and returns each measured range; it never guesses which
 occurrence an author intended. Missing word times remain missing rather than being inferred as
