@@ -341,10 +341,11 @@ export async function captureStagedVisual(input: CaptureInput, controller: Abort
     if (gpu !== undefined) {
       const raw = await gpu.finish();
       await gpu.close();
-      // The requested frame clock defines every packet duration, including the last.
+      // Use the same integer clock for input packets, setts and the MP4 track.
+      // Each frame occupies fps.den ticks, including the final packet.
       await runProcess({ executable: ffmpegPath,
-        argv: ["-v", "error", "-y", "-r", `${fps.num}/${fps.den}`, "-i", raw,
-          "-an", "-c:v", "copy", "-bsf:v", `setts=pts=N:dts=N:duration=1:time_base=${fps.den}/${fps.num}`,
+        argv: ["-v", "error", "-y", "-r", String(fps.num), "-i", raw,
+          "-an", "-c:v", "copy", "-bsf:v", `setts=pts=N*${fps.den}:dts=N*${fps.den}:duration=${fps.den}:time_base=1/${fps.num}`, "-video_track_timescale", String(fps.num),
           "-movflags", "+faststart", output],
         timeoutMs: config.processTimeoutMs, maxOutputBytes: config.maxProcessOutputBytes, signal });
     } else await orderedFrames!.close();
