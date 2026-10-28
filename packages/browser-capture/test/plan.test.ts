@@ -20,7 +20,9 @@ const PAGE = `<style>body{margin:0;height:2400px;background:#ff0000;font:20px sa
   button,input{position:absolute;left:40px;font-size:20px}</style>
   <div role="dialog" id="promo" style="position:fixed;right:20px;top:20px;background:#fff;padding:10px">
     Sale <button aria-label="Close" style="position:static" onclick="this.parentElement.remove()">×</button></div>
+  <button style="display:none">Show result</button>
   <button id="go" style="top:40px" onclick="document.body.style.background='#0000ff'">Show result</button>
+  <div id="rich" contenteditable="true" style="position:absolute;left:300px;top:200px;width:200px">draft <b>kept</b> text</div>
   <input id="name" style="top:120px" value="old text" oninput="document.getElementById('echo').textContent='echo:'+this.value">
   <p id="echo" style="position:absolute;left:400px;top:120px;margin:0"></p>
   <button style="top:200px">Delete project</button>
@@ -68,6 +70,8 @@ for (const scale of [1, 2]) test(`a plan replays real actions at scale ${scale},
         { action: "click", target: "text=Show result", screenshot: true, name: "result" },
         { action: "fill", target: "#name", value: "Hypit" },
         { action: "wait", for: "text=echo:Hypit", note: "the old value was replaced, not appended" },
+        { action: "fill", target: "#rich", value: "", note: "a rich editor is emptied, formatting included" },
+        { action: "assert", target: "#rich:not(:has(b))", timeoutMs: 1000 },
         { action: "hover", target: "text=Delete project", note: "destructive: hover only" },
         { action: "click", target: "#missing-banner", optional: true, timeoutMs: 200 },
         { action: "scroll", dy: 600, durationMs: 300 },
@@ -75,13 +79,13 @@ for (const scale of [1, 2]) test(`a plan replays real actions at scale ${scale},
       ],
     }, "none", scale);
     assert.equal(report.failed, null);
-    assert.equal(report.steps.length, 9);
+    assert.equal(report.steps.length, 11);
     const click = report.steps[2]!;
     assert.deepEqual(click.box, [40, 40, click.box![2], click.box![3]]);
     assert.ok(click.pointer, "pointer actions report where they acted");
     assert.equal(click.screenshot, "02-result.png");
     assert.ok(existsSync(join(work, "take", "screenshots", "02-result.png")));
-    assert.ok(report.steps[6]!.skipped, "an optional missing target is skipped, not failed");
+    assert.ok(report.steps[8]!.skipped, "an optional missing target is skipped, not failed");
     const saved = JSON.parse(await readFile(join(work, "take", "steps.json"), "utf8")) as CapturePlanReport;
     assert.equal(saved.format, "hypit.capture-plan@1");
     assert.equal(saved.recording?.path, "recording.mp4", "saved evidence holds no machine-specific path");
@@ -91,7 +95,7 @@ for (const scale of [1, 2]) test(`a plan replays real actions at scale ${scale},
     const recipe = await readFile(join(work, "take", "steps.svs"), "utf8");
     assert.match(recipe, /walkthrough\.take \{\s+passed: true;/u);
     assert.ok(recipe.includes(`"pointer":[${click.pointer!.join(",")}]`), "the Recipe carries what the composition draws from");
-    assert.doesNotMatch(recipe, /"index":6/u, "skipped steps are left out");
+    assert.doesNotMatch(recipe, /"index":8/u, "skipped steps are left out");
     // Step times are on the recording's clock: the page is red before the click and blue after it.
     const video = join(work, "take", "recording.mp4");
     const before = await colorAt(video, Math.max(0, click.start - 0.4));

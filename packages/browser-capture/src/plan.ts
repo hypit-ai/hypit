@@ -209,13 +209,30 @@ type Input = (send: () => Promise<unknown>) => Promise<void>;
 const sleep = (ms: number) => new Promise((done) => setTimeout(done, ms));
 
 /** Exactly one visible element (or the chosen `index`); several are an error rather than a guess. */
-async function findTarget(page: Page, step: CapturePlanStep, selector: string, timeout: number): Promise<ElementHandle<Element>> {
+/**
+ * Every visible match, waiting until at least one exists. Responsive pages often keep hidden copies
+ * of a control (a desktop layout behind a mobile one), so waiting for the first match is not enough.
+ */
+async function visibleMatches(page: Page, selector: string, timeout: number): Promise<ElementHandle<Element>[]> {
   const query = planSelector(selector);
-  await page.waitForSelector(query, { visible: true, timeout });
-  const visible: ElementHandle<Element>[] = [];
-  for (const element of await page.$$(query)) {
-    if (await element.isVisible()) visible.push(element); else await element.dispose();
+  const deadline = Date.now() + timeout;
+  for (;;) {
+    const visible: ElementHandle<Element>[] = [];
+    for (const element of await page.$$(query).catch(() => [] as ElementHandle<Element>[])) {
+      if (await element.isVisible().catch(() => false)) visible.push(element); else await element.dispose();
+    }
+    if (visible.length > 0) return visible;
+    if (Date.now() >= deadline) {
+      const error = new Error(`Waiting for a visible ${selector} failed after ${timeout} ms`);
+      error.name = "TimeoutError";
+      throw error;
+    }
+    await sleep(100);
   }
+}
+
+async function findTarget(page: Page, step: CapturePlanStep, selector: string, timeout: number): Promise<ElementHandle<Element>> {
+  const visible = await visibleMatches(page, selector, timeout);
   const chosen = step.index === undefined ? (visible.length === 1 ? visible[0] : undefined) : visible[step.index];
   for (const element of visible) if (element !== chosen) await element.dispose();
   if (chosen === undefined) {
@@ -380,7 +397,7 @@ export async function runCapturePlan(session: CaptureSession, input: CapturePlan
     await page.goto(startUrl, { waitUntil: "domcontentloaded" });
     if (plan.startUntil === undefined) { await sleep(1200); break; }
     try {
-      await page.waitForSelector(planSelector(plan.startUntil), { visible: true, timeout: plan.startTimeoutMs ?? 15_000 });
+      for (const element of await visibleMatches(page, plan.startUntil, plan.startTimeoutMs ?? 15_000)) await element.dispose();
       startLoads = load;
       break;
     } catch (error) {
@@ -457,7 +474,7 @@ export async function runCapturePlan(session: CaptureSession, input: CapturePlan
         if (step.target !== undefined) element = await findTarget(page, step, step.target, timeout);
         switch (step.action) {
           case "goto": await page.goto(planUrl(step.url!, base), { waitUntil: "domcontentloaded" }); break;
-          case "wait": await page.waitForSelector(planSelector(step.for!), { visible: true, timeout }); break;
+          case "wait": for (const element of await visibleMatches(page, step.for!, timeout)) await element.dispose(); break;
           case "assert": break;
           case "pause": await sleep(step.ms ?? 1000); break;
           case "screenshot": break;
@@ -482,14 +499,24 @@ export async function runCapturePlan(session: CaptureSession, input: CapturePlan
             await deliver(() => page.mouse.click(...pointer!));
             if (step.action === "fill") {
               // Replace existing text the way a person would, then enter the new value at once.
-              const hadText = await element!.evaluate((el) => {
-                if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) { el.select(); return el.value !== ""; }
-                const range = document.createRange(); range.selectNodeContents(el);
-                const selection = window.getSelection(); selection?.removeAllRanges(); selection?.addRange(range);
-                return (el.textContent ?? "") !== "";
-              });
-              if (hadText) await deliver(() => page.keyboard.press("Backspace"));
-              await deliver(() => page.keyboard.sendCharacter(step.value!));
+              // Select through the editing command so rich editors (ProseMirror, Lexical) update their own
+              // state, then delete; repeat while text remains, since an editor may restore a saved draft.
+              for (let attempt = 0; attempt < 4; attempt++) {
+                const hadText = await element!.evaluate((el) => {
+                  if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) { el.select(); return el.value !== ""; }
+                  (el as HTMLElement).focus();
+                  if (!document.execCommand("selectAll")) {
+                    const range = document.createRange(); range.selectNodeContents(el);
+                    const selection = window.getSelection(); selection?.removeAllRanges(); selection?.addRange(range);
+                  }
+                  return (el.textContent ?? "").trim() !== "";
+                });
+                if (!hadText) break;
+                await sleep(60);
+                await deliver(() => page.keyboard.press("Backspace"));
+                await sleep(120);
+              }
+              if (step.value) await deliver(() => page.keyboard.sendCharacter(step.value!));
             } else {
               // One key at a time, so frames are captured between keystrokes.
               for (const character of step.value!) {
