@@ -62,7 +62,8 @@ Hypit tests are organized by the fact they own, not by a unit/integration/e2e py
 - `packages/<name>/test/composition/` verifies one direct handoff;
 - `test/workflows/` verifies a small number of complete public flows;
 - `packages/<name>/test/environment/` files run only through an explicit
-  `node test/run.mjs environment <name>` selection.
+  `node test/run.mjs environment <package>` or
+  `node test/run.mjs environment <package>/<test>` selection.
 
 Use `node test/run.mjs package <name>` while changing one package and `node test/run.mjs workflow
 <name>` for a repository workflow. The default `pnpm test` suite excludes environment-owned browser,

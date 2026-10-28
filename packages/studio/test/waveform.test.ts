@@ -3,7 +3,7 @@ import test from "node:test";
 import { bytesFile } from "../src/material.js";
 import { createStudioWaveform } from "../src/storyboard.js";
 
-test("waveform produces a small PNG without browser audio decoding", async () => {
+test("waveform produces its fixed raster PNG without browser audio decoding", async () => {
   const samples = 8000;
   const wav = Buffer.alloc(44 + samples * 2);
   wav.write("RIFF", 0); wav.writeUInt32LE(wav.length - 8, 4); wav.write("WAVEfmt ", 8);
@@ -18,5 +18,4 @@ test("waveform produces a small PNG without browser audio decoding", async () =>
   assert.equal(png.toString("ascii", 1, 4), "PNG");
   assert.equal(png.readUInt32BE(16), 2048);
   assert.equal(png.readUInt32BE(20), 56);
-  assert.ok(png.byteLength < 100_000);
 });

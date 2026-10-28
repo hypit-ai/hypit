@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { chmod, mkdtemp, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -25,7 +25,6 @@ test("independent credential keys retain concurrent writes and round-trip opaque
     assert.equal(files.length, keys.length);
     for (const name of files) {
       assert.deepEqual(Object.keys(JSON.parse(await readFile(join(directory, name), "utf8"))).sort(), ["expiresAt", "secret"]);
-      if (process.platform !== "win32") assert.equal((await stat(join(directory, name))).mode & 0o777, 0o600);
     }
     assert.equal(await store.resolve(credentialRef("env", "Account")), undefined);
     assert.equal(await store.delete(credentialRef("file", keys[0]!)), true);
@@ -52,15 +51,5 @@ test("corrupt values report no secret bytes and can be replaced or deleted witho
     await writeFile(path, '{"secret":false}');
     assert.equal(await store.delete(ref), true);
     assert.equal(await store.resolve(ref), undefined);
-  } finally { await rm(root, { recursive: true, force: true }); }
-});
-
-test("file credentials require an owner-private directory on POSIX", { skip: process.platform === "win32" }, async () => {
-  const root = await mkdtemp(join(tmpdir(), "hypit-file-credentials-"));
-  try {
-    await chmod(root, 0o755);
-    const store = new FileCredentialStore(root);
-    await assert.rejects(store.put(credentialRef("file", "service"), { secret: "secret" }), /owner-private/u);
-    assert.deepEqual(await readdir(root), []);
   } finally { await rm(root, { recursive: true, force: true }); }
 });

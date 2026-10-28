@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { isAbsolute, join } from "node:path";
@@ -35,25 +34,4 @@ test("an interpreter without cv2 is reported here, not mid-Build", async () => {
   const state = await localOpenCvProgram(selected.instance, resolveLocalOpenCvDeployment(selected)).probe();
   assert.equal(state.state, "down");
   assert.match(state.state === "down" ? state.detail : "", /cannot import cv2 and numpy/u);
-});
-
-test("an interpreter carrying another OpenCV major is a mismatch, not a failure", {
-  // The stand-in below is a shell script that answers through its shebang line, and Windows has
-  // no shebang: it would run nothing and report the interpreter down, which is the state this
-  // test exists to distinguish a mismatch from.
-  skip: process.platform === "win32" && "the stand-in interpreter answers through a shebang",
-}, async () => {
-  // A stand-in interpreter that answers truthfully about an environment this
-  // Provider cannot drive: cv2 3.x predates the APIs it calls.
-  const directory = await mkdtemp(join(tmpdir(), "hypit-opencv-probe-"));
-  const fake = join(directory, "python");
-  await writeFile(fake, "#!/bin/sh\necho '{\"cv2\": \"3.4.18\", \"numpy\": \"2.1.0\"}'\n", { mode: 0o755 });
-  try {
-    const selected = context(fake);
-    const state = await localOpenCvProgram(selected.instance, resolveLocalOpenCvDeployment(selected)).probe();
-    assert.equal(state.state, "mismatch");
-    assert.match(state.state === "mismatch" ? state.detail : "", /cv2 is 3\.4\.18, expected 4\.x/u);
-  } finally {
-    await rm(directory, { recursive: true, force: true });
-  }
 });

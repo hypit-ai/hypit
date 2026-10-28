@@ -15,9 +15,7 @@ import sharp from "sharp";
 import { rasterizeHtmlProgram, rasterizeHtmlFrames } from "../../src/index.js";
 import { htmlProviderDelivery, htmlProviderPicture } from "../provider-scenario.js";
 
-test("transparent Prepared Media composites through an explicit Visual Clip in Chrome and Electron", {
-  skip: process.env.HYPIT_BROWSER_TESTS !== "1",
-}, async () => {
+test("transparent Prepared Media composites through an explicit Visual Clip in Chrome and Electron", async () => {
   const directory = process.env.HYPIT_ALPHA_PROOF_DIR ?? await mkdtemp(join(tmpdir(), "hypit-alpha-render-"));
   await mkdir(directory, { recursive: true });
   try {

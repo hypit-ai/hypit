@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import test from "node:test";
 import { installEndpoint } from "@hypit/hypit/endpoint";
 
@@ -11,7 +13,11 @@ import { createLocalOpenCvImageProvider } from "@hypit/provider-image-opencv-loc
 import { assertBlobRef, canonicalize } from "@hypit/protocol";
 import type { BlobRef, Need } from "@hypit/protocol";
 
-const openCvPython = process.env.HYPIT_OPENCV_PYTHON ?? "python3";
+const runtime = fileURLToPath(new URL("../../runtime/", import.meta.url));
+const managedPython = process.platform === "win32"
+  ? join(runtime, ".venv", "Scripts", "python.exe")
+  : join(runtime, ".venv", "bin", "python");
+const openCvPython = process.env.HYPIT_OPENCV_PYTHON ?? managedPython;
 
 const denoiseProgram = sealImageTransformProgram({
   operations: [{

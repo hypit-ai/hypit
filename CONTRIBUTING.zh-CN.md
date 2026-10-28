@@ -56,7 +56,8 @@ Hypit 按事实归属组织测试，不使用含义模糊的 unit/integration/e2
 - `packages/<name>/test/composition/` 验证一次直接交接；
 - `test/workflows/` 只验证少量完整公共流程；
 - `packages/<name>/test/environment/` 中的文件只通过显式的
-  `node test/run.mjs environment <name>` 运行。
+  `node test/run.mjs environment <package>` 或
+  `node test/run.mjs environment <package>/<test>` 运行。
 
 修改单个 package 时可运行 `node test/run.mjs package <name>`；仓库流程使用
 `node test/run.mjs workflow <name>`。默认 `pnpm test` 不包含依赖浏览器、媒体工具、Python

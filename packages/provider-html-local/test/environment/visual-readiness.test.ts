@@ -17,12 +17,11 @@ import { createOpaqueFrameCapture } from "../../src/opaque-capture.js";
 import { rasterizeHtmlFrames, rasterizeHtmlProgram } from "../../src/render.js";
 import { htmlProviderDelivery, htmlProviderPicture } from "../provider-scenario.js";
 
-const live = { skip: process.env.HYPIT_BROWSER_TESTS !== "1" };
 const testBrowser = () => process.env.HYPIT_TEST_CHROME_PATH ?? browserExecutablePath({});
 const testBrowserOption = () => process.env.HYPIT_TEST_CHROME_PATH === undefined
   ? {} : { chromePath: process.env.HYPIT_TEST_CHROME_PATH };
 
-test("capture waits for dynamic images and rejects broken images or exact fonts", live, async (t) => {
+test("capture waits for dynamic images and rejects broken images or exact fonts", async (t) => {
   const png = await sharp({ create: { width: 64, height: 64, channels: 3, background: "#ff0000" } }).png().toBuffer();
   const blue = await sharp({ create: { width: 64, height: 64, channels: 3, background: "#0000ff" } }).png().toBuffer();
   const server = createServer((request, response) => {
@@ -204,7 +203,7 @@ test("capture waits for dynamic images and rejects broken images or exact fonts"
   }
 });
 
-test("compiled frame selection neither stages nor waits for unrelated image resources", live, async () => {
+test("compiled frame selection neither stages nor waits for unrelated image resources", async () => {
   const resources = new MemoryResourceStore();
   const unavailable = { kind: "blob" as const, resource: "res_unavailable-unselected-image" as const,
     size: 123, mediaType: "image/png" };
@@ -250,7 +249,7 @@ test("compiled frame selection neither stages nor waits for unrelated image reso
     { resources, workers: 1, processTimeoutMs: 120_000, ...testBrowserOption() }), /image could not be decoded/u);
 });
 
-test("real capture keeps later Present animation local with picture content and independent workers", live, async () => {
+test("real capture keeps later Present animation local with picture content and independent workers", async () => {
   const resources = new MemoryResourceStore();
   const black = await resources.put(await sharp({
     create: { width: 64, height: 64, channels: 3, background: "#000000" },
@@ -289,7 +288,7 @@ test("real capture keeps later Present animation local with picture content and 
   }
 });
 
-test("Fine Caption Cues stay isolated over Picture during reverse seeks and independent workers", live, async () => {
+test("Fine Caption Cues stay isolated over Picture during reverse seeks and independent workers", async () => {
   const resources = new MemoryResourceStore();
   const blackBytes = await sharp({
     create: { width: 320, height: 180, channels: 3, background: "#000000" },
@@ -401,7 +400,7 @@ test("Fine Caption Cues stay isolated over Picture during reverse seeks and inde
   }
 });
 
-test("terminal text and SVG mask sources retain their Present frame animations across direct seeks and fresh workers", live, async () => {
+test("terminal text and SVG mask sources retain their Present frame animations across direct seeks and fresh workers", async () => {
   const space = sealTimeline({ id: "animations", frameCount: 60, frameRate: { numerator: 30, denominator: 1 } });
   const image = { kind: "blob", resource: "res_mask", size: 1, mediaType: "image/png" } as const;
   const font = { sources: [{ artifact: { kind: "blob", resource: "res_font", size: 1, mediaType: "font/woff2" } }],

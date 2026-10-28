@@ -268,18 +268,6 @@ Distribution changes and shell environment changes still concern the coordinator
 Inspect active work before restarting it. Environment-backed credentials use that inherited process
 environment; external writable Credential Stores resolve through their own implementation.
 
-### Concurrency checks
-
-`pnpm test` exercises 24 Builds with an eight-task remote pool and with all 24 submissions pending
-at once. Both cases verify local progress, per-Build module isolation, one submission per Build,
-capacity release and every completed Result. They use the production execution process and SQLite.
-
-`pnpm test:runtime-scale` runs the same checks with 1000 simultaneous remote submissions, on its own.
-This is a load experiment rather than part of every package regression. It reports fixture preparation,
-local progress, completion, executor RSS and cleanup separately; total test time also includes creating
-and removing the temporary Result repositories. Neither suite uses a completion-time performance target.
-
-
 ### Credential management without reading the old value
 
 `openCredentials(endpoint)` opens only the selected Endpoint's credential control.

@@ -6,10 +6,10 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 import { credentialRef } from "@hypit/runtime";
-import { FileCredentialStore } from "../src/file.js";
+import { FileCredentialStore } from "../../src/file.js";
 
-const distribution = fileURLToPath(new URL("../../../", import.meta.url));
-const fixture = fileURLToPath(new URL("./file-store-writer-fixture.ts", import.meta.url));
+const distribution = fileURLToPath(new URL("../../../../", import.meta.url));
+const fixture = fileURLToPath(new URL("../file-store-writer-fixture.ts", import.meta.url));
 const writers = 8;
 
 type Exit = { code: number; stderr: string };

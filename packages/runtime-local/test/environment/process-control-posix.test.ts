@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { stopProcessTree } from "../../src/process-control.js";
 
+// Process-group signaling is a POSIX host behavior, not a portable Runtime unit fact.
 test("a process-group permission error still tries the owned process", { skip: process.platform === "win32" }, async (t) => {
   const targets: number[] = [];
   t.mock.method(process, "kill", (target: number, signal?: NodeJS.Signals | number) => {

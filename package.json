@@ -229,9 +229,8 @@
     "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs",
     "test": "node test/run.mjs",
-    "test:runtime-scale": "node test/run.mjs environment runtime-scale",
     "test:whisperx-service": "uv run --project packages/provider-whisperx-local/runtime --frozen python -m unittest discover -s packages/provider-whisperx-local/test/service -p \"test_*.py\"",
-    "test:image-opencv": "node test/run.mjs environment image-opencv",
+    "test:image-opencv": "node test/run.mjs environment provider-image-opencv-local",
     "hypit": "node bin/hypit.mjs",
     "studio": "node bin/hypit.mjs studio",
     "prepack": "npm run build:public-types"

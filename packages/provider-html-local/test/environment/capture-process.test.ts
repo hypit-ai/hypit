@@ -28,9 +28,7 @@ function assertStopped(pid: number): void {
 }
 
 
-test("abrupt rasterizer exit closes its actual Chrome without disturbing another browser", {
-  skip: process.env.HYPIT_BROWSER_TESTS !== "1",
-}, async () => {
+test("abrupt rasterizer exit closes its actual Chrome without disturbing another browser", async () => {
   const { default: puppeteer } = await import("puppeteer-core");
   const chromePath = process.env.HYPIT_TEST_CHROME_PATH ?? browserExecutablePath({});
   const other = await puppeteer.launch({ executablePath: chromePath, headless: true, args: ["--no-sandbox"] });
