@@ -12,11 +12,14 @@ import type { CliOutputOptions } from "./output.js";
 import { parseCliGlobalOptions } from "./global-options.js";
 import { parseCliDecimalInteger } from "./decimal-integer.js";
 import { CliUsageError } from "./usage-error.js";
+import type { InvocationRequestOverride } from "@hypit/invocation";
 
 type RawOptions = {
   readonly presentation: CliOutputOptions;
   readonly projectRoot?: string;
   readonly assetRoots: readonly string[];
+  readonly targets: readonly string[];
+  readonly overrides: readonly InvocationRequestOverride[];
   readonly endpoints: readonly string[];
   readonly packageRoot?: string;
   readonly runtimeProfile?: string;
@@ -73,12 +76,14 @@ function parseArguments(argv: readonly string[], cwd: string): CliCommand {
     case "pricing": {
       const [source, rest] = requiredPositional(tail, `${command} requires one Source`);
       const options = commandOptions(command, rest, cwd,
-        "--runtime", "--package-root", "--project", "--asset-root", "--limit");
+        "--runtime", "--package-root", "--project", "--asset-root", "--target", "--override", "--limit");
       if (command === "pricing") return {
         command,
         source,
         presentation: options.presentation,
         assetRoots: options.assetRoots,
+        targets: options.targets,
+        overrides: options.overrides,
         ...(options.seenOptions.includes("--limit") ? { limit: options.limit } : {}),
         ...optionalProject(options),
         ...optionalRuntime(options),
@@ -89,6 +94,8 @@ function parseArguments(argv: readonly string[], cwd: string): CliCommand {
         source,
         presentation: options.presentation,
         assetRoots: options.assetRoots,
+        targets: options.targets,
+        overrides: options.overrides,
         limit: options.limit,
         ...optionalProject(options),
         ...optionalRuntime(options),
@@ -96,14 +103,16 @@ function parseArguments(argv: readonly string[], cwd: string): CliCommand {
       };
     }
     case "build": {
-      const [source, rest] = requiredPositional(tail, "build requires one Run Source");
+      const [source, rest] = requiredPositional(tail, "build requires one Author Source or Invocation preset");
       const options = commandOptions(command, rest, cwd,
-        "--runtime", "--package-root", "--project", "--asset-root", "--follow", "--max-wait-ms", "--title", "--limit");
+        "--runtime", "--package-root", "--project", "--asset-root", "--target", "--override", "--follow", "--max-wait-ms", "--title", "--limit");
       return {
         command,
         source,
         presentation: options.presentation,
         assetRoots: options.assetRoots,
+        targets: options.targets,
+        overrides: options.overrides,
         limit: options.limit,
         follow: options.follow,
         ...optionalProject(options),
@@ -311,6 +320,8 @@ function parseOptions(values: readonly string[], cwd: string): RawOptions {
   if (global.issue !== undefined) throw new Error(global.issue);
   let projectRoot: string | undefined;
   const assetRoots: string[] = [];
+  const targets: string[] = [];
+  const overrides: InvocationRequestOverride[] = [];
   let packageRoot: string | undefined;
   let runtimeProfile: string | undefined;
   let follow = false;
@@ -338,7 +349,7 @@ function parseOptions(values: readonly string[], cwd: string): RawOptions {
     if (!item.startsWith("--")) throw new Error(`unexpected positional argument ${item}`);
     const repeatable = item === "--endpoint" || [
       "--json", "--jsonl", "--watch", "--verbose", "--debug",
-      "--no-color", "--follow", "--asset-root", "--highlight",
+      "--no-color", "--follow", "--asset-root", "--highlight", "--target", "--override",
     ].includes(item);
     if (!repeatable && seenOptions.has(item)) throw new Error(`${item} cannot be repeated`);
     seenOptions.add(item);
@@ -349,6 +360,14 @@ function parseOptions(values: readonly string[], cwd: string): RawOptions {
     }
     if (item === "--asset-root") {
       assetRoots.push(resolve(cwd, optionValue(global.remaining, index, "--asset-root requires a directory"))); index += 1; continue;
+    }
+    if (item === "--target") {
+      targets.push(optionValue(global.remaining, index, "--target requires a public Output name")); index += 1; continue;
+    }
+    if (item === "--override") {
+      overrides.push(parseInvocationOverride(optionValue(global.remaining, index,
+        "--override requires <output>=primary or <output>=record:<record>")));
+      index += 1; continue;
     }
     if (item === "--package-root") {
       packageRoot = resolve(cwd, optionValue(global.remaining, index, "--package-root requires a directory")); index += 1; continue;
@@ -411,6 +430,8 @@ function parseOptions(values: readonly string[], cwd: string): RawOptions {
   return {
     presentation: global.presentation,
     assetRoots,
+    targets,
+    overrides,
     follow,
     endpoints,
     highlightedOutputs,
@@ -435,6 +456,20 @@ function parseOptions(values: readonly string[], cwd: string): RawOptions {
     ...(credentialFile === undefined ? {} : { credentialFile }),
     ...(source === undefined ? {} : { source }),
   };
+}
+
+function parseInvocationOverride(value: string): InvocationRequestOverride {
+  const separator = value.indexOf("=");
+  const output = separator < 0 ? "" : value.slice(0, separator).trim();
+  const choice = separator < 0 ? "" : value.slice(separator + 1).trim();
+  if (output.length === 0 || choice.length === 0) {
+    throw new Error("--override requires <output>=primary or <output>=record:<record>");
+  }
+  if (choice === "primary") return { output, choice: { kind: "primary" } };
+  if (choice.startsWith("record:") && choice.slice("record:".length).trim().length > 0) {
+    return { output, choice: { kind: "record", record: choice.slice("record:".length).trim() } };
+  }
+  throw new Error("--override requires <output>=primary or <output>=record:<record>");
 }
 
 function requiredPositional(values: readonly string[], message: string): readonly [string, readonly string[]] {

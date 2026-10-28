@@ -854,7 +854,7 @@ function renderInspector(snapshot: StudioSnapshot, address: StudioItemAddress | 
     inspector.replaceChildren(
       uiGroup("inspector.project", [
         property("inspector.author", snapshot.source.path, "property-code"),
-        property("inspector.run", snapshot.run.path, "property-code"),
+        property("inspector.invocation", snapshot.invocation.source ?? "command arguments", "property-code"),
         property("inspector.sources", String(snapshot.source.files.length)),
         property("inspector.tracks", String(snapshot.tracks.length), "property-number"),
       ]),
@@ -868,7 +868,7 @@ function renderInspector(snapshot: StudioSnapshot, address: StudioItemAddress | 
         property("inspector.frames", String(snapshot.timeline.frameCount), "property-number"),
       ]),
       uiGroup("inspector.build", [
-        property("inspector.targets", snapshot.run.targets.join(", ") || "—", "property-code"),
+        property("inspector.targets", snapshot.invocation.targets.join(", ") || "—", "property-code"),
       ]),
     );
     return;

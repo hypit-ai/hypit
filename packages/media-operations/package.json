@@ -23,7 +23,6 @@
     "@hypit/author": "workspace:*",
     "@hypit/media": "workspace:*",
     "@hypit/protocol": "workspace:*",
-    "@hypit/run": "workspace:*",
     "@hypit/recipe": "workspace:*",
     "@hypit/markup": "workspace:*",
     "@hypit/timeline": "workspace:*",

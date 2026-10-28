@@ -32,7 +32,7 @@ export type RuntimePreparation = {
 };
 
 export type RuntimeExecutionContext = {
-  /** Stable Run-local identity; two identical Build submissions may still be distinct Builds. */
+  /** Stable Build identity; two identical submissions remain distinct execution attempts. */
   readonly build: string;
   /** Observational activity of this call; it never changes scheduling or Core facts. */
   readonly reportProgress?: (activity: import("./execution.js").CommandExecutionActivity) => Promise<void>;
@@ -91,7 +91,7 @@ export type ResourceIOOptions = {
 export type ResourceStore = {
   /** Store one new resource instance. Equal bytes remain independent resources. */
   put(bytes: Uint8Array, mediaType: string, options?: ResourceIOOptions): Promise<BlobRef>;
-  /** Write bytes for an already-declared source or historical resource. */
+  /** Write bytes for one resource already declared by the current execution. */
   write(resource: BlobRef, bytes: Uint8Array, options?: ResourceIOOptions): Promise<void>;
   /** Read bytes previously stored under this execution identity. */
   get(resource: ResourceId, options?: ResourceIOOptions): Promise<Uint8Array | undefined>;

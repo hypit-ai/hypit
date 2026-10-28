@@ -22,7 +22,7 @@ import {
   selectMediaStreams,
   transformPreparedMedia,
 } from "@hypit/media-operations";
-import { audioProgramCapabilities, sealAudioProgram } from "@hypit/audio-program";
+import { audioProgramCapabilities, audioProgramGraphFromClips, sealAudioProgram } from "@hypit/audio-program";
 import { preservePitch } from "@hypit/audio-stretch";
 import { mediaDeliveryCapabilities } from "@hypit/media-delivery";
 import { assertBlobRef, canonicalize } from "@hypit/protocol";
@@ -527,7 +527,7 @@ test("local media Provider renders one frame-domain audio program and muxes exac
       frameCount: 30,
       sampleRate: 48_000,
       sampleFrames: 48_000,
-      clips: [
+      graph: audioProgramGraphFromClips([
         {
           id: "speech:first",
           ...preparedAudioProgramSource("speech:first", first, 24_000),
@@ -554,7 +554,7 @@ test("local media Provider renders one frame-domain audio program and muxes exac
           fadeInSamples: 0,
           fadeOutSamples: 0,
         },
-      ],
+      ]),
     });
     const audioRequest = need(
       "need:render-program-audio",
@@ -670,7 +670,7 @@ test("local media Provider executes an end-aligned loop from the exact authored 
       frameCount: 30,
       sampleRate: 48_000,
       sampleFrames: 48_000,
-      clips: [{
+      graph: audioProgramGraphFromClips([{
         id: "loop:end",
         ...preparedAudioProgramSource("loop:end", source, 100),
         sampling: audioSampling("loop:end", 250, 100, {
@@ -685,7 +685,7 @@ test("local media Provider executes an end-aligned loop from the exact authored 
         gain: 1,
         fadeInSamples: 0,
         fadeOutSamples: 0,
-      }],
+      }]),
     });
     const value = await fulfillInline(resources, need(
       "need:render-loop-audio",
@@ -762,7 +762,7 @@ test("audio signal evaluation treats reverse, hold, cubic motion and gaps as pee
     const program = sealAudioProgram({
       frameRate: { numerator: 30, denominator: 1 }, frameCount: 30,
       sampleRate: 48_000, sampleFrames: 48_000,
-      clips: [
+      graph: audioProgramGraphFromClips([
         base("reverse", 0, sampling("reverse", {
           target: { start: at(0), end: at(4) }, sourceAtStart: at(4), rate: { numerator: -1, denominator: 1 },
         })),
@@ -781,7 +781,7 @@ test("audio signal evaluation treats reverse, hold, cubic motion and gaps as pee
           target: audioTarget(16, 20), targetStartSample: 16, targetEndSampleExclusive: 20,
           mixStartSample: 16, mixEndSampleExclusive: 20, gain: 1, fadeInSamples: 0, fadeOutSamples: 0,
         },
-      ],
+      ]),
     });
     const value = await fulfillInline(resources, need(
       "need:render-signal-map-audio", audioProgramCapabilities.render,
@@ -814,13 +814,13 @@ test("audio range preserves loop phase, tempo and intersected fades from the ful
     const program = sealAudioProgram({
       frameRate: { numerator: 30, denominator: 1 }, frameCount: 60,
       sampleRate: 48000, sampleFrames: 96000,
-      clips: [{ id: "loop", ...preparedAudioProgramSource("loop", source, 4800),
+      graph: audioProgramGraphFromClips([{ id: "loop", ...preparedAudioProgramSource("loop", source, 4800),
         sampling: audioSampling("loop", 96000, 4800, { sourceAtStart: { numerator: 1700, denominator: 1 },
           rate: { numerator: 5, denominator: 4 }, wrap: { startFrame: 0, endFrameExclusive: 4800 } }),
         target: audioTarget(0, 96000),
         targetStartSample: 0, targetEndSampleExclusive: 96000,
         mixStartSample: 0, mixEndSampleExclusive: 96000, gain: 0.8,
-        fadeInSamples: 48000, fadeOutSamples: 30000 }],
+        fadeInSamples: 48000, fadeOutSamples: 30000 }]),
     });
     const pcm = async (name: string, range?: { startFrame: number; endFrameExclusive: number }) => {
       const value = await fulfillInline(resources, need(`need:${name}`, audioProgramCapabilities.render,
@@ -861,7 +861,7 @@ test("pitch-preserving reconstruction follows the same explicit rate without cha
     const makeProgram = (id: string, reconstruction?: ReturnType<typeof preservePitch>) => sealAudioProgram({
       frameRate: { numerator: 30, denominator: 1 }, frameCount: 15,
       sampleRate: 48_000, sampleFrames: 24_000,
-      clips: [{
+      graph: audioProgramGraphFromClips([{
         id,
         ...preparedAudioProgramSource(id, source, 48_000),
         sampling: audioSampling(id, 24_000, 48_000, { rate: { numerator: 2, denominator: 1 } }),
@@ -870,7 +870,7 @@ test("pitch-preserving reconstruction follows the same explicit rate without cha
         targetStartSample: 0, targetEndSampleExclusive: 24_000,
         mixStartSample: 0, mixEndSampleExclusive: 24_000,
         gain: 1, fadeInSamples: 0, fadeOutSamples: 0,
-      }],
+      }]),
     });
     const crossings = async (name: string, program: ReturnType<typeof makeProgram>) => {
       const value = await fulfillInline(resources, need(`need:${name}`, audioProgramCapabilities.render,
@@ -902,7 +902,7 @@ test("audio envelopes and audible regions preserve sample phase through gaps and
     const source = await resources.put(rampWav(4800), "audio/wav");
     const program = sealAudioProgram({
       frameRate: { numerator: 30, denominator: 1 }, frameCount: 12, sampleRate: 48000, sampleFrames: 19200,
-      clips: [{ id: "voice", ...preparedAudioProgramSource("voice", source, 4800),
+      graph: audioProgramGraphFromClips([{ id: "voice", ...preparedAudioProgramSource("voice", source, 4800),
         sampling: audioSampling("voice", 16000, 4800, { wrap: { startFrame: 0, endFrameExclusive: 4800 } }),
         target: audioTarget(1600, 17600),
         targetStartSample: 1600, targetEndSampleExclusive: 17600,
@@ -910,7 +910,7 @@ test("audio envelopes and audible regions preserve sample phase through gaps and
         fadeInSamples: 0, fadeOutSamples: 0,
         gainEnvelope: [{ sample: 1600, gain: 0 }, { sample: 17600, gain: 1 }],
         audibility: [{ startSample: 1600, endSampleExclusive: 4800 }, { startSample: 8000, endSampleExclusive: 17600 }],
-      }],
+      }]),
     });
     const pcm = async (name: string, range?: { startFrame: number; endFrameExclusive: number }) => {
       const value = await fulfillInline(resources, need(`need:${name}`, audioProgramCapabilities.render,

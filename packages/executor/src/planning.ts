@@ -31,7 +31,7 @@ export type PlanEvaluationBlocker =
     };
 
 export type PlanRecordSource =
-  | { readonly kind: "supplied" }
+  | { readonly kind: "program-record" }
   | { readonly kind: "producer-output"; readonly step: string; readonly port: string }
   | {
       readonly kind: "need-result";
@@ -78,7 +78,7 @@ export type ProducerPlanEvaluation = {
   readonly state: BuildView;
   /** One graph-level result for every Step in the finite BuildPlan. */
   readonly steps: readonly EvaluatedProducerStep[];
-  /** Supplied and produced Record declarations, including values that are not established yet. */
+  /** Program and produced Record declarations, including values that are not established yet. */
   readonly records: readonly EvaluatedPlanRecord[];
 };
 
@@ -105,7 +105,7 @@ function uniqueBlockers(blockers: readonly PlanEvaluationBlocker[]): readonly Pl
 function recordDeclarations(definition: BuildDefinition): readonly RecordDeclaration[] {
   const declarations = new Map<string, RecordDeclaration>();
   for (const record of definition.program.records) {
-    declarations.set(record.id, { record: record.id, type: record.type, source: { kind: "supplied" } });
+    declarations.set(record.id, { record: record.id, type: record.type, source: { kind: "program-record" } });
   }
   for (const step of definition.plan.steps) {
     const producer = resolveProducer(definition.program.closure, step.producer);
@@ -159,8 +159,8 @@ function evaluateGraph(
     if (evaluatingRecords.has(record)) throw new Error(`BuildPlan Record dependency cycle reaches ${record}`);
     evaluatingRecords.add(record);
     let result: EvaluatedPlanRecord;
-    if (declaration.source.kind === "supplied") {
-      throw new Error(`supplied BuildPlan Record ${record} is not available`);
+    if (declaration.source.kind === "program-record") {
+      throw new Error(`BuildPlan Program Record ${record} is not available`);
     }
     const owner = evaluateStep(declaration.source.step);
     if (owner.status === "failed") {

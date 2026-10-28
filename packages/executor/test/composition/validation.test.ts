@@ -140,12 +140,12 @@ function outputGraph(): AuthorGraph {
       {
         id: "measure",
         type: measurementType,
-        root: { kind: "operation", result: { kind: "operation-result", operation: "measure" } },
+        root: { kind: "operation-result", operation: "measure" },
       },
       {
         id: "report",
         type: reportType,
-        root: { kind: "operation", result: { kind: "operation-result", operation: "report" } },
+        root: { kind: "operation-result", operation: "report" },
       },
     ],
     operations: [
@@ -170,16 +170,9 @@ function outputBuild(linked: LinkedProgram, graph = outputGraph()) {
 }
 
 function buildState(linked: LinkedProgram, graph: AuthorGraph, targets: readonly string[]) {
-  const planned = planBuild(linked, graph, {
-    format: "hypit.run-graph@1",
-    records: [],
-    candidates: [],
-    operations: [],
-    satisfactions: [],
-    targets,
-  });
+  const planned = planBuild(linked, graph, targets, []);
   return materializeBuild(defineBuild({
-    program: link(linked.closure, [...linked.records, ...planned.initialRecords]),
+    program: linked,
     plan: planned.plan,
   }), []);
 }
@@ -226,7 +219,7 @@ function providerGraph(): AuthorGraph {
     candidates: [{
       id: "request",
       type: measurementType,
-      root: { kind: "operation", result: { kind: "operation-result", operation: "request" } },
+      root: { kind: "operation-result", operation: "request" },
     }],
     operations: [{
       id: "request",

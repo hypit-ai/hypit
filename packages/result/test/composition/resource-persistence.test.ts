@@ -28,7 +28,7 @@ test("one same-Build resource backs a public video and a structured value", asyn
     const result = await FileBuildResult.create(root, {
       id: "bld_20260902T100000000Z_0000000001",
       sourceId: "/project/main.svml",
-      runId: "/project/build.svrun",
+      invocationSourceId: "/project/build.svrun",
       publication: publication([
         { name: "shot.video", output: "logical:shot-video", record: "record:video" },
         { name: "shot.take", output: "logical:shot-take", record: "record:take", type: structuredType },

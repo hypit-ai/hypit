@@ -222,8 +222,7 @@ test("compiled frame selection neither stages nor waits for unrelated image reso
       root: { id: "red", kind: "image", artifact: red,
         style: [{ name: "width", value: "64px" }, { name: "height", value: "64px" }] } },
   ] });
-  const document = compileHtmlProgram(sealComposition({ id: "capture-scope",
-    canvas: { width: 64, height: 64, clearColor: "#000000" }, visual: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) }, audio: [] }), space);
+  const document = compileHtmlProgram(sealComposition({ id: "capture-scope", visual: { canvas: { width: 64, height: 64, clearColor: "#000000" }, root: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }), space);
 
   const captured = await rasterizeHtmlFrames({ program: document, picture: htmlProviderPicture(), frames: [45] },
     { resources, workers: 1, processTimeoutMs: 120_000, ...testBrowserOption() });
@@ -272,9 +271,9 @@ test("real capture keeps later Present animation local with picture content and 
       ] } },
     })),
   });
-  const document = compileHtmlProgram(sealComposition({ id: "local-animation", canvas: {
+  const document = compileHtmlProgram(sealComposition({ id: "local-animation", visual: { canvas: {
     width: 64, height: 64, clearColor: "#000000",
-  }, visual: { members: [picture, animated].map((track) => ({ kind: "track" as const, id: track.id, track })) }, audio: [] }), timeline);
+  }, root: { members: [picture, animated].map((track) => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }), timeline);
   const frames = await rasterizeHtmlFrames({ program: document, picture: htmlProviderPicture(),
     frames: [15, 45, 75] }, {
     resources, workers: 2, processTimeoutMs: 120_000, ...testBrowserOption(),
@@ -350,8 +349,7 @@ test("Fine Caption Cues stay isolated over Picture during reverse seeks and inde
           { name: "inset", value: 0 }, { name: "width", value: "320px" }, { name: "height", value: "180px" }],
         animation: { keyframes: [{ atFrame: 0, style: [{ name: "opacity", value: 1 }] },
           { atFrame: 90, style: [{ name: "opacity", value: 1 }] }] } } }] });
-  const html = compileHtmlProgram(sealComposition({ id: "fine-caption-isolation",
-    canvas: { width: 320, height: 180, clearColor: "#000000" }, visual: { members: [picture, captions].map((track) => ({ kind: "track" as const, id: track.id, track })) }, audio: [] }), timeline);
+  const html = compileHtmlProgram(sealComposition({ id: "fine-caption-isolation", visual: { canvas: { width: 320, height: 180, clearColor: "#000000" }, root: { members: [picture, captions].map((track) => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }), timeline);
 
   const assertCueColors = async (buffer: Uint8Array, wanted: "red" | "green" | "blue", label: string) => {
     const { data } = await sharp(buffer).removeAlpha().raw().toBuffer({ resolveWithObject: true });
@@ -437,7 +435,7 @@ test("terminal text and SVG mask sources retain their Present frame animations a
   ] };
   const track = sealPresentVisualTrack({ id: "visual", timelineId: space.id, visualIr: "hypit.visual-ir@1",
     presents: [{ id: "later", span: { startFrame: 15, endFrameExclusive: 60 }, root }] });
-  const compiled = compileHtmlProgram(sealComposition({ id: "animation", canvas: { width: 128, height: 128, clearColor: "#000000" }, visual: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) }, audio: [] }), space);
+  const compiled = compileHtmlProgram(sealComposition({ id: "animation", visual: { canvas: { width: 128, height: 128, clearColor: "#000000" }, root: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }), space);
   const html = materializeHtmlProgram(compiled, artifact => artifact.resource === "res_font"
     ? "data:font/woff2;base64,AA==" : "data:image/png;base64,AA==");
   const browser = await puppeteer.launch({ executablePath: testBrowser(), headless: true, args: ["--no-sandbox"] });

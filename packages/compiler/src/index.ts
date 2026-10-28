@@ -9,15 +9,15 @@ export type {
   RegisteredModulePackage,
 } from "./modules.js";
 export { Compiler } from "./compiler.js";
-export { RunCompiler } from "./run.js";
+export { InvocationCompiler } from "./invocation.js";
 export type {
   CompilerOptions,
   CompiledAuthorSource,
 } from "./compiler.js";
 export type {
-  CheckedRun,
-  CompiledRun,
-  RunAuthorCompiler,
-  RunCompilerOptions,
+  CheckedInvocationPreset,
+  CompiledInvocation,
+  InvocationAuthorCompiler,
+  InvocationCompilerOptions,
   PreparedBuild,
-} from "./run.js";
+} from "./invocation.js";

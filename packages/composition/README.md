@@ -85,8 +85,10 @@ author package can therefore publish an AudioTrack without teaching Film or Core
 
 ## Composition
 
-A Composition carries its id, Canvas with clear color, a recursive `VisualScope`, and root
-`AudioTrack[]`. A visual Scope contains placed Track members and nested Stack members. Both member
+A Composition carries its id and two independently consumable terminal values:
+`VisualComposition { canvas, root }` and `AudioComposition { contributions }`. They share the
+Timeline connected to assembly, but a visual compiler does not receive audio routing and an audio
+compiler does not receive Canvas or VisualScope. A visual Scope contains placed Track members and nested Stack members. Both member
 kinds carry a sibling-unique `id`, and their array order paints from back to front. Their recursive
 path identifies one visual occurrence. Each Stack closes its children into one picture before entering
 its parent at that position. Audio outputs form a finite multiset of

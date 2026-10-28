@@ -74,7 +74,7 @@
     "inspector.properties": "属性",
     "inspector.remove-item": "移除条目",
     "inspector.resolution": "分辨率",
-    "inspector.run": "运行方案",
+    "inspector.invocation": "调用",
     "inspector.sources": "引用文件",
     "inspector.start": "起点",
     "inspector.structured-value": "结构化值",

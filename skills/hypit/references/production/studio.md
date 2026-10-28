@@ -1,36 +1,36 @@
 # Work in Studio
 
-Read this when opening a Run, choosing its interface language, using its timeline and Inspector, or giving a project component a
+Read this when opening an Author Source and Invocation, choosing its interface language, using its timeline and Inspector, or giving a project component a
 useful Studio presentation. For component implementation, read [Companion authoring](studio-companions.md).
 [Review](review.md) owns the judgment made from the visible work;
 [Track authoring](track-authoring.md) owns the component's production behavior.
 
-## Open the actual Run
+## Open the actual work
 
 From the video project, use the installed Distribution's command:
 
 ```bash
-hypit studio --run build.svrun
+hypit studio --source main.svml --target final.video
 ```
 
 Supply `--runtime <profile>` when intentionally using a different Profile from the project's
-`hypit runtime use` selection. Studio needs a Run whose selected targets reach one Film with resolved
+`hypit runtime use` selection. Studio needs an Invocation whose selected targets reach one Film with resolved
 composition and time. The Timeline supplies the work's clock and extent; optional projections
-provide domain evidence such as Script anchors. Pure animation uses the same editor. An image-generation-only Run is not a Film view; several distinct
-Films need separate Runs or sessions.
+provide domain evidence such as Script anchors. Pure animation uses the same editor. An image-generation-only Invocation is not a Film view; several distinct
+Films need separate sessions or Invocations.
 
-Open the URL actually printed by the process and retain it with the Run it serves. For review, open
+Open the URL actually printed by the process and retain it with the Invocation it serves. For review, open
 that URL with `#comments` appended, such as `http://localhost:5179/#comments`; this selects the
 Comments view directly. The printed port is authoritative. The default
 requested port is 5179; `--port` selects another, and an occupied port can cause Vite to choose a
-different one. Reuse an existing session when it serves the intended project and Run.
+different one. Reuse an existing session when it serves the intended project and Invocation.
 
-The startup output identifies the project, absolute Run path, Runtime Profile and selection source.
+The startup output identifies the project, input Source, Invocation form, Runtime Profile and selection source.
 An explicit `--runtime` applies to this session; the project's default comes from `.hypit/runtime`.
-When launching from another directory, use `--project` to select the project and supply the Run
+When launching from another directory, use `--project` to select the project and supply the Source or saved Invocation
 path from the current directory, as shown in [project boundaries](../creation/project-files.md#establish-the-project-boundary).
 
-Studio watches the Run and its loaded Author/Recipe Sources and recompiles them after changes.
+Studio watches its loaded Author/Recipe Sources and the saved Invocation Source when present, then recompiles after changes.
 Changing package code, adding a package import, changing Companion activation, or selecting another
 Runtime or Result repository requires restarting that Studio session: those implementations and
 selections are loaded at startup. A browser refresh alone does not reload the server-side modules.
@@ -49,13 +49,13 @@ Additional languages are ordinary JSON data, loaded explicitly when opening Stud
 
 ```bash
 hypit studio --check-locale ./studio-ja.json
-hypit studio --run build.svrun --locale-pack ./studio-ja.json
+hypit studio --source main.svml --target final.video --locale-pack ./studio-ja.json
 ```
 
 For a new translation, copy `locales/en.json` from the installed `@hypit/studio` package.
 Set `locale`, the native language `name`, and `direction` (`ltr` or `rtl`); translate `messages`
 while keeping their IDs and named variables such as `{count}`. Missing entries use English.
-The check command reports missing entries, unknown IDs and invalid variables without opening a Run.
+The check command reports missing entries, unknown IDs and invalid variables without opening an Invocation.
 Relative file paths start at the command's working directory. Repeat `--locale-pack` for several
 languages, or pass an installed package's JSON export instead, such as
 `--locale-pack @your-scope/studio-ja/locale.json`. A local file is enough; sharing it as a package
@@ -65,7 +65,7 @@ is optional. Restart Studio to load changed language files. The installed
 ## Discuss the work while composing
 
 When the user is collaborating locally, open the actual composition once a meaningful passage is
-available and keep its Studio URL connected to the current Run. Point to the passage, object or
+available and keep its Studio URL connected to the current Invocation. Point to the passage, object or
 transition being discussed so the user can give concrete direction. Continue through settled choices;
 showing progress need not become an approval stop. Use the prepared production media and explain
 which passages are already composed. A rendered frame or clip remains useful when it answers the
@@ -84,16 +84,16 @@ choreography or graphic structure often needs authored code or direction, while 
 may fit an Inspector field. Both are ordinary collaboration: Comments carries the desired result,
 and the Agent chooses the owning Source, Recipe, component or material decision to change.
 
-Comments live in `FEEDBACK.json` at the project workspace root. Read the entries for the reviewed Run
-and the open notes before revising. Each entry has a stable `id`, workspace-relative `run`, `at` in
+Comments live in `FEEDBACK.json` at the project workspace root. Read the entries for the reviewed context
+and the open notes before revising. Each entry has a stable `id`, workspace-relative `context`, `at` in
 seconds, `text`, and optional `resolved` (false when omitted). For example:
 
 ```json
-{"comments":[{"id":"opening-title","run":"runs/render.svrun","at":1.5,
+{"comments":[{"id":"opening-title","context":"main.svml","at":1.5,
 "text":"Give the title a softer pink and a stronger offset shadow.","resolved":false}]}
 ```
 
-The UI displays notes in time order; its `#` labels follow submission order within that Run. Identify
+The UI displays notes in time order; its `#` labels follow submission order within that context. Identify
 file edits by `id` and preserve the array order and unrelated entries. Clicking a note seeks to its
 saved time. Interpret that time with its words and the reviewed composition: changing Script or media
 placement can move the intended event. Comments retain the reviewed seconds rather than silently
@@ -116,7 +116,7 @@ compiled `HtmlProgram` and selected resources, captures exact original frames, a
 optional grids. Studio remains the interactive view for playback, sound and editing.
 
 
-When the composition is substantially ready and the user can access it, open the current Run at
+When the composition is substantially ready and the user can access it, open the current Invocation at
 `#comments` for discussion and introduce Comments and Studio together. Comments lets the user
 pause and leave direction at a time; Studio shows the timeline, component relationships and exposed
 parameters they can adjust. Both views stay with the same work and playhead. Browser playback does not render an MP4,
@@ -159,11 +159,11 @@ include when the user wants to continue editing on another machine.
 
 | View | What it shows and what it can change |
 | --- | --- |
-| Source | The exact Run, Author and imported Source/Recipe files. Select a file and use Edit source; changes save automatically, and Cmd/Ctrl+S saves immediately. Check save/error state. This is not a project filesystem browser. |
+| Source | The exact Author closure and optional saved Invocation Source. Select a file and use Edit source; changes save automatically, and Cmd/Ctrl+S saves immediately. Check save/error state. This is not a project filesystem browser. |
 | Preview | The selected Film composition evaluated from its compiled `HtmlProgram` in the browser. Play or seek with the transport or timeline. Selecting a component-declared visual part selects its corresponding timeline Item; adjust its exposed position in the Inspector. |
 | Timeline | Projected domain evidence, resolved named Instants, plus component-projected Track Items and their visible intervals, materials or event lanes. A rectangle may describe occupancy, activation or persistent visibility; read the component's meaning. |
-| Inspector | With nothing selected, project, Canvas, time and Run facts. For a selected Item, its declared read-only facts and adjustable fields, organized under Where, When and How where applicable. |
-| Tasks | One card per Build, grouped into ongoing and finished. Active status and progress come from the selected Runtime; completed, failed and cancelled Builds come from project Results. Cards retain the source Run, times and any failure or attention reason. |
+| Inspector | With nothing selected, project, Canvas, time and Invocation facts. For a selected Item, its declared read-only facts and adjustable fields, organized under Where, When and How where applicable. |
+| Tasks | One card per Build, grouped into ongoing and finished. Active status and progress come from the selected Runtime; completed, failed and cancelled Builds come from project Results. Cards retain an Invocation Source when one was saved, times and any failure or attention reason. |
 | Artifacts | Image, video and audio file Outputs from project Results, including those already published by ongoing Builds. Use the sidebar to choose all media, videos, images or audio. View media on a Build opens its Outputs; opening the Artifacts tab returns to project media. Structured Outputs such as prepared media and NarrativeAlignment stay intact and do not add their internal files to this gallery. Click a card to view it in the central preview; video and audio have playback and a time slider. Back to composition returns to the existing composition position. Previewing a file does not modify the Author Source; accepting it requires an explicit project export and authored declaration. |
 
 A declared lane stays one row even when items overlap. Later items cover earlier ones at equal
@@ -198,7 +198,7 @@ The view reads project resources and authored realization choices, plus any Invo
 If a required generation
 is still running, continue component work and open its resulting composition when the material is ready.
 
-[Runs](runs.md) explains Targets and transient overrides. [Snapshots](snapshots.md) captures the current picture
+[Invocations](runs.md) explains Targets and transient overrides. [Snapshots](snapshots.md) captures the current picture
 directly with `hypit snapshot --studio <this-studio-url>`. [Rendering](rendering.md) provides frame-range Builds
 for inspecting the composition as encoded media; choose the view that helps answer the current question.
 
@@ -235,7 +235,7 @@ affinity choices and shared-consumer consequences. Marker moves preserve unrelat
 new marker references can use the existing alignment evidence. [Reuse boundaries](authoring.md#reuse-produced-work-explicitly)
 explain when to retain media, its local domain, alignment evidence or only an upstream generated file.
 
-A successful parameter or timeline edit saves the owning Source and recompiles the selected Run
+A successful parameter or timeline edit saves the owning Source and recompiles the selected Invocation
 for the view. Rejected edits retain the accepted Source and values. Result renaming instead updates
 Result presentation metadata; it does not change the authored composition or trigger a Build.
 

@@ -11,10 +11,10 @@ The package-owned declaration consumes those two completed values directly. It d
 Temporal or a Markup timeline helper; Markup contributes only the `Document` spelling, while direct
 APIs and other Frontends use the same declaration compiler.
 
-Select the document in the Run:
+Select the document as an Invocation target:
 
 ```xml
-<?svml using="@hypit/markup/run@1"?>
+<?svml using="@hypit/markup/invocation@1"?>
 <svrun version="1">
   <author source="./main.svml"/>
   <target output="preview.document"/>
@@ -24,7 +24,8 @@ Select the document in the Run:
 The `HtmlDocument` result contains a compiled `HtmlProgram` and its `AudioProgram`.
 The Programme gives every visual dependency a document-local identity separate from
 its Result-store Blob identity, so recursive Blob rebinding never requires a reverse
-resource table. The Run selects the upstream material used to produce the document.
+resource table. The Author Source owns durable material selection; the Invocation selects only the
+document Target and any transient authored Record override.
 
 Hosts turn the result into HTML by supplying material URLs:
 

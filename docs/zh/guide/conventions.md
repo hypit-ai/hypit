@@ -54,4 +54,4 @@ description: 命名、模块边界、TypeScript 配置与 wire 数据。
 - 编译失败时抛出带有描述性信息的错误，其中包含源码位置。
 - 运行时失败在 Build 状态机中记录为 Operation 失败。
 - 服务协议允许的有限传输重试由 Provider 负责。
-- 执行尝试失败会结束 Build；后续工作使用新的 Run 与 Build，显式选择已完成 Output 复用。
+- 执行尝试失败会结束 Build；后续工作把已接受 Output 导出并写入 Author Source，再使用新的 Invocation 与 Build。

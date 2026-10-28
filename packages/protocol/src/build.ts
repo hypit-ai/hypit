@@ -71,16 +71,11 @@ export type OperationNode = {
   readonly result: OperationResult;
 };
 
-export type CandidateRoot =
-  | RecordRef
-  | { readonly kind: "value"; readonly record: RecordId; readonly value: Value }
-  /** A zero-input value whose source is materialized only after this Candidate is selected. */
-  | { readonly kind: "supply"; readonly record: RecordId }
-  | { readonly kind: "operation"; readonly result: OperationResultRef };
+export type CandidateRoot = RecordRef | OperationResultRef;
 
 export type Candidate = {
   readonly id: CandidateId;
-  /** Type of the independent value exported by the Author or Run Graph. */
+  /** Type of the independent value exported by the Author Graph. */
   readonly type: TypeRef;
   readonly root: CandidateRoot;
 };
@@ -126,17 +121,6 @@ export type BuildPlan = {
   readonly steps: readonly ProducerStep[];
   /** Unique Record identities whose existence completes this finite execution. */
   readonly goals: readonly RecordId[];
-};
-
-/** The complete execution intent compiled from one `.svrun` source. */
-export type RunGraph = {
-  readonly format: "hypit.run-graph@1";
-  /** Literal values authored by this Run and reached only through its selected Fragments. */
-  readonly records: readonly TypedRecord[];
-  readonly candidates: readonly Candidate[];
-  readonly operations: readonly OperationNode[];
-  readonly satisfactions: readonly Satisfaction[];
-  readonly targets: readonly LogicalOutputId[];
 };
 
 export type LinkedProgram = {
@@ -195,7 +179,7 @@ export type BuildDiagnostic = {
   readonly subject?: string;
 };
 
-/** Immutable finite program selected by one Author Graph plus one Run Graph. */
+/** Immutable finite program selected from one Author Graph for one Invocation. */
 export type BuildDefinition = {
   readonly format: "hypit.build-definition@1";
   /** Complete sealed execution program, including every already-established starting Record. */

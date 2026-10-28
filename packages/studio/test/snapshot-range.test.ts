@@ -32,7 +32,7 @@ test("a pure-MG work keeps its declared extent even when a Studio Item extends b
     values: new Map(), temporalDomainValues: [], temporalValues: [], temporalBindings: new Map(),
   };
   const result = snapshot(new StudioCompanionRegistry(fallbackStudioTrackCompanions), built, {
-    revision: 1, path: "main.svml", text: "", run: { path: "main.svrun", targets: [] },
+    revision: 1, path: "main.svml", text: "", invocation: { source: "main.svrun", targets: [] },
     canvas: { width: 1080, height: 1920, clearColor: "#000000" }, frameRate: built.timeline.frameRate,
     preview: { kind: "html-program", srcdoc: "" }, workspaceRoot: "/project", sourceFiles: [],
   });
@@ -91,7 +91,7 @@ test("the common declaration row displays Instants without duplicating Window in
     declaration("direct", directModule, "window"), declaration("projected", projectedModule, "instant"),
   ] });
   const result = snapshot(registry, built, {
-    revision: 1, path: "main.svml", text: "", run: { path: "main.svrun", targets: [] },
+    revision: 1, path: "main.svml", text: "", invocation: { source: "main.svrun", targets: [] },
     canvas: { width: 1080, height: 1920, clearColor: "#000000" }, frameRate: built.timeline.frameRate,
     preview: { kind: "html-program", srcdoc: "" }, workspaceRoot: "/project", sourceFiles: [],
   });

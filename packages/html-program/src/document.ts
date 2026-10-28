@@ -3,7 +3,7 @@ import type { CompositableSurfaceRef, FontArtifactRef } from "@hypit/media";
 import { assertFrameSpan, timelineFrameCount } from "@hypit/timeline";
 import type { FrameSpan, Timeline } from "@hypit/timeline";
 import {
-  assertCompositionIdentity,
+  assertVisualCompositionIdentity,
   visualElements,
   visualPresents,
   visualScopeTrackOccurrences,
@@ -33,6 +33,8 @@ import { htmlAdjustmentScript, readHtmlAdjustment } from "./html-adjustment.js";
 import { presentationCaptureScopeRuntime } from "./capture-scope.js";
 import { presentationVisibilityScript } from "./visibility.js";
 import { frameSelectionRuntime, frameWorkIndexRuntime } from "./frame-work.js";
+
+type HtmlComposition = Pick<Composition, "id" | "visual">;
 
 function isBlobRef(value: unknown): value is BlobRef {
   try {
@@ -708,7 +710,7 @@ function mergeFrameSpans(spans: readonly FrameSpan[]): FrameSpan[] {
   return result;
 }
 
-function collectArtifacts(composition: Composition): HtmlArtifact[] {
+function collectArtifacts(composition: HtmlComposition): HtmlArtifact[] {
   const artifacts = new Map<ResourceId, { artifact: BlobRef; always: boolean; spans: FrameSpan[] }>();
   const add = (artifact: Pick<BlobRef, "resource" | "size" | "mediaType">,
     usage: "always" | FrameSpan): void => {
@@ -727,7 +729,7 @@ function collectArtifacts(composition: Composition): HtmlArtifact[] {
     else if (!entry.always) entry.spans.push({ ...usage });
     artifacts.set(artifact.resource, entry);
   };
-  for (const track of visualScopeTracks(composition.visual)) {
+  for (const track of visualScopeTracks(composition.visual.root)) {
     for (const present of visualPresents(track)) {
       for (const element of visualElements(present.root)) {
         if (element.kind === "image") add(element.artifact, present.span);
@@ -765,11 +767,11 @@ function collectArtifacts(composition: Composition): HtmlArtifact[] {
 }
 
 function collectSurfaces(
-  composition: Composition,
+  composition: HtmlComposition,
   artifactIds: ReadonlyMap<ResourceId, string>,
 ): HtmlProgram["surfaces"][number][] {
   const surfaces = new Map<ResourceId, CompositableSurfaceRef>();
-  for (const track of visualScopeTracks(composition.visual)) {
+  for (const track of visualScopeTracks(composition.visual.root)) {
     for (const present of visualPresents(track)) {
       for (const element of visualElements(present.root)) {
         if (element.kind !== "surface") continue;
@@ -790,9 +792,9 @@ function collectSurfaces(
   });
 }
 
-function collectFonts(composition: Composition): FontArtifactRef[] {
+function collectFonts(composition: HtmlComposition): FontArtifactRef[] {
   const fonts = new Map<string, FontArtifactRef>();
-  for (const track of visualScopeTracks(composition.visual)) {
+  for (const track of visualScopeTracks(composition.visual.root)) {
     for (const present of visualPresents(track)) {
       for (const element of visualElements(present.root)) {
         if (element.kind !== "text") continue;
@@ -800,7 +802,7 @@ function collectFonts(composition: Composition): FontArtifactRef[] {
       }
     }
   }
-  for (const track of visualScopeTracks(composition.visual)) {
+  for (const track of visualScopeTracks(composition.visual.root)) {
     for (const present of visualPresents(track)) {
       for (const element of visualElements(present.root)) {
         if (element.kind !== "text-flow" && element.kind !== "path-text") continue;
@@ -818,7 +820,7 @@ function fontFormat(mediaType: string): string {
   return "truetype";
 }
 
-function renderFontFaces(composition: Composition, stableId: StableDomId): string {
+function renderFontFaces(composition: HtmlComposition, stableId: StableDomId): string {
   return collectFonts(composition).flatMap((font) => font.sources.map((source) => [
       "@font-face{",
       `font-family:${exactFontFamily(font, stableId)};`,
@@ -831,14 +833,14 @@ function renderFontFaces(composition: Composition, stableId: StableDomId): strin
     ].join(""))).join("\n    ");
 }
 
-function hasTerminalText(composition: Composition): boolean {
-  return visualScopeTracks(composition.visual).some((track) =>
+function hasTerminalText(composition: HtmlComposition): boolean {
+  return visualScopeTracks(composition.visual.root).some((track) =>
     visualPresents(track).some((present) => visualElements(present.root).some((element) =>
       element.kind === "text-flow" || element.kind === "path-text")));
 }
 
-function hasFrameAnimations(composition: Composition): boolean {
-  return visualScopeTracks(composition.visual).some((track) =>
+function hasFrameAnimations(composition: HtmlComposition): boolean {
+  return visualScopeTracks(composition.visual.root).some((track) =>
     visualPresents(track).some((present) => visualElements(present.root).some((element) => element.animation !== undefined)));
 }
 
@@ -1017,9 +1019,9 @@ function contributionOccurrences(
   };
 }
 
-function emitHtml(composition: Composition, timeline: Timeline, videoSources: HtmlVideoSource[]): string {
+function emitHtml(composition: HtmlComposition, timeline: Timeline, videoSources: HtmlVideoSource[]): string {
   const { numerator, denominator } = timeline.frameRate;
-  const visualItems = visualScopeTrackOccurrences(composition.visual)
+  const visualItems = visualScopeTrackOccurrences(composition.visual.root)
     .flatMap((occurrence) => occurrence.member.track.items.map((item) => ({
       occurrencePath: occurrence.path,
       item,
@@ -1043,7 +1045,7 @@ function emitHtml(composition: Composition, timeline: Timeline, videoSources: Ht
     paintPath: readonly number[],
   ): string => {
     let html = includeClear
-      ? `<div data-hypit-canvas-clear style="position:absolute;inset:0;z-index:0;background:${escapeHtml(composition.canvas.clearColor)};pointer-events:none"></div>`
+      ? `<div data-hypit-canvas-clear style="position:absolute;inset:0;z-index:0;background:${escapeHtml(composition.visual.canvas.clearColor)};pointer-events:none"></div>`
       : "";
     const entries = orderedVisualScopeEntries(scope);
     for (const [index, entry] of entries.entries()) {
@@ -1069,7 +1071,7 @@ function emitHtml(composition: Composition, timeline: Timeline, videoSources: Ht
     }
     return html;
   };
-  const visualHtml = renderScope(composition.visual, true, [], []);
+  const visualHtml = renderScope(composition.visual.root, true, [], []);
   const sharedDefinitionsHtml = sharedGlyphFilterDefinitions.length === 0 ? ""
     : `<svg data-hypit-document-definitions aria-hidden="true" width="0" height="0" style="position:absolute;overflow:hidden"><defs>${sharedGlyphFilterDefinitions.join("")}</defs></svg>`;
   const animationCss = visuals.flatMap(({ occurrencePath, present }) => renderAnimationRules(occurrencePath, present, stableId)).join("\n    ");
@@ -1115,7 +1117,7 @@ function emitHtml(composition: Composition, timeline: Timeline, videoSources: Ht
   </style>
 </head>
 <body>
-  <div data-hypit-program-root data-hypit-program-id="${escapeHtml(composition.id)}" data-hypit-width="${composition.canvas.width}" data-hypit-height="${composition.canvas.height}" data-hypit-frame-numerator="${numerator}" data-hypit-frame-denominator="${denominator}" data-hypit-frame-count="${frameCount}" style="width:${composition.canvas.width}px;height:${composition.canvas.height}px">
+  <div data-hypit-program-root data-hypit-program-id="${escapeHtml(composition.id)}" data-hypit-width="${composition.visual.canvas.width}" data-hypit-height="${composition.visual.canvas.height}" data-hypit-frame-numerator="${numerator}" data-hypit-frame-denominator="${denominator}" data-hypit-frame-count="${frameCount}" style="width:${composition.visual.canvas.width}px;height:${composition.visual.canvas.height}px">
     ${sharedDefinitionsHtml}${sharedDefinitionsHtml.length === 0 ? "" : "\n    "}${visualHtml}
   </div>${frameRuntime}${programRuntime}
   ${visibilityRuntime}${adjustmentRuntime}
@@ -1152,8 +1154,9 @@ function normalizedDocument(value: HtmlProgram): HtmlProgram {
   };
 }
 
-export function compileHtmlProgram(composition: Composition, timeline: Timeline): HtmlProgram {
-  assertCompositionIdentity(composition, timeline);
+export function compileHtmlProgram(composition: HtmlComposition, timeline: Timeline): HtmlProgram {
+  if (!composition.id.trim()) throw new Error("Visual Composition id must not be empty.");
+  assertVisualCompositionIdentity(composition.visual, timeline);
   const videoSources: HtmlVideoSource[] = [];
   const artifacts = collectArtifacts(composition);
   const artifactIds = new Map(artifacts.map((entry) => [entry.artifact.resource, entry.id] as const));
@@ -1174,8 +1177,8 @@ export function compileHtmlProgram(composition: Composition, timeline: Timeline)
     frameRate: { ...timeline.frameRate },
     frameCount: timelineFrameCount(timeline),
     canvas: {
-      width: composition.canvas.width,
-      height: composition.canvas.height,
+      width: composition.visual.canvas.width,
+      height: composition.visual.canvas.height,
     },
     artifacts,
     surfaces: collectSurfaces(composition, artifactIds),

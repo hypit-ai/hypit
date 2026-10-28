@@ -16,8 +16,9 @@ Go to [service choice](#choose-the-practical-capability-path-with-the-user),
 Identify the next useful result and the material already available. A face replacement or motion
 reference task needs an implementation supporting that operation and its actual references.
 It does not automatically require transcription, an image-generation step or a local render browser.
-An existing Output can satisfy a Run without another model call; [Build planning](../production/builds.md#plan-the-selected-run)
-identifies the remaining requests when a Run exists.
+An accepted Output can be exported into the project and selected as an authored realization without
+another model call; [Build planning](../production/builds.md#plan-the-selected-run) identifies the
+remaining requests for the current Invocation.
 
 Keep these responsibilities clear:
 
@@ -142,7 +143,7 @@ hypit auth login hypihub.default --from /private/path/hypihub-key.txt
 Use the actual Endpoint name and selected Profile. Follow [credential setup](profile.md#put-secrets-behind-credential-references)
 for writable stores, environment credentials and read failures. When diagnosing access,
 `hypit doctor --endpoint hypihub.default` can inspect this route; `plan` and `pricing` concern the
-actual Run. Login, diagnosis and pricing do not submit generation.
+selected Invocation. Login, diagnosis and pricing do not submit generation.
 
 ## Connect a service the user brings
 

@@ -1,4 +1,4 @@
-import { link, verifyRecordStructure } from "@hypit/kernel";
+import { verifyRecordStructure } from "@hypit/kernel";
 import type {
   AuthorDocument,
   AuthorFrontendRegistryLike,
@@ -9,7 +9,7 @@ import type {
 import type { ResolvedSource } from "@hypit/source";
 import type { BlobAttachment, Workspace, WorkspaceSession } from "@hypit/workspace";
 import type { BlobRef, LinkedProgram } from "@hypit/protocol";
-import { compareCodeUnits, moduleKey } from "@hypit/protocol";
+import { compareCodeUnits } from "@hypit/protocol";
 import {
   RefinementRegistry,
   refineRecord,
@@ -181,17 +181,7 @@ export class Compiler {
     };
   }
 
-  /**
-   * Add modules used only by Run implementations. Author records stay unchanged.
-   */
-  extendExecutionProgram(program: LinkedProgram, requests: readonly string[]): LinkedProgram {
-    const existing = program.closure.modules.map(moduleKey);
-    if (requests.every((request) => existing.includes(request))) return program;
-    const closure = this.#options.modules.createClosure([...existing, ...requests]);
-    return link(closure, program.records);
-  }
-
-  /** Validate one selected Run value through the same Type-owner boundary as authored Records. */
+  /** Validate one selected Invocation value through the same Type-owner boundary as authored Records. */
   async refineRecord(program: LinkedProgram, record: import("@hypit/protocol").TypedRecord): Promise<void> {
     verifyRecordStructure(program.closure, record);
     await this.#refineRecord(record);

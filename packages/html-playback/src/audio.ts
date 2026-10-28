@@ -1,4 +1,4 @@
-import { verifyAudioProgram } from "@hypit/audio-program";
+import { audioProgramGainRoutes, verifyAudioProgram } from "@hypit/audio-program";
 import type { AudioProgram } from "@hypit/audio-program";
 import { readPreservePitch } from "@hypit/audio-stretch";
 import type { BlobRef } from "@hypit/hypit/protocol";
@@ -38,7 +38,7 @@ export function lowerPlaybackAudio(
   resolve: PlaybackResourceUrlResolver,
 ): string {
   verifyAudioProgram(program);
-  return program.clips.flatMap((clip) => {
+  return audioProgramGainRoutes(program).flatMap(({ clip, gain: routeGain }) => {
     const preservePitch = clip.reconstruction !== undefined;
     if (clip.reconstruction !== undefined) readPreservePitch(clip.reconstruction);
     if (clip.sampling.stages.length !== 1) {
@@ -95,7 +95,7 @@ export function lowerPlaybackAudio(
     data-phase="${phase / 48_000}"
     data-playback-rate="${(piece.rate.numerator / piece.rate.denominator) * sourceRate}"
     data-preserves-pitch="${preservePitch}"
-    data-gain="${clip.gain}"
+    data-gain="${clip.gain * routeGain}"
     data-level-automation="${encodeURIComponent(JSON.stringify({
       gainEnvelope: clip.gainEnvelope,
       audibility: clip.audibility,

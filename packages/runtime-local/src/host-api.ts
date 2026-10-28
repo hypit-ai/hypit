@@ -55,7 +55,7 @@ export type BuildView = {
   readonly issue?: { readonly scope: "result" | "cleanup"; readonly message: string };
   readonly stop?: BuildExecutionStop;
   readonly sourcePath?: string;
-  readonly runPath?: string;
+  readonly invocationSourcePath?: string;
   readonly targets: readonly string[];
   /** External Needs in the frozen Build Plan and the subset already accepted by Core. */
   readonly requests?: { readonly total: number; readonly completed: number };
@@ -130,7 +130,6 @@ export type RuntimeHostExecution = RuntimeHostControl & RuntimeHostCredentialCon
     readonly result: {
       readonly repository: BuildResultRepositoryLocation;
       readonly title?: string;
-      readonly resourceReferences?: Readonly<Record<string, import("@hypit/hypit/result").BuildResultFileRef>>;
     };
   }, options?: {
     readonly follow?: boolean;

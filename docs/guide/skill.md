@@ -61,11 +61,11 @@ scene; independent graphics and captions can stay separate. Spoken work uses Scr
 these relationships, while purely visual animation can use an authored clock. A component that needs cross-project reuse can be
 published as an ordinary versioned package under its owner's scope.
 
-When revising the work, the Run can reuse suitable Outputs from earlier Results, including useful
-media produced before a Build failed. A new Build executes the revised Run. Studio displays the
+When revising the work, export suitable Outputs from earlier Results into the project and select them
+in the Author Source, including useful media produced before a Build failed. A new Build executes the revised Invocation. Studio displays the
 selected work and writes supported edits back to its Source files; the Agent reviews the actual
 finished video against the intended result.
 
 [Quickstart](../quickstart.md) walks through making a video with your Agent.
-[Runs and Builds](../quickstart/run.md) explains execution and Output reuse.
+[Invocations and Builds](../quickstart/run.md) explains execution and accepting Outputs into the project.
 [Studio](../quickstart/preview.md) explains interactive preview and editing.

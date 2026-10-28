@@ -1,6 +1,6 @@
 import type { BlobRef, ResourceId, Value } from "@hypit/hypit/protocol";
 import { normalizeValue, sameType, valueBlobRefs } from "@hypit/hypit/protocol";
-import type { BuildCandidateSelection } from "@hypit/hypit/kernel";
+import type { SelectedOutputRecord } from "@hypit/hypit/kernel";
 import type { Composition } from "@hypit/composition";
 import { compositionTypes } from "@hypit/composition";
 import { timelineTypes, assertTimelineIdentity } from "@hypit/timeline";
@@ -11,7 +11,7 @@ import type { CliTransientExecution as RuntimeHostTransientExecution } from "@hy
 import type { CompiledSource, ServedFile } from "./compile.js";
 import type { StudioDomain } from "./domain.js";
 import { executeStudioProjection, MemoryResourceStore } from "./execute.js";
-import type { RunPlan } from "./run.js";
+import type { StudioPlan } from "./invocation.js";
 import type { StudioTrackRequirement } from "./studio-preflight.js";
 import { studioDeclarationPreview } from "./declaration-preview.js";
 import { executedTemporalBindings } from "./temporal-graph.js";
@@ -50,15 +50,14 @@ type ExecutionState = Awaited<ReturnType<typeof executeStudioProjection>>["state
 
 function selectedValue(
   state: ExecutionState,
-  selections: readonly Pick<BuildCandidateSelection, "output" | "record">[],
+  selections: readonly SelectedOutputRecord[],
   output: string,
 ): Value | undefined {
   const selection = selections.find((item) => item.output === output);
   if (selection === undefined) return state.program.records.find((item) => item.id === output)?.value;
   const executed = state.records.find((item) => item.id === selection.record)?.value;
   if (executed !== undefined) return executed;
-  // Materialized Source and Run candidates both belong to this freshly recompiled
-  // revision. There is no stale-plan distinction to reconstruct here.
+  // Authored and invocation-selected Records belong to this freshly recompiled revision.
   return state.program.records.find((item) => item.id === selection.record)?.value;
 }
 
@@ -66,11 +65,11 @@ function compositionArtifacts(composition: Composition): readonly BlobRef[] {
   return valueBlobRefs(normalizeValue(composition)).map((item) => item.blob);
 }
 
-/** Build only the Studio-approved deterministic projection of one explicit Run. */
+/** Build only the Studio-approved deterministic projection of one explicit Invocation. */
 export async function resolveStudioProjection(input: {
   readonly source: CompiledSource;
   readonly registry: StudioCompanionRegistry;
-  readonly run: RunPlan;
+  readonly plan: StudioPlan;
   readonly domain: StudioDomain;
   readonly outputRefs: readonly string[];
   readonly compositionRef: string;
@@ -86,7 +85,7 @@ export async function resolveStudioProjection(input: {
   });
   const store = new MemoryResourceStore();
   const served = new Map(input.source.served);
-  for (const attachment of input.run.attachments) {
+  for (const attachment of input.plan.attachments) {
     if (!served.has(attachment.blob.resource)) {
       served.set(attachment.blob.resource, attachmentFile(attachment));
     }
@@ -110,7 +109,7 @@ export async function resolveStudioProjection(input: {
       return served.has(resource) || await store.has(resource);
     },
   };
-  const prepared = input.run.prepare(input.run.run, targets.map((target) => target.ref));
+  const prepared = input.plan.prepare(input.plan.invocation, targets.map((target) => target.ref));
   const executed = await executeStudioProjection(
     input.domain,
     prepared.state,
@@ -140,7 +139,7 @@ export async function resolveStudioProjection(input: {
   const composition = compositionValue as unknown as Composition;
   for (const artifact of compositionArtifacts(composition)) {
     if (!served.has(artifact.resource)) {
-      throw new Error(`Studio composition Resource ${artifact.resource} has no Run attachment.`);
+      throw new Error(`Studio composition Resource ${artifact.resource} has no Invocation attachment.`);
     }
   }
   const trackByRef = new Map(input.tracks.map((track) => [track.ref, track]));
@@ -194,7 +193,7 @@ export async function resolveStudioProjection(input: {
   const temporalValueTypes = input.registry.temporalDomainValueTypes();
   const temporalDomainValues: StudioObservedValue[] = [];
   const declarations = await resolveStudioDeclarations({
-    run: input.run, registry: input.registry, domain: input.domain,
+    plan: input.plan, registry: input.registry, domain: input.domain,
     resolved: executed.state, selections: prepared.selections, resources,
     ...(input.transientExecution === undefined ? {} : { transientExecution: input.transientExecution }),
   });
@@ -218,7 +217,7 @@ export async function resolveStudioProjection(input: {
     temporalBindings,
     composition,
     served,
-    canvas: composition.canvas,
+    canvas: composition.visual.canvas,
     frameRate: rate,
     timeline,
   };

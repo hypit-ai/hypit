@@ -8,11 +8,9 @@ import type {
   OperationNode,
   ProducerStep,
   RecordId,
-  RunGraph,
   Satisfaction,
   StepId,
   TypeRef,
-  TypedRecord,
 } from "@hypit/protocol";
 import { compareCodeUnits, sameType, typeKey } from "@hypit/protocol";
 
@@ -102,26 +100,16 @@ function planContent(
   };
 }
 
-/** Candidate identity is useful only while the two source graphs are being planned. */
-export type BuildCandidateSelection = {
+/** Candidate identity is useful only while one Author Graph and its effective selections are planned. */
+type CandidateSelection = {
   readonly output: string;
   readonly candidate: string;
   readonly record: string;
 };
 
-/** One selected zero-input source whose value must be materialized before sealing a BuildDefinition. */
-export type SelectedSupply = {
-  readonly candidate: string;
-  readonly record: string;
-  readonly type: TypeRef;
-};
-
 export type PlannedExecution = {
   readonly plan: BuildPlan;
-  readonly selections: readonly BuildCandidateSelection[];
-  readonly selectedSupplies: readonly SelectedSupply[];
-  /** Already materialized literal/value Records; selected supplies are deliberately absent. */
-  readonly initialRecords: readonly TypedRecord[];
+  readonly selections: readonly CandidateSelection[];
 };
 
 function compilePlanning(
@@ -129,13 +117,8 @@ function compilePlanning(
   graph: AuthorGraph,
   targets: readonly string[],
   satisfactions: readonly Satisfaction[],
-  runRecords: readonly TypedRecord[],
 ): PlannedExecution {
-  const verificationProgram: LinkedProgram = {
-    closure: program.closure,
-    records: [...program.records, ...runRecords],
-  };
-  verifyAuthorGraph(verificationProgram, graph);
+  verifyAuthorGraph(program, graph);
   const targetIds = new Set<string>();
   for (const target of targets) {
     resolveLogicalOutput(graph, target);
@@ -149,7 +132,7 @@ function compilePlanning(
     const candidate = resolveCandidate(graph, satisfaction.candidate);
     invariant(
       !selectedCandidates.has(output.id),
-      "DUPLICATE_RUN_SATISFACTION",
+      "DUPLICATE_SATISFACTION",
       `${output.id} is satisfied more than once`,
       output.id,
     );
@@ -163,19 +146,9 @@ function compilePlanning(
   }
 
   const authored = new Map(program.records.map((record) => [record.id, record]));
-  const availableRunRecords = new Map<string, TypedRecord>();
-  for (const record of runRecords) {
-    invariant(!authored.has(record.id), "RUN_RECORD_CONFLICT", `${record.id} conflicts with authored input`, record.id);
-    invariant(!availableRunRecords.has(record.id), "DUPLICATE_RUN_RECORD", `${record.id} is declared twice`, record.id);
-    availableRunRecords.set(record.id, record);
-    authored.set(record.id, record);
-  }
-  const demandedRunRecords = new Set<string>();
   const demandedOperations = new Map<string, OperationNode>();
   const resolvedOutputs = new Map<string, ResolvedSource>();
-  const selections = new Map<string, BuildCandidateSelection>();
-  const selectedSupplies = new Map<string, SelectedSupply>();
-  const supplyRecords = new Map<string, string>();
+  const selections = new Map<string, CandidateSelection>();
 
   const operationSource = (id: string): ResolvedSource => {
     const operation = resolveOperation(graph, id);
@@ -200,7 +173,6 @@ function compilePlanning(
     const ref = pending.pop() as GraphValueRef;
     if (ref.kind === "record") {
       invariant(authored.has(ref.id), "UNKNOWN_RECORD", `unknown authored record ${ref.id}`, ref.id);
-      if (availableRunRecords.has(ref.id)) demandedRunRecords.add(ref.id);
       continue;
     }
     if (ref.kind === "operation-result") {
@@ -224,34 +196,9 @@ function compilePlanning(
       );
       resolved = { record: record.id, type: record.type };
       pending.push(candidate.root);
-    } else if (candidate.root.kind === "value") {
-      const record: TypedRecord = {
-        id: candidate.root.record,
-        type: candidate.type,
-        value: candidate.root.value,
-      };
-      invariant(!authored.has(record.id), "CANDIDATE_RECORD_CONFLICT", `${record.id} conflicts with authored input`);
-      resolved = { record: record.id, type: record.type };
-    } else if (candidate.root.kind === "supply") {
-      invariant(!authored.has(candidate.root.record), "CANDIDATE_RECORD_CONFLICT",
-        `${candidate.root.record} conflicts with authored input`, candidate.root.record);
-      const previousCandidate = supplyRecords.get(candidate.root.record);
-      invariant(
-        previousCandidate === undefined || previousCandidate === candidate.id,
-        "CANDIDATE_RECORD_CONFLICT",
-        `${candidate.root.record} is supplied by both ${previousCandidate ?? "an authored Record"} and ${candidate.id}`,
-        candidate.root.record,
-      );
-      supplyRecords.set(candidate.root.record, candidate.id);
-      selectedSupplies.set(candidate.id, {
-        candidate: candidate.id,
-        record: candidate.root.record,
-        type: candidate.type,
-      });
-      resolved = { record: candidate.root.record, type: candidate.type };
     } else {
-      resolved = operationSource(candidate.root.result.operation);
-      pending.push(candidate.root.result);
+      resolved = operationSource(candidate.root.operation);
+      pending.push(candidate.root);
     }
     invariant(
       sameType(resolved.type, output.type),
@@ -300,54 +247,29 @@ function compilePlanning(
 
   const goals = [...new Set(targetSources.map(({ source }) => source.record))].sort();
   const sortedSelections = [...selections.values()].sort((a, b) => compareCodeUnits(a.output, b.output));
-  const initialRecordsById = new Map<string, TypedRecord>();
-  for (const record of selectedValueRecords(program, graph, sortedSelections)) {
-    initialRecordsById.set(record.id, record);
-  }
-  for (const id of demandedRunRecords) {
-    const record = availableRunRecords.get(id)!;
-    invariant(!initialRecordsById.has(id), "RUN_RECORD_CONFLICT", `${id} has multiple sources`, id);
-    initialRecordsById.set(id, record);
-  }
-  const initialRecords = [...initialRecordsById.values()].sort((left, right) => compareCodeUnits(left.id, right.id));
   const plan = planContent(steps, goals);
-  const sortedSupplies = [...selectedSupplies.values()].sort((left, right) => compareCodeUnits(left.candidate, right.candidate));
-  verifyBuildPlan(program, [
-    ...initialRecords,
-    ...sortedSupplies.map((supply) => ({ id: supply.record, type: supply.type })),
-  ], plan);
-  return { plan, selections: sortedSelections, selectedSupplies: sortedSupplies, initialRecords };
+  verifyBuildPlan(program, plan);
+  return { plan, selections: sortedSelections };
 }
 
-/** Plan one Author Graph with one complete Run Graph without rewriting either graph. */
+/** Plan one Author Graph with an explicit finite target and selection set. */
 export function planBuild(
   program: LinkedProgram,
   authorGraph: AuthorGraph,
-  runGraph: RunGraph,
+  targets: readonly string[],
+  satisfactions: readonly Satisfaction[],
 ): PlannedExecution {
-  invariant(runGraph.format === "hypit.run-graph@1", "UNSUPPORTED_RUN_GRAPH", "unsupported Run Graph");
-  const graph: AuthorGraph = {
-    format: "hypit.graph@1",
-    outputs: authorGraph.outputs,
-    candidates: [...authorGraph.candidates, ...runGraph.candidates],
-    operations: [...authorGraph.operations, ...runGraph.operations],
-  };
-  return compilePlanning(program, graph, runGraph.targets, runGraph.satisfactions, runGraph.records);
+  return compilePlanning(program, authorGraph, targets, satisfactions);
 }
 
 export function verifyBuildPlan(
   program: LinkedProgram,
-  initialRecords: readonly Pick<TypedRecord, "id" | "type">[],
   plan: BuildPlan,
 ): void {
   invariant(plan.format === "hypit.plan@1", "UNSUPPORTED_PLAN", "unsupported build plan format");
 
   const records = new Map<RecordId, ProducedRecord>();
   for (const record of program.records) records.set(record.id, { type: record.type });
-  for (const record of initialRecords) {
-    invariant(!records.has(record.id), "DUPLICATE_RECORD", `record ${record.id} has multiple sources`, record.id);
-    records.set(record.id, { type: record.type });
-  }
 
   const stepIds = new Set<string>();
   const needIds = new Set<string>();
@@ -400,38 +322,6 @@ export function verifyBuildPlan(
   }
   assertAcyclic(plan, records);
   assertAllStepsReachGoal(plan, records);
-}
-
-/** Materialize selected zero-input values from their sole source of truth: the Run Graph. */
-export function selectedValueRecords(
-  program: LinkedProgram,
-  graph: AuthorGraph,
-  selections: readonly BuildCandidateSelection[],
-): readonly TypedRecord[] {
-  const authored = new Set(program.records.map((record) => record.id));
-  const records = new Map<string, TypedRecord>();
-  const candidates = new Map<string, string>();
-  for (const selection of selections) {
-    const candidate = resolveCandidate(graph, selection.candidate);
-    if (candidate.root.kind !== "value") continue;
-    const record: TypedRecord = {
-      id: candidate.root.record,
-      type: candidate.type,
-      value: candidate.root.value,
-    };
-    invariant(selection.record === record.id, "SELECTION_RECORD_MISMATCH", `${selection.output} does not select ${record.id}`);
-    invariant(!authored.has(record.id), "CANDIDATE_RECORD_CONFLICT", `${record.id} conflicts with authored input`, record.id);
-    const previousCandidate = candidates.get(record.id);
-    invariant(
-      previousCandidate === undefined || previousCandidate === candidate.id,
-      "CANDIDATE_RECORD_CONFLICT",
-      `${record.id} is supplied by both ${previousCandidate ?? "an authored Record"} and ${candidate.id}`,
-      record.id,
-    );
-    candidates.set(record.id, candidate.id);
-    records.set(record.id, record);
-  }
-  return [...records.values()].sort((left, right) => compareCodeUnits(left.id, right.id));
 }
 
 function assertAcyclic(plan: BuildPlan, records: ReadonlyMap<RecordId, ProducedRecord>): void {

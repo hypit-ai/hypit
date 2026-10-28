@@ -1,9 +1,9 @@
-import { isBlobRef, sameType } from "@hypit/hypit/protocol";
+import { sameType } from "@hypit/hypit/protocol";
 import type { StudioFilmCompanion, StudioPlacementChild } from "@hypit/studio-companion";
 
 import type { CompiledSource } from "./compile.js";
 import type { Placement } from "./observe.js";
-import type { RunPlan } from "./run.js";
+import type { StudioPlan } from "./invocation.js";
 import type { StudioCompanionRegistry } from "./studio-registry.js";
 import {
   outputFor,
@@ -33,8 +33,8 @@ export type StudioInspection = {
   readonly requiredValues: readonly string[];
 };
 
-/** Run selection facts required by Studio preflight; compilation callbacks and attachments stay outside it. */
-export type StudioRunSelection = Pick<RunPlan, "targets" | "run">;
+/** Invocation facts required by Studio preflight; compilation callbacks and attachments stay outside it. */
+export type StudioInvocationSelection = Pick<StudioPlan, "targets" | "invocation">;
 
 export class StudioPreflightError extends Error {
   readonly issues: readonly string[];
@@ -70,7 +70,7 @@ function filmForTarget(registry: StudioCompanionRegistry, source: CompiledSource
       ? []
       : [{ compositionRef: output.ref, placement, companion }];
   });
-  if (candidates.length > 1) throw new Error(`Run target ${targetRef} reaches more than one Studio Film.`);
+  if (candidates.length > 1) throw new Error(`Invocation target ${targetRef} reaches more than one Studio Film.`);
   const found = candidates[0];
   return found === undefined ? { renderTarget: false } : { renderTarget: true, ...found };
 }
@@ -79,25 +79,25 @@ function filmForTarget(registry: StudioCompanionRegistry, source: CompiledSource
  * Video-domain policy is centralized here, inside Studio. Core still only
  * supplies the AuthorGraph facts and their exact BuildPlan/Need closure.
  */
-export function inspectStudioRun(
+export function inspectStudioInvocation(
   registry: StudioCompanionRegistry,
   source: CompiledSource,
-  base: StudioRunSelection,
+  base: StudioInvocationSelection,
 ): StudioInspection {
   const issues: string[] = [];
-  if (base.targets.length === 0) issues.push("the Run Source has no target; Studio requires Film or Render");
+  if (base.targets.length === 0) issues.push("the Invocation has no target; Studio requires Film or Render");
 
   const targets = base.targets.flatMap((ref) => {
     const found = filmForTarget(registry, source, ref);
     return found.renderTarget ? [{ ref, ...found }] : [];
   });
   if (targets.length === 0 && base.targets.length > 0) {
-    issues.push("the Run target is not a Film or Render output from the current SVML");
+    issues.push("the Invocation target is not a Film or Render output from the current SVML");
   }
   const filmCompositions = unique(targets.flatMap((target) =>
     target.compositionRef === undefined ? [] : [target.compositionRef]));
   if (filmCompositions.length > 1) {
-    issues.push(`the Run reaches multiple Film compositions (${filmCompositions.join(", ")}); Studio requires one explicit Film`);
+    issues.push(`the Invocation reaches multiple Film compositions (${filmCompositions.join(", ")}); Studio requires one explicit Film`);
   }
   const chosen = targets.find((item) => item.compositionRef !== undefined && item.placement !== undefined);
   if (chosen?.compositionRef === undefined || chosen.placement === undefined || chosen.companion === undefined) {
@@ -105,16 +105,6 @@ export function inspectStudioRun(
     throw new StudioPreflightError(issues);
   }
   const film = chosen.companion;
-
-  const candidates = new Map(base.run.graph.candidates.map((item) => [item.id, item] as const));
-  const satisfactions = new Map(base.run.graph.satisfactions.map((item) => [item.output, item.candidate] as const));
-  for (const target of targets) {
-    const candidateId = satisfactions.get(target.ref);
-    const candidate = candidateId === undefined ? undefined : candidates.get(candidateId);
-    if (candidate?.root.kind === "value" && isBlobRef(candidate.root.value)) {
-      issues.push(`Render target ${outputFor(source, target.ref)?.name ?? target.ref} is an opaque media Candidate; Studio needs the current Film graph`);
-    }
-  }
 
   // The selected Film companion declares membership and time-source vocabulary.
   const trackUses = (

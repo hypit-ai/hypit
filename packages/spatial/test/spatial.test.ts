@@ -20,16 +20,9 @@ function buildState(
   graph: Parameters<typeof planBuild>[1],
   targets: readonly string[],
 ) {
-  const planned = planBuild(program, graph, {
-    format: "hypit.run-graph@1",
-    records: [],
-    candidates: [],
-    operations: [],
-    satisfactions: [],
-    targets,
-  });
+  const planned = planBuild(program, graph, targets, []);
   return materializeBuild(defineBuild({
-    program: link(program.closure, [...program.records, ...planned.initialRecords]),
+    program,
     plan: planned.plan,
   }), []);
 }import { anchoredFrame, aspectFrame, composeSpatialMaps, mapIntrinsicExtentBounds, mapSpatialFrameBounds, mapSpatialFramePath, mapSpatialPoint, frameFromEdges, resolveContentFit, sealSpatialPath, spatialComponent, spatialManifest, spatialModuleRef, spatialProducers, spatialTypes } from "../src/index.js";

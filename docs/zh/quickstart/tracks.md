@@ -344,7 +344,7 @@ Track 都会作为独立输入进入 Film。输出 `{music-bed.audio}` 是普通
 ```
 
 通用 `Text` 只提供字符；Typography 仍然拥有文档包装、位置、时间、样式与动画。作者需要富文本
-Run 时，继续使用内联 `P`/`Span`/`Break`。
+片段时，继续使用内联 `P`/`Span`/`Break`。
 
 每个 occurrence 发布 `{callout-copy.occurrence}` 供同族文字工具使用，并发布
 `{callout-copy.visual}` 供 `film:Film` 使用。多个无关标题仍是 Film 的多个显式输入；若它们

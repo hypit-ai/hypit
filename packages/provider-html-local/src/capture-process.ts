@@ -41,7 +41,12 @@ export async function runCaptureProcess<T extends CaptureProcessInput>(
       fileURLToPath(entry),
     ], {
       ...(gpu ? { env: electronEnvironment() } : {}),
-      detached: process.platform !== "win32", windowsHide: true,
+      // A local Runtime Worker is already detached from its submitting CLI. Detaching its
+      // Electron child into another session makes macOS AppKit abort while registering the
+      // application. Keep that child in the Worker's login session; explicit tree cleanup below
+      // still owns every browser descendant. Chromium is headless and keeps its POSIX process
+      // group, while Linux Electron does not cross an AppKit session boundary.
+      detached: gpu ? process.platform === "linux" : process.platform !== "win32", windowsHide: true,
       stdio: ["ignore", "pipe", "pipe", "ipc"],
     });
     let failure: Error | undefined;

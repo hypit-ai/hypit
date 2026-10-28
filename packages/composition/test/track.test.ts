@@ -103,15 +103,10 @@ function fixture() {
 test("Composition accepts self-contained peer VisualTrack and AudioTrack values", () => {
   const { timeline, visual, sound } = fixture();
   assert.equal(visual.visualIr, VISUAL_IR_V1);
-  const composition = sealComposition({
-    id: "main",
-    canvas: { width: 1080, height: 1920, clearColor: "#000000" },
-    visual: scope(visual),
-    audio: [sound],
-  });
+  const composition = sealComposition({ id: "main", visual: { canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: scope(visual) }, audio: { contributions: [sound] } });
   assert.doesNotThrow(() => assertCompositionIdentity(composition, timeline));
-  assert.deepEqual([composition.audio[0]?.id, composition.visual.members[0]?.kind === "track"
-    ? composition.visual.members[0].track.id : undefined], ["speech", "caption"]);
+  assert.deepEqual([composition.audio.contributions[0]?.id, composition.visual.root.members[0]?.kind === "track"
+    ? composition.visual.root.members[0].track.id : undefined], ["speech", "caption"]);
 });
 
 test("AudioTrack rejects a sampling domain that differs from its prepared audio domain", () => {
@@ -161,20 +156,13 @@ test("VisualTrack carries exact logical source duration without a terminal mater
 
 test("Composition accepts case-insensitive hexadecimal canvas colors", () => {
   const { timeline, visual } = fixture();
-  const composition = sealComposition({
-    id: "uppercase-color",
-    canvas: { width: 480, height: 854, clearColor: "#09090B" },
-    visual: scope(visual), audio: [],
-  });
+  const composition = sealComposition({ id: "uppercase-color", visual: { canvas: { width: 480, height: 854, clearColor: "#09090B" }, root: scope(visual) }, audio: { contributions: [] } });
   assert.doesNotThrow(() => assertCompositionIdentity(composition, timeline));
 });
 
 test("AudioTrack is one closed DAG with explicit silence, mix and process references", () => {
   const { timeline, sound } = fixture();
-  assert.doesNotThrow(() => assertCompositionIdentity(sealComposition({
-    id: "audio-graph", canvas: { width: 1, height: 1, clearColor: "#000000" },
-    visual: scope(), audio: [sound],
-  }), timeline));
+  assert.doesNotThrow(() => assertCompositionIdentity(sealComposition({ id: "audio-graph", visual: { canvas: { width: 1, height: 1, clearColor: "#000000" }, root: scope() }, audio: { contributions: [sound] } }), timeline));
   const cyclic = sealAudioTrack({ timelineId: timeline.id, id: "cycle", graph: {
     nodes: [
       { kind: "process", id: "a", inputs: { signal: { node: "b", port: "signal" } },
@@ -184,10 +172,7 @@ test("AudioTrack is one closed DAG with explicit silence, mix and process refere
     ],
     output: { node: "a", port: "signal" },
   } });
-  assert.throws(() => assertCompositionIdentity(sealComposition({
-    id: "cycle", canvas: { width: 1, height: 1, clearColor: "#000000" },
-    visual: scope(), audio: [cyclic],
-  }), timeline), /contains a cycle/u);
+  assert.throws(() => assertCompositionIdentity(sealComposition({ id: "cycle", visual: { canvas: { width: 1, height: 1, clearColor: "#000000" }, root: scope() }, audio: { contributions: [cyclic] } }), timeline), /contains a cycle/u);
   const unreachable = sealAudioTrack({ timelineId: timeline.id, id: "unreachable", graph: {
     nodes: [{ kind: "silence", id: "used" }, { kind: "silence", id: "unused" }],
     output: { node: "used", port: "signal" },
@@ -285,11 +270,7 @@ test("VisualTrack accepts authored backdrop compositing", () => {
       root: { ...first, style: [{ name: "backdrop-filter", value: "blur(20px)" }] },
     }],
   });
-  const composition = sealComposition({
-    id: "invasive",
-    canvas: { width: 1080, height: 1920, clearColor: "#000000" },
-    visual: scope(invasive), audio: [sound],
-  });
+  const composition = sealComposition({ id: "invasive", visual: { canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: scope(invasive) }, audio: { contributions: [sound] } });
   assert.doesNotThrow(() => assertCompositionIdentity(composition, timeline));
 });
 
@@ -304,11 +285,7 @@ test("VisualTrack style values cannot smuggle a second declaration", () => {
     }],
   });
   assert.throws(
-    () => assertCompositionIdentity(sealComposition({
-      id: "smuggled",
-      canvas: { width: 1080, height: 1920, clearColor: "#000000" },
-      visual: scope(smuggled), audio: [],
-    }), timeline),
+    () => assertCompositionIdentity(sealComposition({ id: "smuggled", visual: { canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: scope(smuggled) }, audio: { contributions: [] } }), timeline),
     /escapes its declaration/,
   );
 });
@@ -341,11 +318,7 @@ test("VisualTrack cannot silently extend the versioned public Visual IR", () => 
     }],
   });
   assert.throws(
-    () => assertCompositionIdentity(sealComposition({
-      id: "unknown-style",
-      canvas: { width: 1080, height: 1920, clearColor: "#000000" },
-      visual: scope(unknownStyle), audio: [],
-    }), timeline),
+    () => assertCompositionIdentity(sealComposition({ id: "unknown-style", visual: { canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: scope(unknownStyle) }, audio: { contributions: [] } }), timeline),
     /outside hypit\.visual-ir@1/u,
   );
 
@@ -412,11 +385,7 @@ test("Composition validates Track frame ranges against the explicitly connected 
   const { timeline, visual } = fixture();
   const foreign = sealTimeline({ id: "test-space", frameCount: 24, frameRate: { numerator: 24, denominator: 1 },
   });
-  const composition = sealComposition({
-    id: "foreign",
-    canvas: { width: 1080, height: 1920, clearColor: "#000000" },
-    visual: scope(visual), audio: [],
-  });
+  const composition = sealComposition({ id: "foreign", visual: { canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: scope(visual) }, audio: { contributions: [] } });
   assert.throws(() => assertCompositionIdentity(composition, foreign), /outside Timeline/);
   assert.notDeepEqual(timeline, foreign);
 });
@@ -434,11 +403,7 @@ test("one authoring Track owns its local Present declaration order", () => {
       second,
     ],
   });
-  const composition = sealComposition({
-    id: "interleaved",
-    canvas: { width: 1080, height: 1920, clearColor: "#000000" },
-    visual: scope(interleaved), audio: [],
-  });
+  const composition = sealComposition({ id: "interleaved", visual: { canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: scope(interleaved) }, audio: { contributions: [] } });
   assert.doesNotThrow(() => assertCompositionIdentity(composition, timeline));
   assert.deepEqual(interleaved.items.map((present) => present.id), ["cue-1", "cue-2"]);
 });
@@ -455,55 +420,40 @@ test("visual ordering is array position and identities remain validation-only", 
   assert.doesNotThrow(() => assertVisualTrackIdentity(ordered, timeline));
   assert.deepEqual(ordered.items.map((item) => item.id), ["another", "cue-1"]);
 
-  assert.throws(() => assertCompositionIdentity(sealComposition({
-    id: "repeated-member-id",
-    canvas: { width: 1080, height: 1920, clearColor: "#000000" },
-    visual: { members: [
+  assert.throws(() => assertCompositionIdentity(sealComposition({ id: "repeated-member-id", visual: { canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: { members: [
       { kind: "track", id: "same", track: visual },
       { kind: "track", id: "same", track: visual },
-    ] },
-    audio: [],
-  }), timeline), /duplicate member id same/u);
+    ] } }, audio: { contributions: [] } }), timeline), /duplicate member id same/u);
 });
 
 test("Composition audio is a multiset of closed signals rather than a map keyed by Track id", () => {
   const { timeline, sound } = fixture();
-  const composition = sealComposition({
-    id: "repeated-signal",
-    canvas: { width: 1, height: 1, clearColor: "#000000" },
-    visual: { members: [] },
-    audio: [sound, structuredClone(sound)],
-  });
+  const composition = sealComposition({ id: "repeated-signal", visual: { canvas: { width: 1, height: 1, clearColor: "#000000" }, root: { members: [] } }, audio: { contributions: [sound, structuredClone(sound)] } });
   assert.doesNotThrow(() => assertCompositionIdentity(composition, timeline));
-  assert.equal(composition.audio.length, 2);
-  assert.deepEqual(composition.audio.map((track) => track.id), [sound.id, sound.id]);
+  assert.equal(composition.audio.contributions.length, 2);
+  assert.deepEqual(composition.audio.contributions.map((track) => track.id), [sound.id, sound.id]);
 });
 
 test("Composition distinguishes reusable VisualTrack values from their Film-owned occurrences", () => {
   const { timeline, visual } = fixture();
-  const composition = sealComposition({
-    id: "reused-visual",
-    canvas: { width: 1080, height: 1920, clearColor: "#000000" },
-    visual: { members: [
+  const composition = sealComposition({ id: "reused-visual", visual: { canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: { members: [
       { kind: "track", id: "background", track: visual },
       { kind: "stack", id: "inset", scope: { members: [
         { kind: "track", id: "picture", track: visual },
       ] } },
-    ] },
-    audio: [],
-  });
+    ] } }, audio: { contributions: [] } });
   assert.doesNotThrow(() => assertCompositionIdentity(composition, timeline));
-  assert.deepEqual(visualScopeTrackOccurrences(composition.visual).map((item) => item.path), [
+  assert.deepEqual(visualScopeTrackOccurrences(composition.visual.root).map((item) => item.path), [
     ["background"],
     ["inset", "picture"],
   ]);
 
   assert.throws(() => assertCompositionIdentity(sealComposition({
     ...composition,
-    visual: { members: [
+    visual: { ...composition.visual, root: { members: [
       { kind: "track", id: "same", track: visual },
       { kind: "track", id: "same", track: visual },
-    ] },
+    ] } },
   }), timeline), /duplicate member id same/u);
 });
 
@@ -525,11 +475,7 @@ test("Visual Present animations may finish before or after their visibility wind
       },
     }],
   });
-  assert.doesNotThrow(() => assertCompositionIdentity(sealComposition({
-    id: "animated",
-    canvas: { width: 1080, height: 1920, clearColor: "#000000" },
-    visual: scope(animated), audio: [],
-  }), timeline));
+  assert.doesNotThrow(() => assertCompositionIdentity(sealComposition({ id: "animated", visual: { canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: scope(animated) }, audio: { contributions: [] } }), timeline));
   const clipped = sealPresentVisualTrack({...visual,
     presents: [{
       ...present,
@@ -544,11 +490,7 @@ test("Visual Present animations may finish before or after their visibility wind
       },
     }],
   });
-  assert.doesNotThrow(() => assertCompositionIdentity(sealComposition({
-    id: "clipped-animation",
-    canvas: { width: 1080, height: 1920, clearColor: "#000000" },
-    visual: scope(clipped), audio: [],
-  }), timeline));
+  assert.doesNotThrow(() => assertCompositionIdentity(sealComposition({ id: "clipped-animation", visual: { canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: scope(clipped) }, audio: { contributions: [] } }), timeline));
   const invasive = sealPresentVisualTrack({...visual,
     presents: [{
       ...present,
@@ -563,9 +505,5 @@ test("Visual Present animations may finish before or after their visibility wind
       },
     }],
   });
-  assert.doesNotThrow(() => assertCompositionIdentity(sealComposition({
-    id: "animated-invasive",
-    canvas: { width: 1080, height: 1920, clearColor: "#000000" },
-    visual: scope(invasive), audio: [],
-  }), timeline));
+  assert.doesNotThrow(() => assertCompositionIdentity(sealComposition({ id: "animated-invasive", visual: { canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: scope(invasive) }, audio: { contributions: [] } }), timeline));
 });

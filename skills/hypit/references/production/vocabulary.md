@@ -36,10 +36,6 @@ The package README supplies exact behavior that is local to that installed imple
 When the question requires more detail, inspect the relevant implementation and exported API. An
 existing component can also provide a useful implementation example for a new project package.
 
-Run Fragment libraries have a separate interface. A package can provide
-Candidates without an author declaration. Read [Runs](runs.md) and the library's
-package-local Fragment documentation for those inputs and exports.
-
 ## Connect model references as typed inputs
 
 Read the model declaration's reference roles and per-input metadata as well as its prompt parameters.
@@ -108,7 +104,7 @@ with a drawing example. [System relationships](system.md) places it in the compl
 
 ## Let ordinary package management own distribution
 
-The project's package manager installs and versions components. Source and Run imports select the
+The project's package manager installs and versions components. Source and saved-Invocation imports select the
 packages the production uses. Project packages and independently published packages resolve through
 the project's installed dependencies; the selected Distribution supplies its own default packages.
 

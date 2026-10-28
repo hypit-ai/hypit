@@ -63,7 +63,7 @@ export function publication(
       output: output.output,
       type: output.type,
       target: output.goal,
-      source: { kind: "current-record" as const, record: output.record },
+      record: output.record,
     };
   }) };
 }

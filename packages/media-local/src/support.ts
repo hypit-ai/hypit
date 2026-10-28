@@ -1,4 +1,4 @@
-import { verifyAudioProgram } from "@hypit/audio-program";
+import { audioProgramGainRoutes, audioProgramSourceClips, verifyAudioProgram } from "@hypit/audio-program";
 import type { AudioProgram } from "@hypit/audio-program";
 import { readPreservePitch } from "@hypit/audio-stretch";
 import type { EndpointSupport } from "@hypit/hypit/endpoint";
@@ -23,7 +23,12 @@ export function supportsLocalAudioProgram(constraints: CanonicalValue): Endpoint
   } catch (error) {
     return unsupported(`Invalid AudioProgram: ${error instanceof Error ? error.message : String(error)}`);
   }
-  for (const clip of (program as AudioProgram).clips) {
+  try {
+    audioProgramGainRoutes(program as AudioProgram);
+  } catch (error) {
+    return unsupported(`Audio Process is unsupported: ${error instanceof Error ? error.message : String(error)}`);
+  }
+  for (const clip of audioProgramSourceClips(program as AudioProgram)) {
     if (clip.reconstruction === undefined) continue;
     try {
       readPreservePitch(clip.reconstruction);

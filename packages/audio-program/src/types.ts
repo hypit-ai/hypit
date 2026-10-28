@@ -1,4 +1,9 @@
-import type { AudioLevelAutomation, AudioReconstructionProgram } from "@hypit/composition";
+import type {
+  AudioLevelAutomation,
+  AudioProcessProgram,
+  AudioReconstructionProgram,
+  AudioSignalRef,
+} from "@hypit/composition";
 import type { MediaRational, PreparedAudioSource } from "@hypit/media";
 import type { FrameSpan } from "@hypit/timeline";
 import type { TemporalMap, TemporalRange } from "@hypit/temporal";
@@ -24,13 +29,36 @@ export type AudioProgramClip = AudioLevelAutomation & {
   readonly fadeOutSamples: number;
 };
 
-/** Pure, provider-independent audio programme lowered from a closed Composition. */
+export type AudioProgramNode =
+  | { readonly kind: "silence"; readonly id: string }
+  | { readonly kind: "source"; readonly id: string; readonly clip: AudioProgramClip }
+  | { readonly kind: "mix"; readonly id: string; readonly inputs: readonly AudioSignalRef[] }
+  | {
+      readonly kind: "process";
+      readonly id: string;
+      readonly inputs: Readonly<Record<string, AudioSignalRef>>;
+      readonly program: AudioProcessProgram;
+    };
+
+export type AudioProgramGraph = {
+  readonly nodes: readonly AudioProgramNode[];
+  readonly output: AudioSignalRef;
+};
+
+/** Pure, provider-independent executable audio DAG lowered from one AudioComposition. */
 export type AudioProgram = {
   readonly frameRate: MediaRational;
   readonly frameCount: number;
   readonly sampleRate: 48_000;
   readonly sampleFrames: number;
-  readonly clips: readonly AudioProgramClip[];
+  readonly graph: AudioProgramGraph;
+};
+
+/** One gain-only route through an AudioProgram, used by endpoints with a flat additive evaluator. */
+export type AudioProgramGainRoute = {
+  readonly id: string;
+  readonly clip: AudioProgramClip;
+  readonly gain: number;
 };
 
 export type RenderAudioNeed = {

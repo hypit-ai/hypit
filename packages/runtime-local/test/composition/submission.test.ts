@@ -85,65 +85,6 @@ test("a project directory alias accepts its Source and stores a project-relative
   } finally { await rm(parent, { recursive: true, force: true }); }
 });
 
-test("a forward-only Build completes with no Core records or Producer work", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "hypit-local-forward-only-"));
-  const priorId = "bld_20260924T120000000Z_0000000001";
-  const buildId = "bld_20260924T120000001Z_0000000001";
-  try {
-    await writeFile(join(directory, "main.svml"), "source");
-    const repository = new FileBuildResultRepository(join(directory, "results"));
-    const prior = await repository.create({
-      id: priorId,
-      sourceId: "main.svml",
-      publication: { outputs: [{ name: "document", output: "document", target: true,
-        type: types.document,
-        source: { kind: "current-record", record: "record:document" } }] },
-    });
-    await prior.sync({
-      records: [{ id: "record:document", type: types.document, value: ({ text: "ready" }) }],
-      resources: { async open() { throw new Error("fixture has no files"); } },
-    });
-    await prior.finish({ outcome: "complete" });
-
-    const template = createGreetingBuild();
-    const empty = defineBuild({
-      program: template.program,
-      plan: { format: "hypit.plan@1", steps: [], goals: [] },
-    });
-    const runtime = await createLocalRuntime(projectRuntimeFixture(directory));
-    try {
-      await runtime.build({
-        id: buildId,
-        definition: empty,
-        catalog: {
-          sourcePath: join(directory, "main.svml"),
-          publication: { outputs: [{
-            name: "document",
-            output: "forwarded-document",
-            target: true,
-            type: types.document,
-            source: { kind: "historical-output", build: priorId, output: "document" },
-          }] },
-        },
-        result: resultDestination(directory),
-      });
-      const completion = await finishClaimedBuild(runtime);
-      assert.equal(completion.outcome, "complete");
-      const result = await repository.read(buildId);
-      assert.deepEqual(result?.targets, ["document"]);
-      assert.deepEqual(result?.outputs.document, {
-        type: types.document,
-        value: { kind: "build-output", build: priorId, output: "document" },
-      });
-    } finally {
-      await runtime.close();
-    }
-  } finally {
-    await rm(directory, { recursive: true, force: true });
-  }
-});
-
-
 test("Endpoint-declared credentials use the selected writable Store without a Provider switch", async () => {
   const directory = await mkdtemp(join(tmpdir(), "hypit-local-auth-"));
   const values = new Map<string, CredentialValue>();

@@ -61,7 +61,7 @@ A-roll-only or B-roll-only.
 
 | Current question | Owner |
 | --- | --- |
-| Choose Targets, file/Result Candidates and computed substitutes | [Runs](runs.md) |
+| Choose Targets and transient execution overrides | [Invocations](runs.md) |
 | Decide which completed value preserves material while allowing this edit | [Reuse boundaries](authoring.md#reuse-produced-work-explicitly) |
 | Plan, price, submit, follow, recover and retrieve work | [Builds and Results](builds.md) |
 | Inspect the current picture, precise frames and continuous motion grids | [Snapshots](snapshots.md) |

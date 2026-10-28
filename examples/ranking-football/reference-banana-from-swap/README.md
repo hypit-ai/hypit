@@ -4,10 +4,11 @@ An independent ranking variant using the banana presenter. Its SVML, SVS, SVRun,
 Profile describe the full generation and composition. `build.svrun` uses the authored generation
 route; the neighboring `swap-effect-banana` variant demonstrates reuse of existing performances.
 
-From this directory, install the locked dependencies and check the Run:
+From this directory, install the selected 0.4 dependencies, review and commit the generated lockfile,
+then check the Invocation:
 
 ```sh
-npm ci
+npm install
 npx hypit check build.svrun
 ```
 

@@ -201,7 +201,7 @@ carry the Treatment clearly and compellingly. Reconsider Treatment when the desi
 change; change Brief when the user's goal changes.
 
 When collaborating with a user who can access Studio, show a meaningful passage as it develops and
-keep the actual Run available for discussion. When the composition is substantially ready, open its
+keep the current composition available for discussion. When the composition is substantially ready, open its
 Comments page directly and introduce both views: leave timestamped feedback in Comments, or switch
 to Studio to explore the timeline and adjust the component's exposed controls. Browser review and
 final export are separate: review can precede encoding, while a request to export already supplies
@@ -246,9 +246,9 @@ practical, revisit that choice and carry the improvement into the work and its n
   goal in Brief, and your creative answer in Treatment. Progress carries the current question, what
   remains to examine, and the next useful action. Keep these files current enough for another
   conversation to continue the work. Resume from the current request and these notes, with the
-  relevant Skill references, Sources, Runs, project Results and Runtime status.
+  relevant Skill references, Sources, saved Invocations, project Results and Runtime status.
   The project-files reference below owns document responsibilities and the suggested layout.
-- **Project ownership.** Preserve unrelated Source, Recipe, Run, assets, and project-package work.
+- **Project ownership.** Preserve unrelated Source, Recipe, saved Invocation, assets, and project-package work.
   Make production changes at their owning source; keep Result media intact. Author new visual
   behavior in project components. When execution problems arise, actively investigate and pursue
   a suitable repair through the [integration guidance](references/environment/model-and-provider.md),
@@ -293,10 +293,10 @@ practical, revisit that choice and carry the improvement into the work and its n
 | deciding which generated images or videos should depend on which references, including people, places, views and continuing props | `references/playbooks/craft/generated-dependencies.md` |
 | mixing performed or B-roll source sound with chosen music and effects, including balance, ducking and continuity | `references/playbooks/craft/sound-mix.md` |
 | presenting existing Timeline sound, local gain, silence, fades or explicit source blending | `references/production/audio-clips.md` |
-| writing Sources, Recipes, and Runs, reusing produced work, adding a component | `references/production/authoring.md` |
+| writing Author Sources, Recipes and Invocations, reusing produced work, adding a component | `references/production/authoring.md` |
 | imports, output references, literal values or Recipe rules | `references/production/source-syntax.md` |
 | choosing an existing Prompt Kit, assembling its wording or authoring a new one | `references/production/prompt-kits.md` |
-| Run syntax, Targets, transient overrides or accepting produced media into the project | `references/production/runs.md` |
+| saved Invocation syntax, Targets, transient overrides or accepting produced media into the project | `references/production/runs.md` |
 | supplying or reusing images/video/audio, model references, preparation, local domains, NarrativeAlignment, trims or processed variants | `references/production/media.md` |
 | placing independent images, prepared video or surfaces and choosing source playback | `references/production/visual-clips.md` |
 | placing independent music, narration, ambience or effects and selecting source playback | `references/production/audio-clips.md` |

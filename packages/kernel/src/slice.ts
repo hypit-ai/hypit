@@ -4,15 +4,20 @@ import type {
   GraphValueRef,
   LinkedProgram,
   ModuleRef,
-  RunGraph,
 } from "@hypit/protocol";
 
 import { createResolvedClosure, link } from "./link.js";
 import { verifyBuildPlan } from "./plan.js";
-import type { BuildCandidateSelection, PlannedExecution } from "./plan.js";
+import type { PlannedExecution } from "./plan.js";
+
+/** Candidate-free selected value exposed after execution slicing. */
+export type SelectedOutputRecord = {
+  readonly output: string;
+  readonly record: string;
+};
 
 /**
- * Materialize exactly the execution selected by one Author Graph and one Run Graph.
+ * Materialize exactly the execution selected from one Author Graph by one Invocation.
  *
  * Candidate choice is Core semantics: once an alternate Candidate satisfies an
  * output, only that Candidate's reachable upstream graph survives. Hosts must
@@ -21,22 +26,15 @@ import type { BuildCandidateSelection, PlannedExecution } from "./plan.js";
 export function sliceExecution(
   program: LinkedProgram,
   authorGraph: AuthorGraph,
-  runGraph: RunGraph,
+  targets: readonly string[],
   selected: PlannedExecution,
 ): {
   readonly program: LinkedProgram;
   readonly plan: PlannedExecution["plan"];
-  readonly initialRecords: PlannedExecution["initialRecords"];
-  readonly selectedSupplies: PlannedExecution["selectedSupplies"];
-  readonly targets: RunGraph["targets"];
-  readonly selections: readonly BuildCandidateSelection[];
+  readonly targets: readonly string[];
+  readonly selections: readonly SelectedOutputRecord[];
 } {
-  const graph = {
-    format: "hypit.graph@1" as const,
-    outputs: authorGraph.outputs,
-    candidates: [...authorGraph.candidates, ...runGraph.candidates],
-    operations: [...authorGraph.operations, ...runGraph.operations],
-  };
+  const graph = authorGraph;
   const outputById = new Map(authorGraph.outputs.map((item) => [item.id, item]));
   const candidateById = new Map(graph.candidates.map((item) => [item.id, item]));
   const operationById = new Map(graph.operations.map((item) => [item.id, item]));
@@ -64,7 +62,7 @@ export function sliceExecution(
     if (candidate === undefined) throw new Error(`execution slice refers to absent Candidate ${id}`);
     candidates.add(id);
     if (candidate.root.kind === "record") records.add(candidate.root.id);
-    else if (candidate.root.kind === "operation") visitOperation(candidate.root.result.operation);
+    else visitOperation(candidate.root.operation);
   };
   const visitOutput = (id: string): void => {
     if (outputs.has(id)) return;
@@ -73,13 +71,15 @@ export function sliceExecution(
     outputs.add(id);
     visitCandidate(selectionByOutput.get(id)?.candidate ?? output.primary);
   };
-  runGraph.targets.forEach(visitOutput);
+  targets.forEach(visitOutput);
 
   const selectedOperations = graph.operations.filter((item) => operations.has(item.id));
   const authoredRecords = program.records.filter((record) => records.has(record.id));
-  const executionSelections = selected.selections.filter((item) => outputs.has(item.output));
+  const executionSelections = selected.selections
+    .filter((item) => outputs.has(item.output))
+    .map(({ output, record }) => ({ output, record }));
   const targetRecords = new Set<string>();
-  for (const target of runGraph.targets) {
+  for (const target of targets) {
     const selection = selectionByOutput.get(target);
     const output = outputById.get(target);
     if (selection === undefined || output === undefined) {
@@ -88,15 +88,6 @@ export function sliceExecution(
     targetRecords.add(selection.record);
   }
   const goals = [...targetRecords].sort();
-  const requiredRecords = new Set([
-    ...goals,
-    ...selected.plan.steps
-      .filter((step) => operations.has(step.id))
-      .flatMap((step) => Object.values(step.inputs)),
-  ]);
-  const initialRecords = selected.initialRecords.filter((record) => requiredRecords.has(record.id));
-  const selectedSupplies = selected.selectedSupplies.filter((supply) =>
-    candidates.has(supply.candidate) && requiredRecords.has(supply.record));
   const plan: PlannedExecution["plan"] = {
     format: "hypit.plan@1",
     steps: selected.plan.steps.filter((step) => operations.has(step.id)),
@@ -114,23 +105,16 @@ export function sliceExecution(
     resolved.dependencies.forEach(requireModule);
   };
   selectedOperations.forEach((item) => requireModule(item.producer.module));
-  initialRecords.forEach((item) => requireModule(item.type.module));
-  selectedSupplies.forEach((item) => requireModule(item.type.module));
   authoredRecords.forEach((item) => requireModule(item.type.module));
 
   const closure = createResolvedClosure(program.closure.modules
     .filter((item) => requiredModules.has(moduleKey(item))));
   const slicedProgram = link(closure, authoredRecords);
-  verifyBuildPlan(slicedProgram, [
-    ...initialRecords,
-    ...selectedSupplies.map((supply) => ({ id: supply.record, type: supply.type })),
-  ], plan);
+  verifyBuildPlan(slicedProgram, plan);
   return {
     program: slicedProgram,
     plan,
-    initialRecords,
-    selectedSupplies,
-    targets: runGraph.targets,
+    targets,
     selections: executionSelections,
   };
 }

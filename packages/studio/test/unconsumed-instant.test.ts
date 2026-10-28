@@ -7,7 +7,7 @@ import { join } from "node:path";
 import { createVideoDistribution } from "@hypit/video";
 import { loadStudioDomain } from "../src/domain.js";
 import { loadStudioCompanionRegistry } from "../src/companion-assembly.js";
-import { loadStudioRun } from "../src/run.js";
+import { loadStudioPlan } from "../src/invocation.js";
 import { executeStudioProjection, MemoryResourceStore } from "../src/execute.js";
 import { observedTemporalValues, resolveStudioDeclarations } from "../src/temporal-declarations.js";
 import { Executor } from "@hypit/hypit/executor";
@@ -17,7 +17,8 @@ import { readStudioSession } from "../src/session.js";
 async function fixture(t: TestContext, extra = "", target = "program.timeline") {
   const root = await mkdtemp(join(tmpdir(), "hypit-studio-unused-time-"));
   t.after(() => rm(root, { recursive: true, force: true }));
-  await writeFile(join(root, "main.svml"), `<?svml using="@hypit/markup@1"?>
+  const authorPath = join(root, "main.svml");
+  await writeFile(authorPath, `<?svml using="@hypit/markup@1"?>
 <svml>
   <import as="time" from="@hypit/timeline-author@1"/>
   <import as="media" from="@hypit/media@1"/>
@@ -37,32 +38,28 @@ async function fixture(t: TestContext, extra = "", target = "program.timeline") 
   await writeFile(join(root, "source.mp4"), "A probe must require the Runtime; this fixture is never decoded.");
   await writeFile(join(root, "pixel.png"), Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j5ZkAAAAASUVORK5CYII=", "base64"));
   await writeFile(join(root, "look.svs"), '<?svml using="@hypit/recipe@1"?><sheet version="1">film.main { background: #000000; }</sheet>');
-  const runPath = join(root, "main.svrun");
-  await writeFile(runPath, `<?svml using="@hypit/markup/run@1"?>
-<svrun version="1"><author source="./main.svml"/><target output="${target}"/></svrun>`);
-  const domain = await loadStudioDomain({ run: runPath, workspaceRoot: root,
+  const domain = await loadStudioDomain({ source: authorPath, workspaceRoot: root,
     packageRoot: process.cwd(), distribution: createVideoDistribution() });
   const registry = await loadStudioCompanionRegistry({ distributionPackageRoot: process.cwd(), sourcePackages: domain.packages });
-  const run = await loadStudioRun({ run: runPath, domain, registry });
-  const unused = run.source.exports.find(output => output.name === "program.unused");
+  const plan = await loadStudioPlan({
+    selection: { kind: "author", source: authorPath, request: { targets: [target], overrides: [] } },
+    domain,
+    registry,
+  });
+  const unused = plan.source.exports.find(output => output.name === "program.unused");
   assert.ok(unused);
   const resources = new MemoryResourceStore();
-  const prepared = run.prepare(run.run, run.targets);
+  const prepared = plan.prepare(plan.invocation, plan.targets);
   const selected = await executeStudioProjection(domain, prepared.state, resources);
   assert.deepEqual(selected.errors, []);
   assert.equal(observedTemporalValues(selected.state, prepared.selections).some(value => value.id === unused.ref), false);
-  return { root, run, domain, registry, resources, resolved: selected.state, selections: prepared.selections, unused };
+  return { root, plan, domain, registry, resources, resolved: selected.state, selections: prepared.selections, unused };
 }
 
 test("Companion display requests resolve unused nested and standalone Instants", async (t) => {
   const input = await fixture(t);
   const declarations = await resolveStudioDeclarations({ ...input, transientExecution: {
     async evaluate(execution) {
-      const timeline = input.selections.find(selection => selection.output === input.run.targets[0])!;
-      const original = input.resolved.records.find(record => record.id === timeline.record)!;
-      assert.ok([...execution.state.program.records, ...execution.state.records].some(record =>
-        record.id.startsWith("studio:resolved:") && JSON.stringify(record.value) === JSON.stringify(original.value)),
-        "the already resolved logical Timeline output is supplied as a value Candidate");
       return (await new InProcessBuildScheduler(new Executor(execution)).run([{
         id: "studio-test",
         definition: {
@@ -77,11 +74,11 @@ test("Companion display requests resolve unused nested and standalone Instants",
   } });
   assert.deepEqual(declarations.issues, []);
   for (const [name, frame] of [["program.unused", 30], ["standalone", 60], ["offset", 65]] as const) {
-    const output = input.run.source.exports.find(output => output.name === name)!;
+    const output = input.plan.source.exports.find(output => output.name === name)!;
     assert.equal((declarations.values.find(value => value.id === output.ref)?.value as { frame: number }).frame, frame);
   }
   assert.equal(input.resolved.status, "complete");
-  assert.deepEqual(input.run.run.graph.satisfactions, [], "display reuse never changes the authored Run");
+  assert.deepEqual(input.plan.invocation.overrides, [], "display evaluation never changes the invocation");
 });
 
 test("an unresolved locator upstream does not prevent other locators or the selected view", async (t) => {

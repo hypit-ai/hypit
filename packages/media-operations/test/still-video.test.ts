@@ -1,9 +1,7 @@
-import { installRunFragmentFacets, RunFragmentRegistry } from "@hypit/run";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { fixtureResource } from "../../../test/fixture-resource.js";
-import { planStillVideoSegments, bindStillVideoSource, stillVideoFragment } from "../src/index.js";
-import { hypitPackage } from "../src/activation.js";
+import { planStillVideoSegments, bindStillVideoSource } from "../src/index.js";
 import { mediaOperationsComponent } from "../src/component.js";
 import { mediaOperationsProducers } from "../src/manifest.js";
 
@@ -27,12 +25,6 @@ test("StillVideo converts an exact TemporalDuration to whole frames without roun
     async () => plan({ unit: "milliseconds", value: 1 }),
     /must resolve to a positive whole frame count/u,
   );
-});
-
-test("the package exposes StillVideo as an ordinary Run Fragment", () => {
-  const fragments = new RunFragmentRegistry();
-  installRunFragmentFacets(hypitPackage.facets, fragments);
-  assert.equal(fragments.resolve("@hypit/media-operations@1", "still-video"), stillVideoFragment);
 });
 
 test("still video frames are whole and every picture holds at least one", () => {

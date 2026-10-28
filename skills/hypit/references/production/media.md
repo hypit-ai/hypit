@@ -22,8 +22,8 @@ Keep source facts, preparation and use distinct:
 
 Files, generated Outputs and earlier Results are sources of these values. A reference need not
 appear in the film. Align a Script Segment to a video's local domain when the production consumes
-that semantic timing relationship. [Runs](runs.md) owns explicit Result
-reuse. [Image operations](image-operations.md) owns still-image preparation.
+that semantic timing relationship. [Authoring](authoring.md) owns accepting exported Result material
+into the project. [Image operations](image-operations.md) owns still-image preparation.
 
 Preparation establishes moving media's local domain, selected picture/audio streams and exact maps to source presentation time
 streams. `NarrativeAlignment` separately adds one Script Segment's local word/boundary positions.

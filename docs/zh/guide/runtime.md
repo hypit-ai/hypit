@@ -3,8 +3,8 @@ title: Runtime
 description: 选择执行服务，独立运行 Build，并保留可持续使用的 Result。
 ---
 
-Source 描述作品，Run 选择 Target 与 Candidate，Runtime 使用选定服务执行这些决定，
-项目保留实际得到的 Output。
+Source 描述作品及其长期 realization 选择；Invocation 选择 Target 与可选的临时 override，
+`.svrun` 可以保存这份 Invocation。Runtime 使用选定服务执行，项目把接受的材料作为普通作者资源保留。
 
 | 所有者 | 职责 |
 | --- | --- |
@@ -96,7 +96,7 @@ hypit runtime status
 `plan <run>` 检查当前工作需要的能力和轻量就绪状态。发现 Provider 能力需要可加载的包声明；
 没有明确 binding 时，可能需要加载其他已声明 Endpoint。未使用的服务不必启动或登录。
 `build` 不做安装准备：依赖已就绪时，按需启动 Worker 并提交一次 Build。
-[Run 与 Build](../quickstart/run.md) 说明规划、价格、付费授权和显式复用。
+[Invocation 与 Build](../quickstart/run.md) 说明规划、价格、付费授权和显式复用。
 
 ## 执行独立于观察终端
 
@@ -109,7 +109,7 @@ hypit logs <build-id> --lines 80
 Worker 拥有执行。`--follow` 和 `status --watch` 只是观察；关闭终端或等待超时不会取消 Build。
 停止某一次尝试用 `hypit cancel <build-id>`。远程取消尽力而为，已经完成的 Output 会保留。
 
-失败的尝试保持失败。新 Run 可以选择已有 Output，开启新的 Build。如果执行已经结束，
+失败的尝试保持失败。把仍需使用的 Output 导出为项目资源、写入 Author Source，再由新的 Invocation 开启新的 Build。如果执行已经结束，
 只是 Result 保存需要处理，`status` 会指出 `hypit result finish <build-id>`：它只完成待保存工作，
 不会重新生成素材。
 

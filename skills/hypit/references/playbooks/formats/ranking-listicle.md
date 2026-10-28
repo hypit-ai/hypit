@@ -51,7 +51,7 @@ depends. In adaptation, a new subject or visual theme may call for a different i
 
 Whichever source is useful, inspect identity, exact version, resolution, crop, padding and transparency at
 the final displayed size. Builds consume the selected project file or generated Output; sourcing is
-an authoring decision rather than work repeated on every Run.
+an authoring decision rather than work repeated on every Invocation.
 
 Supporting B-roll has a different job. Generated comic inserts can interpret the commentary while
 icons identify the board entries. Each insert chooses the visual language its

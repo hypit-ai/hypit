@@ -15,8 +15,8 @@ The three generation entries use `reference.svml` and an adjacent `reference.svr
 their main images, recurring voice references and generated clips, then prepare media, align the
 Script where needed, and compose the video. They need no earlier Build Result or manually supplied
 presenter, host or scene image. The explainer instead opens a complete 137-second production with 17
-accepted performance clips, recorded demonstrations, pixel graphics and sound; its default Run reuses
-the supplied material.
+accepted performance clips, recorded demonstrations, pixel graphics and sound; its Author Source
+selects those supplied project resources and its default Invocation targets the final work.
 
 Self-contained here means a project directory: SVML, its imported SVS/Kits and the selected local
 assets. Hypit supplies the base video capabilities; each project's `package.json` declares any
@@ -25,13 +25,14 @@ contain neither. Real identifiers, prepared reveal art,
 music and sound effects may remain explicit local assets. Copy the whole example directory when
 using it outside this repository.
 
-Football ranking and Street interview include npm lockfiles. In the selected project directory,
-run `npm ci`, then `npx hypit check reference.svrun`. Their dependencies install
+Football ranking and Street interview declare the Hypit 0.4 release and their additional packages.
+In the selected project directory, install the selected published versions with `npm install`, review
+and commit the resulting lockfile, then use `npm ci` for repeatable installs. Their dependencies install
 [`@hypit/ranking`](https://www.npmjs.com/package/@hypit/ranking) and
 [`@hypit/interview-emoji-reveal`](https://www.npmjs.com/package/@hypit/interview-emoji-reveal),
 respectively. Interview's Flash component stays in its own `packages/flash` directory.
-The nested ranking variants each have their own manifest, lockfile and Run; follow their README
-from that directory. Installation and Source checks do not submit generation requests.
+The nested ranking variants each have their own manifest and saved Invocation; install and keep each
+variant's lockfile from that directory. Installation and Source checks do not submit generation requests.
 
 The other `swap-*` and nested projects preserve separate variations and reuse studies. They have not
 all been rebuilt to the same generation standard as these three reference entries. A linked showcase

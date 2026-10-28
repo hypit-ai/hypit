@@ -95,15 +95,15 @@
       "types": "./dist/public/markup.d.ts",
       "import": "./packages/markup/src/index.ts"
     },
-    "./markup/run": {
-      "hypit-source": "./packages/markup/src/run/index.ts",
-      "types": "./dist/public/markup-run.d.ts",
-      "import": "./packages/markup/src/run/index.ts"
+    "./markup/invocation": {
+      "hypit-source": "./packages/markup/src/invocation/index.ts",
+      "types": "./dist/public/markup-invocation.d.ts",
+      "import": "./packages/markup/src/invocation/index.ts"
     },
-    "./run": {
-      "hypit-source": "./packages/run/src/index.ts",
-      "types": "./dist/public/run.d.ts",
-      "import": "./packages/run/src/index.ts"
+    "./invocation": {
+      "hypit-source": "./packages/invocation/src/index.ts",
+      "types": "./dist/public/invocation.d.ts",
+      "import": "./packages/invocation/src/index.ts"
     },
     "./result": {
       "hypit-source": "./packages/result/src/index.ts",
@@ -276,7 +276,7 @@
     "@hypit/producer": "workspace:*",
     "@hypit/protocol": "workspace:*",
     "@hypit/markup": "workspace:*",
-    "@hypit/run": "workspace:*",
+    "@hypit/invocation": "workspace:*",
     "@hypit/provider-beatapi": "workspace:*",
     "@hypit/provider-hiapi": "workspace:*",
     "@hypit/provider-html-local": "workspace:*",

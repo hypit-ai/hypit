@@ -28,11 +28,7 @@ export function htmlProviderDocument(surface?: CompositableSurfaceRef) {
         { name: "position", value: "absolute" }, { name: "inset", value: 0 }, { name: "background", value: "#261447" },
       ] } }],
   });
-  return compileHtmlProgram(sealComposition({
-    id: "local-html-provider-fixture",
-    canvas: { width: 160, height: 96, clearColor: "#000000" },
-    visual: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) }, audio: [],
-  }), timeline);
+  return compileHtmlProgram(sealComposition({ id: "local-html-provider-fixture", visual: { canvas: { width: 160, height: 96, clearColor: "#000000" }, root: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }), timeline);
 }
 
 export function htmlProviderDelivery(

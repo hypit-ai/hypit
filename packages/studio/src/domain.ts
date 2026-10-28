@@ -19,13 +19,13 @@ export type StudioDomain = {
  * The application assembles the video-domain view; selected packages contribute Studio Companions through facets.
  */
 export async function loadStudioDomain(input: {
-  readonly run: string;
+  readonly source: string;
   readonly workspaceRoot: string;
   readonly packageRoot: string;
   readonly distribution: CliDistribution;
 }): Promise<StudioDomain> {
   const packages = await loadDiscoveredSourcePackages(input.distribution, {
-    source: input.run,
+    source: input.source,
     workspaceRoot: input.workspaceRoot,
     packageRoot: input.packageRoot,
     ...(input.distribution.packageRoot === undefined

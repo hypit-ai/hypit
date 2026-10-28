@@ -1,6 +1,6 @@
 # `@hypit/workspace`
 
-Replaceable Author/Run source and asset sessions. Filesystem, browser, Git, memory and remote
+Replaceable Author/Invocation source and asset sessions. Filesystem, browser, Git, memory and remote
 implementations can provide the same port without entering Core or the generic Host-facet package.
 
 Asset resolution returns a `BlobRef`. The matching `BlobAttachment` carries that same `blob` plus

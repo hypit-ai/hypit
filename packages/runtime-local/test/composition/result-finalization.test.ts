@@ -86,7 +86,7 @@ test("a completed public file moves into its Build Result and leaves no Runtime 
         sourcePath: join(directory, "main.svml"),
         publication: { outputs: [{ name: "clip.video", output: "generated", target: true,
           type: types.generated,
-          source: { kind: "current-record", record: "generated:placeholder" } }] },
+          record: "generated:placeholder" }] },
       },
       result: resultDestination(directory),
     });
@@ -263,7 +263,6 @@ test("an interrupted Result write finishes explicitly without rerunning the Buil
       browse: async (request) => await base.browse(request),
       describeOutput: async (build, output) => await base.describeOutput(build, output),
       resolve: async (build, output) => await base.resolve(build, output),
-      describeFile: async (build, file) => await base.describeFile(build, file),
       openFile: async (build, file) => await base.openFile(build, file),
     };
     return { repository };
@@ -281,7 +280,7 @@ test("an interrupted Result write finishes explicitly without rerunning the Buil
         sourcePath: join(directory, "main.svml"),
         publication: { outputs: [{ name: "final.document", output: "document", target: true,
           type: types.document,
-          source: { kind: "current-record", record: "document:root" } }] },
+          record: "document:root" }] },
       },
       result: resultDestination(directory),
     });
@@ -315,7 +314,6 @@ test("a failed Result creation leaves no active Build", async () => {
     async browse() { return { results: [] }; },
     async describeOutput() { return undefined; },
     async resolve() { return undefined; },
-    async describeFile(_build, file) { return file; },
     async openFile() { return undefined; },
   };
   try {
@@ -330,7 +328,7 @@ test("a failed Result creation leaves no active Build", async () => {
         sourcePath: join(directory, "main.svml"),
         publication: { outputs: [{ name: "final.document", output: "document", target: true,
           type: types.document,
-          source: { kind: "current-record", record: "document:root" } }] },
+          record: "document:root" }] },
       },
       result: resultDestination(directory),
     }), /result repository refused creation/u);

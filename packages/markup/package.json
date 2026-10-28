@@ -6,17 +6,17 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./run": "./src/run/index.ts"
+    "./invocation": "./src/invocation/index.ts"
   },
   "hypit": {
-    "activation": "./src/run/activation.ts"
+    "activation": "./src/invocation/activation.ts"
   },
   "dependencies": {
     "@hypit/source": "workspace:*",
     "@hypit/author": "workspace:*",
     "@hypit/facet": "workspace:*",
     "@hypit/protocol": "workspace:*",
-    "@hypit/run": "workspace:*"
+    "@hypit/invocation": "workspace:*"
   },
   "devDependencies": {
     "@hypit/kernel": "workspace:*"

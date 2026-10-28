@@ -243,7 +243,7 @@ speech and its performance; it does not prescribe a separate visual layer or the
 Use [snapshots](../../production/snapshots.md) from Studio or the existing HTML to inspect the actual
 glyphs, spaces, outline, decoration, wrapping and neighboring visual states. Play the passage in
 Studio to judge reading rhythm, emphasis, Role assignment, cut transitions and tracked movement with
-speech. The current composition supplies this evidence while the Run retains its accepted media and
+speech. The current composition supplies this evidence while the Author Source retains its accepted media and
 semantic Outputs. Inspect the encoded file too when delivering an export.
 
 Repeated tiny handoffs can ask the viewer to reacquire text too often; an overfull block can ask one

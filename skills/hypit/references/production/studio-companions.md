@@ -188,7 +188,7 @@ Uses and ordinary visual Clip occurrences. Ranking demonstrates persistent event
 optional package has been deliberately selected and installed by the project; it is not part of the
 default Distribution.
 
-Try the component in its actual Run: select a meaningful picture part, inspect the corresponding
+Try the component in its current composition: select a meaningful picture part, inspect the corresponding
 timeline Item, change an exposed value and inspect the owning Source and resulting picture.
 For a shared timing edit, inspect the other consumers too. Seek into both movement and settled
 states when those belong to the component's behavior.

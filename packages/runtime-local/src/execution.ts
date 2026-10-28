@@ -8,7 +8,7 @@ export type BuildOutcome = "complete" | "failed" | "cancelled";
 
 /** Exact host-local directory chosen before a Build becomes active. */
 export type BuildResultRepositoryLocation = {
-  /** Project ownership boundary used to record portable Source and Run paths. */
+  /** Project ownership boundary used to record portable Author and optional Invocation Source paths. */
   readonly root: string;
   /** Host-local filesystem path below the project root. */
   readonly path: string;

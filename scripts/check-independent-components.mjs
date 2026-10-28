@@ -103,7 +103,7 @@ try {
 
   await mkdir(join(distribution, "packages"), { recursive: true });
   await writeFile(join(distribution, "package.json"), JSON.stringify(await consumerHostManifest()));
-  const excluded = new Set(["comment-sticker", "comment-sticker-studio", "depth-stack", "interview-emoji-reveal", "visual-track"]);
+  const excluded = new Set(["comment-sticker", "depth-stack", "interview-emoji-reveal", "visual-track"]);
   for (const entry of await readdir(join(repositoryRoot, "packages"), { withFileTypes: true })) {
     if (!entry.isDirectory() || excluded.has(entry.name)) continue;
     await symlink(join(repositoryRoot, "packages", entry.name), join(distribution, "packages", entry.name),

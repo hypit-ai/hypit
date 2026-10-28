@@ -66,8 +66,8 @@ promising to restart failed execution or describing the interruption as a Result
 
 | Command | Default scope | Explicit detail |
 | --- | --- | --- |
-| `check` | Validation, targets and counts | `--verbose`: exported names/types and historical references |
-| `plan` | Targets, demanded requests, Endpoint selection and diagnostics | `--verbose`: Run choices and graph step count |
+| `check` | Validation, targets and counts | `--verbose`: exported names/types and authored values |
+| `plan` | Targets, demanded requests, Endpoint selection and diagnostics | `--verbose`: Invocation choices and graph step count |
 | `pricing` | Requests that may incur a Provider charge and their rate material | `--verbose`: declared no-charge requests and original documents |
 | `status`, `activity` | Current work, Provider-reported phases and failures | `--verbose`: individual operations; activity also includes capacity reservations |
 | `inspect` | Targets and explicitly highlighted Outputs, outcome and failure evidence | `--output <name>` selects one Output; `--verbose` browses all available Outputs and receipts |
@@ -78,11 +78,10 @@ command module, not to this generic command engine. They still appear under the 
 because the official executable binds `createLocalRuntimeCliCommandModules()` to its exact Local
 Host port at application assembly. The module never casts the generic Distribution to discover that port.
 
-Run choices count explicit Candidate selections, which can supply existing work or execute an
-alternative producer. They are not a count of reused files. Result output counts describe all
-available named Outputs, including forwarded ones; they are not a count of newly generated assets.
-`history <output>` lists Builds containing that name, including reuse, rather than deduplicating
-generation events or guessing whether mutable external files still contain the same bytes.
+Invocation choices count transient overrides. Result output counts describe the named Outputs
+actually published by each Build; they are not a count of newly generated assets. `history <output>`
+lists Builds containing that name rather than deduplicating generation events or guessing whether
+mutable external files still contain the same bytes.
 `inspect` chooses names before resolving references, so an unrelated Output cannot delay or break
 inspection of a target. It reports the number of other Outputs without reading their descriptions.
 
@@ -102,7 +101,7 @@ does not interpret model or renderer names.
 
 `--project` explicitly selects the project. Otherwise the Host searches upward for a `package.json`
 whose `hypit.project` field is `true`; it never promotes an arbitrary npm package or current directory.
-Commands that need a project fail accurately when neither selection exists. Source and Run arguments
+Commands that need a project fail accurately when neither selection exists. Source and Invocation arguments
 locate files within that context. Relative command-line paths are resolved from the current directory,
 including when `--project` is supplied.
 
@@ -144,7 +143,7 @@ Only a complete request emitted by an executed Producer is passed to the selecte
 as `not-evaluated`; they never carry partial constraints. Concrete request summaries are display-only
 projections of the actual constraints and do not participate in selection, support or submission.
 
-`pricing <run>` uses that selected Runtime to read Provider-owned rate material. The default report
+`pricing <source-or-invocation>` uses that selected Runtime to read Provider-owned rate material. The default report
 summarizes requests whose selected Endpoint explicitly declares `pricing.kind: "local"` as having no
 Provider charge. Requests with missing pricing declarations, failed price reads, unresolved selections
 or unsupported concrete requests remain visible. A blocked request can show the selected Endpoint's
@@ -159,7 +158,7 @@ does not interpret formulas, infer upstream media properties, or calculate total
 
 All groups are shown by default. `--limit <count>` limits human groups after grouping; `--verbose`
 adds no-charge request details, full request names and original documents. JSON uses `hypit.cli-pricing@1`: `requestCount`
-and `noChargeRequestCount` describe the whole Run, while `groups[]` holds Provider selection facts,
+and `noChargeRequestCount` describe the whole Invocation, while `groups[]` holds Provider selection facts,
 `requests[]` with known parameters and pending inputs, and `pricingDocuments[]` with source and data.
 JSON includes every group regardless of `--limit`; no-charge requests are included with `--verbose`.
 Producer failures are reported independently of requests, including failures that produce no Need.

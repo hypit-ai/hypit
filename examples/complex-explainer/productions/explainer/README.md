@@ -9,11 +9,11 @@ From this production directory:
 ```sh
 hypit check runs/render.svrun
 hypit plan runs/render.svrun
-hypit studio --run runs/render.svrun
+hypit studio --invocation runs/render.svrun
 ```
 
 The accepted performances and supporting media are ordinary project assets selected by the Author Source.
-The Run is only a saved Invocation target. Read the plan before submitting a Build; speech evidence is
+The `.svrun` file is only a saved Invocation target. Read the plan before submitting a Build; speech evidence is
 still produced by the explicitly authored transcription declarations unless the Source is changed to
 use project-owned transcript evidence.
 
@@ -29,8 +29,8 @@ use project-owned transcript evidence.
 | A coordinated visual behavior | The owning project package under `../../packages/` |
 | Which accepted performance file is used | `authors/assets.svml` and `authors/main.svml` |
 
-Generated-material and preparation relations remain explicit in the entry Source. Imported files own
-Script, raw resources and direction; the Run does not own material or historical Build addresses.
+Generated-material and preparation relations remain explicit in the entry Source. Imported Sources own
+Script, raw resources and direction; the saved Invocation only selects targets.
 
 ## Components
 

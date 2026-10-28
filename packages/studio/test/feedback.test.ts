@@ -7,7 +7,7 @@ import { createFeedbackStore, FeedbackConflict } from "../src/feedback-store.js"
 import { readFeedbackComment } from "../src/feedback.js";
 import type { FeedbackComment } from "../src/feedback.js";
 
-const note: FeedbackComment = { id: "caption-size", run: "runs/main.svrun", at: 12.5, text: "字幕大一点" };
+const note: FeedbackComment = { id: "caption-size", context: "authors/main.svml", at: 12.5, text: "字幕大一点" };
 
 test("comments remain ordinary files through edits, completion, reopening and deletion", async (t) => {
   const directory = await mkdtemp(join(tmpdir(), "hypit-feedback-"));
@@ -15,7 +15,7 @@ test("comments remain ordinary files through edits, completion, reopening and de
   const store = createFeedbackStore(directory);
   assert.deepEqual(await store.read(), { comments: [] });
   await store.mutate({ type: "add", comment: note });
-  const external = { comments: [note, { ...note, id: "agent-note", text: "保留这条", run: "runs/other.svrun" }], projectNote: "hand edited" };
+  const external = { comments: [note, { ...note, id: "agent-note", text: "保留这条", context: "authors/other.svml" }], projectNote: "hand edited" };
   await writeFile(store.path, JSON.stringify(external));
   const complete = { ...note, resolved: true };
   await store.mutate({ type: "replace", before: note, comment: complete });

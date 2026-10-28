@@ -6,11 +6,11 @@ that picture and sound should follow. It also covers estimated delivery duration
 [Timing](../production/timing.md) owns their projection into the work.
 
 [Source syntax](../production/source-syntax.md) covers the surrounding imports, references, Recipes
-and Runs; [Tracks](../production/tracks.md) covers the consumers of Script meaning.
+and Invocations; [Tracks](../production/tracks.md) covers the consumers of Script meaning.
 [Timeline authoring](../production/timeline.md) places local temporal domains, allows gaps and overlaps, and declares
 the complete work, including pure MG with no Script.
 [Media preparation](../production/media.md) explains connecting actual footage to a Segment, and
-[Runs](../production/runs.md) explains targeting material and reusing produced media, domains and alignment evidence.
+[Invocations](../production/runs.md) explains Targets and transient execution choices; Authoring owns accepted material.
 
 ## Script is the target's sole verbal authority
 
@@ -255,5 +255,5 @@ the target or preserve an incidental lead/lag unless that offset itself is part 
 Timing seen in Studio or a real Result may expose one of several different problems. A wrong Cue or
 semantic anchor changes Script. A sound performance that changes the intended rhythm may change the
 duration choice or Treatment. A correct Selection rendered badly changes the component or Recipe. An
-unusable generated clip changes its prompt, reference, Candidate, or shot design. Put each correction
+unusable generated clip changes its prompt, reference, realization choice, or shot design. Put each correction
 where its fact is owned.

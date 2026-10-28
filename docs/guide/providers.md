@@ -40,7 +40,7 @@ A Profile chooses the route; an error on that route does not authorize spending 
 
 For an existing installation, inspect the selected Profile and credential status first. A starter
 Profile supplies configuration examples; choose the services you want before connecting accounts or
-preparing their dependencies. [Runs and Builds](../quickstart/run.md) shows the commands.
+preparing their dependencies. [Invocations and Builds](../quickstart/run.md) shows the commands.
 
 ## Use your own model deployment
 
@@ -86,7 +86,7 @@ returns directly; a remote task can submit an ID, poll for completion and collec
 Concurrency and action limits belong to the Endpoint's resource declarations.
 
 A genuine failure ends that execution attempt. Build Results preserve completed Outputs and public
-task receipts. Further work uses a new Run and Build with suitable existing Outputs selected for reuse.
+task receipts. Further work exports suitable Outputs into the project, selects them in the Author Source, and uses a new Invocation and Build.
 
 The [Endpoint SDK](https://github.com/hypit-ai/hypit/blob/main/packages/endpoint/README.md)
 owns the handler interfaces, activation, resource declarations and pricing API. Compile the package

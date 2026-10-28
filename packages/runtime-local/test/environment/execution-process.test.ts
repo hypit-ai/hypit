@@ -106,7 +106,7 @@ test("isolated Builds load fresh transitive code and Profile choices, share capa
       definition: defineBuild({ program: initial.program, plan: initial.plan }),
       executionPackages: ["fixture-components"],
       catalog: { sourcePath: join(directory, "main.svml"), publication: { outputs: [{
-        name: "document", output: "document", target: true, type: types.document, source: { kind: "current-record", record: "document:root" },
+        name: "document", output: "document", target: true, type: types.document, record: "document:root",
       }] } },
       result: { repository: { root: directory, path: "results" } },
     });

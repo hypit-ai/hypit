@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { sealAudioProgram } from "@hypit/audio-program";
+import { audioProgramGraphFromClips, sealAudioProgram } from "@hypit/audio-program";
 import { preservePitch } from "@hypit/audio-stretch";
 import { preparedAudioSource } from "@hypit/media";
 import { fixtureResource } from "../../../test/fixture-resource.js";
@@ -19,7 +19,7 @@ test("audio DOM is owned by shared playback and preserves the exact AudioProgram
     frameCount: 30,
     sampleRate: 48_000,
     sampleFrames: 48_000,
-    clips: [{
+    graph: audioProgramGraphFromClips([{
       id: "voice:0",
       ...(() => {
         const domain = { id: "voice", duration: exactTemporalValueFromFrames(48_000,
@@ -52,7 +52,7 @@ test("audio DOM is owned by shared playback and preserves the exact AudioProgram
       gain: 2,
       fadeInSamples: 2_400,
       fadeOutSamples: 4_800,
-    }],
+    }]),
   });
   const html = lowerPlaybackAudio(program, () => '/audio?a=1&b="two"');
   assert.match(html, /class="hypit-playback-audio"/u);
@@ -80,7 +80,7 @@ test("audio DOM lowers explicit pitch preservation without inventing a second sp
   const program = sealAudioProgram({
     frameRate: { numerator: 30, denominator: 1 }, frameCount: 15,
     sampleRate: 48_000, sampleFrames: 24_000,
-    clips: [{
+    graph: audioProgramGraphFromClips([{
       id: "tone",
       source: { source: artifact, streamIndex: 0, presentationStart: zero, sourceDomain: domain,
         interpretation: { sampleRate: 48_000, channels: 2 } },
@@ -91,7 +91,7 @@ test("audio DOM lowers explicit pitch preservation without inventing a second sp
       reconstruction: preservePitch(),
       target: { start: zero, end: half }, targetStartSample: 0, targetEndSampleExclusive: 24_000,
       mixStartSample: 0, mixEndSampleExclusive: 24_000, gain: 1, fadeInSamples: 0, fadeOutSamples: 0,
-    }],
+    }]),
   });
   const html = lowerPlaybackAudio(program, () => "/tone.wav");
   assert.match(html, /data-playback-rate="2"/u);

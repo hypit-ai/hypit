@@ -5,7 +5,7 @@ import { dirname, join, resolve } from "node:path";
 import test from "node:test";
 
 import { FileBuildResultRepository } from "@hypit/result/node";
-import { createRunFrontendFacet } from "@hypit/run";
+import { createInvocationFrontendFacet } from "@hypit/invocation";
 import { createProducerPackageFacet } from "@hypit/producer";
 import { verifyRecordStructure } from "@hypit/kernel";
 import type { LinkedProgram, TypedRecord } from "@hypit/protocol";
@@ -23,9 +23,8 @@ const runCli: typeof runCliEngine = async (argv, output, selected) => await runC
 });
 
 /**
- * Enough of a Distribution to reach the build handler: a Run Frontend the
- * source header names, and a compiler that hands back that source and claims no
- * Author Frontend, so the CLI takes the Run path.
+ * Enough of a Distribution to reach the build handler through either an
+ * Author Source plus explicit Invocation or a saved Invocation preset.
  */
 function distribution(
   calls: string[],
@@ -39,17 +38,15 @@ function distribution(
       specifier: "@example/run-frontend",
       contribution: {
         format: "hypit.package@1",
-        facets: [createRunFrontendFacet({
-        id: "@hypit/markup/run@1",
+        facets: [createInvocationFrontendFacet({
+        id: "@hypit/markup/invocation@1",
         discover: () => ({ author: { source: authorSource }, imports: [] }),
         decode: () => ({
-          format: "hypit.run-document@1",
+          format: "hypit.invocation-source@1",
           author: { source: authorSource },
           imports: [],
           targets: ["result"],
-          candidates: [],
           overrides: [],
-          satisfactions: [],
         }),
         }), ...(producerError === undefined ? [] : [createProducerPackageFacet([{
             producer: { module: { name: "example.value", version: "1" }, name: "produce" },
@@ -61,7 +58,7 @@ function distribution(
       openEntry: async (path: string) => {
         const source = async (name: string) => ({
           unit: { id: name, name, bytes: new TextEncoder().encode(await readFile(name, "utf8")) },
-          frontend: name.endsWith(".svrun") ? "@hypit/markup/run@1" : "@hypit/markup@1",
+          frontend: name.endsWith(".svrun") ? "@hypit/markup/invocation@1" : "@hypit/markup@1",
         });
         return {
           entry: await source(path),
@@ -70,7 +67,7 @@ function distribution(
           attachments: async () => [],
         };
       },
-      supportsFrontend: () => false,
+      supportsFrontend: (id: string) => id === "@hypit/markup@1",
       openAuthorDocument: async (source: { readonly unit: { readonly id: string; readonly name: string; readonly bytes: Uint8Array } }) => ({
         source: source.unit,
         root: { node: "root", declarations: [] },
@@ -92,22 +89,24 @@ function distribution(
           producers: producerError === undefined ? [] : [{
             name: "produce", inputs: [], result: { kind: "output" as const, name: "result", type: { module: { name: "example.value", version: "1" }, name: "Value" } },
           }],
-        }] }, records: [] },
+        }] }, records: producerError === undefined ? [{
+          id: "record-result",
+          type: { module: { name: "example.value", version: "1" }, name: "Value" },
+          value: "ready",
+        }] : [] },
         graph: {
           format: "hypit.graph@1",
           outputs: [{
             id: "result",
             type: { module: { name: "example.value", version: "1" }, name: "Value" },
-            primary: "provided-result",
+            primary: "primary-result",
           }],
           candidates: [{
-            id: "provided-result",
+            id: "primary-result",
             type: { module: { name: "example.value", version: "1" }, name: "Value" },
-            root: producerError === undefined ? {
-              kind: "value",
-              record: "record-result",
-              value: "ready",
-            } : { kind: "operation", result: { kind: "operation-result", operation: "produce-result" } },
+            root: producerError === undefined
+              ? { kind: "record", id: "record-result" }
+              : { kind: "operation-result", operation: "produce-result" },
           }],
           operations: producerError === undefined ? [] : [{
             id: "produce-result",
@@ -122,7 +121,6 @@ function distribution(
         }],
         attachments: [],
       }),
-      extendExecutionProgram: (program: unknown) => program,
       async refineRecord(program: LinkedProgram, record: TypedRecord) {
         verifyRecordStructure(program.closure, record);
       },
@@ -186,17 +184,31 @@ function distribution(
   });
 }
 
-async function runSource(): Promise<string> {
+async function invocationSource(): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), "hypit-build-programs-"));
   const path = join(root, "build.svrun");
-  await writeFile(path, '<?svml using="@hypit/markup/run@1"?>\n<svrun/>\n', "utf8");
+  await writeFile(path, '<?svml using="@hypit/markup/invocation@1"?>\n<svrun/>\n', "utf8");
   await writeFile(join(root, "main.svml"), "author", "utf8");
   return path;
 }
 
+test("plan accepts an Author Source with explicit targets and no saved Invocation preset", async () => {
+  const preset = await invocationSource();
+  const source = join(dirname(preset), "main.svml");
+  let output = "";
+  await runCli(
+    ["plan", source, "--target", "result", "--json"],
+    { write(text) { output += text; } },
+    distribution([], []),
+  );
+  const plan = JSON.parse(output) as { readonly source: string; readonly targets: readonly string[] };
+  assert.equal(plan.source, source);
+  assert.deepEqual(plan.targets, ["result"]);
+});
+
 test("Build fails its cheap preflight before submitting or starting programs", async () => {
   const calls: string[] = [];
-  const source = await runSource();
+  const source = await invocationSource();
   await assert.rejects(
     async () => await runCli(
       ["build", source, "--runtime", "/p/hypit.runtime.json"],
@@ -215,7 +227,7 @@ test("Build fails its cheap preflight before submitting or starting programs", a
 
 test("Build accepts a Result title and never provisions programs after a clean preflight", async () => {
   const calls: string[] = [];
-  const source = await runSource();
+  const source = await invocationSource();
   await assert.rejects(
     async () => await runCli(
       ["build", source, "--title", "first-cut", "--runtime", "/p/hypit.runtime.json"],
@@ -229,7 +241,7 @@ test("Build accepts a Result title and never provisions programs after a clean p
 
 test("Build confirms durable submission before following stable work progress", async () => {
   const calls: string[] = [];
-  const source = await runSource();
+  const source = await invocationSource();
   const execution = {
     async build(request: { readonly id: string }) {
       calls.push("build");
@@ -297,7 +309,7 @@ test("Build confirms durable submission before following stable work progress", 
 });
 
 test("plan preserves the selected work summary but exits non-zero when cheap preflight fails", async () => {
-  const source = await runSource();
+  const source = await invocationSource();
   let output = "";
   let exitCode: number | undefined;
   await runCli(
@@ -324,7 +336,7 @@ test("plan preserves the selected work summary but exits non-zero when cheap pre
 });
 
 test("pricing reports a Producer failure with no external Need and exits non-zero in human and JSON modes", async () => {
-  const source = await runSource();
+  const source = await invocationSource();
   for (const json of [false, true]) {
     for (const producerError of [undefined, "Timeline end must be after its start"]) {
       let output = "";

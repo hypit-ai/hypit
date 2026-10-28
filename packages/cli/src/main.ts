@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 import { isBlobRef, moduleKey, orderedBuildId } from "@hypit/protocol";
 import { buildResultOutput } from "@hypit/result";
 
-import { checkRunFile, collectRunFrontends, loadRunFile } from "./run-file.js";
+import { checkInvocationPreset, collectInvocationFrontends, loadInvocation } from "./invocation-source.js";
 import type { CliDistribution } from "./distribution.js";
 import type { CliApplicationContext } from "./application.js";
 import type { CliRuntime, CliRuntimeHost, CliRuntimeInspection } from "./runtime-port.js";
@@ -174,7 +174,7 @@ export async function runCli(
         });
   const packageContributions = (loadedPackageSet ?? distribution.bootstrapPackages)
     .map((item) => item.contribution);
-  const runFrontends = collectRunFrontends(packageContributions);
+  const invocationFrontends = collectInvocationFrontends(packageContributions);
   const compiler = distribution.createCompiler({
     ...(effectiveWorkspaceRoot === undefined ? {} : { workspaceRoot: effectiveWorkspaceRoot }),
     ...(args.assetRoots.length === 0 ? {} : { assetRoots: args.assetRoots }),
@@ -186,49 +186,34 @@ export async function runCli(
   });
   const workspace = await compiler.openEntry(args.source);
   const selectedFrontend = workspace.entry.frontend;
-  const runMode = runFrontends.some((frontend) => frontend.id === selectedFrontend);
+  const invocationMode = invocationFrontends.some((frontend) => frontend.id === selectedFrontend);
   const authorMode = compiler.supportsFrontend(selectedFrontend);
-  if (runMode === authorMode) {
-    const message = runMode
-      ? `Frontend ${selectedFrontend} is ambiguously registered as Author and Run`
-      : `No trusted Author or Run compiler accepts Frontend ${selectedFrontend}`;
+  if (invocationMode === authorMode) {
+    const message = invocationMode
+      ? `Frontend ${selectedFrontend} is ambiguously registered as Author and Invocation`
+      : `No trusted Author or Invocation compiler accepts Frontend ${selectedFrontend}`;
     throw new Error(message);
   }
-  if ((args.command === "plan" || args.command === "pricing" || args.command === "build") && !runMode) {
-    throw new Error(`${args.command} requires a self-described Run Source; check Author Sources independently`);
-  }
   if (args.command === "check") {
-    if (runMode) {
-        const loaded = await checkRunFile({
+    if (invocationMode) {
+        const loaded = await checkInvocationPreset({
           workspace,
           authorCompiler: compiler,
-          frontends: runFrontends,
-          packageContributions,
+          frontends: invocationFrontends,
         });
         const machine = {
           format: "hypit.cli-check@1" as const,
-          sourceKind: "run" as const,
+          sourceKind: "invocation" as const,
           ok: true,
-          run: projectPath(loaded.source, effectiveWorkspaceRoot),
+          invocation: projectPath(loaded.source, effectiveWorkspaceRoot),
           author: projectPath(loaded.authorSource, effectiveWorkspaceRoot),
           frontend: selectedFrontend,
           targetCount: loaded.document.targets.length,
           targets: loaded.document.targets,
           overrides: loaded.document.overrides.length,
-          candidates: loaded.document.candidates.length,
-          satisfactions: loaded.document.satisfactions.length,
-          historicalOutputCount: loaded.unresolvedHistoricalOutputs.length,
-          ...(args.presentation.verbose ? { unresolvedHistoricalOutputs: loaded.unresolvedHistoricalOutputs.slice(0, args.limit).map((item) => ({
-            candidate: item.id,
-            build: item.build,
-            output: item.output,
-          })),
-          ...(loaded.unresolvedHistoricalOutputs.length <= args.limit ? {} : {
-            omittedHistoricalOutputs: loaded.unresolvedHistoricalOutputs.length - args.limit,
-          }) } : {}),
         } as const;
         writeCliOutput(io, args.presentation, {
-          kind: "check-run",
+          kind: "check-invocation",
           machine,
         });
         return;
@@ -265,44 +250,50 @@ export async function runCli(
       return;
     }
   }
+  if (invocationMode && (args.targets.length > 0 || args.overrides.length > 0)) {
+    throw new Error("--target and --override apply to an Author Source; an Invocation preset already declares them");
+  }
+  if (authorMode && args.targets.length === 0) {
+    throw new Error(`${args.command} requires at least one explicit --target when its input is an Author Source`);
+  }
+  const loadSelectedInvocation = async () => await loadInvocation({
+    workspace,
+    authorCompiler: compiler,
+    frontends: invocationFrontends,
+    input: invocationMode
+      ? { kind: "preset" }
+      : { kind: "author", request: { targets: args.targets, overrides: args.overrides } },
+  });
   if (args.command === "build") {
     if (runtimeProfile === undefined) {
       throw new Error("build requires a Runtime; run hypit runtime init, select one with runtime use, or pass --runtime <profile>");
     }
     const commandScope = { projectRoot: projectResultsRoot, runtimeProfile: resolve(runtimeProfile) };
     const buildResults = await projectResults(projectResultsRoot);
-    let loadedRun;
+    let loadedInvocation;
     try {
-      loadedRun = await loadRunFile({
-        workspace,
-        authorCompiler: compiler,
-        frontends: runFrontends,
-        packageContributions,
-        results: buildResults.repository,
-      });
+      loadedInvocation = await loadSelectedInvocation();
     } catch (error) {
       await buildResults.close();
       throw error;
     }
     const result = await (async () => {
       try {
-        return loadedRun.compiler.prepareCompilation(loadedRun);
+        return loadedInvocation.compiler.prepareCompilation(loadedInvocation);
       } catch (error) {
         await buildResults.close();
         throw error;
       }
     })();
-    const runSelections = result.selections.filter((selection) =>
-      loadedRun.run.satisfactionNames[selection.output] !== undefined);
     let runtime: CliRuntime | undefined;
     let inspection: CliRuntimeInspection | undefined;
     try {
       const catalog = createCatalogDescriptor({
-        source: loadedRun.authorSource,
+        source: loadedInvocation.authorSource,
         publication: result.publication,
-        run: {
-          path: loadedRun.path,
-        },
+        ...(loadedInvocation.origin.kind === "preset"
+          ? { invocationSource: { path: loadedInvocation.origin.source } }
+          : {}),
       });
       const request = {
         // One CLI invocation is one execution instance. Source and Plan identity
@@ -320,7 +311,6 @@ export async function runCli(
         result: {
           repository: buildResults.location,
           ...(args.title === undefined ? {} : { title: args.title }),
-          resourceReferences: loadedRun.resultResourceReferences,
         },
       } as const;
       const host = await runtimeHost(runtimeProfile, sourcePackageRoot);
@@ -348,13 +338,7 @@ export async function runCli(
         (total, step) => total + (step.result.kind === "need" ? 1 : 0),
         0,
       );
-      const suppliedOutputCount = runSelections.length;
-      const workSummary = [
-        `${requestCount} ${requestCount === 1 ? "request" : "requests"}`,
-        ...(suppliedOutputCount === 0 ? [] : [
-          `${suppliedOutputCount} ${suppliedOutputCount === 1 ? "Output" : "Outputs"} supplied by Run`,
-        ]),
-      ].join(" · ");
+      const workSummary = `${requestCount} ${requestCount === 1 ? "request" : "requests"}`;
       if (args.follow && "view" in built && !args.presentation.json) {
         const acceptedView = buildStatusView({ id: built.id, runtime: built.view, commandScope });
         const targets = built.view.targets.slice(0, args.limit);
@@ -398,10 +382,7 @@ export async function runCli(
         ? published.target
         : targetNames.has(published.name));
       const targetPresentations = targetPublishedOutputs.flatMap((published) => {
-        const currentRecord = published.source.kind === "current-record" ? published.source.record : undefined;
-        const record = currentRecord === undefined
-          ? undefined
-          : built.state.records.find((item) => item.id === currentRecord);
+        const record = built.state.records.find((item) => item.id === published.record);
         if (record === undefined) return [];
         return [{
           published,
@@ -491,17 +472,9 @@ export async function runCli(
     }
     return;
   }
-  let planResults: Awaited<ReturnType<typeof projectResults>> | undefined;
   let planInspection: CliRuntimeInspection | undefined;
   try {
-    planResults = await projectResults(projectResultsRoot);
-    const loaded = await loadRunFile({
-      workspace,
-      authorCompiler: compiler,
-      frontends: runFrontends,
-      packageContributions,
-      results: planResults.repository,
-    });
+    const loaded = await loadSelectedInvocation();
     const result = loaded.compiler.prepareCompilation(loaded);
     const planHost = runtimeProfile === undefined ? undefined : await runtimeHost(runtimeProfile);
     const evaluated = await evaluatePlanNeeds(result.definition, packageContributions);
@@ -518,7 +491,7 @@ export async function runCli(
         kind: "pricing",
         ...(args.limit === undefined ? {} : { limit: args.limit }),
         machine: createPricingOutput(
-          projectPath(loaded.path, effectiveWorkspaceRoot), pricing, needs, args.presentation.verbose,
+          projectPath(loaded.origin.source, effectiveWorkspaceRoot), pricing, needs, args.presentation.verbose,
           evaluated.producerFailures,
         ),
       });
@@ -530,12 +503,17 @@ export async function runCli(
     const needs = describePlanNeeds(evaluated.state, evaluated, endpoints ?? []);
     const outputNames = Object.fromEntries(result.compilation.author.exports.flatMap((item) =>
       item.ref.kind === "logical-output" ? [[item.ref.id, item.name]] : []));
-    const allChoices = result.selections.flatMap((selection) => {
-      const output = outputNames[selection.output];
-      const candidate = loaded.run.satisfactionNames[selection.output];
-      return output === undefined || candidate === undefined ? [] : [{ output, candidate }];
+    const allChoices = loaded.invocation.overrides.flatMap((override) => {
+      const output = outputNames[override.output];
+      if (output === undefined) return [];
+      return [{
+        output,
+        choice: override.choice.kind === "primary" ? "primary" : override.choice.record,
+      }];
     });
-    const targets = loaded.run.document.targets;
+    const targets = loaded.origin.kind === "preset"
+      ? loaded.preset!.document.targets
+      : args.targets;
     const unsupportedRequestCount = endpoints?.filter((item) => item.support === "unsupported").length ?? 0;
     const unresolvedRequestCount = endpoints?.filter((item) => item.status === "unresolved" || item.status === "ambiguous").length ?? 0;
     const localRequestCount = endpoints?.filter((item) => item.status === "resolved" && item.pricing?.kind === "local").length ?? 0;
@@ -550,7 +528,7 @@ export async function runCli(
         ok: (preflight?.ok ?? true) && unresolvedRequestCount === 0
           && unsupportedRequestCount === 0 && requestIssueCount === 0
           && producerFailureCount === 0,
-        run: projectPath(loaded.path, effectiveWorkspaceRoot),
+        source: projectPath(loaded.origin.source, effectiveWorkspaceRoot),
         targetCount: targets.length,
         targets,
         steps: result.definition.plan.steps.length,
@@ -578,6 +556,5 @@ export async function runCli(
       || producerFailureCount > 0) io.setExitCode?.(1);
   } finally {
     await planInspection?.close();
-    await planResults?.close();
   }
 }

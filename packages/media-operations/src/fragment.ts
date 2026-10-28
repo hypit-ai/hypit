@@ -205,5 +205,3 @@ export function createStillVideoFragment(count: number) {
     }],
   });
 }
-
-export const stillVideoFragment = createStillVideoFragment(1);

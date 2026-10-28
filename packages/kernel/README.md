@@ -2,10 +2,9 @@
 
 The domain neutral graph compiler and build state machine.
 
-Core links module declarations and plans one complete Author Graph together with one complete Run
-Graph. Starting at the Targets, it applies explicit satisfactions, follows every dependency introduced
-by the selected Candidates, and derives one finite execution closure without rewriting either source
-graph.
+Core plans one complete Author Graph for a source-neutral Invocation. Starting at the Targets, it
+applies each transient override or authored realization choice, follows the selected dependencies,
+and derives one finite execution closure without rewriting the Author Graph.
 
 Execution is one immutable `BuildDefinition` followed by accepted `BuildFact` values. `BuildMachine`
 reconstructs the current view, emits the next commands and accepts their results. The materialized

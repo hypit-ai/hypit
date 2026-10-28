@@ -375,14 +375,17 @@ function parseCatalogEntry(row: Row): BuildCatalogEntry {
   assert(typeof row.build_id === "string", "SQLite Build Catalog row has no build id");
   assert(typeof row.descriptor_json === "string", "SQLite Build Catalog row has no descriptor");
   const descriptor = object(JSON.parse(row.descriptor_json) as unknown, "SQLite Build Catalog descriptor");
-  exactKeys(descriptor, ["sourcePath", "runPath", "publication"], "SQLite Build Catalog descriptor");
-  assertPublicationIntent(descriptor.publication, { build: row.build_id });
+  exactKeys(descriptor, ["sourcePath", "invocationSourcePath", "publication"], "SQLite Build Catalog descriptor");
+  assertPublicationIntent(descriptor.publication);
   return {
     build: row.build_id,
     sourcePath: nonEmptyString(descriptor.sourcePath, "SQLite Build Catalog Source path"),
-    ...(descriptor.runPath === undefined
+    ...(descriptor.invocationSourcePath === undefined
       ? {}
-      : { runPath: nonEmptyString(descriptor.runPath, "SQLite Build Catalog Run path") }),
+      : { invocationSourcePath: nonEmptyString(
+          descriptor.invocationSourcePath,
+          "SQLite Build Catalog Invocation Source path",
+        ) }),
     publication: descriptor.publication,
   };
 }

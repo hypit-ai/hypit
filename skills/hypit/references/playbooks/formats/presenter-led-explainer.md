@@ -147,7 +147,7 @@ review the changed action and its handoffs; export the encoded film when that de
 The [complex spoken explainer](https://github.com/hypit-ai/hypit/tree/main/examples/complex-explainer)
 is a finished 137-second example with 17 accepted performance clips. Its guide links the film, editable sources,
 media archive and project packages. Reading its code and notes needs no media download; opening the
-full picture uses project-owned accepted media. The default Run only selects the requested Targets.
+full picture uses project-owned accepted media. The default Invocation only selects the requested Targets.
 
 | Question to trace | Concrete source |
 | --- | --- |

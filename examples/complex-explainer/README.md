@@ -41,7 +41,7 @@ After extraction, `.hypit/media.tar.gz` can be removed to reclaim the archive's 
 cd productions/explainer
 hypit check runs/render.svrun
 hypit plan runs/render.svrun --runtime ../../hypit.runtime.json
-hypit studio --run runs/render.svrun --runtime ../../hypit.runtime.json
+hypit studio --invocation runs/render.svrun --runtime ../../hypit.runtime.json
 ```
 
 Open the printed **Comments** URL (`#comments`) to review the composition before export and leave
@@ -51,7 +51,7 @@ this workspace's `FEEDBACK.json`; the Agent can read and resolve them while edit
 or scene code. Existing private review conversations are not included. The Inspector remains useful
 for the selected Caption, Style and event choices without exposing every internal scene dimension.
 
-The default Run is a target-only Invocation preset. Accepted performance and supporting media are
+The default saved Invocation is target-only. Accepted performance and supporting media are
 ordinary project assets; media preparation and speech alignment remain explicit Author relations.
 The included Profile has no generation account or credential store. A Build that reaches the authored
 WhisperX declarations therefore needs an explicitly configured transcription path, or the project must

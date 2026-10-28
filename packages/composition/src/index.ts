@@ -17,6 +17,7 @@ export {
 } from "./schema.js";
 export {
   assertAudioTrackIdentity,
+  assertAudioProcessProgram,
   assertAudioReconstructionProgram,
   audioGainProcess,
   audioGraphFromClips,
@@ -24,6 +25,8 @@ export {
   audioTrackClips,
   AUDIO_GAIN_PROCESS_FORMAT,
   assertCompositionIdentity,
+  assertAudioCompositionIdentity,
+  assertVisualCompositionIdentity,
   assertVisualItemSequence,
   assertVisualProgram,
   assertVisualTextAppearance,

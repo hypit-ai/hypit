@@ -83,17 +83,8 @@ function resultPath(value: unknown, subject: string): string {
 
 function fileRef(value: unknown, subject: string): BuildResultFileRef {
   assertBuildResultFileRef(value, subject);
-  if (value.kind === "external-file") {
-    return {
-      kind: "external-file",
-      uri: value.uri,
-      size: value.size,
-      mediaType: value.mediaType,
-    };
-  }
   return {
     kind: "build-file",
-    ...(value.build === undefined ? {} : { build: value.build }),
     path: value.path,
     size: value.size,
     mediaType: value.mediaType,
@@ -102,15 +93,8 @@ function fileRef(value: unknown, subject: string): BuildResultFileRef {
 
 function outputValue(value: unknown, subject: string): BuildResultOutputValue {
   const item = object(value, subject);
-  if (item.kind === "build-file" || item.kind === "external-file") {
+  if (item.kind === "build-file") {
     return fileRef(item, subject);
-  }
-  if (item.kind === "build-output") {
-    return {
-      kind: "build-output",
-      build: buildId(item.build, `${subject}.build`),
-      output: text(item.output, `${subject}.output`),
-    };
   }
   if (item.kind === "inline") {
     const scalar = item.value;
@@ -223,7 +207,7 @@ export function decodeBuildResultManifest(
   const item = object(value, subject);
   if (item.format !== "hypit.build-result@1") throw new Error(`${subject} is not a Hypit Build Result`);
   const sourceId = text(item.sourceId, `${subject}.sourceId`);
-  const runId = optionalText(item.runId, `${subject}.runId`);
+  const invocationSourceId = optionalText(item.invocationSourceId, `${subject}.invocationSourceId`);
   const title = optionalText(item.title, `${subject}.title`);
   const note = optionalText(item.note, `${subject}.note`);
   const highlightedOutputs = item.highlightedOutputs === undefined
@@ -251,7 +235,7 @@ export function decodeBuildResultManifest(
     ...(note === undefined ? {} : { note }),
     ...(highlightedOutputs === undefined ? {} : { highlightedOutputs }),
     sourceId,
-    ...(runId === undefined ? {} : { runId }),
+    ...(invocationSourceId === undefined ? {} : { invocationSourceId }),
     targets: texts(item.targets, `${subject}.targets`),
     outputs: outputs(item.outputs, `${subject}.outputs`),
     ...(executionLog === undefined ? {} : { executionLog }),
@@ -301,10 +285,6 @@ export function decodeBuildResultWriterState(
     if (logicalOutputs.has(output)) throw new Error(`${subject} publishes Logical Output ${output} more than once`);
     names.add(name);
     logicalOutputs.add(output);
-    const source = object(published.source, `${subject}.publication.outputs[${index}].source`);
-    if (source.kind !== "current-record" && source.kind !== "historical-output") {
-      throw new Error(`${subject}.publication.outputs[${index}].source.kind is not a publication source kind`);
-    }
     if (typeof published.target !== "boolean") {
       throw new Error(`${subject}.publication.outputs[${index}].target must be a boolean`);
     }
@@ -314,24 +294,12 @@ export function decodeBuildResultWriterState(
       type: typeRef(published.type, `${subject}.publication.outputs[${index}].type`),
       ...(published.displayName === undefined ? {} : { displayName: text(published.displayName, `${subject}.displayName`) }),
       target: published.target,
-      source: source.kind === "current-record" ? {
-        kind: "current-record" as const,
-        record: text(source.record, `${subject}.publication.outputs[${index}].source.record`),
-      } : {
-        kind: "historical-output" as const,
-        build: buildId(source.build, `${subject}.publication.outputs[${index}].source.build`),
-        output: text(source.output, `${subject}.publication.outputs[${index}].source.output`),
-      },
+      record: text(published.record, `${subject}.publication.outputs[${index}].record`),
     };
   });
   const publication = { outputs: publishedOutputs };
   assertPublicationIntent(publication);
   return {
-    ...(item.resourceReferences === undefined ? {} : { resourceReferences: Object.fromEntries(
-      Object.entries(object(item.resourceReferences, `${subject}.resourceReferences`)).map(([resource, reference]) => {
-        return [resource, fileRef(reference, `${subject}.resourceReferences.${resource}`)];
-      }),
-    ) }),
     resources: pathMap(item.resources, `${subject}.resources`),
     values: pathMap(item.values, `${subject}.values`),
     publication,

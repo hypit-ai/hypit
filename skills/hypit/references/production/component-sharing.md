@@ -43,7 +43,7 @@ pnpm add --save-exact @studio/score-strip@1.2.0
 The project lockfile records the installed dependency tree. Updates are explicit package-manager
 operations; Builds use the selected installed code. A missing package is an installation problem.
 Select the intended new release in the consumer project, inspect its changed vocabulary where
-relevant, check the actual Source/Run and review the changed behavior. New Builds load that selected
+relevant, check the actual Source and Invocation and review the changed behavior. New Builds load that selected
 implementation; restart an existing Studio session to load package-code changes. Reuse compatible
 project media through authored realization choices while recomputing the component being revised. The package's own
 release notes describe any required author changes.
@@ -143,4 +143,4 @@ A Prompt Kit can export an `.svs` Source through ordinary package `exports`:
 
 That reads the selected package data. The same packing, installation, versioning, and file-completeness
 rules apply. [Project handoff](../creation/project-files.md#hand-over-an-editable-production) explains
-sharing the Sources, Runs, assets and Results needed to continue a video on another machine.
+sharing the Sources, saved Invocations, assets and Results needed to continue a video on another machine.

@@ -31,7 +31,6 @@
     "@hypit/media": "workspace:*",
     "@hypit/narrative": "workspace:*",
     "@hypit/protocol": "workspace:*",
-    "@hypit/run": "workspace:*",
     "@hypit/seedance": "workspace:*",
     "@hypit/spatial": "workspace:*",
     "@hypit/recipe": "workspace:*",

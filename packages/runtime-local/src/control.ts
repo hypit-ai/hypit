@@ -52,7 +52,9 @@ function buildView(input: {
     }),
     ...(input.execution?.stop === undefined ? {} : { stop: input.execution.stop }),
     ...(input.catalog?.sourcePath === undefined ? {} : { sourcePath: input.catalog.sourcePath }),
-    ...(input.catalog?.runPath === undefined ? {} : { runPath: input.catalog.runPath }),
+    ...(input.catalog?.invocationSourcePath === undefined
+      ? {}
+      : { invocationSourcePath: input.catalog.invocationSourcePath }),
     targets,
     ...(requests === undefined ? {} : { requests }),
     acceptedRecords: state?.records.length ?? 0,

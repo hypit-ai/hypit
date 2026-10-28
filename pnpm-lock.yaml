@@ -144,6 +144,9 @@ importers:
       '@hypit/interview-emoji-reveal':
         specifier: workspace:*
         version: link:packages/interview-emoji-reveal
+      '@hypit/invocation':
+        specifier: workspace:*
+        version: link:packages/invocation
       '@hypit/markup':
         specifier: workspace:*
         version: link:packages/markup
@@ -234,9 +237,6 @@ importers:
       '@hypit/result':
         specifier: workspace:*
         version: link:packages/result
-      '@hypit/run':
-        specifier: workspace:*
-        version: link:packages/run
       '@hypit/script':
         specifier: workspace:*
         version: link:packages/script
@@ -414,14 +414,14 @@ importers:
         specifier: workspace:^0.2.0
         version: link:../../../../packages/composition
       '@hypit/spatial':
-        specifier: ^0.1.0
-        version: 0.1.0(@hypit/hypit@)
+        specifier: workspace:^0.1.0
+        version: link:../../../../packages/spatial
       '@hypit/temporal':
-        specifier: ^0.1.0
-        version: 0.1.0(@hypit/hypit@)(@hypit/studio-companion@packages+studio-companion)
+        specifier: workspace:^0.1.0
+        version: link:../../../../packages/temporal
       '@hypit/timeline':
-        specifier: ^0.1.0
-        version: 0.1.0(@hypit/hypit@)
+        specifier: workspace:^0.1.0
+        version: link:../../../../packages/timeline
     devDependencies:
       '@hypit/hypit':
         specifier: workspace:*
@@ -865,6 +865,9 @@ importers:
       '@hypit/executor':
         specifier: workspace:*
         version: link:../executor
+      '@hypit/invocation':
+        specifier: workspace:*
+        version: link:../invocation
       '@hypit/kernel':
         specifier: workspace:*
         version: link:../kernel
@@ -886,9 +889,6 @@ importers:
       '@hypit/result':
         specifier: workspace:*
         version: link:../result
-      '@hypit/run':
-        specifier: workspace:*
-        version: link:../run
       '@hypit/runtime':
         specifier: workspace:*
         version: link:../runtime
@@ -957,6 +957,9 @@ importers:
       '@hypit/author':
         specifier: workspace:*
         version: link:../author
+      '@hypit/invocation':
+        specifier: workspace:*
+        version: link:../invocation
       '@hypit/kernel':
         specifier: workspace:*
         version: link:../kernel
@@ -966,9 +969,6 @@ importers:
       '@hypit/refinement':
         specifier: workspace:*
         version: link:../refinement
-      '@hypit/run':
-        specifier: workspace:*
-        version: link:../run
       '@hypit/source':
         specifier: workspace:*
         version: link:../source
@@ -1315,9 +1315,6 @@ importers:
       '@hypit/recipe':
         specifier: workspace:*
         version: link:../recipe
-      '@hypit/run':
-        specifier: workspace:*
-        version: link:../run
       '@hypit/seedance':
         specifier: workspace:*
         version: link:../seedance
@@ -1586,6 +1583,21 @@ importers:
         specifier: 5.9.3
         version: 5.9.3
 
+  packages/invocation:
+    dependencies:
+      '@hypit/author':
+        specifier: workspace:*
+        version: link:../author
+      '@hypit/facet':
+        specifier: workspace:*
+        version: link:../facet
+      '@hypit/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@hypit/source':
+        specifier: workspace:*
+        version: link:../source
+
   packages/kernel:
     dependencies:
       '@hypit/protocol':
@@ -1615,12 +1627,12 @@ importers:
       '@hypit/facet':
         specifier: workspace:*
         version: link:../facet
+      '@hypit/invocation':
+        specifier: workspace:*
+        version: link:../invocation
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@hypit/run':
-        specifier: workspace:*
-        version: link:../run
       '@hypit/source':
         specifier: workspace:*
         version: link:../source
@@ -1758,9 +1770,6 @@ importers:
       '@hypit/recipe':
         specifier: workspace:*
         version: link:../recipe
-      '@hypit/run':
-        specifier: workspace:*
-        version: link:../run
 
   packages/mimo-speech:
     dependencies:
@@ -2452,21 +2461,6 @@ importers:
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
-
-  packages/run:
-    dependencies:
-      '@hypit/author':
-        specifier: workspace:*
-        version: link:../author
-      '@hypit/facet':
-        specifier: workspace:*
-        version: link:../facet
-      '@hypit/protocol':
-        specifier: workspace:*
-        version: link:../protocol
-      '@hypit/source':
-        specifier: workspace:*
-        version: link:../source
 
   packages/runtime:
     dependencies:
@@ -3796,22 +3790,6 @@ packages:
 
   '@fontsource/archivo-black@5.3.0':
     resolution: {integrity: sha512-7EsTIQ+Blf96ktpzTUpI7msi+u9/AJxM/GZxOSkEubVd1jSTrFSTNxMgfpX/8rQsjZ+19a+qvRbtcTEp5J/72g==}
-
-  '@hypit/spatial@0.1.0':
-    resolution: {integrity: sha512-s44mBcgL2IuB53sqRsuRLswdFJEeNbHzwZTcRa2FxD+xOKVR8Ro/wk1VcqqGortj1g7fDIw3pWxYTuxYVEAgvA==}
-    peerDependencies:
-      '@hypit/hypit': ^0.3.1
-
-  '@hypit/temporal@0.1.0':
-    resolution: {integrity: sha512-ryhyFq49A/6vWL9pwuRsNqsMoJWYg5uCBN3NmPekae0qPGJVMA5zV2YUuVlnkYcFdZkKP5c8vJXSWLR5vTBd+g==}
-    peerDependencies:
-      '@hypit/hypit': ^0.3.1
-      '@hypit/studio-companion': ^0.1.1
-
-  '@hypit/timeline@0.1.0':
-    resolution: {integrity: sha512-RE3jBm/gawWV7lqa0ZNBb9ztVxE3AIaqNkTnMEgbu2mXUEJip7ora15p5xFWN5ZsxBmMX0s1g1jvW4SqPJa/Rw==}
-    peerDependencies:
-      '@hypit/hypit': ^0.3.1
 
   '@iconify-json/simple-icons@1.2.93':
     resolution: {integrity: sha512-/XhANjfGYOuqvSR3TmUnkQkINvQ4GVjVuukvymRbxtVFBvIq/yiXJqCDycKcQPT401OYT9H2vIY6ihAlz1QIAw==}
@@ -5493,20 +5471,6 @@ snapshots:
   '@fontsource-variable/noto-sans-sc@5.3.0': {}
 
   '@fontsource/archivo-black@5.3.0': {}
-
-  '@hypit/spatial@0.1.0(@hypit/hypit@)':
-    dependencies:
-      '@hypit/hypit': 'link:'
-
-  '@hypit/temporal@0.1.0(@hypit/hypit@)(@hypit/studio-companion@packages+studio-companion)':
-    dependencies:
-      '@hypit/hypit': 'link:'
-      '@hypit/studio-companion': link:packages/studio-companion
-      '@hypit/timeline': 0.1.0(@hypit/hypit@)
-
-  '@hypit/timeline@0.1.0(@hypit/hypit@)':
-    dependencies:
-      '@hypit/hypit': 'link:'
 
   '@iconify-json/simple-icons@1.2.93':
     dependencies:

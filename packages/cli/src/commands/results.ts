@@ -54,7 +54,9 @@ export async function runProjectResultCommand(input: {
       createdAt: buildCreatedAtIso(manifest.id),
       ...(manifest.title === undefined ? {} : { title: manifest.title }),
       outcome: manifest.outcome,
-      ...(manifest.runId === undefined ? {} : { run: projectPath(manifest.runId, projectRoot) }),
+      ...(manifest.invocationSourceId === undefined
+        ? {}
+        : { invocationSource: projectPath(manifest.invocationSourceId, projectRoot) }),
       targetCount: manifest.targets.length,
       ...(args.presentation.verbose ? {
         targets: manifest.targets.slice(0, args.limit),
@@ -69,8 +71,8 @@ export async function runProjectResultCommand(input: {
     }, "Build results", "info", [["Builds", String(builds.length)]],
     builds.map((item) => {
       const label = item.title === undefined ? item.id : `${item.title} · ${item.id}`;
-      const run = item.run === undefined ? "" : ` · ${item.run}`;
-      return `${label}: ${item.outcome} · ${new Date(item.createdAt).toLocaleString()}${run} · ${item.targetCount} target${item.targetCount === 1 ? "" : "s"}`;
+      const invocation = item.invocationSource === undefined ? "" : ` · ${item.invocationSource}`;
+      return `${label}: ${item.outcome} · ${new Date(item.createdAt).toLocaleString()}${invocation} · ${item.targetCount} target${item.targetCount === 1 ? "" : "s"}`;
     }).concat(page.next === undefined ? [] : [
       `Older    Repeat this command with --before ${page.next}, keeping the other options.`,
     ]));

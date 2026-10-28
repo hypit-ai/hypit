@@ -17,7 +17,7 @@
     "@hypit/loader": "workspace:*",
     "@hypit/project": "workspace:*",
     "@hypit/protocol": "workspace:*",
-    "@hypit/run": "workspace:*",
+    "@hypit/invocation": "workspace:*",
     "@hypit/runtime": "workspace:*",
     "@hypit/source": "workspace:*",
     "@hypit/refinement": "workspace:*",

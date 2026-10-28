@@ -4,11 +4,13 @@ export async function installBrowserVideo(moduleUrl, maxBytes) {
   const sources = new Map();
   const cache = new Map();
   let resident = 0, samplesRead = 0, decoderStarts = 0, cacheHits = 0, peak = 0;
+  let sourceOpenMs = 0, sampleReadMs = 0, drawMs = 0;
   const open = (url, streamIndex) => {
     const sourceKey = `${url}\u0000${streamIndex}`;
     let pending = sources.get(sourceKey);
     if (pending === undefined) {
       pending = (async () => {
+        const started = performance.now();
         const input = new media.Input({ source: new media.UrlSource(url), formats: media.ALL_FORMATS });
         try {
           const track = (await input.getTracks())[streamIndex];
@@ -21,6 +23,7 @@ export async function installBrowserVideo(moduleUrl, maxBytes) {
             firstTimestamp: await track.getFirstTimestamp(), timeResolution: await track.getTimeResolution(),
             width: track.displayWidth, height: track.displayHeight };
         } catch (error) { input.dispose(); throw error; }
+        finally { sourceOpenMs += performance.now() - started; }
       })();
       sources.set(sourceKey, pending);
     }
@@ -61,44 +64,48 @@ export async function installBrowserVideo(moduleUrl, maxBytes) {
     await cursor.iterator?.return();
   };
   const readSample = async (source, id, timestamp, endTimestamp) => {
-    // Each layer advances independently; the source and retained samples are shared.
-    let cursor = source.cursors.get(id);
-    if (!cursor) { cursor = {}; source.cursors.set(id, cursor); }
-    if (!cursor.iterator || timestamp < cursor.current?.timestamp || timestamp >= cursor.endTimestamp
-      || timestamp - cursor.current?.timestamp > 2) {
-      if (cursor.iterator) await cursor.iterator.return();
-      cursor.current?.close(); cursor.next?.close();
-      decoderStarts++;
-      cursor.endTimestamp = endTimestamp ?? Infinity;
-      cursor.iterator = source.sink.samples(timestamp, endTimestamp);
-      cursor.current = (await cursor.iterator.next()).value;
-      cursor.next = (await cursor.iterator.next()).value;
-      if (cursor.current) samplesRead++;
-      if (cursor.next) samplesRead++;
-    }
-    while (cursor.next && cursor.next.timestamp <= timestamp) {
-      cursor.current?.close();
-      cursor.current = cursor.next;
-      cursor.next = (await cursor.iterator.next()).value;
-      if (cursor.next) samplesRead++;
-    }
-    if (!cursor.current) throw new Error(`Browser video has no sample at ${timestamp}`);
-    const sample = cursor.current;
-    // Planar alpha samples need the source color tags before RGB conversion.
-    if (/^I\d{3}A/.test(sample.format)) {
-      const bytes = new Uint8Array(sample.allocationSize());
-      const layout = await sample.copyTo(bytes);
-      return new media.VideoSample(bytes, { format: sample.format, codedWidth: sample.codedWidth,
-        codedHeight: sample.codedHeight, timestamp: sample.timestamp, duration: sample.duration,
-        rotation: sample.rotation, flip: sample.flip, visibleRect: sample.visibleRect,
-        displayWidth: sample.displayWidth, displayHeight: sample.displayHeight,
-        colorSpace: source.colorSpace, layout });
-    }
-    return sample.clone();
+    const started = performance.now();
+    try {
+      // Each layer advances independently; the source and retained samples are shared.
+      let cursor = source.cursors.get(id);
+      if (!cursor) { cursor = {}; source.cursors.set(id, cursor); }
+      if (!cursor.iterator || timestamp < cursor.current?.timestamp || timestamp >= cursor.endTimestamp
+        || timestamp - cursor.current?.timestamp > 2) {
+        if (cursor.iterator) await cursor.iterator.return();
+        cursor.current?.close(); cursor.next?.close();
+        decoderStarts++;
+        cursor.endTimestamp = endTimestamp ?? Infinity;
+        cursor.iterator = source.sink.samples(timestamp, endTimestamp);
+        cursor.current = (await cursor.iterator.next()).value;
+        cursor.next = (await cursor.iterator.next()).value;
+        if (cursor.current) samplesRead++;
+        if (cursor.next) samplesRead++;
+      }
+      while (cursor.next && cursor.next.timestamp <= timestamp) {
+        cursor.current?.close();
+        cursor.current = cursor.next;
+        cursor.next = (await cursor.iterator.next()).value;
+        if (cursor.next) samplesRead++;
+      }
+      if (!cursor.current) throw new Error(`Browser video has no sample at ${timestamp}`);
+      const sample = cursor.current;
+      // Planar alpha samples need the source color tags before RGB conversion.
+      if (/^I\d{3}A/.test(sample.format)) {
+        const bytes = new Uint8Array(sample.allocationSize());
+        const layout = await sample.copyTo(bytes);
+        return new media.VideoSample(bytes, { format: sample.format, codedWidth: sample.codedWidth,
+          codedHeight: sample.codedHeight, timestamp: sample.timestamp, duration: sample.duration,
+          rotation: sample.rotation, flip: sample.flip, visibleRect: sample.visibleRect,
+          displayWidth: sample.displayWidth, displayHeight: sample.displayHeight,
+          colorSpace: source.colorSpace, layout });
+      }
+      return sample.clone();
+    } finally { sampleReadMs += performance.now() - started; }
   };
   const w = window;
   w.__hypitVideoStats = () => ({ samplesRead, decoderStarts, cacheHits,
-    resident, peak, cachedSamples: cache.size, openSources: sources.size });
+    resident, peak, cachedSamples: cache.size, openSources: sources.size,
+    sourceOpenMs, sampleReadMs, drawMs });
   w.__hypitDrawVideoSources = async (updates) => {
     const sourceKeyFor = update => `${update.url}\u0000${update.sample?.streamIndex ?? 0}`;
     const active = new Map(updates.map(update => [update.id, sourceKeyFor(update)]));
@@ -187,7 +194,9 @@ export async function installBrowserVideo(moduleUrl, maxBytes) {
       if (context === null)
         throw new Error("Browser video canvas could not be created");
       context.clearRect(0, 0, canvas.width, canvas.height);
+      const drawStarted = performance.now();
       entry.sample.draw(context, 0, 0, canvas.width, canvas.height);
+      drawMs += performance.now() - drawStarted;
     }
   };
   let disposing;

@@ -12,8 +12,9 @@ export {
   verifyAuthorGraph,
 } from "./graph.js";
 export { planBuild, plannedNeeds } from "./plan.js";
-export type { BuildCandidateSelection, PlannedExecution, PlannedNeed, SelectedSupply } from "./plan.js";
+export type { PlannedExecution, PlannedNeed } from "./plan.js";
 export { sliceExecution } from "./slice.js";
+export type { SelectedOutputRecord } from "./slice.js";
 export {
   defineBuild,
 } from "./reducer.js";

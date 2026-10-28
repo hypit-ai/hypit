@@ -216,7 +216,7 @@ export function snapshot(registry: StudioCompanionRegistry, built: SnapshotProje
   readonly revision: number;
   readonly path: string;
   readonly text: string;
-  readonly run: StudioSnapshot["run"];
+  readonly invocation: StudioSnapshot["invocation"];
   readonly canvas: { readonly width: number; readonly height: number; readonly clearColor: string };
   readonly frameRate: { readonly numerator: number; readonly denominator: number };
   readonly preview: StudioSnapshot["preview"];
@@ -392,7 +392,7 @@ export function snapshot(registry: StudioCompanionRegistry, built: SnapshotProje
         imports: (file.imports ?? []).map((item) => item.source),
       })),
     },
-    run: input.run,
+    invocation: input.invocation,
     canvas: {
       width: input.canvas.width,
       height: input.canvas.height,

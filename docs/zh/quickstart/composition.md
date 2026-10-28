@@ -105,10 +105,10 @@ Stack 从透明画面开始，在父 Scope 中按自身声明位置作为一张�
 ```
 
 渲染器编译视觉贡献、捕获所需帧、渲染 AudioTrack，并复用封装为交付文件。
-`{final.video}` 是普通 Resource-backed `Blob`，通常也是 Run Target。
+`{final.video}` 是普通 Resource-backed `Blob`，通常也是 Invocation Target。
 
 ```svml
-<?svml using="@hypit/markup/run@1"?>
+<?svml using="@hypit/markup/invocation@1"?>
 <svrun version="1">
   <author source="./main.svml"/>
   <target output="final.video"/>
@@ -123,8 +123,8 @@ Stack 从透明画面开始，在父 Scope 中按自身声明位置作为一张�
 ```
 
 边界使用原 Timeline 的半开区间。30 fps 时，这个例子渲染第 8–12 秒。即使输出片段从零
-开始，动画和媒体采样仍保留原节目位置。区间渲染只限制最终捕获与编码；上游工作仍由 Run
-选择的图决定，因此应显式复用已接受的媒体与对齐输出。
+开始，动画和媒体采样仍保留原节目位置。区间渲染只限制最终捕获与编码；上游工作仍由
+AuthorGraph 与 Invocation Target 的有限切片决定，因此已接受的媒体与对齐证据应在 Author Source 中显式选择。
 
 ## 完全由组件绘制的影片
 
@@ -162,7 +162,7 @@ hypit check main.svml
 hypit plan build.svrun
 ```
 
-`check` 在不调用外部服务的情况下验证导入、类型和图边。`plan` 编译选定 Run 并显示将要
+`check` 在不调用外部服务的情况下验证导入、类型和图边。`plan` 编译 Author Source 与 Invocation 并显示将要
 请求的 Operations。付费执行前应检查该计划。
 
 [时间与装配](./timing.md)解释媒体准备、Timeline 构造、媒体放置与语义投影；

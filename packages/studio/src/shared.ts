@@ -169,7 +169,7 @@ export type StudioSourceView = {
   readonly path: string;
   readonly text: string;
   readonly language: "svml" | "svs" | "svrun";
-  readonly role: "run" | "author" | "dependency";
+  readonly role: "invocation" | "author" | "dependency";
   readonly imports: readonly string[];
 };
 
@@ -185,7 +185,7 @@ export type StudioTaskView = {
   readonly detail?: string;
   readonly requests?: { readonly total: number; readonly completed: number };
   readonly source: string;
-  readonly run?: string;
+  readonly invocationSource?: string;
   readonly targets: readonly string[];
   readonly operations: readonly {
     readonly status: "pending" | "completed" | "failed" | "cancelled";
@@ -200,7 +200,7 @@ export type StudioArtifactView = {
   readonly nameEditable?: boolean;
   /** Author-provided display name; the Output identifier remains unchanged. */
   readonly displayName?: string;
-  /** File-owner identity; references to the same file share one card. */
+  /** File identity inside one Result; references to the same file share one card. */
   readonly id: string;
   readonly build: string;
   readonly createdAt: number;
@@ -208,21 +208,24 @@ export type StudioArtifactView = {
   readonly highlighted: boolean;
   readonly buildTitle?: string;
   readonly buildNote?: string;
-  readonly ownerBuild?: string;
-  readonly ownerOutput: string;
   readonly filePath: string;
   readonly size: number;
   readonly mediaType: string;
   readonly source: string;
-  readonly run?: string;
-  readonly origins: readonly { readonly build: string; readonly output: string; readonly run?: string; readonly source: string }[];
+  readonly invocationSource?: string;
+  readonly origins: readonly {
+    readonly build: string;
+    readonly output: string;
+    readonly invocationSource?: string;
+    readonly source: string;
+  }[];
 };
 
 export type StudioLibraryRequest = {
   readonly media?: "image" | "video" | "audio";
   readonly section: "tasks" | "artifacts";
   readonly before?: string;
-  readonly run?: string;
+  readonly invocationSource?: string;
   readonly build?: string;
 };
 
@@ -243,12 +246,12 @@ export type StudioSnapshot = {
     /** Workspace-relative presentation path; the server retains the absolute write target. */
     readonly path: string;
     readonly text: string;
-    /** The exact Run + Author closure; never a directory scan or inferred project tree. */
+    /** The exact Invocation + Author closure; never a directory scan or inferred project tree. */
     readonly files: readonly StudioSourceView[];
   };
-  /** Visible Run provenance; Studio never invents a second execution source. */
-  readonly run: {
-    readonly path: string;
+  /** Visible Invocation; a saved preset source is optional. */
+  readonly invocation: {
+    readonly source?: string;
     readonly targets: readonly string[];
   };
   /** The resolved picture plane. It is a preview snapshot, not another authored Canvas. */

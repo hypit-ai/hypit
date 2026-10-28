@@ -47,12 +47,12 @@ preview Source 为作者提供可打开或渲染的小例子。查看能说明�
 <import as="mine" from="@your-studio/my-component@1"/>
 ```
 
-将它声明的元素与输出用于编排。`hypit vocabulary` 展示作者接口，`hypit check` 检查 Source 或 Run。组件 README 应包含可复制示例、输出、实用的创作选择和行为示意图。
+将它声明的元素与输出用于编排。`hypit vocabulary` 展示作者接口，`hypit check` 检查 Author Source 或保存的 Invocation。组件 README 应包含可复制示例、输出、实用的创作选择和行为示意图。
 
 组件服务于当前作品时，就与项目一起保存。需要分享时，选择发布版本，编译并用 `npm pack` 打包代码和素材，或通过所有者自己的 scope 发布到 npm 或私有 Registry。发布到 Registry 时去掉 `private: true`，补充普通包元信息。使用者安装选定版本并提交包管理器 lockfile。使用组件不需要 Hypit 仓库 checkout，也不需要向主仓库提 PR。
 
 ## 阅读一个完整作品
 
-[复杂口播示例](https://github.com/hypit-ai/hypit/tree/main/examples/complex-explainer) 将主持人变场、独立字幕、网页演示和多个协同动效场景组合成完整作品。项目说明把每种修改指向负责它的 Source、Recipe 或组件包。它区分了三件事：划分组件职责、开放有用参数、为真实需求设计复用。已接受素材单独提供，默认 Run 可以直接打开并渲染这份编排，无需重新请求生成。
+[复杂口播示例](https://github.com/hypit-ai/hypit/tree/main/examples/complex-explainer) 将主持人变场、独立字幕、网页演示和多个协同动效场景组合成完整作品。项目说明把每种修改指向负责它的 Source、Recipe 或组件包。它区分了三件事：划分组件职责、开放有用参数、为真实需求设计复用。已接受素材作为项目资源并由 Author Source 显式选择，默认 Invocation 可以直接打开并渲染这份编排，无需重新请求生成。
 
 可以直接[观看最终成片](https://storage.googleapis.com/hypit-public-assets/assets/examples/complex-explainer/v1/20260914/final.mp4)，也可以按照示例中的下载说明取得素材包，在 Studio 中打开完整作品。

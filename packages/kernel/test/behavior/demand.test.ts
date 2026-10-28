@@ -12,7 +12,6 @@ import {
 } from "@hypit/kernel";
 import type {
   Candidate,
-  CanonicalValue,
   AuthorGraph,
   GraphValueRef,
   LinkedProgram,
@@ -175,20 +174,15 @@ function candidate(
   type: TypeRef,
   operation: string,
 ): Candidate {
-  return { id, type, root: { kind: "operation", result: operationRef(operation) } };
+  return { id, type, root: operationRef(operation) };
 }
 
-function providedCandidate(
+function recordCandidate(
   id: string,
   type: TypeRef,
   record: string,
-  value: CanonicalValue,
 ): Candidate {
-  return {
-    id,
-    type,
-    root: { kind: "value", record, value },
-  };
+  return { id, type, root: { kind: "record", id: record } };
 }
 
 function operation(
@@ -218,6 +212,12 @@ function createProgram(): LinkedProgram {
       type: types.duration,
       value: (9),
     }),
+    { id: "authored:image1", type: types.image, value: "I1" },
+    { id: "authored:image2", type: types.image, value: "I2" },
+    { id: "authored:image3", type: types.image, value: "I3" },
+    { id: "authored:media", type: types.image, value: "AUTHORED MEDIA" },
+    { id: "authored:A", type: types.a, value: "A" },
+    { id: "authored:B", type: types.b, value: "B" },
   ];
   return link(closure, authored);
 }
@@ -238,10 +238,10 @@ function createImageGraph(): AuthorGraph {
       candidate("collect", types.imageSet, "collect"),
       candidate("seedance", types.image, "seedance"),
       candidate("black", types.image, "black"),
-      providedCandidate("existing-image1", types.image, "provided:image1", "I1"),
-      providedCandidate("existing-image2", types.image, "provided:image2", "I2"),
-      providedCandidate("existing-image3", types.image, "provided:image3", "I3"),
-      providedCandidate("existing-media", types.image, "provided:media", "EXISTING MEDIA"),
+      recordCandidate("authored-image1", types.image, "authored:image1"),
+      recordCandidate("authored-image2", types.image, "authored:image2"),
+      recordCandidate("authored-image3", types.image, "authored:image3"),
+      recordCandidate("authored-media", types.image, "authored:media"),
     ],
     operations: [
       operation("p1", producers.p1, { head: recordRef("head:root") }, { kind: "output", name: "image", record: "image:1" }),
@@ -265,16 +265,9 @@ function startSelected(
   targets: readonly string[],
   satisfactions: readonly Satisfaction[] = [],
 ): BuildView {
-  const planned = planBuild(program, graph, {
-    format: "hypit.run-graph@1",
-    records: [],
-    candidates: [],
-    operations: [],
-    satisfactions,
-    targets: targets.map((outputId) => outputId),
-  });
+  const planned = planBuild(program, graph, targets, satisfactions);
   return materializeBuild(defineBuild({
-    program: link(program.closure, [...program.records, ...planned.initialRecords]),
+    program,
     plan: planned.plan,
   }), []);
 }
@@ -293,12 +286,12 @@ function stepIds(state: BuildView): string[] {
   return state.plan.steps.map((step) => step.id).sort();
 }
 
-test("Targets and Existing-Value Candidates derive the exact image closure", () => {
+test("Targets and authored Record Candidates derive the exact image closure", () => {
   const cases: readonly [string, readonly Satisfaction[], readonly string[]][] = [
     ["image3", [], ["p1", "p2", "p3"]],
-    ["image3", [choose("image1", "existing-image1")], ["p2", "p3"]],
-    ["image3", [choose("image1", "existing-image1"), choose("image2", "existing-image2")], ["p3"]],
-    ["image3", [choose("image3", "existing-image3")], []],
+    ["image3", [choose("image1", "authored-image1")], ["p2", "p3"]],
+    ["image3", [choose("image1", "authored-image1"), choose("image2", "authored-image2")], ["p3"]],
+    ["image3", [choose("image3", "authored-image3")], []],
     ["image2", [], ["p1", "p2"]],
     ["image1", [], ["p1"]],
   ];
@@ -310,8 +303,8 @@ test("Targets and Existing-Value Candidates derive the exact image closure", () 
 test("an ordinary aggregator intentionally demands every selected image", () => {
   assert.deepEqual(stepIds(fixture(["images"])), ["collect", "p1", "p2", "p3"]);
   assert.deepEqual(stepIds(fixture(["images"], [
-    choose("image1", "existing-image1"),
-    choose("image2", "existing-image2"),
+    choose("image1", "authored-image1"),
+    choose("image2", "authored-image2"),
   ])), ["collect", "p3"]);
 });
 
@@ -326,10 +319,10 @@ test("the selected Candidate alone determines demanded upstream inputs", () => {
   assert.deepEqual(stepIds(fixture(["media"], [choose("media", "black")])), ["black"]);
 });
 
-test("an Existing Value is a normal Candidate root and prevents the paid Need from existing", () => {
-  const state = fixture(["media"], [choose("media", "existing-media")]);
+test("an authored Record is a normal Candidate root and prevents the paid Need from existing", () => {
+  const state = fixture(["media"], [choose("media", "authored-media")]);
   assert.deepEqual(stepIds(state), []);
-  assert.equal(state.records.some((record) => record.id === "provided:media"), true);
+  assert.equal(state.records.some((record) => record.id === "authored:media"), true);
   assert.equal(state.status, "complete");
   assert.equal(state.needs.length, 0);
   assert.deepEqual(state.outstanding, []);
@@ -337,8 +330,8 @@ test("an Existing Value is a normal Candidate root and prevents the paid Need fr
 
 test("Definition replay regenerates identical ready Commands", () => {
   const state = fixture(["image3"], [
-    choose("image1", "existing-image1"),
-    choose("image2", "existing-image2"),
+    choose("image1", "authored-image1"),
+    choose("image2", "authored-image2"),
   ]);
   const definition = defineBuild({ program: state.program, plan: state.plan });
   const restored = materializeBuild(
@@ -348,9 +341,9 @@ test("Definition replay regenerates identical ready Commands", () => {
   assert.deepEqual(restored.outstanding, state.outstanding);
 });
 
-function createCaseGGraph(roots: "value" | "operation"): AuthorGraph {
-  const a1Id = roots === "value" ? "a1-value" : "a1-operation";
-  const a2Id = roots === "value" ? "a2-value" : "a2-operation";
+function createCaseGGraph(roots: "record" | "operation"): AuthorGraph {
+  const a1Id = roots === "record" ? "a1-record" : "a1-operation";
+  const a2Id = roots === "record" ? "a2-record" : "a2-operation";
   return sealAuthorGraph({
     outputs: [
       output("a.A", types.a, a1Id),
@@ -360,11 +353,11 @@ function createCaseGGraph(roots: "value" | "operation"): AuthorGraph {
       output("c.result", types.combined, "c"),
     ],
     candidates: [
-      roots === "value"
-        ? providedCandidate(a1Id, types.a, "provided:A", "A")
+      roots === "record"
+        ? recordCandidate(a1Id, types.a, "authored:A")
         : candidate(a1Id, types.a, "a1"),
-      roots === "value"
-        ? providedCandidate(a2Id, types.b, "provided:B", "B")
+      roots === "record"
+        ? recordCandidate(a2Id, types.b, "authored:B")
         : candidate(a2Id, types.b, "a2"),
       candidate("b1", types.c, "b1"),
       candidate("b2", types.d, "b2"),
@@ -380,18 +373,18 @@ function createCaseGGraph(roots: "value" | "operation"): AuthorGraph {
   });
 }
 
-test("Case G: two single-output full-input Candidates share both upstream Values", () => {
+test("Case G: two single-output full-input Candidates share both upstream authored Records", () => {
   const program = createProgram();
-  const graph = createCaseGGraph("value");
-  const planned = planBuild(program, graph, { format: "hypit.run-graph@1", records: [], candidates: [], operations: [], satisfactions: [], targets: ["c.result"] });
+  const graph = createCaseGGraph("record");
+  const planned = planBuild(program, graph, ["c.result"], []);
   const state = startSelected(program, graph, ["c.result"]);
   assert.deepEqual(stepIds(state), ["b1", "b2", "c"]);
-  assert.equal(state.records.some((record) => record.id === "provided:A"), true);
-  assert.equal(state.records.some((record) => record.id === "provided:B"), true);
+  assert.equal(state.records.some((record) => record.id === "authored:A"), true);
+  assert.equal(state.records.some((record) => record.id === "authored:B"), true);
   const b1 = state.plan.steps.find((step) => step.id === "b1");
   const b2 = state.plan.steps.find((step) => step.id === "b2");
-  assert.deepEqual(b1?.inputs, { A: "provided:A", B: "provided:B" });
-  assert.deepEqual(b2?.inputs, { A: "provided:A", B: "provided:B" });
+  assert.deepEqual(b1?.inputs, { A: "authored:A", B: "authored:B" });
+  assert.deepEqual(b2?.inputs, { A: "authored:A", B: "authored:B" });
   assert.equal(planned.selections.find((item) => item.output === "b.C")?.record, "operation:C");
   assert.equal(planned.selections.find((item) => item.output === "b.D")?.record, "operation:D");
 });
@@ -448,7 +441,7 @@ function createOperationIdentityGraph(
 test("two Candidates that name one OperationId demand exactly one execution", () => {
   const program = createProgram();
   const graph = createOperationIdentityGraph("shared");
-  const planned = planBuild(program, graph, { format: "hypit.run-graph@1", records: [], candidates: [], operations: [], satisfactions: [], targets: ["left", "right"] });
+  const planned = planBuild(program, graph, ["left", "right"], []);
   const state = startSelected(program, graph, ["left", "right"]);
   assert.deepEqual(stepIds(state), ["left-operation"]);
   assert.deepEqual(
@@ -464,7 +457,7 @@ test("one independent Candidate may explicitly satisfy multiple compatible Logic
     { output: "left", candidate: "shared-candidate" },
     { output: "right", candidate: "shared-candidate" },
   ];
-  const planned = planBuild(program, graph, { format: "hypit.run-graph@1", records: [], candidates: [], operations: [], satisfactions, targets: ["left", "right"] });
+  const planned = planBuild(program, graph, ["left", "right"], satisfactions);
   const state = startSelected(program, graph, ["left", "right"], satisfactions);
   assert.deepEqual(stepIds(state), ["left-operation"]);
   assert.deepEqual(
@@ -552,7 +545,7 @@ const select = (outputId: string, candidateId: string): Satisfaction => ({
   candidate: candidateId,
 });
 
-test("one Run-Graph instance satisfies two Logical Outputs through one shared Product", () => {
+test("one shared Product operation satisfies two Logical Outputs", () => {
   const program = createProgram();
   const graph = createProductReplacementGraph("shared");
   const state = startSelected(program, graph, ["c.result"], [
@@ -564,7 +557,7 @@ test("one Run-Graph instance satisfies two Logical Outputs through one shared Pr
   assert.equal(state.plan.steps.some((step) => step.id.startsWith("b.default")), false);
 });
 
-test("two explicit Run-Graph instances may separately satisfy the two outputs", () => {
+test("two explicit Product operations may separately satisfy the two outputs", () => {
   const program = createProgram();
   const graph = createProductReplacementGraph("distinct");
   const state = startSelected(program, graph, ["c.result"], [

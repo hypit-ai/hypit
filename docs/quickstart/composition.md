@@ -112,10 +112,10 @@ never inherit visual Stack membership.
 
 The renderer compiles the visual contributions, captures requested frames, renders AudioTracks and
 muxes them into the delivered file. `{final.video}` is an ordinary Resource-backed `Blob` and
-the usual Run Target.
+the usual Invocation Target.
 
 ```svml
-<?svml using="@hypit/markup/run@1"?>
+<?svml using="@hypit/markup/invocation@1"?>
 <svrun version="1">
   <author source="./main.svml"/>
   <target output="final.video"/>
@@ -132,7 +132,7 @@ the usual Run Target.
 The bounds use the original Timeline and a half-open interval. At 30 fps this example renders
 seconds 8–12. Animation and media sampling retain their original program positions even though the
 encoded clip starts at zero. Range rendering limits final capture and encoding; upstream graph work
-still follows the selected Run, so reuse accepted media and alignment Outputs explicitly.
+still follows the selected Invocation, so reuse accepted media and alignment Outputs explicitly.
 
 ## A film drawn entirely by components
 
@@ -172,7 +172,7 @@ hypit plan build.svrun
 ```
 
 `check` validates imports, types and graph edges without calling external services. `plan` compiles
-the selected Run and shows the Operations it would demand. Inspect that plan before paid execution.
+the selected Invocation and shows the Operations it would demand. Inspect that plan before paid execution.
 
 See [Timing & Assembly](./timing.md) for media preparation, Timeline construction, media presentation and
 semantic projection. See [Tracks](./tracks.md) for Visual and Audio authoring forms.

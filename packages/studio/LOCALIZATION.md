@@ -44,11 +44,11 @@ Check and load your file:
 
 ```sh
 hypit studio --check-locale ./ja.json
-hypit studio --run ./render.svrun --locale-pack ./ja.json
+hypit studio --invocation ./render.svrun --locale-pack ./ja.json
 ```
 
 The check lists missing translations and unknown IDs and reports malformed
-messages or renamed variables. It does not open a Run or require a Runtime.
+messages or renamed variables. It does not open an Invocation or require a Runtime.
 Relative file paths start at the command's working directory; prefix them with
 `./` or `../`. Repeat `--locale-pack` to load multiple languages. Packs are read
 at server startup; restart Studio after editing a pack. An explicitly loaded
@@ -73,7 +73,7 @@ step. Export the JSON file in the package's `package.json`, for example:
 Install it using the project's package manager, then load it explicitly:
 
 ```sh
-hypit studio --run ./render.svrun --locale-pack @your-scope/studio-ja/locale.json
+hypit studio --invocation ./render.svrun --locale-pack @your-scope/studio-ja/locale.json
 ```
 
 Package exports resolve from the project, or `--package-root` when specified.

@@ -21,11 +21,13 @@ import {
 export function createCatalogDescriptor(options: {
   readonly source: string;
   readonly publication: PublicationIntent;
-  readonly run?: { readonly path: string };
+  readonly invocationSource?: { readonly path: string };
 }): CliBuildCatalogDescriptor {
   return {
     sourcePath: resolve(options.source),
-    ...(options.run === undefined ? {} : { runPath: resolve(options.run.path) }),
+    ...(options.invocationSource === undefined
+      ? {}
+      : { invocationSourcePath: resolve(options.invocationSource.path) }),
     publication: options.publication,
   };
 }
@@ -149,7 +151,7 @@ export function summarizeConstraints(constraints: CanonicalValue): NeedSummary {
 function pendingPlanInputs(step: EvaluatedProducerStep | undefined): readonly PendingPlanInput[] {
   if (step?.status !== "blocked") return [];
   return step.dependencies.map((dependency): PendingPlanInput => {
-    const sourceStep = dependency.source.kind === "supplied" ? undefined : dependency.source.step;
+    const sourceStep = dependency.source.kind === "program-record" ? undefined : dependency.source.step;
     return {
       input: dependency.input,
       record: dependency.record,

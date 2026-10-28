@@ -31,6 +31,17 @@ export type SourceFrameUpdate = {
       };
 };
 
+export type FramePreparationTiming = {
+  /** Main-process wall time for the complete page evaluation. */
+  readonly evaluationMs: number;
+  /** Author Programme state change inside the page. */
+  readonly programMs: number;
+  /** Selected source decoding and drawing inside the page. */
+  readonly sourceMs: number;
+  /** Image and font readiness after the new state is visible. */
+  readonly readinessMs: number;
+};
+
 /** Install page-owned readiness and prepare one deterministic frame state. */
 export async function createFramePreparer(page: Pick<Page, "evaluate">) {
   // Image readiness belongs to this page. A seek can select a new image through
@@ -260,7 +271,7 @@ export async function createFramePreparer(page: Pick<Page, "evaluate">) {
   });
   return async (frame: number, sources: readonly SourceFrameUpdate[] = []) => {
     const started = performance.now();
-    const prepareMs = await page.evaluate(async (input) => {
+    const timing = await page.evaluate(async (input) => {
       const w = window as unknown as RenderWindow;
       const videos = Array.from(document.querySelectorAll<HTMLVideoElement>("video[data-hypit-source-frame]"));
       // The decoded still stands in for the compiler-owned video element. Restore
@@ -271,11 +282,14 @@ export async function createFramePreparer(page: Pick<Page, "evaluate">) {
         video.style.visibility = video.dataset.hypitAuthoredVisibility ?? "";
         video.style.display = video.dataset.hypitAuthoredDisplay ?? "";
       }
+      const programStarted = performance.now();
       await w.__hypitFrameProgram.applyFrame(input.frame);
       const active = new Set(input.sources.map(source => source.id));
       for (const image of Array.from(document.querySelectorAll<HTMLImageElement>('[data-hypit-source-frame-image]'))) {
         if (!active.has(image.dataset.hypitSourceFrameImage!)) image.style.display = 'none';
       }
+      const programMs = performance.now() - programStarted;
+      const sourceStarted = performance.now();
       if (w.__hypitDrawVideoSources !== undefined) await w.__hypitDrawVideoSources(input.sources);
       else await Promise.all(input.sources.map(async source => {
         const video = document.getElementById(source.id) as HTMLVideoElement | null;
@@ -295,6 +309,7 @@ export async function createFramePreparer(page: Pick<Page, "evaluate">) {
         if (image.src !== source.url) image.src = source.url;
         await image.decode();
       }));
+      const sourceMs = performance.now() - sourceStarted;
       for (const video of videos) {
         // This shared boundary is the sole owner of the temporary hidden state.
         // A source adapter may read or copy the authored style above, but must
@@ -304,12 +319,12 @@ export async function createFramePreparer(page: Pick<Page, "evaluate">) {
         video.style.visibility = "hidden";
         video.style.display = "none";
       }
-      const prepareStarted = performance.now();
+      const readinessStarted = performance.now();
       await w.__hypitPrepareImages();
       if (w.__hypitHtmlVisualError !== undefined) throw new Error(w.__hypitHtmlVisualError);
-      return performance.now() - prepareStarted;
+      return { programMs, sourceMs, readinessMs: performance.now() - readinessStarted };
     }, { frame, sources });
-    return { seekMs: performance.now() - started - prepareMs, prepareMs };
+    return { evaluationMs: performance.now() - started, ...timing } satisfies FramePreparationTiming;
   };
 }
 
@@ -332,6 +347,6 @@ export async function createOpaqueFrameCapture(page: Page, canvas: { readonly wi
       clip: { x: 0, y: 0, width: canvas.width, height: canvas.height, scale: 1 },
     });
     return { buffer: Buffer.from(result.data, "base64"), ...timing,
-      screenshotMs: performance.now() - started };
+      outputMs: performance.now() - started };
   };
 }

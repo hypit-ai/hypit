@@ -57,5 +57,5 @@ Adding a package does not require changing the root TypeScript configuration.
 - Compilation failures throw with descriptive messages including source location.
 - Runtime failures are recorded as Operation failures in the Build state machine.
 - Providers own bounded transport retries where their service protocol permits them.
-- A failed execution attempt ends the Build. Further work uses a new Run and Build, with completed
+- A failed execution attempt ends the Build. Further work uses a new Invocation and Build, with completed
   Outputs explicitly selected for reuse.

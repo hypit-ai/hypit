@@ -19,12 +19,9 @@ export function publication(
       ...output,
       type: output.type ?? videoType,
       target: selected.has(output.name),
-      source: {
-        kind: "current-record" as const,
-        record: output.record ?? (output.output.startsWith("logical:")
-          ? `record:${output.output.slice("logical:".length)}`
-          : output.output),
-      },
+      record: output.record ?? (output.output.startsWith("logical:")
+        ? `record:${output.output.slice("logical:".length)}`
+        : output.output),
     })),
   };
 }

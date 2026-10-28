@@ -7,7 +7,7 @@ It does not load Providers, install programs, inspect credentials or select serv
 1. `resolveProjectRoot({ projectRoot?, cwd? })` uses an explicit Project, otherwise the nearest
    `package.json` above cwd whose `hypit.project` is `true`. It never turns an arbitrary npm package or
    cwd into a Project. `findProjectRoot()` exposes the same discovery without requiring a Project.
-   Source and Run filenames do not choose the Project. After selection it returns the real filesystem
+   Author and Invocation Source filenames do not choose the Project. After selection it returns the real filesystem
    path; symlinks do not redirect the preceding parent-project search.
 2. `findRuntimeProfile(projectRoot)` reads only that project's `.hypit/runtime` file and resolves its
    path relative to the project. An entrypoint's explicit `--runtime` overrides this read for that invocation.

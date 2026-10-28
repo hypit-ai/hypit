@@ -10,7 +10,7 @@ import { injectRuntimeShim } from "./runtime-shim.js";
 export type RenderInput = {
   readonly composition: Composition;
   readonly timeline: Timeline;
-  /** Resources Studio can serve for material selected by the Run. */
+  /** Resources Studio can serve for material selected by the Invocation. */
   readonly served?: ReadonlySet<string>;
 };
 
@@ -19,7 +19,7 @@ export type RenderInput = {
  * renderer photographs frame by frame, and hand it back as an `iframe` srcdoc.
  *
  * Nothing is approximated here: placement, stacking, clipping, motion and
- * material all come from the projection selected by the Run.
+ * material all come from the projection selected by the Invocation.
  */
 export function renderPreview(input: RenderInput): string {
   return renderStudioHtmlProgram(input).preview;
@@ -38,7 +38,7 @@ export function renderStudioHtmlProgram(input: RenderInput): { readonly document
     return `/__studio/material/${artifact.resource}`;
   });
   const audio = lowerPlaybackAudio(
-    compileAudioProgram(input.composition, input.timeline),
+    compileAudioProgram(input.composition.audio, input.timeline),
     (artifact) => {
       if (input.served?.has(artifact.resource) !== true) {
         throw new Error(`Preview audio references Artifact ${artifact.resource}, which it cannot serve.`);

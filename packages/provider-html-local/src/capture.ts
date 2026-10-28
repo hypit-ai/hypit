@@ -12,6 +12,7 @@ import { distributeFrameRange, requestedFrameRanges, sourceDirectionAt, sourceFr
 import type { VideoSlot } from "./sampling.js";
 import { CaptureConcurrency, renderWorkerLimit } from "./concurrency.js";
 import { createOpaqueFrameCapture } from "./opaque-capture.js";
+import type { FramePreparationTiming } from "./opaque-capture.js";
 import { FrameSpanIndex } from "./frame-span-index.js";
 import { OrderedFrameSink } from "./ordered-frame-sink.js";
 import { decodeSourceFrameWindow, probeSourceVideo } from "./source-frame-decoder.js";
@@ -198,6 +199,7 @@ export async function captureStagedVisual(input: CaptureInput, controller: Abort
         controller.abort(error);
       });
     }
+    const requestSetupMs = performance.now() - started;
     onProgress?.({ phase: "prepared", workers: concurrency.target, sourceFrames: sourceTotal, elapsedMs: elapsedMs() });
     const jobs: Promise<void>[] = [];
     let active = 0, open = 0, initializing = 0, capturedFrames = 0, capturedBytes = 0;
@@ -227,7 +229,7 @@ export async function captureStagedVisual(input: CaptureInput, controller: Abort
           sources: readonly SourceFrameUpdate[],
           ordinal: number,
           prepared: () => void,
-        ) => Promise<{ readonly buffer: Buffer; readonly seekMs: number; readonly prepareMs: number; readonly screenshotMs: number }>;
+        ) => Promise<{ readonly buffer: Buffer; readonly outputMs: number } & FramePreparationTiming>;
         if (gpu !== undefined) {
           onProgress({ phase: "worker-initializing", worker, range, browserPid: undefined, elapsedMs: elapsedMs() });
           const gpuWorker = await stage(`worker ${worker} initialization`, config.initializationTimeoutMs,
@@ -276,7 +278,7 @@ export async function captureStagedVisual(input: CaptureInput, controller: Abort
         onProgress?.({ phase: "worker-start", worker, range, browserPid, elapsedMs: elapsedMs() });
         let completed = 0;
         let lastProgressAt = performance.now();
-        const timing = { seekMs: 0, prepareMs: 0, screenshotMs: 0 };
+        const timing = { evaluationMs: 0, programMs: 0, sourceMs: 0, readinessMs: 0, outputMs: 0 };
         while (true) {
           // Retire only between complete batches, before claiming more work.
           if (active > concurrency.target) break;
@@ -326,9 +328,11 @@ export async function captureStagedVisual(input: CaptureInput, controller: Abort
               capturedBytes += captured.buffer.byteLength;
               assert(capturedBytes <= config.maxRenderedBytes, "HTML renderer PNG output exceeds its byte limit");
             }
-            timing.seekMs += captured.seekMs;
-            timing.prepareMs += captured.prepareMs;
-            timing.screenshotMs += captured.screenshotMs;
+            timing.evaluationMs += captured.evaluationMs;
+            timing.programMs += captured.programMs;
+            timing.sourceMs += captured.sourceMs;
+            timing.readinessMs += captured.readinessMs;
+            timing.outputMs += captured.outputMs;
             if (input.frames !== undefined) {
               await writeFile(join(outputFrames, `${String(index).padStart(9, "0")}.png`), captured.buffer);
             } else if (orderedFrames !== undefined) {
@@ -351,8 +355,10 @@ export async function captureStagedVisual(input: CaptureInput, controller: Abort
           }
         }
         console.log(`Capture worker ${worker}: ${completed} frames; startup ${Math.round(setupMs)} ms; `
-          + `seek ${Math.round(timing.seekMs)} ms; prepare ${Math.round(timing.prepareMs)} ms; `
-          + `${useGpu ? "texture and encode" : "PNG"} ${Math.round(timing.screenshotMs)} ms`);
+          + `page ${Math.round(timing.evaluationMs)} ms (`
+          + `program ${Math.round(timing.programMs)} ms; source ${Math.round(timing.sourceMs)} ms; `
+          + `readiness ${Math.round(timing.readinessMs)} ms); `
+          + `${useGpu ? "paint and texture acceptance" : "PNG capture"} ${Math.round(timing.outputMs)} ms`);
         if (videoStats !== undefined) console.log(`Capture worker ${worker} video: ${JSON.stringify(await videoStats())}`);
         if (releaseVideo !== undefined) await stage(`worker ${worker} media cleanup`, 5_000, releaseVideo);
         onProgress({ phase: "worker-complete", worker, completed, browserPid, elapsedMs: elapsedMs() });
@@ -372,6 +378,7 @@ export async function captureStagedVisual(input: CaptureInput, controller: Abort
     const initialWorkers = concurrency.target;
     console.log(`Capture: ${useGpu ? "shared GPU texture" : "opaque fast PNG"}; `
       + `${config.workers === "auto" ? "auto" : "fixed"} workers ${initialWorkers}, limit ${limit}`);
+    const workerRunStarted = performance.now();
     for (let i = 0; i < initialWorkers; i++) launch();
     // New workers can join while earlier jobs run; collect every launched job.
     let awaited = 0;
@@ -385,6 +392,7 @@ export async function captureStagedVisual(input: CaptureInput, controller: Abort
     if (failure !== undefined) throw failure;
     signal.throwIfAborted();
     await Promise.all(closing.values());
+    const workerWallMs = performance.now() - workerRunStarted;
     if (sourceFrameStore !== undefined) console.log(`Capture source working set: ${sourceTotal} unique frames demanded; decoded ${sourceFrameStore.decodedFrames} frames; `
       + `redecoded ${Math.max(0, sourceFrameStore.decodedFrames - sourceTotal)}; decoder runs ${extraction}; `
       + `decoded bytes ${sourceFrameStore.decodedBytes}; largest frame ${sourceFrameStore.largestDecodedFrameBytes} bytes; `
@@ -392,9 +400,13 @@ export async function captureStagedVisual(input: CaptureInput, controller: Abort
       + `source acquire ${Math.round(sourceAcquireWorkerMs)} worker-ms; output submit ${Math.round(outputSubmitWorkerMs)} worker-ms`);
     if (input.frames !== undefined) return outputFrames;
     onProgress({ phase: "encoding", elapsedMs: elapsedMs() });
+    let electronProfile: Readonly<Record<string, number>> | undefined;
     if (gpu !== undefined) {
-      const raw = await gpu.finish();
+      const finishStarted = performance.now();
+      const { raw, stats } = await gpu.finish();
+      const encoderFinishMs = performance.now() - finishStarted;
       await gpu.close();
+      const muxStarted = performance.now();
       await runProcess({ executable: ffmpegPath,
         argv: ["-v", "error", "-y", "-r", `${fps.num}/${fps.den}`, "-i", raw,
           "-an", "-c:v", "copy",
@@ -402,11 +414,16 @@ export async function captureStagedVisual(input: CaptureInput, controller: Abort
           "-color_range", "tv", "-colorspace", "bt709", "-color_trc", "bt709", "-color_primaries", "bt709",
           "-movflags", "+faststart", output],
         timeoutMs: config.processTimeoutMs, maxOutputBytes: config.maxProcessOutputBytes, signal });
+      electronProfile = { frames: frameCount, requestSetupMs, workerWallMs, ...stats,
+        encoderFinishMs, containerMuxMs: performance.now() - muxStarted };
     } else await orderedFrames!.close();
     const outputStat = await stat(output);
     assert(outputStat.size > 0 && outputStat.size <= config.maxRenderedBytes, "HTML renderer output is empty or exceeds its byte limit");
+    const verifyStarted = performance.now();
     await verifyOutput({ path: output, document: { ...document, frameCount }, delivery: input.delivery, ffprobePath,
       timeoutMs: config.processTimeoutMs, maxOutputBytes: config.maxProcessOutputBytes, signal });
+    if (electronProfile !== undefined) console.log(`Electron capture profile: ${JSON.stringify({ ...electronProfile,
+      verifyMs: performance.now() - verifyStarted, totalMs: performance.now() - started })}`);
     signal.throwIfAborted();
     return output;
   } catch (error) {

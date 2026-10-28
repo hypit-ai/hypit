@@ -14,7 +14,6 @@ import {
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { pathToFileURL } from "node:url";
 import test from "node:test";
 
 import { FileResourceStore } from "../../src/resource-store.js";
@@ -61,9 +60,9 @@ test("a selected file is staged once and remains referenced in the produced stru
   const directory = await mkdtemp(join(tmpdir(), "hypit-local-bld_20260902T120000009Z_0000000001-"));
   const initial = createGreetingBuild();
   const bytes = new Uint8Array([4, 3, 2, 1]);
-  const historical = {
+  const authoredAsset = {
     kind: "blob" as const,
-    resource: "res_historical_input" as const,
+    resource: "res_authored_input" as const,
     size: bytes.byteLength,
     mediaType: "image/png",
   };
@@ -73,7 +72,7 @@ test("a selected file is staged once and remains referenced in the produced stru
   };
   const intent = initial.records.find((record) => record.id === "intent:root")!;
   const buildDefinition = defineBuild({
-    program: link(program.closure, [...program.records, { ...intent, value: historical }]),
+    program: link(program.closure, [...program.records, { ...intent, value: authoredAsset }]),
     plan: initial.plan,
   });
   let attachmentOpens = 0;
@@ -99,7 +98,7 @@ test("a selected file is staged once and remains referenced in the produced stru
       returns: types.generated,
       handler: async ({ need, resources }) => {
         endpointCalls += 1;
-        const source = (need.constraints as { readonly source: typeof historical }).source;
+        const source = (need.constraints as { readonly source: typeof authoredAsset }).source;
         assert.equal(await resources.has(source.resource), true);
         assert.deepEqual(await resources.get(source.resource), bytes);
         return { image: source };
@@ -107,8 +106,6 @@ test("a selected file is staged once and remains referenced in the produced stru
     }],
   });
   try {
-    const inputPath = join(directory, "selected.png");
-    await writeFile(inputPath, bytes);
     const runtime = await createLocalRuntime({
       ...projectRuntimeFixture(directory),
       producers: components.producers,
@@ -121,40 +118,37 @@ test("a selected file is staged once and remains referenced in the produced stru
         sourcePath: join(directory, "main.svml"),
         publication: { outputs: [{ name: "final.document", output: "document", target: true,
           type: types.document,
-          source: { kind: "current-record", record: "document:root" } }] },
+          record: "document:root" }] },
       },
       attachments: [{
-        blob: historical,
+        blob: authoredAsset,
         async open() {
           attachmentOpens += 1;
           return (async function* () { yield bytes; })();
         },
       }],
-      result: { ...resultDestination(directory), resourceReferences: {
-        [historical.resource]: { kind: "external-file", uri: pathToFileURL(inputPath).href,
-          size: bytes.length, mediaType: historical.mediaType },
-      } },
+      result: resultDestination(directory),
     });
     assert.equal(attachmentOpens, 1);
     const work = new FileResourceStore(join(directory, ".hypit", "work", "bld_20260902T120000009Z_0000000001"));
-    assert.equal(await work.has(historical.resource), true);
+    assert.equal(await work.has(authoredAsset.resource), true);
 
     const completed = await runtime.workOnce();
     assert(completed !== undefined && "outcome" in completed);
     assert.equal(completed.outcome, "complete");
     assert.equal(endpointCalls, 1);
     assert.equal(attachmentOpens, 1);
-    assert.equal(await work.has(historical.resource), false);
+    assert.equal(await work.has(authoredAsset.resource), false);
     const results = new FileBuildResultRepository(join(directory, "results"));
     const resolved = (await results.resolve("bld_20260902T120000009Z_0000000001", "final.document"))!;
     assert.equal(resolved.value.kind, "value");
     if (resolved.value.kind !== "value") throw new Error("expected value document");
     assert.deepEqual(resolved.value.document.resources.map((binding) => binding.file), [{
-      kind: "external-file", uri: pathToFileURL(inputPath).href, size: bytes.length, mediaType: historical.mediaType,
+      kind: "build-file", path: "files/file-0001.png", size: bytes.length, mediaType: authoredAsset.mediaType,
     }]);
     const resultDirectory = join(directory, "results", "2026-09-02", "bld_20260902T120000009Z_0000000001");
-    assert.deepEqual((await readdir(resultDirectory)).sort(), ["execution.jsonl", "result.json", "values"]);
-    assert.deepEqual(await readFile(inputPath), Buffer.from(bytes));
+    assert.deepEqual((await readdir(resultDirectory)).sort(), ["execution.jsonl", "files", "result.json", "values"]);
+    assert.deepEqual(await readFile(join(resultDirectory, "files", "file-0001.png")), Buffer.from(bytes));
     await runtime.close();
   } finally {
     await rm(directory, { recursive: true, force: true });

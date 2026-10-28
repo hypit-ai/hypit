@@ -30,12 +30,13 @@ of this video's source, not an official Screen Overlay family or an ecosystem de
 
 [reference.svs](reference.svs) owns this entry's Recipes. The Source imports
 `@hypit/gpt-image-kits/phone-ugc-v1` and `@hypit/seedance-kits/street-interview`.
-Run `npm ci` in this directory to install the locked Hypit, font,
+Run `npm install` once in this directory to install the selected Hypit 0.4 release, font,
 [`@hypit/interview-emoji-reveal`](https://www.npmjs.com/package/@hypit/interview-emoji-reveal)
-and project-local Flash dependencies.
+and project-local Flash dependencies. Review and commit the resulting lockfile; subsequent installs
+use `npm ci`.
 
 ```bash
-npm ci
+npm install
 npx hypit check reference.svrun
 npx hypit estimate reference.svml --segment manifest-rule --language en --pace fast --rounding ceil
 npx hypit estimate reference.svml --segment real-estate-rule --language en --pace fast --rounding ceil
@@ -85,38 +86,34 @@ track; `caption.wife` already uses center/bottom anchoring so its text sits abov
 The untracked BOY continues to use his fixed Style position. A null WIFE region hides her Caption
 on that frame; it does not guess a new location.
 
-In the Run, select the first Build's prepared media, local domains and alignment Outputs as
-Candidates. For example, fill the actual Build id in:
+Accept the three generated clips into the project before the second composition pass. Export each
+public video Output, declare the exported file with `@hypit/media`, and use authored realization
+selection for the corresponding generated role:
 
-```svml
-<build-record id="reuse-manifest-media" build="ACTUAL_BUILD_ID" output="manifest-rule-media.media"/>
-<build-record id="reuse-manifest-domain" build="ACTUAL_BUILD_ID" output="manifest-rule-media.domain"/>
-<build-record id="reuse-manifest-alignment" build="ACTUAL_BUILD_ID" output="manifest-rule-semantic.alignment"/>
-<satisfy output="manifest-rule-media.media" candidate="reuse-manifest-media"/>
-<satisfy output="manifest-rule-media.domain" candidate="reuse-manifest-domain"/>
-<satisfy output="manifest-rule-semantic.alignment" candidate="reuse-manifest-alignment"/>
+```bash
+hypit get ACTUAL_BUILD_ID --output manifest-rule-take.video \
+  --to assets/accepted/manifest-rule.mp4
 ```
 
-Apply the same explicit selection to the other two passages. Media, duration and alignment remain
-independent reusable facts. Check `hypit plan` to confirm that the second render contains no new image, voice,
-video or alignment requests. Inspect camera cuts and moving head placement in the result. Changing
-only Caption or MG needs no repeat generation; changing the footage requires matching measurements.
-
-If reviewing the actual footage reveals an alignment error, the reviewed artifact is a complete,
-validated `NarrativeAlignment` Value—not a frame patch embedded in the Source. A Studio or
-review tool can write that file, and a Run variant can select it explicitly:
-
 ```svml
-<value id="reviewed-manifest-alignment"
-  type="@hypit/narrative-temporal@1#NarrativeAlignment"
-  from="./reviewed/manifest-rule.alignment.json"/>
-<satisfy output="manifest-rule-semantic.alignment" candidate="reviewed-manifest-alignment"/>
+<import as="media" from="@hypit/media@1"/>
+<import as="realization" from="@hypit/realization@1"/>
+
+<media:Video id="accepted-manifest-rule" src="./assets/accepted/manifest-rule.mp4"/>
+<realization:Select output={manifest-rule-take.video} record={accepted-manifest-rule}/>
 ```
 
-The reviewed alignment must describe the complete domain of the accepted media. Select matching
-media and domain Candidates from the same accepted Result when necessary. The Source keeps the
-reproducible Alignment request and creative timing intent; the Run records which observed result is
-accepted for this Build.
+Apply the same explicit Author edit to the other two passages. Media preparation then derives the
+current `PreparedMedia`, local domain and extent from those accepted clips. Check `hypit plan` to
+confirm that the second render contains no new image, voice or video request. Inspect camera cuts and
+moving head placement in the result. Changing only Caption or MG needs no repeat generation; changing
+the footage requires matching measurements.
+
+If reviewing the actual footage reveals a transcription timing error, use the explicit speech-evidence
+path. Produce or export an editable `.transcript.svml`, correct its word evidence, import that Source,
+and connect its published `SpeechTranscriptEvidence` to the existing Alignment declaration. The
+Alignment continues to express the relationship between the Script Segment and the accepted media
+domain; the correction belongs to the evidence rather than to an Invocation override.
 
 ## Prompt provenance
 

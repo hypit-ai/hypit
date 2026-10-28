@@ -46,7 +46,7 @@ inverse remain available for inspection.
 
 Inspector fields bind to the author values they change. A shared Recipe or Frame may affect several
 uses, so the property represents that shared decision. Studio applies the edit to the corresponding
-Source, recompiles the same Run, and reports an error with the previous files restored if the edit
+Source, recompiles the same Invocation, and reports an error with the previous files restored if the edit
 cannot be published.
 
 [Timing edits in Studio](./studio-temporal-windows.md) explains how these relationships retain their

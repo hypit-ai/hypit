@@ -76,7 +76,7 @@ test("plan presents useful choices and readable requests without default graph i
     machine: {
       format: "hypit.cli-plan@1",
       ok: true,
-      run: "/project/build.svrun",
+      source: "/project/build.svrun",
       targetCount: 1,
       targets: ["take.video"],
       steps: 2,
@@ -92,11 +92,11 @@ test("plan presents useful choices and readable requests without default graph i
         diagnostics: [],
       },
       choiceCount: 1,
-      choices: [{ output: "take.video", candidate: "preview" }],
+      choices: [{ output: "take.video", choice: "preview" }],
     },
   } as const;
   const output = capture(human, presentation);
-  assert.match(output, /Run choices\s+1/u);
+  assert.match(output, /Invocation choices\s+1/u);
   assert.doesNotMatch(output, /← preview/u);
   assert.match(output, /Requests\s+1/u);
   assert.match(output, /Preflight\s+ready/u);
@@ -112,7 +112,7 @@ test("plan names the Provider and price page behind each request, and points at 
   const base = {
     format: "hypit.cli-plan@1",
     ok: true,
-    run: "/project/build.svrun",
+    source: "/project/build.svrun",
     targetCount: 1,
     targets: ["take.video"],
     steps: 3,
@@ -381,41 +381,17 @@ test("Provider summaries keep raw pricing available and shared parameters preser
   assert.equal(JSON.parse(capture({ ...human, json: true }, presentation)).groups[0].pricingDocuments[0].data.marketingComparison, 99);
 });
 
-test("run check treats historical reuse as a normal summary", () => {
-  const output = capture(human, {
-    kind: "check-run",
-    machine: {
-      format: "hypit.cli-check@1",
-      sourceKind: "run",
-      ok: true,
-      run: "/project/build.svrun",
-      author: "/project/main.svml",
-      frontend: "@hypit/markup/run@1",
-      targetCount: 1,
-      targets: ["final.video"],
-      overrides: 0,
-      candidates: 1,
-      satisfactions: 1,
-      historicalOutputCount: 1,
-      unresolvedHistoricalOutputs: [{ candidate: "previous", build: "bld_previous", output: "take.video" }],
-    },
-  });
-  assert.match(output, /Targets\s+final\.video/u);
-  assert.match(output, /Reuse\s+1 historical Output/u);
-  assert.doesNotMatch(output, /unresolved|bld_previous|Candidate/u);
-});
-
 test("plan scope omits unused branches while retaining every demanded request and diagnostic", () => {
   const needs = Array.from({ length: 61 }, (_, index): PlanNeed => ({
     need: `need-${index}`, step: `item-${index}`, port: "request", capability: "example@1#render", status: "concrete", pending: [],
     ...(index === 60 ? { issue: "missing source" } : {}),
   }));
   const plan = {
-    format: "hypit.cli-plan@1" as const, ok: false, run: "build.svrun", targetCount: 2,
+    format: "hypit.cli-plan@1" as const, ok: false, source: "build.svrun", targetCount: 2,
     targets: ["final.video", "poster.image"], steps: 400, requestCount: needs.length, requestIssueCount: 1,
     producerFailureCount: 1,
     producerFailures: [{ step: "source::component::timeline.resolve", message: "Timeline end must be after its start" }],
-    choiceCount: 35, choices: Array.from({ length: 35 }, (_, i) => ({ output: `old-${i}`, candidate: `selected-${i}` })),
+    choiceCount: 35, choices: Array.from({ length: 35 }, (_, i) => ({ output: `old-${i}`, choice: `selected-${i}` })),
     needs, endpoints: needs.map((need) => ({ need: need.need, capability: need.capability, status: "resolved" as const, support: "supported" as const, endpoint: "local" })),
     preflight: { ok: false, capabilityCount: 2, capabilities: ["a", "b"], diagnosticCount: 2,
       diagnostics: [{ severity: "warning" as const, code: "WARNING", message: "first" },

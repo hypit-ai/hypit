@@ -1,6 +1,4 @@
 import { preserveExecutionLog } from "../execution-log.js";
-import { currentFileReference, localExternalFiles } from "./file-reference.js";
-import type { ExternalFileAccess } from "./file-reference.js";
 import { randomUUID } from "node:crypto";
 import {
   mkdir,
@@ -15,8 +13,8 @@ import {
 import { createReadStream } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
-import { assertOrderedBuildId, buildIdCreatedAt, compareCodeUnits, sameType } from "@hypit/protocol";
-import type { BlobRef, PublicationIntent } from "@hypit/protocol";
+import { assertOrderedBuildId, buildIdCreatedAt, compareCodeUnits } from "@hypit/protocol";
+import type { BlobRef } from "@hypit/protocol";
 
 import type {
   BuildResultResourceSource,
@@ -30,7 +28,6 @@ import type {
   BuildResultRepository,
   RepositoryBuildResultOutput,
   RepositoryBuildResultOutputDescription,
-  RepositoryBuildResultOutputLocation,
   FinishedBuildResultManifest,
 } from "../types.js";
 import { assertBuildResultSeed, buildResultOutput, defineBuildResultOutput } from "../types.js";
@@ -139,42 +136,6 @@ async function copyBlobAtomic(
   const input = await source.open(blob);
   if (input === undefined) throw new Error(`Build resource ${blob.resource} is unavailable`);
   await writeStreamAtomic(destination, input);
-}
-
-export async function locateRepositoryBuildResultOutput(
-  repository: Pick<BuildResultRepository, "read">,
-  build: string,
-  output: string,
-): Promise<RepositoryBuildResultOutputLocation | undefined> {
-  const seen = new Set<string>();
-  let currentBuild = build;
-  let currentOutput = output;
-  while (true) {
-    const address = `${currentBuild}\u0000${currentOutput}`;
-    assert(!seen.has(address), `Build Output forwarding repeats ${currentBuild} / ${currentOutput}`);
-    seen.add(address);
-    const manifest = await repository.read(currentBuild);
-    if (manifest === undefined) return undefined;
-    assert(manifest.outcome !== undefined, `Build ${currentBuild} is not a finished Result`);
-    const entry = buildResultOutput(manifest, currentOutput);
-    if (entry === undefined) return undefined;
-    if (entry.value.kind === "build-output") {
-      currentBuild = entry.value.build;
-      currentOutput = entry.value.output;
-      continue;
-    }
-    return { build: currentBuild, output: currentOutput, type: entry.type };
-  }
-}
-
-export async function locateBuildResultOutput(
-  root: string,
-  build: string,
-  output: string,
-): Promise<RepositoryBuildResultOutputLocation | undefined> {
-  return await locateRepositoryBuildResultOutput({
-    read: async (currentBuild) => await readBuildResult(buildResultDirectory(root, currentBuild)),
-  }, build, output);
 }
 
 async function writeStreamAtomic(destination: string, input: AsyncIterable<Uint8Array>): Promise<void> {
@@ -289,116 +250,42 @@ export async function resolveBuildResultOutput(
   root: string,
   build: string,
   output: string,
-  externalFiles: ExternalFileAccess = localExternalFiles,
 ): Promise<ResolvedFileBuildResultOutput | undefined> {
-  const seen = new Set<string>();
-  let currentBuild = build;
-  let currentOutput = output;
-  while (true) {
-    const address = `${currentBuild}\u0000${currentOutput}`;
-    assert(!seen.has(address), `Build Output forwarding repeats ${currentBuild} / ${currentOutput}`);
-    seen.add(address);
-    const directory = buildResultDirectory(root, currentBuild);
-    const manifest = await readBuildResult(directory);
-    if (manifest === undefined) return undefined;
-    const entry = buildResultOutput(manifest, currentOutput);
-    if (entry === undefined) return undefined;
-    if (entry.value.kind === "build-output") {
-      currentBuild = entry.value.build;
-      currentOutput = entry.value.output;
-      continue;
-    }
-    if (entry.value.kind === "value") {
-      const path = containedResultPath(directory, entry.value.path);
-      const document = decodeBuildResultValueDocument(
-        decodeBuildResultJson(await readFile(path), path),
-        `Build ${currentBuild} Output ${currentOutput}`,
-      );
-      return {
-        build: currentBuild,
-        output: currentOutput,
-        directory,
-        type: entry.type,
-        value: { ...entry.value, document },
-      };
-    }
-    const terminalKind = (entry.value as { readonly kind?: unknown }).kind;
-    assert(terminalKind === "build-file" || terminalKind === "external-file" || terminalKind === "inline",
-      `Build ${currentBuild} Output ${currentOutput} has unsupported Result value kind ${String(terminalKind)}`);
-    return {
-      build: currentBuild,
-      output: currentOutput,
-      directory,
-      type: entry.type,
-      value: entry.value.kind === "external-file" ? await currentFileReference(entry.value, externalFiles) : entry.value,
-    };
+  const directory = buildResultDirectory(root, build);
+  const manifest = await readBuildResult(directory);
+  if (manifest === undefined) return undefined;
+  const entry = buildResultOutput(manifest, output);
+  if (entry === undefined) return undefined;
+  if (entry.value.kind === "value") {
+    const path = containedResultPath(directory, entry.value.path);
+    const document = decodeBuildResultValueDocument(
+      decodeBuildResultJson(await readFile(path), path),
+      `Build ${build} Output ${output}`,
+    );
+    return { build, output, directory, type: entry.type, value: { ...entry.value, document } };
   }
+  return {
+    build,
+    output,
+    directory,
+    type: entry.type,
+    value: entry.value,
+  };
 }
 
 export async function describeBuildResultOutput(
   root: string,
   build: string,
   output: string,
-  externalFiles: ExternalFileAccess = localExternalFiles,
 ): Promise<RepositoryBuildResultOutputDescription | undefined> {
-  const seen = new Set<string>();
-  let currentBuild = build;
-  let currentOutput = output;
-  while (true) {
-    const address = `${currentBuild}\u0000${currentOutput}`;
-    assert(!seen.has(address), `Build Output forwarding repeats ${currentBuild} / ${currentOutput}`);
-    seen.add(address);
-    const manifest = await readBuildResult(buildResultDirectory(root, currentBuild));
-    const entry = manifest === undefined ? undefined : buildResultOutput(manifest, currentOutput);
-    if (entry === undefined) return undefined;
-    if (entry.value.kind === "build-output") {
-      currentBuild = entry.value.build;
-      currentOutput = entry.value.output;
-      continue;
-    }
-    const file = entry.value.kind === "external-file" ? await currentFileReference(entry.value, externalFiles) : entry.value;
-    return file.kind === "build-file" || file.kind === "external-file"
-      ? { type: entry.type, representation: "file", size: file.size, mediaType: file.mediaType }
-      : entry.value.kind === "value"
-        ? { type: entry.type, representation: "value-document" }
-        : { type: entry.type, representation: "inline" };
-  }
-}
-
-/**
- * Accept only finished historical Results and reduce every historical publication source to the
- * Result that owns its terminal value. This follows only caller-named addresses; it needs no reverse
- * index or global Result scan.
- */
-export async function resolvePublicationIntent(
-  repository: {
-    read(build: string): Promise<BuildResultManifest | undefined>;
-  },
-  publication: PublicationIntent,
-): Promise<PublicationIntent> {
-  return { outputs: await Promise.all(publication.outputs.map(async (published) => {
-    if (published.source.kind === "current-record") return published;
-    const sourceAddress = published.source;
-    const source = await repository.read(sourceAddress.build);
-    assert(source?.outcome !== undefined,
-      `Build ${sourceAddress.build} is not a finished Result`);
-    const resolved = await locateRepositoryBuildResultOutput(repository, sourceAddress.build, sourceAddress.output);
-    assert(resolved !== undefined,
-      `Build ${sourceAddress.build} has no Output ${sourceAddress.output}`);
-    const owner = resolved.build === source.id ? source : await repository.read(resolved.build);
-    assert(owner?.outcome !== undefined,
-      `Build ${resolved.build} is not a finished Result`);
-    assert(sameType(published.type, resolved.type),
-      `Build ${sourceAddress.build} Output ${sourceAddress.output} has the wrong type for its forwarded Logical Output`);
-    return {
-      ...published,
-      source: {
-        kind: "historical-output" as const,
-        build: resolved.build,
-        output: resolved.output,
-      },
-    };
-  })) };
+  const manifest = await readBuildResult(buildResultDirectory(root, build));
+  const entry = manifest === undefined ? undefined : buildResultOutput(manifest, output);
+  if (entry === undefined) return undefined;
+  return entry.value.kind === "build-file"
+    ? { type: entry.type, representation: "file", size: entry.value.size, mediaType: entry.value.mediaType }
+    : entry.value.kind === "value"
+      ? { type: entry.type, representation: "value-document" }
+      : { type: entry.type, representation: "inline" };
 }
 
 export class FileBuildResult {
@@ -411,9 +298,7 @@ export class FileBuildResult {
   static async create(root: string, seed: BuildResultSeed): Promise<FileBuildResult> {
     assertOrderedBuildId(seed.id);
     assertBuildResultSeed(seed);
-    const publication = await resolvePublicationIntent({
-      read: async (build) => await readBuildResult(buildResultDirectory(root, build)),
-    }, seed.publication);
+    const publication = seed.publication;
     const directory = buildResultDirectory(root, seed.id);
     await mkdir(dirname(directory), { recursive: true });
     const temporary = join(resolve(root), `.preparing-${seed.id}-${randomUUID()}`);
@@ -423,7 +308,7 @@ export class FileBuildResult {
       id: seed.id,
       ...(seed.title === undefined ? {} : { title: seed.title }),
       sourceId: seed.sourceId,
-      ...(seed.runId === undefined ? {} : { runId: seed.runId }),
+      ...(seed.invocationSourceId === undefined ? {} : { invocationSourceId: seed.invocationSourceId }),
       targets: publication.outputs.filter((output) => output.target).map((output) => output.name),
       outputs: {},
     };
@@ -433,7 +318,6 @@ export class FileBuildResult {
         resources: {},
         values: {},
         publication,
-        ...(seed.resourceReferences === undefined ? {} : { resourceReferences: seed.resourceReferences }),
       });
       await rename(temporary, directory);
     } catch (error) {
@@ -517,11 +401,9 @@ export class FileBuildResult {
 
 /** Default zero-configuration project repository backed by one ordinary directory tree. */
 export class FileBuildResultRepository implements BuildResultRepository {
-  readonly externalFiles: ExternalFileAccess;
   readonly root: string;
 
-  constructor(root: string, externalFiles: ExternalFileAccess = localExternalFiles) {
-    this.externalFiles = externalFiles;
+  constructor(root: string) {
     assert(root.trim().length > 0, "Build Result root must not be empty");
     this.root = resolve(root);
   }
@@ -562,18 +444,14 @@ export class FileBuildResultRepository implements BuildResultRepository {
   }
 
   async describeOutput(build: string, output: string): Promise<RepositoryBuildResultOutputDescription | undefined> {
-    return await describeBuildResultOutput(this.root, build, output, this.externalFiles);
+    return await describeBuildResultOutput(this.root, build, output);
   }
 
   async resolve(build: string, output: string): Promise<RepositoryBuildResultOutput | undefined> {
-    const resolvedOutput = await resolveBuildResultOutput(this.root, build, output, this.externalFiles);
+    const resolvedOutput = await resolveBuildResultOutput(this.root, build, output);
     if (resolvedOutput === undefined) return undefined;
     const { directory: _directory, ...portable } = resolvedOutput;
     return portable;
-  }
-
-  async describeFile(_build: string, file: BuildResultFileRef): Promise<BuildResultFileRef> {
-    return await currentFileReference(file, this.externalFiles);
   }
 
   async openFile(
@@ -581,8 +459,7 @@ export class FileBuildResultRepository implements BuildResultRepository {
     file: BuildResultFileRef,
     range?: BuildResultFileRange,
   ): Promise<AsyncIterable<Uint8Array> | undefined> {
-    if (file.kind === "external-file") return await this.externalFiles.open(file.uri, range);
-    const directory = buildResultDirectory(this.root, file.build ?? build);
+    const directory = buildResultDirectory(this.root, build);
     const path = containedResultPath(directory, file.path);
     if (!await exists(path)) return undefined;
     if (range === undefined) return createReadStream(path);

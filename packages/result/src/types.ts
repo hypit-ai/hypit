@@ -13,30 +13,17 @@ import { assertPublicationIntent } from "@hypit/protocol";
 export type BuildResultOutcome = "complete" | "failed" | "cancelled";
 
 export type BuildResultFileRef = {
+  readonly kind: "build-file";
   readonly size: number;
   readonly mediaType: string;
-} & ({
-  readonly kind: "build-file";
-  /** Absent for a file owned by the containing Result; explicit when reused elsewhere. */
-  readonly build?: string;
-  /** Forward-only path relative to the owning Build's result directory. */
+  /** Path relative to the containing Result directory. */
   readonly path: string;
-} | {
-  readonly kind: "external-file";
-  /** Explicit address supplied by the Workspace; remains a live external dependency. */
-  readonly uri: string;
-});
+};
 
 /** A normalized half-open byte range within one Result file. */
 export type BuildResultFileRange = {
   readonly start: number;
   readonly endExclusive: number;
-};
-
-export type HistoricalBuildOutputRef = {
-  readonly kind: "build-output";
-  readonly build: string;
-  readonly output: string;
 };
 
 export type BuildResultValuePath = readonly (string | number)[];
@@ -88,18 +75,12 @@ export function assertBuildResultFileRef(value: unknown, subject: string): asser
     throw new Error(`${subject} is not a Build file reference`);
   }
   const item = value as Readonly<Record<string, unknown>>;
-  if ((item.kind !== "build-file" && item.kind !== "external-file")
+  if (item.kind !== "build-file"
     || typeof item.size !== "number" || !Number.isSafeInteger(item.size) || item.size < 0
     || typeof item.mediaType !== "string" || item.mediaType.length === 0) {
     throw new Error(`${subject} is not a valid Build file reference`);
   }
-  if (item.kind === "external-file") {
-    if (typeof item.uri !== "string" || item.uri.length === 0) throw new Error(`${subject}.uri is missing`);
-    new URL(item.uri);
-  } else {
-    assertBuildResultPath(item.path, `${subject}.path`);
-    if (item.build !== undefined) assertOrderedBuildId(item.build as string);
-  }
+  assertBuildResultPath(item.path, `${subject}.path`);
 }
 
 function valueAtPath(value: CanonicalValue, path: BuildResultValuePath, subject: string): CanonicalValue {
@@ -162,7 +143,6 @@ export function assertBuildResultValueDocument(
 
 export type BuildResultOutputValue =
   | BuildResultFileRef
-  | HistoricalBuildOutputRef
   | { readonly kind: "inline"; readonly value: null | boolean | number | string }
   | { readonly kind: "value"; readonly path: string };
 
@@ -205,8 +185,8 @@ type BuildResultManifestBase = {
   readonly highlightedOutputs?: readonly string[];
   /** Opaque author Source identity. A local application may choose a project-relative path. */
   readonly sourceId: string;
-  /** Opaque Run Source identity, when this Build was authored through one. */
-  readonly runId?: string;
+  /** Opaque saved Invocation Source identity, when this Build used one. */
+  readonly invocationSourceId?: string;
   /** Author-facing names of the Build's actual final goals. */
   readonly targets: readonly string[];
   readonly outputs: Readonly<Record<string, BuildResultOutput>>;
@@ -253,38 +233,24 @@ export function defineBuildResultOutput(
   });
 }
 
-/** One terminal historical Output address found without opening its value document or files. */
-export type RepositoryBuildResultOutputLocation = {
-  readonly build: string;
-  readonly output: string;
-  readonly type: TypeRef;
-};
-
 export type BuildResultSeed = {
   readonly id: string;
   readonly title?: string;
   readonly sourceId: string;
-  readonly runId?: string;
+  readonly invocationSourceId?: string;
   readonly publication: PublicationIntent;
-  /** Known file locations for referenced Resource identities, including nested uses. */
-  readonly resourceReferences?: Readonly<Record<string, BuildResultFileRef>>;
 };
 
 /** Validate the one-name-per-Output public Result surface before storage is touched. */
 export function assertBuildResultSeed(seed: BuildResultSeed): void {
   if (seed.sourceId.trim().length === 0) throw new Error("Build Result Source identity must not be empty");
-  if (seed.runId !== undefined && seed.runId.trim().length === 0) {
-    throw new Error("Build Result Run identity must not be empty");
+  if (seed.invocationSourceId !== undefined && seed.invocationSourceId.trim().length === 0) {
+    throw new Error("Build Result Invocation Source identity must not be empty");
   }
   if (seed.title !== undefined && seed.title.trim().length === 0) {
     throw new Error("Build Result title must not be empty");
   }
-  assertPublicationIntent(seed.publication, { build: seed.id });
-  for (const [resource, file] of Object.entries(seed.resourceReferences ?? {})) {
-    if (resource.length === 0) throw new Error("Resource reference has no identity");
-    assertBuildResultFileRef(file, `Resource ${resource}`);
-    if (file.kind === "build-file" && file.build === undefined) throw new Error(`Resource ${resource} needs its owning Build`);
-  }
+  assertPublicationIntent(seed.publication);
 }
 
 export type BuildResultResourceSource = {
@@ -332,7 +298,7 @@ export type BuildResultPage = {
   readonly next?: string;
 };
 
-/** Storage-neutral terminal Output after explicit forwarding has been followed. */
+/** Storage-neutral public Output and its stored value. */
 export type RepositoryBuildResultOutput = {
   readonly build: string;
   readonly output: string;
@@ -344,9 +310,8 @@ export type RepositoryBuildResultOutput = {
 };
 
 /**
- * Storage-neutral description of one resolved public Output. Unlike `resolve`, this never opens a
- * Value document or Resource bytes. Forwarding remains internal: callers cannot use this
- * view to distinguish a forwarded Output from one produced by the named Build.
+ * Storage-neutral description of one public Output. Unlike `resolve`, this never opens a Value
+ * document or Resource bytes.
  */
 export type RepositoryBuildResultOutputDescription = {
   readonly type: TypeRef;
@@ -364,8 +329,8 @@ export type BuildResultWriter = {
 };
 
 /**
- * Project result history addressed by Build id and Output name. File references carry their
- * ownership or explicit external address; each repository supplies the corresponding byte access.
+ * Project result history addressed by Build id and Output name. File references are relative to
+ * that Build's Result; each repository supplies the corresponding byte access.
  */
 export type BuildResultRepository = {
   create(seed: BuildResultSeed): Promise<BuildResultWriter>;
@@ -377,11 +342,9 @@ export type BuildResultRepository = {
   updatePresentation(build: string, update: BuildResultPresentationUpdate): Promise<BuildResultManifest>;
   /** Browse finished Results in descending Build-id time order. */
   browse(request: BuildResultBrowseRequest): Promise<BuildResultPage>;
-  /** Follow explicit Output forwarding and describe its terminal value without opening content. */
+  /** Describe one Output without opening its value document or file content. */
   describeOutput(build: string, output: string): Promise<RepositoryBuildResultOutputDescription | undefined>;
   resolve(build: string, output: string): Promise<RepositoryBuildResultOutput | undefined>;
-  /** Read current metadata for a file reference, including external dependencies. */
-  describeFile(build: string, file: BuildResultFileRef): Promise<BuildResultFileRef>;
   openFile(
     build: string,
     file: BuildResultFileRef,

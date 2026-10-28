@@ -10,8 +10,8 @@ import type {
   StudioTrackCompanion,
 } from "@hypit/studio-companion";
 
-import { inspectStudioRun, StudioPreflightError } from "../src/studio-preflight.js";
-import type { StudioRunSelection } from "../src/studio-preflight.js";
+import { inspectStudioInvocation, StudioPreflightError } from "../src/studio-preflight.js";
+import type { StudioInvocationSelection } from "../src/studio-preflight.js";
 import { StudioCompanionRegistry } from "../src/studio-registry.js";
 import { compiledSourceScenario } from "./compiled-source-scenario.js";
 
@@ -42,20 +42,20 @@ function placement(id: string): StudioPlacement {
   };
 }
 
-test("Studio rejects a Run that reaches two distinct Film compositions", () => {
+test("Studio rejects an Invocation that reaches two distinct Film compositions", () => {
   const source = compiledSourceScenario({
     placements: [placement("one"), placement("two")],
     exports: ["one", "two"].map((id) => ({
       name: `${id}.composition`, ref: `${id}.composition`, type: compositionTypes.composition,
     })),
   });
-  const run: StudioRunSelection = {
+  const invocation: StudioInvocationSelection = {
     targets: ["one.composition", "two.composition"],
-    run: { graph: { format: "hypit.run-graph@1", records: [], candidates: [], operations: [], satisfactions: [], targets: [] } },
+     invocation: { format: "hypit.invocation@1", targets: ["one.composition", "two.composition"], overrides: [] },
   };
   const registry = new StudioCompanionRegistry([], { films: [companion] });
   assert.throws(
-    () => inspectStudioRun(registry, source, run),
+    () => inspectStudioInvocation(registry, source, invocation),
     (error: unknown) => error instanceof StudioPreflightError
       && error.issues.some((issue) => issue.includes("multiple Film compositions")),
   );
@@ -108,12 +108,12 @@ test("Studio preserves every Film occurrence of one reusable VisualTrack", () =>
       { name: "film.composition", ref: "film.composition", type: compositionTypes.composition },
     ],
   });
-  const run: StudioRunSelection = {
+  const invocation: StudioInvocationSelection = {
     targets: ["film.composition"],
-    run: { graph: { format: "hypit.run-graph@1", records: [], candidates: [], operations: [], satisfactions: [], targets: [] } },
+     invocation: { format: "hypit.invocation@1", targets: ["film.composition"], overrides: [] },
   };
   const registry = new StudioCompanionRegistry([visualCompanion], { films: [companion] });
-  const inspection = inspectStudioRun(registry, source, run);
+  const inspection = inspectStudioInvocation(registry, source, invocation);
   assert.deepEqual(
     inspection.tracks.find((track) => track.ref === "visual.visual")?.visualOccurrences,
     [["background"], ["inset", "picture"]],

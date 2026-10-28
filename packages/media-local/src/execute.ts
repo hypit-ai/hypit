@@ -17,7 +17,7 @@ import {
   type RenderStillVideoNeed,
   verifyStillVideoRequest,
 } from "@hypit/media-operations";
-import { verifyAudioProgram } from "@hypit/audio-program";
+import { audioProgramSourceClips, verifyAudioProgram } from "@hypit/audio-program";
 import type { AudioProgram, RenderAudioNeed } from "@hypit/audio-program";
 import { readPreservePitch } from "@hypit/audio-stretch";
 import type { MuxMediaNeed } from "@hypit/media-delivery";
@@ -863,7 +863,7 @@ export async function executeRenderTimelineAudio(
   const window = need.range === undefined
     ? { startSample: 0, endSampleExclusive: program.sampleFrames, sampleFrames: program.sampleFrames }
     : clockFrameSpanSamples(need.range, { frameRate: program.frameRate }, 48_000);
-  const clips = program.clips.filter((clip) => clip.targetStartSample < window.endSampleExclusive
+  const clips = audioProgramSourceClips(program).filter((clip) => clip.targetStartSample < window.endSampleExclusive
     && clip.targetEndSampleExclusive > window.startSample);
   const work = await mkdtemp(join(tmpdir(), "hypit-media-audio-"));
   const readers = new Set<CanonicalPcmReader>();

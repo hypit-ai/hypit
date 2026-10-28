@@ -71,7 +71,7 @@ a cutout needs trimming or retiming in the composition, apply `mediaop:Transform
 media. The relation remains lazy until a visual or audio consumer requests signal.
 
 Review motion, hair, hands, translucent edges and the selected speech against the intended
-background. Reuse `cutout.video` or the prepared Output through the Run when changing placement,
+background. Export an accepted `cutout.video` into the project and select that authored asset when changing placement,
 captions or graphics.
 
 ## Model and Provider

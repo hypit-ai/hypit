@@ -1,15 +1,15 @@
 # Planning, Builds, and Results
 
-Read this when inspecting the work selected by a Run, obtaining spending authority, submitting a
+Read this when inspecting the work selected by an Invocation, obtaining spending authority, submitting a
 Build, continuing after a failed attempt, following work after an observer disconnects, or retrieving
 completed Outputs.
 
-[Runs](runs.md) owns saved Invocation Targets and transient overrides. [System relationships](system.md)
+[Invocations](runs.md) owns Targets, transient overrides and their optional saved form. [System relationships](system.md)
 explains how the authored production becomes a Build, and [rendering](rendering.md) covers whole or partial video outputs.
 
 ## Reuse available Outputs and identify active Builds
 
-For a revision, identify the relevant Run and its completed Outputs. Export still-useful media into
+For a revision, identify the relevant Invocation and its completed Outputs. Export still-useful media into
 the project and record the durable choice in the Author Source. [Authoring](authoring.md#reuse-produced-work-explicitly)
 explains how project material and realization selection preserve media without freezing downstream edits.
 A failed Build can still contain completed Outputs; a missing exported file is not evidence of missing media.
@@ -30,7 +30,7 @@ project-owned Results without a Runtime argument. Read active execution from the
 that received the Build.
 
 Use the known Build id. If it was not returned, use project activity and Results to identify the
-submission from its Run, Source and submission time. Follow active work with `status --watch` and
+submission from its Invocation Source when saved, Author Source and submission time. Follow active work with `status --watch` and
 inspect or export completed Outputs. A closed terminal or interrupted
 observation is distinct from a failed Provider request inside the Build. Finishing an incomplete
 Result is covered below and does not require regenerating media.
@@ -74,18 +74,18 @@ available credential references and receipts; increase `--limit` if the report l
 Secret values stay in their Credential Store. `--json` changes encoding, while `--verbose` requests
 these details.
 
-## Plan the selected Run
+## Plan the selected Invocation
 
-`hypit plan` inspects an authored Run's execution demands. The creative direction shared with the
-user develops earlier from their request and reference evidence; it does not require a Run, a fully
+`hypit plan` inspects one explicit Invocation's execution demands. The creative direction shared with the
+user develops earlier from their request and reference evidence; it does not require a saved Invocation, a fully
 prepared environment or this command. Use the command when there is concrete execution to inspect.
 
-Plan the actual Run after durable material choices are in the Author Source and requested execution
+Plan the actual Invocation after durable material choices are in the Author Source and requested execution
 choices are expressed:
 
 ```bash
-hypit check path/to/build.svrun
-hypit plan path/to/build.svrun
+hypit check path/to/main.svml
+hypit plan path/to/main.svml --target final.video
 ```
 
 `check` validates the self-described Sources and graph without executing them. `plan` freezes the
@@ -104,7 +104,7 @@ not require a billing account to answer.
 Read the current pricing material selected Providers expose for these same Needs:
 
 ```bash
-hypit pricing path/to/build.svrun
+hypit pricing path/to/main.svml --target final.video
 ```
 
 `pricing` is an explicit read-only network operation. It creates no Build and submits no generation.
@@ -140,9 +140,9 @@ The commission can cover a whole production, including reference transcription, 
 and semantic alignment, or just the reference analysis before the user decides to commission the
 video. Early hosted transcription fits either scope. Establish its coverage before invoking
 `hypit transcribe`, which immediately calls the selected Endpoint. For that reference, source
-duration and the Provider's published rates can support the estimate; a production Run need not
+duration and the Provider's published rates can support the estimate; a production Invocation need not
 exist yet. Local WhisperX has no hosted Provider call charge. As the creative plan becomes concrete,
-`plan` and `pricing` expose the exact remaining requests for that Run.
+`plan` and `pricing` expose the exact remaining requests for that Invocation.
 
 Carry covered work forward and keep the user informed. The same agreement can apply across tool
 calls and Builds; a new command is not itself a new authorization request. Ask for a new decision
@@ -151,7 +151,7 @@ Use the current plan, available Results and costs already incurred or committed 
 remaining work. Treat estimates as estimates where actual charges are unavailable.
 
 Preserve the user's agreement in [Brief](../creation/brief.md#brief-preserves-user-authority), and
-resume from it alongside the current Run, Results and Progress. Normal composition work carries
+resume from it alongside the current Invocation, Results and Progress. Normal composition work carries
 usable generated media forward. A request to revise Caption or MG authorizes that revision;
 additional media generation follows an intentional production choice covered by the paid scope.
 Explain a meaningful change while proceeding when it is already covered; seek the user's decision
@@ -160,10 +160,10 @@ when it changes what they have agreed to fund.
 ## Submit one durable Build
 
 ```bash
-hypit build path/to/build.svrun --title first-cut --follow
+hypit build path/to/main.svml --target final.video --title first-cut --follow
 ```
 
-Every invocation creates a fresh time-ordered Build id and one independent Result, even when the Run
+Every invocation creates a fresh time-ordered Build id and one independent Result, even when the Author Source
 did not change. Repeating the same command does not resume an earlier Build or automatically alter the
 production's selected material. The optional title is a human-facing
 Result label; it does not replace the Build id or alter Source identity.
@@ -234,7 +234,7 @@ active and has no Result to finish.
 When the user asks to stop submitted work, cancel that exact Build explicitly:
 
 ```bash
-hypit cancel <build-id> --reason "superseded by the corrected Run"
+hypit cancel <build-id> --reason "superseded by the corrected Invocation"
 ```
 
 Check the reported state afterward. Detaching the observer does not send this cancellation, and a

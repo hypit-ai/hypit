@@ -15,13 +15,11 @@ import type {
   BuildResultSync,
   BuildResultValueDocument,
   BuildResultValuePath,
-  HistoricalBuildOutputRef,
 } from "./types.js";
 import { buildResultOutput, defineBuildResultOutput } from "./types.js";
 
 export type BuildResultWriterState = {
   readonly resources: Readonly<Record<string, string>>;
-  readonly resourceReferences?: Readonly<Record<string, BuildResultFileRef>>;
   readonly values: Readonly<Record<string, string>>;
   readonly publication: PublicationIntent;
 };
@@ -130,8 +128,7 @@ function scalar(value: unknown): value is null | boolean | number | string {
 
 type ReadyOutput = {
   readonly published: PublicationOutputIntent;
-  readonly record?: TypedRecord;
-  readonly forward?: HistoricalBuildOutputRef;
+  readonly record: TypedRecord;
 };
 
 /**
@@ -153,8 +150,6 @@ export async function syncBuildResultOutputs(input: {
   const materialize = async (artifacts: readonly BlobRef[]): Promise<readonly BuildResultFileRef[]> => {
     const writes: Array<{ readonly path: string; readonly blob: BlobRef }> = [];
     const result = artifacts.map((blob): BuildResultFileRef => {
-      const reference = input.writer.resourceReferences?.[blob.resource];
-      if (reference !== undefined) return { ...reference, mediaType: blob.mediaType };
       const identity = blob.resource;
       assert(identity.length > 0, "Build resource has no instance identity");
       let path = resources.get(identity);
@@ -193,37 +188,26 @@ export async function syncBuildResultOutputs(input: {
     return { kind: "value", path };
   };
 
-  const outputRank = (record: TypedRecord | undefined, forward: HistoricalBuildOutputRef | undefined): number => forward !== undefined
-    ? 0
-    : record !== undefined && isBlobRef(record.value) ? 1 : record !== undefined && scalar(record.value) ? 2 : 3;
+  const outputRank = (record: TypedRecord): number => isBlobRef(record.value) ? 0 : scalar(record.value) ? 1 : 2;
   const ready: ReadyOutput[] = input.writer.publication.outputs.flatMap((published): ReadyOutput[] => {
     if (buildResultOutput({ outputs }, published.name) !== undefined) return [];
-    const source = published.source;
-    if (source.kind === "historical-output") return [{ published, forward: {
-      kind: "build-output" as const,
-      build: source.build,
-      output: source.output,
-    } }];
-    const currentRecord = published.source.kind === "current-record" ? published.source.record : undefined;
-    const record = currentRecord === undefined
-      ? undefined
-      : input.sync.records.find((item) => item.id === currentRecord);
+    const record = input.sync.records.find((item) => item.id === published.record);
     if (record === undefined) return [];
     assert(sameType(record.type, published.type),
       `Logical Output ${published.output} has the wrong type for published Output ${published.name}`);
     return [{ published, record }];
-  }).sort((left, right) => outputRank(left.record, left.forward) - outputRank(right.record, right.forward)
+  }).sort((left, right) => outputRank(left.record) - outputRank(right.record)
     || compareCodeUnits(left.published.name, right.published.name));
 
   if (ready.length === 0) {
     return { changed: false, manifest: input.manifest, writer: input.writer };
   }
 
-  for (const { published, record, forward } of ready) {
+  for (const { published, record } of ready) {
     defineBuildResultOutput(outputs, published.name, {
       ...(published.displayName === undefined ? {} : { displayName: published.displayName }),
       type: published.type,
-      value: forward ?? await outputValue(record!),
+      value: await outputValue(record),
     });
   }
 

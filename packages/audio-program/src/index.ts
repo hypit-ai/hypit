@@ -8,5 +8,12 @@ export {
   audioProgramSchema,
   audioProgramTypes,
 } from "./manifest.js";
-export { compileAudioProgram, sealAudioProgram, verifyAudioProgram } from "./program.js";
+export {
+  audioProgramGainRoutes,
+  audioProgramGraphFromClips,
+  audioProgramSourceClips,
+  compileAudioProgram,
+  sealAudioProgram,
+  verifyAudioProgram,
+} from "./program.js";
 export type * from "./types.js";

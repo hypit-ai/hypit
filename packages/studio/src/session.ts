@@ -9,22 +9,26 @@ import type { ServedFile } from "./compile.js";
 import type { StudioDomain } from "./domain.js";
 import { resolveStudioProjection } from "./projection.js";
 import { renderStudioHtmlProgram } from "./preview/render.js";
-import type { RunPlan } from "./run.js";
+import type { StudioPlan } from "./invocation.js";
 import type { StudioSnapshot } from "./shared.js";
 import type { StudioCompanionRegistry } from "./studio-registry.js";
 import { snapshot } from "./snapshot.js";
-import { inspectStudioRun } from "./studio-preflight.js";
+import { inspectStudioInvocation } from "./studio-preflight.js";
 import type { StudioSourceFile } from "./parameters.js";
 import type { BuildView } from "@hypit/hypit/kernel";
 import type { Placement } from "./observe.js";
 
-function sourceFiles(run: RunPlan): readonly StudioSourceFile[] {
-  const paths = [run.runPath, run.authorSource, ...run.source.compiled.closure.units.map((unit) => unit.id)];
+function sourceFiles(plan: StudioPlan): readonly StudioSourceFile[] {
+  const paths = [
+    ...(plan.invocationSource === undefined ? [] : [plan.invocationSource]),
+    plan.authorSource,
+    ...plan.source.compiled.closure.units.map((unit) => unit.id),
+  ];
   return [...new Set(paths)].flatMap((path): StudioSourceFile[] => {
     if (!existsSync(path)) return [];
     try {
-      const unit = run.source.compiled.closure.units.find((candidate) => candidate.id === path);
-      const language = path === run.runPath
+      const unit = plan.source.compiled.closure.units.find((candidate) => candidate.id === path);
+      const language = path === plan.invocationSource
         ? "svrun" as const
         : unit?.frontend === recipeFrontendId
           ? "svs" as const
@@ -36,7 +40,7 @@ function sourceFiles(run: RunPlan): readonly StudioSourceFile[] {
         path,
         text: readFileSync(path, "utf8"),
         language,
-        role: path === run.runPath ? "run" : path === run.authorSource ? "author" : "dependency",
+        role: path === plan.invocationSource ? "invocation" : path === plan.authorSource ? "author" : "dependency",
         ...(unit === undefined ? {} : { imports: unit.imports }),
       }];
     } catch {
@@ -61,14 +65,14 @@ export type StudioSession = {
 export async function readStudioSession(input: {
   readonly domain: StudioDomain;
   readonly registry: StudioCompanionRegistry;
-  readonly run: RunPlan;
+  readonly plan: StudioPlan;
   readonly revision: number;
   readonly sourcePath?: string;
   readonly workspaceRoot: string;
   readonly transientExecution?: RuntimeHostTransientExecution;
 }): Promise<StudioSession> {
-  const source = input.run.source;
-  const inspection = inspectStudioRun(input.registry, source, input.run);
+  const source = input.plan.source;
+  const inspection = inspectStudioInvocation(input.registry, source, input.plan);
   const outputRefs = [
     inspection.filmComposition,
     inspection.timeRef,
@@ -78,7 +82,7 @@ export async function readStudioSession(input: {
   const built = await resolveStudioProjection({
     source,
     registry: input.registry,
-    run: input.run,
+    plan: input.plan,
     domain: input.domain,
     outputRefs,
     compositionRef: inspection.filmComposition,
@@ -91,19 +95,21 @@ export async function readStudioSession(input: {
     timeline: built.timeline,
     served: new Set(built.served.keys()),
   });
-  const text = readFileSync(input.run.authorSource, "utf8");
-  const files = sourceFiles(input.run);
+  const text = readFileSync(input.plan.authorSource, "utf8");
+  const files = sourceFiles(input.plan);
   return {
     declarationIssues: built.declarationIssues,
     document: rendered.document,
     visualHtml: rendered.html,
     snapshot: snapshot(input.registry, built, {
       revision: input.revision,
-      path: input.sourcePath ?? input.run.authorSource,
+      path: input.sourcePath ?? input.plan.authorSource,
       text,
-      run: {
-        path: relative(input.workspaceRoot, input.run.runPath),
-        targets: input.run.targets,
+      invocation: {
+        ...(input.plan.invocationSource === undefined
+          ? {}
+          : { source: relative(input.workspaceRoot, input.plan.invocationSource) }),
+        targets: input.plan.targets,
       },
       canvas: built.canvas,
       frameRate: built.frameRate,

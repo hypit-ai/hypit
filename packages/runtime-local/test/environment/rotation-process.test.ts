@@ -78,11 +78,11 @@ test("a draining carrier finishes its existing Build while a new carrier shares 
         context:{format:'hypit.local-execution@1',packageRoot:root,hostStateRoot:join(root,'host'),distributionPackageRoot:distribution,profile:profileValue}};
       await state.submissions.prepare(request);
       await repository.create({id,sourceId:'main.svml',publication:{outputs:[{
-        name:target,output:target,target:true,type:types[target],source:{kind:'current-record',record},
+        name:target,output:target,target:true,type:types[target],record,
       }]}});
       await state.submissions.commit({...request,definition:{...base,program:{...base.program,records:base.program.records.map(r=>r.id==='intent:root'?{...r,value:({name})}:r)}},
         catalog:{sourcePath: join(root,'main.svml'),publication:{outputs:[{
-          name:target,output:target,target:true,type:types[target],source:{kind:'current-record',record},
+          name:target,output:target,target:true,type:types[target],record,
         }]}}});
       return id;
     }

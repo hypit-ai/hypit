@@ -177,16 +177,9 @@ const merged = mergeFragmentContributions(
 const graph: AuthorGraph = sealAuthorGraph({ ...merged });
 
 function build(target: string) {
-  const planned = planBuild(linked, graph, {
-    format: "hypit.run-graph@1",
-    records: [],
-    candidates: [],
-    operations: [],
-    satisfactions: [],
-    targets: [target],
-  });
+  const planned = planBuild(linked, graph, [target], []);
   return materializeBuild(defineBuild({
-    program: link(linked.closure, [...linked.records, ...planned.initialRecords]),
+    program: linked,
     plan: planned.plan,
   }), []);
 }
@@ -218,8 +211,8 @@ test("Film folds peer Tracks, then hands an ordinary Composition to HTML", () =>
   set = appendFilmVisualTrack(set, space, background);
   set = appendFilmAudioTrack(set, space, audio);
   const composition = compileFilmComposition(filmProgram, canvas, space, set);
-  assert.deepEqual(composition.audio.map((track) => track.id), ["empty-audio-track"]);
-  assert.deepEqual(composition.visual.members.map((member) => member.kind === "track" ? member.track.id : member.id),
+  assert.deepEqual(composition.audio.contributions.map((track) => track.id), ["empty-audio-track"]);
+  assert.deepEqual(composition.visual.root.members.map((member) => member.kind === "track" ? member.track.id : member.id),
     ["background-track", "title"]);
   const document = compileHtmlProgram(composition, space);
   assert.match(document.html, /data-hypit-text-run="title-text"/u);
@@ -244,6 +237,6 @@ test("Film root preserves repeated closed audio signals independently of AudioTr
     visual: { members: [] },
     audio: [0, 1],
   }), canvas, space, set);
-  assert.equal(composition.audio.length, 2);
-  assert.deepEqual(composition.audio.map((track) => track.id), [audio.id, audio.id]);
+  assert.equal(composition.audio.contributions.length, 2);
+  assert.deepEqual(composition.audio.contributions.map((track) => track.id), [audio.id, audio.id]);
 });

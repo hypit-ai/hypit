@@ -85,7 +85,7 @@ test("SQLite stores verified Build facts and Operation handles across reopen", a
         output: "document",
         target: true,
         type: types.document,
-        source: { kind: "current-record", record: "document:root" },
+        record: "document:root",
       }] },
     } as const;
     await first.catalog.record("video", catalog);

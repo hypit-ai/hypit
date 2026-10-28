@@ -21,7 +21,7 @@ HypiHub 是我们推荐的集成托管服务。**BYOK** 指使用自己账户的
 
 两个服务即使提供同一个模型，请求格式、限制和可用参数也可能不同。Provider 检查请求是否受该服务支持，并说明不匹配的原因。Profile 决定使用哪个来源；该来源报错并不授权通过另一个账户花钱。
 
-已有安装时，先检查所选 Profile 和凭据状态。起始 Profile 提供配置示例；连接账户或准备依赖前，先选择想使用的服务。[Run 与 Build](../quickstart/run.md) 介绍相关命令。
+已有安装时，先检查所选 Profile 和凭据状态。起始 Profile 提供配置示例；连接账户或准备依赖前，先选择想使用的服务。[Invocation 与 Build](../quickstart/run.md) 介绍相关命令。
 
 ## 使用自有模型部署
 
@@ -53,7 +53,7 @@ import type { AsyncEndpoint, CredentialRef, EndpointRequest } from "@hypit/hypit
 
 实现服务支持的准确能力与输出类型，把每个已选择 Model 的完整请求适配到服务 API，解析声明的凭据并返回结果。即时操作可以直接返回；远程任务可以先提交得到 ID，再轮询完成情况、收集输出文件。并发和动作限制由 Endpoint 的资源声明负责。
 
-真正的失败会结束本次执行尝试。Build Result 保留已完成的 Output 与公开任务回执。后续工作通过新的 Run 与 Build，选择仍适用的已有 Output 复用。
+真正的失败会结束本次执行尝试。Build Result 保留已完成的 Output 与公开任务回执。后续工作把仍适用的 Output 导出为项目资源并在 Author Source 中选择，再通过新的 Invocation 与 Build 继续。
 
 [Endpoint SDK](https://github.com/hypit-ai/hypit/blob/main/packages/endpoint/README.md) 维护处理接口、activation、资源声明和价格 API。将包编译为 JavaScript，由项目包管理器安装。在 [Runtime Profile](./runtime.md) 的 `endpoints` 中配置实例，并通过 `bindings` 选择它。
 

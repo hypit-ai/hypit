@@ -53,7 +53,10 @@ export async function verifyOutput(args: {
 }): Promise<void> {
   const probe = await runProcess({
     executable: args.ffprobePath,
-    argv: ["-v", "error", "-print_format", "json", "-show_streams", "-count_frames", args.path],
+    // The renderer has already counted accepted frames and the MP4 muxer records
+    // that exact sample count. Read container metadata here; decoding the entire
+    // freshly encoded stream a second time adds no new boundary fact.
+    argv: ["-v", "error", "-print_format", "json", "-show_streams", args.path],
     timeoutMs: args.timeoutMs,
     maxOutputBytes: args.maxOutputBytes,
     ...(args.signal === undefined ? {} : { signal: args.signal }),

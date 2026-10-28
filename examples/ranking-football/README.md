@@ -29,13 +29,14 @@ The example Profiles use local media/rendering and HypiHub for hosted capabiliti
 execution choices; connect the intended account or select project Providers before paid work.
 Existing production projects can retain their own Providers independently of these example defaults.
 
-Run `npm ci` in this directory to install the locked Hypit, fonts and
+Run `npm install` once in this directory to install the selected Hypit 0.4 release, fonts and
 [`@hypit/ranking`](https://www.npmjs.com/package/@hypit/ranking) dependencies from npm.
-The nested banana projects have their own dependency manifests and can be installed independently.
+Review and commit the resulting lockfile; subsequent installs use `npm ci`. The nested banana projects
+have their own dependency manifests and lockfiles and can be installed independently.
 With a configured Runtime, run from the chosen project directory:
 
 ```bash
-npm ci
+npm install
 npx hypit check reference.svrun
 npx hypit estimate reference.svml --segment ronaldo --language en --pace fast --rounding ceil
 npx hypit estimate reference.svml --segment messi --language en --pace fast --rounding ceil
@@ -61,4 +62,4 @@ retained from the original ranking Source. Action corrects the host's pronouns a
 meaningful gestures while preserving the dry, affectionate football humor.
 
 `swap-host`, `swap-effect`, `swap-topic` and the nested banana projects are separate studies. Their
-Sources and Runs are not inputs to this complete generation entry.
+Author and Invocation Sources from those studies are not inputs to this complete generation entry.

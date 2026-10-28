@@ -31,7 +31,7 @@ export type CliDiagnostic = {
 
 export type CliBuildCatalogDescriptor = {
   readonly sourcePath: string;
-  readonly runPath?: string;
+  readonly invocationSourcePath?: string;
   readonly publication: PublicationIntent;
 };
 
@@ -43,7 +43,7 @@ export type CliBuildView = {
   readonly issue?: { readonly scope: "result" | "cleanup"; readonly message: string };
   readonly stop?: { readonly cause: "user-cancelled" | "execution-failed"; readonly reason?: string };
   readonly sourcePath?: string;
-  readonly runPath?: string;
+  readonly invocationSourcePath?: string;
   readonly targets: readonly string[];
   readonly requests?: { readonly total: number; readonly completed: number };
   readonly acceptedRecords: number;
@@ -123,7 +123,6 @@ export type CliRuntime = CliRuntimeControl & CliCredentialControl & CliResultCon
     readonly result: {
       readonly repository: CliResultRepositoryLocation;
       readonly title?: string;
-      readonly resourceReferences?: Readonly<Record<string, import("@hypit/result").BuildResultFileRef>>;
     };
   }, options?: {
     readonly follow?: boolean;

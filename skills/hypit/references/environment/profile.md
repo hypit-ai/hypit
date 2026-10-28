@@ -37,7 +37,7 @@ Keep these locations distinct:
 
 | Location | Responsibility |
 | --- | --- |
-| Project directory | Sources, Runs, assets and component dependencies |
+| Project directory | Sources, saved Invocations, assets and component dependencies |
 | `.hypit/runtime` | File naming the selected Profile |
 | Profile file | Editable execution choices; may be shared intentionally |
 | Profile `dataRoot` | Execution data, Worker state and working files; relative to the Profile's directory |
@@ -88,8 +88,9 @@ selects an instance. Use the configuration keys documented by that Provider pack
 
 The [Model and Provider roles](model-and-provider.md#start-from-the-capability-the-work-needs)
 keep authoring separate from deployment. One authored request produces a concrete external **Need**
-only if its output remains demanded by the Run. Existing Result Candidates can satisfy that output
-without another generation request.
+only if its output remains demanded by the Invocation's Targets and the Author Source has not selected
+an accepted realization for that output. Accepted material is an ordinary project resource declared
+in the Author Source; Result history is not an execution input.
 
 A **capability** identifies the required operation. The Profile routes it to an **Endpoint**, a
 configured Provider instance. A **binding** is that explicit routing choice. For example, after
@@ -194,7 +195,7 @@ Use distinct Endpoint names and credential keys for separate accounts. Binding s
 serves the requested capability; entering another service's key does not change the Provider.
 Local credential-free Endpoints need no login. `auth status <endpoint>` reports declared slots
 without revealing values; configured does not mean accepted, funded, reachable, or authorized for
-every model. Keep secrets out of Sources, Runs, Profile JSON, command arguments, commits and chat.
+every model. Keep secrets out of Sources, saved Invocations, Profile JSON, command arguments, commits and chat.
 
 ## Set capacity at the resource it describes
 
@@ -278,7 +279,7 @@ exact settings. Studio's permitted transient work has session-local concurrency.
 | --- | --- |
 | Which project, Profile and storage locations apply? | `hypit paths` |
 | Is a named credential present? | `hypit auth status <endpoint>`; no account-access guarantee |
-| What will this Run demand? | `hypit plan <run>`; concrete requests, support checks and cheap readiness of their selected Endpoints |
+| What will this Invocation demand? | `hypit plan <source> --target <output>` or `hypit plan <preset.svrun>`; concrete requests, support checks and cheap readiness of their selected Endpoints |
 | Can the selected services be reached and used? | `hypit doctor --endpoint <instance>`; bounded active diagnosis, no generation submission |
 | Is the Worker running and work active? | `hypit runtime status` |
 | Which local helpers answer, and where are their logs? | `hypit programs status --endpoint <instance> --verbose` |
@@ -298,12 +299,12 @@ distinguishes useful intermediate evidence from the intended deliverable.
 
 | Change | What to do |
 | --- | --- |
-| Source, Run or project component implementation | Create a new Build for the changed work |
+| Source, Invocation or project component implementation | Create a new Build for the changed work |
 | Endpoint config or binding | New Builds read current choices; an existing Build retains its selected configuration |
 | Writable Store credential value | Subsequent credential resolution uses that Store; changing a secret is not a blanket Worker restart instruction |
 | Distribution installation, Worker startup policy or its inherited environment | Restart the Worker explicitly when active work permits |
 | A running local service's model, device, compute, batch size or cache location | Prepare its selected resources, then restart that helper when idle |
-| Additional WhisperX alignment language in the same cache | Run scoped `programs prepare`; the service can stay running |
+| Additional WhisperX alignment language in the same cache | Execute scoped `programs prepare`; the service can stay running |
 | Browser download mirror | Used for the next required preparation; a healthy cached browser remains usable |
 | Profile used by an existing Studio session | Restart the session if it needs to load the edited selection |
 

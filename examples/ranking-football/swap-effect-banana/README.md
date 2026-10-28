@@ -3,7 +3,8 @@
 An independent effect-swap variant built from the banana presenter. The SVML source owns its material
 and durable realization choices; `reuse.svrun` is only a saved final-video target.
 
-Run `npm ci` here to install the locked Hypit, `@hypit/ranking` and font dependencies.
+Run `npm install` once here to install the selected Hypit 0.4, `@hypit/ranking` and font dependencies;
+review and commit the generated lockfile, then use `npm ci` for repeatable installs.
 
 From this directory, download the two existing performances before using `reuse.svrun`:
 

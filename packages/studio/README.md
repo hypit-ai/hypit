@@ -8,7 +8,7 @@ preview. The snapshot invocation uses the selected Runtime Profile's frame Provi
 Build. During a pending Source compilation the export route reports that state; a failed update
 reports its error instead of returning the previous picture as current.
 
-The single official Web Studio for SVML. It opens an explicit Run Source,
+The single official Web Studio for SVML. It opens an Author Source plus explicit Invocation,
 traces its Film or Render target back to the semantic and visual projections
 Studio can edit, runs deterministic Producers and explicitly permitted transient Needs, and composites the
 resulting Tracks with HTML renderer.
@@ -18,27 +18,28 @@ through the installed Distribution manifest; Studio does not own or wrap the Hyp
 
 ```bash
 cd /path/to/external-video-project
-hypit studio --run build.svrun
+hypit studio --source main.svml --target final.video
+# or: hypit studio --invocation build.svrun
 ```
 
 When `--runtime` is omitted, Studio reads the resolved project's `.hypit/runtime`
 selection made by `hypit runtime use`. It does not search parent projects for a
 Profile. `--project` explicitly selects the project boundary; `--package-root`
 overrides the author package resolution root when those locations intentionally differ.
-Startup prints the project, Run, Profile and whether the Profile came from the command argument or
+Startup prints the project, selected input, Invocation form, Profile and whether the Profile came from the command argument or
 the project's selection file. Relative command-line paths start at the invoking directory;
-`--project` selects the project without rebasing `--run` or `--runtime`.
+`--project` selects the project without rebasing `--source`, `--invocation` or `--runtime`.
 The upper-left library is intentionally not a filesystem browser:
 
-- Source is the exact Run + Author closure and writes back only the selected file;
+- Source is the exact Author closure plus an optional saved Invocation Source and writes back only the selected file;
 - Tasks show one card per Build, with All, In progress and Finished filters. Active progress comes from
   the selected Runtime's read-only control interface; completed, failed and cancelled Builds come
   from the project's Result Repository. Saving a Result and an issue requiring attention remain
-  visible, with the source Run and available progress or failure reason.
+  visible, with the Invocation Source when one was saved and the available progress or failure reason.
 - Artifacts show top-level file Outputs whose declared MIME type is image, video or audio,
   including files already published by ongoing Builds. Value-document Outputs retain their structure:
-  the library does not extract their embedded resources. Forwarded file Outputs resolve to their
-  owner; references to the same owner file share one card and retain their origins. Highlighted
+  the library does not extract their embedded resources. Each Result owns its published files;
+  references to the same current-Result file share one card and retain their origins. Highlighted
   Outputs sort first, without excluding other media.
 
 Source, Tasks and Artifacts use the shared `ui/sidebar-panel.ts` layout and navigation buttons. Each view
@@ -72,8 +73,8 @@ Clicking a card opens the file in the central preview and pauses the composition
 no transport; video and audio share the play/mute controls and a seconds-based scrubber above
 the playback bar. The previous/next buttons skip five seconds for media, and step one frame
 for the composition. Back to composition restores the existing composition playhead. Selecting
-or seeking in the composition timeline also returns to it. Opening media changes no Source,
-Run, or Candidate selection.
+or seeking in the composition timeline also returns to it. Opening media changes no Author Source,
+Invocation or authored realization selection.
 
 No project manifest, Studio database, output-directory scan or inferred campaign
 folder structure is involved. With no selected Runtime, finished Result tasks and
@@ -85,7 +86,7 @@ transient processing require the selected Runtime.
 
 The CLI prints the actual session URL and its direct `#comments` URL after the server chooses a port.
 Open the latter to review the current composition before export. Browser playback creates no export
-Build or encoded video; an export remains a separate Run execution when the user wants the file.
+Build or encoded video; an export remains a separate Invocation when the user wants the file.
 
 The top-right **Studio / Comments** tabs change the layout around the same composition player.
 Comments gives the picture the available height with a notes column on the right. Click the picture
@@ -102,15 +103,15 @@ time and Studio's selection; comments themselves only refer to a time and the us
 Studio saves comments in `<workspace>/FEEDBACK.json`, creating it on the first saved comment.
 This path is Studio's project-file convention, rooted in the resolved workspace; it is independent
 of the Runtime, Result repository and Agent implementation.
-Each comment records its reviewed Run relative to that workspace, so the file can hold notes for
-several Runs while the UI shows the current Run. Times are seconds, including fractional seconds:
+Each comment records its reviewed authoring context relative to that workspace, so the file can hold notes for
+several contexts while the UI shows the current Invocation. Times are seconds, including fractional seconds:
 
 ```json
 {
   "comments": [
     {
       "id": "caption-size",
-      "run": "runs/main.svrun",
+      "context": "main.svml",
       "at": 12.5,
       "text": "Make this caption larger.",
       "resolved": false
@@ -119,7 +120,7 @@ several Runs while the UI shows the current Run. Times are seconds, including fr
 }
 ```
 
-`id`, `run`, `at` and `text` are required. `resolved` defaults to false; setting it to true marks
+`id`, `context`, `at` and `text` are required. `resolved` defaults to false; setting it to true marks
 the comment complete, and false reopens it. Deleting removes the entry. Following a note seeks to
 its saved time; a changed composition can show something different at that time.
 
@@ -127,7 +128,7 @@ Focusing the comment composer pauses the picture and captures the current frame.
 captures a new time. The draft keeps its time while the user writes. Click a saved timestamp to
 revisit it. Comments can be edited, completed, reopened and deleted from the UI or by editing the file.
 The list is ordered by timestamp. Its `#1`, `#2` labels follow submission order within the current
-Run (the file's array order) and appear beside the completion control. Changing a timestamp or
+authoring context (the file's array order) and appear beside the completion control. Changing a timestamp or
 filtering Open/Done preserves those numbers; deleting a note closes its gap in the numbering.
 The stored `id` remains the stable identity. Clicking a note's text or time seeks
 to its frame. The composer has an icon-only send control; emoji and drawing buttons are inactive placeholders.
@@ -150,7 +151,7 @@ recompilation preserve live Item choices, while Comments, Result previews, Sourc
 Reloading the page clears the preview mask.
 
 The selected targets must reach one Film and its resolved time source. Studio rejects several
-distinct Films in one view; use separate Runs/sessions for those. A Timeline supplies the complete
+distinct Films in one view; use separate Invocations/sessions for those. A Timeline supplies the complete
 program range and the ruler always shows program time. Each package-owned temporal-domain Companion
 may add an exact Projection view. Script Studio gives every Narrative Projection two rows: mapped
 Segments and projected word evidence. Selection and Moment objects that exist only to invert a
@@ -171,9 +172,9 @@ the 22px ruler. Additional Projections contribute rows, not separate left-hand h
 
 Each declaration Companion requests its exact logical outputs for the locator row, including
 Instants that no Track consumes. After the Film display execution resolves, Studio evaluates those
-additional outputs through the same Compiler and display Executor. Already resolved logical outputs
-are reused as in-memory Run Candidates from that exact compilation; the user's Run and its targets
-are unchanged. The Runtime's existing transient-execution permissions still apply: displaying a
+additional outputs through the same Compiler and display Executor, selecting a broader slice of the
+same Author program without manufacturing Records or changing the Invocation. The Runtime's existing
+transient-execution permissions still apply: displaying a
 locator does not submit a Build or enable generation Endpoints. Unresolved or failed locator work
 is reported in the Studio terminal without invalidating the Film preview. Only resolved Instants
 on the displayed Timeline are shown.
@@ -185,7 +186,7 @@ to choose a covered object. These are editor presentation rules, independent of 
 
 Open the URL printed by Vite. Studio requests port 5179 by default, accepts `--port`,
 and Vite can choose another available port when it is occupied. Reuse that process
-for edits to the same Run. The Run and loaded Author/Recipe files are watched and
+for edits to the same Invocation. The optional Invocation Source and loaded Author/Recipe files are watched and
 recompiled together. Domain packages, Companion registry, Runtime and Result library
 are opened at startup; restart this Studio process after changing those selections,
 package code or imports that introduce new packages. Browser refresh does not reload
@@ -236,8 +237,9 @@ Dragging to a new frame with several distinct valid Anchor identities does not s
 the author must make that identity choice explicitly.
 See [temporal author forms](../temporal/EDITING.md) for the complete behavior.
 
-Tasks and Artifacts are inspection surfaces; selecting an Artifact does not write a
-Run Candidate. Use `build-record`/`satisfy` in the Run for explicit Output reuse.
+Tasks and Artifacts are inspection surfaces; selecting an Artifact does not change the authored
+production. Export accepted material into the project and declare its durable realization in the
+Author Source.
 
 ## Component presentation
 
@@ -291,7 +293,7 @@ non-spinning text entry so wheel scrolling cannot mutate Source; selects use
 the Studio menu and keyboard navigation. Values still commit only on an
 explicit change through the normal revisioned mutation path.
 
-Temporal lineage comes from the exact executed graph selected by the Run. Studio indexes the
+Temporal lineage comes from the exact executed graph selected by the Invocation. Studio indexes the
 `TemporalInstant` and `TemporalWindow` records in each Track's dependency closure, including each
 endpoint's author authority and direct consumer edge. Common Temporal relations are handled by the
 shared planner; author packages contribute inverses for their own private construction Producers.
@@ -307,19 +309,19 @@ against the complete requested absolute-frame constraint; a compiling plan that 
 is rejected and the original files are restored just like a compilation failure.
 
 Opening Studio never spends and never creates a Build. Its display closure contains
-the Candidates selected by the Run, deterministic Producers and exact Needs that
+the Author choices selected for the Invocation, deterministic Producers and exact Needs that
 their Provider explicitly allows in transient authoring execution. The Runtime owns
 Endpoint activation, Profile bindings, request-level `supports`, credentials and
 invocation; Studio receives no Endpoint Registry and makes no decision from pricing,
 process location, model name or package name. A Need without transient support stops
-with its exact capability named. Existing media and completed Outputs enter through
-ordinary Run Candidates selected with `satisfy`.
+with its exact capability named. Existing media enters through ordinary Author declarations and
+durable realization choices.
 
-Studio and an encoded review use the same ordinary Run. Studio evaluates its
-transient display closure in the browser; building that Run evaluates the
+Studio and an encoded review use the same Invocation. Studio evaluates its
+transient display closure in the browser; building that Invocation evaluates the
 full target closure and sends the resulting HTML renderer document to the chosen
-render Endpoint. A separate review Run is useful only when the author wants a
-different Candidate selection. Its path and filename carry no execution
+render Endpoint. A separate review Invocation is useful only when the author wants different Targets or
+transient overrides. Its path and filename carry no execution
 semantics.
 
 Read [`@hypit/studio-companion`](../studio-companion/README.md) for the Companion ABI,

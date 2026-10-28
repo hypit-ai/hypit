@@ -25,7 +25,7 @@
   <import as="gfx" from="@explainer/opening-system@1"/>
   <import as="spatial" from="@hypit/spatial@1"/>
 
-  <!-- Prepared material outputs: explicit Run reuse boundaries -->
+  <!-- Prepared material outputs selected from explicit project resources -->
   <mediaop:Prepare id="bgm-media" source={assets.bgm-source} video="none" audio="default" span-authority="audio"/>
   <mediaop:Prepare id="web-hypit-media" source={assets.web-hypit} video="primary-moving" audio="none" span-authority="video"/>
   <mediaop:Prepare id="web-creatify-media" source={assets.web-creatify} video="primary-moving" audio="none" span-authority="video"/>

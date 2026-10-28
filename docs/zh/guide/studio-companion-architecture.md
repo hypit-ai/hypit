@@ -23,6 +23,6 @@ Track Companion 匹配组件的终端 Type 与作者 Surface，使用组件公�
 
 时间线编辑沿用所选时间关系。Studio 沿已执行的关系图求解一次完整的移动或裁剪，并原子地写入所有必要的作者端点。共享上游改变后，所有消费者通过重新编译自然更新。没有唯一且受支持的反解时，该值仍可供查看。
 
-Inspector 字段绑定到实际修改的作者值。共享 Recipe 或 Frame 可能影响多个使用位置，因此字段代表的是这项共享决定。Studio 将修改写到对应 Source，以同一份 Run 重新编译；修改无法发布时，显示错误并恢复之前的文件。
+Inspector 字段绑定到实际修改的作者值。共享 Recipe 或 Frame 可能影响多个使用位置，因此字段代表的是这项共享决定。Studio 将修改写到对应 Source，以同一 Invocation 重新编译；修改无法发布时，显示错误并恢复之前的文件。
 
 [Studio 中的时间编辑](./studio-temporal-windows.md) 介绍这些关系如何在投影后保留作者含义，[Studio](../quickstart/preview.md) 介绍编辑界面。

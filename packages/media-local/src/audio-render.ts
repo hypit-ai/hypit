@@ -1,6 +1,7 @@
 import { closeSync, fstatSync, openSync, readSync } from "node:fs";
 import { open } from "node:fs/promises";
 
+import { audioProgramGainRoutes } from "@hypit/audio-program";
 import type { AudioProgram, AudioProgramClip } from "@hypit/audio-program";
 import { exactTemporalRational } from "@hypit/temporal";
 import type { ExactTemporalValue, TemporalMap, TemporalMapPiece } from "@hypit/temporal";
@@ -293,6 +294,7 @@ export class CanonicalPcmReader {
 
 type CompiledClip = {
   readonly clip: AudioProgramClip;
+  readonly routeGain: number;
   readonly sampling: NumericMap;
   readonly preparation: NumericMap;
   readonly source: CanonicalPcmReader;
@@ -357,13 +359,14 @@ export async function renderAudioProgramWav(options: {
   readonly reconstructedForClip?: (clip: AudioProgramClip) => CanonicalPcmReader | undefined;
 }): Promise<void> {
   const endSampleExclusive = options.startSample + options.sampleFrames;
-  const clips: CompiledClip[] = options.program.clips
-    .filter((clip) => clip.targetStartSample < endSampleExclusive
+  const clips: CompiledClip[] = audioProgramGainRoutes(options.program)
+    .filter(({ clip }) => clip.targetStartSample < endSampleExclusive
       && clip.targetEndSampleExclusive > options.startSample)
-    .map((clip) => {
+    .map(({ clip, gain }) => {
       const reconstructed = options.reconstructedForClip?.(clip);
       return {
         clip,
+        routeGain: gain,
         sampling: numericMap(clip.sampling),
         preparation: numericMap(clip.preparation),
         source: options.sourceForClip(clip),
@@ -382,7 +385,7 @@ export async function renderAudioProgramWav(options: {
         const left = Math.max(absoluteStart, entry.clip.targetStartSample);
         const right = Math.min(absoluteEnd, entry.clip.targetEndSampleExclusive);
         for (let sample = left; sample < right; sample += 1) {
-          const level = levelAt(entry.clip, sample);
+          const level = levelAt(entry.clip, sample) * entry.routeGain;
           if (level === 0) continue;
           const outputFrame = sample - absoluteStart;
           let sourceFrame: number;

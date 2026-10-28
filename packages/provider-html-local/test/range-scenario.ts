@@ -29,8 +29,7 @@ export function htmlRangeDocument(artifact: BlobRef) {
           { name: "width", value: "64px" }, { name: "height", value: "64px" }],
       ) }],
   });
-  return compileHtmlProgram(sealComposition({ id: "range-video",
-    canvas: { width: 64, height: 64, clearColor: "#000000" }, visual: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) }, audio: [] }), space);
+  return compileHtmlProgram(sealComposition({ id: "range-video", visual: { canvas: { width: 64, height: 64, clearColor: "#000000" }, root: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }), space);
 }
 
 export function htmlRetiringSourceDocument(artifact: BlobRef) {
@@ -46,7 +45,5 @@ export function htmlRetiringSourceDocument(artifact: BlobRef) {
           { name: "width", value: "64px" }, { name: "height", value: "64px" }],
       ) }],
   });
-  return compileHtmlProgram(sealComposition({ id: "retiring-source-video",
-    canvas: { width: 64, height: 64, clearColor: "#000000" },
-    visual: { members: [{ kind: "track", id: track.id, track }] }, audio: [] }), space);
+  return compileHtmlProgram(sealComposition({ id: "retiring-source-video", visual: { canvas: { width: 64, height: 64, clearColor: "#000000" }, root: { members: [{ kind: "track", id: track.id, track }] } }, audio: { contributions: [] } }), space);
 }

@@ -18,6 +18,55 @@ export const audioProgramProducers = {
 } satisfies Record<string, ProducerRef>;
 
 const integer = { kind: "number", integer: true, minimum: 0 } as const;
+const signalRef: ValueSchema = { kind: "object", fields: {
+  node: { schema: { kind: "string", minLength: 1 } },
+  port: { schema: { kind: "literal", value: "signal" } },
+} };
+const programClip: ValueSchema = {
+  kind: "object",
+  fields: {
+    id: { schema: { kind: "string", minLength: 1 } },
+    source: { schema: preparedAudioSourceSchema },
+    preparation: { schema: temporalMapSchema },
+    sampling: { schema: temporalMapSchema },
+    reconstruction: { schema: audioReconstructionProgramSchema, optional: true },
+    target: { schema: { kind: "object", fields: {
+      start: { schema: exactTemporalValueSchema },
+      end: { schema: exactTemporalValueSchema },
+    } } },
+    targetStartSample: { schema: integer },
+    targetEndSampleExclusive: { schema: { kind: "number", integer: true, minimum: 1 } },
+    mixStartSample: { schema: integer },
+    mixEndSampleExclusive: { schema: { kind: "number", integer: true, minimum: 1 } },
+    gain: { schema: { kind: "number", minimum: 0 } },
+    fadeInSamples: { schema: integer },
+    fadeOutSamples: { schema: integer },
+    gainEnvelope: { schema: audioGainEnvelopeSchema, optional: true },
+    audibility: { schema: { kind: "array", items: audioSampleSpanSchema }, optional: true },
+  },
+};
+const programNode: ValueSchema = { kind: "oneOf", variants: [
+  { kind: "object", fields: {
+    kind: { schema: { kind: "literal", value: "silence" } },
+    id: { schema: { kind: "string", minLength: 1 } },
+  } },
+  { kind: "object", fields: {
+    kind: { schema: { kind: "literal", value: "source" } },
+    id: { schema: { kind: "string", minLength: 1 } },
+    clip: { schema: programClip },
+  } },
+  { kind: "object", fields: {
+    kind: { schema: { kind: "literal", value: "mix" } },
+    id: { schema: { kind: "string", minLength: 1 } },
+    inputs: { schema: { kind: "array", minItems: 1, items: signalRef } },
+  } },
+  { kind: "object", fields: {
+    kind: { schema: { kind: "literal", value: "process" } },
+    id: { schema: { kind: "string", minLength: 1 } },
+    inputs: { schema: { kind: "object", allowUnknown: true, fields: {} } },
+    program: { schema: audioReconstructionProgramSchema },
+  } },
+] };
 export const audioProgramSchema: ValueSchema = {
   kind: "object",
   fields: {
@@ -28,28 +77,9 @@ export const audioProgramSchema: ValueSchema = {
     frameCount: { schema: { kind: "number", integer: true, minimum: 1 } },
     sampleRate: { schema: { kind: "literal", value: 48_000 } },
     sampleFrames: { schema: { kind: "number", integer: true, minimum: 1 } },
-    clips: { schema: { kind: "array", items: {
-      kind: "object",
-      fields: {
-        id: { schema: { kind: "string", minLength: 1 } },
-        source: { schema: preparedAudioSourceSchema },
-        preparation: { schema: temporalMapSchema },
-        sampling: { schema: temporalMapSchema },
-        reconstruction: { schema: audioReconstructionProgramSchema, optional: true },
-        target: { schema: { kind: "object", fields: {
-          start: { schema: exactTemporalValueSchema },
-          end: { schema: exactTemporalValueSchema },
-        } } },
-        targetStartSample: { schema: integer },
-        targetEndSampleExclusive: { schema: { kind: "number", integer: true, minimum: 1 } },
-        mixStartSample: { schema: integer },
-        mixEndSampleExclusive: { schema: { kind: "number", integer: true, minimum: 1 } },
-        gain: { schema: { kind: "number", minimum: 0 } },
-        fadeInSamples: { schema: integer },
-        fadeOutSamples: { schema: integer },
-        gainEnvelope: { schema: audioGainEnvelopeSchema, optional: true },
-        audibility: { schema: { kind: "array", items: audioSampleSpanSchema }, optional: true },
-      },
+    graph: { schema: { kind: "object", fields: {
+      nodes: { schema: { kind: "array", minItems: 1, items: programNode } },
+      output: { schema: signalRef },
     } } },
   },
 };

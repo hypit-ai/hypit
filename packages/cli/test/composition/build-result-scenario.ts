@@ -24,12 +24,10 @@ export function publication(
   const selected = new Set(targets);
   return { outputs: outputs.map((output) => ({ ...output, target: selected.has(output.name),
     type: output.type ?? valueType,
-    source: {
-      kind: "current-record" as const,
-      record: output.record ?? (output.output.startsWith("logical:")
-        ? `record:${output.output.slice("logical:".length)}`
-        : output.output),
-    } })) };
+    record: output.record ?? (output.output.startsWith("logical:")
+      ? `record:${output.output.slice("logical:".length)}`
+      : output.output),
+  })) };
 }
 
 export function completedRecords(): readonly TypedRecord[] {
@@ -41,7 +39,7 @@ export async function fixture(root: string, id = "bld_20260902T110000000Z_000000
     id,
     title: "episode-stage",
     sourceId: source,
-    runId: "build.svrun",
+    invocationSourceId: "build.svrun",
     publication: publication([{ name: "stage.value", output: "logical:stage" }], ["stage.value"]),
   });
   await result.sync({

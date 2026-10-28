@@ -1,6 +1,6 @@
 import { sameType } from "@hypit/hypit/protocol";
 import type { ProducerRef, ProducerStep, Value, TypeRef, TypedRecord } from "@hypit/hypit/protocol";
-import type { BuildCandidateSelection, BuildView } from "@hypit/hypit/kernel";
+import type { BuildView, SelectedOutputRecord } from "@hypit/hypit/kernel";
 import { temporalTypes } from "@hypit/temporal";
 import type {
   StudioTemporalBinding,
@@ -147,7 +147,7 @@ export function executedTemporalProjection(
 
 function closure(
   state: ExecutedGraph,
-  selections: readonly Pick<BuildCandidateSelection, "output" | "record">[],
+  selections: readonly SelectedOutputRecord[],
   output: string,
 ): ReadonlySet<string> {
   const selected = selections.find((selection) => selection.output === output);
@@ -173,7 +173,7 @@ function closure(
  */
 export function executedTemporalBindings(
   state: ExecutedGraph,
-  selections: readonly Pick<BuildCandidateSelection, "output" | "record">[],
+  selections: readonly SelectedOutputRecord[],
   output: string,
   identify?: IdentifyTemporalSource,
   relationFor?: FindTemporalRelation,

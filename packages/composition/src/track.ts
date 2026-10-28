@@ -541,17 +541,26 @@ export type VisualTrackOccurrence = {
   readonly member: VisualScopeTrackMember;
 };
 
-export type Composition = {
-  readonly id: string;
+export type VisualComposition = {
   readonly canvas: {
     readonly width: number;
     readonly height: number;
     /** Structural clear color beneath every VisualTrack. */
     readonly clearColor: string;
   };
-  readonly visual: VisualScope;
+  readonly root: VisualScope;
+};
+
+export type AudioComposition = {
   /** Film-level audio is the additive sum of already closed AudioTrack outputs. */
-  readonly audio: readonly AudioTrack[];
+  readonly contributions: readonly AudioTrack[];
+};
+
+/** One synchronized audiovisual work whose two terminal programmes share one Timeline. */
+export type Composition = {
+  readonly id: string;
+  readonly visual: VisualComposition;
+  readonly audio: AudioComposition;
 };
 
 /** The only local style properties accepted in element keyframes. */
@@ -1060,7 +1069,7 @@ export function assertAudioReconstructionProgram(
   for (const artifact of program.artifacts) assertBlobRef(artifact, `${label}.artifacts`);
 }
 
-function assertAudioProcessProgram(program: AudioProcessProgram, label: string): void {
+export function assertAudioProcessProgram(program: AudioProcessProgram, label: string): void {
   assertAudioReconstructionProgram(program, label);
 }
 
@@ -1697,11 +1706,15 @@ export function visualScopeTrackOccurrences(
 function compositionContent(value: Composition): Composition {
   return {
     id: value.id,
-    canvas: { ...value.canvas },
-    visual: visualScopeContent(value.visual),
-    audio: [...value.audio]
-      .map((track) => audioTrackContent({ timelineId: track.timelineId, id: track.id, graph: track.graph }))
-      .sort((left, right) => compareCodeUnits(canonicalStringify(left), canonicalStringify(right))),
+    visual: {
+      canvas: { ...value.visual.canvas },
+      root: visualScopeContent(value.visual.root),
+    },
+    audio: {
+      contributions: [...value.audio.contributions]
+        .map((track) => audioTrackContent({ timelineId: track.timelineId, id: track.id, graph: track.graph }))
+        .sort((left, right) => compareCodeUnits(canonicalStringify(left), canonicalStringify(right))),
+    },
   };
 }
 
@@ -1741,14 +1754,13 @@ export function assertVisualScopeIdentity(scope: VisualScope, timeline?: Timelin
   assertVisualScope(scope, timeline, "VisualScope");
 }
 
-export function assertCompositionIdentity(composition: Composition, timeline?: Timeline): void {
-  if (composition === null || typeof composition !== "object" || Array.isArray(composition)) {
-    throw new Error("Composition is invalid.");
-  }
-  assertNonEmpty(composition.id, "Composition id");
+export function assertVisualCompositionIdentity(composition: VisualComposition, timeline?: Timeline): void {
   if (timeline !== undefined) assertTimelineIdentity(timeline);
   if (
-    composition.canvas === null
+    composition === null
+    || typeof composition !== "object"
+    || Array.isArray(composition)
+    || composition.canvas === null
     || typeof composition.canvas !== "object"
     || Array.isArray(composition.canvas)
     || !Number.isSafeInteger(composition.canvas.width)
@@ -1756,12 +1768,23 @@ export function assertCompositionIdentity(composition: Composition, timeline?: T
     || !Number.isSafeInteger(composition.canvas.height)
     || composition.canvas.height <= 0
     || !/^#[0-9a-f]{6}(?:[0-9a-f]{2})?$/iu.test(composition.canvas.clearColor)
-  ) {
-    throw new Error("Composition canvas is invalid.");
+  ) throw new Error("VisualComposition canvas is invalid.");
+  assertVisualScope(composition.root, timeline, "VisualComposition.root");
+}
+
+export function assertAudioCompositionIdentity(composition: AudioComposition, timeline?: Timeline): void {
+  if (timeline !== undefined) assertTimelineIdentity(timeline);
+  if (composition === null || typeof composition !== "object" || Array.isArray(composition)
+    || !Array.isArray(composition.contributions)) throw new Error("AudioComposition is invalid.");
+  for (const track of composition.contributions) assertAudioTrackIdentity(track, timeline);
+}
+
+export function assertCompositionIdentity(composition: Composition, timeline?: Timeline): void {
+  if (composition === null || typeof composition !== "object" || Array.isArray(composition)) {
+    throw new Error("Composition is invalid.");
   }
-  assertVisualScope(composition.visual, timeline, "Composition.visual");
-  if (!Array.isArray(composition.audio)) throw new Error("Composition.audio is invalid.");
-  for (const track of composition.audio) {
-    assertAudioTrackIdentity(track, timeline);
-  }
+  assertNonEmpty(composition.id, "Composition id");
+  if (timeline !== undefined) assertTimelineIdentity(timeline);
+  assertVisualCompositionIdentity(composition.visual, timeline);
+  assertAudioCompositionIdentity(composition.audio, timeline);
 }

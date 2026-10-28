@@ -34,12 +34,12 @@ reveal or handoff. Those relationships identify the passages whose composition n
 Studio and rendered frames show how the chosen assets work there. Carry the same produced media
 and semantic Outputs through layout and component revisions.
 
-## Review the work the Run actually selects
+## Review the work the Invocation actually selects
 
-Use the Run that selects the production's actual material. It binds the Author Source, Targets,
-files and earlier Results. Preserve the produced media and semantic Outputs as the composition
+Use the Invocation that selects the production's actual Targets and transient choices. Durable material
+remains in the Author Source. Preserve the produced media and semantic Outputs as the composition
 changes. Studio opens the selected work for playback and editing; snapshot captures its current
-compiled picture directly. A focused Run serves a requested encoded interval.
+compiled picture directly. A focused Invocation serves a requested encoded interval.
 
 Judge the relationship that the evidence can establish. A component's own example can show its
 style and behavior. The actual production image establishes its framing and color; the produced
@@ -60,7 +60,7 @@ current scope clear so the user can give useful direction, and continue the rema
 the agreed commission. [Service selection](../environment/model-and-provider.md#choose-the-practical-capability-path-with-the-user) owns unresolved service choices.
 
 Read missing behavior through its material and use together. For intended speech, listen to
-the selected Film: an available audio file establishes material, while its selected Candidate and the chosen
+the selected Film: an available audio file establishes material, while its authored realization and the chosen
 Audio contribution establish whether that material reaches the Film. For intended physical
 action, examine the footage itself as well as the viewport animation. Use
 [media preparation](media.md), [Audio Clips](audio-clips.md) and [Film assembly](rendering.md)

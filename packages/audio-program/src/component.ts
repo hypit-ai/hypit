@@ -1,3 +1,4 @@
+import { assertCompositionIdentity } from "@hypit/composition";
 import type { Composition } from "@hypit/composition";
 import { canonicalize } from "@hypit/hypit/protocol";
 import type { Value } from "@hypit/hypit/protocol";
@@ -23,13 +24,12 @@ export const audioProgramComponent = {
   producers: [
     {
       producer: audioProgramProducers.compile,
-      handler: ({ inputs }) => ({
-        kind: "output",
-        value: canonicalize(compileAudioProgram(
-          valueOf(inputs.composition?.value, "Composition") as unknown as Composition,
-          valueOf(inputs.timeline?.value, "Timeline") as unknown as Timeline,
-        )),
-      }),
+      handler: ({ inputs }) => {
+        const composition = valueOf(inputs.composition?.value, "Composition") as unknown as Composition;
+        const timeline = valueOf(inputs.timeline?.value, "Timeline") as unknown as Timeline;
+        assertCompositionIdentity(composition, timeline);
+        return { kind: "output", value: canonicalize(compileAudioProgram(composition.audio, timeline)) };
+      },
     },
     {
       producer: audioProgramProducers.render,

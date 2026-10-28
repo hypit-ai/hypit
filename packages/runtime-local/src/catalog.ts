@@ -2,7 +2,7 @@ import type { PublicationIntent } from "@hypit/hypit/protocol";
 
 export type BuildCatalogDescriptor = {
   readonly sourcePath: string;
-  readonly runPath?: string;
+  readonly invocationSourcePath?: string;
   readonly publication: PublicationIntent;
 };
 

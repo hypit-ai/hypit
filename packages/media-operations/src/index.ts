@@ -10,7 +10,6 @@ export {
 export {
   extractAudioFragment,
   extractFrameFragment,
-  stillVideoFragment,
   createStillVideoFragment,
   preparedMediaFragment,
   transformMediaFragment,

@@ -14,7 +14,7 @@ import { producerStep } from "./plan.js";
 import {
   buildNeedCommand,
   buildProducerCommand,
-  factForBuildResult,
+  factForCommandResult,
   initialBuildView,
 } from "./reducer.js";
 import type { BuildView } from "./view.js";
@@ -111,7 +111,7 @@ export class BuildMachine {
     if (this.#proposal !== undefined) {
       throw new Error(`Build result ${this.#proposal.command} has not been durably applied`);
     }
-    const fact = factForBuildResult(this.#state, result, {
+    const fact = factForCommandResult(this.#state, result, {
       command: (id) => this.#commands.get(id),
       stepStatus: (id) => this.#stepStatuses.get(id),
       need: (id) => this.#needs.get(id),

@@ -8,7 +8,7 @@ Domain-neutral text values and deterministic text programs.
 This package does not own the `.svml` grammar, call models, or know what a prompt
 is. A `TextTemplate` plus explicit `TextBindings` renders one ordinary `Text`
 graph output. Dynamic text enters through normal graph edges, so the output can
-be a Target or be satisfied by any compatible Candidate like every other value.
+be a Target, feed another declaration, or receive an authored realization choice like every other value.
 
 Its optional Markup vocabulary exposes literal and assembled values without
 hiding the graph:

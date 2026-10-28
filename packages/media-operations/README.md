@@ -67,9 +67,6 @@ or generated moving video. The resulting Blob is ordinary time-bearing visual me
 comes entirely from the downstream Source relationships; StillVideo itself owns only the authored
 images, duration and frame clock.
 
-The package also exposes the one-picture Run Fragment `still-video`. It takes `duration`, `clock`,
-`layout` and `source-0`. A Run can select its `video` export as a Candidate through `satisfy`.
-
 Preparation and pure transformation use the same source-preserving boundary:
 
 ```xml

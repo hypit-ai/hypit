@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { audioGraphFromClips, sealAudioTrack } from "@hypit/composition";
-import { compileAudioProgram } from "@hypit/audio-program";
+import { audioProgramGainRoutes, compileAudioProgram } from "@hypit/audio-program";
 import { sealComposition } from "@hypit/composition";
 import { sealTimeline } from "@hypit/timeline";
 import { appendAudioMixInput, assertAudioMixSet, createAudioMixSet, finalizeAudioMix } from "../src/index.js";
@@ -40,11 +40,8 @@ test("Audio Mix closes explicit gain branches into one DAG and Film-level compil
   const mixed = finalizeAudioMix(set, { id: "dialogue" }, timeline);
   assert.deepEqual([...mixed.graph.nodes.reduce((counts, node) => counts.set(node.kind, (counts.get(node.kind) ?? 0) + 1),
     new Map<string, number>())], [["source", 2], ["process", 1], ["mix", 1]]);
-  const program = compileAudioProgram(sealComposition({
-    id: "film", canvas: { width: 1, height: 1, clearColor: "#000000" },
-    visual: { members: [] }, audio: [mixed],
-  }), timeline);
-  assert.deepEqual(program.clips.map((clip) => clip.gain).sort(), [0.25, 1]);
+  const program = compileAudioProgram(sealComposition({ id: "film", visual: { canvas: { width: 1, height: 1, clearColor: "#000000" }, root: { members: [] } }, audio: { contributions: [mixed] } }).audio, timeline);
+  assert.deepEqual(audioProgramGainRoutes(program).map(({ clip, gain }) => clip.gain * gain).sort(), [0.25, 1]);
 });
 
 test("Audio Mix keeps routing identity explicit and rejects duplicate Input ids", () => {
@@ -71,21 +68,16 @@ test("Audio Mix identity is independent of declaration order while retaining rep
   const reversed = mixed([["quiet-copy", 0.25], ["dry", 1]]);
   assert.deepEqual(forward, reversed);
   assert.equal(forward.graph.nodes.find((node) => node.kind === "mix")?.inputs.length, 2);
-  const program = (track: typeof forward) => compileAudioProgram(sealComposition({
-    id: "film", canvas: { width: 1, height: 1, clearColor: "#000000" },
-    visual: { members: [] }, audio: [track],
-  }), timeline);
+  const program = (track: typeof forward) => compileAudioProgram(sealComposition({ id: "film", visual: { canvas: { width: 1, height: 1, clearColor: "#000000" }, root: { members: [] } }, audio: { contributions: [track] } }).audio, timeline);
   assert.deepEqual(program(forward), program(reversed));
 });
 
 test("composed gain remains an ordinary finite signal value", () => {
   const set = appendAudioMixInput(createAudioMixSet(), timeline, { id: "amplified", gain: 100 }, source);
   const mixed = finalizeAudioMix(set, { id: "loud" }, timeline);
-  const program = compileAudioProgram(sealComposition({
-    id: "film", canvas: { width: 1, height: 1, clearColor: "#000000" },
-    visual: { members: [] }, audio: [mixed],
-  }), timeline);
-  assert.equal(program.clips[0]?.gain, 100);
+  const program = compileAudioProgram(sealComposition({ id: "film", visual: { canvas: { width: 1, height: 1, clearColor: "#000000" }, root: { members: [] } }, audio: { contributions: [mixed] } }).audio, timeline);
+  const route = audioProgramGainRoutes(program)[0];
+  assert.equal(route === undefined ? undefined : route.clip.gain * route.gain, 100);
 });
 
 test("Audio Mix preserves structural identity when nested nodes use process-like names", () => {
@@ -96,8 +88,6 @@ test("Audio Mix preserves structural identity when nested nodes use process-like
   const set = appendAudioMixInput(createAudioMixSet(), timeline, { id: "voice", gain: 0.5 }, namedGain);
   const mixed = finalizeAudioMix(set, { id: "dialogue" }, timeline);
   assert.equal(new Set(mixed.graph.nodes.map((node) => node.id)).size, mixed.graph.nodes.length);
-  assert.equal(compileAudioProgram(sealComposition({
-    id: "film", canvas: { width: 1, height: 1, clearColor: "#000000" },
-    visual: { members: [] }, audio: [mixed],
-  }), timeline).clips[0]?.gain, 0.5);
+  const route = audioProgramGainRoutes(compileAudioProgram(sealComposition({ id: "film", visual: { canvas: { width: 1, height: 1, clearColor: "#000000" }, root: { members: [] } }, audio: { contributions: [mixed] } }).audio, timeline))[0];
+  assert.equal(route === undefined ? undefined : route.clip.gain * route.gain, 0.5);
 });

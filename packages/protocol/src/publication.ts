@@ -1,4 +1,3 @@
-import { assertOrderedBuildId } from "./build-id.js";
 import { isTypeRef } from "./identity.js";
 import type { TypeRef } from "./identity.js";
 
@@ -10,13 +9,8 @@ export type PublicationOutputIntent = {
   readonly target: boolean;
   /** Expected public type, independent of where this Build obtains the value. */
   readonly type: TypeRef;
-  readonly source:
-    | { readonly kind: "current-record"; readonly record: string }
-    | {
-        readonly kind: "historical-output";
-        readonly build: string;
-        readonly output: string;
-      };
+  /** Selected Record in this finite Build. */
+  readonly record: string;
 };
 
 /** Compiler-owned publication intent; Result repositories decide how to materialize it. */
@@ -25,10 +19,7 @@ export type PublicationIntent = {
 };
 
 /** Validate publication intent without consulting execution or repository state. */
-export function assertPublicationIntent(
-  publication: unknown,
-  options: { readonly build?: string } = {},
-): asserts publication is PublicationIntent {
+export function assertPublicationIntent(publication: unknown): asserts publication is PublicationIntent {
   if (publication === null || Array.isArray(publication) || typeof publication !== "object"
     || !Array.isArray((publication as Readonly<Record<string, unknown>>).outputs)) {
     throw new Error("Publication intent must contain an outputs array");
@@ -62,26 +53,8 @@ export function assertPublicationIntent(
     }
     names.add(published.name);
     outputs.add(published.output);
-    if (published.source === null || Array.isArray(published.source) || typeof published.source !== "object") {
-      throw new Error(`Logical Output ${published.output} has no publication source`);
+    if (typeof published.record !== "string" || published.record.trim().length === 0) {
+      throw new Error(`Logical Output ${published.output} has no selected Record`);
     }
-    const source = published.source as Readonly<Record<string, unknown>>;
-    if (source.kind === "current-record") {
-      if (typeof source.record !== "string" || source.record.trim().length === 0) {
-        throw new Error(`Logical Output ${published.output} has no current Record source`);
-      }
-      continue;
-    }
-    if (source.kind !== "historical-output") {
-      throw new Error(`Logical Output ${published.output} has an invalid publication source kind`);
-    }
-    if (typeof source.build !== "string" || source.build.trim().length === 0
-      || typeof source.output !== "string" || source.output.trim().length === 0) {
-      throw new Error(`Logical Output ${published.output} has an incomplete historical source`);
-    }
-    if (source.build === options.build) {
-      throw new Error(`Logical Output ${published.output} cannot forward to its own Build`);
-    }
-    assertOrderedBuildId(source.build);
   }
 }

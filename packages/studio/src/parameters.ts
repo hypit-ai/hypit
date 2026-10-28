@@ -34,7 +34,7 @@ export type StudioSourceFile = {
   readonly path: string;
   readonly text: string;
   readonly language: "svml" | "svs" | "svrun";
-  readonly role?: "run" | "author" | "dependency";
+  readonly role?: "invocation" | "author" | "dependency";
   readonly imports?: readonly { readonly alias: string; readonly source: string }[];
 };
 

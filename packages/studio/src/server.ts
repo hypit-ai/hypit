@@ -12,7 +12,8 @@ import type { StudioBuildLibrary } from "./build-library.js";
 import type { ServedFile } from "./compile.js";
 import type { StudioDomain } from "./domain.js";
 import type { StudioCompanionRegistry } from "./studio-registry.js";
-import { loadStudioRun } from "./run.js";
+import { loadStudioPlan } from "./invocation.js";
+import type { StudioInvocationSelection } from "./invocation.js";
 import { allowsStudioMutation } from "./mutation-origin.js";
 import { parameterAuthorValue, parameterOption, serializeParameterValue, serializeAttributeGroup, validateParameterValue } from "./parameter-values.js";
 import { readStudioSession } from "./session.js";
@@ -29,7 +30,7 @@ import { createSourceWatch } from "./source-watch.js";
 
 export type StudioPluginOptions = {
   readonly source: string;
-  readonly runPath: string;
+  readonly selection: StudioInvocationSelection;
   readonly domain: StudioDomain;
   readonly registry: StudioCompanionRegistry;
   readonly workspaceRoot: string;
@@ -117,35 +118,33 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
 
   const publishRevision = async (attempt: number, notify: boolean): Promise<void> => {
     try {
-      // SVML and SVRun form one Studio source of truth. Recompile both for
-      // every revision so a new Author graph is never executed through an old
-      // Run plan.
-      const run = await loadStudioRun({
-        run: options.runPath,
+      // Recompile the Author Source and explicit Invocation for every revision.
+      const plan = await loadStudioPlan({
+        selection: options.selection,
         domain: options.domain,
         registry: options.registry,
-        ...(options.buildLibrary === undefined ? {} : { buildLibrary: options.buildLibrary }),
       });
       if (attempt !== requestedRevision) return;
-      currentSource = run.authorSource;
+      currentSource = plan.authorSource;
       sourceWatch.replace([
-        resolve(options.runPath), resolve(run.authorSource),
-        ...run.source.compiled.closure.units.map(unit => unit.id),
+        ...(plan.invocationSource === undefined ? [] : [resolve(plan.invocationSource)]),
+        resolve(plan.authorSource),
+        ...plan.source.compiled.closure.units.map(unit => unit.id),
       ]);
       allowedSourceFiles = new Set([
-        options.runPath,
-        run.authorSource,
-        ...run.source.compiled.closure.units.map((unit) => unit.id).filter((path) => existsSync(path)),
+        ...(plan.invocationSource === undefined ? [] : [plan.invocationSource]),
+        plan.authorSource,
+        ...plan.source.compiled.closure.units.map((unit) => unit.id).filter((path) => existsSync(path)),
       ].map((path) => resolve(path)));
       const result = await readStudioSession({
         domain: options.domain,
         registry: options.registry,
-        run,
+        plan,
         ...(options.buildLibrary?.transientExecution === undefined
           ? {}
           : { transientExecution: options.buildLibrary.transientExecution }),
         revision: attempt,
-        sourcePath: relative(options.workspaceRoot, run.authorSource),
+        sourcePath: relative(options.workspaceRoot, plan.authorSource),
         workspaceRoot: options.workspaceRoot,
       });
       if (attempt !== requestedRevision) return;
@@ -479,7 +478,10 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
     name: "hypit-studio",
     configureServer(value) {
       server = value;
-      sourceWatch.replace([resolve(options.runPath), resolve(currentSource)]);
+      sourceWatch.replace([
+        ...(options.selection.kind === "preset" ? [resolve(options.selection.source)] : []),
+        resolve(currentSource),
+      ]);
       value.middlewares.use((request, response, next) => {
         const url = new URL(request.url ?? "/", "http://studio.hypit.local");
         if (request.method === "PUT" && url.pathname === "/__studio/source") {
@@ -661,10 +663,11 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
             return;
           }
           const before = url.searchParams.get("before") ?? undefined;
-          const run = url.searchParams.get("run") ?? undefined;
+          const invocationSource = url.searchParams.get("invocationSource") ?? undefined;
           const build = url.searchParams.get("build") ?? undefined;
           void readLibrary({ section, ...(media === undefined ? {} : { media }), ...(before === undefined ? {} : { before }),
-            ...(run === undefined ? {} : { run }), ...(build === undefined ? {} : { build }) }).then(
+            ...(invocationSource === undefined ? {} : { invocationSource }),
+            ...(build === undefined ? {} : { build }) }).then(
             (view) => json(response, 200, view),
             (error) => json(response, 500, { error: error instanceof Error ? error.message : String(error) }),
           );

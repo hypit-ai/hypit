@@ -72,26 +72,17 @@ export type AuthorCheckOutput = {
   };
 };
 
-export type RunCheckOutput = {
+export type InvocationCheckOutput = {
   readonly format: "hypit.cli-check@1";
-  readonly sourceKind: "run";
+  readonly sourceKind: "invocation";
   readonly ok: true;
-  readonly run: string;
+  readonly invocation: string;
   readonly author: string;
   readonly frontend: string;
   readonly targetCount: number;
   readonly targets: readonly string[];
   readonly overrides: number;
-  readonly candidates: number;
-  readonly satisfactions: number;
-  readonly historicalOutputCount?: number;
   readonly steps?: number;
-  readonly unresolvedHistoricalOutputs?: readonly {
-    readonly candidate: string;
-    readonly build: string;
-    readonly output: string;
-  }[];
-  readonly omittedHistoricalOutputs?: number;
 };
 
 export type PlanPreflight = {
@@ -120,7 +111,7 @@ export type PlanEndpoint = {
 export type PlanOutput = {
   readonly format: "hypit.cli-plan@1";
   readonly ok: boolean;
-  readonly run: string;
+  readonly source: string;
   readonly targetCount: number;
   readonly targets: readonly string[];
   readonly steps?: number;
@@ -138,7 +129,7 @@ export type PlanOutput = {
   readonly unresolvedRequestCount?: number;
   readonly unsupportedRequestCount?: number;
   readonly choiceCount: number;
-  readonly choices?: readonly { readonly output: string; readonly candidate: string }[];
+  readonly choices?: readonly { readonly output: string; readonly choice: string }[];
   readonly omittedChoices?: number;
   /** Present only when a Runtime Profile was selected; the Endpoint and price page behind each capability. */
   readonly endpoints?: readonly PlanEndpoint[];
@@ -186,7 +177,7 @@ export type PricingDocument = {
 
 export type PricingOutput = {
   readonly format: "hypit.cli-pricing@1";
-  readonly run: string;
+  readonly source: string;
   readonly requestCount: number;
   readonly noChargeRequestCount: number;
   readonly producerFailureCount: number;
@@ -236,8 +227,8 @@ export type CliPresentation =
       readonly machine: AuthorCheckOutput;
     }
   | {
-      readonly kind: "check-run";
-      readonly machine: RunCheckOutput;
+      readonly kind: "check-invocation";
+      readonly machine: InvocationCheckOutput;
     }
   | {
       readonly kind: "plan";
@@ -386,14 +377,13 @@ function renderAuthorCheck(
   return `${lines.join("\n")}\n`;
 }
 
-function renderRunCheck(
-  view: Extract<CliPresentation, { kind: "check-run" }>,
+function renderInvocationCheck(
+  view: Extract<CliPresentation, { kind: "check-invocation" }>,
   io: CliIo,
   colors: Palette,
   verbose: boolean,
 ): string {
-  const lines = [heading("success", "Run source is valid", io, colors), ""];
-  const reuse = view.machine.historicalOutputCount ?? 0;
+  const lines = [heading("success", "Invocation preset is valid", io, colors), ""];
   const targetSummary = view.machine.targets.length === 0
     ? String(view.machine.targetCount)
     : view.machine.targets.join(", ")
@@ -401,26 +391,15 @@ function renderRunCheck(
         ? ` (+${view.machine.targetCount - view.machine.targets.length})`
         : "");
   lines.push(...facts([
-    ["Run", shortPath(view.machine.run)],
+    ["Invocation", shortPath(view.machine.invocation)],
     ["Targets", targetSummary],
-    ...(reuse === 0 ? [] : [["Reuse", `${reuse} historical Output${reuse === 1 ? "" : "s"}`] as const]),
     ...(verbose ? [
       ["Author", shortPath(view.machine.author)] as const,
       ["Frontend", view.machine.frontend] as const,
       ["Overrides", String(view.machine.overrides)] as const,
-      ["Candidates", String(view.machine.candidates)] as const,
-      ["Satisfactions", String(view.machine.satisfactions)] as const,
       ...(view.machine.steps === undefined ? [] : [["Steps", String(view.machine.steps)] as const]),
     ] : []),
   ], colors));
-  const unresolved = view.machine.unresolvedHistoricalOutputs ?? [];
-  if (verbose && unresolved.length > 0) {
-    lines.push("", colors.strong("Historical reuse"));
-    for (const item of unresolved) lines.push(`  ${item.candidate} ← ${item.build}/${item.output}`);
-    if ((view.machine.omittedHistoricalOutputs ?? 0) > 0) {
-      lines.push(`  ${colors.dim(`${view.machine.omittedHistoricalOutputs} more · use --limit <count>`)}`);
-    }
-  }
   return `${lines.join("\n")}\n`;
 }
 
@@ -513,10 +492,10 @@ function renderPlan(
         ? ` (+${view.machine.targetCount - view.machine.targets.length})`
         : "");
   lines.push(...facts([
-    ["Run", shortPath(view.machine.run)],
+    ["Source", shortPath(view.machine.source)],
     ["Targets", targetSummary],
     ["Requests", String(view.machine.requestCount)],
-    ...(view.machine.choiceCount === 0 ? [] : [["Run choices", String(view.machine.choiceCount)] as const]),
+    ...(view.machine.choiceCount === 0 ? [] : [["Invocation choices", String(view.machine.choiceCount)] as const]),
     ...(view.machine.requestIssueCount === 0 ? [] : [["Request issues", String(view.machine.requestIssueCount)] as const]),
     ...(view.machine.producerFailureCount === 0 ? [] : [["Producer failures", String(view.machine.producerFailureCount)] as const]),
     ...((view.machine.providerRequestCount ?? 0) === 0 ? [] : [["Provider requests", String(view.machine.providerRequestCount)] as const]),
@@ -596,10 +575,10 @@ function renderPlan(
     }
   }
   if (verbose && (view.machine.choices?.length ?? 0) > 0) {
-    lines.push("", colors.strong("Run choices"));
+    lines.push("", colors.strong("Invocation choices"));
     for (const selection of view.machine.choices ?? []) {
       const status = colors.success(glyph(io, "✓", "+"));
-      lines.push(`  ${status} ${colors.accent(selection.output)} ← ${selection.candidate}`);
+      lines.push(`  ${status} ${colors.accent(selection.output)} ← ${selection.choice}`);
     }
     if ((view.machine.omittedChoices ?? 0) > 0) {
       lines.push(`  ${colors.dim(`${view.machine.omittedChoices} more choices · use --limit <count>`)}`);
@@ -648,7 +627,7 @@ function pricingNeedLines(needs: readonly PlanNeed[], colors: Palette, verbose: 
 
 /** Group Provider facts without interpreting their documents or inferring charges from model names. */
 export function createPricingOutput(
-  run: string,
+  source: string,
   entries: readonly PricingEntry[],
   needs: readonly PlanNeed[],
   includeNoCharge = false,
@@ -672,7 +651,7 @@ export function createPricingOutput(
     if (need !== undefined) group.requests.push(need);
   }
   return {
-    format: "hypit.cli-pricing@1", run, requestCount: entries.length,
+    format: "hypit.cli-pricing@1", source, requestCount: entries.length,
     noChargeRequestCount, groups: [...groups.values()],
     producerFailureCount: producerFailures.length, producerFailures,
   };
@@ -687,7 +666,7 @@ function renderPricing(
   const machine = view.machine;
   const lines = [heading("info", "Provider pricing information", io, colors), ""];
   lines.push(...facts([
-    ["Run", shortPath(machine.run)],
+    ["Source", shortPath(machine.source)],
     ["Requests", String(machine.requestCount)],
     ["No Provider charge", `${machine.noChargeRequestCount} requests`],
     ...(machine.producerFailureCount === 0 ? [] : [["Producer failures", String(machine.producerFailureCount)] as const]),
@@ -765,8 +744,8 @@ export function writeCliOutput(
     ? renderDoctor(presentation, io, colors)
     : presentation.kind === "check-author"
       ? renderAuthorCheck(presentation, io, colors, options.verbose)
-      : presentation.kind === "check-run"
-        ? renderRunCheck(presentation, io, colors, options.verbose)
+      : presentation.kind === "check-invocation"
+        ? renderInvocationCheck(presentation, io, colors, options.verbose)
         : presentation.kind === "plan"
           ? renderPlan(presentation, io, colors, options.verbose)
           : presentation.kind === "pricing"
@@ -788,10 +767,10 @@ function commandHelp(topic: string, colors: Palette): readonly string[] | undefi
   const topics: Readonly<Record<string, readonly string[]>> = {
     check: [
       colors.accent(colors.strong("hypit check")),
-      colors.dim("Validate one self-described Author Source or Run Source without executing it."),
+      colors.dim("Validate one self-described Author Source or saved Invocation Source without executing it."),
       "",
       "  hypit check <source> [--project <workspace>] [--asset-root <directory>]",
-      "  --verbose lists exported names/types and historical references.",
+      "  --verbose lists exported names/types and authored values.",
     ],
     doctor: [
       colors.accent(colors.strong("hypit doctor")),
@@ -806,19 +785,22 @@ function commandHelp(topic: string, colors: Palette): readonly string[] | undefi
       colors.accent(colors.strong("hypit plan")),
       colors.dim("Show targets, demanded requests and their readiness without executing them."),
       "",
-      "  hypit plan <run-source> [--runtime <profile>] [--project <workspace>] [--asset-root <directory>]",
+      "  hypit plan <source> [--target <output>]... [--override <output>=primary|record:<record>]...",
+      "    [--runtime <profile>] [--project <workspace>] [--asset-root <directory>]",
       "",
       "With --runtime, plan also preflights only the demanded deployment slice and names the Provider",
       "and price page behind each external request.",
-      "--verbose expands Run choices and graph step counts. --limit bounds that detail,",
+      "An Author Source requires explicit --target options. A saved Invocation Source already contains them.",
+      "--verbose expands Invocation choices and graph step counts. --limit bounds that detail,",
       "while all demanded requests and diagnostics remain visible in both text and JSON.",
       "Planning never starts external work.",
     ],
     pricing: [
       colors.accent(colors.strong("hypit pricing")),
-      colors.dim("Read current pricing material from the selected Providers for the requests in one Run."),
+      colors.dim("Read current pricing material from the selected Providers for one Invocation."),
       "",
-      "  hypit pricing <run-source> [--runtime <profile>] [--project <workspace>] [--asset-root <directory>]",
+      "  hypit pricing <source> [--target <output>]... [--override <output>=primary|record:<record>]...",
+      "    [--runtime <profile>] [--project <workspace>] [--asset-root <directory>]",
       "",
       "Pricing is an explicit read-only network operation. It starts no Build and submits no generation.",
       "Matching requests share their parameters and Provider rates, with source URLs.",
@@ -831,7 +813,8 @@ function commandHelp(topic: string, colors: Palette): readonly string[] | undefi
       colors.accent(colors.strong("hypit build")),
       colors.dim("Submit one durable Build and ensure its selected Runtime Worker is available."),
       "",
-      "  hypit build <run-source> [--title <text>] [--runtime <profile>] [--project <workspace>] [--asset-root <directory>] [--follow]",
+      "  hypit build <source> [--target <output>]... [--override <output>=primary|record:<record>]...",
+      "    [--title <text>] [--runtime <profile>] [--project <workspace>] [--asset-root <directory>] [--follow]",
       "",
       "  --title <text>            give this Result a human-facing title",
       "  --follow                   observe the Build; the Worker still owns execution",
@@ -939,10 +922,10 @@ export function writeCliHelp(io: CliIo, topic?: string): void {
     colors.accent(colors.strong("Hypit")),
     "",
     colors.strong("Authoring"),
-    row("check <source>", "verify one self-described Author or Run source"),
-    row("plan <run-source>", "show selected work without executing"),
-    row("pricing <run-source>", "read selected Providers' current pricing material"),
-    row("build <run-source>", "submit a Build; --follow observes it"),
+    row("check <source>", "verify one Author or saved Invocation source"),
+    row("plan <source>", "show one explicit Invocation without executing"),
+    row("pricing <source>", "read selected Providers' current pricing material"),
+    row("build <source>", "submit one explicit Invocation; --follow observes it"),
     "",
     colors.strong("Results"),
     row("builds", "list Results newest first"),

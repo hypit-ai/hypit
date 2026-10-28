@@ -32,8 +32,7 @@ connected to the model. The owning package documents that order.
 
 Fit includes assumptions as well as available knobs. A two-view conversation and a combined
 split-screen opening may need different prompt structures. Keep the useful Kit for passages it
-serves, and use authored Text or a project template for a different relationship. A Prompt Kit is
-also distinct from a Run Fragment that supplies substitute media; [Runs](runs.md) owns that use.
+serves, and use authored Text or a project template for a different relationship.
 
 ## Declare the reusable text program
 
@@ -150,7 +149,7 @@ values. `text:Set` replaces one Text binding through a graph edge; `text:Append`
 after that binding. Their order is authored and visible.
 
 The rendered `{prompt}` is an ordinary Text Output. Connect it to a model's prompt port, or target it
-in a small Run and inspect or export that Result before using the Kit elsewhere. This checks the
+in a small Invocation and inspect or export that Result before using the Kit elsewhere. This checks the
 assembled words without calling the image or video model. The model declaration still owns aspect ratio,
 duration, resolution and reference Resource children; prose describing what a reference supplies
 does not create the reference edge.

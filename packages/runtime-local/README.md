@@ -108,7 +108,8 @@ non-secret Operation receipts with the failed Result, including any remote statu
 It accepts results from calls already in progress before finalizing, without starting further work
 or polling unfinished remote jobs.
 It then releases local reservations. Submission timeouts with no receipt remain recorded failures;
-a new Run and Build can request the remaining work. No original-Build reconciliation is required.
+a new Invocation and Build can request the remaining work after accepted Outputs have become authored
+project resources. No original-Build reconciliation is required.
 An explicit cancellation stops new work and makes one best-effort remote cancellation call when
 supported; its acknowledgement is recorded separately from the local cancelled outcome.
 
@@ -122,10 +123,9 @@ account-wide limits, including tasks submitted elsewhere or still running after 
 The Worker yields to sockets and timers between graph reads. Resource waiters are awakened as capacity
 becomes available; known Operations are polled from their own lightweight records. Graph hydration is
 serialized, while network actions and local work remain concurrent under their declared limits.
-SQLite decodes each Operation record into the exact current lifecycle union branch. Required phase
-facts must be present, and facts owned by another phase are refused rather than carried forward as
-hidden state. This is the single `@1` representation; the reader does not guess an older shape or
-maintain a compatibility branch.
+SQLite decodes each Operation record into its exact lifecycle union branch. Required phase facts must
+be present, and facts owned by another phase are refused rather than carried forward as hidden state.
+The `@1` representation is the complete persisted lifecycle model.
 
 HypiHub can be the explicitly selected gateway for users without their own service keys. A bound
 Provider's authentication, quota or transport error never changes that selection. Separate accounts use separate pools even when they implement the same model.

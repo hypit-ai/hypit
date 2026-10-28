@@ -1,7 +1,7 @@
 # Reading and writing Source syntax
 
 Read this for the language around a production: imports, references, literal values, Recipes and
-Run choices. [Script syntax](script-syntax.md) owns prose, Roles, Dual Text, authored Cues, display
+Invocation choices. [Script syntax](script-syntax.md) owns prose, Roles, Dual Text, authored Cues, display
 attributes and markers. [Timing](timing.md) explains how components consume those identities.
 [System relationships](system.md) explains authored values and computed Outputs.
 
@@ -65,8 +65,9 @@ Visual and Audio Tracks separately publish the picture and sound contributions s
 
 Inspect `hypit vocabulary` for the actual declaration's exports and use the published path it reports.
 Public bindings can be authored Records or realizable Logical Outputs. Script,
-Recipes and literal Text already exist as authored data; they are not Run Targets. The computed
-`prompt` from `copy:Render` is a Logical Output that can be targeted or satisfied by a Candidate.
+Recipes and literal Text already exist as authored data; they are not Invocation Targets. The computed
+`prompt` from `copy:Render` is a Logical Output that an Invocation can target or another declaration
+can consume.
 Declaration order does not establish dependencies. Markup projects the complete Source into
 package-owned Author Declarations; their declared references determine compilation and graph edges
 determine execution. A later declaration can therefore be referenced without rearranging the Source.
@@ -139,29 +140,29 @@ than ordinary Recipes. This is the same file-extension convention with a differe
 This small Kit just joins two Text inputs. It does not generate a video. Fixed blocks and variable
 axes can be added when they express reusable direction; `@hypit/text` owns that template grammar.
 
-## Runs demand Outputs
+## Invocations demand Outputs
 
 For the Text example saved as `main.svml`, beside `direction.svs`:
 
 ```svml
-<?svml using="@hypit/markup/run@1"?>
+<?svml using="@hypit/markup/invocation@1"?>
 <svrun version="1">
   <author source="./main.svml"/>
   <target output="prompt"/>
 </svrun>
 ```
 
-A video Run usually targets the renderer's public video Output. Several Targets are valid when
+A video Invocation usually targets the renderer's public video Output. Several Targets are valid when
 several deliverables are wanted. Targets are public Output names; requests outside the demanded graph
 are not executed.
 
-A Run may add an Invocation-local override for an existing authored Record, but it cannot introduce
+An Invocation may add a transient override for an existing authored Record, but it cannot introduce
 a file, value or computation. Accept durable material by declaring the project resource through the
 package that owns its meaning and selecting that Record in the Author Source. A raw MP4 file is a
 media asset, not prepared media or alignment evidence; preparation and evidence retain their nominal
-types and explicit relationships. [Runs](runs.md) explains Targets and transient overrides, while
+types and explicit relationships. [Invocations](runs.md) explains Targets and transient overrides, while
 [Authoring](authoring.md) owns durable material choices.
 
-`hypit check <run>` checks Source and graph legality. `hypit plan <run> --runtime <profile>` exposes
+`hypit check <source>` checks Source and graph legality. `hypit plan <author-source> --target <output> --runtime <profile>` exposes
 the selected graph and external requests without submitting them. A legal document can still describe a
 poor image, a misplaced Caption or an unhelpful cut; those remain directing questions.

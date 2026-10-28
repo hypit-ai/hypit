@@ -1,14 +1,14 @@
-/** Project-owned review notes. Times are seconds in the reviewed Run. */
+/** Project-owned review notes. Times are seconds in the reviewed authoring context. */
 export type FeedbackComment = {
   readonly id: string;
-  readonly run: string;
+  readonly context: string;
   readonly at: number;
   readonly text: string;
   readonly resolved?: boolean;
 };
 
 export type FeedbackDocument = { readonly comments: readonly FeedbackComment[] };
-export type FeedbackView = FeedbackDocument & { readonly file: string; readonly run: string };
+export type FeedbackView = FeedbackDocument & { readonly file: string; readonly context: string };
 export type FeedbackMutation =
   | { readonly type: "add"; readonly comment: FeedbackComment }
   | { readonly type: "replace"; readonly before: FeedbackComment; readonly comment: FeedbackComment }
@@ -27,8 +27,8 @@ function time(value: unknown): value is number {
 }
 
 export function readFeedbackComment(value: unknown): FeedbackComment {
-  if (!record(value) || !nonempty(value.id) || !nonempty(value.run) || !nonempty(value.text) || !time(value.at)) {
-    throw new Error("Each comment needs an id, run, non-empty text and a non-negative time in seconds.");
+  if (!record(value) || !nonempty(value.id) || !nonempty(value.context) || !nonempty(value.text) || !time(value.at)) {
+    throw new Error("Each comment needs an id, context, non-empty text and a non-negative time in seconds.");
   }
   if (value.resolved !== undefined && typeof value.resolved !== "boolean") throw new Error("Comment resolved must be true or false.");
   // Preserve any project-added fields when Studio edits this document.

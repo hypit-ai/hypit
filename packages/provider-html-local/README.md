@@ -150,6 +150,15 @@ values remain bounded. `maxRenderedBytes` is instead a hard result-size limit.
 When the final occurrence of one Electron source leaves the selected frame, its
 cursor, input and retained decoded samples are released together.
 
+Execution diagnostics divide one Electron request into setup, Programme
+evaluation, source decode/draw, resource readiness, paint and texture transfer,
+GPU blit, WebCodecs queue/output, encoded-chunk IPC, container mux and output
+verification. They are request-local observations used to find the dominant
+implementation cost. Per-frame and per-batch accumulated work can overlap in
+the pipeline and is not added into a second wall-clock total. These diagnostics
+do not become Progress, Result metadata, Programme fields or persisted machine
+capabilities.
+
 ## Lifecycle and failure
 
 Each request owns its temporary directory, localhost server, browser process or

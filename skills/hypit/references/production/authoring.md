@@ -1,6 +1,6 @@
 # Authoring a production
 
-Read this when turning the current Treatment into Author Sources, Recipes, Runs, project components,
+Read this when turning the current Treatment into Author Sources, Recipes, Invocations, project components,
 and Builds, or when revising an existing production.
 
 [Script and semantic time](../creation/script-and-time.md) explains target wording, Segments, Roles,
@@ -62,15 +62,15 @@ Use the logical Module import, tag, attributes, children, ports, and output path
 selected installation reports. Query again when the selected package or Distribution has changed, or
 when an error shows that the assumed declaration is no longer the installed one; an already
 established declaration does not need to be rediscovered for every edit. After writing one coherent
-Source or Run change, check that actual entry:
+Source or saved Invocation change, check that actual entry:
 
 ```bash
 hypit check authors/main.svml
 ```
 
 `vocabulary` establishes what the selected package declares. `check` resolves the real Source closure
-and verifies its imports, references, types, outputs, and Run choices. `plan` resolves the current
-Run's required capabilities; `hypit doctor` actively diagnoses the selected Profile and account
+and verifies its imports, references, types, outputs, and Invocation choices. `plan` resolves the current
+Invocation's required capabilities; `hypit doctor` actively diagnoses the selected Profile and account
 reachability. Those are execution questions rather than additional authoring checks.
 
 When observation has already produced useful authored data—such as a per-frame region sequence for
@@ -87,23 +87,23 @@ Observe it, author the resulting data, and reuse the produced media in the next 
   public Outputs. It imports the vocabulary it uses and may import other Author or Recipe Sources.
 - A **Recipe Source** (`.svs`) owns reusable authored values such as a visual Style or request
   configuration. It remains explicit input to the Source that uses it.
-- A **Run Source** (`.svrun`) optionally saves one Author entry, the public Outputs this execution
+- An **Invocation Source** (`.svrun`) optionally saves one Author entry, the public Outputs this execution
   requires, and any transient override for this invocation.
 - A project **Author Package** under `packages/` owns a visual or semantic role that deserves its own
   vocabulary and implementation.
 
-A project may have several of each. Different Runs against the same Author Source are useful when
-their demanded Outputs or transient choices genuinely differ. Repeating one Run creates another
+A project may have several of each. Different Invocations against the same Author Source are useful when
+their demanded Outputs or transient choices genuinely differ. Repeating one Invocation creates another
 Build; it does not create another production.
 
-Use [Source syntax](source-syntax.md) for language forms and [Runs](runs.md) for execution choices.
+Use [Source syntax](source-syntax.md) for language forms and [Invocations](runs.md) for execution choices.
 `hypit vocabulary <package>` or a focused tag or visual query supplies the installed declaration's
 attributes and outputs. Package-local documentation supplies its exact behavior and API. Source
 imports select author vocabulary; Runtime configuration selects external facilities.
 
-## Use Runs for execution choices
+## Use Invocations for execution choices
 
-A Target marks where this Run asks the graph to become real. For ordinary commissioned production,
+A Target marks where this Invocation asks the graph to become real. For ordinary commissioned production,
 the demanded Output is usually the finished video, and the Build produces its required media
 dependencies through the same graph. A public image, prepared video, audio item, or other intermediate Output
 is also a normal Target when the user requested that deliverable or the work genuinely needs it
@@ -111,10 +111,10 @@ independently now.
 
 Every public Author Output that completes while satisfying the demanded Target is stored in that
 Build Result and can be inspected or exported later. Project files and durable realization choices
-belong in the Author Source. A Run can temporarily select the AuthorGraph primary or another existing
+belong in the Author Source. An Invocation can temporarily select the AuthorGraph primary or another existing
 authored Record through `<override>`, without changing the production.
 
-[Runs](runs.md#generate-material-while-composing) shows how to target prepared material while
+[Invocations](runs.md#generate-material-while-composing) shows how to target prepared material while
 component work continues, then reuse that material for focused rendering and delivery.
 
 ## Reuse produced work explicitly
@@ -153,13 +153,13 @@ requests may be intended, while a new performance request needs a separate produ
 ## Revise the fact at its owner
 
 Before editing an existing production, establish the current facts that can affect the change. Read the
-relevant parts of its Brief and Treatment and the affected Source, Recipe or Run; inspect Results and
+relevant parts of its Brief and Treatment and the affected Source, Recipe or Invocation Source; inspect Results and
 Runtime activity when reuse or active execution matters. Read the relevant diff and preserve unrelated work.
 
 - Revise Treatment when the creative design changed.
 - Revise Script when words, Cue membership, Selections, or Moments changed.
 - Revise Source or Recipe when composition, parameters, or authored timing relations changed.
-- Revise the Run when the demanded deliverable or a transient execution override changed.
+- Revise the saved Invocation only when its demanded deliverable or transient execution override changed.
 - Revise a project package when its fixed or reusable behavior needs to change; an unexposed local
   design detail can be edited there without creating a new parameter.
 - Revise a media request when the desired shot or the user's requested media has changed.
@@ -171,7 +171,9 @@ change that intentionally requests new paid media should first make the addition
 
 ## Use each view for what it can establish
 
-`hypit check` establishes Source and graph legality. `hypit plan <run>` shows the selected graph and
-external requests without submitting them. Studio opens that same Run for visual authoring.
-Only `hypit build <run>` submits work and creates a fresh Build Result. None of those facts alone says
-that the video is creatively successful; review the visible work as described in `review.md`.
+`hypit check` establishes Source and graph legality. `hypit plan <source> --target <output>` shows the
+selected graph and external requests without submitting them; a saved Invocation Source can be passed
+instead when that execution intent needs a durable name. Studio opens the same Author Source and
+Invocation for visual authoring. Only `hypit build` submits work and creates a fresh Build Result. None
+of those facts alone says that the video is creatively successful; review the visible work as described
+in `review.md`.

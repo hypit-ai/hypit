@@ -1,12 +1,13 @@
 # Banana reference variant
 
 An independent ranking variant with a banana presenter. Read `reference-banana.svml`, its SVS
-recipes, and `build.svrun` together; the Run starts with no generated media satisfied.
+recipes, and `build.svrun` together; the saved Invocation targets the authored generation route.
 
-From this directory, install the locked dependencies and check the Run:
+From this directory, install the selected 0.4 dependencies, review and commit the generated lockfile,
+then check the Invocation:
 
 ```sh
-npm ci
+npm install
 npx hypit check build.svrun
 ```
 

@@ -35,8 +35,8 @@ export function createFeedbackStore(workspaceRoot: string) {
       }
       if (mutation.type === "delete") comments.splice(index, 1);
       else {
-        if (mutation.comment.id !== mutation.before.id || mutation.comment.run !== mutation.before.run) {
-          throw new Error("Editing a comment preserves its id and Run.");
+        if (mutation.comment.id !== mutation.before.id || mutation.comment.context !== mutation.before.context) {
+          throw new Error("Editing a comment preserves its id and authoring context.");
         }
         comments[index] = mutation.comment;
       }

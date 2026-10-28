@@ -33,7 +33,6 @@ import { narrativeManifest } from "@hypit/narrative";
 import { timelineManifest } from "@hypit/timeline";
 import { temporalManifest } from "@hypit/temporal";
 import type { CanonicalValue, ResourceId, ModuleManifest, Value, TypeRef } from "@hypit/protocol";
-import { createValueCandidate } from "@hypit/run";
 import {
   createSeedanceAssembledGenerationFragment,
   seedanceEndpoints,
@@ -49,16 +48,9 @@ function buildState(
   graph: Parameters<typeof planBuild>[1],
   targets: readonly string[],
 ) {
-  const planned = planBuild(program, graph, {
-    format: "hypit.run-graph@1",
-    records: [],
-    candidates: [],
-    operations: [],
-    satisfactions: [],
-    targets,
-  });
+  const planned = planBuild(program, graph, targets, []);
   return materializeBuild(defineBuild({
-    program: link(program.closure, [...program.records, ...planned.initialRecords]),
+    program,
     plan: planned.plan,
   }), []);
 }
@@ -199,11 +191,16 @@ test("the common B-roll topology is one graph with one shared holding image", ()
 
 test("an explicitly selected holding-image Candidate prunes only that branch", () => {
   const { program, graph } = fixture();
-  const candidate = createValueCandidate({
+  const approved = {
     id: "approved-holding",
     type: blobTypes.blob,
     value: image("approved-holding"),
-  });
+  };
+  const candidate = {
+    id: "approved-holding",
+    type: blobTypes.blob,
+    root: { kind: "record" as const, id: approved.id },
+  };
   const realized = sealAuthorGraph({
     outputs: graph.outputs.map((item) => item.id === "holding.image"
       ? { ...item, primary: candidate.id }
@@ -211,7 +208,7 @@ test("an explicitly selected holding-image Candidate prunes only that branch", (
     candidates: [...graph.candidates, candidate],
     operations: graph.operations,
   });
-  const state = buildState(program, realized, ["montage.video"]);
+  const state = buildState(link(program.closure, [...program.records, approved]), realized, ["montage.video"]);
   const producers = state.plan.steps.map((step) => step.producer.name);
   assert.equal(producers.filter((name) => name === "request-gpt-image-2").length, 2);
   assert.equal(producers.filter((name) => name === "request-image-transform").length, 2);

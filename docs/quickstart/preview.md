@@ -11,12 +11,13 @@ Switch to **Comments** for a larger picture and timestamped feedback. Both views
 
 ```bash
 cd /path/to/my-video
-hypit studio --run build.svrun
+hypit studio --source main.svml --target final.video
 ```
 
-Open the address printed by the command. Studio uses the Author Source and material selected in
-that Run. To keep generated material while editing, select completed Outputs with
-[`build-record` and `satisfy`](./run.md#reusing-results).
+Open the address printed by the command. A recurring Invocation may instead be opened with
+`hypit studio --invocation build.svrun`. Both forms create the same in-memory Invocation. To keep
+generated material while editing, export the accepted Output into the project and make the durable
+choice in the Author Source as described in [Reusing produced work](./run.md#reusing-produced-work).
 
 The **globe menu**, to the left of **Studio / Comments**, selects the interface language.
 English and Simplified Chinese are included. The first visit follows your browser language;
@@ -25,7 +26,8 @@ It changes the interface, while your Script, video captions and comments keep th
 
 | Argument | Use |
 | --- | --- |
-| `--run <file.svrun>` | Select the Run to open. |
+| `--source <file.svml>` | Select the Author Source; repeat `--target <output>` for its Invocation. |
+| `--invocation <file.svrun>` | Open an optional saved Invocation instead of direct Source options. |
 | `--runtime <profile.json>` | Select a Runtime Profile; otherwise use the project's saved Runtime selection. |
 | `--project <directory>` | Set the project boundary for Source access and edits. |
 | `--port <number>` | Request a browser-server port; the default is `5179`. |
@@ -33,8 +35,8 @@ It changes the interface, while your Script, video captions and comments keep th
 The selected target must lead to one Film and its Timeline. Prepared media can establish Timeline
 extent, and optional semantic projection can add Script anchors when the composition uses them. An
 animation can use a Timeline with an explicit end and no performance media. Both support visual
-components and property editing. The material needed to display the composition must already be available through
-the Run. Studio can perform media preparation supported by the selected Runtime; submit generation
+components and property editing. Durable material needed to display the composition belongs in the
+Author Source. Studio can perform media preparation supported by the selected Runtime; submit generation
 and encoded renders through `hypit build`.
 
 ## Review together in Comments
@@ -52,12 +54,12 @@ Opening either view does not encode a video or submit an export Build.
 
 The library at the left has three views:
 
-- **Source** lists the selected Run and its Author and Recipe files. Select a file to inspect or edit it.
+- **Source** lists the Author closure and an optional saved Invocation Source. Select a file to inspect or edit it.
 - **Tasks** shows completed project Builds and, with a selected Runtime, active execution information.
 - **Artifacts** lets you inspect public files retained in Build Results.
 
-Choosing an Artifact opens it for inspection. To use it in the composition, update the Run's
-Candidate selection. This keeps the material choice in the editable project.
+Choosing an Artifact opens it for inspection. To use it in the composition, export it into the
+project, declare it in the Author Source and record the durable realization choice there.
 
 ## Picture, timeline and Inspector
 
@@ -77,14 +79,14 @@ controls are separate: a field or gesture needs a clear source value to change.
 
 ## Make an edit
 
-Source edits change the selected `.svml`, `.svs` or `.svrun` file. Supported Inspector changes and
-timeline gestures write to the corresponding author value, then recompile the same Run.
+Source edits change the selected `.svml`, `.svs` or optional `.svrun` file. Supported Inspector changes and
+timeline gestures write to the corresponding author value, then recompile the same Invocation.
 Moving a shared Selection or Moment changes its position in the Script, so all consumers follow
 that change. Editing a shared Frame or Recipe can likewise affect several appearances.
 
 Check the save status after an edit. If recompilation fails, Studio reports the error and restores
 the previous files. List and record controls save complete, valid values when editing ends and show
-a completion hint for incomplete values. The Run and loaded Source
+a completion hint for incomplete values. The optional Invocation Source and loaded Author Sources
 files are watched; restart Studio after changing installed packages, component code or Runtime
 selection so those changes are loaded too.
 

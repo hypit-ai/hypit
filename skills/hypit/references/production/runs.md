@@ -1,15 +1,15 @@
-# Runs and Targets
+# Invocations and Targets
 
 Read this when choosing the Outputs for one execution or saving a repeatable execution preset.
 [Authoring](authoring.md) explains the production Source and durable material choices;
 [Builds](builds.md) explains planning, submitting and inspecting the resulting Build.
 
-A Run is an optional saved Invocation. It names one Author entry, one or more Target Outputs, and
+An `.svrun` document is an optional saved Invocation. It names one Author entry, one or more Target Outputs, and
 any choice that should apply only to this execution. It does not own project material or the
 production graph.
 
 ```svrun
-<?svml using="@hypit/markup/run@1"?>
+<?svml using="@hypit/markup/invocation@1"?>
 <svrun version="1">
   <author source="./production.svml"/>
   <target output="final.video"/>
@@ -21,7 +21,7 @@ Target. An image, prepared media value, transcript, alignment or another interme
 a useful Target when the current work needs that result independently.
 
 Runtime Profiles, Provider options, credentials, project files and output destinations remain in
-their own owners. Saving another Run against the same Source creates another execution preset, not
+their own owners. Saving another Invocation against the same Source creates another execution preset, not
 another production.
 
 ## Keep project material in the Author Source
@@ -38,7 +38,7 @@ owns its meaning, then connect it to the generated role it realizes:
 ```
 
 The selection is part of the authored production. A title, Caption, Timeline or rendering change
-continues to use that video without restating it in every Run. To use another performance, change
+continues to use that video without restating it in every Invocation. To use another performance, change
 the project asset or the authored selection and check the Source again.
 
 Project files can come from a generation Result, a camera, a download or another tool. Once placed
@@ -48,7 +48,7 @@ package afterward.
 
 ## Override a choice for one execution
 
-A saved Run may temporarily ask for the AuthorGraph primary implementation:
+A saved Invocation may temporarily ask for the AuthorGraph primary implementation:
 
 ```svrun
 <override output="opening.video" primary="true"/>
@@ -59,7 +59,7 @@ accepted one. The new Build does not change the durable selection by itself. Ins
 place an accepted file in the project, and update the Author Source when the new take should become
 the production's material.
 
-A Run may also temporarily choose an existing authored Record:
+An Invocation may also temporarily choose an existing authored Record:
 
 ```svrun
 <override output="opening.video" record="alternate-opening"/>
@@ -75,7 +75,7 @@ are ready and the commission covers their cost, target the material Output while
 work continues:
 
 ```svrun
-<?svml using="@hypit/markup/run@1"?>
+<?svml using="@hypit/markup/invocation@1"?>
 <svrun version="1">
   <author source="./production.svml"/>
   <target output="opening.video"/>
@@ -85,11 +85,11 @@ work continues:
 Independent requests can run while downstream composition is authored. Read `hypit plan` before
 submitting paid work. The resulting public Output remains in its Build Result for inspection and
 export. Accepting it into the production means making it an ordinary project resource and editing
-the Author Source; a later Run only chooses what to execute.
+the Author Source; a later Invocation only chooses what to execute.
 
 The small [production Source](examples/production.svml), [Recipe](examples/look.svs),
-[material Run](examples/material.svrun), [production Run](examples/production.svrun), and focused
-[detail Run](examples/detail.svrun) illustrate target-only presets over one authored production.
+[material Invocation](examples/material.svrun), [production Invocation](examples/production.svrun), and focused
+[detail Invocation](examples/detail.svrun) illustrate target-only presets over one authored production.
 
 ## Choose the useful Target
 

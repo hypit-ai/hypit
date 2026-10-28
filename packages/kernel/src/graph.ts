@@ -11,7 +11,7 @@ import type {
   TypedRecord,
 } from "@hypit/protocol";
 
-import { compareCodeUnits, normalizeValue, sameType, typeKey } from "@hypit/protocol";
+import { compareCodeUnits, sameType, typeKey } from "@hypit/protocol";
 import { invariant } from "./error.js";
 import { resolveCapability, resolveProducer, verifyRecordStructure } from "./link.js";
 
@@ -51,11 +51,7 @@ function normalizeRef(ref: GraphValueRef): GraphValueRef {
 
 function normalizeRoot(root: CandidateRoot): CandidateRoot {
   if (root.kind === "record") return { kind: "record", id: root.id };
-  if (root.kind === "operation") {
-    return { kind: "operation", result: { kind: "operation-result", operation: root.result.operation } };
-  }
-  if (root.kind === "supply") return { kind: "supply", record: root.record };
-  return { kind: "value", record: root.record, value: normalizeValue(root.value) };
+  return { kind: "operation-result", operation: root.operation };
 }
 
 function normalizeOutput(output: LogicalOutput): LogicalOutput {
@@ -220,26 +216,13 @@ function verifyCandidateValue(program: LinkedProgram, graph: AuthorGraph, candid
     );
     return;
   }
-  if (candidate.root.kind === "operation") {
-    const supplied = operationResultType(program, resolveOperation(graph, candidate.root.result.operation));
-    invariant(
-      sameType(supplied, candidate.type),
-      "CANDIDATE_RESULT_TYPE_MISMATCH",
-      `${candidate.id} declares ${typeKey(candidate.type)} but returns ${typeKey(supplied)}`,
-      candidate.id,
-    );
-    return;
-  }
-  if (candidate.root.kind === "supply") {
-    invariant(candidate.root.record.length > 0, "EMPTY_RECORD_ID", `${candidate.id} supply Record id is empty`, candidate.id);
-    return;
-  }
-  const provisional: TypedRecord = {
-    id: candidate.root.record,
-    type: candidate.type,
-    value: candidate.root.value,
-  };
-  verifyRecordStructure(program.closure, provisional);
+  const supplied = operationResultType(program, resolveOperation(graph, candidate.root.operation));
+  invariant(
+    sameType(supplied, candidate.type),
+    "CANDIDATE_RESULT_TYPE_MISMATCH",
+    `${candidate.id} declares ${typeKey(candidate.type)} but returns ${typeKey(supplied)}`,
+    candidate.id,
+  );
 }
 
 function verifySatisfaction(

@@ -28,16 +28,9 @@ export const capabilities = {
 } satisfies Record<string, CapabilityRef>;
 
 function initialState(program: Parameters<typeof planBuild>[0], graph: AuthorGraph, targets: readonly string[]): BuildView {
-  const planned = planBuild(program, graph, {
-    format: "hypit.run-graph@1",
-    records: [],
-    candidates: [],
-    operations: [],
-    satisfactions: [],
-    targets,
-  });
+  const planned = planBuild(program, graph, targets, []);
   return materializeBuild(defineBuild({
-    program: link(program.closure, [...program.records, ...planned.initialRecords]),
+    program,
     plan: planned.plan,
   }), []);
 }
@@ -114,13 +107,13 @@ export function greetingGraph(includeSide = false): AuthorGraph {
       }] : []),
     ],
     candidates: [
-      { id: "make-prompt", type: types.prompt, root: { kind: "operation", result: { kind: "operation-result", operation: "make-prompt" } } },
-      { id: "request-text", type: types.generated, root: { kind: "operation", result: { kind: "operation-result", operation: "request-text" } } },
-      { id: "placeholder-text", type: types.generated, root: { kind: "operation", result: { kind: "operation-result", operation: "placeholder-text" } } },
-      { id: "assemble", type: types.document, root: { kind: "operation", result: { kind: "operation-result", operation: "assemble" } } },
+      { id: "make-prompt", type: types.prompt, root: { kind: "operation-result", operation: "make-prompt" } },
+      { id: "request-text", type: types.generated, root: { kind: "operation-result", operation: "request-text" } },
+      { id: "placeholder-text", type: types.generated, root: { kind: "operation-result", operation: "placeholder-text" } },
+      { id: "assemble", type: types.document, root: { kind: "operation-result", operation: "assemble" } },
       ...(includeSide ? [
-        { id: "side-placeholder", type: types.generated, root: { kind: "operation" as const, result: { kind: "operation-result" as const, operation: "side-placeholder" } } },
-        { id: "side-assemble", type: types.document, root: { kind: "operation" as const, result: { kind: "operation-result" as const, operation: "side-assemble" } } },
+        { id: "side-placeholder", type: types.generated, root: { kind: "operation-result" as const, operation: "side-placeholder" } },
+        { id: "side-assemble", type: types.document, root: { kind: "operation-result" as const, operation: "side-assemble" } },
       ] : []),
     ],
     operations: [
@@ -216,15 +209,12 @@ export function createParallelGreetingBuild(generationCount = 2) {
       {
         id: "make-prompt",
         type: types.prompt,
-        root: { kind: "operation", result: { kind: "operation-result", operation: "make-prompt" } },
+        root: { kind: "operation-result", operation: "make-prompt" },
       },
       ...generations.map((suffix) => ({
         id: `generate-${suffix}`,
         type: types.generated,
-        root: {
-          kind: "operation" as const,
-          result: { kind: "operation-result" as const, operation: `generate-${suffix}` },
-        },
+        root: { kind: "operation-result" as const, operation: `generate-${suffix}` },
       })),
     ],
     operations: [

@@ -6,7 +6,7 @@
   "hypit": { "project": true },
   "dependencies": {
     "@fontsource-variable/league-spartan": "5.3.0",
-    "@hypit/hypit": "^0.3.1",
+    "@hypit/hypit": "^0.4.0",
     "@hypit/interview-emoji-reveal": "^0.1.0",
     "@interview/flash": "file:packages/flash"
   }

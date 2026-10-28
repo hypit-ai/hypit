@@ -89,11 +89,11 @@ async function exportValueDocument(
     const paths = new Set<string>();
     const bindings = [];
     for (const binding of resolvedOutput.value.document.resources) {
-      const file = await repository.describeFile(resolvedOutput.build, binding.file);
+      const file = binding.file;
       const identity = fileReferenceIdentity(resolvedOutput.build, file);
       let local = copied.get(identity);
       if (local === undefined) {
-        let path = file.kind === "build-file" ? file.path : `files/file-${copied.size + 1}`;
+        let path = file.path;
         const name = basename(path);
         let index = copied.size + 1;
         while (paths.has(path) || path === "value.json") path = `files/import-${index++}/${name}`;
@@ -132,7 +132,7 @@ export async function exportBuildResultOutput(
   const target = resolve(destination);
   if (resolvedOutput.value.kind === "value") {
     await exportValueDocument(repository, { ...resolvedOutput, value: resolvedOutput.value }, target);
-  } else if ((resolvedOutput.value.kind === "build-file" || resolvedOutput.value.kind === "external-file")) {
+  } else if (resolvedOutput.value.kind === "build-file") {
     const resource = resolvedOutput.value;
     await exportFile(target, async (temporary) => {
       await writeStream(
@@ -152,7 +152,7 @@ export async function exportBuildResultOutput(
     type: publishedOutput.type,
     representation: resolvedOutput.value.kind === "inline"
       ? "inline"
-      : (resolvedOutput.value.kind === "build-file" || resolvedOutput.value.kind === "external-file") ? "file" : "value-document",
+      : resolvedOutput.value.kind === "build-file" ? "file" : "value-document",
     path: target,
   };
 }

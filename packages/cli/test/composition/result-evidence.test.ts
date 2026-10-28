@@ -7,10 +7,8 @@ import { commandHint } from "../../src/command-hint.js";
 import test from "node:test";
 
 import {
-  fileReferenceIdentity,
   FileBuildResult,
   FileBuildResultRepository,
-  ownedFileReference,
 } from "@hypit/result/node";
 import type { CapabilityRef, TypedRecord } from "@hypit/protocol";
 
@@ -18,9 +16,6 @@ import type { CliDistribution } from "../../src/distribution.js";
 import { cliDistribution } from "../distribution-scenario.js";
 import { createCatalogDescriptor } from "../../src/build-planning.js";
 import { runCli } from "../../src/main.js";
-import { loadRunFile, resolveBuildResultValue } from "../../src/run-file.js";
-import type { BuildResultValueRepository } from "../../src/run-file.js";
-
 import {
   completedRecords,
   fixture,

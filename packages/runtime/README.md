@@ -38,7 +38,8 @@ A Build's `stop` records `user-cancelled` or `execution-failed` and an optional 
 cause is retained. Runtime stops launching work, saves the attempt's outcome, completed Outputs and
 available Operation receipts, then releases its local reservations. Pending remote work can remain
 pending in the Result: ending local execution does not assert that a cloud task was cancelled.
-A later attempt is a new Build with explicit Run Candidates for reusable Outputs or retrieved files.
+A later attempt is a new Build. Reusable material is first accepted into the Author Source as an
+ordinary project resource; Result history is not a Runtime input.
 
 Capacity claims describe occupancy; action rate budgets describe admissions over time. An asynchronous
 Operation holds its declared occupancy while Runtime manages the remote task. Its submit, poll and

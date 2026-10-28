@@ -7,8 +7,8 @@ import { physicalPackageName, resolveNodePackageSource } from "@hypit/loader/nod
 import { logicalPackageAddressKey } from "@hypit/loader";
 import type { LogicalPackageAddress, LoadedPackage } from "@hypit/loader";
 import { compareCodeUnits, moduleKey, modulePackageAbi } from "@hypit/protocol";
-import { runFragmentFacetAbi, runFrontendsFromFacets } from "@hypit/run";
-import type { RunFrontend } from "@hypit/run";
+import { invocationFrontendsFromFacets } from "@hypit/invocation";
+import type { InvocationFrontend } from "@hypit/invocation";
 import { sourceFrontendPackageAbi } from "@hypit/source";
 import { resolveSelfDescribedTextSource } from "@hypit/source/text";
 
@@ -26,7 +26,7 @@ function selectedPackage(request: string): string {
 /**
  * Discover the package requirements reachable from a self-described Source closure.
  * A Distribution supplies only its bootstrap Frontends; every further language,
- * Module and Run Fragment is resolved from package-owned logical offers.
+ * Module is resolved from package-owned logical offers.
  */
 export async function discoverSourcePackages(
   sourcePath: string,
@@ -36,7 +36,7 @@ export async function discoverSourcePackages(
     readonly distributionPackageRoot?: string;
     readonly packages?: readonly LoadedPackage[];
     readonly bootstrapAuthorFrontends?: readonly AuthorFrontend[];
-    readonly bootstrapRunFrontends?: readonly RunFrontend[];
+    readonly bootstrapInvocationFrontends?: readonly InvocationFrontend[];
   } = {},
 ): Promise<{ readonly selected: readonly string[]; readonly logical: readonly LogicalPackageAddress[] }> {
   const canonicalSource = await realpath(resolve(sourcePath));
@@ -50,25 +50,20 @@ export async function discoverSourcePackages(
     ...packages.flatMap((item) => authorFrontendsFromFacets(item.contribution.facets ?? [])
       .map((frontend) => ({ frontend, physical: item.specifier as string | undefined }))),
   ];
-  const runFrontends = [
-    ...(options.bootstrapRunFrontends ?? []).map((frontend) => ({ frontend, physical: undefined as string | undefined })),
-    ...packages.flatMap((item) => runFrontendsFromFacets(item.contribution.facets ?? [])
+  const invocationFrontends = [
+    ...(options.bootstrapInvocationFrontends ?? []).map((frontend) => ({ frontend, physical: undefined as string | undefined })),
+    ...packages.flatMap((item) => invocationFrontendsFromFacets(item.contribution.facets ?? [])
       .map((frontend) => ({ frontend, physical: item.specifier as string | undefined }))),
   ];
   const selected = new Set<string>();
   const logical = new Map<string, LogicalPackageAddress>();
   const visited = new Set<string>();
   const moduleOwners = new Map<string, string>();
-  const fragmentOwners = new Map<string, string>();
   for (const item of packages) {
     for (const module of item.contribution.modules ?? []) {
       for (const request of [moduleKey(module.manifest), ...(module.specifiers ?? [])]) {
         moduleOwners.set(request, item.specifier);
       }
-    }
-    for (const facet of item.contribution.facets ?? []) {
-      if (facet.abi !== runFragmentFacetAbi) continue;
-      if (facet.address !== undefined) fragmentOwners.set(facet.address, item.specifier);
     }
   }
 
@@ -105,9 +100,9 @@ export async function discoverSourcePackages(
     const name = relative(canonicalRoot, canonical);
     const resolved = resolveSelfDescribedTextSource({ id: canonical, name, text });
     const authors = authorFrontends.filter((item) => item.frontend.id === resolved.frontend);
-    const runs = runFrontends.filter((item) => item.frontend.id === resolved.frontend);
-    if (authors.length + runs.length > 1) throw new Error(`Source Frontend ${resolved.frontend} is ambiguously provided`);
-    if (authors.length + runs.length === 0) {
+    const invocations = invocationFrontends.filter((item) => item.frontend.id === resolved.frontend);
+    if (authors.length + invocations.length > 1) throw new Error(`Source Frontend ${resolved.frontend} is ambiguously provided`);
+    if (authors.length + invocations.length === 0) {
       requireLogical({ abi: sourceFrontendPackageAbi, name: resolved.frontend }, undefined);
       return;
     }
@@ -126,14 +121,11 @@ export async function discoverSourcePackages(
       }
       return;
     }
-    const owner = runs[0]!;
+    const owner = invocations[0]!;
     if (owner.physical !== undefined) {
       requireLogical({ abi: sourceFrontendPackageAbi, name: owner.frontend.id }, owner.physical);
     }
     const discovery = await owner.frontend.discover(resolved.unit);
-    for (const item of discovery.imports) {
-      requireLogical({ abi: runFragmentFacetAbi, name: item.from }, fragmentOwners.get(item.from));
-    }
     const imported = resolveImportedSource(canonical, canonicalRoot, discovery.author.source);
     await discover(imported.source, imported.root);
   };

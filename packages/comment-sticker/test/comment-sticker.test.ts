@@ -92,8 +92,10 @@ test("explicit metadata is rendered and the terminal compiler accepts the Track 
     ? meta.document.paragraphs[0].inlines[0].text : undefined : undefined, "Featured comment");
   const document = compileHtmlProgram({
     id: "comment-film",
-    canvas: { width: 1080, height: 1920, clearColor: "#000000" },
-    visual: { members: [rendered].map(track => ({ kind: "track" as const, id: track.id, track })) }, audio: [],
+    visual: {
+      canvas: { width: 1080, height: 1920, clearColor: "#000000" },
+      root: { members: [rendered].map(track => ({ kind: "track" as const, id: track.id, track })) },
+    },
   }, space);
   assert.match(document.html, /data-hypit-element-id="meta"/u);
   assert.match(document.html, /data-hypit-element-id="body"/u);

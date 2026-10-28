@@ -139,14 +139,14 @@ function schedule(state: BuildView): BuildView {
 export function defineBuild(
   input: Omit<BuildDefinition, "format">,
 ): BuildDefinition {
-  verifyBuildPlan(input.program, [], input.plan);
+  verifyBuildPlan(input.program, input.plan);
   return { format: "hypit.build-definition@1", ...input };
 }
 
 /** Create the first disposable execution view for one immutable Definition. */
 export function initialBuildView(definition: BuildDefinition): BuildView {
   invariant(definition.format === "hypit.build-definition@1", "UNSUPPORTED_BUILD_DEFINITION", definition.format);
-  verifyBuildPlan(definition.program, [], definition.plan);
+  verifyBuildPlan(definition.program, definition.plan);
   return schedule({
     program: definition.program,
     plan: definition.plan,
@@ -170,7 +170,7 @@ export type BuildFactLookup = {
  * Validate one result and derive its durable Fact without advancing scheduling.
  * BuildMachine supplies its private indexes.
  */
-export function factForBuildResult(
+export function factForCommandResult(
   state: Pick<BuildView, "program" | "plan" | "steps" | "needs" | "records" | "outstanding">,
   event: CommandResult,
   indexed?: BuildFactLookup,

@@ -1,4 +1,5 @@
 import type { CliOutputOptions } from "./output.js";
+import type { InvocationRequestOverride } from "@hypit/invocation";
 
 /**
  * Root command names owned by the domain-neutral long-compilation CLI.
@@ -46,14 +47,19 @@ type SourceOptions = ProjectOption & {
   readonly limit: number;
 };
 
+type InvocationOptions = {
+  readonly targets: readonly string[];
+  readonly overrides: readonly InvocationRequestOverride[];
+};
+
 export type AuthorCommand =
   | (CommandBase & SourceOptions & { readonly command: "check" })
-  | (CommandBase & SourceOptions & RuntimeOption & { readonly command: "plan" })
-  | (CommandBase & Omit<SourceOptions, "limit"> & RuntimeOption & {
+  | (CommandBase & SourceOptions & InvocationOptions & RuntimeOption & { readonly command: "plan" })
+  | (CommandBase & Omit<SourceOptions, "limit"> & InvocationOptions & RuntimeOption & {
       readonly command: "pricing";
       readonly limit?: number;
     })
-  | (CommandBase & SourceOptions & RuntimeOption & {
+  | (CommandBase & SourceOptions & InvocationOptions & RuntimeOption & {
       readonly command: "build";
       readonly follow: boolean;
       readonly maxWaitMs?: number;

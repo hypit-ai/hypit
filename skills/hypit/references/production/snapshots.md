@@ -7,7 +7,7 @@ supplies evidence about the delivered file. Choose the view that establishes the
 
 ## Capture the work already open in Studio
 
-Open the actual Run using [Studio](studio.md). After its current preview is ready:
+Open the actual Invocation using [Studio](studio.md). After its current preview is ready:
 
 ```bash
 hypit snapshot --studio http://localhost:5191 \

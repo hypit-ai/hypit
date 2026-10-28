@@ -1,4 +1,4 @@
-<?svml using="@hypit/markup/run@1"?>
+<?svml using="@hypit/markup/invocation@1"?>
 
 <svrun version="1">
   <author source="./swap-host.svml"/>

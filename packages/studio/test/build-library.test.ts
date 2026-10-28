@@ -2,13 +2,12 @@ import assert from "node:assert/strict";
 import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { pathToFileURL } from "node:url";
 import test from "node:test";
 
 import { buildResultDirectory, FileBuildResultRepository } from "@hypit/result/node";
 import type { BuildResultRepository } from "@hypit/result/node";
 import type { CliBuildView as BuildView } from "@hypit/cli";
-import { buildIdCreatedAt, isBlobRef } from "@hypit/protocol";
+import { buildIdCreatedAt } from "@hypit/protocol";
 import { createVideoDistribution } from "@hypit/video";
 
 import { openStudioBuildLibrary, readStudioLibrary } from "../src/build-library.js";
@@ -23,7 +22,7 @@ function activeBuild(id: string, root: string): BuildView {
     outcome: "complete",
 
     sourcePath: `${root}/author/main.svml`,
-    runPath: `${root}/runs/build.svrun`,
+    invocationSourcePath: `${root}/runs/build.svrun`,
     targets: ["final.video"],
     acceptedRecords: 1,
     outstandingCommands: 0,
@@ -38,7 +37,7 @@ test("Studio library joins this environment's Builds with project Build Result f
     format: "hypit.build-result@1" as const,
     id: entry.id,
     sourceId: entry.sourcePath!,
-    ...(entry.runPath === undefined ? {} : { runId: entry.runPath }),
+    ...(entry.invocationSourcePath === undefined ? {} : { invocationSourceId: entry.invocationSourcePath }),
     targets: ["final.video"],
     finishedAt: entry.createdAt,
     outcome: "complete" as const,
@@ -76,7 +75,6 @@ test("Studio library joins this environment's Builds with project Build Result f
       const value = manifest?.outputs[output as "final.video"];
       return value === undefined ? undefined : { build, output, type: value.type, value: value.value };
     },
-    async describeFile(_build, file) { return file; },
     async openFile() { return undefined; },
   };
   const input = {
@@ -96,13 +94,13 @@ test("Studio library joins this environment's Builds with project Build Result f
     id: task.id,
     status: task.status,
     source: task.source,
-    run: task.run,
+    invocationSource: task.invocationSource,
     targets: task.targets,
   })), [{
     id: "bld_20260902T130000000Z_0000000001",
     status: "saving-result",
     source: "author/main.svml",
-    run: "runs/build.svrun",
+    invocationSource: "runs/build.svrun",
     targets: ["final.video"],
   }]);
   assert.deepEqual(view.artifacts, []);
@@ -137,7 +135,6 @@ test("Studio library joins this environment's Builds with project Build Result f
     mediaType: "video/mp4",
   }]);
 });
-
 test("Studio opens project Build Results without a Runtime or ResourceStore", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-studio-results-"));
   const build = "bld_20260902T130000002Z_0000000001";
@@ -150,7 +147,7 @@ test("Studio opens project Build Results without a Runtime or ResourceStore", as
       format: "hypit.build-result@1",
       title: "First cut",
       sourceId: join(root, "main.svml"),
-      runId: join(root, "build.svrun"),
+      invocationSourceId: join(root, "build.svrun"),
       targets: ["final.video"],
       finishedAt: 200,
       outcome: "complete",
@@ -185,9 +182,6 @@ test("Studio opens project Build Results without a Runtime or ResourceStore", as
     const opened: number[] = [];
     for await (const chunk of stream!) opened.push(...chunk);
     assert.deepEqual(Uint8Array.from(opened), bytes.slice(2, 8));
-    const record = await buildLibrary.resolveHistoricalOutput(build, "final.video");
-    assert.equal(record === undefined ? false : isBlobRef(record.value), true);
-    assert.equal(record?.attachments?.length, 1);
     await buildLibrary.close();
   } finally {
     await rm(root, { recursive: true, force: true });
@@ -196,13 +190,13 @@ test("Studio opens project Build Results without a Runtime or ResourceStore", as
 
 const mediaTypeRef = { module: { name: "example", version: "1" }, name: "Media" };
 
-test("media listing includes active files, follows file references and leaves value-document Outputs unopened", async () => {
+test("media listing includes active files and leaves value-document Outputs unopened", async () => {
   const owner = "bld_20260902T130000010Z_0000000001";
   const active = "bld_20260902T130000011Z_0000000001";
   const image = { type: mediaTypeRef, value: { kind: "build-file" as const, path: "files/portrait.png", mediaType: "image/png", size: 100 } };
   const manifests: import("@hypit/result").BuildResultManifest[] = [{
     format: "hypit.build-result@1", id: owner, sourceId: "/project/main.svml",
-    runId: "/project/earlier.svrun", targets: ["portrait.image"], outcome: "failed", finishedAt: 300,
+    invocationSourceId: "/project/earlier.svrun", targets: ["portrait.image"], outcome: "failed", finishedAt: 300,
     failure: "Rendering failed", highlightedOutputs: ["portrait.image"],
     outputs: {
       "portrait.image": image,
@@ -212,11 +206,9 @@ test("media listing includes active files, follows file references and leaves va
     },
   }, {
     format: "hypit.build-result@1", id: active, sourceId: "/project/main.svml",
-    runId: "/project/current.svrun", targets: ["final.video"],
+    invocationSourceId: "/project/current.svrun", targets: ["final.video"],
     outputs: {
-      "reused.image": { type: mediaTypeRef, value: { kind: "build-output", build: owner, output: "portrait.image" } },
       "voice.audio": { type: mediaTypeRef, value: { kind: "build-file", path: "files/voice.wav", mediaType: "audio/wav", size: 80 } },
-      "reused.take": { type: mediaTypeRef, value: { kind: "build-output", build: owner, output: "semantic.take" } },
     },
   }];
   const described: string[] = [];
@@ -230,21 +222,17 @@ test("media listing includes active files, follows file references and leaves va
     async browse() { return { results: [manifests[0] as import("@hypit/result").FinishedBuildResultManifest] }; },
     async describeOutput(_build, output) {
       described.push(output);
-      if (output === "reused.take") return { representation: "value-document", type: mediaTypeRef };
-      assert.equal(output, "reused.image");
-      return { representation: "file", type: mediaTypeRef, mediaType: "image/png", size: 100 };
+      throw new Error(`Listing should not describe ${output}`);
     },
     async resolve(_build, output) {
       resolved.push(output);
-      assert.equal(output, "reused.image", "No value document or non-media file should be opened");
-      return { ...image, build: owner, output: "portrait.image" };
+      throw new Error(`Listing should not resolve ${output}`);
     },
-    async describeFile(_build, file) { return file; },
     async openFile() { throw new Error("Listing never reads media bytes"); },
   };
   const view: BuildView = {
     ...activeBuild(active, "/project"), sourcePath: "/project/main.svml",
-    runPath: "/project/current.svrun", activity: "running", requests: { total: 4, completed: 2 },
+    invocationSourcePath: "/project/current.svrun", activity: "running", requests: { total: 4, completed: 2 },
   };
   const input = { workspaceRoot: "/project", results, runtime: { async activity() { return { builds: [view], capacity: [] }; } } };
   const tasks = await readStudioLibrary({ ...input, section: "tasks" });
@@ -260,44 +248,16 @@ test("media listing includes active files, follows file references and leaves va
   const media = await readStudioLibrary({ ...input, section: "artifacts" });
   assert.equal(media.artifacts.length, 2);
   const portrait = media.artifacts.find((item) => item.mediaType === "image/png")!;
-  assert.equal(portrait.ownerBuild, owner);
   assert.equal(portrait.highlighted, true);
-  assert.deepEqual(portrait.origins.map((origin) => [origin.build, origin.output]), [[owner, "portrait.image"], [active, "reused.image"]]);
-  assert.deepEqual(resolved, ["reused.image"]);
+  assert.deepEqual(portrait.origins.map((origin) => [origin.build, origin.output]), [[owner, "portrait.image"]]);
+  assert.deepEqual(resolved, []);
   assert(media.artifacts.some((item) => item.build === active && item.output === "voice.audio"));
 
-  const scoped = await readStudioLibrary({ ...input, section: "artifacts", run: "current.svrun" });
-  assert.equal(scoped.artifacts.length, 2);
+  const scoped = await readStudioLibrary({ ...input, section: "artifacts", invocationSource: "current.svrun" });
+  assert.equal(scoped.artifacts.length, 1);
   assert(scoped.artifacts.every((item) => item.origins.every((origin) => origin.build === active)));
   const selected = await readStudioLibrary({ ...input, section: "artifacts", build: owner });
   assert.deepEqual(selected.artifacts.map((item) => item.output), ["portrait.image"]);
   const outside = await readStudioLibrary({ ...input, section: "artifacts", workspaceRoot: "/different-project", build: owner });
   assert.deepEqual(outside.artifacts, []);
-});
-
-test("Studio groups repeated external file references and retains both Build uses", async () => {
-  const root = await mkdtemp(join(tmpdir(), "hypit-studio-external-"));
-  try {
-    const imagePath = join(root, "portrait.png");
-    await writeFile(imagePath, new Uint8Array([1, 2]));
-    const results = new FileBuildResultRepository(join(root, "results"));
-    const type = { module: { name: "example", version: "1" }, name: "Image" };
-    for (const id of ["bld_20260902T130000000Z_0000000001", "bld_20260902T130000001Z_0000000001"]) {
-      const writer = await results.create({ id, sourceId: join(root, "main.svml"),
-        publication: { outputs: [{ name: "portrait", output: "portrait", target: true,
-          type,
-          source: { kind: "current-record", record: "image" } }] },
-        resourceReferences: { res_image: { kind: "external-file", uri: pathToFileURL(imagePath).href,
-          size: 2, mediaType: "image/png" } } });
-      await writer.sync({ records: [{ id: "image", type,
-        value: { kind: "blob", resource: "res_image", size: 2, mediaType: "image/png" } }],
-      resources: { async open() { throw new Error("No bytes should be copied"); } } });
-      await writer.finish({ outcome: "complete" });
-    }
-    const view = await readStudioLibrary({ workspaceRoot: root, results, section: "artifacts" });
-    assert.equal(view.artifacts.length, 1);
-    assert.equal(view.artifacts[0]!.origins.length, 2);
-    assert.equal(view.artifacts[0]!.ownerBuild, undefined);
-    assert.equal(view.artifacts[0]!.filePath, pathToFileURL(imagePath).href);
-  } finally { await rm(root, { recursive: true, force: true }); }
 });

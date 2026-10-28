@@ -3,7 +3,8 @@
 An independent reference-synchronized effect variant. Its SVML owns the composition and explicitly
 reused performances; `build.svrun` is only a saved final-video target.
 
-Run `npm ci` here to install the locked Hypit, `@hypit/ranking` and font dependencies.
+Run `npm install` once here to install the selected Hypit 0.4, `@hypit/ranking` and font dependencies;
+review and commit the generated lockfile, then use `npm ci` for repeatable installs.
 
 From this directory, download the two existing performances before using `build.svrun`:
 

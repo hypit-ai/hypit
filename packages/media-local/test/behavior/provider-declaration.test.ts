@@ -6,7 +6,7 @@ import { localMediaToolchainProgram } from "../../src/program.js";
 import { supportsLocalAudioProgram, supportsLocalSpeechEvidenceAudio } from "../../src/support.js";
 import { endpointOffers } from "@hypit/endpoint";
 import { canonicalize, capabilityKey } from "@hypit/protocol";
-import { audioProgramCapabilities, sealAudioProgram } from "@hypit/audio-program";
+import { audioProgramCapabilities, audioProgramGraphFromClips, audioProgramSourceClips, sealAudioProgram } from "@hypit/audio-program";
 import { preservePitch } from "@hypit/audio-stretch";
 import { mediaDeliveryCapabilities } from "@hypit/media-delivery";
 import { mediaOperationsCapabilities } from "@hypit/media-operations";
@@ -49,7 +49,7 @@ test("local media accepts complete AudioProgram maps while speech evidence keeps
   const program = sealAudioProgram({
     frameRate: { numerator: 30, denominator: 1 }, frameCount: 30,
     sampleRate: 48_000, sampleFrames: 48_000,
-    clips: [{
+    graph: audioProgramGraphFromClips([{
       id: "curve",
       source: {
         source: { kind: "blob", resource: fixtureResource("media-local:support"), size: 1, mediaType: "audio/wav" },
@@ -66,12 +66,23 @@ test("local media accepts complete AudioProgram maps while speech evidence keeps
       targetStartSample: 0, targetEndSampleExclusive: 48_000,
       mixStartSample: 0, mixEndSampleExclusive: 48_000,
       gain: 1, fadeInSamples: 0, fadeOutSamples: 0,
-    }],
+    }]),
   });
   assert.deepEqual(supportsLocalAudioProgram(canonicalize({ program })), { status: "supported" });
+  const process = "local-unsupported-process";
+  const unsupportedProgram = sealAudioProgram({ ...program, graph: {
+    nodes: [...program.graph.nodes, { kind: "process", id: process,
+      inputs: { signal: program.graph.output },
+      program: { format: "example.audio-effect@1", payload: {}, artifacts: [] } }],
+    output: { node: process, port: "signal" },
+  } });
+  assert.deepEqual(supportsLocalAudioProgram(canonicalize({ program: unsupportedProgram })), {
+    status: "unsupported",
+    reason: "Audio Process is unsupported: Audio programme does not support Process format example.audio-effect@1.",
+  });
   assert.deepEqual(supportsLocalSpeechEvidenceAudio(canonicalize({
-    source: program.clips[0]!.source,
-    preparation: program.clips[0]!.sampling,
+    source: audioProgramSourceClips(program)[0]!.source,
+    preparation: audioProgramSourceClips(program)[0]!.sampling,
   })), {
     status: "unsupported",
     reason: "Speech-evidence audio requires positive affine, non-looping Prepared Media relations.",
@@ -85,7 +96,7 @@ test("pitch-preserving reconstruction is explicit and the local Provider reports
   const curve = sealAudioProgram({
     frameRate: { numerator: 30, denominator: 1 }, frameCount: 30,
     sampleRate: 48_000, sampleFrames: 48_000,
-    clips: [{
+    graph: audioProgramGraphFromClips([{
       id: "curve-preserve-pitch",
       source: {
         source: { kind: "blob", resource: fixtureResource("media-local:pitch-curve"), size: 1, mediaType: "audio/wav" },
@@ -103,7 +114,7 @@ test("pitch-preserving reconstruction is explicit and the local Provider reports
       targetStartSample: 0, targetEndSampleExclusive: 48_000,
       mixStartSample: 0, mixEndSampleExclusive: 48_000,
       gain: 1, fadeInSamples: 0, fadeOutSamples: 0,
-    }],
+    }]),
   });
   const support = supportsLocalAudioProgram(canonicalize({ program: curve }));
   assert.equal(support.status, "unsupported");

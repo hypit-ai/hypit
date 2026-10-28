@@ -4,7 +4,6 @@ import {
 } from "@hypit/kernel";
 import type {
   Candidate,
-  Satisfaction,
   CandidateRoot,
   AuthorGraph,
   GraphValueRef,
@@ -77,18 +76,6 @@ export type FragmentContribution = {
   readonly outputs: readonly LogicalOutput[];
   readonly candidates: readonly Candidate[];
   readonly operations: readonly OperationNode[];
-  /** Explicit Run-Graph satisfactions; Author contributions leave this absent. */
-  readonly satisfactions?: readonly Satisfaction[];
-};
-
-export type RunFragmentExport = {
-  readonly name: string;
-  readonly candidate: string;
-  readonly type: TypeRef;
-};
-
-export type RunFragmentContribution = FragmentContribution & {
-  readonly exports: readonly RunFragmentExport[];
 };
 
 export class FragmentError extends Error {
@@ -352,7 +339,7 @@ export function elaborateGraphFragment(
     return {
       name: item.name,
       type: item.type,
-      root: { kind: "operation" as const, result: root },
+      root,
     };
   });
   const content = {
@@ -385,8 +372,8 @@ function reachableOperationIds(
     }
   };
   for (const item of selected) {
-    assert(item.root.kind === "operation", "INVALID_FRAGMENT_EXPORT_ROOT", item.name);
-    visit(item.root.result.operation);
+    assert(item.root.kind === "operation-result", "INVALID_FRAGMENT_EXPORT_ROOT", item.name);
+    visit(item.root.operation);
   }
   return reachable;
 }
@@ -394,10 +381,9 @@ function reachableOperationIds(
 function bindExports(
   instance: ElaboratedFragment,
   bindings: Readonly<Record<string, string>>,
-  requireAll: boolean,
 ): FragmentContribution {
   const available = exportMap(instance);
-  if (requireAll) exactKeys(bindings, instance.exports.map((item) => item.name), instance.instance);
+  exactKeys(bindings, instance.exports.map((item) => item.name), instance.instance);
   assert(Object.keys(bindings).length > 0, "EMPTY_FRAGMENT_BINDING", `${instance.instance} binds no exports`);
   const selected = Object.keys(bindings).map((name) => {
     const item = available.get(name);
@@ -413,61 +399,16 @@ function bindExports(
       root: item.root,
     };
   });
-  const outputs: LogicalOutput[] = requireAll
-    ? selected.map((item, index) => ({
-        id: bindings[item.name] as string,
-        type: item.type,
-        primary: candidates[index]!.id,
-      }))
-    : [];
+  const outputs: LogicalOutput[] = selected.map((item, index) => ({
+    id: bindings[item.name] as string,
+    type: item.type,
+    primary: candidates[index]!.id,
+  }));
   const reachable = reachableOperationIds(instance, selected);
   return {
     outputs,
     candidates,
     operations: instance.operations.filter((operation) => reachable.has(operation.id)),
-    ...(requireAll
-      ? {}
-      : {
-          satisfactions: selected.map((item, index) => ({
-            output: bindings[item.name] as string,
-            candidate: candidates[index]!.id,
-          })),
-        }),
-  };
-}
-
-/**
- * Instantiate a Run-Graph Fragment without deciding which Author Logical Outputs it will satisfy.
- * Multiple exports share the instance's internal Operations; separate calls always create separate
- * instances because identity comes from the already elaborated `instance.instance` path.
- */
-export function exportRunFragment(
-  instance: ElaboratedFragment,
-  names: readonly string[] = instance.exports.map((item) => item.name),
-): RunFragmentContribution {
-  assert(names.length > 0, "EMPTY_FRAGMENT_BINDING", `${instance.instance} exports no Run values`);
-  assert(new Set(names).size === names.length, "DUPLICATE_FRAGMENT_EXPORT", `${instance.instance} repeats a Run export`);
-  const available = exportMap(instance);
-  const selected = names.map((name) => {
-    const item = available.get(name);
-    assert(item !== undefined, "UNKNOWN_FRAGMENT_EXPORT", `${instance.instance} has no export ${name}`);
-    return item;
-  });
-  const candidates: Candidate[] = selected.map((item) => ({
-    id: hygienicId("candidate", instance.instance, item.name),
-    type: item.type,
-    root: item.root,
-  }));
-  const reachable = reachableOperationIds(instance, selected);
-  return {
-    outputs: [],
-    candidates,
-    operations: instance.operations.filter((operation) => reachable.has(operation.id)),
-    exports: selected.map((item, index) => ({
-      name: item.name,
-      candidate: candidates[index]!.id,
-      type: item.type,
-    })),
   };
 }
 
@@ -476,7 +417,7 @@ export function bindAuthorFragment(
   instance: ElaboratedFragment,
   outputs: Readonly<Record<string, string>>,
 ): FragmentContribution {
-  return bindExports(instance, outputs, true);
+  return bindExports(instance, outputs);
 }
 
 /** Merge already elaborated contributions; final Graph validation remains Core's authority. */

@@ -176,16 +176,9 @@ function graph(...contributions: readonly FragmentContribution[]): AuthorGraph {
 }
 
 function buildState(linked: LinkedProgram, authorGraph: AuthorGraph, targets: readonly string[]) {
-  const planned = planBuild(linked, authorGraph, {
-    format: "hypit.run-graph@1",
-    records: [],
-    candidates: [],
-    operations: [],
-    satisfactions: [],
-    targets,
-  });
+  const planned = planBuild(linked, authorGraph, targets, []);
   return materializeBuild(defineBuild({
-    program: link(linked.closure, [...linked.records, ...planned.initialRecords]),
+    program: linked,
     plan: planned.plan,
   }), []);
 }

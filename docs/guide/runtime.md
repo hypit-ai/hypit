@@ -3,8 +3,9 @@ title: Runtime
 description: Select execution services, run independent Builds and keep their Results available.
 ---
 
-The Source describes the work. The Run chooses its Targets and Candidates. The Runtime executes
-those choices using the selected services; the project keeps the resulting Outputs.
+The Source describes the work and its durable realization choices. An Invocation chooses Targets and
+optional transient overrides; a `.svrun` file can save that Invocation. The Runtime executes it using
+the selected services, and the project keeps accepted material as ordinary authored resources.
 
 | Owner | Responsibility |
 | --- | --- |
@@ -104,7 +105,7 @@ execution and choose the route before starting preparation.
 installed package declarations; it may load other declared Endpoints when no explicit binding selects
 a route. Unused services need not be running or logged in. `build` provisions nothing: it requires
 its dependencies ready, starts an available Worker if necessary, and submits one Build.
-[Runs and Builds](../quickstart/run.md) explains planning, prices, authorization and explicit reuse.
+[Invocations and Builds](../quickstart/run.md) explains planning, prices, authorization and explicit reuse.
 
 ## Execute independently of the terminal
 
@@ -118,7 +119,7 @@ The Worker owns execution. `--follow` and `status --watch` observe it; closing t
 a watch timeout does not cancel the Build. To stop a specific attempt, use `hypit cancel <build-id>`.
 Remote cancellation is best effort, and completed Outputs remain available.
 
-A failed attempt stays failed. A new Run can select its useful Outputs for a new Build. If execution
+A failed attempt stays failed. Export useful Outputs into the project, update the Author Source, and use a new Invocation for the next Build. If execution
 has finished but Result storage needs attention, `status` names `hypit result finish <build-id>`:
 that completes the pending save, without executing generation again.
 

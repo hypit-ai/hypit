@@ -13,6 +13,8 @@ import type { SourceFrameUpdate } from "./opaque-capture.js";
 import { assert } from "./process.js";
 
 export async function gpuCapturePages({ width, height }: { width: number; height: number }) {
+  const markerWidth = 32;
+  const markerHeight = 2;
   const shell = `/__hypit_capture_${randomUUID()}.html`;
   const encoder = `/__hypit_encoder_${randomUUID()}.html`;
   const decoder = `/__hypit_decoder_${randomUUID()}.mjs`;
@@ -22,23 +24,23 @@ export async function gpuCapturePages({ width, height }: { width: number; height
   const html = (matte: string) => `<!doctype html><meta charset="utf-8"><style>
 html,body{margin:0;background:${matte};overflow:hidden}
 iframe{position:absolute;left:0;top:0;width:${width}px;height:${height}px;border:0}
-canvas{position:absolute;left:0;top:${height}px;width:256px;height:8px}
-</style><iframe src="/index.html"></iframe><canvas width="256" height="8"></canvas><script>
+canvas{position:absolute;left:0;top:${height}px;width:${markerWidth}px;height:${markerHeight}px}
+</style><iframe src="/index.html"></iframe><canvas width="${markerWidth}" height="${markerHeight}"></canvas><script>
 const ctx=document.querySelector('canvas').getContext('2d',{alpha:false});
 window.__hypitCaptureCommit=token=>{
   for(let bit=0;bit<32;bit++){
     const white=((token>>>bit)&1)!==0;
-    ctx.fillStyle=white?'#fff':'#000';ctx.fillRect(bit*8,0,8,4);
-    ctx.fillStyle=white?'#000':'#fff';ctx.fillRect(bit*8,4,8,4);
+    ctx.fillStyle=white?'#fff':'#000';ctx.fillRect(bit,0,1,1);
+    ctx.fillStyle=white?'#000':'#fff';ctx.fillRect(bit,1,1,1);
   }
 };
 </script>`;
-  return { shell, encoder, decoder, video, html, bundle, videoModule };
+  return { shell, encoder, decoder, video, html, bundle, videoModule, markerWidth, markerHeight };
 }
 
-type PendingFrame = { token: number; ordinal: number; resolve(): void; reject(error: unknown): void };
+type PendingFrame = { token: number; ordinal: number; waitStartedAt: number; resolve(): void; reject(error: unknown): void };
 type Scene = { window: BrowserWindow; pending?: PendingFrame | undefined;
-  latest?: OffscreenSharedTexture | undefined; busy: boolean };
+  latest?: { readonly texture: OffscreenSharedTexture; readonly receivedAt: number } | undefined; busy: boolean };
 
 /** One request owns its windows, texture references and ordered H.264 stream. */
 export async function createGpuCapture(input: CaptureInput, origin: string,
@@ -53,12 +55,15 @@ export async function createGpuCapture(input: CaptureInput, origin: string,
   assert(frameCount < 2 ** 32, "Shared-texture export exceeds the frame identifier range");
   assert(sharedTexture?.importSharedTexture !== undefined, "This Electron build does not provide sharedTexture");
   const signal = controller.signal;
+  const sceneFrameRate = workers <= 1 ? 240 : workers === 2 ? 120 : 60;
   const raw = join(input.directory, "encoded.h264");
   const writer = createWriteStream(raw);
   const writerClosed = finished(writer).catch(() => {});
   const scenes = new Set<Scene>();
   let transferring = false;
   let closing = false, bytesWritten = 0, chunks = 0, lastTimestamp = -1;
+  let paintWaitFrameMs = 0, transferMs = 0, textureTransfers = 0, rejectedTextures = 0;
+  let contentOnlyTextures = 0, unrequestedTextures = 0;
   const encoding = new BrowserWindow({ show: false, width: 300, height: 200, webPreferences: {
     preload: fileURLToPath(new URL("../runtime/gpu-encoder.cjs", import.meta.url)), sandbox: false, backgroundThrottling: false,
   } });
@@ -70,9 +75,11 @@ export async function createGpuCapture(input: CaptureInput, origin: string,
     const scene = [...scenes].filter(item => !item.busy && item.pending !== undefined && item.latest !== undefined)
       .sort((a, b) => a.pending!.ordinal - b.pending!.ordinal)[0];
     if (scene === undefined) return;
-    const texture = scene.latest!;
+    const latest = scene.latest!;
     scene.latest = undefined;
     scene.busy = true;
+    paintWaitFrameMs += Math.max(0, latest.receivedAt - scene.pending!.waitStartedAt);
+    const texture = latest.texture;
     let imported: ReturnType<typeof sharedTexture.importSharedTexture>;
     try {
       imported = sharedTexture.importSharedTexture({ textureInfo: texture.textureInfo, allReferencesReleased: () => texture.release() });
@@ -82,9 +89,11 @@ export async function createGpuCapture(input: CaptureInput, origin: string,
     // Snapshot copying and encoding can continue concurrently in the receiver.
     transferring = true;
     const request = { token: scene.pending!.token, ordinal: scene.pending!.ordinal };
+    const transferStarted = performance.now();
     void Promise.resolve().then(() => sharedTexture.sendSharedTexture(
       { frame: encoding.webContents.mainFrame, importedSharedTexture: imported }, request))
       .catch(fail).finally(() => {
+        transferMs += performance.now() - transferStarted; textureTransfers++;
         imported.release(); transferring = false; processTexture();
       }).catch(fail);
   }
@@ -96,8 +105,11 @@ export async function createGpuCapture(input: CaptureInput, origin: string,
     if (accepted) {
       const pending = scene.pending!;
       scene.pending = undefined;
-      scene.latest?.release(); scene.latest = undefined;
+      scene.latest?.texture.release(); scene.latest = undefined;
       pending.resolve();
+    } else {
+      rejectedTextures++;
+      scene.pending!.waitStartedAt = performance.now();
     }
     processTexture();
   };
@@ -124,7 +136,7 @@ export async function createGpuCapture(input: CaptureInput, origin: string,
   });
   const closeScene = (scene: Scene) => {
     scene.pending?.reject(signal.reason ?? new Error("GPU capture closed")); scene.pending = undefined;
-    scene.latest?.release(); scene.latest = undefined;
+    scene.latest?.texture.release(); scene.latest = undefined;
     if (!scene.window.isDestroyed()) scene.window.destroy();
     scenes.delete(scene);
   };
@@ -165,6 +177,7 @@ export async function createGpuCapture(input: CaptureInput, origin: string,
       * width * height / (1920 * 1080) * fps / 30));
     encoding.webContents.send("hypit-configure", {
       width, height, fps, bitrate, frameCount, maxPendingBytes: config.maxPendingFrameBytes,
+      markerWidth: pages.markerWidth, markerHeight: pages.markerHeight,
       picture: delivery.picture,
     });
     await configured;
@@ -173,19 +186,37 @@ export async function createGpuCapture(input: CaptureInput, origin: string,
   return {
     async createWorker() {
       signal.throwIfAborted();
-      const window = new BrowserWindow({ show: false, width: Math.max(width, 256), height: height + 8,
+      const window = new BrowserWindow({ show: false, width: Math.max(width, pages.markerWidth), height: height + pages.markerHeight,
         useContentSize: true, backgroundColor: delivery.picture.alpha.matte, webPreferences: { backgroundThrottling: false,
           offscreen: { useSharedTexture: true, sharedTexturePixelFormat: "argb", deviceScaleFactor: 1 } } });
       const scene: Scene = { window, busy: false };
       scenes.add(scene);
-      window.webContents.setFrameRate(240);
+      // One receiver serializes texture transfer and one encoder consumes every
+      // scene. Divide the useful offscreen cadence across parallel producers;
+      // higher per-scene rates only publish intermediate compositor surfaces.
+      window.webContents.setFrameRate(sceneFrameRate);
       window.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
       window.webContents.on("render-process-gone", (_event, detail) => fail(new Error(`GPU scene exited: ${detail.reason}`)));
-      window.webContents.on("paint", event => {
+      window.webContents.on("paint", (event, dirtyRect) => {
         const texture = event.texture;
         if (texture === undefined) return;
         if (closing || texture.textureInfo.widgetType !== "frame") { texture.release(); return; }
-        scene.latest?.release(); scene.latest = texture;
+        // Programme changes can paint before the explicit commit marker reaches
+        // the shared surface. Those textures cannot satisfy the pending frame and
+        // must not cross the native transfer boundary. The marker dirty region is
+        // the compositor's exact acknowledgement that this surface may carry it;
+        // the encoded token remains the final identity check in the receiver.
+        if (scene.pending === undefined) {
+          unrequestedTextures++;
+          texture.release();
+          return;
+        }
+        if (dirtyRect.y + dirtyRect.height <= height || dirtyRect.y >= height + pages.markerHeight) {
+          contentOnlyTextures++;
+          texture.release();
+          return;
+        }
+        scene.latest?.texture.release(); scene.latest = { texture, receivedAt: performance.now() };
         processTexture();
       });
       const sameRenderer = () => {
@@ -221,9 +252,11 @@ export async function createGpuCapture(input: CaptureInput, origin: string,
           sameRenderer(); signal.throwIfAborted();
           // This local frame tree commits together. Ignore surfaces received
           // before the ready page publishes its new frame identifier.
-          scene.latest?.release(); scene.latest = undefined;
+          scene.latest?.texture.release(); scene.latest = undefined;
           const token = ordinal + 1;
-          const observed = new Promise<void>((resolve, reject) => { scene.pending = { token, ordinal, resolve, reject }; });
+          const observed = new Promise<void>((resolve, reject) => {
+            scene.pending = { token, ordinal, waitStartedAt: performance.now(), resolve, reject };
+          });
           void observed.catch(() => {});
           let repaint: ReturnType<typeof setInterval> | undefined;
           try {
@@ -236,17 +269,21 @@ export async function createGpuCapture(input: CaptureInput, origin: string,
             }, 100);
             await observed;
           } finally { clearInterval(repaint); }
-          return { buffer: Buffer.alloc(0), ...timing, screenshotMs: performance.now() - started };
+          return { buffer: Buffer.alloc(0), ...timing, outputMs: performance.now() - started };
         },
       };
     },
     async finish() {
       signal.throwIfAborted();
-      const accepted = await encoding.webContents.executeJavaScript("window.__hypitFinishEncoding()");
-      assert(accepted === frameCount && chunks === frameCount, "GPU encoder did not complete every requested frame");
+      const summary = await encoding.webContents.executeJavaScript("window.__hypitFinishEncoding()") as {
+        readonly accepted: number;
+        readonly stats: Readonly<Record<string, number>>;
+      };
+      assert(summary.accepted === frameCount && chunks === frameCount, "GPU encoder did not complete every requested frame");
       await new Promise<void>((resolve, reject) => writer.end((error?: Error | null) => error ? reject(error) : resolve()));
       signal.throwIfAborted();
-      return raw;
+      return { raw, stats: { paintWaitFrameMs, transferMs, textureTransfers, rejectedTextures,
+        contentOnlyTextures, unrequestedTextures, ...summary.stats } };
     },
     close,
   };

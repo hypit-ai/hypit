@@ -31,16 +31,9 @@ function buildState(
   graph: Parameters<typeof planBuild>[1],
   targets: readonly string[],
 ) {
-  const planned = planBuild(program, graph, {
-    format: "hypit.run-graph@1",
-    records: [],
-    candidates: [],
-    operations: [],
-    satisfactions: [],
-    targets,
-  });
+  const planned = planBuild(program, graph, targets, []);
   return materializeBuild(defineBuild({
-    program: link(program.closure, [...program.records, ...planned.initialRecords]),
+    program,
     plan: planned.plan,
   }), []);
 }
@@ -202,10 +195,7 @@ test("Text Mask explicitly consumes one fine Text occurrence and one owned still
   assert.ok(elements[2]?.style.some((entry) =>
     entry.name === "transform" && entry.value === "matrix(2,0,0,2,0,-120)"));
   assert.equal(elements[2]?.style.some((entry) => entry.name === "object-fit"), false);
-  const html = compileHtmlProgram(sealComposition({
-    id: "owned-mask-composition",
-    canvas: { width: 1080, height: 1920, clearColor: "#000000" }, visual: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) }, audio: [],
-  }), space).html;
+  const html = compileHtmlProgram(sealComposition({ id: "owned-mask-composition", visual: { canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }), space).html;
   assert.match(html, /<foreignObject/u);
   assert.match(html, />OWNED MASK</u);
   assert.match(html, /mask-type:alpha/u);
@@ -372,11 +362,8 @@ test("rich Text lowers ordered glyph layers, boxes, bounded flow, sequences and 
     sealTextItemSpec({ id: "path", document: document("Renderer-neutral Path Text") }),
     pathStyle, stillTextMotion("path-still"), absoluteWindow("path", 0, 150),
   );
-  const rendered = compileHtmlProgram(sealComposition({
-    id: "rich-text-film", canvas: { width: 1080, height: 900, clearColor: "#000000" },
-    visual: { members: [renderFineTextOccurrence(space, area), renderFineTextOccurrence(space, path)]
-      .map((track, z) => ({ kind: "track" as const, id: track.id, z, track })) }, audio: [],
-  }), space);
+  const rendered = compileHtmlProgram(sealComposition({ id: "rich-text-film", visual: { canvas: { width: 1080, height: 900, clearColor: "#000000" }, root: { members: [renderFineTextOccurrence(space, area), renderFineTextOccurrence(space, path)]
+      .map((track, z) => ({ kind: "track" as const, id: track.id, z, track })) } }, audio: { contributions: [] } }), space);
   assert.match(rendered.html, /data-hypit-text-paint-layer="5"/u);
   assert.match(rendered.html, /feMorphology/u);
   assert.match(rendered.html, /linear-gradient\(30deg/u);

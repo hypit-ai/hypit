@@ -105,12 +105,7 @@ async function runBuild(executor: Executor, state: BuildView) {
 const space = sealTimeline({ id: "test-space", frameCount: 60, frameRate: { numerator: 30, denominator: 1 },
 });
 const semantic = timelineFixture(space);
-const composition = sealComposition({
-  id: "render-test",
-  canvas: { width: 1080, height: 1920, clearColor: "#000000" },
-  visual: { members: [] },
-  audio: [],
-});
+const composition = sealComposition({ id: "render-test", visual: { canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: { members: [] } }, audio: { contributions: [] } });
 const delivery = htmlVideoDeliverySpec();
 
 const stored = (value: CanonicalValue): Value => value;
@@ -167,16 +162,9 @@ function buildState(
   authorGraph: Parameters<typeof planBuild>[1],
   targets: readonly string[],
 ) {
-  const planned = planBuild(program, authorGraph, {
-    format: "hypit.run-graph@1",
-    records: [],
-    candidates: [],
-    operations: [],
-    satisfactions: [],
-    targets,
-  });
+  const planned = planBuild(program, authorGraph, targets, []);
   return materializeBuild(defineBuild({
-    program: link(program.closure, [...program.records, ...planned.initialRecords]),
+    program,
     plan: planned.plan,
   }), []);
 }

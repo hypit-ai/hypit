@@ -185,7 +185,12 @@ export function createComments(store: Store, stage: Stage) {
   form.addEventListener("submit", (event) => {
     event.preventDefault();
     if (view === undefined || anchor === undefined || input.value.trim().length === 0) return;
-    const comment: FeedbackComment = { id: `c-${crypto.randomUUID()}`, run: view.run, ...anchor, text: input.value.trim() };
+    const comment: FeedbackComment = {
+      id: `c-${crypto.randomUUID()}`,
+      context: view.context,
+      ...anchor,
+      text: input.value.trim(),
+    };
     void mutate({ type: "add", comment }, () => {
       input.value = ""; input.style.height = ""; selected = comment.id; anchor = currentAnchor();
     });

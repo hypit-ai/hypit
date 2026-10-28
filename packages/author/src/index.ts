@@ -101,7 +101,6 @@ export type {
 export {
   bindAuthorFragment,
   elaborateGraphFragment,
-  exportRunFragment,
   FragmentError,
   mergeFragmentContributions,
   sealGraphFragment,
@@ -118,7 +117,5 @@ export type {
   FragmentOperationRef,
   FragmentOperationResult,
   FragmentValueRef,
-  RunFragmentContribution,
-  RunFragmentExport,
   GraphFragment,
 } from "./fragment.js";

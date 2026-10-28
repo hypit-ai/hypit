@@ -5,7 +5,7 @@ import type { Workspace } from "@hypit/workspace";
 import type { CliDiagnostic, CliResultRepositoryLocation, CliRuntimeHost } from "./runtime-port.js";
 
 export type CliCompilerOptions = {
-  /** Canonical containment boundary for Author and Run Sources plus source assets. */
+  /** Canonical containment boundary for Author and Invocation Sources plus source assets. */
   readonly workspaceRoot?: string;
   /** Additional Host-authorized asset roots. These never widen Source imports. */
   readonly assetRoots?: readonly string[];
@@ -34,8 +34,8 @@ export type CliDistribution = {
     "workspaceRoot" | "assetRoots" | "packageRoot" | "distributionPackageRoot">): Workspace;
   createCompiler(options: CliCompilerOptions): Compiler;
   /**
-   * Read the self-described Run Source and its Author Source closure, then return
-   * only the installed package roots those sources explicitly select.
+   * Read the selected Source and its explicit closure, then return only the installed
+   * package roots those sources select.
    *
    * This is Distribution syntax work. The generic CLI never scans a directory,
    * guesses an entry filename or teaches Core about package names.

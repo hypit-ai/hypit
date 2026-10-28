@@ -23,7 +23,7 @@ export type HtmlDocumentPlaybackOptions = {
 
 export function compileHtmlDocument(composition: Composition, timeline: Timeline): HtmlDocument {
   const program = compileHtmlProgram(composition, timeline);
-  const audio = compileAudioProgram(composition, timeline);
+  const audio = compileAudioProgram(composition.audio, timeline);
   return {
     format: "hypit.html-document@1",
     program,

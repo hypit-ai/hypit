@@ -77,7 +77,7 @@
     "inspector.properties": "Properties",
     "inspector.remove-item": "Remove item",
     "inspector.resolution": "Resolution",
-    "inspector.run": "Run",
+    "inspector.invocation": "Invocation",
     "inspector.sources": "Sources",
     "inspector.start": "Start",
     "inspector.structured-value": "Structured value",

@@ -32,7 +32,7 @@ export type CliBuildSummary = {
   readonly title?: string;
   readonly createdAt: string;
   readonly outcome: "complete" | "failed" | "cancelled";
-  readonly run?: string;
+  readonly invocationSource?: string;
   readonly targetCount: number;
   readonly targets?: readonly string[];
   readonly omittedTargets?: number;
@@ -47,7 +47,7 @@ export type CliBuildResultView = {
   readonly finishedAt?: string;
   readonly outcome: "open" | "complete" | "failed" | "cancelled";
   readonly source: string;
-  readonly run?: string;
+  readonly invocationSource?: string;
   readonly targetCount: number;
   readonly targets: readonly string[];
   readonly omittedTargets?: number;
@@ -263,7 +263,9 @@ export async function buildResultView(
     ...(manifest.finishedAt === undefined ? {} : { finishedAt: new Date(manifest.finishedAt).toISOString() }),
     outcome: manifest.outcome ?? "open",
     source: projectPath(manifest.sourceId, options.projectRoot),
-    ...(manifest.runId === undefined ? {} : { run: projectPath(manifest.runId, options.projectRoot) }),
+    ...(manifest.invocationSourceId === undefined
+      ? {}
+      : { invocationSource: projectPath(manifest.invocationSourceId, options.projectRoot) }),
     targetCount: manifest.targets.length,
     targets: manifest.targets,
     outputCount: available.length,

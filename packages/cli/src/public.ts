@@ -8,7 +8,6 @@ export { hypitHostStateRoot, hypitProjectStateRoot } from "./paths.js";
 export { writeCliOutput } from "./output.js";
 export { loadDiscoveredSourcePackages } from "./source-packages.js";
 export { discoverSourcePackages } from "./source-discovery.js";
-export { resolveBuildResultValue } from "./run-file.js";
 export type { CliCompilerOptions, CliDistribution } from "./distribution.js";
 export type { CliIo, CliMachineView, CliOutputOptions, CliTerminal } from "./output.js";
 export type * from "./runtime-port.js";

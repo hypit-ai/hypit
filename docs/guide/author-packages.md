@@ -72,7 +72,7 @@ Import the installed component's logical Module in Source:
 ```
 
 Use its declared elements and outputs in the composition. `hypit vocabulary` exposes their authored
-interface; `hypit check` checks a Source or Run. The component's README should include a copyable
+interface; `hypit check` checks an Author Source or saved Invocation. The component's README should include a copyable
 example, its outputs, useful creative choices and a picture of the behavior.
 
 Keep the package with its video project while it serves that work. To share it, choose a release
@@ -87,7 +87,7 @@ The [complex spoken explainer](https://github.com/hypit-ai/hypit/tree/main/examp
 combines presenter framing, independent captions, website demonstrations and coordinated animated
 scenes in one finished work. Its project guide follows each decision to the Source, Recipe or package
 that owns it. The example distinguishes a useful component boundary from the separate choices to
-expose parameters or design for reuse. Accepted material is supplied separately, so its default Run
+expose parameters or design for reuse. Accepted material is supplied separately, so its default Invocation
 can open and render the composition without another generation request.
 
 [Watch the finished film](https://storage.googleapis.com/hypit-public-assets/assets/examples/complex-explainer/v1/20260914/final.mp4)

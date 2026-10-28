@@ -1,7 +1,7 @@
 # Composition and rendering
 
 Read this when assembling the deliverable or rendering a frame interval for review. [Tracks](tracks.md)
-explains the contributing layers; [Runs](runs.md) explains selecting existing media for this execution.
+explains the contributing layers; [Invocations](runs.md) explains selecting Targets and transient choices.
 
 Components author the picture and sound contributions. Film assembles the selected contributions
 with Timeline and Canvas into a Composition. Rendering evaluates that composition over a frame
@@ -112,7 +112,7 @@ rational frame rate, compute seconds from its numerator and denominator rather t
 rate first.
 
 The original animation time remains intact, and picture and sound use the same interval. A short
-Run can target `detail.video` while the normal Run continues to target `final.video`.
+Invocation can target `detail.video` while the normal delivery Invocation continues to target `final.video`.
 For this example, the renderer evaluates the original page at seconds 8–12 and encodes those frames
 as a four-second clip starting at zero. An animation already in progress at second 8 keeps that state.
 
@@ -151,11 +151,11 @@ decoding, browser startup, capture, encoding and storage; `hypit logs <build-id>
 timings and execution details when a slow or failed stage needs investigation.
 
 Image decode and declared-font loading failures stop capture with an error. Repair the named
-resource in its owning Source or component, then retry with accepted media retained in the Run.
+resource in its owning Source or component, then retry with accepted media retained in the Author Source.
 
 A local render timeout ends that execution attempt and releases capacity after its work has stopped.
 Its failure and already completed Outputs belong to the Build Result. Export accepted media into the
-project, update the Author Source, and continue with a new Build as described in [Runs](runs.md).
+project, update the Author Source, and continue with a new Build as described in [Invocations](runs.md).
 
 Use [Builds and Results](builds.md) to submit, follow and retrieve `final.video` or `detail.video`.
 Use [Review](review.md) to judge the observed interval or complete deliverable against the intended work.

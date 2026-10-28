@@ -153,13 +153,15 @@ export function compileFilmComposition(
   }
   const composition = sealComposition({
     id: program.id,
-    canvas: {
-      width: canvas.widthPx,
-      height: canvas.heightPx,
-      clearColor: program.clearColor,
+    visual: {
+      canvas: {
+        width: canvas.widthPx,
+        height: canvas.heightPx,
+        clearColor: program.clearColor,
+      },
+      root: visual,
     },
-    visual,
-    audio,
+    audio: { contributions: audio },
   });
   assertCompositionIdentity(composition, timeline);
   return composition;

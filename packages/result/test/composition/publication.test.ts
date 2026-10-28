@@ -99,7 +99,7 @@ test("publication facts are rejected before a Result directory is created", asyn
         name: "answer",
         output: "logical:answer",
         target: true,
-        source: { kind: "current-record", record: "record:answer" },
+        record: "record:answer",
       }] },
     } as unknown as Parameters<typeof FileBuildResult.create>[1]), /type must be a Type reference/u);
     assert.deepEqual(await readdir(root), []);

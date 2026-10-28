@@ -15,7 +15,7 @@ export type Executed = {
 };
 
 /**
- * Run the display closure: deterministic Producers, plus Needs the Runtime explicitly permits in
+ * Evaluate the display closure: deterministic Producers, plus Needs the Runtime explicitly permits in
  * a disposable authoring execution. The Runtime owns Endpoint selection and invocation; Studio
  * never filters Providers or sees their handlers.
  */

@@ -101,7 +101,7 @@ test("Endpoint inspection, doctor and invoke share one resolver: a contested cap
     assert.equal(contested.length, 1);
     assert.equal(contested[0]!.severity, "error");
     assert.match(contested[0]!.message, /add "bindings": \{ "example\.model@1#generate": "<instance>" \}/u);
-    // Without a Run, doctor looks at every selected Endpoint and reports the contest as a warning.
+    // Without a finite Invocation plan, doctor inspects the whole Profile and reports the contest as a warning.
     const idle = (await preflightRuntimeConfig(unbound, { registry })).diagnostics
       .find((item) => item.code === "RUNTIME_CAPABILITY_AMBIGUOUS");
     assert.equal(idle?.severity, "warning");

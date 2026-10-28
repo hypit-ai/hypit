@@ -31,7 +31,7 @@ node bin/hypit.mjs build examples/semantic-composition/chat.svrun --project exam
 The Profile selects local HTML rasterization and FFmpeg. Its execution data lives in `.hypit/runtimes/local`;
 `.hypit/runtime` is reserved for the project's Profile-selection file. Use the machine's prepared browser/media tools;
 there is no hosted generation account in this example. The final Output is `final.video`. The same
-Run can be opened in Studio, where its component lane and physical clock work without a Script lane.
+Invocation can be opened in Studio, where its component lane and physical clock work without a Script lane.
 For an independent project, install `@hypit/hypit`, `@hypit/fontsource` and
 `@fontsource-variable/inter` in the project's ordinary `package.json`, copy the component into
 `packages/`, replace its workspace dependency with the installed Hypit version, and build the

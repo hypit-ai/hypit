@@ -70,7 +70,7 @@ try {
   await mkdir(join(distribution, "packages"), { recursive: true });
   await writeFile(join(distribution, "package.json"), JSON.stringify(await consumerHostManifest()));
   for (const entry of await readdir(join(repositoryRoot, "packages"), { withFileTypes: true })) {
-    if (!entry.isDirectory() || entry.name === "ranking" || entry.name === "ranking-studio") continue;
+    if (!entry.isDirectory() || entry.name === "ranking") continue;
     await symlink(join(repositoryRoot, "packages", entry.name), join(distribution, "packages", entry.name),
       process.platform === "win32" ? "junction" : "dir");
   }

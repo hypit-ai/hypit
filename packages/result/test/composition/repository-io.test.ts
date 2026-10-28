@@ -95,14 +95,14 @@ test("reserved-looking domain objects remain ordinary domain data", async () => 
     }));
     await writeFile(join(directory, "values", "value-0001.json"), JSON.stringify({
       format: "hypit.result-value@1",
-      value: { nested: { kind: "build-output", build: id, output: "value" } },
+      value: { nested: { kind: "value", path: "domain-authored" } },
       resources: [],
     }));
     const resolved = await new FileBuildResultRepository(root).resolve(id, "value");
     assert.equal(resolved?.value.kind, "value");
     if (resolved?.value.kind !== "value") throw new Error("expected Result value document");
     assert.deepEqual(resolved.value.document.value, {
-      nested: { kind: "build-output", build: id, output: "value" },
+      nested: { kind: "value", path: "domain-authored" },
     });
   } finally {
     await rm(root, { recursive: true, force: true });

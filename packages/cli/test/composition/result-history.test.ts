@@ -7,10 +7,8 @@ import { commandHint } from "../../src/command-hint.js";
 import test from "node:test";
 
 import {
-  fileReferenceIdentity,
   FileBuildResult,
   FileBuildResultRepository,
-  ownedFileReference,
 } from "@hypit/result/node";
 import type { CapabilityRef, TypeRef, TypedRecord } from "@hypit/protocol";
 
@@ -18,9 +16,6 @@ import type { CliDistribution } from "../../src/distribution.js";
 import { cliDistribution } from "../distribution-scenario.js";
 import { createCatalogDescriptor } from "../../src/build-planning.js";
 import { runCli } from "../../src/main.js";
-import { loadRunFile, resolveBuildResultValue } from "../../src/run-file.js";
-import type { BuildResultValueRepository } from "../../src/run-file.js";
-
 import {
   completedRecords,
   fixture,
@@ -42,6 +37,7 @@ test("builds, history, inspect and get read project Build Results without openin
         readonly id: string;
         readonly title?: string;
         readonly outcome: string;
+        readonly invocationSource?: string;
         readonly outputCount: number;
       }[];
     };
@@ -49,6 +45,7 @@ test("builds, history, inspect and get read project Build Results without openin
     assert.equal(builds.builds[0]?.id, "bld_20260902T110000000Z_0000000001");
     assert.equal(builds.builds[0]?.title, "episode-stage");
     assert.equal(builds.builds[0]?.outcome, "complete");
+    assert.equal(builds.builds[0]?.invocationSource, "build.svrun");
     assert.equal(builds.builds[0]?.outputCount, 1);
     assert.equal("source" in builds.builds[0]!, false);
     assert.equal("outputs" in builds.builds[0]!, false);

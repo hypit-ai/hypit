@@ -69,13 +69,13 @@ function taskCard(task: StudioTaskView, selected: boolean, select: () => void, s
   const node = document.createElement("article");
   node.className = `task-card task-${task.status}${selected ? " selected" : ""}`;
   node.tabIndex = 0;
-  node.setAttribute("aria-label", task.title ?? stem(task.run ?? task.source));
+  node.setAttribute("aria-label", task.title ?? stem(task.invocationSource ?? task.source));
   node.addEventListener("click", select);
   node.addEventListener("keydown", (event) => {
     if (event.target === node && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); select(); }
   });
   node.dataset.taskId = task.id;
-  const source = task.run ?? task.source;
+  const source = task.invocationSource ?? task.source;
   const title = task.title ?? stem(source);
   const statuses: Record<StudioTaskView["status"], Message> = {
     queued: "common.queued", running: "common.running", waiting: "common.waiting", complete: "common.completed",
@@ -236,8 +236,9 @@ function artifactCard(artifact: StudioArtifactView, open: (artifact: StudioArtif
     artifact.mediaType,
     formatBytes(artifact.size),
     new Date(artifact.createdAt).toLocaleString(),
-    artifact.ownerBuild === undefined ? artifact.filePath : `${artifact.ownerBuild}/${artifact.filePath}`,
-    ...artifact.origins.map((origin) => `${origin.run ?? origin.source} · ${origin.build} · ${origin.output}`),
+    `${artifact.build}/${artifact.filePath}`,
+    ...artifact.origins.map((origin) =>
+      `${origin.invocationSource ?? origin.source} · ${origin.build} · ${origin.output}`),
     artifact.buildNote,
   ].filter((item) => item !== undefined).join("\n");
   return link;
@@ -364,7 +365,9 @@ export function createLibraryPane(code: CodePane, openArtifact: (artifact: Studi
 
   const renderTaskContext = (): void => {
     for (const node of Array.from(element.querySelectorAll<HTMLElement>("[data-task-context]"))) {
-      const title = selectedTask === undefined ? undefined : selectedTask.title ?? stem(selectedTask.run ?? selectedTask.source);
+      const title = selectedTask === undefined
+        ? undefined
+        : selectedTask.title ?? stem(selectedTask.invocationSource ?? selectedTask.source);
       if (selectedTask !== undefined && node.dataset.taskId === selectedTask.id
         && node.querySelector(".task-context-name span")?.textContent === title) continue;
       node.replaceChildren();
@@ -375,8 +378,10 @@ export function createLibraryPane(code: CodePane, openArtifact: (artifact: Studi
       const back = document.createElement("button");
       back.type = "button"; back.className = "task-context-name";
       back.innerHTML = "<span></span>";
-      back.querySelector("span")!.textContent = task.title ?? stem(task.run ?? task.source);
-      uiAttr(back, "title", "library.task-return", { name: task.title ?? stem(task.run ?? task.source) });
+      back.querySelector("span")!.textContent = task.title ?? stem(task.invocationSource ?? task.source);
+      uiAttr(back, "title", "library.task-return", {
+        name: task.title ?? stem(task.invocationSource ?? task.source),
+      });
       back.addEventListener("click", () => {
         taskFilter = "all";
         switchTo("tasks", false);

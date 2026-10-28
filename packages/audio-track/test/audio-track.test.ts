@@ -23,7 +23,7 @@ import type { PreparedMedia } from "@hypit/media";
 import { mediaComponent, mediaDependency, mediaManifest, mediaTypes, prepareMedia } from "@hypit/media";
 import type { NarrativeMomentRef, NarrativeSelectionRef } from "@hypit/narrative";
 import { narrativeManifest } from "@hypit/narrative";
-import { compileAudioProgram } from "@hypit/audio-program";
+import { audioProgramSourceClips, compileAudioProgram } from "@hypit/audio-program";
 import { mediaOperationsManifest } from "@hypit/media-operations";
 import type { ModuleManifest } from "@hypit/protocol";
 import { exactTemporalValueFromFrames, isAffineTemporalMapPiece, resolveTemporalRelation, temporalDependency, temporalTypes,
@@ -42,16 +42,9 @@ function buildState(
   graph: Parameters<typeof planBuild>[1],
   targets: readonly string[],
 ) {
-  const planned = planBuild(program, graph, {
-    format: "hypit.run-graph@1",
-    records: [],
-    candidates: [],
-    operations: [],
-    satisfactions: [],
-    targets,
-  });
+  const planned = planBuild(program, graph, targets, []);
   return materializeBuild(defineBuild({
-    program: link(program.closure, [...program.records, ...planned.initialRecords]),
+    program,
     plan: planned.plan,
   }), []);
 }
@@ -249,10 +242,8 @@ test("exact audio rates are not rejected by an arbitrary playback-mode ceiling",
     sampling: rateSpec({ rate: { numerator: 128, denominator: 1 } }),
   }));
   assert.deepEqual(affinePiece(audioTrackClips(track)[0]!.sampling.stages[0]!.pieces[0]!).rate, { numerator: 128, denominator: 1 });
-  const program = compileAudioProgram(sealComposition({
-    id: "fast", canvas: { width: 1, height: 1, clearColor: "#000000" }, visual: { members: [] }, audio: [track],
-  }), space);
-  assert.deepEqual(affinePiece(program.clips[0]!.sampling.stages[0]!.pieces[0]!).rate, { numerator: 128, denominator: 1 });
+  const program = compileAudioProgram(sealComposition({ id: "fast", visual: { canvas: { width: 1, height: 1, clearColor: "#000000" }, root: { members: [] } }, audio: { contributions: [track] } }).audio, space);
+  assert.deepEqual(affinePiece(audioProgramSourceClips(program)[0]!.sampling.stages[0]!.pieces[0]!).rate, { numerator: 128, denominator: 1 });
 });
 
 test("Audio Track preserves a reverse relation instead of enforcing one renderer's tempo capability", () => {
@@ -263,10 +254,8 @@ test("Audio Track preserves a reverse relation instead of enforcing one renderer
   }));
   assert.deepEqual(affinePiece(audioTrackClips(track)[0]!.sampling.stages[0]!.pieces[0]!).rate,
     { numerator: -1, denominator: 1 });
-  const program = compileAudioProgram(sealComposition({
-    id: "reverse", canvas: { width: 1, height: 1, clearColor: "#000000" }, visual: { members: [] }, audio: [track],
-  }), space);
-  assert.deepEqual(affinePiece(program.clips[0]!.sampling.stages[0]!.pieces[0]!).rate,
+  const program = compileAudioProgram(sealComposition({ id: "reverse", visual: { canvas: { width: 1, height: 1, clearColor: "#000000" }, root: { members: [] } }, audio: { contributions: [track] } }).audio, space);
+  assert.deepEqual(affinePiece(audioProgramSourceClips(program)[0]!.sampling.stages[0]!.pieces[0]!).rate,
     { numerator: -1, denominator: 1 });
 });
 
@@ -287,11 +276,9 @@ test("source bounds and fades quantize once into the same sample domain", () => 
   assert.deepEqual(sampledPiece(audioTrackClips(track)[0]!.sampling.stages[0]!.pieces[0]!).target,
     { startSample: 0, endSampleExclusive: 96_000 });
   assert.equal(audioTrackClips(track)[0]?.gain, 0.25);
-  const compiled = compileAudioProgram(sealComposition({
-    id: "trim", canvas: { width: 1, height: 1, clearColor: "#000000" }, visual: { members: [] }, audio: [track],
-  }), space);
-  assert.equal(compiled.clips[0]?.fadeInSamples, 4_800);
-  assert.equal(compiled.clips[0]?.fadeOutSamples, 9_600);
+  const compiled = compileAudioProgram(sealComposition({ id: "trim", visual: { canvas: { width: 1, height: 1, clearColor: "#000000" }, root: { members: [] } }, audio: { contributions: [track] } }).audio, space);
+  assert.equal(audioProgramSourceClips(compiled)[0]?.fadeInSamples, 4_800);
+  assert.equal(audioProgramSourceClips(compiled)[0]?.fadeOutSamples, 9_600);
   assert.throws(() => programTrack(media("fade", 24_000), spec({
     mix: { gain: 1, fadeIn: { unit: "seconds", numerator: 3, denominator: 1 }, fadeOut: zero },
   })), /fade exceeds its Window/u);
@@ -321,10 +308,7 @@ test("frame-authored fades share their Clip boundaries on a rational clock", () 
       appendProgramAudioItem(createAudioTrackSet(), header, ntscSemantic, media("sting", 48_000), clip),
       header,
     ));
-    const rendered = compileAudioProgram(sealComposition({
-      id: `ntsc-${startFrame}`, canvas: { width: 1, height: 1, clearColor: "#000000" },
-      visual: { members: [] }, audio: [track],
-    }), ntsc).clips[0]!;
+    const rendered = audioProgramSourceClips(compileAudioProgram(sealComposition({ id: `ntsc-${startFrame}`, visual: { canvas: { width: 1, height: 1, clearColor: "#000000" }, root: { members: [] } }, audio: { contributions: [track] } }).audio, ntsc))[0]!;
     const length = rendered.mixEndSampleExclusive - rendered.mixStartSample;
     assert.equal(rendered.fadeInSamples, length, `fade-in from frame ${startFrame}`);
     assert.equal(rendered.fadeOutSamples, length, `fade-out from frame ${startFrame}`);
@@ -350,10 +334,8 @@ test("piecewise audio maps preserve silent gaps while execution keeps one Clip-g
     { startSample: 0, endSampleExclusive: 48_000 },
     { startSample: 96_000, endSampleExclusive: 144_000 },
   ]);
-  const program = compileAudioProgram(sealComposition({
-    id: "piecewise", canvas: { width: 1, height: 1, clearColor: "#000000" }, visual: { members: [] }, audio: [track],
-  }), space);
-  assert.deepEqual(program.clips.map((clip) => ({
+  const program = compileAudioProgram(sealComposition({ id: "piecewise", visual: { canvas: { width: 1, height: 1, clearColor: "#000000" }, root: { members: [] } }, audio: { contributions: [track] } }).audio, space);
+  assert.deepEqual(audioProgramSourceClips(program).map((clip) => ({
     target: [clip.targetStartSample, clip.targetEndSampleExclusive],
     mix: [clip.mixStartSample, clip.mixEndSampleExclusive],
     fade: [clip.fadeInSamples, clip.fadeOutSamples],
@@ -428,17 +410,11 @@ test("one Track with overlaps and two peer Tracks compile to the same mix", () =
       { ...audioTrackClips(second)[0]!, id: "b" },
     ]),
   };
-  const peerProgram = compileAudioProgram(sealComposition({
-    id: "peer", canvas: { width: 1, height: 1, clearColor: "#000000" },
-    visual: { members: [] }, audio: [first, second],
-  }), space);
-  const combinedProgram = compileAudioProgram(sealComposition({
-    id: "combined", canvas: { width: 1, height: 1, clearColor: "#000000" },
-    visual: { members: [] }, audio: [combined],
-  }), space);
+  const peerProgram = compileAudioProgram(sealComposition({ id: "peer", visual: { canvas: { width: 1, height: 1, clearColor: "#000000" }, root: { members: [] } }, audio: { contributions: [first, second] } }).audio, space);
+  const combinedProgram = compileAudioProgram(sealComposition({ id: "combined", visual: { canvas: { width: 1, height: 1, clearColor: "#000000" }, root: { members: [] } }, audio: { contributions: [combined] } }).audio, space);
   assert.deepEqual(
-    peerProgram.clips.map(({ id: _id, ...clip }) => clip),
-    combinedProgram.clips.map(({ id: _id, ...clip }) => clip),
+    audioProgramSourceClips(peerProgram).map(({ id: _id, ...clip }) => clip),
+    audioProgramSourceClips(combinedProgram).map(({ id: _id, ...clip }) => clip),
   );
 });
 

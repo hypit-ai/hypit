@@ -23,7 +23,7 @@ const runCli = (
   });
 };
 
-test("source package selection follows Run and Author imports", async () => {
+test("source package selection follows Invocation and Author imports", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-cli-package-selection-"));
   try {
     await writeFile(join(root, "style.svs"), `<?svml using="@hypit/recipe@1"?>\n<sheet version="1"/>`, "utf8");
@@ -34,7 +34,7 @@ test("source package selection follows Run and Author imports", async () => {
   <script id="story"><line><HOST>Hello.</line></script>
 </svml>`, "utf8");
     const run = join(root, "build.svrun");
-    await writeFile(run, `<?svml using="@hypit/markup/run@1"?>
+    await writeFile(run, `<?svml using="@hypit/markup/invocation@1"?>
 <svrun version="1">
   <author source="./main.svml"/>
   <target output="story"/>
@@ -130,7 +130,7 @@ test("pricing keeps every planned generation and exposes authored parameters", a
   <gpt:Image id="${id}" prompt={${id}-prompt} aspect-ratio="9:16" resolution="2K"/>`).join("\n")}
 </svml>`);
     const source = join(root, "build.svrun");
-    await writeFile(source, `<?svml using="@hypit/markup/run@1"?>
+    await writeFile(source, `<?svml using="@hypit/markup/invocation@1"?>
 <svrun version="1"><author source="./main.svml"/>
   ${ids.map((id) => `<target output="${id}.image"/>`).join("\n")}
 </svrun>`);

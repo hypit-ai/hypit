@@ -1,8 +1,7 @@
-import { buildResultOutput, fileReferenceIdentity, locateRepositoryBuildResultOutput } from "@hypit/hypit/result/node";
+import { buildResultOutput, fileReferenceIdentity } from "@hypit/hypit/result/node";
 import { isAbsolute, relative, resolve, sep } from "node:path";
 
 import { buildIdCreatedAt } from "@hypit/hypit/protocol";
-import type { Value, TypeRef } from "@hypit/hypit/protocol";
 import type {
   BuildResultFileRange,
   BuildResultManifest,
@@ -10,7 +9,6 @@ import type {
   FinishedBuildResultManifest,
 } from "@hypit/hypit/result/node";
 
-import { resolveBuildResultValue } from "@hypit/hypit/cli";
 import type { CliBuildView as BuildView, CliDistribution, CliRuntimeHost, CliTransientExecution } from "@hypit/hypit/cli";
 
 import type { StudioArtifactView, StudioLibraryRequest, StudioLibraryView, StudioTaskView } from "./shared.js";
@@ -25,18 +23,6 @@ export type StudioBuildLibrary = {
   readonly transientExecution?: CliTransientExecution;
   readonly library: (request: StudioLibraryRequest) => Promise<StudioLibraryView>;
   readonly renameArtifact: (build: string, output: string, displayName: string | null) => Promise<string | undefined>;
-  readonly locateHistoricalOutput: (
-    build: string,
-    output: string,
-  ) => Promise<import("@hypit/hypit/result").RepositoryBuildResultOutputLocation | undefined>;
-  readonly resolveHistoricalOutput: (
-    build: string,
-    output: string,
-  ) => Promise<{
-    readonly type: TypeRef;
-    readonly value: Value;
-    readonly attachments?: readonly import("@hypit/hypit/workspace").BlobAttachment[];
-  } | undefined>;
   readonly openArtifact: (
     build: string,
     output: string,
@@ -58,7 +44,7 @@ function isWithin(root: string, path: string): boolean {
 }
 
 /**
- * A path inside the project reads the same on every platform, so the Studio library shows one Run
+ * A path inside the project reads the same on every platform, so the Studio library shows one Invocation Source
  * under one name wherever it is opened. A path outside the project is the machine's own, and stays
  * in that machine's form.
  */
@@ -92,7 +78,9 @@ function taskView(
     ...(detail === undefined ? {} : { detail }),
     ...(view.requests === undefined ? {} : { requests: view.requests }),
     source: presentedPath(root, view.sourcePath),
-    ...(view.runPath === undefined ? {} : { run: presentedPath(root, view.runPath) }),
+    ...(view.invocationSourcePath === undefined
+      ? {}
+      : { invocationSource: presentedPath(root, view.invocationSourcePath) }),
     targets: result?.targets ?? view.targets,
     operations: view.operations.map((operation) => ({
       status: operation.status === "received" ? "pending" : operation.status,
@@ -116,7 +104,9 @@ function resultTaskView(root: string, result: FinishedBuildResultManifest): Stud
     status: result.outcome,
     ...(result.failure === undefined ? {} : { detail: result.failure }),
     source: presentedPath(root, result.sourceId),
-    ...(result.runId === undefined ? {} : { run: presentedPath(root, result.runId) }),
+    ...(result.invocationSourceId === undefined
+      ? {}
+      : { invocationSource: presentedPath(root, result.invocationSourceId) }),
     targets: result.targets,
     operations: [],
   };
@@ -135,21 +125,17 @@ async function artifactsForResults(
   const nested = await Promise.all(manifests.flatMap((manifest) =>
     Object.entries(manifest.outputs).map(async ([output, entry]): Promise<StudioArtifactView[]> => {
       // Value-document Outputs remain intact. Listing media never opens their documents.
-      if (entry.value.kind !== "build-file" && entry.value.kind !== "external-file" && entry.value.kind !== "build-output") return [];
-      const description = entry.value.kind === "build-file" || entry.value.kind === "external-file"
-        ? { representation: "file" as const, mediaType: entry.value.mediaType, size: entry.value.size }
-        : await repository.describeOutput(manifest.id, output);
+      if (entry.value.kind !== "build-file") return [];
+      const description = { representation: "file" as const, mediaType: entry.value.mediaType, size: entry.value.size };
       if (description?.representation !== "file" || !isMedia(description.mediaType)) return [];
       if (media !== undefined && !description.mediaType.startsWith(`${media}/`)) return [];
-      const resolved = entry.value.kind === "build-file"
-        ? { build: manifest.id, output, value: entry.value }
-        : await repository.resolve(manifest.id, output);
-      if (resolved === undefined || (resolved.value.kind !== "build-file" && resolved.value.kind !== "external-file")) return [];
-      const file = resolved.value;
+      const file = entry.value;
       const source = presentedPath(root, manifest.sourceId);
-      const run = manifest.runId === undefined ? undefined : presentedPath(root, manifest.runId);
+      const invocationSource = manifest.invocationSourceId === undefined
+        ? undefined
+        : presentedPath(root, manifest.invocationSourceId);
       return [{
-        id: fileReferenceIdentity(resolved.build, file),
+        id: fileReferenceIdentity(manifest.id, file),
         build: manifest.id,
         createdAt: buildIdCreatedAt(manifest.id)!,
         output,
@@ -158,14 +144,17 @@ async function artifactsForResults(
         highlighted: manifest.highlightedOutputs?.includes(output) === true,
         ...(manifest.title === undefined ? {} : { buildTitle: manifest.title }),
         ...(manifest.note === undefined ? {} : { buildNote: manifest.note }),
-        ...(file.kind === "external-file" ? {} : { ownerBuild: file.build ?? resolved.build }),
-        ownerOutput: resolved.output,
-        filePath: file.kind === "external-file" ? file.uri : file.path,
+        filePath: file.path,
         size: file.size,
         mediaType: file.mediaType,
         source,
-        ...(run === undefined ? {} : { run }),
-        origins: [{ build: manifest.id, output, source, ...(run === undefined ? {} : { run }) }],
+        ...(invocationSource === undefined ? {} : { invocationSource }),
+        origins: [{
+          build: manifest.id,
+          output,
+          source,
+          ...(invocationSource === undefined ? {} : { invocationSource }),
+        }],
       }];
     })));
   return mergeStudioArtifacts(nested.flat());
@@ -178,18 +167,19 @@ export async function readStudioLibrary(input: StudioLibraryRequest & {
   readonly runtime?: Pick<RuntimeControl, "activity">;
   readonly results: BuildResultRepository;
 }): Promise<StudioLibraryView> {
-  const matches = (item: { readonly id: string; readonly source: string; readonly run?: string }) =>
-    (isWithin(input.workspaceRoot, item.run ?? item.source) || isWithin(input.workspaceRoot, item.source))
+  const matches = (item: { readonly id: string; readonly source: string; readonly invocationSource?: string }) =>
+    (isWithin(input.workspaceRoot, item.invocationSource ?? item.source) || isWithin(input.workspaceRoot, item.source))
     && (input.build === undefined || item.id === input.build)
-    && (input.run === undefined || (item.run !== undefined
-      && projectPath(input.workspaceRoot, item.run) === projectPath(input.workspaceRoot, input.run)));
+    && (input.invocationSource === undefined || (item.invocationSource !== undefined
+      && projectPath(input.workspaceRoot, item.invocationSource)
+        === projectPath(input.workspaceRoot, input.invocationSource)));
   // Read activity before Results so a Build that finishes during this query is still represented.
   const active = input.runtime === undefined || input.before !== undefined
     ? [] : (await input.runtime.activity()).builds;
   const views = active.filter((view) => view.sourcePath !== undefined && matches({
     id: view.id,
     source: view.sourcePath,
-    ...(view.runPath === undefined ? {} : { run: view.runPath }),
+    ...(view.invocationSourcePath === undefined ? {} : { invocationSource: view.invocationSourcePath }),
   }));
   let page = input.build === undefined
     ? await input.results.browse({ limit: 25, ...(input.before === undefined ? {} : { before: input.before }) })
@@ -197,13 +187,15 @@ export async function readStudioLibrary(input: StudioLibraryRequest & {
   const manifests = page.results.filter((manifest) => matches({
     id: manifest.id,
     source: manifest.sourceId,
-    ...(manifest.runId === undefined ? {} : { run: manifest.runId }),
+    ...(manifest.invocationSourceId === undefined ? {} : { invocationSource: manifest.invocationSourceId }),
   }));
   const resultsByBuild = new Map(manifests.map((manifest) => [manifest.id, manifest]));
   await Promise.all(views.filter((view) => !resultsByBuild.has(view.id)).map(async (view) => {
     const result = await input.results.read(view.id);
     if (result !== undefined && matches({ id: result.id, source: result.sourceId,
-      ...(result.runId === undefined ? {} : { run: result.runId }) })) resultsByBuild.set(view.id, result);
+      ...(result.invocationSourceId === undefined
+        ? {}
+        : { invocationSource: result.invocationSourceId }) })) resultsByBuild.set(view.id, result);
   }));
   let artifacts: readonly StudioArtifactView[] = [];
   if (input.section === "artifacts") {
@@ -218,7 +210,9 @@ export async function readStudioLibrary(input: StudioLibraryRequest & {
         ...await artifactsForResults(input.workspaceRoot, input.results, page.results.filter((manifest) => matches({
           id: manifest.id,
           source: manifest.sourceId,
-          ...(manifest.runId === undefined ? {} : { run: manifest.runId }),
+          ...(manifest.invocationSourceId === undefined
+            ? {}
+            : { invocationSource: manifest.invocationSourceId }),
         })), input.media)]);
     }
   }
@@ -290,16 +284,10 @@ export async function openStudioBuildLibrary(
       presentationWrite = saved.catch(() => undefined);
       return await saved;
     },
-    async locateHistoricalOutput(build, output) {
-      return await locateRepositoryBuildResultOutput(results, build, output);
-    },
-    async resolveHistoricalOutput(build, output) {
-      return await resolveBuildResultValue(results, build, output);
-    },
     async openArtifact(build, output) {
       const resolved = await results.resolve(build, output);
       if (resolved === undefined) return undefined;
-      if ((resolved.value.kind !== "build-file" && resolved.value.kind !== "external-file") || !isMedia(resolved.value.mediaType)) return undefined;
+      if (resolved.value.kind !== "build-file" || !isMedia(resolved.value.mediaType)) return undefined;
       const file = resolved.value;
       return {
         mediaType: file.mediaType,

@@ -12,7 +12,7 @@
     "@hypit/author": "workspace:*",
     "@hypit/workspace": "workspace:*",
     "@hypit/protocol": "workspace:*",
-    "@hypit/run": "workspace:*",
+    "@hypit/invocation": "workspace:*",
     "@hypit/source": "workspace:*",
     "@hypit/refinement": "workspace:*"
   },

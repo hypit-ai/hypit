@@ -69,16 +69,9 @@ const manifest: ModuleManifest = {
 const closure = createResolvedClosure([manifest]);
 
 function buildState(linked: LinkedProgram, graph: AuthorGraph, targets: readonly string[]) {
-  const planned = planBuild(linked, graph, {
-    format: "hypit.run-graph@1",
-    records: [],
-    candidates: [],
-    operations: [],
-    satisfactions: [],
-    targets,
-  });
+  const planned = planBuild(linked, graph, targets, []);
   return materializeBuild(defineBuild({
-    program: link(linked.closure, [...linked.records, ...planned.initialRecords]),
+    program: linked,
     plan: planned.plan,
   }), []);
 }

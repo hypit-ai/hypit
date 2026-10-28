@@ -275,7 +275,7 @@ authored references to one SVS Recipe and its declared properties. These paths a
 the `inspector` field table. Keep shared values shared: editing a Recipe affects its consumers, while
 an Item-specific `parameterReferences` override must identify the actual authored value it uses.
 
-Verify the integration in an ordinary Run: the intended Module/declaration matches, the expected Item
+Verify the integration through an ordinary Invocation: the intended Module/declaration matches, the expected Item
 is selected, its field reaches the correct Source or Recipe, and changing it recomputes the preview.
 For domain handles, verify the exact point/span identity and its other consumers too. Read-only derived timing
 is preferable to an invented inverse. The Companion explains the component; its Producers remain
