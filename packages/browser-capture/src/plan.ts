@@ -624,7 +624,7 @@ export async function runCapturePlan(session: CaptureSession, input: CapturePlan
     const list = await recording.stop();
     const path = join(directory, "recording.mp4");
     await promisify(execFile)(options.ffmpegPath ?? "ffmpeg", ["-v", "error", "-n", "-f", "concat", "-safe", "0", "-i", list,
-      "-vf", `fps=${fps},format=yuv420p`, "-c:v", "libx264", "-crf", "14", "-preset", "medium", "-tune", "stillimage",
+      "-vf", `fps=${fps},format=yuv420p`, "-c:v", "libx264", "-crf", "14", "-preset", "veryfast", "-tune", "stillimage",
       "-movflags", "+faststart", "-an", path], { maxBuffer: 16 * 1024 * 1024 });
     const probe = await probeMedia(path, { ...(options.ffprobePath === undefined ? {} : { ffprobePath: options.ffprobePath }) });
     if (!probe.hasVideo) throw new Error(`Recording ${path} has no readable video stream`);
