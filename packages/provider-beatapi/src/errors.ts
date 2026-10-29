@@ -15,6 +15,11 @@ export function safeBeatApiReason(value: string): string {
   return value.replace(/https?:\/\/\S+/giu, "[redacted-url]");
 }
 
+// Download and upload targets are signed URLs whose query is an access capability.
+function signedUrlTarget(path: string): string {
+  return /^https?:\/\//iu.test(path) ? path.replace(/[?#].*$/su, "") : path;
+}
+
 export class BeatApiServiceError extends EndpointServiceError {}
 
 export class BeatApiHttpError extends EndpointHttpError {
@@ -29,7 +34,7 @@ export class BeatApiHttpError extends EndpointHttpError {
     const serviceRetryAfter = typeof error?.retry_after_seconds === "number" ? Math.round(error.retry_after_seconds * 1000) : undefined;
     const retryAfter = serviceRetryAfter ?? retryAfterMs(response.headers);
     const facts = [
-      `BeatAPI HTTP ${status}`, code, `${request.method} ${request.path}`,
+      `BeatAPI HTTP ${status}`, code, `${request.method} ${signedUrlTarget(request.path)}`,
       ...(request.model === undefined ? [] : [`model=${request.model}`]),
       ...(requestId === undefined ? [] : [`request=${requestId}`]),
       ...(retryAfter === undefined ? [] : [`retry-after=${retryAfter}ms`]),

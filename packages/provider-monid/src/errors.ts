@@ -15,6 +15,11 @@ export function safeMonidReason(value: string): string {
   return value.replace(/https?:\/\/\S+/giu, "[redacted-url]");
 }
 
+// Download and upload targets are signed URLs whose query is an access capability.
+function signedUrlTarget(path: string): string {
+  return /^https?:\/\//iu.test(path) ? path.replace(/[?#].*$/su, "") : path;
+}
+
 export class MonidServiceError extends EndpointServiceError {}
 
 export class MonidHttpError extends EndpointHttpError {
@@ -25,7 +30,7 @@ export class MonidHttpError extends EndpointHttpError {
     const reason = text(body?.message) ?? (body === undefined ? text(bodyText.slice(0, 2000)) : undefined);
     const requestId = text(response.headers.get("x-request-id"));
     const facts = [
-      `Monid HTTP ${status}`, `${request.method} ${request.path}`,
+      `Monid HTTP ${status}`, `${request.method} ${signedUrlTarget(request.path)}`,
       ...(requestId === undefined ? [] : [`request=${requestId}`]),
     ];
     super("MONID_HTTP_ERROR", `${facts.join("; ")}${reason === undefined ? "" : `: ${safeMonidReason(reason)}`}`,
