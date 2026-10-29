@@ -169,6 +169,7 @@ export function synchronizedMediaSampleFrames(value: SynchronizedMedia): number 
 
 export function verifySynchronizedMedia(value: unknown): asserts value is SynchronizedMedia {
   const item = object(value, "SynchronizedMedia") as unknown as SynchronizedMedia;
+  object(item.frameDomain, "SynchronizedMedia.frameDomain");
   verifyRational(item.frameDomain.frameRate, "SynchronizedMedia.frameDomain.frameRate");
   positiveInteger(item.frameDomain.frameCount, "SynchronizedMedia.frameDomain.frameCount");
   synchronizedMediaSampleFrames(item);
