@@ -172,7 +172,9 @@ export function textTemplateFromRecipes(
   const consumed = new Set([
     meta.path,
     ...blocks.map((item) => `${blockPrefix}${item.id}`),
-    ...recipes.filter((recipe) => recipe.path.startsWith(choicePrefix)).map((recipe) => recipe.path),
+    // Only choices of an axis or variant block are read; a choice under any other name is a typo.
+    ...blocks.filter((item) => item.kind === "axis" || item.kind === "variant").flatMap((item) => recipes
+      .filter((recipe) => recipe.path.startsWith(`${choicePrefix}${item.id}.`)).map((recipe) => recipe.path)),
   ]);
   const stray = recipes.find((recipe) => recipe.path.startsWith(`${prefix}.`) && !consumed.has(recipe.path));
   if (stray !== undefined) throw new Error(`Unrecognized Text Template Recipe ${stray.path}`);
