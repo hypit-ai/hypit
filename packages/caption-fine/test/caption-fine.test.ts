@@ -145,6 +145,16 @@ test("Fine Caption schedules visibility outside semantic Word timing and cuts on
   assert.equal(atom?.style.find((declaration) => declaration.name === "overflow-wrap")?.value, "anywhere");
 });
 
+test("Fine Caption ends a tail that runs past the Timeline at the Timeline end", () => {
+  const { document, program, projection } = fixture();
+  const schedule = scheduleFineCaption(projection, program, document);
+  assert.equal(schedule.cues[1]?.visibleEndFrameExclusive, 62);
+  const track = renderCaption(schedule, program, document,
+    sealTimeline({ id: "test-space", frameCount: 60, frameRate: { numerator: 30, denominator: 1 } }));
+  assert.deepEqual(track.presents[1]?.span, { startFrame: 36, endFrameExclusive: 60 });
+  assert.deepEqual(track.presents[1]?.visibility, [{ startFrame: 36, endFrameExclusive: 60 }]);
+});
+
 test("Fine Caption uniformly springs the whole Cue through exact scales", () => {
   const { document, program, projection } = fixture();
   const style = fineCaptionStyle("plain", {
