@@ -85,4 +85,23 @@ export function killRenderDescendantsSync(pid: number): void {
       }
     }
   }
+  // A signal can remain pending after kill returns. Keep the owner alive until
+  // its children have stopped; zombies are already stopped and await reaping.
+  if (descendants.length === 1) return;
+  const deadline = Date.now() + cleanupMs;
+  const pause = new Int32Array(new SharedArrayBuffer(4));
+  while (true) {
+    let states: string;
+    try {
+      states = execFileSync("ps", ["-p", descendants.slice(1).join(","), "-o", "stat="], {
+        encoding: "utf8", timeout: cleanupMs, stdio: ["ignore", "pipe", "pipe"],
+      });
+    } catch (error) {
+      if ((error as { status?: unknown }).status === 1) return;
+      throw error;
+    }
+    if (states.trim().split(/\s+/u).every(state => state === "" || state.startsWith("Z"))) return;
+    if (Date.now() >= deadline) throw new Error("Rasterizer descendants did not stop after SIGKILL");
+    Atomics.wait(pause, 0, 0, 20);
+  }
 }
