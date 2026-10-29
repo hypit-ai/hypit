@@ -6,10 +6,14 @@ export type LexicalUnit = {
 const CHARACTER_UNIT = String.raw`[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]`;
 // A Latin name beside Han prose ends at the script boundary, even without an authored space.
 const WORD_CHARACTER = String.raw`(?:(?!${CHARACTER_UNIT})[\p{L}\p{M}\p{N}])`;
+const WORD_JOIN = String.raw`(?:['’.-]${WORD_CHARACTER}+)*`;
 const LEXICAL_UNIT = new RegExp([
-  String.raw`(?:\p{N}{1,3}(?:[,，]\p{N}{3})+|\p{N}+)(?:[.．]\p{N}+)?(?:-\p{N}+(?:[.．]\p{N}+)?)*(?!\p{N}|-[\p{L}\p{M}])`,
+  // A comma-grouped number is one unit even when a hyphenated word follows, so
+  // "1,000-word" stays whole instead of falling back to the bare number "1".
+  String.raw`\p{N}{1,3}(?:[,，]\p{N}{3})+(?:[.．]\p{N}+)?(?:-\p{N}+(?:[.．]\p{N}+)?)*(?:-${WORD_CHARACTER}+${WORD_JOIN})*(?!\p{N})`,
+  String.raw`\p{N}+(?:[.．]\p{N}+)?(?:-\p{N}+(?:[.．]\p{N}+)?)*(?!\p{N}|-[\p{L}\p{M}])`,
   String.raw`${CHARACTER_UNIT}\p{M}*`,
-  String.raw`(?:(?!${CHARACTER_UNIT})[\p{L}\p{N}])${WORD_CHARACTER}*(?:['’.-]${WORD_CHARACTER}+)*`,
+  String.raw`(?:(?!${CHARACTER_UNIT})[\p{L}\p{N}])${WORD_CHARACTER}*${WORD_JOIN}`,
 ].join("|"), "gu");
 
 // Unicode owns bracket/quote categories. ASCII symmetric quotes need local context;

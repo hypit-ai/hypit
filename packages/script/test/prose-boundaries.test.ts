@@ -10,7 +10,7 @@ const caption = (text: string) => {
 
 test("annotations cannot create speech boundaries inside words or attached punctuation", () => {
   for (const body of ['hel@{beat!}lo', '“@{beat!}测试”', 'hello@{beat!}, world',
-    'hel{emphasis}lo', '한{emphasis}글', 'hel||lo', '<hel{emphasis}lo|hello>', '<hel{emphasis}lo|>']) {
+    'hel{emphasis}lo', '한{emphasis}글', 'hel||lo', '1,||000-word essay', '<hel{emphasis}lo|hello>', '<hel{emphasis}lo|>']) {
     assert.throws(() => parse(body), /SCRIPT_(?:MARKER_TOKEN_BOUNDARY|CAPTION_BREAK_TOKEN_BOUNDARY|ATTRIBUTE_TARGET)/u, body);
   }
   assert.equal(caption('@{beat!}“测试”'), '“测试”');
