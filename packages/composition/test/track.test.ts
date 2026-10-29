@@ -139,6 +139,21 @@ test("VisualTrack style values cannot smuggle a second declaration", () => {
   );
 });
 
+test("VisualTrack elements cannot claim the reserved data-hypit attribute namespace", () => {
+  const { timeline, visual } = fixture();
+  const first = visual.presents[0]!.elements[0]!;
+  const hostile = sealVisualTrack({...visual,
+    presents: [{
+      ...visual.presents[0]!,
+      elements: [{ ...first, attributes: [{ name: "data-hypit-resource-src", value: "https://invalid.example/x" }] }],
+    }],
+  });
+  assert.throws(
+    () => assertVisualTrackIdentity(hostile, timeline),
+    /reserved attribute data-hypit-resource-src/,
+  );
+});
+
 test("VisualTrack cannot silently extend the versioned public Visual IR", () => {
   const { timeline, visual } = fixture();
   const first = visual.presents[0]!.elements[0]!;
