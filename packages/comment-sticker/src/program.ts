@@ -449,7 +449,9 @@ function displayHeader(content: CommentStickerContent): string {
 }
 
 function initial(author: string): string {
-  return [...author.replace(/^@/u, "").trim()][0]?.toUpperCase() ?? "";
+  // One user-perceived character: a code point would split 👍🏽, 🇯🇵 or a decomposed é.
+  const name = author.replace(/^@/u, "").trim();
+  return [...new Intl.Segmenter("und", { granularity: "grapheme" }).segment(name)][0]?.segment.toUpperCase() ?? "";
 }
 
 function stickerElements(item: CommentStickerItemProgram): readonly VisualElement[] {
