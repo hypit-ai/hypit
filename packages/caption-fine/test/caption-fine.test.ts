@@ -439,6 +439,26 @@ test("Caption handoff follows placed time and retains simultaneous spoken envelo
   assert.equal(track.presents.filter(present => present.span.startFrame <= 25 && present.span.endFrameExclusive > 25).length, 2);
 });
 
+test("Caption handoff gives the Frame that rounding makes contiguous Cues share to the next Cue", () => {
+  const { document, program, projection } = fixture();
+  // Touching words whose boundary falls inside Frame 30: the previous end ceils to 31 and the next
+  // start floors to 30, so both Cues claim Frame 30.
+  const [first, second, third, fourth] = projection.units;
+  const touching: CaptionTiming = { ...projection, units: [first!, { ...second!, endFrameExclusive: 31 },
+    { ...third!, startFrame: 30, endFrameExclusive: 40 }, { ...fourth!, startFrame: 40, endFrameExclusive: 50 }] };
+  const schedule = scheduleFineCaption(touching, program, document);
+  assert.deepEqual(schedule.cues.map(cue => [cue.timedStartFrame, cue.timedEndFrameExclusive]), [[10, 30], [30, 50]]);
+  assert.deepEqual(schedule.cues.map(cue => [cue.visibleStartFrame, cue.visibleEndFrameExclusive]), [[6, 30], [30, 56]]);
+  // Unit timing, which Karaoke reads, keeps the measured overlap.
+  assert.deepEqual(schedule.cues.flatMap(cue => cue.units), touching.units);
+  const track = renderCaption(schedule, program, document,
+    sealTimeline({ id: "test-space", frameCount: 90, frameRate: { numerator: 30, denominator: 1 } }));
+  for (let frame = 0; frame < 90; frame++) {
+    assert.ok(track.presents.filter(present => present.span.startFrame <= frame && present.span.endFrameExclusive > frame).length <= 1,
+      `Frame ${frame} draws more than one Cue`);
+  }
+});
+
 
 test("Caption Surface wires one Timeline to both ordinary and tracked-region rendering", async () => {
   const { decodeFineCaptionTrackSurface } = await import("../src/surface.js");
