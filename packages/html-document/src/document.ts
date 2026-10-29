@@ -166,5 +166,6 @@ export function materializeHtmlDocument(document: HtmlDocument, resolve: Resourc
   }, {once:true});
 })();
 </script>`;
-  return html.replace("</body>", driver + "</body>");
+  // A replacer function keeps `$&`, `$'` and `$$` in authored content from being read as patterns.
+  return html.replace("</body>", () => driver + "</body>");
 }
