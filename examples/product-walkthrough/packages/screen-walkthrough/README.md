@@ -30,6 +30,7 @@ clean, so a different zoom or no cursor needs no retake.
 | `within` | Frame the screen card fits inside, keeping the recording's aspect ratio. |
 | `zoom` | Camera magnification on pointer actions, 1–3 (default 1.6). `1` keeps the whole screen in view. |
 | `cursor` | `arrow` (default) draws the cursor and click ripples; `none` omits them. |
+| `layout` | `card` (default) fits the screen on a framed card with a margin; `full` fills the Frame edge to edge, which suits a phone-width take on a 1080 × 1920 Canvas meant for phones. |
 | `stack-order` | Paint order among other contributions (default 0). |
 
 The camera moves in shortly before each hover, click or typing step, pans between actions that

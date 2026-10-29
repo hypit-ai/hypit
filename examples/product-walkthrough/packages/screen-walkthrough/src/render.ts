@@ -12,6 +12,8 @@ export type WalkthroughOptions = {
   zoom: number;
   cursor: boolean;
   stackingOrder: number;
+  /** `card`: the screen on a framed card with margin; `full`: the screen fills the Frame (cropped to cover). */
+  layout: "card" | "full";
 };
 
 /** One recorded step as `hypit capture plan` writes it into steps.svs. */
@@ -171,15 +173,19 @@ export function renderWalkthrough(timeline: Timeline, within: SpatialFrame, wind
         sourceAtStart: { numerator: clipStart - sourceWindow.span.startFrame, denominator: 1 }, rate: { numerator: 1, denominator: 1 } }] },
   }];
 
-  // The screen card fits the recorded viewport inside the Frame with a margin for its shadow.
-  const fit = Math.min(within.widthPx * 0.9 / width, within.heightPx * 0.9 / height);
-  const card = { width: Math.round(width * fit), height: Math.round(height * fit) };
+  // `card` fits the recorded viewport inside the Frame with a margin for its shadow; `full` covers
+  // the whole Frame, so a phone-shaped take on a phone-shaped Canvas fills the screen edge to edge.
+  const full = options.layout === "full";
+  const fit = full ? Math.max(within.widthPx / width, within.heightPx / height)
+    : Math.min(within.widthPx * 0.9 / width, within.heightPx * 0.9 / height);
+  const card = full ? { width: within.widthPx, height: within.heightPx } : { width: Math.round(width * fit), height: Math.round(height * fit) };
   const program = htmlVisual({
     html: `<div class="card"><div class="layer">${videos.map((video) => `{{${video.id}}}`).join("")}</div>
       <div class="ripple"></div><svg class="cursor" viewBox="0 0 22 30"><path d="M2 2 L2 24 L8 18 L12 28 L16 26 L12 17 L20 17 Z"/></svg></div>`,
     css: `:scope { background: radial-gradient(120% 90% at 50% 0%, #2a3150 0%, #12141c 70%); overflow: hidden; }
-      .card { position: absolute; overflow: hidden; border-radius: ${Math.round(14 * Math.max(fit, 0.6))}px; background: #000;
-        box-shadow: 0 ${Math.round(24 * fit)}px ${Math.round(70 * fit)}px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.08); }
+      .card { position: absolute; overflow: hidden; background: #000;${full ? "" : `
+        border-radius: ${Math.round(14 * Math.max(fit, 0.6))}px;
+        box-shadow: 0 ${Math.round(24 * fit)}px ${Math.round(70 * fit)}px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.08);`} }
       .layer { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
       .cursor { position: absolute; left: 0; top: 0; width: ${Math.round(22 * Math.max(fit, 0.75) * 1.25)}px; overflow: visible;
         transform-origin: 2px 2px; filter: drop-shadow(0 2px 3px rgba(0,0,0,.5)); }

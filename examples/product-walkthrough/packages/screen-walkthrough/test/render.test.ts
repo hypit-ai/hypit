@@ -58,7 +58,7 @@ test("the cursor arrives where the recorder acted, presses follow, and the camer
 test("motion stays locked to the footage when the recording starts later in the program", () => {
   const render = (sourceStart: number) => {
     const track = renderWalkthrough(timeline, { xPx: 0, yPx: 0, widthPx: 1280, heightPx: 720 }, windowOf("scene", 0, 300),
-      media(240), windowOf("take", sourceStart, sourceStart + 240), take, { id: "demo", zoom: 1.6, cursor: true, stackingOrder: 0 });
+      media(240), windowOf("take", sourceStart, sourceStart + 240), take, { id: "demo", zoom: 1.6, cursor: true, stackingOrder: 0, layout: "card" as const });
     const program = track.presents[0]!.elements.find((element) => element.kind === "program")!;
     assert.equal(program.kind, "program");
     const video = track.presents[0]!.elements.find((element) => element.kind === "video")!;
@@ -71,5 +71,22 @@ test("motion stays locked to the footage when the recording starts later in the 
   assert.equal(late.video.kind, "video");
   assert.deepEqual(late.video.kind === "video" && late.video.sourceTime?.pieces[0]?.target, { startFrame: 30, endFrameExclusive: 270 });
   assert.throws(() => renderWalkthrough(timeline, { xPx: 0, yPx: 0, widthPx: 1280, heightPx: 720 }, windowOf("scene", 0, 300),
-    media(200), windowOf("take", 0, 240), take, { id: "demo", zoom: 1.6, cursor: true, stackingOrder: 0 }), /equal-length/);
+    media(200), windowOf("take", 0, 240), take, { id: "demo", zoom: 1.6, cursor: true, stackingOrder: 0, layout: "card" as const }), /equal-length/);
+});
+
+test("full layout covers the Frame edge to edge; card leaves a framed margin", () => {
+  const frame = { xPx: 0, yPx: 0, widthPx: 1080, heightPx: 1920 };
+  const phone: WalkthroughTake = { viewport: { width: 540, height: 960, scale: 2 }, steps: take.steps };
+  const data = (layout: "card" | "full") => {
+    const track = renderWalkthrough(timeline, frame, windowOf("scene", 0, 300), media(240), windowOf("take", 0, 240), phone,
+      { id: "demo", zoom: 1.4, cursor: true, stackingOrder: 0, layout });
+    const program = track.presents[0]!.elements.find((element) => element.kind === "program")!;
+    return program.kind === "program" ? program.program.payload as unknown as HtmlVisual : undefined;
+  };
+  const full = data("full")!, card = data("card")!;
+  assert.deepEqual((full.data as { card: unknown }).card, { width: 1080, height: 1920 });
+  assert.equal((full.data as { fit: number }).fit, 2);
+  assert.doesNotMatch(full.css, /box-shadow/);
+  assert.deepEqual((card.data as { card: unknown }).card, { width: 972, height: 1728 });
+  assert.match(card.css, /box-shadow/);
 });

@@ -63,7 +63,7 @@ function optionalNumber(raw: unknown, name: string, fallback: number): number {
 }
 
 export const decodeSurface: StructuredSurfaceHandler = ({ element, resolveReference }) => {
-  assertAttributes(element, ["id", "timeline", "within", "media", "source-window", "take", "zoom", "cursor", "stack-order",
+  assertAttributes(element, ["id", "timeline", "within", "media", "source-window", "take", "zoom", "cursor", "layout", "stack-order",
     ...temporalWindowAttributeNames]);
   assertEmptyElement(element);
   const id = textAttribute(element, "id");
@@ -76,8 +76,10 @@ export const decodeSurface: StructuredSurfaceHandler = ({ element, resolveRefere
   };
   const cursor = element.attributes.cursor ?? "arrow";
   if (cursor !== "arrow" && cursor !== "none") throw new Error("cursor must be arrow or none.");
+  const layout = element.attributes.layout ?? "card";
+  if (layout !== "card" && layout !== "full") throw new Error("layout must be card or full.");
   const options: WalkthroughOptions = { id, zoom: optionalNumber(element.attributes.zoom, "zoom", 1.6),
-    cursor: cursor === "arrow", stackingOrder: optionalNumber(element.attributes["stack-order"], "stack-order", 0) };
+    cursor: cursor === "arrow", layout, stackingOrder: optionalNumber(element.attributes["stack-order"], "stack-order", 0) };
   if (!(options.zoom >= 1 && options.zoom <= 3)) throw new Error("zoom must be between 1 and 3.");
   const context = resolveTemporalContext({ element, resolveReference });
   const window = resolveTemporalWindowReference({ element, resolveReference });
@@ -104,6 +106,7 @@ const declaration = { name: "walkthrough", tag: "Walkthrough", mode: "structured
       { name: "take", kind: "reference" as const, required: true, accepts: [recipeType], summary: "walkthrough.take Recipe from the take's steps.svs." },
       { name: "zoom", kind: "literal" as const, required: false, summary: "Camera magnification on pointer actions, 1–3 (default 1.6; 1 disables)." },
       { name: "cursor", kind: "literal" as const, required: false, summary: "arrow (default) draws the cursor and click ripples; none omits them." },
+      { name: "layout", kind: "literal" as const, required: false, summary: "card (default): framed screen with margin; full: the screen fills the Frame." },
       { name: "stack-order", kind: "literal" as const, required: false, summary: "Paint order among other contributions (default 0)." },
       ...temporalWindowAttributeVocabulary,
     ], ports: [{ name: "visual", type: compositionTypes.visualTrack, summary: "The framed, followed walkthrough." }],
