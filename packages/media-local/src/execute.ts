@@ -1092,7 +1092,16 @@ export async function executeExtractFrame(
       maxStdoutBytes: 64 * 1024,
       ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
     });
-    const bytes = await readFile(output);
+    let bytes: Uint8Array;
+    try {
+      bytes = await readFile(output);
+    } catch (error) {
+      // ffmpeg exits successfully when its selection matches no frame, as a `time:` past the end does.
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+      throw new Error(need.at.kind === "time"
+        ? `Frame extraction found no frame at ${need.at.seconds}s; the time is past the end of the selected stream`
+        : "Frame extraction found no frame for its selection", { cause: error });
+    }
     assert(bytes.byteLength > 0, "Frame extraction produced no image");
     const inspected = await outputInspection({
       path: output,
