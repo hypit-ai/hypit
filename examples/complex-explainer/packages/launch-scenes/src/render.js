@@ -12,7 +12,7 @@ function seal(t, within, w, o, html, css, setup, data, children = []) {
   return sealPresentVisualTrack({
     id: o.id,
     timelineId: t.id,
-    visualIr: "hypit.visual-ir@1",
+
     presents: [
       {
         id: o.id,

@@ -6,16 +6,13 @@ description: 选择执行服务，独立运行 Build，并保留可持续使用�
 Source 描述作品及其长期 realization 选择；Invocation 选择 Target 与可选的临时 override，
 `.svrun` 可以保存这份 Invocation。Runtime 使用选定服务执行，项目把接受的材料作为普通作者资源保留。
 
-| 所有者 | 职责 |
+| 部分 | 包含内容 |
 | --- | --- |
 | 项目 | Source、素材、组件包与选定的 Runtime Profile |
-| Distribution | 安装的可执行程序、公共 SDK 与执行实现 |
+| Hypit 安装 | 命令与已安装的包 |
 | Runtime Profile | Provider Endpoint、凭据引用、路由与共享容量 |
-| Build | 使用选定依赖图和配置的一次执行尝试 |
+| Build | 使用选定工作和配置的一次执行尝试 |
 | Result 仓库 | 已完成的公开 Output、执行结果和保留的运行证据 |
-
-Core 只规划和推进依赖，不需要知道作品是一条视频。新组件或
-[Provider](./providers.md) 通过相同的包接口提供自己的行为。
 
 ## 先确定项目，再选择 Profile
 
@@ -93,7 +90,8 @@ hypit runtime status
 `programs prepare|up|status|down` 单独管理这些本地资源和助手。首次推理环境准备可能涉及大量下载，
 应先比较本地准备成本和托管方式，再选择执行路径。
 
-`plan <run>` 检查当前工作需要的能力和轻量就绪状态。发现 Provider 能力需要可加载的包声明；
+`hypit plan <source>` 检查当前工作需要的能力和轻量就绪状态。Source 可以是带显式 Target
+的 Author Source，也可以是已保存的 `.svrun` Invocation Source。发现 Provider 能力需要可加载的包声明；
 没有明确 binding 时，可能需要加载其他已声明 Endpoint。未使用的服务不必启动或登录。
 `build` 不做安装准备：依赖已就绪时，按需启动 Worker 并提交一次 Build。
 [Invocation 与 Build](../quickstart/run.md) 说明规划、价格、付费授权和显式复用。

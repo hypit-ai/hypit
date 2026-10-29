@@ -120,21 +120,13 @@ clearing this Track's presentation in its window; a later visible Use can restor
 Use `captionUseVisibility` to resolve that coverage for each Cue's speaker. The content projection
 retains all Cues regardless of Style. Empty or uncovered time naturally produces no drawing.
 
-## Give Style, layout and rendering clear owners
+## Give Style, layout and rendering clear responsibilities
 
-The Style declaration compiler validates a Recipe and exact font references, then emits the common
-Caption Style shape with the new family's name and parameters. The Caption declaration accepts the
-document, Timeline and timed Use children; its Fragment assembles the Uses, performs the common timing
-join, and runs its own schedule and render operations. Register the new family's Producers and any new
-schedule Type in its own package.
-
-The renderer owns typography, structural relationships, stacking and motion. Use the existing text
-shaping and Visual IR facilities with explicit font resources, including selected local font files,
-so the same faces reach the rendering machine.
-Read `@hypit/caption-fine`'s `declaration.ts`, `schedule.ts` and `render.ts` as separate implementation
-examples. Reuse the common parts and replace the actual family behavior, including its parameter
-validation; renaming Fine while retaining its uniform-word assumption will not implement a structural
-keyword treatment.
+The Style owns the named appearance choices and exact fonts. The family consumes the Caption document,
+Timeline, ordered Uses and complete Unit timing, then produces its own schedule and picture. Keep
+typography, structural relationships, stacking and motion in that family. Use explicit font resources
+so the selected faces reach the rendering machine. Start from the installed Caption example and its
+README, replacing the actual layout behavior rather than only changing names.
 
 The chosen family interprets its own Styles. Fine handles its uniform-flow Styles; a structural
 family handles its own layouts. Each Track is independent, so multiple Tracks can intentionally
@@ -157,7 +149,6 @@ and authored word roles editable in the project. The package adds its rendering 
 consuming the existing Script, Caption and semantic-time owners.
 
 For live Cue Items and Inspector editing, add a [Studio Companion](studio.md#give-a-project-component-a-useful-companion)
-that presents complete Cue content on the Timeline and authored Uses as Inspector objects. Read the
-Track's resolved Use collection, retain each Use's Source range and temporal lineage, and expose the
-referenced Style on that Use. Caption Fine's
-Companion is a useful example of these relationships; the new family's layout stays in its renderer.
+that presents complete Cue content on the Timeline and authored Uses as Inspector objects. Expose the
+Style selected by each Use. Caption Fine's Companion is a useful interaction reference; the new
+family's layout stays in its component.

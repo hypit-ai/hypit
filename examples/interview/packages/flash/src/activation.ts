@@ -13,9 +13,10 @@ import {
   sealPresentVisualTrack,
 } from "@hypit/composition";
 import type {
-  VisualElement,
-  VisualStyleDeclaration,
-} from "@hypit/composition";
+  HtmlElement,
+  HtmlStyleDeclaration,
+} from "@hypit/html-program";
+import { htmlVisualElement } from "@hypit/html-program";
 import { assertSpatialFrame, spatialTypes } from "@hypit/spatial";
 import type { SpatialFrame } from "@hypit/spatial";
 import {
@@ -98,7 +99,7 @@ function renderFlash(
   const total = options.attackFrames + options.holdFrames + options.decayFrames;
   assert(total <= duration, "Flash envelope cannot outlive its Window.");
 
-  const style: readonly VisualStyleDeclaration[] = [
+  const style: readonly HtmlStyleDeclaration[] = [
     { name: "background-color", value: options.color },
     { name: "height", value: px(within.heightPx) },
     { name: "left", value: px(within.xPx) },
@@ -113,7 +114,7 @@ function renderFlash(
   marks.set(options.attackFrames + options.holdFrames, options.intensity);
   marks.set(total, 0);
   marks.set(duration, 0);
-  const element: VisualElement = total === 0 ? {
+  const element: HtmlElement = total === 0 ? {
     id: "root",
     kind: "box",
     children: [],
@@ -132,12 +133,12 @@ function renderFlash(
   const track = sealPresentVisualTrack({
     id: options.id,
     timelineId: timeline.id,
-    visualIr: "hypit.visual-ir@1",
+
     presents: [{
       id: options.id,
       subjectId: options.id,
       span: { ...window.span },
-      root: element,
+      root: htmlVisualElement(element),
     }],
   });
   assertVisualTrackIdentity(track, timeline);

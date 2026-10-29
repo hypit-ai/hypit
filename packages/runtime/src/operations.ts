@@ -82,10 +82,25 @@ export type OperationSnapshot = OperationIdentity & OperationContext & Operation
 /** Updates replace the lifecycle phase while preserving immutable context and accumulated evidence. */
 export type OperationUpdate = OperationEvidence & OperationState;
 
-export function applyOperationUpdate(current: OperationSnapshot, update: OperationUpdate): OperationSnapshot {
-  if (current.status === "completed" || current.status === "failed" || current.status === "cancelled") {
-    return current;
+const operationTransitions: Readonly<Record<OperationState["status"], readonly OperationState["status"][]>> = {
+  queued: ["queued", "submitting", "failed", "cancelled"],
+  submitting: ["running", "collecting", "received", "failed", "cancelled"],
+  running: ["running", "collecting", "received", "failed", "cancelled"],
+  collecting: ["collecting", "received", "failed", "cancelled"],
+  received: ["completed", "failed"],
+  completed: [],
+  failed: [],
+  cancelled: [],
+};
+
+export function assertOperationTransition(current: OperationSnapshot, update: OperationUpdate): void {
+  if (!operationTransitions[current.status].includes(update.status)) {
+    throw new Error(`Operation ${current.id} cannot transition from ${current.status} to ${update.status}`);
   }
+}
+
+export function applyOperationUpdate(current: OperationSnapshot, update: OperationUpdate): OperationSnapshot {
+  assertOperationTransition(current, update);
   return {
     id: current.id,
     build: current.build,
@@ -111,7 +126,7 @@ export type OperationStore = {
   create(operation: OperationSnapshot): Promise<OperationSnapshot>;
   read(id: string): Promise<OperationSnapshot | undefined>;
   list(query: OperationQuery): Promise<readonly OperationSnapshot[]>;
-  /** One local Worker owns execution. A terminal Operation is returned unchanged. */
+  /** One local Worker owns execution. Invalid or terminal-state transitions are rejected. */
   update(id: string, update: OperationUpdate): Promise<OperationSnapshot>;
   /** Drop Provider execution payloads after the owning Build Result has an outcome. */
   removeBuild?(build: string): Promise<void>;

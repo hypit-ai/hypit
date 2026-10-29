@@ -146,10 +146,13 @@ The local audio Renderer evaluates the complete occurrence and Prepared Media ma
 pullback. Affine, reverse, hold, wrap, gap, cubic and multi-stage relations therefore use the same
 execution path. Selected source streams are decoded once per request to canonical 48 kHz stereo PCM;
 the Renderer reads them through a bounded page cache, applies Clip automation and adds the resulting
-signals in output blocks. A nested AudioProgram is a request-local lazy signal reader with its own
+signals in output blocks. AudioProgram nesting is supported independently of visual Programme nesting:
+a nested AudioProgram is a request-local lazy signal reader with its own
 bounded sample-page cache. The parent pulls only mapped child samples, so nesting does not write and
 reopen a complete intermediate WAV; the reader preserves the closed child signal boundary before
-parent gain, fade and processing. Reader reuse is limited to the same in-memory child Program during
+parent gain, fade and processing. Reconstruction on a nested Composition node is not implemented and is
+rejected as that specific Renderer capability; nesting without it remains supported. Reader reuse is
+limited to the same in-memory child Program during
 one render request and creates no global cache or author metadata. It does not infer pitch-preserving stretch from a temporal relation: such a
 reconstruction policy is an explicit Clip reconstruction with its own programme owner. The Provider
 implements `@hypit/audio-stretch` PreservePitch for a complete positive-affine, non-looping occurrence;

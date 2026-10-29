@@ -99,7 +99,7 @@ permits enumeration, and it does not turn the read input into a build attachment
 
 Frontend output passes a Host-owned Record validation hook before linking. The hook is permitted to
 reject a Record but is forbidden to rewrite Record identity, Type or value.
-`@hypit/compiler` wires this to `@hypit/refinement` by default, so authored
+The compiler Host explicitly supplies its `@hypit/refinement` registry, so authored
 values use the same Type-owner gate as Producer and Endpoint results. Invocation can only select an
 already validated authored Record; it introduces no additional value source.
 
@@ -110,8 +110,8 @@ Input Envelopes.
 
 Expansion assigns hygienic identities from the author instance id and Fragment-local id.
 Multiple exports of one instance therefore share internal Operations, while two explicit instances
-remain two nodes even when their content is identical. Author exports become Logical Outputs with
-Primary Candidates. The result is ordinary graph data that Core validates again before freezing a BuildPlan.
+remain two nodes even when their content is identical. Author exports become Logical Outputs whose
+primary roots directly name a Record or Operation result. The result is ordinary graph data that Core validates again before freezing a BuildPlan.
 
 `@hypit/author` is a reusable graph-construction owner, not a universal Author SDK facade. A domain
 normally adds its own contract and component packages; Text remains only one

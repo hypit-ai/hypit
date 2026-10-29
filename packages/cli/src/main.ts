@@ -14,7 +14,7 @@ import type { OperationalMachineView } from "./machine-view.js";
 import { parseCommand } from "./arguments.js";
 import type { CliCommand, RuntimeOption } from "./command.js";
 import { commandHint } from "./command-hint.js";
-import { assertPlannedRequests, assertPreflight, createCatalogDescriptor, describePlanEndpoints, describePlanNeeds, describePlanPricing, evaluatePlanNeeds, plannedEndpointQueries, preflightPlan } from "./build-planning.js";
+import { assertPlannedRequests, assertPreflight, createBuildAuthoring, describePlanEndpoints, describePlanNeeds, describePlanPricing, evaluatePlanNeeds, plannedEndpointQueries, preflightPlan } from "./build-planning.js";
 import { buildProgressLines, observeBuild } from "./observation.js";
 import { isProjectResultCommand, runProjectResultCommand } from "./commands/results.js";
 import { isEnvironmentCommand, runEnvironmentCommand } from "./commands/environment.js";
@@ -220,8 +220,7 @@ export async function runCli(
     }
     {
       const result = await compiler.compileResolvedSource(workspace.entry, workspace);
-      const authorFacing = result.exports.filter((item) =>
-        !item.name.includes(".__") && !/\.binding-\d+$/u.test(item.name) && !item.name.endsWith(".bindings"));
+      const authorFacing = result.exports;
       const outputs = authorFacing.filter((item) => item.ref.kind === "logical-output");
       const values = authorFacing.filter((item) => item.ref.kind !== "logical-output");
       const modules = result.program.closure.modules.map(moduleKey);
@@ -288,7 +287,7 @@ export async function runCli(
     let runtime: CliRuntime | undefined;
     let inspection: CliRuntimeInspection | undefined;
     try {
-      const catalog = createCatalogDescriptor({
+      const authoring = createBuildAuthoring({
         source: loadedInvocation.authorSource,
         publication: result.publication,
         ...(loadedInvocation.origin.kind === "preset"
@@ -306,7 +305,7 @@ export async function runCli(
               facet.abi === "hypit.producer-package@1" || facet.abi === "hypit.refinement-package@1") ?? false))
             .map((item) => item.specifier),
         }),
-        catalog,
+        authoring,
         attachments: result.compilation.attachments,
         result: {
           repository: buildResults.location,
@@ -376,7 +375,7 @@ export async function runCli(
       const finishedResult = finished
         ? await buildResults.repository.read(built.id)
         : undefined;
-      const presentation = catalog.publication;
+      const presentation = authoring.publication;
       const targetNames = new Set(finishedResult?.targets ?? []);
       const targetPublishedOutputs = presentation.outputs.filter((published) => finishedResult === undefined
         ? published.target
@@ -503,12 +502,13 @@ export async function runCli(
     const needs = describePlanNeeds(evaluated.state, evaluated, endpoints ?? []);
     const outputNames = Object.fromEntries(result.compilation.author.exports.flatMap((item) =>
       item.ref.kind === "logical-output" ? [[item.ref.id, item.name]] : []));
-    const allChoices = loaded.invocation.overrides.flatMap((override) => {
-      const output = outputNames[override.output];
+    const allChoices = result.selections.flatMap((selection) => {
+      const output = outputNames[selection.output];
       if (output === undefined) return [];
       return [{
         output,
-        choice: override.choice.kind === "primary" ? "primary" : override.choice.record,
+        record: selection.record,
+        origin: selection.origin,
       }];
     });
     const targets = loaded.origin.kind === "preset"

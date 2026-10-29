@@ -7,16 +7,13 @@ The Source describes the work and its durable realization choices. An Invocation
 optional transient overrides; a `.svrun` file can save that Invocation. The Runtime executes it using
 the selected services, and the project keeps accepted material as ordinary authored resources.
 
-| Owner | Responsibility |
+| Part | What it contains |
 | --- | --- |
 | Project | Sources, assets, component packages and the selected Runtime Profile |
-| Distribution | The installed executable, public SDKs and execution implementation |
+| Hypit installation | Commands and installed packages |
 | Runtime Profile | Provider Endpoints, credential references, bindings and shared capacity |
-| Build | One execution attempt using the selected graph and configuration |
+| Build | One execution attempt using the selected work and configuration |
 | Result repository | Completed public Outputs, outcome and retained execution evidence |
-
-Core plans and advances dependencies without knowing that they make a video. A new component or
-[Provider](./providers.md) supplies its behavior through the same package interfaces.
 
 ## Select the project and Profile
 
@@ -101,7 +98,8 @@ It does not log into or start hosted services. `programs prepare|up|status|down`
 separately. Initial inference setup can require substantial downloads; compare that effort with hosted
 execution and choose the route before starting preparation.
 
-`plan <run>` checks the work's demanded capabilities and cheap readiness. Provider discovery needs
+`hypit plan <source>` checks the work's demanded capabilities and cheap readiness. The Source can be
+an Author Source with explicit Targets or a saved `.svrun` Invocation Source. Provider discovery needs
 installed package declarations; it may load other declared Endpoints when no explicit binding selects
 a route. Unused services need not be running or logged in. `build` provisions nothing: it requires
 its dependencies ready, starts an available Worker if necessary, and submits one Build.

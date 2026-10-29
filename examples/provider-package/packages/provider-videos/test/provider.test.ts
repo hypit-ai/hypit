@@ -67,7 +67,7 @@ test("project video Provider uploads a reference, retains its receipt and collec
   assert.equal(resolution.registration.kind, "asynchronous");
   const endpoint = resolution.registration.endpoint;
   const context: EndpointStartContext = {
-    need, operation: "operation:example",
+    request: need, operation: "operation:example",
     resources, credentials: { apiKey: { secret: "test-key" } },
     checkpoint: async (value) => { checkpoint = value; },
     reportProgress: async (value) => { progress.push(value.phase); },
@@ -138,7 +138,7 @@ test("project video Provider keeps the received task id when the render fails re
   assert.equal(resolved.registration.kind, "asynchronous");
   const endpoint = resolved.registration.endpoint;
   const context: EndpointStartContext = {
-    need, operation: "operation:failure",
+    request: need, operation: "operation:failure",
     resources: new MemoryResourceStore(), credentials: { apiKey: { secret: "test-key" } },
     checkpoint: async () => { checkpointed = true; },
   };
@@ -187,7 +187,7 @@ test("first and last frame person flags reach the upload API, including false", 
   const selected = registry.select(need);
   assert.equal(selected.status, "resolved");
   assert.equal(selected.registration.kind, "asynchronous");
-  await selected.registration.endpoint.start({ need,
+  await selected.registration.endpoint.start({ request: need,
     operation: "frames", resources, credentials: { apiKey: { secret: "test" } },
   });
   assert.deepEqual(flags, ["true", "false"]);

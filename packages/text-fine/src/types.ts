@@ -1,5 +1,4 @@
 import type {
-  VisualAnimation,
   VisualColorPaint,
   VisualTextDocument,
   VisualTextFlow,
@@ -7,6 +6,7 @@ import type {
   VisualTextSequenceAnimation,
   VisualTextTypography,
 } from "@hypit/composition";
+import type { HtmlAnimation as VisualAnimation } from "@hypit/html-program";
 import type { FrameSpan } from "@hypit/timeline";
 import type { SpatialFrame, SpatialPath, SpatialPoint } from "@hypit/spatial";
 

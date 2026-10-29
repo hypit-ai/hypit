@@ -8,7 +8,8 @@ attributes and markers. [Timing](timing.md) explains how components consume thos
 ## Three documents, three decisions
 
 A `.svml` normally describes the work, a `.svs` holds reusable authored values, and a `.svrun`
-chooses what to execute and reuse. Each document's Header selects its parser; the filename extension
+chooses one Author entry, its execution Targets and any transient realization override. Each
+document's Header selects its parser; the filename extension
 is the convention used to recognize its role.
 
 This small Author Source produces Text and Script values; it makes no media request:
@@ -35,8 +36,8 @@ Package imports expose vocabulary under a local alias. Source imports expose a d
 values: `<import as="look" source="./look.svs"/>`. A data package can expose the same kind of Source,
 for example `<import as="ugc" source="@hypit/gpt-image-kits/phone-ugc-v1"/>`; its own relative imports
 and assets stay inside that package. Put imports in the leading prologue, before body declarations.
-Use a package's logical Module ABI, such as `@hypit/text@1`, in `from`; installed package versions
-belong to ordinary package management. Reading a packaged Source does not activate its JavaScript.
+Use a package's Source address, such as `@hypit/text@1`, in `from`; installed package versions belong
+to ordinary package management. A Source data import reads the package's declared Source content.
 
 A Source alias qualifies public bindings; it does not rename a Narrative's authored identity.
 Two imported Sources declaring different Scripts both named `story` therefore conflict. Share the
@@ -68,9 +69,8 @@ Public bindings can be authored Records or realizable Logical Outputs. Script,
 Recipes and literal Text already exist as authored data; they are not Invocation Targets. The computed
 `prompt` from `copy:Render` is a Logical Output that an Invocation can target or another declaration
 can consume.
-Declaration order does not establish dependencies. Markup projects the complete Source into
-package-owned Author Declarations; their declared references determine compilation and graph edges
-determine execution. A later declaration can therefore be referenced without rearranging the Source.
+Declaration order does not establish dependencies. References state which values each declaration
+uses, so a later declaration can be referenced without rearranging the Source.
 
 Different bodies have different readers. Script uses its own prose grammar; structured components
 declare their permitted attributes and children; Text has its own literal/template forms. In
@@ -110,8 +110,8 @@ caption.host {
 ```
 
 Units such as `8f`, `250ms`, and `50%` remain strings until the consuming package interprets them.
-Recipe values do not evaluate graph references. Media, fonts, semantic ranges, and other graph
-values remain explicit Source inputs to the component that consumes them.
+Recipe properties are authored literals. Media, fonts, semantic ranges and other computed values are
+explicit Source inputs to the component that consumes them.
 
 Some packages, such as TextTemplate, explicitly define parameter precedence for their own inputs.
 A Prompt Kit remains a reusable text program; image

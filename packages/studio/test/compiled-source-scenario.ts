@@ -26,12 +26,11 @@ export function compiledSourceScenario(input: {
       program: { closure: { format: "hypit.closure@1", modules: [] }, records: input.records ?? [] },
       graph: {
         format: "hypit.graph@1",
-        candidates: [],
         operations: [],
         outputs: input.exports.map((output) => ({
           id: output.ref,
           type: output.type,
-          primary: `${output.ref}:candidate`,
+          primary: { kind: "operation-result" as const, operation: `${output.ref}:primary` },
         })),
       },
       realizations: [],

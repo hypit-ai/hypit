@@ -89,8 +89,10 @@ execution mechanisms and never become Program fields or graph Results.
 CSS and synchronous frame drawing. Its setup function returns
 `render(localFrame)`. Setup receives `(root, data, context)`, where `context.durationFrames` is the
 owning contribution's exact duration; `localFrame` is relative to that Visual Present or Visual Process.
-Components may use this when ordinary Visual IR elements do not express
-their shared behaviour.
+`htmlVisualElement(root)` closes one package-owned HTML element tree behind this format. Layout,
+attributes, CSS declarations and HTML keyframes are validated here; Composition receives only the
+Programme envelope and its typed named slots. Components use typed media, text, Surface and nested
+Composition leaves as slot values instead of copying their resource facts into markup.
 
 The HTML compiler also lowers generic Composition `VisualProcess` values. Track-level Processes keep
 their named contributions and independent clocks inline. Scope-level Processes render each named input
@@ -99,10 +101,9 @@ scope into one request-private transparent Picture before invoking the package-o
 effect or prescribe PNG, GPU textures or another transfer mechanism. The HTML format does not know
 transition or matte effect names.
 
-The current format rejects a nested Composition whose child `HtmlProgram` itself requires Scope Process
-input surfaces. Current Providers execute those passes in the root document only. This is an explicit
-renderer-format limit, not a Composition limit: a future recursive surface executor can remove it without
-changing Film, VisualScope or effect declarations.
+Nested Scope Process passes remain in their owning child documents. `processPasses` counts the complete
+recursive Programme, and the local Provider executes passes deepest-first before reapplying the requested
+absolute root frame. Nesting therefore does not materialize a child video or change Composition semantics.
 
 Asynchronous resources must be prepared before drawing. A frame callback may
 not race capture. The page ABI and Provider readiness checks settle declared

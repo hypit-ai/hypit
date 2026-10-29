@@ -1,9 +1,11 @@
 import { preparedVisualSource } from "@hypit/media";
+import { htmlVisualElement } from "@hypit/html-program";
 import type {
-  VisualAnimation,
-  VisualElement,
-  VisualStyleDeclaration,
-} from "@hypit/composition";
+  HtmlAnimation as VisualAnimation,
+  HtmlElement as VisualElement,
+  HtmlStyleDeclaration as VisualStyleDeclaration,
+} from "@hypit/html-program";
+import type { VisualProgramElement } from "@hypit/composition";
 import { mapSpatialPoint } from "@hypit/spatial";
 import type { SpatialFrame, SpatialPath } from "@hypit/spatial";
 import { composeTemporalMaps } from "@hypit/temporal";
@@ -290,7 +292,7 @@ function layerElements(
 }
 
 /** Lower one independent Clip through the fixed wrapper stack from the visual spec. */
-export function lowerVisualClipRoot(
+export function lowerVisualClipElement(
   clip: VisualClipProgram,
   options: {
     readonly poseAnimationOverride?: VisualAnimation | null;
@@ -335,4 +337,11 @@ export function lowerVisualClipRoot(
       { name: "width", value: px(clip.frame.widthPx) },
     ],
   };
+}
+
+export function lowerVisualClipRoot(
+  clip: VisualClipProgram,
+  options: Parameters<typeof lowerVisualClipElement>[1] = {},
+): VisualProgramElement {
+  return htmlVisualElement(lowerVisualClipElement(clip, options));
 }

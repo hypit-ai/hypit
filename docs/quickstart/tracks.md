@@ -93,8 +93,8 @@ glow and underline; Cue/Pill Paint; three independent glyph/Pill/underline activ
 and layered Cue, Alignment-Unit, active-response and loop motion. Missing optional dimensions resolve
 deterministically to no decoration or motion. Unknown properties are rejected.
 
-The package groups those properties as **Where**, **How** and **When** in its Author Declaration,
-so Studio can present the same author contract without maintaining a Caption-specific property list.
+The package groups those properties as **Where**, **How** and **When**, so Studio can present them in
+the same terms used by Source.
 `lead-frames` and `tail-frames` form an explicit visible Schedule around the spoken Cue;
 `handoff: cut` prevents adjacent visible envelopes from competing, while `overlap` preserves both.
 Neither form changes the Word frames used by Karaoke.
@@ -358,8 +358,8 @@ To apply explicit gain and close several AudioTracks into one contribution, use 
 </mix:Track>
 ```
 
-The output `{dialogue.audio}` is another ordinary AudioTrack. Film sees only that closed output;
-Audio Mix does not normalize, limit, invent a Master, or route by Track name.
+The output `{dialogue.audio}` is another ordinary AudioTrack. Audio Mix applies each declared gain
+and adds the signals. Use an audio component for limiting, ducking, sends or master treatment.
 
 ## Text overlays
 
@@ -409,7 +409,7 @@ Each occurrence has one explicit placement form, one exact Style and one absolut
 | Attribute | Required | Description |
 |---|---|---|
 | `id` | yes | Stable item identity |
-| child content or `content` | yes | Inline plain/rich content, or an ordinary graph `Text` reference; the two forms are exclusive |
+| child content or `content` | yes | Inline plain/rich content, or a `Text` reference; the two forms are exclusive |
 | timing | yes | `during={named-window}` |
 | placement | yes | `SpatialPoint`, `SpatialFrame` or `SpatialPath`, matching the occurrence form |
 | `style` | yes | A `text:Style` compiled from an SVS Recipe plus exact font bytes |
@@ -427,7 +427,7 @@ does not know which domain produced it:
 </text:Flow>
 ```
 
-Graph-produced copy remains visible as an edge:
+Computed copy remains an explicit reference:
 
 ```svml
 <wording:Value id="headline">EXACTLY THE RIGHT MOMENT</wording:Value>

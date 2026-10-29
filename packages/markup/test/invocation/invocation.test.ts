@@ -37,12 +37,7 @@ function fixture(): CompiledSourceClosure {
   const accepted = { id: "media:accepted", type: mediaType, value: "Already accepted." };
   const program = link(closure, [prompt, accepted]);
   const graph = sealAuthorGraph({
-    outputs: [{ id: "left", type: mediaType, primary: "default:candidate" }],
-    candidates: [{
-      id: "default:candidate",
-      type: mediaType,
-      root: { kind: "operation-result", operation: "default:operation" },
-    }],
+    outputs: [{ id: "left", type: mediaType, primary: { kind: "operation-result", operation: "default:operation" } }],
     operations: [{
       id: "default:operation",
       producer: defaultProducer,

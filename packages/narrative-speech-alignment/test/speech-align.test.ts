@@ -344,23 +344,6 @@ test("locating is total: every Script token carries a window", () => {
   assert.equal(diverged.tokens.every((token) => token.endUnitExclusive > token.startUnit), true);
 });
 
-test("a collapsed WhisperX word is assigned the available interval between its neighbors", () => {
-  const narrative = parseScript("collapsed.svml", "<line>well a lot</line>");
-  const map = locate(narrative, {
-    durationSec: 1,
-    words: [
-      { text: "well", startSec: 0.1, endSec: 0.4 },
-      { text: "a", startSec: 0.43, endSec: 0.43 },
-      { text: "lot", startSec: 0.5, endSec: 0.8 },
-    ],
-  });
-  assert.deepEqual(map.tokens.map((token) => [token.startUnit, token.endUnitExclusive]), [
-    [100, 400],
-    [400, 500],
-    [500, 800],
-  ]);
-});
-
 test("three Script words may share the two alignment units covered by one evidence word", () => {
   const narrative = parseScript("pigeonhole.svml", "<line>alpha beta gamma</line>");
   const original = speechBasis(narrative, 1);

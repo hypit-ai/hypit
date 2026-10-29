@@ -15,10 +15,8 @@ test("attachment merging preserves the owner's whole and ranged readers", async 
     blob: { kind: "blob", resource: "res_attachment", size: 3, mediaType: "application/octet-stream" },
     open,
     openRange,
-    location: "/fixture/attachment.bin",
   }]]);
 
   assert.equal(attachment?.open, open);
   assert.equal(attachment?.openRange, openRange);
-  assert.equal(attachment?.location, "/fixture/attachment.bin");
 });

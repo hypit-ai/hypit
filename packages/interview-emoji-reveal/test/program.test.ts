@@ -1,18 +1,20 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { visualElements } from "@hypit/composition";
+import type { HtmlElement } from "@hypit/html-program";
 import type { BlobRef } from "@hypit/hypit/protocol";
 import type { TemporalInstant } from "@hypit/temporal";
 import { sealTimeline } from "@hypit/timeline";
 import { fixtureResource } from "../../../test/fixture-resource.js";
 import { decodeEmojiRevealStyle, renderEmojiReveal } from "../src/index.js";
+import { emojiRevealRoot } from "../src/program.js";
 
 const timeline = sealTimeline({ id: "reveal-space", frameCount: 300, frameRate: { numerator: 30, denominator: 1 } });
 const icon: BlobRef = { kind: "blob", resource: fixtureResource("emoji-reveal-icon"), size: 10, mediaType: "image/png" };
 const instant = (id: string, frame: number): TemporalInstant => ({ id, subjectId: id, timelineId: timeline.id, frame });
 
 function iconScales(revealFrames: number): readonly (readonly [number, string])[] {
-  const track = renderEmojiReveal({ xPx: 0, yPx: 0, widthPx: 1080, heightPx: 1920 }, timeline, {
+  const within = { xPx: 0, yPx: 0, widthPx: 1080, heightPx: 1920 };
+  const program = {
     id: "reveal",
     timelineId: timeline.id,
     style: decodeEmojiRevealStyle("style", { path: "reveal", properties: { "reveal-frames": revealFrames } }),
@@ -25,8 +27,13 @@ function iconScales(revealFrames: number): readonly (readonly [number, string])[
       span: { startFrame: 0, endFrameExclusive: 300 },
     },
     items: [{ spec: { id: "one", preset: false }, icon, activation: instant("one", 30) }],
-  });
-  const element = visualElements(track.items[0]!.root).find((candidate) => candidate.id === "slot-1-icon");
+  } as const;
+  renderEmojiReveal(within, timeline, program);
+  const elements = (root: HtmlElement): readonly HtmlElement[] => root.kind === "box"
+    ? [root, ...root.children.flatMap(elements)]
+    : [root];
+  const element = elements(emojiRevealRoot(within, timeline, program))
+    .find((candidate) => candidate.id === "slot-1-icon");
   return (element?.animation?.keyframes ?? []).map((keyframe) => [
     keyframe.atFrame,
     String(keyframe.style.find((declaration) => declaration.name === "transform")?.value),

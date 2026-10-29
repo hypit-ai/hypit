@@ -39,14 +39,7 @@ export function assertOrderedBuildId(value: string): void {
     "Build id must contain its UTC submission time and a ten-character nonce");
 }
 
-/**
- * Runtime Build ids are opaque identities, but every durable Host currently
- * uses one id as one filesystem/S3 path segment. Keep that boundary explicit:
- * an id is never a path and the two dot directory entries are never Builds.
- */
+/** Validate an opaque Build identity without imposing a Host's persistence layout. */
 export function assertBuildId(value: string): void {
   assert(value.length > 0 && value === value.trim(), "Build id must be a non-empty unpadded name");
-  assert(value !== "." && value !== "..", "Build id must not be a dot directory");
-  assert(!value.includes("/") && !value.includes("\\") && !value.includes("\0") && !value.includes(":"),
-    "Build id must be one path-free name");
 }

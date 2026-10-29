@@ -16,6 +16,9 @@ function playbackVideoPlan(program: HtmlProgram | undefined): readonly PlaybackV
   if (program === undefined) return [];
   return program.videoSources.flatMap((source) => {
     if (source.kind !== "media") return [];
+    if (source.source.streamIndex !== 0) {
+      throw new Error(`Browser playback cannot select visual stream ${source.source.streamIndex} for ${source.id}; use a renderer that executes the HtmlProgram source plan`);
+    }
     const timestamps = Array.from({ length: source.endFrameExclusive - source.startFrame }, (_, frame) => {
       const mapped = evaluateTemporalMap(source.sampling, exactTemporalValueFromFrames(frame, program));
       if (mapped === undefined) return null;

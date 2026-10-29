@@ -310,6 +310,6 @@ distinguishes useful intermediate evidence from the intended deliverable.
 
 A new Build loads the current project implementation and selected configuration; external files and
 services retain their own lifetimes. Read
-[Build execution scope](../production/builds.md#build-with-the-current-project-implementation)
+[Build execution scope](../production/builds.md#build-with-the-current-project-code)
 before restarting the Worker or changing dependencies during active work.
 Do not restart everything after every edit, or expect a completed Build to rerun itself.

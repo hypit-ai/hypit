@@ -3,7 +3,7 @@ import test from "node:test";
 
 import { compileAudioProgram } from "@hypit/audio-program";
 import { sealComposition, sealPresentVisualTrack, visualElements } from "@hypit/composition";
-import { compileHtmlProgram } from "@hypit/html-program";
+import { compileHtmlProgram, htmlVisualElement } from "@hypit/html-program";
 import { sealTimeline } from "@hypit/timeline";
 
 import {
@@ -34,11 +34,11 @@ test("one Composition occurrence branches into closed visual and audio carriers"
   const childTrack = sealPresentVisualTrack({
     id: "child-picture",
     timelineId: childTimeline.id,
-    visualIr: "hypit.visual-ir@1",
+
     presents: [{
       id: "child-card",
       span: { startFrame: 0, endFrameExclusive: 10 },
-      root: { id: "child-root", kind: "box", children: [], style: [{ name: "background-color", value: "#224466" }] },
+      root: htmlVisualElement({ id: "child-root", kind: "box", children: [], style: [{ name: "background-color", value: "#224466" }] }),
     }],
   });
   const child = sealComposition({

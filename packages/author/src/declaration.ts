@@ -20,7 +20,6 @@ import type {
   AuthorInputProvenanceDraft,
   AuthorSourceAssetRequest,
   AuthorSourceExport,
-  AuthorSourceIdentity,
   Awaitable,
   DecodedAuthorSource,
 } from "./source.js";
@@ -142,7 +141,6 @@ export type AuthorDeclarationOutput = {
   readonly records: readonly AuthorRecordDraft[];
   readonly components: readonly AuthorComponentDraft[];
   readonly realizations?: readonly AuthorRealizationSelectionDraft[];
-  readonly identities?: readonly AuthorSourceIdentity[];
 };
 
 export type AuthorDeclarationCompileContext = {
@@ -583,7 +581,6 @@ export async function compileAuthorDeclarations(
   const components: AuthorComponent[] = [];
   const componentIds = new Set<string>();
   const componentsById = new Map<string, AuthorComponent>();
-  const identities: AuthorSourceIdentity[] = [];
   const realizations: AuthorRealizationSelection[] = [];
   const provenance: AuthorElementProvenanceDraft[] = [];
   const resolvedReferences = new Map<string, AuthorResolvedReference>();
@@ -702,7 +699,6 @@ export async function compileAuthorDeclarations(
         record: { ...realization.record },
       });
     }
-    identities.push(...(output.identities ?? []));
     const groups = declarationProvenanceGroups(item.declaration, resolvedReferences);
     const groupFor = (range: SourceRange): DeclarationProvenanceGroup => {
       const key = rangeKey(range);
@@ -766,7 +762,6 @@ export async function compileAuthorDeclarations(
     components,
     realizations,
     exports: exports.sort((left, right) => compareCodeUnits(left.name, right.name)),
-    identities,
     provenance,
   };
 }

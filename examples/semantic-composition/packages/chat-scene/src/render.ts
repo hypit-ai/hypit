@@ -1,6 +1,6 @@
 import { sealPresentVisualTrack } from "@hypit/composition";
-import type { VisualElement } from "@hypit/composition";
-import { htmlVisual } from "@hypit/html-program";
+import { htmlVisual, htmlVisualElement } from "@hypit/html-program";
+import type { HtmlElement } from "@hypit/html-program";
 import type { FontStackRef } from "@hypit/media";
 import type { Timeline } from "@hypit/timeline";
 import type { SpatialFrame } from "@hypit/spatial";
@@ -16,7 +16,7 @@ export function renderChat(timeline: Timeline, within: SpatialFrame, window: Tem
   assertTemporalWindowFor(window, { timeline });
   if (!Number.isSafeInteger(options.entranceFrames) || options.entranceFrames < 1) throw new Error("Chat entrance-frames must be a positive integer.");
   if (messages.some(message => message.at.frame < window.span.startFrame || message.at.frame >= window.span.endFrameExclusive)) throw new Error("Chat messages must appear inside the scene's window.");
-  const text = (id: string, value: string, size: number, color: string): VisualElement => ({
+  const text = (id: string, value: string, size: number, color: string): HtmlElement => ({
     id, kind: "text", text: value, fonts: font.faces,
     style: [{ name: "font-size", value: `${size}px` }, { name: "line-height", value: 1.3 }, { name: "color", value: color }],
   });
@@ -55,11 +55,11 @@ export function renderChat(timeline: Timeline, within: SpatialFrame, window: Tem
         [...dots.children].forEach((dot,i)=>dot.style.transform='translateY('+(-3*(1+Math.sin(frame*.18-i)))+'px)');
       };`,
   });
-  return sealPresentVisualTrack({ id: options.id, timelineId: timeline.id, visualIr: "hypit.visual-ir@1",
+  return sealPresentVisualTrack({ id: options.id, timelineId: timeline.id,
     presents: [{ id: options.id, span: window.span,
-      root: { id: "chat", kind: "program", program,
+      root: htmlVisualElement({ id: "chat", kind: "program", program,
         slots: children.map((element) => ({ name: element.id, element })),
         style: [{ name: "position", value: "absolute" }, { name: "left", value: `${within.xPx}px` },
           { name: "top", value: `${within.yPx}px` },
-          { name: "width", value: `${within.widthPx}px` }, { name: "height", value: `${within.heightPx}px` }] } }] });
+          { name: "width", value: `${within.widthPx}px` }, { name: "height", value: `${within.heightPx}px` }] }) }] });
 }

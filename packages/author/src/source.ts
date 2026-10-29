@@ -45,11 +45,6 @@ export type AuthorSourceExport = {
   readonly type: TypeRef;
 };
 
-export type AuthorSourceIdentity = {
-  readonly namespace: TypeRef;
-  readonly id: string;
-};
-
 export type AuthorInputProvenanceDraft = {
   readonly name: string;
   readonly range: SourceRange;
@@ -87,7 +82,6 @@ export type DecodedAuthorSource = {
   readonly components: readonly AuthorComponent[];
   readonly realizations?: readonly AuthorRealizationSelection[];
   readonly exports: readonly AuthorSourceExport[];
-  readonly identities?: readonly AuthorSourceIdentity[];
   readonly provenance?: readonly AuthorElementProvenanceDraft[];
 };
 

@@ -53,7 +53,7 @@ test("HypiHub operation deadlines fail while polling transport errors keep the j
   assert.equal(selected.status, "resolved"); assert.equal(selected.registration.kind, "asynchronous");
   const endpoint = selected.registration.endpoint;
   const common = {
-    need: request, resources: new MemoryResourceStore(), credentials: { apiKey: { secret: "test" } }, operation: "op:test",
+    request: request, resources: new MemoryResourceStore(), credentials: { apiKey: { secret: "test" } }, operation: "op:test",
     handle: { contract: "hypit.hypihub-operation@1", jobId: "test",
       route: `${request.capability.module.name}@${request.capability.module.version}#${request.capability.name}`, startedAt: 0 } };
   const timedOut = await endpoint.poll(common);
@@ -106,7 +106,7 @@ test("reference URL reuse includes its authored classification and forwards it t
   const resolved = registry.select(request);
   assert.equal(resolved.status, "resolved");
   assert.equal(resolved.registration.kind, "asynchronous");
-  const started = await resolved.registration.endpoint.start({ need: request, resources,
+  const started = await resolved.registration.endpoint.start({ request: request, resources,
     credentials: { apiKey: { secret: "test-key" } }, operation: "classified" });
   assert.equal(started.status, "pending");
   assert.deepEqual(seen, [{ personReference: true }, { personReference: false }]);
@@ -182,7 +182,7 @@ test("generation and voice cloning check their exact catalogue operation before 
     const selected = registry.select(request);
     assert.equal(selected.status, "resolved");
     const context = {
-      need: request, resources,
+      request: request, resources,
       credentials: { apiKey: { secret: "test-key" } }, operation: "operation:catalogue",
       reportProgress: async (value: { readonly phase?: string }) => { progress.push(value.phase!); },
     };
@@ -227,7 +227,7 @@ test("an unavailable model reports availability without prescribing another logi
   const endpoint = await endpointFor(request, async () => Response.json({ error: "model_not_found" }, { status: 404 }));
   const outcome = await endpoint.start({
 
-    need: request, resources: new MemoryResourceStore(),
+    request: request, resources: new MemoryResourceStore(),
     credentials: { apiKey: { secret: "test-key" } }, operation: "operation:unavailable",
   });
   assert.equal(outcome.status, "failed");
@@ -252,7 +252,7 @@ test("HTTP evidence keeps model, request id and the complete public reason witho
       });
     });
     const outcome = await endpoint.start({
-      need: request,
+      request: request,
       resources: new MemoryResourceStore(), credentials: { apiKey: { secret: "private-key" } }, operation: "evidence",
     });
     assert.equal(calls, 2);
@@ -277,7 +277,7 @@ test("terminal jobs preserve service error codes and receipts on both submission
       : Response.json({ id: "job-rejected", status: "failed", model: "seedance-2-mini",
         error_code: "upstream_rejected", error: "Reference could not be processed" }));
     const context = {
-      need: request,
+      request: request,
       resources: new MemoryResourceStore(), credentials: { apiKey: { secret: "test-key" } }, operation: "job",
     };
     const outcome = phase === "start" ? await endpoint.start(context) : await endpoint.poll({ ...context,
@@ -319,7 +319,7 @@ for (const kind of ["pricing", "speech"] as const) {
       const selected = registry.select(request);
       assert.equal(selected.status, "resolved");
       assert.equal(selected.registration.kind, "immediate");
-      return await selected.registration.handler({ need: request, credentials, resources: new MemoryResourceStore(),
+      return await selected.registration.handler({ request: request, credentials, resources: new MemoryResourceStore(),
 
       });
     };
@@ -340,7 +340,7 @@ for (const mode of ['success', 'error', 'body-timeout'] as const) {
     const resources = new MemoryResourceStore();
     const artifact = await resources.put(wav(32_000), 'audio/wav');
     const request: Need = {
-      id: 'need:transcription-receipt', capability: whisperXCapabilities.transcription,
+      id: 'request:transcription-receipt', capability: whisperXCapabilities.transcription,
       returns: speechEvidenceTypes.transcript,
       constraints: whisperXRequestForEvidenceAudio(sealSpeechEvidenceAudio({ artifact, sampleFrames: 32_000 }), { language: 'en' }) as unknown as CanonicalValue,
       result: 'record:transcription-receipt',
@@ -364,7 +364,7 @@ for (const mode of ['success', 'error', 'body-timeout'] as const) {
     assert.equal(resolution.registration.kind, 'immediate');
     const work = resolution.registration.handler({
 
-      need: request, resources, credentials: { apiKey: { secret: 'test-key' } },
+      request: request, resources, credentials: { apiKey: { secret: 'test-key' } },
       reportDiagnostic: async (entry) => { messages.push(entry.message); },
     });
     if (mode === 'success') await work;

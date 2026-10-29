@@ -3,7 +3,6 @@ import type { BlobRef } from "@hypit/hypit/protocol";
 import type { CompositableSurfaceRef, PictureInterpretation, PreparedVisualSource, WorkingPictureSpec } from "@hypit/media";
 import type { Clock, FrameSpan } from "@hypit/timeline";
 import type { TemporalMap } from "@hypit/temporal";
-import { VISUAL_IR_V1 } from "@hypit/composition";
 
 export type HtmlFrameDomain = Clock & {
   /** Legal frame indices are exactly [0, frameCount). */
@@ -65,7 +64,6 @@ export type HtmlVideoSource = FrameSpan & {
 
 /** Portable, frame-addressed HTML visual program. */
 export type HtmlProgram = HtmlFrameDomain & {
-  readonly visualIr: typeof VISUAL_IR_V1;
   readonly picture: WorkingPictureSpec;
   readonly canvas: HtmlCanvas;
   /** Scope-level Picture Processes that require renderer-private input passes. */

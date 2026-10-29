@@ -258,22 +258,12 @@ Implement only the service capabilities this work needs.
 
 The Provider's `supports` response describes the requests that implementation can execute.
 
-## Use the public SDK
+## Follow the installed package interface
 
-| Public import | Accurate interface owner |
-| --- | --- |
-| `@hypit/generation/model` | Model-owned request Type, Capability and Producer/Need construction |
-| `@hypit/generation/model-fields` | Optional field-oriented request builder for Models that choose that shape |
-| `@hypit/generation/provider` | Optional Provider-local field and resource transport projection |
-| `@hypit/generation` | Generated-media result values |
-| `@hypit/hypit/endpoint` | Execution, resources, credentials, support, receipts and capacity |
-| `@hypit/runtime-local/extension` | Profile activation, diagnostics and Managed Programs for the official local Runtime |
-| `@hypit/hypit/author`, `producer`, `refinement`, `markup` | Author declarations/graphs, deterministic Producers, owner-defined Type refinement and Markup spelling respectively |
-
-These packages' READMEs ship with the Distribution and own precise APIs. Use the selected
-`@hypit/hypit` release as the extension's development dependency; ship compiled JavaScript and normal
-runtime dependencies. The copied repository example's `workspace:*` development dependencies need
-the appropriate installed release, as its README explains.
+The selected Hypit release includes Provider examples and package READMEs for request types, service
+support, credentials, resources, task receipts, capacity and pricing. Copy the example that matches the
+request shape, use the release selected by the project, and ship ordinary compiled JavaScript and
+runtime dependencies. The example README owns the exact imports and package fields.
 [Component sharing](../production/component-sharing.md) owns later owner-managed distribution.
 
 ## Use your own model deployment

@@ -207,7 +207,7 @@ test("Timeline Author Companion reverses private Points and Extents through the 
   ]);
 });
 
-test("relation candidates are solved by their final author writes", () => {
+test("relation alternatives are solved by their final author writes", () => {
   const spec = record("spec", "@example/time", "Spec", { author: { binding: "at" } });
   const point = record("point", "@hypit/temporal", "TemporalInstant", {
     id: "point", subjectId: "point", timelineId: "main", frame: 10,
@@ -224,7 +224,7 @@ test("relation candidates are solved by their final author writes", () => {
     id: "spec:at", binding: "spec:at", name: "at", value: "10f", language: "svml" as const, writable: true,
     source: { endpoint: "author:at", path: "main.svml", range: { start: 0, end: 3 }, preimage: "10f" },
   };
-  const candidates = (replacements: readonly string[]) => new StudioCompanionRegistry([], { temporalRelations: [{
+  const alternatives = (replacements: readonly string[]) => new StudioCompanionRegistry([], { temporalRelations: [{
     id: "choose-point", match: { producer, output: "point" },
     invert: () => replacements.map((replacement) => ({ writes: [{ input: "spec", binding: "at", replacement }] })),
   }] });
@@ -232,6 +232,6 @@ test("relation candidates are solved by their final author writes", () => {
     state, rootRecord: "point", target: { kind: "instant", frame: 12 }, bindings: [binding],
     domainFrame: () => undefined, registry,
   });
-  assert.deepEqual(planWith(candidates(["12f", "12f"])).map((write) => write.replacement), ["12f"]);
-  assert.throws(() => planWith(candidates(["12f", "13f"])), /multiple distinct author inverses/u);
+  assert.deepEqual(planWith(alternatives(["12f", "12f"])).map((write) => write.replacement), ["12f"]);
+  assert.throws(() => planWith(alternatives(["12f", "13f"])), /multiple distinct author inverses/u);
 });

@@ -23,6 +23,7 @@ import { recipeType } from "@hypit/recipe";
 import { sealText, textTypes } from "@hypit/text";
 import type { Recipe } from "@hypit/recipe";
 import { visualTrackTypes } from "@hypit/visual-track";
+import { poseAnimation } from "../src/lower.js";
 
 const space = sealTimeline({ id: "test-space", frameCount: 60, frameRate: { numerator: 30, denominator: 1 },
 });
@@ -284,22 +285,22 @@ test("relative-depth pose resolves offsets, multiplicative tone and alternating 
 });
 
 test("collection reflow moves the complete old/new union while cut replaces it exactly", () => {
-  const animated = renderDepthStack(space, program());
+  const animatedProgram = program();
+  const animated = renderDepthStack(space, animatedProgram);
   const stageTwo = animated.items.filter((present) => present.span.startFrame === 20);
   assert.deepEqual(stageTwo.map((present) => present.id).sort(), [
     "card-1:stage:2", "card-2:stage:2", "card-3:stage:2",
   ]);
-  for (const present of stageTwo) {
-    const pose = visualElements(present.root).find((value) => value.id === "deck-pose");
-    assert.deepEqual(pose?.animation?.keyframes.map((value) => value.atFrame), [0, 4, 20]);
-    assert.ok(visualElements(present.root).some((value) => value.id === "deck-placement"));
-  }
-  const cut = renderDepthStack(space, program({
-    spec: baseSpec({ reflow: { durationFrames: 0, easing: "linear" } }),
-  }));
+  assert.deepEqual(poseAnimation({
+    program: animatedProgram,
+    stageDuration: 20,
+    oldDepth: 0,
+    newDepth: -1,
+  })?.keyframes.map((value) => value.atFrame), [0, 4, 20]);
+  const cutProgram = program({ spec: baseSpec({ reflow: { durationFrames: 0, easing: "linear" } }) });
+  const cut = renderDepthStack(space, cutProgram);
   assert.equal(cut.items.filter((present) => present.span.startFrame === 20).length, 3);
-  assert.ok(cut.items.filter((present) => present.span.startFrame === 20)
-    .every((present) => visualElements(present.root).find((value) => value.id === "deck-pose")?.animation === undefined));
+  assert.equal(poseAnimation({ program: cutProgram, stageDuration: 20, oldDepth: 0, newDepth: -1 }), undefined);
 });
 
 test("timed Cards hold future head/current clock/past tail without renderer playback history", () => {
@@ -389,9 +390,10 @@ function exactLabel(): DepthStackCardLabel {
 test("optional labels preserve exact fonts and remain inside the Card-owned pose", () => {
   const track = renderDepthStack(space, program({ labels: [exactLabel(), noDepthStackCardLabel(), noDepthStackCardLabel()] }));
   const label = element(track, "card-1:stage:1", (value) => value.kind === "text-flow");
-  const frame = element(track, "card-1:stage:1", (value) => value.id === "deck-material:frame");
   assert.equal(label.kind, "text-flow");
-  assert.ok(frame.kind === "box" && frame.children.includes(label));
+  const present = track.items.find((candidate) => candidate.id === "card-1:stage:1");
+  assert.equal(present?.kind, "present");
+  assert.equal(present?.root.kind, "program");
   assert.equal(label.typography.fonts?.[0]?.sources[0]?.artifact.resource, font.sources[0]!.artifact.resource);
   const authored = exactLabel();
   assert.equal(authored.kind, "text");

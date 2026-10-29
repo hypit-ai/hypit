@@ -11,12 +11,11 @@ import {
 import type {
   AudioClip,
   AudioTrack,
-  VisualAnimation,
-  VisualElement,
   VisualPresentDraft,
-  VisualStyleDeclaration,
   PresentVisualTrack,
 } from "@hypit/composition";
+import { htmlVisualElement } from "@hypit/html-program";
+import type { HtmlAnimation as VisualAnimation, HtmlElement as VisualElement, HtmlStyleDeclaration as VisualStyleDeclaration } from "@hypit/html-program";
 import { preparedAudioSource, SRGB_STRAIGHT_PICTURE, verifyPreparedMedia } from "@hypit/media";
 import { addExactTemporalValues, compareExactTemporalValues, exactTemporalValueFromFrames,
   resolveTemporalRelation, subtractExactTemporalValues } from "@hypit/temporal";
@@ -190,7 +189,7 @@ function present(input: {
     sequence: input.sequence,
     subjectId: input.subjectId,
     span: { startFrame: input.start, endFrameExclusive: input.end },
-    root: input.root,
+    root: htmlVisualElement(input.root),
   };
 }
 
@@ -252,7 +251,7 @@ function sealTrack(timeline: Timeline, id: string, presents: readonly LayeredPre
   const ordered = [...presents]
     .sort((left, right) => left.layer - right.layer || left.sequence - right.sequence || compareCodeUnits(left.id, right.id))
     .map(({ layer: _layer, sequence: _sequence, ...item }) => item);
-  const value = sealPresentVisualTrack({ timelineId: timeline.id, visualIr: "hypit.visual-ir@1", id, presents: ordered });
+  const value = sealPresentVisualTrack({ timelineId: timeline.id, id, presents: ordered });
   assertVisualTrackIdentity(value, timeline);
   return value;
 }

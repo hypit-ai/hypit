@@ -1,28 +1,15 @@
 ---
-title: 组件结构
-description: 将场景的创作接口变成可复用的图贡献。
+title: 组件设计
+description: 将场景的创作接口变成可复用的项目组件。
 ---
 
 组件把作者面对的创作想法与具体实现连接起来。对于榜单，这个想法可以是“说到每个候选时介绍它，再让图标移动到对应排名位置”。输入表达这些关系，代码完成绘制和运动。
 
 [添加作者包](./author-packages.md) 提供完整可构建的起点。[Ranking](https://github.com/hypit-ai/hypit/blob/main/packages/ranking/README.md) 则展示更丰富的语义事件、持久视觉状态和 Studio Companion。
 
-## 实现中的职责
+## 从作者面对的行为开始
 
-这些职责可以按组件规模组织到合适的文件中：
-
-| 部分 | 职责 |
-| --- | --- |
-| Manifest 与 Types | 命名包提供的值、Producer、输入和输出 |
-| Author Declaration | 定义字段与子声明，解析具名类型引用，并把作者元素降为图数据 |
-| Fragment | 描述输入到输出之间的操作与依赖 |
-| Producer | 完成声明的计算 |
-| 值与样式辅助函数 | 验证输入、应用已说明的默认值、解析接受的 Recipe 属性 |
-| 调度与绘制 | 投影事件，并在每一帧绘制场景 |
-| Activation | 公开所选包提供的贡献 |
-| Studio Companion | 描述时间线 Item 与可编辑属性 |
-
-精确对象形状由 [Author Package 指南](./author-packages.md) 和随包示例指向各自所有者。小组件可以把相关职责放在一起；大组件则可以分离可复用的调度、样式和绘制逻辑。
+用组件提供的视觉或听觉角色命名它。Source 接口公开另一个作者会有意修改的内容、位置、外观和有意义事件。调度与绘制共同表达一种行为时可以放在一起；文件拆分只服务于理解和维护。准确 TypeScript 文件布局与 API 由随包 README 说明。
 
 ## 围绕关系设计
 

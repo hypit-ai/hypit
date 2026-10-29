@@ -913,7 +913,18 @@ const svmlTextPrepareSequence = (sequence) => {
   }
   const keyframes = sequence.keyframes.map((point) => {
     const frame = { offset: point.atProgress, ...(point.easing ? { easing: point.easing } : {}) };
-    for (const declaration of point.style) frame[svmlTextPropertyName(declaration.name)] = declaration.value;
+    const state = point.state;
+    if (state.opacity !== undefined) frame.opacity = state.opacity;
+    if (state.transform !== undefined) {
+      const value = state.transform;
+      frame.transform = 'translate(' + value.translateXPx + 'px,' + value.translateYPx + 'px) scale(' + value.scale + ') rotate(' + value.rotateDeg + 'deg) skew(' + value.skewXDeg + 'deg,' + value.skewYDeg + 'deg)';
+    }
+    if (state.blurPx !== undefined) frame.filter = 'blur(' + state.blurPx + 'px)';
+    if (state.color !== undefined) frame.color = state.color;
+    if (state.clipInsetPercent !== undefined) {
+      const value = state.clipInsetPercent;
+      frame.clipPath = 'inset(' + value.top + '% ' + value.right + '% ' + value.bottom + '% ' + value.left + '%)';
+    }
     return frame;
   });
   return { ...sequence, rankByLocalIndex, nativeKeyframes: keyframes };

@@ -21,16 +21,16 @@ hypit snapshot --studio http://localhost:5191 \
   --grid 4x3 --cell 480 --to evidence/comparison-motion
 ```
 
-Use the address of the existing Studio session and frames located in its current `HtmlProgram`. The examples
+Use the address of the existing Studio session and frames located in its current HTML Programme. The examples
 demonstrate the options. Locate meaningful events through Script, Timeline or the Studio playhead;
 pass their resulting frame positions to the observation command. Frame selection does not change
 the authored timing relationship.
 
-Studio supplies its already compiled `HtmlProgram` and the material selected by the Author Source
+Studio supplies its already compiled HTML Programme and the material selected by the Author Source
 plus any Invocation-local override.
 This preserves declared fonts, images, video sampling, transparent Surfaces and resources used
 inside a component's HTML visual. The command sends one immediate request, keeping the original
-`HtmlProgram` clock and component-local clocks. It writes images directly into the chosen directory.
+HTML Programme clock and component-local clocks. It writes images directly into the chosen directory.
 There is no new Build, material generation or video encoding in this call.
 
 Use `--runtime <profile>` and `--project <project>` when the invocation needs an explicit selection;
@@ -43,7 +43,7 @@ Endpoint before execution. If several Endpoints offer frame capture, select one 
 
 - `--at-frame` chooses one frame or a strictly increasing list of frames.
 - A range includes `--start-frame` and excludes `--end-frame-exclusive`. `--step-frames 1` retains
-  every frame. Frame indices start at zero on that `HtmlProgram` clock.
+  every frame. Frame indices start at zero on that HTML Programme clock.
 - Every selected frame is saved as a full-size PNG. Open one for typography, edges and geometry.
 - `--grid columnsxrows` adds paginated contact sheets. `--cell` chooses the width of each picture;
   labels sit below it and give its original frame index and time. The full-size PNGs remain available.
@@ -65,7 +65,7 @@ hypit snapshot ./picture/index.html --at-frame 240 --to evidence/html-detail
 The HTML carries its compiled frame clock and frame-sampling declarations. Its directly referenced
 media and fonts travel with the request; scripts and styles are inline. An HTML URL is accepted too.
 For a current Studio work, prefer `--studio`: its compiled document also retains resource declarations
-inside JavaScript data and the full typed Surface input. Snapshot is an `HtmlProgram` frame operation;
+inside JavaScript data and the full typed Surface input. Snapshot is an HTML Programme frame operation;
 [browser capture](browser-capture.md) owns screenshots of ordinary websites and applications.
 
 For an existing source video or encoded Result, use the media commands. Native-frame extraction

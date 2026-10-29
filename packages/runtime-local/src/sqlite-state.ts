@@ -13,7 +13,6 @@ import type {
   TypeRef,
 } from "@hypit/hypit/protocol";
 import { assertBuildId, compareCodeUnits, normalizeValue, valueBlobRefs } from "@hypit/hypit/protocol";
-import { assertPublicationIntent } from "@hypit/hypit/protocol";
 import { applyOperationUpdate, capacityUnits } from "@hypit/hypit/runtime";
 import type {
   BuildSnapshot,
@@ -35,7 +34,6 @@ import type {
   OperationStore,
   OperationUpdate,
 } from "@hypit/hypit/runtime";
-import type { BuildCatalog, BuildCatalogDescriptor, BuildCatalogEntry } from "./catalog.js";
 import type { PendingBuildCommit, PendingBuildSubmission, PendingBuildStore } from "./submission.js";
 import type {
   BuildExecutionRequest,
@@ -371,57 +369,6 @@ class SqliteBuildStore implements BuildStore {
   }
 }
 
-function parseCatalogEntry(row: Row): BuildCatalogEntry {
-  assert(typeof row.build_id === "string", "SQLite Build Catalog row has no build id");
-  assert(typeof row.descriptor_json === "string", "SQLite Build Catalog row has no descriptor");
-  const descriptor = object(JSON.parse(row.descriptor_json) as unknown, "SQLite Build Catalog descriptor");
-  exactKeys(descriptor, ["sourcePath", "invocationSourcePath", "publication"], "SQLite Build Catalog descriptor");
-  assertPublicationIntent(descriptor.publication);
-  return {
-    build: row.build_id,
-    sourcePath: nonEmptyString(descriptor.sourcePath, "SQLite Build Catalog Source path"),
-    ...(descriptor.invocationSourcePath === undefined
-      ? {}
-      : { invocationSourcePath: nonEmptyString(
-          descriptor.invocationSourcePath,
-          "SQLite Build Catalog Invocation Source path",
-        ) }),
-    publication: descriptor.publication,
-  };
-}
-
-class SqliteBuildCatalog implements BuildCatalog {
-  readonly #database: DatabaseSync;
-
-  constructor(database: DatabaseSync) {
-    this.#database = database;
-  }
-
-  async record(build: string, descriptor: BuildCatalogDescriptor): Promise<BuildCatalogEntry> {
-    assertBuildId(build);
-    const now = Date.now();
-    this.#database.prepare(`
-      INSERT INTO hypit_build_catalog (
-        build_id, created_at, descriptor_json
-      ) VALUES (?, ?, ?)
-    `).run(build, now, JSON.stringify(descriptor));
-    return { ...copy(descriptor), build };
-  }
-
-  async read(build: string): Promise<BuildCatalogEntry | undefined> {
-    const row = this.#database.prepare(`
-      SELECT build_id, created_at, descriptor_json
-      FROM hypit_build_catalog
-      WHERE build_id = ?
-    `).get(build) as Row | undefined;
-    return row === undefined ? undefined : parseCatalogEntry(row);
-  }
-
-  async remove(build: string): Promise<void> {
-    this.#database.prepare("DELETE FROM hypit_build_catalog WHERE build_id = ?").run(build);
-  }
-}
-
 function parseExecutionRequest(row: Row, subject: string): BuildExecutionRequest {
   assert(typeof row.build_id === "string", `SQLite ${subject} row has no Build id`);
   assert(typeof row.execution_packages_json === "string", `SQLite ${subject} row has no execution packages`);
@@ -468,13 +415,12 @@ class SqlitePendingBuildStore implements PendingBuildStore {
         SELECT 1 AS occupied FROM hypit_submissions WHERE build_id = ?
         UNION ALL SELECT 1 FROM hypit_executions WHERE build_id = ?
         UNION ALL SELECT 1 FROM hypit_builds WHERE build_id = ?
-        UNION ALL SELECT 1 FROM hypit_build_catalog WHERE build_id = ?
         UNION ALL SELECT 1 FROM hypit_operations WHERE build_id = ?
         UNION ALL SELECT 1 FROM hypit_command_executions WHERE build_id = ?
         UNION ALL SELECT 1 FROM hypit_build_facts WHERE build_id = ?
         UNION ALL SELECT 1 FROM hypit_capacity WHERE build_id = ?
         LIMIT 1
-      `).get(request.build, request.build, request.build, request.build, request.build, request.build, request.build, request.build);
+      `).get(request.build, request.build, request.build, request.build, request.build, request.build, request.build);
       assert(occupied === undefined, `Build ${request.build} already has Runtime state`);
       this.#database.prepare(`
         INSERT INTO hypit_submissions (
@@ -517,9 +463,6 @@ class SqlitePendingBuildStore implements PendingBuildStore {
       this.#database.prepare(`
         INSERT INTO hypit_builds (build_id, definition_json) VALUES (?, ?)
       `).run(request.build, JSON.stringify(request.definition));
-      this.#database.prepare(`
-        INSERT INTO hypit_build_catalog (build_id, created_at, descriptor_json) VALUES (?, ?, ?)
-      `).run(request.build, Date.now(), JSON.stringify(request.catalog));
       this.#database.prepare(`
         INSERT INTO hypit_executions (
           build_id, execution_packages_json, result_location_json, context_json, created_at, wake_at,
@@ -1176,7 +1119,6 @@ export class SqliteRuntimeState {
   readonly operations: OperationStore;
   readonly commandExecutions: CommandExecutionStore;
   readonly execution: BuildExecutionStore;
-  readonly catalog: BuildCatalog;
   readonly submissions: PendingBuildStore;
   readonly #database: DatabaseSync;
 
@@ -1224,11 +1166,6 @@ export class SqliteRuntimeState {
         event_json TEXT,
         activity_json TEXT,
         PRIMARY KEY (build_id, command_id)
-      ) STRICT;
-      CREATE TABLE IF NOT EXISTS hypit_build_catalog (
-        build_id TEXT PRIMARY KEY,
-        created_at INTEGER NOT NULL,
-        descriptor_json TEXT NOT NULL
       ) STRICT;
       CREATE TABLE IF NOT EXISTS hypit_submissions (
         build_id TEXT PRIMARY KEY,
@@ -1286,7 +1223,6 @@ export class SqliteRuntimeState {
     this.operations = new SqliteOperationStore(database);
     this.commandExecutions = new SqliteCommandExecutionStore(database);
     this.execution = new SqliteBuildExecutionStore(database);
-    this.catalog = new SqliteBuildCatalog(database);
     this.submissions = new SqlitePendingBuildStore(database);
   }
 
@@ -1302,7 +1238,6 @@ export class SqliteRuntimeState {
       this.#database.prepare("DELETE FROM hypit_operations WHERE build_id = ?").run(build);
       this.#database.prepare("DELETE FROM hypit_command_executions WHERE build_id = ?").run(build);
       this.#database.prepare("DELETE FROM hypit_build_facts WHERE build_id = ?").run(build);
-      this.#database.prepare("DELETE FROM hypit_build_catalog WHERE build_id = ?").run(build);
       this.#database.prepare("DELETE FROM hypit_builds WHERE build_id = ?").run(build);
       this.#database.prepare("DELETE FROM hypit_executions WHERE build_id = ?").run(build);
       return { build, ...current.decision };

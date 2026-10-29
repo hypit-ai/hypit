@@ -1,7 +1,7 @@
 import { sealPresentVisualTrack } from "@hypit/composition";
+import { htmlVisualElement } from "@hypit/html-program";
 import type { FontArtifactRef } from "@hypit/media";
 import type { FrameSpan, Timeline } from "@hypit/timeline";
-import { VISUAL_IR_V1 } from "@hypit/composition";
 
 // The caller supplies its projected Window, resolved Frame and selected font faces.
 export function renderCard(input: {
@@ -23,12 +23,11 @@ export function renderCard(input: {
   return sealPresentVisualTrack({
     id: input.id,
     timelineId: input.timeline.id,
-    visualIr: VISUAL_IR_V1,
     presents: [{
       id: `${input.id}-present`,
       subjectId: input.id,
       span: input.span,
-      root: {
+      root: htmlVisualElement({
         kind: "box", id: root,
         style: [
           { name: "position", value: "absolute" },
@@ -54,7 +53,7 @@ export function renderCard(input: {
             { name: "font-size", value: input.size },
           ],
         }],
-      },
+      }),
     }],
   });
 }

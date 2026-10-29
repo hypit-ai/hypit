@@ -163,7 +163,7 @@ test("the visual schema prints every shape and refuses an unknown one", () => {
   const all = visualSchema();
   assert.ok(all.shapes.some((item) => item.shape === "text"));
   assert.ok(all.rules.length > 0);
-  assert.equal(visualSchema("box").shapes.length, 1);
+  assert.equal(visualSchema("program").shapes.length, 1);
   assert.throws(() => visualSchema("sprite"), /shape must be one of/);
 });
 

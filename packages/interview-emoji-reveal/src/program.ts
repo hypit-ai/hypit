@@ -1,7 +1,9 @@
 import { assertTimelineIdentity } from "@hypit/timeline";
 import type { Timeline } from "@hypit/timeline";
 import { assertVisualTrackIdentity, sealPresentVisualTrack } from "@hypit/composition";
-import type { PresentVisualTrack, VisualAnimation, VisualElement } from "@hypit/composition";
+import type { PresentVisualTrack } from "@hypit/composition";
+import { htmlVisualElement } from "@hypit/html-program";
+import type { HtmlAnimation as VisualAnimation, HtmlElement as VisualElement } from "@hypit/html-program";
 import { canonicalize } from "@hypit/hypit/protocol";
 import type { BlobRef } from "@hypit/hypit/protocol";
 import { assertSpatialFrame } from "@hypit/spatial";
@@ -187,7 +189,7 @@ function iconElement(input: {
   };
 }
 
-export function renderEmojiReveal(within: SpatialFrame, timeline: Timeline, program: EmojiRevealProgram): PresentVisualTrack {
+export function emojiRevealRoot(within: SpatialFrame, timeline: Timeline, program: EmojiRevealProgram): VisualElement {
   assertSpatialFrame(within); assertTimelineIdentity(timeline); assertEmojiRevealProgram(program);
   assert(program.timelineId === timeline.id, "EmojiRevealProgram belongs to another Timeline.");
   assertTemporalWindowFor(program.outer, { timeline });
@@ -237,10 +239,15 @@ export function renderEmojiReveal(within: SpatialFrame, timeline: Timeline, prog
       { name: "position", value: "absolute" }, { name: "top", value: px(top) }, { name: "width", value: px(width) },
     ],
   };
+  return root;
+}
+
+export function renderEmojiReveal(within: SpatialFrame, timeline: Timeline, program: EmojiRevealProgram): PresentVisualTrack {
+  const root = emojiRevealRoot(within, timeline, program);
   const track = sealPresentVisualTrack({
-    timelineId: timeline.id, visualIr: "hypit.visual-ir@1", id: program.id,
+    timelineId: timeline.id, id: program.id,
     presents: [{ id: program.id, subjectId: program.id,
-      span: { ...program.outer.span }, root }],
+      span: { ...program.outer.span }, root: htmlVisualElement(root) }],
   });
   assertVisualTrackIdentity(track, timeline); return track;
 }

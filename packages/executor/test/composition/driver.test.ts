@@ -83,9 +83,9 @@ test("the Scheduler can continue a returned state after its missing Endpoint is 
   assert.equal(paused.blocked[0]?.reason, "missing-endpoint");
   assert.deepEqual(calls, { prompt: 1, request: 1, assemble: 0, fulfill: 0 });
 
-  endpoints.registerImmediateEndpoint("example:generation", capabilities.generation, types.generated, ({ need }) => {
+  endpoints.registerImmediateEndpoint("example:generation", capabilities.generation, types.generated, ({ request }) => {
     calls.fulfill += 1;
-    assert.deepEqual(need.constraints, { prompt: "Greet Ada" });
+    assert.deepEqual(request.constraints, { prompt: "Greet Ada" });
     return "Hello, Ada!";
   });
 
@@ -237,7 +237,7 @@ test("the same return Type cannot impersonate another exact capability", async (
   assert.equal(calls, 0);
 });
 
-test("an alternate Candidate is explicitly selected before execution, never by Endpoint return Type", async () => {
+test("an alternate root is explicitly selected before execution, never by Endpoint return Type", async () => {
   const { producers, endpoints } = configuredRegistry();
   producers.registerProducer(
     greetingProducers.placeholderText,

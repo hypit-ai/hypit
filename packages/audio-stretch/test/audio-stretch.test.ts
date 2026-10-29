@@ -3,8 +3,6 @@ import test from "node:test";
 
 import {
   PITCH_PRESERVING_RECONSTRUCTION_FORMAT,
-  audioStretchAuthorDeclarations,
-  audioStretchMarkupDeclarations,
   preservePitch,
   readPreservePitch,
 } from "@hypit/audio-stretch";
@@ -17,6 +15,4 @@ test("PreservePitch is one explicit reconstruction programme without a hidden sp
     artifacts: [],
   });
   assert.doesNotThrow(() => readPreservePitch(program));
-  assert.deepEqual(audioStretchAuthorDeclarations.map(({ declaration }) => declaration), ["preserve-pitch"]);
-  assert.deepEqual(audioStretchMarkupDeclarations.map(({ tag }) => tag), ["PreservePitch"]);
 });

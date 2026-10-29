@@ -16,7 +16,7 @@ npm install --save-dev @hypit/hypit@<selected-release>
 npm run build
 ```
 
-示例提供 TypeScript 构建配置、Manifest、Author Declaration、Markup spelling、Fragment、Producer、activation 和小型 preview Source。[包的 README](https://github.com/hypit-ai/hypit/blob/main/examples/minimal-author-package/packages/example-component/README.md) 介绍准确文件与设置。项目可以用普通包管理器的 workspace 或本地包依赖安装组件。
+示例提供 TypeScript 构建配置、Source 接口、绘制代码和小型 preview Source。[包的 README](https://github.com/hypit-ai/hypit/blob/main/examples/minimal-author-package/packages/example-component/README.md) 介绍准确文件与设置。项目可以用普通包管理器的 workspace 或本地包依赖安装组件。
 
 ## 给组件有用的接口
 
@@ -33,7 +33,7 @@ Style 一类声明在裸作者 id 下公开其值，例如 `style={board-style}`
 
 ## 实现并查看场景
 
-作者包按职责使用 `@hypit/hypit/author`、`producer`、`refinement` 与 `markup` 等窄公共子路径，消费的领域值使用对应所有者的公开子路径。[组件结构](./component-anatomy.md) 介绍 Manifest、Author Declaration、Markup spelling、Fragment 和 Producer 如何配合。项目文案与素材作为输入，组件自己的面板、边框与装饰由实现绘制。
+所选发行版使用哪些 TypeScript API，以示例包 README 为准。[组件结构](./component-anatomy.md) 介绍如何设计组件公开给作者的选择。项目文案与素材作为输入，组件自己的面板、边框与装饰由实现绘制。
 
 preview Source 为作者提供可打开或渲染的小例子。查看能说明行为的状态：进入、关键变化、停留布局和退出。也要在实际编排中查看，这时内容、空间和时机才有具体用途。
 

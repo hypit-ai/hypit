@@ -1,4 +1,4 @@
-import { compositionDependency, compositionTypes, VISUAL_IR_V1 } from "@hypit/composition";
+import { compositionDependency, compositionTypes } from "@hypit/composition";
 import { compositableSurfaceSchema, mediaDependency, mediaTypes, pictureInterpretationSchema, preparedVisualSourceSchema, workingPictureSpecSchema } from "@hypit/media";
 import { blobRefSchema } from "@hypit/hypit/protocol";
 import type { CapabilityRef, ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/hypit/protocol";
@@ -25,7 +25,6 @@ const nonNegativeInteger = { kind: "number", integer: true, minimum: 0 } as cons
 export const htmlProgramSchema: ValueSchema = {
   kind: "object",
   fields: {
-    visualIr: { schema: { kind: "literal", value: VISUAL_IR_V1 } },
     picture: { schema: workingPictureSpecSchema },
     frameRate: { schema: {
       kind: "object",

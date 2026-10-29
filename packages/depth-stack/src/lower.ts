@@ -4,14 +4,13 @@ import {
   sealPresentVisualTrack,
 } from "@hypit/composition";
 import type {
-  VisualAnimation,
-  VisualElement,
-  VisualStyleDeclaration,
   PresentVisualTrack,
   VisualPresentDraft,
 } from "@hypit/composition";
+import { htmlVisualElement } from "@hypit/html-program";
+import type { HtmlAnimation as VisualAnimation, HtmlElement as VisualElement, HtmlStyleDeclaration as VisualStyleDeclaration } from "@hypit/html-program";
 import {
-  lowerVisualClipRoot,
+  lowerVisualClipElement,
   resolveMediaLayerPrograms,
 } from "@hypit/visual-track";
 import type {
@@ -64,7 +63,7 @@ function hiddenPose(program: DepthStackProgram, direction: "previous" | "next"):
   return { ...resolveDepthStackPose(program.spec, depth), opacity: 0 };
 }
 
-function poseAnimation(input: {
+export function poseAnimation(input: {
   readonly program: DepthStackProgram;
   readonly stageDuration: number;
   readonly oldDepth?: number;
@@ -312,7 +311,7 @@ export function renderDepthStack(
         treatment: structuredClone(program.spec.treatment),
         layers: resolveMediaLayerPrograms(card.material, localFrame(program.frame), program.spec.treatment),
       };
-      let material = lowerVisualClipRoot(mediaItem, {
+      let material = lowerVisualClipElement(mediaItem, {
         poseAnimationOverride: null,
         samplingOverrides,
         samplingAnimationOverrides,
@@ -323,18 +322,18 @@ export function renderDepthStack(
         id: `${card.id}:stage:${stageIndex + 1}`,
         subjectId: card.id,
         span: { startFrame: stageStart, endFrameExclusive: stageEnd },
-        root: groupRoot({
+        root: htmlVisualElement(groupRoot({
           program,
           pose: staticPose,
           ...(animation === undefined ? {} : { poseAnimation: animation }),
           child: material,
-        }),
+        })),
       });
     }
   }
   const track = sealPresentVisualTrack({
     timelineId: timeline.id,
-    visualIr: "hypit.visual-ir@1",
+
     id: program.id,
     presents,
   });

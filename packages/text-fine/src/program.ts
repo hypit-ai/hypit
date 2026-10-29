@@ -15,13 +15,13 @@ import {
   sealPresentVisualTrack,
 } from "@hypit/composition";
 import type {
-  VisualElement,
-  VisualPathTextElement,
-  VisualStyleDeclaration,
-  VisualTextElement,
-  VisualTextFlowElement,
   PresentVisualTrack,
 } from "@hypit/composition";
+import { htmlVisualElement } from "@hypit/html-program";
+import type { HtmlElement as VisualElement, HtmlStyleDeclaration as VisualStyleDeclaration } from "@hypit/html-program";
+type VisualPathTextElement = Extract<VisualElement, { readonly kind: "path-text" }>;
+type VisualTextElement = Extract<VisualElement, { readonly kind: "text" }>;
+type VisualTextFlowElement = Extract<VisualElement, { readonly kind: "text-flow" }>;
 import { assertCompositableSurfaceRef } from "@hypit/media";
 import type { CompositableSurfaceRef } from "@hypit/media";
 import { canonicalize } from "@hypit/hypit/protocol";
@@ -511,12 +511,12 @@ export function renderFineTextOccurrence(timeline: Timeline, occurrence: FineTex
   assertFineTextOccurrenceIdentity(occurrence, timeline);
   const track = sealPresentVisualTrack({
     timelineId: timeline.id,
-    visualIr: "hypit.visual-ir@1",
+
     id: occurrence.id,
     presents: [{
       id: occurrence.id,
       span: { ...occurrence.span },
-      root: elementRoot(occurrence),
+      root: htmlVisualElement(elementRoot(occurrence)),
     }],
   });
   assertVisualTrackIdentity(track, timeline);
@@ -536,7 +536,7 @@ function renderTextMaskItems(
   }
   const track = sealPresentVisualTrack({
     timelineId: timeline.id,
-    visualIr: "hypit.visual-ir@1",
+
     id: spec.id,
     presents: items.map((item) => {
       if (item.placement.kind !== "flow") {
@@ -559,7 +559,7 @@ function renderTextMaskItems(
       return {
         id: item.id,
         span: { ...item.span },
-        root: {
+        root: htmlVisualElement({
             id: "mask", kind: "mask", mode: spec.mode,
             mask: maskTextElement(item),
             content: {
@@ -573,7 +573,7 @@ function renderTextMaskItems(
             },
             style,
             ...(item.motion.item === undefined ? {} : { animation: item.motion.item }),
-          },
+          }),
       };
     }),
   });

@@ -137,7 +137,7 @@ parameter panel can express; Studio exposes the Timeline and the choices that ar
 Follow a timestamped comment to the responsible Source, Recipe, media or scene implementation.
 The timestamp locates evidence; the desired change may concern a recurring system throughout the work.
 
-Preserve accepted material through explicit Author declarations and realization choices while revising the composition. Seek and
+Preserve accepted material through explicit Source declarations and realization choices while revising the composition. Seek and
 review the changed action and its handoffs; export the encoded film when that deliverable is wanted.
 [Review](../../production/review.md) and [Studio](../../production/studio.md) own the interaction;
 [Rendering](../../production/rendering.md) owns render scope and resource choices.
@@ -151,10 +151,9 @@ full picture uses project-owned accepted media. The default Invocation only sele
 
 | Question to trace | Concrete source |
 | --- | --- |
-| How did the design change, and what made the revisions useful? | [Treatment and craft notes](https://github.com/hypit-ai/hypit/blob/main/examples/complex-explainer/productions/explainer/CRAFT-NOTES.md) |
 | How does a spoken phrase become a scene event? | [Script](https://github.com/hypit-ai/hypit/blob/main/examples/complex-explainer/productions/explainer/authors/script.svml) and [Main Source](https://github.com/hypit-ai/hypit/blob/main/examples/complex-explainer/productions/explainer/authors/main.svml) |
 | How do existing footage, a moving viewport and independent graphics coexist? | [Opening system and visual presentation](https://github.com/hypit-ai/hypit/blob/main/examples/complex-explainer/packages/opening-system/README.md) |
-| What belongs inside a coordinated demonstration? | [Scene map, inputs and internal modules](https://github.com/hypit-ai/hypit/blob/main/examples/complex-explainer/packages/web-scenes/README.md) |
+| What belongs inside a coordinated demonstration? | [Scene inputs and visual behavior](https://github.com/hypit-ai/hypit/blob/main/examples/complex-explainer/packages/web-scenes/README.md) |
 | How can Caption stay independently editable? | [Project Caption package](https://github.com/hypit-ai/hypit/blob/main/examples/complex-explainer/packages/single-line-captions/README.md) |
 
 Carry the reasoning into the new commission: identify which objects, relationships and events it

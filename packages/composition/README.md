@@ -2,14 +2,14 @@
 
 Provider-neutral visual and audio Track contracts and their final Composition.
 
-Composition also owns the terminal structural visual vocabulary identified by `VISUAL_IR_V1`,
-including its supported CSS-shaped declarations and validation. There is no peer Visual IR Module:
-the vocabulary versions the visual representation carried by `VisualTrack`, while richer renderer
-program payloads remain explicitly owned by their rendering package.
+Composition owns renderer-neutral visual structure: Present, Process, Adjustment, VisualScope,
+typed media/text/Surface/Composition leaves and the generic Programme envelope. It does not publish
+DOM nodes, CSS properties, HTML attributes or renderer keyframes. Those values and their validation
+belong to the package that owns a Programme format.
 
 ## VisualTrack
 
-`sealVisualTrack` accepts `id`, `timelineId`, `visualIr: VISUAL_IR_V1` and one ordered `items` union,
+`sealVisualTrack` accepts `id`, `timelineId` and one ordered `items` union,
 and returns a value with `kind: "visual"`. `sealPresentVisualTrack` is the narrow constructor for the
 common Present-only subset; its `presents` input is construction syntax, while the returned terminal
 value still contains `items`. `assertVisualTrackIdentity(track, timeline)` checks either form of item
@@ -37,19 +37,18 @@ Each Present supplies:
 | --- | --- |
 | `id`, optional `subjectId` | Appearance identity and, when useful, the domain entity it depicts |
 | `span` | `{ startFrame, endFrameExclusive }` in program frames |
-| `root` | One recursive element tree owned by the Present |
+| `root` | One typed visual value owned by the Present |
 
 The parent VisualScope's member array paints from back to front. Items inside one Track use the same
 array law. Neither member id nor item id is a hidden paint-order fallback. The member id forms a
 recursive occurrence path through nested Stacks; Track `id` remains the identity of the reusable value.
-The same Track may therefore be placed more than once without being rewritten. Element children are
-recursive values rather than parent references; each child position is relative to its containing
-element, while the Present root is relative to the Canvas.
-Animation keyframes use `atFrame` offsets from the Present's start. Timed media carries an exact
-occurrence-local `TemporalMap`; terminal visual compilation alone resolves it onto decoded frames.
+The same Track may therefore be placed more than once without being rewritten. Mask operands and
+Programme slots are recursive values rather than parent references. Programme-local layout and animation
+stay inside the package that owns that Programme format. Timed media carries an exact occurrence-local
+`TemporalMap`; terminal visual compilation alone resolves it onto decoded frames.
 
-The exported `VisualElement` union covers `box`, `mask`, `text`, `text-flow`, `path-text`, `image`,
-`video`, `surface` and `program`. Text carries exact FontArtifactRef values. Every image carries a BlobRef
+The exported `VisualElement` union covers `mask`, `text`, `text-flow`, `path-text`, `image`,
+`video`, `surface`, nested `composition` and `program`. Text carries exact FontArtifactRef values. Every image carries a BlobRef
 and complete `PictureInterpretation`; video carries a selected `PreparedVisualSource` with the same
 picture semantics plus its local temporal facts; `surface` carries a CompositableSurfaceRef with its
 declared picture interpretation. The schema and exported TypeScript types in `src/track.ts`
@@ -58,8 +57,8 @@ schemas through the installed Distribution.
 
 A `program` carries `{ format, payload, artifacts }`. The rendering package owns the object payload
 and supports named formats. It may place typed children in named slots, so video, text
-and graphics can share behavior while retaining explicit material dependencies. The parent
-relationship remains structural inside the Present; internal layout belongs to that program.
+and graphics can share behavior while retaining explicit material dependencies. Slot names express
+roles, not paint order. Internal layout, CSS and animation belong to that program.
 
 A Track-level `VisualProcess` holds a `VisualProcessEffect` and named inputs that are complete Present or nested
 Process contributions, not element slots. The effect declares the exact input-port names and its package-owned

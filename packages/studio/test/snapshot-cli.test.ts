@@ -23,7 +23,7 @@ test("Studio snapshots pass one typed HTML Program and only its selected Artifac
   const late = { kind: "blob" as const, resource: "res_late_image" as const, size: 123, mediaType: "image/png" };
   const picture = { colorPrimaries: "bt709", colorTransfer: "srgb", colorMatrix: "rgb",
     colorRange: "full", bitDepth: 8, alphaMode: "straight" } as const;
-  const program = { visualIr: "hypit.visual-ir@1",
+  const program = {
     picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100,
       alphaMode: "premultiplied" } as const,
     frameRate: { numerator: 30000, denominator: 1001 }, frameCount: 12,

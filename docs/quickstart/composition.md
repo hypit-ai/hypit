@@ -131,8 +131,8 @@ the usual Invocation Target.
 
 The bounds use the original Timeline and a half-open interval. At 30 fps this example renders
 seconds 8–12. Animation and media sampling retain their original program positions even though the
-encoded clip starts at zero. Range rendering limits final capture and encoding; upstream graph work
-still follows the selected Invocation, so reuse accepted media and alignment Outputs explicitly.
+encoded clip starts at zero. Range rendering limits final capture and encoding; the selected
+Invocation still produces required inputs, so reuse accepted media and alignment Outputs explicitly.
 
 ## A film drawn entirely by components
 
@@ -171,8 +171,8 @@ hypit check main.svml
 hypit plan build.svrun
 ```
 
-`check` validates imports, types and graph edges without calling external services. `plan` compiles
-the selected Invocation and shows the Operations it would demand. Inspect that plan before paid execution.
+`check` validates imports, types and references without calling external services. `plan` shows the
+selected Targets and external work. Inspect that plan before paid execution.
 
 See [Timing & Assembly](./timing.md) for media preparation, Timeline construction, media presentation and
 semantic projection. See [Tracks](./tracks.md) for Visual and Audio authoring forms.

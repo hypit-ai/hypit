@@ -135,7 +135,6 @@ export function compileScriptDeclaration(
       })),
     ],
     components: [],
-    identities: [{ namespace: narrativeType, id }],
   };
 }
 

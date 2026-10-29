@@ -4,8 +4,8 @@ import { tmpdir } from "node:os";
 import type { CliDistribution } from "../../src/distribution.js";
 import { runCliApplication } from "../../src/application.js";
 import type { CliIo } from "../../src/output.js";
-import { createLocalRuntimeCliCommandModules } from "../../../runtime-local/src/cli.js";
-import type { LocalRuntimeHost } from "../../../runtime-local/src/host-api.js";
+import { createLocalRuntimeCliCommandModules } from "@hypit/runtime-local/cli";
+import type { LocalRuntimeHost } from "@hypit/runtime-local";
 
 export const applicationCwd = tmpdir();
 

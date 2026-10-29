@@ -4,8 +4,8 @@ Read this when deciding complete duration or naming absolute Instants and Window
 preparation](media.md) publishes local domains and Extents; [Timing](timing.md) explains direct and
 projected values; [Visual](visual-clips.md) and [Audio](audio-clips.md) place media in the resolved work.
 
-Timeline is the work's finite absolute frame domain. Its author declaration is an acyclic graph of
-Instant and Window expressions with one required `end`.
+Timeline is the work's finite absolute frame domain. Named Instant and Window expressions may depend
+on one another, with one required `end`.
 
 ```svml
 <import as="time" from="@hypit/timeline-author@1"/>
@@ -66,7 +66,7 @@ Visual and Audio placement is a separate decision:
 PreparedMedia + Window -> visual / audio occurrence
 ```
 
-Put a named Instant or Window inside Timeline when it participates in the construction DAG. After the
+Put a named Instant or Window inside Timeline when it helps determine the Timeline. After the
 Timeline resolves, standalone time declarations and domain projectors can publish additional named
 values against it. Components consume those values, including single-use ones, through ordinary
 references. The project `TIMELINE.md` can retain human observations and their meaning; Source

@@ -84,7 +84,7 @@ for (const language of ["en", "ko"]) test(`local Provider preserves ${language} 
       sampleFrames: 32_000,
     });
     const constraints = whisperXRequestForEvidenceAudio(evidenceAudio, { language });
-    const need: Need = {
+    const request: Need = {
       id: "need:whisperx-loopback",
       capability: whisperXCapabilities.transcription,
       returns: speechEvidenceTypes.transcript,
@@ -97,12 +97,12 @@ for (const language of ["en", "ko"]) test(`local Provider preserves ${language} 
       expectedModel: "small",
       expectedDevice: "cpu",
     }), registry);
-    const resolved = registry.select(need);
+    const resolved = registry.select(request);
     assert.equal(resolved.status, "resolved");
     assert.equal(resolved.registration.kind, "immediate");
     const output = await resolved.registration.handler({
 
-      need,
+      request,
       resources,
       credentials: {},
     });

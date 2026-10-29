@@ -7,7 +7,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./node": "./src/node/index.ts",
-    "./node/module-scope": "./src/node/module-scope.ts"
+    "./node/module-importer": "./src/node/module-importer.ts"
   },
   "dependencies": {
     "@hypit/facet": "workspace:*",

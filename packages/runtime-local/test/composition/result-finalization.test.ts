@@ -82,7 +82,7 @@ test("a completed public file moves into its Build Result and leaves no Runtime 
     await runtime.build({
       id,
       definition: buildDefinition,
-      catalog: {
+      authoring: {
         sourcePath: join(directory, "main.svml"),
         publication: { outputs: [{ name: "clip.video", output: "generated", target: true,
           type: types.generated,
@@ -97,7 +97,7 @@ test("a completed public file moves into its Build Result and leaves no Runtime 
     const resolved = await results.resolve(id, "clip.video");
     assert.equal(resolved?.value.kind, "build-file");
     if (resolved?.value.kind !== "build-file") throw new Error("expected completed Result file");
-    const opened = await results.openFile(resolved.build, resolved.value);
+    const opened = await results.openFile(id, resolved.value);
     if (opened === undefined) throw new Error("expected completed Result bytes");
     const resultBytes: number[] = [];
     for await (const chunk of opened) resultBytes.push(...chunk);
@@ -146,7 +146,7 @@ test("a failed Build keeps public Outputs completed before removing active Runti
     await runtime.build({
       id: "bld_20260902T120000005Z_0000000001",
       definition: definition(initial),
-      catalog: {
+      authoring: {
         sourcePath: join(directory, "main.svml"),
         publication: publication([{
           name: "prompt.text", ref: { id: "prompt" },
@@ -276,7 +276,7 @@ test("an interrupted Result write finishes explicitly without rerunning the Buil
     await runtime.build({
       id: "bld_20260902T120000006Z_0000000001",
       definition: definition(initial),
-      catalog: {
+      authoring: {
         sourcePath: join(directory, "main.svml"),
         publication: { outputs: [{ name: "final.document", output: "document", target: true,
           type: types.document,
@@ -324,7 +324,7 @@ test("a failed Result creation leaves no active Build", async () => {
     await assert.rejects(runtime.build({
       id: "bld_20260902T120000007Z_0000000001",
       definition: definition(initial),
-      catalog: {
+      authoring: {
         sourcePath: join(directory, "main.svml"),
         publication: { outputs: [{ name: "final.document", output: "document", target: true,
           type: types.document,

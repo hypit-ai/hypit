@@ -118,9 +118,9 @@ function endpoint(client: PolloClient, pollIntervalMs: number, maxOperationMs: n
   return {
     async start(context) {
       try {
-        const route = polloRouteForCapability(context.need.capability);
+        const route = polloRouteForCapability(context.request.capability);
         assert(route !== undefined, "Pollo does not implement this exact capability");
-        const request = route.prepare(context.need.constraints);
+        const request = route.prepare(context.request.constraints);
         await context.reportProgress?.({ phase: `Preparing Pollo request: ${request.path}` });
         const body = await request.compile(resolverFor(context, publicAssetUrl));
         await context.reportProgress?.({ phase: `Submitting Pollo request: ${request.path}` });
@@ -147,7 +147,7 @@ function endpoint(client: PolloClient, pollIntervalMs: number, maxOperationMs: n
       let operationDeadlineAt: number | undefined;
       try {
         const handle = object(context.handle, "Pollo handle") as unknown as Handle;
-        const route = polloRouteForCapability(context.need.capability);
+        const route = polloRouteForCapability(context.request.capability);
         assert(route !== undefined && handle.contract === "hypit.pollo-operation@1" && handle.route === route.key, "Pollo handle is invalid");
         const receipt = { id: handle.taskId };
         operationDeadlineAt = handle.startedAt + maxOperationMs;
@@ -177,7 +177,7 @@ function endpoint(client: PolloClient, pollIntervalMs: number, maxOperationMs: n
     async collect(context) {
       try {
         const handle = object(context.handle, "Pollo handle") as unknown as Handle;
-        const route = polloRouteForCapability(context.need.capability);
+        const route = polloRouteForCapability(context.request.capability);
         assert(route !== undefined && handle.route === route.key && Array.isArray(handle.urls), "Pollo collection route differs");
         await context.reportProgress?.({ phase: "Receiving generated files" });
         const blobs: BlobRef[] = [];

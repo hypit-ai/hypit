@@ -5,8 +5,8 @@ delivery. [Production navigation](index.md) routes each relationship to its deta
 
 ## Material becomes useful through explicit relationships
 
-A supplied file or generated Output can become the same project material Type once accepted through
-its package-owned Author declaration. Prepare
+A supplied file or generated Output can become the same project material Type once declared with the
+package that owns its meaning. Prepare
 timed media to select its streams, establish a finite exact local temporal domain and publish its Extent.
 The work then decides how to use those facts.
 
@@ -22,7 +22,7 @@ pictures, narration, music and effects each connect their media to the role they
 ## Timeline publishes absolute time
 
 Timeline supplies the work's finite frame domain and the named Instants and Windows the author wants
-to share. Its author graph can use known durations or Extents resolved after media generation.
+to share. Its end can use known durations or Extents resolved after media generation.
 
 Semantic timing is one source of absolute values. A Narrative projection combines Alignment, its
 local domain and an equal-length Timeline Window, then publishes the requested Selection, Moment or
@@ -89,19 +89,17 @@ well-formed component with few controls; cross-project reuse is decided only whe
 [Component design](component-design.md) explains that boundary, and [Track authoring](track-authoring.md)
 implements it.
 
-Film explicitly selects its Timeline, Canvas and required visual/audio outputs. Source nesting,
-component scope, paint order and execution dependencies keep their own meanings.
+Film explicitly selects its Timeline, Canvas and required visual/audio outputs.
 
 ## Source, Invocation, Runtime and Studio
 
 Author Source connects material requests, time and space values, components and deliverables.
 Recipes hold reusable treatments. An `.svrun` is an optional saved Invocation: it selects public Outputs
-as Targets and may temporarily override a generated role with another Record already authored in
+as Targets and may temporarily override an Output with another Record already authored in
 the same closure. Durable material and realization choices remain in the Author Source.
 
-A Build executes the demanded graph and records completed public Outputs in its Result. Runtime
+A Build produces the demanded Outputs and records completed public Outputs in its Result. Runtime
 Profiles select already installed Providers, Endpoints and credentials for external work.
 
-Studio reads the authored and executed relationships exposed by the selected packages. Companions
-give useful Items and controls to a component by following its real inputs and outputs.
+Studio opens the selected composition. Companions give useful Items and controls to project components.
 [Authoring](authoring.md), [Invocations](runs.md), [Builds](builds.md) and [Studio](studio.md) own those workflows.

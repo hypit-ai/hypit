@@ -310,6 +310,6 @@ This Script declares:
 - Three Selections: `whole` (entire Script), `problem`, `solution`, `emphasis`
 - One Moment: `ranking` (marks the instant "After the first recap")
 
-Downstream graph nodes reference these by name: `{story.segment.hook.dialogue}` supplies generation
+Downstream declarations reference these by name: `{story.segment.hook.dialogue}` supplies generation
 text, while Narrative Projection declarations reveal `{story.selection.problem}` for B-roll timing
 and `{story.moment.ranking}` for a visual card event.

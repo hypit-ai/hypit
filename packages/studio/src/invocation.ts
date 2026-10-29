@@ -40,16 +40,19 @@ export async function loadStudioPlan(input: {
       frontends.register(frontend);
     }
   }
+  const authorCompiler = input.domain.createCompiler();
   const compiler = new InvocationCompiler({
-    authorCompiler: input.domain.createCompiler(),
+    authorCompiler,
     frontends,
   });
   const compiled = input.selection.kind === "preset"
     ? await compiler.compilePresetEntry(input.selection.source)
     : await compiler.compileAuthorEntry(input.selection.source, input.selection.request);
+  const authorWorkspace = await authorCompiler.openEntry(compiled.authorSource);
+  const authorDocument = await authorCompiler.openAuthorDocument(authorWorkspace.entry);
   const source = await observedCompiledSource(
     compiled.author,
-    observeAuthorDocument(compiled.authorDocument, compiled.author, input.registry),
+    observeAuthorDocument(authorDocument, compiled.author, input.registry),
   );
   const targets = compiled.invocation.targets;
   return {

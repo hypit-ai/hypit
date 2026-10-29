@@ -64,7 +64,7 @@ for (const operation of ["pricing", "generation"] as const) {
         assert.equal(resolution.registration.kind, "asynchronous");
         const result = await resolution.registration.endpoint.start({
 
-          need: request, resources: new MemoryResourceStore(), credentials, operation: "operation:oauth",
+          request: request, resources: new MemoryResourceStore(), credentials, operation: "operation:oauth",
         });
         assert.equal(result.status, stalls ? "failed" : "pending");
         if (result.status === "failed") assert.match(result.failure.message, /HypiHub OAuth refresh timed out/u);
@@ -96,7 +96,7 @@ test("HypiHub Seedance 2.5 resolves and submits 1080p without downgrading", asyn
   });
   const started = await endpoint.start({
 
-    need: request, resources: new MemoryResourceStore(),
+    request: request, resources: new MemoryResourceStore(),
     credentials: { apiKey: { secret: "test-key" } }, operation: "operation:seedance25",
   });
   assert.equal(started.status, "pending");
@@ -140,7 +140,7 @@ test("HypiHub portrait matting uses the video job lifecycle and stores transpare
   assert.equal(resolution.registration.kind, "asynchronous");
   const endpoint = resolution.registration.endpoint;
   const context = {
-    need: request, resources, credentials: { apiKey: { secret: "test-key" } }, operation: "operation:cutout" };
+    request: request, resources, credentials: { apiKey: { secret: "test-key" } }, operation: "operation:cutout" };
   const started = await endpoint.start(context);
   assert.equal(started.status, "pending");
   if (started.status !== "pending") return;

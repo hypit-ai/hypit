@@ -3,7 +3,7 @@ import { EndpointRegistry } from "@hypit/executor";
 import type { EndpointRegistration } from "@hypit/executor";
 import type { ImmediateEndpointHandler } from "@hypit/endpoint";
 import { installEndpoint } from "@hypit/endpoint";
-import { compileHtmlProgram, htmlProgramCapabilities, htmlRasterRequest } from "@hypit/html-program";
+import { compileHtmlProgram, htmlProgramCapabilities, htmlRasterRequest, htmlVisualElement } from "@hypit/html-program";
 import { mediaTypes, sealVisualDeliverySpec, sealOutputPictureSpec } from "@hypit/media";
 import type { FrameOutputPictureSpec, HdrStaticMetadata, VisualDeliverySpec } from "@hypit/media";
 import type { CompositableSurfaceRef } from "@hypit/media";
@@ -14,9 +14,9 @@ import { createLocalHtmlProvider } from "../src/index.js";
 
 export function htmlProviderDocument(surface?: CompositableSurfaceRef) {
   const timeline = sealTimeline({ id: "test-space", frameCount: 12, frameRate: { numerator: 12, denominator: 1 } });
-  const track = sealPresentVisualTrack({ timelineId: "test-space", visualIr: "hypit.visual-ir@1", id: "provider-fixture",
+  const track = sealPresentVisualTrack({ timelineId: "test-space", id: "provider-fixture",
     presents: [{ id: "card", span: { startFrame: 0, endFrameExclusive: 12 }, root:
-      { id: "background", kind: "box", children: [
+      htmlVisualElement({ id: "background", kind: "box", children: [
         ...(surface === undefined ? [] : [{
           id: "surface", kind: "surface" as const, surface,
           style: [
@@ -27,19 +27,19 @@ export function htmlProviderDocument(surface?: CompositableSurfaceRef) {
         }]),
       ], style: [
         { name: "position", value: "absolute" }, { name: "inset", value: 0 }, { name: "background", value: "#261447" },
-      ] } }],
+      ] }) }],
   });
   return compileHtmlProgram(sealComposition({ id: "local-html-provider-fixture", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 160, height: 96, clearColor: "#000000" }, root: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }, timeline));
 }
 
 export function htmlProviderNestedDocument() {
   const childTimeline = sealTimeline({ id: "child-space", frameCount: 6, frameRate: { numerator: 12, denominator: 1 } });
-  const childTrack = sealPresentVisualTrack({ timelineId: childTimeline.id, visualIr: "hypit.visual-ir@1", id: "child-track",
-    presents: [{ id: "child-card", span: { startFrame: 0, endFrameExclusive: 6 }, root: {
+  const childTrack = sealPresentVisualTrack({ timelineId: childTimeline.id, id: "child-track",
+    presents: [{ id: "child-card", span: { startFrame: 0, endFrameExclusive: 6 }, root: htmlVisualElement({
       id: "child-background", kind: "box", children: [], style: [
         { name: "position", value: "absolute" }, { name: "inset", value: 0 }, { name: "background", value: "#d02040" },
       ],
-    } }],
+    }) }],
   });
   const child = sealComposition({ id: "child-composition", visual: {
     picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const,
@@ -52,10 +52,9 @@ export function htmlProviderNestedDocument() {
     source: sealLocalTemporalDomain({ id: "child-timeline", duration: exactTemporalValueFromFrames(6, childTimeline) }),
     clock: timeline,
   });
-  const track = sealPresentVisualTrack({ timelineId: timeline.id, visualIr: "hypit.visual-ir@1", id: "parent-track",
+  const track = sealPresentVisualTrack({ timelineId: timeline.id, id: "parent-track",
     presents: [{ id: "child-use", span: { startFrame: 0, endFrameExclusive: 12 }, root: {
       id: "nested", kind: "composition", composition: child, sampling,
-      style: [{ name: "position", value: "absolute" }, { name: "inset", value: 0 }],
     } }],
   });
   return compileHtmlProgram(sealComposition({ id: "nested-provider-fixture", visual: {

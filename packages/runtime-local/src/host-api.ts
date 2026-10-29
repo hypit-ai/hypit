@@ -13,7 +13,7 @@ import type {
   RuntimeEndpointQuery,
   ScheduledBuildResult,
 } from "@hypit/hypit/runtime";
-import type { BuildCatalogDescriptor } from "./catalog.js";
+import type { PublicationIntent } from "@hypit/hypit/protocol";
 import type { BuildCompletion, BuildExecutionStop, BuildResultRepositoryLocation } from "./execution.js";
 import type { RuntimeDoctorDiagnostic } from "@hypit/runtime-local/extension";
 
@@ -124,7 +124,11 @@ export type RuntimeHostExecution = RuntimeHostControl & RuntimeHostCredentialCon
     readonly id: string;
     readonly definition: BuildDefinition;
     readonly executionPackages?: readonly string[];
-    readonly catalog: BuildCatalogDescriptor;
+    readonly authoring: {
+      readonly sourcePath: string;
+      readonly invocationSourcePath?: string;
+      readonly publication: PublicationIntent;
+    };
     readonly attachments?: readonly BlobAttachment[];
     /** Project-owned Result destination, fixed before this Build becomes active. */
     readonly result: {

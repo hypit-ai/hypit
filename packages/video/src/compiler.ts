@@ -26,7 +26,7 @@ export function createVideoWorkspace(options: Pick<CliCompilerOptions,
     ...(options.assetRoots === undefined ? {} : { assetRoots: options.assetRoots }),
     externalSourceResolver(importer, request) {
       const located = resolveNodePackageSource(request.from, {
-        from: importer.id,
+        from: importer.path,
         workspaceRoots: [packageRoot],
         ...(options.distributionPackageRoot === undefined
           ? {}
@@ -36,7 +36,7 @@ export function createVideoWorkspace(options: Pick<CliCompilerOptions,
     },
     externalAssetResolver(importer, request) {
       const located = resolveNodePackageResourceSpecifier(request.from, {
-        from: importer.id,
+        from: importer.path,
         workspaceRoots: [packageRoot],
         ...(options.distributionPackageRoot === undefined
           ? {}

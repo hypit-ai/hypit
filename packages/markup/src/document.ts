@@ -313,7 +313,9 @@ function structuredContent(
   const hasText = element.children.some((child) => child.kind === "text");
   if (children.length > 0 && hasText) {
     let childIndex = 0;
-    const body: AuthorDeclarationBodyPart[] = element.children.map((child) => child.kind === "text"
+    const body: AuthorDeclarationBodyPart[] = element.children
+      .filter((child): child is MarkupDocumentText | MarkupDocumentElement => child.kind !== "comment")
+      .map((child) => child.kind === "text"
       ? { kind: "text", value: decodeText(document.source, child.range), range: { ...child.range } }
       : { kind: "child", index: childIndex++ });
     return { children, body };

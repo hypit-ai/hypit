@@ -53,7 +53,7 @@ domain projectors translate local evidence into absolute Windows that components
 Semantic alignment, project- or ecosystem-provided musical beats, and authored events are peer sources of absolute time. Visual and
 Audio Clips connect prepared media to explicit Windows. Time can contain speech, gaps, overlaps or
 wholly authored animation. Space can contain independent contributions or a coordinated scene with
-its own internal tree. [System relationships](references/production/system.md) explains this adaptive
+its own visual tree. [System relationships](references/production/system.md) explains this
 organization and connects it to materials and execution.
 
 Choose component boundaries through shared behavior: coordinated layout and motion can share a
@@ -129,15 +129,17 @@ As the intended material becomes clear, explain the capabilities it needs and th
 choices in the user's terms. HypiHub is the recommended integrated hosted service; a user's own API key
 connects the service that issued it, through an installed or project-written Provider. Service choice
 and credential setup are distinct. When connecting a service or explaining a missing capability,
-read [Models and Providers](references/environment/model-and-provider.md) for the decision, connection
-work and public SDK. Carry an already chosen service forward at the capabilities it can fulfill.
+read [Models and Providers](references/environment/model-and-provider.md) for the decision and
+connection work. Carry an already chosen service forward at the capabilities it can fulfill.
 
 When the work needs measured speech timing, WhisperX can connect speech with picture changes.
 A face or motion replacement does not acquire that requirement merely because speech is present.
 Before preparing a new local inference service, compare its remaining setup effort with hosted
 execution through [service selection](references/environment/model-and-provider.md#choose-the-practical-capability-path-with-the-user).
-Carry working, chosen services and reusable Outputs forward. Configure their routing through the
+Carry working, chosen services forward. Configure their routing through the
 [Profile](references/environment/profile.md), then prepare only the needed resources and helpers.
+Carry an accepted Output forward by exporting it into the project and declaring it in the Author
+Source, as described under [Existing work](#existing-work) below.
 A Profile-wide readiness report describes configuration; the current production determines which
 findings matter next. Installed, selected, prepared and running establish different facts.
 Judge preparation by what it enables for this work. When downloads or model loading dominate,

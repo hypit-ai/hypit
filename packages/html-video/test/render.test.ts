@@ -228,8 +228,8 @@ test("separate visual, audio and mux Endpoints complete one author-visible rende
     "example.html.local",
     htmlProgramCapabilities.rasterizeVisual,
     mediaTypes.timelineVisual,
-    ({ need }) => {
-      const request = need.constraints as {
+    ({ request: endpointRequest }) => {
+      const request = endpointRequest.constraints as {
         readonly program: ReturnType<typeof compileHtmlProgram>;
         readonly delivery: typeof delivery.visual;
       };
@@ -246,8 +246,8 @@ test("separate visual, audio and mux Endpoints complete one author-visible rende
     "example.media.audio-real",
     audioProgramCapabilities.render,
     mediaTypes.timelineAudio,
-    ({ need }) => {
-      const request = need.constraints as { contract: string; program: ReturnType<typeof compileAudioProgram> };
+    ({ request: endpointRequest }) => {
+      const request = endpointRequest.constraints as { contract: string; program: ReturnType<typeof compileAudioProgram> };
       return stored(sealTimelineAudio({
           artifact: audioArtifact,
           sampleRate: 48_000,
@@ -260,8 +260,8 @@ test("separate visual, audio and mux Endpoints complete one author-visible rende
     "example.media.mux",
     mediaDeliveryCapabilities.mux,
     mediaTypes.muxed,
-    ({ need }) => {
-      const request = need.constraints as { visual: ReturnType<typeof sealTimelineVisual>;
+    ({ request: endpointRequest }) => {
+      const request = endpointRequest.constraints as { visual: ReturnType<typeof sealTimelineVisual>;
         audio: ReturnType<typeof sealTimelineAudio>; delivery: typeof delivery };
       return stored(sealMuxedMedia({
           frameRate: request.visual.frameRate,

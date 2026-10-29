@@ -78,7 +78,7 @@ test("local media accepts complete AudioProgram maps while speech evidence keeps
   } });
   assert.deepEqual(supportsLocalAudioProgram(canonicalize({ program: unsupportedProgram })), {
     status: "unsupported",
-    reason: "Audio Process is unsupported: Audio programme does not support Process format example.audio-effect@1.",
+    reason: "AudioProgram capability is unsupported: Audio programme does not support Process format example.audio-effect@1.",
   });
   assert.deepEqual(supportsLocalSpeechEvidenceAudio(canonicalize({
     source: audioProgramSourceClips(program)[0]!.source,

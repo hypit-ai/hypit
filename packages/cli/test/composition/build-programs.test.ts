@@ -68,13 +68,6 @@ function distribution(
         };
       },
       supportsFrontend: (id: string) => id === "@hypit/markup@1",
-      openAuthorDocument: async (source: { readonly unit: { readonly id: string; readonly name: string; readonly bytes: Uint8Array } }) => ({
-        source: source.unit,
-        root: { node: "root", declarations: [] },
-        containers: [{ node: "root", declarations: [] }],
-        declarations: [],
-        representation: undefined,
-      }),
       compileResolvedSource: async (entry: { readonly unit: { readonly id: string } }) => ({
         closure: { entry: entry.unit.id, units: [] },
         provenance: { format: "hypit.author-provenance@1", elements: [] },
@@ -99,12 +92,7 @@ function distribution(
           outputs: [{
             id: "result",
             type: { module: { name: "example.value", version: "1" }, name: "Value" },
-            primary: "primary-result",
-          }],
-          candidates: [{
-            id: "primary-result",
-            type: { module: { name: "example.value", version: "1" }, name: "Value" },
-            root: producerError === undefined
+            primary: producerError === undefined
               ? { kind: "record", id: "record-result" }
               : { kind: "operation-result", operation: "produce-result" },
           }],

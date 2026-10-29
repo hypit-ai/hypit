@@ -3,7 +3,7 @@ title: Invocation 与 Build
 description: 声明 Build 目标、复用结果以及配置运行时环境。
 ---
 
-Author Source 定义视频本身。Invocation 选择最终目标，也可以临时选择 AuthorGraph primary 或另一个
+Author Source 定义视频本身。Invocation 选择最终目标，也可以临时选择 Output 的 primary realization 或另一个
 已经存在的 Author Record。一次性调用直接通过 CLI 参数表达；需要具名和复用时再保存成 `.svrun`
 Invocation Source。官方 Distribution 提供 Local Runtime；
 它的 Profile 声明执行这份计划可用的凭据、Provider Endpoint 与服务。
@@ -85,7 +85,7 @@ Invocation Source 与 Runtime Profile 不会悄悄改写视频。创作性的模
 
 ### Target
 
-Target 表达这次 Build 的最终意图，通常是成片或另一个真正的交付物；它不是“要保存哪些东西”的列表。编译器只执行通向 Target 的路线，而这条路上真正完成的每个公开 Author Output 都会自动进入同一个 Build Result。内部 Operation 值不进入 Result。
+Target 表达这次 Build 的最终意图，通常是成片或另一个真正的交付物。Build 会完成 Target 所需的工作，而这条路上真正完成的每个公开 Author Output 都会自动进入同一个 Build Result。
 
 ### 多个 Target
 
@@ -124,7 +124,7 @@ hypit get <build-id> --output opening-generation.video --to assets/opening.mp4
 Invocation 或 Result 认识文件的来源。相机素材、下载文件、CLI 产物和生成 Result 都通过同一种
 Author 声明进入作品。
 
-如果只想在一次执行中重新使用 AuthorGraph 的 primary，同时保留当前长期选择，可以写：
+如果只想在一次执行中使用 Output 的 primary realization，同时保留当前长期选择，可以写：
 
 ```svml
 <override output="opening-generation.video" primary="true"/>
@@ -138,6 +138,9 @@ Author 声明进入作品。
 
 这个 Record 必须已经存在，并与 Output 类型完全一致。Invocation 不引入项目文件、值或计算，只保存
 Target 和本次执行的临时选择。
+每个被需要的 Output 都按同一顺序得到有效选择：Invocation override、Author Source 中的
+realization selection，最后是 Output 的 primary realization。`plan --verbose` 会连同选中的 Record
+一起报告该来源。
 
 ## Runtime Profile
 
@@ -298,7 +301,8 @@ hypit plan reference.svml --target final.video
 ```
 
 花费资金前审查所选工作。默认计划展示 Target、实际需要的外部请求及其已知参数；
-`--verbose` 增加图和结构选择详情。选择 Runtime 后预检这次计划需要的 Endpoint、
+`--verbose` 增加 Source 依赖，以及每个有效 Output 选择的 `invocation`、`authored` 或 `primary`
+来源。选择 Runtime 后预检这次计划需要的 Endpoint、
 凭据和外部程序，不启动任何外部工作。
 
 `plan` 可以完全不带 Runtime；执行过 `hypit runtime use` 后，`plan` 和 `build` 都不必再写
@@ -316,7 +320,7 @@ hypit plan reference.svml --target final.video
 hypit build reference.svml --target final.video --title first-cut --follow
 ```
 
-不带 `--follow` 时，Build 在耐久提交后退出，后台 Worker 继续。带 `--follow` 时终端也只是观察者，并会报告 phase / Operation 数量变化；Ctrl-C 不会取消任务。
+不带 `--follow` 时，Build 在耐久提交后退出，后台 Worker 继续。带 `--follow` 时终端也只是观察者，并会报告进度变化；Ctrl-C 不会取消任务。
 
 任何时候都可以重新接入观察：
 

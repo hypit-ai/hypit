@@ -137,6 +137,71 @@ function referencedModuleSpecifiers(sourceFile) {
   return references;
 }
 
+function packageNameFromSpecifier(specifier) {
+  if (specifier.startsWith(".") || specifier.startsWith("/")
+    || specifier.startsWith("#") || specifier.startsWith("node:")) return undefined;
+  const parts = specifier.split("/");
+  return specifier.startsWith("@") ? parts.slice(0, 2).join("/") : parts[0];
+}
+
+function runtimeModuleSpecifiers(sourceFile) {
+  const references = [];
+  const visit = (node) => {
+    if (typescript.isImportDeclaration(node) && typescript.isStringLiteral(node.moduleSpecifier)) {
+      const clause = node.importClause;
+      const typeOnlyNames = clause?.namedBindings !== undefined
+        && typescript.isNamedImports(clause.namedBindings)
+        && clause.namedBindings.elements.length > 0
+        && clause.namedBindings.elements.every((item) => item.isTypeOnly);
+      if (clause === undefined || (!clause.isTypeOnly && (clause.name !== undefined || !typeOnlyNames))) {
+        references.push(node.moduleSpecifier.text);
+      }
+    } else if (typescript.isExportDeclaration(node) && node.moduleSpecifier !== undefined
+      && typescript.isStringLiteral(node.moduleSpecifier)) {
+      const typeOnlyNames = node.exportClause !== undefined
+        && typescript.isNamedExports(node.exportClause)
+        && node.exportClause.elements.length > 0
+        && node.exportClause.elements.every((item) => item.isTypeOnly);
+      if (!node.isTypeOnly && !typeOnlyNames) references.push(node.moduleSpecifier.text);
+    } else if (typescript.isCallExpression(node) && node.expression.kind === typescript.SyntaxKind.ImportKeyword
+      && node.arguments[0] !== undefined && typescript.isStringLiteral(node.arguments[0])) {
+      references.push(node.arguments[0].text);
+    }
+    typescript.forEachChild(node, visit);
+  };
+  visit(sourceFile);
+  return references;
+}
+
+/**
+ * A package must name every package imported by its published sources. Installing a complete
+ * workspace closure can otherwise make an undeclared import work accidentally through another
+ * package's dependency. The package manifest remains the only dependency topology.
+ */
+async function assertPublishedSourceDependencies(packageRoot, manifest) {
+  const declared = new Set(Object.keys({
+    ...(manifest.dependencies ?? {}),
+    ...(manifest.optionalDependencies ?? {}),
+    ...(manifest.peerDependencies ?? {}),
+  }));
+  const missing = new Set();
+  for (const source of globSync("src/**/*.ts", { cwd: packageRoot }).sort()) {
+    const path = resolve(packageRoot, source);
+    const text = await readFile(path, "utf8");
+    const sourceFile = typescript.createSourceFile(path, text, typescript.ScriptTarget.Latest, true,
+      typescript.ScriptKind.TS);
+    for (const specifier of runtimeModuleSpecifiers(sourceFile)) {
+      const dependency = packageNameFromSpecifier(specifier);
+      if (dependency !== undefined && dependency !== manifest.name && !declared.has(dependency)) {
+        missing.add(dependency);
+      }
+    }
+  }
+  if (missing.size > 0) {
+    throw new Error(`${manifest.name} published sources import undeclared dependencies: ${[...missing].sort().join(", ")}`);
+  }
+}
+
 /**
  * Independent packages compile against the Distribution's source condition while the repository is
  * under development. Declaration inference can consequently expose an embedded workspace identity
@@ -202,6 +267,7 @@ export async function packIndependentPackage(packageDirectory, outputDirectory, 
   if (typeof manifest.name !== "string" || typeof manifest.version !== "string") {
     throw new Error(`${packageRoot}/package.json has no package identity`);
   }
+  await assertPublishedSourceDependencies(packageRoot, manifest);
   if (manifest.repository === undefined && rootManifest.repository === undefined) {
     throw new Error(`${manifest.name} has no repository identity for npm provenance`);
   }

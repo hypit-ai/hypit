@@ -40,8 +40,8 @@ test("terminal Text lazily prepares one persistent Animation per active Unit × 
       unit: "grapheme", range: { start: 7, endExclusive: 10 }, order: "random", seed: 41,
       startFrame: 0, staggerFrames: 1, unitDurationFrames: 10, cycles: 1,
       keyframes: [
-        { atProgress: 0, style: [{ name: "opacity", value: 0 }] },
-        { atProgress: 1, style: [{ name: "opacity", value: 1 }] },
+        { atProgress: 0, state: { opacity: 0 } },
+        { atProgress: 1, state: { opacity: 1 } },
       ],
     }]);
   const root = (startFrame: number, elements: MockElement[]) => {

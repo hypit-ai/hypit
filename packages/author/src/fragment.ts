@@ -3,8 +3,7 @@ import {
   resolveProducer,
 } from "@hypit/kernel";
 import type {
-  Candidate,
-  CandidateRoot,
+  OutputRoot,
   AuthorGraph,
   GraphValueRef,
   LinkedProgram,
@@ -60,7 +59,7 @@ export type FragmentInstanceRequest = {
 export type ElaboratedFragmentExport = {
   readonly name: string;
   readonly type: TypeRef;
-  readonly root: CandidateRoot;
+  readonly root: OutputRoot;
 };
 
 export type ElaboratedFragment = {
@@ -74,7 +73,6 @@ export type ElaboratedFragment = {
 
 export type FragmentContribution = {
   readonly outputs: readonly LogicalOutput[];
-  readonly candidates: readonly Candidate[];
   readonly operations: readonly OperationNode[];
 };
 
@@ -390,24 +388,14 @@ function bindExports(
     assert(item !== undefined, "UNKNOWN_FRAGMENT_EXPORT", `${instance.instance} has no export ${name}`);
     return item;
   });
-  const candidates: Candidate[] = selected.map((item) => {
+  const outputs: LogicalOutput[] = selected.map((item) => {
     const output = bindings[item.name] as string;
     assert(output.length > 0, "EMPTY_LOGICAL_OUTPUT_ID", `${instance.instance}.${item.name} output is empty`);
-    return {
-      id: hygienicId("candidate", instance.instance, item.name),
-      type: item.type,
-      root: item.root,
-    };
+    return { id: output, type: item.type, primary: item.root };
   });
-  const outputs: LogicalOutput[] = selected.map((item, index) => ({
-    id: bindings[item.name] as string,
-    type: item.type,
-    primary: candidates[index]!.id,
-  }));
   const reachable = reachableOperationIds(instance, selected);
   return {
     outputs,
-    candidates,
     operations: instance.operations.filter((operation) => reachable.has(operation.id)),
   };
 }
@@ -422,12 +410,11 @@ export function bindAuthorFragment(
 
 /** Merge already elaborated contributions; final Graph validation remains Core's authority. */
 export function mergeFragmentContributions(
-  graph: Pick<AuthorGraph, "outputs" | "candidates" | "operations">,
+  graph: Pick<AuthorGraph, "outputs" | "operations">,
   ...contributions: readonly FragmentContribution[]
-): Pick<AuthorGraph, "outputs" | "candidates" | "operations"> {
+): Pick<AuthorGraph, "outputs" | "operations"> {
   return {
     outputs: [...graph.outputs, ...contributions.flatMap((item) => item.outputs)],
-    candidates: [...graph.candidates, ...contributions.flatMap((item) => item.candidates)],
     operations: [...graph.operations, ...contributions.flatMap((item) => item.operations)],
   };
 }

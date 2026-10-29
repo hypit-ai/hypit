@@ -1,5 +1,5 @@
 import { link, verifyRecordStructure } from "@hypit/kernel";
-import { compareCodeUnits, isResourceId, sameType, typeIdentity, typeKey } from "@hypit/protocol";
+import { compareCodeUnits, isResourceId, sameType, typeKey } from "@hypit/protocol";
 import type {
   GraphValueRef,
   BlobRef,
@@ -24,7 +24,6 @@ import type {
   AuthorRealizationSelection,
   AuthorSourceDiscovery,
   AuthorSourceExport,
-  AuthorSourceIdentity,
   AuthorSourceUnit,
   AuthorValueRef,
   CompiledSourceClosure,
@@ -90,7 +89,6 @@ type HygienicSource = {
   readonly components: readonly AuthorComponent[];
   readonly realizations: readonly AuthorRealizationSelection[];
   readonly exports: readonly AuthorSourceExport[];
-  readonly identities: readonly AuthorSourceIdentity[];
   readonly provenance: readonly AuthorElementProvenance[];
 };
 
@@ -104,6 +102,7 @@ function hygienizeSource(
   decoded: DecodedAuthorSource,
   imports: readonly ResolvedAuthorSourceImport[],
 ): HygienicSource {
+  const unitId = `source:${JSON.stringify([source.id, frontend.id])}`;
   const recordsById = new Map(decoded.records.map((record) => [record.id, record]));
   const componentsById = new Map(decoded.components.map((component) => [component.id, component]));
   const exportNames = new Set<string>();
@@ -135,16 +134,16 @@ function hygienizeSource(
 
   const recordIds = new Map(decoded.records.map((record) => [
     record.id,
-    hygienicId("record", source.id, record.id),
+    hygienicId("record", unitId, record.id),
   ]));
   const componentIds = new Map(decoded.components.map((component) => [
     component.id,
-    hygienicId("component", source.id, component.id),
+    hygienicId("component", unitId, component.id),
   ]));
   const outputIds = new Map<string, string>();
   for (const component of decoded.components) {
     for (const output of Object.values(component.outputs)) {
-      outputIds.set(output, hygienicId("output", source.id, output));
+      outputIds.set(output, hygienicId("output", unitId, output));
     }
   }
   const mapRef = (ref: AuthorValueRef): AuthorValueRef => {
@@ -176,7 +175,7 @@ function hygienizeSource(
     record: mapRef(selection.record) as typeof selection.record,
   }));
   const unitContent = {
-    id: source.id,
+    id: unitId,
     name: source.name,
     frontend: frontend.id,
     imports: imports
@@ -192,10 +191,9 @@ function hygienizeSource(
     components,
     realizations,
     exports,
-    identities: decoded.identities ?? [],
     provenance: (decoded.provenance ?? []).map((element) => ({
-      id: hygienicId("element", source.id, `${element.range.start}:${element.range.end}`),
-      source: source.id,
+      id: hygienicId("element", unitId, `${element.range.start}:${element.range.end}`),
+      source: unitId,
       sourceName: source.name,
       frontend: frontend.id,
       range: { ...element.range },
@@ -208,7 +206,7 @@ function hygienizeSource(
         id: outputIds.get(output.id) ?? output.id,
       })),
       inputs: element.inputs.map((input) => ({
-        id: hygienicId("endpoint", source.id, `${element.range.start}:${input.name}`),
+        id: hygienicId("endpoint", unitId, `${element.range.start}:${input.name}`),
         name: input.name,
         range: { ...input.range },
         kind: input.kind,
@@ -359,21 +357,6 @@ export async function compileSourceClosure(
   };
 
   const entry = await compile(request.entry);
-  const identities = new Map<string, { readonly source: string; readonly identity: AuthorSourceIdentity }>();
-  for (const unit of ordered) {
-    for (const identity of unit.identities) {
-      assert(identity.id.length > 0, "EMPTY_SOURCE_IDENTITY", `${unit.unit.id} declares an empty public identity`);
-      const key = JSON.stringify([typeIdentity(identity.namespace), identity.id]);
-      const existing = identities.get(key);
-      assert(
-        existing === undefined,
-        "DUPLICATE_SOURCE_IDENTITY",
-        `${typeName(identity.namespace)} identity ${identity.id} is declared by both ${existing?.source ?? unit.unit.id} and ${unit.unit.id}`,
-        identity.id,
-      );
-      identities.set(key, { source: unit.unit.id, identity });
-    }
-  }
   const records = ordered.flatMap((unit) => unit.records);
   const recordIds = new Set<string>();
   for (const record of records) {

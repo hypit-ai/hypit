@@ -22,6 +22,7 @@ import {
   realizationModuleRef,
 } from "@hypit/realization";
 import { NodeFilesystemWorkspace } from "@hypit/workspace/node";
+import { RefinementRegistry } from "@hypit/refinement";
 
 export const rawSourceAdapter = (unit: import("@hypit/source").SourceUnit) => ({ unit, frontend: "test.frontend@1" });
 
@@ -195,7 +196,7 @@ export function compiler(
       return frontend.discover(source);
     },
   });
-  return new Compiler({ modules, frontends, workspace: new NodeFilesystemWorkspace({ root }) });
+  return new Compiler({ modules, frontends, refinements: new RefinementRegistry(), workspace: new NodeFilesystemWorkspace({ root }) });
 }
 
 export const previewModule = { name: "example.compiler-preview", version: "1" } as const;
@@ -266,6 +267,7 @@ export function assetCompiler(environment: { readonly root: string } | { readonl
   return new Compiler({
     modules,
     frontends,
+    refinements: new RefinementRegistry(),
     workspace: "workspace" in environment
       ? environment.workspace
       : new NodeFilesystemWorkspace({ root: environment.root }),

@@ -167,7 +167,7 @@ preparation and final encoding contribute separately. Reusing authored project m
 not preserve a previous render's temporary preparation.
 
 For a local composition change, use [snapshot](snapshots.md) first to inspect the changed
-relationship and its handoffs in Studio's current `HtmlProgram`. Keep accepted material selected in
+relationship and its handoffs in Studio's current HTML Programme. Keep accepted material selected in
 the Author Source. Range rendering supplies an encoded clip when that is needed; render the complete
 deliverable when the composition is ready.
 While rendering, communicate the current phase and meaningful progress. The Provider reports

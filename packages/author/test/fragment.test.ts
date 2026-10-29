@@ -169,7 +169,7 @@ function instance(programValue: LinkedProgram, id: string) {
 
 function graph(...contributions: readonly FragmentContribution[]): AuthorGraph {
   const merged = mergeFragmentContributions(
-    { outputs: [], candidates: [], operations: [] },
+    { outputs: [], operations: [] },
     ...contributions,
   );
   return sealAuthorGraph({ ...merged });

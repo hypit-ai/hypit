@@ -40,7 +40,7 @@ clear. A meaningful phrase may wrap over two lines; one line may stay fully visi
 word changes color. Hiding a caption for a demonstration changes presentation, not the Script or the
 performed speech. The following sections connect these decisions to the actual picture.
 
-## Keep wording and timing in their owners
+## Keep wording and timing in their source documents
 
 Script owns display words, speaking Roles, Dual Text units, attributes and authored Cues; `||` ends
 the current Cue. Its CaptionDocument carries those verbal units. A source-domain adapter produces

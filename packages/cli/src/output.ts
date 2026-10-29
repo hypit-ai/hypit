@@ -129,7 +129,11 @@ export type PlanOutput = {
   readonly unresolvedRequestCount?: number;
   readonly unsupportedRequestCount?: number;
   readonly choiceCount: number;
-  readonly choices?: readonly { readonly output: string; readonly choice: string }[];
+  readonly choices?: readonly {
+    readonly output: string;
+    readonly record: string;
+    readonly origin: "invocation" | "authored" | "primary";
+  }[];
   readonly omittedChoices?: number;
   /** Present only when a Runtime Profile was selected; the Endpoint and price page behind each capability. */
   readonly endpoints?: readonly PlanEndpoint[];
@@ -495,7 +499,7 @@ function renderPlan(
     ["Source", shortPath(view.machine.source)],
     ["Targets", targetSummary],
     ["Requests", String(view.machine.requestCount)],
-    ...(view.machine.choiceCount === 0 ? [] : [["Invocation choices", String(view.machine.choiceCount)] as const]),
+    ...(view.machine.choiceCount === 0 ? [] : [["Effective selections", String(view.machine.choiceCount)] as const]),
     ...(view.machine.requestIssueCount === 0 ? [] : [["Request issues", String(view.machine.requestIssueCount)] as const]),
     ...(view.machine.producerFailureCount === 0 ? [] : [["Producer failures", String(view.machine.producerFailureCount)] as const]),
     ...((view.machine.providerRequestCount ?? 0) === 0 ? [] : [["Provider requests", String(view.machine.providerRequestCount)] as const]),
@@ -575,10 +579,10 @@ function renderPlan(
     }
   }
   if (verbose && (view.machine.choices?.length ?? 0) > 0) {
-    lines.push("", colors.strong("Invocation choices"));
+    lines.push("", colors.strong("Effective selections"));
     for (const selection of view.machine.choices ?? []) {
       const status = colors.success(glyph(io, "✓", "+"));
-      lines.push(`  ${status} ${colors.accent(selection.output)} ← ${selection.choice}`);
+      lines.push(`  ${status} ${colors.accent(selection.output)} ← ${selection.record} ${colors.dim(`(${selection.origin})`)}`);
     }
     if ((view.machine.omittedChoices ?? 0) > 0) {
       lines.push(`  ${colors.dim(`${view.machine.omittedChoices} more choices · use --limit <count>`)}`);
@@ -791,7 +795,7 @@ function commandHelp(topic: string, colors: Palette): readonly string[] | undefi
       "With --runtime, plan also preflights only the demanded deployment slice and names the Provider",
       "and price page behind each external request.",
       "An Author Source requires explicit --target options. A saved Invocation Source already contains them.",
-      "--verbose expands Invocation choices and graph step counts. --limit bounds that detail,",
+      "--verbose expands effective Output selections and graph step counts. --limit bounds that detail,",
       "while all demanded requests and diagnostics remain visible in both text and JSON.",
       "Planning never starts external work.",
     ],

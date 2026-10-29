@@ -78,7 +78,7 @@ in Brief or Treatment. Brief can preserve mandatory claims or exact user-supplie
 can describe what each passage must accomplish. Source owns the actual words, roles, Cues,
 Selections, and Moments.
 
-## Revise the owner of the changed fact
+## Update the file that states the changed decision
 
 - A changed user goal, claim, constraint, or requested substitution changes the Brief.
 - A changed story, shot logic, visual system, performance, or creative approach changes the Treatment.

@@ -24,7 +24,7 @@ Endpoint has resolved and has not rejected the concrete request. Unresolved, amb
 observations cannot carry pricing documents or pricing errors. These are immutable observations. They
 do not select an Endpoint, store a Profile or introduce a Runtime registry.
 
-The scheduler never changes graph meaning. Targets and candidates are fixed before execution, and
+The scheduler never changes graph meaning. Targets and effective selections are fixed before execution, and
 resource limits only control when an already selected command may run.
 
 Resource I/O accepts an optional `ResourceIOOptions` with an `AbortSignal`. The selected store owns

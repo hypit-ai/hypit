@@ -1,6 +1,6 @@
 import { sealPresentVisualTrack } from "@hypit/composition";
-import type { VisualElement } from "@hypit/composition";
-import { htmlVisual } from "@hypit/html-program";
+import { htmlVisual, htmlVisualElement } from "@hypit/html-program";
+import type { HtmlElement } from "@hypit/html-program";
 import { preparedVisualSource, verifyPreparedMedia } from "@hypit/media";
 import type { FontArtifactRef, PreparedMedia } from "@hypit/media";
 import type { Timeline } from "@hypit/timeline";
@@ -30,7 +30,7 @@ export function renderExplainer(timeline: Timeline, within: SpatialFrame, window
   const clipEnd = Math.min(sourceWindow.span.endFrameExclusive, window.span.endFrameExclusive);
   const clips = clipEnd <= clipStart ? [] : [{ startFrame: clipStart, endFrameExclusive: clipEnd,
     sourceStartFrame: clipStart - sourceWindow.span.startFrame }];
-  const videos: VisualElement[] = clips.map((clip, i) => ({
+  const videos: HtmlElement[] = clips.map((clip, i) => ({
     id: `take-${i}`, kind: "video",
     source: preparedVisualSource(media), muted: true,
     style: [{ name: "position", value: "absolute" }, { name: "inset", value: 0 },
@@ -48,7 +48,7 @@ export function renderExplainer(timeline: Timeline, within: SpatialFrame, window
       }],
     }), visual.map),
   }));
-  const labels: VisualElement[] = [options.title, "Intent", "Performance", "Composition"].map((text, i) => ({
+  const labels: HtmlElement[] = [options.title, "Intent", "Performance", "Composition"].map((text, i) => ({
     id: `label-${i}`, kind: "text", text, fonts,
     style: [{ name: "font-size", value: `${i === 0 ? Math.round(within.widthPx * .035) : 23}px` }, { name: "color", value: "#f5eddc" },
       { name: "white-space", value: "nowrap" }],
@@ -81,11 +81,11 @@ export function renderExplainer(timeline: Timeline, within: SpatialFrame, window
         path.style.strokeDashoffset=String(900*(1-p));
       };`,
   });
-  return sealPresentVisualTrack({ id: options.id, timelineId: timeline.id, visualIr: "hypit.visual-ir@1",
+  return sealPresentVisualTrack({ id: options.id, timelineId: timeline.id,
     presents: [{ id: options.id, span: window.span,
-      root: { id: "scene", kind: "program", program,
+      root: htmlVisualElement({ id: "scene", kind: "program", program,
         slots: [...videos, ...labels].map((element) => ({ name: element.id, element })),
         style: [{ name: "position", value: "absolute" }, { name: "left", value: `${within.xPx}px` },
           { name: "top", value: `${within.yPx}px` }, { name: "width", value: `${within.widthPx}px` },
-          { name: "height", value: `${within.heightPx}px` }] } }] });
+          { name: "height", value: `${within.heightPx}px` }] }) }] });
 }

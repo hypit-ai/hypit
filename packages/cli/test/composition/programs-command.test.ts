@@ -8,9 +8,9 @@ import { runCliApplication } from "../../src/application.js";
 import { commandHint } from "../../src/command-hint.js";
 import type { CliDistribution } from "../../src/distribution.js";
 import type { CliIo } from "../../src/output.js";
-import { createLocalRuntimeCliCommandModules } from "../../../runtime-local/src/cli.js";
-import type { ManagedProgramProgress as CliManagedProgramProgress, ManagedProgramReport as CliManagedProgramReport } from "../../../runtime-local/src/programs.js";
-import type { LocalRuntimeHost, RuntimeController as CliRuntimeController } from "../../../runtime-local/src/host-api.js";
+import { createLocalRuntimeCliCommandModules } from "@hypit/runtime-local/cli";
+import type { ManagedProgramProgress as CliManagedProgramProgress, ManagedProgramReport as CliManagedProgramReport } from "@hypit/runtime-local/programs";
+import type { LocalRuntimeHost, RuntimeController as CliRuntimeController } from "@hypit/runtime-local";
 import { cliDistribution } from "../distribution-scenario.js";
 
 const io = { write: () => {} };

@@ -50,7 +50,7 @@ test("local HTML renderer Provider really renders a silent frame-exact MP4 with 
   const { handler } = await htmlProviderHandler(request);
   const output = await handler({
 
-    need: request, resources, credentials: {},
+    request: request, resources, credentials: {},
   });
   const value: CanonicalValue = output;
   verifyTimelineVisual(value);

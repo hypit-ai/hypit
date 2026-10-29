@@ -9,7 +9,6 @@ import type {
   CredentialStore,
   OperationStore,
 } from "@hypit/hypit/runtime";
-import type { BuildCatalog } from "./catalog.js";
 import type { BuildCompletion, BuildExecutionStore, BuildExecutionSnapshot, BuildResultRepositoryLocation } from "./execution.js";
 import type {
   RuntimeHostControl,
@@ -30,8 +29,6 @@ export type CreateLocalRuntimeOptions = {
   readonly executionContext?: import("@hypit/hypit/protocol").CanonicalValue;
   readonly executionLogs?: import("./log.js").LocalExecutionLogs;
   readonly buildStore: BuildStore;
-  /** Host presentation metadata only; never part of Core state. */
-  readonly buildCatalog: BuildCatalog;
   readonly operationStore: OperationStore;
   /** Durable receipt boundary: one immediate Command is never invoked twice for one Build. */
   readonly commandExecutionStore: import("@hypit/hypit/runtime").CommandExecutionStore;
@@ -62,7 +59,7 @@ export type CreateLocalRuntimeControlOptions = {
   readonly executionLogs?: import("./log.js").LocalExecutionLogs;
   readonly buildStore: BuildStore;
   readonly commandExecutionStore: import("@hypit/hypit/runtime").CommandExecutionStore;
-  readonly buildCatalog?: BuildCatalog;
+  readonly openBuildResultRepository: (location: BuildResultRepositoryLocation) => Awaitable<BuildResultRepositoryOpened>;
   readonly operationStore: OperationStore;
   readonly executionStore: BuildExecutionStore;
   readonly submissionStore: import("./submission.js").PendingBuildStore;

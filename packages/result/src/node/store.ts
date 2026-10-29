@@ -262,11 +262,9 @@ export async function resolveBuildResultOutput(
       decodeBuildResultJson(await readFile(path), path),
       `Build ${build} Output ${output}`,
     );
-    return { build, output, directory, type: entry.type, value: { ...entry.value, document } };
+    return { directory, type: entry.type, value: { ...entry.value, document } };
   }
   return {
-    build,
-    output,
     directory,
     type: entry.type,
     value: entry.value,

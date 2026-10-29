@@ -13,7 +13,7 @@
   &nbsp;&bull;&nbsp;
   <a href="https://hypit.ai/quickstart/"><strong>Quickstart</strong></a>
   &nbsp;&bull;&nbsp;
-  <a href="https://hypit.ai/guide/develop/"><strong>Develop</strong></a>
+  <a href="https://hypit.ai/guide/packages/"><strong>Extend</strong></a>
   &nbsp;&bull;&nbsp;
   <a href="./README.zh-CN.md"><strong>简体中文</strong></a>
 </p>
@@ -196,8 +196,8 @@ a versioned tarball or published under the owner's npm scope or private registry
 component maintained in Hypit's official Distribution begin with an issue describing the shared
 product need; official inclusion is separate from normal community sharing.
 
-The [Development Guide](https://hypit.ai/guide/develop/) covers local production prerequisites and
-the public extension guides for components, Models, Providers and Runtime integration.
+The [Packages and Extension guide](https://hypit.ai/guide/packages/) explains how a project creates,
+installs and shares components, Models and Providers.
 
 <table>
   <tr>
@@ -211,10 +211,6 @@ the public extension guides for components, Models, Providers and Runtime integr
   <tr>
     <td>Questions</td>
     <td><a href="https://discord.gg/85hnyQnxpn">Discord</a> or <a href="https://t.me/hypitai">Telegram</a></td>
-  </tr>
-  <tr>
-    <td>Upgrading existing projects</td>
-    <td><a href="./migrations/0.3.md">0.3 migration guide</a> · <a href="./migrations/0.3.1.md">0.3.1 SDK migration guide</a> · <a href="./migrations/0.4.md">0.4 framework migration guide</a></td>
   </tr>
 </table>
 

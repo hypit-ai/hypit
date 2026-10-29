@@ -39,7 +39,8 @@ Hypit 只有一条节目时间轴：`Timeline`。它只是 `{ id, frameRate, fra
   video="primary-moving" audio="default" span-authority="video"/>
 ```
 
-准备只建立媒体事实，不包含 Script 含义、节目中的位置或代理文件。
+准备会发布选中的媒体成员、它们精确的局部时间域与 Extent，以及后续消费者需要的源关系。
+Script 对齐与节目放置仍由作者分别声明。
 
 ## 在作品消费语义位置时进行对齐
 
@@ -82,7 +83,7 @@ Caption 时间；Script 含义、媒体放置和 Alignment 操作本身都无需
 
 ## 构造绝对 Timeline
 
-Timeline 声明是无环构造图。`end` 必填；每个具名 Instant 或 Window 都自然发布为普通图值：
+Timeline 声明可以彼此依赖，但必须保持无环。`end` 必填；每个具名 Instant 或 Window 都可以被其他声明引用：
 
 ```svml
 <time:Timeline id="speech" clock={clock} end="answer.end">
@@ -92,7 +93,7 @@ Timeline 声明是无环构造图。`end` 必填；每个具名 Instant 或 Wind
 ```
 
 每个 `for={...extent}` 都会把精确但尚未定位的时长解析到当前 Timeline 的 Clock 上；默认
-`cover` 规则会保留最后一个不完整帧。因此，未知长度的生成语音可以在普通图求值中撑开
+`cover` 规则会保留最后一个不完整帧。因此，未知长度的生成语音可以在解析完成后撑开
 Timeline。`from="opening.end+2s"` 表示空隙，
 `from="opening.end-12f"` 表示重叠，`latest(a.end,b.end)` 可以合并并行分支。纯动效可直接
 声明 `<time:Timeline id="animation" clock={clock} end="8s"/>`。Timeline 不保留媒体或局部
@@ -146,5 +147,4 @@ NarrativeAlignment + LocalDomain + Window ────────────�
 Instant / Window / TemporalExtent DAG ───────────────────→ Timeline
 ```
 
-组件最终只消费 Timeline 与绝对 Instant/Window。领域投影在上游发布这些值；通用组件的
-Author Declaration 不接受 Script 对象，也不携带投影器。
+组件最终只消费 Timeline 与绝对 Instant/Window。领域投影先发布这些值，组件再通过普通 Source 引用使用它们。

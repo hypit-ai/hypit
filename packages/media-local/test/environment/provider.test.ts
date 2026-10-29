@@ -172,7 +172,7 @@ async function fulfillInline(resources: MemoryResourceStore, request: Need): Pro
   const provider = await handlerFor(request);
   const result = await provider.handler({
 
-    need: request,
+    request: request,
     resources,
     credentials: {},
   });
@@ -195,7 +195,7 @@ async function inspectArtifact(resources: MemoryResourceStore, source: Awaited<R
   const provider = await handlerFor(request);
   const result = await provider.handler({
 
-    need: request,
+    request: request,
     resources,
     credentials: {},
   });
@@ -301,7 +301,7 @@ test("local media Provider extracts ordinary audio and frame Artifacts and rende
       const provider = await handlerFor(request);
       const result = await provider.handler({
 
-        need: request,
+        request: request,
         resources,
         credentials: {},
       });
@@ -446,7 +446,7 @@ test("StillVideo converts authored RGB pictures to tagged BT.709 in both render 
       const provider = await handlerFor(request);
       const result = await provider.handler({
 
-        need: request,
+        request: request,
         resources,
         credentials: {},
       });

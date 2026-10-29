@@ -113,7 +113,7 @@ try {
   assert.deepEqual(captionPackage.contribution.modules?.map(({ manifest }) => manifest.name), ["@hypit/caption-fine"]);
   assert.deepEqual(textPackage.contribution.modules?.map(({ manifest }) => manifest.name), ["@hypit/text-fine"]);
   assert.equal(producerPackagesFromFacets(captionPackage.contribution.facets ?? []).length, 1);
-  assert.equal(refinementPackagesFromFacets(captionPackage.contribution.facets ?? []).length, 0);
+  assert.equal(refinementPackagesFromFacets(captionPackage.contribution.facets ?? []).length, 1);
   assert.equal(producerPackagesFromFacets(textPackage.contribution.facets ?? []).length, 1);
   assert.equal(refinementPackagesFromFacets(textPackage.contribution.facets ?? []).length, 0);
 
@@ -124,14 +124,14 @@ try {
   assert.equal(captionStudio.tracks.length, 1);
   assert.equal(captionStudio.parameters.length, 1);
   assert.equal(captionStudio.tracks[0]?.output.type.name, compositionTypes.visualTrack.name);
-  assert.equal(captionStudio.tracks[0]?.output.surface, "caption");
+  assert.equal(captionStudio.tracks[0]?.output.declaration, "caption");
 
   const textStudio = studioContributionFromPackage(
     textPackage.specifier,
     textPackage.contribution.facets ?? [],
   );
   assert.equal(textStudio.tracks.length, 3);
-  assert.deepEqual(textStudio.tracks.map((track) => track.output.surface), ["flow", "point", "path"]);
+  assert.deepEqual(textStudio.tracks.map((track) => track.output.declaration), ["flow", "point", "path"]);
   assert.ok(textStudio.tracks.every((track) => track.output.type.name === compositionTypes.visualTrack.name));
 
   const reusedCaption = await import(

@@ -13,7 +13,7 @@ For a standalone asset edit, follow the actual material operation and deliver it
 
 ## Express the work
 
-| Current question | Owner |
+| Current question | Read |
 | --- | --- |
 | How do materials, Timeline, Canvas, components and execution relate? | [System](system.md) |
 | How do Source imports, references, values and Recipes work? | [Source syntax](source-syntax.md) |
@@ -24,7 +24,7 @@ For a standalone asset edit, follow the actual material operation and deliver it
 
 ## Prepare material and establish time and space
 
-| Current question | Owner |
+| Current question | Read |
 | --- | --- |
 | Files, generated/reused outputs, stream selection, preparation, local domains, semantic alignment or processed variants | [Media preparation](media.md) |
 | Timeline end, Instants, Windows, Extents, gaps and overlap | [Timeline](timeline.md) |
@@ -39,7 +39,7 @@ For a standalone asset edit, follow the actual material operation and deliver it
 [Tracks](tracks.md) chooses by content source and shared behavior, without classifying files as
 A-roll-only or B-roll-only.
 
-| Current question | Owner |
+| Current question | Read |
 | --- | --- |
 | Place footage or independent images/video; choose treatment and sampling, or identify coordinated behavior that needs a component | [Visual Track](visual-clips.md) |
 | Present placed performance audio or independent music, narration, ambience and effects | [Audio Track](audio-clips.md) |
@@ -48,10 +48,10 @@ A-roll-only or B-roll-only.
 
 ## Create the component the work needs
 
-| Current question | Owner |
+| Current question | Read |
 | --- | --- |
 | What should share a component, and which choices should become inputs? | [Component design](component-design.md) |
-| How do I connect Author Declaration, projections, Fragment and Producers? | [Track authoring](track-authoring.md) |
+| How do I give a project component useful time, content and visual behavior? | [Track authoring](track-authoring.md) |
 | How do I draw elements, video, graphics and frame-driven motion? | [Component visuals](component-visuals.md) |
 | How do I create a new Caption layout using existing wording and timing? | [Caption authoring](caption-authoring.md) |
 | How do I expose meaningful Studio Items and actual author controls? | [Studio Companions](studio-companions.md) |
@@ -59,7 +59,7 @@ A-roll-only or B-roll-only.
 
 ## Execute, revise and deliver
 
-| Current question | Owner |
+| Current question | Read |
 | --- | --- |
 | Choose Targets and transient execution overrides | [Invocations](runs.md) |
 | Decide which completed value preserves material while allowing this edit | [Reuse boundaries](authoring.md#reuse-produced-work-explicitly) |

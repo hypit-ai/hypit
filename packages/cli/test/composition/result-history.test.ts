@@ -14,7 +14,6 @@ import type { CapabilityRef, TypeRef, TypedRecord } from "@hypit/protocol";
 
 import type { CliDistribution } from "../../src/distribution.js";
 import { cliDistribution } from "../distribution-scenario.js";
-import { createCatalogDescriptor } from "../../src/build-planning.js";
 import { runCli } from "../../src/main.js";
 import {
   completedRecords,

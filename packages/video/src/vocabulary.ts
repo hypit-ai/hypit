@@ -7,10 +7,7 @@ import type {
   AuthorDeclarationCompiler,
   AuthorDeclarationFieldShape,
 } from "@hypit/hypit/author";
-import {
-  animatableLocalStyles,
-  visualCompositionVocabulary,
-} from "@hypit/composition";
+import { visualCompositionVocabulary } from "@hypit/composition";
 import { markupDeclarationFacetAbi } from "@hypit/hypit/markup";
 import type { RegisteredMarkupDeclaration } from "@hypit/hypit/markup";
 import { loadNodePackageSelection, locateNodePackage, distributionPackageRoots } from "@hypit/hypit/loader/node";
@@ -18,7 +15,6 @@ import type { NodePackageLoadOptions } from "@hypit/hypit/loader/node";
 import { compareCodeUnits, moduleKey, typeKey } from "@hypit/hypit/protocol";
 import type { ModuleManifest, ValueSchema } from "@hypit/hypit/protocol";
 import { findProjectRoot } from "@hypit/hypit/project";
-import { VISUAL_STYLE_ENUM_VALUES_V1, VISUAL_STYLE_NAMES_V1 } from "@hypit/composition";
 
 /**
  * What a Source may write: installed packages, their Module Capabilities and author Declarations.
@@ -229,9 +225,6 @@ export function describeSchema(schema: ValueSchema, indent = ""): string[] {
 
 export function visualSchema(shape?: string): {
   readonly shapes: readonly { readonly shape: string; readonly describes: string }[];
-  readonly animatableLocalStyles: readonly string[];
-  readonly styleNames: readonly string[];
-  readonly styleEnumValues: typeof VISUAL_STYLE_ENUM_VALUES_V1;
   readonly rules: readonly string[];
 } {
   const asked = shape?.trim();
@@ -240,9 +233,6 @@ export function visualSchema(shape?: string): {
   const chosen = asked === undefined || asked.length === 0 ? Object.keys(shapes) : [asked];
   return {
     shapes: chosen.map((name) => ({ shape: name, describes: describeSchema(shapes[name]!).join("\n") })),
-    animatableLocalStyles: [...animatableLocalStyles],
-    styleNames: [...VISUAL_STYLE_NAMES_V1],
-    styleEnumValues: VISUAL_STYLE_ENUM_VALUES_V1,
     rules: visualCompositionVocabulary.rules,
   };
 }
@@ -313,8 +303,7 @@ export async function runVocabularyCli(
     assert(words.length <= 2, "hypit vocabulary --visual takes at most one shape name");
     const schema = visualSchema(shape);
     if (json) { io.write(`${JSON.stringify(schema, null, 2)}\n`); return; }
-    io.write(`${schema.shapes.map((item) => `${item.shape}\n${item.describes.split("\n").map((line) => `  ${line}`).join("\n")}`).join("\n\n")}\n\n`
-      + `animatable local styles: ${schema.animatableLocalStyles.join(", ")}\nstyle names: ${schema.styleNames.join(", ")}\n\nrules\n${schema.rules.map((rule) => `  ${rule}`).join("\n")}\n`);
+    io.write(`${schema.shapes.map((item) => `${item.shape}\n${item.describes.split("\n").map((line) => `  ${line}`).join("\n")}`).join("\n\n")}\n\nrules\n${schema.rules.map((rule) => `  ${rule}`).join("\n")}\n`);
     return;
   }
 

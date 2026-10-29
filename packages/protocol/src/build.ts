@@ -1,5 +1,4 @@
 import type {
-  CandidateId,
   CommandId,
   CapabilityRef,
   LogicalOutputId,
@@ -48,7 +47,7 @@ export type GraphValueRef = RecordRef | LogicalOutputRef | OperationResultRef;
 export type LogicalOutput = {
   readonly id: LogicalOutputId;
   readonly type: TypeRef;
-  readonly primary: CandidateId;
+  readonly primary: OutputRoot;
 };
 
 export type OperationResult =
@@ -71,28 +70,21 @@ export type OperationNode = {
   readonly result: OperationResult;
 };
 
-export type CandidateRoot = RecordRef | OperationResultRef;
-
-export type Candidate = {
-  readonly id: CandidateId;
-  /** Type of the independent value exported by the Author Graph. */
-  readonly type: TypeRef;
-  readonly root: CandidateRoot;
-};
+export type OutputRoot = RecordRef | OperationResultRef;
 
 export type AuthorGraph = {
   readonly format: "hypit.graph@1";
   readonly outputs: readonly LogicalOutput[];
-  readonly candidates: readonly Candidate[];
   readonly operations: readonly OperationNode[];
 };
 
-export type Satisfaction = {
+/** One explicit effective source for a Logical Output in this Invocation. */
+export type LogicalOutputSelection = {
   readonly output: LogicalOutputId;
-  readonly candidate: CandidateId;
+  readonly root: OutputRoot;
 };
 
-/** Author-visible choice for one invocation; hygienic Candidate ids never cross this boundary. */
+/** Author-visible choice for one invocation; graph-internal roots never cross this boundary. */
 export type InvocationChoice =
   | { readonly kind: "primary" }
   | { readonly kind: "record"; readonly record: RecordId };

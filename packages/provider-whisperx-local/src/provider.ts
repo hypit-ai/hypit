@@ -152,7 +152,7 @@ export function createLocalWhisperXProvider(config: CreateLocalWhisperXProviderO
       capability: whisperXCapabilities.transcription,
       returns: speechEvidenceTypes.transcript,
       handler: async (context: EndpointInvocationContext) => {
-        const request = verifyWhisperXTranscriptionRequest(context.need.constraints);
+        const request = verifyWhisperXTranscriptionRequest(context.request.constraints);
         const audio = await context.resources.get(request.audio.resource);
         assert(audio !== undefined && audio.byteLength === request.audio.size,
           `WhisperX evidence Artifact ${request.audio.resource} is unavailable or has changed`);

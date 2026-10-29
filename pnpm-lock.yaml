@@ -419,6 +419,9 @@ importers:
       '@hypit/composition':
         specifier: workspace:^0.2.0
         version: link:../../../../packages/composition
+      '@hypit/html-program':
+        specifier: workspace:^0.1.0
+        version: link:../../../../packages/html-program
       '@hypit/spatial':
         specifier: workspace:^0.1.0
         version: link:../../../../packages/spatial
@@ -438,6 +441,9 @@ importers:
       '@hypit/composition':
         specifier: workspace:^0.1.0
         version: link:../../../../packages/composition
+      '@hypit/html-program':
+        specifier: workspace:^0.2.0
+        version: link:../../../../packages/html-program
       '@hypit/media':
         specifier: workspace:^0.1.0
         version: link:../../../../packages/media
@@ -920,6 +926,9 @@ importers:
       '@hypit/composition':
         specifier: workspace:^0.2.0
         version: link:../composition
+      '@hypit/html-program':
+        specifier: workspace:^0.2.0
+        version: link:../html-program
       '@hypit/media':
         specifier: workspace:^0.2.0
         version: link:../media
@@ -936,9 +945,6 @@ importers:
       '@hypit/blob':
         specifier: workspace:*
         version: link:../blob
-      '@hypit/html-program':
-        specifier: workspace:*
-        version: link:../html-program
       '@hypit/hypit':
         specifier: workspace:*
         version: link:../..
@@ -1101,6 +1107,9 @@ importers:
       '@hypit/composition':
         specifier: workspace:^0.2.0
         version: link:../composition
+      '@hypit/html-program':
+        specifier: workspace:^0.2.0
+        version: link:../html-program
       '@hypit/media':
         specifier: workspace:^0.2.0
         version: link:../media
@@ -1609,6 +1618,12 @@ importers:
       '@hypit/composition':
         specifier: workspace:^0.2.0
         version: link:../composition
+      '@hypit/html-program':
+        specifier: workspace:^0.2.0
+        version: link:../html-program
+      '@hypit/media':
+        specifier: workspace:^0.2.0
+        version: link:../media
       '@hypit/spatial':
         specifier: workspace:^0.1.1
         version: link:../spatial
@@ -1739,6 +1754,9 @@ importers:
       '@hypit/audio-stretch':
         specifier: workspace:^0.1.0
         version: link:../audio-stretch
+      '@hypit/composition':
+        specifier: workspace:^0.2.0
+        version: link:../composition
       '@hypit/media':
         specifier: workspace:^0.2.0
         version: link:../media
@@ -1751,6 +1769,9 @@ importers:
       '@hypit/speech-evidence':
         specifier: workspace:^0.2.0
         version: link:../speech-evidence
+      '@hypit/temporal':
+        specifier: workspace:^0.1.1
+        version: link:../temporal
       '@hypit/timeline':
         specifier: workspace:^0.1.1
         version: link:../timeline
@@ -2381,6 +2402,9 @@ importers:
       '@hypit/composition':
         specifier: workspace:^0.2.0
         version: link:../composition
+      '@hypit/html-program':
+        specifier: workspace:^0.2.0
+        version: link:../html-program
       '@hypit/media':
         specifier: workspace:^0.2.0
         version: link:../media
@@ -2861,6 +2885,9 @@ importers:
       '@hypit/composition':
         specifier: workspace:^0.2.0
         version: link:../composition
+      '@hypit/html-program':
+        specifier: workspace:^0.2.0
+        version: link:../html-program
       '@hypit/media':
         specifier: workspace:^0.2.0
         version: link:../media
@@ -2880,9 +2907,6 @@ importers:
       '@hypit/compiler':
         specifier: workspace:*
         version: link:../compiler
-      '@hypit/html-program':
-        specifier: workspace:*
-        version: link:../html-program
       '@hypit/hypit':
         specifier: workspace:*
         version: link:../..
@@ -3217,6 +3241,9 @@ importers:
       '@hypit/composition':
         specifier: workspace:^0.2.0
         version: link:../composition
+      '@hypit/html-program':
+        specifier: workspace:^0.2.0
+        version: link:../html-program
       '@hypit/media':
         specifier: workspace:^0.2.0
         version: link:../media
@@ -3233,9 +3260,6 @@ importers:
       '@hypit/blob':
         specifier: workspace:*
         version: link:../blob
-      '@hypit/html-program':
-        specifier: workspace:*
-        version: link:../html-program
       '@hypit/hypit':
         specifier: workspace:*
         version: link:../..

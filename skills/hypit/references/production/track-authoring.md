@@ -12,8 +12,8 @@ and project package ownership. [Caption authoring](caption-authoring.md) covers 
 
 Prefer domain-produced time when the component responds to words or performance. A Narrative
 projector can turn a comparison Selection into a Window, a verdict Moment into an Instant, and a
-Segment into a board lifetime. Expose ordinary absolute values through the component's author declaration and pass
-them to the implementation. This keeps the component useful when a new performance changes the
+Segment into a board lifetime. Accept ordinary absolute values in the component's Source interface.
+This keeps the component useful when a new performance changes the
 pace without coupling it to Narrative. Expose separately meaningful
 internal events as well as the outer lifetime. The [event-versus-animation boundary](component-design.md#let-meaning-drive-the-behavior)
 explains why a single semantic Window cannot replace several word-linked triggers. In an authored animation,
@@ -43,8 +43,7 @@ repeated updates or simultaneous events.
 
 Script names Narrative meaning: a Selection, Segment or Moment. `@hypit/narrative-temporal`
 combines Alignment, its local domain and an equal-length Window and publishes requested absolute Instants or Windows. The
-component's author interface accepts those values, and its Fragment and
-Producers decide what to do with them.
+component's Source interface accepts those values and decides what to do with them.
 
 ```text
 Narrative relationship + Alignment + LocalDomain + Window
@@ -58,10 +57,8 @@ This separation lets one projected Instant drive an answer reveal, a short sound
 Consumers can share that one value. Changed speech moves the upstream event without asking each
 component to search for a word, carry a projector or inspect the Script parser.
 
-Declare `timeline`, Window and Instant inputs as typed references in the package's syntax-neutral
-Author Declaration shape. Its compiler resolves those references and passes the same completed Timeline
-and temporal values to the Fragment and Producers. A component can combine directly authored and
-domain-produced named values without switching time models.
+Declare `timeline`, Window and Instant as typed Source inputs. A component can combine directly
+authored and domain-produced named values without switching time models.
 
 For a Window consumer, `during={example}` reuses a projected interval. To start a short
 effect at an Instant, first declare a named Window from that Instant, then pass it through `during`.
@@ -116,9 +113,8 @@ and any detector in their own execution or measurement boundary.
 
 ## Write the smallest component that expresses the role
 
-Declare the new package in the project's `packages/` and ordinary package configuration. Read the
-installed `@hypit/hypit/author`, `producer`, `refinement` and `markup` READMEs for the public package boundaries and inspect a close installed sibling for
-the relevant implementation, rather than depending on a monorepo example directory being present.
+Declare the new package in the project's `packages/` and ordinary package configuration. Start from
+the installed component example and its README, then inspect a close installed component when useful.
 When already selected by a project, `@hypit/interview-emoji-reveal` demonstrates persistent
 Moment-driven state and `@hypit/ranking` demonstrates reveal Windows and settled rows.
 `@hypit/visual-track` is the default example for ordinary Clip occurrences with independent Window,
@@ -126,12 +122,9 @@ Frame, fit and temporal sampling relations. Its `Transition` child explicitly re
 Clip occurrences; their exact Window intersection is the relation span, while a referenced effect package owns
 how the two pictures combine. Optional examples are evidence, not prerequisites.
 
-The declaration shape exposes author intent and states the accepted Type for every temporal reference.
-The package compiler resolves those references and wires the completed value, shared Timeline,
-explicit placement Frames and authored values into the Fragment. Timeline authoring, Narrative, or
-project- and ecosystem-owned beat and other domain packages publish those values upstream; the component does not construct an anonymous
-value or inspect its origin. The Producer owns the visual/state behavior, while Studio follows the
-graph and provenance back to the value's actual declaration for editing.
+The Source interface states the accepted Type for every temporal reference. Timeline authoring,
+Narrative, and project or ecosystem packages publish those values; the component consumes the named
+values without inspecting where they came from.
 
 Wire supplied media, Script content and event references through Source. Expose other content or
 treatment in Source or Recipe where the work needs those choices. A one-off component can own fixed
@@ -139,34 +132,15 @@ illustrative labels, dimensions and animation alongside its state and visual str
 does not require every detail to become a parameter. [Component design](component-design.md#separate-responsibility-parameters-and-reuse)
 explains that distinction. A new Caption family consumes the common Caption document and timing.
 
-## Connect the implementation at its real boundaries
+## Implement the component package
 
-The useful pieces of a project package are:
+Give the package one Source interface, the code that performs its behavior, a concise README and a
+preview. Add Studio controls only for author choices that are useful to edit. Follow the installed
+component template and package README for the selected release's exact files and TypeScript APIs.
 
-| Piece | Responsibility |
-| --- | --- |
-| Manifest | Module identity, nominal Types, Producer input/output ports and dependencies |
-| Author Declaration | Own fields, children, accepted reference Types, bindings and graph lowering independently of syntax |
-| Markup spelling | Map one Source tag and its syntax into the package-owned declaration |
-| Fragment | Wire the finite computation graph and publish outputs |
-| Producer | Compute the immutable state or render program from declared inputs |
-| Activation | Export the package's Author, Producer, Refinement and Markup contributions through the installed public helpers |
-| Vocabulary and preview | Explain the role and show a recognizable, configured example |
-| Optional Studio Companion | Project meaningful editor Items, real parameter bindings and temporal lineage without changing video rendering |
-
-Declare the Track's `timeline` field as a `Timeline` reference and wire the resolved reference directly
-to its Fragment input. Declare each Window or Instant field with its exact accepted Type, resolve it
-through the Author compiler's `resolveReference`, and wire the returned `ref` into the domain Fragment.
-Window consumers commonly use `during`; Instant consumers commonly use `at`. Both fields reference
-completed temporal values. Timeline-authoring and domain packages own those declarations; the
-component only consumes their public values.
-
-Keep each child's `subjectId` meaningful for inspection while qualifying graph ids by its owning
-Track, so multiple instances can coexist. Do not use it to reject a deliberately shared Window. A
-finite create/append/finalize graph supports any authored number of messages or cards with ordinary
-fixed Producer ports. Exact duration, rate and relation parsing belongs to `@hypit/temporal`; absolute
-Clock, Timeline, Window and Instant construction belongs to `@hypit/timeline-author`. A component
-declaration normally needs only typed references to their completed outputs.
+Window consumers commonly use `during`; Instant consumers commonly use `at`. Keep child ids meaningful
+within each component instance so several instances can coexist. Accept shared Windows and Instants
+when several objects intentionally follow the same event.
 
 A scene may publish computed event times when another component needs them, just as it publishes a
 Track. This shares pre-render data. When the author already specifies a common trigger, consumers
@@ -177,13 +151,10 @@ draw nothing; inside it, each slot shows its preset/activated answer or its plac
 entrance motion relative to that slot's activation frame. Deriving state directly from declared inputs
 and the requested frame keeps Studio scrubbing and partial or concurrent rendering deterministic.
 
-Emit the public VisualTrack representation through `@hypit/composition`.
-[Component visuals](component-visuals.md) explains Presents, element trees, local animation,
-prepared surfaces and a complete drawing function. [Spatial layout](spatial.md) explains incoming
-Frames, and [Fonts and text](fonts-and-text.md) explains font resources.
-Pass asset references and exact font data through declared inputs. A visual Producer does not open
-files, call GVI, run ffmpeg or choose a Provider. If an external preparation operation is needed,
-represent it separately through its capability; its result becomes another input.
+Publish an ordinary VisualTrack or AudioTrack output. [Component visuals](component-visuals.md)
+explains Presents, element trees and local animation. [Spatial layout](spatial.md) explains incoming
+Frames, and [Fonts and text](fonts-and-text.md) explains font resources. Pass prepared assets and exact
+font data through declared inputs. Complete external preparation before the component consumes it.
 
 A component-owned sound can be a peer Audio Track output; alternatively the Source can place a sound
 on the same Moment. Neither choice requires a Track to inspect another Track's private state.

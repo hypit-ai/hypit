@@ -5,13 +5,12 @@ import {
   sealPresentVisualTrack,
 } from "@hypit/composition";
 import type {
-  VisualAnimation,
-  VisualElement,
-  VisualStyleDeclaration,
   VisualTextFlow,
   VisualTextTypography,
   PresentVisualTrack,
 } from "@hypit/composition";
+import { htmlVisualElement } from "@hypit/html-program";
+import type { HtmlAnimation as VisualAnimation, HtmlElement as VisualElement, HtmlStyleDeclaration as VisualStyleDeclaration } from "@hypit/html-program";
 import { assertFontArtifactRef, SRGB_STRAIGHT_PICTURE } from "@hypit/media";
 import { assertBlobRef, canonicalize } from "@hypit/hypit/protocol";
 import type { BlobRef } from "@hypit/hypit/protocol";
@@ -441,7 +440,7 @@ function initial(author: string): string {
   return [...author.replace(/^@/u, "").trim()][0]?.toUpperCase() ?? "";
 }
 
-function stickerRoot(item: CommentStickerItemProgram): VisualElement {
+export function stickerRoot(item: CommentStickerItemProgram): VisualElement {
   const { style, frame, content } = item;
   const duration = item.span.endFrameExclusive - item.span.startFrame;
   const tailHeight = style.card.tail.enabled ? style.card.tail.heightPx : 0;
@@ -575,14 +574,14 @@ export function renderCommentSticker(timeline: Timeline, program: CommentSticker
   assertCommentStickerProgram(program);
   const track = sealPresentVisualTrack({
     timelineId: timeline.id,
-    visualIr: "hypit.visual-ir@1",
+
     id: program.id,
     presents: [...program.items].sort((left, right) => left.style.stackingOrder - right.style.stackingOrder)
       .map((item) => ({
       id: item.id,
       subjectId: item.subjectId,
       span: { ...item.span },
-      root: stickerRoot(item),
+      root: htmlVisualElement(stickerRoot(item)),
     })),
   });
   assertVisualTrackIdentity(track, timeline);

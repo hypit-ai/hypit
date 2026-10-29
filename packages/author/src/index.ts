@@ -85,7 +85,6 @@ export type {
   AuthorSourceAssetReader,
   AuthorSourceAssetResolver,
   AuthorSourceExport,
-  AuthorSourceIdentity,
   AuthorSourceImport,
   AuthorSourceResolver,
   AuthorSourceUnit,

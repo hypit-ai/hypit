@@ -89,6 +89,14 @@ function failureMessage(error: unknown): string {
   return [...new Set(parts)].join("; caused by: ");
 }
 
+function endpointRequest(need: FulfillNeedCommand["need"]): import("@hypit/endpoint").EndpointRequest {
+  return {
+    capability: structuredClone(need.capability),
+    returns: structuredClone(need.returns),
+    constraints: structuredClone(need.constraints),
+  };
+}
+
 export class Executor {
   readonly producers: ProducerRegistry;
   readonly endpoints: EndpointRegistry;
@@ -186,6 +194,8 @@ export class Executor {
             command: command.id,
             reason: "missing-producer",
             subject: producerKey(command.producer),
+            step: command.step,
+            producer: structuredClone(command.producer),
           },
         };
       }
@@ -210,6 +220,7 @@ export class Executor {
         blocked: {
           command: command.id,
           reason: "missing-endpoint",
+            need: structuredClone(command.need),
           subject: selection.endpointId === undefined
             ? `${capabilityKey(command.need.capability)} -> ${typeKey(command.need.returns)}`
             : `${capabilityKey(command.need.capability)} -> ${selection.endpointId}`,
@@ -222,6 +233,7 @@ export class Executor {
         blocked: {
           command: command.id,
           reason: "ambiguous-endpoint",
+            need: structuredClone(command.need),
           subject: `${capabilityKey(command.need.capability)} -> ${selection.endpointIds.join(", ")}`,
         },
       };
@@ -234,6 +246,7 @@ export class Executor {
         blocked: {
           command: command.id,
           reason: "unsupported-endpoint-request",
+            need: structuredClone(command.need),
           subject: `${registration.id}: ${support.reason}`,
         },
       };
@@ -244,6 +257,7 @@ export class Executor {
         blocked: {
           command: command.id,
           reason: "missing-operation-store",
+            need: structuredClone(command.need),
           subject: registration.id,
         },
       };
@@ -422,7 +436,7 @@ export class Executor {
     const actionEndedAt = operation.status === "collecting" ? operation.endedAt : undefined;
     const invoke = async (): Promise<EndpointOutcome> => {
       const context = {
-        need: structuredClone(operation.need),
+        request: endpointRequest(operation.need),
         resources: this.#resourceStore(operation.build), operation: operation.id,
         credentials: await this.#endpointCredentials({ ...registration, credentials: operation.credentials }),
         ...this.#endpointObservers(operation.endpoint, runtimeContext),
@@ -568,7 +582,7 @@ export class Executor {
     await context?.recordExecution?.({ endpoint: executable.endpointId, kind: "started" });
     try {
       const result = await executable.registration.handler({
-        need: structuredClone(executable.command.need),
+        request: endpointRequest(executable.command.need),
         resources: this.#resourceStore(context?.build),
         credentials: await this.#endpointCredentials(executable.registration),
         ...this.#endpointObservers(executable.endpointId, context),
@@ -643,7 +657,7 @@ export class Executor {
         const support = this.endpoints.checkSupport(selected.registration, current.need);
         if (support.status === "unsupported") throw new Error(`Operation request is unsupported: ${support.reason}`);
         const result = await selected.registration.endpoint.cancel?.({
-          need: current.need, operation: current.id, handle: current.handle,
+          request: endpointRequest(current.need), operation: current.id, handle: current.handle,
           resources: this.#resourceStore(current.build),
           credentials: await this.#endpointCredentials(selected.registration),
         });

@@ -5,7 +5,7 @@ import { assertBlobRef, canonicalize } from "@hypit/hypit/protocol";
 import type { BlobRef, TypedRecord } from "@hypit/hypit/protocol";
 import type { ProducerPackage, ProducerHandler } from "@hypit/hypit/producer";
 import type { RefinementPackage } from "@hypit/hypit/refinement";
-import { VISUAL_IR_V1 } from "@hypit/composition";
+import { htmlVisualElement } from "@hypit/html-program";
 import { exampleProducers, exampleTypes } from "./manifest.js";
 import { SRGB_STRAIGHT_PICTURE } from "@hypit/media";
 
@@ -26,9 +26,9 @@ function render(kind: string, timeline: Timeline, within: SpatialFrame, image?: 
   const frames = timeline.frameCount;
   return sealPresentVisualTrack({
     timelineId: timeline.id,
-    visualIr: VISUAL_IR_V1,
+
     id: `example-${kind}`,
-    presents: [{ id: `present-${kind}`, span: { startFrame: 0, endFrameExclusive: frames }, root: {
+    presents: [{ id: `present-${kind}`, span: { startFrame: 0, endFrameExclusive: frames }, root: htmlVisualElement({
       id: `${kind}-root`, kind: "box",
       children: kind === "image" && image !== undefined ? [{ id: `${kind}-content`, kind: "image" as const,
         artifact: image, picture: SRGB_STRAIGHT_PICTURE,
@@ -36,7 +36,7 @@ function render(kind: string, timeline: Timeline, within: SpatialFrame, image?: 
       style: [{ name: "position", value: "absolute" }, { name: "left", value: `${within.xPx}px` },
         { name: "top", value: `${within.yPx}px` }, { name: "width", value: `${within.widthPx}px` },
         { name: "height", value: `${within.heightPx}px` }, { name: "background-color", value: "#6b7280" }],
-    } }],
+    }) }],
   });
 }
 const producer = (kind: string): { readonly handler: ProducerHandler } => ({ handler: ({ inputs }) => ({ kind: "output", value: output(render(kind,

@@ -67,7 +67,7 @@ export function createLocalHtmlProvider(config: CreateLocalHtmlProviderOptions) 
         },
       }),
       handler: async (context) => {
-        const request = context.need.constraints;
+        const request = context.request.constraints;
         verifyHtmlRasterRequest(request);
         const frameCount = request.range === undefined ? request.program.frameCount
           : request.range.endFrameExclusive - request.range.startFrame;
@@ -104,7 +104,7 @@ export function createLocalHtmlProvider(config: CreateLocalHtmlProviderOptions) 
         },
       }),
       handler: async (context: EndpointInvocationContext) => {
-        const request = context.need.constraints;
+        const request = context.request.constraints;
         verifyHtmlFrameRequest(request);
         const progress = renderProgressReporter(context.reportProgress, request.frames.length);
         try {

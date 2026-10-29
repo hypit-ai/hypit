@@ -135,10 +135,10 @@
       "types": "./dist/public/loader-node.d.ts",
       "import": "./packages/loader/src/node/public.ts"
     },
-    "./loader/node/module-scope": {
-      "hypit-source": "./packages/loader/src/node/module-scope.ts",
-      "types": "./dist/public/loader-node-module-scope.d.ts",
-      "import": "./packages/loader/src/node/module-scope.ts"
+    "./loader/node/module-importer": {
+      "hypit-source": "./packages/loader/src/node/module-importer.ts",
+      "types": "./dist/public/loader-node-module-importer.d.ts",
+      "import": "./packages/loader/src/node/module-importer.ts"
     },
     "./atomic-file": {
       "hypit-source": "./packages/atomic-file/src/index.ts",

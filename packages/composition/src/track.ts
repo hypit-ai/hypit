@@ -3,10 +3,6 @@ import type { AudioLevelAutomation } from "./audio-level-automation.js";
 import { assertBlobRef, canonicalize, canonicalStringify, compareCodeUnits } from "@hypit/hypit/protocol";
 import type { BlobRef, CanonicalValue } from "@hypit/hypit/protocol";
 
-import {
-  assertVisualStyleV1,
-  VISUAL_IR_V1,
-} from "./visual.js";
 import { assertFrameSpan as assertTimelineFrameSpan, assertTimelineIdentity, timelineFrameCount, timelineSampleFrames } from "@hypit/timeline";
 import type { FrameSpan, Timeline } from "@hypit/timeline";
 import {
@@ -35,45 +31,10 @@ import {
 } from "@hypit/temporal";
 import type { ExactTemporalValue, TemporalMap, TemporalRange } from "@hypit/temporal";
 
-/** One inline style declaration inside a Present-owned element tree. */
-export type VisualStyleDeclaration = {
-  readonly name: string;
-  readonly value: string | number;
-};
-
-export type VisualAttribute = {
-  readonly name: string;
-  readonly value: string;
-};
-
 export type VisualEasing = "linear" | "ease-in" | "ease-out" | "ease-in-out";
-
-/**
- * A frame-exact, code-free animation owned by one element. Keyframe offsets
- * are relative to the containing Present and therefore remain deterministic
- * under local and hosted rendering.
- */
-export type VisualKeyframe = {
-  readonly atFrame: number;
-  readonly easing?: VisualEasing;
-  readonly style: readonly VisualStyleDeclaration[];
-};
-
-export type VisualAnimation = {
-  readonly keyframes: readonly VisualKeyframe[];
-};
 
 export type VisualElementBase = {
   readonly id: string;
-  readonly style: readonly VisualStyleDeclaration[];
-  readonly attributes?: readonly VisualAttribute[];
-  readonly animation?: VisualAnimation;
-};
-
-export type VisualBoxElement = VisualElementBase & {
-  readonly kind: "box";
-  /** Semantic sibling order, from back to front. */
-  readonly children: readonly VisualElement[];
 };
 
 /** A renderer-interpreted local program. Its format and payload belong to its rendering package. */
@@ -101,7 +62,7 @@ export type VisualMaskElement = VisualElementBase & {
 export type VisualTextElement = VisualElementBase & {
   readonly kind: "text";
   readonly text: string;
-  /** Exact ordered fallback faces. Terminal Visual IR never depends on environment fonts. */
+  /** Exact ordered fallback faces. Typed text never depends on environment fonts. */
   readonly fonts: readonly FontArtifactRef[];
   /**
    * Ordered glyph Paint, in the same vocabulary Text Flow uses.
@@ -283,7 +244,25 @@ export type VisualTextSequenceAnimation = {
   readonly keyframes: readonly {
     readonly atProgress: number;
     readonly easing?: VisualEasing;
-    readonly style: readonly VisualStyleDeclaration[];
+    readonly state: {
+      readonly opacity?: number;
+      readonly transform?: {
+        readonly translateXPx: number;
+        readonly translateYPx: number;
+        readonly scale: number;
+        readonly rotateDeg: number;
+        readonly skewXDeg: number;
+        readonly skewYDeg: number;
+      };
+      readonly blurPx?: number;
+      readonly color?: string;
+      readonly clipInsetPercent?: {
+        readonly top: number;
+        readonly right: number;
+        readonly bottom: number;
+        readonly left: number;
+      };
+    };
   }[];
 };
 
@@ -368,7 +347,7 @@ export type VisualCompositionElement = VisualElementBase & {
  * or every child lands offset by it — which draws without complaint and is wrong by exactly the
  * distance the parent sits from the corner.
  */
-export type VisualElement = VisualBoxElement | VisualProgramElement | VisualMaskElement | VisualTextElement | VisualTextFlowElement | VisualPathTextElement | VisualMediaElement | VisualSurfaceElement | VisualCompositionElement;
+export type VisualElement = VisualProgramElement | VisualMaskElement | VisualTextElement | VisualTextFlowElement | VisualPathTextElement | VisualMediaElement | VisualSurfaceElement | VisualCompositionElement;
 
 export type VisualItemBase = {
   readonly id: string;
@@ -417,8 +396,6 @@ export type VisualTrack = {
   readonly kind: "visual";
   /** Timeline identity this terminal placement was rendered against. */
   readonly timelineId: string;
-  /** The one terminal visual language shared by official video components. */
-  readonly visualIr: typeof VISUAL_IR_V1;
   readonly id: string;
   /** Author-owned contributions that Composition interleaves in their containing VisualScope. */
   readonly items: readonly VisualItem[];
@@ -615,26 +592,6 @@ export type Composition = {
 /** Construction input: Film supplies the Timeline once; the sealed value owns it thereafter. */
 export type CompositionDraft = Omit<Composition, "timeline">;
 
-/** The only local style properties accepted in element keyframes. */
-export const animatableLocalStyles = [
-  "backdrop-filter",
-  "clip-path",
-  "filter",
-  "opacity",
-  "transform",
-] as const;
-const ANIMATABLE_LOCAL_STYLES = new Set<string>(animatableLocalStyles);
-
-const ANIMATABLE_TEXT_UNIT_STYLES = new Set([
-  "-webkit-text-fill-color",
-  "-webkit-text-stroke-color",
-  "background-color",
-  "color",
-  "filter",
-  "opacity",
-  "transform",
-]);
-
 function assertNonEmpty(value: string, label: string): void {
   if (!value) throw new Error(`${label} must not be empty.`);
 }
@@ -677,38 +634,6 @@ function assertVisualSampling(
   assertSampling(value, label, expectedTargetDuration, source.sourceDomain.duration);
 }
 
-function assertStyle(style: readonly VisualStyleDeclaration[], label: string): void {
-  const names = new Set<string>();
-  for (const declaration of style) {
-    if (names.has(declaration.name)) {
-      throw new Error(`${label} contains duplicate style ${declaration.name}.`);
-    }
-    names.add(declaration.name);
-    assertVisualStyleV1(declaration.name, declaration.value, label);
-  }
-}
-
-function assertAttributes(attributes: readonly VisualAttribute[] | undefined, label: string): void {
-  const names = new Set<string>();
-  for (const attribute of attributes ?? []) {
-    if (!/^(?:data-[a-z0-9-]+|aria-[a-z0-9-]+|role|title|lang|dir)$/u.test(attribute.name)) {
-      throw new Error(`${label} contains unsafe attribute ${attribute.name}.`);
-    }
-    if (attribute.name.startsWith("data-hypit-")) {
-      throw new Error(`${label} contains reserved attribute ${attribute.name}.`);
-    }
-    if (attribute.name === "lang" && !/^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$/u.test(attribute.value)) {
-      throw new Error(`${label} contains invalid lang ${attribute.value}.`);
-    }
-    if (attribute.name === "dir" && !["ltr", "rtl", "auto"].includes(attribute.value)) {
-      throw new Error(`${label} contains invalid dir ${attribute.value}.`);
-    }
-    if (names.has(attribute.name)) {
-      throw new Error(`${label} contains duplicate attribute ${attribute.name}.`);
-    }
-    names.add(attribute.name);
-  }
-}
 
 function assertExactFonts(fonts: readonly FontArtifactRef[], label: string): void {
   if (fonts.length === 0) throw new Error(`${label} has an empty font stack.`);
@@ -1034,9 +959,21 @@ function assertTextSequences(
       if (!Number.isFinite(keyframe.atProgress) || keyframe.atProgress <= previous || keyframe.atProgress < 0 || keyframe.atProgress > 1) {
         throw new Error(`${item}.keyframes.${frameIndex} progress is invalid.`);
       }
-      assertStyle(keyframe.style, `${item}.keyframes.${frameIndex}.style`);
-      if (keyframe.style.some((declaration) => !ANIMATABLE_TEXT_UNIT_STYLES.has(declaration.name))) {
-        throw new Error(`${item}.keyframes.${frameIndex} animates an unsupported text-unit property.`);
+      const state = keyframe.state;
+      if (Object.keys(state).length === 0) throw new Error(`${item}.keyframes.${frameIndex} has no state.`);
+      if (state.opacity !== undefined && (!Number.isFinite(state.opacity) || state.opacity < 0 || state.opacity > 1)) {
+        throw new Error(`${item}.keyframes.${frameIndex}.opacity is invalid.`);
+      }
+      if (state.blurPx !== undefined) nonNegative(state.blurPx, `${item}.keyframes.${frameIndex}.blurPx`);
+      if (state.color !== undefined) assertColor(state.color, `${item}.keyframes.${frameIndex}.color`);
+      if (state.transform !== undefined) {
+        for (const [name, value] of Object.entries(state.transform)) finite(value, `${item}.keyframes.${frameIndex}.transform.${name}`);
+        if (state.transform.scale <= 0) throw new Error(`${item}.keyframes.${frameIndex}.transform.scale is invalid.`);
+      }
+      if (state.clipInsetPercent !== undefined) {
+        for (const [name, value] of Object.entries(state.clipInsetPercent)) {
+          if (!Number.isFinite(value) || value < 0 || value > 100) throw new Error(`${item}.keyframes.${frameIndex}.clipInsetPercent.${name} is invalid.`);
+        }
       }
       previous = keyframe.atProgress;
     }
@@ -1052,35 +989,6 @@ function assertPathCommands(path: readonly VisualVectorPathCommand[], label: str
     for (const [name, value] of Object.entries(command)) {
       if (name !== "kind") finite(value as number, `${label}.${index}.${name}`);
     }
-  }
-}
-
-function assertAnimation(animation: VisualAnimation | undefined, label: string): void {
-  if (animation === undefined) return;
-  if (animation.keyframes.length < 2) throw new Error(`${label} animation must contain at least two keyframes.`);
-  let previous = -1;
-  for (const [index, keyframe] of animation.keyframes.entries()) {
-    if (
-      !Number.isSafeInteger(keyframe.atFrame)
-      || keyframe.atFrame < 0
-      || keyframe.atFrame <= previous
-    ) {
-      throw new Error(`${label} animation keyframe ${index + 1} has an invalid frame offset.`);
-    }
-    if (
-      keyframe.easing !== undefined
-      && !["linear", "ease-in", "ease-out", "ease-in-out"].includes(keyframe.easing)
-    ) {
-      throw new Error(`${label} animation keyframe ${index + 1} has an invalid easing.`);
-    }
-    if (keyframe.style.length === 0) throw new Error(`${label} animation keyframe ${index + 1} has no style.`);
-    assertStyle(keyframe.style, `${label}.animation.${index + 1}`);
-    for (const declaration of keyframe.style) {
-      if (!ANIMATABLE_LOCAL_STYLES.has(declaration.name)) {
-        throw new Error(`${label} animation cannot change ${declaration.name}.`);
-      }
-    }
-    previous = keyframe.atFrame;
   }
 }
 
@@ -1139,15 +1047,6 @@ function assertElement(
   if (ids.has(element.id)) throw new Error(`${trackId}.${present.id} has duplicate element ${element.id}.`);
   ids.add(element.id);
   const label = `${trackId}.${present.id}.${element.id}`;
-  assertStyle(element.style, label);
-  assertAttributes(element.attributes, label);
-  assertAnimation(element.animation, label);
-
-  if (element.kind === "box") {
-    if (!Array.isArray(element.children)) throw new Error(`${label}.children is invalid.`);
-    for (const child of element.children) assertElement(child, present, trackId, ids, timeline);
-    return;
-  }
   if (element.kind === "program") {
     assertVisualProgram(element.program, `${label}.program`);
     if (!Array.isArray(element.slots)) throw new Error(`${label}.slots is invalid.`);
@@ -1165,16 +1064,13 @@ function assertElement(
     assertElement(element.mask, present, trackId, ids, timeline);
     assertElement(element.content, present, trackId, ids, timeline);
     const mask = element.mask;
-    if (!["text", "text-flow", "path-text", "image", "surface"].includes(mask.kind)
+    if (!["text", "text-flow", "path-text", "image", "surface", "program"].includes(mask.kind)
       || (mask.kind === "surface" && mask.surface.timing.kind !== "still")) {
       throw new Error(`${label} mask source must be one terminal owned text, image or still Surface.`);
     }
     return;
   }
   if (element.kind === "composition") {
-    if (element.animation !== undefined) {
-      throw new Error(`${label} temporal sampling and animation must live on separate owned elements.`);
-    }
     assertCompositionIdentity(element.composition);
     const targetDuration = timeline === undefined ? undefined
       : exactTemporalValueFromFrames(present.span.endFrameExclusive - present.span.startFrame, timeline);
@@ -1192,9 +1088,6 @@ function assertElement(
         throw new Error(`${label} media kind does not match its Artifact.`);
       }
     } else {
-      if (element.animation !== undefined) {
-        throw new Error(`${label} temporal sampling and animation must live on separate owned elements.`);
-      }
       verifyPreparedVisualSource(element.source);
       assertVisualSampling(element.sampling, `${label}.sampling`, timeline === undefined ? undefined
         : exactTemporalValueFromFrames(present.span.endFrameExclusive - present.span.startFrame, timeline),
@@ -1204,17 +1097,9 @@ function assertElement(
   }
   if (element.kind === "text") {
     assertExactFonts(element.fonts, `${label}.fonts`);
-    const ownedFontStyles = new Set(["font", "font-family", "font-style", "font-synthesis", "font-weight"]);
-    if (element.style.some((declaration) => ownedFontStyles.has(declaration.name))) {
-      throw new Error(`${label} exact fonts conflict with a raw font style.`);
-    }
     for (const [index, paint] of (element.paints ?? []).entries()) {
       assertTextPaint(paint, `${label}.paints.${index}`);
       if (paint.kind === "box") throw new Error(`${label}.paints.${index} is Box Paint on a plain text element.`);
-    }
-    const paintedStyles = new Set(["-webkit-text-stroke", "-webkit-text-stroke-color", "-webkit-text-stroke-width", "paint-order"]);
-    if (element.paints !== undefined && element.style.some((declaration) => paintedStyles.has(declaration.name))) {
-      throw new Error(`${label} declares glyph Paint beside a raw stroke style.`);
     }
     return;
   }
@@ -1254,9 +1139,6 @@ function assertElement(
       throw new Error(`${label} still Surface cannot have temporal sampling.`);
     }
     if (element.sampling !== undefined) {
-      if (element.animation !== undefined) {
-        throw new Error(`${label} temporal sampling and animation must live on separate owned elements.`);
-      }
       if (element.surface.timing.kind !== "frames") throw new Error(`${label} still Surface cannot have temporal sampling.`);
       assertSampling(element.sampling, `${label}.sampling`, timeline === undefined ? undefined
         : exactTemporalValueFromFrames(present.span.endFrameExclusive - present.span.startFrame, timeline),
@@ -1310,41 +1192,9 @@ function assertAdjustment(adjustment: VisualAdjustment, timeline: Timeline | und
   assertVisualProgram(adjustment.program, `${trackId}.${adjustment.id}.program`);
 }
 
-function normalizeStyle(style: readonly VisualStyleDeclaration[]): VisualStyleDeclaration[] {
-  return [...style]
-    .map((item) => ({ name: item.name, value: item.value }))
-    .sort((left, right) => compareCodeUnits(left.name, right.name));
-}
-
-function normalizeAttributes(attributes: readonly VisualAttribute[]): readonly VisualAttribute[] {
-  return [...attributes]
-    .map((item) => ({ name: item.name, value: item.value }))
-    .sort((left, right) => compareCodeUnits(left.name, right.name));
-}
-
-function normalizeAnimation(animation: VisualAnimation): VisualAnimation {
-  return {
-    keyframes: [...animation.keyframes]
-      .map((keyframe) => ({
-        atFrame: keyframe.atFrame,
-        ...(keyframe.easing === undefined ? {} : { easing: keyframe.easing }),
-        style: normalizeStyle(keyframe.style),
-      }))
-      .sort((left, right) => left.atFrame - right.atFrame),
-  };
-}
-
 function normalizeElement(element: VisualElement): VisualElement {
   const common = {
     id: element.id,
-    style: normalizeStyle(element.style),
-    ...(element.attributes === undefined ? {} : { attributes: normalizeAttributes(element.attributes) }),
-    ...(element.animation === undefined ? {} : { animation: normalizeAnimation(element.animation) }),
-  };
-  if (element.kind === "box") return {
-    ...common,
-    kind: "box",
-    children: element.children.map(normalizeElement),
   };
   if (element.kind === "program") return {
     ...common,
@@ -1392,10 +1242,7 @@ function normalizeElement(element: VisualElement): VisualElement {
       sequences: element.sequences.map((sequence) => ({
         ...sequence,
         range: { ...sequence.range },
-        keyframes: sequence.keyframes.map((keyframe) => ({
-          ...keyframe,
-          style: normalizeStyle(keyframe.style),
-        })),
+        keyframes: sequence.keyframes.map((keyframe) => structuredClone(keyframe)),
       })),
     } as VisualTextFlowElement | VisualPathTextElement;
   }
@@ -1457,7 +1304,6 @@ function visualTrackContent(value: Omit<VisualTrack, "kind">): VisualTrack {
   return {
     kind: "visual",
     timelineId: value.timelineId,
-    visualIr: value.visualIr,
     id: value.id,
     items: [...value.items]
       .map((item): VisualItem => {
@@ -1568,7 +1414,6 @@ export function sealPresentVisualTrack(
   }
   return visualTrackContent({
     timelineId: value.timelineId,
-    visualIr: value.visualIr,
     id: value.id,
     items: value.presents.map((present, index) => {
       if (present === null || typeof present !== "object") {
@@ -1602,7 +1447,6 @@ export function visualProcesses(track: VisualTrack): readonly VisualProcess[] {
 
 /** Structural children of one visual node, preserving each relation's semantic order. */
 export function visualElementChildren(element: VisualElement): readonly VisualElement[] {
-  if (element.kind === "box") return element.children;
   if (element.kind === "program") return element.slots.map((slot) => slot.element);
   if (element.kind === "mask") return [element.mask, element.content];
   return [];
@@ -1627,7 +1471,6 @@ export function assertVisualTrackIdentity(track: VisualTrack, timeline?: Timelin
     throw new Error("VisualTrack is invalid.");
   }
   if (track.kind !== "visual") throw new Error("VisualTrack kind is invalid.");
-  if (track.visualIr !== VISUAL_IR_V1) throw new Error("Unsupported VisualTrack visual IR.");
   assertNonEmpty(track.timelineId, "VisualTrack timelineId");
   if (timeline !== undefined && track.timelineId !== timeline.id) {
     throw new Error(`VisualTrack ${track.id} belongs to Timeline ${track.timelineId}, not ${timeline.id}.`);

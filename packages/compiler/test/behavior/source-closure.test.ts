@@ -48,42 +48,6 @@ function source(id: string, name: string): ResolvedSource {
   return resolveSelfDescribedTextSource({ id, name, text: `<?svml using="${frontendId}"?>\nidentity` });
 }
 
-test("Source Closure rejects a repeated domain-declared public identity", async () => {
-  const frontends = new AuthorFrontendRegistry();
-  frontends.register({
-    id: frontendId,
-    discover(unit) {
-      return {
-        modules: [],
-        sources: unit.name === "main"
-          ? [{ from: "./child", alias: "child", range: { start: 0, end: 0 } }]
-          : [],
-      };
-    },
-    decode() {
-      return {
-        records: [],
-        components: [],
-        exports: [],
-        identities: [{ namespace: identityType, id: "story" }],
-      };
-    },
-  });
-  await assert.rejects(
-    compileSourceClosure({
-      entry: source("/project/main", "main"),
-      closure: createResolvedClosure([manifest]),
-      frontends,
-      resolveSource() {
-        return source("/project/child", "child");
-      },
-    }),
-    (error: unknown) => error instanceof SourceClosureError
-      && error.code === "DUPLICATE_SOURCE_IDENTITY"
-      && error.subject === "story",
-  );
-});
-
 test("Source Closure hygienizes author provenance across imported Sources", async () => {
   const frontends = new AuthorFrontendRegistry();
   frontends.register({
@@ -127,6 +91,56 @@ test("Source Closure hygienizes author provenance across imported Sources", asyn
   assert.equal(compiled.program.records.some((record) => record.id === mainRecord), true);
   assert.equal(compiled.program.records.some((record) => record.id === childRecord), true);
   assert.notEqual(bySource.get("main")?.inputs[0]?.id, bySource.get("child")?.inputs[0]?.id);
+});
+
+test("Source Closure identity includes the explicit Frontend for shared Source bytes", async () => {
+  const firstFrontendId = "example.first-frontend@1";
+  const secondFrontendId = "example.second-frontend@1";
+  const frontends = new AuthorFrontendRegistry();
+  frontends.register({
+    id: frontendId,
+    discover() {
+      return { modules: [], sources: [
+        { from: "./shared", alias: "first", range: { start: 0, end: 0 } },
+        { from: "./shared", alias: "second", range: { start: 0, end: 0 } },
+      ] };
+    },
+    decode() {
+      return { records: [], components: [], exports: [] };
+    },
+  });
+  for (const id of [firstFrontendId, secondFrontendId]) {
+    frontends.register({
+      id,
+      discover() {
+        return { modules: [], sources: [] };
+      },
+      decode() {
+        return {
+          records: [{ id: "value", type: identityType, value: id }],
+          components: [],
+          exports: [{ name: "value", ref: { kind: "record", id: "value" }, type: identityType }],
+        };
+      },
+    });
+  }
+  const shared = source("source:shared", "shared").unit;
+  const compiled = await compileSourceClosure({
+    entry: source("source:main", "main"),
+    closure: createResolvedClosure([manifest]),
+    frontends,
+    resolveSource(_importer, request) {
+      return {
+        unit: shared,
+        frontend: request.alias === "first" ? firstFrontendId : secondFrontendId,
+      };
+    },
+  });
+
+  const sharedUnits = compiled.closure.units.filter((unit) => unit.name === "shared");
+  assert.equal(sharedUnits.length, 2);
+  assert.notEqual(sharedUnits[0]?.id, sharedUnits[1]?.id);
+  assert.deepEqual(new Set(compiled.program.records.map((record) => record.id)).size, 2);
 });
 
 test("Source Closure resolves authored realizations to hygienic graph identities", async () => {

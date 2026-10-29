@@ -37,7 +37,7 @@ surface contains no video types and does not let a contribution replace the Host
 
 Source imports decide which language and component packages give the source meaning. A Local Runtime
 Profile separately selects Credential Stores and Endpoints allowed to execute work. The CLI does not
-invent targets, candidates or Provider choices.
+invent targets, realizations or Provider choices.
 
 Human and JSON output answer the same command-specific question. `--json` changes encoding;
 `--verbose` expands scope. Compiler, Runtime and Repository objects are not default reports.

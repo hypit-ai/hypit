@@ -10,10 +10,7 @@ import type { ResolvedSource } from "@hypit/source";
 import type { BlobAttachment, Workspace, WorkspaceSession } from "@hypit/workspace";
 import type { BlobRef, LinkedProgram } from "@hypit/protocol";
 import { compareCodeUnits } from "@hypit/protocol";
-import {
-  RefinementRegistry,
-  refineRecord,
-} from "@hypit/refinement";
+import { refineRecord } from "@hypit/refinement";
 import type { RefinementRegistryLike } from "@hypit/refinement";
 
 import { CompilerError } from "./error.js";
@@ -49,7 +46,6 @@ export function mergeAttachments(groups: readonly (readonly BlobAttachment[])[])
       blob: { ...item.blob },
       open: item.open,
       ...(item.openRange === undefined ? {} : { openRange: item.openRange }),
-      ...(item.location === undefined ? {} : { location: item.location }),
     });
   }
   return [...merged.values()]
@@ -92,7 +88,7 @@ export type CompilerOptions = {
   /** Explicit definition environment selected by the Host. */
   readonly workspace: Workspace;
   /** Trusted Type-owner refinements applied to authored Records before linking. */
-  readonly refinements?: RefinementRegistryLike;
+  readonly refinements: RefinementRegistryLike;
 };
 
 export type CompiledAuthorSource = CompiledSourceClosure & {
@@ -107,8 +103,7 @@ export class Compiler {
 
   constructor(options: CompilerOptions) {
     this.#options = options;
-    const refinements = options.refinements ?? new RefinementRegistry();
-    this.#refineRecord = async (record) => await refineRecord(record, refinements);
+    this.#refineRecord = async (record) => await refineRecord(record, options.refinements);
   }
 
   supportsFrontend(id: string): boolean {

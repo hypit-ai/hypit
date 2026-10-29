@@ -303,8 +303,8 @@ export async function evaluateProducerPlan(
   const final = driver.prepare(machine);
   const unavailable = new Map<string, string>();
   for (const blocked of final.blocked) {
-    if (blocked.reason !== "missing-producer" || !blocked.command.startsWith("producer:")) continue;
-    unavailable.set(blocked.command.slice("producer:".length), `no Producer for ${blocked.subject} is loaded`);
+    if (blocked.reason !== "missing-producer") continue;
+    unavailable.set(blocked.step, `no Producer for ${blocked.subject} is loaded`);
   }
 
   const state = machine.view();

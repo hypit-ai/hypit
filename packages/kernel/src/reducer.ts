@@ -135,7 +135,7 @@ function schedule(state: BuildView): BuildView {
   return scheduled;
 }
 
-/** Seal one already selected execution. Graphs and Candidates do not cross this boundary. */
+/** Seal one already selected execution. Author graph alternatives do not cross this boundary. */
 export function defineBuild(
   input: Omit<BuildDefinition, "format">,
 ): BuildDefinition {

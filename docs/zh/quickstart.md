@@ -22,7 +22,7 @@ npx skills add hypit-ai/hypit -g
 
 Hypit 框架免费使用；Coding Agent 和模型服务各自有账户与费用。安装 Skill 或程序并不附带生成额度。使用自己的 API Key 时，告诉 Agent 密钥属于哪个服务，并提供对应接口文档。
 
-已有安装可以让 Agent 用 `hypit version --check` 核对版本和[发布说明](https://github.com/hypit-ai/hypit/releases)。旧版没有这个命令时，可以用 `hypit --version` 和 `npm view @hypit/hypit@latest version`。程序和 Skill 分别更新，Agent 可以保留视频项目，只更新这次需要的安装。
+已有安装可以让 Agent 用 `hypit version --check` 核对版本和[发布说明](https://github.com/hypit-ai/hypit/releases)。程序和 Skill 分别更新，Agent 可以保留视频项目，只更新这次需要的安装。
 
 ## 2. 提供参考，说明想改什么
 

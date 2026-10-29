@@ -43,7 +43,7 @@ export function supportsLocalAudioProgram(constraints: CanonicalValue): Endpoint
     };
     inspect(program as AudioProgram);
   } catch (error) {
-    return unsupported(`Audio Process is unsupported: ${error instanceof Error ? error.message : String(error)}`);
+    return unsupported(`AudioProgram capability is unsupported: ${error instanceof Error ? error.message : String(error)}`);
   }
   for (const clip of audioProgramSourceClips(program as AudioProgram)) {
     if (clip.reconstruction === undefined) continue;

@@ -87,9 +87,9 @@ test("transient execution follows capability opt-in rather than pricing and keep
           supports: (need) => (need.constraints as { readonly prompt?: unknown }).prompt === "Greet Ada"
             ? { status: "supported" }
             : { status: "unsupported", reason: "prompt must be Greet Ada" },
-          handler: ({ need, credentials }) => {
+          handler: ({ request, credentials }) => {
             remoteCalls += 1;
-            assert.deepEqual(need.constraints, { prompt: "Greet Ada" });
+            assert.deepEqual(request.constraints, { prompt: "Greet Ada" });
             assert.equal(credentials.apiKey?.secret, "available");
             return "Hello, Ada!";
           },
@@ -211,10 +211,10 @@ test("Runtime invoke executes one immediate Need through the selected Endpoint a
           capability: observe,
           returns,
           lifecycle: "immediate",
-          handler: async ({ need, credentials, reportProgress, reportDiagnostic }) => {
+          handler: async ({ request, credentials, reportProgress, reportDiagnostic }) => {
             await reportProgress?.({ phase: "Aligning words" });
             await reportDiagnostic?.({ level: "info", message: "Timing ready" });
-            return { seen: need.constraints, key: credentials.apiKey?.secret ?? null };
+            return { seen: request.constraints, key: credentials.apiKey?.secret ?? null };
           },
         }],
       }),

@@ -567,7 +567,7 @@ export async function openTransientRuntimeConfigExecution(
         capacity.declare(resources);
         endpoints.registerImmediateEndpoint(id, capability, returns, async (context) => {
           const claims = registrationOptions.scheduling === undefined ? resources
-            : endpointResourceClaims(registrationOptions.scheduling, context.need);
+            : endpointResourceClaims(registrationOptions.scheduling, context.request);
           return await capacity.run(claims, async () => {
             await assertReady();
             return await handler(context);
@@ -927,7 +927,7 @@ export async function invokeRuntimeConfigNeed(
   try {
     const credentials = await resolveEndpointCredentials(activation.endpoint, stores.store, absolute);
     return await registration.handler({
-      need,
+      request: need,
       resources,
       credentials,
       ...(options.reportProgress === undefined ? {} : { reportProgress: options.reportProgress }),
@@ -976,6 +976,10 @@ export function statePath(root: string): string {
 
 function buildWorkPath(root: string, build: string): string {
   assertBuildId(build);
+  if (build === "." || build === ".." || build.includes("/") || build.includes("\\")
+    || build.includes("\0") || build.includes(":")) {
+    throw new Error(`Build ${build} is not a local Runtime work-directory name`);
+  }
   const work = resolve(root, "work");
   const target = resolve(work, build);
   const relation = relative(work, target);
@@ -1275,7 +1279,6 @@ async function createRuntimeFromOpened(opened: OpenedRuntimeConfig, options: Loa
       ...(execution === undefined ? {} : { executionBuild: execution.build }),
       executionContext: context,
       buildStore: state.builds,
-      buildCatalog: state.catalog,
       operationStore: state.operations,
       commandExecutionStore: state.commandExecutions,
       executionLogs: fileExecutionLogs((build) => buildWorkPath(root, build)),
@@ -1322,7 +1325,7 @@ export async function createRuntimeControlFromConfig(
     buildStore: state.builds,
     commandExecutionStore: state.commandExecutions,
     executionLogs: fileExecutionLogs((build) => buildWorkPath(root, build)),
-    buildCatalog: state.catalog,
+    openBuildResultRepository: openBuildResultLocation,
     operationStore: state.operations,
     executionStore: state.execution,
     submissionStore: state.submissions,

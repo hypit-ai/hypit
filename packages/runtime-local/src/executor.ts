@@ -1,10 +1,11 @@
 import { setImmediate, setTimeout as pause } from "node:timers/promises";
-import { NodeModuleScope } from "@hypit/hypit/loader/node/module-scope";
+import { createNodeModuleImporter } from "@hypit/hypit/loader/node/module-importer";
+import type { NodeModuleImporter } from "@hypit/hypit/loader/node/module-importer";
 import { SqliteRuntimeState } from "./sqlite-state.js";
 import { createRuntimeForBuild, statePath } from "./config.js";
 import type { LocalRuntime } from "./types.js";
 
-type Context = { readonly scope: NodeModuleScope; readonly runtime: LocalRuntime; task?: Promise<void> };
+type Context = { readonly scope: NodeModuleImporter; readonly runtime: LocalRuntime; task?: Promise<void> };
 
 /** A shared execution carrier. Database readiness selects work; waiting is not an occupied process. */
 export async function executeBuilds(dataRoot: string, signal: AbortSignal): Promise<void> {
@@ -31,7 +32,7 @@ export async function executeBuilds(dataRoot: string, signal: AbortSignal): Prom
         if (signal.aborted) break;
         let context = contexts.get(build);
         if (context === undefined && pending.delete(build)) {
-          const scope = new NodeModuleScope();
+          const scope = createNodeModuleImporter();
           try {
             const runtime = await createRuntimeForBuild(dataRoot, build, { state, importModule: (url) => scope.import(url) });
             context = { scope, runtime };

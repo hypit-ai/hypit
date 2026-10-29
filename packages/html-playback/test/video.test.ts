@@ -52,6 +52,24 @@ test("PreparedMedia preview samples the HtmlProgram TemporalMap as its timing au
   assert.equal(currentTime, 2 + 2 / 30);
 });
 
+test("browser playback rejects a selected nonzero visual stream instead of playing the container default", () => {
+  const domain = { id: "alternate-source", duration: exactTemporalValueFromFrames(1,
+    { frameRate: { numerator: 30, denominator: 1 } }) };
+  const program = {
+    frameRate: { numerator: 30, denominator: 1 }, frameCount: 1,
+    videoSources: [{ kind: "media", id: "alternate", startFrame: 0, endFrameExclusive: 1,
+      source: { source: { kind: "blob", resource: "res_alternate", size: 1, mediaType: "video/mp4" },
+        streamIndex: 2, presentationStart: { ticks: "0", timeBase: { numerator: 1, denominator: 1 } },
+        sourceDomain: domain, interpretation: { codedWidth: 16, codedHeight: 9,
+          sampleAspectRatio: { numerator: 1, denominator: 1 }, rotationDegrees: 0,
+          picture: { colorPrimaries: "bt709", colorTransfer: "bt709", colorMatrix: "bt709",
+            colorRange: "limited", bitDepth: 8, alphaMode: "opaque" } as const } },
+      sampling: identityTemporalMap(domain) }],
+  } as unknown as HtmlProgram;
+  assert.throws(() => injectHtmlPlayback("", "", program),
+    /cannot select visual stream 2 for alternate/u);
+});
+
 test("long preview releases remote Clips and cancels obsolete metadata waits", async () => {
   const clips = Array.from({ length: 126 }, (_, index) => {
     const attrs: Record<string, string> = {

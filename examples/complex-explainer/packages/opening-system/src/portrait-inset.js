@@ -65,7 +65,7 @@ export function installPortraitInset(module, manifest, component) {
         visual = sealPresentVisualTrack({
           id,
           timelineId: timeline.id,
-          visualIr: "hypit.visual-ir@1",
+
           presents: children.length
             ? [
                 {

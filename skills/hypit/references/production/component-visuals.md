@@ -11,9 +11,9 @@ visible lifetime. For a reveal card, those decisions become a box and text, a de
 an entrance animation and the interval for which the answer remains visible.
 
 A component can first compute a domain program, such as a list of answers and their reveal times.
-Its drawing Producer receives that program, Timeline, Frames, Style and explicit assets, then
-returns a VisualTrack. A simple component can produce the Track directly when no separate program
-would help its behavior or editing.
+Its drawing code receives that program, Timeline, Frames, Style and explicit assets, then returns a
+VisualTrack. A simple component can produce the Track directly when no separate program would help
+its behavior or editing.
 
 The public representation has these parts:
 
@@ -43,8 +43,8 @@ visual relationships rather than the nesting of tags in Source.
 
 ## A working drawing function
 
-[visuals.ts](examples/visuals.ts) contains `renderCard`, a complete pure drawing function using
-`sealPresentVisualTrack` from `@hypit/composition`. It receives a projected span and a resolved Frame,
+[visuals.ts](examples/visuals.ts) contains `renderCard`, a complete pure drawing function. It receives
+a projected span and a resolved Frame,
 draws a colored box with exact-font text, and optionally fades in relative to the Present's start.
 Its colors, size, padding and entrance duration are supplied by the caller. These drawing-function
 arguments need not all become author fields: the owning component can supply its fixed design
@@ -57,14 +57,9 @@ Present position is local to its owning Visual Track. The parent Film or Stack m
 whole Track. Ordered box children use their array position; mask roles and program slots are named.
 Ids name objects and occurrences, but never break ordering ties or change paint order.
 
-The function is the drawing part of a package. Connect it to a Producer with matching typed inputs,
-then publish the Track through the Fragment and Author Declaration as described in
-[Track authoring](track-authoring.md#connect-the-implementation-at-its-real-boundaries). Declaration outputs
-map the Fragment's export name to a public Source name such as `answers.track`.
-
-Use `timelineFrameCount` from `@hypit/timeline` for the full Timeline's frame count and
-`assertVisualTrackIdentity(track, timeline)` to check a produced Track against it. Direct seeking
-and range rendering evaluate the same declared keyframes at the requested frame.
+Follow the installed component example and package README to connect the drawing function to typed
+inputs and publish a Source output such as `answers.visual`. Direct seeking and range rendering must
+evaluate the same declared keyframes at the requested frame.
 
 ## Elements, fonts and other assets
 
@@ -82,10 +77,9 @@ shapes above for their supported values. Motion uses frame-indexed keyframes. Me
 describes which source frame to show at each part of a Present; it is needed for timed video playback,
 trims, loops and holds. A Visual Clip is useful when that is the whole role.
 
-Carry asset and font references through declared inputs. Source assets can be resolved through the
-Author compiler's narrow asset capability; generated media remains a graph reference until its Producer runs.
-The drawing function receives those values. For a visual preparation that reads bytes or invokes an
-external tool, use its preparation capability and pass the resulting material into drawing.
+Carry asset and font references through declared inputs. The drawing function receives prepared
+values. When preparation reads bytes or invokes an external tool, complete that operation separately
+and pass the resulting material into drawing.
 
 ## Compose externally prepared pixels
 
@@ -131,14 +125,10 @@ package owns the handoff programme. Choose the scope from the visible relationsh
 useful contributions as peer Presents outside the relation. These are ordinary composition choices within
 the same rendering path.
 
-Use ordinary typed children for prepared video, images and exact-font text. A `{{child-id}}` slot in
-the HTML places each direct child exactly once. These children retain their declared resources,
-video sampling and font handling while participating in the program's HTML layout. Extra artifacts
-used by the program belong in its `artifacts` list; `htmlArtifactUri` supplies an inert
-locator for that declared dependency. Compilation replaces authored dependency locators with
-Programme-local Artifact ids, and the rendering environment resolves those ids through the paired
-Blob references. Component HTML therefore does not treat Result-store resource ids as document
-identity.
+Use ordinary typed children for prepared video, images and exact-font text. An HTML Programme places
+each named child exactly once, while the child retains its media sampling, font and resource meaning.
+Declare additional package-owned visual artifacts through the HTML Programme helper so the renderer
+can resolve them without making storage details part of the component's layout.
 
 For time-bearing footage, give the component ordinary prepared media, the absolute Window it needs
 and an explicit sampling choice. Intersect that Window with the containing Present, then derive the
@@ -154,7 +144,7 @@ inputs from internal motion details.
 
 A reusable scene might expose `during={explanation}` for its lifetime and
 `reveal={demonstrate}` for its layout change. An upstream Narrative projector publishes
-these independently; the Producer receives a Window and an Instant. The installed Distribution's
+these independently; the component receives a Window and an Instant. The installed package's
 `examples/semantic-composition/packages/responsive-explainer` shows this complete package: video
 moves from full screen to a side viewport while a diagram enters, with Caption available as a peer.
 

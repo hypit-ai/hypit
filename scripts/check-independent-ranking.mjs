@@ -90,8 +90,8 @@ try {
     installedRanking.contribution.facets ?? [],
   );
   assert.equal(studio.tracks.length, 6);
-  for (const surface of ["column", "tier", "top-three"]) {
-    const tracks = studio.tracks.filter((track) => track.output.surface === surface);
+  for (const declaration of ["column", "tier", "top-three"]) {
+    const tracks = studio.tracks.filter((track) => track.output.declaration === declaration);
     assert.equal(tracks.length, 2);
     assert.ok(tracks.some((track) => track.output.type.name === compositionTypes.visualTrack.name));
     assert.ok(tracks.some((track) => track.output.type.name === compositionTypes.audioTrack.name));

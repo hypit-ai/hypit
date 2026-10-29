@@ -111,7 +111,7 @@ independently now.
 
 Every public Author Output that completes while satisfying the demanded Target is stored in that
 Build Result and can be inspected or exported later. Project files and durable realization choices
-belong in the Author Source. An Invocation can temporarily select the AuthorGraph primary or another existing
+belong in the Author Source. An Invocation can temporarily select the Output's primary realization or another existing
 authored Record through `<override>`, without changing the production.
 
 [Invocations](runs.md#generate-material-while-composing) shows how to target prepared material while
@@ -133,7 +133,7 @@ beside the rest of the authored production:
 ```
 
 Replacing a Caption or graphic does not release that selected performance back to generation. To
-request another take for one Build, use an explicit Invocation override to the Author primary; the
+request another take for one Build, use an explicit Invocation override to the Output's primary realization; the
 accepted selection remains unchanged until the Author Source is deliberately edited.
 
 Keep evidence at its own owner. Project-owned Speech Transcript evidence can be inspected and edited
@@ -150,7 +150,7 @@ For example, correcting three B-roll choices should keep the accepted performanc
 change only those image records and downstream composition. Inspect the resulting plan: new image
 requests may be intended, while a new performance request needs a separate production reason.
 
-## Revise the fact at its owner
+## Update the file that states the changed decision
 
 Before editing an existing production, establish the current facts that can affect the change. Read the
 relevant parts of its Brief and Treatment and the affected Source, Recipe or Invocation Source; inspect Results and

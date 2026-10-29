@@ -92,12 +92,12 @@ test("plan presents useful choices and readable requests without default graph i
         diagnostics: [],
       },
       choiceCount: 1,
-      choices: [{ output: "take.video", choice: "preview" }],
+      choices: [{ output: "take.video", record: "record:preview", origin: "authored" }],
     },
   } as const;
   const output = capture(human, presentation);
-  assert.match(output, /Invocation choices\s+1/u);
-  assert.doesNotMatch(output, /← preview/u);
+  assert.match(output, /Effective selections\s+1/u);
+  assert.doesNotMatch(output, /← record:preview/u);
   assert.match(output, /Requests\s+1/u);
   assert.match(output, /Preflight\s+ready/u);
   assert.doesNotMatch(output, /Runtime\s+ready/u);
@@ -105,7 +105,7 @@ test("plan presents useful choices and readable requests without default graph i
 
   const verbose = capture({ ...human, verbose: true }, presentation);
   assert.match(verbose, /Requests\s+1/u);
-  assert.match(verbose, /take\.video\s+← preview/u);
+  assert.match(verbose, /take\.video\s+← record:preview \(authored\)/u);
 });
 
 test("plan names the Provider and price page behind each request, and points at --runtime when it cannot", () => {
@@ -391,7 +391,9 @@ test("plan scope omits unused branches while retaining every demanded request an
     targets: ["final.video", "poster.image"], steps: 400, requestCount: needs.length, requestIssueCount: 1,
     producerFailureCount: 1,
     producerFailures: [{ step: "source::component::timeline.resolve", message: "Timeline end must be after its start" }],
-    choiceCount: 35, choices: Array.from({ length: 35 }, (_, i) => ({ output: `old-${i}`, choice: `selected-${i}` })),
+    choiceCount: 35, choices: Array.from({ length: 35 }, (_, i) => ({
+      output: `old-${i}`, record: `selected-${i}`, origin: "primary" as const,
+    })),
     needs, endpoints: needs.map((need) => ({ need: need.need, capability: need.capability, status: "resolved" as const, support: "supported" as const, endpoint: "local" })),
     preflight: { ok: false, capabilityCount: 2, capabilities: ["a", "b"], diagnosticCount: 2,
       diagnostics: [{ severity: "warning" as const, code: "WARNING", message: "first" },

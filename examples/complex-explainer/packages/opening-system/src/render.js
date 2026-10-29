@@ -43,7 +43,7 @@ function track(timeline, within, window, o, program, children = [], presents) {
   return sealPresentVisualTrack({
     id: o.id,
     timelineId: timeline.id,
-    visualIr: "hypit.visual-ir@1",
+
     presents: presents ?? [
       {
         id: o.id,

@@ -208,8 +208,8 @@ authored work and project resources rather than the originating Runtime's execut
 `hypit get` is useful when accepting or handing over a particular historical Output. Place an exported
 image, video or audio file at a project path, declare it through its owning package, and author the
 realization choice explicitly. A structured value with referenced files exports as `value.json`
-beside those files for inspection and transport; it enters Source only when its owning package defines
-a current Author declaration for that document. [Builds and Results](../production/builds.md) explains
+beside those files for inspection and transport; it enters Source only when its owning package accepts
+that document. [Builds and Results](../production/builds.md) explains
 Result inspection and export.
 
 ## Resume from present facts

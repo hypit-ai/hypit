@@ -29,9 +29,12 @@ test("the same chat renderer consumes authored and word-bound events; changing p
     ], { id: "chat", title: "Launch", entranceFrames: 10 });
   };
   const program = (value: ReturnType<typeof scene>) => {
-    const element = visualElements(value.items[0]!.root).find(element => element.kind === "program")!;
-    assert.equal(element.kind, "program");
-    return element.program.payload as unknown as HtmlVisual;
+    const program = visualElements(value.items[0]!.root)
+      .filter((element) => element.kind === "program")
+      .map((element) => element.program.payload as unknown as HtmlVisual)
+      .find((payload) => Array.isArray((payload.data as { times?: unknown } | undefined)?.times));
+    assert(program !== undefined);
+    return program;
   };
   const before = program(scene(60)), after = program(scene(90));
   assert.equal(before.html, after.html);

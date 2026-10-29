@@ -1,7 +1,7 @@
 import type {
-  VisualAnimation,
-  VisualStyleDeclaration,
-} from "@hypit/composition";
+  HtmlAnimation as VisualAnimation,
+  HtmlStyleDeclaration as VisualStyleDeclaration,
+} from "@hypit/html-program";
 import { canonicalize } from "@hypit/hypit/protocol";
 
 import type {

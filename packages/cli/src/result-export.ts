@@ -7,7 +7,7 @@ import type {
   BuildResultFileRef,
   BuildResultRepository,
   RepositoryBuildResultOutput,
-} from "@hypit/result/node";
+} from "@hypit/result";
 import { buildResultOutput } from "@hypit/result";
 
 export type BuildResultExport = {
@@ -77,6 +77,7 @@ async function exportFile(
 
 async function exportValueDocument(
   repository: BuildResultRepository,
+  build: string,
   resolvedOutput: ValueDocumentResultOutput,
   target: string,
 ): Promise<void> {
@@ -90,7 +91,7 @@ async function exportValueDocument(
     const bindings = [];
     for (const binding of resolvedOutput.value.document.resources) {
       const file = binding.file;
-      const identity = fileReferenceIdentity(resolvedOutput.build, file);
+      const identity = fileReferenceIdentity(build, file);
       let local = copied.get(identity);
       if (local === undefined) {
         let path = file.path;
@@ -100,7 +101,7 @@ async function exportValueDocument(
         paths.add(path);
         local = { kind: "build-file", path, size: file.size, mediaType: file.mediaType };
         copied.set(identity, local);
-        await writeStream(containedPath(temporary, path), await openResultFile(repository, resolvedOutput.build, file));
+        await writeStream(containedPath(temporary, path), await openResultFile(repository, build, file));
       }
       bindings.push({ at: binding.at, file: local });
     }
@@ -131,13 +132,13 @@ export async function exportBuildResultOutput(
   if (resolvedOutput === undefined) throw new Error(`Build ${build} Output ${output} cannot be resolved`);
   const target = resolve(destination);
   if (resolvedOutput.value.kind === "value") {
-    await exportValueDocument(repository, { ...resolvedOutput, value: resolvedOutput.value }, target);
+    await exportValueDocument(repository, build, { ...resolvedOutput, value: resolvedOutput.value }, target);
   } else if (resolvedOutput.value.kind === "build-file") {
     const resource = resolvedOutput.value;
     await exportFile(target, async (temporary) => {
       await writeStream(
         temporary,
-        await openResultFile(repository, resolvedOutput.build, resource),
+        await openResultFile(repository, build, resource),
       );
     });
   } else {

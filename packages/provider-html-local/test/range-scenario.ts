@@ -1,24 +1,42 @@
 import { sealComposition, sealPresentVisualTrack } from "@hypit/composition";
-import { compileHtmlProgram } from "@hypit/html-program";
+import { compileHtmlProgram, htmlVisual, htmlVisualElement } from "@hypit/html-program";
 import type { BlobRef } from "@hypit/protocol";
+import type { PictureInterpretation } from "@hypit/media";
 import { sealTimeline } from "@hypit/timeline";
 import { frameSamplingMapFixture } from "../../../test/temporal-fixture.js";
 import { exactTemporalValueFromFrames, exactTemporalZero, sealLocalTemporalDomain, sealTemporalMap } from "@hypit/temporal";
 
-function videoElement(artifact: BlobRef, sampling: ReturnType<typeof frameSamplingMapFixture>, style: readonly { name: string; value: string | number }[]) {
-  return { id: "video", kind: "video" as const,
-    source: { source: artifact, streamIndex: 0, presentationStart: exactTemporalZero(),
-      sourceDomain: structuredClone(sampling.stages.at(-1)!.source),
-      interpretation: { codedWidth: 64, codedHeight: 64, sampleAspectRatio: { numerator: 1, denominator: 1 }, rotationDegrees: 0 as const, picture: { colorPrimaries: "bt709", colorTransfer: "bt709", colorMatrix: "bt709", colorRange: "limited", bitDepth: 8, alphaMode: "opaque" } as const,} },
-    style, muted: true, sampling };
+function videoElement(
+  artifact: BlobRef,
+  sampling: ReturnType<typeof frameSamplingMapFixture>,
+  picture: PictureInterpretation = {
+    colorPrimaries: "bt709", colorTransfer: "bt709", colorMatrix: "bt709",
+    colorRange: "limited", bitDepth: 8, alphaMode: "opaque",
+  },
+) {
+  return htmlVisualElement({
+    id: "video-layout",
+    kind: "program",
+    style: [{ name: "position", value: "absolute" }, { name: "inset", value: 0 }],
+    program: htmlVisual({
+      html: '<div class="source">{{source}}</div>',
+      css: ".source,.source>*{position:absolute;inset:0;width:64px;height:64px}.source [data-hypit-source-frame-image]{width:64px;height:64px}",
+    }),
+    slots: [{ name: "source", element: {
+      id: "video", kind: "video" as const,
+      source: { source: artifact, streamIndex: 0, presentationStart: exactTemporalZero(),
+        sourceDomain: structuredClone(sampling.stages.at(-1)!.source),
+        interpretation: { codedWidth: 64, codedHeight: 64, sampleAspectRatio: { numerator: 1, denominator: 1 }, rotationDegrees: 0 as const, picture } },
+      style: [], muted: true, sampling,
+    } }],
+  });
 }
 
 function hdr10VideoElement(artifact: BlobRef, sampling: ReturnType<typeof frameSamplingMapFixture>) {
-  const value = videoElement(artifact, sampling, [{ name: "position", value: "absolute" },
-    { name: "inset", value: 0 }, { name: "width", value: "64px" }, { name: "height", value: "64px" }]);
-  return { ...value, source: { ...value.source, interpretation: { ...value.source.interpretation,
-    picture: { colorPrimaries: "bt2020", colorTransfer: "pq", colorMatrix: "bt2020-ncl",
-      colorRange: "limited", bitDepth: 10, alphaMode: "opaque" } as const } } };
+  return videoElement(artifact, sampling, {
+    colorPrimaries: "bt2020", colorTransfer: "pq", colorMatrix: "bt2020-ncl",
+    colorRange: "limited", bitDepth: 10, alphaMode: "opaque",
+  });
 }
 
 export function htmlHdr10SourceDocument(artifact: BlobRef) {
@@ -29,7 +47,7 @@ export function htmlHdr10SourceDocument(artifact: BlobRef) {
       target: { startFrame: 0, endFrameExclusive: 1 }, sourceAtStart: { numerator: 0, denominator: 1 },
       rate: { numerator: 1, denominator: 1 },
     }] });
-  const track = sealPresentVisualTrack({ id: "hdr10-video", visualIr: "hypit.visual-ir@1", timelineId: space.id,
+  const track = sealPresentVisualTrack({ id: "hdr10-video", timelineId: space.id,
     presents: [{ id: "sample", span: { startFrame: 0, endFrameExclusive: 1 },
       root: hdr10VideoElement(artifact, sampling) }],
   });
@@ -42,7 +60,7 @@ export function htmlHdr10SourceDocument(artifact: BlobRef) {
 
 function rangeComposition(artifact: BlobRef) {
   const space = sealTimeline({ id: "range-space", frameCount: 18, frameRate: { numerator: 30, denominator: 1 } });
-  const track = sealPresentVisualTrack({ id: "video", visualIr: "hypit.visual-ir@1", timelineId: space.id,
+  const track = sealPresentVisualTrack({ id: "video", timelineId: space.id,
     presents: [{ id: "sample", span: { startFrame: 0, endFrameExclusive: 18 },
       root: videoElement(artifact, frameSamplingMapFixture({ targetFrameRate: space.frameRate, targetFrames: 18,
         sourceFrameRate: space.frameRate, sourceFrames: 4, pieces: [
@@ -52,9 +70,7 @@ function rangeComposition(artifact: BlobRef) {
           { target: { startFrame: 8, endFrameExclusive: 12 }, sourceAtStart: { numerator: 0, denominator: 1 }, rate: { numerator: 1, denominator: 2 } },
           { target: { startFrame: 12, endFrameExclusive: 18 }, sourceAtStart: { numerator: 4, denominator: 1 },
             rate: { numerator: -1, denominator: 1 }, wrap: { startFrame: 0, endFrameExclusive: 4 } },
-        ] }), [{ name: "position", value: "absolute" }, { name: "inset", value: 0 },
-          { name: "width", value: "64px" }, { name: "height", value: "64px" }],
-      ) }],
+        ] })) }],
   });
   return sealComposition({ id: "range-video", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 64, height: 64, clearColor: "#000000" }, root: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }, space);
 }
@@ -75,11 +91,10 @@ export function htmlNestedRangeDocument(artifact: BlobRef) {
     target: { start: exactTemporalZero(), end: target.duration },
     sourceAtStart: exactTemporalZero(), rate: { numerator: 1, denominator: 2 },
   }] }] });
-  const track = sealPresentVisualTrack({ id: "nested-range", visualIr: "hypit.visual-ir@1",
+  const track = sealPresentVisualTrack({ id: "nested-range",
     timelineId: timeline.id, presents: [{ id: "nested-range-use",
       span: { startFrame: 0, endFrameExclusive: timeline.frameCount }, root: {
         id: "nested-range-composition", kind: "composition", composition: child, sampling,
-        style: [{ name: "position", value: "absolute" }, { name: "inset", value: 0 }],
       } }],
   });
   return compileHtmlProgram(sealComposition({ id: "nested-range-video", visual: {
@@ -93,15 +108,13 @@ export function htmlNestedRangeDocument(artifact: BlobRef) {
 export function htmlRetiringSourceDocument(artifact: BlobRef) {
   const space = sealTimeline({ id: "retiring-source-space", frameCount: 8,
     frameRate: { numerator: 30, denominator: 1 } });
-  const track = sealPresentVisualTrack({ id: "retiring-video", visualIr: "hypit.visual-ir@1", timelineId: space.id,
+  const track = sealPresentVisualTrack({ id: "retiring-video", timelineId: space.id,
     presents: [{ id: "sample", span: { startFrame: 0, endFrameExclusive: 4 },
       root: videoElement(artifact, frameSamplingMapFixture({ targetFrameRate: space.frameRate, targetFrames: 4,
         sourceFrameRate: space.frameRate, sourceFrames: 4, pieces: [{
           target: { startFrame: 0, endFrameExclusive: 4 }, sourceAtStart: { numerator: 0, denominator: 1 },
           rate: { numerator: 1, denominator: 1 },
-        }] }), [{ name: "position", value: "absolute" }, { name: "inset", value: 0 },
-          { name: "width", value: "64px" }, { name: "height", value: "64px" }],
-      ) }],
+        }] })) }],
   });
   return compileHtmlProgram(sealComposition({ id: "retiring-source-video", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 64, height: 64, clearColor: "#000000" }, root: { members: [{ kind: "track", id: track.id, track }] } }, audio: { contributions: [] } }, space));
 }

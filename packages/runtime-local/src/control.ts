@@ -8,7 +8,7 @@ import type {
   OperationSnapshot,
 } from "@hypit/hypit/runtime";
 import type { PendingBuildSubmission } from "./submission.js";
-import type { BuildCatalogEntry } from "./catalog.js";
+import type { BuildResultManifest } from "@hypit/hypit/result";
 import type { BuildExecutionSnapshot } from "./execution.js";
 import type { BuildView } from "./host-api.js";
 import { buildIdCreatedAt, compareCodeUnits } from "@hypit/hypit/protocol";
@@ -17,7 +17,7 @@ import { materializeBuild } from "@hypit/hypit/kernel";
 function buildView(input: {
   readonly build: string;
   readonly snapshot?: BuildSnapshot;
-  readonly catalog?: BuildCatalogEntry;
+  readonly result?: BuildResultManifest;
   readonly submission?: PendingBuildSubmission;
   readonly execution?: BuildExecutionSnapshot;
   readonly operations: readonly OperationSnapshot[];
@@ -30,8 +30,7 @@ function buildView(input: {
   const activity: BuildView["activity"] = input.submission !== undefined
     ? "submitting"
     : runtimeActivity!;
-  const targets = input.catalog?.publication.outputs.filter((output) => output.target)
-    .map((output) => output.name) ?? [];
+  const targets = input.result?.targets ?? [];
   const requests = input.snapshot === undefined ? undefined : {
     total: input.snapshot.definition.plan.steps.reduce(
       (total, step) => total + (step.result.kind === "need" ? 1 : 0),
@@ -51,10 +50,10 @@ function buildView(input: {
       issue: { scope: input.execution.attention.step, message: input.execution.attention.error },
     }),
     ...(input.execution?.stop === undefined ? {} : { stop: input.execution.stop }),
-    ...(input.catalog?.sourcePath === undefined ? {} : { sourcePath: input.catalog.sourcePath }),
-    ...(input.catalog?.invocationSourcePath === undefined
+    ...(input.result?.sourceId === undefined ? {} : { sourcePath: input.result.sourceId }),
+    ...(input.result?.invocationSourceId === undefined
       ? {}
-      : { invocationSourcePath: input.catalog.invocationSourcePath }),
+      : { invocationSourcePath: input.result.invocationSourceId }),
     targets,
     ...(requests === undefined ? {} : { requests }),
     acceptedRecords: state?.records.length ?? 0,
@@ -81,20 +80,24 @@ function buildView(input: {
 export function createLocalRuntimeControl(
   options: CreateLocalRuntimeControlOptions,
 ): LocalRuntimeControl {
-  const buildCatalog = options.buildCatalog;
   const inspect = async (build: string): Promise<BuildView | undefined> => {
-    const [snapshot, catalog, operations, submission, execution, commands] = await Promise.all([
+    const [snapshot, operations, submission, execution, commands] = await Promise.all([
       options.buildStore.read(build),
-      buildCatalog?.read(build),
       options.operationStore.list({ build }),
       options.submissionStore.read(build),
       options.executionStore.read(build),
       options.commandExecutionStore.list(build),
     ]);
+    const location = execution?.result ?? submission?.result;
+    let result: BuildResultManifest | undefined;
+    if (location !== undefined) {
+      const opened = await options.openBuildResultRepository(location);
+      try { result = await opened.repository.read(build); } finally { await opened.close?.(); }
+    }
     return buildView({
       build,
       ...(snapshot === undefined ? {} : { snapshot }),
-      ...(catalog === undefined ? {} : { catalog }),
+      ...(result === undefined ? {} : { result }),
       ...(submission === undefined ? {} : { submission }),
       ...(execution === undefined ? {} : { execution }),
       operations,

@@ -189,23 +189,17 @@ test("the common B-roll topology is one graph with one shared holding image", ()
     Object.values(operation.inputs).some((input) => input.kind === "logical-output" && input.id === "holding.image")).length, 3);
 });
 
-test("an explicitly selected holding-image Candidate prunes only that branch", () => {
+test("an explicitly selected holding-image Record prunes only that branch", () => {
   const { program, graph } = fixture();
   const approved = {
     id: "approved-holding",
     type: blobTypes.blob,
     value: image("approved-holding"),
   };
-  const candidate = {
-    id: "approved-holding",
-    type: blobTypes.blob,
-    root: { kind: "record" as const, id: approved.id },
-  };
   const realized = sealAuthorGraph({
     outputs: graph.outputs.map((item) => item.id === "holding.image"
-      ? { ...item, primary: candidate.id }
+      ? { ...item, primary: { kind: "record" as const, id: approved.id } }
       : item),
-    candidates: [...graph.candidates, candidate],
     operations: graph.operations,
   });
   const state = buildState(link(program.closure, [...program.records, approved]), realized, ["montage.video"]);

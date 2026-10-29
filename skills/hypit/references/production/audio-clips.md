@@ -68,9 +68,8 @@ Use Audio Mix when the required relationship is explicit gain followed by additi
 ```
 
 `dialogue.audio` is one closed AudioTrack for Film. Each Input id names that routing occurrence;
-gain defaults to `1`. Audio Mix does not normalize or limit. A relationship that needs ducking,
-sidechain control, reverb sends or role-specific behavior still belongs to the component that owns
-that behavior.
+gain defaults to `1`. Audio Mix applies each declared gain and adds the signals. Use an audio
+component for ducking, sidechain control, reverb sends, limiting or role-specific behavior.
 
 Audio Track publishes `.audio` for Film and `.program` for declared tooling. Film includes audio
 outputs explicitly. Using prepared media in [Visual Track](visual-clips.md) does not select its

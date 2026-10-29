@@ -8,8 +8,8 @@ import sharp from "sharp";
 import { fineCaptionStyle, renderFineCaption, scheduleFineCaption } from "@hypit/caption-fine";
 import { MemoryResourceStore } from "@hypit/executor";
 import { sealComposition, sealPresentVisualTrack } from "@hypit/composition";
-import type { VisualElement, VisualTextTypography } from "@hypit/composition";
-import { compileHtmlProgram, materializeHtmlProgram } from "@hypit/html-program";
+import type { VisualTextTypography } from "@hypit/composition";
+import { compileHtmlProgram, htmlVisualElement, materializeHtmlProgram } from "@hypit/html-program";
 import { captionDocument, parseScript } from "@hypit/script";
 import { sealTimeline } from "@hypit/timeline";
 import { browserExecutablePath } from "../../src/browser.js";
@@ -20,6 +20,8 @@ import { htmlProviderDelivery, htmlProviderPicture } from "../provider-scenario.
 const testBrowser = () => process.env.HYPIT_TEST_CHROME_PATH ?? browserExecutablePath({});
 const testBrowserOption = () => process.env.HYPIT_TEST_CHROME_PATH === undefined
   ? {} : { chromePath: process.env.HYPIT_TEST_CHROME_PATH };
+const capturePage = (body: string): string =>
+  `<div data-hypit-program-root data-hypit-width="64" data-hypit-height="64" style="width:64px;height:64px">${body}</div>`;
 
 test("capture waits for dynamic images and rejects broken images or exact fonts", async (t) => {
   const png = await sharp({ create: { width: 64, height: 64, channels: 3, background: "#ff0000" } }).png().toBuffer();
@@ -48,7 +50,7 @@ test("capture waits for dynamic images and rejects broken images or exact fonts"
         const html = kind === "font" ? '<span>A</span>' : kind === "svg" ? '<svg width="64" height="64"><image id="target" width="64" height="64"/></svg>'
           : kind === "broken" ? '<img src="data:image/png;base64,YmFk"/>'
           : '<div id="target" style="width:64px;height:64px"></div>';
-        await page.setContent(`<style>body{margin:0}${css}</style>${html}`);
+        await page.setContent(capturePage(`<style>body{margin:0}${css}</style>${html}`));
         if (kind === "broken") await page.waitForFunction(() => document.images[0]!.complete);
         await page.evaluate(({ kind, origin }) => {
           (window as unknown as { __hypitFrameProgram: unknown }).__hypitFrameProgram = { async applyFrame() {
@@ -72,8 +74,8 @@ test("capture waits for dynamic images and rejects broken images or exact fonts"
       const page = await browser.newPage();
       try {
         await page.setViewport({ width: 64, height: 64 });
-        await page.setContent(`<style>body{margin:0}.screen{width:64px;height:64px;overflow:hidden}.screen>*{width:64px;height:64px}</style>
-          <div class="screen"><video id="source" data-hypit-source-frame></video></div>`);
+        await page.setContent(capturePage(`<style>body{margin:0}.screen{width:64px;height:64px;overflow:hidden}.screen>*{width:64px;height:64px}</style>
+          <div class="screen"><video id="source" data-hypit-source-frame></video></div>`));
         await page.evaluate(() => {
           (window as unknown as { __hypitFrameProgram: unknown }).__hypitFrameProgram = {
             async applyFrame() {},
@@ -95,7 +97,7 @@ test("capture waits for dynamic images and rejects broken images or exact fonts"
       const page = await browser.newPage();
       try {
         await page.setViewport({ width: 64, height: 64 });
-        await page.setContent(`<style>body{margin:0}</style><div id="target" style="width:64px;height:64px;background:#000"></div>${"<span></span>".repeat(200)}`);
+        await page.setContent(capturePage(`<style>body{margin:0}</style><div id="target" style="width:64px;height:64px;background:#000"></div>${"<span></span>".repeat(200)}`));
         await page.evaluate(origin => {
           const original = window.getComputedStyle.bind(window);
           const state = window as unknown as { __styleReads: number; __hypitFrameProgram: unknown };
@@ -128,7 +130,7 @@ test("capture waits for dynamic images and rejects broken images or exact fonts"
       const page = await browser.newPage();
       try {
         await page.setViewport({ width: 64, height: 64 });
-        await page.setContent(`<style>body{margin:0}</style><div id="selected" style="width:64px;height:64px;background:#000"></div><div id="unselected">${"<span></span>".repeat(200)}</div>`);
+        await page.setContent(capturePage(`<style>body{margin:0}</style><div id="selected" style="width:64px;height:64px;background:#000"></div><div id="unselected">${"<span></span>".repeat(200)}</div>`));
         await page.evaluate(origin => {
           const original = window.getComputedStyle.bind(window);
           const state = window as unknown as { __styleReads: number; __hypitFrameProgram: unknown; __hypitCaptureRoots: readonly Element[] };
@@ -157,7 +159,7 @@ test("capture waits for dynamic images and rejects broken images or exact fonts"
       const page = await browser.newPage();
       try {
         await page.setViewport({ width: 64, height: 64 });
-        await page.setContent('<style>body{margin:0}</style><div id="target" style="width:64px;height:64px"></div>');
+        await page.setContent(capturePage('<style>body{margin:0}</style><div id="target" style="width:64px;height:64px"></div>'));
         await page.evaluate(origin => {
           const target = document.getElementById("target")!;
           const animation = target.animate([
@@ -181,7 +183,7 @@ test("capture waits for dynamic images and rejects broken images or exact fonts"
       const page = await browser.newPage();
       try {
         await page.setViewport({ width: 64, height: 64 });
-        await page.setContent('<style>body{margin:0}</style><div id="target" style="width:64px;height:64px"></div>');
+        await page.setContent(capturePage('<style>body{margin:0}</style><div id="target" style="width:64px;height:64px"></div>'));
         await page.evaluate(origin => {
           let changed = false;
           (window as unknown as { __hypitFrameProgram: unknown }).__hypitFrameProgram = { async applyFrame(time: number) {
@@ -213,16 +215,16 @@ test("compiled frame selection neither stages nor waits for unrelated image reso
   const red = await resources.put(await sharp({ create: { width: 64, height: 64, channels: 3, background: "#ff0000" } })
     .png().toBuffer(), "image/png");
   const space = sealTimeline({ id: "capture-scope", frameCount: 60, frameRate: { numerator: 30, denominator: 1 } });
-  const track = sealPresentVisualTrack({ id: "visual", timelineId: space.id, visualIr: "hypit.visual-ir@1", presents: [
+  const track = sealPresentVisualTrack({ id: "visual", timelineId: space.id, presents: [
     { id: "unavailable-early", span: { startFrame: 0, endFrameExclusive: 10 },
-      root: { id: "unavailable", kind: "image", picture: { colorPrimaries: "bt709", colorTransfer: "srgb", colorMatrix: "rgb", colorRange: "full", bitDepth: 8, alphaMode: "straight" } as const, artifact: unavailable,
-        style: [{ name: "width", value: "64px" }, { name: "height", value: "64px" }] } },
+      root: htmlVisualElement({ id: "unavailable", kind: "image", picture: { colorPrimaries: "bt709", colorTransfer: "srgb", colorMatrix: "rgb", colorRange: "full", bitDepth: 8, alphaMode: "straight" } as const, artifact: unavailable,
+        style: [{ name: "width", value: "64px" }, { name: "height", value: "64px" }] }) },
     { id: "broken-early", span: { startFrame: 10, endFrameExclusive: 30 },
-      root: { id: "broken", kind: "image", picture: { colorPrimaries: "bt709", colorTransfer: "srgb", colorMatrix: "rgb", colorRange: "full", bitDepth: 8, alphaMode: "straight" } as const, artifact: broken,
-        style: [{ name: "width", value: "64px" }, { name: "height", value: "64px" }] } },
+      root: htmlVisualElement({ id: "broken", kind: "image", picture: { colorPrimaries: "bt709", colorTransfer: "srgb", colorMatrix: "rgb", colorRange: "full", bitDepth: 8, alphaMode: "straight" } as const, artifact: broken,
+        style: [{ name: "width", value: "64px" }, { name: "height", value: "64px" }] }) },
     { id: "red-late", span: { startFrame: 30, endFrameExclusive: 60 },
-      root: { id: "red", kind: "image", picture: { colorPrimaries: "bt709", colorTransfer: "srgb", colorMatrix: "rgb", colorRange: "full", bitDepth: 8, alphaMode: "straight" } as const, artifact: red,
-        style: [{ name: "width", value: "64px" }, { name: "height", value: "64px" }] } },
+      root: htmlVisualElement({ id: "red", kind: "image", picture: { colorPrimaries: "bt709", colorTransfer: "srgb", colorMatrix: "rgb", colorRange: "full", bitDepth: 8, alphaMode: "straight" } as const, artifact: red,
+        style: [{ name: "width", value: "64px" }, { name: "height", value: "64px" }] }) },
   ] });
   const document = compileHtmlProgram(sealComposition({ id: "capture-scope", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 64, height: 64, clearColor: "#000000" }, root: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }, space));
 
@@ -256,21 +258,21 @@ test("real capture keeps later Present animation local with picture content and 
     create: { width: 64, height: 64, channels: 3, background: "#000000" },
   }).png().toBuffer(), "image/png");
   const timeline = sealTimeline({ id: "local-animation", frameCount: 90, frameRate: { numerator: 30, denominator: 1 } });
-  const picture = sealPresentVisualTrack({ id: "picture", timelineId: timeline.id, visualIr: "hypit.visual-ir@1", presents: [{
+  const picture = sealPresentVisualTrack({ id: "picture", timelineId: timeline.id, presents: [{
     id: "picture", span: { startFrame: 0, endFrameExclusive: 90 },
-    root: { id: "picture", kind: "image", picture: { colorPrimaries: "bt709", colorTransfer: "srgb", colorMatrix: "rgb", colorRange: "full", bitDepth: 8, alphaMode: "straight" } as const, artifact: black,
+    root: htmlVisualElement({ id: "picture", kind: "image", picture: { colorPrimaries: "bt709", colorTransfer: "srgb", colorMatrix: "rgb", colorRange: "full", bitDepth: 8, alphaMode: "straight" } as const, artifact: black,
       style: [{ name: "position", value: "absolute" }, { name: "inset", value: 0 },
-        { name: "width", value: "64px" }, { name: "height", value: "64px" }] },
+        { name: "width", value: "64px" }, { name: "height", value: "64px" }] }),
   }] });
-  const animated = sealPresentVisualTrack({ id: "animated", timelineId: timeline.id, visualIr: "hypit.visual-ir@1",
+  const animated = sealPresentVisualTrack({ id: "animated", timelineId: timeline.id,
     presents: [0, 30, 60].map((startFrame, index) => ({
       id: `pose-${index + 1}`, span: { startFrame, endFrameExclusive: startFrame + 30 },
-      root: { id: "pose", kind: "box", children: [], style: [
+      root: htmlVisualElement({ id: "pose", kind: "box", children: [], style: [
         { name: "position", value: "absolute" }, { name: "inset", value: 0 }, { name: "background", value: "#ffffff" },
       ], animation: { keyframes: [
         { atFrame: 0, style: [{ name: "opacity", value: 0 }] },
         { atFrame: 30, style: [{ name: "opacity", value: 1 }] },
-      ] } },
+      ] } }),
     })),
   });
   const document = compileHtmlProgram(sealComposition({ id: "local-animation", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: {
@@ -345,12 +347,12 @@ test("Fine Caption Cues stay isolated over Picture during reverse seeks and inde
   ]);
 
   const picture = sealPresentVisualTrack({ id: "picture", timelineId: timeline.id,
-    visualIr: "hypit.visual-ir@1", presents: [{ id: "picture",
-      span: { startFrame: 0, endFrameExclusive: 90 }, root: { id: "picture",
+ presents: [{ id: "picture",
+      span: { startFrame: 0, endFrameExclusive: 90 }, root: htmlVisualElement({ id: "picture",
         kind: "image", picture: { colorPrimaries: "bt709", colorTransfer: "srgb", colorMatrix: "rgb", colorRange: "full", bitDepth: 8, alphaMode: "straight" } as const, artifact: black, style: [{ name: "position", value: "absolute" },
           { name: "inset", value: 0 }, { name: "width", value: "320px" }, { name: "height", value: "180px" }],
         animation: { keyframes: [{ atFrame: 0, style: [{ name: "opacity", value: 1 }] },
-          { atFrame: 90, style: [{ name: "opacity", value: 1 }] }] } } }] });
+          { atFrame: 90, style: [{ name: "opacity", value: 1 }] }] } }) }] });
   const html = compileHtmlProgram(sealComposition({ id: "fine-caption-isolation", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 320, height: 180, clearColor: "#000000" }, root: { members: [picture, captions].map((track) => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }, timeline));
 
   const assertCueColors = async (buffer: Uint8Array, wanted: "red" | "green" | "blue", label: string) => {
@@ -414,15 +416,15 @@ test("terminal text and SVG mask sources retain their Present frame animations a
     { atFrame: 30, style: [{ name: "opacity", value: 1 }] }] };
   const sequences = [{ id: "letters-in", unit: "grapheme" as const, range: { start: 0, endExclusive: 1 }, order: "forward" as const,
     startFrame: 0, unitDurationFrames: 30, staggerFrames: 0, cycles: 1,
-    keyframes: [{ atProgress: 0, style: [{ name: "opacity", value: 0 }] },
-      { atProgress: 1, style: [{ name: "opacity", value: 1 }] }] },
+    keyframes: [{ atProgress: 0, state: { opacity: 0 } },
+      { atProgress: 1, state: { opacity: 1 } }] },
   { id: "letters-out", unit: "grapheme" as const, range: { start: 0, endExclusive: 1 }, order: "forward" as const,
     startFrame: 0, unitDurationFrames: 30, staggerFrames: 0, cycles: 1,
-    keyframes: [{ atProgress: 0, style: [{ name: "opacity", value: 1 }] },
-      { atProgress: 1, style: [{ name: "opacity", value: 0 }] }] }];
+    keyframes: [{ atProgress: 0, state: { opacity: 1 } },
+      { atProgress: 1, state: { opacity: 0 } }] }];
   const text = { style: [], animation, document: { paragraphs: [{ id: "p", inlines: [{ kind: "text" as const, id: "t", text: "A" }] }] },
     typography, paints: [{ kind: "fill" as const, paint: { kind: "solid" as const, color: "#ffffff" } }], sequences };
-  const root: VisualElement = { id: "root", kind: "box", style: [], children: [
+  const root = htmlVisualElement({ id: "root", kind: "box", style: [], children: [
     { ...text, id: "flow", kind: "text-flow", flow: {
       form: { kind: "area" }, inlineSize: "hug", blockSize: "hug", paddingPx: { inlineStart: 0, inlineEnd: 0, blockStart: 0, blockEnd: 0 },
       inlineAlign: "start", blockAlign: "start", wrap: "none", overflow: "visible", clipToFrame: false, columns: 1,
@@ -434,8 +436,8 @@ test("terminal text and SVG mask sources retain their Present frame animations a
       mask: { id: "mask-image", kind: "image", picture: { colorPrimaries: "bt709", colorTransfer: "srgb", colorMatrix: "rgb", colorRange: "full", bitDepth: 8, alphaMode: "straight" } as const, artifact: image, style: [], animation },
       content: { id: "content", kind: "box", children: [], style: [{ name: "background", value: "#ffffff" }] },
       style: [{ name: "width", value: "64px" }, { name: "height", value: "64px" }] },
-  ] };
-  const track = sealPresentVisualTrack({ id: "visual", timelineId: space.id, visualIr: "hypit.visual-ir@1",
+  ] });
+  const track = sealPresentVisualTrack({ id: "visual", timelineId: space.id,
     presents: [{ id: "later", span: { startFrame: 15, endFrameExclusive: 60 }, root }] });
   const compiled = compileHtmlProgram(sealComposition({ id: "animation", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 128, height: 128, clearColor: "#000000" }, root: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }, space));
   const html = materializeHtmlProgram(compiled, artifact => artifact.resource === "res_font"
@@ -450,7 +452,7 @@ test("terminal text and SVG mask sources retain their Present frame animations a
       await (window as typeof window & {
         __hypitFrameProgram: { applyFrame(frame: number): Promise<void> };
       }).__hypitFrameProgram.applyFrame(frame);
-      const roots = ["flow", "path", "mask-image"].map(id => Number(getComputedStyle(document.querySelector(`[data-hypit-element-id="${id}"]`)!).opacity));
+      const roots = ["flow", "path", "mask-image"].map(id => Number(getComputedStyle(document.querySelector(`[data-hypit-html-element-id="${id}"]`)!).opacity));
       const units = ["flow", "path"].map(id => Number(getComputedStyle(document.querySelector(`[data-hypit-element-id="${id}"] [data-hypit-text-unit-grapheme="0"]`)!).opacity));
       return { roots, units };
     }, frame);

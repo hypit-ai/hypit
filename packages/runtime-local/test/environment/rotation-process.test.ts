@@ -80,10 +80,7 @@ test("a draining carrier finishes its existing Build while a new carrier shares 
       await repository.create({id,sourceId:'main.svml',publication:{outputs:[{
         name:target,output:target,target:true,type:types[target],record,
       }]}});
-      await state.submissions.commit({...request,definition:{...base,program:{...base.program,records:base.program.records.map(r=>r.id==='intent:root'?{...r,value:({name})}:r)}},
-        catalog:{sourcePath: join(root,'main.svml'),publication:{outputs:[{
-          name:target,output:target,target:true,type:types[target],record,
-        }]}}});
+      await state.submissions.commit({...request,definition:{...base,program:{...base.program,records:base.program.records.map(r=>r.id==='intent:root'?{...r,value:({name})}:r)}}});
       return id;
     }
     child=spawn(process.execPath,[join(distribution,'bin/hypit.mjs'),'_worker',profile,'--package-root',root,'--ready-file',join(root,'ready'),'--worker-owner','rotation-test'],{cwd:root,stdio:['ignore','pipe','pipe']});

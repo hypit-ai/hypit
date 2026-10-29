@@ -1,7 +1,6 @@
 import type { ValueSchema } from "@hypit/hypit/protocol";
 
 import {
-  visualBoxSchema,
   visualElementSchema,
   visualImageSchema,
   visualMaskSchema,
@@ -28,7 +27,6 @@ export const visualCompositionVocabulary: {
     "visual-element": visualElementSchema,
     program: visualProgramSchema,
     process: visualProcessSchema,
-    box: visualBoxSchema,
     mask: visualMaskSchema,
     text: visualTextSchema,
     image: visualImageSchema,
@@ -41,16 +39,13 @@ export const visualCompositionVocabulary: {
     "path-command": visualPathCommandSchema,
   },
   rules: [
-    "A Present owns exactly one recursive root; a Visual Process owns named, independently timed picture contributions and a package-owned programme.",
-    "Element ids are unique within one Present for identity only; Box child arrays carry back-to-front paint order.",
-    "Mask owns explicit mask and content branches, while Program owns uniquely named role slots whose order has no paint meaning.",
-    "A child's position is measured from its parent's box, not from the Canvas.",
-    "An animation carries at least two keyframes, and every keyframe of one animation declares the same properties; `atFrame` is Present-relative.",
-    "A plain text element provides exact ordered font artifacts and cannot combine them with raw `font`, `font-family`, `font-style`, `font-synthesis` or `font-weight` styles.",
-    "A text element using glyph Paint cannot also declare raw stroke or paint-order styles.",
+    "A Present owns exactly one typed root or package-owned Programme; a Visual Process owns named, independently timed picture contributions and a package-owned Programme.",
+    "Element ids are unique within one Present for identity only. Layout, paint order, attributes and animation belong to the selected Programme package.",
+    "Mask owns explicit mask and content branches, while Program owns uniquely named typed slots whose order has no paint meaning.",
+    "Typed text owns exact font artifacts and semantic typography or paint. Renderer-specific HTML and CSS remain inside the HTML Programme.",
     "An image owns one image Artifact; a video owns one selected PreparedVisualSource and an exact occurrence-local sampling relation.",
     "A Surface with still timing cannot carry sampling; frame-based Surface sampling must match its typed timing.",
-    "A Mask source is one owned terminal text, image or still Surface; its content remains an ordinary owned subtree.",
+    "A Mask source is one typed visual element or package-owned Programme; its content remains an ordinary owned subtree.",
     "An Audio source node owns one selected PreparedAudioSource, its preparation relation and its occurrence-local sampling relation; unrelated visual facts never enter the audio graph.",
   ],
 };

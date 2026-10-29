@@ -12,8 +12,6 @@ export type BlobByteRange = { readonly start: number; readonly endExclusive: num
 /** Repeatably openable transfer bytes supplied by the selected Workspace. */
 export type BlobAttachment = {
   readonly blob: BlobRef;
-  /** Stable external address, when the Workspace supplies a file by reference. */
-  readonly location?: string;
   open(): Awaitable<AsyncIterable<Uint8Array>>;
   /** Optional random access for preview playback; ranges use an exclusive end. */
   openRange?(range: BlobByteRange): Awaitable<AsyncIterable<Uint8Array>>;
@@ -25,6 +23,8 @@ export interface WorkspaceSession {
   readonly resolveSource: SourceResolver;
   readonly resolveAsset: SourceAssetResolver;
   readonly readAsset?: SourceAssetReader;
+  /** Host locator for diagnostics or editing; never participates in Source identity. */
+  sourceLocation?(source: ResolvedSource["unit"]): string | undefined;
   attachments(): Awaitable<readonly BlobAttachment[]>;
 }
 

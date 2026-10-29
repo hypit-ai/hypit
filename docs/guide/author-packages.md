@@ -23,8 +23,8 @@ npm install --save-dev @hypit/hypit@<selected-release>
 npm run build
 ```
 
-The example includes TypeScript build configuration, Manifest, Author Declaration, Markup spelling, Fragment, Producers,
-activation and a small preview Source. Its [README](https://github.com/hypit-ai/hypit/blob/main/examples/minimal-author-package/packages/example-component/README.md)
+The example includes TypeScript build configuration, a Source interface, rendering code and a small
+preview Source. Its [README](https://github.com/hypit-ai/hypit/blob/main/examples/minimal-author-package/packages/example-component/README.md)
 explains the exact files and package setup. The project can use its package manager's workspace or
 local package dependency to install the component.
 
@@ -49,9 +49,9 @@ chosen names and the accepted values in the component's own vocabulary and READM
 
 ## Implement and inspect the scene
 
-Use the narrow `author`, `producer`, `refinement` and `markup` public subpaths for their respective
-responsibilities, and public domain subpaths for the values you consume. [Component Anatomy](./component-anatomy.md) explains how the Manifest, Author Declaration, Markup spelling, Fragment and
-Producer cooperate. Keep project copy and media as inputs; draw the component's own panels, frames
+Follow the included package README for the TypeScript APIs used by the selected release.
+[Component Anatomy](./component-anatomy.md) explains how to design the component's public choices.
+Keep project copy and media as inputs; draw the component's own panels, frames
 and decoration in its implementation.
 
 A preview Source gives authors a small example they can open or render. Inspect the states that

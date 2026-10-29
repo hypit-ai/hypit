@@ -49,7 +49,7 @@ function projectPath(root: string, path: string): string {
 
 function requiredInitialResources(request: LocalBuildRequest): ReadonlySet<string> {
   const definition = request.definition;
-  const publicOwnedRecords = request.catalog.publication.outputs.map((published) => published.record);
+  const publicOwnedRecords = request.authoring.publication.outputs.map((published) => published.record);
   const recordIds = new Set([
     ...publicOwnedRecords,
     ...definition.plan.steps.flatMap((step) => Object.values(step.inputs)),
@@ -89,7 +89,6 @@ export async function createLocalRuntime(
   options: CreateLocalRuntimeOptions,
 ): Promise<LocalRuntime> {
   const openBuildResultRepository = options.openBuildResultRepository;
-  const buildCatalog = options.buildCatalog;
   const producers = new ProducerRegistry();
   const endpoints = new EndpointRegistry();
   const refinements = new RefinementRegistry();
@@ -163,7 +162,7 @@ export async function createLocalRuntime(
     ...(options.executionLogs === undefined ? {} : { executionLogs: options.executionLogs }),
     buildStore: options.buildStore,
     commandExecutionStore: options.commandExecutionStore,
-    buildCatalog,
+    openBuildResultRepository,
     operationStore: options.operationStore,
     executionStore: options.executionStore,
     submissionStore: options.submissionStore,
@@ -249,11 +248,11 @@ export async function createLocalRuntime(
         await opened.repository.create({
           id: request.id,
           ...(resultRequest.title === undefined ? {} : { title: resultRequest.title }),
-          sourceId: projectPath(resultRequest.repository.root, request.catalog.sourcePath),
-          ...(request.catalog.invocationSourcePath === undefined ? {} : {
-            invocationSourceId: projectPath(resultRequest.repository.root, request.catalog.invocationSourcePath),
+          sourceId: projectPath(resultRequest.repository.root, request.authoring.sourcePath),
+          ...(request.authoring.invocationSourcePath === undefined ? {} : {
+            invocationSourceId: projectPath(resultRequest.repository.root, request.authoring.invocationSourcePath),
           }),
-          publication: request.catalog.publication,
+          publication: request.authoring.publication,
         });
       } finally {
         await opened.close?.();
@@ -261,7 +260,6 @@ export async function createLocalRuntime(
       await options.submissionStore.commit({
         ...executionRequest,
         definition: request.definition,
-        catalog: request.catalog,
       });
       return await presentation(request.id, resultRequest.repository);
     } catch (error) {

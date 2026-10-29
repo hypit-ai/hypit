@@ -164,9 +164,9 @@ function endpoint(client: BeatApiClient, pollIntervalMs: number, maxOperationMs:
   return {
     async start(context) {
       try {
-        const route = beatApiRouteForCapability(context.need.capability);
+        const route = beatApiRouteForCapability(context.request.capability);
         assert(route !== undefined, "BeatAPI does not implement this exact capability");
-        const request = route.prepare(context.need.constraints);
+        const request = route.prepare(context.request.constraints);
         await context.reportProgress?.({ phase: `Preparing BeatAPI request: ${request.model}` });
         const body = await request.compile(resolverFor(client, context, publicAssetUrl));
         await context.reportProgress?.({ phase: `Submitting BeatAPI request: ${request.model}` });
@@ -195,7 +195,7 @@ function endpoint(client: BeatApiClient, pollIntervalMs: number, maxOperationMs:
       let operationDeadlineAt: number | undefined;
       try {
         const handle = object(context.handle, "BeatAPI handle") as unknown as Handle;
-        const route = beatApiRouteForCapability(context.need.capability);
+        const route = beatApiRouteForCapability(context.request.capability);
         assert(route !== undefined && handle.contract === "hypit.beatapi-operation@1" && handle.route === route.key, "BeatAPI handle is invalid");
         const receipt = { id: handle.taskId };
         operationDeadlineAt = handle.startedAt + maxOperationMs;
@@ -221,7 +221,7 @@ function endpoint(client: BeatApiClient, pollIntervalMs: number, maxOperationMs:
     async collect(context) {
       try {
         const handle = object(context.handle, "BeatAPI handle") as unknown as Handle;
-        const route = beatApiRouteForCapability(context.need.capability);
+        const route = beatApiRouteForCapability(context.request.capability);
         assert(route !== undefined && handle.route === route.key && Array.isArray(handle.urls), "BeatAPI collection route differs");
         await context.reportProgress?.({ phase: "Receiving generated files" });
         const blobs: BlobRef[] = [];

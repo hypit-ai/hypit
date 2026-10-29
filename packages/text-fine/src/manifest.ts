@@ -16,7 +16,6 @@ import {
   spatialPointSchema,
   spatialTypes,
 } from "@hypit/spatial";
-import { VISUAL_STYLE_ENUM_VALUES_V1, VISUAL_STYLE_NAMES_V1 } from "@hypit/composition";
 import { mediaDependency, mediaTypes } from "@hypit/media";
 import { textDependency, textTypes } from "@hypit/hypit/text";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/hypit/protocol";
@@ -52,12 +51,12 @@ const integer = { kind: "number", integer: true, minimum: 0 } as const;
 const object = (fields: Readonly<Record<string, { readonly schema: ValueSchema; readonly optional?: boolean }>>): ValueSchema => ({ kind: "object", fields });
 const enumString = (values: readonly string[]): ValueSchema => ({ kind: "string", enum: values });
 
-const styleDeclaration: ValueSchema = { kind: "oneOf", variants: VISUAL_STYLE_NAMES_V1.map((name) => object({
-  name: { schema: { kind: "literal", value: name } },
-  value: { schema: Object.hasOwn(VISUAL_STYLE_ENUM_VALUES_V1, name)
-    ? { kind: "string", enum: VISUAL_STYLE_ENUM_VALUES_V1[name as keyof typeof VISUAL_STYLE_ENUM_VALUES_V1] }
-    : { kind: "oneOf", variants: [{ kind: "string" }, { kind: "number" }] } },
-})) };
+// Item motion is implemented by this package's HTML Programme. Composition does not
+// publish a renderer-wide CSS vocabulary; the HTML owner validates declarations while lowering.
+const styleDeclaration: ValueSchema = object({
+  name: { schema: string },
+  value: { schema: { kind: "oneOf", variants: [{ kind: "string" }, { kind: "number" }] } },
+});
 const visualKeyframe = object({
   atFrame: { schema: integer },
   easing: { schema: enumString(["linear", "ease-in", "ease-out", "ease-in-out"]), optional: true },

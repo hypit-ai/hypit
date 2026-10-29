@@ -13,15 +13,14 @@ A component normally begins under the video project's `packages/` directory. Giv
 such as `@studio/score-strip`. Sharing it means giving the other project that package's code, assets,
 and usage instructions through an installable package.
 
-Keep the same name when distributing it. The Source import names its logical Module ABI:
+Keep the same name when distributing it. The Source import uses the component's stable address:
 
 ```xml
 <import as="score" from="@studio/score-strip@1"/>
 ```
 
-Here `@1` names the logical Module ABI used by the Source. The package manager separately records
-the physical npm release, such as `1.2.0`. Updating that package release does not by itself change
-the logical import. Follow the package's actual published vocabulary for its author interface.
+The package manager separately records the installed release, such as `1.2.0`. Follow the package's
+published vocabulary for its Source interface.
 
 ## Publish for repeated distribution
 
@@ -116,19 +115,14 @@ component.
 
 ## Include what the recipient needs
 
-The package's `files` and `exports` should include its built activation, runtime code, preview assets,
-and any Sources or templates exposed by its vocabulary. `hypit.activation` points to the shipped
-JavaScript entry. Declare third-party runtime dependencies in `dependencies`. Include a README with
+The package's `files` and `exports` should include its executable code, preview assets, and any Sources
+or templates exposed by its vocabulary. Declare third-party runtime dependencies in `dependencies`. Include a README with
 an actual Source example, the public outputs, any companion or asset requirements, and the Hypit
 release used to check it. Inspect the tarball contents with `npm pack --dry-run`.
 
-An executable Author Package uses the public APIs it needs, such as `@hypit/hypit/author`,
-`@hypit/hypit/producer`, `@hypit/hypit/refinement` and `@hypit/hypit/markup`.
-Declare `@hypit/hypit` as a compatible peer and development dependency, and domain packages such as
-`@hypit/composition` or `@hypit/caption` as ordinary dependencies. A Studio Companion also declares
-compatibility with `@hypit/studio-companion` through a peer dependency. Its release contains its own
-code and assets; the selected host supplies those public APIs. Check the package from a
-separate consumer project so local source links do not conceal omitted files or dependencies.
+Use the installed example and package README for the selected release's public APIs and dependency
+declarations. Check the package from a separate consumer project so local source links do not conceal
+omitted files or dependencies.
 
 Package code runs as trusted JavaScript in the host process. The recipient chooses which package and
 release to install.

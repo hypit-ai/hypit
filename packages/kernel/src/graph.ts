@@ -1,6 +1,5 @@
 import type {
-  Candidate,
-  CandidateRoot,
+  OutputRoot,
   AuthorGraph,
   GraphValueRef,
   LinkedProgram,
@@ -17,7 +16,6 @@ import { resolveCapability, resolveProducer, verifyRecordStructure } from "./lin
 
 type GraphIndex = {
   readonly outputs: ReadonlyMap<string, LogicalOutput>;
-  readonly candidates: ReadonlyMap<string, Candidate>;
   readonly operations: ReadonlyMap<string, OperationNode>;
 };
 
@@ -29,7 +27,6 @@ function graphIndex(graph: AuthorGraph): GraphIndex {
   if (existing !== undefined) return existing;
   const created = {
     outputs: new Map(graph.outputs.map((item) => [item.id, item])),
-    candidates: new Map(graph.candidates.map((item) => [item.id, item])),
     operations: new Map(graph.operations.map((item) => [item.id, item])),
   };
   graphIndexes.set(graph, created);
@@ -49,7 +46,7 @@ function normalizeRef(ref: GraphValueRef): GraphValueRef {
   return { kind: "operation-result", operation: ref.operation };
 }
 
-function normalizeRoot(root: CandidateRoot): CandidateRoot {
+function normalizeRoot(root: OutputRoot): OutputRoot {
   if (root.kind === "record") return { kind: "record", id: root.id };
   return { kind: "operation-result", operation: root.operation };
 }
@@ -58,15 +55,7 @@ function normalizeOutput(output: LogicalOutput): LogicalOutput {
   return {
     id: output.id,
     type: output.type,
-    primary: output.primary,
-  };
-}
-
-function normalizeCandidate(candidate: Candidate): Candidate {
-  return {
-    id: candidate.id,
-    type: candidate.type,
-    root: normalizeRoot(candidate.root),
+    primary: normalizeRoot(output.primary),
   };
 }
 
@@ -100,7 +89,6 @@ export function sealAuthorGraph(
 ): AuthorGraph {
   const normalized = {
     outputs: [...graph.outputs].map(normalizeOutput).sort((a, b) => compareCodeUnits(a.id, b.id)),
-    candidates: [...graph.candidates].map(normalizeCandidate).sort((a, b) => compareCodeUnits(a.id, b.id)),
     operations: [...graph.operations].map(normalizeOperation).sort((a, b) => compareCodeUnits(a.id, b.id)),
   };
   return {
@@ -113,12 +101,6 @@ export function resolveLogicalOutput(graph: AuthorGraph, id: string): LogicalOut
   const output = graphIndex(graph).outputs.get(id);
   invariant(output !== undefined, "UNKNOWN_LOGICAL_OUTPUT", `unknown logical output ${id}`, id);
   return output;
-}
-
-export function resolveCandidate(graph: AuthorGraph, id: string): Candidate {
-  const candidate = graphIndex(graph).candidates.get(id);
-  invariant(candidate !== undefined, "UNKNOWN_CANDIDATE", `unknown Candidate ${id}`, id);
-  return candidate;
 }
 
 export function resolveOperation(graph: AuthorGraph, id: string): OperationNode {
@@ -198,49 +180,41 @@ function verifyOperation(program: LinkedProgram, graph: AuthorGraph, operation: 
   }
 }
 
-function verifyCandidateValue(program: LinkedProgram, graph: AuthorGraph, candidate: Candidate): void {
-  if (candidate.root.kind === "record") {
-    const record = programRecords(program).get(candidate.root.id);
+export function verifyOutputRoot(
+  program: LinkedProgram,
+  graph: AuthorGraph,
+  output: LogicalOutput,
+  root: OutputRoot,
+): void {
+  if (root.kind === "record") {
+    const record = programRecords(program).get(root.id);
     invariant(
       record !== undefined,
-      "UNKNOWN_CANDIDATE_RECORD",
-      candidate.id + " references unknown authored Record " + candidate.root.id,
-      candidate.id,
+      "UNKNOWN_OUTPUT_RECORD",
+      output.id + " references unknown authored Record " + root.id,
+      output.id,
     );
     invariant(
-      sameType(record.type, candidate.type),
-      "CANDIDATE_RESULT_TYPE_MISMATCH",
-      candidate.id + " declares " + typeKey(candidate.type)
+      sameType(record.type, output.type),
+      "OUTPUT_RESULT_TYPE_MISMATCH",
+      output.id + " declares " + typeKey(output.type)
         + " but Record " + record.id + " is " + typeKey(record.type),
-      candidate.id,
+      output.id,
     );
     return;
   }
-  const supplied = operationResultType(program, resolveOperation(graph, candidate.root.operation));
+  const supplied = operationResultType(program, resolveOperation(graph, root.operation));
   invariant(
-    sameType(supplied, candidate.type),
-    "CANDIDATE_RESULT_TYPE_MISMATCH",
-    `${candidate.id} declares ${typeKey(candidate.type)} but returns ${typeKey(supplied)}`,
-    candidate.id,
-  );
-}
-
-function verifySatisfaction(
-  output: LogicalOutput,
-  candidate: Candidate,
-): void {
-  invariant(
-    sameType(candidate.type, output.type),
-    "CANDIDATE_RESULT_TYPE_MISMATCH",
-    `${candidate.id} supplies ${typeKey(candidate.type)}, not ${typeKey(output.type)}`,
-    candidate.id,
+    sameType(supplied, output.type),
+    "OUTPUT_RESULT_TYPE_MISMATCH",
+    `${output.id} declares ${typeKey(output.type)} but returns ${typeKey(supplied)}`,
+    output.id,
   );
 }
 
 export function verifyAuthorGraph(program: LinkedProgram, graph: AuthorGraph): void {
   invariant(graph.format === "hypit.graph@1", "UNSUPPORTED_GRAPH", "unsupported Author Graph format");
   const outputIds = new Set<string>();
-  const candidateIds = new Set<string>();
   const operationIds = new Set<string>();
   const operationRecords = new Set(program.records.map((record) => record.id));
   const needIds = new Set<string>();
@@ -268,15 +242,7 @@ export function verifyAuthorGraph(program: LinkedProgram, graph: AuthorGraph): v
   }
   for (const operation of graph.operations) verifyOperation(program, graph, operation);
 
-  for (const candidate of graph.candidates) {
-    invariant(candidate.id.length > 0, "EMPTY_CANDIDATE_ID", "Candidate id is empty");
-    invariant(!candidateIds.has(candidate.id), "DUPLICATE_CANDIDATE", `duplicate ${candidate.id}`, candidate.id);
-    candidateIds.add(candidate.id);
-    verifyCandidateValue(program, graph, candidate);
-  }
-
   for (const output of graph.outputs) {
-    const primary = resolveCandidate(graph, output.primary);
-    verifySatisfaction(output, primary);
+    verifyOutputRoot(program, graph, output, output.primary);
   }
 }

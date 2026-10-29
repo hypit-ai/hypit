@@ -19,11 +19,13 @@
   "dependencies": {
     "@hypit/audio-program": "workspace:^0.1.0",
     "@hypit/audio-stretch": "workspace:^0.1.0",
+    "@hypit/composition": "workspace:^0.2.0",
     "@hypit/media": "workspace:^0.2.0",
     "@hypit/media-operations": "workspace:^0.3.0",
     "@hypit/media-delivery": "workspace:^0.1.0",
     "@hypit/speech-evidence": "workspace:^0.2.0",
     "@hypit/timeline": "workspace:^0.1.1",
+    "@hypit/temporal": "workspace:^0.1.1",
     "sharp": "0.35.4"
   },
   "peerDependencies": {

@@ -17,13 +17,13 @@ test("a pure-MG work keeps its declared extent even when a Studio Item extends b
     tracks: [{ outputRef: "art.visual", name: "art.visual", type: compositionTypes.visualTrack.name,
       typeRef: compositionTypes.visualTrack,
       trace: { outputPorts: [], references: [] }, visualOccurrences: [["foreground", "visual"]], value: {
-        kind: "visual", timelineId: "work", visualIr: "hypit.visual-ir@1", id: "visual", items: [
+        kind: "visual", timelineId: "work", id: "visual", items: [
         { kind: "present", id: "scene", span: { startFrame: 0, endFrameExclusive: 150 },
-          root: { id: "root", kind: "box", children: [], style: [] } },
+          root: { id: "root", kind: "program", program: { format: "example.present@1", payload: {}, artifacts: [] }, slots: [] } },
         { kind: "process", id: "handoff", span: { startFrame: 20, endFrameExclusive: 40 },
           inputs: [{ name: "picture", contribution: { kind: "present", id: "process-picture",
             span: { startFrame: 0, endFrameExclusive: 90 },
-            root: { id: "process-root", kind: "box", children: [], style: [] } } }],
+            root: { id: "process-root", kind: "program", program: { format: "example.process-input@1", payload: {}, artifacts: [] }, slots: [] } } }],
           effect: { inputs: ["picture"], program: { format: "example.process@1", payload: {}, artifacts: [] } } },
         { kind: "adjustment", id: "grade", span: { startFrame: 10, endFrameExclusive: 80 },
           program: { format: "hypit.html-adjustment@1", payload: { filter: "contrast(1.1)" }, artifacts: [] } },

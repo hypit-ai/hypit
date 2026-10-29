@@ -97,9 +97,9 @@ test("the reserved blob tag is validated by the same Value boundary at every dep
   assert.throws(() => normalizeValue({ value: undefined }), /undefined/u);
 });
 
-test("Build ids cannot address a parent or nested path", () => {
+test("Build ids are non-empty opaque Host identities", () => {
   assert.doesNotThrow(() => assertBuildId("build-19"));
-  for (const value of ["..", ".", "episode/19", "episode\\19", " padded ", "c:", "d:build"]) {
+  for (const value of ["", " ", " padded "]) {
     assert.throws(() => assertBuildId(value), /Build id/u);
   }
 });

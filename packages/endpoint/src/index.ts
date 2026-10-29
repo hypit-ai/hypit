@@ -90,7 +90,7 @@ export function verifyEndpointPricingDocument(value: EndpointPricingDocument): v
 }
 
 export type EndpointInvocationContext = {
-  readonly need: Need;
+  readonly request: EndpointRequest;
   readonly resources: ResourceStore;
   /** Only slots explicitly declared by this configured Endpoint instance are present. */
   readonly credentials: Readonly<Record<string, EndpointCredential>>;

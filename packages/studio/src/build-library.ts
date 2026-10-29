@@ -292,7 +292,7 @@ export async function openStudioBuildLibrary(
       return {
         mediaType: file.mediaType,
         size: file.size,
-        open: async (range) => await results.openFile(resolved.build, file, range),
+        open: async (range) => await results.openFile(build, file, range),
       };
     },
     async close() {

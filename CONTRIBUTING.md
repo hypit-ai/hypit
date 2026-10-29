@@ -24,8 +24,9 @@ corepack enable
 pnpm install --frozen-lockfile
 ```
 
-Live Builds additionally need Python 3.10–3.13, uv, ffmpeg and Chromium. The
-[Development Guide](https://hypit.ai/guide/develop/) lists what each one is for.
+Live Builds additionally need Python 3.10–3.13, uv, ffmpeg and Chromium when the selected
+packages use them. Follow the README of the Provider or local service you are changing for its
+exact environment and verification commands.
 
 For a Profile selecting local rendering, run `hypit programs up --runtime <profile> --endpoint
 <render-instance>` before the first render (or `hypit runtime up --runtime <profile>` to prepare
@@ -42,7 +43,10 @@ See the [local renderer README](packages/provider-html-local/README.md) for brow
 | Component internals | [Component Anatomy](https://hypit.ai/guide/component-anatomy/) |
 | Studio interface translations | [Localizing Studio](packages/studio/LOCALIZATION.md) |
 | Compilation, Runs and Builds | [Runtime](https://hypit.ai/guide/runtime/) |
-| Naming, module boundaries, wire data | [Conventions](https://hypit.ai/guide/conventions/) |
+
+Follow the nearest package or service README for precise APIs and scripts. Cross-package ownership
+and repository-wide boundaries are maintained in [AGENTS.md](AGENTS.md), rather than duplicated in
+a public development guide.
 
 English and Chinese documentation live side by side under `docs/` and `docs/zh/`. A change to one
 page belongs with the change to its counterpart.
@@ -76,26 +80,6 @@ syntax, but must not choose a Model, Provider, Output, recovery rule or domain r
 consumers. Delete tests with obsolete behavior rather than retaining them as project history.
 
 ## Package the Distribution
-
-### SDK imports in 0.3.1
-
-For an existing video project, follow the [Agent migration guide](migrations/0.3.1.md)
-for the exact import mapping, dependency update and verification steps. Projects from 0.2.x or an
-older checkout should first use the [0.3 project migration](migrations/0.3.md).
-
-Video-domain SDKs are independently installed packages. Component code using a former root subpath,
-such as `@hypit/hypit/composition`, must import from `@hypit/composition` and declare that package
-in its own `dependencies`. The same applies to Timeline, Temporal, Spatial, Media, Narrative,
-Caption, Generation, HTML Program, evidence and projection packages. Import the subpath exported by
-the owning package when using an API such as `@hypit/temporal/author` or `@hypit/temporal/studio`.
-Generic host APIs remain under `@hypit/hypit/*`. Logical SVML module references retain their `@1`
-identities; this change concerns npm ownership and TypeScript imports.
-
-The root release is `0.3.1`, but this SDK import migration is not source-compatible with `0.3.0`.
-Update the root and affected component dependencies together, then regenerate the project's ordinary
-package-manager lockfile. New-architecture versions of existing domain packages use the `0.2.x`
-line so that old `^0.1.1` dependencies do not silently select them. Previously embedded domain
-packages start at `0.1.0`; packages that did not change keep their existing versions.
 
 ### Build and publish
 
@@ -140,7 +124,7 @@ package version is on npm, changing that package's bytes requires a new version;
 unchanged publication does not. Pushing main, pushing a tag alone, or saving a draft Release does
 not publish npm. Check the publication result before announcing availability.
 
-Workspace release dependencies use explicit compatibility ranges, such as `workspace:^0.3.0`;
+Workspace release dependencies use explicit compatibility ranges, such as `workspace:^0.4.0`;
 packing removes the workspace prefix without raising the minimum to the current checkout version.
 
 The npm package's Trusted Publisher settings must allow GitHub Actions from organization `hypit-ai`,

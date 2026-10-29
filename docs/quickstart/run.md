@@ -4,7 +4,7 @@ description: Declaring build targets, reusing results and configuring the runtim
 ---
 
 The Author Source defines the video. An Invocation chooses which
-public Outputs to produce and may temporarily select the AuthorGraph primary or another existing
+public Outputs to produce and may temporarily select an Output's primary realization or another
 authored Record. Pass it directly with CLI options, or save it as a `.svrun` Invocation Source when
 it needs a durable name. The official Distribution supplies the Local Runtime; its Profile names the
 credentials, Provider Endpoints and services available to execute the resulting plan.
@@ -91,9 +91,8 @@ Every `.svrun` file begins with its processing instruction:
 ### Targets
 
 A Target is the Build's final intention, normally the finished video or another real deliverable.
-It is not a retention list. The compiler executes only the route needed for the Targets, and every
-public Author Output that actually completes on that route is written into the same Build Result.
-Internal Operation values remain execution details.
+The Build produces the work needed for its Targets, and every public Author Output that completes
+on that route is written into the same Build Result.
 
 ### Multiple targets
 
@@ -135,7 +134,7 @@ using the accepted performance without teaching Invocation or Result how that fi
 footage, a download, a CLI-produced file and a generated Result enter through the same Author
 declaration.
 
-To request the AuthorGraph primary for one execution while retaining the durable selection, add a
+To request the Output's primary realization for one execution while retaining the durable selection, add a
 transient Invocation override:
 
 ```svml
@@ -150,6 +149,9 @@ An Invocation may instead choose another existing authored Record for one execut
 
 The Record must already exist in the Author closure and have the Output's exact Type. An Invocation
 introduces no project files, values or computations; it only selects Targets and transient choices.
+For each demanded Output, the effective choice is resolved in one order: Invocation override,
+authored realization selection, then the Output's primary realization. `plan --verbose` reports that
+origin together with the selected Record.
 
 ## Runtime Profile
 
@@ -174,7 +176,7 @@ a Profile from a conventional filename or inherits another project's selection f
 
 ## Configure selected credentials
 
-`check` and `plan` never make live Provider requests. A graph-only `plan` without a selected Runtime
+`check` and `plan` never make live Provider requests. A `plan` without a selected Runtime
 needs no deployment credentials; with a selected Runtime, its cheap preflight checks that demanded
 credential references are present. Before `doctor` or a paid/external `build`, configure only the
 credentials referenced by the selected Runtime Profile. First inspect the existing selection:
@@ -336,7 +338,8 @@ hypit plan reference.svml --target final.video
 ```
 
 Review the selected work before spending money. The default plan shows Targets, demanded external
-requests and their available parameters; `--verbose` adds graph and Invocation-choice details.
+requests and their available parameters; `--verbose` adds Source dependencies and each effective
+Output selection with its `invocation`, `authored`, or `primary` origin.
 With a selected Runtime, it also reports the relevant Endpoint, credential and
 external-program diagnostics. It never starts external work.
 
@@ -360,7 +363,7 @@ hypit build reference.svml --target final.video --title first-cut --follow
 ```
 
 Without `--follow`, `build` returns after durable submission. The detached Worker continues. With
-`--follow`, the terminal is only an observer; it reports durable phase/Operation-count changes and
+`--follow`, the terminal is only an observer; it reports durable progress changes and
 interrupting it leaves the Build running.
 
 Attach or reattach an observer at any time:

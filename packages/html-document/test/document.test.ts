@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { sealComposition, sealPresentVisualTrack, VISUAL_IR_V1 } from "@hypit/composition";
+import { sealComposition, sealPresentVisualTrack } from "@hypit/composition";
 import { sealTimeline } from "@hypit/timeline";
+import { htmlVisualElement } from "@hypit/html-program";
 import { fixtureResource } from "../../../test/fixture-resource.js";
 import {
   assertHtmlDocument,
@@ -27,15 +28,15 @@ function fixture() {
   };
   const track = sealPresentVisualTrack({
     timelineId: timeline.id,
-    visualIr: VISUAL_IR_V1,
+
     id: "picture",
     presents: [{
       id: "picture",
       span: { startFrame: 0, endFrameExclusive: timeline.frameCount },
-      root: { id: "root", kind: "box", children: [
+      root: htmlVisualElement({ id: "root", kind: "box", children: [
         { id: "image", kind: "image", picture: { colorPrimaries: "bt709", colorTransfer: "srgb", colorMatrix: "rgb", colorRange: "full", bitDepth: 8, alphaMode: "straight" } as const, artifact: picture, style: [] },
         { id: "second-image", kind: "image", picture: { colorPrimaries: "bt709", colorTransfer: "srgb", colorMatrix: "rgb", colorRange: "full", bitDepth: 8, alphaMode: "straight" } as const, artifact: secondPicture, style: [] },
-      ], style: [] },
+      ], style: [] }),
     }],
   });
   return {

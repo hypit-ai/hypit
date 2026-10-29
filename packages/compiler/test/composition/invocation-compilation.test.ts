@@ -75,7 +75,7 @@ test("authored realization selects an existing Record without executing the prim
   assert.equal(prepared.publication.outputs[0]?.record, prepared.compilation.author.realizations[0]?.record);
 });
 
-test("transient Invocation primary overrides an authored realization without exposing a Candidate id", async () => {
+test("transient Invocation primary overrides an authored realization without exposing graph internals", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-realization-override-"));
   const authorFile = join(root, "main.svml");
   const invocationFile = join(root, "build.svrun");

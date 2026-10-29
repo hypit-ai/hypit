@@ -159,10 +159,6 @@ function operationReceipts(value: unknown, subject: string): NonNullable<BuildRe
     }
     const receipt = item.receipt === undefined ? undefined : object(item.receipt, `${subject}.receipt`);
     const failure = item.failure === undefined ? undefined : object(item.failure, `${subject}.failure`);
-    const credentials = item.credentials === undefined ? undefined : Object.fromEntries(Object.entries(object(item.credentials, `${subject}.credentials`)).map(([slot, rawRef]) => {
-      const ref = object(rawRef, `${subject}.credential`);
-      return [slot, { store: text(ref.store, "credential store"), key: text(ref.key, "credential reference") }];
-    }));
     const evidence = {
       ...(need === undefined ? {} : { need: { id: text(need.id, "Need id"), capability: capabilityRef(need.capability, "Need capability") } }),
       ...(item.createdAt === undefined ? {} : { createdAt: optionalTime(item.createdAt, "Operation createdAt")! }),
@@ -181,7 +177,6 @@ function operationReceipts(value: unknown, subject: string): NonNullable<BuildRe
       operation: text(item.operation, "Operation id"), command: text(item.command, "Operation command"),
       endpoint: text(item.endpoint, "Operation Endpoint"),
       ...(item.pool === undefined ? {} : { pool: text(item.pool, "Operation pool") }),
-      ...(credentials === undefined ? {} : { credentials }),
       ...(receipt === undefined ? {} : { receipt: { id: text(receipt.id, "Remote receipt id"),
         ...(receipt.url === undefined ? {} : { url: text(receipt.url, "Remote receipt URL") }) } }),
     };

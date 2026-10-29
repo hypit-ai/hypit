@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -31,6 +31,26 @@ test("an in-root Source whose basename starts with .. is accepted", async () => 
     );
   } finally {
     await rm(parent, { recursive: true, force: true });
+  }
+});
+
+test("filesystem locations stay in the Workspace while Source ids remain closure-local", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hypit-workspace-source-id-"));
+  try {
+    const entryPath = join(root, "main.svml");
+    const childPath = join(root, "child.svml");
+    await writeFile(entryPath, "entry", "utf8");
+    await writeFile(childPath, "child", "utf8");
+    const session = await new NodeFilesystemWorkspace({ root, sourceAdapter: rawSourceAdapter }).open(entryPath);
+    const child = await session.resolveSource(session.entry.unit, { from: "./child.svml", alias: "child" });
+    const sameChild = await session.resolveSource(session.entry.unit, { from: "././child.svml", alias: "another-name" });
+    assert.equal(session.entry.unit.id, "source:0");
+    assert.equal(child.unit.id, "source:1");
+    assert.equal(sameChild.unit.id, child.unit.id);
+    assert.equal(session.sourceLocation?.(session.entry.unit), await realpath(entryPath));
+    assert.equal(session.sourceLocation?.(child.unit), await realpath(childPath));
+  } finally {
+    await rm(root, { recursive: true, force: true });
   }
 });
 

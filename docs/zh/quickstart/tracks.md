@@ -69,7 +69,7 @@ Cue 成员由 Script 的 Segment、Role 和作者写出的 `||` 决定；样式�
 Fine 不是一组互斥预设。基础/激活渐变、描边、阴影、长阴影、外发光、下划线、Pill
 和动画均为正交维度。文字、下划线和 Pill 各自选择 `off | current | trail`；因此可以直接表达“文字保留已读色，但 Pill 只跟随当前词”。`active-box-continuity: joined` 会把已读前缀在每个真实换行片段内连成一个背景，而不是给每个词分别套胶囊。
 
-包在 Author Declaration 中把参数分成 **Where / How / When**，Studio 直接消费这份作者协议，无需再维护字幕专用参数全集。`lead-frames`、`tail-frames` 先产生显式可见 Schedule；`handoff: cut` 负责相邻 Cue 的交接，`overlap` 则保留双方包络。二者都不会修改 Karaoke 使用的原始词帧。
+包把参数分成 **Where / How / When**，Studio 按照 Source 中的同一含义呈现它们。`lead-frames`、`tail-frames` 先产生显式可见 Schedule；`handoff: cut` 负责相邻 Cue 的交接，`overlap` 则保留双方包络。二者都不会修改 Karaoke 使用的原始词帧。
 
 `wrap: word` 优先在完整 Alignment Unit 之间换行；单个显示单元若比 Region 还宽，会继续在内部回退换行，不会逃出范围。`max-words-per-line` 直接构造真实行；声明 `max-lines` 后，超过行数预算的 Cue 会被拒绝，不会裁掉文字、描边、阴影或外发光。Cue 分界由 Script 的结构和 `||` 决定。
 
@@ -339,7 +339,7 @@ Track 都会作为独立输入进入 Film。输出 `{music-bed.audio}` 是普通
 | 属性 | 必填 | 描述 |
 |---|---|---|
 | `id` | 是 | 稳定的文字 occurrence 身份 |
-| 子内容或 `content` | 是 | 内联纯文本/富文本，或普通图 `Text` 引用；两种形式互斥 |
+| 子内容或 `content` | 是 | 内联纯文本/富文本，或 `Text` 引用；两种形式互斥 |
 | 时间 | 是 | `during={具名 Window}` |
 | 位置 | 是 | 与 occurrence 形式匹配的 `SpatialPoint`、`SpatialFrame` 或 `SpatialPath` |
 | `style` | 是 | 由 SVS Recipe 与精确字体字节共同编译出的 `text:Style` |

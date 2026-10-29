@@ -66,7 +66,7 @@ The authored value determines the editing relationship:
 - editing a direct literal changes that literal;
 - editing a named Timeline value changes its Timeline declaration;
 - editing a Narrative-produced value changes the mapping or Narrative source that produced it;
-- editing a reused value changes its producer and all consumers follow after recompilation.
+- editing a reused value changes its declaration and all uses follow after recompilation.
 
 Studio can display any resolved value. It offers source editing only where the package declares a
 meaningful author relation. Keep semantic relationships, absolute offsets and response duration as

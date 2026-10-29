@@ -41,10 +41,10 @@ test("Studio joins repeated local names through compiler-owned provenance", asyn
     closure: { entry: "a.svml", units: [] },
     program: { closure: { format: "hypit.closure@1", modules: [] }, records: [] },
     graph: {
-      format: "hypit.graph@1", candidates: [], operations: [],
+      format: "hypit.graph@1", operations: [],
       outputs: [
-        { id: "a::output::visual", type, primary: "a-candidate" },
-        { id: "b::output::visual", type, primary: "b-candidate" },
+        { id: "a::output::visual", type, primary: { kind: "operation-result", operation: "a" } },
+        { id: "b::output::visual", type, primary: { kind: "operation-result", operation: "b" } },
       ],
     },
     realizations: [],

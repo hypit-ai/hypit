@@ -29,7 +29,7 @@ export type CliDiagnostic = {
   readonly subject?: string;
 };
 
-export type CliBuildCatalogDescriptor = {
+export type CliBuildAuthoring = {
   readonly sourcePath: string;
   readonly invocationSourcePath?: string;
   readonly publication: PublicationIntent;
@@ -118,7 +118,7 @@ export type CliRuntime = CliRuntimeControl & CliCredentialControl & CliResultCon
     readonly id: string;
     readonly definition: BuildDefinition;
     readonly executionPackages?: readonly string[];
-    readonly catalog: CliBuildCatalogDescriptor;
+    readonly authoring: CliBuildAuthoring;
     readonly attachments?: readonly BlobAttachment[];
     readonly result: {
       readonly repository: CliResultRepositoryLocation;

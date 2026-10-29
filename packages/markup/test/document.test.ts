@@ -412,7 +412,7 @@ test("structured declarations preserve text and child order without exposing Mar
 
   const decoded = await decodeMarkupDeclarations({ name: "rich.svml", text: `<svml>
     <import from="example.document@1" as="lab"/>
-    <lab:Rich id="line"><lab:P>before <lab:Span>inside</lab:Span> after</lab:P></lab:Rich>
+    <lab:Rich id="line"><lab:P>before <!-- spelling only --><lab:Span>inside</lab:Span> after</lab:P></lab:Rich>
   </svml>` }, { resolveModule: options.resolveModule, syntax: richSyntax, compilers: declarations });
 
   assert.equal(decoded.records[0]?.value, "before [inside] after");

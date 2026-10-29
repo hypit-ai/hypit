@@ -52,7 +52,7 @@ The project keeps the work in ordinary files:
 - Reference notes explain the source video's structure and locatable details.
 - Brief and Treatment describe the user's goal and the Agent's creative answer.
 - `.svml` describes the Script, media, components, and composition; `.svs` holds reusable Recipes.
-- `.svrun` selects the Author Source, existing Outputs, and the targets for one execution.
+- `.svrun` selects the Author Source, target Outputs, and any transient realization override for one execution.
 - Build Results retain produced Outputs and the facts of that execution.
 
 Project components are part of making a video. They live with the project and can express a new

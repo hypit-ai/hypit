@@ -145,9 +145,9 @@ function endpoint(client: HiApiClient, pollIntervalMs: number, maxOperationMs: n
   return {
     async start(context) {
       try {
-        const route = hiApiRouteForCapability(context.need.capability);
+        const route = hiApiRouteForCapability(context.request.capability);
         assert(route !== undefined, "HiAPI does not implement this exact capability");
-        const request = route.prepare(context.need.constraints);
+        const request = route.prepare(context.request.constraints);
         await context.reportProgress?.({ phase: `Preparing HiAPI request: ${request.model}` });
         let body: Record<string, unknown>;
         body = await request.compile(resolverFor(request.mediaLimits, context, publicAssetUrl));
@@ -175,7 +175,7 @@ function endpoint(client: HiApiClient, pollIntervalMs: number, maxOperationMs: n
       let operationDeadlineAt: number | undefined;
       try {
         const handle = object(context.handle, "HiAPI handle") as unknown as Handle;
-        const route = hiApiRouteForCapability(context.need.capability);
+        const route = hiApiRouteForCapability(context.request.capability);
         assert(route !== undefined && handle.contract === "hypit.hiapi-operation@1" && handle.route === route.key, "HiAPI handle is invalid");
         const receipt = { id: handle.taskId };
         operationDeadlineAt = handle.startedAt + maxOperationMs;
@@ -204,7 +204,7 @@ function endpoint(client: HiApiClient, pollIntervalMs: number, maxOperationMs: n
     async collect(context) {
       try {
         const handle = object(context.handle, "HiAPI handle") as unknown as Handle;
-        const route = hiApiRouteForCapability(context.need.capability);
+        const route = hiApiRouteForCapability(context.request.capability);
         assert(route !== undefined && handle.route === route.key && Array.isArray(handle.urls), "HiAPI collection route differs");
         await context.reportProgress?.({ phase: "Receiving generated files" });
         const blobs: BlobRef[] = [];

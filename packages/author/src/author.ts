@@ -300,7 +300,7 @@ export function elaborateAuthorGraph(
   }
 
   const merged = mergeFragmentContributions(
-    { outputs: [], candidates: [], operations: [] },
+    { outputs: [], operations: [] },
     ...contributions,
   );
   const graph = sealAuthorGraph(merged);

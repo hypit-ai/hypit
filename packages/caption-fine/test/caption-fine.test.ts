@@ -6,6 +6,7 @@ import test from "node:test";
 
 import type { CaptionProgram, CaptionTiming } from "@hypit/caption";
 import { visualElements } from "@hypit/composition";
+import type { HtmlElement } from "@hypit/html-program";
 import type { FontArtifactRef } from "@hypit/media";
 import { captionDocument, parseScript } from "@hypit/script";
 import type { TimelineRegionSequence } from "@hypit/spatial-sequence";
@@ -18,6 +19,7 @@ import {
   renderFineCaption,
   scheduleFineCaption,
 } from "../src/index.js";
+import { cueElements } from "../src/render.js";
 
 const bounds = { xPx: 0, yPx: 0, widthPx: 1080, heightPx: 1920 } as const;
 
@@ -30,6 +32,42 @@ function renderCaption(
   regionBindings?: Parameters<typeof renderFineCaption>[6],
 ) {
   return renderFineCaption(schedule, program, document, timeline, bounds, regions, regionBindings);
+}
+
+function localElements(root: HtmlElement): readonly HtmlElement[] {
+  if (root.kind === "box") return [root, ...root.children.flatMap(localElements)];
+  if (root.kind === "program") return [root, ...root.slots.flatMap((slot) => localElements(slot.element))];
+  if (root.kind === "mask") return [root, ...localElements(root.mask), ...localElements(root.content)];
+  return [root];
+}
+
+function localCueElement(
+  document: Parameters<typeof renderFineCaption>[2],
+  program: CaptionProgram,
+  cue: ReturnType<typeof scheduleFineCaption>["cues"][number],
+  present: ReturnType<typeof renderFineCaption>["items"][number],
+  within: Parameters<typeof cueElements>[6] = bounds,
+  trackedPlacement?: Parameters<typeof cueElements>[7],
+): HtmlElement {
+  const durationFrames = present.span.endFrameExclusive - present.span.startFrame;
+  const atoms = cue.units.map((timing) => document.units.find((unit) => unit.id === timing.unitId)!);
+  const atomFrames = new Map(cue.units.map((timing) => [timing.unitId, {
+    start: Math.max(0, Math.min(durationFrames, timing.startFrame - present.span.startFrame)),
+    end: Math.max(0, Math.min(durationFrames,
+      Math.max(timing.endFrameExclusive - present.span.startFrame, timing.startFrame - present.span.startFrame + 1))),
+  }]));
+  const style = program.styles.find((candidate) => candidate.id === cue.styleId)!;
+  assert.notEqual(style.rendering, null);
+  return cueElements(
+    atoms,
+    atomFrames,
+    style.rendering!.parameters as Parameters<typeof cueElements>[2],
+    new Map(document.words.map((word) => [word.id, word])),
+    durationFrames,
+    cue.styleId,
+    within,
+    trackedPlacement,
+  );
 }
 
 const font: FontArtifactRef = {
@@ -137,7 +175,7 @@ test("Fine Caption schedules visibility outside semantic Word timing and cuts on
     { startFrame: 6, endFrameExclusive: 36 },
     { startFrame: 36, endFrameExclusive: 62 },
   ]);
-  const elements = visualElements(track.items[0]!.root);
+  const elements = localElements(localCueElement(document, program, schedule.cues[0]!, track.items[0]!));
   assert.ok(elements.some((element) => element.id === "line-break-1"));
   const cue = elements.find((element) => element.id === "cue");
   assert.equal(cue?.style.find((declaration) => declaration.name === "overflow")?.value, "visible");
@@ -186,13 +224,14 @@ test("Fine Caption uniformly springs the whole Cue through exact scales", () => 
     },
   }, [font]);
   const animatedProgram: CaptionProgram = { ...program, styles: [style] };
+  const schedule = scheduleFineCaption(projection, animatedProgram, document);
   const track = renderCaption(
-    scheduleFineCaption(projection, animatedProgram, document),
+    schedule,
     animatedProgram,
     document,
     sealTimeline({ id: "test-space", frameCount: 90, frameRate: { numerator: 30, denominator: 1 } }),
   );
-  const elements = visualElements(track.items[0]!.root);
+  const elements = localElements(localCueElement(document, animatedProgram, schedule.cues[0]!, track.items[0]!));
   const cueMotion = elements.find((element) => element.id === "cue-motion");
   const cueLoop = elements.find((element) => element.id === "cue-loop");
   const cue = elements.find((element) => element.id === "cue");
@@ -212,8 +251,7 @@ test("Fine Caption uniformly springs the whole Cue through exact scales", () => 
   assert.equal(scaleAt(2), 1.05);
   assert.equal(scaleAt(3), 0.95);
   assert.equal(declarationAt(0, "filter"), "none");
-  assert.ok(cueMotion?.kind === "box" && cueMotion.children.includes(cueLoop!));
-  assert.ok(cueLoop?.kind === "box" && cueLoop.children.includes(cue!));
+  assert.ok(cueMotion && cueLoop && cue);
   assert.equal(declarationAt(4, "transform"), "none");
   assert.equal(declarationAt(4, "filter"), "none");
 });
@@ -225,13 +263,15 @@ test("Fine Caption samples harmonic loop motion instead of aliasing it to rest",
     properties: { ...recipe.properties, loop: "shake" },
   }, [font]);
   const looping: CaptionProgram = { ...program, styles: [style] };
+  const schedule = scheduleFineCaption(projection, looping, document);
   const track = renderCaption(
-    scheduleFineCaption(projection, looping, document),
+    schedule,
     looping,
     document,
     sealTimeline({ id: "test-space", frameCount: 90, frameRate: { numerator: 30, denominator: 1 } }),
   );
-  const cueLoop = visualElements(track.items[0]!.root).find((element) => element.id === "cue-loop");
+  const cueLoop = localElements(localCueElement(document, looping, schedule.cues[0]!, track.items[0]!))
+    .find((element) => element.id === "cue-loop");
   const moved = (cueLoop?.animation?.keyframes ?? []).filter((keyframe) => {
     const value = keyframe.style.find((declaration) => declaration.name === "transform")?.value;
     return value !== "translateX(0px)" && value !== "none";
@@ -254,10 +294,15 @@ test("Fine Caption follows an explicitly bound region series and hides null Fram
       })),
     }],
   };
-  const track = renderCaption(scheduleFineCaption(projection, program, document), program, document, space, regions, {
+  const schedule = scheduleFineCaption(projection, program, document);
+  const bindings = {
     bindings: [{ role: "BOY", seriesId: "boy-head", missing: "hide" }],
-  });
-  const placement = visualElements(track.items[0]!.root).find((element) => element.id === "placement");
+  } as const;
+  const track = renderCaption(schedule, program, document, space, regions, bindings);
+  const placement = localElements(localCueElement(document, program, schedule.cues[0]!, track.items[0]!, bounds, {
+    frames: regions.series[0]!.frames.slice(track.items[0]!.span.startFrame, track.items[0]!.span.endFrameExclusive),
+    missing: "hide",
+  })).find((element) => element.id === "placement");
   const declarationAt = (frame: number, name: string): string | number | undefined =>
     placement?.animation?.keyframes[frame]?.style.find((declaration) => declaration.name === name)?.value;
   assert.equal(placement?.style.find((declaration) => declaration.name === "left")?.value, "0px");
@@ -277,10 +322,12 @@ test("Fine Caption keeps authored placement when a Cue Role has no explicit regi
     timelineId: space.id,
     series: [{ id: "wife-head", frames: Array.from({ length: 90 }, () => null) }],
   };
-  const track = renderCaption(scheduleFineCaption(projection, program, document), program, document, space, regions, {
+  const schedule = scheduleFineCaption(projection, program, document);
+  const track = renderCaption(schedule, program, document, space, regions, {
     bindings: [{ role: "WIFE", seriesId: "wife-head", missing: "hide" }],
   });
-  const placement = visualElements(track.items[0]!.root).find((element) => element.id === "placement");
+  const placement = localElements(localCueElement(document, program, schedule.cues[0]!, track.items[0]!))
+    .find((element) => element.id === "placement");
   assert.equal(placement?.style.find((declaration) => declaration.name === "left")?.value, "540px");
   assert.equal(placement?.style.find((declaration) => declaration.name === "top")?.value, "1728px");
   assert.equal(placement?.animation, undefined);
@@ -295,10 +342,14 @@ test("Fine Caption applies the bound authored-placement policy to null region Fr
     timelineId: space.id,
     series: [{ id: "boy-head", frames: Array.from({ length: 90 }, () => null) }],
   };
-  const track = renderCaption(scheduleFineCaption(projection, program, document), program, document, space, regions, {
+  const schedule = scheduleFineCaption(projection, program, document);
+  const track = renderCaption(schedule, program, document, space, regions, {
     bindings: [{ role: "BOY", seriesId: "boy-head", missing: "authored-placement" }],
   });
-  const placement = visualElements(track.items[0]!.root).find((element) => element.id === "placement");
+  const placement = localElements(localCueElement(document, program, schedule.cues[0]!, track.items[0]!, bounds, {
+    frames: regions.series[0]!.frames.slice(track.items[0]!.span.startFrame, track.items[0]!.span.endFrameExclusive),
+    missing: "authored-placement",
+  })).find((element) => element.id === "placement");
   const initial = placement?.animation?.keyframes[0]?.style;
   assert.equal(initial?.find((declaration) => declaration.name === "transform")?.value,
     "translate(540px,1728px) translate(-50%,-100%)");
@@ -309,9 +360,11 @@ test("Fine Caption resolves authored placement inside an arbitrary picture-plane
   const { document, program, projection } = fixture();
   const timeline = sealTimeline({ id: "test-space", frameCount: 90,
     frameRate: { numerator: 30, denominator: 1 } });
-  const track = renderFineCaption(scheduleFineCaption(projection, program, document), program, document, timeline,
+  const schedule = scheduleFineCaption(projection, program, document);
+  const track = renderFineCaption(schedule, program, document, timeline,
     { xPx: 100, yPx: 200, widthPx: 500, heightPx: 800 });
-  const placement = visualElements(track.items[0]!.root).find((element) => element.id === "placement");
+  const placement = localElements(localCueElement(document, program, schedule.cues[0]!, track.items[0]!,
+    { xPx: 100, yPx: 200, widthPx: 500, heightPx: 800 })).find((element) => element.id === "placement");
   const value = (name: string) => placement?.style.find((declaration) => declaration.name === name)?.value;
   assert.equal(value("left"), "350px");
   assert.equal(value("top"), "920px");
@@ -371,7 +424,8 @@ test("Fine Caption gives overlapping acoustic Words one current Karaoke owner", 
     document,
     sealTimeline({ id: "test-space", frameCount: 90, frameRate: { numerator: 30, denominator: 1 } }),
   );
-  const elements = visualElements(track.items[0]!.root);
+  const elements = localElements(localCueElement(document, karaokeProgram,
+    scheduleFineCaption(overlapped, karaokeProgram, document).cues[0]!, track.items[0]!));
   const firstActive = elements.find((element) => element.id === "atom-1-active");
   const secondActive = elements.find((element) => element.id === "atom-2-active");
   const opacityAt = (element: typeof firstActive, frame: number): string | number | undefined =>
@@ -395,12 +449,13 @@ function unevenChineseCaption(properties: Recipe["properties"] = {}) {
       startFrame: windows[index]![0], endFrameExclusive: windows[index]![1] })),
   };
   const styled = { ...program, styles: [style] };
-  const track = renderCaption(scheduleFineCaption(timed, styled, document), styled, document,
+  const schedule = scheduleFineCaption(timed, styled, document);
+  const track = renderCaption(schedule, styled, document,
     sealTimeline({ id: "test-space", frameCount: 90, frameRate: { numerator: 30, denominator: 1 } }));
-  return { track, windows };
+  return { track, windows, elements: localElements(localCueElement(document, styled, schedule.cues[0]!, track.items[0]!)) };
 }
 
-function numericStyleAt(element: import("@hypit/composition").VisualElement, frame: number, name: string): number {
+function numericStyleAt(element: HtmlElement, frame: number, name: string): number {
   const frames = element.animation!.keyframes;
   const left = [...frames].reverse().find((item) => item.atFrame <= frame)!;
   const right = frames.find((item) => item.atFrame > frame) ?? left;
@@ -416,13 +471,14 @@ for (const mode of ["current", "trail"] as const) test(`shared-text groups use e
       karaoke: mode, "karaoke-transition": "step", "active-box": mode, "active-underline": mode,
     } }, [font]);
     const styled = { ...program, styles: [style] };
-    return renderCaption(scheduleFineCaption(projection, styled, document), styled, document,
+    const schedule = scheduleFineCaption(projection, styled, document);
+    const track = renderCaption(schedule, styled, document,
       sealTimeline({ id: "test-space", frameCount: 90, frameRate: { numerator: 30, denominator: 1 } }));
+    return { track, elements: localElements(localCueElement(document, styled, schedule.cues[0]!, track.items[0]!)) };
   };
-  const track = make('<line><动效|><组件化|> || <直接|><复用|></line>');
-  assert.deepEqual(track, make('<line><动效|动效><组件化|组件化> || <直接|直接><复用|复用></line>'));
+  const { track, elements } = make('<line><动效|><组件化|> || <直接|><复用|></line>');
+  assert.deepEqual(track, make('<line><动效|动效><组件化|组件化> || <直接|直接><复用|复用></line>').track);
   const present = track.items[0]!;
-  const elements = visualElements(present.root);
   for (const [index, [start, end]] of [[10, 20], [20, 30]].entries()) {
     for (const suffix of ["active", "underline", "box"]) {
       const element = elements.find(item => item.id === `atom-${index + 1}-${suffix}`)!;
@@ -437,11 +493,10 @@ for (const mode of ["current", "trail"] as const) test(`shared-text groups use e
 
 for (const mode of ["current", "trail"] as const) {
   test(`Chinese ${mode} karaoke, underline and boxes follow unequal character times and pauses`, () => {
-    const { track, windows } = unevenChineseCaption({
+    const { track, windows, elements } = unevenChineseCaption({
       karaoke: mode, "active-underline": mode, "active-box": mode,
     });
     const present = track.items[0]!;
-    const elements = visualElements(present.root);
     for (const [index, [start, end]] of windows.entries()) {
       for (const suffix of ["active", "underline", "box"]) {
         const element = elements.find((item) => item.id === `atom-${index + 1}-${suffix}`)!;
@@ -461,9 +516,8 @@ for (const mode of ["current", "trail"] as const) {
 }
 
 test("Chinese wipe remains an explicit within-character effect with each character's own interval", () => {
-  const { track, windows } = unevenChineseCaption({ karaoke: "trail", "karaoke-transition": "wipe" });
+  const { track, windows, elements } = unevenChineseCaption({ karaoke: "trail", "karaoke-transition": "wipe" });
   const present = track.items[0]!;
-  const elements = visualElements(present.root);
   for (const [index, [start, end]] of windows.entries()) {
     const active = elements.find((item) => item.id === `atom-${index + 1}-active`)!;
     const clip = (frame: number) => active.animation!.keyframes
@@ -474,9 +528,8 @@ test("Chinese wipe remains an explicit within-character effect with each charact
 });
 
 test("Chinese typewriter reveals whole characters at their own starts, including uneven holds", () => {
-  const { track, windows } = unevenChineseCaption({ "atom-reveal": "typewriter", karaoke: "trail" });
+  const { track, windows, elements } = unevenChineseCaption({ "atom-reveal": "typewriter", karaoke: "trail" });
   const present = track.items[0]!;
-  const elements = visualElements(present.root);
   for (const [index, [start]] of windows.entries()) {
     for (const layer of ["base", "active"]) {
       const glyph = elements.find((item) => item.id === `atom-${index + 1}-${layer}-1-grapheme-1`)!;
@@ -495,14 +548,17 @@ test("Typewriter keeps combining graphemes whole and preserves unequal-width Lat
   const style = fineCaptionStyle("plain", { ...recipe,
     properties: { ...recipe.properties, "atom-reveal": "typewriter" } }, [font]);
   const styled = { ...program, styles: [style] };
-  const track = renderCaption(scheduleFineCaption(projection, styled, document), styled, document,
+  const schedule = scheduleFineCaption(projection, styled, document);
+  const track = renderCaption(schedule, styled, document,
     sealTimeline({ id: "test-space", frameCount: 90, frameRate: { numerator: 30, denominator: 1 } }));
   const text = visualElements(track.items[0]!.root).filter((element) => element.kind === "text");
+  const inspected = localElements(localCueElement(document, styled, schedule.cues[0]!, track.items[0]!));
   assert.deepEqual(text.map((element) => element.text), ["W", "i", "e\u0301"]);
-  assert.equal(numericStyleAt(text[0]!, 4, "opacity"), 1);
-  assert.equal(numericStyleAt(text[1]!, 8, "opacity"), 0);
-  assert.equal(numericStyleAt(text[1]!, 9, "opacity"), 1);
-  assert.equal(numericStyleAt(text[2]!, 14, "opacity"), 1);
+  const glyph = (id: string) => inspected.find((element) => element.id === id)!;
+  assert.equal(numericStyleAt(glyph("atom-1-base-1-grapheme-1"), 4, "opacity"), 1);
+  assert.equal(numericStyleAt(glyph("atom-1-base-1-grapheme-2"), 8, "opacity"), 0);
+  assert.equal(numericStyleAt(glyph("atom-1-base-1-grapheme-2"), 9, "opacity"), 1);
+  assert.equal(numericStyleAt(glyph("atom-2-base-1-grapheme-1"), 14, "opacity"), 1);
 });
 
 test("Caption handoff follows placed time and retains simultaneous spoken envelopes", () => {
@@ -577,24 +633,26 @@ test("Fine uses author separators in ordinary text, shared groups, active copies
     const document = captionDocument(parseScript("spacing", `<line>${source}</line>`), "story.caption", "story");
     const timed: CaptionTiming = { ...projection,
       units: document.units.map((unit, index) => ({ unitId: unit.id, startFrame: 10 + index * 5, endFrameExclusive: 15 + index * 5 })) };
-    const present = renderCaption(scheduleFineCaption(timed, styled, document), styled, document,
+    const schedule = scheduleFineCaption(timed, styled, document);
+    const present = renderCaption(schedule, styled, document,
       sealTimeline({ id: "test-space", frameCount: 90, frameRate: { numerator: 30, denominator: 1 } })).items[0]!;
-    return visualElements(present.root);
+    const html = localElements(localCueElement(document, styled, schedule.cues[0]!, present));
+    return { terminals: html, html };
   };
   const grouped = render("<3개월 만에|> 완료했습니다");
   for (const id of ["atom-1-base-2", "atom-1-active-2", "atom-1-underline-2"]) {
-    assert.equal(grouped.find(element => element.id === id)!.style.some(style => style.name === "margin-left"), false);
+    assert.equal(grouped.html.find(element => element.id === id)!.style.some(style => style.name === "margin-left"), false);
   }
   for (const id of ["atom-1-base-3", "atom-1-active-3", "atom-1-underline-3"]) {
-    assert.equal(grouped.find(element => element.id === id)!.style.find(style => style.name === "margin-left")?.value, "14px");
+    assert.equal(grouped.html.find(element => element.id === id)!.style.find(style => style.name === "margin-left")?.value, "14px");
   }
-  const backgroundWords = grouped.filter(element => element.id.startsWith("joined-group-") && element.kind === "text");
+  const backgroundWords = grouped.terminals.filter(element => element.id.startsWith("joined-group-") && element.kind === "text");
   assert.deepEqual(backgroundWords.map(element => element.kind === "text" && element.text), ["3", "개월", "만에", "완료했습니다"]);
-  assert.equal(grouped.find(element => element.id === "joined-group-0-word-2")!.style.find(style => style.name === "margin-left")?.value, "14px");
-  assert.equal(grouped.find(element => element.id === "joined-gap-1")!.kind, "text");
+  assert.equal(grouped.html.find(element => element.id === "joined-group-0-word-2")!.style.find(style => style.name === "margin-left")?.value, "14px");
+  assert.equal(grouped.terminals.find(element => element.id === "joined-gap-1")!.kind, "text");
   const chinese = render("是的 就是这样");
-  assert.equal(chinese.find(element => element.id === "gap-2")!.style.find(style => style.name === "letter-spacing")?.value, "14px");
-  assert.equal(chinese.find(element => element.id === "atom-2-entry")!.style.some(style => style.name === "margin-left"), false);
+  assert.equal(chinese.html.find(element => element.id === "gap-2")!.style.find(style => style.name === "letter-spacing")?.value, "14px");
+  assert.equal(chinese.html.find(element => element.id === "atom-2-entry")!.style.some(style => style.name === "margin-left"), false);
   const joined = render("3D");
-  assert.equal(joined.some(element => element.style.some(style => (style.name === "column-gap" || style.name === "margin-left") && style.value !== "0px")), false);
+  assert.equal(joined.html.some(element => element.style.some(style => (style.name === "column-gap" || style.name === "margin-left") && style.value !== "0px")), false);
 });

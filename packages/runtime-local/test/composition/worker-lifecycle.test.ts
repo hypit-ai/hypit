@@ -72,7 +72,7 @@ test("project local Runtime advances, polls and cancels work with replaceable pa
     name: "generated.text",
     ref: { kind: "logical-output" as const, id: "generated" },
   }];
-  const catalog = {
+  const authoring = {
     sourcePath: join(directory, "main.svml"),
     publication: publication(publishedOutputs, buildFixture),
   };
@@ -157,7 +157,7 @@ test("project local Runtime advances, polls and cancels work with replaceable pa
     const first = await firstRuntime.build({
       id: "bld_20260902T120000001Z_0000000001",
       definition: definition(initial),
-      catalog,
+      authoring,
       result: resultDestination(directory),
     });
     assert("view" in first);

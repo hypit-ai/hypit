@@ -10,9 +10,9 @@ import { runCliApplication } from "../../src/application.js";
 import type { CliIo } from "../../src/output.js";
 import { resolveProjectRoot } from "@hypit/project";
 import { findRuntimeProfile, selectRuntimeProfile } from "@hypit/runtime-local";
-import { createLocalRuntimeCliCommandModules } from "../../../runtime-local/src/cli.js";
-import type { LocalRuntimeCliDistribution } from "../../../runtime-local/src/cli.js";
-import type { LocalRuntimeHost } from "../../../runtime-local/src/host-api.js";
+import { createLocalRuntimeCliCommandModules } from "@hypit/runtime-local/cli";
+import type { LocalRuntimeCliDistribution } from "@hypit/runtime-local/cli";
+import type { LocalRuntimeHost } from "@hypit/runtime-local";
 import { cliDistribution } from "../distribution-scenario.js";
 import { runtimeControl } from "../control-scenario.js";
 

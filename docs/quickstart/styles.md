@@ -179,7 +179,7 @@ visual.product {
 | `border-*`, `shadows` | Frame-owned border and ordered shadows |
 | `motion` / `Pose` | Optional typed affine and opacity states over the Clip-local clock |
 
-Position remains an explicit graph edge:
+Position remains an explicit Source reference:
 
 ```svml
 <space:Frame id="product-frame" within={vertical.bounds}
@@ -300,8 +300,8 @@ order. `podcast-v1` and `call-v1` read the corresponding
 `framing`, `edit-language`, `pacing`, `performance`, `reaction` and `gesture` axes with their own
 finite values. The selected Kit file is the authority for allowed values and defaults.
 
-Model, resolution, duration and reference media are not template policy. They stay on the exact
-model declaration and graph edges.
+Model, resolution, duration and reference media remain explicit on the model declaration and its
+Source references.
 
 ## Exact font declarations
 
@@ -326,10 +326,8 @@ video project's `package.json`. The ordinary lockfile fixes their actual version
 | `weight` | Exact selected face weight |
 | `style` | Selected style: `normal` or a package-supported `italic` |
 
-Hypit carries no finite font catalog and does not install a family during compilation. The adapter
-reads the selected package's metadata, CSS and font files as data, and the compiler turns those
-installed bytes into Resource-backed font values. A build performs no download and the Runtime
-never guesses a font:
+Fonts come from the `@fontsource` packages installed by the project. Their metadata, CSS and font
+files become Resource-backed font values:
 
 ```svml
 <caption-fine:Style id="dialogue" recipe={recipes.caption.dialogue}
@@ -338,8 +336,8 @@ never guesses a font:
 
 `media:FontStack` emits one generic `FontStackRef`; its primary and fallbacks preserve their own honest
 metadata. The Caption Recipe does not repeat family, weight or style. CJK and Emoji can be split into several
-Unicode-range files while remaining one logical graph edge. Terminal Text and Fine Caption reject
-an omitted stack; machine-font fallback is not part of Visual IR.
+Unicode-range files while remaining one font stack. Terminal Text and Fine Caption require that
+stack explicitly.
 For a symbol with both text and Emoji presentation, write the authored Unicode Emoji sequence
 (for example `☎️`, including VS16); no package rewrites display text to force color.
 

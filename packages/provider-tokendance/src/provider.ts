@@ -152,9 +152,9 @@ function resolverFor(client: TokenDanceClient, route: TokenDanceRoute, context: 
 }
 
 async function prepare(client: TokenDanceClient, context: EndpointInvocationContext, publicAssetUrl: CreateTokenDanceProviderOptions["publicAssetUrl"]) {
-  const route = tokenDanceRouteForCapability(context.need.capability);
+  const route = tokenDanceRouteForCapability(context.request.capability);
   assert(route !== undefined, "TokenDance does not implement this exact capability");
-  const request = route.prepare(context.need.constraints);
+  const request = route.prepare(context.request.constraints);
   await context.reportProgress?.({ phase: `Preparing TokenDance request: ${request.model}` });
   const body = JSON.stringify(await request.compile(resolverFor(client, route, context, publicAssetUrl)));
   const cap = route.mediaLimits.body;
@@ -222,7 +222,7 @@ function endpoint(client: TokenDanceClient, pollIntervalMs: number, maxOperation
       let operationDeadlineAt: number | undefined;
       try {
         const handle = object(context.handle, "TokenDance handle") as unknown as Handle;
-        const route = tokenDanceRouteForCapability(context.need.capability);
+        const route = tokenDanceRouteForCapability(context.request.capability);
         assert(route !== undefined && handle.contract === "hypit.tokendance-operation@1" && handle.route === route.key && route.protocol !== "ark-image", "TokenDance handle is invalid");
         const receipt = { id: handle.taskId };
         operationDeadlineAt = handle.startedAt + maxOperationMs;
@@ -243,7 +243,7 @@ function endpoint(client: TokenDanceClient, pollIntervalMs: number, maxOperation
     async collect(context) {
       try {
         const handle = object(context.handle, "TokenDance handle") as unknown as Handle;
-        const route = tokenDanceRouteForCapability(context.need.capability);
+        const route = tokenDanceRouteForCapability(context.request.capability);
         assert(route !== undefined && handle.route === route.key, "TokenDance collection route differs");
         await context.reportProgress?.({ phase: "Receiving generated video" });
         const blobs = await store(client, [httpsUrl(handle.url, "TokenDance handle")], context.resources);

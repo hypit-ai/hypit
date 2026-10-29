@@ -14,7 +14,6 @@ import type { CapabilityRef, TypedRecord } from "@hypit/protocol";
 
 import type { CliDistribution } from "../../src/distribution.js";
 import { cliDistribution } from "../distribution-scenario.js";
-import { createCatalogDescriptor } from "../../src/build-planning.js";
 import { runCli } from "../../src/main.js";
 import {
   completedRecords,
@@ -27,7 +26,7 @@ import {
   valueType,
 } from "./build-result-scenario.js";
 
-test("a failed Result exposes task receipts and credential references without a Runtime", async () => {
+test("a failed Result exposes task receipts without a Runtime", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-receipts-"));
   const id = "bld_20260906T110000000Z_0000000001";
   try {
@@ -37,7 +36,6 @@ test("a failed Result exposes task receipts and credential references without a 
     const operation = {
       operation: "op-1", command: "need-1", endpoint: "selected-account", pool: "my-pool",
       need: { id: "generation-1", capability: generationCapability },
-      credentials: { apiKey: { store: "os", key: "personal-api-key" } },
       receipt: { id: "remote-task-1" }, status: "failed" as const,
       failure: { code: "DOWNLOAD_FAILED", message: `HTTP 502; request=req-example; ${"public reason ".repeat(35)}last diagnostic detail` },
       createdAt: 1, acknowledgedAt: 2,

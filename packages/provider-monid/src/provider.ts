@@ -184,9 +184,9 @@ function endpoint(client: MonidClient, pollIntervalMs: number, maxOperationMs: n
   return {
     async start(context) {
       try {
-        const route = monidRouteForCapability(context.need.capability);
+        const route = monidRouteForCapability(context.request.capability);
         assert(route !== undefined, "Monid does not implement this exact capability");
-        const request = route.prepare(context.need.constraints);
+        const request = route.prepare(context.request.constraints);
         await context.reportProgress?.({ phase: `Preparing Monid request: ${request.service} ${request.endpoint}` });
         const input = await request.compile(resolverFor(client, context, publicAssetUrl));
         await context.reportProgress?.({ phase: `Submitting Monid request: ${request.service} ${request.endpoint}` });
@@ -218,7 +218,7 @@ function endpoint(client: MonidClient, pollIntervalMs: number, maxOperationMs: n
       let operationDeadlineAt: number | undefined;
       try {
         const handle = object(context.handle, "Monid handle") as unknown as Handle;
-        const route = monidRouteForCapability(context.need.capability);
+        const route = monidRouteForCapability(context.request.capability);
         assert(route !== undefined && handle.contract === "hypit.monid-operation@1" && handle.route === route.key, "Monid handle is invalid");
         const receipt = { id: handle.runId };
         operationDeadlineAt = handle.startedAt + maxOperationMs;
@@ -240,7 +240,7 @@ function endpoint(client: MonidClient, pollIntervalMs: number, maxOperationMs: n
     async collect(context) {
       try {
         const handle = object(context.handle, "Monid handle") as unknown as Handle;
-        const route = monidRouteForCapability(context.need.capability);
+        const route = monidRouteForCapability(context.request.capability);
         assert(route !== undefined && handle.route === route.key, "Monid collection route differs");
         const urls = handle.urls ?? [];
         assert(urls.length > 0, "Monid handle carries no result");

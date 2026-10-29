@@ -74,7 +74,7 @@ export function createLocalMediaProvider(config: CreateLocalMediaProviderOptions
   const operation = (
     execute: (env: MediaExecutionEnvironment, constraints: never) => Promise<MediaOperationResult>,
   ) => async (context: EndpointInvocationContext): Promise<Value> =>
-    fulfillment(await execute(environment(context), context.need.constraints as never));
+    fulfillment(await execute(environment(context), context.request.constraints as never));
 
   return defineEndpoint({
     instance: config.instance ?? "media.local",

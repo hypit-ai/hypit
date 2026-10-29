@@ -82,7 +82,7 @@ test("the local Provider returns only a new image Blob", async () => {
   assert.equal(resolution.registration.kind, "immediate");
   const result = await resolution.registration.handler({
 
-    need: request, resources, credentials: {},
+    request: request, resources, credentials: {},
   });
   assertBlobRef(result);
   assert.equal(result.mediaType, "image/png");
@@ -109,7 +109,7 @@ test("the local Provider composes ordered Layers into exact Canvas pixels", asyn
   assert.equal(resolution.registration.kind, "immediate");
   const result = await resolution.registration.handler({
 
-    need: request, resources, credentials: {},
+    request: request, resources, credentials: {},
   });
   assertBlobRef(result);
   const output = await resources.get(result.resource);

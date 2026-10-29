@@ -169,13 +169,13 @@ export function createLocalOpenCvImageProvider(config: CreateLocalOpenCvImagePro
       capability: imageOperationsCapabilities.transform,
       returns: blobTypes.blob,
       handler: async (context): Promise<Value> =>
-        await execute("transform", transformRequest(context.need.constraints), context),
+        await execute("transform", transformRequest(context.request.constraints), context),
     }, {
       lifecycle: "immediate" as const,
       capability: imageOperationsCapabilities.compose,
       returns: blobTypes.blob,
       handler: async (context): Promise<Value> =>
-        await execute("compose", composeRequest(context.need.constraints), context),
+        await execute("compose", composeRequest(context.request.constraints), context),
     }],
   });
 }

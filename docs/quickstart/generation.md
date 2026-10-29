@@ -65,8 +65,8 @@ hypit estimate main.svml --segment hook --language en --pace normal --rounding r
 
 `hypit estimate` counts pronunciation units of the Segment's speech at a delivery policy — `language`,
 `pace` (`slow = 4.2`, `normal = 4.6`, `fast = 5.6` syllables per second for English) or a numeric
-`rate` and `rounding` — with no external call. Nothing in the graph computes a duration,
-so the requested durations are available before a Build starts. Use the estimate to shape the
+`rate` and `rounding` — with no external call. The command returns a requested duration before a
+Build starts. Use the estimate to shape the
 wording and choose a supported request duration; the produced performance supplies actual word timing.
 
 ## text:Value
@@ -89,7 +89,7 @@ declared text port.
 | `id` | yes | Unique identifier |
 
 The element body is the exact Text value. `text:Render` can produce the same type from a template
-and explicit graph inputs.
+and explicit Source inputs.
 
 ## Seedance invocation shapes
 
@@ -166,8 +166,8 @@ Common attributes are `id`, `model`, `prompt`, `duration`, `resolution`, `aspect
 `generate-audio`. `duration` is a literal in whole seconds inside the model's range, estimated
 beforehand with `hypit estimate`.
 
-The audio generated in an earlier take can be reused as a later reference through an ordinary graph
-edge. Extraction does not turn it into speech evidence or attach speaker meaning:
+The audio generated in an earlier take can be reused as a later reference. Extraction preserves it
+as audio without attaching speech evidence or speaker meaning:
 
 ```svml
 <mediaop:ExtractAudio id="voice-from-opening"
@@ -182,8 +182,8 @@ edge. Extraction does not turn it into speech evidence or attach speaker meaning
 
 The same media-operation package exposes `Transform` for ordered trim, constant retime and exact
 rate profiles resolved against the prepared source's actual duration, plus `ExtractFrame` for
-first, last, indexed or timestamped still extraction. Local FFmpeg implements these exact Needs. Another compatible Runtime Endpoint can be selected
-without changing the author graph.
+first, last, indexed or timestamped still extraction. Local FFmpeg implements these operations. A
+compatible Runtime Endpoint can be selected through the Runtime Profile.
 
 ## Seedance semantic Kits
 
@@ -317,7 +317,7 @@ module. The result enters Seedance through the same explicit `prompt` edge as an
 ```
 
 `speaker-v1.svs` selects its own Text Template Frontend. `recipes.svs` supplies the named axis values;
-`dialogue` and `action` remain ordinary graph inputs. Neither the Kit nor Text chooses a model,
+`dialogue` and `action` remain explicit Source inputs. Neither the Kit nor Text chooses a model,
 reference media or generation endpoint.
 
 ## Combination example

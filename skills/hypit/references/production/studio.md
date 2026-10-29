@@ -31,9 +31,8 @@ When launching from another directory, use `--project` to select the project and
 path from the current directory, as shown in [project boundaries](../creation/project-files.md#establish-the-project-boundary).
 
 Studio watches its loaded Author/Recipe Sources and the saved Invocation Source when present, then recompiles after changes.
-Changing package code, adding a package import, changing Companion activation, or selecting another
-Runtime or Result repository requires restarting that Studio session: those implementations and
-selections are loaded at startup. A browser refresh alone does not reload the server-side modules.
+Changing package code, adding a package import or Studio control, or selecting another
+Runtime or Result repository requires restarting that Studio session.
 Stop only the relevant Studio process; stopping Studio does not cancel a submitted Build.
 
 ## Choose the interface language
@@ -112,7 +111,7 @@ pass, read the latest file. [Composition review](review.md) explains the judgmen
 ## Review before export
 
 For visual inspection, use [snapshot](snapshots.md) on this session first. It reads the current
-compiled `HtmlProgram` and selected resources, captures exact original frames, and writes PNGs with
+compiled HTML Programme and selected resources, captures exact original frames, and writes PNGs with
 optional grids. Studio remains the interactive view for playback, sound and editing.
 
 
@@ -160,7 +159,7 @@ include when the user wants to continue editing on another machine.
 | View | What it shows and what it can change |
 | --- | --- |
 | Source | The exact Author closure and optional saved Invocation Source. Select a file and use Edit source; changes save automatically, and Cmd/Ctrl+S saves immediately. Check save/error state. This is not a project filesystem browser. |
-| Preview | The selected Film composition evaluated from its compiled `HtmlProgram` in the browser. Play or seek with the transport or timeline. Selecting a component-declared visual part selects its corresponding timeline Item; adjust its exposed position in the Inspector. |
+| Preview | The selected Film composition evaluated from its compiled HTML Programme in the browser. Play or seek with the transport or timeline. Selecting a component-declared visual part selects its corresponding timeline Item; adjust its exposed position in the Inspector. |
 | Timeline | Projected domain evidence, resolved named Instants, plus component-projected Track Items and their visible intervals, materials or event lanes. A rectangle may describe occupancy, activation or persistent visibility; read the component's meaning. |
 | Inspector | With nothing selected, project, Canvas, time and Invocation facts. For a selected Item, its declared read-only facts and adjustable fields, organized under Where, When and How where applicable. |
 | Tasks | One card per Build, grouped into ongoing and finished. Active status and progress come from the selected Runtime; completed, failed and cancelled Builds come from project Results. Cards retain an Invocation Source when one was saved, times and any failure or attention reason. |
@@ -192,8 +191,8 @@ display closure needs no unresolved Endpoint work. Active Runtime status and tra
 processing require the selected environment.
 
 Studio opens the selected work for interactive playback and editing. It creates no Build and submits
-no paid generation. It can evaluate deterministic Producers and the exact immediate capabilities a
-Provider permits for transient authoring, such as media inspection and frame or audio extraction.
+no paid generation. It can preview deterministic package behavior and use immediate authoring tools
+offered by the selected Provider, such as media inspection and frame or audio extraction.
 The view reads project resources and authored realization choices, plus any Invocation-local override.
 If a required generation
 is still running, continue component work and open its resulting composition when the material is ready.
@@ -246,10 +245,10 @@ Composition edits return to the ordinary Sources; they do not create a second St
 ## Give a project component a useful Companion
 
 A Companion makes the component's own production relationships legible and editable: a board's
-lifetime, a reveal event, a Cue's actual Style, or a scene's layout choices. Its Producers still own
-the rendered work. Generic Track projection is useful when no additional authoring concepts are
-needed; a component with meaningful child events or controls can publish those directly.
+lifetime, a reveal event, a Cue's actual Style, or a scene's layout choices. Ordinary Track Items are
+enough when no additional authoring concepts are needed; a component with meaningful child events or
+controls can present those directly.
 
-Read [Companion authoring](studio-companions.md) for Items and child lanes, picture selection,
-parameter controls, unit conversion, semantic writeback and package activation. It builds on the
+Read [Companion authoring](studio-companions.md) for Items and child lanes, picture selection and
+parameter controls. It builds on the
 same [component design](component-design.md) decisions used to make the video.

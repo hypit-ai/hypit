@@ -1,29 +1,31 @@
 ---
 title: Timing edits in Studio
-description: Edit the declaration that produced an absolute Instant or Window.
+description: Move and trim named Instants and Windows while preserving their authored meaning.
 ---
 
-Components use absolute Instants and Windows. Studio follows the graph to the value's producer and
-edits that declaration; it does not ask every visual, audio, caption or text component to understand
-the source domain.
+Components use named absolute Instants and Windows. Studio edits the Source declaration that gives the
+selected Item its time.
 
-## Absolute declarations
+## Direct time declarations
 
-| Author form | Moving it changes | Trimming it changes |
+| Source form | Moving it changes | Trimming it changes |
 | --- | --- | --- |
 | `from="2s" for="8f"` | `from`; duration remains eight frames | leading: `from` + `for`; trailing: `for` |
 | `until="3s" for="8f"` | `until`; duration remains eight frames | leading: `for`; trailing: `until` + `for` |
 | `from="1s" until="3s"` | both endpoints by the same delta | the selected endpoint |
-| named Window declared with `from`/`until`/`for` | the named declaration | the selected relation |
-| component `during={named-window}` | the named value's producer | the named value's producer |
+| component `during={named-window}` | the named Window declaration | the selected relation in that declaration |
 
-An Instant reference behaves the same way: component `at={claim}` follows the declaration that
-produced `claim`. Clock literals belong on named Timeline or standalone declarations, not on the
-component surface.
+An Instant reference behaves the same way: `at={claim}` edits the named declaration for `claim`.
+Each drag keeps the part that did not change: a leading trim keeps the old end, a trailing trim keeps
+the old start, and a move keeps the old duration.
 
-## Domain-produced values
+Unedited expressions retain their units. `2s` remains two seconds when frame rate changes, while
+`60f` remains sixty frames. A changed position is written on a whole frame boundary for the current
+Timeline.
 
-Narrative time is projected before it reaches the component:
+## Semantic time
+
+Semantic time is projected before a component uses it:
 
 ```svml
 <semantic:Projection id="story-time" narrative={story} timeline={film.timeline}>
@@ -36,27 +38,13 @@ Narrative time is projected before it reaches the component:
 <deck:Card at={reveal} .../>
 ```
 
-The Narrative projection declaration retains the Selection or Moment relation required by its
-Companion. Editing that declaration may move Script anchors, and every consumer follows after recompilation.
-The consumers themselves receive only completed absolute values. A future beat projector can offer
-different editing rules while publishing the same Temporal types.
+When the selected component supports that edit, moving `proof` or `reveal` changes the corresponding
+Script anchors and every use updates after recompilation. The component continues to use an ordinary
+absolute Window or Instant.
 
-If a producer declares no inverse, the resolved value remains usable but Studio does not guess a
-write target. This keeps shared meaning, local clock values and component behavior separate.
-
-Each drag is solved as one complete constraint. A leading trim keeps the old end, a trailing trim
-keeps the old start, and a move keeps the old duration. Studio follows the executed Temporal graph
-to the exact author endpoints and commits every required source change together.
-
-Named values constructed inside `<time:Timeline>` follow the same rule. Timeline Author retains the
-child declaration that owns each literal offset or duration, so Studio can edit that exact
-`Instant.at`, `Window.from`, `Window.until` or `Window.for` value. Bare references continue upstream;
-an `earliest(...)` or `latest(...)` expression stays read-only when changing it would require choosing
-one branch on the author's behalf.
-
-Unedited expressions retain their units: `2s` remains two seconds when frame rate changes, whereas
-`60f` remains sixty frames. A changed clock value is written on a whole frame boundary for the
-current Timeline.
+Some expressions have several possible author choices. For example, changing `earliest(...)` or
+`latest(...)` would require choosing one branch. Studio presents such values as read-only; edit the
+intended Source expression directly.
 
 [Studio](../quickstart/preview.md) explains the editing interface. The
-[Companion guide](./studio-companion-architecture.md) explains package-owned Items and controls.
+[Companion guide](./studio-companions.md) explains component Items and controls.

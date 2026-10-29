@@ -51,7 +51,7 @@ test("Visual Adjustment validates generic programme shape and Adjustment-only ac
     /duplicate Visual Item first/u);
   assert.throws(() => assertVisualAdjustmentSet({ items: [{
     kind: "present", id: "wrong", span: window.span,
-    root: { id: "root", kind: "box", style: [], children: [] },
+    root: { id: "root", kind: "program", program: effect("example.present@1"), slots: [] },
   }] } as never), /accepts only Adjustment items/u);
 });
 

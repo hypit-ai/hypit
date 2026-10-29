@@ -50,7 +50,6 @@ test("Script has one package-owned meaning through direct and Markup declaration
 
   assert.deepEqual(markup.records, direct.records);
   assert.deepEqual(markup.exports, direct.exports);
-  assert.deepEqual(markup.identities, direct.identities);
 
   const parsed = parseScript("story.svml", body, bodyStart);
   const segment = parsed.segments[0]!;

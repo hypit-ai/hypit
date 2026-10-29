@@ -4,7 +4,7 @@ Environment-neutral execution of commands produced by the domain-neutral Kernel.
 
 `ProducerRegistry` installs deterministic component handlers. `EndpointRegistry` installs exact
 capability implementations. `Executor.prepare()` regenerates the current commands from Core and
-classifies each as runnable or blocked; it does not search the graph or choose a candidate.
+classifies each as runnable or blocked; it does not search the graph or choose a realization.
 
 Producer handlers receive immutable typed inputs. External work is represented by a declared Need
 and fulfilled by an exact endpoint. When several endpoints offer the same capability, the Runtime

@@ -413,7 +413,7 @@ export function projectVisualTrack(timeline: Timeline, program: VisualTrackProgr
   });
   const track = sealVisualTrack({
     timelineId: timeline.id,
-    visualIr: "hypit.visual-ir@1",
+
     id: program.id,
     items,
   });

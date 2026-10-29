@@ -8,14 +8,11 @@ A **Provider** knows how to fulfill that request through a particular service. A
 configured instance of that Provider, with its service address, credential reference and capacity.
 The Runtime Profile binds the requested capability to an Endpoint.
 
-Hypit's official Distribution selects local Providers and the HypiHub Provider as defaults.
-TokenDance, HiAPI, Pollo, BeatAPI and Monid Providers are independently versioned optional npm packages, not default dependencies.
-Install the chosen Provider in the video project, e.g. `npm install @hypit/provider-hiapi`.
-Other services connect through packages owned by the
-production or their authors. The Agent can implement a new service through the public SDK, just as
-it can create a visual component for a video.
-[Model and deployment services](./service-partners.md) introduces independent partners through that
-same path. Choosing a service is separate from [choosing an Agent environment](./agents.md).
+The starter Profile includes local services and HypiHub. Other services connect through a Provider
+package installed by the video project. Tell the Agent which service you want and provide its API
+documentation; the Agent can install an available package or create a project Provider.
+[Model and deployment services](./service-partners.md) introduces service choices. Choosing a service
+is separate from [choosing an Agent environment](./agents.md).
 
 HypiHub is the recommended integrated hosted service. **BYOK** means bringing an account's own
 API key: the key connects to the service that issued it, through a compatible Provider. Tell the
@@ -61,37 +58,19 @@ deployment and executing a video Build have separate lifetimes.
 
 ## Add a Model
 
-Develop a project package against `@hypit/generation/model`, `@hypit/generation`,
-`@hypit/hypit/author`, `@hypit/hypit/producer`, `@hypit/hypit/refinement` and `@hypit/hypit/markup`.
-Declare the complete request shape and validator, result type and capability. Its author declaration
-connects prompt Text and reference media to the request, then publishes the resulting media as a
-normal graph Output.
-
-The [Generation Model authoring API](https://github.com/hypit-ai/hypit/blob/main/packages/generation/README.md#model-contract) includes a
-request definition and explains activation. The package owns the model interface; credentials and
-HTTP mapping belong to the Provider.
+Create a project package when the service introduces a request shape that the installed Models do not
+describe. Define the prompt, reference roles, supported choices and output media from the author's
+point of view. The [Generation package README](https://github.com/hypit-ai/hypit/blob/main/packages/generation/README.md#model-contract)
+provides the exact API and a package example for the selected release. Credentials and HTTP mapping
+belong to the Provider.
 
 ## Add a Provider
 
-Use the selected `@hypit/hypit` release as a development dependency and import the public SDK:
-
-```ts
-import { defineEndpointPackage } from "@hypit/hypit/endpoint";
-import type { AsyncEndpoint, CredentialRef, EndpointRequest } from "@hypit/hypit/endpoint";
-```
-
-Implement the exact capabilities and result types the service supports. Adapt each selected Model's
-complete request to the service API, resolve the declared credentials, and return its results. An immediate operation
-returns directly; a remote task can submit an ID, poll for completion and collect the output files.
-Concurrency and action limits belong to the Endpoint's resource declarations.
-
-A genuine failure ends that execution attempt. Build Results preserve completed Outputs and public
-task receipts. Further work exports suitable Outputs into the project, selects them in the Author Source, and uses a new Invocation and Build.
-
-The [Endpoint SDK](https://github.com/hypit-ai/hypit/blob/main/packages/endpoint/README.md)
-owns the handler interfaces, activation, resource declarations and pricing API. Compile the package
-to JavaScript and install it in the project through its package manager. Configure its Endpoint
-under `endpoints` and select it in `bindings` in the [Runtime Profile](./runtime.md).
+Create a project Provider package to connect a selected Model to an API or local service. Implement
+the request forms and limits that service actually supports, install the package with the project,
+then configure it under `endpoints` and select it through `bindings` in the
+[Runtime Profile](./runtime.md). The [Endpoint package README](https://github.com/hypit-ai/hypit/blob/main/packages/endpoint/README.md)
+owns the exact TypeScript API and package fields.
 
 The [complete project Provider example](https://github.com/hypit-ai/hypit/tree/main/examples/provider-package)
 demonstrates reference uploads, task receipts, collection and pricing using an illustrative API.
@@ -107,30 +86,11 @@ That difference belongs to the Provider: report it from the capability's `suppor
 the request with a reason, rather than editing the shared Model or silently narrowing the author's
 request.
 
-## Model a remote video task
-
-A service that renders video usually submits a job, polls it and then downloads the result, which
-the Endpoint SDK expresses as three separate actions:
-
-- `start` submits the request and returns `pending` with the service's task id. The HTTP bound covers
-  the API call, not the render, so `start` returns as soon as the service accepts the job. Record the
-  task id through `checkpoint` before returning, so an interrupted Build still names the remote work
-  it began.
-- `poll` returns `pending` while the job runs, `ready` when it finishes, or `failed` with the
-  service's own error code. Return `wakeAfter(handle, delayMs)` to schedule the next check.
-- `collect` downloads the finished media and stores it through `context.resources`, returning the
-  Model's declared result value. Keeping collection separate from polling lets download capacity be
-  configured independently of task capacity.
-
-Inputs whose bytes do not exist until an upstream step runs stay ordinary graph edges. The URL
-resolver passed to `compileWireRequest` is where your Provider uploads a reference and returns the
-service's URL for it, so no other part of the system learns the service's upload protocol.
-
 ## Prices and permission
 
 The Provider declares local work without a Provider charge, or supplies its published pricing page.
 It can also read current rates using the Endpoint's credentials and return a concise summary with
-the original pricing documents. `hypit pricing <run>` brings those rates together with the planned
+the original pricing documents. `hypit pricing <source>` brings those rates together with the planned
 requests. Pending media measurements remain unknown until the material exists.
 
 Rates help explain the cost. The user's agreement supplies permission to spend through the selected

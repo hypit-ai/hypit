@@ -14,7 +14,8 @@ frame-addressed relation. The generated preview never reconstructs sampling from
 
 Native media elements are an explicitly narrower preview endpoint. They do not reliably select an arbitrary
 stream from a multi-stream container, and audio playback can execute only the linear relations supported by
-`HTMLMediaElement`; the adapter rejects other audio relations instead of approximating them. Exact
+`HTMLMediaElement`; the adapter rejects every nonzero selected visual or audio stream and rejects other
+audio relations instead of allowing the browser to choose a different stream or approximate a map. Exact
 selected-stream and arbitrary-map execution belongs to a capable offline Renderer. A future
 demux-capable playback adapter may close this preview gap without changing `PreparedMedia`, Film, or either
 Programme.

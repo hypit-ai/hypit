@@ -10,7 +10,6 @@ export { openLocalRuntimeHost } from "./host.js";
 export { clearRuntimeProfile, findRuntimeProfile, selectRuntimeProfile } from "./profile-selection.js";
 export type { RuntimeProfileSelection } from "./profile-selection.js";
 export * from "./host-api.js";
-export { FileResourceStore } from "./resource-store.js";
 export {
   createRuntimeFromConfig,
   createRuntimeControlFromConfig,
@@ -39,7 +38,6 @@ export {
 export type * from "./types.js";
 export type * from "./config.js";
 export type * from "./programs.js";
-export type * from "./catalog.js";
 export type * from "./submission.js";
 export { buildExecutionActivity } from "./execution.js";
 export type * from "./execution.js";

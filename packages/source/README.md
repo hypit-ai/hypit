@@ -2,9 +2,11 @@
 
 The byte-oriented Source contract shared by Author and saved-Invocation compilation.
 
-`SourceUnit` contains opaque bytes and Workspace-canonical identity. `ResolvedSource` pairs those
+`SourceUnit` contains opaque bytes and a closure-local identity. `ResolvedSource` pairs those
 bytes with the exact trusted Frontend selected by the caller, Workspace mount or package Source
 export. Source itself never guesses from a suffix or body and has no default parser.
+Physical locators remain private to the Workspace; a Host may expose one separately for diagnostics
+or editing, but it never becomes graph identity.
 
 `SourceRange` is owned here because offsets locate authoring syntax inside a Source; graph Protocol
 values remain independent of parsers, text encodings and editor positions.

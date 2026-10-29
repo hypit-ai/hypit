@@ -3,24 +3,23 @@ title: Packages and Extension
 description: How video projects select components, models and services as ordinary packages.
 ---
 
-Hypit separates what a video asks for from the code and services that fulfill it. A new graphic,
-model or API source can be supplied by a package and selected by the project. Each package owns its
-interface and implementation; the execution system runs the resulting dependency graph.
+Hypit projects install reusable components, generation models and services as ordinary packages.
+The project selects each package where it is used.
 
 ## What belongs where
 
 | Part | Responsibility | Where it is selected |
 | --- | --- | --- |
-| Author component | Turns author inputs into media requests, visual behavior or other graph outputs | Source imports |
+| Author component | Turns author inputs into media requests, visual behavior or other outputs | Source imports |
 | Model | Defines an exact generation request and its outputs | Source imports |
 | Provider Endpoint | Executes supported requests through an API or local tool | Runtime Profile |
 | Credential store | Resolves the named credentials for an Endpoint | Runtime Profile |
-| Result repository | Keeps a project's Build records and produced files | Runtime implementation; Local Runtime uses project `.hypit/results` |
-| Distribution | Supplies the executable applications and official packages | Installed `@hypit/hypit` release |
+| Results | Keeps a project's Build records and produced files | Project `.hypit/results` |
+| Hypit installation | Supplies the commands and included packages | Installed `@hypit/hypit` release |
 
 For example, a Model describes a requested video, while a Provider maps that request to a service.
 A ranking component describes how a board behaves, while the renderer draws its contribution into
-the final composition. Both participate in the same graph, with explicit inputs and outputs.
+the final composition. Both use explicit inputs and outputs.
 
 ## Components follow the work
 
@@ -41,38 +40,23 @@ The consumer installs a chosen version and keeps its lockfile with the project.
 
 ## Installation and Source imports
 
-The Skill, executable Distribution and video project are installed and updated separately. The
-`@hypit/hypit` Distribution embeds Core, installs product-selected default author packages as ordinary
-npm dependencies, and exposes public extension APIs. Its selected Runtime adapters can prepare their
-declared services and other runtime materials through
-`hypit runtime up`. npm dependencies are installed with the package that owns them: Distribution
-dependencies with the Distribution, and project component dependencies with the project.
+The Skill, Hypit installation and video project are installed and updated separately. Project
+components are ordinary project dependencies. Selected local services can prepare their files and
+processes through `hypit runtime up`.
 
-Source uses a logical Module address such as `@your-studio/scoreboard@1`. npm's installed package
-version selects the implementation; the logical `@1` identifies its author interface. Building a
-video uses those installed versions. Missing packages are reported with the information needed to
-install them.
-
-When upgrading an existing production, read the selected release's migration notes before changing
-its executable or component dependencies. The [0.4 framework migration guide](https://github.com/hypit-ai/hypit/blob/main/migrations/0.4.md)
-starts from 0.3.1; the [0.3 project migration guide](https://github.com/hypit-ai/hypit/blob/main/migrations/0.3.md)
-covers older project syntax and usage and links to the 0.3.1 SDK import changes. Keep existing
-material and Results while verifying the migrated work.
+Source uses a component address such as `@your-studio/scoreboard@1`. The project package manager
+selects the installed release and records it in the lockfile. Missing packages are reported with the
+name needed for installation.
 
 ## Write and share an extension
 
-An external package develops against the narrow public owners it uses, such as
-`@hypit/hypit/author`, `@hypit/hypit/producer`, `@hypit/hypit/refinement`,
-`@hypit/hypit/markup`, `@hypit/composition`, `@hypit/generation/model` or
-`@hypit/hypit/endpoint`. Use the selected `@hypit/hypit` release as a
-development dependency, compile the extension to JavaScript, and ship its own code and assets. Its
-`package.json` names an activation entry describing what it provides. The active Distribution
-supplies the public Hypit APIs when it loads the selected extension.
+Create a component under the video's `packages/` directory and install it with the project's package
+manager. The package ships its own code, assets, README and examples. Its README names the public
+TypeScript APIs for the selected Hypit release.
 
 - [Adding an Author Package](./author-packages.md) starts from an included, buildable component.
-- [Component Anatomy](./component-anatomy.md) explains the roles within a component.
+- [Component Anatomy](./component-anatomy.md) explains how to choose a component boundary and public inputs.
 - [Models and Providers](./providers.md) explains new models, services and credentials.
 - [Runtime](./runtime.md) covers Endpoint and credential configuration.
 
-Exact SDK types and implementation examples live with the corresponding package README and
-repository source. An installed package supplies its public types and executable code.
+Exact APIs and implementation examples live with the corresponding installed package README.

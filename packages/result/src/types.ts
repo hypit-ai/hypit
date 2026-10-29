@@ -165,7 +165,6 @@ type BuildResultOperationEvidence = {
   readonly command: string;
   readonly endpoint: string;
   readonly pool?: string;
-  readonly credentials?: Readonly<Record<string, { readonly store: string; readonly key: string }>>;
   readonly receipt?: { readonly id: string; readonly url?: string };
 };
 
@@ -300,8 +299,6 @@ export type BuildResultPage = {
 
 /** Storage-neutral public Output and its stored value. */
 export type RepositoryBuildResultOutput = {
-  readonly build: string;
-  readonly output: string;
   readonly type: TypeRef;
   readonly value:
     | BuildResultFileRef

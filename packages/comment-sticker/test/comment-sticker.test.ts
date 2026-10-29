@@ -34,6 +34,7 @@ import {
 } from "../src/index.js";
 import { commentStickerMarkupDeclarations, commentStickerStyleAuthorDeclaration,
   commentStickerTrackAuthorDeclaration } from "../src/declaration.js";
+import { stickerRoot } from "../src/program.js";
 
 const font: FontArtifactRef = {
   sources: [{ artifact: { kind: "blob", resource: fixtureResource("comment-sticker-font"), size: 1_024, mediaType: "font/woff2" } }],
@@ -67,13 +68,16 @@ function content(meta?: string) {
   return value;
 }
 
-function track(meta?: string) {
+function fixture(meta?: string) {
   const spec = item("opening");
   const set = appendProjectedCommentSticker(createCommentStickerSet(), header, space, frame, style, spec, content(meta), projectProgramWindow({
     itemId: spec.id, semantic, projection: { start: { ref: "timeline.start" }, end: { ref: "timeline.end" } },
   }));
-  return renderCommentSticker(space, finalizeCommentSticker(set, header));
+  const program = finalizeCommentSticker(set, header);
+  return { program, rendered: renderCommentSticker(space, program) };
 }
+
+const track = (meta?: string) => fixture(meta).rendered;
 
 test("Comment Sticker is one deterministic self-contained peer VisualTrack", () => {
   const first = track();
@@ -82,7 +86,9 @@ test("Comment Sticker is one deterministic self-contained peer VisualTrack", () 
   assert.deepEqual(first.items[0]?.span, { startFrame: 0, endFrameExclusive: 90 });
   assert.equal(visualElements(first.items[0]!.root).some((element) => element.id === "meta"), false);
   assert.ok(visualElements(first.items[0]!.root).some((element) => element.id === "avatar-initial"));
-  for (const element of visualElements(first.items[0]!.root)) assert.equal(element.attributes, undefined);
+  const root = stickerRoot(fixture().program.items[0]!);
+  assert.equal(root.kind, "box");
+  for (const element of root.children) assert.equal(element.attributes, undefined);
 });
 
 test("explicit metadata is rendered and the terminal compiler accepts the Track unchanged", () => {
@@ -128,8 +134,9 @@ test("short Sticker windows compose overlapping enter and exit motion instead of
       itemId: spec.id, semantic, projection: { start: { ref: "timeline.start" }, end: { ref: "timeline.end" } },
     }),
   );
-  const rendered = renderCommentSticker(space, finalizeCommentSticker(set, header));
-  const animation = visualElements(rendered.items[0]!.root).find((element) => element.animation !== undefined)?.animation;
+  const program = finalizeCommentSticker(set, header);
+  const rendered = renderCommentSticker(space, program);
+  const animation = stickerRoot(program.items[0]!).animation;
   assert.ok(animation);
   const overlap = animation.keyframes.find((keyframe) => keyframe.atFrame === 45)!;
   const opacity = overlap.style.find((declaration) => declaration.name === "opacity")?.value;

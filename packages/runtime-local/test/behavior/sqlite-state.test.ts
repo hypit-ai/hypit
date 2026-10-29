@@ -78,18 +78,6 @@ test("SQLite stores verified Build facts and Operation handles across reopen", a
     const initial = createGreetingBuild();
     const buildDefinition = definition(initial);
     await first.builds.create("video", buildDefinition);
-    const catalog = {
-      sourcePath: "/project/main.svml",
-      publication: { outputs: [{
-        name: "final.video",
-        output: "document",
-        target: true,
-        type: types.document,
-        record: "document:root",
-      }] },
-    } as const;
-    await first.catalog.record("video", catalog);
-    assert.equal((await first.catalog.read("video"))?.publication.outputs[0]?.name, "final.video");
     const operation = {
       id: "operation:generation",
       build: "video",
@@ -111,7 +99,6 @@ test("SQLite stores verified Build facts and Operation handles across reopen", a
     const restoredBuild = await second.builds.read("video");
     assert.ok(restoredBuild);
     assert.equal(materializeBuild(restoredBuild.definition, restoredBuild.facts).status, initial.status);
-    assert.equal((await second.catalog.read("video"))?.publication.outputs[0]?.name, "final.video");
     const restoredOperation = await second.operations.read(operation.id);
     assert.equal(restoredOperation?.status, "running");
     assert.deepEqual(restoredOperation?.handle, { remoteJob: "job-1" });
@@ -131,7 +118,7 @@ test("SQLite stores verified Build facts and Operation handles across reopen", a
   }
 });
 
-test("SQLite Operation updates preserve a terminal completion", async () => {
+test("SQLite Operation updates reject changes after terminal completion", async () => {
   const directory = await mkdtemp(join(tmpdir(), "hypit-operation-"));
   try {
     const state = new SqliteRuntimeState(join(directory, "runtime.sqlite"));
@@ -152,9 +139,9 @@ test("SQLite Operation updates preserve a terminal completion", async () => {
     });
     assert.equal(completed.status, "completed");
     assert.equal((await state.operations.read(identity.id))?.status, "completed");
-    assert.equal((await state.operations.update(identity.id, {
+    await assert.rejects(state.operations.update(identity.id, {
       status: "queued",
-    })).status, "completed");
+    }), /cannot transition from completed to queued/u);
     state.close();
   } finally {
     await rm(directory, { recursive: true, force: true });
@@ -317,7 +304,6 @@ test("Execution stores scheduling facts, one decision and independent operator a
     await state.submissions.commit({
       ...request,
       definition: buildDefinition,
-      catalog: { sourcePath: "/project/main.svml", publication: { outputs: [] } },
     });
     assert.equal(await state.submissions.read("queued-build"), undefined);
     assert.deepEqual((await state.execution.read("queued-build"))?.result, result);
@@ -344,7 +330,6 @@ test("Execution stores scheduling facts, one decision and independent operator a
     assert.deepEqual(completion, { build: "queued-build", outcome: "cancelled", reason: "no longer needed" });
     assert.equal(await state.execution.read("queued-build"), undefined);
     assert.equal(await state.builds.read("queued-build"), undefined);
-    assert.equal(await state.catalog.read("queued-build"), undefined);
     state.close();
   } finally {
     await rm(directory, { recursive: true, force: true });

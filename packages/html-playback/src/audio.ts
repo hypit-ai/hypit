@@ -39,6 +39,9 @@ export function lowerPlaybackAudio(
 ): string {
   verifyAudioProgram(program);
   return audioProgramGainRoutes(program).flatMap(({ clip, gain: routeGain }) => {
+    if (clip.source.streamIndex !== 0) {
+      throw new Error(`Browser playback cannot select audio stream ${clip.source.streamIndex} for ${clip.id}; use an audio renderer that executes the AudioProgram source plan`);
+    }
     const preservePitch = clip.reconstruction !== undefined;
     if (clip.reconstruction !== undefined) readPreservePitch(clip.reconstruction);
     if (clip.sampling.stages.length !== 1) {

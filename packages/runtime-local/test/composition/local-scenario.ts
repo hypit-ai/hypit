@@ -27,7 +27,6 @@ export function projectRuntimeFixture(directory: string) {
   return {
     executionLogs: fileExecutionLogs((build) => join(work, build)),
     buildStore: state.builds,
-    buildCatalog: state.catalog,
     operationStore: state.operations,
     commandExecutionStore: state.commandExecutions,
     executionStore: state.execution,
@@ -81,7 +80,7 @@ export function durableBuildRequest(
   return {
     id,
     definition: definition(fixture.state),
-    catalog: {
+    authoring: {
       sourcePath: join(directory, "main.svml"),
       publication: publication(publishedOutputs, fixture),
     },

@@ -63,6 +63,12 @@ test("audio DOM is owned by shared playback and preserves the exact AudioProgram
   assert.match(html, /data-preserves-pitch="false"/u);
   assert.match(html, /\/audio\?a=1&amp;b=&quot;two&quot;/u);
   assert.match(decodeURIComponent(html), /"fadeInSamples":2400/u);
+  const alternate = sealAudioProgram({ ...program, graph: { ...program.graph,
+    nodes: program.graph.nodes.map((node) => node.kind === "source"
+      ? { ...node, clip: { ...node.clip, source: { ...node.clip.source, streamIndex: 1 } } }
+      : node) } });
+  assert.throws(() => lowerPlaybackAudio(alternate, () => "/audio"),
+    /cannot select audio stream 1 for voice:0/u);
 });
 
 test("audio DOM lowers explicit pitch preservation without inventing a second speed", () => {

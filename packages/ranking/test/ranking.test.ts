@@ -362,11 +362,10 @@ test("TierBoard separates its board Frame from the outer placement Frame and hol
   assert.equal(track.items.some((item) => item.id.endsWith(":item:preset:reveal")), false);
   assert.equal(track.items.find((item) => item.id.endsWith(":item:preset:settled"))?.span.startFrame, 10);
   const direct = track.items.find((item) => item.id.endsWith(":item:early:reveal"))!;
-  const drop = track.items.find((item) => item.id.endsWith(":item:late:reveal"))!;
+  assert.ok(track.items.find((item) => item.id.endsWith(":item:late:reveal")));
   assert.equal(direct.subjectId, "early");
   assert.equal(track.items.find((item) => item.id.endsWith(":item:early:settled"))?.subjectId, "early");
   assert.equal(track.items.find((item) => item.id.endsWith(":board"))?.subjectId, program.id);
-  assert.ok(itemElements(direct)[0]?.animation);
   const geometry = tierBoardGeometry(tierFrame.widthPx, tierFrame.heightPx, style);
   const stage = tierStageGeometry(canvas.widthPx, canvas.heightPx, style);
   assert.deepEqual({
@@ -374,9 +373,6 @@ test("TierBoard separates its board Frame from the outer placement Frame and hol
     gap: geometry.gap, iconSize: geometry.iconSize,
   }, { rowHeight: 140, labelWidth: 210, gap: 4, iconSize: 132 });
   assert.deepEqual(stage, { centerX: 216, centerY: 576, size: 168 });
-  const boardRow = itemElements(track.items.find((item) => item.id.endsWith(":board")))
-    .find((item) => item.id === "tier-row-s");
-  assert.equal(boardRow?.style.find((item) => item.name === "top")?.value, "0px");
   const relativeCell = tierCell(geometry, 0, 2);
   const cell = { x: tierFrame.xPx + relativeCell.x, y: tierFrame.yPx + relativeCell.y, size: relativeCell.size };
   const duration = 40;
@@ -398,9 +394,6 @@ test("TierBoard separates its board Frame from the outer placement Frame and hol
   assert.ok(curvedMiddle.y < ((stage.centerY - cell.size / 2) + cell.y) / 2,
     "drop motion follows an arc above the linear midpoint");
   assert.equal(fromHighTierItemPose(40, duration, stage, cell, 5, 8).x, cell.x);
-  assert.equal(itemElements(drop)[0]?.animation?.keyframes.find((item) => item.atFrame === 20)
-    ?.style.find((item) => item.name === "transform")?.value,
-  "translate(-376px,146px) scale(1.272727) rotate(0deg)");
   assert.deepEqual(buildTierBoardSoundEvents(value, style, specs(owner, semantic)).events
     .map((item) => [item.kind, item.frame]), [["appear", 25], ["appear", 120], ["move", 152]]);
   assert.throws(() => tierSchedule(owner, [semantic[0]!, semantic[2]!], { late: overlapping, early }), /overlap/u);
@@ -470,7 +463,7 @@ test("Column rejects overlapping or out-of-bounds reveal windows", () => {
   }), /one window is outside/u);
 });
 
-test("TopThree accepts one to three optional-image Items and removes active accent in the settled suffix", () => {
+test("TopThree accepts one to three optional-image Items and separates active and settled suffixes", () => {
   const owner = header("top-three", "podium");
   const semantic = [topSpec("gold"), topSpec("silver"), topSpec("bronze")];
   const style = decodeTopThreeStyle(recipe("ranking.top", { "appear-frames": 4 }), font).style;
@@ -483,9 +476,8 @@ test("TopThree accepts one to three optional-image Items and removes active acce
   const track = renderTopThree(space, program);
   const active = track.items.find((item) => item.id.endsWith(":item:bronze:stage"))!;
   const settled = track.items.find((item) => item.id.endsWith(":item:bronze:settled"))!;
-  const accent = itemElements(active).find((item) => item.id === "accent");
-  assert.equal(accent?.animation?.keyframes.at(-1)?.atFrame, value.entries[2]!.stage.endFrameExclusive - value.entries[2]!.triggerFrame);
-  assert.equal(itemElements(settled).some((item) => item.id === "accent"), false);
+  assert.deepEqual(active.span, value.entries[2]!.stage);
+  assert.equal(settled.span.startFrame, value.entries[2]!.stage.endFrameExclusive);
   const fourth = topSpec("fourth");
   let tooMany = appendTopThreeItem(set, fourth);
   assert.throws(() => buildTopThreeProgram(owner, frame,

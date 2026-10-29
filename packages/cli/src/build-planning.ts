@@ -10,7 +10,7 @@ import type { PackageContribution } from "@hypit/loader";
 import { capabilityIdentity, capabilityKey, compareCodeUnits } from "@hypit/protocol";
 import type { BuildDefinition, CanonicalValue, CapabilityRef, PublicationIntent, ValuePath } from "@hypit/protocol";
 import type { BuildView } from "@hypit/kernel";
-import type { CliBuildCatalogDescriptor, CliEndpointQuery, CliRuntimeInspection } from "./runtime-port.js";
+import type { CliBuildAuthoring, CliEndpointQuery, CliRuntimeInspection } from "./runtime-port.js";
 import { plannedNeeds } from "@hypit/kernel";
 import {
   refinementPackagesFromFacets,
@@ -18,11 +18,11 @@ import {
   RefinementRegistry,
 } from "@hypit/refinement";
 
-export function createCatalogDescriptor(options: {
+export function createBuildAuthoring(options: {
   readonly source: string;
   readonly publication: PublicationIntent;
   readonly invocationSource?: { readonly path: string };
-}): CliBuildCatalogDescriptor {
+}): CliBuildAuthoring {
   return {
     sourcePath: resolve(options.source),
     ...(options.invocationSource === undefined

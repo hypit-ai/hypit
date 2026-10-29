@@ -84,37 +84,27 @@ export function greetingGraph(includeSide = false): AuthorGraph {
       {
         id: "prompt",
         type: types.prompt,
-        primary: "make-prompt",
+        primary: { kind: "operation-result", operation: "make-prompt" },
       },
       {
         id: "generated",
         type: types.generated,
-        primary: "request-text",
+        primary: { kind: "operation-result", operation: "request-text" },
       },
       {
         id: "document",
         type: types.document,
-        primary: "assemble",
+        primary: { kind: "operation-result", operation: "assemble" },
       },
       ...(includeSide ? [{
         id: "side-generated",
         type: types.generated,
-        primary: "side-placeholder",
+        primary: { kind: "operation-result" as const, operation: "side-placeholder" },
       }, {
         id: "side-document",
         type: types.document,
-        primary: "side-assemble",
+        primary: { kind: "operation-result" as const, operation: "side-assemble" },
       }] : []),
-    ],
-    candidates: [
-      { id: "make-prompt", type: types.prompt, root: { kind: "operation-result", operation: "make-prompt" } },
-      { id: "request-text", type: types.generated, root: { kind: "operation-result", operation: "request-text" } },
-      { id: "placeholder-text", type: types.generated, root: { kind: "operation-result", operation: "placeholder-text" } },
-      { id: "assemble", type: types.document, root: { kind: "operation-result", operation: "assemble" } },
-      ...(includeSide ? [
-        { id: "side-placeholder", type: types.generated, root: { kind: "operation-result" as const, operation: "side-placeholder" } },
-        { id: "side-assemble", type: types.document, root: { kind: "operation-result" as const, operation: "side-assemble" } },
-      ] : []),
     ],
     operations: [
       {
@@ -172,9 +162,8 @@ export function createGreetingBuild(options?: {
   const graph = options?.generationRealization === "placeholder"
     ? sealAuthorGraph({
         outputs: sourceGraph.outputs.map((item) => item.id === "generated"
-          ? { ...item, primary: "placeholder-text" }
+          ? { ...item, primary: { kind: "operation-result" as const, operation: "placeholder-text" } }
           : item),
-        candidates: sourceGraph.candidates,
         operations: sourceGraph.operations,
       })
     : sourceGraph;
@@ -197,24 +186,12 @@ export function createParallelGreetingBuild(generationCount = 2) {
       {
         id: "prompt",
         type: types.prompt,
-        primary: "make-prompt",
+        primary: { kind: "operation-result", operation: "make-prompt" },
       },
       ...generations.map((suffix) => ({
         id: `generated-${suffix}`,
         type: types.generated,
-        primary: `generate-${suffix}`,
-      })),
-    ],
-    candidates: [
-      {
-        id: "make-prompt",
-        type: types.prompt,
-        root: { kind: "operation-result", operation: "make-prompt" },
-      },
-      ...generations.map((suffix) => ({
-        id: `generate-${suffix}`,
-        type: types.generated,
-        root: { kind: "operation-result" as const, operation: `generate-${suffix}` },
+        primary: { kind: "operation-result" as const, operation: `generate-${suffix}` },
       })),
     ],
     operations: [

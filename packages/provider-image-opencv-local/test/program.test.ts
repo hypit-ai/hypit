@@ -7,10 +7,9 @@ import test from "node:test";
 import { localOpenCvProgram } from "../src/program.js";
 import { resolveLocalOpenCvDeployment } from "../src/deployment.js";
 
-const context = (pythonExecutable?: string) => ({
+const context = () => ({
   hostStateRoot: join(tmpdir(), "hypit-opencv-host"),
   dataRoot: process.cwd(), instance: "opencv.test",
-  ...(pythonExecutable === undefined ? {} : { pythonExecutable }),
 });
 
 test("OpenCV declares how to install its interpreter and nothing to keep running", () => {
@@ -26,12 +25,4 @@ test("OpenCV declares how to install its interpreter and nothing to keep running
   assert.ok(isAbsolute(project), `${project} must be absolute`);
   assert.ok(existsSync(join(project, "pyproject.toml")), `${project} must be the pinned uv project`);
   assert.equal(program.stateRoot, join(context().hostStateRoot, "programs", "image-opencv-opencv.test"));
-});
-
-test("an interpreter without cv2 is reported here, not mid-Build", async () => {
-  // `false` exits non-zero without printing a version report.
-  const selected = context("/usr/bin/false");
-  const state = await localOpenCvProgram(selected.instance, resolveLocalOpenCvDeployment(selected)).probe();
-  assert.equal(state.state, "down");
-  assert.match(state.state === "down" ? state.detail : "", /cannot import cv2 and numpy/u);
 });

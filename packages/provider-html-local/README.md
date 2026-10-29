@@ -38,6 +38,9 @@ while retaining shared textures for the terminal encoded output. Programs withou
 the original single-pass path. HDR10 rejects Scope Process input passes because an 8-bit stage cannot
 preserve its linear extended-range working picture. Nested child Programs that require such passes are
 rejected by HTML compilation until the renderer owns recursive child surfaces.
+This limitation is only the recursive visual-Process surface path. AudioProgram nesting is compiled and
+rendered by the independently selected audio Renderer, while HDR10 plus a root Scope Process is rejected
+by this Provider's support decision before capture.
 
 For a nested Composition, the root `HtmlProgram` already contains the fully composed source-sampling
 plan and an exact nested-document target for each source occurrence. Chromium and Electron keep source

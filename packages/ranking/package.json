@@ -36,6 +36,7 @@
   },
   "dependencies": {
     "@hypit/composition": "workspace:^0.2.0",
+    "@hypit/html-program": "workspace:^0.2.0",
     "@hypit/media": "workspace:^0.2.0",
     "@hypit/media-operations": "workspace:^0.3.0",
     "@hypit/spatial": "workspace:^0.1.1",

@@ -43,12 +43,12 @@ the project asset or the authored selection and check the Source again.
 
 Project files can come from a generation Result, a camera, a download or another tool. Once placed
 in the project and declared, their origin does not alter composition. `hypit get` can export a public
-Result Output to a chosen location; use the file format and Author declaration owned by the receiving
+Result Output to a chosen location; use the file format and Source declaration owned by the receiving
 package afterward.
 
 ## Override a choice for one execution
 
-A saved Invocation may temporarily ask for the AuthorGraph primary implementation:
+A saved Invocation may temporarily ask for the Output's primary realization:
 
 ```svrun
 <override output="opening.video" primary="true"/>
@@ -67,6 +67,10 @@ An Invocation may also temporarily choose an existing authored Record:
 
 The Record must already exist in the selected Author closure and have the exact Output Type. The
 override is local to this Invocation. It cannot introduce a file, value or computation.
+
+For each demanded Output, an Invocation override takes precedence over an authored realization
+selection, which takes precedence over the Output's primary realization. `hypit plan --verbose`
+reports the selected Record and whether its origin is `invocation`, `authored`, or `primary`.
 
 ## Generate material while composing
 

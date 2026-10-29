@@ -73,7 +73,7 @@ export function installPullback(module, manifest, component, optionsType, mode="
         visual = sealPresentVisualTrack({
           id,
           timelineId: timeline.id,
-          visualIr: "hypit.visual-ir@1",
+
           presents: children.length
             ? [
                 {

@@ -440,9 +440,9 @@ async function prepareGeneration(
   context: EndpointInvocationContext,
   publicAssetUrl: CreateHypiHubProviderOptions["publicAssetUrl"],
 ) {
-  const route = hypiHubRouteForCapability(context.need.capability);
+  const route = hypiHubRouteForCapability(context.request.capability);
   assert(route !== undefined, "HypiHub does not implement this exact capability");
-  const request = route.prepare(context.need.constraints);
+  const request = route.prepare(context.request.constraints);
   const auth = authFor(context, authSession);
   await context.reportProgress?.({ phase: `Reading HypiHub model catalogue: ${request.model} (${request.operation})` });
   if (!await verifyModelRoute(client, auth, request.model, request.operation)) {
@@ -523,7 +523,7 @@ function endpoint(
     async poll(context: EndpointPollContext) {
       let operationDeadlineAt: number | undefined;
       try {
-        const handle = object(context.handle, "HypiHub handle") as unknown as Handle; const route = hypiHubRouteForCapability(context.need.capability);
+        const handle = object(context.handle, "HypiHub handle") as unknown as Handle; const route = hypiHubRouteForCapability(context.request.capability);
         assert(route !== undefined && handle.contract === "hypit.hypihub-operation@1" && handle.route === capabilityKey(route.capability), "HypiHub handle is invalid");
         operationDeadlineAt = handle.startedAt + maxOperationMs;
         if (Date.now() >= operationDeadlineAt) {
@@ -544,7 +544,7 @@ function endpoint(
     async collect(context) {
       try {
         const handle = object(context.handle, "HypiHub handle") as unknown as Handle;
-        const route = hypiHubRouteForCapability(context.need.capability);
+        const route = hypiHubRouteForCapability(context.request.capability);
         assert(route !== undefined && handle.route === capabilityKey(route.capability), "HypiHub collection route differs");
         return await complete(client, authFor(context, authSession), route, handle.jobId, context.resources);
       } catch (error) { return retrying(error, context.handle, pollIntervalMs) ?? failure(error); }
@@ -610,7 +610,7 @@ export function createHypiHubProvider(options: CreateHypiHubProviderOptions = {}
   const transcriptionModel = options.transcriptionModel?.trim() || "victor-upmeet/whisperx";
   const whisperXEndpoint: ImmediateEndpointHandler = async (context) => {
     try {
-      const request = verifyWhisperXTranscriptionRequest(context.need.constraints);
+      const request = verifyWhisperXTranscriptionRequest(context.request.constraints);
       const bytes = await context.resources.get(request.audio.resource);
       assert(bytes !== undefined && bytes.byteLength === request.audio.size,
         `WhisperX evidence Resource ${request.audio.resource} is unavailable or has changed`);

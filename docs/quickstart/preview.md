@@ -63,7 +63,7 @@ project, declare it in the Author Source and record the durable realization choi
 
 ## Picture, timeline and Inspector
 
-The central Preview evaluates the composition's compiled `HtmlProgram`. It uses the same component layout,
+The central Preview evaluates the composition's compiled HTML Programme. It uses the same component layout,
 media sampling and motion as an encoded render. Check the actual picture when adjusting caption
 placement, graphic emphasis or coverage.
 

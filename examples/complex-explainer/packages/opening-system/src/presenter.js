@@ -96,7 +96,7 @@ function resolvePresenter(timeline, id, program, plane) {
       });
     }
   }
-  return sealPresentVisualTrack({ id, timelineId: timeline.id, visualIr: "hypit.visual-ir@1", presents });
+  return sealPresentVisualTrack({ id, timelineId: timeline.id, presents });
 }
 
 function ordinaryPresenter(timeline, window, frame, sources, fit, sample, spec) {
@@ -123,7 +123,7 @@ function ordinaryPresenter(timeline, window, frame, sources, fit, sample, spec) 
         }]) },
     });
   }
-  if (layers.length === 0) return sealPresentVisualTrack({ id: window.subjectId, timelineId: timeline.id, visualIr: "hypit.visual-ir@1", presents: [] });
+  if (layers.length === 0) return sealPresentVisualTrack({ id: window.subjectId, timelineId: timeline.id, presents: [] });
   const header = { id: window.subjectId };
   const set = appendVisualClip(createVisualTrackSet(), header, timeline, { layers }, frame, { ...spec, id: window.subjectId }, window);
   return projectVisualTrack(timeline, finalizeVisualTrack(set, header, timeline));

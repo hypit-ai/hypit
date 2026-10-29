@@ -159,19 +159,19 @@ export function planTemporalInverse(input: {
           : false);
   const root = records.get(input.rootRecord);
   if (root === undefined) throw new Error(`Temporal inverse cannot find ${input.rootRecord}.`);
-  type Candidate = {
+  type SolutionState = {
     readonly desired: Map<string, StudioTemporalConstraint>;
     readonly queue: string[];
     readonly writes: Map<string, TemporalSourceWrite>;
   };
-  const constrain = (candidate: Candidate, record: string, target: StudioTemporalConstraint): boolean => {
-    const previous = candidate.desired.get(record);
+  const constrain = (state: SolutionState, record: string, target: StudioTemporalConstraint): boolean => {
+    const previous = state.desired.get(record);
     if (previous !== undefined) return sameConstraint(previous, target);
-    candidate.desired.set(record, target);
-    candidate.queue.push(record);
+    state.desired.set(record, target);
+    state.queue.push(record);
     return true;
   };
-  const initial: Candidate = { desired: new Map(), queue: [], writes: new Map() };
+  const initial: SolutionState = { desired: new Map(), queue: [], writes: new Map() };
   if (input.target.kind === "instant") {
     if (!sameType(root.type, temporalTypes.instant)) throw new Error("Temporal inverse expected an Instant record.");
     constrain(initial, root.id, input.target);
@@ -181,23 +181,23 @@ export function planTemporalInverse(input: {
       endFrameExclusive: input.target.endFrameExclusive });
   }
 
-  const write = (candidate: Candidate, owner: string, replacement: string): boolean => {
+  const write = (state: SolutionState, owner: string, replacement: string): boolean => {
     const source = sources.get(owner);
     if (source === undefined) return false;
     const key = source.endpoint ?? `${source.path}:${source.range.start}:${source.range.end}`;
-    const previous = candidate.writes.get(key);
+    const previous = state.writes.get(key);
     if (previous !== undefined) return previous.replacement === replacement;
-    candidate.writes.set(key, { source, replacement });
+    state.writes.set(key, { source, replacement });
     return true;
   };
 
-  const clone = (candidate: Candidate): Candidate => ({
-    desired: new Map(candidate.desired), queue: [...candidate.queue], writes: new Map(candidate.writes),
+  const clone = (state: SolutionState): SolutionState => ({
+    desired: new Map(state.desired), queue: [...state.queue], writes: new Map(state.writes),
   });
-  const solve = (candidate: Candidate): readonly Candidate[] => {
-    if (candidate.queue.length === 0) return [candidate];
-    const recordId = candidate.queue.shift()!;
-    const target = candidate.desired.get(recordId)!;
+  const solve = (state: SolutionState): readonly SolutionState[] => {
+    if (state.queue.length === 0) return [state];
+    const recordId = state.queue.shift()!;
+    const target = state.desired.get(recordId)!;
     const record = records.get(recordId);
     const step = producers.get(recordId);
     if (record === undefined) throw new Error(`Temporal inverse cannot read ${recordId}.`);
@@ -219,7 +219,7 @@ export function planTemporalInverse(input: {
     };
     if (step === undefined) {
       const held = current();
-      return held === undefined || !sameConstraint(held, target) ? [] : solve(candidate);
+      return held === undefined || !sameConstraint(held, target) ? [] : solve(state);
     }
     const outputName = step.result.kind === "output" && step.result.record === recordId
       ? step.result.name
@@ -237,12 +237,12 @@ export function planTemporalInverse(input: {
         inputs: Object.fromEntries(Object.entries(step.inputs).map(([name, id]) => [name, relationValue(id)])),
         desired: (name) => {
           const id = step.inputs[name];
-          return id === undefined ? undefined : candidate.desired.get(id);
+          return id === undefined ? undefined : state.desired.get(id);
         },
       });
       if (plans.length > 0) {
-        return plans.flatMap((plan): readonly Candidate[] => {
-          const branch = clone(candidate);
+        return plans.flatMap((plan): readonly SolutionState[] => {
+          const branch = clone(state);
           for (const child of plan.constraints ?? []) {
             const record = step.inputs[child.input];
             if (record === undefined) throw new Error(`Temporal relation ${relation.id} names missing input ${child.input}.`);
@@ -261,16 +261,16 @@ export function planTemporalInverse(input: {
       ? executedTemporalProjection(input.state, recordId, input.identify,
           (producer, output) => input.registry?.temporalRelationFor(producer, output)) : undefined;
     if (target.kind === "instant" && projection?.kind === "instant" && projection.authority.kind === "domain") {
-      return input.domainFrame(projection) !== target.frame ? [] : solve(candidate);
+      return input.domainFrame(projection) !== target.frame ? [] : solve(state);
     }
     const held = current();
-    return held === undefined || !sameConstraint(held, target) ? [] : solve(candidate);
+    return held === undefined || !sameConstraint(held, target) ? [] : solve(state);
   };
-  const key = (candidate: Candidate): string => [...candidate.writes.entries()]
+  const key = (state: SolutionState): string => [...state.writes.entries()]
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([source, write]) => `${JSON.stringify(source)}:${JSON.stringify(write.replacement)}`).join("\n");
-  const solutions = new Map<string, Candidate>();
-  for (const candidate of solve(initial)) solutions.set(key(candidate), candidate);
+  const solutions = new Map<string, SolutionState>();
+  for (const solution of solve(initial)) solutions.set(key(solution), solution);
   if (solutions.size === 0) throw new Error("Temporal relation graph has no author inverse for the requested edit.");
   if (solutions.size > 1) throw new Error("Temporal relation graph has multiple distinct author inverses for the requested edit.");
   return [...[...solutions.values()][0]!.writes.values()]

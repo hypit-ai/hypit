@@ -106,7 +106,7 @@ test("HypiHub stores both preview JSON and ordinary speech JSON as audio Resourc
     assert.equal(resolution.registration.kind, "immediate");
     const result = await resolution.registration.handler({
 
-      need: request,
+      request: request,
       resources,
       credentials: { apiKey: { secret: "test-key" } },
     });
@@ -217,7 +217,7 @@ test("HypiHub uploads one referenced Resource once and submits its HTTPS URL", a
   const endpoint = await endpointFor(request, fakeFetch);
   const common = {
 
-    need: request, resources, credentials: { apiKey: { secret: "test-key" } },
+    request: request, resources, credentials: { apiKey: { secret: "test-key" } },
     operation: "operation:hypihub-test",
   };
   const started = await endpoint.start(common);
@@ -298,7 +298,7 @@ test("HypiHub stops before paid submission when a reference upload fails", async
   assert.equal(resolution.registration.kind, "asynchronous");
   const outcome = await resolution.registration.endpoint.start({
 
-    need: request,
+    request: request,
     resources,
     credentials: { apiKey: { secret: "test-key" } },
     operation: "operation:hypihub-upload-failure",
@@ -385,7 +385,7 @@ for (const language of ["en", "ko"]) test(`HypiHub forwards ${language} for the 
   assert.equal(resolution.registration.kind, "immediate");
   const result = await resolution.registration.handler({
 
-    need: request,
+    request: request,
     resources,
     credentials: { apiKey: { secret: "test-key" } },
   });

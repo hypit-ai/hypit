@@ -51,12 +51,14 @@ or upgrades them.
 
 `NodePackageLoadOptions.importModule` lets the Host own module lifetime while package selection and
 contribution validation stay here. The default uses ordinary process imports. The local execution
-Host supplies a `NodeModuleScope` for each Build: selected project packages and their transitive
+Host creates one module importer for each Build: selected project packages and their transitive
 JavaScript dependencies receive scope-local module identities. Only public exports and exact packages
 physically embedded by the active Distribution remain shared process code; npm scope alone grants no
 such ownership. Registries and configured adapter instances are still created per Build.
 
-`NodeModuleScope` uses Node resolution/loading hooks and transpiles scope-owned TypeScript/TSX. Its CommonJS
+The public `createNodeModuleImporter()` factory returns only `import()` and `close()`; the Loader keeps
+its scope class and CommonJS bridge private. The implementation uses Node resolution/loading hooks and
+transpiles scope-owned TypeScript/TSX. Its CommonJS
 bridge has a scope-owned module cache, Node-style named-export discovery and synchronous evaluation;
 Node's VM dynamic-import support is enabled only for the execution carrier. Public paths such as
 `import.meta.url`, `__filename` and relative asset reads remain real filesystem locations. Module

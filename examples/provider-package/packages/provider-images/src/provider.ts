@@ -82,10 +82,10 @@ export function createImageProvider(options: {
   }
   const endpoint: AsyncEndpoint = {
     async start(context) {
-      const supported = support(context.need);
+      const supported = support(context.request);
       if (supported.status === "unsupported") throw new Error(supported.reason);
       const secret = key(context.credentials);
-      const authored = context.need.constraints as unknown as ProviderFieldRequest;
+      const authored = context.request.constraints as unknown as ProviderFieldRequest;
       const model = selectWireModelForRequest(mapping, authored);
       // This service has no catalogue query; its known request limits were checked above.
       await context.reportProgress?.({ phase: `Preparing image request: ${model}` });

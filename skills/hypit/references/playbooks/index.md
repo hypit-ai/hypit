@@ -67,7 +67,7 @@ These choices compose according to the intended use of the material.
 A format page is useful when its relationships illuminate this work. It is not a category the
 project must declare, and its examples do not limit what the work may combine or invent.
 
-## Continue at the owner
+## Continue with the relevant guide
 
 Once a playbook identifies the needed role or relationship, use `hypit vocabulary <package>` and the
 owning package README for exact declarations, ports, fields, and model options. Creation references own

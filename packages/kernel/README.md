@@ -18,7 +18,7 @@ constructor replays stored Facts through that same accepted-Fact transition, so 
 execution cannot acquire separate scheduling semantics. `materializeBuild` is only a read-view
 projection over this machine; it is not another reducer.
 `BuildDefinition` contains only the selected Program, its initial Records, Producer steps and Goal
-Record identities. Graphs, satisfactions and Candidate identities end at the planning boundary.
+Record identities. Author Graph roots and effective output selections end at the planning boundary.
 
 Core does not parse source files, load packages, execute components, call providers, store artifact
 bytes or know what a video is. Those responsibilities remain in compiler and runtime packages.

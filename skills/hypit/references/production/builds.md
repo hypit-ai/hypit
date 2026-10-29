@@ -55,7 +55,7 @@ expand it when the cause needs earlier context; a closed terminal does not erase
 ## Continue after a failed attempt
 
 A failed Build leaves the work and evidence produced by that attempt. Export any accepted file into
-the project, add or update its ordinary Author declaration and realization selection, then submit a
+the project, declare it in Source and update its realization selection, then submit a
 new Build for the remaining work. The earlier Build retains its failure.
 
 When a Provider task-submission request times out without a task ID or another usable receipt,
@@ -70,7 +70,7 @@ alignment then run from that authored material when needed.
 
 Use `status <build-id> --verbose` for task IDs, Endpoints and progress. Use
 `inspect <build-id> --verbose --json` for the Result's full retained execution records, including
-available credential references and receipts; increase `--limit` if the report lists omitted records.
+Endpoint identities and available receipts; increase `--limit` if the report lists omitted records.
 Secret values stay in their Credential Store. `--json` changes encoding, while `--verbose` requests
 these details.
 
@@ -110,7 +110,7 @@ hypit pricing path/to/main.svml --target final.video
 `pricing` is an explicit read-only network operation. It creates no Build and submits no generation.
 The default report groups matching requests by their selected Endpoint and pricing material, showing
 known parameters, request counts, and the Provider's rate summary or document with its source URL. Explicit
-no-charge work is summarized in one count. Missing pricing declarations and failed queries stay
+no-charge work is summarized in one count. Missing pricing declarations and failed queries stay visible.
 Use the stated units and conditions together with authored duration, resolution, count, or other
 billing facts to calculate and explain the expected cost. Providers may publish several price tiers
 for one model; match the request to the applicable conditions. A future audio input may not have a
@@ -226,8 +226,8 @@ attention and the exact action:
 hypit result finish <build-id>
 ```
 
-That command writes from already accepted execution facts and working Resources. It does not invoke a
-Producer, resubmit generation, or alter a realization choice. Use it only for the Result write named by
+That command writes from already accepted execution facts and working Resources. It does not repeat
+external work, resubmit generation, or alter a realization choice. Use it only for the Result write named by
 `status`. `hypit result discard <build-id>` applies only to an incomplete submission that never became
 active and has no Result to finish.
 
@@ -293,7 +293,7 @@ project paths rather than depend on Result cleanup policy.
 [Project handoff](../creation/project-files.md#hand-over-an-editable-production) explains carrying
 those Results and the authored work to another machine or collaborator.
 
-## Build with the current project implementation
+## Build with the current project code
 
 Each new local Build loads the current project implementation and selected Provider configuration.
 Edit project components or the Profile, then create a new Build;

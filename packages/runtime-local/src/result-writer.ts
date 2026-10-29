@@ -56,7 +56,6 @@ function resultOperation(operation: OperationSnapshot): BuildResultOperation {
     command: operation.command,
     endpoint: operation.endpoint,
     ...(operation.pool === undefined ? {} : { pool: operation.pool }),
-    credentials: operation.credentials,
     ...(operation.receipt === undefined ? {} : { receipt: operation.receipt }),
   };
   return operation.status === "failed"

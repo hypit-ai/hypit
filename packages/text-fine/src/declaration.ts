@@ -6,13 +6,13 @@ import { timelineTypes } from "@hypit/timeline";
 import { compositionTypes } from "@hypit/composition";
 import type {
   VisualColorPaint,
-  VisualStyleDeclaration,
   VisualTextDocument,
   VisualTextPaintLayer,
   VisualTextRunStyle,
   VisualTextSequenceAnimation,
   VisualTextTypography,
 } from "@hypit/composition";
+import type { HtmlStyleDeclaration } from "@hypit/html-program";
 import {
   assertFontArtifactRef,
   assertFontStackRef,
@@ -503,8 +503,14 @@ const decodeTypographyStyleDeclaration: DeclarationDecoder = ({ element, resolve
   return { records: [{ id, type: textFineTypes.style, value: (style), range: element.range }], components: [] };
 };
 
-function keyframeStyle(element: DeclarationElement): VisualStyleDeclaration[] {
-  const result: VisualStyleDeclaration[] = [];
+function keyframeState(element: DeclarationElement): VisualTextSequenceAnimation["keyframes"][number]["state"] {
+  const result: {
+    opacity?: number;
+    transform?: { translateXPx: number; translateYPx: number; scale: number; rotateDeg: number; skewXDeg: number; skewYDeg: number };
+    blurPx?: number;
+    color?: string;
+    clipInsetPercent?: { top: number; right: number; bottom: number; left: number };
+  } = {};
   const x = numeric(element, "x", 0);
   const y = numeric(element, "y", 0);
   const scale = numeric(element, "scale", 1);
@@ -512,16 +518,33 @@ function keyframeStyle(element: DeclarationElement): VisualStyleDeclaration[] {
   const skewX = numeric(element, "skew-x", 0);
   const skewY = numeric(element, "skew-y", 0);
   if (["x", "y", "scale", "rotate", "skew-x", "skew-y"].some((name) => element.attributes[name] !== undefined)) {
-    result.push({ name: "transform", value: `translate(${x}px,${y}px) scale(${scale}) rotate(${rotate}deg) skew(${skewX}deg,${skewY}deg)` });
+    result.transform = { translateXPx: x, translateYPx: y, scale, rotateDeg: rotate, skewXDeg: skewX, skewYDeg: skewY };
   }
-  if (element.attributes.opacity !== undefined) result.push({ name: "opacity", value: numeric(element, "opacity") });
-  if (element.attributes.blur !== undefined) result.push({ name: "filter", value: `blur(${numeric(element, "blur")}px)` });
-  if (element.attributes.color !== undefined) result.push({ name: "color", value: text(element, "color") });
+  if (element.attributes.opacity !== undefined) result.opacity = numeric(element, "opacity");
+  if (element.attributes.blur !== undefined) result.blurPx = numeric(element, "blur");
+  if (element.attributes.color !== undefined) result.color = text(element, "color");
   if (["clip-top", "clip-right", "clip-bottom", "clip-left"].some((name) => element.attributes[name] !== undefined)) {
-    result.push({ name: "clip-path", value: `inset(${numeric(element, "clip-top", 0)}% ${numeric(element, "clip-right", 0)}% ${numeric(element, "clip-bottom", 0)}% ${numeric(element, "clip-left", 0)}%)` });
+    result.clipInsetPercent = { top: numeric(element, "clip-top", 0), right: numeric(element, "clip-right", 0), bottom: numeric(element, "clip-bottom", 0), left: numeric(element, "clip-left", 0) };
   }
-  if (result.length === 0) throw new Error(`${element.name} must animate at least one property.`);
+  if (Object.keys(result).length === 0) throw new Error(`${element.name} must animate at least one property.`);
   return result;
+}
+
+function htmlKeyframeStyle(element: DeclarationElement): HtmlStyleDeclaration[] {
+  const state = keyframeState(element);
+  const style: HtmlStyleDeclaration[] = [];
+  if (state.transform !== undefined) {
+    const value = state.transform;
+    style.push({ name: "transform", value: `translate(${value.translateXPx}px,${value.translateYPx}px) scale(${value.scale}) rotate(${value.rotateDeg}deg) skew(${value.skewXDeg}deg,${value.skewYDeg}deg)` });
+  }
+  if (state.opacity !== undefined) style.push({ name: "opacity", value: state.opacity });
+  if (state.blurPx !== undefined) style.push({ name: "filter", value: `blur(${state.blurPx}px)` });
+  if (state.color !== undefined) style.push({ name: "color", value: state.color });
+  if (state.clipInsetPercent !== undefined) {
+    const value = state.clipInsetPercent;
+    style.push({ name: "clip-path", value: `inset(${value.top}% ${value.right}% ${value.bottom}% ${value.left}%)` });
+  }
+  return style;
 }
 
 const decodeTypographyMotionDeclaration: DeclarationDecoder = ({ element }) => {
@@ -536,7 +559,7 @@ const decodeTypographyMotionDeclaration: DeclarationDecoder = ({ element }) => {
     const name = localName(child.name);
     if (name === "ItemKeyframe") {
       if (child.children.some((nested) => nested.kind === "element" || nested.value.trim())) throw new Error(`${child.name} must be empty.`);
-      itemKeyframes.push({ atFrame: integer(child, "at"), ...(child.attributes.easing === undefined ? {} : { easing: text(child, "easing") as "linear" | "ease-in" | "ease-out" | "ease-in-out" }), style: keyframeStyle(child) });
+      itemKeyframes.push({ atFrame: integer(child, "at"), ...(child.attributes.easing === undefined ? {} : { easing: text(child, "easing") as "linear" | "ease-in" | "ease-out" | "ease-in-out" }), style: htmlKeyframeStyle(child) });
       continue;
     }
     if (name !== "Sequence") throw new Error(`${element.name} does not accept ${child.name}.`);
@@ -546,7 +569,7 @@ const decodeTypographyMotionDeclaration: DeclarationDecoder = ({ element }) => {
         return [];
       }
       if (localName(nested.name) !== "Keyframe") throw new Error(`${child.name} accepts only Keyframe children.`);
-      return [{ atProgress: numeric(nested, "at"), ...(nested.attributes.easing === undefined ? {} : { easing: text(nested, "easing") as "linear" | "ease-in" | "ease-out" | "ease-in-out" }), style: keyframeStyle(nested) }];
+      return [{ atProgress: numeric(nested, "at"), ...(nested.attributes.easing === undefined ? {} : { easing: text(nested, "easing") as "linear" | "ease-in" | "ease-out" | "ease-in-out" }), state: keyframeState(nested) }];
     });
     sequences.push({
       id: text(child, "id"), unit: text(child, "unit") as VisualTextSequenceAnimation["unit"],

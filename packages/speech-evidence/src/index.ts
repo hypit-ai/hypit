@@ -191,6 +191,7 @@ export function assertSpeechTranscriptEvidence(value: SpeechTranscriptEvidence):
       && Number.isSafeInteger(candidate.endSampleExclusive)
       && candidate.startSample >= 0
       && candidate.endSampleExclusive >= 0
+      && candidate.startSample < candidate.endSampleExclusive
       && candidate.startSample <= item.sampleFrames
       && candidate.endSampleExclusive <= item.sampleFrames;
   };

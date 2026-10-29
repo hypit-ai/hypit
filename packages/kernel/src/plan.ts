@@ -1,14 +1,15 @@
 import type {
   BuildPlan,
+  OutputRoot,
   CapabilityRef,
   AuthorGraph,
   GraphValueRef,
   LinkedProgram,
   NeedId,
+  LogicalOutputSelection,
   OperationNode,
   ProducerStep,
   RecordId,
-  Satisfaction,
   StepId,
   TypeRef,
 } from "@hypit/protocol";
@@ -17,9 +18,9 @@ import { compareCodeUnits, sameType, typeKey } from "@hypit/protocol";
 import { invariant } from "./error.js";
 import {
   operationResultRecord,
-  resolveCandidate,
   resolveLogicalOutput,
   resolveOperation,
+  verifyOutputRoot,
   verifyAuthorGraph,
 } from "./graph.js";
 import type { BuildView } from "./view.js";
@@ -100,23 +101,22 @@ function planContent(
   };
 }
 
-/** Candidate identity is useful only while one Author Graph and its effective selections are planned. */
-type CandidateSelection = {
+type PlannedSelection = {
   readonly output: string;
-  readonly candidate: string;
+  readonly root: OutputRoot;
   readonly record: string;
 };
 
 export type PlannedExecution = {
   readonly plan: BuildPlan;
-  readonly selections: readonly CandidateSelection[];
+  readonly selections: readonly PlannedSelection[];
 };
 
 function compilePlanning(
   program: LinkedProgram,
   graph: AuthorGraph,
   targets: readonly string[],
-  satisfactions: readonly Satisfaction[],
+  effectiveSelections: readonly LogicalOutputSelection[],
 ): PlannedExecution {
   verifyAuthorGraph(program, graph);
   const targetIds = new Set<string>();
@@ -126,29 +126,23 @@ function compilePlanning(
     targetIds.add(target);
   }
 
-  const selectedCandidates = new Map<string, string>();
-  for (const satisfaction of satisfactions) {
-    const output = resolveLogicalOutput(graph, satisfaction.output);
-    const candidate = resolveCandidate(graph, satisfaction.candidate);
+  const selectedRoots = new Map<string, LogicalOutputSelection["root"]>();
+  for (const selection of effectiveSelections) {
+    const output = resolveLogicalOutput(graph, selection.output);
     invariant(
-      !selectedCandidates.has(output.id),
-      "DUPLICATE_SATISFACTION",
-      `${output.id} is satisfied more than once`,
+      !selectedRoots.has(output.id),
+      "DUPLICATE_OUTPUT_SELECTION",
+      `${output.id} is selected more than once`,
       output.id,
     );
-    invariant(
-      sameType(candidate.type, output.type),
-      "CANDIDATE_RESULT_TYPE_MISMATCH",
-      `${candidate.id} supplies ${typeKey(candidate.type)}, not ${typeKey(output.type)}`,
-      candidate.id,
-    );
-    selectedCandidates.set(output.id, candidate.id);
+    verifyOutputRoot(program, graph, output, selection.root);
+    selectedRoots.set(output.id, selection.root);
   }
 
   const authored = new Map(program.records.map((record) => [record.id, record]));
   const demandedOperations = new Map<string, OperationNode>();
   const resolvedOutputs = new Map<string, ResolvedSource>();
-  const selections = new Map<string, CandidateSelection>();
+  const selections = new Map<string, PlannedSelection>();
 
   const operationSource = (id: string): ResolvedSource => {
     const operation = resolveOperation(graph, id);
@@ -184,30 +178,30 @@ function compilePlanning(
     }
     if (resolvedOutputs.has(ref.id)) continue;
     const output = resolveLogicalOutput(graph, ref.id);
-    const candidate = resolveCandidate(graph, selectedCandidates.get(ref.id) ?? output.primary);
+    const root = selectedRoots.get(ref.id) ?? output.primary;
     let resolved: ResolvedSource;
-    if (candidate.root.kind === "record") {
-      const record = authored.get(candidate.root.id);
+    if (root.kind === "record") {
+      const record = authored.get(root.id);
       invariant(
         record !== undefined,
-        "UNKNOWN_CANDIDATE_RECORD",
-        candidate.id + " references unknown authored Record " + candidate.root.id,
-        candidate.id,
+        "UNKNOWN_OUTPUT_RECORD",
+        output.id + " references unknown authored Record " + root.id,
+        output.id,
       );
       resolved = { record: record.id, type: record.type };
-      pending.push(candidate.root);
+      pending.push(root);
     } else {
-      resolved = operationSource(candidate.root.operation);
-      pending.push(candidate.root);
+      resolved = operationSource(root.operation);
+      pending.push(root);
     }
     invariant(
       sameType(resolved.type, output.type),
-      "CANDIDATE_RESULT_TYPE_MISMATCH",
-      `${candidate.id} returns ${typeKey(resolved.type)}, not ${typeKey(output.type)}`,
-      candidate.id,
+      "OUTPUT_RESULT_TYPE_MISMATCH",
+      `${output.id} returns ${typeKey(resolved.type)}, not ${typeKey(output.type)}`,
+      output.id,
     );
     resolvedOutputs.set(output.id, resolved);
-    selections.set(output.id, { output: output.id, candidate: candidate.id, record: resolved.record });
+    selections.set(output.id, { output: output.id, root, record: resolved.record });
   }
 
   const resolveRef = (ref: GraphValueRef): ResolvedSource => {
@@ -257,9 +251,9 @@ export function planBuild(
   program: LinkedProgram,
   authorGraph: AuthorGraph,
   targets: readonly string[],
-  satisfactions: readonly Satisfaction[],
+  effectiveSelections: readonly LogicalOutputSelection[],
 ): PlannedExecution {
-  return compilePlanning(program, authorGraph, targets, satisfactions);
+  return compilePlanning(program, authorGraph, targets, effectiveSelections);
 }
 
 export function verifyBuildPlan(

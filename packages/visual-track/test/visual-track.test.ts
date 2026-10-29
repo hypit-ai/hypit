@@ -9,6 +9,7 @@ import type { TemporalWindowProjection } from "../../../test/temporal-fixture.js
 import { sealComposition, visualElements } from "@hypit/composition";
 import type { VisualItem } from "@hypit/composition";
 import { compileHtmlProgram } from "@hypit/html-program";
+import type { HtmlElement } from "@hypit/html-program";
 import { mediaTypes, prepareMedia, SRGB_STRAIGHT_PICTURE } from "@hypit/media";
 import type { CompositableSurfaceRef, PreparedMedia } from "@hypit/media";
 import { blobTypes } from "@hypit/blob";
@@ -23,11 +24,26 @@ import type { BlobRef } from "@hypit/protocol";
 import { spatialTypes } from "@hypit/spatial";
 import { recipeType } from "@hypit/recipe";
 import type { Recipe } from "@hypit/recipe";
+import { lowerVisualClipElement } from "../src/lower.js";
 
 const presentElements = (item: VisualItem) => {
   assert.equal(item.kind, "present");
   return visualElements(item.root);
 };
+
+const htmlElements = (root: HtmlElement): readonly HtmlElement[] => {
+  const children = root.kind === "box"
+    ? root.children
+    : root.kind === "program"
+      ? root.slots.map((slot) => slot.element)
+      : root.kind === "mask"
+        ? [root.mask, root.content]
+        : [];
+  return [root, ...children.flatMap(htmlElements)];
+};
+
+const loweredClipElements = (program: ReturnType<typeof finalizeVisualTrack>, index = 0) =>
+  htmlElements(lowerVisualClipElement(program.clips[index]!));
 
 test("gradient frame paints preserve commas inside functional colors", () => {
   const paint = (value: string) => decodeMediaFramePaint({ path: "scrim", properties: { "frame-paint": value } }, "scrim")?.paint;
@@ -232,7 +248,7 @@ test("a Clip keeps ordered Paint/sample layers, two-frame fit and frame treatmen
   assert.deepEqual(program.clips[0]?.layers.map((layer) => layer.id), ["backing", "content"]);
   const track = projectVisualTrack(space, program);
   assert.equal(track.items[0]?.id, "product");
-  const elements = presentElements(track.items[0]!);
+  const elements = loweredClipElements(program);
   assert.deepEqual(elements.slice(0, 3).map((element) => element.id), [
     "product:placement", "product:pose", "product:frame",
   ]);
@@ -275,10 +291,10 @@ test("an owned clip path is an explicit Visual input and lowers only over the Cl
       { kind: "close" },
     ],
   });
-  const track = projectVisualTrack(space, finalizeVisualTrack(appendProgramVisualClip(
+  const program = finalizeVisualTrack(appendProgramVisualClip(
     createVisualTrackSet(), header, semantic, stillLayers(), frame, clipped,
-  ), header, space));
-  const frameElement = presentElements(track.items[0]!).find((element) => element.id.endsWith(":frame"));
+  ), header, space);
+  const frameElement = loweredClipElements(program).find((element) => element.id.endsWith(":frame"));
   assert.equal(frameElement?.style.find((entry) => entry.name === "clip-path")?.value,
     'path("M 0 0 L 400 0 L 360 300 L 40 300 Z")');
 });
@@ -295,8 +311,7 @@ test("an explicit source mapping survives Program resolution and renderer loweri
   ), header, space);
   const sample = program.clips[0]!.layers.find((layer) => layer.kind === "sample");
   assert.deepEqual(sample?.kind === "sample" ? sample.mapping : undefined, mapping);
-  const rendered = projectVisualTrack(space, program);
-  const element = presentElements(rendered.items[0]!).find((candidate) => candidate.id === "mapped:mapping");
+  const element = loweredClipElements(program).find((candidate) => candidate.id === "mapped:mapping");
   assert.ok(element?.style.some((entry) => entry.name === "transform"
     && entry.value === "matrix(0,0.5,-0.5,0,320,40)"));
 });
@@ -311,19 +326,21 @@ test("self-blur is two explicit samples of one Resource and collection keeps one
   layers = appendStillMediaLayer(layers, source, SRGB_STRAIGHT_PICTURE, extent, fit, sealMediaSampleLayerSpec({
     id: "foreground", appearance,
   }));
-  const track = projectVisualTrack(space, finalizeVisualTrack(appendProgramVisualClip(
+  const program = finalizeVisualTrack(appendProgramVisualClip(
     createVisualTrackSet(), header, semantic, layers, frame, clipSpec(),
-  ), header, space));
+  ), header, space);
+  const track = projectVisualTrack(space, program);
   const document = compileHtmlProgram(sealComposition({ id: "media", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }, space));
   assert.equal(document.artifacts.length, 1);
   const artifactId = document.artifacts[0]!.id;
   assert.equal((document.html.match(new RegExp(artifactId, "gu")) ?? []).length, 2,
     "HTML names the same Programme-local Artifact at both sampling sites");
   assert.equal((document.html.match(/hypit-artifact:\/\/artifact-/gu) ?? []).length, 2);
-  const blurAppearance = presentElements(track.items[0]!).find((element) => element.id === "blurred:appearance");
+  const localElements = loweredClipElements(program);
+  const blurAppearance = localElements.find((element) => element.id === "blurred:appearance");
   assert.equal(blurAppearance?.style.find((entry) => entry.name === "filter")?.value,
     "blur(24px) brightness(0.7) saturate(0.8)");
-  const blurred = presentElements(track.items[0]!).find((element) => element.id === "blurred");
+  const blurred = localElements.find((element) => element.id === "blurred");
   assert.equal(blurred?.style.find((entry) => entry.name === "left")?.value, "-103px");
   assert.equal(blurred?.style.find((entry) => entry.name === "top")?.value, "-103px");
 });
@@ -372,7 +389,7 @@ test("piecewise temporal sampling, Clip pose and picture sampling remain separat
       ],
     },
   })), header, space);
-  const elements = presentElements(projectVisualTrack(space, program).items[0]!);
+  const elements = loweredClipElements(program);
   assert.ok(elements.find((element) => element.id.endsWith(":pose"))?.animation);
   const samplingWrapper = elements.find((element) => element.id === "video:sampling");
   assert.ok(samplingWrapper?.animation);
@@ -702,11 +719,11 @@ test("every documented Visual frame and fit remains one ordinary Clip instead of
       treatment: { clip: { kind: "none" }, padding: { topPx: 0, rightPx: 0, bottomPx: 0, leftPx: 0 }, shadows: [] },
     }));
   }
-  const track = projectVisualTrack(space, finalizeVisualTrack(set, header, space));
+  const program = finalizeVisualTrack(set, header, space);
+  const track = projectVisualTrack(space, program);
   assert.equal(track.items.length, sizings.length);
-  for (const present of track.items) {
-    assert.equal(present.kind, "present");
-    const placement = present.root;
+  for (const [index] of track.items.entries()) {
+    const placement = lowerVisualClipElement(program.clips[index]!);
     assert.equal(placement.kind, "box");
     assert.ok(placement.style.some((entry) => entry.name === "width" && typeof entry.value === "string"));
     assert.ok(placement.style.some((entry) => entry.name === "height" && typeof entry.value === "string"));
@@ -728,21 +745,22 @@ test("transparent, Paint, self-blur and alternate-source backing are only ordere
     sealMediaSampleLayerSpec({ id: "alternate", appearance }));
   layers = appendStillMediaLayer(layers, source, SRGB_STRAIGHT_PICTURE, extent, fit,
     sealMediaSampleLayerSpec({ id: "foreground", appearance }));
-  const track = projectVisualTrack(space, finalizeVisualTrack(appendProgramVisualClip(
+  const program = finalizeVisualTrack(appendProgramVisualClip(
     createVisualTrackSet(), header, semantic, layers, frame, clipSpec(),
-  ), header, space));
+  ), header, space);
+  const track = projectVisualTrack(space, program);
   const document = compileHtmlProgram(sealComposition({ id: "layer-matrix", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }, space));
   assert.deepEqual(presentElements(track.items[0]!).filter((element) => element.kind === "image").map((element) => element.id),
     ["self-blur", "alternate", "foreground"]);
   assert.equal(document.artifacts.length, 2, "repeated samples share bytes while the alternate source remains explicit");
 
-  const transparent = projectVisualTrack(space, finalizeVisualTrack(appendProgramVisualClip(
+  const transparentProgram = finalizeVisualTrack(appendProgramVisualClip(
     createVisualTrackSet(), header, semantic,
     appendStillMediaLayer(createMediaLayerSet(), source, SRGB_STRAIGHT_PICTURE, extent, fit,
       sealMediaSampleLayerSpec({ id: "only", appearance })),
     frame, clipSpec(),
-  ), header, space));
-  assert.equal(presentElements(transparent.items[0]!).some((element) =>
+  ), header, space);
+  assert.equal(loweredClipElements(transparentProgram).some((element) =>
     element.kind === "box" && element.style.some((entry) => entry.name === "background")), false);
 });
 

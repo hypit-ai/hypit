@@ -11,7 +11,6 @@ import { frameSpanSchema, timelineDependency, timelineSchema } from "@hypit/time
 import { exactTemporalValueSchema, temporalDependency, temporalMapSchema } from "@hypit/temporal";
 import { blobRefSchema } from "@hypit/hypit/protocol";
 import type { ValueSchema } from "@hypit/hypit/protocol";
-import { VISUAL_IR_V1, VISUAL_STYLE_ENUM_VALUES_V1, VISUAL_STYLE_NAMES_V1 } from "./visual.js";
 export { mediaDependency, temporalDependency, timelineDependency };
 const string = { kind: "string", minLength: 1 } as const; const number = { kind: "number", minimum: 0 } as const;
 const integer = { kind: "number", integer: true, minimum: 0 } as const; const signedInteger = { kind: "number", integer: true } as const;
@@ -21,19 +20,10 @@ const object = (
 ): ValueSchema => ({ kind: "object", fields, ...(allowUnknown ? { allowUnknown: true } : {}) });
 const mediaBlobRef = blobRefSchema();
 const positiveInteger = { kind: "number", integer: true, minimum: 1 } as const;
-const styleDeclaration: ValueSchema = { kind: "oneOf", variants: VISUAL_STYLE_NAMES_V1.map((name) => object({
-  name: { schema: { kind: "literal", value: name } }, value: { schema: Object.hasOwn(VISUAL_STYLE_ENUM_VALUES_V1, name)
-    ? { kind: "string", enum: VISUAL_STYLE_ENUM_VALUES_V1[name as keyof typeof VISUAL_STYLE_ENUM_VALUES_V1] }
-    : { kind: "oneOf", variants: [{ kind: "string" }, { kind: "number" }] } },
-})) };
-const attribute = object({ name: { schema: string }, value: { schema: { kind: "string" } } });
-const keyframe = object({ atFrame: { schema: integer }, easing: { schema: { kind: "string", enum: ["linear", "ease-in", "ease-out", "ease-in-out"] }, optional: true }, style: { schema: { kind: "array", minItems: 1, items: styleDeclaration } } });
-const animation = object({ keyframes: { schema: { kind: "array", minItems: 2, items: keyframe } } });
-const base = { id: { schema: string }, style: { schema: { kind: "array", items: styleDeclaration } }, attributes: { schema: { kind: "array", items: attribute }, optional: true }, animation: { schema: animation, optional: true } } as const;
+const base = { id: { schema: string } } as const;
 // ValueSchema intentionally has no recursive reference primitive. Composition's
 // owner refinement validates each nested node exactly.
 const visualNodeEnvelope = object({}, true);
-export const visualBoxSchema: ValueSchema = object({ ...base, kind: { schema: { kind: "literal", value: "box" } }, children: { schema: { kind: "array", items: visualNodeEnvelope } } });
 export const visualMaskSchema: ValueSchema = object({
   ...base,
   kind: { schema: { kind: "literal", value: "mask" } },
@@ -145,7 +135,22 @@ export const visualTextSequenceSchema = object({
   keyframes: { schema: { kind: "array", minItems: 2, items: object({
     atProgress: { schema: { kind: "number", minimum: 0, maximum: 1 } },
     easing: { schema: enumString(["linear", "ease-in", "ease-out", "ease-in-out"]), optional: true },
-    style: { schema: { kind: "array", minItems: 1, items: styleDeclaration } },
+    state: { schema: object({
+      opacity: { schema: { kind: "number", minimum: 0, maximum: 1 }, optional: true },
+      transform: { schema: object({
+        translateXPx: { schema: finiteNumber }, translateYPx: { schema: finiteNumber },
+        scale: { schema: { kind: "number", minimum: 0.000001 } }, rotateDeg: { schema: finiteNumber },
+        skewXDeg: { schema: finiteNumber }, skewYDeg: { schema: finiteNumber },
+      }), optional: true },
+      blurPx: { schema: number, optional: true },
+      color: { schema: string, optional: true },
+      clipInsetPercent: { schema: object({
+        top: { schema: { kind: "number", minimum: 0, maximum: 100 } },
+        right: { schema: { kind: "number", minimum: 0, maximum: 100 } },
+        bottom: { schema: { kind: "number", minimum: 0, maximum: 100 } },
+        left: { schema: { kind: "number", minimum: 0, maximum: 100 } },
+      }), optional: true },
+    }) },
   }) } },
 });
 const textFlowElement = object({ ...base, kind: { schema: { kind: "literal", value: "text-flow" } }, document: { schema: visualTextDocumentSchema }, typography: { schema: visualTextTypographySchema }, paints: { schema: { kind: "array", items: visualTextPaintSchema } }, flow: { schema: visualTextFlowSchema }, sequences: { schema: { kind: "array", items: visualTextSequenceSchema } } });
@@ -177,7 +182,7 @@ export const visualProgramSchema: ValueSchema = object({
   program: { schema: visualProgramCarrierSchema },
   slots: { schema: { kind: "array", items: object({ name: { schema: string }, element: { schema: visualNodeEnvelope } }) } },
 });
-export const visualElementSchema: ValueSchema = { kind: "oneOf", variants: [visualBoxSchema, visualMaskSchema, visualTextSchema, textFlowElement, pathTextElement, visualImageSchema, visualVideoSchema, visualSurfaceSchema, visualCompositionSchema, visualProgramSchema] };
+export const visualElementSchema: ValueSchema = { kind: "oneOf", variants: [visualMaskSchema, visualTextSchema, textFlowElement, pathTextElement, visualImageSchema, visualVideoSchema, visualSurfaceSchema, visualCompositionSchema, visualProgramSchema] };
 const visualItemBase = { id: { schema: string }, subjectId: { schema: string, optional: true }, span: { schema: frameSpanSchema }, visibility: { schema: { kind: "array", items: frameSpanSchema }, optional: true } } as const;
 export const visualPresentSchema: ValueSchema = object({ ...visualItemBase, kind: { schema: { kind: "literal", value: "present" } }, root: { schema: visualElementSchema } });
 export const visualProcessSchema: ValueSchema = object({
@@ -192,7 +197,7 @@ export const visualProcessSchema: ValueSchema = object({
 });
 export const visualAdjustmentSchema: ValueSchema = object({ ...visualItemBase, kind: { schema: { kind: "literal", value: "adjustment" } }, program: { schema: visualProgramCarrierSchema } });
 export const visualItemSchema: ValueSchema = { kind: "oneOf", variants: [visualPresentSchema, visualProcessSchema, visualAdjustmentSchema] };
-export const visualTrackSchema: ValueSchema = object({ kind: { schema: { kind: "literal", value: "visual" } }, timelineId: { schema: string }, visualIr: { schema: { kind: "literal", value: VISUAL_IR_V1 } }, id: { schema: string }, items: { schema: { kind: "array", items: visualItemSchema } } });
+export const visualTrackSchema: ValueSchema = object({ kind: { schema: { kind: "literal", value: "visual" } }, timelineId: { schema: string }, id: { schema: string }, items: { schema: { kind: "array", items: visualItemSchema } } });
 export const audioSampleSpanSchema = object({ startSample: { schema: integer }, endSampleExclusive: { schema: { kind: "number", integer: true, minimum: 1 } } });
 export const audioGainEnvelopeSchema: ValueSchema = { kind: "array", minItems: 1, items: object({
   sample: { schema: integer }, gain: { schema: { kind: "number", minimum: 0 } },

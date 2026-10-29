@@ -1,23 +1,14 @@
 import type { TypeRef, CapabilityRef } from "@hypit/protocol";
 import type { EndpointRegistrationOptions, ImmediateEndpointHandler, AsyncEndpoint } from "@hypit/endpoint";
 
+export type { RuntimeBlockedCommand as BlockedCommand } from "@hypit/runtime";
+
 export type {
   ProducerHandler,
   ProducerHandlerContext,
   ProducerHandlerResult,
   ProducerRegistrar,
 } from "@hypit/producer";
-
-export type BlockedCommand = {
-  readonly command: string;
-  readonly reason:
-    | "missing-producer"
-    | "missing-endpoint"
-    | "unsupported-endpoint-request"
-    | "ambiguous-endpoint"
-    | "missing-operation-store";
-  readonly subject: string;
-};
 
 type EndpointRegistrationBase = {
   readonly id: string;

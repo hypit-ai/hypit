@@ -1,5 +1,4 @@
 import type { BuildDefinition } from "@hypit/hypit/protocol";
-import type { BuildCatalogDescriptor } from "./catalog.js";
 import type { BuildExecutionRequest, BuildExecutionSnapshot } from "./execution.js";
 
 export type PendingBuildSubmission = BuildExecutionRequest & {
@@ -8,7 +7,6 @@ export type PendingBuildSubmission = BuildExecutionRequest & {
 
 export type PendingBuildCommit = BuildExecutionRequest & {
   readonly definition: BuildDefinition;
-  readonly catalog: BuildCatalogDescriptor;
 };
 
 /**

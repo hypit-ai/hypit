@@ -7,19 +7,16 @@ import {
 import type { PlannedExecution, SelectedOutputRecord } from "@hypit/kernel";
 import type { BuildView } from "@hypit/kernel";
 import type {
-  AuthorDocument,
-} from "@hypit/author";
-import type {
   BlobAttachment,
   WorkspaceSession,
 } from "@hypit/workspace";
 import type {
   AuthorGraph,
   BuildDefinition,
-  Candidate,
+  OutputRoot,
   Invocation,
+  LogicalOutputSelection,
   PublicationIntent,
-  Satisfaction,
 } from "@hypit/protocol";
 import { compareCodeUnits, sameType } from "@hypit/protocol";
 import {
@@ -42,12 +39,19 @@ import { mergeAttachments } from "./compiler.js";
 type EffectiveSelection = {
   readonly graph: AuthorGraph;
   readonly targets: readonly string[];
-  readonly satisfactions: readonly Satisfaction[];
+  readonly selections: readonly LogicalOutputSelection[];
+  readonly origins: ReadonlyMap<string, EffectiveSelectionOrigin>;
+};
+
+export type EffectiveSelectionOrigin = "invocation" | "authored" | "primary";
+
+export type EffectiveOutputSelection = SelectedOutputRecord & {
+  readonly origin: EffectiveSelectionOrigin;
 };
 
 /**
  * Resolve durable author choices and transient Invocation overrides before Kernel planning.
- * Invocation satisfaction wins for this execution; absent overrides retain authored realization,
+ * Invocation selection wins for this execution; absent overrides retain authored realization,
  * and Kernel uses each output primary when neither exists.
  */
 function effectiveSelection(
@@ -56,11 +60,8 @@ function effectiveSelection(
 ): EffectiveSelection {
   const outputs = new Map(author.graph.outputs.map((output) => [output.id, output]));
   const records = new Map(author.program.records.map((record) => [record.id, record]));
-  const usedCandidates = new Set([
-    ...author.graph.candidates.map((candidate) => candidate.id),
-  ]);
-  const recordCandidates: Candidate[] = [];
-  const effective = new Map<string, string>();
+  const effective = new Map<string, OutputRoot>();
+  const origins = new Map<string, EffectiveSelectionOrigin>();
 
   for (const realization of author.realizations) {
     const output = outputs.get(realization.output);
@@ -74,17 +75,8 @@ function effectiveSelection(
     if (!sameType(output.type, record.type)) {
       throw new Error("Authored realization Record has the wrong Type for " + output.id);
     }
-    const id = "candidate:realization:" + JSON.stringify([output.id, record.id]);
-    if (usedCandidates.has(id)) {
-      throw new Error("Authored realization Candidate conflicts with " + id);
-    }
-    usedCandidates.add(id);
-    recordCandidates.push({
-      id,
-      type: output.type,
-      root: { kind: "record", id: record.id },
-    });
-    effective.set(output.id, id);
+    effective.set(output.id, { kind: "record", id: record.id });
+    origins.set(output.id, "authored");
   }
 
   for (const override of invocation.overrides) {
@@ -94,6 +86,7 @@ function effectiveSelection(
     }
     if (override.choice.kind === "primary") {
       effective.set(output.id, output.primary);
+      origins.set(output.id, "invocation");
       continue;
     }
     const record = records.get(override.choice.record);
@@ -103,36 +96,34 @@ function effectiveSelection(
     if (!sameType(output.type, record.type)) {
       throw new Error("Invocation override Record has the wrong Type for " + output.id);
     }
-    const id = "candidate:invocation-record:" + JSON.stringify([output.id, record.id]);
-    if (usedCandidates.has(id)) {
-      throw new Error("Invocation override Candidate conflicts with " + id);
-    }
-    usedCandidates.add(id);
-    recordCandidates.push({
-      id,
-      type: output.type,
-      root: { kind: "record", id: record.id },
-    });
-    effective.set(output.id, id);
+    effective.set(output.id, { kind: "record", id: record.id });
+    origins.set(output.id, "invocation");
   }
 
   return {
-    graph: {
-      ...author.graph,
-      candidates: [...author.graph.candidates, ...recordCandidates],
-    },
+    graph: author.graph,
     targets: invocation.targets,
-    satisfactions: [...effective.entries()]
+    selections: [...effective.entries()]
       .sort(([left], [right]) => compareCodeUnits(left, right))
-      .map(([output, candidate]) => ({ output, candidate })),
+      .map(([output, root]) => ({ output, root })),
+    origins,
   };
+}
+
+function explainSelections(
+  selections: readonly SelectedOutputRecord[],
+  origins: ReadonlyMap<string, EffectiveSelectionOrigin>,
+): readonly EffectiveOutputSelection[] {
+  return selections.map((selection) => ({
+    ...selection,
+    origin: origins.get(selection.output) ?? "primary",
+  }));
 }
 
 /** The exact Author-compilation boundary required by Invocation compilation. */
 export type InvocationAuthorCompiler = {
   openEntry(locator: string): Promise<WorkspaceSession>;
   compileResolvedSource(entry: ResolvedSource, workspace: WorkspaceSession): Promise<CompiledAuthorSource>;
-  openAuthorDocument(source: ResolvedSource): Promise<AuthorDocument>;
 };
 
 export type InvocationCompilerOptions = {
@@ -143,7 +134,6 @@ export type InvocationCompilerOptions = {
 export type CompiledInvocation = {
   readonly authorSource: string;
   readonly author: CompiledAuthorSource;
-  readonly authorDocument: AuthorDocument;
   /** Linked Author program evaluated by this Invocation. */
   readonly program: LinkedProgram;
   readonly invocation: Invocation;
@@ -169,7 +159,7 @@ export type CheckedInvocationPreset = {
 export type PreparedBuild = {
   readonly compilation: CompiledInvocation;
   /** Compiler-only explanation of how authored choices became the execution plan. */
-  readonly selections: readonly SelectedOutputRecord[];
+  readonly selections: readonly EffectiveOutputSelection[];
   /** Public Result surface and source ownership derived from the same structural selection. */
   readonly publication: PublicationIntent;
   /** Immutable authority persisted once for every fresh Runtime Build. */
@@ -182,7 +172,6 @@ type StructuralPresetResolution = {
   readonly document: Awaited<ReturnType<typeof compileInvocationSource>>;
   readonly authorSource: ResolvedSource;
   readonly author: CompiledAuthorSource;
-  readonly authorDocument: AuthorDocument;
   readonly program: LinkedProgram;
   readonly preset: ResolvedInvocationPreset;
   readonly plan: PlannedExecution;
@@ -211,17 +200,15 @@ export class InvocationCompiler {
       from: document.author.source,
       alias: "author",
     });
-    const authorDocument = await this.#options.authorCompiler.openAuthorDocument(authorSource);
     const author = await this.#options.authorCompiler.compileResolvedSource(authorSource, workspace);
     const program = author.program;
     const preset = await resolveInvocationSourceDocument(document, { compilation: author });
     const effective = effectiveSelection(author, preset.invocation);
-    const plan = planBuild(program, effective.graph, effective.targets, effective.satisfactions);
+    const plan = planBuild(program, effective.graph, effective.targets, effective.selections);
     return {
       document,
       authorSource,
       author,
-      authorDocument,
       program,
       preset,
       plan,
@@ -232,8 +219,8 @@ export class InvocationCompiler {
   async checkPresetResolvedSource(source: ResolvedSource, workspace: WorkspaceSession): Promise<CheckedInvocationPreset> {
     const resolved = await this.#resolvePresetStructure(source, workspace);
     return {
-      source: source.unit.id,
-      authorSource: resolved.authorSource.unit.id,
+      source: workspace.sourceLocation?.(source.unit) ?? source.unit.id,
+      authorSource: workspace.sourceLocation?.(resolved.authorSource.unit) ?? resolved.authorSource.unit.id,
       author: resolved.author,
       program: resolved.program,
       document: resolved.document,
@@ -244,14 +231,13 @@ export class InvocationCompiler {
   /** Compile one saved Invocation preset and its explicitly named Author Source. */
   async compilePresetResolvedSource(source: ResolvedSource, workspace: WorkspaceSession): Promise<CompiledInvocation> {
     const resolved = await this.#resolvePresetStructure(source, workspace);
-    const { author, authorDocument, program, preset, plan: structuralPlan } = resolved;
+    const { author, program, preset, plan: structuralPlan } = resolved;
     return {
-      authorSource: resolved.authorSource.unit.id,
+      authorSource: workspace.sourceLocation?.(resolved.authorSource.unit) ?? resolved.authorSource.unit.id,
       author,
-      authorDocument,
       program,
       invocation: preset.invocation,
-      preset: { source: source.unit.id, document: resolved.document },
+      preset: { source: workspace.sourceLocation?.(source.unit) ?? source.unit.id, document: resolved.document },
       selection: structuralPlan,
       attachments: mergeAttachments([author.attachments, await workspace.attachments()]),
     };
@@ -263,17 +249,15 @@ export class InvocationCompiler {
     workspace: WorkspaceSession,
     request: InvocationRequest,
   ): Promise<CompiledInvocation> {
-    const authorDocument = await this.#options.authorCompiler.openAuthorDocument(source);
     const author = await this.#options.authorCompiler.compileResolvedSource(source, workspace);
     const invocation = resolveInvocationRequest(request, { compilation: author });
     const effective = effectiveSelection(author, invocation);
     return {
-      authorSource: source.unit.id,
+      authorSource: workspace.sourceLocation?.(source.unit) ?? source.unit.id,
       author,
-      authorDocument,
       program: author.program,
       invocation,
-      selection: planBuild(author.program, effective.graph, effective.targets, effective.satisfactions),
+      selection: planBuild(author.program, effective.graph, effective.targets, effective.selections),
       attachments: mergeAttachments([author.attachments, await workspace.attachments()]),
     };
   }
@@ -288,7 +272,6 @@ export class InvocationCompiler {
     const effective = effectiveSelection(compilation.author, compilation.invocation);
     const sliced = sliceExecution(
       compilation.program,
-      effective.graph,
       effective.targets,
       preliminary,
     );
@@ -297,7 +280,8 @@ export class InvocationCompiler {
       plan: sliced.plan,
     });
     const state = materializeBuild(definition, []);
-    const selections = new Map(preliminary.selections.map((selection) => [selection.output, selection]));
+    const explainedSelections = explainSelections(sliced.selections, effective.origins);
+    const selections = new Map(explainedSelections.map((selection) => [selection.output, selection]));
     const targets = new Set(compilation.invocation.targets);
     const names = new Set<string>();
     const outputs = new Set<string>();
@@ -335,7 +319,7 @@ export class InvocationCompiler {
         throw new Error(`Target ${target} is not a published Author Output`);
       }
     }
-    return { compilation, selections: sliced.selections, publication, definition, state };
+    return { compilation, selections: explainedSelections, publication, definition, state };
   }
 
   /** Plan a distinct in-memory Invocation without changing the Author Source. */
@@ -344,7 +328,7 @@ export class InvocationCompiler {
     return this.prepareCompilation({
       ...compilation,
       invocation,
-      selection: planBuild(compilation.program, effective.graph, effective.targets, effective.satisfactions),
+      selection: planBuild(compilation.program, effective.graph, effective.targets, effective.selections),
     });
   }
 

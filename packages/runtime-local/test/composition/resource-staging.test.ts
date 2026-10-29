@@ -96,9 +96,9 @@ test("a selected file is staged once and remains referenced in the produced stru
       lifecycle: "immediate",
       capability: capabilities.generation,
       returns: types.generated,
-      handler: async ({ need, resources }) => {
+      handler: async ({ request, resources }) => {
         endpointCalls += 1;
-        const source = (need.constraints as { readonly source: typeof authoredAsset }).source;
+        const source = (request.constraints as { readonly source: typeof authoredAsset }).source;
         assert.equal(await resources.has(source.resource), true);
         assert.deepEqual(await resources.get(source.resource), bytes);
         return { image: source };
@@ -114,7 +114,7 @@ test("a selected file is staged once and remains referenced in the produced stru
     await runtime.build({
       id: "bld_20260902T120000009Z_0000000001",
       definition: buildDefinition,
-      catalog: {
+      authoring: {
         sourcePath: join(directory, "main.svml"),
         publication: { outputs: [{ name: "final.document", output: "document", target: true,
           type: types.document,

@@ -607,7 +607,7 @@ export function resolveTimelineEditHandles(
     const domainEndpoints = changed.filter(({ endpoint }) => endpoint.authority.kind === "domain").map(({ endpoint }) => endpoint);
     const target = domainTarget(domainEndpoints);
     if (domainEndpoints.length > 0 && target === undefined) {
-      return disabled(gesture, "时间域端点在当前 Candidate 中没有可写的作者身份。");
+      return disabled(gesture, "时间域端点在当前投影中没有可写的作者身份。");
     }
     const sources = projected.filter((item): item is StudioEditSource => "source" in item);
     return {

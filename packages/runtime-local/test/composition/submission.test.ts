@@ -78,7 +78,10 @@ test("a project directory alias accepts its Source and stores a project-relative
     const runtime = await createLocalRuntime(projectRuntimeFixture(directory));
     try {
       const request = durableBuildRequest(root, "bld_20260916T150000000Z_0000000001", createGreetingBuildFixture());
-      await runtime.build({ ...request, catalog: { ...request.catalog, sourcePath: session.entry.unit.id } });
+      await runtime.build({ ...request, authoring: {
+        ...request.authoring,
+        sourcePath: session.sourceLocation?.(session.entry.unit) ?? session.entry.unit.id,
+      } });
       const result = await new FileBuildResultRepository(join(directory, "results")).read(request.id);
       assert.equal(result?.sourceId, "main.svml");
     } finally { await runtime.close(); }

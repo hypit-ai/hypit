@@ -4,6 +4,7 @@ import {
   assertHtmlFrameSpan,
   compileHtmlProgram,
   htmlAdjustment,
+  htmlVisualElement,
   htmlVisual,
   htmlProgramTime,
   materializeHtmlProgram,
@@ -12,7 +13,6 @@ import type { FontArtifactRef } from "@hypit/media";
 import { sealTimeline } from "@hypit/timeline";
 import { audioGraphFromClips, sealAudioTrack, sealComposition, sealPresentVisualTrack, sealVisualProcessEffect, sealVisualScope, sealVisualTrack, visualElements, visualPresents, visualScopeTracks } from "@hypit/composition";
 import type { Composition, VisualTrack } from "@hypit/composition";
-import { VISUAL_IR_V1 } from "@hypit/composition";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { fixtureResource } from "../../../test/fixture-resource.js";
@@ -69,26 +69,26 @@ function fixture() {
     mediaType: "audio/wav",
   };
   const lower = sealPresentVisualTrack({ timelineId: "test-space",
-    visualIr: "hypit.visual-ir@1",
+
     id: "lower",
     presents: [{
       id: "picture",
       span: { startFrame: 0, endFrameExclusive: 30 },
-      root: {
+      root: htmlVisualElement({
         id: "media",
         kind: "image", picture: { colorPrimaries: "bt709", colorTransfer: "srgb", colorMatrix: "rgb", colorRange: "full", bitDepth: 8, alphaMode: "straight" } as const,
         artifact: picture,
         style: [{ name: "width", value: "100%" }],
-      },
+      }),
     }],
   });
   const upper = sealPresentVisualTrack({ timelineId: "test-space",
-    visualIr: "hypit.visual-ir@1",
+
     id: "upper",
     presents: [{
       id: "words",
       span: { startFrame: 3, endFrameExclusive: 20 },
-      root: { id: "root", kind: "box", children: [
+      root: htmlVisualElement({ id: "root", kind: "box", children: [
         { id: "text", kind: "text", text: "Hello <world>", fonts: [fixtureFont], style: [],
           paints: [
             { kind: "stroke", placement: "outside", widthPx: 2,
@@ -96,7 +96,7 @@ function fixture() {
             { kind: "fill", paint: { kind: "solid", color: "#ffffff" } },
           ],
         },
-      ], style: [{ name: "position", value: "absolute" }] },
+      ], style: [{ name: "position", value: "absolute" }] }),
     }],
   });
   const audio = sealAudioTrack({ timelineId: "test-space",
@@ -133,7 +133,6 @@ test("HTML renderer flattens generic peer visual Track Presents without absorbin
   const { composition, picture, sound, timeline } = fixture();
   const document = compileHtmlProgram(composition);
   assert.doesNotThrow(() => assertHtmlProgram(document));
-  assert.equal(document.visualIr, VISUAL_IR_V1);
   assert.deepEqual(new Set(document.artifacts.map(({ artifact }) => artifact.resource)),
     new Set([picture.resource, fixtureFont.sources[0]!.artifact.resource]));
   assert.deepEqual(document.artifacts.find(({ artifact }) => artifact.resource === picture.resource)?.usage,
@@ -162,7 +161,7 @@ test("HTML renderer preserves independent input clocks inside a Visual Process",
   const { composition, timeline } = fixture();
   const processTrack = sealVisualTrack({
     timelineId: timeline.id,
-    visualIr: VISUAL_IR_V1,
+
     id: "process",
     items: [{
       kind: "process",
@@ -174,7 +173,7 @@ test("HTML renderer preserves independent input clocks inside a Visual Process",
           kind: "present",
           id: "outgoing",
           span: { startFrame: 0, endFrameExclusive: 20 },
-          root: { kind: "box", id: "outgoing-root", style: [], children: [] },
+          root: htmlVisualElement({ kind: "box", id: "outgoing-root", style: [], children: [] }),
         },
       }, {
         name: "incoming",
@@ -182,7 +181,7 @@ test("HTML renderer preserves independent input clocks inside a Visual Process",
           kind: "present",
           id: "incoming",
           span: { startFrame: 10, endFrameExclusive: 30 },
-          root: { kind: "box", id: "incoming-root", style: [], children: [] },
+          root: htmlVisualElement({ kind: "box", id: "incoming-root", style: [], children: [] }),
         },
       }],
       effect: sealVisualProcessEffect({
@@ -242,7 +241,7 @@ test("HTML renderer lowers a recursive scope Process as one generic Picture oper
     "private input Presents are captured only through their renderer-owned Process stages");
 });
 
-test("HTML renderer rejects a nested Scope Process until child surfaces execute recursively", () => {
+test("HTML renderer lowers a nested Scope Process for recursive execution", () => {
   const { composition, timeline } = fixture();
   const [content, matte] = composition.visual.root.members;
   assert.equal(content?.kind, "track");
@@ -266,7 +265,7 @@ test("HTML renderer rejects a nested Scope Process until child surfaces execute 
   }, timeline);
   const parentTrack = sealPresentVisualTrack({
     timelineId: timeline.id,
-    visualIr: VISUAL_IR_V1,
+
     id: "parent",
     presents: [{
       id: "child-use",
@@ -283,7 +282,6 @@ test("HTML renderer rejects a nested Scope Process until child surfaces execute 
           pieces: [{ target: { startFrame: 0, endFrameExclusive: 30 },
             sourceAtStart: { numerator: 0, denominator: 1 }, rate: { numerator: 1, denominator: 1 } }],
         }),
-        style: [],
       },
     }],
   });
@@ -292,8 +290,10 @@ test("HTML renderer rejects a nested Scope Process until child surfaces execute 
     id: "parent",
     visual: { ...composition.visual, root: scope(parentTrack) },
   }, timeline);
-  assert.throws(() => compileHtmlProgram(parent),
-    /Nested Composition child-with-process requires Visual Process input surfaces/u);
+  const document = compileHtmlProgram(parent);
+  assert.equal(document.processPasses, 2);
+  assert.match(document.html, /data-hypit-nested-document-id/u);
+  assert.match(document.html, /data-hypit-process-stage/u);
 });
 
 test("Programme-local Artifact ids do not depend on Resource-id substring order", () => {
@@ -304,7 +304,7 @@ test("Programme-local Artifact ids do not depend on Resource-id substring order"
   ];
   const track = sealPresentVisualTrack({
     timelineId: timeline.id,
-    visualIr: VISUAL_IR_V1,
+
     id: "pictures",
     presents: artifacts.map((artifact, index) => ({
       id: `picture-${index}`,
@@ -327,12 +327,12 @@ test("one VisualTrack paints by declaration order rather than item identity", ()
   });
   const visualTrack = (id: string, ids: readonly string[]) => sealPresentVisualTrack({
     timelineId: timeline.id,
-    visualIr: VISUAL_IR_V1,
+
     id,
     presents: ids.map(id => ({
       id,
       span: { startFrame: 0, endFrameExclusive: 30 },
-      root: { id: "root", kind: "box", children: [], style: [] },
+      root: htmlVisualElement({ id: "root", kind: "box", children: [], style: [] }),
     })),
   });
   const composition = sealComposition({ id: "paint-order", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 1920, height: 1080, clearColor: "#000000" }, root: { members: [
@@ -392,7 +392,7 @@ test("HTML renderer folds Adjustments around the accumulated picture in visual s
   assert.ok(lower !== undefined);
   const adjusted = sealVisualTrack({
     timelineId: lower.timelineId,
-    visualIr: lower.visualIr,
+
     id: lower.id,
     items: [...lower.items,
       {
@@ -461,7 +461,7 @@ test("HTML renderer rejects an Adjustment programme owned by another renderer", 
   assert.ok(lower !== undefined);
   const adjusted = sealVisualTrack({
     timelineId: lower.timelineId,
-    visualIr: lower.visualIr,
+
     id: lower.id,
     items: [...lower.items, {
       kind: "adjustment",
@@ -583,12 +583,12 @@ test("Text shrink preserves authored hug sizing and trims metrics inside the con
   });
   const track = sealPresentVisualTrack({
     timelineId: timeline.id,
-    visualIr: "hypit.visual-ir@1",
+
     id: "text",
     presents: [{
       id: "title",
       span: { startFrame: 0, endFrameExclusive: 30 },
-      root: { id: "root", kind: "box", style: [{ name: "position", value: "absolute" }, { name: "inset", value: 0 }], children: [
+      root: htmlVisualElement({ id: "root", kind: "box", style: [{ name: "position", value: "absolute" }, { name: "inset", value: 0 }], children: [
         {
           id: "flow",
           kind: "text-flow",
@@ -658,7 +658,7 @@ test("Text shrink preserves authored hug sizing and trims metrics inside the con
           },
           sequences: [],
         },
-      ] },
+      ] }),
     }],
   });
   const document = compileHtmlProgram(sealComposition({ id: "text-boxes", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 720, height: 1280, clearColor: "#000000" }, root: scope(track) }, audio: { contributions: [] } }, timeline));
@@ -723,193 +723,29 @@ test("any legal frame and Provider-owned chunk can be addressed without traversi
   );
 });
 
-test("HTML renderer emits compact absolute-frame animation without creating a Track stacking context", async () => {
-  const { composition, timeline } = fixture();
+test("HTML-owned animation closes behind one Programme", () => {
+  const { composition, picture } = fixture();
   const lower = visualScopeTracks(composition.visual.root).find((track) => track.id === "lower");
   assert(lower !== undefined);
   const present = visualPresents(lower)[0]!;
-  const media = present.root;
-  const animated = sealPresentVisualTrack({...lower,
-    presents: [{
-      ...present,
-      root: {
-        ...media,
-        animation: {
-          keyframes: [
-            { atFrame: 0, style: [{ name: "opacity", value: 0 }, { name: "transform", value: "translateY(100%)" }] },
-            { atFrame: 10, easing: "ease-out", style: [{ name: "opacity", value: 1 }, { name: "transform", value: "translateY(0%)" }] },
-            { atFrame: 30, style: [{ name: "opacity", value: 1 }, { name: "transform", value: "translateY(0%)" }] },
-          ],
-        },
-      },
-    }],
-  });
+  const animated = sealPresentVisualTrack({ ...lower, presents: [{
+    ...present,
+    root: htmlVisualElement({
+      id: "animated-media",
+      kind: "image",
+      picture: { colorPrimaries: "bt709", colorTransfer: "srgb", colorMatrix: "rgb", colorRange: "full", bitDepth: 8, alphaMode: "straight" } as const,
+      artifact: picture,
+      style: [{ name: "width", value: "100%" }],
+      animation: { keyframes: [
+        { atFrame: 0, style: [{ name: "opacity", value: 0 }] },
+        { atFrame: 10, easing: "ease-out", style: [{ name: "opacity", value: 1 }] },
+      ] },
+    }),
+  }] });
   const document = compileHtmlProgram(replaceVisualTrack(composition, "lower", animated));
-  assert.match(document.html, /@keyframes hypit-/u);
-  assert.match(document.html, /33\.333333333%\{opacity:1;transform:translateY\(0%\)/u);
-  assert.match(document.html, /animation-duration:1\.001s/u);
-  assert.match(document.html, /100%\{opacity:1;transform:translateY\(0%\)\}/u);
-  assert.match(document.html, /htmlCreateFrameWorkIndex/u);
-  assert.match(document.html, /new Animation\(new KeyframeEffect\(/u);
-  assert.doesNotMatch(document.html, /const frames = \[\]/u, "poses are evaluated per seek, not tabulated per Present frame");
-  assert.doesNotMatch(document.html, /\.animate\(/u, "HTML renderer' waapi adapter tracks Element.animate");
-  assert.doesNotMatch(document.html, /isolation:isolate/u);
-
-  const marker = document.html.indexOf("const millisecondsPerFrame");
-  assert.ok(marker >= 0);
-  const scriptStart = document.html.lastIndexOf("<script>", marker) + "<script>".length;
-  const scriptEnd = document.html.indexOf("</script>", marker);
-  const { frameWorkIndexRuntime } = await import("../src/frame-work.js");
-  const runtime = `${frameWorkIndexRuntime}\n${document.html.slice(scriptStart, scriptEnd)}`;
-  const toFrame = (milliseconds: number) => Math.round(milliseconds * 30 / 1_001);
-  // The test page advances every animation that remains live after Hypit's
-  // seek handler. This is the collision which made later Presents use absolute
-  // composition time even though Hypit had first applied a local pose.
-  const evaluate = async (
-    spans: readonly { readonly start: number; readonly duration: number }[],
-    frames: readonly number[],
-    selection?: readonly { readonly startFrame: number; readonly endFrameExclusive: number }[],
-  ) => {
-    const { runInNewContext } = await import("node:vm");
-    type FakeElement = { pose: number | undefined; readonly style: Record<string, unknown> };
-    type FakeAnimation = { readonly target: FakeElement; currentTime: number; pause(): void; cancel(): void };
-    const positions = spans.map((): number[] => []);
-    const live = new Set<FakeAnimation>();
-    let materialized = 0;
-    let unpausedProbes = 0;
-    let staleUnderlying = 0;
-    let seek: (event: { detail: { frame: number } }) => void = () => {};
-    const animate = (target: FakeElement, record?: number[], effect?: object, kind?: "probe"): FakeAnimation => {
-      let paused = false;
-      const animation = {
-        target,
-        effect,
-        set currentTime(value: number) {
-          if (kind === "probe") {
-            if (!paused) unpausedProbes += 1;
-            if (String(target.style.opacity) !== "authored") staleUnderlying += 1;
-          }
-          record?.push(toFrame(value));
-          target.pose = toFrame(value);
-        },
-        pause() { paused = true; },
-        cancel() {
-          live.delete(animation);
-          target.pose = undefined;
-        },
-      };
-      live.add(animation);
-      return animation;
-    };
-    const elements = spans.map((span) => {
-      const element = {
-        pose: undefined as number | undefined,
-        style: { opacity: "authored" } as Record<string, unknown>,
-        getBoundingClientRect() {},
-        getAnimations: () => [...live].filter((animation) => animation.target === element),
-        getAttribute: (name: string) => String(name.endsWith("start-frame") ? span.start : span.duration),
-      };
-      animate(element, undefined, {
-        getKeyframes: () => {
-          materialized += 1;
-          return [
-            { offset: 0, computedOffset: 0, easing: "linear", composite: "auto", opacity: "0" },
-            { offset: 1, computedOffset: 1, easing: "linear", composite: "auto", opacity: String(span.duration) },
-          ];
-        },
-        getTiming: () => ({ duration: span.duration * 1_001 / 30, fill: "both" }),
-      });
-      return element;
-    });
-    runInNewContext(`${runtime}
-      htmlPrepareFrameSelection(${JSON.stringify(selection)});
-      for (const initialize of htmlFrameProgramInitializers) initialize();`, {
-      document: { querySelectorAll: () => elements, documentElement: { getBoundingClientRect() {} }, timeline: {} },
-      window: { addEventListener(_name: string, callback: typeof seek) { seek = callback; } },
-      KeyframeEffect: class {
-        readonly target: FakeElement;
-        constructor(target: FakeElement) { this.target = target; }
-      },
-      Animation: function (effect: { target: FakeElement }) {
-        return animate(effect.target, positions[elements.indexOf(effect.target as typeof elements[number])], undefined, "probe");
-      },
-      getComputedStyle: (element: FakeElement) => ({ opacity: String(element.pose) }),
-    });
-    for (const frame of frames) {
-      seek({ detail: { frame } });
-      for (const animation of live) animation.currentTime = frame * 1_001 / 30;
-    }
-    const shown = elements.map((element) => element.pose === undefined ? element.style.opacity : String(element.pose));
-    return { materialized, live: live.size, positions, shown, staleUnderlying, unpausedProbes };
-  };
-  assert.deepEqual(await evaluate([{ start: 15, duration: 30 }], [30, 44, 15, 45, 60]), {
-    materialized: 1,
-    live: 0,
-    positions: [[15, 29, 0]],
-    shown: ["0"],
-    staleUnderlying: 0,
-    unpausedProbes: 0,
-  }, "every seek restores authored underlying values and pauses its probe before seeking");
-  assert.deepEqual(await evaluate([{ start: 15, duration: 30 }], [30]), {
-    materialized: 1, live: 0, positions: [[15]], shown: ["15"], staleUnderlying: 0, unpausedProbes: 0,
-  },
-    "a fresh worker derives the same middle pose without visiting preceding frames");
-  assert.deepEqual(await evaluate([{ start: 30, duration: 60 }], [33, 60, 86]), {
-    materialized: 1,
-    live: 0,
-    positions: [[3, 30, 56]],
-    shown: ["56"],
-    staleUnderlying: 0,
-    unpausedProbes: 0,
-  }, "a Present starting after frame 0 keeps its Present-relative pose when HTML renderer seeks live animations");
-  assert.deepEqual(await evaluate([
-    { start: 0, duration: 30 },
-    { start: 90, duration: 30 },
-  ], [100], [{ startFrame: 100, endFrameExclusive: 101 }]), {
-    materialized: 1,
-    live: 1,
-    positions: [[], [10]],
-    shown: ["100", "10"],
-    staleUnderlying: 0,
-    unpausedProbes: 0,
-  }, "a selected render does not materialize animations from unrelated Presents");
-  assert.deepEqual(await evaluate([
-    { start: 0, duration: 5 },
-    { start: 5, duration: 5 },
-    { start: 3, duration: 5 },
-    { start: 100, duration: 2 },
-  ], [0, 3, 4, 5, 7, 8, 100, 101, 102, 6]), {
-    materialized: 4,
-    live: 0,
-    positions: [
-      [0, 3, 4],
-      [0, 2, 3, 1],
-      [0, 1, 2, 4, 3],
-      [0, 1],
-    ],
-    shown: ["4", "1", "3", "1"],
-    staleUnderlying: 0,
-    unpausedProbes: 0,
-  }, "the point index preserves overlap, half-open boundaries, distant spans and reverse seeks");
-});
-
-test("HTML renderer clips a long animation by Present visibility instead of rejecting it", () => {
-  const { composition, timeline } = fixture();
-  const lower = visualScopeTracks(composition.visual.root).find((track) => track.id === "lower");
-  assert(lower !== undefined);
-  const present = visualPresents(lower)[0]!;
-  const media = present.root;
-  const animated = sealPresentVisualTrack({...lower,
-    presents: [{ ...present, root: { ...media, animation: { keyframes: [
-      { atFrame: 0, style: [{ name: "opacity", value: 0 }] },
-      { atFrame: 45, style: [{ name: "opacity", value: 1 }] },
-    ] } } }],
-  });
-  const document = compileHtmlProgram(replaceVisualTrack(composition, "lower", animated));
-  assert.match(document.html, /animation-duration:1\.5015s/u);
-  assert.match(document.html, /data-hypit-animation-sample-frames="30"/u);
-  assert.doesNotMatch(document.html, /data-hypit-animation-properties|data-hypit-animation-duration-frames/u);
-  assert.match(document.html, /100%\{opacity:1\}/u);
+  assert.match(document.html, /data-hypit-html-element-id="animated-media"/u);
+  assert.match(document.html, /element\.animate\(definition\.keyframes/u);
+  assert.doesNotMatch(document.html, /data-hypit-frame-animation/u);
 });
 
 test("content-bound fonts and typed compositable Surfaces cross the same Artifact boundary", () => {
@@ -927,12 +763,12 @@ test("content-bound fonts and typed compositable Surfaces cross the same Artifac
   };
   const surfaceResource = fixtureResource("html-program:alpha-surface");
   const track = sealPresentVisualTrack({ timelineId: "test-space",
-    visualIr: "hypit.visual-ir@1",
+
     id: "bound-render-dependencies",
     presents: [{
       id: "bound",
       span: { startFrame: 0, endFrameExclusive: 30 },
-      root: { id: "root", kind: "box", style: [], children: [
+      root: htmlVisualElement({ id: "root", kind: "box", style: [], children: [
         {
           id: "text",
           kind: "text",
@@ -965,7 +801,7 @@ test("content-bound fonts and typed compositable Surfaces cross the same Artifac
           }),
           style: [{ name: "position", value: "absolute" }, { name: "inset", value: 0 }],
         },
-      ] },
+      ] }),
     }],
   });
   const document = compileHtmlProgram(sealComposition({ id: "render-dependencies", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: scope(track) }, audio: { contributions: [] } }, space));
@@ -1001,7 +837,7 @@ test("exact timed sampling keeps a held frame as one compact interval without ze
     mediaType: "video/mp4",
   };
   const track = sealPresentVisualTrack({ timelineId: "test-space",
-    visualIr: "hypit.visual-ir@1",
+
     id: "sampled",
     presents: [{
       id: "sampled",
@@ -1059,7 +895,7 @@ test("HTML terminal quantizes continuous sampling pieces without moving their so
       rate: { numerator: 1, denominator: 1 },
     },
   ] }] });
-  const track = sealPresentVisualTrack({ timelineId: timeline.id, visualIr: VISUAL_IR_V1, id: "partial-piece", presents: [{
+  const track = sealPresentVisualTrack({ timelineId: timeline.id, id: "partial-piece", presents: [{
     id: "partial-piece",
     span: { startFrame: 0, endFrameExclusive: 3 },
     root: {
@@ -1068,7 +904,6 @@ test("HTML terminal quantizes continuous sampling pieces without moving their so
       source: directVideoSource({ kind: "blob", resource: fixtureResource("html-program:partial-piece"), size: 1, mediaType: "video/mp4" }, sampling),
       muted: true,
       sampling,
-      style: [],
     },
   }] });
   const document = compileHtmlProgram(sealComposition({ id: "partial-piece", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 100, height: 100, clearColor: "#000000" }, root: scope(track) }, audio: { contributions: [] } }, timeline));
@@ -1090,7 +925,7 @@ test("a Track naming five takes still lowers to DOM identities a Windows path ca
   const timeline = sealTimeline({ id: "test-space", frameCount: 8, frameRate: { numerator: 30, denominator: 1 },
   });
   const track = sealPresentVisualTrack({ timelineId: "test-space",
-    visualIr: "hypit.visual-ir@1",
+
     id: trackId,
     presents: [{
       id: presentId,
@@ -1136,10 +971,10 @@ test("HTML visuals own local HTML while retaining typed child resources and form
   const { timeline, picture } = fixture();
   const opaqueArtifact = { kind: "blob" as const, resource: fixtureResource("html-program:opaque-program"),
     size: 12, mediaType: "image/png" };
-  const visual = sealPresentVisualTrack({ id: "scene", timelineId: timeline.id, visualIr: VISUAL_IR_V1,
+  const visual = sealPresentVisualTrack({ id: "scene", timelineId: timeline.id,
     presents: [{ id: "scene", span: { startFrame: 0, endFrameExclusive: 30 },
-      root: { id: "root", kind: "program", style: [], slots: [{ name: "photo", element: {
-        id: "photo", kind: "image", picture: { colorPrimaries: "bt709", colorTransfer: "srgb", colorMatrix: "rgb", colorRange: "full", bitDepth: 8, alphaMode: "straight" } as const, artifact: picture, style: [],
+      root: { id: "root", kind: "program", slots: [{ name: "photo", element: {
+        id: "photo", kind: "image", picture: { colorPrimaries: "bt709", colorTransfer: "srgb", colorMatrix: "rgb", colorRange: "full", bitDepth: 8, alphaMode: "straight" } as const, artifact: picture,
       } }], program: htmlVisual({
         html: `<section class="viewport">{{photo}}<img class="opaque" src="hypit-artifact://${opaqueArtifact.resource}"><svg><path d="M0 0H20"/></svg></section>`,
         css: '.viewport { backdrop-filter:blur(4px); display:grid; }',

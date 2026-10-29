@@ -114,8 +114,7 @@ hypit version --check
 
 This read-only query reports npm release information and its source. `--registry <url>` selects a
 registry for the check; `--json` gives structured output. Local `hypit version` and `--version`
-do not contact a registry. With an older executable lacking the command, use
-`npm view @hypit/hypit@latest version` through the project's configured registry.
+do not contact a registry.
 
 A failed query leaves the remote release unknown. A different version can mean a newer checkout or
 a stale mirror. Read the relevant [release notes](https://github.com/hypit-ai/hypit/releases) and

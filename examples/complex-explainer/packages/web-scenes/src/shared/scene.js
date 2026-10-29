@@ -70,7 +70,7 @@ export function scene(t, within, w, font, o, html, css, setup, events, entries, 
   return sealPresentVisualTrack({
     id: o.id,
     timelineId: t.id,
-    visualIr: "hypit.visual-ir@1",
+
     presents: [
       {
         id: o.id,

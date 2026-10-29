@@ -19,7 +19,8 @@ corepack enable
 pnpm install --frozen-lockfile
 ```
 
-运行真实 Build 还需要 Python 3.10–3.13、uv、ffmpeg 和 Chromium，各自的用途见[开发指南](https://hypit.ai/zh/guide/develop/)。
+当选中的 package 需要时，真实 Build 还会用到 Python 3.10–3.13、uv、ffmpeg 和 Chromium。
+请以正在修改的 Provider 或本地服务 README 为准，查看它的环境要求和验证命令。
 
 使用本地渲染的 Profile，首次渲染前执行
 `hypit programs up --runtime <profile> --endpoint <render-instance>`；也可以执行
@@ -37,7 +38,9 @@ pnpm install --frozen-lockfile
 | 组件内部 | [组件解剖](https://hypit.ai/zh/guide/component-anatomy/) |
 | Studio 界面翻译 | [Studio 本地化](packages/studio/LOCALIZATION.md) |
 | 编译、Run 与 Build | [Runtime](https://hypit.ai/zh/guide/runtime/) |
-| 命名、模块边界、wire 数据 | [代码规范](https://hypit.ai/zh/guide/conventions/) |
+
+精确 API 和脚本以最近的 package 或 service README 为准。跨包归属与仓库级边界统一维护在
+[AGENTS.md](AGENTS.md) 中，不再复制一份公共开发百科。
 
 中英文档分别位于 `docs/` 和 `docs/zh/`，改动一侧的页面时，请一并改动对应的另一侧。
 
@@ -69,24 +72,6 @@ Hypit 按事实归属组织测试，不使用含义模糊的 unit/integration/e2
 也一起删除，不把测试集当作项目历史档案。
 
 ## 打包 Distribution
-
-### 0.3.1 的 SDK 导入迁移
-
-已有视频项目的准确导入映射、依赖调整与验证方法见
-[Agent 迁移指南](migrations/0.3.1.md)。从 0.2.x 或更早开发版本迁移的项目，先阅读
-[0.3 项目迁移指南](migrations/0.3.md)。
-
-视频领域 SDK 改为独立安装的包。组件代码使用 `@hypit/hypit/composition` 等旧根子路径时，
-需要改为从 `@hypit/composition` 导入，并在组件自己的 `dependencies` 中声明该包。
-Timeline、Temporal、Spatial、Media、Narrative、Caption、Generation、HTML Program、证据与
-投影包同理。使用子路径 API 时，以所属包实际导出为准，例如 `@hypit/temporal/author`、
-`@hypit/temporal/studio`。通用宿主 API 继续由 `@hypit/hypit/*` 提供。
-SVML 的逻辑 Module 引用仍保持 `@1`，这里改变的是 npm 归属和 TypeScript 导入路径。
-
-根发行号定为 `0.3.1`，但上述 SDK 导入迁移与 `0.3.0` 并非源码兼容。
-需要一起更新根和受影响的组件依赖，然后由项目的普通包管理器更新 lockfile。
-已有领域包的新架构版本使用 `0.2.x`，避免旧 `^0.1.1` 依赖静默选择它们；
-原先内嵌的领域包从 `0.1.0` 开始，未变化的包保留原版本。
 
 ### 构建与发布
 
@@ -124,7 +109,7 @@ main CI，下载其制品，核对版本和 npm 状态，按依赖优先、根�
 重试原内容的发布不需要。push main、只 push 标签或保存草稿 Release 都不会发布 npm。
 对外宣布版本可用前，先核对发布结果。
 
-发行依赖使用明确的兼容范围，例如 `workspace:^0.3.0`；打包只去掉 workspace 前缀，
+发行依赖使用明确的兼容范围，例如 `workspace:^0.4.0`；打包只去掉 workspace 前缀，
 不会自动把兼容下限抬高到当前源码版本。
 
 npm 包的 Trusted Publisher 应配置 GitHub Actions：组织 `hypit-ai`、仓库 `hypit`、工作流

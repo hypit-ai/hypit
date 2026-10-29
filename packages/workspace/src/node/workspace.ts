@@ -1,4 +1,3 @@
-import { pathToFileURL } from "node:url";
 import { randomUUID } from "node:crypto";
 import { createReadStream } from "node:fs";
 import { readFile, realpath, stat } from "node:fs/promises";
@@ -34,7 +33,7 @@ export type NodeFilesystemExternalSource = {
 };
 
 export type NodeFilesystemExternalSourceResolver = (
-  importer: SourceUnit,
+  importer: { readonly unit: SourceUnit; readonly path: string },
   request: SourceImportRequest,
 ) => Awaitable<NodeFilesystemExternalSource>;
 
@@ -44,7 +43,7 @@ export type NodeFilesystemExternalAsset = {
 };
 
 export type NodeFilesystemExternalAssetResolver = (
-  importer: SourceUnit,
+  importer: { readonly unit: SourceUnit; readonly path: string },
   request: SourceAssetRequest,
 ) => Awaitable<NodeFilesystemExternalAsset>;
 
@@ -65,6 +64,8 @@ class NodeFilesystemWorkspaceSession implements WorkspaceSession {
   readonly #sourceAdapter: NodeFilesystemSourceAdapter;
   readonly #sourceCache = new Map<string, SourceUnit>();
   readonly #sourceRoots = new Map<string, string>();
+  readonly #sourcePaths = new Map<string, string>();
+  #nextSourceId = 1;
   readonly #assetIdentity = new Map<string, {
     readonly resource: BlobRef["resource"];
     readonly size: number;
@@ -73,6 +74,7 @@ class NodeFilesystemWorkspaceSession implements WorkspaceSession {
 
   private constructor(
     root: string,
+    entryPath: string,
     entry: ResolvedSource,
     assetRoots: readonly string[],
     externalSourceResolver: NodeFilesystemExternalSourceResolver | undefined,
@@ -85,8 +87,9 @@ class NodeFilesystemWorkspaceSession implements WorkspaceSession {
     this.#externalSourceResolver = externalSourceResolver;
     this.#externalAssetResolver = externalAssetResolver;
     this.#sourceAdapter = sourceAdapter;
-    this.#sourceCache.set(entry.unit.id, entry.unit);
+    this.#sourceCache.set(entryPath, entry.unit);
     this.#sourceRoots.set(entry.unit.id, root);
+    this.#sourcePaths.set(entry.unit.id, entryPath);
   }
 
   static async open(
@@ -108,13 +111,14 @@ class NodeFilesystemWorkspaceSession implements WorkspaceSession {
       );
     }
     const entryUnit: SourceUnit = {
-      id: canonicalEntry,
+      id: "source:0",
       name: relative(root, canonicalEntry) || basename(canonicalEntry) || canonicalEntry,
       bytes: await readFile(canonicalEntry),
     };
     const entry = await sourceAdapter(entryUnit);
     return new NodeFilesystemWorkspaceSession(
       root,
+      canonicalEntry,
       entry,
       [root, ...assetRoots],
       externalSourceResolver,
@@ -135,7 +139,7 @@ class NodeFilesystemWorkspaceSession implements WorkspaceSession {
     }
     const cached = this.#sourceCache.get(canonical);
     if (cached !== undefined) {
-      const previousRoot = this.#sourceRoots.get(canonical);
+      const previousRoot = this.#sourceRoots.get(cached.id);
       if (previousRoot !== sourceRoot) {
         throw new WorkspaceError(
           "SOURCE_ROOT_CONFLICT",
@@ -146,12 +150,13 @@ class NodeFilesystemWorkspaceSession implements WorkspaceSession {
       return cached;
     }
     const unit: SourceUnit = {
-      id: canonical,
+      id: `source:${this.#nextSourceId++}`,
       name: relative(sourceRoot, canonical) || basename(canonical) || canonical,
       bytes: await readFile(canonical),
     };
     this.#sourceCache.set(canonical, unit);
-    this.#sourceRoots.set(canonical, sourceRoot);
+    this.#sourceRoots.set(unit.id, sourceRoot);
+    this.#sourcePaths.set(unit.id, canonical);
     return unit;
   }
 
@@ -164,7 +169,7 @@ class NodeFilesystemWorkspaceSession implements WorkspaceSession {
       throw new WorkspaceError("UNKNOWN_SOURCE_IMPORTER", `${importer.id} is outside this Workspace`, importer.id);
     }
     if (request.from.startsWith("./") || request.from.startsWith("../")) {
-      const unit = await this.#loadSource(resolve(dirname(importer.id), request.from), importerRoot);
+      const unit = await this.#loadSource(resolve(dirname(this.#sourcePath(importer)), request.from), importerRoot);
       return await this.#sourceAdapter(unit);
     }
     if (this.#externalSourceResolver === undefined) {
@@ -174,7 +179,7 @@ class NodeFilesystemWorkspaceSession implements WorkspaceSession {
         request.from,
       );
     }
-    const external = await this.#externalSourceResolver(importer, request);
+    const external = await this.#externalSourceResolver({ unit: importer, path: this.#sourcePath(importer) }, request);
     const unit = await this.#loadSource(external.source, external.root);
     return external.frontend === undefined
       ? await this.#sourceAdapter(unit)
@@ -217,7 +222,6 @@ class NodeFilesystemWorkspaceSession implements WorkspaceSession {
     if (!this.#attachments.has(attachmentKey)) {
       this.#attachments.set(attachmentKey, {
         blob: { ...blob },
-        location: pathToFileURL(canonical).href,
         open: () => createReadStream(canonical),
         openRange: (range) => createReadStream(canonical, { start: range.start, end: range.endExclusive - 1 }),
       });
@@ -242,13 +246,25 @@ class NodeFilesystemWorkspaceSession implements WorkspaceSession {
     return importerRoot;
   }
 
+  #sourcePath(source: SourceUnit): string {
+    const path = this.#sourcePaths.get(source.id);
+    if (path === undefined) {
+      throw new WorkspaceError("UNKNOWN_SOURCE_IMPORTER", `${source.id} is outside this Workspace`, source.id);
+    }
+    return path;
+  }
+
+  sourceLocation(source: SourceUnit): string | undefined {
+    return this.#sourcePaths.get(source.id);
+  }
+
   async #assetPath(importer: SourceUnit, request: SourceAssetRequest): Promise<string> {
     const importerRoot = this.#importerRoot(importer);
     const relativeAsset = request.from.startsWith("./") || request.from.startsWith("../");
     let canonical: string;
     let allowedRoots: readonly string[];
     if (relativeAsset) {
-      canonical = await realpath(resolve(dirname(importer.id), request.from));
+      canonical = await realpath(resolve(dirname(this.#sourcePath(importer)), request.from));
       allowedRoots = importerRoot === this.root ? this.#assetRoots : [importerRoot];
     } else {
       if (this.#externalAssetResolver === undefined) {
@@ -258,7 +274,7 @@ class NodeFilesystemWorkspaceSession implements WorkspaceSession {
           request.from,
         );
       }
-      const external = await this.#externalAssetResolver(importer, request);
+      const external = await this.#externalAssetResolver({ unit: importer, path: this.#sourcePath(importer) }, request);
       const externalRoot = await realpath(resolve(external.root));
       canonical = await realpath(resolve(external.asset));
       allowedRoots = [externalRoot];

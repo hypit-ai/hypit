@@ -60,6 +60,9 @@ export async function loadInvocation(options: {
   return {
     ...compiled,
     compiler,
-    origin: { kind: options.input.kind, source: options.workspace.entry.unit.id },
+    origin: {
+      kind: options.input.kind,
+      source: options.workspace.sourceLocation?.(options.workspace.entry.unit) ?? options.workspace.entry.unit.id,
+    },
   };
 }

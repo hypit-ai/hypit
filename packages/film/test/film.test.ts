@@ -8,6 +8,7 @@ import { mediaManifest } from "@hypit/media";
 import type { FontArtifactRef } from "@hypit/media";
 import { sealCanvas, spatialComponent, spatialManifest, spatialTypes } from "@hypit/spatial";
 import { recipeManifest } from "@hypit/recipe";
+import { htmlVisualElement } from "@hypit/html-program";
 import { temporalManifest } from "@hypit/temporal";
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -95,12 +96,12 @@ const titleVisual = renderFineTextOccurrence(space, {
     motion: stillTextMotion(),
 });
 const background = sealPresentVisualTrack({ timelineId: "test-space",
-  visualIr: "hypit.visual-ir@1",
+
   id: "background-track",
   presents: [{
     id: "background",
     span: { startFrame: 0, endFrameExclusive: 120 },
-    root: { id: "root", kind: "box", children: [], style: [{ name: "background-color", value: "#223344" }] },
+    root: htmlVisualElement({ id: "root", kind: "box", children: [], style: [{ name: "background-color", value: "#223344" }] }),
   }],
 });
 const audio = sealAudioTrack({ timelineId: "test-space",
@@ -169,7 +170,7 @@ const htmlProgramContribution = bindAuthorFragment(htmlProgramInstance, {
   program: "main.program",
 });
 const merged = mergeFragmentContributions(
-  { outputs: [], candidates: [], operations: [] },
+  { outputs: [], operations: [] },
   filmContribution,
   htmlProgramContribution,
 );

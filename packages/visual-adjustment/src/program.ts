@@ -76,7 +76,7 @@ export function finalizeVisualAdjustmentTrack(
   if (set.items.length === 0) throw new Error("Visual Adjustment Track requires at least one Adjustment.");
   const track = sealVisualTrack({
     timelineId: timeline.id,
-    visualIr: "hypit.visual-ir@1",
+
     id: sealVisualAdjustmentHeader(header).id,
     items: set.items,
   });

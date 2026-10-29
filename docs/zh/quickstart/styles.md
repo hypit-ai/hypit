@@ -173,7 +173,7 @@ visual.product {
 | `border-*`、`shadows` | 框自有的边框与有序阴影 |
 | `motion` / `Pose` | Clip 局部时钟上的可选仿射与透明度状态 |
 
-位置始终是一条显式图边：
+位置始终是一项显式 Source 引用：
 
 ```svml
 <space:Frame id="product-frame" within={vertical.bounds}
@@ -286,7 +286,7 @@ interview.street {
 `street-interview-v1` 读取这五个轴，每段的镜头变化按作者顺序直接写在 `action` 中。`podcast-v1` 与 `call-v1` 读取同名的 `framing`、
 `edit-language`、`pacing`、`performance`、`reaction` 和 `gesture` 轴，但使用各自的有限值。允许值和默认值以所选 Kit 文件为准。
 
-模型、分辨率、时长和参考媒体不是模板策略；它们继续存在于精确模型声明与显式图边中。
+模型、分辨率、时长和参考媒体留在精确模型声明与显式 Source 引用中。
 
 ## 精确字体声明
 
@@ -310,8 +310,8 @@ SVS 描述字体策略，但不选择或打开字体字节。官方 Hypit Distri
 | `weight` | 精确选择的字体粗细 |
 | `style` | `normal` 或该字体包支持的 `italic` |
 
-Hypit 不维护有限字体目录，也不会在编译时安装字体族。适配器只把所选包的 metadata、CSS
-和字体文件作为数据读取；编译器把已安装字节变成 Resource-backed 字体值。Build 过程不会下载字体，Runtime 也不猜字体：
+字体由项目安装的 `@fontsource` 包明确提供。所选包的 metadata、CSS 和字体文件会作为数据读取，
+已安装字节成为 Resource-backed 字体值：
 
 ```svml
 <caption-fine:Style id="dialogue" recipe={recipes.caption.dialogue}
@@ -319,7 +319,7 @@ Hypit 不维护有限字体目录，也不会在编译时安装字体族。适�
 ```
 
 `media:FontStack` 产出通用 `FontStackRef`，主字体与 Fallback 都保留自己的真实元数据；
-Caption Recipe 只保存呈现参数；家族、字重与字形由 Font 值负责。CJK 与 Emoji 即使由多个 Unicode-range 文件组成，在作者图中仍是一条逻辑边。终端 Text 与 Fine Caption 都要求明确字体栈；Visual IR 只接受显式字体资源。对于同时具有文本与 Emoji 两种呈现的符号，作者应写真实的 Unicode Emoji 序列（例如包含 VS16 的 `☎️`），包按该显示稿绘制。
+Caption Recipe 只保存呈现参数；家族、字重与字形由 Font 值负责。CJK 与 Emoji 即使由多个 Unicode-range 文件组成，在作者图中仍是一条逻辑边。Composition 的类型化 Text 与 HTML Programme 都要求显式字体资源。对于同时具有文本与 Emoji 两种呈现的符号，作者应写真实的 Unicode Emoji 序列（例如包含 VS16 的 `☎️`），包按该显示稿绘制。
 
 品牌字体与自定义字体仍是显式作者资产，不会被塞进中央目录：
 

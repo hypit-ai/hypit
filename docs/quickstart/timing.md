@@ -3,8 +3,8 @@ title: Timing & Assembly
 description: Construct absolute program time, then present media and project optional semantic time explicitly.
 ---
 
-Hypit has one program-time axis: `Timeline`. It is only `{ id, frameRate, frameCount }`.
-It contains no clips, words, Tracks or central event registry.
+Hypit has one program-time axis: `Timeline`, represented by `{ id, frameRate, frameCount }`.
+Named Instants, Windows, media occurrences and semantic projections refer to that axis.
 
 For spoken work, independent facts meet around that axis:
 
@@ -41,7 +41,9 @@ choosing the final Timeline's frame grid:
   video="primary-moving" audio="default" span-authority="video"/>
 ```
 
-Preparation establishes media facts. It contains no Script meaning, program placement or proxy file.
+Preparation publishes the selected members, their exact local temporal domain and Extent, and the
+source relationship needed by later consumers. Script alignment and programme placement remain
+separate author decisions.
 
 ## Align meaning when the composition consumes it
 
@@ -87,8 +89,8 @@ placement or the Alignment operation.
 
 ## Construct the absolute Timeline
 
-Timeline authoring is an acyclic construction graph. `end` is required; every named Instant or
-Window is naturally published as an ordinary graph value:
+Timeline declarations may depend on one another but must remain acyclic. `end` is required; every
+named Instant or Window can be referenced by other declarations:
 
 ```svml
 <time:Timeline id="speech" clock={clock} end="answer.end">
@@ -99,7 +101,7 @@ Window is naturally published as an ordinary graph value:
 
 Each `for={...extent}` resolves an exact unpositioned duration on this Timeline's Clock. The default
 `cover` rule retains a final partial frame. Generated speech may therefore determine Timeline length
-during ordinary graph evaluation. Use `from="opening.end+2s"` for a gap,
+when its Extent becomes available. Use `from="opening.end+2s"` for a gap,
 `from="opening.end-12f"` for overlap, or `latest(a.end,b.end)` for parallel branches. A pure animation
 can simply declare `<time:Timeline id="animation" clock={clock} end="8s"/>`. The Timeline retains no
 media or source-domain identity.

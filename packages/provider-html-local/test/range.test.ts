@@ -81,8 +81,6 @@ test("a nested Composition composes its occurrence Map with its media Map withou
     { frameRate: document.frameRate });
   assert.equal(slots.length, 1);
   assert.equal(slots[0]!.documentPath.length, 1);
-  assert.notEqual(slots[0]!.id, slots[0]!.elementId,
-    "the parent source occurrence and child document element retain separate identities");
   const timestampIndex = { timestamps: [0n, 1n, 2n, 3n],
     timeBase: { numerator: 1n, denominator: 30n } };
   const childFrames = [2, 3, 0, 1, 2, 3, 3, 3, 0, 0, 1, 1, 3, 2, 1, 0, 3, 2];

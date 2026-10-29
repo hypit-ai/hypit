@@ -7,7 +7,7 @@ import { sealMinimaxH3Request } from "@hypit/minimax-h3";
 
 import { hypiHubRoutes } from "../../src/routes.js";
 import type { HypiHubRoute } from "../../src/routes.js";
-import { sealGptImage2Request } from "../../../gpt-image/src/index.js";
+import { sealGptImage2Request } from "@hypit/gpt-image";
 
 async function compile(route: HypiHubRoute, constraints: CanonicalValue, resolve: GenerationArtifactUrlResolver) {
   return await route.prepare(constraints).compile(resolve);

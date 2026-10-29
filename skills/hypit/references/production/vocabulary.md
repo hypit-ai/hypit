@@ -74,17 +74,10 @@ Keep the boundary useful:
 - Runtime Profiles own external execution and credentials;
 - Provider packages implement media tools and external services.
 
-Read the installed `@hypit/hypit/producer`, `refinement`, `author` and `markup` READMEs for the public package boundaries and a relevant component
-for an implementation example. Give the new package its own Module identity and use the project
-owner's scope; `@hypit/*` is the Hypit project's publishing namespace, not a scope for project packages.
-
-TypeScript imports use public SDK paths such as `@hypit/hypit/author`, `@hypit/hypit/producer`,
-`@hypit/hypit/refinement`, `@hypit/hypit/markup`, `@hypit/composition`,
-`@hypit/hypit/text` or `@hypit/caption`; Studio Companions use the independent
-`@hypit/studio-companion` package. Source imports instead name logical Modules,
-such as `@hypit/caption@1`. Declare the domain packages you import as ordinary dependencies;
-declare compatibility with the Hypit and Companion host APIs through peer dependencies. When learning
-from language-internal source, translate its private workspace imports to public Hypit SDK paths.
+Start from the installed project-component example and follow its README for the selected release's
+TypeScript imports, package metadata and dependencies. Give the new package its own identity under the
+project owner's scope. Source imports use the address published by that package, such as
+`@studio/score-strip@1`.
 
 Describe the declaration's role, fields and outputs with a small valid example so a future author
 can select it. A visual preview makes its appearance recognizable; Studio shows the actual

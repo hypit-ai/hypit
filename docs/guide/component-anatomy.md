@@ -1,6 +1,6 @@
 ---
-title: Component Anatomy
-description: Turn a scene's creative interface into a reusable graph contribution.
+title: Component Design
+description: Turn a scene's creative interface into a reusable project component.
 ---
 
 A component connects an author-facing idea to its implementation. For a ranking board, that idea
@@ -11,24 +11,12 @@ Start with [Adding an Author Package](./author-packages.md) for a complete build
 [Ranking](https://github.com/hypit-ai/hypit/blob/main/packages/ranking/README.md) is a richer example
 of semantic events, persistent state and a Studio Companion.
 
-## The implementation roles
+## Start from the author-facing behavior
 
-These roles can be organized into files that suit the component's size:
-
-| Role | Responsibility |
-| --- | --- |
-| Manifest and Types | Name the values, Producers, inputs and outputs the package provides |
-| Author Declaration | Define fields and children, resolve typed references and lower the authored element into graph data |
-| Fragment | Describe the operations and dependencies connecting those inputs to outputs |
-| Producer | Perform the declared computation |
-| Value and Style helpers | Validate inputs, apply documented defaults and decode the accepted Recipe properties |
-| Schedule and drawing | Project events and draw the scene at each frame |
-| Activation | Publish the contributions the selected package offers |
-| Studio Companion | Describe timeline Items and editable properties for Studio |
-
-The [Author Package guide](./author-packages.md) and included example route each exact object shape to
-its owning API. A small component can keep related roles together;
-a larger component benefits from separating reusable scheduling, styling and drawing logic.
+Name the component by the visual or audible role it contributes. Its Source interface should expose
+content, placement, appearance and meaningful events that another author may intentionally change.
+Keep scheduling and drawing together when they express one behavior; split files when that makes the
+package easier to understand. The included package README owns the exact TypeScript file layout and APIs.
 
 ## Design around relationships
 

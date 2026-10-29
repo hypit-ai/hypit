@@ -128,24 +128,12 @@ function outputGraph(): AuthorGraph {
       {
         id: "measurement",
         type: measurementType,
-        primary: "measure",
+        primary: { kind: "operation-result", operation: "measure" },
       },
       {
         id: "report",
         type: reportType,
-        primary: "report",
-      },
-    ],
-    candidates: [
-      {
-        id: "measure",
-        type: measurementType,
-        root: { kind: "operation-result", operation: "measure" },
-      },
-      {
-        id: "report",
-        type: reportType,
-        root: { kind: "operation-result", operation: "report" },
+        primary: { kind: "operation-result", operation: "report" },
       },
     ],
     operations: [
@@ -214,12 +202,7 @@ function providerGraph(): AuthorGraph {
     outputs: [{
       id: "measurement",
       type: measurementType,
-      primary: "request",
-    }],
-    candidates: [{
-      id: "request",
-      type: measurementType,
-      root: { kind: "operation-result", operation: "request" },
+      primary: { kind: "operation-result", operation: "request" },
     }],
     operations: [{
       id: "request",

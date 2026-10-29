@@ -190,14 +190,13 @@ test("Text Mask explicitly consumes one fine Text occurrence and one owned still
   assert.equal(track.id, "masked-title");
   assert.ok(track.items[0] !== undefined);
   const elements = visualElements(track.items[0]!.root);
-  assert.deepEqual(elements.map((element) => element.kind), ["mask", "text", "surface"]);
-  assert.ok(elements[2]?.style.some((entry) =>
-    entry.name === "transform" && entry.value === "matrix(2,0,0,2,0,-120)"));
-  assert.equal(elements[2]?.style.some((entry) => entry.name === "object-fit"), false);
+  assert.deepEqual(elements.filter((element) => element.kind !== "program").map((element) => element.kind),
+    ["mask", "text", "surface"]);
   const html = compileHtmlProgram(sealComposition({ id: "owned-mask-composition", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }, space)).html;
   assert.match(html, /<foreignObject/u);
   assert.match(html, />OWNED MASK</u);
   assert.match(html, /mask-type:alpha/u);
+  assert.match(html, /matrix\(2,0,0,2,0,-120\)/u);
   assert.throws(() => renderFineTextMask(space, occurrence, {
     ...material, artifact: { ...material.artifact, mediaType: "video/webm" },
     timing: { kind: "frames", frameCount: 150, frameRate: { numerator: 30, denominator: 1 } },
@@ -317,16 +316,16 @@ test("rich Text lowers ordered glyph layers, boxes, bounded flow, sequences and 
         id: "words", unit: "word", range: { start: 0, endExclusive: 3 }, order: "reverse",
         startFrame: 0, unitDurationFrames: 20, staggerFrames: 4, cycles: 1,
         keyframes: [
-          { atProgress: 0, style: [{ name: "opacity", value: 0 }, { name: "transform", value: "scale(0.7)" }] },
-          { atProgress: 1, easing: "ease-out", style: [{ name: "opacity", value: 1 }, { name: "transform", value: "scale(1)" }] },
+          { atProgress: 0, state: { opacity: 0, transform: { translateXPx: 0, translateYPx: 0, scale: 0.7, rotateDeg: 0, skewXDeg: 0, skewYDeg: 0 } } },
+          { atProgress: 1, easing: "ease-out", state: { opacity: 1, transform: { translateXPx: 0, translateYPx: 0, scale: 1, rotateDeg: 0, skewXDeg: 0, skewYDeg: 0 } } },
         ],
       },
       {
         id: "lines", unit: "line", range: { start: 0, endExclusive: 2 }, order: "forward",
         startFrame: 20, unitDurationFrames: 15, staggerFrames: 5, cycles: 1,
         keyframes: [
-          { atProgress: 0, style: [{ name: "opacity", value: 0 }] },
-          { atProgress: 1, style: [{ name: "opacity", value: 1 }] },
+          { atProgress: 0, state: { opacity: 0 } },
+          { atProgress: 1, state: { opacity: 1 } },
         ],
       },
     ],

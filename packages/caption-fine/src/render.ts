@@ -4,14 +4,7 @@ import { assertCaptionProgramForDocument } from "@hypit/caption";
 import type { CaptionProgram } from "@hypit/caption";
 import { assertVisualTrackIdentity, sealPresentVisualTrack } from "@hypit/composition";
 import type {
-  VisualAnimation,
-  VisualBoxElement,
   VisualColorPaint,
-  VisualElement,
-  VisualKeyframe,
-  VisualProgramElement,
-  VisualStyleDeclaration,
-  VisualTextElement,
   VisualTextPaintLayer,
   PresentVisualTrack,
 } from "@hypit/composition";
@@ -25,7 +18,16 @@ import { assertFineCaptionParameters, FINE_CAPTION_FAMILY } from "./style.js";
 import { assertFineCaptionSchedule } from "./schedule.js";
 import { assertFineCaptionRegionBindings } from "./region-binding.js";
 import { uniformGap, wordGaps } from "./spacing.js";
-import { htmlVisual } from "@hypit/html-program";
+import { htmlVisual, htmlVisualElement } from "@hypit/html-program";
+import type {
+  HtmlAnimation as VisualAnimation,
+  HtmlBoxElement as VisualBoxElement,
+  HtmlElement as VisualElement,
+  HtmlProgramElement,
+  HtmlKeyframe as VisualKeyframe,
+  HtmlStyleDeclaration as VisualStyleDeclaration,
+} from "@hypit/html-program";
+type HtmlTextElement = Extract<VisualElement, { readonly kind: "text" }>;
 import { joinedBoxSetup } from "./joined-box.js";
 import type {
   FineCaptionActiveUnderline,
@@ -672,7 +674,7 @@ function exclusiveActivationFrames(
   }));
 }
 
-function cueElements(
+export function cueElements(
   atoms: readonly CaptionUnit[],
   atomFrames: ReadonlyMap<string, { readonly start: number; readonly end: number }>,
   parameters: FineCaptionParameters,
@@ -685,7 +687,7 @@ function cueElements(
     readonly missing: "hide" | "authored-placement";
   },
 ): VisualElement {
-  type DetachedVisualElement = Omit<VisualBoxElement, "children"> | VisualTextElement | Omit<VisualProgramElement, "slots">;
+  type DetachedVisualElement = Omit<VisualBoxElement, "children"> | HtmlTextElement | Omit<HtmlProgramElement, "slots">;
   const nodes = new Map<string, { readonly element: DetachedVisualElement; readonly children: string[] }>();
   const roots: string[] = [];
   const push = (element: DetachedVisualElement, parent?: string): void => {
@@ -702,12 +704,12 @@ function cueElements(
     const node = nodes.get(id);
     if (node === undefined) throw new Error(`Fine Caption visual element ${id} is missing`);
     const children = node.children.map(build);
-    if (node.element.kind === "box") return { ...node.element, children };
+    if (node.element.kind === "box") return { ...node.element, children } as VisualElement;
     if (node.element.kind === "program") {
-      return { ...node.element, slots: children.map((element) => ({ name: element.id, element })) };
+      return { ...node.element, slots: children.map((element) => ({ name: element.id, element })) } as VisualElement;
     }
     if (children.length > 0) throw new Error(`Fine Caption terminal element ${id} owns children`);
-    return node.element;
+    return node.element as VisualElement;
   };
   const placementAnimation = trackedPlacement === undefined
     ? undefined
@@ -730,7 +732,7 @@ function cueElements(
   }));
   const atomSurfaces = atomWords.map(words => words.map(word => word.text));
   const atomGaps = atomWords.map((words, index) => index > 0 && words[0]!.separatorBefore === " ");
-  // The Visual IR carries physical margins, so the leading edge follows the Cue's own direction.
+  // The HTML Programme carries physical margins, so the leading edge follows the Cue's own direction.
   const marginStart = parameters.layout.direction === "rtl" ? "margin-right" : "margin-left";
   const spacedStyle = (spaced: boolean): readonly VisualStyleDeclaration[] =>
     spaced ? [{ name: marginStart, value: gapPx }] : [];
@@ -989,7 +991,7 @@ function cueElements(
         [...new Intl.Segmenter("und", { granularity: "grapheme" }).segment(text)].map((part) => part.segment))
       : [];
     const graphemeCount = graphemes.reduce((sum, word) => sum + word.length, 0);
-    const pushText = (element: VisualTextElement, parent: string, wordIndex: number): void => {
+    const pushText = (element: HtmlTextElement, parent: string, wordIndex: number): void => {
       if (parameters.motion.atomReveal !== "typewriter") {
         push(element, parent);
         return;
@@ -1184,12 +1186,12 @@ export function renderFineCaption(
       id: cue.id,
       span: { startFrame, endFrameExclusive },
       visibility,
-      root: cueElements(resolvedAtoms, atomFrames, parameters, wordText, durationFrames, cue.styleId, within, trackedPlacement),
+      root: htmlVisualElement(cueElements(resolvedAtoms, atomFrames, parameters, wordText, durationFrames, cue.styleId, within, trackedPlacement)),
     }];
   });
   const track = sealPresentVisualTrack({
     timelineId: timeline.id,
-    visualIr: "hypit.visual-ir@1",
+
     id: program.id,
     presents,
   });

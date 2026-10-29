@@ -7,7 +7,7 @@ export type SourceRange = {
 };
 
 export type SourceUnit = {
-  /** Workspace-canonical identity used only for recursion and diagnostics. */
+  /** Closure-local identity used for recursion and author-graph hygiene. */
   readonly id: string;
   readonly name: string;
   /** Opaque source payload. Its selected Frontend alone decides how to decode it. */

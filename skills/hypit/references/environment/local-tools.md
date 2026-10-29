@@ -404,5 +404,5 @@ metadata successfully may still redirect large files to another host; diagnose t
 
 The next Build loads current project component and Profile choices. For a Distribution or inherited
 shell-environment change, read
-[Build execution](../production/builds.md#build-with-the-current-project-implementation) before
+[Build execution](../production/builds.md#build-with-the-current-project-code) before
 restarting the Worker so active work is preserved.

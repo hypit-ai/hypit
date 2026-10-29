@@ -5,15 +5,17 @@ import type {
   CommandResult,
   BuildCommand,
   ResourceId,
+  Need,
+  ProducerRef,
 } from "@hypit/protocol";
 import type { BuildView } from "@hypit/kernel";
 import type { OperationSnapshot } from "./operations.js";
 
-export type RuntimeBlockedCommand = {
-  readonly command: string;
-  readonly reason: string;
-  readonly subject: string;
-};
+export type RuntimeBlockedCommand =
+  | { readonly command: string; readonly reason: "missing-producer"; readonly subject: string;
+      readonly step: string; readonly producer: ProducerRef }
+  | { readonly command: string; readonly reason: "missing-endpoint" | "unsupported-endpoint-request"
+      | "ambiguous-endpoint" | "missing-operation-store"; readonly subject: string; readonly need: Need };
 
 export type RuntimeRunnableCommand = {
   readonly command: BuildCommand;

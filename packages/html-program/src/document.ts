@@ -12,15 +12,12 @@ import {
 } from "@hypit/composition";
 import type {
   Composition,
-  VisualAnimation,
   VisualAdjustment,
-  VisualAttribute,
   VisualContribution,
   VisualElement,
   VisualItem,
   VisualPresent,
   VisualProcess,
-  VisualStyleDeclaration,
   VisualScope,
 } from "@hypit/composition";
 import { visualProcesses } from "@hypit/composition";
@@ -28,7 +25,6 @@ import { assertTemporalMap, composeTemporalMaps, evaluateTemporalMap, exactTempo
 import type { ExactTemporalValue, TemporalMap } from "@hypit/temporal";
 import { assertBlobRef, canonicalStringify, compareCodeUnits } from "@hypit/hypit/protocol";
 import type { BlobRef, ResourceId } from "@hypit/hypit/protocol";
-import { VISUAL_IR_V1 } from "@hypit/composition";
 import { readHtmlVisual, htmlVisualHtml, htmlVisualScript } from "./html-visual.js";
 import { htmlAdjustmentScript, readHtmlAdjustment } from "./html-adjustment.js";
 import { presentationCaptureScopeRuntime } from "./capture-scope.js";
@@ -268,23 +264,6 @@ function deferredArtifact(attribute: "src" | "href", id: string): string {
   return `data-hypit-artifact-${attribute}="${escapeHtml(htmlArtifactUri(id))}"`;
 }
 
-function css(style: readonly VisualStyleDeclaration[]): string {
-  return style.map(({ name, value }) => `${name}:${String(value)}`).join(";");
-}
-
-function pixelDimension(style: readonly VisualStyleDeclaration[], name: string): number | undefined {
-  const value = style.find((declaration) => declaration.name === name)?.value;
-  if (typeof value !== "string") return undefined;
-  const match = /^(?:0|[1-9][0-9]*(?:\.[0-9]+)?)px$/u.exec(value);
-  if (match === null) return undefined;
-  const parsed = Number.parseFloat(value.slice(0, -2));
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
-}
-
-function attributes(values: readonly VisualAttribute[] | undefined): string {
-  return (values ?? []).map(({ name, value }) => ` ${name}="${escapeHtml(value)}"`).join("");
-}
-
 type StableDomId = (parts: readonly string[]) => string;
 
 /** Allocate short document-local names in first-use order; authored ids stay in data attributes. */
@@ -427,34 +406,12 @@ function nestedSurfaceFrameAt(
 /** Every emitted element, including SVG mask sources, keeps the same authored frame clock. */
 function elementPresentation(element: VisualElement, context: ElementContext) {
   const id = context.stableId(["visual-occurrence", ...context.occurrencePath, context.presentId, element.id]);
-  const animationName = element.animation === undefined
-    ? undefined
-    : context.stableId(["animation", ...context.occurrencePath, context.presentId, element.id]);
-  const animationDurationFrames = element.animation === undefined
-    ? context.presentDurationFrames
-    : Math.max(context.presentDurationFrames, element.animation.keyframes.at(-1)?.atFrame ?? 0);
-  const animationDuration = frameSeconds(animationDurationFrames, context.programNumerator, context.programDenominator);
   const inlineStyle = [
-    css(element.style),
     ...exactFontStyle(element, context.stableId),
-    ...(animationName === undefined ? [] : [
-      `animation-name:${animationName}`,
-      `animation-duration:${animationDuration}s`,
-      "animation-fill-mode:both",
-      // An independently launched render worker may begin at any frame. Keep
-      // CSS animations inert from first paint so HTML renderer' exact seek is
-      // the only clock; otherwise page-load time leaks into the first frame of
-      // each partition before the runtime pauses the animation.
-      "animation-play-state:paused",
-      "animation-timing-function:linear",
-    ]),
   ].filter(Boolean).join(";");
-  const commonAttributes = `id="${id}" data-hypit-element-id="${escapeHtml(element.id)}"${attributes(element.attributes)}`;
-  const animationAttributes = animationName === undefined
-    ? ""
-    : ` data-hypit-frame-animation data-hypit-animation-start-frame="${context.presentStartFrame}" data-hypit-animation-sample-frames="${context.presentDurationFrames}"`;
-  const common = `${commonAttributes}${animationAttributes} style="${escapeHtml(inlineStyle)}"`;
-  return { inlineStyle, commonAttributes: `${commonAttributes}${animationAttributes}`, common };
+  const commonAttributes = `id="${id}" data-hypit-element-id="${escapeHtml(element.id)}"`;
+  const common = `${commonAttributes} style="${escapeHtml(inlineStyle)}"`;
+  return { inlineStyle, commonAttributes, common };
 }
 
 function renderElement(
@@ -467,33 +424,19 @@ function renderElement(
     const maskRoot = element.mask;
     const contentRoot = element.content;
     const maskId = context.stableId(["visual-occurrence", ...context.occurrencePath, context.presentId, element.id, "mask"]);
-    const maskWidth = pixelDimension(element.style, "width");
-    const maskHeight = pixelDimension(element.style, "height");
-    const viewport = maskWidth === undefined || maskHeight === undefined
-      ? ""
-      : ` viewBox="0 0 ${maskWidth} ${maskHeight}" preserveAspectRatio="none"`;
+    const viewport = "";
     const renderOwned = (child: VisualElement) => renderElement(child, context);
     const maskSource = (() => {
       const sourcePresentation = elementPresentation(maskRoot, context);
       if (maskRoot.kind === "text") {
-        const alignment = maskRoot.style.find((declaration) => declaration.name === "text-align")?.value;
-        const anchor = alignment === "right" || alignment === "end" ? "end" : alignment === "left" || alignment === "start" ? "start" : "middle";
-        const blockAlignment = maskRoot.style.find((declaration) => declaration.name === "align-items")?.value;
-        const paddingLeft = pixelDimension(maskRoot.style, "padding-left") ?? 0;
-        const paddingRight = pixelDimension(maskRoot.style, "padding-right") ?? 0;
-        const paddingTop = pixelDimension(maskRoot.style, "padding-top") ?? 0;
-        const paddingBottom = pixelDimension(maskRoot.style, "padding-bottom") ?? 0;
-        const x = maskWidth === undefined
-          ? anchor === "start" ? "0" : anchor === "end" ? "100%" : "50%"
-          : String(anchor === "start" ? paddingLeft : anchor === "end" ? maskWidth - paddingRight : (paddingLeft + maskWidth - paddingRight) / 2);
-        const y = maskHeight === undefined
-          ? blockAlignment === "flex-start" ? "0" : blockAlignment === "flex-end" ? "100%" : "50%"
-          : String(blockAlignment === "flex-start" ? paddingTop : blockAlignment === "flex-end" ? maskHeight - paddingBottom : (paddingTop + maskHeight - paddingBottom) / 2);
-        const baseline = blockAlignment === "flex-start" ? "text-before-edge" : blockAlignment === "flex-end" ? "text-after-edge" : "central";
+        const anchor = "middle";
+        const x = "50%";
+        const y = "50%";
+        const baseline = "central";
         const textStyle = `${sourcePresentation.inlineStyle};fill:currentColor`;
         return `<text ${sourcePresentation.commonAttributes} x="${x}" y="${y}" text-anchor="${anchor}" dominant-baseline="${baseline}" style="${escapeHtml(textStyle)}">${escapeHtml(maskRoot.text)}</text>`;
       }
-      if (maskRoot.kind === "text-flow" || maskRoot.kind === "path-text") {
+      if (maskRoot.kind === "text-flow" || maskRoot.kind === "path-text" || maskRoot.kind === "program") {
         return `<foreignObject x="0" y="0" width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml" style="position:relative;width:100%;height:100%">${renderOwned(maskRoot)}</div></foreignObject>`;
       }
       if (maskRoot.kind === "image") {
@@ -510,10 +453,6 @@ function renderElement(
     const program = readHtmlVisual(element.program);
     const slots = new Map(element.slots.map(slot => [slot.name, renderElement(slot.element, context)]));
     return `<div ${common}>${htmlVisualHtml(program, slots)}</div>`;
-  }
-  if (element.kind === "box") {
-    const descendants = element.children.map((child) => renderElement(child, context)).join("");
-    return `<div ${common}>${descendants}</div>`;
   }
   if (element.kind === "composition") {
     const child = context.childDocument(element.composition);
@@ -630,7 +569,6 @@ function renderElement(
       `data-hypit-start-frame="${context.presentStartFrame}"`,
       `data-hypit-end-frame="${context.presentStartFrame + context.presentDurationFrames}"`,
       `style="${escapeHtml(inlineStyle)}"`,
-      attributes(element.attributes).trim(),
       "muted",
       "playsinline",
     ].filter(Boolean).join(" ");
@@ -673,7 +611,6 @@ function renderElement(
         `data-hypit-end-frame="${startFrame + durationFrames}"`,
         `data-hypit-source-fps="${timing.frameRate.numerator}/${timing.frameRate.denominator}"`,
         `style="${escapeHtml(inlineStyle)}"`,
-        attributes(element.attributes).trim(),
         "muted",
         "playsinline",
         ...[
@@ -845,26 +782,6 @@ function renderVisualAdjustment(
       keyframes: program.keyframes,
     },
   };
-}
-
-function renderAnimationRules(occurrencePath: readonly string[], present: VisualPresent, stableId: StableDomId): string[] {
-  const presentDurationFrames = present.span.endFrameExclusive - present.span.startFrame;
-  return visualElements(present.root).flatMap((element) => {
-    if (element.animation === undefined) return [];
-    const durationFrames = Math.max(presentDurationFrames, element.animation.keyframes.at(-1)?.atFrame ?? 0);
-    const name = stableId(["animation", ...occurrencePath, present.id, element.id]);
-    const keyframes: VisualAnimation["keyframes"] = element.animation.keyframes.at(-1)?.atFrame === durationFrames
-      ? element.animation.keyframes
-      : [...element.animation.keyframes, {
-          atFrame: durationFrames,
-          style: element.animation.keyframes.at(-1)!.style,
-        }];
-    const frames = keyframes.map((keyframe) => {
-      const easing = keyframe.easing === undefined ? "" : `;animation-timing-function:${keyframe.easing}`;
-      return `${percentage(keyframe.atFrame, durationFrames)}{${css(keyframe.style)}${easing}}`;
-    }).join("");
-    return [`@keyframes ${name}{${frames}}`];
-  });
 }
 
 type OrderedVisualScopeEntry =
@@ -1049,119 +966,6 @@ function hasTerminalText(composition: HtmlComposition): boolean {
   return visualScopeTracks(composition.visual.root).some((track) =>
     visualPresents(track).some((present) => visualElements(present.root).some((element) =>
       element.kind === "text-flow" || element.kind === "path-text")));
-}
-
-function hasFrameAnimations(composition: HtmlComposition): boolean {
-  return visualScopeTracks(composition.visual.root).some((track) =>
-    visualPresents(track).some((present) => visualElements(present.root).some((element) => element.animation !== undefined)));
-}
-
-function frameAnimationRuntime(numerator: number, denominator: number): string {
-  return String.raw`
-(() => {
-  const numerator = ${numerator};
-  const denominator = ${denominator};
-  const millisecondsPerFrame = denominator * 1000 / numerator;
-  const groupsBySpan = new Map();
-  const read = (style, name) => name.startsWith("--") ? style.getPropertyValue(name) : style[name];
-  const write = (style, name, value) => {
-    if (name.startsWith("--")) style.setProperty(name, value);
-    else style[name] = value;
-  };
-  const clear = (style, name) => {
-    if (name.startsWith("--")) style.removeProperty(name);
-    else style[name] = "";
-  };
-  for (const element of document.querySelectorAll("[data-hypit-frame-animation]")) {
-    const start = Number(element.getAttribute("data-hypit-animation-start-frame"));
-    const duration = Number(element.getAttribute("data-hypit-animation-sample-frames"));
-    if (!Number.isSafeInteger(start) || !Number.isSafeInteger(duration) || start < 0 || duration <= 0) {
-      throw new Error("Visual IR frame animation has an invalid Present span.");
-    }
-    const end = start + duration;
-    if (!Number.isSafeInteger(end)) throw new Error("Visual IR frame animation Present span exceeds safe arithmetic.");
-    // CSS already keeps every authored animation paused. Only materialize the
-    // browser Animation objects which this render can actually sample.
-    if (!htmlSelectionOverlaps(start, end)) continue;
-    void element.getBoundingClientRect();
-    const animation = element.getAnimations()[0];
-    if (animation === undefined) throw new Error("Visual IR frame animation did not materialize.");
-    // The authored keyframes are already the compact state function. Keep them
-    // instead of expanding every Present frame into a second table of
-    // computed-style strings in every render Worker, but do not leave the CSS
-    // animation live: HTML renderer' css and waapi adapters seek every live
-    // document animation to absolute composition time, which replaces this
-    // Present-relative pose whenever the Present does not start at frame 0.
-    const keyframes = animation.effect.getKeyframes();
-    const timing = animation.effect.getTiming();
-    const properties = [...new Set(keyframes.flatMap((keyframe) => Object.keys(keyframe)))]
-      .filter((name) => name !== "offset" && name !== "computedOffset" && name !== "easing" && name !== "composite");
-    animation.cancel();
-    element.style.animationName = "none";
-    // Keyframes may omit properties and therefore interpolate against the
-    // authored underlying value. Preserve that value before any requested
-    // frame writes its sampled pose inline.
-    const authored = {};
-    for (const name of properties) authored[name] = read(element.style, name) ?? "";
-    const key = start + ":" + end;
-    let work = groupsBySpan.get(key);
-    if (work === undefined) {
-      work = {
-        startFrame: start,
-        endFrameExclusive: end,
-        order: groupsBySpan.size,
-        payload: { animations: [] },
-      };
-      groupsBySpan.set(key, work);
-    }
-    work.payload.animations.push({ element, keyframes, timing, properties, authored });
-  }
-  // The shared index owns only frame-span lookup. Animation materialization and
-  // absolute currentTime evaluation remain private to this adapter.
-  const workIndex = htmlCreateFrameWorkIndex([...groupsBySpan.values()]);
-  const applyFrame = (programFrame) => {
-    const active = [];
-    for (const work of workIndex.at(programFrame)) {
-      const localTime = (programFrame - work.startFrame) * millisecondsPerFrame;
-      // Always derive the pose from the absolute requested frame. Worker
-      // partitioning, seek order and the previously rendered frame are not
-      // inputs to animation state.
-      for (const item of work.payload.animations) active.push({ item, localTime });
-    }
-    // A previous seek's inline pose is not an input to this seek. Restore the
-    // authored underlying value before transiently evaluating every animation.
-    for (const { item } of active) {
-      for (const name of item.properties) {
-        const value = item.authored[name];
-        if (value === "") clear(item.element.style, name);
-        else write(item.element.style, name, value);
-      }
-    }
-    // Evaluate each pose with a transient Animation, read it and cancel it before
-    // this seek returns, so no adapter ever sees it. The Animation constructor,
-    // unlike Element.animate, is not tracked by HTML renderer' waapi adapter. Only
-    // the resulting inline style reaches the captured frame.
-    const probes = active.map(({ item, localTime }) => {
-      const probe = new Animation(new KeyframeEffect(item.element, item.keyframes, item.timing), document.timeline);
-      // A running Animation advances with wall time after currentTime is set.
-      // Pause first so the sampled pose is only a function of programFrame.
-      probe.pause();
-      probe.currentTime = localTime;
-      return probe;
-    });
-    const poses = active.map(({ item }) => {
-      const style = getComputedStyle(item.element);
-      return item.properties.map((name) => read(style, name));
-    });
-    for (const probe of probes) probe.cancel();
-    active.forEach(({ item }, index) => {
-      item.properties.forEach((name, position) => write(item.element.style, name, poses[index][position]));
-    });
-    void document.documentElement.getBoundingClientRect();
-  };
-  void document.documentElement.getBoundingClientRect();
-  window.addEventListener("hypit-frame", (event) => applyFrame(event.detail?.frame));
-})();`;
 }
 
 function frameProgramRuntime(frameCount: number, hasNestedCompositions: boolean): string {
@@ -1361,9 +1165,6 @@ function emitHtml(
     const existing = nestedDocuments.get(childComposition);
     if (existing !== undefined) return existing;
     const child = compileChild(childComposition);
-    if (child.processPasses > 0) {
-      throw new Error(`Nested Composition ${childComposition.id} requires Visual Process input surfaces, which the HTML renderer does not yet execute recursively.`);
-    }
     const resources = new Map(child.artifacts.map((entry) => [entry.id, entry.artifact.resource] as const));
     const resource = (id: string): ResourceId => {
       const value = resources.get(id);
@@ -1443,7 +1244,6 @@ function emitHtml(
     `<template data-hypit-nested-document-id="${document.id}" data-hypit-nested-srcdoc="${escapeHtml(document.html)}"></template>`).join("\n  ");
   const sharedDefinitionsHtml = sharedGlyphFilterDefinitions.length === 0 ? ""
     : `<svg data-hypit-document-definitions aria-hidden="true" width="0" height="0" style="position:absolute;overflow:hidden"><defs>${sharedGlyphFilterDefinitions.join("")}</defs></svg>`;
-  const animationCss = visuals.flatMap(({ occurrencePath, present }) => renderAnimationRules(occurrencePath, present, stableId)).join("\n    ");
   const fontCss = renderFontFaces(composition, stableId);
   const programs = [...visuals.flatMap(({ occurrencePath, present }) => visualElements(present.root).flatMap(element => element.kind !== "program" ? [] : [{
     id: stableId(["visual-occurrence", ...occurrencePath, present.id, element.id]),
@@ -1465,11 +1265,11 @@ function emitHtml(
   const visibilityRuntime = hasVisibility ? initializer(presentationVisibilityScript()) : "";
   const adjustmentRuntime = adjustments.length === 0 ? "" : initializer(htmlAdjustmentScript(adjustments));
   const frameCount = timelineFrameCount(timeline);
-  const needsFrameWork = hasFrameAnimations(composition) || hasTerminalText(composition)
+  const needsFrameWork = hasTerminalText(composition)
     || programs.length > 0 || hasVisibility || adjustments.length > 0;
   const frameRuntime = `\n  <script>\n    ${needsFrameWork ? frameWorkIndexRuntime : frameSelectionRuntime}\n  </script>
-  <script>${presentationCaptureScopeRuntime}</script>${hasFrameAnimations(composition) || hasTerminalText(composition)
-      ? `\n  ${initializer(`${hasFrameAnimations(composition) ? `\n    ${frameAnimationRuntime(numerator, denominator)}` : ""}${hasTerminalText(composition) ? `\n    ${terminalTextLayoutScript}` : ""}`)}`
+  <script>${presentationCaptureScopeRuntime}</script>${hasTerminalText(composition)
+      ? `\n  ${initializer(`\n    ${terminalTextLayoutScript}`)}`
       : ""}`;
   return `<!doctype html>
 <html>
@@ -1482,7 +1282,6 @@ function emitHtml(
     ${hasNestedCompositions ? "iframe[data-hypit-nested-composition]{border:0;background:transparent}" : ""}
     *,*::before,*::after{box-sizing:border-box}
     ${fontCss}
-    ${animationCss}
     ${programCss}
   </style>
 </head>
@@ -1501,7 +1300,6 @@ function emitHtml(
 
 function normalizedDocument(value: HtmlProgram): HtmlProgram {
   return {
-    visualIr: value.visualIr,
     picture: structuredClone(value.picture),
     frameRate: { ...value.frameRate },
     frameCount: value.frameCount,
@@ -1529,6 +1327,27 @@ function normalizedDocument(value: HtmlProgram): HtmlProgram {
     })).sort((left, right) => left.startFrame - right.startFrame || compareCodeUnits(left.id, right.id)),
     html: value.html,
   };
+}
+
+function compositionProcessPasses(composition: HtmlComposition, visited = new Set<HtmlComposition>()): number {
+  if (visited.has(composition)) throw new Error(`Nested Composition ${composition.id} forms a recursive value.`);
+  visited.add(composition);
+  let count = visualScopeProcesses(composition.visual.root)
+    .reduce((total, process) => total + process.inputs.length, 0);
+  const visitContribution = (contribution: VisualContribution): void => {
+    if (contribution.kind === "process") {
+      for (const input of contribution.inputs) visitContribution(input.contribution);
+      return;
+    }
+    for (const element of visualElements(contribution.root)) {
+      if (element.kind === "composition") count += compositionProcessPasses(element.composition, visited);
+    }
+  };
+  for (const track of visualScopeTracks(composition.visual.root)) {
+    for (const item of track.items) if (item.kind !== "adjustment") visitContribution(item);
+  }
+  visited.delete(composition);
+  return count;
 }
 
 type HtmlCompilationContext = {
@@ -1569,7 +1388,6 @@ function compileHtmlProgramWithContext(
       return `data-hypit-surface-artifact="${artifactId}"`;
     });
   const content = normalizedDocument({
-    visualIr: VISUAL_IR_V1,
     picture: structuredClone(composition.visual.picture),
     frameRate: { ...timeline.frameRate },
     frameCount: timelineFrameCount(timeline),
@@ -1577,8 +1395,7 @@ function compileHtmlProgramWithContext(
       width: composition.visual.canvas.width,
       height: composition.visual.canvas.height,
     },
-    processPasses: visualScopeProcesses(composition.visual.root)
-      .reduce((count, process) => count + process.inputs.length, 0),
+    processPasses: compositionProcessPasses(composition),
     artifacts,
     surfaces: collectSurfaces(composition, artifactIds),
     videoSources: videoSources.map((source) => {
@@ -1598,7 +1415,6 @@ export function compileHtmlProgram(composition: HtmlComposition): HtmlProgram {
 }
 
 export function assertHtmlProgram(document: HtmlProgram): void {
-  if (document.visualIr !== VISUAL_IR_V1) throw new Error("Unsupported HtmlProgram visual IR.");
   verifyWorkingPictureSpec(document.picture, "HtmlProgram.picture");
   if (
     !Number.isSafeInteger(document.frameRate.numerator)

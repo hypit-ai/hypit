@@ -56,7 +56,7 @@ test("project Provider maps a reference, retains its receipt and collects throug
   assert.equal(resolution.registration.kind, "asynchronous");
   const endpoint = resolution.registration.endpoint;
   const context: EndpointStartContext = {
-    need, operation: "operation:example",
+    request: need, operation: "operation:example",
     resources, credentials: { apiKey: { secret: "test-key" } },
     checkpoint: async (value) => { checkpoint = value; },
     reportProgress: async (value) => { progress.push(value.phase); },
@@ -104,7 +104,7 @@ test("project Provider retains public submission and task errors without suggest
     assert.equal(resolved.registration.kind, "asynchronous");
     const endpoint = resolved.registration.endpoint;
     const context: EndpointStartContext = {
-      need, operation: "operation:failure",
+      request: need, operation: "operation:failure",
       resources: new MemoryResourceStore(), credentials: { apiKey: { secret: "test-key" } },
       checkpoint: async () => { checkpointed = true; },
     };
