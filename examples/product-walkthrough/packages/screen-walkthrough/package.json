@@ -1,0 +1,33 @@
+{
+  "name": "@example/screen-walkthrough",
+  "version": "0.0.0-dev",
+  "private": true,
+  "type": "module",
+  "hypit": {
+    "activation": "./dist/activation.js"
+  },
+  "exports": {
+    ".": "./dist/render.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prepack": "npm run build"
+  },
+  "devDependencies": {
+    "@hypit/hypit": "workspace:*",
+    "typescript": "5.9.3",
+    "@types/node": "24.10.1"
+  },
+  "dependencies": {
+    "@hypit/composition": "workspace:^0.1.0",
+    "@hypit/media": "workspace:^0.1.0",
+    "@hypit/timeline": "workspace:^0.1.0",
+    "@hypit/spatial": "workspace:^0.1.0",
+    "@hypit/temporal": "workspace:^0.1.0",
+    "@hypit/html-program": "workspace:^0.1.0"
+  }
+}

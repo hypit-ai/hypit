@@ -7,7 +7,7 @@ Result or Runtime; completed recordings reuse `@hypit/media-local`'s explicit fi
 forking a second ffprobe parser. The package's CLI contribution uses the installed Hypit CLI host.
 
 This package also owns the `@hypit/browser-capture/cli` contribution used by the Distribution for
-`hypit capture screenshot` and `hypit capture run`. See `hypit capture --help`
+`hypit capture screenshot`, `hypit capture run`, `hypit capture plan` and `hypit capture login`. See `hypit capture --help`
 for command options. Puppeteer Core is a pinned Distribution dependency, so a plain video project
 needs no browser-library installation or private `node_modules` import path.
 `hypit capture install-browser` explicitly prepares the package's tested Chrome for Testing revision
@@ -73,6 +73,63 @@ Outputs include absolute `path`, `kind`, `url`, `width`, `height`, `format`, plu
 and `hasAudio` for video when available. Helpers refuse overwrites; a failed capture removes only its
 own incomplete output. The CLI prints completed paths as work progresses; `--json` returns the
 complete output list as `hypit.capture@1`.
+
+## Plan replay
+
+`runCapturePlan(session, plan, options)` replays a JSON step plan in the session's page while
+recording it, and `hypit capture plan <plan.json> --to <directory>` is the CLI form.
+`parseCapturePlan` validates a plan before a browser opens. The start page (and optional
+`startUntil` selector, with `startRetries`) loads before the recording starts. Steps are `goto`,
+`wait`, `assert`, `dismiss`, `hover`, `click`, `dblclick`, `fill`, `type`, `press`, `scroll`, `pause`,
+`screenshot`, `drag` and `upload`. Targets are Puppeteer selectors, and `planSelector` translates
+`text=` and `role=…[name='…']` shorthands. A target must resolve to exactly one visible element
+unless the step chooses an `index`; `asset: { attribute, value }` additionally checks an exact
+identity. `optional: true` skips a step whose target never appears.
+
+The output directory must be new or empty. It receives `recording.mp4`, `screenshots/`,
+`steps.svs` and `steps.json` (`hypit.capture-plan@1`): per step `start`/`end` seconds measured from the recording's
+start, the target `box` and `pointer` in CSS pixels, any checkpoint screenshot and `skipped` reason,
+plus the viewport and scale, the recording's probed metadata, an optional login check and `failed`.
+A plan records timestamped frames and assembles them afterwards into a constant `fps` (default 30)
+H.264 file with FFmpeg (`ffmpegPath`, default `ffmpeg`); media normalization rejects the long frame
+gaps a change-only recording leaves on a still screen. Headless Chrome's native recorder and
+screencast deliver CSS pixels only, so above device scale 1 the frames are repeated screenshots:
+sharp enough to zoom into, at about 15 page frames per second for a 2560 × 1600 take. Mouse and key
+events wait for the screenshot in flight, because Chrome drops input dispatched during a capture.
+At scale 1 the smoother screencast is used. The CLI records plans at scale 2 unless `--scale` says
+otherwise. `capturePlanRecipe` renders the
+report as `steps.svs`, a `walkthrough.take` Recipe (`passed`, `viewport`, `duration`, `steps` with
+`start`, `end`, `pointer`, `box`) that a composition imports as Source. Relative `startUrl`, `goto`
+and `upload` paths resolve from `baseDirectory` (the plan file's directory in the CLI).
+The take stops at the first failed step, keeps the partial recording and saves
+`screenshots/failed.png`; the CLI exits non-zero. `cursor: "none"` (default) leaves footage clean for
+a composition-drawn cursor; `cursor: "page"` draws one into the page.
+
+`prepare` steps run before the recording starts and are not reported; `locale` sets
+`Accept-Language`, `navigator.language` and `navigator.languages`. A `scroll` with `durationMs` is a
+page-side eased animation of the scroller under the pointer that scrolls in that direction (or the
+document); without it, the scroll is wheel input.
+
+Clicks whose selector or element text names a paid or destructive operation are refused unless the
+step has `authorized: true`. `loginCheck` fetches the product's own session endpoint from inside the
+page and records only an account label.
+
+## An ordinary browser
+
+Every capture browser starts without Chrome's `--enable-automation` switch, with
+`--disable-blink-features=AutomationControlled` (so `navigator.webdriver` is false) and with
+"HeadlessChrome" replaced by "Chrome" in the user agent and, consistently, in its client hints (a headed browser is left as it is). Sites otherwise serve bot-specific pages,
+and verification widgets such as Cloudflare Turnstile refuse the session, including when a person
+logs in by hand. This presents the browser as an ordinary one; it does not solve a challenge.
+
+## Login state
+
+`CaptureOptions.storageState` imports a `{ cookies, origins }` file (Playwright's storageState
+shape): cookies are set on launch and each origin's localStorage is restored before page scripts
+run. `captureProfileDirectory(name)` names a persistent profile outside projects
+(`~/.cache/hypit/capture-profiles/<name>`, or `HYPIT_CAPTURE_PROFILES`); the CLI's `--profile` uses it
+as `userDataDir`. `openCaptureLogin(options, url)` and `hypit capture login <url> --profile <name>`
+open a visible browser on that profile for a person to log in, resolving when the window closes.
 
 ## Project scripts
 

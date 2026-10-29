@@ -428,6 +428,37 @@ importers:
         specifier: 5.9.3
         version: 5.9.3
 
+  examples/product-walkthrough/packages/screen-walkthrough:
+    dependencies:
+      '@hypit/composition':
+        specifier: workspace:^0.1.0
+        version: link:../../../../packages/composition
+      '@hypit/html-program':
+        specifier: workspace:^0.1.0
+        version: link:../../../../packages/html-program
+      '@hypit/media':
+        specifier: workspace:^0.1.0
+        version: link:../../../../packages/media
+      '@hypit/spatial':
+        specifier: workspace:^0.1.0
+        version: link:../../../../packages/spatial
+      '@hypit/temporal':
+        specifier: workspace:^0.1.0
+        version: link:../../../../packages/temporal
+      '@hypit/timeline':
+        specifier: workspace:^0.1.0
+        version: link:../../../../packages/timeline
+    devDependencies:
+      '@hypit/hypit':
+        specifier: workspace:*
+        version: link:../../../..
+      '@types/node':
+        specifier: 24.10.1
+        version: 24.10.1
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+
   examples/provider-package/packages/provider-images:
     dependencies:
       '@hypit/generation':

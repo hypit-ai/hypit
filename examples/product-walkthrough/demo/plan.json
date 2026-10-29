@@ -1,0 +1,16 @@
+{
+  "startUrl": "./app.html",
+  "startUntil": "#new-board",
+  "steps": [
+    { "action": "pause", "ms": 800, "note": "the board list settles on screen" },
+    { "action": "dismiss", "note": "close the what's-new note" },
+    { "action": "click", "target": "#new-board", "note": "open the create panel" },
+    { "action": "wait", "for": "#board-name" },
+    { "action": "fill", "target": "#board-name", "value": "", "settleMs": 150, "note": "clear the default name" },
+    { "action": "type", "target": "#board-name", "value": "Product launch", "delayMs": 55, "note": "name the board" },
+    { "action": "click", "target": "[data-template=kanban]", "note": "choose the Kanban template" },
+    { "action": "click", "target": "#create-board", "note": "create the board" },
+    { "action": "wait", "for": "text=Record product demo", "screenshot": true, "name": "board" },
+    { "action": "pause", "ms": 1500, "note": "hold the result" }
+  ]
+}

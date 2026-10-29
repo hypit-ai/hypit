@@ -102,6 +102,43 @@ and CTA grow from what this product actually offers. Supplied product images and
 appearance; the user's facts and relevant product material establish its claims. Resolve important
 gaps from available material or with the user while continuing to develop the creative idea.
 
+## When the new product is a website or app
+
+A reference often proves its product on a screen: a phone held up to the camera, a cut to the app
+in use, a scroll through a landing page, a cursor that clicks and a result that appears. When the
+user's product is itself a website or app, those passages become evidence about the real product,
+and its actual interface is the material that can carry them. Plan this while transforming the
+reference, not after the rest of the production exists.
+
+For every passage whose role is to show the product, decide what the viewer must believe:
+
+- **What the product looks like or does** (its real screens, controls, wording, results): record
+  the actual interface. A generated or illustrated interface would show a product that does not
+  exist, and a viewer who opens the product would notice.
+- **What it feels like to use, or who uses it** (a person smiling at a phone, a lifestyle moment):
+  generated footage or an authored component can carry it; any visible screen content still comes
+  from the real product, for example a recorded clip or screenshot placed on the device.
+- **A concept the interface does not show directly**: an authored component can explain it beside
+  or after the real screen.
+
+Recording follows [browser capture](../production/browser-capture.md#record-a-product-walkthrough-from-a-plan):
+explore the product with screenshots until its real controls and results are known, write one plan
+per passage that performs the reference's demonstrated action on the target product, record it, and
+review the take before using it. Match the reference's screen shape: a phone-held demonstration
+records at phone width (`--viewport 540x960 --scale 2` gives a 1080 × 1920 take and the site's own
+mobile layout); a desktop walkthrough records at desktop width. The repository's product walkthrough
+example contains a project component that presents a take with a cursor, click ripples and a camera
+that follows each action, either full screen or on a framed card; copy it into the video's
+`packages/` when a passage needs that treatment. A take enters a phone or device in generated footage
+like any other screen media.
+
+Pages behind a login need the user's account. Use a login state or browser profile the user has
+already prepared for this product; if none exists, ask for it and continue preparing the rest of the
+production meanwhile. Never sign up, type a password, or complete a human-verification challenge on
+the user's behalf, and never click actions that spend credits or change data unless the user allowed
+that step. When the environment provides a remote capture runner (a project tool or team
+convention), run the same plans there instead of on the user's machine.
+
 When both person and product change, consider their relationship together: why this person recommends
 it, how the partner responds, and what makes the encounter engaging. Treatment holds that creative
 answer; Source expresses its words, references, and semantic relationships.
