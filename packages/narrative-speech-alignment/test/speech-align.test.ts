@@ -301,6 +301,35 @@ test("overlapping evidence word windows reach the map overlapping", () => {
   assert.equal(map.tokens[1]!.startFrame < map.tokens[0]!.endFrameExclusive, true, "the overlap survived");
 });
 
+test("overlapping, nested and untimed words still materialize a monotone alignment", () => {
+  const cases = [
+    // An untimed numeral between two overlapping words would otherwise start after its follower.
+    ["<line>one 2 three</line>", [{ text: "one", startSec: 0.1, endSec: 0.5 }, { text: "2" },
+      { text: "three", startSec: 0.4, endSec: 0.9 }]],
+    // A window nested in the previous one would otherwise end earlier than it.
+    ["<line>one two</line>", [{ text: "one", startSec: 0.1, endSec: 0.8 }, { text: "two", startSec: 0.3, endSec: 0.5 }]],
+  ] as const;
+  for (const [source, words] of cases) {
+    const narrative = parseScript("monotone.svml", source);
+    const map = locate(narrative, { words });
+    for (const [index, token] of map.tokens.entries()) {
+      const previous = map.tokens[index - 1];
+      assert.ok(token.endFrameExclusive > token.startFrame, source);
+      if (previous !== undefined) {
+        assert.ok(token.startFrame >= previous.startFrame && token.endFrameExclusive >= previous.endFrameExclusive, source);
+      }
+    }
+    const segment = narrative.segments[0]!;
+    const alignment = materializeNarrativeAlignment(
+      narrative,
+      { narrativeId: narrative.id, kind: "segment", id: segment.id, tokenStart: segment.tokenStart, tokenEndExclusive: segment.tokenEndExclusive },
+      { id: "speech-domain", frameRate: { numerator: 1_000, denominator: 1 }, frameCount: 2_000 },
+      map,
+    );
+    assert.equal(alignment.tokens.length, narrative.tokens.length);
+  }
+});
+
 test("locating is total: every Script token carries a window", () => {
   const narrative = parseScript("total.svml", "<line>alpha beta gamma delta</line>");
   // Nothing the aligner could place: every window below is interpolated.
