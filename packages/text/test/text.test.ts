@@ -15,9 +15,11 @@ import {
   sealTextBindings,
   sealTextTemplate,
   textTypes,
+  textTemplateBindingNames,
   textTemplateFromRecipes,
   verifyTextTemplate,
 } from "@hypit/text";
+import type { TextExpression } from "@hypit/text";
 
 test("Text Templates keep sheet closing text inside authored prompt text", () => {
   const prompt = "Show the literal </sheet> tag in the video";
@@ -111,6 +113,30 @@ test("text templates reject recursion and ambiguous choices", () => {
       ],
     },
   }), sealTextBindings({ x: true })), /matched 2/u);
+});
+
+const diamondTemplate = (levels: number, leaf: TextExpression): ReturnType<typeof sealTextTemplate> => {
+  const definitions: Record<string, TextExpression> = { leaf };
+  for (let level = 0; level < levels; level++) {
+    const target = level === 0 ? "leaf" : `d${level - 1}`;
+    definitions[`d${level}`] = {
+      kind: "sequence",
+      items: [{ kind: "call", template: target }, { kind: "call", template: target }],
+    };
+  }
+  return sealTextTemplate({ definitions, root: { kind: "call", template: `d${levels - 1}` } });
+};
+
+test("diamond call graphs collect bindings without re-walking definitions", () => {
+  // Thirty levels of two calls each would visit 2^30 expansions unmemoized.
+  const template = diamondTemplate(30, { kind: "slot", binding: "leaf" });
+  assert.deepEqual([...textTemplateBindingNames(template)], ["leaf"]);
+});
+
+test("text renders stop at the output budget instead of expanding forever", () => {
+  // Each level doubles output; 24 levels produce 16M characters unbudgeted.
+  const template = diamondTemplate(24, { kind: "literal", value: "x" });
+  assert.throws(() => renderText(template, sealTextBindings({})), /output budget/u);
 });
 
 test("one definition keeps lexical each bindings without hiding its global uses", () => {
