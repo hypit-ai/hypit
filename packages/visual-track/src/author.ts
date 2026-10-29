@@ -80,7 +80,20 @@ function padding(recipe: Recipe): VisualFrameTreatment["padding"] {
 }
 
 function gradientStops(recipe: Recipe, source: string): readonly { readonly offset: number; readonly color: string }[] {
-  const stops = source.split(",").map((entry) => {
+  // Split on commas between stops, not those inside a functional color such as rgba(0,0,0,0.5).
+  const entries: string[] = [];
+  let depth = 0;
+  let start = 0;
+  for (let index = 0; index < source.length; index += 1) {
+    if (source[index] === "(") depth += 1;
+    else if (source[index] === ")") depth -= 1;
+    else if (source[index] === "," && depth === 0) {
+      entries.push(source.slice(start, index));
+      start = index + 1;
+    }
+  }
+  entries.push(source.slice(start));
+  const stops = entries.map((entry) => {
     const match = /^(.+?)@((?:0(?:\.\d+)?)|(?:1(?:\.0+)?))$/u.exec(entry.trim());
     if (match === null) fail(recipe, "gradient stops must be color@offset inside [0,1].");
     return { color: match[1]!.trim(), offset: Number(match[2]) };
