@@ -14,6 +14,7 @@
   ],
   "dependencies": {
     "@hypit/audio-track": "workspace:^0.2.0",
+    "@hypit/bach": "workspace:^0.1.0",
     "@hypit/caption": "workspace:^0.1.0",
     "@hypit/caption-fine": "workspace:^0.2.0",
     "@hypit/composition": "workspace:^0.1.0",
