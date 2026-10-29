@@ -60,6 +60,9 @@ while deciding what the presenter, Caption and other graphics contribute beside 
 [Graphic composition](graphic-compositions.md) owns that shared hierarchy; [motion graphics](motion-graphics.md)
 owns the animation around or within an authored demonstration.
 
+When a reference demonstrates a product on screen and the target product is a website or app,
+[transformations](../../creation/transformations.md#when-the-new-product-is-a-website-or-app)
+explains when the real interface must be recorded instead of generated.
 [Browser capture](../../production/browser-capture.md) owns saving a real page or recording,
 [Media presentation](../../production/visual-clips.md) owns its playback and crop, and
 [component design](../../production/component-design.md) owns an editable screen scene. Choose the

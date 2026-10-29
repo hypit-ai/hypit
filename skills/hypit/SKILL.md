@@ -274,7 +274,7 @@ practical, revisit that choice and carry the improvement into the work and its n
 | configuring and preparing local media tools, browsers or WhisperX; managing helpers, caches, mirrors and logs | `references/environment/local-tools.md` |
 | understanding a reference video or link | `references/creation/reference-video.md` |
 | defining the target: what the user asked for, and what the new piece will be | `references/creation/brief.md` |
-| reshaping a reference while changing a person, object, world, performance, Script or sound; combining references | `references/creation/transformations.md` |
+| reshaping a reference while changing a person, object, world, performance, Script or sound; combining references; replacing a product that is a website or app, whose real interface is recorded | `references/creation/transformations.md` |
 | choosing wording, pronunciation, performable passages, semantic relationships or measured delivery | `references/creation/script-and-time.md` |
 | writing `<script>`: current syntax, display/speech, spaces, grouping, Roles, authored Cues, attributes or marker affinities | `references/production/script-syntax.md` |
 | placing a component in time: semantic bindings, authored clock positions, offsets, durations or what a timeline edit changes | `references/production/timing.md` |
