@@ -9,7 +9,7 @@ import type { TemporalWindowProjection } from "../../../test/temporal-fixture.js
 import { sealComposition, visualElements } from "@hypit/composition";
 import type { VisualItem } from "@hypit/composition";
 import { compileHtmlProgram } from "@hypit/html-program";
-import { mediaTypes, prepareMedia } from "@hypit/media";
+import { mediaTypes, prepareMedia, SRGB_STRAIGHT_PICTURE } from "@hypit/media";
 import type { CompositableSurfaceRef, PreparedMedia } from "@hypit/media";
 import { blobTypes } from "@hypit/blob";
 import { defaultTemporalRelationSpec, evaluateTemporalMap, exactTemporalValueFromFrames, isAffineTemporalMapPiece, resolveTemporalRelation, temporalTypes,
@@ -156,7 +156,7 @@ function stillLayers(): MediaLayerSet {
     ] },
     opacity: 1,
   }));
-  layers = appendStillMediaLayer(layers, source, extent, fit, sealMediaSampleLayerSpec({
+  layers = appendStillMediaLayer(layers, source, SRGB_STRAIGHT_PICTURE, extent, fit, sealMediaSampleLayerSpec({
 
     id: "content",
     appearance,
@@ -172,7 +172,7 @@ function preparedTimed(id = "timed", withAudio = true): PreparedMedia {
     startPts: { ticks: "0", timeBase: { numerator: 1, denominator: 30 } },
     endPts: { ticks: "60", timeBase: { numerator: 1, denominator: 30 } },
     decodedUnitCount: 60, width: 720, height: 1280,
-    sampleAspectRatio: { numerator: 1, denominator: 1 }, rotationDegrees: 0 as const,
+    sampleAspectRatio: { numerator: 1, denominator: 1 }, rotationDegrees: 0 as const, picture: { colorPrimaries: "bt709", colorTransfer: "bt709", colorMatrix: "bt709", colorRange: "limited", bitDepth: 8, alphaMode: "opaque" } as const,
     averageFrameRate: { numerator: 30, denominator: 1 }, nominalFrameRate: { numerator: 30, denominator: 1 },
   };
   const audioStream = {
@@ -187,7 +187,9 @@ function preparedTimed(id = "timed", withAudio = true): PreparedMedia {
     id: `prepared-${id}`,
     source: { kind: "blob", resource: fixtureResource(`source:${id}`), size: 10_000, mediaType: "video/mp4" },
     inspection: { container: { formatNames: ["mp4"] }, streams: withAudio ? [videoStream, audioStream] : [videoStream] },
-    selection: { videoStreamIndex: 0, ...(withAudio ? { audioStreamIndex: 1 } : {}), spanAuthority: "video" },
+    selection: { videoStreamIndex: 0, ...(withAudio ? { audioStreamIndex: 1 } : {}), spanAuthority: "video",
+      picture: { colorPrimaries: "bt709", colorTransfer: "bt709", colorMatrix: "bt709",
+        colorRange: "limited", bitDepth: 8, alphaMode: "opaque" } },
   });
 }
 
@@ -284,7 +286,7 @@ test("an owned clip path is an explicit Visual input and lowers only over the Cl
 test("an explicit source mapping survives Program resolution and renderer lowering without becoming a content box", () => {
   const mapping = { xx: 0, xy: -0.5, yx: 0.5, yy: 0, tx: 420, ty: 240 };
   const layers = appendMappedStillMediaLayer(
-    createMediaLayerSet(), source, extent, mapping,
+    createMediaLayerSet(), source, SRGB_STRAIGHT_PICTURE, extent, mapping,
     sealMediaSampleLayerSpec({ id: "mapped", appearance }),
   );
   const program = finalizeVisualTrack(appendProgramVisualClip(
@@ -301,18 +303,18 @@ test("an explicit source mapping survives Program resolution and renderer loweri
 
 test("self-blur is two explicit samples of one Resource and collection keeps one reference", () => {
   let layers = createMediaLayerSet();
-  layers = appendStillMediaLayer(layers, source, extent, { ...fit, sizing: "cover" }, sealMediaSampleLayerSpec({
+  layers = appendStillMediaLayer(layers, source, SRGB_STRAIGHT_PICTURE, extent, { ...fit, sizing: "cover" }, sealMediaSampleLayerSpec({
     id: "blurred", appearance: {
       opacity: 1, filter: { blurPx: 24, brightness: 0.7, contrast: 1, saturation: 0.8 },
     },
   }));
-  layers = appendStillMediaLayer(layers, source, extent, fit, sealMediaSampleLayerSpec({
+  layers = appendStillMediaLayer(layers, source, SRGB_STRAIGHT_PICTURE, extent, fit, sealMediaSampleLayerSpec({
     id: "foreground", appearance,
   }));
   const track = projectVisualTrack(space, finalizeVisualTrack(appendProgramVisualClip(
     createVisualTrackSet(), header, semantic, layers, frame, clipSpec(),
   ), header, space));
-  const document = compileHtmlProgram(sealComposition({ id: "media", visual: { canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }), space);
+  const document = compileHtmlProgram(sealComposition({ id: "media", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }, space));
   assert.equal(document.artifacts.length, 1);
   const artifactId = document.artifacts[0]!.id;
   assert.equal((document.html.match(new RegExp(artifactId, "gu")) ?? []).length, 2,
@@ -405,7 +407,7 @@ test("Prepared Media reaches the terminal visual program without an intermediate
   const track = projectVisualTrack(space, finalizeVisualTrack(appendProgramVisualClip(
     createVisualTrackSet(), header, semantic, layers, frame, clipSpec(),
   ), header, space));
-  const document = compileHtmlProgram(sealComposition({ id: "alternate-rate", visual: { canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: { members: [{ kind: "track", id: track.id, track }] } }, audio: { contributions: [] } }), space);
+  const document = compileHtmlProgram(sealComposition({ id: "alternate-rate", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: { members: [{ kind: "track", id: track.id, track }] } }, audio: { contributions: [] } }, space));
   const source = document.videoSources[0];
   assert.equal(source?.kind, "media");
   if (source?.kind !== "media") throw new Error("Expected direct Prepared Media source");
@@ -425,7 +427,7 @@ test("a cubic Clip relation remains exact through Prepared Media and the termina
   const track = projectVisualTrack(space, finalizeVisualTrack(appendProgramVisualClip(
     createVisualTrackSet(), header, semantic, timedLayers("cubic", false, curve), frame, clipSpec(),
   ), header, space));
-  const document = compileHtmlProgram(sealComposition({ id: "cubic", visual: { canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: { members: [{ kind: "track", id: track.id, track }] } }, audio: { contributions: [] } }), space);
+  const document = compileHtmlProgram(sealComposition({ id: "cubic", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: { members: [{ kind: "track", id: track.id, track }] } }, audio: { contributions: [] } }, space));
   const source = document.videoSources[0];
   assert.equal(source?.kind, "media");
   if (source?.kind !== "media") throw new Error("Expected direct Prepared Media source");
@@ -444,8 +446,7 @@ test("still and animated typed Surfaces use the same layer law without browser f
     artifact: { kind: "blob", resource: fixtureResource("surface:still"), size: 500, mediaType: "image/png" },
     width: 100,
     height: 100,
-    colorSpace: "srgb",
-    alphaMode: "straight",
+    picture: { colorPrimaries: "bt709", colorTransfer: "srgb", colorMatrix: "rgb", colorRange: "full", bitDepth: 8, alphaMode: "straight" } as const,
     timing: { kind: "still" },
   };
   const animated: CompositableSurfaceRef = {
@@ -565,7 +566,7 @@ test("a Transition applies a package-owned effect over the exact Clip intersecti
   assert.deepEqual(process.inputs.map(({ name, contribution }) => ({ name, id: contribution.id })), [
     { name: "outgoing", id: "outgoing" }, { name: "incoming", id: "incoming" },
   ]);
-  assert.deepEqual(process.program, effect);
+  assert.deepEqual(process.effect, effect);
 
   assert.throws(() => appendVisualTransition(pair, {
     id: "reversed", outgoingClipId: "incoming", incomingClipId: "outgoing", effect,
@@ -613,7 +614,7 @@ test("a timed Transition reaches HTML with both Prepared Media clocks intact", (
     { name: "incoming", span: { startFrame: 45, endFrameExclusive: 100 } },
   ]);
 
-  const document = compileHtmlProgram(sealComposition({ id: "timed-transition", visual: { canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: { members: [{ kind: "track", id: track.id, track }] } }, audio: { contributions: [] } }), space);
+  const document = compileHtmlProgram(sealComposition({ id: "timed-transition", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: { members: [{ kind: "track", id: track.id, track }] } }, audio: { contributions: [] } }, space));
   const sourceSpans = new Map<string, { startFrame: number; endFrameExclusive: number }[]>();
   for (const video of document.videoSources) {
     if (video.kind !== "media") continue;
@@ -692,7 +693,7 @@ test("every documented Visual frame and fit remains one ordinary Clip instead of
       contentPoint: { x: 0.65, y: 0.1 },
       constraint: index % 2 === 0 ? "bounded" as const : "free" as const,
     };
-    const layers = appendStillMediaLayer(createMediaLayerSet(), source,
+    const layers = appendStillMediaLayer(createMediaLayerSet(), source, SRGB_STRAIGHT_PICTURE,
       { widthPx: index % 3 === 0 ? 400 : index % 3 === 1 ? 1200 : 800,
         heightPx: index % 3 === 0 ? 1200 : index % 3 === 1 ? 400 : 800 },
       localFit, sealMediaSampleLayerSpec({ id: `sample-${index}`, appearance }));
@@ -718,26 +719,26 @@ test("transparent, Paint, self-blur and alternate-source backing are only ordere
   layers = appendMediaPaintLayer(layers, sealMediaPaintLayerSpec({
     id: "solid", paint: { kind: "solid", color: "#101018" }, opacity: 1,
   }));
-  layers = appendStillMediaLayer(layers, source, extent, { ...fit, sizing: "cover" }, sealMediaSampleLayerSpec({
+  layers = appendStillMediaLayer(layers, source, SRGB_STRAIGHT_PICTURE, extent, { ...fit, sizing: "cover" }, sealMediaSampleLayerSpec({
     id: "self-blur", appearance: {
       opacity: 1, filter: { blurPx: 32, brightness: 0.7, contrast: 1.1, saturation: 0.8 },
     },
   }));
-  layers = appendStillMediaLayer(layers, alternate, { ...extent, widthPx: 1200, heightPx: 600 }, { ...fit, sizing: "cover" },
+  layers = appendStillMediaLayer(layers, alternate, SRGB_STRAIGHT_PICTURE, { ...extent, widthPx: 1200, heightPx: 600 }, { ...fit, sizing: "cover" },
     sealMediaSampleLayerSpec({ id: "alternate", appearance }));
-  layers = appendStillMediaLayer(layers, source, extent, fit,
+  layers = appendStillMediaLayer(layers, source, SRGB_STRAIGHT_PICTURE, extent, fit,
     sealMediaSampleLayerSpec({ id: "foreground", appearance }));
   const track = projectVisualTrack(space, finalizeVisualTrack(appendProgramVisualClip(
     createVisualTrackSet(), header, semantic, layers, frame, clipSpec(),
   ), header, space));
-  const document = compileHtmlProgram(sealComposition({ id: "layer-matrix", visual: { canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }), space);
+  const document = compileHtmlProgram(sealComposition({ id: "layer-matrix", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }, space));
   assert.deepEqual(presentElements(track.items[0]!).filter((element) => element.kind === "image").map((element) => element.id),
     ["self-blur", "alternate", "foreground"]);
   assert.equal(document.artifacts.length, 2, "repeated samples share bytes while the alternate source remains explicit");
 
   const transparent = projectVisualTrack(space, finalizeVisualTrack(appendProgramVisualClip(
     createVisualTrackSet(), header, semantic,
-    appendStillMediaLayer(createMediaLayerSet(), source, extent, fit,
+    appendStillMediaLayer(createMediaLayerSet(), source, SRGB_STRAIGHT_PICTURE, extent, fit,
       sealMediaSampleLayerSpec({ id: "only", appearance })),
     frame, clipSpec(),
   ), header, space));
@@ -805,6 +806,6 @@ test("visual occurrences use the shared temporal relation algebra without frame-
 
 test("the graph keeps every source, extent, fit, frame, time and treatment input explicit", () => {
   assert.deepEqual(stillVisualTrackFragment.inputs.map((input) => input.name), [
-    "clip-spec", "extent", "fit", "frame", "header", "sample-spec", "source", "timeline", "window",
+    "clip-spec", "extent", "fit", "frame", "header", "picture", "sample-spec", "source", "timeline", "window",
   ]);
 });

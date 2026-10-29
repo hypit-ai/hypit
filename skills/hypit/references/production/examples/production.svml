@@ -69,7 +69,7 @@
     <film:Track source={speech-sound.audio}/>
     <film:Track id="proof-label" source={proof-label.visual}/>
   </film:Film>
-  <html:Video id="final" composition={main.composition} timeline={speech.timeline}/>
-  <html:Video id="detail" composition={main.composition} timeline={speech.timeline}
+  <html:Video id="final" composition={main.composition}/>
+  <html:Video id="detail" composition={main.composition}
     start-frame="30" end-frame-exclusive="90"/>
 </svml>

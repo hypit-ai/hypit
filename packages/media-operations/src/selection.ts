@@ -1,5 +1,12 @@
-import { sealMediaStreamSelection, verifyMediaInspection } from "@hypit/media";
-import type { MediaAudioStream, MediaInspection, MediaStreamSelection, MediaVideoStream } from "@hypit/media";
+import {
+  BT2020_HLG10_OPAQUE_PICTURE,
+  BT2020_PQ10_OPAQUE_PICTURE,
+  BT709_OPAQUE_PICTURE,
+  sealMediaStreamSelection,
+  verifyMediaInspection,
+  verifyPictureInterpretation,
+} from "@hypit/media";
+import type { MediaAudioStream, MediaInspection, MediaStreamSelection, MediaVideoStream, PictureInterpretation } from "@hypit/media";
 import { canonicalize } from "@hypit/hypit/protocol";
 
 import type { MediaAudioSelector, MediaSelectionRequest, MediaVideoSelector } from "./types.js";
@@ -27,9 +34,34 @@ export function verifyMediaSelectionRequest(value: unknown): asserts value is Me
     assert(Number.isSafeInteger(item.audio.streamIndex) && item.audio.streamIndex >= 0,
       "MediaSelectionRequest audio stream index is invalid");
   }
+  assert(item.picture?.mode === "none" || item.picture?.mode === "source" || item.picture?.mode === "explicit",
+    "MediaSelectionRequest picture mode is invalid");
+  assert((item.video.mode === "none") === (item.picture.mode === "none"),
+    "MediaSelectionRequest picture mode must be none exactly when video is disabled");
+  if (item.picture.mode === "explicit") {
+    verifyPictureInterpretation(item.picture.interpretation, "MediaSelectionRequest.picture.interpretation");
+  }
   assert(item.spanAuthority === "video" || item.spanAuthority === "audio", "MediaSelectionRequest authority is invalid");
   assert(item.spanAuthority === "video" ? item.video.mode !== "none" : item.audio.mode !== "none",
     "MediaSelectionRequest authority stream is disabled");
+}
+
+export function namedPictureInterpretation(name: "sdr-bt709" | "bt2100-pq10" | "bt2100-hlg10"): PictureInterpretation {
+  if (name === "sdr-bt709") return structuredClone(BT709_OPAQUE_PICTURE);
+  if (name === "bt2100-pq10") return structuredClone(BT2020_PQ10_OPAQUE_PICTURE);
+  return structuredClone(BT2020_HLG10_OPAQUE_PICTURE);
+}
+
+function selectedPicture(video: MediaVideoStream, request: MediaSelectionRequest): PictureInterpretation {
+  assert(request.picture.mode !== "none", "Selected video has no picture interpretation request");
+  if (request.picture.mode === "explicit") return structuredClone(request.picture.interpretation);
+  try {
+    verifyPictureInterpretation(video.picture, `Video stream ${video.index} observed picture`);
+  } catch (error) {
+    throw new Error(`Video stream ${video.index} does not contain a complete picture interpretation; choose an explicit picture profile.`,
+      { cause: error });
+  }
+  return structuredClone(video.picture);
 }
 
 function selectUniqueDefault<T extends { readonly disposition: { readonly default: boolean }; readonly index: number }>(
@@ -96,7 +128,7 @@ export function selectMediaStreams(
   const audio = request.audio.mode === "none" ? undefined : selectAudioStream(inspection, request.audio);
   assert(video !== undefined || audio !== undefined, "Media stream selection is empty");
   return sealMediaStreamSelection({
-    ...(video === undefined ? {} : { videoStreamIndex: video.index }),
+    ...(video === undefined ? {} : { videoStreamIndex: video.index, picture: selectedPicture(video, request) }),
     ...(audio === undefined ? {} : { audioStreamIndex: audio.index }),
     spanAuthority: request.spanAuthority,
   });

@@ -47,6 +47,7 @@ test("DepthStack declarations resolve package-owned labels and time values indep
         literal("id", "first"),
         reference("source", "image"),
         reference("extent", "extent"),
+        literal("picture", "srgb"),
         reference("at", "activation"),
         reference("label", "proof-label"),
       ],
@@ -101,4 +102,5 @@ test("DepthStack declarations resolve package-owned labels and time values indep
     output: "label",
   });
   assert.deepEqual(track?.inputs["card-0001-activation"], { kind: "record", id: "activation" });
+  assert.deepEqual(track?.inputs["card-0001-picture"], { kind: "record", id: "proof.card.0001.picture" });
 });

@@ -16,13 +16,14 @@ import type {
   PresentVisualTrack,
 } from "@hypit/composition";
 import type { CaptionDocument, CaptionDisplayWord, CaptionUnit } from "@hypit/caption";
-import { assertRegionEvidence } from "@hypit/region-evidence";
-import type { RegionEvidence } from "@hypit/region-evidence";
+import { assertTimelineRegionSequence } from "@hypit/spatial-sequence";
+import type { TimelineRegionSequence } from "@hypit/spatial-sequence";
 import { assertSpatialFrame } from "@hypit/spatial";
 import type { SpatialFrame } from "@hypit/spatial";
 
 import { assertFineCaptionParameters, FINE_CAPTION_FAMILY } from "./style.js";
 import { assertFineCaptionSchedule } from "./schedule.js";
+import { assertFineCaptionRegionBindings } from "./region-binding.js";
 import { uniformGap, wordGaps } from "./spacing.js";
 import { htmlVisual } from "@hypit/html-program";
 import { joinedBoxSetup } from "./joined-box.js";
@@ -31,6 +32,7 @@ import type {
   FineCaptionGlyphPaint,
   FineCaptionOneShotMotion,
   FineCaptionParameters,
+  FineCaptionRegionBindings,
   FineCaptionSchedule,
   FineCaptionUnderline,
 } from "./types.js";
@@ -602,26 +604,32 @@ function anchorTransform(parameters: FineCaptionParameters): string | undefined 
 function trackedPlacementAnimation(
   parameters: FineCaptionParameters,
   frames: readonly (SpatialFrame | null)[],
+  within: SpatialFrame,
+  missing: "hide" | "authored-placement",
 ): VisualAnimation {
   if (frames.length === 0) throw new Error("Fine Caption tracked placement has no Frames");
   const anchor = anchorTransform(parameters);
   const transform = (frame: SpatialFrame | null): string => {
-    const xPx = frame === null ? 0 : frame.xPx + frame.widthPx / 2;
-    const yPx = frame === null ? 0 : frame.yPx;
+    const xPx = frame === null
+      ? within.xPx + parameters.placement.x * within.widthPx
+      : frame.xPx + frame.widthPx / 2;
+    const yPx = frame === null
+      ? within.yPx + parameters.placement.y * within.heightPx
+      : frame.yPx;
     return `translate(${compactNumber(xPx)}px,${compactNumber(yPx)}px)${anchor === undefined ? "" : ` ${anchor}`}`;
   };
   const keyframes: VisualKeyframe[] = frames.map((frame, atFrame) => ({
     atFrame,
     style: [
       { name: "transform", value: transform(frame) },
-      { name: "opacity", value: frame === null ? 0 : 1 },
+      { name: "opacity", value: frame === null && missing === "hide" ? 0 : 1 },
     ],
   }));
   keyframes.push({
     atFrame: frames.length,
     style: [
       { name: "transform", value: transform(frames.at(-1)!) },
-      { name: "opacity", value: frames.at(-1) === null ? 0 : 1 },
+      { name: "opacity", value: frames.at(-1) === null && missing === "hide" ? 0 : 1 },
     ],
   });
   return { keyframes };
@@ -674,6 +682,7 @@ function cueElements(
   within: SpatialFrame,
   trackedPlacement?: {
     readonly frames: readonly (SpatialFrame | null)[];
+    readonly missing: "hide" | "authored-placement";
   },
 ): VisualElement {
   type DetachedVisualElement = Omit<VisualBoxElement, "children"> | VisualTextElement | Omit<VisualProgramElement, "slots">;
@@ -702,7 +711,7 @@ function cueElements(
   };
   const placementAnimation = trackedPlacement === undefined
     ? undefined
-    : trackedPlacementAnimation(parameters, trackedPlacement.frames);
+    : trackedPlacementAnimation(parameters, trackedPlacement.frames, within, trackedPlacement.missing);
   const transform = placementAnimation === undefined
     ? anchorTransform(parameters)
     : (() => {
@@ -1089,7 +1098,8 @@ export function renderFineCaption(
   document: CaptionDocument,
   timeline: Timeline,
   within: SpatialFrame,
-  regions?: RegionEvidence,
+  regions?: TimelineRegionSequence,
+  regionBindings?: FineCaptionRegionBindings,
 ): PresentVisualTrack {
   assertFineCaptionSchedule(schedule);
   assertCaptionProgramForDocument(program, document);
@@ -1112,13 +1122,26 @@ export function renderFineCaption(
     assertFineCaptionParameters(style.rendering.parameters as unknown as FineCaptionParameters);
   }
   const totalFrames = timelineFrameCount(timeline);
-  const regionSeriesById = regions === undefined ? undefined : (() => {
-    assertRegionEvidence(regions);
+  if ((regions === undefined) !== (regionBindings === undefined)) {
+    throw new Error("Fine Caption regions and region bindings must be supplied together");
+  }
+  const regionContext = regions === undefined || regionBindings === undefined ? undefined : (() => {
+    assertTimelineRegionSequence(regions);
+    assertFineCaptionRegionBindings(regionBindings);
     const regionFrameCount = regions.series[0]!.frames.length;
     if (regions.timelineId !== timeline.id || regionFrameCount !== totalFrames) {
       throw new Error(`Fine Caption regions do not cover Timeline ${timeline.id}'s ${totalFrames} Frames`);
     }
-    return new Map(regions.series.map((series) => [series.id, series]));
+    const seriesById = new Map(regions.series.map((series) => [series.id, series]));
+    for (const binding of regionBindings.bindings) {
+      if (!seriesById.has(binding.seriesId)) {
+        throw new Error(`Fine Caption role ${binding.role} references unknown region series ${binding.seriesId}`);
+      }
+    }
+    return {
+      seriesById,
+      bindingByRole: new Map(regionBindings.bindings.map((binding) => [binding.role, binding])),
+    };
   })();
   const presents = schedule.cues.flatMap((cue) => {
     const authoredCue = cueById.get(cue.cueId);
@@ -1142,13 +1165,15 @@ export function renderFineCaption(
       endFrameExclusive: Math.min(span.endFrameExclusive, endFrameExclusive),
     })).filter((span) => span.endFrameExclusive > span.startFrame);
     if (visibility.length === 0) return [];
-    const trackedPlacement = regionSeriesById === undefined ? undefined : (() => {
+    const trackedPlacement = regionContext === undefined ? undefined : (() => {
       const role = authoredCue.role;
-      if (role === undefined) throw new Error(`Fine Caption Cue ${cue.id} must have one Script Role to follow regions`);
-      const series = regionSeriesById.get(role);
-      if (series === undefined) return undefined;
+      if (role === undefined) return undefined;
+      const binding = regionContext.bindingByRole.get(role);
+      if (binding === undefined) return undefined;
+      const series = regionContext.seriesById.get(binding.seriesId)!;
       return {
         frames: series.frames.slice(startFrame, endFrameExclusive),
+        missing: binding.missing,
       };
     })();
     const atomFrames = new Map(cue.units.map((atom) => [atom.unitId, {

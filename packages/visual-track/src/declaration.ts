@@ -13,7 +13,7 @@ import { blobTypes } from "@hypit/hypit/blob";
 import { sameType, type CanonicalValue, type TypeRef } from "@hypit/hypit/protocol";
 import { recipeType, type Recipe } from "@hypit/hypit/recipe";
 import { compositionTypes } from "@hypit/composition";
-import { mediaTypes } from "@hypit/media";
+import { mediaTypes, pictureInterpretationProfile } from "@hypit/media";
 import { spatialTypes } from "@hypit/spatial";
 import {
   assertTemporalRelationSpec,
@@ -27,7 +27,6 @@ import {
   type TemporalRelationSpec,
 } from "@hypit/temporal";
 import { timelineTypes } from "@hypit/timeline";
-
 import {
   decodeMediaFit,
   decodeMediaFramePaint,
@@ -176,7 +175,7 @@ function samplingRelation(node: DeclarationNode): TemporalRelationSpec | undefin
 
 type FragmentLayer =
   | { readonly kind: "paint"; readonly specName: string }
-  | { readonly kind: "still"; readonly sourceName: string; readonly extentName: string; readonly placementKind: "fit" | "mapping"; readonly placementName: string; readonly specName: string }
+  | { readonly kind: "still"; readonly sourceName: string; readonly pictureName: string; readonly extentName: string; readonly placementKind: "fit" | "mapping"; readonly placementName: string; readonly specName: string }
   | { readonly kind: "timed" | "surface"; readonly sourceName: string; readonly placementKind: "fit" | "mapping"; readonly placementName: string; readonly specName: string };
 
 type FragmentClip = {
@@ -203,7 +202,7 @@ function appendLayers(operations: FragmentOperation[], prefix: string, layers: r
       operations.push({ id, producer: visualTrackProducers.appendPaintLayer, inputs: common, result: { kind: "output", name: "layers" } });
     } else if (layer.kind === "still") {
       operations.push({ id, producer: layer.placementKind === "fit" ? visualTrackProducers.appendStillLayer : visualTrackProducers.appendMappedStillLayer,
-        inputs: { ...common, source: input(layer.sourceName), extent: input(layer.extentName), [layer.placementKind === "fit" ? "fit" : "mapping"]: input(layer.placementName) },
+        inputs: { ...common, source: input(layer.sourceName), picture: input(layer.pictureName), extent: input(layer.extentName), [layer.placementKind === "fit" ? "fit" : "mapping"]: input(layer.placementName) },
         result: { kind: "output", name: "layers" } });
     } else {
       const producer = layer.kind === "timed"
@@ -336,6 +335,7 @@ export const visualMotionAuthorDeclaration: AuthorDeclarationCompiler = {
 export const visualTrackAuthorDeclaration: AuthorDeclarationCompiler = {
   module: visualTrackModuleRef, declaration: "track",
   outputs: [spatialTypes.fit, visualTrackTypes.header, visualTrackTypes.motion,
+    mediaTypes.pictureInterpretation,
     visualTrackTypes.paintLayerSpec, visualTrackTypes.sampleLayerSpec, visualTrackTypes.layerSet,
     visualTrackTypes.clipSpec, visualTrackTypes.transitionEffect, visualTrackTypes.transitionSpec,
     visualTrackTypes.set, visualTrackTypes.program, compositionTypes.visualTrack],
@@ -349,6 +349,7 @@ export const visualTrackAuthorDeclaration: AuthorDeclarationCompiler = {
     { name: "motion", kind: "reference", required: false, accepts: [visualTrackTypes.motion], summary: "Selects reusable Clip-local Motion." },
     { name: "clip", kind: "reference", required: false, accepts: [spatialTypes.path], summary: "Selects an authored clipping Path." },
     { name: "image", kind: "reference", required: false, accepts: [blobTypes.blob], summary: "Selects a durationless still image." },
+    { name: "picture", kind: "literal", required: false, values: ["srgb"], summary: "Declares the still image's sample interpretation." },
     { name: "media", kind: "reference", required: false, accepts: [mediaTypes.prepared], summary: "Selects prepared timed media." },
     { name: "surface", kind: "reference", required: false, accepts: [mediaTypes.compositableSurface], summary: "Selects an alpha-aware Surface." },
     { name: "extent", kind: "reference", required: false, accepts: [spatialTypes.extent], summary: "Supplies a still image's intrinsic Extent." },
@@ -385,6 +386,9 @@ export const visualTrackAuthorDeclaration: AuthorDeclarationCompiler = {
       const treatment: Recipe = treatmentReference === undefined ? { path: `${child.name}:default-treatment`, properties: {} } : recipe(treatmentReference, `${child.name}.treatment`);
       const sourceAppearance = sourceRecipe(child, treatment);
       const source = await declaredVisualSource(child, resolveReference);
+      const pictureField = field(child, "picture");
+      if (source.kind === "image" && pictureField === undefined) throw new Error(`${child.name}.picture is required with image.`);
+      if (source.kind !== "image" && pictureField !== undefined) throw new Error(`${child.name}.picture is only valid with image.`);
       const frame = await resolved(child, "frame", spatialTypes.frame, resolveReference);
       const window = await resolved(child, "during", temporalTypes.window, resolveReference);
       const mapping = field(child, "mapping") === undefined ? undefined : await resolved(child, "mapping", spatialTypes.map2D, resolveReference);
@@ -404,7 +408,13 @@ export const visualTrackAuthorDeclaration: AuthorDeclarationCompiler = {
       const layerSpecName = `${layerSuffix}-spec`;
       state.addRecord(layerSpecName, `${id}.${layerSuffix}.spec`, visualTrackTypes.sampleLayerSpec, decodeMediaSampleSpec(sourceAppearance, "content", sourceKind, cropMotion, true, relation), range);
       const sourceName = `${layerSuffix}-source`; state.addReference(sourceName, source.value);
-      if (source.kind === "image") { const extentName = `${layerSuffix}-extent`; state.addReference(extentName, source.extent); layers.push({ kind: "still", sourceName, extentName, placementKind, placementName, specName: layerSpecName }); }
+      if (source.kind === "image") {
+        const extentName = `${layerSuffix}-extent`, pictureName = `${layerSuffix}-picture`;
+        state.addReference(extentName, source.extent);
+        state.addRecord(pictureName, `${id}.${layerSuffix}.picture`, mediaTypes.pictureInterpretation,
+          pictureInterpretationProfile(literal(child, "picture") as "srgb"), range);
+        layers.push({ kind: "still", sourceName, pictureName, extentName, placementKind, placementName, specName: layerSpecName });
+      }
       else layers.push({ kind: source.kind === "media" ? "timed" : "surface", sourceName, placementKind, placementName, specName: layerSpecName });
       const specName = `clip-${suffix}-spec`;
       state.addRecord(specName, `${id}.clip.${suffix}.spec`, visualTrackTypes.clipSpec, decodeVisualClipSpec(treatment, { id: clipId }), range);

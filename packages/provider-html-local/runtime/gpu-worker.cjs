@@ -6,7 +6,6 @@ app.setPath("userData", path.join(process.argv[2], "electron"));
 app.on("window-all-closed", () => {});
 app.commandLine.appendSwitch("disable-frame-rate-limit");
 app.commandLine.appendSwitch("disable-gpu-vsync");
-app.commandLine.appendSwitch("force-color-profile", "srgb");
 if (process.platform === "darwin") {
   app.commandLine.appendSwitch("enable-features", "VTVideoEncodeAcceleratorOpaqueRgbSharedImageEncode");
 }

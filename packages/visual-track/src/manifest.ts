@@ -6,6 +6,7 @@ import {
   compositableSurfaceSchema,
   mediaDependency,
   mediaTypes,
+  pictureInterpretationSchema,
   preparedMediaSchema,
 } from "@hypit/media";
 
@@ -90,7 +91,7 @@ export const mediaSampleLayerSpecSchema: ValueSchema = object({
   appearance: { schema: mediaSampleAppearanceSchema }, samplingMotion: { schema: mediaSamplingMotionSchema, optional: true },
 });
 const visualSource: ValueSchema = { kind: "oneOf", variants: [
-  object({ kind: { schema: { kind: "literal", value: "still" } }, artifact: { schema: blob }, extent: { schema: extent } }),
+  object({ kind: { schema: { kind: "literal", value: "still" } }, artifact: { schema: blob }, picture: { schema: pictureInterpretationSchema }, extent: { schema: extent } }),
   object({
     kind: { schema: { kind: "literal", value: "timed" } }, media: { schema: preparedMediaSchema }, extent: { schema: extent },
   }),
@@ -157,7 +158,13 @@ export const visualClipSpecSchema: ValueSchema = object({
   id: { schema: string },
   treatment: { schema: visualFrameTreatmentSchema }, motion: { schema: visualClipMotionSchema, optional: true },
 });
-export const visualTransitionEffectSchema: ValueSchema = visualProgramCarrierSchema;
+export const visualTransitionEffectSchema: ValueSchema = object({
+  inputs: { schema: {
+    kind: "array", minItems: 2, maxItems: 2,
+    items: { kind: "string", enum: ["outgoing", "incoming"] },
+  } },
+  program: { schema: visualProgramCarrierSchema },
+});
 export const visualTransitionSpecSchema: ValueSchema = object({
   id: { schema: string },
   outgoingClipId: { schema: string },
@@ -218,8 +225,8 @@ export const visualTrackManifest: ModuleManifest = {
   producers: [
     { name: visualTrackProducers.createLayers.name, inputs: [], result: { kind: "output" as const, name: "layers", type: visualTrackTypes.layerSet } },
     { name: visualTrackProducers.appendPaintLayer.name, inputs: [{ name: "layers", type: visualTrackTypes.layerSet }, { name: "spec", type: visualTrackTypes.paintLayerSpec }], result: { kind: "output" as const, name: "layers", type: visualTrackTypes.layerSet } },
-    { name: visualTrackProducers.appendStillLayer.name, inputs: [{ name: "layers", type: visualTrackTypes.layerSet }, { name: "source", type: blobTypes.blob }, { name: "extent", type: spatialTypes.extent }, { name: "fit", type: spatialTypes.fit }, { name: "spec", type: visualTrackTypes.sampleLayerSpec }], result: { kind: "output" as const, name: "layers", type: visualTrackTypes.layerSet } },
-    { name: visualTrackProducers.appendMappedStillLayer.name, inputs: [{ name: "layers", type: visualTrackTypes.layerSet }, { name: "source", type: blobTypes.blob }, { name: "extent", type: spatialTypes.extent }, { name: "mapping", type: spatialTypes.map2D }, { name: "spec", type: visualTrackTypes.sampleLayerSpec }], result: { kind: "output" as const, name: "layers", type: visualTrackTypes.layerSet } },
+    { name: visualTrackProducers.appendStillLayer.name, inputs: [{ name: "layers", type: visualTrackTypes.layerSet }, { name: "source", type: blobTypes.blob }, { name: "picture", type: mediaTypes.pictureInterpretation }, { name: "extent", type: spatialTypes.extent }, { name: "fit", type: spatialTypes.fit }, { name: "spec", type: visualTrackTypes.sampleLayerSpec }], result: { kind: "output" as const, name: "layers", type: visualTrackTypes.layerSet } },
+    { name: visualTrackProducers.appendMappedStillLayer.name, inputs: [{ name: "layers", type: visualTrackTypes.layerSet }, { name: "source", type: blobTypes.blob }, { name: "picture", type: mediaTypes.pictureInterpretation }, { name: "extent", type: spatialTypes.extent }, { name: "mapping", type: spatialTypes.map2D }, { name: "spec", type: visualTrackTypes.sampleLayerSpec }], result: { kind: "output" as const, name: "layers", type: visualTrackTypes.layerSet } },
     { name: visualTrackProducers.appendTimedLayer.name, inputs: [{ name: "layers", type: visualTrackTypes.layerSet }, { name: "media", type: mediaTypes.prepared }, { name: "fit", type: spatialTypes.fit }, { name: "spec", type: visualTrackTypes.sampleLayerSpec }], result: { kind: "output" as const, name: "layers", type: visualTrackTypes.layerSet } },
     { name: visualTrackProducers.appendMappedTimedLayer.name, inputs: [{ name: "layers", type: visualTrackTypes.layerSet }, { name: "media", type: mediaTypes.prepared }, { name: "mapping", type: spatialTypes.map2D }, { name: "spec", type: visualTrackTypes.sampleLayerSpec }], result: { kind: "output" as const, name: "layers", type: visualTrackTypes.layerSet } },
     { name: visualTrackProducers.appendSurfaceLayer.name, inputs: [{ name: "layers", type: visualTrackTypes.layerSet }, { name: "source", type: mediaTypes.compositableSurface }, { name: "fit", type: spatialTypes.fit }, { name: "spec", type: visualTrackTypes.sampleLayerSpec }], result: { kind: "output" as const, name: "layers", type: visualTrackTypes.layerSet } },

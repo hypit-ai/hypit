@@ -20,6 +20,11 @@ import type {
   MediaTimestamp,
   MediaDeliverySpec,
   MediaDomainSpec,
+  HdrStaticMetadata,
+  OutputPictureSpec,
+  PictureSignal,
+  PictureInterpretation,
+  PictureObservation,
   PreparedAudioMember,
   PreparedMedia,
   PreparedAudioSource,
@@ -27,7 +32,7 @@ import type {
   PreparedVisualMember,
   TimelineAudio,
   VisualDeliverySpec,
-  VisualPictureSpec,
+  WorkingPictureSpec,
 } from "./types.js";
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -71,39 +76,134 @@ export function sealVisualDeliverySpec(value: VisualDeliverySpec): VisualDeliver
   return canonicalize(value) as unknown as VisualDeliverySpec;
 }
 
-export function sealVisualPictureSpec<T extends VisualPictureSpec>(value: T): T {
-  verifyVisualPictureSpec(value);
+export function sealOutputPictureSpec<T extends OutputPictureSpec>(value: T): T {
+  verifyOutputPictureSpec(value);
   return canonicalize(value) as unknown as T;
 }
 
-export function verifyVisualPictureSpec(value: unknown): asserts value is VisualPictureSpec {
-  const picture = object(value, "VisualPictureSpec") as unknown as VisualPictureSpec;
-  assert(picture.colorPrimaries === "bt709", "VisualPictureSpec color primaries are unsupported");
-  const video = picture.colorTransfer === "bt709" && picture.colorMatrix === "bt709" && picture.colorRange === "limited";
-  const image = picture.colorTransfer === "srgb" && picture.colorMatrix === "rgb" && picture.colorRange === "full";
-  assert(video || image, "VisualPictureSpec color interpretation is unsupported");
-  assert(picture.bitDepth === 8, "VisualPictureSpec bit depth is unsupported");
-  const alpha = object(picture.alpha, "VisualPictureSpec.alpha") as unknown as VisualPictureSpec["alpha"];
-  assert(alpha.mode === "opaque", "VisualPictureSpec alpha mode is unsupported");
-  verifyHexColor(alpha.matte, "VisualPictureSpec.alpha.matte");
+const PRIMARIES = ["bt709", "display-p3", "bt2020"] as const;
+const TRANSFERS = ["srgb", "bt709", "linear", "pq", "hlg"] as const;
+const MATRICES = ["rgb", "bt709", "bt2020-ncl"] as const;
+const RANGES = ["full", "limited"] as const;
+const BIT_DEPTHS = [8, 10, 12, 16] as const;
+const ALPHA_MODES = ["opaque", "straight", "premultiplied"] as const;
+
+function oneOf<T extends string | number>(value: unknown, options: readonly T[], subject: string): asserts value is T {
+  assert(options.includes(value as T), `${subject} is invalid`);
 }
 
-export function sameVisualPictureSpec(left: VisualPictureSpec, right: VisualPictureSpec): boolean {
-  verifyVisualPictureSpec(left);
-  verifyVisualPictureSpec(right);
+export function verifyPictureSignal(value: unknown, subject = "PictureSignal"): asserts value is PictureSignal {
+  const picture = object(value, subject) as unknown as PictureSignal;
+  oneOf(picture.colorPrimaries, PRIMARIES, `${subject}.colorPrimaries`);
+  oneOf(picture.colorTransfer, TRANSFERS, `${subject}.colorTransfer`);
+  oneOf(picture.colorMatrix, MATRICES, `${subject}.colorMatrix`);
+  oneOf(picture.colorRange, RANGES, `${subject}.colorRange`);
+  oneOf(picture.bitDepth, BIT_DEPTHS, `${subject}.bitDepth`);
+}
+
+export function verifyPictureInterpretation(
+  value: unknown,
+  subject = "PictureInterpretation",
+): asserts value is PictureInterpretation {
+  verifyPictureSignal(value, subject);
+  const picture = value as PictureInterpretation;
+  oneOf(picture.alphaMode, ALPHA_MODES, `${subject}.alphaMode`);
+}
+
+export function verifyPictureObservation(value: unknown, subject = "PictureObservation"): asserts value is PictureObservation {
+  const picture = object(value, subject) as PictureObservation;
+  if (picture.colorPrimaries !== undefined) oneOf(picture.colorPrimaries, PRIMARIES, `${subject}.colorPrimaries`);
+  if (picture.colorTransfer !== undefined) oneOf(picture.colorTransfer, TRANSFERS, `${subject}.colorTransfer`);
+  if (picture.colorMatrix !== undefined) oneOf(picture.colorMatrix, MATRICES, `${subject}.colorMatrix`);
+  if (picture.colorRange !== undefined) oneOf(picture.colorRange, RANGES, `${subject}.colorRange`);
+  if (picture.bitDepth !== undefined) oneOf(picture.bitDepth, BIT_DEPTHS, `${subject}.bitDepth`);
+  if (picture.alphaMode !== undefined) oneOf(picture.alphaMode, ALPHA_MODES, `${subject}.alphaMode`);
+  if (Object.keys(picture).length === 6) verifyPictureInterpretation(picture, subject);
+}
+
+export function verifyWorkingPictureSpec(value: unknown, subject = "WorkingPictureSpec"): asserts value is WorkingPictureSpec {
+  const picture = object(value, subject) as unknown as WorkingPictureSpec;
+  oneOf(picture.colorPrimaries, PRIMARIES, `${subject}.colorPrimaries`);
+  oneOf(picture.colorTransfer, ["srgb", "linear"] as const, `${subject}.colorTransfer`);
+  assert(Number.isFinite(picture.referenceWhiteNits) && picture.referenceWhiteNits > 0,
+    `${subject}.referenceWhiteNits must be positive`);
+  assert(picture.alphaMode === "premultiplied", `${subject}.alphaMode must be premultiplied`);
+  assert(picture.colorTransfer !== "srgb" || picture.colorPrimaries !== "bt2020",
+    `${subject} cannot pair an sRGB transfer with BT.2020 primaries`);
+}
+
+export function verifyOutputPictureSpec(value: unknown): asserts value is OutputPictureSpec {
+  const picture = object(value, "OutputPictureSpec") as unknown as OutputPictureSpec;
+  verifyPictureSignal(picture, "OutputPictureSpec");
+  const signal = picture as PictureSignal;
+  const image = (signal.colorTransfer === "srgb" || signal.colorTransfer === "linear")
+    && signal.colorMatrix === "rgb" && signal.colorRange === "full"
+    && signal.colorPrimaries !== "bt2020";
+  const video = (signal.colorTransfer === "bt709" || signal.colorTransfer === "pq" || signal.colorTransfer === "hlg")
+    && signal.colorMatrix !== "rgb" && signal.colorRange === "limited";
+  assert(image || video, "OutputPictureSpec color interpretation is invalid");
+  const alpha = object(picture.alpha, "OutputPictureSpec.alpha") as unknown as OutputPictureSpec["alpha"];
+  assert(alpha.mode === "opaque", "OutputPictureSpec alpha mode must be opaque");
+  verifyHexColor(alpha.matte, "OutputPictureSpec.alpha.matte");
+}
+
+export function sameOutputPictureSpec(left: OutputPictureSpec, right: OutputPictureSpec): boolean {
+  verifyOutputPictureSpec(left);
+  verifyOutputPictureSpec(right);
   return JSON.stringify(canonicalize(left)) === JSON.stringify(canonicalize(right));
+}
+
+function verifyChromaticity(value: unknown, subject: string): void {
+  const point = object(value, subject);
+  assert(Number.isFinite(point.x) && (point.x as number) >= 0 && (point.x as number) <= 1,
+    `${subject}.x must be between 0 and 1`);
+  assert(Number.isFinite(point.y) && (point.y as number) >= 0 && (point.y as number) <= 1,
+    `${subject}.y must be between 0 and 1`);
+}
+
+export function verifyHdrStaticMetadata(value: unknown, subject = "HdrStaticMetadata"): asserts value is HdrStaticMetadata {
+  const metadata = object(value, subject) as unknown as HdrStaticMetadata;
+  const display = object(metadata.masteringDisplay, `${subject}.masteringDisplay`) as unknown as HdrStaticMetadata["masteringDisplay"];
+  verifyChromaticity(display.red, `${subject}.masteringDisplay.red`);
+  verifyChromaticity(display.green, `${subject}.masteringDisplay.green`);
+  verifyChromaticity(display.blue, `${subject}.masteringDisplay.blue`);
+  verifyChromaticity(display.whitePoint, `${subject}.masteringDisplay.whitePoint`);
+  assert(Number.isFinite(display.minLuminanceNits) && display.minLuminanceNits >= 0,
+    `${subject}.masteringDisplay.minLuminanceNits must be non-negative`);
+  assert(Number.isFinite(display.maxLuminanceNits) && display.maxLuminanceNits > display.minLuminanceNits,
+    `${subject}.masteringDisplay.maxLuminanceNits must exceed its minimum`);
+  const light = object(metadata.contentLight, `${subject}.contentLight`) as unknown as HdrStaticMetadata["contentLight"];
+  nonNegativeInteger(light.maxContentLightLevelNits, `${subject}.contentLight.maxContentLightLevelNits`);
+  nonNegativeInteger(light.maxFrameAverageLightLevelNits, `${subject}.contentLight.maxFrameAverageLightLevelNits`);
+  assert(light.maxContentLightLevelNits <= 65_535 && light.maxFrameAverageLightLevelNits <= 65_535,
+    `${subject}.contentLight values must fit unsigned 16-bit HDR metadata`);
+  assert(light.maxFrameAverageLightLevelNits <= light.maxContentLightLevelNits,
+    `${subject}.contentLight.maxFrameAverageLightLevelNits cannot exceed maxContentLightLevelNits`);
 }
 
 export function verifyVisualDeliverySpec(value: unknown): asserts value is VisualDeliverySpec {
   const item = object(value, "VisualDeliverySpec") as unknown as VisualDeliverySpec;
-  verifyVisualPictureSpec(item.picture);
-  assert(item.picture.colorTransfer === "bt709" && item.picture.colorMatrix === "bt709"
-    && item.picture.colorRange === "limited", "VisualDeliverySpec picture is not a supported video interpretation");
+  verifyOutputPictureSpec(item.picture);
+  assert(item.picture.colorRange === "limited",
+    "VisualDeliverySpec picture must use a video interpretation");
   const encoding = object(item.encoding, "VisualDeliverySpec.encoding") as unknown as VisualDeliverySpec["encoding"];
-  assert(encoding.codec === "h264", "VisualDeliverySpec video codec is unsupported");
-  assert(encoding.pixelFormat === "yuv420p", "VisualDeliverySpec pixel format is unsupported");
+  oneOf(encoding.codec, ["h264", "hevc"] as const, "VisualDeliverySpec.encoding.codec");
+  oneOf(encoding.pixelFormat, ["yuv420p", "yuv420p10le", "yuv420p12le"] as const,
+    "VisualDeliverySpec.encoding.pixelFormat");
+  const pixelDepth = encoding.pixelFormat === "yuv420p" ? 8
+    : encoding.pixelFormat === "yuv420p10le" ? 10 : 12;
+  assert(item.picture.bitDepth === pixelDepth,
+    "VisualDeliverySpec picture bit depth differs from its pixel format");
+  assert(encoding.codec !== "h264" || encoding.pixelFormat === "yuv420p",
+    "VisualDeliverySpec H.264 requires the 8-bit YUV420 format");
   assert(encoding.quality === "draft" || encoding.quality === "standard" || encoding.quality === "high",
     "VisualDeliverySpec quality is unsupported");
+  if (item.picture.colorTransfer === "pq") {
+    verifyHdrStaticMetadata(item.hdrStaticMetadata, "VisualDeliverySpec.hdrStaticMetadata");
+  } else {
+    assert(item.hdrStaticMetadata === undefined,
+      "VisualDeliverySpec HDR static metadata requires PQ delivery");
+  }
 }
 
 export function sealMediaDeliverySpec(value: MediaDeliverySpec): MediaDeliverySpec {
@@ -182,6 +282,7 @@ function verifyStream(value: unknown, subject: string): asserts value is MediaSt
     `${subject}.rotationDegrees is invalid`);
     if (item.averageFrameRate !== undefined) verifyRational(item.averageFrameRate, `${subject}.averageFrameRate`);
     if (item.nominalFrameRate !== undefined) verifyRational(item.nominalFrameRate, `${subject}.nominalFrameRate`);
+    verifyPictureObservation(item.picture, `${subject}.picture`);
     if (item.role === "attached-picture") {
       assert(disposition.attachedPicture === true, `${subject} attached-picture role differs from disposition`);
     }
@@ -236,6 +337,9 @@ export function verifyMediaStreamSelection(value: unknown): asserts value is Med
   assert(item.spanAuthority === "video" || item.spanAuthority === "audio", "MediaStreamSelection authority is invalid");
   assert(item.spanAuthority === "video" ? item.videoStreamIndex !== undefined : item.audioStreamIndex !== undefined,
     "MediaStreamSelection authority stream is absent");
+  assert((item.videoStreamIndex === undefined) === (item.picture === undefined),
+    "MediaStreamSelection visual picture must exist exactly when a video stream is selected");
+  if (item.picture !== undefined) verifyPictureInterpretation(item.picture, "MediaStreamSelection.picture");
 }
 
 function verifyPreparedMember(
@@ -275,6 +379,7 @@ export function verifyPreparedMedia(value: unknown): asserts value is PreparedMe
     assert(interpretation.rotationDegrees === 0 || interpretation.rotationDegrees === 90
       || interpretation.rotationDegrees === 180 || interpretation.rotationDegrees === 270,
     "PreparedMedia.visual.interpretation.rotationDegrees is invalid");
+    verifyPictureInterpretation(interpretation.picture, "PreparedMedia.visual.interpretation.picture");
   }
   if (item.audio !== undefined) {
     const audio = object(item.audio, "PreparedMedia.audio") as unknown as PreparedAudioMember;
@@ -302,6 +407,7 @@ export function verifyPreparedVisualSource(value: unknown): asserts value is Pre
   assert(interpretation.rotationDegrees === 0 || interpretation.rotationDegrees === 90
     || interpretation.rotationDegrees === 180 || interpretation.rotationDegrees === 270,
   "PreparedVisualSource.interpretation.rotationDegrees is invalid");
+  verifyPictureInterpretation(interpretation.picture, "PreparedVisualSource.interpretation.picture");
 }
 
 export function verifyPreparedAudioSource(value: unknown): asserts value is PreparedAudioSource {

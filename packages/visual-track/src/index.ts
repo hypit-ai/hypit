@@ -22,6 +22,7 @@ export {
   appendMappedStillMediaLayer,
   appendMappedSurfaceMediaLayer,
   appendMappedTimedMediaLayer,
+  appendCompositionLayer,
   appendMediaPaintLayer,
   appendStillMediaLayer,
   appendSurfaceMediaLayer,
@@ -29,7 +30,7 @@ export {
   assertMediaLayerSet,
   assertMediaPaintLayerSpec,
   assertMediaSampleLayerSpec,
-  assertMediaVisualSource,
+  assertVisualSource,
   createMediaLayerSet,
   sealMediaPaintLayerSpec,
   sealMediaSampleLayerSpec,
@@ -45,7 +46,7 @@ export {
   samplingAnimation,
 } from "./motion.js";
 export { assertVisualFrameTreatment, visualContentFrame } from "./frame-treatment.js";
-export { appendVisualClip, appendVisualTransition, bindVisualClipMotion, bindVisualClipPath, assertVisualClipSpec, assertVisualTransitionSpec, assertVisualTrackHeader, assertVisualTrackProgram, assertVisualTrackProgramIdentity, assertVisualTrackSet, createVisualTrackSet, finalizeVisualTrack, projectVisualTrack, sealVisualClipSpec, sealVisualTrackHeader, sealVisualTrackProgram, visualTransitionSpan } from "./program.js";export { visualTrackMarkupDeclarations } from "./declaration.js";
+export { appendVisualClip, appendVisualTransition, bindVisualClipMotion, bindVisualClipPath, assertVisualClipSpec, assertVisualTransitionEffect, assertVisualTransitionSpec, assertVisualTrackHeader, assertVisualTrackProgram, assertVisualTrackProgramIdentity, assertVisualTrackSet, createVisualTrackSet, finalizeVisualTrack, projectVisualTrack, sealVisualClipSpec, sealVisualTransitionEffect, sealVisualTrackHeader, sealVisualTrackProgram, visualTransitionSpan } from "./program.js";export { visualTrackMarkupDeclarations } from "./declaration.js";
 export type * from "./types.js";
 
 export { visualTreatmentDefaults } from "./author.js";

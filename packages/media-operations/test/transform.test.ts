@@ -8,6 +8,8 @@ import { fixtureResource } from "../../../test/fixture-resource.js";
 import { transformPreparedMedia } from "../src/index.js";
 
 const timestamp = (ticks: string) => ({ ticks, timeBase: { numerator: 1, denominator: 1_000 } });
+const VIDEO_PICTURE = { colorPrimaries: "bt709", colorTransfer: "bt709", colorMatrix: "bt709",
+  colorRange: "limited", bitDepth: 8, alphaMode: "opaque" } as const;
 
 function tenSecondMedia() {
   return prepareMedia({
@@ -35,10 +37,10 @@ function tenSecondMedia() {
         width: 1_920,
         height: 1_080,
         sampleAspectRatio: { numerator: 1, denominator: 1 },
-        rotationDegrees: 0,
+        rotationDegrees: 0, picture: { colorPrimaries: "bt709", colorTransfer: "bt709", colorMatrix: "bt709", colorRange: "limited", bitDepth: 8, alphaMode: "opaque" } as const,
       }],
     },
-    selection: { videoStreamIndex: 0, spanAuthority: "video" },
+    selection: { videoStreamIndex: 0, spanAuthority: "video", picture: VIDEO_PICTURE },
   });
 }
 

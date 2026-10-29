@@ -14,7 +14,7 @@ import { htmlProgramCapabilities } from "@hypit/html-program";
 import { mediaTypes } from "@hypit/media";
 import { canonicalize } from "@hypit/protocol";
 import { distributeFrameRange, requestedFrameRanges, sourceFrameAt, sourceWindows, videoSlots } from "../src/sampling.js";
-import { htmlRangeDocument } from "./range-scenario.js";
+import { htmlNestedRangeDocument, htmlRangeDocument } from "./range-scenario.js";
 import { htmlProviderDelivery } from "./provider-scenario.js";
 
 test("a render deadline cancels resource preparation and awaits the reader's cleanup", async () => {
@@ -74,8 +74,25 @@ test("source selection retains loop, hold, fractional-speed and reverse sampling
   ]);
 });
 
+test("a nested Composition composes its occurrence Map with its media Map without materializing a child video", () => {
+  const document = htmlNestedRangeDocument({ kind: "blob", resource: "res_nested_range_source",
+    size: 1, mediaType: "video/mp4" });
+  const slots = videoSlots(document.videoSources, resource => `media://${resource}`,
+    { frameRate: document.frameRate });
+  assert.equal(slots.length, 1);
+  assert.equal(slots[0]!.documentPath.length, 1);
+  assert.notEqual(slots[0]!.id, slots[0]!.elementId,
+    "the parent source occurrence and child document element retain separate identities");
+  const timestampIndex = { timestamps: [0n, 1n, 2n, 3n],
+    timeBase: { numerator: 1n, denominator: 30n } };
+  const childFrames = [2, 3, 0, 1, 2, 3, 3, 3, 0, 0, 1, 1, 3, 2, 1, 0, 3, 2];
+  assert.deepEqual(Array.from({ length: 36 }, (_, frame) => sourceFrameAt(slots[0]!, frame, timestampIndex)),
+    childFrames.flatMap(frame => [frame, frame]));
+});
+
 test("reverse source time selects the same bounded decoded window without forward traversal", () => {
-  const [slot] = videoSlots([{ id: "reverse", artifactId: "artifact-reverse", startFrame: 0, endFrameExclusive: 4,
+  const [slot] = videoSlots([{ id: "reverse", documentPath: [], elementId: "reverse",
+    artifactId: "artifact-reverse", startFrame: 0, endFrameExclusive: 4,
     sourceFrame: { numerator: 4, denominator: 1 }, sourceRate: { numerator: -1, denominator: 1 },
     kind: "surface", sourceFrameRate: { numerator: 30, denominator: 1 } }], () => "direct.mp4",
   { frameRate: { numerator: 30, denominator: 1 } });
@@ -131,9 +148,11 @@ test("Runtime Profile selects Electron explicitly without constructing a managed
     config: canonicalize({ renderer: "electron", electronPath: "Electron" }),
   });
   assert.equal(activation.program?.installation, undefined);
-  assert.deepEqual(endpointOffers(activation.endpoint), [{
+  const offers = endpointOffers(activation.endpoint);
+  assert.deepEqual(offers.map(({ supports: _supports, ...offer }) => offer), [{
     capability: htmlProgramCapabilities.rasterizeVisual,
     returns: mediaTypes.timelineVisual,
     endpoint: "html.gpu",
   }]);
+  assert.equal(typeof offers[0]!.supports, "function");
 });

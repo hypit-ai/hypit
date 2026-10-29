@@ -699,11 +699,11 @@
     <film:Track id="captions" source={captions.visual}/>
     <film:Track id="series-timer" source={series-timer.visual}/>
   </film:Film>
-  <html:Video id="complete-film" composition={main.composition} timeline={program.timeline}/>
+  <html:Video id="complete-film" composition={main.composition}/>
   <!-- Consecutive export ranges for limited temporary disk space. -->
-  <html:Video id="export-part-1" composition={main.composition} timeline={program.timeline} start-frame="0" end-frame-exclusive="900"/>
-  <html:Video id="export-part-2" composition={main.composition} timeline={program.timeline} start-frame="900" end-frame-exclusive="1800"/>
-  <html:Video id="export-part-3" composition={main.composition} timeline={program.timeline} start-frame="1800" end-frame-exclusive="2700"/>
-  <html:Video id="export-part-4" composition={main.composition} timeline={program.timeline} start-frame="2700" end-frame-exclusive="3600"/>
-  <html:Video id="export-part-5" composition={main.composition} timeline={program.timeline} start-frame="3600" end-frame-exclusive="4112"/>
+  <html:Video id="export-part-1" composition={main.composition} start-frame="0" end-frame-exclusive="900"/>
+  <html:Video id="export-part-2" composition={main.composition} start-frame="900" end-frame-exclusive="1800"/>
+  <html:Video id="export-part-3" composition={main.composition} start-frame="1800" end-frame-exclusive="2700"/>
+  <html:Video id="export-part-4" composition={main.composition} start-frame="2700" end-frame-exclusive="3600"/>
+  <html:Video id="export-part-5" composition={main.composition} start-frame="3600" end-frame-exclusive="4112"/>
 </svml>

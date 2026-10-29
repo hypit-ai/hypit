@@ -14,12 +14,16 @@ import {
   assertFontArtifactRef,
   verifyPreparedAudioSource,
   verifyPreparedVisualSource,
+  verifyPictureInterpretation,
+  verifyWorkingPictureSpec,
 } from "@hypit/media";
 import type {
   CompositableSurfaceRef,
   FontArtifactRef,
+  PictureInterpretation,
   PreparedAudioSource,
   PreparedVisualSource,
+  WorkingPictureSpec,
 } from "@hypit/media";
 import {
   assertTemporalMap,
@@ -326,6 +330,7 @@ export type VisualMediaElement =
   | (VisualElementBase & {
       readonly kind: "image";
       readonly artifact: BlobRef;
+      readonly picture: PictureInterpretation;
     })
   | (VisualElementBase & {
       readonly kind: "video";
@@ -345,6 +350,17 @@ export type VisualSurfaceElement = VisualElementBase & {
 };
 
 /**
+ * One recursively sampled child Composition. The child remains a closed A/V work;
+ * this visual carrier selects only its final picture for the containing Present.
+ */
+export type VisualCompositionElement = VisualElementBase & {
+  readonly kind: "composition";
+  readonly composition: Composition;
+  /** Occurrence-local target time to child-Composition local time. */
+  readonly sampling: TemporalMap;
+};
+
+/**
  * Structural elements and explicit renderer programs compose in one owned tree.
  *
  * A Present holds exactly one recursive root. **Position is measured from that parent, not from the Canvas.**
@@ -352,7 +368,7 @@ export type VisualSurfaceElement = VisualElementBase & {
  * or every child lands offset by it — which draws without complaint and is wrong by exactly the
  * distance the parent sits from the corner.
  */
-export type VisualElement = VisualBoxElement | VisualProgramElement | VisualMaskElement | VisualTextElement | VisualTextFlowElement | VisualPathTextElement | VisualMediaElement | VisualSurfaceElement;
+export type VisualElement = VisualBoxElement | VisualProgramElement | VisualMaskElement | VisualTextElement | VisualTextFlowElement | VisualPathTextElement | VisualMediaElement | VisualSurfaceElement | VisualCompositionElement;
 
 export type VisualItemBase = {
   readonly id: string;
@@ -381,7 +397,7 @@ export type VisualProcess = VisualItemBase & {
     readonly name: string;
     readonly contribution: VisualContribution;
   }[];
-  readonly program: VisualProgram;
+  readonly effect: VisualProcessEffect;
 };
 
 export type VisualContribution = VisualPresent | VisualProcess;
@@ -484,6 +500,18 @@ export function readAudioGainProcess(program: AudioProcessProgram): number {
 export type AudioGraphNode =
   | { readonly kind: "silence"; readonly id: string }
   | { readonly kind: "source"; readonly id: string; readonly clip: AudioClip }
+  | {
+      readonly kind: "composition";
+      readonly id: string;
+      readonly composition: Composition;
+      readonly target: TemporalRange;
+      /** Occurrence-local target time to child-Composition local time. */
+      readonly sampling: TemporalMap;
+      readonly reconstruction?: AudioReconstructionProgram;
+      readonly gain: number;
+      readonly fadeIn: ExactTemporalValue;
+      readonly fadeOut: ExactTemporalValue;
+    }
   | { readonly kind: "mix"; readonly id: string; readonly inputs: readonly AudioSignalRef[] }
   | {
       readonly kind: "process";
@@ -523,7 +551,24 @@ export type VisualScopeStackMember = {
   readonly scope: VisualScope;
 };
 
-export type VisualScopeMember = VisualScopeTrackMember | VisualScopeStackMember;
+/** One renderer-neutral contract for a package-owned, named-input Picture operation. */
+export type VisualProcessEffect = {
+  readonly inputs: readonly string[];
+  readonly program: VisualProgram;
+};
+
+export type VisualScopeProcessMember = {
+  readonly kind: "process";
+  /** Stable identity of this Process occurrence inside its parent VisualScope. */
+  readonly id: string;
+  readonly inputs: readonly {
+    readonly name: string;
+    readonly scope: VisualScope;
+  }[];
+  readonly effect: VisualProcessEffect;
+};
+
+export type VisualScopeMember = VisualScopeTrackMember | VisualScopeStackMember | VisualScopeProcessMember;
 
 /**
  * One recursively composited visual domain. Array position is the complete
@@ -542,6 +587,8 @@ export type VisualTrackOccurrence = {
 };
 
 export type VisualComposition = {
+  /** Renderer-neutral picture semantics shared by stills, video and materialized Surfaces. */
+  readonly picture: WorkingPictureSpec;
   readonly canvas: {
     readonly width: number;
     readonly height: number;
@@ -559,9 +606,14 @@ export type AudioComposition = {
 /** One synchronized audiovisual work whose two terminal programmes share one Timeline. */
 export type Composition = {
   readonly id: string;
+  /** The one absolute clock shared by this Composition's visual and audio programmes. */
+  readonly timeline: Timeline;
   readonly visual: VisualComposition;
   readonly audio: AudioComposition;
 };
+
+/** Construction input: Film supplies the Timeline once; the sealed value owns it thereafter. */
+export type CompositionDraft = Omit<Composition, "timeline">;
 
 /** The only local style properties accepted in element keyframes. */
 export const animatableLocalStyles = [
@@ -1119,9 +1171,23 @@ function assertElement(
     }
     return;
   }
+  if (element.kind === "composition") {
+    if (element.animation !== undefined) {
+      throw new Error(`${label} temporal sampling and animation must live on separate owned elements.`);
+    }
+    assertCompositionIdentity(element.composition);
+    const targetDuration = timeline === undefined ? undefined
+      : exactTemporalValueFromFrames(present.span.endFrameExclusive - present.span.startFrame, timeline);
+    const sourceDuration = exactTemporalValueFromFrames(
+      timelineFrameCount(element.composition.timeline), element.composition.timeline,
+    );
+    assertSampling(element.sampling, `${label}.sampling`, targetDuration, sourceDuration);
+    return;
+  }
   if (element.kind === "image" || element.kind === "video") {
     if (element.kind === "image") {
       assertMediaArtifact(element.artifact, `${label}.artifact`);
+      verifyPictureInterpretation(element.picture, `${label}.picture`);
       if (!element.artifact.mediaType.startsWith("image/")) {
         throw new Error(`${label} media kind does not match its Artifact.`);
       }
@@ -1219,7 +1285,7 @@ function assertVisualContribution(
     return;
   }
   assertVisualItemBase(contribution, timeline, owner);
-  assertVisualProgram(contribution.program, `${owner}.${contribution.id}.program`);
+  assertVisualProcessEffect(contribution.effect, `${owner}.${contribution.id}.effect`);
   if (!Array.isArray(contribution.inputs) || contribution.inputs.length === 0) {
     throw new Error(`${owner}.${contribution.id} Visual Process requires named inputs.`);
   }
@@ -1232,6 +1298,10 @@ function assertVisualContribution(
     if (names.has(input.name)) throw new Error(`${owner}.${contribution.id} repeats input ${input.name}.`);
     names.add(input.name);
     assertVisualContribution(input.contribution, timeline, `${owner}.${contribution.id}.${input.name}`);
+  }
+  if (names.size !== contribution.effect.inputs.length
+    || contribution.effect.inputs.some((name) => !names.has(name))) {
+    throw new Error(`${owner}.${contribution.id} inputs do not match its VisualProcessEffect.`);
   }
 }
 
@@ -1305,6 +1375,14 @@ function normalizeElement(element: VisualElement): VisualElement {
       ...(element.paints === undefined ? {} : { paints: structuredClone(element.paints) as VisualTextPaintLayer[] }),
     };
   }
+  if (element.kind === "composition") {
+    return {
+      ...common,
+      kind: "composition",
+      composition: structuredClone(element.composition),
+      sampling: structuredClone(element.sampling),
+    };
+  }
   if (element.kind === "text-flow" || element.kind === "path-text") {
     const copy = structuredClone(element);
     return {
@@ -1341,7 +1419,9 @@ function normalizeElement(element: VisualElement): VisualElement {
   if (element.kind === "image" && element.artifact === undefined) {
     throw new Error(`${element.id} is a ${element.kind} element with no artifact.`);
   }
-  if (element.kind === "image") return { ...common, kind: "image", artifact: { ...element.artifact } };
+  if (element.kind === "image") return {
+    ...common, kind: "image", artifact: { ...element.artifact }, picture: structuredClone(element.picture),
+  };
   return {
     ...common,
     kind: "video",
@@ -1366,7 +1446,7 @@ function normalizeVisualContribution(value: VisualContribution): VisualContribut
       name: input.name,
       contribution: normalizeVisualContribution(input.contribution),
     })),
-    program: structuredClone(value.program),
+    effect: sealVisualProcessEffect(value.effect),
   };
 }
 
@@ -1423,6 +1503,19 @@ function audioTrackContent(value: Omit<AudioTrack, "kind">): AudioTrack {
           .sort(([left], [right]) => compareCodeUnits(left, right))
           .map(([port, input]) => [port, { ...input }])),
         program: structuredClone(node.program),
+      };
+    }
+    if (node.kind === "composition") {
+      return {
+        kind: "composition",
+        id: node.id,
+        composition: structuredClone(node.composition),
+        target: structuredClone(node.target),
+        sampling: structuredClone(node.sampling),
+        ...(node.reconstruction === undefined ? {} : { reconstruction: structuredClone(node.reconstruction) }),
+        gain: node.gain,
+        fadeIn: structuredClone(node.fadeIn),
+        fadeOut: structuredClone(node.fadeOut),
       };
     }
     return structuredClone(node);
@@ -1640,6 +1733,34 @@ export function assertAudioTrackIdentity(track: AudioTrack, timeline?: Timeline)
     }
       continue;
     }
+    if (node.kind === "composition") {
+      references.set(node.id, []);
+      assertCompositionIdentity(node.composition);
+      const zero = exactTemporalZero();
+      const timelineDuration = timeline === undefined ? undefined
+        : exactTemporalValueFromFrames(timeline.frameCount, timeline);
+      if (compareExactTemporalValues(node.target.start, zero) < 0
+        || compareExactTemporalValues(node.target.start, node.target.end) >= 0
+        || (timelineDuration !== undefined && compareExactTemporalValues(node.target.end, timelineDuration) > 0)) {
+        throw new Error(`${track.id}.${node.id} target interval is outside Timeline.`);
+      }
+      const targetDuration = subtractExactTemporalValues(node.target.end, node.target.start);
+      const sourceDuration = exactTemporalValueFromFrames(
+        timelineFrameCount(node.composition.timeline), node.composition.timeline,
+      );
+      assertSampling(node.sampling, `${track.id}.${node.id}.sampling`, targetDuration, sourceDuration);
+      if (node.reconstruction !== undefined) {
+        assertAudioReconstructionProgram(node.reconstruction, `${track.id}.${node.id}.reconstruction`);
+      }
+      if (!Number.isFinite(node.gain) || node.gain < 0
+        || compareExactTemporalValues(node.fadeIn, zero) < 0
+        || compareExactTemporalValues(node.fadeIn, targetDuration) > 0
+        || compareExactTemporalValues(node.fadeOut, zero) < 0
+        || compareExactTemporalValues(node.fadeOut, targetDuration) > 0) {
+        throw new Error(`${track.id}.${node.id} gain or fades are invalid.`);
+      }
+      continue;
+    }
     if (node.kind === "mix") {
       if (!Array.isArray(node.inputs) || node.inputs.length === 0) throw new Error(`${track.id}.${node.id} Mix has no inputs.`);
       references.set(node.id, node.inputs);
@@ -1675,9 +1796,41 @@ export function assertAudioTrackIdentity(track: AudioTrack, timeline?: Timeline)
 
 function visualScopeContent(value: VisualScope): VisualScope {
   return {
-    members: [...value.members].map((member): VisualScopeMember => member.kind === "track"
-      ? { kind: "track", id: member.id, track: structuredClone(member.track) }
-      : { kind: "stack", id: member.id, scope: visualScopeContent(member.scope) }),
+    members: [...value.members].map((member): VisualScopeMember => {
+      if (member.kind === "track") return { kind: "track", id: member.id, track: structuredClone(member.track) };
+      if (member.kind === "stack") return { kind: "stack", id: member.id, scope: visualScopeContent(member.scope) };
+      return {
+        kind: "process",
+        id: member.id,
+        inputs: member.inputs.map((input) => ({ name: input.name, scope: visualScopeContent(input.scope) })),
+        effect: {
+          inputs: [...member.effect.inputs],
+          program: structuredClone(member.effect.program),
+        },
+      };
+    }),
+  };
+}
+
+export function assertVisualProcessEffect(value: VisualProcessEffect, label = "VisualProcessEffect"): void {
+  if (value === null || typeof value !== "object" || Array.isArray(value) || !Array.isArray(value.inputs)) {
+    throw new Error(`${label} is invalid.`);
+  }
+  if (value.inputs.length === 0) throw new Error(`${label} requires named inputs.`);
+  const names = new Set<string>();
+  for (const [index, name] of value.inputs.entries()) {
+    assertNonEmpty(name, `${label}.inputs.${index}`);
+    if (names.has(name)) throw new Error(`${label} repeats input ${name}.`);
+    names.add(name);
+  }
+  assertVisualProgram(value.program, `${label}.program`);
+}
+
+export function sealVisualProcessEffect(value: VisualProcessEffect): VisualProcessEffect {
+  assertVisualProcessEffect(value);
+  return {
+    inputs: [...value.inputs],
+    program: structuredClone(value.program),
   };
 }
 
@@ -1686,9 +1839,19 @@ export function sealVisualScope(value: VisualScope): VisualScope {
 }
 
 export function visualScopeTracks(scope: VisualScope): VisualTrack[] {
-  return scope.members.flatMap((member) => member.kind === "track"
-    ? [member.track]
-    : visualScopeTracks(member.scope));
+  return scope.members.flatMap((member) => {
+    if (member.kind === "track") return [member.track];
+    if (member.kind === "stack") return visualScopeTracks(member.scope);
+    return member.inputs.flatMap((input) => visualScopeTracks(input.scope));
+  });
+}
+
+export function visualScopeProcesses(scope: VisualScope): VisualScopeProcessMember[] {
+  return scope.members.flatMap((member): VisualScopeProcessMember[] => {
+    if (member.kind === "track") return [];
+    if (member.kind === "stack") return visualScopeProcesses(member.scope);
+    return [member, ...member.inputs.flatMap((input) => visualScopeProcesses(input.scope))];
+  });
 }
 
 export function visualScopeTrackOccurrences(
@@ -1697,16 +1860,21 @@ export function visualScopeTrackOccurrences(
 ): VisualTrackOccurrence[] {
   return scope.members.flatMap((member) => {
     const path = [...parentPath, member.id];
-    return member.kind === "track"
-      ? [{ path, member }]
-      : visualScopeTrackOccurrences(member.scope, path);
+    if (member.kind === "track") return [{ path, member }];
+    if (member.kind === "stack") return visualScopeTrackOccurrences(member.scope, path);
+    return member.inputs.flatMap((input) => visualScopeTrackOccurrences(
+      input.scope,
+      [...parentPath, `process:${member.id}`, `input:${input.name}`],
+    ));
   });
 }
 
-function compositionContent(value: Composition): Composition {
+function compositionContent(value: CompositionDraft, timeline: Timeline): Composition {
   return {
     id: value.id,
+    timeline: structuredClone(timeline),
     visual: {
+      picture: structuredClone(value.visual.picture),
       canvas: { ...value.visual.canvas },
       root: visualScopeContent(value.visual.root),
     },
@@ -1718,8 +1886,9 @@ function compositionContent(value: Composition): Composition {
   };
 }
 
-export function sealComposition(value: Composition): Composition {
-  return compositionContent(value);
+export function sealComposition(value: CompositionDraft, timeline: Timeline): Composition {
+  assertTimelineIdentity(timeline);
+  return compositionContent(value, timeline);
 }
 
 function assertVisualScope(
@@ -1741,10 +1910,32 @@ function assertVisualScope(
       assertVisualTrackIdentity(member.track, timeline);
       continue;
     }
-    if (member.kind !== "stack") throw new Error(`${memberLabel}.kind is invalid.`);
-    assertVisualScope(member.scope, timeline, `${memberLabel}.scope`);
-    if (!visualScopeTracks(member.scope).some((track) => visualPresents(track).length > 0)) {
-      throw new Error(`${memberLabel} must contain a source-owning Present.`);
+    if (member.kind === "stack") {
+      assertVisualScope(member.scope, timeline, `${memberLabel}.scope`);
+      if (!visualScopeTracks(member.scope).some((track) => visualPresents(track).length > 0)) {
+        throw new Error(`${memberLabel} must contain a source-owning Present.`);
+      }
+      continue;
+    }
+    if (member.kind !== "process" || !Array.isArray(member.inputs) || member.inputs.length === 0) {
+      throw new Error(`${memberLabel}.kind is invalid.`);
+    }
+    assertVisualProcessEffect(member.effect, `${memberLabel}.effect`);
+    const inputNames = new Set<string>();
+    for (const [inputIndex, input] of member.inputs.entries()) {
+      const inputLabel = `${memberLabel}.inputs.${inputIndex}`;
+      if (input === null || typeof input !== "object") throw new Error(`${inputLabel} is invalid.`);
+      assertNonEmpty(input.name, `${inputLabel}.name`);
+      if (inputNames.has(input.name)) throw new Error(`${memberLabel} repeats input ${input.name}.`);
+      inputNames.add(input.name);
+      assertVisualScope(input.scope, timeline, `${inputLabel}.scope`);
+      if (!visualScopeTracks(input.scope).some((track) => visualPresents(track).length > 0)) {
+        throw new Error(`${inputLabel} must contain a source-owning Present.`);
+      }
+    }
+    if (inputNames.size !== member.effect.inputs.length
+      || member.effect.inputs.some((name: string) => !inputNames.has(name))) {
+      throw new Error(`${memberLabel} inputs do not match its VisualProcessEffect.`);
     }
   }
 }
@@ -1769,6 +1960,7 @@ export function assertVisualCompositionIdentity(composition: VisualComposition, 
     || composition.canvas.height <= 0
     || !/^#[0-9a-f]{6}(?:[0-9a-f]{2})?$/iu.test(composition.canvas.clearColor)
   ) throw new Error("VisualComposition canvas is invalid.");
+  verifyWorkingPictureSpec(composition.picture, "VisualComposition.picture");
   assertVisualScope(composition.root, timeline, "VisualComposition.root");
 }
 
@@ -1779,12 +1971,12 @@ export function assertAudioCompositionIdentity(composition: AudioComposition, ti
   for (const track of composition.contributions) assertAudioTrackIdentity(track, timeline);
 }
 
-export function assertCompositionIdentity(composition: Composition, timeline?: Timeline): void {
+export function assertCompositionIdentity(composition: Composition): void {
   if (composition === null || typeof composition !== "object" || Array.isArray(composition)) {
     throw new Error("Composition is invalid.");
   }
   assertNonEmpty(composition.id, "Composition id");
-  if (timeline !== undefined) assertTimelineIdentity(timeline);
-  assertVisualCompositionIdentity(composition.visual, timeline);
-  assertAudioCompositionIdentity(composition.audio, timeline);
+  assertTimelineIdentity(composition.timeline);
+  assertVisualCompositionIdentity(composition.visual, composition.timeline);
+  assertAudioCompositionIdentity(composition.audio, composition.timeline);
 }

@@ -11,13 +11,12 @@ import { stageHtmlProgram } from "../src/stage.js";
 
 test("typed Surface inspection borrows the completed streamed file used by capture", async () => {
   const surface = { artifact: { kind: "blob" as const, resource: "res_streamed-surface" as const,
-    size: 6, mediaType: "image/png" }, width: 1, height: 1, colorSpace: "srgb" as const,
-    alphaMode: "straight" as const, timing: { kind: "still" as const } };
+    size: 6, mediaType: "image/png" }, width: 1, height: 1, picture: { colorPrimaries: "bt709", colorTransfer: "srgb", colorMatrix: "rgb", colorRange: "full", bitDepth: 8, alphaMode: "straight" } as const, timing: { kind: "still" as const } };
   const space = sealTimeline({ id: "space", frameCount: 30, frameRate: { numerator: 30, denominator: 1 } });
   const track = sealPresentVisualTrack({ id: "surface", visualIr: "hypit.visual-ir@1", timelineId: space.id,
     presents: [{ id: "surface", span: { startFrame: 0, endFrameExclusive: 30 },
       root: { id: "surface", kind: "surface", surface, style: [] } }] });
-  const document = compileHtmlProgram(sealComposition({ id: "main", visual: { canvas: { width: 64, height: 64, clearColor: "#000000" }, root: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }), space);
+  const document = compileHtmlProgram(sealComposition({ id: "main", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 64, height: 64, clearColor: "#000000" }, root: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }, space));
   const directory = await mkdtemp(join(tmpdir(), "hypit-stage-surface-"));
   let inspected = false;
   let streamFinished = false;
@@ -46,10 +45,10 @@ test("staging cancels and joins sibling reads before exposing a failure", async 
   const space = sealTimeline({ id: "space", frameCount: 30, frameRate: { numerator: 30, denominator: 1 } });
   const track = sealPresentVisualTrack({ id: "images", visualIr: "hypit.visual-ir@1", timelineId: space.id,
     presents: ["a", "b", "c", "d"].map((id) => ({ id, span: { startFrame: 0, endFrameExclusive: 30 },
-      root: { id, kind: "image" as const, style: [],
+      root: { id, kind: "image" as const, picture: { colorPrimaries: "bt709", colorTransfer: "srgb", colorMatrix: "rgb", colorRange: "full", bitDepth: 8, alphaMode: "straight" } as const, style: [],
         artifact: { kind: "blob" as const, resource: `res_${id}` as const, size: 1, mediaType: "image/png" } },
     })) });
-  const document = compileHtmlProgram(sealComposition({ id: "main", visual: { canvas: { width: 64, height: 64, clearColor: "#000000" }, root: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }), space);
+  const document = compileHtmlProgram(sealComposition({ id: "main", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 64, height: 64, clearColor: "#000000" }, root: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }, space));
   const directory = await mkdtemp(join(tmpdir(), "hypit-stage-cancel-"));
   let active = 0;
   let started = 0;
@@ -73,10 +72,10 @@ test("document staging bounds complete Artifact lifecycles without changing dete
   const ids = Array.from({ length: 12 }, (_, index) => String(index).padStart(2, "0"));
   const track = sealPresentVisualTrack({ id: "images", visualIr: "hypit.visual-ir@1", timelineId: space.id,
     presents: ids.map((id) => ({ id, span: { startFrame: 0, endFrameExclusive: 30 },
-      root: { id, kind: "image" as const, style: [],
+      root: { id, kind: "image" as const, picture: { colorPrimaries: "bt709", colorTransfer: "srgb", colorMatrix: "rgb", colorRange: "full", bitDepth: 8, alphaMode: "straight" } as const, style: [],
         artifact: { kind: "blob" as const, resource: `res_${id}` as const, size: 1, mediaType: "image/png" } },
     })) });
-  const document = compileHtmlProgram(sealComposition({ id: "main", visual: { canvas: { width: 64, height: 64, clearColor: "#000000" }, root: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }), space);
+  const document = compileHtmlProgram(sealComposition({ id: "main", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 64, height: 64, clearColor: "#000000" }, root: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }, space));
   const directory = await mkdtemp(join(tmpdir(), "hypit-stage-bounded-"));
   let active = 0;
   let peak = 0;
@@ -108,16 +107,16 @@ test("document staging reads only Artifacts whose compiler usage overlaps the wh
   const track = sealPresentVisualTrack({ id: "images", visualIr: "hypit.visual-ir@1", timelineId: space.id,
     presents: [
       { id: "first-a", span: { startFrame: 0, endFrameExclusive: 5 },
-        root: { id: "first-a", kind: "image" as const, style: [], artifact: first } },
+        root: { id: "first-a", kind: "image" as const, picture: { colorPrimaries: "bt709", colorTransfer: "srgb", colorMatrix: "rgb", colorRange: "full", bitDepth: 8, alphaMode: "straight" } as const, style: [], artifact: first } },
       { id: "first-b", span: { startFrame: 5, endFrameExclusive: 10 },
-        root: { id: "first-b", kind: "image" as const, style: [], artifact: first } },
+        root: { id: "first-b", kind: "image" as const, picture: { colorPrimaries: "bt709", colorTransfer: "srgb", colorMatrix: "rgb", colorRange: "full", bitDepth: 8, alphaMode: "straight" } as const, style: [], artifact: first } },
       { id: "late", span: { startFrame: 20, endFrameExclusive: 30 },
-        root: { id: "late", kind: "image" as const, style: [], artifact: late } },
+        root: { id: "late", kind: "image" as const, picture: { colorPrimaries: "bt709", colorTransfer: "srgb", colorMatrix: "rgb", colorRange: "full", bitDepth: 8, alphaMode: "straight" } as const, style: [], artifact: late } },
       { id: "opaque", span: { startFrame: 20, endFrameExclusive: 30 },
         root: { id: "opaque", kind: "program" as const, style: [], slots: [],
           program: htmlVisual({ html: `<img src="hypit-artifact://${always.resource}">` }, [always]) } },
     ] });
-  const document = compileHtmlProgram(sealComposition({ id: "main", visual: { canvas: { width: 64, height: 64, clearColor: "#000000" }, root: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }), space);
+  const document = compileHtmlProgram(sealComposition({ id: "main", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 64, height: 64, clearColor: "#000000" }, root: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }, space));
   assert.deepEqual(document.artifacts.find(({ artifact }) => artifact.resource === first.resource)?.usage,
     { kind: "frames", spans: [{ startFrame: 0, endFrameExclusive: 10 }] }, "adjacent uses merge canonically");
   const directory = await mkdtemp(join(tmpdir(), "hypit-stage-selection-"));
@@ -138,12 +137,12 @@ test("document staging reads only Artifacts whose compiler usage overlaps the wh
 test("document staging rejects an invalid concurrency bound", async () => {
   const { composition, timeline } = (() => {
     const timeline = sealTimeline({ id: "space", frameCount: 30, frameRate: { numerator: 30, denominator: 1 } });
-    return { timeline, composition: sealComposition({ id: "empty", visual: { canvas: { width: 64, height: 64, clearColor: "#000000" }, root: { members: [] } }, audio: { contributions: [] } }) };
+    return { timeline, composition: sealComposition({ id: "empty", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 64, height: 64, clearColor: "#000000" }, root: { members: [] } }, audio: { contributions: [] } }, timeline) };
   })();
   const directory = await mkdtemp(join(tmpdir(), "hypit-stage-invalid-bound-"));
   try {
     await assert.rejects(stageHtmlProgram({
-      document: compileHtmlProgram(composition, timeline), directory,
+      document: compileHtmlProgram(composition), directory,
       maxConcurrentArtifacts: 0, read: async () => new Uint8Array(),
     }), /concurrency must be a positive safe integer/u);
   } finally { await rm(directory, { recursive: true, force: true }); }
@@ -153,10 +152,10 @@ test("document staging drains readers and preserves an external cancellation rea
   const space = sealTimeline({ id: "space", frameCount: 30, frameRate: { numerator: 30, denominator: 1 } });
   const track = sealPresentVisualTrack({ id: "images", visualIr: "hypit.visual-ir@1", timelineId: space.id,
     presents: ["a", "b"].map((id) => ({ id, span: { startFrame: 0, endFrameExclusive: 30 },
-      root: { id, kind: "image" as const, style: [],
+      root: { id, kind: "image" as const, picture: { colorPrimaries: "bt709", colorTransfer: "srgb", colorMatrix: "rgb", colorRange: "full", bitDepth: 8, alphaMode: "straight" } as const, style: [],
         artifact: { kind: "blob" as const, resource: `res_${id}` as const, size: 1, mediaType: "image/png" } },
     })) });
-  const document = compileHtmlProgram(sealComposition({ id: "main", visual: { canvas: { width: 64, height: 64, clearColor: "#000000" }, root: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }), space);
+  const document = compileHtmlProgram(sealComposition({ id: "main", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 64, height: 64, clearColor: "#000000" }, root: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }, space));
   const directory = await mkdtemp(join(tmpdir(), "hypit-stage-external-cancel-"));
   const controller = new AbortController();
   const reason = new Error("caller stopped staging");
@@ -184,9 +183,9 @@ test("staging gives opaque Resource identities portable local names and writes c
   const space = sealTimeline({ id: "space", frameCount: 30, frameRate: { numerator: 30, denominator: 1 } });
   const track = sealPresentVisualTrack({ id: "image", visualIr: "hypit.visual-ir@1", timelineId: space.id,
     presents: [{ id: "image", span: { startFrame: 0, endFrameExclusive: 30 },
-      root: { id: "image", kind: "image", style: [],
+      root: { id: "image", kind: "image", picture: { colorPrimaries: "bt709", colorTransfer: "srgb", colorMatrix: "rgb", colorRange: "full", bitDepth: 8, alphaMode: "straight" } as const, style: [],
         artifact: { kind: "blob", resource, size: 5, mediaType: "image/png" } } }] });
-  const document = compileHtmlProgram(sealComposition({ id: "main", visual: { canvas: { width: 64, height: 64, clearColor: "#000000" }, root: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }), space);
+  const document = compileHtmlProgram(sealComposition({ id: "main", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 64, height: 64, clearColor: "#000000" }, root: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }, space));
   const directory = await mkdtemp(join(tmpdir(), "hypit-stage-identity-"));
   try {
     await stageHtmlProgram({ document, directory, read: async artifact => {

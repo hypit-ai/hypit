@@ -52,39 +52,39 @@ performance, cuts, reading and reveal timing.
 ## Add head-following Caption to this footage
 
 The published video used externally measured head positions. A fresh generation changes motion,
-cuts and actual length, so this Source does not import the original 783-frame `tracking.svs`.
-That file describes the old footage only. Supplying it to new requests would attach plausible-looking
-numbers to the wrong video.
+cuts and actual length, so its spatial sequence must describe that actual footage.
 
 After the first Build, export its `final.video` and measure that actual footage, using Google Video
 Intelligence with face bounding boxes, another suitable detector, or manual observation. If graphics
 obstruct the detector, render a clean picture pass from the same prepared media. Use the actual
 program frame count and 30 fps clock; identify WIFE across camera cuts, expand face boxes to include
-her hair, and write one normalized `[x,y,width,height]` or `null` per frame into a new
-`reference-heads.svs`. Keep interpolation within a continuous shot and one identity.
+her hair, and write one normalized `[x,y,width,height]` or `null` per frame into a standalone
+`reference-heads.regions.svml`. Review and correct that author file before importing it.
 
 Once that real Recipe exists, add its import to the Source's opening prologue:
 
 ```svml
-<import as="heads" source="./reference-heads.svs"/>
+<import as="heads" source="./reference-heads.regions.svml"/>
 ```
 
 After `vertical` is declared, add its measured timeline and connect it to the existing Caption Track:
 
 ```svml
-<region:Evidence id="wife-heads" within={vertical.bounds} timeline={speech.timeline}
-  recipe={heads.heads.wife}/>
+<import as="sequence" from="@hypit/spatial-sequence@1"/>
+<sequence:TimelineRegions id="wife-heads" document={heads.heads}
+  timeline={speech.timeline} canvas={vertical.canvas}/>
 <caption-fine:Caption id="captions" document={story.caption} timing={caption-timing}
   timeline={speech.timeline} within={vertical.bounds} regions={wife-heads}>
   <caption-fine:Use style={caption-boy-style}/>
   <caption-fine:Use role="WIFE" style={caption-wife-style}/>
+  <caption-fine:Follow role="WIFE" series="wife-head" missing="hide"/>
 </caption-fine:Caption>
 ```
 
-Replace the existing `captions` declaration with the connected one. The Recipe contains a WIFE Role
-track; `caption.wife` already uses center/bottom anchoring so its text sits above that region.
-The untracked BOY continues to use his fixed Style position. A null WIFE region hides her Caption
-on that frame; it does not guess a new location.
+Replace the existing `captions` declaration with the connected one. The author file names the measured
+series `wife-head`; `Follow` explicitly assigns that series to WIFE. `caption.wife` already uses
+center/bottom anchoring so its text sits above that region. The unbound BOY continues to use fixed
+Style placement. A null WIFE region hides her Caption on that frame.
 
 Accept the three generated clips into the project before the second composition pass. Export each
 public video Output, declare the exported file with `@hypit/media`, and use authored realization

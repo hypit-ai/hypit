@@ -72,9 +72,9 @@ The Recipe decoder exposes `fit`, `frame-x`, `frame-y`, `content-x`, `content-y`
 `fit-offset-y` and `fit-constraint`. Visual Track uses it, and project components may use the same
 pure functions.
 
-## Evidence over time is a peer package
+## Spatial sequences are a peer package
 
-Frame-indexed observations do not belong to static geometry. `@hypit/region-evidence` relates prepared
-regions to a Timeline and resolves them into picture-plane Frames. Detection, identity association,
-interpolation and source-to-picture projection remain explicit preparation or project-package work.
-This keeps Spatial reusable and prevents a central scene or evidence registry.
+Frame-indexed regions do not belong to static geometry. `@hypit/spatial-sequence` imports an editable
+`RegionSequenceDocument`, then attaches it exactly to one Timeline and final Canvas. Detection,
+identity association and author correction happen before import. Consumers assign meaning to named
+series explicitly. This keeps Spatial reusable and avoids a central scene, tracking or evidence registry.

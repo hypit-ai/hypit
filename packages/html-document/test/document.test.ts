@@ -33,21 +33,21 @@ function fixture() {
       id: "picture",
       span: { startFrame: 0, endFrameExclusive: timeline.frameCount },
       root: { id: "root", kind: "box", children: [
-        { id: "image", kind: "image", artifact: picture, style: [] },
-        { id: "second-image", kind: "image", artifact: secondPicture, style: [] },
+        { id: "image", kind: "image", picture: { colorPrimaries: "bt709", colorTransfer: "srgb", colorMatrix: "rgb", colorRange: "full", bitDepth: 8, alphaMode: "straight" } as const, artifact: picture, style: [] },
+        { id: "second-image", kind: "image", picture: { colorPrimaries: "bt709", colorTransfer: "srgb", colorMatrix: "rgb", colorRange: "full", bitDepth: 8, alphaMode: "straight" } as const, artifact: secondPicture, style: [] },
       ], style: [] },
     }],
   });
   return {
     timeline,
     pictures: [picture, secondPicture],
-    composition: sealComposition({ id: "document", visual: { canvas: { width: 1920, height: 1080, clearColor: "#000000" }, root: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }),
+    composition: sealComposition({ id: "document", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 1920, height: 1080, clearColor: "#000000" }, root: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }, timeline),
   };
 }
 
 test("HTML Document composes independently compiled picture, sound and shared playback", () => {
   const { composition, pictures, timeline } = fixture();
-  const document = compileHtmlDocument(composition, timeline);
+  const document = compileHtmlDocument(composition);
   assert.doesNotThrow(() => assertHtmlDocument(document));
   assert.equal(document.program.frameCount, 60);
   assert.equal(document.audio.frameCount, 60);
@@ -68,7 +68,7 @@ test("HTML Document composes independently compiled picture, sound and shared pl
 
 test("document-local identities survive recursive Result material rebinding", () => {
   const { composition, timeline } = fixture();
-  const original = compileHtmlDocument(composition, timeline);
+  const original = compileHtmlDocument(composition);
   const reboundResource = fixtureResource("html-document:rebound-picture");
   const rebound = {
     ...original,
@@ -97,7 +97,7 @@ test("document-local identities survive recursive Result material rebinding", ()
 
 test("HTML Document rejects picture and sound that disagree on their frame clock", () => {
   const { composition, timeline } = fixture();
-  const document = compileHtmlDocument(composition, timeline);
+  const document = compileHtmlDocument(composition);
   const invalid = { ...document, audio: {
     ...document.audio,
     frameRate: { numerator: 60, denominator: 1 },
@@ -108,7 +108,7 @@ test("HTML Document rejects picture and sound that disagree on their frame clock
 
 test("HTML Document inserts extracted author scripts as literal text", () => {
   const { composition, timeline } = fixture();
-  const document = compileHtmlDocument(composition, timeline);
+  const document = compileHtmlDocument(composition);
   const token = "window.__hypitLiteral='$&-$`-$\'';";
   const withLiteral = {
     ...document,

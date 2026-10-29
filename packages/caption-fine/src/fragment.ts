@@ -2,7 +2,7 @@ import { captionTypes } from "@hypit/caption";
 import { compositionTypes } from "@hypit/composition";
 import { sealGraphFragment } from "@hypit/hypit/author";
 import { timelineTypes } from "@hypit/timeline";
-import { regionEvidenceTypes } from "@hypit/region-evidence";
+import { spatialSequenceTypes } from "@hypit/spatial-sequence";
 import { spatialTypes } from "@hypit/spatial";
 
 import { captionFineProducers, captionFineTypes } from "./manifest.js";
@@ -53,14 +53,15 @@ export const fineCaptionTrackFragment = sealGraphFragment({
 });
 
 /** The same Caption pipeline with one explicit, external spatial-evidence edge. */
-export const fineCaptionRegionEvidenceFragment = sealGraphFragment({
+export const fineCaptionRegionSequenceFragment = sealGraphFragment({
   inputs: [
     { name: "document", type: captionTypes.document },
     { name: "timeline", type: timelineTypes.timeline },
     { name: "within", type: spatialTypes.frame },
     { name: "timing", type: captionTypes.timing },
     { name: "program", type: captionTypes.program },
-    { name: "regions", type: regionEvidenceTypes.evidence },
+    { name: "regions", type: spatialSequenceTypes.timelineRegions },
+    { name: "regionBindings", type: captionFineTypes.regionBindings },
   ],
   operations: [
     {
@@ -76,7 +77,8 @@ export const fineCaptionRegionEvidenceFragment = sealGraphFragment({
       producer: captionFineProducers.renderWithRegions,
       inputs: {
         schedule: operation("caption-fine:schedule"), program: input("program"),
-        document: input("document"), timeline: input("timeline"), within: input("within"), regions: input("regions"),
+        document: input("document"), timeline: input("timeline"), within: input("within"),
+        regions: input("regions"), regionBindings: input("regionBindings"),
       },
       result: { kind: "output" as const, name: "track" },
     },

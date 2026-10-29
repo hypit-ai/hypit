@@ -42,7 +42,7 @@ test("AudioProgram identities preserve distinct graph paths containing delimiter
   const second = sealAudioTrack({ id: "a:b", timelineId: timeline.id, graph: {
     nodes: [{ kind: "source", id: "c", clip: clip("d") }], output: { node: "c", port: "signal" },
   } });
-  const program = compileAudioProgram(sealComposition({ id: "film", visual: { canvas: { width: 1, height: 1, clearColor: "#000000" }, root: { members: [] } }, audio: { contributions: [first, second] } }).audio, timeline);
+  const program = compileAudioProgram(sealComposition({ id: "film", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 1, height: 1, clearColor: "#000000" }, root: { members: [] } }, audio: { contributions: [first, second] } }, timeline));
   assert.doesNotThrow(() => verifyAudioProgram(program));
   assert.equal(new Set(audioProgramSourceClips(program).map((item) => item.id)).size, 2);
 });
@@ -52,7 +52,7 @@ test("AudioProgram preserves repeated root signals without treating Track id as 
     nodes: [{ kind: "source", id: "source", clip: clip("line") }],
     output: { node: "source", port: "signal" },
   } });
-  const program = compileAudioProgram(sealComposition({ id: "film", visual: { canvas: { width: 1, height: 1, clearColor: "#000000" }, root: { members: [] } }, audio: { contributions: [track, structuredClone(track)] } }).audio, timeline);
+  const program = compileAudioProgram(sealComposition({ id: "film", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 1, height: 1, clearColor: "#000000" }, root: { members: [] } }, audio: { contributions: [track, structuredClone(track)] } }, timeline));
   const clips = audioProgramSourceClips(program);
   assert.equal(clips.length, 2);
   assert.equal(new Set(clips.map((item) => item.id)).size, 2);
@@ -73,11 +73,11 @@ test("AudioProgram canonicalizes a valid root signal multiset regardless of its 
   } });
   const authored = { contributions: [second, first] };
   const composition = sealComposition({ id: "film",
-    visual: { canvas: { width: 1, height: 1, clearColor: "#000000" }, root: { members: [] } },
-    audio: authored });
+    visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 1, height: 1, clearColor: "#000000" }, root: { members: [] } },
+    audio: authored }, timeline);
   assert.deepEqual(
-    compileAudioProgram(authored, timeline),
-    compileAudioProgram(composition.audio, timeline),
+    compileAudioProgram(sealComposition({ id: "audio-program", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" }, canvas: { width: 1, height: 1, clearColor: "#000000" }, root: { members: [] } }, audio: authored }, timeline)),
+    compileAudioProgram(composition),
   );
 });
 
@@ -95,7 +95,7 @@ test("AudioProgram preserves one shared source across explicit gain branches", (
     ],
     output: { node: "return", port: "signal" },
   } });
-  const program = compileAudioProgram({ contributions: [track] }, timeline);
+  const program = compileAudioProgram(sealComposition({ id: "audio-program", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" }, canvas: { width: 1, height: 1, clearColor: "#000000" }, root: { members: [] } }, audio: { contributions: [track] } }, timeline));
   assert.equal(audioProgramSourceClips(program).length, 1);
   assert.deepEqual(audioProgramGainRoutes(program).map((route) => route.gain).sort(), [0.25, 0.5]);
 });
@@ -109,7 +109,7 @@ test("AudioProgram retains package-owned Process programmes for endpoint capabil
     ],
     output: { node: "effect", port: "signal" },
   } });
-  const program = compileAudioProgram({ contributions: [track] }, timeline);
+  const program = compileAudioProgram(sealComposition({ id: "audio-program", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" }, canvas: { width: 1, height: 1, clearColor: "#000000" }, root: { members: [] } }, audio: { contributions: [track] } }, timeline));
   assert.equal(program.graph.nodes.find((node) => node.kind === "process")?.program.format,
     "example.audio-effect@1");
   assert.throws(() => audioProgramGainRoutes(program), /does not support Process format/u);

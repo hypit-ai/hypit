@@ -1,4 +1,4 @@
-import { sealTimeline, timelineDependency, timelineManifest, timelineTypes, timelineComponent } from "@hypit/timeline";
+import { sealTimeline, timelineManifest, timelineTypes, timelineComponent } from "@hypit/timeline";
 import { blobManifest, blobTypes } from "@hypit/blob";
 import {
   registerProducerFacets,
@@ -10,7 +10,6 @@ import type { Composition } from "@hypit/composition";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { fixtureResource } from "../../../test/fixture-resource.js";
-import { timelineFixture } from "../../../test/timeline-fixture.js";
 
 import {
   createResolvedClosure,
@@ -104,8 +103,7 @@ async function runBuild(executor: Executor, state: BuildView) {
 
 const space = sealTimeline({ id: "test-space", frameCount: 60, frameRate: { numerator: 30, denominator: 1 },
 });
-const semantic = timelineFixture(space);
-const composition = sealComposition({ id: "render-test", visual: { canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: { members: [] } }, audio: { contributions: [] } });
+const composition = sealComposition({ id: "render-test", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: { members: [] } }, audio: { contributions: [] } }, space);
 const delivery = htmlVideoDeliverySpec();
 
 const stored = (value: CanonicalValue): Value => value;
@@ -133,20 +131,13 @@ const compositionRecord = {
   value: stored(composition),
 };
 await refineRecord(compositionRecord, validatorRegistry());
-const spaceRecord = {
-  id: "space",
-  type: timelineTypes.timeline,
-  value: stored(space),
-};
-await refineRecord(spaceRecord, validatorRegistry());
 const deliveryRecord = { id: "delivery", type: mediaTypes.delivery, value: stored(delivery) };
 await refineRecord(deliveryRecord, validatorRegistry());
-const linked = link(closure, [compositionRecord, spaceRecord, deliveryRecord]);
+const linked = link(closure, [compositionRecord, deliveryRecord]);
 const instance = elaborateGraphFragment(linked, htmlVideoFragment, {
   id: "final",
   inputs: {
     composition: { kind: "record", id: compositionRecord.id },
-    timeline: { kind: "record", id: spaceRecord.id },
     delivery: { kind: "record", id: deliveryRecord.id },
   },
 });
@@ -206,7 +197,7 @@ test("HTML renderer rendering is an explicit exact Need after ordinary document 
   const visual = result.state.needs.find((need) =>
     sameCapability(need.capability, htmlProgramCapabilities.rasterizeVisual))!;
   assert.equal(visual.returns.name, mediaTypes.timelineVisual.name);
-  assert.deepEqual(visual.constraints, htmlRasterRequest(compileHtmlProgram(composition, space), delivery.visual));
+  assert.deepEqual(visual.constraints, htmlRasterRequest(compileHtmlProgram(composition), delivery.visual));
   const audio = result.state.needs.find((need) =>
     sameCapability(need.capability, audioProgramCapabilities.render))!;
   assert.equal(audio.returns.name, mediaTypes.timelineAudio.name);
@@ -301,16 +292,14 @@ const fixtureModule = { name: "example.composition-fixture", version: "1" } as c
 const fixtureDeclaration = {
   module: fixtureModule,
   declaration: "composition",
-  outputs: [compositionTypes.composition, timelineTypes.timeline],
-  shape: { summary: "Supplies the test Composition and Timeline.", fields: [] },
+  outputs: [compositionTypes.composition],
+  shape: { summary: "Supplies the test Composition.", fields: [] },
   bindings: () => [
     { name: "composition", ref: { kind: "record" as const, id: "composition" }, type: compositionTypes.composition },
-    { name: "semantic", ref: { kind: "record" as const, id: "semantic" }, type: timelineTypes.timeline },
   ],
   compile: ({ declaration }: { readonly declaration: { readonly range: { readonly start: number; readonly end: number } } }) => ({
     records: [
       { id: "composition", type: compositionTypes.composition, value: stored(composition), range: declaration.range },
-      { id: "semantic", type: timelineTypes.timeline, value: stored(semantic), range: declaration.range },
     ],
     components: [],
   }),
@@ -319,7 +308,7 @@ const fixtureManifest: ModuleManifest = {
   format: "hypit.module@1",
   name: fixtureModule.name,
   version: fixtureModule.version,
-  dependencies: [compositionDependency, timelineDependency],
+  dependencies: [compositionDependency],
   types: [],
   capabilities: [],
   producers: [],
@@ -378,7 +367,7 @@ test(`the ${selectedRange ? "selected" : "full"} rendered video remains an ordin
       <import as="html" from="@hypit/html-video@1"/>
       <import as="media" from="@hypit/media-operations@1"/>
       <fixture:Composition/>
-      <html:Video id="final" composition={composition} timeline={semantic} ${selectedRange ? 'start-frame="15" end-frame-exclusive="45"' : ""}/>
+      <html:Video id="final" composition={composition} ${selectedRange ? 'start-frame="15" end-frame-exclusive="45"' : ""}/>
       <media:ExtractFrame id="poster" source={final.video} video="primary-moving" at="last"/>
     </svml>`),
     closure: sourceClosure,
@@ -412,12 +401,11 @@ test("selected render frames reach both visual and audio Needs through the ordin
   const range = { startFrame: 15, endFrameExclusive: 45 };
   const rangeRecord = { id: "selection", type: timelineTypes.frameSpan, value: stored(range) };
   await refineRecord(rangeRecord, validatorRegistry());
-  const program = link(closure, [compositionRecord, spaceRecord, deliveryRecord, rangeRecord]);
+  const program = link(closure, [compositionRecord, deliveryRecord, rangeRecord]);
   const fragment = createHtmlVideoFragment(true);
   const selected = elaborateGraphFragment(program, fragment, {
     id: "selected", inputs: {
       composition: { kind: "record", id: compositionRecord.id },
-      timeline: { kind: "record", id: spaceRecord.id },
       delivery: { kind: "record", id: deliveryRecord.id },
       range: { kind: "record", id: rangeRecord.id },
     },

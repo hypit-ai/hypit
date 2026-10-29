@@ -4,7 +4,6 @@ import { canonicalize } from "@hypit/hypit/protocol";
 import type { Value } from "@hypit/hypit/protocol";
 import type { ProducerPackage } from "@hypit/hypit/producer";
 import type { RefinementPackage } from "@hypit/hypit/refinement";
-import type { Timeline } from "@hypit/timeline";
 import { assertFrameSpan } from "@hypit/timeline";
 
 import { audioProgramProducers, audioProgramTypes } from "./manifest.js";
@@ -26,9 +25,8 @@ export const audioProgramComponent = {
       producer: audioProgramProducers.compile,
       handler: ({ inputs }) => {
         const composition = valueOf(inputs.composition?.value, "Composition") as unknown as Composition;
-        const timeline = valueOf(inputs.timeline?.value, "Timeline") as unknown as Timeline;
-        assertCompositionIdentity(composition, timeline);
-        return { kind: "output", value: canonicalize(compileAudioProgram(composition.audio, timeline)) };
+        assertCompositionIdentity(composition);
+        return { kind: "output", value: canonicalize(compileAudioProgram(composition)) };
       },
     },
     {

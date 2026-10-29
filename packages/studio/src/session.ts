@@ -92,7 +92,6 @@ export async function readStudioSession(input: {
   });
   const rendered = renderStudioHtmlProgram({
     composition: built.composition,
-    timeline: built.timeline,
     served: new Set(built.served.keys()),
   });
   const text = readFileSync(input.plan.authorSource, "utf8");

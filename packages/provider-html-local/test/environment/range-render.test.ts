@@ -11,8 +11,77 @@ import type { BlobRef } from "@hypit/protocol";
 import sharp from "sharp";
 import { rasterizeHtmlFrames, rasterizeHtmlProgram } from "../../src/index.js";
 import type { HtmlRasterProgress } from "../../src/index.js";
-import { htmlRangeDocument, htmlRetiringSourceDocument } from "../range-scenario.js";
-import { htmlProviderDelivery, htmlProviderPicture } from "../provider-scenario.js";
+import { htmlHdr10SourceDocument, htmlNestedRangeDocument, htmlRangeDocument, htmlRetiringSourceDocument } from "../range-scenario.js";
+import { htmlProviderDelivery, htmlProviderHdr10Delivery, htmlProviderPicture } from "../provider-scenario.js";
+
+test("a nested Composition renders its explicitly composed media sampling without an intermediate child video", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hypit-render-nested-range-test-"));
+  const browser = process.env.HYPIT_TEST_CHROME_PATH === undefined
+    ? {} : { chromePath: process.env.HYPIT_TEST_CHROME_PATH };
+  try {
+    const colors = [[240, 20, 20], [20, 220, 20], [20, 20, 240], [220, 220, 20]];
+    const raw = Buffer.concat(colors.map(color => Buffer.from(Array.from({ length: 64 * 64 }, () => color).flat())));
+    const source = join(root, "source.mp4");
+    const encoded = spawnSync("ffmpeg", ["-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "rgb24",
+      "-s", "64x64", "-r", "30", "-i", "pipe:0", "-c:v", "libx264", "-crf", "0", "-pix_fmt", "yuv420p", source],
+    { input: raw });
+    assert.equal(encoded.status, 0, encoded.stderr.toString());
+    const resources = new MemoryResourceStore();
+    const document = htmlNestedRangeDocument(await resources.put(await readFile(source), "video/mp4"));
+    const selectedFrames = [0, 1, 2, 3, 18, 19, 34, 35];
+    const snapshots = await rasterizeHtmlFrames({ program: document, picture: htmlProviderPicture(),
+      frames: selectedFrames }, { resources, workers: 2, ...browser });
+    const expectedSources = [2, 2, 3, 3, 0, 0, 2, 2];
+    const center = (32 * 64 + 32) * 3;
+    for (const [index, sourceFrame] of expectedSources.entries()) {
+      const pixels = await sharp((await resources.get(snapshots.frames[index]!.artifact.resource))!)
+        .removeAlpha().raw().toBuffer();
+      for (let channel = 0; channel < 3; channel++) {
+        assert.ok(Math.abs(pixels[center + channel]! - colors[sourceFrame]![channel]!) < 12,
+          `nested frame ${selectedFrames[index]} did not sample source frame ${sourceFrame}`);
+      }
+    }
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test("Electron routes exact source samples into a nested Composition document", {
+  skip: process.env.HYPIT_TEST_ELECTRON_PATH === undefined,
+}, async () => {
+  const root = await mkdtemp(join(tmpdir(), "hypit-render-electron-nested-range-test-"));
+  try {
+    const colors = [[240, 20, 20], [20, 220, 20], [20, 20, 240], [220, 220, 20]];
+    const raw = Buffer.concat(colors.map(color => Buffer.from(Array.from({ length: 64 * 64 }, () => color).flat())));
+    const source = join(root, "source.mp4");
+    const encoded = spawnSync("ffmpeg", ["-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "rgb24",
+      "-s", "64x64", "-r", "30", "-i", "pipe:0", "-c:v", "libx264", "-crf", "0", "-pix_fmt", "yuv420p", source],
+    { input: raw });
+    assert.equal(encoded.status, 0, encoded.stderr.toString());
+    const resources = new MemoryResourceStore();
+    const document = htmlNestedRangeDocument(await resources.put(await readFile(source), "video/mp4"));
+    const visual = await rasterizeHtmlProgram({ program: document, delivery: htmlProviderDelivery("high") }, {
+      renderer: "electron", electronPath: process.env.HYPIT_TEST_ELECTRON_PATH!,
+      ffmpegPath: "ffmpeg", resources, workers: 1,
+    });
+    const output = join(root, "output.mp4");
+    await writeFile(output, (await resources.get(visual.artifact.resource))!);
+    const decoded = spawnSync("ffmpeg", ["-v", "error", "-i", output,
+      "-f", "rawvideo", "-pix_fmt", "rgb24", "pipe:1"]);
+    assert.equal(decoded.status, 0, decoded.stderr.toString());
+    const childFrames = [2, 3, 0, 1, 2, 3, 3, 3, 0, 0, 1, 1, 3, 2, 1, 0, 3, 2];
+    const expected = childFrames.flatMap(frame => [frame, frame]);
+    const stride = 64 * 64 * 3;
+    const center = (32 * 64 + 32) * 3;
+    assert.equal(decoded.stdout.length, expected.length * stride);
+    for (const [frame, sourceFrame] of expected.entries()) {
+      const sample = [0, 1, 2].map(channel => decoded.stdout[frame * stride + center + channel]!);
+      const distances = colors.map(color => color.reduce((sum, value, channel) =>
+        sum + (sample[channel]! - value) ** 2, 0));
+      const nearest = distances.indexOf(Math.min(...distances));
+      assert.equal(nearest, sourceFrame,
+        `Electron nested frame ${frame} sampled ${JSON.stringify(sample)}, nearest source frame ${nearest}, expected ${sourceFrame}`);
+    }
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
 
 test("real selected renders sample video correctly across wrap, hold, fractional and reverse rates with independent browsers", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-render-range-test-"));
@@ -200,5 +269,47 @@ test("Electron decodes exact source-video samples in the browser before shared-t
     for (let channel = 0; channel < 3; channel++) {
       assert.ok(Math.abs(recovered[center + channel]! - colors[3]![channel]!) < 16);
     }
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test("Electron preserves a known HDR10 source above reference white through the linear Programme", {
+  skip: process.env.HYPIT_TEST_ELECTRON_PATH === undefined,
+}, async () => {
+  const root = await mkdtemp(join(tmpdir(), "hypit-render-hdr10-source-test-"));
+  try {
+    const pq = (nits: number) => {
+      const m1 = 2610 / 16384, m2 = 2523 / 32, c1 = 3424 / 4096, c2 = 2413 / 128, c3 = 2392 / 128;
+      const p = (Math.max(0, Math.min(10_000, nits)) / 10_000) ** m1;
+      return ((c1 + c2 * p) / (1 + c3 * p)) ** m2;
+    };
+    const expectedCode = Math.round(64 + 876 * pq(1_000));
+    const referenceWhiteCode = Math.round(64 + 876 * pq(203));
+    const frame = Buffer.alloc(64 * 64 * 3);
+    for (let offset = 0; offset < 64 * 64 * 2; offset += 2) frame.writeUInt16LE(expectedCode << 6, offset);
+    for (let offset = 64 * 64 * 2; offset < frame.length; offset += 2) frame.writeUInt16LE(512 << 6, offset);
+    const source = join(root, "source.mp4");
+    const encoded = spawnSync("ffmpeg", ["-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "p010le",
+      "-s", "64x64", "-r", "30", "-i", "pipe:0", "-frames:v", "1",
+      "-vf", "setparams=color_primaries=bt2020:color_trc=smpte2084:colorspace=bt2020nc:range=tv",
+      "-c:v", "libx265", "-x265-params",
+      "lossless=1:colorprim=bt2020:transfer=smpte2084:colormatrix=bt2020nc:range=limited:repeat-headers=1",
+      "-pix_fmt", "yuv420p10le", "-tag:v", "hvc1", source], { input: frame });
+    assert.equal(encoded.status, 0, encoded.stderr.toString());
+    const resources = new MemoryResourceStore();
+    const document = htmlHdr10SourceDocument(await resources.put(await readFile(source), "video/mp4"));
+    const visual = await rasterizeHtmlProgram({ program: document, delivery: htmlProviderHdr10Delivery("high") }, {
+      renderer: "electron", electronPath: process.env.HYPIT_TEST_ELECTRON_PATH!, resources, workers: 1,
+      ffmpegPath: "ffmpeg", ffprobePath: "ffprobe", processTimeoutMs: 120_000,
+    });
+    const output = await resources.get(visual.artifact.resource);
+    assert.ok(output !== undefined);
+    const decoded = spawnSync("ffmpeg", ["-v", "error", "-i", "pipe:0", "-frames:v", "1",
+      "-f", "rawvideo", "-pix_fmt", "p010le", "pipe:1"], { input: output });
+    assert.equal(decoded.status, 0, decoded.stderr.toString());
+    const actualCode = decoded.stdout.readUInt16LE((32 * 64 + 32) * 2) >> 6;
+    assert.ok(actualCode > referenceWhiteCode + 80,
+      `HDR source was narrowed near reference white: output ${actualCode}, reference ${referenceWhiteCode}`);
+    assert.ok(Math.abs(actualCode - expectedCode) < 12,
+      `HDR source code ${expectedCode} became ${actualCode}`);
   } finally { await rm(root, { recursive: true, force: true }); }
 });

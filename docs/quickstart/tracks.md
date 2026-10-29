@@ -266,7 +266,7 @@ Every direct Clip or sample Layer declares exactly one visual input form:
 
 | Input | Value | Meaning |
 |---|---|---|
-| `image={...}` + `extent={...}` | Blob + authored pixel extent | A durationless still image |
+| `image={...}` + `picture="srgb"` + `extent={...}` | Blob + explicit pixel interpretation + authored pixel extent | A durationless still image |
 | `media={...}` | `PreparedMedia` | Connect an explicitly prepared timed source directly |
 | `surface={...}` | `CompositableSurfaceRef` | Connect an alpha-aware still or timed surface directly |
 
@@ -278,6 +278,29 @@ to be an image or a video.
 
 **Outputs:** `{product-broll.program}` and `{product-broll.visual}`. Audio is always authored on an
 Audio Track; connecting a PreparedMedia visual member here never selects its audio member.
+
+### Reuse a closed audiovisual composition
+
+A complete child Composition can appear inside another Film without first exporting it as a video.
+Declare its occurrence once, then independently project its picture and sound as ordinary peer Tracks:
+
+```svml
+<import as="nest" from="@hypit/composition-clip@1"/>
+
+<nest:Occurrence id="intro-use" timeline={program.timeline}
+  source={intro.composition} during={intro-window}/>
+<nest:Visual id="intro-picture" timeline={program.timeline}
+  picture={working-picture} occurrence={intro-use.occurrence} frame={layout.full}/>
+<nest:Audio id="intro-sound" timeline={program.timeline}
+  occurrence={intro-use.occurrence} gain="1" fade-in="0f" fade-out="0f"/>
+```
+
+`Occurrence` owns the sole target-to-child temporal relation. Add `Map` or `Curve` children when
+the child should loop, reverse, hold or change speed. `Visual` and `Audio` may be used separately or
+together; both consume the same relation rather than deriving parallel timing. Visual reuse currently
+requires the parent and child to declare the same exact Working Picture. Audio uses the fixed 48 kHz
+stereo programme environment. The renderer evaluates the child recursively; no intermediate movie is
+created as an author value.
 
 ## Audio tracks
 
@@ -516,6 +539,7 @@ A direct child of the stack, self-closing, at least one, and dealt in document o
 |---|---|
 | `source` | required — a still image, PreparedMedia, or a Compositable Surface |
 | `extent` | required for a still image and refused for anything else |
+| `picture` | required for a still image (`srgb`) and refused for anything else |
 | `at` | required — a named absolute reveal Instant |
 | `appearance` | optional — its own Recipe, otherwise the stack's |
 | `label` | optional — a `deck:Label` record |
@@ -529,8 +553,8 @@ give both and it is refused. `size`, `color`, `align`, `block` and `padding` are
 <space:Frame id="deck-frame" within={vertical.bounds} left="44%" top="60%" right="98%" bottom="88%"/>
 <deck:DepthStack id="deck" timeline={speech.timeline}
   frame={deck-frame} appearance={recipes.deck.stack} until={done}>
-  <deck:Card id="card-spatial" source={icon-spatial} extent={square} at={deal-one}/>
-  <deck:Card id="card-type" source={icon-type} extent={square} at={deal-two}/>
+  <deck:Card id="card-spatial" source={icon-spatial} extent={square} picture="srgb" at={deal-one}/>
+  <deck:Card id="card-type" source={icon-type} extent={square} picture="srgb" at={deal-two}/>
 </deck:DepthStack>
 ```
 

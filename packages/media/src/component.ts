@@ -1,6 +1,6 @@
 import type { RefinementPackage } from "@hypit/hypit/refinement";
 import type { ProducerPackage } from "@hypit/hypit/producer";
-import { projectVisualDeliverySpec, verifyMediaDeliverySpec, verifyMediaDomainSpec, verifyMediaInspection, verifyMediaStreamSelection, verifyMuxedMedia, verifyPreparedMedia, verifyTimelineVisual, verifyTimelineAudio, verifyVisualDeliverySpec } from "./identity.js";
+import { projectVisualDeliverySpec, verifyHdrStaticMetadata, verifyMediaDeliverySpec, verifyMediaDomainSpec, verifyMediaInspection, verifyMediaStreamSelection, verifyMuxedMedia, verifyPictureInterpretation, verifyPreparedMedia, verifyTimelineVisual, verifyTimelineAudio, verifyVisualDeliverySpec, verifyWorkingPictureSpec } from "./identity.js";
 import type { MediaDomainSpec, PreparedMedia } from "./types.js";
 import { canonicalize } from "@hypit/hypit/protocol";
 import type { Value } from "@hypit/hypit/protocol";
@@ -15,6 +15,9 @@ export const mediaComponent = {
     { type: mediaTypes.inspection, handler: ({ value }) => verifyMediaInspection(valueOf(value, "MediaInspection")) },
     { type: mediaTypes.streamSelection, handler: ({ value }) => verifyMediaStreamSelection(valueOf(value, "MediaStreamSelection")) },
     { type: mediaTypes.prepared, handler: ({ value }) => verifyPreparedMedia(valueOf(value, "PreparedMedia")) },
+    { type: mediaTypes.pictureInterpretation, handler: ({ value }) => verifyPictureInterpretation(valueOf(value, "PictureInterpretation")) },
+    { type: mediaTypes.workingPicture, handler: ({ value }) => verifyWorkingPictureSpec(valueOf(value, "WorkingPictureSpec")) },
+    { type: mediaTypes.hdrStaticMetadata, handler: ({ value }) => verifyHdrStaticMetadata(valueOf(value, "HdrStaticMetadata")) },
     { type: mediaTypes.delivery, handler: ({ value }) => verifyMediaDeliverySpec(valueOf(value, "MediaDeliverySpec")) },
     { type: mediaTypes.visualDelivery, handler: ({ value }) => verifyVisualDeliverySpec(valueOf(value, "VisualDeliverySpec")) },
     { type: mediaTypes.timelineVisual, handler: ({ value }) => verifyTimelineVisual(valueOf(value, "TimelineVisual")) },

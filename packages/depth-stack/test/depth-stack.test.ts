@@ -61,6 +61,8 @@ function stillMaterial(name: string): MediaLayerSet {
       source: {
         kind: "still",
         artifact: image(name),
+        picture: { colorPrimaries: "bt709", colorTransfer: "srgb", colorMatrix: "rgb", colorRange: "full",
+          bitDepth: 8, alphaMode: "straight" },
         extent: { widthPx: 120, heightPx: 90 },
       },
       placement: { kind: "fit", fit: {
@@ -90,10 +92,13 @@ function timedMaterial(
       startPts: { ticks: "0", timeBase: { numerator: frameRate.denominator, denominator: frameRate.numerator } },
       endPts: { ticks: String(frameCount), timeBase: { numerator: frameRate.denominator, denominator: frameRate.numerator } },
       decodedUnitCount: frameCount, width: 120, height: 90,
-      sampleAspectRatio: { numerator: 1, denominator: 1 }, rotationDegrees: 0 as const,
+      sampleAspectRatio: { numerator: 1, denominator: 1 }, rotationDegrees: 0 as const, picture: { colorPrimaries: "bt709", colorTransfer: "bt709", colorMatrix: "bt709", colorRange: "limited", bitDepth: 8, alphaMode: "opaque" } as const,
       averageFrameRate: frameRate, nominalFrameRate: frameRate,
     }] },
-    selection: { videoStreamIndex: 0, spanAuthority: "video" },
+    selection: { videoStreamIndex: 0, spanAuthority: "video", picture: {
+      colorPrimaries: "bt709", colorTransfer: "bt709", colorMatrix: "bt709", colorRange: "limited",
+      bitDepth: 8, alphaMode: "opaque",
+    } },
   });
   return {
 

@@ -13,6 +13,8 @@ import {
 } from "../src/index.js";
 import type { MediaInspection } from "../src/index.js";
 
+const VIDEO_PICTURE = { colorPrimaries: "bt709", colorTransfer: "bt709", colorMatrix: "bt709",
+  colorRange: "limited", bitDepth: 8, alphaMode: "opaque" } as const;
 const timestamp = (ticks: string) => ({ ticks, timeBase: { numerator: 1, denominator: 1_000 } });
 const inspection: MediaInspection = {
   container: { formatNames: ["mp4"] },
@@ -21,7 +23,7 @@ const inspection: MediaInspection = {
     disposition: { default: true, attachedPicture: false }, timingStatus: "admissible",
     timeBase: { numerator: 1, denominator: 1_000 }, startPts: timestamp("100"), endPts: timestamp("10100"),
     decodedUnitCount: 240, role: "moving", width: 720, height: 576,
-    sampleAspectRatio: { numerator: 16, denominator: 15 }, rotationDegrees: 90,
+    sampleAspectRatio: { numerator: 16, denominator: 15 }, rotationDegrees: 90, picture: { colorPrimaries: "bt709", colorTransfer: "bt709", colorMatrix: "bt709", colorRange: "limited", bitDepth: 8, alphaMode: "opaque" } as const,
   }, {
     kind: "audio", index: 1, codecType: "audio", codecName: "aac",
     disposition: { default: true, attachedPicture: false }, timingStatus: "admissible",
@@ -37,7 +39,7 @@ test("PreparedMedia preserves source identity, exact member offsets and display 
     id: "shot",
     source,
     inspection,
-    selection: { videoStreamIndex: 0, audioStreamIndex: 1, spanAuthority: "video" },
+    selection: { videoStreamIndex: 0, audioStreamIndex: 1, spanAuthority: "video", picture: VIDEO_PICTURE },
   });
   verifyPreparedMedia(media);
   assert.deepEqual(media.source, source);
@@ -58,7 +60,7 @@ test("signal projections retain source selection without choosing an execution f
     id: "shot",
     source: { kind: "blob", resource: fixtureResource("prepared-projection"), size: 1_024, mediaType: "video/mp4" },
     inspection,
-    selection: { videoStreamIndex: 0, audioStreamIndex: 1, spanAuthority: "video" },
+    selection: { videoStreamIndex: 0, audioStreamIndex: 1, spanAuthority: "video", picture: VIDEO_PICTURE },
   });
   const visual = preparedVisualSource(media);
   const audio = preparedAudioSource(media);

@@ -30,7 +30,7 @@
     "@hypit/html-program": "workspace:*",
     "@hypit/media": "workspace:*",
     "@hypit/protocol": "workspace:*",
-    "@hypit/region-evidence": "workspace:*",
+    "@hypit/spatial-sequence": "workspace:*",
     "@hypit/timeline": "workspace:*",
     "@hypit/spatial": "workspace:*",
     "@hypit/recipe": "workspace:*",
@@ -45,7 +45,7 @@
     "@hypit/composition": "workspace:^0.2.0",
     "@hypit/html-program": "workspace:^0.2.0",
     "@hypit/media": "workspace:^0.2.0",
-    "@hypit/region-evidence": "workspace:^0.1.1",
+    "@hypit/spatial-sequence": "workspace:^0.1.0",
     "@hypit/spatial": "workspace:^0.1.1",
     "@hypit/temporal": "workspace:^0.1.1",
     "@hypit/timeline": "workspace:^0.1.1"

@@ -1,5 +1,7 @@
 import type { VisualProgram } from "@hypit/composition";
 import { htmlVisual } from "@hypit/html-program";
+import { sealVisualTransitionEffect } from "@hypit/visual-track";
+import type { VisualTransitionEffect } from "@hypit/visual-track";
 
 export type TransitionEasing = "linear" | "ease-in" | "ease-out" | "ease-in-out";
 export type TransitionDirection = "left" | "right" | "up" | "down";
@@ -55,6 +57,10 @@ const progressAt = localFrame => {
   return ease(progress);
 };`;
 
+function transitionEffect(program: VisualProgram): VisualTransitionEffect {
+  return sealVisualTransitionEffect({ inputs: ["outgoing", "incoming"], program });
+}
+
 function transitionSetup(body: string, selectors = `const outgoing = root.querySelector('[data-hypit-transition-layer="outgoing"]');
 const incoming = root.querySelector('[data-hypit-transition-layer="incoming"]');
 if (outgoing === null || incoming === null) throw new Error('Transition requires outgoing and incoming inputs.');`): string {
@@ -66,22 +72,22 @@ ${body}
 };`;
 }
 
-export function crossDissolveEffect(easing: TransitionEasing = "linear"): VisualProgram {
+export function crossDissolveEffect(easing: TransitionEasing = "linear"): VisualTransitionEffect {
   assertTransitionEasing(easing);
-  return htmlVisual({
+  return transitionEffect(htmlVisual({
     html: twoInputHtml,
     css: additiveCss,
     setup: transitionSetup(`  outgoing.style.opacity = String(1 - progress);
   incoming.style.opacity = String(progress);`),
     data: { easing },
-  });
+  }));
 }
 
 /** Fade through one explicit opaque colour. */
-export function dipToColorEffect(color = "#000000", easing: TransitionEasing = "linear"): VisualProgram {
+export function dipToColorEffect(color = "#000000", easing: TransitionEasing = "linear"): VisualTransitionEffect {
   assertTransitionColor(color);
   assertTransitionEasing(easing);
-  return htmlVisual({
+  return transitionEffect(htmlVisual({
     html: '<div data-hypit-transition-layer="outgoing">{{outgoing}}</div><div data-hypit-transition-color></div><div data-hypit-transition-layer="incoming">{{incoming}}</div>',
     css: `${additiveCss}
 :scope > [data-hypit-transition-color] { position: absolute; inset: 0; z-index: 1; mix-blend-mode: plus-lighter; }
@@ -97,7 +103,7 @@ const color = root.querySelector('[data-hypit-transition-color]');
 if (outgoing === null || incoming === null || color === null) throw new Error('Dip To Color requires outgoing, color and incoming layers.');
 color.style.background = data.color;`),
     data: { color, easing },
-  });
+  }));
 }
 
 function translation(direction: TransitionDirection, progress: string, incoming: boolean): string {
@@ -119,20 +125,20 @@ function movementSetup(direction: TransitionDirection, easing: TransitionEasing,
 }
 
 /** Move both pictures as one continuous strip. Direction names picture travel. */
-export function pushEffect(direction: TransitionDirection = "left", easing: TransitionEasing = "ease-in-out"): VisualProgram {
-  return htmlVisual({ html: twoInputHtml, css: twoInputCss, setup: movementSetup(direction, easing, true), data: { direction, easing } });
+export function pushEffect(direction: TransitionDirection = "left", easing: TransitionEasing = "ease-in-out"): VisualTransitionEffect {
+  return transitionEffect(htmlVisual({ html: twoInputHtml, css: twoInputCss, setup: movementSetup(direction, easing, true), data: { direction, easing } }));
 }
 
 /** Move the incoming picture over a stationary outgoing picture. Direction names incoming travel. */
-export function slideEffect(direction: TransitionDirection = "left", easing: TransitionEasing = "ease-in-out"): VisualProgram {
-  return htmlVisual({ html: twoInputHtml, css: twoInputCss, setup: movementSetup(direction, easing, false), data: { direction, easing } });
+export function slideEffect(direction: TransitionDirection = "left", easing: TransitionEasing = "ease-in-out"): VisualTransitionEffect {
+  return transitionEffect(htmlVisual({ html: twoInputHtml, css: twoInputCss, setup: movementSetup(direction, easing, false), data: { direction, easing } }));
 }
 
 /** Reveal the incoming picture with one straight boundary travelling in direction. */
-export function linearWipeEffect(direction: TransitionDirection = "right", easing: TransitionEasing = "ease-in-out"): VisualProgram {
+export function linearWipeEffect(direction: TransitionDirection = "right", easing: TransitionEasing = "ease-in-out"): VisualTransitionEffect {
   assertTransitionDirection(direction);
   assertTransitionEasing(easing);
-  return htmlVisual({
+  return transitionEffect(htmlVisual({
     html: twoInputHtml,
     css: twoInputCss,
     setup: transitionSetup(`  const hidden = (1 - progress) * 100;
@@ -141,14 +147,14 @@ export function linearWipeEffect(direction: TransitionDirection = "right", easin
     : data.direction === 'down' ? \`inset(0 0 \${hidden}% 0)\`
     : \`inset(\${hidden}% 0 0 0)\`;`),
     data: { direction, easing },
-  });
+  }));
 }
 
 /** Reveal the incoming picture from the centre through one geometric aperture. */
-export function irisEffect(shape: IrisShape = "circle", easing: TransitionEasing = "ease-in-out"): VisualProgram {
+export function irisEffect(shape: IrisShape = "circle", easing: TransitionEasing = "ease-in-out"): VisualTransitionEffect {
   assertIrisShape(shape);
   assertTransitionEasing(easing);
-  return htmlVisual({
+  return transitionEffect(htmlVisual({
     html: twoInputHtml,
     css: twoInputCss,
     setup: transitionSetup(`  if (data.shape === 'circle') incoming.style.clipPath = \`circle(\${progress * 100}% at 50% 50%)\`;
@@ -160,14 +166,14 @@ export function irisEffect(shape: IrisShape = "circle", easing: TransitionEasing
     incoming.style.clipPath = \`polygon(50% \${50 - spread}%, \${50 + spread}% 50%, 50% \${50 + spread}%, \${50 - spread}% 50%)\`;
   }`),
     data: { shape, easing },
-  });
+  }));
 }
 
 /** Dissolve while the outgoing picture expands and the incoming picture settles from a smaller scale. */
-export function zoomDissolveEffect(strength = 0.16, easing: TransitionEasing = "ease-in-out"): VisualProgram {
+export function zoomDissolveEffect(strength = 0.16, easing: TransitionEasing = "ease-in-out"): VisualTransitionEffect {
   finiteRange(strength, 0, 1, "Zoom Dissolve strength");
   assertTransitionEasing(easing);
-  return htmlVisual({
+  return transitionEffect(htmlVisual({
     html: twoInputHtml,
     css: additiveCss,
     setup: transitionSetup(`  outgoing.style.opacity = String(1 - progress);
@@ -175,14 +181,14 @@ export function zoomDissolveEffect(strength = 0.16, easing: TransitionEasing = "
   outgoing.style.transform = \`scale(\${1 + data.strength * progress})\`;
   incoming.style.transform = \`scale(\${1 - data.strength * (1 - progress)})\`;`),
     data: { strength, easing },
-  });
+  }));
 }
 
 /** Dissolve through a blur peak without changing either picture's spatial relation. */
-export function blurDissolveEffect(radius = 20, easing: TransitionEasing = "ease-in-out"): VisualProgram {
+export function blurDissolveEffect(radius = 20, easing: TransitionEasing = "ease-in-out"): VisualTransitionEffect {
   finiteRange(radius, 0, 200, "Blur Dissolve radius");
   assertTransitionEasing(easing);
-  return htmlVisual({
+  return transitionEffect(htmlVisual({
     html: twoInputHtml,
     css: additiveCss,
     setup: transitionSetup(`  const blur = Math.sin(Math.PI * progress) * data.radius;
@@ -191,5 +197,5 @@ export function blurDissolveEffect(radius = 20, easing: TransitionEasing = "ease
   outgoing.style.filter = \`blur(\${blur}px)\`;
   incoming.style.filter = \`blur(\${blur}px)\`;`),
     data: { radius, easing },
-  });
+  }));
 }

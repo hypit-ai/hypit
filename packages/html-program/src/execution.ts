@@ -2,8 +2,8 @@ import type { CanonicalValue, BlobRef } from "@hypit/hypit/protocol";
 import { assertBlobRef } from "@hypit/hypit/protocol";
 import { assertFrameSpan } from "@hypit/timeline";
 import type { FrameSpan } from "@hypit/timeline";
-import { sameVisualPictureSpec, verifyVisualDeliverySpec, verifyVisualPictureSpec } from "@hypit/media";
-import type { ImagePictureSpec, VisualDeliverySpec } from "@hypit/media";
+import { sameOutputPictureSpec, verifyVisualDeliverySpec, verifyOutputPictureSpec } from "@hypit/media";
+import type { FrameOutputPictureSpec, VisualDeliverySpec } from "@hypit/media";
 import { assertHtmlProgram } from "./document.js";
 import type { HtmlProgram } from "./types.js";
 
@@ -16,21 +16,21 @@ export type HtmlRasterRequest = {
 /** Select original program frames in strictly increasing order. */
 export type HtmlFrameRequest = {
   readonly program: HtmlProgram;
-  readonly picture: ImagePictureSpec;
+  readonly picture: FrameOutputPictureSpec;
   readonly frames: readonly number[];
 };
 
 /** Self-describing PNG pictures at absolute HtmlProgram frames. */
 export type HtmlFrameImages = {
-  readonly picture: ImagePictureSpec;
+  readonly picture: FrameOutputPictureSpec;
   readonly frames: readonly {
     readonly frame: number;
     readonly artifact: BlobRef;
   }[];
 };
 
-function verifyHtmlFramePicture(value: unknown): asserts value is ImagePictureSpec {
-  verifyVisualPictureSpec(value);
+function verifyHtmlFramePicture(value: unknown): asserts value is FrameOutputPictureSpec {
+  verifyOutputPictureSpec(value);
   if (value.colorTransfer !== "srgb" || value.colorMatrix !== "rgb" || value.colorRange !== "full") {
     throw new Error("HTML frame capture requires an sRGB full-range image interpretation");
   }
@@ -88,7 +88,7 @@ export function verifyHtmlFrameImagesForRequest(
 ): asserts value is HtmlFrameImages {
   verifyHtmlFrameRequest(request);
   verifyHtmlFrameImages(value);
-  if (!sameVisualPictureSpec(value.picture, request.picture)) {
+  if (!sameOutputPictureSpec(value.picture, request.picture)) {
     throw new Error("HTML frame images implement a different picture requirement");
   }
   if (value.frames.length !== request.frames.length

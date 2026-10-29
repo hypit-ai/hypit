@@ -1,9 +1,9 @@
-import { assertVisualProgram, assertVisualTrackIdentity, sealVisualTrack } from "@hypit/composition";
+import { assertVisualProcessEffect, assertVisualTrackIdentity, sealVisualProcessEffect, sealVisualTrack } from "@hypit/composition";
 import type { VisualPresent, VisualTrack } from "@hypit/composition";
 import { canonicalize } from "@hypit/hypit/protocol";
 import { assertSpatialFrame, assertSpatialPath } from "@hypit/spatial";
 import type { SpatialPath } from "@hypit/spatial";
-import { assertTemporalWindowFor, exactTemporalValueFromFrames, resolveTemporalRelation, sealLocalTemporalDomain } from "@hypit/temporal";
+import { assertTemporalWindowFor, compareExactTemporalValues, exactTemporalValueFromFrames, resolveTemporalRelation, sealLocalTemporalDomain } from "@hypit/temporal";
 import type { TemporalWindow } from "@hypit/temporal";
 import { assertFrameSpan, assertTimelineIdentity, timelineFrameCount } from "@hypit/timeline";
 import type { FrameSpan, Timeline } from "@hypit/timeline";
@@ -23,10 +23,12 @@ import type {
   VisualClipMotion,
   VisualClipSpec,
   VisualTransitionSpec,
+  VisualTransitionEffect,
   VisualTrackHeader,
   VisualTrackProgram,
   VisualTrackSet,
 } from "./types.js";
+import { VISUAL_TRANSITION_INPUTS } from "./types.js";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -104,6 +106,13 @@ export function appendVisualClip(
     let sourceDomain;
     if (layer.source.kind === "timed") {
       sourceDomain = layer.source.media.domain;
+    } else if (layer.source.kind === "composition") {
+      sourceDomain = sealLocalTemporalDomain({
+        id: `${layer.source.composition.id}:timeline`,
+        duration: exactTemporalValueFromFrames(
+          layer.source.composition.timeline.frameCount, layer.source.composition.timeline,
+        ),
+      });
     } else {
       if (layer.source.surface.timing.kind === "still") return layer;
       const timing = { frameRate: layer.source.surface.timing.frameRate, frameCount: layer.source.surface.timing.frameCount };
@@ -111,6 +120,16 @@ export function appendVisualClip(
         id: `${spec.id}:${layer.id}:surface`,
         duration: exactTemporalValueFromFrames(timing.frameCount, { frameRate: timing.frameRate }),
       });
+    }
+    if (layer.sampling?.kind === "map") {
+      const targetDuration = exactTemporalValueFromFrames(duration, timeline);
+      const first = layer.sampling.value.stages[0]!.target;
+      const last = layer.sampling.value.stages.at(-1)!.source;
+      assert(compareExactTemporalValues(first.duration, targetDuration) === 0,
+        `Visual Clip ${spec.id}.${layer.id} sampling target differs from its Window.`);
+      assert(last.id === sourceDomain.id && compareExactTemporalValues(last.duration, sourceDomain.duration) === 0,
+        `Visual Clip ${spec.id}.${layer.id} sampling source differs from its source domain.`);
+      return layer;
     }
     return {
       ...layer,
@@ -142,13 +161,26 @@ export function appendVisualClip(
   return { clips: [...set.clips, addition], transitions: set.transitions };
 }
 
+export function assertVisualTransitionEffect(value: VisualTransitionEffect): void {
+  assertVisualProcessEffect(value, "VisualTransitionEffect");
+  assert(value.inputs.length === VISUAL_TRANSITION_INPUTS.length
+    && value.inputs.every((name, index) => name === VISUAL_TRANSITION_INPUTS[index]),
+  "VisualTransitionEffect inputs must be outgoing followed by incoming.");
+}
+
+export function sealVisualTransitionEffect(value: VisualTransitionEffect): VisualTransitionEffect {
+  assertVisualTransitionEffect(value);
+  const effect = sealVisualProcessEffect(value);
+  return { inputs: [...VISUAL_TRANSITION_INPUTS], program: effect.program };
+}
+
 export function assertVisualTransitionSpec(value: VisualTransitionSpec): void {
   assert(value !== null && typeof value === "object" && !Array.isArray(value), "VisualTransitionSpec is invalid.");
   assertMediaIdentity(value.id, "VisualTransitionSpec.id");
   assertMediaIdentity(value.outgoingClipId, "VisualTransitionSpec.outgoingClipId");
   assertMediaIdentity(value.incomingClipId, "VisualTransitionSpec.incomingClipId");
   assert(value.outgoingClipId !== value.incomingClipId, "Visual Transition requires two different Clips.");
-  assertVisualProgram(value.effect, "VisualTransitionSpec.effect");
+  assertVisualTransitionEffect(value.effect);
 }
 
 function transitionIntersection(outgoing: VisualClipProgram, incoming: VisualClipProgram): FrameSpan {
@@ -241,7 +273,7 @@ export function appendVisualTransition(
 
 function assertSampleLayer(layer: MediaSampleLayerProgram, label: string): void {
   assertResolvedSampleLayer(layer, label);
-  const timed = layer.source.kind === "timed"
+  const timed = layer.source.kind === "timed" || layer.source.kind === "composition"
     || layer.source.kind === "surface" && layer.source.surface.timing.kind === "frames";
   if (!timed) {
     assert(layer.sampling === undefined, `${label} is still material and cannot have temporal sampling.`);
@@ -376,7 +408,7 @@ export function projectVisualTrack(timeline: Timeline, program: VisualTrackProgr
         { name: "outgoing", contribution: structuredClone(outgoing) },
         { name: "incoming", contribution: structuredClone(incoming) },
       ],
-      program: structuredClone(transition.effect),
+      effect: sealVisualTransitionEffect(transition.effect),
     }, authored];
   });
   const track = sealVisualTrack({

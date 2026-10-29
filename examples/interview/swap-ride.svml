@@ -19,13 +19,13 @@
   <import as="caption-fine" from="@hypit/caption-fine@1"/>
   <import as="fonts" from="@hypit/fontsource@1"/>
   <import as="space" from="@hypit/spatial@1"/>
-  <import as="region" from="@hypit/region-evidence@1"/>
+  <import as="sequence" from="@hypit/spatial-sequence@1"/>
   <import as="flash" from="@interview/flash@1"/>
   <import as="film" from="@hypit/film@1"/>
   <import as="html" from="@hypit/html-video@1"/>
   <import as="emoji" from="@hypit/interview-emoji-reveal@1"/>
   <import as="recipes" source="./recipes.svs"/>
-  <import as="tracking" source="./ada-tracking.svs"/>
+  <import as="tracking" source="./ada-tracking.regions.svml"/>
   <import as="interview-kit" source="@hypit/seedance-kits/street-interview"/>
 
   <script id="story">
@@ -240,13 +240,14 @@
   <caption-fine:Style id="caption-ada-style" recipe={recipes.caption.ada}
     font={caption-font}/>
 
-  <region:Evidence id="ada-heads" within={vertical.bounds} timeline={speech.timeline}
-    recipe={tracking.heads.ada}/>
+  <sequence:TimelineRegions id="ada-heads" document={tracking.heads}
+    timeline={speech.timeline} canvas={vertical.canvas}/>
   <narrative-caption:Timing id="caption-timing" document={story.caption} binding={story.caption-binding} projection={story-time}/>
   <caption-fine:Caption id="captions" document={story.caption} timing={caption-timing}
     timeline={speech.timeline} within={vertical.bounds} regions={ada-heads}>
     <caption-fine:Use style={caption-leon-style}/>
     <caption-fine:Use role="ADA" style={caption-ada-style}/>
+    <caption-fine:Follow role="ADA" series="ada-head" missing="hide"/>
   </caption-fine:Caption>
 
   <emoji:Style id="rule-reveal-style" recipe={recipes.emoji.strip}/>
@@ -280,6 +281,5 @@
     <film:Track source={rule-reveal-sfx.audio}/>
   </film:Film>
 
-  <html:Video id="final" composition={main.composition}
-    timeline={speech.timeline}/>
+  <html:Video id="final" composition={main.composition}/>
 </svml>

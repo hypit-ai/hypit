@@ -1,9 +1,10 @@
 import {
   assertCompositableSurfaceRef,
   preparedVisualExtent,
+  verifyPictureInterpretation,
   verifyPreparedMedia,
 } from "@hypit/media";
-import type { CompositableSurfaceRef, PreparedMedia } from "@hypit/media";
+import type { CompositableSurfaceRef, PictureInterpretation, PreparedMedia } from "@hypit/media";
 import { assertBlobRef, canonicalize } from "@hypit/hypit/protocol";
 import type { BlobRef } from "@hypit/hypit/protocol";
 import {
@@ -13,7 +14,10 @@ import {
 } from "@hypit/spatial";
 import type { ContentFit, IntrinsicExtent, SpatialMap2D } from "@hypit/spatial";
 import { assertTemporalMap, assertTemporalRelationSpec, defaultTemporalRelationSpec } from "@hypit/temporal";
+import type { TemporalMap } from "@hypit/temporal";
 
+import { assertCompositionIdentity } from "@hypit/composition";
+import type { Composition } from "@hypit/composition";
 import type {
   MediaGradientStop,
   MediaLayer,
@@ -23,7 +27,7 @@ import type {
   MediaSampleLayer,
   MediaSampleLayerSpec,
   MediaSamplingMotion,
-  MediaVisualSource,
+  VisualSource,
 } from "./types.js";
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -100,16 +104,24 @@ export function assertMediaSamplingMotion(value: MediaSamplingMotion, label: str
     `${label} must cover normalized progress [0, 1].`);
 }
 
-export function assertMediaVisualSource(value: MediaVisualSource, label: string): void {
+export function assertVisualSource(value: VisualSource, label: string): void {
   assertIntrinsicExtent(value.extent);
   if (value.kind === "still") {
     assertBlob(value.artifact, `${label}.artifact`, "image/");
+    verifyPictureInterpretation(value.picture, `${label}.picture`);
     return;
   }
   if (value.kind === "surface") {
     assertCompositableSurfaceRef(value.surface, `${label}.surface`);
     assert(value.extent.widthPx === value.surface.width && value.extent.heightPx === value.surface.height,
       `${label} Surface extent disagrees with its intrinsic dimensions.`);
+    return;
+  }
+  if (value.kind === "composition") {
+    assertCompositionIdentity(value.composition);
+    assert(value.extent.widthPx === value.composition.visual.canvas.width
+      && value.extent.heightPx === value.composition.visual.canvas.height,
+    `${label} Composition extent disagrees with its Canvas.`);
     return;
   }
   assert(value.kind === "timed", `${label}.kind is unsupported.`);
@@ -169,15 +181,15 @@ export function assertMediaLayerSet(value: MediaLayerSet): void {
       continue;
     }
     assert(layer.kind === "sample", `Media layer ${layer.id} kind is unsupported.`);
-    assertMediaVisualSource(layer.source, `Media layer ${layer.id}.source`);
+    assertVisualSource(layer.source, `Media layer ${layer.id}.source`);
     if (layer.placement.kind === "fit") assertContentFit(layer.placement.fit);
     else if (layer.placement.kind === "mapping") assertSpatialMap2D(layer.placement.mapping);
     else assert(false, `Media layer ${layer.id} placement is unsupported.`);
     if (layer.source.kind === "still") {
       assert(layer.sampling === undefined, `Still Media layer ${layer.id} cannot have temporal sampling.`);
     } else {
-      const timed = layer.source.kind === "timed"
-        || layer.source.surface.timing.kind === "frames";
+      const timed = layer.source.kind === "timed" || layer.source.kind === "composition"
+        || layer.source.kind === "surface" && layer.source.surface.timing.kind === "frames";
       if (!timed) {
         assert(layer.sampling === undefined, `Still Surface layer ${layer.id} cannot have temporal sampling.`);
       } else {
@@ -209,11 +221,11 @@ export function appendMediaPaintLayer(set: MediaLayerSet, spec: MediaPaintLayerS
 }
 
 function sampleLayer(
-  source: MediaVisualSource,
+  source: VisualSource,
   placement: MediaSampleLayer["placement"],
   spec: MediaSampleLayerSpec,
 ): MediaSampleLayer {
-  assertMediaVisualSource(source, "Media sample source");
+  assertVisualSource(source, "Media sample source");
   if (placement.kind === "fit") assertContentFit(placement.fit);
   else assertSpatialMap2D(placement.mapping);
   assertMediaSampleLayerSpec(spec);
@@ -232,15 +244,17 @@ function sampleLayer(
 export function appendStillMediaLayer(
   set: MediaLayerSet,
   source: BlobRef,
+  picture: PictureInterpretation,
   extent: IntrinsicExtent,
   fit: ContentFit,
   spec: MediaSampleLayerSpec,
 ): MediaLayerSet {
   assertBlob(source, "Still Media source", "image/");
+  verifyPictureInterpretation(picture, "Still Media picture");
   assertIntrinsicExtent(extent);
   assert(spec.sampling === undefined, "Still Media source cannot have temporal sampling.");
   return append(set, sampleLayer(
-    { kind: "still", artifact: structuredClone(source), extent: { ...extent } },
+    { kind: "still", artifact: structuredClone(source), picture: structuredClone(picture), extent: { ...extent } },
     { kind: "fit", fit: structuredClone(fit) }, spec,
   ));
 }
@@ -248,16 +262,18 @@ export function appendStillMediaLayer(
 export function appendMappedStillMediaLayer(
   set: MediaLayerSet,
   source: BlobRef,
+  picture: PictureInterpretation,
   extent: IntrinsicExtent,
   mapping: SpatialMap2D,
   spec: MediaSampleLayerSpec,
 ): MediaLayerSet {
   assertBlob(source, "Still Media source", "image/");
+  verifyPictureInterpretation(picture, "Still Media picture");
   assertIntrinsicExtent(extent);
   assertSpatialMap2D(mapping);
   assert(spec.sampling === undefined, "Still Media source cannot have temporal sampling.");
   return append(set, sampleLayer(
-    { kind: "still", artifact: structuredClone(source), extent: { ...extent } },
+    { kind: "still", artifact: structuredClone(source), picture: structuredClone(picture), extent: { ...extent } },
     { kind: "mapping", mapping: structuredClone(mapping) }, spec,
   ));
 }
@@ -270,7 +286,7 @@ export function appendTimedMediaLayer(
 ): MediaLayerSet {
   verifyPreparedMedia(media);
   assert(media.visual !== undefined, "Prepared Media source has no visual member.");
-  const source: MediaVisualSource = {
+  const source: VisualSource = {
     kind: "timed",
     media: structuredClone(media),
     extent: preparedVisualExtent(media),
@@ -290,7 +306,7 @@ export function appendMappedTimedMediaLayer(
   verifyPreparedMedia(media);
   assert(media.visual !== undefined, "Prepared Media source has no visual member.");
   assertSpatialMap2D(mapping);
-  const source: MediaVisualSource = {
+  const source: VisualSource = {
     kind: "timed",
     media: structuredClone(media),
     extent: preparedVisualExtent(media),
@@ -299,6 +315,26 @@ export function appendMappedTimedMediaLayer(
     ...spec,
     sampling: spec.sampling ?? defaultTemporalRelationSpec(),
   }));
+}
+
+/** Add one closed child Composition as an ordinary visual source occurrence. */
+export function appendCompositionLayer(
+  set: MediaLayerSet,
+  composition: Composition,
+  fit: ContentFit,
+  sampling: TemporalMap,
+  spec: Omit<MediaSampleLayerSpec, "sampling">,
+): MediaLayerSet {
+  assertCompositionIdentity(composition);
+  assertTemporalMap(sampling);
+  return append(set, {
+    ...sampleLayer({
+      kind: "composition",
+      composition: structuredClone(composition),
+      extent: { widthPx: composition.visual.canvas.width, heightPx: composition.visual.canvas.height },
+    }, { kind: "fit", fit: structuredClone(fit) }, spec),
+    sampling: { kind: "map", value: structuredClone(sampling) },
+  });
 }
 
 export function appendSurfaceMediaLayer(

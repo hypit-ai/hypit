@@ -29,14 +29,30 @@ async function mediaToolVersion(path: string): Promise<MediaToolVersion> {
   }
 }
 
-async function probeHtmlMediaTools(ffprobePath: string, ffmpegPath?: string): Promise<ManagedProgramState> {
+async function hasEncoder(path: string, encoder: string): Promise<boolean> {
+  const result = await runProcess({ executable: path, argv: ["-hide_banner", "-encoders"],
+    timeoutMs: 15_000, maxOutputBytes: 4 * 1024 * 1024 });
+  const output = Buffer.concat([Buffer.from(result.stdout), Buffer.from(result.stderr)]).toString("utf8");
+  return output.split(/\r?\n/u).some(line => line.trim().split(/\s+/u)[1] === encoder);
+}
+
+async function probeHtmlMediaTools(ffprobePath: string, ffmpegPath: string | undefined,
+  requireHdr10Encoder: boolean): Promise<ManagedProgramState> {
   const ffprobe = await mediaToolVersion(ffprobePath);
   if (ffprobe.state !== "ready") return { state: ffprobe.state, detail: ffprobe.detail };
   if (ffmpegPath === undefined) return { state: "ready" };
   const ffmpeg = await mediaToolVersion(ffmpegPath);
-  return ffmpeg.state === "ready"
-    ? { state: "ready" }
-    : { state: ffmpeg.state, detail: ffmpeg.detail };
+  if (ffmpeg.state !== "ready") return { state: ffmpeg.state, detail: ffmpeg.detail };
+  if (requireHdr10Encoder) {
+    try {
+      if (!await hasEncoder(ffmpegPath, "libx265")) {
+        return { state: "mismatch", detail: `${ffmpegPath} does not provide the Electron HDR10 pipeline's libx265 encoder` };
+      }
+    } catch (error) {
+      return { state: "down", detail: error instanceof Error ? error.message : String(error) };
+    }
+  }
+  return { state: "ready" };
 }
 
 /**
@@ -87,7 +103,7 @@ export function localHtmlRendererProgram(
       if (electron.state !== "ready") return electron;
       const browser = await probeBrowser();
       if (browser.state !== "ready") return browser;
-      return await probeHtmlMediaTools(input.ffprobePath, input.ffmpegPath);
+      return await probeHtmlMediaTools(input.ffprobePath, input.ffmpegPath, renderer === "electron");
     },
   };
 }

@@ -3,13 +3,11 @@ import { compileHtmlProgram, materializeHtmlProgram } from "@hypit/html-program"
 import type { HtmlProgram } from "@hypit/html-program";
 import { lowerPlaybackAudio } from "@hypit/html-playback";
 import { compileAudioProgram } from "@hypit/audio-program";
-import type { Timeline } from "@hypit/timeline";
 
 import { injectRuntimeShim } from "./runtime-shim.js";
 
 export type RenderInput = {
   readonly composition: Composition;
-  readonly timeline: Timeline;
   /** Resources Studio can serve for material selected by the Invocation. */
   readonly served?: ReadonlySet<string>;
 };
@@ -27,7 +25,7 @@ export function renderPreview(input: RenderInput): string {
 
 /** The same compiled picture serves immediate frame capture and interactive playback. */
 export function renderStudioHtmlProgram(input: RenderInput): { readonly document: HtmlProgram; readonly html: string; readonly preview: string } {
-  const document = compileHtmlProgram(input.composition, input.timeline);
+  const document = compileHtmlProgram(input.composition);
   const html = materializeHtmlProgram(document, (artifact) => {
     // The only Artifacts a preview can reference are files the author already
     // has. Anything else would be a Provider's output, which does not exist yet,
@@ -38,7 +36,7 @@ export function renderStudioHtmlProgram(input: RenderInput): { readonly document
     return `/__studio/material/${artifact.resource}`;
   });
   const audio = lowerPlaybackAudio(
-    compileAudioProgram(input.composition.audio, input.timeline),
+    compileAudioProgram(input.composition),
     (artifact) => {
       if (input.served?.has(artifact.resource) !== true) {
         throw new Error(`Preview audio references Artifact ${artifact.resource}, which it cannot serve.`);

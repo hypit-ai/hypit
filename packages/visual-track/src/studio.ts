@@ -128,7 +128,7 @@ function materialPreview(
 ): StudioMaterialPreview | undefined {
   const layer = layers.find((candidate) => candidate.kind === "sample");
   if (layer?.kind !== "sample") return undefined;
-  if (layer.source.kind === "surface") return undefined;
+  if (layer.source.kind === "surface" || layer.source.kind === "composition") return undefined;
   return artifactPreview(layer.source.kind === "still" ? "image" : "video",
     layer.source.kind === "still" ? layer.source.artifact.resource : layer.source.media.source.resource);
 }

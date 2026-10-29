@@ -6,6 +6,31 @@ export type MediaRational = {
   readonly denominator: number;
 };
 
+/** Standardized meaning of picture samples, independent of codecs and renderers. */
+export type PictureSignal = {
+  readonly colorPrimaries: "bt709" | "display-p3" | "bt2020";
+  readonly colorTransfer: "srgb" | "bt709" | "linear" | "pq" | "hlg";
+  readonly colorMatrix: "rgb" | "bt709" | "bt2020-ncl";
+  readonly colorRange: "full" | "limited";
+  readonly bitDepth: 8 | 10 | 12 | 16;
+};
+
+/** Source alpha and sample interpretation shared by still and time-bearing pictures. */
+export type PictureInterpretation = PictureSignal & {
+  readonly alphaMode: "opaque" | "straight" | "premultiplied";
+};
+
+/** Facts observed from a source. Missing fields remain unknown until author preparation resolves them. */
+export type PictureObservation = Partial<PictureInterpretation>;
+
+/** Renderer-neutral semantics in which one visual Composition is evaluated. */
+export type WorkingPictureSpec = {
+  readonly colorPrimaries: PictureSignal["colorPrimaries"];
+  readonly colorTransfer: "srgb" | "linear";
+  readonly referenceWhiteNits: number;
+  readonly alphaMode: "premultiplied";
+};
+
 /** JSON-safe presentation timestamp: ticks * timeBase.numerator / timeBase.denominator. */
 export type MediaTimestamp = {
   readonly ticks: string;
@@ -40,6 +65,7 @@ export type MediaVideoStream = MediaStreamBase & {
   readonly rotationDegrees: 0 | 90 | 180 | 270;
   readonly averageFrameRate?: MediaRational;
   readonly nominalFrameRate?: MediaRational;
+  readonly picture: PictureObservation;
 };
 
 export type MediaAudioStream = MediaStreamBase & {
@@ -70,6 +96,8 @@ export type MediaStreamSelection = {
   readonly videoStreamIndex?: number;
   readonly audioStreamIndex?: number;
   readonly spanAuthority: "video" | "audio";
+  /** Complete author-resolved interpretation of the selected visual stream. */
+  readonly picture?: PictureInterpretation;
 };
 
 export type PreparedVisualMember = {
@@ -84,6 +112,7 @@ export type PreparedVisualMember = {
     readonly codedHeight: number;
     readonly sampleAspectRatio: MediaRational;
     readonly rotationDegrees: 0 | 90 | 180 | 270;
+    readonly picture: PictureInterpretation;
   };
 };
 
@@ -136,8 +165,8 @@ export type PreparedMedia = {
 export type MediaDomainSpec = { readonly id: string };
 
 /** Stable picture requirements shared by encoded video and authored frame capture. */
-type VisualPictureBase = {
-  readonly bitDepth: 8;
+type OutputPictureBase = {
+  readonly bitDepth: PictureSignal["bitDepth"];
   readonly alpha: {
     readonly mode: "opaque";
     /** Final background used when the composed picture still contains transparency. */
@@ -145,28 +174,51 @@ type VisualPictureBase = {
   };
 };
 
-export type VideoPictureSpec = VisualPictureBase & {
-  readonly colorPrimaries: "bt709";
-  readonly colorTransfer: "bt709";
-  readonly colorMatrix: "bt709";
+export type VideoOutputPictureSpec = OutputPictureBase & {
+  readonly colorPrimaries: PictureSignal["colorPrimaries"];
+  readonly colorTransfer: Exclude<PictureSignal["colorTransfer"], "srgb" | "linear">;
+  readonly colorMatrix: Exclude<PictureSignal["colorMatrix"], "rgb">;
   readonly colorRange: "limited";
 };
 
-export type ImagePictureSpec = VisualPictureBase & {
-  readonly colorPrimaries: "bt709";
-  readonly colorTransfer: "srgb";
+export type FrameOutputPictureSpec = OutputPictureBase & {
+  readonly colorPrimaries: "bt709" | "display-p3";
+  readonly colorTransfer: "srgb" | "linear";
   readonly colorMatrix: "rgb";
   readonly colorRange: "full";
 };
 
-export type VisualPictureSpec = VideoPictureSpec | ImagePictureSpec;
+export type OutputPictureSpec = VideoOutputPictureSpec | FrameOutputPictureSpec;
+
+export type Chromaticity = {
+  readonly x: number;
+  readonly y: number;
+};
+
+/** Author-owned static mastering and content-light metadata for one HDR10 delivery. */
+export type HdrStaticMetadata = {
+  readonly masteringDisplay: {
+    readonly red: Chromaticity;
+    readonly green: Chromaticity;
+    readonly blue: Chromaticity;
+    readonly whitePoint: Chromaticity;
+    readonly minLuminanceNits: number;
+    readonly maxLuminanceNits: number;
+  };
+  readonly contentLight: {
+    readonly maxContentLightLevelNits: number;
+    readonly maxFrameAverageLightLevelNits: number;
+  };
+};
 
 /** Stable picture and coded-video requirements, independent of any encoder implementation. */
 export type VisualDeliverySpec = {
-  readonly picture: VideoPictureSpec;
+  readonly picture: VideoOutputPictureSpec;
+  /** Required for PQ delivery; absent from SDR and HLG delivery. */
+  readonly hdrStaticMetadata?: HdrStaticMetadata;
   readonly encoding: {
-    readonly codec: "h264";
-    readonly pixelFormat: "yuv420p";
+    readonly codec: "h264" | "hevc";
+    readonly pixelFormat: "yuv420p" | "yuv420p10le" | "yuv420p12le";
     /** Author-visible delivery target; encoder flags remain Provider policy. */
     readonly quality: "draft" | "standard" | "high";
   };

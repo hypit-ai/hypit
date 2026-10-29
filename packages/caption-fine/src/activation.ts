@@ -1,4 +1,5 @@
 import { createProducerPackageFacet } from "@hypit/hypit/producer";
+import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
 import { createAuthorDeclarationFacet } from "@hypit/hypit/author";
 import { createMarkupDeclarationFacet } from "@hypit/hypit/markup";
 import { createStudioCompanionFacet } from "@hypit/studio-companion";
@@ -12,6 +13,7 @@ export const hypitPackage = {
   }],
   facets: [
     createProducerPackageFacet(captionFineComponent.producers),
+    createRefinementPackageFacet(captionFineComponent.refinements ?? []),
     ...captionFineAuthorDeclarations.map((declaration) => createAuthorDeclarationFacet(declaration)),
     ...captionFineMarkupDeclarations.map((declaration) => createMarkupDeclarationFacet({
       module: captionFineModuleRef,

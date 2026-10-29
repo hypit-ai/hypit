@@ -27,11 +27,11 @@
   <media:Image id="badge-image" src="../../visual-track/preview/flush.png"/>
 
   <visual:Track id="card" timeline={program.timeline}>
-    <visual:Clip id="card" image={card-image} extent={picture-size}
+    <visual:Clip id="card" image={card-image} picture="srgb" extent={picture-size}
       during={program.window} frame={card-frame} fit="contain"/>
   </visual:Track>
   <visual:Track id="badge" timeline={program.timeline}>
-    <visual:Clip id="badge" image={badge-image} extent={picture-size}
+    <visual:Clip id="badge" image={badge-image} picture="srgb" extent={picture-size}
       during={program.window} frame={badge-frame} fit="contain"/>
   </visual:Track>
 
@@ -57,5 +57,5 @@
     </film:Stack>
     <film:Track id="badge" source={badge.visual}/>
   </film:Film>
-  <html:Video id="final" composition={main.composition} timeline={program.timeline}/>
+  <html:Video id="final" composition={main.composition}/>
 </svml>

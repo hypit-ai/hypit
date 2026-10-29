@@ -45,6 +45,7 @@
     "@hypit/runtime": "workspace:*",
     "@hypit/runtime-local": "workspace:*",
     "@hypit/script": "workspace:*",
+    "@hypit/visual-matte": "workspace:*",
     "@hypit/visual-track": "workspace:*",
     "mediabunny": "1.62.1",
     "electron": "45.0.0",

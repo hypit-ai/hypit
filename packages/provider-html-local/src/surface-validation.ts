@@ -190,7 +190,7 @@ export async function verifyCompositableSurfaceFile(options: SurfaceInspectionOp
   assert(pixelAlpha !== undefined, `Surface pixel format ${stream.pix_fmt} is unknown to ffprobe`);
   const taggedAlpha = stream.tags?.alpha_mode === "1" || stream.tags?.alpha_mode === "straight";
   const hasAlpha = pixelAlpha || taggedAlpha;
-  if (options.surface.alphaMode === "straight") {
+  if (options.surface.picture.alphaMode === "straight") {
     assert(hasAlpha, "Surface declares straight alpha but its bytes carry no alpha channel");
   } else {
     assert(!hasAlpha, "Surface declares opaque pixels but its encoded format carries alpha");

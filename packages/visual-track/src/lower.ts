@@ -212,6 +212,7 @@ function sampleElements(
       id: layer.id,
       kind: "image",
       artifact: structuredClone(layer.source.artifact),
+      picture: structuredClone(layer.source.picture),
       style: mediaStyle,
     };
     return { ...samplingElement, children: [{ ...appearanceElement, children: [{ ...mappingElement, children: [media] }] }] };
@@ -239,6 +240,16 @@ function sampleElements(
       source: preparedVisualSource(layer.source.media),
       sampling: composeTemporalMaps(temporalSampling, layer.source.media.visual.map),
       muted: true,
+      style: mediaStyle,
+    };
+    return { ...samplingElement, children: [{ ...appearanceElement, children: [{ ...mappingElement, children: [media] }] }] };
+  }
+  if (layer.source.kind === "composition") {
+    const media: VisualElement = {
+      id: layer.id,
+      kind: "composition",
+      composition: structuredClone(layer.source.composition),
+      sampling: structuredClone(temporalSampling),
       style: mediaStyle,
     };
     return { ...samplingElement, children: [{ ...appearanceElement, children: [{ ...mappingElement, children: [media] }] }] };

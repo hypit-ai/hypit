@@ -304,55 +304,55 @@
   </ranking:TierBoard>
 
   <visual:Track id="broll" timeline={speech.timeline}>
-    <visual:Clip id="money-rain" image={broll-money-rain.image}
+    <visual:Clip id="money-rain" image={broll-money-rain.image} picture="srgb"
       extent={money-rain-extent} during={selection-money-rain}
       frame={money-rain-frame} fit="cover" treatment={recipes.media.money-rain}
       motion={broll-left}/>
-    <visual:Clip id="twitter-x" image={broll-twitter-x.image}
+    <visual:Clip id="twitter-x" image={broll-twitter-x.image} picture="srgb"
       extent={twitter-x-extent} during={selection-twitter-x}
       frame={twitter-x-frame} fit="cover" treatment={recipes.media.twitter-x}
       motion={broll-right}/>
-    <visual:Clip id="mars-rocket" image={broll-mars-rocket.image}
+    <visual:Clip id="mars-rocket" image={broll-mars-rocket.image} picture="srgb"
       extent={mars-rocket-extent} during={selection-mars-rocket}
       frame={mars-rocket-frame} fit="cover" treatment={recipes.media.mars-rocket}
       motion={broll-left}/>
-    <visual:Clip id="market-crash" image={broll-market-crash.image}
+    <visual:Clip id="market-crash" image={broll-market-crash.image} picture="srgb"
       extent={market-crash-extent} during={selection-market-crash}
       frame={market-crash-frame} fit="cover" treatment={recipes.media.market-crash}
       motion={broll-wide}/>
-    <visual:Clip id="richest-chair" image={broll-richest-chair.image}
+    <visual:Clip id="richest-chair" image={broll-richest-chair.image} picture="srgb"
       extent={richest-chair-extent} during={selection-richest-chair}
       frame={richest-chair-frame} fit="cover" treatment={recipes.media.richest-chair}
       motion={broll-right}/>
-    <visual:Clip id="haircut-x" image={broll-haircut-x.image}
+    <visual:Clip id="haircut-x" image={broll-haircut-x.image} picture="srgb"
       extent={haircut-x-extent} during={selection-haircut-x}
       frame={haircut-x-frame} fit="cover" treatment={recipes.media.haircut-x}
       motion={broll-wide}/>
-    <visual:Clip id="fired-friday" image={broll-fired-friday.image}
+    <visual:Clip id="fired-friday" image={broll-fired-friday.image} picture="srgb"
       extent={fired-friday-extent} during={selection-fired-friday}
       frame={fired-friday-frame} fit="cover" treatment={recipes.media.fired-friday}
       motion={broll-left}/>
-    <visual:Clip id="company-quit" image={broll-company-quit.image}
+    <visual:Clip id="company-quit" image={broll-company-quit.image} picture="srgb"
       extent={company-quit-extent} during={selection-company-quit}
       frame={company-quit-frame} fit="cover" treatment={recipes.media.company-quit}
       motion={broll-right}/>
-    <visual:Clip id="back-monday" image={broll-back-monday.image}
+    <visual:Clip id="back-monday" image={broll-back-monday.image} picture="srgb"
       extent={back-monday-extent} during={selection-back-monday}
       frame={back-monday-frame} fit="cover" treatment={recipes.media.back-monday}
       motion={broll-wide}/>
-    <visual:Clip id="elon-lawsuit" image={broll-elon-lawsuit.image}
+    <visual:Clip id="elon-lawsuit" image={broll-elon-lawsuit.image} picture="srgb"
       extent={elon-lawsuit-extent} during={selection-elon-lawsuit}
       frame={elon-lawsuit-frame} fit="cover" treatment={recipes.media.elon-lawsuit}
       motion={broll-left}/>
-    <visual:Clip id="google-fears" image={broll-google-fears.image}
+    <visual:Clip id="google-fears" image={broll-google-fears.image} picture="srgb"
       extent={google-fears-extent} during={selection-google-fears}
       frame={google-fears-frame} fit="cover" treatment={recipes.media.google-fears}
       motion={broll-right}/>
-    <visual:Clip id="congress-grilled" image={broll-congress-grilled.image}
+    <visual:Clip id="congress-grilled" image={broll-congress-grilled.image} picture="srgb"
       extent={congress-grilled-extent} during={selection-congress-grilled}
       frame={congress-grilled-frame} fit="cover" treatment={recipes.media.congress-grilled}
       motion={broll-left}/>
-    <visual:Clip id="still-here" image={broll-still-here.image}
+    <visual:Clip id="still-here" image={broll-still-here.image} picture="srgb"
       extent={still-here-extent} during={selection-still-here}
       frame={still-here-frame} fit="cover" treatment={recipes.media.still-here}
       motion={broll-wide}/>
@@ -377,6 +377,5 @@
     <film:Track id="captions" source={captions.visual}/>
     <film:Track source={music-bed.audio}/>
   </film:Film>
-  <html:Video id="final" composition={main.composition}
-    timeline={speech.timeline}/>
+  <html:Video id="final" composition={main.composition}/>
 </svml>

@@ -5,7 +5,6 @@ import { AuthorDeclarationRegistry, installAuthorDeclarationFacets, type Resolve
 import { MarkupDeclarationRegistry, decodeMarkupDeclarations, installMarkupDeclarationFacets } from "@hypit/markup";
 import { compositionTypes } from "@hypit/composition";
 import { mediaTypes } from "@hypit/media";
-import { timelineTypes } from "@hypit/timeline";
 
 import { hypitPackage } from "../src/activation.js";
 import { htmlVideoDeliverySpec, htmlVideoModuleRef } from "../src/index.js";
@@ -21,7 +20,6 @@ test("HTML Video declaration owns delivery and range authoring without choosing 
     records: [],
     exports: [
       { name: "composition", ref: { kind: "record", id: "composition" }, type: compositionTypes.composition },
-      { name: "timeline", ref: { kind: "record", id: "timeline" }, type: timelineTypes.timeline },
     ],
   };
   const decoded = await decodeMarkupDeclarations({
@@ -29,7 +27,7 @@ test("HTML Video declaration owns delivery and range authoring without choosing 
     text: `<svml>
       <import from="@hypit/html-video@1" as="video"/>
       <import source="facts.svml" as="facts"/>
-      <video:Video id="final" composition={facts.composition} timeline={facts.timeline}
+      <video:Video id="final" composition={facts.composition}
         quality="high" start-frame="15" end-frame-exclusive="45"/>
     </svml>`,
   }, {

@@ -32,6 +32,19 @@ export type AudioProgramClip = AudioLevelAutomation & {
 export type AudioProgramNode =
   | { readonly kind: "silence"; readonly id: string }
   | { readonly kind: "source"; readonly id: string; readonly clip: AudioProgramClip }
+  | {
+      readonly kind: "composition";
+      readonly id: string;
+      readonly program: AudioProgram;
+      readonly target: TemporalRange;
+      readonly targetStartSample: number;
+      readonly targetEndSampleExclusive: number;
+      readonly sampling: TemporalMap;
+      readonly reconstruction?: AudioReconstructionProgram;
+      readonly gain: number;
+      readonly fadeInSamples: number;
+      readonly fadeOutSamples: number;
+    }
   | { readonly kind: "mix"; readonly id: string; readonly inputs: readonly AudioSignalRef[] }
   | {
       readonly kind: "process";

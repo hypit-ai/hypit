@@ -1,9 +1,11 @@
-import type { Track } from "@hypit/composition";
+import type { Track, VisualProcessEffect } from "@hypit/composition";
+import type { WorkingPictureSpec } from "@hypit/media";
 
 /** Package-owned authoring value. A future Film Surface may produce this record. */
 export type FilmProgram = {
   readonly id: string;
   readonly clearColor: string;
+  readonly picture: WorkingPictureSpec;
   readonly visual: FilmVisualPlan;
   /** Slots of root AudioTrack inputs summed by Film. */
   readonly audio: readonly number[];
@@ -15,6 +17,15 @@ export type FilmVisualPlanMember =
       readonly kind: "stack";
       readonly id: string;
       readonly members: readonly FilmVisualPlanMember[];
+    }
+  | {
+      readonly kind: "process";
+      readonly id: string;
+      readonly inputs: readonly {
+        readonly name: string;
+        readonly members: readonly FilmVisualPlanMember[];
+      }[];
+      readonly effect: VisualProcessEffect;
     };
 
 /** Author-declared recursive visual grouping before Track values are evaluated. */

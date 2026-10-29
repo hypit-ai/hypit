@@ -6,12 +6,13 @@ import { compositionDependency, compositionTypes } from "@hypit/composition";
 import { mediaDependency } from "@hypit/media";
 
 import type { ModuleManifest, ProducerRef } from "@hypit/hypit/protocol";
-import { regionEvidenceDependency, regionEvidenceTypes } from "@hypit/region-evidence";
+import { spatialSequenceDependency, spatialSequenceTypes } from "@hypit/spatial-sequence";
 import { spatialDependency, spatialTypes } from "@hypit/spatial";
 
 export const captionFineModuleRef = { name: "@hypit/caption-fine", version: "1" } as const;
 export const captionFineTypes = {
   schedule: { module: captionFineModuleRef, name: "FineCaptionSchedule" },
+  regionBindings: { module: captionFineModuleRef, name: "FineCaptionRegionBindings" },
 } as const;
 export const captionFineProducers = {
   schedule: { module: captionFineModuleRef, name: "schedule-fine-caption" },
@@ -30,9 +31,9 @@ export const captionFineManifest: ModuleManifest = {
     mediaDependency,
     spatialDependency,
     timelineDependency,
-    regionEvidenceDependency, temporalDependency,
+    spatialSequenceDependency, temporalDependency,
   ],
-  types: [captionFineTypes.schedule.name],
+  types: [captionFineTypes.schedule.name, captionFineTypes.regionBindings.name],
   capabilities: [],
   producers: [
     {
@@ -63,7 +64,8 @@ export const captionFineManifest: ModuleManifest = {
         { name: "document", type: captionTypes.document },
         { name: "timeline", type: timelineTypes.timeline },
         { name: "within", type: spatialTypes.frame },
-        { name: "regions", type: regionEvidenceTypes.evidence },
+        { name: "regions", type: spatialSequenceTypes.timelineRegions },
+        { name: "regionBindings", type: captionFineTypes.regionBindings },
       ],
       result: { kind: "output" as const, name: "track", type: compositionTypes.visualTrack },
     },

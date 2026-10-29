@@ -1,5 +1,7 @@
 import { assertBlobRef } from "@hypit/hypit/protocol";
 import type { BlobRef } from "@hypit/hypit/protocol";
+import { verifyPictureInterpretation } from "./identity.js";
+import type { PictureInterpretation } from "./types.js";
 
 const FONT_MEDIA_TYPES = new Set([
   "font/otf",
@@ -33,8 +35,7 @@ export type CompositableSurfaceRef = {
   readonly artifact: BlobRef;
   readonly width: number;
   readonly height: number;
-  readonly colorSpace: "srgb";
-  readonly alphaMode: "opaque" | "straight";
+  readonly picture: PictureInterpretation;
   readonly timing:
     | { readonly kind: "still" }
     | {
@@ -98,11 +99,11 @@ export function assertCompositableSurfaceRef(
   ) {
     throw new Error(`${label} dimensions are invalid.`);
   }
-  if (value.colorSpace !== "srgb") throw new Error(`${label} colorSpace is unsupported.`);
-  if (value.alphaMode !== "opaque" && value.alphaMode !== "straight") {
-    throw new Error(`${label} alphaMode is unsupported.`);
+  verifyPictureInterpretation(value.picture, `${label}.picture`);
+  if (value.picture.alphaMode === "premultiplied") {
+    throw new Error(`${label} stored Artifact cannot declare premultiplied alpha.`);
   }
-  if (value.alphaMode === "straight" && !ALPHA_SURFACE_MEDIA_TYPES.has(value.artifact.mediaType)) {
+  if (value.picture.alphaMode === "straight" && !ALPHA_SURFACE_MEDIA_TYPES.has(value.artifact.mediaType)) {
     throw new Error(`${label} straight alpha requires PNG, WebP or WebM media.`);
   }
   if (value.timing.kind === "still") {

@@ -93,7 +93,7 @@ function renderFlash(
   assertTimelineIdentity(timeline);
   assertSpatialFrame(within);
   assertOptions(options);
-  assertTemporalWindowFor(window, { subjectId: options.id, timeline });
+  assertTemporalWindowFor(window, { timeline });
   const duration = window.span.endFrameExclusive - window.span.startFrame;
   const total = options.attackFrames + options.holdFrames + options.decayFrames;
   assert(total <= duration, "Flash envelope cannot outlive its Window.");

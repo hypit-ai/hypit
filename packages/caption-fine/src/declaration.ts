@@ -5,6 +5,7 @@ import {
   type AuthorDeclarationBinding,
   type AuthorDeclarationChild,
   type AuthorDeclarationCompiler,
+  type AuthorRecordDraft,
   type AuthorResolvedReference,
   type FragmentOperation,
 } from "@hypit/hypit/author";
@@ -13,7 +14,7 @@ import { sameType, type TypeRef } from "@hypit/hypit/protocol";
 import { captionProducers, captionTypes } from "@hypit/caption";
 import { compositionTypes } from "@hypit/composition";
 import { assertFontArtifactRef, assertFontStackRef, mediaTypes, type FontArtifactRef, type FontStackRef } from "@hypit/media";
-import { regionEvidenceTypes } from "@hypit/region-evidence";
+import { spatialSequenceTypes } from "@hypit/spatial-sequence";
 import { spatialTypes } from "@hypit/spatial";
 import { temporalTypes } from "@hypit/temporal";
 import { timelineTypes } from "@hypit/timeline";
@@ -101,10 +102,15 @@ export function createFineCaptionDeclarationFragment(uses: readonly CaptionUseFr
   }
   operations.push({ id: "schedule", producer: captionFineProducers.schedule,
     inputs: { timing: input("timing"), document: input("document"), program: operation(previous) }, result: { kind: "output", name: "schedule" } });
-  if (regions) inputs.push({ name: "regions", type: regionEvidenceTypes.evidence });
+  if (regions) inputs.push(
+    { name: "regions", type: spatialSequenceTypes.timelineRegions },
+    { name: "regionBindings", type: captionFineTypes.regionBindings },
+  );
   operations.push({ id: "render", producer: regions ? captionFineProducers.renderWithRegions : captionFineProducers.render,
     inputs: { schedule: operation("schedule"), document: input("document"), timeline: input("timeline"), within: input("within"),
-      program: operation(previous), ...(regions ? { regions: input("regions") } : {}) }, result: { kind: "output", name: "track" } });
+      program: operation(previous), ...(regions ? {
+        regions: input("regions"), regionBindings: input("regionBindings"),
+      } : {}) }, result: { kind: "output", name: "track" } });
   return sealGraphFragment({ inputs, operations, exports: [
     { name: "program", type: captionTypes.program, root: operation(previous) },
     { name: "schedule", type: captionFineTypes.schedule, root: operation("schedule") },
@@ -147,7 +153,8 @@ export const fineCaptionStyleAuthorDeclaration: AuthorDeclarationCompiler = {
 export const fineCaptionTrackAuthorDeclaration: AuthorDeclarationCompiler = {
   module: captionFineModuleRef,
   declaration: "caption",
-  outputs: [captionTypes.header, captionTypes.filter, captionTypes.program, captionFineTypes.schedule, compositionTypes.visualTrack],
+  outputs: [captionTypes.header, captionTypes.filter, captionTypes.program, captionFineTypes.schedule,
+    captionFineTypes.regionBindings, compositionTypes.visualTrack],
   shape: {
     summary: "Renders a CaptionDocument at its resolved CaptionTiming as one peer VisualTrack.",
     fields: [
@@ -156,14 +163,21 @@ export const fineCaptionTrackAuthorDeclaration: AuthorDeclarationCompiler = {
       { name: "timing", kind: "reference", required: true, accepts: [captionTypes.timing], summary: "Selects resolved Caption timing." },
       { name: "timeline", kind: "reference", required: true, accepts: [timelineTypes.timeline], summary: "Selects the absolute Timeline." },
       { name: "within", kind: "reference", required: true, accepts: [spatialTypes.frame], summary: "Selects the picture-plane Frame." },
-      { name: "regions", kind: "reference", required: false, accepts: [regionEvidenceTypes.evidence], summary: "Optionally selects frame-exact Role regions." },
+      { name: "regions", kind: "reference", required: false, accepts: [spatialSequenceTypes.timelineRegions], summary: "Optionally selects one Timeline-attached spatial sequence." },
     ],
-    children: [{ name: "Use", cardinality: "many", summary: "Presents matching complete Cues with one Style.", fields: [
-      { name: "id", kind: "identifier", required: false, summary: "Optionally names this Use." },
-      { name: "style", kind: "reference", required: true, accepts: [captionTypes.style], summary: "Selects a complete Caption Style." },
-      { name: "role", kind: "literal", required: false, summary: "Optionally filters by speaker Role." },
-      { name: "during", kind: "reference", required: false, accepts: [temporalTypes.window], summary: "Optionally narrows presentation to one Window." },
-    ] }],
+    children: [
+      { name: "Use", cardinality: "many", summary: "Presents matching complete Cues with one Style.", fields: [
+        { name: "id", kind: "identifier", required: false, summary: "Optionally names this Use." },
+        { name: "style", kind: "reference", required: true, accepts: [captionTypes.style], summary: "Selects a complete Caption Style." },
+        { name: "role", kind: "literal", required: false, summary: "Optionally filters by speaker Role." },
+        { name: "during", kind: "reference", required: false, accepts: [temporalTypes.window], summary: "Optionally narrows presentation to one Window." },
+      ] },
+      { name: "Follow", cardinality: "many", summary: "Explicitly binds one Script Role to one named spatial series.", fields: [
+        { name: "role", kind: "literal", required: true, summary: "Selects the Script Role whose Cues follow this series." },
+        { name: "series", kind: "literal", required: true, summary: "Names one series in the selected spatial sequence." },
+        { name: "missing", kind: "literal", required: true, values: ["hide", "authored-placement"], summary: "States what a null observation means." },
+      ] },
+    ],
   },
   bindings(declaration) {
     const id = literal(declaration, "id");
@@ -180,16 +194,17 @@ export const fineCaptionTrackAuthorDeclaration: AuthorDeclarationCompiler = {
     const timeline = await resolved(declaration, "timeline", timelineTypes.timeline, resolveReference);
     const within = await resolved(declaration, "within", spatialTypes.frame, resolveReference);
     const regions = field(declaration, "regions") === undefined ? undefined
-      : await resolved(declaration, "regions", regionEvidenceTypes.evidence, resolveReference);
+      : await resolved(declaration, "regions", spatialSequenceTypes.timelineRegions, resolveReference);
     const headerId = `${id}.header`;
-    const records = [{ id: headerId, type: captionTypes.header, value: { id }, range: declaration.range }];
+    const records: AuthorRecordDraft[] = [{ id: headerId, type: captionTypes.header, value: { id }, range: declaration.range }];
     const inputs: Record<string, AuthorResolvedReference["ref"] | { readonly kind: "record"; readonly id: string }> = {
       document: document.ref, timing: timing.ref, timeline: timeline.ref, within: within.ref,
       header: { kind: "record", id: headerId },
       ...(regions === undefined ? {} : { regions: regions.ref }),
     };
     const uses: CaptionUseFragment[] = [];
-    for (const [index, child] of declaration.children.entries()) {
+    const useChildren = declaration.children.filter((child) => child.name === "Use");
+    for (const [index, child] of useChildren.entries()) {
       const number = index + 1, key = `use-${number}`;
       const useId = field(child, "id") === undefined ? `${id}.use.${number}` : literal(child, "id");
       const style = await resolved(child, "style", captionTypes.style, resolveReference);
@@ -202,6 +217,27 @@ export const fineCaptionTrackAuthorDeclaration: AuthorDeclarationCompiler = {
       inputs[`${key}-filter`] = { kind: "record", id: filterId };
       if (window !== undefined) inputs[`${key}-window`] = window.ref;
       uses.push({ key, bounded: window !== undefined });
+    }
+    const followChildren = declaration.children.filter((child) => child.name === "Follow");
+    if ((regions === undefined) !== (followChildren.length === 0)) {
+      throw new Error(`${declaration.name}.regions and at least one Follow must be declared together.`);
+    }
+    if (regions !== undefined) {
+      const roles = new Set<string>();
+      const bindings = followChildren.map((child) => {
+        const role = literal(child, "role");
+        if (roles.has(role)) throw new Error(`${declaration.name} repeats Follow role ${role}.`);
+        roles.add(role);
+        const missing = literal(child, "missing");
+        if (missing !== "hide" && missing !== "authored-placement") {
+          throw new Error(`${child.name}.missing must be hide or authored-placement.`);
+        }
+        return { role, seriesId: literal(child, "series"), missing };
+      });
+      const bindingId = `${id}.region-bindings`;
+      records.push({ id: bindingId, type: captionFineTypes.regionBindings,
+        value: { bindings }, range: declaration.range });
+      inputs.regionBindings = { kind: "record", id: bindingId };
     }
     return { records, components: [{
       id,

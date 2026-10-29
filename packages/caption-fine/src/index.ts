@@ -5,8 +5,9 @@ export {
   fineCaptionStyleAuthorDeclaration,
   fineCaptionTrackAuthorDeclaration,
 } from "./declaration.js";
-export { fineCaptionRegionEvidenceFragment, fineCaptionTrackFragment } from "./fragment.js";export { captionFineManifest, captionFineModuleRef, captionFineProducers, captionFineTypes } from "./manifest.js";
+export { fineCaptionRegionSequenceFragment, fineCaptionTrackFragment } from "./fragment.js";export { captionFineManifest, captionFineModuleRef, captionFineProducers, captionFineTypes } from "./manifest.js";
 export { renderFineCaption } from "./render.js";
+export { assertFineCaptionRegionBindings } from "./region-binding.js";
 export { assertFineCaptionSchedule, scheduleFineCaption } from "./schedule.js";
 export {
   fineCaptionOneShotMotions,

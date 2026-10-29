@@ -21,10 +21,15 @@ test("Studio snapshots pass one typed HTML Program and only its selected Artifac
   const bytes = await sharp({ create: { width: 96, height: 64, channels: 3, background: "red" } }).png().toBuffer();
   const artifact = { kind: "blob" as const, resource: "res_program_image" as const, size: bytes.length, mediaType: "image/png" };
   const late = { kind: "blob" as const, resource: "res_late_image" as const, size: 123, mediaType: "image/png" };
-  const program = { visualIr: "hypit.visual-ir@1", frameRate: { numerator: 30000, denominator: 1001 }, frameCount: 12,
-    canvas: { width: 96, height: 64 }, artifacts: [
-      { id: "artifact-1", artifact: late, usage: { kind: "frames" as const, spans: [{ startFrame: 10, endFrameExclusive: 12 }] } },
-      { id: "artifact-2", artifact, usage: { kind: "always" as const } },
+  const picture = { colorPrimaries: "bt709", colorTransfer: "srgb", colorMatrix: "rgb",
+    colorRange: "full", bitDepth: 8, alphaMode: "straight" } as const;
+  const program = { visualIr: "hypit.visual-ir@1",
+    picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100,
+      alphaMode: "premultiplied" } as const,
+    frameRate: { numerator: 30000, denominator: 1001 }, frameCount: 12,
+    canvas: { width: 96, height: 64 }, processPasses: 0, artifacts: [
+      { id: "artifact-1", artifact: late, picture, usage: { kind: "frames" as const, spans: [{ startFrame: 10, endFrameExclusive: 12 }] } },
+      { id: "artifact-2", artifact, picture, usage: { kind: "always" as const } },
     ], surfaces: [], videoSources: [],
     html: '<!doctype html><div data-hypit-program-root data-hypit-frame-count="12"><script>const input="hypit-artifact://artifact-2";</script><img data-hypit-artifact-src="hypit-artifact://artifact-1"></div>' };
   const fetched: string[] = [];

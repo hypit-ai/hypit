@@ -223,6 +223,10 @@ test("local media Provider inspects moving picture, audio and attached picture w
       video: { mode: "primary-moving" },
       audio: { mode: "default" },
       spanAuthority: "video",
+      picture: { mode: "explicit", interpretation: {
+        colorPrimaries: "bt709", colorTransfer: "bt709", colorMatrix: "bt709", colorRange: "limited",
+        bitDepth: 8, alphaMode: "opaque",
+      } },
     }));
     const prepared = prepareMedia({ id: "fixture", source, inspection, selection });
     assert.equal(prepared.source.resource, source.resource);
@@ -252,7 +256,7 @@ test("local media Provider derives exact 16 kHz evidence from retimed Prepared M
       source,
       inspection,
       selection: selectMediaStreams(inspection, {
-        video: { mode: "none" }, audio: { mode: "default" }, spanAuthority: "audio",
+        video: { mode: "none" }, audio: { mode: "default" }, spanAuthority: "audio", picture: { mode: "none" },
       }),
     });
     const media = transformPreparedMedia(prepared, { operations: [{

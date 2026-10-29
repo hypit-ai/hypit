@@ -2,7 +2,7 @@ import { sameType } from "@hypit/hypit/protocol";
 import type { TypeRef } from "@hypit/hypit/protocol";
 import { blobTypes } from "@hypit/hypit/blob";
 import { compositionTypes } from "@hypit/composition";
-import { mediaTypes } from "@hypit/media";
+import { mediaTypes, pictureInterpretationProfile } from "@hypit/media";
 import type { FontStackRef } from "@hypit/media";
 import { visualTrackTypes } from "@hypit/visual-track";
 import { spatialTypes } from "@hypit/spatial";
@@ -206,6 +206,13 @@ async function compileDepthStack({
     const source = await oneOfReference(child, "source", [blobTypes.blob, mediaTypes.prepared, mediaTypes.compositableSurface], resolveReference);
     const sourceKind = sameType(source.type, blobTypes.blob) ? "still"
       : sameType(source.type, mediaTypes.prepared) ? "timed" : "surface";
+    const pictureField = field(child, "picture");
+    if (sourceKind === "still" && pictureField === undefined) {
+      throw new Error(`${child.name}.picture is required for a still image.`);
+    }
+    if (sourceKind !== "still" && pictureField !== undefined) {
+      throw new Error(`${child.name}.picture belongs only to a still image.`);
+    }
     const extent = field(child, "extent") === undefined ? undefined
       : await reference(child, "extent", spatialTypes.extent, resolveReference);
     if (sourceKind === "still" && extent === undefined) throw new Error(`${child.name}.extent is required for a still image.`);
@@ -247,6 +254,18 @@ async function compileDepthStack({
       extentName = `card-${suffix}-extent`;
       inputs[extentName] = extent.ref;
     }
+    let pictureName: string | undefined;
+    if (pictureField !== undefined) {
+      pictureName = `card-${suffix}-picture`;
+      const pictureId = `${id}.card.${suffix}.picture`;
+      records.push({
+        id: pictureId,
+        type: mediaTypes.pictureInterpretation,
+        value: pictureInterpretationProfile(text(child, "picture") as "srgb"),
+        range,
+      });
+      inputs[pictureName] = { kind: "record", id: pictureId };
+    }
     let framePaintSpecName: string | undefined;
     if (material.framePaint !== undefined) {
       framePaintSpecName = `card-${suffix}-frame-paint`;
@@ -255,7 +274,10 @@ async function compileDepthStack({
       inputs[framePaintSpecName] = { kind: "record", id: paintId };
     }
     cards.push({
-      suffix, sourceKind, sourceName, ...(extentName === undefined ? {} : { extentName }), fitName, sampleSpecName,
+      suffix, sourceKind, sourceName,
+      ...(extentName === undefined ? {} : { extentName }),
+      ...(pictureName === undefined ? {} : { pictureName }),
+      fitName, sampleSpecName,
       ...(framePaintSpecName === undefined ? {} : { framePaintSpecName }), labelName, cardSpecName, activationName,
     });
   }
@@ -343,6 +365,7 @@ export const depthStackTrackAuthorDeclaration: AuthorDeclarationCompiler = {
     spatialTypes.fit,
     visualTrackTypes.sampleLayerSpec,
     visualTrackTypes.paintLayerSpec,
+    mediaTypes.pictureInterpretation,
     depthStackTypes.cardLabel,
     depthStackTypes.program,
     compositionTypes.visualTrack,
@@ -364,6 +387,7 @@ export const depthStackTrackAuthorDeclaration: AuthorDeclarationCompiler = {
         identifierField(),
         referenceField("source", [blobTypes.blob, mediaTypes.prepared, mediaTypes.compositableSurface], true),
         referenceField("extent", spatialTypes.extent, false),
+        literalField("picture", false, ["srgb"]),
         referenceField("at", temporalTypes.instant, true, "expression"),
         referenceField("appearance", recipeType, false),
         referenceField("label", depthStackTypes.cardLabel, false),

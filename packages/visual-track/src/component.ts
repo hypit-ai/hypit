@@ -1,7 +1,6 @@
 import type { ProducerPackage, ProducerHandlerContext } from "@hypit/hypit/producer";
 import type { RefinementPackage } from "@hypit/hypit/refinement";
-import { assertVisualProgram } from "@hypit/composition";
-import type { CompositableSurfaceRef, PreparedMedia } from "@hypit/media";
+import type { CompositableSurfaceRef, PictureInterpretation, PreparedMedia } from "@hypit/media";
 import { assertBlobRef, canonicalize } from "@hypit/hypit/protocol";
 import type { BlobRef, Value } from "@hypit/hypit/protocol";
 import type { ContentFit, IntrinsicExtent, SpatialFrame, SpatialMap2D, SpatialPath } from "@hypit/spatial";
@@ -25,6 +24,7 @@ import { visualTrackProducers, visualTrackTypes } from "./manifest.js";
 import {
   appendVisualClip,
   appendVisualTransition,
+  assertVisualTransitionEffect,
   assertVisualTransitionSpec,
   assertVisualClipSpec,
   assertVisualTrackHeader,
@@ -82,11 +82,13 @@ export const visualTrackComponent = {
     )) }) },
     { producer: visualTrackProducers.appendStillLayer, handler: ({ inputs }) => ({ kind: "output", value: output(appendStillMediaLayer(
       valueOf<MediaLayerSet>(inputs.layers?.value, "MediaLayerSet"), blob(inputs.source?.value),
+      valueOf<PictureInterpretation>(inputs.picture?.value, "PictureInterpretation"),
       valueOf<IntrinsicExtent>(inputs.extent?.value, "IntrinsicExtent"), valueOf<ContentFit>(inputs.fit?.value, "ContentFit"),
       valueOf<MediaSampleLayerSpec>(inputs.spec?.value, "MediaSampleLayerSpec"),
     )) }) },
     { producer: visualTrackProducers.appendMappedStillLayer, handler: ({ inputs }) => ({ kind: "output", value: output(appendMappedStillMediaLayer(
       valueOf<MediaLayerSet>(inputs.layers?.value, "MediaLayerSet"), blob(inputs.source?.value),
+      valueOf<PictureInterpretation>(inputs.picture?.value, "PictureInterpretation"),
       valueOf<IntrinsicExtent>(inputs.extent?.value, "IntrinsicExtent"), valueOf<SpatialMap2D>(inputs.mapping?.value, "SpatialMap2D"),
       valueOf<MediaSampleLayerSpec>(inputs.spec?.value, "MediaSampleLayerSpec"),
     )) }) },
@@ -145,7 +147,7 @@ export const visualTrackComponent = {
     { type: visualTrackTypes.clipSpec,
       handler: ({ value }) => assertVisualClipSpec(valueOf<VisualClipSpec>(value, "VisualClipSpec")) },
     { type: visualTrackTypes.transitionEffect,
-      handler: ({ value }) => assertVisualProgram(valueOf<VisualTransitionSpec["effect"]>(value, "VisualTransitionEffect"), "VisualTransitionEffect") },
+      handler: ({ value }) => assertVisualTransitionEffect(valueOf<VisualTransitionSpec["effect"]>(value, "VisualTransitionEffect")) },
     { type: visualTrackTypes.transitionSpec,
       handler: ({ value }) => assertVisualTransitionSpec(valueOf<VisualTransitionSpec>(value, "VisualTransitionSpec")) },
     { type: visualTrackTypes.set,

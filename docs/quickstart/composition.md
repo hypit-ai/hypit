@@ -107,7 +107,7 @@ never inherit visual Stack membership.
 
 ```svml
 <html:Video id="final"
-  composition={main.composition} timeline={speech.timeline}/>
+  composition={main.composition}/>
 ```
 
 The renderer compiles the visual contributions, captures requested frames, renders AudioTracks and
@@ -125,7 +125,7 @@ the usual Invocation Target.
 ## Render a frame interval
 
 ```svml
-<html:Video id="detail" composition={main.composition} timeline={speech.timeline}
+<html:Video id="detail" composition={main.composition}
   start-frame="240" end-frame-exclusive="360"/>
 ```
 
@@ -157,7 +157,7 @@ Timeline does not require speech or media:
   appearance={recipes.film.main}>
   <film:Track id="conversation" source={conversation.visual}/>
 </film:Film>
-<html:Video id="final" composition={main.composition} timeline={animation.timeline}/>
+<html:Video id="final" composition={main.composition}/>
 ```
 
 The component owns its reading rhythm through ordinary absolute time. With no selected AudioTrack,

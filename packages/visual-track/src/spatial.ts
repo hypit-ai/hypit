@@ -11,7 +11,7 @@ import {
   assertMediaLayerSet,
   assertMediaPaintLayerSpec,
   assertMediaSampleLayerSpec,
-  assertMediaVisualSource,
+  assertVisualSource,
 } from "./layers.js";
 import type {
   MediaLayerProgram,
@@ -61,7 +61,7 @@ export function assertMediaLayerPrograms(value: readonly MediaLayerProgram[]): v
       assertMediaPaintLayerSpec(layer);
       continue;
     }
-    assertMediaVisualSource(layer.source, `Media layer ${layer.id}.source`);
+    assertVisualSource(layer.source, `Media layer ${layer.id}.source`);
     assertSpatialMap2D(layer.mapping);
     if (layer.sampling?.kind === "map") assertTemporalMap(layer.sampling.value);
     assertMediaSampleLayerSpec({
@@ -74,6 +74,6 @@ export function assertMediaLayerPrograms(value: readonly MediaLayerProgram[]): v
 }
 
 export function assertResolvedSampleLayer(value: MediaSampleLayerProgram, label: string): void {
-  assertMediaVisualSource(value.source, `${label}.source`);
+  assertVisualSource(value.source, `${label}.source`);
   assertSpatialMap2D(value.mapping);
 }

@@ -51,7 +51,7 @@ test("transparent Prepared Media composites through an explicit Visual Clip in C
         projection: { start: { ref: "timeline.start" }, end: { ref: "timeline.end" } } }));
     const speechVisual = projectVisualTrack(space, finalizeVisualTrack(speechSet, speechHeader, space));
     const brollVisual = projectVisualTrack(space, finalizeVisualTrack(items, header, space));
-    const document = compileHtmlProgram(sealComposition({ id: "alpha-proof", visual: { canvas: { width: 192, height: 64, clearColor: "#143cdc" }, root: { members: [speechVisual, brollVisual].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }), space);
+    const document = compileHtmlProgram(sealComposition({ id: "alpha-proof", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 192, height: 64, clearColor: "#143cdc" }, root: { members: [speechVisual, brollVisual].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }, space));
     const rendered = await rasterizeHtmlProgram({ program: document, delivery: htmlProviderDelivery("high") },
       { resources, workers: 2, processTimeoutMs: 120_000 });
     const video = await writeTestArtifact(resources, rendered.artifact, join(directory, "speech-and-broll.mp4"));

@@ -38,7 +38,7 @@ test("all official transition declarations compile through the public Markup sur
   ]);
   assert.equal(decoded.records.length, 8);
   assert.equal(decoded.records.every(({ value }) => {
-    const program = value as unknown as { readonly format?: string };
-    return program.format === HTML_VISUAL_FORMAT;
+    const effect = value as unknown as { readonly inputs?: readonly string[]; readonly program?: { readonly format?: string } };
+    return effect.inputs?.join(",") === "outgoing,incoming" && effect.program?.format === HTML_VISUAL_FORMAT;
   }), true);
 });

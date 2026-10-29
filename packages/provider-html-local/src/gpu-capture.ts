@@ -11,12 +11,14 @@ import type { CaptureInput } from "./capture.js";
 import { createFramePreparer } from "./opaque-capture.js";
 import type { SourceFrameUpdate } from "./opaque-capture.js";
 import { assert } from "./process.js";
+import { openProcessInput } from "./process.js";
+import { isLocalHtmlHdr10Request } from "./support.js";
 
 export async function gpuCapturePages({ width, height }: { width: number; height: number }) {
   const markerWidth = 32;
   const markerHeight = 2;
   const shell = `/__hypit_capture_${randomUUID()}.html`;
-  const encoder = `/__hypit_encoder_${randomUUID()}.html`;
+  const output = `/__hypit_output_${randomUUID()}.html`;
   const decoder = `/__hypit_decoder_${randomUUID()}.mjs`;
   const video = `/__hypit_video_${randomUUID()}.mjs`;
   const bundle = await readFile(new URL("../vendor/mediabunny/dist/bundles/mediabunny.min.mjs", import.meta.url), "utf8");
@@ -35,41 +37,72 @@ window.__hypitCaptureCommit=token=>{
   }
 };
 </script>`;
-  return { shell, encoder, decoder, video, html, bundle, videoModule, markerWidth, markerHeight };
+  return { shell, output, decoder, video, html, bundle, videoModule, markerWidth, markerHeight };
 }
 
 type PendingFrame = { token: number; ordinal: number; waitStartedAt: number; resolve(): void; reject(error: unknown): void };
 type Scene = { window: BrowserWindow; pending?: PendingFrame | undefined;
   latest?: { readonly texture: OffscreenSharedTexture; readonly receivedAt: number } | undefined; busy: boolean };
 
-/** One request owns its windows, texture references and ordered H.264 stream. */
+function x265HdrStaticMetadata(metadata: NonNullable<CaptureInput["delivery"]>["hdrStaticMetadata"]): string {
+  assert(metadata !== undefined, "HDR10 delivery is missing its authored static metadata");
+  const xy = (point: { readonly x: number; readonly y: number }) =>
+    `${Math.round(point.x * 50_000)},${Math.round(point.y * 50_000)}`;
+  const display = metadata.masteringDisplay;
+  const mastering = `G(${xy(display.green)})B(${xy(display.blue)})R(${xy(display.red)})`
+    + `WP(${xy(display.whitePoint)})L(${Math.round(display.maxLuminanceNits * 10_000)},`
+    + `${Math.round(display.minLuminanceNits * 10_000)})`;
+  const light = metadata.contentLight;
+  return `master-display=${mastering}:max-cll=${light.maxContentLightLevelNits},${light.maxFrameAverageLightLevelNits}`;
+}
+
+/** One request owns its windows, texture references and ordered output stream. */
 export async function createGpuCapture(input: CaptureInput, origin: string,
-  pages: Awaited<ReturnType<typeof gpuCapturePages>>, controller: AbortController, workers: number) {
+  pages: Awaited<ReturnType<typeof gpuCapturePages>>, controller: AbortController, workers: number,
+  ffmpegPath: string) {
   const { BrowserWindow, ipcMain, sharedTexture } = createRequire(import.meta.url)("electron") as typeof import("electron");
   assert(input.frames === undefined, "Shared-texture capture only executes encoded visual requests");
   const { config, document, delivery } = input;
   const { width, height } = document.canvas;
   const frameCount = input.range.endFrameExclusive - input.range.startFrame;
   const fps = document.frameRate.numerator / document.frameRate.denominator;
-  assert(width % 2 === 0 && height % 2 === 0, "Shared-texture H.264 export requires even canvas dimensions");
+  const hdr10 = isLocalHtmlHdr10Request({ program: document, delivery });
+  assert(width % 2 === 0 && height % 2 === 0, "Shared-texture 4:2:0 export requires even canvas dimensions");
   assert(frameCount < 2 ** 32, "Shared-texture export exceeds the frame identifier range");
   assert(sharedTexture?.importSharedTexture !== undefined, "This Electron build does not provide sharedTexture");
   const signal = controller.signal;
   const sceneFrameRate = workers <= 1 ? 240 : workers === 2 ? 120 : 60;
-  const raw = join(input.directory, "encoded.h264");
-  const writer = createWriteStream(raw);
-  const writerClosed = finished(writer).catch(() => {});
+  const raw = hdr10 ? undefined : join(input.directory, "encoded.h264");
+  const output = join(input.directory, "visual.mp4");
+  const quality = delivery.encoding.quality;
+  const hdrMetadata = hdr10 ? x265HdrStaticMetadata(delivery.hdrStaticMetadata) : undefined;
+  const rawWriter = raw === undefined ? undefined : createWriteStream(raw);
+  const hdrEncoder = hdr10 ? openProcessInput({ executable: ffmpegPath,
+    argv: ["-v", "error", "-y", "-f", "rawvideo", "-pixel_format", "p010le",
+      "-video_size", `${width}x${height}`, "-framerate", `${document.frameRate.numerator}/${document.frameRate.denominator}`,
+      "-i", "pipe:0", "-frames:v", String(frameCount), "-an",
+      "-vf", "setparams=color_primaries=bt2020:color_trc=smpte2084:colorspace=bt2020nc:range=tv",
+      "-c:v", "libx265",
+      "-preset", quality === "draft" ? "veryfast" : "medium",
+      "-crf", String({ draft: 28, standard: 23, high: 18 }[quality]), "-pix_fmt", "yuv420p10le",
+      "-x265-params", `colorprim=bt2020:transfer=smpte2084:colormatrix=bt2020nc:range=limited:repeat-headers=1:${hdrMetadata}`,
+      "-color_range", "tv", "-colorspace", "bt2020nc", "-color_trc", "smpte2084",
+      "-color_primaries", "bt2020", "-tag:v", "hvc1", "-movflags", "+faststart", output],
+    timeoutMs: config.processTimeoutMs, maxOutputBytes: config.maxProcessOutputBytes, signal,
+  }) : undefined;
+  const writerClosed = rawWriter === undefined ? Promise.resolve() : finished(rawWriter).catch(() => {});
   const scenes = new Set<Scene>();
   let transferring = false;
   let closing = false, bytesWritten = 0, chunks = 0, lastTimestamp = -1;
   let paintWaitFrameMs = 0, transferMs = 0, textureTransfers = 0, rejectedTextures = 0;
   let contentOnlyTextures = 0, unrequestedTextures = 0;
-  const encoding = new BrowserWindow({ show: false, width: 300, height: 200, webPreferences: {
-    preload: fileURLToPath(new URL("../runtime/gpu-encoder.cjs", import.meta.url)), sandbox: false, backgroundThrottling: false,
+  const outputWindow = new BrowserWindow({ show: false, width: 300, height: 200, webPreferences: {
+    preload: fileURLToPath(new URL("../runtime/gpu-output.cjs", import.meta.url)), sandbox: false, backgroundThrottling: false,
   } });
   const fail = (error: unknown) => { if (!closing) controller.abort(error instanceof Error ? error : new Error(String(error))); };
-  writer.on("error", fail);
-  const trusted = (event: IpcMainEvent) => event.sender === encoding.webContents;
+  rawWriter?.on("error", fail);
+  void hdrEncoder?.completed.catch(fail);
+  const trusted = (event: IpcMainEvent) => event.sender === outputWindow.webContents;
   function processTexture() {
     if (closing || transferring) return;
     const scene = [...scenes].filter(item => !item.busy && item.pending !== undefined && item.latest !== undefined)
@@ -86,12 +119,12 @@ export async function createGpuCapture(input: CaptureInput, origin: string,
     } catch (error) { texture.release(); fail(error); return; }
     // Electron limits each native transfer handshake to one second. Submit the
     // earliest ready frame and wait for its import acknowledgement before another.
-    // Snapshot copying and encoding can continue concurrently in the receiver.
+    // Snapshot copying and output preparation can continue concurrently in the receiver.
     transferring = true;
     const request = { token: scene.pending!.token, ordinal: scene.pending!.ordinal };
     const transferStarted = performance.now();
     void Promise.resolve().then(() => sharedTexture.sendSharedTexture(
-      { frame: encoding.webContents.mainFrame, importedSharedTexture: imported }, request))
+      { frame: outputWindow.webContents.mainFrame, importedSharedTexture: imported }, request))
       .catch(fail).finally(() => {
         transferMs += performance.now() - transferStarted; textureTransfers++;
         imported.release(); transferring = false; processTexture();
@@ -116,9 +149,9 @@ export async function createGpuCapture(input: CaptureInput, origin: string,
   const captureError = (event: IpcMainEvent, error: string) => { if (trusted(event)) fail(new Error(error)); };
   ipcMain.on("hypit-observed", observed);
   ipcMain.on("hypit-capture-error", captureError);
-  ipcMain.handle("hypit-encoded", async (event,
+  ipcMain.handle("hypit-output-batch", async (event,
     batch: Array<{ readonly bytes: Uint8Array; readonly timestamp: number }>) => {
-    assert(event.sender === encoding.webContents, "Unexpected encoder sender");
+    assert(event.sender === outputWindow.webContents, "Unexpected output sender");
     signal.throwIfAborted();
     assert(Array.isArray(batch) && batch.length > 0 && batch.length <= 8,
       "Encoder emitted an invalid output batch");
@@ -130,8 +163,14 @@ export async function createGpuCapture(input: CaptureInput, origin: string,
       lastTimestamp = item.timestamp; chunks++; bytesWritten += item.bytes.byteLength;
       buffers.push(Buffer.from(item.bytes.buffer, item.bytes.byteOffset, item.bytes.byteLength));
     }
-    assert(bytesWritten <= config.maxRenderedBytes, "HTML renderer output exceeds its byte limit");
-    await new Promise<void>((resolve, reject) => writer.write(Buffer.concat(buffers),
+    // SDR crosses this boundary as the encoded result stream. HDR crosses as
+    // fixed P010 encoder input; its result-size limit is checked on the final
+    // container, not incorrectly against the larger transient pixel stream.
+    if (hdrEncoder === undefined)
+      assert(bytesWritten <= config.maxRenderedBytes, "HTML renderer output exceeds its byte limit");
+    const bytes = Buffer.concat(buffers);
+    if (hdrEncoder !== undefined) await hdrEncoder.write(bytes);
+    else await new Promise<void>((resolve, reject) => rawWriter!.write(bytes,
       error => error ? reject(error) : resolve()));
   });
   const closeScene = (scene: Scene) => {
@@ -145,18 +184,18 @@ export async function createGpuCapture(input: CaptureInput, origin: string,
       closing = true;
       signal.removeEventListener("abort", aborted);
       for (const scene of scenes) closeScene(scene);
-      if (!encoding.isDestroyed()) encoding.destroy();
+      if (!outputWindow.isDestroyed()) outputWindow.destroy();
       ipcMain.off("hypit-observed", observed);
       ipcMain.off("hypit-capture-error", captureError);
-      ipcMain.removeHandler("hypit-encoded");
-      writer.destroy();
+      ipcMain.removeHandler("hypit-output-batch");
+      rawWriter?.destroy();
     }
     await writerClosed;
   };
   const aborted = () => { void close(); };
   signal.addEventListener("abort", aborted, { once: true });
-  encoding.webContents.on("render-process-gone", (_event, detail) => fail(new Error(`GPU encoder exited: ${detail.reason}`)));
-  encoding.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+  outputWindow.webContents.on("render-process-gone", (_event, detail) => fail(new Error(`GPU output process exited: ${detail.reason}`)));
+  outputWindow.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
 
   const waitMessage = (channel: string) => new Promise<void>((resolve, reject) => {
     const done = (event: IpcMainEvent) => { if (trusted(event)) { cleanup(); resolve(); } };
@@ -169,16 +208,17 @@ export async function createGpuCapture(input: CaptureInput, origin: string,
     signal.throwIfAborted();
     const ready = waitMessage("hypit-encoder-ready");
     void ready.catch(() => {});
-    await encoding.loadURL(new URL(pages.encoder, origin).href);
+    await outputWindow.loadURL(new URL(pages.output, origin).href);
     await ready;
     const configured = waitMessage("hypit-configured");
     void configured.catch(() => {});
     const bitrate = Math.max(64_000, Math.round({ draft: 6_000_000, standard: 12_000_000, high: 24_000_000 }[delivery.encoding.quality]
       * width * height / (1920 * 1080) * fps / 30));
-    encoding.webContents.send("hypit-configure", {
+    outputWindow.webContents.send("hypit-configure", {
       width, height, fps, bitrate, frameCount, maxPendingBytes: config.maxPendingFrameBytes,
       markerWidth: pages.markerWidth, markerHeight: pages.markerHeight,
-      picture: delivery.picture,
+      picture: delivery.picture, mode: hdr10 ? "hdr10" : "sdr",
+      referenceWhiteNits: document.picture.referenceWhiteNits,
     });
     await configured;
   } catch (error) { controller.abort(error); await close(); throw error; }
@@ -188,7 +228,7 @@ export async function createGpuCapture(input: CaptureInput, origin: string,
       signal.throwIfAborted();
       const window = new BrowserWindow({ show: false, width: Math.max(width, pages.markerWidth), height: height + pages.markerHeight,
         useContentSize: true, backgroundColor: delivery.picture.alpha.matte, webPreferences: { backgroundThrottling: false,
-          offscreen: { useSharedTexture: true, sharedTexturePixelFormat: "argb", deviceScaleFactor: 1 } } });
+          offscreen: { useSharedTexture: true, sharedTexturePixelFormat: hdr10 ? "rgbaf16" : "argb", deviceScaleFactor: 1 } } });
       const scene: Scene = { window, busy: false };
       scenes.add(scene);
       // One receiver serializes texture transfer and one encoder consumes every
@@ -201,7 +241,7 @@ export async function createGpuCapture(input: CaptureInput, origin: string,
         const texture = event.texture;
         if (texture === undefined) return;
         if (closing || texture.textureInfo.widgetType !== "frame") { texture.release(); return; }
-        // Programme changes can paint before the explicit commit marker reaches
+        // Program changes can paint before the explicit commit marker reaches
         // the shared surface. Those textures cannot satisfy the pending frame and
         // must not cross the native transfer boundary. The marker dirty region is
         // the compositor's exact acknowledgement that this surface may carry it;
@@ -231,14 +271,38 @@ export async function createGpuCapture(input: CaptureInput, origin: string,
       await child.executeJavaScript(`__hypitFrameProgram.prepare(${JSON.stringify(input.frameSelection)})`);
       const viewport = await child.executeJavaScript("({width:innerWidth,height:innerHeight})") as { width: number; height: number };
       assert(viewport.width === width && viewport.height === height, "GPU capture changed the HTML Program viewport");
-      const page: Pick<Page, "evaluate"> = {
+      const page: Pick<Page, "evaluate" | "screenshot"> = {
         evaluate: ((fn: (...args: unknown[]) => unknown, ...args: unknown[]) =>
           child.executeJavaScript(`(${fn.toString()})(...${JSON.stringify(args)})`)) as Page["evaluate"],
+        screenshot: (async (options: Parameters<Page["screenshot"]>[0] = {}) => {
+          const clip = options.clip;
+          assert(clip !== undefined, "Visual Process capture requires one explicit canvas clip");
+          window.setBackgroundColor("#00000000");
+          try {
+            await new Promise<void>((resolve) => {
+              const painted = (_event: unknown, dirtyRect: { readonly y: number; readonly height: number }) => {
+                if (dirtyRect.y >= height || dirtyRect.y + dirtyRect.height <= 0) return;
+                window.webContents.off("paint", painted);
+                resolve();
+              };
+              window.webContents.on("paint", painted);
+              window.webContents.invalidate();
+            });
+            const image = await window.webContents.capturePage({
+              x: Math.round(clip.x), y: Math.round(clip.y),
+              width: Math.round(clip.width), height: Math.round(clip.height),
+            });
+            return image.toPNG();
+          } finally {
+            window.setBackgroundColor(delivery.picture.alpha.matte);
+          }
+        }) as unknown as Page["screenshot"],
       };
       const prepare = await createFramePreparer(page);
       await child.executeJavaScript(`import(${JSON.stringify(new URL(pages.video, origin).href)})
         .then(module=>module.installBrowserVideo(${JSON.stringify(new URL(pages.decoder, origin).href)},
-          ${Math.max(1, Math.floor(config.maxDecodedSourceBytes / workers))}))`);
+          ${Math.max(1, Math.floor(config.maxDecodedSourceBytes / workers))},
+          ${JSON.stringify(document.picture)}))`);
       return {
         browserPid: window.webContents.getOSProcessId(),
         async stats() { return child.executeJavaScript("__hypitVideoStats()"); },
@@ -275,14 +339,15 @@ export async function createGpuCapture(input: CaptureInput, origin: string,
     },
     async finish() {
       signal.throwIfAborted();
-      const summary = await encoding.webContents.executeJavaScript("window.__hypitFinishEncoding()") as {
+      const summary = await outputWindow.webContents.executeJavaScript("window.__hypitFinishOutput()") as {
         readonly accepted: number;
         readonly stats: Readonly<Record<string, number>>;
       };
-      assert(summary.accepted === frameCount && chunks === frameCount, "GPU encoder did not complete every requested frame");
-      await new Promise<void>((resolve, reject) => writer.end((error?: Error | null) => error ? reject(error) : resolve()));
+      assert(summary.accepted === frameCount && chunks === frameCount, "GPU output process did not complete every requested frame");
+      if (hdrEncoder !== undefined) await hdrEncoder.close();
+      else await new Promise<void>((resolve, reject) => rawWriter!.end((error?: Error | null) => error ? reject(error) : resolve()));
       signal.throwIfAborted();
-      return { raw, stats: { paintWaitFrameMs, transferMs, textureTransfers, rejectedTextures,
+      return { ...(raw === undefined ? { output } : { raw }), stats: { paintWaitFrameMs, transferMs, textureTransfers, rejectedTextures,
         contentOnlyTextures, unrequestedTextures, ...summary.stats } };
     },
     close,

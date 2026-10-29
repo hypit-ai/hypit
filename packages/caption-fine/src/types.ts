@@ -190,3 +190,14 @@ export type FineCaptionSchedule = {
   readonly documentId: string;
   readonly cues: readonly FineCaptionScheduledCue[];
 };
+
+/** Consumer-owned meaning assigned to one named spatial series. */
+export type FineCaptionRegionBinding = {
+  readonly role: string;
+  readonly seriesId: string;
+  readonly missing: "hide" | "authored-placement";
+};
+
+export type FineCaptionRegionBindings = {
+  readonly bindings: readonly FineCaptionRegionBinding[];
+};

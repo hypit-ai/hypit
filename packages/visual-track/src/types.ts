@@ -1,6 +1,6 @@
-import type { VisualEasing, VisualProgram } from "@hypit/composition";
+import type { Composition, VisualEasing, VisualProcessEffect } from "@hypit/composition";
 import type { FrameSpan } from "@hypit/timeline";
-import type { CompositableSurfaceRef, PreparedMedia } from "@hypit/media";
+import type { CompositableSurfaceRef, PictureInterpretation, PreparedMedia } from "@hypit/media";
 import type { BlobRef } from "@hypit/hypit/protocol";
 import type {
   ContentFit,
@@ -12,10 +12,11 @@ import type {
 import type { TemporalMap, TemporalRelationSpec } from "@hypit/temporal";
 
 /** Intrinsic visual truth resolved before Media authoring; never a Provider or lineage envelope. */
-export type MediaVisualSource =
+export type VisualSource =
   | {
       readonly kind: "still";
       readonly artifact: BlobRef;
+      readonly picture: PictureInterpretation;
       readonly extent: IntrinsicExtent;
     }
   | {
@@ -27,6 +28,11 @@ export type MediaVisualSource =
   | {
       readonly kind: "surface";
       readonly surface: CompositableSurfaceRef;
+      readonly extent: IntrinsicExtent;
+    }
+  | {
+      readonly kind: "composition";
+      readonly composition: Composition;
       readonly extent: IntrinsicExtent;
     };
 
@@ -93,7 +99,7 @@ export type MediaSampleLayer = {
   readonly kind: "sample";
   /** Absent exactly for still material; timed material always carries one occurrence-local sampling relation. */
   readonly sampling?: MediaVisualSampling;
-  readonly source: MediaVisualSource;
+  readonly source: VisualSource;
   readonly placement: MediaSamplePlacement;
   readonly appearance: MediaSampleAppearance;
   readonly samplingMotion?: MediaSamplingMotion;
@@ -202,6 +208,13 @@ export type VisualClipProgram = {
   readonly motion?: VisualClipMotion;
 };
 
+export const VISUAL_TRANSITION_INPUTS = ["outgoing", "incoming"] as const;
+
+/** The closed two-picture Process contract selected by a Transition relation. */
+export type VisualTransitionEffect = Omit<VisualProcessEffect, "inputs"> & {
+  readonly inputs: typeof VISUAL_TRANSITION_INPUTS;
+};
+
 /**
  * A relation between two neighbouring Clip occurrences. The relation owns no source media and does
  * not replace either Clip's sampling Map; it only describes how their already overlapping pictures
@@ -211,7 +224,7 @@ export type VisualTransitionSpec = {
   readonly id: string;
   readonly outgoingClipId: string;
   readonly incomingClipId: string;
-  readonly effect: VisualProgram;
+  readonly effect: VisualTransitionEffect;
 };
 
 export type VisualTrackProgram = {

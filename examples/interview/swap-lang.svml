@@ -19,13 +19,13 @@
   <import as="caption-fine" from="@hypit/caption-fine@1"/>
   <import as="fonts" from="@hypit/fontsource@1"/>
   <import as="space" from="@hypit/spatial@1"/>
-  <import as="region" from="@hypit/region-evidence@1"/>
+  <import as="sequence" from="@hypit/spatial-sequence@1"/>
   <import as="flash" from="@interview/flash@1"/>
   <import as="film" from="@hypit/film@1"/>
   <import as="html" from="@hypit/html-video@1"/>
   <import as="emoji" from="@hypit/interview-emoji-reveal@1"/>
   <import as="recipes" source="./recipes.svs"/>
-  <import as="tracking" source="./spanish-tracking.svs"/>
+  <import as="tracking" source="./spanish-tracking.regions.svml"/>
   <import as="interview-kit" source="@hypit/seedance-kits/street-interview"/>
 
   <script id="story">
@@ -205,8 +205,8 @@
   <time:Window id="real-estate-flash-window" timeline={speech.timeline} from={moment-real-estate-cue} for="8f"/>
   <time:Window id="bitcoin-flash-window" timeline={speech.timeline} from={moment-bitcoin-cue} for="8f"/>
 
-  <region:Evidence id="wife-heads" within={vertical.bounds} timeline={speech.timeline}
-    recipe={tracking.heads.wife}/>
+  <sequence:TimelineRegions id="wife-heads" document={tracking.heads}
+    timeline={speech.timeline} canvas={vertical.canvas}/>
   <audio:Track id="speech-sound" timeline={speech.timeline}>
     <audio:Clip id="manifest-rule-source" source={manifest-rule-media.media} during={speech.manifest-rule-semantic}/>
     <audio:Clip id="real-estate-rule-source" source={real-estate-rule-media.media} during={speech.real-estate-rule-semantic}/>
@@ -240,6 +240,7 @@
     timeline={speech.timeline} within={vertical.bounds} regions={wife-heads}>
     <caption-fine:Use style={caption-boy-style}/>
     <caption-fine:Use role="WIFE" style={caption-wife-style}/>
+    <caption-fine:Follow role="WIFE" series="wife-head" missing="hide"/>
   </caption-fine:Caption>
 
   <emoji:Style id="rule-reveal-style" recipe={recipes.emoji.strip}/>
@@ -273,6 +274,5 @@
     <film:Track source={rule-reveal-sfx.audio}/>
   </film:Film>
 
-  <html:Video id="final" composition={main.composition}
-    timeline={speech.timeline}/>
+  <html:Video id="final" composition={main.composition}/>
 </svml>

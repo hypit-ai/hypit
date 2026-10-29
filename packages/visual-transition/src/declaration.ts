@@ -4,8 +4,8 @@ import {
   type AuthorDeclarationCompiler,
   type AuthorDeclarationFieldShape,
 } from "@hypit/hypit/author";
-import type { VisualProgram } from "@hypit/composition";
 import { visualTrackTypes } from "@hypit/visual-track";
+import type { VisualTransitionEffect } from "@hypit/visual-track";
 
 import { visualTransitionModuleRef } from "./manifest.js";
 import {
@@ -45,7 +45,7 @@ function transitionDeclaration(
   declaration: string,
   summary: string,
   fields: readonly AuthorDeclarationFieldShape[],
-  compileEffect: (declaration: AuthorDeclaration) => VisualProgram,
+  compileEffect: (declaration: AuthorDeclaration) => VisualTransitionEffect,
 ): AuthorDeclarationCompiler {
   return {
     module: visualTransitionModuleRef,

@@ -29,7 +29,7 @@ function cueHtml(source: string, width: number, extra: Recipe["properties"]): st
     units: document.units.map((unit, index) => ({ unitId: unit.id, startFrame: index * 5, endFrameExclusive: index * 5 + 5 })) };
   const track = renderFineCaption(scheduleFineCaption(timed, program, document), program, document, timeline,
     { xPx: 0, yPx: 0, widthPx: width, heightPx: 500 });
-  const compiled = compileHtmlProgram(sealComposition({ id: "test", visual: { canvas: { width, height: 500, clearColor: "#ffffff" }, root: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }), timeline);
+  const compiled = compileHtmlProgram(sealComposition({ id: "test", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width, height: 500, clearColor: "#ffffff" }, root: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }, timeline));
   // Both copies use the same face. Exact-font loading is exercised by renderer integration.
   return materializeHtmlProgram(compiled, () => "data:font/woff2;base64,AA==")
     .replace("</head>", `<style>[data-hypit-element-id]{font-family:Arial!important}[data-composition-id]{width:${width}px;height:500px}</style></head>`);

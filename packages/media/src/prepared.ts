@@ -109,6 +109,8 @@ export function prepareMedia(input: {
   });
   let visual: PreparedVisualMember | undefined;
   if (video?.startPts !== undefined && video.endPts !== undefined) {
+    assert(input.selection.picture !== undefined,
+      `Prepared Media ${input.id} selected video without an author-resolved picture interpretation.`);
     const sourceDomain = streamDomain(`${input.id}:visual-source`, video.startPts, video.endPts);
     const presentationStart = exact(video.startPts);
     visual = {
@@ -121,6 +123,7 @@ export function prepareMedia(input: {
         codedHeight: video.height,
         sampleAspectRatio: { ...video.sampleAspectRatio },
         rotationDegrees: video.rotationDegrees,
+        picture: structuredClone(input.selection.picture),
       },
     };
   }

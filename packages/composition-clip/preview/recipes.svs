@@ -1,0 +1,6 @@
+<?svml using="@hypit/recipe@1"?>
+
+<sheet version="1">
+  film.child { background: #00000000; }
+  film.parent { background: #10141c; }
+</sheet>

@@ -7,6 +7,7 @@ import { rasterizeHtmlProgram, rasterizeHtmlFrames, resolveExecutionOptions } fr
 import { renderWorkerLimit } from "./concurrency.js";
 import type { HtmlExecutionOptions } from "./options.js";
 import { renderProgressReporter } from "./progress.js";
+import { endpointSupport, localHtmlFrameRejection, localHtmlRasterRejection } from "./support.js";
 
 export type * from "./options.js";
 export const localHtmlProviderModuleRef = { name: "@hypit/provider-html-local", version: "1" } as const;
@@ -46,6 +47,14 @@ export function createLocalHtmlProvider(config: CreateLocalHtmlProviderOptions) 
       lifecycle: "immediate" as const,
       capability: htmlProgramCapabilities.rasterizeVisual,
       returns: mediaTypes.timelineVisual,
+      supports: (request: import("@hypit/hypit/endpoint").EndpointRequest) => {
+        try {
+          verifyHtmlRasterRequest(request.constraints);
+          return endpointSupport(localHtmlRasterRejection(request.constraints, execution.renderer));
+        } catch (error) {
+          return endpointSupport(error instanceof Error ? error.message : String(error));
+        }
+      },
       ...(config.browserCapacity === undefined ? {} : {
         resources: [{ id: browsers, limit: config.browserCapacity }],
         unitsForRequest: (request: import("@hypit/hypit/endpoint").EndpointRequest) => {
@@ -77,6 +86,14 @@ export function createLocalHtmlProvider(config: CreateLocalHtmlProviderOptions) 
       lifecycle: "immediate" as const,
       capability: htmlProgramCapabilities.rasterizeFrames,
       returns: htmlProgramTypes.frameImages,
+      supports: (request: import("@hypit/hypit/endpoint").EndpointRequest) => {
+        try {
+          verifyHtmlFrameRequest(request.constraints);
+          return endpointSupport(localHtmlFrameRejection(request.constraints));
+        } catch (error) {
+          return endpointSupport(error instanceof Error ? error.message : String(error));
+        }
+      },
       ...(config.browserCapacity === undefined ? {} : {
         resources: [{ id: browsers, limit: config.browserCapacity }],
         unitsForRequest: (request: import("@hypit/hypit/endpoint").EndpointRequest) => {

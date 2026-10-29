@@ -5,35 +5,75 @@ const string = { kind: "string", minLength: 1 } as const;
 const integer = { kind: "number", integer: true, minimum: 0 } as const;
 const object = (fields: Readonly<Record<string, { readonly schema: ValueSchema; readonly optional?: boolean }>>): ValueSchema => ({ kind: "object", fields });
 const rational = object({ numerator: { schema: { kind: "number", integer: true, minimum: 1 } }, denominator: { schema: { kind: "number", integer: true, minimum: 1 } } });
-const visualPictureBase = {
-  colorPrimaries: { schema: { kind: "literal", value: "bt709" } as const },
-  bitDepth: { schema: { kind: "literal", value: 8 } as const },
+const primariesSchema: ValueSchema = { kind: "string", enum: ["bt709", "display-p3", "bt2020"] };
+const transferSchema: ValueSchema = { kind: "string", enum: ["srgb", "bt709", "linear", "pq", "hlg"] };
+const matrixSchema: ValueSchema = { kind: "string", enum: ["rgb", "bt709", "bt2020-ncl"] };
+const rangeSchema: ValueSchema = { kind: "string", enum: ["full", "limited"] };
+const bitDepthSchema: ValueSchema = { kind: "oneOf", variants: [8, 10, 12, 16].map((value) => ({ kind: "literal", value })) };
+const alphaModeSchema: ValueSchema = { kind: "string", enum: ["opaque", "straight", "premultiplied"] };
+export const pictureInterpretationSchema: ValueSchema = object({
+  colorPrimaries: { schema: primariesSchema }, colorTransfer: { schema: transferSchema },
+  colorMatrix: { schema: matrixSchema }, colorRange: { schema: rangeSchema }, bitDepth: { schema: bitDepthSchema },
+  alphaMode: { schema: alphaModeSchema },
+});
+export const pictureObservationSchema: ValueSchema = object({
+  colorPrimaries: { schema: primariesSchema, optional: true }, colorTransfer: { schema: transferSchema, optional: true },
+  colorMatrix: { schema: matrixSchema, optional: true }, colorRange: { schema: rangeSchema, optional: true },
+  bitDepth: { schema: bitDepthSchema, optional: true }, alphaMode: { schema: alphaModeSchema, optional: true },
+});
+export const workingPictureSpecSchema: ValueSchema = object({
+  colorPrimaries: { schema: primariesSchema },
+  colorTransfer: { schema: { kind: "string", enum: ["srgb", "linear"] } },
+  referenceWhiteNits: { schema: { kind: "number", minimum: Number.MIN_VALUE } },
+  alphaMode: { schema: { kind: "literal", value: "premultiplied" } },
+});
+const outputPictureBase = {
+  colorPrimaries: { schema: primariesSchema },
+  bitDepth: { schema: bitDepthSchema },
   alpha: { schema: object({
     mode: { schema: { kind: "literal", value: "opaque" } },
     matte: { schema: { kind: "string", minLength: 7, maxLength: 7 } },
   }) },
 } as const;
-const videoPictureSpecSchema: ValueSchema = object({
-  ...visualPictureBase,
-  colorTransfer: { schema: { kind: "literal", value: "bt709" } },
-  colorMatrix: { schema: { kind: "literal", value: "bt709" } },
+const videoOutputPictureSpecSchema: ValueSchema = object({
+  ...outputPictureBase,
+  colorTransfer: { schema: { kind: "string", enum: ["bt709", "pq", "hlg"] } },
+  colorMatrix: { schema: { kind: "string", enum: ["bt709", "bt2020-ncl"] } },
   colorRange: { schema: { kind: "literal", value: "limited" } },
 });
-const imagePictureSpecSchema: ValueSchema = object({
-  ...visualPictureBase,
-  colorTransfer: { schema: { kind: "literal", value: "srgb" } },
+const frameOutputPictureSpecSchema: ValueSchema = object({
+  ...outputPictureBase,
+  colorPrimaries: { schema: { kind: "string", enum: ["bt709", "display-p3"] } },
+  colorTransfer: { schema: { kind: "string", enum: ["srgb", "linear"] } },
   colorMatrix: { schema: { kind: "literal", value: "rgb" } },
   colorRange: { schema: { kind: "literal", value: "full" } },
 });
-export const visualPictureSpecSchema: ValueSchema = {
+export const outputPictureSpecSchema: ValueSchema = {
   kind: "oneOf",
-  variants: [videoPictureSpecSchema, imagePictureSpecSchema],
+  variants: [videoOutputPictureSpecSchema, frameOutputPictureSpecSchema],
 };
+const chromaticitySchema = object({
+  x: { schema: { kind: "number", minimum: 0, maximum: 1 } },
+  y: { schema: { kind: "number", minimum: 0, maximum: 1 } },
+});
+export const hdrStaticMetadataSchema: ValueSchema = object({
+  masteringDisplay: { schema: object({
+    red: { schema: chromaticitySchema }, green: { schema: chromaticitySchema },
+    blue: { schema: chromaticitySchema }, whitePoint: { schema: chromaticitySchema },
+    minLuminanceNits: { schema: { kind: "number", minimum: 0 } },
+    maxLuminanceNits: { schema: { kind: "number", minimum: Number.MIN_VALUE } },
+  }) },
+  contentLight: { schema: object({
+    maxContentLightLevelNits: { schema: { kind: "number", integer: true, minimum: 0, maximum: 65_535 } },
+    maxFrameAverageLightLevelNits: { schema: { kind: "number", integer: true, minimum: 0, maximum: 65_535 } },
+  }) },
+});
 export const visualDeliverySpecSchema: ValueSchema = object({
-  picture: { schema: videoPictureSpecSchema },
+  picture: { schema: videoOutputPictureSpecSchema },
+  hdrStaticMetadata: { schema: hdrStaticMetadataSchema, optional: true },
   encoding: { schema: object({
-    codec: { schema: { kind: "literal", value: "h264" } },
-    pixelFormat: { schema: { kind: "literal", value: "yuv420p" } },
+    codec: { schema: { kind: "string", enum: ["h264", "hevc"] } },
+    pixelFormat: { schema: { kind: "string", enum: ["yuv420p", "yuv420p10le", "yuv420p12le"] } },
     quality: { schema: { kind: "string", enum: ["draft", "standard", "high"] } },
   }) },
 });
@@ -57,6 +97,7 @@ const streamBase = {
 const videoStream = object({ ...streamBase, kind: { schema: { kind: "literal", value: "video" } }, codecType: { schema: { kind: "literal", value: "video" } },
   role: { schema: { kind: "string", enum: ["moving", "attached-picture", "still"] } }, width: { schema: { kind: "number", integer: true, minimum: 1 } },
   height: { schema: { kind: "number", integer: true, minimum: 1 } }, sampleAspectRatio: { schema: rational },
+  picture: { schema: pictureObservationSchema },
   rotationDegrees: { schema: { kind: "oneOf", variants: [0, 90, 180, 270].map((value) => ({ kind: "literal", value })) } },
   averageFrameRate: { schema: rational, optional: true }, nominalFrameRate: { schema: rational, optional: true } });
 const audioStream = object({ ...streamBase, kind: { schema: { kind: "literal", value: "audio" } }, codecType: { schema: { kind: "literal", value: "audio" } },
@@ -70,6 +111,7 @@ export const mediaInspectionSchema: ValueSchema = object({
 export const mediaStreamSelectionSchema: ValueSchema = object({
   videoStreamIndex: { schema: integer, optional: true }, audioStreamIndex: { schema: integer, optional: true },
   spanAuthority: { schema: { kind: "string", enum: ["video", "audio"] } },
+  picture: { schema: pictureInterpretationSchema, optional: true },
 });
 const preparedMemberBase = {
   streamIndex: { schema: integer },
@@ -83,6 +125,7 @@ const preparedVisualInterpretation = object({
   sampleAspectRatio: { schema: rational },
   rotationDegrees: { schema: { kind: "oneOf", variants: [0, 90, 180, 270]
     .map((value) => ({ kind: "literal" as const, value })) } },
+  picture: { schema: pictureInterpretationSchema },
 });
 const preparedAudioInterpretation = object({
   sampleRate: { schema: { kind: "number", integer: true, minimum: 1 } },
@@ -134,5 +177,5 @@ const surfaceTiming: ValueSchema = { kind: "oneOf", variants: [
   object({ kind: { schema: { kind: "literal", value: "frames" } }, frameRate: { schema: rational }, frameCount: { schema: { kind: "number", integer: true, minimum: 1 } } }),
 ] };
 export const compositableSurfaceSchema: ValueSchema = object({ artifact: { schema: blobRefSchema() }, width: { schema: { kind: "number", integer: true, minimum: 1 } },
-  height: { schema: { kind: "number", integer: true, minimum: 1 } }, colorSpace: { schema: { kind: "literal", value: "srgb" } },
-  alphaMode: { schema: { kind: "string", enum: ["opaque", "straight"] } }, timing: { schema: surfaceTiming } });
+  height: { schema: { kind: "number", integer: true, minimum: 1 } }, picture: { schema: pictureInterpretationSchema },
+  timing: { schema: surfaceTiming } });

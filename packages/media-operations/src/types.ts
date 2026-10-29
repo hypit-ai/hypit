@@ -1,5 +1,5 @@
 import type { BlobRef } from "@hypit/hypit/protocol";
-import type { MediaRational } from "@hypit/media";
+import type { MediaRational, PictureInterpretation } from "@hypit/media";
 import type { FrameSpan } from "@hypit/timeline";
 import type { ExactTemporalValue, TemporalRate } from "@hypit/temporal";
 
@@ -13,6 +13,10 @@ export type MediaSelectionRequest = {
     | { readonly mode: "stream-index"; readonly streamIndex: number }
     | { readonly mode: "none" };
   readonly spanAuthority: "video" | "audio";
+  readonly picture:
+    | { readonly mode: "none" }
+    | { readonly mode: "source" }
+    | { readonly mode: "explicit"; readonly interpretation: PictureInterpretation };
 };
 
 export type InspectMediaNeed = {

@@ -44,7 +44,8 @@ color. `ZoomDissolve.strength` is within 0–1, and `BlurDissolve.radius` is wit
 <transition:BlurDissolve id="soft-blur" radius="24"/>
 ```
 
-These declarations all produce the same public `VisualTransitionEffect` Type. Visual Track does not
-enumerate them, and project or ecosystem packages can publish other effects through that Type.
+These declarations all produce the same public `VisualTransitionEffect` Type: one `VisualProcessEffect`
+with the exact ordered ports `outgoing` and `incoming`. Visual Track validates that closed contract but does
+not enumerate effect implementations; project or ecosystem packages can publish other effects through the Type.
 Content-aware morphs, optical-flow effects, and true 3D page or cube geometry require their own
 implementation rather than an approximation in this package.

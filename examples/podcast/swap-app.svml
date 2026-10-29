@@ -251,6 +251,5 @@
     <film:Track source={music-bed.audio}/>
   </film:Film>
 
-  <html:Video id="final" composition={main.composition}
-    timeline={speech.timeline}/>
+  <html:Video id="final" composition={main.composition}/>
 </svml>

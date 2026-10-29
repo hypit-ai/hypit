@@ -1,5 +1,5 @@
 import { blobDependency } from "@hypit/hypit/blob";
-import { mediaDependency, mediaTypes } from "@hypit/media";
+import { mediaDependency, mediaTypes, pictureInterpretationSchema } from "@hypit/media";
 import { frameSpanSchema, timelineDependency, timelineTypes } from "@hypit/timeline";
 import { recipeModuleRef, recipeType } from "@hypit/hypit/recipe";
 import { exactTemporalValueSchema, temporalDependency, temporalRateSchema, temporalTypes } from "@hypit/temporal";
@@ -51,6 +51,12 @@ export const mediaSelectionRequestSchema: ValueSchema = {
     video: { schema: { kind: "oneOf", variants: [mode("primary-moving"), streamMode, mode("none")] } },
     audio: { schema: { kind: "oneOf", variants: [mode("default"), streamMode, mode("none")] } },
     spanAuthority: { schema: { kind: "string", enum: ["video", "audio"] } },
+    picture: { schema: { kind: "oneOf", variants: [mode("none"), mode("source"), {
+      kind: "object", fields: {
+        mode: { schema: { kind: "literal", value: "explicit" } },
+        interpretation: { schema: pictureInterpretationSchema },
+      },
+    }] } },
   },
 };
 

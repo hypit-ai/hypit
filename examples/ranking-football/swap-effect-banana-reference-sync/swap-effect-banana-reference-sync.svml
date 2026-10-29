@@ -282,35 +282,35 @@
   <!-- Every Item consumes a projected Selection window. Later overlapping
        jokes use a higher explicit z on their own Clip occurrence. -->
   <visual:Track id="broll" timeline={speech.timeline}>
-    <visual:Clip id="hair-gel" image={broll-hair-gel.image}
+    <visual:Clip id="hair-gel" image={broll-hair-gel.image} picture="srgb"
       extent={hair-gel-extent} during={selection-hair-gel}
       frame={hair-gel-frame} fit="cover" treatment={recipes.media.hair-gel}
       motion={broll-left}/>
-    <visual:Clip id="trophy" image={broll-trophy.image}
+    <visual:Clip id="trophy" image={broll-trophy.image} picture="srgb"
       extent={trophy-extent} during={selection-trophy}
       frame={trophy-frame} fit="cover" treatment={recipes.media.trophy}
       motion={broll-right}/>
-    <visual:Clip id="greek-god" image={broll-greek-god.image}
+    <visual:Clip id="greek-god" image={broll-greek-god.image} picture="srgb"
       extent={greek-god-extent} during={selection-greek-god}
       frame={greek-god-frame} fit="cover" treatment={recipes.media.greek-god}
       motion={broll-left}/>
-    <visual:Clip id="greek-tragedy" image={broll-greek-tragedy.image}
+    <visual:Clip id="greek-tragedy" image={broll-greek-tragedy.image} picture="srgb"
       extent={greek-tragedy-extent} during={selection-greek-tragedy}
       frame={greek-tragedy-frame} fit="cover" treatment={recipes.media.greek-tragedy}
       motion={broll-right}/>
-    <visual:Clip id="penaldo-social" image={broll-penaldo-social.image}
+    <visual:Clip id="penaldo-social" image={broll-penaldo-social.image} picture="srgb"
       extent={penaldo-social-extent} during={selection-penaldo-social}
       frame={penaldo-social-frame} fit="cover" treatment={recipes.media.penaldo-social}
       motion={broll-wide}/>
-    <visual:Clip id="tired-dad" image={broll-tired-dad-trophy.image}
+    <visual:Clip id="tired-dad" image={broll-tired-dad-trophy.image} picture="srgb"
       extent={tired-dad-extent} during={selection-tired-dad}
       frame={tired-dad-frame} fit="cover" treatment={recipes.media.tired-dad}
       motion={broll-right}/>
-    <visual:Clip id="walks-around" image={broll-walks-around.image}
+    <visual:Clip id="walks-around" image={broll-walks-around.image} picture="srgb"
       extent={walks-around-extent} during={selection-walks-around}
       frame={walks-around-frame} fit="cover" treatment={recipes.media.walks-around}
       motion={broll-left}/>
-    <visual:Clip id="hat-trick" image={broll-hat-trick.image}
+    <visual:Clip id="hat-trick" image={broll-hat-trick.image} picture="srgb"
       extent={hat-trick-extent} during={selection-hat-trick}
       frame={hat-trick-frame} fit="cover" treatment={recipes.media.hat-trick}
       motion={broll-right}/>
@@ -335,6 +335,5 @@
     <film:Track id="captions" source={captions.visual}/>
     <film:Track source={music-bed.audio}/>
   </film:Film>
-  <html:Video id="final" composition={main.composition}
-    timeline={speech.timeline}/>
+  <html:Video id="final" composition={main.composition}/>
 </svml>

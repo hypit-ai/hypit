@@ -101,7 +101,7 @@ Stack 从透明画面开始，在父 Scope 中按自身声明位置作为一张�
 
 ```svml
 <html:Video id="final"
-  composition={main.composition} timeline={speech.timeline}/>
+  composition={main.composition}/>
 ```
 
 渲染器编译视觉贡献、捕获所需帧、渲染 AudioTrack，并复用封装为交付文件。
@@ -118,7 +118,7 @@ Stack 从透明画面开始，在父 Scope 中按自身声明位置作为一张�
 ## 渲染帧区间
 
 ```svml
-<html:Video id="detail" composition={main.composition} timeline={speech.timeline}
+<html:Video id="detail" composition={main.composition}
   start-frame="240" end-frame-exclusive="360"/>
 ```
 
@@ -149,7 +149,7 @@ Timeline 不要求语音或媒体：
   appearance={recipes.film.main}>
   <film:Track id="conversation" source={conversation.visual}/>
 </film:Film>
-<html:Video id="final" composition={main.composition} timeline={animation.timeline}/>
+<html:Video id="final" composition={main.composition}/>
 ```
 
 组件用普通绝对时间拥有自己的阅读节奏。没有选择 AudioTrack 时，结果是静音的。在语音作品

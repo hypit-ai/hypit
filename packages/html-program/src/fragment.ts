@@ -1,6 +1,5 @@
 import { compositionTypes } from "@hypit/composition";
 import { sealGraphFragment } from "@hypit/hypit/author";
-import { timelineTypes } from "@hypit/timeline";
 
 import { htmlProgramProducers, htmlProgramTypes } from "./manifest.js";
 
@@ -13,14 +12,11 @@ const operation = (id: string) => ({ kind: "fragment-operation" as const, operat
  * can use this ordinary downstream Fragment.
  */
 export const htmlProgramFragment = sealGraphFragment({
-  inputs: [
-    { name: "composition", type: compositionTypes.composition },
-    { name: "timeline", type: timelineTypes.timeline },
-  ],
+  inputs: [{ name: "composition", type: compositionTypes.composition }],
   operations: [{
     id: "compile-program",
     producer: htmlProgramProducers.compile,
-    inputs: { composition: input("composition"), timeline: input("timeline") },
+    inputs: { composition: input("composition") },
     result: { kind: "output" as const, name: "program" },
   }],
   exports: [{

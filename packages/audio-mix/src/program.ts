@@ -74,6 +74,7 @@ function namespaceGraph(graph: AudioSignalGraph, inputId: string): { readonly no
       if (node.kind === "source") return { kind: "source", id, clip: {
         ...structuredClone(node.clip), id: structuralId(["input", inputId, "clip", node.clip.id]),
       } };
+      if (node.kind === "composition") return { ...structuredClone(node), id };
       if (node.kind === "mix") return { kind: "mix", id, inputs: node.inputs.map(ref) };
       return { kind: "process", id, inputs: Object.fromEntries(Object.entries(node.inputs).map(([port, input]) => [port, ref(input)])),
         program: structuredClone(node.program) };

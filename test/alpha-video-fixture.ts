@@ -78,6 +78,7 @@ export async function prepareTestVideo(
   verifyMediaInspection(inspection);
   const selection = selectMediaStreams(inspection, {
     video: { mode: "primary-moving" }, audio: { mode: withAudio ? "default" : "none" }, spanAuthority: "video",
+    picture: { mode: "source" },
   });
   return prepareMedia({ id, source, inspection, selection });
 }

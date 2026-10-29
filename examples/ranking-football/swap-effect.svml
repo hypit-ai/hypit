@@ -251,31 +251,31 @@
   </ranking:Column>
 
   <visual:Track id="broll" timeline={speech.timeline}>
-    <visual:Clip id="pitch-pov" image={broll-pitch-pov.image}
+    <visual:Clip id="pitch-pov" image={broll-pitch-pov.image} picture="srgb"
       extent={pitch-pov-extent} during={selection-pitch-pov}
       frame={pitch-pov-frame} fit="cover" treatment={recipes.media.pitch-pov}
       motion={broll-motion}/>
-    <visual:Clip id="ikea-sign" image={broll-ikea-sign.image}
+    <visual:Clip id="ikea-sign" image={broll-ikea-sign.image} picture="srgb"
       extent={ikea-sign-extent} during={selection-ikea-sign}
       frame={ikea-sign-frame} fit="cover" treatment={recipes.media.ikea-sign}
       motion={broll-motion}/>
-    <visual:Clip id="retirement-room" image={broll-retirement-room.image}
+    <visual:Clip id="retirement-room" image={broll-retirement-room.image} picture="srgb"
       extent={retirement-room-extent} during={selection-retirement-room}
       frame={retirement-room-frame} fit="cover" treatment={recipes.media.retirement-room}
       motion={broll-motion}/>
-    <visual:Clip id="rent-jump" image={broll-rent-jump.image}
+    <visual:Clip id="rent-jump" image={broll-rent-jump.image} picture="srgb"
       extent={rent-jump-extent} during={selection-rent-jump}
       frame={rent-jump-frame} fit="cover" treatment={recipes.media.rent-jump}
       motion={broll-motion}/>
-    <visual:Clip id="nine-hundred-goals" image={broll-nine-hundred.image}
+    <visual:Clip id="nine-hundred-goals" image={broll-nine-hundred.image} picture="srgb"
       extent={nine-hundred-extent} during={selection-nine-hundred-goals}
       frame={nine-hundred-frame} fit="cover" treatment={recipes.media.nine-hundred}
       motion={broll-motion}/>
-    <visual:Clip id="laboratory-body" image={broll-laboratory-body.image}
+    <visual:Clip id="laboratory-body" image={broll-laboratory-body.image} picture="srgb"
       extent={laboratory-body-extent} during={selection-laboratory-body}
       frame={laboratory-body-frame} fit="cover" treatment={recipes.media.laboratory-body}
       motion={broll-motion}/>
-    <visual:Clip id="museum-jawline" image={broll-museum-jawline.image}
+    <visual:Clip id="museum-jawline" image={broll-museum-jawline.image} picture="srgb"
       extent={museum-jawline-extent} during={selection-museum-jawline}
       frame={museum-jawline-frame} fit="cover" treatment={recipes.media.museum-jawline}
       motion={broll-motion}/>
@@ -300,6 +300,5 @@
     <film:Track id="captions" source={captions.visual}/>
     <film:Track source={music-bed.audio}/>
   </film:Film>
-  <html:Video id="final" composition={main.composition}
-    timeline={speech.timeline}/>
+  <html:Video id="final" composition={main.composition}/>
 </svml>

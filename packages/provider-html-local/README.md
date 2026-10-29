@@ -12,10 +12,13 @@ execution implementations for the same visual Need:
   through FFmpeg, presents them to Chrome as PNG images, captures PNG frames
   through Chrome DevTools Protocol and streams them into FFmpeg;
 - `electron` is the encoded-visual implementation. It decodes the compiler's
-  exact source samples inside the browser, transfers the composed frame as an
-  offscreen shared texture, encodes the resulting `VideoFrame` with WebCodecs
-  and uses FFmpeg only to mux the encoded H.264 stream into MP4. Neither the
-  source-video input side nor the composed-video output side crosses PNG.
+  exact source samples, transfers the composed frame as an offscreen shared
+  texture and owns two exact delivery pipelines. SDR uses WebCodecs H.264 plus
+  FFmpeg container muxing. HDR10 uses a linear `rgbaf16` Program surface,
+  an explicit BT.709-linear-to-BT.2020/PQ P010 transform and `libx265` Main10;
+  the Provider writes the authored mastering-display and content-light metadata and verifies both
+  kinds in the first decoded output frame.
+  Neither source-video input nor composed-video output crosses PNG.
 
 The Electron implementation carries its pinned Mediabunny browser runtime and
 corresponding MPL source inside this Provider package. It is a private decoder
@@ -27,6 +30,44 @@ Both implementations apply absolute integer frames through
 `window.__hypitFrameProgram` and publish the same verified `TimelineVisual`.
 Renderer selection is deployment policy; it does not change `HtmlProgram`, Film,
 Composition, Prepared Media or the delivery requirement.
+
+When an SDR `HtmlProgram` declares Scope Process input passes, both implementations render the named
+input scopes as request-private transparent Pictures before evaluating the package-owned process programme.
+Chromium currently transfers these stage Pictures as PNG; Electron uses the same correct stage boundary
+while retaining shared textures for the terminal encoded output. Programs without a Scope Process retain
+the original single-pass path. HDR10 rejects Scope Process input passes because an 8-bit stage cannot
+preserve its linear extended-range working picture. Nested child Programs that require such passes are
+rejected by HTML compilation until the renderer owns recursive child surfaces.
+
+For a nested Composition, the root `HtmlProgram` already contains the fully composed source-sampling
+plan and an exact nested-document target for each source occurrence. Chromium and Electron keep source
+decode, cache and sample selection at the root Provider boundary, then inject the selected frame into
+that target document. They do not materialize a child video, ask the iframe to rediscover its media
+semantics or copy renderer addresses into Composition.
+
+Chromium implements one exact SDR subset: an sRGB, premultiplied, 100-nit-reference working
+picture; 8-bit sRGB/full-range RGB stills or 8-bit BT.709/limited-range video inputs; and opaque
+BT.709 8-bit delivery. Electron implements that same subset and an additional HDR10 subset:
+a linear BT.709 premultiplied working picture with explicit reference white, optional opaque
+BT.2020/PQ/BT.2020-NCL/limited 10-bit video sources, and opaque BT.2020/PQ/BT.2020-NCL/limited
+HEVC Main10 delivery with explicit HDR10 static metadata. HDR still images and HDR Compositable
+Surfaces remain unsupported. HLG,
+other gamut/transfer combinations and other higher-bit-depth values remain valid common-domain
+requests but are rejected here. The Provider never guesses a replacement profile, silently
+tone-maps unsupported input or changes delivery after execution starts.
+
+For an HDR10 video source, Chromium's opaque hardware-decoder texture is deliberately not used
+as picture authority: importing it as a display texture applies a browser view transform. The
+Provider lazily decodes only the exact samples selected by the Program's Temporal Map into
+temporary I420P10 planes, then performs the authored PQ/BT.2020-to-linear-working transform in
+WebGPU. These files are a bounded, request-private decoder working set, not Prepared Media or a
+new Result format. The final `rgbaf16` Program surface is transformed to P010 and streamed into
+the explicitly configured software Main10 encoder; it is never retained as an intermediate video.
+
+The Endpoint publishes this same closed subset through request-local `supports`. `plan` and
+deployment preflight can therefore reject an unsupported working picture, source interpretation,
+encoded delivery or PNG picture before capture starts. Execution reuses the same predicate as a
+boundary assertion; it does not maintain a second, later-only format table.
 
 For a range or sparse request, one typed absolute-frame selection drives both
 Artifact staging and `window.__hypitFrameProgram.prepare(selection)` in the
@@ -40,7 +81,7 @@ Runtime configuration, selects delivery quality, picture tags and the opaque mat
 Provider verifies the encoded stream against that requirement before publishing
 `TimelineVisual`. Browser/GPU choice, FFmpeg paths, concurrency and memory budgets remain
 deployment policy and do not enter the Result.
-Frame capture receives the minimal `ImagePictureSpec`, so its sRGB/full-range interpretation and
+Frame capture receives the minimal `FrameOutputPictureSpec`, so its sRGB/full-range interpretation and
 matte are request semantics rather than a hidden local screenshot default. Its `FrameImages` result
 retains that picture interpretation and every original absolute frame identity. It does not receive
 video codec, quality, audio or container fields because it produces PNG pictures, not a finished video.
@@ -83,7 +124,9 @@ selection modes are mutually exclusive.
 
 Electron is never downloaded, selected as a fallback or substituted for Chrome.
 Select it explicitly in the Runtime Profile and supply an executable from
-Electron 45 or newer:
+Electron 45 or newer. The configured FFmpeg must expose `libx265`; the Electron
+Program readiness probe reports a mismatch otherwise, because that Endpoint
+publishes the complete SDR plus HDR10 request subset:
 
 ```json
 {
@@ -106,8 +149,8 @@ is encoded video. `rasterize-frames` intentionally remains a Chromium capability
 its requested result consists of self-describing PNG images. A Runtime that needs
 both can configure and bind two Endpoint instances. Electron cannot be combined
 with Chrome-selection fields or software-only browser compositing. Unsupported
-shared-texture or H.264 WebCodecs configurations fail on that Endpoint; execution
-does not rewrite the request or switch implementations.
+shared-texture, SDR WebCodecs or HDR10 `libx265` configurations fail on that Endpoint;
+execution does not rewrite the request or switch implementations.
 
 ## Frame selection and parallelism
 
@@ -132,14 +175,14 @@ right. This is the Provider's terminal quantization of one continuous Temporal
 Map, not an adjustment to the authored relation.
 
 In the Chromium path, completed PNGs enter a bounded ordered sink. In the Electron
-path, shared textures are copied to bounded `VideoFrame` storage and enter
+SDR path, shared textures are copied to bounded `VideoFrame` storage and enter
 WebCodecs in ordinal order; FFmpeg receives encoded H.264 only for container
-muxing. The copy is a GPU surface blit into an encoder-compatible canvas, not a
-CPU bitmap or PNG round trip. Current macOS VideoToolbox rejects Electron's
-imported shared image as a direct encoder input, so the Provider keeps that
-machine-local compatibility boundary. Encoded chunks cross to the main process
-in bounded batches before their ordered stream write. Capture of later frames can
-continue while earlier frames are encoded.
+muxing. In the Electron HDR10 path, the same ordered shared textures enter the
+WebGPU output transform; bounded P010 batches stream directly into `libx265`.
+Neither path creates a CPU bitmap, PNG sequence or intermediate composed video.
+Current macOS VideoToolbox rejects Electron's imported shared image as a direct
+encoder input, so the Provider keeps that machine-local compatibility boundary.
+Capture of later frames can continue while earlier frames are encoded.
 Sparse frame output writes only requested PNGs and is bounded by
 `maxRenderedBytes`.
 
@@ -152,7 +195,7 @@ cursor, input and retained decoded samples are released together.
 
 Execution diagnostics divide one Electron request into setup, Programme
 evaluation, source decode/draw, resource readiness, paint and texture transfer,
-GPU blit, WebCodecs queue/output, encoded-chunk IPC, container mux and output
+GPU output work, ordered IPC/encoder input, container completion and output
 verification. They are request-local observations used to find the dominant
 implementation cost. Per-frame and per-batch accumulated work can overlap in
 the pipeline and is not added into a second wall-clock total. These diagnostics

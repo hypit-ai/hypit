@@ -110,7 +110,7 @@ test("the complete Studio session displays an unconsumed Instant alongside a pla
   <space:Extent id="extent" width="1" height="1"/>
   <media:Image id="picture" src="./pixel.png"/>
   <visual:Track id="track" timeline={program.timeline}>
-    <visual:Clip id="still" image={picture} extent={extent}
+    <visual:Clip id="still" image={picture} picture="srgb" extent={extent}
       during={program.window} frame={canvas.bounds}/>
   </visual:Track>
   <film:Film id="film" canvas={canvas.canvas} timeline={program.timeline} appearance={look.film.main}>

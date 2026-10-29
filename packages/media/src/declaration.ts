@@ -7,7 +7,10 @@ import {
   type Awaitable,
 } from "@hypit/hypit/author";
 import { blobTypes } from "@hypit/hypit/blob";
-import type { CanonicalValue, TypeRef } from "@hypit/hypit/protocol";
+import { sameType, type CanonicalValue, type TypeRef } from "@hypit/hypit/protocol";
+import type { HdrStaticMetadata, MediaDeliverySpec, WorkingPictureSpec } from "./types.js";
+import { verifyHdrStaticMetadata, verifyWorkingPictureSpec } from "./identity.js";
+import { mediaDeliveryProfile } from "./delivery.js";
 
 import { mediaModuleRef, mediaTypes } from "./manifest.js";
 import {
@@ -123,6 +126,156 @@ function assetDeclaration(
 export const mediaImageAuthorDeclaration = assetDeclaration("image", "image", imageMediaTypes);
 export const mediaAudioAuthorDeclaration = assetDeclaration("audio", "audio", audioMediaTypes);
 export const mediaVideoAuthorDeclaration = assetDeclaration("video", "video", videoMediaTypes);
+
+export const mediaWorkingPictureAuthorDeclaration: AuthorDeclarationCompiler = {
+  module: mediaModuleRef,
+  declaration: "working-picture",
+  outputs: [mediaTypes.workingPicture],
+  shape: {
+    summary: "Defines the linear or sRGB picture space used while visual contributions are composed.",
+    fields: [
+      idField,
+      { name: "color-primaries", kind: "literal", required: true,
+        values: ["bt709", "display-p3", "bt2020"], summary: "States the working RGB primaries." },
+      { name: "color-transfer", kind: "literal", required: true,
+        values: ["srgb", "linear"], summary: "States whether working RGB values are sRGB-encoded or linear." },
+      { name: "reference-white-nits", kind: "literal", required: true,
+        summary: "Defines the absolute luminance represented by working value 1.0." },
+    ],
+  },
+  bindings(declaration) {
+    return [idBinding(literal(declaration, "id"), mediaTypes.workingPicture)];
+  },
+  compile({ declaration }) {
+    const id = literal(declaration, "id");
+    const primaries = literal(declaration, "color-primaries");
+    const transfer = literal(declaration, "color-transfer");
+    const referenceWhiteNits = Number(literal(declaration, "reference-white-nits"));
+    const picture = {
+      colorPrimaries: primaries,
+      colorTransfer: transfer,
+      referenceWhiteNits,
+      alphaMode: "premultiplied",
+    } as WorkingPictureSpec;
+    verifyWorkingPictureSpec(picture, `Media WorkingPicture.${id}`);
+    return {
+      records: [{ id, type: mediaTypes.workingPicture,
+        value: picture as unknown as CanonicalValue, range: declaration.range }],
+      components: [],
+    };
+  },
+};
+
+function numberLiteral(declaration: DeclarationLike, name: string): number {
+  const value = Number(literal(declaration, name));
+  if (!Number.isFinite(value)) throw new Error(`Media ${name} must be a finite number.`);
+  return value;
+}
+
+export const mediaHdrStaticMetadataAuthorDeclaration: AuthorDeclarationCompiler = {
+  module: mediaModuleRef,
+  declaration: "hdr-static-metadata",
+  outputs: [mediaTypes.hdrStaticMetadata],
+  shape: {
+    summary: "Defines author-owned HDR10 mastering-display and content-light metadata.",
+    fields: [
+      idField,
+      ...["red", "green", "blue", "white"].flatMap(name => ([
+        { name: `${name}-x`, kind: "literal" as const, required: true, summary: `States the ${name} x chromaticity.` },
+        { name: `${name}-y`, kind: "literal" as const, required: true, summary: `States the ${name} y chromaticity.` },
+      ])),
+      { name: "min-luminance-nits", kind: "literal", required: true,
+        summary: "States the mastering display minimum luminance." },
+      { name: "max-luminance-nits", kind: "literal", required: true,
+        summary: "States the mastering display maximum luminance." },
+      { name: "max-content-light-nits", kind: "literal", required: true,
+        summary: "States MaxCLL without inspecting or estimating the finished video." },
+      { name: "max-frame-average-light-nits", kind: "literal", required: true,
+        summary: "States MaxFALL without inspecting or estimating the finished video." },
+    ],
+  },
+  bindings(declaration) {
+    return [idBinding(literal(declaration, "id"), mediaTypes.hdrStaticMetadata)];
+  },
+  compile({ declaration }) {
+    const id = literal(declaration, "id");
+    const point = (name: string) => ({
+      x: numberLiteral(declaration, `${name}-x`),
+      y: numberLiteral(declaration, `${name}-y`),
+    });
+    const metadata: HdrStaticMetadata = {
+      masteringDisplay: {
+        red: point("red"), green: point("green"), blue: point("blue"), whitePoint: point("white"),
+        minLuminanceNits: numberLiteral(declaration, "min-luminance-nits"),
+        maxLuminanceNits: numberLiteral(declaration, "max-luminance-nits"),
+      },
+      contentLight: {
+        maxContentLightLevelNits: numberLiteral(declaration, "max-content-light-nits"),
+        maxFrameAverageLightLevelNits: numberLiteral(declaration, "max-frame-average-light-nits"),
+      },
+    };
+    verifyHdrStaticMetadata(metadata, `Media HdrStaticMetadata.${id}`);
+    return { records: [{ id, type: mediaTypes.hdrStaticMetadata,
+      value: metadata as unknown as CanonicalValue, range: declaration.range }], components: [] };
+  },
+};
+
+export const mediaDeliveryAuthorDeclaration: AuthorDeclarationCompiler = {
+  module: mediaModuleRef,
+  declaration: "delivery",
+  outputs: [mediaTypes.delivery],
+  shape: {
+    summary: "Defines one explicit final media delivery requirement independently of its Provider.",
+    fields: [
+      idField,
+      { name: "profile", kind: "literal", required: true, values: ["bt709-h264", "hdr10-hevc"],
+        summary: "Selects one complete standard signal and coded-video family." },
+      { name: "quality", kind: "literal", required: false, values: ["draft", "standard", "high"],
+        summary: "States the author-visible delivery quality target." },
+      { name: "matte", kind: "literal", required: false,
+        summary: "States the opaque hexadecimal background used for remaining transparency." },
+      { name: "hdr-static-metadata", kind: "reference", required: false,
+        accepts: [mediaTypes.hdrStaticMetadata], summary: "Supplies required HDR10 static metadata." },
+    ],
+  },
+  bindings(declaration) {
+    return [idBinding(literal(declaration, "id"), mediaTypes.delivery)];
+  },
+  async compile({ declaration, resolveReference }) {
+    const id = literal(declaration, "id");
+    const profile = literal(declaration, "profile");
+    const quality = optionalLiteral(declaration, "quality") ?? "standard";
+    const matte = optionalLiteral(declaration, "matte") ?? "#000000";
+    if (profile !== "bt709-h264" && profile !== "hdr10-hevc") {
+      throw new Error("Media Delivery.profile must be bt709-h264 or hdr10-hevc.");
+    }
+    if (quality !== "draft" && quality !== "standard" && quality !== "high") {
+      throw new Error("Media Delivery.quality must be draft, standard or high.");
+    }
+    const metadataField = declarationField(declaration, "hdr-static-metadata");
+    let metadata: HdrStaticMetadata | undefined;
+    if (metadataField !== undefined) {
+      if (metadataField.kind !== "reference") throw new Error("Media hdr-static-metadata must be a reference.");
+      const resolved = await resolveReference(metadataField.path);
+      if (resolved?.record === undefined || !sameType(resolved.type, mediaTypes.hdrStaticMetadata)) {
+        throw new Error("Media hdr-static-metadata must reference an authored HdrStaticMetadata value.");
+      }
+      metadata = resolved.record.value as unknown as HdrStaticMetadata;
+    }
+    if (profile === "hdr10-hevc" && metadata === undefined) {
+      throw new Error("Media Delivery profile hdr10-hevc requires hdr-static-metadata.");
+    }
+    if (profile === "bt709-h264" && metadata !== undefined) {
+      throw new Error("Media Delivery profile bt709-h264 cannot carry HDR static metadata.");
+    }
+    const delivery: MediaDeliverySpec = mediaDeliveryProfile(profile, {
+      quality, matte,
+      ...(metadata === undefined ? {} : { hdrStaticMetadata: metadata }),
+    });
+    return { records: [{ id, type: mediaTypes.delivery,
+      value: delivery as unknown as CanonicalValue, range: declaration.range }], components: [] };
+  },
+};
 
 const fontSourceShape = {
   name: "Source",
@@ -270,6 +423,9 @@ export const mediaAuthorDeclarations = [
   mediaImageAuthorDeclaration,
   mediaAudioAuthorDeclaration,
   mediaVideoAuthorDeclaration,
+  mediaWorkingPictureAuthorDeclaration,
+  mediaHdrStaticMetadataAuthorDeclaration,
+  mediaDeliveryAuthorDeclaration,
   mediaFontAuthorDeclaration,
   mediaFontStackAuthorDeclaration,
 ] as const;
@@ -279,6 +435,9 @@ export const mediaMarkupDeclarations = [
   { name: "image", tag: "Image" },
   { name: "audio", tag: "Audio" },
   { name: "video", tag: "Video" },
+  { name: "working-picture", tag: "WorkingPicture" },
+  { name: "hdr-static-metadata", tag: "HdrStaticMetadata" },
+  { name: "delivery", tag: "Delivery" },
   { name: "font", tag: "Font" },
   { name: "font-stack", tag: "FontStack" },
 ] as const;

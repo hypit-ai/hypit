@@ -5,6 +5,7 @@ import { compositionTypes } from "@hypit/composition";
 import { sealGraphFragment } from "@hypit/hypit/author";
 import { spatialTypes } from "@hypit/spatial";
 import { temporalTypes } from "@hypit/temporal";
+import { mediaTypes } from "@hypit/media";
 
 import { visualTrackProducers, visualTrackTypes } from "./manifest.js";
 
@@ -17,6 +18,7 @@ export const stillVisualTrackFragment = sealGraphFragment({
     { name: "header", type: visualTrackTypes.header },
     { name: "timeline", type: timelineTypes.timeline },
     { name: "source", type: blobTypes.blob },
+    { name: "picture", type: mediaTypes.pictureInterpretation },
     { name: "extent", type: spatialTypes.extent },
     { name: "frame", type: spatialTypes.frame },
     { name: "fit", type: spatialTypes.fit },
@@ -27,7 +29,7 @@ export const stillVisualTrackFragment = sealGraphFragment({
   operations: [
     { id: "layers", producer: visualTrackProducers.createLayers, inputs: {}, result: { kind: "output" as const, name: "layers" } },
     { id: "sample", producer: visualTrackProducers.appendStillLayer, inputs: {
-      layers: operation("layers"), source: input("source"), extent: input("extent"), fit: input("fit"), spec: input("sample-spec"),
+      layers: operation("layers"), source: input("source"), picture: input("picture"), extent: input("extent"), fit: input("fit"), spec: input("sample-spec"),
     }, result: { kind: "output" as const, name: "layers" } },
     { id: "set", producer: visualTrackProducers.createSet, inputs: {}, result: { kind: "output" as const, name: "set" } },
     { id: "append", producer: visualTrackProducers.appendClip, inputs: {

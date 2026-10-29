@@ -24,7 +24,7 @@ With the named inputs already declared:
   <film:Track id="captions" source={captions.visual}/>
   <film:Track source={music.audio}/>
 </film:Film>
-<html:Video id="final" composition={main.composition} timeline={speech.timeline}/>
+<html:Video id="final" composition={main.composition}/>
 ```
 
 An example Film Recipe is `film.main { background: #18212A; }`. Canvas supplies the picture dimensions;
@@ -51,6 +51,30 @@ Stack's declaration position places that closed picture in its parent; its child
 This is the appropriate scope for a Visual Adjustment that should affect `subject.visual` without
 affecting the background or captions. Keep AudioTrack selections at the Film root; visual grouping
 does not create an audio bus.
+
+When one already-formed Picture controls another Picture's visibility, use an explicit sibling matte
+Process. The effect names the relation and its interpretation; each Input remains an ordinary recursive
+Film scope:
+
+```svml
+<import as="matte" from="@hypit/visual-matte@1"/>
+<matte:Effect id="subject-alpha" channel="alpha" invert="false"/>
+
+<film:Process id="cutout" effect={subject-alpha}>
+  <film:Input name="content">
+    <film:Track id="subject" source={subject.visual}/>
+  </film:Input>
+  <film:Input name="matte">
+    <film:Track id="alpha" source={subjectMask.visual}/>
+  </film:Input>
+</film:Process>
+```
+
+Use `channel="luminance"` when brightness, rather than alpha, carries the matte; set `invert="true"`
+only when the intended visible region is the complement. Film requires the `content` and `matte`
+inputs exactly. It does not infer the relation from Track names, adjacency or media origin. A mask
+owned wholly inside one component remains that component's local visual tree rather than a Film Process.
+
 Root AudioTracks are additive signals rather than a map keyed by Track id. Selecting two independently
 produced signals with the same value id keeps both contributions; intentional repeated routing of one
 source should be expressed by the component or Audio Mix that owns that relationship.
@@ -84,7 +108,7 @@ explicit end and pass it to the components, Film and HTML Video:
 <film:Film id="main" canvas={canvas.canvas} timeline={animation.timeline} appearance={look.film.main}>
   <film:Track id="conversation" source={conversation.visual}/>
 </film:Film>
-<html:Video id="final" composition={main.composition} timeline={animation.timeline}/>
+<html:Video id="final" composition={main.composition}/>
 ```
 
 The example assumes the Canvas, font, Film Recipe and project package are declared. Timeline's `end`
@@ -102,7 +126,7 @@ code-only composition, including scrolling and arbitrary message arrivals.
 ## Choose a render interval in frames
 
 ```svml
-<html:Video id="detail" composition={main.composition} timeline={speech.timeline}
+<html:Video id="detail" composition={main.composition}
   start-frame="240" end-frame-exclusive="360"/>
 ```
 

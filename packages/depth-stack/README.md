@@ -30,7 +30,7 @@ focused material lowerer, but Deck is not a Visual Clip mode and exports only an
   until={proof-end}
   appearance={recipes.deck.proof}
 >
-  <deck:Card id="proof-1" source={proof1.image} extent={proof1.extent}
+  <deck:Card id="proof-1" source={proof1.image} extent={proof1.extent} picture="srgb"
     at={proof1} label={proof-label-style}/>
   <deck:Card id="proof-2" source={proof2.video} at={proof2}/>
 </deck:DepthStack>
@@ -42,6 +42,10 @@ continuing temporal sampling map from the Card's declared activation and the cur
 require a hidden looping mode on the material and never depends on renderer playback history.
 Continue advances by exact programme time while the source may keep a different or variable frame cadence.
 Only the selected renderer resolves that relation onto decoded source samples.
+
+A still Card states its `picture` interpretation explicitly; `srgb` means an ordinary full-range
+sRGB image with straight alpha. Timed media and Surfaces already carry their own picture semantics,
+so the declaration refuses this field for them.
 
 Optional labels are separate exact-font values and are referenced by Cards. Filenames, URLs and
 media metadata are never treated as label truth.

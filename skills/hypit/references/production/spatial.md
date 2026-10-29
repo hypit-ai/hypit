@@ -89,7 +89,7 @@ The matrix maps source-local pixels directly into program-picture pixels:
 <space:Map id="turned" xx="0" xy="-0.5" yx="0.5" yy="0" tx="920" ty="180"/>
 
 <visual:Track id="graphic" timeline={program.timeline}>
-  <visual:Clip image={poster} extent={poster-size} during={program.title}
+  <visual:Clip image={poster} picture="srgb" extent={poster-size} during={program.title}
     frame={layout.full} mapping={turned}/>
 </visual:Track>
 ```

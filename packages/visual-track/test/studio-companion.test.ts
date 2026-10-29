@@ -43,7 +43,10 @@ test("Studio selects the visible Transition Process instead of its hidden partic
       id: "handoff",
       outgoingClipId: "outgoing",
       incomingClipId: "incoming",
-      effect: { format: "example.transition@1", payload: {}, artifacts: [] },
+      effect: {
+        inputs: ["outgoing", "incoming"],
+        program: { format: "example.transition@1", payload: {}, artifacts: [] },
+      },
     }],
   };
   const context: StudioTrackCompanionContext = {

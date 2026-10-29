@@ -1,5 +1,6 @@
-import { audioProgramGainRoutes, audioProgramSourceClips, verifyAudioProgram } from "@hypit/audio-program";
+import { audioProgramSourceClips, verifyAudioProgram } from "@hypit/audio-program";
 import type { AudioProgram } from "@hypit/audio-program";
+import { readAudioGainProcess } from "@hypit/composition";
 import { readPreservePitch } from "@hypit/audio-stretch";
 import type { EndpointSupport } from "@hypit/hypit/endpoint";
 import type { CanonicalValue } from "@hypit/hypit/protocol";
@@ -24,7 +25,23 @@ export function supportsLocalAudioProgram(constraints: CanonicalValue): Endpoint
     return unsupported(`Invalid AudioProgram: ${error instanceof Error ? error.message : String(error)}`);
   }
   try {
-    audioProgramGainRoutes(program as AudioProgram);
+    const inspect = (value: AudioProgram): void => {
+      for (const node of value.graph.nodes) {
+        if (node.kind === "process") {
+          if (Object.keys(node.inputs).some((port) => port !== "signal")) {
+            throw new Error(`Audio Process ${node.id} has unsupported ports.`);
+          }
+          readAudioGainProcess(node.program);
+        }
+        if (node.kind === "composition") {
+          if (node.reconstruction !== undefined) {
+            throw new Error(`Audio Composition ${node.id} reconstruction is unsupported.`);
+          }
+          inspect(node.program);
+        }
+      }
+    };
+    inspect(program as AudioProgram);
   } catch (error) {
     return unsupported(`Audio Process is unsupported: ${error instanceof Error ? error.message : String(error)}`);
   }

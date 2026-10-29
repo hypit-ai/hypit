@@ -19,14 +19,14 @@
   <import as="caption-fine" from="@hypit/caption-fine@1"/>
   <import as="fonts" from="@hypit/fontsource@1"/>
   <import as="space" from="@hypit/spatial@1"/>
-  <import as="region" from="@hypit/region-evidence@1"/>
+  <import as="sequence" from="@hypit/spatial-sequence@1"/>
   <import as="flash" from="@interview/flash@1"/>
   <import as="film" from="@hypit/film@1"/>
   <import as="html" from="@hypit/html-video@1"/>
   <import as="emoji" from="@hypit/interview-emoji-reveal@1"/>
   <import as="recipes" source="./recipes.svs"/>
   <import as="interview-kit" source="@hypit/seedance-kits/street-interview"/>
-  <import as="wojak-tracking" source="./wojak-tracking.svs"/>
+  <import as="wojak-tracking" source="./wojak-tracking.regions.svml"/>
 
   <script id="story">
     <manifest-rule>
@@ -206,8 +206,8 @@
   <time:Window id="real-estate-flash-window" timeline={speech.timeline} from={moment-real-estate-cue} for="8f"/>
   <time:Window id="bitcoin-flash-window" timeline={speech.timeline} from={moment-bitcoin-cue} for="8f"/>
 
-  <region:Evidence id="wojak-heads" within={vertical.bounds} timeline={speech.timeline}
-    recipe={wojak-tracking.heads.wojak}/>
+  <sequence:TimelineRegions id="wojak-heads" document={wojak-tracking.heads}
+    timeline={speech.timeline} canvas={vertical.canvas}/>
   <audio:Track id="speech-sound" timeline={speech.timeline}>
     <audio:Clip id="manifest-rule-semantic-source" source={manifest-rule-media.media} during={speech.manifest-rule-semantic}/>
     <audio:Clip id="real-estate-rule-semantic-source" source={real-estate-rule-media.media} during={speech.real-estate-rule-semantic}/>
@@ -241,6 +241,7 @@
     timeline={speech.timeline} within={vertical.bounds} regions={wojak-heads}>
     <caption-fine:Use style={caption-chad-style}/>
     <caption-fine:Use role="WOJAK" style={caption-wojak-style}/>
+    <caption-fine:Follow role="WOJAK" series="wojak-head" missing="hide"/>
   </caption-fine:Caption>
 
   <emoji:Style id="rule-reveal-style" recipe={recipes.emoji.strip}/>
@@ -274,6 +275,5 @@
     <film:Track source={rule-reveal-sfx.audio}/>
   </film:Film>
 
-  <html:Video id="final" composition={main.composition}
-    timeline={speech.timeline}/>
+  <html:Video id="final" composition={main.composition}/>
 </svml>

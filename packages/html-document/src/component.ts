@@ -1,5 +1,4 @@
 import type { Composition } from "@hypit/composition";
-import type { Timeline } from "@hypit/timeline";
 import type { ProducerPackage } from "@hypit/hypit/producer";
 import type { RefinementPackage } from "@hypit/hypit/refinement";
 import type { Value } from "@hypit/hypit/protocol";
@@ -17,7 +16,6 @@ export const htmlDocumentComponent = {
     producer: htmlDocumentProducers.compile,
     handler: ({ inputs }) => ({ kind: "output" as const, value: canonicalize(compileHtmlDocument(
       valueOf<Composition>(inputs.composition?.value, "Composition"),
-      valueOf<Timeline>(inputs.timeline?.value, "Timeline"),
     )) }),
   }],
   refinements: [{

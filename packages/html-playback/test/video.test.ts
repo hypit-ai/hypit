@@ -22,7 +22,7 @@ test("PreparedMedia preview samples the HtmlProgram TemporalMap as its timing au
       source: { source: { kind: "blob", resource: "res_direct", size: 1, mediaType: "video/mp4" },
         streamIndex: 0, presentationStart: { ticks: "2", timeBase: { numerator: 1, denominator: 1 } },
         sourceDomain: domain, interpretation: { codedWidth: 16, codedHeight: 9,
-          sampleAspectRatio: { numerator: 1, denominator: 1 }, rotationDegrees: 0 } },
+          sampleAspectRatio: { numerator: 1, denominator: 1 }, rotationDegrees: 0, picture: { colorPrimaries: "bt709", colorTransfer: "bt709", colorMatrix: "bt709", colorRange: "limited", bitDepth: 8, alphaMode: "opaque" } as const,} },
       sampling: identityTemporalMap(domain) }],
   } as unknown as HtmlProgram;
   const attrs: Record<string, string> = {

@@ -19,6 +19,7 @@ export type DepthStackFragmentCard = {
   readonly sourceKind: "still" | "timed" | "surface";
   readonly sourceName: string;
   readonly extentName?: string;
+  readonly pictureName?: string;
   readonly fitName: string;
   readonly sampleSpecName: string;
   readonly framePaintSpecName?: string;
@@ -57,6 +58,7 @@ export function createDepthStackFragment(
   for (const card of cards) {
     inputs.push(sourceInput(card));
     if (card.extentName !== undefined) inputs.push({ name: card.extentName, type: spatialTypes.extent });
+    if (card.pictureName !== undefined) inputs.push({ name: card.pictureName, type: mediaTypes.pictureInterpretation });
     inputs.push(
       { name: card.fitName, type: spatialTypes.fit },
       { name: card.sampleSpecName, type: visualTrackTypes.sampleLayerSpec },
@@ -97,6 +99,7 @@ export function createDepthStackFragment(
         layers,
         source,
         ...(card.extentName === undefined ? {} : { extent: input(card.extentName) }),
+        ...(card.pictureName === undefined ? {} : { picture: input(card.pictureName) }),
         fit: input(card.fitName),
         spec: input(card.sampleSpecName),
       },

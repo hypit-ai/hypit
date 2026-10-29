@@ -17,7 +17,7 @@ import type {
   VisualStyleDeclaration,
   PresentVisualTrack,
 } from "@hypit/composition";
-import { preparedAudioSource, verifyPreparedMedia } from "@hypit/media";
+import { preparedAudioSource, SRGB_STRAIGHT_PICTURE, verifyPreparedMedia } from "@hypit/media";
 import { addExactTemporalValues, compareExactTemporalValues, exactTemporalValueFromFrames,
   resolveTemporalRelation, subtractExactTemporalValues } from "@hypit/temporal";
 
@@ -156,6 +156,7 @@ function iconElement(input: {
     id: input.id,
     kind: "image",
     artifact: structuredClone(input.artifact),
+    picture: SRGB_STRAIGHT_PICTURE,
     style: [
       { name: "border-radius", value: px(input.radius) },
       { name: "height", value: px(input.size) },

@@ -60,11 +60,10 @@ export const htmlVideoAuthorDeclaration: AuthorDeclarationCompiler = {
   declaration: "video",
   outputs: [blobTypes.blob, mediaTypes.delivery, timelineTypes.frameSpan],
   shape: {
-    summary: "Requests one final video from a Composition on an explicit Timeline.",
+    summary: "Requests one final video from a Composition and its owned Timeline.",
     fields: [
       { name: "id", kind: "identifier", required: true, summary: "Names the video component." },
       { name: "composition", kind: "reference", required: true, accepts: [compositionTypes.composition], summary: "Selects the picture and sound." },
-      { name: "timeline", kind: "reference", required: true, accepts: [timelineTypes.timeline], summary: "Selects the absolute frame clock and duration." },
       { name: "delivery", kind: "reference", required: false, accepts: [mediaTypes.delivery], summary: "Selects an explicit delivery requirement." },
       { name: "quality", kind: "literal", required: false, values: ["draft", "standard", "high"], summary: "Constructs a standard HTML video delivery requirement." },
       { name: "start-frame", kind: "literal", required: false, summary: "Selects the first rendered source frame." },
@@ -77,7 +76,6 @@ export const htmlVideoAuthorDeclaration: AuthorDeclarationCompiler = {
   async compile({ declaration, resolveReference }) {
     const id = literal(declaration, "id");
     const composition = await resolved(declaration, "composition", compositionTypes.composition, resolveReference);
-    const timeline = await resolved(declaration, "timeline", timelineTypes.timeline, resolveReference);
     if (field(declaration, "delivery") !== undefined && field(declaration, "quality") !== undefined) {
       throw new Error(`${declaration.name} cannot combine delivery and quality.`);
     }
@@ -115,7 +113,6 @@ export const htmlVideoAuthorDeclaration: AuthorDeclarationCompiler = {
         fragment: createHtmlVideoFragment(selected),
         inputs: {
           composition: composition.ref,
-          timeline: timeline.ref,
           delivery,
           ...(selected ? { range: { kind: "record" as const, id: rangeId } } : {}),
         },

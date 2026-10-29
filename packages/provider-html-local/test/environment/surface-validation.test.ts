@@ -40,8 +40,8 @@ function surface(bytes: Uint8Array, options: {
     artifact: { kind: "blob", resource, size: bytes.byteLength, mediaType: options.mediaType },
     width: options.width,
     height: options.height,
-    colorSpace: "srgb",
-    alphaMode: options.alphaMode,
+    picture: { colorPrimaries: "bt709", colorTransfer: "srgb", colorMatrix: "rgb", colorRange: "full",
+      bitDepth: 8, alphaMode: options.alphaMode },
     timing: options.timing,
   };
 }
@@ -134,7 +134,8 @@ test("Surface file admission accepts matching still/video bytes and rejects cont
       /dimensions differ/u,
     );
     await assert.rejects(
-      verifyCompositableSurfaceFile({ surface: { ...alphaSurface, alphaMode: "opaque" }, path: alphaPath }),
+      verifyCompositableSurfaceFile({ surface: { ...alphaSurface,
+        picture: { ...alphaSurface.picture, alphaMode: "opaque" } }, path: alphaPath }),
       /encoded format carries alpha/u,
     );
     await assert.rejects(

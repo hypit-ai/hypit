@@ -7,10 +7,13 @@ import {
   type AuthorResolvedReference,
 } from "@hypit/hypit/author";
 import { sameType, type TypeRef } from "@hypit/hypit/protocol";
-import { compositionTypes } from "@hypit/composition";
+import { assertVisualProcessEffect, compositionTypes } from "@hypit/composition";
+import type { VisualProcessEffect } from "@hypit/composition";
 import { spatialTypes } from "@hypit/spatial";
 import { recipeType, type Recipe } from "@hypit/hypit/recipe";
 import { timelineTypes } from "@hypit/timeline";
+import { mediaTypes, SDR_SRGB_WORKING_PICTURE } from "@hypit/media";
+import type { WorkingPictureSpec } from "@hypit/media";
 
 import { createFilmAssemblyFragment } from "./fragment.js";
 import { filmModuleRef, filmTypes } from "./manifest.js";
@@ -84,6 +87,8 @@ export const filmAuthorDeclaration: AuthorDeclarationCompiler = {
       { name: "canvas", kind: "reference", required: true, accepts: [spatialTypes.canvas], summary: "Selects the Canvas." },
       { name: "timeline", kind: "reference", required: true, accepts: [timelineTypes.timeline], summary: "Selects the absolute Timeline." },
       { name: "appearance", kind: "reference", required: true, accepts: [recipeType], summary: "Selects the Film appearance Recipe." },
+      { name: "picture", kind: "reference", required: false, accepts: [mediaTypes.workingPicture],
+        summary: "Selects an explicit working picture; omitted Films use the SDR sRGB working picture." },
     ],
     children: { group: "members" },
     childGroups: {
@@ -100,6 +105,23 @@ export const filmAuthorDeclaration: AuthorDeclarationCompiler = {
         cardinality: "many",
         summary: "Closes one recursively nested visual scope.",
         fields: [{ name: "id", kind: "identifier", required: true, summary: "Names the visual scope occurrence." }],
+        children: { group: "members" },
+      }, {
+        name: "Process",
+        cardinality: "many",
+        summary: "Combines named visual input scopes through one package-owned Picture process.",
+        fields: [
+          { name: "id", kind: "identifier", required: true, summary: "Names the visual Process occurrence." },
+          { name: "effect", kind: "reference", required: true, accepts: [compositionTypes.visualProcessEffect],
+            summary: "Selects the package-owned Process effect and its named input contract." },
+        ],
+        children: { group: "inputs" },
+      }],
+      inputs: [{
+        name: "Input",
+        cardinality: "many",
+        summary: "Supplies one named, recursively composed Picture input.",
+        fields: [{ name: "name", kind: "literal", required: true, summary: "Selects one effect input port." }],
         children: { group: "members" },
       }],
     },
@@ -118,6 +140,15 @@ export const filmAuthorDeclaration: AuthorDeclarationCompiler = {
       throw new Error(`${declaration.name}.appearance must reference an authored Recipe value.`);
     }
     const appearance = filmAppearanceFromRecipe((appearanceValue as unknown as Recipe).properties);
+    const pictureValue = field(declaration, "picture");
+    let picture: WorkingPictureSpec = structuredClone(SDR_SRGB_WORKING_PICTURE);
+    if (pictureValue !== undefined) {
+      const pictureReference = await resolved(declaration, "picture", mediaTypes.workingPicture, resolveReference);
+      if (pictureReference.record?.value === undefined) {
+        throw new Error(`${declaration.name}.picture must reference an authored WorkingPicture value.`);
+      }
+      picture = structuredClone(pictureReference.record.value as unknown as WorkingPictureSpec);
+    }
 
     const tracks: Array<FilmTrackInput & { readonly source: AuthorResolvedReference }> = [];
     const audio: number[] = [];
@@ -131,7 +162,7 @@ export const filmAuthorDeclaration: AuthorDeclarationCompiler = {
       const occurrence = field(child, "id");
       if (kind === "visual" && occurrence === undefined) throw new Error("Track requires exactly id, source.");
       if (kind === "audio" && occurrence !== undefined) throw new Error("Track requires exactly source.");
-      if (kind === "audio" && !allowAudio) throw new Error("Track inside Stack must reference VisualTrack.");
+      if (kind === "audio" && !allowAudio) throw new Error("Track inside a visual member must reference VisualTrack.");
       const key = referenceKey(source);
       const existingSlot = sourceSlots.get(key);
       if (kind === "audio" && existingSlot !== undefined) {
@@ -165,12 +196,39 @@ export const filmAuthorDeclaration: AuthorDeclarationCompiler = {
           }
           continue;
         }
-        const stackId = literal(child, "id");
-        if (memberIds.has(stackId)) throw new Error(`${subject} contains duplicate visual member id ${stackId}.`);
-        memberIds.add(stackId);
-        const nested = await visualChildren(child.children, false, child.name);
-        if (nested.length === 0) throw new Error(`${child.name} requires at least one visual child.`);
-        members.push({ kind: "stack", id: stackId, members: nested });
+        const memberId = literal(child, "id");
+        if (memberIds.has(memberId)) throw new Error(`${subject} contains duplicate visual member id ${memberId}.`);
+        memberIds.add(memberId);
+        if (child.name === "Stack") {
+          const nested = await visualChildren(child.children, false, child.name);
+          if (nested.length === 0) throw new Error(`${child.name} requires at least one visual child.`);
+          members.push({ kind: "stack", id: memberId, members: nested });
+          continue;
+        }
+        if (child.name !== "Process") throw new Error(`${subject} contains unsupported visual member ${child.name}.`);
+        const effectReference = await resolved(child, "effect", compositionTypes.visualProcessEffect, resolveReference);
+        const effectValue = effectReference.record?.value;
+        if (effectValue === undefined || effectValue === null || Array.isArray(effectValue)
+          || typeof effectValue !== "object") {
+          throw new Error(`${child.name}.effect must reference an authored VisualProcessEffect.`);
+        }
+        const effect = structuredClone(effectValue) as unknown as VisualProcessEffect;
+        assertVisualProcessEffect(effect, `${child.name}.effect`);
+        const inputs: { readonly name: string; readonly members: readonly FilmVisualPlanMember[] }[] = [];
+        const inputNames = new Set<string>();
+        for (const input of child.children) {
+          if (input.name !== "Input") throw new Error(`${child.name} contains unsupported child ${input.name}.`);
+          const name = literal(input, "name");
+          if (inputNames.has(name)) throw new Error(`${child.name} repeats Input ${name}.`);
+          inputNames.add(name);
+          const inputMembers = await visualChildren(input.children, false, input.name);
+          if (inputMembers.length === 0) throw new Error(`${input.name} ${name} requires at least one visual child.`);
+          inputs.push({ name, members: inputMembers });
+        }
+        if (inputNames.size !== effect.inputs.length || effect.inputs.some((name) => !inputNames.has(name))) {
+          throw new Error(`${child.name} inputs must exactly match ${effect.inputs.join(", ")}.`);
+        }
+        members.push({ kind: "process", id: memberId, inputs, effect });
       }
       return members;
     };
@@ -180,7 +238,8 @@ export const filmAuthorDeclaration: AuthorDeclarationCompiler = {
       records: [{
         id: programId,
         type: filmTypes.program,
-        value: sealFilmProgram({ id, clearColor: appearance.clearColor, visual, audio }),
+        value: sealFilmProgram({ id, clearColor: appearance.clearColor,
+          picture, visual, audio }),
         range: declaration.range,
       }],
       components: [{

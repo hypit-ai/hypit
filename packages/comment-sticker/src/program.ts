@@ -12,7 +12,7 @@ import type {
   VisualTextTypography,
   PresentVisualTrack,
 } from "@hypit/composition";
-import { assertFontArtifactRef } from "@hypit/media";
+import { assertFontArtifactRef, SRGB_STRAIGHT_PICTURE } from "@hypit/media";
 import { assertBlobRef, canonicalize } from "@hypit/hypit/protocol";
 import type { BlobRef } from "@hypit/hypit/protocol";
 import { assertSpatialFrame } from "@hypit/spatial";
@@ -497,6 +497,7 @@ function stickerRoot(item: CommentStickerItemProgram): VisualElement {
       id: "avatar",
       kind: "image",
       artifact: structuredClone(item.avatar),
+      picture: SRGB_STRAIGHT_PICTURE,
       style: [
         { name: "border", value: `${px(style.avatar.borderWidthPx)} solid ${style.avatar.borderColor}` },
         { name: "border-radius", value: "50%" },

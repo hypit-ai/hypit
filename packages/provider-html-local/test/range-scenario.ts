@@ -3,17 +3,44 @@ import { compileHtmlProgram } from "@hypit/html-program";
 import type { BlobRef } from "@hypit/protocol";
 import { sealTimeline } from "@hypit/timeline";
 import { frameSamplingMapFixture } from "../../../test/temporal-fixture.js";
-import { exactTemporalZero } from "@hypit/temporal";
+import { exactTemporalValueFromFrames, exactTemporalZero, sealLocalTemporalDomain, sealTemporalMap } from "@hypit/temporal";
 
 function videoElement(artifact: BlobRef, sampling: ReturnType<typeof frameSamplingMapFixture>, style: readonly { name: string; value: string | number }[]) {
   return { id: "video", kind: "video" as const,
     source: { source: artifact, streamIndex: 0, presentationStart: exactTemporalZero(),
       sourceDomain: structuredClone(sampling.stages.at(-1)!.source),
-      interpretation: { codedWidth: 64, codedHeight: 64, sampleAspectRatio: { numerator: 1, denominator: 1 }, rotationDegrees: 0 as const } },
+      interpretation: { codedWidth: 64, codedHeight: 64, sampleAspectRatio: { numerator: 1, denominator: 1 }, rotationDegrees: 0 as const, picture: { colorPrimaries: "bt709", colorTransfer: "bt709", colorMatrix: "bt709", colorRange: "limited", bitDepth: 8, alphaMode: "opaque" } as const,} },
     style, muted: true, sampling };
 }
 
-export function htmlRangeDocument(artifact: BlobRef) {
+function hdr10VideoElement(artifact: BlobRef, sampling: ReturnType<typeof frameSamplingMapFixture>) {
+  const value = videoElement(artifact, sampling, [{ name: "position", value: "absolute" },
+    { name: "inset", value: 0 }, { name: "width", value: "64px" }, { name: "height", value: "64px" }]);
+  return { ...value, source: { ...value.source, interpretation: { ...value.source.interpretation,
+    picture: { colorPrimaries: "bt2020", colorTransfer: "pq", colorMatrix: "bt2020-ncl",
+      colorRange: "limited", bitDepth: 10, alphaMode: "opaque" } as const } } };
+}
+
+export function htmlHdr10SourceDocument(artifact: BlobRef) {
+  const space = sealTimeline({ id: "hdr10-source-space", frameCount: 1,
+    frameRate: { numerator: 30, denominator: 1 } });
+  const sampling = frameSamplingMapFixture({ targetFrameRate: space.frameRate, targetFrames: 1,
+    sourceFrameRate: space.frameRate, sourceFrames: 1, pieces: [{
+      target: { startFrame: 0, endFrameExclusive: 1 }, sourceAtStart: { numerator: 0, denominator: 1 },
+      rate: { numerator: 1, denominator: 1 },
+    }] });
+  const track = sealPresentVisualTrack({ id: "hdr10-video", visualIr: "hypit.visual-ir@1", timelineId: space.id,
+    presents: [{ id: "sample", span: { startFrame: 0, endFrameExclusive: 1 },
+      root: hdr10VideoElement(artifact, sampling) }],
+  });
+  return compileHtmlProgram(sealComposition({ id: "hdr10-source", visual: { picture: {
+    colorPrimaries: "bt709", colorTransfer: "linear", referenceWhiteNits: 203,
+    alphaMode: "premultiplied",
+  } as const, canvas: { width: 64, height: 64, clearColor: "#000000" },
+  root: { members: [{ kind: "track", id: track.id, track }] } }, audio: { contributions: [] } }, space));
+}
+
+function rangeComposition(artifact: BlobRef) {
   const space = sealTimeline({ id: "range-space", frameCount: 18, frameRate: { numerator: 30, denominator: 1 } });
   const track = sealPresentVisualTrack({ id: "video", visualIr: "hypit.visual-ir@1", timelineId: space.id,
     presents: [{ id: "sample", span: { startFrame: 0, endFrameExclusive: 18 },
@@ -29,7 +56,38 @@ export function htmlRangeDocument(artifact: BlobRef) {
           { name: "width", value: "64px" }, { name: "height", value: "64px" }],
       ) }],
   });
-  return compileHtmlProgram(sealComposition({ id: "range-video", visual: { canvas: { width: 64, height: 64, clearColor: "#000000" }, root: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }), space);
+  return sealComposition({ id: "range-video", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 64, height: 64, clearColor: "#000000" }, root: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }, space);
+}
+
+export function htmlRangeDocument(artifact: BlobRef) {
+  return compileHtmlProgram(rangeComposition(artifact));
+}
+
+export function htmlNestedRangeDocument(artifact: BlobRef) {
+  const child = rangeComposition(artifact);
+  const timeline = sealTimeline({ id: "nested-range-space", frameCount: 36,
+    frameRate: { numerator: 30, denominator: 1 } });
+  const target = sealLocalTemporalDomain({ id: "nested-range-occurrence",
+    duration: exactTemporalValueFromFrames(timeline.frameCount, timeline) });
+  const source = sealLocalTemporalDomain({ id: child.timeline.id,
+    duration: exactTemporalValueFromFrames(child.timeline.frameCount, child.timeline) });
+  const sampling = sealTemporalMap({ stages: [{ target, source, pieces: [{
+    target: { start: exactTemporalZero(), end: target.duration },
+    sourceAtStart: exactTemporalZero(), rate: { numerator: 1, denominator: 2 },
+  }] }] });
+  const track = sealPresentVisualTrack({ id: "nested-range", visualIr: "hypit.visual-ir@1",
+    timelineId: timeline.id, presents: [{ id: "nested-range-use",
+      span: { startFrame: 0, endFrameExclusive: timeline.frameCount }, root: {
+        id: "nested-range-composition", kind: "composition", composition: child, sampling,
+        style: [{ name: "position", value: "absolute" }, { name: "inset", value: 0 }],
+      } }],
+  });
+  return compileHtmlProgram(sealComposition({ id: "nested-range-video", visual: {
+    picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100,
+      alphaMode: "premultiplied" } as const,
+    canvas: { width: 64, height: 64, clearColor: "#000000" },
+    root: { members: [{ kind: "track", id: track.id, track }] },
+  }, audio: { contributions: [] } }, timeline));
 }
 
 export function htmlRetiringSourceDocument(artifact: BlobRef) {
@@ -45,5 +103,5 @@ export function htmlRetiringSourceDocument(artifact: BlobRef) {
           { name: "width", value: "64px" }, { name: "height", value: "64px" }],
       ) }],
   });
-  return compileHtmlProgram(sealComposition({ id: "retiring-source-video", visual: { canvas: { width: 64, height: 64, clearColor: "#000000" }, root: { members: [{ kind: "track", id: track.id, track }] } }, audio: { contributions: [] } }), space);
+  return compileHtmlProgram(sealComposition({ id: "retiring-source-video", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 64, height: 64, clearColor: "#000000" }, root: { members: [{ kind: "track", id: track.id, track }] } }, audio: { contributions: [] } }, space));
 }

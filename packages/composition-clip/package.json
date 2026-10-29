@@ -1,0 +1,25 @@
+{
+  "name": "@hypit/composition-clip",
+  "version": "0.1.0",
+  "license": "SEE LICENSE IN LICENSE",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "hypit": { "activation": "./src/activation.ts" },
+  "dependencies": {
+    "@hypit/audio-track": "workspace:^0.3.0",
+    "@hypit/composition": "workspace:^0.2.0",
+    "@hypit/media": "workspace:^0.2.0",
+    "@hypit/spatial": "workspace:^0.1.1",
+    "@hypit/temporal": "workspace:^0.1.1",
+    "@hypit/timeline": "workspace:^0.1.1",
+    "@hypit/visual-track": "workspace:^0.3.0"
+  },
+  "devDependencies": {
+    "@hypit/producer": "workspace:*",
+    "@hypit/protocol": "workspace:*",
+    "@hypit/refinement": "workspace:*"
+  },
+  "peerDependencies": { "@hypit/hypit": "workspace:^0.4.0" },
+  "files": ["dist", "README.md"]
+}

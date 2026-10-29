@@ -18,6 +18,61 @@ type ProbeStream = {
   readonly color_primaries?: unknown;
 };
 
+type ProbeSideData = Record<string, unknown> & { readonly side_data_type?: unknown };
+
+function parseFraction(value: unknown, subject: string): number {
+  assert(typeof value === "string" && /^\d+\/\d+$/u.test(value), `${subject} is not a rational`);
+  const [numerator, denominator] = value.split("/");
+  assert(numerator !== undefined && denominator !== undefined && Number(denominator) > 0, `${subject} is invalid`);
+  return Number(numerator) / Number(denominator);
+}
+
+async function verifyHdrStaticMetadata(args: {
+  readonly path: string;
+  readonly delivery: VisualDeliverySpec;
+  readonly ffprobePath: string;
+  readonly timeoutMs: number;
+  readonly maxOutputBytes: number;
+  readonly signal?: AbortSignal;
+}): Promise<void> {
+  const expected = args.delivery.hdrStaticMetadata;
+  if (expected === undefined) return;
+  const probe = await runProcess({
+    executable: args.ffprobePath,
+    argv: ["-v", "error", "-show_frames", "-read_intervals", "0%+#1", "-of", "json", args.path],
+    timeoutMs: args.timeoutMs,
+    maxOutputBytes: args.maxOutputBytes,
+    ...(args.signal === undefined ? {} : { signal: args.signal }),
+  });
+  const parsed = JSON.parse(Buffer.from(probe.stdout).toString("utf8")) as { readonly frames?: unknown };
+  assert(Array.isArray(parsed.frames) && parsed.frames.length === 1,
+    "Rendered HDR visual has no first frame metadata");
+  const sideData = (parsed.frames[0] as { readonly side_data_list?: unknown }).side_data_list;
+  assert(Array.isArray(sideData), "Rendered HDR visual has no static metadata");
+  const mastering = sideData.find(item => (item as ProbeSideData).side_data_type === "Mastering display metadata") as ProbeSideData | undefined;
+  const light = sideData.find(item => (item as ProbeSideData).side_data_type === "Content light level metadata") as ProbeSideData | undefined;
+  assert(mastering !== undefined, "Rendered HDR visual has no mastering-display metadata");
+  assert(light !== undefined, "Rendered HDR visual has no content-light metadata");
+  const display = expected.masteringDisplay;
+  const close = (actual: unknown, wanted: number, subject: string, scale: number) =>
+    assert(Math.abs(parseFraction(actual, subject) - wanted) <= 0.5 / scale,
+      `${subject} differs from its delivery requirement`);
+  close(mastering.red_x, display.red.x, "Rendered HDR red x", 50_000);
+  close(mastering.red_y, display.red.y, "Rendered HDR red y", 50_000);
+  close(mastering.green_x, display.green.x, "Rendered HDR green x", 50_000);
+  close(mastering.green_y, display.green.y, "Rendered HDR green y", 50_000);
+  close(mastering.blue_x, display.blue.x, "Rendered HDR blue x", 50_000);
+  close(mastering.blue_y, display.blue.y, "Rendered HDR blue y", 50_000);
+  close(mastering.white_point_x, display.whitePoint.x, "Rendered HDR white-point x", 50_000);
+  close(mastering.white_point_y, display.whitePoint.y, "Rendered HDR white-point y", 50_000);
+  close(mastering.min_luminance, display.minLuminanceNits, "Rendered HDR minimum luminance", 10_000);
+  close(mastering.max_luminance, display.maxLuminanceNits, "Rendered HDR maximum luminance", 10_000);
+  assert(light.max_content === expected.contentLight.maxContentLightLevelNits,
+    "Rendered HDR MaxCLL differs from its delivery requirement");
+  assert(light.max_average === expected.contentLight.maxFrameAverageLightLevelNits,
+    "Rendered HDR MaxFALL differs from its delivery requirement");
+}
+
 function parseRational(value: unknown, subject: string): { readonly numerator: bigint; readonly denominator: bigint } {
   assert(typeof value === "string" && /^\d+\/\d+$/u.test(value), `${subject} is not a rational`);
   const [numerator, denominator] = value.split("/");
@@ -73,15 +128,21 @@ export async function verifyOutput(args: {
   assert(Array.isArray(streams) && streams.length === 1, "Rendered visual must contain exactly one stream");
   const stream = streams[0] as ProbeStream;
   assert(stream.codec_type === "video" && stream.codec_name === args.delivery.encoding.codec,
-    "Rendered visual must contain one H.264 video stream and no audio");
+    "Rendered visual codec differs from its delivery requirement");
   assert(stream.pix_fmt === args.delivery.encoding.pixelFormat,
     "Rendered visual pixel format differs from its delivery requirement");
   assert(stream.color_range === "tv" && args.delivery.picture.colorRange === "limited",
     "Rendered visual color range differs from its delivery requirement");
-  assert(stream.color_space === args.delivery.picture.colorMatrix,
+  const ffprobeMatrix = args.delivery.picture.colorMatrix === "bt2020-ncl"
+    ? "bt2020nc"
+    : args.delivery.picture.colorMatrix;
+  assert(stream.color_space === ffprobeMatrix,
     "Rendered visual color matrix differs from its delivery requirement");
-  assert(stream.color_transfer === args.delivery.picture.colorTransfer,
-    "Rendered visual color transfer differs from its delivery requirement");
+  const ffprobeTransfer = args.delivery.picture.colorTransfer === "pq" ? "smpte2084"
+    : args.delivery.picture.colorTransfer === "hlg" ? "arib-std-b67"
+      : args.delivery.picture.colorTransfer;
+  assert(stream.color_transfer === ffprobeTransfer,
+    `Rendered visual color transfer ${String(stream.color_transfer)} differs from ${ffprobeTransfer}`);
   assert(stream.color_primaries === args.delivery.picture.colorPrimaries,
     "Rendered visual color primaries differ from its delivery requirement");
   assert(stream.width === args.document.canvas.width && stream.height === args.document.canvas.height,
@@ -90,4 +151,5 @@ export async function verifyOutput(args: {
   assert(equalsRational(rate, args.document.frameRate), "Rendered visual frame rate differs from its document");
   assert(outputFrameCount(stream) === args.document.frameCount,
     "Rendered visual frame count differs from its document");
+  await verifyHdrStaticMetadata(args);
 }

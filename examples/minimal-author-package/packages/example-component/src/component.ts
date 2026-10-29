@@ -7,6 +7,7 @@ import type { ProducerPackage, ProducerHandler } from "@hypit/hypit/producer";
 import type { RefinementPackage } from "@hypit/hypit/refinement";
 import { VISUAL_IR_V1 } from "@hypit/composition";
 import { exampleProducers, exampleTypes } from "./manifest.js";
+import { SRGB_STRAIGHT_PICTURE } from "@hypit/media";
 
 const valueOf = <T>(record: TypedRecord | undefined): T => {
   if (record?.value === undefined) throw new Error("example producer input is missing");
@@ -29,7 +30,9 @@ function render(kind: string, timeline: Timeline, within: SpatialFrame, image?: 
     id: `example-${kind}`,
     presents: [{ id: `present-${kind}`, span: { startFrame: 0, endFrameExclusive: frames }, root: {
       id: `${kind}-root`, kind: "box",
-      children: kind === "image" && image !== undefined ? [{ id: `${kind}-content`, kind: "image" as const, artifact: image, style: [{ name: "position", value: "absolute" }, { name: "left", value: 0 }, { name: "top", value: 0 }, { name: "width", value: "100%" }, { name: "height", value: "100%" }, { name: "object-fit", value: "contain" }] }] : [],
+      children: kind === "image" && image !== undefined ? [{ id: `${kind}-content`, kind: "image" as const,
+        artifact: image, picture: SRGB_STRAIGHT_PICTURE,
+        style: [{ name: "position", value: "absolute" }, { name: "left", value: 0 }, { name: "top", value: 0 }, { name: "width", value: "100%" }, { name: "height", value: "100%" }, { name: "object-fit", value: "contain" }] }] : [],
       style: [{ name: "position", value: "absolute" }, { name: "left", value: `${within.xPx}px` },
         { name: "top", value: `${within.yPx}px` }, { name: "width", value: `${within.widthPx}px` },
         { name: "height", value: `${within.heightPx}px` }, { name: "background-color", value: "#6b7280" }],

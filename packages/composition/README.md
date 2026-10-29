@@ -49,8 +49,10 @@ Animation keyframes use `atFrame` offsets from the Present's start. Timed media 
 occurrence-local `TemporalMap`; terminal visual compilation alone resolves it onto decoded frames.
 
 The exported `VisualElement` union covers `box`, `mask`, `text`, `text-flow`, `path-text`, `image`,
-`video`, `surface` and `program`. Text carries exact FontArtifactRef values; images and videos carry BlobRefs;
-`surface` carries a CompositableSurfaceRef. The schema and exported TypeScript types in `src/track.ts`
+`video`, `surface` and `program`. Text carries exact FontArtifactRef values. Every image carries a BlobRef
+and complete `PictureInterpretation`; video carries a selected `PreparedVisualSource` with the same
+picture semantics plus its local temporal facts; `surface` carries a CompositableSurfaceRef with its
+declared picture interpretation. The schema and exported TypeScript types in `src/track.ts`
 give each shape. `hypit vocabulary --visual visual-track` and focused element queries expose those
 schemas through the installed Distribution.
 
@@ -59,10 +61,17 @@ and supports named formats. It may place typed children in named slots, so video
 and graphics can share behavior while retaining explicit material dependencies. The parent
 relationship remains structural inside the Present; internal layout belongs to that program.
 
-A `VisualProcess` uses the same programme carrier but its named inputs are complete Present or nested
-Process contributions, not element slots. Each input therefore retains its own absolute span, local
-animation origin and media sampling relation. This is the terminal boundary for multi-picture operations
-such as a two-shot transition; the package that creates the process owns the input-role names and payload.
+A Track-level `VisualProcess` holds a `VisualProcessEffect` and named inputs that are complete Present or nested
+Process contributions, not element slots. The effect declares the exact input-port names and its package-owned
+programme; Composition requires the occurrence inputs to match that contract. Each input therefore retains its
+own absolute span, local animation origin and media sampling relation. This is the terminal boundary for
+multi-picture operations such as a two-shot transition without turning port names into renderer convention.
+
+A Scope-level Process is a structural member alongside Track and Stack. Its named inputs are complete
+recursive VisualScopes, and its `VisualProcessEffect` declares the exact port names and package-owned
+programme. The Process consumes those private input Pictures and contributes one Picture at its own
+position in the parent Scope. This is the generic boundary used by sibling matte; Composition does not
+name matte channels or infer relationships from adjacency.
 
 ## AudioTrack
 
@@ -86,12 +95,15 @@ author package can therefore publish an AudioTrack without teaching Film or Core
 ## Composition
 
 A Composition carries its id and two independently consumable terminal values:
-`VisualComposition { canvas, root }` and `AudioComposition { contributions }`. They share the
+`VisualComposition { picture, canvas, root }` and `AudioComposition { contributions }`. The visual
+picture is the single renderer-neutral working-picture meaning under which Present, Process and
+Adjustment are evaluated; input interpretations and final delivery remain separate. They share the
 Timeline connected to assembly, but a visual compiler does not receive audio routing and an audio
-compiler does not receive Canvas or VisualScope. A visual Scope contains placed Track members and nested Stack members. Both member
-kinds carry a sibling-unique `id`, and their array order paints from back to front. Their recursive
-path identifies one visual occurrence. Each Stack closes its children into one picture before entering
-its parent at that position. Audio outputs form a finite multiset of
+compiler does not receive Canvas or VisualScope. A visual Scope contains placed Track members, nested Stack members and
+named-input Process members. Every member carries a sibling-unique `id`, and array order paints from back to front.
+Its recursive path identifies one visual occurrence. Each Stack closes its children into one Picture before entering
+its parent; each Process closes its named input Scopes through one effect and likewise contributes one Picture.
+Audio outputs form a finite multiset of
 independent closed graphs and are additively combined at the Film root. Repeated signals and equal
 AudioTrack ids are valid; the Track id describes the reusable value, not a root routing key. The Tracks retain
 their Timeline identity; assembly and rendering receive the corresponding Timeline separately.

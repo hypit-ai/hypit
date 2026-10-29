@@ -53,7 +53,7 @@ export function htmlVisualScript(entries: readonly {
   readonly startFrame: number;
   readonly durationFrames: number;
   readonly program: HtmlVisual;
-}[]): string {
+}[], context: { readonly width: number; readonly height: number } = { width: 0, height: 0 }): string {
   return `(() => {
     const fail = error => { window.__hypitHtmlVisualError = String(error?.stack || error); };
     const entries = ${scriptJson(entries)}.filter(entry =>
@@ -64,6 +64,8 @@ export function htmlVisualScript(entries: readonly {
         const render = entry.program.setup === undefined ? () => {} :
           new Function('root', 'data', 'context', entry.program.setup)(root, entry.program.data, {
             durationFrames: entry.durationFrames,
+            width: ${context.width},
+            height: ${context.height},
           });
         if (typeof render !== 'function') throw new Error('HTML visual setup must return render(localFrame).');
         return { ...entry, order, render, region: undefined };

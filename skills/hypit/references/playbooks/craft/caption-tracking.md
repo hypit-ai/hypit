@@ -70,52 +70,53 @@ Transform the useful observations into ordinary project data, with these decisio
   choice within a continuous shot and the same person. Inspect it, stop at cuts and occlusion, and
   write `null` when no usable region exists. Fine does not invent a missing box.
 
-Each Role track's final array has exactly one box or `null` per program frame. Keep the actual array
-in a project Recipe such as `tracking.svs`. A project script can perform the transformations using
-explicit source, clock and geometry inputs. Changing the camera use can require remapping positions.
+Each named series has exactly one box or `null` per program frame. Keep accepted arrays in a standalone
+author Source such as `tracking.regions.svml`. Its `RegionSequenceDocument` declares the exact Clock,
+frame count and normalized final-program coordinates. Changing the camera use can require remapping
+positions and reviewing that file again.
 
 ## Place only the intended speaker's Caption
 
-Script and Caption already connect a Role's words to their timed Cue; the region input supplies the
-head position for the frames where this treatment follows them. A `null` region also hides that
-Role's Cue on that frame. Use the Cue's presentation window or `null` regions to end its appearance
-at the intended handoff, including when a Style's tail would otherwise leave the old words over the
-next speaker. When the person is absent, obscured or in another camera view, choose whether the
-Caption ends or uses an authored ordinary placement. Neither a detector track nor the mere presence
-of a listening face extends someone's speech.
+Script and Caption already connect a Role's words to their timed Cue. A `Follow` binding assigns one
+named series to that Role. Its `missing` policy says whether a `null` frame hides the Cue or uses the
+Style's authored placement. Use the Cue's presentation window or `null` regions to end its appearance
+at the intended handoff. Neither a detector track nor the mere presence of a listening face extends
+someone's speech.
 
 [Caption presentation](../../production/caption-presentation.md) owns Style coverage and hiding.
-A Role with no region evidence keeps ordinary Style placement; a `null` inside an existing series hides
-the Cue rather than switching placement automatically. A deliberate tracked-to-ordinary change can
-use explicit Caption Uses or separate Tracks with the same Script and Timeline.
+A Role with no `Follow` keeps ordinary Style placement. Select `missing="hide"` or
+`missing="authored-placement"` deliberately for every binding.
 
 For example, this is a three-frame data-shape illustration, not a ready timeline for a real video:
 
-```svs
-heads.default {
-  series: [
-    {"id":"GUEST","regions":[[0.12,0.09,0.20,0.26],null,[0.13,0.10,0.20,0.26]]}
-  ];
-}
+```svml
+<?svml using="@hypit/markup@1"?>
+<svml>
+  <import as="sequence" from="@hypit/spatial-sequence@1"/>
+  <sequence:Regions id="heads">
+{"clock":{"frameRate":{"numerator":30,"denominator":1}},"frameCount":3,"series":[{"id":"guest-head","regions":[[0.12,0.09,0.20,0.26],null,[0.13,0.10,0.20,0.26]]}]}
+  </sequence:Regions>
+</svml>
 ```
 
 ## Connect the placement to Caption
 
 ```svml
-<import as="region" from="@hypit/region-evidence@1"/>
-<region:Evidence id="heads" within={vertical.bounds} timeline={speech.timeline}
-  recipe={tracking.heads.default}/>
+<import as="sequence" from="@hypit/spatial-sequence@1"/>
+<import as="tracking" source="./tracking.regions.svml"/>
+<sequence:TimelineRegions id="heads" document={tracking.heads}
+  timeline={speech.timeline} canvas={vertical.canvas}/>
 <caption-fine:Caption id="captions" document={story.caption} timing={story-captions}
   timeline={speech.timeline} within={vertical.bounds} regions={heads}>
   <caption-fine:Use style={caption-style}/>
+  <caption-fine:Follow role="GUEST" series="guest-head" missing="hide"/>
 </caption-fine:Caption>
 ```
 
-The Region Evidence series ids match Script Roles. Fine places a single-Role Cue at that region's top
-center; `anchor-x: center` and `anchor-y: bottom` put the Cue above it. The Style still owns its width,
-font and motion. Supplying `regions` requires every Cue on that Track to have one Script Role, even
-when that particular Role uses fixed placement. Author the relevant Role Cues in Script. The
-`@hypit/region-evidence` and `@hypit/caption-fine` READMEs own the exact data behavior.
+`TimelineRegions` requires exact Clock and frame-count equality and resolves the normalized sequence
+against the final Canvas. Fine places a bound Cue at the region's top center; `anchor-x: center` and
+`anchor-y: bottom` put it above the region. The Style still owns width, font and motion. The
+`@hypit/spatial-sequence` and `@hypit/caption-fine` READMEs own the exact data behavior.
 
 ## Inspect the actual placement
 

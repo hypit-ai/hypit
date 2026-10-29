@@ -82,6 +82,8 @@ test("capture waits for dynamic images and rejects broken images or exact fonts"
         const capture = await createOpaqueFrameCapture(page, { width: 64, height: 64 }, "#000000");
         const frame = await capture(0, [{
           id: "source",
+          documentPath: [],
+          elementId: "source",
           url: `data:image/png;base64,${png.toString("base64")}`,
         }]);
         const { data, info } = await sharp(frame.buffer).raw().toBuffer({ resolveWithObject: true });
@@ -213,16 +215,16 @@ test("compiled frame selection neither stages nor waits for unrelated image reso
   const space = sealTimeline({ id: "capture-scope", frameCount: 60, frameRate: { numerator: 30, denominator: 1 } });
   const track = sealPresentVisualTrack({ id: "visual", timelineId: space.id, visualIr: "hypit.visual-ir@1", presents: [
     { id: "unavailable-early", span: { startFrame: 0, endFrameExclusive: 10 },
-      root: { id: "unavailable", kind: "image", artifact: unavailable,
+      root: { id: "unavailable", kind: "image", picture: { colorPrimaries: "bt709", colorTransfer: "srgb", colorMatrix: "rgb", colorRange: "full", bitDepth: 8, alphaMode: "straight" } as const, artifact: unavailable,
         style: [{ name: "width", value: "64px" }, { name: "height", value: "64px" }] } },
     { id: "broken-early", span: { startFrame: 10, endFrameExclusive: 30 },
-      root: { id: "broken", kind: "image", artifact: broken,
+      root: { id: "broken", kind: "image", picture: { colorPrimaries: "bt709", colorTransfer: "srgb", colorMatrix: "rgb", colorRange: "full", bitDepth: 8, alphaMode: "straight" } as const, artifact: broken,
         style: [{ name: "width", value: "64px" }, { name: "height", value: "64px" }] } },
     { id: "red-late", span: { startFrame: 30, endFrameExclusive: 60 },
-      root: { id: "red", kind: "image", artifact: red,
+      root: { id: "red", kind: "image", picture: { colorPrimaries: "bt709", colorTransfer: "srgb", colorMatrix: "rgb", colorRange: "full", bitDepth: 8, alphaMode: "straight" } as const, artifact: red,
         style: [{ name: "width", value: "64px" }, { name: "height", value: "64px" }] } },
   ] });
-  const document = compileHtmlProgram(sealComposition({ id: "capture-scope", visual: { canvas: { width: 64, height: 64, clearColor: "#000000" }, root: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }), space);
+  const document = compileHtmlProgram(sealComposition({ id: "capture-scope", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 64, height: 64, clearColor: "#000000" }, root: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }, space));
 
   const captured = await rasterizeHtmlFrames({ program: document, picture: htmlProviderPicture(), frames: [45] },
     { resources, workers: 1, processTimeoutMs: 120_000, ...testBrowserOption() });
@@ -256,7 +258,7 @@ test("real capture keeps later Present animation local with picture content and 
   const timeline = sealTimeline({ id: "local-animation", frameCount: 90, frameRate: { numerator: 30, denominator: 1 } });
   const picture = sealPresentVisualTrack({ id: "picture", timelineId: timeline.id, visualIr: "hypit.visual-ir@1", presents: [{
     id: "picture", span: { startFrame: 0, endFrameExclusive: 90 },
-    root: { id: "picture", kind: "image", artifact: black,
+    root: { id: "picture", kind: "image", picture: { colorPrimaries: "bt709", colorTransfer: "srgb", colorMatrix: "rgb", colorRange: "full", bitDepth: 8, alphaMode: "straight" } as const, artifact: black,
       style: [{ name: "position", value: "absolute" }, { name: "inset", value: 0 },
         { name: "width", value: "64px" }, { name: "height", value: "64px" }] },
   }] });
@@ -271,9 +273,9 @@ test("real capture keeps later Present animation local with picture content and 
       ] } },
     })),
   });
-  const document = compileHtmlProgram(sealComposition({ id: "local-animation", visual: { canvas: {
+  const document = compileHtmlProgram(sealComposition({ id: "local-animation", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: {
     width: 64, height: 64, clearColor: "#000000",
-  }, root: { members: [picture, animated].map((track) => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }), timeline);
+  }, root: { members: [picture, animated].map((track) => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }, timeline));
   const frames = await rasterizeHtmlFrames({ program: document, picture: htmlProviderPicture(),
     frames: [15, 45, 75] }, {
     resources, workers: 2, processTimeoutMs: 120_000, ...testBrowserOption(),
@@ -345,11 +347,11 @@ test("Fine Caption Cues stay isolated over Picture during reverse seeks and inde
   const picture = sealPresentVisualTrack({ id: "picture", timelineId: timeline.id,
     visualIr: "hypit.visual-ir@1", presents: [{ id: "picture",
       span: { startFrame: 0, endFrameExclusive: 90 }, root: { id: "picture",
-        kind: "image", artifact: black, style: [{ name: "position", value: "absolute" },
+        kind: "image", picture: { colorPrimaries: "bt709", colorTransfer: "srgb", colorMatrix: "rgb", colorRange: "full", bitDepth: 8, alphaMode: "straight" } as const, artifact: black, style: [{ name: "position", value: "absolute" },
           { name: "inset", value: 0 }, { name: "width", value: "320px" }, { name: "height", value: "180px" }],
         animation: { keyframes: [{ atFrame: 0, style: [{ name: "opacity", value: 1 }] },
           { atFrame: 90, style: [{ name: "opacity", value: 1 }] }] } } }] });
-  const html = compileHtmlProgram(sealComposition({ id: "fine-caption-isolation", visual: { canvas: { width: 320, height: 180, clearColor: "#000000" }, root: { members: [picture, captions].map((track) => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }), timeline);
+  const html = compileHtmlProgram(sealComposition({ id: "fine-caption-isolation", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 320, height: 180, clearColor: "#000000" }, root: { members: [picture, captions].map((track) => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }, timeline));
 
   const assertCueColors = async (buffer: Uint8Array, wanted: "red" | "green" | "blue", label: string) => {
     const { data } = await sharp(buffer).removeAlpha().raw().toBuffer({ resolveWithObject: true });
@@ -429,13 +431,13 @@ test("terminal text and SVG mask sources retain their Present frame animations a
       path: [{ kind: "move", x: 0, y: 20 }, { kind: "line", x: 100, y: 20 }], side: "left", orientation: "follow",
       align: "start", overflow: "visible", startMarginPx: 0, endMarginPx: 0, reverse: false },
     { id: "mask", kind: "mask", mode: "alpha",
-      mask: { id: "mask-image", kind: "image", artifact: image, style: [], animation },
+      mask: { id: "mask-image", kind: "image", picture: { colorPrimaries: "bt709", colorTransfer: "srgb", colorMatrix: "rgb", colorRange: "full", bitDepth: 8, alphaMode: "straight" } as const, artifact: image, style: [], animation },
       content: { id: "content", kind: "box", children: [], style: [{ name: "background", value: "#ffffff" }] },
       style: [{ name: "width", value: "64px" }, { name: "height", value: "64px" }] },
   ] };
   const track = sealPresentVisualTrack({ id: "visual", timelineId: space.id, visualIr: "hypit.visual-ir@1",
     presents: [{ id: "later", span: { startFrame: 15, endFrameExclusive: 60 }, root }] });
-  const compiled = compileHtmlProgram(sealComposition({ id: "animation", visual: { canvas: { width: 128, height: 128, clearColor: "#000000" }, root: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }), space);
+  const compiled = compileHtmlProgram(sealComposition({ id: "animation", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 128, height: 128, clearColor: "#000000" }, root: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }, space));
   const html = materializeHtmlProgram(compiled, artifact => artifact.resource === "res_font"
     ? "data:font/woff2;base64,AA==" : "data:image/png;base64,AA==");
   const browser = await puppeteer.launch({ executablePath: testBrowser(), headless: true, args: ["--no-sandbox"] });

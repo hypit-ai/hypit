@@ -93,6 +93,9 @@ importers:
       '@hypit/composition':
         specifier: workspace:*
         version: link:packages/composition
+      '@hypit/composition-clip':
+        specifier: workspace:*
+        version: link:packages/composition-clip
       '@hypit/credential-store-env':
         specifier: workspace:*
         version: link:packages/credential-store-env
@@ -231,9 +234,6 @@ importers:
       '@hypit/refinement':
         specifier: workspace:*
         version: link:packages/refinement
-      '@hypit/region-evidence':
-        specifier: workspace:*
-        version: link:packages/region-evidence
       '@hypit/result':
         specifier: workspace:*
         version: link:packages/result
@@ -252,6 +252,9 @@ importers:
       '@hypit/spatial':
         specifier: workspace:*
         version: link:packages/spatial
+      '@hypit/spatial-sequence':
+        specifier: workspace:*
+        version: link:packages/spatial-sequence
       '@hypit/speech-evidence':
         specifier: workspace:*
         version: link:packages/speech-evidence
@@ -276,6 +279,9 @@ importers:
       '@hypit/visual-adjustment':
         specifier: workspace:*
         version: link:packages/visual-adjustment
+      '@hypit/visual-matte':
+        specifier: workspace:*
+        version: link:packages/visual-matte
       '@hypit/visual-track':
         specifier: workspace:*
         version: link:packages/visual-track
@@ -810,12 +816,12 @@ importers:
       '@hypit/media':
         specifier: workspace:^0.2.0
         version: link:../media
-      '@hypit/region-evidence':
-        specifier: workspace:^0.1.1
-        version: link:../region-evidence
       '@hypit/spatial':
         specifier: workspace:^0.1.1
         version: link:../spatial
+      '@hypit/spatial-sequence':
+        specifier: workspace:^0.1.0
+        version: link:../spatial-sequence
       '@hypit/temporal':
         specifier: workspace:^0.1.1
         version: link:../temporal
@@ -1026,6 +1032,43 @@ importers:
         specifier: workspace:*
         version: link:../speech-evidence
 
+  packages/composition-clip:
+    dependencies:
+      '@hypit/audio-track':
+        specifier: workspace:^0.3.0
+        version: link:../audio-track
+      '@hypit/composition':
+        specifier: workspace:^0.2.0
+        version: link:../composition
+      '@hypit/hypit':
+        specifier: workspace:^0.4.0
+        version: link:../..
+      '@hypit/media':
+        specifier: workspace:^0.2.0
+        version: link:../media
+      '@hypit/spatial':
+        specifier: workspace:^0.1.1
+        version: link:../spatial
+      '@hypit/temporal':
+        specifier: workspace:^0.1.1
+        version: link:../temporal
+      '@hypit/timeline':
+        specifier: workspace:^0.1.1
+        version: link:../timeline
+      '@hypit/visual-track':
+        specifier: workspace:^0.3.0
+        version: link:../visual-track
+    devDependencies:
+      '@hypit/producer':
+        specifier: workspace:*
+        version: link:../producer
+      '@hypit/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@hypit/refinement':
+        specifier: workspace:*
+        version: link:../refinement
+
   packages/credential-store-env:
     devDependencies:
       '@hypit/hypit':
@@ -1167,6 +1210,9 @@ importers:
       '@hypit/composition':
         specifier: workspace:^0.2.0
         version: link:../composition
+      '@hypit/media':
+        specifier: workspace:^0.2.0
+        version: link:../media
       '@hypit/spatial':
         specifier: workspace:^0.1.1
         version: link:../spatial
@@ -1192,9 +1238,6 @@ importers:
       '@hypit/markup':
         specifier: workspace:*
         version: link:../markup
-      '@hypit/media':
-        specifier: workspace:*
-        version: link:../media
       '@hypit/producer':
         specifier: workspace:*
         version: link:../producer
@@ -2105,6 +2148,9 @@ importers:
       '@hypit/script':
         specifier: workspace:*
         version: link:../script
+      '@hypit/visual-matte':
+        specifier: workspace:*
+        version: link:../visual-matte
       '@hypit/visual-track':
         specifier: workspace:*
         version: link:../visual-track
@@ -2422,37 +2468,6 @@ importers:
         specifier: workspace:*
         version: link:../protocol
 
-  packages/region-evidence:
-    dependencies:
-      '@hypit/spatial':
-        specifier: workspace:^0.1.1
-        version: link:../spatial
-      '@hypit/timeline':
-        specifier: workspace:^0.1.1
-        version: link:../timeline
-    devDependencies:
-      '@hypit/author':
-        specifier: workspace:*
-        version: link:../author
-      '@hypit/hypit':
-        specifier: workspace:*
-        version: link:../..
-      '@hypit/markup':
-        specifier: workspace:*
-        version: link:../markup
-      '@hypit/producer':
-        specifier: workspace:*
-        version: link:../producer
-      '@hypit/protocol':
-        specifier: workspace:*
-        version: link:../protocol
-      '@hypit/recipe':
-        specifier: workspace:*
-        version: link:../recipe
-      '@hypit/refinement':
-        specifier: workspace:*
-        version: link:../refinement
-
   packages/result:
     dependencies:
       '@hypit/atomic-file':
@@ -2639,6 +2654,34 @@ importers:
       '@hypit/source':
         specifier: workspace:*
         version: link:../source
+
+  packages/spatial-sequence:
+    dependencies:
+      '@hypit/spatial':
+        specifier: workspace:^0.1.1
+        version: link:../spatial
+      '@hypit/timeline':
+        specifier: workspace:^0.1.1
+        version: link:../timeline
+    devDependencies:
+      '@hypit/author':
+        specifier: workspace:*
+        version: link:../author
+      '@hypit/hypit':
+        specifier: workspace:*
+        version: link:../..
+      '@hypit/markup':
+        specifier: workspace:*
+        version: link:../markup
+      '@hypit/producer':
+        specifier: workspace:*
+        version: link:../producer
+      '@hypit/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@hypit/refinement':
+        specifier: workspace:*
+        version: link:../refinement
 
   packages/speech-estimate:
     dependencies:
@@ -2943,6 +2986,9 @@ importers:
       '@hypit/composition':
         specifier: workspace:^0.2.0
         version: link:../composition
+      '@hypit/composition-clip':
+        specifier: workspace:^0.1.0
+        version: link:../composition-clip
       '@hypit/credential-store-env':
         specifier: workspace:^0.1.2
         version: link:../credential-store-env
@@ -3033,9 +3079,6 @@ importers:
       '@hypit/realization':
         specifier: workspace:^0.1.0
         version: link:../realization
-      '@hypit/region-evidence':
-        specifier: workspace:^0.1.1
-        version: link:../region-evidence
       '@hypit/runtime-local':
         specifier: workspace:^0.2.0
         version: link:../runtime-local
@@ -3054,6 +3097,9 @@ importers:
       '@hypit/spatial':
         specifier: workspace:^0.1.1
         version: link:../spatial
+      '@hypit/spatial-sequence':
+        specifier: workspace:^0.1.0
+        version: link:../spatial-sequence
       '@hypit/speech-evidence':
         specifier: workspace:^0.2.0
         version: link:../speech-evidence
@@ -3072,6 +3118,9 @@ importers:
       '@hypit/visual-adjustment':
         specifier: workspace:^0.1.0
         version: link:../visual-adjustment
+      '@hypit/visual-matte':
+        specifier: workspace:^0.1.0
+        version: link:../visual-matte
       '@hypit/visual-track':
         specifier: workspace:^0.3.0
         version: link:../visual-track
@@ -3140,6 +3189,28 @@ importers:
       '@hypit/studio-companion':
         specifier: workspace:*
         version: link:../studio-companion
+
+  packages/visual-matte:
+    dependencies:
+      '@hypit/composition':
+        specifier: workspace:^0.2.0
+        version: link:../composition
+      '@hypit/html-program':
+        specifier: workspace:^0.2.0
+        version: link:../html-program
+    devDependencies:
+      '@hypit/author':
+        specifier: workspace:*
+        version: link:../author
+      '@hypit/hypit':
+        specifier: workspace:*
+        version: link:../..
+      '@hypit/markup':
+        specifier: workspace:*
+        version: link:../markup
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
 
   packages/visual-track:
     dependencies:

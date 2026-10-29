@@ -6,7 +6,6 @@ import { injectHtmlPlayback, lowerPlaybackAudio } from "@hypit/html-playback";
 import type { PlaybackResourceUrlResolver } from "@hypit/html-playback";
 import { compileAudioProgram, verifyAudioProgram } from "@hypit/audio-program";
 import type { AudioProgram } from "@hypit/audio-program";
-import type { Timeline } from "@hypit/timeline";
 
 export type HtmlDocument = {
   readonly format: "hypit.html-document@1";
@@ -21,9 +20,9 @@ export type HtmlDocumentPlaybackOptions = {
   readonly responsive?: boolean;
 };
 
-export function compileHtmlDocument(composition: Composition, timeline: Timeline): HtmlDocument {
-  const program = compileHtmlProgram(composition, timeline);
-  const audio = compileAudioProgram(composition.audio, timeline);
+export function compileHtmlDocument(composition: Composition): HtmlDocument {
+  const program = compileHtmlProgram(composition);
+  const audio = compileAudioProgram(composition);
   return {
     format: "hypit.html-document@1",
     program,

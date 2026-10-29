@@ -56,7 +56,7 @@ test("Visual Track declarations own source, time, space and motion independently
           <visual:Sampling at="start" zoom="1"/>
           <visual:Sampling at="end" zoom="1.1"/>
         </visual:Clip>
-        <visual:Clip id="still" image={facts.image} extent={facts.extent} during={facts.incoming} frame={facts.frame}/>
+        <visual:Clip id="still" image={facts.image} picture="srgb" extent={facts.extent} during={facts.incoming} frame={facts.frame}/>
         <visual:Transition id="video-to-still" outgoing="video" incoming="still" effect={soft-mix}/>
       </visual:Track>
       <visual:Motion id="push">

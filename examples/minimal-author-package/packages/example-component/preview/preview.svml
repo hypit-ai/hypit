@@ -56,5 +56,5 @@
     <film:Track source={speech-sound.audio}/>
     <film:Track id="box" source={box.visual}/>
   </film:Film>
-  <html:Video id="final" composition={main.composition} timeline={speech.timeline}/>
+  <html:Video id="final" composition={main.composition}/>
 </svml>

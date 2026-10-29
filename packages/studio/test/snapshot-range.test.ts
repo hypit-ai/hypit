@@ -24,7 +24,7 @@ test("a pure-MG work keeps its declared extent even when a Studio Item extends b
           inputs: [{ name: "picture", contribution: { kind: "present", id: "process-picture",
             span: { startFrame: 0, endFrameExclusive: 90 },
             root: { id: "process-root", kind: "box", children: [], style: [] } } }],
-          program: { format: "example.process@1", payload: {}, artifacts: [] } },
+          effect: { inputs: ["picture"], program: { format: "example.process@1", payload: {}, artifacts: [] } } },
         { kind: "adjustment", id: "grade", span: { startFrame: 10, endFrameExclusive: 80 },
           program: { format: "hypit.html-adjustment@1", payload: { filter: "contrast(1.1)" }, artifacts: [] } },
       ] } }],

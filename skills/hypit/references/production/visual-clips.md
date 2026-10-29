@@ -21,7 +21,7 @@ Visual Track = a set of Visual Clips
 <visual:Track id="picture" timeline={program.timeline}>
   <visual:Clip id="speaker" media={speaker-media.media}
     during={program.speaker} frame={layout.full} fit="cover"/>
-  <visual:Clip id="photo" image={product} extent={product-extent}
+  <visual:Clip id="photo" image={product} picture="srgb" extent={product-extent}
     during={example} frame={layout.detail} fit="contain"
     treatment={look.visual.still} motion={photo-push}/>
 </visual:Track>
@@ -33,7 +33,7 @@ extent or semantic evidence.
 
 A Clip takes one source form:
 
-- `image` with its pixel `extent` for a still;
+- `image` with its pixel `extent` and explicit `picture` interpretation for a still;
 - prepared `media` for timed picture;
 - a typed `surface` for compositable pixels.
 
@@ -91,6 +91,28 @@ When two adjacent Clips overlap and the outgoing Clip starts and ends first, dec
 `visual:Transition` and supply an effect such as `transition:CrossDissolve`, `transition:Push`,
 `transition:LinearWipe` or `transition:BlurDissolve`. The complete overlap is
 the interval; do not repeat it as another Window. Each Clip keeps its own source sampling.
+
+## Reuse one closed audiovisual work
+
+Use `@hypit/composition-clip@1` when the reusable source is a complete Composition rather than a
+PreparedMedia picture. Author one `Occurrence` from the child Composition, parent Timeline and parent
+Window. Project that occurrence with `Visual` and/or `Audio`; Film receives their ordinary Track outputs.
+
+```svml
+<import as="nest" from="@hypit/composition-clip@1"/>
+
+<nest:Occurrence id="chapter-use" timeline={program.timeline}
+  source={chapter.composition} during={chapter-window}/>
+<nest:Visual id="chapter-picture" timeline={program.timeline}
+  picture={working-picture} occurrence={chapter-use.occurrence} frame={layout.full}/>
+<nest:Audio id="chapter-sound" timeline={program.timeline}
+  occurrence={chapter-use.occurrence} gain="1" fade-in="0f" fade-out="0f"/>
+```
+
+Put temporal `Map` or `Curve` children on `Occurrence`, never independently on its visual and audio
+projections. Use another explicit occurrence for an intentional J-cut or L-cut. Parent and child must
+currently share one exact WorkingPictureSpec; do not insert an implicit colour conversion. The audio
+programme is fixed at 48 kHz stereo.
 
 ## Put shared behavior in a component
 

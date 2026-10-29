@@ -1,5 +1,5 @@
 import { sealMediaInspection } from "@hypit/media";
-import type { MediaAudioStream, MediaInspection, MediaOtherStream, MediaRational, MediaStream, MediaTimestamp, MediaVideoStream } from "@hypit/media";
+import type { MediaAudioStream, MediaInspection, MediaOtherStream, MediaRational, MediaStream, MediaTimestamp, MediaVideoStream, PictureObservation } from "@hypit/media";
 import { ffprobeDisplayRotation } from "./ffprobe-display.js";
 
 type JsonObject = Record<string, unknown>;
@@ -14,12 +14,24 @@ type FfprobeStream = {
   readonly time_base?: unknown;
   readonly avg_frame_rate?: unknown;
   readonly r_frame_rate?: unknown;
+  readonly pix_fmt?: unknown;
+  readonly bits_per_raw_sample?: unknown;
+  readonly color_primaries?: unknown;
+  readonly color_transfer?: unknown;
+  readonly color_space?: unknown;
+  readonly color_range?: unknown;
   readonly sample_rate?: unknown;
   readonly channels?: unknown;
   readonly channel_layout?: unknown;
   readonly disposition?: { readonly default?: unknown; readonly attached_pic?: unknown };
   readonly tags?: { readonly rotate?: unknown };
   readonly side_data_list?: readonly unknown[];
+};
+
+type FfprobePixelFormat = {
+  readonly name?: unknown;
+  readonly flags?: { readonly alpha?: unknown };
+  readonly components?: readonly { readonly bit_depth?: unknown }[];
 };
 
 type FfprobeFrame = {
@@ -92,6 +104,32 @@ function sampleAspectRatio(value: unknown): MediaRational {
 
 function timestamp(ticks: bigint, timeBase: MediaRational): MediaTimestamp {
   return { ticks: ticks.toString(), timeBase };
+}
+
+function pictureObservation(stream: FfprobeStream, formats: readonly FfprobePixelFormat[]): PictureObservation {
+  const result: { -readonly [Key in keyof PictureObservation]?: PictureObservation[Key] } = {};
+  if (stream.color_primaries === "bt709") result.colorPrimaries = "bt709";
+  else if (stream.color_primaries === "smpte432") result.colorPrimaries = "display-p3";
+  else if (stream.color_primaries === "bt2020") result.colorPrimaries = "bt2020";
+  if (stream.color_transfer === "iec61966-2-1") result.colorTransfer = "srgb";
+  else if (stream.color_transfer === "bt709") result.colorTransfer = "bt709";
+  else if (stream.color_transfer === "linear") result.colorTransfer = "linear";
+  else if (stream.color_transfer === "smpte2084") result.colorTransfer = "pq";
+  else if (stream.color_transfer === "arib-std-b67") result.colorTransfer = "hlg";
+  if (stream.color_space === "gbr" || stream.color_space === "rgb") result.colorMatrix = "rgb";
+  else if (stream.color_space === "bt709") result.colorMatrix = "bt709";
+  else if (stream.color_space === "bt2020nc") result.colorMatrix = "bt2020-ncl";
+  if (stream.color_range === "pc") result.colorRange = "full";
+  else if (stream.color_range === "tv") result.colorRange = "limited";
+  const format = typeof stream.pix_fmt === "string"
+    ? formats.find((candidate) => candidate.name === stream.pix_fmt) : undefined;
+  const rawDepth = positiveInteger(stream.bits_per_raw_sample);
+  const componentDepths = [...new Set((format?.components ?? [])
+    .map((component) => positiveInteger(component.bit_depth)).filter((value): value is number => value !== undefined))];
+  const bitDepth = rawDepth ?? (componentDepths.length === 1 ? componentDepths[0] : undefined);
+  if (bitDepth === 8 || bitDepth === 10 || bitDepth === 12 || bitDepth === 16) result.bitDepth = bitDepth;
+  if (format !== undefined) result.alphaMode = integer(format.flags?.alpha) === 1 ? "straight" : "opaque";
+  return result;
 }
 
 function median(values: readonly bigint[]): bigint {
@@ -209,6 +247,9 @@ export function parseMediaInspection(value: unknown): MediaInspection {
   const streams = rawStreams as FfprobeStream[];
   const rawFrames = Array.isArray(root.frames) ? root.frames.map(object).filter((item): item is JsonObject => item !== undefined) : [];
   const frames = rawFrames as FfprobeFrame[];
+  const rawFormats = Array.isArray(root.pixel_formats)
+    ? root.pixel_formats.map(object).filter((item): item is JsonObject => item !== undefined) : [];
+  const formats = rawFormats as FfprobePixelFormat[];
   const parsed: MediaStream[] = streams.map((stream): MediaStream => {
     const index = integer(stream.index);
     if (index === undefined || index < 0) throw new Error("ffprobe stream index is invalid");
@@ -242,6 +283,7 @@ export function parseMediaInspection(value: unknown): MediaInspection {
         height,
         sampleAspectRatio: sampleAspectRatio(stream.sample_aspect_ratio),
         rotationDegrees: ffprobeDisplayRotation(stream, `video stream ${index}`),
+        picture: pictureObservation(stream, formats),
         ...(rational(stream.avg_frame_rate, true) === undefined ? {} : { averageFrameRate: rational(stream.avg_frame_rate, true)! }),
         ...(rational(stream.r_frame_rate, true) === undefined ? {} : { nominalFrameRate: rational(stream.r_frame_rate, true)! }),
       };

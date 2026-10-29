@@ -38,7 +38,7 @@ function grokInspection(): MediaInspection {
         width: 464,
         height: 688,
         sampleAspectRatio: { numerator: 1, denominator: 1 },
-        rotationDegrees: 0,
+        rotationDegrees: 0, picture: { colorPrimaries: "bt709", colorTransfer: "bt709", colorMatrix: "bt709", colorRange: "limited", bitDepth: 8, alphaMode: "opaque" } as const,
         averageFrameRate: { numerator: 24, denominator: 1 },
         nominalFrameRate: { numerator: 24, denominator: 1 },
       },
@@ -73,7 +73,7 @@ function grokInspection(): MediaInspection {
         width: 464,
         height: 688,
         sampleAspectRatio: { numerator: 1, denominator: 1 },
-        rotationDegrees: 0,
+        rotationDegrees: 0, picture: { colorPrimaries: "bt709", colorTransfer: "bt709", colorMatrix: "bt709", colorRange: "limited", bitDepth: 8, alphaMode: "opaque" } as const,
       },
     ],
   });
@@ -85,6 +85,7 @@ test("primary stream selection excludes Grok's MJPEG attached picture and observ
     video: { mode: "primary-moving" },
     audio: { mode: "default" },
     spanAuthority: "video",
+    picture: { mode: "source" },
   });
   const selection = selectMediaStreams(inspection, request);
   verifyMediaStreamSelection(selection);
@@ -107,12 +108,14 @@ test("multiple moving streams without one default fail closed instead of guessin
     video: { mode: "primary-moving" },
     audio: { mode: "none" },
     spanAuthority: "video",
+    picture: { mode: "source" },
   });
   assert.throws(() => selectMediaStreams(ambiguous, request), /ambiguous/u);
   const explicit = sealMediaSelectionRequest({
     video: { mode: "stream-index", streamIndex: 3 },
     audio: { mode: "none" },
     spanAuthority: "video",
+    picture: { mode: "source" },
   });
   assert.equal(selectMediaStreams(ambiguous, explicit).videoStreamIndex, 3);
 });
@@ -122,6 +125,37 @@ test("an attached picture cannot be forced into the moving-video preparation pat
     video: { mode: "stream-index", streamIndex: 2 },
     audio: { mode: "none" },
     spanAuthority: "video",
+    picture: { mode: "source" },
   });
   assert.throws(() => selectMediaStreams(grokInspection(), request), /not a moving visual stream/u);
+});
+
+test("incomplete source picture facts require an explicit author interpretation", () => {
+  const inspection = grokInspection();
+  const primary = inspection.streams.find((stream): stream is MediaVideoStream => stream.kind === "video" && stream.index === 0)!;
+  const incomplete = sealMediaInspection({
+    ...inspection,
+    streams: inspection.streams.map((stream) => stream === primary
+      ? { ...primary, picture: { colorPrimaries: "bt709", bitDepth: 8, alphaMode: "opaque" } }
+      : stream),
+  });
+  const common = {
+    video: { mode: "primary-moving" as const },
+    audio: { mode: "none" as const },
+    spanAuthority: "video" as const,
+  };
+  assert.throws(() => selectMediaStreams(incomplete, sealMediaSelectionRequest({
+    ...common,
+    picture: { mode: "source" },
+  })), /choose an explicit picture profile/u);
+
+  const interpretation = {
+    colorPrimaries: "bt709", colorTransfer: "bt709", colorMatrix: "bt709",
+    colorRange: "limited", bitDepth: 8, alphaMode: "opaque",
+  } as const;
+  const selected = selectMediaStreams(incomplete, sealMediaSelectionRequest({
+    ...common,
+    picture: { mode: "explicit", interpretation },
+  }));
+  assert.deepEqual(selected.picture, interpretation);
 });

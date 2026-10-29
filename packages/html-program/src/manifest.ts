@@ -1,5 +1,5 @@
 import { compositionDependency, compositionTypes, VISUAL_IR_V1 } from "@hypit/composition";
-import { compositableSurfaceSchema, mediaDependency, mediaTypes, preparedVisualSourceSchema } from "@hypit/media";
+import { compositableSurfaceSchema, mediaDependency, mediaTypes, pictureInterpretationSchema, preparedVisualSourceSchema, workingPictureSpecSchema } from "@hypit/media";
 import { blobRefSchema } from "@hypit/hypit/protocol";
 import type { CapabilityRef, ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/hypit/protocol";
 import { frameSpanSchema, timelineDependency, timelineTypes } from "@hypit/timeline";
@@ -26,6 +26,7 @@ export const htmlProgramSchema: ValueSchema = {
   kind: "object",
   fields: {
     visualIr: { schema: { kind: "literal", value: VISUAL_IR_V1 } },
+    picture: { schema: workingPictureSpecSchema },
     frameRate: { schema: {
       kind: "object",
       fields: {
@@ -41,11 +42,13 @@ export const htmlProgramSchema: ValueSchema = {
         height: { schema: positiveInteger },
       },
     } },
+    processPasses: { schema: nonNegativeInteger },
     artifacts: { schema: { kind: "array", items: {
       kind: "object",
       fields: {
         id: { schema: { kind: "string", minLength: 1 } },
         artifact: { schema: blobRefSchema() },
+        picture: { schema: pictureInterpretationSchema, optional: true },
         usage: { schema: { kind: "oneOf", variants: [
           { kind: "object", fields: { kind: { schema: { kind: "literal", value: "always" } } } },
           { kind: "object", fields: {
@@ -61,11 +64,15 @@ export const htmlProgramSchema: ValueSchema = {
     } } } },
     videoSources: { schema: { kind: "array", items: { kind: "oneOf", variants: [{ kind: "object", fields: {
       id: { schema: { kind: "string", minLength: 1 } },
+      documentPath: { schema: { kind: "array", items: { kind: "string", minLength: 1 } } },
+      elementId: { schema: { kind: "string", minLength: 1 } },
       kind: { schema: { kind: "literal", value: "media" } },
       ...(frameSpanSchema.kind === "object" ? frameSpanSchema.fields : {}),
       source: { schema: preparedVisualSourceSchema }, sampling: { schema: temporalMapSchema },
     } }, { kind: "object", fields: {
       id: { schema: { kind: "string", minLength: 1 } },
+      documentPath: { schema: { kind: "array", items: { kind: "string", minLength: 1 } } },
+      elementId: { schema: { kind: "string", minLength: 1 } },
       kind: { schema: { kind: "literal", value: "surface" } },
       artifactId: { schema: { kind: "string", minLength: 1 } },
       ...(frameSpanSchema.kind === "object" ? frameSpanSchema.fields : {}),
@@ -95,10 +102,7 @@ export const htmlProgramManifest: ModuleManifest = {
   ],
   producers: [{
     name: htmlProgramProducers.compile.name,
-    inputs: [
-      { name: "composition", type: compositionTypes.composition },
-      { name: "timeline", type: timelineTypes.timeline },
-    ],
+    inputs: [{ name: "composition", type: compositionTypes.composition }],
     result: { kind: "output" as const, name: "program", type: htmlProgramTypes.program },
   }, {
     name: htmlProgramProducers.requestVisual.name,

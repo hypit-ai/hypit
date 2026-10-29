@@ -18,7 +18,7 @@ import {
   verifyStillVideoRequest,
 } from "@hypit/media-operations";
 import { audioProgramSourceClips, verifyAudioProgram } from "@hypit/audio-program";
-import type { AudioProgram, RenderAudioNeed } from "@hypit/audio-program";
+import type { AudioProgram, AudioProgramClip, RenderAudioNeed } from "@hypit/audio-program";
 import { readPreservePitch } from "@hypit/audio-stretch";
 import type { MuxMediaNeed } from "@hypit/media-delivery";
 import { assertBlobRef, canonicalize } from "@hypit/hypit/protocol";
@@ -230,7 +230,7 @@ async function inspectFile(args: {
 }): Promise<MediaInspection> {
   const raw = await runProcess({
     executable: args.ffprobePath,
-    argv: ["-v", "error", "-print_format", "json", "-show_format", "-show_streams", "-show_frames", args.input],
+    argv: ["-v", "error", "-print_format", "json", "-show_format", "-show_streams", "-show_frames", "-show_pixel_formats", args.input],
     timeoutMs: args.timeoutMs,
     maxStdoutBytes: args.maxProbeOutputBytes,
     ...(args.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: args.sharedLibraryPath }),
@@ -274,6 +274,10 @@ function animatedWebpInspection(animation: AnimatedWebp): MediaInspection {
       sampleAspectRatio: { numerator: 1, denominator: 1 },
       rotationDegrees: 0,
       averageFrameRate: { numerator: numerator / factor, denominator: durationMs / factor },
+      picture: {
+        colorPrimaries: "bt709", colorTransfer: "srgb", colorMatrix: "rgb", colorRange: "full",
+        bitDepth: 8, alphaMode: "straight",
+      },
     }],
   });
 }
@@ -874,8 +878,10 @@ export async function executeRenderTimelineAudio(
       readonly path: string;
       readonly reader: CanonicalPcmReader;
     }>();
-    const clipSources = new Map<string, CanonicalPcmReader>();
-    const clipSourcePaths = new Map<string, string>();
+    // Clip ids are local to their owning AudioProgram. Recursive Compositions may
+    // therefore contain the same authored id without sharing an execution slot.
+    const clipSources = new Map<AudioProgramClip, CanonicalPcmReader>();
+    const clipSourcePaths = new Map<AudioProgramClip, string>();
     for (const clip of clips) {
       const key = `${clip.source.source.resource}\u0000${clip.source.streamIndex}`;
       let decoded = sources.get(key);
@@ -901,17 +907,17 @@ export async function executeRenderTimelineAudio(
           clip.source.sourceDomain.duration) === 0,
         `Audio renderer source ${clip.id} reuses one stream with a different domain`);
       }
-      clipSources.set(clip.id, decoded.reader);
-      clipSourcePaths.set(clip.id, decoded.path);
+      clipSources.set(clip, decoded.reader);
+      clipSourcePaths.set(clip, decoded.path);
     }
 
-    const reconstructed = new Map<string, CanonicalPcmReader>();
+    const reconstructed = new Map<AudioProgramClip, CanonicalPcmReader>();
     for (const clip of clips) {
       if (clip.reconstruction === undefined) continue;
       readPreservePitch(clip.reconstruction);
       const plan = planPositiveAffineReconstruction(clip);
-      const source = clipSources.get(clip.id);
-      const sourcePath = clipSourcePaths.get(clip.id);
+      const source = clipSources.get(clip);
+      const sourcePath = clipSourcePaths.get(clip);
       assert(source !== undefined && sourcePath !== undefined,
         `Audio renderer Clip ${clip.id} has no decoded source for reconstruction`);
       assert(plan.sourceEndSampleExclusive <= source.sampleFrames,
@@ -936,7 +942,7 @@ export async function executeRenderTimelineAudio(
       });
       const reader = new CanonicalPcmReader(path, plan.targetSampleFrames);
       readers.add(reader);
-      reconstructed.set(clip.id, reader);
+      reconstructed.set(clip, reader);
     }
 
     const output = join(work, "program.wav");
@@ -946,11 +952,11 @@ export async function executeRenderTimelineAudio(
       startSample: window.startSample,
       sampleFrames: window.sampleFrames,
       sourceForClip: (clip) => {
-        const reader = clipSources.get(clip.id);
+        const reader = clipSources.get(clip);
         assert(reader !== undefined, `Audio renderer Clip ${clip.id} has no decoded source`);
         return reader;
       },
-      reconstructedForClip: (clip) => reconstructed.get(clip.id),
+      reconstructedForClip: (clip) => reconstructed.get(clip),
     });
     const artifact = await env.artifacts.putFile(output, "audio/wav");
     const audio = await assertCanonicalWav({

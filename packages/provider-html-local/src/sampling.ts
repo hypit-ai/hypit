@@ -19,12 +19,16 @@ type SourceFrames = {
 
 export type VideoSlot = FrameSpan & {
   readonly id: string;
+  readonly documentPath: readonly string[];
+  readonly elementId: string;
   readonly src: string;
   readonly sourceKey: string;
 } & (
   | {
       readonly kind: "media";
       readonly streamIndex: number;
+      readonly picture: Extract<HtmlVideoSource, { readonly kind: "media" }>["source"]["interpretation"]["picture"];
+      readonly rotation: 0 | 90 | 180 | 270;
       readonly presentationStart: ExactValue;
       readonly sampling: Extract<HtmlVideoSource, { readonly kind: "media" }>["sampling"];
       readonly programClock: Clock;
@@ -67,9 +71,13 @@ export function videoSlots(
       return {
         kind: "media",
         id: source.id,
+        documentPath: [...source.documentPath],
+        elementId: source.elementId,
         src,
         sourceKey: `${src}\u0000${source.source.streamIndex}`,
         streamIndex: source.source.streamIndex,
+        picture: structuredClone(source.source.interpretation.picture),
+        rotation: source.source.interpretation.rotationDegrees,
         presentationStart: structuredClone(source.source.presentationStart),
         sampling: structuredClone(source.sampling),
         programClock: structuredClone(programClock),
@@ -81,6 +89,8 @@ export function videoSlots(
     return {
       kind: "surface",
       id: source.id,
+      documentPath: [...source.documentPath],
+      elementId: source.elementId,
       src,
       sourceKey: `${src}\u00000`,
       streamIndex: 0,

@@ -5,7 +5,7 @@ active-word treatment and motion. It renders authored Cues whose tokens all obey
 type, Paint and motion rules. Spoken time and token order may change the state of that rule; a token
 does not carry a private visual role.
 
-The package owns the `Style`, `Caption`, `Use` and `Fallback` declaration meanings and lowers them
+The package owns the `Style`, `Caption`, `Use`, `Follow` and `Fallback` declaration meanings and lowers them
 to Caption records and graph components. Markup only spells those declarations. Another authoring
 frontend can invoke the same package declarations without recreating Caption assembly or validation.
 
@@ -18,34 +18,28 @@ frontend can invoke the same package declarations without recreating Caption ass
   </caption-fine:Caption>
 ```
 
-An optional Region Evidence supplies a moving placement point when the user's reference
-visibly uses head-following Caption or the user asks for that treatment. Ordinary Caption uses the
-Style's placement without regions. Region Evidence is authored numeric input mapped from available picture
-evidence to the composition that consumes it; it is not a face-tracking request:
+An optional Timeline Region Sequence supplies moving placement when the intended treatment follows
+a measured subject. Ordinary Caption uses the Style's placement without regions. The spatial sequence
+is authored and attached to the Timeline outside this package; `Follow` gives it consumer-specific meaning:
 
 ```xml
-<import as="region" from="@hypit/region-evidence@1"/>
-<region:Evidence id="heads" within={vertical.bounds} timeline={speech.timeline}
-  recipe={tracking.heads.default}/>
+<import as="sequence" from="@hypit/spatial-sequence@1"/>
+<import as="tracking" source="./heads.regions.svml"/>
+<sequence:TimelineRegions id="heads" document={tracking.heads}
+  timeline={speech.timeline} canvas={vertical.canvas}/>
 <caption-fine:Caption id="captions-track" document={story.caption} timing={story-captions}
   timeline={speech.timeline} within={vertical.bounds} regions={heads}>
     <caption-fine:Use style={primary}/>
+    <caption-fine:Follow role="GUEST" series="guest-head" missing="hide"/>
   </caption-fine:Caption>
 ```
 
-With `regions`, every Cue must carry one Script Role. When Region Evidence contains a measured region for that
-Role and Frame, Fine places the Cue at the region's top center. When that Role has a series but
-the current Frame is `null`, the Cue is not rendered: absence of evidence never becomes a guessed
-position. A Role with no evidence series uses the Style's authored `x` and `y`, so unrelated speakers remain
-ordinary fixed captions. The Style still owns its width and anchors, so `anchor-x: center;
-anchor-y: bottom` puts the Caption immediately above a measured region. The Timeline is finished
-external evidence: Fine does not detect people, associate identities, smooth motion, interpolate
-missing Frames or invoke a Provider. Without `regions`, the ordinary Recipe `x` and `y` behavior is
-unchanged.
-
-This keeps placement inspectable and editable. If a tracked face needs padding or an above-head anchor,
-transform the measured numbers while authoring Region Evidence, then give Caption the result. Do
-not hide that transformation in a Provider or ask the Build to rediscover the face.
+`Follow` explicitly maps one Script Role to one series id. A matching Cue is placed at that region's
+top center. `missing="hide"` hides a Cue on a `null` Frame; `missing="authored-placement"` uses the
+Style's authored `x` and `y` on that Frame. Roles without a `Follow` remain ordinary fixed captions.
+The Style still owns width and anchors, so `anchor-x: center; anchor-y: bottom` places text above the
+region. Fine does not detect people, associate identities, interpolate observations or invoke a
+Provider. It only consumes the explicit Timeline sequence and binding.
 
 One SVS Recipe freezes three public dimensions:
 

@@ -29,5 +29,5 @@
   <film:Film id="main" canvas={canvas.canvas} timeline={animation.timeline} appearance={style.film.main}>
     <film:Track id="conversation" source={conversation.visual}/>
   </film:Film>
-  <html:Video id="final" composition={main.composition} timeline={animation.timeline}/>
+  <html:Video id="final" composition={main.composition}/>
 </svml>

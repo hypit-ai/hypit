@@ -20,6 +20,7 @@ import { requestedFrameRanges } from "./sampling.js";
 import { browserCacheDirectory, browserExecutablePath, configuredBrowserPath, requireBrowserExecutable, selectedBrowserVersion } from "./browser.js";
 import { htmlArtifactRelativePath, stageHtmlProgram } from "./stage.js";
 import { electronExecutablePath, requireElectronExecutable, selectedHtmlRenderer } from "./electron.js";
+import { assertLocalHtmlFrameSupport, assertLocalHtmlRasterSupport, isLocalHtmlHdr10Request } from "./support.js";
 
 export type HtmlRasterProgress =
   | { readonly phase: "staging" | "encoding" | "storing"; readonly elapsedMs: number }
@@ -97,10 +98,13 @@ export async function rasterizeHtmlFrames(request: HtmlFrameRequest, options: Ht
 async function capture(request: HtmlRasterRequest | HtmlFrameRequest, options: HtmlRasterOptions): Promise<TimelineVisual | HtmlFrameImages> {
   const frames = "frames" in request ? request.frames : undefined;
   const execution = resolveExecutionOptions(options);
+  if (frames === undefined) assertLocalHtmlRasterSupport(request as HtmlRasterRequest, execution.renderer);
+  else assertLocalHtmlFrameSupport(request as HtmlFrameRequest);
   if (frames !== undefined && execution.renderer === "electron") {
     throw new Error("The Electron renderer produces encoded video; PNG frame capture requires a Chromium Endpoint");
   }
   const gpu = frames === undefined && execution.renderer === "electron";
+  const hdr10 = frames === undefined && isLocalHtmlHdr10Request(request as HtmlRasterRequest);
   const config = { ...execution, chromePath: gpu ? "" : browserExecutablePath(options) };
   const document = request.program;
   const range = frames === undefined
@@ -140,7 +144,8 @@ async function capture(request: HtmlRasterRequest | HtmlFrameRequest, options: H
       + `; decoded source budget ${config.maxDecodedSourceBytes} bytes`
       + (frames === undefined
         ? `; delivery quality ${(request as HtmlRasterRequest).delivery.encoding.quality}; `
-          + `${gpu ? "browser decode, WebCodecs H.264 and FFmpeg mux" : "ordered FFmpeg PNG pipe"}; `
+          + `${gpu ? (hdr10 ? "exact HDR source decode, WebGPU P010 transform and libx265 Main10"
+            : "browser decode, WebCodecs H.264 and FFmpeg mux") : "ordered FFmpeg PNG pipe"}; `
           + `pending frame budget ${config.maxPendingFrameBytes} bytes; FFmpeg ${config.ffmpegPath}`
         : "; PNG output") });
     options.onProgress?.({ phase: "staging", elapsedMs: 0 });

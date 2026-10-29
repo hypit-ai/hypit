@@ -8,7 +8,7 @@ import type { CaptionProgram, CaptionTiming } from "@hypit/caption";
 import { visualElements } from "@hypit/composition";
 import type { FontArtifactRef } from "@hypit/media";
 import { captionDocument, parseScript } from "@hypit/script";
-import type { RegionEvidence } from "@hypit/region-evidence";
+import type { TimelineRegionSequence } from "@hypit/spatial-sequence";
 import type { Recipe } from "@hypit/recipe";
 
 import { fixtureResource } from "../../../test/fixture-resource.js";
@@ -26,9 +26,10 @@ function renderCaption(
   program: CaptionProgram,
   document: Parameters<typeof renderFineCaption>[2],
   timeline: Timeline,
-  regions?: RegionEvidence,
+  regions?: TimelineRegionSequence,
+  regionBindings?: Parameters<typeof renderFineCaption>[6],
 ) {
-  return renderFineCaption(schedule, program, document, timeline, bounds, regions);
+  return renderFineCaption(schedule, program, document, timeline, bounds, regions, regionBindings);
 }
 
 const font: FontArtifactRef = {
@@ -239,21 +240,23 @@ test("Fine Caption samples harmonic loop motion instead of aliasing it to rest",
   assert.ok(moved[0]!.atFrame < 6);
 });
 
-test("Fine Caption follows measured Role regions and hides null Frames", () => {
+test("Fine Caption follows an explicitly bound region series and hides null Frames", () => {
   const { document, program, projection } = fixture(`<line>
   <BOY>one two || three four
 </line>`);
   const space = sealTimeline({ id: "test-space", frameCount: 90, frameRate: { numerator: 30, denominator: 1 } });
-  const regions: RegionEvidence = {
+  const regions: TimelineRegionSequence = {
     timelineId: space.id,
     series: [{
-      id: "BOY",
+      id: "boy-head",
       frames: Array.from({ length: 90 }, (_, frame) => frame === 7 ? null : ({
         xPx: 100 + frame, yPx: 300 + frame, widthPx: 200, heightPx: 240,
       })),
     }],
   };
-  const track = renderCaption(scheduleFineCaption(projection, program, document), program, document, space, regions);
+  const track = renderCaption(scheduleFineCaption(projection, program, document), program, document, space, regions, {
+    bindings: [{ role: "BOY", seriesId: "boy-head", missing: "hide" }],
+  });
   const placement = visualElements(track.items[0]!.root).find((element) => element.id === "placement");
   const declarationAt = (frame: number, name: string): string | number | undefined =>
     placement?.animation?.keyframes[frame]?.style.find((declaration) => declaration.name === name)?.value;
@@ -265,20 +268,41 @@ test("Fine Caption follows measured Role regions and hides null Frames", () => {
   assert.equal(declarationAt(2, "opacity"), 1);
 });
 
-test("Fine Caption keeps authored placement when a Cue Role has no measured evidence series", () => {
+test("Fine Caption keeps authored placement when a Cue Role has no explicit region binding", () => {
   const { document, program, projection } = fixture(`<line>
   <BOY>one two || three four
 </line>`);
   const space = sealTimeline({ id: "test-space", frameCount: 90, frameRate: { numerator: 30, denominator: 1 } });
-  const regions: RegionEvidence = {
+  const regions: TimelineRegionSequence = {
     timelineId: space.id,
-    series: [{ id: "WIFE", frames: Array.from({ length: 90 }, () => null) }],
+    series: [{ id: "wife-head", frames: Array.from({ length: 90 }, () => null) }],
   };
-  const track = renderCaption(scheduleFineCaption(projection, program, document), program, document, space, regions);
+  const track = renderCaption(scheduleFineCaption(projection, program, document), program, document, space, regions, {
+    bindings: [{ role: "WIFE", seriesId: "wife-head", missing: "hide" }],
+  });
   const placement = visualElements(track.items[0]!.root).find((element) => element.id === "placement");
   assert.equal(placement?.style.find((declaration) => declaration.name === "left")?.value, "540px");
   assert.equal(placement?.style.find((declaration) => declaration.name === "top")?.value, "1728px");
   assert.equal(placement?.animation, undefined);
+});
+
+test("Fine Caption applies the bound authored-placement policy to null region Frames", () => {
+  const { document, program, projection } = fixture(`<line>
+  <BOY>one two || three four
+</line>`);
+  const space = sealTimeline({ id: "test-space", frameCount: 90, frameRate: { numerator: 30, denominator: 1 } });
+  const regions: TimelineRegionSequence = {
+    timelineId: space.id,
+    series: [{ id: "boy-head", frames: Array.from({ length: 90 }, () => null) }],
+  };
+  const track = renderCaption(scheduleFineCaption(projection, program, document), program, document, space, regions, {
+    bindings: [{ role: "BOY", seriesId: "boy-head", missing: "authored-placement" }],
+  });
+  const placement = visualElements(track.items[0]!.root).find((element) => element.id === "placement");
+  const initial = placement?.animation?.keyframes[0]?.style;
+  assert.equal(initial?.find((declaration) => declaration.name === "transform")?.value,
+    "translate(540px,1728px) translate(-50%,-100%)");
+  assert.equal(initial?.find((declaration) => declaration.name === "opacity")?.value, 1);
 });
 
 test("Fine Caption resolves authored placement inside an arbitrary picture-plane Frame", () => {

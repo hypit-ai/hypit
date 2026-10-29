@@ -13,6 +13,9 @@ export const mediaTypes = {
   muxed: { module: mediaModuleRef, name: "MuxedMedia" }, fontArtifact: { module: mediaModuleRef, name: "FontArtifactRef" },
   fontStack: { module: mediaModuleRef, name: "FontStackRef" },
   compositableSurface: { module: mediaModuleRef, name: "CompositableSurfaceRef" },
+  pictureInterpretation: { module: mediaModuleRef, name: "PictureInterpretation" },
+  workingPicture: { module: mediaModuleRef, name: "WorkingPictureSpec" },
+  hdrStaticMetadata: { module: mediaModuleRef, name: "HdrStaticMetadata" },
   /** Declared by `@hypit/blob`. A Type is identified by the Module that owns it, not the one that re-exports it. */
   blobArtifact: blobTypes.blob,
 } satisfies Record<string, TypeRef>;
@@ -36,6 +39,9 @@ export const mediaManifest: ModuleManifest = {
     mediaTypes.muxed.name,
     mediaTypes.fontArtifact.name, mediaTypes.fontStack.name,
     mediaTypes.compositableSurface.name,
+    mediaTypes.pictureInterpretation.name,
+    mediaTypes.workingPicture.name,
+    mediaTypes.hdrStaticMetadata.name,
   ], capabilities: [], producers: [
     { name: mediaProducers.prepare.name,
       inputs: [

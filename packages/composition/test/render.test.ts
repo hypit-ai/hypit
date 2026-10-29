@@ -39,8 +39,7 @@ const animatedSurface: CompositableSurfaceRef = {
   },
   width: 1080,
   height: 1920,
-  colorSpace: "srgb",
-  alphaMode: "straight",
+  picture: { colorPrimaries: "bt709", colorTransfer: "srgb", colorMatrix: "rgb", colorRange: "full", bitDepth: 8, alphaMode: "straight" } as const,
   timing: {
     kind: "frames",
     frameRate: { numerator: 30, denominator: 1 },
@@ -95,7 +94,7 @@ test("exact fonts own font selection and cannot conflict with raw CSS font facts
     }],
   });
   assert.throws(
-    () => assertCompositionIdentity(sealComposition({ id: "invalid-font-composition", visual: { canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: { members: [invalid].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }), space),
+    () => assertCompositionIdentity(sealComposition({ id: "invalid-font-composition", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: { members: [invalid].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }, space)),
     /exact fonts conflict with a raw font style/u,
   );
 });
@@ -118,7 +117,7 @@ test("animated materialized Surfaces carry an explicit exact sampling relation",
       root: { id: "surface", kind: "surface", surface: animatedSurface, sampling, style: [] },
     }],
   });
-  assert.doesNotThrow(() => assertCompositionIdentity(sealComposition({ id: "surface-composition", visual: { canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: { members: [valid].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }), space));
+  assert.doesNotThrow(() => assertCompositionIdentity(sealComposition({ id: "surface-composition", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: { members: [valid].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }, space)));
 
   const content = structuredClone(valid) as PresentVisualTrack;
   const surface = content.items[0]!.root;
@@ -136,7 +135,7 @@ test("animated materialized Surfaces carry an explicit exact sampling relation",
       },
     }],
   });
-  assert.throws(() => assertCompositionIdentity(sealComposition({ id: "invalid-surface-composition", visual: { canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: { members: [invalid].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }), space), /target domain differs from its occurrence/u);
+  assert.throws(() => assertCompositionIdentity(sealComposition({ id: "invalid-surface-composition", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: { members: [invalid].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }, space)), /target domain differs from its occurrence/u);
 });
 
 test("a local mask owns exactly one mask root and one content root inside its Present", () => {
@@ -160,7 +159,7 @@ test("a local mask owns exactly one mask root and one content root inside its Pr
       },
     }],
   });
-  assert.doesNotThrow(() => assertCompositionIdentity(sealComposition({ id: "mask-composition", visual: { canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }), space));
+  assert.doesNotThrow(() => assertCompositionIdentity(sealComposition({ id: "mask-composition", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }, space)));
 
   const invalid = structuredClone(track) as PresentVisualTrack;
   const root = invalid.items[0]!.root;
@@ -171,5 +170,5 @@ test("a local mask owns exactly one mask root and one content root inside its Pr
       root: { ...root, mask: { id: "invalid-mask-box", kind: "box", children: [], style: [] } },
     }],
   });
-  assert.throws(() => assertCompositionIdentity(sealComposition({ id: "broken-mask", visual: { canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: { members: [broken].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }), space), /terminal owned text, image or still Surface/u);
+  assert.throws(() => assertCompositionIdentity(sealComposition({ id: "broken-mask", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: { members: [broken].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }, space)), /terminal owned text, image or still Surface/u);
 });

@@ -38,13 +38,13 @@
   </visual:Motion>
 
   <visual:Track id="showcase" timeline={speech.timeline}>
-    <visual:Clip id="rounded-card" image={picture-a} extent={picture-size} during={speech.window}
+    <visual:Clip id="rounded-card" image={picture-a} picture="srgb" extent={picture-size} during={speech.window}
       frame={card-a} fit="cover" treatment={recipes.media.card} motion={card-motion}/>
-    <visual:Clip id="flush-card" image={picture-b} extent={picture-size} during={speech.window}
+    <visual:Clip id="flush-card" image={picture-b} picture="srgb" extent={picture-size} during={speech.window}
       frame={card-b} fit="cover" treatment={recipes.media.wide} motion={card-motion}/>
   </visual:Track>
   <film:Film id="main" canvas={vertical.canvas} timeline={speech.timeline} appearance={recipes.film.vertical}>
     <film:Track id="showcase" source={showcase.visual}/>
   </film:Film>
-  <html:Video id="final" composition={main.composition} timeline={speech.timeline}/>
+  <html:Video id="final" composition={main.composition}/>
 </svml>

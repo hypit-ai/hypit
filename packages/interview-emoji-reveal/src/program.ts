@@ -8,6 +8,7 @@ import { assertSpatialFrame } from "@hypit/spatial";
 import type { SpatialFrame } from "@hypit/spatial";
 import { assertTemporalInstantFor, assertTemporalWindowFor } from "@hypit/temporal";
 import type { TemporalInstant, TemporalWindow } from "@hypit/temporal";
+import { SRGB_STRAIGHT_PICTURE } from "@hypit/media";
 
 import type { EmojiRevealHeader, EmojiRevealItemSpec, EmojiRevealProgram, EmojiRevealSet, EmojiRevealStyle } from "./types.js";
 
@@ -176,7 +177,8 @@ function iconElement(input: {
   readonly x: number; readonly y: number; readonly size: number; readonly animation: VisualAnimation;
 }): VisualElement {
   return {
-    id: input.id, kind: "image", artifact: structuredClone(input.artifact), animation: input.animation,
+    id: input.id, kind: "image", artifact: structuredClone(input.artifact), picture: SRGB_STRAIGHT_PICTURE,
+    animation: input.animation,
     style: [
       { name: "height", value: px(input.size) }, { name: "left", value: px(input.x) }, { name: "object-fit", value: "contain" },
       { name: "overflow", value: "visible" }, { name: "position", value: "absolute" }, { name: "top", value: px(input.y) },

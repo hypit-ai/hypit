@@ -71,7 +71,7 @@ Preparation and pure transformation use the same source-preserving boundary:
 
 ```xml
 <mediaop:Prepare id="shot-media" source={shot.video}
-  video="primary-moving" audio="default" span-authority="video"/>
+  video="primary-moving" picture="source" audio="default" span-authority="video"/>
 <mediaop:Transform id="prepared" source={shot-media.media}>
   <mediaop:Trim tail="0.25s"/>
   <mediaop:Retime rate="1.05"/>

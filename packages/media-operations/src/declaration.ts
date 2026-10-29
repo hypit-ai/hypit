@@ -30,7 +30,7 @@ import {
   sealFrameExtractionRequest,
   sealMediaTransformProgram,
 } from "./operations.js";
-import { sealMediaSelectionRequest } from "./selection.js";
+import { namedPictureInterpretation, sealMediaSelectionRequest } from "./selection.js";
 import type {
   AudioExtractionRequest,
   FrameExtractionRequest,
@@ -148,8 +148,8 @@ function authoredRecipe(
   const value = typedReference(raw, label, recipeType, resolve);
   if (value.record === undefined) throw new Error(`${label} must be an authored SVS Recipe.`);
   const recipe = value.record.value as unknown as Recipe;
-  const unknown = Object.keys(recipe.properties).filter((name) => !["audio", "span-authority", "video"].includes(name));
-  if (unknown.length > 0) throw new Error(`${label} only accepts video, audio and span-authority; found ${unknown.join(", ")}.`);
+  const unknown = Object.keys(recipe.properties).filter((name) => !["audio", "picture", "span-authority", "video"].includes(name));
+  if (unknown.length > 0) throw new Error(`${label} only accepts video, audio, picture and span-authority; found ${unknown.join(", ")}.`);
   return recipe;
 }
 
@@ -304,7 +304,7 @@ function transformOperations(element: DeclarationElement): readonly MediaTransfo
 
 const decodePreparedMediaDeclaration: DeclarationDecoder = ({ element, resolveReference }) => {
   const required = ["id", "source"];
-  const optional = ["audio", "recipe", "span-authority", "video"];
+  const optional = ["audio", "picture", "recipe", "span-authority", "video"];
   exactAttributes(element, required, optional);
   const hasRecipe = element.attributes.recipe !== undefined;
   const policyCount = ["video", "audio", "span-authority"].filter((name) => element.attributes[name] !== undefined).length;
@@ -320,12 +320,23 @@ const decodePreparedMediaDeclaration: DeclarationDecoder = ({ element, resolveRe
   const spanAuthority = recipe === undefined ? text(element, "span-authority")
     : recipeText(recipe, "span-authority", `${element.name}.recipe`);
   if (spanAuthority !== "video" && spanAuthority !== "audio") throw new Error(`${element.name}.span-authority must be video or audio.`);
+  const pictureValue = recipe === undefined ? (element.attributes.picture ?? "source")
+    : (recipe.properties.picture ?? "source");
+  if (typeof pictureValue !== "string") throw new Error(`${element.name}.picture must be text.`);
+  const pictureName = pictureValue;
+  if (!["source", "sdr-bt709", "bt2100-pq10", "bt2100-hlg10"].includes(pictureName)) {
+    throw new Error(`${element.name}.picture must be source, sdr-bt709, bt2100-pq10 or bt2100-hlg10.`);
+  }
+  const picture = video.mode === "none" ? { mode: "none" as const }
+    : pictureName === "source" ? { mode: "source" as const }
+    : { mode: "explicit" as const,
+      interpretation: namedPictureInterpretation(pictureName as "sdr-bt709" | "bt2100-pq10" | "bt2100-hlg10") };
   const requestId = `${id}.request`;
   const domainId = `${id}.domain-spec`;
   return {
     records: [
       { id: requestId, type: mediaOperationsTypes.selectionRequest,
-        value: sealMediaSelectionRequest({ video, audio, spanAuthority }), range: element.range },
+        value: sealMediaSelectionRequest({ video, audio, spanAuthority, picture }), range: element.range },
       { id: domainId, type: mediaTypes.domainSpec, value: { id }, range: element.range },
     ],
     components: [{
@@ -572,6 +583,7 @@ export const preparedMediaAuthorDeclaration = declarationCompiler(
       referenceField("recipe", recipeType, false),
       literalField("video"),
       literalField("audio"),
+      literalField("picture", false, ["source", "sdr-bt709", "bt2100-pq10", "bt2100-hlg10"]),
       literalField("span-authority", false, ["video", "audio"]),
     ],
   },

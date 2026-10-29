@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { HTML_VISUAL_FORMAT, type HtmlVisual } from "@hypit/html-program";
+import { assertVisualTransitionEffect } from "@hypit/visual-track";
 import {
   assertIrisShape,
   assertTransitionColor,
@@ -22,9 +23,10 @@ import { visualTransitionStudioParameterCompanions } from "../src/studio.js";
 
 type Layer = { style: Record<string, string> };
 
-function run(program: ReturnType<typeof crossDissolveEffect>, durationFrames = 3) {
-  assert.equal(program.format, HTML_VISUAL_FORMAT);
-  const visual = program.payload as unknown as HtmlVisual;
+function run(effect: ReturnType<typeof crossDissolveEffect>, durationFrames = 3) {
+  assert.deepEqual(effect.inputs, ["outgoing", "incoming"]);
+  assert.equal(effect.program.format, HTML_VISUAL_FORMAT);
+  const visual = effect.program.payload as unknown as HtmlVisual;
   const outgoing: Layer = { style: {} };
   const incoming: Layer = { style: {} };
   const color: Layer = { style: {} };
@@ -73,11 +75,17 @@ test("every transition owns exactly the outgoing and incoming Picture inputs", (
     zoomDissolveEffect(),
     blurDissolveEffect(),
   ];
-  for (const program of programs) {
-    const visual = program.payload as unknown as HtmlVisual;
+  for (const effect of programs) {
+    assert.deepEqual(effect.inputs, ["outgoing", "incoming"]);
+    const visual = effect.program.payload as unknown as HtmlVisual;
     assert.equal(visual.html.match(/\{\{outgoing\}\}/gu)?.length, 1);
     assert.equal(visual.html.match(/\{\{incoming\}\}/gu)?.length, 1);
   }
+  const effect = crossDissolveEffect();
+  assert.throws(() => assertVisualTransitionEffect({
+    inputs: ["incoming", "outgoing"],
+    program: effect.program,
+  } as unknown as Parameters<typeof assertVisualTransitionEffect>[0]), /outgoing followed by incoming/u);
 });
 
 test("Cross Dissolve interpolates premultiplied Pictures and reaches both endpoints", () => {

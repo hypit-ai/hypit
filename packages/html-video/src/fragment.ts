@@ -15,7 +15,6 @@ export function createHtmlVideoFragment(selectedRange = false) {
   return sealGraphFragment({
     inputs: [
       { name: "composition", type: compositionTypes.composition },
-      { name: "timeline", type: timelineTypes.timeline },
       { name: "delivery", type: mediaTypes.delivery },
       ...(selectedRange ? [{ name: "range", type: timelineTypes.frameSpan }] : []),
     ],
@@ -29,7 +28,7 @@ export function createHtmlVideoFragment(selectedRange = false) {
       {
         id: "compile-program",
         producer: htmlProgramProducers.compile,
-        inputs: { composition: input("composition"), timeline: input("timeline") },
+        inputs: { composition: input("composition") },
         result: { kind: "output" as const, name: "program" },
       },
       {
@@ -42,7 +41,7 @@ export function createHtmlVideoFragment(selectedRange = false) {
       {
         id: "compile-audio-program",
         producer: audioProgramProducers.compile,
-        inputs: { composition: input("composition"), timeline: input("timeline") },
+        inputs: { composition: input("composition") },
         result: { kind: "output" as const, name: "program" },
       },
       {

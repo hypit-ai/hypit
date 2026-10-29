@@ -1,7 +1,6 @@
 import type { RefinementPackage } from "@hypit/hypit/refinement";
 import type { ProducerPackage } from "@hypit/hypit/producer";
 import type { Composition } from "@hypit/composition";
-import type { Timeline } from "@hypit/timeline";
 import type { CanonicalValue, Value } from "@hypit/hypit/protocol";
 import { canonicalize } from "@hypit/hypit/protocol";
 
@@ -24,8 +23,7 @@ export const htmlProgramComponent = {
   producers: [{
     producer: htmlProgramProducers.compile,
     handler: ({ inputs }: { inputs: Record<string, { value: Value } | undefined> }) => ({ kind: "output" as const, value: (canonicalize(compileHtmlProgram(
-            valueOf(inputs.composition!.value, "Composition") as unknown as Composition,
-            valueOf(inputs.timeline!.value, "Timeline") as unknown as Timeline,
+          valueOf(inputs.composition!.value, "Composition") as unknown as Composition,
           ))) }),
   }, ...[htmlProgramProducers.requestVisual, htmlProgramProducers.requestVisualRange].map((producer) => ({
     producer,

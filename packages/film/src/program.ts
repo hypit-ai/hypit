@@ -1,9 +1,10 @@
-import { assertAudioTrackIdentity, assertCompositionIdentity, assertVisualTrackIdentity, sealComposition, sealVisualScope } from "@hypit/composition";
+import { assertAudioTrackIdentity, assertCompositionIdentity, assertVisualProcessEffect, assertVisualTrackIdentity, sealComposition, sealVisualScope } from "@hypit/composition";
 import type { AudioTrack, Composition, Track, VisualScope, VisualTrack } from "@hypit/composition";
 import { assertCanvas } from "@hypit/spatial";
 import type { Canvas } from "@hypit/spatial";
 import { assertTimelineIdentity } from "@hypit/timeline";
 import type { Timeline } from "@hypit/timeline";
+import { verifyWorkingPictureSpec } from "@hypit/media";
 
 import type { FilmProgram, FilmTrackSet, FilmVisualPlanMember } from "./types.js";
 
@@ -15,6 +16,7 @@ function filmProgramContent(value: FilmProgram): FilmProgram {
   return {
     id: value.id,
     clearColor: value.clearColor,
+    picture: structuredClone(value.picture),
     visual: structuredClone(value.visual),
     audio: [...value.audio],
   };
@@ -39,6 +41,7 @@ export function assertFilmProgramIdentity(program: FilmProgram): void {
   if (!/^#[0-9a-f]{6}(?:[0-9a-f]{2})?$/iu.test(program.clearColor)) {
     throw new Error("FilmProgram clear color is invalid.");
   }
+  verifyWorkingPictureSpec(program.picture, "FilmProgram.picture");
   if (program.visual === null || typeof program.visual !== "object" || !Array.isArray(program.visual.members)
     || !Array.isArray(program.audio)) throw new Error("FilmProgram assembly is invalid.");
   const visualSlots = new Set<number>();
@@ -58,11 +61,31 @@ export function assertFilmProgramIdentity(program: FilmProgram): void {
         visualSlots.add(member.slot);
         continue;
       }
-      if (member.kind !== "stack" || !member.id.trim()
-        || !Array.isArray(member.members) || member.members.length === 0) {
-        throw new Error(`${item} is an invalid Visual Stack.`);
+      if (member.kind === "stack") {
+        if (!Array.isArray(member.members) || member.members.length === 0) {
+          throw new Error(`${item} is an invalid Visual Stack.`);
+        }
+        visit(member.members, `${item}.members`);
+        continue;
       }
-      visit(member.members, `${item}.members`);
+      if (member.kind !== "process" || !Array.isArray(member.inputs) || member.inputs.length === 0) {
+        throw new Error(`${item} is an invalid Visual Process.`);
+      }
+      assertVisualProcessEffect(member.effect, `${item}.effect`);
+      const inputNames = new Set<string>();
+      for (const [inputIndex, input] of member.inputs.entries()) {
+        const inputLabel = `${item}.inputs.${inputIndex}`;
+        if (input === null || typeof input !== "object" || !input.name.trim()
+          || inputNames.has(input.name) || !Array.isArray(input.members) || input.members.length === 0) {
+          throw new Error(`${inputLabel} is invalid.`);
+        }
+        inputNames.add(input.name);
+        visit(input.members, `${inputLabel}.members`);
+      }
+      if (inputNames.size !== member.effect.inputs.length
+        || member.effect.inputs.some((name) => !inputNames.has(name))) {
+        throw new Error(`${item} inputs do not match its VisualProcessEffect.`);
+      }
     }
   };
   visit(program.visual.members, "FilmProgram.visual.members");
@@ -137,6 +160,14 @@ export function compileFilmComposition(
       if (member.kind === "stack") {
         return { kind: "stack" as const, id: member.id, scope: compileVisual(member.members) };
       }
+      if (member.kind === "process") {
+        return {
+          kind: "process" as const,
+          id: member.id,
+          inputs: member.inputs.map((input) => ({ name: input.name, scope: compileVisual(input.members) })),
+          effect: structuredClone(member.effect),
+        };
+      }
       const track = trackAt(member.slot);
       if (track.kind !== "visual") throw new Error(`FilmProgram Track slot ${member.slot} must be visual.`);
       return { kind: "track" as const, id: member.id, track };
@@ -154,6 +185,7 @@ export function compileFilmComposition(
   const composition = sealComposition({
     id: program.id,
     visual: {
+      picture: structuredClone(program.picture),
       canvas: {
         width: canvas.widthPx,
         height: canvas.heightPx,
@@ -162,7 +194,7 @@ export function compileFilmComposition(
       root: visual,
     },
     audio: { contributions: audio },
-  });
-  assertCompositionIdentity(composition, timeline);
+  }, timeline);
+  assertCompositionIdentity(composition);
   return composition;
 }

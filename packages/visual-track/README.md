@@ -31,7 +31,7 @@ semantic roles, select audio, or derive Transition participants from timing prox
 <visual:Track id="picture" timeline={program.timeline}>
   <visual:Clip id="speaker" media={speaker-media.media}
     during={program.speaker} frame={full-frame} fit="cover"/>
-  <visual:Clip id="diagram" image={diagram} extent={diagram-extent}
+  <visual:Clip id="diagram" image={diagram} picture="srgb" extent={diagram-extent}
     during={explanation} frame={inset-frame} fit="contain"
     treatment={recipes.visual.diagram} motion={gentle-push}/>
   <visual:Transition id="speaker-to-diagram"
@@ -39,8 +39,9 @@ semantic roles, select audio, or derive Transition participants from timing prox
 </visual:Track>
 ```
 
-A public Clip accepts exactly one direct source form—`image` plus `extent`, prepared `media`, or a
-typed `surface`. Moving media is prepared before authoring; its exact local domain and map to source
+A public Clip accepts exactly one direct source form—`image` plus `picture` and `extent`, prepared
+`media`, or a typed `surface`. The still's picture profile makes its pixel interpretation explicit;
+prepared video and Surface values already carry the same `PictureInterpretation`. Moving media is prepared before authoring; its exact local domain and map to source
 presentation time remain source truth. The destination Window states when this
 occurrence exists in program time.
 
@@ -90,7 +91,7 @@ the identical projection:
 
 ```svml
 <space:Map id="turned" xx="0" xy="-0.5" yx="0.5" yy="0" tx="920" ty="180"/>
-<visual:Clip image={diagram} extent={diagram-extent} mapping={turned}
+<visual:Clip image={diagram} picture="srgb" extent={diagram-extent} mapping={turned}
   during={explanation} frame={inset-frame}/>
 ```
 
@@ -154,8 +155,10 @@ Studio derive the intersection from the participant Windows instead of caching a
 ```
 
 Each Clip keeps evaluating its own temporal Map during the overlap. Projection supplies both Presents
-as independently timed inputs to a generic Composition `VisualProcess`; the effect package decides how
-they combine. Visual Track knows no transition catalogue. Studio shows the relation on an attached
+as independently timed inputs to a generic Composition `VisualProcess`. `VisualTransitionEffect` is the
+closed two-port `VisualProcessEffect` whose ports are exactly `outgoing` and `incoming`, so the port contract
+survives projection instead of becoming a renderer convention. The effect package decides how they combine.
+Visual Track knows no transition catalogue. Studio shows the relation on an attached
 Transitions lane and follows `effect` to that package's parameter companion.
 
 `@hypit/visual-transition` supplies the official Dissolve, Dip, Push, Slide, Wipe, Iris, Zoom Dissolve

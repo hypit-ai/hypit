@@ -1,8 +1,8 @@
 import { closeSync, fstatSync, openSync, readSync } from "node:fs";
 import { open } from "node:fs/promises";
 
-import { audioProgramGainRoutes } from "@hypit/audio-program";
-import type { AudioProgram, AudioProgramClip } from "@hypit/audio-program";
+import type { AudioProgram, AudioProgramClip, AudioProgramNode } from "@hypit/audio-program";
+import { readAudioGainProcess } from "@hypit/composition";
 import { exactTemporalRational } from "@hypit/temporal";
 import type { ExactTemporalValue, TemporalMap, TemporalMapPiece } from "@hypit/temporal";
 
@@ -297,9 +297,36 @@ type CompiledClip = {
   readonly routeGain: number;
   readonly sampling: NumericMap;
   readonly preparation: NumericMap;
-  readonly source: CanonicalPcmReader;
-  readonly reconstructed?: CanonicalPcmReader;
+  readonly source: SignalReader;
+  readonly reconstructed?: SignalReader;
 };
+
+type CompositionNode = Extract<AudioProgramNode, { readonly kind: "composition" }>;
+type CompiledComposition = {
+  readonly node: CompositionNode;
+  readonly routeGain: number;
+  readonly sampling: NumericMap;
+  readonly source: SignalReader;
+};
+
+type SignalRoute =
+  | { readonly kind: "source"; readonly clip: AudioProgramClip; readonly gain: number }
+  | { readonly kind: "composition"; readonly node: CompositionNode; readonly gain: number };
+
+function signalRoutes(program: AudioProgram): SignalRoute[] {
+  const nodes = new Map(program.graph.nodes.map((node) => [node.id, node] as const));
+  const visit = (id: string, gain: number): SignalRoute[] => {
+    const node = nodes.get(id)!;
+    if (node.kind === "silence") return [];
+    if (node.kind === "source") return [{ kind: "source", clip: node.clip, gain }];
+    if (node.kind === "composition") return [{ kind: "composition", node, gain }];
+    if (node.kind === "mix") return node.inputs.flatMap((input) => visit(input.node, gain));
+    assert(Object.keys(node.inputs).every((port) => port === "signal"),
+      `Audio Process ${node.id} has unsupported ports`);
+    return visit(node.inputs.signal!.node, gain * readAudioGainProcess(node.program));
+  };
+  return visit(program.graph.output.node, 1);
+}
 
 function levelAt(clip: AudioProgramClip, sample: number): number {
   let gain = clip.gain;
@@ -345,6 +372,164 @@ function pcm16(value: number): number {
   return Math.max(-32_768, Math.min(32_767, Math.round(value)));
 }
 
+type SignalReader = {
+  readonly sampleFrames: number;
+  sample(position: number, channel: 0 | 1, direction: -1 | 0 | 1): number;
+};
+
+type SignalPage = {
+  readonly index: number;
+  readonly frames: number;
+  readonly samples: Float64Array;
+};
+
+/**
+ * Request-local lazy evaluation of one closed AudioProgram. Child programmes
+ * remain closed signals, but no longer need to cross a temporary WAV boundary.
+ */
+class ProgramSignalReader implements SignalReader {
+  readonly sampleFrames: number;
+  readonly #clips: readonly CompiledClip[];
+  readonly #compositions: readonly CompiledComposition[];
+  readonly #pages = new Map<number, SignalPage>();
+
+  constructor(
+    program: AudioProgram,
+    sourceForClip: (clip: AudioProgramClip) => SignalReader,
+    reconstructedForClip: ((clip: AudioProgramClip) => SignalReader | undefined) | undefined,
+    cache: WeakMap<AudioProgram, ProgramSignalReader>,
+  ) {
+    this.sampleFrames = program.sampleFrames;
+    const routes = signalRoutes(program);
+    this.#clips = routes
+      .filter((route): route is Extract<SignalRoute, { kind: "source" }> => route.kind === "source")
+      .map(({ clip, gain }) => {
+        const reconstructed = reconstructedForClip?.(clip);
+        return {
+          clip,
+          routeGain: gain,
+          sampling: numericMap(clip.sampling),
+          preparation: numericMap(clip.preparation),
+          source: sourceForClip(clip),
+          ...(reconstructed === undefined ? {} : { reconstructed }),
+        };
+      });
+    this.#compositions = routes
+      .filter((route): route is Extract<SignalRoute, { kind: "composition" }> => route.kind === "composition")
+      .map(({ node, gain }) => {
+        assert(node.reconstruction === undefined,
+          `Audio Composition ${node.id} reconstruction is not supported by this renderer.`);
+        return {
+          node,
+          routeGain: gain,
+          sampling: numericMap(node.sampling),
+          source: programSignalReader(node.program, sourceForClip, reconstructedForClip, cache),
+        };
+      });
+  }
+
+  #page(index: number): SignalPage {
+    const cached = this.#pages.get(index);
+    if (cached !== undefined) {
+      this.#pages.delete(index);
+      this.#pages.set(index, cached);
+      return cached;
+    }
+    const start = index * PAGE_FRAMES;
+    const frames = Math.min(PAGE_FRAMES, this.sampleFrames - start);
+    assert(frames > 0, "Audio renderer requested a programme page outside its signal");
+    const end = start + frames;
+    const samples = new Float64Array(frames * CHANNELS);
+    for (const entry of this.#clips) {
+      const left = Math.max(start, entry.clip.targetStartSample);
+      const right = Math.min(end, entry.clip.targetEndSampleExclusive);
+      for (let sample = left; sample < right; sample += 1) {
+        const level = levelAt(entry.clip, sample) * entry.routeGain;
+        if (level === 0) continue;
+        let sourceFrame: number;
+        let direction: -1 | 0 | 1;
+        let reader: SignalReader;
+        if (entry.reconstructed !== undefined) {
+          sourceFrame = sample - entry.clip.targetStartSample;
+          direction = 1;
+          reader = entry.reconstructed;
+        } else {
+          const occurrence = (sample - entry.clip.targetStartSample) / SAMPLE_RATE;
+          const prepared = evaluateMap(entry.sampling, occurrence);
+          if (prepared === undefined) continue;
+          const source = evaluateMap(entry.preparation, prepared.source);
+          if (source === undefined) continue;
+          direction = prepared.direction === 0 || source.direction === 0
+            ? 0
+            : prepared.direction === source.direction ? 1 : -1;
+          sourceFrame = source.source * SAMPLE_RATE;
+          reader = entry.source;
+        }
+        const offset = (sample - start) * CHANNELS;
+        samples[offset] = samples[offset]! + reader.sample(sourceFrame, 0, direction) * level;
+        samples[offset + 1] = samples[offset + 1]! + reader.sample(sourceFrame, 1, direction) * level;
+      }
+    }
+    for (const entry of this.#compositions) {
+      const left = Math.max(start, entry.node.targetStartSample);
+      const right = Math.min(end, entry.node.targetEndSampleExclusive);
+      for (let sample = left; sample < right; sample += 1) {
+        let level = entry.node.gain * entry.routeGain;
+        if (entry.node.fadeInSamples > 0 && sample < entry.node.targetStartSample + entry.node.fadeInSamples) {
+          level *= Math.max(0, (sample - entry.node.targetStartSample) / entry.node.fadeInSamples);
+        }
+        if (entry.node.fadeOutSamples > 0 && sample >= entry.node.targetEndSampleExclusive - entry.node.fadeOutSamples) {
+          level *= Math.max(0, (entry.node.targetEndSampleExclusive - sample) / entry.node.fadeOutSamples);
+        }
+        if (level === 0) continue;
+        const mapped = evaluateMap(entry.sampling, (sample - entry.node.targetStartSample) / SAMPLE_RATE);
+        if (mapped === undefined) continue;
+        const sourceFrame = mapped.source * SAMPLE_RATE;
+        const offset = (sample - start) * CHANNELS;
+        samples[offset] = samples[offset]! + entry.source.sample(sourceFrame, 0, mapped.direction) * level;
+        samples[offset + 1] = samples[offset + 1]! + entry.source.sample(sourceFrame, 1, mapped.direction) * level;
+      }
+    }
+    const page = { index, frames, samples };
+    this.#pages.set(index, page);
+    while (this.#pages.size > MAX_PAGES) this.#pages.delete(this.#pages.keys().next().value!);
+    return page;
+  }
+
+  #sample(frame: number, channel: 0 | 1): number {
+    const page = this.#page(Math.floor(frame / PAGE_FRAMES));
+    const local = frame - page.index * PAGE_FRAMES;
+    assert(local >= 0 && local < page.frames, "Audio renderer programme sample lies outside its page");
+    return page.samples[local * CHANNELS + channel]!;
+  }
+
+  sample(position: number, channel: 0 | 1, direction: -1 | 0 | 1): number {
+    assert(Number.isFinite(position), "Audio renderer programme position is not finite");
+    const rounded = Math.round(position);
+    if (direction < 0 && rounded > 0 && Math.abs(position - rounded) <= 1e-9) position = rounded - 1;
+    position = Math.max(0, Math.min(this.sampleFrames - 1, position));
+    const left = Math.floor(position);
+    const right = Math.min(this.sampleFrames - 1, left + 1);
+    const fraction = position - left;
+    const a = this.#sample(left, channel);
+    if (fraction === 0 || right === left) return a;
+    return a + (this.#sample(right, channel) - a) * fraction;
+  }
+}
+
+function programSignalReader(
+  program: AudioProgram,
+  sourceForClip: (clip: AudioProgramClip) => SignalReader,
+  reconstructedForClip: ((clip: AudioProgramClip) => SignalReader | undefined) | undefined,
+  cache: WeakMap<AudioProgram, ProgramSignalReader>,
+): ProgramSignalReader {
+  const cached = cache.get(program);
+  if (cached !== undefined) return cached;
+  const reader = new ProgramSignalReader(program, sourceForClip, reconstructedForClip, cache);
+  cache.set(program, reader);
+  return reader;
+}
+
 /**
  * Evaluate one renderer-facing AudioProgram as a signal pullback. TemporalMap
  * chooses source position; pitch-preserving reconstruction is a separate,
@@ -358,66 +543,26 @@ export async function renderAudioProgramWav(options: {
   readonly sourceForClip: (clip: AudioProgramClip) => CanonicalPcmReader;
   readonly reconstructedForClip?: (clip: AudioProgramClip) => CanonicalPcmReader | undefined;
 }): Promise<void> {
-  const endSampleExclusive = options.startSample + options.sampleFrames;
-  const clips: CompiledClip[] = audioProgramGainRoutes(options.program)
-    .filter(({ clip }) => clip.targetStartSample < endSampleExclusive
-      && clip.targetEndSampleExclusive > options.startSample)
-    .map(({ clip, gain }) => {
-      const reconstructed = options.reconstructedForClip?.(clip);
-      return {
-        clip,
-        routeGain: gain,
-        sampling: numericMap(clip.sampling),
-        preparation: numericMap(clip.preparation),
-        source: options.sourceForClip(clip),
-        ...(reconstructed === undefined ? {} : { reconstructed }),
-      };
-    });
-  const output = await open(options.path, "w");
+  assert(options.startSample >= 0 && options.sampleFrames >= 0
+    && options.startSample + options.sampleFrames <= options.program.sampleFrames,
+  "Audio renderer range lies outside its programme");
+  const reader = programSignalReader(options.program, options.sourceForClip,
+    options.reconstructedForClip, new WeakMap());
+  let output: Awaited<ReturnType<typeof open>> | undefined;
   try {
+    output = await open(options.path, "w");
     await output.write(wavHeader(options.sampleFrames));
     for (let blockStart = 0; blockStart < options.sampleFrames; blockStart += OUTPUT_BLOCK_FRAMES) {
       const frames = Math.min(OUTPUT_BLOCK_FRAMES, options.sampleFrames - blockStart);
-      const mix = new Float64Array(frames * CHANNELS);
       const absoluteStart = options.startSample + blockStart;
-      const absoluteEnd = absoluteStart + frames;
-      for (const entry of clips) {
-        const left = Math.max(absoluteStart, entry.clip.targetStartSample);
-        const right = Math.min(absoluteEnd, entry.clip.targetEndSampleExclusive);
-        for (let sample = left; sample < right; sample += 1) {
-          const level = levelAt(entry.clip, sample) * entry.routeGain;
-          if (level === 0) continue;
-          const outputFrame = sample - absoluteStart;
-          let sourceFrame: number;
-          let direction: -1 | 0 | 1;
-          let reader: CanonicalPcmReader;
-          if (entry.reconstructed !== undefined) {
-            sourceFrame = sample - entry.clip.targetStartSample;
-            direction = 1;
-            reader = entry.reconstructed;
-          } else {
-            const occurrence = (sample - entry.clip.targetStartSample) / SAMPLE_RATE;
-            const prepared = evaluateMap(entry.sampling, occurrence);
-            if (prepared === undefined) continue;
-            const source = evaluateMap(entry.preparation, prepared.source);
-            if (source === undefined) continue;
-            direction = prepared.direction === 0 || source.direction === 0
-              ? 0
-              : prepared.direction === source.direction ? 1 : -1;
-            sourceFrame = source.source * SAMPLE_RATE;
-            reader = entry.source;
-          }
-          const left = outputFrame * 2;
-          const right = left + 1;
-          mix[left] = mix[left]! + reader.sample(sourceFrame, 0, direction) * level;
-          mix[right] = mix[right]! + reader.sample(sourceFrame, 1, direction) * level;
-        }
-      }
       const bytes = Buffer.allocUnsafe(frames * BYTES_PER_FRAME);
-      for (let index = 0; index < mix.length; index += 1) bytes.writeInt16LE(pcm16(mix[index]!), index * 2);
+      for (let frame = 0; frame < frames; frame += 1) for (const channel of [0, 1] as const) {
+        bytes.writeInt16LE(pcm16(reader.sample(absoluteStart + frame, channel, 1)),
+          (frame * CHANNELS + channel) * BYTES_PER_SAMPLE);
+      }
       await output.write(bytes);
     }
   } finally {
-    await output.close();
+    await output?.close();
   }
 }

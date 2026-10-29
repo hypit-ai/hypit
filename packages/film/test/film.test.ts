@@ -50,7 +50,7 @@ const canvas = sealCanvas({
 });
 const filmProgram = sealFilmProgram({
   id: "main-film",
-  clearColor: "#000000",
+  clearColor: "#000000", picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const,
   visual: { members: [
     { kind: "track", id: "background", slot: 1 },
     { kind: "track", id: "title", slot: 0 },
@@ -163,7 +163,6 @@ const htmlProgramInstance = elaborateGraphFragment(linked, htmlProgramFragment, 
   id: "main-render",
   inputs: {
     composition: { kind: "logical-output", id: "main.composition" },
-    timeline: { kind: "record", id: "timeline" },
   },
 });
 const htmlProgramContribution = bindAuthorFragment(htmlProgramInstance, {
@@ -214,7 +213,7 @@ test("Film folds peer Tracks, then hands an ordinary Composition to HTML", () =>
   assert.deepEqual(composition.audio.contributions.map((track) => track.id), ["empty-audio-track"]);
   assert.deepEqual(composition.visual.root.members.map((member) => member.kind === "track" ? member.track.id : member.id),
     ["background-track", "title"]);
-  const document = compileHtmlProgram(composition, space);
+  const document = compileHtmlProgram(composition);
   assert.match(document.html, /data-hypit-text-run="title-text"/u);
   assert.match(document.html, /data-hypit-occurrence-path="\[&quot;background&quot;\]"/u);
 });
@@ -233,7 +232,7 @@ test("Film root preserves repeated closed audio signals independently of AudioTr
   set = appendFilmAudioTrack(set, space, structuredClone(audio));
   const composition = compileFilmComposition(sealFilmProgram({
     id: "repeated-audio",
-    clearColor: "#000000",
+    clearColor: "#000000", picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const,
     visual: { members: [] },
     audio: [0, 1],
   }), canvas, space, set);

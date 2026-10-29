@@ -6,7 +6,7 @@ import { captionTypes } from "@hypit/caption";
 import { MarkupDeclarationRegistry, decodeMarkupDeclarations, installMarkupDeclarationFacets } from "@hypit/markup";
 import { mediaTypes, type FontArtifactRef } from "@hypit/media";
 import { recipeType, type Recipe } from "@hypit/recipe";
-import { regionEvidenceTypes } from "@hypit/region-evidence";
+import { spatialSequenceTypes } from "@hypit/spatial-sequence";
 import { spatialTypes } from "@hypit/spatial";
 import { temporalTypes } from "@hypit/temporal";
 import { timelineTypes } from "@hypit/timeline";
@@ -62,7 +62,7 @@ test("Fine Caption declarations own Style, Uses and graph lowering independently
       { name: "timeline", ref: { kind: "record", id: "timeline" }, type: timelineTypes.timeline },
       { name: "frame", ref: { kind: "record", id: "frame" }, type: spatialTypes.frame },
       { name: "window", ref: { kind: "record", id: "window" }, type: temporalTypes.window },
-      { name: "regions", ref: { kind: "record", id: "regions" }, type: regionEvidenceTypes.evidence },
+      { name: "regions", ref: { kind: "record", id: "regions" }, type: spatialSequenceTypes.timelineRegions },
     ],
   };
   const decoded = await decodeMarkupDeclarations({
@@ -74,6 +74,7 @@ test("Fine Caption declarations own Style, Uses and graph lowering independently
         timeline={facts.timeline} within={facts.frame} regions={facts.regions}>
         <fine:Use id="main" style={primary}/>
         <fine:Use style={primary} role="guest" during={facts.window}/>
+        <fine:Follow role="guest" series="guest-head" missing="authored-placement"/>
       </fine:Caption>
       <fine:Style id="primary" recipe={facts.recipe} font={facts.font}/>
     </svml>`,
@@ -96,4 +97,5 @@ test("Fine Caption declarations own Style, Uses and graph lowering independently
   assert.equal(caption?.fragment.exports.find((output) => output.name === "schedule")?.type.name, captionFineTypes.schedule.name);
   assert.deepEqual(caption?.inputs["use-2-window"], { kind: "record", id: "window" });
   assert.deepEqual(caption?.inputs["use-1-style"], { kind: "record", id: "primary" });
+  assert.deepEqual(caption?.inputs.regionBindings, { kind: "record", id: "captions.region-bindings" });
 });
