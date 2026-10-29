@@ -133,6 +133,31 @@ test("one definition keeps lexical each bindings without hiding its global uses"
     "one, two / global");
 });
 
+test("replace expressions insert authored replacement text literally", () => {
+  const template = sealTextTemplate({
+
+    root: {
+      kind: "replace",
+      input: { kind: "literal", value: "price: X" },
+      replacements: [
+        { from: "X", to: "$& USD", mode: "all" },
+        { from: "USD", to: "$$ USD", mode: "first" },
+      ],
+    },
+  });
+  assert.equal(renderText(template, sealTextBindings({})).value, "price: $& $$ USD");
+
+  const edges = sealTextTemplate({
+
+    root: {
+      kind: "replace",
+      input: { kind: "literal", value: "a b" },
+      replacements: [{ from: "b", to: "$`$'", mode: "all" }],
+    },
+  });
+  assert.equal(renderText(edges, sealTextBindings({})).value, "a $`$'");
+});
+
 test("Markup Text Surfaces expose literal and assembled Text as ordinary graph values", async () => {
   const literal = parseStructuredElement({
     name: "text.svml",
