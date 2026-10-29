@@ -143,19 +143,39 @@ function parseAttributes(
   offset: number,
 ): Readonly<Record<string, string>> {
   const attributes: Record<string, string> = {};
-  const attribute = /([a-z][a-z0-9-]*)\s*=\s*(["'])(.*?)\2/gu;
+  // Scanned by hand: the regex this replaced backtracked through one character class per
+  // position and went quadratic on a long run of name characters with no "=".
   let cursor = 0;
-  for (const match of raw.matchAll(attribute)) {
-    const start = match.index ?? 0;
-    if (raw.slice(cursor, start).trim().length > 0) {
+  while (cursor < raw.length) {
+    while (cursor < raw.length && /\s/u.test(raw[cursor]!)) cursor++;
+    if (cursor >= raw.length) break;
+    const start = cursor;
+    if (!(raw[cursor]! >= "a" && raw[cursor]! <= "z")) {
       fail(sourceName, "SVS_SHEET_ATTRIBUTE", "Malformed <sheet> attribute.", offset + cursor);
     }
-    const name = match[1] as string;
+    while (cursor < raw.length && /[a-z0-9-]/u.test(raw[cursor]!)) cursor++;
+    const name = raw.slice(start, cursor);
+    while (cursor < raw.length && /\s/u.test(raw[cursor]!)) cursor++;
+    if (raw[cursor] !== "=") {
+      fail(sourceName, "SVS_SHEET_ATTRIBUTE", "Malformed <sheet> attribute.", offset + cursor);
+    }
+    cursor++;
+    while (cursor < raw.length && /\s/u.test(raw[cursor]!)) cursor++;
+    const quote = raw[cursor];
+    if (quote !== '"' && quote !== "'") {
+      fail(sourceName, "SVS_SHEET_ATTRIBUTE", "Malformed <sheet> attribute.", offset + cursor);
+    }
+    const close = raw.indexOf(quote, cursor + 1);
+    // Line terminators never matched the old (.*?)\2 body, so a quoted value spanning lines
+    // was malformed rather than a short value.
+    if (close === -1 || /[\n\r\u2028\u2029]/u.test(raw.slice(cursor + 1, close))) {
+      fail(sourceName, "SVS_SHEET_ATTRIBUTE", "Malformed <sheet> attribute.", offset + cursor);
+    }
     if (Object.hasOwn(attributes, name)) {
       fail(sourceName, "SVS_SHEET_ATTRIBUTE_DUPLICATE", `Duplicate sheet attribute ${name}.`, offset + start);
     }
-    attributes[name] = match[3] as string;
-    cursor = start + match[0].length;
+    attributes[name] = raw.slice(cursor + 1, close);
+    cursor = close + 1;
   }
   if (raw.slice(cursor).trim().length > 0) {
     fail(sourceName, "SVS_SHEET_ATTRIBUTE", "Malformed <sheet> attribute.", offset + cursor);
