@@ -139,6 +139,54 @@ test("VisualTrack style values cannot smuggle a second declaration", () => {
   );
 });
 
+test("VisualTrack style values cannot terminate the compiled style element", () => {
+  const { timeline, visual } = fixture();
+  const first = visual.presents[0]!.elements[0]!;
+  const hostile = sealVisualTrack({...visual,
+    presents: [{
+      ...visual.presents[0]!,
+      elements: [{ ...first, style: [{ name: "position", value: "absolute" }, { name: "color", value: "red</style><script>alert(1)</script>" }] }],
+    }],
+  });
+  assert.throws(
+    () => assertVisualTrackIdentity(hostile, timeline),
+    /unsafe style value/,
+  );
+});
+
+test("VisualTrack style values cannot hide resource functions behind CSS escapes", () => {
+  const { timeline, visual } = fixture();
+  const first = visual.presents[0]!.elements[0]!;
+  const escaped = sealVisualTrack({...visual,
+    presents: [{
+      ...visual.presents[0]!,
+      elements: [{ ...first, style: [{ name: "background", value: "u\\72 l(https://invalid.example/)" }] }],
+    }],
+  });
+  assert.throws(
+    () => assertVisualTrackIdentity(escaped, timeline),
+    /unsafe style value/,
+  );
+});
+
+test("VisualTrack animation keyframes share the same unsafe-value checks", () => {
+  const { timeline, visual } = fixture();
+  const first = visual.presents[0]!.elements[0]!;
+  const hostile = sealVisualTrack({...visual,
+    presents: [{
+      ...visual.presents[0]!,
+      elements: [{ ...first, animation: { keyframes: [
+        { atFrame: 0, style: [{ name: "opacity", value: 1 }] },
+        { atFrame: 30, style: [{ name: "opacity", value: "0</style><script>alert(1)</script>" }] },
+      ] } }],
+    }],
+  });
+  assert.throws(
+    () => assertVisualTrackIdentity(hostile, timeline),
+    /unsafe style value/,
+  );
+});
+
 test("VisualTrack cannot silently extend the versioned public Visual IR", () => {
   const { timeline, visual } = fixture();
   const first = visual.presents[0]!.elements[0]!;
