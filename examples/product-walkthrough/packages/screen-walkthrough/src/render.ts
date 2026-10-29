@@ -91,9 +91,17 @@ export function walkthroughMotion(take: WalkthroughTake, toFrame: (seconds: numb
     last = cursor.at(-1)!;
   }
 
-  const clamp = (value: number, size: number) => {
-    const half = size / (2 * zoom);
+  const clamp = (value: number, size: number, scale: number) => {
+    const half = size / (2 * scale);
     return Math.min(Math.max(value, half), size - half);
+  };
+  // The acted element stays whole in view: a wide field gets less magnification than a small button, and the
+  // camera centres on the element rather than the pointer.
+  const framing = (step: WalkthroughStep) => {
+    const [bx, by, bw, bh] = step.box ?? [step.pointer![0], step.pointer![1], 0, 0];
+    const scale = Math.max(1, Math.min(zoom, bw > 0 ? width * 0.92 / bw : zoom, bh > 0 ? height * 0.92 / bh : zoom));
+    const [x, y] = step.box ? [bx + bw / 2, by + bh / 2] : step.pointer!;
+    return { scale, x: clamp(x, width, scale), y: clamp(y, height, scale) };
   };
   const camera: Keys = [[0, 1, center[0]!, center[1]!]];
   const push = (frame: number, scale: number, x: number, y: number) => {
@@ -101,11 +109,11 @@ export function walkthroughMotion(take: WalkthroughTake, toFrame: (seconds: numb
     camera.push([Math.max(previous[0]!, Math.round(frame)), scale, x, y]);
   };
   if (zoom > 1) {
-    type Group = { start: number; end: number; points: Array<{ arrive: number; x: number; y: number }> };
+    type Group = { start: number; end: number; points: Array<{ arrive: number; scale: number; x: number; y: number }> };
     const groups: Group[] = [];
     for (const step of pointed) {
       const arrive = toFrame(step.start), start = arrive - lead, end = toFrame(step.end) + hold;
-      const point = { arrive, x: clamp(step.pointer![0], width), y: clamp(step.pointer![1], height) };
+      const point = { arrive, ...framing(step) };
       const group = groups.at(-1);
       if (group !== undefined && start - group.end < join) { group.end = Math.max(group.end, end); group.points.push(point); }
       else groups.push({ start, end, points: [point] });
@@ -113,14 +121,14 @@ export function walkthroughMotion(take: WalkthroughTake, toFrame: (seconds: numb
     for (const group of groups) {
       const [first, ...rest] = group.points;
       push(group.start - ease, 1, center[0]!, center[1]!);
-      push(group.start, zoom, first!.x, first!.y);
+      push(group.start, first!.scale, first!.x, first!.y);
       let previous = first!;
       for (const point of rest) {
-        push(point.arrive - travel, zoom, previous.x, previous.y);
-        push(point.arrive, zoom, point.x, point.y);
+        push(point.arrive - travel, previous.scale, previous.x, previous.y);
+        push(point.arrive, point.scale, point.x, point.y);
         previous = point;
       }
-      push(group.end, zoom, previous.x, previous.y);
+      push(group.end, previous.scale, previous.x, previous.y);
       push(group.end + ease, 1, center[0]!, center[1]!);
     }
   }

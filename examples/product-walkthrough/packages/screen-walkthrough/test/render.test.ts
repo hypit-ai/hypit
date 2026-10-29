@@ -55,6 +55,18 @@ test("the cursor arrives where the recorder acted, presses follow, and the camer
   assert.deepEqual(walkthroughMotion(take, (s) => Math.round(s * 30), 1).camera, [[0, 1, 640, 400]], "zoom 1 never moves the camera");
 });
 
+test("a wide field stays whole in view: the camera zooms less and centres on the element", () => {
+  // A phone take typing into a prompt field almost as wide as the screen (the OpenArt case).
+  const phone = { passed: true, viewport: { width: 432, height: 768, scale: 2.5 }, duration: 4,
+    steps: [{ index: 1, action: "type", start: 1, end: 3, pointer: [216, 330], box: [24, 270, 384, 140] as [number, number, number, number] }] };
+  const [scale, cx] = sample(walkthroughMotion(phone, (s) => Math.round(s * 30), 1.4).camera, 40);
+  assert.ok(scale > 1 && scale <= 432 * 0.92 / 384 + 1e-9, `scale ${scale} keeps the 384 px field inside the view`);
+  assert.equal(cx, 216);
+  // A small button still gets the full magnification.
+  const button = { ...phone, steps: [{ ...phone.steps[0]!, action: "click", box: [180, 600, 72, 40] as [number, number, number, number] }] };
+  assert.equal(sample(walkthroughMotion(button, (s) => Math.round(s * 30), 1.4).camera, 40)[0], 1.4);
+});
+
 test("motion stays locked to the footage when the recording starts later in the program", () => {
   const render = (sourceStart: number) => {
     const track = renderWalkthrough(timeline, { xPx: 0, yPx: 0, widthPx: 1280, heightPx: 720 }, windowOf("scene", 0, 300),
