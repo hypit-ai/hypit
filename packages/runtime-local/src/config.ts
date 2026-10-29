@@ -241,7 +241,16 @@ export async function readRuntimeWorkerOptions(path: string): Promise<{ readonly
 
 async function openRuntimeConfig(path: string, packageRootHint?: string): Promise<OpenedRuntimeConfig> {
   const absolute = resolve(path);
-  const document = parseLocalRuntimeProfile(JSON.parse(await readFile(absolute, "utf8")));
+  const text = await readFile(absolute, "utf8");
+  let value: unknown;
+  try {
+    value = JSON.parse(text);
+  } catch (error) {
+    // A hand-edited Profile's trailing comma must say which file to open.
+    if (!(error instanceof SyntaxError)) throw error;
+    throw new Error(`Runtime Profile ${absolute} is not valid JSON: ${error.message}`, { cause: error });
+  }
+  const document = parseLocalRuntimeProfile(value);
   const profileRoot = dirname(absolute);
   return {
     absolute,
