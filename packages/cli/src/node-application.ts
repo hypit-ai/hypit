@@ -39,7 +39,10 @@ export async function runNodeCli(
   argv: readonly string[],
   run: NodeCliRunner,
 ): Promise<void> {
-  const json = argv.includes("--json");
+  // `--jsonl` is the machine stream mode (`activity --watch` refuses `--json`), so its failures are
+  // machine records too: one line, like every other record in the stream.
+  const jsonl = argv.includes("--jsonl");
+  const json = argv.includes("--json") || jsonl;
   const debug = argv.includes("--debug");
   const colorIndex = argv.indexOf("--color");
   const colorMode = argv.includes("--no-color")
@@ -65,6 +68,7 @@ export async function runNodeCli(
   } catch (error) {
     const rendered = renderCliError(error, {
       json,
+      compact: jsonl,
       color: !json && colorMode !== "never" && process.env.TERM !== "dumb"
         && (colorMode === "always" || (process.env.NO_COLOR === undefined && process.stderr.isTTY === true)),
       unicode,
