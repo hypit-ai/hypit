@@ -160,13 +160,18 @@ function requireVideo(info: MediaProbe, path: string): asserts info is MediaProb
 
 export async function probeMedia(path: string, options: { readonly ffprobePath?: string } = {}): Promise<MediaProbe> {
   const raw = await runProcess(options.ffprobePath ?? "ffprobe", [
-    "-v", "error", "-show_entries", "format=duration:stream=codec_type,width,height,r_frame_rate:stream_disposition=attached_pic", "-of", "json", path,
+    "-v", "error", "-show_entries",
+    "format=duration:stream=codec_type,width,height,r_frame_rate:stream_disposition=attached_pic"
+      + ":stream_side_data=rotation:stream_tags=rotate",
+    "-of", "json", path,
   ]);
   const parsed = JSON.parse(raw.toString("utf8")) as {
     format?: { duration?: string };
     streams?: readonly {
       codec_type?: string; width?: number; height?: number; r_frame_rate?: string;
       disposition?: { attached_pic?: number };
+      side_data_list?: readonly { rotation?: number | string }[];
+      tags?: { rotate?: string };
     }[];
   };
   const video = parsed.streams?.find((item) => item.codec_type === "video" && item.disposition?.attached_pic !== 1);
@@ -179,11 +184,16 @@ export async function probeMedia(path: string, options: { readonly ffprobePath?:
   // ffprobe reports the rate as a ratio; a still image reports none.
   const ratio = (video.r_frame_rate ?? "").split("/");
   const rate = Number(ratio[0]) / Number(ratio[1] ?? 1);
+  // Phone video is coded landscape with a display rotation. Every frame ffmpeg writes is
+  // autorotated, so report the size those frames have.
+  const rotation = Number(video.side_data_list?.find((item) => item.rotation !== undefined)?.rotation
+    ?? video.tags?.rotate ?? 0);
+  const quarterTurn = Number.isFinite(rotation) && Math.abs(rotation) % 180 === 90;
   return {
     duration: round(duration),
     hasVideo: true,
-    width: video.width,
-    height: video.height,
+    width: quarterTurn ? video.height : video.width,
+    height: quarterTurn ? video.width : video.height,
     frameRate: Number.isFinite(rate) && rate > 0 ? round(rate) : 0,
     hasAudio,
   };
