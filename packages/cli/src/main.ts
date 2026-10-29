@@ -28,6 +28,7 @@ import {
   cliTypeName,
   projectPath,
 } from "./view.js";
+import { prepareBuildInputs } from "./build-inputs.js";
 
 function createPublicBuildId(now = Date.now()): string {
   return orderedBuildId(now, randomBytes(5).toString("hex").toUpperCase());
@@ -266,6 +267,17 @@ export async function runCli(
     if (runtimeProfile === undefined) {
       throw new Error("build requires a Runtime; run hypit runtime init, select one with runtime use, or pass --runtime <profile>");
     }
+    // Open the selected profile before allowing project-defined build hooks to run.
+    // This validates the Runtime path/configuration without starting execution.
+    const selectedRuntimeHost = await runtimeHost(runtimeProfile);
+    if (selectedRuntimeHost.resolvePaths === undefined) {
+      throw new Error("The selected Runtime cannot validate its profile before Build preparation");
+    }
+    await selectedRuntimeHost.resolvePaths();
+    await prepareBuildInputs(projectResultsRoot, (line) => {
+      const report = io.writeProgress ?? (args.presentation.json ? undefined : io.write);
+      report?.(`${line}\n`);
+    });
     const commandScope = { projectRoot: projectResultsRoot, runtimeProfile: resolve(runtimeProfile) };
     const buildResults = await projectResults(projectResultsRoot);
     let loadedRun;

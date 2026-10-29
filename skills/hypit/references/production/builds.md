@@ -171,6 +171,9 @@ did not change. Cross-Build reuse requires explicit Run Candidates; repeating th
 not resume the earlier Build or automatically select its Outputs. The optional title is a human-facing
 Result label; it does not replace the Build id or alter Source identity.
 
+Build may prepare declared external project files before resolving the Run. See [project files](../creation/project-files.md#prepare-external-files-as-part-of-build)
+for the command, cache, output and failure contract.
+
 Build performs a cheap preflight and submits only when the selected deployment slice is ready. It
 does not install packages or start a missing Managed Program. When the environment has already been
 prepared and only the Worker is stopped, Build ensures that Worker becomes available. When

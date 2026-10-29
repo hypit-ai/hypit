@@ -1,0 +1,132 @@
+<?svml using="@hypit/markup@1"?>
+
+<svml>
+  <import as="assets" source="./assets.svml"/>
+  <import as="copy" source="./script.svml"/>
+  <import as="direction" source="./direction.svml"/>
+  <import as="seedance" from="@hypit/seedance@1"/>
+  <import as="pipeline" from="@hypit/media-operations@1"/>
+  <import as="whisperx" from="@hypit/whisperx@1"/>
+  <import as="time" from="@hypit/timeline-author@1"/>
+  <import as="visual" from="@hypit/visual-track@1"/>
+  <import as="semantic" from="@hypit/narrative-temporal@1"/>
+  <import as="audio" from="@hypit/audio-track@1"/>
+  <import as="film" from="@hypit/film@1"/>
+  <import as="render" from="@hypit/html-video@1"/>
+  <import as="manim" from="@project/manim-showcase@1"/>
+  <import as="look" source="../recipes/composition.svs"/>
+
+  <!-- The canonical render Run generates five English A-roll clips with native audio. -->
+  <seedance:ReferenceVideo id="part-one" model="standard" prompt={direction.part-one-prompt}
+    duration="4" resolution="720p" aspect-ratio="9:16" generate-audio="true">
+    <seedance:Reference image={assets.presenter-reference} person-reference="true"/>
+    <seedance:Reference audio={assets.voice-reference}/>
+  </seedance:ReferenceVideo>
+  <seedance:ReferenceVideo id="part-two" model="standard" prompt={direction.part-two-prompt}
+    duration="6" resolution="720p" aspect-ratio="9:16" generate-audio="true">
+    <seedance:Reference image={assets.presenter-reference} person-reference="true"/>
+    <seedance:Reference audio={assets.voice-reference}/>
+  </seedance:ReferenceVideo>
+  <seedance:ReferenceVideo id="part-three" model="standard" prompt={direction.part-three-prompt}
+    duration="6" resolution="720p" aspect-ratio="9:16" generate-audio="true">
+    <seedance:Reference image={assets.presenter-reference} person-reference="true"/>
+    <seedance:Reference audio={assets.voice-reference}/>
+  </seedance:ReferenceVideo>
+  <seedance:ReferenceVideo id="part-four" model="standard" prompt={direction.part-four-prompt}
+    duration="6" resolution="720p" aspect-ratio="9:16" generate-audio="true">
+    <seedance:Reference image={assets.presenter-reference} person-reference="true"/>
+    <seedance:Reference audio={assets.voice-reference}/>
+  </seedance:ReferenceVideo>
+  <seedance:ReferenceVideo id="part-five" model="standard" prompt={direction.part-five-prompt}
+    duration="7" resolution="720p" aspect-ratio="9:16" generate-audio="true">
+    <seedance:Reference image={assets.presenter-reference} person-reference="true"/>
+    <seedance:Reference audio={assets.voice-reference}/>
+  </seedance:ReferenceVideo>
+
+  <!-- Generated A-roll media: each clip is normalized to the shared 30 fps clock,
+       then aligned to exactly one authored Script Segment. -->
+  <pipeline:Normalize id="part-one-media" source={part-one.video}
+    video="primary-moving" audio="default" span-authority="video" clock={assets.clock}/>
+  <pipeline:Normalize id="part-two-media" source={part-two.video}
+    video="primary-moving" audio="default" span-authority="video" clock={assets.clock}/>
+  <pipeline:Normalize id="part-three-media" source={part-three.video}
+    video="primary-moving" audio="default" span-authority="video" clock={assets.clock}/>
+  <pipeline:Normalize id="part-four-media" source={part-four.video}
+    video="primary-moving" audio="default" span-authority="video" clock={assets.clock}/>
+  <pipeline:Normalize id="part-five-media" source={part-five.video}
+    video="primary-moving" audio="default" span-authority="video" clock={assets.clock}/>
+
+  <!-- Manim renders are ordinary silent video and are normalized onto the same clock. -->
+  <pipeline:Normalize id="math-media" source={assets.math-source}
+    video="primary-moving" audio="none" span-authority="video" clock={assets.clock}/>
+  <pipeline:Normalize id="ml-media" source={assets.ml-source}
+    video="primary-moving" audio="none" span-authority="video" clock={assets.clock}/>
+  <pipeline:Normalize id="physics-media" source={assets.physics-source}
+    video="primary-moving" audio="none" span-authority="video" clock={assets.clock}/>
+
+  <whisperx:Alignment id="part-one-semantic" narrative={copy.story}
+    segment={copy.story.segment.opening} media={part-one-media.media} domain={part-one-media.domain} language="en"/>
+  <whisperx:Alignment id="part-two-semantic" narrative={copy.story}
+    segment={copy.story.segment.mathematics} media={part-two-media.media} domain={part-two-media.domain} language="en"/>
+  <whisperx:Alignment id="part-three-semantic" narrative={copy.story}
+    segment={copy.story.segment.machine-learning} media={part-three-media.media} domain={part-three-media.domain} language="en"/>
+  <whisperx:Alignment id="part-four-semantic" narrative={copy.story}
+    segment={copy.story.segment.physics} media={part-four-media.media} domain={part-four-media.domain} language="en"/>
+  <whisperx:Alignment id="part-five-semantic" narrative={copy.story}
+    segment={copy.story.segment.closing} media={part-five-media.media} domain={part-five-media.domain} language="en"/>
+
+  <!-- Prepared media extents construct consecutive Windows; alignment is projected afterward. -->
+  <time:Timeline id="speech" clock={assets.clock} end="closing.end">
+    <time:Window id="opening" from="start" for={part-one-media.extent}/>
+    <time:Window id="mathematics" from="opening.end" for={part-two-media.extent}/>
+    <time:Window id="machine-learning" from="mathematics.end" for={part-three-media.extent}/>
+    <time:Window id="physics" from="machine-learning.end" for={part-four-media.extent}/>
+    <time:Window id="closing" from="physics.end" for={part-five-media.extent}/>
+  </time:Timeline>
+
+  <semantic:Projection id="story-time" narrative={copy.story} timeline={speech.timeline}>
+    <semantic:Map alignment={part-one-semantic.alignment} domain={part-one-media.domain} window={speech.opening}/>
+    <semantic:Map alignment={part-two-semantic.alignment} domain={part-two-media.domain} window={speech.mathematics}/>
+    <semantic:Map alignment={part-three-semantic.alignment} domain={part-three-media.domain} window={speech.machine-learning}/>
+    <semantic:Map alignment={part-four-semantic.alignment} domain={part-four-media.domain} window={speech.physics}/>
+    <semantic:Map alignment={part-five-semantic.alignment} domain={part-five-media.domain} window={speech.closing}/>
+  </semantic:Projection>
+  <semantic:Instant id="first-cue" projection={story-time} at={copy.story.moment.first}/>
+  <semantic:Instant id="next-cue" projection={story-time} at={copy.story.moment.next}/>
+  <semantic:Instant id="finally-cue" projection={story-time} at={copy.story.moment.finally}/>
+  <semantic:Instant id="these-cue" projection={story-time} at={copy.story.moment.these}/>
+
+  <manim:Scene id="showcase" timeline={speech.timeline} canvas={assets.canvas.canvas}
+    math={math-media.media} ml={ml-media.media}
+    physics={physics-media.media} during={speech.window}
+    first={first-cue} next={next-cue} finally={finally-cue} these={these-cue}/>
+
+  <audio:Track id="voice" timeline={speech.timeline}>
+    <audio:Clip id="voice-one" source={part-one-media.media} during={speech.opening}/>
+    <audio:Clip id="voice-two" source={part-two-media.media} during={speech.mathematics}/>
+    <audio:Clip id="voice-three" source={part-three-media.media} during={speech.machine-learning}/>
+    <audio:Clip id="voice-four" source={part-four-media.media} during={speech.physics}/>
+    <audio:Clip id="voice-five" source={part-five-media.media} during={speech.closing}/>
+  </audio:Track>
+
+  <visual:Track id="presenter" timeline={speech.timeline}>
+    <visual:Clip id="presenter-one" media={part-one-media.media} during={speech.opening}
+      frame={assets.full-frame} z="0" fit="cover"/>
+    <visual:Clip id="presenter-two" media={part-two-media.media} during={speech.mathematics}
+      frame={assets.full-frame} z="0" fit="cover"/>
+    <visual:Clip id="presenter-three" media={part-three-media.media} during={speech.machine-learning}
+      frame={assets.full-frame} z="0" fit="cover"/>
+    <visual:Clip id="presenter-four" media={part-four-media.media} during={speech.physics}
+      frame={assets.full-frame} z="0" fit="cover"/>
+    <visual:Clip id="presenter-five" media={part-five-media.media} during={speech.closing}
+      frame={assets.full-frame} z="0" fit="cover"/>
+  </visual:Track>
+
+  <film:Film id="main" canvas={assets.canvas.canvas} timeline={speech.timeline} appearance={look.film.main}>
+    <film:Track source={presenter.visual}/>
+    <film:Track source={showcase.track}/>
+    <film:Track source={voice.audio}/>
+  </film:Film>
+
+  <render:Video id="final" composition={main.composition} timeline={speech.timeline}/>
+</svml>
