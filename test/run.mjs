@@ -1,6 +1,7 @@
 /** Resolve test files without depending on platform-specific shell glob syntax. */
 import { spawnSync } from "node:child_process";
 import { globSync } from "node:fs";
+import { sep } from "node:path";
 
 const patterns = [
   "scripts/test/*.test.mjs",
@@ -40,12 +41,12 @@ if (extra.length > 0) failUsage(`unexpected arguments: ${extra.join(" ")}`);
 let files;
 if (kind === undefined) {
   files = [...new Set(patterns.flatMap((pattern) => globSync(pattern)))]
-    .filter((file) => !file.includes("/test/environment/"))
+    .filter((file) => !file.includes(`${sep}test${sep}environment${sep}`))
     .sort();
 } else if (kind === "package") {
   const name = exactName(selected, "package");
   files = globSync(`packages/${name}/test/**/*.test.ts`)
-    .filter((file) => !file.includes("/test/environment/"))
+    .filter((file) => !file.includes(`${sep}test${sep}environment${sep}`))
     .sort();
 } else if (kind === "workflow") {
   const name = exactName(selected, "workflow");
