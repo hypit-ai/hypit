@@ -47,6 +47,9 @@ export async function transparentVideoFixture(directory: string, format: "webm" 
       : format === "webm"
       ? ["-c:v", "libvpx-vp9", "-pix_fmt", "yuva420p", "-lossless", "1", "-auto-alt-ref", "0", "-c:a", "libopus"]
       : ["-c:v", "qtrle", "-pix_fmt", "argb", "-c:a", "pcm_s16le"]),
+    "-color_primaries", "bt709", "-color_trc", format === "mov" ? "iec61966-2-1" : "bt709",
+    "-colorspace", format === "mov" ? "rgb" : "bt709", "-color_range", format === "mov" ? "pc" : "tv",
+    ...(format === "mov" ? [] : ["-vf", "scale=out_color_matrix=bt709:out_range=tv,setparams=color_primaries=bt709:color_trc=bt709:colorspace=bt709:range=limited"]),
     "-t", "1", path], rgba);
   return { path, bytes: await readFile(path), mediaType: format === "mov" ? "video/quicktime" : "video/webm" };
 }
@@ -76,6 +79,8 @@ export async function prepareTestVideo(
   const inspected = await executeInspectMedia(env, canonicalize({ source }));
   const inspection = inspected.value;
   verifyMediaInspection(inspection);
+  const video = inspection.streams.find((stream) => stream.kind === "video");
+  assert.ok(video?.kind === "video" && video.picture.alphaMode === "straight", "Fixture transparency must be detected from the encoded source");
   const selection = selectMediaStreams(inspection, {
     video: { mode: "primary-moving" }, audio: { mode: withAudio ? "default" : "none" }, spanAuthority: "video",
     picture: { mode: "source" },

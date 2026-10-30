@@ -23,7 +23,9 @@ test("a nested Composition renders its explicitly composed media sampling withou
     const raw = Buffer.concat(colors.map(color => Buffer.from(Array.from({ length: 64 * 64 }, () => color).flat())));
     const source = join(root, "source.mp4");
     const encoded = spawnSync("ffmpeg", ["-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "rgb24",
-      "-s", "64x64", "-r", "30", "-i", "pipe:0", "-c:v", "libx264", "-crf", "0", "-pix_fmt", "yuv420p", source],
+      "-s", "64x64", "-r", "30", "-i", "pipe:0", "-vf",
+      "scale=out_color_matrix=bt709:out_range=tv,format=yuv420p,setparams=color_primaries=bt709:color_trc=bt709:colorspace=bt709:range=tv",
+      "-c:v", "libx264", "-crf", "0", "-pix_fmt", "yuv420p", source],
     { input: raw });
     assert.equal(encoded.status, 0, encoded.stderr.toString());
     const resources = new MemoryResourceStore();
@@ -53,7 +55,9 @@ test("Electron routes exact source samples into a nested Composition document", 
     const raw = Buffer.concat(colors.map(color => Buffer.from(Array.from({ length: 64 * 64 }, () => color).flat())));
     const source = join(root, "source.mp4");
     const encoded = spawnSync("ffmpeg", ["-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "rgb24",
-      "-s", "64x64", "-r", "30", "-i", "pipe:0", "-c:v", "libx264", "-crf", "0", "-pix_fmt", "yuv420p", source],
+      "-s", "64x64", "-r", "30", "-i", "pipe:0", "-vf",
+      "scale=out_color_matrix=bt709:out_range=tv,format=yuv420p,setparams=color_primaries=bt709:color_trc=bt709:colorspace=bt709:range=tv",
+      "-c:v", "libx264", "-crf", "0", "-pix_fmt", "yuv420p", source],
     { input: raw });
     assert.equal(encoded.status, 0, encoded.stderr.toString());
     const resources = new MemoryResourceStore();
@@ -92,7 +96,9 @@ test("real selected renders sample video correctly across wrap, hold, fractional
     const raw = Buffer.concat(colors.map((color) => Buffer.from(Array.from({ length: 64 * 64 }, () => color).flat())));
     const path = join(root, "source.mp4");
     const encoded = spawnSync("ffmpeg", ["-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "rgb24",
-      "-s", "64x64", "-r", "30", "-i", "pipe:0", "-c:v", "libx264", "-crf", "0", "-pix_fmt", "yuv420p", path], { input: raw });
+      "-s", "64x64", "-r", "30", "-i", "pipe:0", "-vf",
+      "scale=out_color_matrix=bt709:out_range=tv,format=yuv420p,setparams=color_primaries=bt709:color_trc=bt709:colorspace=bt709:range=tv",
+      "-c:v", "libx264", "-crf", "0", "-pix_fmt", "yuv420p", path], { input: raw });
     assert.equal(encoded.status, 0, encoded.stderr.toString());
     const resources = new MemoryResourceStore();
     const document = htmlRangeDocument(await resources.put(await readFile(path), "video/mp4"));

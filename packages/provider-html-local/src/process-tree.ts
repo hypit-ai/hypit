@@ -85,4 +85,29 @@ export function killRenderDescendantsSync(pid: number): void {
       }
     }
   }
+  // SIGKILL is delivered asynchronously. Confirm termination while this owner can
+  // still identify its descendants; zombies are stopped and await parent reaping.
+  let remaining = descendants.slice(1);
+  const deadline = Date.now() + cleanupMs;
+  const pause = new Int32Array(new SharedArrayBuffer(4));
+  while (remaining.length > 0) {
+    let output: string;
+    try {
+      output = execFileSync("ps", ["-p", remaining.join(","), "-o", "pid=,stat="], {
+        encoding: "utf8", timeout: cleanupMs, stdio: ["ignore", "pipe", "pipe"],
+      });
+    } catch (error) {
+      if ((error as { status?: unknown }).status === 1
+        && String((error as { stdout?: unknown }).stdout ?? "").trim() === "") return;
+      throw error;
+    }
+    remaining = output.trim().split("\n").filter(Boolean).flatMap(line => {
+      const [id, state] = line.trim().split(/\s+/u);
+      if (state === undefined) throw new Error(`Invalid process termination status: ${line}`);
+      return state.startsWith("Z") ? [] : [Number(id)];
+    });
+    if (remaining.length === 0) return;
+    if (Date.now() >= deadline) throw new Error(`Rasterizer process ${remaining[0]} did not stop after SIGKILL`);
+    Atomics.wait(pause, 0, 0, 20);
+  }
 }

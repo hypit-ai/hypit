@@ -18,9 +18,10 @@ test("PreparedMedia preview samples the HtmlProgram TemporalMap as its timing au
     { frameRate: { numerator: 30, denominator: 1 } }) };
   const program = {
     frameRate: { numerator: 30, denominator: 1 }, frameCount: 3,
-    videoSources: [{ kind: "media", id: "direct", startFrame: 0, endFrameExclusive: 3,
+    videoSources: [{ kind: "media", id: "direct", elementId: "direct-source", documentPath: [], startFrame: 0, endFrameExclusive: 3,
       source: { source: { kind: "blob", resource: "res_direct", size: 1, mediaType: "video/mp4" },
-        streamIndex: 0, presentationStart: { ticks: "2", timeBase: { numerator: 1, denominator: 1 } },
+        streamIndex: 0, frameIndex: { timeBase: { numerator: 1, denominator: 30 },
+          timestamps: Array.from({ length: 30 }, (_, frame) => String(60 + frame)), endTimestamp: "90" }, presentationStart: { ticks: "2", timeBase: { numerator: 1, denominator: 1 } },
         sourceDomain: domain, interpretation: { codedWidth: 16, codedHeight: 9,
           sampleAspectRatio: { numerator: 1, denominator: 1 }, rotationDegrees: 0, picture: { colorPrimaries: "bt709", colorTransfer: "bt709", colorMatrix: "bt709", colorRange: "limited", bitDepth: 8, alphaMode: "opaque" } as const,} },
       sampling: identityTemporalMap(domain) }],
@@ -31,7 +32,7 @@ test("PreparedMedia preview samples the HtmlProgram TemporalMap as its timing au
   };
   const listeners = new Map<string, () => void>();
   let currentTime = 0;
-  const video = { id: "direct", style: {}, readyState: 4, duration: 10, paused: true,
+  const video = { id: "direct-source", style: {}, readyState: 4, duration: 10, paused: true,
     getAttribute: (name: string) => attrs[name] ?? null, closest: () => null,
     setAttribute(name: string, value: string) { attrs[name] = value; },
     removeAttribute(name: string) { delete attrs[name]; }, load() {},
@@ -46,10 +47,10 @@ test("PreparedMedia preview samples the HtmlProgram TemporalMap as its timing au
   })[name] ?? null };
   const window: Record<string, any> = { addEventListener() {}, __hypitFrameProgram: { async applyFrame() {} } };
   const script = injectHtmlPlayback("", "", program).trim().slice("<script>".length, -"</script>".length);
-  vm.runInNewContext(script, { window, document: { querySelector: () => root,
+  vm.runInNewContext(script, { window, document: { querySelector: () => root, getElementById: () => video,
     querySelectorAll: (selector: string) => selector === ".hypit-visual-present video" ? [video] : [] } });
   await window.__hypitSeekFrame(2);
-  assert.equal(currentTime, 2 + 2 / 30);
+  assert.equal(currentTime, 2 + 2.5 / 30);
 });
 
 test("browser playback rejects a selected nonzero visual stream instead of playing the container default", () => {
@@ -97,6 +98,7 @@ test("long preview releases remote Clips and cancels obsolete metadata waits", a
   const script = injectHtmlPlayback("").trim().slice("<script>".length, -"</script>".length);
   vm.runInNewContext(script, { window, document: { querySelector: () => root,
     querySelectorAll: (selector: string) => selector === ".hypit-visual-present video" ? clips : [] } });
+  await new Promise((resolve) => setImmediate(resolve));
   assert.equal(clips.filter((clip) => clip.attrs.src !== undefined).length, 1);
   const original = window.__hypitFrameReady;
   for (let index = 1; index < clips.length; index += 1) {
@@ -249,14 +251,14 @@ test("playback parks the next Clip on its entry frame and shows it only once dec
   await new Promise((resolve) => setTimeout(resolve, 0));
   await window.__hypitPlayFrame(81);
   assert.equal(clips[1]!.currentTime, 300.5 / 30);
-  assert.equal(clips[1]!.style.visibility, "hidden");
+  assert.equal(clips[1]!.style.display, "none");
   await window.__hypitPlayFrame(120);
-  assert.equal(clips[1]!.style.visibility, "visible");
-  assert.equal(clips[0]!.style.visibility, "hidden");
+  assert.equal(clips[1]!.style.display, "");
+  assert.equal(clips[0]!.style.display, "none");
 
   // Entered without a decoded frame: stay hidden rather than paint a stale picture.
   clips[1]!.readyState = 1;
-  clips[1]!.style.visibility = "hidden";
+  clips[1]!.style.display = "none";
   await window.__hypitPlayFrame(150);
-  assert.equal(clips[1]!.style.visibility, "hidden");
+  assert.equal(clips[1]!.style.display, "none");
 });

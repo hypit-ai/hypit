@@ -21,7 +21,7 @@ import type {
   VisualScope,
 } from "@hypit/composition";
 import { visualProcesses } from "@hypit/composition";
-import { assertTemporalMap, composeTemporalMaps, evaluateTemporalMap, exactTemporalValueFromFrames, exactTemporalZero, isAffineTemporalMapPiece, resolveTemporalBoundary, sealTemporalMap, temporalValueInFrames } from "@hypit/temporal";
+import { assertTemporalMap, composeTemporalMaps, evaluateTemporalSample, exactTemporalValueFromFrames, exactTemporalZero, isAffineTemporalMapPiece, resolveTemporalBoundary, sealTemporalMap, temporalValueInFrames } from "@hypit/temporal";
 import type { ExactTemporalValue, TemporalMap } from "@hypit/temporal";
 import { assertBlobRef, canonicalStringify, compareCodeUnits } from "@hypit/hypit/protocol";
 import type { BlobRef, ResourceId } from "@hypit/hypit/protocol";
@@ -457,33 +457,23 @@ function renderElement(
   if (element.kind === "composition") {
     const child = context.childDocument(element.composition);
     const frames = Array.from({ length: context.presentDurationFrames }, (_, localFrame) => {
-      const mapped = evaluateTemporalMap(element.sampling, exactTemporalValueFromFrames(localFrame, {
+      const mapped = evaluateTemporalSample(element.sampling, exactTemporalValueFromFrames(localFrame, {
         frameRate: { numerator: context.programNumerator, denominator: context.programDenominator },
       }));
       if (mapped === undefined) return null;
-      // A visual frame owns the half-open interval beginning at its boundary.
-      // Quantizing to nearest would switch to the next child frame halfway
-      // through the current interval and make nesting depend on frame-rate ratio.
-      const frame = resolveTemporalBoundary(mapped, element.composition.timeline, "inside");
+      const position = temporalValueInFrames(mapped.position, element.composition.timeline);
+      const frame = resolveTemporalBoundary(mapped.position, element.composition.timeline, "inside")
+        - (mapped.direction < 0 && position.numerator % position.denominator === 0n ? 1 : 0);
       return frame >= 0 && frame < element.composition.timeline.frameCount ? frame : null;
     });
     for (const source of child.program.videoSources) {
       const documentPath = [id, ...source.documentPath];
       if (source.kind === "media") {
-        const childDomain = element.sampling.stages.at(-1)!.source;
-        const sourceDomain = source.sampling.stages[0]!.target;
-        const active = sealTemporalMap({ stages: [{
-          target: structuredClone(childDomain),
-          source: structuredClone(sourceDomain),
-          pieces: [{
-            target: {
-              start: exactTemporalValueFromFrames(source.startFrame, element.composition.timeline),
-              end: exactTemporalValueFromFrames(source.endFrameExclusive, element.composition.timeline),
-            },
-            sourceAtStart: exactTemporalZero(),
-            rate: { numerator: 1, denominator: 1 },
-          }],
-        }] });
+        const selected = frames.map(frame => {
+          if (frame === null || frame < source.startFrame || frame >= source.endFrameExclusive) return null;
+          const local = frame - source.startFrame;
+          return source.frameSelection === undefined ? local : source.frameSelection.frames[local]!;
+        });
         context.videoSources.push({
           kind: "media",
           id: context.stableId(["nested-source", ...context.occurrencePath, context.presentId, element.id, source.id]),
@@ -492,7 +482,11 @@ function renderElement(
           startFrame: context.presentStartFrame,
           endFrameExclusive: context.presentStartFrame + context.presentDurationFrames,
           source: structuredClone(source.source),
-          sampling: composeTemporalMaps(composeTemporalMaps(element.sampling, active), source.sampling),
+          sampling: structuredClone(source.sampling),
+          frameSelection: {
+            frameRate: { ...(source.frameSelection?.frameRate ?? child.program.frameRate) },
+            frames: selected,
+          },
         });
         continue;
       }
@@ -552,27 +546,32 @@ function renderElement(
     return renderTerminalTextElement(element, textContext);
   }
   if (element.kind === "video") {
+    const sourceId = `${id}-source`;
+    const interpretation = element.source.interpretation;
+    let displayWidth = interpretation.codedWidth * interpretation.sampleAspectRatio.numerator / interpretation.sampleAspectRatio.denominator;
+    let displayHeight = interpretation.codedHeight;
+    if (interpretation.rotationDegrees === 90 || interpretation.rotationDegrees === 270)
+      [displayWidth, displayHeight] = [displayHeight, displayWidth];
     context.videoSources.push({
       kind: "media",
       id,
       documentPath: [],
-      elementId: id,
+      elementId: sourceId,
       startFrame: context.presentStartFrame,
       endFrameExclusive: context.presentStartFrame + context.presentDurationFrames,
       source: structuredClone(element.source),
       sampling: structuredClone(element.sampling),
     });
     const media = [
-      `id="${id}"`,
-      `data-hypit-element-id="${escapeHtml(element.id)}"`,
+      `id="${sourceId}"`,
+      "data-hypit-media-content",
       "data-hypit-source-frame=\"media\"",
       `data-hypit-start-frame="${context.presentStartFrame}"`,
       `data-hypit-end-frame="${context.presentStartFrame + context.presentDurationFrames}"`,
-      `style="${escapeHtml(inlineStyle)}"`,
       "muted",
       "playsinline",
     ].filter(Boolean).join(" ");
-    return `<video ${media} ${deferredArtifact("src", element.source.source.resource)}></video>`;
+    return `<div ${commonAttributes} style="aspect-ratio:${displayWidth}/${displayHeight};${escapeHtml(inlineStyle)}" data-hypit-media-host><video ${media} ${deferredArtifact("src", element.source.source.resource)}></video></div>`;
   }
   if (element.kind === "surface" && element.sampling !== undefined) {
     const artifact = element.surface.artifact;
@@ -584,7 +583,7 @@ function renderElement(
       numerator: context.programNumerator, denominator: context.programDenominator,
     });
     let part = 0;
-    return pieces.flatMap((piece) => samplingRuns(piece).map((run) => {
+    const mediaRuns = pieces.flatMap((piece) => samplingRuns(piece).map((run) => {
       part += 1;
       const startFrame = context.presentStartFrame + run.startFrame;
       const durationFrames = run.endFrameExclusive - run.startFrame;
@@ -593,7 +592,7 @@ function renderElement(
         kind: "surface",
         id: partId,
         documentPath: [],
-        elementId: partId,
+        elementId: `${partId}-source`,
         artifactId: artifact.resource,
         startFrame,
         endFrameExclusive: startFrame + durationFrames,
@@ -602,15 +601,14 @@ function renderElement(
         sourceFrameRate: { ...timing.frameRate },
       });
       const media = [
-        `id="${partId}"`,
-        `data-hypit-element-id="${escapeHtml(element.id)}"`,
+        `id="${partId}-source"`,
+        "data-hypit-media-content",
         `data-hypit-sampling-part="${part}"`,
         `data-hypit-source-frame="${run.sourceFrame.numerator}/${run.sourceFrame.denominator}"`,
         `data-hypit-source-rate="${piece.rate.numerator}/${piece.rate.denominator}"`,
         `data-hypit-start-frame="${startFrame}"`,
         `data-hypit-end-frame="${startFrame + durationFrames}"`,
         `data-hypit-source-fps="${timing.frameRate.numerator}/${timing.frameRate.denominator}"`,
-        `style="${escapeHtml(inlineStyle)}"`,
         "muted",
         "playsinline",
         ...[
@@ -627,6 +625,7 @@ function renderElement(
       ].filter(Boolean).join(" ");
       return `<video ${media} ${deferredArtifact("src", artifact.resource)}></video>`;
     })).join("");
+    return `<div ${commonAttributes} style="aspect-ratio:${element.surface.width}/${element.surface.height};${escapeHtml(inlineStyle)}" data-hypit-media-host>${mediaRuns}</div>`;
   }
   if (element.kind === "surface") {
     const surface = [
@@ -1059,12 +1058,14 @@ function frameProgramRuntime(frameCount: number, hasNestedCompositions: boolean)
   const nestedApplication = hasNestedCompositions ? `
       for (const nested of nestedCompositions) {
         const childFrame = nestedFrameAt(nested, frame);
+        nested.element.toggleAttribute('data-hypit-nested-active', Number.isSafeInteger(childFrame));
         nested.element.style.display = Number.isSafeInteger(childFrame) ? '' : 'none';
         if (Number.isSafeInteger(childFrame)) pending.push(nestedProgram(nested).then(program => program.applyFrame(childFrame)));
       }` : "";
   return `(() => {
     let presents;${nestedDeclarations}
-    let prepared;${nestedRuntime}
+    let prepared, selection;
+    let frameWork = Promise.resolve();${nestedRuntime}
     const initialize = spans => {
       htmlPrepareFrameSelection(spans);
       for (const initializer of htmlFrameProgramInitializers) initializer();
@@ -1075,11 +1076,10 @@ function frameProgramRuntime(frameCount: number, hasNestedCompositions: boolean)
         endFrameExclusive: Number(element.getAttribute('data-hypit-contribution-end-frame')),
       }));${nestedInitialization}
     };
-    const applyFrame = async frame => {
+    const renderFrame = async frame => {
       if (!Number.isSafeInteger(frame) || frame < 0 || frame >= ${frameCount}) {
         throw new Error('HTML Program frame is outside its domain.');
       }
-      if (!htmlFrameSelectionPrepared) initialize();
       for (const present of presents) {
         present.element.style.display = frame >= present.startFrame && frame < present.endFrameExclusive ? '' : 'none';
       }
@@ -1089,20 +1089,32 @@ function frameProgramRuntime(frameCount: number, hasNestedCompositions: boolean)
         waitUntil(value) { pending.push(Promise.resolve(value)); },
       }}));
       await Promise.all(pending);
+      if (window.__hypitHtmlVisualError !== undefined) throw new Error(window.__hypitHtmlVisualError);
       void document.documentElement.getBoundingClientRect();
     };
-    Object.defineProperty(window, '__hypitFrameProgram', { configurable: false, writable: false, value: Object.freeze({
-      frameCount: ${frameCount},
-      prepare(spans) {
-        if (prepared !== undefined) return prepared;
-        prepared = (async () => {
-          initialize(spans);
-          await document.fonts.ready;
-          await applyFrame(spans?.[0]?.startFrame ?? 0);
-        })();
+    const prepare = spans => {
+      if (prepared !== undefined) {
+        if (spans !== undefined && JSON.stringify(spans, ["startFrame", "endFrameExclusive"]) !== selection) {
+          return Promise.reject(new Error('HTML Program frame selection differs from its prepared selection.'));
+        }
         return prepared;
-      },
-      applyFrame,
+      }
+      selection = JSON.stringify(spans, ["startFrame", "endFrameExclusive"]);
+      prepared = Promise.resolve().then(async () => {
+        initialize(spans);
+        await document.fonts.ready;
+        await renderFrame(spans?.[0]?.startFrame ?? 0);
+      });
+      return prepared;
+    };
+    const applyFrame = frame => {
+      const ready = prepare();
+      const result = frameWork.then(async () => { await ready; await renderFrame(frame); });
+      frameWork = result.catch(() => {});
+      return result;
+    };
+    Object.defineProperty(window, '__hypitFrameProgram', { configurable: false, writable: false, value: Object.freeze({
+      frameCount: ${frameCount}, prepare, applyFrame,
     }) });
   })();`;
 }
@@ -1279,6 +1291,8 @@ function emitHtml(
   <style>
     html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent}
     [data-hypit-program-root]{position:relative;overflow:hidden;background:transparent}
+    [data-hypit-media-host]{position:relative}
+    [data-hypit-media-host]>[data-hypit-media-content]{display:block;position:absolute;inset:0;width:100%;height:100%;object-fit:inherit;object-position:inherit}
     ${hasNestedCompositions ? "iframe[data-hypit-nested-composition]{border:0;background:transparent}" : ""}
     *,*::before,*::after{box-sizing:border-box}
     ${fontCss}
@@ -1319,6 +1333,7 @@ function normalizedDocument(value: HtmlProgram): HtmlProgram {
       documentPath: [...source.documentPath],
       source: structuredClone(source.source),
       sampling: structuredClone(source.sampling),
+      ...(source.frameSelection === undefined ? {} : { frameSelection: structuredClone(source.frameSelection) }),
     }) : ({
       ...source,
       documentPath: [...source.documentPath],
@@ -1478,6 +1493,13 @@ export function assertHtmlProgram(document: HtmlProgram): void {
       try {
         verifyPreparedVisualSource(source.source);
         assertTemporalMap(source.sampling);
+        if (source.frameSelection !== undefined) {
+          const { frameRate, frames } = source.frameSelection;
+          if (!Number.isSafeInteger(frameRate.numerator) || frameRate.numerator <= 0
+            || !Number.isSafeInteger(frameRate.denominator) || frameRate.denominator <= 0
+            || !Array.isArray(frames) || frames.length !== source.endFrameExclusive - source.startFrame
+            || frames.some(frame => frame !== null && (!Number.isSafeInteger(frame) || frame < 0))) return true;
+        }
           return !declared.some((entry) => entry.artifact.resource === source.source.source.resource)
           || source.sampling.stages.at(-1)?.source.id !== source.source.sourceDomain.id;
       } catch { return true; }

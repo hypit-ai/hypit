@@ -17,8 +17,8 @@ export async function installBrowserVideo(moduleUrl, maxBytes, workingPicture) {
       && sample.colorSpace.transfer === expected.transfer
       && sample.colorSpace.matrix === expected.matrix
       && sample.colorSpace.fullRange === expected.fullRange);
-  const open = (url, streamIndex, picture) => {
-    const sourceKey = `${url}\u0000${streamIndex}\u0000${JSON.stringify(picture ?? null)}`;
+  const open = (url, streamIndex, picture, rotation) => {
+    const sourceKey = `${url}\u0000${streamIndex}\u0000${JSON.stringify(picture ?? null)}\u0000${rotation ?? "container"}`;
     let pending = sources.get(sourceKey);
     if (pending === undefined) {
       pending = (async () => {
@@ -31,8 +31,9 @@ export async function installBrowserVideo(moduleUrl, maxBytes, workingPicture) {
           }
           const decoderConfig = await track.getDecoderConfig();
           return { input, sink: new media.VideoSampleSink(track), cursors: new Map(),
+            alphaMode: picture?.alphaMode, rotation: rotation === undefined ? undefined : (360 - rotation) % 360,
             colorSpace: colorSpaceFor(picture) ?? decoderConfig?.colorSpace,
-            firstTimestamp: await track.getFirstTimestamp(), timeResolution: await track.getTimeResolution(),
+            firstTimestamp: await track.getFirstTimestamp(),
             width: track.displayWidth, height: track.displayHeight };
         } catch (error) { input.dispose(); throw error; }
         finally { sourceOpenMs += performance.now() - started; }
@@ -107,18 +108,33 @@ export async function installBrowserVideo(moduleUrl, maxBytes, workingPicture) {
       // Reconstruct only when the selected source interpretation differs from
       // the decoder/container tags. PreparedVisualSource is the authority;
       // decoder metadata is merely one implementation input.
-      if (/^I\d{3}A/.test(sample.format) || !colorSpaceMatches(sample, source.colorSpace)) {
+      const rotation = source.rotation ?? sample.rotation;
+      let selected;
+      if (/^I\d{3}A/.test(sample.format) || !colorSpaceMatches(sample, source.colorSpace)
+        || rotation !== sample.rotation) {
         if (sample.format === null)
           throw new Error("Browser video cannot apply the selected picture interpretation to an opaque decoder surface");
         const bytes = new Uint8Array(sample.allocationSize());
         const layout = await sample.copyTo(bytes);
-        return new media.VideoSample(bytes, { format: sample.format, codedWidth: sample.codedWidth,
+        selected = new media.VideoSample(bytes, { format: sample.format, codedWidth: sample.codedWidth,
           codedHeight: sample.codedHeight, timestamp: sample.timestamp, duration: sample.duration,
-          rotation: sample.rotation, flip: sample.flip, visibleRect: sample.visibleRect,
-          displayWidth: sample.displayWidth, displayHeight: sample.displayHeight,
+          rotation, flip: sample.flip, visibleRect: sample.visibleRect,
+          displayWidth: rotation % 180 === 0 ? sample.squarePixelWidth : sample.squarePixelHeight,
+          displayHeight: rotation % 180 === 0 ? sample.squarePixelHeight : sample.squarePixelWidth,
           colorSpace: source.colorSpace, layout });
+      } else selected = sample.clone();
+      if (source.alphaMode === "opaque" && (selected.format === null || selected.format.includes("A"))) {
+        try {
+          const frame = selected.toVideoFrame();
+          try {
+            const opaque = new VideoFrame(frame, { alpha: "discard" });
+            try { return new media.VideoSample(opaque, { timestamp: selected.timestamp,
+              duration: selected.duration, rotation: selected.rotation, flip: selected.flip }); }
+            catch (error) { opaque.close(); throw error; }
+          } finally { frame.close(); }
+        } finally { selected.close(); }
       }
-      return sample.clone();
+      return selected;
     } finally { sampleReadMs += performance.now() - started; }
   };
   const w = window;
@@ -137,7 +153,7 @@ export async function installBrowserVideo(moduleUrl, maxBytes, workingPicture) {
       }
       return target;
     };
-    const sourceKeyFor = update => `${update.url}\u0000${update.sample?.streamIndex ?? 0}\u0000${JSON.stringify(update.picture ?? null)}`;
+    const sourceKeyFor = update => `${update.url}\u0000${update.sample?.streamIndex ?? 0}\u0000${JSON.stringify(update.picture ?? null)}\u0000${update.sample?.rotation ?? "container"}`;
     const active = new Map(updates.map(update => [update.id, sourceKeyFor(update)]));
     const activeSourceKeys = new Set(updates.filter(update => update.sample?.kind !== "i420p10").map(sourceKeyFor));
     for (const [sourceKey, pending] of sources) {
@@ -173,25 +189,19 @@ export async function installBrowserVideo(moduleUrl, maxBytes, workingPicture) {
           throw new Error(`HDR source sample has ${bytes.byteLength} bytes, expected ${expected}`);
         entry = { sample: new media.VideoSample(bytes, { format: "I420P10",
           codedWidth: selection.width, codedHeight: selection.height, timestamp: 0,
-          rotation: selection.rotation, colorSpace: colorSpaceFor(update.picture) }) };
+          rotation: (360 - selection.rotation) % 360, colorSpace: colorSpaceFor(update.picture) }) };
         sourceWidth = entry.sample.displayWidth; sourceHeight = entry.sample.displayHeight; transient = true;
       } else {
-        const opened = open(update.url, selection.streamIndex, update.picture);
+        const opened = open(update.url, selection.streamIndex, update.picture, selection.rotation);
         const source = await opened.pending;
         const sampleValue = selection.kind === "time" ? selection.timestamp : selection.frame;
         const keyFor = (value) => `${opened.sourceKey}:${selection.kind}:${value}:${selection.reverse ? "left" : "right"}`;
         const key = keyFor(sampleValue);
         if (!cache.has(key)) {
           if (selection.kind === "time") {
-          // A reverse Map samples the interval on an exact boundary's left.
-          // Move by one source time-base tick rather than an arbitrary epsilon;
-          // between boundaries this remains inside the same decoded interval.
-          const timestamp = selection.reverse
-            ? selection.timestamp - 1 / source.timeResolution
-            : selection.timestamp;
-          const sample = await readSample(source, update.id, timestamp);
-          source.sampleBytes = allocationSize(sample);
-          retain(opened.sourceKey, key, sample, key);
+            const sample = await readSample(source, update.id, selection.timestamp);
+            source.sampleBytes = allocationSize(sample);
+            retain(opened.sourceKey, key, sample, key);
           } else {
             // Reverse playback decodes a bounded forward interval, then reuses its samples.
             const count = selection.reverse ? Math.max(1, Math.min(64,
@@ -214,7 +224,7 @@ export async function installBrowserVideo(moduleUrl, maxBytes, workingPicture) {
           throw new Error("Browser video cache lost a requested sample");
         cache.delete(key);
         cache.set(key, entry);
-        sourceWidth = source.width; sourceHeight = source.height;
+        sourceWidth = entry.sample.displayWidth; sourceHeight = entry.sample.displayHeight;
       }
       const owner = targetDocument(update);
       const video = owner.getElementById(update.elementId);
@@ -228,20 +238,15 @@ export async function installBrowserVideo(moduleUrl, maxBytes, workingPicture) {
         // its DOM placement is nested while decoder execution remains root-owned.
         canvas = document.createElement("canvas");
         canvas.dataset.hypitSourceFrameCanvas = update.id;
+        canvas.setAttribute("data-hypit-media-content", "");
         video.insertAdjacentElement("afterend", canvas);
         canvases.set(update.id, canvas);
       }
-      canvas.className = video.className;
-      canvas.style.cssText = video.style.cssText;
-      canvas.style.visibility = video.dataset.hypitAuthoredVisibility ?? video.style.visibility;
-      canvas.style.display = video.style.display;
+      canvas.style.display = "";
       if (canvas.width !== sourceWidth)
         canvas.width = sourceWidth;
       if (canvas.height !== sourceHeight)
         canvas.height = sourceHeight;
-      // Keep the compiler video at its authored style until the shared page
-      // preparer records that state. The preparer hides it after this adapter
-      // has copied the box onto the decoded-frame canvas.
       const drawStarted = performance.now();
       try {
         if (workingPicture?.colorTransfer === "linear") {

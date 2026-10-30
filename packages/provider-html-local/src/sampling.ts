@@ -1,11 +1,12 @@
+import { canonicalStringify } from "@hypit/hypit/protocol";
+import type { PictureInterpretation } from "@hypit/media";
 import type { HtmlVideoSource } from "@hypit/html-program";
 import type { Clock, FrameSpan } from "@hypit/timeline";
 import {
   addExactTemporalValues,
-  evaluateTemporalMap,
+  evaluateTemporalSample,
   exactTemporalRational,
   exactTemporalValueFromFrames,
-  temporalMapDirectionAt,
 } from "@hypit/temporal";
 import { FrameSpanIndex } from "./frame-span-index.js";
 import { assert } from "./process.js";
@@ -23,14 +24,15 @@ export type VideoSlot = FrameSpan & {
   readonly elementId: string;
   readonly src: string;
   readonly sourceKey: string;
+  readonly picture: PictureInterpretation;
+  readonly rotation: 0 | 90 | 180 | 270;
 } & (
   | {
       readonly kind: "media";
       readonly streamIndex: number;
-      readonly picture: Extract<HtmlVideoSource, { readonly kind: "media" }>["source"]["interpretation"]["picture"];
-      readonly rotation: 0 | 90 | 180 | 270;
       readonly presentationStart: ExactValue;
       readonly sampling: Extract<HtmlVideoSource, { readonly kind: "media" }>["sampling"];
+      readonly frameSelection?: Extract<HtmlVideoSource, { readonly kind: "media" }>["frameSelection"];
       readonly programClock: Clock;
     }
   | {
@@ -64,6 +66,7 @@ export function videoSlots(
   sources: readonly HtmlVideoSource[],
   pathFor: (resource: string) => string,
   programClock: Clock,
+  surfacePictures: ReadonlyMap<string, PictureInterpretation>,
 ): VideoSlot[] {
   return sources.map((source) => {
     if (source.kind === "media") {
@@ -74,25 +77,29 @@ export function videoSlots(
         documentPath: [...source.documentPath],
         elementId: source.elementId,
         src,
-        sourceKey: `${src}\u0000${source.source.streamIndex}`,
+        sourceKey: `${src}\u0000${source.source.streamIndex}\u0000${canonicalStringify(source.source.interpretation.picture)}`,
         streamIndex: source.source.streamIndex,
         picture: structuredClone(source.source.interpretation.picture),
         rotation: source.source.interpretation.rotationDegrees,
         presentationStart: structuredClone(source.source.presentationStart),
         sampling: structuredClone(source.sampling),
+        ...(source.frameSelection === undefined ? {} : { frameSelection: structuredClone(source.frameSelection) }),
         programClock: structuredClone(programClock),
         startFrame: source.startFrame,
         endFrameExclusive: source.endFrameExclusive,
       };
     }
     const src = pathFor(source.artifactId);
+    const picture = surfacePictures.get(source.artifactId);
+    assert(picture !== undefined, `HTML renderer surface ${source.artifactId} has no picture interpretation`);
     return {
       kind: "surface",
       id: source.id,
       documentPath: [...source.documentPath],
       elementId: source.elementId,
       src,
-      sourceKey: `${src}\u00000`,
+      sourceKey: `${src}\u00000\u0000${canonicalStringify(picture)}`,
+      picture: structuredClone(picture), rotation: 0,
       streamIndex: 0,
       startFrame: source.startFrame,
       endFrameExclusive: source.endFrameExclusive,
@@ -103,18 +110,22 @@ export function videoSlots(
   });
 }
 
+function selectedSample(slot: Extract<VideoSlot, { readonly kind: "media" }>, frame: number) {
+  const local = frame - slot.startFrame;
+  assert(Number.isSafeInteger(local) && local >= 0, "HTML Program frame lies outside its source occurrence");
+  const selected = slot.frameSelection === undefined ? local : slot.frameSelection.frames[local];
+  if (selected == null) return undefined;
+  return evaluateTemporalSample(slot.sampling, exactTemporalValueFromFrames(selected,
+    slot.frameSelection ?? slot.programClock));
+}
+
 function exactSourceTimestampAt(slot: Extract<VideoSlot, { readonly kind: "media" }>, frame: number): Rational | undefined {
-  const localFrame = frame - slot.startFrame;
-  assert(Number.isSafeInteger(localFrame) && localFrame >= 0, "HTML Program frame lies outside its source occurrence");
-  const mapped = evaluateTemporalMap(slot.sampling, exactTemporalValueFromFrames(localFrame, slot.programClock));
-  if (mapped === undefined) return undefined;
-  return exactTemporalRational(addExactTemporalValues(slot.presentationStart, mapped));
+  const sample = selectedSample(slot, frame);
+  return sample === undefined ? undefined : exactTemporalRational(addExactTemporalValues(slot.presentationStart, sample.position));
 }
 
 export function sourceDirectionAt(slot: Extract<VideoSlot, { readonly kind: "media" }>, frame: number): -1 | 0 | 1 | undefined {
-  const localFrame = frame - slot.startFrame;
-  assert(Number.isSafeInteger(localFrame) && localFrame >= 0, "HTML Program frame lies outside its source occurrence");
-  return temporalMapDirectionAt(slot.sampling, exactTemporalValueFromFrames(localFrame, slot.programClock));
+  return selectedSample(slot, frame)?.direction;
 }
 
 export function sourceTimestampAt(slot: Extract<VideoSlot, { readonly kind: "media" }>, frame: number): number | undefined {
@@ -141,7 +152,8 @@ export function sourceFrameAt(slot: VideoSlot, frame: number, frames?: SourceFra
       if (reverse ? comparison < 0n : comparison <= 0n) low = middle + 1;
       else high = middle;
     }
-    return Math.max(0, Math.min(frames.timestamps.length - 1, low - 1));
+    assert(low > 0 && low <= frames.timestamps.length, "HTML Program sample lies outside its decoded frame index");
+    return low - 1;
   }
   const a = slot.sourceFrame;
   const r = slot.sourceRate;

@@ -60,8 +60,8 @@ function cubicPosition(piece: Exclude<TemporalMapPiece, TemporalAffineMapPiece>,
   );
 }
 
-function stageValue(stage: TemporalMapStage, targetAt: ExactTemporalValue): ExactTemporalValue | undefined {
-  const piece = stagePiece(stage, targetAt);
+function stageValue(stage: TemporalMapStage, targetAt: ExactTemporalValue, selected?: TemporalMapPiece, direction?: -1 | 0 | 1): ExactTemporalValue | undefined {
+  const piece = selected ?? stagePiece(stage, targetAt);
   if (piece === undefined) return undefined;
   const target = exactTemporalRational(targetAt);
   if (!isAffineTemporalMapPiece(piece)) return exactTemporalValue(cubicPosition(piece, target));
@@ -77,7 +77,7 @@ function stageValue(stage: TemporalMapStage, targetAt: ExactTemporalValue): Exac
     // boundary still needs its direction. Preserve the left-hand
     // representative for reverse motion so a decoded-frame consumer selects
     // the final sample in the interval rather than its first sample.
-    if (rate.numerator < 0n && compare(source, wrapStart) === 0) source = wrapEnd;
+    if ((direction ?? Number(rate.numerator)) < 0 && compare(source, wrapStart) === 0) source = wrapEnd;
   }
   return exactTemporalValue(source);
 }
@@ -224,4 +224,31 @@ export function temporalMapDirectionAt(
     current = stageValue(stage, current);
   }
   return direction;
+}
+
+/** Select a piece on the approaching side of a sample boundary. */
+export function temporalSampleContains(startComparison: number, endComparison: number, direction: -1 | 0 | 1): boolean {
+  return direction < 0 ? startComparison > 0 && endComparison <= 0 : startComparison >= 0 && endComparison < 0;
+}
+
+/** Evaluate a playable sample, carrying its boundary orientation through every stage. */
+export function evaluateTemporalSample(
+  value: TemporalMap,
+  targetAt: ExactTemporalValue,
+  direction: -1 | 0 | 1 = 1,
+): { readonly position: ExactTemporalValue; readonly direction: -1 | 0 | 1 } | undefined {
+  let position = targetAt;
+  for (const stage of value.stages) {
+    const piece = stage.pieces.find(candidate => temporalSampleContains(
+      compareExactTemporalValues(position, candidate.target.start),
+      compareExactTemporalValues(position, candidate.target.end), direction));
+    if (piece === undefined) return undefined;
+    const orientation = isAffineTemporalMapPiece(piece) ? Math.sign(piece.rate.numerator)
+      : compareExactTemporalValues(piece.sourceAtEnd, piece.sourceAtStart);
+    if (orientation !== 0) direction = Math.sign(direction * orientation) as -1 | 0 | 1;
+    position = stageValue(stage, position, piece, direction)!;
+    if (!temporalSampleContains(compareExactTemporalValues(position, exactTemporalZero()),
+      compareExactTemporalValues(position, stage.source.duration), direction)) return undefined;
+  }
+  return { position, direction };
 }

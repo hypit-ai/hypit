@@ -1,4 +1,3 @@
-import { parseHTML } from "linkedom";
 import type { Composition } from "@hypit/composition";
 import { assertHtmlProgram, compileHtmlProgram, materializeHtmlProgram } from "@hypit/html-program";
 import type { HtmlProgram, ResourceUrlResolver } from "@hypit/html-program";
@@ -66,19 +65,12 @@ export function materializeHtmlDocument(
 ): string {
   assertHtmlDocument(document);
   const program = document.program;
-  const rendered = renderDocumentProgram(
+  const html = renderDocumentProgram(
     program,
     document.audio,
     (artifact) => resolve(artifact),
     resolve,
   );
-  const { document: page } = parseHTML(rendered);
-  const scripts = Array.from(page.querySelectorAll("script")).map((script) => {
-    const source = script.textContent ?? "";
-    script.remove();
-    return source;
-  });
-  const html = page.toString();
   const settings = JSON.stringify({
     autoplay: options.autoplay ?? true,
     loop: options.loop ?? true,
@@ -100,6 +92,7 @@ export function materializeHtmlDocument(
   }
   let readyResolve, readyReject;
   const ready = new Promise((resolve, reject) => { readyResolve = resolve; readyReject = reject; });
+  window.__hypitFrameReady?.catch(() => {});
   function pause() {
     playing = false; generation++; cancelAnimationFrame(request);
     return ready.then(async () => { await window.__hypitSeekFrame(frame); report(true); });
@@ -107,7 +100,10 @@ export function materializeHtmlDocument(
   async function play() {
     await ready;
     if (playing) return;
-    playing = true; started = performance.now() - frame * 1000 / fps;
+    playing = true;
+    try { await window.__hypitPlayFrame(frame); }
+    catch (error) { playing = false; report(true); throw error; }
+    started = performance.now() - frame * 1000 / fps;
     report(true);
     const current = ++generation;
     async function tick(now) {
@@ -117,7 +113,9 @@ export function materializeHtmlDocument(
       try { await window.__hypitPlayFrame(frame); }
       catch (error) {
         playing = false;
+        report(true);
         window.dispatchEvent(new CustomEvent('hypit-playback-error', {detail: error}));
+        if (window.parent !== window) window.parent.postMessage({type:'hypit.html-document.error@1', message:String(error)}, '*');
         return;
       }
       if (!playing || generation !== current) return;
@@ -158,7 +156,6 @@ export function materializeHtmlDocument(
     try {
       await document.fonts.ready;
       await new Promise(requestAnimationFrame);
-      ${scripts.join("\n")}
       await window.__hypitFrameProgram.prepare();
       await window.__hypitFrameReady;
       await window.__hypitSetMuted(options.muted);
@@ -180,5 +177,6 @@ export function materializeHtmlDocument(
   }, {once:true});
 })();
 </script>`;
-  return html.replace("</body>", () => driver + "</body>");
+  const bodyEnd = html.lastIndexOf("</body>");
+  return html.slice(0, bodyEnd) + driver + html.slice(bodyEnd);
 }

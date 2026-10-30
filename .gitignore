@@ -1,5 +1,7 @@
 node_modules/
 dist/
+!packages/provider-html-local/vendor/mediabunny/dist/
+!packages/provider-html-local/vendor/mediabunny/dist/**
 coverage/
 # Local architecture notes and repository-specific working instructions.
 /design/

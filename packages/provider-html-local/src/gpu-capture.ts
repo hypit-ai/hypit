@@ -239,7 +239,7 @@ export async function createGpuCapture(input: CaptureInput, origin: string,
       window.webContents.on("render-process-gone", (_event, detail) => fail(new Error(`GPU scene exited: ${detail.reason}`)));
       window.webContents.on("paint", (event, dirtyRect) => {
         const texture = event.texture;
-        if (texture === undefined) return;
+        if (texture == null) return;
         if (closing || texture.textureInfo.widgetType !== "frame") { texture.release(); return; }
         // Program changes can paint before the explicit commit marker reaches
         // the shared surface. Those textures cannot satisfy the pending frame and
@@ -280,7 +280,8 @@ export async function createGpuCapture(input: CaptureInput, origin: string,
           window.setBackgroundColor("#00000000");
           try {
             await new Promise<void>((resolve) => {
-              const painted = (_event: unknown, dirtyRect: { readonly y: number; readonly height: number }) => {
+              const painted = (event: { readonly texture?: OffscreenSharedTexture | null }, dirtyRect: { readonly y: number; readonly height: number }) => {
+                if (event.texture == null || event.texture.textureInfo.widgetType !== "frame") return;
                 if (dirtyRect.y >= height || dirtyRect.y + dirtyRect.height <= 0) return;
                 window.webContents.off("paint", painted);
                 resolve();

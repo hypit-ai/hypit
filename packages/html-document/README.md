@@ -1,15 +1,15 @@
 # @hypit/html-document
 
-Build a browser-playable document from a Composition and Timeline:
+Build a browser-playable document from a Composition:
 
 ```xml
 <import as="page" from="@hypit/html-document@1"/>
-<page:Document id="preview" composition={main.composition} timeline={animation.timeline}/>
+<page:Document id="preview" composition={main.composition}/>
 ```
 
-The package-owned declaration consumes those two completed values directly. It does not depend on
-Temporal or a Markup timeline helper; Markup contributes only the `Document` spelling, while direct
-APIs and other Frontends use the same declaration compiler.
+The package-owned declaration consumes the completed Composition and uses its Timeline for
+frame rate and duration. Markup contributes the `Document` spelling; direct APIs and other
+Frontends use the same declaration compiler.
 
 Select the document as an Invocation target:
 
@@ -43,6 +43,11 @@ const html = materializeHtmlDocument(document, artifact => materialUrl(artifact)
 The URL resolver can return relative paths, HTTP URLs or data URLs. It must
 provide every resource referenced by the document. Autoplay, looping, muting
 and responsive canvas sizing default to `true`.
+
+Video sources carry the measured frame timestamps supplied by `Prepare`.
+Browser playback selects a source frame from these timestamps and locates the
+native decoder inside that frame's presentation interval, including for reverse
+playback and variable frame rates.
 
 The generated page displays the composition inside the iframe's viewport:
 
