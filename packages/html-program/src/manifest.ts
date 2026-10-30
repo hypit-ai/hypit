@@ -68,6 +68,14 @@ export const htmlProgramSchema: ValueSchema = {
       kind: { schema: { kind: "literal", value: "media" } },
       ...(frameSpanSchema.kind === "object" ? frameSpanSchema.fields : {}),
       source: { schema: preparedVisualSourceSchema }, sampling: { schema: temporalMapSchema },
+      frameSelection: { optional: true, schema: { kind: "object", fields: {
+        frameRate: { schema: { kind: "object", fields: {
+          numerator: { schema: positiveInteger }, denominator: { schema: positiveInteger },
+        } } },
+        frames: { schema: { kind: "array", items: { kind: "oneOf", variants: [
+          nonNegativeInteger, { kind: "literal", value: null },
+        ] } } },
+      } } },
     } }, { kind: "object", fields: {
       id: { schema: { kind: "string", minLength: 1 } },
       documentPath: { schema: { kind: "array", items: { kind: "string", minLength: 1 } } },

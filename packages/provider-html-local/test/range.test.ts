@@ -1,3 +1,4 @@
+import { BT709_OPAQUE_PICTURE } from "@hypit/media";
 import assert from "node:assert/strict";
 import { tmpdir } from "node:os";
 import test from "node:test";
@@ -55,7 +56,7 @@ test("the render deadline is global while stage deadlines are explicit deploymen
 test("source selection retains loop, hold, fractional-speed and reverse sampling and shares decoded frames", () => {
   const document = htmlRangeDocument({ kind: "blob", resource: "res_range_source", size: 1, mediaType: "video/mp4" });
   const slots = videoSlots(document.videoSources, resource => `media://${resource}`,
-    { frameRate: document.frameRate });
+    { frameRate: document.frameRate }, new Map(document.surfaces.map(entry => [entry.surface.artifact.resource, entry.surface.picture])));
   assert.ok(slots.every(slot => slot.src === "media://res_range_source"));
   assert.equal(slots.length, 1, "the terminal plan retains one source occurrence and its complete Map");
   const timestampIndex = { timestamps: [0n, 1n, 2n, 3n],
@@ -78,7 +79,7 @@ test("a nested Composition composes its occurrence Map with its media Map withou
   const document = htmlNestedRangeDocument({ kind: "blob", resource: "res_nested_range_source",
     size: 1, mediaType: "video/mp4" });
   const slots = videoSlots(document.videoSources, resource => `media://${resource}`,
-    { frameRate: document.frameRate });
+    { frameRate: document.frameRate }, new Map(document.surfaces.map(entry => [entry.surface.artifact.resource, entry.surface.picture])));
   assert.equal(slots.length, 1);
   assert.equal(slots[0]!.documentPath.length, 1);
   const timestampIndex = { timestamps: [0n, 1n, 2n, 3n],
@@ -93,11 +94,11 @@ test("reverse source time selects the same bounded decoded window without forwar
     artifactId: "artifact-reverse", startFrame: 0, endFrameExclusive: 4,
     sourceFrame: { numerator: 4, denominator: 1 }, sourceRate: { numerator: -1, denominator: 1 },
     kind: "surface", sourceFrameRate: { numerator: 30, denominator: 1 } }], () => "direct.mp4",
-  { frameRate: { numerator: 30, denominator: 1 } });
+  { frameRate: { numerator: 30, denominator: 1 } }, new Map([["artifact-reverse", BT709_OPAQUE_PICTURE]]));
   assert.ok(slot !== undefined);
   assert.deepEqual(Array.from({ length: 4 }, (_, frame) => sourceFrameAt(slot, frame)), [3, 2, 1, 0]);
   assert.deepEqual(sourceWindows([slot], { startFrame: 0, endFrameExclusive: 4 }, new Map()), [{
-    sourceKey: "direct.mp4\u00000", src: "direct.mp4", streamIndex: 0,
+    sourceKey: slot.sourceKey, src: "direct.mp4", streamIndex: 0,
     windows: [{ startFrame: 0, endFrameExclusive: 4 }],
   }]);
 });

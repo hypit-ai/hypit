@@ -33,11 +33,12 @@ export type SourceFrameUpdate = {
         readonly kind: "time";
         readonly timestamp: number;
         readonly streamIndex: number;
+        readonly rotation: 0 | 90 | 180 | 270;
         readonly reverse: boolean;
       }
     | {
         /** Provider-private exact planar sample selected by the authored Map. */
-        readonly kind: "i420p10";
+        readonly kind: "i420p10" | "rgba8";
         readonly width: number;
         readonly height: number;
         readonly rotation: 0 | 90 | 180 | 270;
@@ -63,9 +64,6 @@ export async function createFramePreparer(page: FramePreparationPage) {
   // attributes, a CSS class or a pseudo-element after initial page readiness.
   await page.evaluate(() => {
     for (const video of Array.from(document.querySelectorAll<HTMLVideoElement>("video[data-hypit-source-frame]"))) {
-      video.dataset.hypitAuthoredVisibility = video.style.visibility;
-      video.dataset.hypitAuthoredDisplay = video.style.display;
-      video.style.visibility = "hidden";
       video.style.display = "none";
     }
     const decoded = new Map<string, Promise<void>>();
@@ -327,33 +325,17 @@ export async function createFramePreparer(page: FramePreparationPage) {
     const started = performance.now();
     const timing = await page.evaluate(async (input) => {
       const w = window as unknown as RenderWindow;
-      let nestedDocuments: Document[] = [document];
-      for (let index = 0; index < nestedDocuments.length; index += 1) {
-        for (const iframe of Array.from(nestedDocuments[index]!.querySelectorAll<HTMLIFrameElement>(
-          "iframe[data-hypit-nested-composition]"))) {
-          if (iframe.contentDocument !== null) nestedDocuments.push(iframe.contentDocument);
-        }
-      }
-      let videos = nestedDocuments.flatMap(owner =>
-        Array.from(owner.querySelectorAll<HTMLVideoElement>("video[data-hypit-source-frame]")));
-      // The decoded still stands in for the compiler-owned video element. Restore
-      // the authored box while the frame program runs so component code reads and
-      // writes its real layout, then remove that inert video from flow after the
-      // replacement has copied the resulting state.
-      for (const video of videos) {
-        video.style.visibility = video.dataset.hypitAuthoredVisibility ?? "";
-        video.style.display = video.dataset.hypitAuthoredDisplay ?? "";
-      }
       const programStarted = performance.now();
       await w.__hypitFrameProgram.applyFrame(input.frame);
-      nestedDocuments = [document];
+      const nestedDocuments: Document[] = [document];
       for (let index = 0; index < nestedDocuments.length; index += 1) {
         for (const iframe of Array.from(nestedDocuments[index]!.querySelectorAll<HTMLIFrameElement>(
-          "iframe[data-hypit-nested-composition]"))) {
-          if (iframe.contentDocument !== null) nestedDocuments.push(iframe.contentDocument);
+          "iframe[data-hypit-nested-composition][data-hypit-nested-active]"))) {
+          if (iframe.contentDocument === null) throw new Error(`HTML Program active nested document ${iframe.id} is unavailable.`);
+          nestedDocuments.push(iframe.contentDocument);
         }
       }
-      videos = nestedDocuments.flatMap(owner =>
+      const videos = nestedDocuments.flatMap(owner =>
         Array.from(owner.querySelectorAll<HTMLVideoElement>("video[data-hypit-source-frame]")));
       const active = new Set(input.sources.map(source => source.id));
       for (const owner of nestedDocuments) {
@@ -376,31 +358,51 @@ export async function createFramePreparer(page: FramePreparationPage) {
         }
         const video = owner.getElementById(source.elementId) as HTMLVideoElement | null;
         if (video === null) throw new Error(`HTML Program source element ${source.elementId} is missing.`);
+        if (source.sample?.kind === "rgba8") {
+          const { width, height, rotation } = source.sample;
+          if (source.picture === undefined) throw new Error("Decoded video frame has no picture interpretation");
+          const response = await fetch(source.url);
+          if (!response.ok) throw new Error(`Decoded video frame returned ${response.status}: ${source.url}`);
+          const bytes = new Uint8Array(await response.arrayBuffer());
+          if (bytes.byteLength !== width * height * 4) throw new Error("Decoded RGBA frame has an invalid byte length");
+          const picture = source.picture;
+          if (picture.colorPrimaries !== "bt709" || (picture.colorTransfer !== "srgb" && picture.colorTransfer !== "bt709"))
+            throw new Error("Decoded RGBA frame requires a supported SDR picture interpretation");
+          const frame = new VideoFrame(bytes, { format: "RGBA", codedWidth: width, codedHeight: height, timestamp: 0,
+            colorSpace: { primaries: "bt709", transfer: picture.colorTransfer === "srgb" ? "iec61966-2-1" : "bt709",
+              matrix: "rgb", fullRange: true } });
+          try {
+            let canvas = owner.querySelector<HTMLCanvasElement>(`canvas[data-hypit-source-frame-image="${CSS.escape(source.id)}"]`);
+            if (canvas === null) {
+              canvas = owner.createElement("canvas");
+              canvas.dataset.hypitSourceFrameImage = source.id;
+              canvas.setAttribute("data-hypit-media-content", "");
+              video.insertAdjacentElement("afterend", canvas);
+            }
+            canvas.style.display = "";
+            canvas.width = rotation === 90 || rotation === 270 ? height : width;
+            canvas.height = rotation === 90 || rotation === 270 ? width : height;
+            const context = canvas.getContext("2d", { colorSpace: "srgb" });
+            if (context === null) throw new Error("Decoded video canvas could not be created");
+            context.translate(canvas.width / 2, canvas.height / 2);
+            context.rotate(-rotation * Math.PI / 180);
+            context.drawImage(frame, -width / 2, -height / 2);
+          } finally { frame.close(); }
+          return;
+        }
         let image = owner.querySelector<HTMLImageElement>(`[data-hypit-source-frame-image="${CSS.escape(source.id)}"]`);
         if (image === null) {
           image = owner.createElement('img');
           image.dataset.hypitSourceFrameImage = source.id;
-          image.className = video.className;
+          image.setAttribute('data-hypit-media-content', '');
           video.insertAdjacentElement('afterend', image);
         }
-        image.style.cssText = video.style.cssText;
-        image.style.visibility = video.style.visibility;
-        image.style.display = video.style.display;
-        image.width = video.width;
-        image.height = video.height;
+        image.style.display = "";
         if (image.src !== source.url) image.src = source.url;
         await image.decode();
       }));
       const sourceMs = performance.now() - sourceStarted;
-      for (const video of videos) {
-        // This shared boundary is the sole owner of the temporary hidden state.
-        // A source adapter may read or copy the authored style above, but must
-        // not replace it before it is retained for the next absolute seek.
-        video.dataset.hypitAuthoredVisibility = video.style.visibility;
-        video.dataset.hypitAuthoredDisplay = video.style.display;
-        video.style.visibility = "hidden";
-        video.style.display = "none";
-      }
+      for (const video of videos) video.style.display = "none";
       const readinessStarted = performance.now();
       await w.__hypitPrepareImages();
       for (const owner of nestedDocuments.slice(1)) await w.__hypitPrepareDocumentImages(owner);
@@ -416,11 +418,12 @@ export async function createFramePreparer(page: FramePreparationPage) {
       if (!Number.isSafeInteger(width) || width <= 0 || !Number.isSafeInteger(height) || height <= 0) {
         throw new Error("HTML Program canvas is invalid.");
       }
-      const documents: { owner: Document; depth: number }[] = [{ owner: document, depth: 0 }];
+      const documents: { owner: Document; depth: number; path: string[] }[] = [{ owner: document, depth: 0, path: [] }];
       for (let index = 0; index < documents.length; index += 1) {
         const entry = documents[index]!;
-        for (const iframe of Array.from(entry.owner.querySelectorAll<HTMLIFrameElement>("iframe[data-hypit-nested-composition]"))) {
-          if (iframe.contentDocument !== null) documents.push({ owner: iframe.contentDocument, depth: entry.depth + 1 });
+        for (const iframe of Array.from(entry.owner.querySelectorAll<HTMLIFrameElement>("iframe[data-hypit-nested-composition][data-hypit-nested-active]"))) {
+          if (iframe.contentDocument === null) throw new Error(`HTML Program active nested document ${iframe.id} is unavailable.`);
+          documents.push({ owner: iframe.contentDocument, depth: entry.depth + 1, path: [...entry.path, iframe.id] });
         }
       }
       const stages = documents.flatMap((entry, ownerIndex) => {
@@ -433,6 +436,7 @@ export async function createFramePreparer(page: FramePreparationPage) {
         }
         return Array.from(entry.owner.querySelectorAll<HTMLElement>("[data-hypit-process-stage]")).map((stage, stageIndex) => ({
           ownerIndex,
+          documentPath: entry.path,
           stageIndex,
           depth: entry.depth,
           order: Number(stage.dataset.hypitProcessOrder),
@@ -451,17 +455,14 @@ export async function createFramePreparer(page: FramePreparationPage) {
       throw new Error("Selected HTML renderer does not implement Visual Process input rasterization.");
     }
     for (const stage of processPlan.stages) {
-      await page.evaluate(({ ownerIndex, stageIndex, width, height }) => {
-        type DocumentEntry = { owner: Document; chain: HTMLIFrameElement[] };
-        const documents: DocumentEntry[] = [{ owner: document, chain: [] }];
-        for (let index = 0; index < documents.length; index += 1) {
-          const entry = documents[index]!;
-          for (const iframe of Array.from(entry.owner.querySelectorAll<HTMLIFrameElement>("iframe[data-hypit-nested-composition]"))) {
-            if (iframe.contentDocument !== null) documents.push({ owner: iframe.contentDocument, chain: [...entry.chain, iframe] });
-          }
+      await page.evaluate(({ documentPath, stageIndex, width, height }) => {
+        const entry: { owner: Document; chain: HTMLIFrameElement[] } = { owner: document, chain: [] };
+        for (const id of documentPath) {
+          const iframe = entry.owner.getElementById(id) as HTMLIFrameElement | null;
+          if (iframe?.contentDocument == null) throw new Error('HTML Program Process owner document is unavailable.');
+          entry.chain.push(iframe);
+          entry.owner = iframe.contentDocument;
         }
-        const entry = documents[ownerIndex];
-        if (entry === undefined) throw new Error("HTML Program Process owner document is unavailable.");
         const target = Array.from(entry.owner.querySelectorAll<HTMLElement>("[data-hypit-process-stage]"))[stageIndex];
         if (target === undefined) throw new Error("HTML Program Process stage is unavailable.");
         const changed = new Map<HTMLElement, string | null>();
@@ -469,7 +470,7 @@ export async function createFramePreparer(page: FramePreparationPage) {
         for (const iframe of entry.chain) if (iframe.contentDocument !== null) owners.push(iframe.contentDocument);
         for (const owner of owners) {
           for (const child of Array.from(owner.body?.children ?? [])) {
-            if (!(child instanceof HTMLElement)) continue;
+            if (owner.defaultView === null || !(child instanceof owner.defaultView.HTMLElement)) continue;
             if (!changed.has(child)) changed.set(child, child.getAttribute("style"));
             // Process stages are body-level siblings of the authored programme.
             // `visibility` is not an isolation boundary: a frame programme may
@@ -510,7 +511,7 @@ export async function createFramePreparer(page: FramePreparationPage) {
         (window as unknown as {
           __hypitProcessCaptureRestore?: [HTMLElement, string | null][];
         }).__hypitProcessCaptureRestore = [...changed];
-      }, { ownerIndex: stage.ownerIndex, stageIndex: stage.stageIndex, width: stage.width, height: stage.height });
+      }, { documentPath: stage.documentPath, stageIndex: stage.stageIndex, width: stage.width, height: stage.height });
       try {
         const png = await page.screenshot!({
           type: "png",
@@ -520,15 +521,13 @@ export async function createFramePreparer(page: FramePreparationPage) {
           clip: { x: 0, y: 0, width: stage.width, height: stage.height },
         });
         const url = `data:image/png;base64,${Buffer.from(png).toString("base64")}`;
-        await page.evaluate(async ({ ownerIndex, key, url }) => {
-          const documents: Document[] = [document];
-          for (let index = 0; index < documents.length; index += 1) {
-            for (const iframe of Array.from(documents[index]!.querySelectorAll<HTMLIFrameElement>("iframe[data-hypit-nested-composition]"))) {
-              if (iframe.contentDocument !== null) documents.push(iframe.contentDocument);
-            }
+        await page.evaluate(async ({ documentPath, key, url }) => {
+          let owner = document;
+          for (const id of documentPath) {
+            const iframe = owner.getElementById(id) as HTMLIFrameElement | null;
+            if (iframe?.contentDocument == null) throw new Error('HTML Program Process owner document is unavailable.');
+            owner = iframe.contentDocument;
           }
-          const owner = documents[ownerIndex];
-          if (owner === undefined) throw new Error("HTML Program Process owner document is unavailable.");
           const images = Array.from(owner.querySelectorAll<HTMLImageElement>("[data-hypit-process-raster-key]"))
             .filter(image => image.dataset.hypitProcessRasterKey === key);
           if (images.length === 0) throw new Error(`HTML Program Process input ${key} has no raster target.`);
@@ -536,7 +535,7 @@ export async function createFramePreparer(page: FramePreparationPage) {
             if (image.src !== url) image.src = url;
             await image.decode();
           }));
-        }, { ownerIndex: stage.ownerIndex, key: stage.key, url });
+        }, { documentPath: stage.documentPath, key: stage.key, url });
       } finally {
         await page.evaluate(() => {
           const state = window as unknown as {

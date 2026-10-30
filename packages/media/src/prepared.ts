@@ -115,6 +115,7 @@ export function prepareMedia(input: {
     const presentationStart = exact(video.startPts);
     visual = {
       streamIndex: video.index,
+      ...(video.frameIndex === undefined ? {} : { frameIndex: structuredClone(video.frameIndex) }),
       presentationStart,
       sourceDomain,
       map: memberMap(domain, authorityStart, sourceDomain, presentationStart),
@@ -175,20 +176,16 @@ export function mapPreparedMedia(media: PreparedMedia, relation: TemporalMap): P
   return value;
 }
 
-/** Exact display aspect expressed as an integer extent without materializing rotation or square pixels. */
+/** Display pixel extent after pixel aspect and orientation are applied. */
 export function preparedVisualExtent(media: PreparedMedia): { readonly widthPx: number; readonly heightPx: number } {
   verifyPreparedMedia(media);
   assert(media.visual !== undefined, "Prepared Media has no visual member.");
   const value = media.visual.interpretation;
-  let width = value.codedWidth * value.sampleAspectRatio.numerator;
-  let height = value.codedHeight * value.sampleAspectRatio.denominator;
-  const divisor = (left: number, right: number): number => right === 0 ? left : divisor(right, left % right);
-  const common = divisor(width, height);
-  width /= common;
-  height /= common;
+  let width = value.codedWidth * (value.sampleAspectRatio.numerator / value.sampleAspectRatio.denominator);
+  let height = value.codedHeight;
   if (value.rotationDegrees === 90 || value.rotationDegrees === 270) [width, height] = [height, width];
-  assert(Number.isSafeInteger(width) && width > 0 && Number.isSafeInteger(height) && height > 0,
-    "Prepared visual display extent exceeds safe arithmetic.");
+  assert(Number.isFinite(width) && width > 0 && Number.isFinite(height) && height > 0,
+    "Prepared visual display extent must be finite and positive.");
   return { widthPx: width, heightPx: height };
 }
 
@@ -205,6 +202,7 @@ export function preparedVisualSource(media: PreparedMedia): PreparedVisualSource
   return canonicalize({
     source: media.source,
     streamIndex: media.visual.streamIndex,
+    ...(media.visual.frameIndex === undefined ? {} : { frameIndex: media.visual.frameIndex }),
     presentationStart: media.visual.presentationStart,
     sourceDomain: media.visual.sourceDomain,
     interpretation: media.visual.interpretation,

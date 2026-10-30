@@ -9,8 +9,9 @@ The Provider consumes the typed `HtmlProgram` directly and offers two explicit
 execution implementations for the same visual Need:
 
 - `chromium` is the portable implementation. It obtains exact source samples
-  through FFmpeg, presents them to Chrome as PNG images, captures PNG frames
-  through Chrome DevTools Protocol and streams them into FFmpeg;
+  through FFmpeg as RGBA samples, presents them through `VideoFrame` with the
+  authored picture interpretation, captures PNG frames through Chrome DevTools
+  Protocol and streams them into FFmpeg;
 - `electron` is the encoded-visual implementation. It decodes the compiler's
   exact source samples, transfers the composed frame as an offscreen shared
   texture and owns two exact delivery pipelines. SDR uses WebCodecs H.264 plus
@@ -28,6 +29,11 @@ consumer's global DOM types.
 
 Both implementations apply absolute integer frames through
 `window.__hypitFrameProgram` and publish the same verified `TimelineVisual`.
+Decoded SDR samples retain their video transfer and primaries through browser
+presentation. FFmpeg applies the authored matrix and range when producing RGBA;
+`VideoFrame` carries the resulting full-range RGB sample interpretation into the
+sRGB canvas. Source caches distinguish picture interpretations of the same stream.
+
 Renderer selection is deployment policy; it does not change `HtmlProgram`, Film,
 Composition, Prepared Media or the delivery requirement.
 

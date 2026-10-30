@@ -20,6 +20,8 @@ test("transparent Prepared Media composites through an explicit Visual Clip in C
   await mkdir(directory, { recursive: true });
   try {
     const resources = new MemoryResourceStore();
+    const chromeOptions = process.env.HYPIT_TEST_CHROME_PATH === undefined
+      ? {} : { chromePath: process.env.HYPIT_TEST_CHROME_PATH };
     const fixture = await transparentVideoFixture(directory, "webm");
     const source = await resources.put(fixture.bytes, fixture.mediaType);
     const media = await prepareTestVideo(resources, source, true, "speech");
@@ -53,7 +55,7 @@ test("transparent Prepared Media composites through an explicit Visual Clip in C
     const brollVisual = projectVisualTrack(space, finalizeVisualTrack(items, header, space));
     const document = compileHtmlProgram(sealComposition({ id: "alpha-proof", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 192, height: 64, clearColor: "#143cdc" }, root: { members: [speechVisual, brollVisual].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }, space));
     const rendered = await rasterizeHtmlProgram({ program: document, delivery: htmlProviderDelivery("high") },
-      { resources, workers: 2, processTimeoutMs: 120_000 });
+      { resources, ...chromeOptions, workers: 2, processTimeoutMs: 120_000 });
     const video = await writeTestArtifact(resources, rendered.artifact, join(directory, "speech-and-broll.mp4"));
     const pixels = ffmpegBytes(["-i", video, "-pix_fmt", "rgb24", "-f", "rawvideo", "pipe:1"]);
     assert.equal(pixels.length, 192 * 64 * 3 * 12);
@@ -67,7 +69,7 @@ test("transparent Prepared Media composites through an explicit Visual Clip in C
       close(pixel(f, left + 60, 32), [130, 40, 120]);
     }
     const snapshots = await rasterizeHtmlFrames({ program: document, picture: htmlProviderPicture(),
-      frames: [0, 11] }, { resources, workers: 2 });
+      frames: [0, 11] }, { resources, ...chromeOptions, workers: 2 });
     for (const snapshot of snapshots.frames) {
       const pixels = await sharp((await resources.get(snapshot.artifact.resource))!).removeAlpha().raw().toBuffer();
       const at = (x: number, y: number) => [...pixels.subarray((y * 192 + x) * 3, (y * 192 + x) * 3 + 3)];

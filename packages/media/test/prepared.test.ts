@@ -52,7 +52,7 @@ test("PreparedMedia preserves source identity, exact member offsets and display 
     sourceAtStart: { ticks: "0", timeBase: { numerator: 1, denominator: 1 } },
     rate: { numerator: 1, denominator: 1 },
   });
-  assert.deepEqual(preparedVisualExtent(media), { widthPx: 3, heightPx: 4 });
+  assert.deepEqual(preparedVisualExtent(media), { widthPx: 576, heightPx: 768 });
 });
 
 test("signal projections retain source selection without choosing an execution format", () => {

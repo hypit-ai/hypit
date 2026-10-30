@@ -37,6 +37,13 @@ export type MediaTimestamp = {
   readonly timeBase: MediaRational;
 };
 
+/** Presentation order and final boundary measured from the selected video stream. */
+export type VideoFrameIndex = {
+  readonly timeBase: MediaRational;
+  readonly timestamps: readonly string[];
+  readonly endTimestamp: string;
+};
+
 export type MediaDisposition = {
   readonly default: boolean;
   readonly attachedPicture: boolean;
@@ -65,6 +72,7 @@ export type MediaVideoStream = MediaStreamBase & {
   readonly rotationDegrees: 0 | 90 | 180 | 270;
   readonly averageFrameRate?: MediaRational;
   readonly nominalFrameRate?: MediaRational;
+  readonly frameIndex?: VideoFrameIndex;
   readonly picture: PictureObservation;
 };
 
@@ -101,6 +109,7 @@ export type MediaStreamSelection = {
 };
 
 export type PreparedVisualMember = {
+  readonly frameIndex?: VideoFrameIndex;
   readonly streamIndex: number;
   /** Original presentation timestamp corresponding to source-domain zero. */
   readonly presentationStart: ExactTemporalValue;
@@ -132,6 +141,7 @@ export type PreparedAudioMember = {
 
 /** Signal-specific terminal facts projected from PreparedMedia for visual execution. */
 export type PreparedVisualSource = {
+  readonly frameIndex?: VideoFrameIndex;
   readonly source: BlobRef;
   readonly streamIndex: number;
   /** Original presentation timestamp corresponding to source-domain zero. */

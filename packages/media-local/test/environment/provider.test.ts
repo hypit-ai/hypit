@@ -802,7 +802,7 @@ test("audio signal evaluation treats reverse, hold, cubic motion and gaps as pee
     assert.deepEqual(values(0, 4), [4, 3, 2, 1]);
     assert.deepEqual(values(4, 4), [3, 3, 3, 3]);
     assert.deepEqual(values(8, 4), [1, 1, 2, 3]);
-    assert.deepEqual(values(12, 4), [1, 2, 3, 0]);
+    assert.deepEqual(values(12, 4), [1, 2, 0, 0]);
     assert.deepEqual(values(16, 4), [1, 5, 9, 13],
       "occurrence and multi-stage preparation maps compose without a playback-mode rewrite");
   } finally {

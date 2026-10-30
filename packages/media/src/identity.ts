@@ -4,6 +4,7 @@ import {
 } from "@hypit/hypit/protocol";
 import type { BlobRef } from "@hypit/hypit/protocol";
 import {
+  addExactTemporalValues,
   assertExactTemporalValue,
   assertLocalTemporalDomain,
   assertTemporalMap,
@@ -18,6 +19,7 @@ import type {
   MediaStream,
   MediaStreamSelection,
   MediaTimestamp,
+  VideoFrameIndex,
   MediaDeliverySpec,
   MediaDomainSpec,
   HdrStaticMetadata,
@@ -246,6 +248,24 @@ function compareTimestamp(left: MediaTimestamp, right: MediaTimestamp): number {
   return leftScaled < rightScaled ? -1 : leftScaled > rightScaled ? 1 : 0;
 }
 
+function verifyVideoFrameIndex(value: unknown, start: MediaTimestamp | undefined, end: MediaTimestamp | undefined,
+  subject: string): asserts value is VideoFrameIndex {
+  const index = object(value, subject) as unknown as VideoFrameIndex;
+  verifyRational(index.timeBase, `${subject}.timeBase`);
+  assert(Array.isArray(index.timestamps) && index.timestamps.length > 0, `${subject} has no frames`);
+  let previous: bigint | undefined;
+  for (const ticks of [...index.timestamps, index.endTimestamp]) {
+    verifyTimestamp({ ticks, timeBase: index.timeBase }, subject);
+    const position = BigInt(ticks);
+    assert(previous === undefined || position > previous, `${subject} timestamps must increase`);
+    previous = position;
+  }
+  if (start !== undefined) assert(compareTimestamp({ ticks: index.timestamps[0]!, timeBase: index.timeBase }, start) === 0,
+    `${subject} first frame differs from its presentation start`);
+  if (end !== undefined) assert(compareTimestamp({ ticks: index.endTimestamp, timeBase: index.timeBase }, end) === 0,
+    `${subject} final boundary differs from its presentation end`);
+}
+
 function verifyBlob(value: unknown, subject: string): asserts value is BlobRef {
   assertBlobRef(value, subject);
 }
@@ -283,6 +303,11 @@ function verifyStream(value: unknown, subject: string): asserts value is MediaSt
     if (item.averageFrameRate !== undefined) verifyRational(item.averageFrameRate, `${subject}.averageFrameRate`);
     if (item.nominalFrameRate !== undefined) verifyRational(item.nominalFrameRate, `${subject}.nominalFrameRate`);
     verifyPictureObservation(item.picture, `${subject}.picture`);
+    if (item.frameIndex !== undefined) {
+      verifyVideoFrameIndex(item.frameIndex, item.startPts, item.endPts, `${subject}.frameIndex`);
+      assert(item.timingStatus === "admissible" && item.frameIndex.timestamps.length === item.decodedUnitCount,
+        `${subject} frame index differs from its decoded frame count`);
+    }
     if (item.role === "attached-picture") {
       assert(disposition.attachedPicture === true, `${subject} attached-picture role differs from disposition`);
     }
@@ -372,6 +397,8 @@ export function verifyPreparedMedia(value: unknown): asserts value is PreparedMe
   if (item.visual !== undefined) {
     const visual = object(item.visual, "PreparedMedia.visual") as unknown as PreparedVisualMember;
     verifyPreparedMember(visual, item.domain, "PreparedMedia.visual");
+    if (visual.frameIndex !== undefined) verifyVideoFrameIndex(visual.frameIndex, visual.presentationStart,
+      addExactTemporalValues(visual.presentationStart, visual.sourceDomain.duration), "PreparedMedia.visual.frameIndex");
     const interpretation = object(visual.interpretation, "PreparedMedia.visual.interpretation");
     positiveInteger(interpretation.codedWidth, "PreparedMedia.visual.interpretation.codedWidth");
     positiveInteger(interpretation.codedHeight, "PreparedMedia.visual.interpretation.codedHeight");
@@ -400,6 +427,8 @@ export function verifyPreparedVisualSource(value: unknown): asserts value is Pre
   nonNegativeInteger(item.streamIndex, "PreparedVisualSource.streamIndex");
   assertExactTemporalValue(item.presentationStart, "PreparedVisualSource.presentationStart");
   assertLocalTemporalDomain(item.sourceDomain);
+  if (item.frameIndex !== undefined) verifyVideoFrameIndex(item.frameIndex, item.presentationStart,
+    addExactTemporalValues(item.presentationStart, item.sourceDomain.duration), "PreparedVisualSource.frameIndex");
   const interpretation = object(item.interpretation, "PreparedVisualSource.interpretation");
   positiveInteger(interpretation.codedWidth, "PreparedVisualSource.interpretation.codedWidth");
   positiveInteger(interpretation.codedHeight, "PreparedVisualSource.interpretation.codedHeight");

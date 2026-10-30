@@ -49,7 +49,12 @@ export type HtmlVideoSource = FrameSpan & {
   | {
       readonly kind: "media";
       readonly source: PreparedVisualSource;
-      /** Exact occurrence-local to source-presentation relation. */
+      /** Optional parent-frame selection into the local clock of sampling. */
+      readonly frameSelection?: {
+        readonly frameRate: HtmlFrameDomain["frameRate"];
+        readonly frames: readonly (number | null)[];
+      };
+      /** Exact local-clock to source-presentation relation. */
       readonly sampling: TemporalMap;
     }
   | {

@@ -2,32 +2,61 @@ import { audioEnvelopeGainAt } from "@hypit/composition";
 import type { HtmlProgram } from "@hypit/html-program";
 import {
   addExactTemporalValues,
-  evaluateTemporalMap,
+  evaluateTemporalSample,
   exactTemporalRational,
   exactTemporalValueFromFrames,
 } from "@hypit/temporal";
 
 type PlaybackVideoPlan = {
   readonly id: string;
+  readonly documentPath: readonly string[];
+  readonly startFrame: number;
+  readonly endFrame: number;
   readonly timestamps: readonly (number | null)[];
 };
 
 function playbackVideoPlan(program: HtmlProgram | undefined): readonly PlaybackVideoPlan[] {
   if (program === undefined) return [];
   return program.videoSources.flatMap((source) => {
-    if (source.kind !== "media") return [];
-    if (source.source.streamIndex !== 0) {
+    if (source.kind === "media" && source.source.streamIndex !== 0) {
       throw new Error(`Browser playback cannot select visual stream ${source.source.streamIndex} for ${source.id}; use a renderer that executes the HtmlProgram source plan`);
     }
+    if (source.kind === "media" && source.source.frameIndex === undefined) {
+      throw new Error(`Browser playback requires the measured frame index for ${source.id}; prepare the source with video frame timing.`);
+    }
     const timestamps = Array.from({ length: source.endFrameExclusive - source.startFrame }, (_, frame) => {
-      const mapped = evaluateTemporalMap(source.sampling, exactTemporalValueFromFrames(frame, program));
+      if (source.kind === "surface") {
+        const a = source.sourceFrame, r = source.sourceRate;
+        const index = (BigInt(a.numerator) * BigInt(r.denominator)
+          + BigInt(frame) * BigInt(r.numerator) * BigInt(a.denominator))
+          / (BigInt(a.denominator) * BigInt(r.denominator));
+        return (Number(index) + 0.5) * source.sourceFrameRate.denominator / source.sourceFrameRate.numerator;
+      }
+      const selected = source.frameSelection === undefined ? frame : source.frameSelection.frames[frame];
+      if (selected == null) return null;
+      const mapped = evaluateTemporalSample(source.sampling, exactTemporalValueFromFrames(selected, source.frameSelection ?? program));
       if (mapped === undefined) return null;
-      const absolute = exactTemporalRational(addExactTemporalValues(source.source.presentationStart, mapped));
-      const seconds = Number(absolute.numerator) / Number(absolute.denominator);
+      const absolute = exactTemporalRational(addExactTemporalValues(source.source.presentationStart, mapped.position));
+      const index = source.source.frameIndex!;
+      const scale = BigInt(index.timeBase.numerator) * absolute.denominator;
+      const target = absolute.numerator * BigInt(index.timeBase.denominator);
+      let low = 0, high = index.timestamps.length;
+      while (low < high) {
+        const middle = Math.floor((low + high) / 2);
+        const pts = BigInt(index.timestamps[middle]!) * scale;
+        if (mapped.direction < 0 ? pts < target : pts <= target) low = middle + 1;
+        else high = middle;
+      }
+      if (low === 0 || (mapped.direction < 0 ? target > BigInt(index.endTimestamp) * scale
+        : target >= BigInt(index.endTimestamp) * scale)) return null;
+      const start = BigInt(index.timestamps[low - 1]!);
+      const end = BigInt(index.timestamps[low] ?? index.endTimestamp);
+      const seconds = Number((start + end) * BigInt(index.timeBase.numerator)) / (2 * index.timeBase.denominator);
       if (!Number.isFinite(seconds)) throw new Error(`Playback video ${source.id} timestamp exceeds finite arithmetic`);
       return seconds;
     });
-    return [{ id: source.id, timestamps }];
+    return [{ id: source.elementId, documentPath: source.documentPath, startFrame: source.startFrame,
+      endFrame: source.endFrameExclusive, timestamps }];
   });
 }
 
@@ -50,9 +79,7 @@ function shim(videoPlan: readonly PlaybackVideoPlan[]): string {
   var currentSeconds = 0;
   var playing = false;
   var seekRevision = 0;
-  var directMediaPlans = new Map(JSON.parse(decodeURIComponent(${JSON.stringify(encodedVideoPlan)})).map(function (entry) {
-    return [entry.id, entry.timestamps];
-  }));
+  var videoPlans = JSON.parse(decodeURIComponent(${JSON.stringify(encodedVideoPlan)}));
   if (root) {
     root.style.width = (root.getAttribute('data-hypit-width') || '0') + 'px';
     root.style.height = (root.getAttribute('data-hypit-height') || '0') + 'px';
@@ -61,8 +88,8 @@ function shim(videoPlan: readonly PlaybackVideoPlan[]): string {
   // Sampling runs are separate video elements with their own absolute spans.
   // Addressing only their containing Present makes every run paint at once.
   var media = [];
-  for (var element of document.querySelectorAll('.hypit-visual-present video')) {
-    var timestamps = directMediaPlans.get(element.id);
+  for (var element of videoPlans.length ? [] : document.querySelectorAll('.hypit-visual-present video')) {
+    var timestamps;
     var sourceFrame = element.getAttribute('data-hypit-source-frame');
     var sourceRate = element.getAttribute('data-hypit-source-rate');
     var sourceFps = element.getAttribute('data-hypit-source-fps');
@@ -77,6 +104,39 @@ function shim(videoPlan: readonly PlaybackVideoPlan[]): string {
       sourceRate: timestamps ? undefined : sourceRate.split('/').map(BigInt),
       sourceFps: timestamps ? undefined : sourceFps.split('/').map(Number)
     });
+  }
+  function refreshMedia(frame) {
+    if (!videoPlans.length) return;
+    var selected = new Map();
+    for (var plan of videoPlans) {
+      var owner = document;
+      for (var id of plan.documentPath) {
+        var child = owner.getElementById(id);
+        if (!child) throw new Error('Playback nested document element is missing: ' + id);
+        if (!child.hasAttribute('data-hypit-nested-active')) { owner = null; break; }
+        owner = child.contentDocument;
+        if (!owner) throw new Error('Playback active nested document is unavailable: ' + id);
+      }
+      if (!owner) continue;
+      var element = owner.getElementById(plan.id);
+      if (!element) throw new Error('Playback media element is missing: ' + plan.id);
+      var previous = selected.get(element);
+      if (!previous || (frame >= plan.startFrame && frame < plan.endFrame)) selected.set(element, plan);
+    }
+    for (const record of media) record.active = false;
+    for (var entry of selected) {
+      var element = entry[0], plan = entry[1];
+      var record = media.find(function (item) { return item.element === element; });
+      if (!record) {
+        record = { element: element, url: element.getAttribute('data-hypit-src')
+          || element.getAttribute('data-hypit-artifact-src') || element.getAttribute('src') };
+        media.push(record);
+      }
+      record.active = true;
+      record.startFrame = plan.startFrame;
+      record.endFrame = plan.endFrame;
+      record.timestamps = plan.timestamps;
+    }
   }
   var audioContext;
   var programAudio = [];
@@ -147,35 +207,40 @@ function shim(videoPlan: readonly PlaybackVideoPlan[]): string {
     var pending = pendingSeeks.get(element);
     if (pending && pending.target === target) return pending.promise;
     cancelSeek(element);
-    if (Math.abs(element.currentTime - target) < 0.0005 && element.readyState >= 2) return Promise.resolve();
+    if (element.error) return Promise.reject(new Error('Playback media could not be decoded: ' + (element.error.message || element.currentSrc || element.id)));
+    if (element.currentTime === target && !element.seeking && element.readyState >= 2) return Promise.resolve();
     var request = { target: target };
-    request.promise = new Promise(function (resolve) {
-      var done = function () {
-        element.removeEventListener('seeked', done);
-        element.removeEventListener('error', done);
-        element.removeEventListener('emptied', done);
+    request.promise = new Promise(function (resolve, reject) {
+      var done = function (error) {
+        element.removeEventListener('seeked', completed);
+        element.removeEventListener('error', failed);
+        element.removeEventListener('emptied', emptied);
         element.removeEventListener('loadeddata', decoded);
         element.removeEventListener('loadedmetadata', seek);
         if (pendingSeeks.get(element) === request) pendingSeeks.delete(element);
-        resolve();
+        if (error !== undefined) reject(error); else resolve();
       };
+      var completed = function () { done(); };
+      var failed = function () { done(new Error('Playback media could not be decoded: ' + (element.error?.message || element.currentSrc || element.id))); };
+      var emptied = function () { done(new Error('Playback media was emptied before decoding completed: ' + element.id)); };
       request.done = done;
       var decoded = function () {
-        if (!element.seeking && element.readyState >= 2 && Math.abs(element.currentTime - target) < 0.0005) done();
+        if (!element.seeking && element.readyState >= 2 && element.currentTime === target) done();
       };
       var seek = function () {
         try {
-          if (Math.abs(element.currentTime - target) >= 0.0005) element.currentTime = target;
+          if (element.currentTime !== target) element.currentTime = target;
           decoded();
         }
-        catch (error) { done(); }
+        catch (error) { done(error); }
       };
       pendingSeeks.set(element, request);
-      element.addEventListener('seeked', done, { once: true });
-      element.addEventListener('error', done, { once: true });
-      element.addEventListener('emptied', done, { once: true });
+      element.addEventListener('seeked', completed, { once: true });
+      element.addEventListener('error', failed, { once: true });
+      element.addEventListener('emptied', emptied, { once: true });
       element.addEventListener('loadeddata', decoded);
-      if (element.readyState === 0) element.addEventListener('loadedmetadata', seek, { once: true });
+      if (element.error) failed();
+      else if (element.readyState === 0) element.addEventListener('loadedmetadata', seek, { once: true });
       else seek();
     });
     return request.promise;
@@ -184,6 +249,7 @@ function shim(videoPlan: readonly PlaybackVideoPlan[]): string {
   function prepareMedia(record, nearby) {
     if (!record.url) return;
     if (nearby && !record.loaded) {
+      record.preparationError = undefined;
       record.element.setAttribute('src', record.url);
       record.element.preload = 'auto';
       record.loaded = true;
@@ -194,6 +260,22 @@ function shim(videoPlan: readonly PlaybackVideoPlan[]): string {
       record.element.load();
       record.loaded = false;
     }
+  }
+
+  async function prepareImages(owner) {
+    var waits = [];
+    for (var image of owner.images || []) {
+      if (!image.getAttribute('src')) continue;
+      var visible = true;
+      for (var element = image; element; element = element.parentElement) {
+        if (owner.defaultView.getComputedStyle(element).display === 'none') { visible = false; break; }
+      }
+      if (visible) waits.push(image.decode());
+    }
+    for (var iframe of owner.querySelectorAll('iframe[data-hypit-nested-active]')) {
+      if (iframe.contentDocument) waits.push(prepareImages(iframe.contentDocument));
+    }
+    await Promise.all(waits);
   }
 
   function placeHTML(frame) {
@@ -212,70 +294,65 @@ function shim(videoPlan: readonly PlaybackVideoPlan[]): string {
       sourceFrame = Number((a[0] * r[1] + BigInt(programFrame - record.startFrame) * r[0] * a[1]) / (a[1] * r[1]));
     }
     var target = (sourceFrame + 0.5) * record.sourceFps[1] / record.sourceFps[0];
-    var element = record.element;
-    if (Number.isFinite(element.duration) && element.duration > 0) {
-      target = Math.min(target, Math.max(0, element.duration - 0.001));
-    }
     return target;
   }
 
-  function apply(seconds, scrubbing) {
+  async function apply(seconds, scrubbing) {
     currentSeconds = Math.max(0, seconds);
     var revision = ++seekRevision;
     var waits = [];
     var programFrame = Math.max(0, Math.round(currentSeconds * fps));
-    for (var record of media) {
-      var inside = programFrame >= record.startFrame && programFrame < record.endFrame;
+    await placeHTML(programFrame);
+    if (revision !== seekRevision) return false;
+    refreshMedia(programFrame);
+    await prepareImages(document);
+    if (revision !== seekRevision) return false;
+    for (const record of media) {
+      var inside = record.active !== false && programFrame >= record.startFrame && programFrame < record.endFrame;
       var element = record.element;
-      prepareMedia(record, programFrame >= record.startFrame - 2 * fps && programFrame < record.endFrame + fps);
+      prepareMedia(record, record.active !== false && programFrame >= record.startFrame - 2 * fps && programFrame < record.endFrame + fps);
       // Materialized picture Artifacts are deliberately silent. Program sound
       // comes from the exact AudioTrack below rather than from a video sidecar.
       element.muted = true;
       var target = inside ? sourceTarget(record, programFrame) : undefined;
       inside = inside && target !== undefined && target !== null;
       if (!inside) {
-        element.style.visibility = 'hidden';
+        element.style.display = 'none';
         element.pause();
         // An upcoming Clip waits decoded on its entry frame, so the cut shows
         // that frame at once instead of whatever the decoder last held.
         var entryTarget = programFrame < record.startFrame ? sourceTarget(record, record.startFrame) : undefined;
-        if (record.loaded && entryTarget !== undefined && entryTarget !== null) seekDecoded(element, entryTarget);
+        if (record.loaded && entryTarget !== undefined && entryTarget !== null) seekDecoded(element, entryTarget).catch(function (error) { record.preparationError = error; });
         else cancelSeek(element);
         continue;
       }
-      var directNext = record.timestamps && programFrame + 1 < record.endFrame
-        ? sourceTarget(record, programFrame + 1) : undefined;
-      var directRate = directNext === undefined || directNext === null ? 0 : (directNext - target) * fps;
-      // A hold remains one compact target interval. Its exact zero source rate
-      // cannot be assigned to HTMLMediaElement.playbackRate, so keep the native
-      // decoder paused at the authored source frame instead.
-      if (scrubbing || (record.timestamps ? directRate <= 0 : record.sourceRate[0] <= 0n)
+      if (record.preparationError) throw record.preparationError;
+      if (element.error) throw new Error('Playback media could not be decoded: ' + element.error.message);
+      // Planned samples and holds remain on their selected decoded frame.
+      if (scrubbing || record.timestamps || record.sourceRate[0] <= 0n
         || programFrame === record.endFrame - 1) {
-        element.style.visibility = 'visible';
+        element.style.display = '';
         element.pause();
         waits.push(seekDecoded(element, target));
         continue;
       }
-      // During continuous playback the decoder owns its clock. A frame event
-      // only corrects visible drift; making every refresh a media seek is what
-      // previously froze the preview between frames. A Clip entered before its
-      // frame is decoded stays hidden rather than flashing a stale picture.
-      if (element.style.visibility !== 'visible' && !(element.readyState >= 2 && !element.seeking && !pendingSeeks.has(element))) {
+      // Legacy frame-rate records use the native decoder clock during playback.
+      // Keep an entering clip hidden until its first frame is decoded.
+      if (element.style.display === 'none' && !(element.readyState >= 2 && !element.seeking && !pendingSeeks.has(element))) {
         if (element.readyState > 0 && !pendingSeeks.has(element)) {
           element.pause();
-          seekDecoded(element, target);
+          waits.push(seekDecoded(element, target));
         }
         continue;
       }
-      element.style.visibility = 'visible';
+      element.style.display = '';
       cancelSeek(element);
       if (element.readyState === 0) continue;
       if (!element.seeking && Math.abs(element.currentTime - target) > 0.08) element.currentTime = target;
-      element.playbackRate = record.timestamps ? directRate
-        : Number(record.sourceRate[0]) / Number(record.sourceRate[1]) * fps * record.sourceFps[1] / record.sourceFps[0];
+      element.playbackRate = Number(record.sourceRate[0]) / Number(record.sourceRate[1]) * fps * record.sourceFps[1] / record.sourceFps[0];
       if (element.paused) {
         var started = element.play();
-        if (started) started.catch(function () {});
+        if (started) waits.push(started);
       }
     }
     for (var record of programAudio) {
@@ -286,11 +363,14 @@ function shim(videoPlan: readonly PlaybackVideoPlan[]): string {
       prepareMedia(record, local >= -2 && local < record.duration + 1);
       element.muted = muted || scrubbing;
       if (!inside) { cancelSeek(element); element.pause(); continue; }
+      if (element.error) throw new Error('Playback audio could not be decoded: ' + element.error.message);
       var interval = Math.max(0, record.mediaEnd - record.mediaStart);
       var advanced = local * record.rate;
       var target = record.mediaStart + advanced;
       if (record.loop && interval > 0) target = record.mediaStart + ((record.phase + advanced) % interval);
-      else target = Math.min(target, Math.max(record.mediaStart, record.mediaEnd - 0.000001));
+      if (target < record.mediaStart || target >= record.mediaEnd) {
+        throw new Error('Playback audio sample lies outside its prepared source interval');
+      }
       if (scrubbing) {
         element.pause();
         waits.push(seekDecoded(element, target));
@@ -302,11 +382,10 @@ function shim(videoPlan: readonly PlaybackVideoPlan[]): string {
         placeAudioGain(record, currentSeconds);
         if (element.paused) {
           var started = element.play();
-          if (started) started.catch(function () {});
+          if (started) waits.push(started);
         }
       }
     }
-    waits.push(placeHTML(programFrame));
     return Promise.all(waits).then(function () { return revision === seekRevision; });
   }
 
@@ -318,10 +397,10 @@ function shim(videoPlan: readonly PlaybackVideoPlan[]): string {
     playing = false;
     return apply(frame / fps, true);
   };
-  window.__hypitPlayFrame = function (frame) {
+  window.__hypitPlayFrame = async function (frame) {
     playing = true;
     if (programAudio.length && !audioContext) audioContext = new AudioContext();
-    if (audioContext && audioContext.state === 'suspended') audioContext.resume();
+    if (audioContext && audioContext.state === 'suspended') await audioContext.resume();
     return apply(frame / fps, false);
   };
   window.__hypitFrameReady = apply(0, true);

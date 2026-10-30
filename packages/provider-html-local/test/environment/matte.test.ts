@@ -173,8 +173,8 @@ test("Chromium resolves a child Picture Process before its parent Picture Proces
       const path = await writeTestArtifact(resources, video.artifact, join(directory, "matte.mp4"));
       const electronPixels = ffmpegBytes(["-i", path, "-frames:v", "1", "-pix_fmt", "rgb24", "-f", "rawvideo", "pipe:1"]);
       const electronPixel = (x: number, y: number) => [...electronPixels.subarray((y * 64 + x) * 3, (y * 64 + x) * 3 + 3)];
-      close(electronPixel(16, 32), [255, 0, 0]);
-      close(electronPixel(48, 32), [0, 0, 0]);
+      close(electronPixel(8, 16), [255, 0, 0]);
+      close(electronPixel(24, 16), [0, 0, 0]);
     } finally { await rm(directory, { recursive: true, force: true }); }
   }
 });

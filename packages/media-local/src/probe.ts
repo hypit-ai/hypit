@@ -1,5 +1,5 @@
 import { sealMediaInspection } from "@hypit/media";
-import type { MediaAudioStream, MediaInspection, MediaOtherStream, MediaRational, MediaStream, MediaTimestamp, MediaVideoStream, PictureObservation } from "@hypit/media";
+import type { MediaAudioStream, MediaInspection, MediaOtherStream, MediaRational, MediaStream, MediaTimestamp, MediaVideoStream, PictureObservation, VideoFrameIndex } from "@hypit/media";
 import { ffprobeDisplayRotation } from "./ffprobe-display.js";
 
 type JsonObject = Record<string, unknown>;
@@ -24,7 +24,7 @@ type FfprobeStream = {
   readonly channels?: unknown;
   readonly channel_layout?: unknown;
   readonly disposition?: { readonly default?: unknown; readonly attached_pic?: unknown };
-  readonly tags?: { readonly rotate?: unknown };
+  readonly tags?: Readonly<Record<string, unknown>>;
   readonly side_data_list?: readonly unknown[];
 };
 
@@ -128,7 +128,9 @@ function pictureObservation(stream: FfprobeStream, formats: readonly FfprobePixe
     .map((component) => positiveInteger(component.bit_depth)).filter((value): value is number => value !== undefined))];
   const bitDepth = rawDepth ?? (componentDepths.length === 1 ? componentDepths[0] : undefined);
   if (bitDepth === 8 || bitDepth === 10 || bitDepth === 12 || bitDepth === 16) result.bitDepth = bitDepth;
-  if (format !== undefined) result.alphaMode = integer(format.flags?.alpha) === 1 ? "straight" : "opaque";
+  const alphaTag = Object.entries(stream.tags ?? {}).find(([key]) => key.toLowerCase() === "alpha_mode")?.[1];
+  if (integer(alphaTag) === 1 || integer(format?.flags?.alpha) === 1) result.alphaMode = "straight";
+  else if (format !== undefined) result.alphaMode = "opaque";
   return result;
 }
 
@@ -162,6 +164,7 @@ function timing(
   readonly endPts?: MediaTimestamp;
   readonly decodedUnitCount: number;
   readonly decodedSampleFrames: number;
+  readonly frameIndex?: VideoFrameIndex;
 } {
   if (timeBase === undefined) return { timingStatus: "missing", decodedUnitCount: 0, decodedSampleFrames: 0 };
   const selected = frames.filter((frame) => integer(frame.stream_index) === index
@@ -233,6 +236,8 @@ function timing(
   }
   return {
     timingStatus: "admissible",
+    ...(kind === "video" ? { frameIndex: { timeBase, timestamps: units.map(unit => String(unit.pts)),
+      endTimestamp: String(last.pts + last.duration) } } : {}),
     startPts: timestamp(units[0]!.pts, timeBase),
     endPts: timestamp(last.pts + last.duration, timeBase),
     decodedUnitCount: units.length,
@@ -284,6 +289,7 @@ export function parseMediaInspection(value: unknown): MediaInspection {
         sampleAspectRatio: sampleAspectRatio(stream.sample_aspect_ratio),
         rotationDegrees: ffprobeDisplayRotation(stream, `video stream ${index}`),
         picture: pictureObservation(stream, formats),
+        ...(measured.frameIndex === undefined ? {} : { frameIndex: measured.frameIndex }),
         ...(rational(stream.avg_frame_rate, true) === undefined ? {} : { averageFrameRate: rational(stream.avg_frame_rate, true)! }),
         ...(rational(stream.r_frame_rate, true) === undefined ? {} : { nominalFrameRate: rational(stream.r_frame_rate, true)! }),
       };

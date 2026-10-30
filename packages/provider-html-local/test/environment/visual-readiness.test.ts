@@ -70,12 +70,12 @@ test("capture waits for dynamic images and rejects broken images or exact fonts"
         }
       } finally { await page.close(); }
     });
-    await t.test("a decoded source frame occupies the compiler video normal-flow box", async () => {
+    await t.test("a decoded source frame occupies the compiler media presentation box", async () => {
       const page = await browser.newPage();
       try {
         await page.setViewport({ width: 64, height: 64 });
-        await page.setContent(capturePage(`<style>body{margin:0}.screen{width:64px;height:64px;overflow:hidden}.screen>*{width:64px;height:64px}</style>
-          <div class="screen"><video id="source" data-hypit-source-frame></video></div>`));
+        await page.setContent(capturePage(`<style>body{margin:0}.screen{width:64px;height:64px;overflow:hidden}.screen>*{width:64px;height:64px}[data-hypit-media-content]{position:absolute;inset:0;width:100%;height:100%}</style>
+          <div class="screen"><div data-hypit-media-host style="position:relative"><video id="source" data-hypit-source-frame></video></div></div>`));
         await page.evaluate(() => {
           (window as unknown as { __hypitFrameProgram: unknown }).__hypitFrameProgram = {
             async applyFrame() {},

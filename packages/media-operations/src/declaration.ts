@@ -320,10 +320,9 @@ const decodePreparedMediaDeclaration: DeclarationDecoder = ({ element, resolveRe
   const spanAuthority = recipe === undefined ? text(element, "span-authority")
     : recipeText(recipe, "span-authority", `${element.name}.recipe`);
   if (spanAuthority !== "video" && spanAuthority !== "audio") throw new Error(`${element.name}.span-authority must be video or audio.`);
-  const pictureValue = recipe === undefined ? (element.attributes.picture ?? "source")
-    : (recipe.properties.picture ?? "source");
-  if (typeof pictureValue !== "string") throw new Error(`${element.name}.picture must be text.`);
-  const pictureName = pictureValue;
+  const pictureName = recipe === undefined
+    ? (element.attributes.picture === undefined ? "source" : text(element, "picture"))
+    : (recipe.properties.picture === undefined ? "source" : recipeText(recipe, "picture", `${element.name}.recipe`));
   if (!["source", "sdr-bt709", "bt2100-pq10", "bt2100-hlg10"].includes(pictureName)) {
     throw new Error(`${element.name}.picture must be source, sdr-bt709, bt2100-pq10 or bt2100-hlg10.`);
   }
