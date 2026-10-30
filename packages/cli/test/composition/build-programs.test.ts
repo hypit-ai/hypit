@@ -182,15 +182,15 @@ async function invocationSource(): Promise<string> {
 
 test("plan accepts an Author Source with explicit targets and no saved Invocation preset", async () => {
   const preset = await invocationSource();
-  const source = join(dirname(preset), "main.svml");
+  const source = await realpath(join(dirname(preset), "main.svml"));
   let output = "";
   await runCli(
-    ["plan", source, "--target", "result", "--json"],
+    ["plan", source, "--project", dirname(source), "--target", "result", "--json"],
     { write(text) { output += text; } },
     distribution([], []),
   );
   const plan = JSON.parse(output) as { readonly source: string; readonly targets: readonly string[] };
-  assert.equal(plan.source, source);
+  assert.equal(plan.source, "main.svml");
   assert.deepEqual(plan.targets, ["result"]);
 });
 
