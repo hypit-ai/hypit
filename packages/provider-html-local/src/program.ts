@@ -5,8 +5,6 @@ import type { ManagedProgram, ManagedProgramState } from "@hypit/runtime-local/e
 import { browserCacheDirectory, browserDownloadBaseUrl, browserDownloadUrl, browserExecutablePath, configuredBrowserPath, requireBrowserExecutable, selectedBrowserVersion } from "./browser.js";
 import type { BrowserOptions } from "./browser.js";
 import { runProcess } from "./process.js";
-import { electronExecutablePath, requireElectronExecutable, selectedHtmlRenderer } from "./electron.js";
-import type { ElectronOptions } from "./electron.js";
 
 type MediaToolVersion =
   | { readonly state: "ready"; readonly version: string }
@@ -29,7 +27,7 @@ async function mediaToolVersion(path: string): Promise<MediaToolVersion> {
   }
 }
 
-async function probeHtmlMediaTools(ffprobePath: string, ffmpegPath: string | undefined): Promise<ManagedProgramState> {
+export async function probeHtmlMediaTools(ffprobePath: string, ffmpegPath: string | undefined): Promise<ManagedProgramState> {
   const ffprobe = await mediaToolVersion(ffprobePath);
   if (ffprobe.state !== "ready") return { state: ffprobe.state, detail: ffprobe.detail };
   if (ffmpegPath === undefined) return { state: "ready" };
@@ -42,31 +40,22 @@ async function probeHtmlMediaTools(ffprobePath: string, ffmpegPath: string | und
  * This Provider owns browser selection and preparation. Probes never install;
  * rasterization receives the same selected executable instead of invoking browser discovery.
  */
-function localHtmlRendererProgram(
-  input: BrowserOptions & ElectronOptions & {
-    readonly id: string;
-    readonly nodePath: string;
-    readonly ffprobePath: string;
-    readonly ffmpegPath?: string;
-  },
-): ManagedProgram {
-  const renderer = selectedHtmlRenderer(input);
-  const version = renderer === "chromium" ? selectedBrowserVersion(input) : undefined;
-  const selectedPath = renderer === "chromium" ? browserExecutablePath(input) : undefined;
-  const baseUrl = renderer === "chromium" ? browserDownloadBaseUrl(input) : undefined;
-  const electronPath = electronExecutablePath(input);
+function localHtmlRendererProgram(input: BrowserOptions & {
+  readonly id: string;
+  readonly nodePath: string;
+  readonly ffprobePath: string;
+  readonly ffmpegPath?: string;
+}): ManagedProgram {
+  const version = selectedBrowserVersion(input);
+  const selectedPath = browserExecutablePath(input);
+  const baseUrl = browserDownloadBaseUrl(input);
   const probeBrowser = async (): Promise<ManagedProgramState> => {
     if (selectedPath === undefined) return { state: "ready" };
     try { await requireBrowserExecutable(selectedPath, version); }
     catch (error) { return { state: "down", detail: error instanceof Error ? error.message : String(error) }; }
     return { state: "ready" };
   };
-  const probeElectron = async (): Promise<ManagedProgramState> => {
-    if (electronPath === undefined) return { state: "ready" };
-    try { await requireElectronExecutable(electronPath); return { state: "ready" }; }
-    catch (error) { return { state: "down", detail: error instanceof Error ? error.message : String(error) }; }
-  };
-  const managedChrome = renderer === "chromium" && configuredBrowserPath(input) === undefined;
+  const managedChrome = configuredBrowserPath(input) === undefined;
   return {
     id: input.id,
     ...(managedChrome ? {
@@ -82,8 +71,6 @@ function localHtmlRendererProgram(
       },
     } : {}),
     async probe(): Promise<ManagedProgramState> {
-      const electron = await probeElectron();
-      if (electron.state !== "ready") return electron;
       const browser = await probeBrowser();
       if (browser.state !== "ready") return browser;
       return await probeHtmlMediaTools(input.ffprobePath, input.ffmpegPath);
@@ -101,12 +88,5 @@ type LocalHtmlProgramOptions = {
 export function localChromiumHtmlRendererProgram(
   input: BrowserOptions & LocalHtmlProgramOptions & { readonly nodePath: string },
 ): ManagedProgram {
-  return localHtmlRendererProgram({ ...input, renderer: "chromium" });
-}
-
-/** User-managed executable and media-tool probes for the Electron Endpoint. */
-export function localElectronHtmlRendererProgram(
-  input: LocalHtmlProgramOptions & { readonly electronPath: string },
-): ManagedProgram {
-  return localHtmlRendererProgram({ ...input, renderer: "electron", nodePath: process.execPath });
+  return localHtmlRendererProgram(input);
 }

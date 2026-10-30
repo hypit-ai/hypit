@@ -9,16 +9,38 @@
   },
   "files": [
     "dist",
+    "runtime",
+    "vendor/mediabunny/LICENSE",
+    "vendor/mediabunny/README.md",
+    "vendor/mediabunny/mediabunny-1.62.1-source.tar.gz",
+    "vendor/mediabunny/package.json",
     "README.md"
   ],
   "hypit": {
     "activation": "./src/activation.ts"
   },
   "dependencies": {
-    "@hypit/provider-html-local": "workspace:^0.2.1"
+    "@hypit/html-program": "workspace:^0.2.0",
+    "@hypit/media": "workspace:^0.2.0",
+    "@hypit/provider-html-local": "workspace:^0.2.1",
+    "mediabunny": "1.62.1",
+    "tsx": "4.21.0"
   },
   "peerDependencies": {
     "@hypit/hypit": "workspace:^0.4.0",
     "@hypit/runtime-local": "workspace:^0.2.0"
+  },
+  "devDependencies": {
+    "@hypit/caption-fine": "workspace:*",
+    "@hypit/composition": "workspace:*",
+    "@hypit/executor": "workspace:*",
+    "@hypit/protocol": "workspace:*",
+    "@hypit/runtime": "workspace:*",
+    "@hypit/script": "workspace:*",
+    "@hypit/timeline": "workspace:*",
+    "@hypit/visual-track": "workspace:*",
+    "electron": "45.0.0",
+    "puppeteer-core": "25.10.0",
+    "sharp": "0.35.4"
   }
 }

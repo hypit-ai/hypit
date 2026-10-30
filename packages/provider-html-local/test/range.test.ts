@@ -7,10 +7,9 @@ import { EndpointRegistry, MemoryResourceStore } from "@hypit/executor";
 import { rasterizeChromiumHtmlProgram } from "../src/index.js";
 import { resolveExecutionOptions } from "../src/render.js";
 import { hypitPackage } from "../src/activation.js";
-import { hypitPackage as electronHypitPackage } from "../../provider-html-electron-local/src/activation.js";
 import { runtimeEndpointAdapterFacetAbi } from "@hypit/runtime-local/extension";
 import type { RuntimeEndpointAdapterImplementation } from "@hypit/runtime-local/extension";
-import { endpointOffers, endpointResourceClaims, installEndpoint } from "@hypit/endpoint";
+import { endpointResourceClaims, installEndpoint } from "@hypit/endpoint";
 import { htmlProgramCapabilities } from "@hypit/html-program";
 import { mediaTypes } from "@hypit/media";
 import { canonicalize } from "@hypit/protocol";
@@ -173,22 +172,4 @@ test("HTML claims actual browser count including a range shorter than workers", 
     assert.deepEqual(endpointResourceClaims(selected.registration.scheduling!, single).at(-1),
       { id: "capacity:machine/browsers", limit: browserCapacity, units: 1 });
   }
-});
-
-test("Runtime Profile selects Electron explicitly without constructing a managed Chrome program", async () => {
-  const facet = electronHypitPackage.facets.find(item => item.abi === runtimeEndpointAdapterFacetAbi);
-  assert.ok(facet);
-  const adapter = facet.implementation as RuntimeEndpointAdapterImplementation;
-  const activation = await adapter.activate({
-    hostStateRoot: tmpdir(), dataRoot: tmpdir(), instance: "html.gpu", pool: "machine",
-    config: canonicalize({ electronPath: "Electron" }),
-  });
-  assert.equal(activation.program?.installation, undefined);
-  const offers = endpointOffers(activation.endpoint);
-  assert.deepEqual(offers.map(({ supports: _supports, ...offer }) => offer), [{
-    capability: htmlProgramCapabilities.rasterizeVisual,
-    returns: mediaTypes.timelineVisual,
-    endpoint: "html.gpu",
-  }]);
-  assert.equal(typeof offers[0]!.supports, "function");
 });

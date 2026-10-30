@@ -1,35 +1,7 @@
 import { execFile } from "node:child_process";
 import { constants } from "node:fs";
 import { access, stat } from "node:fs/promises";
-import { resolve } from "node:path";
 import { promisify } from "node:util";
-
-export type HtmlRenderer = "chromium" | "electron";
-
-export type ElectronOptions = {
-  /** Explicit execution implementation. There is no automatic fallback between renderers. */
-  readonly renderer?: HtmlRenderer;
-  /** User-managed Electron executable selected by the Runtime Profile. */
-  readonly electronPath?: string;
-};
-
-export function selectedHtmlRenderer(options: ElectronOptions): HtmlRenderer {
-  const renderer = options.renderer ?? "chromium";
-  if (renderer !== "chromium" && renderer !== "electron") {
-    throw new Error("HTML renderer must be chromium or electron");
-  }
-  if (renderer === "chromium" && options.electronPath !== undefined) {
-    throw new Error("electronPath requires renderer electron");
-  }
-  if (renderer === "electron" && (options.electronPath === undefined || options.electronPath.trim() === "")) {
-    throw new Error("renderer electron requires an explicit electronPath");
-  }
-  return renderer;
-}
-
-export function electronExecutablePath(options: ElectronOptions): string | undefined {
-  return selectedHtmlRenderer(options) === "electron" ? resolve(options.electronPath!) : undefined;
-}
 
 export function electronEnvironment(): NodeJS.ProcessEnv {
   const env = { ...process.env };

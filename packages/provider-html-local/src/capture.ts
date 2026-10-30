@@ -6,7 +6,7 @@ import { selectHtmlProcessUsages } from "@hypit/html-program";
 import type { HtmlProgram } from "@hypit/html-program";
 import type { FrameSpan } from "@hypit/timeline";
 import type { VisualDeliverySpec, OutputPictureSpec } from "@hypit/media";
-import type { HtmlRasterProgress, resolveExecutionOptions } from "./render.js";
+import type { HtmlRasterProgress, ResolvedHtmlExecutionOptions } from "./render.js";
 import { assert, mediaExecutablePath, openProcessInput, runProcess } from "./process.js";
 import { verifyOutput } from "./output.js";
 import { distributeFrameRange, requestedFrameRanges, sourceFrameAt, sourceWindows, videoSlots } from "./sampling.js";
@@ -20,14 +20,13 @@ import { decodeSourceFrameWindow, probeSourceVideo } from "./source-frame-decode
 import { SourceFrameStore } from "./source-frame-store.js";
 import type { SourceFrameWindow } from "./source-frame-store.js";
 import { serveHtmlProgram } from "./server.js";
-import { createGpuCapture, gpuCapturePages } from "./gpu-capture.js";
 import type { SourceFrameUpdate } from "./opaque-capture.js";
 import { resolveStagedPath } from "./staged-path.js";
 
 type CaptureInputBase = {
   readonly document: HtmlProgram;
   readonly range: FrameSpan;
-  readonly config: ReturnType<typeof resolveExecutionOptions> & { readonly chromePath: string };
+  readonly config: ResolvedHtmlExecutionOptions;
   readonly directory: string;
   /** Absolute Program spans selected by this render request. */
   readonly frameSelection: readonly FrameSpan[];
@@ -40,9 +39,40 @@ export type CaptureInput = CaptureInputBase & (
   | { readonly frames: readonly number[]; readonly picture: OutputPictureSpec; readonly delivery?: never }
 );
 
+export type SharedTextureCapturePages = {
+  readonly shell: string;
+  readonly output: string;
+  readonly decoder: string;
+  readonly video: string;
+  readonly bundle: string;
+  readonly videoModule: string;
+  readonly markerWidth: number;
+  readonly markerHeight: number;
+  readonly html: (matte: string) => string;
+};
+
+export type SharedTextureCapture = {
+  readonly createWorker: () => Promise<{
+    readonly browserPid: number;
+    readonly stats: () => Promise<unknown>;
+    readonly releaseSources: () => Promise<void>;
+    readonly capture: (frame: number, sources: readonly SourceFrameUpdate[], ordinal: number, prepared: () => void) =>
+      Promise<{ readonly buffer: Buffer; readonly outputMs: number } & FramePreparationTiming>;
+  }>;
+  readonly finish: () => Promise<{ readonly raw: string; readonly stats: Readonly<Record<string, number>> }>;
+  readonly close: () => Promise<void>;
+};
+
+export type SharedTextureCaptureBackend = {
+  readonly pages: (canvas: HtmlProgram["canvas"]) => Promise<SharedTextureCapturePages>;
+  readonly create: (input: CaptureInput, origin: string, pages: SharedTextureCapturePages,
+    controller: AbortController, workers: number) => Promise<SharedTextureCapture>;
+};
+
 /** All browser and codec work belongs to this render's disposable process. */
 export async function captureStagedVisual(input: CaptureInput, controller: AbortController,
-  onProgress: (event: HtmlRasterProgress) => void): Promise<string> {
+  onProgress: (event: HtmlRasterProgress) => void,
+  sharedTextureBackend?: SharedTextureCaptureBackend): Promise<string> {
   const { document, range, config, directory: work } = input;
   const signal = controller.signal;
   const frameCount = input.frames?.length ?? range.endFrameExclusive - range.startFrame;
@@ -50,7 +80,7 @@ export async function captureStagedVisual(input: CaptureInput, controller: Abort
   const selected = input.frames === undefined ? undefined : new Set(input.frames);
   const at = (index: number) => input.frames?.[index] ?? range.startFrame + index;
   const fps = { num: document.frameRate.numerator, den: document.frameRate.denominator };
-  const useGpu = input.frames === undefined && config.renderer === "electron";
+  const useGpu = input.frames === undefined && sharedTextureBackend !== undefined;
   const limit = renderWorkerLimit(config, frameCount, fps.num / fps.den,
     useGpu && document.videoSources.length > 0);
   const concurrency = new CaptureConcurrency(limit, config.workers === "auto" && !useGpu);
@@ -93,7 +123,7 @@ export async function captureStagedVisual(input: CaptureInput, controller: Abort
     }
   };
   let server: Awaited<ReturnType<typeof serveHtmlProgram>> | undefined;
-  let gpu: Awaited<ReturnType<typeof createGpuCapture>> | undefined;
+  let gpu: SharedTextureCapture | undefined;
   let encoderCompletion: Promise<unknown> | undefined;
   let sourceFrameStore: SourceFrameStore | undefined;
   // Closing pages interrupts an in-flight capture as well as the next loop iteration.
@@ -195,7 +225,7 @@ export async function captureStagedVisual(input: CaptureInput, controller: Abort
         }
         return payloads;
     };
-    const gpuPages = useGpu ? await gpuCapturePages(document.canvas) : undefined;
+    const gpuPages = useGpu ? await sharedTextureBackend!.pages(document.canvas) : undefined;
     const virtualPages = gpuPages === undefined ? undefined : new Map([
       [gpuPages.shell, gpuPages.html(picture.alpha.matte)],
       [gpuPages.output, "<!doctype html><title>Hypit output</title>"],
@@ -205,7 +235,7 @@ export async function captureStagedVisual(input: CaptureInput, controller: Abort
     server = await serveHtmlProgram(work, virtualPages);
     if (gpuPages !== undefined) {
       gpu = await stage("GPU encoder initialization", config.initializationTimeoutMs,
-        () => createGpuCapture(input, server!.url, gpuPages, controller, limit));
+        () => sharedTextureBackend!.create(input, server!.url, gpuPages, controller, limit));
     }
     const serverUrl = server.url;
     const outputFrames = join(work, "frames");
@@ -275,6 +305,7 @@ export async function captureStagedVisual(input: CaptureInput, controller: Abort
           videoStats = gpuWorker.stats;
           releaseVideo = gpuWorker.releaseSources;
         } else {
+          assert(config.chromePath !== undefined, "Chromium capture requires its selected executable");
           session = await puppeteer.launch({ executablePath: config.chromePath, headless: true,
             defaultViewport: { width: document.canvas.width, height: document.canvas.height, deviceScaleFactor: 1 },
             args: ["--no-sandbox", "--disable-dev-shm-usage",
@@ -445,7 +476,7 @@ export async function captureStagedVisual(input: CaptureInput, controller: Abort
       + `source acquire ${Math.round(sourceAcquireWorkerMs)} worker-ms; output submit ${Math.round(outputSubmitWorkerMs)} worker-ms`);
     if (input.frames !== undefined) return outputFrames;
     onProgress({ phase: "encoding", elapsedMs: elapsedMs() });
-    let electronProfile: Readonly<Record<string, number>> | undefined;
+    let backendProfile: Readonly<Record<string, number>> | undefined;
     if (gpu !== undefined) {
       const finishStarted = performance.now();
       const encoded = await gpu.finish();
@@ -460,7 +491,7 @@ export async function captureStagedVisual(input: CaptureInput, controller: Abort
           "-color_range", "tv", "-colorspace", "bt709", "-color_trc", "bt709", "-color_primaries", "bt709",
           "-movflags", "+faststart", output],
         timeoutMs: config.processTimeoutMs, maxOutputBytes: config.maxProcessOutputBytes, signal });
-      electronProfile = { frames: frameCount, requestSetupMs, workerWallMs, ...stats,
+      backendProfile = { frames: frameCount, requestSetupMs, workerWallMs, ...stats,
         encoderFinishMs, containerMuxMs: performance.now() - muxStarted };
     } else await orderedFrames!.close();
     const outputStat = await stat(output);
@@ -468,7 +499,7 @@ export async function captureStagedVisual(input: CaptureInput, controller: Abort
     const verifyStarted = performance.now();
     await verifyOutput({ path: output, document: { ...document, frameCount }, delivery: input.delivery, ffprobePath,
       timeoutMs: config.processTimeoutMs, maxOutputBytes: config.maxProcessOutputBytes, signal });
-    if (electronProfile !== undefined) console.log(`Electron capture profile: ${JSON.stringify({ ...electronProfile,
+    if (backendProfile !== undefined) console.log(`Shared-texture capture profile: ${JSON.stringify({ ...backendProfile,
       verifyMs: performance.now() - verifyStarted, totalMs: performance.now() - started })}`);
     signal.throwIfAborted();
     return output;

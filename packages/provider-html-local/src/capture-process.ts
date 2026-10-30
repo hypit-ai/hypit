@@ -3,7 +3,6 @@ import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { killRenderTree } from "./process-tree.js";
 import type { HtmlRasterProgress } from "./render.js";
-import { electronEnvironment } from "./electron.js";
 
 const cleanupMs = 5_000;
 
@@ -11,11 +10,15 @@ const cleanupMs = 5_000;
 export type CaptureProcessInput = {
   readonly config: {
     readonly maxProcessOutputBytes: number;
-    readonly renderer: import("./electron.js").HtmlRenderer;
-    readonly electronPath?: string | undefined;
   };
   readonly frames?: readonly number[];
-  readonly directory?: string;
+};
+
+export type CaptureWorkerLaunch = {
+  readonly executable: string;
+  readonly args: readonly string[];
+  readonly env?: NodeJS.ProcessEnv;
+  readonly detached?: boolean;
 };
 
 /** One disposable execution, with no persisted state or resubmission behavior. */
@@ -25,28 +28,23 @@ export async function runCaptureProcess<T extends CaptureProcessInput>(
   onProgress: (event: HtmlRasterProgress) => void,
   entry = new URL("./capture-worker.js", import.meta.url),
   onDiagnostic?: (diagnostic: ExecutionDiagnostic) => Promise<void>,
+  launch?: CaptureWorkerLaunch,
 ): Promise<void> {
   signal.throwIfAborted();
   await new Promise<void>((resolve, reject) => {
-    const gpu = input.frames === undefined && input.config.renderer === "electron";
-    if (gpu && (input.config.electronPath === undefined || input.directory === undefined)) {
-      reject(new Error("Electron capture requires its selected executable and staged directory"));
-      return;
-    }
-    const child = spawn(gpu ? input.config.electronPath! : process.execPath, gpu ? [
-      fileURLToPath(new URL("../runtime/gpu-worker.cjs", import.meta.url)), input.directory!, entry.href,
-    ] : [
+    const selected = launch ?? {
+      executable: process.execPath,
+      args: [
       "--import", import.meta.resolve("tsx"),
       "--import", new URL("./capture-exit.js", import.meta.url).href,
       fileURLToPath(entry),
-    ], {
-      ...(gpu ? { env: electronEnvironment() } : {}),
-      // A local Runtime Worker is already detached from its submitting CLI. Detaching its
-      // Electron child into another session makes macOS AppKit abort while registering the
-      // application. Keep that child in the Worker's login session; explicit tree cleanup below
-      // still owns every browser descendant. Chromium is headless and keeps its POSIX process
-      // group, while Linux Electron does not cross an AppKit session boundary.
-      detached: gpu ? process.platform === "linux" : process.platform !== "win32", windowsHide: true,
+      ],
+      detached: process.platform !== "win32",
+    } satisfies CaptureWorkerLaunch;
+    const child = spawn(selected.executable, [...selected.args], {
+      ...(selected.env === undefined ? {} : { env: selected.env }),
+      detached: selected.detached ?? false,
+      windowsHide: true,
       stdio: ["ignore", "pipe", "pipe", "ipc"],
     });
     let failure: Error | undefined;

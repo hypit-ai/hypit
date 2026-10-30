@@ -3,7 +3,6 @@ import { selectHtmlArtifacts, selectHtmlSurfaces, selectHtmlVideoSources } from 
 import type { HtmlFrameRequest, HtmlRasterRequest } from "@hypit/html-program";
 import type { FrameSpan } from "@hypit/timeline";
 import type { PictureInterpretation } from "@hypit/media";
-import type { HtmlRenderer } from "./electron.js";
 
 function sdrSourcePictureRejection(picture: PictureInterpretation, label: string): string | undefined {
   const imageLike = picture.colorPrimaries === "bt709" && picture.colorTransfer === "srgb"
@@ -64,7 +63,7 @@ function programRejection(request: HtmlRasterRequest | HtmlFrameRequest): string
 }
 
 /** Exact request subset implemented by the current encoded-visual execution paths. */
-export function localHtmlRasterRejection(request: HtmlRasterRequest, _renderer: HtmlRenderer): string | undefined {
+export function localHtmlRasterRejection(request: HtmlRasterRequest): string | undefined {
   const program = programRejection(request);
   if (program !== undefined) return program;
   const picture = request.delivery.picture;
@@ -93,8 +92,8 @@ export function endpointSupport(reason: string | undefined): EndpointSupport {
   return reason === undefined ? { status: "supported" } : { status: "unsupported", reason };
 }
 
-export function assertLocalHtmlRasterSupport(request: HtmlRasterRequest, renderer: HtmlRenderer): void {
-  const reason = localHtmlRasterRejection(request, renderer);
+export function assertLocalHtmlRasterSupport(request: HtmlRasterRequest): void {
+  const reason = localHtmlRasterRejection(request);
   if (reason !== undefined) throw new Error(reason);
 }
 

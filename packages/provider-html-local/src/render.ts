@@ -14,12 +14,12 @@ import { isStreamingResourceStore } from "@hypit/hypit/endpoint";
 import type { HtmlExecutionOptions } from "./options.js";
 import { assert, positiveInteger } from "./process.js";
 import { runCaptureProcess } from "./capture-process.js";
+import type { CaptureWorkerLaunch } from "./capture-process.js";
 import { finished } from "node:stream/promises";
 import { autoWorkerLimit, renderWorkerLimit } from "./concurrency.js";
 import { requestedFrameRanges } from "./sampling.js";
 import { browserCacheDirectory, browserExecutablePath, configuredBrowserPath, requireBrowserExecutable, selectedBrowserVersion } from "./browser.js";
 import { htmlArtifactRelativePath, stageHtmlProgram } from "./stage.js";
-import { electronExecutablePath, requireElectronExecutable, selectedHtmlRenderer } from "./electron.js";
 import { assertLocalHtmlFrameSupport, assertLocalHtmlRasterSupport } from "./support.js";
 import type { BrowserOptions } from "./browser.js";
 
@@ -41,36 +41,24 @@ export type HtmlRasterOptions = HtmlExecutionOptions & {
   readonly onProgress?: (event: HtmlRasterProgress) => void;
 };
 
-export type ChromiumHtmlRasterOptions = Omit<HtmlRasterOptions, "renderer" | "electronPath"> & {
-  readonly renderer?: never;
-  readonly electronPath?: never;
+export type ChromiumHtmlRasterOptions = HtmlRasterOptions & BrowserOptions;
+
+/** One concrete capture implementation selected by an Endpoint package. */
+export type HtmlRasterBackend = {
+  readonly kind: "opaque-png" | "shared-texture";
+  readonly executablePath: string;
+  readonly workerEntry?: URL;
+  readonly workerLaunch?: (directory: string, entry: URL) => CaptureWorkerLaunch;
+  readonly verifyExecutable: () => Promise<void>;
 };
 
-export type ElectronHtmlRasterOptions = Omit<HtmlRasterOptions,
-  "renderer" | "electronPath" | keyof BrowserOptions> & {
-  readonly renderer?: never;
-  readonly electronPath: string;
-};
-
-export function resolveExecutionOptions(options: HtmlExecutionOptions) {
+export function resolveLocalHtmlExecutionOptions(options: HtmlExecutionOptions) {
   const workers = options.workers ?? "auto";
   assert(workers === "auto" || (Number.isSafeInteger(workers) && workers > 0),
     "workers must be auto or a positive safe integer");
   const browserGpu = options.browserGpu ?? "hardware";
   assert(["auto", "software", "hardware"].includes(browserGpu), "HTML renderer browserGpu is invalid");
-  const renderer = selectedHtmlRenderer(options);
-  if (renderer === "electron") {
-    assert(options.chromePath === undefined && options.browserVersion === undefined
-      && options.browserCacheDirectory === undefined && options.browserDownloadBaseUrl === undefined,
-    "Electron rendering cannot combine Chrome selection options");
-    assert(browserGpu !== "software", "Electron shared-texture rendering requires browserGpu auto or hardware");
-  }
   return {
-    renderer,
-    electronPath: electronExecutablePath(options),
-    chromePath: configuredBrowserPath(options),
-    browserVersion: selectedBrowserVersion(options),
-    browserCacheDirectory: browserCacheDirectory(options),
     workers,
     maxWorkers: workers === "auto" ? positiveInteger(options.maxWorkers ?? autoWorkerLimit(), "maxWorkers") : workers,
     browserGpu,
@@ -91,46 +79,72 @@ export function resolveExecutionOptions(options: HtmlExecutionOptions) {
   };
 }
 
+export function resolveExecutionOptions(options: HtmlExecutionOptions & BrowserOptions) {
+  return {
+    ...resolveLocalHtmlExecutionOptions(options),
+    chromePath: configuredBrowserPath(options),
+    browserVersion: selectedBrowserVersion(options),
+    browserCacheDirectory: browserCacheDirectory(options),
+  };
+}
+
+export type ResolvedHtmlExecutionOptions = ReturnType<typeof resolveLocalHtmlExecutionOptions> & {
+  readonly chromePath: string | undefined;
+  readonly browserVersion: string | undefined;
+  readonly browserCacheDirectory: string | undefined;
+};
+
 export { renderWorkerLimit } from "./concurrency.js";
 
 /** Execute one attempt. Its deadline includes resource preparation and output storage. */
-export async function rasterizeHtmlProgram(
-  request: HtmlRasterRequest,
-  options: HtmlRasterOptions,
-): Promise<TimelineVisual> {
-  verifyHtmlRasterRequest(request);
-  return capture(request, options) as Promise<TimelineVisual>;
-}
-
 export async function rasterizeChromiumHtmlProgram(
   request: HtmlRasterRequest,
   options: ChromiumHtmlRasterOptions,
 ): Promise<TimelineVisual> {
-  return await rasterizeHtmlProgram(request, { ...options, renderer: "chromium" });
-}
-
-export async function rasterizeElectronHtmlProgram(
-  request: HtmlRasterRequest,
-  options: ElectronHtmlRasterOptions,
-): Promise<TimelineVisual> {
-  return await rasterizeHtmlProgram(request, { ...options, renderer: "electron" });
+  verifyHtmlRasterRequest(request);
+  const executablePath = browserExecutablePath(options);
+  return capture(request, options, {
+    kind: "opaque-png",
+    executablePath,
+    verifyExecutable: () => requireBrowserExecutable(executablePath, selectedBrowserVersion(options)),
+  }) as Promise<TimelineVisual>;
 }
 
 export async function rasterizeHtmlFrames(request: HtmlFrameRequest, options: ChromiumHtmlRasterOptions): Promise<HtmlFrameImages> {
   verifyHtmlFrameRequest(request);
-  return capture(request, { ...options, renderer: "chromium" }) as Promise<HtmlFrameImages>;
+  const executablePath = browserExecutablePath(options);
+  return capture(request, options, {
+    kind: "opaque-png",
+    executablePath,
+    verifyExecutable: () => requireBrowserExecutable(executablePath, selectedBrowserVersion(options)),
+  }) as Promise<HtmlFrameImages>;
 }
 
-async function capture(request: HtmlRasterRequest | HtmlFrameRequest, options: HtmlRasterOptions): Promise<TimelineVisual | HtmlFrameImages> {
+/** Internal execution seam used by renderer-specific Endpoint packages. */
+export async function rasterizeHtmlProgramWithBackend(
+  request: HtmlRasterRequest,
+  options: HtmlRasterOptions,
+  backend: HtmlRasterBackend,
+): Promise<TimelineVisual> {
+  verifyHtmlRasterRequest(request);
+  return capture(request, options, backend) as Promise<TimelineVisual>;
+}
+
+async function capture(request: HtmlRasterRequest | HtmlFrameRequest, options: HtmlRasterOptions,
+  backend: HtmlRasterBackend): Promise<TimelineVisual | HtmlFrameImages> {
   const frames = "frames" in request ? request.frames : undefined;
-  const execution = resolveExecutionOptions(options);
-  if (frames === undefined) assertLocalHtmlRasterSupport(request as HtmlRasterRequest, execution.renderer);
+  const execution: ResolvedHtmlExecutionOptions = backend.kind === "opaque-png"
+    ? resolveExecutionOptions(options as ChromiumHtmlRasterOptions)
+    : { ...resolveLocalHtmlExecutionOptions(options), chromePath: undefined, browserVersion: undefined, browserCacheDirectory: undefined };
+  if (frames === undefined) assertLocalHtmlRasterSupport(request as HtmlRasterRequest);
   else assertLocalHtmlFrameSupport(request as HtmlFrameRequest);
-  if (frames !== undefined && execution.renderer === "electron") {
-    throw new Error("The Electron renderer produces encoded video; PNG frame capture requires a Chromium Endpoint");
+  if (frames !== undefined && backend.kind !== "opaque-png") {
+    throw new Error("The selected renderer produces encoded video and cannot capture PNG frames");
   }
-  const gpu = frames === undefined && execution.renderer === "electron";
-  const config = { ...execution, chromePath: gpu ? "" : browserExecutablePath(options) };
+  const sharedTexture = frames === undefined && backend.kind === "shared-texture";
+  assert(!sharedTexture || execution.browserGpu !== "software",
+    "Shared-texture rendering requires browserGpu auto or hardware");
+  const config = { ...execution, chromePath: backend.kind === "opaque-png" ? backend.executablePath : undefined };
   const document = request.program;
   const range = frames === undefined
     ? (request as HtmlRasterRequest).range ?? { startFrame: 0, endFrameExclusive: document.frameCount }
@@ -159,17 +173,16 @@ async function capture(request: HtmlRasterRequest | HtmlFrameRequest, options: H
   };
   try {
     signal.throwIfAborted();
-    if (gpu) await requireElectronExecutable(config.electronPath!);
-    else await requireBrowserExecutable(config.chromePath, config.browserVersion);
+    await backend.verifyExecutable();
     await options.onDiagnostic?.({ level: "info", message:
       `Capture ${frameCount} frames; workers ${config.workers} (limit ${renderWorkerLimit(config, frameCount,
-        document.frameRate.numerator / document.frameRate.denominator, gpu && document.videoSources.length > 0)}); `
-      + `${gpu ? "shared GPU texture" : "opaque fast PNG"}; GPU ${config.browserGpu}; executable ${gpu ? config.electronPath : config.chromePath}`
+        document.frameRate.numerator / document.frameRate.denominator, sharedTexture && document.videoSources.length > 0)}); `
+      + `${sharedTexture ? "shared GPU texture" : "opaque fast PNG"}; GPU ${config.browserGpu}; executable ${backend.executablePath}`
       + `; artifact staging concurrency ${config.artifactStagingConcurrency}`
       + `; decoded source budget ${config.maxDecodedSourceBytes} bytes`
       + (frames === undefined
         ? `; delivery quality ${(request as HtmlRasterRequest).delivery.encoding.quality}; `
-          + `${gpu ? "browser decode, WebCodecs H.264 and FFmpeg mux" : "ordered FFmpeg PNG pipe"}; `
+          + `${sharedTexture ? "browser decode, WebCodecs H.264 and FFmpeg mux" : "ordered FFmpeg PNG pipe"}; `
           + `pending frame budget ${config.maxPendingFrameBytes} bytes; FFmpeg ${config.ffmpegPath}`
         : "; PNG output") });
     options.onProgress?.({ phase: "staging", elapsedMs: 0 });
@@ -206,8 +219,8 @@ async function capture(request: HtmlRasterRequest | HtmlFrameRequest, options: H
       if (event.phase === "worker-start" && phase === "starting browsers") changePhase("capturing frames");
       if (event.phase === "encoding") changePhase("encoding and verifying video");
       options.onProgress?.({ ...event, elapsedMs: Math.round(performance.now() - started) });
-    },
-      undefined, options.onDiagnostic);
+    }, backend.workerEntry, options.onDiagnostic,
+      backend.workerLaunch?.(work, backend.workerEntry ?? new URL("./capture-worker.js", import.meta.url)));
     signal.throwIfAborted();
     changePhase("storing output");
     options.onProgress?.({ phase: "storing", elapsedMs: Math.round(performance.now() - started) });

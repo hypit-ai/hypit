@@ -12,10 +12,11 @@ import type { VisualTextTypography } from "@hypit/composition";
 import { compileHtmlProgram, htmlVisualElement, materializeHtmlProgram } from "@hypit/html-program";
 import { captionDocument, parseScript } from "@hypit/script";
 import { sealTimeline } from "@hypit/timeline";
-import { browserExecutablePath } from "../../src/browser.js";
-import { createOpaqueFrameCapture } from "../../src/opaque-capture.js";
-import { rasterizeElectronHtmlProgram, rasterizeHtmlFrames } from "../../src/render.js";
-import { htmlProviderDelivery, htmlProviderPicture } from "../provider-scenario.js";
+import { browserExecutablePath } from "../../../provider-html-local/src/browser.js";
+import { createOpaqueFrameCapture } from "../../../provider-html-local/src/opaque-capture.js";
+import { rasterizeHtmlFrames } from "../../../provider-html-local/src/render.js";
+import { rasterizeElectronHtmlProgram } from "../../src/index.js";
+import { htmlProviderDelivery, htmlProviderPicture } from "../../../provider-html-local/test/provider-scenario.js";
 
 const testBrowser = () => process.env.HYPIT_TEST_CHROME_PATH ?? browserExecutablePath({});
 const testBrowserOption = () => process.env.HYPIT_TEST_CHROME_PATH === undefined

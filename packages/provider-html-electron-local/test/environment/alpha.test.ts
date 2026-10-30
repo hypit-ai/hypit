@@ -12,9 +12,9 @@ import { appendVisualClip, appendTimedMediaLayer, createMediaLayerSet, createVis
 import { projectProgramWindow } from "../../../../test/temporal-fixture.js";
 import { MemoryResourceStore, ffmpegBytes, prepareTestVideo, transparentVideoFixture, writeTestArtifact } from "../../../../test/alpha-video-fixture.js";
 import sharp from "sharp";
-import { rasterizeChromiumHtmlProgram, rasterizeHtmlFrames } from "../../src/index.js";
-import { rasterizeElectronHtmlProgram } from "../../src/render.js";
-import { htmlProviderDelivery, htmlProviderPicture } from "../provider-scenario.js";
+import { rasterizeChromiumHtmlProgram, rasterizeHtmlFrames } from "../../../provider-html-local/src/index.js";
+import { rasterizeElectronHtmlProgram } from "../../src/index.js";
+import { htmlProviderDelivery, htmlProviderPicture } from "../../../provider-html-local/test/provider-scenario.js";
 
 test("transparent Prepared Media composites through an explicit Visual Clip in Chrome and Electron", async () => {
   const directory = process.env.HYPIT_ALPHA_PROOF_DIR ?? await mkdtemp(join(tmpdir(), "hypit-alpha-render-"));

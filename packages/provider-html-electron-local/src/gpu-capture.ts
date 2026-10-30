@@ -8,10 +8,16 @@ import { fileURLToPath } from "node:url";
 import type { BrowserWindow, IpcMainEvent, OffscreenSharedTexture } from "electron";
 import type { Page } from "puppeteer-core";
 import { selectHtmlProcessUsages } from "@hypit/html-program";
-import type { CaptureInput } from "./capture.js";
-import { createFramePreparer } from "./opaque-capture.js";
-import type { SourceFrameUpdate } from "./opaque-capture.js";
-import { assert } from "./process.js";
+import {
+  assert,
+  createFramePreparer,
+} from "@hypit/provider-html-local/execution";
+import type {
+  CaptureInput,
+  SharedTextureCaptureBackend,
+  SharedTextureCapturePages,
+  SourceFrameUpdate,
+} from "@hypit/provider-html-local/execution";
 
 export async function gpuCapturePages({ width, height }: { width: number; height: number }) {
   const markerWidth = 32;
@@ -20,7 +26,8 @@ export async function gpuCapturePages({ width, height }: { width: number; height
   const output = `/__hypit_output_${randomUUID()}.html`;
   const decoder = `/__hypit_decoder_${randomUUID()}.mjs`;
   const video = `/__hypit_video_${randomUUID()}.mjs`;
-  const bundle = await readFile(new URL("../vendor/mediabunny/dist/bundles/mediabunny.min.mjs", import.meta.url), "utf8");
+  const bundle = await readFile(fileURLToPath(new URL("../../bundles/mediabunny.min.mjs",
+    import.meta.resolve("mediabunny"))), "utf8");
   const videoModule = await readFile(new URL("../runtime/browser-video.mjs", import.meta.url), "utf8");
   const html = (matte: string) => `<!doctype html><meta charset="utf-8"><style>
 html,body{margin:0;background:${matte};overflow:hidden}
@@ -45,7 +52,7 @@ type Scene = { window: BrowserWindow; pending?: PendingFrame | undefined;
 
 /** One request owns its windows, texture references and ordered output stream. */
 export async function createGpuCapture(input: CaptureInput, origin: string,
-  pages: Awaited<ReturnType<typeof gpuCapturePages>>, controller: AbortController, workers: number) {
+  pages: SharedTextureCapturePages, controller: AbortController, workers: number) {
   const { BrowserWindow, ipcMain, sharedTexture } = createRequire(import.meta.url)("electron") as typeof import("electron");
   assert(input.frames === undefined, "Shared-texture capture only executes encoded visual requests");
   const { config, document, delivery } = input;
@@ -313,3 +320,8 @@ export async function createGpuCapture(input: CaptureInput, origin: string,
     close,
   };
 }
+
+export const electronSharedTextureCaptureBackend: SharedTextureCaptureBackend = {
+  pages: gpuCapturePages,
+  create: createGpuCapture,
+};

@@ -6,13 +6,10 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./electron-implementation": "./src/electron-implementation.ts",
-    "./runtime-adapter": "./src/activation.ts"
+    "./execution": "./src/execution.ts"
   },
   "files": [
     "dist",
-    "runtime",
-    "vendor/mediabunny",
     "README.md"
   ],
   "hypit": {
@@ -49,8 +46,6 @@
     "@hypit/script": "workspace:*",
     "@hypit/visual-matte": "workspace:*",
     "@hypit/visual-track": "workspace:*",
-    "mediabunny": "1.62.1",
-    "electron": "45.0.0",
     "sharp": "0.35.4"
   }
 }

@@ -1,8 +1,8 @@
 export type HtmlWorkers = number | "auto";
 export type HtmlBrowserGpu = "auto" | "software" | "hardware";
-export type { HtmlRenderer } from "./electron.js";
 
-export type HtmlExecutionOptions = import("./browser.js").BrowserOptions & import("./electron.js").ElectronOptions & {
+/** Renderer-neutral limits shared by local HTML execution backends. */
+export type HtmlExecutionOptions = {
   readonly ffprobePath?: string;
   /** Selected FFmpeg command for portable source extraction/encoding and GPU H.264 muxing. */
   readonly ffmpegPath?: string;
@@ -10,7 +10,7 @@ export type HtmlExecutionOptions = import("./browser.js").BrowserOptions & impor
   readonly workers?: HtmlWorkers;
   /** Upper bound for auto's browser reservation; explicit workers remain fixed. */
   readonly maxWorkers?: number;
-  /** Browser compositor policy. Electron shared textures require auto or hardware. */
+  /** Browser compositor policy. Shared-texture backends require auto or hardware. */
   readonly browserGpu?: HtmlBrowserGpu;
   readonly processTimeoutMs?: number;
   readonly initializationTimeoutMs?: number;

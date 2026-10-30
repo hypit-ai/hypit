@@ -12,8 +12,7 @@ import {
   createLocalChromiumHtmlProvider,
   rasterizeChromiumHtmlProgram,
 } from "../src/index.js";
-import { createLocalElectronHtmlProvider } from "../src/electron-implementation.js";
-import { localChromiumHtmlRendererProgram, localElectronHtmlRendererProgram } from "../src/program.js";
+import { localChromiumHtmlRendererProgram } from "../src/program.js";
 import { htmlProviderDelivery, htmlProviderDocument, htmlProviderHandler, htmlProviderNeed } from "./provider-scenario.js";
 
 test("rendering with a missing selection fails without installing or substituting a browser", async () => {
@@ -50,32 +49,6 @@ test("local HTML renderer Provider exposes visual and frame capabilities and two
     "Runtime request admission must remain separate from HTML renderer frame workers");
 });
 
-test("Electron is an explicit encoded-visual implementation, not a fallback or PNG-frame endpoint", () => {
-  const provider = createLocalElectronHtmlProvider({
-    electronPath: "/configured/Electron",
-  });
-  assert.deepEqual(endpointOffers(provider).map(({ supports: _supports, ...offer }) => offer), [{
-    capability: htmlProgramCapabilities.rasterizeVisual,
-    returns: mediaTypes.timelineVisual,
-    endpoint: "html.local",
-  }]);
-  const visual = endpointOffers(provider)[0]!;
-  assert.deepEqual(visual.supports!({ capability: visual.capability, returns: visual.returns,
-    constraints: htmlRasterRequest(htmlProviderDocument(), htmlProviderDelivery()) }), {
-    status: "supported",
-  });
-  assert.throws(() => createLocalChromiumHtmlProvider({ electronPath: "/configured/Electron" } as never),
-    /electronPath requires renderer electron/u);
-  assert.throws(() => createLocalElectronHtmlProvider({
-    electronPath: "/configured/Electron",
-    chromePath: "/configured/Chrome",
-  } as never), /cannot combine Chrome selection options/u);
-  assert.throws(() => createLocalElectronHtmlProvider({
-    electronPath: "/configured/Electron",
-    browserGpu: "software",
-  }), /requires browserGpu auto or hardware/u);
-});
-
 test("the selected HTML renderer Provider owns one idempotent browser installation", () => {
   const program = localChromiumHtmlRendererProgram({
     id: "html.local",
@@ -85,14 +58,4 @@ test("the selected HTML renderer Provider owns one idempotent browser installati
   assert.equal(program.id, "html.local");
   assert.equal(program.start, undefined);
   assert.match(program.installation!.commands[0]!.args.at(-3)!, /browser-install\.js$/u);
-});
-
-test("an explicitly selected Electron remains user-managed", () => {
-  const program = localElectronHtmlRendererProgram({
-    id: "html.gpu",
-    electronPath: "/configured/Electron",
-    ffprobePath: "ffprobe",
-  });
-  assert.equal(program.id, "html.gpu");
-  assert.equal(program.installation, undefined);
 });

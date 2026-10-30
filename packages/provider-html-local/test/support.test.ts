@@ -7,13 +7,12 @@ import {
   htmlProviderDocument,
 } from "./provider-scenario.js";
 
-test("both local renderers implement Visual Process passes", () => {
+test("local rendering implements Visual Process passes", () => {
   const processUsages = [{ order: 1, passes: 1,
     stageKeys: ["root-stage"], spans: [{ startFrame: 6, endFrameExclusive: 12 }] }];
   const program = { ...htmlProviderDocument(), processUsages };
   const request = { program, delivery: htmlProviderDelivery() };
-  assert.equal(localHtmlRasterRejection(request, "chromium"), undefined);
-  assert.equal(localHtmlRasterRejection(request, "electron"), undefined);
+  assert.equal(localHtmlRasterRejection(request), undefined);
 });
 
 test("browser still support is narrower than explicitly transformed timed media", () => {
@@ -25,8 +24,8 @@ test("browser still support is narrower than explicitly transformed timed media"
       size: 1, mediaType: "image/png" }, picture,
     usage: { kind: "frames" as const, spans: [{ startFrame: 6, endFrameExclusive: 12 }] },
   }], html: program.html.replace("</body>", '<img src="hypit-artifact://artifact-still-proof"/></body>') };
-  assert.match(localHtmlRasterRejection({ program: withStill, delivery: htmlProviderDelivery() }, "chromium") ?? "",
+  assert.match(localHtmlRasterRejection({ program: withStill, delivery: htmlProviderDelivery() }) ?? "",
     /exact 8-bit sRGB still-picture support/u);
   assert.equal(localHtmlRasterRejection({ program: withStill, delivery: htmlProviderDelivery(),
-    range: { startFrame: 0, endFrameExclusive: 6 } }, "chromium"), undefined);
+    range: { startFrame: 0, endFrameExclusive: 6 } }), undefined);
 });

@@ -2050,15 +2050,61 @@ importers:
 
   packages/provider-html-electron-local:
     dependencies:
+      '@hypit/html-program':
+        specifier: workspace:^0.2.0
+        version: link:../html-program
       '@hypit/hypit':
         specifier: workspace:^0.4.0
         version: link:../..
+      '@hypit/media':
+        specifier: workspace:^0.2.0
+        version: link:../media
       '@hypit/provider-html-local':
         specifier: workspace:^0.2.1
         version: link:../provider-html-local
       '@hypit/runtime-local':
         specifier: workspace:^0.2.0
         version: link:../runtime-local
+      mediabunny:
+        specifier: 1.62.1
+        version: 1.62.1
+      tsx:
+        specifier: 4.21.0
+        version: 4.21.0
+    devDependencies:
+      '@hypit/caption-fine':
+        specifier: workspace:*
+        version: link:../caption-fine
+      '@hypit/composition':
+        specifier: workspace:*
+        version: link:../composition
+      '@hypit/executor':
+        specifier: workspace:*
+        version: link:../executor
+      '@hypit/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@hypit/runtime':
+        specifier: workspace:*
+        version: link:../runtime
+      '@hypit/script':
+        specifier: workspace:*
+        version: link:../script
+      '@hypit/timeline':
+        specifier: workspace:*
+        version: link:../timeline
+      '@hypit/visual-track':
+        specifier: workspace:*
+        version: link:../visual-track
+      electron:
+        specifier: 45.0.0
+        version: 45.0.0
+      puppeteer-core:
+        specifier: 25.10.0
+        version: 25.10.0
+      sharp:
+        specifier: 0.35.4
+        version: 0.35.4(@types/node@24.10.1)
 
   packages/provider-html-local:
     dependencies:
@@ -2120,12 +2166,6 @@ importers:
       '@hypit/visual-track':
         specifier: workspace:*
         version: link:../visual-track
-      electron:
-        specifier: 45.0.0
-        version: 45.0.0
-      mediabunny:
-        specifier: 1.62.1
-        version: 1.62.1
       sharp:
         specifier: 0.35.4
         version: 0.35.4(@types/node@24.10.1)

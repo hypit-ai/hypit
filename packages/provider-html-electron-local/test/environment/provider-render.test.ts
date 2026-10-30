@@ -4,12 +4,12 @@ import { MemoryResourceStore } from "@hypit/executor";
 import { verifyTimelineVisual } from "@hypit/media";
 import type { CompositableSurfaceRef, TimelineVisual } from "@hypit/media";
 import type { CanonicalValue } from "@hypit/protocol";
-import { rasterizeChromiumHtmlProgram } from "../../src/index.js";
-import { rasterizeElectronHtmlProgram } from "../../src/render.js";
-import { browserExecutablePath } from "../../src/browser.js";
-import { localChromiumHtmlRendererProgram } from "../../src/program.js";
+import { rasterizeChromiumHtmlProgram } from "../../../provider-html-local/src/index.js";
+import { rasterizeElectronHtmlProgram } from "../../src/index.js";
+import { browserExecutablePath } from "../../../provider-html-local/src/browser.js";
+import { localChromiumHtmlRendererProgram } from "../../../provider-html-local/src/program.js";
 import { htmlProviderDelivery, htmlProviderDocument, htmlProviderHandler, htmlProviderNeed,
-} from "../provider-scenario.js";
+} from "../../../provider-html-local/test/provider-scenario.js";
 
 test("an explicit browser renders without installing a managed replacement", async () => {
   const chromePath = process.env.HYPIT_TEST_CHROME_PATH ?? browserExecutablePath({});

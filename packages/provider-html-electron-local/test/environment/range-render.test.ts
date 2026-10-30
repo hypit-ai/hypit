@@ -9,11 +9,11 @@ import type { ResourceIOOptions } from "@hypit/runtime";
 import { MemoryResourceStore } from "@hypit/executor";
 import type { BlobRef } from "@hypit/protocol";
 import sharp from "sharp";
-import { rasterizeChromiumHtmlProgram, rasterizeHtmlFrames } from "../../src/index.js";
-import { rasterizeElectronHtmlProgram } from "../../src/render.js";
-import type { HtmlRasterProgress } from "../../src/index.js";
-import { htmlRangeDocument, htmlRetiringSourceDocument } from "../range-scenario.js";
-import { htmlProviderDelivery, htmlProviderPicture } from "../provider-scenario.js";
+import { rasterizeChromiumHtmlProgram, rasterizeHtmlFrames } from "../../../provider-html-local/src/index.js";
+import { rasterizeElectronHtmlProgram } from "../../src/index.js";
+import type { HtmlRasterProgress } from "../../../provider-html-local/src/index.js";
+import { htmlRangeDocument, htmlRetiringSourceDocument } from "../../../provider-html-local/test/range-scenario.js";
+import { htmlProviderDelivery, htmlProviderPicture } from "../../../provider-html-local/test/provider-scenario.js";
 
 test("real selected renders sample video correctly across wrap, hold, fractional and reverse rates with independent browsers", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-render-range-test-"));
