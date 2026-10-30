@@ -8,8 +8,8 @@ import {
   renderProgressReporter,
   renderWorkerLimit,
   resolveLocalHtmlExecutionOptions,
-} from "@hypit/provider-html-local/execution";
-import type { HtmlExecutionOptions } from "@hypit/provider-html-local/execution";
+} from "@hypit/html-render-local";
+import type { HtmlExecutionOptions } from "@hypit/html-render-local";
 
 import { rasterizeElectronHtmlProgram } from "./render.js";
 

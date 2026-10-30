@@ -7,6 +7,7 @@ export type {
   ProducerHandler,
   ProducerHandlerContext,
   ProducerHandlerResult,
+  ProducerExecutionLimits,
   ProducerRegistrar,
 } from "@hypit/producer";
 

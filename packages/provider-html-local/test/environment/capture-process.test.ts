@@ -2,14 +2,18 @@ import assert from "node:assert/strict";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { pathToFileURL } from "node:url";
 import test from "node:test";
 import { spawnSync } from "node:child_process";
-import { runCaptureProcess } from "../../src/capture-process.js";
-import { resolveExecutionOptions } from "../../src/render.js";
+import { runCaptureProcess, resolveLocalHtmlExecutionOptions } from "@hypit/html-render-local";
+import type { CaptureWorkerLaunch } from "@hypit/html-render-local";
 import { browserExecutablePath } from "../../src/browser.js";
 
-const exitCleanup = new URL("../../src/capture-exit.ts", import.meta.url).href;
+const exitCleanup = new URL("../../../html-render-local/src/capture-exit.ts", import.meta.url).href;
+const launch = (entry: string): CaptureWorkerLaunch => ({
+  executable: process.execPath,
+  args: ["--import", import.meta.resolve("tsx"), entry],
+  detached: process.platform !== "win32",
+});
 
 /** Observe termination once: a reaped process is as stopped as a zombie awaiting its parent. */
 function assertStopped(pid: number): void {
@@ -38,16 +42,18 @@ test("abrupt rasterizer exit closes its actual Chrome without disturbing another
   try {
     const worker = join(root, "worker.mjs");
     await writeFile(worker, `import puppeteer from ${JSON.stringify(import.meta.resolve("puppeteer-core"))};
+import { installCaptureExitCleanup } from ${JSON.stringify(exitCleanup)};
 import { writeFileSync } from 'node:fs';
+installCaptureExitCleanup();
 const browser = await puppeteer.launch({ executablePath: ${JSON.stringify(chromePath)}, headless: true, args: ['--no-sandbox'] });
 await browser.newPage();
 writeFileSync(${JSON.stringify(pidFile)}, String(browser.process().pid));
 process.exit(7);`);
     await assert.rejects(runCaptureProcess({
       document: { frameRate: { numerator: 30, denominator: 1 } },
-      range: { startFrame: 0, endFrameExclusive: 1 }, config: resolveExecutionOptions({}),
+      range: { startFrame: 0, endFrameExclusive: 1 }, config: resolveLocalHtmlExecutionOptions({}),
       directory: root,
-    }, new AbortController().signal, () => {}, pathToFileURL(worker)), /exited before completion/u);
+    }, new AbortController().signal, () => {}, launch(worker)), /exited before completion/u);
     browserPid = Number(await readFile(pidFile, "utf8"));
     assertStopped(browserPid);
     const page = await other.newPage();
@@ -69,6 +75,8 @@ test("an uncatchable exit cannot hang on an orphan's inherited output pipes", {
   try {
     const entry = join(root, "worker.mjs");
     await writeFile(entry, `import { spawn } from 'node:child_process';
+import { installCaptureExitCleanup } from ${JSON.stringify(exitCleanup)};
+installCaptureExitCleanup();
 process.once('message', () => {
   const child = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], {
     detached: true, stdio: ['ignore', process.stdout, process.stderr],
@@ -77,10 +85,10 @@ process.once('message', () => {
   process.send({ type: 'progress', event: { phase: 'worker-start', browserPid: child.pid } },
     () => process.kill(process.pid, 'SIGKILL'));
 });`);
-    await assert.rejects(runCaptureProcess({ config: resolveExecutionOptions({}) },
+    await assert.rejects(runCaptureProcess({ config: resolveLocalHtmlExecutionOptions({}) },
       new AbortController().signal, event => {
         if ("browserPid" in event) descendant = event.browserPid;
-      }, pathToFileURL(entry), async event => { diagnostics.push(event.message); }), /SIGKILL/u);
+      }, launch(entry), async event => { diagnostics.push(event.message); }), /SIGKILL/u);
     assert.ok(diagnostics.some(message => /descendant cleanup could not be confirmed/u.test(message)));
     assert.ok(diagnostics.some(message => /output pipes did not close/u.test(message)));
   } finally {
@@ -102,16 +110,18 @@ for (const scenario of ["exit-zero", "exit-error", "uncaught", "SIGTERM"] as con
         : scenario === "SIGTERM" ? "process.kill(process.pid, 'SIGTERM'); await new Promise(() => {});"
         : `process.exit(${scenario === "exit-zero" ? 0 : 7});`;
       await writeFile(worker, `import { spawn } from 'node:child_process';
+import { installCaptureExitCleanup } from ${JSON.stringify(exitCleanup)};
 import { writeFileSync } from 'node:fs';
+installCaptureExitCleanup();
 const child = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], { detached: true, stdio: 'ignore' });
 child.unref();
 writeFileSync(${JSON.stringify(pidFile)}, String(child.pid));
 ${end}`);
       await assert.rejects(runCaptureProcess({
         document: { frameRate: { numerator: 30, denominator: 1 } },
-        range: { startFrame: 0, endFrameExclusive: 1 }, config: resolveExecutionOptions({}),
+        range: { startFrame: 0, endFrameExclusive: 1 }, config: resolveLocalHtmlExecutionOptions({}),
         directory: root,
-      }, new AbortController().signal, () => {}, pathToFileURL(worker)), /exited before completion/u);
+      }, new AbortController().signal, () => {}, launch(worker)), /exited before completion/u);
       descendant = Number(await readFile(pidFile, "utf8"));
       assertStopped(descendant);
     } finally {
@@ -130,16 +140,18 @@ test("a capture failure still terminates a detached process left by failed resou
     const worker = join(root, "worker.mjs");
     const pidFile = join(root, "descendant");
     await writeFile(worker, `import { spawn } from 'node:child_process';
+import { installCaptureExitCleanup } from ${JSON.stringify(exitCleanup)};
 import { writeFileSync } from 'node:fs';
+installCaptureExitCleanup();
 const child = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], { detached: true, stdio: 'ignore' });
 child.unref();
 writeFileSync(${JSON.stringify(pidFile)}, String(child.pid));
 throw new Error('rasterizer initialization failed after starting a child');`);
     await assert.rejects(runCaptureProcess({
       document: { frameRate: { numerator: 30, denominator: 1 } },
-      range: { startFrame: 0, endFrameExclusive: 1 }, config: resolveExecutionOptions({}),
+      range: { startFrame: 0, endFrameExclusive: 1 }, config: resolveLocalHtmlExecutionOptions({}),
       directory: root,
-    }, new AbortController().signal, () => {}, pathToFileURL(worker)),
+    }, new AbortController().signal, () => {}, launch(worker)),
     /rasterizer initialization failed/);
     descendant = Number(await readFile(pidFile, "utf8"));
     assertStopped(descendant);
@@ -154,15 +166,16 @@ test("a completed renderer finishes its IPC shutdown and exits naturally", async
   try {
     const marker = join(root, "exited");
     const entry = join(root, "worker.mjs");
-    await writeFile(entry, `import { releaseCaptureExitCleanup } from ${JSON.stringify(exitCleanup)};
+    await writeFile(entry, `import { installCaptureExitCleanup } from ${JSON.stringify(exitCleanup)};
 import { writeFileSync } from 'node:fs';
+const releaseCaptureExitCleanup = installCaptureExitCleanup();
 process.on('exit', () => writeFileSync(${JSON.stringify(marker)}, 'natural exit'));
 process.once('message', () => {
   releaseCaptureExitCleanup();
   process.send({ type: 'completed' }, () => setTimeout(() => process.disconnect(), 100));
 });`);
-    await runCaptureProcess({ config: resolveExecutionOptions({}) },
-      new AbortController().signal, () => {}, pathToFileURL(entry));
+    await runCaptureProcess({ config: resolveLocalHtmlExecutionOptions({}) },
+      new AbortController().signal, () => {}, launch(entry));
     assert.equal(await readFile(marker, "utf8"), "natural exit");
   } finally { await rm(root, { recursive: true, force: true }); }
 });
@@ -180,11 +193,11 @@ process.once('message', () => {
 });
 setInterval(() => {}, 1000);
 `);
-    await assert.rejects(runCaptureProcess({ config: resolveExecutionOptions({}) },
+    await assert.rejects(runCaptureProcess({ config: resolveLocalHtmlExecutionOptions({}) },
       controller.signal, (event) => {
         if ("browserPid" in event) descendant = event.browserPid;
         controller.abort(new Error("render deadline"));
-      }, pathToFileURL(entry)), /render deadline/u);
+      }, launch(entry)), /render deadline/u);
     assert.ok(descendant !== undefined);
     assertStopped(descendant);
   } finally {
@@ -198,15 +211,16 @@ test("renderer stdout and stderr diagnostics are drained before reporting succes
   const messages: import("@hypit/hypit/endpoint").ExecutionDiagnostic[] = [];
   try {
     const entry = join(root, "report.mjs");
-    await writeFile(entry, `import { releaseCaptureExitCleanup } from ${JSON.stringify(exitCleanup)};
+    await writeFile(entry, `import { installCaptureExitCleanup } from ${JSON.stringify(exitCleanup)};
+const releaseCaptureExitCleanup = installCaptureExitCleanup();
 process.once('message', () => {
       process.stdout.write('browser ready\\n');
       process.stderr.write('render diagnostic\\n');
       releaseCaptureExitCleanup();
       process.send({ type: 'completed' }, () => process.disconnect());
     });`);
-    await runCaptureProcess({ config: resolveExecutionOptions({}) },
-      new AbortController().signal, () => {}, pathToFileURL(entry), async (message) => {
+    await runCaptureProcess({ config: resolveLocalHtmlExecutionOptions({}) },
+      new AbortController().signal, () => {}, launch(entry), async (message) => {
         await new Promise((resolve) => setTimeout(resolve, 5)); messages.push(message);
       });
     assert.ok(messages.some((item) => item.stream === "stdout" && item.message.includes("browser ready")));
@@ -221,16 +235,16 @@ test("normal exit needs no process enumeration and forced-cleanup failures remai
     // Isolate PATH in another Node process: no pgrep/taskkill is available, and other
     // tests retain their normal environment. The capture child uses an absolute Node path.
     await writeFile(runner, `
-import { runCaptureProcess } from ${JSON.stringify(new URL("../../src/capture-process.ts", import.meta.url).href)};
-import { resolveExecutionOptions } from ${JSON.stringify(new URL("../../src/render.ts", import.meta.url).href)};
-import { pathToFileURL } from 'node:url';
+import { runCaptureProcess } from ${JSON.stringify(new URL("../../../html-render-local/src/capture-process.ts", import.meta.url).href)};
+import { resolveLocalHtmlExecutionOptions } from ${JSON.stringify(new URL("../../../html-render-local/src/render.ts", import.meta.url).href)};
 process.env.PATH = ${JSON.stringify(root)};
 const diagnostics = [];
 const controller = new AbortController();
 let error;
 try {
-  await runCaptureProcess({ config: resolveExecutionOptions({}) }, controller.signal,
-    () => controller.abort(new Error('cancel this render')), pathToFileURL(process.argv[2]),
+  await runCaptureProcess({ config: resolveLocalHtmlExecutionOptions({}) }, controller.signal,
+    () => controller.abort(new Error('cancel this render')),
+    { executable: process.execPath, args: ['--import', ${JSON.stringify(import.meta.resolve("tsx"))}, process.argv[2]], detached: process.platform !== 'win32' },
     async (event) => { diagnostics.push(event); });
 } catch (caught) { error = caught.message; }
 process.stdout.write(JSON.stringify({ error, diagnostics }));
@@ -242,7 +256,8 @@ process.stdout.write(JSON.stringify({ error, diagnostics }));
         const result = scenario === "failed" ? { type: "failed", error: "capture failed" }
           : scenario === "cancelled" ? { type: "progress", event: { phase: "encoding" } }
           : { type: "completed" };
-        await writeFile(entry, `import { releaseCaptureExitCleanup } from ${JSON.stringify(exitCleanup)};
+        await writeFile(entry, `import { installCaptureExitCleanup } from ${JSON.stringify(exitCleanup)};
+const releaseCaptureExitCleanup = installCaptureExitCleanup();
 process.once('message', () => {
   ${scenario === 'completed' ? 'releaseCaptureExitCleanup();' : ''}
   process.send(${JSON.stringify(result)}, () => { ${scenario !== "completed" ? "setInterval(() => {}, 1000);" : "process.disconnect();"} });

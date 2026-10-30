@@ -1,8 +1,5 @@
 import { mkdir, rm, stat, writeFile } from "node:fs/promises";
 import { join, relative, sep } from "node:path";
-import puppeteer from "puppeteer-core";
-import type { Browser } from "puppeteer-core";
-import { selectHtmlProcessUsages } from "@hypit/html-program";
 import type { HtmlProgram } from "@hypit/html-program";
 import type { FrameSpan } from "@hypit/timeline";
 import type { VisualDeliverySpec, OutputPictureSpec } from "@hypit/media";
@@ -12,15 +9,13 @@ import { verifyOutput } from "./output.js";
 import { distributeFrameRange, requestedFrameRanges, sourceFrameAt, sourceWindows, videoSlots } from "./sampling.js";
 import type { VideoSlot } from "./sampling.js";
 import { CaptureConcurrency, renderWorkerLimit } from "./concurrency.js";
-import { createOpaqueFrameCapture } from "./opaque-capture.js";
-import type { FramePreparationTiming } from "./opaque-capture.js";
+import type { FramePreparationTiming, SourceFrameUpdate } from "./frame-preparer.js";
 import { FrameSpanIndex } from "./frame-span-index.js";
 import { OrderedFrameSink } from "./ordered-frame-sink.js";
 import { decodeSourceFrameWindow, probeSourceVideo } from "./source-frame-decoder.js";
 import { SourceFrameStore } from "./source-frame-store.js";
 import type { SourceFrameWindow } from "./source-frame-store.js";
 import { serveHtmlProgram } from "./server.js";
-import type { SourceFrameUpdate } from "./opaque-capture.js";
 import { resolveStagedPath } from "./staged-path.js";
 
 type CaptureInputBase = {
@@ -39,40 +34,40 @@ export type CaptureInput = CaptureInputBase & (
   | { readonly frames: readonly number[]; readonly picture: OutputPictureSpec; readonly delivery?: never }
 );
 
-export type SharedTextureCapturePages = {
-  readonly shell: string;
-  readonly output: string;
-  readonly decoder: string;
-  readonly video: string;
-  readonly bundle: string;
-  readonly videoModule: string;
-  readonly markerWidth: number;
-  readonly markerHeight: number;
-  readonly html: (matte: string) => string;
+export type StagedCapturePreparation = {
+  /** Extra request-local resources served beside the staged HTML Program. */
+  readonly virtualPages: ReadonlyMap<string, string>;
+  /** Opaque state returned to the same concrete backend that prepared it. */
+  readonly state: unknown;
 };
 
-export type SharedTextureCapture = {
-  readonly createWorker: () => Promise<{
-    readonly browserPid: number;
-    readonly stats: () => Promise<unknown>;
-    readonly releaseSources: () => Promise<void>;
-    readonly capture: (frame: number, sources: readonly SourceFrameUpdate[], ordinal: number, prepared: () => void) =>
-      Promise<{ readonly buffer: Buffer; readonly outputMs: number } & FramePreparationTiming>;
-  }>;
-  readonly finish: () => Promise<{ readonly raw: string; readonly stats: Readonly<Record<string, number>> }>;
+export type StagedCaptureWorker = {
+  readonly browserPid: number | undefined;
+  readonly stats?: () => Promise<unknown>;
+  readonly releaseSources?: () => Promise<void>;
+  readonly capture: (frame: number, sources: readonly SourceFrameUpdate[], ordinal: number, prepared: () => void) =>
+    Promise<{ readonly buffer: Buffer; readonly outputMs: number } & FramePreparationTiming>;
   readonly close: () => Promise<void>;
 };
 
-export type SharedTextureCaptureBackend = {
-  readonly pages: (canvas: HtmlProgram["canvas"]) => Promise<SharedTextureCapturePages>;
-  readonly create: (input: CaptureInput, origin: string, pages: SharedTextureCapturePages,
-    controller: AbortController, workers: number) => Promise<SharedTextureCapture>;
+export type StagedCaptureSession = {
+  readonly createWorker: () => Promise<StagedCaptureWorker>;
+  readonly finish?: () => Promise<{ readonly raw: string; readonly stats: Readonly<Record<string, number>> }>;
+  readonly close: () => Promise<void>;
+};
+
+export type StagedCaptureBackend = {
+  readonly mode: "frame-buffer" | "encoded-stream";
+  readonly label: string;
+  readonly prepare?: (canvas: HtmlProgram["canvas"], picture: OutputPictureSpec) => Promise<StagedCapturePreparation>;
+  readonly create: (input: CaptureInput, origin: string, state: unknown,
+    controller: AbortController, workers: number) => Promise<StagedCaptureSession>;
 };
 
 /** All browser and codec work belongs to this render's disposable process. */
 export async function captureStagedVisual(input: CaptureInput, controller: AbortController,
   onProgress: (event: HtmlRasterProgress) => void,
-  sharedTextureBackend?: SharedTextureCaptureBackend): Promise<string> {
+  backend: StagedCaptureBackend): Promise<string> {
   const { document, range, config, directory: work } = input;
   const signal = controller.signal;
   const frameCount = input.frames?.length ?? range.endFrameExclusive - range.startFrame;
@@ -80,13 +75,13 @@ export async function captureStagedVisual(input: CaptureInput, controller: Abort
   const selected = input.frames === undefined ? undefined : new Set(input.frames);
   const at = (index: number) => input.frames?.[index] ?? range.startFrame + index;
   const fps = { num: document.frameRate.numerator, den: document.frameRate.denominator };
-  const useGpu = input.frames === undefined && sharedTextureBackend !== undefined;
+  const encodedCapture = input.frames === undefined && backend.mode === "encoded-stream";
   const limit = renderWorkerLimit(config, frameCount, fps.num / fps.den,
-    useGpu && document.videoSources.length > 0);
-  const concurrency = new CaptureConcurrency(limit, config.workers === "auto" && !useGpu);
+    encodedCapture && document.videoSources.length > 0);
+  const concurrency = new CaptureConcurrency(limit, config.workers === "auto" && !encodedCapture);
   // Short contiguous batches retain sequential capture while allowing free browsers
   // to help with expensive passages. This queue exists only inside this render.
-  const batchCount = useGpu
+  const batchCount = encodedCapture
     ? Math.max(limit, Math.ceil(frameCount / 4))
     : Math.max(limit, Math.ceil(frameCount / Math.max(1, Math.round(fps.num / fps.den))));
   const batches = distributeFrameRange({ startFrame: 0, endFrameExclusive: frameCount }, batchCount);
@@ -96,16 +91,6 @@ export async function captureStagedVisual(input: CaptureInput, controller: Abort
   const [ffmpegPath, ffprobePath] = await Promise.all([
     mediaExecutablePath(config.ffmpegPath), mediaExecutablePath(config.ffprobePath),
   ]);
-  const sessions = new Set<Browser>();
-  const closing = new Map<Browser, Promise<void>>();
-  const close = (session: Browser): Promise<void> => {
-    let promise = closing.get(session);
-    if (promise === undefined) {
-      promise = session.close().finally(() => { sessions.delete(session); });
-      closing.set(session, promise);
-    }
-    return promise;
-  };
   const stage = async <T>(subject: string, timeoutMs: number | undefined, run: () => Promise<T>): Promise<T> => {
     signal.throwIfAborted();
     const timeout = timeoutMs === undefined
@@ -123,12 +108,9 @@ export async function captureStagedVisual(input: CaptureInput, controller: Abort
     }
   };
   let server: Awaited<ReturnType<typeof serveHtmlProgram>> | undefined;
-  let gpu: SharedTextureCapture | undefined;
+  let captureSession: StagedCaptureSession | undefined;
   let encoderCompletion: Promise<unknown> | undefined;
   let sourceFrameStore: SourceFrameStore | undefined;
-  // Closing pages interrupts an in-flight capture as well as the next loop iteration.
-  const abort = () => { for (const session of sessions) void close(session).catch(() => {}); };
-  signal.addEventListener("abort", abort, { once: true });
   try {
     signal.throwIfAborted();
     const artifactPaths = new Map(input.artifactPaths);
@@ -138,7 +120,7 @@ export async function captureStagedVisual(input: CaptureInput, controller: Abort
       return `./${path}`;
     }, { frameRate: document.frameRate });
     const slotIndex = new FrameSpanIndex(slots);
-    const decodedSlots = useGpu ? [] : slots;
+    const decodedSlots = encodedCapture ? [] : slots;
     const decodedSlotKeys = new Set(decodedSlots.map(slot => slot.sourceKey));
     const decodedSlotIndex = new FrameSpanIndex(decodedSlots);
     const requestedRanges = requestedFrameRanges(range, input.frames);
@@ -152,7 +134,7 @@ export async function captureStagedVisual(input: CaptureInput, controller: Abort
     // The portable path indexes exact selected-stream timestamps before it
     // plans ordinal decode windows. Pixel frames remain lazy.
     for (const slot of requestedSlots.values()) {
-      if (!decodedSlotKeys.has(slot.sourceKey) && !(useGpu && slot.kind === "media")) continue;
+      if (!decodedSlotKeys.has(slot.sourceKey) && !(encodedCapture && slot.kind === "media")) continue;
       const path = resolveStagedPath(work, slot.src);
       assert(path !== undefined, "HTML renderer source is outside the staged project");
       const metadata = await probeSourceVideo({ executable: ffprobePath, path,
@@ -225,22 +207,14 @@ export async function captureStagedVisual(input: CaptureInput, controller: Abort
         }
         return payloads;
     };
-    const gpuPages = useGpu ? await sharedTextureBackend!.pages(document.canvas) : undefined;
-    const virtualPages = gpuPages === undefined ? undefined : new Map([
-      [gpuPages.shell, gpuPages.html(picture.alpha.matte)],
-      [gpuPages.output, "<!doctype html><title>Hypit output</title>"],
-      [gpuPages.decoder, gpuPages.bundle],
-      [gpuPages.video, gpuPages.videoModule],
-    ]);
-    server = await serveHtmlProgram(work, virtualPages);
-    if (gpuPages !== undefined) {
-      gpu = await stage("GPU encoder initialization", config.initializationTimeoutMs,
-        () => sharedTextureBackend!.create(input, server!.url, gpuPages, controller, limit));
-    }
+    const preparation = backend.prepare === undefined ? undefined : await backend.prepare(document.canvas, picture);
+    server = await serveHtmlProgram(work, preparation?.virtualPages);
+    captureSession = await stage(`${backend.label} initialization`, config.initializationTimeoutMs,
+      () => backend.create(input, server!.url, preparation?.state, controller, limit));
     const serverUrl = server.url;
     const outputFrames = join(work, "frames");
     const output = join(work, "visual.mp4");
-    const encoder = input.frames === undefined && !useGpu ? (() => {
+    const encoder = input.frames === undefined && !encodedCapture ? (() => {
       const quality = input.delivery.encoding.quality;
       const crf = { draft: 28, standard: 23, high: 18 }[quality];
       return openProcessInput({ executable: ffmpegPath,
@@ -278,7 +252,7 @@ export async function captureStagedVisual(input: CaptureInput, controller: Abort
       void jobs[worker]!.catch(() => {});
     };
     const runWorker = async (worker: number): Promise<void> => {
-      let session: Browser | undefined;
+      let captureWorker: StagedCaptureWorker | undefined;
       let ready = false;
       active++;
       open++;
@@ -287,57 +261,11 @@ export async function captureStagedVisual(input: CaptureInput, controller: Abort
       let setupMs = 0;
       try {
         signal.throwIfAborted();
-        let browserPid: number | undefined;
-        let videoStats: (() => Promise<unknown>) | undefined;
-        let releaseVideo: (() => Promise<void>) | undefined;
-        let captureFrame: (
-          frame: number,
-          sources: readonly SourceFrameUpdate[],
-          ordinal: number,
-          prepared: () => void,
-        ) => Promise<{ readonly buffer: Buffer; readonly outputMs: number } & FramePreparationTiming>;
-        if (gpu !== undefined) {
-          onProgress({ phase: "worker-initializing", worker, range, browserPid: undefined, elapsedMs: elapsedMs() });
-          const gpuWorker = await stage(`worker ${worker} initialization`, config.initializationTimeoutMs,
-            () => gpu!.createWorker());
-          browserPid = gpuWorker.browserPid;
-          captureFrame = gpuWorker.capture;
-          videoStats = gpuWorker.stats;
-          releaseVideo = gpuWorker.releaseSources;
-        } else {
-          assert(config.chromePath !== undefined, "Chromium capture requires its selected executable");
-          session = await puppeteer.launch({ executablePath: config.chromePath, headless: true,
-            defaultViewport: { width: document.canvas.width, height: document.canvas.height, deviceScaleFactor: 1 },
-            args: ["--no-sandbox", "--disable-dev-shm-usage",
-              ...(config.browserGpu === "software" ? ["--disable-gpu"] : []),
-            ] });
-          sessions.add(session);
-          signal.throwIfAborted();
-          const page = await session.newPage();
-          if (config.initializationTimeoutMs !== undefined) {
-            page.setDefaultTimeout(config.initializationTimeoutMs);
-            page.setDefaultNavigationTimeout(config.initializationTimeoutMs);
-          }
-          browserPid = session.process()?.pid;
-          onProgress?.({ phase: "worker-initializing", worker, range, browserPid, elapsedMs: elapsedMs() });
-          await stage(`worker ${worker} initialization`, config.initializationTimeoutMs, async () => {
-            await page.goto(serverUrl, { waitUntil: "load" });
-            await page.evaluate(async (frameSelection) => {
-              const program = (window as unknown as {
-                __hypitFrameProgram?: { prepare(spans?: readonly FrameSpan[]): Promise<void> };
-              }).__hypitFrameProgram;
-              if (program === undefined) throw new Error("HTML Program page ABI is missing");
-              await program.prepare(frameSelection);
-            }, input.frameSelection);
-          });
-          const capturePng = await createOpaqueFrameCapture(page, document.canvas, picture.alpha.matte,
-            selectHtmlProcessUsages(document, input.frameSelection));
-          captureFrame = async (frame, sources, _ordinal, prepared) => {
-            const captured = await capturePng(frame, sources);
-            prepared();
-            return captured;
-          };
-        }
+        onProgress({ phase: "worker-initializing", worker, range, browserPid: undefined, elapsedMs: elapsedMs() });
+        captureWorker = await stage(`worker ${worker} initialization`, config.initializationTimeoutMs,
+          () => captureSession!.createWorker());
+        const { browserPid } = captureWorker;
+        const captureFrame = captureWorker.capture;
         setupMs = performance.now() - launched;
         startupMs = Math.max(startupMs, setupMs);
         ready = true;
@@ -364,8 +292,7 @@ export async function captureStagedVisual(input: CaptureInput, controller: Abort
             sourceAcquireWorkerMs += performance.now() - sourceAcquireStarted;
             let captured: Awaited<ReturnType<typeof captureFrame>>;
             try {
-              const decodedPayloads = sourceFrameStore === undefined ? new Map() : activeFramePayloads(frame);
-              const sourceUpdates: SourceFrameUpdate[] = useGpu
+              const sourceUpdates: SourceFrameUpdate[] = encodedCapture
                 ? slotIndex.at(frame).flatMap((slot): SourceFrameUpdate[] => {
                   if (slot.kind === "media") {
                     const sample = browserTimestampAt(slot, frame);
@@ -434,9 +361,13 @@ export async function captureStagedVisual(input: CaptureInput, controller: Abort
           + `page ${Math.round(timing.evaluationMs)} ms (`
           + `program ${Math.round(timing.programMs)} ms; source ${Math.round(timing.sourceMs)} ms; `
           + `readiness ${Math.round(timing.readinessMs)} ms); `
-          + `${useGpu ? "paint and texture acceptance" : "PNG capture"} ${Math.round(timing.outputMs)} ms`);
-        if (videoStats !== undefined) console.log(`Capture worker ${worker} video: ${JSON.stringify(await videoStats())}`);
-        if (releaseVideo !== undefined) await stage(`worker ${worker} media cleanup`, 5_000, releaseVideo);
+          + `${backend.label} output ${Math.round(timing.outputMs)} ms`);
+        if (captureWorker.stats !== undefined) {
+          console.log(`Capture worker ${worker} video: ${JSON.stringify(await captureWorker.stats())}`);
+        }
+        if (captureWorker.releaseSources !== undefined) {
+          await stage(`worker ${worker} media cleanup`, 5_000, captureWorker.releaseSources);
+        }
         onProgress({ phase: "worker-complete", worker, completed, browserPid, elapsedMs: elapsedMs() });
       } catch (error) {
         controller.abort(error);
@@ -444,7 +375,7 @@ export async function captureStagedVisual(input: CaptureInput, controller: Abort
       } finally {
         active--;
         if (!ready) initializing--;
-        if (session !== undefined) await close(session);
+        if (captureWorker !== undefined) await captureWorker.close();
         open--;
         // A restoring decision can wait for a retiring Chrome to release its
         // slot. Closing processes still count against the reserved ceiling.
@@ -452,7 +383,7 @@ export async function captureStagedVisual(input: CaptureInput, controller: Abort
       }
     };
     const initialWorkers = concurrency.target;
-    console.log(`Capture: ${useGpu ? "shared GPU texture" : "opaque fast PNG"}; `
+    console.log(`Capture: ${backend.label}; `
       + `${config.workers === "auto" ? "auto" : "fixed"} workers ${initialWorkers}, limit ${limit}`);
     const workerRunStarted = performance.now();
     for (let i = 0; i < initialWorkers; i++) launch();
@@ -467,7 +398,6 @@ export async function captureStagedVisual(input: CaptureInput, controller: Abort
     }
     if (failure !== undefined) throw failure;
     signal.throwIfAborted();
-    await Promise.all(closing.values());
     const workerWallMs = performance.now() - workerRunStarted;
     if (sourceFrameStore !== undefined) console.log(`Capture source working set: ${sourceTotal} unique frames demanded; decoded ${sourceFrameStore.decodedFrames} frames; `
       + `redecoded ${Math.max(0, sourceFrameStore.decodedFrames - sourceTotal)}; decoder runs ${extraction}; `
@@ -477,12 +407,13 @@ export async function captureStagedVisual(input: CaptureInput, controller: Abort
     if (input.frames !== undefined) return outputFrames;
     onProgress({ phase: "encoding", elapsedMs: elapsedMs() });
     let backendProfile: Readonly<Record<string, number>> | undefined;
-    if (gpu !== undefined) {
+    if (encodedCapture) {
+      assert(captureSession.finish !== undefined, "Encoded-stream capture backend cannot finish its output");
       const finishStarted = performance.now();
-      const encoded = await gpu.finish();
+      const encoded = await captureSession.finish();
       const { stats } = encoded;
       const encoderFinishMs = performance.now() - finishStarted;
-      await gpu.close();
+      await captureSession.close();
       const muxStarted = performance.now();
       await runProcess({ executable: ffmpegPath,
         argv: ["-v", "error", "-y", "-r", `${fps.num}/${fps.den}`, "-i", encoded.raw,
@@ -499,7 +430,7 @@ export async function captureStagedVisual(input: CaptureInput, controller: Abort
     const verifyStarted = performance.now();
     await verifyOutput({ path: output, document: { ...document, frameCount }, delivery: input.delivery, ffprobePath,
       timeoutMs: config.processTimeoutMs, maxOutputBytes: config.maxProcessOutputBytes, signal });
-    if (backendProfile !== undefined) console.log(`Shared-texture capture profile: ${JSON.stringify({ ...backendProfile,
+    if (backendProfile !== undefined) console.log(`${backend.label} capture profile: ${JSON.stringify({ ...backendProfile,
       verifyMs: performance.now() - verifyStarted, totalMs: performance.now() - started })}`);
     signal.throwIfAborted();
     return output;
@@ -507,11 +438,9 @@ export async function captureStagedVisual(input: CaptureInput, controller: Abort
     controller.abort(error);
     throw error;
   } finally {
-    signal.removeEventListener("abort", abort);
-    await Promise.allSettled([...sessions].map(close));
     if (sourceFrameStore !== undefined) await sourceFrameStore.close();
     if (encoderCompletion !== undefined) await Promise.allSettled([encoderCompletion]);
-    if (gpu !== undefined) await gpu.close();
+    if (captureSession !== undefined) await captureSession.close();
     if (server !== undefined) await server.close();
   }
 }

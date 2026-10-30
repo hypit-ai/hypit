@@ -1,6 +1,5 @@
-import type { ExecutionDiagnostic } from "@hypit/hypit/endpoint";
+import type { ExecutionDiagnostic } from "@hypit/endpoint";
 import { spawn } from "node:child_process";
-import { fileURLToPath } from "node:url";
 import { killRenderTree } from "./process-tree.js";
 import type { HtmlRasterProgress } from "./render.js";
 
@@ -26,24 +25,14 @@ export async function runCaptureProcess<T extends CaptureProcessInput>(
   input: T,
   signal: AbortSignal,
   onProgress: (event: HtmlRasterProgress) => void,
-  entry = new URL("./capture-worker.js", import.meta.url),
+  launch: CaptureWorkerLaunch,
   onDiagnostic?: (diagnostic: ExecutionDiagnostic) => Promise<void>,
-  launch?: CaptureWorkerLaunch,
 ): Promise<void> {
   signal.throwIfAborted();
   await new Promise<void>((resolve, reject) => {
-    const selected = launch ?? {
-      executable: process.execPath,
-      args: [
-      "--import", import.meta.resolve("tsx"),
-      "--import", new URL("./capture-exit.js", import.meta.url).href,
-      fileURLToPath(entry),
-      ],
-      detached: process.platform !== "win32",
-    } satisfies CaptureWorkerLaunch;
-    const child = spawn(selected.executable, [...selected.args], {
-      ...(selected.env === undefined ? {} : { env: selected.env }),
-      detached: selected.detached ?? false,
+    const child = spawn(launch.executable, [...launch.args], {
+      ...(launch.env === undefined ? {} : { env: launch.env }),
+      detached: launch.detached ?? false,
       windowsHide: true,
       stdio: ["ignore", "pipe", "pipe", "ipc"],
     });

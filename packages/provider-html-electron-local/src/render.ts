@@ -2,13 +2,13 @@ import { fileURLToPath } from "node:url";
 import type { HtmlRasterRequest } from "@hypit/html-program";
 import type { TimelineVisual } from "@hypit/media";
 import {
-  rasterizeHtmlProgramWithBackend,
-} from "@hypit/provider-html-local/execution";
+  rasterizeHtmlWithBackend,
+} from "@hypit/html-render-local";
 import type {
   CaptureWorkerLaunch,
   HtmlRasterOptions,
   HtmlRasterProgress,
-} from "@hypit/provider-html-local/execution";
+} from "@hypit/html-render-local";
 
 import { electronEnvironment, requireElectronExecutable } from "./electron.js";
 
@@ -19,10 +19,11 @@ export type ElectronHtmlRasterOptions = HtmlRasterOptions & {
   readonly electronPath: string;
 };
 
-function electronWorkerLaunch(electronPath: string, directory: string, entry: URL): CaptureWorkerLaunch {
+function electronWorkerLaunch(electronPath: string, directory: string): CaptureWorkerLaunch {
   return {
     executable: electronPath,
-    args: [fileURLToPath(new URL("../runtime/gpu-worker.cjs", import.meta.url)), directory, entry.href],
+    args: [fileURLToPath(new URL("../runtime/gpu-worker.cjs", import.meta.url)), directory,
+      new URL("./capture-worker.js", import.meta.url).href],
     env: electronEnvironment(),
     // A local Runtime Worker already belongs to the user's login session. Starting a second
     // macOS AppKit session aborts Electron during registration; Linux keeps its own process group.
@@ -36,11 +37,13 @@ export async function rasterizeElectronHtmlProgram(
 ): Promise<TimelineVisual> {
   const electronPath = options.electronPath.trim();
   if (electronPath.length === 0) throw new Error("Electron rendering requires an explicit electronPath");
-  return rasterizeHtmlProgramWithBackend(request, options, {
-    kind: "shared-texture",
+  return rasterizeHtmlWithBackend(request, options, {
+    mode: "encoded-stream",
+    label: "Electron shared GPU texture",
+    requiresHardwareGpu: true,
+    encodedPipeline: "browser decode, WebCodecs H.264 and FFmpeg mux",
     executablePath: electronPath,
-    workerEntry: new URL("./capture-worker.js", import.meta.url),
-    workerLaunch: (directory, entry) => electronWorkerLaunch(electronPath, directory, entry),
+    workerLaunch: directory => electronWorkerLaunch(electronPath, directory),
     verifyExecutable: async () => { await requireElectronExecutable(electronPath); },
   });
 }

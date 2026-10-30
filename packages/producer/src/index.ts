@@ -17,6 +17,12 @@ export type ProducerHandlerResult = {
   readonly constraints: CanonicalValue;
 };
 
+/** Host-owned limits for one deterministic Producer invocation. */
+export type ProducerExecutionLimits = {
+  /** Maximum canonical UTF-8 bytes the returned output Value or Need constraints may add to Build facts. */
+  readonly maxInlineValueBytes: number;
+};
+
 /**
  * Pure compute context. Artifact bytes, credentials, network and stores are deliberately absent;
  * those effects must cross an explicit Need into a Provider.
@@ -24,6 +30,7 @@ export type ProducerHandlerResult = {
 export type ProducerHandlerContext = {
   readonly command: InvokeProducerCommand;
   readonly inputs: Readonly<Record<string, TypedRecord>>;
+  readonly limits: ProducerExecutionLimits;
 };
 
 export type ProducerHandler = (

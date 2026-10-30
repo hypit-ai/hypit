@@ -1478,6 +1478,34 @@ importers:
         specifier: 0.18.13
         version: 0.18.13
 
+  packages/html-render-local:
+    dependencies:
+      '@hypit/endpoint':
+        specifier: workspace:*
+        version: link:../endpoint
+      '@hypit/html-program':
+        specifier: workspace:^0.2.0
+        version: link:../html-program
+      '@hypit/media':
+        specifier: workspace:^0.2.0
+        version: link:../media
+      '@hypit/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@hypit/runtime-local':
+        specifier: workspace:^0.2.0
+        version: link:../runtime-local
+      '@hypit/temporal':
+        specifier: workspace:^0.1.1
+        version: link:../temporal
+      '@hypit/timeline':
+        specifier: workspace:^0.1.1
+        version: link:../timeline
+    devDependencies:
+      '@hypit/composition':
+        specifier: workspace:*
+        version: link:../composition
+
   packages/html-video:
     dependencies:
       '@hypit/audio-program':
@@ -2053,15 +2081,15 @@ importers:
       '@hypit/html-program':
         specifier: workspace:^0.2.0
         version: link:../html-program
+      '@hypit/html-render-local':
+        specifier: workspace:^0.1.0
+        version: link:../html-render-local
       '@hypit/hypit':
         specifier: workspace:^0.4.0
         version: link:../..
       '@hypit/media':
         specifier: workspace:^0.2.0
         version: link:../media
-      '@hypit/provider-html-local':
-        specifier: workspace:^0.2.1
-        version: link:../provider-html-local
       '@hypit/runtime-local':
         specifier: workspace:^0.2.0
         version: link:../runtime-local
@@ -2111,6 +2139,9 @@ importers:
       '@hypit/html-program':
         specifier: workspace:^0.2.0
         version: link:../html-program
+      '@hypit/html-render-local':
+        specifier: workspace:^0.1.0
+        version: link:../html-render-local
       '@hypit/media':
         specifier: workspace:^0.2.0
         version: link:../media

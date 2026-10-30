@@ -125,6 +125,7 @@ export async function createLocalRuntime(
     operations: options.operationStore,
     actions: createActionExecutor(options.executionStore),
     refinements,
+    ...(options.producerExecutionLimits === undefined ? {} : { producerExecutionLimits: options.producerExecutionLimits }),
   });
   const resultWriter = createLocalResultWriter({
     ...(options.executionLogs === undefined ? {} : { executionLogs: options.executionLogs }),

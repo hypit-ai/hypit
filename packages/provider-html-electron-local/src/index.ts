@@ -6,4 +6,4 @@ export type {
   CreateLocalElectronHtmlProviderOptions,
 } from "./provider.js";
 export type { ElectronHtmlRasterOptions, HtmlRasterProgress } from "./render.js";
-export type { HtmlBrowserGpu, HtmlWorkers } from "@hypit/provider-html-local/execution";
+export type { HtmlBrowserGpu, HtmlWorkers } from "@hypit/html-render-local";

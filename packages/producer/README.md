@@ -4,8 +4,9 @@ The minimal host-neutral SDK for trusted deterministic Producers. A package expo
 Producer facets; Type-owner validation is independently owned by `@hypit/refinement`. Both identities
 are data: an exact nominal reference plus handler. Hosts enumerate them without running an opaque
 `install()` callback.
-Producer handlers receive only the
-Core command, Producer identity and immutable typed inputs.
+Producer handlers receive only the Core command, immutable typed inputs and host-owned execution
+limits. `maxInlineValueBytes` bounds the canonical UTF-8 bytes of the returned output Value or Need
+constraints; it grants no Runtime authority.
 
 They receive no ResourceStore, credentials, network client, queue or Runtime infrastructure. Work that
 needs those authorities must emit an explicit Need and be implemented by a separately selected

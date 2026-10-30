@@ -150,7 +150,7 @@ recompilation preserve live Item choices, while Comments, Result previews, Sourc
 Reloading the page clears the preview mask.
 
 The selected targets must reach one Film and its resolved time source. Studio rejects several
-distinct Films in one view; use separate Invocations/sessions for those. A Timeline supplies the complete
+distinct Films in one view; use separate target selections/sessions for those. A Timeline supplies the complete
 program range and the ruler always shows program time. Each package-owned temporal-domain Companion
 may add an exact Projection view. Script Studio gives every Narrative Projection two rows: mapped
 Segments and projected word evidence. Selection and Moment objects that exist only to invert a

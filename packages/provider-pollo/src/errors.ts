@@ -1,5 +1,5 @@
 import { EndpointServiceError } from "@hypit/hypit/endpoint";
-import { EndpointHttpError, retryAfterMs } from "@hypit/hypit/endpoint/http";
+import { EndpointHttpError, httpTargetForDiagnostic, retryAfterMs } from "@hypit/hypit/endpoint/http";
 
 /** Pollo's `{ errorCode, message, code, requestId }` envelope and generation `failMsg`, kept at the service boundary. */
 function record(value: unknown): Record<string, unknown> | undefined {
@@ -26,7 +26,7 @@ export class PolloHttpError extends EndpointHttpError {
     const reason = text(body?.message) ?? (body === undefined ? text(bodyText.slice(0, 2000)) : undefined);
     const requestId = text(body?.requestId);
     const facts = [
-      `Pollo HTTP ${status}`, code, `${request.method} ${request.path}`,
+      `Pollo HTTP ${status}`, code, `${request.method} ${httpTargetForDiagnostic(request.path)}`,
       ...(requestId === undefined ? [] : [`request=${requestId}`]),
     ];
     super(code, `${facts.join("; ")}${reason === undefined ? "" : `: ${safePolloReason(reason)}`}`,

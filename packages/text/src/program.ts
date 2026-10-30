@@ -373,10 +373,69 @@ function applyTransform(value: string, operation: TextTransform): string {
   return JSON.stringify(value);
 }
 
-type TextRenderBuffer = { readonly chunks: string[] };
+export type TextRenderOptions = {
+  /** Limit for the canonical `{ value: string }` returned by this render. */
+  readonly maxInlineValueBytes?: number;
+};
+
+type TextRenderBuffer = {
+  readonly chunks: string[];
+  readonly maxInlineValueBytes: number | undefined;
+  escapedBytes: number;
+  pendingHighSurrogate: boolean;
+};
+
+const textValueJsonOverhead = Buffer.byteLength('{"value":""}', "utf8");
+
+function createTextRenderBuffer(maxInlineValueBytes: number | undefined): TextRenderBuffer {
+  if (maxInlineValueBytes !== undefined) {
+    assert(Number.isSafeInteger(maxInlineValueBytes) && maxInlineValueBytes > 0,
+      "Text render maxInlineValueBytes must be a positive safe integer");
+    assert(maxInlineValueBytes >= textValueJsonOverhead,
+      `Text render inline Value limit ${maxInlineValueBytes} bytes cannot contain an empty Text value`);
+  }
+  return { chunks: [], maxInlineValueBytes, escapedBytes: 0, pendingHighSurrogate: false };
+}
+
+function escapedCodeUnitBytes(value: number): number {
+  if (value === 0x22 || value === 0x5c || value === 0x08 || value === 0x09
+    || value === 0x0a || value === 0x0c || value === 0x0d) return 2;
+  if (value < 0x20 || (value >= 0xdc00 && value <= 0xdfff)) return 6;
+  if (value <= 0x7f) return 1;
+  if (value <= 0x7ff) return 2;
+  return 3;
+}
+
+function assertTextRenderBudget(output: TextRenderBuffer, final: boolean): void {
+  const bytes = textValueJsonOverhead + output.escapedBytes
+    + (output.pendingHighSurrogate ? (final ? 6 : 4) : 0);
+  if (output.maxInlineValueBytes !== undefined) {
+    assert(bytes <= output.maxInlineValueBytes,
+      `Text render exceeds the ${output.maxInlineValueBytes}-byte inline Value limit`);
+  }
+}
+
+function countRendered(output: TextRenderBuffer, value: string): void {
+  for (let index = 0; index < value.length; index += 1) {
+    const unit = value.charCodeAt(index);
+    if (output.pendingHighSurrogate) {
+      if (unit >= 0xdc00 && unit <= 0xdfff) {
+        output.escapedBytes += 4;
+        output.pendingHighSurrogate = false;
+        continue;
+      }
+      output.escapedBytes += 6;
+      output.pendingHighSurrogate = false;
+    }
+    if (unit >= 0xd800 && unit <= 0xdbff) output.pendingHighSurrogate = true;
+    else output.escapedBytes += escapedCodeUnitBytes(unit);
+  }
+  assertTextRenderBudget(output, false);
+}
 
 function appendRendered(output: TextRenderBuffer, value: string): void {
   if (value.length === 0) return;
+  countRendered(output, value);
   output.chunks.push(value);
 }
 
@@ -384,14 +443,16 @@ function renderExpressionValue(
   value: TextExpression,
   template: TextTemplate,
   bindings: Readonly<Record<string, TextBindingValue>>,
+  maxInlineValueBytes?: number,
 ): string {
-  const output: TextRenderBuffer = { chunks: [] };
+  const output = createTextRenderBuffer(maxInlineValueBytes);
   renderExpression(value, template, bindings, output);
+  assertTextRenderBudget(output, true);
   return output.chunks.join("");
 }
 
-function replaceLiteral(value: string, from: string, to: string, all: boolean): string {
-  const output: TextRenderBuffer = { chunks: [] };
+function replaceLiteral(value: string, from: string, to: string, all: boolean, maxInlineValueBytes?: number): string {
+  const output = createTextRenderBuffer(maxInlineValueBytes);
   let cursor = 0;
   while (cursor <= value.length) {
     const found = value.indexOf(from, cursor);
@@ -407,6 +468,7 @@ function replaceLiteral(value: string, from: string, to: string, all: boolean): 
       break;
     }
   }
+  assertTextRenderBudget(output, true);
   return output.chunks.join("");
 }
 
@@ -428,7 +490,7 @@ function renderExpression(
   if (value.kind === "join") {
     let written = false;
     for (const item of value.items) {
-      const rendered = renderExpressionValue(item, template, bindings);
+      const rendered = renderExpressionValue(item, template, bindings, output.maxInlineValueBytes);
       if (value.omitEmpty === true && rendered.length === 0) continue;
       if (written) appendRendered(output, value.separator);
       appendRendered(output, rendered);
@@ -461,9 +523,9 @@ function renderExpression(
     return;
   }
   if (value.kind === "replace") {
-    let result = renderExpressionValue(value.input, template, bindings);
+    let result = renderExpressionValue(value.input, template, bindings, output.maxInlineValueBytes);
     for (const replacement of value.replacements) {
-      result = replaceLiteral(result, replacement.from, replacement.to, replacement.mode === "all");
+      result = replaceLiteral(result, replacement.from, replacement.to, replacement.mode === "all", output.maxInlineValueBytes);
     }
     appendRendered(output, result);
     return;
@@ -471,7 +533,7 @@ function renderExpression(
   if (value.kind === "transform") {
     const result = value.transforms.reduce(
       (result, operation) => applyTransform(result, operation),
-      renderExpressionValue(value.input, template, bindings),
+      renderExpressionValue(value.input, template, bindings, output.maxInlineValueBytes),
     );
     appendRendered(output, result);
     return;
@@ -481,7 +543,7 @@ function renderExpression(
   renderExpression(definition, template, bindings, output);
 }
 
-export function renderText(template: TextTemplate, bindings: TextBindings): Text {
+export function renderText(template: TextTemplate, bindings: TextBindings, options: TextRenderOptions = {}): Text {
   verifyTextTemplate(template);
   verifyTextBindings(bindings);
   const known = textTemplateBindingNames(template);
@@ -491,5 +553,6 @@ export function renderText(template: TextTemplate, bindings: TextBindings): Text
   for (const id of Object.keys(bindings.values)) {
     assert(known.has(id), `Text binding ${id} is not declared by the template`);
   }
-  return sealText(renderExpressionValue(template.root, template, { ...template.defaults, ...bindings.values }));
+  return sealText(renderExpressionValue(template.root, template, { ...template.defaults, ...bindings.values },
+    options.maxInlineValueBytes));
 }

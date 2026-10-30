@@ -5,7 +5,7 @@ import { localHtmlRasterRejection } from "../src/support.js";
 import {
   htmlProviderDelivery,
   htmlProviderDocument,
-} from "./provider-scenario.js";
+} from "../../provider-html-local/test/provider-scenario.js";
 
 test("local rendering implements Visual Process passes", () => {
   const processUsages = [{ order: 1, passes: 1,

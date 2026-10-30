@@ -25,6 +25,21 @@ export class EndpointTransportError extends Error {
 /** A successful HTTP response whose body cannot be interpreted by the Provider. */
 export class EndpointResponseError extends Error {}
 
+/**
+ * Describe an HTTP request target without retaining URL capabilities or credentials.
+ * Query and fragment data are never needed to identify the failed route.
+ */
+export function httpTargetForDiagnostic(target: string): string {
+  const path = target.replace(/[?#].*$/u, "");
+  if (!/^https?:\/\//iu.test(path)) return path;
+  try {
+    const url = new URL(path);
+    return `${url.protocol}//${url.host}${url.pathname}`;
+  } catch {
+    return path;
+  }
+}
+
 type FailureDetail = {
   readonly message: string;
   readonly code?: string;

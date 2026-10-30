@@ -173,6 +173,35 @@ test("transient execution follows capability opt-in rather than pricing and keep
   }
 });
 
+test("transient execution applies the Profile's Producer inline Value budget", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hypit-runtime-producer-budget-"));
+  const path = join(root, "hypit.runtime.json");
+  await writeFile(path, JSON.stringify({ ...profile({ dataRoot: "." }),
+    execution: { producerInlineValueBytes: 16 } }));
+  const producers = new ProducerRegistry();
+  producers.registerProducer(greetingProducerRefs.makePrompt, ({ limits }) => {
+    assert.equal(limits.maxInlineValueBytes, 16);
+    return { kind: "output", value: "larger than sixteen bytes" };
+  });
+  try {
+    const execution = await openTransientRuntimeConfigExecution(path, { registry: new RuntimeAdapterRegistry() });
+    try {
+      const result = await execution.evaluate({
+        state: createGreetingBuild(),
+        producers,
+        refinements: new RefinementRegistry(),
+        resources: new MemoryResourceStore(),
+      });
+      assert.equal(result.status, "failed");
+      assert.match(result.outcomes.at(-1)?.message ?? "", /inline Value bytes; limit is 16 bytes/u);
+    } finally {
+      await execution.close();
+    }
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 
 test("Runtime invoke executes one immediate Need through the selected Endpoint and its credential, outside any Build", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-runtime-invoke-"));

@@ -13,7 +13,7 @@ import { endpointResourceClaims, installEndpoint } from "@hypit/endpoint";
 import { htmlProgramCapabilities } from "@hypit/html-program";
 import { mediaTypes } from "@hypit/media";
 import { canonicalize } from "@hypit/protocol";
-import { distributeFrameRange, requestedFrameRanges, sourceFrameAt, sourceWindows, videoSlots } from "../src/sampling.js";
+import { distributeFrameRange, requestedFrameRanges, sourceFrameAt, sourceWindows, videoSlots } from "../../html-render-local/src/sampling.js";
 import { htmlRangeDocument } from "./range-scenario.js";
 import { htmlProviderDelivery } from "./provider-scenario.js";
 

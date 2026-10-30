@@ -145,6 +145,21 @@ test("TextTemplate collection memoizes diamond definitions and rendering stays e
   assert.ok([...rendered.value].every((value) => value === "x"));
 });
 
+test("Text rendering stops diamond expansion at the host inline Value budget", () => {
+  assert.throws(() => renderText(
+    diamondTemplate(24, { kind: "literal", value: "x" }),
+    sealTextBindings({}),
+    { maxInlineValueBytes: 1024 },
+  ), /1024-byte inline Value limit/u);
+});
+
+test("Text inline Value accounting follows canonical JSON UTF-8 bytes", () => {
+  assert.equal(renderText(sealTextTemplate({ root: { kind: "literal", value: '😀"\n' } }),
+    sealTextBindings({}), { maxInlineValueBytes: 20 }).value, '😀"\n');
+  assert.throws(() => renderText(sealTextTemplate({ root: { kind: "literal", value: '😀"\n' } }),
+    sealTextBindings({}), { maxInlineValueBytes: 19 }), /19-byte inline Value limit/u);
+});
+
 test("one definition keeps lexical each bindings without hiding its global uses", () => {
   const template = sealTextTemplate({
 

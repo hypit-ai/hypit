@@ -1,5 +1,5 @@
 import { EndpointServiceError } from "@hypit/hypit/endpoint";
-import { EndpointHttpError, retryAfterMs } from "@hypit/hypit/endpoint/http";
+import { EndpointHttpError, httpTargetForDiagnostic, retryAfterMs } from "@hypit/hypit/endpoint/http";
 
 /** BeatAPI's `{ error: { code, message, request_id, retry_after_seconds } }` envelope and terminal task errors. */
 function record(value: unknown): Record<string, unknown> | undefined {
@@ -29,7 +29,7 @@ export class BeatApiHttpError extends EndpointHttpError {
     const serviceRetryAfter = typeof error?.retry_after_seconds === "number" ? Math.round(error.retry_after_seconds * 1000) : undefined;
     const retryAfter = serviceRetryAfter ?? retryAfterMs(response.headers);
     const facts = [
-      `BeatAPI HTTP ${status}`, code, `${request.method} ${request.path}`,
+      `BeatAPI HTTP ${status}`, code, `${request.method} ${httpTargetForDiagnostic(request.path)}`,
       ...(request.model === undefined ? [] : [`model=${request.model}`]),
       ...(requestId === undefined ? [] : [`request=${requestId}`]),
       ...(retryAfter === undefined ? [] : [`retry-after=${retryAfter}ms`]),

@@ -7,13 +7,13 @@ import {
   diagnoseRuntimeExecutable,
   resolveRuntimeExecutable,
 } from "@hypit/runtime-local/node";
+import { localHtmlRuntimeConfig } from "@hypit/html-render-local";
 
 import {
   createLocalChromiumHtmlProvider,
 } from "./provider.js";
 import { configuredBrowserPath, browserExecutablePath, selectedBrowserVersion } from "./browser.js";
 import { localChromiumHtmlRendererProgram } from "./program.js";
-import { localHtmlRuntimeConfig } from "./runtime-config.js";
 
 /**
  * Construct one fixed Runtime Adapter identity. Renderer choice belongs to the package/Endpoint

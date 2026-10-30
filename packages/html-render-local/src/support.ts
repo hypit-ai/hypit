@@ -1,4 +1,4 @@
-import type { EndpointSupport } from "@hypit/hypit/endpoint";
+import type { EndpointSupport } from "@hypit/endpoint";
 import { selectHtmlArtifacts, selectHtmlSurfaces, selectHtmlVideoSources } from "@hypit/html-program";
 import type { HtmlFrameRequest, HtmlRasterRequest } from "@hypit/html-program";
 import type { FrameSpan } from "@hypit/timeline";

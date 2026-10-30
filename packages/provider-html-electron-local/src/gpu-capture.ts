@@ -6,20 +6,21 @@ import { randomUUID } from "node:crypto";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { BrowserWindow, IpcMainEvent, OffscreenSharedTexture } from "electron";
-import type { Page } from "puppeteer-core";
 import { selectHtmlProcessUsages } from "@hypit/html-program";
 import {
   assert,
   createFramePreparer,
-} from "@hypit/provider-html-local/execution";
+} from "@hypit/html-render-local";
 import type {
   CaptureInput,
-  SharedTextureCaptureBackend,
-  SharedTextureCapturePages,
+  FramePreparationPage,
+  StagedCaptureBackend,
   SourceFrameUpdate,
-} from "@hypit/provider-html-local/execution";
+} from "@hypit/html-render-local";
 
-export async function gpuCapturePages({ width, height }: { width: number; height: number }) {
+type ElectronCapturePages = Awaited<ReturnType<typeof gpuCapturePages>>;
+
+export async function gpuCapturePages({ width, height }: { width: number; height: number }, matte: string) {
   const markerWidth = 32;
   const markerHeight = 2;
   const shell = `/__hypit_capture_${randomUUID()}.html`;
@@ -29,7 +30,7 @@ export async function gpuCapturePages({ width, height }: { width: number; height
   const bundle = await readFile(fileURLToPath(new URL("../../bundles/mediabunny.min.mjs",
     import.meta.resolve("mediabunny"))), "utf8");
   const videoModule = await readFile(new URL("../runtime/browser-video.mjs", import.meta.url), "utf8");
-  const html = (matte: string) => `<!doctype html><meta charset="utf-8"><style>
+  const html = `<!doctype html><meta charset="utf-8"><style>
 html,body{margin:0;background:${matte};overflow:hidden}
 iframe{position:absolute;left:0;top:0;width:${width}px;height:${height}px;border:0}
 canvas{position:absolute;left:0;top:${height}px;width:${markerWidth}px;height:${markerHeight}px}
@@ -52,7 +53,7 @@ type Scene = { window: BrowserWindow; pending?: PendingFrame | undefined;
 
 /** One request owns its windows, texture references and ordered output stream. */
 export async function createGpuCapture(input: CaptureInput, origin: string,
-  pages: SharedTextureCapturePages, controller: AbortController, workers: number) {
+  pages: ElectronCapturePages, controller: AbortController, workers: number) {
   const { BrowserWindow, ipcMain, sharedTexture } = createRequire(import.meta.url)("electron") as typeof import("electron");
   assert(input.frames === undefined, "Shared-texture capture only executes encoded visual requests");
   const { config, document, delivery } = input;
@@ -144,6 +145,7 @@ export async function createGpuCapture(input: CaptureInput, origin: string,
       error => error ? reject(error) : resolve()));
   });
   const closeScene = (scene: Scene) => {
+    if (!scenes.has(scene)) return;
     scene.pending?.reject(signal.reason ?? new Error("GPU capture closed")); scene.pending = undefined;
     scene.latest?.texture.release(); scene.latest = undefined;
     if (!scene.window.isDestroyed()) scene.window.destroy();
@@ -240,12 +242,11 @@ export async function createGpuCapture(input: CaptureInput, origin: string,
       await programFrame.executeJavaScript(`__hypitFrameProgram.prepare(${JSON.stringify(input.frameSelection)})`);
       const viewport = await programFrame.executeJavaScript("({width:innerWidth,height:innerHeight})") as { width: number; height: number };
       assert(viewport.width === width && viewport.height === height, "GPU capture changed the HTML Program viewport");
-      const page: Pick<Page, "evaluate" | "screenshot"> = {
+      const page: FramePreparationPage = {
         evaluate: ((fn: (...args: unknown[]) => unknown, ...args: unknown[]) =>
-          programFrame.executeJavaScript(`(${fn.toString()})(...${JSON.stringify(args)})`)) as Page["evaluate"],
-        screenshot: (async (options: Parameters<Page["screenshot"]>[0] = {}) => {
+          programFrame.executeJavaScript(`(${fn.toString()})(...${JSON.stringify(args)})`)) as FramePreparationPage["evaluate"],
+        screenshot: async options => {
           const clip = options.clip;
-          assert(clip !== undefined, "Visual Process capture requires one explicit canvas clip");
           window.setBackgroundColor("#00000000");
           try {
             await new Promise<void>((resolve) => {
@@ -265,7 +266,7 @@ export async function createGpuCapture(input: CaptureInput, origin: string,
           } finally {
             window.setBackgroundColor(delivery.picture.alpha.matte);
           }
-        }) as unknown as Page["screenshot"],
+        },
       };
       const prepare = await createFramePreparer(page, selectHtmlProcessUsages(document, input.frameSelection));
       await programFrame.executeJavaScript(`import(${JSON.stringify(new URL(pages.video, origin).href)})
@@ -303,6 +304,7 @@ export async function createGpuCapture(input: CaptureInput, origin: string,
           } finally { clearInterval(repaint); }
           return { buffer: Buffer.alloc(0), ...timing, outputMs: performance.now() - started };
         },
+        close: async () => { closeScene(scene); },
       };
     },
     async finish() {
@@ -321,7 +323,20 @@ export async function createGpuCapture(input: CaptureInput, origin: string,
   };
 }
 
-export const electronSharedTextureCaptureBackend: SharedTextureCaptureBackend = {
-  pages: gpuCapturePages,
-  create: createGpuCapture,
+export const electronStagedCaptureBackend: StagedCaptureBackend = {
+  mode: "encoded-stream",
+  label: "Electron shared GPU texture",
+  async prepare(canvas, picture) {
+    const pages = await gpuCapturePages(canvas, picture.alpha.matte);
+    return { state: pages, virtualPages: new Map([
+      [pages.shell, pages.html],
+      [pages.output, "<!doctype html><title>Hypit output</title>"],
+      [pages.decoder, pages.bundle],
+      [pages.video, pages.videoModule],
+    ]) };
+  },
+  async create(input, origin, state, controller, workers) {
+    assert(state !== undefined, "Electron capture preparation is missing");
+    return await createGpuCapture(input, origin, state as ElectronCapturePages, controller, workers);
+  },
 };

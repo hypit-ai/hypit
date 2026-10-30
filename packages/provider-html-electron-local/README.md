@@ -10,9 +10,9 @@ also supplies PNG-frame capture.
 
 This package owns the Electron executable probe, Runtime Adapter, Endpoint, Program, shared-texture
 capture backend, child worker, browser-side decoder/encoder runtime and pinned Mediabunny source.
-`@hypit/provider-html-local` contributes only the renderer-neutral local execution seam used for
-staging, request limits, progress and worker supervision; it contains no Electron activation branch,
-runtime resource or Electron dependency.
+`@hypit/html-render-local` contributes the renderer-neutral staging, request limits, progress and
+worker supervision used by both local Providers. Electron does not depend on the Chromium Provider,
+Puppeteer or browser installation machinery.
 
 The Endpoint accepts the same typed `HtmlProgram` and visual-delivery subset as the Chromium visual
 Endpoint. It decodes exact compiler-selected source samples in the browser, transfers composed frames

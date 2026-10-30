@@ -7,6 +7,7 @@ import type {
 } from "@hypit/protocol";
 import { RefinementRegistry } from "@hypit/refinement";
 import type { RefinementRegistryLike } from "@hypit/refinement";
+import type { ProducerExecutionLimits } from "@hypit/producer";
 
 import { Executor } from "./executor.js";
 import { EndpointRegistry, ProducerRegistry } from "./registry.js";
@@ -267,8 +268,10 @@ export async function evaluateProducerPlan(
   definition: BuildDefinition,
   producers: ProducerRegistry,
   refinements: RefinementRegistryLike = new RefinementRegistry(),
+  producerExecutionLimits?: ProducerExecutionLimits,
 ): Promise<ProducerPlanEvaluation> {
-  const driver = new Executor({ producers, endpoints: new EndpointRegistry(), refinements });
+  const driver = new Executor({ producers, endpoints: new EndpointRegistry(), refinements,
+    ...(producerExecutionLimits === undefined ? {} : { producerExecutionLimits }) });
   const machine = new BuildMachine(definition);
   const attempted = new Set<string>();
   const failures = new Map<string, string>();

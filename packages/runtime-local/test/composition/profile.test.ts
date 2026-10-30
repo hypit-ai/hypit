@@ -63,6 +63,16 @@ test("execution memory policy belongs to the local Worker, with an explicit MiB 
   assert.throws(() => parseLocalRuntimeProfile({ ...profile(), worker: { executionMemoryMb: 768, maxBuilds: 8 } }), /maxBuilds/u);
 });
 
+test("Producer inline Value policy belongs to captured Build execution", () => {
+  assert.deepEqual(parseLocalRuntimeProfile({ ...profile(), execution: { producerInlineValueBytes: 8_388_608 } }).execution,
+    { producerInlineValueBytes: 8_388_608 });
+  assert.throws(() => parseLocalRuntimeProfile({ ...profile(), execution: { producerInlineValueBytes: 0 } }),
+    /positive integer in bytes/u);
+  assert.throws(() => parseLocalRuntimeProfile({ ...profile(), execution: {
+    producerInlineValueBytes: 8_388_608, producerTimeoutMs: 1000,
+  } }), /producerTimeoutMs/u);
+});
+
 
 test("Local Runtime Profile rejects source ownership fields", () => {
   assert.throws(() => parseLocalRuntimeProfile({ ...profile(), root: "." }), /does not accept root/u);

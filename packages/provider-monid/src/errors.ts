@@ -1,5 +1,5 @@
 import { EndpointServiceError } from "@hypit/hypit/endpoint";
-import { EndpointHttpError, retryAfterMs } from "@hypit/hypit/endpoint/http";
+import { EndpointHttpError, httpTargetForDiagnostic, retryAfterMs } from "@hypit/hypit/endpoint/http";
 
 /** Monid's `{ code, message }` error envelope and run outcome fields, kept at the service boundary. */
 function record(value: unknown): Record<string, unknown> | undefined {
@@ -25,7 +25,7 @@ export class MonidHttpError extends EndpointHttpError {
     const reason = text(body?.message) ?? (body === undefined ? text(bodyText.slice(0, 2000)) : undefined);
     const requestId = text(response.headers.get("x-request-id"));
     const facts = [
-      `Monid HTTP ${status}`, `${request.method} ${request.path}`,
+      `Monid HTTP ${status}`, `${request.method} ${httpTargetForDiagnostic(request.path)}`,
       ...(requestId === undefined ? [] : [`request=${requestId}`]),
     ];
     super("MONID_HTTP_ERROR", `${facts.join("; ")}${reason === undefined ? "" : `: ${safeMonidReason(reason)}`}`,

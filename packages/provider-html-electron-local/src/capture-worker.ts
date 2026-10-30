@@ -1,12 +1,13 @@
 import { createRequire } from "node:module";
 import {
   captureStagedVisual,
-  releaseCaptureExitCleanup,
-} from "@hypit/provider-html-local/execution";
-import type { CaptureInput } from "@hypit/provider-html-local/execution";
+  installCaptureExitCleanup,
+} from "@hypit/html-render-local";
+import type { CaptureInput } from "@hypit/html-render-local";
 
-import { electronSharedTextureCaptureBackend } from "./gpu-capture.js";
+import { electronStagedCaptureBackend } from "./gpu-capture.js";
 
+const releaseCaptureExitCleanup = installCaptureExitCleanup();
 const controller = new AbortController();
 const message = (error: unknown) => error instanceof Error ? error.message : String(error);
 const disconnected = () => controller.abort(new Error("Render owner disconnected"));
@@ -31,7 +32,7 @@ controller.signal.addEventListener("abort", () => {
 const receive = (value: { type: "start"; input: CaptureInput } | { type: "abort"; error: string }) => {
   if (value.type === "abort") { controller.abort(new Error(value.error)); return; }
   void captureStagedVisual(value.input, controller,
-    event => report({ type: "progress", event }), electronSharedTextureCaptureBackend).then(
+    event => report({ type: "progress", event }), electronStagedCaptureBackend).then(
     () => finish({ type: "completed" }),
     error => finish({ type: "failed", error: message(error) }),
   );

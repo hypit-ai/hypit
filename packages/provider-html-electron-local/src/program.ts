@@ -1,7 +1,7 @@
 import type { ManagedProgram } from "@hypit/runtime-local/extension";
 import {
   probeHtmlMediaTools,
-} from "@hypit/provider-html-local/execution";
+} from "@hypit/html-render-local";
 
 import { requireElectronExecutable } from "./electron.js";
 

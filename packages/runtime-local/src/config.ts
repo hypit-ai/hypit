@@ -72,6 +72,8 @@ export type LocalRuntimeProfile = {
   readonly dataRoot: string;
   /** Coordinator policy, independent of any Build's selected Endpoints. */
   readonly worker?: { readonly executionMemoryMb: number };
+  /** Build execution policy captured for new submissions. */
+  readonly execution?: { readonly producerInlineValueBytes: number };
   readonly credentials: readonly LocalRuntimeAdapterSelection[];
   readonly endpoints: readonly LocalRuntimeAdapterSelection[];
   /**
@@ -215,7 +217,7 @@ function bindings(value: unknown, endpoints: readonly LocalRuntimeAdapterSelecti
 
 export function parseLocalRuntimeProfile(value: unknown): LocalRuntimeProfile {
   const item = object(value, "$runtime");
-  exactKeys(item, ["format", "dataRoot", "worker", "credentials", "endpoints", "bindings"], "$runtime");
+  exactKeys(item, ["format", "dataRoot", "worker", "execution", "credentials", "endpoints", "bindings"], "$runtime");
   if (item.format !== "hypit.runtime-local@1") {
     throw new Error("$runtime.format must be hypit.runtime-local@1");
   }
@@ -233,10 +235,21 @@ export function parseLocalRuntimeProfile(value: unknown): LocalRuntimeProfile {
     }
     worker = { executionMemoryMb: budget };
   }
+  let execution: LocalRuntimeProfile["execution"];
+  if (item.execution !== undefined) {
+    const settings = object(item.execution, "$runtime.execution");
+    exactKeys(settings, ["producerInlineValueBytes"], "$runtime.execution");
+    const budget = settings.producerInlineValueBytes;
+    if (typeof budget !== "number" || !Number.isSafeInteger(budget) || budget <= 0) {
+      throw new Error("$runtime.execution.producerInlineValueBytes must be a positive integer in bytes");
+    }
+    execution = { producerInlineValueBytes: budget };
+  }
   return {
     format: "hypit.runtime-local@1",
     dataRoot: requiredString(item.dataRoot, "$runtime.dataRoot"),
     ...(worker === undefined ? {} : { worker }),
+    ...(execution === undefined ? {} : { execution }),
     credentials,
     endpoints,
     bindings: bindings(item.bindings, endpoints),
@@ -599,6 +612,9 @@ export async function openTransientRuntimeConfigExecution(
           endpoints,
           resources: input.resources,
           credentials: stores.store,
+          ...(document.execution === undefined ? {} : {
+            producerExecutionLimits: { maxInlineValueBytes: document.execution.producerInlineValueBytes },
+          }),
         });
         const [result] = await new InProcessBuildScheduler(executor).run([{
           id: "transient",
@@ -1272,12 +1288,17 @@ async function createRuntimeFromOpened(opened: OpenedRuntimeConfig, options: Loa
     const context = {
       format: "hypit.local-execution@1", packageRoot, hostStateRoot,
       ...(options.distributionPackageRoot === undefined ? {} : { distributionPackageRoot: options.distributionPackageRoot }),
-      profile: { format: document.format, dataRoot: root, credentials: selections(document.credentials),
+      profile: { format: document.format, dataRoot: root,
+        ...(document.execution === undefined ? {} : { execution: document.execution }),
+        credentials: selections(document.credentials),
         endpoints: selections(document.endpoints), bindings: document.bindings },
     } as CanonicalValue;
     return await createLocalRuntime({
       ...(execution === undefined ? {} : { executionBuild: execution.build }),
       executionContext: context,
+      ...(document.execution === undefined ? {} : {
+        producerExecutionLimits: { maxInlineValueBytes: document.execution.producerInlineValueBytes },
+      }),
       buildStore: state.builds,
       operationStore: state.operations,
       commandExecutionStore: state.commandExecutions,

@@ -1,7 +1,12 @@
-import { releaseCaptureExitCleanup } from "./capture-exit.js";
-import { captureStagedVisual } from "./capture.js";
-import type { CaptureInput } from "./capture.js";
+import { captureStagedVisual, installCaptureExitCleanup } from "@hypit/html-render-local";
+import type { CaptureInput } from "@hypit/html-render-local";
+import { chromiumCaptureBackend } from "./capture-backend.js";
 
+const releaseCaptureExitCleanup = installCaptureExitCleanup();
+const executablePath = process.argv[2];
+if (executablePath === undefined || executablePath.trim().length === 0) {
+  throw new Error("Chromium capture worker requires an executable path");
+}
 const controller = new AbortController();
 const message = (error: unknown) => error instanceof Error ? error.message : String(error);
 const disconnected = () => controller.abort(new Error("Render owner disconnected"));
@@ -29,7 +34,7 @@ controller.signal.addEventListener("abort", () => {
 const receive = (value: { type: "start"; input: CaptureInput } | { type: "abort"; error: string }) => {
   if (value.type === "abort") { controller.abort(new Error(value.error)); return; }
   void captureStagedVisual(value.input, controller,
-    (event) => report({ type: "progress", event })).then(
+    (event) => report({ type: "progress", event }), chromiumCaptureBackend(executablePath)).then(
     () => finish({ type: "completed" }),
     (error) => finish({ type: "failed", error: message(error) }),
   );

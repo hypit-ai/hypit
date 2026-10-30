@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { materializeHtmlProgram, selectHtmlArtifacts } from "@hypit/html-program";
 import type { HtmlProgram } from "@hypit/html-program";
 import type { CompositableSurfaceRef, PictureInterpretation } from "@hypit/media";
-import type { BlobRef } from "@hypit/hypit/protocol";
+import type { BlobRef } from "@hypit/protocol";
 import type { FrameSpan } from "@hypit/timeline";
 
 /** Reads one execution resource. Whose store it comes from is the caller's business. */

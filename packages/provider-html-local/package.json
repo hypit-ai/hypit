@@ -5,8 +5,7 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
-    "./execution": "./src/execution.ts"
+    ".": "./src/index.ts"
   },
   "files": [
     "dist",
@@ -20,6 +19,7 @@
   },
   "dependencies": {
     "@hypit/html-program": "workspace:^0.2.0",
+    "@hypit/html-render-local": "workspace:^0.1.0",
     "@hypit/media": "workspace:^0.2.0",
     "@hypit/temporal": "workspace:^0.1.1",
     "@hypit/timeline": "workspace:^0.1.1",

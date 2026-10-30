@@ -15,6 +15,7 @@ export {
   verifyTextBindings,
   verifyTextTemplate,
 } from "./program.js";
+export type { TextRenderOptions } from "./program.js";
 export { textTemplateFromRecipes } from "./recipe.js";export { textMarkupDeclarations } from "./declaration.js";
 export {
   textAuthorDeclarations,

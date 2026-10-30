@@ -48,9 +48,10 @@ export const textComponent = {
     },
     {
       producer: textProducers.render,
-      handler: ({ inputs }: ProducerHandlerContext) => ({ kind: "output", value: (renderText(
+      handler: ({ inputs, limits }: ProducerHandlerContext) => ({ kind: "output", value: (renderText(
               valueOf<TextTemplate>(inputs.template?.value, "Text template"),
               valueOf<TextBindings>(inputs.bindings?.value, "Text bindings"),
+              { maxInlineValueBytes: limits.maxInlineValueBytes },
             )) }),
     },
   ],

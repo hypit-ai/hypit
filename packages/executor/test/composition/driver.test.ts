@@ -275,6 +275,27 @@ test("Core still owns command readiness when Executor has every implementation",
   assert.equal(result.status, "complete");
 });
 
+test("Executor rejects oversized Producer facts under one host-owned inline Value policy", async () => {
+  const producers = new ProducerRegistry();
+  producers.registerProducer(greetingProducers.makePrompt, ({ limits }) => {
+    assert.equal(limits.maxInlineValueBytes, 16);
+    return { kind: "output", value: "a value that is too large" };
+  });
+  const output = await runBuild(new Executor({ producers,
+    producerExecutionLimits: { maxInlineValueBytes: 16 } }), createGreetingBuild());
+  assert.equal(output.status, "failed");
+  assert.match(output.outcomes.at(-1)?.message ?? "", /inline Value bytes; limit is 16 bytes/u);
+
+  const needs = new ProducerRegistry();
+  needs.registerProducer(greetingProducers.makePrompt, () => ({ kind: "output", value: "ok" }));
+  needs.registerProducer(greetingProducers.requestText, () => ({ kind: "need",
+    constraints: { prompt: "a constraint that is too large" } }));
+  const need = await runBuild(new Executor({ producers: needs,
+    producerExecutionLimits: { maxInlineValueBytes: 16 } }), createGreetingBuild());
+  assert.equal(need.status, "failed");
+  assert.match(need.outcomes.at(-1)?.message ?? "", /inline Value bytes; limit is 16 bytes/u);
+});
+
 test("a Scheduler-owned execution failure ends its state and a new attempt starts independently", async () => {
   const { producers, endpoints, calls } = configuredRegistry();
   let attempts = 0;

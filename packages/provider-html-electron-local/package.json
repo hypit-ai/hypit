@@ -22,7 +22,7 @@
   "dependencies": {
     "@hypit/html-program": "workspace:^0.2.0",
     "@hypit/media": "workspace:^0.2.0",
-    "@hypit/provider-html-local": "workspace:^0.2.1",
+    "@hypit/html-render-local": "workspace:^0.1.0",
     "mediabunny": "1.62.1",
     "tsx": "4.21.0"
   },

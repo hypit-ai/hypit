@@ -11,6 +11,7 @@ import {
 import {
   EndpointTransportError,
   endpointTransportError,
+  httpTargetForDiagnostic,
   retryAfterMs,
   withRequestDeadline,
 } from "@hypit/endpoint/http";
@@ -162,5 +163,14 @@ test("HTTP mechanics retain transport evidence without choosing an Endpoint outc
   await assert.rejects(
     withRequestDeadline(1, async ({ wait }) => await wait(new Promise(() => undefined))),
     (error) => error instanceof EndpointTransportError && error.timeout === true,
+  );
+});
+
+test("HTTP diagnostics identify a request without retaining URL capabilities", () => {
+  assert.equal(httpTargetForDiagnostic("/v1/tasks/task-1"), "/v1/tasks/task-1");
+  assert.equal(httpTargetForDiagnostic("/v1/assets/source?download=1#video"), "/v1/assets/source");
+  assert.equal(
+    httpTargetForDiagnostic("https://user:secret@cdn.example.test/video.mp4?token=signed#download"),
+    "https://cdn.example.test/video.mp4",
   );
 });

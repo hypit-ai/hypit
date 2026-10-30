@@ -1,15 +1,15 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { autoWorkerLimit, CaptureConcurrency } from "../src/concurrency.js";
-import { renderWorkerLimit, resolveExecutionOptions } from "../src/render.js";
+import { renderWorkerLimit, resolveLocalHtmlExecutionOptions } from "../src/render.js";
 
 test("automatic reservations respect memory, explicit ceiling and actual frame range", () => {
   assert.equal(autoWorkerLimit(16, 6 * 1024 ** 3), 2);
   assert.equal(autoWorkerLimit(2, 32 * 1024 ** 3), 1);
-  const auto = resolveExecutionOptions({ workers: "auto", maxWorkers: 6 });
+  const auto = resolveLocalHtmlExecutionOptions({ workers: "auto", maxWorkers: 6 });
   assert.equal(renderWorkerLimit(auto, 45, 30), 2);
   assert.equal(renderWorkerLimit(auto, 900, 30), 6);
-  const fixed = resolveExecutionOptions({ workers: 8 });
+  const fixed = resolveLocalHtmlExecutionOptions({ workers: 8 });
   assert.equal(renderWorkerLimit(fixed, 45, 30), 8);
   assert.equal(renderWorkerLimit(fixed, 3, 30), 3);
 });

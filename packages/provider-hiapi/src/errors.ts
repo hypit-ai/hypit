@@ -1,5 +1,5 @@
 import { EndpointServiceError } from "@hypit/hypit/endpoint";
-import { EndpointHttpError, retryAfterMs } from "@hypit/hypit/endpoint/http";
+import { EndpointHttpError, httpTargetForDiagnostic, retryAfterMs } from "@hypit/hypit/endpoint/http";
 
 /** HiAPI's `{ code, message, error_code }` envelope and task `error` object, kept at the service boundary. */
 function record(value: unknown): Record<string, unknown> | undefined {
@@ -26,7 +26,7 @@ export class HiApiHttpError extends EndpointHttpError {
     const reason = text(body?.message) ?? (body === undefined ? text(bodyText.slice(0, 2000)) : undefined);
     const requestId = text(response.headers.get("x-request-id"));
     const facts = [
-      `HiAPI HTTP ${status}`, code, `${request.method} ${request.path}`,
+      `HiAPI HTTP ${status}`, code, `${request.method} ${httpTargetForDiagnostic(request.path)}`,
       ...(request.model === undefined ? [] : [`model=${request.model}`]),
       ...(requestId === undefined ? [] : [`request=${requestId}`]),
     ];

@@ -1,5 +1,5 @@
 import { EndpointServiceError } from "@hypit/hypit/endpoint";
-import { EndpointHttpError, retryAfterMs } from "@hypit/hypit/endpoint/http";
+import { EndpointHttpError, httpTargetForDiagnostic, retryAfterMs } from "@hypit/hypit/endpoint/http";
 
 /** TokenDance relays each protocol's own error body; keep the code, the message and the HTTP facts. */
 function record(value: unknown): Record<string, unknown> | undefined {
@@ -28,7 +28,7 @@ export class TokenDanceHttpError extends EndpointHttpError {
       ?? (body === undefined ? text(bodyText.slice(0, 2000)) : undefined);
     const requestId = text(response.headers.get("x-request-id"));
     const facts = [
-      `TokenDance HTTP ${status}`, code, `${request.method} ${request.path}`,
+      `TokenDance HTTP ${status}`, code, `${request.method} ${httpTargetForDiagnostic(request.path)}`,
       ...(request.model === undefined ? [] : [`model=${request.model}`]),
       ...(requestId === undefined ? [] : [`request=${requestId}`]),
     ];

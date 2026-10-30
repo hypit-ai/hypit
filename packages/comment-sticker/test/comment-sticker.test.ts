@@ -61,16 +61,16 @@ function item(id: string) {
   });
 }
 
-function content(meta?: string) {
+function content(meta?: string, author = "@viewer") {
   let value = createCommentStickerContent(sealText("This part finally made the idea click."));
-  value = setCommentStickerContentText(value, "author", sealText("@viewer"));
+  value = setCommentStickerContentText(value, "author", sealText(author));
   if (meta !== undefined) value = setCommentStickerContentText(value, "meta", sealText(meta));
   return value;
 }
 
-function fixture(meta?: string) {
+function fixture(meta?: string, author = "@viewer") {
   const spec = item("opening");
-  const set = appendProjectedCommentSticker(createCommentStickerSet(), header, space, frame, style, spec, content(meta), projectProgramWindow({
+  const set = appendProjectedCommentSticker(createCommentStickerSet(), header, space, frame, style, spec, content(meta, author), projectProgramWindow({
     itemId: spec.id, semantic, projection: { start: { ref: "timeline.start" }, end: { ref: "timeline.end" } },
   }));
   const program = finalizeCommentSticker(set, header);
@@ -89,6 +89,23 @@ test("Comment Sticker is one deterministic self-contained peer VisualTrack", () 
   const root = stickerRoot(fixture().program.items[0]!);
   assert.equal(root.kind, "box");
   for (const element of root.children) assert.equal(element.attributes, undefined);
+});
+
+test("avatar initials preserve the author's first visible character", () => {
+  for (const [author, expected] of [
+    ["@viewer", "V"],
+    ["👍🏽fan", "👍🏽"],
+    ["🇯🇵traveler", "🇯🇵"],
+    ["👩‍💻developer", "👩‍💻"],
+    ["e\u0301lodie", "E\u0301"],
+  ] as const) {
+    const root = stickerRoot(fixture(undefined, author).program.items[0]!);
+    const card = root.kind === "box" ? root.children.find((element) => element.id === "card") : undefined;
+    const avatar = card?.kind === "box" ? card.children.find((element) => element.id === "avatar") : undefined;
+    const initial = avatar?.kind === "box" ? avatar.children.find((element) => element.id === "avatar-initial") : undefined;
+    const text = initial?.kind === "text-flow" ? initial.document.paragraphs[0]?.inlines[0] : undefined;
+    assert.equal(text?.kind === "text" ? text.text : undefined, expected);
+  }
 });
 
 test("explicit metadata is rendered and the terminal compiler accepts the Track unchanged", () => {

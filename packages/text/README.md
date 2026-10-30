@@ -10,6 +10,11 @@ is. A `TextTemplate` plus explicit `TextBindings` renders one ordinary `Text`
 graph output. Dynamic text enters through normal graph edges, so the output can
 be a Target or feed another declaration like every other value.
 
+Template call cycles are rejected structurally. A finite diamond call graph can still multiply its
+output, so the Text Producer applies the Executor's inline Value byte limit while appending content;
+it does not maintain a Text-specific recursion or character limit. Direct `renderText` callers may
+provide the same `maxInlineValueBytes` option when they need the Host execution boundary.
+
 Its optional Markup vocabulary exposes literal and assembled values without
 hiding the graph:
 

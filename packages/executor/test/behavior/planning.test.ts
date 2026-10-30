@@ -137,3 +137,13 @@ test("a failed branch does not prevent an independent pure Producer from being e
   assert.equal(evaluation.steps.find((step) => step.step === "step:side")?.status, "complete");
   assert.equal(evaluation.records.find((record) => record.record === "record:side")?.status, "available");
 });
+
+test("disposable planning applies the same Producer inline Value policy", async () => {
+  const registry = new ProducerRegistry();
+  registry.registerProducer(producers.makePrompt, () => ({ kind: "output", value: "larger than sixteen bytes" }));
+  const evaluation = await evaluateProducerPlan(definitionFrom(createGreetingBuild()), registry, undefined,
+    { maxInlineValueBytes: 16 });
+  const failed = stepByProducer(evaluation, producers.makePrompt.name);
+  assert.equal(failed?.status, "failed");
+  if (failed?.status === "failed") assert.match(failed.message, /inline Value bytes; limit is 16 bytes/u);
+});

@@ -26,6 +26,7 @@ export type CreateLocalRuntimeOptions = {
   /** Already assigned by the local coordinator. Embeddings omit this and start fresh work. */
   readonly executionBuild?: string;
   readonly executionContext?: import("@hypit/hypit/protocol").CanonicalValue;
+  readonly producerExecutionLimits?: import("@hypit/hypit/producer").ProducerExecutionLimits;
   readonly executionLogs?: import("./log.js").LocalExecutionLogs;
   readonly buildStore: BuildStore;
   readonly operationStore: OperationStore;

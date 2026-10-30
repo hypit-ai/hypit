@@ -1,0 +1,24 @@
+{
+  "name": "@hypit/html-render-local",
+  "version": "0.1.0",
+  "license": "SEE LICENSE IN LICENSE",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@hypit/endpoint": "workspace:*",
+    "@hypit/html-program": "workspace:^0.2.0",
+    "@hypit/media": "workspace:^0.2.0",
+    "@hypit/protocol": "workspace:*",
+    "@hypit/temporal": "workspace:^0.1.1",
+    "@hypit/timeline": "workspace:^0.1.1"
+  },
+  "peerDependencies": {
+    "@hypit/runtime-local": "workspace:^0.2.0"
+  },
+  "devDependencies": {
+    "@hypit/composition": "workspace:*"
+  }
+}

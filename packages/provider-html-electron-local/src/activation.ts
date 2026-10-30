@@ -4,7 +4,7 @@ import {
   runtimeConfigString,
 } from "@hypit/runtime-local/extension";
 import { diagnoseRuntimeExecutable } from "@hypit/runtime-local/node";
-import { localHtmlRuntimeConfig } from "@hypit/provider-html-local/execution";
+import { localHtmlRuntimeConfig } from "@hypit/html-render-local";
 
 import { createLocalElectronHtmlProvider } from "./provider.js";
 import { localElectronHtmlRendererProgram } from "./program.js";

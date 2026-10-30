@@ -436,8 +436,12 @@ function displayHeader(content: CommentStickerContent): string {
   return `Reply to @${author}'s comment`;
 }
 
+const graphemeSegmenter = new Intl.Segmenter("und", { granularity: "grapheme" });
+
 function initial(author: string): string {
-  return [...author.replace(/^@/u, "").trim()][0]?.toUpperCase() ?? "";
+  const name = author.replace(/^@/u, "").trim();
+  for (const { segment } of graphemeSegmenter.segment(name)) return segment.toUpperCase();
+  return "";
 }
 
 export function stickerRoot(item: CommentStickerItemProgram): VisualElement {

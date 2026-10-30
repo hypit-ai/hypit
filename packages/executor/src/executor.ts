@@ -1,6 +1,6 @@
 import { resolveProducer } from "@hypit/kernel";
 import type { BuildView } from "@hypit/kernel";
-import type { ProducerHandlerResult } from "@hypit/producer";
+import type { ProducerExecutionLimits, ProducerHandlerResult } from "@hypit/producer";
 import type { EndpointCredential, EndpointOutcome } from "@hypit/endpoint";
 import { endpointResourceClaims } from "@hypit/endpoint";
 import type {
@@ -52,7 +52,30 @@ export type ExecutorOptions = {
   readonly credentials?: CredentialStore;
   readonly refinements?: RefinementRegistryLike;
   readonly actions?: import("@hypit/runtime").RuntimeActionExecutor;
+  /** Host policy for one pure Producer invocation. */
+  readonly producerExecutionLimits?: ProducerExecutionLimits;
 };
+
+export const defaultProducerExecutionLimits: ProducerExecutionLimits = Object.freeze({
+  maxInlineValueBytes: 8 * 1024 * 1024,
+});
+
+function producerExecutionLimits(value: ProducerExecutionLimits | undefined): ProducerExecutionLimits {
+  const limits = value ?? defaultProducerExecutionLimits;
+  if (!Number.isSafeInteger(limits.maxInlineValueBytes) || limits.maxInlineValueBytes <= 0) {
+    throw new Error("Producer maxInlineValueBytes must be a positive safe integer");
+  }
+  return Object.freeze({ maxInlineValueBytes: limits.maxInlineValueBytes });
+}
+
+function assertProducerInlineValue(value: Value, limits: ProducerExecutionLimits): void {
+  const serialized = JSON.stringify(value);
+  if (serialized === undefined) throw new Error("Producer returned a Value that cannot be serialized");
+  const bytes = Buffer.byteLength(serialized, "utf8");
+  if (bytes > limits.maxInlineValueBytes) {
+    throw new Error(`Producer returned ${bytes} inline Value bytes; limit is ${limits.maxInlineValueBytes} bytes`);
+  }
+}
 
 type Executable =
   | {
@@ -106,6 +129,7 @@ export class Executor {
   readonly credentials: CredentialStore | undefined;
   readonly refinements: RefinementRegistryLike;
   readonly #actions: import("@hypit/runtime").RuntimeActionExecutor | undefined;
+  readonly #producerExecutionLimits: ProducerExecutionLimits;
   readonly #credentialReads = new Map<string, Promise<CredentialValue | undefined>>();
 
   constructor(options: ExecutorOptions = {}) {
@@ -117,6 +141,7 @@ export class Executor {
     this.credentials = options.credentials;
     this.refinements = options.refinements ?? new RefinementRegistry();
     this.#actions = options.actions;
+    this.#producerExecutionLimits = producerExecutionLimits(options.producerExecutionLimits);
   }
 
   #resourceStore(build?: string): ResourceStore {
@@ -208,6 +233,7 @@ export class Executor {
             handler({
               command: structuredClone(command),
               inputs: this.#producerInputs(state, command, indexedRecord),
+              limits: this.#producerExecutionLimits,
             }),
         },
       };
@@ -549,6 +575,9 @@ export class Executor {
           const port = producer.result;
           if (port.kind !== "output") throw new Error("Producer returned an output but declares a Need");
           await refineValue(port.type, result.value, this.refinements);
+          assertProducerInlineValue(result.value, this.#producerExecutionLimits);
+        } else {
+          assertProducerInlineValue(result.constraints, this.#producerExecutionLimits);
         }
         const content = {
           kind: "producer-completed",

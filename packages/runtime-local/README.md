@@ -246,6 +246,23 @@ forced timeout or replay. Draining carriers can still use substantial memory whi
 this policy reclaims finished-work accumulation, not the memory required by unfinished work.
 The Profile that starts the coordinator owns this process policy until that coordinator exits.
 
+Pure Producer outputs have a separate Build execution policy:
+
+```json
+"execution": { "producerInlineValueBytes": 8388608 }
+```
+
+The default is 8 MiB. This limits the canonical UTF-8 representation of one Producer's output Value
+or Need constraints before it becomes a Build Fact. Blob bytes are not inline and remain governed by
+the ResourceStore and producing Endpoint; only their BlobRef metadata is counted. The selected value
+is captured in each new Build's execution context, so later Profile edits do not change an already
+submitted attempt. Executor performs the common final check, while Producers that can expand data
+multiplicatively must observe the same limit before allocating their complete result.
+
+This setting is not a recursion depth, timeout or JavaScript heap limit. Synchronous JavaScript cannot
+be forcibly interrupted inside a shared carrier; a future hard CPU or memory boundary would require a
+separate Worker or process per command.
+
 Loaded module bindings are scoped, not the filesystem. Later file reads observe ordinary files;
 a first-time dynamic import reads the implementation then available and subsequently remains cached
 in that Build's scope. No source snapshot, filesystem scan, content hash or Build recovery is involved.

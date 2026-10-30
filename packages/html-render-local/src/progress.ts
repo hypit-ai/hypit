@@ -1,4 +1,4 @@
-import type { OperationProgress } from "@hypit/hypit/endpoint";
+import type { OperationProgress } from "@hypit/endpoint";
 import type { HtmlRasterProgress } from "./render.js";
 
 /** Reduce parallel capture events to one readable progress report for this rasterization request. */

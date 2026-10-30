@@ -14,7 +14,7 @@ The package owns Chromium selection, installation, frame capture and its disposa
 It does not select another renderer as a fallback. The separate
 `@hypit/provider-html-electron-local` package owns Electron execution and offers encoded visual output
 only. Both packages use a renderer-neutral local execution seam for staging, limits, progress and
-worker supervision; that seam does not make renderer choice a request field.
+worker supervision from `@hypit/html-render-local`; that seam does not make renderer choice a request field.
 
 ## Exact request subset
 
