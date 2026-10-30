@@ -1,5 +1,5 @@
 import { declarationField, type AuthorDeclaration, type AuthorDeclarationChild,
-  type AuthorDeclarationCompiler, type AuthorResolvedReference } from "@hypit/hypit/author";
+  type AuthorDeclarationBinding, type AuthorDeclarationCompiler, type AuthorResolvedReference } from "@hypit/hypit/author";
 import { blobTypes } from "@hypit/hypit/blob";
 import { isBlobRef, sameType, type TypeRef } from "@hypit/hypit/protocol";
 import { textTypes } from "@hypit/hypit/text";
@@ -81,9 +81,10 @@ const commonFields = [
 const outputs = Object.values(seedanceEndpoints).flatMap((endpoint) => [endpoint.draftType,
   ...Object.values(endpoint.mediaBindings).map((binding) => binding.type)]).concat(blobTypes.blob);
 
-function bindings(declaration: AuthorDeclaration) {
+function bindings(declaration: AuthorDeclaration): readonly AuthorDeclarationBinding[] {
   const id = literal(declaration, "id");
-  return [{ name: `${id}.video`, ref: { kind: "component-output" as const, component: id, output: "video" }, type: blobTypes.blob }];
+  return [{ name: `${id}.video`, ref: { kind: "component-output" as const, component: id, output: "video" }, type: blobTypes.blob,
+    retained: true }];
 }
 
 async function output(declaration: AuthorDeclaration,

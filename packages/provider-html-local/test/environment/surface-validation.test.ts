@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { setTimeout as delay } from "node:timers/promises";
 
-import { verifyCompositableSurfaceFile } from "../../src/surface-validation.js";
+import { verifyCompositableSurfaceFile, verifyPictureArtifactFile } from "../../src/surface-validation.js";
 import type { CompositableSurfaceRef } from "@hypit/media";
 
 const hasMediaTools = spawnSync("ffmpeg", ["-version"], { stdio: "ignore", windowsHide: true }).status === 0
@@ -82,8 +82,9 @@ setInterval(() => {}, 1000);
     assert.deepEqual([...await readFile(path)], [...bytes]);
     await writeFile(program, `#!${process.execPath}
 console.log(JSON.stringify(process.argv.includes('-show_pixel_formats')
- ? { pixel_formats: [{ name: 'rgb24', flags: { alpha: 0 } }] }
- : { streams: [{ codec_type: 'video', width: 1, height: 1, pix_fmt: 'rgb24', nb_read_frames: '1' }] }));
+ ? { pixel_formats: [{ name: 'rgb24', flags: { alpha: 0 }, components: [{ bit_depth: 8 }, { bit_depth: 8 }, { bit_depth: 8 }] }] }
+ : { streams: [{ codec_type: 'video', width: 1, height: 1, pix_fmt: 'rgb24', nb_read_frames: '1',
+   color_primaries: 'bt709', color_transfer: 'iec61966-2-1', color_space: 'gbr', color_range: 'pc' }] }));
 `);
     await verifyCompositableSurfaceFile({ surface: value, path, ffprobePath: program });
   } finally { await rm(directory, { recursive: true, force: true }); }
@@ -95,16 +96,20 @@ test("Surface file admission accepts matching still/video bytes and rejects cont
   const directory = await mkdtemp(join(tmpdir(), "hypit-surface-test-"));
   try {
     const opaquePath = join(directory, "opaque.png");
+    const untaggedPath = join(directory, "untagged.png");
     const alphaPath = join(directory, "alpha.png");
     const videoPath = join(directory, "video.mp4");
-    await ffmpeg(["-f", "lavfi", "-i", "color=c=red:s=8x6:d=1", "-frames:v", "1", opaquePath]);
-    await ffmpeg(["-f", "lavfi", "-i", "color=c=red@0.5:s=8x6:d=1,format=rgba", "-frames:v", "1", alphaPath]);
+    const srgb = "setparams=color_primaries=bt709:color_trc=iec61966-2-1:colorspace=gbr:range=pc";
+    await ffmpeg(["-f", "lavfi", "-i", "color=c=red:s=8x6:d=1", "-frames:v", "1", "-vf", srgb, opaquePath]);
+    await ffmpeg(["-f", "lavfi", "-i", "color=c=green:s=8x6:d=1", "-frames:v", "1", untaggedPath]);
+    await ffmpeg(["-f", "lavfi", "-i", "color=c=red@0.5:s=8x6:d=1,format=rgba", "-frames:v", "1", "-vf", srgb, alphaPath]);
     await ffmpeg([
       "-f", "lavfi", "-i", "color=c=blue:s=8x6:r=4:d=1",
-      "-frames:v", "4", "-c:v", "libx264", "-pix_fmt", "yuv420p", videoPath,
+      "-frames:v", "4", "-vf", "setparams=color_primaries=bt709:color_trc=bt709:colorspace=bt709:range=tv",
+      "-c:v", "libx264", "-pix_fmt", "yuv420p", videoPath,
     ]);
-    const [opaque, alpha, video] = await Promise.all([
-      readFile(opaquePath), readFile(alphaPath), readFile(videoPath),
+    const [opaque, untagged, alpha, video] = await Promise.all([
+      readFile(opaquePath), readFile(untaggedPath), readFile(alphaPath), readFile(videoPath),
     ]);
     const opaqueSurface = surface(opaque, {
       mediaType: "image/png", width: 8, height: 6, alphaMode: "opaque", timing: { kind: "still" },
@@ -112,14 +117,28 @@ test("Surface file admission accepts matching still/video bytes and rejects cont
     const alphaSurface = surface(alpha, {
       mediaType: "image/png", width: 8, height: 6, alphaMode: "straight", timing: { kind: "still" },
     });
-    const videoSurface = surface(video, {
+    const untaggedSurface = surface(untagged, {
+      mediaType: "image/png", width: 8, height: 6, alphaMode: "opaque", timing: { kind: "still" },
+    });
+    const videoSurface = { ...surface(video, {
       mediaType: "video/mp4", width: 8, height: 6, alphaMode: "opaque",
       timing: { kind: "frames", frameRate: { numerator: 4, denominator: 1 }, frameCount: 4 },
-    });
+    }), picture: { colorPrimaries: "bt709", colorTransfer: "bt709", colorMatrix: "bt709",
+      colorRange: "limited", bitDepth: 8, alphaMode: "opaque" } as const };
 
     await verifyCompositableSurfaceFile({ surface: opaqueSurface, path: opaquePath });
+    await verifyCompositableSurfaceFile({ surface: untaggedSurface, path: untaggedPath });
     await verifyCompositableSurfaceFile({ surface: alphaSurface, path: alphaPath });
     await verifyCompositableSurfaceFile({ surface: videoSurface, path: videoPath });
+    await verifyPictureArtifactFile({ picture: opaqueSurface.picture, path: opaquePath });
+    await verifyPictureArtifactFile({ picture: untaggedSurface.picture, path: untaggedPath });
+    await verifyPictureArtifactFile({ picture: { ...untaggedSurface.picture, alphaMode: "straight" },
+      path: untaggedPath });
+    await assert.rejects(verifyPictureArtifactFile({ picture: {
+      colorPrimaries: "bt709", colorTransfer: "bt709", colorMatrix: "bt709",
+      colorRange: "limited", bitDepth: 8, alphaMode: "opaque",
+    }, path: opaquePath }), /contradicts its declared picture interpretation/u,
+    "browser still admission must not treat broadly compatible metadata as author evidence");
     await verifyCompositableSurfaceFile({ surface: videoSurface, path: videoPath });
     await assert.rejects(verifyCompositableSurfaceFile({ surface: {
       ...videoSurface, artifact: { ...videoSurface.artifact, size: video.byteLength + 1 },

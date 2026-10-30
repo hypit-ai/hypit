@@ -1,6 +1,4 @@
 import {
-  BT2020_HLG10_OPAQUE_PICTURE,
-  BT2020_PQ10_OPAQUE_PICTURE,
   BT709_OPAQUE_PICTURE,
   sealMediaStreamSelection,
   verifyMediaInspection,
@@ -46,10 +44,8 @@ export function verifyMediaSelectionRequest(value: unknown): asserts value is Me
     "MediaSelectionRequest authority stream is disabled");
 }
 
-export function namedPictureInterpretation(name: "sdr-bt709" | "bt2100-pq10" | "bt2100-hlg10"): PictureInterpretation {
-  if (name === "sdr-bt709") return structuredClone(BT709_OPAQUE_PICTURE);
-  if (name === "bt2100-pq10") return structuredClone(BT2020_PQ10_OPAQUE_PICTURE);
-  return structuredClone(BT2020_HLG10_OPAQUE_PICTURE);
+export function namedPictureInterpretation(name: "sdr-bt709"): PictureInterpretation {
+  return structuredClone(BT709_OPAQUE_PICTURE);
 }
 
 function selectedPicture(video: MediaVideoStream, request: MediaSelectionRequest): PictureInterpretation {

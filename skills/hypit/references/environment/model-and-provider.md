@@ -16,9 +16,9 @@ Go to [service choice](#choose-the-practical-capability-path-with-the-user),
 Identify the next useful result and the material already available. A face replacement or motion
 reference task needs an implementation supporting that operation and its actual references.
 It does not automatically require transcription, an image-generation step or a local render browser.
-An accepted Output can be exported into the project and selected as an authored realization without
+An accepted Output can be exported into the project and referenced by its consumer without
 another model call; [Build planning](../production/builds.md#plan-the-selected-run) identifies the
-remaining requests for the current Invocation.
+remaining requests for the current explicit Targets.
 
 Keep these responsibilities clear:
 
@@ -143,7 +143,7 @@ hypit auth login hypihub.default --from /private/path/hypihub-key.txt
 Use the actual Endpoint name and selected Profile. Follow [credential setup](profile.md#put-secrets-behind-credential-references)
 for writable stores, environment credentials and read failures. When diagnosing access,
 `hypit doctor --endpoint hypihub.default` can inspect this route; `plan` and `pricing` concern the
-selected Invocation. Login, diagnosis and pricing do not submit generation.
+selected Targets. Login, diagnosis and pricing do not submit generation.
 
 ## Connect a service the user brings
 
@@ -215,8 +215,8 @@ Then use the declared acquisition method:
 
 ```bash
 hypit auth login videos.personal
-hypit plan ./production.svrun
-hypit pricing ./production.svrun
+hypit plan ./production.svml --target final.video
+hypit pricing ./production.svml --target final.video
 ```
 
 The example Provider has a writable key slot and no browser flow, so login securely prompts for the

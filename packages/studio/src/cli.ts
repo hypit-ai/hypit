@@ -5,7 +5,7 @@ export const cliCommandModules = [{
   id: "@hypit/studio",
   commands: ["studio", "snapshot"],
   writeRootHelp(io) {
-    io.write("\nStudio\n  studio --source <main.svml> --target <output>\n  studio --invocation <build.svrun>\n  snapshot --studio <url> ...\n  hypit studio --help or hypit snapshot --help\n");
+    io.write("\nStudio\n  studio --source <main.svml> --target <output>\n  snapshot --studio <url> ...\n  hypit studio --help or hypit snapshot --help\n");
   },
   async writeHelp(argv, io) {
     if ((argv[0] === "help" ? argv[1] : argv[0]) === "snapshot") {

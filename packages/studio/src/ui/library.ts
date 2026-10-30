@@ -6,7 +6,6 @@ import type {
   StudioTaskView,
 } from "../shared.js";
 import type { CodePane } from "./code.js";
-import { createArtifactName } from "./artifact-name.js";
 import { audioPreview } from "./material-preview.js";
 import { createSidebarPanel, sidebarItem } from "./sidebar-panel.js";
 import { icon } from "./icons.js";
@@ -69,14 +68,14 @@ function taskCard(task: StudioTaskView, selected: boolean, select: () => void, s
   const node = document.createElement("article");
   node.className = `task-card task-${task.status}${selected ? " selected" : ""}`;
   node.tabIndex = 0;
-  node.setAttribute("aria-label", task.title ?? stem(task.invocationSource ?? task.source));
+  node.setAttribute("aria-label", stem(task.source));
   node.addEventListener("click", select);
   node.addEventListener("keydown", (event) => {
     if (event.target === node && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); select(); }
   });
   node.dataset.taskId = task.id;
-  const source = task.invocationSource ?? task.source;
-  const title = task.title ?? stem(source);
+  const source = task.source;
+  const title = stem(source);
   const statuses: Record<StudioTaskView["status"], Message> = {
     queued: "common.queued", running: "common.running", waiting: "common.waiting", complete: "common.completed",
     failed: "common.failed", cancelled: "common.cancelled", "saving-result": "common.saving", attention: "common.needs-attention",
@@ -124,7 +123,7 @@ function taskCard(task: StudioTaskView, selected: boolean, select: () => void, s
     detailNode.addEventListener("click", (event) => { event.stopPropagation(); if (!node.classList.contains("selected")) select(); });
   }
   node.querySelector<HTMLButtonElement>(".task-open")!.addEventListener("click", (event) => { event.stopPropagation(); showMedia(); });
-  name.title = [title, source, task.id, task.note].filter((item) => item !== undefined).join("\n");
+  name.title = [title, source, task.id].join("\n");
   return node;
 }
 
@@ -142,11 +141,11 @@ function sizeThumbnail(media: HTMLElement, width: number, height: number): void 
   media.style.height = `${100 * height / longest}%`;
 }
 
-function artifactCard(artifact: StudioArtifactView, open: (artifact: StudioArtifactView) => void, renamed: (artifact: StudioArtifactView) => void): HTMLElement {
+function artifactCard(artifact: StudioArtifactView, open: (artifact: StudioArtifactView) => void): HTMLElement {
   const kind = artifactKind(artifact.mediaType);
   const link = document.createElement("div");
   link.tabIndex = 0;
-  link.className = `artifact-card artifact-${artifact.mediaType.split("/")[0]}${artifact.highlighted ? " artifact-highlighted" : ""}`;
+  link.className = `artifact-card artifact-${artifact.mediaType.split("/")[0]}`;
   const query = new URLSearchParams({
     build: artifact.build,
     output: artifact.output,
@@ -156,9 +155,7 @@ function artifactCard(artifact: StudioArtifactView, open: (artifact: StudioArtif
   link.dataset.artifactId = artifact.id;
   link.dataset.build = artifact.build;
   link.dataset.output = artifact.output;
-  link.dataset.displayName = artifact.displayName ?? "";
-  link.dataset.nameEditable = String(artifact.nameEditable === true);
-  const title = artifact.displayName ?? artifact.output;
+  const title = artifact.output;
   link.innerHTML = `
     <div class="artifact-preview">
       <span class="artifact-glyph">${icon(kind.icon)}</span>
@@ -169,30 +166,23 @@ function artifactCard(artifact: StudioArtifactView, open: (artifact: StudioArtif
   preview.setAttribute("role", "button");
   uiAttr(preview, "aria-label", "library.preview-name", { name: title });
   preview.addEventListener("click", () => open(artifact));
-  const name = createArtifactName({
-    name: title,
-    editable: artifact.nameEditable === true,
-    select: () => { if (!link.classList.contains("selected")) open(artifact); },
-    async save(displayName) {
-      const response = await fetch("/__studio/artifact-name", {
-        method: "PUT", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ build: artifact.build, output: artifact.output, displayName }),
-      });
-      const result = await response.json() as { displayName?: string; error?: string };
-      if (!response.ok || typeof result.displayName !== "string") throw new Error(result.error ?? t("library.name-failed"));
-      artifact = { ...artifact, displayName: result.displayName };
-      link.dataset.displayName = result.displayName;
-      renamed(artifact);
-      uiAttr(preview, "aria-label", "library.preview-name", { name: result.displayName });
-      preview.title = [result.displayName, ...preview.title.split("\n").slice(1)].join("\n");
-      return result.displayName;
-    },
+  const copy = document.createElement("div");
+  copy.className = "artifact-copy";
+  const name = document.createElement("button");
+  name.type = "button";
+  name.className = "artifact-name";
+  const nameText = document.createElement("span");
+  nameText.className = "artifact-name-text";
+  nameText.textContent = title;
+  name.append(nameText);
+  name.addEventListener("click", (event) => {
+    event.stopPropagation();
+    if (!link.classList.contains("selected")) open(artifact);
   });
-  link.append(name.element);
+  copy.append(name);
+  link.append(copy);
   link.addEventListener("keydown", (event) => {
-    if (event.target instanceof HTMLTextAreaElement) return;
-    if (event.key === "F2") { event.preventDefault(); name.edit(); }
-    else if (event.key === "Enter" && event.target === link) { event.preventDefault(); open(artifact); }
+    if (event.key === "Enter" && event.target === link) { event.preventDefault(); open(artifact); }
   });
   if (artifact.mediaType.startsWith("image/")) {
     const image = document.createElement("img");
@@ -238,13 +228,12 @@ function artifactCard(artifact: StudioArtifactView, open: (artifact: StudioArtif
     new Date(artifact.createdAt).toLocaleString(),
     `${artifact.build}/${artifact.filePath}`,
     ...artifact.origins.map((origin) =>
-      `${origin.invocationSource ?? origin.source} · ${origin.build} · ${origin.output}`),
-    artifact.buildNote,
+      `${origin.source} · ${origin.build} · ${origin.output}`),
   ].filter((item) => item !== undefined).join("\n");
   return link;
 }
 
-export function createLibraryPane(code: CodePane, openArtifact: (artifact: StudioArtifactView) => void, renamedArtifact: (artifact: StudioArtifactView) => void): LibraryPane {
+export function createLibraryPane(code: CodePane, openArtifact: (artifact: StudioArtifactView) => void): LibraryPane {
   const element = document.createElement("section");
   element.className = "library";
   element.innerHTML = `
@@ -354,7 +343,7 @@ export function createLibraryPane(code: CodePane, openArtifact: (artifact: Studi
     sourceList.replaceChildren(...files.map((file) => {
       const button = sidebarItem({
         label: `${stem(file.path)} ${file.language.toUpperCase()}`,
-        icon: file.language === "svrun" ? "run" : file.language === "svs" ? "tune" : "code",
+        icon: file.language === "svs" ? "tune" : "code",
         selected: file.path === selectedSource,
         select: () => { selectedSource = file.path; renderSources(); },
       });
@@ -365,9 +354,7 @@ export function createLibraryPane(code: CodePane, openArtifact: (artifact: Studi
 
   const renderTaskContext = (): void => {
     for (const node of Array.from(element.querySelectorAll<HTMLElement>("[data-task-context]"))) {
-      const title = selectedTask === undefined
-        ? undefined
-        : selectedTask.title ?? stem(selectedTask.invocationSource ?? selectedTask.source);
+      const title = selectedTask === undefined ? undefined : stem(selectedTask.source);
       if (selectedTask !== undefined && node.dataset.taskId === selectedTask.id
         && node.querySelector(".task-context-name span")?.textContent === title) continue;
       node.replaceChildren();
@@ -378,9 +365,9 @@ export function createLibraryPane(code: CodePane, openArtifact: (artifact: Studi
       const back = document.createElement("button");
       back.type = "button"; back.className = "task-context-name";
       back.innerHTML = "<span></span>";
-      back.querySelector("span")!.textContent = task.title ?? stem(task.invocationSource ?? task.source);
+      back.querySelector("span")!.textContent = stem(task.source);
       uiAttr(back, "title", "library.task-return", {
-        name: task.title ?? stem(task.invocationSource ?? task.source),
+        name: stem(task.source),
       });
       back.addEventListener("click", () => {
         taskFilter = "all";
@@ -464,17 +451,10 @@ export function createLibraryPane(code: CodePane, openArtifact: (artifact: Studi
     const entries: HTMLElement[] = shown.map((artifact) => {
       const held = cards.get(artifact.id);
       cards.delete(artifact.id);
-      if (held !== undefined && held.dataset.build === artifact.build && held.dataset.output === artifact.output
-        && held.dataset.displayName === (artifact.displayName ?? "") && held.dataset.nameEditable === String(artifact.nameEditable === true)) return held;
+      if (held !== undefined && held.dataset.build === artifact.build && held.dataset.output === artifact.output) return held;
       const previousVideo = held?.querySelector("video");
       if (previousVideo != null) { previousVideo.removeAttribute("src"); previousVideo.load(); }
-      return artifactCard(artifact, openArtifact, (updated) => {
-        const current = libraries.artifacts;
-        if (current !== undefined) libraries.artifacts = { ...current,
-          artifacts: current.artifacts.map((item) => item.id === updated.id ? { ...item, displayName: updated.displayName! } : item),
-        };
-        renamedArtifact(updated);
-      });
+      return artifactCard(artifact, openArtifact);
     });
     for (const card of cards.values()) {
       const video = card.querySelector("video");

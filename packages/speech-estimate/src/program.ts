@@ -34,9 +34,9 @@ function looksSpanish(text: string): boolean {
 
 export function detectSpeechEstimateLanguage(text: string): ResolvedSpeechEstimateLanguage {
   const han = (text.match(/\p{Script=Han}/gu) ?? []).length;
-  const kana = (text.match(/[\u3040-\u30ff]/gu) ?? []).length;
+  const kana = (text.match(/[\u3040-\u30fa\u30fc-\u30ff]/gu) ?? []).length;
   const ascii = (text.match(/[A-Za-z]/gu) ?? []).length;
-  if (kana > Math.max(han, ascii / 4)) return "ja";
+  if (kana > 0 && kana * 4 >= han && kana + han > ascii / 4) return "ja";
   if (han > ascii / 4) return "zh";
   if (looksSpanish(text)) return "es";
   return "en";

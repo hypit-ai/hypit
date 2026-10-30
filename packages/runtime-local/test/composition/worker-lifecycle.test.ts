@@ -18,8 +18,7 @@ import { pathToFileURL } from "node:url";
 import test from "node:test";
 
 import { FileResourceStore } from "../../src/resource-store.js";
-import { FileBuildResultRepository } from "@hypit/result/node";
-import type { BuildResultRepository } from "@hypit/result";
+import { FileBuildResultStore } from "@hypit/result/runtime-storage/node";
 import { EnvironmentCredentialStore } from "@hypit/credential-store-env";
 import { defineEndpoint } from "@hypit/endpoint";
 import type { AsyncEndpoint, EndpointInstance } from "@hypit/endpoint";
@@ -53,7 +52,7 @@ import {
   durableBuildRequest,
   finishClaimedBuild,
   projectRuntimeFixture,
-  publication,
+  resultIntent,
   resultDestination,
   runFixture,
 } from "./local-scenario.js";
@@ -62,7 +61,7 @@ test("project local Runtime advances, polls and cancels work with replaceable pa
   const directory = await mkdtemp(join(tmpdir(), "hypit-local-"));
   const buildFixture = createGreetingBuildFixture();
   const initial = buildFixture.state;
-  const publishedOutputs = [{
+  const retainedOutputs = [{
     name: "final.document",
     ref: { kind: "logical-output" as const, id: "document" },
   }, {
@@ -74,7 +73,8 @@ test("project local Runtime advances, polls and cancels work with replaceable pa
   }];
   const authoring = {
     sourcePath: join(directory, "main.svml"),
-    publication: publication(publishedOutputs, buildFixture),
+    targets: ["final.document"],
+    intent: resultIntent(retainedOutputs, buildFixture),
   };
   let promptCalls = 0;
   let requestCalls = 0;
@@ -185,7 +185,7 @@ test("project local Runtime advances, polls and cancels work with replaceable pa
     const clientStatus = await firstRuntime.inspect("bld_20260902T120000001Z_0000000001");
     assert.equal(clientStatus, undefined);
     assert.deepEqual((await firstRuntime.activity()).builds, []);
-    const buildResult = await new FileBuildResultRepository(join(directory, "results"))
+    const buildResult = await new FileBuildResultStore(join(directory, "results"))
       .read("bld_20260902T120000001Z_0000000001");
     assert.deepEqual(Object.keys(buildResult?.outputs ?? {}).sort(), [
       "final.document",
@@ -222,7 +222,7 @@ test("project local Runtime advances, polls and cancels work with replaceable pa
 
 test("an immediate Command left in started state fails its Build without invoking the Producer again", async () => {
   const directory = await mkdtemp(join(tmpdir(), "hypit-local-command-receipt-"));
-  const buildFixture = createGreetingBuildFixture({ generationRealization: "placeholder" });
+  const buildFixture = createGreetingBuildFixture({ generationStep: "placeholder" });
   const initial = buildFixture.state;
   let calls = 0;
   const components: { producers: ProducerPackage; refinements?: RefinementPackage } = {
@@ -250,7 +250,7 @@ test("an immediate Command left in started state fails its Build without invokin
     const terminal = await finishClaimedBuild(runtime);
     assert.equal(terminal.outcome, "failed");
     assert.equal(calls, 0);
-    const failed = await new FileBuildResultRepository(join(directory, "results"))
+    const failed = await new FileBuildResultStore(join(directory, "results"))
       .read("bld_20260902T120000008Z_0000000001");
     assert.equal(failed?.outcome, "failed");
     assert.match(failed?.failure ?? "", /stopped before its result was stored/u);

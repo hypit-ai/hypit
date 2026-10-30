@@ -1,5 +1,4 @@
 import { existsSync, readFileSync } from "node:fs";
-import { relative } from "node:path";
 
 import { markupDeclarationAuthorFrontendId } from "@hypit/hypit/markup";
 import type { CliTransientExecution as RuntimeHostTransientExecution } from "@hypit/hypit/cli";
@@ -9,18 +8,17 @@ import type { ServedFile } from "./compile.js";
 import type { StudioDomain } from "./domain.js";
 import { resolveStudioProjection } from "./projection.js";
 import { renderStudioHtmlProgram } from "./preview/render.js";
-import type { StudioPlan } from "./invocation.js";
+import type { StudioPlan } from "./build-plan.js";
 import type { StudioSnapshot } from "./shared.js";
 import type { StudioCompanionRegistry } from "./studio-registry.js";
 import { snapshot } from "./snapshot.js";
-import { inspectStudioInvocation } from "./studio-preflight.js";
+import { inspectStudioPlan } from "./studio-preflight.js";
 import type { StudioSourceFile } from "./parameters.js";
 import type { BuildView } from "@hypit/hypit/kernel";
 import type { Placement } from "./observe.js";
 
 function sourceFiles(plan: StudioPlan): readonly StudioSourceFile[] {
   const paths = [
-    ...(plan.invocationSource === undefined ? [] : [plan.invocationSource]),
     plan.authorSource,
     ...plan.source.compiled.closure.units.map((unit) => unit.id),
   ];
@@ -28,9 +26,7 @@ function sourceFiles(plan: StudioPlan): readonly StudioSourceFile[] {
     if (!existsSync(path)) return [];
     try {
       const unit = plan.source.compiled.closure.units.find((candidate) => candidate.id === path);
-      const language = path === plan.invocationSource
-        ? "svrun" as const
-        : unit?.frontend === recipeFrontendId
+      const language = unit?.frontend === recipeFrontendId
           ? "svs" as const
           : unit?.frontend === markupDeclarationAuthorFrontendId
             ? "svml" as const
@@ -40,7 +36,7 @@ function sourceFiles(plan: StudioPlan): readonly StudioSourceFile[] {
         path,
         text: readFileSync(path, "utf8"),
         language,
-        role: path === plan.invocationSource ? "invocation" : path === plan.authorSource ? "author" : "dependency",
+        role: path === plan.authorSource ? "author" : "dependency",
         ...(unit === undefined ? {} : { imports: unit.imports }),
       }];
     } catch {
@@ -72,7 +68,7 @@ export async function readStudioSession(input: {
   readonly transientExecution?: RuntimeHostTransientExecution;
 }): Promise<StudioSession> {
   const source = input.plan.source;
-  const inspection = inspectStudioInvocation(input.registry, source, input.plan);
+  const inspection = inspectStudioPlan(input.registry, source, input.plan);
   const outputRefs = [
     inspection.filmComposition,
     inspection.timeRef,
@@ -104,10 +100,7 @@ export async function readStudioSession(input: {
       revision: input.revision,
       path: input.sourcePath ?? input.plan.authorSource,
       text,
-      invocation: {
-        ...(input.plan.invocationSource === undefined
-          ? {}
-          : { source: relative(input.workspaceRoot, input.plan.invocationSource) }),
+      selection: {
         targets: input.plan.targets,
       },
       canvas: built.canvas,

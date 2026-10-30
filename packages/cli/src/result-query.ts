@@ -1,10 +1,10 @@
 import { resolve } from "node:path";
 
 import { buildResultOutput } from "@hypit/result";
-import type { BuildResultRepository, FinishedBuildResultManifest } from "@hypit/result";
+import type { BuildResult, BuildResultHistory } from "@hypit/result";
 
 export type BuildOutputHistoryPage = {
-  readonly results: readonly FinishedBuildResultManifest[];
+  readonly results: readonly BuildResult[];
   /** Read older Builds strictly before this id. */
   readonly next?: string;
 };
@@ -14,7 +14,7 @@ export type BuildOutputHistoryPage = {
  * request-local scan over the Repository's own chronological cursor; it creates no index or history.
  */
 export async function browseBuildOutputHistory(
-  repository: BuildResultRepository,
+  repository: BuildResultHistory,
   request: {
     readonly projectRoot: string;
     readonly output: string;
@@ -26,14 +26,14 @@ export async function browseBuildOutputHistory(
   const source = request.source === undefined ? undefined : resolve(request.source);
   const pageSize = Math.max(32, request.limit);
   let before = request.before;
-  const matches: FinishedBuildResultManifest[] = [];
+  const matches: BuildResult[] = [];
   while (matches.length < request.limit) {
     const page = await repository.browse({ limit: pageSize, ...(before === undefined ? {} : { before }) });
     if (page.results.length === 0) return { results: matches };
     for (let index = 0; index < page.results.length; index += 1) {
       const manifest = page.results[index]!;
       const sameSource = source === undefined
-        || resolve(request.projectRoot, manifest.sourceId) === source;
+        || resolve(request.projectRoot, manifest.sourcePath) === source;
       if (sameSource && buildResultOutput(manifest, request.output) !== undefined) matches.push(manifest);
       if (matches.length === request.limit) {
         const hasOlder = index < page.results.length - 1 || page.next !== undefined;

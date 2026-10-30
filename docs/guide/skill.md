@@ -52,7 +52,7 @@ The project keeps the work in ordinary files:
 - Reference notes explain the source video's structure and locatable details.
 - Brief and Treatment describe the user's goal and the Agent's creative answer.
 - `.svml` describes the Script, media, components, and composition; `.svs` holds reusable Recipes.
-- `.svrun` selects the Author Source, target Outputs, and any transient realization override for one execution.
+- Each command explicitly selects the Author Source and target Outputs for one execution.
 - Build Results retain produced Outputs and the facts of that execution.
 
 Project components are part of making a video. They live with the project and can express a new
@@ -62,10 +62,10 @@ these relationships, while purely visual animation can use an authored clock. A 
 published as an ordinary versioned package under its owner's scope.
 
 When revising the work, export suitable Outputs from earlier Results into the project and select them
-in the Author Source, including useful media produced before a Build failed. A new Build executes the revised Invocation. Studio displays the
+in the Author Source, including useful media produced before a Build failed. A new Build executes the revised Source and explicit Targets. Studio displays the
 selected work and writes supported edits back to its Source files; the Agent reviews the actual
 finished video against the intended result.
 
 [Quickstart](../quickstart.md) walks through making a video with your Agent.
-[Invocations and Builds](../quickstart/run.md) explains execution and accepting Outputs into the project.
+[Targets and Builds](../quickstart/run.md) explains execution and accepting Outputs into the project.
 [Studio](../quickstart/preview.md) explains interactive preview and editing.

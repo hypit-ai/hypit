@@ -17,6 +17,7 @@ import {
   mediaOperationsMarkupDeclarations,
   mediaOperationsModuleRef,
   mediaOperationsTypes,
+  preparedMediaAuthorDeclaration,
   transformMediaAuthorDeclaration,
 } from "../src/index.js";
 
@@ -116,4 +117,28 @@ test("nested Rate syntax reaches one exact retime profile through the public Mar
   assert.equal(program?.type.name, mediaOperationsTypes.transformProgram.name);
   assert.deepEqual((program?.value as { operations?: readonly { kind: string }[] }).operations?.map((operation) => operation.kind),
     ["retime-profile"]);
+});
+
+test("Prepare reads an explicit picture literal through the same typed declaration boundary as other fields", async () => {
+  const source: AuthorResolvedReference = {
+    path: "asset.video",
+    ref: { kind: "record", id: "asset.video" },
+    type: blobTypes.blob,
+  };
+  const result = await compileMarkupDeclaration({
+    source: `<mediaop:Prepare id="prepared" source={asset.video} video="primary-moving" audio="none" span-authority="video" picture="sdr-bt709"/>`,
+    module: mediaOperationsModuleRef,
+    alias: "mediaop",
+    compilers: [preparedMediaAuthorDeclaration],
+    syntax: mediaOperationsMarkupDeclarations,
+    references: new Map([[source.path, source]]),
+  });
+  const request = result.records.find((record) => record.id === "prepared.request");
+  assert.deepEqual((request?.value as { picture?: unknown }).picture, {
+    mode: "explicit",
+    interpretation: {
+      colorPrimaries: "bt709", colorTransfer: "bt709", colorMatrix: "bt709",
+      colorRange: "limited", bitDepth: 8, alphaMode: "opaque",
+    },
+  });
 });

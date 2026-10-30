@@ -47,7 +47,7 @@ export function createVideoWorkspace(options: Pick<CliCompilerOptions,
   });
 }
 
-/** Assemble the Markup compiler Host from only the packages selected for this invocation. */
+/** Assemble the Markup compiler Host from only the packages selected for this compilation. */
 export function createVideoCompiler(options: CliCompilerOptions) {
   const modules = new ModulePackageRegistry();
   const declarations = new AuthorDeclarationRegistry();

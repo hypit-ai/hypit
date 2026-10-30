@@ -244,7 +244,7 @@ but the wake time never passes the original `operationTimeoutMs` deadline. Crede
 other non-retryable errors still end the attempt. Known job IDs and credential references remain
 available in Result receipts; a timeout with no ID is recorded as such. A job can
 be inspected at `/jobs/<id>` and its generated assets at `/jobs/<id>/assets` on the selected API base.
-The next production attempt uses a new Invocation and Build. Runtime bindings never switch from a user's
+The next production attempt uses a new Build. Runtime bindings never switch from a user's
 own Provider to HypiHub after a key, quota or transport failure.
 
 `uploadConcurrency` bounds whole files inside the Provider transport. Uploader instances in the same

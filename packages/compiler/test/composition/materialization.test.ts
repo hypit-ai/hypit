@@ -4,10 +4,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { InvocationCompiler } from "@hypit/compiler";
+import { BuildCompiler } from "@hypit/compiler";
 import { isBlobRef } from "@hypit/protocol";
-import { InvocationFrontendRegistry } from "@hypit/invocation";
-import { invocationMarkupFrontend } from "@hypit/markup/invocation";
 
 import { assetCompiler, readAttachment } from "../compiler-scenario.js";
 
@@ -52,10 +50,9 @@ test("an installed package declaration can contribute embedded bytes without an 
     : undefined, attachment?.blob.resource);
 });
 
-test("Invocation preset compilation retains embedded Author attachments for later Runtime staging", async () => {
-  const root = await mkdtemp(join(tmpdir(), "hypit-run-author-attachments-"));
+test("targeted Author compilation retains embedded attachments for later Runtime staging", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hypit-build-author-attachments-"));
   const authorFile = join(root, "main.svml");
-  const invocationFile = join(root, "build.svrun");
   await writeFile(authorFile, `<?svml using="@hypit/markup@1"?>
   <svml>
     <import as="asset" from="example.asset-lab@1"/>
@@ -63,20 +60,11 @@ test("Invocation preset compilation retains embedded Author attachments for late
     <asset:Asset id="embedded" src="package:example.asset-lab/embedded.bin"/>
     <lab:Result id="hello"/>
   </svml>`, "utf8");
-  await writeFile(invocationFile, `<?svml using="@hypit/markup/invocation@1"?>
-  <svrun version="1">
-    <author source="./main.svml"/>
-    <target output="hello.result"/>
-  </svrun>`, "utf8");
-
   const authorCompiler = assetCompiler({ root });
-  const frontends = new InvocationFrontendRegistry();
-  frontends.register(invocationMarkupFrontend);
-  const invocationCompiler = new InvocationCompiler({
+  const buildCompiler = new BuildCompiler({
     authorCompiler,
-    frontends,
   });
-  const compiled = await invocationCompiler.compilePresetEntry(invocationFile);
+  const compiled = await buildCompiler.compileAuthorEntry(authorFile, { targets: ["hello.result"] });
   assert.deepEqual(compiled.attachments.map((item) => item.blob), compiled.author.attachments.map((item) => item.blob));
   assert.deepEqual(await readAttachment(compiled.attachments[0]), new Uint8Array([8, 6, 7, 5, 3, 0, 9]));
 });

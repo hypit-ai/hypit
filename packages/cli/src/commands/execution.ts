@@ -1,10 +1,9 @@
 import { resolve } from "node:path";
 
 import { readExecutionLog } from "@hypit/runtime";
-import type { BuildResultManifest, BuildResultRepository } from "@hypit/result";
+import type { BuildResult, BuildResultHistory } from "@hypit/result";
 
 import type { CliCommand, ExecutionCommand } from "../command.js";
-import { commandHint } from "../command-hint.js";
 import { activityObservationKey, buildProgressLines, buildProgressView, observeBuildView } from "../observation.js";
 import type { CliIo } from "../output.js";
 import type { CliRuntimeHost } from "../runtime-port.js";
@@ -14,7 +13,7 @@ import type { CliBuildStatusView } from "../view.js";
 import type { OperationalWriter } from "./types.js";
 
 type OpenProjectResults = () => Promise<{
-  readonly repository: BuildResultRepository;
+  readonly repository: BuildResultHistory;
   close(): void | Promise<void>;
 }>;
 
@@ -32,8 +31,7 @@ function statusDetailLines(build: CliBuildStatusView | null): string[] {
 }
 
 export function isExecutionCommand(args: CliCommand): args is ExecutionCommand {
-  return args.command === "logs" || args.command === "status" || args.command === "cancel" || args.command === "activity"
-    || (args.command === "result" && (args.action === "finish" || args.action === "discard"));
+  return args.command === "logs" || args.command === "status" || args.command === "cancel" || args.command === "activity";
 }
 
 /** Inspect or control accepted Build work. Observation never owns execution. */
@@ -128,7 +126,6 @@ export async function runExecutionCommand(input: {
       : outcome === "failed" ? "error"
         : outcome === "cancelled" ? "warning" : "success", [
       ["Build", args.build],
-      ...(build?.title === undefined ? [] : [["Title", build.title] as const]),
       ...(outcome === undefined ? [] : [["Outcome", outcome] as const]),
       ...(!finished && result !== undefined ? [["Result", "open"] as const] : []),
       ...(build?.targets?.length ? [["Targets", build.targets.join(", ")] as const] : []),
@@ -144,20 +141,6 @@ export async function runExecutionCommand(input: {
     throw new Error(`${args.command} requires a Runtime; run hypit runtime init, select one with runtime use, or pass --runtime <profile>`);
   }
   const selectedHost = await runtimeHost(runtimeProfile);
-
-  if (args.command === "result" && args.action === "discard") {
-    const resultControl = await selectedHost.openResultControl();
-    const discarded = await resultControl.discardSubmission(args.build)
-      .finally(async () => await resultControl.close());
-    write({ format: "hypit.cli-result-discard@1", build: args.build, discarded }, discarded
-      ? "Incomplete Build discarded"
-      : "Incomplete Build not found", discarded ? "success" : "warning", [
-        ["Build", args.build],
-        ["State", discarded ? "discarded" : "missing"],
-      ], discarded ? ["The incomplete submission was removed."] : []);
-    if (!discarded) io.setExitCode?.(1);
-    return;
-  }
 
   const runtime = await selectedHost.openControl({ readOnly: args.command !== "cancel" });
   try {
@@ -221,7 +204,7 @@ export async function runExecutionCommand(input: {
 
     if (args.command === "status") {
       let view = await runtime.inspect(args.build);
-      let result: BuildResultManifest | undefined;
+      let result: BuildResult | undefined;
       let resultReadError: string | undefined;
       let openedResults: Awaited<ReturnType<OpenProjectResults>> | undefined;
       if (args.watch && view !== undefined && view.issue === undefined) {
@@ -233,7 +216,7 @@ export async function runExecutionCommand(input: {
             const report = io.writeProgress ?? (args.presentation.json ? undefined : io.write);
             for (const line of buildProgressLines(progress, {
               verbose: args.presentation.verbose,
-              limit: args.limit,
+              limit: 20,
             })) report?.(`${line}\n`);
           },
         });
@@ -288,7 +271,6 @@ export async function runExecutionCommand(input: {
                 ? "success"
                 : args.watch && activity !== undefined ? "warning" : "info", [
           ["Build", args.build],
-          ...(build?.title === undefined ? [] : [["Title", build.title] as const]),
           ...(attention !== undefined ? [
             ["Execution", build?.work.outcome ?? build?.work.state ?? "unknown"] as const,
             ["Result", build?.result.state ?? "missing"] as const,
@@ -305,52 +287,6 @@ export async function runExecutionCommand(input: {
             ...(attention.action === undefined ? [] : [`Action     ${attention.action}`]),
           ]));
       if (!found || issue !== undefined || resultReadError !== undefined || outcome === "failed") io.setExitCode?.(1);
-      return;
-    }
-
-    if (args.command === "result") {
-      const before = await runtime.inspect(args.build);
-      if (before !== undefined && before.activity !== "saving-result") {
-        throw new Error(`Build ${args.build} is still ${before.activity}; there is no Result write to finish`);
-      }
-      if (before !== undefined && before.issue === undefined) {
-        const execution = await selectedHost.executionStatus();
-        if (execution.state === "running") {
-          throw new Error(`Build ${args.build} Result is currently being written by the Runtime Worker`);
-        }
-      }
-      const resultControl = await selectedHost.openResultControl();
-      const finished = await resultControl.finishResult(args.build)
-        .finally(async () => await resultControl.close());
-      if (finished === undefined) {
-        const openedResults = await openProjectResults();
-        const existing = await openedResults.repository.read(args.build)
-          .finally(async () => await openedResults.close());
-        if (existing?.outcome === undefined) {
-          write({ format: "hypit.cli-result-finish@1", build: args.build, found: false },
-            "Result cannot be finished", "warning", [["Build", args.build]],
-            ["No decided Result write exists for this Build."]);
-          io.setExitCode?.(1);
-          return;
-        }
-        write({ format: "hypit.cli-result-finish@1", build: args.build, outcome: existing.outcome },
-          "Result already finished", "info", [["Build", args.build], ["Outcome", existing.outcome]]);
-        return;
-      }
-      write({
-        format: "hypit.cli-result-finish@1",
-        build: args.build,
-        outcome: finished.outcome,
-        ...(finished.issue === undefined ? {} : { attention: {
-          message: finished.issue.message,
-          action: commandHint(["result", "finish", args.build], commandScope),
-        } }),
-      }, finished.issue === undefined ? "Result finished" : "Result still needs attention",
-      finished.issue === undefined ? "success" : "error", [
-        ["Build", args.build],
-        ["Outcome", finished.outcome],
-      ], finished.issue === undefined ? [] : [`Attention  ${finished.issue.message}`]);
-      if (finished.issue !== undefined) io.setExitCode?.(1);
       return;
     }
 

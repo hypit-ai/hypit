@@ -15,7 +15,7 @@ or [updates](#let-the-installation-channel-own-updates) for the current question
 | --- | --- | --- |
 | Hypit Skill | Production judgment and navigation | The Skill's own installation channel |
 | Executable Distribution, `@hypit/hypit` | CLI and product-selected default packages | Its npm/release installation |
-| Video project | Sources, saved Invocations, assets, project packages, selected Profile and Results | The project's files and package lock |
+| Video project | Sources, assets, project packages, selected Profile and Results | The project's files and package lock |
 
 An installed Skill does not install the executable. Installing the executable does not connect an
 account, supply model credits, or prepare every browser and model. Updating either does not itself
@@ -97,11 +97,11 @@ keep project components with their project, or explicitly install an owner's ver
 sharing is needed. Its ordinary package manifest and lockfile select the implementation. Update that
 dependency deliberately; a Hypit or Skill update does not upgrade every project's component packages.
 
-Preserve project assets, Results and authored realization choices during an update. A newer executable is
+Preserve project assets, Results and authored consumer references during an update. A newer executable is
 not a reason to regenerate accepted material. [Output reuse](../production/authoring.md#reuse-produced-work-explicitly)
 owns choosing compatible produced values, including useful Outputs from failed Builds.
 If a release changes authoring requirements, apply the documented project changes and check the
-affected Source and Invocation.
+affected Source and explicit Targets.
 
 ## Let the installation channel own updates
 

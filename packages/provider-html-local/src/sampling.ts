@@ -1,12 +1,12 @@
-import type { HtmlVideoSource } from "@hypit/html-program";
+import type { HtmlArtifactUsage, HtmlVideoSource } from "@hypit/html-program";
 import type { Clock, FrameSpan } from "@hypit/timeline";
 import {
   addExactTemporalValues,
-  evaluateTemporalMap,
+  createTemporalMapEvaluator,
   exactTemporalRational,
   exactTemporalValueFromFrames,
-  temporalMapDirectionAt,
 } from "@hypit/temporal";
+import type { TemporalMapEvaluator } from "@hypit/temporal";
 import { FrameSpanIndex } from "./frame-span-index.js";
 import { assert } from "./process.js";
 
@@ -19,23 +19,27 @@ type SourceFrames = {
 
 export type VideoSlot = FrameSpan & {
   readonly id: string;
-  readonly documentPath: readonly string[];
   readonly elementId: string;
   readonly src: string;
   readonly sourceKey: string;
+  readonly usage: HtmlArtifactUsage;
 } & (
   | {
       readonly kind: "media";
       readonly streamIndex: number;
       readonly picture: Extract<HtmlVideoSource, { readonly kind: "media" }>["source"]["interpretation"]["picture"];
+      readonly codedWidth: number;
+      readonly codedHeight: number;
+      readonly sampleAspectRatio: { readonly numerator: number; readonly denominator: number };
       readonly rotation: 0 | 90 | 180 | 270;
       readonly presentationStart: ExactValue;
-      readonly sampling: Extract<HtmlVideoSource, { readonly kind: "media" }>["sampling"];
+      readonly evaluateSampling: TemporalMapEvaluator;
       readonly programClock: Clock;
     }
   | {
       readonly kind: "surface";
       readonly streamIndex: 0;
+      readonly picture: Extract<HtmlVideoSource, { readonly kind: "surface" }>["picture"];
       readonly sourceFrame: Rational;
       readonly sourceRate: Rational;
       readonly sourceFps: { readonly num: number; readonly den: number };
@@ -68,32 +72,47 @@ export function videoSlots(
   return sources.map((source) => {
     if (source.kind === "media") {
       const src = pathFor(source.source.source.resource);
+      const picture = structuredClone(source.source.interpretation.picture);
       return {
         kind: "media",
         id: source.id,
-        documentPath: [...source.documentPath],
         elementId: source.elementId,
+        usage: structuredClone(source.usage),
         src,
-        sourceKey: `${src}\u0000${source.source.streamIndex}`,
+        // Two author preparations may select the same container stream with a
+        // different resolved picture interpretation. They are distinct decoder
+        // inputs even when their bytes and stream index happen to coincide.
+        sourceKey: `${src}\u0000${source.source.streamIndex}\u0000${JSON.stringify({
+          picture,
+          codedWidth: source.source.interpretation.codedWidth,
+          codedHeight: source.source.interpretation.codedHeight,
+          sampleAspectRatio: source.source.interpretation.sampleAspectRatio,
+          rotation: source.source.interpretation.rotationDegrees,
+        })}`,
         streamIndex: source.source.streamIndex,
-        picture: structuredClone(source.source.interpretation.picture),
+        picture,
+        codedWidth: source.source.interpretation.codedWidth,
+        codedHeight: source.source.interpretation.codedHeight,
+        sampleAspectRatio: { ...source.source.interpretation.sampleAspectRatio },
         rotation: source.source.interpretation.rotationDegrees,
         presentationStart: structuredClone(source.source.presentationStart),
-        sampling: structuredClone(source.sampling),
+        evaluateSampling: createTemporalMapEvaluator(source.sampling),
         programClock: structuredClone(programClock),
         startFrame: source.startFrame,
         endFrameExclusive: source.endFrameExclusive,
       };
     }
     const src = pathFor(source.artifactId);
+    const picture = structuredClone(source.picture);
     return {
       kind: "surface",
       id: source.id,
-      documentPath: [...source.documentPath],
       elementId: source.elementId,
+      usage: structuredClone(source.usage),
       src,
-      sourceKey: `${src}\u00000`,
+      sourceKey: `${src}\u00000\u0000${JSON.stringify(picture)}`,
       streamIndex: 0,
+      picture,
       startFrame: source.startFrame,
       endFrameExclusive: source.endFrameExclusive,
       sourceFrame: { numerator: BigInt(source.sourceFrame.numerator), denominator: BigInt(source.sourceFrame.denominator) },
@@ -103,35 +122,45 @@ export function videoSlots(
   });
 }
 
-function exactSourceTimestampAt(slot: Extract<VideoSlot, { readonly kind: "media" }>, frame: number): Rational | undefined {
+function usedAt(usage: HtmlArtifactUsage, frame: number): boolean {
+  if (usage.kind === "always") return true;
+  if (usage.kind === "never") return false;
+  let low = 0;
+  let high = usage.spans.length;
+  while (low < high) {
+    const middle = Math.floor((low + high) / 2);
+    if (usage.spans[middle]!.endFrameExclusive <= frame) low = middle + 1;
+    else high = middle;
+  }
+  const span = usage.spans[low];
+  return span !== undefined && frame >= span.startFrame;
+}
+
+function exactSourceSampleAt(slot: Extract<VideoSlot, { readonly kind: "media" }>, frame: number): {
+  readonly timestamp: Rational;
+  readonly direction: -1 | 0 | 1;
+} | undefined {
   const localFrame = frame - slot.startFrame;
   assert(Number.isSafeInteger(localFrame) && localFrame >= 0, "HTML Program frame lies outside its source occurrence");
-  const mapped = evaluateTemporalMap(slot.sampling, exactTemporalValueFromFrames(localFrame, slot.programClock));
+  const mapped = slot.evaluateSampling(exactTemporalValueFromFrames(localFrame, slot.programClock), "after");
   if (mapped === undefined) return undefined;
-  return exactTemporalRational(addExactTemporalValues(slot.presentationStart, mapped));
-}
-
-export function sourceDirectionAt(slot: Extract<VideoSlot, { readonly kind: "media" }>, frame: number): -1 | 0 | 1 | undefined {
-  const localFrame = frame - slot.startFrame;
-  assert(Number.isSafeInteger(localFrame) && localFrame >= 0, "HTML Program frame lies outside its source occurrence");
-  return temporalMapDirectionAt(slot.sampling, exactTemporalValueFromFrames(localFrame, slot.programClock));
-}
-
-export function sourceTimestampAt(slot: Extract<VideoSlot, { readonly kind: "media" }>, frame: number): number | undefined {
-  const timestamp = exactSourceTimestampAt(slot, frame);
-  if (timestamp === undefined) return undefined;
-  const result = Number(timestamp.numerator) / Number(timestamp.denominator);
-  assert(Number.isFinite(result), "HTML Program source time exceeds finite arithmetic");
-  return result;
+  return {
+    timestamp: exactTemporalRational(addExactTemporalValues(slot.presentationStart, mapped.position)),
+    direction: mapped.sourceSide === "before" ? -1 : 1,
+  };
 }
 
 export function sourceFrameAt(slot: VideoSlot, frame: number, frames?: SourceFrames): number | undefined {
+  assert(Number.isSafeInteger(frame) && frame >= slot.startFrame && frame < slot.endFrameExclusive,
+    "HTML Program frame lies outside its source occurrence");
+  if (!usedAt(slot.usage, frame)) return undefined;
   if (slot.kind === "media") {
     assert(frames !== undefined && frames.timestamps.length > 0,
       `HTML renderer has no timestamp index for source ${slot.sourceKey}`);
-    const timestamp = exactSourceTimestampAt(slot, frame);
-    if (timestamp === undefined) return undefined;
-    const reverse = sourceDirectionAt(slot, frame) === -1;
+    const sample = exactSourceSampleAt(slot, frame);
+    if (sample === undefined) return undefined;
+    const timestamp = sample.timestamp;
+    const reverse = sample.direction === -1;
     let low = 0, high = frames.timestamps.length;
     while (low < high) {
       const middle = Math.floor((low + high) / 2);
@@ -166,16 +195,17 @@ export function sourceWindows(
     const first = Math.max(range.startFrame, slot.startFrame);
     const last = Math.min(range.endFrameExclusive, slot.endFrameExclusive) - 1;
     if (last < first) continue;
-    let source = sources.get(slot.sourceKey);
-    if (source === undefined) {
-      source = { src: slot.src, streamIndex: slot.streamIndex, windows: [] };
-      sources.set(slot.sourceKey, source);
-    }
     // A Map may wrap, hold, reverse or contain gaps; endpoint interpolation
     // cannot prove which decoded ordinals the selected Program frames need.
     for (let frame = first; frame <= last; frame++) {
       const sourceFrame = sourceFrameAt(slot, frame, frames.get(slot.sourceKey));
-      if (sourceFrame !== undefined) source.windows.push({
+      if (sourceFrame === undefined) continue;
+      let source = sources.get(slot.sourceKey);
+      if (source === undefined) {
+        source = { src: slot.src, streamIndex: slot.streamIndex, windows: [] };
+        sources.set(slot.sourceKey, source);
+      }
+      source.windows.push({
         startFrame: sourceFrame,
         endFrameExclusive: sourceFrame + 1,
       });

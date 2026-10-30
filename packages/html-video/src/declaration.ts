@@ -52,6 +52,7 @@ function outputBinding(component: string): AuthorDeclarationBinding {
     name: `${component}.video`,
     ref: { kind: "component-output", component, output: "video" },
     type: blobTypes.blob,
+    retained: true,
   };
 }
 

@@ -1,5 +1,4 @@
 import type {
-  OutputRoot,
   AuthorGraph,
   GraphValueRef,
   LinkedProgram,
@@ -46,16 +45,11 @@ function normalizeRef(ref: GraphValueRef): GraphValueRef {
   return { kind: "operation-result", operation: ref.operation };
 }
 
-function normalizeRoot(root: OutputRoot): OutputRoot {
-  if (root.kind === "record") return { kind: "record", id: root.id };
-  return { kind: "operation-result", operation: root.operation };
-}
-
 function normalizeOutput(output: LogicalOutput): LogicalOutput {
   return {
     id: output.id,
     type: output.type,
-    primary: normalizeRoot(output.primary),
+    result: { kind: "operation-result", operation: output.result.operation },
   };
 }
 
@@ -180,30 +174,12 @@ function verifyOperation(program: LinkedProgram, graph: AuthorGraph, operation: 
   }
 }
 
-export function verifyOutputRoot(
+export function verifyLogicalOutput(
   program: LinkedProgram,
   graph: AuthorGraph,
   output: LogicalOutput,
-  root: OutputRoot,
 ): void {
-  if (root.kind === "record") {
-    const record = programRecords(program).get(root.id);
-    invariant(
-      record !== undefined,
-      "UNKNOWN_OUTPUT_RECORD",
-      output.id + " references unknown authored Record " + root.id,
-      output.id,
-    );
-    invariant(
-      sameType(record.type, output.type),
-      "OUTPUT_RESULT_TYPE_MISMATCH",
-      output.id + " declares " + typeKey(output.type)
-        + " but Record " + record.id + " is " + typeKey(record.type),
-      output.id,
-    );
-    return;
-  }
-  const supplied = operationResultType(program, resolveOperation(graph, root.operation));
+  const supplied = operationResultType(program, resolveOperation(graph, output.result.operation));
   invariant(
     sameType(supplied, output.type),
     "OUTPUT_RESULT_TYPE_MISMATCH",
@@ -243,6 +219,6 @@ export function verifyAuthorGraph(program: LinkedProgram, graph: AuthorGraph): v
   for (const operation of graph.operations) verifyOperation(program, graph, operation);
 
   for (const output of graph.outputs) {
-    verifyOutputRoot(program, graph, output, output.primary);
+    verifyLogicalOutput(program, graph, output);
   }
 }

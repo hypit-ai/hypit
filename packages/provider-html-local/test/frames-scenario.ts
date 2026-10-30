@@ -4,7 +4,7 @@ import { sealTimeline } from "@hypit/timeline";
 
 export function htmlFrameFixture() {
   const space = sealTimeline({ id: "space", frameCount: 12, frameRate: { numerator: 12, denominator: 1 } });
-  return compileHtmlProgram(sealComposition({ id: "frames", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 96, height: 64, clearColor: "#000000" }, root: { members: [{ kind: "track", id: "motion", track: sealPresentVisualTrack({ id: "motion", timelineId: space.id, presents: [{ id: "reveal",
+  return compileHtmlProgram(sealComposition({ id: "frames", visual: { canvas: { width: 96, height: 64, clearColor: "#000000" }, root: { members: [{ kind: "track", id: "motion", track: sealPresentVisualTrack({ id: "motion", timelineId: space.id, presents: [{ id: "reveal",
       span: { startFrame: 3, endFrameExclusive: 12 }, root: htmlVisualElement({ id: "program",
         kind: "program", style: [{ name: "position", value: "absolute" }, { name: "inset", value: 0 }],
         slots: [],

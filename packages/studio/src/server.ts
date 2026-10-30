@@ -12,8 +12,8 @@ import type { StudioBuildLibrary } from "./build-library.js";
 import type { ServedFile } from "./compile.js";
 import type { StudioDomain } from "./domain.js";
 import type { StudioCompanionRegistry } from "./studio-registry.js";
-import { loadStudioPlan } from "./invocation.js";
-import type { StudioInvocationSelection } from "./invocation.js";
+import { loadStudioPlan } from "./build-plan.js";
+import type { StudioTargetSelection } from "./build-plan.js";
 import { allowsStudioMutation } from "./mutation-origin.js";
 import { parameterAuthorValue, parameterOption, serializeParameterValue, serializeAttributeGroup, validateParameterValue } from "./parameter-values.js";
 import { readStudioSession } from "./session.js";
@@ -30,7 +30,7 @@ import { createSourceWatch } from "./source-watch.js";
 
 export type StudioPluginOptions = {
   readonly source: string;
-  readonly selection: StudioInvocationSelection;
+  readonly selection: StudioTargetSelection;
   readonly domain: StudioDomain;
   readonly registry: StudioCompanionRegistry;
   readonly workspaceRoot: string;
@@ -94,7 +94,7 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
   let timer: ReturnType<typeof setTimeout> | undefined;
   let mutating = false;
   let publishing = 0;
-  let publication: Promise<void> = Promise.resolve();
+  let revisionQueue: Promise<void> = Promise.resolve();
   let requestedRevision = 0;
   let currentSource = options.source;
   let allowedSourceFiles = new Set<string>();
@@ -118,7 +118,7 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
 
   const publishRevision = async (attempt: number, notify: boolean): Promise<void> => {
     try {
-      // Recompile the Author Source and explicit Invocation for every revision.
+      // Recompile the Author Source and explicit Target selection for every revision.
       const plan = await loadStudioPlan({
         selection: options.selection,
         domain: options.domain,
@@ -127,12 +127,10 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
       if (attempt !== requestedRevision) return;
       currentSource = plan.authorSource;
       sourceWatch.replace([
-        ...(plan.invocationSource === undefined ? [] : [resolve(plan.invocationSource)]),
         resolve(plan.authorSource),
         ...plan.source.compiled.closure.units.map(unit => unit.id),
       ]);
       allowedSourceFiles = new Set([
-        ...(plan.invocationSource === undefined ? [] : [plan.invocationSource]),
         plan.authorSource,
         ...plan.source.compiled.closure.units.map((unit) => unit.id).filter((path) => existsSync(path)),
       ].map((path) => resolve(path)));
@@ -175,17 +173,17 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
   // Source changes supersede queued revisions; readers share the in-flight compilation.
   const publish = (attempt: number, notify = true): Promise<void> => {
     publishing += 1;
-    const next = publication.then(async () => {
+    const next = revisionQueue.then(async () => {
       if (attempt === requestedRevision) await publishRevision(attempt, notify);
     }).finally(() => { publishing -= 1; });
-    publication = next;
+    revisionQueue = next;
     return next;
   };
 
   const ensureSnapshot = async (): Promise<void> => {
     if (snapshot !== undefined || failure !== undefined) return;
     if (publishing === 0) await publish(++requestedRevision);
-    else await publication;
+    else await revisionQueue;
   };
 
   const schedule = (): void => {
@@ -479,7 +477,6 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
     configureServer(value) {
       server = value;
       sourceWatch.replace([
-        ...(options.selection.kind === "preset" ? [resolve(options.selection.source)] : []),
         resolve(currentSource),
       ]);
       value.middlewares.use((request, response, next) => {
@@ -535,32 +532,6 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
               json(response, conflict(error) ? 409 : 500, { error: error instanceof Error ? error.message : String(error) });
             } finally {
               if (acquired) mutating = false;
-            }
-          })();
-          return;
-        }
-        if (request.method === "PUT" && url.pathname === "/__studio/artifact-name") {
-          if (!allowsStudioMutation(request.headers)) {
-            json(response, 403, { error: "Cross-origin Studio mutations are prohibited." });
-            return;
-          }
-          void (async () => {
-            try {
-              const chunks: Buffer[] = [];
-              for await (const chunk of request) chunks.push(Buffer.from(chunk));
-              const body = JSON.parse(Buffer.concat(chunks).toString("utf8")) as {
-                build?: unknown; output?: unknown; displayName?: unknown;
-              };
-              if (typeof body.build !== "string" || typeof body.output !== "string"
-                || (typeof body.displayName !== "string" && body.displayName !== null)) {
-                json(response, 400, { error: "Expected Build, Output and displayName" });
-                return;
-              }
-              if (options.buildLibrary === undefined) throw new Error("Result Repository is unavailable");
-              const displayName = await options.buildLibrary.renameArtifact(body.build, body.output, body.displayName);
-              json(response, 200, { displayName: displayName ?? null });
-            } catch (error) {
-              json(response, 422, { error: error instanceof Error ? error.message : String(error) });
             }
           })();
           return;
@@ -663,10 +634,8 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
             return;
           }
           const before = url.searchParams.get("before") ?? undefined;
-          const invocationSource = url.searchParams.get("invocationSource") ?? undefined;
           const build = url.searchParams.get("build") ?? undefined;
           void readLibrary({ section, ...(media === undefined ? {} : { media }), ...(before === undefined ? {} : { before }),
-            ...(invocationSource === undefined ? {} : { invocationSource }),
             ...(build === undefined ? {} : { build }) }).then(
             (view) => json(response, 200, view),
             (error) => json(response, 500, { error: error instanceof Error ? error.message : String(error) }),

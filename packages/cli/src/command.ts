@@ -1,5 +1,4 @@
 import type { CliOutputOptions } from "./output.js";
-import type { InvocationRequestOverride } from "@hypit/invocation";
 
 /**
  * Root command names owned by the domain-neutral long-compilation CLI.
@@ -18,7 +17,6 @@ export const genericCliCommandNames = [
   "builds",
   "history",
   "inspect",
-  "get",
   "logs",
   "status",
   "activity",
@@ -47,23 +45,21 @@ type SourceOptions = ProjectOption & {
   readonly limit: number;
 };
 
-type InvocationOptions = {
+type TargetOptions = {
   readonly targets: readonly string[];
-  readonly overrides: readonly InvocationRequestOverride[];
 };
 
 export type AuthorCommand =
   | (CommandBase & SourceOptions & { readonly command: "check" })
-  | (CommandBase & SourceOptions & InvocationOptions & RuntimeOption & { readonly command: "plan" })
-  | (CommandBase & Omit<SourceOptions, "limit"> & InvocationOptions & RuntimeOption & {
+  | (CommandBase & SourceOptions & TargetOptions & RuntimeOption & { readonly command: "plan" })
+  | (CommandBase & Omit<SourceOptions, "limit"> & TargetOptions & RuntimeOption & {
       readonly command: "pricing";
       readonly limit?: number;
     })
-  | (CommandBase & SourceOptions & InvocationOptions & RuntimeOption & {
+  | (CommandBase & SourceOptions & TargetOptions & RuntimeOption & {
       readonly command: "build";
       readonly follow: boolean;
       readonly maxWaitMs?: number;
-      readonly title?: string;
     });
 
 export type ProjectResultCommand =
@@ -86,22 +82,11 @@ export type ProjectResultCommand =
       readonly limit: number;
     })
   | (CommandBase & ProjectOption & {
-      readonly command: "get";
+      readonly command: "result";
+      readonly action: "export";
       readonly build: string;
       readonly outputName: string;
       readonly destination: string;
-    })
-  | (CommandBase & ProjectOption & {
-      readonly command: "result";
-      readonly action: "edit";
-      readonly build: string;
-      readonly title?: string;
-      readonly note?: string;
-      readonly highlightedOutputs: readonly string[];
-      readonly clearTitle: boolean;
-      readonly clearNote: boolean;
-      readonly clearHighlights: boolean;
-      readonly limit: number;
     });
 
 export type ExecutionCommand =
@@ -111,7 +96,6 @@ export type ExecutionCommand =
       readonly build: string;
       readonly watch: boolean;
       readonly maxWaitMs?: number;
-      readonly limit: number;
     })
   | (CommandBase & RuntimeOption & {
       readonly command: "activity";
@@ -122,11 +106,6 @@ export type ExecutionCommand =
       readonly command: "cancel";
       readonly build: string;
       readonly reason?: string;
-    })
-  | (CommandBase & RuntimeOption & {
-      readonly command: "result";
-      readonly action: "finish" | "discard";
-      readonly build: string;
     });
 
 export type AuthCommand =

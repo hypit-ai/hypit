@@ -37,7 +37,7 @@ A Profile chooses the route; an error on that route does not authorize spending 
 
 For an existing installation, inspect the selected Profile and credential status first. A starter
 Profile supplies configuration examples; choose the services you want before connecting accounts or
-preparing their dependencies. [Invocations and Builds](../quickstart/run.md) shows the commands.
+preparing their dependencies. [Targets and Builds](../quickstart/run.md) shows the commands.
 
 ## Use your own model deployment
 

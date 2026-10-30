@@ -1,8 +1,23 @@
-import { canonicalize } from "@hypit/hypit/protocol";
+import { assertBlobRef, canonicalize, canonicalStringify } from "@hypit/hypit/protocol";
 import type { BlobRef, CanonicalValue } from "@hypit/hypit/protocol";
 import type { VisualProgramElement } from "@hypit/composition";
+import { verifyPictureInterpretation } from "@hypit/media";
+import type { PictureInterpretation } from "@hypit/media";
 
 export const HTML_VISUAL_FORMAT = "hypit.html-visual@1" as const;
+
+export type HtmlVisualDependency =
+  | {
+      /** Non-presented package bytes, such as a font or data table. */
+      readonly kind: "data";
+      readonly artifact: BlobRef;
+    }
+  | {
+      /** One browser-presented still picture with author-owned colour meaning. */
+      readonly kind: "picture";
+      readonly artifact: BlobRef;
+      readonly picture: PictureInterpretation;
+    };
 
 export type HtmlVisual = {
   /** HTML fragment. {{child-id}} inserts an owned VisualElement, including frame-sampled video. */
@@ -12,10 +27,57 @@ export type HtmlVisual = {
   /** Function body with (root, data, context) arguments; returns a synchronous render(localFrame) function. */
   readonly setup?: string;
   readonly data?: CanonicalValue;
+  /** Package-owned resource meaning. Timed media must instead be an owned VisualElement slot. */
+  readonly dependencies: readonly HtmlVisualDependency[];
 };
 
-export function htmlVisual(value: HtmlVisual, artifacts: readonly BlobRef[] = []): VisualProgramElement["program"] {
-  return { format: HTML_VISUAL_FORMAT, payload: canonicalize(value) as VisualProgramElement["program"]["payload"], artifacts: [...artifacts] };
+export type HtmlVisualAuthoring = Omit<HtmlVisual, "dependencies"> & {
+  readonly dependencies?: readonly HtmlVisualDependency[];
+};
+
+function assertExactKeys(value: object, keys: readonly string[], label: string): void {
+  if (canonicalStringify(Object.keys(value).sort()) !== canonicalStringify([...keys].sort())) {
+    throw new Error(`${label} has unknown or missing fields.`);
+  }
+}
+
+function assertDependency(value: unknown, index: number): asserts value is HtmlVisualDependency {
+  const label = `HTML visual dependency ${index}`;
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(`${label} must be a typed dependency.`);
+  }
+  const dependency = value as Partial<HtmlVisualDependency>;
+  if (dependency.kind === "data") {
+    assertExactKeys(value, ["artifact", "kind"], label);
+    const artifact = dependency.artifact;
+    assertBlobRef(artifact, `${label}.artifact`);
+    if (["audio/", "image/", "video/"].some((prefix) => artifact.mediaType.startsWith(prefix))) {
+      throw new Error(`${label} cannot present media as data; use a picture dependency or an owned VisualElement.`);
+    }
+    return;
+  }
+  if (dependency.kind === "picture") {
+    assertExactKeys(value, ["artifact", "kind", "picture"], label);
+    assertBlobRef(dependency.artifact, `${label}.artifact`);
+    if (!dependency.artifact.mediaType.startsWith("image/")) {
+      throw new Error(`${label}.artifact must declare an image media type.`);
+    }
+    verifyPictureInterpretation(dependency.picture, `${label}.picture`);
+    return;
+  }
+  throw new Error(`${label} must declare data or picture use.`);
+}
+
+export function htmlVisual(value: HtmlVisualAuthoring): VisualProgramElement["program"] {
+  const payload = canonicalize({ ...value, dependencies: value.dependencies ?? [] }) as VisualProgramElement["program"]["payload"];
+  const dependencies = (payload as unknown as HtmlVisual).dependencies;
+  const program = {
+    format: HTML_VISUAL_FORMAT,
+    payload,
+    artifacts: dependencies.map((dependency) => dependency.artifact),
+  };
+  readHtmlVisual(program);
+  return program;
 }
 
 export function readHtmlVisual(program: VisualProgramElement["program"]): HtmlVisual {
@@ -23,10 +85,32 @@ export function readHtmlVisual(program: VisualProgramElement["program"]): HtmlVi
     throw new Error(`HTML renderer does not support visual program format ${program.format}.`);
   }
   const value = program.payload as unknown as HtmlVisual;
-  if (value === null || typeof value !== "object" || typeof value.html !== "string"
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("HTML visual payload must be an object.");
+  }
+  const expectedKeys = ["html", "dependencies",
+    ...(value.css === undefined ? [] : ["css"]),
+    ...(value.setup === undefined ? [] : ["setup"]),
+    ...(value.data === undefined ? [] : ["data"])];
+  assertExactKeys(value, expectedKeys, "HTML visual payload");
+  if (typeof value.html !== "string"
     || (value.css !== undefined && typeof value.css !== "string")
-    || (value.setup !== undefined && typeof value.setup !== "string")) {
+    || (value.setup !== undefined && typeof value.setup !== "string")
+    || !Array.isArray(value.dependencies)) {
     throw new Error("HTML visual requires HTML and optional CSS and setup source.");
+  }
+  for (const [index, dependency] of value.dependencies.entries()) assertDependency(dependency, index);
+  if (new Set(value.dependencies.map((dependency) => dependency.artifact.resource)).size !== value.dependencies.length) {
+    throw new Error("HTML visual dependencies must not repeat an Artifact resource.");
+  }
+  if (!Array.isArray(program.artifacts) || program.artifacts.length !== value.dependencies.length) {
+    throw new Error("HTML visual carrier Artifacts do not match its typed dependencies.");
+  }
+  for (const [index, dependency] of value.dependencies.entries()) {
+    assertBlobRef(program.artifacts[index], `HTML visual carrier Artifact ${index}`);
+    if (canonicalStringify(program.artifacts[index]) !== canonicalStringify(dependency.artifact)) {
+      throw new Error("HTML visual carrier Artifacts do not match its typed dependencies.");
+    }
   }
   return value;
 }
@@ -52,7 +136,7 @@ export function htmlVisualScript(entries: readonly {
   readonly id: string;
   readonly startFrame: number;
   readonly durationFrames: number;
-  readonly program: HtmlVisual;
+  readonly program: Pick<HtmlVisual, "data" | "html" | "setup">;
 }[], context: { readonly width: number; readonly height: number } = { width: 0, height: 0 }): string {
   return `(() => {
     const fail = error => { window.__hypitHtmlVisualError = String(error?.stack || error); };

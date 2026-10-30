@@ -7,13 +7,13 @@ A 137-second Chinese explainer built from 17 accepted performance clips, recorde
 From this production directory:
 
 ```sh
-hypit check runs/render.svrun
-hypit plan runs/render.svrun
-hypit studio --invocation runs/render.svrun
+hypit check authors/main.svml
+hypit plan authors/main.svml --target complete-film.video
+hypit studio --source authors/main.svml --target complete-film.video
 ```
 
 The accepted performances and supporting media are ordinary project assets selected by the Author Source.
-The `.svrun` file is only a saved Invocation target. Read the plan before submitting a Build; speech evidence is
+Read the plan before submitting a Build; speech evidence is
 still produced by the explicitly authored transcription declarations unless the Source is changed to
 use project-owned transcript evidence.
 
@@ -30,7 +30,7 @@ use project-owned transcript evidence.
 | Which accepted performance file is used | `authors/assets.svml` and `authors/main.svml` |
 
 Generated-material and preparation relations remain explicit in the entry Source. Imported Sources own
-Script, raw resources and direction; the saved Invocation only selects targets.
+Script, raw resources and direction; the current command selects Targets.
 
 ## Components
 
@@ -38,7 +38,9 @@ Script, raw resources and direction; the saved Invocation only selects targets.
 
 ## Export
 
-`runs/render.svrun` targets the complete film. `runs/export-parts.svrun` targets five consecutive ranges for machines with limited temporary disk. Each Build is a fresh execution attempt; both files are target-only Invocation presets. The local profile currently requests eight rendering workers.
+Select `complete-film.video` to render the complete film. For machines with limited temporary disk,
+select `export-part-1.video` through `export-part-5.video` in one command by repeating `--target`.
+Each Build is a fresh execution attempt. The local profile currently requests eight rendering workers.
 
 After exporting the five named Outputs with `hypit get`, join their video streams without re-encoding:
 

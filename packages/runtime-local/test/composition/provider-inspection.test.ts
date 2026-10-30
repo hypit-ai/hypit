@@ -9,7 +9,7 @@ import {
   createRuntimeEndpointAdapterFacet,
   RuntimeAdapterRegistry,
 } from "@hypit/runtime-local/extension";
-import { FileBuildResultRepository } from "@hypit/result/node";
+import { FileBuildResultStore } from "@hypit/result/runtime-storage/node";
 import { MemoryResourceStore, ProducerRegistry } from "@hypit/executor";
 import { defineEndpoint } from "@hypit/endpoint";
 import { credentialRef } from "@hypit/runtime";
@@ -26,7 +26,6 @@ import {
 import {
   createRuntimeControlFromConfig,
   createRuntimeFromConfig,
-  createRuntimeResultControlFromConfig,
   describeRuntimeConfigEndpoints,
   doctorProjectBuildResultRepository,
   doctorRuntimeConfig,

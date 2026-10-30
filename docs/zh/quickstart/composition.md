@@ -105,15 +105,8 @@ Stack 从透明画面开始，在父 Scope 中按自身声明位置作为一张�
 ```
 
 渲染器编译视觉贡献、捕获所需帧、渲染 AudioTrack，并复用封装为交付文件。
-`{final.video}` 是普通 Resource-backed `Blob`，通常也是 Invocation Target。
-
-```svml
-<?svml using="@hypit/markup/invocation@1"?>
-<svrun version="1">
-  <author source="./main.svml"/>
-  <target output="final.video"/>
-</svrun>
-```
+`{final.video}` 是普通 Resource-backed `Blob`，通常也是 Build Target：
+`hypit build main.svml --target final.video`。
 
 ## 渲染帧区间
 
@@ -159,7 +152,7 @@ Timeline 不要求语音或媒体：
 
 ```bash
 hypit check main.svml
-hypit plan build.svrun
+hypit plan main.svml --target final.video
 ```
 
 `check` 在不调用外部服务的情况下验证导入、类型和引用。`plan` 显示所选 Target 与外部工作。付费执行前应检查该计划。

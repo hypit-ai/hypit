@@ -33,9 +33,8 @@ The package-owned `film` declaration compiler validates an imported generic SVS 
 passes the Timeline directly, type-checks each `<film:Track source={...}/>` reference and generates
 the finite fold. Visual Tracks require `id`; Audio Tracks reject it. Canvas is the only
 dimension truth, Timeline is the only time-range truth, and FilmProgram owns only assembly
-identity, clear color and its selected working picture. Omitting `picture` preserves the SDR sRGB
-working picture; a Film that needs another space references an ordinary `@hypit/media`
-`WorkingPictureSpec`. Film does not name HDR formats or renderers.
+identity, clear color and its visual/audio plan.
+Film has no author-selectable color-space field and does not name delivery formats or renderers.
 Its recursive Track/Stack/Process grammar is expressed by declaration-local child groups in the syntax-neutral
 Author shape. Markup contributes only the `Film` spelling; direct callers and other Frontends use the
 same compiler. Film consumes a completed Timeline and has no runtime dependency on Temporal or its
@@ -48,7 +47,7 @@ For example, after the named inputs are declared:
 
 ```svml
 <film:Film id="main" canvas={vertical.canvas} timeline={speech.timeline}
-  appearance={recipes.film.vertical} picture={hdr-working}>
+  appearance={recipes.film.vertical}>
   <film:Track id="picture" source={picture.visual}/>
   <film:Track source={mix.audio}/>
   <film:Stack id="treated">

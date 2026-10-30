@@ -1,25 +1,24 @@
 import { fileReferenceIdentity } from "@hypit/result/node";
 import { randomUUID } from "node:crypto";
 import { lstat, mkdir, rename, rm, writeFile } from "node:fs/promises";
-import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 
 import type {
   BuildResultFileRef,
-  BuildResultRepository,
+  BuildResultHistory,
   RepositoryBuildResultOutput,
+  ResultOutputExporter,
 } from "@hypit/result";
 import { buildResultOutput } from "@hypit/result";
+import type { BlobRef, CanonicalValue, Value, ValuePath } from "@hypit/protocol";
+import { sameType } from "@hypit/protocol";
 
 export type BuildResultExport = {
   readonly build: string;
   readonly output: string;
   readonly type: RepositoryBuildResultOutput["type"];
-  readonly representation: "inline" | "file" | "value-document";
+  readonly representation: "inline" | "file" | "structured";
   readonly path: string;
-};
-
-type ValueDocumentResultOutput = Omit<RepositoryBuildResultOutput, "value"> & {
-  readonly value: Extract<RepositoryBuildResultOutput["value"], { readonly kind: "value" }>;
 };
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -33,14 +32,6 @@ async function pathExists(path: string): Promise<boolean> {
   });
 }
 
-function containedPath(root: string, path: string): string {
-  const target = resolve(root, path);
-  const relation = relative(root, target);
-  assert(relation.length > 0 && relation !== ".." && !relation.startsWith(`..${sep}`) && !isAbsolute(relation),
-    `Result file ${path} leaves export directory ${root}`);
-  return target;
-}
-
 async function writeStream(
   path: string,
   input: AsyncIterable<Uint8Array>,
@@ -50,7 +41,7 @@ async function writeStream(
 }
 
 async function openResultFile(
-  repository: BuildResultRepository,
+  repository: BuildResultHistory,
   build: string,
   file: BuildResultFileRef,
 ): Promise<AsyncIterable<Uint8Array>> {
@@ -75,64 +66,73 @@ async function exportFile(
   }
 }
 
-async function exportValueDocument(
-  repository: BuildResultRepository,
+function inflateValueDocument(
+  repository: BuildResultHistory,
   build: string,
-  resolvedOutput: ValueDocumentResultOutput,
-  target: string,
-): Promise<void> {
-  assert(!await pathExists(target), `Export destination ${target} already exists`);
-  await mkdir(dirname(target), { recursive: true });
-  const temporary = join(dirname(target), `.${basename(target)}.part-${randomUUID()}`);
-  try {
-    await mkdir(temporary);
-    const copied = new Map<string, BuildResultFileRef>();
-    const paths = new Set<string>();
-    const bindings = [];
-    for (const binding of resolvedOutput.value.document.resources) {
-      const file = binding.file;
-      const identity = fileReferenceIdentity(build, file);
-      let local = copied.get(identity);
-      if (local === undefined) {
-        let path = file.path;
-        const name = basename(path);
-        let index = copied.size + 1;
-        while (paths.has(path) || path === "value.json") path = `files/import-${index++}/${name}`;
-        paths.add(path);
-        local = { kind: "build-file", path, size: file.size, mediaType: file.mediaType };
-        copied.set(identity, local);
-        await writeStream(containedPath(temporary, path), await openResultFile(repository, build, file));
-      }
-      bindings.push({ at: binding.at, file: local });
+  document: Extract<RepositoryBuildResultOutput["value"], { readonly kind: "value" }>["document"],
+): { readonly value: Value; readonly openResource: (blob: BlobRef) => Promise<AsyncIterable<Uint8Array> | undefined> } {
+  const files = new Map<string, BuildResultFileRef>();
+  const bindings = new Map(document.resources.map((binding, index) => {
+    const resource = `res_result_export_${String(index + 1)}`;
+    files.set(resource, binding.file);
+    return [JSON.stringify(binding.at), {
+      kind: "blob" as const,
+      resource,
+      size: binding.file.size,
+      mediaType: binding.file.mediaType,
+    }];
+  }));
+  const inflate = (value: CanonicalValue, at: ValuePath): Value => {
+    const blob = bindings.get(JSON.stringify(at));
+    if (blob !== undefined) return blob;
+    if (Array.isArray(value)) return value.map((child, index) => inflate(child, [...at, index]));
+    if (value !== null && typeof value === "object") {
+      return Object.fromEntries(Object.entries(value).map(([name, child]) => [name, inflate(child, [...at, name])]));
     }
-    await writeFile(
-      join(temporary, "value.json"),
-      `${JSON.stringify({ ...resolvedOutput.value.document, resources: bindings }, null, 2)}\n`,
-      { flag: "wx" },
-    );
-    await rename(temporary, target);
-  } catch (error) {
-    await rm(temporary, { recursive: true, force: true });
-    throw error;
-  }
+    return value;
+  };
+  return {
+    value: inflate(document.value, []),
+    async openResource(blob) {
+      const file = files.get(blob.resource);
+      return file === undefined ? undefined : await repository.openFile(build, file);
+    },
+  };
 }
 
-/** Export one resolved public Output into an explicit user-owned local destination. */
+/** Export one resolved retained Output into an explicit user-owned local destination. */
 export async function exportBuildResultOutput(
-  repository: BuildResultRepository,
+  repository: BuildResultHistory,
   build: string,
   output: string,
   destination: string,
+  resolveExporter?: (type: RepositoryBuildResultOutput["type"]) => Promise<ResultOutputExporter | undefined>,
 ): Promise<BuildResultExport> {
   const manifest = await repository.read(build);
   if (manifest === undefined) throw new Error(`Build Result ${build} does not exist`);
-  const publishedOutput = buildResultOutput(manifest, output);
-  if (publishedOutput === undefined) throw new Error(`Build ${build} has no Output ${output}`);
+  const retainedOutput = buildResultOutput(manifest, output);
+  if (retainedOutput === undefined) throw new Error(`Build ${build} has no retained Output ${output}`);
   const resolvedOutput = await repository.resolve(build, output);
   if (resolvedOutput === undefined) throw new Error(`Build ${build} Output ${output} cannot be resolved`);
   const target = resolve(destination);
   if (resolvedOutput.value.kind === "value") {
-    await exportValueDocument(repository, build, { ...resolvedOutput, value: resolvedOutput.value }, target);
+    const exporter = await resolveExporter?.(resolvedOutput.type);
+    if (exporter === undefined) {
+      throw new Error(`Retained Output ${output} has no package-owned exporter for its Type`);
+    }
+    assert(sameType(exporter.type, resolvedOutput.type),
+      `Retained Output ${output} resolved an exporter for a different Type`);
+    const inflated = inflateValueDocument(repository, build, resolvedOutput.value.document);
+    const exported = await exporter.export({
+      name: output,
+      type: resolvedOutput.type,
+      value: inflated.value,
+      openResource: inflated.openResource,
+    });
+    await exportFile(target, async (temporary) => {
+      if (exported.bytes instanceof Uint8Array) await writeFile(temporary, exported.bytes, { flag: "wx" });
+      else await writeStream(temporary, exported.bytes);
+    });
   } else if (resolvedOutput.value.kind === "build-file") {
     const resource = resolvedOutput.value;
     await exportFile(target, async (temporary) => {
@@ -150,10 +150,10 @@ export async function exportBuildResultOutput(
   return {
     build,
     output,
-    type: publishedOutput.type,
+    type: retainedOutput.type,
     representation: resolvedOutput.value.kind === "inline"
       ? "inline"
-      : resolvedOutput.value.kind === "build-file" ? "file" : "value-document",
+      : resolvedOutput.value.kind === "build-file" ? "file" : "structured",
     path: target,
   };
 }

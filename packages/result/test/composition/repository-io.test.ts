@@ -5,13 +5,12 @@ import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import test from "node:test";
 
-import { buildResultDirectory, FileBuildResult, FileBuildResultRepository, syncBuildResultOutputs } from "@hypit/result/node";
+import { buildResultDirectory, FileBuildResult, FileBuildResultStore } from "@hypit/result/runtime-storage/node";
 import type { BlobRef } from "@hypit/protocol";
 
 import {
-  acceptedRecords,
   structuredType,
-  publication,
+  resultIntent,
   videoType,
 } from "./repository-scenario.js";
 
@@ -23,7 +22,7 @@ test("filesystem repository streams one normalized byte range", async () => {
     await mkdir(join(directory, "files"), { recursive: true });
     const bytes = new TextEncoder().encode("abcdefghij");
     await writeFile(join(directory, "files", "video.mp4"), bytes);
-    const repository = new FileBuildResultRepository(root);
+    const repository = new FileBuildResultStore(root);
     const stream = await repository.openFile(build, {
       kind: "build-file",
       path: "files/video.mp4",
@@ -48,7 +47,7 @@ test("filesystem decodes Result and writer data before exposing it", async () =>
     await mkdir(directory, { recursive: true });
     await writeFile(join(directory, "result.json"), JSON.stringify({
       format: "hypit.build-result@1",
-      sourceId: "main.svml",
+      sourcePath: "main.svml",
       targets: ["video"],
       outputs: {
         video: {
@@ -57,18 +56,19 @@ test("filesystem decodes Result and writer data before exposing it", async () =>
         },
       },
     }));
-    const repository = new FileBuildResultRepository(root);
+    const repository = new FileBuildResultStore(root);
     await assert.rejects(repository.read(malformed), /outputs\["video"\]\.value\.path is not a Result-relative path/u);
 
     const writer = await repository.create({
       id: unfinished,
-      sourceId: "main.svml",
-      publication: publication([]),
+      sourcePath: "main.svml",
+      targets: [],
+      intent: resultIntent([]),
     });
     await writeFile(join(buildResultDirectory(root, unfinished), ".writer.json"), JSON.stringify({
       resources: null,
       values: {},
-      publication: { outputs: [] },
+      intent: { outputs: [] },
     }));
     await assert.rejects(writer.sync({
       records: [],
@@ -87,7 +87,7 @@ test("reserved-looking domain objects remain ordinary domain data", async () => 
     await mkdir(join(directory, "values"), { recursive: true });
     await writeFile(join(directory, "result.json"), JSON.stringify({
       format: "hypit.build-result@1",
-      sourceId: "main.svml",
+      sourcePath: "main.svml",
       targets: ["value"],
       outcome: "complete",
       finishedAt: 1,
@@ -98,7 +98,7 @@ test("reserved-looking domain objects remain ordinary domain data", async () => 
       value: { nested: { kind: "value", path: "domain-authored" } },
       resources: [],
     }));
-    const resolved = await new FileBuildResultRepository(root).resolve(id, "value");
+    const resolved = await new FileBuildResultStore(root).resolve(id, "value");
     assert.equal(resolved?.value.kind, "value");
     if (resolved?.value.kind !== "value") throw new Error("expected Result value document");
     assert.deepEqual(resolved.value.document.value, {
@@ -109,7 +109,7 @@ test("reserved-looking domain objects remain ordinary domain data", async () => 
   }
 });
 
-test("describing a value-document Output reads only its manifest", async () => {
+test("reading a value-document Output manifest does not open its document", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-result-describe-"));
   const id = "bld_20260902T100000020Z_0000000001";
   try {
@@ -117,15 +117,15 @@ test("describing a value-document Output reads only its manifest", async () => {
     await mkdir(directory, { recursive: true });
     await writeFile(join(directory, "result.json"), JSON.stringify({
       format: "hypit.build-result@1",
-      sourceId: "main.svml",
+      sourcePath: "main.svml",
       targets: ["take"],
       outcome: "complete",
       finishedAt: 1,
       outputs: { take: { type: structuredType, value: { kind: "value", path: "values/missing.json" } } },
     }));
-    const repository = new FileBuildResultRepository(root);
-    const description = await repository.describeOutput(id, "take");
-    assert.equal(description?.representation, "value-document");
+    const repository = new FileBuildResultStore(root);
+    const manifest = await repository.read(id);
+    assert.equal(manifest?.outputs.take?.value.kind, "value");
     await assert.rejects(repository.resolve(id, "take"), /missing\.json/u);
   } finally {
     await rm(root, { recursive: true, force: true });

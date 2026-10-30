@@ -8,8 +8,8 @@ import test from "node:test";
 
 import {
   FileBuildResult,
-  FileBuildResultRepository,
-} from "@hypit/result/node";
+  FileBuildResultStore,
+} from "@hypit/result/runtime-storage/node";
 import type { CapabilityRef, TypedRecord } from "@hypit/protocol";
 
 import type { CliDistribution } from "../../src/distribution.js";
@@ -21,7 +21,7 @@ import {
   generationCapability,
   humanCommand,
   jsonCommand,
-  publication,
+  resultIntent,
   resultDistribution,
   valueType,
 } from "./build-result-scenario.js";
@@ -31,14 +31,13 @@ test("a failed Result exposes task receipts without a Runtime", async () => {
   const id = "bld_20260906T110000000Z_0000000001";
   try {
     const result = await FileBuildResult.create(join(root, ".hypit", "results"), {
-      id, sourceId: "main.svml", publication: publication([]),
+      id, sourcePath: "main.svml", targets: [], intent: resultIntent([]),
     });
     const operation = {
-      operation: "op-1", command: "need-1", endpoint: "selected-account", pool: "my-pool",
-      need: { id: "generation-1", capability: generationCapability },
-      receipt: { id: "remote-task-1" }, status: "failed" as const,
+      endpoint: "selected-account", capability: generationCapability,
+      receipt: { id: "remote-task-1" }, outcome: "failed" as const,
       failure: { code: "DOWNLOAD_FAILED", message: `HTTP 502; request=req-example; ${"public reason ".repeat(35)}last diagnostic detail` },
-      createdAt: 1, acknowledgedAt: 2,
+      failedAt: 2,
     };
     await result.finish({ outcome: "failed", failure: "download failed", operations: [operation] });
     const inspected = await jsonCommand(["inspect", id], root) as {
@@ -46,7 +45,7 @@ test("a failed Result exposes task receipts without a Runtime", async () => {
     };
     assert.equal(inspected.build.outcome, "failed");
     assert.deepEqual(inspected.build.operations, [{
-      endpoint: operation.endpoint, status: operation.status, receipt: operation.receipt, failure: operation.failure,
+      endpoint: operation.endpoint, outcome: operation.outcome, receipt: operation.receipt, failure: operation.failure,
     }]);
     const detailed = await jsonCommand(["inspect", id, "--verbose"], root) as { build: { operations: unknown[] } };
     assert.deepEqual(detailed.build.operations, [operation]);
@@ -62,7 +61,7 @@ test("logs reads finished evidence without a Runtime and clearly limits the tail
   try {
     const id = "bld_20260913T130000000Z_0000000001";
     const result = await FileBuildResult.create(join(root, ".hypit/results"), {
-      id, sourceId: "main.svml", publication: publication([]),
+      id, sourcePath: "main.svml", targets: [], intent: resultIntent([]),
     });
     const records = ["started", "completed"].map((kind, time) => ({ format: "hypit.execution-log@1", time, kind, endpoint: "renderer", command: "c1" }));
     await result.finish({ outcome: "complete", executionLog: (async function* () {
@@ -88,7 +87,7 @@ test("logs reports unavailable evidence as unsuccessful, while an existing empty
       if (state === "no-log") await fixture(root);
       if (state === "empty-log") {
         const result = await FileBuildResult.create(join(root, ".hypit/results"), {
-          id: "bld_20260902T110000001Z_0000000001", sourceId: "main.svml", publication: publication([]),
+          id: "bld_20260902T110000001Z_0000000001", sourcePath: "main.svml", targets: [], intent: resultIntent([]),
         });
         await result.finish({ outcome: "complete", executionLog: (async function* () {})() });
       }

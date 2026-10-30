@@ -52,11 +52,11 @@ export function lowerPlaybackAudio(
       && stage.pieces[0]!.wrap === undefined && stage.pieces[0]!.rate.numerator > 0)) {
       throw new Error(`Playback audio ${clip.id} preparation is not one positive affine chain`);
     }
-    const sourceAt = (sample: number): number => {
+    const sourceAt = (sample: number, side: "before" | "after"): number => {
       const mapped = evaluateTemporalMap(clip.preparation,
-        exactTemporalValue({ numerator: BigInt(sample), denominator: 48_000n }));
+        exactTemporalValue({ numerator: BigInt(sample), denominator: 48_000n }), side);
       if (mapped === undefined) throw new Error(`Playback audio ${clip.id} sampling falls in a Prepared Media gap`);
-      const absolute = exactTemporalRational(addExactTemporalValues(clip.source.presentationStart, mapped));
+      const absolute = exactTemporalRational(addExactTemporalValues(clip.source.presentationStart, mapped.position));
       return Number(absolute.numerator) / Number(absolute.denominator);
     };
     return clip.sampling.stages[0]!.pieces.map((piece, pieceIndex) => {
@@ -80,8 +80,8 @@ export function lowerPlaybackAudio(
       const preparedEnd = piece.wrap === undefined ? sourceAtEnd
         : sampleBoundary(piece.wrap.end, `Playback audio ${clip.id} piece ${pieceIndex} wrap end`);
       const phase = piece.wrap === undefined ? 0 : sourceAtStart - preparedStart;
-      const sourceStart = sourceAt(preparedStart);
-      const sourceEnd = sourceAt(preparedEnd);
+      const sourceStart = sourceAt(preparedStart, "after");
+      const sourceEnd = sourceAt(preparedEnd, "before");
       const preparedLength = (preparedEnd - preparedStart) / 48_000;
       const sourceRate = Math.abs(sourceEnd - sourceStart) / preparedLength;
       if (!Number.isFinite(sourceRate) || sourceRate <= 0) {

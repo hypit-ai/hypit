@@ -22,7 +22,6 @@ export {
   appendMappedStillMediaLayer,
   appendMappedSurfaceMediaLayer,
   appendMappedTimedMediaLayer,
-  appendCompositionLayer,
   appendMediaPaintLayer,
   appendStillMediaLayer,
   appendSurfaceMediaLayer,

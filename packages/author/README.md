@@ -26,6 +26,13 @@ so a declaration can read a later authored Record without making source order se
 outputs expose only their reference and Type; the compiler never fabricates a Record value for work
 that has not executed.
 
+A binding may additionally mark one Component output as `retained`. This is a package-owned lifetime
+decision: it means the produced value is an independently recoverable artifact, not merely an
+intermediate value named in a Source. Authored Records cannot be retained because they already belong
+to the author project. The compiler carries retained outputs through the complete Source closure, so
+moving a declaration into an imported Source does not change whether its result survives a Build.
+Explicit Build Targets remain separate execution requests and do not imply retention.
+
 The compiler's `shape` is the single structural authority for fields, nested declarations, text,
 cardinality, literal choices and accepted reference Types. Author validates that shape before package
 lowering. Frontends and Studio may project it for their own presentation, but do not maintain another
@@ -92,7 +99,7 @@ identity, rejects conflicting media assignments for one written locator and fold
 into Source Closure identity. It does not know whether a Host obtained the bytes from a filesystem,
 browser upload, repository object or remote content store.
 
-`readAsset({ from, mediaType })` is the corresponding non-publication operation for package compilers
+`readAsset({ from, mediaType })` is the corresponding read-only operation for package compilers
 that must interpret an exact auxiliary input before constructing a value. It returns bytes only;
 locator resolution, containment and I/O remain Host responsibilities. It neither exposes paths nor
 permits enumeration, and it does not turn the read input into a build attachment.
@@ -100,7 +107,7 @@ permits enumeration, and it does not turn the read input into a build attachment
 Frontend output passes a Host-owned Record validation hook before linking. The hook is permitted to
 reject a Record but is forbidden to rewrite Record identity, Type or value.
 The compiler Host explicitly supplies its `@hypit/refinement` registry, so authored
-values use the same Type-owner gate as Producer and Endpoint results. Invocation can only select an
+values use the same Type-owner gate as Producer and Endpoint results. A Target selection can only select an
 already validated authored Record; it introduces no additional value source.
 
 A `hypit.fragment@1` value may reference only declared Fragment inputs and local Operations. It
@@ -110,8 +117,9 @@ Input Envelopes.
 
 Expansion assigns hygienic identities from the author instance id and Fragment-local id.
 Multiple exports of one instance therefore share internal Operations, while two explicit instances
-remain two nodes even when their content is identical. Author exports become Logical Outputs whose
-primary roots directly name a Record or Operation result. The result is ordinary graph data that Core validates again before freezing a BuildPlan.
+remain two nodes even when their content is identical. Component outputs become Logical Outputs whose
+single result directly names the producing Operation result. The result is ordinary graph data that
+Core validates again before freezing a BuildPlan.
 
 `@hypit/author` is a reusable graph-construction owner, not a universal Author SDK facade. A domain
 normally adds its own contract and component packages; Text remains only one

@@ -3,7 +3,7 @@
 [reference.svml](reference.svml) generates a goth football commentator and all eight comedy B-roll
 images, then makes two independent speaking clips from the same presenter image and designed voice.
 A tier board preserves its state while the argument, Caption and overlapping image inserts unfold.
-[reference.svrun](reference.svrun) targets `final.video` without earlier Results or replacement files.
+Build `reference.svml` with `--target final.video` without earlier Results or replacement files.
 
 ## What is generated and what is supplied
 
@@ -37,15 +37,15 @@ With a configured Runtime, run from the chosen project directory:
 
 ```bash
 npm install
-npx hypit check reference.svrun
+npx hypit check reference.svml
 npx hypit estimate reference.svml --segment ronaldo --language en --pace fast --rounding ceil
 npx hypit estimate reference.svml --segment messi --language en --pace fast --rounding ceil
-npx hypit plan reference.svrun --runtime ./hypit.runtime.json
+npx hypit plan reference.svml --target final.video --runtime ./hypit.runtime.json
 ```
 
 Both passages estimate to nine seconds at that delivery policy; the authored ten-second requests
 allow room for expression. Read the plan and its Endpoint/pricing information before authorizing paid
-work. Under that authorization, `npx hypit build reference.svrun --runtime ./hypit.runtime.json --follow`
+work. Under that authorization, `npx hypit build reference.svml --target final.video --runtime ./hypit.runtime.json --follow`
 produces the final video. Watch the actual result and reuse its media outputs when refining graphics.
 
 When changing the ranked subjects, use supplied photographs or search for recognizable real
@@ -62,4 +62,4 @@ retained from the original ranking Source. Action corrects the host's pronouns a
 meaningful gestures while preserving the dry, affectionate football humor.
 
 `swap-host`, `swap-effect`, `swap-topic` and the nested banana projects are separate studies. Their
-Author and Invocation Sources from those studies are not inputs to this complete generation entry.
+Author Sources from those studies are not inputs to this complete generation entry.

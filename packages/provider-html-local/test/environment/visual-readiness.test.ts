@@ -14,7 +14,7 @@ import { captionDocument, parseScript } from "@hypit/script";
 import { sealTimeline } from "@hypit/timeline";
 import { browserExecutablePath } from "../../src/browser.js";
 import { createOpaqueFrameCapture } from "../../src/opaque-capture.js";
-import { rasterizeHtmlFrames, rasterizeHtmlProgram } from "../../src/render.js";
+import { rasterizeElectronHtmlProgram, rasterizeHtmlFrames } from "../../src/render.js";
 import { htmlProviderDelivery, htmlProviderPicture } from "../provider-scenario.js";
 
 const testBrowser = () => process.env.HYPIT_TEST_CHROME_PATH ?? browserExecutablePath({});
@@ -75,7 +75,11 @@ test("capture waits for dynamic images and rejects broken images or exact fonts"
       try {
         await page.setViewport({ width: 64, height: 64 });
         await page.setContent(capturePage(`<style>body{margin:0}.screen{width:64px;height:64px;overflow:hidden}.screen>*{width:64px;height:64px}</style>
-          <div class="screen"><video id="source" data-hypit-source-frame></video></div>`));
+          <div class="screen"><span id="source" data-hypit-media-display-plane>
+            <span data-hypit-media-payload-host style="position:relative;display:block;width:100%;height:100%">
+              <video></video><span data-hypit-decoded-media-slot style="position:absolute;inset:0"></span>
+            </span>
+          </span></div>`));
         await page.evaluate(() => {
           (window as unknown as { __hypitFrameProgram: unknown }).__hypitFrameProgram = {
             async applyFrame() {},
@@ -84,7 +88,6 @@ test("capture waits for dynamic images and rejects broken images or exact fonts"
         const capture = await createOpaqueFrameCapture(page, { width: 64, height: 64 }, "#000000");
         const frame = await capture(0, [{
           id: "source",
-          documentPath: [],
           elementId: "source",
           url: `data:image/png;base64,${png.toString("base64")}`,
         }]);
@@ -226,7 +229,7 @@ test("compiled frame selection neither stages nor waits for unrelated image reso
       root: htmlVisualElement({ id: "red", kind: "image", picture: { colorPrimaries: "bt709", colorTransfer: "srgb", colorMatrix: "rgb", colorRange: "full", bitDepth: 8, alphaMode: "straight" } as const, artifact: red,
         style: [{ name: "width", value: "64px" }, { name: "height", value: "64px" }] }) },
   ] });
-  const document = compileHtmlProgram(sealComposition({ id: "capture-scope", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 64, height: 64, clearColor: "#000000" }, root: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }, space));
+  const document = compileHtmlProgram(sealComposition({ id: "capture-scope", visual: { canvas: { width: 64, height: 64, clearColor: "#000000" }, root: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }, space));
 
   const captured = await rasterizeHtmlFrames({ program: document, picture: htmlProviderPicture(), frames: [45] },
     { resources, workers: 1, processTimeoutMs: 120_000, ...testBrowserOption() });
@@ -234,9 +237,9 @@ test("compiled frame selection neither stages nor waits for unrelated image reso
   const center = (32 * 64 + 32) * 3;
   assert.deepEqual([...pixels.subarray(center, center + 3)], [255, 0, 0]);
   if (process.env.HYPIT_TEST_ELECTRON_PATH !== undefined) {
-    const visual = await rasterizeHtmlProgram({ program: document, delivery: htmlProviderDelivery("high"),
+    const visual = await rasterizeElectronHtmlProgram({ program: document, delivery: htmlProviderDelivery("high"),
       range: { startFrame: 45, endFrameExclusive: 46 } }, {
-      renderer: "electron", electronPath: process.env.HYPIT_TEST_ELECTRON_PATH,
+      electronPath: process.env.HYPIT_TEST_ELECTRON_PATH,
       resources, workers: 1, processTimeoutMs: 120_000,
     });
     const decoded = spawnSync("ffmpeg", ["-v", "error", "-i", "pipe:0", "-frames:v", "1",
@@ -249,7 +252,8 @@ test("compiled frame selection neither stages nor waits for unrelated image reso
       `Electron range render changed the selected red picture: ${JSON.stringify(sample)}`);
   }
   await assert.rejects(rasterizeHtmlFrames({ program: document, picture: htmlProviderPicture(), frames: [15] },
-    { resources, workers: 1, processTimeoutMs: 120_000, ...testBrowserOption() }), /image could not be decoded/u);
+    { resources, workers: 1, processTimeoutMs: 120_000, ...testBrowserOption() }),
+  /pixel format is absent|image could not be decoded/u);
 });
 
 test("real capture keeps later Present animation local with picture content and independent workers", async () => {
@@ -275,7 +279,7 @@ test("real capture keeps later Present animation local with picture content and 
       ] } }),
     })),
   });
-  const document = compileHtmlProgram(sealComposition({ id: "local-animation", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: {
+  const document = compileHtmlProgram(sealComposition({ id: "local-animation", visual: { canvas: {
     width: 64, height: 64, clearColor: "#000000",
   }, root: { members: [picture, animated].map((track) => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }, timeline));
   const frames = await rasterizeHtmlFrames({ program: document, picture: htmlProviderPicture(),
@@ -353,7 +357,7 @@ test("Fine Caption Cues stay isolated over Picture during reverse seeks and inde
           { name: "inset", value: 0 }, { name: "width", value: "320px" }, { name: "height", value: "180px" }],
         animation: { keyframes: [{ atFrame: 0, style: [{ name: "opacity", value: 1 }] },
           { atFrame: 90, style: [{ name: "opacity", value: 1 }] }] } }) }] });
-  const html = compileHtmlProgram(sealComposition({ id: "fine-caption-isolation", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 320, height: 180, clearColor: "#000000" }, root: { members: [picture, captions].map((track) => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }, timeline));
+  const html = compileHtmlProgram(sealComposition({ id: "fine-caption-isolation", visual: { canvas: { width: 320, height: 180, clearColor: "#000000" }, root: { members: [picture, captions].map((track) => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }, timeline));
 
   const assertCueColors = async (buffer: Uint8Array, wanted: "red" | "green" | "blue", label: string) => {
     const { data } = await sharp(buffer).removeAlpha().raw().toBuffer({ resolveWithObject: true });
@@ -439,7 +443,7 @@ test("terminal text and SVG mask sources retain their Present frame animations a
   ] });
   const track = sealPresentVisualTrack({ id: "visual", timelineId: space.id,
     presents: [{ id: "later", span: { startFrame: 15, endFrameExclusive: 60 }, root }] });
-  const compiled = compileHtmlProgram(sealComposition({ id: "animation", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 128, height: 128, clearColor: "#000000" }, root: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }, space));
+  const compiled = compileHtmlProgram(sealComposition({ id: "animation", visual: { canvas: { width: 128, height: 128, clearColor: "#000000" }, root: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }, space));
   const html = materializeHtmlProgram(compiled, artifact => artifact.resource === "res_font"
     ? "data:font/woff2;base64,AA==" : "data:image/png;base64,AA==");
   const browser = await puppeteer.launch({ executablePath: testBrowser(), headless: true, args: ["--no-sandbox"] });

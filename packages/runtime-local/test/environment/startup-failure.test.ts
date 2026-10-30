@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { setTimeout as pause } from "node:timers/promises";
 import test from "node:test";
 import { defineBuild } from "@hypit/kernel";
-import { FileBuildResultRepository } from "@hypit/result/node";
+import { FileBuildResultStore } from "@hypit/result/runtime-storage/node";
 import { SqliteRuntimeState } from "../../src/sqlite-state.js";
 import { createGreetingBuild, types } from "../execution-scenario.js";
 import { statePath } from "../../src/config.js";
@@ -18,7 +18,7 @@ test("an executor that fails before ready records a failed Build and leaves supe
   const root = await mkdtemp(join(tmpdir(), "hypit-executor-startup-"));
   const dataRoot = join(root, "runtime");
   const profile = join(root, "profile.json");
-  const result = new FileBuildResultRepository(join(root, "results"));
+  const result = new FileBuildResultStore(join(root, "results"));
   const state = new SqliteRuntimeState(statePath(dataRoot));
   const abort = new AbortController();
   let supervision: Promise<void> | undefined;
@@ -35,8 +35,8 @@ test("an executor that fails before ready records a failed Build and leaves supe
           distributionPackageRoot: distribution, profile: profileValue },
       };
       await state.submissions.prepare(request);
-      await result.create({ id: build, sourceId: "main.svml", publication: { outputs: [{
-        name: "document", output: "document", target: true, type: types.document, record: "document:root",
+      await result.create({ id: build, sourcePath: "main.svml", targets: ["document"], intent: { outputs: [{
+        name: "document", record: "document:root",
       }] } });
       await state.submissions.commit({ ...request,
         definition: defineBuild({ program: initial.program,

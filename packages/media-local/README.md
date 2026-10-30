@@ -97,20 +97,25 @@ The Endpoint:
 - encodes authored image frames as ordinary finite video-only MP4 with explicit BT.709 conversion and
   colour metadata before preparation;
 - renders a supported explicit `AudioProgram` into one exact-length 48 kHz stereo PCM `TimelineAudio`;
-- muxes exactly one verified silent visual stream and one verified program-audio stream into MP4;
+- muxes exactly one verified silent visual stream and one verified program-audio stream into MP4, including a valid one-frame video;
+- re-observes the TimelineVisual bytes at that terminal boundary and requires their frame rate, canvas, codec,
+  pixel format and picture metadata to match the declared delivery; a value declaration is not treated as evidence
+  about arbitrary bytes supplied under its Artifact reference;
 - distinguishes AAC coding-frame padding from the authoritative packet presentation span.
 
 During one `render-timeline-audio` request, selected sources and transform working files stay in that request's temporary
-directory. Only the final `TimelineAudio` Artifact enters the Build resource gateway; decoder intermediates are not Results.
+directory. The requested output sample range is projected through the closed AudioProgram into one request-local demand plan.
+Source preparation and the signal reader consume that same plan, so a partial render neither decodes
+nor later asks for an unrelated Clip. Each Prepared Media and Clip occurrence Map is validated and bound once while building
+that plan; range projection and sample reading retain the same sided evaluator instance. Reverse, hold, gaps, wrapping and cubic
+relations therefore cannot acquire a separate demand interpretation, and structural Map checks do not run once per output sample.
+A selected source may still be decoded as a complete canonical PCM track in this first implementation; that execution choice does
+not widen the plan or become Programme metadata. Only the final `TimelineAudio`
+Artifact enters the Build resource gateway; decoder intermediates are not Results.
 
 Private visual evaluation preserves alpha across trim/retime: transparent input becomes
 VP9 / `yuva420p` WebM, while opaque input uses H.264 / `yuv420p` MP4. The input pixel format and WebM alpha metadata
 determine the choice at each private execution step.
-Opaque H.264 / `yuv420p` video in Baseline, Main or High profiles up to level 4.1 may reuse its
-encoded frames when `media-local` proves that every decoded frame already has the requested ordinal,
-timestamp, duration, geometry, square pixels and zero display rotation. A single-video-stream MP4 is
-reused directly; another matching container is remuxed to a silent MP4 and inspected again. Inputs
-outside those provider-local copy criteria use the normal transcode path.
 Animated WebP is also evaluated through an alpha-capable output. Transparent VP8/VP9 input uses libvpx
 decoders so FFmpeg retains the alpha sidecar, including during PNG frame extraction.
 Transparent evaluation requires an FFmpeg build with the `libvpx-vp9` encoder; the normal
@@ -146,14 +151,8 @@ The local audio Renderer evaluates the complete occurrence and Prepared Media ma
 pullback. Affine, reverse, hold, wrap, gap, cubic and multi-stage relations therefore use the same
 execution path. Selected source streams are decoded once per request to canonical 48 kHz stereo PCM;
 the Renderer reads them through a bounded page cache, applies Clip automation and adds the resulting
-signals in output blocks. AudioProgram nesting is supported independently of visual Programme nesting:
-a nested AudioProgram is a request-local lazy signal reader with its own
-bounded sample-page cache. The parent pulls only mapped child samples, so nesting does not write and
-reopen a complete intermediate WAV; the reader preserves the closed child signal boundary before
-parent gain, fade and processing. Reconstruction on a nested Composition node is not implemented and is
-rejected as that specific Renderer capability; nesting without it remains supported. Reader reuse is
-limited to the same in-memory child Program during
-one render request and creates no global cache or author metadata. It does not infer pitch-preserving stretch from a temporal relation: such a
+signals in output blocks. The AudioProgram is one closed signal graph.
+It does not infer pitch-preserving stretch from a temporal relation: such a
 reconstruction policy is an explicit Clip reconstruction with its own programme owner. The Provider
 implements `@hypit/audio-stretch` PreservePitch for a complete positive-affine, non-looping occurrence;
 other relations or reconstruction formats are accurately unsupported rather than silently resampled.

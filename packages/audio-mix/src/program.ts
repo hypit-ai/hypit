@@ -74,7 +74,6 @@ function namespaceGraph(graph: AudioSignalGraph, inputId: string): { readonly no
       if (node.kind === "source") return { kind: "source", id, clip: {
         ...structuredClone(node.clip), id: structuralId(["input", inputId, "clip", node.clip.id]),
       } };
-      if (node.kind === "composition") return { ...structuredClone(node), id };
       if (node.kind === "mix") return { kind: "mix", id, inputs: node.inputs.map(ref) };
       return { kind: "process", id, inputs: Object.fromEntries(Object.entries(node.inputs).map(([port, input]) => [port, ref(input)])),
         program: structuredClone(node.program) };
@@ -92,12 +91,12 @@ export function finalizeAudioMix(set: AudioMixSet, header: AudioMixHeader, timel
   const outputs: AudioSignalRef[] = [];
   for (const input of set.inputs) {
     assertAudioTrackIdentity(input.track, timeline);
-    const nested = namespaceGraph(input.track.graph, input.spec.id);
-    nodes.push(...nested.nodes);
-    if (input.spec.gain === 1) outputs.push(nested.output);
+    const namespaced = namespaceGraph(input.track.graph, input.spec.id);
+    nodes.push(...namespaced.nodes);
+    if (input.spec.gain === 1) outputs.push(namespaced.output);
     else {
       const processId = structuralId(["input", input.spec.id, "process", "gain"]);
-      nodes.push({ kind: "process", id: processId, inputs: { signal: nested.output }, program: audioGainProcess(input.spec.gain) });
+      nodes.push({ kind: "process", id: processId, inputs: { signal: namespaced.output }, program: audioGainProcess(input.spec.gain) });
       outputs.push(audioSignal(processId));
     }
   }

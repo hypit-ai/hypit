@@ -128,12 +128,12 @@ function outputGraph(): AuthorGraph {
       {
         id: "measurement",
         type: measurementType,
-        primary: { kind: "operation-result", operation: "measure" },
+        result: { kind: "operation-result", operation: "measure" },
       },
       {
         id: "report",
         type: reportType,
-        primary: { kind: "operation-result", operation: "report" },
+        result: { kind: "operation-result", operation: "report" },
       },
     ],
     operations: [
@@ -158,7 +158,7 @@ function outputBuild(linked: LinkedProgram, graph = outputGraph()) {
 }
 
 function buildState(linked: LinkedProgram, graph: AuthorGraph, targets: readonly string[]) {
-  const planned = planBuild(linked, graph, targets, []);
+  const planned = planBuild(linked, graph, targets);
   return materializeBuild(defineBuild({
     program: linked,
     plan: planned.plan,
@@ -202,7 +202,7 @@ function providerGraph(): AuthorGraph {
     outputs: [{
       id: "measurement",
       type: measurementType,
-      primary: { kind: "operation-result", operation: "request" },
+      result: { kind: "operation-result", operation: "request" },
     }],
     operations: [{
       id: "request",

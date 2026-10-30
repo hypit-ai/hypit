@@ -57,7 +57,7 @@ export const elevenLabsVoiceDesignAuthorDeclaration: AuthorDeclarationCompiler =
   bindings(declaration) {
     const id = literal(declaration, "id");
     return [{ name: `${id}.reference`, ref: { kind: "component-output", component: id, output: "audio" },
-      type: blobTypes.blob }];
+      type: blobTypes.blob, retained: true }];
   },
   async compile({ declaration, resolveReference }) {
     const id = literal(declaration, "id");

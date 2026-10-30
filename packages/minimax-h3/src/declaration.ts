@@ -2,6 +2,7 @@ import {
   declarationField,
   type AuthorDeclaration,
   type AuthorDeclarationChild,
+  type AuthorDeclarationBinding,
   type AuthorDeclarationCompiler,
   type AuthorResolvedReference,
 } from "@hypit/hypit/author";
@@ -103,10 +104,10 @@ async function output(
   });
 }
 
-function bindings(declaration: AuthorDeclaration) {
+function bindings(declaration: AuthorDeclaration): readonly AuthorDeclarationBinding[] {
   const id = literal(declaration, "id");
   return [{ name: `${id}.video`, ref: { kind: "component-output" as const, component: id, output: "video" },
-    type: blobTypes.blob }];
+    type: blobTypes.blob, retained: true }];
 }
 
 const endpoint = minimaxH3Endpoints.video!;

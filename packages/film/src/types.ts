@@ -1,11 +1,9 @@
 import type { Track, VisualProcessEffect } from "@hypit/composition";
-import type { WorkingPictureSpec } from "@hypit/media";
 
 /** Package-owned authoring value. A future Film Surface may produce this record. */
 export type FilmProgram = {
   readonly id: string;
   readonly clearColor: string;
-  readonly picture: WorkingPictureSpec;
   readonly visual: FilmVisualPlan;
   /** Slots of root AudioTrack inputs summed by Film. */
   readonly audio: readonly number[];

@@ -18,8 +18,7 @@ import { pathToFileURL } from "node:url";
 import test from "node:test";
 
 import { FileResourceStore } from "../../src/resource-store.js";
-import { FileBuildResultRepository } from "@hypit/result/node";
-import type { BuildResultRepository } from "@hypit/result";
+import { FileBuildResultStore } from "@hypit/result/runtime-storage/node";
 import { EnvironmentCredentialStore } from "@hypit/credential-store-env";
 import { defineEndpoint } from "@hypit/endpoint";
 import type { AsyncEndpoint, EndpointInstance } from "@hypit/endpoint";
@@ -53,7 +52,6 @@ import {
   durableBuildRequest,
   finishClaimedBuild,
   projectRuntimeFixture,
-  publication,
   resultDestination,
   runFixture,
 } from "./local-scenario.js";
@@ -113,7 +111,7 @@ test("project local runtime accepts components loaded from an installed package"
         return await loadNodePackageSelection(specifiers, installedRoot);
       },
     });
-    const selected = createGreetingBuildFixture({ generationRealization: "placeholder" });
+    const selected = createGreetingBuildFixture({ generationStep: "placeholder" });
     const result = await runtime.build({
       ...durableBuildRequest(runtimeRoot, "bld_20260902T120000012Z_0000000001", selected),
       executionPackages: ["example-greeting-components"],
@@ -122,7 +120,7 @@ test("project local runtime accepts components loaded from an installed package"
     assert.equal(result.view.activity, "ready");
     const completed = await finishClaimedBuild(runtime);
     assert.equal(completed.outcome, "complete");
-    assert.equal((await new FileBuildResultRepository(join(runtimeRoot, "results"))
+    assert.equal((await new FileBuildResultStore(join(runtimeRoot, "results"))
       .read("bld_20260902T120000012Z_0000000001"))?.outcome, "complete");
     await runtime.close();
   } finally {
@@ -178,7 +176,7 @@ test("project local runtime remembers the complete package closure across increm
       ["bld_20260902T120000014Z_0000000001", "example-feature-b"],
       ["bld_20260902T120000015Z_0000000001", "example-shared-components"],
     ] as const) {
-      const initial = createGreetingBuildFixture({ generationRealization: "placeholder" });
+      const initial = createGreetingBuildFixture({ generationStep: "placeholder" });
       await runtime.build({
         ...durableBuildRequest(directory, id, initial),
         executionPackages: [specifier],

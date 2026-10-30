@@ -1,14 +1,20 @@
 # Hypit Studio
 
+The 0.4 Studio is a legacy inspection surface pending a full rewrite. Its preview is intentionally
+limited to the subset the browser playback adapter can execute faithfully. It rejects Visual Process
+input rasterization and non-default container streams instead of
+showing a picture or soundtrack that disagrees with export. New execution semantics belong to the
+Programme and Provider owners, not to patches in this preview path.
+
 For direct picture inspection, `hypit snapshot --studio <studio-url>` reads the current compiled
 `HtmlProgram` from `GET /__studio/document` and its existing `/__studio/material/<resource>`
 resources. `GET /__studio/visual.html` exposes the same materialized picture without the interactive
 Studio playback shim or audio. Both representations come from the same compilation as the displayed
-preview. The snapshot invocation uses the selected Runtime Profile's frame Provider and creates no
+preview. The snapshot uses the selected Runtime Profile's frame Provider and creates no
 Build. During a pending Source compilation the export route reports that state; a failed update
 reports its error instead of returning the previous picture as current.
 
-The single official Web Studio for SVML. It opens an Author Source plus explicit Invocation,
+The single official Web Studio for SVML. It opens an Author Source plus explicit Targets,
 traces its Film or Render target back to the semantic and visual projections
 Studio can edit, runs deterministic Producers and explicitly permitted transient Needs, and composites the
 resulting Tracks with HTML renderer.
@@ -19,28 +25,26 @@ through the installed Distribution manifest; Studio does not own or wrap the Hyp
 ```bash
 cd /path/to/external-video-project
 hypit studio --source main.svml --target final.video
-# or: hypit studio --invocation build.svrun
 ```
 
 When `--runtime` is omitted, Studio reads the resolved project's `.hypit/runtime`
 selection made by `hypit runtime use`. It does not search parent projects for a
 Profile. `--project` explicitly selects the project boundary; `--package-root`
 overrides the author package resolution root when those locations intentionally differ.
-Startup prints the project, selected input, Invocation form, Profile and whether the Profile came from the command argument or
+Startup prints the project, selected Source, Targets, Profile and whether the Profile came from the command argument or
 the project's selection file. Relative command-line paths start at the invoking directory;
-`--project` selects the project without rebasing `--source`, `--invocation` or `--runtime`.
+`--project` selects the project without rebasing `--source` or `--runtime`.
 The upper-left library is intentionally not a filesystem browser:
 
-- Source is the exact Author closure plus an optional saved Invocation Source and writes back only the selected file;
+- Source is the exact Author closure and writes back only the selected file;
 - Tasks show one card per Build, with All, In progress and Finished filters. Active progress comes from
   the selected Runtime's read-only control interface; completed, failed and cancelled Builds come
   from the project's Result Repository. Saving a Result and an issue requiring attention remain
-  visible, with the Invocation Source when one was saved and the available progress or failure reason.
-- Artifacts show top-level file Outputs whose declared MIME type is image, video or audio,
-  including files already published by ongoing Builds. Value-document Outputs retain their structure:
-  the library does not extract their embedded resources. Each Result owns its published files;
-  references to the same current-Result file share one card and retain their origins. Highlighted
-  Outputs sort first, without excluding other media.
+  visible with the available progress or failure reason.
+- Artifacts show retained top-level file Outputs whose declared MIME type is image, video or audio,
+  including files already stored by ongoing Builds. Structured Outputs retain their structure:
+  the library does not extract their embedded resources. Each Result owns its stored files;
+  references to the same current-Result file share one card and retain their origins.
 
 Source, Tasks and Artifacts use the shared `ui/sidebar-panel.ts` layout and navigation buttons. Each view
 owns its toolbar content, data and actions; the shared shell owns geometry and navigation styling.
@@ -59,14 +63,9 @@ outer card border. Resizing the
 sidebar distributes spare width between columns, then adds a column when another fixed-size
 card fits. Card size stays unchanged. Video thumbnails decode a frame in the browser; audio waveforms are also
 browser presentation, not additional Result files. Thumbnails load as their cells enter view.
-The CLI carries the author's component name from compilation provenance into the Result's
-optional Output `displayName`. The public Output identifier stays intact for references;
-Outputs without a display name show that identifier unchanged. Double-click a name or press F2
-to edit it in full; Enter or blur saves, Escape cancels. Failed saves retain the text and show the
-reason. A completed, failed or cancelled Build's name is written through Result Repository
-`updatePresentation` to that exact Output's `displayName`. Ongoing Builds become editable when
-they finish, following the existing Result presentation-edit boundary. Renaming never changes
-Output identity, referenced media files or other Builds' names for the same file.
+Media cards show each retained Output identifier unchanged. Finished Results remain read-only
+execution evidence rather than a mutable media catalog. Project-facing naming belongs to the
+ordinary Author declaration that consumes an explicitly exported Result Output.
 
 The composition has a frame-snapped progress slider and current/total time.
 Clicking a card opens the file in the central preview and pauses the composition. Images need
@@ -74,7 +73,7 @@ no transport; video and audio share the play/mute controls and a seconds-based s
 the playback bar. The previous/next buttons skip five seconds for media, and step one frame
 for the composition. Back to composition restores the existing composition playhead. Selecting
 or seeking in the composition timeline also returns to it. Opening media changes no Author Source,
-Invocation or authored realization selection.
+Author Source reference.
 
 No project manifest, Studio database, output-directory scan or inferred campaign
 folder structure is involved. With no selected Runtime, finished Result tasks and
@@ -86,7 +85,7 @@ transient processing require the selected Runtime.
 
 The CLI prints the actual session URL and its direct `#comments` URL after the server chooses a port.
 Open the latter to review the current composition before export. Browser playback creates no export
-Build or encoded video; an export remains a separate Invocation when the user wants the file.
+Build or encoded video; an export remains a separate Build when the user wants the file.
 
 The top-right **Studio / Comments** tabs change the layout around the same composition player.
 Comments gives the picture the available height with a notes column on the right. Click the picture
@@ -104,7 +103,7 @@ Studio saves comments in `<workspace>/FEEDBACK.json`, creating it on the first s
 This path is Studio's project-file convention, rooted in the resolved workspace; it is independent
 of the Runtime, Result repository and Agent implementation.
 Each comment records its reviewed authoring context relative to that workspace, so the file can hold notes for
-several contexts while the UI shows the current Invocation. Times are seconds, including fractional seconds:
+several contexts while the UI shows the current Target selection. Times are seconds, including fractional seconds:
 
 ```json
 {
@@ -173,7 +172,7 @@ the 22px ruler. Additional Projections contribute rows, not separate left-hand h
 Each declaration Companion requests its exact logical outputs for the locator row, including
 Instants that no Track consumes. After the Film display execution resolves, Studio evaluates those
 additional outputs through the same Compiler and display Executor, selecting a broader slice of the
-same Author program without manufacturing Records or changing the Invocation. The Runtime's existing
+same Author program without manufacturing Records or changing the Target selection. The Runtime's existing
 transient-execution permissions still apply: displaying a
 locator does not submit a Build or enable generation Endpoints. Unresolved or failed locator work
 is reported in the Studio terminal without invalidating the Film preview. Only resolved Instants
@@ -186,8 +185,8 @@ to choose a covered object. These are editor presentation rules, independent of 
 
 Open the URL printed by Vite. Studio requests port 5179 by default, accepts `--port`,
 and Vite can choose another available port when it is occupied. Reuse that process
-for edits to the same Invocation. The optional Invocation Source and loaded Author/Recipe files are watched and
-recompiled together. Domain packages, Companion registry, Runtime and Result library
+for edits to the same Source and Targets. Loaded Author/Recipe files are watched and recompiled together.
+Domain packages, Companion registry, Runtime and Result library
 are opened at startup; restart this Studio process after changing those selections,
 package code or imports that introduce new packages. Browser refresh does not reload
 server-side package modules.
@@ -204,7 +203,7 @@ after correcting the underlying filesystem/resource problem; a browser refresh a
 the last compiled snapshot. Studio's own edit requests explicitly recompile and do not depend on
 filesystem notifications.
 
-The Source pane can edit the selected `.svml`, `.svs` or `.svrun` file. The Inspector
+The Source pane can edit the selected `.svml` or `.svs` file. The Inspector
 shows project facts when no Item is selected and declared facts and author fields for
 the selected Item. A reference can resolve to a shared Frame or Recipe, so one edit
 may affect several consumers. Structured fields save together when editing ends and the value is complete; missing required values stay in the editor with a completion hint.
@@ -238,8 +237,8 @@ the author must make that identity choice explicitly.
 See [temporal author forms](../temporal/EDITING.md) for the complete behavior.
 
 Tasks and Artifacts are inspection surfaces; selecting an Artifact does not change the authored
-production. Export accepted material into the project and declare its durable realization in the
-Author Source.
+production. Export accepted material into the project, declare it as author material and make the
+consumer reference it explicitly.
 
 ## Component presentation
 
@@ -293,7 +292,7 @@ non-spinning text entry so wheel scrolling cannot mutate Source; selects use
 the Studio menu and keyboard navigation. Values still commit only on an
 explicit change through the normal revisioned mutation path.
 
-Temporal lineage comes from the exact executed graph selected by the Invocation. Studio indexes the
+Temporal lineage comes from the exact executed graph reached by the selected Targets. Studio indexes the
 `TemporalInstant` and `TemporalWindow` records in each Track's dependency closure, including each
 endpoint's author authority and direct consumer edge. Common Temporal relations are handled by the
 shared planner; author packages contribute inverses for their own private construction Producers.
@@ -309,31 +308,35 @@ against the complete requested absolute-frame constraint; a compiling plan that 
 is rejected and the original files are restored just like a compilation failure.
 
 Opening Studio never spends and never creates a Build. Its display closure contains
-the Author choices selected for the Invocation, deterministic Producers and exact Needs that
+the Author choices reached by the selected Targets, deterministic Producers and exact Needs that
 their Provider explicitly allows in transient authoring execution. The Runtime owns
 Endpoint activation, Profile bindings, request-level `supports`, credentials and
-invocation; Studio receives no Endpoint Registry and makes no decision from pricing,
+selection; Studio receives no Endpoint Registry and makes no decision from pricing,
 process location, model name or package name. A Need without transient support stops
 with its exact capability named. Existing media enters through ordinary Author declarations and
-durable realization choices.
+durable project-material references.
 
-Studio and an encoded review use the same Invocation. Studio evaluates its
-transient display closure in the browser; building that Invocation evaluates the
+Studio and an encoded review can use the same explicit Targets. Studio evaluates its
+transient display closure in the browser; building those Targets evaluates the
 full target closure and sends the resulting HTML renderer document to the chosen
-render Endpoint. A separate review Invocation is useful only when the author wants different Targets or
-transient overrides. Its path and filename carry no execution
-semantics.
+render Endpoint. A separate Studio session is useful only when the author wants different Targets;
+the selection remains transient session state rather than another authored file.
 
 Read [`@hypit/studio-companion`](../studio-companion/README.md) for the Companion ABI,
 project activation example, value projection and Inspector declarations.
 
 ## Composition audio preview
 
-The preview consumes generic AudioClips: source sampling, fixed gain, program-sample gain envelopes,
-audibility regions and target-relative fades. Web Audio gain nodes schedule the independent factors
-on the same clock, including silence and amplification above unity. Visual video elements stay muted;
-the Film's selected AudioTracks own composition sound. Seeking is silent. This path is independent of
-which component emitted an audio contribution.
+The preview consumes the flat AudioProgram compiled from the selected Film: source sampling, fixed
+gain, program-sample gain envelopes, audibility regions and target-relative fades. Web Audio gain
+nodes schedule the independent factors on the same clock, including silence and amplification above
+unity. Visual video elements stay muted; the Film's selected AudioTracks own composition sound.
+Seeking is silent. This path is independent of which component emitted an audio contribution.
+
+Browser playback cannot select a non-default stream from a multi-stream container. Studio rejects
+that preview before presenting picture or sound; the same Film remains exportable through the local
+audio Renderer, which executes the selected stream in the AudioProgram. This is an explicit legacy
+Studio capability boundary, not a second audio-program shape.
 
 ### Interface language
 

@@ -1,6 +1,6 @@
 ---
 name: hypit
-description: Direct and produce videos with Hypit, primarily through generated media and authored components while incorporating briefs, references or supplied material; includes SVML/SVS/SVRun authoring and Runtime or credential setup.
+description: Direct and produce videos with Hypit, primarily through generated media and authored components while incorporating briefs, references or supplied material; includes SVML/SVS authoring and Runtime or credential setup.
 ---
 
 # Hypit
@@ -197,7 +197,7 @@ Prefer [snapshots](references/production/snapshots.md)
 for detailed states and continuous frame grids, and Studio playback for the passage with sound: the graphics make the idea clear,
 the Caption is easy to read, and the pictures and effects appear where and when they serve the
 passage. Adjust the owning Source or component to improve those relationships. Reuse produced media
-through the Author Source's explicit realization choices. A useful change makes a comparison readable, lands a reveal on its word, or
+as declared project resources referenced by their consumers. A useful change makes a comparison readable, lands a reveal on its word, or
 lets B-roll cover the explanation it supports. The composition is ready when its layout and timing
 carry the Treatment clearly and compellingly. Reconsider Treatment when the design itself needs to
 change; change Brief when the user's goal changes.
@@ -227,7 +227,7 @@ practical, revisit that choice and carry the improvement into the work and its n
 - **Existing work.** Reuse serves the current commission. For a continuation, carry its completed
   work forward; for a new adaptation, develop the requested target from the supplied reference and
   changes. Judge connected earlier material against that Brief and Treatment. Preserve
-  material that still serves the production as explicit project resources and realization choices,
+  material that still serves the production as explicit project resources and consumer references,
   retaining unrelated selections while completing the requested changes. Project Results can contain
   useful Outputs even from failed Builds; export an accepted file into the project before authoring
   it as durable material. Check `plan` for the intended remaining requests. [Authoring](references/production/authoring.md#reuse-produced-work-explicitly)
@@ -248,9 +248,9 @@ practical, revisit that choice and carry the improvement into the work and its n
   goal in Brief, and your creative answer in Treatment. Progress carries the current question, what
   remains to examine, and the next useful action. Keep these files current enough for another
   conversation to continue the work. Resume from the current request and these notes, with the
-  relevant Skill references, Sources, saved Invocations, project Results and Runtime status.
+  relevant Skill references, Sources, current Target selection, project Results and Runtime status.
   The project-files reference below owns document responsibilities and the suggested layout.
-- **Project ownership.** Preserve unrelated Source, Recipe, saved Invocation, assets, and project-package work.
+- **Project ownership.** Preserve unrelated Source, Recipe, assets, and project-package work.
   Make production changes at their owning source; keep Result media intact. Author new visual
   behavior in project components. When execution problems arise, actively investigate and pursue
   a suitable repair through the [integration guidance](references/environment/model-and-provider.md),
@@ -295,10 +295,10 @@ practical, revisit that choice and carry the improvement into the work and its n
 | deciding which generated images or videos should depend on which references, including people, places, views and continuing props | `references/playbooks/craft/generated-dependencies.md` |
 | mixing performed or B-roll source sound with chosen music and effects, including balance, ducking and continuity | `references/playbooks/craft/sound-mix.md` |
 | presenting existing Timeline sound, local gain, silence, fades or explicit source blending | `references/production/audio-clips.md` |
-| writing Author Sources, Recipes and Invocations, reusing produced work, adding a component | `references/production/authoring.md` |
+| writing Author Sources and Recipes, reusing produced work, adding a component | `references/production/authoring.md` |
 | imports, output references, literal values or Recipe rules | `references/production/source-syntax.md` |
 | choosing an existing Prompt Kit, assembling its wording or authoring a new one | `references/production/prompt-kits.md` |
-| saved Invocation syntax, Targets, transient overrides or accepting produced media into the project | `references/production/runs.md` |
+| choosing the explicit Targets for one plan, Build or Studio session | `references/production/targets.md` |
 | supplying or reusing images/video/audio, model references, preparation, local domains, NarrativeAlignment, trims or processed variants | `references/production/media.md` |
 | placing independent images, prepared video or surfaces and choosing source playback | `references/production/visual-clips.md` |
 | placing independent music, narration, ambience or effects and selecting source playback | `references/production/audio-clips.md` |

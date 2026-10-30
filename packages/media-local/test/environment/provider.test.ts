@@ -5,7 +5,7 @@ import { join } from "node:path";
 import test from "node:test";
 import { blobTypes } from "@hypit/blob";
 import { mediaTypes, preparedAudioSource, prepareMedia, sealMediaDeliverySpec, sealTimelineVisual, sealTimelineAudio, verifyMediaInspection, verifyMuxedMedia, verifyTimelineAudio } from "@hypit/media";
-import type { MediaAudioStream, MediaInspection, MuxedMedia, TimelineAudio } from "@hypit/media";
+import type { MediaAudioStream, MediaInspection, MuxedMedia, TimelineAudio, TimelineVisual } from "@hypit/media";
 import { assertSpeechEvidenceAudioIdentity, speechEvidenceCapabilities, speechEvidenceTypes } from "@hypit/speech-evidence";
 import type { SpeechEvidenceAudio } from "@hypit/speech-evidence";
 import assert from "node:assert/strict";
@@ -503,6 +503,8 @@ test("local media Provider renders one frame-domain audio program and muxes exac
     const firstPath = join(root, "first.wav");
     const secondPath = join(root, "second.wav");
     const visualPath = join(root, "visual.mp4");
+    const oneFrameVisualPath = join(root, "one-frame.mp4");
+    const oneFrameAudioPath = join(root, "one-frame.wav");
     await Promise.all([
       run("ffmpeg", [
         "-v", "error", "-y", "-f", "lavfi", "-i",
@@ -516,7 +518,17 @@ test("local media Provider renders one frame-domain audio program and muxes exac
       ]),
       run("ffmpeg", [
         "-v", "error", "-y", "-f", "lavfi", "-i", "testsrc2=s=160x96:r=30:d=1",
-        "-frames:v", "30", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-an", visualPath,
+        "-frames:v", "30", "-vf", "setparams=color_primaries=bt709:color_trc=bt709:colorspace=bt709:range=tv",
+        "-c:v", "libx264", "-pix_fmt", "yuv420p", "-an", visualPath,
+      ]),
+      run("ffmpeg", [
+        "-v", "error", "-y", "-f", "lavfi", "-i", "color=c=red:s=160x96:r=30",
+        "-frames:v", "1", "-vf", "setparams=color_primaries=bt709:color_trc=bt709:colorspace=bt709:range=tv",
+        "-c:v", "libx264", "-pix_fmt", "yuv420p", "-an", oneFrameVisualPath,
+      ]),
+      run("ffmpeg", [
+        "-v", "error", "-y", "-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo",
+        "-af", "atrim=end_sample=1600", "-c:a", "pcm_s16le", oneFrameAudioPath,
       ]),
     ]);
 
@@ -572,6 +584,27 @@ test("local media Provider renders one frame-domain audio program and muxes exac
     assert.equal(audio.sampleFrames, 48_000);
     assert.equal(await resources.has(audio.artifact.resource), true);
 
+    const partialResources = new MemoryResourceStore();
+    const partialFirst = await partialResources.put(await readFile(firstPath), "audio/wav");
+    const partialProgram = sealAudioProgram({
+      ...program,
+      graph: {
+        ...program.graph,
+        nodes: program.graph.nodes.map((node) => node.kind === "source" && node.clip.id === "speech:first"
+          ? { ...node, clip: { ...node.clip, source: { ...node.clip.source, source: partialFirst } } }
+          : node),
+      },
+    });
+    const partialValue = await fulfillInline(partialResources, need(
+      "need:render-first-half-audio",
+      audioProgramCapabilities.render,
+      mediaTypes.timelineAudio,
+      canonicalize({ program: partialProgram, range: { startFrame: 0, endFrameExclusive: 15 } }),
+    ));
+    verifyTimelineAudio(partialValue);
+    assert.equal((partialValue as unknown as TimelineAudio).sampleFrames, 24_000,
+      "partial rendering must not prepare the absent second-half source");
+
     const visual = sealTimelineVisual({
       frameRate: { numerator: 30, denominator: 1 },
       frameCount: 30,
@@ -591,6 +624,19 @@ test("local media Provider renders one frame-domain audio program and muxes exac
     assert.equal(muxed.presentationSampleFrames, 48_000);
     assert.equal(await resources.has(muxed.artifact.resource), true);
 
+    const mislabeledDelivery = {
+      ...delivery,
+      visual: { ...delivery.visual, encoding: { ...delivery.visual.encoding, codec: "hevc" } },
+    } as unknown as typeof delivery;
+    const mislabeledVisual = { ...visual, delivery: mislabeledDelivery.visual } as unknown as TimelineVisual;
+    await assert.rejects(fulfillInline(resources, need(
+      "need:mux-mislabeled-program-media",
+      mediaDeliveryCapabilities.mux,
+      mediaTypes.muxed,
+      canonicalize({ visual: mislabeledVisual, audio, delivery: mislabeledDelivery }),
+    )), /VisualDeliverySpec\.encoding\.codec must be h264/u,
+    "mux must reject a delivery outside the one supported visual family before probing bytes");
+
     const inspection = await inspectArtifact(resources, muxed.artifact);
     const videos = inspection.streams.filter((stream) => stream.kind === "video");
     const audios = inspection.streams.filter((stream) => stream.kind === "audio");
@@ -604,6 +650,28 @@ test("local media Provider renders one frame-domain audio program and muxes exac
       "AAC packet duration/padding metadata must preserve the authoritative presentation span");
     assert.ok(audios[0]?.kind === "audio" && audios[0].decodedSampleFrames >= 48_000,
       "AAC coding frames may include padding, but must cover the complete presentation span");
+
+    const [oneFrameVisualArtifact, oneFrameAudioArtifact] = await Promise.all([
+      resources.put(await readFile(oneFrameVisualPath), "video/mp4"),
+      resources.put(await readFile(oneFrameAudioPath), "audio/wav"),
+    ]);
+    const oneFrameVisual = sealTimelineVisual({
+      frameRate: { numerator: 30, denominator: 1 }, frameCount: 1,
+      canvas: { width: 160, height: 96 }, delivery: delivery.visual,
+      artifact: oneFrameVisualArtifact,
+    });
+    const oneFrameAudio = sealTimelineAudio({
+      artifact: oneFrameAudioArtifact, sampleRate: 48_000, channelLayout: "stereo", sampleFrames: 1_600,
+    });
+    const oneFrameValue = await fulfillInline(resources, need(
+      "need:mux-one-frame-program-media",
+      mediaDeliveryCapabilities.mux,
+      mediaTypes.muxed,
+      canonicalize({ visual: oneFrameVisual, audio: oneFrameAudio, delivery }),
+    ));
+    verifyMuxedMedia(oneFrameValue);
+    const oneFrameInspection = await inspectArtifact(resources, (oneFrameValue as unknown as MuxedMedia).artifact);
+    assert.equal(oneFrameInspection.streams.find((stream) => stream.kind === "video")?.decodedUnitCount, 1);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -621,7 +689,8 @@ test("local media Provider preserves the audio tail for a 30000/1001 frame domai
     const sampleFrames = 1_462_261;
     await run("ffmpeg", [
       "-v", "error", "-y", "-f", "lavfi", "-i", "testsrc2=s=160x96:r=30000/1001",
-      "-frames:v", String(frameCount), "-c:v", "libx264", "-pix_fmt", "yuv420p", "-an", visualPath,
+      "-frames:v", String(frameCount), "-vf", "setparams=color_primaries=bt709:color_trc=bt709:colorspace=bt709:range=tv",
+      "-c:v", "libx264", "-pix_fmt", "yuv420p", "-an", visualPath,
     ]);
     await run("ffmpeg", [
       "-v", "error", "-y", "-f", "lavfi", "-i", "sine=frequency=440:sample_rate=48000",
@@ -802,7 +871,8 @@ test("audio signal evaluation treats reverse, hold, cubic motion and gaps as pee
     assert.deepEqual(values(0, 4), [4, 3, 2, 1]);
     assert.deepEqual(values(4, 4), [3, 3, 3, 3]);
     assert.deepEqual(values(8, 4), [1, 1, 2, 3]);
-    assert.deepEqual(values(12, 4), [1, 2, 3, 0]);
+    assert.deepEqual(values(12, 4), [1, 2, 0, 0],
+      "content sampling treats the final Map endpoint as the start of the following gap");
     assert.deepEqual(values(16, 4), [1, 5, 9, 13],
       "occurrence and multi-stage preparation maps compose without a playback-mode rewrite");
   } finally {

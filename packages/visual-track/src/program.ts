@@ -106,13 +106,6 @@ export function appendVisualClip(
     let sourceDomain;
     if (layer.source.kind === "timed") {
       sourceDomain = layer.source.media.domain;
-    } else if (layer.source.kind === "composition") {
-      sourceDomain = sealLocalTemporalDomain({
-        id: `${layer.source.composition.id}:timeline`,
-        duration: exactTemporalValueFromFrames(
-          layer.source.composition.timeline.frameCount, layer.source.composition.timeline,
-        ),
-      });
     } else {
       if (layer.source.surface.timing.kind === "still") return layer;
       const timing = { frameRate: layer.source.surface.timing.frameRate, frameCount: layer.source.surface.timing.frameCount };
@@ -273,7 +266,7 @@ export function appendVisualTransition(
 
 function assertSampleLayer(layer: MediaSampleLayerProgram, label: string): void {
   assertResolvedSampleLayer(layer, label);
-  const timed = layer.source.kind === "timed" || layer.source.kind === "composition"
+  const timed = layer.source.kind === "timed"
     || layer.source.kind === "surface" && layer.source.surface.timing.kind === "frames";
   if (!timed) {
     assert(layer.sampling === undefined, `${label} is still material and cannot have temporal sampling.`);

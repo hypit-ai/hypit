@@ -1,4 +1,4 @@
-/** Scope belongs to the invocation; a suggested command must keep the same target. */
+/** Scope belongs to the command; a suggested command must keep the same project and Runtime. */
 export type CommandScope = {
   readonly projectRoot?: string;
   readonly runtimeProfile?: string;

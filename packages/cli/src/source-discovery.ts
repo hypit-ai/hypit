@@ -7,8 +7,6 @@ import { physicalPackageName, resolveNodePackageSource } from "@hypit/loader/nod
 import { logicalPackageAddressKey } from "@hypit/loader";
 import type { LogicalPackageAddress, LoadedPackage } from "@hypit/loader";
 import { compareCodeUnits, moduleKey, modulePackageAbi } from "@hypit/protocol";
-import { invocationFrontendsFromFacets } from "@hypit/invocation";
-import type { InvocationFrontend } from "@hypit/invocation";
 import { sourceFrontendPackageAbi } from "@hypit/source";
 import { resolveSelfDescribedTextSource } from "@hypit/source/text";
 
@@ -36,7 +34,6 @@ export async function discoverSourcePackages(
     readonly distributionPackageRoot?: string;
     readonly packages?: readonly LoadedPackage[];
     readonly bootstrapAuthorFrontends?: readonly AuthorFrontend[];
-    readonly bootstrapInvocationFrontends?: readonly InvocationFrontend[];
   } = {},
 ): Promise<{ readonly selected: readonly string[]; readonly logical: readonly LogicalPackageAddress[] }> {
   const canonicalSource = await realpath(resolve(sourcePath));
@@ -48,11 +45,6 @@ export async function discoverSourcePackages(
   const authorFrontends = [
     ...(options.bootstrapAuthorFrontends ?? []).map((frontend) => ({ frontend, physical: undefined as string | undefined })),
     ...packages.flatMap((item) => authorFrontendsFromFacets(item.contribution.facets ?? [])
-      .map((frontend) => ({ frontend, physical: item.specifier as string | undefined }))),
-  ];
-  const invocationFrontends = [
-    ...(options.bootstrapInvocationFrontends ?? []).map((frontend) => ({ frontend, physical: undefined as string | undefined })),
-    ...packages.flatMap((item) => invocationFrontendsFromFacets(item.contribution.facets ?? [])
       .map((frontend) => ({ frontend, physical: item.specifier as string | undefined }))),
   ];
   const selected = new Set<string>();
@@ -100,34 +92,23 @@ export async function discoverSourcePackages(
     const name = relative(canonicalRoot, canonical);
     const resolved = resolveSelfDescribedTextSource({ id: canonical, name, text });
     const authors = authorFrontends.filter((item) => item.frontend.id === resolved.frontend);
-    const invocations = invocationFrontends.filter((item) => item.frontend.id === resolved.frontend);
-    if (authors.length + invocations.length > 1) throw new Error(`Source Frontend ${resolved.frontend} is ambiguously provided`);
-    if (authors.length + invocations.length === 0) {
+    if (authors.length > 1) throw new Error(`Source Frontend ${resolved.frontend} is ambiguously provided`);
+    if (authors.length === 0) {
       requireLogical({ abi: sourceFrontendPackageAbi, name: resolved.frontend }, undefined);
       return;
     }
-    if (authors.length === 1) {
-      const owner = authors[0]!;
-      if (owner.physical !== undefined) {
-        requireLogical({ abi: sourceFrontendPackageAbi, name: owner.frontend.id }, owner.physical);
-      }
-      const discovery = await owner.frontend.discover(resolved.unit);
-      for (const request of discovery.modules) {
-        requireLogical({ abi: modulePackageAbi, name: request }, moduleOwners.get(request));
-      }
-      for (const child of discovery.sources) {
-        const imported = resolveImportedSource(canonical, canonicalRoot, child.from);
-        await discover(imported.source, imported.root);
-      }
-      return;
-    }
-    const owner = invocations[0]!;
+    const owner = authors[0]!;
     if (owner.physical !== undefined) {
       requireLogical({ abi: sourceFrontendPackageAbi, name: owner.frontend.id }, owner.physical);
     }
     const discovery = await owner.frontend.discover(resolved.unit);
-    const imported = resolveImportedSource(canonical, canonicalRoot, discovery.author.source);
-    await discover(imported.source, imported.root);
+    for (const request of discovery.modules) {
+      requireLogical({ abi: modulePackageAbi, name: request }, moduleOwners.get(request));
+    }
+    for (const child of discovery.sources) {
+      const imported = resolveImportedSource(canonical, canonicalRoot, child.from);
+      await discover(imported.source, imported.root);
+    }
   };
 
   await discover(canonicalSource, root);

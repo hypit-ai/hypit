@@ -56,21 +56,6 @@ const programNode: ValueSchema = { kind: "oneOf", variants: [
     clip: { schema: programClip },
   } },
   { kind: "object", fields: {
-    kind: { schema: { kind: "literal", value: "composition" } },
-    id: { schema: { kind: "string", minLength: 1 } },
-    // Recursive AudioProgram shape is verified by the programme refinement.
-    program: { schema: { kind: "object", allowUnknown: true, fields: {} } },
-    target: { schema: { kind: "object", fields: {
-      start: { schema: exactTemporalValueSchema }, end: { schema: exactTemporalValueSchema },
-    } } },
-    targetStartSample: { schema: integer },
-    targetEndSampleExclusive: { schema: { kind: "number", integer: true, minimum: 1 } },
-    sampling: { schema: temporalMapSchema },
-    reconstruction: { schema: audioReconstructionProgramSchema, optional: true },
-    gain: { schema: { kind: "number", minimum: 0 } },
-    fadeInSamples: { schema: integer }, fadeOutSamples: { schema: integer },
-  } },
-  { kind: "object", fields: {
     kind: { schema: { kind: "literal", value: "mix" } },
     id: { schema: { kind: "string", minLength: 1 } },
     inputs: { schema: { kind: "array", minItems: 1, items: signalRef } },

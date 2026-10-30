@@ -17,7 +17,6 @@ export type Stage = {
   /** Return from a Result artifact to the composition player. */
   showComposition(): void;
   openArtifact(artifact: StudioArtifactView): void;
-  renameArtifact(artifact: StudioArtifactView): void;
 };
 
 /**
@@ -366,7 +365,7 @@ export function createStage(store: Store, selectedArtifact: (id: string | undefi
     stop();
     scaler.hidden = true;
     back.hidden = false;
-    userText(title, artifact.displayName ?? artifact.output);
+    userText(title, artifact.output);
     title.title = artifact.output;
     uiAttr(previous, "title", "player.back-5-seconds");
     uiAttr(next, "title", "player.forward-5-seconds");
@@ -444,9 +443,5 @@ export function createStage(store: Store, selectedArtifact: (id: string | undefi
     },
     pause() { stop(); artifactPreview.media?.pause(); },
     showComposition() { if (artifactPreview.selected !== undefined) returnToComposition(); },
-    renameArtifact(artifact) {
-      const selected = artifactPreview.selected;
-      if (selected?.build === artifact.build && selected.output === artifact.output) userText(title, artifact.displayName ?? artifact.output);
-    },
   };
 }

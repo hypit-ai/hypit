@@ -23,7 +23,7 @@ const runCli = (
   });
 };
 
-test("source package selection follows Invocation and Author imports", async () => {
+test("source package selection follows Author imports", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-cli-package-selection-"));
   try {
     await writeFile(join(root, "style.svs"), `<?svml using="@hypit/recipe@1"?>\n<sheet version="1"/>`, "utf8");
@@ -33,25 +33,20 @@ test("source package selection follows Invocation and Author imports", async () 
   <import as="style" source="./style.svs"/>
   <script id="story"><line><HOST>Hello.</line></script>
 </svml>`, "utf8");
-    const run = join(root, "build.svrun");
-    await writeFile(run, `<?svml using="@hypit/markup/invocation@1"?>
-<svrun version="1">
-  <author source="./main.svml"/>
-  <target output="story"/>
-</svrun>`, "utf8");
+    const source = join(root, "main.svml");
     const packages = await loadDiscoveredSourcePackages(videoDistribution, {
-      source: run,
+      source,
       workspaceRoot: root,
       packageRoot: root,
       ...(videoDistribution.packageRoot === undefined
         ? {}
         : { distributionPackageRoot: videoDistribution.packageRoot }),
     });
-    const discovered = await videoDistribution.discoverSourcePackages!(run, {
+    const discovered = await videoDistribution.discoverSourcePackages!(source, {
       workspaceRoot: root,
       packages,
     });
-    assert.deepEqual(discovered.selected, ["@hypit/markup", "@hypit/recipe", "@hypit/script"]);
+    assert.deepEqual(discovered.selected, ["@hypit/recipe", "@hypit/script"]);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -64,7 +59,9 @@ test("provider-free example plans from installed Source packages", async () => {
   let output = "";
   await runCli([
     "plan",
-    join(fixture, "build.svrun"),
+    join(fixture, "preview.svml"),
+    "--target",
+    "final.video",
     "--project",
     process.cwd(),
   ], { write: (text) => { output += text; } });
@@ -129,14 +126,11 @@ test("pricing keeps every planned generation and exposes authored parameters", a
   ${ids.map((id) => `<copy:Value id="${id}-prompt">An original ${id}.</copy:Value>
   <gpt:Image id="${id}" prompt={${id}-prompt} aspect-ratio="9:16" resolution="2K"/>`).join("\n")}
 </svml>`);
-    const source = join(root, "build.svrun");
-    await writeFile(source, `<?svml using="@hypit/markup/invocation@1"?>
-<svrun version="1"><author source="./main.svml"/>
-  ${ids.map((id) => `<target output="${id}.image"/>`).join("\n")}
-</svrun>`);
+    const source = join(root, "main.svml");
     let queried = 0;
     let output = "";
-    await runCommand(["pricing", source, "--project", root, "--runtime", join(root, "runtime.json"),
+    await runCommand(["pricing", source, ...ids.flatMap((id) => ["--target", `${id}.image`]),
+      "--project", root, "--runtime", join(root, "runtime.json"),
       "--json", "--limit", "1"], { write: (text) => { output += text; } }, {
       ...videoDistribution,
       openRuntimeHost: async (path, options) => ({

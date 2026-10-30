@@ -149,7 +149,7 @@ values. `text:Set` replaces one Text binding through a graph edge; `text:Append`
 after that binding. Their order is authored and visible.
 
 The rendered `{prompt}` is an ordinary Text Output. Connect it to a model's prompt port, or target it
-in a small Invocation and inspect or export that Result before using the Kit elsewhere. This checks the
+with focused Targets and inspect or export that Result before using the Kit elsewhere. This checks the
 assembled words without calling the image or video model. The model declaration still owns aspect ratio,
 duration, resolution and reference Resource children; prose describing what a reference supplies
 does not create the reference edge.

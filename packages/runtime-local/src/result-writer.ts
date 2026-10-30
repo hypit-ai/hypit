@@ -7,7 +7,8 @@ import type {
 } from "@hypit/hypit/runtime";
 import type { BuildExecutionSnapshot } from "./execution.js";
 import type { CommandResult } from "@hypit/hypit/protocol";
-import type { BuildResultFinish, BuildResultOperation, BuildResultWriter } from "@hypit/hypit/result";
+import type { BuildResultOperation } from "@hypit/hypit/result";
+import type { BuildResultFinish, BuildResultWriter, StoredBuildResult } from "@hypit/result/runtime-storage";
 
 import type {
   CreateLocalResultWriterOptions,
@@ -44,24 +45,24 @@ function operationEvent(operation: OperationSnapshot): CommandResult | undefined
   };
 }
 
-function resultOperation(operation: OperationSnapshot): BuildResultOperation {
+function resultOperation(operation: OperationSnapshot): BuildResultOperation | undefined {
   const evidence = {
-    need: { id: operation.need.id, capability: operation.need.capability },
-    createdAt: operation.createdAt,
-    ...("acknowledgedAt" in operation ? { acknowledgedAt: operation.acknowledgedAt } : {}),
-    ...("endedAt" in operation ? { endedAt: operation.endedAt } : {}),
-    ...(operation.progress === undefined ? {} : { progress: operation.progress }),
-    ...(operation.status === "cancelled" ? { cancellation: operation.cancellation } : {}),
-    operation: operation.id,
-    command: operation.command,
+    capability: operation.need.capability,
     endpoint: operation.endpoint,
-    ...(operation.pool === undefined ? {} : { pool: operation.pool }),
     ...(operation.receipt === undefined ? {} : { receipt: operation.receipt }),
   };
   return operation.status === "failed"
-    ? { ...evidence, status: "failed", failure: operation.failure }
-    : { ...evidence, status: operation.status === "queued" || operation.status === "submitting"
-      || operation.status === "running" || operation.status === "collecting" ? "pending" : operation.status };
+    ? { ...evidence, outcome: "failed", failedAt: operation.endedAt, failure: operation.failure }
+    : operation.status === "cancelled"
+      ? { ...evidence, outcome: "cancelled", cancelledAt: operation.endedAt, cancellation: operation.cancellation }
+      : operation.status === "queued" || operation.status === "submitting"
+        ? undefined
+        : operation.status === "running"
+          ? { ...evidence, acknowledgedAt: operation.acknowledgedAt }
+          : operation.status === "collecting"
+            ? { ...evidence, acknowledgedAt: operation.acknowledgedAt, providerCompletedAt: operation.endedAt }
+            : { ...evidence, outcome: "complete", acknowledgedAt: operation.acknowledgedAt,
+              providerCompletedAt: operation.endedAt };
 }
 
 function resultFinish(
@@ -86,14 +87,14 @@ export function createLocalResultWriter(
   const owner = randomUUID();
   const openWriter = async (execution: BuildExecutionSnapshot): Promise<{
     readonly writer: BuildResultWriter;
-    readonly manifest: import("@hypit/hypit/result").BuildResultManifest;
+    readonly manifest: StoredBuildResult;
     close(): Promise<void>;
   }> => {
     const opened = await options.openBuildResultRepository(execution.result);
     try {
       const [writer, manifest] = await Promise.all([
         opened.repository.openWriter(execution.build),
-        opened.repository.read(execution.build),
+        opened.repository.readStored(execution.build),
       ]);
       assert(writer !== undefined && manifest !== undefined, `Build ${execution.build} has no Result draft`);
       return {
@@ -148,7 +149,7 @@ export function createLocalResultWriter(
   ): Promise<void> => {
     const result = await openWriter(execution);
     try {
-      if (result.manifest.outcome !== undefined) return;
+      if ("outcome" in result.manifest) return;
       const resources = options.resourceStoreForBuild?.(execution.build) ?? options.resourceStore;
       await result.writer.sync({
         records,
@@ -170,14 +171,18 @@ export function createLocalResultWriter(
     const opened = await openWriter(execution);
     let closed = false;
     try {
-      if (opened.manifest.outcome === undefined) {
+      if (!("outcome" in opened.manifest)) {
         await opened.close();
         closed = true;
         const state = await acceptStoredResults(execution.build);
         await syncResult(execution, state.records);
         const reopened = await openWriter(execution);
         try {
-          const operations = (await options.operationStore.list({ build: execution.build })).map(resultOperation);
+          const operations = (await options.operationStore.list({ build: execution.build }))
+            .flatMap((operation) => {
+              const evidence = resultOperation(operation);
+              return evidence === undefined ? [] : [evidence];
+            });
           const executionLog = await options.executionLogs?.open(execution.build);
           await reopened.writer.finish(resultFinish(execution.decision, {
             ...(executionLog === undefined ? {} : { executionLog }),
@@ -246,22 +251,6 @@ export function createLocalResultWriter(
 
   return {
     sync: syncResult,
-    async finishResult(build) {
-      const execution = await options.executionStore.read(build);
-      if (execution === undefined) return undefined;
-      assert(execution.decision !== undefined,
-        `Build ${build} is still executing; its Result cannot be finished yet`);
-      const finished = await writeResultAndCleanup(await claimResultWrite(build));
-      return "createdAt" in finished
-        ? {
-            id: build,
-            outcome: finished.decision!.outcome,
-            ...(finished.attention === undefined ? {} : {
-              issue: { scope: finished.attention.step, message: finished.attention.error },
-            }),
-          }
-        : { id: build, outcome: finished.outcome };
-    },
     discardSubmission,
     completeResult,
     close() {

@@ -1,14 +1,13 @@
 # Reading and writing Source syntax
 
 Read this for the language around a production: imports, references, literal values, Recipes and
-Invocation choices. [Script syntax](script-syntax.md) owns prose, Roles, Dual Text, authored Cues, display
+execution Targets. [Script syntax](script-syntax.md) owns prose, Roles, Dual Text, authored Cues, display
 attributes and markers. [Timing](timing.md) explains how components consume those identities.
 [System relationships](system.md) explains authored values and computed Outputs.
 
-## Three documents, three decisions
+## Two documents, two decisions
 
-A `.svml` normally describes the work, a `.svs` holds reusable authored values, and a `.svrun`
-chooses one Author entry, its execution Targets and any transient realization override. Each
+A `.svml` normally describes the work and a `.svs` holds reusable authored values. Each
 document's Header selects its parser; the filename extension
 is the convention used to recognize its role.
 
@@ -66,8 +65,8 @@ Visual and Audio Tracks separately publish the picture and sound contributions s
 
 Inspect `hypit vocabulary` for the actual declaration's exports and use the published path it reports.
 Public bindings can be authored Records or realizable Logical Outputs. Script,
-Recipes and literal Text already exist as authored data; they are not Invocation Targets. The computed
-`prompt` from `copy:Render` is a Logical Output that an Invocation can target or another declaration
+Recipes and literal Text already exist as authored data; they are not Build Targets. The computed
+`prompt` from `copy:Render` is a Logical Output that a Build can target or another declaration
 can consume.
 Declaration order does not establish dependencies. References state which values each declaration
 uses, so a later declaration can be referenced without rearranging the Source.
@@ -140,29 +139,26 @@ than ordinary Recipes. This is the same file-extension convention with a differe
 This small Kit just joins two Text inputs. It does not generate a video. Fixed blocks and variable
 axes can be added when they express reusable direction; `@hypit/text` owns that template grammar.
 
-## Invocations demand Outputs
+## Commands select Target Outputs
 
-For the Text example saved as `main.svml`, beside `direction.svs`:
+For the Text example saved as `main.svml`, beside `direction.svs`, select its computed `prompt`
+Output explicitly:
 
-```svml
-<?svml using="@hypit/markup/invocation@1"?>
-<svrun version="1">
-  <author source="./main.svml"/>
-  <target output="prompt"/>
-</svrun>
+```bash
+hypit plan main.svml --target prompt
 ```
 
-A video Invocation usually targets the renderer's public video Output. Several Targets are valid when
-several deliverables are wanted. Targets are public Output names; requests outside the demanded graph
+A video command usually targets the renderer's author video Output. Several Targets are valid when
+several goals are wanted. Targets are author Output names; requests outside the demanded graph
 are not executed.
 
-An Invocation may add a transient override for an existing authored Record, but it cannot introduce
-a file, value or computation. Accept durable material by declaring the project resource through the
-package that owns its meaning and selecting that Record in the Author Source. A raw MP4 file is a
+Target selection introduces no file, value or computation. Accept durable material by declaring the
+project resource through the package that owns its meaning and making its consumer reference that
+Record in the Author Source. A raw MP4 file is a
 media asset, not prepared media or alignment evidence; preparation and evidence retain their nominal
-types and explicit relationships. [Invocations](runs.md) explains Targets and transient overrides, while
+types and explicit relationships. [Targets](targets.md) explains the selection, while
 [Authoring](authoring.md) owns durable material choices.
 
 `hypit check <source>` checks Source and graph legality. `hypit plan <author-source> --target <output> --runtime <profile>` exposes
-the selected graph and external requests without submitting them. A legal document can still describe a
+the target's demanded graph slice and external requests without submitting them. A legal document can still describe a
 poor image, a misplaced Caption or an unhelpful cut; those remain directing questions.

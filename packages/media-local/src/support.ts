@@ -25,23 +25,14 @@ export function supportsLocalAudioProgram(constraints: CanonicalValue): Endpoint
     return unsupported(`Invalid AudioProgram: ${error instanceof Error ? error.message : String(error)}`);
   }
   try {
-    const inspect = (value: AudioProgram): void => {
-      for (const node of value.graph.nodes) {
-        if (node.kind === "process") {
-          if (Object.keys(node.inputs).some((port) => port !== "signal")) {
-            throw new Error(`Audio Process ${node.id} has unsupported ports.`);
-          }
-          readAudioGainProcess(node.program);
+    for (const node of (program as AudioProgram).graph.nodes) {
+      if (node.kind === "process") {
+        if (Object.keys(node.inputs).some((port) => port !== "signal")) {
+          throw new Error(`Audio Process ${node.id} has unsupported ports.`);
         }
-        if (node.kind === "composition") {
-          if (node.reconstruction !== undefined) {
-            throw new Error(`Audio Composition ${node.id} reconstruction is unsupported.`);
-          }
-          inspect(node.program);
-        }
+        readAudioGainProcess(node.program);
       }
-    };
-    inspect(program as AudioProgram);
+    }
   } catch (error) {
     return unsupported(`AudioProgram capability is unsupported: ${error instanceof Error ? error.message : String(error)}`);
   }

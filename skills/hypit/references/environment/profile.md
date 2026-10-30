@@ -37,7 +37,7 @@ Keep these locations distinct:
 
 | Location | Responsibility |
 | --- | --- |
-| Project directory | Sources, saved Invocations, assets and component dependencies |
+| Project directory | Sources, assets and component dependencies |
 | `.hypit/runtime` | File naming the selected Profile |
 | Profile file | Editable execution choices; may be shared intentionally |
 | Profile `dataRoot` | Execution data, Worker state and working files; relative to the Profile's directory |
@@ -88,9 +88,9 @@ selects an instance. Use the configuration keys documented by that Provider pack
 
 The [Model and Provider roles](model-and-provider.md#start-from-the-capability-the-work-needs)
 keep authoring separate from deployment. One authored request produces a concrete external **Need**
-only if its output remains demanded by the Invocation's Targets and the Author Source has not selected
-an accepted realization for that output. Accepted material is an ordinary project resource declared
-in the Author Source; Result history is not an execution input.
+only if its output remains demanded by the command's Targets. Accepted material is an ordinary
+project resource declared in the Author Source and referenced directly by its consumer; changing that
+reference makes an unused generation branch unreachable. Result history is not an execution input.
 
 A **capability** identifies the required operation. The Profile routes it to an **Endpoint**, a
 configured Provider instance. A **binding** is that explicit routing choice. For example, after
@@ -195,7 +195,7 @@ Use distinct Endpoint names and credential keys for separate accounts. Binding s
 serves the requested capability; entering another service's key does not change the Provider.
 Local credential-free Endpoints need no login. `auth status <endpoint>` reports declared slots
 without revealing values; configured does not mean accepted, funded, reachable, or authorized for
-every model. Keep secrets out of Sources, saved Invocations, Profile JSON, command arguments, commits and chat.
+every model. Keep secrets out of Sources, Profile JSON, command arguments, commits and chat.
 
 ## Set capacity at the resource it describes
 
@@ -233,20 +233,19 @@ two. These numbers illustrate the relationship; choose them for the actual machi
 reserves both budgets until the whole render finishes, including preparation and encoding.
 It does not release capacity each time one browser closes.
 
-The local HTML Provider selects its implementation explicitly. Omit `renderer` or use
-`"chromium"` for the portable visual-and-frame renderer. Use `"electron"` only with an explicit,
-user-managed `electronPath`; that Endpoint produces encoded visuals and does not offer PNG frame
-capture. It does not silently fall back to Chromium. Configure a second Chromium Endpoint when the
-same Runtime also needs frame-image capture:
+The two local HTML implementations are separate Endpoint packages. Use
+`@hypit/provider-html-local` for portable Chromium visual and PNG-frame rendering. Use
+`@hypit/provider-html-electron-local` with an explicit, user-managed `electronPath` for encoded
+visual output. Neither package silently falls back to the other. Configure both Endpoint instances
+when the same Runtime also needs Electron export and Chromium frame-image capture:
 
 ```json
 {
   "endpoints": {
     "html.gpu": {
-      "use": "@hypit/provider-html-local",
+      "use": "@hypit/provider-html-electron-local",
       "pool": "local-render",
       "config": {
-        "renderer": "electron",
         "electronPath": "/Applications/Electron.app/Contents/MacOS/Electron",
         "workers": 1
       }
@@ -255,7 +254,6 @@ same Runtime also needs frame-image capture:
       "use": "@hypit/provider-html-local",
       "pool": "local-snapshots",
       "config": {
-        "renderer": "chromium",
         "workers": 2
       }
     }
@@ -279,7 +277,7 @@ exact settings. Studio's permitted transient work has session-local concurrency.
 | --- | --- |
 | Which project, Profile and storage locations apply? | `hypit paths` |
 | Is a named credential present? | `hypit auth status <endpoint>`; no account-access guarantee |
-| What will this Invocation demand? | `hypit plan <source> --target <output>` or `hypit plan <preset.svrun>`; concrete requests, support checks and cheap readiness of their selected Endpoints |
+| What will these Targets demand? | `hypit plan <source> --target <output>`; concrete requests, support checks and cheap readiness of their selected Endpoints |
 | Can the selected services be reached and used? | `hypit doctor --endpoint <instance>`; bounded active diagnosis, no generation submission |
 | Is the Worker running and work active? | `hypit runtime status` |
 | Which local helpers answer, and where are their logs? | `hypit programs status --endpoint <instance> --verbose` |
@@ -299,7 +297,7 @@ distinguishes useful intermediate evidence from the intended deliverable.
 
 | Change | What to do |
 | --- | --- |
-| Source, Invocation or project component implementation | Create a new Build for the changed work |
+| Source, Target selection or project component implementation | Create a new Build for the changed work |
 | Endpoint config or binding | New Builds read current choices; an existing Build retains its selected configuration |
 | Writable Store credential value | Subsequent credential resolution uses that Store; changing a secret is not a blanket Worker restart instruction |
 | Distribution installation, Worker startup policy or its inherited environment | Restart the Worker explicitly when active work permits |

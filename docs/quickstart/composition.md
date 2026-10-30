@@ -112,15 +112,7 @@ never inherit visual Stack membership.
 
 The renderer compiles the visual contributions, captures requested frames, renders AudioTracks and
 muxes them into the delivered file. `{final.video}` is an ordinary Resource-backed `Blob` and
-the usual Invocation Target.
-
-```svml
-<?svml using="@hypit/markup/invocation@1"?>
-<svrun version="1">
-  <author source="./main.svml"/>
-  <target output="final.video"/>
-</svrun>
-```
+the usual Build Target: `hypit build main.svml --target final.video`.
 
 ## Render a frame interval
 
@@ -132,7 +124,7 @@ the usual Invocation Target.
 The bounds use the original Timeline and a half-open interval. At 30 fps this example renders
 seconds 8–12. Animation and media sampling retain their original program positions even though the
 encoded clip starts at zero. Range rendering limits final capture and encoding; the selected
-Invocation still produces required inputs, so reuse accepted media and alignment Outputs explicitly.
+Target slicing still produces required inputs, so reuse accepted media and alignment Outputs explicitly.
 
 ## A film drawn entirely by components
 
@@ -168,7 +160,7 @@ Selections as the same absolute Instant and Window inputs.
 
 ```bash
 hypit check main.svml
-hypit plan build.svrun
+hypit plan main.svml --target final.video
 ```
 
 `check` validates imports, types and references without calling external services. `plan` shows the

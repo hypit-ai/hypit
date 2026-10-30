@@ -91,15 +91,15 @@ implements it.
 
 Film explicitly selects its Timeline, Canvas and required visual/audio outputs.
 
-## Source, Invocation, Runtime and Studio
+## Source, Targets, Runtime and Studio
 
 Author Source connects material requests, time and space values, components and deliverables.
-Recipes hold reusable treatments. An `.svrun` is an optional saved Invocation: it selects public Outputs
-as Targets and may temporarily override an Output with another Record already authored in
-the same closure. Durable material and realization choices remain in the Author Source.
+Recipes hold reusable treatments. Each plan, Build or Studio command explicitly selects public
+Outputs as Targets. Durable material and its consumer references remain in the Author Source.
 
-A Build produces the demanded Outputs and records completed public Outputs in its Result. Runtime
+A Build records Targets as execution evidence and stores only package-owned Outputs whose declarations
+give them a cross-Build lifetime. Runtime
 Profiles select already installed Providers, Endpoints and credentials for external work.
 
 Studio opens the selected composition. Companions give useful Items and controls to project components.
-[Authoring](authoring.md), [Invocations](runs.md), [Builds](builds.md) and [Studio](studio.md) own those workflows.
+[Authoring](authoring.md), [Targets](targets.md), [Builds](builds.md) and [Studio](studio.md) own those workflows.

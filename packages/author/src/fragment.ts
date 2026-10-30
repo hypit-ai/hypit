@@ -3,12 +3,12 @@ import {
   resolveProducer,
 } from "@hypit/kernel";
 import type {
-  OutputRoot,
   AuthorGraph,
   GraphValueRef,
   LinkedProgram,
   LogicalOutput,
   OperationNode,
+  OperationResultRef,
   ProducerRef,
   TypeRef,
 } from "@hypit/protocol";
@@ -59,7 +59,7 @@ export type FragmentInstanceRequest = {
 export type ElaboratedFragmentExport = {
   readonly name: string;
   readonly type: TypeRef;
-  readonly root: OutputRoot;
+  readonly result: OperationResultRef;
 };
 
 export type ElaboratedFragment = {
@@ -337,7 +337,7 @@ export function elaborateGraphFragment(
     return {
       name: item.name,
       type: item.type,
-      root,
+      result: root,
     };
   });
   const content = {
@@ -370,8 +370,7 @@ function reachableOperationIds(
     }
   };
   for (const item of selected) {
-    assert(item.root.kind === "operation-result", "INVALID_FRAGMENT_EXPORT_ROOT", item.name);
-    visit(item.root.operation);
+    visit(item.result.operation);
   }
   return reachable;
 }
@@ -391,7 +390,7 @@ function bindExports(
   const outputs: LogicalOutput[] = selected.map((item) => {
     const output = bindings[item.name] as string;
     assert(output.length > 0, "EMPTY_LOGICAL_OUTPUT_ID", `${instance.instance}.${item.name} output is empty`);
-    return { id: output, type: item.type, primary: item.root };
+    return { id: output, type: item.type, result: item.result };
   });
   const reachable = reachableOperationIds(instance, selected);
   return {

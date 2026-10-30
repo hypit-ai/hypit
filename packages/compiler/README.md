@@ -47,19 +47,17 @@ available to package code.
 while the exact Module Closure must be known before typed Records can be verified. It then invokes
 the Source Closure compiler and parser-independent Author linker.
 
-`InvocationCompiler` compiles an Author Source together with one explicit source-neutral
-`Invocation`. The Invocation can be resolved directly from CLI or Studio arguments, or decoded from
-an optional saved `.svrun` preset that names its Author Source. Both paths resolve the same
-`Invocation` before entering the compiler. Durable Records, operations and realization choices remain
-in the Author Source. The compiler applies the precedence
-`Invocation override > authored realization > AuthorGraph primary`, then asks Core for the finite
-BuildPlan.
+`BuildCompiler` compiles an Author Source together with one explicit transient Target selection
+from CLI or Studio arguments. Durable Records, operations and consumer references remain in the
+Author Source. The compiler follows each demanded output through its one fixed AuthorGraph
+producer, then asks Core for the finite BuildPlan.
 
-`prepareCompilation` turns that completed structural selection into a `PreparedBuild`: it derives
-one immutable `PublicationIntent`, seals the `BuildDefinition`, and exposes the Kernel's disposable
-`BuildView`.
-The publication binds each public Author name to its selected Logical Output, target membership,
-display name and current accepted Record. CLI catalogs, Runtime submission and Result writing consume
+`prepareBuild` turns that completed structural selection into a `PreparedBuild`: it derives
+one immutable `ResultIntent`, seals the `BuildDefinition`, and exposes the Kernel's disposable
+`BuildView`. The prepared targets describe the execution goals; the intent separately
+contains only reachable package-owned retained outputs and carries their Result name and current Record
+without leaking Logical Output identities into Result storage.
+CLI catalogs, Runtime submission and Result writing consume
 this intent; they do not repeat structural selection or interpret Result history as author input.
 
 The package contains no Script, video, Provider, queue, credentials or rendering knowledge. A

@@ -61,8 +61,8 @@ A-roll-only or B-roll-only.
 
 | Current question | Read |
 | --- | --- |
-| Choose Targets and transient execution overrides | [Invocations](runs.md) |
-| Decide which completed value preserves material while allowing this edit | [Reuse boundaries](authoring.md#reuse-produced-work-explicitly) |
+| Choose the Outputs this command must reach | [Targets](targets.md) |
+| Export completed material into the project and reference it from the work | [Reuse boundaries](authoring.md#reuse-produced-work-explicitly) |
 | Plan, price, submit, follow, recover and retrieve work | [Builds and Results](builds.md) |
 | Inspect the current picture, precise frames and continuous motion grids | [Snapshots](snapshots.md) |
 | Assemble Film, request full/range rendering and export the result | [Rendering](rendering.md) |

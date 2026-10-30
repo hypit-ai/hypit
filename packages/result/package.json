@@ -6,9 +6,12 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./runtime-storage": "./src/runtime-storage.ts",
+    "./runtime-storage/node": "./src/node/runtime-storage.ts",
     "./node": "./src/node/index.ts"
   },
   "dependencies": {
+    "@hypit/facet": "workspace:*",
     "@hypit/protocol": "workspace:*",
     "@hypit/atomic-file": "workspace:*"
   }

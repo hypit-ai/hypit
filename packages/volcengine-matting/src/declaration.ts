@@ -60,7 +60,8 @@ export const portraitMattingAuthorDeclaration: AuthorDeclarationCompiler = {
   },
   bindings(declaration) {
     const id = literal(declaration, "id");
-    return [{ name: `${id}.video`, ref: { kind: "component-output", component: id, output: "video" }, type: blobTypes.blob }];
+    return [{ name: `${id}.video`, ref: { kind: "component-output", component: id, output: "video" }, type: blobTypes.blob,
+      retained: true }];
   },
   async compile({ declaration, resolveReference }) {
     const id = literal(declaration, "id");

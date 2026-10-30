@@ -1,4 +1,4 @@
-import type { Composition, VisualEasing, VisualProcessEffect } from "@hypit/composition";
+import type { VisualEasing, VisualProcessEffect } from "@hypit/composition";
 import type { FrameSpan } from "@hypit/timeline";
 import type { CompositableSurfaceRef, PictureInterpretation, PreparedMedia } from "@hypit/media";
 import type { BlobRef } from "@hypit/hypit/protocol";
@@ -28,11 +28,6 @@ export type VisualSource =
   | {
       readonly kind: "surface";
       readonly surface: CompositableSurfaceRef;
-      readonly extent: IntrinsicExtent;
-    }
-  | {
-      readonly kind: "composition";
-      readonly composition: Composition;
       readonly extent: IntrinsicExtent;
     };
 

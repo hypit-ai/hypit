@@ -5,19 +5,18 @@ import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import test from "node:test";
 
-import { buildResultDirectory, FileBuildResult, FileBuildResultRepository, syncBuildResultOutputs } from "@hypit/result/node";
+import { buildResultDirectory, FileBuildResult, FileBuildResultStore } from "@hypit/result/runtime-storage/node";
 import type { BlobRef } from "@hypit/protocol";
 
 import {
-  acceptedRecords,
   structuredType,
-  publication,
+  resultIntent,
   videoType,
 } from "./repository-scenario.js";
 
-test("filesystem Results have one public name per Output and browse newest first", async () => {
+test("filesystem Results have one retained name per Output and browse newest first", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-build-result-browse-"));
-  const repository = new FileBuildResultRepository(root);
+  const repository = new FileBuildResultStore(root);
   const ids = [
     "bld_20260901T100000001Z_0000000001",
     "bld_20260902T100000002Z_0000000001",
@@ -26,18 +25,20 @@ test("filesystem Results have one public name per Output and browse newest first
   try {
     await assert.rejects(repository.create({
       id: "bld_20260902T100000000Z_0000000001",
-      sourceId: "/project/main.svml",
-      publication: publication([
-        { name: "video", output: "logical:video" },
-        { name: "duplicate", output: "logical:video" },
-      ], ["video"]),
-    }), /has more than one published name/u);
+      sourcePath: "/project/main.svml",
+      targets: ["video"],
+      intent: resultIntent([
+        { name: "video", record: "record:video" },
+        { name: "video", record: "record:duplicate" },
+      ]),
+    }), /name video is repeated/u);
 
     for (const id of ids) {
       const writer = await repository.create({
         id,
-        sourceId: "/project/main.svml",
-        publication: publication([{ name: "video", output: "logical:video" }], ["video"]),
+        sourcePath: "/project/main.svml",
+        targets: ["video"],
+        intent: resultIntent([{ name: "video" }]),
       });
       await writer.finish({ outcome: "failed", failure: "ordering fixture" });
     }

@@ -97,7 +97,7 @@ with a drawing example. [System relationships](system.md) places it in the compl
 
 ## Let ordinary package management own distribution
 
-The project's package manager installs and versions components. Source and saved-Invocation imports select the
+The project's package manager installs and versions components. Source imports select the
 packages the production uses. Project packages and independently published packages resolve through
 the project's installed dependencies; the selected Distribution supplies its own default packages.
 

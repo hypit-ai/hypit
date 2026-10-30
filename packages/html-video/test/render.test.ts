@@ -103,7 +103,7 @@ async function runBuild(executor: Executor, state: BuildView) {
 
 const space = sealTimeline({ id: "test-space", frameCount: 60, frameRate: { numerator: 30, denominator: 1 },
 });
-const composition = sealComposition({ id: "render-test", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: { members: [] } }, audio: { contributions: [] } }, space);
+const composition = sealComposition({ id: "render-test", visual: { canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: { members: [] } }, audio: { contributions: [] } }, space);
 const delivery = htmlVideoDeliverySpec();
 
 const stored = (value: CanonicalValue): Value => value;
@@ -153,7 +153,7 @@ function buildState(
   authorGraph: Parameters<typeof planBuild>[1],
   targets: readonly string[],
 ) {
-  const planned = planBuild(program, authorGraph, targets, []);
+  const planned = planBuild(program, authorGraph, targets);
   return materializeBuild(defineBuild({
     program,
     plan: planned.plan,

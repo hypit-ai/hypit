@@ -15,12 +15,6 @@ import {
   createMarkupDeclarationAuthorFrontend,
   MarkupDeclarationRegistry,
 } from "@hypit/markup";
-import {
-  realizationAuthorDeclarations,
-  realizationManifest,
-  realizationMarkupDeclarations,
-  realizationModuleRef,
-} from "@hypit/realization";
 import { NodeFilesystemWorkspace } from "@hypit/workspace/node";
 import { RefinementRegistry } from "@hypit/refinement";
 
@@ -41,7 +35,9 @@ export function emptyManifest(name: string, version = "1"): ModuleManifest {
 export const laboratory = { name: "example.compiler-lab", version: "1" } as const;
 export const resultType = { module: laboratory, name: "Result" } satisfies TypeRef;
 const producer = { module: laboratory, name: "produce" } satisfies ProducerRef;
+const forwardProducer = { module: laboratory, name: "forward" } satisfies ProducerRef;
 const resultSyntax = { declaration: "result", tag: "Result" } as const;
+const forwardSyntax = { declaration: "forward", tag: "Forward" } as const;
 const acceptedSyntax = { declaration: "accepted", tag: "Accepted" } as const;
 const laboratoryManifest: ModuleManifest = {
   format: "hypit.module@1",
@@ -53,6 +49,10 @@ const laboratoryManifest: ModuleManifest = {
   producers: [{
     name: producer.name,
     inputs: [],
+    result: { kind: "output" as const, name: "result", type: resultType },
+  }, {
+    name: forwardProducer.name,
+    inputs: [{ name: "source", type: resultType }],
     result: { kind: "output" as const, name: "result", type: resultType },
   }],
 };
@@ -81,12 +81,61 @@ const resultDeclaration: AuthorDeclarationCompiler = {
   bindings(declaration) {
     const id = declarationField(declaration, "id");
     if (id?.kind !== "literal") throw new Error("Result id is required");
-    return [{ name: `${id.value}.result`, ref: { kind: "component-output", component: id.value, output: "result" }, type: resultType }];
+    return [{ name: `${id.value}.result`, ref: { kind: "component-output", component: id.value, output: "result" },
+      type: resultType, retained: true }];
   },
   compile({ declaration }) {
     const id = declarationField(declaration, "id");
     if (id?.kind !== "literal") throw new Error("Result id is required");
     return { records: [], components: [{ id: id.value, fragment, inputs: {}, outputs: { result: `${id.value}.result` }, range: declaration.range }] };
+  },
+};
+
+const forwardFragment = sealGraphFragment({
+  inputs: [{ name: "source", type: resultType }],
+  operations: [{
+    id: "forward",
+    producer: forwardProducer,
+    inputs: { source: { kind: "fragment-input", name: "source" } },
+    result: { kind: "output" as const, name: "result" },
+  }],
+  exports: [{
+    name: "result",
+    type: resultType,
+    root: { kind: "fragment-operation", operation: "forward" },
+  }],
+});
+
+const forwardDeclaration: AuthorDeclarationCompiler = {
+  module: laboratory,
+  declaration: "forward",
+  outputs: [resultType],
+  shape: {
+    summary: "Forwards one test Result without retaining the derived value.",
+    fields: [
+      { name: "id", kind: "identifier", required: true, summary: "Names the forwarded Result." },
+      { name: "source", kind: "reference", required: true, accepts: [resultType], summary: "Selects the source Result." },
+    ],
+  },
+  bindings(declaration) {
+    const id = declarationField(declaration, "id");
+    if (id?.kind !== "literal") throw new Error("Forward id is required");
+    return [{ name: `${id.value}.result`, ref: { kind: "component-output", component: id.value, output: "result" },
+      type: resultType }];
+  },
+  async compile({ declaration, resolveReference }) {
+    const id = declarationField(declaration, "id");
+    const source = declarationField(declaration, "source");
+    if (id?.kind !== "literal" || source?.kind !== "reference") throw new Error("Forward id and source are required");
+    const resolved = await resolveReference(source.path);
+    if (resolved === undefined) throw new Error(`Forward source ${source.path} is unavailable`);
+    return { records: [], components: [{
+      id: id.value,
+      fragment: forwardFragment,
+      inputs: { source: resolved.ref },
+      outputs: { result: `${id.value}.result` },
+      range: declaration.range,
+    }] };
   },
 };
 
@@ -165,20 +214,15 @@ export function compiler(
 ): Compiler {
   const modules = new ModulePackageRegistry();
   modules.register({ manifest: laboratoryManifest });
-  modules.register({ manifest: realizationManifest });
   for (const manifest of additional) modules.register({ manifest });
   const declarations = new AuthorDeclarationRegistry();
   declarations.register(resultDeclaration);
+  declarations.register(forwardDeclaration);
   declarations.register(acceptedDeclaration);
-  realizationAuthorDeclarations.forEach((declaration) => declarations.register(declaration));
   const syntax = new MarkupDeclarationRegistry();
   syntax.register({ module: laboratory, ...resultSyntax });
+  syntax.register({ module: laboratory, ...forwardSyntax });
   syntax.register({ module: laboratory, ...acceptedSyntax });
-  realizationMarkupDeclarations.forEach((declaration) => syntax.register({
-    module: realizationModuleRef,
-    declaration: declaration.name,
-    tag: declaration.tag,
-  }));
   const frontends = new AuthorFrontendRegistry();
   const frontend = createMarkupDeclarationAuthorFrontend({
     syntax,

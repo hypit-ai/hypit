@@ -11,7 +11,7 @@ import {
   verifyPreparedMedia,
   verifyPreparedVisualSource,
 } from "../src/index.js";
-import type { MediaInspection } from "../src/index.js";
+import type { MediaInspection, MediaVideoStream } from "../src/index.js";
 
 const VIDEO_PICTURE = { colorPrimaries: "bt709", colorTransfer: "bt709", colorMatrix: "bt709",
   colorRange: "limited", bitDepth: 8, alphaMode: "opaque" } as const;
@@ -52,7 +52,24 @@ test("PreparedMedia preserves source identity, exact member offsets and display 
     sourceAtStart: { ticks: "0", timeBase: { numerator: 1, denominator: 1 } },
     rate: { numerator: 1, denominator: 1 },
   });
-  assert.deepEqual(preparedVisualExtent(media), { widthPx: 3, heightPx: 4 });
+  assert.deepEqual(preparedVisualExtent(media), { widthPx: 576, heightPx: 768 });
+});
+
+test("square-pixel display extent preserves actual dimensions instead of reducing an aspect ratio", () => {
+  const squareInspection: MediaInspection = {
+    container: { formatNames: ["mp4"] },
+    streams: [{
+      ...(inspection.streams[0]! as MediaVideoStream), width: 64, height: 64,
+      sampleAspectRatio: { numerator: 1, denominator: 1 }, rotationDegrees: 0,
+    }],
+  };
+  const media = prepareMedia({
+    id: "square",
+    source: { kind: "blob", resource: fixtureResource("prepared-square"), size: 128, mediaType: "video/mp4" },
+    inspection: squareInspection,
+    selection: { videoStreamIndex: 0, spanAuthority: "video", picture: VIDEO_PICTURE },
+  });
+  assert.deepEqual(preparedVisualExtent(media), { widthPx: 64, heightPx: 64 });
 });
 
 test("signal projections retain source selection without choosing an execution format", () => {

@@ -33,7 +33,7 @@ for (const failure of ["opening", "watching"] as const) {
     t.after(() => { t.mock.restoreAll(); syncBuiltinESMExports(); });
     const warnings: string[] = [];
     let installed = false;
-    const plugin = studioFeedbackPlugin("/project", "/project/main.svrun");
+    const plugin = studioFeedbackPlugin("/project", "/project/main.svml");
     (plugin.configureServer as (server: ViteDevServer) => void)({
       config: { logger: { warn(message: string) { warnings.push(message); } } },
       ws: { send() {} },

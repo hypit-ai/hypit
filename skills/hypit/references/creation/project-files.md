@@ -20,7 +20,7 @@ Keep discovery tied to the question being answered:
 | --- | --- |
 | An executable or prepared local service | `hypit paths`, package-manager records, the selected Profile and Provider-documented tool locations |
 | Declaration syntax or reusable behavior | Installed vocabulary, the owning package's documentation and a relevant component example |
-| This production's inputs and completed work | Supplied files, its notes, Sources, saved Invocations and project Result history, including explicitly linked shared assets |
+| This production's inputs and completed work | Supplied files, its notes, Sources and project Result history, including explicitly linked shared assets |
 
 Follow a path beyond the project when a supplied location, recorded dependency or documented tool
 location explains its purpose. A nearby project with a similar name or subject does not establish
@@ -60,7 +60,7 @@ Sources can live below the root, with file and Source imports relative to the de
 | `--package-root <directory>` | Resolve project packages from another installation location |
 
 Relative command-line paths start at the shell's current directory. `--project` selects the project
-without rebasing the Source, Invocation Source or `--runtime` argument. For example, from outside a project:
+without rebasing the Source or `--runtime` argument. For example, from outside a project:
 
 ```bash
 hypit paths --project /path/to/video-project
@@ -104,7 +104,6 @@ project/
 │       ├── PROGRESS.md
 │       ├── authors/
 │       ├── recipes/
-│       ├── runs/
 │       ├── assets/
 │       └── drafts/
 ├── assets/                      # inputs shared by several targets
@@ -113,7 +112,7 @@ project/
 └── package.json
 ```
 
-A target may have several Author Sources, Recipe Sources and saved Invocations. Repeating one Invocation creates another
+A target may have several Author and Recipe Sources. Repeating a Build command creates another
 Build, not another target. Keep files for one target together so their relationship is readable from
 the filesystem rather than inferred from matching names elsewhere in the project.
 
@@ -126,9 +125,9 @@ productions/short-version/
 ```
 
 Each production links to `../../references/viral-ad/` from its own Brief or Treatment and keeps its own
-Sources and saved Invocations.
+Sources.
 
-The CLI finds the project from the command's working directory as described above; Source and Invocation files may live in any
+The CLI finds the project from the command's working directory as described above; Source files may live in any
 subdirectory inside it. Shared assets and packages can stay at project root. Target-specific assets
 stay with that target. A reference file that is also intentionally used in the new film can be
 referenced in place; its documentary role does not require a duplicate.
@@ -148,12 +147,12 @@ referenced in place; its documentary role does not require a duplicate.
   [agreed paid scope](brief.md#brief-preserves-user-authority).
 - `TREATMENT.md` is the director's current answer to the Brief: the intended new piece in complete
   creative terms, before implementation details.
-- `authors/`, `recipes/`, and optional `invocations/` are the exact production implementation.
+- `authors/` and `recipes/` contain the exact production implementation.
 - `PROGRESS.md` is a short photograph of the work now: the live question, what remains to examine or
   make, next useful action, real blockers, active Build ids and useful Results. Keep cost information
   relevant to the remaining work here when it affects the agreed budget. When handing work
-  over, retain the relevant Invocation and Runtime Profile, exact Build id and public Output names needed
-  to continue. The Author Source owns durable project resources and realization choices; the note
+  over, retain the relevant Source and explicit Targets, Runtime Profile, exact Build id and retained Output names needed
+  to continue. The Author Source owns durable project resources and consumer references; the note
   points to them. Established conclusions belong in their owning
   document instead.
 
@@ -166,7 +165,7 @@ their owning documents as the work develops, preserving both the explanation and
 details. Let provisional accounts grow with the understanding, keeping detailed evidence once and
 linking to its owner. Share the meaning of discoveries in conversation while the files retain the
 full account. Resume by reading the current project files and relevant Skill pages; use Progress to find
-the next question and the saved evidence, Sources, saved Invocations or Results to continue it. A new discovery
+the next question and the saved evidence, Sources or Results to continue it. A new discovery
 updates the account it changes so the next session inherits the improved understanding.
 
 ## Drafts and Results are different things
@@ -182,45 +181,44 @@ become an `asset`, a `draft`, or direct input to another production.
 ## Hand over an editable production
 
 A finished MP4 is a viewing deliverable. To continue making the piece, the recipient also needs the
-authored work and the project resources its Author Source selects:
+authored work and the project resources its Author Source references:
 
-- Sources, Recipes, saved Invocations, project notes and referenced input assets, keeping their relative layout;
+- Sources, Recipes, project notes and referenced input assets, keeping their relative layout;
 - project component source or installed-release dependencies, `package.json`, its lockfile and any
   tarballs referenced by `file:` dependencies;
-- every project asset, evidence document and other authored Record selected by the production;
+- every project asset, evidence document and other authored Record referenced by the production;
 - the intended Runtime configuration, with account access configured on the receiving machine through
   its own Credential Store.
 
 Results are execution history rather than dependencies of the authored production. Include
 `.hypit/results/` when the recipient needs prior Build evidence, diagnostics or Outputs that have not
 yet been accepted into the project. A self-contained editable production must not require a Result
-directory merely to resolve its selected material.
+directory merely to resolve its authored references.
 
 External input files remain live dependencies. When moving to another machine, provide those inputs
 and preserve or update their project-relative references. Copying Result directories does not collect
-project inputs; `hypit get` only exports a selected historical Output to an explicit destination.
+project inputs; `hypit result export` only exports a selected historical Output to an explicit destination.
 
 The recipient installs the selected Distribution and project dependencies, configures their Runtime,
-and checks the received Author Source. Planning the intended Invocation shows what new work remains. Active
+and checks the received Author Source. Planning its explicit Targets shows what new work remains. Active
 execution stays with the originating Runtime until that attempt ends; an editable handoff carries
 authored work and project resources rather than the originating Runtime's execution state.
 
-`hypit get` is useful when accepting or handing over a particular historical Output. Place an exported
+`hypit result export` is useful when accepting or handing over a particular historical Output. Place an exported
 image, video or audio file at a project path, declare it through its owning package, and author the
-realization choice explicitly. A structured value with referenced files exports as `value.json`
-beside those files for inspection and transport; it enters Source only when its owning package accepts
-that document. [Builds and Results](../production/builds.md) explains
+consumer reference explicitly. A structured value is exported in the author format supplied by its
+owning package; it enters Source only through that package's ordinary declaration. [Builds and Results](../production/builds.md) explains
 Result inspection and export.
 
 ## Resume from present facts
 
 After interruption or context compaction, read the current Brief, Treatment, reference archive,
-Source, Recipe, saved Invocation and the short `PROGRESS.md` that applies. Then inspect the project's actual Build
+Source, Recipe and the short `PROGRESS.md` that applies. Then inspect the project's actual Build
 Results and Runtime status. Continue from usable outputs already present; loss of conversation context
 is not a reason to submit the same paid work again.
 
 A command interruption or missing reply can leave the Worker running. [Builds](../production/builds.md)
-explains how to identify active work and continue through a new Invocation after a failed attempt.
+explains how to identify active work and continue through a new Build after a failed attempt.
 Completed Outputs remain in Results without becoming production inputs. Export accepted material to
 the project and update the Author Source; neither notes nor an unchanged output name selects it automatically.
 

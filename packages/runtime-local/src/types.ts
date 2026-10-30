@@ -2,7 +2,7 @@ import type { RefinementPackage } from "@hypit/hypit/refinement";
 import type { Awaitable, ProducerPackage } from "@hypit/hypit/producer";
 import type { EndpointInstance } from "@hypit/hypit/endpoint";
 import type { LoadedPackage } from "@hypit/hypit/loader";
-import type { BuildResultRepository } from "@hypit/hypit/result";
+import type { BuildResultStore } from "@hypit/result/runtime-storage";
 import type {
   ResourceStore,
   BuildStore,
@@ -15,11 +15,10 @@ import type {
   RuntimeHostBuildSubmission,
   RuntimeHostCredentialControl,
   RuntimeHostExecution,
-  RuntimeHostResultControl,
 } from "./host-api.js";
 
 type BuildResultRepositoryOpened = {
-  readonly repository: BuildResultRepository;
+  readonly repository: BuildResultStore;
   readonly close?: () => void | Promise<void>;
 };
 
@@ -39,7 +38,7 @@ export type CreateLocalRuntimeOptions = {
   readonly resourceStore: ResourceStore;
   /** Optional Build-local transient byte area used by Provider execution and Result writing. */
   readonly resourceStoreForBuild?: (build: string) => ResourceStore;
-  /** Called only after a finished Build Result has accepted every public Output completed so far. */
+  /** Called only after a finished Build Result has accepted every retained Output completed so far. */
   readonly clearBuildResources?: (build: string) => Awaitable<void>;
   readonly openBuildResultRepository: (location: BuildResultRepositoryLocation) => Awaitable<BuildResultRepositoryOpened>;
   readonly credentialStore: CredentialStore;
@@ -100,14 +99,17 @@ export type LocalRuntime = RuntimeHostExecution & {
 /** Active execution control that never opens the selected ResourceStore. */
 export type LocalRuntimeControl = RuntimeHostControl;
 
-export type LocalResultWriter = RuntimeHostResultControl & {
-  /** Incrementally accept public Outputs already completed during execution. */
+export type LocalResultWriter = {
+  /** Incrementally accept retained Outputs already completed during execution. */
   sync(
     execution: BuildExecutionSnapshot,
     records: readonly import("@hypit/hypit/protocol").TypedRecord[],
   ): Promise<void>;
   /** Persist the outcome just frozen by the execution Worker, then remove active Runtime state. */
   completeResult(execution: BuildExecutionSnapshot): Promise<BuildExecutionSnapshot | BuildCompletion>;
+  /** Roll back a submission that never became active. This is not a user Result operation. */
+  discardSubmission(build: string): Promise<boolean>;
+  close(): void | Promise<void>;
 };
 
 /** Credential control for one or more exact Endpoint declarations; no execution state is opened. */

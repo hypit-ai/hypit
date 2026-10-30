@@ -6,7 +6,7 @@ import { commandHint } from "../../src/command-hint.js";
 test("POSIX command hints preserve selectors and literal path characters when copied", {
   skip: process.platform === "win32",
 }, () => {
-  const args = ["get", "build-1", "--output", "scene's $draft `name`", "--to", ""];
+  const args = ["result", "export", "build-1", "--output", "scene's $draft `name`", "--to", ""];
   const projectRoot = "/tmp/film $(printf changed)";
   const runtimeProfile = "/tmp/voice & picture/profile.json";
   const command = commandHint(args, { projectRoot, runtimeProfile }, "posix");

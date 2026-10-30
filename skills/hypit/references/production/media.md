@@ -99,9 +99,7 @@ the signal it consumes; its decoder, frame grid, sample buffers and caches are e
 - `video` selects the moving-picture stream, or `none` for audio-only material.
 - `picture` selects how the chosen visual samples are interpreted. `source` requires complete embedded
   colour tags; use an explicit profile such as `sdr-bt709` when the accepted source is known to have
-  missing or incorrect tags. Use `bt2100-pq10` or `bt2100-hlg10` only when that is the known source
-  signal. These names describe source interpretation, not an HDR delivery. This choice does not
-  transcode the file.
+  missing or incorrect tags. This choice does not transcode the file.
 - `audio` selects the embedded audio, or `none` when the material should carry no sound.
 - `span-authority` chooses which stream determines the prepared duration when stream lengths differ.
 
@@ -114,36 +112,23 @@ an exact local domain, optional picture and optional audio, and explicit maps to
 time. It does not transcode or resample. Balance, fades and music ducking remain mix decisions in
 [Audio Track and sound mix](../playbooks/craft/sound-mix.md).
 
-## Choose an HDR working picture explicitly
+## Keep source interpretation and delivery colour explicit
 
-Use HDR only when the intended delivery and selected Runtime Endpoint implement the complete HDR10
-path. Name the Composition's working picture, mastering facts and delivery separately:
+Prepared pictures carry an explicit source interpretation. Finished video uses the BT.709 H.264/AAC MP4
+delivery family; quality and matte remain explicit when the defaults are not the intended master:
 
 ```svml
-<media:WorkingPicture id="hdr-working" color-primaries="bt709"
-  color-transfer="linear" reference-white-nits="203"/>
-<media:HdrStaticMetadata id="hdr-metadata"
-  red-x="0.708" red-y="0.292" green-x="0.170" green-y="0.797"
-  blue-x="0.131" blue-y="0.046" white-x="0.3127" white-y="0.3290"
-  min-luminance-nits="0.005" max-luminance-nits="1000"
-  max-content-light-nits="1000" max-frame-average-light-nits="400"/>
-<media:Delivery id="hdr-delivery" profile="hdr10-hevc" quality="high"
-  hdr-static-metadata={hdr-metadata}/>
+<media:Delivery id="delivery" profile="bt709-h264" quality="high" matte="#000000"/>
 <film:Film id="main" canvas={vertical.canvas} timeline={program.timeline}
-  appearance={recipes.film.vertical} picture={hdr-working}>
+  appearance={recipes.film.vertical}>
   <!-- Tracks -->
 </film:Film>
 <html:Video id="video" composition={main.composition}
-  delivery={hdr-delivery}/>
+  delivery={delivery}/>
 ```
 
-The working picture says what Film values mean while contributions are composed. The Delivery
-independently requests BT.2020/PQ 10-bit output and carries its explicit mastering-display and
-content-light facts. Supply values that describe the intended master; Hypit does not scan the work
-and guess them. The Runtime binding selects an Electron Endpoint that supports that exact request.
-Do not infer working, delivery or monitoring choices from a source's tags or the current display.
-The local HDR10 path accepts tagged 10-bit BT.2020/PQ video sources; HDR still images, HDR
-compositable surfaces and HLG are not currently supported.
+Source interpretation and delivery describe different facts. Source tags, the current display and the
+selected renderer do not rewrite either one.
 
 ## Associate a performance with Script when its timing is consumed
 

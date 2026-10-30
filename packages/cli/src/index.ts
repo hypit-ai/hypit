@@ -15,8 +15,6 @@ export { runInstalledCliApplication, writeCliCompositionHelp } from "./installed
 export type { InstalledCliApplicationOptions, LoadedCliCommandSelection } from "./installed-application.js";
 export { discoverSourcePackages } from "./source-discovery.js";
 export { loadDiscoveredSourcePackages } from "./source-packages.js";
-export { collectInvocationFrontends, loadInvocation } from "./invocation-source.js";
-export type { LoadedInvocation } from "./invocation-source.js";
 export { hypitHostStateRoot, hypitProjectStateRoot } from "./paths.js";
 export { resolveProjectRoot } from "@hypit/project";
 export { renderCliError, writeCliHelp, writeCliOutput } from "./output.js";

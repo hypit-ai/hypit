@@ -39,9 +39,9 @@ After extraction, `.hypit/media.tar.gz` can be removed to reclaim the archive's 
 
 ```sh
 cd productions/explainer
-hypit check runs/render.svrun
-hypit plan runs/render.svrun --runtime ../../hypit.runtime.json
-hypit studio --invocation runs/render.svrun --runtime ../../hypit.runtime.json
+hypit check authors/main.svml
+hypit plan authors/main.svml --target complete-film.video --runtime ../../hypit.runtime.json
+hypit studio --source authors/main.svml --target complete-film.video --runtime ../../hypit.runtime.json
 ```
 
 Open the printed **Comments** URL (`#comments`) to review the composition before export and leave
@@ -51,15 +51,16 @@ this workspace's `FEEDBACK.json`; the Agent can read and resolve them while edit
 or scene code. Existing private review conversations are not included. The Inspector remains useful
 for the selected Caption, Style and event choices without exposing every internal scene dimension.
 
-The default saved Invocation is target-only. Accepted performance and supporting media are
+The selected Target is passed with the command. Accepted performance and supporting media are
 ordinary project assets; media preparation and speech alignment remain explicit Author relations.
 The included Profile has no generation account or credential store. A Build that reaches the authored
 WhisperX declarations therefore needs an explicitly configured transcription path, or the project must
 replace those declarations with project-owned transcript evidence first.
 
-Submit `runs/render.svrun` to render the complete film. `runs/export-parts.svrun` instead renders five
-consecutive ranges for limited temporary disk space. Its local Profile requests eight rendering
-workers and one render request at a time. The [production guide](productions/explainer/README.md)
+Build `authors/main.svml --target complete-film.video` to render the complete film. For limited
+temporary disk space, select the five `export-part-*.video` Outputs in one command instead. Its local
+Profile requests eight rendering workers and one render request at a time. The
+[production guide](productions/explainer/README.md)
 explains joining exported parts. The archive also includes `productions/explainer/output/final.mp4`.
 
 ## Read the work by responsibility

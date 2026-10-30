@@ -8,10 +8,11 @@ import { renderWorkerLimit } from "./concurrency.js";
 import type { HtmlExecutionOptions } from "./options.js";
 import { renderProgressReporter } from "./progress.js";
 import { endpointSupport, localHtmlFrameRejection, localHtmlRasterRejection } from "./support.js";
+import type { BrowserOptions } from "./browser.js";
 
 export type * from "./options.js";
 export const localHtmlProviderModuleRef = { name: "@hypit/provider-html-local", version: "1" } as const;
-export type CreateLocalHtmlProviderOptions = HtmlExecutionOptions & {
+type LocalHtmlProviderOptions = HtmlExecutionOptions & {
   readonly instance?: string;
   readonly pool?: string;
   /** Used by managed browser installation, not frame capture. */
@@ -22,7 +23,22 @@ export type CreateLocalHtmlProviderOptions = HtmlExecutionOptions & {
   readonly browserCapacity?: number;
 };
 
-export function createLocalHtmlProvider(config: CreateLocalHtmlProviderOptions) {
+export type CreateLocalChromiumHtmlProviderOptions = Omit<LocalHtmlProviderOptions, "renderer" | "electronPath"> & {
+  readonly renderer?: never;
+  readonly electronPath?: never;
+};
+
+export type CreateLocalElectronHtmlProviderOptions = Omit<LocalHtmlProviderOptions,
+  "renderer" | "electronPath" | keyof BrowserOptions> & {
+  readonly renderer?: never;
+  readonly electronPath: string;
+  readonly chromePath?: never;
+  readonly browserVersion?: never;
+  readonly browserCacheDirectory?: never;
+  readonly browserDownloadBaseUrl?: never;
+};
+
+function createLocalHtmlProvider(config: LocalHtmlProviderOptions) {
   const execution = resolveExecutionOptions(config);
   const pool = config.pool ?? config.instance ?? "html.local";
   const browsers = `capacity:${pool}/browsers`;
@@ -38,6 +54,7 @@ export function createLocalHtmlProvider(config: CreateLocalHtmlProviderOptions) 
       ...(execution.chromePath === undefined ? { browserVersion: execution.browserVersion! } : { chromePath: execution.chromePath }),
       browserCacheDirectory: execution.browserCacheDirectory,
     };
+  const { renderer: _renderer, electronPath: _electronPath, ...chromiumConfig } = config;
   return defineEndpoint({
     instance: config.instance ?? "html.local",
     pool,
@@ -108,7 +125,7 @@ export function createLocalHtmlProvider(config: CreateLocalHtmlProviderOptions) 
         verifyHtmlFrameRequest(request);
         const progress = renderProgressReporter(context.reportProgress, request.frames.length);
         try {
-          const frames = await rasterizeHtmlFrames(request, { ...config, renderer: "chromium",
+          const frames = await rasterizeHtmlFrames(request, { ...chromiumConfig,
             ...(execution.chromePath === undefined ? { browserVersion: execution.browserVersion! } : { chromePath: execution.chromePath }),
             browserCacheDirectory: execution.browserCacheDirectory,
             workers: execution.workers, maxWorkers,
@@ -119,4 +136,14 @@ export function createLocalHtmlProvider(config: CreateLocalHtmlProviderOptions) 
       },
     }])],
   });
+}
+
+/** Portable PNG-frame and encoded-visual Endpoint backed by Chromium. */
+export function createLocalChromiumHtmlProvider(config: CreateLocalChromiumHtmlProviderOptions) {
+  return createLocalHtmlProvider({ ...config, renderer: "chromium" });
+}
+
+/** Encoded-visual Endpoint backed by one explicitly selected Electron executable. */
+export function createLocalElectronHtmlProvider(config: CreateLocalElectronHtmlProviderOptions) {
+  return createLocalHtmlProvider({ ...config, renderer: "electron" });
 }

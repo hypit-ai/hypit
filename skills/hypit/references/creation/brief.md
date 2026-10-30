@@ -82,8 +82,8 @@ Selections, and Moments.
 
 - A changed user goal, claim, constraint, or requested substitution changes the Brief.
 - A changed story, shot logic, visual system, performance, or creative approach changes the Treatment.
-- A prompt refinement, component geometry correction, realization choice, or timing-expression fix that
-  preserves the same design changes Source, Recipe, Invocation, a project package, or generation input—not
+- A prompt refinement, component geometry correction, material-reference choice, or timing-expression fix that
+  preserves the same design changes Source, Recipe, Targets, a project package, or generation input—not
   the Treatment.
 - New evidence about the reference changes its Analysis or Timeline; it may then cause the director to
   reconsider Treatment.

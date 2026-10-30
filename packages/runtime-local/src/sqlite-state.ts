@@ -931,7 +931,7 @@ class SqliteBuildExecutionStore implements BuildExecutionStore {
           UPDATE hypit_executions
           SET result_writer_owner = NULL, result_writer_acquired_at = NULL,
               attention_step = 'result',
-              attention_error = 'Result writing was interrupted; run hypit result finish <build-id>'
+              attention_error = 'Result writing was interrupted; the Runtime will retry publication when it starts'
           WHERE build_id = ? AND result_writer_owner IS NOT NULL
         `).run(build);
       }

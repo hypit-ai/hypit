@@ -1,6 +1,6 @@
 import {
   assertOrderedBuildId,
-  assertPublicationIntent,
+  assertResultIntent,
   createCapabilityRef,
   createModuleRef,
   createTypeRef,
@@ -14,7 +14,8 @@ import {
 } from "./types.js";
 import type {
   BuildResultFileRef,
-  BuildResultManifest,
+  BuildResultOperation,
+  StoredBuildResult,
   BuildResultOutput,
   BuildResultOutputValue,
   BuildResultValueDocument,
@@ -116,7 +117,6 @@ function outputs(value: unknown, subject: string): Readonly<Record<string, Build
     text(name, `${subject} Output name`);
     const item = object(value, `${subject}[${JSON.stringify(name)}]`);
     return [name, {
-      ...(item.displayName === undefined ? {} : { displayName: text(item.displayName, `${subject}.displayName`) }),
       type: typeRef(item.type, `${subject}[${JSON.stringify(name)}].type`),
       value: outputValue(item.value, `${subject}[${JSON.stringify(name)}].value`),
     }] as const;
@@ -131,6 +131,12 @@ function optionalTime(value: unknown, subject: string): number | undefined {
   return value;
 }
 
+function time(value: unknown, subject: string): number {
+  const decoded = optionalTime(value, subject);
+  if (decoded === undefined) throw new Error(`${subject} is required`);
+  return decoded;
+}
+
 /** Decode JSON bytes without letting invalid UTF-8 or an anonymous SyntaxError escape the Result boundary. */
 export function decodeBuildResultJson(value: Uint8Array, subject: string): unknown {
   try {
@@ -140,76 +146,67 @@ export function decodeBuildResultJson(value: Uint8Array, subject: string): unkno
   }
 }
 
-function progressNumber(value: unknown, subject: string): number {
-  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) throw new Error(`${subject} must be non-negative`);
-  return value;
-}
-
-function operationReceipts(value: unknown, subject: string): NonNullable<BuildResultManifest["operations"]> {
+function operationEvidence(value: unknown, subject: string): readonly BuildResultOperation[] {
   if (!Array.isArray(value)) throw new Error(`${subject} must be an array`);
-  return value.map((raw) => {
-    const item = object(raw, subject);
-    const status = item.status;
-    if (status !== "pending" && status !== "received" && status !== "completed" && status !== "failed" && status !== "cancelled") throw new Error(`${subject} has an invalid Operation status`);
-    const need = item.need === undefined ? undefined : object(item.need, `${subject}.need`);
-    const progress = item.progress === undefined ? undefined : object(item.progress, `${subject}.progress`);
-    const cancellation = item.cancellation === undefined ? undefined : object(item.cancellation, `${subject}.cancellation`);
-    if (cancellation !== undefined && !["confirmed", "accepted", "unsupported", "too-late", "failed"].includes(String(cancellation.outcome))) {
-      throw new Error(`${subject} has an invalid cancellation acknowledgement`);
+  return value.map((raw, index) => {
+    const item = object(raw, `${subject}[${index}]`);
+    const outcome = item.outcome;
+    if (outcome !== undefined && outcome !== "complete" && outcome !== "failed" && outcome !== "cancelled") {
+      throw new Error(`${subject}[${index}] has an invalid Operation outcome`);
     }
-    const receipt = item.receipt === undefined ? undefined : object(item.receipt, `${subject}.receipt`);
-    const failure = item.failure === undefined ? undefined : object(item.failure, `${subject}.failure`);
+    const cancellation = item.cancellation === undefined ? undefined : object(item.cancellation, `${subject}[${index}].cancellation`);
+    if (cancellation !== undefined && !["confirmed", "accepted", "unsupported", "too-late", "failed"].includes(String(cancellation.outcome))) {
+      throw new Error(`${subject}[${index}] has an invalid cancellation acknowledgement`);
+    }
+    const receipt = item.receipt === undefined ? undefined : object(item.receipt, `${subject}[${index}].receipt`);
+    const failure = item.failure === undefined ? undefined : object(item.failure, `${subject}[${index}].failure`);
     const evidence = {
-      ...(need === undefined ? {} : { need: { id: text(need.id, "Need id"), capability: capabilityRef(need.capability, "Need capability") } }),
-      ...(item.createdAt === undefined ? {} : { createdAt: optionalTime(item.createdAt, "Operation createdAt")! }),
-      ...(item.acknowledgedAt === undefined ? {} : { acknowledgedAt: optionalTime(item.acknowledgedAt, "Operation acknowledgedAt")! }),
-      ...(item.endedAt === undefined ? {} : { endedAt: optionalTime(item.endedAt, "Operation endedAt")! }),
-      ...(progress === undefined ? {} : { progress: {
-        phase: text(progress.phase, "Operation phase"),
-        ...(progress.completed === undefined ? {} : { completed: progressNumber(progress.completed, "Operation completed units") }),
-        ...(progress.total === undefined ? {} : { total: progressNumber(progress.total, "Operation total units") }),
-        ...(progress.unit === undefined ? {} : { unit: text(progress.unit, "Operation unit") }),
-      } }),
-      ...(cancellation === undefined ? {} : { cancellation: {
-        outcome: cancellation.outcome as "confirmed" | "accepted" | "unsupported" | "too-late" | "failed",
-        ...(cancellation.message === undefined ? {} : { message: text(cancellation.message, "Cancellation error") }),
-      } }),
-      operation: text(item.operation, "Operation id"), command: text(item.command, "Operation command"),
+      capability: capabilityRef(item.capability, "Operation capability"),
       endpoint: text(item.endpoint, "Operation Endpoint"),
-      ...(item.pool === undefined ? {} : { pool: text(item.pool, "Operation pool") }),
       ...(receipt === undefined ? {} : { receipt: { id: text(receipt.id, "Remote receipt id"),
         ...(receipt.url === undefined ? {} : { url: text(receipt.url, "Remote receipt URL") }) } }),
     };
-    if (status === "failed") {
+    if (outcome === "failed") {
       if (failure === undefined) throw new Error(`${subject} failed Operation has no failure`);
-      return { ...evidence, status, failure: {
+      if (item.cancellation !== undefined) throw new Error(`${subject}[${index}] failed Operation cannot have cancellation evidence`);
+      return { ...evidence, outcome, failedAt: time(item.failedAt, "Operation failedAt"), failure: {
         code: text(failure.code, "Operation failure code"),
         message: text(failure.message, "Operation failure message"),
       } };
     }
-    if (failure !== undefined) throw new Error(`${subject} ${status} Operation cannot have a failure`);
-    return { ...evidence, status };
+    if (failure !== undefined) throw new Error(`${subject}[${index}] ${outcome ?? "accepted"} Operation cannot have a failure`);
+    if (outcome === "cancelled") {
+      if (cancellation === undefined) throw new Error(`${subject}[${index}] cancelled Operation has no cancellation evidence`);
+      return { ...evidence, outcome, cancelledAt: time(item.cancelledAt, "Operation cancelledAt"), cancellation: {
+        outcome: cancellation.outcome as "confirmed" | "accepted" | "unsupported" | "too-late" | "failed",
+        ...(cancellation.message === undefined ? {} : { message: text(cancellation.message, "Cancellation error") }),
+      } };
+    }
+    if (cancellation !== undefined) throw new Error(`${subject}[${index}] ${outcome ?? "accepted"} Operation cannot have cancellation evidence`);
+    const acknowledgedAt = time(item.acknowledgedAt, "Operation acknowledgedAt");
+    if (outcome === "complete") {
+      return { ...evidence, outcome, acknowledgedAt,
+        providerCompletedAt: time(item.providerCompletedAt, "Operation providerCompletedAt") };
+    }
+    return { ...evidence, acknowledgedAt,
+      ...(item.providerCompletedAt === undefined ? {} : {
+        providerCompletedAt: time(item.providerCompletedAt, "Operation providerCompletedAt"),
+      }) };
   });
 }
 
 /** Decode one Result document and attach the Build identity supplied by its repository address. */
-export function decodeBuildResultManifest(
+export function decodeStoredBuildResult(
   value: unknown,
   build: string,
   subject = `Build ${build} result.json`,
-): BuildResultManifest {
+): StoredBuildResult {
   const id = buildId(build, "Build Result address");
   const item = object(value, subject);
   if (item.format !== "hypit.build-result@1") throw new Error(`${subject} is not a Hypit Build Result`);
-  const sourceId = text(item.sourceId, `${subject}.sourceId`);
-  const invocationSourceId = optionalText(item.invocationSourceId, `${subject}.invocationSourceId`);
-  const title = optionalText(item.title, `${subject}.title`);
-  const note = optionalText(item.note, `${subject}.note`);
-  const highlightedOutputs = item.highlightedOutputs === undefined
-    ? undefined
-    : texts(item.highlightedOutputs, `${subject}.highlightedOutputs`);
+  const sourcePath = text(item.sourcePath, `${subject}.sourcePath`);
   const finishedAt = optionalTime(item.finishedAt, `${subject}.finishedAt`);
-  let outcome: BuildResultManifest["outcome"];
+  let outcome: import("./types.js").BuildResult["outcome"] | undefined;
   if (item.outcome !== undefined) {
     if (item.outcome !== "complete" && item.outcome !== "failed" && item.outcome !== "cancelled") {
       throw new Error(`${subject}.outcome is not a Build Result outcome`);
@@ -226,30 +223,32 @@ export function decodeBuildResultManifest(
   const manifest = {
     format: "hypit.build-result@1" as const,
     id,
-    ...(title === undefined ? {} : { title }),
-    ...(note === undefined ? {} : { note }),
-    ...(highlightedOutputs === undefined ? {} : { highlightedOutputs }),
-    sourceId,
-    ...(invocationSourceId === undefined ? {} : { invocationSourceId }),
+    sourcePath,
     targets: texts(item.targets, `${subject}.targets`),
     outputs: outputs(item.outputs, `${subject}.outputs`),
-    ...(executionLog === undefined ? {} : { executionLog }),
-    ...(item.operations === undefined ? {} : { operations: operationReceipts(item.operations, `${subject}.operations`) }),
   };
   if (outcome === undefined) {
     if (failure !== undefined) throw new Error(`${subject} unfinished Result cannot have a failure`);
+    if (executionLog !== undefined || item.operations !== undefined) {
+      throw new Error(`${subject} unfinished Result cannot contain terminal execution evidence`);
+    }
     return manifest;
   }
+  const evidence = {
+    ...manifest,
+    ...(executionLog === undefined ? {} : { executionLog }),
+    ...(item.operations === undefined ? {} : { operations: operationEvidence(item.operations, `${subject}.operations`) }),
+  };
   if (outcome === "complete") {
     if (failure !== undefined) throw new Error(`${subject} complete Result cannot have a failure`);
-    return { ...manifest, outcome, finishedAt: finishedAt! };
+    return { ...evidence, outcome, finishedAt: finishedAt! };
   }
   if (failure === undefined) throw new Error(`${subject} ${outcome} Result has no failure reason`);
-  return { ...manifest, outcome, finishedAt: finishedAt!, failure };
+  return { ...evidence, outcome, finishedAt: finishedAt!, failure };
 }
 
 /** Persist only Result content. The repository address is the single Build identity. */
-export function encodeBuildResultManifest(manifest: BuildResultManifest): Omit<BuildResultManifest, "id"> {
+export function encodeStoredBuildResult(manifest: StoredBuildResult): Omit<StoredBuildResult, "id"> {
   const { id: _id, ...document } = manifest;
   return document;
 }
@@ -268,36 +267,34 @@ export function decodeBuildResultWriterState(
   subject = "Build Result writer state",
 ): BuildResultWriterState {
   const item = object(value, subject);
-  const rawPublication = object(item.publication, `${subject}.publication`);
-  if (!Array.isArray(rawPublication.outputs)) throw new Error(`${subject}.publication.outputs must be an array`);
+  const rawIntent = object(item.intent, `${subject}.intent`);
+  if (!Array.isArray(rawIntent.outputs)) throw new Error(`${subject}.intent.outputs must be an array`);
+  if (Object.keys(rawIntent).some((name) => name !== "outputs")) {
+    throw new Error(`${subject}.intent must contain only outputs`);
+  }
   const names = new Set<string>();
-  const logicalOutputs = new Set<string>();
-  const publishedOutputs = rawPublication.outputs.map((value, index) => {
-    const published = object(value, `${subject}.publication.outputs[${index}]`);
-    const name = text(published.name, `${subject}.publication.outputs[${index}].name`);
-    const output = text(published.output, `${subject}.publication.outputs[${index}].output`);
-    if (names.has(name)) throw new Error(`${subject} repeats published name ${name}`);
-    if (logicalOutputs.has(output)) throw new Error(`${subject} publishes Logical Output ${output} more than once`);
-    names.add(name);
-    logicalOutputs.add(output);
-    if (typeof published.target !== "boolean") {
-      throw new Error(`${subject}.publication.outputs[${index}].target must be a boolean`);
+  const outputs = rawIntent.outputs.map((value, index) => {
+    const output = object(value, `${subject}.intent.outputs[${index}]`);
+    for (const key of Object.keys(output)) {
+      if (key !== "name" && key !== "record") {
+        throw new Error(`${subject}.intent.outputs[${index}] has an unexpected ${key} field`);
+      }
     }
+    const name = text(output.name, `${subject}.intent.outputs[${index}].name`);
+    if (names.has(name)) throw new Error(`${subject} repeats retained Output name ${name}`);
+    names.add(name);
+    const record = text(output.record, `${subject}.intent.outputs[${index}].record`);
     return {
       name,
-      output,
-      type: typeRef(published.type, `${subject}.publication.outputs[${index}].type`),
-      ...(published.displayName === undefined ? {} : { displayName: text(published.displayName, `${subject}.displayName`) }),
-      target: published.target,
-      record: text(published.record, `${subject}.publication.outputs[${index}].record`),
+      record,
     };
   });
-  const publication = { outputs: publishedOutputs };
-  assertPublicationIntent(publication);
+  const intent = { outputs };
+  assertResultIntent(intent);
   return {
     resources: pathMap(item.resources, `${subject}.resources`),
     values: pathMap(item.values, `${subject}.values`),
-    publication,
+    intent,
   };
 }
 

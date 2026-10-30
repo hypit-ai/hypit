@@ -72,7 +72,7 @@ function compiler(options: {
     bindings(declaration) {
       const id = literal(declaration, "id");
       return [{ name: `${id}.image`, ref: { kind: "component-output", component: id, output: "image" },
-        type: blobTypes.blob }];
+        type: blobTypes.blob, retained: true }];
     },
     async compile({ declaration, resolveReference }) {
       if (declaration.children.length > options.maxImages) {

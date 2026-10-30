@@ -17,7 +17,7 @@ import {
   type RenderStillVideoNeed,
   verifyStillVideoRequest,
 } from "@hypit/media-operations";
-import { audioProgramSourceClips, verifyAudioProgram } from "@hypit/audio-program";
+import { verifyAudioProgram } from "@hypit/audio-program";
 import type { AudioProgram, AudioProgramClip, RenderAudioNeed } from "@hypit/audio-program";
 import { readPreservePitch } from "@hypit/audio-stretch";
 import type { MuxMediaNeed } from "@hypit/media-delivery";
@@ -30,7 +30,13 @@ import { runBoundedMediaProcess } from "./process.js";
 import { parseMediaInspection } from "./probe.js";
 import { parseAnimatedWebp } from "./webp.js";
 import type { AnimatedWebp } from "./webp.js";
-import { CanonicalPcmReader, planPositiveAffineReconstruction, renderAudioProgramWav } from "./audio-render.js";
+import {
+  audioRenderPlanSourceClips,
+  CanonicalPcmReader,
+  planAudioProgramRender,
+  planPositiveAffineReconstruction,
+  renderAudioProgramWav,
+} from "./audio-render.js";
 
 /**
  * Where the bytes live and which binaries transform them.
@@ -489,6 +495,53 @@ async function sourceVideoEncoding(env: MediaExecutionEnvironment, path: string,
   };
 }
 
+function sameRational(
+  left: { readonly numerator: number; readonly denominator: number } | undefined,
+  right: { readonly numerator: number; readonly denominator: number },
+): boolean {
+  return left !== undefined
+    && BigInt(left.numerator) * BigInt(right.denominator)
+      === BigInt(right.numerator) * BigInt(left.denominator);
+}
+
+/**
+ * A TimelineVisual declaration is not evidence about the bytes it names. Mux is
+ * the last boundary before a delivery Artifact is published, so it observes the
+ * selected stream and proves the exact facts it promises to preserve by copy.
+ */
+async function assertTimelineVisualBytes(
+  env: MediaExecutionEnvironment,
+  path: string,
+  visual: import("@hypit/media").TimelineVisual,
+  inspection: MediaInspection,
+): Promise<MediaVideoStream> {
+  const streams = inspection.streams.filter((item): item is MediaVideoStream => item.kind === "video");
+  assert(streams.length === 1 && inspection.streams.length === 1,
+    "TimelineVisual Artifact must contain exactly one silent video stream");
+  const stream = streams[0]!;
+  assert(!stream.disposition.attachedPicture && stream.timingStatus === "admissible"
+      && stream.decodedUnitCount === visual.frameCount
+      && stream.width === visual.canvas.width && stream.height === visual.canvas.height,
+  "TimelineVisual bytes differ from their declared frame domain");
+  assert(sameRational(stream.averageFrameRate ?? stream.nominalFrameRate, visual.frameRate),
+    "TimelineVisual bytes differ from their declared frame rate");
+
+  const encoding = await sourceVideoEncoding(env, path, stream.index);
+  assert(encoding.stream.codec_name === visual.delivery.encoding.codec,
+    "TimelineVisual codec differs from its declared delivery");
+  assert(encoding.pixelFormat === visual.delivery.encoding.pixelFormat,
+    "TimelineVisual pixel format differs from its declared delivery");
+  const picture = visual.delivery.picture;
+  assert(stream.picture.colorPrimaries === picture.colorPrimaries
+      && stream.picture.colorTransfer === picture.colorTransfer
+      && stream.picture.colorMatrix === picture.colorMatrix
+      && stream.picture.colorRange === picture.colorRange
+      && stream.picture.bitDepth === picture.bitDepth
+      && stream.picture.alphaMode === "opaque",
+  "TimelineVisual picture metadata differs from its declared delivery");
+  return stream;
+}
+
 async function decodeAudioRenderSource(
   env: MediaExecutionEnvironment,
   need: AudioRenderSourceBaseNeed,
@@ -867,8 +920,8 @@ export async function executeRenderTimelineAudio(
   const window = need.range === undefined
     ? { startSample: 0, endSampleExclusive: program.sampleFrames, sampleFrames: program.sampleFrames }
     : clockFrameSpanSamples(need.range, { frameRate: program.frameRate }, 48_000);
-  const clips = audioProgramSourceClips(program).filter((clip) => clip.targetStartSample < window.endSampleExclusive
-    && clip.targetEndSampleExclusive > window.startSample);
+  const renderPlan = planAudioProgramRender(program, window.startSample, window.sampleFrames);
+  const clips = [...new Set(audioRenderPlanSourceClips(renderPlan))];
   const work = await mkdtemp(join(tmpdir(), "hypit-media-audio-"));
   const readers = new Set<CanonicalPcmReader>();
   try {
@@ -878,8 +931,8 @@ export async function executeRenderTimelineAudio(
       readonly path: string;
       readonly reader: CanonicalPcmReader;
     }>();
-    // Clip ids are local to their owning AudioProgram. Recursive Compositions may
-    // therefore contain the same authored id without sharing an execution slot.
+    // Clip object identity addresses the request-local plan independently of
+    // authored ids that may repeat across namespaced root Tracks.
     const clipSources = new Map<AudioProgramClip, CanonicalPcmReader>();
     const clipSourcePaths = new Map<AudioProgramClip, string>();
     for (const clip of clips) {
@@ -949,6 +1002,7 @@ export async function executeRenderTimelineAudio(
     await renderAudioProgramWav({
       path: output,
       program,
+      plan: renderPlan,
       startSample: window.startSample,
       sampleFrames: window.sampleFrames,
       sourceForClip: (clip) => {
@@ -1011,14 +1065,7 @@ export async function executeMuxProgramMedia(
         ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
       }),
     ]);
-    const visualStreams = visualInspection.streams.filter((item): item is MediaVideoStream => item.kind === "video");
-    assert(visualStreams.length === 1 && visualInspection.streams.length === 1,
-      "TimelineVisual Artifact must contain exactly one silent video stream");
-    const visual = visualStreams[0]!;
-    assert(visual.role === "moving" && visual.timingStatus === "admissible"
-      && visual.decodedUnitCount === need.visual.frameCount
-      && visual.width === need.visual.canvas.width && visual.height === need.visual.canvas.height,
-    "TimelineVisual bytes differ from their declared frame domain");
+    const visual = await assertTimelineVisualBytes(env, visualPath, need.visual, visualInspection);
     assert(audio.decodedSampleFrames === need.audio.sampleFrames,
       "TimelineAudio bytes differ from their declared sample domain");
     await runProcess({
@@ -1046,9 +1093,11 @@ export async function executeMuxProgramMedia(
     assert(finalVideo.length === 1 && finalAudio.length === 1 && finalInspection.streams.length === 2,
       "Final mux must contain exactly one video and one audio stream");
     assert(finalVideo[0]!.timingStatus === "admissible"
-      && finalVideo[0]!.decodedUnitCount === need.visual.frameCount,
+      && finalVideo[0]!.decodedUnitCount === need.visual.frameCount
+      && finalVideo[0]!.codecName === need.delivery.visual.encoding.codec,
       "Final mux video frame count differs from TimelineVisual");
     assert(finalAudio[0]!.timingStatus === "admissible"
+      && finalAudio[0]!.codecName === need.delivery.audio.codec
       && finalAudio[0]!.sampleRate === 48_000 && finalAudio[0]!.channels === 2,
       "Final mux audio shape differs from TimelineAudio");
     assert(finalVideo[0]!.startPts !== undefined && finalAudio[0]!.startPts !== undefined

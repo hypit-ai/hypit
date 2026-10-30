@@ -8,7 +8,7 @@ export type BuildOutcome = "complete" | "failed" | "cancelled";
 
 /** Exact host-local directory chosen before a Build becomes active. */
 export type BuildResultRepositoryLocation = {
-  /** Project ownership boundary used to record portable Author and optional Invocation Source paths. */
+  /** Project ownership boundary used to record a portable Author Source path. */
   readonly root: string;
   /** Host-local filesystem path below the project root. */
   readonly path: string;
@@ -105,7 +105,7 @@ export type BuildExecutionStore = {
   setAttention(build: string, attention: BuildExecutionAttention | undefined): Promise<BuildExecutionSnapshot>;
   claimResultWrite(build: string, owner: string, now?: number): Promise<BuildExecutionSnapshot | undefined>;
   releaseResultWrite(build: string, owner: string): Promise<BuildExecutionSnapshot>;
-  /** Clear only Result-writer ownership left by the previous Runtime process and record attention. */
+  /** Clear only Result-writer ownership left by the previous Runtime process before automatic recovery. */
   reclaimResultWrites(): Promise<readonly string[]>;
   acquireCapacity(request: CapacityAcquireRequest): Promise<CapacityAcquire>;
   releaseCapacity(build: string, command: string): Promise<void>;

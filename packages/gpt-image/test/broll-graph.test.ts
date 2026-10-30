@@ -48,7 +48,7 @@ function buildState(
   graph: Parameters<typeof planBuild>[1],
   targets: readonly string[],
 ) {
-  const planned = planBuild(program, graph, targets, []);
+  const planned = planBuild(program, graph, targets);
   return materializeBuild(defineBuild({
     program,
     plan: planned.plan,
@@ -61,7 +61,6 @@ const image = (name: string) => ({
   size: 100,
   mediaType: "image/png",
 });
-
 function fixture() {
   const manifests: ModuleManifest[] = [
     blobManifest,
@@ -187,24 +186,4 @@ test("the common B-roll topology is one graph with one shared holding image", ()
   assert.ok(holding);
   assert.equal(graph.operations.filter((operation) =>
     Object.values(operation.inputs).some((input) => input.kind === "logical-output" && input.id === "holding.image")).length, 3);
-});
-
-test("an explicitly selected holding-image Record prunes only that branch", () => {
-  const { program, graph } = fixture();
-  const approved = {
-    id: "approved-holding",
-    type: blobTypes.blob,
-    value: image("approved-holding"),
-  };
-  const realized = sealAuthorGraph({
-    outputs: graph.outputs.map((item) => item.id === "holding.image"
-      ? { ...item, primary: { kind: "record" as const, id: approved.id } }
-      : item),
-    operations: graph.operations,
-  });
-  const state = buildState(link(program.closure, [...program.records, approved]), realized, ["montage.video"]);
-  const producers = state.plan.steps.map((step) => step.producer.name);
-  assert.equal(producers.filter((name) => name === "request-gpt-image-2").length, 2);
-  assert.equal(producers.filter((name) => name === "request-image-transform").length, 2);
-  assert.equal(producers.filter((name) => name === "request-seedance-2-mini").length, 1);
 });

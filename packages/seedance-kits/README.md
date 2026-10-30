@@ -74,7 +74,7 @@ template id. Its linked `.svs` file owns the exact fixed wording, default choice
 For example, `source="@hypit/seedance-kits/call"` imported as `kit` exposes `kit.call-v1`.
 Text slots use `text:Set`; scalar Recipe choices use the selected template's named axes. Reading the
 template reveals what each choice actually asks the generator to do. Rendering the Text Output as a
-Invocation Target lets an author inspect the assembled prompt without generating media.
+Build Target lets an author inspect the assembled prompt without generating media.
 
 Speaker, B-roll, Podcast, Call and Street Interview expose prompt choices through their Text
 Templates. The examples above use author-chosen literal durations. Measure the selected speech with

@@ -5,19 +5,14 @@ Trusted local implementation of:
 - `@hypit/html-program@1#rasterize-visual` → `TimelineVisual`;
 - `@hypit/html-program@1#rasterize-frames` → self-describing sRGB PNG frame images.
 
-The Provider consumes the typed `HtmlProgram` directly and offers two explicit
-execution implementations for the same visual Need:
+The Provider consumes the typed `HtmlProgram` directly. This package contributes the portable
+Chromium Endpoint: it obtains exact source samples through FFmpeg, presents them to Chrome as PNG
+images, captures PNG frames through Chrome DevTools Protocol and streams them into FFmpeg.
 
-- `chromium` is the portable implementation. It obtains exact source samples
-  through FFmpeg, presents them to Chrome as PNG images, captures PNG frames
-  through Chrome DevTools Protocol and streams them into FFmpeg;
-- `electron` is the encoded-visual implementation. It decodes the compiler's
+The separate `@hypit/provider-html-electron-local` package contributes an encoded-visual-only
+Endpoint. It decodes the compiler's
   exact source samples, transfers the composed frame as an offscreen shared
-  texture and owns two exact delivery pipelines. SDR uses WebCodecs H.264 plus
-  FFmpeg container muxing. HDR10 uses a linear `rgbaf16` Program surface,
-  an explicit BT.709-linear-to-BT.2020/PQ P010 transform and `libx265` Main10;
-  the Provider writes the authored mastering-display and content-light metadata and verifies both
-  kinds in the first decoded output frame.
+  texture, encodes with WebCodecs H.264 and uses FFmpeg for container muxing.
   Neither source-video input nor composed-video output crosses PNG.
 
 The Electron implementation carries its pinned Mediabunny browser runtime and
@@ -26,49 +21,22 @@ implementation, not a dependency installed into the author's TypeScript
 environment; its WebCodecs ambient declarations therefore cannot change a
 consumer's global DOM types.
 
-Both implementations apply absolute integer frames through
+Both Endpoint packages apply absolute integer frames through
 `window.__hypitFrameProgram` and publish the same verified `TimelineVisual`.
-Renderer selection is deployment policy; it does not change `HtmlProgram`, Film,
+Endpoint selection is deployment policy; it does not change `HtmlProgram`, Film,
 Composition, Prepared Media or the delivery requirement.
 
-When an SDR `HtmlProgram` declares Scope Process input passes, both implementations render the named
+When an `HtmlProgram` declares Scope Process input passes, both implementations render the named
 input scopes as request-private transparent Pictures before evaluating the package-owned process programme.
 Chromium currently transfers these stage Pictures as PNG; Electron uses the same correct stage boundary
 while retaining shared textures for the terminal encoded output. Programs without a Scope Process retain
-the original single-pass path. HDR10 rejects Scope Process input passes because an 8-bit stage cannot
-preserve its linear extended-range working picture. Nested child Programs that require such passes are
-rejected by HTML compilation until the renderer owns recursive child surfaces.
-This limitation is only the recursive visual-Process surface path. AudioProgram nesting is compiled and
-rendered by the independently selected audio Renderer, while HDR10 plus a root Scope Process is rejected
-by this Provider's support decision before capture.
+the original single-pass path.
 
-For a nested Composition, the root `HtmlProgram` already contains the fully composed source-sampling
-plan and an exact nested-document target for each source occurrence. Chromium and Electron keep source
-decode, cache and sample selection at the root Provider boundary, then inject the selected frame into
-that target document. They do not materialize a child video, ask the iframe to rediscover its media
-semantics or copy renderer addresses into Composition.
-
-Chromium implements one exact SDR subset: an sRGB, premultiplied, 100-nit-reference working
-picture; 8-bit sRGB/full-range RGB stills or 8-bit BT.709/limited-range video inputs; and opaque
-BT.709 8-bit delivery. Electron implements that same subset and an additional HDR10 subset:
-a linear BT.709 premultiplied working picture with explicit reference white, optional opaque
-BT.2020/PQ/BT.2020-NCL/limited 10-bit video sources, and opaque BT.2020/PQ/BT.2020-NCL/limited
-HEVC Main10 delivery with explicit HDR10 static metadata. HDR still images and HDR Compositable
-Surfaces remain unsupported. HLG,
-other gamut/transfer combinations and other higher-bit-depth values remain valid common-domain
-requests but are rejected here. The Provider never guesses a replacement profile, silently
-tone-maps unsupported input or changes delivery after execution starts.
-
-For an HDR10 video source, Chromium's opaque hardware-decoder texture is deliberately not used
-as picture authority: importing it as a display texture applies a browser view transform. The
-Provider lazily decodes only the exact samples selected by the Program's Temporal Map into
-temporary I420P10 planes, then performs the authored PQ/BT.2020-to-linear-working transform in
-WebGPU. These files are a bounded, request-private decoder working set, not Prepared Media or a
-new Result format. The final `rgbaf16` Program surface is transformed to P010 and streamed into
-the explicitly configured software Main10 encoder; it is never retained as an intermediate video.
+Both implementations expose one exact subset: 8-bit sRGB/full-range RGB stills or
+8-bit BT.709/limited-range video inputs, and opaque BT.709 8-bit H.264/yuv420p delivery.
 
 The Endpoint publishes this same closed subset through request-local `supports`. `plan` and
-deployment preflight can therefore reject an unsupported working picture, source interpretation,
+deployment preflight can therefore reject an unsupported source interpretation,
 encoded delivery or PNG picture before capture starts. Execution reuses the same predicate as a
 boundary assertion; it does not maintain a second, later-only format table.
 
@@ -77,7 +45,36 @@ Artifact staging and `window.__hypitFrameProgram.prepare(selection)` in the
 actual Program page. Unselected Present roots are removed before their deferred
 URLs or component runtimes become active. Chromium and Electron therefore do
 not depend on different pre-document injection mechanisms, and an Electron
-capture shell does not need to copy hidden state into its child page.
+capture shell does not need to copy hidden state into the Program frame.
+
+Visual Process inputs use compiler-owned fixed full-canvas stages. The capture path executes selected
+stages by their compiler-owned keys and order; it does not scan markup to reconstruct a Process plan.
+
+Support is request-local. Picture Artifacts and Surfaces are checked through their typed absolute usage,
+timed sources through occurrence usage, and Process work through `processUsages`. Unsupported material in
+an unselected half-open range does not make a partial export unsupported.
+
+Timed media is addressed through the compiler-owned display plane named by `HtmlVideoSource.elementId`.
+The Provider replaces only the private decoded-media slot inside that plane's payload host. It does not copy
+computed style or insert a sibling into the authored tree, so source decoding cannot change selector,
+flex/grid, adjacent-sibling or intrinsic layout semantics.
+
+`PreparedVisualSource.interpretation.picture` is decoder input authority. The portable FFmpeg
+path expands the selected SDR matrix and range into full-range RGB PNG payloads. It does not add a
+second BT.709-to-sRGB transfer conversion or inherit container colour tags. The same interpretation's quarter-turn is applied explicitly
+before pixels enter the stable plane; decoder/container rotation never replaces it. Coded pixels are
+rotated first, while the plane applies the separately declared sample-aspect display geometry. Its exact timed-source subset is 8-bit BT.709 sRGB/RGB/full
+or BT.709 transfer/matrix/limited, with opaque or straight alpha.
+
+Direct browser stills, including package-owned `HtmlVisual` picture dependencies, have no such transform.
+Their typed declaration reaches staging through `HtmlProgram.artifacts`; the Provider does not discover
+an `<img>`, CSS URL or colour profile by inspecting component markup. They are limited to 8-bit BT.709 sRGB/RGB/full,
+opaque or straight alpha. Staging verifies pixel depth, compatible alpha storage and exactly one decoded frame.
+An absent alpha component is the all-opaque subset of straight alpha. Missing embedded colour tags do not
+override the typed declaration; present contradictory tags are rejected. `HtmlVisual` data dependencies are
+staged as opaque bytes and are never accepted as a presentation path. Still Surfaces use the same rule. Timed Surfaces are
+byte-validated against their complete declared picture and decoded through the explicit timed-source
+path.
 
 The visual Need also carries a `VisualDeliverySpec`. It, rather than this Provider's
 Runtime configuration, selects delivery quality, picture tags and the opaque matte. The
@@ -100,14 +97,11 @@ executor and do not establish a shared media-execution ABI.
 
 The Endpoint facet is `rasterize`. Runtime configuration owns deployment policy:
 
-- `renderer`: `chromium` (default) or `electron`;
 - `workers`: fixed browser-worker count or `auto`;
 - `maxWorkers`: automatic ceiling;
 - `defaultConcurrency`: whole requests admitted in this Endpoint pool;
 - `browserCapacity`: browser-worker slots reserved across admitted requests;
-- for `chromium`, `chromePath`, or exact `browserVersion` plus
-  `browserCacheDirectory`;
-- for `electron`, an explicit user-managed `electronPath`;
+- `chromePath`, or exact `browserVersion` plus `browserCacheDirectory`;
 - `ffmpegPath` and `ffprobePath`;
 - optional process/stage deadlines and byte budgets.
 
@@ -125,20 +119,16 @@ different system browser. `chromePath` selects a user-managed executable;
 `browserVersion` selects one exact managed Chrome for Testing version. The two
 selection modes are mutually exclusive.
 
-Electron is never downloaded, selected as a fallback or substituted for Chrome.
-Select it explicitly in the Runtime Profile and supply an executable from
-Electron 45 or newer. The configured FFmpeg must expose `libx265`; the Electron
-Program readiness probe reports a mismatch otherwise, because that Endpoint
-publishes the complete SDR plus HDR10 request subset:
+Electron is never downloaded, selected as a fallback or substituted for Chrome. Select the separate
+Endpoint package explicitly and supply an executable from Electron 45 or newer:
 
 ```json
 {
   "endpoints": {
     "html.gpu": {
-      "use": "@hypit/provider-html-local",
+      "use": "@hypit/provider-html-electron-local",
       "pool": "local-render",
       "config": {
-        "renderer": "electron",
         "electronPath": "/Applications/Electron.app/Contents/MacOS/Electron",
         "workers": 1
       }
@@ -152,7 +142,7 @@ is encoded video. `rasterize-frames` intentionally remains a Chromium capability
 its requested result consists of self-describing PNG images. A Runtime that needs
 both can configure and bind two Endpoint instances. Electron cannot be combined
 with Chrome-selection fields or software-only browser compositing. Unsupported
-shared-texture, SDR WebCodecs or HDR10 `libx265` configurations fail on that Endpoint;
+shared-texture or WebCodecs H.264 configurations fail on that Endpoint;
 execution does not rewrite the request or switch implementations.
 
 ## Frame selection and parallelism
@@ -163,9 +153,12 @@ browser processes and may start at any requested frame; they do not wait for an
 earlier worker to traverse the program.
 
 The compiler's typed `videoSources` plan determines exact selected streams and source-video samples,
-including reverse, hold, loop and rational-rate mappings. The Chromium
+including reverse, hold, loop and rational-rate mappings. The Provider binds the shared sided evaluator
+for each source's single Temporal Map; it does not maintain a parallel sampling model. The Chromium
 implementation compares the Map's exact rational source time with FFprobe's integer PTS ticks and
-stream time base, then decodes bounded FFmpeg windows lazily. It does not compare rounded decimal
+stream time base, then decodes bounded FFmpeg windows lazily. Electron receives that same selected
+ordinal and exact PTS tick; its browser decoder must return the selected timestamp or execution rejects.
+It never re-evaluates a reverse boundary by subtracting a floating-point epsilon. Neither path compares rounded decimal
 seconds or resample through an average frame rate. It
 shares decoded images only within the current execution and leases them under
 `maxDecodedSourceBytes`. The Electron implementation consumes the same plan with
@@ -178,11 +171,9 @@ right. This is the Provider's terminal quantization of one continuous Temporal
 Map, not an adjustment to the authored relation.
 
 In the Chromium path, completed PNGs enter a bounded ordered sink. In the Electron
-SDR path, shared textures are copied to bounded `VideoFrame` storage and enter
+path, shared textures are copied to bounded `VideoFrame` storage and enter
 WebCodecs in ordinal order; FFmpeg receives encoded H.264 only for container
-muxing. In the Electron HDR10 path, the same ordered shared textures enter the
-WebGPU output transform; bounded P010 batches stream directly into `libx265`.
-Neither path creates a CPU bitmap, PNG sequence or intermediate composed video.
+muxing. The Electron path creates no CPU bitmap, PNG sequence or intermediate composed video.
 Current macOS VideoToolbox rejects Electron's imported shared image as a direct
 encoder input, so the Provider keeps that machine-local compatibility boundary.
 Capture of later frames can continue while earlier frames are encoded.
@@ -222,9 +213,9 @@ edits intentionally fall back to whole-document inspection.
 ## Direct use
 
 ```ts
-import { rasterizeHtmlProgram } from "@hypit/provider-html-local";
+import { rasterizeChromiumHtmlProgram } from "@hypit/provider-html-local";
 
-const visual = await rasterizeHtmlProgram(
+const visual = await rasterizeChromiumHtmlProgram(
   {
     program,
     delivery,
@@ -232,8 +223,6 @@ const visual = await rasterizeHtmlProgram(
   },
   {
     resources,
-    renderer: "electron",
-    electronPath: "/Applications/Electron.app/Contents/MacOS/Electron",
     workers: 1,
   },
 );

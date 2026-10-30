@@ -1,17 +1,38 @@
 export {
   assertBuildResultValueDocument,
-  assertBuildResultSeed,
+  assertBuildResultFileRef,
+  assertBuildResultPath,
   buildResultOutput,
-  defineBuildResultOutput,
 } from "./types.js";
 export {
-  decodeBuildResultJson,
-  decodeBuildResultManifest,
   decodeBuildResultValueDocument,
-  decodeBuildResultWriterState,
-  encodeBuildResultManifest,
 } from "./decode.js";
-export { syncBuildResultOutputs } from "./writer.js";
-export type * from "./types.js";
-export type * from "./writer.js";
-export { preserveExecutionLog } from "./execution-log.js";
+export type {
+  BuildResultOutcome,
+  BuildResultFileRef,
+  BuildResultFileRange,
+  BuildResultValuePath,
+  BuildResultResourceBinding,
+  BuildResultValueDocument,
+  BuildResultOutputValue,
+  BuildResultOutput,
+  BuildResultOperation,
+  BuildResult,
+  BuildResultBrowseRequest,
+  BuildResultPage,
+  RepositoryBuildResultOutput,
+  BuildResultHistory,
+} from "./types.js";
+export {
+  createResultOutputExporterFacet,
+  resultOutputExporterForType,
+  resultOutputExportersFromFacets,
+  resultOutputExporterFacetAbi,
+} from "./exporter.js";
+export type {
+  ResultOutputExport,
+  ResultOutputExportBytes,
+  ResultOutputExportContext,
+  ResultOutputExporter,
+  ResultOutputExporterFacet,
+} from "./exporter.js";

@@ -25,13 +25,13 @@ From the repository after installing its dependencies:
 pnpm build:public-types
 pnpm --filter @example/chat-scene build
 node bin/hypit.mjs check examples/semantic-composition/chat.svml --project examples/semantic-composition
-node bin/hypit.mjs build examples/semantic-composition/chat.svrun --project examples/semantic-composition --runtime examples/semantic-composition/hypit.runtime.json --follow
+node bin/hypit.mjs build examples/semantic-composition/chat.svml --target final.video --project examples/semantic-composition --runtime examples/semantic-composition/hypit.runtime.json --follow
 ```
 
 The Profile selects local HTML rasterization and FFmpeg. Its execution data lives in `.hypit/runtimes/local`;
 `.hypit/runtime` is reserved for the project's Profile-selection file. Use the machine's prepared browser/media tools;
 there is no hosted generation account in this example. The final Output is `final.video`. The same
-Invocation can be opened in Studio, where its component lane and physical clock work without a Script lane.
+The Source and selected Target can be opened in Studio, where its component lane and physical clock work without a Script lane.
 For an independent project, install `@hypit/hypit`, `@hypit/fontsource` and
 `@fontsource-variable/inter` in the project's ordinary `package.json`, copy the component into
 `packages/`, replace its workspace dependency with the installed Hypit version, and build the

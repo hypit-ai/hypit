@@ -13,7 +13,7 @@ import type {
   RuntimeEndpointQuery,
   ScheduledBuildResult,
 } from "@hypit/hypit/runtime";
-import type { PublicationIntent } from "@hypit/hypit/protocol";
+import type { ResultIntent } from "@hypit/hypit/protocol";
 import type { BuildCompletion, BuildExecutionStop, BuildResultRepositoryLocation } from "./execution.js";
 import type { RuntimeDoctorDiagnostic } from "@hypit/runtime-local/extension";
 
@@ -55,7 +55,6 @@ export type BuildView = {
   readonly issue?: { readonly scope: "result" | "cleanup"; readonly message: string };
   readonly stop?: BuildExecutionStop;
   readonly sourcePath?: string;
-  readonly invocationSourcePath?: string;
   readonly targets: readonly string[];
   /** External Needs in the frozen Build Plan and the subset already accepted by Core. */
   readonly requests?: { readonly total: number; readonly completed: number };
@@ -96,17 +95,6 @@ export type RuntimeHostControl = {
   close(): void | Promise<void>;
 };
 
-/** One-shot Result write or incomplete-submission cleanup with no execution Providers. */
-export type RuntimeHostResultControl = {
-  finishResult(build: string): Promise<{
-    readonly id: string;
-    readonly outcome: BuildCompletion["outcome"];
-    readonly issue?: { readonly scope: "result" | "cleanup"; readonly message: string };
-  } | undefined>;
-  discardSubmission(build: string): Promise<boolean>;
-  close(): void | Promise<void>;
-};
-
 export type RuntimeHostCredentialControl = {
   /** Endpoint declarations and Store write capability; never reads an existing secret. */
   describeCredentials(endpoint?: string): Promise<readonly RuntimeHostCredentialDescription[]>;
@@ -119,21 +107,20 @@ export type RuntimeHostCredentialControl = {
   close(): void | Promise<void>;
 };
 
-export type RuntimeHostExecution = RuntimeHostControl & RuntimeHostCredentialControl & RuntimeHostResultControl & {
+export type RuntimeHostExecution = RuntimeHostControl & RuntimeHostCredentialControl & {
   build(request: {
     readonly id: string;
     readonly definition: BuildDefinition;
     readonly executionPackages?: readonly string[];
     readonly authoring: {
       readonly sourcePath: string;
-      readonly invocationSourcePath?: string;
-      readonly publication: PublicationIntent;
+      readonly targets: readonly string[];
+      readonly intent: ResultIntent;
     };
     readonly attachments?: readonly BlobAttachment[];
     /** Project-owned Result destination, fixed before this Build becomes active. */
     readonly result: {
       readonly repository: BuildResultRepositoryLocation;
-      readonly title?: string;
     };
   }, options?: {
     readonly follow?: boolean;
@@ -150,7 +137,7 @@ export type RuntimeHostDoctorResult = {
 
 /**
  * Disposable graph evaluation through capabilities that their Providers explicitly allow outside
- * a Build. The Host owns Endpoint selection, credentials, invocation and session-local concurrency;
+ * a Build. The Host owns Endpoint selection, credentials, calls and session-local concurrency;
  * callers contribute only deterministic domain Producers, validation and an ephemeral ResourceStore.
  */
 export type RuntimeHostTransientExecution = {
@@ -231,8 +218,6 @@ export type LocalRuntimeHost = {
   }): Promise<RuntimeController>;
   createRuntime(options?: { readonly endpoints?: readonly string[] }): Promise<RuntimeHostExecution>;
   openControl(options?: { readonly readOnly?: boolean }): Promise<RuntimeHostControl>;
-  /** Open only Result-writing dependencies; never construct execution Providers. */
-  openResultControl(): Promise<RuntimeHostResultControl>;
   openCredentials(endpoint: string): Promise<RuntimeHostCredentialControl>;
   /**
    * Read-only, bounded deployment validation for one demanded Build slice.

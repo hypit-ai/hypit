@@ -49,7 +49,7 @@ function projectPath(root: string, path: string): string {
 
 function requiredInitialResources(request: LocalBuildRequest): ReadonlySet<string> {
   const definition = request.definition;
-  const publicOwnedRecords = request.authoring.publication.outputs.map((published) => published.record);
+  const publicOwnedRecords = request.authoring.intent.outputs.map((output) => output.record);
   const recordIds = new Set([
     ...publicOwnedRecords,
     ...definition.plan.steps.flatMap((step) => Object.values(step.inputs)),
@@ -247,12 +247,9 @@ export async function createLocalRuntime(
       try {
         await opened.repository.create({
           id: request.id,
-          ...(resultRequest.title === undefined ? {} : { title: resultRequest.title }),
-          sourceId: projectPath(resultRequest.repository.root, request.authoring.sourcePath),
-          ...(request.authoring.invocationSourcePath === undefined ? {} : {
-            invocationSourceId: projectPath(resultRequest.repository.root, request.authoring.invocationSourcePath),
-          }),
-          publication: request.authoring.publication,
+          sourcePath: projectPath(resultRequest.repository.root, request.authoring.sourcePath),
+          targets: request.authoring.targets,
+          intent: request.authoring.intent,
         });
       } finally {
         await opened.close?.();

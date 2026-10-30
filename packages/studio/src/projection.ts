@@ -1,6 +1,6 @@
 import type { BlobRef, ResourceId, Value } from "@hypit/hypit/protocol";
 import { normalizeValue, sameType, valueBlobRefs } from "@hypit/hypit/protocol";
-import type { SelectedOutputRecord } from "@hypit/hypit/kernel";
+import type { ResolvedOutputRecord } from "@hypit/hypit/kernel";
 import type { Composition } from "@hypit/composition";
 import { compositionTypes } from "@hypit/composition";
 import { timelineTypes, assertTimelineIdentity } from "@hypit/timeline";
@@ -11,7 +11,7 @@ import type { CliTransientExecution as RuntimeHostTransientExecution } from "@hy
 import type { CompiledSource, ServedFile } from "./compile.js";
 import type { StudioDomain } from "./domain.js";
 import { executeStudioProjection, MemoryResourceStore } from "./execute.js";
-import type { StudioPlan } from "./invocation.js";
+import type { StudioPlan } from "./build-plan.js";
 import type { StudioTrackRequirement } from "./studio-preflight.js";
 import { studioDeclarationPreview } from "./declaration-preview.js";
 import { executedTemporalBindings } from "./temporal-graph.js";
@@ -33,7 +33,7 @@ export type StudioProjection = {
   readonly state: ExecutionState;
   readonly source: CompiledSource;
   readonly tracks: readonly BuiltTrack[];
-  /** Resolved Companion realizations keyed by exact graph output ref. */
+  /** Resolved Companion values keyed by exact graph output ref. */
   readonly values: ReadonlyMap<string, unknown>;
   readonly temporalDomainValues: readonly StudioObservedValue[];
   readonly temporalValues: readonly StudioObservedValue[];
@@ -48,24 +48,23 @@ export type StudioProjection = {
 
 type ExecutionState = Awaited<ReturnType<typeof executeStudioProjection>>["state"];
 
-function selectedValue(
+function resolvedValue(
   state: ExecutionState,
-  selections: readonly SelectedOutputRecord[],
+  outputs: readonly ResolvedOutputRecord[],
   output: string,
 ): Value | undefined {
-  const selection = selections.find((item) => item.output === output);
-  if (selection === undefined) return state.program.records.find((item) => item.id === output)?.value;
-  const executed = state.records.find((item) => item.id === selection.record)?.value;
+  const resolved = outputs.find((item) => item.output === output);
+  if (resolved === undefined) return state.program.records.find((item) => item.id === output)?.value;
+  const executed = state.records.find((item) => item.id === resolved.record)?.value;
   if (executed !== undefined) return executed;
-  // Authored and invocation-selected Records belong to this freshly recompiled revision.
-  return state.program.records.find((item) => item.id === selection.record)?.value;
+  return state.program.records.find((item) => item.id === resolved.record)?.value;
 }
 
 function compositionArtifacts(composition: Composition): readonly BlobRef[] {
   return valueBlobRefs(normalizeValue(composition)).map((item) => item.blob);
 }
 
-/** Build only the Studio-approved deterministic projection of one explicit Invocation. */
+/** Build only the Studio-approved deterministic projection of one explicit Target selection. */
 export async function resolveStudioProjection(input: {
   readonly source: CompiledSource;
   readonly registry: StudioCompanionRegistry;
@@ -109,7 +108,7 @@ export async function resolveStudioProjection(input: {
       return served.has(resource) || await store.has(resource);
     },
   };
-  const prepared = input.plan.prepare(input.plan.invocation, targets.map((target) => target.ref));
+  const prepared = input.plan.prepare(targets.map((target) => target.ref));
   const executed = await executeStudioProjection(
     input.domain,
     prepared.state,
@@ -126,26 +125,26 @@ export async function resolveStudioProjection(input: {
   const timingOutput = input.source.exports.find((target) => target.ref === input.timeRef);
   const timingRecord = executed.state.program.records.find((record) => record.id === input.timeRef);
   const timingType = timingOutput?.typeRef ?? timingRecord?.type;
-  const timingValue = selectedValue(executed.state, prepared.selections, input.timeRef);
+  const timingValue = resolvedValue(executed.state, prepared.outputs, input.timeRef);
   if (timingValue === undefined || timingType === undefined) throw new Error("Studio requires a resolved film time source.");
   if (!sameType(timingType, timelineTypes.timeline)) throw new Error("Studio requires the declared Timeline.");
   const timeline = timingValue as unknown as Timeline;
   assertTimelineIdentity(timeline);
   const rate = timeline.frameRate;
-  const compositionValue = selectedValue(executed.state, prepared.selections, input.compositionRef);
+  const compositionValue = resolvedValue(executed.state, prepared.outputs, input.compositionRef);
   if (compositionValue === undefined) {
     throw new Error("Studio Film composition did not produce a Composition.");
   }
   const composition = compositionValue as unknown as Composition;
   for (const artifact of compositionArtifacts(composition)) {
     if (!served.has(artifact.resource)) {
-      throw new Error(`Studio composition Resource ${artifact.resource} has no Invocation attachment.`);
+      throw new Error(`Studio composition Resource ${artifact.resource} has no selected Build attachment.`);
     }
   }
   const trackByRef = new Map(input.tracks.map((track) => [track.ref, track]));
   const tracks: BuiltTrack[] = targets.flatMap((target) => {
     if (!playable(target.typeRef)) return [];
-    const stored = selectedValue(executed.state, prepared.selections, target.ref);
+    const stored = resolvedValue(executed.state, prepared.outputs, target.ref);
     if (stored === undefined) {
       throw new Error(`Studio projection ${target.name} did not produce a Track.`);
     }
@@ -171,7 +170,7 @@ export async function resolveStudioProjection(input: {
     track.outputRef,
     executedTemporalBindings(
       executed.state,
-      prepared.selections,
+      prepared.outputs,
       track.outputRef,
       (type, value) => input.registry.identifyTemporalSource(type, value),
       (producer, output) => input.registry.temporalRelationFor(producer, output),
@@ -179,14 +178,14 @@ export async function resolveStudioProjection(input: {
   ] as const));
   const values = new Map<string, unknown>();
   for (const target of targets) {
-    const stored = selectedValue(executed.state, prepared.selections, target.ref);
+    const stored = resolvedValue(executed.state, prepared.outputs, target.ref);
     if (stored !== undefined) values.set(target.ref, stored);
   }
   // Companion traces carry exact qualified references. Resolve those references from
   // the executed projection so deterministic upstream Producers are visible too.
   for (const track of input.tracks) {
     for (const reference of track.trace.references) {
-      const stored = selectedValue(executed.state, prepared.selections, reference.ref);
+      const stored = resolvedValue(executed.state, prepared.outputs, reference.ref);
       if (stored !== undefined) values.set(reference.ref, stored);
     }
   }
@@ -194,7 +193,7 @@ export async function resolveStudioProjection(input: {
   const temporalDomainValues: StudioObservedValue[] = [];
   const declarations = await resolveStudioDeclarations({
     plan: input.plan, registry: input.registry, domain: input.domain,
-    resolved: executed.state, selections: prepared.selections, resources,
+    resolved: executed.state, outputs: prepared.outputs, resources,
     ...(input.transientExecution === undefined ? {} : { transientExecution: input.transientExecution }),
   });
   const temporalDomainValueIds = new Set<string>();

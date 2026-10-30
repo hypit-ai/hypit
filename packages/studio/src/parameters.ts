@@ -33,8 +33,8 @@ type StudioParameterDraft = StudioItemDraft | StudioInspectorObjectDraft;
 export type StudioSourceFile = {
   readonly path: string;
   readonly text: string;
-  readonly language: "svml" | "svs" | "svrun";
-  readonly role?: "invocation" | "author" | "dependency";
+  readonly language: "svml" | "svs";
+  readonly role?: "author" | "dependency";
   readonly imports?: readonly { readonly alias: string; readonly source: string }[];
 };
 

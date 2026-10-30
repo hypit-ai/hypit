@@ -22,7 +22,7 @@ test("the feedback write endpoint rejects a foreign page before reading its muta
     assert.ok(middleware);
     middleware(request, response, () => { response.statusCode = 404; response.end(); });
   });
-  const plugin = studioFeedbackPlugin(root, join(root, "runs", "main.svrun"));
+  const plugin = studioFeedbackPlugin(root, join(root, "author", "main.svml"));
   (plugin.configureServer as (server: ViteDevServer) => void)({
     httpServer: server,
     ws: { send() {} },

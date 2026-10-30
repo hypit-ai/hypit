@@ -48,7 +48,8 @@ function compiler(options: { declaration: "video" | "preview-video"; endpoint: F
     },
     bindings(declaration) {
       const id = literal(declaration, "id");
-      return [{ name: `${id}.video`, ref: { kind: "component-output", component: id, output: "video" }, type: blobTypes.blob }];
+      return [{ name: `${id}.video`, ref: { kind: "component-output", component: id, output: "video" }, type: blobTypes.blob,
+        retained: true }];
     },
     async compile({ declaration, resolveReference }) {
       if (declaration.children.length > 7) throw new Error(`${options.endpoint.fields.model} accepts at most 7 reference images.`);

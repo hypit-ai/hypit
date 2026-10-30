@@ -22,8 +22,8 @@ export type CompiledSource = {
 };
 
 /**
- * Attach Studio's observations to the exact Author compilation an Invocation was
- * resolved against. Keeping this conversion separate lets the Invocation compiler and
+ * Attach Studio's observations to the exact Author compilation a Target selection was
+ * resolved against. Keeping this conversion separate lets Build preparation and
  * Studio share one Author graph instead of compiling two look-alike graphs.
  */
 export async function observedCompiledSource(

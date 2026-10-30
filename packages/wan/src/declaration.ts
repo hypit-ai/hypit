@@ -88,7 +88,8 @@ function compiler(options: {
       const id = literal(declaration, "id");
       return [
         { name: `${id}.images`, ref: { kind: "component-output", component: id, output: "images" }, type: options.endpoint.returns },
-        { name: `${id}.image`, ref: { kind: "component-output", component: id, output: "image" }, type: blobTypes.blob },
+        { name: `${id}.image`, ref: { kind: "component-output", component: id, output: "image" }, type: blobTypes.blob,
+          retained: true },
       ];
     },
     async compile({ declaration, resolveReference }) {

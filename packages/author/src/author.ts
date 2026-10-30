@@ -6,8 +6,6 @@ import type {
   AuthorGraph,
   GraphValueRef,
   LinkedProgram,
-  LogicalOutputId,
-  RecordId,
   TypeRef,
 } from "@hypit/protocol";
 import { compareCodeUnits, sameType, typeKey } from "@hypit/protocol";
@@ -37,18 +35,6 @@ export type AuthorComponentOutputRef = {
 };
 
 export type AuthorValueRef = AuthorRecordRef | AuthorComponentOutputRef;
-
-/** A durable author decision that one existing Record realizes one Component output. */
-export type AuthorRealizationSelection = {
-  readonly output: AuthorComponentOutputRef;
-  readonly record: AuthorRecordRef;
-};
-
-/** Source-closure form after authored references have resolved to graph identities. */
-export type RealizationSelection = {
-  readonly output: LogicalOutputId;
-  readonly record: RecordId;
-};
 
 /**
  * One author-visible component call. `outputs` binds every public Fragment export to a Logical Output.

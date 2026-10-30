@@ -11,6 +11,7 @@ import {
   assertWindowRelation,
   composeTemporalWindow,
   composeTemporalMaps,
+  createTemporalMapEvaluator,
   evaluateTemporalMap,
   exactTemporalValueFromFrames,
   identityTemporalMap,
@@ -23,7 +24,6 @@ import {
   resolveTemporalBoundary,
   resolveTemporalRelation,
   sealTemporalMap,
-  temporalMapDirectionAt,
   resolveTriggeredSchedule,
   temporalDurationInSamples,
   temporalExtentFromDomain,
@@ -147,14 +147,90 @@ test("Temporal Maps compose identity, scale, reverse, hold, loop and gaps withou
     ],
   }] });
   const map = composeTemporalMaps(first, second);
-  assert.deepEqual(evaluateTemporalMap(map, { ticks: "1", timeBase: { numerator: 1, denominator: 2 } }),
-    { ticks: "7", timeBase: { numerator: 1, denominator: 1 } });
-  assert.equal(evaluateTemporalMap(map, { ticks: "5", timeBase: { numerator: 1, denominator: 4 } }), undefined);
-  assert.deepEqual(evaluateTemporalMap(map, { ticks: "2", timeBase: { numerator: 1, denominator: 1 } }),
-    { ticks: "4", timeBase: { numerator: 1, denominator: 1 } });
-  assert.deepEqual(evaluateTemporalMap(map, { ticks: "7", timeBase: { numerator: 1, denominator: 2 } }),
-    { ticks: "1", timeBase: { numerator: 1, denominator: 1 } });
-  assert.deepEqual(evaluateTemporalMap(identityTemporalMap(target), target.duration), target.duration);
+  assert.deepEqual(evaluateTemporalMap(map,
+    { ticks: "1", timeBase: { numerator: 1, denominator: 2 } }, "after"), {
+    position: { ticks: "7", timeBase: { numerator: 1, denominator: 1 } }, sourceSide: "before",
+  });
+  assert.equal(evaluateTemporalMap(map,
+    { ticks: "5", timeBase: { numerator: 1, denominator: 4 } }, "after"), undefined);
+  assert.deepEqual(evaluateTemporalMap(map,
+    { ticks: "2", timeBase: { numerator: 1, denominator: 1 } }, "after"), {
+    position: { ticks: "4", timeBase: { numerator: 1, denominator: 1 } }, sourceSide: "after",
+  });
+  assert.deepEqual(evaluateTemporalMap(map,
+    { ticks: "7", timeBase: { numerator: 1, denominator: 2 } }, "after"), {
+    position: { ticks: "1", timeBase: { numerator: 1, denominator: 1 } }, sourceSide: "after",
+  });
+  assert.deepEqual(evaluateTemporalMap(identityTemporalMap(target), target.duration, "before"), {
+    position: target.duration, sourceSide: "before",
+  });
+});
+
+test("sided evaluation keeps gaps half-open and carries side through composed stages", () => {
+  const value = (ticks: string) => ({ ticks, timeBase: { numerator: 1, denominator: 1 } } as const);
+  const parent = { id: "parent", duration: value("4") };
+  const child = { id: "child", duration: value("4") };
+  const source = { id: "source", duration: value("4") };
+  const reverse = sealTemporalMap({ stages: [{ target: parent, source: child, pieces: [{
+    target: { start: value("0"), end: parent.duration },
+    sourceAtStart: child.duration,
+    rate: { numerator: -1, denominator: 1 },
+  }] }] });
+  const heldFrames = sealTemporalMap({ stages: [{ target: child, source, pieces: [0, 1, 2, 3].map((frame) => ({
+    target: { start: value(String(frame)), end: value(String(frame + 1)) },
+    sourceAtStart: value(String(frame)),
+    rate: { numerator: 0, denominator: 1 },
+  })) }] });
+  const sampled = evaluateTemporalMap(composeTemporalMaps(reverse, heldFrames), value("0"), "after");
+  assert.deepEqual(sampled, { position: value("3"), sourceSide: "after" });
+  const media = { id: "media", duration: value("4") };
+  const childReverse = sealTemporalMap({ stages: [{ target: source, source: media, pieces: [{
+    target: { start: value("0"), end: source.duration },
+    sourceAtStart: media.duration,
+    rate: { numerator: -1, denominator: 1 },
+  }] }] });
+  assert.deepEqual(evaluateTemporalMap(
+    composeTemporalMaps(composeTemporalMaps(reverse, heldFrames), childReverse), value("0"), "after"),
+  { position: value("1"), sourceSide: "before" },
+    "a frame hold resets boundary ownership without erasing the child source relation's direction");
+
+  const partial = sealTemporalMap({ stages: [{ target: parent, source, pieces: [{
+    target: { start: value("0"), end: value("2") },
+    sourceAtStart: value("0"),
+    rate: { numerator: 1, denominator: 1 },
+  }] }] });
+  assert.deepEqual(evaluateTemporalMap(partial, value("2"), "before"), {
+    position: value("2"), sourceSide: "before",
+  }, "the side before an exclusive boundary still belongs to the ending piece");
+  assert.equal(evaluateTemporalMap(partial, value("2"), "after"), undefined,
+    "the side after an exclusive boundary must not extend content into a gap");
+
+  const cut = sealTemporalMap({ stages: [{ target: parent, source, pieces: [
+    { target: { start: value("0"), end: value("2") }, sourceAtStart: value("0"),
+      rate: { numerator: 1, denominator: 1 } },
+    { target: { start: value("2"), end: value("4") }, sourceAtStart: value("1"),
+      rate: { numerator: 1, denominator: 1 } },
+  ] }] });
+  assert.deepEqual(evaluateTemporalMap(cut, value("2"), "before"), {
+    position: value("2"), sourceSide: "before",
+  }, "the side before a jump follows the ending piece");
+  assert.deepEqual(evaluateTemporalMap(cut, value("2"), "after"), {
+    position: value("1"), sourceSide: "after",
+  }, "the side after a jump follows the beginning piece");
+});
+
+test("a bound Temporal Map evaluator preserves the one-shot sided semantics", () => {
+  const value = (ticks: string) => ({ ticks, timeBase: { numerator: 1, denominator: 1 } } as const);
+  const target = { id: "bound-target", duration: value("4") };
+  const source = { id: "bound-source", duration: value("4") };
+  const map = sealTemporalMap({ stages: [{ target, source, pieces: [{
+    target: { start: value("0"), end: value("3") },
+    sourceAtStart: value("3"), rate: { numerator: -1, denominator: 1 },
+  }] }] });
+  const evaluate = createTemporalMapEvaluator(map);
+  for (const side of ["before", "after"] as const) for (const at of [value("0"), value("2"), value("3")]) {
+    assert.deepEqual(evaluate(at, side), evaluateTemporalMap(map, at, side));
+  }
 });
 
 test("cubic Map pieces evaluate exact monotone source positions without a curve registry", () => {
@@ -168,9 +244,12 @@ test("cubic Map pieces evaluate exact monotone source positions without a curve 
     sourceControl2: value("8"),
     sourceAtEnd: value("8"),
   }] }] });
-  assert.deepEqual(evaluateTemporalMap(map, value("1")), value("5", 4));
-  assert.deepEqual(evaluateTemporalMap(map, value("2")), value("4"));
-  assert.equal(temporalMapDirectionAt(map, value("2")), 1);
+  assert.deepEqual(evaluateTemporalMap(map, value("1"), "after"), {
+    position: value("5", 4), sourceSide: "after",
+  });
+  assert.deepEqual(evaluateTemporalMap(map, value("2"), "after"), {
+    position: value("4"), sourceSide: "after",
+  });
   assert.throws(() => sealTemporalMap({ stages: [{ target, source, pieces: [{
     target: { start: value("0"), end: target.duration },
     sourceAtStart: value("0"), sourceControl1: value("8"), sourceControl2: value("2"), sourceAtEnd: value("6"),
@@ -190,8 +269,12 @@ test("a signed rate profile integrates to one exact cubic target-to-source Map",
     ],
   });
   assert.deepEqual(map.stages[0]?.target.duration, value("40", 3));
-  assert.deepEqual(evaluateTemporalMap(map, value("20", 3)), value("5"));
-  assert.deepEqual(evaluateTemporalMap(map, value("40", 3)), value("10"));
+  assert.deepEqual(evaluateTemporalMap(map, value("20", 3), "after"), {
+    position: value("5"), sourceSide: "after",
+  });
+  assert.deepEqual(evaluateTemporalMap(map, value("40", 3), "before"), {
+    position: value("10"), sourceSide: "before",
+  });
 });
 
 test("a reverse wrapped Map preserves the left-hand representative at its cyclic boundary", () => {
@@ -203,14 +286,34 @@ test("a reverse wrapped Map preserves the left-hand representative at its cyclic
     rate: { numerator: -1, denominator: 1 },
     wrap: { start: { ticks: "0", timeBase: { numerator: 1, denominator: 1 } }, end: source.duration },
   }] }] });
-  assert.deepEqual(evaluateTemporalMap(map, { ticks: "0", timeBase: { numerator: 1, denominator: 1 } }),
-    source.duration);
-  assert.equal(temporalMapDirectionAt(map, { ticks: "0", timeBase: { numerator: 1, denominator: 1 } }), -1);
-  assert.deepEqual(evaluateTemporalMap(map, { ticks: "1", timeBase: { numerator: 1, denominator: 1 } }), {
-    ticks: "3", timeBase: { numerator: 1, denominator: 1 },
+  assert.deepEqual(evaluateTemporalMap(map,
+    { ticks: "0", timeBase: { numerator: 1, denominator: 1 } }, "after"), {
+    position: source.duration, sourceSide: "before",
   });
-  assert.deepEqual(evaluateTemporalMap(map, target.duration), {
-    ticks: "2", timeBase: { numerator: 1, denominator: 1 },
+  assert.deepEqual(evaluateTemporalMap(map,
+    { ticks: "1", timeBase: { numerator: 1, denominator: 1 } }, "after"), {
+    position: { ticks: "3", timeBase: { numerator: 1, denominator: 1 } }, sourceSide: "before",
+  });
+  assert.deepEqual(evaluateTemporalMap(map, target.duration, "before"), {
+    position: { ticks: "2", timeBase: { numerator: 1, denominator: 1 } }, sourceSide: "after",
+  });
+});
+
+test("a wrap seam is represented by its source side instead of the rate sign", () => {
+  const value = (ticks: string) => ({ ticks, timeBase: { numerator: 1, denominator: 1 } } as const);
+  const target = { id: "occurrence", duration: value("4") };
+  const source = { id: "source", duration: value("4") };
+  const wrapped = (rate: 1 | -1) => sealTemporalMap({ stages: [{ target, source, pieces: [{
+    target: { start: value("0"), end: target.duration },
+    sourceAtStart: rate > 0 ? value("0") : source.duration,
+    rate: { numerator: rate, denominator: 1 },
+    wrap: { start: value("0"), end: source.duration },
+  }] }] });
+  assert.deepEqual(evaluateTemporalMap(wrapped(1), target.duration, "before"), {
+    position: source.duration, sourceSide: "before",
+  });
+  assert.deepEqual(evaluateTemporalMap(wrapped(-1), target.duration, "before"), {
+    position: value("0"), sourceSide: "after",
   });
 });
 
@@ -234,7 +337,9 @@ test("one relation resolver binds edge-relative author intent to exact domains",
   }] } });
   assert.deepEqual(reverse.stages[0]?.pieces[0]?.sourceAtStart, source.duration);
   const oneSecond = { ticks: "1", timeBase: { numerator: 1, denominator: 1 } } as const;
-  assert.deepEqual(evaluateTemporalMap(reverse, oneSecond), oneSecond);
+  assert.deepEqual(evaluateTemporalMap(reverse, oneSecond, "after"), {
+    position: oneSecond, sourceSide: "before",
+  });
 });
 
 test("Timeline and absolute expressions resolve to minimal absolute Instants", () => {

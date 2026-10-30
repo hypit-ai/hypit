@@ -21,8 +21,8 @@ import {
 } from "@hypit/hypit/runtime";
 import type { CredentialStore, CredentialValue, ResourceStore } from "@hypit/hypit/runtime";
 import type { BuildResultRepositoryLocation } from "./execution.js";
-import { FileBuildResultRepository } from "@hypit/hypit/result/node";
-import type { BuildResultRepository } from "@hypit/hypit/result";
+import { FileBuildResultStore } from "@hypit/result/runtime-storage/node";
+import type { BuildResultStore } from "@hypit/result/runtime-storage";
 import { FileResourceStore } from "./resource-store.js";
 import {
   isRuntimeAdapterFacet,
@@ -312,19 +312,19 @@ async function installRuntimeAdapters(
 
 async function openBuildResultLocation(
   location: BuildResultRepositoryLocation,
-): Promise<{ readonly repository: BuildResultRepository }> {
-  return { repository: new FileBuildResultRepository(resolve(location.root, location.path)) };
+): Promise<{ readonly repository: BuildResultStore }> {
+  return { repository: new FileBuildResultStore(resolve(location.root, location.path)) };
 }
 
 export async function openBuildResultRepositoryLocation(
   location: BuildResultRepositoryLocation,
-): Promise<{ readonly repository: BuildResultRepository }> {
+): Promise<{ readonly repository: BuildResultStore }> {
   return await openBuildResultLocation(location);
 }
 
 export async function openProjectBuildResultRepository(
   projectRoot: string,
-): Promise<{ readonly repository: BuildResultRepository; readonly location: BuildResultRepositoryLocation }> {
+): Promise<{ readonly repository: BuildResultStore; readonly location: BuildResultRepositoryLocation }> {
   const location = projectBuildResultLocation(projectRoot);
   const result = await openBuildResultLocation(location);
   return { ...result, location };
@@ -1331,14 +1331,6 @@ export async function createRuntimeControlFromConfig(
     submissionStore: state.submissions,
     close: () => state.close(),
   });
-}
-
-export async function createRuntimeResultControlFromConfig(
-  path: string,
-  options: LoadRuntimeConfigOptions = {},
-): Promise<LocalResultWriter> {
-  const { root } = await openRuntimeConfig(path, options.packageRoot);
-  return createRuntimeResultWriter(root);
 }
 
 export function createRuntimeResultWriter(root: string): LocalResultWriter {

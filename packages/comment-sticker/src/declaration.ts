@@ -107,8 +107,8 @@ export const commentStickerTrackAuthorDeclaration: AuthorDeclarationCompiler = {
   bindings(declaration) {
     const id = literal(declaration, "id");
     return [
-      { name: `${id}.program`, ref: { kind: "component-output", component: id, output: "program" }, type: commentStickerTypes.program, exported: true },
-      { name: `${id}.visual`, ref: { kind: "component-output", component: id, output: "visual" }, type: compositionTypes.visualTrack, exported: true },
+      { name: `${id}.program`, ref: { kind: "component-output", component: id, output: "program" }, type: commentStickerTypes.program },
+      { name: `${id}.visual`, ref: { kind: "component-output", component: id, output: "visual" }, type: compositionTypes.visualTrack },
     ];
   },
   async compile({ declaration, resolveReference }) {

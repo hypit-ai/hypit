@@ -12,16 +12,14 @@ cd /path/to/my-video
 hypit studio --source main.svml --target final.video
 ```
 
-打开命令打印的网址。需要反复使用的调用也可以通过 `hypit studio --invocation build.svrun` 打开；两种形式
-都会形成同一个内存 Invocation。编辑时要保留已生成素材，先把接受的
+打开命令打印的网址。Source 与可重复的 `--target` 选项一起确定这个 Studio Session。编辑时要保留已生成素材，先把接受的
 Output 导出到项目，再按[复用已经产出的内容](./run.md#复用已经产出的内容)在 Author Source 中记录长期选择。
 
 **Studio / Comments 左侧的地球菜单**可以切换界面语言，内置英文和简体中文。首次访问跟随浏览器语言，之后记住你的选择。切换时保留播放位置、选中状态和评论草稿；稿子、视频字幕和评论内容保持原样。
 
 | 参数 | 用途 |
 | --- | --- |
-| `--source <file.svml>` | 选择 Author Source；用一个或多个 `--target <output>` 声明本次 Invocation。 |
-| `--invocation <file.svrun>` | 用可选的已保存 Invocation 代替直接 Source 参数。 |
+| `--source <file.svml>` | 选择 Author Source；用一个或多个 `--target <output>` 声明本次 Session。 |
 | `--runtime <profile.json>` | 选择 Runtime Profile；省略时使用项目保存的 Runtime 选择。 |
 | `--project <directory>` | 设置 Source 访问与修改的项目边界。 |
 | `--port <number>` | 指定浏览器服务端口，默认请求 `5179`。 |
@@ -38,11 +36,11 @@ Output 导出到项目，再按[复用已经产出的内容](./run.md#复用已�
 
 左侧资源库包含三个视图：
 
-- **Source** 列出 Author closure 和可选的 Invocation Source，可以选择文件查看或编辑。
+- **Source** 列出精确的 Author closure，可以选择文件查看或编辑。
 - **Tasks** 显示项目已完成的 Build；选择 Runtime 后，也能查看活动执行信息。
 - **Artifacts** 用于查看 Build Result 中保留的公开产物文件。
 
-选择 Artifact 会打开它供查看。要将它用于编排，应导出到项目，在 Author Source 中声明，并在那里记录长期 realization 选择。
+选择 Artifact 会打开它供查看。要将它用于编排，应导出到项目，在 Author Source 中声明，并更新消费它的引用。
 
 ## 画面、时间线与 Inspector
 
@@ -54,9 +52,9 @@ Inspector 显示所选 Item 的属性。可编辑字段与时间线手柄由组�
 
 ## 修改作品
 
-Source 编辑修改所选 `.svml`、`.svs` 或可选 `.svrun` 文件。支持的 Inspector 修改和时间线手势会写回对应作者值，然后用同一个 Invocation 重新编译。移动共享的 Selection 或 Moment，会改变它在 Script 中的位置，使用它的组件随之更新；修改共享 Frame 或 Recipe，也可能影响多个画面元素。
+Source 编辑修改所选 `.svml` 或 `.svs` 文件。支持的 Inspector 修改和时间线手势会写回对应作者值，然后用同一组 Target 重新编译。移动共享的 Selection 或 Moment，会改变它在 Script 中的位置，使用它的组件随之更新；修改共享 Frame 或 Recipe，也可能影响多个画面元素。
 
-编辑后查看保存状态。重新编译失败时，Studio 显示错误并恢复之前的文件。列表与记录控件在结束编辑时保存完整、有效的值；未填写完整时会显示提示。可选 Invocation Source 和已加载 Author Source 会被监听；更换安装包、组件代码或 Runtime 选择后，需要重启 Studio 来加载这些变化。
+编辑后查看保存状态。重新编译失败时，Studio 显示错误并恢复之前的文件。列表与记录控件在结束编辑时保存完整、有效的值；未填写完整时会显示提示。已加载 Author Source 会被监听；更换安装包、组件代码或 Runtime 选择后，需要重启 Studio 来加载这些变化。
 
 ## 声音与交付
 

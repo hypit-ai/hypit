@@ -1,6 +1,6 @@
 export { htmlProgramFragment } from "./fragment.js";
 export { htmlProgramComponent } from "./component.js";
-export { assertHtmlProgram, assertHtmlFrameIndex, assertHtmlFrameSpan, compileHtmlProgram, htmlArtifactUri, htmlProgramTime, materializeHtmlProgram, selectHtmlArtifacts } from "./document.js";
+export { assertHtmlProgram, assertHtmlFrameIndex, assertHtmlFrameSpan, compileHtmlProgram, htmlArtifactUri, htmlProgramTime, materializeHtmlProgram, selectHtmlArtifacts, selectHtmlProcessUsages, selectHtmlSurfaces, selectHtmlVideoSources } from "./document.js";
 export {
   htmlProgramSchema,
   htmlProgramCapabilities,
@@ -13,7 +13,7 @@ export { htmlRasterRequest, verifyHtmlRasterRequest, htmlFrameRequest, verifyHtm
 export type { HtmlRasterRequest, HtmlFrameRequest, HtmlFrameImages } from "./execution.js";
 export type * from "./types.js";
 export { htmlVisual, readHtmlVisual, HTML_VISUAL_FORMAT } from "./html-visual.js";
-export type { HtmlVisual } from "./html-visual.js";
+export type { HtmlVisual, HtmlVisualAuthoring, HtmlVisualDependency } from "./html-visual.js";
 export { htmlVisualElement } from "./html-element.js";
 export type {
   HtmlAnimation,

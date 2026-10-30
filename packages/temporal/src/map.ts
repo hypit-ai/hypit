@@ -29,15 +29,36 @@ function modulo(value: Rational, length: Rational): Rational {
   return subtract(value, multiply(length, rational(quotient)));
 }
 
-function stagePiece(stage: TemporalMapStage, targetAt: ExactTemporalValue): TemporalMapPiece | undefined {
+export type TemporalMapSide = "before" | "after";
+
+export type TemporalMapEvaluation = {
+  readonly position: ExactTemporalValue;
+  /** Which side of `position` is the image of the requested target side. */
+  readonly sourceSide: TemporalMapSide;
+};
+
+export type TemporalMapEvaluator = (
+  targetAt: ExactTemporalValue,
+  side: TemporalMapSide,
+) => TemporalMapEvaluation | undefined;
+
+function stagePiece(
+  stage: TemporalMapStage,
+  targetAt: ExactTemporalValue,
+  side: TemporalMapSide,
+): TemporalMapPiece | undefined {
   const target = exactTemporalRational(targetAt);
-  const last = stage.pieces.at(-1);
-  return stage.pieces.find((candidate) => {
+  const inside = stage.pieces.find((candidate) => {
     const start = exactTemporalRational(candidate.target.start);
     const end = exactTemporalRational(candidate.target.end);
-    return compare(target, start) >= 0 && (compare(target, end) < 0
-      || (candidate === last && compare(target, end) === 0));
+    return compare(target, start) > 0 && compare(target, end) < 0;
   });
+  if (inside !== undefined) return inside;
+  const begins = stage.pieces.find((candidate) =>
+    compare(target, exactTemporalRational(candidate.target.start)) === 0);
+  const ends = stage.pieces.findLast((candidate) =>
+    compare(target, exactTemporalRational(candidate.target.end)) === 0);
+  return side === "before" ? ends : begins;
 }
 
 export function isAffineTemporalMapPiece(piece: TemporalMapPiece): piece is TemporalAffineMapPiece {
@@ -60,9 +81,7 @@ function cubicPosition(piece: Exclude<TemporalMapPiece, TemporalAffineMapPiece>,
   );
 }
 
-function stageValue(stage: TemporalMapStage, targetAt: ExactTemporalValue): ExactTemporalValue | undefined {
-  const piece = stagePiece(stage, targetAt);
-  if (piece === undefined) return undefined;
+function pieceValue(piece: TemporalMapPiece, targetAt: ExactTemporalValue): ExactTemporalValue {
   const target = exactTemporalRational(targetAt);
   if (!isAffineTemporalMapPiece(piece)) return exactTemporalValue(cubicPosition(piece, target));
   const delta = subtract(target, exactTemporalRational(piece.target.start));
@@ -73,13 +92,29 @@ function stageValue(stage: TemporalMapStage, targetAt: ExactTemporalValue): Exac
     const wrapEnd = exactTemporalRational(piece.wrap.end);
     const wrapLength = subtract(wrapEnd, wrapStart);
     source = add(wrapStart, modulo(subtract(source, wrapStart), wrapLength));
-    // The ends denote the same cyclic position, but a terminal sample at that
-    // boundary still needs its direction. Preserve the left-hand
-    // representative for reverse motion so a decoded-frame consumer selects
-    // the final sample in the interval rather than its first sample.
-    if (rate.numerator < 0n && compare(source, wrapStart) === 0) source = wrapEnd;
   }
   return exactTemporalValue(source);
+}
+
+function sidedPieceValue(
+  piece: TemporalMapPiece,
+  targetAt: ExactTemporalValue,
+  sourceSide: TemporalMapSide,
+): ExactTemporalValue {
+  const position = pieceValue(piece, targetAt);
+  if (!isAffineTemporalMapPiece(piece) || piece.wrap === undefined || sourceSide !== "before"
+    || compareExactTemporalValues(position, piece.wrap.start) !== 0) return position;
+  // wrap.start/after and wrap.end/before are the two exact representatives of
+  // the cyclic seam. Keeping the representative and side together avoids a
+  // renderer-specific "reverse endpoint" exception.
+  return structuredClone(piece.wrap.end);
+}
+
+function pieceDirection(piece: TemporalMapPiece): -1 | 0 | 1 {
+  return isAffineTemporalMapPiece(piece)
+    ? Math.sign(piece.rate.numerator) as -1 | 0 | 1
+    : compareExactTemporalValues(piece.sourceAtStart, piece.sourceAtEnd) < 0 ? 1
+      : compareExactTemporalValues(piece.sourceAtStart, piece.sourceAtEnd) > 0 ? -1 : 0;
 }
 
 function assertPiece(
@@ -193,35 +228,52 @@ export function composeTemporalMaps(first: TemporalMap, second: TemporalMap): Te
   };
 }
 
-/** Evaluate one target boundary. A gap has no image. */
-export function evaluateTemporalMap(value: TemporalMap, targetAt: ExactTemporalValue): ExactTemporalValue | undefined {
-  let current: ExactTemporalValue | undefined = targetAt;
-  for (const stage of value.stages) {
-    if (current === undefined) return undefined;
-    current = stageValue(stage, current);
-  }
-  return current;
-}
-
-/** Local orientation of the complete Map at one target boundary. */
-export function temporalMapDirectionAt(
+/**
+ * Evaluate one side of an exact target position through the complete Map.
+ *
+ * A TemporalMap is a piecewise relation, so an unsided value at a piece or gap
+ * boundary is ambiguous. Content beginning at a frame or sample boundary uses
+ * `after`; an exclusive interval end uses `before`. Reverse pieces flip the
+ * side at every stage. A hold deliberately starts a new `after` side at its
+ * fixed source position: it selects that position as content instead of
+ * pretending that a zero derivative still carries an earlier orientation.
+ */
+function evaluateTemporalMapCore(
   value: TemporalMap,
   targetAt: ExactTemporalValue,
-): -1 | 0 | 1 | undefined {
-  let current: ExactTemporalValue | undefined = targetAt;
-  let direction: -1 | 0 | 1 = 1;
+  side: TemporalMapSide,
+): TemporalMapEvaluation | undefined {
+  let current = targetAt;
+  let sourceSide = side;
   for (const stage of value.stages) {
-    if (current === undefined) return undefined;
-    const piece = stagePiece(stage, current);
+    const piece = stagePiece(stage, current, sourceSide);
     if (piece === undefined) return undefined;
-    const stageDirection = isAffineTemporalMapPiece(piece)
-      ? Math.sign(piece.rate.numerator) as -1 | 0 | 1
-      : compareExactTemporalValues(piece.sourceAtStart, piece.sourceAtEnd) < 0 ? 1
-        : compareExactTemporalValues(piece.sourceAtStart, piece.sourceAtEnd) > 0 ? -1 : 0;
-    direction = direction === 0 || stageDirection === 0
-      ? 0
-      : direction === stageDirection ? 1 : -1;
-    current = stageValue(stage, current);
+    const direction = pieceDirection(piece);
+    sourceSide = direction === 0 ? "after"
+      : direction > 0 ? sourceSide
+        : sourceSide === "before" ? "after" : "before";
+    current = sidedPieceValue(piece, current, sourceSide);
   }
-  return direction;
+  return { position: current, sourceSide };
+}
+
+export function evaluateTemporalMap(
+  value: TemporalMap,
+  targetAt: ExactTemporalValue,
+  side: TemporalMapSide,
+): TemporalMapEvaluation | undefined {
+  assertTemporalMap(value);
+  return evaluateTemporalMapCore(value, targetAt, side);
+}
+
+/**
+ * Validate one immutable Map at an execution boundary and bind its evaluator.
+ *
+ * This is the same sided evaluation engine as `evaluateTemporalMap`; it only
+ * moves structural validation out of frame/sample hot loops. Callers must not
+ * mutate the readonly Map after binding it.
+ */
+export function createTemporalMapEvaluator(value: TemporalMap): TemporalMapEvaluator {
+  assertTemporalMap(value);
+  return (targetAt, side) => evaluateTemporalMapCore(value, targetAt, side);
 }

@@ -12,8 +12,8 @@ export function mergeStudioArtifacts(items: readonly StudioArtifactView[]): Stud
     const latest = item.createdAt > prior.createdAt ? item : prior;
     const origins = new Map([...prior.origins, ...item.origins].map((origin) =>
       [JSON.stringify([origin.build, origin.output]), origin]));
-    files.set(item.id, { ...latest, highlighted: prior.highlighted || item.highlighted, origins: [...origins.values()] });
+    files.set(item.id, { ...latest, origins: [...origins.values()] });
   }
-  return [...files.values()].sort((left, right) => Number(right.highlighted) - Number(left.highlighted)
-    || right.createdAt - left.createdAt || left.output.localeCompare(right.output));
+  return [...files.values()].sort((left, right) => right.createdAt - left.createdAt
+    || left.output.localeCompare(right.output));
 }

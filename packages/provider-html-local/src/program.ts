@@ -29,29 +29,12 @@ async function mediaToolVersion(path: string): Promise<MediaToolVersion> {
   }
 }
 
-async function hasEncoder(path: string, encoder: string): Promise<boolean> {
-  const result = await runProcess({ executable: path, argv: ["-hide_banner", "-encoders"],
-    timeoutMs: 15_000, maxOutputBytes: 4 * 1024 * 1024 });
-  const output = Buffer.concat([Buffer.from(result.stdout), Buffer.from(result.stderr)]).toString("utf8");
-  return output.split(/\r?\n/u).some(line => line.trim().split(/\s+/u)[1] === encoder);
-}
-
-async function probeHtmlMediaTools(ffprobePath: string, ffmpegPath: string | undefined,
-  requireHdr10Encoder: boolean): Promise<ManagedProgramState> {
+async function probeHtmlMediaTools(ffprobePath: string, ffmpegPath: string | undefined): Promise<ManagedProgramState> {
   const ffprobe = await mediaToolVersion(ffprobePath);
   if (ffprobe.state !== "ready") return { state: ffprobe.state, detail: ffprobe.detail };
   if (ffmpegPath === undefined) return { state: "ready" };
   const ffmpeg = await mediaToolVersion(ffmpegPath);
   if (ffmpeg.state !== "ready") return { state: ffmpeg.state, detail: ffmpeg.detail };
-  if (requireHdr10Encoder) {
-    try {
-      if (!await hasEncoder(ffmpegPath, "libx265")) {
-        return { state: "mismatch", detail: `${ffmpegPath} does not provide the Electron HDR10 pipeline's libx265 encoder` };
-      }
-    } catch (error) {
-      return { state: "down", detail: error instanceof Error ? error.message : String(error) };
-    }
-  }
   return { state: "ready" };
 }
 
@@ -59,7 +42,7 @@ async function probeHtmlMediaTools(ffprobePath: string, ffmpegPath: string | und
  * This Provider owns browser selection and preparation. Probes never install;
  * rasterization receives the same selected executable instead of invoking browser discovery.
  */
-export function localHtmlRendererProgram(
+function localHtmlRendererProgram(
   input: BrowserOptions & ElectronOptions & {
     readonly id: string;
     readonly nodePath: string;
@@ -103,7 +86,27 @@ export function localHtmlRendererProgram(
       if (electron.state !== "ready") return electron;
       const browser = await probeBrowser();
       if (browser.state !== "ready") return browser;
-      return await probeHtmlMediaTools(input.ffprobePath, input.ffmpegPath, renderer === "electron");
+      return await probeHtmlMediaTools(input.ffprobePath, input.ffmpegPath);
     },
   };
+}
+
+type LocalHtmlProgramOptions = {
+  readonly id: string;
+  readonly ffprobePath: string;
+  readonly ffmpegPath?: string;
+};
+
+/** Managed dependencies for the portable Chromium Endpoint. */
+export function localChromiumHtmlRendererProgram(
+  input: BrowserOptions & LocalHtmlProgramOptions & { readonly nodePath: string },
+): ManagedProgram {
+  return localHtmlRendererProgram({ ...input, renderer: "chromium" });
+}
+
+/** User-managed executable and media-tool probes for the Electron Endpoint. */
+export function localElectronHtmlRendererProgram(
+  input: LocalHtmlProgramOptions & { readonly electronPath: string },
+): ManagedProgram {
+  return localHtmlRendererProgram({ ...input, renderer: "electron", nodePath: process.execPath });
 }

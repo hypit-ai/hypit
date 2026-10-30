@@ -72,4 +72,4 @@ Agent 会从一开始写好剧本、表演方向和图片参考关系，让生�
 
 继续对话就能修改作品或制作变体。仍适用的素材会继续复用，Agent 调整相关剧本、组件或位置。项目保存在普通文件里，可以继续编辑。
 
-进一步了解：[与 Agent 一起制作视频](./guide/skill.md)、[Invocation 与 Build](./quickstart/run.md)、[Studio](./quickstart/preview.md)。
+进一步了解：[与 Agent 一起制作视频](./guide/skill.md)、[Target 与 Build](./quickstart/run.md)、[Studio](./quickstart/preview.md)。

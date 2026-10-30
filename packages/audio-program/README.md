@@ -8,6 +8,9 @@ Mix, and preserves source, mix, process, explicit port and shared-upstream topol
 complete Prepared Media map, complete occurrence map, exact absolute target range and mix automation.
 Only absolute programme and mix boundaries are projected onto the 48 kHz grid here.
 
+`AudioProgram` is one closed signal graph. Source, Mix and package-owned Process nodes are its
+complete execution topology.
+
 It does not turn a relation into `trim`, `loop` or `playbackRate` modes. A selected Renderer privately
 lowers the preserved graph and maps according to its signal capability and reports unsupported Process
 formats or map shapes through its request-local Endpoint support decision. This package does not choose that Provider, own media

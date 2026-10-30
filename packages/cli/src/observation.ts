@@ -1,4 +1,4 @@
-import type { BuildResultManifest } from "@hypit/result";
+import type { BuildResult } from "@hypit/result";
 import { compareCodeUnits } from "@hypit/protocol";
 
 import type { CliBuildSubmission, CliBuildView, CliRuntimeControl } from "./runtime-port.js";
@@ -186,7 +186,7 @@ export async function observeBuild(
   options: {
     readonly maxWaitMs?: number;
     readonly executionStatus?: () => Promise<{ readonly state: "running" | "stopped" }>;
-    readonly readResult: () => Promise<BuildResultManifest | undefined>;
+    readonly readResult: () => Promise<BuildResult | undefined>;
     readonly onProgress?: (value: BuildProgressView) => void;
     readonly commandScope?: CommandScope;
   },

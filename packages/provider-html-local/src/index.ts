@@ -1,10 +1,12 @@
-export { createLocalHtmlProvider, localHtmlProviderModuleRef } from "./provider.js";
+export {
+  createLocalChromiumHtmlProvider,
+  localHtmlProviderModuleRef,
+} from "./provider.js";
 export type {
-  CreateLocalHtmlProviderOptions,
+  CreateLocalChromiumHtmlProviderOptions,
   HtmlBrowserGpu,
-  HtmlRenderer,
   HtmlWorkers,
 } from "./provider.js";
 
-export { rasterizeHtmlProgram, rasterizeHtmlFrames } from "./render.js";
-export type { HtmlRasterOptions, HtmlRasterProgress } from "./render.js";
+export { rasterizeChromiumHtmlProgram, rasterizeHtmlFrames } from "./render.js";
+export type { ChromiumHtmlRasterOptions, HtmlRasterProgress } from "./render.js";

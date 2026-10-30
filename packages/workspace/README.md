@@ -1,6 +1,6 @@
 # `@hypit/workspace`
 
-Replaceable Author/Invocation source and asset sessions. Filesystem, browser, Git, memory and remote
+Replaceable Author source and asset sessions. Filesystem, browser, Git, memory and remote
 implementations can provide the same port without entering Core or the generic Host-facet package.
 Each session assigns closure-local Source identities while retaining any filesystem or remote locator
 inside the Host. `sourceLocation` is an optional editing/diagnostic projection, not part of author semantics.

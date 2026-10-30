@@ -37,11 +37,6 @@ a matte has no adjacency rule and remains structurally active for the Film Timel
 
 The HTML renderer evaluates Process inputs as request-private Picture surfaces in recursive order.
 This extra work occurs only when a Film contains a Process; the surfaces are not Results, authored
-media or reusable metadata. Chromium and SDR Electron execute the same effect contract. The current
-HDR10 Electron path rejects Process input passes because an 8-bit intermediate would change the
-working Picture; HDR support requires a float shared-texture implementation of the same renderer-private
-boundary rather than another author declaration.
+media or reusable metadata. Chromium and Electron execute the same fixed SDR effect contract.
 
-The current HTML lowering executes Scope Process surfaces in the root Composition document. A matte
-inside a nested child Composition is rejected explicitly until that renderer executes child-document
-surfaces recursively; this does not change the matte effect or Film declaration.
+The current HTML lowering executes Scope Process surfaces in the Composition document.

@@ -20,7 +20,7 @@ function buildState(
   graph: Parameters<typeof planBuild>[1],
   targets: readonly string[],
 ) {
-  const planned = planBuild(program, graph, targets, []);
+  const planned = planBuild(program, graph, targets);
   return materializeBuild(defineBuild({
     program,
     plan: planned.plan,

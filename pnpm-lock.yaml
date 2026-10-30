@@ -93,9 +93,6 @@ importers:
       '@hypit/composition':
         specifier: workspace:*
         version: link:packages/composition
-      '@hypit/composition-clip':
-        specifier: workspace:*
-        version: link:packages/composition-clip
       '@hypit/credential-store-env':
         specifier: workspace:*
         version: link:packages/credential-store-env
@@ -147,9 +144,6 @@ importers:
       '@hypit/interview-emoji-reveal':
         specifier: workspace:*
         version: link:packages/interview-emoji-reveal
-      '@hypit/invocation':
-        specifier: workspace:*
-        version: link:packages/invocation
       '@hypit/markup':
         specifier: workspace:*
         version: link:packages/markup
@@ -201,6 +195,9 @@ importers:
       '@hypit/provider-hiapi':
         specifier: workspace:*
         version: link:packages/provider-hiapi
+      '@hypit/provider-html-electron-local':
+        specifier: workspace:*
+        version: link:packages/provider-html-electron-local
       '@hypit/provider-html-local':
         specifier: workspace:*
         version: link:packages/provider-html-local
@@ -225,9 +222,6 @@ importers:
       '@hypit/ranking':
         specifier: workspace:*
         version: link:packages/ranking
-      '@hypit/realization':
-        specifier: workspace:*
-        version: link:packages/realization
       '@hypit/recipe':
         specifier: workspace:*
         version: link:packages/recipe
@@ -877,9 +871,6 @@ importers:
       '@hypit/executor':
         specifier: workspace:*
         version: link:../executor
-      '@hypit/invocation':
-        specifier: workspace:*
-        version: link:../invocation
       '@hypit/kernel':
         specifier: workspace:*
         version: link:../kernel
@@ -914,9 +905,6 @@ importers:
         specifier: 5.9.3
         version: 5.9.3
     devDependencies:
-      '@hypit/markup':
-        specifier: workspace:*
-        version: link:../markup
       '@hypit/runtime-local':
         specifier: workspace:*
         version: link:../runtime-local
@@ -969,9 +957,6 @@ importers:
       '@hypit/author':
         specifier: workspace:*
         version: link:../author
-      '@hypit/invocation':
-        specifier: workspace:*
-        version: link:../invocation
       '@hypit/kernel':
         specifier: workspace:*
         version: link:../kernel
@@ -991,9 +976,6 @@ importers:
       '@hypit/markup':
         specifier: workspace:*
         version: link:../markup
-      '@hypit/realization':
-        specifier: workspace:*
-        version: link:../realization
 
   packages/composition:
     dependencies:
@@ -1037,43 +1019,6 @@ importers:
       '@hypit/speech-evidence':
         specifier: workspace:*
         version: link:../speech-evidence
-
-  packages/composition-clip:
-    dependencies:
-      '@hypit/audio-track':
-        specifier: workspace:^0.3.0
-        version: link:../audio-track
-      '@hypit/composition':
-        specifier: workspace:^0.2.0
-        version: link:../composition
-      '@hypit/hypit':
-        specifier: workspace:^0.4.0
-        version: link:../..
-      '@hypit/media':
-        specifier: workspace:^0.2.0
-        version: link:../media
-      '@hypit/spatial':
-        specifier: workspace:^0.1.1
-        version: link:../spatial
-      '@hypit/temporal':
-        specifier: workspace:^0.1.1
-        version: link:../temporal
-      '@hypit/timeline':
-        specifier: workspace:^0.1.1
-        version: link:../timeline
-      '@hypit/visual-track':
-        specifier: workspace:^0.3.0
-        version: link:../visual-track
-    devDependencies:
-      '@hypit/producer':
-        specifier: workspace:*
-        version: link:../producer
-      '@hypit/protocol':
-        specifier: workspace:*
-        version: link:../protocol
-      '@hypit/refinement':
-        specifier: workspace:*
-        version: link:../refinement
 
   packages/credential-store-env:
     devDependencies:
@@ -1219,9 +1164,6 @@ importers:
       '@hypit/composition':
         specifier: workspace:^0.2.0
         version: link:../composition
-      '@hypit/media':
-        specifier: workspace:^0.2.0
-        version: link:../media
       '@hypit/spatial':
         specifier: workspace:^0.1.1
         version: link:../spatial
@@ -1247,6 +1189,9 @@ importers:
       '@hypit/markup':
         specifier: workspace:*
         version: link:../markup
+      '@hypit/media':
+        specifier: workspace:*
+        version: link:../media
       '@hypit/producer':
         specifier: workspace:*
         version: link:../producer
@@ -1444,6 +1389,12 @@ importers:
       '@hypit/markup':
         specifier: workspace:*
         version: link:../markup
+      '@hypit/provider-html-local':
+        specifier: workspace:*
+        version: link:../provider-html-local
+      puppeteer-core:
+        specifier: 25.10.0
+        version: 25.10.0
 
   packages/html-playback:
     dependencies:
@@ -1641,21 +1592,6 @@ importers:
         specifier: 5.9.3
         version: 5.9.3
 
-  packages/invocation:
-    dependencies:
-      '@hypit/author':
-        specifier: workspace:*
-        version: link:../author
-      '@hypit/facet':
-        specifier: workspace:*
-        version: link:../facet
-      '@hypit/protocol':
-        specifier: workspace:*
-        version: link:../protocol
-      '@hypit/source':
-        specifier: workspace:*
-        version: link:../source
-
   packages/kernel:
     dependencies:
       '@hypit/protocol':
@@ -1685,9 +1621,6 @@ importers:
       '@hypit/facet':
         specifier: workspace:*
         version: link:../facet
-      '@hypit/invocation':
-        specifier: workspace:*
-        version: link:../invocation
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
@@ -2115,6 +2048,18 @@ importers:
         specifier: workspace:*
         version: link:../runtime-local
 
+  packages/provider-html-electron-local:
+    dependencies:
+      '@hypit/hypit':
+        specifier: workspace:^0.4.0
+        version: link:../..
+      '@hypit/provider-html-local':
+        specifier: workspace:^0.2.1
+        version: link:../provider-html-local
+      '@hypit/runtime-local':
+        specifier: workspace:^0.2.0
+        version: link:../runtime-local
+
   packages/provider-html-local:
     dependencies:
       '@hypit/html-program':
@@ -2446,21 +2391,6 @@ importers:
         specifier: 5.9.3
         version: 5.9.3
 
-  packages/realization:
-    devDependencies:
-      '@hypit/author':
-        specifier: workspace:*
-        version: link:../author
-      '@hypit/hypit':
-        specifier: workspace:*
-        version: link:../..
-      '@hypit/markup':
-        specifier: workspace:*
-        version: link:../markup
-      '@hypit/protocol':
-        specifier: workspace:*
-        version: link:../protocol
-
   packages/recipe:
     dependencies:
       '@hypit/author':
@@ -2497,6 +2427,9 @@ importers:
       '@hypit/atomic-file':
         specifier: workspace:*
         version: link:../atomic-file
+      '@hypit/facet':
+        specifier: workspace:*
+        version: link:../facet
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
@@ -3010,9 +2943,6 @@ importers:
       '@hypit/composition':
         specifier: workspace:^0.2.0
         version: link:../composition
-      '@hypit/composition-clip':
-        specifier: workspace:^0.1.0
-        version: link:../composition-clip
       '@hypit/credential-store-env':
         specifier: workspace:^0.1.2
         version: link:../credential-store-env
@@ -3100,9 +3030,6 @@ importers:
       '@hypit/provider-whisperx-local':
         specifier: workspace:^0.3.0
         version: link:../provider-whisperx-local
-      '@hypit/realization':
-        specifier: workspace:^0.1.0
-        version: link:../realization
       '@hypit/runtime-local':
         specifier: workspace:^0.2.0
         version: link:../runtime-local

@@ -228,12 +228,12 @@ function trackCompiler(variant: RankingVariant): AuthorDeclarationCompiler {
       const sound = declarationField(declaration, "appear-sound") !== undefined
         || declarationField(declaration, "move-sound") !== undefined;
       return [
-        { name: `${id}.schedule`, ref: { kind: "component-output", component: id, output: "schedule" }, type: rankingTypes.schedule, exported: true },
-        { name: `${id}.program`, ref: { kind: "component-output", component: id, output: "program" }, type: selected.program, exported: true },
-        { name: `${id}.visual`, ref: { kind: "component-output", component: id, output: "visual" }, type: compositionTypes.visualTrack, exported: true },
+        { name: `${id}.schedule`, ref: { kind: "component-output", component: id, output: "schedule" }, type: rankingTypes.schedule },
+        { name: `${id}.program`, ref: { kind: "component-output", component: id, output: "program" }, type: selected.program },
+        { name: `${id}.visual`, ref: { kind: "component-output", component: id, output: "visual" }, type: compositionTypes.visualTrack },
         ...(sound ? [
-          { name: `${id}.events`, ref: { kind: "component-output" as const, component: id, output: "events" }, type: rankingTypes.soundEvents, exported: true },
-          { name: `${id}.audio`, ref: { kind: "component-output" as const, component: id, output: "audio" }, type: compositionTypes.audioTrack, exported: true },
+          { name: `${id}.events`, ref: { kind: "component-output" as const, component: id, output: "events" }, type: rankingTypes.soundEvents },
+          { name: `${id}.audio`, ref: { kind: "component-output" as const, component: id, output: "audio" }, type: compositionTypes.audioTrack },
         ] : []),
       ];
     },

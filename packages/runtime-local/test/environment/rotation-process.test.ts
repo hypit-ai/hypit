@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 import { setTimeout as pause } from "node:timers/promises";
 import test from "node:test";
 import { defineBuild } from "@hypit/kernel";
-import { FileBuildResultRepository } from "@hypit/result/node";
+import { FileBuildResultStore } from "@hypit/result/runtime-storage/node";
 import { SqliteRuntimeState } from "../../src/sqlite-state.js";
 import { createGreetingBuild, manifest, capabilities, producers, types } from "../execution-scenario.js";
 import { statePath } from "../../src/config.js";
@@ -27,7 +27,7 @@ test("a draining carrier finishes its existing Build while a new carrier shares 
   const root=await mkdtemp(join(tmpdir(),"hypit-carrier-rotation-"));
   const dataRoot=join(root,"runtime"), profile=join(root,"profile.json");
   const state=new SqliteRuntimeState(statePath(dataRoot));
-  const repository=new FileBuildResultRepository(join(root,"results"));
+  const repository=new FileBuildResultStore(join(root,"results"));
   const local=new Map<string,number>(), starts=new Map<string,number>(), finished=new Set<string>();
   let child: ChildProcess | undefined, exited: Promise<void> | undefined, log="", release=false;
   const server=createServer(async(req,res)=>{
@@ -77,8 +77,8 @@ test("a draining carrier finishes its existing Build while a new carrier shares 
       const request={build:id,executionPackages:['fixture-rotation'],result:{root,path:'results'},
         context:{format:'hypit.local-execution@1',packageRoot:root,hostStateRoot:join(root,'host'),distributionPackageRoot:distribution,profile:profileValue}};
       await state.submissions.prepare(request);
-      await repository.create({id,sourceId:'main.svml',publication:{outputs:[{
-        name:target,output:target,target:true,type:types[target],record,
+      await repository.create({id,sourcePath:'main.svml',targets:[target],intent:{outputs:[{
+        name:target,record,
       }]}});
       await state.submissions.commit({...request,definition:{...base,program:{...base.program,records:base.program.records.map(r=>r.id==='intent:root'?{...r,value:({name})}:r)}}});
       return id;
@@ -95,7 +95,7 @@ test("a draining carrier finishes its existing Build while a new carrier shares 
     const newPid=local.get('C')!;assert.notEqual(newPid,oldPid);assert.ok(alive(oldPid));
     await until(async()=>{const current=await state.execution.read(c);return current?.startedAt!==undefined && current.turn===undefined && current.wakeAt===undefined;},()=>log);
     assert.deepEqual([...starts.keys()],['A'],'new carrier shares the occupied remote pool');
-    assert.equal((await repository.read(a))?.outcome,undefined);
+    assert.equal((await repository.readStored(a))?.outcome,undefined);
     release=true;
     await until(async()=>{for(const [name,id] of ids){if((await repository.read(id))?.outcome==='complete')finished.add(name);}return finished.size===3;},()=>log);
     await until(()=>!alive(oldPid)&&!alive(newPid),()=>log);

@@ -97,4 +97,4 @@ Keep talking to make changes or variants. Suitable existing material stays in us
 changes the relevant script, component or placement. Your project remains editable in ordinary files.
 
 For more detail, see [Making videos with an Agent](./guide/skill.md),
-[Invocations and Builds](./quickstart/run.md), and [Studio](./quickstart/preview.md).
+[Targets and Builds](./quickstart/run.md), and [Studio](./quickstart/preview.md).

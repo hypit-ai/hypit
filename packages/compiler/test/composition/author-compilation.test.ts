@@ -20,6 +20,7 @@ test("Node Compiler discovers real imports and emits a named public Author Graph
   let discoveries = 0;
   const compiled = await compiler(root, [], () => { discoveries += 1; }).compileEntry(file);
   assert.equal(compiled.exports[0]?.name, "hello.result");
+  assert.equal(compiled.retainedOutputs[0]?.name, "hello.result");
   assert.equal(compiled.graph.outputs.length, 1);
   assert.equal(discoveries, 1, "the frozen Import Prologue must not execute Frontend discovery twice");
 

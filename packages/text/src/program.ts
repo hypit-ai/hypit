@@ -373,15 +373,10 @@ function applyTransform(value: string, operation: TextTransform): string {
   return JSON.stringify(value);
 }
 
-const TEXT_RENDER_CHARACTER_LIMIT = 8 * 1024 * 1024;
-
-type TextRenderBuffer = { readonly chunks: string[]; length: number };
+type TextRenderBuffer = { readonly chunks: string[] };
 
 function appendRendered(output: TextRenderBuffer, value: string): void {
   if (value.length === 0) return;
-  output.length += value.length;
-  assert(output.length <= TEXT_RENDER_CHARACTER_LIMIT,
-    `Text render exceeds the ${TEXT_RENDER_CHARACTER_LIMIT}-character output limit`);
   output.chunks.push(value);
 }
 
@@ -390,13 +385,13 @@ function renderExpressionValue(
   template: TextTemplate,
   bindings: Readonly<Record<string, TextBindingValue>>,
 ): string {
-  const output: TextRenderBuffer = { chunks: [], length: 0 };
+  const output: TextRenderBuffer = { chunks: [] };
   renderExpression(value, template, bindings, output);
   return output.chunks.join("");
 }
 
 function replaceLiteral(value: string, from: string, to: string, all: boolean): string {
-  const output: TextRenderBuffer = { chunks: [], length: 0 };
+  const output: TextRenderBuffer = { chunks: [] };
   let cursor = 0;
   while (cursor <= value.length) {
     const found = value.indexOf(from, cursor);

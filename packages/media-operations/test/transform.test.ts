@@ -56,7 +56,8 @@ test("PreparedMedia transforms derive a concrete target domain from the connecte
   assert.deepEqual(evaluateTemporalMap(
     transformed.visual!.map,
     { ticks: "5", timeBase: { numerator: 1, denominator: 2 } },
-  ), { ticks: "5", timeBase: { numerator: 1, denominator: 1 } });
+    "after",
+  ), { position: { ticks: "5", timeBase: { numerator: 1, denominator: 1 } }, sourceSide: "after" });
   assert.equal("decodedUnitCount" in transformed, false);
 });
 
@@ -74,7 +75,8 @@ test("source-relative trim resolves before a following retime without author-sup
   assert.deepEqual(evaluateTemporalMap(
     transformed.visual!.map,
     { ticks: "2", timeBase: { numerator: 1, denominator: 1 } },
-  ), { ticks: "5", timeBase: { numerator: 1, denominator: 1 } });
+    "after",
+  ), { position: { ticks: "5", timeBase: { numerator: 1, denominator: 1 } }, sourceSide: "after" });
 });
 
 test("a complete reverse retime derives its target domain without native source-frame facts", () => {
@@ -87,7 +89,8 @@ test("a complete reverse retime derives its target domain without native source-
   assert.deepEqual(evaluateTemporalMap(
     transformed.visual!.map,
     { ticks: "1", timeBase: { numerator: 1, denominator: 1 } },
-  ), { ticks: "8", timeBase: { numerator: 1, denominator: 1 } });
+    "after",
+  ), { position: { ticks: "8", timeBase: { numerator: 1, denominator: 1 } }, sourceSide: "before" });
 });
 
 test("a complete rate profile waits for the PreparedMedia extent and integrates an exact target domain", () => {
@@ -107,7 +110,8 @@ test("a complete rate profile waits for the PreparedMedia extent and integrates 
   assert.deepEqual(evaluateTemporalMap(
     transformed.visual!.map,
     { ticks: "20", timeBase: { numerator: 1, denominator: 3 } },
-  ), { ticks: "5", timeBase: { numerator: 1, denominator: 1 } });
+    "after",
+  ), { position: { ticks: "5", timeBase: { numerator: 1, denominator: 1 } }, sourceSide: "after" });
 });
 
 test("Retime profiles do not reinterpret source overlap as an ordinary speed ramp", () => {

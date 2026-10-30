@@ -140,7 +140,7 @@ export const studioParameterControls = [
   "text", "number", "boolean", "select", "color", "list", "record",
 ] as const;
 export type StudioParameterControl = typeof studioParameterControls[number];
-export type StudioParameterLanguage = "svml" | "svs" | "svrun";
+export type StudioParameterLanguage = "svml" | "svs";
 
 /** Data-only choices. Packages supply meaning; Studio owns all option rendering. */
 export type StudioParameterOption = string | {

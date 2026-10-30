@@ -2,32 +2,74 @@ import { audioEnvelopeGainAt } from "@hypit/composition";
 import type { HtmlProgram } from "@hypit/html-program";
 import {
   addExactTemporalValues,
-  evaluateTemporalMap,
+  createTemporalMapEvaluator,
   exactTemporalRational,
   exactTemporalValueFromFrames,
 } from "@hypit/temporal";
 
 type PlaybackVideoPlan = {
-  readonly id: string;
+  /** Compiler-owned stable display-plane address in the root document. */
+  readonly elementId: string;
+  readonly startFrame: number;
+  readonly endFrameExclusive: number;
   readonly timestamps: readonly (number | null)[];
 };
 
 function playbackVideoPlan(program: HtmlProgram | undefined): readonly PlaybackVideoPlan[] {
   if (program === undefined) return [];
-  return program.videoSources.flatMap((source) => {
-    if (source.kind !== "media") return [];
-    if (source.source.streamIndex !== 0) {
+  if (program.processUsages.length > 0) {
+    throw new Error("Browser playback does not execute Visual Process input rasterization; use a renderer that executes the HtmlProgram process plan");
+  }
+  const plans = new Map<string, (number | null)[]>();
+  for (const source of program.videoSources) {
+    if (source.kind === "media" && source.source.streamIndex !== 0) {
       throw new Error(`Browser playback cannot select visual stream ${source.source.streamIndex} for ${source.id}; use a renderer that executes the HtmlProgram source plan`);
     }
-    const timestamps = Array.from({ length: source.endFrameExclusive - source.startFrame }, (_, frame) => {
-      const mapped = evaluateTemporalMap(source.sampling, exactTemporalValueFromFrames(frame, program));
-      if (mapped === undefined) return null;
-      const absolute = exactTemporalRational(addExactTemporalValues(source.source.presentationStart, mapped));
-      const seconds = Number(absolute.numerator) / Number(absolute.denominator);
+    const evaluateSampling = source.kind === "media"
+      ? createTemporalMapEvaluator(source.sampling)
+      : undefined;
+    let timestamps = plans.get(source.elementId);
+    if (timestamps === undefined) {
+      timestamps = Array.from({ length: program.frameCount }, () => null);
+      plans.set(source.elementId, timestamps);
+    }
+    for (let frame = source.startFrame; frame < source.endFrameExclusive; frame += 1) {
+      let seconds: number | undefined;
+      if (source.kind === "media") {
+        const mapped = evaluateSampling!(exactTemporalValueFromFrames(frame - source.startFrame, program), "after");
+        if (mapped !== undefined) {
+          const absolute = exactTemporalRational(addExactTemporalValues(source.source.presentationStart, mapped.position));
+          seconds = Number(absolute.numerator) / Number(absolute.denominator);
+        }
+      } else {
+        const a = source.sourceFrame;
+        const r = source.sourceRate;
+        const numerator = BigInt(a.numerator) * BigInt(r.denominator)
+          + BigInt(frame - source.startFrame) * BigInt(r.numerator) * BigInt(a.denominator);
+        const denominator = BigInt(a.denominator) * BigInt(r.denominator);
+        let ordinal = numerator / denominator;
+        if (r.numerator < 0 && numerator % denominator === 0n) ordinal -= 1n;
+        if (ordinal >= 0n) {
+          seconds = (Number(ordinal) + 0.5) * source.sourceFrameRate.denominator
+            / source.sourceFrameRate.numerator;
+        }
+      }
+      if (seconds === undefined) continue;
       if (!Number.isFinite(seconds)) throw new Error(`Playback video ${source.id} timestamp exceeds finite arithmetic`);
-      return seconds;
-    });
-    return [{ id: source.id, timestamps }];
+      if (timestamps[frame] !== null) {
+        throw new Error(`Browser playback has overlapping source plans for display plane ${source.elementId}`);
+      }
+      timestamps[frame] = seconds;
+    }
+  }
+  return [...plans].map(([elementId, timestamps]) => {
+    const startFrame = timestamps.findIndex(value => value !== null);
+    const endFrameExclusive = timestamps.findLastIndex(value => value !== null) + 1;
+    if (startFrame < 0 || endFrameExclusive <= startFrame) {
+      throw new Error(`Browser playback display plane ${elementId} has no selected frames`);
+    }
+    return { elementId, startFrame, endFrameExclusive,
+      timestamps: timestamps.slice(startFrame, endFrameExclusive) };
   });
 }
 
@@ -51,7 +93,7 @@ function shim(videoPlan: readonly PlaybackVideoPlan[]): string {
   var playing = false;
   var seekRevision = 0;
   var directMediaPlans = new Map(JSON.parse(decodeURIComponent(${JSON.stringify(encodedVideoPlan)})).map(function (entry) {
-    return [entry.id, entry.timestamps];
+    return [entry.elementId, entry];
   }));
   if (root) {
     root.style.width = (root.getAttribute('data-hypit-width') || '0') + 'px';
@@ -62,7 +104,9 @@ function shim(videoPlan: readonly PlaybackVideoPlan[]): string {
   // Addressing only their containing Present makes every run paint at once.
   var media = [];
   for (var element of document.querySelectorAll('.hypit-visual-present video')) {
-    var timestamps = directMediaPlans.get(element.id);
+    var plane = element.closest && element.closest('[data-hypit-media-display-plane]');
+    var plan = directMediaPlans.get(plane ? plane.id : element.id);
+    var timestamps = plan && plan.timestamps;
     var sourceFrame = element.getAttribute('data-hypit-source-frame');
     var sourceRate = element.getAttribute('data-hypit-source-rate');
     var sourceFps = element.getAttribute('data-hypit-source-fps');
@@ -70,8 +114,8 @@ function shim(videoPlan: readonly PlaybackVideoPlan[]): string {
     media.push({
       element: element,
       url: element.getAttribute('data-hypit-src'),
-      startFrame: Number(element.getAttribute('data-hypit-start-frame')),
-      endFrame: Number(element.getAttribute('data-hypit-end-frame')),
+      startFrame: plan ? plan.startFrame : Number(element.getAttribute('data-hypit-start-frame')),
+      endFrame: plan ? plan.endFrameExclusive : Number(element.getAttribute('data-hypit-end-frame')),
       timestamps: timestamps,
       sourceFrame: timestamps ? undefined : sourceFrame.split('/').map(BigInt),
       sourceRate: timestamps ? undefined : sourceRate.split('/').map(BigInt),
@@ -209,7 +253,14 @@ function shim(videoPlan: readonly PlaybackVideoPlan[]): string {
     if (record.sourceRate[0] === 0n) sourceFrame = Number(record.sourceFrame[0] / record.sourceFrame[1]);
     else {
       var a = record.sourceFrame, r = record.sourceRate;
-      sourceFrame = Number((a[0] * r[1] + BigInt(programFrame - record.startFrame) * r[0] * a[1]) / (a[1] * r[1]));
+      var sourceNumerator = a[0] * r[1] + BigInt(programFrame - record.startFrame) * r[0] * a[1];
+      var sourceDenominator = a[1] * r[1];
+      var sourceOrdinal = sourceNumerator / sourceDenominator;
+      // A reverse relation owns the interval immediately to an exact
+      // boundary's left. Match offline Surface sampling instead of letting
+      // BigInt truncation silently choose the following frame.
+      if (r[0] < 0n && sourceNumerator % sourceDenominator === 0n && sourceOrdinal > 0n) sourceOrdinal -= 1n;
+      sourceFrame = Number(sourceOrdinal);
     }
     var target = (sourceFrame + 0.5) * record.sourceFps[1] / record.sourceFps[0];
     var element = record.element;

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-// Kernel owns structural selection and finite-plan demand.
+// Kernel owns fixed-graph finite-plan demand.
 import {
   createResolvedClosure,
   defineBuild,
@@ -11,7 +11,6 @@ import {
   sealAuthorGraph,
 } from "@hypit/kernel";
 import type {
-  OutputRoot,
   AuthorGraph,
   GraphValueRef,
   LinkedProgram,
@@ -20,7 +19,6 @@ import type {
   OperationNode,
   OperationResultRef,
   ProducerRef,
-  LogicalOutputSelection,
   TypeRef,
 } from "@hypit/protocol";
 import type { BuildView } from "@hypit/kernel";
@@ -164,9 +162,9 @@ const operationRef = (operation: string): OperationResultRef => ({ kind: "operat
 function output(
   id: string,
   type: TypeRef,
-  primary: string | OutputRoot,
+  operation: string,
 ): LogicalOutput {
-  return { id, type, primary: typeof primary === "string" ? operationRef(primary) : primary };
+  return { id, type, result: operationRef(operation) };
 }
 
 function operation(
@@ -231,53 +229,40 @@ function createImageGraph(): AuthorGraph {
   });
 }
 
-function startSelected(
+function start(
   program: LinkedProgram,
   graph: AuthorGraph,
   targets: readonly string[],
-  selections: readonly LogicalOutputSelection[] = [],
 ): BuildView {
-  const planned = planBuild(program, graph, targets, selections);
+  const planned = planBuild(program, graph, targets);
   return materializeBuild(defineBuild({
     program,
     plan: planned.plan,
   }), []);
 }
 
-function fixture(targets: readonly string[], selections: readonly LogicalOutputSelection[] = []): BuildView {
+function fixture(targets: readonly string[]): BuildView {
   const program = createProgram();
   const graph = createImageGraph();
-  return startSelected(program, graph, targets, selections);
-}
-
-function choose(outputId: string, root: OutputRoot): LogicalOutputSelection {
-  return { output: outputId, root };
+  return start(program, graph, targets);
 }
 
 function stepIds(state: BuildView): string[] {
   return state.plan.steps.map((step) => step.id).sort();
 }
 
-test("Targets and selected authored Records derive the exact image closure", () => {
-  const cases: readonly [string, readonly LogicalOutputSelection[], readonly string[]][] = [
-    ["image3", [], ["p1", "p2", "p3"]],
-    ["image3", [choose("image1", recordRef("authored:image1"))], ["p2", "p3"]],
-    ["image3", [choose("image1", recordRef("authored:image1")), choose("image2", recordRef("authored:image2"))], ["p3"]],
-    ["image3", [choose("image3", recordRef("authored:image3"))], []],
-    ["image2", [], ["p1", "p2"]],
-    ["image1", [], ["p1"]],
+test("Targets derive the exact fixed image closure", () => {
+  const cases: readonly [string, readonly string[]][] = [
+    ["image3", ["p1", "p2", "p3"]],
+    ["image2", ["p1", "p2"]],
+    ["image1", ["p1"]],
   ];
-  for (const [target, bindings, expected] of cases) {
-    assert.deepEqual(stepIds(fixture([target], bindings)), expected);
+  for (const [target, expected] of cases) {
+    assert.deepEqual(stepIds(fixture([target])), expected);
   }
 });
-
-test("an ordinary aggregator intentionally demands every selected image", () => {
+test("an ordinary aggregator intentionally demands every authored image", () => {
   assert.deepEqual(stepIds(fixture(["images"])), ["collect", "p1", "p2", "p3"]);
-  assert.deepEqual(stepIds(fixture(["images"], [
-    choose("image1", recordRef("authored:image1")),
-    choose("image2", recordRef("authored:image2")),
-  ])), ["collect", "p3"]);
 });
 
 test("multiple Targets share Operations once", () => {
@@ -286,25 +271,12 @@ test("multiple Targets share Operations once", () => {
   assert.equal(new Set(first.plan.steps.map((step) => step.id)).size, first.plan.steps.length);
 });
 
-test("the selected root alone determines demanded upstream inputs", () => {
+test("the authored output result determines demanded upstream inputs", () => {
   assert.deepEqual(stepIds(fixture(["media"])), ["p1", "p2", "seedance"]);
-  assert.deepEqual(stepIds(fixture(["media"], [choose("media", operationRef("black"))])), ["black"]);
-});
-
-test("an authored Record root prevents the paid Need from existing", () => {
-  const state = fixture(["media"], [choose("media", recordRef("authored:media"))]);
-  assert.deepEqual(stepIds(state), []);
-  assert.equal(state.records.some((record) => record.id === "authored:media"), true);
-  assert.equal(state.status, "complete");
-  assert.equal(state.needs.length, 0);
-  assert.deepEqual(state.outstanding, []);
 });
 
 test("Definition replay regenerates identical ready Commands", () => {
-  const state = fixture(["image3"], [
-    choose("image1", recordRef("authored:image1")),
-    choose("image2", recordRef("authored:image2")),
-  ]);
+  const state = fixture(["image3"]);
   const definition = defineBuild({ program: state.program, plan: state.plan });
   const restored = materializeBuild(
     JSON.parse(JSON.stringify(definition)) as typeof definition,
@@ -313,11 +285,11 @@ test("Definition replay regenerates identical ready Commands", () => {
   assert.deepEqual(restored.outstanding, state.outstanding);
 });
 
-function createCaseGGraph(roots: "record" | "operation"): AuthorGraph {
+function createCaseGGraph(): AuthorGraph {
   return sealAuthorGraph({
     outputs: [
-      output("a.A", types.a, roots === "record" ? recordRef("authored:A") : operationRef("a1")),
-      output("a.B", types.b, roots === "record" ? recordRef("authored:B") : operationRef("a2")),
+      output("a.A", types.a, "a1"),
+      output("a.B", types.b, "a2"),
       output("b.C", types.c, "b1"),
       output("b.D", types.d, "b2"),
       output("c.result", types.combined, "c"),
@@ -332,26 +304,10 @@ function createCaseGGraph(roots: "record" | "operation"): AuthorGraph {
   });
 }
 
-test("Case G: two single-output roots share both upstream authored Records", () => {
-  const program = createProgram();
-  const graph = createCaseGGraph("record");
-  const planned = planBuild(program, graph, ["c.result"], []);
-  const state = startSelected(program, graph, ["c.result"]);
-  assert.deepEqual(stepIds(state), ["b1", "b2", "c"]);
-  assert.equal(state.records.some((record) => record.id === "authored:A"), true);
-  assert.equal(state.records.some((record) => record.id === "authored:B"), true);
-  const b1 = state.plan.steps.find((step) => step.id === "b1");
-  const b2 = state.plan.steps.find((step) => step.id === "b2");
-  assert.deepEqual(b1?.inputs, { A: "authored:A", B: "authored:B" });
-  assert.deepEqual(b2?.inputs, { A: "authored:A", B: "authored:B" });
-  assert.equal(planned.selections.find((item) => item.output === "b.C")?.record, "operation:C");
-  assert.equal(planned.selections.find((item) => item.output === "b.D")?.record, "operation:D");
-});
-
 test("Case G: shared zero-input upstream Operations appear exactly once", () => {
   const program = createProgram();
-  const graph = createCaseGGraph("operation");
-  const state = startSelected(program, graph, ["c.result"]);
+  const graph = createCaseGGraph();
+  const state = start(program, graph, ["c.result"]);
   assert.deepEqual(stepIds(state), ["a1", "a2", "b1", "b2", "c"]);
   assert.equal(state.plan.steps.filter((step) => step.id === "a1").length, 1);
   assert.equal(state.plan.steps.filter((step) => step.id === "a2").length, 1);
@@ -391,27 +347,11 @@ function createOperationIdentityGraph(
 test("two outputs that name one OperationId demand exactly one execution", () => {
   const program = createProgram();
   const graph = createOperationIdentityGraph("shared");
-  const planned = planBuild(program, graph, ["left", "right"], []);
-  const state = startSelected(program, graph, ["left", "right"]);
+  const planned = planBuild(program, graph, ["left", "right"]);
+  const state = start(program, graph, ["left", "right"]);
   assert.deepEqual(stepIds(state), ["left-operation"]);
   assert.deepEqual(
-    planned.selections.map((selection) => [selection.output, selection.record]),
-    [["left", "identity:left"], ["right", "identity:left"]],
-  );
-});
-
-test("one independent root may explicitly satisfy multiple compatible Logical Outputs", () => {
-  const program = createProgram();
-  const graph = createOperationIdentityGraph("shared");
-  const selections = [
-    { output: "left", root: operationRef("left-operation") },
-    { output: "right", root: operationRef("left-operation") },
-  ];
-  const planned = planBuild(program, graph, ["left", "right"], selections);
-  const state = startSelected(program, graph, ["left", "right"], selections);
-  assert.deepEqual(stepIds(state), ["left-operation"]);
-  assert.deepEqual(
-    planned.selections.map((selection) => [selection.output, selection.record]),
+    planned.outputs.map((output) => [output.output, output.record]),
     [["left", "identity:left"], ["right", "identity:left"]],
   );
 });
@@ -419,117 +359,11 @@ test("one independent root may explicitly satisfy multiple compatible Logical Ou
 test("different OperationIds remain distinct when their definitions match", () => {
   const program = createProgram();
   const graph = createOperationIdentityGraph("distinct");
-  const state = startSelected(program, graph, ["left", "right"]);
+  const state = start(program, graph, ["left", "right"]);
   assert.deepEqual(stepIds(state), ["left-operation", "right-operation"]);
   assert.deepEqual(
     state.plan.steps.map((step) => step.producer),
     [producers.p1, producers.p1],
     "same Producer and same inputs still represent two author-declared operations",
   );
-});
-
-function createProductReplacementGraph(
-  alternate: "shared" | "distinct",
-): AuthorGraph {
-  const productOperation = (
-    id: string,
-    record: string,
-  ): OperationNode => operation(
-    id,
-    producers.makeProduct,
-    { A: outputRef("a.A"), B: outputRef("a.B") },
-    { kind: "output", name: "product", record },
-  );
-  const projection = (
-    id: string,
-    producerRef: ProducerRef,
-    product: string,
-    name: "C" | "D",
-    record: string,
-  ): OperationNode => operation(
-    id,
-    producerRef,
-    { product: operationRef(product) },
-    { kind: "output", name, record },
-  );
-  const altCProduct = "b.alt.product.c";
-  const altDProduct = alternate === "shared" ? altCProduct : "b.alt.product.d";
-  return sealAuthorGraph({
-    outputs: [
-      output("a.A", types.a, "a1"),
-      output("a.B", types.b, "a2"),
-      output("b.C", types.c, "b.default.C"),
-      output("b.D", types.d, "b.default.D"),
-      output("c.result", types.combined, "c"),
-    ],
-    operations: [
-      operation("a1", producers.a1, {}, { kind: "output", name: "value", record: "product:A" }),
-      operation("a2", producers.a2, {}, { kind: "output", name: "value", record: "product:B" }),
-      productOperation("b.default.product", "product:default"),
-      projection("b.default.C", producers.projectC, "b.default.product", "C", "product:default:C"),
-      projection("b.default.D", producers.projectD, "b.default.product", "D", "product:default:D"),
-      productOperation(altCProduct, "product:alternate:C"),
-      ...(alternate === "distinct" ? [productOperation(altDProduct, "product:alternate:D")] : []),
-      projection("b.alt.C", producers.projectC, altCProduct, "C", "product:alternate:C:projection"),
-      projection("b.alt.D", producers.projectD, altDProduct, "D", "product:alternate:D:projection"),
-      operation("c", producers.c, { C: outputRef("b.C"), D: outputRef("b.D") }, {
-        kind: "output",
-        name: "combined",
-        record: "product:combined",
-      }),
-    ],
-  });
-}
-
-const select = (outputId: string, operation: string): LogicalOutputSelection => ({
-  output: outputId,
-  root: operationRef(operation),
-});
-
-test("one shared Product operation satisfies two Logical Outputs", () => {
-  const program = createProgram();
-  const graph = createProductReplacementGraph("shared");
-  const state = startSelected(program, graph, ["c.result"], [
-    select("b.C", "b.alt.C"),
-    select("b.D", "b.alt.D"),
-  ]);
-  assert.deepEqual(stepIds(state), ["a1", "a2", "b.alt.C", "b.alt.D", "b.alt.product.c", "c"]);
-  assert.equal(state.plan.steps.filter((step) => step.producer.name === producers.makeProduct.name).length, 1);
-  assert.equal(state.plan.steps.some((step) => step.id.startsWith("b.default")), false);
-});
-
-test("two explicit Product operations may separately satisfy the two outputs", () => {
-  const program = createProgram();
-  const graph = createProductReplacementGraph("distinct");
-  const state = startSelected(program, graph, ["c.result"], [
-    select("b.C", "b.alt.C"),
-    select("b.D", "b.alt.D"),
-  ]);
-  assert.deepEqual(stepIds(state), [
-    "a1", "a2", "b.alt.C", "b.alt.D", "b.alt.product.c", "b.alt.product.d", "c",
-  ]);
-  assert.equal(state.plan.steps.filter((step) => step.producer.name === producers.makeProduct.name).length, 2);
-  assert.equal(state.plan.steps.some((step) => step.id.startsWith("b.default")), false);
-});
-
-test("partial selection keeps only the demanded projection of the default Product", () => {
-  const program = createProgram();
-  const graph = createProductReplacementGraph("shared");
-  const state = startSelected(program, graph, ["c.result"], [
-    select("b.C", "b.alt.C"),
-  ]);
-  assert.deepEqual(stepIds(state), [
-    "a1", "a2", "b.alt.C", "b.alt.product.c", "b.default.D", "b.default.product", "c",
-  ]);
-  assert.equal(state.plan.steps.some((step) => step.id === "b.default.C"), false);
-});
-
-test("an unbound sibling output cannot keep an unreachable default Product alive", () => {
-  const program = createProgram();
-  const graph = createProductReplacementGraph("shared");
-  const state = startSelected(program, graph, ["b.C"], [
-    select("b.C", "b.alt.C"),
-  ]);
-  assert.deepEqual(stepIds(state), ["a1", "a2", "b.alt.C", "b.alt.product.c"]);
-  assert.equal(state.plan.steps.some((step) => step.id.startsWith("b.default")), false);
 });

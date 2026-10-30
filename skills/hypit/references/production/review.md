@@ -34,12 +34,12 @@ reveal or handoff. Those relationships identify the passages whose composition n
 Studio and rendered frames show how the chosen assets work there. Carry the same produced media
 and semantic Outputs through layout and component revisions.
 
-## Review the work the Invocation actually selects
+## Review the work the Targets actually select
 
-Use the Invocation that selects the production's actual Targets and transient choices. Durable material
+Use the Source and Targets for the production's actual deliverable. Durable material
 remains in the Author Source. Preserve the produced media and semantic Outputs as the composition
 changes. Studio opens the selected work for playback and editing; snapshot captures its current
-compiled picture directly. A focused Invocation serves a requested encoded interval.
+compiled picture directly. Focused Targets can serve a requested encoded interval.
 
 Judge the relationship that the evidence can establish. A component's own example can show its
 style and behavior. The actual production image establishes its framing and color; the produced
@@ -60,7 +60,7 @@ current scope clear so the user can give useful direction, and continue the rema
 the agreed commission. [Service selection](../environment/model-and-provider.md#choose-the-practical-capability-path-with-the-user) owns unresolved service choices.
 
 Read missing behavior through its material and use together. For intended speech, listen to
-the selected Film: an available audio file establishes material, while its authored realization and the chosen
+the selected Film: an available audio file establishes material, while its consumer reference and the chosen
 Audio contribution establish whether that material reaches the Film. For intended physical
 action, examine the footage itself as well as the viewport animation. Use
 [media preparation](media.md), [Audio Clips](audio-clips.md) and [Film assembly](rendering.md)
@@ -159,7 +159,7 @@ which of those choices belong in this piece.
 | The intended story, shot logic, or visual system is wrong | `TREATMENT.md` |
 | Words, speakers, Cue membership, Selections, or Moments are wrong | the Author Source's Script |
 | Composition, authored parameters, or semantic/clock relation is wrong | Author Source or Recipe |
-| The wrong project resource realizes a generated role | the Author Source's asset declaration or realization selection |
+| The wrong project resource is used by a media role | the Author Source's asset declaration or consumer reference |
 | A reusable visual role cannot express or render its intended design | the project Author Package |
 
 Before changing the work, connect the composition problem to its consequence and the intended

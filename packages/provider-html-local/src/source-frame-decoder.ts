@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import type { PictureInterpretation } from "@hypit/media";
 import { assert, processEnvironment, runProcess } from "./process.js";
 import type { DecodedSourceFrame, SourceFrameWindow } from "./source-frame-store.js";
 
@@ -109,36 +110,15 @@ export class PngFrameParser {
   }
 }
 
-class FixedFrameParser {
-  readonly #frameBytes: number;
-  #buffer = Buffer.alloc(0);
-
-  constructor(frameBytes: number) {
-    assert(Number.isSafeInteger(frameBytes) && frameBytes > 0, "Raw frame byte size must be positive");
-    this.#frameBytes = frameBytes;
-  }
-
-  push(chunk: Uint8Array): Buffer[] {
-    if (chunk.byteLength === 0) return [];
-    this.#buffer = Buffer.concat([this.#buffer, chunk]);
-    const frames: Buffer[] = [];
-    while (this.#buffer.byteLength >= this.#frameBytes) {
-      frames.push(Buffer.from(this.#buffer.subarray(0, this.#frameBytes)));
-      this.#buffer = this.#buffer.subarray(this.#frameBytes);
-    }
-    return frames;
-  }
-
-  finish(): void {
-    assert(this.#buffer.byteLength === 0, "FFmpeg source decoder ended inside a raw frame");
-  }
-}
-
 export function sourceFrameDecodeArguments(args: {
   readonly path: string;
   readonly window: Omit<SourceFrameWindow, "source">;
   readonly metadata: SourceVideoMetadata;
-}, output: "png" | "i420p10" = "png"): string[] {
+  /** Author-resolved sample meaning; container tags are not authority. */
+  readonly picture: PictureInterpretation;
+  /** Author-resolved display turn; container rotation is deliberately ignored. */
+  readonly rotation: 0 | 90 | 180 | 270;
+}): string[] {
   const count = args.window.endFrameExclusive - args.window.startFrame;
   assert(Number.isSafeInteger(args.window.startFrame) && args.window.startFrame >= 0
     && Number.isSafeInteger(count) && count > 0, "Source decode window is invalid");
@@ -148,17 +128,35 @@ export function sourceFrameDecodeArguments(args: {
     argv.push("-c:v", codec === "vp9" ? "libvpx-vp9" : codec === "vp8" ? "libvpx" : codec);
   }
   argv.push("-i", args.path, "-map", `0:${args.metadata.streamIndex}`);
-  const filters: string[] = [];
+  const selection = `select=between(n\\,${args.window.startFrame}\\,${args.window.endFrameExclusive - 1})`;
   // HtmlProgram asks for exact source-frame ordinals. Time seeking and FPS
   // resampling reinterpret that fact as a nearby timestamp, especially at VFR
   // and PTS boundaries. Decode in stream order and select the requested ordinal
   // interval; a future fast seek may only be introduced with verified identity.
-  filters.push(`select=between(n\\,${args.window.startFrame}\\,${args.window.endFrameExclusive - 1})`);
-  argv.push("-vf", filters.join(","), "-fps_mode", "passthrough");
+  const picture = args.picture;
+  const orientation = args.rotation === 0 ? ""
+    : args.rotation === 90 ? "transpose=clock,"
+      : args.rotation === 180 ? "hflip,vflip,"
+        : "transpose=cclock,";
+  const imageLike = picture.colorPrimaries === "bt709" && picture.colorTransfer === "srgb"
+    && picture.colorMatrix === "rgb" && picture.colorRange === "full";
+  const videoLike = picture.colorPrimaries === "bt709" && picture.colorTransfer === "bt709"
+    && picture.colorMatrix === "bt709" && picture.colorRange === "limited";
+  assert(picture.bitDepth === 8 && (imageLike || videoLike),
+    "HTML renderer PNG source decode received an unsupported picture interpretation");
+  // The HTML plane consumes ordinary 8-bit SDR RGB values. Decode the
+  // declared matrix/range into full-range RGB, but do not invent a second
+  // transfer-function conversion between BT.709 and CSS sRGB numeric values.
+  const conversion = imageLike
+    ? "scale=in_range=pc:out_range=pc"
+    : "scale=in_color_matrix=bt709:in_range=tv:out_range=pc";
+  const filter = picture.alphaMode === "straight"
+    ? `${selection},${orientation}split[main][alpha];[main]${conversion},format=rgba[color];[alpha]alphaextract[a];[color][a]alphamerge`
+    : `${selection},${orientation}${conversion},format=rgb24`;
+  argv.push("-vf", filter, "-fps_mode", "passthrough");
   argv.push("-frames:v", String(count));
-  if (output === "png") argv.push("-q:v", "0", "-compression_level", "1",
+  argv.push("-q:v", "0", "-compression_level", "1",
     "-f", "image2pipe", "-vcodec", "png", "pipe:1");
-  else argv.push("-pix_fmt", "yuv420p10le", "-f", "rawvideo", "pipe:1");
   return argv;
 }
 
@@ -169,18 +167,19 @@ type DecodeWindowArgs = {
   readonly outputPrefix: string;
   readonly window: Omit<SourceFrameWindow, "source">;
   readonly metadata: SourceVideoMetadata;
+  readonly picture: PictureInterpretation;
+  readonly rotation: 0 | 90 | 180 | 270;
   readonly timeoutMs: number;
   readonly maxProcessOutputBytes: number;
   readonly signal?: AbortSignal;
 };
 
-async function* decodeSourceFrameFiles(args: DecodeWindowArgs,
-  output: "png" | "i420p10"): AsyncGenerator<DecodedSourceFrame> {
+async function* decodeSourceFrameFiles(args: DecodeWindowArgs): AsyncGenerator<DecodedSourceFrame> {
   args.signal?.throwIfAborted();
   const count = args.window.endFrameExclusive - args.window.startFrame;
   assert(Number.isSafeInteger(count) && count > 0, "Source decode window is empty");
   await mkdir(args.outputDir, { recursive: true });
-  const argv = sourceFrameDecodeArguments(args, output);
+  const argv = sourceFrameDecodeArguments(args);
 
   const child = spawn(args.executable, argv, {
     shell: false, windowsHide: true, stdio: ["ignore", "pipe", "pipe"], env: processEnvironment(),
@@ -205,11 +204,10 @@ async function* decodeSourceFrameFiles(args: DecodeWindowArgs,
     child.once("error", reject);
     child.once("close", (code, signal) => { closed = true; resolve({ code, signal }); });
   });
-  const rawFrameBytes = args.metadata.width * args.metadata.height * 3;
   const maxFrameBytes = args.metadata.width * args.metadata.height * 10 + 64 * 1024;
-  assert(Number.isSafeInteger(rawFrameBytes) && Number.isSafeInteger(maxFrameBytes),
+  assert(Number.isSafeInteger(maxFrameBytes),
     "HTML renderer decoded source frame limit exceeds safe arithmetic");
-  const parser = output === "png" ? new PngFrameParser(maxFrameBytes) : new FixedFrameParser(rawFrameBytes);
+  const parser = new PngFrameParser(maxFrameBytes);
   let produced = 0;
   let completed = false;
   try {
@@ -217,7 +215,7 @@ async function* decodeSourceFrameFiles(args: DecodeWindowArgs,
       for (const bytes of parser.push(chunk)) {
         assert(produced < count, "FFmpeg source decoder emitted too many frames");
         const frame = args.window.startFrame + produced++;
-        const path = join(args.outputDir, `${args.outputPrefix}-${frame}.${output === "png" ? "png" : "i420p10"}`);
+        const path = join(args.outputDir, `${args.outputPrefix}-${frame}.png`);
         await writeFile(path, bytes);
         yield { frame, path, bytes: bytes.byteLength };
       }
@@ -238,10 +236,5 @@ async function* decodeSourceFrameFiles(args: DecodeWindowArgs,
 }
 
 export function decodeSourceFrameWindow(args: DecodeWindowArgs): AsyncGenerator<DecodedSourceFrame> {
-  return decodeSourceFrameFiles(args, "png");
-}
-
-/** Exact 10-bit planar source samples for the Electron HDR Program path. */
-export function decodeHdr10SourceFrameWindow(args: DecodeWindowArgs): AsyncGenerator<DecodedSourceFrame> {
-  return decodeSourceFrameFiles(args, "i420p10");
+  return decodeSourceFrameFiles(args);
 }

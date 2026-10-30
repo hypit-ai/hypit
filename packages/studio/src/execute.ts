@@ -16,7 +16,7 @@ export type Executed = {
 
 /**
  * Evaluate the display closure: deterministic Producers, plus Needs the Runtime explicitly permits in
- * a disposable authoring execution. The Runtime owns Endpoint selection and invocation; Studio
+ * a disposable authoring execution. The Runtime owns Endpoint selection and calls; Studio
  * never filters Providers or sees their handlers.
  */
 export async function executeStudioProjection(

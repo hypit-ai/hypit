@@ -116,7 +116,7 @@ the entire video. The portable example starts without the production's private c
 
 ## Preserve accepted outputs and readable authoring
 
-Project assets and authored realization selections express which accepted material the composition uses. Build execution handles only the remaining work selected by the current Invocation. Keep explicit Output boundaries where the author needs a replaceable realization; separate Script and direction without hiding those boundaries. Archive obsolete experiments so the active entry is evident. Keep CSS and frame programs readable rather than compressing a complete scene into a single enormous string.
+Project assets and direct consumer references express which accepted material the composition uses. Build execution handles only the remaining work selected by the current Target list. Keep explicit Output boundaries where independently useful material should be targeted; separate Script and direction without hiding those boundaries. Archive obsolete experiments so the active entry is evident. Keep CSS and frame programs readable rather than compressing a complete scene into a single enormous string.
 
 ## Export for the machine actually available
 

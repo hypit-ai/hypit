@@ -3,10 +3,9 @@ import { isAbsolute, relative, resolve, sep } from "node:path";
 
 import { buildIdCreatedAt } from "@hypit/hypit/protocol";
 import type {
+  BuildResult,
   BuildResultFileRange,
-  BuildResultManifest,
-  BuildResultRepository,
-  FinishedBuildResultManifest,
+  BuildResultHistory,
 } from "@hypit/hypit/result/node";
 
 import type { CliBuildView as BuildView, CliDistribution, CliRuntimeHost, CliTransientExecution } from "@hypit/hypit/cli";
@@ -22,7 +21,6 @@ export type StudioBuildLibrary = {
   /** Runtime-owned, disposable execution for the current authoring session. */
   readonly transientExecution?: CliTransientExecution;
   readonly library: (request: StudioLibraryRequest) => Promise<StudioLibraryView>;
-  readonly renameArtifact: (build: string, output: string, displayName: string | null) => Promise<string | undefined>;
   readonly openArtifact: (
     build: string,
     output: string,
@@ -44,8 +42,7 @@ function isWithin(root: string, path: string): boolean {
 }
 
 /**
- * A path inside the project reads the same on every platform, so the Studio library shows one Invocation Source
- * under one name wherever it is opened. A path outside the project is the machine's own, and stays
+ * A path inside the project reads the same on every platform. A path outside the project is the machine's own and stays
  * in that machine's form.
  */
 function presentedPath(root: string, path: string): string {
@@ -63,24 +60,18 @@ function taskStatus(view: BuildView): StudioTaskView["status"] {
 function taskView(
   root: string,
   view: BuildView,
-  result?: BuildResultManifest,
+  result?: BuildResult,
 ): StudioTaskView {
   if (view.sourcePath === undefined) throw new Error(`Active Build ${view.id} has no source`);
   const detail = view.issue?.message ?? view.stop?.reason;
   return {
     id: view.id,
-    ...(result?.title === undefined ? {} : { title: result.title }),
-    ...(result?.note === undefined ? {} : { note: result.note }),
-    ...(result?.highlightedOutputs === undefined ? {} : { highlightedOutputs: result.highlightedOutputs }),
     createdAt: view.createdAt,
     ongoing: true,
     status: taskStatus(view),
     ...(detail === undefined ? {} : { detail }),
     ...(view.requests === undefined ? {} : { requests: view.requests }),
     source: presentedPath(root, view.sourcePath),
-    ...(view.invocationSourcePath === undefined
-      ? {}
-      : { invocationSource: presentedPath(root, view.invocationSourcePath) }),
     targets: result?.targets ?? view.targets,
     operations: view.operations.map((operation) => ({
       status: operation.status === "received" ? "pending" : operation.status,
@@ -92,21 +83,15 @@ function taskView(
   };
 }
 
-function resultTaskView(root: string, result: FinishedBuildResultManifest): StudioTaskView {
+function resultTaskView(root: string, result: BuildResult): StudioTaskView {
   return {
     id: result.id,
-    ...(result.title === undefined ? {} : { title: result.title }),
-    ...(result.note === undefined ? {} : { note: result.note }),
-    ...(result.highlightedOutputs === undefined ? {} : { highlightedOutputs: result.highlightedOutputs }),
     createdAt: buildIdCreatedAt(result.id)!,
     finishedAt: result.finishedAt,
     ongoing: false,
     status: result.outcome,
     ...(result.failure === undefined ? {} : { detail: result.failure }),
-    source: presentedPath(root, result.sourceId),
-    ...(result.invocationSourceId === undefined
-      ? {}
-      : { invocationSource: presentedPath(root, result.invocationSourceId) }),
+    source: presentedPath(root, result.sourcePath),
     targets: result.targets,
     operations: [],
   };
@@ -118,8 +103,8 @@ function isMedia(mediaType: string): boolean {
 
 async function artifactsForResults(
   root: string,
-  repository: BuildResultRepository,
-  manifests: readonly BuildResultManifest[],
+  repository: BuildResultHistory,
+  manifests: readonly BuildResult[],
   media?: StudioLibraryRequest["media"],
 ): Promise<readonly StudioArtifactView[]> {
   const nested = await Promise.all(manifests.flatMap((manifest) =>
@@ -130,30 +115,20 @@ async function artifactsForResults(
       if (description?.representation !== "file" || !isMedia(description.mediaType)) return [];
       if (media !== undefined && !description.mediaType.startsWith(`${media}/`)) return [];
       const file = entry.value;
-      const source = presentedPath(root, manifest.sourceId);
-      const invocationSource = manifest.invocationSourceId === undefined
-        ? undefined
-        : presentedPath(root, manifest.invocationSourceId);
+      const source = presentedPath(root, manifest.sourcePath);
       return [{
         id: fileReferenceIdentity(manifest.id, file),
         build: manifest.id,
         createdAt: buildIdCreatedAt(manifest.id)!,
         output,
-        nameEditable: manifest.outcome !== undefined,
-        ...(entry.displayName === undefined ? {} : { displayName: entry.displayName }),
-        highlighted: manifest.highlightedOutputs?.includes(output) === true,
-        ...(manifest.title === undefined ? {} : { buildTitle: manifest.title }),
-        ...(manifest.note === undefined ? {} : { buildNote: manifest.note }),
         filePath: file.path,
         size: file.size,
         mediaType: file.mediaType,
         source,
-        ...(invocationSource === undefined ? {} : { invocationSource }),
         origins: [{
           build: manifest.id,
           output,
           source,
-          ...(invocationSource === undefined ? {} : { invocationSource }),
         }],
       }];
     })));
@@ -165,37 +140,29 @@ export async function readStudioLibrary(input: StudioLibraryRequest & {
   readonly profile?: string;
   readonly workspaceRoot: string;
   readonly runtime?: Pick<RuntimeControl, "activity">;
-  readonly results: BuildResultRepository;
+  readonly results: BuildResultHistory;
 }): Promise<StudioLibraryView> {
-  const matches = (item: { readonly id: string; readonly source: string; readonly invocationSource?: string }) =>
-    (isWithin(input.workspaceRoot, item.invocationSource ?? item.source) || isWithin(input.workspaceRoot, item.source))
-    && (input.build === undefined || item.id === input.build)
-    && (input.invocationSource === undefined || (item.invocationSource !== undefined
-      && projectPath(input.workspaceRoot, item.invocationSource)
-        === projectPath(input.workspaceRoot, input.invocationSource)));
+  const matches = (item: { readonly id: string; readonly source: string }) =>
+    isWithin(input.workspaceRoot, item.source)
+    && (input.build === undefined || item.id === input.build);
   // Read activity before Results so a Build that finishes during this query is still represented.
   const active = input.runtime === undefined || input.before !== undefined
     ? [] : (await input.runtime.activity()).builds;
   const views = active.filter((view) => view.sourcePath !== undefined && matches({
     id: view.id,
     source: view.sourcePath,
-    ...(view.invocationSourcePath === undefined ? {} : { invocationSource: view.invocationSourcePath }),
   }));
   let page = input.build === undefined
     ? await input.results.browse({ limit: 25, ...(input.before === undefined ? {} : { before: input.before }) })
-    : { results: [await input.results.read(input.build)].filter((item): item is BuildResultManifest => item !== undefined) };
+    : { results: [await input.results.read(input.build)].filter((item): item is BuildResult => item !== undefined) };
   const manifests = page.results.filter((manifest) => matches({
     id: manifest.id,
-    source: manifest.sourceId,
-    ...(manifest.invocationSourceId === undefined ? {} : { invocationSource: manifest.invocationSourceId }),
+    source: manifest.sourcePath,
   }));
   const resultsByBuild = new Map(manifests.map((manifest) => [manifest.id, manifest]));
   await Promise.all(views.filter((view) => !resultsByBuild.has(view.id)).map(async (view) => {
     const result = await input.results.read(view.id);
-    if (result !== undefined && matches({ id: result.id, source: result.sourceId,
-      ...(result.invocationSourceId === undefined
-        ? {}
-        : { invocationSource: result.invocationSourceId }) })) resultsByBuild.set(view.id, result);
+    if (result !== undefined && matches({ id: result.id, source: result.sourcePath })) resultsByBuild.set(view.id, result);
   }));
   let artifacts: readonly StudioArtifactView[] = [];
   if (input.section === "artifacts") {
@@ -209,10 +176,7 @@ export async function readStudioLibrary(input: StudioLibraryRequest & {
       artifacts = mergeStudioArtifacts([...artifacts,
         ...await artifactsForResults(input.workspaceRoot, input.results, page.results.filter((manifest) => matches({
           id: manifest.id,
-          source: manifest.sourceId,
-          ...(manifest.invocationSourceId === undefined
-            ? {}
-            : { invocationSource: manifest.invocationSourceId }),
+          source: manifest.sourcePath,
         })), input.media)]);
     }
   }
@@ -224,8 +188,7 @@ export async function readStudioLibrary(input: StudioLibraryRequest & {
     tasks: input.section !== "tasks" ? [] : [
       ...views.map((view) => taskView(input.workspaceRoot, view, resultsByBuild.get(view.id))),
       ...manifests
-        .filter((manifest): manifest is FinishedBuildResultManifest => manifest.outcome !== undefined
-          && !views.some((view) => view.id === manifest.id))
+        .filter((manifest) => !views.some((view) => view.id === manifest.id))
         .map((manifest) => resultTaskView(input.workspaceRoot, manifest)),
     ].sort((left, right) => right.createdAt - left.createdAt || left.id.localeCompare(right.id)),
     artifacts,
@@ -262,7 +225,6 @@ export async function openStudioBuildLibrary(
     throw error;
   }
   const results = openedResults.repository;
-  let presentationWrite: Promise<unknown> = Promise.resolve();
   return {
     ...(resolvedProfile === undefined ? {} : { profile: resolvedProfile }),
     ...(runtime === undefined ? {} : { runtime }),
@@ -275,14 +237,6 @@ export async function openStudioBuildLibrary(
         results,
         ...request,
       });
-    },
-    async renameArtifact(build, output, displayName) {
-      const saved = presentationWrite.then(async () => {
-        const updated = await results.updatePresentation(build, { outputDisplayNames: { [output]: displayName } });
-        return buildResultOutput(updated, output)?.displayName;
-      });
-      presentationWrite = saved.catch(() => undefined);
-      return await saved;
     },
     async openArtifact(build, output) {
       const resolved = await results.resolve(build, output);

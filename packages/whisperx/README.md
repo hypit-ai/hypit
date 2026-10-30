@@ -81,7 +81,7 @@ The package validates only the language-code form; the selected Endpoint owns ac
 ```bash
 hypit programs prepare --runtime hypit.runtime.json --endpoint whisperx.local
 hypit runtime up --runtime hypit.runtime.json --endpoint whisperx.local
-hypit build video.svrun --runtime hypit.runtime.json --follow
+hypit build video.svml --target <output> --runtime hypit.runtime.json --follow
 ```
 
 The Provider README owns model cache and hardware choices. To materialize editable evidence, use

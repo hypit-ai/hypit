@@ -214,27 +214,6 @@ Transition span；Hypit 不根据时间邻近猜参与者、不要求作者重�
 **输出：**`{product-broll.program}` 与 `{product-broll.visual}`。音频始终在 Audio Track
 中单独声明；这里连接 PreparedMedia 不会顺带选择它的音频成员。
 
-### 复用一个闭合的视听 Composition
-
-完整的子 Composition 可以直接进入另一个 Film，不必先导出成视频。先声明一次 occurrence，
-再把画面和声音分别投影成普通的对等 Track：
-
-```svml
-<import as="nest" from="@hypit/composition-clip@1"/>
-
-<nest:Occurrence id="intro-use" timeline={program.timeline}
-  source={intro.composition} during={intro-window}/>
-<nest:Visual id="intro-picture" timeline={program.timeline}
-  picture={working-picture} occurrence={intro-use.occurrence} frame={layout.full}/>
-<nest:Audio id="intro-sound" timeline={program.timeline}
-  occurrence={intro-use.occurrence} gain="1" fade-in="0f" fade-out="0f"/>
-```
-
-`Occurrence` 是目标局部时间到子 Timeline 的唯一关系所有者；需要循环、倒放、停帧或变速时，
-在其中加入 `Map` 或 `Curve`。`Visual` 与 `Audio` 可以单独使用，也可以一起进入 Film；二者消费
-同一关系，不各自推导时间。当前视觉复用要求父子声明完全相同的 Working Picture；音频使用固定的
-48 kHz stereo programme 环境。Renderer 递归求值子作品，不会把中间视频写成作者值。
-
 ## Audio Track
 
 `@hypit/audio-track` 把显式准备好的音频放进与视觉 Track 相同的 Timeline。`Clip`

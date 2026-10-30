@@ -52,7 +52,8 @@ export const mimoVoiceDesignAuthorDeclaration: AuthorDeclarationCompiler = {
     text: "The required voice description." },
   bindings(declaration) {
     const id = literal(declaration, "id");
-    return [{ name: `${id}.reference`, ref: { kind: "component-output", component: id, output: "audio" }, type: blobTypes.blob }];
+    return [{ name: `${id}.reference`, ref: { kind: "component-output", component: id, output: "audio" }, type: blobTypes.blob,
+      retained: true }];
   },
   async compile({ declaration, resolveReference }) {
     const id = literal(declaration, "id");
@@ -76,7 +77,8 @@ export const mimoVoiceCloneAuthorDeclaration: AuthorDeclarationCompiler = {
   ], text: "An optional delivery instruction." },
   bindings(declaration) {
     const id = literal(declaration, "id");
-    return [{ name: `${id}.audio`, ref: { kind: "component-output", component: id, output: "audio" }, type: blobTypes.blob }];
+    return [{ name: `${id}.audio`, ref: { kind: "component-output", component: id, output: "audio" }, type: blobTypes.blob,
+      retained: true }];
   },
   async compile({ declaration, resolveReference }) {
     const id = literal(declaration, "id");

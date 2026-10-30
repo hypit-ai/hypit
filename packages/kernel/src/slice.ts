@@ -8,14 +8,14 @@ import { createResolvedClosure, link } from "./link.js";
 import { verifyBuildPlan } from "./plan.js";
 import type { PlannedExecution } from "./plan.js";
 
-/** Selected value exposed after execution slicing. */
-export type SelectedOutputRecord = {
+/** Fixed public value exposed after execution slicing. */
+export type ResolvedOutputRecord = {
   readonly output: string;
   readonly record: string;
 };
 
 /**
- * Materialize exactly the finite execution already selected for one Invocation.
+ * Materialize exactly the finite execution reached by one Target selection.
  */
 export function sliceExecution(
   program: LinkedProgram,
@@ -25,24 +25,24 @@ export function sliceExecution(
   readonly program: LinkedProgram;
   readonly plan: PlannedExecution["plan"];
   readonly targets: readonly string[];
-  readonly selections: readonly SelectedOutputRecord[];
+  readonly outputs: readonly ResolvedOutputRecord[];
 } {
-  const selectionByOutput = new Map(selected.selections.map((item) => [item.output, item]));
+  const recordByOutput = new Map(selected.outputs.map((item) => [item.output, item]));
   const recordIds = new Set([
     ...selected.plan.steps.flatMap((step) => Object.values(step.inputs)),
     ...selected.plan.goals,
   ]);
   const authoredRecords = program.records.filter((record) => recordIds.has(record.id));
-  const executionSelections = selected.selections
-    .filter((item) => selectionByOutput.has(item.output))
+  const executionOutputs = selected.outputs
+    .filter((item) => recordByOutput.has(item.output))
     .map(({ output, record }) => ({ output, record }));
   const targetRecords = new Set<string>();
   for (const target of targets) {
-    const selection = selectionByOutput.get(target);
-    if (selection === undefined) {
-      throw new Error(`execution slice has no selected source for ${target}`);
+    const output = recordByOutput.get(target);
+    if (output === undefined) {
+      throw new Error(`execution slice has no resolved value for ${target}`);
     }
-    targetRecords.add(selection.record);
+    targetRecords.add(output.record);
   }
   const goals = [...targetRecords].sort();
   const plan: PlannedExecution["plan"] = {
@@ -72,6 +72,6 @@ export function sliceExecution(
     program: slicedProgram,
     plan,
     targets,
-    selections: executionSelections,
+    outputs: executionOutputs,
   };
 }

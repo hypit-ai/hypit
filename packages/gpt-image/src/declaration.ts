@@ -59,7 +59,8 @@ function compiler(clean: boolean): AuthorDeclarationCompiler {
         fields: [{ name: "image", kind: "reference", required: true, accepts: [blobTypes.blob], summary: "Selects the reference image." }] }] },
     bindings(declaration) {
       const id = literal(declaration, "id");
-      return [{ name: `${id}.image`, ref: { kind: "component-output", component: id, output: "image" }, type: blobTypes.blob }];
+      return [{ name: `${id}.image`, ref: { kind: "component-output", component: id, output: "image" }, type: blobTypes.blob,
+        retained: true }];
     },
     async compile({ declaration, resolveReference }) {
       if (declaration.children.length > 16) throw new Error("GPT Image accepts at most 16 Reference children.");

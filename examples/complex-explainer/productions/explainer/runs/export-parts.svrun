@@ -1,9 +1,0 @@
-<?svml using="@hypit/markup/invocation@1"?>
-<svrun version="1">
-  <author source="../authors/main.svml"/>
-  <target output="export-part-1.video"/>
-  <target output="export-part-2.video"/>
-  <target output="export-part-3.video"/>
-  <target output="export-part-4.video"/>
-  <target output="export-part-5.video"/>
-</svrun>

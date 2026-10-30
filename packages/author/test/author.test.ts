@@ -69,7 +69,7 @@ const manifest: ModuleManifest = {
 const closure = createResolvedClosure([manifest]);
 
 function buildState(linked: LinkedProgram, graph: AuthorGraph, targets: readonly string[]) {
-  const planned = planBuild(linked, graph, targets, []);
+  const planned = planBuild(linked, graph, targets);
   return materializeBuild(defineBuild({
     program: linked,
     plan: planned.plan,

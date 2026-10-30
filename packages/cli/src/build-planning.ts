@@ -8,9 +8,10 @@ import { evaluateProducerPlan, ProducerRegistry } from "@hypit/executor";
 import type { EvaluatedProducerStep } from "@hypit/executor";
 import type { PackageContribution } from "@hypit/loader";
 import { capabilityIdentity, capabilityKey, compareCodeUnits } from "@hypit/protocol";
-import type { BuildDefinition, CanonicalValue, CapabilityRef, PublicationIntent, ValuePath } from "@hypit/protocol";
+import type { BuildDefinition, CanonicalValue, CapabilityRef, ResultIntent, ValuePath } from "@hypit/protocol";
 import type { BuildView } from "@hypit/kernel";
 import type { CliBuildAuthoring, CliEndpointQuery, CliRuntimeInspection } from "./runtime-port.js";
+import type { PlanRequest, PricingRequest } from "./output.js";
 import { plannedNeeds } from "@hypit/kernel";
 import {
   refinementPackagesFromFacets,
@@ -20,15 +21,13 @@ import {
 
 export function createBuildAuthoring(options: {
   readonly source: string;
-  readonly publication: PublicationIntent;
-  readonly invocationSource?: { readonly path: string };
+  readonly targets: readonly string[];
+  readonly intent: ResultIntent;
 }): CliBuildAuthoring {
   return {
     sourcePath: resolve(options.source),
-    ...(options.invocationSource === undefined
-      ? {}
-      : { invocationSourcePath: resolve(options.invocationSource.path) }),
-    publication: options.publication,
+    targets: options.targets,
+    intent: options.intent,
   };
 }
 
@@ -90,18 +89,6 @@ export type EvaluatedPlan = {
     readonly step: string;
     readonly message: string;
   }[];
-};
-
-export type PlanNeedView = {
-  readonly need: string;
-  readonly step: string;
-  readonly port: string;
-  readonly capability: string;
-  readonly status: EvaluatedPlanNeed["status"];
-  readonly endpoint?: string;
-  readonly summary?: NeedSummary;
-  readonly pending: readonly PendingPlanInput[];
-  readonly issue?: string;
 };
 
 function scalarSummary(value: CanonicalValue): string | number | boolean | undefined {
@@ -343,11 +330,11 @@ export function assertPreflight(preflight: Awaited<ReturnType<typeof preflightPl
 }
 
 /** Every request in step order, joined to its own Endpoint resolution. */
-export function describePlanNeeds(
+function describeRequests(
   state: BuildView,
   evaluated: EvaluatedPlan,
   endpoints: readonly PlanEndpointView[],
-): readonly PlanNeedView[] {
+): readonly PlanRequest[] {
   const byNeed = new Map(endpoints.map((item) => [item.need, item]));
   return plannedNeeds(state).map((planned) => {
     const endpoint = byNeed.get(planned.need);
@@ -356,15 +343,46 @@ export function describePlanNeeds(
       throw new Error(`planned request ${planned.need} has no evaluation result`);
     }
     return {
-      need: planned.need,
-      step: planned.step,
-      port: planned.port,
       capability: capabilityKey(planned.capability),
-      status: found.status,
+      readiness: found.status,
+      ...(endpoint === undefined ? {} : {
+        resolution: endpoint.status,
+        support: endpoint.support,
+        ...(endpoint.use === undefined ? {} : { use: endpoint.use }),
+        ...(endpoint.pricing === undefined ? {} : { pricing: endpoint.pricing }),
+        ...(endpoint.endpoints === undefined ? {} : { endpoints: endpoint.endpoints }),
+        ...(endpoint.rejections === undefined ? {} : { rejections: endpoint.rejections }),
+        ...(endpoint.binding === undefined ? {} : { binding: endpoint.binding }),
+      }),
       ...(endpoint?.endpoint === undefined ? {} : { endpoint: endpoint.endpoint }),
       ...(found.summary === undefined ? {} : { summary: found.summary }),
-      pending: found.pending,
+      pending: found.pending.map((item) => item.input),
       ...(found.issue === undefined ? {} : { issue: found.issue }),
+    };
+  });
+}
+
+export function describePlanRequests(
+  state: BuildView,
+  evaluated: EvaluatedPlan,
+  endpoints: readonly PlanEndpointView[],
+): readonly PlanRequest[] {
+  return describeRequests(state, evaluated, endpoints);
+}
+
+export function describePricingRequests(
+  state: BuildView,
+  evaluated: EvaluatedPlan,
+  pricing: readonly PlanPricingView[],
+): readonly PricingRequest[] {
+  const byNeed = new Map(pricing.map((item) => [item.need, item]));
+  return describeRequests(state, evaluated, pricing).map((request, index) => {
+    const planned = plannedNeeds(state)[index]!;
+    const item = byNeed.get(planned.need);
+    return {
+      ...request,
+      ...(item?.pricingDocuments === undefined ? {} : { pricingDocuments: item.pricingDocuments }),
+      ...(item?.pricingError === undefined ? {} : { pricingError: item.pricingError }),
     };
   });
 }

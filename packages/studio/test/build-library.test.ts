@@ -4,8 +4,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { buildResultDirectory, FileBuildResultRepository } from "@hypit/result/node";
-import type { BuildResultRepository } from "@hypit/result/node";
+import { buildResultDirectory, FileBuildResultStore } from "@hypit/result/runtime-storage/node";
+import type { BuildResult, BuildResultHistory } from "@hypit/result";
 import type { CliBuildView as BuildView } from "@hypit/cli";
 import { buildIdCreatedAt } from "@hypit/protocol";
 import { createVideoDistribution } from "@hypit/video";
@@ -22,7 +22,6 @@ function activeBuild(id: string, root: string): BuildView {
     outcome: "complete",
 
     sourcePath: `${root}/author/main.svml`,
-    invocationSourcePath: `${root}/runs/build.svrun`,
     targets: ["final.video"],
     acceptedRecords: 1,
     outstandingCommands: 0,
@@ -36,39 +35,23 @@ test("Studio library joins this environment's Builds with project Build Result f
   const manifests = [relevant, unrelated].map((entry) => ({
     format: "hypit.build-result@1" as const,
     id: entry.id,
-    sourceId: entry.sourcePath!,
-    ...(entry.invocationSourcePath === undefined ? {} : { invocationSourceId: entry.invocationSourcePath }),
+    sourcePath: entry.sourcePath!,
     targets: ["final.video"],
     finishedAt: entry.createdAt,
     outcome: "complete" as const,
     outputs: {
       "final.video": {
-        displayName: "Final cut",
         type: { module: { name: "example", version: "1" }, name: "Video" },
         value: { kind: "build-file" as const, path: "files/final.video.mp4", size: 42, mediaType: "video/mp4" },
       },
     },
   }));
-  const results: BuildResultRepository = {
-    async create() { throw new Error("not used"); },
-    async openWriter() { return undefined; },
-    async removeIncomplete() {},
-    async updatePresentation() { throw new Error("read-only fixture"); },
+  const results: BuildResultHistory = {
     async read(build) { return manifests.find((item) => item.id === build); },
     async browse(request) {
       if (request?.before !== undefined) return { results: [] };
       assert.deepEqual(request, { limit: 25 });
       return { results: manifests, next: relevant.id };
-    },
-    async describeOutput(build, output) {
-      const manifest = manifests.find((item) => item.id === build);
-      const value = manifest?.outputs[output as "final.video"];
-      return value === undefined ? undefined : {
-        type: value.type,
-        representation: "file",
-        size: value.value.size,
-        mediaType: value.value.mediaType,
-      };
     },
     async resolve(build, output) {
       const manifest = manifests.find((item) => item.id === build);
@@ -94,19 +77,16 @@ test("Studio library joins this environment's Builds with project Build Result f
     id: task.id,
     status: task.status,
     source: task.source,
-    invocationSource: task.invocationSource,
     targets: task.targets,
   })), [{
     id: "bld_20260902T130000000Z_0000000001",
     status: "saving-result",
     source: "author/main.svml",
-    invocationSource: "runs/build.svrun",
     targets: ["final.video"],
   }]);
   assert.deepEqual(view.artifacts, []);
   const media = await readStudioLibrary({ ...input, section: "artifacts" });
   assert.deepEqual(media.tasks, []);
-  assert.equal(media.artifacts[0]?.displayName, "Final cut");
   const queried: (string | undefined)[] = [];
   const images = await readStudioLibrary({ ...input, section: "artifacts", media: "image", results: {
     ...results,
@@ -145,9 +125,7 @@ test("Studio opens project Build Results without a Runtime or ResourceStore", as
     await writeFile(join(directory, "files", "final.mp4"), bytes);
     await writeFile(join(directory, "result.json"), `${JSON.stringify({
       format: "hypit.build-result@1",
-      title: "First cut",
-      sourceId: join(root, "main.svml"),
-      invocationSourceId: join(root, "build.svrun"),
+      sourcePath: join(root, "main.svml"),
       targets: ["final.video"],
       finishedAt: 200,
       outcome: "complete",
@@ -163,18 +141,14 @@ test("Studio opens project Build Results without a Runtime or ResourceStore", as
     assert(buildLibrary !== undefined);
     const view = await buildLibrary.library({ section: "tasks" });
     assert.equal(view.runtime, undefined);
-    assert.deepEqual(view.tasks.map((item) => [item.id, item.title, item.status]), [
-      [build, "First cut", "complete"],
+    assert.deepEqual(view.tasks.map((item) => [item.id, item.status]), [
+      [build, "complete"],
     ]);
     const media = await buildLibrary.library({ section: "artifacts" });
     assert.deepEqual(media.artifacts.map((item) => [item.build, item.output]), [
       [build, "final.video"],
     ]);
-    await buildLibrary.renameArtifact(build, "final.video", "Renamed final");
-    const renamed = await buildLibrary.library({ section: "artifacts" });
-    assert.equal(renamed.artifacts[0]?.displayName, "Renamed final");
-    assert.equal(renamed.artifacts[0]?.nameEditable, true);
-    assert.equal(renamed.artifacts[0]?.output, "final.video");
+    assert.equal(media.artifacts[0]?.output, "final.video");
     const artifact = await buildLibrary.openArtifact(build, "final.video");
     assert.notEqual(artifact, undefined);
     const stream = await artifact!.open({ start: 2, endExclusive: 8 });
@@ -190,40 +164,25 @@ test("Studio opens project Build Results without a Runtime or ResourceStore", as
 
 const mediaTypeRef = { module: { name: "example", version: "1" }, name: "Media" };
 
-test("media listing includes active files and leaves value-document Outputs unopened", async () => {
+test("media listing reads finished history and leaves active Result drafts private", async () => {
   const owner = "bld_20260902T130000010Z_0000000001";
   const active = "bld_20260902T130000011Z_0000000001";
   const image = { type: mediaTypeRef, value: { kind: "build-file" as const, path: "files/portrait.png", mediaType: "image/png", size: 100 } };
-  const manifests: import("@hypit/result").BuildResultManifest[] = [{
-    format: "hypit.build-result@1", id: owner, sourceId: "/project/main.svml",
-    invocationSourceId: "/project/earlier.svrun", targets: ["portrait.image"], outcome: "failed", finishedAt: 300,
-    failure: "Rendering failed", highlightedOutputs: ["portrait.image"],
+  const manifests: BuildResult[] = [{
+    format: "hypit.build-result@1", id: owner, sourcePath: "/project/main.svml",
+    targets: ["portrait.image"], outcome: "failed", finishedAt: 300,
+    failure: "Rendering failed",
     outputs: {
       "portrait.image": image,
       "data.json": { type: mediaTypeRef, value: { kind: "build-file", path: "files/data.json", mediaType: "application/json", size: 20 } },
       "prepared.video": { type: mediaTypeRef, value: { kind: "value", path: "values/prepared.json" } },
       "semantic.take": { type: mediaTypeRef, value: { kind: "value", path: "values/semantic.json" } },
     },
-  }, {
-    format: "hypit.build-result@1", id: active, sourceId: "/project/main.svml",
-    invocationSourceId: "/project/current.svrun", targets: ["final.video"],
-    outputs: {
-      "voice.audio": { type: mediaTypeRef, value: { kind: "build-file", path: "files/voice.wav", mediaType: "audio/wav", size: 80 } },
-    },
   }];
-  const described: string[] = [];
   const resolved: string[] = [];
-  const results: BuildResultRepository = {
-    async create() { throw new Error("read-only"); },
-    async openWriter() { throw new Error("read-only"); },
-    async removeIncomplete() { throw new Error("read-only"); },
-    async updatePresentation() { throw new Error("read-only"); },
+  const results: BuildResultHistory = {
     async read(build) { return manifests.find((item) => item.id === build); },
-    async browse() { return { results: [manifests[0] as import("@hypit/result").FinishedBuildResultManifest] }; },
-    async describeOutput(_build, output) {
-      described.push(output);
-      throw new Error(`Listing should not describe ${output}`);
-    },
+    async browse() { return { results: manifests }; },
     async resolve(_build, output) {
       resolved.push(output);
       throw new Error(`Listing should not resolve ${output}`);
@@ -232,11 +191,10 @@ test("media listing includes active files and leaves value-document Outputs unop
   };
   const view: BuildView = {
     ...activeBuild(active, "/project"), sourcePath: "/project/main.svml",
-    invocationSourcePath: "/project/current.svrun", activity: "running", requests: { total: 4, completed: 2 },
+    activity: "running", requests: { total: 4, completed: 2 },
   };
   const input = { workspaceRoot: "/project", results, runtime: { async activity() { return { builds: [view], capacity: [] }; } } };
   const tasks = await readStudioLibrary({ ...input, section: "tasks" });
-  assert.deepEqual(described, []);
   assert.deepEqual(resolved, []);
   assert.deepEqual(tasks.artifacts, []);
   assert.deepEqual(tasks.tasks.map((task) => [task.id, task.ongoing, task.status]), [[active, true, "running"], [owner, false, "failed"]]);
@@ -246,16 +204,12 @@ test("media listing includes active files and leaves value-document Outputs unop
   assert.equal("acceptedRecords" in tasks.tasks[0]!, false);
 
   const media = await readStudioLibrary({ ...input, section: "artifacts" });
-  assert.equal(media.artifacts.length, 2);
+  assert.equal(media.artifacts.length, 1);
   const portrait = media.artifacts.find((item) => item.mediaType === "image/png")!;
-  assert.equal(portrait.highlighted, true);
   assert.deepEqual(portrait.origins.map((origin) => [origin.build, origin.output]), [[owner, "portrait.image"]]);
   assert.deepEqual(resolved, []);
-  assert(media.artifacts.some((item) => item.build === active && item.output === "voice.audio"));
+  assert.equal(media.artifacts.some((item) => item.build === active), false);
 
-  const scoped = await readStudioLibrary({ ...input, section: "artifacts", invocationSource: "current.svrun" });
-  assert.equal(scoped.artifacts.length, 1);
-  assert(scoped.artifacts.every((item) => item.origins.every((origin) => origin.build === active)));
   const selected = await readStudioLibrary({ ...input, section: "artifacts", build: owner });
   assert.deepEqual(selected.artifacts.map((item) => item.output), ["portrait.image"]);
   const outside = await readStudioLibrary({ ...input, section: "artifacts", workspaceRoot: "/different-project", build: owner });

@@ -137,7 +137,7 @@ parameter panel can express; Studio exposes the Timeline and the choices that ar
 Follow a timestamped comment to the responsible Source, Recipe, media or scene implementation.
 The timestamp locates evidence; the desired change may concern a recurring system throughout the work.
 
-Preserve accepted material through explicit Source declarations and realization choices while revising the composition. Seek and
+Preserve accepted material through explicit Source declarations and consumer references while revising the composition. Seek and
 review the changed action and its handoffs; export the encoded film when that deliverable is wanted.
 [Review](../../production/review.md) and [Studio](../../production/studio.md) own the interaction;
 [Rendering](../../production/rendering.md) owns render scope and resource choices.
@@ -147,7 +147,7 @@ review the changed action and its handoffs; export the encoded film when that de
 The [complex spoken explainer](https://github.com/hypit-ai/hypit/tree/main/examples/complex-explainer)
 is a finished 137-second example with 17 accepted performance clips. Its guide links the film, editable sources,
 media archive and project packages. Reading its code and notes needs no media download; opening the
-full picture uses project-owned accepted media. The default Invocation only selects the requested Targets.
+full picture uses project-owned accepted media. The command only selects the requested Targets.
 
 | Question to trace | Concrete source |
 | --- | --- |

@@ -8,7 +8,7 @@ import type {
   OperationSnapshot,
 } from "@hypit/hypit/runtime";
 import type { PendingBuildSubmission } from "./submission.js";
-import type { BuildResultManifest } from "@hypit/hypit/result";
+import type { StoredBuildResult } from "@hypit/result/runtime-storage";
 import type { BuildExecutionSnapshot } from "./execution.js";
 import type { BuildView } from "./host-api.js";
 import { buildIdCreatedAt, compareCodeUnits } from "@hypit/hypit/protocol";
@@ -17,7 +17,7 @@ import { materializeBuild } from "@hypit/hypit/kernel";
 function buildView(input: {
   readonly build: string;
   readonly snapshot?: BuildSnapshot;
-  readonly result?: BuildResultManifest;
+  readonly result?: StoredBuildResult;
   readonly submission?: PendingBuildSubmission;
   readonly execution?: BuildExecutionSnapshot;
   readonly operations: readonly OperationSnapshot[];
@@ -50,10 +50,7 @@ function buildView(input: {
       issue: { scope: input.execution.attention.step, message: input.execution.attention.error },
     }),
     ...(input.execution?.stop === undefined ? {} : { stop: input.execution.stop }),
-    ...(input.result?.sourceId === undefined ? {} : { sourcePath: input.result.sourceId }),
-    ...(input.result?.invocationSourceId === undefined
-      ? {}
-      : { invocationSourcePath: input.result.invocationSourceId }),
+    ...(input.result?.sourcePath === undefined ? {} : { sourcePath: input.result.sourcePath }),
     targets,
     ...(requests === undefined ? {} : { requests }),
     acceptedRecords: state?.records.length ?? 0,
@@ -89,10 +86,10 @@ export function createLocalRuntimeControl(
       options.commandExecutionStore.list(build),
     ]);
     const location = execution?.result ?? submission?.result;
-    let result: BuildResultManifest | undefined;
+    let result: StoredBuildResult | undefined;
     if (location !== undefined) {
       const opened = await options.openBuildResultRepository(location);
-      try { result = await opened.repository.read(build); } finally { await opened.close?.(); }
+      try { result = await opened.repository.readStored(build); } finally { await opened.close?.(); }
     }
     return buildView({
       build,

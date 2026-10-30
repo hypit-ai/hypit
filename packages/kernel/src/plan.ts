@@ -1,12 +1,10 @@
 import type {
   BuildPlan,
-  OutputRoot,
   CapabilityRef,
   AuthorGraph,
   GraphValueRef,
   LinkedProgram,
   NeedId,
-  LogicalOutputSelection,
   OperationNode,
   ProducerStep,
   RecordId,
@@ -20,7 +18,6 @@ import {
   operationResultRecord,
   resolveLogicalOutput,
   resolveOperation,
-  verifyOutputRoot,
   verifyAuthorGraph,
 } from "./graph.js";
 import type { BuildView } from "./view.js";
@@ -101,22 +98,20 @@ function planContent(
   };
 }
 
-type PlannedSelection = {
+type ResolvedOutput = {
   readonly output: string;
-  readonly root: OutputRoot;
   readonly record: string;
 };
 
 export type PlannedExecution = {
   readonly plan: BuildPlan;
-  readonly selections: readonly PlannedSelection[];
+  readonly outputs: readonly ResolvedOutput[];
 };
 
 function compilePlanning(
   program: LinkedProgram,
   graph: AuthorGraph,
   targets: readonly string[],
-  effectiveSelections: readonly LogicalOutputSelection[],
 ): PlannedExecution {
   verifyAuthorGraph(program, graph);
   const targetIds = new Set<string>();
@@ -126,23 +121,10 @@ function compilePlanning(
     targetIds.add(target);
   }
 
-  const selectedRoots = new Map<string, LogicalOutputSelection["root"]>();
-  for (const selection of effectiveSelections) {
-    const output = resolveLogicalOutput(graph, selection.output);
-    invariant(
-      !selectedRoots.has(output.id),
-      "DUPLICATE_OUTPUT_SELECTION",
-      `${output.id} is selected more than once`,
-      output.id,
-    );
-    verifyOutputRoot(program, graph, output, selection.root);
-    selectedRoots.set(output.id, selection.root);
-  }
-
   const authored = new Map(program.records.map((record) => [record.id, record]));
   const demandedOperations = new Map<string, OperationNode>();
   const resolvedOutputs = new Map<string, ResolvedSource>();
-  const selections = new Map<string, PlannedSelection>();
+  const outputs = new Map<string, ResolvedOutput>();
 
   const operationSource = (id: string): ResolvedSource => {
     const operation = resolveOperation(graph, id);
@@ -178,22 +160,8 @@ function compilePlanning(
     }
     if (resolvedOutputs.has(ref.id)) continue;
     const output = resolveLogicalOutput(graph, ref.id);
-    const root = selectedRoots.get(ref.id) ?? output.primary;
-    let resolved: ResolvedSource;
-    if (root.kind === "record") {
-      const record = authored.get(root.id);
-      invariant(
-        record !== undefined,
-        "UNKNOWN_OUTPUT_RECORD",
-        output.id + " references unknown authored Record " + root.id,
-        output.id,
-      );
-      resolved = { record: record.id, type: record.type };
-      pending.push(root);
-    } else {
-      resolved = operationSource(root.operation);
-      pending.push(root);
-    }
+    const resolved = operationSource(output.result.operation);
+    pending.push(output.result);
     invariant(
       sameType(resolved.type, output.type),
       "OUTPUT_RESULT_TYPE_MISMATCH",
@@ -201,7 +169,7 @@ function compilePlanning(
       output.id,
     );
     resolvedOutputs.set(output.id, resolved);
-    selections.set(output.id, { output: output.id, root, record: resolved.record });
+    outputs.set(output.id, { output: output.id, record: resolved.record });
   }
 
   const resolveRef = (ref: GraphValueRef): ResolvedSource => {
@@ -240,20 +208,19 @@ function compilePlanning(
     }));
 
   const goals = [...new Set(targetSources.map(({ source }) => source.record))].sort();
-  const sortedSelections = [...selections.values()].sort((a, b) => compareCodeUnits(a.output, b.output));
+  const sortedOutputs = [...outputs.values()].sort((a, b) => compareCodeUnits(a.output, b.output));
   const plan = planContent(steps, goals);
   verifyBuildPlan(program, plan);
-  return { plan, selections: sortedSelections };
+  return { plan, outputs: sortedOutputs };
 }
 
-/** Plan one Author Graph with an explicit finite target and selection set. */
+/** Plan one Author Graph for an explicit finite target set. */
 export function planBuild(
   program: LinkedProgram,
   authorGraph: AuthorGraph,
   targets: readonly string[],
-  effectiveSelections: readonly LogicalOutputSelection[],
 ): PlannedExecution {
-  return compilePlanning(program, authorGraph, targets, effectiveSelections);
+  return compilePlanning(program, authorGraph, targets);
 }
 
 export function verifyBuildPlan(

@@ -3,7 +3,7 @@ import { FileResourceStore } from "../../src/resource-store.js";
 import { SqliteRuntimeState } from "../../src/sqlite-state.js";
 import { EnvironmentCredentialStore } from "@hypit/credential-store-env";
 import { defineBuild } from "@hypit/kernel";
-import { FileBuildResultRepository } from "@hypit/result/node";
+import { FileBuildResultStore } from "@hypit/result/runtime-storage/node";
 import { buildExecutionActivity, createLocalRuntime } from "@hypit/runtime-local";
 import type { BuildCompletion } from "@hypit/runtime-local";
 import { rm } from "node:fs/promises";
@@ -38,7 +38,7 @@ export function projectRuntimeFixture(directory: string) {
       await rm(join(work, build), { recursive: true, force: true });
     },
     openBuildResultRepository: async (location: import("@hypit/runtime-local").BuildResultRepositoryLocation) =>
-      ({ repository: new FileBuildResultRepository(join(location.root, location.path)) }),
+      ({ repository: new FileBuildResultStore(join(location.root, location.path)) }),
     credentialStore: new EnvironmentCredentialStore(),
     close: () => state.close(),
   } as const;
@@ -50,18 +50,15 @@ export function resultDestination(directory: string) {
   } as const;
 }
 
-export function publication(
+export function resultIntent(
   outputs: readonly { readonly name: string; readonly ref: { readonly id: string } }[],
   fixture: RuntimeBuildFixture,
 ) {
-  return { outputs: outputs.map((published) => {
-    const output = fixture.outputs[published.ref.id];
-    if (output === undefined) throw new Error(`Fixture has no Output ${published.ref.id}`);
+  return { outputs: outputs.map((retained) => {
+    const output = fixture.outputs[retained.ref.id];
+    if (output === undefined) throw new Error(`Fixture has no Output ${retained.ref.id}`);
     return {
-      name: published.name,
-      output: output.output,
-      type: output.type,
-      target: output.goal,
+      name: retained.name,
       record: output.record,
     };
   }) };
@@ -73,7 +70,7 @@ export function durableBuildRequest(
   fixture: RuntimeBuildFixture,
 ) {
   const targets = Object.values(fixture.outputs).filter((output) => output.goal);
-  const publishedOutputs = targets.map((output, index) => ({
+  const retainedOutputs = targets.map((output, index) => ({
     name: `target.${index + 1}`,
     ref: { kind: "logical-output" as const, id: output.output },
   }));
@@ -82,7 +79,8 @@ export function durableBuildRequest(
     definition: definition(fixture.state),
     authoring: {
       sourcePath: join(directory, "main.svml"),
-      publication: publication(publishedOutputs, fixture),
+      targets: retainedOutputs.map((output) => output.name),
+      intent: resultIntent(retainedOutputs, fixture),
     },
     result: resultDestination(directory),
   } as const;

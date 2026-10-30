@@ -12,13 +12,11 @@
     "@hypit/author": "workspace:*",
     "@hypit/workspace": "workspace:*",
     "@hypit/protocol": "workspace:*",
-    "@hypit/invocation": "workspace:*",
     "@hypit/source": "workspace:*",
     "@hypit/refinement": "workspace:*"
   },
   "devDependencies": {
     "@hypit/markup": "workspace:*",
-    "@hypit/realization": "workspace:*",
     "@hypit/workspace": "workspace:*"
   }
 }

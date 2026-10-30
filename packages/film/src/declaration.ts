@@ -12,8 +12,6 @@ import type { VisualProcessEffect } from "@hypit/composition";
 import { spatialTypes } from "@hypit/spatial";
 import { recipeType, type Recipe } from "@hypit/hypit/recipe";
 import { timelineTypes } from "@hypit/timeline";
-import { mediaTypes, SDR_SRGB_WORKING_PICTURE } from "@hypit/media";
-import type { WorkingPictureSpec } from "@hypit/media";
 
 import { createFilmAssemblyFragment } from "./fragment.js";
 import { filmModuleRef, filmTypes } from "./manifest.js";
@@ -87,8 +85,6 @@ export const filmAuthorDeclaration: AuthorDeclarationCompiler = {
       { name: "canvas", kind: "reference", required: true, accepts: [spatialTypes.canvas], summary: "Selects the Canvas." },
       { name: "timeline", kind: "reference", required: true, accepts: [timelineTypes.timeline], summary: "Selects the absolute Timeline." },
       { name: "appearance", kind: "reference", required: true, accepts: [recipeType], summary: "Selects the Film appearance Recipe." },
-      { name: "picture", kind: "reference", required: false, accepts: [mediaTypes.workingPicture],
-        summary: "Selects an explicit working picture; omitted Films use the SDR sRGB working picture." },
     ],
     children: { group: "members" },
     childGroups: {
@@ -140,16 +136,6 @@ export const filmAuthorDeclaration: AuthorDeclarationCompiler = {
       throw new Error(`${declaration.name}.appearance must reference an authored Recipe value.`);
     }
     const appearance = filmAppearanceFromRecipe((appearanceValue as unknown as Recipe).properties);
-    const pictureValue = field(declaration, "picture");
-    let picture: WorkingPictureSpec = structuredClone(SDR_SRGB_WORKING_PICTURE);
-    if (pictureValue !== undefined) {
-      const pictureReference = await resolved(declaration, "picture", mediaTypes.workingPicture, resolveReference);
-      if (pictureReference.record?.value === undefined) {
-        throw new Error(`${declaration.name}.picture must reference an authored WorkingPicture value.`);
-      }
-      picture = structuredClone(pictureReference.record.value as unknown as WorkingPictureSpec);
-    }
-
     const tracks: Array<FilmTrackInput & { readonly source: AuthorResolvedReference }> = [];
     const audio: number[] = [];
     const sourceSlots = new Map<string, number>();
@@ -238,8 +224,7 @@ export const filmAuthorDeclaration: AuthorDeclarationCompiler = {
       records: [{
         id: programId,
         type: filmTypes.program,
-        value: sealFilmProgram({ id, clearColor: appearance.clearColor,
-          picture, visual, audio }),
+        value: sealFilmProgram({ id, clearColor: appearance.clearColor, visual, audio }),
         range: declaration.range,
       }],
       components: [{

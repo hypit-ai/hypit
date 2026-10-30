@@ -28,7 +28,7 @@ export const capabilities = {
 } satisfies Record<string, CapabilityRef>;
 
 function initialState(program: Parameters<typeof planBuild>[0], graph: AuthorGraph, targets: readonly string[]): BuildView {
-  const planned = planBuild(program, graph, targets, []);
+  const planned = planBuild(program, graph, targets);
   return materializeBuild(defineBuild({
     program,
     plan: planned.plan,
@@ -84,26 +84,26 @@ export function greetingGraph(includeSide = false): AuthorGraph {
       {
         id: "prompt",
         type: types.prompt,
-        primary: { kind: "operation-result", operation: "make-prompt" },
+        result: { kind: "operation-result", operation: "make-prompt" },
       },
       {
         id: "generated",
         type: types.generated,
-        primary: { kind: "operation-result", operation: "request-text" },
+        result: { kind: "operation-result", operation: "request-text" },
       },
       {
         id: "document",
         type: types.document,
-        primary: { kind: "operation-result", operation: "assemble" },
+        result: { kind: "operation-result", operation: "assemble" },
       },
       ...(includeSide ? [{
         id: "side-generated",
         type: types.generated,
-        primary: { kind: "operation-result" as const, operation: "side-placeholder" },
+        result: { kind: "operation-result" as const, operation: "side-placeholder" },
       }, {
         id: "side-document",
         type: types.document,
-        primary: { kind: "operation-result" as const, operation: "side-assemble" },
+        result: { kind: "operation-result" as const, operation: "side-assemble" },
       }] : []),
     ],
     operations: [
@@ -147,7 +147,7 @@ export function greetingGraph(includeSide = false): AuthorGraph {
 }
 
 export function createGreetingBuild(options?: {
-  readonly generationRealization?: "primary" | "placeholder";
+  readonly generationStep?: "remote" | "placeholder";
   readonly includeSideTarget?: boolean;
   readonly targetOutputs?: readonly string[];
 }): BuildView {
@@ -159,10 +159,10 @@ export function createGreetingBuild(options?: {
   });
   const program = link(closure, [authored]);
   const sourceGraph = greetingGraph(options?.includeSideTarget ?? false);
-  const graph = options?.generationRealization === "placeholder"
+  const graph = options?.generationStep === "placeholder"
     ? sealAuthorGraph({
         outputs: sourceGraph.outputs.map((item) => item.id === "generated"
-          ? { ...item, primary: { kind: "operation-result" as const, operation: "placeholder-text" } }
+          ? { ...item, result: { kind: "operation-result" as const, operation: "placeholder-text" } }
           : item),
         operations: sourceGraph.operations,
       })
@@ -186,12 +186,12 @@ export function createParallelGreetingBuild(generationCount = 2) {
       {
         id: "prompt",
         type: types.prompt,
-        primary: { kind: "operation-result", operation: "make-prompt" },
+        result: { kind: "operation-result", operation: "make-prompt" },
       },
       ...generations.map((suffix) => ({
         id: `generated-${suffix}`,
         type: types.generated,
-        primary: { kind: "operation-result" as const, operation: `generate-${suffix}` },
+        result: { kind: "operation-result" as const, operation: `generate-${suffix}` },
       })),
     ],
     operations: [

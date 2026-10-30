@@ -26,7 +26,7 @@ function snapshot(revision: number, items: readonly StudioItem[]): StudioSnapsho
   return {
     revision,
     source: { path: "main.svml", text: "", files: [] },
-    invocation: { source: "main.svrun", targets: [] },
+    selection: { targets: [] },
     canvas: { width: 1920, height: 1080, clearColor: "#000" },
     timeline: { frameRate: { numerator: 30, denominator: 1 }, frameCount: 30, durationSec: 1 },
     tracks: [{

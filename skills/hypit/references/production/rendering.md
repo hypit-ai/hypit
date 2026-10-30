@@ -1,7 +1,7 @@
 # Composition and rendering
 
 Read this when assembling the deliverable or rendering a frame interval for review. [Tracks](tracks.md)
-explains the contributing layers; [Invocations](runs.md) explains selecting Targets and transient choices.
+explains the contributing layers; [Targets](targets.md) explains selecting Outputs for one command.
 
 Components author the picture and sound contributions. Film assembles the selected contributions
 with Timeline and Canvas into a Composition. Rendering evaluates that composition over a frame
@@ -136,12 +136,12 @@ rational frame rate, compute seconds from its numerator and denominator rather t
 rate first.
 
 The original animation time remains intact, and picture and sound use the same interval. A short
-Invocation can target `detail.video` while the normal delivery Invocation continues to target `final.video`.
+one command can target `detail.video` while the normal delivery command targets `final.video`.
 For this example, the renderer evaluates the original page at seconds 8–12 and encodes those frames
 as a four-second clip starting at zero. An animation already in progress at second 8 keeps that state.
 
-**The range limits final rendering. Upstream generation still follows the selected graph.** Keep
-usable media and evidence selected in the Author Source when inspecting a Caption or MG revision.
+**The range limits final rendering. Upstream generation still follows the fixed authored graph.** Keep
+consumers referencing the intended media and evidence when inspecting a Caption or MG revision.
 Inspect `hypit plan` for the work that remains before submission. [Authoring](authoring.md#reuse-produced-work-explicitly)
 explains choosing the reuse boundary.
 
@@ -167,19 +167,19 @@ preparation and final encoding contribute separately. Reusing authored project m
 not preserve a previous render's temporary preparation.
 
 For a local composition change, use [snapshot](snapshots.md) first to inspect the changed
-relationship and its handoffs in Studio's current HTML Programme. Keep accepted material selected in
-the Author Source. Range rendering supplies an encoded clip when that is needed; render the complete
+relationship and its handoffs in Studio's current HTML Programme. Keep consumers referencing the
+intended project material. Range rendering supplies an encoded clip when that is needed; render the complete
 deliverable when the composition is ready.
 While rendering, communicate the current phase and meaningful progress. The Provider reports
 decoding, browser startup, capture, encoding and storage; `hypit logs <build-id>` preserves their
 timings and execution details when a slow or failed stage needs investigation.
 
 Image decode and declared-font loading failures stop capture with an error. Repair the named
-resource in its owning Source or component, then retry with accepted media retained in the Author Source.
+resource in its owning Source or component, then retry without changing unrelated material references.
 
 A local render timeout ends that execution attempt and releases capacity after its work has stopped.
 Its failure and already completed Outputs belong to the Build Result. Export accepted media into the
-project, update the Author Source, and continue with a new Build as described in [Invocations](runs.md).
+project, update the Author Source, and continue with a new Build as described in [Targets](targets.md).
 
 Use [Builds and Results](builds.md) to submit, follow and retrieve `final.video` or `detail.video`.
 Use [Review](review.md) to judge the observed interval or complete deliverable against the intended work.

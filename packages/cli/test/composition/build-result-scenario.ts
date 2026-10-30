@@ -1,7 +1,9 @@
 import { join } from "node:path";
 
-import { FileBuildResult, FileBuildResultRepository } from "@hypit/result/node";
+import { FileBuildResult, FileBuildResultStore } from "@hypit/result/runtime-storage/node";
+import type { ResultOutputExporter } from "@hypit/result";
 import type { CapabilityRef, TypeRef, TypedRecord } from "@hypit/protocol";
+import { sameType } from "@hypit/protocol";
 
 import type { CliDistribution } from "../../src/distribution.js";
 import { runCli } from "../../src/main.js";
@@ -17,16 +19,11 @@ export const generationCapability: CapabilityRef = {
   name: "generation",
 };
 
-export function publication(
-  outputs: readonly { readonly name: string; readonly output: string; readonly record?: string; readonly displayName?: string; readonly type?: TypeRef }[],
-  targets: readonly string[] = [],
+export function resultIntent(
+  outputs: readonly { readonly name: string; readonly record?: string }[],
 ) {
-  const selected = new Set(targets);
-  return { outputs: outputs.map((output) => ({ ...output, target: selected.has(output.name),
-    type: output.type ?? valueType,
-    record: output.record ?? (output.output.startsWith("logical:")
-      ? `record:${output.output.slice("logical:".length)}`
-      : output.output),
+  return { outputs: outputs.map((output) => ({ name: output.name,
+    record: output.record ?? `record:${output.name}`,
   })) };
 }
 
@@ -37,10 +34,9 @@ export function completedRecords(): readonly TypedRecord[] {
 export async function fixture(root: string, id = "bld_20260902T110000000Z_0000000001", source = "main.svml"): Promise<void> {
   const result = await FileBuildResult.create(join(root, ".hypit", "results"), {
     id,
-    title: "episode-stage",
-    sourceId: source,
-    invocationSourceId: "build.svrun",
-    publication: publication([{ name: "stage.value", output: "logical:stage" }], ["stage.value"]),
+    sourcePath: source,
+    targets: ["stage.value"],
+    intent: resultIntent([{ name: "stage.value", record: "record:stage" }]),
   });
   await result.sync({
     records: completedRecords(),
@@ -57,8 +53,22 @@ export function resultDistribution(): CliDistribution {
           root: projectRoot,
           selection: { use: "test.results", config: {} },
         },
-        repository: new FileBuildResultRepository(join(projectRoot, ".hypit", "results")),
+        repository: new FileBuildResultStore(join(projectRoot, ".hypit", "results")),
         close() {},
+      };
+    },
+    async resolveResultOutputExporter(type: TypeRef): Promise<ResultOutputExporter | undefined> {
+      if (!sameType(type, { module: { name: "example.speech", version: "1" }, name: "StructuredValue" })) {
+        return undefined;
+      }
+      return {
+        type,
+        export({ value }) {
+          const words = (value as { readonly words: readonly string[] }).words;
+          return {
+            bytes: new TextEncoder().encode(`${JSON.stringify({ words }, null, 2)}\n`),
+          };
+        },
       };
     },
     async diagnoseProjectResults() { return { diagnostics: [] }; },

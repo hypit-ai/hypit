@@ -12,7 +12,8 @@ import { appendVisualClip, appendTimedMediaLayer, createMediaLayerSet, createVis
 import { projectProgramWindow } from "../../../../test/temporal-fixture.js";
 import { MemoryResourceStore, ffmpegBytes, prepareTestVideo, transparentVideoFixture, writeTestArtifact } from "../../../../test/alpha-video-fixture.js";
 import sharp from "sharp";
-import { rasterizeHtmlProgram, rasterizeHtmlFrames } from "../../src/index.js";
+import { rasterizeChromiumHtmlProgram, rasterizeHtmlFrames } from "../../src/index.js";
+import { rasterizeElectronHtmlProgram } from "../../src/render.js";
 import { htmlProviderDelivery, htmlProviderPicture } from "../provider-scenario.js";
 
 test("transparent Prepared Media composites through an explicit Visual Clip in Chrome and Electron", async () => {
@@ -51,15 +52,17 @@ test("transparent Prepared Media composites through an explicit Visual Clip in C
         projection: { start: { ref: "timeline.start" }, end: { ref: "timeline.end" } } }));
     const speechVisual = projectVisualTrack(space, finalizeVisualTrack(speechSet, speechHeader, space));
     const brollVisual = projectVisualTrack(space, finalizeVisualTrack(items, header, space));
-    const document = compileHtmlProgram(sealComposition({ id: "alpha-proof", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 192, height: 64, clearColor: "#143cdc" }, root: { members: [speechVisual, brollVisual].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }, space));
-    const rendered = await rasterizeHtmlProgram({ program: document, delivery: htmlProviderDelivery("high") },
+    const document = compileHtmlProgram(sealComposition({ id: "alpha-proof", visual: { canvas: { width: 192, height: 64, clearColor: "#143cdc" }, root: { members: [speechVisual, brollVisual].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }, space));
+    const rendered = await rasterizeChromiumHtmlProgram({ program: document, delivery: htmlProviderDelivery("high") },
       { resources, workers: 2, processTimeoutMs: 120_000 });
     const video = await writeTestArtifact(resources, rendered.artifact, join(directory, "speech-and-broll.mp4"));
     const pixels = ffmpegBytes(["-i", video, "-pix_fmt", "rgb24", "-f", "rawvideo", "pipe:1"]);
     assert.equal(pixels.length, 192 * 64 * 3 * 12);
     const pixel = (f: number, x: number, y: number) => [...pixels.subarray(((f * 64 + y) * 192 + x) * 3, ((f * 64 + y) * 192 + x) * 3 + 3)];
     const close = (actual: number[], expected: number[]) => {
-      assert.ok(actual.every((value, i) => Math.abs(value - expected[i]!) < 14), `${actual} differs from ${expected}`);
+      // Final H.264 4:2:0 encoding can move saturated edge channels by a few
+      // additional code values after the browser composite.
+      assert.ok(actual.every((value, i) => Math.abs(value - expected[i]!) <= 18), `${actual} differs from ${expected}`);
     };
     for (let f = 0; f < 12; f++) for (const left of [0, 96]) {
       close(pixel(f, left + 4, 4), [20, 60, 220]);
@@ -80,8 +83,8 @@ test("transparent Prepared Media composites through an explicit Visual Clip in C
     close(pixel(0, 18, 32), [240, 20, 20]);
     close(pixel(11, 18, 32), [20, 60, 220]);
     if (process.env.HYPIT_TEST_ELECTRON_PATH !== undefined) {
-      const electronRendered = await rasterizeHtmlProgram({ program: document, delivery: htmlProviderDelivery("high") }, {
-        renderer: "electron", electronPath: process.env.HYPIT_TEST_ELECTRON_PATH,
+      const electronRendered = await rasterizeElectronHtmlProgram({ program: document, delivery: htmlProviderDelivery("high") }, {
+        electronPath: process.env.HYPIT_TEST_ELECTRON_PATH,
         resources, workers: 1, processTimeoutMs: 120_000,
       });
       const electronVideo = await writeTestArtifact(resources, electronRendered.artifact,

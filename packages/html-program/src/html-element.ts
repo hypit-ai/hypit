@@ -1,5 +1,4 @@
 import type {
-  VisualCompositionElement,
   VisualElement,
   VisualMaskElement,
   VisualMediaElement,
@@ -70,8 +69,7 @@ export type HtmlTerminalElement =
   | HtmlOwned<VisualTextFlowElement>
   | HtmlOwned<VisualPathTextElement>
   | HtmlOwned<VisualMediaElement>
-  | HtmlOwned<VisualSurfaceElement>
-  | HtmlOwned<VisualCompositionElement>;
+  | HtmlOwned<VisualSurfaceElement>;
 
 export type HtmlElement = HtmlBoxElement | HtmlTerminalElement;
 

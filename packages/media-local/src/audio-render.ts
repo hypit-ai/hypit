@@ -1,10 +1,25 @@
 import { closeSync, fstatSync, openSync, readSync } from "node:fs";
 import { open } from "node:fs/promises";
 
-import type { AudioProgram, AudioProgramClip, AudioProgramNode } from "@hypit/audio-program";
+import { verifyAudioProgram } from "@hypit/audio-program";
+import type { AudioProgram, AudioProgramClip } from "@hypit/audio-program";
 import { readAudioGainProcess } from "@hypit/composition";
-import { exactTemporalRational } from "@hypit/temporal";
-import type { ExactTemporalValue, TemporalMap, TemporalMapPiece } from "@hypit/temporal";
+import {
+  compareExactTemporalValues,
+  composeTemporalMaps,
+  createTemporalMapEvaluator,
+  evaluateTemporalMap,
+  exactTemporalRational,
+  exactTemporalValueFromFrames,
+  exactTemporalZero,
+  isAffineTemporalMapPiece,
+} from "@hypit/temporal";
+import type {
+  ExactTemporalValue,
+  TemporalMap,
+  TemporalMapEvaluator,
+  TemporalMapSide,
+} from "@hypit/temporal";
 
 const SAMPLE_RATE = 48_000;
 const CHANNELS = 2;
@@ -13,6 +28,7 @@ const BYTES_PER_FRAME = CHANNELS * BYTES_PER_SAMPLE;
 const PAGE_FRAMES = 4_096;
 const MAX_PAGES = 8;
 const OUTPUT_BLOCK_FRAMES = 8_192;
+const SAMPLE_CLOCK = { frameRate: { numerator: SAMPLE_RATE, denominator: 1 } } as const;
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -25,31 +41,40 @@ function exactNumber(value: ExactTemporalValue): number {
   return result;
 }
 
-type NumericPiece = {
-  readonly targetStart: number;
-  readonly targetEnd: number;
-  readonly sourceAtStart: number;
-} & (
-  | {
-      readonly kind: "affine";
-      readonly rate: number;
-      readonly wrap?: { readonly start: number; readonly end: number };
-    }
-  | {
-      readonly kind: "cubic";
-      readonly sourceControl1: number;
-      readonly sourceControl2: number;
-      readonly sourceAtEnd: number;
-    }
-);
-
-type NumericStage = {
-  readonly pieces: readonly NumericPiece[];
+type SignalPosition = {
+  readonly position: ExactTemporalValue;
+  readonly sourceSide: TemporalMapSide;
 };
 
-type NumericMap = {
-  readonly stages: readonly NumericStage[];
-};
+function samplePosition(sample: number): ExactTemporalValue {
+  return exactTemporalValueFromFrames(sample, SAMPLE_CLOCK);
+}
+
+function sampleCoordinate(
+  value: SignalPosition,
+  sampleFrames: number,
+): { readonly left: number; readonly right: number; readonly fraction: number } {
+  assert(sampleFrames > 0, "Audio renderer cannot sample an empty signal");
+  const seconds = exactTemporalRational(value.position);
+  let numerator = seconds.numerator * BigInt(SAMPLE_RATE);
+  const denominator = seconds.denominator;
+  if (value.sourceSide === "before" && numerator > 0n && numerator % denominator === 0n) {
+    numerator -= denominator;
+  }
+  if (numerator <= 0n) return { left: 0, right: 0, fraction: 0 };
+  const last = BigInt(sampleFrames - 1);
+  if (numerator >= last * denominator) {
+    const frame = Number(last);
+    return { left: frame, right: frame, fraction: 0 };
+  }
+  const left = Number(numerator / denominator);
+  const remainder = numerator % denominator;
+  return {
+    left,
+    right: remainder === 0n ? left : left + 1,
+    fraction: Number(remainder) / Number(denominator),
+  };
+}
 
 export type PositiveAffineReconstructionPlan = {
   readonly sourceStartSample: number;
@@ -58,111 +83,30 @@ export type PositiveAffineReconstructionPlan = {
   readonly targetSampleFrames: number;
 };
 
-function numericPiece(piece: TemporalMapPiece): NumericPiece {
-  const common = {
-    targetStart: exactNumber(piece.target.start),
-    targetEnd: exactNumber(piece.target.end),
-    sourceAtStart: exactNumber(piece.sourceAtStart),
-  };
-  if ("rate" in piece) {
-    return {
-      ...common,
-      kind: "affine",
-      rate: piece.rate.numerator / piece.rate.denominator,
-      ...(piece.wrap === undefined ? {} : {
-        wrap: { start: exactNumber(piece.wrap.start), end: exactNumber(piece.wrap.end) },
-      }),
-    };
-  }
-  return {
-    ...common,
-    kind: "cubic",
-    sourceControl1: exactNumber(piece.sourceControl1),
-    sourceControl2: exactNumber(piece.sourceControl2),
-    sourceAtEnd: exactNumber(piece.sourceAtEnd),
-  };
-}
-
-function numericMap(map: TemporalMap): NumericMap {
-  return { stages: map.stages.map((stage) => ({ pieces: stage.pieces.map(numericPiece) })) };
-}
-
-function pieceAt(stage: NumericStage, target: number): NumericPiece | undefined {
-  let low = 0;
-  let high = stage.pieces.length;
-  while (low < high) {
-    const middle = Math.floor((low + high) / 2);
-    if (stage.pieces[middle]!.targetStart <= target) low = middle + 1;
-    else high = middle;
-  }
-  const piece = stage.pieces[low - 1];
-  if (piece === undefined || target < piece.targetStart) return undefined;
-  const last = piece === stage.pieces.at(-1);
-  return target < piece.targetEnd || (last && target === piece.targetEnd) ? piece : undefined;
-}
-
-function modulo(value: number, length: number): number {
-  return ((value % length) + length) % length;
-}
-
-function evaluateStage(piece: NumericPiece, target: number): { readonly source: number; readonly direction: -1 | 0 | 1 } {
-  if (piece.kind === "affine") {
-    let source = piece.sourceAtStart + (target - piece.targetStart) * piece.rate;
-    if (piece.wrap !== undefined) {
-      const length = piece.wrap.end - piece.wrap.start;
-      const wrapped = modulo(source - piece.wrap.start, length);
-      source = piece.wrap.start + wrapped;
-      if (piece.rate < 0 && Math.abs(wrapped) <= Number.EPSILON * Math.max(1, length) * 8) {
-        source = piece.wrap.end;
-      }
-    }
-    return { source, direction: Math.sign(piece.rate) as -1 | 0 | 1 };
-  }
-  const u = (target - piece.targetStart) / (piece.targetEnd - piece.targetStart);
-  const v = 1 - u;
-  const source = v * v * v * piece.sourceAtStart
-    + 3 * v * v * u * piece.sourceControl1
-    + 3 * v * u * u * piece.sourceControl2
-    + u * u * u * piece.sourceAtEnd;
-  return {
-    source,
-    direction: Math.sign(piece.sourceAtEnd - piece.sourceAtStart) as -1 | 0 | 1,
-  };
-}
-
-function evaluateMap(map: NumericMap, target: number): { readonly source: number; readonly direction: -1 | 0 | 1 } | undefined {
-  let source = target;
-  let direction: -1 | 0 | 1 = 1;
-  for (const stage of map.stages) {
-    const piece = pieceAt(stage, source);
-    if (piece === undefined) return undefined;
-    const evaluated = evaluateStage(piece, source);
-    direction = direction === 0 || evaluated.direction === 0
-      ? 0
-      : direction === evaluated.direction ? 1 : -1;
-    source = evaluated.source;
-  }
-  return { source, direction };
-}
-
-function positiveAffineSpan(map: NumericMap, start: number, end: number, label: string): {
-  readonly start: number;
-  readonly end: number;
+function positiveAffineSpan(map: TemporalMap, start: ExactTemporalValue, end: ExactTemporalValue, label: string): {
+  readonly start: ExactTemporalValue;
+  readonly end: ExactTemporalValue;
   readonly rate: number;
 } {
   let left = start;
   let right = end;
   let totalRate = 1;
   for (const [index, stage] of map.stages.entries()) {
-    const piece = stage.pieces.find((candidate) => candidate.targetStart <= left
-      && candidate.targetEnd >= right);
+    const piece = stage.pieces.find((candidate) =>
+      compareExactTemporalValues(candidate.target.start, left) <= 0
+      && compareExactTemporalValues(candidate.target.end, right) >= 0);
     assert(piece !== undefined,
       `${label} stage ${index} crosses a gap or piece boundary unsupported by pitch-preserving reconstruction`);
-    assert(piece.kind === "affine" && piece.wrap === undefined && piece.rate > 0,
+    assert(isAffineTemporalMapPiece(piece) && piece.wrap === undefined && piece.rate.numerator > 0,
       `${label} stage ${index} must be one positive affine, non-looping relation for pitch-preserving reconstruction`);
-    left = piece.sourceAtStart + (left - piece.targetStart) * piece.rate;
-    right = piece.sourceAtStart + (right - piece.targetStart) * piece.rate;
-    totalRate *= piece.rate;
+    const oneStage = { stages: [{ ...stage, pieces: [piece] }] };
+    const projectedLeft = evaluateTemporalMap(oneStage, left, "after");
+    const projectedRight = evaluateTemporalMap(oneStage, right, "before");
+    assert(projectedLeft !== undefined && projectedRight !== undefined,
+      `${label} stage ${index} cannot project its selected span`);
+    left = projectedLeft.position;
+    right = projectedRight.position;
+    totalRate *= piece.rate.numerator / piece.rate.denominator;
   }
   return { start: left, end: right, rate: totalRate };
 }
@@ -175,13 +119,13 @@ function positiveAffineSpan(map: NumericMap, start: number, end: number, label: 
 export function planPositiveAffineReconstruction(clip: AudioProgramClip): PositiveAffineReconstructionPlan {
   const targetSampleFrames = clip.targetEndSampleExclusive - clip.targetStartSample;
   assert(targetSampleFrames > 0, `Audio Clip ${clip.id} has no target samples`);
-  const targetSeconds = exactNumber(clip.sampling.stages[0]!.target.duration);
-  const sampled = positiveAffineSpan(numericMap(clip.sampling), 0, targetSeconds,
+  const sampled = positiveAffineSpan(clip.sampling, exactTemporalZero(),
+    clip.sampling.stages[0]!.target.duration,
     `Audio Clip ${clip.id} sampling`);
-  const prepared = positiveAffineSpan(numericMap(clip.preparation), sampled.start, sampled.end,
+  const prepared = positiveAffineSpan(clip.preparation, sampled.start, sampled.end,
     `Audio Clip ${clip.id} preparation`);
-  const sourceStartSample = Math.round(prepared.start * SAMPLE_RATE);
-  const sourceEndSampleExclusive = Math.round(prepared.end * SAMPLE_RATE);
+  const sourceStartSample = Math.round(exactNumber(prepared.start) * SAMPLE_RATE);
+  const sourceEndSampleExclusive = Math.round(exactNumber(prepared.end) * SAMPLE_RATE);
   const rate = sampled.rate * prepared.rate;
   assert(Number.isFinite(rate) && rate > 0 && sourceStartSample >= 0
     && sourceEndSampleExclusive > sourceStartSample,
@@ -278,14 +222,8 @@ export class CanonicalPcmReader {
     return page.bytes.readInt16LE(local * BYTES_PER_FRAME + channel * BYTES_PER_SAMPLE);
   }
 
-  sample(position: number, channel: 0 | 1, direction: -1 | 0 | 1): number {
-    assert(Number.isFinite(position), "Audio renderer source position is not finite");
-    const rounded = Math.round(position);
-    if (direction < 0 && rounded > 0 && Math.abs(position - rounded) <= 1e-9) position = rounded - 1;
-    position = Math.max(0, Math.min(this.sampleFrames - 1, position));
-    const left = Math.floor(position);
-    const right = Math.min(this.sampleFrames - 1, left + 1);
-    const fraction = position - left;
+  sample(position: SignalPosition, channel: 0 | 1): number {
+    const { left, right, fraction } = sampleCoordinate(position, this.sampleFrames);
     const a = this.#sample(left, channel);
     if (fraction === 0 || right === left) return a;
     return a + (this.#sample(right, channel) - a) * fraction;
@@ -295,37 +233,120 @@ export class CanonicalPcmReader {
 type CompiledClip = {
   readonly clip: AudioProgramClip;
   readonly routeGain: number;
-  readonly sampling: NumericMap;
-  readonly preparation: NumericMap;
+  readonly mapping: TemporalMapEvaluator;
   readonly source: SignalReader;
   readonly reconstructed?: SignalReader;
 };
 
-type CompositionNode = Extract<AudioProgramNode, { readonly kind: "composition" }>;
-type CompiledComposition = {
-  readonly node: CompositionNode;
-  readonly routeGain: number;
-  readonly sampling: NumericMap;
-  readonly source: SignalReader;
-};
-
-type SignalRoute =
-  | { readonly kind: "source"; readonly clip: AudioProgramClip; readonly gain: number }
-  | { readonly kind: "composition"; readonly node: CompositionNode; readonly gain: number };
+type SignalRoute = { readonly clip: AudioProgramClip; readonly gain: number };
 
 function signalRoutes(program: AudioProgram): SignalRoute[] {
   const nodes = new Map(program.graph.nodes.map((node) => [node.id, node] as const));
-  const visit = (id: string, gain: number): SignalRoute[] => {
-    const node = nodes.get(id)!;
-    if (node.kind === "silence") return [];
-    if (node.kind === "source") return [{ kind: "source", clip: node.clip, gain }];
-    if (node.kind === "composition") return [{ kind: "composition", node, gain }];
-    if (node.kind === "mix") return node.inputs.flatMap((input) => visit(input.node, gain));
+  const routes: SignalRoute[] = [];
+  const visits = [{ id: program.graph.output.node, gain: 1 }];
+  while (visits.length > 0) {
+    const visit = visits.pop()!;
+    const node = nodes.get(visit.id)!;
+    if (node.kind === "silence") continue;
+    if (node.kind === "source") {
+      routes.push({ clip: node.clip, gain: visit.gain });
+      continue;
+    }
+    if (node.kind === "mix") {
+      for (let index = node.inputs.length - 1; index >= 0; index -= 1) {
+        visits.push({ id: node.inputs[index]!.node, gain: visit.gain });
+      }
+      continue;
+    }
     assert(Object.keys(node.inputs).every((port) => port === "signal"),
       `Audio Process ${node.id} has unsupported ports`);
-    return visit(node.inputs.signal!.node, gain * readAudioGainProcess(node.program));
-  };
-  return visit(program.graph.output.node, 1);
+    visits.push({ id: node.inputs.signal!.node,
+      gain: visit.gain * readAudioGainProcess(node.program) });
+  }
+  return routes;
+}
+
+type SampleRange = { readonly startSample: number; readonly endSampleExclusive: number };
+type PlannedClip = {
+  readonly clip: AudioProgramClip;
+  readonly gain: number;
+  /** Shared by demand analysis and actual sample reads. */
+  readonly mapping: TemporalMapEvaluator;
+};
+
+/** One request-local pull plan shared by source preparation and signal evaluation. */
+export type AudioRenderPlan = {
+  readonly program: AudioProgram;
+  readonly ranges: readonly SampleRange[];
+  readonly clips: readonly PlannedClip[];
+};
+
+function mergeSampleRanges(ranges: readonly SampleRange[], limit: number): SampleRange[] {
+  const result: SampleRange[] = [];
+  for (const range of ranges
+    .map((item) => ({ startSample: Math.max(0, item.startSample),
+      endSampleExclusive: Math.min(limit, item.endSampleExclusive) }))
+    .filter((item) => item.endSampleExclusive > item.startSample)
+    .toSorted((left, right) => left.startSample - right.startSample)) {
+    const previous = result.at(-1);
+    if (previous !== undefined && range.startSample <= previous.endSampleExclusive) {
+      result[result.length - 1] = { startSample: previous.startSample,
+        endSampleExclusive: Math.max(previous.endSampleExclusive, range.endSampleExclusive) };
+    } else result.push(range);
+  }
+  return result;
+}
+
+function localRanges(
+  selected: readonly SampleRange[],
+  targetStartSample: number,
+  targetEndSampleExclusive: number,
+): SampleRange[] {
+  return selected.flatMap((range): SampleRange[] => {
+    const start = Math.max(range.startSample, targetStartSample);
+    const end = Math.min(range.endSampleExclusive, targetEndSampleExclusive);
+    return end <= start ? [] : [{
+      startSample: start - targetStartSample,
+      endSampleExclusive: end - targetStartSample,
+    }];
+  });
+}
+
+function mapHasContent(evaluate: TemporalMapEvaluator, ranges: readonly SampleRange[]): boolean {
+  return ranges.some((range) => {
+    for (let sample = range.startSample; sample < range.endSampleExclusive; sample += 1) {
+      if (evaluate(samplePosition(sample), "after") !== undefined) return true;
+    }
+    return false;
+  });
+}
+
+function planProgram(program: AudioProgram, ranges: readonly SampleRange[]): AudioRenderPlan {
+  const selected = mergeSampleRanges(ranges, program.sampleFrames);
+  const clips = signalRoutes(program).flatMap((route): PlannedClip[] => {
+    const local = localRanges(selected, route.clip.targetStartSample, route.clip.targetEndSampleExclusive);
+    if (local.length === 0) return [];
+    const mapping = createTemporalMapEvaluator(composeTemporalMaps(route.clip.sampling, route.clip.preparation));
+    return mapHasContent(mapping, local) ? [{ clip: route.clip, gain: route.gain, mapping }] : [];
+  });
+  return { program, ranges: selected, clips };
+}
+
+export function planAudioProgramRender(
+  program: AudioProgram,
+  startSample: number,
+  sampleFrames: number,
+): AudioRenderPlan {
+  verifyAudioProgram(program);
+  assert(Number.isSafeInteger(startSample) && startSample >= 0
+    && Number.isSafeInteger(sampleFrames) && sampleFrames >= 0
+    && startSample + sampleFrames <= program.sampleFrames,
+  "Audio renderer range lies outside its programme");
+  return planProgram(program, [{ startSample, endSampleExclusive: startSample + sampleFrames }]);
+}
+
+export function audioRenderPlanSourceClips(plan: AudioRenderPlan): readonly AudioProgramClip[] {
+  return plan.clips.map((entry) => entry.clip);
 }
 
 function levelAt(clip: AudioProgramClip, sample: number): number {
@@ -374,7 +395,7 @@ function pcm16(value: number): number {
 
 type SignalReader = {
   readonly sampleFrames: number;
-  sample(position: number, channel: 0 | 1, direction: -1 | 0 | 1): number;
+  sample(position: SignalPosition, channel: 0 | 1): number;
 };
 
 type SignalPage = {
@@ -383,47 +404,27 @@ type SignalPage = {
   readonly samples: Float64Array;
 };
 
-/**
- * Request-local lazy evaluation of one closed AudioProgram. Child programmes
- * remain closed signals, but no longer need to cross a temporary WAV boundary.
- */
+/** Request-local lazy evaluation of one closed AudioProgram. */
 class ProgramSignalReader implements SignalReader {
   readonly sampleFrames: number;
   readonly #clips: readonly CompiledClip[];
-  readonly #compositions: readonly CompiledComposition[];
   readonly #pages = new Map<number, SignalPage>();
 
   constructor(
-    program: AudioProgram,
+    plan: AudioRenderPlan,
     sourceForClip: (clip: AudioProgramClip) => SignalReader,
     reconstructedForClip: ((clip: AudioProgramClip) => SignalReader | undefined) | undefined,
-    cache: WeakMap<AudioProgram, ProgramSignalReader>,
   ) {
+    const program = plan.program;
     this.sampleFrames = program.sampleFrames;
-    const routes = signalRoutes(program);
-    this.#clips = routes
-      .filter((route): route is Extract<SignalRoute, { kind: "source" }> => route.kind === "source")
-      .map(({ clip, gain }) => {
+    this.#clips = plan.clips.map(({ clip, gain, mapping }) => {
         const reconstructed = reconstructedForClip?.(clip);
         return {
           clip,
           routeGain: gain,
-          sampling: numericMap(clip.sampling),
-          preparation: numericMap(clip.preparation),
+          mapping,
           source: sourceForClip(clip),
           ...(reconstructed === undefined ? {} : { reconstructed }),
-        };
-      });
-    this.#compositions = routes
-      .filter((route): route is Extract<SignalRoute, { kind: "composition" }> => route.kind === "composition")
-      .map(({ node, gain }) => {
-        assert(node.reconstruction === undefined,
-          `Audio Composition ${node.id} reconstruction is not supported by this renderer.`);
-        return {
-          node,
-          routeGain: gain,
-          sampling: numericMap(node.sampling),
-          source: programSignalReader(node.program, sourceForClip, reconstructedForClip, cache),
         };
       });
   }
@@ -446,48 +447,23 @@ class ProgramSignalReader implements SignalReader {
       for (let sample = left; sample < right; sample += 1) {
         const level = levelAt(entry.clip, sample) * entry.routeGain;
         if (level === 0) continue;
-        let sourceFrame: number;
-        let direction: -1 | 0 | 1;
+        let sourcePosition: SignalPosition;
         let reader: SignalReader;
         if (entry.reconstructed !== undefined) {
-          sourceFrame = sample - entry.clip.targetStartSample;
-          direction = 1;
+          sourcePosition = {
+            position: samplePosition(sample - entry.clip.targetStartSample),
+            sourceSide: "after",
+          };
           reader = entry.reconstructed;
         } else {
-          const occurrence = (sample - entry.clip.targetStartSample) / SAMPLE_RATE;
-          const prepared = evaluateMap(entry.sampling, occurrence);
-          if (prepared === undefined) continue;
-          const source = evaluateMap(entry.preparation, prepared.source);
-          if (source === undefined) continue;
-          direction = prepared.direction === 0 || source.direction === 0
-            ? 0
-            : prepared.direction === source.direction ? 1 : -1;
-          sourceFrame = source.source * SAMPLE_RATE;
+          const mapped = entry.mapping(samplePosition(sample - entry.clip.targetStartSample), "after");
+          if (mapped === undefined) continue;
+          sourcePosition = mapped;
           reader = entry.source;
         }
         const offset = (sample - start) * CHANNELS;
-        samples[offset] = samples[offset]! + reader.sample(sourceFrame, 0, direction) * level;
-        samples[offset + 1] = samples[offset + 1]! + reader.sample(sourceFrame, 1, direction) * level;
-      }
-    }
-    for (const entry of this.#compositions) {
-      const left = Math.max(start, entry.node.targetStartSample);
-      const right = Math.min(end, entry.node.targetEndSampleExclusive);
-      for (let sample = left; sample < right; sample += 1) {
-        let level = entry.node.gain * entry.routeGain;
-        if (entry.node.fadeInSamples > 0 && sample < entry.node.targetStartSample + entry.node.fadeInSamples) {
-          level *= Math.max(0, (sample - entry.node.targetStartSample) / entry.node.fadeInSamples);
-        }
-        if (entry.node.fadeOutSamples > 0 && sample >= entry.node.targetEndSampleExclusive - entry.node.fadeOutSamples) {
-          level *= Math.max(0, (entry.node.targetEndSampleExclusive - sample) / entry.node.fadeOutSamples);
-        }
-        if (level === 0) continue;
-        const mapped = evaluateMap(entry.sampling, (sample - entry.node.targetStartSample) / SAMPLE_RATE);
-        if (mapped === undefined) continue;
-        const sourceFrame = mapped.source * SAMPLE_RATE;
-        const offset = (sample - start) * CHANNELS;
-        samples[offset] = samples[offset]! + entry.source.sample(sourceFrame, 0, mapped.direction) * level;
-        samples[offset + 1] = samples[offset + 1]! + entry.source.sample(sourceFrame, 1, mapped.direction) * level;
+        samples[offset] = samples[offset]! + reader.sample(sourcePosition, 0) * level;
+        samples[offset + 1] = samples[offset + 1]! + reader.sample(sourcePosition, 1) * level;
       }
     }
     const page = { index, frames, samples };
@@ -496,38 +472,19 @@ class ProgramSignalReader implements SignalReader {
     return page;
   }
 
-  #sample(frame: number, channel: 0 | 1): number {
+  #sampleFrame(frame: number, channel: 0 | 1): number {
     const page = this.#page(Math.floor(frame / PAGE_FRAMES));
     const local = frame - page.index * PAGE_FRAMES;
     assert(local >= 0 && local < page.frames, "Audio renderer programme sample lies outside its page");
     return page.samples[local * CHANNELS + channel]!;
   }
 
-  sample(position: number, channel: 0 | 1, direction: -1 | 0 | 1): number {
-    assert(Number.isFinite(position), "Audio renderer programme position is not finite");
-    const rounded = Math.round(position);
-    if (direction < 0 && rounded > 0 && Math.abs(position - rounded) <= 1e-9) position = rounded - 1;
-    position = Math.max(0, Math.min(this.sampleFrames - 1, position));
-    const left = Math.floor(position);
-    const right = Math.min(this.sampleFrames - 1, left + 1);
-    const fraction = position - left;
-    const a = this.#sample(left, channel);
+  sample(position: SignalPosition, channel: 0 | 1): number {
+    const { left, right, fraction } = sampleCoordinate(position, this.sampleFrames);
+    const a = this.#sampleFrame(left, channel);
     if (fraction === 0 || right === left) return a;
-    return a + (this.#sample(right, channel) - a) * fraction;
+    return a + (this.#sampleFrame(right, channel) - a) * fraction;
   }
-}
-
-function programSignalReader(
-  program: AudioProgram,
-  sourceForClip: (clip: AudioProgramClip) => SignalReader,
-  reconstructedForClip: ((clip: AudioProgramClip) => SignalReader | undefined) | undefined,
-  cache: WeakMap<AudioProgram, ProgramSignalReader>,
-): ProgramSignalReader {
-  const cached = cache.get(program);
-  if (cached !== undefined) return cached;
-  const reader = new ProgramSignalReader(program, sourceForClip, reconstructedForClip, cache);
-  cache.set(program, reader);
-  return reader;
 }
 
 /**
@@ -538,6 +495,7 @@ function programSignalReader(
 export async function renderAudioProgramWav(options: {
   readonly path: string;
   readonly program: AudioProgram;
+  readonly plan?: AudioRenderPlan;
   readonly startSample: number;
   readonly sampleFrames: number;
   readonly sourceForClip: (clip: AudioProgramClip) => CanonicalPcmReader;
@@ -546,8 +504,9 @@ export async function renderAudioProgramWav(options: {
   assert(options.startSample >= 0 && options.sampleFrames >= 0
     && options.startSample + options.sampleFrames <= options.program.sampleFrames,
   "Audio renderer range lies outside its programme");
-  const reader = programSignalReader(options.program, options.sourceForClip,
-    options.reconstructedForClip, new WeakMap());
+  const plan = options.plan ?? planAudioProgramRender(options.program, options.startSample, options.sampleFrames);
+  assert(plan.program === options.program, "Audio renderer plan belongs to another programme");
+  const reader = new ProgramSignalReader(plan, options.sourceForClip, options.reconstructedForClip);
   let output: Awaited<ReturnType<typeof open>> | undefined;
   try {
     output = await open(options.path, "w");
@@ -557,7 +516,10 @@ export async function renderAudioProgramWav(options: {
       const absoluteStart = options.startSample + blockStart;
       const bytes = Buffer.allocUnsafe(frames * BYTES_PER_FRAME);
       for (let frame = 0; frame < frames; frame += 1) for (const channel of [0, 1] as const) {
-        bytes.writeInt16LE(pcm16(reader.sample(absoluteStart + frame, channel, 1)),
+        bytes.writeInt16LE(pcm16(reader.sample({
+          position: samplePosition(absoluteStart + frame),
+          sourceSide: "after",
+        }, channel)),
           (frame * CHANNELS + channel) * BYTES_PER_SAMPLE);
       }
       await output.write(bytes);

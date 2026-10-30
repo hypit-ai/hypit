@@ -16,23 +16,7 @@ Omitting delivery publishes a private standard BT.709 H.264/AAC MP4 requirement 
 author graph. `quality="draft|standard|high"` changes that explicit standard requirement;
 advanced author packages can instead pass a `MediaDeliverySpec` through `delivery`.
 
-HDR10 is an ordinary explicit delivery value, not a renderer switch:
-
-```svml
-<media:HdrStaticMetadata id="hdr-metadata"
-  red-x="0.708" red-y="0.292" green-x="0.170" green-y="0.797"
-  blue-x="0.131" blue-y="0.046" white-x="0.3127" white-y="0.3290"
-  min-luminance-nits="0.005" max-luminance-nits="1000"
-  max-content-light-nits="1000" max-frame-average-light-nits="400"/>
-<media:Delivery id="hdr-delivery" profile="hdr10-hevc" quality="high"
-  hdr-static-metadata={hdr-metadata}/>
-<html:Video id="video" composition={main.composition}
-  delivery={hdr-delivery}/>
-```
-
-The source profile `bt2100-pq10`, the Composition's linear working picture and this HDR10 delivery
-remain three independent declarations. The Delivery metadata is author-owned; no Provider scans
-the work to guess it.
+The author contract exposes one finished-video family: BT.709 H.264/AAC MP4.
 
 The package contributes only the `html` author declaration and its orchestration
 Fragment. It:

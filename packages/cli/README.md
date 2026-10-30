@@ -37,7 +37,7 @@ surface contains no video types and does not let a contribution replace the Host
 
 Source imports decide which language and component packages give the source meaning. A Local Runtime
 Profile separately selects Credential Stores and Endpoints allowed to execute work. The CLI does not
-invent targets, realizations or Provider choices.
+invent targets, output producers or Provider choices.
 
 Human and JSON output answer the same command-specific question. `--json` changes encoding;
 `--verbose` expands scope. Compiler, Runtime and Repository objects are not default reports.
@@ -67,10 +67,10 @@ promising to restart failed execution or describing the interruption as a Result
 | Command | Default scope | Explicit detail |
 | --- | --- | --- |
 | `check` | Validation, targets and counts | `--verbose`: exported names/types and authored values |
-| `plan` | Targets, demanded requests, Endpoint selection and diagnostics | `--verbose`: Invocation choices and graph step count |
+| `plan` | Targets, demanded requests, Endpoint selection and diagnostics | `--verbose`: deployment capabilities and successful diagnostics |
 | `pricing` | Requests that may incur a Provider charge and their rate material | `--verbose`: declared no-charge requests and original documents |
 | `status`, `activity` | Current work, Provider-reported phases and failures | `--verbose`: individual operations; activity also includes capacity reservations |
-| `inspect` | Targets and explicitly highlighted Outputs, outcome and failure evidence | `--output <name>` selects one Output; `--verbose` browses all available Outputs and receipts |
+| `inspect` | Targets, retained Outputs, outcome and failure evidence | `--output <name>` selects one Output; `--verbose` adds full operation receipts and Output details |
 | `doctor` | Complete project/Runtime diagnostics | `--verbose`: successful diagnostic detail |
 
 `runtime`, `programs`, `paths` and the private Worker entry belong to the selected Local Runtime
@@ -78,16 +78,17 @@ command module, not to this generic command engine. They still appear under the 
 because the official executable binds `createLocalRuntimeCliCommandModules()` to its exact Local
 Host port at application assembly. The module never casts the generic Distribution to discover that port.
 
-Invocation choices count transient overrides. Result output counts describe the named Outputs
-actually published by each Build; they are not a count of newly generated assets. `history <output>`
+Build targets count demanded author outputs. Result output counts describe only retained outputs
+actually stored by each Build; they are not a count of targets or newly generated assets. `history <output>`
 lists Builds containing that name rather than deduplicating generation events or guessing whether
 mutable external files still contain the same bytes.
-`inspect` chooses names before resolving references, so an unrelated Output cannot delay or break
-inspection of a target. It reports the number of other Outputs without reading their descriptions.
+`inspect` chooses its bounded retained-Output page before resolving references, so an Output outside
+that page cannot delay or break inspection. Targets remain separate execution evidence; they do not
+select or rank retained Outputs.
 
 `plan` retains every target, demanded request and preflight diagnostic in both encodings. `--limit`
-bounds expanded detail, not the work inventory before grouping. `inspect` likewise keeps its default
-target/highlight selection intact; `--limit` bounds the broader `--verbose` list, with an omitted count.
+bounds expanded detail, not the work inventory before grouping. `inspect --limit` bounds the retained
+Output descriptions it opens and reports the omitted count; `--verbose` changes detail, not selection.
 No-charge classification continues to belong to the selected Endpoint's pricing declaration.
 
 Build follow and status include Provider-reported local Command activity as well as asynchronous
@@ -101,8 +102,8 @@ does not interpret model or renderer names.
 
 `--project` explicitly selects the project. Otherwise the Host searches upward for a `package.json`
 whose `hypit.project` field is `true`; it never promotes an arbitrary npm package or current directory.
-Commands that need a project fail accurately when neither selection exists. Source and Invocation arguments
-locate files within that context. Relative command-line paths are resolved from the current directory,
+Commands that need a project fail accurately when neither selection exists. Source arguments locate files
+within that context. Relative command-line paths are resolved from the current directory,
 including when `--project` is supplied.
 
 The same project boundary owns `hypit.cli.use`. Distribution contributions resolve from the
@@ -110,7 +111,7 @@ Distribution root and cannot be shadowed by project dependencies; project contri
 from that project's direct dependencies. Outside a package project, only Distribution commands are
 available.
 
-Runtime-aware generic commands use an explicit `--runtime` for that invocation, or ask the selected
+Runtime-aware generic commands use an explicit `--runtime` for that command, or ask the selected
 Distribution for exactly the resolved project's Runtime selection. The official Local Runtime module
 owns the `.hypit/runtime` pointer and its `runtime use` command; the generic CLI does not know its
 filesystem representation, Worker process or managed Programs. Project selection remains available on
@@ -133,17 +134,18 @@ For a command invoked outside the project, name both the project and its input e
 
 ```bash
 hypit paths --project /path/to/video-project
-hypit plan /path/to/video-project/build.svrun --project /path/to/video-project
+hypit plan /path/to/video-project/main.svml --target final.video --project /path/to/video-project
 ```
 
-`plan` lists every structural Need in the frozen Build graph. Each Need selects a deployment from its
-capability, return Type and Profile binding even when its Producer is blocked by an upstream Record.
-Only a complete request emitted by an executed Producer is passed to the selected Endpoint's
-`supports` predicate. Blocked requests retain their direct Step/Record dependencies and report support
-as `not-evaluated`; they never carry partial constraints. Concrete request summaries are display-only
-projections of the actual constraints and do not participate in selection, support or submission.
+`plan` projects every demanded external request in the selected Build slice. Each request selects a
+deployment from its capability, return Type and Profile binding even when its Producer still depends on
+upstream work. Only a complete request emitted by an executed Producer is passed to the selected
+Endpoint's `supports` predicate. Blocked requests report author-facing pending inputs and support as
+`not-evaluated`; they never expose graph joins or carry partial constraints. Concrete request summaries
+are display-only projections of the actual constraints and do not participate in selection, support or
+submission.
 
-`pricing <source-or-invocation>` uses that selected Runtime to read Provider-owned rate material. The default report
+`pricing <source> --target <output>` uses that selected Runtime to read Provider-owned rate material. The default report
 summarizes requests whose selected Endpoint explicitly declares `pricing.kind: "local"` as having no
 Provider charge. Requests with missing pricing declarations, failed price reads, unresolved selections
 or unsupported concrete requests remain visible. A blocked request can show the selected Endpoint's
@@ -158,7 +160,7 @@ does not interpret formulas, infer upstream media properties, or calculate total
 
 All groups are shown by default. `--limit <count>` limits human groups after grouping; `--verbose`
 adds no-charge request details, full request names and original documents. JSON uses `hypit.cli-pricing@1`: `requestCount`
-and `noChargeRequestCount` describe the whole Invocation, while `groups[]` holds Provider selection facts,
+and `noChargeRequestCount` describe the whole target selection, while `groups[]` holds Provider selection facts,
 `requests[]` with known parameters and pending inputs, and `pricingDocuments[]` with source and data.
 JSON includes every group regardless of `--limit`; no-charge requests are included with `--verbose`.
 Producer failures are reported independently of requests, including failures that produce no Need.
@@ -195,9 +197,9 @@ from a lookup that still needs the Build's Runtime or correct project selection.
 Worker process log instead, for Runtime startup or process-level failures.
 
 Project context resolution is owned by [`@hypit/project`](../project/README.md).
-History Source filters resolve existing filesystem links before comparing project-relative Result
-paths. A deleted Source or directory remains queryable: only its existing ancestor is resolved and
-the missing path suffix is retained. This is local argument handling, with no saved alias inventory.
+History Source filters resolve an existing filesystem path before comparing project-relative Result
+paths. A deleted or moved Source is not reconstructed; browse Result entries and their recorded Source
+paths instead. This is local argument handling, with no saved alias inventory.
 CLI, Studio and creation tools call that same package; the CLI is not another environment owner.
 
 `doctor`, `programs prepare|up|status|down`, and `runtime up` accept repeated `--endpoint <instance>` values.

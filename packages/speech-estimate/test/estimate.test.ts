@@ -145,6 +145,11 @@ test("Chinese mixed-language punctuation preserves English word boundaries", () 
 
 test("Japanese and Spanish expose their documented writing-based approximations", () => {
   assert.equal(detectSpeechEstimateLanguage("こんにちは世界"), "ja");
+  for (const japanese of ["私は学生です", "政府は経済対策を発表した", "東京駅で待ち合わせしましょう"]) {
+    assert.equal(detectSpeechEstimateLanguage(japanese), "ja", japanese);
+  }
+  assert.equal(detectSpeechEstimateLanguage("约翰・史密斯先生"), "zh");
+  assert.equal(detectSpeechEstimateLanguage("Use the カメラ app to record the whole video"), "en");
   assert.equal(countSpeechEstimateUnits("こんにちは世界", "ja"), 7);
   assert.equal(countSpeechEstimateUnits("今日は video です", "ja"), 8);
   assert.equal(detectSpeechEstimateLanguage("La edición de video comienza con significado."), "es");

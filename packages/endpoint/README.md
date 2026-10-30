@@ -127,7 +127,7 @@ determines what can be cached together.
 Four facts remain separate at this boundary:
 
 - the `EndpointDemand` declares a capability and return Type that need a deployment;
-- the `EndpointRequest` describes the work selected by the current Invocation;
+- the `EndpointRequest` describes the work selected by the current Build;
 - an `EndpointPricingDocument` describes prices published by that Provider;
 - spending authority belongs to the user's decision about the described work and cost.
 

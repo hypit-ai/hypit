@@ -1,11 +1,9 @@
 ---
-title: Invocation 与 Build
+title: Target 与 Build
 description: 声明 Build 目标、复用结果以及配置运行时环境。
 ---
 
-Author Source 定义视频本身。Invocation 选择最终目标，也可以临时选择 Output 的 primary realization 或另一个
-已经存在的 Author Record。一次性调用直接通过 CLI 参数表达；需要具名和复用时再保存成 `.svrun`
-Invocation Source。官方 Distribution 提供 Local Runtime；
+Author Source 定义视频本身。每次 `plan`、`pricing`、`build` 或 Studio 命令都显式选择本次要求值到的 Target。官方 Distribution 提供 Local Runtime；
 它的 Profile 声明执行这份计划可用的凭据、Provider Endpoint 与服务。
 
 先为项目选择一次 Runtime：
@@ -19,14 +17,14 @@ hypit runtime use hypit.runtime.json
 ```bash
 hypit plan main.svml --target final.video
 hypit build main.svml --target final.video --follow
-hypit get <build-id> --output final.video --to output/final.mp4
+hypit result export <build-id> --output final.video --to output/final.mp4
 ```
 
 快速开始只需全局安装一次 Distribution。此后本页所有命令都直接写作 `hypit`，在任何独立视频项目中都一样。
 
 只有 `build` 会真正提交工作。`plan` 展示选中的工作；`check` 用于编辑源码，`doctor` 用于配置和排查部署。它们都安全，但不是每次 Build 前必须重复的仪式。
 
-当项目包含多份 Author、Recipe 和已保存 Invocation 时，一种顺手的目录约定是：
+当项目包含多份 Author 和 Recipe Source 时，一种顺手的目录约定是：
 
 ```text
 my-video/
@@ -37,10 +35,6 @@ my-video/
   recipes/
     visual.svs              视觉 Recipe
     generation.svs          生成 Recipe
-  invocations/
-    images.svrun            一种执行意图
-    takes.svrun             另一种执行意图
-    final.svrun             最终交付意图
   assets/                   项目自己的输入素材
   kits/                     可选的项目内 Recipe Kit
   packages/                 作品需要时创建的项目本地 Author 包
@@ -49,55 +43,32 @@ my-video/
   .hypit/                   自动产生的本地 Runtime 与 Result 数据
 ```
 
-这只是方便人整理内容的推荐，绝不是强制的项目格式。小项目可以把多份 `.svml`、`.svs` 和
-`.svrun` 直接平铺在根目录，其他项目也可以采用不同分组。Hypit 只服从 Source import、
-`<author source="…">`、CLI 参数和 `get --to` 中明确写出的路径，不要求这些名字，也不会特殊识别
-`authors/`、`recipes/`、`invocations/`、`assets/` 或 `output/`。每份已保存 Invocation 选择一份 Author 入口，而这份
-Author Source 的闭包可以显式导入多份 Author 或 Recipe Source。受管理的 Result 仓库与它们分开，
+这只是方便人整理内容的推荐，绝不是强制的项目格式。小项目可以把多份 `.svml` 和 `.svs`
+直接平铺在根目录，其他项目也可以采用不同分组。Hypit 只服从 Source import、CLI 参数和
+`result export --to` 中明确写出的路径，不要求这些名字，也不会特殊识别
+`authors/`、`recipes/`、`assets/` 或 `output/`。Author Source 的闭包可以显式导入多份 Author 或 Recipe Source。受管理的 Result 仓库与它们分开，
 零配置时仍位于 `.hypit/results`。
 
-Invocation Source 与 Runtime Profile 不会悄悄改写视频。创作性的模型选择仍然留在 Author Source，或它显式导入的包里。
+Target 选择与 Runtime Profile 不会悄悄改写视频。创作性的模型选择仍然留在 Author Source，或它显式导入的包里。
 
-## 已保存 Invocation Source 语法
+## Target
 
-每个 `.svrun` 文件都以其处理指令开头：
-
-```svml
-<?svml using="@hypit/markup/invocation@1"?>
-```
-
-### 最简已保存 Invocation
-
-```svml
-<?svml using="@hypit/markup/invocation@1"?>
-
-<svrun version="1">
-  <author source="./main.svml"/>
-  <target output="final.video"/>
-</svrun>
-```
-
-| 元素 | 说明 |
-|---|---|
-| `<svrun>` | 根元素，唯一属性是 `version="1"` |
-| `<author>` | 必需。`source` 指向 `.svml` Author Source |
-| `<target>` | 一个需要得到的公开 Logical Output |
-
-### Target
-
-Target 表达这次 Build 的最终意图，通常是成片或另一个真正的交付物。Build 会完成 Target 所需的工作，而这条路上真正完成的每个公开 Author Output 都会自动进入同一个 Build Result。
+Target 表达这次 Build 要求求值到哪里，通常是成片或另一个独立目标。Target 本身不会让该值自动保存到
+Build Result；生成媒体、可编辑证据和最终编码输出由各自 package 明确声明跨 Build 生命周期。Track、
+Timeline 和 PreparedMedia 等派生值不会因为具名、可引用或成为 Target 而自动保存。
 
 ### 多个 Target
 
 可以在一次 Build 中请求多个输出：
 
-```svml
-<target output="final.video"/>
-<target output="captions.track"/>
+```bash
+hypit plan main.svml \
+  --target final.video \
+  --target captions.track
 ```
 
-只有一次执行确实存在多个最终目标时才写多个 Target。需要复用的运行意图可以保存成不同的
-`.svrun` 文件；一次性意图直接使用 CLI Target。两种形式形成同一个 Invocation，也可以共同指向同一个 Author Source。
+只有一次执行确实存在多个最终目标时才选择多个 Target。Source 路径和 Target 是命令的显式输入。
+如果项目需要给一条很长、经常重复的命令起名，可以使用普通任务运行器；Hypit 不定义 Target 文件、注册表或默认 Target。
 
 ## 复用已经产出的内容
 
@@ -107,40 +78,24 @@ Build Result 是执行历史。一个 Output 一旦要成为项目的长期素�
 ```bash
 hypit history opening-generation.video
 hypit inspect <build-id>
-hypit get <build-id> --output opening-generation.video --to assets/opening.mp4
+hypit result export <build-id> --output opening-generation.video --to assets/opening.mp4
 ```
 
-随后用拥有该含义的 Author 包声明文件，并把这个具名 Record 选择为生成角色的实现：
+随后用拥有该含义的 Author 包声明文件，并让消费者直接引用这个具名 Record：
 
 ```svml
 <import as="asset" from="@hypit/media@1"/>
-<import as="realization" from="@hypit/realization@1"/>
+<import as="mediaop" from="@hypit/media-operations@1"/>
 
 <asset:Video id="accepted-opening" src="./assets/opening.mp4"/>
-<realization:Select output={opening-generation.video} record={accepted-opening}/>
+<mediaop:Prepare id="opening-media" source={accepted-opening}
+  video="primary-moving" audio="default" span-authority="video"/>
 ```
 
-这是一次持久的作品编辑。字幕、时间线放置、视觉处理和渲染继续使用这段表演，不需要让
-Invocation 或 Result 认识文件的来源。相机素材、下载文件、CLI 产物和生成 Result 都通过同一种
-Author 声明进入作品。
-
-如果只想在一次执行中使用 Output 的 primary realization，同时保留当前长期选择，可以写：
-
-```svml
-<override output="opening-generation.video" primary="true"/>
-```
-
-也可以临时选择 Author 闭包里另一个已经存在的 Record：
-
-```svml
-<override output="opening-generation.video" record="alternate-opening"/>
-```
-
-这个 Record 必须已经存在，并与 Output 类型完全一致。Invocation 不引入项目文件、值或计算，只保存
-Target 和本次执行的临时选择。
-每个被需要的 Output 都按同一顺序得到有效选择：Invocation override、Author Source 中的
-realization selection，最后是 Output 的 primary realization。`plan --verbose` 会连同选中的 Record
-一起报告该来源。
+这是一次持久的作品编辑。字幕、时间线放置、视觉处理和渲染直接使用这段表演，不需要让
+Target 选择或 Result 不需要认识文件的来源。相机素材、下载文件、CLI 产物和生成 Result 都通过普通
+Author 声明进入作品。需要生成新版本时，单独 Target `opening-generation.video`；是否采用新版本，
+由之后对消费者引用的显式编辑决定。
 
 ## Runtime Profile
 
@@ -187,13 +142,13 @@ hypit auth login hypihub.default
 Provider 说明需要哪种凭据，Profile 选择存储方式；项目 Provider 沿用同一条路径。
 如果使用环境变量存储，则按 Provider 的配置在 Worker 环境中设置。
 
-不要把凭据写进 Author Source、Invocation Source、Runtime Profile 源文件或提交内容。`doctor` 会验证所需凭据是否存在，但不会打印秘密值。
+不要把凭据写进 Author Source、Runtime Profile 源文件或提交内容。`doctor` 会验证所需凭据是否存在，但不会打印秘密值。
 
-## 查询所选 Invocation 的费用信息
+## 查询所选 Target 的费用信息
 
 ```bash
-hypit pricing reference.svrun
-hypit pricing reference.svrun --json
+hypit pricing reference.svml --target final.video
+hypit pricing reference.svml --target final.video --json
 ```
 
 所选 Runtime 决定每个请求由哪个 Endpoint 执行。`pricing` 读取对应 Provider 的费率信息，将匹配请求分组，展示已知参数与请求数量。明确声明为本地无 Provider 调用费用的工作汇总显示；未知价格、不支持的请求和价格读取失败继续可见。`--verbose` 补充本地请求细节与原始价格材料。
@@ -231,7 +186,7 @@ npm install --save-exact @fontsource-variable/inter@5.3.0
 cd /work/my-film
 
 hypit runtime use hypit.runtime.json
-hypit plan build.svrun
+hypit plan main.svml --target final.video
 ```
 
 项目在 Runtime Profile 之前确定；显式 `--project` 可以覆盖它，入口 Source 路径和
@@ -257,7 +212,7 @@ output/
 共享只读素材库不必复制进项目，也不必放宽 Source 边界：
 
 ```bash
-hypit plan /work/my-film/build.svrun --asset-root /work/shared-media
+hypit plan /work/my-film/main.svml --target final.video --asset-root /work/shared-media
 ```
 
 `--asset-root` 可重复使用，只授权读取素材字节，不允许从那里导入 `.svml/.svs` 源码。该 Host
@@ -273,7 +228,7 @@ cd examples/podcast
 hypit runtime use hypit.runtime.json
 ```
 
-Author/Invocation Source 通过 import 选择作者包；官方视频 Distribution 已经选择 Local Runtime，Profile
+Author Source 通过 import 选择作者包；官方视频 Distribution 已经选择 Local Runtime，Profile
 只通过 `use` 选择 Credential Store 与 Endpoint。安装、版本与完整性由 npm 或 pnpm 负责。
 
 ### 2. 诊断环境
@@ -286,7 +241,7 @@ Doctor 总会校验项目的 Result 仓库；存在已选或显式传入的 Runt
 Runtime 角色、Endpoint 配置、凭据是否存在和有界环境探测。它不启动 Worker，也不发付费请求。
 
 存在 Profile 时，`doctor` 默认检查整个 Profile，也可以重复 `--endpoint <instance>` 限定服务。
-若只想检查某次 Invocation 真正需要的环境，请使用带
+若只想检查某组 Target 真正需要的环境，请使用带
 所选 Runtime 的 `plan`。未就绪会写入 `preflight` 并令命令非零退出，但 JSON 中仍保留
 冻结计划供检查。
 
@@ -301,8 +256,7 @@ hypit plan reference.svml --target final.video
 ```
 
 花费资金前审查所选工作。默认计划展示 Target、实际需要的外部请求及其已知参数；
-`--verbose` 增加 Source 依赖，以及每个有效 Output 选择的 `invocation`、`authored` 或 `primary`
-来源。选择 Runtime 后预检这次计划需要的 Endpoint、
+`--verbose` 增加所需部署能力和成功的诊断细节；报告不暴露 Producer 图连接。选择 Runtime 后预检这次计划需要的 Endpoint、
 凭据和外部程序，不启动任何外部工作。
 
 `plan` 可以完全不带 Runtime；执行过 `hypit runtime use` 后，`plan` 和 `build` 都不必再写
@@ -317,7 +271,7 @@ hypit plan reference.svml --target final.video
 ### 4. 提交 Build
 
 ```bash
-hypit build reference.svml --target final.video --title first-cut --follow
+hypit build reference.svml --target final.video --follow
 ```
 
 不带 `--follow` 时，Build 在耐久提交后退出，后台 Worker 继续。带 `--follow` 时终端也只是观察者，并会报告进度变化；Ctrl-C 不会取消任务。
@@ -335,10 +289,9 @@ hypit status <build-id> --watch
 | `--runtime` | 单次命令的 Runtime Profile 覆盖；通常用 `runtime use` 选择一次即可 |
 | `--package-root` | 存放已安装包的 Host 目录 |
 | `--project` | 显式项目边界，也是默认的 Source Workspace 根目录 |
-| `--title` | 给这次 Result 一个供人阅读的标题 |
 | `--follow` | 将 Build 进度流式输出到终端 |
 
-每次执行都会创建新的 Build id，即使 Author Source 和已保存 Invocation 完全没变。关闭观察终端不会停止
+每次 `build` 命令都会创建新的 Build id，即使 Author Source 和 Target 完全没变。关闭观察终端不会停止
 Worker；但 Build 一旦失去执行上下文，这次尝试就结束，重启 Worker 不会恢复它。已完成的
 Output 和记录下来的任务凭据会保留；需要长期使用的素材应导出到项目并写入 Author Source。
 
@@ -348,30 +301,30 @@ Output 和记录下来的任务凭据会保留；需要长期使用的素材应�
 hypit inspect <build-id>
 ```
 
-`inspect` 直接读取项目 Result，默认展示 Target、高亮 Output 和失败证据。
-`--output <name>` 精确查看一个 Output；`--verbose` 浏览其他 Output 和任务回执，
-`--limit <count>` 扩展这个详细列表。导出指定 Output 用：
+`inspect` 直接读取项目 Result，展示 Target、retained Output 和失败证据。
+`--output <name>` 精确查看一个 Output；`--verbose` 增加 Output 细节和任务回执，
+`--limit <count>` 限制 retained Output 列表。导出一个 Output 用：
 
 ```bash
-hypit get <build-id> \
+hypit result export <build-id> \
   --output final.video \
   --to output/final.mp4
 ```
 
-`get` 把一个精确的 `build + output` 地址导出到必填的 `--to` 目的地。`inline` 表示写成 JSON
-文件；`file` 表示按原始字节写成一个文件；`value-document` 表示写成一个自足目录，其中
-`value.json` 保存值与文件绑定，被引用的文件则按 Result 内的相对路径一起写入。目的地必须尚不存在。
+`result export` 把一个精确的留存 `build + output` 地址写到必填的 `--to` 目的地。标量写成 JSON，
+文件 Output 保持原始字节；结构化 Output 由拥有其 Type 的 package 导出为正式作者格式。若该 package
+没有提供导出器，命令会准确失败，不会暴露 Result Repository 的私有存储结构。目的地必须尚不存在。
 
-Build 的最终输出会为每个文件 Target 打印精确的 `get --output …` 命令。查看 Output 用
-`inspect`；`get` 只负责显式本地导出。
+Build 的最终输出会为可导出的留存文件打印精确的 `result export --output …` 命令。查看 Output 用
+`inspect`；`result export` 只负责显式本地导出。
 
 ### 6. 在新 Build 中复用
 
 按照上文 [复用已经产出的内容](#复用已经产出的内容) 导出被接受的 Output，在 Author Source
-中声明它并加入 `realization:Select`。普通 Invocation 随后直接使用这个长期作者选择：
+中声明它，并更新消费该素材的引用。普通 Build 命令随后直接使用这个项目素材：
 
 ```bash
-hypit build build.svrun --follow
+hypit build main.svml --target final.video --follow
 ```
 
 ### 7. 诊断或停止本地 Runtime

@@ -43,7 +43,6 @@ const identityFragment = sealGraphFragment({
     root: { kind: "fragment-operation", operation: "produce" },
   }],
 });
-
 function source(id: string, name: string): ResolvedSource {
   return resolveSelfDescribedTextSource({ id, name, text: `<?svml using="${frontendId}"?>\nidentity` });
 }
@@ -63,8 +62,11 @@ test("Source Closure hygienizes author provenance across imported Sources", asyn
     decode(unit) {
       return {
         records: [{ id: "value", type: identityType, value: (unit.name) }],
-        components: [],
+        components: [{ id: "generated", fragment: identityFragment, inputs: {},
+          outputs: { result: "generated.value" } }],
         exports: [{ name: "value", ref: { kind: "record", id: "value" }, type: identityType }],
+        retainedOutputs: [{ name: "generated.value",
+          ref: { kind: "component-output", component: "generated", output: "result" }, type: identityType }],
         provenance: [{
           range: { start: 1, end: 9 },
           records: ["value"],
@@ -91,6 +93,43 @@ test("Source Closure hygienizes author provenance across imported Sources", asyn
   assert.equal(compiled.program.records.some((record) => record.id === mainRecord), true);
   assert.equal(compiled.program.records.some((record) => record.id === childRecord), true);
   assert.notEqual(bySource.get("main")?.inputs[0]?.id, bySource.get("child")?.inputs[0]?.id);
+  assert.deepEqual(compiled.retainedOutputs.map((output) => output.name), [
+    "child/generated.value",
+    "generated.value",
+  ]);
+  assert.equal(compiled.retainedOutputs.every((output) => output.ref.kind === "logical-output"), true);
+});
+
+test("retained Output identity rejects one Source reached through multiple aliases", async () => {
+  const frontends = new AuthorFrontendRegistry();
+  frontends.register({
+    id: frontendId,
+    discover(unit) {
+      return { modules: [], sources: unit.name === "main" ? [
+        { from: "./child", alias: "first", range: { start: 0, end: 0 } },
+        { from: "./child", alias: "second", range: { start: 0, end: 0 } },
+      ] : [] };
+    },
+    decode(unit) {
+      if (unit.name === "main") return { records: [], components: [], exports: [] };
+      return {
+        records: [],
+        components: [{ id: "generated", fragment: identityFragment, inputs: {},
+          outputs: { result: "generated.value" } }],
+        exports: [],
+        retainedOutputs: [{ name: "generated.value",
+          ref: { kind: "component-output" as const, component: "generated", output: "result" }, type: identityType }],
+      };
+    },
+  });
+  await assert.rejects(compileSourceClosure({
+    entry: source("/project/main", "main"),
+    closure: createResolvedClosure([manifest]),
+    frontends,
+    resolveSource() { return source("/project/child", "child"); },
+  }), (error: unknown) => error instanceof SourceClosureError
+    && error.code === "AMBIGUOUS_RETAINED_OUTPUT_PATH"
+    && /first, second/u.test(error.message));
 });
 
 test("Source Closure identity includes the explicit Frontend for shared Source bytes", async () => {
@@ -141,106 +180,4 @@ test("Source Closure identity includes the explicit Frontend for shared Source b
   assert.equal(sharedUnits.length, 2);
   assert.notEqual(sharedUnits[0]?.id, sharedUnits[1]?.id);
   assert.deepEqual(new Set(compiled.program.records.map((record) => record.id)).size, 2);
-});
-
-test("Source Closure resolves authored realizations to hygienic graph identities", async () => {
-  const frontends = new AuthorFrontendRegistry();
-  frontends.register({
-    id: frontendId,
-    discover() {
-      return { modules: [], sources: [] };
-    },
-    decode() {
-      return {
-        records: [{ id: "accepted", type: identityType, value: "accepted" }],
-        components: [{
-          id: "generated",
-          fragment: identityFragment,
-          inputs: {},
-          outputs: { result: "generated.result" },
-        }],
-        realizations: [{
-          output: { kind: "component-output", component: "generated", output: "result" },
-          record: { kind: "record", id: "accepted" },
-        }],
-        exports: [],
-        provenance: [{
-          range: { start: 0, end: 8 },
-          records: ["accepted"],
-          components: ["generated"],
-          outputs: [{ component: "generated", name: "result", id: "generated.result" }],
-          inputs: [],
-          realizations: [{
-            output: { kind: "component-output", component: "generated", output: "result" },
-            record: { kind: "record", id: "accepted" },
-          }],
-        }],
-      };
-    },
-  });
-  const compiled = await compileSourceClosure({
-    entry: source("/project/main", "main"),
-    closure: createResolvedClosure([manifest]),
-    frontends,
-    resolveSource() {
-      throw new Error("unused");
-    },
-  });
-
-  assert.equal(compiled.realizations.length, 1);
-  const selection = compiled.realizations[0]!;
-  assert.notEqual(selection.output, "generated.result");
-  assert.notEqual(selection.record, "accepted");
-  assert.equal(compiled.graph.outputs.some((output) => output.id === selection.output), true);
-  assert.equal(compiled.program.records.some((record) => record.id === selection.record), true);
-  assert.deepEqual(compiled.provenance.elements[0]?.realizations, [{
-    output: {
-      kind: "component-output",
-      component: compiled.provenance.elements[0]?.components[0]?.id,
-      output: "result",
-    },
-    record: {
-      kind: "record",
-      id: compiled.provenance.elements[0]?.records[0]?.id,
-    },
-  }]);
-});
-
-test("Source Closure rejects a realization whose Record Type differs from its output", async () => {
-  const frontends = new AuthorFrontendRegistry();
-  frontends.register({
-    id: frontendId,
-    discover() {
-      return { modules: [], sources: [] };
-    },
-    decode() {
-      return {
-        records: [{ id: "accepted", type: otherType, value: "wrong type" }],
-        components: [{
-          id: "generated",
-          fragment: identityFragment,
-          inputs: {},
-          outputs: { result: "generated.result" },
-        }],
-        realizations: [{
-          output: { kind: "component-output", component: "generated", output: "result" },
-          record: { kind: "record", id: "accepted" },
-        }],
-        exports: [],
-      };
-    },
-  });
-
-  await assert.rejects(
-    compileSourceClosure({
-      entry: source("/project/main", "main"),
-      closure: createResolvedClosure([manifest]),
-      frontends,
-      resolveSource() {
-        throw new Error("unused");
-      },
-    }),
-    (error: unknown) => error instanceof SourceClosureError
-      && error.code === "REALIZATION_TYPE_MISMATCH",
-  );
 });

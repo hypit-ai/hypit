@@ -100,9 +100,6 @@ export function assertCompositableSurfaceRef(
     throw new Error(`${label} dimensions are invalid.`);
   }
   verifyPictureInterpretation(value.picture, `${label}.picture`);
-  if (value.picture.alphaMode === "premultiplied") {
-    throw new Error(`${label} stored Artifact cannot declare premultiplied alpha.`);
-  }
   if (value.picture.alphaMode === "straight" && !ALPHA_SURFACE_MEDIA_TYPES.has(value.artifact.mediaType)) {
     throw new Error(`${label} straight alpha requires PNG, WebP or WebM media.`);
   }

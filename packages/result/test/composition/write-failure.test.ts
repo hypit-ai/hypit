@@ -5,13 +5,14 @@ import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import test from "node:test";
 
-import { buildResultDirectory, FileBuildResult, FileBuildResultRepository, syncBuildResultOutputs } from "@hypit/result/node";
+import { buildResultDirectory, FileBuildResult, FileBuildResultStore } from "@hypit/result/runtime-storage/node";
+import { syncBuildResultOutputs } from "@hypit/result/runtime-storage";
+import type { BuildResultWriteTarget } from "@hypit/result/runtime-storage";
 import type { BlobRef } from "@hypit/protocol";
 
 import {
-  acceptedRecords,
   structuredType,
-  publication,
+  resultIntent,
   videoType,
 } from "./repository-scenario.js";
 
@@ -20,15 +21,15 @@ test("a failed filesystem sync cannot make a later resource inherit stale bytes"
   try {
     const result = await FileBuildResult.create(root, {
       id: "bld_20260924T100000000Z_0000000001",
-      sourceId: "/project/main.svml",
-      publication: publication(["a", "b", "z"].map((name) => ({ name, output: name })), ["a", "b", "z"]),
+      sourcePath: "/project/main.svml",
+      targets: ["a", "b", "z"],
+      intent: resultIntent(["a", "b", "z"].map((name) => ({ name, record: name }))),
     });
-    const snapshot = (names: readonly string[]) => acceptedRecords({
-      records: names.map((name) => ({ id: name, type: videoType, value: {
+    const snapshot = (names: readonly string[]) => names.map((name) => ({
+      id: name, type: videoType, value: {
         kind: "blob", resource: `res_${name}`, size: 1, mediaType: "video/mp4",
-      } })),
-      bindings: names.map((name) => ({ output: name, record: name })),
-    });
+      },
+    }));
     let fail = true;
     const resources = { async open(blob: BlobRef) {
       if (fail && blob.resource === "res_z") throw new Error("intentional source failure");
@@ -60,20 +61,17 @@ test("Result writer recovers one numeric cursor across file extensions and the 9
     manifest: {
       format: "hypit.build-result@1",
       id: "bld_20260924T110000000Z_0000000001",
-      sourceId: "main.svml",
+      sourcePath: "main.svml",
       targets: ["image"],
       outputs: {},
     },
     writer: {
       resources: { old: "files/file-9999.mp4" },
       values: { old: "values/value-9999.json" },
-      publication: publication([{ name: "image", output: "logical:image" }], ["image"]),
+      intent: resultIntent([{ name: "image" }]),
     },
     sync: {
-      records: acceptedRecords({
-        records: [{ id: "record:image", type: videoType, value: ({ artifact }) }],
-        bindings: [{ output: "logical:image", record: "record:image" }],
-      }),
+      records: [{ id: "record:image", type: videoType, value: ({ artifact }) }],
       resources: { async open() { throw new Error("target owns this test write"); } },
     },
     target: {
@@ -91,23 +89,20 @@ test("Result writer bounds resource writes and drains started work before a fail
     kind: "blob", resource: `res_${String(index).padStart(2, "0")}`,
     size: 1, mediaType: "image/png",
   }));
-  const input = (target: import("@hypit/result").BuildResultWriteTarget) => syncBuildResultOutputs({
+  const input = (target: BuildResultWriteTarget) => syncBuildResultOutputs({
     manifest: {
       format: "hypit.build-result@1" as const,
       id: "bld_20260924T110000001Z_0000000001",
-      sourceId: "main.svml",
+      sourcePath: "main.svml",
       targets: ["images"],
       outputs: {},
     },
     writer: {
       resources: {}, values: {},
-      publication: publication([{ name: "images", output: "logical:images" }], ["images"]),
+      intent: resultIntent([{ name: "images" }]),
     },
     sync: {
-      records: acceptedRecords({
-        records: [{ id: "record:images", type: videoType, value: (artifacts) }],
-        bindings: [{ output: "logical:images", record: "record:images" }],
-      }),
+      records: [{ id: "record:images", type: videoType, value: (artifacts) }],
       resources: { async open() { throw new Error("target owns this test write"); } },
     },
     target,

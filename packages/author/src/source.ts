@@ -20,9 +20,7 @@ import type {
 
 import type {
   AuthorComponent,
-  AuthorRealizationSelection,
   AuthorValueRef,
-  RealizationSelection,
 } from "./author.js";
 import type { AuthorDocumentFrontend } from "./document.js";
 
@@ -45,6 +43,13 @@ export type AuthorSourceExport = {
   readonly type: TypeRef;
 };
 
+/** Package-owned recoverable output; independent of the Source module interface. */
+export type AuthorRetainedOutput = {
+  readonly name: string;
+  readonly ref: AuthorValueRef;
+  readonly type: TypeRef;
+};
+
 export type AuthorInputProvenanceDraft = {
   readonly name: string;
   readonly range: SourceRange;
@@ -58,7 +63,6 @@ export type AuthorElementProvenanceDraft = {
   readonly components: readonly string[];
   readonly outputs: readonly { readonly component: string; readonly name: string; readonly id: string }[];
   readonly inputs: readonly AuthorInputProvenanceDraft[];
-  readonly realizations?: readonly AuthorRealizationSelection[];
 };
 
 export type ResolvedAuthorSourceImport = {
@@ -80,8 +84,8 @@ export type AuthorSourceDecodeContext = {
 export type DecodedAuthorSource = {
   readonly records: readonly TypedRecord[];
   readonly components: readonly AuthorComponent[];
-  readonly realizations?: readonly AuthorRealizationSelection[];
   readonly exports: readonly AuthorSourceExport[];
+  readonly retainedOutputs?: readonly AuthorRetainedOutput[];
   readonly provenance?: readonly AuthorElementProvenanceDraft[];
 };
 
@@ -159,7 +163,6 @@ export type AuthorElementProvenance = {
     readonly id: string;
   }[];
   readonly inputs: readonly AuthorInputProvenance[];
-  readonly realizations?: readonly AuthorRealizationSelection[];
 };
 
 export type AuthorProvenance = {
@@ -178,13 +181,20 @@ export type CompiledSourceExport = {
   readonly ref: GraphValueRef;
 };
 
+export type CompiledRetainedOutput = {
+  /** Source-qualified author name used by the Result surface. */
+  readonly name: string;
+  readonly type: TypeRef;
+  readonly ref: Extract<GraphValueRef, { readonly kind: "logical-output" }>;
+};
+
 /** Domain result of authoring; the Compiler owns how a Source closure is assembled. */
 export type CompiledSourceClosure = {
   readonly closure: SourceClosure;
   readonly program: LinkedProgram;
   readonly graph: AuthorGraph;
-  readonly realizations: readonly RealizationSelection[];
   readonly exports: readonly CompiledSourceExport[];
+  readonly retainedOutputs: readonly CompiledRetainedOutput[];
   readonly provenance: AuthorProvenance;
 };
 

@@ -103,8 +103,22 @@ export async function superviseBuilds(options: {
     for (const execution of await state.execution.list()) {
       if (execution.decision === undefined && execution.startedAt !== undefined) {
         await finishInterrupted(execution.build, "Build executor was lost; its code context is gone. Create a new Build to continue");
-      } else if (execution.decision !== undefined && execution.attention === undefined) {
-        await state.execution.setAttention(execution.build, { step: "result", error: "Result writing was interrupted; run hypit result finish <build-id>" });
+      } else if (execution.decision !== undefined) {
+        // A decided Build has no work left to rerun. Result publication is an
+        // idempotent Runtime responsibility, so restart recovery finishes it
+        // directly instead of asking the user to mutate historical state.
+        try {
+          const writer = createRuntimeResultWriter(options.dataRoot);
+          try { await writer.completeResult(execution); }
+          finally { await writer.close(); }
+        } catch (error) {
+          if (await state.execution.read(execution.build) !== undefined) {
+            await state.execution.setAttention(execution.build, {
+              step: "result",
+              error: error instanceof Error ? error.message : String(error),
+            });
+          }
+        }
       }
     }
     await state.execution.reclaimActionCapacity();

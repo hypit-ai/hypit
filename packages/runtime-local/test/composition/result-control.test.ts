@@ -9,7 +9,7 @@ import {
   createRuntimeEndpointAdapterFacet,
   RuntimeAdapterRegistry,
 } from "@hypit/runtime-local/extension";
-import { FileBuildResultRepository } from "@hypit/result/node";
+import { FileBuildResultStore } from "@hypit/result/runtime-storage/node";
 import { MemoryResourceStore, ProducerRegistry } from "@hypit/executor";
 import { defineEndpoint } from "@hypit/endpoint";
 import { credentialRef } from "@hypit/runtime";
@@ -26,7 +26,6 @@ import {
 import {
   createRuntimeControlFromConfig,
   createRuntimeFromConfig,
-  createRuntimeResultControlFromConfig,
   describeRuntimeConfigEndpoints,
   doctorProjectBuildResultRepository,
   doctorRuntimeConfig,
@@ -52,7 +51,7 @@ test("Build Results belong to the project filesystem without a second selection 
   await mkdir(project, { recursive: true });
   try {
     const local = await openProjectBuildResultRepository(project);
-    assert.ok(local.repository instanceof FileBuildResultRepository);
+    assert.ok(local.repository instanceof FileBuildResultStore);
     assert.deepEqual(local.location, { root: project, path: ".hypit/results" });
     const diagnosed = await doctorProjectBuildResultRepository(project);
     assert.deepEqual(diagnosed.diagnostics, []);
@@ -61,8 +60,6 @@ test("Build Results belong to the project filesystem without a second selection 
     await rm(root, { recursive: true, force: true });
   }
 });
-
-
 test("active Build inspection requires no selected ResourceStore", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-runtime-slice-"));
   const path = join(root, "hypit.runtime.json");
@@ -74,23 +71,6 @@ test("active Build inspection requires no selected ResourceStore", async () => {
     const control = await createRuntimeControlFromConfig(path, { registry, readOnly: true });
     assert.equal(await control.inspect("missing"), undefined);
     await control.close();
-  } finally {
-    await rm(root, { recursive: true, force: true });
-  }
-});
-
-test("Result control opens without loading the Runtime Profile's Endpoint adapters", async () => {
-  const root = await mkdtemp(join(tmpdir(), "hypit-runtime-result-control-"));
-  const path = join(root, "hypit.runtime.json");
-  await writeFile(path, JSON.stringify(profile({
-    dataRoot: ".",
-    endpoints: { unavailable: { use: "package.that.must.not.load" } },
-  })));
-  try {
-    const resultControl = await createRuntimeResultControlFromConfig(path, {
-      registry: new RuntimeAdapterRegistry(),
-    });
-    await resultControl.close();
   } finally {
     await rm(root, { recursive: true, force: true });
   }

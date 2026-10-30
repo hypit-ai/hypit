@@ -17,8 +17,7 @@ import { join } from "node:path";
 import test from "node:test";
 
 import { FileResourceStore } from "../../src/resource-store.js";
-import { FileBuildResultRepository } from "@hypit/result/node";
-import type { BuildResultRepository } from "@hypit/result";
+import { FileBuildResultStore } from "@hypit/result/runtime-storage/node";
 import { EnvironmentCredentialStore } from "@hypit/credential-store-env";
 import { defineEndpoint } from "@hypit/endpoint";
 import type { AsyncEndpoint, EndpointInstance } from "@hypit/endpoint";
@@ -51,7 +50,6 @@ import {
   durableBuildRequest,
   finishClaimedBuild,
   projectRuntimeFixture,
-  publication,
   resultDestination,
   runFixture,
 } from "./local-scenario.js";
@@ -116,8 +114,8 @@ test("a selected file is staged once and remains referenced in the produced stru
       definition: buildDefinition,
       authoring: {
         sourcePath: join(directory, "main.svml"),
-        publication: { outputs: [{ name: "final.document", output: "document", target: true,
-          type: types.document,
+        targets: ["final.document"],
+        intent: { outputs: [{ name: "final.document",
           record: "document:root" }] },
       },
       attachments: [{
@@ -139,7 +137,7 @@ test("a selected file is staged once and remains referenced in the produced stru
     assert.equal(endpointCalls, 1);
     assert.equal(attachmentOpens, 1);
     assert.equal(await work.has(authoredAsset.resource), false);
-    const results = new FileBuildResultRepository(join(directory, "results"));
+    const results = new FileBuildResultStore(join(directory, "results"));
     const resolved = (await results.resolve("bld_20260902T120000009Z_0000000001", "final.document"))!;
     assert.equal(resolved.value.kind, "value");
     if (resolved.value.kind !== "value") throw new Error("expected value document");

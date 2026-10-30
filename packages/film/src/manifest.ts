@@ -3,7 +3,6 @@ import { audioTrackSchema, compositionDependency, compositionTypes, visualTrackS
 import { spatialDependency, spatialTypes } from "@hypit/spatial";
 import { recipeModuleRef, recipeType } from "@hypit/hypit/recipe";
 import { timelineTypes, timelineDependency } from "@hypit/timeline";
-import { mediaDependency, workingPictureSpecSchema } from "@hypit/media";
 
 export const filmModuleRef = { name: "@hypit/film", version: "1" } as const;
 export const filmTypes = {
@@ -27,7 +26,6 @@ const object = (fields: Readonly<Record<string, { readonly schema: ValueSchema; 
 export const filmProgramSchema: ValueSchema = object({
   id: { schema: string },
   clearColor: { schema: string },
-  picture: { schema: workingPictureSpecSchema },
   // Film owns the recursive Plan refinement; admission keeps the envelope domain-neutral.
   visual: { schema: object({ members: { schema: { kind: "array", items: object({}, true) } } }) },
   audio: { schema: { kind: "array", items: { kind: "number", integer: true, minimum: 0 } } },
@@ -52,7 +50,6 @@ export const filmManifest: ModuleManifest = {
     timelineDependency,
     spatialDependency,
     compositionDependency,
-    mediaDependency,
     recipeModuleRef,
   ],
   types: [

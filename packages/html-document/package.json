@@ -20,6 +20,8 @@
   "peerDependencies": { "@hypit/hypit": "workspace:^0.4.0" },
   "devDependencies": {
     "@hypit/author": "workspace:*",
-    "@hypit/markup": "workspace:*"
+    "@hypit/markup": "workspace:*",
+    "@hypit/provider-html-local": "workspace:*",
+    "puppeteer-core": "25.10.0"
   }
 }

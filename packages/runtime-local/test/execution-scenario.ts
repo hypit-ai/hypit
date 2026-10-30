@@ -82,7 +82,7 @@ export type RuntimeBuildFixture = {
 };
 
 export function createGreetingBuildFixture(options?: {
-  readonly generationRealization?: "primary" | "placeholder";
+  readonly generationStep?: "remote" | "placeholder";
   readonly targetOutputs?: readonly (keyof typeof outputRecords)[];
 }): RuntimeBuildFixture {
   const targets = options?.targetOutputs ?? ["document"];
@@ -90,7 +90,7 @@ export function createGreetingBuildFixture(options?: {
   const unknown = targets.find((target) => outputRecords[target] === undefined);
   if (unknown !== undefined) throw new Error(`unknown Runtime scenario target ${unknown}`);
   const demandGenerated = targets.includes("generated") || targets.includes("document");
-  const generatedRecord = options?.generationRealization === "placeholder"
+  const generatedRecord = options?.generationStep === "placeholder"
     ? "generated:placeholder"
     : outputRecords.generated;
   const steps: ProducerStep[] = [{
@@ -100,7 +100,7 @@ export function createGreetingBuildFixture(options?: {
     result: { kind: "output", name: "prompt", record: outputRecords.prompt },
   }];
   if (demandGenerated) {
-    steps.push(options?.generationRealization === "placeholder"
+    steps.push(options?.generationStep === "placeholder"
       ? {
           id: "placeholder-text",
           producer: producers.placeholderText,
@@ -156,7 +156,7 @@ export function createGreetingBuildFixture(options?: {
 }
 
 export function createGreetingBuild(options?: {
-  readonly generationRealization?: "primary" | "placeholder";
+  readonly generationStep?: "remote" | "placeholder";
   readonly targetOutputs?: readonly (keyof typeof outputRecords)[];
 }): BuildView {
   return createGreetingBuildFixture(options).state;

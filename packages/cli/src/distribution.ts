@@ -1,11 +1,12 @@
 import type { Compiler } from "@hypit/compiler";
 import type { LoadedPackage, LogicalPackageAddress, PackageContribution } from "@hypit/loader";
-import type { BuildResultRepository } from "@hypit/result";
+import type { BuildResultHistory, ResultOutputExporter } from "@hypit/result";
+import type { TypeRef } from "@hypit/protocol";
 import type { Workspace } from "@hypit/workspace";
 import type { CliDiagnostic, CliResultRepositoryLocation, CliRuntimeHost } from "./runtime-port.js";
 
 export type CliCompilerOptions = {
-  /** Canonical containment boundary for Author and Invocation Sources plus source assets. */
+  /** Canonical containment boundary for Author Sources plus source assets. */
   readonly workspaceRoot?: string;
   /** Additional Host-authorized asset roots. These never widen Source imports. */
   readonly assetRoots?: readonly string[];
@@ -61,10 +62,15 @@ export type CliDistribution = {
     readonly distributionPackageRoot?: string;
   }): Promise<{
     readonly location: CliResultRepositoryLocation;
-    readonly repository: BuildResultRepository;
+    readonly repository: BuildResultHistory;
     close(): void | Promise<void>;
   }>;
-  /** Actively diagnose this project's selected Result Store without reading its history. */
+  /** Resolve the package-owned author export for one retained structured Type. */
+  resolveResultOutputExporter?(type: TypeRef, options: {
+    readonly packageRoot: string;
+    readonly distributionPackageRoot?: string;
+  }): Promise<ResultOutputExporter | undefined>;
+  /** Actively diagnose this project's Result storage without reading its history. */
   diagnoseProjectResults(projectRoot: string, options: {
     readonly packageRoot: string;
     readonly distributionPackageRoot?: string;

@@ -48,25 +48,29 @@ test("Text Fine declarations preserve ordered rich content and compile independe
       { name: "frame", ref: { kind: "record", id: "frame" }, type: spatialTypes.frame },
     ],
   };
-  const decoded = await decodeMarkupDeclarations({
-    name: "text.svml",
-    text: `<svml>
+  const source = `<svml>
       <import from="@hypit/text-fine@1" as="fine"/>
       <import source="facts.svml" as="facts"/>
       <fine:Flow id="body" timeline={facts.timeline} during={facts.window}
         within={facts.frame} style={poster} inline-size="hug">
-        <fine:P>before <fine:Span style={poster}>inside</fine:Span><fine:Break/> after</fine:P>
+        <fine:P>
+          before <fine:Span style={poster}>inside</fine:Span><fine:Break/> after
+        </fine:P>
       </fine:Flow>
       <fine:Style id="poster" recipe={facts.recipe} font={facts.font}>
         <fine:Fill color="#ffffff"/>
       </fine:Style>
-    </svml>`,
+    </svml>`;
+  const decode = (newline: "\n" | "\r\n") => decodeMarkupDeclarations({
+    name: "text.svml",
+    text: source.replaceAll("\n", newline),
   }, {
     resolveModule: () => textFineModuleRef,
     syntax,
     compilers,
     sourceImports: [facts],
   });
+  const decoded = await decode("\n");
 
   assert.deepEqual(decoded.exports.map((value) => value.name), ["body.occurrence", "body.visual", "poster"]);
   const spec = decoded.records.find((record) => record.type.name === textFineTypes.itemSpec.name)?.value as TextItemSpec | undefined;
@@ -80,4 +84,8 @@ test("Text Fine declarations preserve ordered rich content and compile independe
     readonly flow?: { readonly inlineSize?: string };
   } | undefined;
   assert.equal(policy?.flow?.inlineSize, "hug");
+
+  const windows = await decode("\r\n");
+  const windowsSpec = windows.records.find((record) => record.type.name === textFineTypes.itemSpec.name)?.value as TextItemSpec | undefined;
+  assert.deepEqual(windowsSpec?.document, spec.document);
 });

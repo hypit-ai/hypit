@@ -18,8 +18,7 @@ import { pathToFileURL } from "node:url";
 import test from "node:test";
 
 import { FileResourceStore } from "../../src/resource-store.js";
-import { FileBuildResultRepository } from "@hypit/result/node";
-import type { BuildResultRepository } from "@hypit/result";
+import { FileBuildResultStore } from "@hypit/result/runtime-storage/node";
 import { EnvironmentCredentialStore } from "@hypit/credential-store-env";
 import { defineEndpoint } from "@hypit/endpoint";
 import type { AsyncEndpoint, EndpointInstance } from "@hypit/endpoint";
@@ -53,7 +52,6 @@ import {
   durableBuildRequest,
   finishClaimedBuild,
   projectRuntimeFixture,
-  publication,
   resultDestination,
   runFixture,
 } from "./local-scenario.js";
@@ -109,10 +107,10 @@ for (const cancellation of ["accepted", "unsupported", "failed-build", "host-fai
       assert.equal(completion.outcome, isFailure ? "failed" : "cancelled");
       assert.equal((await fixture.executionStore.listCapacity()).length, 0);
       assert.equal(await runtime.inspect(first), undefined);
-      const result = await new FileBuildResultRepository(join(directory, "results")).read(first);
+      const result = await new FileBuildResultStore(join(directory, "results")).read(first);
       assert.equal(result?.outcome, completion.outcome);
       assert.equal(result?.operations?.[0]?.receipt?.id, "job-1");
-      assert.equal(result?.operations?.[0]?.status, isFailure ? "pending" : "cancelled");
+      assert.equal(result?.operations?.[0]?.outcome, isFailure ? undefined : "cancelled");
       assert.equal(polls, 0);
       assert.equal(cancels, isFailure ? 0 : 1);
       assert.equal(remoteActive, 1, "local termination does not pretend the cloud task stopped");

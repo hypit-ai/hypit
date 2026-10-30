@@ -4,7 +4,7 @@ import type {
   BuildDefinition,
   CapabilityRef,
   Need,
-  PublicationIntent,
+  ResultIntent,
   Value,
 } from "@hypit/protocol";
 import type { BuildView } from "@hypit/kernel";
@@ -31,8 +31,8 @@ export type CliDiagnostic = {
 
 export type CliBuildAuthoring = {
   readonly sourcePath: string;
-  readonly invocationSourcePath?: string;
-  readonly publication: PublicationIntent;
+  readonly targets: readonly string[];
+  readonly intent: ResultIntent;
 };
 
 export type CliBuildView = {
@@ -43,7 +43,6 @@ export type CliBuildView = {
   readonly issue?: { readonly scope: "result" | "cleanup"; readonly message: string };
   readonly stop?: { readonly cause: "user-cancelled" | "execution-failed"; readonly reason?: string };
   readonly sourcePath?: string;
-  readonly invocationSourcePath?: string;
   readonly targets: readonly string[];
   readonly requests?: { readonly total: number; readonly completed: number };
   readonly acceptedRecords: number;
@@ -95,16 +94,6 @@ export type CliRuntimeControl = {
   close(): void | Promise<void>;
 };
 
-export type CliResultControl = {
-  finishResult(build: string): Promise<{
-    readonly id: string;
-    readonly outcome: "complete" | "failed" | "cancelled";
-    readonly issue?: { readonly scope: "result" | "cleanup"; readonly message: string };
-  } | undefined>;
-  discardSubmission(build: string): Promise<boolean>;
-  close(): void | Promise<void>;
-};
-
 export type CliCredentialControl = {
   describeCredentials(endpoint?: string): Promise<readonly Omit<CliCredentialStatus, "configured">[]>;
   credentials(endpoint?: string): Promise<readonly CliCredentialStatus[]>;
@@ -113,7 +102,7 @@ export type CliCredentialControl = {
   close(): void | Promise<void>;
 };
 
-export type CliRuntime = CliRuntimeControl & CliCredentialControl & CliResultControl & {
+export type CliRuntime = CliRuntimeControl & CliCredentialControl & {
   build(request: {
     readonly id: string;
     readonly definition: BuildDefinition;
@@ -122,7 +111,6 @@ export type CliRuntime = CliRuntimeControl & CliCredentialControl & CliResultCon
     readonly attachments?: readonly BlobAttachment[];
     readonly result: {
       readonly repository: CliResultRepositoryLocation;
-      readonly title?: string;
     };
   }, options?: {
     readonly follow?: boolean;
@@ -174,7 +162,6 @@ export type CliRuntimeHost = {
   ensureExecution(options?: { readonly maxWaitMs?: number }): Promise<{ readonly state: "running" | "stopped" }>;
   createRuntime(options?: { readonly endpoints?: readonly string[] }): Promise<CliRuntime>;
   openControl(options?: { readonly readOnly?: boolean }): Promise<CliRuntimeControl>;
-  openResultControl(): Promise<CliResultControl>;
   openCredentials(endpoint: string): Promise<CliCredentialControl>;
   preflight(options?: { readonly capabilities?: readonly CapabilityRef[]; readonly endpoints?: readonly string[] }): Promise<CliRuntimeDoctorResult>;
   doctor(options?: { readonly capabilities?: readonly CapabilityRef[]; readonly endpoints?: readonly string[] }): Promise<CliRuntimeDoctorResult>;

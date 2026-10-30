@@ -1,6 +1,6 @@
 import { sameType } from "@hypit/hypit/protocol";
 import type { ProducerRef, ProducerStep, Value, TypeRef, TypedRecord } from "@hypit/hypit/protocol";
-import type { BuildView, SelectedOutputRecord } from "@hypit/hypit/kernel";
+import type { BuildView, ResolvedOutputRecord } from "@hypit/hypit/kernel";
 import { temporalTypes } from "@hypit/temporal";
 import type {
   StudioTemporalBinding,
@@ -147,11 +147,11 @@ export function executedTemporalProjection(
 
 function closure(
   state: ExecutedGraph,
-  selections: readonly SelectedOutputRecord[],
+  outputs: readonly ResolvedOutputRecord[],
   output: string,
 ): ReadonlySet<string> {
-  const selected = selections.find((selection) => selection.output === output);
-  if (selected === undefined) return new Set();
+  const resolved = outputs.find((item) => item.output === output);
+  if (resolved === undefined) return new Set();
   const producers = producingSteps(state);
   const steps = new Set<string>();
   const records = new Set<string>();
@@ -163,7 +163,7 @@ function closure(
     steps.add(step.id);
     for (const child of Object.values(step.inputs)) visit(child);
   };
-  visit(selected.record);
+  visit(resolved.record);
   return steps;
 }
 
@@ -173,13 +173,13 @@ function closure(
  */
 export function executedTemporalBindings(
   state: ExecutedGraph,
-  selections: readonly SelectedOutputRecord[],
+  outputs: readonly ResolvedOutputRecord[],
   output: string,
   identify?: IdentifyTemporalSource,
   relationFor?: FindTemporalRelation,
 ): readonly StudioTemporalBinding[] {
   const records = recordIndex(state);
-  const stepIds = closure(state, selections, output);
+  const stepIds = closure(state, outputs, output);
   const steps = state.plan.steps.filter((step) => stepIds.has(step.id));
   return [...records.values()]
     .filter((record) => sameType(record.type, temporalTypes.instant) || sameType(record.type, temporalTypes.window))

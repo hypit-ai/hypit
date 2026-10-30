@@ -17,7 +17,6 @@
     "@hypit/loader": "workspace:*",
     "@hypit/project": "workspace:*",
     "@hypit/protocol": "workspace:*",
-    "@hypit/invocation": "workspace:*",
     "@hypit/runtime": "workspace:*",
     "@hypit/source": "workspace:*",
     "@hypit/refinement": "workspace:*",
@@ -25,7 +24,6 @@
     "typescript": "5.9.3"
   },
   "devDependencies": {
-    "@hypit/markup": "workspace:*",
     "@hypit/runtime-local": "workspace:*"
   }
 }

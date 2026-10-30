@@ -3,8 +3,8 @@ title: Runtime
 description: 选择执行服务，独立运行 Build，并保留可持续使用的 Result。
 ---
 
-Source 描述作品及其长期 realization 选择；Invocation 选择 Target 与可选的临时 override，
-`.svrun` 可以保存这份 Invocation。Runtime 使用选定服务执行，项目把接受的材料作为普通作者资源保留。
+Source 描述作品及其项目素材引用；每条命令显式选择 Target。
+Runtime 使用选定服务执行这份有限工作，项目把接受的材料作为普通作者资源保留。
 
 | 部分 | 包含内容 |
 | --- | --- |
@@ -90,16 +90,15 @@ hypit runtime status
 `programs prepare|up|status|down` 单独管理这些本地资源和助手。首次推理环境准备可能涉及大量下载，
 应先比较本地准备成本和托管方式，再选择执行路径。
 
-`hypit plan <source>` 检查当前工作需要的能力和轻量就绪状态。Source 可以是带显式 Target
-的 Author Source，也可以是已保存的 `.svrun` Invocation Source。发现 Provider 能力需要可加载的包声明；
+`hypit plan <source> --target <output>` 检查当前工作需要的能力和轻量就绪状态。发现 Provider 能力需要可加载的包声明；
 没有明确 binding 时，可能需要加载其他已声明 Endpoint。未使用的服务不必启动或登录。
 `build` 不做安装准备：依赖已就绪时，按需启动 Worker 并提交一次 Build。
-[Invocation 与 Build](../quickstart/run.md) 说明规划、价格、付费授权和显式复用。
+[Target 与 Build](../quickstart/run.md) 说明规划、价格、付费授权和显式复用。
 
 ## 执行独立于观察终端
 
 ```bash
-hypit build build.svrun --follow
+hypit build main.svml --target final.video --follow
 hypit status <build-id> --watch
 hypit logs <build-id> --lines 80
 ```
@@ -107,8 +106,8 @@ hypit logs <build-id> --lines 80
 Worker 拥有执行。`--follow` 和 `status --watch` 只是观察；关闭终端或等待超时不会取消 Build。
 停止某一次尝试用 `hypit cancel <build-id>`。远程取消尽力而为，已经完成的 Output 会保留。
 
-失败的尝试保持失败。把仍需使用的 Output 导出为项目资源、写入 Author Source，再由新的 Invocation 开启新的 Build。如果执行已经结束，
-只是 Result 保存需要处理，`status` 会指出 `hypit result finish <build-id>`：它只完成待保存工作，
+失败的尝试保持失败。把仍需使用的 Output 导出为项目资源、写入 Author Source，再以显式 Target 提交新 Build。如果执行已经结束，
+只是 Result 保存需要处理，`status` 会报告存储问题；Runtime 在执行服务启动时重试发布，
 不会重新生成素材。
 
 Build 日志保留 Provider 阶段和诊断。`runtime logs` 查看 Worker 启动和进程错误；

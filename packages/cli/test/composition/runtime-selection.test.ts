@@ -51,7 +51,6 @@ test("Runtime-aware commands accept an explicit project without changing relativ
   const project = resolve("another-project");
   for (const command of [
     ["doctor"], ["status", "build-id"], ["activity"], ["cancel", "build-id"],
-    ["result", "finish", "build-id"], ["result", "discard", "build-id"],
     ["auth", "status", "endpoint"], ["auth", "login", "endpoint"], ["auth", "logout", "endpoint"],
   ]) {
     const parsed = parseCommand([...command, "--project", project, "--runtime", "chosen.json"]);
@@ -65,14 +64,14 @@ test("Runtime-aware commands accept an explicit project without changing relativ
 test("argument paths resolve from the application working directory", () => {
   const cwd = resolve("alternate-cwd");
   const parsed = parseCommand([
-    "build", "build.svrun", "--project", "film", "--runtime", "profiles/local.json",
+    "build", "main.svml", "--target", "final.video", "--project", "film", "--runtime", "profiles/local.json",
   ], cwd);
   assert.ok("projectRoot" in parsed && "runtimeProfile" in parsed);
   assert.equal(parsed.projectRoot, join(cwd, "film"));
   assert.equal(parsed.runtimeProfile, join(cwd, "profiles", "local.json"));
 });
 
-test("paths reports project selection, invocation override and no selection without changing the pointer", async () => {
+test("paths reports project selection, argument override and no selection without changing the pointer", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-path-context-"));
   try {
     const profile = join(root, "selected.json");

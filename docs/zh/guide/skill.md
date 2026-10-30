@@ -32,13 +32,13 @@ Skill 提供制作知识，可执行的 `hypit` 包提供命令、组件、Runti
 - 参考笔记解释原片的整体结构和可定位细节。
 - Brief 与 Treatment 分别记录用户目标和 Agent 的创意方案。
 - `.svml` 表达 Script、媒体、组件和合成；`.svs` 保存可复用的 Recipe。
-- `.svrun` 选择 Author Source、本次执行的目标 Output 与临时 realization override。
+- 每条命令显式选择 Author Source 与本次执行的目标 Output。
 - Build Result 留存实际产物与本次执行的事实。
 
 项目组件是视频制作的一部分。它们与项目一起保存，可以表达新的视觉角色、Caption 样式族或图形行为。共享布局或动作的内容可以组织为同一场景，独立图形与字幕继续分开。说话视频用 Script 事件驱动这些关系，纯视觉动画则可以使用作者声明的时钟。需要跨项目共享时，可以通过所有者自己的 scope 发布普通的版本化包。
 
-修改作品时，把 Result 中仍适用的 Output 显式导出为项目资源，并在 Author Source 中选择；失败 Build 已经产出的可用素材也遵循同一路径。新的 Build 执行当前 Author Source 与 Invocation。Studio 显示这份作品，并把支持的编辑写回 Source；Agent 对照目标审看实际成片。
+修改作品时，把 Result 中仍适用的 Output 显式导出为项目资源，并在 Author Source 中选择；失败 Build 已经产出的可用素材也遵循同一路径。新的 Build 执行当前 Author Source 与显式 Target。Studio 显示这份作品，并把支持的编辑写回 Source；Agent 对照目标审看实际成片。
 
 [快速开始](../quickstart.md) 展示与 Agent 一起制作视频的过程。
-[Invocation 与 Build](../quickstart/run.md) 介绍执行和产物复用。
+[Target 与 Build](../quickstart/run.md) 介绍执行和产物复用。
 [Studio](../quickstart/preview.md) 介绍交互预览与编辑。

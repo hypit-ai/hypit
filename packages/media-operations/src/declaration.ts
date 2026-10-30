@@ -320,17 +320,17 @@ const decodePreparedMediaDeclaration: DeclarationDecoder = ({ element, resolveRe
   const spanAuthority = recipe === undefined ? text(element, "span-authority")
     : recipeText(recipe, "span-authority", `${element.name}.recipe`);
   if (spanAuthority !== "video" && spanAuthority !== "audio") throw new Error(`${element.name}.span-authority must be video or audio.`);
-  const pictureValue = recipe === undefined ? (element.attributes.picture ?? "source")
+  const pictureValue = recipe === undefined ? (optionalLiteral(element.attributes.picture, `${element.name}.picture`) ?? "source")
     : (recipe.properties.picture ?? "source");
   if (typeof pictureValue !== "string") throw new Error(`${element.name}.picture must be text.`);
   const pictureName = pictureValue;
-  if (!["source", "sdr-bt709", "bt2100-pq10", "bt2100-hlg10"].includes(pictureName)) {
-    throw new Error(`${element.name}.picture must be source, sdr-bt709, bt2100-pq10 or bt2100-hlg10.`);
+  if (!["source", "sdr-bt709"].includes(pictureName)) {
+    throw new Error(`${element.name}.picture must be source or sdr-bt709.`);
   }
   const picture = video.mode === "none" ? { mode: "none" as const }
     : pictureName === "source" ? { mode: "source" as const }
     : { mode: "explicit" as const,
-      interpretation: namedPictureInterpretation(pictureName as "sdr-bt709" | "bt2100-pq10" | "bt2100-hlg10") };
+      interpretation: namedPictureInterpretation(pictureName as "sdr-bt709") };
   const requestId = `${id}.request`;
   const domainId = `${id}.domain-spec`;
   return {
@@ -583,7 +583,7 @@ export const preparedMediaAuthorDeclaration = declarationCompiler(
       referenceField("recipe", recipeType, false),
       literalField("video"),
       literalField("audio"),
-      literalField("picture", false, ["source", "sdr-bt709", "bt2100-pq10", "bt2100-hlg10"]),
+      literalField("picture", false, ["source", "sdr-bt709"]),
       literalField("span-authority", false, ["video", "audio"]),
     ],
   },

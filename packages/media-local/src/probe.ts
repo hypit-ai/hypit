@@ -109,16 +109,10 @@ function timestamp(ticks: bigint, timeBase: MediaRational): MediaTimestamp {
 function pictureObservation(stream: FfprobeStream, formats: readonly FfprobePixelFormat[]): PictureObservation {
   const result: { -readonly [Key in keyof PictureObservation]?: PictureObservation[Key] } = {};
   if (stream.color_primaries === "bt709") result.colorPrimaries = "bt709";
-  else if (stream.color_primaries === "smpte432") result.colorPrimaries = "display-p3";
-  else if (stream.color_primaries === "bt2020") result.colorPrimaries = "bt2020";
   if (stream.color_transfer === "iec61966-2-1") result.colorTransfer = "srgb";
   else if (stream.color_transfer === "bt709") result.colorTransfer = "bt709";
-  else if (stream.color_transfer === "linear") result.colorTransfer = "linear";
-  else if (stream.color_transfer === "smpte2084") result.colorTransfer = "pq";
-  else if (stream.color_transfer === "arib-std-b67") result.colorTransfer = "hlg";
   if (stream.color_space === "gbr" || stream.color_space === "rgb") result.colorMatrix = "rgb";
   else if (stream.color_space === "bt709") result.colorMatrix = "bt709";
-  else if (stream.color_space === "bt2020nc") result.colorMatrix = "bt2020-ncl";
   if (stream.color_range === "pc") result.colorRange = "full";
   else if (stream.color_range === "tv") result.colorRange = "limited";
   const format = typeof stream.pix_fmt === "string"
@@ -127,7 +121,7 @@ function pictureObservation(stream: FfprobeStream, formats: readonly FfprobePixe
   const componentDepths = [...new Set((format?.components ?? [])
     .map((component) => positiveInteger(component.bit_depth)).filter((value): value is number => value !== undefined))];
   const bitDepth = rawDepth ?? (componentDepths.length === 1 ? componentDepths[0] : undefined);
-  if (bitDepth === 8 || bitDepth === 10 || bitDepth === 12 || bitDepth === 16) result.bitDepth = bitDepth;
+  if (bitDepth === 8) result.bitDepth = bitDepth;
   if (format !== undefined) result.alphaMode = integer(format.flags?.alpha) === 1 ? "straight" : "opaque";
   return result;
 }

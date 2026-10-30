@@ -5,7 +5,6 @@
   <import as="audio" from="@hypit/audio-track@1"/>
   <import as="text" from="@hypit/text@1"/>
   <import as="asset" from="@hypit/media@1"/>
-  <import as="realization" from="@hypit/realization@1"/>
   <import as="gpt" from="@hypit/gpt-image@1"/>
   <import as="seedance" from="@hypit/seedance@1"/>
   <import as="mediaop" from="@hypit/media-operations@1"/>
@@ -146,8 +145,6 @@
     <seedance:Reference image={presenter.image} person-reference="true"/>
     <seedance:Reference audio={presenter-voice}/>
   </seedance:ReferenceVideo>
-  <realization:Select output={ronaldo-take.video} record={accepted-ronaldo}/>
-  <realization:Select output={messi-take.video} record={accepted-messi}/>
 
   <space:Canvas id="vertical" width="720" height="1280"/>
   <time:Clock id="clock" frame-rate="30"/>
@@ -193,9 +190,9 @@
 
   <!-- Real Build path: generated video -> one shared preparation waist ->
        measured alignment. -->
-  <mediaop:Prepare id="ronaldo-media" source={ronaldo-take.video}
+  <mediaop:Prepare id="ronaldo-media" source={accepted-ronaldo}
     video="primary-moving" audio="default" span-authority="video"/>
-  <mediaop:Prepare id="messi-media" source={messi-take.video}
+  <mediaop:Prepare id="messi-media" source={accepted-messi}
     video="primary-moving" audio="default" span-authority="video"/>
   <whisperx:Transcription id="ronaldo-semantic-transcription" media={ronaldo-media.media} language="en"/>
   <speechalign:Alignment id="ronaldo-semantic" narrative={story}

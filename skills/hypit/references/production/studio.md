@@ -1,6 +1,6 @@
 # Work in Studio
 
-Read this when opening an Author Source and Invocation, choosing its interface language, using its timeline and Inspector, or giving a project component a
+Read this when opening an Author Source with explicit Targets, choosing its interface language, using its timeline and Inspector, or giving a project component a
 useful Studio presentation. For component implementation, read [Companion authoring](studio-companions.md).
 [Review](review.md) owns the judgment made from the visible work;
 [Track authoring](track-authoring.md) owns the component's production behavior.
@@ -14,23 +14,23 @@ hypit studio --source main.svml --target final.video
 ```
 
 Supply `--runtime <profile>` when intentionally using a different Profile from the project's
-`hypit runtime use` selection. Studio needs an Invocation whose selected targets reach one Film with resolved
+`hypit runtime use` selection. Studio needs explicit Targets that reach one Film with resolved
 composition and time. The Timeline supplies the work's clock and extent; optional projections
-provide domain evidence such as Script anchors. Pure animation uses the same editor. An image-generation-only Invocation is not a Film view; several distinct
-Films need separate sessions or Invocations.
+provide domain evidence such as Script anchors. Pure animation uses the same editor. Image-generation-only Targets do not form a Film view; several distinct
+Films need separate sessions.
 
-Open the URL actually printed by the process and retain it with the Invocation it serves. For review, open
+Open the URL actually printed by the process and retain it with the Source and Targets it serves. For review, open
 that URL with `#comments` appended, such as `http://localhost:5179/#comments`; this selects the
 Comments view directly. The printed port is authoritative. The default
 requested port is 5179; `--port` selects another, and an occupied port can cause Vite to choose a
-different one. Reuse an existing session when it serves the intended project and Invocation.
+different one. Reuse an existing session when it serves the intended project, Source and Targets.
 
-The startup output identifies the project, input Source, Invocation form, Runtime Profile and selection source.
+The startup output identifies the project, Author Source, Targets and Runtime Profile.
 An explicit `--runtime` applies to this session; the project's default comes from `.hypit/runtime`.
-When launching from another directory, use `--project` to select the project and supply the Source or saved Invocation
+When launching from another directory, use `--project` to select the project and supply the Source
 path from the current directory, as shown in [project boundaries](../creation/project-files.md#establish-the-project-boundary).
 
-Studio watches its loaded Author/Recipe Sources and the saved Invocation Source when present, then recompiles after changes.
+Studio watches its loaded Author/Recipe Sources, then recompiles after changes.
 Changing package code, adding a package import or Studio control, or selecting another
 Runtime or Result repository requires restarting that Studio session.
 Stop only the relevant Studio process; stopping Studio does not cancel a submitted Build.
@@ -54,7 +54,7 @@ hypit studio --source main.svml --target final.video --locale-pack ./studio-ja.j
 For a new translation, copy `locales/en.json` from the installed `@hypit/studio` package.
 Set `locale`, the native language `name`, and `direction` (`ltr` or `rtl`); translate `messages`
 while keeping their IDs and named variables such as `{count}`. Missing entries use English.
-The check command reports missing entries, unknown IDs and invalid variables without opening an Invocation.
+The check command reports missing entries, unknown IDs and invalid variables without opening a Studio session.
 Relative file paths start at the command's working directory. Repeat `--locale-pack` for several
 languages, or pass an installed package's JSON export instead, such as
 `--locale-pack @your-scope/studio-ja/locale.json`. A local file is enough; sharing it as a package
@@ -64,7 +64,7 @@ is optional. Restart Studio to load changed language files. The installed
 ## Discuss the work while composing
 
 When the user is collaborating locally, open the actual composition once a meaningful passage is
-available and keep its Studio URL connected to the current Invocation. Point to the passage, object or
+available and keep its Studio URL connected to the current Source and Targets. Point to the passage, object or
 transition being discussed so the user can give concrete direction. Continue through settled choices;
 showing progress need not become an approval stop. Use the prepared production media and explain
 which passages are already composed. A rendered frame or clip remains useful when it answers the
@@ -115,7 +115,7 @@ compiled HTML Programme and selected resources, captures exact original frames, 
 optional grids. Studio remains the interactive view for playback, sound and editing.
 
 
-When the composition is substantially ready and the user can access it, open the current Invocation at
+When the composition is substantially ready and the user can access it, open the current Source and Targets at
 `#comments` for discussion and introduce Comments and Studio together. Comments lets the user
 pause and leave direction at a time; Studio shows the timeline, component relationships and exposed
 parameters they can adjust. Both views stay with the same work and playhead. Browser playback does not render an MP4,
@@ -158,12 +158,12 @@ include when the user wants to continue editing on another machine.
 
 | View | What it shows and what it can change |
 | --- | --- |
-| Source | The exact Author closure and optional saved Invocation Source. Select a file and use Edit source; changes save automatically, and Cmd/Ctrl+S saves immediately. Check save/error state. This is not a project filesystem browser. |
+| Source | The exact Author closure. Select a file and use Edit source; changes save automatically, and Cmd/Ctrl+S saves immediately. Check save/error state. This is not a project filesystem browser. |
 | Preview | The selected Film composition evaluated from its compiled HTML Programme in the browser. Play or seek with the transport or timeline. Selecting a component-declared visual part selects its corresponding timeline Item; adjust its exposed position in the Inspector. |
 | Timeline | Projected domain evidence, resolved named Instants, plus component-projected Track Items and their visible intervals, materials or event lanes. A rectangle may describe occupancy, activation or persistent visibility; read the component's meaning. |
-| Inspector | With nothing selected, project, Canvas, time and Invocation facts. For a selected Item, its declared read-only facts and adjustable fields, organized under Where, When and How where applicable. |
-| Tasks | One card per Build, grouped into ongoing and finished. Active status and progress come from the selected Runtime; completed, failed and cancelled Builds come from project Results. Cards retain an Invocation Source when one was saved, times and any failure or attention reason. |
-| Artifacts | Image, video and audio file Outputs from project Results, including those already published by ongoing Builds. Use the sidebar to choose all media, videos, images or audio. View media on a Build opens its Outputs; opening the Artifacts tab returns to project media. Structured Outputs such as prepared media and NarrativeAlignment stay intact and do not add their internal files to this gallery. Click a card to view it in the central preview; video and audio have playback and a time slider. Back to composition returns to the existing composition position. Previewing a file does not modify the Author Source; accepting it requires an explicit project export and authored declaration. |
+| Inspector | With nothing selected, project, Canvas, time and Target facts. For a selected Item, its declared read-only facts and adjustable fields, organized under Where, When and How where applicable. |
+| Tasks | One card per Build, grouped into ongoing and finished. Active status and progress come from the selected Runtime; completed, failed and cancelled Builds come from project Results. Cards show their Author Source, Targets, times and any failure or attention reason. |
+| Artifacts | Retained image, video and audio file Outputs from project Results, including those already stored by ongoing Builds. Use the sidebar to choose all media, videos, images or audio. View media on a Build opens its Outputs; opening the Artifacts tab returns to project media. Structured Outputs stay intact and do not add their internal resources to this gallery. Click a card to view it in the central preview; video and audio have playback and a time slider. Back to composition returns to the existing composition position. Previewing a file does not modify the Author Source; accepting it requires an explicit `hypit result export` and authored declaration. |
 
 A declared lane stays one row even when items overlap. Later items cover earlier ones at equal
 stacking order; selecting an item brings its full rectangle forward within that lane. This changes
@@ -179,13 +179,11 @@ Open either library tab or click Refresh to read its latest state. These lists d
 Refresh replaces the view; scrolling to the end loads more. Media categories query matching files
 across Result pages, so an intervening Build without that kind of media does not require a separate action. A failed refresh keeps the
 previous view and displays the error. Multiple references to one stored file share a media card;
-its source details retain the originating Builds and Outputs. Highlighted Outputs appear first.
-Names show up to two lines. Double-click a name or press F2 to edit; Enter or leaving the field
-saves, and Escape cancels. Renaming changes the displayed Output name in the finished Result,
-not its reference identifier or media file.
+its source details retain the originating Builds and Outputs. Each card shows the exact retained
+Output name recorded by the finished Result. Result history is read-only in Studio.
 
 Use [Builds and Results](builds.md) to inspect Output names, export media, finish an incomplete Result,
-or edit Result presentation metadata. Studio reads the same project Result
+and recover interrupted Result finalization. Studio reads the same project Result
 repository. With no Runtime selected, finished Results remain accessible; preview works when its
 display closure needs no unresolved Endpoint work. Active Runtime status and transient Endpoint
 processing require the selected environment.
@@ -193,11 +191,11 @@ processing require the selected environment.
 Studio opens the selected work for interactive playback and editing. It creates no Build and submits
 no paid generation. It can preview deterministic package behavior and use immediate authoring tools
 offered by the selected Provider, such as media inspection and frame or audio extraction.
-The view reads project resources and authored realization choices, plus any Invocation-local override.
+The view reads project resources and the fixed references authored by their consumers.
 If a required generation
 is still running, continue component work and open its resulting composition when the material is ready.
 
-[Invocations](runs.md) explains Targets and transient overrides. [Snapshots](snapshots.md) captures the current picture
+[Targets](targets.md) explains the selection. [Snapshots](snapshots.md) captures the current picture
 directly with `hypit snapshot --studio <this-studio-url>`. [Rendering](rendering.md) provides frame-range Builds
 for inspecting the composition as encoded media; choose the view that helps answer the current question.
 
@@ -234,9 +232,9 @@ affinity choices and shared-consumer consequences. Marker moves preserve unrelat
 new marker references can use the existing alignment evidence. [Reuse boundaries](authoring.md#reuse-produced-work-explicitly)
 explain when to retain media, its local domain, alignment evidence or only an upstream generated file.
 
-A successful parameter or timeline edit saves the owning Source and recompiles the selected Invocation
-for the view. Rejected edits retain the accepted Source and values. Result renaming instead updates
-Result presentation metadata; it does not change the authored composition or trigger a Build.
+A successful parameter or timeline edit saves the owning Source and recompiles the selected Targets
+for the view. Rejected edits retain the accepted Source and values. Result history remains immutable;
+refer to a submitted attempt by its Source, Targets and Build id.
 
 Source edits outside Studio are observed too. If a stale UI edit conflicts with a newer file, read
 the current Source and retry the intended change against it instead of overwriting the newer work.

@@ -43,9 +43,11 @@ export async function transparentVideoFixture(directory: string, format: "webm" 
     "-f", "lavfi", "-i", "sine=frequency=440:sample_rate=48000:duration=1",
     ...(format === "webm-vp8"
       // The portrait service returns VP8 with audio before the visual stream.
-      ? ["-map", "1:a:0", "-map", "0:v:0", "-c:v", "libvpx", "-pix_fmt", "yuva420p", "-auto-alt-ref", "0", "-c:a", "libopus"]
+      ? ["-map", "1:a:0", "-map", "0:v:0", "-vf", "scale=out_color_matrix=bt709:out_range=tv,format=yuva420p,setparams=color_primaries=bt709:color_trc=bt709:colorspace=bt709:range=tv",
+          "-c:v", "libvpx", "-pix_fmt", "yuva420p", "-auto-alt-ref", "0", "-c:a", "libopus"]
       : format === "webm"
-      ? ["-c:v", "libvpx-vp9", "-pix_fmt", "yuva420p", "-lossless", "1", "-auto-alt-ref", "0", "-c:a", "libopus"]
+      ? ["-vf", "scale=out_color_matrix=bt709:out_range=tv,format=yuva420p,setparams=color_primaries=bt709:color_trc=bt709:colorspace=bt709:range=tv",
+          "-c:v", "libvpx-vp9", "-pix_fmt", "yuva420p", "-lossless", "1", "-auto-alt-ref", "0", "-c:a", "libopus"]
       : ["-c:v", "qtrle", "-pix_fmt", "argb", "-c:a", "pcm_s16le"]),
     "-t", "1", path], rgba);
   return { path, bytes: await readFile(path), mediaType: format === "mov" ? "video/quicktime" : "video/webm" };
@@ -78,7 +80,10 @@ export async function prepareTestVideo(
   verifyMediaInspection(inspection);
   const selection = selectMediaStreams(inspection, {
     video: { mode: "primary-moving" }, audio: { mode: withAudio ? "default" : "none" }, spanAuthority: "video",
-    picture: { mode: "source" },
+    picture: { mode: "explicit", interpretation: {
+      colorPrimaries: "bt709", colorTransfer: "bt709", colorMatrix: "bt709",
+      colorRange: "limited", bitDepth: 8, alphaMode: "straight",
+    } },
   });
   return prepareMedia({ id, source, inspection, selection });
 }

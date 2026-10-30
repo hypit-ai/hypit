@@ -5,9 +5,19 @@ import { join } from "node:path";
 import test from "node:test";
 
 import type { AudioProgram, AudioProgramClip } from "@hypit/audio-program";
-import { exactTemporalValueFromFrames, identityTemporalMap } from "@hypit/temporal";
+import {
+  exactTemporalValueFromFrames,
+  identityTemporalMap,
+  sealTemporalMap,
+} from "@hypit/temporal";
+import type { TemporalMap, TemporalMapPiece } from "@hypit/temporal";
 import { fixtureResource } from "../../../test/fixture-resource.js";
-import { CanonicalPcmReader, renderAudioProgramWav } from "../src/audio-render.js";
+import {
+  audioRenderPlanSourceClips,
+  CanonicalPcmReader,
+  planAudioProgramRender,
+  renderAudioProgramWav,
+} from "../src/audio-render.js";
 
 const frameRate = { numerator: 48_000, denominator: 1 } as const;
 const sampleFrames = 4;
@@ -28,11 +38,11 @@ function wav(samples: readonly number[]): Buffer {
   return bytes;
 }
 
-function sourceClip(): AudioProgramClip {
+function sourceClip(id = "local-clip", targetStartSample = 0): AudioProgramClip {
   return {
-    id: "local-clip",
+    id,
     source: {
-      source: { kind: "blob", resource: fixtureResource("nested-audio"), size: 1, mediaType: "audio/wav" },
+      source: { kind: "blob", resource: fixtureResource("flat-audio"), size: 1, mediaType: "audio/wav" },
       streamIndex: 0,
       presentationStart: { ticks: "0", timeBase: { numerator: 1, denominator: 1 } },
       sourceDomain: domain,
@@ -40,6 +50,33 @@ function sourceClip(): AudioProgramClip {
     },
     preparation: sampling,
     sampling,
+    target: { start: exactTemporalValueFromFrames(targetStartSample, { frameRate }), end: exactTemporalValueFromFrames(targetStartSample + 4, { frameRate }) },
+    targetStartSample,
+    targetEndSampleExclusive: targetStartSample + 4,
+    mixStartSample: targetStartSample,
+    mixEndSampleExclusive: targetStartSample + 4,
+    gain: 1,
+    fadeInSamples: 0,
+    fadeOutSamples: 0,
+  };
+}
+
+function mappedSourceClip(id: string, map: TemporalMap, sourceFrames: number): AudioProgramClip {
+  const sourceDomain = {
+    id: `${id}:source`,
+    duration: exactTemporalValueFromFrames(sourceFrames, { frameRate }),
+  };
+  return {
+    id,
+    source: {
+      source: { kind: "blob", resource: fixtureResource("flat-audio"), size: 1, mediaType: "audio/wav" },
+      streamIndex: 0,
+      presentationStart: { ticks: "0", timeBase: { numerator: 1, denominator: 1 } },
+      sourceDomain,
+      interpretation: { sampleRate: 48_000, channels: 2 },
+    },
+    preparation: identityTemporalMap(sourceDomain),
+    sampling: map,
     target: { start: exactTemporalValueFromFrames(0, { frameRate }), end: exactTemporalValueFromFrames(4, { frameRate }) },
     targetStartSample: 0,
     targetEndSampleExclusive: 4,
@@ -51,37 +88,97 @@ function sourceClip(): AudioProgramClip {
   };
 }
 
-test("the local audio renderer evaluates a child AudioProgram before parent occurrence gain", async () => {
-  const work = await mkdtemp(join(tmpdir(), "hypit-nested-audio-"));
+function sampleMap(id: string, piece: TemporalMapPiece): TemporalMap {
+  return sealTemporalMap({ stages: [{
+    target: { id: `${id}:target`, duration: exactTemporalValueFromFrames(4, { frameRate }) },
+    source: { id: `${id}:source`, duration: exactTemporalValueFromFrames(8, { frameRate }) },
+    pieces: [piece],
+  }] });
+}
+
+test("one request-local audio plan excludes clips outside a partial render and drives the same read", async () => {
+  const first = sourceClip("first", 0);
+  const second = sourceClip("second", 4);
+  const program: AudioProgram = {
+    frameRate, frameCount: 8, sampleRate: 48_000, sampleFrames: 8,
+    graph: {
+      nodes: [
+        { kind: "source", id: "first-source", clip: first },
+        { kind: "source", id: "second-source", clip: second },
+        { kind: "mix", id: "mix", inputs: [
+          { node: "first-source", port: "signal" }, { node: "second-source", port: "signal" },
+        ] },
+      ],
+      output: { node: "mix", port: "signal" },
+    },
+  };
+  const plan = planAudioProgramRender(program, 0, 4);
+  assert.deepEqual(audioRenderPlanSourceClips(plan), [first]);
+  assert.deepEqual(audioRenderPlanSourceClips(planAudioProgramRender(program, 4, 4)), [second]);
+  const work = await mkdtemp(join(tmpdir(), "hypit-partial-audio-"));
   const sourcePath = join(work, "source.wav");
   const outputPath = join(work, "output.wav");
-  await writeFile(sourcePath, wav([1_000, 2_000, 3_000, 4_000]));
+  await writeFile(sourcePath, wav([1, 2, 3, 4]));
   const source = new CanonicalPcmReader(sourcePath, sampleFrames);
   try {
-    const clip = sourceClip();
-    const child: AudioProgram = {
-      frameRate, frameCount: 4, sampleRate: 48_000, sampleFrames: 4,
-      graph: { nodes: [{ kind: "source", id: "source", clip }], output: { node: "source", port: "signal" } },
-    };
-    const parent: AudioProgram = {
-      frameRate, frameCount: 4, sampleRate: 48_000, sampleFrames: 4,
-      graph: { nodes: [{
-        kind: "composition", id: "child", program: child,
-        target: { start: exactTemporalValueFromFrames(0, { frameRate }), end: exactTemporalValueFromFrames(4, { frameRate }) },
-        targetStartSample: 0, targetEndSampleExclusive: 4, sampling,
-        gain: 0.5, fadeInSamples: 0, fadeOutSamples: 0,
-      }], output: { node: "child", port: "signal" } },
-    };
     await renderAudioProgramWav({
-      path: outputPath, program: parent, startSample: 0, sampleFrames: 4,
-      sourceForClip: (value) => {
-        assert.equal(value, clip);
-        return source;
-      },
+      path: outputPath, program, plan, startSample: 0, sampleFrames: 4,
+      sourceForClip: (value) => { assert.equal(value, first); return source; },
     });
     const output = await readFile(outputPath);
-    assert.deepEqual([0, 1, 2, 3].map((index) => output.readInt16LE(44 + index * 4)), [500, 1_000, 1_500, 2_000]);
-    assert.equal(await readFile(`${outputPath}.nested-0.wav`).catch(() => undefined), undefined);
+    assert.deepEqual([0, 1, 2, 3].map((index) => output.readInt16LE(44 + index * 4)), [1, 2, 3, 4]);
+  } finally {
+    source.close();
+    await rm(work, { recursive: true, force: true });
+  }
+});
+
+test("audio sampling delegates reverse, hold, wrap, gap and cubic boundaries to Temporal", async () => {
+  const at = (sample: number) => exactTemporalValueFromFrames(sample, { frameRate });
+  const cases: readonly {
+    readonly name: string;
+    readonly piece: TemporalMapPiece;
+    readonly expected: readonly number[];
+  }[] = [
+    { name: "reverse", piece: {
+      target: { start: at(0), end: at(4) }, sourceAtStart: at(4), rate: { numerator: -1, denominator: 1 },
+    }, expected: [4, 3, 2, 1] },
+    { name: "hold", piece: {
+      target: { start: at(0), end: at(4) }, sourceAtStart: at(2), rate: { numerator: 0, denominator: 1 },
+    }, expected: [3, 3, 3, 3] },
+    { name: "wrap", piece: {
+      target: { start: at(0), end: at(4) }, sourceAtStart: at(7), rate: { numerator: 1, denominator: 1 },
+      wrap: { start: at(0), end: at(8) },
+    }, expected: [8, 1, 2, 3] },
+    { name: "gap", piece: {
+      target: { start: at(0), end: at(2) }, sourceAtStart: at(0), rate: { numerator: 1, denominator: 1 },
+    }, expected: [1, 2, 0, 0] },
+    { name: "cubic", piece: {
+      target: { start: at(0), end: at(4) }, sourceAtStart: at(0),
+      sourceControl1: at(0), sourceControl2: at(0), sourceAtEnd: at(4),
+    }, expected: [1, 1, 2, 3] },
+  ];
+  const work = await mkdtemp(join(tmpdir(), "hypit-audio-temporal-"));
+  const sourcePath = join(work, "source.wav");
+  await writeFile(sourcePath, wav([1, 2, 3, 4, 5, 6, 7, 8]));
+  const source = new CanonicalPcmReader(sourcePath, 8);
+  try {
+    for (const item of cases) {
+      const clip = mappedSourceClip(item.name, sampleMap(item.name, item.piece), 8);
+      const program: AudioProgram = {
+        frameRate, frameCount: 4, sampleRate: 48_000, sampleFrames: 4,
+        graph: { nodes: [{ kind: "source", id: `${item.name}:node`, clip }],
+          output: { node: `${item.name}:node`, port: "signal" } },
+      };
+      const outputPath = join(work, `${item.name}.wav`);
+      await renderAudioProgramWav({
+        path: outputPath, program, startSample: 0, sampleFrames: 4,
+        sourceForClip: () => source,
+      });
+      const output = await readFile(outputPath);
+      assert.deepEqual([0, 1, 2, 3].map((index) => output.readInt16LE(44 + index * 4)),
+        item.expected, item.name);
+    }
   } finally {
     source.close();
     await rm(work, { recursive: true, force: true });

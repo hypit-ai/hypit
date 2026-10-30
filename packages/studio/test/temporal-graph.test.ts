@@ -55,14 +55,14 @@ test("Studio reads Instant lineage and author authority from executed graph edge
   ];
   const state = executedGraph({ programRecords: program, steps, records: executed, goals: ["track"] });
 
-  const selections = [{ output: "visual", record: "track" }];
-  const opaque = executedTemporalBindings(state, selections, "visual");
+  const outputs = [{ output: "visual", record: "track" }];
+  const opaque = executedTemporalBindings(state, outputs, "visual");
   assert.deepEqual(opaque[0]?.projection, {
     kind: "instant", expression: "42f", reference: "absolute", frame: 42,
     source: { scope: "timeline", timelineId: "speech", type: type("@hypit/temporal", "TemporalInstant"), kind: "resolved", id: "deck.card::cue" },
     authority: { kind: "fixed" },
   });
-  const bindings = executedTemporalBindings(state, selections, "visual", (sourceType, value) => {
+  const bindings = executedTemporalBindings(state, outputs, "visual", (sourceType, value) => {
     const held = value as { readonly id?: unknown };
     return sourceType.module.name === "@hypit/narrative" && typeof held.id === "string"
       ? { companion: "narrative", id: "story-on-speech", kind: sourceType.name === "NarrativeMoment" ? "moment" : "source", itemId: held.id }

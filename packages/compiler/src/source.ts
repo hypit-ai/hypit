@@ -21,14 +21,13 @@ import type {
   AuthorFrontend,
   AuthorFrontendRegistryLike,
   AuthorRecordRefiner,
-  AuthorRealizationSelection,
   AuthorSourceDiscovery,
   AuthorSourceExport,
+  AuthorRetainedOutput,
   AuthorSourceUnit,
   AuthorValueRef,
   CompiledSourceClosure,
   DecodedAuthorSource,
-  RealizationSelection,
   ResolvedAuthorSourceImport,
   SourceClosure,
   SourceClosureUnit,
@@ -87,8 +86,8 @@ type HygienicSource = {
   readonly unit: SourceClosureUnit;
   readonly records: readonly TypedRecord[];
   readonly components: readonly AuthorComponent[];
-  readonly realizations: readonly AuthorRealizationSelection[];
   readonly exports: readonly AuthorSourceExport[];
+  readonly retainedOutputs: readonly AuthorRetainedOutput[];
   readonly provenance: readonly AuthorElementProvenance[];
 };
 
@@ -170,10 +169,7 @@ function hygienizeSource(
     ])),
   }));
   const exports = decoded.exports.map((item) => ({ ...item, ref: mapRef(item.ref) }));
-  const realizations = (decoded.realizations ?? []).map((selection) => ({
-    output: mapRef(selection.output) as typeof selection.output,
-    record: mapRef(selection.record) as typeof selection.record,
-  }));
+  const retainedOutputs = (decoded.retainedOutputs ?? []).map((item) => ({ ...item, ref: mapRef(item.ref) }));
   const unitContent = {
     id: unitId,
     name: source.name,
@@ -189,8 +185,8 @@ function hygienizeSource(
     unit: unitContent,
     records,
     components,
-    realizations,
     exports,
+    retainedOutputs,
     provenance: (decoded.provenance ?? []).map((element) => ({
       id: hygienicId("element", unitId, `${element.range.start}:${element.range.end}`),
       source: unitId,
@@ -212,14 +208,6 @@ function hygienizeSource(
         kind: input.kind,
         ...(input.ref === undefined ? {} : { ref: mapRef(input.ref) }),
       })),
-      ...(element.realizations === undefined
-        ? {}
-        : {
-            realizations: element.realizations.map((selection) => ({
-              output: mapRef(selection.output) as typeof selection.output,
-              record: mapRef(selection.record) as typeof selection.record,
-            })),
-          }),
     })),
   };
 }
@@ -234,6 +222,27 @@ function graphRefForExport(
   const output = Object.hasOwn(component.outputs, item.ref.output) ? component.outputs[item.ref.output] : undefined;
   assert(output !== undefined, "UNKNOWN_SOURCE_EXPORT", `export ${item.name} references ${item.ref.component}.${item.ref.output}`);
   return { kind: "logical-output", id: output };
+}
+
+function sourcePaths(entry: HygienicSource, units: readonly HygienicSource[]): ReadonlyMap<string, ReadonlySet<string>> {
+  const byId = new Map(units.map((unit) => [unit.unit.id, unit]));
+  const paths = new Map<string, Set<string>>([[entry.unit.id, new Set([""])]]);
+  const pending = [{ source: entry.unit.id, path: "" }];
+  while (pending.length > 0) {
+    const current = pending.shift()!;
+    const parent = byId.get(current.source);
+    if (parent === undefined) continue;
+    for (const imported of parent.unit.imports) {
+      const candidate = current.path.length === 0 ? imported.alias : `${current.path}/${imported.alias}`;
+      const known = paths.get(imported.source) ?? new Set<string>();
+      // Two distinct paths prove ambiguity; retaining more would only multiply diamond-import work.
+      if (known.has(candidate) || known.size >= 2) continue;
+      known.add(candidate);
+      paths.set(imported.source, known);
+      pending.push({ source: imported.source, path: candidate });
+    }
+  }
+  return paths;
 }
 
 export async function compileSourceClosure(
@@ -372,60 +381,30 @@ export async function compileSourceClosure(
     units,
   };
   const componentsById = new Map(components.map((component) => [component.id, component]));
-  const recordsById = new Map(records.map((record) => [record.id, record]));
-  const outputsById = new Map(graph.outputs.map((output) => [output.id, output]));
-  const realizationByOutput = new Map<string, RealizationSelection>();
-  for (const selection of ordered.flatMap((unit) => unit.realizations)) {
-    const component = componentsById.get(selection.output.component);
-    assert(
-      component !== undefined,
-      "UNKNOWN_REALIZATION_OUTPUT",
-      "realization references unknown component " + selection.output.component,
-      selection.output.component,
-    );
-    const outputId = component.outputs[selection.output.output];
-    assert(
-      outputId !== undefined,
-      "UNKNOWN_REALIZATION_OUTPUT",
-      "realization references unknown output "
-        + selection.output.component + "." + selection.output.output,
-      selection.output.component + "." + selection.output.output,
-    );
-    const output = outputsById.get(outputId);
-    assert(
-      output !== undefined,
-      "UNKNOWN_REALIZATION_OUTPUT",
-      "realization references unknown Logical Output " + outputId,
-      outputId,
-    );
-    const record = recordsById.get(selection.record.id);
-    assert(
-      record !== undefined,
-      "UNKNOWN_REALIZATION_RECORD",
-      "realization references unknown Record " + selection.record.id,
-      selection.record.id,
-    );
-    assert(
-      sameType(output.type, record.type),
-      "REALIZATION_TYPE_MISMATCH",
-      "realization Record " + record.id + " is " + typeName(record.type)
-        + ", not " + typeName(output.type),
-      outputId,
-    );
-    assert(
-      !realizationByOutput.has(outputId),
-      "DUPLICATE_REALIZATION_SELECTION",
-      "Logical Output " + outputId + " has more than one authored realization",
-      outputId,
-    );
-    realizationByOutput.set(outputId, { output: outputId, record: record.id });
-  }
+  const paths = sourcePaths(entry, ordered);
+  const retainedOutputNames = new Set<string>();
+  const retainedOutputs = ordered.flatMap((unit) => {
+    const importPaths = paths.get(unit.unit.id);
+    if (importPaths === undefined) return [];
+    assert(unit.retainedOutputs.length === 0 || importPaths.size === 1,
+      "AMBIGUOUS_RETAINED_OUTPUT_PATH",
+      `${unit.unit.name} has retained Outputs but is reachable through multiple import paths: ${[...importPaths].sort(compareCodeUnits).join(", ")}`,
+      unit.unit.name);
+    const prefix = importPaths.values().next().value as string;
+    return unit.retainedOutputs.map((item) => {
+      const ref = graphRefForExport(item, componentsById);
+      assert(ref.kind === "logical-output", "INVALID_RETAINED_OUTPUT", `${item.name} is not a Component output`);
+      const name = prefix.length === 0 ? item.name : `${prefix}/${item.name}`;
+      assert(!retainedOutputNames.has(name), "DUPLICATE_RETAINED_OUTPUT", `retained Output ${name} is repeated`, name);
+      retainedOutputNames.add(name);
+      return { name, type: item.type, ref };
+    });
+  }).sort((left, right) => compareCodeUnits(left.name, right.name));
   return {
     closure: sourceClosure,
     program,
     graph,
-    realizations: [...realizationByOutput.values()]
-      .sort((left, right) => compareCodeUnits(left.output, right.output)),
+    retainedOutputs,
     provenance: {
       format: "hypit.author-provenance@1",
       elements: ordered.flatMap((unit) => unit.provenance),

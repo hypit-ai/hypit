@@ -246,16 +246,6 @@ function sampleElements(
     };
     return { ...samplingElement, children: [{ ...appearanceElement, children: [{ ...mappingElement, children: [media] }] }] };
   }
-  if (layer.source.kind === "composition") {
-    const media: VisualElement = {
-      id: layer.id,
-      kind: "composition",
-      composition: structuredClone(layer.source.composition),
-      sampling: structuredClone(temporalSampling),
-      style: mediaStyle,
-    };
-    return { ...samplingElement, children: [{ ...appearanceElement, children: [{ ...mappingElement, children: [media] }] }] };
-  }
   const media: VisualElement = {
     id: layer.id,
     kind: "surface",

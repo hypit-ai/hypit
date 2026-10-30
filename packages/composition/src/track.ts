@@ -11,7 +11,6 @@ import {
   verifyPreparedAudioSource,
   verifyPreparedVisualSource,
   verifyPictureInterpretation,
-  verifyWorkingPictureSpec,
 } from "@hypit/media";
 import type {
   CompositableSurfaceRef,
@@ -19,7 +18,6 @@ import type {
   PictureInterpretation,
   PreparedAudioSource,
   PreparedVisualSource,
-  WorkingPictureSpec,
 } from "@hypit/media";
 import {
   assertTemporalMap,
@@ -37,7 +35,11 @@ export type VisualElementBase = {
   readonly id: string;
 };
 
-/** A renderer-interpreted local program. Its format and payload belong to its rendering package. */
+/**
+ * A renderer-interpreted local program. Its format, payload and dependency
+ * meaning belong to its rendering package; artifacts are only the generic
+ * resource closure required by graph execution.
+ */
 export type VisualProgram = {
   readonly format: string;
   readonly payload: { readonly [key: string]: CanonicalValue };
@@ -329,17 +331,6 @@ export type VisualSurfaceElement = VisualElementBase & {
 };
 
 /**
- * One recursively sampled child Composition. The child remains a closed A/V work;
- * this visual carrier selects only its final picture for the containing Present.
- */
-export type VisualCompositionElement = VisualElementBase & {
-  readonly kind: "composition";
-  readonly composition: Composition;
-  /** Occurrence-local target time to child-Composition local time. */
-  readonly sampling: TemporalMap;
-};
-
-/**
  * Structural elements and explicit renderer programs compose in one owned tree.
  *
  * A Present holds exactly one recursive root. **Position is measured from that parent, not from the Canvas.**
@@ -347,7 +338,7 @@ export type VisualCompositionElement = VisualElementBase & {
  * or every child lands offset by it — which draws without complaint and is wrong by exactly the
  * distance the parent sits from the corner.
  */
-export type VisualElement = VisualProgramElement | VisualMaskElement | VisualTextElement | VisualTextFlowElement | VisualPathTextElement | VisualMediaElement | VisualSurfaceElement | VisualCompositionElement;
+export type VisualElement = VisualProgramElement | VisualMaskElement | VisualTextElement | VisualTextFlowElement | VisualPathTextElement | VisualMediaElement | VisualSurfaceElement;
 
 export type VisualItemBase = {
   readonly id: string;
@@ -477,18 +468,6 @@ export function readAudioGainProcess(program: AudioProcessProgram): number {
 export type AudioGraphNode =
   | { readonly kind: "silence"; readonly id: string }
   | { readonly kind: "source"; readonly id: string; readonly clip: AudioClip }
-  | {
-      readonly kind: "composition";
-      readonly id: string;
-      readonly composition: Composition;
-      readonly target: TemporalRange;
-      /** Occurrence-local target time to child-Composition local time. */
-      readonly sampling: TemporalMap;
-      readonly reconstruction?: AudioReconstructionProgram;
-      readonly gain: number;
-      readonly fadeIn: ExactTemporalValue;
-      readonly fadeOut: ExactTemporalValue;
-    }
   | { readonly kind: "mix"; readonly id: string; readonly inputs: readonly AudioSignalRef[] }
   | {
       readonly kind: "process";
@@ -564,8 +543,6 @@ export type VisualTrackOccurrence = {
 };
 
 export type VisualComposition = {
-  /** Renderer-neutral picture semantics shared by stills, video and materialized Surfaces. */
-  readonly picture: WorkingPictureSpec;
   readonly canvas: {
     readonly width: number;
     readonly height: number;
@@ -1070,16 +1047,6 @@ function assertElement(
     }
     return;
   }
-  if (element.kind === "composition") {
-    assertCompositionIdentity(element.composition);
-    const targetDuration = timeline === undefined ? undefined
-      : exactTemporalValueFromFrames(present.span.endFrameExclusive - present.span.startFrame, timeline);
-    const sourceDuration = exactTemporalValueFromFrames(
-      timelineFrameCount(element.composition.timeline), element.composition.timeline,
-    );
-    assertSampling(element.sampling, `${label}.sampling`, targetDuration, sourceDuration);
-    return;
-  }
   if (element.kind === "image" || element.kind === "video") {
     if (element.kind === "image") {
       assertMediaArtifact(element.artifact, `${label}.artifact`);
@@ -1225,14 +1192,6 @@ function normalizeElement(element: VisualElement): VisualElement {
       ...(element.paints === undefined ? {} : { paints: structuredClone(element.paints) as VisualTextPaintLayer[] }),
     };
   }
-  if (element.kind === "composition") {
-    return {
-      ...common,
-      kind: "composition",
-      composition: structuredClone(element.composition),
-      sampling: structuredClone(element.sampling),
-    };
-  }
   if (element.kind === "text-flow" || element.kind === "path-text") {
     const copy = structuredClone(element);
     return {
@@ -1349,19 +1308,6 @@ function audioTrackContent(value: Omit<AudioTrack, "kind">): AudioTrack {
           .sort(([left], [right]) => compareCodeUnits(left, right))
           .map(([port, input]) => [port, { ...input }])),
         program: structuredClone(node.program),
-      };
-    }
-    if (node.kind === "composition") {
-      return {
-        kind: "composition",
-        id: node.id,
-        composition: structuredClone(node.composition),
-        target: structuredClone(node.target),
-        sampling: structuredClone(node.sampling),
-        ...(node.reconstruction === undefined ? {} : { reconstruction: structuredClone(node.reconstruction) }),
-        gain: node.gain,
-        fadeIn: structuredClone(node.fadeIn),
-        fadeOut: structuredClone(node.fadeOut),
       };
     }
     return structuredClone(node);
@@ -1576,34 +1522,6 @@ export function assertAudioTrackIdentity(track: AudioTrack, timeline?: Timeline)
     }
       continue;
     }
-    if (node.kind === "composition") {
-      references.set(node.id, []);
-      assertCompositionIdentity(node.composition);
-      const zero = exactTemporalZero();
-      const timelineDuration = timeline === undefined ? undefined
-        : exactTemporalValueFromFrames(timeline.frameCount, timeline);
-      if (compareExactTemporalValues(node.target.start, zero) < 0
-        || compareExactTemporalValues(node.target.start, node.target.end) >= 0
-        || (timelineDuration !== undefined && compareExactTemporalValues(node.target.end, timelineDuration) > 0)) {
-        throw new Error(`${track.id}.${node.id} target interval is outside Timeline.`);
-      }
-      const targetDuration = subtractExactTemporalValues(node.target.end, node.target.start);
-      const sourceDuration = exactTemporalValueFromFrames(
-        timelineFrameCount(node.composition.timeline), node.composition.timeline,
-      );
-      assertSampling(node.sampling, `${track.id}.${node.id}.sampling`, targetDuration, sourceDuration);
-      if (node.reconstruction !== undefined) {
-        assertAudioReconstructionProgram(node.reconstruction, `${track.id}.${node.id}.reconstruction`);
-      }
-      if (!Number.isFinite(node.gain) || node.gain < 0
-        || compareExactTemporalValues(node.fadeIn, zero) < 0
-        || compareExactTemporalValues(node.fadeIn, targetDuration) > 0
-        || compareExactTemporalValues(node.fadeOut, zero) < 0
-        || compareExactTemporalValues(node.fadeOut, targetDuration) > 0) {
-        throw new Error(`${track.id}.${node.id} gain or fades are invalid.`);
-      }
-      continue;
-    }
     if (node.kind === "mix") {
       if (!Array.isArray(node.inputs) || node.inputs.length === 0) throw new Error(`${track.id}.${node.id} Mix has no inputs.`);
       references.set(node.id, node.inputs);
@@ -1717,7 +1635,6 @@ function compositionContent(value: CompositionDraft, timeline: Timeline): Compos
     id: value.id,
     timeline: structuredClone(timeline),
     visual: {
-      picture: structuredClone(value.visual.picture),
       canvas: { ...value.visual.canvas },
       root: visualScopeContent(value.visual.root),
     },
@@ -1803,7 +1720,6 @@ export function assertVisualCompositionIdentity(composition: VisualComposition, 
     || composition.canvas.height <= 0
     || !/^#[0-9a-f]{6}(?:[0-9a-f]{2})?$/iu.test(composition.canvas.clearColor)
   ) throw new Error("VisualComposition canvas is invalid.");
-  verifyWorkingPictureSpec(composition.picture, "VisualComposition.picture");
   assertVisualScope(composition.root, timeline, "VisualComposition.root");
 }
 

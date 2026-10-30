@@ -7,7 +7,7 @@ import type { BlobRef } from "@hypit/hypit/protocol";
 import { sealTimelineVisual } from "@hypit/media";
 import type { TimelineVisual } from "@hypit/media";
 import type { FrameSpan } from "@hypit/timeline";
-import { verifyCompositableSurfaceFile } from "./surface-validation.js";
+import { verifyCompositableSurfaceFile, verifyPictureArtifactFile } from "./surface-validation.js";
 import { verifyHtmlRasterRequest, verifyHtmlFrameRequest } from "@hypit/html-program";
 import type { HtmlRasterRequest, HtmlFrameRequest, HtmlFrameImages } from "@hypit/html-program";
 import { isStreamingResourceStore } from "@hypit/hypit/endpoint";
@@ -20,7 +20,8 @@ import { requestedFrameRanges } from "./sampling.js";
 import { browserCacheDirectory, browserExecutablePath, configuredBrowserPath, requireBrowserExecutable, selectedBrowserVersion } from "./browser.js";
 import { htmlArtifactRelativePath, stageHtmlProgram } from "./stage.js";
 import { electronExecutablePath, requireElectronExecutable, selectedHtmlRenderer } from "./electron.js";
-import { assertLocalHtmlFrameSupport, assertLocalHtmlRasterSupport, isLocalHtmlHdr10Request } from "./support.js";
+import { assertLocalHtmlFrameSupport, assertLocalHtmlRasterSupport } from "./support.js";
+import type { BrowserOptions } from "./browser.js";
 
 export type HtmlRasterProgress =
   | { readonly phase: "staging" | "encoding" | "storing"; readonly elapsedMs: number }
@@ -38,6 +39,17 @@ export type HtmlRasterOptions = HtmlExecutionOptions & {
   readonly signal?: AbortSignal;
   readonly onDiagnostic?: (diagnostic: import("@hypit/hypit/endpoint").ExecutionDiagnostic) => Promise<void>;
   readonly onProgress?: (event: HtmlRasterProgress) => void;
+};
+
+export type ChromiumHtmlRasterOptions = Omit<HtmlRasterOptions, "renderer" | "electronPath"> & {
+  readonly renderer?: never;
+  readonly electronPath?: never;
+};
+
+export type ElectronHtmlRasterOptions = Omit<HtmlRasterOptions,
+  "renderer" | "electronPath" | keyof BrowserOptions> & {
+  readonly renderer?: never;
+  readonly electronPath: string;
 };
 
 export function resolveExecutionOptions(options: HtmlExecutionOptions) {
@@ -90,9 +102,23 @@ export async function rasterizeHtmlProgram(
   return capture(request, options) as Promise<TimelineVisual>;
 }
 
-export async function rasterizeHtmlFrames(request: HtmlFrameRequest, options: HtmlRasterOptions): Promise<HtmlFrameImages> {
+export async function rasterizeChromiumHtmlProgram(
+  request: HtmlRasterRequest,
+  options: ChromiumHtmlRasterOptions,
+): Promise<TimelineVisual> {
+  return await rasterizeHtmlProgram(request, { ...options, renderer: "chromium" });
+}
+
+export async function rasterizeElectronHtmlProgram(
+  request: HtmlRasterRequest,
+  options: ElectronHtmlRasterOptions,
+): Promise<TimelineVisual> {
+  return await rasterizeHtmlProgram(request, { ...options, renderer: "electron" });
+}
+
+export async function rasterizeHtmlFrames(request: HtmlFrameRequest, options: ChromiumHtmlRasterOptions): Promise<HtmlFrameImages> {
   verifyHtmlFrameRequest(request);
-  return capture(request, options) as Promise<HtmlFrameImages>;
+  return capture(request, { ...options, renderer: "chromium" }) as Promise<HtmlFrameImages>;
 }
 
 async function capture(request: HtmlRasterRequest | HtmlFrameRequest, options: HtmlRasterOptions): Promise<TimelineVisual | HtmlFrameImages> {
@@ -104,7 +130,6 @@ async function capture(request: HtmlRasterRequest | HtmlFrameRequest, options: H
     throw new Error("The Electron renderer produces encoded video; PNG frame capture requires a Chromium Endpoint");
   }
   const gpu = frames === undefined && execution.renderer === "electron";
-  const hdr10 = frames === undefined && isLocalHtmlHdr10Request(request as HtmlRasterRequest);
   const config = { ...execution, chromePath: gpu ? "" : browserExecutablePath(options) };
   const document = request.program;
   const range = frames === undefined
@@ -144,8 +169,7 @@ async function capture(request: HtmlRasterRequest | HtmlFrameRequest, options: H
       + `; decoded source budget ${config.maxDecodedSourceBytes} bytes`
       + (frames === undefined
         ? `; delivery quality ${(request as HtmlRasterRequest).delivery.encoding.quality}; `
-          + `${gpu ? (hdr10 ? "exact HDR source decode, WebGPU P010 transform and libx265 Main10"
-            : "browser decode, WebCodecs H.264 and FFmpeg mux") : "ordered FFmpeg PNG pipe"}; `
+          + `${gpu ? "browser decode, WebCodecs H.264 and FFmpeg mux" : "ordered FFmpeg PNG pipe"}; `
           + `pending frame budget ${config.maxPendingFrameBytes} bytes; FFmpeg ${config.ffmpegPath}`
         : "; PNG output") });
     options.onProgress?.({ phase: "staging", elapsedMs: 0 });
@@ -161,6 +185,9 @@ async function capture(request: HtmlRasterRequest | HtmlFrameRequest, options: H
       frameSelection,
       maxConcurrentArtifacts: config.artifactStagingConcurrency,
       validateSurface: (surface, path, probeSignal) => verifyCompositableSurfaceFile({ surface, path,
+        ffprobePath: config.ffprobePath, processTimeoutMs: config.processTimeoutMs,
+        maxProbeOutputBytes: config.maxProcessOutputBytes, signal: probeSignal! }),
+      validatePicture: (picture, path, probeSignal) => verifyPictureArtifactFile({ picture, path,
         ffprobePath: config.ffprobePath, processTimeoutMs: config.processTimeoutMs,
         maxProbeOutputBytes: config.maxProcessOutputBytes, signal: probeSignal! }),
     });

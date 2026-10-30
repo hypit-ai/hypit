@@ -608,7 +608,8 @@ const decodeTypographyPathMotionDeclaration: DeclarationDecoder = ({ element }) 
 };
 
 function dedent(value: string): string {
-  let text = value.startsWith("\n") ? value.slice(1) : value;
+  let text = value.replaceAll("\r\n", "\n").replaceAll("\r", "\n");
+  if (text.startsWith("\n")) text = text.slice(1);
   let end = text.length;
   while (end > 0 && /\s/u.test(text[end - 1]!)) end -= 1;
   if (end < text.length && text[end] === "\n") text = text.slice(0, end);

@@ -4,7 +4,6 @@ import { assertCanvas } from "@hypit/spatial";
 import type { Canvas } from "@hypit/spatial";
 import { assertTimelineIdentity } from "@hypit/timeline";
 import type { Timeline } from "@hypit/timeline";
-import { verifyWorkingPictureSpec } from "@hypit/media";
 
 import type { FilmProgram, FilmTrackSet, FilmVisualPlanMember } from "./types.js";
 
@@ -16,7 +15,6 @@ function filmProgramContent(value: FilmProgram): FilmProgram {
   return {
     id: value.id,
     clearColor: value.clearColor,
-    picture: structuredClone(value.picture),
     visual: structuredClone(value.visual),
     audio: [...value.audio],
   };
@@ -41,7 +39,6 @@ export function assertFilmProgramIdentity(program: FilmProgram): void {
   if (!/^#[0-9a-f]{6}(?:[0-9a-f]{2})?$/iu.test(program.clearColor)) {
     throw new Error("FilmProgram clear color is invalid.");
   }
-  verifyWorkingPictureSpec(program.picture, "FilmProgram.picture");
   if (program.visual === null || typeof program.visual !== "object" || !Array.isArray(program.visual.members)
     || !Array.isArray(program.audio)) throw new Error("FilmProgram assembly is invalid.");
   const visualSlots = new Set<number>();
@@ -185,7 +182,6 @@ export function compileFilmComposition(
   const composition = sealComposition({
     id: program.id,
     visual: {
-      picture: structuredClone(program.picture),
       canvas: {
         width: canvas.widthPx,
         height: canvas.heightPx,

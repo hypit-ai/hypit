@@ -5,7 +5,6 @@ import {
   pictureInterpretationSchema,
   preparedAudioSourceSchema,
   preparedVisualSourceSchema,
-  workingPictureSpecSchema,
 } from "@hypit/media";
 import { frameSpanSchema, timelineDependency, timelineSchema } from "@hypit/timeline";
 import { exactTemporalValueSchema, temporalDependency, temporalMapSchema } from "@hypit/temporal";
@@ -164,13 +163,6 @@ const pathTextElement = object({ ...base, kind: { schema: { kind: "literal", val
 export const visualImageSchema: ValueSchema = object({ ...base, kind: { schema: { kind: "literal", value: "image" } }, artifact: { schema: mediaBlobRef }, picture: { schema: pictureInterpretationSchema } });
 export const visualVideoSchema: ValueSchema = object({ ...base, kind: { schema: { kind: "literal", value: "video" } }, source: { schema: preparedVisualSourceSchema }, sampling: { schema: temporalMapSchema }, muted: { schema: { kind: "boolean" }, optional: true } });
 export const visualSurfaceSchema: ValueSchema = object({ ...base, kind: { schema: { kind: "literal", value: "surface" } }, surface: { schema: compositableSurfaceSchema }, sampling: { schema: temporalMapSchema, optional: true } });
-export const visualCompositionSchema: ValueSchema = object({
-  ...base,
-  kind: { schema: { kind: "literal", value: "composition" } },
-  // Composition is recursive; its owner refinement validates the complete child.
-  composition: { schema: object({}, true) },
-  sampling: { schema: temporalMapSchema },
-});
 export const visualProgramCarrierSchema = object({ format: { schema: string }, payload: { schema: object({}, true) }, artifacts: { schema: { kind: "array", items: mediaBlobRef } } });
 export const visualProcessEffectSchema: ValueSchema = object({
   inputs: { schema: { kind: "array", minItems: 1, items: string } },
@@ -182,7 +174,7 @@ export const visualProgramSchema: ValueSchema = object({
   program: { schema: visualProgramCarrierSchema },
   slots: { schema: { kind: "array", items: object({ name: { schema: string }, element: { schema: visualNodeEnvelope } }) } },
 });
-export const visualElementSchema: ValueSchema = { kind: "oneOf", variants: [visualMaskSchema, visualTextSchema, textFlowElement, pathTextElement, visualImageSchema, visualVideoSchema, visualSurfaceSchema, visualCompositionSchema, visualProgramSchema] };
+export const visualElementSchema: ValueSchema = { kind: "oneOf", variants: [visualMaskSchema, visualTextSchema, textFlowElement, pathTextElement, visualImageSchema, visualVideoSchema, visualSurfaceSchema, visualProgramSchema] };
 const visualItemBase = { id: { schema: string }, subjectId: { schema: string, optional: true }, span: { schema: frameSpanSchema }, visibility: { schema: { kind: "array", items: frameSpanSchema }, optional: true } } as const;
 export const visualPresentSchema: ValueSchema = object({ ...visualItemBase, kind: { schema: { kind: "literal", value: "present" } }, root: { schema: visualElementSchema } });
 export const visualProcessSchema: ValueSchema = object({
@@ -226,15 +218,6 @@ const audioProcessProgram = audioReconstructionProgramSchema;
 const audioGraphNode: ValueSchema = { kind: "oneOf", variants: [
   object({ kind: { schema: { kind: "literal", value: "silence" } }, id: { schema: string } }),
   object({ kind: { schema: { kind: "literal", value: "source" } }, id: { schema: string }, clip: { schema: audioClip } }),
-  object({
-    kind: { schema: { kind: "literal", value: "composition" } }, id: { schema: string },
-    composition: { schema: object({}, true) },
-    target: { schema: object({ start: { schema: exactTemporalValueSchema }, end: { schema: exactTemporalValueSchema } }) },
-    sampling: { schema: temporalMapSchema },
-    reconstruction: { schema: audioReconstructionProgramSchema, optional: true },
-    gain: { schema: { kind: "number", minimum: 0 } },
-    fadeIn: { schema: exactTemporalValueSchema }, fadeOut: { schema: exactTemporalValueSchema },
-  }),
   object({ kind: { schema: { kind: "literal", value: "mix" } }, id: { schema: string }, inputs: { schema: { kind: "array", minItems: 1, items: audioSignalRef } } }),
   object({ kind: { schema: { kind: "literal", value: "process" } }, id: { schema: string }, inputs: { schema: object({}, true) }, program: { schema: audioProcessProgram } }),
 ] };
@@ -260,7 +243,6 @@ export const compositionSchema: ValueSchema = object({
   id: { schema: string },
   timeline: { schema: timelineSchema },
   visual: { schema: object({
-    picture: { schema: workingPictureSpecSchema },
     canvas: { schema: object({ width: { schema: integer }, height: { schema: integer }, clearColor: { schema: string } }) },
     root: { schema: visualScopeSchema },
   }) },

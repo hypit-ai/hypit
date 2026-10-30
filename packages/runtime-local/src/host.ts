@@ -9,7 +9,6 @@ import { superviseBuilds } from "./supervisor.js";
 
 import {
   createRuntimeControlFromConfig,
-  createRuntimeResultControlFromConfig,
   createRuntimeCredentialsFromConfig,
   createRuntimeFromConfig,
   describeRuntimeConfigEndpoints,
@@ -118,10 +117,6 @@ export async function openLocalRuntimeHost(
       packageRoot: basePackageRoot,
       ...distribution,
       ...(options?.readOnly === undefined ? {} : { readOnly: options.readOnly }),
-    }),
-    openResultControl: async () => await createRuntimeResultControlFromConfig(profile, {
-      packageRoot: basePackageRoot,
-      ...distribution,
     }),
     openCredentials: async (endpoint) => await createRuntimeCredentialsFromConfig(
       profile,

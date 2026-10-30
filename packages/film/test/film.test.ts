@@ -51,8 +51,7 @@ const canvas = sealCanvas({
 });
 const filmProgram = sealFilmProgram({
   id: "main-film",
-  clearColor: "#000000", picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const,
-  visual: { members: [
+  clearColor: "#000000", visual: { members: [
     { kind: "track", id: "background", slot: 1 },
     { kind: "track", id: "title", slot: 0 },
   ] },
@@ -177,7 +176,7 @@ const merged = mergeFragmentContributions(
 const graph: AuthorGraph = sealAuthorGraph({ ...merged });
 
 function build(target: string) {
-  const planned = planBuild(linked, graph, [target], []);
+  const planned = planBuild(linked, graph, [target]);
   return materializeBuild(defineBuild({
     program: linked,
     plan: planned.plan,
@@ -233,8 +232,7 @@ test("Film root preserves repeated closed audio signals independently of AudioTr
   set = appendFilmAudioTrack(set, space, structuredClone(audio));
   const composition = compileFilmComposition(sealFilmProgram({
     id: "repeated-audio",
-    clearColor: "#000000", picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const,
-    visual: { members: [] },
+    clearColor: "#000000", visual: { members: [] },
     audio: [0, 1],
   }), canvas, space, set);
   assert.equal(composition.audio.contributions.length, 2);

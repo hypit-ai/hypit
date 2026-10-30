@@ -52,7 +52,7 @@ export const whisperXTranscriptionAuthorDeclaration: AuthorDeclarationCompiler =
   bindings(declaration) {
     const id = literal(declaration, "id");
     return [{ name: `${id}.transcript`, ref: { kind: "component-output", component: id, output: "transcript" },
-      type: speechEvidenceTypes.transcript }];
+      type: speechEvidenceTypes.transcript, retained: true }];
   },
   async compile({ declaration, resolveReference }) {
     const id = literal(declaration, "id");

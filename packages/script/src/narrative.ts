@@ -80,13 +80,14 @@ function projectCaption(
 
   const tokenIndex = new Map(parsed.tokens.map((token) => [token.id, token.index]));
   const cueBreaks = parsed.captionProjection.breaks.map((breakPoint) => {
-    const next = units.findIndex((unit) => {
+    const following = units.findIndex((unit) => {
       const binding = bindings.find((candidate) => candidate.unitId === unit.id)!;
       const indexes = binding.sourceTokenIds.map((tokenId) => tokenIndex.get(tokenId));
       return indexes.every((index): index is number => index !== undefined)
         && Math.min(...indexes) >= breakPoint.tokenIndex;
     });
-    if (next <= 0 || next === -1) {
+    const next = following === -1 ? units.length : following;
+    if (next <= 0) {
       throw new Error("Caption Cue break must lie between two complete Alignment Units");
     }
     const previous = units[next - 1]!;

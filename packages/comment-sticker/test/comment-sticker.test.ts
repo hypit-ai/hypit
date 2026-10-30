@@ -100,8 +100,6 @@ test("explicit metadata is rendered and the terminal compiler accepts the Track 
     id: "comment-film",
     timeline: space,
     visual: {
-      picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100,
-        alphaMode: "premultiplied" },
       canvas: { width: 1080, height: 1920, clearColor: "#000000" },
       root: { members: [rendered].map(track => ({ kind: "track" as const, id: track.id, track })) },
     },

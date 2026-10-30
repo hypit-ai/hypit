@@ -33,10 +33,10 @@ Installing or importing an arbitrary Source package never grants it CLI or proce
 `createVideoDistribution()` supplies the generic CLI Host with video-product choices:
 
 - `createVideoCompiler()` assembles the selected Author Frontends, package declaration compilers,
-  Markup spellings, Modules and refinements for one invocation;
+  Markup spellings, Modules and refinements for one Author compilation;
 - `createVideoWorkspace()` resolves Source and asset imports from the project and selected
   Distribution without treating arbitrary package directories as projects;
-- `discoverVideoSourcePackages()` discovers the closure named by explicit Invocation and Author imports;
+- `discoverVideoSourcePackages()` discovers the closure named by explicit Author imports;
 - the starter Runtime Profile selects ordinary independently distributed Providers and Credential
   Stores by package name;
 - Local Runtime and Result Repository adapters remain Host concerns and do not enter Author values.

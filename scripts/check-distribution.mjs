@@ -88,7 +88,7 @@ try {
   await hypit(["studio", "--help"]);
 
   const example = join(distribution, "examples", "semantic-composition");
-  for (const name of ["chat.svml", "chat.svrun", "chat.svs", "hypit.runtime.json"]) {
+  for (const name of ["chat.svml", "chat.svs", "hypit.runtime.json"]) {
     await cp(join(example, name), join(project, name));
   }
   const component = join(project, "packages", "chat-scene");
@@ -163,10 +163,13 @@ try {
     if (error.code === "ENOENT") return []; throw error;
   }), [], "npm dependencies must not download an unselected Puppeteer browser");
   await hypit(["doctor", ...scope]);
-  const result = JSON.parse(await hypit(["build", "chat.svrun", ...scope, "--follow", "--max-wait-ms", "180000", "--json"], true));
+  const result = JSON.parse(await hypit([
+    "build", "chat.svml", "--target", "final.video", ...scope,
+    "--follow", "--max-wait-ms", "180000", "--json",
+  ], true));
   assert.equal(result.build.work.outcome, "complete", JSON.stringify(result));
   const output = join(project, "chat.mp4");
-  await hypit(["get", result.build.id, "--project", project, "--output", "final.video", "--to", output]);
+  await hypit(["result", "export", result.build.id, "--project", project, "--output", "final.video", "--to", output]);
   const probe = JSON.parse(await run("ffprobe", ["-v", "error", "-show_streams", "-of", "json", output], true));
   const video = probe.streams.find((stream) => stream.codec_type === "video");
   assert.ok(video, "the exported file must contain video");

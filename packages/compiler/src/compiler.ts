@@ -176,7 +176,7 @@ export class Compiler {
     };
   }
 
-  /** Validate one selected Invocation value through the same Type-owner boundary as authored Records. */
+  /** Validate one selected Build value through the same Type-owner boundary as authored Records. */
   async refineRecord(program: LinkedProgram, record: import("@hypit/protocol").TypedRecord): Promise<void> {
     verifyRecordStructure(program.closure, record);
     await this.#refineRecord(record);

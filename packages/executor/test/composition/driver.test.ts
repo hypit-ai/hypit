@@ -237,7 +237,7 @@ test("the same return Type cannot impersonate another exact capability", async (
   assert.equal(calls, 0);
 });
 
-test("an alternate root is explicitly selected before execution, never by Endpoint return Type", async () => {
+test("the finite BuildDefinition fixes the producer path before execution, never by Endpoint return Type", async () => {
   const { producers, endpoints } = configuredRegistry();
   producers.registerProducer(
     greetingProducers.placeholderText,
@@ -248,7 +248,7 @@ test("an alternate root is explicitly selected before execution, never by Endpoi
   assert.equal(exact.status, "paused");
   assert.equal(exact.blocked[0]?.reason, "missing-endpoint");
   const accepted = await runBuild(new Executor({ producers, endpoints }),
-    createGreetingBuild({ generationRealization: "placeholder" }));
+    createGreetingBuild({ generationStep: "placeholder" }));
   assert.equal(accepted.status, "complete");
   assert.equal(accepted.state.needs.length, 0);
 });

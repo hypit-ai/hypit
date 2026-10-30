@@ -14,8 +14,8 @@ else, whether a video is a generation reference or another input, and which visu
 an exact Font.
 
 Media's syntax-neutral Author declarations own these fields, conditional Font shape, asset requests,
-reference Types and output Records. Markup contributes only the Image, Audio, Video, Font and
-FontStack spellings, plus `WorkingPicture` for an explicitly authored Composition space. Asset resolution remains an explicit compiler capability, and FontStack may
+reference Types and output Records. Markup contributes only the Image, Audio, Video, Font, FontStack
+and Delivery spellings. Asset resolution remains an explicit compiler capability, and FontStack may
 reference authored Font Records regardless of their textual order.
 
 The same module owns `PreparedMedia`: one immutable source Blob, one exact finite local domain and
@@ -23,6 +23,9 @@ the selected visual/audio members' exact maps back to source presentation time. 
 retains coded extent, sample aspect ratio, rotation and the complete `PictureInterpretation` selected
 for those samples; audio interpretation retains its sample and channel facts. Decoding, Film placement, semantic evidence, renderer choice and
 Provider cache remain separate downstream values.
+`preparedVisualExtent` projects those facts to the actual display width and height after pixel aspect
+and quarter-turn rotation. It is geometry, not a reduced aspect-ratio pair: a square-pixel 64×64 source
+therefore remains 64×64.
 
 `PictureInterpretation` is shared by still images, selected video streams and compositable Surfaces.
 It states primaries, transfer, matrix, range, source sample bit depth and alpha semantics. Sharing this
@@ -51,10 +54,11 @@ but those choices do not become graph values or fields of `PreparedMedia`.
 
 ## Terminal delivery
 
-`PictureSignal` is the common source and delivery signal vocabulary. `WorkingPictureSpec` separately
-states the Composition working primaries, transfer, reference white and alpha model. A Program carries
-that same value; it does not establish a second picture authority. Internal
-float precision belongs to a Provider implementation rather than either value. `OutputPictureSpec`
+`PictureObservation` is the inspection vocabulary for source pixel meaning. It can preserve tags that the
+current execution path does not implement so Preparation can reject them accurately. A complete
+`PictureInterpretation` is deliberately narrower: it admits only the two SDR signal families implemented
+by current preparation and rendering. Composition and Program do not carry a selectable or extensible-looking
+working-picture record. `OutputPictureSpec`
 describes a delivery picture: encoded video uses `VideoOutputPictureSpec`, while PNG frame capture uses
 `FrameOutputPictureSpec`. `MediaDeliverySpec` is the author-owned requirement for one finished file. It declares the picture
 profile and matte policy, coded video target, audio target and container once. The pure
@@ -68,32 +72,15 @@ it does not silently transcode them or recover policy from a Provider configurat
 
 These values do not contain encoder names, hardware choices, browser selection, texture handles,
 worker counts or cache budgets. Such facts belong to the selected Provider and Runtime Profile.
-The common values can express wider-gamut and higher-bit-depth requirements without claiming an
-implementation. The local HTML Chromium Endpoint supports opaque BT.709 limited-range 8-bit
-H.264/yuv420p delivery. Its explicitly selected Electron implementation additionally supports one
-closed HDR10 family: linear BT.709 working values with explicit reference white and opaque
-BT.2020/PQ/BT.2020-NCL limited-range HEVC Main10 delivery. Audio delivery remains 48 kHz stereo AAC
-and the finished container remains MP4. Unsupported combinations fail explicitly rather than being approximated.
-
-An author can name the working picture and final delivery independently:
+The current delivery contract is deliberately one complete family: opaque BT.709 limited-range 8-bit
+H.264/yuv420p visual, 48 kHz stereo AAC audio and MP4. The author selects quality and opaque matte:
 
 ```svml
-<media:WorkingPicture id="hdr-working" color-primaries="bt709"
-  color-transfer="linear" reference-white-nits="203"/>
-<media:HdrStaticMetadata id="hdr-metadata"
-  red-x="0.708" red-y="0.292" green-x="0.170" green-y="0.797"
-  blue-x="0.131" blue-y="0.046" white-x="0.3127" white-y="0.3290"
-  min-luminance-nits="0.005" max-luminance-nits="1000"
-  max-content-light-nits="1000" max-frame-average-light-nits="400"/>
-<media:Delivery id="hdr-delivery" profile="hdr10-hevc" quality="high"
-  hdr-static-metadata={hdr-metadata}/>
+<media:Delivery id="delivery" profile="bt709-h264" quality="high" matte="#000000"/>
 ```
 
-`WorkingPicture` is only Composition semantics. `Delivery` is the author-owned finished-file
-requirement. The `hdr10-hevc` profile requires explicit mastering-display and content-light metadata;
-the Provider writes and verifies those values and never derives them by scanning the work. Neither
-declaration selects Electron, an encoder or a display mode. Runtime binding selects an Endpoint that
-can implement the complete request.
+The declaration does not select Chromium, Electron, an encoder or a display mode. Runtime binding selects
+an Endpoint that implements the same complete request.
 
 ## Font files
 

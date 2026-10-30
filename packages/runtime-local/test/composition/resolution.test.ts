@@ -9,7 +9,7 @@ import {
   createRuntimeEndpointAdapterFacet,
   RuntimeAdapterRegistry,
 } from "@hypit/runtime-local/extension";
-import { FileBuildResultRepository } from "@hypit/result/node";
+import { FileBuildResultStore } from "@hypit/result/runtime-storage/node";
 import { MemoryResourceStore, ProducerRegistry } from "@hypit/executor";
 import { defineEndpoint } from "@hypit/endpoint";
 import { credentialRef } from "@hypit/runtime";
@@ -26,7 +26,6 @@ import {
 import {
   createRuntimeControlFromConfig,
   createRuntimeFromConfig,
-  createRuntimeResultControlFromConfig,
   describeRuntimeConfigEndpoints,
   doctorProjectBuildResultRepository,
   doctorRuntimeConfig,
@@ -101,7 +100,7 @@ test("Endpoint inspection, doctor and invoke share one resolver: a contested cap
     assert.equal(contested.length, 1);
     assert.equal(contested[0]!.severity, "error");
     assert.match(contested[0]!.message, /add "bindings": \{ "example\.model@1#generate": "<instance>" \}/u);
-    // Without a finite Invocation plan, doctor inspects the whole Profile and reports the contest as a warning.
+    // Without a finite Target plan, doctor inspects the whole Profile and reports the contest as a warning.
     const idle = (await preflightRuntimeConfig(unbound, { registry })).diagnostics
       .find((item) => item.code === "RUNTIME_CAPABILITY_AMBIGUOUS");
     assert.equal(idle?.severity, "warning");

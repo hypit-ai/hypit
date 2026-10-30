@@ -3,7 +3,7 @@ import { join } from "node:path";
 
 import { materializeHtmlProgram, selectHtmlArtifacts } from "@hypit/html-program";
 import type { HtmlProgram } from "@hypit/html-program";
-import type { CompositableSurfaceRef } from "@hypit/media";
+import type { CompositableSurfaceRef, PictureInterpretation } from "@hypit/media";
 import type { BlobRef } from "@hypit/hypit/protocol";
 import type { FrameSpan } from "@hypit/timeline";
 
@@ -15,6 +15,12 @@ export type HtmlArtifactReader = (
 /** Inspect the completed staged file; its lifetime belongs to the staging caller. */
 export type HtmlSurfaceValidator = (
   surface: CompositableSurfaceRef,
+  path: string,
+  signal?: AbortSignal,
+) => Promise<void>;
+/** Validate a direct still whose author interpretation cannot be recovered from browser state. */
+export type HtmlPictureValidator = (
+  picture: PictureInterpretation,
   path: string,
   signal?: AbortSignal,
 ) => Promise<void>;
@@ -32,9 +38,7 @@ const EXTENSIONS: Readonly<Record<string, string>> = {
 };
 
 function extension(mediaType: string): string {
-  const found = EXTENSIONS[mediaType];
-  if (found === undefined) throw new Error(`HTML renderer does not support Artifact media type ${mediaType}`);
-  return found;
+  return EXTENSIONS[mediaType] ?? ".bin";
 }
 
 export function htmlArtifactRelativePath(document: HtmlProgram, id: string): string {
@@ -54,6 +58,7 @@ export async function stageHtmlProgram(options: {
   readonly directory: string;
   readonly read: HtmlArtifactReader;
   readonly validateSurface?: HtmlSurfaceValidator;
+  readonly validatePicture?: HtmlPictureValidator;
   /** Whole-request absolute selection. Omit only when every frame may be rendered. */
   readonly frameSelection?: readonly FrameSpan[];
   /** Maximum complete Artifact read/write/validation lifecycles in flight. */
@@ -83,6 +88,10 @@ export async function stageHtmlProgram(options: {
   if (options.validateSurface === undefined
     && selected.some(({ entry }) => surfaces.has(entry.id))) {
     throw new Error("HTML renderer Runtime has no Surface-byte validator");
+  }
+  if (options.validatePicture === undefined
+    && selected.some(({ entry }) => entry.kind === "picture" && !surfaces.has(entry.id))) {
+    throw new Error("HTML renderer Runtime has no picture-byte validator");
   }
   let nextArtifact = 0;
   let failure: unknown;
@@ -121,6 +130,8 @@ export async function stageHtmlProgram(options: {
         if (surface !== undefined) {
           // The validator borrows the completed staged file for this call only.
           await options.validateSurface!(structuredClone(surface), path, signal);
+        } else if (selectedArtifact.entry.kind === "picture") {
+          await options.validatePicture!(structuredClone(selectedArtifact.entry.picture), path, signal);
         }
       } catch (error) {
         if (failure === undefined) {

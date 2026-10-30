@@ -9,7 +9,6 @@ It does not launch a browser, encode video, mix audio, or select a local Provide
 An `HtmlProgram` contains:
 
 - the integer frame domain and canvas;
-- the Composition's renderer-neutral working-picture semantics;
 - one self-contained HTML document;
 - typed byte dependencies and their conservative frame usage;
 - typed compositable Surface dependencies;
@@ -34,8 +33,10 @@ the whole Program for playback. The Provider passes the same absolute selection
 to Artifact staging and to this page ABI; the page does not obtain render policy
 from a hidden browser global or infer it from worker assignment.
 
-`HtmlProgram.videoSources` is the compiler-owned terminal source-sampling plan. For direct media it keeps the selected
-visual stream and complete exact `TemporalMap`; for an already rendered Surface it keeps its frame relation. A Provider
+`HtmlProgram.videoSources` is the compiler-owned terminal source-sampling plan. Direct media keeps the selected
+visual stream and its complete exact `TemporalMap`. An already rendered Surface keeps its explicit frame relation
+and `PictureInterpretation`: a Surface is already a discrete frame carrier, so its occurrence is represented by
+compact `sourceFrame`/`sourceRate` runs without adding a second continuous-time evaluator. A Provider
 uses this plan to decode the source samples it needs; it must not recover sampling semantics by
 parsing generated markup. Resource URLs in the HTML remain inert
 `hypit-artifact://` placeholders until execution materializes the program.
@@ -47,23 +48,34 @@ resources; compilation localizes that locator before publishing the Program.
 
 Direct image Artifacts, prepared video sources and compositable Surfaces all retain the same complete
 `PictureInterpretation`; HTML data attributes merely carry that fact into this Program. A Provider
-must check that it can implement every input interpretation and the working picture. It must not infer
+must check that it can implement every input interpretation. It must not infer
 colour meaning from filenames, containers or generated markup.
 
-Nested Compositions remain recursive programmes rather than intermediate video Artifacts. During one
-root compilation, repeated references to the same in-memory child Composition reuse its compiled
-`HtmlProgram`; this cache is request-local and has no author-visible identity. A child document stays
-inert until its occurrence enters the selected render spans. The parent projects those spans through
-the occurrence map and passes the resulting child spans to `prepare`, so unrelated child work remains
-uninitialized. A child `applyFrame` is still invoked for every requested parent frame: the compiler
-does not guess that repeated child-frame numbers make an arbitrary component stateless.
+`HtmlVisual` owns the meaning of every resource it introduces. Its payload declares each dependency as
+either `data` (bytes that are never presented by HTML or CSS) or `picture` (one still image plus its
+complete `PictureInterpretation`). `htmlVisual(...)` derives the generic `VisualProgram.artifacts`
+resource closure from those declarations, and `readHtmlVisual(...)` requires the two representations to
+match exactly. Compilation lowers the same declaration into a discriminated `HtmlArtifact`: `bytes`
+when presentation meaning is absent or carried by another typed table, and `picture` when the browser
+will present the still directly. This is one lowering chain, not a second registry of Artifact purposes.
 
-Child media sources remain part of the root terminal sampling plan. Compilation composes the parent
-occurrence Map with each child source Map and records a Programme-private child-document path plus the
-target element identity. A Provider therefore decodes each selected source sample once under its own
-execution policy and routes it to the exact nested document; it does not render, save and reopen a
-child video. The path is an execution address inside this `HtmlProgram`, not Composition metadata or
-an author identity.
+`data` cannot declare an `image/*`, `audio/*` or `video/*` Blob and must not be installed as an image,
+audio, video or CSS-media source. Component setup may fetch and interpret those bytes as package data.
+An `application/octet-stream` dependency is accepted only on that package contract; neither compiler nor
+Provider inspects authored DOM to invent a purpose. A `picture` dependency must declare `image/*`, and the Provider still verifies that the staged
+bytes decode to exactly one frame with the declared colour interpretation. Timed media belongs in an
+owned media or Surface `VisualElement`, whose prepared stream, clock and sampling plan are explicit.
+
+Every timed media element owns one stable display plane. Authored layout, crop,
+transform and selector identity stay on that plane; the native video and a
+Provider-owned decoded payload slot are private children. All sampled runs of
+one timed Surface share the same plane. A Provider replaces pixels inside the
+slot and never adds a sibling to the authored flex/grid or selector tree.
+
+Each timed media source carries its authored `TemporalMap` directly. Executors bind the shared sided
+Temporal Map evaluator once at their boundary and evaluate each occurrence-local Program frame with
+the `after` side. Reverse boundaries propagate the resulting source side to exact decoded-sample
+selection; there is no renderer-private frame-selection wrapper or second clock model.
 
 ## Execution ABI
 
@@ -89,36 +101,25 @@ execution mechanisms and never become Program fields or graph Results.
 CSS and synchronous frame drawing. Its setup function returns
 `render(localFrame)`. Setup receives `(root, data, context)`, where `context.durationFrames` is the
 owning contribution's exact duration; `localFrame` is relative to that Visual Present or Visual Process.
+Package-local byte dependencies are declared in the same value through the typed `dependencies` field;
+the old untyped second `htmlVisual` argument does not exist.
 `htmlVisualElement(root)` closes one package-owned HTML element tree behind this format. Layout,
 attributes, CSS declarations and HTML keyframes are validated here; Composition receives only the
-Programme envelope and its typed named slots. Components use typed media, text, Surface and nested
-Composition leaves as slot values instead of copying their resource facts into markup.
+Programme envelope and its typed named slots. Components use typed media, text and Surface leaves as
+slot values instead of copying their resource facts into markup.
 
 The HTML compiler also lowers generic Composition `VisualProcess` values. Track-level Processes keep
 their named contributions and independent clocks inline. Scope-level Processes render each named input
 scope into one request-private transparent Picture before invoking the package-owned programme. The typed
-`processPasses` count tells a Provider whether these input surfaces are required; it does not identify an
-effect or prescribe PNG, GPU textures or another transfer mechanism. The HTML format does not know
+`processUsages` topology gives each Process its compiler order, exact stage keys and
+absolute half-open usage spans. A Provider projects the requested frames onto those facts before it
+executes the addressed stages; it does not rediscover Process work by scanning the DOM. The topology
+does not prescribe PNG, GPU textures or another transfer mechanism. The HTML format does not know
 transition or matte effect names.
-
-Nested Scope Process passes remain in their owning child documents. `processPasses` counts the complete
-recursive Programme, and the local Provider executes passes deepest-first before reapplying the requested
-absolute root frame. Nesting therefore does not materialize a child video or change Composition semantics.
 
 Asynchronous resources must be prepared before drawing. A frame callback may
 not race capture. The page ABI and Provider readiness checks settle declared
 fonts, images and frame listeners before pixels are accepted.
-
-## Nested compositions
-
-A Composition visual source lowers recursively to a child `HtmlProgram`; it is not rendered to an
-intermediate video. The compiler resolves the authored Temporal Map to exact child-frame identities,
-and the generated document starts a child browsing context only when its parent render selection needs
-that occurrence. One parent document stores a repeated in-memory child Composition document once while
-each occurrence retains independent runtime state. Frame tables use a shorter lossless private encoding
-only when it is actually smaller. Child source-media plans are likewise lifted into the root Program by
-exact Map composition and retain their nested target address. Documents without nested Composition sources contain none of this
-runtime or data. These are HtmlProgram execution details, not Composition fields or author metadata.
 
 ## HTML picture adjustments
 

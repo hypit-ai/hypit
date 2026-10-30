@@ -12,26 +12,18 @@ import type { CliOutputOptions } from "./output.js";
 import { parseCliGlobalOptions } from "./global-options.js";
 import { parseCliDecimalInteger } from "./decimal-integer.js";
 import { CliUsageError } from "./usage-error.js";
-import type { InvocationRequestOverride } from "@hypit/invocation";
 
 type RawOptions = {
   readonly presentation: CliOutputOptions;
   readonly projectRoot?: string;
   readonly assetRoots: readonly string[];
   readonly targets: readonly string[];
-  readonly overrides: readonly InvocationRequestOverride[];
   readonly endpoints: readonly string[];
   readonly packageRoot?: string;
   readonly runtimeProfile?: string;
   readonly follow: boolean;
   readonly maxWaitMs?: number;
   readonly outputName?: string;
-  readonly title?: string;
-  readonly note?: string;
-  readonly highlightedOutputs: readonly string[];
-  readonly clearTitle: boolean;
-  readonly clearNote: boolean;
-  readonly clearHighlights: boolean;
   readonly limit: number;
   readonly lines: number;
   readonly before?: string;
@@ -76,14 +68,13 @@ function parseArguments(argv: readonly string[], cwd: string): CliCommand {
     case "pricing": {
       const [source, rest] = requiredPositional(tail, `${command} requires one Source`);
       const options = commandOptions(command, rest, cwd,
-        "--runtime", "--package-root", "--project", "--asset-root", "--target", "--override", "--limit");
+        "--runtime", "--package-root", "--project", "--asset-root", "--target", "--limit");
       if (command === "pricing") return {
         command,
         source,
         presentation: options.presentation,
         assetRoots: options.assetRoots,
         targets: options.targets,
-        overrides: options.overrides,
         ...(options.seenOptions.includes("--limit") ? { limit: options.limit } : {}),
         ...optionalProject(options),
         ...optionalRuntime(options),
@@ -95,7 +86,6 @@ function parseArguments(argv: readonly string[], cwd: string): CliCommand {
         presentation: options.presentation,
         assetRoots: options.assetRoots,
         targets: options.targets,
-        overrides: options.overrides,
         limit: options.limit,
         ...optionalProject(options),
         ...optionalRuntime(options),
@@ -103,23 +93,21 @@ function parseArguments(argv: readonly string[], cwd: string): CliCommand {
       };
     }
     case "build": {
-      const [source, rest] = requiredPositional(tail, "build requires one Author Source or Invocation preset");
+      const [source, rest] = requiredPositional(tail, "build requires one Author Source");
       const options = commandOptions(command, rest, cwd,
-        "--runtime", "--package-root", "--project", "--asset-root", "--target", "--override", "--follow", "--max-wait-ms", "--title", "--limit");
+        "--runtime", "--package-root", "--project", "--asset-root", "--target", "--follow", "--max-wait-ms", "--limit");
       return {
         command,
         source,
         presentation: options.presentation,
         assetRoots: options.assetRoots,
         targets: options.targets,
-        overrides: options.overrides,
         limit: options.limit,
         follow: options.follow,
         ...optionalProject(options),
         ...optionalRuntime(options),
         ...optionalPackageRoot(options),
         ...(options.maxWaitMs === undefined ? {} : { maxWaitMs: options.maxWaitMs }),
-        ...(options.title === undefined ? {} : { title: options.title }),
       };
     }
     case "builds": {
@@ -157,20 +145,6 @@ function parseArguments(argv: readonly string[], cwd: string): CliCommand {
         ...(options.outputName === undefined ? {} : { outputName: options.outputName }),
       };
     }
-    case "get": {
-      const [build, rest] = requiredPositional(tail, "get requires one Build id");
-      const options = commandOptions(command, rest, cwd, "--project", "--output", "--to");
-      if (options.outputName === undefined) throw new Error("get requires --output with one public Output name");
-      if (options.destination === undefined) throw new Error("get requires --to with the export destination");
-      return {
-        command,
-        build,
-        outputName: options.outputName,
-        destination: options.destination,
-        presentation: options.presentation,
-        ...optionalProject(options),
-      };
-    }
     case "logs": {
       const [build, rest] = requiredPositional(tail, "logs requires one Build id");
       const options = commandOptions(command, rest, cwd, "--runtime", "--project", "--lines");
@@ -179,7 +153,7 @@ function parseArguments(argv: readonly string[], cwd: string): CliCommand {
     }
     case "status": {
       const [build, rest] = requiredPositional(tail, "status requires one Build id");
-      const options = commandOptions(command, rest, cwd, "--runtime", "--project", "--watch", "--max-wait-ms", "--limit");
+      const options = commandOptions(command, rest, cwd, "--runtime", "--project", "--watch", "--max-wait-ms");
       if (!options.watch && options.maxWaitMs !== undefined) {
         throw new Error("--max-wait-ms applies to status --watch");
       }
@@ -188,7 +162,6 @@ function parseArguments(argv: readonly string[], cwd: string): CliCommand {
         build,
         presentation: options.presentation,
         watch: options.watch,
-        limit: options.limit,
         ...optionalRuntime(options),
         ...(options.maxWaitMs === undefined ? {} : { maxWaitMs: options.maxWaitMs }),
       };
@@ -242,40 +215,25 @@ function parseArguments(argv: readonly string[], cwd: string): CliCommand {
   }
 }
 
-function parseResultCommand(tail: readonly string[], cwd: string): ProjectResultCommand | ExecutionCommand {
+function parseResultCommand(tail: readonly string[], cwd: string): ProjectResultCommand {
   const [action, ...values] = tail;
-  if (action !== "finish" && action !== "discard" && action !== "edit") {
-    throw new Error("result accepts finish, discard or edit");
-  }
+  if (action !== "export") throw new Error("result accepts export");
   const [build, rest] = requiredPositional(values, `result ${action} requires one Build id`);
-  if (action === "finish" || action === "discard") {
-    const options = commandOptions(`result ${action}`, rest, cwd, "--runtime", "--project");
-    return { command: "result", action, build, presentation: options.presentation, ...optionalRuntime(options) };
+  const options = commandOptions("result export", rest, cwd, "--project", "--output", "--to");
+  if (options.outputName === undefined) {
+    throw new Error("result export requires --output with one retained Output name");
   }
-  const options = commandOptions("result edit", rest, cwd,
-    "--project", "--title", "--note", "--highlight", "--clear-title", "--clear-note", "--clear-highlights", "--limit");
-  if (options.title !== undefined && options.clearTitle) throw new Error("--title and --clear-title are mutually exclusive");
-  if (options.note !== undefined && options.clearNote) throw new Error("--note and --clear-note are mutually exclusive");
-  if (options.highlightedOutputs.length > 0 && options.clearHighlights) {
-    throw new Error("--highlight and --clear-highlights are mutually exclusive");
-  }
-  if (options.title === undefined && options.note === undefined && options.highlightedOutputs.length === 0
-    && !options.clearTitle && !options.clearNote && !options.clearHighlights) {
-    throw new Error("result edit requires a presentation change");
+  if (options.destination === undefined) {
+    throw new Error("result export requires --to with the export destination");
   }
   return {
     command: "result",
     action,
     build,
+    outputName: options.outputName,
+    destination: options.destination,
     presentation: options.presentation,
-    highlightedOutputs: options.highlightedOutputs,
-    clearTitle: options.clearTitle,
-    clearNote: options.clearNote,
-    clearHighlights: options.clearHighlights,
-    limit: options.limit,
     ...optionalProject(options),
-    ...(options.title === undefined ? {} : { title: options.title }),
-    ...(options.note === undefined ? {} : { note: options.note }),
   };
 }
 
@@ -321,19 +279,12 @@ function parseOptions(values: readonly string[], cwd: string): RawOptions {
   let projectRoot: string | undefined;
   const assetRoots: string[] = [];
   const targets: string[] = [];
-  const overrides: InvocationRequestOverride[] = [];
   let packageRoot: string | undefined;
   let runtimeProfile: string | undefined;
   let follow = false;
   let maxWaitMs: number | undefined;
   const endpoints: string[] = [];
   let outputName: string | undefined;
-  let title: string | undefined;
-  let note: string | undefined;
-  const highlightedOutputs: string[] = [];
-  let clearTitle = false;
-  let clearNote = false;
-  let clearHighlights = false;
   let limit = 20;
   let lines = 50;
   let before: string | undefined;
@@ -349,7 +300,7 @@ function parseOptions(values: readonly string[], cwd: string): RawOptions {
     if (!item.startsWith("--")) throw new Error(`unexpected positional argument ${item}`);
     const repeatable = item === "--endpoint" || [
       "--json", "--jsonl", "--watch", "--verbose", "--debug",
-      "--no-color", "--follow", "--asset-root", "--highlight", "--target", "--override",
+      "--no-color", "--follow", "--asset-root", "--target",
     ].includes(item);
     if (!repeatable && seenOptions.has(item)) throw new Error(`${item} cannot be repeated`);
     seenOptions.add(item);
@@ -362,12 +313,7 @@ function parseOptions(values: readonly string[], cwd: string): RawOptions {
       assetRoots.push(resolve(cwd, optionValue(global.remaining, index, "--asset-root requires a directory"))); index += 1; continue;
     }
     if (item === "--target") {
-      targets.push(optionValue(global.remaining, index, "--target requires a public Output name")); index += 1; continue;
-    }
-    if (item === "--override") {
-      overrides.push(parseInvocationOverride(optionValue(global.remaining, index,
-        "--override requires <output>=primary or <output>=record:<record>")));
-      index += 1; continue;
+      targets.push(optionValue(global.remaining, index, "--target requires an Author Output name")); index += 1; continue;
     }
     if (item === "--package-root") {
       packageRoot = resolve(cwd, optionValue(global.remaining, index, "--package-root requires a directory")); index += 1; continue;
@@ -376,23 +322,11 @@ function parseOptions(values: readonly string[], cwd: string): RawOptions {
       runtimeProfile = resolve(cwd, optionValue(global.remaining, index, "--runtime requires a Runtime Profile")); index += 1; continue;
     }
     if (item === "--out") {
-      throw new Error("--out does not apply to Build submission; use `get <build-id> --output <name> --to <path>` to export one Result Output");
+      throw new Error("--out does not apply to Build submission; use `result export <build-id> --output <name> --to <path>` to export one retained Result Output");
     }
     if (item === "--output") {
-      outputName = optionValue(global.remaining, index, "--output requires a public Output name"); index += 1; continue;
+      outputName = optionValue(global.remaining, index, "--output requires a retained Output name"); index += 1; continue;
     }
-    if (item === "--title") {
-      title = optionValue(global.remaining, index, "--title requires text"); index += 1; continue;
-    }
-    if (item === "--note") {
-      note = optionValue(global.remaining, index, "--note requires text"); index += 1; continue;
-    }
-    if (item === "--highlight") {
-      highlightedOutputs.push(optionValue(global.remaining, index, "--highlight requires an Output name")); index += 1; continue;
-    }
-    if (item === "--clear-title") { clearTitle = true; continue; }
-    if (item === "--clear-note") { clearNote = true; continue; }
-    if (item === "--clear-highlights") { clearHighlights = true; continue; }
     if (item === "--limit") {
       limit = positiveInteger(optionValue(global.remaining, index, "--limit requires a positive integer"), "--limit");
       index += 1; continue;
@@ -431,13 +365,8 @@ function parseOptions(values: readonly string[], cwd: string): RawOptions {
     presentation: global.presentation,
     assetRoots,
     targets,
-    overrides,
     follow,
     endpoints,
-    highlightedOutputs,
-    clearTitle,
-    clearNote,
-    clearHighlights,
     limit,
     lines,
     watch,
@@ -447,8 +376,6 @@ function parseOptions(values: readonly string[], cwd: string): RawOptions {
     ...(runtimeProfile === undefined ? {} : { runtimeProfile }),
     ...(maxWaitMs === undefined ? {} : { maxWaitMs }),
     ...(outputName === undefined ? {} : { outputName }),
-    ...(title === undefined ? {} : { title }),
-    ...(note === undefined ? {} : { note }),
     ...(before === undefined ? {} : { before }),
     ...(destination === undefined ? {} : { destination }),
     ...(reason === undefined ? {} : { reason }),
@@ -456,20 +383,6 @@ function parseOptions(values: readonly string[], cwd: string): RawOptions {
     ...(credentialFile === undefined ? {} : { credentialFile }),
     ...(source === undefined ? {} : { source }),
   };
-}
-
-function parseInvocationOverride(value: string): InvocationRequestOverride {
-  const separator = value.indexOf("=");
-  const output = separator < 0 ? "" : value.slice(0, separator).trim();
-  const choice = separator < 0 ? "" : value.slice(separator + 1).trim();
-  if (output.length === 0 || choice.length === 0) {
-    throw new Error("--override requires <output>=primary or <output>=record:<record>");
-  }
-  if (choice === "primary") return { output, choice: { kind: "primary" } };
-  if (choice.startsWith("record:") && choice.slice("record:".length).trim().length > 0) {
-    return { output, choice: { kind: "record", record: choice.slice("record:".length).trim() } };
-  }
-  throw new Error("--override requires <output>=primary or <output>=record:<record>");
 }
 
 function requiredPositional(values: readonly string[], message: string): readonly [string, readonly string[]] {

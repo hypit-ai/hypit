@@ -10,11 +10,13 @@ import {
   decodeSpeechTranscriptSource,
   phraseRanges,
   speechEvidenceModuleRef,
+  speechEvidenceTypes,
   speechTranscriptSource,
   transcriptWordsFromEvidence,
   wordsAt,
 } from "../src/index.js";
 import { hypitPackage } from "../src/activation.js";
+import { resultOutputExporterForType, resultOutputExportersFromFacets } from "@hypit/hypit/result";
 
 test("editable transcript Source compiles back to the exact evidence Record", async () => {
   const evidence = {
@@ -45,6 +47,23 @@ test("editable transcript Source compiles back to the exact evidence Record", as
   });
   assert.deepEqual(declared.records.find((record) => record.id === "opening")?.value, evidence);
   assert.deepEqual(transcriptWordsFromEvidence(evidence), [{ text: "<你好 & café>", start: 0.1, end: 0.4 }]);
+});
+
+test("the Speech Evidence package exports retained transcripts as editable author Source", async () => {
+  const evidence = { sampleFrames: 16_000, passages: [{ words: [], chars: [] }] };
+  const exporter = resultOutputExporterForType(
+    resultOutputExportersFromFacets(hypitPackage.facets),
+    speechEvidenceTypes.transcript,
+  );
+  assert.notEqual(exporter, undefined);
+  const exported = await exporter!.export({
+    name: "speech.transcript",
+    type: speechEvidenceTypes.transcript,
+    value: evidence,
+    async openResource() { return undefined; },
+  });
+  assert(exported.bytes instanceof Uint8Array);
+  assert.deepEqual(decodeSpeechTranscriptSource(new TextDecoder().decode(exported.bytes)), evidence);
 });
 
 test("word annotations retain missing times and distinguish word boundaries, overlap and gaps", () => {

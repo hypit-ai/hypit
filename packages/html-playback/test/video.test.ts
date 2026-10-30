@@ -17,8 +17,9 @@ test("PreparedMedia preview samples the HtmlProgram TemporalMap as its timing au
   const domain = { id: "direct-source", duration: exactTemporalValueFromFrames(30,
     { frameRate: { numerator: 30, denominator: 1 } }) };
   const program = {
-    frameRate: { numerator: 30, denominator: 1 }, frameCount: 3,
-    videoSources: [{ kind: "media", id: "direct", startFrame: 0, endFrameExclusive: 3,
+    frameRate: { numerator: 30, denominator: 1 }, frameCount: 3, processUsages: [],
+    videoSources: [{ kind: "media", id: "direct", elementId: "direct",
+      startFrame: 0, endFrameExclusive: 3,
       source: { source: { kind: "blob", resource: "res_direct", size: 1, mediaType: "video/mp4" },
         streamIndex: 0, presentationStart: { ticks: "2", timeBase: { numerator: 1, denominator: 1 } },
         sourceDomain: domain, interpretation: { codedWidth: 16, codedHeight: 9,
@@ -56,8 +57,9 @@ test("browser playback rejects a selected nonzero visual stream instead of playi
   const domain = { id: "alternate-source", duration: exactTemporalValueFromFrames(1,
     { frameRate: { numerator: 30, denominator: 1 } }) };
   const program = {
-    frameRate: { numerator: 30, denominator: 1 }, frameCount: 1,
-    videoSources: [{ kind: "media", id: "alternate", startFrame: 0, endFrameExclusive: 1,
+    frameRate: { numerator: 30, denominator: 1 }, frameCount: 1, processUsages: [],
+    videoSources: [{ kind: "media", id: "alternate", elementId: "alternate",
+      startFrame: 0, endFrameExclusive: 1,
       source: { source: { kind: "blob", resource: "res_alternate", size: 1, mediaType: "video/mp4" },
         streamIndex: 2, presentationStart: { ticks: "0", timeBase: { numerator: 1, denominator: 1 } },
         sourceDomain: domain, interpretation: { codedWidth: 16, codedHeight: 9,
@@ -68,6 +70,49 @@ test("browser playback rejects a selected nonzero visual stream instead of playi
   } as unknown as HtmlProgram;
   assert.throws(() => injectHtmlPlayback("", "", program),
     /cannot select visual stream 2 for alternate/u);
+});
+
+test("browser playback rejects Provider-owned Visual Process passes", () => {
+  const program = { frameRate: { numerator: 30, denominator: 1 }, frameCount: 1,
+    processUsages: [{ order: 1, passes: 2, stageKeys: ["content", "matte"],
+      spans: [{ startFrame: 0, endFrameExclusive: 1 }] }], videoSources: [] } as unknown as HtmlProgram;
+  assert.throws(() => injectHtmlPlayback("", "", program),
+    /does not execute Visual Process input rasterization/u);
+});
+
+test("timed Surface playback consumes the typed source runs behind one stable display plane", async () => {
+  const program = {
+    frameRate: { numerator: 30, denominator: 1 }, frameCount: 3, processUsages: [],
+    videoSources: [{ kind: "surface", id: "surface-run", elementId: "surface-plane",
+      artifactId: "artifact_surface", picture: { colorPrimaries: "bt709", colorTransfer: "bt709",
+        colorMatrix: "bt709", colorRange: "limited", bitDepth: 8, alphaMode: "opaque" },
+      startFrame: 0, endFrameExclusive: 3,
+      sourceFrame: { numerator: 0, denominator: 1 }, sourceRate: { numerator: 1, denominator: 1 },
+      sourceFrameRate: { numerator: 30, denominator: 1 } }],
+  } as unknown as HtmlProgram;
+  const attrs: Record<string, string> = { "data-hypit-src": "surface.mp4" };
+  const listeners = new Map<string, () => void>();
+  let currentTime = 0;
+  const plane = { id: "surface-plane" };
+  const video = { id: "", style: {}, readyState: 4, duration: 10, paused: true,
+    getAttribute: (name: string) => attrs[name] ?? null, closest: () => plane,
+    setAttribute(name: string, value: string) { attrs[name] = value; },
+    removeAttribute(name: string) { delete attrs[name]; }, load() {},
+    get currentTime() { return currentTime; },
+    set currentTime(value: number) { currentTime = value; queueMicrotask(() => listeners.get("seeked")?.()); },
+    pause() {}, play() { return Promise.resolve(); },
+    addEventListener(name: string, listener: () => void) { listeners.set(name, listener); },
+    removeEventListener(name: string) { listeners.delete(name); },
+  };
+  const root = { style: {}, getAttribute: (name: string) => ({
+    "data-hypit-frame-numerator": "30", "data-hypit-frame-denominator": "1",
+  })[name] ?? null };
+  const window: Record<string, any> = { addEventListener() {}, __hypitFrameProgram: { async applyFrame() {} } };
+  const script = injectHtmlPlayback("", "", program).trim().slice("<script>".length, -"</script>".length);
+  vm.runInNewContext(script, { window, document: { querySelector: () => root,
+    querySelectorAll: (selector: string) => selector === ".hypit-visual-present video" ? [video] : [] } });
+  await window.__hypitSeekFrame(2);
+  assert.equal(currentTime, 2.5 / 30);
 });
 
 test("long preview releases remote Clips and cancels obsolete metadata waits", async () => {
@@ -176,7 +221,7 @@ test("preview keeps a compact zero-rate sampling interval paused on its source f
   assert.ok(pauses >= 3);
 });
 
-test("preview evaluates reverse source time by absolute frame without assigning a negative browser rate", async () => {
+test("preview gives an exact reverse boundary to its left-hand source frame", async () => {
   const attrs: Record<string, string> = {
     "data-start": "0", "data-duration": "1", "data-media-start": String(9.5 / 30), "data-playback-rate": "-1",
     "data-hypit-start-frame": "0", "data-hypit-end-frame": "10", "data-hypit-source-frame": "9/1",
@@ -205,7 +250,7 @@ test("preview evaluates reverse source time by absolute frame without assigning 
     CustomEvent: class {},
   });
   await window.__hypitPlayFrame(3);
-  assert.equal(currentTime, 6.5 / 30);
+  assert.equal(currentTime, 5.5 / 30);
   assert.equal(assignedRate, undefined);
   assert.equal(plays, 0);
 });

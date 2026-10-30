@@ -1,4 +1,4 @@
-import type { TypeRef, TypedRecord } from "@hypit/protocol";
+import type { TypeRef } from "@hypit/protocol";
 
 export const videoType: TypeRef = {
   module: { name: "example.media", version: "1" },
@@ -9,26 +9,13 @@ export const structuredType: TypeRef = {
   name: "StructuredValue",
 };
 
-export function publication(
-  outputs: readonly { readonly name: string; readonly output: string; readonly record?: string; readonly displayName?: string; readonly type?: TypeRef }[],
-  targets: readonly string[] = [],
+export function resultIntent(
+  outputs: readonly { readonly name: string; readonly record?: string }[],
 ) {
-  const selected = new Set(targets);
   return {
     outputs: outputs.map((output) => ({
-      ...output,
-      type: output.type ?? videoType,
-      target: selected.has(output.name),
-      record: output.record ?? (output.output.startsWith("logical:")
-        ? `record:${output.output.slice("logical:".length)}`
-        : output.output),
+      name: output.name,
+      record: output.record ?? `record:${output.name}`,
     })),
   };
-}
-
-export function acceptedRecords(input: {
-  readonly records: readonly TypedRecord[];
-  readonly bindings: readonly { readonly output: string; readonly record: string }[];
-}): readonly TypedRecord[] {
-  return input.records.filter((record) => input.bindings.some((binding) => binding.record === record.id));
 }

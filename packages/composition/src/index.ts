@@ -14,7 +14,7 @@ export {
   visualAdjustmentSchema, visualPresentSchema, visualProcessSchema, visualItemSchema,
   visualScopeSchema, visualProgramCarrierSchema, audioReconstructionProgramSchema,
   visualProcessEffectSchema,
-  visualMaskSchema, visualTextSchema, visualImageSchema, visualVideoSchema, visualSurfaceSchema, visualCompositionSchema, visualProgramSchema, visualElementSchema,
+  visualMaskSchema, visualTextSchema, visualImageSchema, visualVideoSchema, visualSurfaceSchema, visualProgramSchema, visualElementSchema,
 } from "./schema.js";
 export {
   assertAudioTrackIdentity,

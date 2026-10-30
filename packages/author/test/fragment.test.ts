@@ -176,7 +176,7 @@ function graph(...contributions: readonly FragmentContribution[]): AuthorGraph {
 }
 
 function buildState(linked: LinkedProgram, authorGraph: AuthorGraph, targets: readonly string[]) {
-  const planned = planBuild(linked, authorGraph, targets, []);
+  const planned = planBuild(linked, authorGraph, targets);
   return materializeBuild(defineBuild({
     program: linked,
     plan: planned.plan,

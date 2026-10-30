@@ -1,31 +1,37 @@
 # @hypit/html-document
 
-Build a browser-playable document from a Composition and Timeline:
+Build a browser-playable document from a Composition:
+
+This is an exportable browser playback document, not Studio's preview foundation. “Document” means
+the page closes picture, sound, clock and playback controls into one browser host; it does not imply
+that every media byte is embedded into one `.html` file. The material URL resolver may point at
+adjacent files, HTTP resources or data URLs. Studio and
+`HtmlDocument` are separate hosts of `@hypit/html-playback`: Studio compiles `HtmlProgram` and
+`AudioProgram` directly for its current session, while this package closes the same Programmes and
+their material bindings into a portable page with an embedding API. A Studio rewrite can replace its
+host or use a Provider-backed exact preview without changing or passing through `HtmlDocument`.
 
 ```xml
 <import as="page" from="@hypit/html-document@1"/>
-<page:Document id="preview" composition={main.composition} timeline={animation.timeline}/>
+<page:Document id="preview" composition={main.composition}/>
 ```
 
-The package-owned declaration consumes those two completed values directly. It does not depend on
-Temporal or a Markup timeline helper; Markup contributes only the `Document` spelling, while direct
+The package-owned declaration consumes the completed Composition directly. Its Timeline is already
+part of that value, so accepting a second Timeline would permit a contradictory clock. Markup contributes only the `Document` spelling, while direct
 APIs and other Frontends use the same declaration compiler.
 
-Select the document as an Invocation target:
+Select the document as an explicit Build target:
 
-```xml
-<?svml using="@hypit/markup/invocation@1"?>
-<svrun version="1">
-  <author source="./main.svml"/>
-  <target output="preview.document"/>
-</svrun>
+```bash
+hypit plan main.svml --target preview.document
+hypit build main.svml --target preview.document
 ```
 
 The `HtmlDocument` result contains a compiled `HtmlProgram` and its `AudioProgram`.
 The Programme gives every visual dependency a document-local identity separate from
 its Result-store Blob identity, so recursive Blob rebinding never requires a reverse
-resource table. The Author Source owns durable material selection; the Invocation selects only the
-document Target and any transient authored Record override.
+resource table. The Author Source owns durable material references; the command selects only the
+document Target.
 
 Hosts turn the result into HTML by supplying material URLs:
 

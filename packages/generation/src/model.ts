@@ -254,10 +254,10 @@ export type ModelTextInput = {
   readonly field: string;
 };
 
-export type FieldModelFragmentPublication = {
-  /** Publishes the Model's complete result value without interpreting it. */
+export type FieldModelFragmentExports = {
+  /** Exposes the Model's complete result value without interpreting it. */
   readonly result?: string;
-  /** Publishes the result selected by the Model's explicit primary Producer. */
+  /** Exposes the result selected by the Model's explicit primary Producer. */
   readonly primary?: string;
 };
 
@@ -525,7 +525,7 @@ export function createFieldModelGenerationFragment(
   endpoint: FieldModelOperation,
   mediaInputs: readonly ModelArtifactInput[] = [],
   textInputs: readonly ModelTextInput[] = [],
-  publication: FieldModelFragmentPublication,
+  outputNames: FieldModelFragmentExports,
 ) {
   const names = [...mediaInputs, ...textInputs].map((item) => item.name);
   assert(new Set(names).size === names.length, "Model input names must be unique");
@@ -587,21 +587,21 @@ export function createFieldModelGenerationFragment(
     inputs: { request: operation("finalize-request") },
     result: { kind: "need" as const, name: "generation" },
   });
-  assert(publication.result !== undefined || publication.primary !== undefined,
-    `${endpoint.fields.model} Fragment publishes neither its result nor its primary value`);
-  assert(publication.result === undefined || publication.result.trim().length > 0,
-    `${endpoint.fields.model} result publication name is empty`);
-  assert(publication.primary === undefined || publication.primary.trim().length > 0,
-    `${endpoint.fields.model} primary publication name is empty`);
-  assert(publication.result === undefined || publication.primary === undefined
-    || publication.result !== publication.primary,
-    `${endpoint.fields.model} result and primary publication names must differ`);
+  assert(outputNames.result !== undefined || outputNames.primary !== undefined,
+    `${endpoint.fields.model} Fragment exposes neither its result nor its primary value`);
+  assert(outputNames.result === undefined || outputNames.result.trim().length > 0,
+    `${endpoint.fields.model} result output name is empty`);
+  assert(outputNames.primary === undefined || outputNames.primary.trim().length > 0,
+    `${endpoint.fields.model} primary output name is empty`);
+  assert(outputNames.result === undefined || outputNames.primary === undefined
+    || outputNames.result !== outputNames.primary,
+    `${endpoint.fields.model} result and primary output names must differ`);
   const exports: Array<{ readonly name: string; readonly type: TypeRef;
     readonly root: ReturnType<typeof operation> }> = [];
-  if (publication.result !== undefined) {
-    exports.push({ name: publication.result, type: endpoint.returns, root: operation("generate") });
+  if (outputNames.result !== undefined) {
+    exports.push({ name: outputNames.result, type: endpoint.returns, root: operation("generate") });
   }
-  if (publication.primary !== undefined) {
+  if (outputNames.primary !== undefined) {
     const output = endpoint.result.primary.output;
     const selector = `select-primary-${output}`;
     operations.push({
@@ -610,7 +610,7 @@ export function createFieldModelGenerationFragment(
       inputs: { [endpoint.result.primary.input]: operation("generate") },
       result: { kind: "output" as const, name: output },
     });
-    exports.push({ name: publication.primary, type: blobTypes.blob, root: operation(selector) });
+    exports.push({ name: outputNames.primary, type: blobTypes.blob, root: operation(selector) });
   }
   return sealGraphFragment({
     inputs,

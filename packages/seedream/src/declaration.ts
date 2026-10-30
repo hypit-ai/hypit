@@ -2,6 +2,7 @@ import {
   declarationField,
   type AuthorDeclaration,
   type AuthorDeclarationChild,
+  type AuthorDeclarationBinding,
   type AuthorDeclarationCompiler,
   type AuthorResolvedReference,
 } from "@hypit/hypit/author";
@@ -54,10 +55,10 @@ const fields = [
     summary: "States whether the Provider applies its safety check." },
 ];
 
-function bindings(declaration: AuthorDeclaration) {
+function bindings(declaration: AuthorDeclaration): readonly AuthorDeclarationBinding[] {
   const id = literal(declaration, "id");
   return [{ name: `${id}.image`, ref: { kind: "component-output" as const, component: id, output: "image" },
-    type: blobTypes.blob }];
+    type: blobTypes.blob, retained: true }];
 }
 
 function compiler(referenceMode: boolean): AuthorDeclarationCompiler {

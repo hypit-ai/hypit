@@ -3,8 +3,8 @@ title: Runtime
 description: Select execution services, run independent Builds and keep their Results available.
 ---
 
-The Source describes the work and its durable realization choices. An Invocation chooses Targets and
-optional transient overrides; a `.svrun` file can save that Invocation. The Runtime executes it using
+The Source describes the work and its project-material references. Each command explicitly chooses
+Targets. The Runtime executes that finite work using
 the selected services, and the project keeps accepted material as ordinary authored resources.
 
 | Part | What it contains |
@@ -13,7 +13,7 @@ the selected services, and the project keeps accepted material as ordinary autho
 | Hypit installation | Commands and installed packages |
 | Runtime Profile | Provider Endpoints, credential references, bindings and shared capacity |
 | Build | One execution attempt using the selected work and configuration |
-| Result repository | Completed public Outputs, outcome and retained execution evidence |
+| Result repository | Targets, outcome, retained Outputs and execution evidence |
 
 ## Select the project and Profile
 
@@ -98,17 +98,16 @@ It does not log into or start hosted services. `programs prepare|up|status|down`
 separately. Initial inference setup can require substantial downloads; compare that effort with hosted
 execution and choose the route before starting preparation.
 
-`hypit plan <source>` checks the work's demanded capabilities and cheap readiness. The Source can be
-an Author Source with explicit Targets or a saved `.svrun` Invocation Source. Provider discovery needs
+`hypit plan <source> --target <output>` checks the work's demanded capabilities and cheap readiness. Provider discovery needs
 installed package declarations; it may load other declared Endpoints when no explicit binding selects
 a route. Unused services need not be running or logged in. `build` provisions nothing: it requires
 its dependencies ready, starts an available Worker if necessary, and submits one Build.
-[Invocations and Builds](../quickstart/run.md) explains planning, prices, authorization and explicit reuse.
+[Targets and Builds](../quickstart/run.md) explains planning, prices, authorization and explicit reuse.
 
 ## Execute independently of the terminal
 
 ```bash
-hypit build build.svrun --follow
+hypit build main.svml --target final.video --follow
 hypit status <build-id> --watch
 hypit logs <build-id> --lines 80
 ```
@@ -117,9 +116,9 @@ The Worker owns execution. `--follow` and `status --watch` observe it; closing t
 a watch timeout does not cancel the Build. To stop a specific attempt, use `hypit cancel <build-id>`.
 Remote cancellation is best effort, and completed Outputs remain available.
 
-A failed attempt stays failed. Export useful Outputs into the project, update the Author Source, and use a new Invocation for the next Build. If execution
-has finished but Result storage needs attention, `status` names `hypit result finish <build-id>`:
-that completes the pending save, without executing generation again.
+A failed attempt stays failed. Export useful Outputs into the project, update the Author Source, and submit a new Build with explicit Targets. If execution
+has finished but Result storage needs attention, `status` reports the storage problem. The Runtime retries
+publication when its execution service starts, without executing generation again.
 
 Build logs retain Provider phases and diagnostics. `runtime logs` instead reads Worker startup and
 process errors; installation and service logs belong to the selected Managed Program. A missing
@@ -149,7 +148,7 @@ an SSH Linux host and the official WebUI backend use the same rule: the whole Ru
 host instead of splitting its queue, working files and Result storage across services. Archive or
 migrate completed Results explicitly after a Build when needed.
 
-Results publish completed public Outputs as they become available and retain the terminal outcome.
+Results retain package-declared Outputs as they become available and record the terminal outcome.
 A new Output can reference an existing file, including within a composite; it does not necessarily
 create new media bytes. Explicit local file references remain live. Keep dependencies available for
 future reuse. `get` creates a separate export when a person or another tool needs those files.

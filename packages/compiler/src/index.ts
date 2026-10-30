@@ -9,15 +9,17 @@ export type {
   RegisteredModulePackage,
 } from "./modules.js";
 export { Compiler } from "./compiler.js";
-export { InvocationCompiler } from "./invocation.js";
+export { BuildCompiler, resolveTargetSelection } from "./build.js";
 export type {
   CompilerOptions,
   CompiledAuthorSource,
 } from "./compiler.js";
 export type {
-  CheckedInvocationPreset,
-  CompiledInvocation,
-  InvocationAuthorCompiler,
-  InvocationCompilerOptions,
+  BuildAuthorCompiler,
+  BuildCompilerOptions,
+  CompiledBuild,
   PreparedBuild,
-} from "./invocation.js";
+  ResolvedTarget,
+  ResolvedTargetSelection,
+  TargetSelection,
+} from "./build.js";

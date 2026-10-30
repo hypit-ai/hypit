@@ -2,7 +2,7 @@
 
 [reference.svml](reference.svml) describes the complete image and video generation for a muscular,
 beautiful host recommending creatine to a handsome, skinny co-host in glasses. The setting is outside
-a Korean restaurant. [reference.svrun](reference.svrun) targets `final.video` without previous Results.
+a Korean restaurant. Build `reference.svml` with `--target final.video` without previous Results.
 
 ## The image relationships
 
@@ -55,15 +55,15 @@ are generated; preparation, alignment, Caption and Film composition are explicit
 ## Run and refine
 
 ```bash
-hypit check reference.svrun
+hypit check reference.svml
 hypit estimate reference.svml --segment opening-question --language en --pace fast --rounding ceil
 hypit estimate reference.svml --segment daily-creatine --language en --pace fast --rounding ceil
 hypit estimate reference.svml --segment arms-are-asking --language en --pace fast --rounding ceil
-hypit plan reference.svrun --runtime ./hypit.runtime.json
+hypit plan reference.svml --target final.video --runtime ./hypit.runtime.json
 ```
 
 The estimates are five, eight and six seconds. Inspect the selected Endpoints and pricing before
-paid execution. With spending authorization, use `hypit build reference.svrun --runtime ./hypit.runtime.json --follow`.
+paid execution. With spending authorization, use `hypit build reference.svml --target final.video --runtime ./hypit.runtime.json --follow`.
 Review the actual conversation, product continuity and B-roll handover; reuse produced media for
 subsequent Caption or composition changes.
 

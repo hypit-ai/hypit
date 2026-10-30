@@ -12,7 +12,6 @@ import type { SourceRange } from "@hypit/source";
 
 import type {
   AuthorComponent,
-  AuthorRealizationSelection,
   AuthorValueRef,
 } from "./author.js";
 import type {
@@ -20,6 +19,7 @@ import type {
   AuthorInputProvenanceDraft,
   AuthorSourceAssetRequest,
   AuthorSourceExport,
+  AuthorRetainedOutput,
   Awaitable,
   DecodedAuthorSource,
 } from "./source.js";
@@ -119,7 +119,8 @@ export type AuthorDeclarationBinding = {
   readonly name: string;
   readonly ref: AuthorValueRef;
   readonly type: TypeRef;
-  readonly exported?: boolean;
+  /** This declaration owns an Output whose lifetime may outlive one Build. */
+  readonly retained?: true;
 };
 
 export type AuthorRecordDraft = {
@@ -133,14 +134,9 @@ export type AuthorComponentDraft = AuthorComponent & {
   readonly range: SourceRange;
 };
 
-export type AuthorRealizationSelectionDraft = AuthorRealizationSelection & {
-  readonly range: SourceRange;
-};
-
 export type AuthorDeclarationOutput = {
   readonly records: readonly AuthorRecordDraft[];
   readonly components: readonly AuthorComponentDraft[];
-  readonly realizations?: readonly AuthorRealizationSelectionDraft[];
 };
 
 export type AuthorDeclarationCompileContext = {
@@ -342,7 +338,6 @@ type DeclarationProvenanceGroup = {
   readonly components: string[];
   readonly outputs: Array<{ readonly component: string; readonly name: string; readonly id: string }>;
   readonly inputs: AuthorInputProvenanceDraft[];
-  realizations?: AuthorRealizationSelection[];
 };
 
 function rangeKey(range: SourceRange): string {
@@ -581,7 +576,6 @@ export async function compileAuthorDeclarations(
   const components: AuthorComponent[] = [];
   const componentIds = new Set<string>();
   const componentsById = new Map<string, AuthorComponent>();
-  const realizations: AuthorRealizationSelection[] = [];
   const provenance: AuthorElementProvenanceDraft[] = [];
   const resolvedReferences = new Map<string, AuthorResolvedReference>();
   const externalReferences = new Map<string, AuthorResolvedReference | null>();
@@ -688,17 +682,6 @@ export async function compileAuthorDeclarations(
       components.push(component);
       componentsById.set(component.id, component);
     }
-    for (const realization of output.realizations ?? []) {
-      assertRange(
-        item.declaration.range,
-        realization.range,
-        compilerKey(item.compiler.module, item.compiler.declaration) + " Realization",
-      );
-      realizations.push({
-        output: { ...realization.output },
-        record: { ...realization.record },
-      });
-    }
     const groups = declarationProvenanceGroups(item.declaration, resolvedReferences);
     const groupFor = (range: SourceRange): DeclarationProvenanceGroup => {
       const key = rangeKey(range);
@@ -718,17 +701,11 @@ export async function compileAuthorDeclarations(
         id,
       })));
     }
-    for (const realization of output.realizations ?? []) {
-      const group = groupFor(realization.range);
-      (group.realizations ??= []).push({
-        output: { ...realization.output },
-        record: { ...realization.record },
-      });
-    }
     provenance.push(...groups.values());
   }
 
   const exports: AuthorSourceExport[] = [];
+  const retainedOutputs: AuthorRetainedOutput[] = [];
   for (const item of prepared) {
     for (const binding of item.bindings) {
       if (binding.ref.kind === "record") {
@@ -753,15 +730,24 @@ export async function compileAuthorDeclarations(
           );
         }
       }
-      if (binding.exported === false) continue;
+      if (binding.retained === true) {
+        if (binding.ref.kind !== "component-output") {
+          throw new AuthorDeclarationError(
+            "AUTHOR_DECLARATION_RETAINED_RECORD",
+            `Retained Output ${binding.name} must be produced by a Component.`,
+            item.declaration.range,
+          );
+        }
+        retainedOutputs.push({ name: binding.name, ref: binding.ref, type: binding.type });
+      }
       exports.push({ name: binding.name, ref: binding.ref, type: binding.type });
     }
   }
   return {
     records,
     components,
-    realizations,
     exports: exports.sort((left, right) => compareCodeUnits(left.name, right.name)),
+    retainedOutputs: retainedOutputs.sort((left, right) => compareCodeUnits(left.name, right.name)),
     provenance,
   };
 }

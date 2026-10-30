@@ -82,8 +82,8 @@ const promptStep: ProducerStep = {
   result: { kind: "output", name: "prompt", record: "prompt:root" },
 };
 
-function greetingDefinition(realization: "primary" | "placeholder" = "primary"): BuildDefinition {
-  const generated: ProducerStep = realization === "primary"
+function greetingDefinition(generationStep: "remote" | "placeholder" = "remote"): BuildDefinition {
+  const generated: ProducerStep = generationStep === "remote"
     ? {
         id: "request-text",
         producer: producers.requestText,
@@ -117,9 +117,9 @@ function greetingDefinition(realization: "primary" | "placeholder" = "primary"):
 }
 
 export function createGreetingBuild(options?: {
-  readonly generationRealization?: "primary" | "placeholder";
+  readonly generationStep?: "remote" | "placeholder";
 }): BuildView {
-  return materializeBuild(greetingDefinition(options?.generationRealization), []);
+  return materializeBuild(greetingDefinition(options?.generationStep), []);
 }
 
 export function createParallelGreetingBuild(generationCount = 2): BuildView {

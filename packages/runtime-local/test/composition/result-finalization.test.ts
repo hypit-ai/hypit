@@ -18,8 +18,8 @@ import { pathToFileURL } from "node:url";
 import test from "node:test";
 
 import { FileResourceStore } from "../../src/resource-store.js";
-import { FileBuildResultRepository } from "@hypit/result/node";
-import type { BuildResultRepository } from "@hypit/result";
+import { FileBuildResultStore } from "@hypit/result/runtime-storage/node";
+import type { BuildResultStore } from "@hypit/result/runtime-storage";
 import { EnvironmentCredentialStore } from "@hypit/credential-store-env";
 import { defineEndpoint } from "@hypit/endpoint";
 import type { AsyncEndpoint, EndpointInstance } from "@hypit/endpoint";
@@ -27,7 +27,7 @@ import { createProducerPackageFacet } from "@hypit/producer";
 import type { ProducerPackage } from "@hypit/producer";
 import { createRefinementPackageFacet } from "@hypit/refinement";
 import type { RefinementPackage } from "@hypit/refinement";
-import { createLocalRuntime } from "@hypit/runtime-local";
+import { createLocalResultWriter, createLocalRuntime } from "@hypit/runtime-local";
 import { resolveProjectRoot } from "@hypit/project";
 import { NodeFilesystemWorkspace } from "@hypit/workspace/node";
 import { defineBuild, link } from "@hypit/kernel";
@@ -54,16 +54,16 @@ import {
   durableBuildRequest,
   finishClaimedBuild,
   projectRuntimeFixture,
-  publication,
+  resultIntent,
   resultDestination,
   runFixture,
 } from "./local-scenario.js";
 
-test("a completed public file moves into its Build Result and leaves no Runtime working copy", async () => {
+test("a completed retained file moves into its Build Result and leaves no Runtime working copy", async () => {
   const directory = await mkdtemp(join(tmpdir(), "hypit-local-result-file-"));
   const id = "bld_20260902T120000004Z_0000000001";
   const workStore = new FileResourceStore(join(directory, ".hypit", "work", id));
-  const initial = createGreetingBuild({ generationRealization: "placeholder", targetOutputs: ["generated"] });
+  const initial = createGreetingBuild({ generationStep: "placeholder", targetOutputs: ["generated"] });
   const buildDefinition = definition(initial);
   const components: { producers: ProducerPackage; refinements?: RefinementPackage } = {
     producers: [{
@@ -84,14 +84,14 @@ test("a completed public file moves into its Build Result and leaves no Runtime 
       definition: buildDefinition,
       authoring: {
         sourcePath: join(directory, "main.svml"),
-        publication: { outputs: [{ name: "clip.video", output: "generated", target: true,
-          type: types.generated,
+        targets: ["clip.video"],
+        intent: { outputs: [{ name: "clip.video",
           record: "generated:placeholder" }] },
       },
       result: resultDestination(directory),
     });
     assert.equal((await finishClaimedBuild(runtime)).outcome, "complete");
-    const results = new FileBuildResultRepository(join(directory, "results"));
+    const results = new FileBuildResultStore(join(directory, "results"));
     const result = await results.read(id);
     assert.equal(result?.outputs["clip.video"]?.value.kind, "build-file");
     const resolved = await results.resolve(id, "clip.video");
@@ -109,7 +109,7 @@ test("a completed public file moves into its Build Result and leaves no Runtime 
   }
 });
 
-test("a failed Build keeps public Outputs completed before removing active Runtime state", async () => {
+test("a failed Build keeps retained Outputs completed before removing active Runtime state", async () => {
   const directory = await mkdtemp(join(tmpdir(), "hypit-local-bld_20260902T120000005Z_0000000001-"));
   const buildFixture = createGreetingBuildFixture();
   const initial = buildFixture.state;
@@ -148,7 +148,8 @@ test("a failed Build keeps public Outputs completed before removing active Runti
       definition: definition(initial),
       authoring: {
         sourcePath: join(directory, "main.svml"),
-        publication: publication([{
+        targets: ["final.document"],
+        intent: resultIntent([{
           name: "prompt.text", ref: { id: "prompt" },
         }, { name: "generated.text", ref: { id: "generated" } }, {
           name: "final.document", ref: { id: "document" },
@@ -157,7 +158,7 @@ test("a failed Build keeps public Outputs completed before removing active Runti
       result: resultDestination(directory),
     });
     assert.equal((await finishClaimedBuild(runtime)).outcome, "failed");
-    const result = await new FileBuildResultRepository(join(directory, "results"))
+    const result = await new FileBuildResultStore(join(directory, "results"))
       .read("bld_20260902T120000005Z_0000000001");
     assert.equal(result?.outcome, "failed");
     assert.equal(result?.failure, "generation failed");
@@ -202,7 +203,7 @@ for (const phase of ["submit", "poll"] as const) {
       const id = "bld_20260906T110000000Z_0000000001";
       await runtime.build(durableBuildRequest(directory, id, buildFixture));
       assert.equal((await finishClaimedBuild(runtime)).outcome, "failed");
-      const result = await new FileBuildResultRepository(join(directory, "results")).read(id);
+      const result = await new FileBuildResultStore(join(directory, "results")).read(id);
       assert.equal(result?.failure, "first request failed");
       assert.deepEqual(result?.outputs["target.2"]?.value, { kind: "inline", value: "retained sibling output" });
       assert.equal(starts, 2);
@@ -215,9 +216,9 @@ for (const phase of ["submit", "poll"] as const) {
   });
 }
 
-test("an interrupted Result write finishes explicitly without rerunning the Build", async () => {
+test("an interrupted Result write can be retried internally without rerunning the Build", async () => {
   const directory = await mkdtemp(join(tmpdir(), "hypit-local-result-retry-"));
-  const initial = createGreetingBuild({ generationRealization: "placeholder" });
+  const initial = createGreetingBuild({ generationStep: "placeholder" });
   let generationCalls = 0;
   let rejectSync = true;
   const components: { producers: ProducerPackage; refinements?: RefinementPackage } = {
@@ -242,8 +243,8 @@ test("an interrupted Result write finishes explicitly without rerunning the Buil
   const openRepository = async (
     location: import("@hypit/runtime-local").BuildResultRepositoryLocation,
   ) => {
-    const base = new FileBuildResultRepository(join(location.root, location.path));
-    const repository: BuildResultRepository = {
+    const base = new FileBuildResultStore(join(location.root, location.path));
+    const repository: BuildResultStore = {
       create: async (seed) => await base.create(seed),
       async openWriter(build) {
         const writer = await base.openWriter(build);
@@ -259,9 +260,8 @@ test("an interrupted Result write finishes explicitly without rerunning the Buil
       },
       removeIncomplete: async (build) => await base.removeIncomplete(build),
       read: async (build) => await base.read(build),
-      updatePresentation: async (build, update) => await base.updatePresentation(build, update),
+      readStored: async (build) => await base.readStored(build),
       browse: async (request) => await base.browse(request),
-      describeOutput: async (build, output) => await base.describeOutput(build, output),
       resolve: async (build, output) => await base.resolve(build, output),
       openFile: async (build, file) => await base.openFile(build, file),
     };
@@ -278,8 +278,8 @@ test("an interrupted Result write finishes explicitly without rerunning the Buil
       definition: definition(initial),
       authoring: {
         sourcePath: join(directory, "main.svml"),
-        publication: { outputs: [{ name: "final.document", output: "document", target: true,
-          type: types.document,
+        targets: ["final.document"],
+        intent: { outputs: [{ name: "final.document",
           record: "document:root" }] },
       },
       result: resultDestination(directory),
@@ -291,8 +291,9 @@ test("an interrupted Result write finishes explicitly without rerunning the Buil
     assert.equal(await runtime.workOnce(), undefined);
 
     rejectSync = false;
-    const completed = await runtime.finishResult("bld_20260902T120000006Z_0000000001");
-    assert(completed !== undefined);
+    const resultWriter = createLocalResultWriter({ ...fixture, openBuildResultRepository: openRepository });
+    const completed = await resultWriter.completeResult(blocked);
+    assert.ok(!("createdAt" in completed));
     assert.equal(completed.outcome, "complete");
     assert.equal(generationCalls, 1);
     await runtime.close();
@@ -303,16 +304,15 @@ test("an interrupted Result write finishes explicitly without rerunning the Buil
 
 test("a failed Result creation leaves no active Build", async () => {
   const directory = await mkdtemp(join(tmpdir(), "hypit-local-submit-rollback-"));
-  const initial = createGreetingBuild({ generationRealization: "placeholder" });
+  const initial = createGreetingBuild({ generationStep: "placeholder" });
   const fixture = projectRuntimeFixture(directory);
-  const unavailable: BuildResultRepository = {
+  const unavailable: BuildResultStore = {
     async create() { throw new Error("result repository refused creation"); },
     async openWriter() { return undefined; },
     async removeIncomplete() {},
     async read() { return undefined; },
-    async updatePresentation() { throw new Error("result repository refused update"); },
+    async readStored() { return undefined; },
     async browse() { return { results: [] }; },
-    async describeOutput() { return undefined; },
     async resolve() { return undefined; },
     async openFile() { return undefined; },
   };
@@ -326,8 +326,8 @@ test("a failed Result creation leaves no active Build", async () => {
       definition: definition(initial),
       authoring: {
         sourcePath: join(directory, "main.svml"),
-        publication: { outputs: [{ name: "final.document", output: "document", target: true,
-          type: types.document,
+        targets: ["final.document"],
+        intent: { outputs: [{ name: "final.document",
           record: "document:root" }] },
       },
       result: resultDestination(directory),

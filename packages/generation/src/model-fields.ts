@@ -52,7 +52,7 @@ export type {
   DefineFieldModelModuleOptions,
   FieldModelOperation,
   ModelArtifactInput,
-  FieldModelFragmentPublication,
+  FieldModelFragmentExports,
   FieldModelModule,
   ModelTextInput,
   FieldModelOperationSpec,

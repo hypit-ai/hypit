@@ -42,7 +42,7 @@ function fixture() {
   return {
     timeline,
     pictures: [picture, secondPicture],
-    composition: sealComposition({ id: "document", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 1920, height: 1080, clearColor: "#000000" }, root: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }, timeline),
+    composition: sealComposition({ id: "document", visual: { canvas: { width: 1920, height: 1080, clearColor: "#000000" }, root: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }, timeline),
   };
 }
 

@@ -7,7 +7,7 @@ supplies evidence about the delivered file. Choose the view that establishes the
 
 ## Capture the work already open in Studio
 
-Open the actual Invocation using [Studio](studio.md). After its current preview is ready:
+Open the actual Source and Targets using [Studio](studio.md). After its current preview is ready:
 
 ```bash
 hypit snapshot --studio http://localhost:5191 \
@@ -27,7 +27,7 @@ pass their resulting frame positions to the observation command. Frame selection
 the authored timing relationship.
 
 Studio supplies its already compiled HTML Programme and the material selected by the Author Source
-plus any Invocation-local override.
+and its selected Targets.
 This preserves declared fonts, images, video sampling, transparent Surfaces and resources used
 inside a component's HTML visual. The command sends one immediate request, keeping the original
 HTML Programme clock and component-local clocks. It writes images directly into the chosen directory.
@@ -84,7 +84,7 @@ coarse and fine observation.
 
 ## After a composition change
 
-Keep accepted material selected in the Author Source, let Studio compile the updated Source, then capture the
+Keep consumers referencing the intended project material, let Studio compile the updated Source, then capture the
 affected states and their handoffs. Carry discoveries back to the owning Source, component or
 Treatment. This is the preferred picture-review path. Use a
 [range render](rendering.md#choose-a-render-interval-in-frames) when a short encoded video with sound

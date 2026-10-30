@@ -4,9 +4,10 @@ import test from "node:test";
 import { setTimeout as delay } from "node:timers/promises";
 import type { ResourceIOOptions } from "@hypit/runtime";
 import { EndpointRegistry, MemoryResourceStore } from "@hypit/executor";
-import { rasterizeHtmlProgram } from "../src/index.js";
+import { rasterizeChromiumHtmlProgram } from "../src/index.js";
 import { resolveExecutionOptions } from "../src/render.js";
 import { hypitPackage } from "../src/activation.js";
+import { hypitPackage as electronHypitPackage } from "../../provider-html-electron-local/src/activation.js";
 import { runtimeEndpointAdapterFacetAbi } from "@hypit/runtime-local/extension";
 import type { RuntimeEndpointAdapterImplementation } from "@hypit/runtime-local/extension";
 import { endpointOffers, endpointResourceClaims, installEndpoint } from "@hypit/endpoint";
@@ -14,7 +15,7 @@ import { htmlProgramCapabilities } from "@hypit/html-program";
 import { mediaTypes } from "@hypit/media";
 import { canonicalize } from "@hypit/protocol";
 import { distributeFrameRange, requestedFrameRanges, sourceFrameAt, sourceWindows, videoSlots } from "../src/sampling.js";
-import { htmlNestedRangeDocument, htmlRangeDocument } from "./range-scenario.js";
+import { htmlRangeDocument } from "./range-scenario.js";
 import { htmlProviderDelivery } from "./provider-scenario.js";
 
 test("a render deadline cancels resource preparation and awaits the reader's cleanup", async () => {
@@ -29,7 +30,7 @@ test("a render deadline cancels resource preparation and awaits the reader's cle
   const resources = new StalledResources();
   const document = htmlRangeDocument({ kind: "blob", resource: "res_waiting", size: 1, mediaType: "video/mp4" });
   // This test stops during resource preparation, before any browser is launched.
-  await assert.rejects(rasterizeHtmlProgram({ program: document, delivery: htmlProviderDelivery() }, { resources, chromePath: process.execPath, processTimeoutMs: 100 }),
+  await assert.rejects(rasterizeChromiumHtmlProgram({ program: document, delivery: htmlProviderDelivery() }, { resources, chromePath: process.execPath, processTimeoutMs: 100 }),
     /render timed out during preparing resources/u);
   assert.equal(resources.active, 0, "the failed render must not leave its reader running");
 });
@@ -74,30 +75,67 @@ test("source selection retains loop, hold, fractional-speed and reverse sampling
   ]);
 });
 
-test("a nested Composition composes its occurrence Map with its media Map without materializing a child video", () => {
-  const document = htmlNestedRangeDocument({ kind: "blob", resource: "res_nested_range_source",
-    size: 1, mediaType: "video/mp4" });
-  const slots = videoSlots(document.videoSources, resource => `media://${resource}`,
-    { frameRate: document.frameRate });
-  assert.equal(slots.length, 1);
-  assert.equal(slots[0]!.documentPath.length, 1);
+test("source occurrence usage excludes invisible frames from sampling demand", () => {
+  const document = htmlRangeDocument({ kind: "blob", resource: "res_usage_source", size: 1, mediaType: "video/mp4" });
+  const source = document.videoSources[0]!;
+  const [slot] = videoSlots([{ ...source, usage: { kind: "frames", spans: [
+    { startFrame: 3, endFrameExclusive: 5 },
+    { startFrame: 8, endFrameExclusive: 10 },
+  ] } }], resource => `media://${resource}`, { frameRate: document.frameRate });
+  assert.ok(slot !== undefined);
   const timestampIndex = { timestamps: [0n, 1n, 2n, 3n],
     timeBase: { numerator: 1n, denominator: 30n } };
-  const childFrames = [2, 3, 0, 1, 2, 3, 3, 3, 0, 0, 1, 1, 3, 2, 1, 0, 3, 2];
-  assert.deepEqual(Array.from({ length: 36 }, (_, frame) => sourceFrameAt(slots[0]!, frame, timestampIndex)),
-    childFrames.flatMap(frame => [frame, frame]));
+  assert.deepEqual(Array.from({ length: 8 }, (_, index) => sourceFrameAt(slot, index + 3, timestampIndex)),
+    [1, 2, undefined, undefined, undefined, 0, 0, undefined]);
+  assert.deepEqual(sourceWindows([slot], { startFrame: 3, endFrameExclusive: 11 },
+    new Map([[slot.sourceKey, timestampIndex]]))[0]?.windows,
+  [{ startFrame: 0, endFrameExclusive: 3 }]);
+
+  const [never] = videoSlots([{ ...source, usage: { kind: "never" } }], resource => `media://${resource}`,
+    { frameRate: document.frameRate });
+  assert.ok(never !== undefined);
+  assert.deepEqual(sourceWindows([never], { startFrame: never.startFrame,
+    endFrameExclusive: never.endFrameExclusive }, new Map([[never.sourceKey, timestampIndex]])), []);
+});
+
+test("decoder identity includes the complete author-resolved picture geometry", () => {
+  const document = htmlRangeDocument({ kind: "blob", resource: "res_picture_source", size: 1, mediaType: "video/mp4" });
+  const source = document.videoSources[0]!;
+  assert.equal(source.kind, "media");
+  if (source.kind !== "media") return;
+  const alternate = {
+    ...source,
+    id: `${source.id}:alternate-picture`,
+    source: {
+      ...source.source,
+      interpretation: {
+        ...source.source.interpretation,
+        picture: { colorPrimaries: "bt709", colorTransfer: "srgb", colorMatrix: "rgb",
+          colorRange: "full", bitDepth: 8, alphaMode: "opaque" } as const,
+        sampleAspectRatio: { numerator: 4, denominator: 3 },
+        rotationDegrees: 90 as const,
+      },
+    },
+  };
+  const slots = videoSlots([source, alternate], resource => `media://${resource}`,
+    { frameRate: document.frameRate });
+  assert.notEqual(slots[0]!.sourceKey, slots[1]!.sourceKey,
+    "one stream prepared under two picture/geometry interpretations must not share decoder state");
 });
 
 test("reverse source time selects the same bounded decoded window without forward traversal", () => {
-  const [slot] = videoSlots([{ id: "reverse", documentPath: [], elementId: "reverse",
+  const [slot] = videoSlots([{ id: "reverse", elementId: "reverse",
     artifactId: "artifact-reverse", startFrame: 0, endFrameExclusive: 4,
+    usage: { kind: "frames", spans: [{ startFrame: 0, endFrameExclusive: 4 }] },
+    picture: { colorPrimaries: "bt709", colorTransfer: "bt709", colorMatrix: "bt709",
+      colorRange: "limited", bitDepth: 8, alphaMode: "opaque" },
     sourceFrame: { numerator: 4, denominator: 1 }, sourceRate: { numerator: -1, denominator: 1 },
     kind: "surface", sourceFrameRate: { numerator: 30, denominator: 1 } }], () => "direct.mp4",
   { frameRate: { numerator: 30, denominator: 1 } });
   assert.ok(slot !== undefined);
   assert.deepEqual(Array.from({ length: 4 }, (_, frame) => sourceFrameAt(slot, frame)), [3, 2, 1, 0]);
   assert.deepEqual(sourceWindows([slot], { startFrame: 0, endFrameExclusive: 4 }, new Map()), [{
-    sourceKey: "direct.mp4\u00000", src: "direct.mp4", streamIndex: 0,
+    sourceKey: slot.sourceKey, src: "direct.mp4", streamIndex: 0,
     windows: [{ startFrame: 0, endFrameExclusive: 4 }],
   }]);
 });
@@ -138,12 +176,12 @@ test("HTML claims actual browser count including a range shorter than workers", 
 });
 
 test("Runtime Profile selects Electron explicitly without constructing a managed Chrome program", async () => {
-  const facet = hypitPackage.facets.find(item => item.abi === runtimeEndpointAdapterFacetAbi);
+  const facet = electronHypitPackage.facets.find(item => item.abi === runtimeEndpointAdapterFacetAbi);
   assert.ok(facet);
   const adapter = facet.implementation as RuntimeEndpointAdapterImplementation;
   const activation = await adapter.activate({
     hostStateRoot: tmpdir(), dataRoot: tmpdir(), instance: "html.gpu", pool: "machine",
-    config: canonicalize({ renderer: "electron", electronPath: "Electron" }),
+    config: canonicalize({ electronPath: "Electron" }),
   });
   assert.equal(activation.program?.installation, undefined);
   const offers = endpointOffers(activation.endpoint);

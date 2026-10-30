@@ -8,8 +8,8 @@ import test from "node:test";
 
 import {
   FileBuildResult,
-  FileBuildResultRepository,
-} from "@hypit/result/node";
+  FileBuildResultStore,
+} from "@hypit/result/runtime-storage/node";
 import type { CapabilityRef, TypeRef, TypedRecord } from "@hypit/protocol";
 
 import type { CliDistribution } from "../../src/distribution.js";
@@ -21,12 +21,12 @@ import {
   generationCapability,
   humanCommand,
   jsonCommand,
-  publication,
+  resultIntent,
   resultDistribution,
   valueType,
 } from "./build-result-scenario.js";
 
-test("builds, history, inspect and get read project Build Results without opening a Runtime", async () => {
+test("builds, history, inspect and result export read project Build Results without opening a Runtime", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-cli-results-"));
   try {
     await fixture(root);
@@ -34,48 +34,45 @@ test("builds, history, inspect and get read project Build Results without openin
     const builds = await jsonCommand(["builds"], root) as {
       readonly builds: readonly {
         readonly id: string;
-        readonly title?: string;
+        readonly source: string;
         readonly outcome: string;
-        readonly invocationSource?: string;
         readonly outputCount: number;
       }[];
     };
     assert.equal(builds.builds.length, 1);
     assert.equal(builds.builds[0]?.id, "bld_20260902T110000000Z_0000000001");
-    assert.equal(builds.builds[0]?.title, "episode-stage");
     assert.equal(builds.builds[0]?.outcome, "complete");
-    assert.equal(builds.builds[0]?.invocationSource, "build.svrun");
     assert.equal(builds.builds[0]?.outputCount, 1);
-    assert.equal("source" in builds.builds[0]!, false);
+    assert.equal(builds.builds[0]?.source, "main.svml");
     assert.equal("outputs" in builds.builds[0]!, false);
 
     const history = await jsonCommand(["history", "stage.value"], root) as {
-      readonly entries: readonly { readonly build: string; readonly output: { readonly name: string } }[];
+      readonly entries: readonly { readonly build: string; readonly source: string; readonly output: { readonly name: string } }[];
     };
     assert.equal(history.entries.length, 1);
     assert.equal(history.entries[0]?.build, "bld_20260902T110000000Z_0000000001");
+    assert.equal(history.entries[0]?.source, "main.svml");
     assert.equal(history.entries[0]?.output.name, "stage.value");
 
     const inspected = await jsonCommand(["inspect", "bld_20260902T110000000Z_0000000001"], root) as {
-      readonly build: { readonly id: string; readonly title?: string };
+      readonly build: { readonly id: string };
     };
     assert.equal(inspected.build.id, "bld_20260902T110000000Z_0000000001");
-    assert.equal(inspected.build.title, "episode-stage");
 
     const humanHistory = await humanCommand(["history", "stage.value"], root);
-    assert.match(humanHistory, /episode-stage/u);
     assert.doesNotMatch(humanHistory, /example\.result|scalar/u);
 
     const humanInspect = await humanCommand(["inspect", "bld_20260902T110000000Z_0000000001"], root);
-    assert.match(humanInspect, /Target\s+stage\.value/u);
+    assert.match(humanInspect, /Output\s+stage\.value/u);
+    assert.match(humanInspect, /Source\s+main\.svml/u);
     assert.doesNotMatch(humanInspect, /example\.result|scalar/u);
 
     const destination = join(root, "exported.json");
     const exported = await jsonCommand([
-      "get", "bld_20260902T110000000Z_0000000001", "--output", "stage.value", "--to", destination,
+      "result", "export", "bld_20260902T110000000Z_0000000001", "--output", "stage.value", "--to", destination,
     ], root);
     assert.deepEqual(exported, {
-      format: "hypit.cli-get@1",
+      format: "hypit.cli-result-export@1",
       build: "bld_20260902T110000000Z_0000000001",
       output: "stage.value",
       type: "example.result@1#Value",
@@ -86,12 +83,12 @@ test("builds, history, inspect and get read project Build Results without openin
 
     const humanDestination = join(root, "human-exported.json");
     const humanGet = await humanCommand([
-      "get", "bld_20260902T110000000Z_0000000001", "--output", "stage.value", "--to", humanDestination,
+      "result", "export", "bld_20260902T110000000Z_0000000001", "--output", "stage.value", "--to", humanDestination,
     ], root);
     assert.match(humanGet, /Exported stage\.value → human-exported\.json/u);
     assert.doesNotMatch(humanGet, /\b(?:Type|Kind|Build)\b|example\.result|scalar/u);
     await assert.rejects(
-      jsonCommand(["get", "bld_20260902T110000000Z_0000000001", "--output", "stage.value", "--to", destination], root),
+      jsonCommand(["result", "export", "bld_20260902T110000000Z_0000000001", "--output", "stage.value", "--to", destination], root),
       /Export destination .* already exists/u,
     );
   } finally {
@@ -102,16 +99,18 @@ test("builds, history, inspect and get read project Build Results without openin
 test("history scans older pages for matches and compares project-relative source paths", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-cli-history-"));
   try {
+    await writeFile(join(root, "main.svml"), "source", "utf8");
     await fixture(root);
-    const repository = new FileBuildResultRepository(join(root, ".hypit", "results"));
+    const repository = new FileBuildResultStore(join(root, ".hypit", "results"));
     for (const id of [
       "bld_20260902T110000001Z_0000000001",
       "bld_20260902T110000002Z_0000000001",
     ]) {
       const writer = await repository.create({
         id,
-        sourceId: "other.svml",
-        publication: publication([]),
+        sourcePath: "other.svml",
+        targets: [],
+        intent: resultIntent([]),
       });
       await writer.finish({ outcome: "failed", failure: "fixture without the requested Output" });
     }
@@ -129,8 +128,8 @@ test("history scans older pages for matches and compares project-relative source
   }
 });
 
-test("get exports file bytes and a self-contained value-document directory", async () => {
-  const root = await mkdtemp(join(tmpdir(), "hypit-cli-get-"));
+test("result export writes Blob bytes and uses the Type owner's structured author format", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hypit-cli-result-export-"));
   const build = "bld_20260902T110000010Z_0000000001";
   const videoType = { module: { name: "example.media", version: "1" }, name: "Video" } satisfies TypeRef;
   const structuredType = { module: { name: "example.speech", version: "1" }, name: "StructuredValue" } satisfies TypeRef;
@@ -144,11 +143,12 @@ test("get exports file bytes and a self-contained value-document directory", asy
   try {
     const result = await FileBuildResult.create(join(root, ".hypit", "results"), {
       id: build,
-      sourceId: join(root, "main.svml"),
-      publication: publication([
-        { name: "final.video", output: "logical:video", type: videoType },
-        { name: "final.take", output: "logical:take", type: structuredType },
-      ], ["final.video"]),
+      sourcePath: join(root, "main.svml"),
+      targets: ["final.video"],
+      intent: resultIntent([
+        { name: "final.video", record: "record:video" },
+        { name: "final.take", record: "record:take" },
+      ]),
     });
     await result.sync({
       records: [
@@ -177,50 +177,39 @@ test("get exports file bytes and a self-contained value-document directory", asy
 
     const resourceDestination = join(root, "output", "final.mp4");
     const resource = await jsonCommand([
-      "get", build, "--output", "final.video", "--to", resourceDestination,
+      "result", "export", build, "--output", "final.video", "--to", resourceDestination,
     ], root) as { readonly representation: string; readonly build: string; readonly output: string };
     assert.equal(resource.representation, "file");
     assert.equal(resource.build, build);
     assert.equal(resource.output, "final.video");
     assert.equal(new TextDecoder().decode(await readFile(resourceDestination)), "video bytes");
 
-    const valueDocumentDestination = join(root, "output", "final-take");
+    const valueDocumentDestination = join(root, "output", "final-take.json");
     const valueDocument = await jsonCommand([
-      "get", build, "--output", "final.take", "--to", valueDocumentDestination,
+      "result", "export", build, "--output", "final.take", "--to", valueDocumentDestination,
     ], root) as { readonly representation: string; readonly path: string };
-    assert.equal(valueDocument.representation, "value-document");
+    assert.equal(valueDocument.representation, "structured");
     assert.equal(valueDocument.path, valueDocumentDestination);
-    assert.equal((await stat(valueDocumentDestination)).isDirectory(), true);
-    const document = JSON.parse(await readFile(join(valueDocumentDestination, "value.json"), "utf8")) as {
-      readonly format: string;
-      readonly value: { readonly words: readonly string[]; readonly media: { readonly artifact: null } };
-      readonly resources: readonly [{ readonly file: { readonly path: string } }];
-    };
-    assert.equal(document.format, "hypit.result-value@1");
-    assert.deepEqual(document.value.words, ["hello"]);
-    assert.equal(document.value.media.artifact, null);
-    assert.equal(
-      new TextDecoder().decode(await readFile(join(valueDocumentDestination, document.resources[0].file.path))),
-      "video bytes",
-    );
+    assert.equal((await stat(valueDocumentDestination)).isFile(), true);
+    assert.deepEqual(JSON.parse(await readFile(valueDocumentDestination, "utf8")), { words: ["hello"] });
   } finally {
     await rm(root, { recursive: true, force: true });
   }
 });
 
-test("get requires an exact Output name and an explicit destination", async () => {
-  const root = await mkdtemp(join(tmpdir(), "hypit-cli-get-options-"));
+test("result export requires an exact retained Output name and an explicit destination", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hypit-cli-result-export-options-"));
   try {
     const silent = { write() {} };
     await assert.rejects(
-      runCli(["get", "bld_20260902T110000000Z_0000000001", "--project", root], silent, resultDistribution()),
-      /get requires --output/u,
+      runCli(["result", "export", "bld_20260902T110000000Z_0000000001", "--project", root], silent, resultDistribution()),
+      /result export requires --output/u,
     );
     await assert.rejects(
       runCli([
-        "get", "bld_20260902T110000000Z_0000000001", "--output", "stage.value", "--project", root,
+        "result", "export", "bld_20260902T110000000Z_0000000001", "--output", "stage.value", "--project", root,
       ], silent, resultDistribution()),
-      /get requires --to/u,
+      /result export requires --to/u,
     );
     await assert.rejects(
       runCli(["history", "--source", join(root, "main.svml"), "--project", root], silent,
@@ -236,60 +225,12 @@ test("get requires an exact Output name and an explicit destination", async () =
   }
 });
 
-test("result edit changes only the exact project Result presentation without opening a Runtime", async () => {
-  const root = await mkdtemp(join(tmpdir(), "hypit-cli-result-edit-"));
-  try {
-    await fixture(root);
-    const edited = await jsonCommand([
-      "result", "edit", "bld_20260902T110000000Z_0000000001",
-      "--title", "Episode 12 B-roll",
-      "--note", "Use the close-up for the opening beat.",
-      "--highlight", "stage.value",
-      "--highlight", "stage.value",
-    ], root) as {
-      readonly build: string;
-      readonly title: string;
-      readonly note: string;
-      readonly highlightedOutputs: readonly string[];
-    };
-    assert.deepEqual(edited, {
-      format: "hypit.cli-result-edit@1",
-      build: "bld_20260902T110000000Z_0000000001",
-      title: "Episode 12 B-roll",
-      note: "Use the close-up for the opening beat.",
-      highlightedOutputCount: 1,
-      highlightedOutputs: ["stage.value"],
-    });
-
-    const repository = new FileBuildResultRepository(join(root, ".hypit", "results"));
-    const stored = await repository.read("bld_20260902T110000000Z_0000000001");
-    assert.equal(stored?.title, "Episode 12 B-roll");
-    assert.equal(stored?.note, "Use the close-up for the opening beat.");
-    assert.deepEqual(stored?.highlightedOutputs, ["stage.value"]);
-
-    const cleared = await jsonCommand([
-      "result", "edit", "bld_20260902T110000000Z_0000000001", "--clear-title", "--clear-note", "--clear-highlights",
-    ], root) as {
-      readonly title: null;
-      readonly note: null;
-      readonly highlightedOutputCount: number;
-      readonly highlightedOutputs: readonly string[];
-    };
-    assert.equal(cleared.title, null);
-    assert.equal(cleared.note, null);
-    assert.equal(cleared.highlightedOutputCount, 0);
-    assert.deepEqual(cleared.highlightedOutputs, []);
-  } finally {
-    await rm(root, { recursive: true, force: true });
-  }
-});
-
-
 test("history continuation keeps the same project and Source query", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit cli pagination "));
   try {
     const older = "bld_20260902T110000000Z_0000000001";
     const newer = "bld_20260902T110000002Z_0000000001";
+    await writeFile(join(root, "selected source.svml"), "source", "utf8");
     await fixture(root, older, "selected source.svml");
     await fixture(root, "bld_20260902T110000001Z_0000000001", "unrelated.svml");
     await fixture(root, newer, "selected source.svml");
@@ -302,7 +243,7 @@ test("history continuation keeps the same project and Source query", async () =>
   } finally { await rm(root, { recursive: true, force: true }); }
 });
 
-test("history through a directory alias still finds a Source after its directory is removed", async () => {
+test("history does not reconstruct the address of a deleted Source", async () => {
   const parent = await mkdtemp(join(tmpdir(), "hypit-history-alias-"));
   try {
     const root = join(parent, "project");
@@ -313,10 +254,9 @@ test("history through a directory alias still finds a Source after its directory
     const id = "bld_20260902T110000000Z_0000000001";
     await fixture(root, id, "chapter/main.svml");
     await rm(join(root, "chapter"), { recursive: true });
-    const history = await jsonCommand(["history", "stage.value", "--source", join(alias, "chapter", "main.svml")], alias) as {
-      source: string; entries: { build: string }[];
-    };
-    assert.equal(history.source, join("chapter", "main.svml"));
-    assert.deepEqual(history.entries.map((entry) => entry.build), [id]);
+    await assert.rejects(
+      jsonCommand(["history", "stage.value", "--source", join(alias, "chapter", "main.svml")], alias),
+      /ENOENT/u,
+    );
   } finally { await rm(parent, { recursive: true, force: true }); }
 });

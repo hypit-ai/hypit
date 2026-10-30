@@ -1,6 +1,6 @@
 # `@hypit/source`
 
-The byte-oriented Source contract shared by Author and saved-Invocation compilation.
+The byte-oriented Source contract used by Author compilation.
 
 `SourceUnit` contains opaque bytes and a closure-local identity. `ResolvedSource` pairs those
 bytes with the exact trusted Frontend selected by the caller, Workspace mount or package Source
@@ -24,4 +24,4 @@ recognizes one bounded Header such as:
 
 The adapter masks the Header while preserving UTF-16 offsets and line breaks. Other Workspaces can
 produce `ResolvedSource` directly and need not use text or a Header. Neither entry recognizes
-imports, XML, Script, Recipes, saved-Invocation syntax or domain Types; those belong to the selected Frontend.
+imports, XML, Script, Recipes or domain Types; those belong to the selected Frontend.

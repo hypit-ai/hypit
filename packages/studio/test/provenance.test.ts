@@ -43,12 +43,12 @@ test("Studio joins repeated local names through compiler-owned provenance", asyn
     graph: {
       format: "hypit.graph@1", operations: [],
       outputs: [
-        { id: "a::output::visual", type, primary: { kind: "operation-result", operation: "a" } },
-        { id: "b::output::visual", type, primary: { kind: "operation-result", operation: "b" } },
+        { id: "a::output::visual", type, result: { kind: "operation-result", operation: "a" } },
+        { id: "b::output::visual", type, result: { kind: "operation-result", operation: "b" } },
       ],
     },
-    realizations: [],
     exports: [{ name: "visual", type, ref: { kind: "logical-output", id: "a::output::visual" } }],
+    retainedOutputs: [],
     provenance: { format: "hypit.author-provenance@1", elements: [
       element("a.svml", "a::output::visual"),
       element("b.svml", "b::output::visual"),

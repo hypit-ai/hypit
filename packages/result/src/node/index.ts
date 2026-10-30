@@ -1,12 +1,8 @@
 export * from "../index.js";
 export {
-  FileBuildResult,
-  FileBuildResultRepository,
-  applyBuildResultPresentation,
+  FileBuildResultHistory,
   browseBuildResults,
   buildResultDirectory,
-  describeBuildResultOutput,
-  readBuildResult,
   resolveBuildResultOutput,
 } from "./store.js";
 export type { ResolvedFileBuildResultOutput } from "./store.js";

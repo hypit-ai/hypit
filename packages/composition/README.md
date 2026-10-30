@@ -48,7 +48,7 @@ stay inside the package that owns that Programme format. Timed media carries an 
 `TemporalMap`; terminal visual compilation alone resolves it onto decoded frames.
 
 The exported `VisualElement` union covers `mask`, `text`, `text-flow`, `path-text`, `image`,
-`video`, `surface`, nested `composition` and `program`. Text carries exact FontArtifactRef values. Every image carries a BlobRef
+`video`, `surface` and `program`. Text carries exact FontArtifactRef values. Every image carries a BlobRef
 and complete `PictureInterpretation`; video carries a selected `PreparedVisualSource` with the same
 picture semantics plus its local temporal facts; `surface` carries a CompositableSurfaceRef with its
 declared picture interpretation. The schema and exported TypeScript types in `src/track.ts`
@@ -56,7 +56,10 @@ give each shape. `hypit vocabulary --visual visual-track` and focused element qu
 schemas through the installed Distribution.
 
 A `program` carries `{ format, payload, artifacts }`. The rendering package owns the object payload
-and supports named formats. It may place typed children in named slots, so video, text
+and supports named formats. The generic `artifacts` array is only its graph-visible Blob resource
+closure; the owning format must define and validate any purpose, picture interpretation or timing in
+its own payload rather than adding a Composition-wide purpose table or asking an executor to infer it.
+It may place typed children in named slots, so video, text
 and graphics can share behavior while retaining explicit material dependencies. Slot names express
 roles, not paint order. Internal layout, CSS and animation belong to that program.
 
@@ -94,9 +97,9 @@ author package can therefore publish an AudioTrack without teaching Film or Core
 ## Composition
 
 A Composition carries its id and two independently consumable terminal values:
-`VisualComposition { picture, canvas, root }` and `AudioComposition { contributions }`. The visual
-picture is the single renderer-neutral working-picture meaning under which Present, Process and
-Adjustment are evaluated; input interpretations and final delivery remain separate. They share the
+`VisualComposition { canvas, root }` and `AudioComposition { contributions }`. Source picture
+interpretations remain on their visual inputs, while final delivery stays on its terminal request;
+Composition does not advertise a selectable working colour space. The two programmes share the
 Timeline connected to assembly, but a visual compiler does not receive audio routing and an audio
 compiler does not receive Canvas or VisualScope. A visual Scope contains placed Track members, nested Stack members and
 named-input Process members. Every member carries a sibling-unique `id`, and array order paints from back to front.

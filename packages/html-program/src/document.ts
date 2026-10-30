@@ -1,4 +1,4 @@
-import { assertCompositableSurfaceRef, verifyPictureInterpretation, verifyPreparedVisualSource, verifyWorkingPictureSpec } from "@hypit/media";
+import { assertCompositableSurfaceRef, verifyPictureInterpretation, verifyPreparedVisualSource } from "@hypit/media";
 import type { CompositableSurfaceRef, FontArtifactRef } from "@hypit/media";
 import { assertFrameSpan, timelineFrameCount } from "@hypit/timeline";
 import type { FrameSpan, Timeline } from "@hypit/timeline";
@@ -21,7 +21,7 @@ import type {
   VisualScope,
 } from "@hypit/composition";
 import { visualProcesses } from "@hypit/composition";
-import { assertTemporalMap, composeTemporalMaps, evaluateTemporalMap, exactTemporalValueFromFrames, exactTemporalZero, isAffineTemporalMapPiece, resolveTemporalBoundary, sealTemporalMap, temporalValueInFrames } from "@hypit/temporal";
+import { assertTemporalMap, compareExactTemporalValues, exactTemporalValueFromFrames, isAffineTemporalMapPiece, resolveTemporalBoundary, temporalValueInFrames } from "@hypit/temporal";
 import type { ExactTemporalValue, TemporalMap } from "@hypit/temporal";
 import { assertBlobRef, canonicalStringify, compareCodeUnits } from "@hypit/hypit/protocol";
 import type { BlobRef, ResourceId } from "@hypit/hypit/protocol";
@@ -45,7 +45,9 @@ function isBlobRef(value: unknown): value is BlobRef {
 import type {
   ResourceUrlResolver,
   HtmlArtifact,
+  HtmlArtifactUsage,
   HtmlProgram,
+  HtmlProcessUsage,
   HtmlVideoSource,
 } from "./types.js";
 import {
@@ -294,13 +296,6 @@ function exactFontStyle(element: VisualElement, stableId: StableDomId): string[]
   ];
 }
 
-type ChildDocument = {
-  readonly id: string;
-  readonly html: string;
-  readonly program: HtmlProgram;
-  readonly resourceForArtifact: (id: string) => ResourceId;
-};
-
 type ElementContext = {
   readonly occurrencePath: readonly string[];
   readonly presentId: string;
@@ -308,6 +303,7 @@ type ElementContext = {
   readonly presentDuration: string;
   readonly presentDurationFrames: number;
   readonly presentStartFrame: number;
+  readonly presentUsage: readonly FrameSpan[];
   readonly programNumerator: number;
   readonly programDenominator: number;
   readonly stackIndex: number;
@@ -315,92 +311,45 @@ type ElementContext = {
   readonly sharedGlyphFilterDefinitions: string[];
   readonly stableId: StableDomId;
   readonly videoSources: HtmlVideoSource[];
-  readonly childDocument: (composition: HtmlComposition) => ChildDocument;
+  readonly processUsages: HtmlProcessUsage[];
 };
 
-type NestedFrameRun =
-  | { readonly length: number }
-  | { readonly length: number; readonly childStart: number; readonly step: number }
-  | { readonly length: number; readonly childStart: number; readonly steps: readonly number[] }
-  | { readonly values: readonly number[] };
-
-function shortestRepeatingPrefix(values: readonly number[]): number[] {
-  if (values.length < 2) return [...values];
-  const prefix = Array.from({ length: values.length }, () => 0);
-  for (let index = 1; index < values.length; index += 1) {
-    let candidate = prefix[index - 1]!;
-    while (candidate > 0 && values[index] !== values[candidate]) candidate = prefix[candidate - 1]!;
-    if (values[index] === values[candidate]) candidate += 1;
-    prefix[index] = candidate;
+function preparedVisualDisplayExtent(source: Extract<VisualElement, { readonly kind: "video" }>["source"]): {
+  readonly width: number;
+  readonly height: number;
+} {
+  const interpretation = source.interpretation;
+  let width = interpretation.codedWidth * interpretation.sampleAspectRatio.numerator
+    / interpretation.sampleAspectRatio.denominator;
+  let height = interpretation.codedHeight;
+  if (interpretation.rotationDegrees === 90 || interpretation.rotationDegrees === 270) [width, height] = [height, width];
+  if (!Number.isFinite(width) || width <= 0 || !Number.isFinite(height) || height <= 0) {
+    throw new Error("HTML renderer video display extent is invalid.");
   }
-  return values.slice(0, values.length - prefix.at(-1)!);
+  return { width, height };
 }
 
-function compactNestedNumberFrames(values: readonly number[]): NestedFrameRun[] {
-  if (values.length === 1) return [{ length: 1, childStart: values[0]!, step: 0 }];
-  const arithmetic: NestedFrameRun[] = [];
-  let index = 0;
-  while (index < values.length) {
-    const value = values[index]!;
-    const next = values[index + 1];
-    const step = next === undefined ? 0 : next - value;
-    let end = index + 1;
-    while (end < values.length && values[end] === value + step * (end - index)) end += 1;
-    arithmetic.push({ length: end - index, childStart: value, step });
-    index = end;
-  }
-  const differences = values.slice(1).map((value, position) => value - values[position]!);
-  const steps = shortestRepeatingPrefix(differences);
-  const periodic: NestedFrameRun[] = [{ length: values.length, childStart: values[0]!, steps }];
-  const literal: NestedFrameRun[] = [{ values: [...values] }];
-  return [arithmetic, periodic, literal].reduce((shortest, candidate) =>
-    JSON.stringify(candidate).length < JSON.stringify(shortest).length ? candidate : shortest);
-}
-
-/** Compress an already-quantized parent-to-child frame table without changing its meaning. */
-function nestedFrameRuns(frames: readonly (number | null)[]): NestedFrameRun[] {
-  const runs: NestedFrameRun[] = [];
-  let index = 0;
-  while (index < frames.length) {
-    const value = frames[index]!;
-    if (value === null) {
-      let end = index + 1;
-      while (end < frames.length && frames[end] === null) end += 1;
-      runs.push({ length: end - index });
-      index = end;
-      continue;
-    }
-    let end = index + 1;
-    while (end < frames.length && frames[end] !== null) end += 1;
-    runs.push(...compactNestedNumberFrames(frames.slice(index, end) as number[]));
-    index = end;
-  }
-  return runs;
-}
-
-function nestedFrameAttribute(frames: readonly (number | null)[]): string {
-  const values = escapeHtml(JSON.stringify(frames));
-  const runs = escapeHtml(JSON.stringify(nestedFrameRuns(frames)));
-  return runs.length < values.length
-    ? `data-hypit-nested-frame-runs="${runs}"`
-    : `data-hypit-nested-frame-values="${values}"`;
-}
-
-function nestedSurfaceFrameAt(
-  source: Extract<HtmlVideoSource, { readonly kind: "surface" }>,
-  childFrame: number,
-): number | undefined {
-  if (childFrame < source.startFrame || childFrame >= source.endFrameExclusive) return undefined;
-  const a = source.sourceFrame;
-  const r = source.sourceRate;
-  const numerator = BigInt(a.numerator) * BigInt(r.denominator)
-    + BigInt(childFrame - source.startFrame) * BigInt(r.numerator) * BigInt(a.denominator);
-  const denominator = BigInt(a.denominator) * BigInt(r.denominator);
-  const value = numerator / denominator - (r.numerator < 0 && numerator % denominator === 0n ? 1n : 0n);
-  if (value < 0n || value > BigInt(Number.MAX_SAFE_INTEGER)) {
-    throw new Error(`Nested HTML Surface ${source.id} exceeds safe frame arithmetic.`);
-  }
-  return Number(value);
+/**
+ * Keep authored layout and selectors on one stable box. Decoders replace only
+ * the private payload inside the slot, so decoded pixels cannot add a sibling
+ * to the authored flex/grid/selector tree.
+ */
+function mediaDisplayPlane(input: {
+  readonly id: string;
+  readonly logicalElementId: string;
+  readonly inlineStyle: string;
+  readonly width: number;
+  readonly height: number;
+  readonly sourceAttributes: readonly string[];
+  readonly deferredSource: string;
+}): string {
+  const planeStyle = [
+    input.inlineStyle,
+    `--hypit-media-intrinsic-width:${input.width}px`,
+    `--hypit-media-intrinsic-height:${input.height}px`,
+  ].filter(Boolean).join(";");
+  const payloadStyle = "position:absolute;inset:0;width:100%;height:100%;object-fit:inherit;object-position:inherit;pointer-events:none";
+  return `<span id="${input.id}" data-hypit-element-id="${escapeHtml(input.logicalElementId)}" data-hypit-media-display-plane style="${escapeHtml(planeStyle)}"><span data-hypit-media-payload-host style="position:relative;display:block;width:100%;height:100%;object-fit:inherit;object-position:inherit"><video ${input.sourceAttributes.join(" ")} style="${payloadStyle}" muted playsinline ${input.deferredSource}></video><span data-hypit-decoded-media-slot style="position:absolute;inset:0;overflow:hidden;object-fit:inherit;object-position:inherit;pointer-events:none"></span></span></span>`;
 }
 
 /** Every emitted element, including SVG mask sources, keeps the same authored frame clock. */
@@ -454,78 +403,6 @@ function renderElement(
     const slots = new Map(element.slots.map(slot => [slot.name, renderElement(slot.element, context)]));
     return `<div ${common}>${htmlVisualHtml(program, slots)}</div>`;
   }
-  if (element.kind === "composition") {
-    const child = context.childDocument(element.composition);
-    const frames = Array.from({ length: context.presentDurationFrames }, (_, localFrame) => {
-      const mapped = evaluateTemporalMap(element.sampling, exactTemporalValueFromFrames(localFrame, {
-        frameRate: { numerator: context.programNumerator, denominator: context.programDenominator },
-      }));
-      if (mapped === undefined) return null;
-      // A visual frame owns the half-open interval beginning at its boundary.
-      // Quantizing to nearest would switch to the next child frame halfway
-      // through the current interval and make nesting depend on frame-rate ratio.
-      const frame = resolveTemporalBoundary(mapped, element.composition.timeline, "inside");
-      return frame >= 0 && frame < element.composition.timeline.frameCount ? frame : null;
-    });
-    for (const source of child.program.videoSources) {
-      const documentPath = [id, ...source.documentPath];
-      if (source.kind === "media") {
-        const childDomain = element.sampling.stages.at(-1)!.source;
-        const sourceDomain = source.sampling.stages[0]!.target;
-        const active = sealTemporalMap({ stages: [{
-          target: structuredClone(childDomain),
-          source: structuredClone(sourceDomain),
-          pieces: [{
-            target: {
-              start: exactTemporalValueFromFrames(source.startFrame, element.composition.timeline),
-              end: exactTemporalValueFromFrames(source.endFrameExclusive, element.composition.timeline),
-            },
-            sourceAtStart: exactTemporalZero(),
-            rate: { numerator: 1, denominator: 1 },
-          }],
-        }] });
-        context.videoSources.push({
-          kind: "media",
-          id: context.stableId(["nested-source", ...context.occurrencePath, context.presentId, element.id, source.id]),
-          documentPath,
-          elementId: source.elementId,
-          startFrame: context.presentStartFrame,
-          endFrameExclusive: context.presentStartFrame + context.presentDurationFrames,
-          source: structuredClone(source.source),
-          sampling: composeTemporalMaps(composeTemporalMaps(element.sampling, active), source.sampling),
-        });
-        continue;
-      }
-      const sourceFrames = frames.map((frame) => frame === null ? null : nestedSurfaceFrameAt(source, frame));
-      let runStart = 0;
-      let part = 0;
-      while (runStart < sourceFrames.length) {
-        const sourceFrame = sourceFrames[runStart];
-        if (sourceFrame === null || sourceFrame === undefined) { runStart += 1; continue; }
-        const next = sourceFrames[runStart + 1];
-        const rate = typeof next === "number" ? next - sourceFrame : 0;
-        let runEnd = runStart + 1;
-        while (runEnd < sourceFrames.length
-          && sourceFrames[runEnd] === sourceFrame + rate * (runEnd - runStart)) runEnd += 1;
-        part += 1;
-        context.videoSources.push({
-          kind: "surface",
-          id: context.stableId(["nested-source", ...context.occurrencePath, context.presentId, element.id,
-            source.id, String(part)]),
-          documentPath,
-          elementId: source.elementId,
-          artifactId: child.resourceForArtifact(source.artifactId),
-          startFrame: context.presentStartFrame + runStart,
-          endFrameExclusive: context.presentStartFrame + runEnd,
-          sourceFrame: { numerator: sourceFrame, denominator: 1 },
-          sourceRate: { numerator: rate, denominator: 1 },
-          sourceFrameRate: { ...source.sourceFrameRate },
-        });
-        runStart = runEnd;
-      }
-    }
-    return `<iframe ${common} data-hypit-nested-composition data-hypit-nested-document-id="${child.id}" data-hypit-nested-start-frame="${context.presentStartFrame}" ${nestedFrameAttribute(frames)}></iframe>`;
-  }
   const textContext = {
     occurrencePath: context.occurrencePath,
     presentId: context.presentId,
@@ -552,27 +429,31 @@ function renderElement(
     return renderTerminalTextElement(element, textContext);
   }
   if (element.kind === "video") {
+    const extent = preparedVisualDisplayExtent(element.source);
     context.videoSources.push({
       kind: "media",
       id,
-      documentPath: [],
       elementId: id,
       startFrame: context.presentStartFrame,
       endFrameExclusive: context.presentStartFrame + context.presentDurationFrames,
+      usage: frameUsage(context.presentUsage),
       source: structuredClone(element.source),
       sampling: structuredClone(element.sampling),
     });
-    const media = [
-      `id="${id}"`,
-      `data-hypit-element-id="${escapeHtml(element.id)}"`,
+    const sourceAttributes = [
       "data-hypit-source-frame=\"media\"",
       `data-hypit-start-frame="${context.presentStartFrame}"`,
       `data-hypit-end-frame="${context.presentStartFrame + context.presentDurationFrames}"`,
-      `style="${escapeHtml(inlineStyle)}"`,
-      "muted",
-      "playsinline",
-    ].filter(Boolean).join(" ");
-    return `<video ${media} ${deferredArtifact("src", element.source.source.resource)}></video>`;
+    ];
+    return mediaDisplayPlane({
+      id,
+      logicalElementId: element.id,
+      inlineStyle,
+      width: extent.width,
+      height: extent.height,
+      sourceAttributes,
+      deferredSource: deferredArtifact("src", element.source.source.resource),
+    });
   }
   if (element.kind === "surface" && element.sampling !== undefined) {
     const artifact = element.surface.artifact;
@@ -584,7 +465,7 @@ function renderElement(
       numerator: context.programNumerator, denominator: context.programDenominator,
     });
     let part = 0;
-    return pieces.flatMap((piece) => samplingRuns(piece).map((run) => {
+    for (const piece of pieces) for (const run of samplingRuns(piece)) {
       part += 1;
       const startFrame = context.presentStartFrame + run.startFrame;
       const durationFrames = run.endFrameExclusive - run.startFrame;
@@ -592,41 +473,38 @@ function renderElement(
       context.videoSources.push({
         kind: "surface",
         id: partId,
-        documentPath: [],
-        elementId: partId,
+        elementId: id,
         artifactId: artifact.resource,
+        picture: structuredClone(element.surface.picture),
         startFrame,
         endFrameExclusive: startFrame + durationFrames,
+        usage: frameUsage(intersectFrameSpans([{
+          startFrame,
+          endFrameExclusive: startFrame + durationFrames,
+        }], context.presentUsage)),
         sourceFrame: { ...run.sourceFrame },
         sourceRate: { ...piece.rate },
         sourceFrameRate: { ...timing.frameRate },
       });
-      const media = [
-        `id="${partId}"`,
-        `data-hypit-element-id="${escapeHtml(element.id)}"`,
-        `data-hypit-sampling-part="${part}"`,
-        `data-hypit-source-frame="${run.sourceFrame.numerator}/${run.sourceFrame.denominator}"`,
-        `data-hypit-source-rate="${piece.rate.numerator}/${piece.rate.denominator}"`,
-        `data-hypit-start-frame="${startFrame}"`,
-        `data-hypit-end-frame="${startFrame + durationFrames}"`,
-        `data-hypit-source-fps="${timing.frameRate.numerator}/${timing.frameRate.denominator}"`,
-        `style="${escapeHtml(inlineStyle)}"`,
-        "muted",
-        "playsinline",
-        ...[
-          `data-hypit-surface-artifact="${element.surface.artifact.resource}"`,
-          `data-hypit-alpha-mode="${element.surface.picture.alphaMode}"`,
-          `data-hypit-color-primaries="${element.surface.picture.colorPrimaries}"`,
-          `data-hypit-color-transfer="${element.surface.picture.colorTransfer}"`,
-          `data-hypit-color-matrix="${element.surface.picture.colorMatrix}"`,
-          `data-hypit-color-range="${element.surface.picture.colorRange}"`,
-          `data-hypit-bit-depth="${element.surface.picture.bitDepth}"`,
-          `width="${element.surface.width}"`,
-          `height="${element.surface.height}"`,
-        ],
-      ].filter(Boolean).join(" ");
-      return `<video ${media} ${deferredArtifact("src", artifact.resource)}></video>`;
-    })).join("");
+    }
+    return mediaDisplayPlane({
+      id,
+      logicalElementId: element.id,
+      inlineStyle,
+      width: element.surface.width,
+      height: element.surface.height,
+      sourceAttributes: [
+        "data-hypit-source-frame=\"surface\"",
+        `data-hypit-surface-artifact="${element.surface.artifact.resource}"`,
+        `data-hypit-alpha-mode="${element.surface.picture.alphaMode}"`,
+        `data-hypit-color-primaries="${element.surface.picture.colorPrimaries}"`,
+        `data-hypit-color-transfer="${element.surface.picture.colorTransfer}"`,
+        `data-hypit-color-matrix="${element.surface.picture.colorMatrix}"`,
+        `data-hypit-color-range="${element.surface.picture.colorRange}"`,
+        `data-hypit-bit-depth="${element.surface.picture.bitDepth}"`,
+      ],
+      deferredSource: deferredArtifact("src", artifact.resource),
+    });
   }
   if (element.kind === "surface") {
     const surface = [
@@ -659,7 +537,7 @@ function renderVisualPresent(
   sharedGlyphFilterDefinitions: string[],
   stableId: StableDomId,
   videoSources: HtmlVideoSource[],
-  childDocument: (composition: HtmlComposition) => ChildDocument,
+  processUsages: HtmlProcessUsage[],
   captureRoot: boolean,
 ): string {
   const start = frameSeconds(present.span.startFrame, numerator, denominator);
@@ -672,6 +550,7 @@ function renderVisualPresent(
     presentDuration: duration,
     presentDurationFrames: present.span.endFrameExclusive - present.span.startFrame,
     presentStartFrame: present.span.startFrame,
+    presentUsage: present.visibility ?? [present.span],
     programNumerator: numerator,
     programDenominator: denominator,
     stackIndex,
@@ -679,7 +558,7 @@ function renderVisualPresent(
     sharedGlyphFilterDefinitions,
     stableId,
     videoSources,
-    childDocument,
+    processUsages,
   });
   return `<div class="hypit-visual-present"${captureRoot ? " data-hypit-capture-root" : ""} data-hypit-occurrence-path="${escapeHtml(JSON.stringify(occurrencePath))}" data-hypit-present-id="${escapeHtml(present.id)}" data-hypit-present-root-element-id="${escapeHtml(root.id)}" data-hypit-paint-path="${escapeHtml(JSON.stringify(paintPath))}" data-hypit-contribution-start-frame="${present.span.startFrame}" data-hypit-contribution-end-frame="${present.span.endFrameExclusive}" style="position:absolute;inset:0;z-index:${stackIndex};overflow:hidden;pointer-events:none">${present.visibility === undefined ? contents : `<div data-hypit-visibility="${escapeHtml(JSON.stringify(present.visibility))}" style="position:absolute;inset:0">${contents}</div>`}</div>`;
 }
@@ -703,7 +582,7 @@ function renderVisualProcess(
   sharedGlyphFilterDefinitions: string[],
   stableId: StableDomId,
   videoSources: HtmlVideoSource[],
-  childDocument: (composition: HtmlComposition) => ChildDocument,
+  processUsages: HtmlProcessUsage[],
   captureRoot: boolean,
 ): string {
   const id = stableId(["visual-process", ...occurrencePath, process.id]);
@@ -719,7 +598,7 @@ function renderVisualProcess(
     sharedGlyphFilterDefinitions,
     stableId,
     videoSources,
-    childDocument,
+    processUsages,
     false,
   )]));
   const contents = htmlVisualHtml(program, slots);
@@ -740,14 +619,14 @@ function renderVisualContribution(
   sharedGlyphFilterDefinitions: string[],
   stableId: StableDomId,
   videoSources: HtmlVideoSource[],
-  childDocument: (composition: HtmlComposition) => ChildDocument,
+  processUsages: HtmlProcessUsage[],
   captureRoot: boolean,
 ): string {
   return contribution.kind === "present"
     ? renderVisualPresent(occurrencePath, contribution, stackIndex, paintPath, numerator, denominator,
-        emittedFilterIds, sharedGlyphFilterDefinitions, stableId, videoSources, childDocument, captureRoot)
+        emittedFilterIds, sharedGlyphFilterDefinitions, stableId, videoSources, processUsages, captureRoot)
     : renderVisualProcess(occurrencePath, contribution, stackIndex, paintPath, numerator, denominator,
-        emittedFilterIds, sharedGlyphFilterDefinitions, stableId, videoSources, childDocument, captureRoot);
+        emittedFilterIds, sharedGlyphFilterDefinitions, stableId, videoSources, processUsages, captureRoot);
 }
 
 type RenderedAdjustment = {
@@ -813,10 +692,22 @@ function mergeFrameSpans(spans: readonly FrameSpan[]): FrameSpan[] {
   return result;
 }
 
+function frameUsage(spans: readonly FrameSpan[]): HtmlArtifactUsage {
+  const merged = mergeFrameSpans(spans);
+  return merged.length === 0 ? { kind: "never" } : { kind: "frames", spans: merged };
+}
+
+function intersectFrameSpans(left: readonly FrameSpan[], right: readonly FrameSpan[]): FrameSpan[] {
+  return mergeFrameSpans(left.flatMap((a) => right.map((b) => ({
+    startFrame: Math.max(a.startFrame, b.startFrame),
+    endFrameExclusive: Math.min(a.endFrameExclusive, b.endFrameExclusive),
+  })).filter((span) => span.startFrame < span.endFrameExclusive)));
+}
+
 function collectArtifacts(composition: HtmlComposition): HtmlArtifact[] {
   const artifacts = new Map<ResourceId, { artifact: BlobRef; picture?: import("@hypit/media").PictureInterpretation; always: boolean; spans: FrameSpan[] }>();
   const add = (artifact: Pick<BlobRef, "resource" | "size" | "mediaType">,
-    usage: "always" | FrameSpan, picture?: import("@hypit/media").PictureInterpretation): void => {
+    usage: "always" | "never" | FrameSpan, picture?: import("@hypit/media").PictureInterpretation): void => {
     const next: BlobRef = {
       kind: "blob",
       resource: artifact.resource,
@@ -834,24 +725,27 @@ function collectArtifacts(composition: HtmlComposition): HtmlArtifact[] {
     const entry = existing ?? { artifact: next, always: false, spans: [], ...(picture === undefined ? {} : { picture }) };
     if (entry.picture === undefined && picture !== undefined) entry.picture = structuredClone(picture);
     if (usage === "always") entry.always = true;
-    else if (!entry.always) entry.spans.push({ ...usage });
+    else if (usage !== "never" && !entry.always) entry.spans.push({ ...usage });
     artifacts.set(artifact.resource, entry);
+  };
+  const addForUsage = (artifact: Pick<BlobRef, "resource" | "size" | "mediaType">,
+    usage: readonly FrameSpan[], picture?: import("@hypit/media").PictureInterpretation): void => {
+    if (usage.length === 0) add(artifact, "never", picture);
+    else for (const span of usage) add(artifact, span, picture);
   };
   for (const track of visualScopeTracks(composition.visual.root)) {
     for (const present of visualPresents(track)) {
+      const presentUsage = present.visibility ?? [present.span];
       for (const element of visualElements(present.root)) {
-        if (element.kind === "image") add(element.artifact, present.span, element.picture);
-        if (element.kind === "video") add(element.source.source, present.span);
-        if (element.kind === "surface") add(element.surface.artifact, present.span);
-        if (element.kind === "composition") {
-          for (const child of collectArtifacts(element.composition)) {
-            add(child.artifact, present.span, child.picture);
+        if (element.kind === "image") addForUsage(element.artifact, presentUsage, element.picture);
+        if (element.kind === "video") addForUsage(element.source.source, presentUsage);
+        if (element.kind === "surface") addForUsage(element.surface.artifact, presentUsage);
+        if (element.kind === "program") {
+          for (const dependency of readHtmlVisual(element.program).dependencies) {
+            addForUsage(dependency.artifact, presentUsage,
+              dependency.kind === "picture" ? dependency.picture : undefined);
           }
         }
-        // HtmlVisual HTML, CSS and setup are intentionally opaque. Their
-        // declared dependencies stay conservative even though the visual root
-        // itself has a Present span.
-        if (element.kind === "program") for (const artifact of element.program.artifacts) add(artifact, "always");
         if (element.kind === "text") {
           for (const font of element.fonts ?? []) {
             // @font-face declarations live at document scope. Keep them whole
@@ -867,42 +761,42 @@ function collectArtifacts(composition: HtmlComposition): HtmlArtifact[] {
       }
     }
     for (const process of visualProcesses(track)) {
-      for (const artifact of process.effect.program.artifacts) add(artifact, "always");
+      const usage = process.visibility ?? [process.span];
+      for (const dependency of readHtmlVisual(process.effect.program).dependencies) {
+        addForUsage(dependency.artifact, usage, dependency.kind === "picture" ? dependency.picture : undefined);
+      }
     }
   }
   for (const process of visualScopeProcesses(composition.visual.root)) {
-    for (const artifact of process.effect.program.artifacts) add(artifact, "always");
+    for (const dependency of readHtmlVisual(process.effect.program).dependencies) {
+      add(dependency.artifact, "always", dependency.kind === "picture" ? dependency.picture : undefined);
+    }
   }
   return [...artifacts.values()]
     .sort((left, right) => compareCodeUnits(left.artifact.resource, right.artifact.resource))
-    .map(({ artifact, picture, always, spans }, index) => ({
+    .map(({ artifact, picture, always, spans }, index): HtmlArtifact => ({
       id: `artifact-${String(index + 1).padStart(4, "0")}`,
       artifact,
-      ...(picture === undefined ? {} : { picture: structuredClone(picture) }),
-      usage: always ? { kind: "always" as const } : { kind: "frames" as const, spans: mergeFrameSpans(spans) },
+      ...(picture === undefined
+        ? { kind: "bytes" as const }
+        : { kind: "picture" as const, picture: structuredClone(picture) }),
+      usage: always
+        ? { kind: "always" as const }
+        : spans.length === 0
+          ? { kind: "never" as const }
+          : { kind: "frames" as const, spans: mergeFrameSpans(spans) },
     }));
 }
 
 function collectSurfaces(
   composition: HtmlComposition,
   artifactIds: ReadonlyMap<ResourceId, string>,
+  artifacts: readonly HtmlArtifact[],
 ): HtmlProgram["surfaces"][number][] {
   const surfaces = new Map<ResourceId, CompositableSurfaceRef>();
   for (const track of visualScopeTracks(composition.visual.root)) {
     for (const present of visualPresents(track)) {
       for (const element of visualElements(present.root)) {
-        if (element.kind === "composition") {
-          for (const nested of collectSurfaces(element.composition,
-            new Map(collectArtifacts(element.composition).map((entry) => [entry.artifact.resource, entry.id] as const)))) {
-            const surface = structuredClone(nested.surface);
-            const existing = surfaces.get(surface.artifact.resource);
-            if (existing !== undefined && canonicalStringify(existing) !== canonicalStringify(surface)) {
-              throw new Error(`HTML renderer Surface ${surface.artifact.resource} has conflicting declarations.`);
-            }
-            surfaces.set(surface.artifact.resource, surface);
-          }
-          continue;
-        }
         if (element.kind !== "surface") continue;
         const surface = structuredClone(element.surface);
         const existing = surfaces.get(surface.artifact.resource);
@@ -917,7 +811,9 @@ function collectSurfaces(
     compareCodeUnits(left.artifact.resource, right.artifact.resource)).map((surface) => {
     const artifactId = artifactIds.get(surface.artifact.resource);
     if (artifactId === undefined) throw new Error("HTML Programme Surface has no declared Artifact.");
-    return { artifactId, surface };
+    const usage = artifacts.find((entry) => entry.id === artifactId)?.usage;
+    if (usage === undefined) throw new Error("HTML Programme Surface has no declared Artifact usage.");
+    return { artifactId, surface, usage: structuredClone(usage) };
   });
 }
 
@@ -968,103 +864,10 @@ function hasTerminalText(composition: HtmlComposition): boolean {
       element.kind === "text-flow" || element.kind === "path-text")));
 }
 
-function frameProgramRuntime(frameCount: number, hasNestedCompositions: boolean): string {
-  const nestedDeclarations = hasNestedCompositions ? "\n    let nestedCompositions;" : "";
-  const nestedRuntime = hasNestedCompositions ? `
-    const nestedFrameAt = (nested, parentFrame) => {
-      const localFrame = parentFrame - nested.startFrame;
-      if (localFrame < 0 || localFrame >= nested.frameCount) return undefined;
-      let low = 0;
-      let high = nested.runs.length;
-      while (low < high) {
-        const middle = Math.floor((low + high) / 2);
-        if (nested.runs[middle].endFrameExclusive <= localFrame) low = middle + 1;
-        else high = middle;
-      }
-      const run = nested.runs[low];
-      if (run === undefined) return undefined;
-      const offset = localFrame - run.startFrame;
-      if (run.values !== undefined) return run.values[offset];
-      if (!Number.isSafeInteger(run.childStart)) return undefined;
-      if (run.steps === undefined) return run.childStart + offset * run.step;
-      const cycles = Math.floor(offset / run.steps.length);
-      const remainder = offset % run.steps.length;
-      return run.childStart + cycles * run.stepSum + run.stepPrefix[remainder];
-    };
-    const projectedSpans = (nested, spans) => {
-      const frames = new Set();
-      for (const span of spans ?? [{ startFrame: 0, endFrameExclusive: ${frameCount} }]) {
-        const start = Math.max(span.startFrame, nested.startFrame);
-        const end = Math.min(span.endFrameExclusive, nested.startFrame + nested.frameCount);
-        for (let frame = start; frame < end; frame += 1) {
-          const childFrame = nestedFrameAt(nested, frame);
-          if (Number.isSafeInteger(childFrame)) frames.add(childFrame);
-        }
-      }
-      const ordered = [...frames].sort((left, right) => left - right);
-      const result = [];
-      for (const frame of ordered) {
-        const previous = result.at(-1);
-        if (previous !== undefined && previous.endFrameExclusive === frame) previous.endFrameExclusive = frame + 1;
-        else result.push({ startFrame: frame, endFrameExclusive: frame + 1 });
-      }
-      return result;
-    };
-    const nestedProgram = async nested => {
-      if (nested.ready === undefined) nested.ready = (async () => {
-        if (typeof nested.srcdoc !== 'string') throw new Error('Nested Composition has no document.');
-        if (!nested.element.hasAttribute('srcdoc')) {
-          await new Promise((resolve, reject) => {
-            nested.element.addEventListener('load', resolve, { once: true });
-            nested.element.addEventListener('error', () => reject(new Error('Nested Composition failed to load.')), { once: true });
-            nested.element.setAttribute('srcdoc', nested.srcdoc);
-          });
-        }
-        const program = nested.element.contentWindow?.__hypitFrameProgram;
-        if (program === undefined) throw new Error('Nested Composition has no frame programme.');
-        await program.prepare(nested.spans);
-        return program;
-      })();
-      return nested.ready;
-    };` : "";
-  const nestedInitialization = hasNestedCompositions ? `
-      const nestedDocuments = new Map([...document.querySelectorAll('template[data-hypit-nested-document-id]')].map(element => [
-        element.getAttribute('data-hypit-nested-document-id'),
-        element.getAttribute('data-hypit-nested-srcdoc'),
-      ]));
-      nestedCompositions = [...document.querySelectorAll('iframe[data-hypit-nested-composition]')].map(element => {
-        let cursor = 0;
-        const values = element.getAttribute('data-hypit-nested-frame-values');
-        const encoded = values === null
-          ? JSON.parse(element.getAttribute('data-hypit-nested-frame-runs'))
-          : [{ values: JSON.parse(values) }];
-        const runs = encoded.map(run => {
-          const length = run.length ?? run.values.length;
-          const stepPrefix = run.steps?.reduce((prefix, step) => [...prefix, prefix.at(-1) + step], [0]);
-          const resolved = { ...run, length, startFrame: cursor, endFrameExclusive: cursor + length,
-            stepPrefix, stepSum: stepPrefix?.at(-1) };
-          cursor = resolved.endFrameExclusive;
-          return resolved;
-        });
-        return {
-          element,
-          startFrame: Number(element.getAttribute('data-hypit-nested-start-frame')),
-          frameCount: cursor,
-          runs,
-          srcdoc: nestedDocuments.get(element.getAttribute('data-hypit-nested-document-id')),
-          ready: undefined,
-        };
-      });
-      for (const nested of nestedCompositions) nested.spans = projectedSpans(nested, spans);` : "";
-  const nestedApplication = hasNestedCompositions ? `
-      for (const nested of nestedCompositions) {
-        const childFrame = nestedFrameAt(nested, frame);
-        nested.element.style.display = Number.isSafeInteger(childFrame) ? '' : 'none';
-        if (Number.isSafeInteger(childFrame)) pending.push(nestedProgram(nested).then(program => program.applyFrame(childFrame)));
-      }` : "";
+function frameProgramRuntime(frameCount: number): string {
   return `(() => {
-    let presents;${nestedDeclarations}
-    let prepared;${nestedRuntime}
+    let presents;
+    let prepared;
     const initialize = spans => {
       htmlPrepareFrameSelection(spans);
       for (const initializer of htmlFrameProgramInitializers) initializer();
@@ -1073,17 +876,16 @@ function frameProgramRuntime(frameCount: number, hasNestedCompositions: boolean)
         element,
         startFrame: Number(element.getAttribute('data-hypit-contribution-start-frame')),
         endFrameExclusive: Number(element.getAttribute('data-hypit-contribution-end-frame')),
-      }));${nestedInitialization}
+      }));
     };
-    const applyFrame = async frame => {
+    const applyPreparedFrame = async frame => {
       if (!Number.isSafeInteger(frame) || frame < 0 || frame >= ${frameCount}) {
         throw new Error('HTML Program frame is outside its domain.');
       }
-      if (!htmlFrameSelectionPrepared) initialize();
       for (const present of presents) {
         present.element.style.display = frame >= present.startFrame && frame < present.endFrameExclusive ? '' : 'none';
       }
-      const pending = [];${nestedApplication}
+      const pending = [];
       window.dispatchEvent(new CustomEvent('hypit-frame', { detail: {
         frame,
         waitUntil(value) { pending.push(Promise.resolve(value)); },
@@ -1091,16 +893,27 @@ function frameProgramRuntime(frameCount: number, hasNestedCompositions: boolean)
       await Promise.all(pending);
       void document.documentElement.getBoundingClientRect();
     };
+    const begin = (spans, frame) => {
+      if (prepared !== undefined) return prepared;
+      prepared = (async () => {
+        initialize(spans);
+        await document.fonts.ready;
+        await applyPreparedFrame(frame);
+      })();
+      return prepared;
+    };
+    const applyFrame = async frame => {
+      if (!Number.isSafeInteger(frame) || frame < 0 || frame >= ${frameCount}) {
+        throw new Error('HTML Program frame is outside its domain.');
+      }
+      if (prepared === undefined) return begin(undefined, frame);
+      await prepared;
+      await applyPreparedFrame(frame);
+    };
     Object.defineProperty(window, '__hypitFrameProgram', { configurable: false, writable: false, value: Object.freeze({
       frameCount: ${frameCount},
       prepare(spans) {
-        if (prepared !== undefined) return prepared;
-        prepared = (async () => {
-          initialize(spans);
-          await document.fonts.ready;
-          await applyFrame(spans?.[0]?.startFrame ?? 0);
-        })();
-        return prepared;
+        return begin(spans, spans?.[0]?.startFrame ?? 0);
       },
       applyFrame,
     }) });
@@ -1132,7 +945,7 @@ function emitHtml(
   composition: HtmlComposition,
   timeline: Timeline,
   videoSources: HtmlVideoSource[],
-  compileChild: (composition: HtmlComposition) => HtmlProgram,
+  processUsages: HtmlProcessUsage[],
 ): string {
   const { numerator, denominator } = timeline.frameRate;
   const visualItems = visualScopeTrackOccurrences(composition.visual.root)
@@ -1160,28 +973,6 @@ function emitHtml(
   }[] = [];
   const processStages: string[] = [];
   let processOrder = 0;
-  const nestedDocuments = new Map<HtmlComposition, ChildDocument>();
-  const childDocument = (childComposition: HtmlComposition): ChildDocument => {
-    const existing = nestedDocuments.get(childComposition);
-    if (existing !== undefined) return existing;
-    const child = compileChild(childComposition);
-    const resources = new Map(child.artifacts.map((entry) => [entry.id, entry.artifact.resource] as const));
-    const resource = (id: string): ResourceId => {
-      const value = resources.get(id);
-      if (value === undefined) throw new Error(`Nested Composition ${childComposition.id} references unknown Artifact ${id}.`);
-      return value;
-    };
-    const document = {
-      id: `hypit-nested-document-${nestedDocuments.size + 1}`,
-      program: child,
-      resourceForArtifact: resource,
-      html: child.html
-        .replace(ARTIFACT_URI, (_match, childId: string) => htmlArtifactUri(resource(childId)))
-        .replace(SURFACE_ARTIFACT, (_match, childId: string) => `data-hypit-surface-artifact="${resource(childId)}"`),
-    };
-    nestedDocuments.set(childComposition, document);
-    return document;
-  };
   const renderScope = (
     scope: VisualScope,
     includeClear: boolean,
@@ -1218,8 +1009,14 @@ function emitHtml(
         const slots = new Map(renderedInputs.map(({ input, key }) => [input.name,
           `<div data-hypit-process-input="${escapeHtml(input.name)}" style="position:absolute;inset:0;overflow:hidden;pointer-events:none;isolation:isolate"><img data-hypit-process-raster-key="${key}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:fill;pointer-events:none"/></div>`] as const));
         for (const { input, child, key } of renderedInputs) processStages.push(
-          `<div data-hypit-process-stage data-hypit-process-order="${order}" data-hypit-process-stage-key="${key}" data-hypit-process-input-name="${escapeHtml(input.name)}" data-hypit-capture-root data-hypit-contribution-start-frame="0" data-hypit-contribution-end-frame="${timelineFrameCount(timeline)}" style="display:none;position:fixed;inset:0;width:${composition.visual.canvas.width}px;height:${composition.visual.canvas.height}px;overflow:hidden;pointer-events:none;background:transparent;isolation:isolate">${child}</div>`,
+          `<div id="${key}" data-hypit-process-stage data-hypit-process-order="${order}" data-hypit-process-stage-key="${key}" data-hypit-process-input-name="${escapeHtml(input.name)}" data-hypit-capture-root data-hypit-contribution-start-frame="0" data-hypit-contribution-end-frame="${timelineFrameCount(timeline)}" style="display:none;position:fixed;inset:0;width:${composition.visual.canvas.width}px;height:${composition.visual.canvas.height}px;overflow:hidden;pointer-events:none;background:transparent;isolation:isolate">${child}</div>`,
         );
+        processUsages.push({
+          order,
+          passes: renderedInputs.length,
+          stageKeys: renderedInputs.map(({ key }) => key),
+          spans: [{ startFrame: 0, endFrameExclusive: timelineFrameCount(timeline) }],
+        });
         scopePrograms.push({ id, startFrame: 0, durationFrames: timelineFrameCount(timeline), program });
         html += `\n    <div id="${id}" class="hypit-visual-scope-process"${captureContributions ? " data-hypit-capture-root" : ""} data-hypit-process-id="${escapeHtml(entry.process.id)}" data-hypit-occurrence-path="${escapeHtml(JSON.stringify(processPath))}" data-hypit-paint-path="${escapeHtml(JSON.stringify(processPaintPath))}" data-hypit-contribution-start-frame="0" data-hypit-contribution-end-frame="${timelineFrameCount(timeline)}" style="position:absolute;inset:0;z-index:${stackIndex};overflow:hidden;pointer-events:none;isolation:isolate">${htmlVisualHtml(program, slots)}</div>`;
         continue;
@@ -1229,7 +1026,7 @@ function emitHtml(
       if (item.kind !== "adjustment") {
         html += `\n    ${renderVisualContribution(occurrencePath, item, stackIndex, [...paintPath, stackIndex],
           numerator, denominator, emittedFilterIds, sharedGlyphFilterDefinitions, stableId, videoSources,
-          childDocument, captureContributions)}`;
+          processUsages, captureContributions)}`;
         continue;
       }
       const rendered = renderVisualAdjustment(occurrencePath, item, stackIndex, html, stableId);
@@ -1239,9 +1036,6 @@ function emitHtml(
     return html;
   };
   const visualHtml = renderScope(composition.visual.root, true, [], [], true);
-  const hasNestedCompositions = nestedDocuments.size > 0;
-  const nestedDocumentsHtml = [...nestedDocuments.values()].map((document) =>
-    `<template data-hypit-nested-document-id="${document.id}" data-hypit-nested-srcdoc="${escapeHtml(document.html)}"></template>`).join("\n  ");
   const sharedDefinitionsHtml = sharedGlyphFilterDefinitions.length === 0 ? ""
     : `<svg data-hypit-document-definitions aria-hidden="true" width="0" height="0" style="position:absolute;overflow:hidden"><defs>${sharedGlyphFilterDefinitions.join("")}</defs></svg>`;
   const fontCss = renderFontFaces(composition, stableId);
@@ -1279,20 +1073,19 @@ function emitHtml(
   <style>
     html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent}
     [data-hypit-program-root]{position:relative;overflow:hidden;background:transparent}
-    ${hasNestedCompositions ? "iframe[data-hypit-nested-composition]{border:0;background:transparent}" : ""}
+    :where([data-hypit-media-display-plane]){display:inline-block;width:var(--hypit-media-intrinsic-width);height:var(--hypit-media-intrinsic-height)}
     *,*::before,*::after{box-sizing:border-box}
     ${fontCss}
     ${programCss}
   </style>
 </head>
 <body>
-  ${nestedDocumentsHtml}${nestedDocumentsHtml.length === 0 ? "" : "\n  "}
   ${processStages.join("\n  ")}${processStages.length === 0 ? "" : "\n  "}
   <div data-hypit-program-root data-hypit-program-id="${escapeHtml(composition.id)}" data-hypit-width="${composition.visual.canvas.width}" data-hypit-height="${composition.visual.canvas.height}" data-hypit-frame-numerator="${numerator}" data-hypit-frame-denominator="${denominator}" data-hypit-frame-count="${frameCount}" style="width:${composition.visual.canvas.width}px;height:${composition.visual.canvas.height}px">
     ${sharedDefinitionsHtml}${sharedDefinitionsHtml.length === 0 ? "" : "\n    "}${visualHtml}
   </div>${frameRuntime}${programRuntime}
   ${visibilityRuntime}${adjustmentRuntime}
-  <script>${frameProgramRuntime(frameCount, hasNestedCompositions)}</script>
+  <script>${frameProgramRuntime(frameCount)}</script>
 </body>
 </html>
 `;
@@ -1300,28 +1093,37 @@ function emitHtml(
 
 function normalizedDocument(value: HtmlProgram): HtmlProgram {
   return {
-    picture: structuredClone(value.picture),
     frameRate: { ...value.frameRate },
     frameCount: value.frameCount,
     canvas: { ...value.canvas },
-    processPasses: value.processPasses,
+    processUsages: value.processUsages.map((usage) => ({
+      order: usage.order,
+      passes: usage.passes,
+      stageKeys: [...usage.stageKeys],
+      spans: usage.spans.map((span) => ({ ...span })),
+    })),
     artifacts: [...value.artifacts]
       .map((entry) => ({ id: entry.id, artifact: { ...entry.artifact },
-        ...(entry.picture === undefined ? {} : { picture: structuredClone(entry.picture) }), usage: entry.usage.kind === "always"
+        ...(entry.kind === "picture"
+          ? { kind: "picture" as const, picture: structuredClone(entry.picture) }
+          : { kind: "bytes" as const }), usage: entry.usage.kind === "always"
         ? { kind: "always" as const }
-        : { kind: "frames" as const, spans: entry.usage.spans.map((span) => ({ ...span })) } }))
+        : entry.usage.kind === "never"
+          ? { kind: "never" as const }
+          : { kind: "frames" as const, spans: entry.usage.spans.map((span) => ({ ...span })) } }))
       .sort((left, right) => compareCodeUnits(left.id, right.id)),
     surfaces: [...value.surfaces]
       .map((surface) => structuredClone(surface))
       .sort((left, right) => compareCodeUnits(left.artifactId, right.artifactId)),
     videoSources: [...value.videoSources].map((source) => source.kind === "media" ? ({
       ...source,
-      documentPath: [...source.documentPath],
+      usage: structuredClone(source.usage),
       source: structuredClone(source.source),
       sampling: structuredClone(source.sampling),
     }) : ({
       ...source,
-      documentPath: [...source.documentPath],
+      usage: structuredClone(source.usage),
+      picture: structuredClone(source.picture),
       sourceFrame: { ...source.sourceFrame }, sourceRate: { ...source.sourceRate },
       sourceFrameRate: { ...source.sourceFrameRate },
     })).sort((left, right) => left.startFrame - right.startFrame || compareCodeUnits(left.id, right.id)),
@@ -1329,53 +1131,15 @@ function normalizedDocument(value: HtmlProgram): HtmlProgram {
   };
 }
 
-function compositionProcessPasses(composition: HtmlComposition, visited = new Set<HtmlComposition>()): number {
-  if (visited.has(composition)) throw new Error(`Nested Composition ${composition.id} forms a recursive value.`);
-  visited.add(composition);
-  let count = visualScopeProcesses(composition.visual.root)
-    .reduce((total, process) => total + process.inputs.length, 0);
-  const visitContribution = (contribution: VisualContribution): void => {
-    if (contribution.kind === "process") {
-      for (const input of contribution.inputs) visitContribution(input.contribution);
-      return;
-    }
-    for (const element of visualElements(contribution.root)) {
-      if (element.kind === "composition") count += compositionProcessPasses(element.composition, visited);
-    }
-  };
-  for (const track of visualScopeTracks(composition.visual.root)) {
-    for (const item of track.items) if (item.kind !== "adjustment") visitContribution(item);
-  }
-  visited.delete(composition);
-  return count;
-}
-
-type HtmlCompilationContext = {
-  readonly programs: WeakMap<object, HtmlProgram>;
-};
-
-function compileHtmlProgramWithContext(
-  composition: HtmlComposition,
-  context: HtmlCompilationContext,
-): HtmlProgram {
-  const cached = context.programs.get(composition);
-  if (cached !== undefined) return cached;
+export function compileHtmlProgram(composition: HtmlComposition): HtmlProgram {
   const timeline = composition.timeline;
   if (!composition.id.trim()) throw new Error("Visual Composition id must not be empty.");
   assertVisualCompositionIdentity(composition.visual, timeline);
-  for (const track of visualScopeTracks(composition.visual.root)) for (const present of visualPresents(track)) {
-    for (const element of visualElements(present.root)) {
-      if (element.kind === "composition"
-        && canonicalStringify(element.composition.visual.picture) !== canonicalStringify(composition.visual.picture)) {
-        throw new Error(`Nested Composition ${element.composition.id} WorkingPicture differs from its parent.`);
-      }
-    }
-  }
   const videoSources: HtmlVideoSource[] = [];
+  const processUsages: HtmlProcessUsage[] = [];
   const artifacts = collectArtifacts(composition);
   const artifactIds = new Map(artifacts.map((entry) => [entry.artifact.resource, entry.id] as const));
-  let html = emitHtml(composition, timeline, videoSources,
-    (child) => compileHtmlProgramWithContext(child, context));
+  let html = emitHtml(composition, timeline, videoSources, processUsages);
   html = html
     .replace(ARTIFACT_URI, (_uri, resource: string) => {
       const artifactId = artifactIds.get(resource as ResourceId);
@@ -1388,16 +1152,15 @@ function compileHtmlProgramWithContext(
       return `data-hypit-surface-artifact="${artifactId}"`;
     });
   const content = normalizedDocument({
-    picture: structuredClone(composition.visual.picture),
     frameRate: { ...timeline.frameRate },
     frameCount: timelineFrameCount(timeline),
     canvas: {
       width: composition.visual.canvas.width,
       height: composition.visual.canvas.height,
     },
-    processPasses: compositionProcessPasses(composition),
+    processUsages,
     artifacts,
-    surfaces: collectSurfaces(composition, artifactIds),
+    surfaces: collectSurfaces(composition, artifactIds, artifacts),
     videoSources: videoSources.map((source) => {
       if (source.kind !== "surface") return source;
       const artifactId = artifactIds.get(source.artifactId as ResourceId);
@@ -1406,16 +1169,10 @@ function compileHtmlProgramWithContext(
     }),
     html,
   });
-  context.programs.set(composition, content);
   return content;
 }
 
-export function compileHtmlProgram(composition: HtmlComposition): HtmlProgram {
-  return compileHtmlProgramWithContext(composition, { programs: new WeakMap() });
-}
-
 export function assertHtmlProgram(document: HtmlProgram): void {
-  verifyWorkingPictureSpec(document.picture, "HtmlProgram.picture");
   if (
     !Number.isSafeInteger(document.frameRate.numerator)
     || document.frameRate.numerator <= 0
@@ -1427,19 +1184,33 @@ export function assertHtmlProgram(document: HtmlProgram): void {
     || document.canvas.width <= 0
     || !Number.isSafeInteger(document.canvas.height)
     || document.canvas.height <= 0
-    || !Number.isSafeInteger(document.processPasses)
-    || document.processPasses < 0
   ) {
     throw new Error("HtmlProgram frame domain or canvas is invalid.");
   }
   if (!document.html.startsWith("<!doctype html>")) throw new Error("HtmlProgram HTML is invalid.");
+  if (!Array.isArray(document.processUsages) || document.processUsages.some((usage) =>
+    !Number.isSafeInteger(usage.order) || usage.order <= 0
+    || !Number.isSafeInteger(usage.passes) || usage.passes <= 0
+    || !Array.isArray(usage.stageKeys) || usage.stageKeys.length !== usage.passes
+    || usage.stageKeys.some((key: unknown) => typeof key !== "string" || key.length === 0)
+    || new Set(usage.stageKeys).size !== usage.stageKeys.length
+    || !Array.isArray(usage.spans) || usage.spans.length === 0
+    || usage.spans.some((span: FrameSpan) => span === null || typeof span !== "object"
+      || !Number.isSafeInteger(span.startFrame) || !Number.isSafeInteger(span.endFrameExclusive)
+      || span.startFrame < 0 || span.endFrameExclusive <= span.startFrame
+      || span.endFrameExclusive > document.frameCount)
+    || JSON.stringify(mergeFrameSpans(usage.spans)) !== JSON.stringify(usage.spans))) {
+    throw new Error("HtmlProgram Process execution topology is invalid.");
+  }
   const declared = [...document.artifacts];
   if (declared.some((entry) => {
     if (typeof entry?.id !== "string" || !PROGRAM_RESOURCE_ID.test(entry.id)) return true;
     const item = entry?.artifact;
     if (!isBlobRef(item)) return true;
-    if (entry.picture !== undefined) verifyPictureInterpretation(entry.picture, `HtmlProgram.artifacts.${entry.id}.picture`);
-    if (entry.usage?.kind === "always") return Object.keys(entry.usage).length !== 1;
+    if (entry.kind === "picture") {
+      verifyPictureInterpretation(entry.picture, `HtmlProgram.artifacts.${entry.id}.picture`);
+    } else if (entry.kind !== "bytes" || "picture" in entry) return true;
+    if (entry.usage?.kind === "always" || entry.usage?.kind === "never") return Object.keys(entry.usage).length !== 1;
     if (entry.usage?.kind !== "frames" || !Array.isArray(entry.usage.spans) || entry.usage.spans.length === 0) return true;
     if (entry.usage.spans.some((span) => span === null || typeof span !== "object"
       || !Number.isSafeInteger(span.startFrame) || !Number.isSafeInteger(span.endFrameExclusive)
@@ -1469,20 +1240,34 @@ export function assertHtmlProgram(document: HtmlProgram): void {
   if (!Array.isArray(document.surfaces)) throw new Error("HtmlProgram Surface set is invalid.");
   if (!Array.isArray(document.videoSources) || document.videoSources.some((source) =>
     typeof source?.id !== "string" || source.id.length === 0
-    || !Array.isArray(source.documentPath) || source.documentPath.some((id: unknown) => typeof id !== "string" || id.length === 0)
     || typeof source.elementId !== "string" || source.elementId.length === 0
     || !Number.isSafeInteger(source.startFrame) || !Number.isSafeInteger(source.endFrameExclusive)
     || source.startFrame < 0 || source.endFrameExclusive <= source.startFrame
     || source.endFrameExclusive > document.frameCount
+    || source.usage === null || typeof source.usage !== "object"
+    || (source.usage.kind === "never" ? Object.keys(source.usage).length !== 1 : (source.usage.kind !== "frames"
+      || !Array.isArray(source.usage.spans) || source.usage.spans.length === 0
+      || source.usage.spans.some((span: FrameSpan) => !Number.isSafeInteger(span.startFrame)
+        || !Number.isSafeInteger(span.endFrameExclusive)
+        || span.startFrame < source.startFrame || span.endFrameExclusive > source.endFrameExclusive
+        || span.endFrameExclusive <= span.startFrame)
+      || JSON.stringify(mergeFrameSpans(source.usage.spans)) !== JSON.stringify(source.usage.spans)))
     || (source.kind === "media" ? (() => {
       try {
         verifyPreparedVisualSource(source.source);
         assertTemporalMap(source.sampling);
+        const target = source.sampling.stages[0]!.target;
+        const terminal = source.sampling.stages.at(-1)!.source;
           return !declared.some((entry) => entry.artifact.resource === source.source.source.resource)
-          || source.sampling.stages.at(-1)?.source.id !== source.source.sourceDomain.id;
+          || compareExactTemporalValues(target.duration,
+            exactTemporalValueFromFrames(source.endFrameExclusive - source.startFrame, document)) !== 0
+          || terminal.id !== source.source.sourceDomain.id
+          || compareExactTemporalValues(terminal.duration, source.source.sourceDomain.duration) !== 0;
       } catch { return true; }
     })() : source.kind !== "surface" || typeof source.artifactId !== "string"
       || !PROGRAM_RESOURCE_ID.test(source.artifactId)
+      || (() => { try { verifyPictureInterpretation(source.picture, `HtmlProgram.videoSources.${source.id}.picture`); return false; }
+        catch { return true; } })()
       || !Number.isSafeInteger(source.sourceFrame?.numerator) || source.sourceFrame.numerator < 0
       || !Number.isSafeInteger(source.sourceFrame?.denominator) || source.sourceFrame.denominator <= 0
       || !Number.isSafeInteger(source.sourceRate?.numerator)
@@ -1506,11 +1291,13 @@ export function assertHtmlProgram(document: HtmlProgram): void {
       throw new Error("HtmlProgram Surface set repeats an Artifact.");
     }
     surfaceArtifacts.add(binding.artifactId);
-    const artifact = declared.find((entry) => entry.id === binding.artifactId)?.artifact;
-    if (artifact === undefined
+    const artifactEntry = declared.find((entry) => entry.id === binding.artifactId);
+    const artifact = artifactEntry?.artifact;
+    if (artifact === undefined || artifactEntry === undefined
       || artifact.resource !== surface.artifact.resource
       || artifact.size !== surface.artifact.size
-      || artifact.mediaType !== surface.artifact.mediaType) {
+      || artifact.mediaType !== surface.artifact.mediaType
+      || canonicalStringify(binding.usage) !== canonicalStringify(artifactEntry.usage)) {
       throw new Error("HtmlProgram Surface is not bound to its declared Artifact.");
     }
   }
@@ -1564,7 +1351,7 @@ function assertHTMLFrameSelection(
   }
 }
 
-function artifactUsageOverlaps(
+function frameSpansOverlap(
   usage: readonly FrameSpan[],
   selection: readonly FrameSpan[],
 ): boolean {
@@ -1589,10 +1376,44 @@ export function selectHtmlArtifacts(
   frameSelection?: readonly FrameSpan[],
 ): readonly HtmlArtifact[] {
   assertHtmlProgram(document);
-  if (frameSelection === undefined) return document.artifacts;
-  assertHTMLFrameSelection(document, frameSelection);
+  if (frameSelection !== undefined) assertHTMLFrameSelection(document, frameSelection);
   return document.artifacts.filter((entry) => entry.usage.kind === "always"
-    || artifactUsageOverlaps(entry.usage.spans, frameSelection));
+    || entry.usage.kind === "frames" && (frameSelection === undefined
+      || frameSpansOverlap(entry.usage.spans, frameSelection)));
+}
+
+/** Project one render selection onto exact source occurrences. */
+export function selectHtmlVideoSources(
+  document: HtmlProgram,
+  frameSelection?: readonly FrameSpan[],
+): readonly HtmlVideoSource[] {
+  assertHtmlProgram(document);
+  if (frameSelection !== undefined) assertHTMLFrameSelection(document, frameSelection);
+  return document.videoSources.filter((source) => source.usage.kind === "frames"
+    && (frameSelection === undefined || frameSpansOverlap(source.usage.spans, frameSelection)));
+}
+
+/** Project one render selection onto typed Surface dependencies. */
+export function selectHtmlSurfaces(
+  document: HtmlProgram,
+  frameSelection?: readonly FrameSpan[],
+): HtmlProgram["surfaces"] {
+  assertHtmlProgram(document);
+  if (frameSelection !== undefined) assertHTMLFrameSelection(document, frameSelection);
+  return document.surfaces.filter((surface) => surface.usage.kind === "always"
+    || surface.usage.kind === "frames" && (frameSelection === undefined
+      || frameSpansOverlap(surface.usage.spans, frameSelection)));
+}
+
+/** Project one render selection onto renderer-private Process input work. */
+export function selectHtmlProcessUsages(
+  document: HtmlProgram,
+  frameSelection?: readonly FrameSpan[],
+): readonly HtmlProcessUsage[] {
+  assertHtmlProgram(document);
+  if (frameSelection === undefined) return document.processUsages;
+  assertHTMLFrameSelection(document, frameSelection);
+  return document.processUsages.filter((usage) => frameSpansOverlap(usage.spans, frameSelection));
 }
 
 /** Runtime-only URL materialization. The returned HTML is intentionally not a new compiled Record. */

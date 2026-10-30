@@ -95,16 +95,6 @@
       "types": "./dist/public/markup.d.ts",
       "import": "./packages/markup/src/index.ts"
     },
-    "./markup/invocation": {
-      "hypit-source": "./packages/markup/src/invocation/index.ts",
-      "types": "./dist/public/markup-invocation.d.ts",
-      "import": "./packages/markup/src/invocation/index.ts"
-    },
-    "./invocation": {
-      "hypit-source": "./packages/invocation/src/index.ts",
-      "types": "./dist/public/invocation.d.ts",
-      "import": "./packages/invocation/src/index.ts"
-    },
     "./result": {
       "hypit-source": "./packages/result/src/index.ts",
       "types": "./dist/public/result.d.ts",
@@ -197,7 +187,6 @@
     "examples/semantic-composition/packages/*/tsconfig.json",
     "examples/semantic-composition/packages/*/README.md",
     "examples/semantic-composition/*.svml",
-    "examples/semantic-composition/*.svrun",
     "examples/semantic-composition/*.svs",
     "examples/semantic-composition/hypit.runtime.json",
     "examples/provider-package/README.md",
@@ -247,7 +236,6 @@
     "@hypit/caption": "workspace:*",
     "@hypit/comment-sticker": "workspace:*",
     "@hypit/composition": "workspace:*",
-    "@hypit/composition-clip": "workspace:*",
     "@hypit/credential-store-env": "workspace:*",
     "@hypit/credential-store-local": "workspace:*",
     "@hypit/depth-stack": "workspace:*",
@@ -277,9 +265,9 @@
     "@hypit/producer": "workspace:*",
     "@hypit/protocol": "workspace:*",
     "@hypit/markup": "workspace:*",
-    "@hypit/invocation": "workspace:*",
     "@hypit/provider-beatapi": "workspace:*",
     "@hypit/provider-hiapi": "workspace:*",
+    "@hypit/provider-html-electron-local": "workspace:*",
     "@hypit/provider-html-local": "workspace:*",
     "@hypit/provider-image-opencv-local": "workspace:*",
     "@hypit/media-local": "workspace:*",
@@ -289,7 +277,6 @@
     "@hypit/provider-whisperx-local": "workspace:*",
     "@hypit/ranking": "workspace:*",
     "@hypit/spatial-sequence": "workspace:*",
-    "@hypit/realization": "workspace:*",
     "@hypit/html-video": "workspace:*",
     "@hypit/runtime-local": "workspace:*",
     "@hypit/video": "workspace:*",

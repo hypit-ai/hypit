@@ -501,16 +501,9 @@ button:focus-visible, textarea:focus-visible {
 .artifact-waveform.is-ready ~ .artifact-glyph { display: none; }
 .artifact-type { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 .artifact-copy { min-width: 0; height: 44px; padding-top: 6px; text-align: center; }
-.artifact-name, .artifact-name-editor { box-sizing: border-box; width: 100%; margin: 0; padding: 0 4px; border: 1px solid transparent; border-radius: 3px; color: light-dark(#1b1a18, #d8dae0); background: transparent; font: 500 11px/18px var(--font-ui); text-align: center; word-break: break-all; overflow-wrap: anywhere; }
-.artifact-name { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; max-height: 38px; overflow: hidden; white-space: normal; cursor: text; }
+.artifact-name { box-sizing: border-box; display: -webkit-box; width: 100%; max-height: 38px; margin: 0; padding: 0 4px; overflow: hidden; border: 1px solid transparent; border-radius: 3px; color: light-dark(#1b1a18, #d8dae0); background: transparent; font: 500 11px/18px var(--font-ui); text-align: center; word-break: break-all; overflow-wrap: anywhere; white-space: normal; cursor: pointer; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 .artifact-name-text { padding: 1px 2px; border-radius: 3px; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
 .artifact-name:focus-visible { outline: none; box-shadow: inset 0 0 0 1px light-dark(#a8a49c, #626875); }
-.artifact-name[hidden] { display: none; }
-.artifact-copy.editing { height: auto; min-height: 44px; }
-.artifact-name-editor { display: block; min-height: 20px; resize: none; overflow: hidden; outline: none; color: light-dark(#1b1a18, #f1f2f5); box-shadow: inset 0 0 0 1px light-dark(#a8a49c, #626875); }
-.artifact-name-editor:focus-visible { outline: none; box-shadow: inset 0 0 0 1px light-dark(#a8a49c, #626875); }
-.artifact-name-editor::selection { color: light-dark(#1b1a18, #fff); background: light-dark(#d1cdc7, #4b5263); }
-.artifact-name-error { display: block; color: light-dark(#a3453d, #bd9c92); font-size: 9px; line-height: 13px; overflow-wrap: anywhere; }
 .library-empty { grid-column: 1 / -1; min-height: 210px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 28px; text-align: center; }
 .library-empty-icon { width: 44px; height: 44px; display: grid; place-items: center; margin-bottom: 12px; border: 1px solid light-dark(#e5e2dd, #292c31); border-radius: 12px; background: linear-gradient(145deg, light-dark(#ffffff, #202227), light-dark(#f4f3f0, #18191d)); color: light-dark(#a8a49c, #666b74); box-shadow: 0 9px 24px rgba(0, 0, 0, .12); }
 .library-empty-icon .icon { width: 21px; height: 21px; }

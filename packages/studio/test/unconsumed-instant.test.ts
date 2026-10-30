@@ -7,7 +7,7 @@ import { join } from "node:path";
 import { createVideoDistribution } from "@hypit/video";
 import { loadStudioDomain } from "../src/domain.js";
 import { loadStudioCompanionRegistry } from "../src/companion-assembly.js";
-import { loadStudioPlan } from "../src/invocation.js";
+import { loadStudioPlan } from "../src/build-plan.js";
 import { executeStudioProjection, MemoryResourceStore } from "../src/execute.js";
 import { observedTemporalValues, resolveStudioDeclarations } from "../src/temporal-declarations.js";
 import { Executor } from "@hypit/hypit/executor";
@@ -42,18 +42,18 @@ async function fixture(t: TestContext, extra = "", target = "program.timeline") 
     packageRoot: process.cwd(), distribution: createVideoDistribution() });
   const registry = await loadStudioCompanionRegistry({ distributionPackageRoot: process.cwd(), sourcePackages: domain.packages });
   const plan = await loadStudioPlan({
-    selection: { kind: "author", source: authorPath, request: { targets: [target], overrides: [] } },
+    selection: { source: authorPath, request: { targets: [target] } },
     domain,
     registry,
   });
   const unused = plan.source.exports.find(output => output.name === "program.unused");
   assert.ok(unused);
   const resources = new MemoryResourceStore();
-  const prepared = plan.prepare(plan.invocation, plan.targets);
+  const prepared = plan.prepare(plan.targets);
   const selected = await executeStudioProjection(domain, prepared.state, resources);
   assert.deepEqual(selected.errors, []);
-  assert.equal(observedTemporalValues(selected.state, prepared.selections).some(value => value.id === unused.ref), false);
-  return { root, plan, domain, registry, resources, resolved: selected.state, selections: prepared.selections, unused };
+  assert.equal(observedTemporalValues(selected.state, prepared.outputs).some(value => value.id === unused.ref), false);
+  return { root, plan, domain, registry, resources, resolved: selected.state, outputs: prepared.outputs, unused };
 }
 
 test("Companion display requests resolve unused nested and standalone Instants", async (t) => {
@@ -78,7 +78,6 @@ test("Companion display requests resolve unused nested and standalone Instants",
     assert.equal((declarations.values.find(value => value.id === output.ref)?.value as { frame: number }).frame, frame);
   }
   assert.equal(input.resolved.status, "complete");
-  assert.deepEqual(input.plan.invocation.overrides, [], "display evaluation never changes the invocation");
 });
 
 test("an unresolved locator upstream does not prevent other locators or the selected view", async (t) => {

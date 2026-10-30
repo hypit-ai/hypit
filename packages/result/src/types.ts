@@ -2,12 +2,12 @@ import { assertOrderedBuildId } from "@hypit/protocol";
 import type {
   BlobRef,
   CanonicalValue,
-  PublicationIntent,
+  ResultIntent,
   TypeRef,
   CapabilityRef,
   TypedRecord,
 } from "@hypit/protocol";
-import { assertPublicationIntent } from "@hypit/protocol";
+import { assertResultIntent } from "@hypit/protocol";
 
 /** The one durable conclusion of a finished Build. Active execution belongs to Runtime. */
 export type BuildResultOutcome = "complete" | "failed" | "cancelled";
@@ -147,78 +147,76 @@ export type BuildResultOutputValue =
   | { readonly kind: "value"; readonly path: string };
 
 export type BuildResultOutput = {
-  /** Author-provided display name; the Output identifier remains unchanged. */
-  readonly displayName?: string;
   readonly type: TypeRef;
   readonly value: BuildResultOutputValue;
 };
 
-/** Non-secret execution facts at the end of this attempt. Pending means the remote outcome was not observed. */
+/** Durable facts about one external operation attempted by this Build. */
 type BuildResultOperationEvidence = {
-  readonly operation: string;
-  readonly need?: { readonly id: string; readonly capability: CapabilityRef };
-  readonly createdAt?: number;
-  readonly acknowledgedAt?: number;
-  readonly endedAt?: number;
-  readonly progress?: { readonly phase: string; readonly completed?: number; readonly total?: number; readonly unit?: string };
-  readonly cancellation?: { readonly outcome: "confirmed" | "accepted" | "unsupported" | "too-late" | "failed"; readonly message?: string };
-  readonly command: string;
+  readonly capability: CapabilityRef;
   readonly endpoint: string;
-  readonly pool?: string;
   readonly receipt?: { readonly id: string; readonly url?: string };
 };
 
 export type BuildResultOperation = BuildResultOperationEvidence & (
-  | { readonly status: "pending" | "received" | "completed"; readonly failure?: never }
-  | { readonly status: "failed"; readonly failure: { readonly code: string; readonly message: string } }
-  | { readonly status: "cancelled"; readonly failure?: never }
+  | { readonly outcome?: never; readonly acknowledgedAt: number; readonly providerCompletedAt?: number;
+      readonly failure?: never; readonly cancellation?: never }
+  | { readonly outcome: "complete"; readonly acknowledgedAt: number; readonly providerCompletedAt: number;
+      readonly failure?: never; readonly cancellation?: never }
+  | { readonly outcome: "failed"; readonly failedAt: number;
+      readonly failure: { readonly code: string; readonly message: string } }
+  | { readonly outcome: "cancelled"; readonly cancelledAt: number; readonly failure?: never; readonly cancellation: {
+      readonly outcome: "confirmed" | "accepted" | "unsupported" | "too-late" | "failed";
+      readonly message?: string;
+    } }
 );
 
-type BuildResultManifestBase = {
+type BuildResultBase = {
   readonly format: "hypit.build-result@1";
   /** Injected from the Repository address; `result.json` does not repeat its containing Build id. */
   readonly id: string;
-  readonly title?: string;
-  readonly note?: string;
-  /** Human-selected public Outputs to surface first; names must exist in `outputs`. */
-  readonly highlightedOutputs?: readonly string[];
-  /** Opaque author Source identity. A local application may choose a project-relative path. */
-  readonly sourceId: string;
-  /** Opaque saved Invocation Source identity, when this Build used one. */
-  readonly invocationSourceId?: string;
+  /** Author Source path recorded when the Build was submitted. */
+  readonly sourcePath: string;
   /** Author-facing names of the Build's actual final goals. */
   readonly targets: readonly string[];
   readonly outputs: Readonly<Record<string, BuildResultOutput>>;
+};
+
+/** Private writable state while Runtime is still accepting retained Outputs. */
+export type BuildResultDraft = BuildResultBase & {
+  readonly outcome?: never;
+  readonly finishedAt?: never;
+  readonly failure?: never;
+  readonly operations?: never;
+  readonly executionLog?: never;
+};
+
+type BuildResultEvidence = {
   readonly operations?: readonly BuildResultOperation[];
   readonly executionLog?: BuildResultFileRef;
 };
 
-export type OpenBuildResultManifest = BuildResultManifestBase & {
-  readonly outcome?: never;
-  readonly finishedAt?: never;
-  readonly failure?: never;
-};
-
-export type FinishedBuildResultManifest = BuildResultManifestBase & (
+/** Immutable historical record published only after the Build reaches one conclusion. */
+export type BuildResult = BuildResultBase & BuildResultEvidence & (
   | { readonly outcome: "complete"; readonly finishedAt: number; readonly failure?: never }
   | { readonly outcome: "failed" | "cancelled"; readonly finishedAt: number; readonly failure: string }
 );
 
-/** A Result is either writable or finished with one internally consistent conclusion. */
-export type BuildResultManifest = OpenBuildResultManifest | FinishedBuildResultManifest;
+/** Storage state used only by Runtime publication and recovery. */
+export type StoredBuildResult = BuildResultDraft | BuildResult;
 
 /**
- * Read one exact public Output name. Output names are author data, so inherited object
+ * Read one exact retained Output name. Output names are author data, so inherited object
  * properties such as `constructor` and `toString` are never Result entries.
  */
 export function buildResultOutput(
-  manifest: Pick<BuildResultManifest, "outputs">,
+  manifest: Pick<BuildResult, "outputs">,
   name: string,
 ): BuildResultOutput | undefined {
   return Object.hasOwn(manifest.outputs, name) ? manifest.outputs[name] : undefined;
 }
 
-/** Define an author-named Output without invoking special object setters such as `__proto__`. */
+/** Define an author-named retained Output without invoking special object setters such as `__proto__`. */
 export function defineBuildResultOutput(
   outputs: Record<string, BuildResultOutput>,
   name: string,
@@ -234,22 +232,22 @@ export function defineBuildResultOutput(
 
 export type BuildResultSeed = {
   readonly id: string;
-  readonly title?: string;
-  readonly sourceId: string;
-  readonly invocationSourceId?: string;
-  readonly publication: PublicationIntent;
+  readonly sourcePath: string;
+  /** Author-facing names requested by this Build; targets are execution evidence, not retained Outputs. */
+  readonly targets: readonly string[];
+  readonly intent: ResultIntent;
 };
 
-/** Validate the one-name-per-Output public Result surface before storage is touched. */
+/** Validate the one-name-per-Output retained Result surface before storage is touched. */
 export function assertBuildResultSeed(seed: BuildResultSeed): void {
-  if (seed.sourceId.trim().length === 0) throw new Error("Build Result Source identity must not be empty");
-  if (seed.invocationSourceId !== undefined && seed.invocationSourceId.trim().length === 0) {
-    throw new Error("Build Result Invocation Source identity must not be empty");
+  if (seed.sourcePath.trim().length === 0) throw new Error("Build Result Source path must not be empty");
+  const targets = new Set<string>();
+  for (const target of seed.targets) {
+    if (target.trim().length === 0) throw new Error("Build Result target must not be empty");
+    if (targets.has(target)) throw new Error(`Build Result target ${target} is repeated`);
+    targets.add(target);
   }
-  if (seed.title !== undefined && seed.title.trim().length === 0) {
-    throw new Error("Build Result title must not be empty");
-  }
-  assertPublicationIntent(seed.publication);
+  assertResultIntent(seed.intent);
 }
 
 export type BuildResultResourceSource = {
@@ -273,17 +271,6 @@ export type BuildResultFinish = BuildResultFinishEvidence & (
   | { readonly outcome: "failed" | "cancelled"; readonly failure: string }
 );
 
-export type BuildResultPresentationUpdate = {
-  /** Exact public Output names; null removes an override. */
-  readonly outputDisplayNames?: Readonly<Record<string, string | null>>;
-  /** `null` removes the current title; omission leaves it unchanged. */
-  readonly title?: string | null;
-  /** `null` removes the current note; omission leaves it unchanged. */
-  readonly note?: string | null;
-  /** An empty list clears the selection; omission leaves it unchanged. */
-  readonly highlightedOutputs?: readonly string[];
-};
-
 export type BuildResultBrowseRequest = {
   /** Return Builds strictly older than this ordered Build id. */
   readonly before?: string;
@@ -292,12 +279,12 @@ export type BuildResultBrowseRequest = {
 
 export type BuildResultPage = {
   /** Newest first. */
-  readonly results: readonly FinishedBuildResultManifest[];
+  readonly results: readonly BuildResult[];
   /** Last scanned Build id when an older page may exist. */
   readonly next?: string;
 };
 
-/** Storage-neutral public Output and its stored value. */
+/** Storage-neutral retained Output and its stored value. */
 export type RepositoryBuildResultOutput = {
   readonly type: TypeRef;
   readonly value:
@@ -306,45 +293,35 @@ export type RepositoryBuildResultOutput = {
     | { readonly kind: "value"; readonly path: string; readonly document: BuildResultValueDocument };
 };
 
-/**
- * Storage-neutral description of one public Output. Unlike `resolve`, this never opens a Value
- * document or Resource bytes.
- */
-export type RepositoryBuildResultOutputDescription = {
-  readonly type: TypeRef;
-} & (
-  | { readonly representation: "inline" }
-  | { readonly representation: "value-document" }
-  | { readonly representation: "file"; readonly size: number; readonly mediaType: string }
-);
-
 export type BuildResultWriter = {
-  read(): Promise<BuildResultManifest>;
-  /** Publish newly accepted public Outputs; no storage writes when none are new. */
-  sync(input: BuildResultSync): Promise<BuildResultManifest>;
-  finish(input: BuildResultFinish): Promise<BuildResultManifest>;
+  read(): Promise<StoredBuildResult>;
+  /** Store newly accepted retained Outputs; no storage writes when none are new. */
+  sync(input: BuildResultSync): Promise<StoredBuildResult>;
+  finish(input: BuildResultFinish): Promise<BuildResult>;
 };
 
 /**
- * Project result history addressed by Build id and Output name. File references are relative to
- * that Build's Result; each repository supplies the corresponding byte access.
+ * Immutable project history addressed by Build id and retained Output name. Open drafts never
+ * cross this reader boundary.
  */
-export type BuildResultRepository = {
-  create(seed: BuildResultSeed): Promise<BuildResultWriter>;
-  openWriter(build: string): Promise<BuildResultWriter | undefined>;
-  /** Remove one exact unfinished Result created by a submission that never became claimable. */
-  removeIncomplete(build: string): Promise<void>;
-  read(build: string): Promise<BuildResultManifest | undefined>;
-  /** Edit only human presentation stored inside this exact finished Result. */
-  updatePresentation(build: string, update: BuildResultPresentationUpdate): Promise<BuildResultManifest>;
+export type BuildResultHistory = {
+  read(build: string): Promise<BuildResult | undefined>;
   /** Browse finished Results in descending Build-id time order. */
   browse(request: BuildResultBrowseRequest): Promise<BuildResultPage>;
-  /** Describe one Output without opening its value document or file content. */
-  describeOutput(build: string, output: string): Promise<RepositoryBuildResultOutputDescription | undefined>;
   resolve(build: string, output: string): Promise<RepositoryBuildResultOutput | undefined>;
   openFile(
     build: string,
     file: BuildResultFileRef,
     range?: BuildResultFileRange,
   ): Promise<AsyncIterable<Uint8Array> | undefined>;
+};
+
+/** Runtime-owned publication and recovery port. Applications consume `BuildResultHistory`. */
+export type BuildResultStore = BuildResultHistory & {
+  create(seed: BuildResultSeed): Promise<BuildResultWriter>;
+  openWriter(build: string): Promise<BuildResultWriter | undefined>;
+  /** Remove one exact unfinished Result created by a submission that never became claimable. */
+  removeIncomplete(build: string): Promise<void>;
+  /** Read private publication state for active-build observation and crash recovery. */
+  readStored(build: string): Promise<StoredBuildResult | undefined>;
 };

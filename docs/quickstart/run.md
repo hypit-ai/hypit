@@ -1,12 +1,10 @@
 ---
-title: Invocations & Builds
+title: Targets & Builds
 description: Declaring build targets, reusing results and configuring the runtime.
 ---
 
-The Author Source defines the video. An Invocation chooses which
-public Outputs to produce and may temporarily select an Output's primary realization or another
-authored Record. Pass it directly with CLI options, or save it as a `.svrun` Invocation Source when
-it needs a durable name. The official Distribution supplies the Local Runtime; its Profile names the
+The Author Source defines the video. Each `plan`, `pricing`, `build` or Studio command explicitly
+chooses which author Outputs to evaluate as Targets. The official Distribution supplies the Local Runtime; its Profile names the
 credentials, Provider Endpoints and services available to execute the resulting plan.
 
 Select the project Runtime once:
@@ -20,7 +18,7 @@ Ordinary work then follows the short path:
 ```bash
 hypit plan main.svml --target final.video
 hypit build main.svml --target final.video --follow
-hypit get <build-id> --output final.video --to output/final.mp4
+hypit result export <build-id> --output final.video --to output/final.mp4
 ```
 
 The Quickstart installs the Distribution once. Every command on this page then works as `hypit`
@@ -29,7 +27,7 @@ from any independent video project.
 Only `build` submits work. `plan` shows the selected work. `check` is an editing aid; `doctor` is a
 deployment diagnostic. They are safe to run, but not mandatory ceremony before every Build.
 
-One convenient layout for a project with several Author and Recipe Sources and saved Invocations is:
+One convenient layout for a project with several Author and Recipe Sources is:
 
 ```text
 my-video/
@@ -40,10 +38,6 @@ my-video/
   recipes/
     visual.svs              authored visual Recipes
     generation.svs          authored generation Recipes
-  invocations/
-    images.svrun            one executable intention
-    takes.svrun             another executable intention
-    final.svrun             final delivery intention
   assets/                   project-owned input media
   kits/                     optional project-authored Recipe Kits
   packages/                 project-local Author packages when the work introduces them
@@ -53,59 +47,35 @@ my-video/
 ```
 
 This layout is only a human-facing recommendation, never a required project schema. A small project
-may keep several `.svml`, `.svs` and `.svrun` files flat at its root, and another project may group
-them differently. Hypit uses only the paths written in Source imports, `<author source="…">`, CLI
-arguments and `get --to`; it does not require these names or recognize `authors/`, `recipes/`,
-`invocations/`, `assets/` or `output/` specially. Each saved Invocation selects one Author entry, while that Author
-Source closure may explicitly import multiple Author or Recipe Sources. The managed Result repository
+may keep several `.svml` and `.svs` files flat at its root, and another project may group
+them differently. Hypit uses only the paths written in Source imports and CLI
+arguments and `result export --to`; it does not require these names or recognize `authors/`, `recipes/`,
+`assets/` or `output/` specially. An Author Source closure may explicitly import multiple Author or Recipe Sources. The managed Result repository
 remains separate under `.hypit/results` by default.
 
-Invocation Source and Runtime Profile do not silently rewrite the video. Creative model choices remain in
+Target selection and Runtime Profile do not silently rewrite the video. Creative model choices remain in
 the Author Source or in packages that it explicitly imports.
 
-## Saved Invocation Source syntax
-
-Every `.svrun` file begins with its processing instruction:
-
-```svml
-<?svml using="@hypit/markup/invocation@1"?>
-```
-
-### Minimal saved Invocation
-
-```svml
-<?svml using="@hypit/markup/invocation@1"?>
-
-<svrun version="1">
-  <author source="./main.svml"/>
-  <target output="final.video"/>
-</svrun>
-```
-
-| Element | Description |
-|---|---|
-| `<svrun>` | Root element. Its only attribute is `version="1"` |
-| `<author>` | Mandatory. `source` points to the `.svml` Author Source |
-| `<target>` | One demanded public Logical Output |
-
-### Targets
+## Targets
 
 A Target is the Build's final intention, normally the finished video or another real deliverable.
-The Build produces the work needed for its Targets, and every public Author Output that completes
-on that route is written into the same Build Result.
+The Build produces the work needed for its Targets. A Target controls evaluation; it does not by itself
+store that value in the Result. Package-owned generated media, editable evidence and encoded final outputs
+declare their own cross-Build lifetime. Derived Track, Timeline and PreparedMedia values remain graph values.
 
-### Multiple targets
+### Multiple Targets
 
 You can demand multiple outputs from one Build:
 
-```svml
-<target output="final.video"/>
-<target output="captions.track"/>
+```bash
+hypit plan main.svml \
+  --target final.video \
+  --target captions.track
 ```
 
-Use multiple Targets only when one execution genuinely has several final goals. Save recurring build
-intentions as separate `.svrun` files; one-off intentions can remain direct CLI targets. Both forms
-create the same Invocation and can select the same Author Source.
+Use multiple Targets only when one execution genuinely has several final goals. The Source path and
+Targets are explicit command inputs. A project can use its ordinary task runner for a frequently
+repeated long command; Hypit does not define a Target file, registry or inferred default.
 
 ## Reusing produced work
 
@@ -115,43 +85,26 @@ the exact Output and export it into the project:
 ```bash
 hypit history opening-generation.video
 hypit inspect <build-id>
-hypit get <build-id> --output opening-generation.video --to assets/opening.mp4
+hypit result export <build-id> --output opening-generation.video --to assets/opening.mp4
 ```
 
-Declare the exported file with the Author package that owns its meaning, then select that authored
-Record for the generated role:
+Declare the exported file with the Author package that owns its meaning, then make the consumer
+reference that authored Record:
 
 ```svml
 <import as="asset" from="@hypit/media@1"/>
-<import as="realization" from="@hypit/realization@1"/>
+<import as="mediaop" from="@hypit/media-operations@1"/>
 
 <asset:Video id="accepted-opening" src="./assets/opening.mp4"/>
-<realization:Select output={opening-generation.video} record={accepted-opening}/>
+<mediaop:Prepare id="opening-media" source={accepted-opening}
+  video="primary-moving" audio="default" span-authority="video"/>
 ```
 
-This is a durable production edit. Captions, Timeline placement, visual treatment and rendering keep
-using the accepted performance without teaching Invocation or Result how that file originated. Camera
+This is a durable production edit. Captions, Timeline placement, visual treatment and rendering use
+the accepted performance without teaching Target selection or Result how that file originated. Camera
 footage, a download, a CLI-produced file and a generated Result enter through the same Author
-declaration.
-
-To request the Output's primary realization for one execution while retaining the durable selection, add a
-transient Invocation override:
-
-```svml
-<override output="opening-generation.video" primary="true"/>
-```
-
-An Invocation may instead choose another existing authored Record for one execution:
-
-```svml
-<override output="opening-generation.video" record="alternate-opening"/>
-```
-
-The Record must already exist in the Author closure and have the Output's exact Type. An Invocation
-introduces no project files, values or computations; it only selects Targets and transient choices.
-For each demanded Output, the effective choice is resolved in one order: Invocation override,
-authored realization selection, then the Output's primary realization. `plan --verbose` reports that
-origin together with the selected Record.
+declaration. To generate another take, target `opening-generation.video`; adopting that take is a
+separate explicit edit of the consumer reference.
 
 ## Runtime Profile
 
@@ -202,14 +155,14 @@ For another selected Endpoint, use its declared secure input, such as
 selects the Store. A project Provider follows the same path. Environment-backed credentials are
 set in the Worker environment according to that Provider's configuration.
 
-Keep credentials out of Author Source, Invocation Source, Runtime Profile source, and committed files.
+Keep credentials out of Author Source, Runtime Profile source, and committed files.
 `doctor` validates required credential presence without printing secret values.
 
-## Read prices for the selected Invocation
+## Read prices for the selected Targets
 
 ```bash
-hypit pricing reference.svrun
-hypit pricing reference.svrun --json
+hypit pricing reference.svml --target final.video
+hypit pricing reference.svml --target final.video --json
 ```
 
 The selected Runtime determines which Endpoint serves each request. `pricing` reads those Providers'
@@ -260,7 +213,7 @@ that reuses packages installed under `/opt/hypit`:
 cd /work/my-film
 
 hypit runtime use hypit.runtime.json
-hypit plan build.svrun
+hypit plan main.svml --target final.video
 ```
 
 The Project is resolved before the Runtime Profile. Override it explicitly with `--project`; the
@@ -274,9 +227,9 @@ An external project should normally commit this `.gitignore`:
 output/
 ```
 
-The authoritative result of every Build lives in `.hypit/results/<UTC-date>/<build-id>/`:
-`result.json` records the name, status, Target and public Outputs, media in `files/`, structured
-values in `values/`.
+The authoritative result of every Build lives in the project Result repository under `.hypit/results`.
+It records the outcome and Targets, execution evidence and the retained Outputs that actually completed.
+Its physical file layout is repository-private.
 
 This project-local directory is the Result repository. The `output/` directory shown earlier is only
 a convenient destination for explicit exports and is not part of Result storage. Archive or migrate
@@ -290,7 +243,7 @@ A shared read-only asset library does not need to be copied into the project, no
 Source boundary:
 
 ```bash
-hypit plan /work/my-film/build.svrun --asset-root /work/shared-media
+hypit plan /work/my-film/main.svml --target final.video --asset-root /work/shared-media
 ```
 
 `--asset-root` may be repeated and only grants read access to asset bytes; it never permits importing
@@ -307,7 +260,7 @@ cd examples/podcast
 hypit runtime use hypit.runtime.json
 ```
 
-Author and Invocation Sources select their packages through imports. The Local Runtime Profile selects
+Author Sources select their packages through imports. The Local Runtime Profile selects
 Credential Store and Endpoint packages through `use`; the project separately owns its Result
 repository. The installed package manager owns their versions.
 
@@ -322,7 +275,7 @@ passed explicitly, it also validates every selected Runtime role, Endpoint confi
 presence and bounded environment probe. It never starts the Worker or performs a paid request.
 
 With a Profile, Doctor checks the whole Profile unless scoped with repeated `--endpoint <instance>`
-flags. For the environment required by one Invocation, use
+flags. For the environment required by explicit Targets, use
 `plan`: it checks only capabilities demanded by that finite plan. Missing readiness is returned in
 `preflight` and gives the command a non-zero exit status, while the frozen plan remains available in
 JSON for inspection.
@@ -338,8 +291,8 @@ hypit plan reference.svml --target final.video
 ```
 
 Review the selected work before spending money. The default plan shows Targets, demanded external
-requests and their available parameters; `--verbose` adds Source dependencies and each effective
-Output selection with its `invocation`, `authored`, or `primary` origin.
+requests and their available parameters; `--verbose` adds demanded deployment capabilities and
+successful diagnostics. The report does not expose Producer graph connections.
 With a selected Runtime, it also reports the relevant Endpoint, credential and
 external-program diagnostics. It never starts external work.
 
@@ -359,7 +312,7 @@ processes declared by Endpoints.
 ### 4. Submit the Build
 
 ```bash
-hypit build reference.svml --target final.video --title first-cut --follow
+hypit build reference.svml --target final.video --follow
 ```
 
 Without `--follow`, `build` returns after durable submission. The detached Worker continues. With
@@ -380,10 +333,9 @@ A plain `status <build-id>` prints one snapshot. `status --watch` exits when the
 | `--runtime` | One-command Runtime Profile override; normally select it once with `runtime use` |
 | `--package-root` | Host directory containing the installed packages |
 | `--project` | Explicit Project boundary; also the default Source Workspace root |
-| `--title` | Optional human-facing Result title |
 | `--follow` | Wait for a Result outcome as an observer; durable execution remains with the Worker |
 
-Each invocation creates a fresh Build id, even when the Author Source and saved Invocation are unchanged. Closing
+Each `build` command creates a fresh Build id, even when the Author Source and Targets are unchanged. Closing
 an observer leaves the Worker running. Losing a Build's execution context ends that attempt;
 restarting the Worker does not resume it. Completed Outputs and recorded task receipts remain
 available. Accept useful material by exporting it into the project and updating the Author Source.
@@ -394,33 +346,33 @@ available. Accept useful material by exporting it into the project and updating 
 hypit inspect <build-id>
 ```
 
-`inspect` reads the project-owned Result directly and shows its Targets, highlighted Outputs and
-failure evidence. Use `--output <name>` for one exact Output, or `--verbose` to browse the other Outputs
-and execution receipts. `--limit <count>` expands that detailed list. Export a selected Output with:
+`inspect` reads the project-owned Result directly and shows its Targets, retained Outputs and
+failure evidence. Use `--output <name>` for one exact Output, or `--verbose` to add Output details
+and execution receipts. `--limit <count>` bounds the retained Output list. Export one Output with:
 
 ```bash
-hypit get <build-id> \
+hypit result export <build-id> \
   --output final.video \
   --to output/final.mp4
 ```
 
-`get` exports one exact `build + output` address to the required `--to` destination. An `inline`
-representation becomes a JSON file. A `file` representation becomes one file containing its original
-bytes. A `value-document` representation becomes a self-contained directory: `value.json` holds the
-value and file bindings, while the referenced files keep their Result-relative paths inside that
-directory. The destination must not already exist.
+`result export` writes one exact retained `build + output` address to the required `--to` destination.
+An inline scalar becomes JSON and a file Output keeps its original bytes. A structured Output is written
+in the author format defined by the package that owns its Type; if that package supplies no exporter,
+the command fails instead of exposing the Result repository's private representation. The destination
+must not already exist.
 
-The finished Build result prints the exact `get --output …` command for every file Target;
+The finished Build result prints the exact `result export --output …` command for retained file Outputs;
 there is no need to inspect opaque Record ids just to export `final.video`.
 
 ### 6. Reuse in a new Build
 
-Export the accepted Output, declare it in the Author Source and add `realization:Select` as described
-in [Reusing produced work](#reusing-produced-work). The ordinary production Invocation then uses that
-durable author choice:
+Export the accepted Output, declare it in the Author Source and update its consumer as described in
+[Reusing produced work](#reusing-produced-work). The ordinary production command then uses that
+project material:
 
 ```bash
-hypit build build.svrun --follow
+hypit build main.svml --target final.video --follow
 ```
 
 ### 7. Diagnose or stop the local Runtime

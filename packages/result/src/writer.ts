@@ -1,15 +1,15 @@
-import { compareCodeUnits, isBlobRef, mapValueBlobs, sameType } from "@hypit/protocol";
+import { compareCodeUnits, isBlobRef, mapValueBlobs } from "@hypit/protocol";
 import type {
   BlobRef,
   CanonicalValue,
-  PublicationIntent,
-  PublicationOutputIntent,
+  ResultIntent,
+  ResultOutputIntent,
   TypedRecord,
 } from "@hypit/protocol";
 
 import type {
   BuildResultFileRef,
-  BuildResultManifest,
+  BuildResultDraft,
   BuildResultOutput,
   BuildResultResourceSource,
   BuildResultSync,
@@ -21,7 +21,7 @@ import { buildResultOutput, defineBuildResultOutput } from "./types.js";
 export type BuildResultWriterState = {
   readonly resources: Readonly<Record<string, string>>;
   readonly values: Readonly<Record<string, string>>;
-  readonly publication: PublicationIntent;
+  readonly intent: ResultIntent;
 };
 
 export type BuildResultWriteTarget = {
@@ -34,9 +34,9 @@ export type BuildResultWriteTarget = {
 };
 
 export type BuildResultSyncResult = {
-  /** Whether accepted public Outputs were added to the manifest. */
+  /** Whether accepted retained Outputs were added to the manifest. */
   readonly changed: boolean;
-  readonly manifest: BuildResultManifest;
+  readonly manifest: BuildResultDraft;
   readonly writer: BuildResultWriterState;
 };
 
@@ -127,16 +127,16 @@ function scalar(value: unknown): value is null | boolean | number | string {
 }
 
 type ReadyOutput = {
-  readonly published: PublicationOutputIntent;
+  readonly intent: ResultOutputIntent;
   readonly record: TypedRecord;
 };
 
 /**
- * Encode accepted public Outputs exactly once, independently of the physical repository adapter.
+ * Encode accepted retained Outputs exactly once, independently of the physical repository adapter.
  * The adapter only writes bytes/documents at the paths chosen here.
  */
 export async function syncBuildResultOutputs(input: {
-  readonly manifest: BuildResultManifest;
+  readonly manifest: BuildResultDraft;
   readonly writer: BuildResultWriterState;
   readonly sync: BuildResultSync;
   readonly target: BuildResultWriteTarget;
@@ -189,24 +189,21 @@ export async function syncBuildResultOutputs(input: {
   };
 
   const outputRank = (record: TypedRecord): number => isBlobRef(record.value) ? 0 : scalar(record.value) ? 1 : 2;
-  const ready: ReadyOutput[] = input.writer.publication.outputs.flatMap((published): ReadyOutput[] => {
-    if (buildResultOutput({ outputs }, published.name) !== undefined) return [];
-    const record = input.sync.records.find((item) => item.id === published.record);
+  const ready: ReadyOutput[] = input.writer.intent.outputs.flatMap((intent): ReadyOutput[] => {
+    if (buildResultOutput({ outputs }, intent.name) !== undefined) return [];
+    const record = input.sync.records.find((item) => item.id === intent.record);
     if (record === undefined) return [];
-    assert(sameType(record.type, published.type),
-      `Logical Output ${published.output} has the wrong type for published Output ${published.name}`);
-    return [{ published, record }];
+    return [{ intent, record }];
   }).sort((left, right) => outputRank(left.record) - outputRank(right.record)
-    || compareCodeUnits(left.published.name, right.published.name));
+    || compareCodeUnits(left.intent.name, right.intent.name));
 
   if (ready.length === 0) {
     return { changed: false, manifest: input.manifest, writer: input.writer };
   }
 
-  for (const { published, record } of ready) {
-    defineBuildResultOutput(outputs, published.name, {
-      ...(published.displayName === undefined ? {} : { displayName: published.displayName }),
-      type: published.type,
+  for (const { intent, record } of ready) {
+    defineBuildResultOutput(outputs, intent.name, {
+      type: record.type,
       value: await outputValue(record),
     });
   }

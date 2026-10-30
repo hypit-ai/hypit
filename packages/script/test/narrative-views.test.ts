@@ -45,6 +45,15 @@ test("shared text permits semantic markers without changing display; empty group
   assert.throws(() => parseScript("explicit", '<intro><@{bad} 字|word></intro>'), /spoken text, not the Dual display side/u);
 });
 
+test("a Cue break before the final Segment close folds into that boundary", () => {
+  const cueSizes = (source: string) =>
+    captionDocument(parseScript("cue", source), "caption", "story").cues.map((cue) => cue.unitIds.length);
+  assert.deepEqual(cueSizes("<a>one two ||</a><b>three</b>"), [2, 1]);
+  assert.deepEqual(cueSizes("<a>one</a><b>two three ||</b>"), [1, 2]);
+  assert.deepEqual(cueSizes("<a>one two ||</a>"), [2]);
+  assert.deepEqual(cueSizes("<a>one two</a>"), [2]);
+});
+
 test("Narrative selections query authored speech while Caption preserves display correspondence", () => {
   const narrative = authored();
   const parsed = parseScript("views.svml", body);

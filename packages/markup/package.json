@@ -5,18 +5,13 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
-    "./invocation": "./src/invocation/index.ts"
-  },
-  "hypit": {
-    "activation": "./src/invocation/activation.ts"
+    ".": "./src/index.ts"
   },
   "dependencies": {
     "@hypit/source": "workspace:*",
     "@hypit/author": "workspace:*",
     "@hypit/facet": "workspace:*",
-    "@hypit/protocol": "workspace:*",
-    "@hypit/invocation": "workspace:*"
+    "@hypit/protocol": "workspace:*"
   },
   "devDependencies": {
     "@hypit/kernel": "workspace:*"

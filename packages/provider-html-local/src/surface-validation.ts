@@ -1,7 +1,7 @@
 import { stat } from "node:fs/promises";
 
-import { assertCompositableSurfaceRef } from "@hypit/media";
-import type { CompositableSurfaceRef } from "@hypit/media";
+import { assertCompositableSurfaceRef, verifyPictureInterpretation } from "@hypit/media";
+import type { CompositableSurfaceRef, PictureInterpretation } from "@hypit/media";
 import { runProcess } from "./process.js";
 
 type JsonObject = Record<string, unknown>;
@@ -30,6 +30,12 @@ type ProbeStream = {
 type PixelFormat = {
   readonly name?: unknown;
   readonly flags?: { readonly alpha?: unknown };
+  readonly components?: readonly { readonly bit_depth?: unknown }[];
+};
+
+type PixelFormatProperties = {
+  readonly alpha: boolean;
+  readonly componentDepths: readonly number[];
 };
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -88,28 +94,59 @@ function rotation(stream: ProbeStream): number {
   return ((parsed % 360) + 360) % 360;
 }
 
-function assertSrgb(stream: ProbeStream): void {
-  const allowed = {
-    color_space: new Set([undefined, "unknown", "gbr", "rgb", "bt709"]),
-    color_transfer: new Set([undefined, "unknown", "iec61966-2-1", "bt709"]),
-    color_primaries: new Set([undefined, "unknown", "bt709"]),
-    color_range: new Set([undefined, "unknown", "pc", "tv"]),
-  } as const;
-  for (const [name, values] of Object.entries(allowed)) {
-    const value = stream[name as keyof typeof allowed];
-    assert(typeof value === "string" || value === undefined, `Surface ${name} metadata is invalid`);
-    assert(values.has(value), `Surface ${name} ${String(value)} is not SDR sRGB-compatible`);
+function assertExactPicture(
+  stream: ProbeStream,
+  format: PixelFormatProperties,
+  picture: PictureInterpretation,
+  subject: string,
+): void {
+  const imageLike = picture.colorPrimaries === "bt709" && picture.colorTransfer === "srgb"
+    && picture.colorMatrix === "rgb" && picture.colorRange === "full";
+  const videoLike = picture.colorPrimaries === "bt709" && picture.colorTransfer === "bt709"
+    && picture.colorMatrix === "bt709" && picture.colorRange === "limited";
+  assert(picture.bitDepth === 8 && (imageLike || videoLike),
+    `${subject} is outside the local Provider's exact SDR picture support`);
+  const expected = [
+    ["color_primaries", new Set(["bt709"])],
+    ["color_transfer", imageLike ? new Set(["iec61966-2-1"]) : new Set(["bt709"])],
+    ["color_space", imageLike ? new Set(["gbr", "rgb"]) : new Set(["bt709"])],
+    ["color_range", imageLike ? new Set(["pc", "jpeg"]) : new Set(["tv", "mpeg"])],
+  ] as const;
+  for (const [name, values] of expected) {
+    const value = stream[name];
+    // A declaration supplies the source interpretation. Embedded tags are only
+    // contradictions to reject; their absence is not a second proof obligation.
+    assert(value === undefined || (typeof value === "string" && values.has(value as never)),
+      `${subject} ${name} ${String(value)} contradicts its declared picture interpretation`);
   }
+  assert(format.componentDepths.length > 0
+    && format.componentDepths.every(depth => depth === picture.bitDepth),
+  `${subject} pixel depth differs from its declared picture interpretation`);
+  const alphaTag = stream.tags?.alpha_mode;
+  const taggedAlpha = alphaTag === "1" || alphaTag === "2"
+    || alphaTag === "straight" || alphaTag === "premultiplied";
+  const hasAlpha = format.alpha || taggedAlpha;
+  if (picture.alphaMode === "straight") {
+    // A carrier without an alpha component is the ordinary all-opaque subset
+    // of straight alpha. When alpha bytes do exist, their encoding must not
+    // contradict the declaration.
+    if (hasAlpha) {
+      assert(alphaTag !== "1" && alphaTag !== "premultiplied",
+        `${subject} declares straight alpha but its bytes declare premultiplied alpha`);
+      assert(alphaTag === "2" || alphaTag === "straight" || stream.codec_name === "png" || stream.codec_name === "webp",
+        `${subject} straight-alpha semantics are not supported by its encoding`);
+    }
+  } else assert(!hasAlpha, `${subject} declares opaque pixels but its encoded format carries alpha`);
 }
 
-const pixelFormats = new Map<string, Map<string, boolean>>();
+const pixelFormats = new Map<string, Map<string, PixelFormatProperties>>();
 
 async function pixelFormatAlpha(
   ffprobePath: string,
   timeoutMs: number,
   maxOutputBytes: number,
   signal: AbortSignal,
-): Promise<Map<string, boolean>> {
+): Promise<Map<string, PixelFormatProperties>> {
   signal.throwIfAborted();
   const cached = pixelFormats.get(ffprobePath);
   if (cached !== undefined) return cached;
@@ -118,10 +155,14 @@ async function pixelFormatAlpha(
     timeoutMs, maxOutputBytes, signal,
   })).stdout, "ffprobe pixel-format query");
   assert(Array.isArray(root.pixel_formats), "ffprobe returned no pixel-format table");
-  const result = new Map<string, boolean>();
+  const result = new Map<string, PixelFormatProperties>();
   for (const raw of root.pixel_formats) {
     const format = object(raw) as PixelFormat | undefined;
-    if (typeof format?.name === "string") result.set(format.name, format.flags?.alpha === 1);
+    const depths = format?.components?.map(component => Number(component.bit_depth));
+    if (typeof format?.name === "string" && depths !== undefined
+      && depths.length > 0 && depths.every(depth => Number.isSafeInteger(depth) && depth > 0)) {
+      result.set(format.name, { alpha: format.flags?.alpha === 1, componentDepths: depths });
+    }
   }
   // Cache completed facts only; cancelling one caller cannot cancel another's probe.
   pixelFormats.set(ffprobePath, result);
@@ -182,19 +223,11 @@ export async function verifyCompositableSurfaceFile(options: SurfaceInspectionOp
   assert(rotation(stream) === 0, "Surface must not depend on display rotation metadata");
   assert(stream.field_order === undefined || stream.field_order === "progressive" || stream.field_order === "unknown",
     "Surface must be progressive");
-  assertSrgb(stream);
-
   assert(typeof stream.pix_fmt === "string" && stream.pix_fmt.length > 0,
     "Surface pixel format is absent");
-  const pixelAlpha = formats.get(stream.pix_fmt);
-  assert(pixelAlpha !== undefined, `Surface pixel format ${stream.pix_fmt} is unknown to ffprobe`);
-  const taggedAlpha = stream.tags?.alpha_mode === "1" || stream.tags?.alpha_mode === "straight";
-  const hasAlpha = pixelAlpha || taggedAlpha;
-  if (options.surface.picture.alphaMode === "straight") {
-    assert(hasAlpha, "Surface declares straight alpha but its bytes carry no alpha channel");
-  } else {
-    assert(!hasAlpha, "Surface declares opaque pixels but its encoded format carries alpha");
-  }
+  const format = formats.get(stream.pix_fmt);
+  assert(format !== undefined, `Surface pixel format ${stream.pix_fmt} is unknown to ffprobe`);
+  assertExactPicture(stream, format, options.surface.picture, "Surface");
 
   const frameCount = positiveInteger(stream.nb_read_frames ?? stream.nb_frames, "Surface frame count");
   if (options.surface.timing.kind === "still") {
@@ -206,4 +239,50 @@ export async function verifyCompositableSurfaceFile(options: SurfaceInspectionOp
     assert(sameRational(rate, options.surface.timing.frameRate),
       "Surface decoded frame rate differs from its declaration");
   }
+}
+
+/**
+ * A browser-decoded still uses its author-resolved sRGB interpretation. Missing
+ * tags do not invalidate that declaration; contradictory embedded tags still do.
+ * The carrier must contain one unrotated still frame with the declared depth and alpha.
+ */
+export async function verifyPictureArtifactFile(options: {
+  readonly picture: PictureInterpretation;
+  readonly path: string;
+  readonly ffprobePath?: string;
+  readonly processTimeoutMs?: number;
+  readonly maxProbeOutputBytes?: number;
+  readonly signal?: AbortSignal;
+}): Promise<void> {
+  verifyPictureInterpretation(options.picture, "HTML picture Artifact interpretation");
+  const signal = options.signal ?? new AbortController().signal;
+  signal.throwIfAborted();
+  const ffprobePath = options.ffprobePath ?? "ffprobe";
+  const timeoutMs = options.processTimeoutMs ?? 120_000;
+  const maxOutputBytes = options.maxProbeOutputBytes ?? 8 * 1024 * 1024;
+  const [probe, formats] = await Promise.all([
+    runProcess({ executable: ffprobePath,
+      argv: ["-v", "error", "-print_format", "json", "-show_streams", "-count_frames", options.path],
+      timeoutMs, maxOutputBytes, signal,
+    }).then(result => result.stdout),
+    pixelFormatAlpha(ffprobePath, timeoutMs, maxOutputBytes, signal),
+  ]);
+  const root = json(probe, "ffprobe picture Artifact query");
+  assert(Array.isArray(root.streams) && root.streams.length === 1,
+    "Picture Artifact must contain exactly one visual stream and no auxiliary streams");
+  const stream = root.streams[0] as ProbeStream;
+  assert(stream.codec_type === "video", "Picture Artifact stream is not visual");
+  assert(stream.disposition?.attached_pic !== 1, "Picture Artifact cannot be an attached-picture stream");
+  assert(rotation(stream) === 0, "Picture Artifact must not depend on display rotation metadata");
+  assert(stream.sample_aspect_ratio === undefined || stream.sample_aspect_ratio === "1:1",
+    "Picture Artifact must use square pixels");
+  assert(stream.field_order === undefined || stream.field_order === "progressive" || stream.field_order === "unknown",
+    "Picture Artifact must be progressive");
+  assert(typeof stream.pix_fmt === "string" && stream.pix_fmt.length > 0,
+    "Picture Artifact pixel format is absent");
+  const format = formats.get(stream.pix_fmt);
+  assert(format !== undefined, `Picture Artifact pixel format ${stream.pix_fmt} is unknown to ffprobe`);
+  assertExactPicture(stream, format, options.picture, "Picture Artifact");
+  assert(positiveInteger(stream.nb_read_frames ?? stream.nb_frames, "Picture Artifact frame count") === 1,
+    "Picture Artifact must decode to exactly one frame");
 }

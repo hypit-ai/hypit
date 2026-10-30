@@ -1,7 +1,7 @@
 import { assertBlobRef } from "@hypit/hypit/protocol";
 import type { CanonicalValue, ValueSchema } from "@hypit/hypit/protocol";
 import { formatRecipeValue } from "@hypit/hypit/recipe";
-import type { StudioInspectorField, StudioParameterControl, StudioParameterOption, StudioNumberPresentation, StudioValuePresentation } from "@hypit/studio-companion";
+import type { StudioInspectorField, StudioParameterControl, StudioParameterLanguage, StudioParameterOption, StudioNumberPresentation, StudioValuePresentation } from "@hypit/studio-companion";
 
 export const parameterOption = (option: StudioParameterOption): Exclude<StudioParameterOption, string> =>
   typeof option === "string" ? { value: option, label: option } : option;
@@ -119,7 +119,10 @@ export function validateParameterValue(value: CanonicalValue, schema: ValueSchem
   if (schema.maxBytes !== undefined && value.size > schema.maxBytes) fail(path, `accepts at most ${schema.maxBytes} bytes`);
 }
 
-export function serializeParameterValue(value: CanonicalValue, language: "svml" | "svs" | "svrun"): string {
+export function serializeParameterValue(value: CanonicalValue, language: StudioParameterLanguage): string {
+  if (language !== "svml" && language !== "svs") {
+    throw new Error("Studio only writes Author and Recipe Sources.");
+  }
   if (language === "svs") return formatRecipeValue(value);
   if (typeof value === "string") return value.replaceAll("&", "&amp;").replaceAll('"', "&quot;").replaceAll("'", "&apos;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
   if (typeof value === "number" || typeof value === "boolean") return String(value);

@@ -10,8 +10,8 @@ import type {
   StudioTrackCompanion,
 } from "@hypit/studio-companion";
 
-import { inspectStudioInvocation, StudioPreflightError } from "../src/studio-preflight.js";
-import type { StudioInvocationSelection } from "../src/studio-preflight.js";
+import { inspectStudioPlan, StudioPreflightError } from "../src/studio-preflight.js";
+import type { StudioPlanSelection } from "../src/studio-preflight.js";
 import { StudioCompanionRegistry } from "../src/studio-registry.js";
 import { compiledSourceScenario } from "./compiled-source-scenario.js";
 
@@ -42,20 +42,19 @@ function placement(id: string): StudioPlacement {
   };
 }
 
-test("Studio rejects an Invocation that reaches two distinct Film compositions", () => {
+test("Studio rejects Targets that reach two distinct Film compositions", () => {
   const source = compiledSourceScenario({
     placements: [placement("one"), placement("two")],
     exports: ["one", "two"].map((id) => ({
       name: `${id}.composition`, ref: `${id}.composition`, type: compositionTypes.composition,
     })),
   });
-  const invocation: StudioInvocationSelection = {
+  const selection: StudioPlanSelection = {
     targets: ["one.composition", "two.composition"],
-     invocation: { format: "hypit.invocation@1", targets: ["one.composition", "two.composition"], overrides: [] },
   };
   const registry = new StudioCompanionRegistry([], { films: [companion] });
   assert.throws(
-    () => inspectStudioInvocation(registry, source, invocation),
+    () => inspectStudioPlan(registry, source, selection),
     (error: unknown) => error instanceof StudioPreflightError
       && error.issues.some((issue) => issue.includes("multiple Film compositions")),
   );
@@ -108,12 +107,11 @@ test("Studio preserves every Film occurrence of one reusable VisualTrack", () =>
       { name: "film.composition", ref: "film.composition", type: compositionTypes.composition },
     ],
   });
-  const invocation: StudioInvocationSelection = {
+  const selection: StudioPlanSelection = {
     targets: ["film.composition"],
-     invocation: { format: "hypit.invocation@1", targets: ["film.composition"], overrides: [] },
   };
   const registry = new StudioCompanionRegistry([visualCompanion], { films: [companion] });
-  const inspection = inspectStudioInvocation(registry, source, invocation);
+  const inspection = inspectStudioPlan(registry, source, selection);
   assert.deepEqual(
     inspection.tracks.find((track) => track.ref === "visual.visual")?.visualOccurrences,
     [["background"], ["inset", "picture"]],

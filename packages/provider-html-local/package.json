@@ -5,7 +5,9 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./electron-implementation": "./src/electron-implementation.ts",
+    "./runtime-adapter": "./src/activation.ts"
   },
   "files": [
     "dist",

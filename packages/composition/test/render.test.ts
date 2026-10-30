@@ -92,7 +92,7 @@ test("typed text owns exact font selection without renderer CSS", () => {
       },
     }],
   });
-  assert.doesNotThrow(() => assertCompositionIdentity(sealComposition({ id: "font-composition", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: { members: [valid].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }, space)));
+  assert.doesNotThrow(() => assertCompositionIdentity(sealComposition({ id: "font-composition", visual: { canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: { members: [valid].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }, space)));
 });
 
 test("animated materialized Surfaces carry an explicit exact sampling relation", () => {
@@ -113,7 +113,7 @@ test("animated materialized Surfaces carry an explicit exact sampling relation",
       root: { id: "surface", kind: "surface", surface: animatedSurface, sampling },
     }],
   });
-  assert.doesNotThrow(() => assertCompositionIdentity(sealComposition({ id: "surface-composition", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: { members: [valid].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }, space)));
+  assert.doesNotThrow(() => assertCompositionIdentity(sealComposition({ id: "surface-composition", visual: { canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: { members: [valid].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }, space)));
 
   const content = structuredClone(valid) as PresentVisualTrack;
   const surface = content.items[0]!.root;
@@ -131,7 +131,7 @@ test("animated materialized Surfaces carry an explicit exact sampling relation",
       },
     }],
   });
-  assert.throws(() => assertCompositionIdentity(sealComposition({ id: "invalid-surface-composition", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: { members: [invalid].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }, space)), /target domain differs from its occurrence/u);
+  assert.throws(() => assertCompositionIdentity(sealComposition({ id: "invalid-surface-composition", visual: { canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: { members: [invalid].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }, space)), /target domain differs from its occurrence/u);
 });
 
 test("a local mask owns exactly one mask root and one content root inside its Present", () => {
@@ -152,5 +152,5 @@ test("a local mask owns exactly one mask root and one content root inside its Pr
       },
     }],
   });
-  assert.doesNotThrow(() => assertCompositionIdentity(sealComposition({ id: "mask-composition", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }, space)));
+  assert.doesNotThrow(() => assertCompositionIdentity(sealComposition({ id: "mask-composition", visual: { canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }, space)));
 });

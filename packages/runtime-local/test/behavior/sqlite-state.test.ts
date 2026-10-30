@@ -373,7 +373,7 @@ test("a lost executor ends its attempt while Result-writer leases can be reclaim
     assert.equal(interrupted?.resultWrite, undefined);
     assert.deepEqual(interrupted?.attention, {
       step: "result",
-      error: "Result writing was interrupted; run hypit result finish <build-id>",
+      error: "Result writing was interrupted; the Runtime will retry publication when it starts",
     });
     state.close();
   } finally {

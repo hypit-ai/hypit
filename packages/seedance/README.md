@@ -98,8 +98,8 @@ These forms apply to `standard`, `fast`, `mini` and `2.5`. For example:
 Inspect the selected video excerpt, not only its opening frame. An empty room stays `false` when
 the prompt asks to add a person. The flag does not lock identity; direction and references own that.
 
-The SVML author declares this parameter on each reference input. Admitted files, generated
-images/videos and reused Results use the same attributes. For a future output, declare the intended
+The SVML author declares this parameter on each reference input. Project files, generated
+images/videos and files explicitly exported from Results use the same attributes. For a future output, declare the intended
 reference classification explicitly; if its contents are uncertain, generate and inspect that
 material before using it downstream.
 

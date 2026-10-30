@@ -2,9 +2,8 @@ import { randomBytes } from "node:crypto";
 import { resolve } from "node:path";
 
 import { isBlobRef, moduleKey, orderedBuildId } from "@hypit/protocol";
-import { buildResultOutput } from "@hypit/result";
+import { BuildCompiler } from "@hypit/compiler";
 
-import { checkInvocationPreset, collectInvocationFrontends, loadInvocation } from "./invocation-source.js";
 import type { CliDistribution } from "./distribution.js";
 import type { CliApplicationContext } from "./application.js";
 import type { CliRuntime, CliRuntimeHost, CliRuntimeInspection } from "./runtime-port.js";
@@ -14,7 +13,7 @@ import type { OperationalMachineView } from "./machine-view.js";
 import { parseCommand } from "./arguments.js";
 import type { CliCommand, RuntimeOption } from "./command.js";
 import { commandHint } from "./command-hint.js";
-import { assertPlannedRequests, assertPreflight, createBuildAuthoring, describePlanEndpoints, describePlanNeeds, describePlanPricing, evaluatePlanNeeds, plannedEndpointQueries, preflightPlan } from "./build-planning.js";
+import { assertPlannedRequests, assertPreflight, createBuildAuthoring, describePlanEndpoints, describePlanRequests, describePlanPricing, describePricingRequests, evaluatePlanNeeds, plannedEndpointQueries, preflightPlan } from "./build-planning.js";
 import { buildProgressLines, observeBuild } from "./observation.js";
 import { isProjectResultCommand, runProjectResultCommand } from "./commands/results.js";
 import { isEnvironmentCommand, runEnvironmentCommand } from "./commands/environment.js";
@@ -139,6 +138,15 @@ export async function runCli(
         args,
         projectRoot: await commandProjectRoot(),
         repository: results.repository,
+        ...(distribution.resolveResultOutputExporter === undefined ? {} : {
+          resolveOutputExporter: async (type: Parameters<NonNullable<typeof distribution.resolveResultOutputExporter>>[0]) =>
+            await distribution.resolveResultOutputExporter!(type, {
+              packageRoot: await packageRootForProject(await commandProjectRoot()),
+              ...(distribution.packageRoot === undefined
+                ? {}
+                : { distributionPackageRoot: distribution.packageRoot }),
+            }),
+        }),
         write: writeOperational,
       });
     } finally {
@@ -174,7 +182,6 @@ export async function runCli(
         });
   const packageContributions = (loadedPackageSet ?? distribution.bootstrapPackages)
     .map((item) => item.contribution);
-  const invocationFrontends = collectInvocationFrontends(packageContributions);
   const compiler = distribution.createCompiler({
     ...(effectiveWorkspaceRoot === undefined ? {} : { workspaceRoot: effectiveWorkspaceRoot }),
     ...(args.assetRoots.length === 0 ? {} : { assetRoots: args.assetRoots }),
@@ -186,38 +193,10 @@ export async function runCli(
   });
   const workspace = await compiler.openEntry(args.source);
   const selectedFrontend = workspace.entry.frontend;
-  const invocationMode = invocationFrontends.some((frontend) => frontend.id === selectedFrontend);
-  const authorMode = compiler.supportsFrontend(selectedFrontend);
-  if (invocationMode === authorMode) {
-    const message = invocationMode
-      ? `Frontend ${selectedFrontend} is ambiguously registered as Author and Invocation`
-      : `No trusted Author or Invocation compiler accepts Frontend ${selectedFrontend}`;
-    throw new Error(message);
+  if (!compiler.supportsFrontend(selectedFrontend)) {
+    throw new Error(`No trusted Author compiler accepts Frontend ${selectedFrontend}`);
   }
   if (args.command === "check") {
-    if (invocationMode) {
-        const loaded = await checkInvocationPreset({
-          workspace,
-          authorCompiler: compiler,
-          frontends: invocationFrontends,
-        });
-        const machine = {
-          format: "hypit.cli-check@1" as const,
-          sourceKind: "invocation" as const,
-          ok: true,
-          invocation: projectPath(loaded.source, effectiveWorkspaceRoot),
-          author: projectPath(loaded.authorSource, effectiveWorkspaceRoot),
-          frontend: selectedFrontend,
-          targetCount: loaded.document.targets.length,
-          targets: loaded.document.targets,
-          overrides: loaded.document.overrides.length,
-        } as const;
-        writeCliOutput(io, args.presentation, {
-          kind: "check-invocation",
-          machine,
-        });
-        return;
-    }
     {
       const result = await compiler.compileResolvedSource(workspace.entry, workspace);
       const authorFacing = result.exports;
@@ -249,20 +228,15 @@ export async function runCli(
       return;
     }
   }
-  if (invocationMode && (args.targets.length > 0 || args.overrides.length > 0)) {
-    throw new Error("--target and --override apply to an Author Source; an Invocation preset already declares them");
+  if (args.targets.length === 0) {
+    throw new Error(`${args.command} requires at least one explicit --target`);
   }
-  if (authorMode && args.targets.length === 0) {
-    throw new Error(`${args.command} requires at least one explicit --target when its input is an Author Source`);
-  }
-  const loadSelectedInvocation = async () => await loadInvocation({
+  const buildCompiler = new BuildCompiler({ authorCompiler: compiler });
+  const compileSelectedTargets = async () => await buildCompiler.compileAuthorResolvedSource(
+    workspace.entry,
     workspace,
-    authorCompiler: compiler,
-    frontends: invocationFrontends,
-    input: invocationMode
-      ? { kind: "preset" }
-      : { kind: "author", request: { targets: args.targets, overrides: args.overrides } },
-  });
+    { targets: args.targets },
+  );
   if (args.command === "build") {
     if (runtimeProfile === undefined) {
       throw new Error("build requires a Runtime; run hypit runtime init, select one with runtime use, or pass --runtime <profile>");
@@ -271,14 +245,14 @@ export async function runCli(
     const buildResults = await projectResults(projectResultsRoot);
     let loadedInvocation;
     try {
-      loadedInvocation = await loadSelectedInvocation();
+      loadedInvocation = await compileSelectedTargets();
     } catch (error) {
       await buildResults.close();
       throw error;
     }
     const result = await (async () => {
       try {
-        return loadedInvocation.compiler.prepareCompilation(loadedInvocation);
+        return buildCompiler.prepareBuild(loadedInvocation);
       } catch (error) {
         await buildResults.close();
         throw error;
@@ -289,13 +263,11 @@ export async function runCli(
     try {
       const authoring = createBuildAuthoring({
         source: loadedInvocation.authorSource,
-        publication: result.publication,
-        ...(loadedInvocation.origin.kind === "preset"
-          ? { invocationSource: { path: loadedInvocation.origin.source } }
-          : {}),
+        targets: result.targets.map((target) => target.name),
+        intent: result.result,
       });
       const request = {
-        // One CLI invocation is one execution instance. Source and Plan identity
+        // One CLI submission is one execution instance. Source and Plan identity
         // remain in Core; they never reclaim a previous Build.
         id: createPublicBuildId(),
         definition: result.definition,
@@ -309,7 +281,6 @@ export async function runCli(
         attachments: result.compilation.attachments,
         result: {
           repository: buildResults.location,
-          ...(args.title === undefined ? {} : { title: args.title }),
         },
       } as const;
       const host = await runtimeHost(runtimeProfile, sourcePackageRoot);
@@ -343,10 +314,9 @@ export async function runCli(
         const targets = built.view.targets.slice(0, args.limit);
         writeOperational({
           format: "hypit.cli-build@1",
-          build: args.title === undefined ? acceptedView : { ...acceptedView, title: args.title },
+          build: acceptedView,
         }, "Build submitted", "success", [
           ["Build", built.id],
-          ...(args.title === undefined ? [] : [["Title", args.title] as const]),
           [built.view.targets.length === 1 ? "Target" : "Targets", targets.join(", ")
             + (built.view.targets.length > targets.length ? ` (+${built.view.targets.length - targets.length})` : "")],
           ["Work", workSummary],
@@ -375,16 +345,12 @@ export async function runCli(
       const finishedResult = finished
         ? await buildResults.repository.read(built.id)
         : undefined;
-      const presentation = authoring.publication;
-      const targetNames = new Set(finishedResult?.targets ?? []);
-      const targetPublishedOutputs = presentation.outputs.filter((published) => finishedResult === undefined
-        ? published.target
-        : targetNames.has(published.name));
-      const targetPresentations = targetPublishedOutputs.flatMap((published) => {
-        const record = built.state.records.find((item) => item.id === published.record);
+      const targetOutputs = result.targets;
+      const targetPresentations = targetOutputs.flatMap((target) => {
+        const record = built.state.records.find((item) => item.id === target.record);
         if (record === undefined) return [];
         return [{
-          published,
+          target,
           record,
           ...(!isBlobRef(record.value)
             ? { inline: inlineValuePreview(record.value) }
@@ -400,16 +366,13 @@ export async function runCli(
       });
       const machine = {
         format: "hypit.cli-build@1" as const,
-        build: args.title === undefined || buildView.title !== undefined
-          ? buildView
-          : { ...buildView, title: args.title },
+        build: buildView,
       };
       const resultScope = { projectRoot: projectResultsRoot };
-      const resultTargets = finishedResult?.targets.flatMap((name) => {
-        const output = buildResultOutput(finishedResult, name);
-        return output === undefined ? [] : [{ name, output }];
-      }) ?? [];
-      const finishedLines = resultTargets.length === 0 && targetPresentations.length === 0
+      const retainedOutputs = finishedResult === undefined
+        ? []
+        : Object.entries(finishedResult.outputs).map(([name, output]) => ({ name, output }));
+      const finishedLines = retainedOutputs.length === 0 && targetPresentations.length === 0
         ? [
             ...(completionReason === undefined ? [] : [`Reason   ${completionReason}`]),
             `Inspect  ${commandHint(["inspect", built.id], resultScope)}`,
@@ -417,21 +380,15 @@ export async function runCli(
         : [
             ...(completionReason === undefined ? [] : [`Reason   ${completionReason}`]),
             `Inspect  ${commandHint(["inspect", built.id], resultScope)}`,
-            ...resultTargets
-              .filter((item) => item.output.value.kind === "inline")
+            ...retainedOutputs
               .slice(0, args.limit)
-              .map((item) => `Result   ${item.name} = ${inlineValuePreview(
-                item.output.value.kind === "inline" ? item.output.value.value : undefined,
-              )}`),
-            ...resultTargets
-              .filter((item) => item.output.value.kind !== "inline")
-              .slice(0, args.limit)
-              .map((item) =>
-                `Export   ${commandHint(["get", built.id, "--output", item.name], resultScope)} --to <path>`),
-            ...(resultTargets.length > 0 ? [] : targetPresentations
+              .map((item) => item.output.value.kind === "inline"
+                ? `Result   ${item.name} = ${inlineValuePreview(item.output.value.value)}`
+                : `Export   ${commandHint(["result", "export", built.id, "--output", item.name], resultScope)} --to <path>`),
+            ...(retainedOutputs.length > 0 ? [] : targetPresentations
               .filter((item) => item.inline !== undefined)
               .slice(0, args.limit)
-              .map((item) => `Result   ${item.published.name} = ${item.inline}`)),
+              .map((item) => `Target   ${item.target.name} = ${item.inline}`)),
           ];
       const humanTitle = issue !== undefined
         ? "Build needs attention"
@@ -446,10 +403,9 @@ export async function runCli(
       buildOutcome === "failed" || issue !== undefined ? "error"
         : buildOutcome === "cancelled" || (args.follow && !finished) ? "warning" : "success", [
           ["Build", built.id],
-          ...(args.title === undefined ? [] : [["Title", args.title] as const]),
           ...(!args.follow && !finished ? [
-            [targetPublishedOutputs.length === 1 ? "Target" : "Targets",
-              targetPublishedOutputs.map((item) => item.name).join(", ")] as const,
+            [targetOutputs.length === 1 ? "Target" : "Targets",
+              targetOutputs.map((item) => item.name).join(", ")] as const,
             ["Work", workSummary] as const,
           ] : []),
           ...(issue === undefined ? [] : [
@@ -458,7 +414,7 @@ export async function runCli(
           ]),
         ], finished ? finishedLines : issue !== undefined ? [
           `Attention  ${issue.scope}: ${issue.message}`,
-          `Finish   ${commandHint(["result", "finish", built.id], commandScope)}`,
+          "The Runtime retries Result publication when its execution service starts.",
         ] : [
           `Watch    ${commandHint(["status", built.id, "--watch"], commandScope)}`,
           `Cancel   ${commandHint(["cancel", built.id], commandScope)}`,
@@ -473,8 +429,8 @@ export async function runCli(
   }
   let planInspection: CliRuntimeInspection | undefined;
   try {
-    const loaded = await loadSelectedInvocation();
-    const result = loaded.compiler.prepareCompilation(loaded);
+    const loaded = await compileSelectedTargets();
+    const result = buildCompiler.prepareBuild(loaded);
     const planHost = runtimeProfile === undefined ? undefined : await runtimeHost(runtimeProfile);
     const evaluated = await evaluatePlanNeeds(result.definition, packageContributions);
     planInspection = planHost === undefined
@@ -485,13 +441,13 @@ export async function runCli(
         throw new Error("pricing requires a Runtime; run hypit runtime init, select one with runtime use, or pass --runtime <profile>");
       }
       const pricing = await describePlanPricing(planInspection);
-      const needs = describePlanNeeds(evaluated.state, evaluated, pricing);
+      const requests = describePricingRequests(evaluated.state, evaluated, pricing);
       writeCliOutput(io, args.presentation, {
         kind: "pricing",
         ...(args.limit === undefined ? {} : { limit: args.limit }),
         machine: createPricingOutput(
-          projectPath(loaded.origin.source, effectiveWorkspaceRoot), pricing, needs, args.presentation.verbose,
-          evaluated.producerFailures,
+          projectPath(loaded.authorSource, effectiveWorkspaceRoot), requests, args.presentation.verbose,
+          evaluated.producerFailures.map((failure) => failure.message),
         ),
       });
       if (evaluated.producerFailures.length > 0) io.setExitCode?.(1);
@@ -499,27 +455,14 @@ export async function runCli(
     }
     const endpoints = planInspection === undefined ? undefined : await describePlanEndpoints(planInspection);
     const preflight = planInspection === undefined ? undefined : await preflightPlan(planInspection, evaluated.state);
-    const needs = describePlanNeeds(evaluated.state, evaluated, endpoints ?? []);
-    const outputNames = Object.fromEntries(result.compilation.author.exports.flatMap((item) =>
-      item.ref.kind === "logical-output" ? [[item.ref.id, item.name]] : []));
-    const allChoices = result.selections.flatMap((selection) => {
-      const output = outputNames[selection.output];
-      if (output === undefined) return [];
-      return [{
-        output,
-        record: selection.record,
-        origin: selection.origin,
-      }];
-    });
-    const targets = loaded.origin.kind === "preset"
-      ? loaded.preset!.document.targets
-      : args.targets;
+    const requests = describePlanRequests(evaluated.state, evaluated, endpoints ?? []);
+    const targets = args.targets;
     const unsupportedRequestCount = endpoints?.filter((item) => item.support === "unsupported").length ?? 0;
     const unresolvedRequestCount = endpoints?.filter((item) => item.status === "unresolved" || item.status === "ambiguous").length ?? 0;
     const localRequestCount = endpoints?.filter((item) => item.status === "resolved" && item.pricing?.kind === "local").length ?? 0;
     const providerRequestCount = endpoints?.filter((item) => item.status === "resolved" && item.pricing?.kind !== "local").length;
-    const requestIssueCount = needs.filter((item) => item.issue !== undefined).length;
-    const producerFailures = evaluated.producerFailures;
+    const requestIssueCount = requests.filter((item) => item.issue !== undefined).length;
+    const producerFailures = evaluated.producerFailures.map((failure) => failure.message);
     const producerFailureCount = producerFailures.length;
     writeCliOutput(io, args.presentation, {
       kind: "plan",
@@ -528,20 +471,16 @@ export async function runCli(
         ok: (preflight?.ok ?? true) && unresolvedRequestCount === 0
           && unsupportedRequestCount === 0 && requestIssueCount === 0
           && producerFailureCount === 0,
-        source: projectPath(loaded.origin.source, effectiveWorkspaceRoot),
+        source: projectPath(loaded.authorSource, effectiveWorkspaceRoot),
         targetCount: targets.length,
         targets,
-        steps: result.definition.plan.steps.length,
-        requestCount: needs.length,
+        requestCount: requests.length,
         requestIssueCount,
         producerFailureCount,
         producerFailures,
         ...(providerRequestCount === undefined ? {} : { providerRequestCount }),
         ...(endpoints === undefined ? {} : { localRequestCount, unresolvedRequestCount, unsupportedRequestCount }),
-        choiceCount: allChoices.length,
-        choices: allChoices,
-        ...(endpoints === undefined ? {} : { endpoints }),
-        needs,
+        requests,
         ...(preflight === undefined ? {} : { preflight: {
           ok: preflight.ok,
           capabilityCount: preflight.capabilities.length,

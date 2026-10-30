@@ -1,38 +1,28 @@
 import { isAbsolute, relative, resolve, sep } from "node:path";
 
-import type {
-  BuildResultManifest,
-  BuildResultRepository,
-} from "@hypit/result";
+import type { BuildResult, BuildResultOperation } from "@hypit/result";
 import { buildResultOutput } from "@hypit/result";
 import { buildIdCreatedAt, compareCodeUnits } from "@hypit/protocol";
 import { typeKey } from "@hypit/protocol";
 import type { TypeRef } from "@hypit/protocol";
 import type { CliBuildView as BuildView } from "./runtime-port.js";
-import { commandHint } from "./command-hint.js";
 import type { CommandScope } from "./command-hint.js";
 
 export type PublicOutputRepresentation = "inline" | "file" | "value-document";
-
-/** Result capability used by CLI presentation; mutation and byte access stay outside this boundary. */
-export type BuildResultDescriptionRepository = Pick<BuildResultRepository, "describeOutput">;
 
 export type CliOutputView = {
   readonly name: string;
   readonly type: string;
   readonly representation: PublicOutputRepresentation;
-  readonly target: boolean;
-  readonly highlighted: boolean;
   readonly mediaType?: string;
   readonly size?: number;
 };
 
 export type CliBuildSummary = {
   readonly id: string;
-  readonly title?: string;
+  readonly source: string;
   readonly createdAt: string;
   readonly outcome: "complete" | "failed" | "cancelled";
-  readonly invocationSource?: string;
   readonly targetCount: number;
   readonly targets?: readonly string[];
   readonly omittedTargets?: number;
@@ -41,31 +31,25 @@ export type CliBuildSummary = {
 
 export type CliBuildResultView = {
   readonly id: string;
-  readonly title?: string;
-  readonly note?: string;
   readonly createdAt: string;
   readonly finishedAt?: string;
-  readonly outcome: "open" | "complete" | "failed" | "cancelled";
+  readonly outcome: "complete" | "failed" | "cancelled";
   readonly source: string;
-  readonly invocationSource?: string;
   readonly targetCount: number;
   readonly targets: readonly string[];
   readonly omittedTargets?: number;
   readonly outputs: readonly CliOutputView[];
   readonly outputCount: number;
-  /** Available Outputs outside the selected inspection scope. */
-  readonly otherOutputCount?: number;
   readonly omittedOutputs?: number;
   readonly failure?: string;
-  readonly operations?: readonly Pick<NonNullable<BuildResultManifest["operations"]>[number],
-    "endpoint" | "status" | "receipt" | "failure">[];
-  readonly executionLog?: BuildResultManifest["executionLog"];
+  readonly operations?: readonly Pick<BuildResultOperation,
+    "endpoint" | "outcome" | "receipt" | "failure">[];
+  readonly executionLog?: BuildResult["executionLog"];
   readonly omittedOperations?: number;
 };
 
 export type CliBuildStatusView = {
   readonly id: string;
-  readonly title?: string;
   readonly targets?: readonly string[];
   readonly failure?: string;
   readonly commands?: readonly {
@@ -81,7 +65,7 @@ export type CliBuildStatusView = {
     readonly requests?: { readonly total: number; readonly completed: number };
   };
   readonly result: {
-    readonly state: "missing" | "open" | "complete" | "failed" | "cancelled" | "unavailable";
+    readonly state: "missing" | "complete" | "failed" | "cancelled" | "unavailable";
     readonly outputCount?: number;
   };
   readonly attention?: { readonly message: string; readonly action?: string };
@@ -119,41 +103,34 @@ export function buildCreatedAtIso(build: string): string {
   return new Date(createdAt).toISOString();
 }
 
-export async function outputView(
-  repository: BuildResultDescriptionRepository,
-  manifest: BuildResultManifest,
+export function outputView(
+  manifest: BuildResult,
   name: string,
-): Promise<CliOutputView> {
-  const output = await repository.describeOutput(manifest.id, name);
+): CliOutputView {
+  const output = buildResultOutput(manifest, name);
   if (output === undefined) {
     throw new Error(`Build Result ${manifest.id} Output ${name} cannot be resolved`);
   }
+  const representation = output.value.kind === "build-file"
+    ? "file" as const
+    : output.value.kind === "value" ? "value-document" as const : "inline" as const;
   return {
     name,
     type: cliTypeName(output.type),
-    representation: output.representation,
-    target: manifest.targets.includes(name),
-    highlighted: manifest.highlightedOutputs?.includes(name) === true,
-    ...(output.representation === "file" ? {
-      mediaType: output.mediaType,
-      size: output.size,
+    representation,
+    ...(output.value.kind === "build-file" ? {
+      mediaType: output.value.mediaType,
+      size: output.value.size,
     } : {}),
   };
 }
 
-function orderedOutputNames(manifest: BuildResultManifest): readonly string[] {
-  const names = Object.keys(manifest.outputs);
-  const highlighted = new Set(manifest.highlightedOutputs ?? []);
-  const targets = new Set(manifest.targets);
-  return names.sort((left, right) => {
-    const leftRank = targets.has(left) ? 0 : highlighted.has(left) ? 1 : 2;
-    const rightRank = targets.has(right) ? 0 : highlighted.has(right) ? 1 : 2;
-    return leftRank - rightRank || compareCodeUnits(left, right);
-  });
+function orderedOutputNames(manifest: BuildResult): readonly string[] {
+  return Object.keys(manifest.outputs).sort(compareCodeUnits);
 }
 
-function workState(view: BuildView | undefined, result: BuildResultManifest | undefined): CliBuildStatusView["work"]["state"] {
-  if (view === undefined) return result?.outcome === undefined ? "unknown" : "done";
+function workState(view: BuildView | undefined, result: BuildResult | undefined): CliBuildStatusView["work"]["state"] {
+  if (view === undefined) return result === undefined ? "unknown" : "done";
   if (view.activity === "submitting") return "submitting";
   if (view.activity === "ready" || view.activity === "running" || view.activity === "waiting") return "working";
   return "done";
@@ -162,34 +139,36 @@ function workState(view: BuildView | undefined, result: BuildResultManifest | un
 export function buildStatusView(options: {
   readonly id: string;
   readonly runtime?: BuildView;
-  readonly result?: BuildResultManifest;
+  readonly result?: BuildResult;
   readonly resultReadError?: string;
   readonly verbose?: boolean;
   readonly commandScope?: CommandScope;
 }): CliBuildStatusView {
+  const finished = options.result;
   const resultState = options.resultReadError !== undefined
     ? "unavailable" as const
-    : options.result?.outcome ?? (options.result === undefined ? "missing" as const : "open" as const);
+    : finished?.outcome ?? "missing" as const;
   const issue = options.runtime?.issue;
-  const operations = (options.runtime?.operations ?? options.result?.operations ?? [])
-    .filter((item) => options.verbose || item.status !== "completed");
+  const operations = (options.runtime?.operations ?? finished?.operations ?? [])
+    .filter((item) => options.verbose || ("status" in item
+      ? item.status !== "completed"
+      : item.outcome !== "complete"));
   return {
     id: options.id,
     ...((options.runtime?.targets ?? options.result?.targets) === undefined ? {} : {
       targets: options.runtime?.targets ?? options.result!.targets,
     }),
-    ...((options.result?.failure ?? options.runtime?.stop?.reason) === undefined ? {} : {
-      failure: options.result?.failure ?? options.runtime!.stop!.reason,
+    ...((finished?.failure ?? options.runtime?.stop?.reason) === undefined ? {} : {
+      failure: finished?.failure ?? options.runtime!.stop!.reason,
     }),
     ...(options.runtime?.commands?.length ? { commands: options.runtime.commands.map((command) => ({
       ...(options.verbose ? { id: command.id } : {}), endpoint: command.endpoint, progress: command.progress,
     })) } : {}),
-    ...(options.result?.title === undefined ? {} : { title: options.result.title }),
     work: {
       state: workState(options.runtime, options.result),
-      ...((options.runtime?.outcome ?? options.result?.outcome) === undefined
+      ...((options.runtime?.outcome ?? finished?.outcome) === undefined
         ? {}
-        : { outcome: options.runtime?.outcome ?? options.result!.outcome }),
+        : { outcome: options.runtime?.outcome ?? finished!.outcome }),
       ...(options.runtime?.stop?.cause === "user-cancelled" ? { cancellationRequested: true } : {}),
       ...(options.runtime?.stop === undefined ? {} : { stop: options.runtime.stop }),
       ...(options.runtime?.requests === undefined ? {} : { requests: options.runtime.requests }),
@@ -200,20 +179,17 @@ export function buildStatusView(options: {
     },
     ...(issue === undefined && options.resultReadError === undefined ? {} : {
       attention: issue !== undefined
-        ? {
-            message: issue.message,
-            action: commandHint(["result", "finish", options.id], options.commandScope),
-          }
+        ? { message: issue.message }
         : { message: options.resultReadError! },
     }),
     ...(operations.length > 0 ? {
       operations: groupOperationViews(operations
         .map((item) => ({
-          ...(!options.verbose ? {} : "operation" in item ? { id: item.operation } : item.id === undefined ? {} : { id: item.id }),
+          ...(!options.verbose || !("id" in item) || item.id === undefined ? {} : { id: item.id }),
           ...(item.receipt === undefined || (!options.verbose && item.failure === undefined) ? {} : { receipt: item.receipt }),
           endpoint: item.endpoint,
-          state: item.status,
-          ...(item.progress === undefined ? {} : { progress: item.progress }),
+          state: "status" in item ? item.status : item.outcome ?? "accepted",
+          ...(!("progress" in item) || item.progress === undefined ? {} : { progress: item.progress }),
           ...(item.failure === undefined ? {} : { failure: {
             code: item.failure.code,
             message: item.failure.message,
@@ -239,43 +215,36 @@ function groupOperationViews(
 }
 
 export async function buildResultView(
-  repository: BuildResultDescriptionRepository,
-  manifest: BuildResultManifest,
+  manifest: BuildResult,
   options: { readonly projectRoot: string; readonly output?: string; readonly limit: number; readonly verbose?: boolean },
 ): Promise<CliBuildResultView> {
   if (options.output !== undefined && buildResultOutput(manifest, options.output) === undefined) {
-    throw new Error(`Build Result ${manifest.id} has no public Output ${options.output}`);
+    throw new Error(`Build Result ${manifest.id} has no retained Output ${options.output}`);
   }
   const available = orderedOutputNames(manifest);
-  const allNames = options.output !== undefined ? [options.output] : options.verbose ? available
-    : available.filter((name) => manifest.targets.includes(name) || manifest.highlightedOutputs?.includes(name));
-  const selected = options.verbose ? allNames.slice(0, options.limit) : allNames;
-  const outputs = await Promise.all(selected.map(async (name) =>
-    await outputView(repository, manifest, name)));
-  const operations = options.verbose ? manifest.operations ?? []
-    : (manifest.operations ?? []).filter((item) => item.failure !== undefined);
+  const allNames = options.output === undefined ? available : [options.output];
+  const selected = options.output === undefined ? allNames.slice(0, options.limit) : allNames;
+  const outputs = selected.map((name) => outputView(manifest, name));
+  const finished = manifest;
+  const operations = options.verbose ? finished?.operations ?? []
+    : (finished?.operations ?? []).filter((item) => item.failure !== undefined);
   const selectedOperations = options.verbose ? operations.slice(0, options.limit) : operations;
   return {
     id: manifest.id,
-    ...(manifest.title === undefined ? {} : { title: manifest.title }),
-    ...(manifest.note === undefined ? {} : { note: manifest.note }),
     createdAt: buildCreatedAtIso(manifest.id),
-    ...(manifest.finishedAt === undefined ? {} : { finishedAt: new Date(manifest.finishedAt).toISOString() }),
-    outcome: manifest.outcome ?? "open",
-    source: projectPath(manifest.sourceId, options.projectRoot),
-    ...(manifest.invocationSourceId === undefined
-      ? {}
-      : { invocationSource: projectPath(manifest.invocationSourceId, options.projectRoot) }),
+    finishedAt: new Date(finished.finishedAt).toISOString(),
+    outcome: finished.outcome,
+    source: projectPath(manifest.sourcePath, options.projectRoot),
     targetCount: manifest.targets.length,
     targets: manifest.targets,
     outputCount: available.length,
     outputs,
-    ...(available.length === allNames.length ? {} : { otherOutputCount: available.length - allNames.length }),
     ...(selected.length === allNames.length ? {} : { omittedOutputs: allNames.length - selected.length }),
-    ...(manifest.failure === undefined ? {} : { failure: manifest.failure }),
-    ...(manifest.executionLog === undefined ? {} : { executionLog: manifest.executionLog }),
+    ...(finished?.failure === undefined ? {} : { failure: finished.failure }),
+    ...(finished?.executionLog === undefined ? {} : { executionLog: finished.executionLog }),
     ...(selectedOperations.length === 0 ? {} : { operations: selectedOperations.map((item) => options.verbose ? item : ({
-      endpoint: item.endpoint, status: item.status,
+      endpoint: item.endpoint,
+      ...(item.outcome === undefined ? {} : { outcome: item.outcome }),
       ...(item.receipt === undefined ? {} : { receipt: item.receipt }),
       ...(item.failure === undefined ? {} : { failure: item.failure }),
     })) }),

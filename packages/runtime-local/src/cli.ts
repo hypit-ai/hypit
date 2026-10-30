@@ -227,7 +227,7 @@ async function runLocal(
     } as const;
     write(io, args, machine, "Hypit paths", "info", [
       ["Project", projectRoot], ["Project state", machine.projectState], ["Runtime Profile", profile ?? "not selected"],
-      ["Runtime selection", args.profile === undefined ? selected?.selectionFile ?? "none" : "command argument (this invocation only)"],
+      ["Runtime selection", args.profile === undefined ? selected?.selectionFile ?? "none" : "command argument (this command only)"],
       ["Runtime data", runtimePaths?.runtimeDataRoot ?? "not selected"], ["Host state", machine.hostState],
       ["Distribution", localDistribution.packageRoot ?? "embedded"],
     ]);

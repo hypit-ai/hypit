@@ -7,7 +7,6 @@ import { compositionTypes } from "@hypit/composition";
 import { spatialTypes } from "@hypit/spatial";
 import { recipeType } from "@hypit/recipe";
 import { timelineTypes } from "@hypit/timeline";
-import { mediaTypes } from "@hypit/media";
 
 import { hypitPackage } from "../src/activation.js";
 import { filmModuleRef, filmTypes } from "../src/index.js";
@@ -27,7 +26,6 @@ test("Film's package-owned declaration compiles recursive scopes independently o
       { name: "audio", ref: { kind: "record", id: "audio" }, type: compositionTypes.audioTrack },
       { name: "matte", ref: { kind: "record", id: "matte" }, type: compositionTypes.visualProcessEffect },
       { name: "appearance", ref: { kind: "record", id: "appearance" }, type: recipeType },
-      { name: "hdr", ref: { kind: "record", id: "hdr" }, type: mediaTypes.workingPicture },
     ],
     records: [{
       id: "appearance",
@@ -37,17 +35,12 @@ test("Film's package-owned declaration compiles recursive scopes independently o
       id: "matte",
       type: compositionTypes.visualProcessEffect,
       value: { inputs: ["content", "matte"], program: { format: "example.matte@1", payload: {}, artifacts: [] } },
-    }, {
-      id: "hdr",
-      type: mediaTypes.workingPicture,
-      value: { colorPrimaries: "bt709", colorTransfer: "linear", referenceWhiteNits: 203,
-        alphaMode: "premultiplied" },
     }],
   };
   const text = `<svml>
   <import from="@hypit/film@1" as="film"/>
   <import source="facts.svml" as="facts"/>
-  <film:Film id="main" canvas={facts.canvas} timeline={facts.timeline} appearance={facts.appearance} picture={facts.hdr}>
+  <film:Film id="main" canvas={facts.canvas} timeline={facts.timeline} appearance={facts.appearance}>
     <film:Stack id="foreground">
       <film:Stack id="titles"><film:Track id="title" source={facts.visual}/></film:Stack>
     </film:Stack>
@@ -69,8 +62,6 @@ test("Film's package-owned declaration compiles recursive scopes independently o
   assert.deepEqual(decoded.records.find((record) => record.type.name === filmTypes.program.name)?.value, {
     id: "main",
     clearColor: "#09090B",
-    picture: { colorPrimaries: "bt709", colorTransfer: "linear", referenceWhiteNits: 203,
-      alphaMode: "premultiplied" },
     visual: { members: [{ kind: "stack", id: "foreground", members: [{
       kind: "stack", id: "titles", members: [{ kind: "track", id: "title", slot: 0 }],
     }] }, {

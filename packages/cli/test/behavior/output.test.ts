@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { createPlanOutput, createPricingOutput, renderCliError, writeCliHelp, writeCliOutput } from "../../src/output.js";
-import type { PlanNeed, PricingEntry } from "../../src/output.js";
+import type { PlanRequest, PricingRequest } from "../../src/output.js";
 import { parseCommand } from "../../src/arguments.js";
 
 function capture(
@@ -27,7 +27,7 @@ test("doctor makes its checked scope and explicit Runtime selection visible", ()
   const selected = capture(human, { kind: "doctor", machine: {
     ...machine, profile: "/project/chosen.json", profileSource: "argument",
   } });
-  assert.match(selected, /command argument \(this invocation only\)/u);
+  assert.match(selected, /command argument \(this command only\)/u);
   assert.match(selected, /Scope\s+selected Runtime and project Results/u);
 });
 
@@ -70,20 +70,20 @@ test("JSON mode writes exactly the stable command view", () => {
   assert.doesNotMatch(output, /Hypit Doctor|\u001b\[/u);
 });
 
-test("plan presents useful choices and readable requests without default graph internals", () => {
+test("plan presents target requests without exposing graph Record resolution", () => {
   const presentation = {
     kind: "plan",
     machine: {
       format: "hypit.cli-plan@1",
       ok: true,
-      source: "/project/build.svrun",
+      source: "/project/main.svml",
       targetCount: 1,
       targets: ["take.video"],
-      steps: 2,
       requestCount: 1,
       requestIssueCount: 0,
       producerFailureCount: 0,
       producerFailures: [],
+      requests: [{ capability: "@hypit/media@1/inspect", readiness: "concrete", pending: [] }],
       preflight: {
         ok: true,
         capabilityCount: 1,
@@ -91,58 +91,59 @@ test("plan presents useful choices and readable requests without default graph i
         diagnosticCount: 0,
         diagnostics: [],
       },
-      choiceCount: 1,
-      choices: [{ output: "take.video", record: "record:preview", origin: "authored" }],
     },
   } as const;
   const output = capture(human, presentation);
-  assert.match(output, /Effective selections\s+1/u);
   assert.doesNotMatch(output, /← record:preview/u);
   assert.match(output, /Requests\s+1/u);
   assert.match(output, /Preflight\s+ready/u);
   assert.doesNotMatch(output, /Runtime\s+ready/u);
-  assert.doesNotMatch(output, /@hypit\/media|logical:|record:|step-/u);
+  assert.doesNotMatch(output, /logical:|record:|step-/u);
 
   const verbose = capture({ ...human, verbose: true }, presentation);
   assert.match(verbose, /Requests\s+1/u);
-  assert.match(verbose, /take\.video\s+← record:preview \(authored\)/u);
+  assert.doesNotMatch(verbose, /take\.video\s+← record:preview/u);
 });
 
 test("plan names the Provider and price page behind each request, and points at --runtime when it cannot", () => {
   const base = {
     format: "hypit.cli-plan@1",
     ok: true,
-    source: "/project/build.svrun",
+    source: "/project/main.svml",
     targetCount: 1,
     targets: ["take.video"],
-    steps: 3,
     requestCount: 2,
     requestIssueCount: 0,
     producerFailureCount: 0,
     producerFailures: [],
-    choiceCount: 0,
-    choices: [],
+    requests: [
+      { capability: "@hypit/seedance@1#seedance-2-mini", readiness: "concrete", pending: [] },
+      { capability: "@example/downstream@1#generate", readiness: "blocked", pending: ["source"] },
+    ],
   } as const;
   const without = capture(human, { kind: "plan", machine: base });
   assert.match(without, /Pass --runtime <profile>/u);
   assert.doesNotMatch(without, /Providers and price pages/u);
 
-  const output = capture(human, { kind: "plan", machine: { ...base, providerRequestCount: 2, localRequestCount: 1, unresolvedRequestCount: 0, unsupportedRequestCount: 1, endpoints: [
+  const output = capture(human, { kind: "plan", machine: { ...base, providerRequestCount: 2, localRequestCount: 1, unresolvedRequestCount: 0, unsupportedRequestCount: 1, requests: [
     {
-      need: "seedance:one",
       capability: "@hypit/seedance@1#seedance-2-mini",
-      status: "resolved",
+      readiness: "concrete",
+      resolution: "resolved",
       support: "supported",
       endpoint: "hypihub.default",
       use: "@hypit/provider-hypihub",
       pricing: { kind: "page", url: "https://hypit.ai/commercial/pricing/" },
+      summary: [{ at: ["prompt"], value: "A concise scene" }, { at: ["duration"], value: 10 }, { at: ["resolution"], value: "720p" }],
+      pending: [],
     },
-    { need: "media:one", capability: "@hypit/media@1#inspect", status: "resolved", support: "supported", endpoint: "media.local", use: "@hypit/media-local", pricing: { kind: "local" } },
-    { need: "whisper:one", capability: "@hypit/whisperx@1#whisperx-transcription", status: "resolved", support: "supported", endpoint: "whisperx.remote", use: "@hypit/provider-example" },
+    { capability: "@hypit/media@1#inspect", readiness: "concrete", pending: [], resolution: "resolved", support: "supported", endpoint: "media.local", use: "@hypit/media-local", pricing: { kind: "local" } },
+    { capability: "@hypit/whisperx@1#whisperx-transcription", readiness: "concrete", pending: [], resolution: "resolved", support: "supported", endpoint: "whisperx.remote", use: "@hypit/provider-example" },
     {
-      need: "image:one",
       capability: "@hypit/gpt-image@1#gpt-image-2",
-      status: "resolved",
+      readiness: "concrete",
+      pending: [],
+      resolution: "resolved",
       support: "unsupported",
       endpoint: "hypihub.default",
       use: "@hypit/provider-hypihub",
@@ -152,29 +153,15 @@ test("plan names the Provider and price page behind each request, and points at 
       }],
     },
     {
-      need: "downstream:one",
       capability: "@example/downstream@1#generate",
-      status: "resolved",
+      readiness: "blocked",
+      pending: ["source"],
+      resolution: "resolved",
       support: "not-evaluated",
       endpoint: "downstream.default",
       use: "@example/provider-downstream",
     },
-  ], needs: [{
-    need: "seedance:one",
-    step: "video::component::presenter.generate",
-    port: "request",
-    capability: "@hypit/seedance@1#seedance-2-mini",
-    status: "concrete",
-    summary: [{ at: ["prompt"], value: "A concise scene" }, { at: ["duration"], value: 10 }, { at: ["resolution"], value: "720p" }],
-    pending: [],
-  }, {
-    need: "downstream:one",
-    step: "video::component::downstream.generate",
-    port: "request",
-    capability: "@example/downstream@1#generate",
-    status: "blocked",
-    pending: [{ input: "source", record: "upstream:result", sourceStep: "upstream.generate" }],
-  }] } });
+  ] } });
   assert.match(output, /Providers and price pages/u);
   assert.match(output, /@hypit\/seedance@1#seedance-2-mini\n\s+hypihub\.default \(@hypit\/provider-hypihub\)\s+·\s+https:\/\/hypit\.ai\/commercial\/pricing\//u);
   assert.match(output, /media\.local .*·\s+local, no Provider charge/u);
@@ -188,43 +175,32 @@ test("plan names the Provider and price page behind each request, and points at 
   assert.doesNotMatch(output, /Pass --runtime/u);
   assert.match(output, /seedance@1#/u);
 
-  const verbose = capture({ ...human, verbose: true }, { kind: "plan", machine: { ...base, endpoints: [
-    { need: "seedance:one", capability: "@hypit/seedance@1#seedance-2-mini", status: "ambiguous", support: "not-evaluated", endpoints: ["hypihub.default", "images.personal"] },
+  const verbose = capture({ ...human, verbose: true }, { kind: "plan", machine: { ...base, requests: [
+    { capability: "@hypit/seedance@1#seedance-2-mini", readiness: "concrete", pending: [], resolution: "ambiguous", support: "not-evaluated", endpoints: ["hypihub.default", "images.personal"] },
   ] } });
   assert.match(verbose, /@hypit\/seedance@1#seedance-2-mini\n\s+hypihub\.default, images\.personal all offer it/u);
 });
 
 test("pricing presents Provider-owned material beside the corresponding Needs", () => {
-  const presentation = { kind: "pricing", machine: createPricingOutput("/project/build.svrun", [{
-      need: "seedance:one", capability: "@hypit/seedance@1#seedance-2", status: "resolved",
+  const presentation = { kind: "pricing", machine: createPricingOutput("/project/main.svml", [{
+      capability: "@hypit/seedance@1#seedance-2", readiness: "concrete", pending: [], resolution: "resolved",
       support: "supported",
       endpoint: "hypihub.default", use: "@hypit/provider-hypihub",
       pricing: { kind: "page", url: "https://hypit.ai/commercial/pricing/" },
+      summary: [{ at: ["duration"], value: 5 }, { at: ["resolution"], value: "720p" }],
       pricingDocuments: [{
         source: "https://hypit.ai/v1/pricing?model=seedance-2",
         data: { model: "seedance-2", pricing: { mode: "per_second", per_second_usd: 0.1045 } },
       }],
     }, {
-      need: "image:one", capability: "@hypit/gpt-image@1#gpt-image-2", status: "resolved",
+      capability: "@hypit/gpt-image@1#gpt-image-2", readiness: "concrete", pending: [], resolution: "resolved",
       support: "supported",
       endpoint: "images.personal", use: "@studio/provider-images",
       pricing: { kind: "page", url: "https://images.example/pricing" },
     }, {
-      need: "downstream:one", capability: "@example/downstream@1#generate", status: "resolved",
+      capability: "@example/downstream@1#generate", readiness: "blocked", pending: ["source"], resolution: "resolved",
       support: "not-evaluated", endpoint: "downstream.default", use: "@example/provider-downstream",
       pricing: { kind: "page", url: "https://downstream.example/pricing" },
-    }], [{
-      need: "seedance:one", step: "video::component::presenter.generate", port: "generation",
-      capability: "@hypit/seedance@1#seedance-2", endpoint: "hypihub.default",
-      status: "concrete",
-      summary: [{ at: ["duration"], value: 5 }, { at: ["resolution"], value: "720p" }], pending: [],
-    }, {
-      need: "image:one", step: "video::component::portrait.generate", port: "generation",
-      capability: "@hypit/gpt-image@1#gpt-image-2", endpoint: "images.personal", status: "concrete", pending: [],
-    }, {
-      need: "downstream:one", step: "video::component::downstream.generate", port: "generation",
-      capability: "@example/downstream@1#generate", endpoint: "downstream.default", status: "blocked",
-      pending: [{ input: "source", record: "upstream:result", sourceStep: "upstream.generate" }],
     }]),
   } as const;
   const output = capture(human, presentation);
@@ -241,81 +217,79 @@ test("pricing presents Provider-owned material beside the corresponding Needs", 
 
 test("pricing preserves every Producer failure alongside rates regardless of the group limit", () => {
   const failures = [
-    { step: "timeline", message: "Timeline end must be after its start" },
-    { step: "layout", message: "Frame width must be positive" },
+    "Timeline end must be after its start",
+    "Frame width must be positive",
   ];
-  const machine = createPricingOutput("build.svrun", [{
-    need: "video", capability: "example.video@1#create", status: "resolved",
+  const machine = createPricingOutput("main.svml", [{
+    capability: "example.video@1#create", readiness: "concrete", pending: [], resolution: "resolved",
     support: "supported",
     endpoint: "vendor", pricing: { kind: "page", url: "https://vendor.example/pricing" },
   }, {
-    need: "image", capability: "example.image@1#create", status: "unresolved",
+    capability: "example.image@1#create", readiness: "concrete", pending: [], resolution: "unresolved",
     support: "not-evaluated",
-  }], [], false, failures);
+  }], false, failures);
   const presentation = { kind: "pricing", machine, limit: 1 } as const;
   const output = capture(human, presentation);
   assert.match(output, /Producer failures\s+2/u);
-  for (const failure of failures) assert.ok(output.includes(failure.message));
+  for (const failure of failures) assert.ok(output.includes(failure));
   assert.match(output, /1 more groups/u);
   const json = JSON.parse(capture({ ...human, json: true }, presentation));
   assert.equal(json.producerFailureCount, 2);
   assert.deepEqual(json.producerFailures, failures);
   assert.equal(json.groups.length, 2);
 
-  const clean = createPricingOutput("build.svrun", [], []);
+  const clean = createPricingOutput("main.svml", []);
   assert.equal(clean.producerFailureCount, 0);
   assert.deepEqual(clean.producerFailures, []);
   assert.doesNotMatch(capture(human, { kind: "pricing", machine: clean }), /Producer failures/u);
 });
 
 test("pricing summarizes 24 no-charge requests and retains all 15 priced requests with shared rate documents", () => {
-  const entries: PricingEntry[] = [];
-  const needs: PlanNeed[] = [];
-  const add = (count: number, capability: string, metadata: Omit<PricingEntry, "need" | "capability">) => {
+  const requests: PricingRequest[] = [];
+  const add = (count: number, capability: string,
+    metadata: Omit<PricingRequest, "capability" | "readiness" | "pending" | "summary">) => {
     for (let index = 0; index < count; index++) {
-      const need = `${capability}:${index}`;
-      entries.push({ need, capability, ...metadata });
-      needs.push({ need, capability, step: need, port: "result", status: "concrete", pending: [],
-        summary: [{ at: ["quantity"], value: index + 1 }] });
+      requests.push({ capability, readiness: "concrete", pending: [],
+        summary: [{ at: ["quantity"], value: index + 1 }], ...metadata });
     }
   };
   add(24, "example.processing@1#prepare", {
-    status: "resolved", support: "supported", endpoint: "processing", pricing: { kind: "local" },
+    resolution: "resolved", support: "supported", endpoint: "processing", pricing: { kind: "local" },
   });
   for (const [count, capability] of [[7, "example.work@1#create"], [7, "example.work@1#align"], [1, "example.work@1#draw"]] as const) {
     add(count, capability, {
-      status: "resolved", support: "supported", endpoint: "vendor", pricing: { kind: "page", url: "https://vendor.example/prices" },
+      resolution: "resolved", support: "supported", endpoint: "vendor", pricing: { kind: "page", url: "https://vendor.example/prices" },
       pricingDocuments: [{ source: `https://vendor.example/prices/${capability}`, data: { creditsPerUnit: 3 } }],
     });
   }
-  const machine = createPricingOutput("build.svrun", entries, needs);
+  const machine = createPricingOutput("main.svml", requests);
   assert.equal(machine.requestCount, 39);
   assert.equal(machine.noChargeRequestCount, 24);
   assert.deepEqual(machine.groups.map((group) => group.requests.length), [7, 7, 1]);
-  assert.deepEqual(machine.groups.flatMap((group) => group.requests), needs.slice(24));
+  assert.deepEqual(machine.groups.flatMap((group) => group.requests).map((request) => request.summary?.[0]?.value),
+    Array.from({ length: 15 }, (_, index) => index < 7 ? index + 1 : index < 14 ? index - 6 : 1));
   const output = capture(human, { kind: "pricing", machine });
   assert.doesNotMatch(output, /example.processing/u);
   assert.equal(output.match(/"creditsPerUnit": 3/gu)?.length, 3);
   assert.match(output, /quantity 7/u);
   assert.match(output, /example.work@1#draw/u);
-  const detailed = createPricingOutput("build.svrun", entries, needs, true);
+  const detailed = createPricingOutput("main.svml", requests, true);
   assert.equal(detailed.groups.flatMap((group) => group.requests).length, 39);
 });
 
 test("pricing retains unknown and rejected requests and distinguishes Endpoint-specific rate material", () => {
-  const entries: PricingEntry[] = [
-    { need: "unknown", capability: "example.local@1#free", status: "resolved", support: "supported", endpoint: "free.local" },
-    { need: "rejected", capability: "example.local@1#free", status: "resolved", support: "unsupported", pricing: { kind: "local" },
+  const requests: PricingRequest[] = [
+    { capability: "example.local@1#free", readiness: "concrete", pending: [], resolution: "resolved", support: "supported", endpoint: "free.local" },
+    { capability: "example.local@1#free", readiness: "concrete", pending: [], resolution: "resolved", support: "unsupported", pricing: { kind: "local" },
       rejections: [{ endpoint: "free.local", message: "unsupported parameter" }] },
-    { need: "failed", capability: "example@1#create", status: "resolved", support: "supported", endpoint: "vendor",
+    { capability: "example@1#create", readiness: "concrete", pending: [], resolution: "resolved", support: "supported", endpoint: "vendor",
       pricing: { kind: "page", url: "https://vendor.example/prices" }, pricingError: "pricing service unavailable" },
     ...["account-a", "account-b"].flatMap((endpoint) => [1, 2].map((tier) => ({
-      need: `${endpoint}:${tier}`, capability: "example@1#create", status: "resolved" as const, support: "supported" as const, endpoint,
+      capability: "example@1#create", readiness: "concrete" as const, pending: [], resolution: "resolved" as const, support: "supported" as const, endpoint,
       pricingDocuments: [{ source: "https://vendor.example/prices", data: { tier, amount: tier * 2 } }],
     }))),
   ];
-  const needs = entries.map(({ need, capability }) => ({ need, capability, step: need, port: "result", status: "concrete" as const, pending: [] }));
-  const machine = createPricingOutput("build.svrun", entries, needs);
+  const machine = createPricingOutput("main.svml", requests);
   assert.equal(machine.noChargeRequestCount, 0);
   assert.equal(machine.groups.length, 7);
   const presentation = { kind: "pricing", machine } as const;
@@ -328,18 +302,20 @@ test("pricing retains unknown and rejected requests and distinguishes Endpoint-s
   assert.match(capture(human, limited), /6 more groups/u);
   const json = JSON.parse(capture({ ...human, json: true }, limited));
   assert.deepEqual(json, machine);
-  const firstJsonNeed = json.groups.at(0)?.requests.at(0);
-  assert.ok(firstJsonNeed);
-  assert.equal(firstJsonNeed.need, "unknown");
-  assert.equal("request" in firstJsonNeed, false);
-  const command = parseCommand(["pricing", "build.svrun"]);
+  const firstJsonRequest = json.groups.at(0)?.requests.at(0);
+  assert.ok(firstJsonRequest);
+  assert.equal("need" in firstJsonRequest, false);
+  assert.equal("step" in firstJsonRequest, false);
+  assert.equal("record" in firstJsonRequest, false);
+  const command = parseCommand(["pricing", "main.svml"]);
   assert.equal(command.command, "pricing");
   assert.equal("limit" in command, false);
-  assert.equal((parseCommand(["pricing", "build.svrun", "--limit", "1"]) as { limit: number }).limit, 1);
+  assert.equal((parseCommand(["pricing", "main.svml", "--limit", "1"]) as { limit: number }).limit, 1);
 });
 
 test("numeric options accept unsigned decimal integer spelling only", () => {
   assert.equal((parseCommand(["status", "bld_example", "--watch", "--max-wait-ms", "0"]) as { maxWaitMs: number }).maxWaitMs, 0);
+  assert.throws(() => parseCommand(["status", "bld_example", "--limit", "1"]), /--limit does not apply to status/u);
   assert.equal((parseCommand(["builds", "--limit", "12"]) as { limit: number }).limit, 12);
   for (const value of ["", " ", "0x10", "0b11", "1e3", "-1", "1.5", "9007199254740992"]) {
     assert.throws(
@@ -358,17 +334,14 @@ test("numeric options accept unsigned decimal integer spelling only", () => {
 });
 
 test("Provider summaries keep raw pricing available and shared parameters preserve differing combinations", () => {
-  const entries = ["first", "second", "third"].map((need) => ({
-    need, capability: "example@1#generate", status: "resolved" as const, support: "supported" as const, endpoint: "vendor",
+  const requests = ["first", "second", "third"].map((_name, index): PricingRequest => ({
+    capability: "example@1#generate", readiness: "concrete", pending: [], resolution: "resolved", support: "supported", endpoint: "vendor",
     pricingDocuments: [{ source: "https://vendor.example/prices", summary: "Gold: 2 credits per unit",
       data: { actualRate: 2, marketingComparison: 99 } }],
-  }));
-  const needs = entries.map(({ need, capability }, index) => ({
-    need, capability, step: need, port: "result", status: "concrete" as const, pending: [],
     summary: [{ at: ["mode"], value: "gold" }, { at: ["duration"], value: index === 0 ? 5 : 10 },
       { at: ["size"], value: index === 2 ? "large" : "small" }],
   }));
-  const machine = createPricingOutput("build.svrun", entries, needs);
+  const machine = createPricingOutput("main.svml", requests);
   const presentation = { kind: "pricing", machine } as const;
   const output = capture(human, presentation);
   assert.equal(output.match(/mode gold/gu)?.length, 1);
@@ -382,46 +355,41 @@ test("Provider summaries keep raw pricing available and shared parameters preser
 });
 
 test("plan scope omits unused branches while retaining every demanded request and diagnostic", () => {
-  const needs = Array.from({ length: 61 }, (_, index): PlanNeed => ({
-    need: `need-${index}`, step: `item-${index}`, port: "request", capability: "example@1#render", status: "concrete", pending: [],
+  const requests = Array.from({ length: 61 }, (_, index): PlanRequest => ({
+    capability: "example@1#render", readiness: "concrete", pending: [],
+    resolution: "resolved", support: "supported", endpoint: "local",
     ...(index === 60 ? { issue: "missing source" } : {}),
   }));
   const plan = {
-    format: "hypit.cli-plan@1" as const, ok: false, source: "build.svrun", targetCount: 2,
-    targets: ["final.video", "poster.image"], steps: 400, requestCount: needs.length, requestIssueCount: 1,
+    format: "hypit.cli-plan@1" as const, ok: false, source: "main.svml", targetCount: 2,
+    targets: ["final.video", "poster.image"], requestCount: requests.length, requestIssueCount: 1,
     producerFailureCount: 1,
-    producerFailures: [{ step: "source::component::timeline.resolve", message: "Timeline end must be after its start" }],
-    choiceCount: 35, choices: Array.from({ length: 35 }, (_, i) => ({
-      output: `old-${i}`, record: `selected-${i}`, origin: "primary" as const,
-    })),
-    needs, endpoints: needs.map((need) => ({ need: need.need, capability: need.capability, status: "resolved" as const, support: "supported" as const, endpoint: "local" })),
+    producerFailures: ["Timeline end must be after its start"],
+    requests,
     preflight: { ok: false, capabilityCount: 2, capabilities: ["a", "b"], diagnosticCount: 2,
       diagnostics: [{ severity: "warning" as const, code: "WARNING", message: "first" },
         { severity: "error" as const, code: "REQUIRED", message: "last required error" }] },
   };
   const machine = createPlanOutput(plan, { verbose: false, limit: 1 });
   const parsed = JSON.parse(capture({ ...human, json: true }, { kind: "plan", machine }));
-  assert.equal(parsed.choiceCount, 35);
-  assert.equal("choices" in parsed, false);
+  assert.equal("outputs" in parsed, false);
   assert.equal("steps" in parsed, false);
-  assert.equal(parsed.needs.length, 61);
-  assert.equal(parsed.needs[0].need, "need-0");
-  assert.equal("request" in parsed.needs[0], false);
-  assert.equal(parsed.endpoints.length, 61);
+  assert.equal(parsed.requests.length, 61);
+  assert.equal("need" in parsed.requests[0], false);
+  assert.equal("step" in parsed.requests[0], false);
+  assert.equal("record" in parsed.requests[0], false);
   assert.deepEqual(parsed.targets, plan.targets);
   assert.deepEqual(parsed.preflight.diagnostics, plan.preflight.diagnostics);
   const rendered = capture(human, { kind: "plan", machine });
   assert.match(rendered, /missing source/u);
-  assert.match(rendered, /timeline\.resolve: Timeline end must be after its start/u);
+  assert.match(rendered, /Timeline end must be after its start/u);
   assert.match(rendered, /last required error/u);
-  assert.doesNotMatch(rendered, /old-\d/u);
+  assert.doesNotMatch(rendered, /output-\d/u);
   assert.match(rendered, /request summary unavailable/u);
   assert.doesNotMatch(rendered, /no parameters/u);
 
   const detailed = createPlanOutput(plan, { verbose: true, limit: 1 });
-  assert.equal(detailed.choices?.length, 1);
-  assert.equal(detailed.omittedChoices, 34);
-  assert.equal(detailed.needs?.length, 61);
+  assert.equal(detailed.requests.length, 61);
   assert.deepEqual(detailed.preflight?.diagnostics, plan.preflight.diagnostics);
 });
 
@@ -447,9 +415,9 @@ test("human errors expose stable codes while JSON errors stay parseable", () => 
 
 test("Result help makes exact Output addressing explicit", () => {
   let output = "";
-  writeCliHelp({ write(text) { output += text; } }, "get");
+  writeCliHelp({ write(text) { output += text; } }, "result");
   assert.match(output, /--output <name> --to <path>/u);
-  assert.match(output, /Value-document Outputs become a directory/u);
+  assert.match(output, /Type-owning package/u);
 });
 
 test("argument errors give command help in text and JSON without suggesting a stack trace", () => {

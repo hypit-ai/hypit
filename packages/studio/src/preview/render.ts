@@ -8,7 +8,7 @@ import { injectRuntimeShim } from "./runtime-shim.js";
 
 export type RenderInput = {
   readonly composition: Composition;
-  /** Resources Studio can serve for material selected by the Invocation. */
+  /** Resources Studio can serve for material reached by the selected Targets. */
   readonly served?: ReadonlySet<string>;
 };
 
@@ -16,8 +16,9 @@ export type RenderInput = {
  * Compile the interpreted Tracks into the same HTML renderer document the real
  * renderer photographs frame by frame, and hand it back as an `iframe` srcdoc.
  *
- * Nothing is approximated here: placement, stacking, clipping, motion and
- * material all come from the projection selected by the Invocation.
+ * This preview intentionally covers only the browser-playable subset. Provider
+ * execution such as Visual Process rasterization is rejected instead of being
+ * approximated; Studio's preview pipeline will be replaced as a whole.
  */
 export function renderPreview(input: RenderInput): string {
   return renderStudioHtmlProgram(input).preview;
@@ -26,6 +27,9 @@ export function renderPreview(input: RenderInput): string {
 /** The same compiled picture serves immediate frame capture and interactive playback. */
 export function renderStudioHtmlProgram(input: RenderInput): { readonly document: HtmlProgram; readonly html: string; readonly preview: string } {
   const document = compileHtmlProgram(input.composition);
+  if (document.processUsages.length > 0) {
+    throw new Error("Studio preview is disabled for Visual Process input rasterization; export with a renderer instead.");
+  }
   const html = materializeHtmlProgram(document, (artifact) => {
     // The only Artifacts a preview can reference are files the author already
     // has. Anything else would be a Provider's output, which does not exist yet,

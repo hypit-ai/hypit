@@ -2,27 +2,27 @@ import { mkdir, rm, stat, writeFile } from "node:fs/promises";
 import { join, relative, sep } from "node:path";
 import puppeteer from "puppeteer-core";
 import type { Browser } from "puppeteer-core";
+import { selectHtmlProcessUsages } from "@hypit/html-program";
 import type { HtmlProgram } from "@hypit/html-program";
 import type { FrameSpan } from "@hypit/timeline";
 import type { VisualDeliverySpec, OutputPictureSpec } from "@hypit/media";
 import type { HtmlRasterProgress, resolveExecutionOptions } from "./render.js";
 import { assert, mediaExecutablePath, openProcessInput, runProcess } from "./process.js";
 import { verifyOutput } from "./output.js";
-import { distributeFrameRange, requestedFrameRanges, sourceDirectionAt, sourceFrameAt, sourceTimestampAt, sourceWindows, videoSlots } from "./sampling.js";
+import { distributeFrameRange, requestedFrameRanges, sourceFrameAt, sourceWindows, videoSlots } from "./sampling.js";
 import type { VideoSlot } from "./sampling.js";
 import { CaptureConcurrency, renderWorkerLimit } from "./concurrency.js";
 import { createOpaqueFrameCapture } from "./opaque-capture.js";
 import type { FramePreparationTiming } from "./opaque-capture.js";
 import { FrameSpanIndex } from "./frame-span-index.js";
 import { OrderedFrameSink } from "./ordered-frame-sink.js";
-import { decodeHdr10SourceFrameWindow, decodeSourceFrameWindow, probeSourceVideo } from "./source-frame-decoder.js";
+import { decodeSourceFrameWindow, probeSourceVideo } from "./source-frame-decoder.js";
 import { SourceFrameStore } from "./source-frame-store.js";
 import type { SourceFrameWindow } from "./source-frame-store.js";
 import { serveHtmlProgram } from "./server.js";
 import { createGpuCapture, gpuCapturePages } from "./gpu-capture.js";
 import type { SourceFrameUpdate } from "./opaque-capture.js";
 import { resolveStagedPath } from "./staged-path.js";
-import { isLocalHtmlHdr10Request, isLocalHtmlPq10Source } from "./support.js";
 
 type CaptureInputBase = {
   readonly document: HtmlProgram;
@@ -51,7 +51,6 @@ export async function captureStagedVisual(input: CaptureInput, controller: Abort
   const at = (index: number) => input.frames?.[index] ?? range.startFrame + index;
   const fps = { num: document.frameRate.numerator, den: document.frameRate.denominator };
   const useGpu = input.frames === undefined && config.renderer === "electron";
-  const hdr10 = input.frames === undefined && isLocalHtmlHdr10Request({ program: document, delivery: input.delivery });
   const limit = renderWorkerLimit(config, frameCount, fps.num / fps.den,
     useGpu && document.videoSources.length > 0);
   const concurrency = new CaptureConcurrency(limit, config.workers === "auto" && !useGpu);
@@ -109,9 +108,7 @@ export async function captureStagedVisual(input: CaptureInput, controller: Abort
       return `./${path}`;
     }, { frameRate: document.frameRate });
     const slotIndex = new FrameSpanIndex(slots);
-    const decodedSlots = useGpu
-      ? slots.filter(slot => slot.kind === "media" && hdr10 && isLocalHtmlPq10Source(slot.picture))
-      : slots;
+    const decodedSlots = useGpu ? [] : slots;
     const decodedSlotKeys = new Set(decodedSlots.map(slot => slot.sourceKey));
     const decodedSlotIndex = new FrameSpanIndex(decodedSlots);
     const requestedRanges = requestedFrameRanges(range, input.frames);
@@ -119,21 +116,26 @@ export async function captureStagedVisual(input: CaptureInput, controller: Abort
     for (const requested of requestedRanges) {
       for (const slot of slotIndex.overlapping(requested)) requestedSlots.set(slot.sourceKey, slot);
     }
-    const sources = new Map<string, { path: string;
+    const sources = new Map<string, { path: string; picture: VideoSlot["picture"]; rotation: 0 | 90 | 180 | 270;
       metadata: Awaited<ReturnType<typeof probeSourceVideo>> }>();
     const sourceFrames = new Map<string, Awaited<ReturnType<typeof probeSourceVideo>>>();
     // The portable path indexes exact selected-stream timestamps before it
     // plans ordinal decode windows. Pixel frames remain lazy.
     for (const slot of requestedSlots.values()) {
-      if (!decodedSlotKeys.has(slot.sourceKey)) continue;
+      if (!decodedSlotKeys.has(slot.sourceKey) && !(useGpu && slot.kind === "media")) continue;
       const path = resolveStagedPath(work, slot.src);
       assert(path !== undefined, "HTML renderer source is outside the staged project");
       const metadata = await probeSourceVideo({ executable: ffprobePath, path,
         streamIndex: slot.streamIndex,
         timeoutMs: config.processTimeoutMs, maxOutputBytes: config.maxProcessOutputBytes, signal });
       signal.throwIfAborted();
+      if (slot.kind === "media") {
+        assert(metadata.width === slot.codedWidth && metadata.height === slot.codedHeight,
+          `HTML renderer source ${slot.id} coded extent differs from its Programme interpretation`);
+      }
       sourceFrames.set(slot.sourceKey, metadata);
-      sources.set(slot.sourceKey, { path, metadata });
+      sources.set(slot.sourceKey, { path, picture: slot.picture,
+        rotation: slot.kind === "media" ? slot.rotation : 0, metadata });
     }
     const plannedSources = sourceWindows(decodedSlots, requestedRanges, sourceFrames, decodedSlotIndex);
     const sourceTotal = plannedSources.reduce((sum, source) => sum + source.windows.reduce((count, window) =>
@@ -143,15 +145,40 @@ export async function captureStagedVisual(input: CaptureInput, controller: Abort
       decode: (src, window) => {
         const source = sources.get(src);
         assert(source !== undefined, `HTML renderer source ${src} is outside the requested render`);
-        const decode = useGpu ? decodeHdr10SourceFrameWindow : decodeSourceFrameWindow;
-        return decode({ executable: ffmpegPath, path: source.path, outputDir: join(work, "decoded"),
+        return decodeSourceFrameWindow({ executable: ffmpegPath, path: source.path, outputDir: join(work, "decoded"),
           outputPrefix: `source-${extraction++}`, window, metadata: source.metadata,
+          picture: source.picture,
+          rotation: source.rotation,
           timeoutMs: config.processTimeoutMs, maxProcessOutputBytes: config.maxProcessOutputBytes, signal });
       },
       remove: async path => { await rm(path, { force: true }); },
     });
     const sourceDemand = (ranges: readonly FrameSpan[]): SourceFrameWindow[] => sourceWindows(decodedSlots, ranges, sourceFrames, decodedSlotIndex)
       .flatMap(source => source.windows.map(window => ({ source: source.sourceKey, ...window })));
+    const browserTimestampAt = (slot: Extract<VideoSlot, { readonly kind: "media" }>, frame: number) => {
+      const metadata = sourceFrames.get(slot.sourceKey);
+      assert(metadata !== undefined, `HTML renderer source ${slot.id} has no timestamp index`);
+      const ordinal = sourceFrameAt(slot, frame, metadata);
+      if (ordinal === undefined) return undefined;
+      const ticks = metadata.timestamps[ordinal];
+      assert(ticks !== undefined, `HTML renderer source ${slot.id} has no selected timestamp`);
+      const timestamp = Number(ticks * metadata.timeBase.numerator) / Number(metadata.timeBase.denominator);
+      assert(Number.isFinite(timestamp), `HTML renderer source ${slot.id} timestamp exceeds finite arithmetic`);
+      return {
+        kind: "time" as const,
+        timestamp,
+        timestampTicks: ticks.toString(),
+        timeBase: {
+          numerator: metadata.timeBase.numerator.toString(),
+          denominator: metadata.timeBase.denominator.toString(),
+        },
+        streamIndex: slot.streamIndex,
+        codedWidth: slot.codedWidth,
+        codedHeight: slot.codedHeight,
+        sampleAspectRatio: slot.sampleAspectRatio,
+        rotation: slot.rotation,
+      };
+    };
     const frameRanges = (startIndex: number, endIndex: number): FrameSpan[] => input.frames === undefined
       ? [{ startFrame: at(startIndex), endFrameExclusive: at(endIndex - 1) + 1 }]
       : input.frames.slice(startIndex, endIndex).map(frame => ({ startFrame: frame, endFrameExclusive: frame + 1 }));
@@ -178,7 +205,7 @@ export async function captureStagedVisual(input: CaptureInput, controller: Abort
     server = await serveHtmlProgram(work, virtualPages);
     if (gpuPages !== undefined) {
       gpu = await stage("GPU encoder initialization", config.initializationTimeoutMs,
-        () => createGpuCapture(input, server!.url, gpuPages, controller, limit, ffmpegPath));
+        () => createGpuCapture(input, server!.url, gpuPages, controller, limit));
     }
     const serverUrl = server.url;
     const outputFrames = join(work, "frames");
@@ -272,7 +299,8 @@ export async function captureStagedVisual(input: CaptureInput, controller: Abort
               await program.prepare(frameSelection);
             }, input.frameSelection);
           });
-          const capturePng = await createOpaqueFrameCapture(page, document.canvas, picture.alpha.matte);
+          const capturePng = await createOpaqueFrameCapture(page, document.canvas, picture.alpha.matte,
+            selectHtmlProcessUsages(document, input.frameSelection));
           captureFrame = async (frame, sources, _ordinal, prepared) => {
             const captured = await capturePng(frame, sources);
             prepared();
@@ -309,33 +337,21 @@ export async function captureStagedVisual(input: CaptureInput, controller: Abort
               const sourceUpdates: SourceFrameUpdate[] = useGpu
                 ? slotIndex.at(frame).flatMap((slot): SourceFrameUpdate[] => {
                   if (slot.kind === "media") {
-                    if (decodedSlotKeys.has(slot.sourceKey)) {
-                      const payload = decodedPayloads.get(slot.id);
-                      return payload === undefined ? [] : [{ id: slot.id,
-                        documentPath: slot.documentPath, elementId: slot.elementId,
-                        url: new URL(relative(work, payload.framePath).split(sep).map(encodeURIComponent).join("/"), serverUrl).href,
-                        picture: slot.picture,
-                        sample: { kind: "i420p10" as const, width: sources.get(slot.sourceKey)!.metadata.width,
-                          height: sources.get(slot.sourceKey)!.metadata.height, rotation: slot.rotation },
-                      }];
-                    }
-                    const timestamp = sourceTimestampAt(slot, frame);
-                    return timestamp === undefined ? [] : [{
+                    const sample = browserTimestampAt(slot, frame);
+                    return sample === undefined ? [] : [{
                       id: slot.id,
-                      documentPath: slot.documentPath,
                       elementId: slot.elementId,
                       url: new URL(slot.src, serverUrl).href,
                       picture: slot.picture,
-                      sample: { kind: "time" as const, timestamp, streamIndex: slot.streamIndex,
-                        reverse: sourceDirectionAt(slot, frame) === -1 },
+                      sample,
                     }];
                   }
                   const sourceFrame = sourceFrameAt(slot, frame);
                   return sourceFrame === undefined ? [] : [{
                     id: slot.id,
-                    documentPath: slot.documentPath,
                     elementId: slot.elementId,
                     url: new URL(slot.src, serverUrl).href,
+                    picture: slot.picture,
                     sample: { kind: "frame" as const, frame: sourceFrame, fps: slot.sourceFps,
                       streamIndex: slot.streamIndex, reverse: slot.sourceRate.numerator < 0n },
                   }];
@@ -343,7 +359,7 @@ export async function captureStagedVisual(input: CaptureInput, controller: Abort
                 : [...activeFramePayloads(frame)].map(([id, payload]) => {
                   const slot = slotIndex.at(frame).find((candidate) => candidate.id === id);
                   assert(slot !== undefined, `HTML renderer source slot ${id} is missing`);
-                  return { id, documentPath: slot.documentPath, elementId: slot.elementId,
+                  return { id, elementId: slot.elementId,
                     url: new URL(relative(work, payload.framePath).split(sep).map(encodeURIComponent).join("/"), serverUrl).href };
                 });
               captured = await stage(`worker ${worker} frame ${frame}`, config.frameTimeoutMs,
@@ -437,14 +453,13 @@ export async function captureStagedVisual(input: CaptureInput, controller: Abort
       const encoderFinishMs = performance.now() - finishStarted;
       await gpu.close();
       const muxStarted = performance.now();
-      if ("raw" in encoded) await runProcess({ executable: ffmpegPath,
+      await runProcess({ executable: ffmpegPath,
         argv: ["-v", "error", "-y", "-r", `${fps.num}/${fps.den}`, "-i", encoded.raw,
           "-an", "-c:v", "copy",
           "-bsf:v", `setts=pts=N:dts=N:duration=1:time_base=${fps.den}/${fps.num}`,
           "-color_range", "tv", "-colorspace", "bt709", "-color_trc", "bt709", "-color_primaries", "bt709",
           "-movflags", "+faststart", output],
         timeoutMs: config.processTimeoutMs, maxOutputBytes: config.maxProcessOutputBytes, signal });
-      else assert(encoded.output === output, "GPU encoder returned an unexpected output path");
       electronProfile = { frames: frameCount, requestSetupMs, workerWallMs, ...stats,
         encoderFinishMs, containerMuxMs: performance.now() - muxStarted };
     } else await orderedFrames!.close();

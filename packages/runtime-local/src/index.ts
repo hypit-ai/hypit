@@ -13,7 +13,6 @@ export * from "./host-api.js";
 export {
   createRuntimeFromConfig,
   createRuntimeControlFromConfig,
-  createRuntimeResultControlFromConfig,
   createRuntimeCredentialsFromConfig,
   doctorProjectBuildResultRepository,
   openProjectBuildResultRepository,

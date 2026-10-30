@@ -1,17 +1,17 @@
 # Planning, Builds, and Results
 
-Read this when inspecting the work selected by an Invocation, obtaining spending authority, submitting a
+Read this when inspecting the work selected by explicit Targets, obtaining spending authority, submitting a
 Build, continuing after a failed attempt, following work after an observer disconnects, or retrieving
 completed Outputs.
 
-[Invocations](runs.md) owns Targets, transient overrides and their optional saved form. [System relationships](system.md)
+[Targets](targets.md) owns the selection for one command. [System relationships](system.md)
 explains how the authored production becomes a Build, and [rendering](rendering.md) covers whole or partial video outputs.
 
 ## Reuse available Outputs and identify active Builds
 
-For a revision, identify the relevant Invocation and its completed Outputs. Export still-useful media into
-the project and record the durable choice in the Author Source. [Authoring](authoring.md#reuse-produced-work-explicitly)
-explains how project material and realization selection preserve media without freezing downstream edits.
+For a revision, identify the relevant Source, Targets and completed Outputs. Export still-useful media into
+the project and update the consuming reference in the Author Source. [Authoring](authoring.md#reuse-produced-work-explicitly)
+explains how project material preserves media without freezing downstream edits.
 A failed Build can still contain completed Outputs; a missing exported file is not evidence of missing media.
 
 If the CLI or observation tool loses its reply while submitting or following a Build, inspect the
@@ -30,7 +30,7 @@ project-owned Results without a Runtime argument. Read active execution from the
 that received the Build.
 
 Use the known Build id. If it was not returned, use project activity and Results to identify the
-submission from its Invocation Source when saved, Author Source and submission time. Follow active work with `status --watch` and
+submission from its Author Source, Targets and submission time. Follow active work with `status --watch` and
 inspect or export completed Outputs. A closed terminal or interrupted
 observation is distinct from a failed Provider request inside the Build. Finishing an incomplete
 Result is covered below and does not require regenerating media.
@@ -55,7 +55,7 @@ expand it when the cause needs earlier context; a closed terminal does not erase
 ## Continue after a failed attempt
 
 A failed Build leaves the work and evidence produced by that attempt. Export any accepted file into
-the project, declare it in Source and update its realization selection, then submit a
+the project, declare it in Source and update its consumer reference, then submit a
 new Build for the remaining work. The earlier Build retains its failure.
 
 When a Provider task-submission request times out without a task ID or another usable receipt,
@@ -74,14 +74,13 @@ Endpoint identities and available receipts; increase `--limit` if the report lis
 Secret values stay in their Credential Store. `--json` changes encoding, while `--verbose` requests
 these details.
 
-## Plan the selected Invocation
+## Plan the selected Targets
 
-`hypit plan` inspects one explicit Invocation's execution demands. The creative direction shared with the
-user develops earlier from their request and reference evidence; it does not require a saved Invocation, a fully
+`hypit plan` inspects one explicit Target selection's execution demands. The creative direction shared with the
+user develops earlier from their request and reference evidence; it does not require a fully
 prepared environment or this command. Use the command when there is concrete execution to inspect.
 
-Plan the actual Invocation after durable material choices are in the Author Source and requested execution
-choices are expressed:
+Plan the actual Targets after durable material choices are in the Author Source:
 
 ```bash
 hypit check path/to/main.svml
@@ -89,7 +88,7 @@ hypit plan path/to/main.svml --target final.video
 ```
 
 `check` validates the self-described Sources and graph without executing them. `plan` freezes the
-demanded subgraph after applying authored realization choices and Invocation overrides, then lists
+demanded subgraph from the Author Source's fixed production relations, then lists
 every external Need that would be sent. Planning starts no external work.
 
 Use the default reports to follow the remaining work. `--json` changes the encoding; `--verbose`
@@ -122,11 +121,11 @@ data. Both views include all pricing groups by default. `--limit <count>` shorte
 view; `--verbose` shows original documents and the no-charge work. Read the relevant groups and explain
 the expected cost of the described work, the account that would pay and any material uncertainty.
 
-Read the remaining Needs against this change. A Caption or MG-only revision should retain its accepted
-media realization; replacing selected B-roll should leave the unchanged performance selected.
+Read the remaining Needs against this change. A Caption or MG-only revision should retain its existing
+project-media references; replacing selected B-roll should leave the unchanged performance referenced.
 Rendering and other required processing may still appear as Needs. Explain each new media request
 from the user's goal or an explicit generation decision. If a request appears because an accepted
-project realization is missing, repair the Author Source and plan again before asking to spend or submitting work.
+project material reference is missing, repair the Author Source and plan again before asking to spend or submitting work.
 
 ## Work within the agreed paid scope
 
@@ -140,9 +139,9 @@ The commission can cover a whole production, including reference transcription, 
 and semantic alignment, or just the reference analysis before the user decides to commission the
 video. Early hosted transcription fits either scope. Establish its coverage before invoking
 `hypit transcribe`, which immediately calls the selected Endpoint. For that reference, source
-duration and the Provider's published rates can support the estimate; a production Invocation need not
+duration and the Provider's published rates can support the estimate; production Targets need not
 exist yet. Local WhisperX has no hosted Provider call charge. As the creative plan becomes concrete,
-`plan` and `pricing` expose the exact remaining requests for that Invocation.
+`plan` and `pricing` expose the exact remaining requests for those Targets.
 
 Carry covered work forward and keep the user informed. The same agreement can apply across tool
 calls and Builds; a new command is not itself a new authorization request. Ask for a new decision
@@ -151,7 +150,7 @@ Use the current plan, available Results and costs already incurred or committed 
 remaining work. Treat estimates as estimates where actual charges are unavailable.
 
 Preserve the user's agreement in [Brief](../creation/brief.md#brief-preserves-user-authority), and
-resume from it alongside the current Invocation, Results and Progress. Normal composition work carries
+resume from it alongside the current Source, Targets, Results and Progress. Normal composition work carries
 usable generated media forward. A request to revise Caption or MG authorizes that revision;
 additional media generation follows an intentional production choice covered by the paid scope.
 Explain a meaningful change while proceeding when it is already covered; seek the user's decision
@@ -160,13 +159,12 @@ when it changes what they have agreed to fund.
 ## Submit one durable Build
 
 ```bash
-hypit build path/to/main.svml --target final.video --title first-cut --follow
+hypit build path/to/main.svml --target final.video --follow
 ```
 
-Every invocation creates a fresh time-ordered Build id and one independent Result, even when the Author Source
+Every submission creates a fresh time-ordered Build id and one independent Result, even when the Author Source
 did not change. Repeating the same command does not resume an earlier Build or automatically alter the
-production's selected material. The optional title is a human-facing
-Result label; it does not replace the Build id or alter Source identity.
+production's authored material references. Source, Targets and the Build id identify the attempt.
 
 Build performs a cheap preflight and submits only when the selected deployment slice is ready. It
 does not install packages or start a missing Managed Program. When the environment has already been
@@ -212,29 +210,23 @@ the selected Provider's documentation owns its available settings.
 
 Runtime activity describes what is happening now. The finished Result records one outcome:
 `complete`, `failed`, or `cancelled`. These are different facts. `status` reads both sources and may
-therefore show, for example, a decided failure whose completed public Outputs are still being written
+therefore show, for example, a decided failure whose completed retained Outputs are still being written
 to its Result.
 
-A failed or cancelled Build can retain useful public Outputs completed before its outcome. Inspect
+A failed or cancelled Build can retain useful Outputs completed before its outcome. Inspect
 them normally. Cancellation withdraws work that has not begun and asks an Endpoint once to cancel an
 already submitted operation when it supports that; accepted completed output is retained.
 
 If Result storage or cleanup fails after execution has decided its outcome, `status` reports operator
-attention and the exact action:
-
-```bash
-hypit result finish <build-id>
-```
-
-That command writes from already accepted execution facts and working Resources. It does not repeat
-external work, resubmit generation, or alter a realization choice. Use it only for the Result write named by
-`status`. `hypit result discard <build-id>` applies only to an incomplete submission that never became
-active and has no Result to finish.
+attention. The Runtime retries publication from already accepted execution facts and working Resources
+when its execution service starts. It does not repeat external work, resubmit generation or alter an
+authored reference. Incomplete submission drafts are internal Runtime state and are rolled back by the
+submission boundary rather than managed as Results by the user.
 
 When the user asks to stop submitted work, cancel that exact Build explicitly:
 
 ```bash
-hypit cancel <build-id> --reason "superseded by the corrected Invocation"
+hypit cancel <build-id> --reason "superseded by the corrected Source"
 ```
 
 Check the reported state afterward. Detaching the observer does not send this cancellation, and a
@@ -251,34 +243,30 @@ selected active Build.
 ```bash
 hypit builds
 hypit inspect <build-id>
-hypit history <public-output-name>
-hypit get <build-id> --output <public-output-name> --to <destination>
+hypit history <retained-output-name>
+hypit result export <build-id> --output <retained-output-name> --to <destination>
 ```
 
-`builds` lists finished project Results newest first. `inspect` shows one Result's Targets,
-highlighted Outputs and outcome. Use `inspect <build-id> --output <public-output-name>` for a known
-Output, or `--verbose` to browse all available names and receipts. A Result can expose many public
-Outputs. `history` finds one named Output across Results; it does not select one for the current
-production. `get` exports one named Output to one explicit destination:
+`builds` lists finished project Results newest first. `inspect` shows one Result's Targets and outcome.
+Use `inspect <build-id> --output <retained-output-name>` for a known
+Output, or `--verbose` to browse all available names and receipts. A Result can retain many Outputs.
+`history` finds one named Output across Results; it does not select one for the current production.
+`result export` writes one named Output to one explicit destination:
 
 - a value with no referenced files becomes a JSON file;
 - a file Output becomes one file with its original bytes;
-- a structured value with referenced files becomes a directory containing `value.json` and those files.
+- a structured value uses the author format exported by the package that owns its Type.
+
+If a structured Type has no exporter, the command fails accurately instead of exposing the Result
+repository's private value and resource layout.
 
 The destination remains a user-facing export. The original Result stays in the project's
 `.hypit/results` directory on the machine running Hypit.
 
-Give useful Results presentation metadata when it helps people and Studio find them:
-
-```bash
-hypit result edit <build-id> --title "podcast take · coral captions" \
-  --note "speaker timing and framing for the current production" \
-  --highlight podcast-take.video
-```
-
-The title, note, and highlights live in that Result manifest. They do not rename its public Outputs
-or create a project-wide history index. Once exported, the receiving package's ordinary Author
-declaration owns how that file enters the production.
+A finished Result is execution evidence and retained
+output, not a mutable media catalog: its Output names are the compiler-selected retained names and
+are not renamed, annotated or highlighted after completion. Once exported, the receiving package's
+ordinary Author declaration owns how that file enters the production.
 
 ## Keep Results with the project
 
@@ -298,7 +286,7 @@ those Results and the authored work to another machine or collaborator.
 Each new local Build loads the current project implementation and selected Provider configuration.
 Edit project components or the Profile, then create a new Build;
 previously started work keeps its loaded implementation. Keep completed material through ordinary
-project assets and authored realization choices when changing composition. Warm services such as
+project assets and authored consumer references when changing composition. Warm services such as
 WhisperX remain available across Builds.
 
 Concurrent Builds share execution infrastructure; remote waiting does not reserve a whole-Build slot.

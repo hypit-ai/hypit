@@ -2,8 +2,8 @@
 
 The domain neutral graph compiler and build state machine.
 
-Core plans one complete Author Graph for a source-neutral Invocation. Starting at the Targets, it
-applies each transient override or authored realization choice, follows the selected dependencies,
+Core plans one complete Author Graph for an explicit finite target set. Starting at the Targets, it
+follows each target through the Author Graph's fixed production relations,
 and derives one finite execution closure without rewriting the Author Graph.
 
 Execution is one immutable `BuildDefinition` followed by accepted `BuildFact` values. `BuildMachine`
@@ -18,7 +18,7 @@ constructor replays stored Facts through that same accepted-Fact transition, so 
 execution cannot acquire separate scheduling semantics. `materializeBuild` is only a read-view
 projection over this machine; it is not another reducer.
 `BuildDefinition` contains only the selected Program, its initial Records, Producer steps and Goal
-Record identities. Author Graph roots and effective output selections end at the planning boundary.
+Record identities. Author Graph roots and target resolution end at the planning boundary.
 
 Core does not parse source files, load packages, execute components, call providers, store artifact
 bytes or know what a video is. Those responsibilities remain in compiler and runtime packages.

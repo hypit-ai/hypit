@@ -16,8 +16,6 @@ import type { ContentFit, IntrinsicExtent, SpatialMap2D } from "@hypit/spatial";
 import { assertTemporalMap, assertTemporalRelationSpec, defaultTemporalRelationSpec } from "@hypit/temporal";
 import type { TemporalMap } from "@hypit/temporal";
 
-import { assertCompositionIdentity } from "@hypit/composition";
-import type { Composition } from "@hypit/composition";
 import type {
   MediaGradientStop,
   MediaLayer,
@@ -117,13 +115,6 @@ export function assertVisualSource(value: VisualSource, label: string): void {
       `${label} Surface extent disagrees with its intrinsic dimensions.`);
     return;
   }
-  if (value.kind === "composition") {
-    assertCompositionIdentity(value.composition);
-    assert(value.extent.widthPx === value.composition.visual.canvas.width
-      && value.extent.heightPx === value.composition.visual.canvas.height,
-    `${label} Composition extent disagrees with its Canvas.`);
-    return;
-  }
   assert(value.kind === "timed", `${label}.kind is unsupported.`);
   verifyPreparedMedia(value.media);
   assert(value.media.visual !== undefined, `${label}.media has no visual member.`);
@@ -188,7 +179,7 @@ export function assertMediaLayerSet(value: MediaLayerSet): void {
     if (layer.source.kind === "still") {
       assert(layer.sampling === undefined, `Still Media layer ${layer.id} cannot have temporal sampling.`);
     } else {
-      const timed = layer.source.kind === "timed" || layer.source.kind === "composition"
+      const timed = layer.source.kind === "timed"
         || layer.source.kind === "surface" && layer.source.surface.timing.kind === "frames";
       if (!timed) {
         assert(layer.sampling === undefined, `Still Surface layer ${layer.id} cannot have temporal sampling.`);
@@ -315,26 +306,6 @@ export function appendMappedTimedMediaLayer(
     ...spec,
     sampling: spec.sampling ?? defaultTemporalRelationSpec(),
   }));
-}
-
-/** Add one closed child Composition as an ordinary visual source occurrence. */
-export function appendCompositionLayer(
-  set: MediaLayerSet,
-  composition: Composition,
-  fit: ContentFit,
-  sampling: TemporalMap,
-  spec: Omit<MediaSampleLayerSpec, "sampling">,
-): MediaLayerSet {
-  assertCompositionIdentity(composition);
-  assertTemporalMap(sampling);
-  return append(set, {
-    ...sampleLayer({
-      kind: "composition",
-      composition: structuredClone(composition),
-      extent: { widthPx: composition.visual.canvas.width, heightPx: composition.visual.canvas.height },
-    }, { kind: "fit", fit: structuredClone(fit) }, spec),
-    sampling: { kind: "map", value: structuredClone(sampling) },
-  });
 }
 
 export function appendSurfaceMediaLayer(

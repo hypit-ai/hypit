@@ -1,55 +1,61 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { decodeBuildResultManifest, decodeBuildResultValueDocument } from "@hypit/result";
+import { decodeBuildResultValueDocument } from "@hypit/result";
+import { decodeStoredBuildResult } from "@hypit/result/runtime-storage";
 
 test("Result decoding rejects contradictory terminal and Operation states", () => {
   const build = "bld_20260902T100000000Z_0000000001";
   const base = {
     format: "hypit.build-result@1",
-    sourceId: "/project/main.svml",
+    sourcePath: "/project/main.svml",
     targets: [],
     outputs: {},
   };
-  assert.throws(() => decodeBuildResultManifest({
+  assert.throws(() => decodeStoredBuildResult({
     ...base, outcome: "complete", finishedAt: 1, failure: "impossible",
   }, build), /complete Result cannot have a failure/u);
-  assert.throws(() => decodeBuildResultManifest({
+  assert.throws(() => decodeStoredBuildResult({
     ...base, outcome: "failed", finishedAt: 1,
   }, build), /failed Result has no failure reason/u);
-  assert.throws(() => decodeBuildResultManifest({
+  assert.throws(() => decodeStoredBuildResult({
     ...base,
     outcome: "failed",
     finishedAt: 1,
     failure: "build failed",
-    operations: [{ operation: "op", command: "cmd", endpoint: "remote", status: "failed" }],
+    operations: [{ capability: { module: { name: "example", version: "1" }, name: "generate" },
+      endpoint: "remote", outcome: "failed", failedAt: 0 }],
   }, build), /failed Operation has no failure/u);
-  assert.throws(() => decodeBuildResultManifest({
+  assert.throws(() => decodeStoredBuildResult({
     ...base,
     outcome: "failed",
     finishedAt: 1,
     failure: "build failed",
     operations: [{
-      operation: "op", command: "cmd", endpoint: "remote", status: "pending",
+      capability: { module: { name: "example", version: "1" }, name: "generate" },
+      endpoint: "remote", acknowledgedAt: 0,
       failure: { code: "IMPOSSIBLE", message: "stale" },
     }],
-  }, build), /pending Operation cannot have a failure/u);
-  assert.equal(decodeBuildResultManifest({
+  }, build), /accepted Operation cannot have a failure/u);
+  assert.equal(decodeStoredBuildResult({
     ...base,
     outcome: "failed",
     finishedAt: 1,
     failure: "other branch failed",
-    operations: [{ operation: "op", command: "cmd", endpoint: "remote", status: "received" }],
-  }, build).operations?.[0]?.status, "received");
+    operations: [{ capability: { module: { name: "example", version: "1" }, name: "generate" },
+      endpoint: "remote", acknowledgedAt: 0, providerCompletedAt: 1, outcome: "complete" }],
+  }, build).operations?.[0]?.outcome, "complete");
 });
 
 test("Result decoders reconstruct owned values from untrusted documents", () => {
   const build = "bld_20260902T100000000Z_0000000001";
-  const manifest = decodeBuildResultManifest({
+  const manifest = decodeStoredBuildResult({
     format: "hypit.build-result@1",
-    sourceId: "main.svml",
+    sourcePath: "main.svml",
     targets: [],
     outputs: {},
+    outcome: "complete",
+    finishedAt: 1,
     executionLog: {
       kind: "build-file", path: "execution.jsonl", size: 12, mediaType: "application/x-ndjson",
       extra: "not owned",
@@ -59,9 +65,11 @@ test("Result decoders reconstruct owned values from untrusted documents", () => 
   assert.deepEqual(manifest, {
     format: "hypit.build-result@1",
     id: build,
-    sourceId: "main.svml",
+    sourcePath: "main.svml",
     targets: [],
     outputs: {},
+    outcome: "complete",
+    finishedAt: 1,
     executionLog: {
       kind: "build-file", path: "execution.jsonl", size: 12, mediaType: "application/x-ndjson",
     },

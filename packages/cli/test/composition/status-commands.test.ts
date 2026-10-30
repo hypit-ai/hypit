@@ -310,15 +310,13 @@ test("status preserves Runtime decision and attention when its Result Store is u
     readonly build: {
       readonly work: { readonly outcome: string };
       readonly result: { readonly state: string };
-      readonly attention: { readonly message: string; readonly action: string };
+      readonly attention: { readonly message: string; readonly action?: string };
     };
   };
   assert.equal(result.build.work.outcome, "failed");
   assert.equal(result.build.result.state, "unavailable");
   assert.equal(result.build.attention.message, "S3 unavailable");
-  assert.equal(result.build.attention.action, commandHint(["result", "finish", view.id], {
-    projectRoot: await realpath(applicationCwd), runtimeProfile: resolve(applicationCwd, "/tmp/runtime with space.json"),
-  }));
+  assert.equal(result.build.attention.action, undefined);
   assert.deepEqual((result.build as { operations?: unknown }).operations, [{
     endpoint: "images.internal", state: "failed", failure: { code: "REMOTE", message: "provider detail" },
   }]);

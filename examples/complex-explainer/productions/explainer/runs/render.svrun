@@ -1,5 +1,0 @@
-<?svml using="@hypit/markup/invocation@1"?>
-<svrun version="1">
-  <author source="../authors/main.svml"/>
-  <target output="complete-film.video"/>
-</svrun>

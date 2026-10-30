@@ -1,5 +1,5 @@
 import { compositionDependency, compositionTypes } from "@hypit/composition";
-import { compositableSurfaceSchema, mediaDependency, mediaTypes, pictureInterpretationSchema, preparedVisualSourceSchema, workingPictureSpecSchema } from "@hypit/media";
+import { compositableSurfaceSchema, mediaDependency, mediaTypes, pictureInterpretationSchema, preparedVisualSourceSchema } from "@hypit/media";
 import { blobRefSchema } from "@hypit/hypit/protocol";
 import type { CapabilityRef, ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/hypit/protocol";
 import { frameSpanSchema, timelineDependency, timelineTypes } from "@hypit/timeline";
@@ -22,17 +22,17 @@ export const htmlProgramProducers = {
 
 const positiveInteger = { kind: "number", integer: true, minimum: 1 } as const;
 const nonNegativeInteger = { kind: "number", integer: true, minimum: 0 } as const;
+const frameRateSchema = {
+  kind: "object" as const,
+  fields: {
+    numerator: { schema: positiveInteger },
+    denominator: { schema: positiveInteger },
+  },
+};
 export const htmlProgramSchema: ValueSchema = {
   kind: "object",
   fields: {
-    picture: { schema: workingPictureSpecSchema },
-    frameRate: { schema: {
-      kind: "object",
-      fields: {
-        numerator: { schema: positiveInteger },
-        denominator: { schema: positiveInteger },
-      },
-    } },
+    frameRate: { schema: frameRateSchema },
     frameCount: { schema: positiveInteger },
     canvas: { schema: {
       kind: "object",
@@ -41,40 +41,78 @@ export const htmlProgramSchema: ValueSchema = {
         height: { schema: positiveInteger },
       },
     } },
-    processPasses: { schema: nonNegativeInteger },
-    artifacts: { schema: { kind: "array", items: {
-      kind: "object",
-      fields: {
+    processUsages: { schema: { kind: "array", items: { kind: "object", fields: {
+      order: { schema: positiveInteger },
+      passes: { schema: positiveInteger },
+      stageKeys: { schema: { kind: "array", minItems: 1, items: { kind: "string", minLength: 1 } } },
+      spans: { schema: { kind: "array", minItems: 1, items: frameSpanSchema } },
+    } } } },
+    artifacts: { schema: { kind: "array", items: { kind: "oneOf", variants: [
+      { kind: "object", fields: {
+        kind: { schema: { kind: "literal", value: "bytes" } },
         id: { schema: { kind: "string", minLength: 1 } },
         artifact: { schema: blobRefSchema() },
-        picture: { schema: pictureInterpretationSchema, optional: true },
         usage: { schema: { kind: "oneOf", variants: [
+          { kind: "object", fields: { kind: { schema: { kind: "literal", value: "never" } } } },
           { kind: "object", fields: { kind: { schema: { kind: "literal", value: "always" } } } },
           { kind: "object", fields: {
             kind: { schema: { kind: "literal", value: "frames" } },
             spans: { schema: { kind: "array", minItems: 1, items: frameSpanSchema } },
           } },
         ] } },
-      },
-    } } },
+      } },
+      { kind: "object", fields: {
+        kind: { schema: { kind: "literal", value: "picture" } },
+        id: { schema: { kind: "string", minLength: 1 } },
+        artifact: { schema: blobRefSchema() },
+        picture: { schema: pictureInterpretationSchema },
+        usage: { schema: { kind: "oneOf", variants: [
+          { kind: "object", fields: { kind: { schema: { kind: "literal", value: "never" } } } },
+          { kind: "object", fields: { kind: { schema: { kind: "literal", value: "always" } } } },
+          { kind: "object", fields: {
+            kind: { schema: { kind: "literal", value: "frames" } },
+            spans: { schema: { kind: "array", minItems: 1, items: frameSpanSchema } },
+          } },
+        ] } },
+      } },
+    ] } } },
     surfaces: { schema: { kind: "array", items: { kind: "object", fields: {
       artifactId: { schema: { kind: "string", minLength: 1 } },
       surface: { schema: compositableSurfaceSchema },
+      usage: { schema: { kind: "oneOf", variants: [
+        { kind: "object", fields: { kind: { schema: { kind: "literal", value: "never" } } } },
+        { kind: "object", fields: { kind: { schema: { kind: "literal", value: "always" } } } },
+        { kind: "object", fields: {
+          kind: { schema: { kind: "literal", value: "frames" } },
+          spans: { schema: { kind: "array", minItems: 1, items: frameSpanSchema } },
+        } },
+      ] } },
     } } } },
     videoSources: { schema: { kind: "array", items: { kind: "oneOf", variants: [{ kind: "object", fields: {
       id: { schema: { kind: "string", minLength: 1 } },
-      documentPath: { schema: { kind: "array", items: { kind: "string", minLength: 1 } } },
       elementId: { schema: { kind: "string", minLength: 1 } },
       kind: { schema: { kind: "literal", value: "media" } },
       ...(frameSpanSchema.kind === "object" ? frameSpanSchema.fields : {}),
+      usage: { schema: { kind: "oneOf", variants: [
+        { kind: "object", fields: { kind: { schema: { kind: "literal", value: "never" } } } },
+        { kind: "object", fields: { kind: { schema: { kind: "literal", value: "always" } } } },
+        { kind: "object", fields: { kind: { schema: { kind: "literal", value: "frames" } },
+          spans: { schema: { kind: "array", minItems: 1, items: frameSpanSchema } } } },
+      ] } },
       source: { schema: preparedVisualSourceSchema }, sampling: { schema: temporalMapSchema },
     } }, { kind: "object", fields: {
       id: { schema: { kind: "string", minLength: 1 } },
-      documentPath: { schema: { kind: "array", items: { kind: "string", minLength: 1 } } },
       elementId: { schema: { kind: "string", minLength: 1 } },
       kind: { schema: { kind: "literal", value: "surface" } },
       artifactId: { schema: { kind: "string", minLength: 1 } },
+      picture: { schema: pictureInterpretationSchema },
       ...(frameSpanSchema.kind === "object" ? frameSpanSchema.fields : {}),
+      usage: { schema: { kind: "oneOf", variants: [
+        { kind: "object", fields: { kind: { schema: { kind: "literal", value: "never" } } } },
+        { kind: "object", fields: { kind: { schema: { kind: "literal", value: "always" } } } },
+        { kind: "object", fields: { kind: { schema: { kind: "literal", value: "frames" } },
+          spans: { schema: { kind: "array", minItems: 1, items: frameSpanSchema } } } },
+      ] } },
       sourceFrame: { schema: { kind: "object", fields: {
         numerator: { schema: nonNegativeInteger }, denominator: { schema: positiveInteger },
       } } },

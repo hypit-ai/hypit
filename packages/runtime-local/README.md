@@ -1,7 +1,7 @@
 # `@hypit/runtime-local`
 
 The default local Runtime for Hypit. It owns the Worker, scheduler and active SQLite execution
-worklist. Project-owned Build Results hold finished public Outputs.
+worklist. Project-owned Build Results hold finished retained Outputs.
 
 This package also exports `createLocalRuntimeCliCommandModules()` from `@hypit/runtime-local/cli`.
 The factory binds the exact Local Host port and returns the command contribution that owns
@@ -103,12 +103,12 @@ compute resources. SQLite retains the weighted reservation across execution turn
 coordinates Builds sharing this Runtime's Execution Store; it does not enforce a service's quotas
 across other machines. Short-action limits are described below.
 
-A failed request ends that Build's execution attempt. Runtime saves completed public Outputs and
+A failed request ends that Build's execution attempt. Runtime saves completed retained Outputs and
 non-secret Operation receipts with the failed Result, including any remote status still unknown.
 It accepts results from calls already in progress before finalizing, without starting further work
 or polling unfinished remote jobs.
 It then releases local reservations. Submission timeouts with no receipt remain recorded failures;
-a new Invocation and Build can request the remaining work after accepted Outputs have become authored
+a new Build can request the remaining work after accepted Outputs have become authored
 project resources. No original-Build reconciliation is required.
 An explicit cancellation stops new work and makes one best-effort remote cancellation call when
 supported; its acknowledgement is recorded separately from the local cancelled outcome.
@@ -139,17 +139,17 @@ The submission passes known Resource references to the Result writer, separately
 graph. Staging bytes for a running Build does not make them new Result files: external and reused
 resources keep their addresses even when a Producer embeds them inside a new array or object value.
 
-While execution advances, Result synchronization publishes newly accepted public Outputs. The
-repository leaves its files or objects untouched when no new public Output is available; internal
-execution progress remains in SQLite. Once execution has a final decision, all accepted public Outputs
+While execution advances, Result synchronization stores newly accepted retained Outputs. The
+repository leaves its files or objects untouched when no new retained Output is available; internal
+execution progress remains in SQLite. Once execution has a final decision, all accepted retained Outputs
 and the outcome are saved before active state and working Resources are removed. This order applies
 to completed, failed and cancelled Builds alike.
 
 Saving a finished Result is a separate, idempotent storage action. If that write is interrupted, the
-Build keeps its already-decided outcome and reports exact operator attention. `hypit result finish
-<build-id>` performs only that pending write and active-state cleanup; it does not run the execution
-Worker, call a Producer or load Provider packages. `hypit result discard <build-id>` is only
-for a submission that never became active and therefore has no Result to save.
+Build keeps its already-decided outcome and reports exact operator attention. The Runtime retries that
+pending publication when its execution service starts; it does not rerun a Producer, call an Endpoint or
+change the decision. Submission rollback removes an incomplete draft internally before the submission
+becomes active. Neither recovery path is a user mutation of Result history.
 
 Source imports select author packages. Runtime Profile entries select only code allowed to access files,
 credentials, processes or networks. Installing a package changes neither selection.
@@ -220,7 +220,7 @@ coordinator's startup directory and recorded Profile path do not select later Bu
 
 `startedAt` records assignment to an execution carrier. Losing that carrier ends its assigned attempts
 and preserves completed Outputs and external receipts, without resubmitting work. Unstarted queue
-entries may still start. Result-writing failures retain the attention and `result finish` path. A live
+entries may still start. Result-writing failures retain attention and are retried when the execution service starts. A live
 carrier never reclaims another carrier's turns. These are module/registry contexts in trusted code,
 not OS or security isolation: process globals, native libraries and a fatal process failure are shared.
 The carrier has one working directory and inherited environment. Package-relative file access uses

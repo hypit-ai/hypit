@@ -14,8 +14,7 @@ cd /path/to/my-video
 hypit studio --source main.svml --target final.video
 ```
 
-Open the address printed by the command. A recurring Invocation may instead be opened with
-`hypit studio --invocation build.svrun`. Both forms create the same in-memory Invocation. To keep
+Open the address printed by the command. The Source and repeated `--target` options select this Studio session. To keep
 generated material while editing, export the accepted Output into the project and make the durable
 choice in the Author Source as described in [Reusing produced work](./run.md#reusing-produced-work).
 
@@ -26,8 +25,7 @@ It changes the interface, while your Script, video captions and comments keep th
 
 | Argument | Use |
 | --- | --- |
-| `--source <file.svml>` | Select the Author Source; repeat `--target <output>` for its Invocation. |
-| `--invocation <file.svrun>` | Open an optional saved Invocation instead of direct Source options. |
+| `--source <file.svml>` | Select the Author Source; repeat `--target <output>` for this session. |
 | `--runtime <profile.json>` | Select a Runtime Profile; otherwise use the project's saved Runtime selection. |
 | `--project <directory>` | Set the project boundary for Source access and edits. |
 | `--port <number>` | Request a browser-server port; the default is `5179`. |
@@ -54,12 +52,12 @@ Opening either view does not encode a video or submit an export Build.
 
 The library at the left has three views:
 
-- **Source** lists the Author closure and an optional saved Invocation Source. Select a file to inspect or edit it.
+- **Source** lists the exact Author closure. Select a file to inspect or edit it.
 - **Tasks** shows completed project Builds and, with a selected Runtime, active execution information.
 - **Artifacts** lets you inspect public files retained in Build Results.
 
 Choosing an Artifact opens it for inspection. To use it in the composition, export it into the
-project, declare it in the Author Source and record the durable realization choice there.
+project, declare it in the Author Source and update the consuming reference there.
 
 ## Picture, timeline and Inspector
 
@@ -79,14 +77,14 @@ controls are separate: a field or gesture needs a clear source value to change.
 
 ## Make an edit
 
-Source edits change the selected `.svml`, `.svs` or optional `.svrun` file. Supported Inspector changes and
-timeline gestures write to the corresponding author value, then recompile the same Invocation.
+Source edits change the selected `.svml` or `.svs` file. Supported Inspector changes and
+timeline gestures write to the corresponding author value, then recompile the same Targets.
 Moving a shared Selection or Moment changes its position in the Script, so all consumers follow
 that change. Editing a shared Frame or Recipe can likewise affect several appearances.
 
 Check the save status after an edit. If recompilation fails, Studio reports the error and restores
 the previous files. List and record controls save complete, valid values when editing ends and show
-a completion hint for incomplete values. The optional Invocation Source and loaded Author Sources
+a completion hint for incomplete values. The loaded Author Sources
 files are watched; restart Studio after changing installed packages, component code or Runtime
 selection so those changes are loaded too.
 

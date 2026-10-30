@@ -42,7 +42,7 @@ export function createArtifactPreview(changed: () => void) {
     };
     if (artifact.mediaType.startsWith("image/")) {
       const image = document.createElement("img");
-      image.alt = artifact.displayName ?? artifact.output;
+      image.alt = artifact.output;
       image.addEventListener("error", failed);
       image.src = url;
       element.append(image);

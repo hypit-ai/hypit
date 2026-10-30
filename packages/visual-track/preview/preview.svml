@@ -1,7 +1,7 @@
 <?svml using="@hypit/markup@1"?>
 <!-- A wordless catalogue composition using this package's two sample graphics.
      The samples are the displayed content. Their frame treatments demonstrate fit,
-     padding, clipping and motion; build.svrun renders the same composition. -->
+     padding, clipping and motion. -->
 <svml>
   <import as="media" from="@hypit/media@1"/>
   <import as="mediaop" from="@hypit/media-operations@1"/>

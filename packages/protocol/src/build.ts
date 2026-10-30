@@ -47,7 +47,8 @@ export type GraphValueRef = RecordRef | LogicalOutputRef | OperationResultRef;
 export type LogicalOutput = {
   readonly id: LogicalOutputId;
   readonly type: TypeRef;
-  readonly primary: OutputRoot;
+  /** The one authored Operation result that produces this public value. */
+  readonly result: OperationResultRef;
 };
 
 export type OperationResult =
@@ -70,35 +71,10 @@ export type OperationNode = {
   readonly result: OperationResult;
 };
 
-export type OutputRoot = RecordRef | OperationResultRef;
-
 export type AuthorGraph = {
   readonly format: "hypit.graph@1";
   readonly outputs: readonly LogicalOutput[];
   readonly operations: readonly OperationNode[];
-};
-
-/** One explicit effective source for a Logical Output in this Invocation. */
-export type LogicalOutputSelection = {
-  readonly output: LogicalOutputId;
-  readonly root: OutputRoot;
-};
-
-/** Author-visible choice for one invocation; graph-internal roots never cross this boundary. */
-export type InvocationChoice =
-  | { readonly kind: "primary" }
-  | { readonly kind: "record"; readonly record: RecordId };
-
-export type InvocationOverride = {
-  readonly output: LogicalOutputId;
-  readonly choice: InvocationChoice;
-};
-
-/** One source-neutral request to evaluate selected authored outputs. */
-export type Invocation = {
-  readonly format: "hypit.invocation@1";
-  readonly targets: readonly LogicalOutputId[];
-  readonly overrides: readonly InvocationOverride[];
 };
 
 export type ProducerStep = {
@@ -171,7 +147,7 @@ export type BuildDiagnostic = {
   readonly subject?: string;
 };
 
-/** Immutable finite program selected from one Author Graph for one Invocation. */
+/** Immutable finite program selected from one Author Graph for one Build. */
 export type BuildDefinition = {
   readonly format: "hypit.build-definition@1";
   /** Complete sealed execution program, including every already-established starting Record. */

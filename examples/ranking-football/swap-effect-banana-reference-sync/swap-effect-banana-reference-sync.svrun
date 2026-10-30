@@ -1,6 +1,0 @@
-<?svml using="@hypit/markup/invocation@1"?>
-
-<svrun version="1">
-  <author source="./swap-effect-banana-reference-sync.svml"/>
-  <target output="final.video"/>
-</svrun>

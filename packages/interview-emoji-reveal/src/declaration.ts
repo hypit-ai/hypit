@@ -89,9 +89,9 @@ export const emojiRevealTrackAuthorDeclaration: AuthorDeclarationCompiler = {
     const id = literal(declaration, "id");
     return [
       { name: `${id}.program`, ref: { kind: "component-output", component: id, output: "program" },
-        type: emojiRevealTypes.program, exported: true },
+        type: emojiRevealTypes.program },
       { name: `${id}.visual`, ref: { kind: "component-output", component: id, output: "visual" },
-        type: compositionTypes.visualTrack, exported: true },
+        type: compositionTypes.visualTrack },
     ];
   },
   async compile({ declaration, resolveReference }) {

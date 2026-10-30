@@ -1,5 +1,7 @@
 import type { EndpointSupport } from "@hypit/hypit/endpoint";
+import { selectHtmlArtifacts, selectHtmlSurfaces, selectHtmlVideoSources } from "@hypit/html-program";
 import type { HtmlFrameRequest, HtmlRasterRequest } from "@hypit/html-program";
+import type { FrameSpan } from "@hypit/timeline";
 import type { PictureInterpretation } from "@hypit/media";
 import type { HtmlRenderer } from "./electron.js";
 
@@ -8,88 +10,63 @@ function sdrSourcePictureRejection(picture: PictureInterpretation, label: string
     && picture.colorMatrix === "rgb" && picture.colorRange === "full";
   const videoLike = picture.colorPrimaries === "bt709" && picture.colorTransfer === "bt709"
     && picture.colorMatrix === "bt709" && picture.colorRange === "limited";
-  if (picture.bitDepth !== 8 || (!imageLike && !videoLike) || picture.alphaMode === "premultiplied") {
+  if (picture.bitDepth !== 8 || (!imageLike && !videoLike)) {
     return `${label} is outside the local HTML Provider's exact 8-bit SDR source support`;
   }
   return undefined;
 }
 
-export function isLocalHtmlPq10Source(picture: PictureInterpretation): boolean {
-  return picture.colorPrimaries === "bt2020" && picture.colorTransfer === "pq"
-    && picture.colorMatrix === "bt2020-ncl" && picture.colorRange === "limited"
-    && picture.bitDepth === 10 && picture.alphaMode === "opaque";
-}
-
-function isHdrWorking(request: HtmlRasterRequest | HtmlFrameRequest): boolean {
-  const picture = request.program.picture;
-  return picture.colorPrimaries === "bt709" && picture.colorTransfer === "linear"
-    && Number.isFinite(picture.referenceWhiteNits) && picture.referenceWhiteNits > 0
-    && picture.alphaMode === "premultiplied";
-}
-
-function isSdrWorking(request: HtmlRasterRequest | HtmlFrameRequest): boolean {
-  const picture = request.program.picture;
-  return picture.colorPrimaries === "bt709" && picture.colorTransfer === "srgb"
-    && picture.referenceWhiteNits === 100 && picture.alphaMode === "premultiplied";
-}
-
-function programRejection(request: HtmlRasterRequest | HtmlFrameRequest, hdr: boolean): string | undefined {
-  if (hdr ? !isHdrWorking(request) : !isSdrWorking(request)) {
-    return hdr
-      ? "The local HTML HDR10 pipeline requires a linear BT.709 working picture with explicit reference white"
-      : "The local HTML SDR pipeline requires the sRGB BT.709 100-nit working picture";
+function stillPictureRejection(picture: PictureInterpretation, label: string): string | undefined {
+  const imageLike = picture.colorPrimaries === "bt709" && picture.colorTransfer === "srgb"
+    && picture.colorMatrix === "rgb" && picture.colorRange === "full";
+  if (picture.bitDepth !== 8 || !imageLike) {
+    return `${label} is outside the local HTML Provider's exact 8-bit sRGB still-picture support`;
   }
-  for (const artifact of request.program.artifacts) {
-    if (artifact.picture !== undefined) {
-      // Browser image presentation is currently exact only for the SDR source
-      // subset. HDR still-image presentation must close its own browser path
-      // before it enters this Provider's support set.
-      const reason = sdrSourcePictureRejection(artifact.picture, `Picture ${artifact.id}`);
+  return undefined;
+}
+
+function requestFrameSelection(request: HtmlRasterRequest | HtmlFrameRequest): readonly FrameSpan[] | undefined {
+  if ("delivery" in request) return request.range === undefined ? undefined : [request.range];
+  const spans: FrameSpan[] = [];
+  for (const frame of request.frames) {
+    const previous = spans.at(-1);
+    if (previous?.endFrameExclusive === frame) spans[spans.length - 1] = {
+      startFrame: previous.startFrame,
+      endFrameExclusive: frame + 1,
+    };
+    else spans.push({ startFrame: frame, endFrameExclusive: frame + 1 });
+  }
+  return spans;
+}
+
+function programRejection(request: HtmlRasterRequest | HtmlFrameRequest): string | undefined {
+  const selection = requestFrameSelection(request);
+  for (const artifact of selectHtmlArtifacts(request.program, selection)) {
+    if (artifact.kind === "picture") {
+      const reason = stillPictureRejection(artifact.picture, `Picture ${artifact.id}`);
       if (reason !== undefined) return reason;
     }
   }
-  for (const source of request.program.videoSources) {
+  for (const source of selectHtmlVideoSources(request.program, selection)) {
     if (source.kind === "media") {
       const picture = source.source.interpretation.picture;
-      const reason = hdr && isLocalHtmlPq10Source(picture)
-        ? undefined
-        : sdrSourcePictureRejection(picture, `Video source ${source.id}`);
+      const reason = sdrSourcePictureRejection(picture, `Video source ${source.id}`);
       if (reason !== undefined) return reason;
     }
   }
-  for (const surface of request.program.surfaces) {
-    const reason = sdrSourcePictureRejection(surface.surface.picture, `Surface ${surface.artifactId}`);
+  for (const surface of selectHtmlSurfaces(request.program, selection)) {
+    const reason = surface.surface.timing.kind === "still"
+      ? stillPictureRejection(surface.surface.picture, `Surface ${surface.artifactId}`)
+      : sdrSourcePictureRejection(surface.surface.picture, `Surface ${surface.artifactId}`);
     if (reason !== undefined) return reason;
   }
   return undefined;
 }
 
-function isHdr10Delivery(request: HtmlRasterRequest): boolean {
-  const picture = request.delivery.picture;
-  const encoding = request.delivery.encoding;
-  return picture.colorPrimaries === "bt2020" && picture.colorTransfer === "pq"
-    && picture.colorMatrix === "bt2020-ncl" && picture.colorRange === "limited"
-    && picture.bitDepth === 10 && encoding.codec === "hevc" && encoding.pixelFormat === "yuv420p10le"
-    && request.delivery.hdrStaticMetadata !== undefined;
-}
-
-export function isLocalHtmlHdr10Request(request: HtmlRasterRequest): boolean {
-  return isHdrWorking(request) && isHdr10Delivery(request);
-}
-
 /** Exact request subset implemented by the current encoded-visual execution paths. */
-export function localHtmlRasterRejection(request: HtmlRasterRequest, renderer: HtmlRenderer): string | undefined {
-  const hdr = isHdr10Delivery(request);
-  const program = programRejection(request, hdr);
+export function localHtmlRasterRejection(request: HtmlRasterRequest, _renderer: HtmlRenderer): string | undefined {
+  const program = programRejection(request);
   if (program !== undefined) return program;
-  if (hdr) {
-    if (request.program.processPasses > 0) {
-      return "The local HTML HDR10 pipeline does not yet implement Visual Process input surfaces";
-    }
-    return renderer === "electron"
-      ? undefined
-      : "The local HTML HDR10 pipeline requires the explicitly selected Electron renderer";
-  }
   const picture = request.delivery.picture;
   const encoding = request.delivery.encoding;
   if (picture.colorPrimaries !== "bt709" || picture.colorTransfer !== "bt709"
@@ -102,7 +79,7 @@ export function localHtmlRasterRejection(request: HtmlRasterRequest, renderer: H
 
 /** Exact request subset implemented by the current Chromium PNG execution path. */
 export function localHtmlFrameRejection(request: HtmlFrameRequest): string | undefined {
-  const program = programRejection(request, false);
+  const program = programRejection(request);
   if (program !== undefined) return program;
   const picture = request.picture;
   if (picture.colorPrimaries !== "bt709" || picture.colorTransfer !== "srgb"

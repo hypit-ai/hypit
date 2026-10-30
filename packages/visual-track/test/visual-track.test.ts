@@ -330,7 +330,7 @@ test("self-blur is two explicit samples of one Resource and collection keeps one
     createVisualTrackSet(), header, semantic, layers, frame, clipSpec(),
   ), header, space);
   const track = projectVisualTrack(space, program);
-  const document = compileHtmlProgram(sealComposition({ id: "media", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }, space));
+  const document = compileHtmlProgram(sealComposition({ id: "media", visual: { canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }, space));
   assert.equal(document.artifacts.length, 1);
   const artifactId = document.artifacts[0]!.id;
   assert.equal((document.html.match(new RegExp(artifactId, "gu")) ?? []).length, 2,
@@ -424,7 +424,7 @@ test("Prepared Media reaches the terminal visual program without an intermediate
   const track = projectVisualTrack(space, finalizeVisualTrack(appendProgramVisualClip(
     createVisualTrackSet(), header, semantic, layers, frame, clipSpec(),
   ), header, space));
-  const document = compileHtmlProgram(sealComposition({ id: "alternate-rate", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: { members: [{ kind: "track", id: track.id, track }] } }, audio: { contributions: [] } }, space));
+  const document = compileHtmlProgram(sealComposition({ id: "alternate-rate", visual: { canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: { members: [{ kind: "track", id: track.id, track }] } }, audio: { contributions: [] } }, space));
   const source = document.videoSources[0];
   assert.equal(source?.kind, "media");
   if (source?.kind !== "media") throw new Error("Expected direct Prepared Media source");
@@ -444,17 +444,17 @@ test("a cubic Clip relation remains exact through Prepared Media and the termina
   const track = projectVisualTrack(space, finalizeVisualTrack(appendProgramVisualClip(
     createVisualTrackSet(), header, semantic, timedLayers("cubic", false, curve), frame, clipSpec(),
   ), header, space));
-  const document = compileHtmlProgram(sealComposition({ id: "cubic", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: { members: [{ kind: "track", id: track.id, track }] } }, audio: { contributions: [] } }, space));
+  const document = compileHtmlProgram(sealComposition({ id: "cubic", visual: { canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: { members: [{ kind: "track", id: track.id, track }] } }, audio: { contributions: [] } }, space));
   const source = document.videoSources[0];
   assert.equal(source?.kind, "media");
   if (source?.kind !== "media") throw new Error("Expected direct Prepared Media source");
-  assert.deepEqual(evaluateTemporalMap(source.sampling, exactTemporalValueFromFrames(30, space)), {
-    ticks: "5",
-    timeBase: { numerator: 1, denominator: 16 },
+  assert.deepEqual(evaluateTemporalMap(source.sampling, exactTemporalValueFromFrames(30, space), "after"), {
+    position: { ticks: "5", timeBase: { numerator: 1, denominator: 16 } },
+    sourceSide: "after",
   });
-  assert.deepEqual(evaluateTemporalMap(source.sampling, exactTemporalValueFromFrames(60, space)), {
-    ticks: "1",
-    timeBase: { numerator: 1, denominator: 1 },
+  assert.deepEqual(evaluateTemporalMap(source.sampling, exactTemporalValueFromFrames(60, space), "after"), {
+    position: { ticks: "1", timeBase: { numerator: 1, denominator: 1 } },
+    sourceSide: "after",
   });
 });
 
@@ -631,7 +631,7 @@ test("a timed Transition reaches HTML with both Prepared Media clocks intact", (
     { name: "incoming", span: { startFrame: 45, endFrameExclusive: 100 } },
   ]);
 
-  const document = compileHtmlProgram(sealComposition({ id: "timed-transition", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: { members: [{ kind: "track", id: track.id, track }] } }, audio: { contributions: [] } }, space));
+  const document = compileHtmlProgram(sealComposition({ id: "timed-transition", visual: { canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: { members: [{ kind: "track", id: track.id, track }] } }, audio: { contributions: [] } }, space));
   const sourceSpans = new Map<string, { startFrame: number; endFrameExclusive: number }[]>();
   for (const video of document.videoSources) {
     if (video.kind !== "media") continue;
@@ -749,7 +749,7 @@ test("transparent, Paint, self-blur and alternate-source backing are only ordere
     createVisualTrackSet(), header, semantic, layers, frame, clipSpec(),
   ), header, space);
   const track = projectVisualTrack(space, program);
-  const document = compileHtmlProgram(sealComposition({ id: "layer-matrix", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }, space));
+  const document = compileHtmlProgram(sealComposition({ id: "layer-matrix", visual: { canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }, space));
   assert.deepEqual(presentElements(track.items[0]!).filter((element) => element.kind === "image").map((element) => element.id),
     ["self-blur", "alternate", "foreground"]);
   assert.equal(document.artifacts.length, 2, "repeated samples share bytes while the alternate source remains explicit");

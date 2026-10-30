@@ -279,29 +279,6 @@ to be an image or a video.
 **Outputs:** `{product-broll.program}` and `{product-broll.visual}`. Audio is always authored on an
 Audio Track; connecting a PreparedMedia visual member here never selects its audio member.
 
-### Reuse a closed audiovisual composition
-
-A complete child Composition can appear inside another Film without first exporting it as a video.
-Declare its occurrence once, then independently project its picture and sound as ordinary peer Tracks:
-
-```svml
-<import as="nest" from="@hypit/composition-clip@1"/>
-
-<nest:Occurrence id="intro-use" timeline={program.timeline}
-  source={intro.composition} during={intro-window}/>
-<nest:Visual id="intro-picture" timeline={program.timeline}
-  picture={working-picture} occurrence={intro-use.occurrence} frame={layout.full}/>
-<nest:Audio id="intro-sound" timeline={program.timeline}
-  occurrence={intro-use.occurrence} gain="1" fade-in="0f" fade-out="0f"/>
-```
-
-`Occurrence` owns the sole target-to-child temporal relation. Add `Map` or `Curve` children when
-the child should loop, reverse, hold or change speed. `Visual` and `Audio` may be used separately or
-together; both consume the same relation rather than deriving parallel timing. Visual reuse currently
-requires the parent and child to declare the same exact Working Picture. Audio uses the fixed 48 kHz
-stereo programme environment. The renderer evaluates the child recursively; no intermediate movie is
-created as an author value.
-
 ## Audio tracks
 
 `@hypit/audio-track` places explicitly prepared audio on the same Timeline as the visual

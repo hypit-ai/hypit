@@ -30,15 +30,15 @@ export function compiledSourceScenario(input: {
         outputs: input.exports.map((output) => ({
           id: output.ref,
           type: output.type,
-          primary: { kind: "operation-result" as const, operation: `${output.ref}:primary` },
+          result: { kind: "operation-result" as const, operation: `${output.ref}:result` },
         })),
       },
-      realizations: [],
       exports: input.exports.map((output) => ({
         name: output.name,
         type: output.type,
         ref: { kind: "logical-output" as const, id: output.ref },
       })),
+      retainedOutputs: [],
       provenance: { format: "hypit.author-provenance@1", elements: provenance },
       attachments: [],
     },

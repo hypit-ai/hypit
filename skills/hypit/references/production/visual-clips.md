@@ -92,28 +92,6 @@ When two adjacent Clips overlap and the outgoing Clip starts and ends first, dec
 `transition:LinearWipe` or `transition:BlurDissolve`. The complete overlap is
 the interval; do not repeat it as another Window. Each Clip keeps its own source sampling.
 
-## Reuse one closed audiovisual work
-
-Use `@hypit/composition-clip@1` when the reusable source is a complete Composition rather than a
-PreparedMedia picture. Author one `Occurrence` from the child Composition, parent Timeline and parent
-Window. Project that occurrence with `Visual` and/or `Audio`; Film receives their ordinary Track outputs.
-
-```svml
-<import as="nest" from="@hypit/composition-clip@1"/>
-
-<nest:Occurrence id="chapter-use" timeline={program.timeline}
-  source={chapter.composition} during={chapter-window}/>
-<nest:Visual id="chapter-picture" timeline={program.timeline}
-  picture={working-picture} occurrence={chapter-use.occurrence} frame={layout.full}/>
-<nest:Audio id="chapter-sound" timeline={program.timeline}
-  occurrence={chapter-use.occurrence} gain="1" fade-in="0f" fade-out="0f"/>
-```
-
-Put temporal `Map` or `Curve` children on `Occurrence`, never independently on its visual and audio
-projections. Use another explicit occurrence for an intentional J-cut or L-cut. Parent and child must
-currently share one exact WorkingPictureSpec; do not insert an implicit colour conversion. The audio
-programme is fixed at 48 kHz stereo.
-
 ## Put shared behavior in a component
 
 A continuing presenter, slideshow, shared mask, cross-Track handoff, coordinated reveal or visual/audio

@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { setTimeout as pause } from "node:timers/promises";
 import test from "node:test";
 import { defineBuild } from "@hypit/kernel";
-import { FileBuildResultRepository } from "@hypit/result/node";
+import { FileBuildResultStore } from "@hypit/result/runtime-storage/node";
 import { installDistributionPackageResolution } from "@hypit/loader/node";
 import { SqliteRuntimeState } from "../../src/sqlite-state.js";
 import { createGreetingBuild, manifest, capabilities, producers, types } from "../execution-scenario.js";
@@ -105,19 +105,19 @@ test("isolated Builds load fresh transitive code and Profile choices, share capa
     await runtime.build({ id,
       definition: defineBuild({ program: initial.program, plan: initial.plan }),
       executionPackages: ["fixture-components"],
-      authoring: { sourcePath: join(directory, "main.svml"), publication: { outputs: [{
-        name: "document", output: "document", target: true, type: types.document, record: "document:root",
+      authoring: { sourcePath: join(directory, "main.svml"), targets: ["document"], intent: { outputs: [{
+        name: "document", record: "document:root",
       }] } },
       result: { repository: { root: directory, path: "results" } },
     });
     return id;
   }
   const completed = (directory: string, id: string) => eventually(async () => {
-    const value = await new FileBuildResultRepository(join(directory, "results")).read(id);
+    const value = await new FileBuildResultStore(join(directory, "results")).read(id);
     return value?.outcome === undefined ? undefined : value;
   });
   const value = async (directory: string, id: string) => {
-    const output = await new FileBuildResultRepository(join(directory, "results")).resolve(id, "document");
+    const output = await new FileBuildResultStore(join(directory, "results")).resolve(id, "document");
     assert.equal(output?.value.kind, "value");
     return output?.value.kind === "value" ? output.value.document.value : undefined;
   };
@@ -162,7 +162,7 @@ test("isolated Builds load fresh transitive code and Profile choices, share capa
     const e = await submit("e", project, "remote-job", true);
     const remote = await eventually(async () => {
       const [operation] = await state.operations.list({ build: e });
-      const ended = await new FileBuildResultRepository(join(project, "results")).read(e);
+      const ended = await new FileBuildResultStore(join(project, "results")).read(e);
       if (ended?.outcome !== undefined) throw new Error(JSON.stringify(ended));
       return operation?.receipt === undefined ? undefined : operation;
     });

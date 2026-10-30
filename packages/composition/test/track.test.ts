@@ -102,7 +102,7 @@ function fixture() {
 
 test("Composition accepts self-contained peer VisualTrack and AudioTrack values", () => {
   const { timeline, visual, sound } = fixture();
-  const composition = sealComposition({ id: "main", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: scope(visual) }, audio: { contributions: [sound] } }, timeline);
+  const composition = sealComposition({ id: "main", visual: { canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: scope(visual) }, audio: { contributions: [sound] } }, timeline);
   assert.doesNotThrow(() => assertCompositionIdentity(composition));
   assert.deepEqual([composition.audio.contributions[0]?.id, composition.visual.root.members[0]?.kind === "track"
     ? composition.visual.root.members[0].track.id : undefined], ["speech", "caption"]);
@@ -124,7 +124,6 @@ test("VisualScope Process combines named sibling Pictures without a central node
     effect,
   }] });
   const composition = sealComposition({ id: "process", visual: {
-    picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const,
     canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: process,
   }, audio: { contributions: [] } }, timeline);
   assert.doesNotThrow(() => assertCompositionIdentity(composition));
@@ -190,13 +189,13 @@ test("VisualTrack carries exact logical source duration without a terminal mater
 
 test("Composition accepts case-insensitive hexadecimal canvas colors", () => {
   const { timeline, visual } = fixture();
-  const composition = sealComposition({ id: "uppercase-color", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 480, height: 854, clearColor: "#09090B" }, root: scope(visual) }, audio: { contributions: [] } }, timeline);
+  const composition = sealComposition({ id: "uppercase-color", visual: { canvas: { width: 480, height: 854, clearColor: "#09090B" }, root: scope(visual) }, audio: { contributions: [] } }, timeline);
   assert.doesNotThrow(() => assertCompositionIdentity(composition));
 });
 
 test("AudioTrack is one closed DAG with explicit silence, mix and process references", () => {
   const { timeline, sound } = fixture();
-  assert.doesNotThrow(() => assertCompositionIdentity(sealComposition({ id: "audio-graph", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 1, height: 1, clearColor: "#000000" }, root: scope() }, audio: { contributions: [sound] } }, timeline)));
+  assert.doesNotThrow(() => assertCompositionIdentity(sealComposition({ id: "audio-graph", visual: { canvas: { width: 1, height: 1, clearColor: "#000000" }, root: scope() }, audio: { contributions: [sound] } }, timeline)));
   const cyclic = sealAudioTrack({ timelineId: timeline.id, id: "cycle", graph: {
     nodes: [
       { kind: "process", id: "a", inputs: { signal: { node: "b", port: "signal" } },
@@ -206,7 +205,7 @@ test("AudioTrack is one closed DAG with explicit silence, mix and process refere
     ],
     output: { node: "a", port: "signal" },
   } });
-  assert.throws(() => assertCompositionIdentity(sealComposition({ id: "cycle", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 1, height: 1, clearColor: "#000000" }, root: scope() }, audio: { contributions: [cyclic] } }, timeline)), /contains a cycle/u);
+  assert.throws(() => assertCompositionIdentity(sealComposition({ id: "cycle", visual: { canvas: { width: 1, height: 1, clearColor: "#000000" }, root: scope() }, audio: { contributions: [cyclic] } }, timeline)), /contains a cycle/u);
   const unreachable = sealAudioTrack({ timelineId: timeline.id, id: "unreachable", graph: {
     nodes: [{ kind: "silence", id: "used" }, { kind: "silence", id: "unused" }],
     output: { node: "used", port: "signal" },
@@ -324,7 +323,7 @@ test("Composition validates Track frame ranges against the explicitly connected 
   const { timeline, visual } = fixture();
   const foreign = sealTimeline({ id: "test-space", frameCount: 24, frameRate: { numerator: 24, denominator: 1 },
   });
-  const composition = sealComposition({ id: "foreign", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: scope(visual) }, audio: { contributions: [] } }, foreign);
+  const composition = sealComposition({ id: "foreign", visual: { canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: scope(visual) }, audio: { contributions: [] } }, foreign);
   assert.throws(() => assertCompositionIdentity(composition), /outside Timeline/);
   assert.notDeepEqual(timeline, foreign);
 });
@@ -342,7 +341,7 @@ test("one authoring Track owns its local Present declaration order", () => {
       second,
     ],
   });
-  const composition = sealComposition({ id: "interleaved", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: scope(interleaved) }, audio: { contributions: [] } }, timeline);
+  const composition = sealComposition({ id: "interleaved", visual: { canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: scope(interleaved) }, audio: { contributions: [] } }, timeline);
   assert.doesNotThrow(() => assertCompositionIdentity(composition));
   assert.deepEqual(interleaved.items.map((present) => present.id), ["cue-1", "cue-2"]);
 });
@@ -359,7 +358,7 @@ test("visual ordering is array position and identities remain validation-only", 
   assert.doesNotThrow(() => assertVisualTrackIdentity(ordered, timeline));
   assert.deepEqual(ordered.items.map((item) => item.id), ["another", "cue-1"]);
 
-  assert.throws(() => assertCompositionIdentity(sealComposition({ id: "repeated-member-id", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: { members: [
+  assert.throws(() => assertCompositionIdentity(sealComposition({ id: "repeated-member-id", visual: { canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: { members: [
       { kind: "track", id: "same", track: visual },
       { kind: "track", id: "same", track: visual },
     ] } }, audio: { contributions: [] } }, timeline)), /duplicate member id same/u);
@@ -367,7 +366,7 @@ test("visual ordering is array position and identities remain validation-only", 
 
 test("Composition audio is a multiset of closed signals rather than a map keyed by Track id", () => {
   const { timeline, sound } = fixture();
-  const composition = sealComposition({ id: "repeated-signal", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 1, height: 1, clearColor: "#000000" }, root: { members: [] } }, audio: { contributions: [sound, structuredClone(sound)] } }, timeline);
+  const composition = sealComposition({ id: "repeated-signal", visual: { canvas: { width: 1, height: 1, clearColor: "#000000" }, root: { members: [] } }, audio: { contributions: [sound, structuredClone(sound)] } }, timeline);
   assert.doesNotThrow(() => assertCompositionIdentity(composition));
   assert.equal(composition.audio.contributions.length, 2);
   assert.deepEqual(composition.audio.contributions.map((track) => track.id), [sound.id, sound.id]);
@@ -375,7 +374,7 @@ test("Composition audio is a multiset of closed signals rather than a map keyed 
 
 test("Composition distinguishes reusable VisualTrack values from their Film-owned occurrences", () => {
   const { timeline, visual } = fixture();
-  const composition = sealComposition({ id: "reused-visual", visual: { picture: { colorPrimaries: "bt709", colorTransfer: "srgb", referenceWhiteNits: 100, alphaMode: "premultiplied" } as const, canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: { members: [
+  const composition = sealComposition({ id: "reused-visual", visual: { canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: { members: [
       { kind: "track", id: "background", track: visual },
       { kind: "stack", id: "inset", scope: { members: [
         { kind: "track", id: "picture", track: visual },

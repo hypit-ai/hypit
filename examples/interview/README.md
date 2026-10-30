@@ -2,7 +2,7 @@
 
 [reference.svml](reference.svml) generates the shared encounter and both close views for a black-haired
 mob wife beside a sky-blue Lamborghini, interviewed by a young man in a purple shirt and backward
-flag cap. [reference.svrun](reference.svrun) targets a finished video without earlier Results.
+flag cap. Build `reference.svml` with `--target final.video` for a finished video without earlier Results.
 
 ## From images to the encounter
 
@@ -37,15 +37,15 @@ use `npm ci`.
 
 ```bash
 npm install
-npx hypit check reference.svrun
+npx hypit check reference.svml
 npx hypit estimate reference.svml --segment manifest-rule --language en --pace fast --rounding ceil
 npx hypit estimate reference.svml --segment real-estate-rule --language en --pace fast --rounding ceil
 npx hypit estimate reference.svml --segment bitcoin-rule --language en --pace fast --rounding ceil
-npx hypit plan reference.svrun --runtime ./hypit.runtime.json
+npx hypit plan reference.svml --target final.video --runtime ./hypit.runtime.json
 ```
 
 Those estimates are eleven, eight and eight seconds. Review the selected Endpoints and pricing;
-under spending authorization, `npx hypit build reference.svrun --runtime ./hypit.runtime.json --follow`
+under spending authorization, `npx hypit build reference.svml --target final.video --runtime ./hypit.runtime.json --follow`
 generates and composes the work. The initial result uses fixed Caption positions. Watch it to judge
 performance, cuts, reading and reveal timing.
 
@@ -87,8 +87,8 @@ center/bottom anchoring so its text sits above that region. The unbound BOY cont
 Style placement. A null WIFE region hides her Caption on that frame.
 
 Accept the three generated clips into the project before the second composition pass. Export each
-public video Output, declare the exported file with `@hypit/media`, and use authored realization
-selection for the corresponding generated role:
+video artifact, declare the exported file with `@hypit/media`, and change the corresponding
+`mediaop:Prepare` source to that project asset:
 
 ```bash
 hypit get ACTUAL_BUILD_ID --output manifest-rule-take.video \
@@ -97,13 +97,14 @@ hypit get ACTUAL_BUILD_ID --output manifest-rule-take.video \
 
 ```svml
 <import as="media" from="@hypit/media@1"/>
-<import as="realization" from="@hypit/realization@1"/>
+<import as="mediaop" from="@hypit/media-operations@1"/>
 
 <media:Video id="accepted-manifest-rule" src="./assets/accepted/manifest-rule.mp4"/>
-<realization:Select output={manifest-rule-take.video} record={accepted-manifest-rule}/>
+<mediaop:Prepare id="manifest-rule-media" source={accepted-manifest-rule}
+  video="primary-moving" audio="default" span-authority="video"/>
 ```
 
-Apply the same explicit Author edit to the other two passages. Media preparation then derives the
+Apply the same direct-reference edit to the other two passages. Media preparation then derives the
 current `PreparedMedia`, local domain and extent from those accepted clips. Check `hypit plan` to
 confirm that the second render contains no new image, voice or video request. Inspect camera cuts and
 moving head placement in the result. Changing only Caption or MG needs no repeat generation; changing
@@ -113,7 +114,7 @@ If reviewing the actual footage reveals a transcription timing error, use the ex
 path. Produce or export an editable `.transcript.svml`, correct its word evidence, import that Source,
 and connect its published `SpeechTranscriptEvidence` to the existing Alignment declaration. The
 Alignment continues to express the relationship between the Script Segment and the accepted media
-domain; the correction belongs to the evidence rather than to an Invocation override.
+domain; the correction belongs to the evidence rather than to the execution request.
 
 ## Prompt provenance
 

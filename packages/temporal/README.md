@@ -35,9 +35,16 @@ monotone, so one piece has one direction; holds and direction changes use adjace
 Composition preserves a sequence of independently meaningful
 stages rather than flattening them through a registry. The relation answers where target time reads
 source time; visual interpolation and audio resampling remain signal-domain responsibilities.
-At a cyclic boundary, a negative-rate Map keeps the left-hand `wrap.end` representative while a
-positive-rate Map keeps the right-hand `wrap.start` representative. Terminal signal consumers use
-that orientation when choosing a discrete frame or sample; the Map itself remains continuous and exact.
+Every evaluation names the side of its exact target position: `after` reads content beginning at a
+frame or sample boundary, while `before` reads the side ending at an exclusive boundary. Each Map
+stage carries that side to its source, reversing it for negative motion and restarting at `after` for
+a hold. Gaps and terminal boundaries therefore have no separate evaluator or inclusive-end exception.
+At a cyclic boundary, `before` uses the `wrap.end` representative and `after` uses `wrap.start`,
+independently of the piece's rate sign. Terminal signal consumers receive that source side when choosing
+a discrete frame or sample; the Map remains exact and does not encode a renderer's interpolation policy.
+An executor that evaluates the same immutable Map for many frames or samples binds
+`createTemporalMapEvaluator` once at its Programme boundary. It uses this same sided evaluator while
+keeping structural validation out of the hot loop; it is not a second sampling rule or a relaxed Map.
 
 Exact duration, rate, relative-point, affine-relation and cubic-relation parsing is part of this package's
 syntax-neutral value contract and is exported from the main entry. Author packages can therefore

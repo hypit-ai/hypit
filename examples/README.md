@@ -6,17 +6,18 @@ Adapt those relationships to a new work; its scene list and styling are choices 
 
 | Example | What to learn | Starting material |
 | --- | --- | --- |
-| [Football ranking](ranking-football/README.md) | Independent speaking clips, a persistent tier board and timed reveals | Generate from `reference.svrun` |
-| [Podcast](podcast/README.md) | Related host views, product references, motivated cuts and a lifestyle montage | Generate from `reference.svrun` |
-| [Street interview](interview/README.md) | A shared encounter, derived close views, coordinated Moments and Caption tracking | Generate from `reference.svrun` |
+| [Football ranking](ranking-football/README.md) | Independent speaking clips, a persistent tier board and timed reveals | Generate from `reference.svml`, targeting `final.video` |
+| [Podcast](podcast/README.md) | Related host views, product references, motivated cuts and a lifestyle montage | Generate from `reference.svml`, targeting `final.video` |
+| [Street interview](interview/README.md) | A shared encounter, derived close views, coordinated Moments and Caption tracking | Generate from `reference.svml`, targeting `final.video` |
 | [Complex spoken explainer](complex-explainer/README.md) | Coordinated project scenes, moving presenter framing, independent Caption, semantic graphic events and graphics-only intervals | Download its accepted media/Result bundle; render locally |
 
-The three generation entries use `reference.svml` and an adjacent `reference.svrun`. They generate
+The three generation entries use `reference.svml` and explicitly select `final.video` when planning
+or building. They generate
 their main images, recurring voice references and generated clips, then prepare media, align the
 Script where needed, and compose the video. They need no earlier Build Result or manually supplied
 presenter, host or scene image. The explainer instead opens a complete 137-second production with 17
 accepted performance clips, recorded demonstrations, pixel graphics and sound; its Author Source
-selects those supplied project resources and its default Invocation targets the final work.
+selects those supplied project resources; the command selects the final work for that execution.
 
 Self-contained here means a project directory: SVML, its imported SVS/Kits and the selected local
 assets. Hypit supplies the base video capabilities; each project's `package.json` declares any
@@ -31,7 +32,7 @@ and commit the resulting lockfile, then use `npm ci` for repeatable installs. Th
 [`@hypit/ranking`](https://www.npmjs.com/package/@hypit/ranking) and
 [`@hypit/interview-emoji-reveal`](https://www.npmjs.com/package/@hypit/interview-emoji-reveal),
 respectively. Interview's Flash component stays in its own `packages/flash` directory.
-The nested ranking variants each have their own manifest and saved Invocation; install and keep each
+The nested ranking variants each have their own manifest and Author Source; install and keep each
 variant's lockfile from that directory. Installation and Source checks do not submit generation requests.
 
 The other `swap-*` and nested projects preserve separate variations and reuse studies. They have not

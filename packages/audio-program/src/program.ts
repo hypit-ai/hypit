@@ -21,7 +21,6 @@ import {
   assertTemporalMap,
   compareExactTemporalValues,
   exactTemporalRational,
-  exactTemporalValueFromFrames,
   subtractExactTemporalValues,
 } from "@hypit/temporal";
 import type { ExactTemporalValue } from "@hypit/temporal";
@@ -80,7 +79,10 @@ function lowerClip(clip: AudioClip, id: string, owner: string): AudioProgramClip
   };
 }
 
-function namespaceTrack(track: AudioTrack, rootIndex: number): {
+function namespaceTrack(
+  track: AudioTrack,
+  rootIndex: number,
+): {
   readonly nodes: readonly AudioProgramNode[];
   readonly output: AudioSignalRef;
 } {
@@ -96,25 +98,6 @@ function namespaceTrack(track: AudioTrack, rootIndex: number): {
       clip: lowerClip(node.clip, structuralId(["audio", String(rootIndex), "track", track.id,
         "node", node.id, "clip", node.clip.id]), track.id),
     };
-    if (node.kind === "composition") {
-      const targetStartSample = sampleBoundary(node.target.start, `${track.id}.${node.id} target start`);
-      const targetEndSampleExclusive = sampleBoundary(node.target.end, `${track.id}.${node.id} target end`);
-      return {
-        kind: "composition",
-        id,
-        program: compileAudioProgram(node.composition),
-        target: structuredClone(node.target),
-        targetStartSample,
-        targetEndSampleExclusive,
-        sampling: structuredClone(node.sampling),
-        ...(node.reconstruction === undefined ? {} : { reconstruction: structuredClone(node.reconstruction) }),
-        gain: node.gain,
-        fadeInSamples: sampleBoundary(addExactTemporalValues(node.target.start, node.fadeIn),
-          `${track.id}.${node.id} fade in`) - targetStartSample,
-        fadeOutSamples: targetEndSampleExclusive - sampleBoundary(
-          subtractExactTemporalValues(node.target.end, node.fadeOut), `${track.id}.${node.id} fade out`),
-      };
-    }
     if (node.kind === "mix") return { kind: "mix", id, inputs: node.inputs.map(reference) };
     return {
       kind: "process",
@@ -133,8 +116,7 @@ export function sealAudioProgram(value: AudioProgram): AudioProgram {
 
 export function audioProgramSourceClips(program: AudioProgram): readonly AudioProgramClip[] {
   verifyAudioProgram(program);
-  return program.graph.nodes.flatMap((node) => node.kind === "source" ? [node.clip]
-    : node.kind === "composition" ? audioProgramSourceClips(node.program) : []);
+  return program.graph.nodes.flatMap((node) => node.kind === "source" ? [node.clip] : []);
 }
 
 /** Construct the ordinary source-plus-root-mix subset without changing the graph value model. */
@@ -159,9 +141,6 @@ export function audioProgramGainRoutes(program: AudioProgram): readonly AudioPro
     const node = nodes.get(input.node)!;
     if (node.kind === "silence") return [];
     if (node.kind === "source") return [{ id: structuralId([...path, "source", node.id]), clip: node.clip, gain }];
-    if (node.kind === "composition") {
-      throw new Error(`Audio Composition ${node.id} requires recursive signal rendering.`);
-    }
     if (node.kind === "mix") return node.inputs.flatMap((entry, index) =>
       route(entry, [...path, "mix", node.id, "input", String(index)], gain));
     if (Object.keys(node.inputs).some((port) => port !== "signal")) {
@@ -192,7 +171,7 @@ export function verifyAudioProgram(value: unknown): asserts value is AudioProgra
     assert(typeof node.id === "string" && node.id.length > 0 && !nodes.has(node.id),
       "AudioProgram node id is empty or repeated");
     nodes.set(node.id, node);
-    if (node.kind === "silence" || node.kind === "source" || node.kind === "composition") references.set(node.id, []);
+    if (node.kind === "silence" || node.kind === "source") references.set(node.id, []);
     else if (node.kind === "mix") {
       assert(Array.isArray(node.inputs) && node.inputs.length > 0, `AudioProgram Mix ${node.id} has no inputs`);
       references.set(node.id, node.inputs);
@@ -212,15 +191,25 @@ export function verifyAudioProgram(value: unknown): asserts value is AudioProgra
   }
   const state = new Map<string, "visiting" | "visited">();
   const reachable = new Set<string>();
-  const visit = (id: string): void => {
-    assert(state.get(id) !== "visiting", `AudioProgram graph contains a cycle at ${id}`);
-    if (state.get(id) === "visited") return;
-    state.set(id, "visiting");
-    reachable.add(id);
-    for (const input of references.get(id) ?? []) visit(input.node);
-    state.set(id, "visited");
-  };
-  visit(item.graph.output.node);
+  const visits: Array<{ readonly id: string; readonly leaving: boolean }> = [
+    { id: item.graph.output.node, leaving: false },
+  ];
+  while (visits.length > 0) {
+    const visit = visits.pop()!;
+    if (visit.leaving) {
+      state.set(visit.id, "visited");
+      continue;
+    }
+    assert(state.get(visit.id) !== "visiting", `AudioProgram graph contains a cycle at ${visit.id}`);
+    if (state.get(visit.id) === "visited") continue;
+    state.set(visit.id, "visiting");
+    reachable.add(visit.id);
+    visits.push({ id: visit.id, leaving: true });
+    const inputs = references.get(visit.id) ?? [];
+    for (let index = inputs.length - 1; index >= 0; index -= 1) {
+      visits.push({ id: inputs[index]!.node, leaving: false });
+    }
+  }
   assert(reachable.size === nodes.size, "AudioProgram graph contains unreachable nodes");
   const clipIds = new Set<string>();
   for (const clip of item.graph.nodes.flatMap((node) => node.kind === "source" ? [node.clip] : [])) {
@@ -270,28 +259,6 @@ export function verifyAudioProgram(value: unknown): asserts value is AudioProgra
       && Number.isSafeInteger(clip.fadeOutSamples) && clip.fadeOutSamples >= 0 && clip.fadeOutSamples <= mixLength,
     `AudioProgram clip ${clip.id} fade is invalid`);
   }
-  for (const node of item.graph.nodes) {
-    if (node.kind !== "composition") continue;
-    verifyAudioProgram(node.program);
-    assertTemporalMap(node.sampling);
-    if (node.reconstruction !== undefined) {
-      assertAudioReconstructionProgram(node.reconstruction, `AudioProgram Composition ${node.id} reconstruction`);
-    }
-    assert(compareExactTemporalValues(node.target.start, node.target.end) < 0
-      && Number.isSafeInteger(node.targetStartSample) && node.targetStartSample >= 0
-      && Number.isSafeInteger(node.targetEndSampleExclusive)
-      && node.targetEndSampleExclusive > node.targetStartSample
-      && node.targetEndSampleExclusive <= item.sampleFrames,
-    `AudioProgram Composition ${node.id} target interval is invalid`);
-    assert(node.sampling.stages.at(-1)?.source.duration !== undefined
-      && compareExactTemporalValues(node.sampling.stages.at(-1)!.source.duration,
-        exactTemporalValueFromFrames(node.program.frameCount, { frameRate: node.program.frameRate })) === 0,
-    `AudioProgram Composition ${node.id} sampling source differs from its child programme`);
-    assert(Number.isFinite(node.gain) && node.gain >= 0
-      && Number.isSafeInteger(node.fadeInSamples) && node.fadeInSamples >= 0
-      && Number.isSafeInteger(node.fadeOutSamples) && node.fadeOutSamples >= 0,
-    `AudioProgram Composition ${node.id} gain or fades are invalid`);
-  }
 }
 
 export function compileAudioProgram(value: Composition): AudioProgram {
@@ -307,9 +274,9 @@ export function compileAudioProgram(value: Composition): AudioProgram {
   const nodes: AudioProgramNode[] = [];
   const outputs: AudioSignalRef[] = [];
   for (const [rootIndex, track] of contributions.entries()) {
-    const nested = namespaceTrack(track, rootIndex);
-    nodes.push(...nested.nodes);
-    outputs.push(nested.output);
+    const namespaced = namespaceTrack(track, rootIndex);
+    nodes.push(...namespaced.nodes);
+    outputs.push(namespaced.output);
   }
   let output: AudioSignalRef;
   if (outputs.length === 0) {

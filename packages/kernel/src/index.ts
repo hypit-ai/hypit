@@ -14,7 +14,7 @@ export {
 export { planBuild, plannedNeeds } from "./plan.js";
 export type { PlannedExecution, PlannedNeed } from "./plan.js";
 export { sliceExecution } from "./slice.js";
-export type { SelectedOutputRecord } from "./slice.js";
+export type { ResolvedOutputRecord } from "./slice.js";
 export {
   defineBuild,
 } from "./reducer.js";

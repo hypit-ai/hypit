@@ -1,4 +1,7 @@
 import type { CliDistribution } from "@hypit/hypit/cli";
+import { resultOutputExporterForType, resultOutputExportersFromFacets } from "@hypit/hypit/result";
+import { loadNodePackageSelection } from "@hypit/hypit/loader/node";
+import { moduleKey, modulePackageAbi } from "@hypit/hypit/protocol";
 import {
   doctorProjectBuildResultRepository,
   findRuntimeProfile,
@@ -89,6 +92,20 @@ export function createVideoDistribution(options: VideoDistributionOptions = {}):
         repository: opened.repository,
         close() {},
       };
+    },
+    resolveResultOutputExporter: async (type, resolverOptions) => {
+      const packages = await loadNodePackageSelection({
+        selected: [],
+        logical: [{ abi: modulePackageAbi, name: moduleKey(type.module) }],
+      }, resolverOptions.packageRoot, {
+        ...(resolverOptions.distributionPackageRoot === undefined
+          ? {}
+          : { fallbackRoots: [resolverOptions.distributionPackageRoot] }),
+      });
+      return resultOutputExporterForType(
+        packages.flatMap((item) => resultOutputExportersFromFacets(item.contribution.facets ?? [])),
+        type,
+      );
     },
     diagnoseProjectResults: async (projectRoot) => await doctorProjectBuildResultRepository(projectRoot),
   };
