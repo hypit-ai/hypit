@@ -36,7 +36,7 @@ const programClip: ValueSchema = {
     } } },
     targetStartSample: { schema: integer },
     targetEndSampleExclusive: { schema: { kind: "number", integer: true, minimum: 1 } },
-    mixStartSample: { schema: integer },
+    mixStartSample: { schema: { kind: "number", integer: true } },
     mixEndSampleExclusive: { schema: { kind: "number", integer: true, minimum: 1 } },
     gain: { schema: { kind: "number", minimum: 0 } },
     fadeInSamples: { schema: integer },

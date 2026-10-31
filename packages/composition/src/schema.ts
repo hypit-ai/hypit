@@ -175,7 +175,8 @@ export const visualProgramSchema: ValueSchema = object({
   slots: { schema: { kind: "array", items: object({ name: { schema: string }, element: { schema: visualNodeEnvelope } }) } },
 });
 export const visualElementSchema: ValueSchema = { kind: "oneOf", variants: [visualMaskSchema, visualTextSchema, textFlowElement, pathTextElement, visualImageSchema, visualVideoSchema, visualSurfaceSchema, visualProgramSchema] };
-const visualItemBase = { id: { schema: string }, subjectId: { schema: string, optional: true }, span: { schema: frameSpanSchema }, visibility: { schema: { kind: "array", items: frameSpanSchema }, optional: true } } as const;
+const animationClock = object({ startFrame: { schema: signedInteger }, endFrameExclusive: { schema: signedInteger } });
+const visualItemBase = { clock: { schema: animationClock, optional: true }, id: { schema: string }, subjectId: { schema: string, optional: true }, span: { schema: frameSpanSchema }, visibility: { schema: { kind: "array", items: frameSpanSchema }, optional: true } } as const;
 export const visualPresentSchema: ValueSchema = object({ ...visualItemBase, kind: { schema: { kind: "literal", value: "present" } }, root: { schema: visualElementSchema } });
 export const visualProcessSchema: ValueSchema = object({
   ...visualItemBase,
@@ -183,7 +184,7 @@ export const visualProcessSchema: ValueSchema = object({
   inputs: { schema: { kind: "array", minItems: 1, items: object({
     name: { schema: string },
     // Recursive contribution shape is refined exactly by Composition.
-    contribution: { schema: visualNodeEnvelope },
+    contribution: { schema: visualNodeEnvelope, optional: true },
   }) } },
   effect: { schema: visualProcessEffectSchema },
 });
@@ -204,6 +205,7 @@ const audioClip = object({
   subjectId: { schema: string, optional: true },
   source: { schema: preparedAudioSourceSchema },
   preparation: { schema: temporalMapSchema },
+  levelOrigin: { schema: object({ start: { schema: exactTemporalValueSchema }, end: { schema: exactTemporalValueSchema } }), optional: true },
   target: { schema: object({ start: { schema: exactTemporalValueSchema }, end: { schema: exactTemporalValueSchema } }) },
   sampling: { schema: temporalMapSchema },
   reconstruction: { schema: audioReconstructionProgramSchema, optional: true },
@@ -231,7 +233,7 @@ const visualScopeMemberSchema: ValueSchema = { kind: "oneOf", variants: [
   object({
     kind: { schema: { kind: "literal", value: "process" } },
     id: { schema: string },
-    timing: { schema: frameSpanSchema, optional: true },
+    timing: { schema: frameSpanSchema, optional: true }, clock: { schema: animationClock, optional: true },
     inputs: { schema: { kind: "array", minItems: 1, items: object({
       name: { schema: string },
       scope: { schema: object({}, true) },

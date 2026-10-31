@@ -816,7 +816,7 @@ const svmlTextRootSelected = (root) => {
   const startFrame = Number(root.getAttribute('data-hypit-text-start-frame'));
   const durationFrames = Number(root.getAttribute('data-hypit-text-duration-frames'));
   if (!Number.isSafeInteger(startFrame) || !Number.isSafeInteger(durationFrames)
-    || startFrame < 0 || durationFrames <= 0 || !Number.isSafeInteger(startFrame + durationFrames)) {
+    || durationFrames <= 0 || !Number.isSafeInteger(startFrame + durationFrames)) {
     throw new Error('Invalid terminal Text Present span.');
   }
   return htmlSelectionOverlaps(startFrame, startFrame + durationFrames);

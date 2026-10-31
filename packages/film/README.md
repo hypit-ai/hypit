@@ -38,27 +38,34 @@ Film has no author-selectable color-space field and does not name delivery forma
 Its recursive Track/Stack/Process grammar is expressed by declaration-local child groups in the syntax-neutral
 Author shape. Markup contributes only the `Film` spelling; direct callers and other Frontends use the
 same compiler. Film consumes a completed Timeline and resolves Compound placement through a typed
-Temporal Instant.
+Temporal Window and a source Instant.
 Child order is visual structure, so Film needs no second numeric ordering channel. Visual occurrence
 identity belongs to Film; Track value identity, Present identity and timing remain in their own typed
 values. Final rendering is a separate author package and capability.
 
-`Compound` references a local audiovisual Composition and places its complete duration at an
-Instant on the parent Timeline. The source keeps its own Timeline and can be shared by multiple
-occurrences. Frame rates and canvas dimensions must match; the parent Timeline contains the full
-placed interval. Visual stacking follows the Compound's sibling position, and its audio joins the
-parent mix. The Film Companion declares the source and placement attributes for editor discovery.
+`Compound` references a local audiovisual Composition. Its `during` Window selects the parent
+placement interval, and `from` selects the starting Instant on the source Timeline. The selected
+source duration equals the parent interval duration. Multiple occurrences can share the same source
+Composition while retaining their own intervals. Frame rates and canvas dimensions must match.
+Compound members may appear at the Film root or inside a Stack; their visual sibling position sets
+the stacking order, and their audio joins the parent mix. The Film Companion declares the source,
+placement and source-position attributes for editor discovery.
 
 ```xml
 <film:Film id="parent" canvas={canvas.canvas} timeline={parentTime.timeline}
   appearance={recipes.film.main}>
-  <film:Compound id="opening" source={opening.composition} at={parentTime.opening}/>
+  <film:Stack id="sequences">
+    <film:Compound id="opening" source={opening.composition}
+      during={parentTime.opening} from={openingTime.inPoint}/>
+  </film:Stack>
 </film:Film>
 ```
 
-Composition placement shifts visual intervals, recursive scope process clocks, audio intervals and
-sample-based level automation together. Media sampling and occurrence-local animation retain their
-source coordinates. Each occurrence preserves its local canvas clear during its placed interval.
+Composition placement intersects visual and audio content with the selected interval. Media Maps
+are sliced and rebased; animation clocks and audio level origins preserve the authored progress.
+Each occurrence preserves its local canvas clear during its placed interval. Splitting an occurrence
+creates two parent Windows and source Instants referencing the same Composition. Editing that source
+updates both occurrences.
 
 `Link` is a direct Film child that preserves a group of clips for coordinated editing. Each
 `Member` selects a Track already included in the Film and a clip identity within that Track:

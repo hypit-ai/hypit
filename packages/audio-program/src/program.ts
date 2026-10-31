@@ -36,13 +36,13 @@ function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
 
-function sampleBoundary(value: ExactTemporalValue, label: string): number {
+function sampleBoundary(value: ExactTemporalValue, label: string, signed = false): number {
   const exact = exactTemporalRational(value);
   const numerator = exact.numerator * 48_000n;
   const rounded = numerator >= 0n
     ? (numerator * 2n + exact.denominator) / (exact.denominator * 2n)
     : -((-numerator * 2n + exact.denominator) / (exact.denominator * 2n));
-  assert(rounded >= 0n && rounded <= BigInt(Number.MAX_SAFE_INTEGER), `${label} is outside sample arithmetic`);
+  assert(rounded >= (signed ? -BigInt(Number.MAX_SAFE_INTEGER) : 0n) && rounded <= BigInt(Number.MAX_SAFE_INTEGER), `${label} is outside sample arithmetic`);
   return Number(rounded);
 }
 
@@ -52,8 +52,9 @@ function structuralId(parts: readonly string[]): string {
 
 function lowerClip(clip: AudioClip, id: string, owner: string): AudioProgramClip {
   assertTemporalMap(clip.sampling);
-  const mixStartSample = sampleBoundary(clip.target.start, `${owner}.${clip.id} target start`);
-  const mixEndSampleExclusive = sampleBoundary(clip.target.end, `${owner}.${clip.id} target end`);
+  const level = clip.levelOrigin ?? clip.target;
+  const mixStartSample = sampleBoundary(level.start, `${owner}.${clip.id} level start`, true);
+  const mixEndSampleExclusive = sampleBoundary(level.end, `${owner}.${clip.id} level end`);
   return {
     id,
     source: structuredClone(clip.source),
@@ -61,15 +62,15 @@ function lowerClip(clip: AudioClip, id: string, owner: string): AudioProgramClip
     sampling: structuredClone(clip.sampling),
     ...(clip.reconstruction === undefined ? {} : { reconstruction: structuredClone(clip.reconstruction) }),
     target: structuredClone(clip.target),
-    targetStartSample: mixStartSample,
-    targetEndSampleExclusive: mixEndSampleExclusive,
+    targetStartSample: sampleBoundary(clip.target.start, `${owner}.${clip.id} target start`),
+    targetEndSampleExclusive: sampleBoundary(clip.target.end, `${owner}.${clip.id} target end`),
     mixStartSample,
     mixEndSampleExclusive,
     gain: clip.gain,
-    fadeInSamples: sampleBoundary(addExactTemporalValues(clip.target.start, clip.fadeIn),
-      `${owner}.${clip.id} fade in`) - mixStartSample,
+    fadeInSamples: sampleBoundary(addExactTemporalValues(level.start, clip.fadeIn),
+      `${owner}.${clip.id} fade in`, true) - mixStartSample,
     fadeOutSamples: mixEndSampleExclusive - sampleBoundary(
-      subtractExactTemporalValues(clip.target.end, clip.fadeOut), `${owner}.${clip.id} fade out`),
+      subtractExactTemporalValues(level.end, clip.fadeOut), `${owner}.${clip.id} fade out`, true),
     ...(clip.gainEnvelope === undefined ? {} : { gainEnvelope: structuredClone(clip.gainEnvelope) }),
     ...(clip.audibility === undefined ? {} : { audibility: clip.audibility.flatMap((span) => {
       const startSample = Math.max(span.startSample, mixStartSample);
@@ -247,7 +248,7 @@ export function verifyAudioProgram(value: unknown): asserts value is AudioProgra
     assert(samplingSource.id === preparedDomain.id
       && compareExactTemporalValues(samplingSource.duration, preparedDomain.duration) === 0,
     `AudioProgram clip ${clip.id} sampling does not end at its PreparedMedia domain`);
-    assert(Number.isSafeInteger(clip.mixStartSample) && clip.mixStartSample >= 0
+    assert(Number.isSafeInteger(clip.mixStartSample)
       && Number.isSafeInteger(clip.mixEndSampleExclusive) && clip.mixEndSampleExclusive > clip.mixStartSample
       && clip.targetStartSample >= clip.mixStartSample && clip.targetEndSampleExclusive <= clip.mixEndSampleExclusive,
     `AudioProgram clip ${clip.id} mix interval is invalid`);

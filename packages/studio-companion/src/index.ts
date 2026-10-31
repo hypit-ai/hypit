@@ -688,8 +688,10 @@ export type StudioFilmCompanion = {
     readonly idAttribute: string;
     readonly sourceAttribute: string;
     readonly placementAttribute: string;
+    readonly sourcePositionAttribute: string;
     readonly sourceType: TypeRef;
     readonly placementType: TypeRef;
+    readonly sourcePositionType: TypeRef;
   };
   /** Package-owned source vocabulary for persistent linked editing groups. */
   readonly links?: {

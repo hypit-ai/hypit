@@ -3,7 +3,8 @@ import type { AudioTrack, Composition, Track, VisualScope, VisualTrack } from "@
 import { assertCanvas } from "@hypit/spatial";
 import type { Canvas } from "@hypit/spatial";
 import { assertFrameSpan, assertTimelineIdentity } from "@hypit/timeline";
-import type { TemporalInstant } from "@hypit/temporal";
+import { assertTemporalWindowFor } from "@hypit/temporal";
+import type { TemporalInstant, TemporalWindow } from "@hypit/temporal";
 import type { Timeline } from "@hypit/timeline";
 
 import type { FilmProgram, FilmTrackSet, FilmVisualPlanMember } from "./types.js";
@@ -152,10 +153,10 @@ export function appendFilmAudioTrack(set: FilmTrackSet, timeline: Timeline, trac
   return appendTrack(set, timeline, track);
 }
 
-export function appendFilmCompound(set: FilmTrackSet, timeline: Timeline, composition: Composition, at: TemporalInstant): FilmTrackSet {
-  assertFilmTrackSetIdentity(set);
-  if (at.timelineId !== timeline.id) throw new Error('Compound placement belongs to another Timeline.');
-  return sealFilmTrackSet({ tracks: [...set.tracks, { kind: 'compound', composition: placeComposition(composition, timeline, at.frame), span: { startFrame: at.frame, endFrameExclusive: at.frame + composition.timeline.frameCount } }] });
+export function appendFilmCompound(set: FilmTrackSet, timeline: Timeline, composition: Composition, during: TemporalWindow, from: TemporalInstant): FilmTrackSet {
+  assertFilmTrackSetIdentity(set); assertTemporalWindowFor(during, { timeline });
+  if (from.timelineId !== composition.timeline.id) throw new Error('Compound source position belongs to another local Timeline.');
+  return sealFilmTrackSet({ tracks: [...set.tracks, { kind: 'compound', composition: placeComposition(composition, timeline, during.span, from.frame), span: during.span }] });
 }
 
 export function compileFilmComposition(

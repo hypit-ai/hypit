@@ -277,3 +277,33 @@ export function createTemporalMapEvaluator(value: TemporalMap): TemporalMapEvalu
   assertTemporalMap(value);
   return (targetAt, side) => evaluateTemporalMapCore(value, targetAt, side);
 }
+
+/** Restrict a Map's target interval and rebase it to a new local origin. */
+export function sliceTemporalMap(value: TemporalMap, from: ExactTemporalValue, until: ExactTemporalValue, targetId: string): TemporalMap {
+  assertTemporalMap(value);
+  const first = value.stages[0]!;
+  const start = exactTemporalRational(from), end = exactTemporalRational(until);
+  assert(compare(start, rational(0n)) >= 0 && compare(start, end) < 0
+    && compare(end, exactTemporalRational(first.target.duration)) <= 0, 'Temporal Map slice exceeds its target domain.');
+  const duration = exactTemporalValue(subtract(end, start));
+  const pieces = first.pieces.flatMap((piece): TemporalMapPiece[] => {
+    const p = exactTemporalRational(piece.target.start), q = exactTemporalRational(piece.target.end);
+    const left = compare(p, start) > 0 ? p : start, right = compare(q, end) < 0 ? q : end;
+    if (compare(left, right) >= 0) return [];
+    const target = { start: exactTemporalValue(subtract(left, start)), end: exactTemporalValue(subtract(right, start)) };
+    const sourceAtStart = pieceValue(piece, exactTemporalValue(left));
+    if (isAffineTemporalMapPiece(piece)) return [{ ...structuredClone(piece), target, sourceAtStart }];
+    const length = subtract(q, p), u = divide(subtract(left, p), length), v = divide(subtract(right, p), length);
+    const derivative = (t: Rational): Rational => {
+      const c = subtract(rational(1n), t), three = rational(3n);
+      const a = exactTemporalRational(piece.sourceAtStart), b = exactTemporalRational(piece.sourceControl1);
+      const d = exactTemporalRational(piece.sourceControl2), e = exactTemporalRational(piece.sourceAtEnd);
+      return multiply(three, add(add(multiply(multiply(c, c), subtract(b, a)), multiply(multiply(rational(2n), multiply(c, t)), subtract(d, b))), multiply(multiply(t, t), subtract(e, d))));
+    };
+    const scale = divide(subtract(v, u), rational(3n)), sourceAtEnd = pieceValue(piece, exactTemporalValue(right));
+    return [{ target, sourceAtStart, sourceAtEnd,
+      sourceControl1: exactTemporalValue(add(exactTemporalRational(sourceAtStart), multiply(derivative(u), scale))),
+      sourceControl2: exactTemporalValue(subtract(exactTemporalRational(sourceAtEnd), multiply(derivative(v), scale))) }];
+  });
+  return sealTemporalMap({ stages: [{ ...structuredClone(first), target: { id: targetId, duration }, pieces }, ...structuredClone(value.stages.slice(1))] });
+}

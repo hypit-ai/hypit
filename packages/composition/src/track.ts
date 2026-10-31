@@ -341,6 +341,8 @@ export type VisualSurfaceElement = VisualElementBase & {
 export type VisualElement = VisualProgramElement | VisualMaskElement | VisualTextElement | VisualTextFlowElement | VisualPathTextElement | VisualMediaElement | VisualSurfaceElement;
 
 export type VisualItemBase = {
+  /** Authored animation clock retained when the visible interval is cropped. Its origin may precede frame zero. */
+  readonly clock?: FrameSpan;
   readonly id: string;
   /** Optional domain entity implemented by this renderer item. */
   readonly subjectId?: string;
@@ -365,7 +367,8 @@ export type VisualProcess = VisualItemBase & {
   readonly kind: "process";
   readonly inputs: readonly {
     readonly name: string;
-    readonly contribution: VisualContribution;
+    /** An omitted picture input is transparent in the selected interval. */
+    readonly contribution?: VisualContribution;
   }[];
   readonly effect: VisualProcessEffect;
 };
@@ -398,6 +401,8 @@ export type PresentVisualTrack = Omit<VisualTrack, "items"> & {
 };
 
 export type AudioClip = AudioLevelAutomation & {
+  /** Original fade interval after placement; target remains the audible source range. */
+  readonly levelOrigin?: TemporalRange;
   readonly id: string;
   /** Optional domain entity implemented by this renderer Clip. */
   readonly subjectId?: string;
@@ -516,7 +521,8 @@ export type VisualProcessEffect = {
 };
 
 export type VisualScopeProcessMember = {
-  /** Visible interval and animation clock after placement of a local composition. */
+  readonly clock?: FrameSpan;
+  /** Visible interval after placement of a local composition. */
   readonly timing?: FrameSpan;
   readonly kind: "process";
   /** Stable identity of this Process occurrence inside its parent VisualScope. */
@@ -973,11 +979,19 @@ function assertPathCommands(path: readonly VisualVectorPathCommand[], label: str
   }
 }
 
+function assertAnimationClock(clock: FrameSpan | undefined, visible: FrameSpan, label: string): void {
+  if (clock === undefined) return;
+  if (!Number.isSafeInteger(clock.startFrame) || !Number.isSafeInteger(clock.endFrameExclusive)
+    || clock.startFrame > visible.startFrame || clock.endFrameExclusive < visible.endFrameExclusive
+    || clock.endFrameExclusive <= clock.startFrame) throw new Error(`${label} has an invalid animation clock.`);
+}
+
 function assertVisualItemBase(item: VisualItemBase, timeline: Timeline | undefined, trackId: string): void {
   const totalFrames = timeline === undefined ? Number.MAX_SAFE_INTEGER : timelineFrameCount(timeline);
   assertNonEmpty(item.id, `${trackId} Visual Item id`);
   if (item.subjectId !== undefined) assertNonEmpty(item.subjectId, `${trackId}.${item.id} subjectId`);
   assertFrameSpan(item.span, totalFrames, `${trackId}.${item.id}.span`);
+  assertAnimationClock(item.clock, item.span, `${trackId}.${item.id}`);
   let previousEnd = item.span.startFrame;
   for (const span of item.visibility ?? []) {
     assertFrameSpan(span, item.span.endFrameExclusive, `${trackId}.${item.id}.visibility`);
@@ -1150,7 +1164,7 @@ function assertVisualContribution(
     assertNonEmpty(input.name, `${owner}.${contribution.id}.inputs.${index}.name`);
     if (names.has(input.name)) throw new Error(`${owner}.${contribution.id} repeats input ${input.name}.`);
     names.add(input.name);
-    assertVisualContribution(input.contribution, timeline, `${owner}.${contribution.id}.${input.name}`);
+    if (input.contribution) assertVisualContribution(input.contribution, timeline, `${owner}.${contribution.id}.${input.name}`);
   }
   if (names.size !== contribution.effect.inputs.length
     || contribution.effect.inputs.some((name) => !names.has(name))) {
@@ -1246,6 +1260,7 @@ function normalizeVisualContribution(value: VisualContribution): VisualContribut
     id: value.id,
     ...(value.subjectId === undefined ? {} : { subjectId: value.subjectId }),
     span: { ...value.span },
+    ...(value.clock ? { clock: { ...value.clock } } : {}),
     ...(value.visibility === undefined ? {} : { visibility: value.visibility.map((span) => ({ ...span })) }),
   } as const;
   if (value.kind === "present") return { ...common, kind: "present", root: normalizeElement(value.root) };
@@ -1254,7 +1269,7 @@ function normalizeVisualContribution(value: VisualContribution): VisualContribut
     kind: "process",
     inputs: value.inputs.map((input) => ({
       name: input.name,
-      contribution: normalizeVisualContribution(input.contribution),
+      ...(input.contribution ? { contribution: normalizeVisualContribution(input.contribution) } : {}),
     })),
     effect: sealVisualProcessEffect(value.effect),
   };
@@ -1278,6 +1293,7 @@ function visualTrackContent(value: Omit<VisualTrack, "kind">): VisualTrack {
           id: item.id,
           ...(item.subjectId === undefined ? {} : { subjectId: item.subjectId }),
           span: { ...item.span },
+          ...(item.clock ? { clock: { ...item.clock } } : {}),
           ...(item.visibility === undefined ? {} : { visibility: item.visibility.map((span: FrameSpan) => ({ ...span })) }),
         } as const;
         if (item.kind === "present" || item.kind === "process") return normalizeVisualContribution(item);
@@ -1385,13 +1401,13 @@ export function visualPresents(track: VisualTrack): readonly VisualPresent[] {
 export function visualContributionPresents(contribution: VisualContribution): readonly VisualPresent[] {
   return contribution.kind === "present"
     ? [contribution]
-    : contribution.inputs.flatMap((input) => visualContributionPresents(input.contribution));
+    : contribution.inputs.flatMap((input) => input.contribution ? visualContributionPresents(input.contribution) : []);
 }
 
 export function visualProcesses(track: VisualTrack): readonly VisualProcess[] {
   const processes = (contribution: VisualContribution): VisualProcess[] => contribution.kind === "present"
     ? []
-    : [contribution, ...contribution.inputs.flatMap((input) => processes(input.contribution))];
+    : [contribution, ...contribution.inputs.flatMap((input) => input.contribution ? processes(input.contribution) : [])];
   return track.items.flatMap((item) => item.kind === "adjustment" ? [] : processes(item));
 }
 
@@ -1518,10 +1534,13 @@ export function assertAudioTrackIdentity(track: AudioTrack, timeline?: Timeline)
         { frameRate: { numerator: 48_000, denominator: 1 } }, "nearest"),
     };
     assertAudioLevelAutomation(clip, targetSamples, totalSamples);
+    const level = clip.levelOrigin ?? clip.target;
+    if (compareExactTemporalValues(level.start, clip.target.start) > 0 || compareExactTemporalValues(level.end, clip.target.end) < 0) throw new Error(`${track.id}.${clip.id} fade interval does not cover the target.`);
+    const levelDuration = subtractExactTemporalValues(level.end, level.start);
     if (compareExactTemporalValues(clip.fadeIn, zero) < 0
-      || compareExactTemporalValues(clip.fadeIn, targetDuration) > 0
+      || compareExactTemporalValues(clip.fadeIn, levelDuration) > 0
       || compareExactTemporalValues(clip.fadeOut, zero) < 0
-      || compareExactTemporalValues(clip.fadeOut, targetDuration) > 0) {
+      || compareExactTemporalValues(clip.fadeOut, levelDuration) > 0) {
       throw new Error(`${track.id}.${clip.id} fades are invalid.`);
     }
       continue;
@@ -1568,6 +1587,7 @@ function visualScopeContent(value: VisualScope): VisualScope {
         kind: "process",
         id: member.id,
         ...(member.timing === undefined ? {} : { timing: { ...member.timing } }),
+        ...(member.clock ? { clock: { ...member.clock } } : {}),
         inputs: member.inputs.map((input) => ({ name: input.name, scope: visualScopeContent(input.scope) })),
         effect: {
           inputs: [...member.effect.inputs],
@@ -1656,6 +1676,10 @@ export function sealComposition(value: CompositionDraft, timeline: Timeline): Co
   return compositionContent(value, timeline);
 }
 
+function scopeHasPicture(scope: VisualScope): boolean {
+  return scope.members.some(member => member.kind === 'process' || (member.kind === 'stack' ? Boolean(member.background) || scopeHasPicture(member.scope) : member.track.items.some(item => item.kind !== 'adjustment')));
+}
+
 function assertVisualScope(
   scope: VisualScope,
   timeline: Timeline | undefined,
@@ -1681,7 +1705,7 @@ function assertVisualScope(
         if (!/^#[0-9a-f]{6}(?:[0-9a-f]{2})?$/iu.test(member.background.color)) throw new Error(`${memberLabel}.background color is invalid.`);
         assertFrameSpan(member.background.span, timeline?.frameCount ?? Number.MAX_SAFE_INTEGER, `${memberLabel}.background.span`);
       }
-      if (member.background === undefined && !visualScopeTracks(member.scope).some((track) => visualPresents(track).length > 0)) {
+      if (member.background === undefined && !scopeHasPicture(member.scope)) {
         throw new Error(`${memberLabel} must contain a source-owning Present.`);
       }
       continue;
@@ -1691,6 +1715,7 @@ function assertVisualScope(
     }
     assertVisualProcessEffect(member.effect, `${memberLabel}.effect`);
     if (member.timing !== undefined) assertFrameSpan(member.timing, timeline?.frameCount ?? Number.MAX_SAFE_INTEGER, `${memberLabel}.timing`);
+    if (member.clock) assertAnimationClock(member.clock, member.timing ?? { startFrame: 0, endFrameExclusive: timeline?.frameCount ?? member.clock.endFrameExclusive }, memberLabel);
     const inputNames = new Set<string>();
     for (const [inputIndex, input] of member.inputs.entries()) {
       const inputLabel = `${memberLabel}.inputs.${inputIndex}`;
@@ -1699,7 +1724,7 @@ function assertVisualScope(
       if (inputNames.has(input.name)) throw new Error(`${memberLabel} repeats input ${input.name}.`);
       inputNames.add(input.name);
       assertVisualScope(input.scope, timeline, `${inputLabel}.scope`);
-      if (!visualScopeTracks(input.scope).some((track) => visualPresents(track).length > 0)) {
+      if (input.scope.members.length > 0 && !scopeHasPicture(input.scope)) {
         throw new Error(`${inputLabel} must contain a source-owning Present.`);
       }
     }

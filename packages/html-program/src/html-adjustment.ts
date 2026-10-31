@@ -74,6 +74,7 @@ export function htmlAdjustmentScript(entries: readonly (FrameSpan & {
   readonly occurrencePath: readonly string[];
   readonly adjustmentId: string;
   readonly visibility?: readonly FrameSpan[];
+  readonly clock?: FrameSpan;
   readonly keyframes: readonly HtmlAdjustmentKeyframe[];
 })[]): string {
   return `(() => {
@@ -120,8 +121,9 @@ export function htmlAdjustmentScript(entries: readonly (FrameSpan & {
         entry.element.style.transformOrigin = state.transformOrigin;
         return;
       }
-      const length = entry.endFrameExclusive - entry.startFrame;
-      const progress = length <= 1 ? 1 : Math.max(0, Math.min(1, (frame - entry.startFrame) / (length - 1)));
+      const origin = entry.clock ?? entry;
+      const length = origin.endFrameExclusive - origin.startFrame;
+      const progress = length <= 1 ? 1 : Math.max(0, Math.min(1, (frame - origin.startFrame) / (length - 1)));
       entry.probe.cancel();
       entry.probe.pause();
       entry.probe.currentTime = progress * 1000;

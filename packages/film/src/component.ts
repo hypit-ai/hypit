@@ -4,7 +4,7 @@ import type { RefinementPackage } from "@hypit/hypit/refinement";
 import type { Value } from "@hypit/hypit/protocol";
 import type { AudioTrack, Composition, VisualTrack } from "@hypit/composition";
 import type { Canvas } from "@hypit/spatial";
-import type { TemporalInstant } from "@hypit/temporal";
+import type { TemporalInstant, TemporalWindow } from "@hypit/temporal";
 import type { Timeline } from "@hypit/timeline";
 
 import { filmProducers, filmTypes } from "./manifest.js";
@@ -44,7 +44,8 @@ export const filmComponent = {
         valueOf<FilmTrackSet>(inputs.set?.value, "FilmTrackSet"),
         valueOf<Timeline>(inputs.timeline?.value, "Timeline"),
         valueOf<Composition>(inputs.composition?.value, "Composition"),
-        valueOf<TemporalInstant>(inputs.at?.value, "TemporalInstant"),
+        valueOf<TemporalWindow>(inputs.during?.value, "TemporalWindow"),
+        valueOf<TemporalInstant>(inputs.from?.value, "TemporalInstant"),
       )) }),
     },
     {

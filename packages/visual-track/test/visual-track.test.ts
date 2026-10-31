@@ -580,7 +580,7 @@ test("a Transition applies a package-owned effect over the exact Clip intersecti
   const process = projected.items.find((item) => item.kind === "process");
   assert.ok(process?.kind === "process");
   assert.deepEqual(process.span, { startFrame: 45, endFrameExclusive: 60 });
-  assert.deepEqual(process.inputs.map(({ name, contribution }) => ({ name, id: contribution.id })), [
+  assert.deepEqual(process.inputs.map(({ name, contribution }) => ({ name, id: contribution?.id })), [
     { name: "outgoing", id: "outgoing" }, { name: "incoming", id: "incoming" },
   ]);
   assert.deepEqual(process.effect, effect);
@@ -626,7 +626,7 @@ test("a timed Transition reaches HTML with both Prepared Media clocks intact", (
   const process = track.items.find((item) => item.kind === "process");
   assert.ok(process?.kind === "process");
   assert.deepEqual(process.span, { startFrame: 45, endFrameExclusive: 60 });
-  assert.deepEqual(process.inputs.map(({ name, contribution }) => ({ name, span: contribution.span })), [
+  assert.deepEqual(process.inputs.map(({ name, contribution }) => ({ name, span: contribution?.span })), [
     { name: "outgoing", span: { startFrame: 0, endFrameExclusive: 60 } },
     { name: "incoming", span: { startFrame: 45, endFrameExclusive: 100 } },
   ]);

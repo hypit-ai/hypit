@@ -46,6 +46,10 @@ An executor that evaluates the same immutable Map for many frames or samples bin
 `createTemporalMapEvaluator` once at its Programme boundary. It uses this same sided evaluator while
 keeping structural validation out of the hot loop; it is not a second sampling rule or a relaxed Map.
 
+`sliceTemporalMap` restricts the target to an exact interval and rebases it to zero under the caller's
+new target-domain identity. Affine rates, wrapping, cubic curves and later mapping stages retain
+their source meaning.
+
 Exact duration, rate, relative-point, affine-relation and cubic-relation parsing is part of this package's
 syntax-neutral value contract and is exported from the main entry. Duration literals include exact
 rational seconds such as `1/30s`, alongside `12f`, `250ms` and `1.5s`. Author packages can therefore

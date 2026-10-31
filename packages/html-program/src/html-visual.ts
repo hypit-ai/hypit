@@ -136,6 +136,7 @@ export function htmlVisualScript(entries: readonly {
   readonly id: string;
   readonly startFrame: number;
   readonly durationFrames: number;
+  readonly clock?: { readonly startFrame: number; readonly endFrameExclusive: number };
   readonly program: Pick<HtmlVisual, "data" | "html" | "setup">;
 }[], context: { readonly width: number; readonly height: number } = { width: 0, height: 0 }): string {
   return `(() => {
@@ -147,7 +148,7 @@ export function htmlVisualScript(entries: readonly {
       try {
         const render = entry.program.setup === undefined ? () => {} :
           new Function('root', 'data', 'context', entry.program.setup)(root, entry.program.data, {
-            durationFrames: entry.durationFrames,
+            durationFrames: entry.clock ? entry.clock.endFrameExclusive - entry.clock.startFrame : entry.durationFrames,
             width: ${context.width},
             height: ${context.height},
           });
@@ -163,13 +164,14 @@ export function htmlVisualScript(entries: readonly {
     })));
     let previousFrame;
     const renderAt = (entry, frame) => {
-      const local = frame - entry.startFrame;
-      const region = local < 0 ? 'before' : local >= entry.durationFrames ? 'after' : 'active';
+      const local = frame - (entry.clock?.startFrame ?? entry.startFrame);
+      const duration = entry.clock ? entry.clock.endFrameExclusive - entry.clock.startFrame : entry.durationFrames;
+      const region = frame < entry.startFrame ? 'before' : frame >= entry.startFrame + entry.durationFrames ? 'after' : 'active';
       // Preserve initial and crossed boundary poses. Active seeks always redraw,
       // including repeated frames after an asynchronously prepared image became ready.
       if (region !== 'active' && entry.region === region) return;
       try {
-        const result = entry.render(Math.max(0, Math.min(entry.durationFrames, local)));
+        const result = entry.render(Math.max(0, Math.min(duration, local)));
         if (result != null && typeof result.then === 'function') {
           // Observe a later rejection, but never let asynchronous drawing race frame capture.
           Promise.resolve(result).catch(fail);

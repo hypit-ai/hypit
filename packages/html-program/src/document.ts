@@ -304,6 +304,7 @@ type ElementContext = {
   readonly presentDurationFrames: number;
   readonly presentStartFrame: number;
   readonly presentUsage: readonly FrameSpan[];
+  readonly clock: FrameSpan;
   readonly programNumerator: number;
   readonly programDenominator: number;
   readonly stackIndex: number;
@@ -406,9 +407,9 @@ function renderElement(
   const textContext = {
     occurrencePath: context.occurrencePath,
     presentId: context.presentId,
-    durationFrames: context.presentDurationFrames,
-    durationSeconds: context.presentDuration,
-    presentStartFrame: context.presentStartFrame,
+    durationFrames: context.clock.endFrameExclusive - context.clock.startFrame,
+    durationSeconds: frameSeconds(context.clock.endFrameExclusive - context.clock.startFrame, context.programNumerator, context.programDenominator),
+    presentStartFrame: context.clock.startFrame,
     programNumerator: context.programNumerator,
     programDenominator: context.programDenominator,
     escape: escapeHtml,
@@ -551,6 +552,7 @@ function renderVisualPresent(
     presentDurationFrames: present.span.endFrameExclusive - present.span.startFrame,
     presentStartFrame: present.span.startFrame,
     presentUsage: present.visibility ?? [present.span],
+    clock: present.clock ?? present.span,
     programNumerator: numerator,
     programDenominator: denominator,
     stackIndex,
@@ -587,9 +589,9 @@ function renderVisualProcess(
 ): string {
   const id = stableId(["visual-process", ...occurrencePath, process.id]);
   const program = readHtmlVisual(process.effect.program);
-  const slots = new Map(process.inputs.map((input, index) => [input.name, renderVisualContribution(
+  const slots = new Map(process.inputs.map((input, index) => [input.name, input.contribution ? renderVisualContribution(
     contributionInputPath(occurrencePath, process, input.name),
-    input.contribution,
+    input.contribution!,
     index + 1,
     [...paintPath, index + 1],
     numerator,
@@ -600,7 +602,7 @@ function renderVisualProcess(
     videoSources,
     processUsages,
     false,
-  )]));
+  ) : ""]));
   const contents = htmlVisualHtml(program, slots);
   const visible = process.visibility === undefined
     ? contents
@@ -636,6 +638,7 @@ type RenderedAdjustment = {
     readonly occurrencePath: readonly string[];
     readonly adjustmentId: string;
     readonly visibility?: readonly FrameSpan[];
+    readonly clock?: FrameSpan;
     readonly keyframes: ReturnType<typeof readHtmlAdjustment>["keyframes"];
   };
 };
@@ -655,6 +658,7 @@ function renderVisualAdjustment(
       id,
       occurrencePath,
       adjustmentId: adjustment.id,
+      ...(adjustment.clock ? { clock: adjustment.clock } : {}),
       startFrame: adjustment.span.startFrame,
       endFrameExclusive: adjustment.span.endFrameExclusive,
       ...(adjustment.visibility === undefined ? {} : { visibility: adjustment.visibility.map((span) => ({ ...span })) }),
@@ -930,9 +934,9 @@ function contributionOccurrences(
   contribution: VisualContribution,
 ): ContributionOccurrences {
   if (contribution.kind === "present") return { presents: [{ occurrencePath, present: contribution }], processes: [] };
-  const children = contribution.inputs.map((input) => contributionOccurrences(
+  const children = contribution.inputs.filter(input => input.contribution).map((input) => contributionOccurrences(
     contributionInputPath(occurrencePath, contribution, input.name),
-    input.contribution,
+    input.contribution!,
   ));
   return {
     presents: children.flatMap((child) => child.presents),
@@ -969,6 +973,7 @@ function emitHtml(
     readonly id: string;
     readonly startFrame: number;
     readonly durationFrames: number;
+    readonly clock?: FrameSpan;
     readonly program: ReturnType<typeof readHtmlVisual>;
   }[] = [];
   const processStages: string[] = [];
@@ -1020,7 +1025,7 @@ function emitHtml(
           stageKeys: renderedInputs.map(({ key }) => key),
           spans: [processSpan],
         });
-        scopePrograms.push({ id, startFrame: processSpan.startFrame, durationFrames: processSpan.endFrameExclusive - processSpan.startFrame, program });
+        scopePrograms.push({ id, startFrame: processSpan.startFrame, durationFrames: processSpan.endFrameExclusive - processSpan.startFrame, ...(entry.process.clock ? { clock: entry.process.clock } : {}), program });
         html += `\n    <div id="${id}" class="hypit-visual-scope-process"${captureContributions ? " data-hypit-capture-root" : ""} data-hypit-process-id="${escapeHtml(entry.process.id)}" data-hypit-occurrence-path="${escapeHtml(JSON.stringify(processPath))}" data-hypit-paint-path="${escapeHtml(JSON.stringify(processPaintPath))}" data-hypit-contribution-start-frame="${processSpan.startFrame}" data-hypit-contribution-end-frame="${processSpan.endFrameExclusive}" style="position:absolute;inset:0;z-index:${stackIndex};overflow:hidden;pointer-events:none;isolation:isolate">${htmlVisualHtml(program, slots)}</div>`;
         continue;
       }
@@ -1044,11 +1049,13 @@ function emitHtml(
   const fontCss = renderFontFaces(composition, stableId);
   const programs = [...visuals.flatMap(({ occurrencePath, present }) => visualElements(present.root).flatMap(element => element.kind !== "program" ? [] : [{
     id: stableId(["visual-occurrence", ...occurrencePath, present.id, element.id]),
+    ...(present.clock ? { clock: present.clock } : {}),
     startFrame: present.span.startFrame,
     durationFrames: present.span.endFrameExclusive - present.span.startFrame,
     program: readHtmlVisual(element.program),
   }])), ...processes.map(({ occurrencePath, process }) => ({
     id: stableId(["visual-process", ...occurrencePath, process.id]),
+    ...(process.clock ? { clock: process.clock } : {}),
     startFrame: process.span.startFrame,
     durationFrames: process.span.endFrameExclusive - process.span.startFrame,
     program: readHtmlVisual(process.effect.program),

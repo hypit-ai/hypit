@@ -110,7 +110,8 @@ export const filmAuthorDeclaration: AuthorDeclarationCompiler = {
         fields: [
           { name: "id", kind: "identifier", required: true, summary: "Names this Compound occurrence." },
           { name: "source", kind: "reference", required: true, accepts: [compositionTypes.composition], summary: "Selects the local Composition." },
-          { name: "at", kind: "reference", required: true, accepts: [temporalTypes.instant], summary: "Selects the parent placement start." },
+          { name: "during", kind: "reference", required: true, accepts: [temporalTypes.window], summary: "Selects the parent placement interval." },
+          { name: "from", kind: "reference", required: true, accepts: [temporalTypes.instant], summary: "Selects the source position on the local Timeline." },
         ],
       }, {
         name: "Stack",
@@ -161,7 +162,7 @@ export const filmAuthorDeclaration: AuthorDeclarationCompiler = {
       throw new Error(`${declaration.name}.appearance must reference an authored Recipe value.`);
     }
     const appearance = filmAppearanceFromRecipe((appearanceValue as unknown as Recipe).properties);
-    const tracks: Array<FilmTrackInput & { readonly source: AuthorResolvedReference; readonly at?: AuthorResolvedReference }> = [];
+    const tracks: Array<FilmTrackInput & { readonly source: AuthorResolvedReference; readonly during?: AuthorResolvedReference; readonly from?: AuthorResolvedReference }> = [];
     const audio: number[] = [];
     const sourceSlots = new Map<string, number>();
     const addTrack = async (
@@ -215,11 +216,11 @@ export const filmAuthorDeclaration: AuthorDeclarationCompiler = {
         if (memberIds.has(memberId)) throw new Error(`${subject} contains duplicate visual member id ${memberId}.`);
         memberIds.add(memberId);
         if (child.name === "Compound") {
-          if (!root) throw new Error('Compound must be declared directly inside Film.');
           const source = await resolved(child, 'source', compositionTypes.composition, resolveReference);
-          const at = await resolved(child, 'at', temporalTypes.instant, resolveReference);
+          const during = await resolved(child, 'during', temporalTypes.window, resolveReference);
+          const from = await resolved(child, 'from', temporalTypes.instant, resolveReference);
           const slot = tracks.length;
-          tracks.push({ name: `track-${slot + 1}`, kind: 'compound', source, at });
+          tracks.push({ name: `track-${slot + 1}`, kind: 'compound', source, during, from });
           members.push({ kind: 'compound', id: memberId, slot });
           continue;
         }
@@ -286,7 +287,7 @@ export const filmAuthorDeclaration: AuthorDeclarationCompiler = {
           program: { kind: "record", id: programId },
           canvas: canvas.ref,
           timeline: timeline.ref,
-          ...Object.fromEntries(tracks.flatMap((track) => [[track.name, track.source.ref], ...(track.at ? [[`${track.name}:at`, track.at.ref]] : [])])),
+          ...Object.fromEntries(tracks.flatMap((track) => [[track.name, track.source.ref], ...(track.during && track.from ? [[`${track.name}:during`, track.during.ref], [`${track.name}:from`, track.from.ref]] : [])])),
         },
         outputs: { composition: `${id}.composition` },
         range: declaration.range,

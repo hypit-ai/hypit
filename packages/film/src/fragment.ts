@@ -20,8 +20,10 @@ function assertTrackInputs(tracks: readonly FilmTrackInput[]): FilmTrackInput[] 
       if (names.has(track.name)) throw new Error(`Film Track input name ${track.name} is reserved or duplicated.`);
       names.add(track.name);
       if (track.kind === "compound") {
-        if (names.has(`${track.name}:at`)) throw new Error(`Film input ${track.name}:at is duplicated.`);
-        names.add(`${track.name}:at`);
+        for (const field of ["during", "from"]) {
+          if (names.has(`${track.name}:${field}`)) throw new Error(`Film input ${track.name}:${field} is duplicated.`);
+          names.add(`${track.name}:${field}`);
+        }
       }
       return track;
     });
@@ -50,7 +52,7 @@ export function createFilmAssemblyFragment(options: FilmAssemblyFragmentOptions)
       producer: track.kind === "compound" ? filmProducers.appendCompound
         : track.kind === "visual" ? filmProducers.appendVisualTrack : filmProducers.appendAudioTrack,
       inputs: track.kind === "compound"
-        ? { set: operation(current), timeline: input("timeline"), composition: input(track.name), at: input(`${track.name}:at`) }
+        ? { set: operation(current), timeline: input("timeline"), composition: input(track.name), during: input(`${track.name}:during`), from: input(`${track.name}:from`) }
         : { set: operation(current), timeline: input("timeline"), track: input(track.name) },
       result: { kind: "output" as const, name: "set" },
     });
@@ -74,7 +76,8 @@ export function createFilmAssemblyFragment(options: FilmAssemblyFragmentOptions)
       { name: "timeline", type: timelineTypes.timeline },
       ...tracks.flatMap((track) => track.kind === "compound" ? [
         { name: track.name, type: compositionTypes.composition },
-        { name: `${track.name}:at`, type: temporalTypes.instant },
+        { name: `${track.name}:during`, type: temporalTypes.window },
+        { name: `${track.name}:from`, type: temporalTypes.instant },
       ] : [{ name: track.name, type: track.kind === "visual" ? compositionTypes.visualTrack : compositionTypes.audioTrack }]),
     ],
     operations,
