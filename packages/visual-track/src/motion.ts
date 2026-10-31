@@ -66,10 +66,6 @@ export function assertVisualClipMotion(value: VisualClipMotion, label: string): 
   assert(Array.isArray(value.keyframes) && value.keyframes.length >= 1, `${label} needs at least one keyframe.`);
   for (const [index, keyframe] of value.keyframes.entries()) assertPose(keyframe, `${label}.keyframes.${index}`);
   const origin = value.keyframes[0]!;
-  if (value.keyframes.length === 1) {
-    assert(origin.at.kind === "start" && origin.at.offsetFrames === 0,
-      `${label} single Pose must be anchored at start.`);
-  }
   assert(value.keyframes.every((keyframe) => keyframe.originX === origin.originX && keyframe.originY === origin.originY),
     `${label} transform origin must remain constant; animate sampling or author a component when the pivot itself changes.`);
 }
@@ -93,9 +89,9 @@ function resolvedKeyframes(value: VisualClipMotion, durationFrames: number): rea
     previous = frame;
     return { frame, pose };
   });
-  if (resolved.length === 1) return [resolved[0]!, { frame: durationFrames, pose: resolved[0]!.pose }];
-  assert(resolved[0]!.frame === 0 && resolved.at(-1)!.frame === durationFrames,
-    "Visual motion must cover the complete Clip-local clock from start through end.");
+  const first = resolved[0]!, last = resolved.at(-1)!;
+  if (first.frame > 0) resolved.unshift({ frame: 0, pose: first.pose });
+  if (last.frame < durationFrames) resolved.push({ frame: durationFrames, pose: last.pose });
   return resolved;
 }
 
