@@ -7,6 +7,13 @@ export type FilmProgram = {
   readonly visual: FilmVisualPlan;
   /** Slots of root AudioTrack inputs summed by Film. */
   readonly audio: readonly number[];
+  /** Editing groups address clip identities within the Film's Track inputs. */
+  readonly links?: readonly FilmLink[];
+};
+
+export type FilmLink = {
+  readonly id: string;
+  readonly members: readonly { readonly slot: number; readonly clip: string }[];
 };
 
 export type FilmVisualPlanMember =

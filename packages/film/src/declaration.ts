@@ -17,7 +17,7 @@ import { createFilmAssemblyFragment } from "./fragment.js";
 import { filmModuleRef, filmTypes } from "./manifest.js";
 import { sealFilmProgram } from "./program.js";
 import { filmAppearanceFromRecipe } from "./recipe.js";
-import type { FilmTrackInput, FilmVisualPlanMember } from "./types.js";
+import type { FilmLink, FilmTrackInput, FilmVisualPlanMember } from "./types.js";
 
 type DeclarationNode = AuthorDeclaration | AuthorDeclarationChild;
 
@@ -89,6 +89,12 @@ export const filmAuthorDeclaration: AuthorDeclarationCompiler = {
     children: { group: "members" },
     childGroups: {
       members: [{
+        name: "Link",
+        cardinality: "many",
+        summary: "Groups Track clips for coordinated editing within this Film.",
+        fields: [{ name: "id", kind: "identifier", required: true, summary: "Names the editing group." }],
+        children: { group: "linked-clips" },
+      }, {
         name: "Track",
         cardinality: "many",
         summary: "Places one VisualTrack or adds one root AudioTrack.",
@@ -112,6 +118,15 @@ export const filmAuthorDeclaration: AuthorDeclarationCompiler = {
             summary: "Selects the package-owned Process effect and its named input contract." },
         ],
         children: { group: "inputs" },
+      }],
+      "linked-clips": [{
+        name: "Member",
+        cardinality: "many",
+        summary: "Identifies one clip in a Film Track input.",
+        fields: [
+          { name: "source", kind: "reference", required: true, accepts: [compositionTypes.visualTrack, compositionTypes.audioTrack], summary: "Selects a Track included in this Film." },
+          { name: "clip", kind: "literal", required: true, summary: "Selects the clip identity within the Track." },
+        ],
       }],
       inputs: [{
         name: "Input",
@@ -173,6 +188,10 @@ export const filmAuthorDeclaration: AuthorDeclarationCompiler = {
       const members: FilmVisualPlanMember[] = [];
       const memberIds = new Set<string>();
       for (const child of children) {
+        if (child.name === "Link") {
+          if (!root) throw new Error('Link must be declared directly inside Film.');
+          continue;
+        }
         if (child.name === "Track") {
           const member = await addTrack(child, root);
           if (member !== undefined) {
@@ -219,12 +238,23 @@ export const filmAuthorDeclaration: AuthorDeclarationCompiler = {
       return members;
     };
     const visual = { members: await visualChildren(declaration.children, true, declaration.name) };
+    const links: FilmLink[] = [];
+    for (const link of declaration.children.filter(child => child.name === 'Link')) {
+      const members: { slot: number; clip: string }[] = [];
+      for (const member of link.children) {
+        const source = await trackReference(member, resolveReference);
+        const slot = sourceSlots.get(referenceKey(source));
+        if (slot === undefined) throw new Error('Link Member must reference a Track included in this Film.');
+        members.push({ slot, clip: literal(member, 'clip') });
+      }
+      links.push({ id: literal(link, 'id'), members });
+    }
     const programId = `${id}.program`;
     return {
       records: [{
         id: programId,
         type: filmTypes.program,
-        value: sealFilmProgram({ id, clearColor: appearance.clearColor, visual, audio }),
+        value: sealFilmProgram({ id, clearColor: appearance.clearColor, visual, audio, ...(links.length ? { links } : {}) }),
         range: declaration.range,
       }],
       components: [{

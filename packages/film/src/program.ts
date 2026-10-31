@@ -17,6 +17,7 @@ function filmProgramContent(value: FilmProgram): FilmProgram {
     clearColor: value.clearColor,
     visual: structuredClone(value.visual),
     audio: [...value.audio],
+    ...(value.links === undefined ? {} : { links: structuredClone(value.links) }),
   };
 }
 
@@ -92,6 +93,20 @@ export function assertFilmProgramIdentity(program: FilmProgram): void {
       throw new Error(`FilmProgram.audio.${index} is invalid or duplicated.`);
     }
     audioSlots.add(slot);
+  }
+  const linkIds = new Set<string>(), linked = new Set<string>();
+  for (const link of program.links ?? []) {
+    if (!link.id?.trim() || linkIds.has(link.id) || !Array.isArray(link.members) || link.members.length < 2) {
+      throw new Error('Film Link requires a unique id and at least two members.');
+    }
+    linkIds.add(link.id);
+    for (const member of link.members) {
+      const key = JSON.stringify([member.slot, member.clip]);
+      if ((!visualSlots.has(member.slot) && !audioSlots.has(member.slot)) || !member.clip?.trim() || linked.has(key)) {
+        throw new Error('Film Link member must identify one Track clip and belong to one Link.');
+      }
+      linked.add(key);
+    }
   }
 }
 
@@ -178,6 +193,15 @@ export function compileFilmComposition(
   });
   if (usedSlots.size !== set.tracks.length || [...set.tracks.keys()].some((slot) => !usedSlots.has(slot))) {
     throw new Error("FilmProgram must use every assembled Track.");
+  }
+  for (const link of program.links ?? []) {
+    for (const member of link.members) {
+      const track = trackAt(member.slot);
+      const found = track.kind === 'visual'
+        ? track.items.some(item => item.subjectId === member.clip || item.id === member.clip)
+        : track.graph.nodes.some(node => node.kind === 'source' && (node.clip.subjectId === member.clip || node.clip.id === member.clip));
+      if (!found) throw new Error(`Film Link ${link.id} references missing clip ${member.clip}.`);
+    }
   }
   const composition = sealComposition({
     id: program.id,

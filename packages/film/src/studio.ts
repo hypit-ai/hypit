@@ -15,4 +15,8 @@ export const filmStudioCompanions: readonly StudioFilmCompanion[] = [{
     sourceAttribute: "source",
     types: [compositionTypes.visualTrack, compositionTypes.audioTrack],
   },
+  links: {
+    childDeclaration: "Link", idAttribute: "id", memberDeclaration: "Member",
+    sourceAttribute: "source", clipAttribute: "clip",
+  },
 }];

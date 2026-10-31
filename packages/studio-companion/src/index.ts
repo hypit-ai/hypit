@@ -682,6 +682,14 @@ export type StudioFilmCompanion = {
     readonly sourceAttribute: string;
     readonly types: readonly TypeRef[];
   };
+  /** Package-owned source vocabulary for persistent linked editing groups. */
+  readonly links?: {
+    readonly childDeclaration: string;
+    readonly idAttribute: string;
+    readonly memberDeclaration: string;
+    readonly sourceAttribute: string;
+    readonly clipAttribute: string;
+  };
 };
 
 export type StudioTemporalDomainSourceMap = {

@@ -33,7 +33,7 @@ The package-owned `film` declaration compiler validates an imported generic SVS 
 passes the Timeline directly, type-checks each `<film:Track source={...}/>` reference and generates
 the finite fold. Visual Tracks require `id`; Audio Tracks reject it. Canvas is the only
 dimension truth, Timeline is the only time-range truth, and FilmProgram owns only assembly
-identity, clear color and its visual/audio plan.
+identity, clear color, its visual/audio plan and linked editing groups.
 Film has no author-selectable color-space field and does not name delivery formats or renderers.
 Its recursive Track/Stack/Process grammar is expressed by declaration-local child groups in the syntax-neutral
 Author shape. Markup contributes only the `Film` spelling; direct callers and other Frontends use the
@@ -42,6 +42,22 @@ Markup helpers.
 Child order is visual structure, so Film needs no second numeric ordering channel. Visual occurrence
 identity belongs to Film; Track value identity, Present identity and timing remain in their own typed
 values. Final rendering is a separate author package and capability.
+
+`Link` is a direct Film child that preserves a group of clips for coordinated editing. Each
+`Member` selects a Track already included in the Film and a clip identity within that Track:
+
+```xml
+<film:Link id="camera-take">
+  <film:Member source={picture.visual} clip="take-1"/>
+  <film:Member source={sound.audio} clip="take-1-sound"/>
+</film:Link>
+```
+
+A Link requires at least two distinct members. Each Track/clip pair belongs to at most one Link.
+Film validates Track membership and checks clip identities when assembling the evaluated Tracks.
+Positions and source ranges stay on the linked clips; editors preserve their relative offsets
+when moving a group. Splitting, trimming and unlinking are explicit source editing transactions.
+The Film Companion declares the Link/Member vocabulary for editor discovery.
 
 For example, after the named inputs are declared:
 

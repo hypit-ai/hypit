@@ -29,6 +29,13 @@ export const filmProgramSchema: ValueSchema = object({
   // Film owns the recursive Plan refinement; admission keeps the envelope domain-neutral.
   visual: { schema: object({ members: { schema: { kind: "array", items: object({}, true) } } }) },
   audio: { schema: { kind: "array", items: { kind: "number", integer: true, minimum: 0 } } },
+  links: { optional: true, schema: { kind: "array", items: object({
+    id: { schema: string },
+    members: { schema: { kind: "array", items: object({
+      slot: { schema: { kind: "number", integer: true, minimum: 0 } },
+      clip: { schema: string },
+    }) } },
+  }) } },
 });
 
 export const filmTrackSetSchema: ValueSchema = object({
