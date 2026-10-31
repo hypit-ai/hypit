@@ -1,6 +1,6 @@
 {
   "name": "@hypit/kernel",
-  "version": "0.0.0-dev",
+  "version": "0.4.1-preview.0",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
   "type": "module",
@@ -8,6 +8,6 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@hypit/protocol": "workspace:*"
+    "@hypit/protocol": "workspace:0.4.1-preview.0"
   }
 }

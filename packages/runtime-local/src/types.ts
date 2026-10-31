@@ -2,7 +2,7 @@ import type { RefinementPackage } from "@hypit/hypit/refinement";
 import type { Awaitable, ProducerPackage } from "@hypit/hypit/producer";
 import type { EndpointInstance } from "@hypit/hypit/endpoint";
 import type { LoadedPackage } from "@hypit/hypit/loader";
-import type { BuildResultStore } from "@hypit/result/runtime-storage";
+import type { BuildResultStore } from "@hypit/hypit/result/runtime-storage";
 import type {
   ResourceStore,
   BuildStore,

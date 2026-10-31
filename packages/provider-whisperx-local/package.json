@@ -1,6 +1,6 @@
 {
   "name": "@hypit/provider-whisperx-local",
-  "version": "0.3.0",
+  "version": "0.4.1-preview.0",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
   "type": "module",
@@ -21,9 +21,9 @@
     "activation": "./src/activation.ts"
   },
   "peerDependencies": {
-    "@hypit/hypit": "workspace:^0.4.0",
-    "@hypit/runtime-local": "workspace:^0.2.0",
-    "@hypit/whisperx": "workspace:^0.3.0"
+    "@hypit/hypit": "workspace:0.4.1-preview.0",
+    "@hypit/runtime-local": "workspace:0.4.1-preview.0",
+    "@hypit/whisperx": "workspace:0.4.1-preview.0"
   },
   "devDependencies": {
     "@hypit/endpoint": "workspace:*",
@@ -35,6 +35,6 @@
     "@hypit/executor": "workspace:*"
   },
   "dependencies": {
-    "@hypit/speech-evidence": "workspace:^0.2.0"
+    "@hypit/speech-evidence": "workspace:0.4.1-preview.0"
   }
 }

@@ -1,6 +1,6 @@
 {
   "name": "@hypit/hypit",
-  "version": "0.4.0",
+  "version": "0.4.1-preview.0",
   "homepage": "https://hypit.ai",
   "repository": {
     "type": "git",
@@ -144,6 +144,21 @@
       "hypit-source": "./packages/text/src/index.ts",
       "types": "./dist/public/text.d.ts",
       "import": "./packages/text/src/index.ts"
+    },
+    "./result/runtime-storage": {
+      "hypit-source": "./packages/result/src/runtime-storage.ts",
+      "types": "./dist/public/result-runtime-storage.d.ts",
+      "import": "./packages/result/src/runtime-storage.ts"
+    },
+    "./result/runtime-storage/node": {
+      "hypit-source": "./packages/result/src/node/runtime-storage.ts",
+      "types": "./dist/public/result-runtime-storage-node.d.ts",
+      "import": "./packages/result/src/node/runtime-storage.ts"
+    },
+    "./loader/node/distribution-resolution": {
+      "hypit-source": "./packages/loader/src/node/distribution-resolution.ts",
+      "types": "./dist/public/loader-node-distribution-resolution.d.ts",
+      "import": "./packages/loader/src/node/distribution-resolution.ts"
     }
   },
   "bin": {
@@ -322,18 +337,19 @@
     "@hypit/visual-transition": "workspace:*"
   },
   "dependencies": {
-    "@hypit/browser-capture": "workspace:^0.2.1",
-    "@hypit/speech-estimate": "workspace:^0.1.2",
-    "@hypit/media-local": "workspace:^0.3.0",
-    "@hypit/runtime-local": "workspace:^0.2.0",
-    "@hypit/video": "workspace:^0.3.0",
-    "@hypit/studio": "workspace:^0.3.0",
-    "@hypit/whisperx": "workspace:^0.3.0",
-    "@hypit/yt-dlp": "workspace:^0.2.1",
+    "@hypit/browser-capture": "workspace:0.4.1-preview.0",
+    "@hypit/speech-estimate": "workspace:0.4.1-preview.0",
+    "@hypit/media-local": "workspace:0.4.1-preview.0",
+    "@hypit/runtime-local": "workspace:0.4.1-preview.0",
+    "@hypit/video": "workspace:0.4.1-preview.0",
+    "@hypit/studio": "workspace:0.4.1-preview.0",
+    "@hypit/whisperx": "workspace:0.4.1-preview.0",
+    "@hypit/yt-dlp": "workspace:0.4.1-preview.0",
     "@types/node": "24.10.1",
     "koffi": "3.2.1",
     "tsx": "4.21.0",
     "typescript": "5.9.3",
-    "cjs-module-lexer": "2.2.1"
+    "cjs-module-lexer": "2.2.1",
+    "@hypit/nle": "workspace:0.4.1-preview.0"
   }
 }

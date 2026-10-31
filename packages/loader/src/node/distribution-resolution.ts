@@ -1,7 +1,7 @@
 import { registerHooks } from "node:module";
 import { join, resolve } from "node:path";
 import { existsSync, readFileSync } from "node:fs";
-import { pathToFileURL } from "node:url";
+import { pathToFileURL, fileURLToPath } from "node:url";
 
 import {
   embeddedPackageDirectory,
@@ -82,4 +82,9 @@ export function installDistributionPackageResolution(roots: readonly string[]): 
       return nextResolve(specifier, context);
     },
   });
+}
+
+/** Install this Distribution's package resolver before a standalone worker loads its adapters. */
+export function installOwningDistributionPackageResolution(): void {
+  installDistributionPackageResolution([fileURLToPath(new URL("../../../../", import.meta.url))]);
 }

@@ -1,6 +1,6 @@
 {
   "name": "@hypit/provider-html-electron-local",
-  "version": "0.1.0",
+  "version": "0.4.1-preview.0",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
   "type": "module",
@@ -20,15 +20,15 @@
     "activation": "./src/activation.ts"
   },
   "dependencies": {
-    "@hypit/html-program": "workspace:^0.2.0",
-    "@hypit/media": "workspace:^0.2.0",
-    "@hypit/html-render-local": "workspace:^0.1.0",
+    "@hypit/html-program": "workspace:0.4.1-preview.0",
+    "@hypit/media": "workspace:0.4.1-preview.0",
+    "@hypit/html-render-local": "workspace:0.4.1-preview.0",
     "mediabunny": "1.62.1",
     "tsx": "4.21.0"
   },
   "peerDependencies": {
-    "@hypit/hypit": "workspace:^0.4.0",
-    "@hypit/runtime-local": "workspace:^0.2.0"
+    "@hypit/hypit": "workspace:0.4.1-preview.0",
+    "@hypit/runtime-local": "workspace:0.4.1-preview.0"
   },
   "devDependencies": {
     "@hypit/caption-fine": "workspace:*",

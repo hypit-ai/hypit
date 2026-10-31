@@ -87,7 +87,7 @@ export async function verifyOutput(args: {
   assert(stream.width === args.document.canvas.width && stream.height === args.document.canvas.height,
     "Rendered visual canvas differs from its document");
   const rate = parseRational(stream.avg_frame_rate ?? stream.r_frame_rate, "Rendered visual frame rate");
-  assert(equalsRational(rate, args.document.frameRate), "Rendered visual frame rate differs from its document");
+  assert(equalsRational(rate, args.document.frameRate), `Rendered visual frame rate ${String(stream.avg_frame_rate ?? stream.r_frame_rate)} differs from ${JSON.stringify(args.document.frameRate)}`);
   assert(outputFrameCount(stream) === args.document.frameCount,
     "Rendered visual frame count differs from its document");
 }

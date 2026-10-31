@@ -1,6 +1,6 @@
 {
   "name": "@hypit/media-delivery",
-  "version": "0.1.0",
+  "version": "0.4.1-preview.0",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
   "type": "module",
@@ -8,10 +8,10 @@
   "files": ["dist", "README.md"],
   "hypit": { "activation": "./src/activation.ts" },
   "dependencies": {
-    "@hypit/media": "workspace:^0.2.0",
-    "@hypit/timeline": "workspace:^0.1.1"
+    "@hypit/media": "workspace:0.4.1-preview.0",
+    "@hypit/timeline": "workspace:0.4.1-preview.0"
   },
-  "peerDependencies": { "@hypit/hypit": "workspace:^0.4.0" },
+  "peerDependencies": { "@hypit/hypit": "workspace:0.4.1-preview.0" },
   "devDependencies": {
     "@hypit/blob": "workspace:*",
     "@hypit/producer": "workspace:*",

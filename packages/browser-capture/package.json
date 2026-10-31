@@ -1,6 +1,6 @@
 {
   "name": "@hypit/browser-capture",
-  "version": "0.2.1",
+  "version": "0.4.1-preview.0",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
   "type": "module",
@@ -9,13 +9,13 @@
     "./cli": "./src/cli.ts"
   },
   "dependencies": {
-    "@hypit/media-local": "workspace:^0.3.0",
+    "@hypit/media-local": "workspace:0.4.1-preview.0",
     "@puppeteer/browsers": "3.2.2",
     "puppeteer-core": "25.10.0",
     "sharp": "0.35.4"
   },
   "peerDependencies": {
-    "@hypit/hypit": "workspace:^0.4.0"
+    "@hypit/hypit": "workspace:0.4.1-preview.0"
   },
   "devDependencies": {
     "@hypit/hypit": "workspace:*"

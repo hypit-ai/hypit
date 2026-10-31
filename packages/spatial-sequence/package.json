@@ -1,6 +1,6 @@
 {
   "name": "@hypit/spatial-sequence",
-  "version": "0.1.0",
+  "version": "0.4.1-preview.0",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
   "type": "module",
@@ -11,15 +11,15 @@
     "activation": "./src/activation.ts"
   },
   "dependencies": {
-    "@hypit/spatial": "workspace:^0.1.1",
-    "@hypit/timeline": "workspace:^0.1.1"
+    "@hypit/spatial": "workspace:0.4.1-preview.0",
+    "@hypit/timeline": "workspace:0.4.1-preview.0"
   },
   "files": [
     "dist",
     "README.md"
   ],
   "peerDependencies": {
-    "@hypit/hypit": "workspace:^0.4.0"
+    "@hypit/hypit": "workspace:0.4.1-preview.0"
   },
   "devDependencies": {
     "@hypit/producer": "workspace:*",

@@ -223,7 +223,7 @@ export async function captureStagedVisual(input: CaptureInput, controller: Abort
           "-preset", quality === "draft" ? "veryfast" : "medium",
           // Chromium composites in sRGB: convert with the BT.709 matrix and tag the stream so players decode it the same way.
           "-vf", "scale=out_color_matrix=bt709:out_range=tv,format=yuv420p,setparams=color_primaries=bt709:color_trc=bt709:colorspace=bt709:range=tv",
-          "-movflags", "+faststart", output],
+          "-video_track_timescale", String(fps.num), "-movflags", "+faststart", output],
         timeoutMs: config.processTimeoutMs, maxOutputBytes: config.maxProcessOutputBytes, signal,
       });
     })() : undefined;
@@ -418,9 +418,9 @@ export async function captureStagedVisual(input: CaptureInput, controller: Abort
       await runProcess({ executable: ffmpegPath,
         argv: ["-v", "error", "-y", "-r", `${fps.num}/${fps.den}`, "-i", encoded.raw,
           "-an", "-c:v", "copy",
-          "-bsf:v", `setts=pts=N:dts=N:duration=1:time_base=${fps.den}/${fps.num}`,
+          "-bsf:v", `h264_metadata=colour_primaries=1:transfer_characteristics=1:matrix_coefficients=1:video_full_range_flag=0,setts=pts=N*${fps.den}:dts=N*${fps.den}:duration=${fps.den}:time_base=1/${fps.num}`,
           "-color_range", "tv", "-colorspace", "bt709", "-color_trc", "bt709", "-color_primaries", "bt709",
-          "-movflags", "+faststart", output],
+          "-video_track_timescale", String(fps.num), "-movflags", "+faststart", output],
         timeoutMs: config.processTimeoutMs, maxOutputBytes: config.maxProcessOutputBytes, signal });
       backendProfile = { frames: frameCount, requestSetupMs, workerWallMs, ...stats,
         encoderFinishMs, containerMuxMs: performance.now() - muxStarted };

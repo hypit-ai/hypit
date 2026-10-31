@@ -1,6 +1,6 @@
 {
   "name": "@hypit/media-operations",
-  "version": "0.3.0",
+  "version": "0.4.1-preview.0",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
   "type": "module",
@@ -15,7 +15,7 @@
     "activation": "./src/activation.ts"
   },
   "peerDependencies": {
-    "@hypit/hypit": "workspace:^0.4.0"
+    "@hypit/hypit": "workspace:0.4.1-preview.0"
   },
   "devDependencies": {
     "@hypit/blob": "workspace:*",
@@ -30,8 +30,8 @@
     "@hypit/hypit": "workspace:*"
   },
   "dependencies": {
-    "@hypit/media": "workspace:^0.2.0",
-    "@hypit/temporal": "workspace:^0.1.1",
-    "@hypit/timeline": "workspace:^0.1.1"
+    "@hypit/media": "workspace:0.4.1-preview.0",
+    "@hypit/temporal": "workspace:0.4.1-preview.0",
+    "@hypit/timeline": "workspace:0.4.1-preview.0"
   }
 }

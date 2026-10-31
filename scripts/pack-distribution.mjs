@@ -87,6 +87,24 @@ try {
       await releaseDependencyVersion(stagedManifest.name, name, version),
     ]),
   ));
+  // Public paths resolve through the package that owns their implementation in this candidate.
+  for (const [publicName, entry] of Object.entries(stagedManifest.exports ?? {})) {
+    const targets = typeof entry === "string" ? [entry] : Object.values(entry);
+    const source = targets.find(target => typeof target === "string" && target.startsWith("./packages/"));
+    const match = source?.match(/^\.\/packages\/([^/]+)\/(.+)$/u);
+    if (!match || embeddedPackageDirectories.has(match[1])) continue;
+    const owner = JSON.parse(await readFile(resolve(root, "packages", match[1], "package.json"), "utf8"));
+    const ownerEntry = Object.entries(owner.exports ?? {}).find(([, target]) => target === `./${match[2]}`);
+    if (!ownerEntry) throw new Error(`${publicName} has no exported owner in ${owner.name}`);
+    const specifier = owner.name + (ownerEntry[0] === "." ? "" : ownerEntry[0].slice(1));
+    const facade = `./dist/public-modules/${publicName.slice(2).replaceAll("/", "-")}.mjs`;
+    await mkdir(dirname(resolve(stage, facade)), { recursive: true });
+    await writeFile(resolve(stage, facade), `export * from ${JSON.stringify(specifier)};\n`);
+    stagedManifest.exports[publicName] = typeof entry === "string" ? facade : Object.fromEntries(
+      Object.entries(entry).map(([condition, target]) => [condition, condition === "types" ? target : facade]));
+    stagedManifest.dependencies[owner.name] = owner.version;
+  }
+  stagedManifest.files.push("dist/public-modules/*.mjs");
   delete stagedManifest.devDependencies;
   await writeFile(stagedManifestPath, `${JSON.stringify(stagedManifest, null, 2)}\n`);
 

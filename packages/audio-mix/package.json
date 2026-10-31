@@ -1,13 +1,13 @@
 {
   "name": "@hypit/audio-mix",
-  "version": "0.1.0",
+  "version": "0.4.1-preview.0",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
   "type": "module",
   "exports": { ".": "./src/index.ts" },
   "files": ["dist", "README.md"],
   "hypit": { "activation": "./src/activation.ts" },
-  "peerDependencies": { "@hypit/hypit": "workspace:^0.4.0" },
+  "peerDependencies": { "@hypit/hypit": "workspace:0.4.1-preview.0" },
   "devDependencies": {
     "@hypit/audio-program": "workspace:*",
     "@hypit/author": "workspace:*", "@hypit/composition": "workspace:*",
@@ -17,7 +17,7 @@
     "@hypit/temporal": "workspace:*", "@hypit/timeline": "workspace:*"
   },
   "dependencies": {
-    "@hypit/composition": "workspace:^0.2.0",
-    "@hypit/timeline": "workspace:^0.1.1"
+    "@hypit/composition": "workspace:0.4.1-preview.0",
+    "@hypit/timeline": "workspace:0.4.1-preview.0"
   }
 }

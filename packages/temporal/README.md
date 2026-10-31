@@ -47,7 +47,8 @@ An executor that evaluates the same immutable Map for many frames or samples bin
 keeping structural validation out of the hot loop; it is not a second sampling rule or a relaxed Map.
 
 Exact duration, rate, relative-point, affine-relation and cubic-relation parsing is part of this package's
-syntax-neutral value contract and is exported from the main entry. Author packages can therefore
+syntax-neutral value contract and is exported from the main entry. Duration literals include exact
+rational seconds such as `1/30s`, alongside `12f`, `250ms` and `1.5s`. Author packages can therefore
 construct exact Maps without importing Markup. Absolute Instant and Window author construction belongs to `@hypit/timeline-author`,
 because it selects one completed Timeline and lowers author relationships into a graph.
 Consumers declare references to completed Timeline, Instant and Window values in their own

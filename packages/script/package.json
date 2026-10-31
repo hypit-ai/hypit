@@ -1,6 +1,6 @@
 {
   "name": "@hypit/script",
-  "version": "0.2.1",
+  "version": "0.4.1-preview.0",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
   "type": "module",
@@ -16,8 +16,8 @@
     "activation": "./src/activation.ts"
   },
   "peerDependencies": {
-    "@hypit/hypit": "workspace:^0.4.0",
-    "@hypit/studio-companion": "workspace:^0.1.3"
+    "@hypit/hypit": "workspace:0.4.1-preview.0",
+    "@hypit/studio-companion": "workspace:0.4.1-preview.0"
   },
   "devDependencies": {
     "@hypit/hypit": "workspace:*",
@@ -33,9 +33,9 @@
     "@hypit/text": "workspace:*"
   },
   "dependencies": {
-    "@hypit/caption": "workspace:^0.1.1",
-    "@hypit/narrative": "workspace:^0.1.1",
-    "@hypit/narrative-caption": "workspace:^0.1.1",
-    "@hypit/narrative-temporal": "workspace:^0.1.1"
+    "@hypit/caption": "workspace:0.4.1-preview.0",
+    "@hypit/narrative": "workspace:0.4.1-preview.0",
+    "@hypit/narrative-caption": "workspace:0.4.1-preview.0",
+    "@hypit/narrative-temporal": "workspace:0.4.1-preview.0"
   }
 }

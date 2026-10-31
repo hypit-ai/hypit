@@ -33,6 +33,8 @@ app.whenReady().then(async () => {
   if (failed) return;
   const { register } = await import("tsx/esm/api");
   register();
+  const { installOwningDistributionPackageResolution } = await import("@hypit/hypit/loader/node/distribution-resolution");
+  installOwningDistributionPackageResolution();
   await import(process.argv[3]);
   process.off("message", queue);
   if (failed) return;
