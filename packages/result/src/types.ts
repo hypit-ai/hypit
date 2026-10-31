@@ -2,10 +2,11 @@ import { assertOrderedBuildId } from "@hypit/protocol";
 import type {
   BlobRef,
   CanonicalValue,
+  NeedId,
   ResultIntent,
   TypeRef,
-  CapabilityRef,
   TypedRecord,
+  Value,
 } from "@hypit/protocol";
 import { assertResultIntent } from "@hypit/protocol";
 
@@ -141,37 +142,44 @@ export function assertBuildResultValueDocument(
   });
 }
 
-export type BuildResultOutputValue =
+export type StoredBuildResultOutputValue =
   | BuildResultFileRef
   | { readonly kind: "inline"; readonly value: null | boolean | number | string }
   | { readonly kind: "value"; readonly path: string };
 
-export type BuildResultOutput = {
+export type StoredBuildResultOutput = {
   readonly type: TypeRef;
-  readonly value: BuildResultOutputValue;
+  readonly value: StoredBuildResultOutputValue;
 };
+
+/** History projection of one retained Output; storage paths remain Repository-private. */
+export type BuildResultOutput = { readonly type: TypeRef } & (
+  | { readonly representation: "inline"; readonly value: null | boolean | number | string;
+      readonly mediaType?: never; readonly size?: never }
+  | { readonly representation: "structured"; readonly value?: never;
+      readonly mediaType?: never; readonly size?: never }
+  | { readonly representation: "file"; readonly mediaType: string; readonly size: number }
+);
 
 /** Durable facts about one external operation attempted by this Build. */
 type BuildResultOperationEvidence = {
-  readonly capability: CapabilityRef;
+  /** Stable identity of the finite Build request, shared with planning and execution logs. */
+  readonly request: NeedId;
   readonly endpoint: string;
   readonly receipt?: { readonly id: string; readonly url?: string };
 };
 
 export type BuildResultOperation = BuildResultOperationEvidence & (
-  | { readonly outcome?: never; readonly acknowledgedAt: number; readonly providerCompletedAt?: number;
-      readonly failure?: never; readonly cancellation?: never }
-  | { readonly outcome: "complete"; readonly acknowledgedAt: number; readonly providerCompletedAt: number;
-      readonly failure?: never; readonly cancellation?: never }
-  | { readonly outcome: "failed"; readonly failedAt: number;
-      readonly failure: { readonly code: string; readonly message: string } }
-  | { readonly outcome: "cancelled"; readonly cancelledAt: number; readonly failure?: never; readonly cancellation: {
+  | { readonly outcome: "unsettled" | "complete"; readonly failure?: never; readonly cancellation?: never }
+  | { readonly outcome: "failed"; readonly failure: { readonly code: string; readonly message: string };
+      readonly cancellation?: never }
+  | { readonly outcome: "cancelled"; readonly failure?: never; readonly cancellation: {
       readonly outcome: "confirmed" | "accepted" | "unsupported" | "too-late" | "failed";
       readonly message?: string;
     } }
 );
 
-type BuildResultBase = {
+type StoredBuildResultBase = {
   readonly format: "hypit.build-result@1";
   /** Injected from the Repository address; `result.json` does not repeat its containing Build id. */
   readonly id: string;
@@ -179,11 +187,11 @@ type BuildResultBase = {
   readonly sourcePath: string;
   /** Author-facing names of the Build's actual final goals. */
   readonly targets: readonly string[];
-  readonly outputs: Readonly<Record<string, BuildResultOutput>>;
+  readonly outputs: Readonly<Record<string, StoredBuildResultOutput>>;
 };
 
 /** Private writable state while Runtime is still accepting retained Outputs. */
-export type BuildResultDraft = BuildResultBase & {
+export type BuildResultDraft = StoredBuildResultBase & {
   readonly outcome?: never;
   readonly finishedAt?: never;
   readonly failure?: never;
@@ -191,19 +199,36 @@ export type BuildResultDraft = BuildResultBase & {
   readonly executionLog?: never;
 };
 
-type BuildResultEvidence = {
+type StoredBuildResultEvidence = {
   readonly operations?: readonly BuildResultOperation[];
   readonly executionLog?: BuildResultFileRef;
 };
 
-/** Immutable historical record published only after the Build reaches one conclusion. */
-export type BuildResult = BuildResultBase & BuildResultEvidence & (
+/** Finished storage manifest used only by Runtime publication and Repository decoding. */
+export type StoredFinishedBuildResult = StoredBuildResultBase & StoredBuildResultEvidence & (
   | { readonly outcome: "complete"; readonly finishedAt: number; readonly failure?: never }
   | { readonly outcome: "failed" | "cancelled"; readonly finishedAt: number; readonly failure: string }
 );
 
 /** Storage state used only by Runtime publication and recovery. */
-export type StoredBuildResult = BuildResultDraft | BuildResult;
+export type StoredBuildResult = BuildResultDraft | StoredFinishedBuildResult;
+
+type BuildResultBase = {
+  readonly format: "hypit.build-result@1";
+  readonly id: string;
+  readonly sourcePath: string;
+  readonly targets: readonly string[];
+  readonly outputs: Readonly<Record<string, BuildResultOutput>>;
+  /** The Repository can open a published execution log without exposing its file address. */
+  readonly executionLog?: true;
+  readonly operations?: readonly BuildResultOperation[];
+};
+
+/** Immutable objective history published only after the Build reaches one conclusion. */
+export type BuildResult = BuildResultBase & (
+  | { readonly outcome: "complete"; readonly finishedAt: number; readonly failure?: never }
+  | { readonly outcome: "failed" | "cancelled"; readonly finishedAt: number; readonly failure: string }
+);
 
 /**
  * Read one exact retained Output name. Output names are author data, so inherited object
@@ -217,10 +242,18 @@ export function buildResultOutput(
 }
 
 /** Define an author-named retained Output without invoking special object setters such as `__proto__`. */
-export function defineBuildResultOutput(
-  outputs: Record<string, BuildResultOutput>,
+export function storedBuildResultOutput(
+  manifest: Pick<StoredBuildResult, "outputs">,
   name: string,
-  output: BuildResultOutput,
+): StoredBuildResultOutput | undefined {
+  return Object.hasOwn(manifest.outputs, name) ? manifest.outputs[name] : undefined;
+}
+
+/** Define one stored Output without invoking special object setters such as `__proto__`. */
+export function defineStoredBuildResultOutput(
+  outputs: Record<string, StoredBuildResultOutput>,
+  name: string,
+  output: StoredBuildResultOutput,
 ): void {
   Object.defineProperty(outputs, name, {
     value: output,
@@ -284,20 +317,21 @@ export type BuildResultPage = {
   readonly next?: string;
 };
 
-/** Storage-neutral retained Output and its stored value. */
-export type RepositoryBuildResultOutput = {
+/** One finished retained Output resolved to ordinary domain data and only its owned Resources. */
+export type ResolvedBuildResultOutput = {
   readonly type: TypeRef;
-  readonly value:
-    | BuildResultFileRef
-    | { readonly kind: "inline"; readonly value: null | boolean | number | string }
-    | { readonly kind: "value"; readonly path: string; readonly document: BuildResultValueDocument };
+  readonly value: Value;
+  openResource(
+    blob: BlobRef,
+    range?: BuildResultFileRange,
+  ): Promise<AsyncIterable<Uint8Array> | undefined>;
 };
 
 export type BuildResultWriter = {
   read(): Promise<StoredBuildResult>;
   /** Store newly accepted retained Outputs; no storage writes when none are new. */
   sync(input: BuildResultSync): Promise<StoredBuildResult>;
-  finish(input: BuildResultFinish): Promise<BuildResult>;
+  finish(input: BuildResultFinish): Promise<StoredFinishedBuildResult>;
 };
 
 /**
@@ -308,12 +342,10 @@ export type BuildResultHistory = {
   read(build: string): Promise<BuildResult | undefined>;
   /** Browse finished Results in descending Build-id time order. */
   browse(request: BuildResultBrowseRequest): Promise<BuildResultPage>;
-  resolve(build: string, output: string): Promise<RepositoryBuildResultOutput | undefined>;
-  openFile(
-    build: string,
-    file: BuildResultFileRef,
-    range?: BuildResultFileRange,
-  ): Promise<AsyncIterable<Uint8Array> | undefined>;
+  /** Resolve one retained Output and a reader confined to Resources actually present in that Output. */
+  resolve(build: string, output: string): Promise<ResolvedBuildResultOutput | undefined>;
+  /** Open only the execution log explicitly published by one finished Result. */
+  openExecutionLog(build: string): Promise<AsyncIterable<Uint8Array> | undefined>;
 };
 
 /** Runtime-owned publication and recovery port. Applications consume `BuildResultHistory`. */

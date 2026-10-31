@@ -407,7 +407,6 @@ export async function decodeMarkupDeclarations(
       }
       const record = value.ref.kind === "record" ? records.get(value.ref.id) : undefined;
       imported.set(path, {
-        path,
         ref: value.ref,
         type: value.type,
         ...(record === undefined ? {} : { record }),
@@ -416,7 +415,6 @@ export async function decodeMarkupDeclarations(
   }
   return await compileAuthorDeclarations({
     sourceName: source.name,
-    ...(source.id === undefined ? {} : { sourceId: source.id }),
     declarations,
     registry: options.compilers,
     resolveReference: (path) => imported.get(path),

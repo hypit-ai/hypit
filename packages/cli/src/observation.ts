@@ -1,5 +1,5 @@
 import type { BuildResult } from "@hypit/result";
-import { compareCodeUnits } from "@hypit/protocol";
+import { buildIdCreatedAt, compareCodeUnits } from "@hypit/protocol";
 
 import type { CliBuildSubmission, CliBuildView, CliRuntimeControl } from "./runtime-port.js";
 import { commandHint } from "./command-hint.js";
@@ -16,7 +16,8 @@ export type BuildProgressView = {
   readonly state: "submitting" | "working" | "saving-result";
   readonly requests?: { readonly total: number; readonly completed: number };
   readonly phases: Readonly<Record<string, number>>;
-  readonly elapsedMs: number;
+  /** Present when the Build id carries its submission time. */
+  readonly elapsedMs?: number;
   readonly details: readonly string[];
 };
 
@@ -42,12 +43,13 @@ function progressState(view: CliBuildView): BuildProgressView["state"] {
 }
 
 export function buildProgressView(view: CliBuildView, now = Date.now()): BuildProgressView {
+  const createdAt = buildIdCreatedAt(view.id);
   return {
     build: view.id,
     state: progressState(view),
     ...(view.requests === undefined ? {} : { requests: view.requests }),
     phases: progressPhases(view),
-    elapsedMs: Math.max(0, now - view.createdAt),
+    ...(createdAt === undefined ? {} : { elapsedMs: Math.max(0, now - createdAt) }),
     details: [
       ...(view.commands ?? []).map((item) => `${item.endpoint}: ${formatOperationProgress(item.progress)}`),
       ...(view.stop === undefined ? [] : [view.stop.cause === "execution-failed"
@@ -102,12 +104,14 @@ export function buildProgressLines(
     ? []
     : [`${progress.requests.completed}/${progress.requests.total} steps complete`];
   const phases = Object.entries(progress.phases).map(([phase, count]) => `${count} ${phase}`);
-  const seconds = Math.floor(progress.elapsedMs / 1_000);
-  const elapsed = seconds < 60
-    ? `${seconds}s`
-    : `${Math.floor(seconds / 60)}m ${String(seconds % 60).padStart(2, "0")}s`;
+  const seconds = progress.elapsedMs === undefined ? undefined : Math.floor(progress.elapsedMs / 1_000);
+  const elapsed = seconds === undefined
+    ? []
+    : [seconds < 60
+      ? `${seconds}s`
+      : `${Math.floor(seconds / 60)}m ${String(seconds % 60).padStart(2, "0")}s`];
   return [
-    `  · ${[state, ...requestProgress, ...phases, elapsed].join(" · ")}`,
+    `  · ${[state, ...requestProgress, ...phases, ...elapsed].join(" · ")}`,
     ...(options.verbose ? progress.details.slice(0, options.limit).map((line) => `    ${line}`) : []),
   ];
 }

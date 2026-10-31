@@ -91,6 +91,85 @@ export async function runBoundedMediaProcess(options: {
     }))).stdout;
 }
 
+/**
+ * Stream a line-oriented tool response through a bounded parser. Total output may scale with media
+ * duration, while retained memory is limited to one line and the caller's aggregate state.
+ */
+export function runMediaProcessLines(options: {
+  readonly executable: string;
+  readonly argv: readonly string[];
+  readonly timeoutMs: number;
+  readonly maxLineBytes: number;
+  readonly onLine: (line: string) => void;
+  readonly sharedLibraryPath?: string;
+}): Promise<void> {
+  return new Promise((resolveRun, reject) => {
+    const child = spawn(options.executable, [...options.argv], {
+      stdio: ["ignore", "pipe", "pipe"],
+      windowsHide: true,
+      env: mediaProcessEnv(options.sharedLibraryPath === undefined ? undefined : {
+        LD_LIBRARY_PATH: options.sharedLibraryPath,
+      }),
+    });
+    let pending = Buffer.alloc(0);
+    let err = "";
+    let settled = false;
+    const finish = (error?: Error): void => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      if (error === undefined) resolveRun();
+      else reject(error);
+    };
+    const emit = (line: Buffer): boolean => {
+      if (line.byteLength > options.maxLineBytes) {
+        child.kill("SIGKILL");
+        finish(new Error(`${options.executable} output line exceeded the configured limit`));
+        return false;
+      }
+      try {
+        options.onLine(line.toString("utf8").replace(/\r$/u, ""));
+        return true;
+      } catch (error) {
+        child.kill("SIGKILL");
+        finish(error instanceof Error ? error : new Error(String(error)));
+        return false;
+      }
+    };
+    const timer = setTimeout(() => {
+      child.kill("SIGKILL");
+      finish(new Error(`${options.executable} timed out after ${options.timeoutMs} ms`));
+    }, options.timeoutMs);
+    child.stdout?.on("data", (chunk: Buffer) => {
+      let bytes = pending.byteLength === 0 ? chunk : Buffer.concat([pending, chunk]);
+      let newline = bytes.indexOf(0x0a);
+      while (newline >= 0) {
+        if (!emit(bytes.subarray(0, newline))) return;
+        bytes = bytes.subarray(newline + 1);
+        newline = bytes.indexOf(0x0a);
+      }
+      pending = Buffer.from(bytes);
+      if (pending.byteLength > options.maxLineBytes) {
+        child.kill("SIGKILL");
+        finish(new Error(`${options.executable} output line exceeded the configured limit`));
+      }
+    });
+    child.stderr?.on("data", (chunk: Buffer) => {
+      err = `${err}${chunk.toString("utf8")}`.slice(-100_000);
+    });
+    child.on("error", (error) => finish(new Error(`${options.executable} could not start: ${error.message}`)));
+    child.on("close", (code) => {
+      if (settled) return;
+      if (code !== 0) {
+        finish(new Error(`${options.executable} exited with ${code}: ${err.trim()}`));
+        return;
+      }
+      if (pending.byteLength > 0 && !emit(pending)) return;
+      finish();
+    });
+  });
+}
+
 /** Run one external program to completion and return its stdout; stderr becomes the error text. */
 export async function runProcess(executable: string, args: readonly string[], timeoutMs = 300_000): Promise<Buffer> {
   return (await run(executable, args, undefined, timeoutMs)).stdout;

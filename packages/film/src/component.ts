@@ -7,8 +7,8 @@ import type { Canvas } from "@hypit/spatial";
 import type { Timeline } from "@hypit/timeline";
 
 import { filmProducers, filmTypes } from "./manifest.js";
-import { appendFilmAudioTrack, appendFilmVisualTrack, assertFilmProgramIdentity, assertFilmTrackSetIdentity, compileFilmComposition, createFilmTrackSet } from "./program.js";
-import type { FilmProgram, FilmTrackSet } from "./types.js";
+import { appendFilmAudioTrack, appendFilmVisualTrack, assertFilmAssemblyPlanIdentity, assertFilmTrackSetIdentity, compileFilmComposition, createFilmTrackSet } from "./program.js";
+import type { FilmAssemblyPlan, FilmTrackSet } from "./types.js";
 
 function valueOf<T>(value: Value | undefined, subject: string): T {
   if (value === undefined) throw new Error(`${subject} is missing`);
@@ -40,7 +40,7 @@ export const filmComponent = {
     {
       producer: filmProducers.compileComposition,
       handler: ({ inputs }) => ({ kind: "output", value: (canonicalize(compileFilmComposition(
-          valueOf<FilmProgram>(inputs.program?.value, "FilmProgram"),
+          valueOf<FilmAssemblyPlan>(inputs.assembly?.value, "FilmAssemblyPlan"),
           valueOf<Canvas>(inputs.canvas?.value, "Canvas"),
           valueOf<Timeline>(inputs.timeline?.value, "Timeline"),
           valueOf<FilmTrackSet>(inputs.set?.value, "FilmTrackSet"),
@@ -48,8 +48,8 @@ export const filmComponent = {
     },
   ],
   refinements: [
-    { type: filmTypes.program,
-      handler: ({ value }) => assertFilmProgramIdentity(valueOf<FilmProgram>(value, "FilmProgram")) },
+    { type: filmTypes.assembly,
+      handler: ({ value }) => assertFilmAssemblyPlanIdentity(valueOf<FilmAssemblyPlan>(value, "FilmAssemblyPlan")) },
     { type: filmTypes.trackSet,
       handler: ({ value }) => assertFilmTrackSetIdentity(valueOf<FilmTrackSet>(value, "FilmTrackSet")) },
   ],

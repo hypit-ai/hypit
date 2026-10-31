@@ -23,6 +23,8 @@ export type VideoSlot = FrameSpan & {
   readonly src: string;
   readonly sourceKey: string;
   readonly usage: HtmlArtifactUsage;
+  readonly evaluateSampling: TemporalMapEvaluator;
+  readonly programClock: Clock;
 } & (
   | {
       readonly kind: "media";
@@ -33,15 +35,11 @@ export type VideoSlot = FrameSpan & {
       readonly sampleAspectRatio: { readonly numerator: number; readonly denominator: number };
       readonly rotation: 0 | 90 | 180 | 270;
       readonly presentationStart: ExactValue;
-      readonly evaluateSampling: TemporalMapEvaluator;
-      readonly programClock: Clock;
     }
   | {
       readonly kind: "surface";
       readonly streamIndex: 0;
       readonly picture: Extract<HtmlVideoSource, { readonly kind: "surface" }>["picture"];
-      readonly sourceFrame: Rational;
-      readonly sourceRate: Rational;
       readonly sourceFps: { readonly num: number; readonly den: number };
     }
 );
@@ -115,8 +113,8 @@ export function videoSlots(
       picture,
       startFrame: source.startFrame,
       endFrameExclusive: source.endFrameExclusive,
-      sourceFrame: { numerator: BigInt(source.sourceFrame.numerator), denominator: BigInt(source.sourceFrame.denominator) },
-      sourceRate: { numerator: BigInt(source.sourceRate.numerator), denominator: BigInt(source.sourceRate.denominator) },
+      evaluateSampling: createTemporalMapEvaluator(source.sampling),
+      programClock: structuredClone(programClock),
       sourceFps: { num: source.sourceFrameRate.numerator, den: source.sourceFrameRate.denominator },
     };
   });
@@ -136,7 +134,7 @@ function usedAt(usage: HtmlArtifactUsage, frame: number): boolean {
   return span !== undefined && frame >= span.startFrame;
 }
 
-function exactSourceSampleAt(slot: Extract<VideoSlot, { readonly kind: "media" }>, frame: number): {
+function exactSourceSampleAt(slot: VideoSlot, frame: number): {
   readonly timestamp: Rational;
   readonly direction: -1 | 0 | 1;
 } | undefined {
@@ -145,7 +143,9 @@ function exactSourceSampleAt(slot: Extract<VideoSlot, { readonly kind: "media" }
   const mapped = slot.evaluateSampling(exactTemporalValueFromFrames(localFrame, slot.programClock), "after");
   if (mapped === undefined) return undefined;
   return {
-    timestamp: exactTemporalRational(addExactTemporalValues(slot.presentationStart, mapped.position)),
+    timestamp: exactTemporalRational(slot.kind === "media"
+      ? addExactTemporalValues(slot.presentationStart, mapped.position)
+      : mapped.position),
     direction: mapped.sourceSide === "before" ? -1 : 1,
   };
 }
@@ -172,13 +172,13 @@ export function sourceFrameAt(slot: VideoSlot, frame: number, frames?: SourceFra
     }
     return Math.max(0, Math.min(frames.timestamps.length - 1, low - 1));
   }
-  const a = slot.sourceFrame;
-  const r = slot.sourceRate;
-  const numerator = a.numerator * r.denominator
-    + BigInt(frame - slot.startFrame) * r.numerator * a.denominator;
-  const denominator = a.denominator * r.denominator;
-  const value = Number(numerator / denominator
-    - (r.numerator < 0n && numerator % denominator === 0n ? 1n : 0n));
+  const sample = exactSourceSampleAt(slot, frame);
+  if (sample === undefined) return undefined;
+  const numerator = sample.timestamp.numerator * BigInt(slot.sourceFps.num);
+  const denominator = sample.timestamp.denominator * BigInt(slot.sourceFps.den);
+  const ordinal = numerator / denominator
+    - (sample.direction === -1 && numerator % denominator === 0n ? 1n : 0n);
+  const value = Number(ordinal);
   assert(Number.isSafeInteger(value) && value >= 0, "HTML Program source frame exceeds safe arithmetic");
   return value;
 }

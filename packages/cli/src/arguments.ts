@@ -33,6 +33,7 @@ type RawOptions = {
   readonly slot?: string;
   readonly credentialFile?: string;
   readonly source?: string;
+  readonly request?: number;
   readonly seenOptions: readonly string[];
 };
 
@@ -68,7 +69,8 @@ function parseArguments(argv: readonly string[], cwd: string): CliCommand {
     case "pricing": {
       const [source, rest] = requiredPositional(tail, `${command} requires one Source`);
       const options = commandOptions(command, rest, cwd,
-        "--runtime", "--package-root", "--project", "--asset-root", "--target", "--limit");
+        "--runtime", "--package-root", "--project", "--asset-root", "--target", "--limit",
+        ...(command === "plan" ? ["--request"] as const : []));
       if (command === "pricing") return {
         command,
         source,
@@ -87,6 +89,7 @@ function parseArguments(argv: readonly string[], cwd: string): CliCommand {
         assetRoots: options.assetRoots,
         targets: options.targets,
         limit: options.limit,
+        ...(options.request === undefined ? {} : { request: options.request }),
         ...optionalProject(options),
         ...optionalRuntime(options),
         ...optionalPackageRoot(options),
@@ -294,6 +297,7 @@ function parseOptions(values: readonly string[], cwd: string): RawOptions {
   let slot: string | undefined;
   let credentialFile: string | undefined;
   let source: string | undefined;
+  let request: number | undefined;
   const seenOptions = new Set<string>(global.seenOptions);
   for (let index = 0; index < global.remaining.length; index += 1) {
     const item = global.remaining[index]!;
@@ -359,6 +363,10 @@ function parseOptions(values: readonly string[], cwd: string): RawOptions {
     if (item === "--source") {
       source = resolve(cwd, optionValue(global.remaining, index, "--source requires a source path")); index += 1; continue;
     }
+    if (item === "--request") {
+      request = positiveInteger(optionValue(global.remaining, index, "--request requires a positive integer"), "--request");
+      index += 1; continue;
+    }
     throw new Error(`unknown option ${item}`);
   }
   return {
@@ -382,6 +390,7 @@ function parseOptions(values: readonly string[], cwd: string): RawOptions {
     ...(slot === undefined ? {} : { slot }),
     ...(credentialFile === undefined ? {} : { credentialFile }),
     ...(source === undefined ? {} : { source }),
+    ...(request === undefined ? {} : { request }),
   };
 }
 

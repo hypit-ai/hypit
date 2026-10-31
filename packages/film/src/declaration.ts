@@ -15,7 +15,7 @@ import { timelineTypes } from "@hypit/timeline";
 
 import { createFilmAssemblyFragment } from "./fragment.js";
 import { filmModuleRef, filmTypes } from "./manifest.js";
-import { sealFilmProgram } from "./program.js";
+import { sealFilmAssemblyPlan } from "./program.js";
 import { filmAppearanceFromRecipe } from "./recipe.js";
 import type { FilmTrackInput, FilmVisualPlanMember } from "./types.js";
 
@@ -77,7 +77,7 @@ function outputBinding(component: string): AuthorDeclarationBinding {
 export const filmAuthorDeclaration: AuthorDeclarationCompiler = {
   module: filmModuleRef,
   declaration: "film",
-  outputs: [filmTypes.program, compositionTypes.composition],
+  outputs: [filmTypes.assembly, compositionTypes.composition],
   shape: {
     summary: "Assembles recursive visual scopes and root audio signals into one Composition.",
     fields: [
@@ -219,12 +219,12 @@ export const filmAuthorDeclaration: AuthorDeclarationCompiler = {
       return members;
     };
     const visual = { members: await visualChildren(declaration.children, true, declaration.name) };
-    const programId = `${id}.program`;
+    const assemblyId = `${id}.assembly`;
     return {
       records: [{
-        id: programId,
-        type: filmTypes.program,
-        value: sealFilmProgram({ id, clearColor: appearance.clearColor, visual, audio }),
+        id: assemblyId,
+        type: filmTypes.assembly,
+        value: sealFilmAssemblyPlan({ id, clearColor: appearance.clearColor, visual, audio }),
         range: declaration.range,
       }],
       components: [{
@@ -234,7 +234,7 @@ export const filmAuthorDeclaration: AuthorDeclarationCompiler = {
           tracks,
         }),
         inputs: {
-          program: { kind: "record", id: programId },
+          assembly: { kind: "record", id: assemblyId },
           canvas: canvas.ref,
           timeline: timeline.ref,
           ...Object.fromEntries(tracks.map((track) => [track.name, track.source.ref])),

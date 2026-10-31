@@ -85,9 +85,12 @@ declarative form selects this package through the Runtime Profile.
 
 The Endpoint:
 
-- bounds subprocess duration and ffprobe JSON size;
+- bounds subprocess duration and metadata response size; decoded frame facts are consumed one compact
+  line at a time, so long media does not require one complete frame JSON document in memory;
 - invokes binaries without a shell;
 - enumerates all streams while the Runtime-owned toolchain reports its executable versions separately;
+- publishes presentation endpoints only when decoded-unit facts support the final boundary;
+  it does not promote cadence estimates or gap thresholds into exact timing;
 - maps explicit stream indexes into ffmpeg instead of relying on `0:v:0` / `0:a:0` guesses;
 - evaluates each selected signal through its Prepared Media map onto the shared local domain when a concrete operation needs bytes;
 - preserves source A/V offset as transparent visual gaps or silent audio gaps without reconstructing
@@ -155,6 +158,8 @@ signals in output blocks. The AudioProgram is one closed signal graph.
 It does not infer pitch-preserving stretch from a temporal relation: such a
 reconstruction policy is an explicit Clip reconstruction with its own programme owner. The Provider
 implements `@hypit/audio-stretch` PreservePitch for a complete positive-affine, non-looping occurrence;
+its source trim keeps exact rational boundaries through Map composition and uses Temporal's shared nearest-boundary
+rule on the 48 kHz grid. Only the final FFmpeg tempo parameter is floating point.
 other relations or reconstruction formats are accurately unsupported rather than silently resampled.
 Speech-evidence projection remains intentionally narrower and reports its positive-affine, non-looping
 signal boundary instead of rewriting the preserved media relation.

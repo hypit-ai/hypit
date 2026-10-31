@@ -9,7 +9,6 @@ import { wanImageAuthorDeclaration, wanMarkupDeclarations } from "../src/declara
 import { wanEndpoints, wanModuleRef } from "../src/index.js";
 
 const prompt: AuthorResolvedReference = {
-  path: "prompt",
   ref: { kind: "component-output", component: "direction", output: "text" },
   type: textTypes.text,
 };

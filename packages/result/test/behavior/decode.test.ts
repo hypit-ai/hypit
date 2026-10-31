@@ -1,8 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { decodeBuildResultValueDocument } from "@hypit/result";
-import { decodeStoredBuildResult } from "@hypit/result/runtime-storage";
+import { decodeBuildResultValueDocument, decodeStoredBuildResult } from "@hypit/result/runtime-storage";
 
 test("Result decoding rejects contradictory terminal and Operation states", () => {
   const build = "bld_20260902T100000000Z_0000000001";
@@ -23,8 +22,7 @@ test("Result decoding rejects contradictory terminal and Operation states", () =
     outcome: "failed",
     finishedAt: 1,
     failure: "build failed",
-    operations: [{ capability: { module: { name: "example", version: "1" }, name: "generate" },
-      endpoint: "remote", outcome: "failed", failedAt: 0 }],
+    operations: [{ request: "need:generate", endpoint: "remote", outcome: "failed" }],
   }, build), /failed Operation has no failure/u);
   assert.throws(() => decodeStoredBuildResult({
     ...base,
@@ -32,18 +30,17 @@ test("Result decoding rejects contradictory terminal and Operation states", () =
     finishedAt: 1,
     failure: "build failed",
     operations: [{
-      capability: { module: { name: "example", version: "1" }, name: "generate" },
-      endpoint: "remote", acknowledgedAt: 0,
+      request: "need:generate",
+      endpoint: "remote", outcome: "unsettled",
       failure: { code: "IMPOSSIBLE", message: "stale" },
     }],
-  }, build), /accepted Operation cannot have a failure/u);
+  }, build), /unsettled Operation cannot have a failure/u);
   assert.equal(decodeStoredBuildResult({
     ...base,
     outcome: "failed",
     finishedAt: 1,
     failure: "other branch failed",
-    operations: [{ capability: { module: { name: "example", version: "1" }, name: "generate" },
-      endpoint: "remote", acknowledgedAt: 0, providerCompletedAt: 1, outcome: "complete" }],
+    operations: [{ request: "need:generate", endpoint: "remote", outcome: "complete" }],
   }, build).operations?.[0]?.outcome, "complete");
 });
 

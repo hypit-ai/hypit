@@ -6,7 +6,7 @@ explains the contributing layers; [Targets](targets.md) explains selecting Outpu
 Components author the picture and sound contributions. Film assembles the selected contributions
 with Timeline and Canvas into a Composition. Rendering evaluates that composition over a frame
 interval and produces the encoded media. The
-same composition can therefore be inspected in Studio, rendered in part, or rendered as a whole.
+same composition can therefore be rendered in part for review or rendered as a whole for delivery.
 
 ## Assemble the picture and sound
 
@@ -79,7 +79,7 @@ Root AudioTracks are additive signals rather than a map keyed by Track id. Selec
 produced signals with the same value id keeps both contributions; intentional repeated routing of one
 source should be expressed by the component or Audio Mix that owns that relationship.
 
-`main.composition` is the assembled work, usable in Studio. `final.video` asks for an encoded video.
+`main.composition` is the assembled work. `final.video` asks for an encoded video.
 A compatible Composition from another component can also feed the HTML Video declaration. Pure A-roll may
 need only one Visual Clip and one Audio Clip, with Caption when wanted. Additional coverage
 and graphics in this excerpt illustrate optional independent contributions.
@@ -166,9 +166,9 @@ declared assets and validates typed visual surfaces. Extra browsers help only wh
 preparation and final encoding contribute separately. Reusing authored project media avoids generation work; it does
 not preserve a previous render's temporary preparation.
 
-For a local composition change, use [snapshot](snapshots.md) first to inspect the changed
-relationship and its handoffs in Studio's current HTML Programme. Keep consumers referencing the
-intended project material. Range rendering supplies an encoded clip when that is needed; render the complete
+For a local composition change, use [snapshot](snapshots.md) on an existing HTML Programme when one
+is already materialized, or render a focused interval to inspect the changed relationship and its
+handoffs with sound. Keep consumers referencing the intended project material. Render the complete
 deliverable when the composition is ready.
 While rendering, communicate the current phase and meaningful progress. The Provider reports
 decoding, browser startup, capture, encoding and storage; `hypit logs <build-id>` preserves their

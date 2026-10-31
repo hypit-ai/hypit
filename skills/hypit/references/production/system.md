@@ -91,15 +91,15 @@ implements it.
 
 Film explicitly selects its Timeline, Canvas and required visual/audio outputs.
 
-## Source, Targets, Runtime and Studio
+## Source, Targets, Runtime and review
 
 Author Source connects material requests, time and space values, components and deliverables.
-Recipes hold reusable treatments. Each plan, Build or Studio command explicitly selects public
+Recipes hold reusable treatments. Each plan or Build command explicitly selects public
 Outputs as Targets. Durable material and its consumer references remain in the Author Source.
 
 A Build records Targets as execution evidence and stores only package-owned Outputs whose declarations
 give them a cross-Build lifetime. Runtime
 Profiles select already installed Providers, Endpoints and credentials for external work.
 
-Studio opens the selected composition. Companions give useful Items and controls to project components.
-[Authoring](authoring.md), [Targets](targets.md), [Builds](builds.md) and [Studio](studio.md) own those workflows.
+[Authoring](authoring.md), [Targets](targets.md), [Builds](builds.md) and [Review](review.md) own
+revision, execution, evidence and delivery.

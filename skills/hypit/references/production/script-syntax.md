@@ -77,7 +77,7 @@ Chinese prose does not require word-by-word markup. The group's Style determines
 `||` still controls which reading phrases appear as separate Cues.
 
 With speech omitted, the left side supplies both projections, so semantic markers can be placed
-there and Studio writes back there: `<组@{beat!}件化|>`. Display attributes and markers are annotations,
+there: `<组@{beat!}件化|>`. Display attributes and markers are annotations,
 not spoken words. Attributes still apply to the preceding display word rather than the whole group.
 With an explicit spoken side, markers continue to belong on that right-hand side.
 Either form needs a spoken word: `<API|...>` supplies no speech correspondence for its display.
@@ -135,8 +135,8 @@ from speech tokens. A space is display information, not an extra timed token. Ca
 line/Cue start. [Caption authoring](caption-authoring.md) explains consuming these values in a new family.
 
 The Script source and its projections answer different needs. Source preserves the author's prose;
-display and speech normalize ordinary whitespace as above. Studio moving a marker relocates only
-that annotation and retains unrelated source whitespace. Explicit Script formatting may reindent
+display and speech normalize ordinary whitespace as above. Relocating a marker changes only that
+annotation and retains unrelated source whitespace. Explicit Script formatting may reindent
 and compact whitespace while preserving the same parsed meaning.
 
 ## Use the Script's deliberate projections

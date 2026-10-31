@@ -18,6 +18,7 @@
     "README.md"
   ],
   "dependencies": {
+    "@hypit/result": "workspace:^0.0.0-dev",
     "koffi": "3.2.1"
   },
   "peerDependencies": {
@@ -34,7 +35,6 @@
     "@hypit/producer": "workspace:*",
     "@hypit/project": "workspace:*",
     "@hypit/protocol": "workspace:*",
-    "@hypit/result": "workspace:*",
     "@hypit/runtime": "workspace:*",
     "@hypit/workspace": "workspace:*"
   }

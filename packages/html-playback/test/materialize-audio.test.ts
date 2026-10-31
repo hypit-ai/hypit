@@ -17,15 +17,13 @@ test("audio DOM is owned by shared playback and preserves the exact AudioProgram
   const program = sealAudioProgram({
     frameRate: { numerator: 30, denominator: 1 },
     frameCount: 30,
-    sampleRate: 48_000,
-    sampleFrames: 48_000,
     graph: audioProgramGraphFromClips([{
       id: "voice:0",
       ...(() => {
         const domain = { id: "voice", duration: exactTemporalValueFromFrames(48_000,
           { frameRate: { numerator: 48_000, denominator: 1 } }) };
         const media = { source: artifact, domain, audio: { streamIndex: 0, presentationStart: exactTemporalZero(),
-          sourceDomain: domain, map: identityTemporalMap(domain), interpretation: { sampleRate: 48_000, channels: 2 } } };
+          sourceDomain: domain, map: identityTemporalMap(domain) } };
         return { source: preparedAudioSource(media), preparation: media.audio.map,
           sampling: sealTemporalMap({ stages: [{
             target: { id: "voice:occurrence", duration: exactTemporalValueFromFrames(24_000,
@@ -45,10 +43,6 @@ test("audio DOM is owned by shared playback and preserves the exact AudioProgram
         start: exactTemporalValueFromFrames(4_800, { frameRate: { numerator: 48_000, denominator: 1 } }),
         end: exactTemporalValueFromFrames(28_800, { frameRate: { numerator: 48_000, denominator: 1 } }),
       },
-      targetStartSample: 4_800,
-      targetEndSampleExclusive: 28_800,
-      mixStartSample: 4_800,
-      mixEndSampleExclusive: 28_800,
       gain: 2,
       fadeInSamples: 2_400,
       fadeOutSamples: 4_800,
@@ -85,18 +79,16 @@ test("audio DOM lowers explicit pitch preservation without inventing a second sp
   const domain = { id: "tone", duration: one };
   const program = sealAudioProgram({
     frameRate: { numerator: 30, denominator: 1 }, frameCount: 15,
-    sampleRate: 48_000, sampleFrames: 24_000,
     graph: audioProgramGraphFromClips([{
       id: "tone",
       source: { source: artifact, streamIndex: 0, presentationStart: zero, sourceDomain: domain,
-        interpretation: { sampleRate: 48_000, channels: 2 } },
+      },
       preparation: identityTemporalMap(domain),
       sampling: sealTemporalMap({ stages: [{ target: { id: "tone:occurrence", duration: half }, source: domain,
         pieces: [{ target: { start: zero, end: half }, sourceAtStart: zero,
           rate: { numerator: 2, denominator: 1 } }] }] }),
       reconstruction: preservePitch(),
-      target: { start: zero, end: half }, targetStartSample: 0, targetEndSampleExclusive: 24_000,
-      mixStartSample: 0, mixEndSampleExclusive: 24_000, gain: 1, fadeInSamples: 0, fadeOutSamples: 0,
+      target: { start: zero, end: half }, gain: 1, fadeInSamples: 0, fadeOutSamples: 0,
     }]),
   });
   const html = lowerPlaybackAudio(program, () => "/tone.wav");

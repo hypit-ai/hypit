@@ -15,7 +15,7 @@ test("parallel appends form complete records, another reader sees their bounded 
     const reader = fileExecutionLogs((build) => join(root, build));
     const view = (await reader.read("build", 3))!;
     assert.equal(view.total, 40);
-    assert.deepEqual(view.records.map((item) => item.command), ["c37", "c38", "c39"]);
+    assert.deepEqual(view.records.map((item) => item.request), ["c37", "c38", "c39"]);
     await appendFile(join(root, "build/execution.jsonl"), '{"unfinished":');
     assert.deepEqual(await reader.read("build", 3), view);
     assert.equal(await reader.read("missing", 3), undefined);

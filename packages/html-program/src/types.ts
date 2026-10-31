@@ -55,8 +55,6 @@ export type HtmlSurface = {
 export type HtmlProcessUsage = {
   /** Compiler order of this Process inside its owning document. */
   readonly order: number;
-  /** Number of named input pictures the renderer must rasterize for this Process. */
-  readonly passes: number;
   /** Exact compiler-owned stage keys, in named-input execution order. */
   readonly stageKeys: readonly string[];
   /** Ordered, disjoint absolute parent-frame spans where these passes can execute. */
@@ -83,8 +81,8 @@ export type HtmlVideoSource = FrameSpan & {
       readonly artifactId: string;
       /** Author-declared interpretation of the materialized Surface pixels. */
       readonly picture: PictureInterpretation;
-      readonly sourceFrame: { readonly numerator: number; readonly denominator: number };
-      readonly sourceRate: { readonly numerator: number; readonly denominator: number };
+      /** Exact occurrence-local target-to-Surface relation. */
+      readonly sampling: TemporalMap;
       readonly sourceFrameRate: { readonly numerator: number; readonly denominator: number };
     }
 );

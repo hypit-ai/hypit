@@ -14,6 +14,7 @@ import type {
   TemporalAffineMapPiece,
   TemporalMapPiece,
   TemporalMapStage,
+  TemporalRange,
 } from "./types.js";
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -276,4 +277,73 @@ export function evaluateTemporalMap(
 export function createTemporalMapEvaluator(value: TemporalMap): TemporalMapEvaluator {
   assertTemporalMap(value);
   return (targetAt, side) => evaluateTemporalMapCore(value, targetAt, side);
+}
+
+type StructuralRegion =
+  | { readonly kind: "range"; readonly start: ExactTemporalValue; readonly end: ExactTemporalValue }
+  | { readonly kind: "point"; readonly at: ExactTemporalValue };
+
+function overlappingPieces(stage: TemporalMapStage, region: StructuralRegion): readonly {
+  readonly piece: TemporalMapPiece;
+  readonly start: ExactTemporalValue;
+  readonly end: ExactTemporalValue;
+}[] {
+  if (region.kind === "point") {
+    const pieces = [stagePiece(stage, region.at, "before"), stagePiece(stage, region.at, "after")]
+      .filter((piece, index, all): piece is TemporalMapPiece => piece !== undefined && all.indexOf(piece) === index);
+    return pieces.map((piece) => ({ piece, start: region.at, end: region.at }));
+  }
+  return stage.pieces.flatMap((piece) => {
+    if (compareExactTemporalValues(piece.target.start, region.end) >= 0
+      || compareExactTemporalValues(piece.target.end, region.start) <= 0) return [];
+    return [{
+      piece,
+      start: compareExactTemporalValues(piece.target.start, region.start) > 0
+        ? piece.target.start : region.start,
+      end: compareExactTemporalValues(piece.target.end, region.end) < 0
+        ? piece.target.end : region.end,
+    }];
+  });
+}
+
+function sourceRegion(
+  piece: TemporalMapPiece,
+  start: ExactTemporalValue,
+  end: ExactTemporalValue,
+): StructuralRegion {
+  if (isAffineTemporalMapPiece(piece) && piece.wrap !== undefined) {
+    return { kind: "range", start: piece.wrap.start, end: piece.wrap.end };
+  }
+  const left = pieceValue(piece, start);
+  const right = pieceValue(piece, end);
+  const order = compareExactTemporalValues(left, right);
+  if (order === 0) return { kind: "point", at: left };
+  return order < 0
+    ? { kind: "range", start: left, end: right }
+    : { kind: "range", start: right, end: left };
+}
+
+function stagesMayContain(
+  stages: readonly TemporalMapStage[],
+  index: number,
+  region: StructuralRegion,
+): boolean {
+  const overlaps = overlappingPieces(stages[index]!, region);
+  if (overlaps.length === 0) return false;
+  if (index === stages.length - 1) return true;
+  return overlaps.some(({ piece, start, end }) =>
+    stagesMayContain(stages, index + 1, sourceRegion(piece, start, end)));
+}
+
+/**
+ * Conservatively answer whether any content relation crosses a target interval.
+ *
+ * This walks piece support and source envelopes; it never samples a frame or audio grid. Wrapped
+ * pieces deliberately propagate their complete wrap interval, so `true` may prepare more source
+ * data than a particular discrete clock reads, while `false` proves the whole interval is a gap.
+ */
+export function temporalMapMayContain(value: TemporalMap, target: TemporalRange): boolean {
+  assertTemporalMap(value);
+  if (compareExactTemporalValues(target.start, target.end) >= 0) return false;
+  return stagesMayContain(value.stages, 0, { kind: "range", start: target.start, end: target.end });
 }

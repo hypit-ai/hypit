@@ -67,7 +67,7 @@ promising to restart failed execution or describing the interruption as a Result
 | Command | Default scope | Explicit detail |
 | --- | --- | --- |
 | `check` | Validation, targets and counts | `--verbose`: exported names/types and authored values |
-| `plan` | Targets, demanded requests, Endpoint selection and diagnostics | `--verbose`: deployment capabilities and successful diagnostics |
+| `plan` | Targets and complete aggregate external work, Endpoint selection and diagnostics | `--verbose`: bounded individual request facts; `--request <number>`: one complete request |
 | `pricing` | Requests that may incur a Provider charge and their rate material | `--verbose`: declared no-charge requests and original documents |
 | `status`, `activity` | Current work, Provider-reported phases and failures | `--verbose`: individual operations; activity also includes capacity reservations |
 | `inspect` | Targets, retained Outputs, outcome and failure evidence | `--output <name>` selects one Output; `--verbose` adds full operation receipts and Output details |
@@ -141,9 +141,12 @@ hypit plan /path/to/video-project/main.svml --target final.video --project /path
 deployment from its capability, return Type and Profile binding even when its Producer still depends on
 upstream work. Only a complete request emitted by an executed Producer is passed to the selected
 Endpoint's `supports` predicate. Blocked requests report author-facing pending inputs and support as
-`not-evaluated`; they never expose graph joins or carry partial constraints. Concrete request summaries
-are display-only projections of the actual constraints and do not participate in selection, support or
-submission.
+`not-evaluated`; they never expose graph joins or carry partial constraints. The default report groups
+all external work by Capability, readiness and selected deployment without traversing request constraints.
+`--verbose` gives each request a one-based position scoped only to that freshly evaluated plan and keeps
+the expanded list under `--limit`; errors remain visible. `--request <number>` explicitly selects one
+position and prints its complete canonical constraints, or explains which upstream inputs prevent those
+constraints from existing. The position is a CLI selection aid, never a Need identity or retained fact.
 
 `pricing <source> --target <output>` uses that selected Runtime to read Provider-owned rate material. The default report
 summarizes requests whose selected Endpoint explicitly declares `pricing.kind: "local"` as having no
@@ -152,16 +155,16 @@ or unsupported concrete requests remain visible. A blocked request can show the 
 static price page or local declaration, but request-sensitive `readPricing` remains deferred. Names,
 model families and request parameters do not determine whether work is free.
 
-Matching capability, Endpoint and pricing material share one group. Each group shows shared request
-parameters once and preserves the counts and combinations of varying parameters. A Provider's optional
-document summary supplies the default rate display; otherwise the document itself is shown, or the
+Matching capability, Endpoint and pricing material share one group. Each group counts its requests and
+reports their readiness without interpreting execution constraints. A Provider's optional document
+summary supplies the default rate display; otherwise the document itself is shown, or the
 declared pricing page when no document is available. Documents retain the Provider's fields, units and conditions. The CLI
 does not interpret formulas, infer upstream media properties, or calculate totals.
 
 All groups are shown by default. `--limit <count>` limits human groups after grouping; `--verbose`
 adds no-charge request details, full request names and original documents. JSON uses `hypit.cli-pricing@1`: `requestCount`
 and `noChargeRequestCount` describe the whole target selection, while `groups[]` holds Provider selection facts,
-`requests[]` with known parameters and pending inputs, and `pricingDocuments[]` with source and data.
+`requests[]` with readiness and pending inputs, and `pricingDocuments[]` with source and data.
 JSON includes every group regardless of `--limit`; no-charge requests are included with `--verbose`.
 Producer failures are reported independently of requests, including failures that produce no Need.
 They are never hidden by `--limit`; JSON includes `producerFailureCount` and `producerFailures`.

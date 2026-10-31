@@ -19,8 +19,9 @@ Blob -> inspect-media Need -> MediaInspection
 and otherwise fails closed. An explicit stream index is available when the author genuinely knows
 which alternate stream is intended.
 
-`PreparedMedia` retains the original Blob, selected members, exact local domain, display/audio
-interpretation and maps back to source presentation time. It chooses no Film frame rate and contains
+`PreparedMedia` retains the original Blob, selected members, exact local domain, visual interpretation
+and maps back to source presentation time. Audio decoder shape is not copied beyond inspection because no Programme consumer uses it.
+It chooses no Film frame rate and contains
 no execution representation. Selecting embedded audio remains a media fact only; Script meaning and program
 placement stay downstream.
 

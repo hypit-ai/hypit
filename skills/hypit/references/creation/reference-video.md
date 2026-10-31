@@ -139,7 +139,7 @@ hypit media grid references/ad/source.mp4 --pages --start 6.8 --end 8.4 --every-
 ```
 
 For the production being composed, [snapshot](../production/snapshots.md) captures its existing
-picture directly from Studio or compiled HTML. Align the comparison by the event's meaning and
+picture directly from compiled HTML or media. Align the comparison by the event's meaning and
 then inspect its concrete frames. Coarse and fine readings continue to inform each other: understand
 the whole work, establish the particular behavior, and revisit the whole explanation with that knowledge.
 

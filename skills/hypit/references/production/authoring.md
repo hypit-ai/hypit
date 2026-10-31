@@ -169,7 +169,7 @@ change that intentionally requests new paid media should first make the addition
 ## Use each view for what it can establish
 
 `hypit check` establishes Source and graph legality. `hypit plan <source> --target <output>` shows the
-target's demanded graph slice and external requests without submitting them. Studio opens the same
-Author Source with explicit Targets for visual authoring. Only `hypit build` submits work and creates a fresh Build Result. None
+target's demanded graph slice and external requests without submitting them. Only `hypit build`
+submits work and creates a fresh Build Result. None
 of those facts alone says that the video is creatively successful; review the visible work as described
 in `review.md`.

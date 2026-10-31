@@ -1,9 +1,10 @@
-import { assertAudioTrackIdentity, audioGainProcess, audioSignal, sealAudioTrack } from "@hypit/composition";
+import { assertAudioTrackIdentity, audioSignal, sealAudioTrack } from "@hypit/composition";
 import type { AudioGraphNode, AudioSignalGraph, AudioSignalRef, AudioTrack } from "@hypit/composition";
 import { compareCodeUnits } from "@hypit/hypit/protocol";
 import { assertTimelineIdentity } from "@hypit/timeline";
 import type { Timeline } from "@hypit/timeline";
 import type { AudioMixHeader, AudioMixInputSpec, AudioMixSet } from "./types.js";
+import { audioGainProcess } from "./gain.js";
 
 function identity(value: string, label: string): void {
   if (!/^[A-Za-z][A-Za-z0-9_.:#-]{0,191}$/u.test(value)) throw new Error(`${label} is invalid.`);

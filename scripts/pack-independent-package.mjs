@@ -61,7 +61,7 @@ async function copyDeclaredEntry(packageRoot, stage, entry) {
   });
 }
 
-async function compileSources(packageRoot, stage) {
+async function compileSources(packageRoot, stage, manifest) {
   const sources = globSync("src/**/*.ts", { cwd: packageRoot }).sort();
   if (sources.length === 0) return false;
   execFileSync(process.execPath, [
@@ -81,7 +81,7 @@ async function compileSources(packageRoot, stage) {
     "--outDir", resolve(stage, "dist"),
     ...sources.map((source) => resolve(packageRoot, source)),
   ], { cwd: repositoryRoot, stdio: "inherit" });
-  await rewritePublishedDeclarationSpecifiers(stage);
+  await rewritePublishedDeclarationSpecifiers(stage, manifest);
   return true;
 }
 
@@ -205,14 +205,21 @@ async function assertPublishedSourceDependencies(packageRoot, manifest) {
 /**
  * Independent packages compile against the Distribution's source condition while the repository is
  * under development. Declaration inference can consequently expose an embedded workspace identity
- * such as `@hypit/protocol`, even though its npm owner is the public `@hypit/hypit/protocol` export.
- * Translate only module specifiers, deriving the ownership map from the root's real exports rather
- * than maintaining another package list.
+ * such as `@hypit/protocol`. Rewrite it to the root's public export only when this package does not
+ * declare that workspace package as its own release dependency. A declared dependency remains its
+ * own npm owner, including private subpaths that the root Distribution intentionally does not export.
+ * Derive the remaining ownership map from the root's real exports rather than maintaining another list.
  */
-async function rewritePublishedDeclarationSpecifiers(stage) {
+async function rewritePublishedDeclarationSpecifiers(stage, manifest) {
   const publicSpecifiers = await embeddedPublicSpecifiers();
+  const declared = new Set(Object.keys({
+    ...(manifest.dependencies ?? {}),
+    ...(manifest.optionalDependencies ?? {}),
+    ...(manifest.peerDependencies ?? {}),
+  }));
   const rewrite = (value) => {
     for (const [embedded, published] of publicSpecifiers) {
+      if (declared.has(embedded)) continue;
       if (value === embedded || value.startsWith(`${embedded}/`)) {
         return `${published}${value.slice(embedded.length)}`;
       }
@@ -275,7 +282,7 @@ export async function packIndependentPackage(packageDirectory, outputDirectory, 
 
   const stage = await mkdtemp(resolve(tmpdir(), "hypit-independent-package-"));
   try {
-    const compiled = await compileSources(packageRoot, stage);
+    const compiled = await compileSources(packageRoot, stage, manifest);
     for (const entry of manifest.files ?? []) {
       if (entry === "dist" || entry === "LICENSE") continue;
       await copyDeclaredEntry(packageRoot, stage, entry);

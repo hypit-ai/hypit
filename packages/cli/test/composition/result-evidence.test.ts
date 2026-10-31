@@ -10,7 +10,6 @@ import {
   FileBuildResult,
   FileBuildResultStore,
 } from "@hypit/result/runtime-storage/node";
-import type { CapabilityRef, TypedRecord } from "@hypit/protocol";
 
 import type { CliDistribution } from "../../src/distribution.js";
 import { cliDistribution } from "../distribution-scenario.js";
@@ -18,7 +17,6 @@ import { runCli } from "../../src/main.js";
 import {
   completedRecords,
   fixture,
-  generationCapability,
   humanCommand,
   jsonCommand,
   resultIntent,
@@ -34,10 +32,9 @@ test("a failed Result exposes task receipts without a Runtime", async () => {
       id, sourcePath: "main.svml", targets: [], intent: resultIntent([]),
     });
     const operation = {
-      endpoint: "selected-account", capability: generationCapability,
+      request: "need:generate", endpoint: "selected-account",
       receipt: { id: "remote-task-1" }, outcome: "failed" as const,
       failure: { code: "DOWNLOAD_FAILED", message: `HTTP 502; request=req-example; ${"public reason ".repeat(35)}last diagnostic detail` },
-      failedAt: 2,
     };
     await result.finish({ outcome: "failed", failure: "download failed", operations: [operation] });
     const inspected = await jsonCommand(["inspect", id], root) as {
@@ -45,7 +42,8 @@ test("a failed Result exposes task receipts without a Runtime", async () => {
     };
     assert.equal(inspected.build.outcome, "failed");
     assert.deepEqual(inspected.build.operations, [{
-      endpoint: operation.endpoint, outcome: operation.outcome, receipt: operation.receipt, failure: operation.failure,
+      request: operation.request, endpoint: operation.endpoint, outcome: operation.outcome,
+      receipt: operation.receipt, failure: operation.failure,
     }]);
     const detailed = await jsonCommand(["inspect", id, "--verbose"], root) as { build: { operations: unknown[] } };
     assert.deepEqual(detailed.build.operations, [operation]);
@@ -63,7 +61,7 @@ test("logs reads finished evidence without a Runtime and clearly limits the tail
     const result = await FileBuildResult.create(join(root, ".hypit/results"), {
       id, sourcePath: "main.svml", targets: [], intent: resultIntent([]),
     });
-    const records = ["started", "completed"].map((kind, time) => ({ format: "hypit.execution-log@1", time, kind, endpoint: "renderer", command: "c1" }));
+    const records = ["started", "completed"].map((kind, time) => ({ format: "hypit.execution-log@1", time, kind, endpoint: "renderer", request: "need:render" }));
     await result.finish({ outcome: "complete", executionLog: (async function* () {
       yield Buffer.from(records.map((record) => JSON.stringify(record) + "\n").join(""));
     })() });

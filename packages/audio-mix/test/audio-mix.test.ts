@@ -2,10 +2,11 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { audioGraphFromClips, sealAudioTrack } from "@hypit/composition";
-import { audioProgramGainRoutes, compileAudioProgram } from "@hypit/audio-program";
+import { compileAudioProgram } from "@hypit/audio-program";
+import type { AudioProgram, AudioProgramClip, AudioProgramSignalRef } from "@hypit/audio-program";
 import { sealComposition } from "@hypit/composition";
 import { sealTimeline } from "@hypit/timeline";
-import { appendAudioMixInput, assertAudioMixSet, createAudioMixSet, finalizeAudioMix } from "../src/index.js";
+import { appendAudioMixInput, assertAudioMixSet, createAudioMixSet, finalizeAudioMix, readAudioGainProcess } from "../src/index.js";
 import { audioMixTypes } from "../src/index.js";
 import { compositionTypes } from "@hypit/composition";
 import { timelineTypes } from "@hypit/timeline";
@@ -20,7 +21,6 @@ const source = sealAudioTrack({ timelineId: timeline.id, id: "voice", graph: aud
   id: "line", subjectId: "line", source: {
     source: { kind: "blob", resource: fixtureResource("audio-mix:voice"), size: 1, mediaType: "audio/wav" },
     streamIndex: 0, presentationStart: exactTemporalZero(), sourceDomain: audioDomain,
-    interpretation: { sampleRate: 48_000, channels: 2 },
   },
   preparation: identityTemporalMap(audioDomain),
   target: frameRangeFixture(0, 48_000, { numerator: 48_000, denominator: 1 }),
@@ -33,6 +33,18 @@ const source = sealAudioTrack({ timelineId: timeline.id, id: "voice", graph: aud
   fadeOut: { ticks: "0", timeBase: { numerator: 1, denominator: 1 } },
 }]) });
 
+function gainRoutes(program: AudioProgram): readonly { readonly clip: AudioProgramClip; readonly gain: number }[] {
+  const nodes = new Map(program.graph.nodes.map((node) => [node.id, node] as const));
+  const visit = (input: AudioProgramSignalRef, gain: number): { readonly clip: AudioProgramClip; readonly gain: number }[] => {
+    const node = nodes.get(input.node)!;
+    if (node.kind === "silence") return [];
+    if (node.kind === "source") return [{ clip: node.clip, gain }];
+    if (node.kind === "mix") return node.inputs.flatMap((entry) => visit(entry, gain));
+    return visit(node.inputs.signal!, gain * readAudioGainProcess(node.program));
+  };
+  return visit(program.graph.output, 1);
+}
+
 test("Audio Mix closes explicit gain branches into one DAG and Film-level compilation preserves them", () => {
   let set = createAudioMixSet();
   set = appendAudioMixInput(set, timeline, { id: "dry", gain: 1 }, source);
@@ -41,7 +53,7 @@ test("Audio Mix closes explicit gain branches into one DAG and Film-level compil
   assert.deepEqual([...mixed.graph.nodes.reduce((counts, node) => counts.set(node.kind, (counts.get(node.kind) ?? 0) + 1),
     new Map<string, number>())], [["source", 2], ["process", 1], ["mix", 1]]);
   const program = compileAudioProgram(sealComposition({ id: "film", visual: { canvas: { width: 1, height: 1, clearColor: "#000000" }, root: { members: [] } }, audio: { contributions: [mixed] } }, timeline));
-  assert.deepEqual(audioProgramGainRoutes(program).map(({ clip, gain }) => clip.gain * gain).sort(), [0.25, 1]);
+  assert.deepEqual(gainRoutes(program).map(({ clip, gain }) => clip.gain * gain).sort(), [0.25, 1]);
 });
 
 test("Audio Mix keeps routing identity explicit and rejects duplicate Input ids", () => {
@@ -76,7 +88,7 @@ test("composed gain remains an ordinary finite signal value", () => {
   const set = appendAudioMixInput(createAudioMixSet(), timeline, { id: "amplified", gain: 100 }, source);
   const mixed = finalizeAudioMix(set, { id: "loud" }, timeline);
   const program = compileAudioProgram(sealComposition({ id: "film", visual: { canvas: { width: 1, height: 1, clearColor: "#000000" }, root: { members: [] } }, audio: { contributions: [mixed] } }, timeline));
-  const route = audioProgramGainRoutes(program)[0];
+  const route = gainRoutes(program)[0];
   assert.equal(route === undefined ? undefined : route.clip.gain * route.gain, 100);
 });
 
@@ -88,6 +100,6 @@ test("Audio Mix preserves structural identity when namespaced nodes use process-
   const set = appendAudioMixInput(createAudioMixSet(), timeline, { id: "voice", gain: 0.5 }, namedGain);
   const mixed = finalizeAudioMix(set, { id: "dialogue" }, timeline);
   assert.equal(new Set(mixed.graph.nodes.map((node) => node.id)).size, mixed.graph.nodes.length);
-  const route = audioProgramGainRoutes(compileAudioProgram(sealComposition({ id: "film", visual: { canvas: { width: 1, height: 1, clearColor: "#000000" }, root: { members: [] } }, audio: { contributions: [mixed] } }, timeline)))[0];
+  const route = gainRoutes(compileAudioProgram(sealComposition({ id: "film", visual: { canvas: { width: 1, height: 1, clearColor: "#000000" }, root: { members: [] } }, audio: { contributions: [mixed] } }, timeline)))[0];
   assert.equal(route === undefined ? undefined : route.clip.gain * route.gain, 0.5);
 });

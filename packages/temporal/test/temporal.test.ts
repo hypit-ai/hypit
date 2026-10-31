@@ -27,6 +27,7 @@ import {
   resolveTriggeredSchedule,
   temporalDurationInSamples,
   temporalExtentFromDomain,
+  temporalMapMayContain,
 } from "../src/index.js";
 
 const timeline: Timeline = { id: "film", frameRate: { numerator: 30, denominator: 1 }, frameCount: 300 };
@@ -231,6 +232,22 @@ test("a bound Temporal Map evaluator preserves the one-shot sided semantics", ()
   for (const side of ["before", "after"] as const) for (const at of [value("0"), value("2"), value("3")]) {
     assert.deepEqual(evaluate(at, side), evaluateTemporalMap(map, at, side));
   }
+});
+
+test("structural content discovery follows composed support without sampling a Clock", () => {
+  const value = (ticks: string) => ({ ticks, timeBase: { numerator: 1, denominator: 1 } } as const);
+  const target = { id: "target-support", duration: value("4") };
+  const middle = { id: "middle-support", duration: value("4") };
+  const source = { id: "source-support", duration: value("4") };
+  const first = identityTemporalMap(target);
+  const renamed = sealTemporalMap({ stages: [{ target, source: middle, pieces: first.stages[0]!.pieces }] });
+  const sparse = sealTemporalMap({ stages: [{ target: middle, source, pieces: [{
+    target: { start: value("2"), end: value("3") },
+    sourceAtStart: value("0"), rate: { numerator: 1, denominator: 1 },
+  }] }] });
+  const map = composeTemporalMaps(renamed, sparse);
+  assert.equal(temporalMapMayContain(map, { start: value("0"), end: value("2") }), false);
+  assert.equal(temporalMapMayContain(map, { start: value("2"), end: value("3") }), true);
 });
 
 test("cubic Map pieces evaluate exact monotone source positions without a curve registry", () => {

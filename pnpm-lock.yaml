@@ -273,6 +273,9 @@ importers:
       '@hypit/visual-adjustment':
         specifier: workspace:*
         version: link:packages/visual-adjustment
+      '@hypit/visual-combine':
+        specifier: workspace:*
+        version: link:packages/visual-combine
       '@hypit/visual-matte':
         specifier: workspace:*
         version: link:packages/visual-matte
@@ -1130,10 +1133,10 @@ importers:
   packages/endpoint:
     dependencies:
       '@hypit/protocol':
-        specifier: workspace:*
+        specifier: workspace:^0.0.0-dev
         version: link:../protocol
       '@hypit/runtime':
-        specifier: workspace:*
+        specifier: workspace:^0.0.0-dev
         version: link:../runtime
 
   packages/executor:
@@ -1398,6 +1401,9 @@ importers:
 
   packages/html-playback:
     dependencies:
+      '@hypit/audio-mix':
+        specifier: workspace:^0.1.0
+        version: link:../audio-mix
       '@hypit/audio-program':
         specifier: workspace:^0.1.0
         version: link:../audio-program
@@ -1481,7 +1487,7 @@ importers:
   packages/html-render-local:
     dependencies:
       '@hypit/endpoint':
-        specifier: workspace:*
+        specifier: workspace:^0.0.0-dev
         version: link:../endpoint
       '@hypit/html-program':
         specifier: workspace:^0.2.0
@@ -1490,7 +1496,7 @@ importers:
         specifier: workspace:^0.2.0
         version: link:../media
       '@hypit/protocol':
-        specifier: workspace:*
+        specifier: workspace:^0.0.0-dev
         version: link:../protocol
       '@hypit/runtime-local':
         specifier: workspace:^0.2.0
@@ -1623,7 +1629,7 @@ importers:
   packages/kernel:
     dependencies:
       '@hypit/protocol':
-        specifier: workspace:*
+        specifier: workspace:^0.0.0-dev
         version: link:../protocol
 
   packages/loader:
@@ -1709,6 +1715,9 @@ importers:
 
   packages/media-local:
     dependencies:
+      '@hypit/audio-mix':
+        specifier: workspace:^0.1.0
+        version: link:../audio-mix
       '@hypit/audio-program':
         specifier: workspace:^0.1.0
         version: link:../audio-program
@@ -2496,26 +2505,29 @@ importers:
   packages/result:
     dependencies:
       '@hypit/atomic-file':
-        specifier: workspace:*
+        specifier: workspace:^0.0.0-dev
         version: link:../atomic-file
       '@hypit/facet':
-        specifier: workspace:*
+        specifier: workspace:^0.0.0-dev
         version: link:../facet
       '@hypit/protocol':
-        specifier: workspace:*
+        specifier: workspace:^0.0.0-dev
         version: link:../protocol
 
   packages/runtime:
     dependencies:
       '@hypit/kernel':
-        specifier: workspace:*
+        specifier: workspace:^0.0.0-dev
         version: link:../kernel
       '@hypit/protocol':
-        specifier: workspace:*
+        specifier: workspace:^0.0.0-dev
         version: link:../protocol
 
   packages/runtime-local:
     dependencies:
+      '@hypit/result':
+        specifier: workspace:^0.0.0-dev
+        version: link:../result
       koffi:
         specifier: 3.2.1
         version: 3.2.1
@@ -2550,9 +2562,6 @@ importers:
       '@hypit/refinement':
         specifier: workspace:*
         version: link:../refinement
-      '@hypit/result':
-        specifier: workspace:*
-        version: link:../result
       '@hypit/runtime':
         specifier: workspace:*
         version: link:../runtime
@@ -3140,6 +3149,9 @@ importers:
       '@hypit/visual-adjustment':
         specifier: workspace:^0.1.0
         version: link:../visual-adjustment
+      '@hypit/visual-combine':
+        specifier: workspace:^0.1.0
+        version: link:../visual-combine
       '@hypit/visual-matte':
         specifier: workspace:^0.1.0
         version: link:../visual-matte
@@ -3211,6 +3223,34 @@ importers:
       '@hypit/studio-companion':
         specifier: workspace:*
         version: link:../studio-companion
+
+  packages/visual-combine:
+    dependencies:
+      '@hypit/composition':
+        specifier: workspace:^0.2.0
+        version: link:../composition
+      '@hypit/timeline':
+        specifier: workspace:^0.1.1
+        version: link:../timeline
+    devDependencies:
+      '@hypit/author':
+        specifier: workspace:*
+        version: link:../author
+      '@hypit/hypit':
+        specifier: workspace:*
+        version: link:../..
+      '@hypit/markup':
+        specifier: workspace:*
+        version: link:../markup
+      '@hypit/producer':
+        specifier: workspace:*
+        version: link:../producer
+      '@hypit/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@hypit/refinement':
+        specifier: workspace:*
+        version: link:../refinement
 
   packages/visual-matte:
     dependencies:

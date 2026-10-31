@@ -74,9 +74,10 @@ declared public exports into importer namespaces. Workspace paths remain outside
 identity. Source bytes and resolved asset bytes remain owned by the Workspace; the decoded structure
 and Kernel BuildView carry only the values and Blob identities required by the authored graph.
 
-The same hygienic pass emits an ephemeral `hypit.author-provenance@1` sidecar. A Frontend may retain
-the structural ranges of author elements and inputs; the Author linker qualifies their Record, component,
-output and endpoint identities together with the graph. This is a compiler result, not a Source
+When an authoring consumer explicitly requests it, the same hygienic pass emits an ephemeral
+`hypit.author-provenance@1` sidecar. A Frontend may retain the structural ranges of author elements;
+the Author linker qualifies their Record, output and endpoint identities together with the graph.
+This is an optional compiler projection, not a normal Build result or Source
 file, lock, content inventory or editor database. It carries no domain or Studio presentation and
 lets any diagnostic/editor join a graph value back to the exact author endpoint without matching a
 local name after compilation.

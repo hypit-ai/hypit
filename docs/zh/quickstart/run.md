@@ -3,7 +3,7 @@ title: Target 与 Build
 description: 声明 Build 目标、复用结果以及配置运行时环境。
 ---
 
-Author Source 定义视频本身。每次 `plan`、`pricing`、`build` 或 Studio 命令都显式选择本次要求值到的 Target。官方 Distribution 提供 Local Runtime；
+Author Source 定义视频本身。每次 `plan`、`pricing` 或 `build` 命令都显式选择本次要求值到的 Target。官方 Distribution 提供 Local Runtime；
 它的 Profile 声明执行这份计划可用的凭据、Provider Endpoint 与服务。
 
 先为项目选择一次 Runtime：

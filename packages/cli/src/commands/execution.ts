@@ -59,7 +59,7 @@ export async function runExecutionCommand(input: {
       const result = await opened.repository.read(args.build);
       finished = result?.outcome !== undefined;
       if (result?.executionLog !== undefined) {
-        const chunks = await opened.repository.openFile(args.build, result.executionLog);
+        const chunks = await opened.repository.openExecutionLog(args.build);
         if (chunks === undefined) throw new Error(`Build ${args.build} execution log file is unavailable`);
         view = await readExecutionLog(chunks, args.lines);
         source = "result";
@@ -78,7 +78,7 @@ export async function runExecutionCommand(input: {
         try {
           const result = await completed.repository.read(args.build);
           if (result?.executionLog !== undefined) {
-            const chunks = await completed.repository.openFile(args.build, result.executionLog);
+            const chunks = await completed.repository.openExecutionLog(args.build);
             if (chunks !== undefined) { view = await readExecutionLog(chunks, args.lines); source = "result"; }
           }
         } finally { await completed.close(); }
@@ -95,7 +95,7 @@ export async function runExecutionCommand(input: {
             ? "No saved log found in this project. Select the Build's Runtime with --runtime <profile> to check active execution."
             : "No log found in this project's Results or the selected Runtime. Check the Build id and project selection."]),
         ...(omitted > 0 ? [`Showing last ${records.length} records; ${omitted} earlier records omitted. Use --lines to read more.`] : []),
-        ...records.map((record) => `${new Date(record.time).toISOString()}  ${record.endpoint}  ${record.command}  ${
+        ...records.map((record) => `${new Date(record.time).toISOString()}  ${record.endpoint}  ${record.request}  ${
           record.kind === "phase" ? record.phase : record.kind === "diagnostic" || record.kind === "failed"
             ? `${record.kind}: ${record.message}` : record.kind}`),
       ]);

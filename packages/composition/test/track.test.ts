@@ -63,7 +63,7 @@ function preparedAudio(): PreparedMedia {
   const domain = { id: "fixture-materialization", duration: exactTemporalValueFromFrames(192_000,
     { frameRate: { numerator: 48_000, denominator: 1 } }) };
   return { source: audio, domain, audio: { streamIndex: 0, presentationStart: exactTemporalZero(),
-    sourceDomain: domain, map: identityTemporalMap(domain), interpretation: { sampleRate: 48_000, channels: 2 } } };
+    sourceDomain: domain, map: identityTemporalMap(domain) } };
 }
 
 function fixture() {

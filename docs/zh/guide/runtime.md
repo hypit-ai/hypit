@@ -136,9 +136,9 @@ Result 位于运行 Hypit 的机器上、项目自己的 `.hypit/results`。本�
 
 Result 在公开 Output 完成时发布它们，最后保留终态。新 Output 可以引用已有文件，复合值内部也一样，
 不意味着多一份素材。显式本地文件引用保持实时性；继续复用时需要保留它们的依赖。
-需要交给人或其他工具的独立文件时，用 `get` 另行导出。
+需要交给人或其他工具的独立文件时，用 `result export` 导出一个明确的留存 Output。
 
-`builds`、`history`、`inspect`、`get` 读取项目 Result，不依赖原 Runtime。
+`builds`、`history`、`inspect`、`result export` 读取项目 Result，不依赖原 Runtime。
 精确存储和执行接口见
 [Result 包](https://github.com/hypit-ai/hypit/blob/main/packages/result/README.md) 与
 [本地 Runtime 包](https://github.com/hypit-ai/hypit/blob/main/packages/runtime-local/README.md)。

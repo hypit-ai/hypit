@@ -5,7 +5,7 @@ import { join } from "node:path";
 import test from "node:test";
 import { blobTypes } from "@hypit/blob";
 import { mediaTypes, preparedAudioSource, prepareMedia, sealMediaDeliverySpec, sealTimelineVisual, sealTimelineAudio, verifyMediaInspection, verifyMuxedMedia, verifyTimelineAudio } from "@hypit/media";
-import type { MediaAudioStream, MediaInspection, MuxedMedia, TimelineAudio, TimelineVisual } from "@hypit/media";
+import type { MediaAudioStream, MediaInspection, MediaVideoStream, MuxedMedia, TimelineAudio, TimelineVisual } from "@hypit/media";
 import { assertSpeechEvidenceAudioIdentity, speechEvidenceCapabilities, speechEvidenceTypes } from "@hypit/speech-evidence";
 import type { SpeechEvidenceAudio } from "@hypit/speech-evidence";
 import assert from "node:assert/strict";
@@ -46,13 +46,12 @@ function preparedAudioProgramSource(id: string, source: import("@hypit/protocol"
   const media = prepareMedia({
     id,
     source,
-    inspection: { container: { formatNames: ["wav"] }, streams: [{
-      kind: "audio", index: 0, codecType: "audio", codecName: "pcm_s16le",
-      disposition: { default: true, attachedPicture: false }, timingStatus: "admissible",
-      timeBase: { numerator: 1, denominator: 48_000 },
+    inspection: { streams: [{
+      kind: "audio", index: 0, codecName: "pcm_s16le",
+      disposition: { default: true, attachedPicture: false },
       startPts: { ticks: "0", timeBase: { numerator: 1, denominator: 48_000 } },
       endPts: { ticks: String(sampleFrames), timeBase: { numerator: 1, denominator: 48_000 } },
-      decodedUnitCount: sampleFrames, sampleRate: 48_000, channels: 2, decodedSampleFrames: sampleFrames,
+      sampleRate: 48_000, channels: 2, decodedSampleFrames: sampleFrames,
     }] },
     selection: { audioStreamIndex: 0, spanAuthority: "audio" },
   });
@@ -214,10 +213,10 @@ test("local media Provider inspects moving picture, audio and attached picture w
     const source = await resources.put(await readFile(sourcePath), "video/mp4");
     const inspection = await inspectArtifact(resources, source);
     assert.deepEqual(inspection.streams.map((stream) => [stream.index, stream.kind,
-      stream.kind === "video" ? stream.role : stream.codecName]), [
-      [0, "video", "moving"],
+      stream.kind === "video" ? stream.disposition.attachedPicture : stream.codecName]), [
+      [0, "video", false],
       [1, "audio", "aac"],
-      [2, "video", "attached-picture"],
+      [2, "video", true],
     ]);
     const selection = selectMediaStreams(inspection, sealMediaSelectionRequest({
       video: { mode: "primary-moving" },
@@ -317,7 +316,6 @@ test("local media Provider extracts ordinary audio and frame Artifacts and rende
       canonicalize({
         source,
         streamIndex: audioIndex,
-        output: { container: "wav", codec: "pcm_s16le", sampleRate: 48_000, channels: 2 },
       }),
     ));
     assert.equal(extractedAudio.mediaType, "audio/wav");
@@ -325,7 +323,8 @@ test("local media Provider extracts ordinary audio and frame Artifacts and rende
     const audio = audioInspection.streams.find((item) => item.kind === "audio");
     assert.ok(audio?.kind === "audio" && audio.sampleRate === 48_000 && audio.channels === 2);
 
-    const video = inspection.streams.find((item) => item.kind === "video" && item.role === "moving")!;
+    const video = inspection.streams.find((item): item is MediaVideoStream => item.kind === "video"
+      && !item.disposition.attachedPicture && item.decodedUnitCount >= 2)!;
     const extractedFrame = await executeArtifact(need(
       "need:extract-frame",
       mediaOperationsCapabilities.extractFrame,
@@ -335,7 +334,6 @@ test("local media Provider extracts ordinary audio and frame Artifacts and rende
         streamIndex: video.index,
         sourceFrameCount: video.decodedUnitCount,
         at: { kind: "last" },
-        output: { format: "png" },
       }),
     ));
     assert.equal(extractedFrame.mediaType, "image/png");
@@ -350,7 +348,6 @@ test("local media Provider extracts ordinary audio and frame Artifacts and rende
         request: {
           frameRate: { numerator: 30, denominator: 1 },
           frameCount: 15,
-          output: { container: "mp4", codec: "h264", pixelFormat: "yuv420p" },
           segments: [{ startFrame: 0, endFrameExclusive: 15, source: extractedFrame }],
         },
       }),
@@ -359,7 +356,8 @@ test("local media Provider extracts ordinary audio and frame Artifacts and rende
     const stillInspection = await inspectArtifact(resources, stillVideo);
     assert.equal(stillInspection.streams.length, 1);
     assert.equal(stillInspection.streams[0]?.kind, "video");
-    assert.equal(stillInspection.streams[0]?.decodedUnitCount, 15);
+    assert.equal(stillInspection.streams[0]?.kind === "video"
+      && stillInspection.streams[0].decodedUnitCount, 15);
 
     const spread = await executeArtifact(need(
       "need:render-still-spread",
@@ -369,7 +367,6 @@ test("local media Provider extracts ordinary audio and frame Artifacts and rende
         request: {
           frameRate: { numerator: 30, denominator: 1 },
           frameCount: 15,
-          output: { container: "mp4", codec: "h264", pixelFormat: "yuv420p" },
           segments: [
             { startFrame: 0, endFrameExclusive: 10, source: extractedFrame },
             { startFrame: 10, endFrameExclusive: 15, source: extractedFrame },
@@ -379,7 +376,8 @@ test("local media Provider extracts ordinary audio and frame Artifacts and rende
     ));
     const spreadInspection = await inspectArtifact(resources, spread);
     assert.equal(spreadInspection.streams.length, 1);
-    assert.equal(spreadInspection.streams[0]?.decodedUnitCount, 15, "two pictures spread over the same frame count");
+    assert.equal(spreadInspection.streams[0]?.kind === "video"
+      && spreadInspection.streams[0].decodedUnitCount, 15, "two pictures spread over the same frame count");
     const twentyFourSpread = await executeArtifact(need(
       "need:render-still-24fps-spread",
       mediaOperationsCapabilities.renderStill,
@@ -388,7 +386,6 @@ test("local media Provider extracts ordinary audio and frame Artifacts and rende
         request: {
           frameRate: { numerator: 24, denominator: 1 },
           frameCount: 144,
-          output: { container: "mp4", codec: "h264", pixelFormat: "yuv420p" },
           segments: [
             { startFrame: 0, endFrameExclusive: 24, source: extractedFrame },
             { startFrame: 24, endFrameExclusive: 96, source: extractedFrame },
@@ -398,7 +395,8 @@ test("local media Provider extracts ordinary audio and frame Artifacts and rende
       }),
     ));
     const twentyFourInspection = await inspectArtifact(resources, twentyFourSpread);
-    assert.equal(twentyFourInspection.streams[0]?.decodedUnitCount, 144,
+    assert.equal(twentyFourInspection.streams[0]?.kind === "video"
+      && twentyFourInspection.streams[0].decodedUnitCount, 144,
       "three Still segments at 24 fps must preserve the complete frame domain");
   } finally {
     await rm(root, { recursive: true, force: true }).catch(() => {});
@@ -438,7 +436,6 @@ test("StillVideo converts authored RGB pictures to tagged BT.709 in both render 
           request: {
             frameRate: { numerator: 30, denominator: 1 },
             frameCount: 4,
-            output: { container: "mp4", codec: "h264", pixelFormat: "yuv420p" },
             segments,
           },
         }),
@@ -541,18 +538,12 @@ test("local media Provider renders one frame-domain audio program and muxes exac
     const program = sealAudioProgram({
       frameRate: { numerator: 30, denominator: 1 },
       frameCount: 30,
-      sampleRate: 48_000,
-      sampleFrames: 48_000,
       graph: audioProgramGraphFromClips([
         {
           id: "speech:first",
           ...preparedAudioProgramSource("speech:first", first, 24_000),
           sampling: audioSampling("speech:first", 24_000, 24_000),
           target: audioTarget(0, 24_000),
-          targetStartSample: 0,
-          targetEndSampleExclusive: 24_000,
-          mixStartSample: 0,
-          mixEndSampleExclusive: 24_000,
           gain: 1,
           fadeInSamples: 0,
           fadeOutSamples: 0,
@@ -562,10 +553,6 @@ test("local media Provider renders one frame-domain audio program and muxes exac
           ...preparedAudioProgramSource("speech:second", second, 24_000),
           sampling: audioSampling("speech:second", 24_000, 24_000),
           target: audioTarget(24_000, 48_000),
-          targetStartSample: 24_000,
-          targetEndSampleExclusive: 48_000,
-          mixStartSample: 24_000,
-          mixEndSampleExclusive: 48_000,
           gain: 1,
           fadeInSamples: 0,
           fadeOutSamples: 0,
@@ -621,7 +608,6 @@ test("local media Provider renders one frame-domain audio program and muxes exac
     const muxValue = await fulfillInline(resources, muxRequest);
     verifyMuxedMedia(muxValue);
     const muxed = muxValue as unknown as MuxedMedia;
-    assert.equal(muxed.presentationSampleFrames, 48_000);
     assert.equal(await resources.has(muxed.artifact.resource), true);
 
     const mislabeledDelivery = {
@@ -661,7 +647,7 @@ test("local media Provider renders one frame-domain audio program and muxes exac
       artifact: oneFrameVisualArtifact,
     });
     const oneFrameAudio = sealTimelineAudio({
-      artifact: oneFrameAudioArtifact, sampleRate: 48_000, channelLayout: "stereo", sampleFrames: 1_600,
+      artifact: oneFrameAudioArtifact, sampleFrames: 1_600,
     });
     const oneFrameValue = await fulfillInline(resources, need(
       "need:mux-one-frame-program-media",
@@ -702,7 +688,7 @@ test("local media Provider preserves the audio tail for a 30000/1001 frame domai
       resources.put(await readFile(audioPath), "audio/wav"),
       resources.put(await readFile(visualPath), "video/mp4"),
     ]);
-    const audio = sealTimelineAudio({ artifact: audioArtifact, sampleRate: 48_000, channelLayout: "stereo", sampleFrames });
+    const audio = sealTimelineAudio({ artifact: audioArtifact, sampleFrames });
     const visual = sealTimelineVisual({
       frameRate,
       frameCount,
@@ -741,8 +727,6 @@ test("local media Provider executes an end-aligned loop from the exact authored 
     const program = sealAudioProgram({
       frameRate: { numerator: 30, denominator: 1 },
       frameCount: 30,
-      sampleRate: 48_000,
-      sampleFrames: 48_000,
       graph: audioProgramGraphFromClips([{
         id: "loop:end",
         ...preparedAudioProgramSource("loop:end", source, 100),
@@ -751,10 +735,6 @@ test("local media Provider executes an end-aligned loop from the exact authored 
           wrap: { startFrame: 0, endFrameExclusive: 100 },
         }),
         target: audioTarget(0, 250),
-        targetStartSample: 0,
-        targetEndSampleExclusive: 250,
-        mixStartSample: 0,
-        mixEndSampleExclusive: 250,
         gain: 1,
         fadeInSamples: 0,
         fadeOutSamples: 0,
@@ -804,10 +784,6 @@ test("audio signal evaluation treats reverse, hold, cubic motion and gaps as pee
       ...preparedAudioProgramSource(id, source, 16),
       sampling: map,
       target: audioTarget(start, start + 4),
-      targetStartSample: start,
-      targetEndSampleExclusive: start + 4,
-      mixStartSample: start,
-      mixEndSampleExclusive: start + 4,
       gain: 1,
       fadeInSamples: 0,
       fadeOutSamples: 0,
@@ -834,7 +810,6 @@ test("audio signal evaluation treats reverse, hold, cubic motion and gaps as pee
     }] });
     const program = sealAudioProgram({
       frameRate: { numerator: 30, denominator: 1 }, frameCount: 30,
-      sampleRate: 48_000, sampleFrames: 48_000,
       graph: audioProgramGraphFromClips([
         base("reverse", 0, sampling("reverse", {
           target: { start: at(0), end: at(4) }, sourceAtStart: at(4), rate: { numerator: -1, denominator: 1 },
@@ -851,8 +826,7 @@ test("audio signal evaluation treats reverse, hold, cubic motion and gaps as pee
         })),
         {
           id: "prepared-chain", source: chained.source, preparation, sampling: preparedSampling,
-          target: audioTarget(16, 20), targetStartSample: 16, targetEndSampleExclusive: 20,
-          mixStartSample: 16, mixEndSampleExclusive: 20, gain: 1, fadeInSamples: 0, fadeOutSamples: 0,
+          target: audioTarget(16, 20), gain: 1, fadeInSamples: 0, fadeOutSamples: 0,
         },
       ]),
     });
@@ -887,13 +861,11 @@ test("audio range preserves loop phase, tempo and intersected fades from the ful
     const source = await resources.put(rampWav(4800), "audio/wav");
     const program = sealAudioProgram({
       frameRate: { numerator: 30, denominator: 1 }, frameCount: 60,
-      sampleRate: 48000, sampleFrames: 96000,
       graph: audioProgramGraphFromClips([{ id: "loop", ...preparedAudioProgramSource("loop", source, 4800),
         sampling: audioSampling("loop", 96000, 4800, { sourceAtStart: { numerator: 1700, denominator: 1 },
           rate: { numerator: 5, denominator: 4 }, wrap: { startFrame: 0, endFrameExclusive: 4800 } }),
         target: audioTarget(0, 96000),
-        targetStartSample: 0, targetEndSampleExclusive: 96000,
-        mixStartSample: 0, mixEndSampleExclusive: 96000, gain: 0.8,
+        gain: 0.8,
         fadeInSamples: 48000, fadeOutSamples: 30000 }]),
     });
     const pcm = async (name: string, range?: { startFrame: number; endFrameExclusive: number }) => {
@@ -934,15 +906,12 @@ test("pitch-preserving reconstruction follows the same explicit rate without cha
     const source = await resources.put(await readFile(sourcePath), "audio/wav");
     const makeProgram = (id: string, reconstruction?: ReturnType<typeof preservePitch>) => sealAudioProgram({
       frameRate: { numerator: 30, denominator: 1 }, frameCount: 15,
-      sampleRate: 48_000, sampleFrames: 24_000,
       graph: audioProgramGraphFromClips([{
         id,
         ...preparedAudioProgramSource(id, source, 48_000),
         sampling: audioSampling(id, 24_000, 48_000, { rate: { numerator: 2, denominator: 1 } }),
         ...(reconstruction === undefined ? {} : { reconstruction }),
         target: audioTarget(0, 24_000),
-        targetStartSample: 0, targetEndSampleExclusive: 24_000,
-        mixStartSample: 0, mixEndSampleExclusive: 24_000,
         gain: 1, fadeInSamples: 0, fadeOutSamples: 0,
       }]),
     });
@@ -975,12 +944,11 @@ test("audio envelopes and audible regions preserve sample phase through gaps and
     const resources = new MemoryResourceStore();
     const source = await resources.put(rampWav(4800), "audio/wav");
     const program = sealAudioProgram({
-      frameRate: { numerator: 30, denominator: 1 }, frameCount: 12, sampleRate: 48000, sampleFrames: 19200,
+      frameRate: { numerator: 30, denominator: 1 }, frameCount: 12,
       graph: audioProgramGraphFromClips([{ id: "voice", ...preparedAudioProgramSource("voice", source, 4800),
         sampling: audioSampling("voice", 16000, 4800, { wrap: { startFrame: 0, endFrameExclusive: 4800 } }),
         target: audioTarget(1600, 17600),
-        targetStartSample: 1600, targetEndSampleExclusive: 17600,
-        mixStartSample: 1600, mixEndSampleExclusive: 17600, gain: 1,
+        gain: 1,
         fadeInSamples: 0, fadeOutSamples: 0,
         gainEnvelope: [{ sample: 1600, gain: 0 }, { sample: 17600, gain: 1 }],
         audibility: [{ startSample: 1600, endSampleExclusive: 4800 }, { startSample: 8000, endSampleExclusive: 17600 }],

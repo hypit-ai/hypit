@@ -1,9 +1,13 @@
 import { closeSync, fstatSync, openSync, readSync } from "node:fs";
 import { open } from "node:fs/promises";
 
-import { verifyAudioProgram } from "@hypit/audio-program";
+import {
+  audioProgramClipSampleSpan,
+  audioProgramSampleFrames,
+  verifyAudioProgram,
+} from "@hypit/audio-program";
 import type { AudioProgram, AudioProgramClip } from "@hypit/audio-program";
-import { readAudioGainProcess } from "@hypit/composition";
+import { readAudioGainProcess } from "@hypit/audio-mix";
 import {
   compareExactTemporalValues,
   composeTemporalMaps,
@@ -13,6 +17,8 @@ import {
   exactTemporalValueFromFrames,
   exactTemporalZero,
   isAffineTemporalMapPiece,
+  resolveTemporalBoundary,
+  temporalMapMayContain,
 } from "@hypit/temporal";
 import type {
   ExactTemporalValue,
@@ -32,13 +38,6 @@ const SAMPLE_CLOCK = { frameRate: { numerator: SAMPLE_RATE, denominator: 1 } } a
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
-}
-
-function exactNumber(value: ExactTemporalValue): number {
-  const rational = exactTemporalRational(value);
-  const result = Number(rational.numerator) / Number(rational.denominator);
-  assert(Number.isFinite(result), "Audio temporal value exceeds finite renderer arithmetic");
-  return result;
 }
 
 type SignalPosition = {
@@ -83,14 +82,40 @@ export type PositiveAffineReconstructionPlan = {
   readonly targetSampleFrames: number;
 };
 
+type PositiveRational = { readonly numerator: bigint; readonly denominator: bigint };
+
+function gcd(left: bigint, right: bigint): bigint {
+  while (right !== 0n) [left, right] = [right, left % right];
+  return left;
+}
+
+function multiplyPositiveRational(
+  left: PositiveRational,
+  right: { readonly numerator: number | bigint; readonly denominator: number | bigint },
+): PositiveRational {
+  const numerator = left.numerator * BigInt(right.numerator);
+  const denominator = left.denominator * BigInt(right.denominator);
+  const divisor = gcd(numerator, denominator);
+  return { numerator: numerator / divisor, denominator: denominator / divisor };
+}
+
+/** The exact relation ends here; FFmpeg's atempo interface accepts only a floating parameter. */
+function finiteRate(value: PositiveRational): number {
+  const bits = Math.max(value.numerator.toString(2).length, value.denominator.toString(2).length);
+  const shift = BigInt(Math.max(0, bits - 900));
+  const rate = Number(value.numerator >> shift) / Number(value.denominator >> shift);
+  assert(Number.isFinite(rate) && rate > 0, "Pitch-preserving rate exceeds finite FFmpeg arithmetic");
+  return rate;
+}
+
 function positiveAffineSpan(map: TemporalMap, start: ExactTemporalValue, end: ExactTemporalValue, label: string): {
   readonly start: ExactTemporalValue;
   readonly end: ExactTemporalValue;
-  readonly rate: number;
+  readonly rate: PositiveRational;
 } {
   let left = start;
   let right = end;
-  let totalRate = 1;
+  let totalRate: PositiveRational = { numerator: 1n, denominator: 1n };
   for (const [index, stage] of map.stages.entries()) {
     const piece = stage.pieces.find((candidate) =>
       compareExactTemporalValues(candidate.target.start, left) <= 0
@@ -106,7 +131,7 @@ function positiveAffineSpan(map: TemporalMap, start: ExactTemporalValue, end: Ex
       `${label} stage ${index} cannot project its selected span`);
     left = projectedLeft.position;
     right = projectedRight.position;
-    totalRate *= piece.rate.numerator / piece.rate.denominator;
+    totalRate = multiplyPositiveRational(totalRate, piece.rate);
   }
   return { start: left, end: right, rate: totalRate };
 }
@@ -117,16 +142,17 @@ function positiveAffineSpan(map: TemporalMap, start: ExactTemporalValue, end: Ex
  * richer reconstruction without changing AudioProgram.
  */
 export function planPositiveAffineReconstruction(clip: AudioProgramClip): PositiveAffineReconstructionPlan {
-  const targetSampleFrames = clip.targetEndSampleExclusive - clip.targetStartSample;
+  const target = audioProgramClipSampleSpan(clip);
+  const targetSampleFrames = target.endSampleExclusive - target.startSample;
   assert(targetSampleFrames > 0, `Audio Clip ${clip.id} has no target samples`);
   const sampled = positiveAffineSpan(clip.sampling, exactTemporalZero(),
     clip.sampling.stages[0]!.target.duration,
     `Audio Clip ${clip.id} sampling`);
   const prepared = positiveAffineSpan(clip.preparation, sampled.start, sampled.end,
     `Audio Clip ${clip.id} preparation`);
-  const sourceStartSample = Math.round(exactNumber(prepared.start) * SAMPLE_RATE);
-  const sourceEndSampleExclusive = Math.round(exactNumber(prepared.end) * SAMPLE_RATE);
-  const rate = sampled.rate * prepared.rate;
+  const sourceStartSample = resolveTemporalBoundary(prepared.start, SAMPLE_CLOCK, "nearest");
+  const sourceEndSampleExclusive = resolveTemporalBoundary(prepared.end, SAMPLE_CLOCK, "nearest");
+  const rate = finiteRate(multiplyPositiveRational(sampled.rate, prepared.rate));
   assert(Number.isFinite(rate) && rate > 0 && sourceStartSample >= 0
     && sourceEndSampleExclusive > sourceStartSample,
   `Audio Clip ${clip.id} has an invalid pitch-preserving source span`);
@@ -232,6 +258,7 @@ export class CanonicalPcmReader {
 
 type CompiledClip = {
   readonly clip: AudioProgramClip;
+  readonly target: SampleRange;
   readonly routeGain: number;
   readonly mapping: TemporalMapEvaluator;
   readonly source: SignalReader;
@@ -269,6 +296,7 @@ function signalRoutes(program: AudioProgram): SignalRoute[] {
 type SampleRange = { readonly startSample: number; readonly endSampleExclusive: number };
 type PlannedClip = {
   readonly clip: AudioProgramClip;
+  readonly target: SampleRange;
   readonly gain: number;
   /** Shared by demand analysis and actual sample reads. */
   readonly mapping: TemporalMapEvaluator;
@@ -312,22 +340,22 @@ function localRanges(
   });
 }
 
-function mapHasContent(evaluate: TemporalMapEvaluator, ranges: readonly SampleRange[]): boolean {
-  return ranges.some((range) => {
-    for (let sample = range.startSample; sample < range.endSampleExclusive; sample += 1) {
-      if (evaluate(samplePosition(sample), "after") !== undefined) return true;
-    }
-    return false;
-  });
+function mapHasContent(map: TemporalMap, ranges: readonly SampleRange[]): boolean {
+  return ranges.some((range) => temporalMapMayContain(map, {
+    start: samplePosition(range.startSample),
+    end: samplePosition(range.endSampleExclusive),
+  }));
 }
 
 function planProgram(program: AudioProgram, ranges: readonly SampleRange[]): AudioRenderPlan {
-  const selected = mergeSampleRanges(ranges, program.sampleFrames);
+  const selected = mergeSampleRanges(ranges, audioProgramSampleFrames(program));
   const clips = signalRoutes(program).flatMap((route): PlannedClip[] => {
-    const local = localRanges(selected, route.clip.targetStartSample, route.clip.targetEndSampleExclusive);
+    const target = audioProgramClipSampleSpan(route.clip);
+    const local = localRanges(selected, target.startSample, target.endSampleExclusive);
     if (local.length === 0) return [];
-    const mapping = createTemporalMapEvaluator(composeTemporalMaps(route.clip.sampling, route.clip.preparation));
-    return mapHasContent(mapping, local) ? [{ clip: route.clip, gain: route.gain, mapping }] : [];
+    const map = composeTemporalMaps(route.clip.sampling, route.clip.preparation);
+    const mapping = createTemporalMapEvaluator(map);
+    return mapHasContent(map, local) ? [{ clip: route.clip, target, gain: route.gain, mapping }] : [];
   });
   return { program, ranges: selected, clips };
 }
@@ -340,7 +368,7 @@ export function planAudioProgramRender(
   verifyAudioProgram(program);
   assert(Number.isSafeInteger(startSample) && startSample >= 0
     && Number.isSafeInteger(sampleFrames) && sampleFrames >= 0
-    && startSample + sampleFrames <= program.sampleFrames,
+    && startSample + sampleFrames <= audioProgramSampleFrames(program),
   "Audio renderer range lies outside its programme");
   return planProgram(program, [{ startSample, endSampleExclusive: startSample + sampleFrames }]);
 }
@@ -349,7 +377,7 @@ export function audioRenderPlanSourceClips(plan: AudioRenderPlan): readonly Audi
   return plan.clips.map((entry) => entry.clip);
 }
 
-function levelAt(clip: AudioProgramClip, sample: number): number {
+function levelAt(clip: AudioProgramClip, target: SampleRange, sample: number): number {
   let gain = clip.gain;
   const points = clip.gainEnvelope;
   if (points !== undefined) {
@@ -367,11 +395,11 @@ function levelAt(clip: AudioProgramClip, sample: number): number {
   }
   if (clip.audibility !== undefined
     && !clip.audibility.some((span) => sample >= span.startSample && sample < span.endSampleExclusive)) return 0;
-  if (clip.fadeInSamples > 0 && sample < clip.mixStartSample + clip.fadeInSamples) {
-    gain *= Math.max(0, (sample - clip.mixStartSample) / clip.fadeInSamples);
+  if (clip.fadeInSamples > 0 && sample < target.startSample + clip.fadeInSamples) {
+    gain *= Math.max(0, (sample - target.startSample) / clip.fadeInSamples);
   }
-  if (clip.fadeOutSamples > 0 && sample >= clip.mixEndSampleExclusive - clip.fadeOutSamples) {
-    gain *= Math.max(0, (clip.mixEndSampleExclusive - sample) / clip.fadeOutSamples);
+  if (clip.fadeOutSamples > 0 && sample >= target.endSampleExclusive - clip.fadeOutSamples) {
+    gain *= Math.max(0, (target.endSampleExclusive - sample) / clip.fadeOutSamples);
   }
   return gain;
 }
@@ -416,11 +444,12 @@ class ProgramSignalReader implements SignalReader {
     reconstructedForClip: ((clip: AudioProgramClip) => SignalReader | undefined) | undefined,
   ) {
     const program = plan.program;
-    this.sampleFrames = program.sampleFrames;
-    this.#clips = plan.clips.map(({ clip, gain, mapping }) => {
+    this.sampleFrames = audioProgramSampleFrames(program);
+    this.#clips = plan.clips.map(({ clip, target, gain, mapping }) => {
         const reconstructed = reconstructedForClip?.(clip);
         return {
           clip,
+          target,
           routeGain: gain,
           mapping,
           source: sourceForClip(clip),
@@ -442,21 +471,21 @@ class ProgramSignalReader implements SignalReader {
     const end = start + frames;
     const samples = new Float64Array(frames * CHANNELS);
     for (const entry of this.#clips) {
-      const left = Math.max(start, entry.clip.targetStartSample);
-      const right = Math.min(end, entry.clip.targetEndSampleExclusive);
+      const left = Math.max(start, entry.target.startSample);
+      const right = Math.min(end, entry.target.endSampleExclusive);
       for (let sample = left; sample < right; sample += 1) {
-        const level = levelAt(entry.clip, sample) * entry.routeGain;
+        const level = levelAt(entry.clip, entry.target, sample) * entry.routeGain;
         if (level === 0) continue;
         let sourcePosition: SignalPosition;
         let reader: SignalReader;
         if (entry.reconstructed !== undefined) {
           sourcePosition = {
-            position: samplePosition(sample - entry.clip.targetStartSample),
+            position: samplePosition(sample - entry.target.startSample),
             sourceSide: "after",
           };
           reader = entry.reconstructed;
         } else {
-          const mapped = entry.mapping(samplePosition(sample - entry.clip.targetStartSample), "after");
+          const mapped = entry.mapping(samplePosition(sample - entry.target.startSample), "after");
           if (mapped === undefined) continue;
           sourcePosition = mapped;
           reader = entry.source;
@@ -502,7 +531,7 @@ export async function renderAudioProgramWav(options: {
   readonly reconstructedForClip?: (clip: AudioProgramClip) => CanonicalPcmReader | undefined;
 }): Promise<void> {
   assert(options.startSample >= 0 && options.sampleFrames >= 0
-    && options.startSample + options.sampleFrames <= options.program.sampleFrames,
+    && options.startSample + options.sampleFrames <= audioProgramSampleFrames(options.program),
   "Audio renderer range lies outside its programme");
   const plan = options.plan ?? planAudioProgramRender(options.program, options.startSample, options.sampleFrames);
   assert(plan.program === options.program, "Audio renderer plan belongs to another programme");

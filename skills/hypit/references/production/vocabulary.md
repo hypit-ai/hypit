@@ -54,7 +54,7 @@ spacing, or ordinary media inputs belong to authored configuration when the decl
 them.
 
 A catalogue preview helps identify the component's visual role. Its declared inputs and behavior
-show what can be adapted; its configured appearance in Studio shows how it serves this production.
+show what can be adapted; the current composition shows how it serves this production.
 
 Record the creative role in Treatment and express the implementation choice through Source imports
 and elements. Those two places contain the useful reason and the exact choice.
@@ -77,20 +77,17 @@ Keep the boundary useful:
 Start from the installed project-component example and follow its README for the selected release's
 TypeScript imports, package metadata and dependencies. Give the new package its own identity under the
 project owner's scope. Source imports use the address published by that package, such as
-`@studio/score-strip@1`.
+`@your-scope/score-strip@1`.
 
 Describe the declaration's role, fields and outputs with a small valid example so a future author
-can select it. A visual preview makes its appearance recognizable; Studio shows the actual
-configuration used in a production.
+can select it. A visual preview makes its appearance recognizable; the production Source records
+the actual configuration used in the work.
 
 For existing Track composition, read [Tracks](tracks.md). For a new Track,
 [Component design](component-design.md) shapes its visual idea, semantic behavior and useful controls.
 [Track authoring](track-authoring.md) explains temporal inputs, spatial ownership, persistent
 state, preset content and peer visual/audio outputs. [Caption authoring](caption-authoring.md) covers
 a new speech-text family without rebuilding its transcript or timing.
-
-[Studio and Companions](studio.md) covers timeline Items and Inspector editing for the new
-component.
 
 [Component visuals](component-visuals.md) explains the actual Track and element representation,
 with a drawing example. [System relationships](system.md) places it in the complete production.

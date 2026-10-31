@@ -169,16 +169,14 @@ test("Author Declarations retain provenance for nested semantic outputs and chil
     {
       range: range(0, 50),
       records: ["document"],
-      components: [],
       outputs: [],
-      inputs: [{ name: "id", range: range(5, 13), kind: "literal" }],
+      inputs: [{ name: "id" }],
     },
     {
       range: range(15, 40),
       records: ["section"],
-      components: [],
       outputs: [],
-      inputs: [{ name: "id", range: range(24, 31), kind: "literal" }],
+      inputs: [{ name: "id" }],
     },
   ]);
 });

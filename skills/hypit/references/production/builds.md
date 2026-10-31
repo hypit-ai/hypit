@@ -270,8 +270,8 @@ ordinary Author declaration owns how that file enters the production.
 
 ## Keep Results with the project
 
-Result storage belongs to the video project at `.hypit/results`. Result listing, export, history and
-Studio's finished library all read that directory. Moving or archiving completed Results is ordinary
+Result storage belongs to the video project at `.hypit/results`. Result listing, export and history
+all read that directory. Moving or archiving completed Results is ordinary
 project/file management performed after a Build; it is not a live Runtime repository choice.
 
 A submitted Build retains its exact project Result directory. Preserve a Result while its execution

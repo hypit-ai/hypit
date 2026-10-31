@@ -27,6 +27,7 @@ import type {
   AuthorSourceUnit,
   AuthorValueRef,
   CompiledSourceClosure,
+  ProjectedCompiledSourceClosure,
   DecodedAuthorSource,
   ResolvedAuthorSourceImport,
   SourceClosure,
@@ -34,6 +35,35 @@ import type {
 } from "@hypit/author";
 
 type Awaitable<T> = T | Promise<T>;
+
+/** Host-owned acceptance limits for one finite Source compilation. */
+export type SourceCompilationLimits = {
+  readonly maxSources: number;
+  readonly maxImportEdges: number;
+  readonly maxImportDepth: number;
+  readonly maxRecords: number;
+  readonly maxComponents: number;
+  readonly maxReadableAssetBytes: number;
+};
+
+export const defaultSourceCompilationLimits: SourceCompilationLimits = Object.freeze({
+  maxSources: 4_096,
+  maxImportEdges: 16_384,
+  maxImportDepth: 128,
+  maxRecords: 100_000,
+  maxComponents: 100_000,
+  maxReadableAssetBytes: 256 * 1024 * 1024,
+});
+
+export function sourceCompilationLimits(value: SourceCompilationLimits | undefined): SourceCompilationLimits {
+  const limits = value ?? defaultSourceCompilationLimits;
+  for (const [name, limit] of Object.entries(limits)) {
+    if (!Number.isSafeInteger(limit) || limit <= 0) {
+      throw new SourceClosureError("INVALID_SOURCE_COMPILATION_LIMIT", `${name} must be a positive safe integer`);
+    }
+  }
+  return Object.freeze({ ...limits });
+}
 
 export type CompileSourceClosureRequest = {
   readonly entry: ResolvedSource;
@@ -51,6 +81,10 @@ export type CompileSourceClosureRequest = {
   readonly resolveAsset?: SourceAssetResolver;
   readonly readAsset?: SourceAssetReader;
   readonly refineRecord?: AuthorRecordRefiner;
+  /** Execution policy supplied by the compiling Host; never enters Source or Build facts. */
+  readonly limits?: SourceCompilationLimits;
+  /** Produce source-range provenance only for an authoring tool that explicitly consumes it. */
+  readonly authorProjection?: boolean;
 };
 
 export class SourceClosureError extends Error {
@@ -100,6 +134,7 @@ function hygienizeSource(
   frontend: AuthorFrontend,
   decoded: DecodedAuthorSource,
   imports: readonly ResolvedAuthorSourceImport[],
+  authorProjection: boolean,
 ): HygienicSource {
   const unitId = `source:${JSON.stringify([source.id, frontend.id])}`;
   const recordsById = new Map(decoded.records.map((record) => [record.id, record]));
@@ -187,14 +222,11 @@ function hygienizeSource(
     components,
     exports,
     retainedOutputs,
-    provenance: (decoded.provenance ?? []).map((element) => ({
+    provenance: authorProjection ? (decoded.provenance ?? []).map((element) => ({
       id: hygienicId("element", unitId, `${element.range.start}:${element.range.end}`),
-      source: unitId,
       sourceName: source.name,
-      frontend: frontend.id,
       range: { ...element.range },
       records: element.records.map((id) => ({ local: id, id: recordIds.get(id) ?? id })),
-      components: element.components.map((id) => ({ local: id, id: componentIds.get(id) ?? id })),
       outputs: element.outputs.map((output) => ({
         component: componentIds.get(output.component) ?? output.component,
         name: output.name,
@@ -204,11 +236,9 @@ function hygienizeSource(
       inputs: element.inputs.map((input) => ({
         id: hygienicId("endpoint", unitId, `${element.range.start}:${input.name}`),
         name: input.name,
-        range: { ...input.range },
-        kind: input.kind,
         ...(input.ref === undefined ? {} : { ref: mapRef(input.ref) }),
       })),
-    })),
+    })) : [],
   };
 }
 
@@ -245,15 +275,29 @@ function sourcePaths(entry: HygienicSource, units: readonly HygienicSource[]): R
   return paths;
 }
 
+export function compileSourceClosure(
+  request: CompileSourceClosureRequest & { readonly authorProjection: true },
+): Promise<ProjectedCompiledSourceClosure>;
+export function compileSourceClosure(
+  request: CompileSourceClosureRequest,
+): Promise<CompiledSourceClosure>;
 export async function compileSourceClosure(
   request: CompileSourceClosureRequest,
-): Promise<CompiledSourceClosure> {
+): Promise<CompiledSourceClosure | ProjectedCompiledSourceClosure> {
+  const limits = sourceCompilationLimits(request.limits);
   const cache = new Map<string, HygienicSource>();
   const visiting: string[] = [];
   const visitingAt = new Map<string, number>();
   const ordered: HygienicSource[] = [];
+  let acceptedSources = 0;
+  let importEdges = 0;
+  let recordCount = 0;
+  let componentCount = 0;
+  let readableAssetBytes = 0;
 
-  const compile = async (resolvedSource: ResolvedSource): Promise<HygienicSource> => {
+  const compile = async (resolvedSource: ResolvedSource, depth: number): Promise<HygienicSource> => {
+    assert(depth <= limits.maxImportDepth, "SOURCE_IMPORT_DEPTH_LIMIT",
+      `Source import depth exceeds Host limit ${limits.maxImportDepth}`, resolvedSource.unit.id);
     const rawSource = resolvedSource.unit;
     assert(rawSource.id.length > 0, "EMPTY_SOURCE_ID", "SourceUnit id is empty");
     const source = rawSource;
@@ -268,6 +312,9 @@ export async function compileSourceClosure(
       `Source imports cycle through ${[...visiting.slice(cycle), key].join(" -> ")}`,
       rawSource.id,
     );
+    acceptedSources += 1;
+    assert(acceptedSources <= limits.maxSources, "SOURCE_COUNT_LIMIT",
+      `Source closure exceeds Host limit ${limits.maxSources}`, rawSource.id);
     const frontend = request.frontends.resolve(frontendId);
     assert(frontend !== undefined, "UNKNOWN_FRONTEND", `Frontend ${frontendId} is not registered`, frontendId);
     visitingAt.set(key, visiting.length);
@@ -278,11 +325,14 @@ export async function compileSourceClosure(
     const aliases = new Set<string>();
     const imports: ResolvedAuthorSourceImport[] = [];
     for (const dependency of discovery.sources) {
+      importEdges += 1;
+      assert(importEdges <= limits.maxImportEdges, "SOURCE_IMPORT_EDGE_LIMIT",
+        `Source imports exceed Host limit ${limits.maxImportEdges}`, source.id);
       assert(dependency.alias.length > 0, "EMPTY_SOURCE_ALIAS", `${source.name} has an empty source alias`);
       assert(!aliases.has(dependency.alias), "DUPLICATE_SOURCE_ALIAS", `${source.name} repeats alias ${dependency.alias}`);
       aliases.add(dependency.alias);
       const child = await request.resolveSource(rawSource, dependency);
-      const compiled = await compile(child);
+      const compiled = await compile(child, depth + 1);
       const publicRecordIds = new Set(compiled.exports
         .filter((item) => item.ref.kind === "record")
         .map((item) => item.ref.kind === "record" ? item.ref.id : ""));
@@ -343,10 +393,20 @@ export async function compileSourceClosure(
           assetRequest.from,
         );
         const bytes = Uint8Array.from(await request.readAsset(rawSource, assetRequest));
+        assert(bytes.byteLength <= limits.maxReadableAssetBytes - readableAssetBytes,
+          "SOURCE_READABLE_ASSET_BYTES_LIMIT",
+          `Readable Source assets exceed Host limit ${limits.maxReadableAssetBytes} bytes`, assetRequest.from);
+        readableAssetBytes += bytes.byteLength;
         readAssets.set(key, bytes);
         return Uint8Array.from(bytes);
       },
     });
+    assert(rawDecoded.records.length <= limits.maxRecords - recordCount, "SOURCE_RECORD_COUNT_LIMIT",
+      `Source Records exceed Host limit ${limits.maxRecords}`, source.id);
+    recordCount += rawDecoded.records.length;
+    assert(rawDecoded.components.length <= limits.maxComponents - componentCount, "SOURCE_COMPONENT_COUNT_LIMIT",
+      `Source Components exceed Host limit ${limits.maxComponents}`, source.id);
+    componentCount += rawDecoded.components.length;
     const validatedRecords: TypedRecord[] = [];
     for (const record of rawDecoded.records) {
       verifyRecordStructure(request.closure, record);
@@ -357,7 +417,7 @@ export async function compileSourceClosure(
       ...rawDecoded,
       records: validatedRecords,
     };
-    const result = hygienizeSource(source, frontend, decoded, imports);
+    const result = hygienizeSource(source, frontend, decoded, imports, request.authorProjection === true);
     visiting.pop();
     visitingAt.delete(key);
     cache.set(key, result);
@@ -365,7 +425,7 @@ export async function compileSourceClosure(
     return result;
   };
 
-  const entry = await compile(request.entry);
+  const entry = await compile(request.entry, 1);
   const records = ordered.flatMap((unit) => unit.records);
   const recordIds = new Set<string>();
   for (const record of records) {
@@ -400,15 +460,11 @@ export async function compileSourceClosure(
       return { name, type: item.type, ref };
     });
   }).sort((left, right) => compareCodeUnits(left.name, right.name));
-  return {
+  const compiled: CompiledSourceClosure = {
     closure: sourceClosure,
     program,
     graph,
     retainedOutputs,
-    provenance: {
-      format: "hypit.author-provenance@1",
-      elements: ordered.flatMap((unit) => unit.provenance),
-    },
     exports: entry.exports
       .map((item) => ({
         name: item.name,
@@ -416,5 +472,13 @@ export async function compileSourceClosure(
         ref: graphRefForExport(item, componentsById),
       }))
       .sort((left, right) => compareCodeUnits(left.name, right.name)),
+  };
+  if (request.authorProjection !== true) return compiled;
+  return {
+    ...compiled,
+    provenance: {
+      format: "hypit.author-provenance@1",
+      elements: ordered.flatMap((unit) => unit.provenance),
+    },
   };
 }

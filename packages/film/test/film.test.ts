@@ -28,7 +28,7 @@ import {
   elaborateGraphFragment,
   mergeFragmentContributions,
 } from "@hypit/author";
-import { appendFilmAudioTrack, appendFilmVisualTrack, compileFilmComposition, createFilmAssemblyFragment, createFilmTrackSet, filmManifest, filmProducers, filmTypes, sealFilmProgram } from "@hypit/film";
+import { appendFilmAudioTrack, appendFilmVisualTrack, compileFilmComposition, createFilmAssemblyFragment, createFilmTrackSet, filmManifest, filmProducers, filmTypes, sealFilmAssemblyPlan } from "@hypit/film";
 import { compileHtmlProgram, htmlProgramFragment, htmlProgramManifest, htmlProgramProducers } from "@hypit/html-program";
 import type { AuthorGraph, CanonicalValue, Value } from "@hypit/protocol";
 import { renderFineTextOccurrence, stillTextMotion } from "@hypit/text-fine";
@@ -49,7 +49,7 @@ const canvas = sealCanvas({
   widthPx: 1080,
   heightPx: 1920,
 });
-const filmProgram = sealFilmProgram({
+const filmAssembly = sealFilmAssemblyPlan({
   id: "main-film",
   clearColor: "#000000", visual: { members: [
     { kind: "track", id: "background", slot: 1 },
@@ -127,7 +127,7 @@ const records = await Promise.all([
   { id: "timeline", type: timelineTypes.timeline, value: stored(space) },
   { id: "semantic", type: timelineTypes.timeline, value: stored(semantic) },
   { id: "canvas", type: spatialTypes.canvas, value: stored(canvas) },
-  { id: "film-program", type: filmTypes.program, value: stored(filmProgram) },
+  { id: "film-assembly", type: filmTypes.assembly, value: stored(filmAssembly) },
   { id: "title", type: compositionTypes.visualTrack, value: stored(titleVisual) },
   { id: "background", type: compositionTypes.visualTrack, value: stored(background) },
   { id: "audio", type: compositionTypes.audioTrack, value: stored(audio) },
@@ -148,7 +148,7 @@ const filmFragment = createFilmAssemblyFragment({
 const filmInstance = elaborateGraphFragment(linked, filmFragment, {
   id: "main-film",
   inputs: {
-    program: { kind: "record", id: "film-program" },
+    assembly: { kind: "record", id: "film-assembly" },
     canvas: { kind: "record", id: "canvas" },
     timeline: { kind: "record", id: "timeline" },
     title: { kind: "record", id: "title" },
@@ -209,7 +209,7 @@ test("Film folds peer Tracks, then hands an ordinary Composition to HTML", () =>
   set = appendFilmVisualTrack(set, space, titleVisual);
   set = appendFilmVisualTrack(set, space, background);
   set = appendFilmAudioTrack(set, space, audio);
-  const composition = compileFilmComposition(filmProgram, canvas, space, set);
+  const composition = compileFilmComposition(filmAssembly, canvas, space, set);
   assert.deepEqual(composition.audio.contributions.map((track) => track.id), ["empty-audio-track"]);
   assert.deepEqual(composition.visual.root.members.map((member) => member.kind === "track" ? member.track.id : member.id),
     ["background-track", "title"]);
@@ -230,7 +230,7 @@ test("Film root preserves repeated closed audio signals independently of AudioTr
   let set = createFilmTrackSet();
   set = appendFilmAudioTrack(set, space, audio);
   set = appendFilmAudioTrack(set, space, structuredClone(audio));
-  const composition = compileFilmComposition(sealFilmProgram({
+  const composition = compileFilmComposition(sealFilmAssemblyPlan({
     id: "repeated-audio",
     clearColor: "#000000", visual: { members: [] },
     audio: [0, 1],

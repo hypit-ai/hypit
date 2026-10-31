@@ -1,17 +1,16 @@
 # Targets for one execution
 
-Read this when choosing which Author Outputs one plan, Build or Studio session must reach.
+Read this when choosing which Author Outputs one plan or Build must reach.
 [Authoring](authoring.md) explains the production Source and durable material choices;
 [Builds](builds.md) explains planning, submitting and inspecting the resulting Build.
 
 A Target is an author-facing Output name supplied to the current command. It selects the finite
 slice of the fixed Author graph evaluated by that command. Source paths and Targets are transient
-command or Studio-session inputs; durable material choices remain explicit references in Author Source.
+command inputs; durable material choices remain explicit references in Author Source.
 
 ```bash
 hypit plan production.svml --target final.video
 hypit build production.svml --target final.video --follow
-hypit studio --source production.svml --target final.video
 ```
 
 Repeat `--target` when the current action genuinely needs several independently useful Outputs:
@@ -78,6 +77,4 @@ on the media and timing used in that interval. `hypit plan` shows the selected d
 external Needs. Package declarations determine which reachable Outputs acquire Result lifetime.
 
 Use [Rendering](rendering.md#choose-a-render-interval-in-frames) for frame-range delivery and
-[Review](review.md) for judging the resulting arrangement. [Studio](studio.md) provides an interactive
-view of the same Author Source and explicit Targets when playback, parameter editing or a component
-Companion is useful.
+[Review](review.md) for judging the resulting arrangement.

@@ -13,6 +13,7 @@ import { endpointResourceClaims, installEndpoint } from "@hypit/endpoint";
 import { htmlProgramCapabilities } from "@hypit/html-program";
 import { mediaTypes } from "@hypit/media";
 import { canonicalize } from "@hypit/protocol";
+import { exactTemporalValueFromFrames, sealTemporalMap } from "@hypit/temporal";
 import { distributeFrameRange, requestedFrameRanges, sourceFrameAt, sourceWindows, videoSlots } from "../../html-render-local/src/sampling.js";
 import { htmlRangeDocument } from "./range-scenario.js";
 import { htmlProviderDelivery } from "./provider-scenario.js";
@@ -123,20 +124,55 @@ test("decoder identity includes the complete author-resolved picture geometry", 
 });
 
 test("reverse source time selects the same bounded decoded window without forward traversal", () => {
+  const clock = { frameRate: { numerator: 30, denominator: 1 } } as const;
+  const target = { id: "reverse-target", duration: exactTemporalValueFromFrames(4, clock) };
+  const source = { id: "reverse-source", duration: exactTemporalValueFromFrames(4, clock) };
   const [slot] = videoSlots([{ id: "reverse", elementId: "reverse",
     artifactId: "artifact-reverse", startFrame: 0, endFrameExclusive: 4,
     usage: { kind: "frames", spans: [{ startFrame: 0, endFrameExclusive: 4 }] },
     picture: { colorPrimaries: "bt709", colorTransfer: "bt709", colorMatrix: "bt709",
       colorRange: "limited", bitDepth: 8, alphaMode: "opaque" },
-    sourceFrame: { numerator: 4, denominator: 1 }, sourceRate: { numerator: -1, denominator: 1 },
-    kind: "surface", sourceFrameRate: { numerator: 30, denominator: 1 } }], () => "direct.mp4",
-  { frameRate: { numerator: 30, denominator: 1 } });
+    sampling: sealTemporalMap({ stages: [{ target, source, pieces: [{
+      target: { start: exactTemporalValueFromFrames(0, clock), end: target.duration },
+      sourceAtStart: source.duration, rate: { numerator: -1, denominator: 1 },
+    }] }] }),
+    kind: "surface", sourceFrameRate: { numerator: 30, denominator: 1 } }], () => "direct.mp4", clock);
   assert.ok(slot !== undefined);
   assert.deepEqual(Array.from({ length: 4 }, (_, frame) => sourceFrameAt(slot, frame)), [3, 2, 1, 0]);
   assert.deepEqual(sourceWindows([slot], { startFrame: 0, endFrameExclusive: 4 }, new Map()), [{
     sourceKey: slot.sourceKey, src: "direct.mp4", streamIndex: 0,
     windows: [{ startFrame: 0, endFrameExclusive: 4 }],
   }]);
+});
+
+test("Surface selection delegates multi-stage cubic, gap, hold and reverse semantics to Temporal", () => {
+  const clock = { frameRate: { numerator: 30, denominator: 1 } } as const;
+  const at = (frame: number) => exactTemporalValueFromFrames(frame, clock);
+  const fractionalFrame = (numerator: number, denominator: number) => ({
+    ticks: String(numerator), timeBase: { numerator: 1, denominator: 30 * denominator },
+  });
+  const target = { id: "complete-target", duration: at(6) };
+  const middle = { id: "complete-middle", duration: at(6) };
+  const source = { id: "complete-source", duration: at(6) };
+  const sampling = sealTemporalMap({ stages: [{ target, source: middle, pieces: [{
+    target: { start: at(0), end: at(2) }, sourceAtStart: at(0),
+    sourceControl1: fractionalFrame(2, 3), sourceControl2: fractionalFrame(4, 3), sourceAtEnd: at(2),
+  }, {
+    target: { start: at(3), end: at(4) }, sourceAtStart: at(2), rate: { numerator: 0, denominator: 1 },
+  }, {
+    target: { start: at(4), end: at(6) }, sourceAtStart: at(6), rate: { numerator: -1, denominator: 1 },
+  }] }, { target: middle, source, pieces: [{
+    target: { start: at(0), end: at(6) }, sourceAtStart: at(0), rate: { numerator: 1, denominator: 1 },
+  }] }] });
+  const [slot] = videoSlots([{ id: "complete", elementId: "complete", artifactId: "artifact-complete",
+    startFrame: 0, endFrameExclusive: 6,
+    usage: { kind: "frames", spans: [{ startFrame: 0, endFrameExclusive: 6 }] },
+    picture: { colorPrimaries: "bt709", colorTransfer: "bt709", colorMatrix: "bt709",
+      colorRange: "limited", bitDepth: 8, alphaMode: "opaque" },
+    sampling, kind: "surface", sourceFrameRate: clock.frameRate }], () => "complete.mp4", clock);
+  assert.ok(slot !== undefined);
+  assert.deepEqual(Array.from({ length: 6 }, (_, frame) => sourceFrameAt(slot, frame)),
+    [0, 1, undefined, 2, 5, 4]);
 });
 
 test("page selection compacts arbitrary requested frames without inventing coverage across gaps", () => {

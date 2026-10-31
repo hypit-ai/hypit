@@ -68,8 +68,8 @@ Agent 会从一开始写好剧本、表演方向和图片参考关系，让生�
 
 <video controls playsInline preload="metadata" width="100%" src="https://storage.googleapis.com/hypit-public-assets/quickstart/2026-09-10/watch_the_finished_video.mp4"></video>
 
-真实素材到位后，Agent 会检查版面、字幕、图形和 B-roll 是否清楚、时机是否恰当。交付视频时，也可以打开 Studio，让你浏览时间线、调整支持的属性。
+真实素材到位后，Agent 会检查版面、字幕、图形和 B-roll 是否清楚、时机是否恰当，然后观看并交付编码后的成片。
 
 继续对话就能修改作品或制作变体。仍适用的素材会继续复用，Agent 调整相关剧本、组件或位置。项目保存在普通文件里，可以继续编辑。
 
-进一步了解：[与 Agent 一起制作视频](./guide/skill.md)、[Target 与 Build](./quickstart/run.md)、[Studio](./quickstart/preview.md)。
+进一步了解：[与 Agent 一起制作视频](./guide/skill.md)、[Target 与 Build](./quickstart/run.md)。

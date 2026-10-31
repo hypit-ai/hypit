@@ -16,6 +16,11 @@ default local implementation, including submission and active-execution stores, 
 `@hypit/runtime-local`; component and endpoint command execution lives in the environment-neutral
 `@hypit/executor`.
 
+Active control views are deliberate projections, not serialized Operation or scheduler records.
+They expose product state, progress, receipts and failures without copying wake times, internal
+operation/command identities, derived Build creation time, or record/command counts. A caller that
+needs elapsed time derives it from the public Build id.
+
 The package also owns the environment-neutral shapes exchanged during command-scoped Runtime
 inspection. `RuntimeEndpointQuery` distinguishes a structural demand from a complete request;
 `RuntimeEndpointObservation` keeps deployment selection separate from concrete request support; and

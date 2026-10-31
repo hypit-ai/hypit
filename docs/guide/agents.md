@@ -27,9 +27,9 @@ environment and use that environment's preview forwarding or file delivery. A lo
 the remote machine is not a preview address on your computer.
 
 The project and generated material should remain accessible when a conversation or temporary
-session ends. Your Agent can explain where they are saved and open Studio for timeline editing
-and Comments for feedback at specific times. Reviewing the composition and exporting a video are
-separate actions.
+session ends. Your Agent can explain where they are saved, show focused frames or intervals for
+feedback, and revise the Sources or components that own the requested change. Reviewing the
+composition and exporting the final video are separate actions.
 
 ## Agent-entry partner: OpenAgents
 

@@ -1,4 +1,4 @@
-import type { CompiledAuthorSource } from "@hypit/hypit/compiler";
+import type { ProjectedCompiledAuthorSource } from "@hypit/hypit/compiler";
 import type { AuthorElementProvenance, AuthorValueRef } from "@hypit/hypit/author";
 import type { TypeRef } from "@hypit/hypit/protocol";
 
@@ -10,7 +10,7 @@ import type { ServedFile } from "./material.js";
 export type { ServedFile } from "./material.js";
 
 export type CompiledSource = {
-  readonly compiled: CompiledAuthorSource;
+  readonly compiled: ProjectedCompiledAuthorSource;
   readonly observations: Observations;
   readonly served: ReadonlyMap<string, ServedFile>;
   readonly exports: readonly {
@@ -27,7 +27,7 @@ export type CompiledSource = {
  * Studio share one Author graph instead of compiling two look-alike graphs.
  */
 export async function observedCompiledSource(
-  compiled: CompiledAuthorSource,
+  compiled: ProjectedCompiledAuthorSource,
   observations: Observations,
 ): Promise<CompiledSource> {
   const served = new Map<string, ServedFile>();
@@ -60,7 +60,7 @@ function sameRange(
 }
 
 function exactElement(
-  compiled: CompiledAuthorSource,
+  compiled: ProjectedCompiledAuthorSource,
   sourcePath: string,
   range: { readonly start: number; readonly end: number },
 ): AuthorElementProvenance | undefined {
@@ -68,14 +68,14 @@ function exactElement(
     element.sourceName === sourcePath && sameRange(element.range, range));
 }
 
-function resolvedRef(compiled: CompiledAuthorSource, ref: AuthorValueRef): string | undefined {
+function resolvedRef(compiled: ProjectedCompiledAuthorSource, ref: AuthorValueRef): string | undefined {
   if (ref.kind === "record") return ref.id;
   return compiled.provenance.elements.flatMap((element) => element.outputs)
     .find((output) => output.component === ref.component && output.name === ref.output)?.id;
 }
 
 function decorate(
-  compiled: CompiledAuthorSource,
+  compiled: ProjectedCompiledAuthorSource,
   sourcePath: string,
   range: { readonly start: number; readonly end: number },
 ): {
@@ -104,7 +104,7 @@ function decorate(
 
 /** Join Studio presentation to compiler-owned identities without re-matching authored names. */
 function normalizeObservations(
-  compiled: CompiledAuthorSource,
+  compiled: ProjectedCompiledAuthorSource,
   observations: Observations,
 ): Observations {
   const placements: Placement[] = observations.placements.map((placement) => {

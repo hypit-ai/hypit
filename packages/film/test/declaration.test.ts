@@ -59,7 +59,7 @@ test("Film's package-owned declaration compiles recursive scopes independently o
   });
 
   assert.deepEqual(decoded.exports.map((value) => value.name), ["main.composition"]);
-  assert.deepEqual(decoded.records.find((record) => record.type.name === filmTypes.program.name)?.value, {
+  assert.deepEqual(decoded.records.find((record) => record.type.name === filmTypes.assembly.name)?.value, {
     id: "main",
     clearColor: "#09090B",
     visual: { members: [{ kind: "stack", id: "foreground", members: [{

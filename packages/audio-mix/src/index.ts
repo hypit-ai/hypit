@@ -1,4 +1,5 @@
 export { audioMixComponent } from "./component.js";
+export { AUDIO_GAIN_PROCESS_FORMAT, audioGainProcess, readAudioGainProcess } from "./gain.js";
 export { createAudioMixFragment } from "./fragment.js";export { audioMixHeaderSchema, audioMixInputSpecSchema, audioMixManifest, audioMixModuleRef, audioMixProducers, audioMixSetSchema, audioMixTypes } from "./manifest.js";
 export { appendAudioMixInput, assertAudioMixSet, createAudioMixSet, finalizeAudioMix, sealAudioMixHeader, sealAudioMixInputSpec } from "./program.js";export { audioMixMarkupDeclarations } from "./declaration.js";
 export { audioMixAuthorDeclaration, audioMixAuthorDeclarations } from "./declaration.js";

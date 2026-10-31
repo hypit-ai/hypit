@@ -37,7 +37,6 @@ export type CliBuildAuthoring = {
 
 export type CliBuildView = {
   readonly id: string;
-  readonly createdAt: number;
   readonly activity: "submitting" | "ready" | "running" | "waiting" | "saving-result";
   readonly outcome?: "complete" | "failed" | "cancelled";
   readonly issue?: { readonly scope: "result" | "cleanup"; readonly message: string };
@@ -45,12 +44,8 @@ export type CliBuildView = {
   readonly sourcePath?: string;
   readonly targets: readonly string[];
   readonly requests?: { readonly total: number; readonly completed: number };
-  readonly acceptedRecords: number;
-  readonly outstandingCommands: number;
   readonly operations: readonly ({
-    readonly id: string;
     readonly receipt?: import("@hypit/runtime").OperationReceipt;
-    readonly wakeAt?: number;
     readonly endpoint: string;
     readonly progress?: OperationSnapshot["progress"];
   } & (
@@ -58,7 +53,6 @@ export type CliBuildView = {
     | { readonly status: "pending" | "received" | "completed" | "cancelled"; readonly failure?: never }
   ))[];
   readonly commands?: readonly {
-    readonly id: string;
     readonly endpoint: string;
     readonly progress: NonNullable<OperationSnapshot["progress"]>;
   }[];
@@ -156,6 +150,10 @@ export type CliInvocationObservation = {
 /** Runtime services consumed by the generic long-compilation command engine. */
 export type CliRuntimeHost = {
   readonly profile: string;
+  /** Host execution policy used before submission. Omission selects Executor defaults. */
+  planningPolicy?(): Promise<{
+    readonly producerExecutionLimits?: NonNullable<ExecutorOptions["producerExecutionLimits"]>;
+  }>;
   /** Availability of the execution service selected by this Runtime implementation. */
   executionStatus(): Promise<{ readonly state: "running" | "stopped" }>;
   /** Make the selected execution service available before accepting durable work. */

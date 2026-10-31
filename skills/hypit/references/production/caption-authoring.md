@@ -147,8 +147,3 @@ where relevant. A still can show typography; only the configured timeline establ
 Expose the family with useful vocabulary and a designed preview. Keep wording, font choices, palette
 and authored word roles editable in the project. The package adds its rendering language while
 consuming the existing Script, Caption and semantic-time owners.
-
-For live Cue Items and Inspector editing, add a [Studio Companion](studio.md#give-a-project-component-a-useful-companion)
-that presents complete Cue content on the Timeline and authored Uses as Inspector objects. Expose the
-Style selected by each Use. Caption Fine's Companion is a useful interaction reference; the new
-family's layout stays in its component.

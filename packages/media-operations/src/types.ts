@@ -70,12 +70,6 @@ export type MediaTransformProgram = {
 
 export type AudioExtractionRequest = {
   readonly audio: Exclude<MediaAudioSelector, { readonly mode: "none" }>;
-  readonly output: {
-    readonly container: "wav";
-    readonly codec: "pcm_s16le";
-    readonly sampleRate: 48_000;
-    readonly channels: 2;
-  };
 };
 
 export type FrameExtractionRequest = {
@@ -85,7 +79,6 @@ export type FrameExtractionRequest = {
     | { readonly kind: "last" }
     | { readonly kind: "frame"; readonly index: number }
     | { readonly kind: "time"; readonly seconds: number };
-  readonly output: { readonly format: "png" };
 };
 
 /** How the still video divides its literal duration among its pictures: one weight per picture, in order. */
@@ -102,18 +95,12 @@ export type StillVideoSegment = FrameSpan & {
 export type StillVideoRequest = {
   readonly frameRate: MediaRational;
   readonly frameCount: number;
-  readonly output: {
-    readonly container: "mp4";
-    readonly codec: "h264";
-    readonly pixelFormat: "yuv420p";
-  };
   readonly segments: readonly StillVideoSegment[];
 };
 
 export type ExtractAudioNeed = {
   readonly source: BlobRef;
   readonly streamIndex: number;
-  readonly output: AudioExtractionRequest["output"];
 };
 
 export type ExtractFrameNeed = {
@@ -121,7 +108,6 @@ export type ExtractFrameNeed = {
   readonly streamIndex: number;
   readonly sourceFrameCount: number;
   readonly at: FrameExtractionRequest["at"];
-  readonly output: FrameExtractionRequest["output"];
 };
 
 /** Every segment of the request carries its picture by the time the Need is made. */

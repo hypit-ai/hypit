@@ -161,7 +161,6 @@ test("short Sticker windows compose overlapping enter and exit motion instead of
 
 function authored(path: string, type: AuthorResolvedReference["type"], value: unknown): AuthorResolvedReference {
   return {
-    path,
     ref: { kind: "record", id: path },
     type,
     record: {

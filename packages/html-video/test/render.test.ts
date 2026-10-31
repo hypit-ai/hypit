@@ -65,6 +65,7 @@ import {
   audioProgramComponent,
   audioProgramManifest,
   audioProgramProducers,
+  audioProgramSampleFrames,
   compileAudioProgram,
 } from "@hypit/audio-program";
 import {
@@ -250,9 +251,7 @@ test("separate visual, audio and mux Endpoints complete one author-visible rende
       const request = endpointRequest.constraints as { contract: string; program: ReturnType<typeof compileAudioProgram> };
       return stored(sealTimelineAudio({
           artifact: audioArtifact,
-          sampleRate: 48_000,
-          channelLayout: "stereo",
-          sampleFrames: request.program.sampleFrames,
+          sampleFrames: audioProgramSampleFrames(request.program),
         }));
     },
   );
@@ -267,7 +266,6 @@ test("separate visual, audio and mux Endpoints complete one author-visible rende
           frameRate: request.visual.frameRate,
           frameCount: request.visual.frameCount,
           canvas: request.visual.canvas,
-          presentationSampleFrames: request.audio.sampleFrames,
           delivery: request.delivery,
           artifact: finalArtifact,
         }));

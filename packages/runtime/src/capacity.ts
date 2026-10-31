@@ -28,8 +28,6 @@ export type CapacityReservation = {
   readonly build: string;
   readonly command: string;
   readonly resources: readonly CapacityResourceClaim[];
-  readonly createdAt: number;
-  readonly lifetime?: "action" | "operation";
 };
 
 export type CapacityAcquireRequest = {

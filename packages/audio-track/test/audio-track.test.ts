@@ -23,7 +23,7 @@ import type { PreparedMedia } from "@hypit/media";
 import { mediaComponent, mediaDependency, mediaManifest, mediaTypes, prepareMedia } from "@hypit/media";
 import type { NarrativeMomentRef, NarrativeSelectionRef } from "@hypit/narrative";
 import { narrativeManifest } from "@hypit/narrative";
-import { audioProgramSourceClips, compileAudioProgram } from "@hypit/audio-program";
+import { audioProgramClipSampleSpan, audioProgramSourceClips, compileAudioProgram } from "@hypit/audio-program";
 import { mediaOperationsManifest } from "@hypit/media-operations";
 import type { ModuleManifest } from "@hypit/protocol";
 import { exactTemporalValueFromFrames, isAffineTemporalMapPiece, resolveTemporalRelation, temporalDependency, temporalTypes,
@@ -105,14 +105,12 @@ function preparedAudio(id: string, sampleFrames: number): PreparedMedia {
     id,
     source: { kind: "blob", resource: fixtureResource(`source:${id}`), size: sampleFrames * 4, mediaType: "audio/wav" },
     inspection: {
-      container: { formatNames: ["wav"] },
       streams: [{
-        kind: "audio", index: 0, codecType: "audio", codecName: "pcm_s16le",
-        disposition: { default: true, attachedPicture: false }, timingStatus: "admissible",
-        timeBase: { numerator: 1, denominator: 48_000 },
+        kind: "audio", index: 0, codecName: "pcm_s16le",
+        disposition: { default: true, attachedPicture: false },
         startPts: { ticks: "0", timeBase: { numerator: 1, denominator: 48_000 } },
         endPts: { ticks: String(sampleFrames), timeBase: { numerator: 1, denominator: 48_000 } },
-        decodedUnitCount: sampleFrames, sampleRate: 48_000, channels: 2,
+        sampleRate: 48_000, channels: 2,
         decodedSampleFrames: sampleFrames,
       }],
     },
@@ -309,7 +307,8 @@ test("frame-authored fades share their Clip boundaries on a rational clock", () 
       header,
     ));
     const rendered = audioProgramSourceClips(compileAudioProgram(sealComposition({ id: `ntsc-${startFrame}`, visual: { canvas: { width: 1, height: 1, clearColor: "#000000" }, root: { members: [] } }, audio: { contributions: [track] } }, ntsc)))[0]!;
-    const length = rendered.mixEndSampleExclusive - rendered.mixStartSample;
+    const span = audioProgramClipSampleSpan(rendered);
+    const length = span.endSampleExclusive - span.startSample;
     assert.equal(rendered.fadeInSamples, length, `fade-in from frame ${startFrame}`);
     assert.equal(rendered.fadeOutSamples, length, `fade-out from frame ${startFrame}`);
   }
@@ -336,12 +335,11 @@ test("piecewise audio maps preserve silent gaps while execution keeps one Clip-g
   ]);
   const program = compileAudioProgram(sealComposition({ id: "piecewise", visual: { canvas: { width: 1, height: 1, clearColor: "#000000" }, root: { members: [] } }, audio: { contributions: [track] } }, space));
   assert.deepEqual(audioProgramSourceClips(program).map((clip) => ({
-    target: [clip.targetStartSample, clip.targetEndSampleExclusive],
-    mix: [clip.mixStartSample, clip.mixEndSampleExclusive],
+    target: Object.values(audioProgramClipSampleSpan(clip)),
     fade: [clip.fadeInSamples, clip.fadeOutSamples],
     pieces: clip.sampling.stages[0]?.pieces.map((piece) => sampledPiece(piece).target),
   })), [
-    { target: [0, 192_000], mix: [0, 192_000], fade: [48_000, 48_000], pieces: [
+    { target: [0, 192_000], fade: [48_000, 48_000], pieces: [
       { startSample: 0, endSampleExclusive: 48_000 },
       { startSample: 96_000, endSampleExclusive: 144_000 },
     ] },

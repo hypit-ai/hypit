@@ -222,9 +222,9 @@ explains how to identify active work and continue through a new Build after a fa
 Completed Outputs remain in Results without becoming production inputs. Export accepted material to
 the project and update the Author Source; neither notes nor an unchanged output name selects it automatically.
 
-## Keep review notes with the work
+## Keep review decisions with the work
 
-Studio's `FEEDBACK.json` belongs to the workspace and records timestamped comments for its authoring contexts.
-[Working from Comments](../production/studio.md#revise-from-timestamped-comments) explains reading,
-resolving and preserving these shared notes. Carry settled creative choices into Treatment and
-execution progress into Progress; retain comments as the review conversation.
+Carry settled creative choices into Treatment and execution progress into Progress. When feedback
+refers to a time or passage, record that location together with the requested result and the Source,
+material or component that owns the revision; do not make a tool-specific comment file the authority
+for the production.

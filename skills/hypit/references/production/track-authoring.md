@@ -135,7 +135,7 @@ explains that distinction. A new Caption family consumes the common Caption docu
 ## Implement the component package
 
 Give the package one Source interface, the code that performs its behavior, a concise README and a
-preview. Add Studio controls only for author choices that are useful to edit. Follow the installed
+preview. Expose author choices only when they are useful to direct. Follow the installed
 component template and package README for the selected release's exact files and TypeScript APIs.
 
 Window consumers commonly use `during`; Instant consumers commonly use `at`. Keep child ids meaningful
@@ -149,7 +149,7 @@ can share that input directly. Expose additional outputs for a real composition 
 For persistent state, reason about a requested frame directly. For example: outside the outer Window,
 draw nothing; inside it, each slot shows its preset/activated answer or its placeholder. Apply an
 entrance motion relative to that slot's activation frame. Deriving state directly from declared inputs
-and the requested frame keeps Studio scrubbing and partial or concurrent rendering deterministic.
+and the requested frame keeps partial or concurrent rendering deterministic.
 
 Publish an ordinary VisualTrack or AudioTrack output. [Component visuals](component-visuals.md)
 explains Presents, element trees and local animation. [Spatial layout](spatial.md) explains incoming
@@ -161,11 +161,6 @@ on the same Moment. Neither choice requires a Track to inspect another Track's p
 Document which Outputs are public, including useful deterministic program values for inspection.
 
 ## Verify the behavior the component introduced
-
-When the new role needs its own timeline Items or Inspector, read
-[Companion authoring](studio-companions.md). Expose the domain
-schedule and temporal identities at their actual boundaries so the editor consumes them directly
-instead of reconstructing them from pixels.
 
 Give the component a concise README, public vocabulary, a meaningful visual example and a preview
 showing the state change. State each exposed event's meaning and which state persists after it.

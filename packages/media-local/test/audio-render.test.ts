@@ -16,6 +16,7 @@ import {
   audioRenderPlanSourceClips,
   CanonicalPcmReader,
   planAudioProgramRender,
+  planPositiveAffineReconstruction,
   renderAudioProgramWav,
 } from "../src/audio-render.js";
 
@@ -46,15 +47,10 @@ function sourceClip(id = "local-clip", targetStartSample = 0): AudioProgramClip 
       streamIndex: 0,
       presentationStart: { ticks: "0", timeBase: { numerator: 1, denominator: 1 } },
       sourceDomain: domain,
-      interpretation: { sampleRate: 48_000, channels: 2 },
     },
     preparation: sampling,
     sampling,
     target: { start: exactTemporalValueFromFrames(targetStartSample, { frameRate }), end: exactTemporalValueFromFrames(targetStartSample + 4, { frameRate }) },
-    targetStartSample,
-    targetEndSampleExclusive: targetStartSample + 4,
-    mixStartSample: targetStartSample,
-    mixEndSampleExclusive: targetStartSample + 4,
     gain: 1,
     fadeInSamples: 0,
     fadeOutSamples: 0,
@@ -73,15 +69,10 @@ function mappedSourceClip(id: string, map: TemporalMap, sourceFrames: number): A
       streamIndex: 0,
       presentationStart: { ticks: "0", timeBase: { numerator: 1, denominator: 1 } },
       sourceDomain,
-      interpretation: { sampleRate: 48_000, channels: 2 },
     },
     preparation: identityTemporalMap(sourceDomain),
     sampling: map,
     target: { start: exactTemporalValueFromFrames(0, { frameRate }), end: exactTemporalValueFromFrames(4, { frameRate }) },
-    targetStartSample: 0,
-    targetEndSampleExclusive: 4,
-    mixStartSample: 0,
-    mixEndSampleExclusive: 4,
     gain: 1,
     fadeInSamples: 0,
     fadeOutSamples: 0,
@@ -100,16 +91,16 @@ test("one request-local audio plan excludes clips outside a partial render and d
   const first = sourceClip("first", 0);
   const second = sourceClip("second", 4);
   const program: AudioProgram = {
-    frameRate, frameCount: 8, sampleRate: 48_000, sampleFrames: 8,
+    frameRate, frameCount: 8,
     graph: {
       nodes: [
         { kind: "source", id: "first-source", clip: first },
         { kind: "source", id: "second-source", clip: second },
         { kind: "mix", id: "mix", inputs: [
-          { node: "first-source", port: "signal" }, { node: "second-source", port: "signal" },
+          { node: "first-source" }, { node: "second-source" },
         ] },
       ],
-      output: { node: "mix", port: "signal" },
+      output: { node: "mix" },
     },
   };
   const plan = planAudioProgramRender(program, 0, 4);
@@ -166,9 +157,9 @@ test("audio sampling delegates reverse, hold, wrap, gap and cubic boundaries to 
     for (const item of cases) {
       const clip = mappedSourceClip(item.name, sampleMap(item.name, item.piece), 8);
       const program: AudioProgram = {
-        frameRate, frameCount: 4, sampleRate: 48_000, sampleFrames: 4,
+        frameRate, frameCount: 4,
         graph: { nodes: [{ kind: "source", id: `${item.name}:node`, clip }],
-          output: { node: `${item.name}:node`, port: "signal" } },
+          output: { node: `${item.name}:node` } },
       };
       const outputPath = join(work, `${item.name}.wav`);
       await renderAudioProgramWav({
@@ -183,4 +174,28 @@ test("audio sampling delegates reverse, hold, wrap, gap and cubic boundaries to 
     source.close();
     await rm(work, { recursive: true, force: true });
   }
+});
+
+test("pitch-preserving trim resolves exact half-sample boundaries with Temporal's one integer rule", () => {
+  const preparedDomain = { id: "half-prepared", duration: exactTemporalValueFromFrames(2, { frameRate }) };
+  const sourceDomain = { id: "half-source", duration: exactTemporalValueFromFrames(3, { frameRate }) };
+  const preparation = sealTemporalMap({ stages: [{ target: preparedDomain, source: sourceDomain, pieces: [{
+    target: { start: exactTemporalValueFromFrames(0, { frameRate }), end: preparedDomain.duration },
+    sourceAtStart: { ticks: "1", timeBase: { numerator: 1, denominator: 96_000 } },
+    rate: { numerator: 1, denominator: 1 },
+  }] }] });
+  const clip: AudioProgramClip = {
+    ...sourceClip("half-sample"),
+    source: { ...sourceClip("half-sample").source, sourceDomain },
+    preparation,
+    sampling: identityTemporalMap(preparedDomain),
+    target: { start: exactTemporalValueFromFrames(0, { frameRate }),
+      end: exactTemporalValueFromFrames(2, { frameRate }) },
+  };
+  assert.deepEqual(planPositiveAffineReconstruction(clip), {
+    sourceStartSample: 1,
+    sourceEndSampleExclusive: 3,
+    rate: 1,
+    targetSampleFrames: 2,
+  });
 });

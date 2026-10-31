@@ -10,13 +10,13 @@ import type {
 import type {
   BuildResultFileRef,
   BuildResultDraft,
-  BuildResultOutput,
+  StoredBuildResultOutput,
   BuildResultResourceSource,
   BuildResultSync,
   BuildResultValueDocument,
   BuildResultValuePath,
 } from "./types.js";
-import { buildResultOutput, defineBuildResultOutput } from "./types.js";
+import { defineStoredBuildResultOutput, storedBuildResultOutput } from "./types.js";
 
 export type BuildResultWriterState = {
   readonly resources: Readonly<Record<string, string>>;
@@ -145,7 +145,7 @@ export async function syncBuildResultOutputs(input: {
   const values = new Map(Object.entries(input.writer.values));
   const filePaths = numberedPathAllocator("files", "file", resources.values());
   const valuePaths = numberedPathAllocator("values", "value", values.values());
-  const outputs: Record<string, BuildResultOutput> = { ...input.manifest.outputs };
+  const outputs: Record<string, StoredBuildResultOutput> = { ...input.manifest.outputs };
 
   const materialize = async (artifacts: readonly BlobRef[]): Promise<readonly BuildResultFileRef[]> => {
     const writes: Array<{ readonly path: string; readonly blob: BlobRef }> = [];
@@ -166,7 +166,7 @@ export async function syncBuildResultOutputs(input: {
     return result;
   };
 
-  const outputValue = async (record: TypedRecord): Promise<BuildResultOutput["value"]> => {
+  const outputValue = async (record: TypedRecord): Promise<StoredBuildResultOutput["value"]> => {
     if (isBlobRef(record.value)) return (await materialize([record.value]))[0]!;
     if (scalar(record.value)) return { kind: "inline", value: record.value };
     const existingPath = values.get(record.id);
@@ -190,7 +190,7 @@ export async function syncBuildResultOutputs(input: {
 
   const outputRank = (record: TypedRecord): number => isBlobRef(record.value) ? 0 : scalar(record.value) ? 1 : 2;
   const ready: ReadyOutput[] = input.writer.intent.outputs.flatMap((intent): ReadyOutput[] => {
-    if (buildResultOutput({ outputs }, intent.name) !== undefined) return [];
+    if (storedBuildResultOutput({ outputs }, intent.name) !== undefined) return [];
     const record = input.sync.records.find((item) => item.id === intent.record);
     if (record === undefined) return [];
     return [{ intent, record }];
@@ -202,7 +202,7 @@ export async function syncBuildResultOutputs(input: {
   }
 
   for (const { intent, record } of ready) {
-    defineBuildResultOutput(outputs, intent.name, {
+    defineStoredBuildResultOutput(outputs, intent.name, {
       type: record.type,
       value: await outputValue(record),
     });

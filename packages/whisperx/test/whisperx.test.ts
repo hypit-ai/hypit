@@ -44,7 +44,7 @@ test("WhisperX request contains canonical audio, its sample span and the chosen 
 
 test("SVML language reaches an independent transcription request", async () => {
   const refs = new Map<string, AuthorResolvedReference>([
-    ["media", { path: "media", ref: { kind: "record", id: "media" }, type: mediaTypes.prepared }],
+    ["media", { ref: { kind: "record", id: "media" }, type: mediaTypes.prepared }],
   ]);
   const registry = new AuthorDeclarationRegistry();
   registry.register(whisperXTranscriptionAuthorDeclaration);

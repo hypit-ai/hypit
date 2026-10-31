@@ -378,10 +378,9 @@ export class Executor {
     }
     operation ??= await operations.create({
       id: `op_${crypto.randomUUID()}`, build: context.build, command: executable.command.id,
-      endpoint: executable.endpointId, status: "queued", createdAt: Date.now(),
+      endpoint: executable.endpointId, status: "queued",
       need: structuredClone(executable.command.need),
       credentials: structuredClone(executable.registration.credentials ?? {}),
-      ...(executable.registration.pool === undefined ? {} : { pool: executable.registration.pool }),
       wakeAt: Date.now(), progress: { phase: "ready-to-submit" },
     });
     if (operation.status === "queued" || operation.status === "submitting"

@@ -4,6 +4,7 @@ import type {
   AuthorFrontendRegistryLike,
   AuthorSourceDiscovery,
   CompiledSourceClosure,
+  ProjectedCompiledSourceClosure,
   AuthorRecordRefiner,
 } from "@hypit/author";
 import type { ResolvedSource } from "@hypit/source";
@@ -15,7 +16,8 @@ import type { RefinementRegistryLike } from "@hypit/refinement";
 
 import { CompilerError } from "./error.js";
 import type { ModulePackageRegistryLike } from "./modules.js";
-import { compileSourceClosure } from "./source.js";
+import { compileSourceClosure, sourceCompilationLimits } from "./source.js";
+import type { CompileSourceClosureRequest, SourceCompilationLimits } from "./source.js";
 
 type DiscoveredUnit = {
   readonly source: ResolvedSource;
@@ -56,10 +58,17 @@ async function discoverClosure(
   entry: ResolvedSource,
   frontends: AuthorFrontendRegistryLike,
   workspace: WorkspaceSession,
+  limits: SourceCompilationLimits,
 ): Promise<readonly DiscoveredUnit[]> {
   const units = new Map<string, DiscoveredUnit>();
   const visiting = new Set<string>();
-  const visit = async (source: ResolvedSource): Promise<void> => {
+  const accepted = new Set<string>();
+  let importEdges = 0;
+  const visit = async (source: ResolvedSource, depth: number): Promise<void> => {
+    if (depth > limits.maxImportDepth) {
+      throw new CompilerError("SOURCE_IMPORT_DEPTH_LIMIT",
+        `Source import depth exceeds Host limit ${limits.maxImportDepth}`, source.unit.id);
+    }
     const selectedFrontend = source.frontend;
     const key = `${source.unit.id}\u0000${selectedFrontend}`;
     if (units.has(key)) return;
@@ -70,15 +79,27 @@ async function discoverClosure(
     if (frontend === undefined) {
       throw new CompilerError("UNKNOWN_FRONTEND", `Frontend ${selectedFrontend} is not registered`, selectedFrontend);
     }
+    if (!accepted.has(key)) {
+      accepted.add(key);
+      if (accepted.size > limits.maxSources) {
+        throw new CompilerError("SOURCE_COUNT_LIMIT",
+          `Source closure exceeds Host limit ${limits.maxSources}`, source.unit.id);
+      }
+    }
     visiting.add(key);
     const discovery = await frontend.discover(source.unit);
     for (const request of discovery.sources) {
-      await visit(await workspace.resolveSource(source.unit, request));
+      importEdges += 1;
+      if (importEdges > limits.maxImportEdges) {
+        throw new CompilerError("SOURCE_IMPORT_EDGE_LIMIT",
+          `Source imports exceed Host limit ${limits.maxImportEdges}`, source.unit.id);
+      }
+      await visit(await workspace.resolveSource(source.unit, request), depth + 1);
     }
     visiting.delete(key);
     units.set(key, { source, frontend: selectedFrontend, discovery });
   };
-  await visit(entry);
+  await visit(entry, 1);
   return [...units.values()];
 }
 
@@ -89,6 +110,8 @@ export type CompilerOptions = {
   readonly workspace: Workspace;
   /** Trusted Type-owner refinements applied to authored Records before linking. */
   readonly refinements: RefinementRegistryLike;
+  /** Host-owned finite-work policy; it is never serialized into authored or compiled values. */
+  readonly limits?: SourceCompilationLimits;
 };
 
 export type CompiledAuthorSource = CompiledSourceClosure & {
@@ -96,13 +119,23 @@ export type CompiledAuthorSource = CompiledSourceClosure & {
   readonly attachments: readonly BlobAttachment[];
 };
 
+export type ProjectedCompiledAuthorSource = ProjectedCompiledSourceClosure & {
+  readonly attachments: readonly BlobAttachment[];
+};
+
+export type CompileAuthorSourceOptions = {
+  readonly authorProjection?: boolean;
+};
+
 /** Domain-neutral compiler from a resolved Author Source to a verified Source Closure and Graph. */
 export class Compiler {
   readonly #options: CompilerOptions;
   readonly #refineRecord: AuthorRecordRefiner;
+  readonly #limits: SourceCompilationLimits;
 
   constructor(options: CompilerOptions) {
     this.#options = options;
+    this.#limits = sourceCompilationLimits(options.limits);
     this.#refineRecord = async (record) => await refineRecord(record, options.refinements);
   }
 
@@ -115,9 +148,19 @@ export class Compiler {
     return await this.#options.workspace.open(locator);
   }
 
-  async compileEntry(locator: string): Promise<CompiledAuthorSource> {
+  async compileEntry(
+    locator: string,
+    options: CompileAuthorSourceOptions & { readonly authorProjection: true },
+  ): Promise<ProjectedCompiledAuthorSource>;
+  async compileEntry(locator: string, options?: CompileAuthorSourceOptions): Promise<CompiledAuthorSource>;
+  async compileEntry(
+    locator: string,
+    options: CompileAuthorSourceOptions = {},
+  ): Promise<CompiledAuthorSource | ProjectedCompiledAuthorSource> {
     const workspace = await this.openEntry(locator);
-    return await this.compileResolvedSource(workspace.entry, workspace);
+    return options.authorProjection === true
+      ? await this.compileResolvedSource(workspace.entry, workspace, { authorProjection: true })
+      : await this.compileResolvedSource(workspace.entry, workspace);
   }
 
   /** Open the editable author projection of one already resolved Source revision. */
@@ -137,11 +180,26 @@ export class Compiler {
   }
 
   /** Compile an explicitly resolved Source inside one already isolated Workspace. */
-  async compileResolvedSource(entry: ResolvedSource, workspace: WorkspaceSession): Promise<CompiledAuthorSource> {
+  async compileResolvedSource(
+    entry: ResolvedSource,
+    workspace: WorkspaceSession,
+    options: CompileAuthorSourceOptions & { readonly authorProjection: true },
+  ): Promise<ProjectedCompiledAuthorSource>;
+  async compileResolvedSource(
+    entry: ResolvedSource,
+    workspace: WorkspaceSession,
+    options?: CompileAuthorSourceOptions,
+  ): Promise<CompiledAuthorSource>;
+  async compileResolvedSource(
+    entry: ResolvedSource,
+    workspace: WorkspaceSession,
+    options: CompileAuthorSourceOptions = {},
+  ): Promise<CompiledAuthorSource | ProjectedCompiledAuthorSource> {
     const discovered = await discoverClosure(
       entry,
       this.#options.frontends,
       workspace,
+      this.#limits,
     );
     const closure = this.#options.modules.createClosure(
       discovered.flatMap((unit) => unit.discovery.modules),
@@ -150,7 +208,7 @@ export class Compiler {
       `${unit.source.unit.id}\u0000${unit.frontend}`,
       unit.discovery,
     ]));
-    const compilation = await compileSourceClosure({
+    const request: CompileSourceClosureRequest = {
       entry,
       closure,
       frontends: this.#options.frontends,
@@ -169,7 +227,11 @@ export class Compiler {
       resolveAsset: workspace.resolveAsset,
       ...(workspace.readAsset === undefined ? {} : { readAsset: workspace.readAsset }),
       refineRecord: this.#refineRecord,
-    });
+      limits: this.#limits,
+    };
+    const compilation = options.authorProjection === true
+      ? await compileSourceClosure({ ...request, authorProjection: true })
+      : await compileSourceClosure(request);
     return {
       ...compilation,
       attachments: mergeAttachments([await workspace.attachments()]),

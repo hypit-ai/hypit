@@ -50,7 +50,7 @@ function selectedStream<T extends MediaVideoStream | MediaAudioStream>(
 ): T {
   const stream = inspection.streams.find((candidate) => candidate.index === index && candidate.kind === kind) as T | undefined;
   assert(stream !== undefined && stream.startPts !== undefined && stream.endPts !== undefined,
-    `Prepared Media selected ${kind} stream ${index} has no admissible presentation span.`);
+    `Prepared Media selected ${kind} stream ${index} has no observed presentation span.`);
   return stream;
 }
 
@@ -136,11 +136,6 @@ export function prepareMedia(input: {
       presentationStart,
       sourceDomain,
       map: memberMap(domain, authorityStart, sourceDomain, presentationStart),
-      interpretation: {
-        sampleRate: audio.sampleRate,
-        channels: audio.channels,
-        ...(audio.channelLayout === undefined ? {} : { channelLayout: audio.channelLayout }),
-      },
     };
   }
   const value = canonicalize({
@@ -216,6 +211,5 @@ export function preparedAudioSource(media: PreparedMedia): PreparedAudioSource {
     streamIndex: media.audio.streamIndex,
     presentationStart: media.audio.presentationStart,
     sourceDomain: media.audio.sourceDomain,
-    interpretation: media.audio.interpretation,
   }) as unknown as PreparedAudioSource;
 }

@@ -120,7 +120,7 @@ against the final Canvas. Fine places a bound Cue at the region's top center; `a
 
 ## Inspect the actual placement
 
-Use Studio or [snapshots](../../production/snapshots.md) to inspect the current picture around
+Use [snapshots](../../production/snapshots.md) or a focused render to inspect the current picture around
 camera changes and speaker handoffs. Check the first and last frames of each tracked Cue, the whole
 Cue's clearance above hair or hats, top-edge clipping and collisions with graphics. Play the passage
 with speech to judge jitter, wrong-person jumps and reading rhythm. When source timing or visual

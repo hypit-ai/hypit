@@ -6,22 +6,17 @@ import {
 } from "@hypit/kernel";
 import type { PlannedExecution, ResolvedOutputRecord } from "@hypit/kernel";
 import type { BuildView } from "@hypit/kernel";
-import type {
-  BlobAttachment,
-  WorkspaceSession,
-} from "@hypit/workspace";
+import type { WorkspaceSession } from "@hypit/workspace";
 import type {
   BuildDefinition,
   LogicalOutputId,
   ResultIntent,
   TypeRef,
 } from "@hypit/protocol";
-import type { LinkedProgram } from "@hypit/protocol";
 import type { ResolvedSource } from "@hypit/source";
 import { resolveCompiledSourceExport } from "@hypit/author";
 
-import type { CompiledAuthorSource } from "./compiler.js";
-import { mergeAttachments } from "./compiler.js";
+import type { CompileAuthorSourceOptions, CompiledAuthorSource } from "./compiler.js";
 
 /** Author-facing Target names selected transiently for one Build. */
 export type TargetSelection = {
@@ -42,7 +37,11 @@ export type ResolvedTargetSelection = {
 /** The exact Author-compilation boundary required while preparing a Build. */
 export type BuildAuthorCompiler = {
   openEntry(locator: string): Promise<WorkspaceSession>;
-  compileResolvedSource(entry: ResolvedSource, workspace: WorkspaceSession): Promise<CompiledAuthorSource>;
+  compileResolvedSource(
+    entry: ResolvedSource,
+    workspace: WorkspaceSession,
+    options?: CompileAuthorSourceOptions,
+  ): Promise<CompiledAuthorSource>;
 };
 
 export type BuildCompilerOptions = {
@@ -52,16 +51,13 @@ export type BuildCompilerOptions = {
 export type CompiledBuild = {
   readonly authorSource: string;
   readonly author: CompiledAuthorSource;
-  readonly program: LinkedProgram;
   readonly selection: ResolvedTargetSelection;
   /** The fixed graph resolution shared by execution slicing and Result retention. */
   readonly execution: PlannedExecution;
-  readonly attachments: readonly BlobAttachment[];
 };
 
 export type PreparedBuild = {
   readonly compilation: CompiledBuild;
-  readonly outputs: readonly ResolvedOutputRecord[];
   /** Author-facing execution goals; targeting does not give an Output Result lifetime. */
   readonly targets: readonly {
     readonly name: string;
@@ -71,7 +67,16 @@ export type PreparedBuild = {
   /** Reachable Outputs with package-declared cross-Build lifetime. */
   readonly result: ResultIntent;
   readonly definition: BuildDefinition;
+};
+
+/** Disposable value-resolution view requested only by an interactive authoring consumer. */
+export type ProjectedPreparedBuild = PreparedBuild & {
+  readonly outputs: readonly ResolvedOutputRecord[];
   readonly state: BuildView;
+};
+
+export type PrepareBuildOptions = {
+  readonly executionView?: boolean;
 };
 
 function resolveTarget(author: CompiledAuthorSource, name: string): ResolvedTarget {
@@ -116,32 +121,42 @@ export class BuildCompiler {
     source: ResolvedSource,
     workspace: WorkspaceSession,
     request: TargetSelection,
+    options: CompileAuthorSourceOptions = {},
   ): Promise<CompiledBuild> {
-    const author = await this.#options.authorCompiler.compileResolvedSource(source, workspace);
+    const author = await this.#options.authorCompiler.compileResolvedSource(source, workspace, options);
     const selection = resolveTargetSelection(request, author);
     return {
       authorSource: workspace.sourceLocation?.(source.unit) ?? source.unit.id,
       author,
-      program: author.program,
       selection,
       execution: planBuild(author.program, author.graph, outputIds(selection)),
-      attachments: mergeAttachments([author.attachments, await workspace.attachments()]),
     };
   }
 
-  async compileAuthorEntry(locator: string, request: TargetSelection): Promise<CompiledBuild> {
+  async compileAuthorEntry(
+    locator: string,
+    request: TargetSelection,
+    options: CompileAuthorSourceOptions = {},
+  ): Promise<CompiledBuild> {
     const workspace = await this.#options.authorCompiler.openEntry(locator);
-    return await this.compileAuthorResolvedSource(workspace.entry, workspace, request);
+    return await this.compileAuthorResolvedSource(workspace.entry, workspace, request, options);
   }
 
-  prepareBuild(compilation: CompiledBuild): PreparedBuild {
+  prepareBuild(
+    compilation: CompiledBuild,
+    options: PrepareBuildOptions & { readonly executionView: true },
+  ): ProjectedPreparedBuild;
+  prepareBuild(compilation: CompiledBuild, options?: PrepareBuildOptions): PreparedBuild;
+  prepareBuild(
+    compilation: CompiledBuild,
+    options: PrepareBuildOptions = {},
+  ): PreparedBuild | ProjectedPreparedBuild {
     const sliced = sliceExecution(
-      compilation.program,
+      compilation.author.program,
       outputIds(compilation.selection),
       compilation.execution,
     );
     const definition = defineBuild({ program: sliced.program, plan: sliced.plan });
-    const state = materializeBuild(definition, []);
     const outputsById = new Map(sliced.outputs.map((output) => [output.output, output]));
     const targets: PreparedBuild["targets"][number][] = [];
     const resultOutputs: ResultIntent["outputs"][number][] = [];
@@ -156,15 +171,34 @@ export class BuildCompiler {
       resultOutputs.push({ name: retained.name, record: resolved.record });
     }
     const result: ResultIntent = { outputs: resultOutputs };
-    return { compilation, outputs: sliced.outputs, targets, result, definition, state };
+    const prepared: PreparedBuild = { compilation, targets, result, definition };
+    if (options.executionView !== true) return prepared;
+    return { ...prepared, outputs: sliced.outputs, state: materializeBuild(definition, []) };
   }
 
   /** Prepare another transient Target selection without changing the Author Source. */
-  prepareSelection(compilation: CompiledBuild, selection: ResolvedTargetSelection): PreparedBuild {
-    return this.prepareBuild({
+  prepareSelection(
+    compilation: CompiledBuild,
+    selection: ResolvedTargetSelection,
+    options: PrepareBuildOptions & { readonly executionView: true },
+  ): ProjectedPreparedBuild;
+  prepareSelection(
+    compilation: CompiledBuild,
+    selection: ResolvedTargetSelection,
+    options?: PrepareBuildOptions,
+  ): PreparedBuild;
+  prepareSelection(
+    compilation: CompiledBuild,
+    selection: ResolvedTargetSelection,
+    options: PrepareBuildOptions = {},
+  ): PreparedBuild | ProjectedPreparedBuild {
+    const selected = {
       ...compilation,
       selection,
-      execution: planBuild(compilation.program, compilation.author.graph, outputIds(selection)),
-    });
+      execution: planBuild(compilation.author.program, compilation.author.graph, outputIds(selection)),
+    };
+    return options.executionView === true
+      ? this.prepareBuild(selected, { executionView: true })
+      : this.prepareBuild(selected);
   }
 }

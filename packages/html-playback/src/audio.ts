@@ -1,5 +1,9 @@
-import { audioProgramGainRoutes, verifyAudioProgram } from "@hypit/audio-program";
-import type { AudioProgram } from "@hypit/audio-program";
+import {
+  audioProgramClipSampleSpan,
+  verifyAudioProgram,
+} from "@hypit/audio-program";
+import type { AudioProgram, AudioProgramClip, AudioProgramSignalRef } from "@hypit/audio-program";
+import { readAudioGainProcess } from "@hypit/audio-mix";
 import { readPreservePitch } from "@hypit/audio-stretch";
 import type { BlobRef } from "@hypit/hypit/protocol";
 import {
@@ -14,6 +18,25 @@ import {
 import type { ExactTemporalValue } from "@hypit/temporal";
 
 export type PlaybackResourceUrlResolver = (artifact: BlobRef) => string;
+
+type PlaybackGainRoute = { readonly clip: AudioProgramClip; readonly gain: number };
+
+function playbackGainRoutes(program: AudioProgram): readonly PlaybackGainRoute[] {
+  const nodes = new Map(program.graph.nodes.map((node) => [node.id, node] as const));
+  const route = (input: AudioProgramSignalRef, gain: number): PlaybackGainRoute[] => {
+    const node = nodes.get(input.node)!;
+    if (node.kind === "silence") return [];
+    if (node.kind === "source") return [{ clip: node.clip, gain }];
+    if (node.kind === "mix") return node.inputs.flatMap((entry) => route(entry, gain));
+    if (Object.keys(node.inputs).some((port) => port !== "signal")) {
+      throw new Error(`Playback Audio Process ${node.id} has unsupported ports.`);
+    }
+    const next = gain * readAudioGainProcess(node.program);
+    if (!Number.isFinite(next)) throw new Error(`Playback Audio Process ${node.id} produces non-finite gain.`);
+    return route(node.inputs.signal!, next);
+  };
+  return route(program.graph.output, 1);
+}
 
 function attribute(value: string): string {
   return value.replaceAll("&", "&amp;").replaceAll('"', "&quot;")
@@ -38,7 +61,8 @@ export function lowerPlaybackAudio(
   resolve: PlaybackResourceUrlResolver,
 ): string {
   verifyAudioProgram(program);
-  return audioProgramGainRoutes(program).flatMap(({ clip, gain: routeGain }) => {
+  return playbackGainRoutes(program).flatMap(({ clip, gain: routeGain }) => {
+    const target = audioProgramClipSampleSpan(clip);
     if (clip.source.streamIndex !== 0) {
       throw new Error(`Browser playback cannot select audio stream ${clip.source.streamIndex} for ${clip.id}; use an audio renderer that executes the AudioProgram source plan`);
     }
@@ -104,8 +128,8 @@ export function lowerPlaybackAudio(
       audibility: clip.audibility,
       fadeInSamples: clip.fadeInSamples,
       fadeOutSamples: clip.fadeOutSamples,
-      mixStartSample: clip.mixStartSample,
-      mixEndSampleExclusive: clip.mixEndSampleExclusive,
+      mixStartSample: target.startSample,
+      mixEndSampleExclusive: target.endSampleExclusive,
     }))}"></audio>`;
     });
   }).join("");

@@ -94,7 +94,7 @@ test("local call logs survive cleanup and remain attributed across concurrent su
       assert.equal(await stat(join(directory, ".hypit/work", id)).then(() => true, () => false), false);
       const manifest = (await repository.read(id))!;
       assert.ok(manifest.executionLog);
-      const log = await readExecutionLog((await repository.openFile(id, manifest.executionLog))!, 50);
+      const log = await readExecutionLog((await repository.openExecutionLog(id))!, 50);
       assert.equal(log.records.filter((record) => record.kind === "started").length, 1);
       assert.equal(log.records.filter((record) => record.kind === "phase" && record.phase === "rendering").length, 1);
       assert.ok(log.records.every((record) => record.endpoint === "local-logs"));

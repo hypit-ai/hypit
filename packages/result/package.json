@@ -11,8 +11,8 @@
     "./node": "./src/node/index.ts"
   },
   "dependencies": {
-    "@hypit/facet": "workspace:*",
-    "@hypit/protocol": "workspace:*",
-    "@hypit/atomic-file": "workspace:*"
+    "@hypit/facet": "workspace:^0.0.0-dev",
+    "@hypit/protocol": "workspace:^0.0.0-dev",
+    "@hypit/atomic-file": "workspace:^0.0.0-dev"
   }
 }

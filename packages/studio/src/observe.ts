@@ -5,7 +5,7 @@ import type {
   AuthorElementProvenance,
   AuthorValueRef,
 } from "@hypit/hypit/author";
-import type { CompiledAuthorSource } from "@hypit/hypit/compiler";
+import type { ProjectedCompiledAuthorSource } from "@hypit/hypit/compiler";
 import type { TypeRef } from "@hypit/hypit/protocol";
 import { decodeSourceText } from "@hypit/hypit/source";
 import type {
@@ -56,7 +56,7 @@ function authoredAttributes(node: DeclarationNode): Readonly<Record<string, unkn
 }
 
 function provenanceFor(
-  compiled: CompiledAuthorSource,
+  compiled: ProjectedCompiledAuthorSource,
   sourceName: string,
   range: { readonly start: number; readonly end: number },
 ): AuthorElementProvenance | undefined {
@@ -64,7 +64,7 @@ function provenanceFor(
     && element.range.start === range.start && element.range.end === range.end);
 }
 
-function typeForRef(compiled: CompiledAuthorSource, ref: AuthorValueRef): TypeRef | undefined {
+function typeForRef(compiled: ProjectedCompiledAuthorSource, ref: AuthorValueRef): TypeRef | undefined {
   if (ref.kind === "record") return compiled.program.records.find((record) => record.id === ref.id)?.type;
   const output = compiled.provenance.elements.flatMap((element) => element.outputs)
     .find((candidate) => candidate.component === ref.component && candidate.name === ref.output);
@@ -72,7 +72,7 @@ function typeForRef(compiled: CompiledAuthorSource, ref: AuthorValueRef): TypeRe
 }
 
 function observed(
-  compiled: CompiledAuthorSource,
+  compiled: ProjectedCompiledAuthorSource,
   provenance: AuthorElementProvenance | undefined,
 ): readonly ObservedValue[] {
   if (provenance === undefined) return [];
@@ -83,7 +83,7 @@ function observed(
 }
 
 function referenceTypes(
-  compiled: CompiledAuthorSource,
+  compiled: ProjectedCompiledAuthorSource,
   provenance: AuthorElementProvenance | undefined,
 ): Readonly<Record<string, string>> {
   if (provenance === undefined) return {};
@@ -97,7 +97,7 @@ function referenceTypes(
 function childPlacement(
   child: AuthorDeclarationChild,
   sourceName: string,
-  compiled: CompiledAuthorSource,
+  compiled: ProjectedCompiledAuthorSource,
 ): StudioPlacementChild {
   const range = rangeOf(child);
   const provenance = provenanceFor(compiled, sourceName, range);
@@ -127,7 +127,7 @@ function childPlacement(
 /** Build Studio placement facts from the exact lossless document and compiled provenance. */
 export function observeAuthorDocument(
   document: AuthorDocument,
-  compiled: CompiledAuthorSource,
+  compiled: ProjectedCompiledAuthorSource,
   registry: StudioCompanionRegistry,
 ): Observations {
   const sourceName = document.source.name;

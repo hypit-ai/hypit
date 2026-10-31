@@ -36,7 +36,7 @@ not need a matching playbook before it can be understood or made.
 | [Motion graphics](craft/motion-graphics.md) | how graphics, effects and scenes change over time, carry objects through handoffs, establish a motion language and meet the performance |
 
 Read every craft whose question genuinely appears in the work, including questions discovered after
-a Studio preview or completed Result. Repeated use of the same craft does not require rereading it
+reviewing current evidence or a completed Result. Repeated use of the same craft does not require rereading it
 unless the decision has changed.
 
 For authoring those decisions, [Visual Clips](../production/visual-clips.md) place footage and

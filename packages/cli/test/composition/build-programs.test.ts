@@ -30,15 +30,20 @@ function distribution(
   diagnostics: readonly RuntimeDoctorDiagnostic[],
   execution?: object,
   producerError?: string,
+  producerOutput?: string,
+  producerInlineValueBytes?: number,
 ): CliDistribution {
   return cliDistribution({
-    bootstrapPackages: producerError === undefined ? [] : [{
+    bootstrapPackages: producerError === undefined && producerOutput === undefined ? [] : [{
       specifier: "@example/run-frontend",
       contribution: {
         format: "hypit.package@1",
         facets: [createProducerPackageFacet([{
             producer: { module: { name: "example.value", version: "1" }, name: "produce" },
-            handler() { throw new Error(producerError); },
+            handler() {
+              if (producerError !== undefined) throw new Error(producerError);
+              return { kind: "output", value: producerOutput! };
+            },
           }])],
       },
     }],
@@ -56,7 +61,6 @@ function distribution(
       supportsFrontend: (id: string) => id === "@hypit/markup@1",
       compileResolvedSource: async (entry: { readonly unit: { readonly id: string } }) => ({
         closure: { entry: entry.unit.id, units: [] },
-        provenance: { format: "hypit.author-provenance@1", elements: [] },
         program: { closure: { format: "hypit.closure@1", modules: [{
           format: "hypit.module@1",
           name: "example.value",
@@ -104,6 +108,11 @@ function distribution(
     diagnoseProjectResults: async () => ({ diagnostics: [] }),
     openRuntimeHost: async (path: string) => ({
       profile: path,
+      ...(producerInlineValueBytes === undefined ? {} : {
+        planningPolicy: async () => ({
+          producerExecutionLimits: { maxInlineValueBytes: producerInlineValueBytes },
+        }),
+      }),
       ensureExecution: async () => ({ state: "running" as const }),
       executionStatus: async () => ({ state: "running" as const }),
       resolvePaths: async () => ({}),
@@ -220,13 +229,10 @@ test("Build confirms durable submission before following stable work progress", 
         },
         view: {
           id: request.id,
-          createdAt: Date.now(),
           activity: "ready",
 
           targets: ["result"],
           requests: { total: 0, completed: 0 },
-          acceptedRecords: 0,
-          outstandingCommands: 0,
           operations: [],
         },
       };
@@ -324,4 +330,24 @@ test("pricing reports a Producer failure with no external Need and exits non-zer
       }
     }
   }
+});
+
+test("plan uses the selected Runtime Producer policy before opening execution", async () => {
+  const source = await authorSource();
+  let output = "";
+  let exitCode = 0;
+  await runCli([
+    "plan", source, "--target", "result", "--runtime", "/p/hypit.runtime.json", "--json",
+  ], {
+    write(text) { output += text; },
+    setExitCode(code) { exitCode = code; },
+  }, distribution([], [], undefined, undefined, "a value that is too large", 16));
+
+  const value = JSON.parse(output) as {
+    readonly producerFailureCount: number;
+    readonly producerFailures: readonly string[];
+  };
+  assert.equal(exitCode, 1);
+  assert.equal(value.producerFailureCount, 1);
+  assert.match(value.producerFailures[0] ?? "", /inline Value bytes; limit is 16 bytes/u);
 });

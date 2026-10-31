@@ -17,9 +17,9 @@ test("TimelineRegions keeps document, Timeline and Canvas edges explicit", async
   const registry = new AuthorDeclarationRegistry();
   installAuthorDeclarationFacets(hypitPackage.facets, registry);
   const references = new Map<string, AuthorResolvedReference>([
-    ["document", { path: "document", ref: { kind: "record", id: "document" }, type: spatialSequenceTypes.document }],
-    ["timeline", { path: "timeline", ref: { kind: "record", id: "timeline" }, type: timelineTypes.timeline }],
-    ["canvas", { path: "canvas", ref: { kind: "record", id: "canvas" }, type: spatialTypes.canvas }],
+    ["document", { ref: { kind: "record", id: "document" }, type: spatialSequenceTypes.document }],
+    ["timeline", { ref: { kind: "record", id: "timeline" }, type: timelineTypes.timeline }],
+    ["canvas", { ref: { kind: "record", id: "canvas" }, type: spatialTypes.canvas }],
   ]);
   const result = await compileAuthorDeclarations({
     sourceName: "regions.direct",

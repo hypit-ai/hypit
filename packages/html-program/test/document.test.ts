@@ -231,7 +231,6 @@ test("HTML renderer lowers a recursive scope Process as one generic Picture oper
   }, timeline));
   assert.deepEqual(document.processUsages, [{
     order: 1,
-    passes: 2,
     stageKeys: document.processUsages[0]?.stageKeys,
     spans: [{ startFrame: 0, endFrameExclusive: 30 }],
   }]);
@@ -713,6 +712,19 @@ test("content-bound fonts and typed compositable Surfaces cross the same Artifac
     style: "normal",
   };
   const surfaceResource = fixtureResource("html-program:alpha-surface");
+  const surfaceTarget = { id: "surface-occurrence", duration: exactTemporalValueFromFrames(30, space) };
+  const surfaceMiddle = { id: "surface-edit", duration: exactTemporalValueFromFrames(30, space) };
+  const surfaceSource = { id: "surface-materialization", duration: exactTemporalValueFromFrames(30, space) };
+  const surfaceSampling = sealTemporalMap({ stages: [{ target: surfaceTarget, source: surfaceMiddle, pieces: [{
+    target: { start: exactTemporalZero(), end: surfaceTarget.duration },
+    sourceAtStart: exactTemporalZero(),
+    sourceControl1: exactTemporalValueFromFrames(10, space),
+    sourceControl2: exactTemporalValueFromFrames(20, space),
+    sourceAtEnd: surfaceMiddle.duration,
+  }] }, { target: surfaceMiddle, source: surfaceSource, pieces: [{
+    target: { start: exactTemporalZero(), end: surfaceMiddle.duration },
+    sourceAtStart: exactTemporalZero(), rate: { numerator: 1, denominator: 1 },
+  }] }] });
   const track = sealPresentVisualTrack({ timelineId: "test-space",
 
     id: "bound-render-dependencies",
@@ -741,15 +753,7 @@ test("content-bound fonts and typed compositable Surfaces cross the same Artifac
               frameCount: 30,
             },
           },
-          sampling: frameSamplingMapFixture({
-            targetFrameRate: space.frameRate, targetFrames: 30,
-            sourceFrameRate: { numerator: 30, denominator: 1 }, sourceFrames: 30,
-            pieces: [{
-              target: { startFrame: 0, endFrameExclusive: 30 },
-              sourceAtStart: { numerator: 0, denominator: 1 },
-              rate: { numerator: 1, denominator: 1 },
-            }],
-          }),
+          sampling: surfaceSampling,
           style: [{ name: "position", value: "absolute" }, { name: "inset", value: 0 }],
         },
       ] }),
@@ -762,6 +766,11 @@ test("content-bound fonts and typed compositable Surfaces cross the same Artifac
     { kind: "always" });
   assert.deepEqual(document.artifacts.find(({ artifact }) => artifact.resource === surfaceResource)?.usage,
     { kind: "frames", spans: [{ startFrame: 0, endFrameExclusive: 30 }] });
+  assert.equal(document.videoSources.length, 1,
+    "one timed Surface stays one occurrence with its complete relation");
+  assert.equal(document.videoSources[0]?.kind, "surface");
+  if (document.videoSources[0]?.kind !== "surface") throw new Error("Expected a timed Surface source");
+  assert.deepEqual(document.videoSources[0].sampling, surfaceSampling);
   assert.match(document.html, /@font-face\{/u);
   assert.match(document.html, /format\("woff2"\)/u);
   assert.match(document.html, /font-synthesis:none/u);
@@ -824,7 +833,7 @@ test("exact timed sampling keeps a held frame as one compact interval without ze
   assert.ok(payloadHost !== null);
   assert.match(payloadHost?.getAttribute("style") ?? "", /object-fit:inherit/u);
   assert.match(payloadHost?.getAttribute("style") ?? "", /object-position:inherit/u);
-  const nativeVideo = payloadHost?.querySelector(":scope > video[data-hypit-source-frame]");
+  const nativeVideo = payloadHost?.querySelector(":scope > video[data-hypit-video-source]");
   assert.ok(nativeVideo !== null);
   assert.doesNotMatch(nativeVideo?.getAttribute("style") ?? "", /visibility\s*:\s*hidden/u);
   assert.match(nativeVideo?.getAttribute("style") ?? "", /object-fit:inherit/u);
@@ -837,7 +846,6 @@ test("exact timed sampling keeps a held frame as one compact interval without ze
     "intrinsic layout defaults stay low-specificity so authored CSS can override them");
   assert.equal(plane?.parentElement?.querySelectorAll(":scope > [data-hypit-media-display-plane]").length, 1,
     "decoded payloads stay inside the stable authored layout item");
-  assert.equal((document.html.match(/data-hypit-sampling-part=/gu) ?? []).length, 0);
   assert.equal(document.videoSources.length, 1);
   assert.equal(document.videoSources[0]?.kind, "media");
   if (document.videoSources[0]?.kind !== "media") throw new Error("Expected direct media source");

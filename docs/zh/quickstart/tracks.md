@@ -3,8 +3,9 @@ title: 轨道
 description: 对等 Track 组件——字幕、媒体、排版与作者声明的音频。
 ---
 
-每个进入最终合成的视听内容都是一个对等的 **Track**。Track 是一个闭合贡献，不是其他 Track 的容器；
-若若干 VisualTrack 的合成结果需要作为一张画面共同处理，Film 可以用 Stack 递归分组。每条 VisualTrack
+每个进入最终合成的视听内容都是一个对等的 **Track**。Track 是一个完成的终端 programme。Visual Combine
+可以把若干完成的 VisualTrack 连接成一条新的有序 Track；若若干 VisualTrack 的合成结果需要作为一张隔离画面
+共同处理，Film 可以用 Stack 递归分组。每条 VisualTrack
 出现的 `id` 与同级序列位置由父 Film 或 Stack 持有；可复用 Track 值只保留自己的局部 programme。本页介绍
 Caption、Media、Typography 与 Audio Track 的作者语法。
 
@@ -69,7 +70,7 @@ Cue 成员由 Script 的 Segment、Role 和作者写出的 `||` 决定；样式�
 Fine 不是一组互斥预设。基础/激活渐变、描边、阴影、长阴影、外发光、下划线、Pill
 和动画均为正交维度。文字、下划线和 Pill 各自选择 `off | current | trail`；因此可以直接表达“文字保留已读色，但 Pill 只跟随当前词”。`active-box-continuity: joined` 会把已读前缀在每个真实换行片段内连成一个背景，而不是给每个词分别套胶囊。
 
-包把参数分成 **Where / How / When**，Studio 按照 Source 中的同一含义呈现它们。`lead-frames`、`tail-frames` 先产生显式可见 Schedule；`handoff: cut` 负责相邻 Cue 的交接，`overlap` 则保留双方包络。二者都不会修改 Karaoke 使用的原始词帧。
+包把参数分成 **Where / How / When**，与 Source 中作者声明的决定保持一致。`lead-frames`、`tail-frames` 先产生显式可见 Schedule；`handoff: cut` 负责相邻 Cue 的交接，`overlap` 则保留双方包络。二者都不会修改 Karaoke 使用的原始词帧。
 
 `wrap: word` 优先在完整 Alignment Unit 之间换行；单个显示单元若比 Region 还宽，会继续在内部回退换行，不会逃出范围。`max-words-per-line` 直接构造真实行；声明 `max-lines` 后，超过行数预算的 Cue 会被拒绝，不会裁掉文字、描边、阴影或外发光。Cue 分界由 Script 的结构和 `||` 决定。
 
@@ -213,6 +214,27 @@ Transition span；Hypit 不根据时间邻近猜参与者、不要求作者重�
 
 **输出：**`{product-broll.program}` 与 `{product-broll.visual}`。音频始终在 Audio Track
 中单独声明；这里连接 PreparedMedia 不会顺带选择它的音频成员。
+
+## 合并完成的 VisualTrack
+
+若若干独立创作的视觉组件共享同一个 Film 绘制位置，Visual Combine 可以把它们完整的 Item programme
+连接成一条普通 VisualTrack：
+
+```svml
+<import as="combine" from="@hypit/visual-combine@1"/>
+
+<combine:Track id="motion" timeline={speech.timeline}>
+  <combine:Use id="opening" source={opening.visual}/>
+  <combine:Use id="comparison" source={comparison.visual}/>
+  <combine:Use id="editor" source={editor.visual}/>
+  <combine:Use id="outro" source={outro.visual}/>
+</combine:Track>
+```
+
+输出 `{motion.visual}` 可以进入 Film 或另一个 Visual Combine。`Use` 声明顺序就是从后往前的绘制顺序。
+来源可以彼此分离，也可以重叠；重叠期间，后面的 Use 绘制在前面的 Use 之上。该包不会按 Window 排序、
+推断转场或修改来源时间。输入必须先闭合成一张隔离子画面时使用 Film Stack；重叠需要其他关系时，使用
+显式 Transition、Process 或组件。
 
 ## Audio Track
 

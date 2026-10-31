@@ -491,7 +491,7 @@ const sound = (id: string): PreparedMedia => {
     source: { kind: "blob", resource: fixtureResource(`ranking-sound:${id}`), size: 128, mediaType: "audio/wav" },
     domain,
     audio: { streamIndex: 0, presentationStart: exactTemporalZero(), sourceDomain: domain,
-      map: identityTemporalMap(domain), interpretation: { sampleRate: 48_000, channels: 2 } },
+      map: identityTemporalMap(domain) },
   };
 };
 
@@ -541,9 +541,9 @@ test("all three author declarations preserve absolute temporal, spatial, font, i
     textManifest,
     rankingManifest,
   ]);
-  const plain = (path: string, type: AuthorResolvedReference["type"]): AuthorResolvedReference => ({ path, ref: { kind: "record", id: path }, type });
+  const plain = (path: string, type: AuthorResolvedReference["type"]): AuthorResolvedReference => ({ ref: { kind: "record", id: path }, type });
   const inlineReference = (path: string, type: AuthorResolvedReference["type"], value: unknown): AuthorResolvedReference => ({
-    path, ref: { kind: "record", id: path }, type,
+    ref: { kind: "record", id: path }, type,
     record: { id: path, type, value } as never,
   });
   const references = new Map<string, AuthorResolvedReference>([
@@ -578,8 +578,8 @@ test("all three author declarations preserve absolute temporal, spatial, font, i
     assert.deepEqual(result.records.map((record) => record.id), [id, `${id}.sound`]);
     const visualRecord = result.records[0]!;
     const soundRecord = result.records[1]!;
-    references.set(id, { path: id, ref: { kind: "record", id }, type, record: visualRecord as never });
-    references.set(`${id}.sound`, { path: `${id}.sound`, ref: { kind: "record", id: `${id}.sound` }, type: rankingTypes.soundStyle, record: soundRecord as never });
+    references.set(id, { ref: { kind: "record", id }, type, record: visualRecord as never });
+    references.set(`${id}.sound`, { ref: { kind: "record", id: `${id}.sound` }, type: rankingTypes.soundStyle, record: soundRecord as never });
   }
   const cases = [
     [tierBoardAuthorDeclaration, `<ranking:TierBoard id="tier" timeline={semantic} within={frame} frame={frame} during={outer} style={tier-style}>
@@ -643,7 +643,7 @@ test("Ranking icon Producers consume Blob values", async () => {
 });
 
 test("Ranking author declarations fail closed on impossible image and sound combinations", async () => {
-  const plain = (path: string, type: AuthorResolvedReference["type"]): AuthorResolvedReference => ({ path, ref: { kind: "record", id: path }, type });
+  const plain = (path: string, type: AuthorResolvedReference["type"]): AuthorResolvedReference => ({ ref: { kind: "record", id: path }, type });
   const references = new Map<string, AuthorResolvedReference>([
     ["semantic", plain("semantic", timelineTypes.timeline)],
     ["frame", plain("frame", spatialTypes.frame)], ["outer", plain("outer", temporalTypes.window)],

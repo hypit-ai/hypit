@@ -167,16 +167,22 @@ export type PricingOutput = {
 
 export type PlanRequestDetail = {
   readonly readiness: "concrete" | "blocked" | "failed" | "unavailable";
-  readonly summary?: readonly {
-    readonly at: readonly (string | number)[];
-    readonly value: string | number | boolean;
-  }[];
   /** Author-facing input names that will only become available during execution. */
   readonly pending: readonly string[];
   readonly issue?: string;
 };
 
 export type PlanRequest = PlanEndpoint & PlanRequestDetail;
+
+/** One explicitly selected request. Complete constraints never enter the ordinary plan list. */
+export type PlanRequestOutput = PlanRequest & {
+  readonly format: "hypit.cli-plan-request@1";
+  readonly source: string;
+  readonly ordinal: number;
+  readonly requestCount: number;
+  readonly returns: string;
+  readonly constraints?: CanonicalValue;
+};
 
 /**
  * Stable machine-output envelope shared by built-in and contributed commands.
@@ -201,6 +207,12 @@ export type CliPresentation =
   | {
       readonly kind: "plan";
       readonly machine: PlanOutput;
+      /** Human-only bound for individual request expansion; aggregate work remains complete. */
+      readonly limit?: number;
+    }
+  | {
+      readonly kind: "plan-request";
+      readonly machine: PlanRequestOutput;
     }
   | {
       readonly kind: "pricing";
@@ -345,54 +357,38 @@ function renderAuthorCheck(
   return `${lines.join("\n")}\n`;
 }
 
-function summaryPath(at: readonly (string | number)[]): string {
-  if (at.length === 0) return "$";
-  return at.map((segment, index) => typeof segment === "number"
-    ? `[${segment}]`
-    : /^[A-Za-z_$][A-Za-z0-9_$]*$/u.test(segment)
-      ? `${index === 0 ? "" : "."}${segment}`
-      : `[${JSON.stringify(segment)}]`).join("");
+function requestStateText(request: PlanRequestDetail): string {
+  const parts: string[] = [];
+  if (request.readiness === "concrete") parts.push("concrete");
+  if (request.readiness === "blocked") {
+    parts.push(request.pending.length === 0
+      ? "blocked by upstream work"
+      : `blocked · ${request.pending.join(", ")} produced during Build`);
+  }
+  if (request.readiness === "failed") parts.push("request Producer failed");
+  if (request.readiness === "unavailable") parts.push("request Producer unavailable");
+  if (request.issue !== undefined) parts.push(request.issue);
+  return parts.join(" · ");
 }
 
-function groupKey(need: PlanRequestDetail): string {
+function requestStateKey(request: PlanRequestDetail): string {
   return JSON.stringify({
-    readiness: need.readiness,
-    summary: need.summary,
-    pending: [...need.pending].sort(),
-    issue: need.issue,
+    readiness: request.readiness,
+    pending: [...request.pending].sort(),
+    issue: request.issue,
   });
 }
 
-function needSummaryText(needs: readonly PlanRequestDetail[]): string {
-  const first = needs[0]!;
-  const parts: string[] = [];
-  for (const { at, value } of first.summary ?? []) {
-    const name = summaryPath(at);
-    if (typeof value === "boolean") {
-      parts.push(value ? name : `no ${name}`);
-    } else {
-      parts.push(`${name} ${value}`);
-    }
-  }
-  const pendingCount = first.pending.length;
-  if (pendingCount > 0) parts.push(`${pendingCount === 1 ? "input" : `${pendingCount} inputs`} produced during Build`);
-  if (first.readiness === "blocked" && pendingCount === 0) parts.push("request blocked by upstream work");
-  if (first.readiness === "failed") parts.push("request Producer failed");
-  if (first.readiness === "unavailable") parts.push("request Producer unavailable");
-  if (first.issue !== undefined) parts.push(`could not inspect: ${first.issue}`);
-  return parts.length === 0 ? "request summary unavailable" : parts.join(" · ");
-}
-
-/** One line per distinct author-facing request shape, counted. */
-function groupedNeedLines(needs: readonly PlanRequestDetail[], colors: Palette, _verbose: boolean): string[] {
+/** Complete aggregation of request states; it never samples or traverses constraints. */
+function groupedRequestStateLines(requests: readonly PlanRequestDetail[], colors: Palette): string[] {
   const groups = new Map<string, PlanRequestDetail[]>();
-  for (const need of needs) {
-    const key = groupKey(need);
-    groups.set(key, [...(groups.get(key) ?? []), need]);
+  for (const request of requests) {
+    const key = requestStateKey(request);
+    groups.set(key, [...(groups.get(key) ?? []), request]);
   }
   return [...groups.values()].map((group) => {
     const count = `×${group.length}`.padStart(4);
-    return `    ${colors.dim(count)}  ${needSummaryText(group)}`;
+    return `    ${colors.dim(count)}  ${requestStateText(group[0]!)}`;
   });
 }
 
@@ -416,6 +412,62 @@ function endpointRejectionText(endpoint: Pick<PlanEndpoint, "rejections">, verbo
   const shown = verbose ? rejections : rejections.slice(0, 1);
   return shown.map((rejection) => `${rejection.endpoint}: ${rejection.message}`).join("; ")
     + (shown.length === rejections.length ? "" : ` · ${rejections.length - shown.length} more Endpoint rejection${rejections.length - shown.length === 1 ? "" : "s"}`);
+}
+
+function requestNeedsAttention(request: PlanRequest): boolean {
+  return request.issue !== undefined
+    || request.readiness === "failed"
+    || request.readiness === "unavailable"
+    || request.resolution === "unresolved"
+    || request.resolution === "ambiguous"
+    || request.support === "unsupported";
+}
+
+function requestEndpointText(request: PlanRequest, colors: Palette, verbose: boolean): string | undefined {
+  if (request.resolution === undefined) return undefined;
+  if (request.resolution === "resolved") {
+    if (request.support === "unsupported") return colors.error(endpointRejectionText(request, verbose));
+    return `${request.endpoint ?? ""}${request.use === undefined ? "" : ` (${request.use})`}`;
+  }
+  if (request.resolution === "ambiguous") return colors.warning(`${(request.endpoints ?? []).join(", ")} all offer it`);
+  return request.binding === undefined
+    ? colors.error("no Endpoint offers this demand")
+    : colors.error(`bound to ${request.binding}, which does not offer this demand`);
+}
+
+function requestPriceText(request: PlanEndpoint, colors: Palette): string | undefined {
+  if (request.pricing === undefined) return request.resolution === "resolved"
+    ? colors.warning("price source unknown") : undefined;
+  return request.pricing.kind === "local"
+    ? colors.dim("local, no Provider charge")
+    : request.pricing.url;
+}
+
+function verboseRequestLines(
+  requests: readonly PlanRequest[],
+  limit: number,
+  colors: Palette,
+): string[] {
+  const important = requests.map((request, index) => ({ request, index }))
+    .filter(({ request }) => requestNeedsAttention(request));
+  const importantIndexes = new Set(important.map(({ index }) => index));
+  const ordinary = requests.map((request, index) => ({ request, index }))
+    .filter(({ index }) => !importantIndexes.has(index));
+  const shown = [...important, ...ordinary.slice(0, limit)]
+    .sort((left, right) => left.index - right.index);
+  const lines: string[] = [];
+  for (const { request, index } of shown) {
+    lines.push(`  ${colors.accent(`[${index + 1}]`)} ${request.capability}`);
+    lines.push(`      ${colors.dim("Readiness")}  ${requestStateText(request)}`);
+    const endpoint = requestEndpointText(request, colors, true);
+    if (endpoint !== undefined) lines.push(`      ${colors.dim("Endpoint")}   ${endpoint}`);
+    if (request.support !== undefined) lines.push(`      ${colors.dim("Support")}    ${request.support}`);
+    const price = requestPriceText(request, colors);
+    if (price !== undefined) lines.push(`      ${colors.dim("Pricing")}    ${price}`);
+  }
+  const omitted = requests.length - shown.length;
+  if (omitted > 0) lines.push(`  ${colors.dim(`${omitted} more requests · use --limit <count>`)}`);
+  return lines;
 }
 
 function renderPlan(
@@ -453,7 +505,7 @@ function renderPlan(
     }
   }
   if (view.machine.requests.some((request) => request.resolution !== undefined)) {
-    if (view.machine.requests.length > 0) lines.push("", colors.strong("Providers and price pages"));
+    if (view.machine.requests.length > 0) lines.push("", colors.strong("External work"));
     const groups = new Map<string, PlanRequest[]>();
     for (const endpoint of view.machine.requests) {
       const key = endpointGroupKey(endpoint);
@@ -470,26 +522,27 @@ function renderPlan(
           : item.binding === undefined
             ? colors.error("no Endpoint offers this demand")
             : colors.error(`bound to ${item.binding}, which does not offer this demand`);
-      const price = item.pricing === undefined
-        ? (item.resolution === "resolved" ? colors.warning("price source unknown") : undefined)
-        : item.pricing.kind === "local"
-          ? colors.dim("local, no Provider charge")
-          : item.pricing.url;
+      const price = requestPriceText(item, colors);
       lines.push(`  ${colors.accent(item.capability)}`);
       lines.push(`    ${where}${price === undefined ? "" : `  ·  ${price}`}`);
-      lines.push(...groupedNeedLines(group, colors, verbose));
+      lines.push(...groupedRequestStateLines(group, colors));
     }
   } else if (view.machine.requestCount > 0) {
     const byCapability = new Map<string, PlanRequest[]>();
     for (const need of view.machine.requests) {
       byCapability.set(need.capability, [...(byCapability.get(need.capability) ?? []), need]);
     }
-    if (byCapability.size > 0) lines.push("", colors.strong("Requests"));
+    if (byCapability.size > 0) lines.push("", colors.strong("External work"));
     for (const [capability, needs] of byCapability) {
       lines.push(`  ${colors.accent(capability)}`);
-      lines.push(...groupedNeedLines(needs, colors, verbose));
+      lines.push(...groupedRequestStateLines(needs, colors));
     }
     lines.push("", colors.dim("Pass --runtime <profile> to see the Endpoint and price page behind each request."));
+  }
+  if (verbose && view.machine.requests.length > 0) {
+    lines.push("", colors.strong("Requests"));
+    lines.push(...verboseRequestLines(view.machine.requests, view.limit ?? 20, colors));
+    lines.push(`  ${colors.dim("Use --request <number> to inspect one complete execution request.")}`);
   }
   if (view.machine.preflight !== undefined
     && (view.machine.preflight.diagnostics.length > 0
@@ -515,40 +568,41 @@ function renderPlan(
   return `${lines.join("\n")}\n`;
 }
 
+function renderPlanRequest(
+  view: Extract<CliPresentation, { kind: "plan-request" }>,
+  io: CliIo,
+  colors: Palette,
+): string {
+  const request = view.machine;
+  const lines = [heading(requestNeedsAttention(request) ? "warning" : "info",
+    `Plan request ${request.ordinal} of ${request.requestCount}`, io, colors), ""];
+  const endpoint = requestEndpointText(request, colors, true);
+  const price = requestPriceText(request, colors);
+  lines.push(...facts([
+    ["Source", shortPath(request.source)],
+    ["Capability", request.capability],
+    ["Returns", request.returns],
+    ["Readiness", requestStateText(request)],
+    ...(endpoint === undefined ? [] : [["Endpoint", endpoint] as const]),
+    ...(request.support === undefined ? [] : [["Support", request.support] as const]),
+    ...(price === undefined ? [] : [["Pricing", price] as const]),
+  ], colors));
+  if (request.constraints === undefined) {
+    lines.push("", colors.dim("Concrete constraints do not exist yet."));
+  } else {
+    lines.push("", colors.strong("Constraints"));
+    lines.push(...JSON.stringify(request.constraints, undefined, 2).split("\n").map((line) => `  ${line}`));
+    lines.push("", colors.dim("Constraints may contain prompts, resource identities and other project content."));
+  }
+  return `${lines.join("\n")}\n`;
+}
+
 function pricingDocumentLines(document: PricingDocument, colors: Palette, verbose: boolean): string[] {
   const rendered = !verbose && document.summary !== undefined
     ? document.summary : JSON.stringify(document.data, undefined, 2);
   return [
     `      ${colors.dim("Source")}  ${document.source}`,
     ...rendered.split("\n").map((line) => `      ${line}`),
-  ];
-}
-
-/** Factor shared request parameters without losing the combinations of the remaining parameters. */
-function pricingNeedLines(needs: readonly PlanRequestDetail[], colors: Palette, verbose: boolean): string[] {
-  if (verbose || needs.length < 2) return groupedNeedLines(needs, colors, verbose);
-  const first = needs[0]!;
-  const sharedFields = (first.summary ?? []).filter((field) => needs.every((need) =>
-    need.summary?.some((candidate) => JSON.stringify(candidate.at) === JSON.stringify(field.at)
-      && candidate.value === field.value) === true));
-  const sharedPaths = new Set(sharedFields.map((field) => JSON.stringify(field.at)));
-  const sharedPending = needs.every((need) =>
-    JSON.stringify([...need.pending].sort()) === JSON.stringify([...first.pending].sort()));
-  const common = needs.map(({ issue: _issue, ...need }) => ({
-    ...need,
-    summary: sharedFields,
-    pending: sharedPending ? need.pending : [],
-  }));
-  const varying = needs.map((need) => ({
-    ...need,
-    summary: (need.summary ?? []).filter((field) => !sharedPaths.has(JSON.stringify(field.at))),
-    pending: sharedPending ? [] : need.pending,
-  }));
-  const hasParameters = (need: PlanRequestDetail) => (need.summary?.length ?? 0) > 0
-    || need.pending.length > 0 || need.issue !== undefined;
-  return [
-    ...(common.some(hasParameters) ? [`    ${needSummaryText(common)}`] : []),
-    ...(varying.some(hasParameters) ? groupedNeedLines(varying, colors, false) : []),
   ];
 }
 
@@ -562,7 +616,7 @@ export function createPricingOutput(
   const groups = new Map<string, PricingEntry & { requests: PlanRequestDetail[] }>();
   let noChargeRequestCount = 0;
   for (const request of requests) {
-    const { readiness, summary, pending, issue, ...entry } = request;
+    const { readiness, pending, issue, ...entry } = request;
     if (entry.resolution === "resolved" && entry.support !== "unsupported" && entry.pricing?.kind === "local") {
       noChargeRequestCount++;
       if (!includeNoCharge) continue;
@@ -573,8 +627,7 @@ export function createPricingOutput(
       group = { ...entry, requests: [] };
       groups.set(key, group);
     }
-    group.requests.push({ readiness, ...(summary === undefined ? {} : { summary }), pending,
-      ...(issue === undefined ? {} : { issue }) });
+    group.requests.push({ readiness, pending, ...(issue === undefined ? {} : { issue }) });
   }
   return {
     format: "hypit.cli-pricing@1", source, requestCount: requests.length,
@@ -618,7 +671,8 @@ function renderPricing(
         : colors.error("no Endpoint offers this demand");
     lines.push(`  ${colors.accent(item.capability)}`);
     lines.push(`    ${selected} · ${item.requests.length} request${item.requests.length === 1 ? "" : "s"}`);
-    lines.push(...pricingNeedLines(item.requests, colors, verbose));
+    lines.push(`      ${colors.dim("Requests")}  ${item.requests.length}`);
+    lines.push(...groupedRequestStateLines(item.requests, colors).map((line) => `  ${line}`));
     if (item.resolution === "resolved" && item.support === "not-evaluated") {
       lines.push(`      ${colors.dim("Request-sensitive pricing deferred until the request is concrete")}`);
     }
@@ -672,6 +726,8 @@ export function writeCliOutput(
       ? renderAuthorCheck(presentation, io, colors, options.verbose)
       : presentation.kind === "plan"
           ? renderPlan(presentation, io, colors, options.verbose)
+          : presentation.kind === "plan-request"
+            ? renderPlanRequest(presentation, io, colors)
           : presentation.kind === "pricing"
             ? renderPricing(presentation, io, colors, options.verbose)
             : renderOperational(presentation, io, colors);
@@ -711,12 +767,14 @@ function commandHelp(topic: string, colors: Palette): readonly string[] | undefi
       "",
       "  hypit plan <source> --target <output> [--target <output>]...",
       "    [--runtime <profile>] [--project <workspace>] [--asset-root <directory>]",
+      "  hypit plan <source> --target <output> --request <number>",
       "",
       "With --runtime, plan also preflights only the demanded deployment slice and names the Provider",
-      "and price page behind each external request.",
+      "and price page behind each external request. The default view completely aggregates external work",
+      "without inspecting execution constraints; --verbose lists bounded individual request facts.",
+      "--request <number> selects one request from that list and displays its complete constraints.",
       "Select at least one Author Output with an explicit --target option.",
-      "--verbose expands capability and diagnostic detail. --limit bounds that detail,",
-      "while all demanded requests and diagnostics remain visible in both text and JSON.",
+      "--limit bounds verbose request and capability detail; aggregate work and diagnostics remain complete.",
       "Planning never starts external work.",
     ],
     pricing: [
@@ -727,7 +785,7 @@ function commandHelp(topic: string, colors: Palette): readonly string[] | undefi
       "    [--runtime <profile>] [--project <workspace>] [--asset-root <directory>]",
       "",
       "Pricing is an explicit read-only network operation. It starts no Build and submits no generation.",
-      "Matching requests share their parameters and Provider rates, with source URLs.",
+      "Matching requests are counted beside Provider-owned rates and source URLs.",
       "Provider summaries appear when available; --verbose and --json retain the full documents.",
       "Explicit no-charge requests are summarized; --verbose includes their details.",
       "All groups are shown by default. --limit <count> limits human groups; --json always includes all groups.",

@@ -11,8 +11,7 @@ import type { PendingBuildSubmission } from "./submission.js";
 import type { StoredBuildResult } from "@hypit/result/runtime-storage";
 import type { BuildExecutionSnapshot } from "./execution.js";
 import type { BuildView } from "./host-api.js";
-import { buildIdCreatedAt, compareCodeUnits } from "@hypit/hypit/protocol";
-import { materializeBuild } from "@hypit/hypit/kernel";
+import { compareCodeUnits } from "@hypit/hypit/protocol";
 
 function buildView(input: {
   readonly build: string;
@@ -24,8 +23,6 @@ function buildView(input: {
   readonly commands: readonly import("@hypit/hypit/runtime").CommandExecutionReceipt[];
 }): BuildView | undefined {
   if (input.submission === undefined && input.execution === undefined) return undefined;
-  const createdAt = buildIdCreatedAt(input.build);
-  if (createdAt === undefined) throw new Error(`Active Build ${input.build} has no ordered public id`);
   const runtimeActivity = input.execution === undefined ? undefined : buildExecutionActivity(input.execution);
   const activity: BuildView["activity"] = input.submission !== undefined
     ? "submitting"
@@ -38,12 +35,8 @@ function buildView(input: {
     ),
     completed: input.snapshot.facts.filter((fact) => fact.kind === "need-applied").length,
   };
-  const state = input.snapshot === undefined
-    ? undefined
-    : materializeBuild(input.snapshot.definition, input.snapshot.facts);
   return {
     id: input.build,
-    createdAt,
     activity,
     ...(input.execution?.decision === undefined ? {} : { outcome: input.execution.decision.outcome }),
     ...(input.execution?.attention === undefined ? {} : {
@@ -53,16 +46,12 @@ function buildView(input: {
     ...(input.result?.sourcePath === undefined ? {} : { sourcePath: input.result.sourcePath }),
     targets,
     ...(requests === undefined ? {} : { requests }),
-    acceptedRecords: state?.records.length ?? 0,
-    outstandingCommands: state?.outstanding.length ?? 0,
     commands: input.commands.flatMap((command) => command.status === "started" && command.activity !== undefined
-      ? [{ id: command.command, ...command.activity }] : []),
+      ? [command.activity] : []),
     operations: input.operations.map((operation): BuildView["operations"][number] => {
       const evidence = {
-        id: operation.id,
         endpoint: operation.endpoint,
         ...(operation.receipt === undefined ? {} : { receipt: operation.receipt }),
-        ...("wakeAt" in operation && operation.wakeAt !== undefined ? { wakeAt: operation.wakeAt } : {}),
         ...(operation.progress === undefined ? {} : { progress: operation.progress }),
       };
       return operation.status === "failed"

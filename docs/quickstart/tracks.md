@@ -4,8 +4,9 @@ description: Peer track components — captions, media, typography and authored 
 ---
 
 Every audiovisual contribution entering the final composition is a peer **Track**. A Track is a
-closed contribution rather than a container for other Tracks. Film may recursively group visual
-Tracks in a Stack when their composite must be treated as one picture. The parent Film or Stack
+completed terminal programme. Visual Combine can concatenate several completed VisualTracks into a
+new ordered Track; Film may recursively group visual Tracks in a Stack when their composite must be
+treated as one isolated picture. The parent Film or Stack
 owns each visual occurrence's `id` and its position in the sibling sequence; the reusable Track value
 retains only its local programme. This page covers Caption, Media, Typography and Audio Track authoring.
 
@@ -93,8 +94,8 @@ glow and underline; Cue/Pill Paint; three independent glyph/Pill/underline activ
 and layered Cue, Alignment-Unit, active-response and loop motion. Missing optional dimensions resolve
 deterministically to no decoration or motion. Unknown properties are rejected.
 
-The package groups those properties as **Where**, **How** and **When**, so Studio can present them in
-the same terms used by Source.
+The package groups those properties as **Where**, **How** and **When**, matching the decisions
+authored in Source.
 `lead-frames` and `tail-frames` form an explicit visible Schedule around the spoken Cue;
 `handoff: cut` prevents adjacent visible envelopes from competing, while `overlap` preserves both.
 Neither form changes the Word frames used by Karaoke.
@@ -278,6 +279,28 @@ to be an image or a video.
 
 **Outputs:** `{product-broll.program}` and `{product-broll.visual}`. Audio is always authored on an
 Audio Track; connecting a PreparedMedia visual member here never selects its audio member.
+
+## Combine completed VisualTracks
+
+When several independently authored visual components share one Film paint position, Visual Combine
+concatenates their complete Item programmes into one ordinary VisualTrack:
+
+```svml
+<import as="combine" from="@hypit/visual-combine@1"/>
+
+<combine:Track id="motion" timeline={speech.timeline}>
+  <combine:Use id="opening" source={opening.visual}/>
+  <combine:Use id="comparison" source={comparison.visual}/>
+  <combine:Use id="editor" source={editor.visual}/>
+  <combine:Use id="outro" source={outro.visual}/>
+</combine:Track>
+```
+
+The output `{motion.visual}` can enter Film or another Visual Combine. `Use` declaration order is
+back-to-front paint order. Sources may be disjoint or overlap; during an overlap, later Uses paint
+above earlier Uses. The package does not sort by Window, infer a transition or change source timing.
+Use a Film Stack when the inputs must first become one isolated child Picture, and use an explicit
+Transition, Process or component when their overlap needs another relationship.
 
 ## Audio tracks
 

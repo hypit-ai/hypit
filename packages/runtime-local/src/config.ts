@@ -261,6 +261,17 @@ export async function readRuntimeWorkerOptions(path: string): Promise<{ readonly
   return (await openRuntimeConfig(path)).document.worker ?? { executionMemoryMb: 1024 };
 }
 
+/** Read the deterministic execution policy shared by planning and submitted Builds. */
+export async function readRuntimePlanningPolicy(
+  path: string,
+  packageRootHint?: string,
+): Promise<{ readonly producerExecutionLimits?: { readonly maxInlineValueBytes: number } }> {
+  const execution = (await openRuntimeConfig(path, packageRootHint)).document.execution;
+  return execution === undefined ? {} : {
+    producerExecutionLimits: { maxInlineValueBytes: execution.producerInlineValueBytes },
+  };
+}
+
 async function openRuntimeConfig(path: string, packageRootHint?: string): Promise<OpenedRuntimeConfig> {
   const absolute = resolve(path);
   const source = await readFile(absolute, "utf8");

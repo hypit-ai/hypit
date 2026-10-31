@@ -18,7 +18,7 @@ When exact wording, data or behavior is the claim, use material that establishes
 its source identifiable in the project. When the screen is an illustration, direct the invented
 states and actions so the viewer understands the idea they stand for. The film may move between
 evidence and illustration, as long as their roles remain clear in the argument. In one making-of
-piece, actual Studio footage showed the working interface while an authored chat-and-pointer scene
+piece, actual product footage showed the working interface while an authored chat-and-pointer scene
 explained how a request becomes an attached reference. Their different jobs guided the choice of
 material in that work.
 

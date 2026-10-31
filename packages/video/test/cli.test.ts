@@ -115,7 +115,7 @@ test("check compiles a data-only package Source export without a project copy", 
   }
 });
 
-test("pricing keeps every planned generation and exposes authored parameters", async () => {
+test("pricing sends complete requests to the Provider without copying parameters into its CLI view", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-pricing-"));
   try {
     const ids = Array.from({ length: 25 }, (_, index) => `portrait-${index}`);
@@ -126,6 +126,7 @@ test("pricing keeps every planned generation and exposes authored parameters", a
   ${ids.map((id) => `<copy:Value id="${id}-prompt">An original ${id}.</copy:Value>
   <gpt:Image id="${id}" prompt={${id}-prompt} aspect-ratio="9:16" resolution="2K"/>`).join("\n")}
 </svml>`);
+    await writeFile(join(root, "runtime.json"), JSON.stringify(videoDistribution.initialRuntimeProfile));
     const source = join(root, "main.svml");
     let queried = 0;
     let output = "";
@@ -137,6 +138,14 @@ test("pricing keeps every planned generation and exposes authored parameters", a
         ...await videoDistribution.openRuntimeHost(path, options),
         openInspection: async (queries) => {
           queried = queries.length;
+          for (const query of queries) {
+            assert.equal(query.kind, "concrete");
+            const fields = (query as unknown as {
+              constraints: { fields: Record<string, unknown[]> };
+            }).constraints.fields;
+            assert.deepEqual(fields.resolution, ["2K"]);
+            assert.deepEqual(fields.aspectRatio, ["9:16"]);
+          }
           return {
             dataRoot: "/tmp",
             endpoints: async () => queries.map((query) => ({
@@ -175,12 +184,7 @@ test("pricing keeps every planned generation and exposes authored parameters", a
     assert.equal(group.requests.length, 25);
     assert.deepEqual(group.pricingDocuments[0].data, { creditsPerImage: 2 });
     for (const request of group.requests) {
-      assert.ok(request.summary.some((field: { at: readonly (string | number)[]; value: unknown }) =>
-        field.at.length === 3 && field.at[0] === "fields" && field.at[1] === "resolution"
-        && field.at[2] === 0 && field.value === "2K"));
-      assert.ok(request.summary.some((field: { at: readonly (string | number)[]; value: unknown }) =>
-        field.at.length === 3 && field.at[0] === "fields" && field.at[1] === "aspectRatio"
-        && field.at[2] === 0 && field.value === "9:16"));
+      assert.deepEqual(request, { readiness: "concrete", pending: [] });
     }
   } finally {
     await rm(root, { recursive: true, force: true });

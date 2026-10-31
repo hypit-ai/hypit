@@ -17,7 +17,7 @@ import {
   type RenderStillVideoNeed,
   verifyStillVideoRequest,
 } from "@hypit/media-operations";
-import { verifyAudioProgram } from "@hypit/audio-program";
+import { audioProgramSampleFrames, verifyAudioProgram } from "@hypit/audio-program";
 import type { AudioProgram, AudioProgramClip, RenderAudioNeed } from "@hypit/audio-program";
 import { readPreservePitch } from "@hypit/audio-stretch";
 import type { MuxMediaNeed } from "@hypit/media-delivery";
@@ -26,8 +26,8 @@ import type { BlobRef, CanonicalValue, Value } from "@hypit/hypit/protocol";
 import { addExactTemporalValues, assertTemporalMap, compareExactTemporalValues, isAffineTemporalMapPiece, resolveTemporalBoundary, scaleExactTemporalValue, subtractExactTemporalValues } from "@hypit/temporal";
 import type { ExactTemporalValue, TemporalMapStage } from "@hypit/temporal";
 
-import { runBoundedMediaProcess } from "./process.js";
-import { parseMediaInspection } from "./probe.js";
+import { runBoundedMediaProcess, runMediaProcessLines } from "./process.js";
+import { createMediaInspectionCollector, parseMediaInspection } from "./probe.js";
 import { parseAnimatedWebp } from "./webp.js";
 import type { AnimatedWebp } from "./webp.js";
 import {
@@ -236,7 +236,7 @@ async function inspectFile(args: {
 }): Promise<MediaInspection> {
   const raw = await runProcess({
     executable: args.ffprobePath,
-    argv: ["-v", "error", "-print_format", "json", "-show_format", "-show_streams", "-show_frames", "-show_pixel_formats", args.input],
+    argv: ["-v", "error", "-print_format", "json", "-show_streams", args.input],
     timeoutMs: args.timeoutMs,
     maxStdoutBytes: args.maxProbeOutputBytes,
     ...(args.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: args.sharedLibraryPath }),
@@ -247,7 +247,62 @@ async function inspectFile(args: {
   } catch {
     throw new Error("ffprobe returned invalid JSON");
   }
-  return parseMediaInspection(value);
+  const formats = await ffprobePixelFormats(args);
+  const metadata = object(value, "ffprobe metadata");
+  const collector = createMediaInspectionCollector({ ...metadata, pixel_formats: formats });
+  await runMediaProcessLines({
+    executable: args.ffprobePath,
+    argv: [
+      "-v", "error",
+      "-show_frames",
+      "-show_entries", "frame=media_type,stream_index,pts,best_effort_timestamp,duration,pkt_duration,nb_samples",
+      "-of", "compact=p=0:nk=0",
+      args.input,
+    ],
+    timeoutMs: args.timeoutMs,
+    maxLineBytes: args.maxProbeOutputBytes,
+    onLine(line) {
+      if (line.length === 0) return;
+      const frame: Record<string, string> = {};
+      for (const field of line.split("|")) {
+        const separator = field.indexOf("=");
+        if (separator > 0) frame[field.slice(0, separator)] = field.slice(separator + 1);
+      }
+      collector.observe(frame);
+    },
+    ...(args.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: args.sharedLibraryPath }),
+  });
+  return collector.finish();
+}
+
+const pixelFormatsByToolchain = new Map<string, Promise<readonly unknown[]>>();
+
+async function ffprobePixelFormats(args: {
+  readonly input: string;
+  readonly ffprobePath: string;
+  readonly timeoutMs: number;
+  readonly maxProbeOutputBytes: number;
+  readonly sharedLibraryPath?: string;
+}): Promise<readonly unknown[]> {
+  const key = `${args.ffprobePath}\u0000${args.sharedLibraryPath ?? ""}`;
+  let pending = pixelFormatsByToolchain.get(key);
+  if (pending === undefined) {
+    pending = (async () => {
+      const bytes = await runProcess({
+        executable: args.ffprobePath,
+        argv: ["-v", "error", "-print_format", "json", "-show_pixel_formats", "-show_entries",
+          "pixel_format=name:pixel_format_flags=alpha:component=bit_depth", args.input],
+        timeoutMs: args.timeoutMs,
+        maxStdoutBytes: args.maxProbeOutputBytes,
+        ...(args.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: args.sharedLibraryPath }),
+      });
+      const document = object(JSON.parse(Buffer.from(bytes).toString("utf8")), "ffprobe pixel formats");
+      return Array.isArray(document.pixel_formats) ? document.pixel_formats : [];
+    })();
+    pixelFormatsByToolchain.set(key, pending);
+    void pending.catch(() => pixelFormatsByToolchain.delete(key));
+  }
+  return pending;
 }
 
 function divisor(left: number, right: number): number {
@@ -262,19 +317,14 @@ function animatedWebpInspection(animation: AnimatedWebp): MediaInspection {
   const numerator = animation.frames.length * 1_000;
   const factor = divisor(numerator, durationMs);
   return sealMediaInspection({
-    container: { formatNames: ["webp", "webp-animation"] },
     streams: [{
       kind: "video",
       index: 0,
-      codecType: "video",
       codecName: "webp",
       disposition: { default: true, attachedPicture: false },
-      timingStatus: "admissible",
-      timeBase: { numerator: 1, denominator: 1_000 },
       startPts: { ticks: "0", timeBase: { numerator: 1, denominator: 1_000 } },
       endPts: { ticks: String(durationMs), timeBase: { numerator: 1, denominator: 1_000 } },
       decodedUnitCount: animation.frames.length,
-      role: "moving",
       width: animation.width,
       height: animation.height,
       sampleAspectRatio: { numerator: 1, denominator: 1 },
@@ -327,7 +377,6 @@ function extractAudioNeed(value: CanonicalValue): ExtractAudioNeed {
     "ExtractAudioNeed streamIndex is invalid");
   verifyAudioExtractionRequest({
     audio: { mode: "stream-index", streamIndex: item.streamIndex },
-    output: item.output,
   });
   return item;
 }
@@ -341,7 +390,6 @@ function extractFrameNeed(value: CanonicalValue): ExtractFrameNeed {
   verifyFrameExtractionRequest({
     video: { mode: "stream-index", streamIndex: item.streamIndex },
     at: item.at,
-    output: item.output,
   });
   if (item.at.kind === "frame") {
     assert(item.at.index < item.sourceFrameCount, "ExtractFrameNeed frame lies outside the source stream");
@@ -381,9 +429,6 @@ function muxMediaNeed(value: CanonicalValue): MuxMediaNeed {
   verifyMediaDeliverySpec(item.delivery);
   assert(sameVisualDeliverySpec(item.visual.delivery, item.delivery.visual),
     "MuxMediaNeed visual differs from its delivery requirement");
-  assert(item.audio.sampleRate === item.delivery.audio.sampleRate
-    && item.audio.channelLayout === item.delivery.audio.channelLayout,
-  "MuxMediaNeed audio differs from its delivery requirement");
   const expectedSamples = roundPositive(
     BigInt(item.visual.frameCount) * 48_000n * BigInt(item.visual.frameRate.denominator),
     BigInt(item.visual.frameRate.numerator),
@@ -431,7 +476,8 @@ async function assertCanonicalWav(args: {
   assert(audio.length === 1 && inspection.streams.length === 1, "Canonical audio must contain exactly one stream");
   assert(audio[0]!.codecName === "pcm_s16le" && audio[0]!.sampleRate === 48_000 && audio[0]!.channels === 2,
     "Canonical audio must be 48 kHz stereo PCM s16");
-  assert(audio[0]!.timingStatus === "admissible", "Canonical audio timing is not admissible");
+  assert(audio[0]!.startPts !== undefined && audio[0]!.endPts !== undefined,
+    "Canonical audio has no presentation span");
   return audio[0]!;
 }
 
@@ -465,7 +511,7 @@ export async function executeInspectMedia(
 async function sourceVideoEncoding(env: MediaExecutionEnvironment, path: string, streamIndex: number) {
   const bytes = await runProcess({
     executable: env.ffprobePath,
-    argv: ["-v", "error", "-print_format", "json", "-show_streams", "-show_pixel_formats", "-show_format", path],
+    argv: ["-v", "error", "-print_format", "json", "-show_streams", "-show_pixel_formats", path],
     timeoutMs: env.processTimeoutMs, maxStdoutBytes: env.maxProbeOutputBytes,
     ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
   });
@@ -474,7 +520,6 @@ async function sourceVideoEncoding(env: MediaExecutionEnvironment, path: string,
       time_base?: string; sample_aspect_ratio?: string; width?: number; height?: number;
       tags?: Record<string, string>; side_data_list?: { rotation?: number }[] }[];
     pixel_formats: { name: string; flags: { alpha: number } }[];
-    format?: { nb_streams?: number; format_name?: string };
   };
   const stream = probe.streams.find((item) => item.index === streamIndex);
   assert(stream !== undefined, `Media source has no video stream ${streamIndex}`);
@@ -489,8 +534,6 @@ async function sourceVideoEncoding(env: MediaExecutionEnvironment, path: string,
     alpha,
     pixelFormat: stream.pix_fmt,
     stream,
-    formatNames: probe.format?.format_name?.split(",") ?? [],
-    streamCount: probe.format?.nb_streams,
     inputArgs: decoder === undefined ? [] : [`-c:${streamIndex}`, decoder],
   };
 }
@@ -519,11 +562,11 @@ async function assertTimelineVisualBytes(
   assert(streams.length === 1 && inspection.streams.length === 1,
     "TimelineVisual Artifact must contain exactly one silent video stream");
   const stream = streams[0]!;
-  assert(!stream.disposition.attachedPicture && stream.timingStatus === "admissible"
+  assert(!stream.disposition.attachedPicture && stream.startPts !== undefined && stream.endPts !== undefined
       && stream.decodedUnitCount === visual.frameCount
       && stream.width === visual.canvas.width && stream.height === visual.canvas.height,
   "TimelineVisual bytes differ from their declared frame domain");
-  assert(sameRational(stream.averageFrameRate ?? stream.nominalFrameRate, visual.frameRate),
+  assert(sameRational(stream.averageFrameRate, visual.frameRate),
     "TimelineVisual bytes differ from their declared frame rate");
 
   const encoding = await sourceVideoEncoding(env, path, stream.index);
@@ -917,8 +960,9 @@ export async function executeRenderTimelineAudio(
 ): Promise<MediaOperationResult> {
   const need = renderAudioNeed(constraints);
   const program: AudioProgram = need.program;
+  const programSampleFrames = audioProgramSampleFrames(program);
   const window = need.range === undefined
-    ? { startSample: 0, endSampleExclusive: program.sampleFrames, sampleFrames: program.sampleFrames }
+    ? { startSample: 0, endSampleExclusive: programSampleFrames, sampleFrames: programSampleFrames }
     : clockFrameSpanSamples(need.range, { frameRate: program.frameRate }, 48_000);
   const renderPlan = planAudioProgramRender(program, window.startSample, window.sampleFrames);
   const clips = [...new Set(audioRenderPlanSourceClips(renderPlan))];
@@ -1024,8 +1068,6 @@ export async function executeRenderTimelineAudio(
       "Rendered TimelineAudio sample count differs from its program");
     const value: TimelineAudio = sealTimelineAudio({
       artifact,
-      sampleRate: 48_000,
-      channelLayout: "stereo",
       sampleFrames: window.sampleFrames,
     });
     return inlineResult(canonicalize(value));
@@ -1092,11 +1134,11 @@ export async function executeMuxProgramMedia(
     const finalAudio = finalInspection.streams.filter((item): item is MediaAudioStream => item.kind === "audio");
     assert(finalVideo.length === 1 && finalAudio.length === 1 && finalInspection.streams.length === 2,
       "Final mux must contain exactly one video and one audio stream");
-    assert(finalVideo[0]!.timingStatus === "admissible"
+    assert(finalVideo[0]!.startPts !== undefined && finalVideo[0]!.endPts !== undefined
       && finalVideo[0]!.decodedUnitCount === need.visual.frameCount
       && finalVideo[0]!.codecName === need.delivery.visual.encoding.codec,
       "Final mux video frame count differs from TimelineVisual");
-    assert(finalAudio[0]!.timingStatus === "admissible"
+    assert(finalAudio[0]!.startPts !== undefined && finalAudio[0]!.endPts !== undefined
       && finalAudio[0]!.codecName === need.delivery.audio.codec
       && finalAudio[0]!.sampleRate === 48_000 && finalAudio[0]!.channels === 2,
       "Final mux audio shape differs from TimelineAudio");
@@ -1130,7 +1172,6 @@ export async function executeMuxProgramMedia(
       frameRate: need.visual.frameRate,
       frameCount: need.visual.frameCount,
       canvas: need.visual.canvas,
-      presentationSampleFrames: need.audio.sampleFrames,
       delivery: need.delivery,
       artifact,
     });

@@ -3,10 +3,12 @@
 Renderer-facing audio Programme for an `AudioComposition` on one `Timeline`.
 
 The package namespaces every selected closed `AudioSignalGraph`, joins their outputs with one root
-Mix, and preserves source, mix, process, explicit port and shared-upstream topology in an exact
-48 kHz programme. It declares the `render-timeline-audio` capability. Each occurrence retains its selected audio source,
+Mix, and preserves source, mix, process and shared-upstream topology in an exact
+48 kHz programme. Every Programme node has one signal output, so internal references name only the node instead of repeating a literal port.
+It declares the `render-timeline-audio` capability. Each occurrence retains its selected audio source,
 complete Prepared Media map, complete occurrence map, exact absolute target range and mix automation.
-Only absolute programme and mix boundaries are projected onto the 48 kHz grid here.
+Fade lengths are projected onto the 48 kHz grid once; target sample spans and total sample count remain pure projections of the exact
+target and frame domain instead of duplicate Programme fields.
 
 `AudioProgram` is one closed signal graph. Source, Mix and package-owned Process nodes are its
 complete execution topology.

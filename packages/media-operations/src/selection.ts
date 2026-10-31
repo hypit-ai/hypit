@@ -79,18 +79,16 @@ export function selectVideoStream(
   verifyMediaInspection(inspection);
   const moving = inspection.streams.filter((stream): stream is MediaVideoStream =>
     stream.kind === "video"
-      && stream.role === "moving"
+      && stream.decodedUnitCount >= 2
       && stream.disposition.attachedPicture === false
-      && stream.timingStatus === "admissible"
       && stream.startPts !== undefined
       && stream.endPts !== undefined);
   if (videoRequest.mode === "primary-moving") return selectUniqueDefault(moving, "Primary moving video");
   const selected = inspection.streams.find((stream): stream is MediaVideoStream =>
     stream.kind === "video" && stream.index === videoRequest.streamIndex);
   assert(selected !== undefined, `Video stream ${videoRequest.streamIndex} does not exist`);
-  assert(selected.role === "moving" && selected.disposition.attachedPicture === false,
+  assert(selected.decodedUnitCount >= 2 && selected.disposition.attachedPicture === false,
     `Video stream ${videoRequest.streamIndex} is not a moving visual stream`);
-  assert(selected.timingStatus === "admissible", `Video stream ${videoRequest.streamIndex} timing is not admissible`);
   assert(selected.startPts !== undefined && selected.endPts !== undefined,
     `Video stream ${videoRequest.streamIndex} has no presentation interval`);
   return selected;
@@ -102,8 +100,7 @@ export function selectAudioStream(
 ): MediaAudioStream {
   verifyMediaInspection(inspection);
   const audio = inspection.streams.filter((stream): stream is MediaAudioStream =>
-    stream.kind === "audio" && stream.timingStatus === "admissible"
-      && stream.startPts !== undefined && stream.endPts !== undefined);
+    stream.kind === "audio" && stream.startPts !== undefined && stream.endPts !== undefined);
   if (audioRequest.mode === "default") return selectUniqueDefault(audio, "Default audio");
   const selected = audio.find((stream) => stream.index === audioRequest.streamIndex);
   assert(selected !== undefined, `Audio stream ${audioRequest.streamIndex} does not exist or has no presentation interval`);

@@ -25,7 +25,6 @@ export type SourceFrameUpdate = {
         readonly frame: number;
         readonly fps: { readonly num: number; readonly den: number };
         readonly streamIndex: number;
-        readonly reverse: boolean;
       }
     | {
         readonly kind: "time";

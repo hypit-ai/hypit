@@ -21,8 +21,12 @@ reference authored Font Records regardless of their textual order.
 The same module owns `PreparedMedia`: one immutable source Blob, one exact finite local domain and
 the selected visual/audio members' exact maps back to source presentation time. Visual interpretation
 retains coded extent, sample aspect ratio, rotation and the complete `PictureInterpretation` selected
-for those samples; audio interpretation retains its sample and channel facts. Decoding, Film placement, semantic evidence, renderer choice and
+for those samples. Audio preparation retains only the selected stream, exact presentation origin, source domain and Map; decoder input
+shape is observed where bytes are decoded instead of being copied through every Programme. Decoding, Film placement, semantic evidence, renderer choice and
 Provider cache remain separate downstream values.
+Inspection publishes presentation endpoints only when decoded-unit facts establish both boundaries.
+Without a complete span, the stream cannot establish an exact local domain; probe diagnostics do not enter this value.
+
 `preparedVisualExtent` projects those facts to the actual display width and height after pixel aspect
 and quarter-turn rotation. It is geometry, not a reduced aspect-ratio pair: a square-pixel 64×64 source
 therefore remains 64×64.
@@ -48,7 +52,8 @@ its preparation relation into the terminal Audio Track, while `AudioProgram` low
 usable as foreground performance, B-roll, music, an effect or a model input; its earlier contribution
 to Timeline construction is not observable downstream.
 
-`PreparedVisualSource` and `PreparedAudioSource` are signal-specific projections of source selection and interpretation.
+`PreparedVisualSource` and `PreparedAudioSource` are signal-specific projections of source selection and exact source domains;
+only the visual projection carries pixel interpretation because visual renderers consume it.
 They choose no file format, frame grid, sample buffer, decoder or cache. A renderer may decode, cache or transcode privately,
 but those choices do not become graph values or fields of `PreparedMedia`.
 
@@ -66,7 +71,8 @@ profile and matte policy, coded video target, audio target and container once. T
 the complete value independently reaches final mux.
 
 `TimelineVisual` records the exact visual requirement implemented by its encoded Artifact.
-`TimelineAudio` records its PCM sample rate, channel layout and sample count. `MuxedMedia` records
+`TimelineAudio` records its canonical PCM Artifact and actual sample count; its type already means 48 kHz stereo PCM.
+`MuxedMedia` records
 the complete delivery requirement. Final mux rejects inputs prepared for a different requirement;
 it does not silently transcode them or recover policy from a Provider configuration.
 

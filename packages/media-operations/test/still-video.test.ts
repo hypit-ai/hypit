@@ -35,7 +35,7 @@ test("still video frames are whole and every picture holds at least one", () => 
   assert.deepEqual(planStillVideoSegments(3, [100, 1, 1]).map((item) => item.endFrameExclusive - item.startFrame), [1, 1, 1]);
   assert.throws(() => planStillVideoSegments(2, [1, 1, 1]), /each picture needs at least one/u);
   const bound = bindStillVideoSource(
-    { frameRate: { numerator: 30, denominator: 1 }, frameCount: 2, output: { container: "mp4", codec: "h264", pixelFormat: "yuv420p" },
+    { frameRate: { numerator: 30, denominator: 1 }, frameCount: 2,
       segments: [{ startFrame: 0, endFrameExclusive: 1 }, { startFrame: 1, endFrameExclusive: 2 }] },
     { kind: "blob", resource: fixtureResource("still:first"), size: 1, mediaType: "image/png" },
   );

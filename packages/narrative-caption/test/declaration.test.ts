@@ -41,9 +41,9 @@ const projectionRecord: TypedRecord = { id: "narrative-projection", type: narrat
 const records: readonly TypedRecord[] = [documentRecord, bindingRecord, projectionRecord];
 
 const references = new Map<string, AuthorResolvedReference>([
-  ["facts.document", { path: "facts.document", ref: { kind: "record", id: documentRecord.id }, type: documentRecord.type, record: documentRecord }],
-  ["facts.binding", { path: "facts.binding", ref: { kind: "record", id: bindingRecord.id }, type: bindingRecord.type, record: bindingRecord }],
-  ["facts.projection", { path: "facts.projection", ref: { kind: "record", id: projectionRecord.id }, type: projectionRecord.type, record: projectionRecord }],
+  ["facts.document", { ref: { kind: "record", id: documentRecord.id }, type: documentRecord.type, record: documentRecord }],
+  ["facts.binding", { ref: { kind: "record", id: bindingRecord.id }, type: bindingRecord.type, record: bindingRecord }],
+  ["facts.projection", { ref: { kind: "record", id: projectionRecord.id }, type: projectionRecord.type, record: projectionRecord }],
 ]);
 
 const sourceImport: ResolvedAuthorSourceImport = {

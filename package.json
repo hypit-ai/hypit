@@ -315,6 +315,7 @@
     "@hypit/script": "workspace:*",
     "@hypit/text-fine": "workspace:*",
     "@hypit/timeline-author": "workspace:*",
+    "@hypit/visual-combine": "workspace:*",
     "@hypit/visual-track": "workspace:*",
     "@hypit/visual-adjustment": "workspace:*",
     "@hypit/visual-matte": "workspace:*",

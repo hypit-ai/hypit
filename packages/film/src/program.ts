@@ -5,13 +5,13 @@ import type { Canvas } from "@hypit/spatial";
 import { assertTimelineIdentity } from "@hypit/timeline";
 import type { Timeline } from "@hypit/timeline";
 
-import type { FilmProgram, FilmTrackSet, FilmVisualPlanMember } from "./types.js";
+import type { FilmAssemblyPlan, FilmTrackSet, FilmVisualPlanMember } from "./types.js";
 
 function assertNonEmpty(value: string, label: string): void {
   if (!value.trim()) throw new Error(`${label} must not be empty.`);
 }
 
-function filmProgramContent(value: FilmProgram): FilmProgram {
+function filmAssemblyPlanContent(value: FilmAssemblyPlan): FilmAssemblyPlan {
   return {
     id: value.id,
     clearColor: value.clearColor,
@@ -27,20 +27,20 @@ function filmTrackSetContent(value: FilmTrackSet): FilmTrackSet {
   };
 }
 
-export function sealFilmProgram(value: FilmProgram): FilmProgram {
-  return filmProgramContent(value);
+export function sealFilmAssemblyPlan(value: FilmAssemblyPlan): FilmAssemblyPlan {
+  return filmAssemblyPlanContent(value);
 }
 
-export function assertFilmProgramIdentity(program: FilmProgram): void {
-  if (program === null || typeof program !== "object" || Array.isArray(program)) {
-    throw new Error("FilmProgram is invalid.");
+export function assertFilmAssemblyPlanIdentity(assembly: FilmAssemblyPlan): void {
+  if (assembly === null || typeof assembly !== "object" || Array.isArray(assembly)) {
+    throw new Error("FilmAssemblyPlan is invalid.");
   }
-  assertNonEmpty(program.id, "FilmProgram id");
-  if (!/^#[0-9a-f]{6}(?:[0-9a-f]{2})?$/iu.test(program.clearColor)) {
-    throw new Error("FilmProgram clear color is invalid.");
+  assertNonEmpty(assembly.id, "FilmAssemblyPlan id");
+  if (!/^#[0-9a-f]{6}(?:[0-9a-f]{2})?$/iu.test(assembly.clearColor)) {
+    throw new Error("FilmAssemblyPlan clear color is invalid.");
   }
-  if (program.visual === null || typeof program.visual !== "object" || !Array.isArray(program.visual.members)
-    || !Array.isArray(program.audio)) throw new Error("FilmProgram assembly is invalid.");
+  if (assembly.visual === null || typeof assembly.visual !== "object" || !Array.isArray(assembly.visual.members)
+    || !Array.isArray(assembly.audio)) throw new Error("FilmAssemblyPlan assembly is invalid.");
   const visualSlots = new Set<number>();
   const visit = (members: readonly FilmVisualPlanMember[], label: string): void => {
     const memberIds = new Set<string>();
@@ -85,11 +85,11 @@ export function assertFilmProgramIdentity(program: FilmProgram): void {
       }
     }
   };
-  visit(program.visual.members, "FilmProgram.visual.members");
+  visit(assembly.visual.members, "FilmAssemblyPlan.visual.members");
   const audioSlots = new Set<number>();
-  for (const [index, slot] of program.audio.entries()) {
+  for (const [index, slot] of assembly.audio.entries()) {
     if (!Number.isSafeInteger(slot) || slot < 0 || audioSlots.has(slot) || visualSlots.has(slot)) {
-      throw new Error(`FilmProgram.audio.${index} is invalid or duplicated.`);
+      throw new Error(`FilmAssemblyPlan.audio.${index} is invalid or duplicated.`);
     }
     audioSlots.add(slot);
   }
@@ -136,19 +136,19 @@ export function appendFilmAudioTrack(set: FilmTrackSet, timeline: Timeline, trac
 }
 
 export function compileFilmComposition(
-  program: FilmProgram,
+  assembly: FilmAssemblyPlan,
   canvas: Canvas,
   timeline: Timeline,
   set: FilmTrackSet,
 ): Composition {
-  assertFilmProgramIdentity(program);
+  assertFilmAssemblyPlanIdentity(assembly);
   assertCanvas(canvas);
   assertTimelineIdentity(timeline);
   assertFilmTrackSetIdentity(set);
   const usedSlots = new Set<number>();
   const trackAt = (slot: number): Track => {
     const track = set.tracks[slot];
-    if (track === undefined) throw new Error(`FilmProgram references missing Track slot ${slot}.`);
+    if (track === undefined) throw new Error(`FilmAssemblyPlan references missing Track slot ${slot}.`);
     usedSlots.add(slot);
     return track;
   };
@@ -166,26 +166,26 @@ export function compileFilmComposition(
         };
       }
       const track = trackAt(member.slot);
-      if (track.kind !== "visual") throw new Error(`FilmProgram Track slot ${member.slot} must be visual.`);
+      if (track.kind !== "visual") throw new Error(`FilmAssemblyPlan Track slot ${member.slot} must be visual.`);
       return { kind: "track" as const, id: member.id, track };
     }),
   });
-  const visual = compileVisual(program.visual.members);
-  const audio = program.audio.map((slot) => {
+  const visual = compileVisual(assembly.visual.members);
+  const audio = assembly.audio.map((slot) => {
     const track = trackAt(slot);
-    if (track.kind !== "audio") throw new Error(`FilmProgram Track slot ${slot} must be audio.`);
+    if (track.kind !== "audio") throw new Error(`FilmAssemblyPlan Track slot ${slot} must be audio.`);
     return track;
   });
   if (usedSlots.size !== set.tracks.length || [...set.tracks.keys()].some((slot) => !usedSlots.has(slot))) {
-    throw new Error("FilmProgram must use every assembled Track.");
+    throw new Error("FilmAssemblyPlan must use every assembled Track.");
   }
   const composition = sealComposition({
-    id: program.id,
+    id: assembly.id,
     visual: {
       canvas: {
         width: canvas.widthPx,
         height: canvas.heightPx,
-        clearColor: program.clearColor,
+        clearColor: assembly.clearColor,
       },
       root: visual,
     },

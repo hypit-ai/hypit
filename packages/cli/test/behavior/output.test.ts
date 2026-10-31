@@ -102,6 +102,8 @@ test("plan presents target requests without exposing graph Record resolution", (
 
   const verbose = capture({ ...human, verbose: true }, presentation);
   assert.match(verbose, /Requests\s+1/u);
+  assert.match(verbose, /\[1\] @hypit\/media@1\/inspect/u);
+  assert.match(verbose, /Use --request <number>/u);
   assert.doesNotMatch(verbose, /take\.video\s+← record:preview/u);
 });
 
@@ -134,7 +136,6 @@ test("plan names the Provider and price page behind each request, and points at 
       endpoint: "hypihub.default",
       use: "@hypit/provider-hypihub",
       pricing: { kind: "page", url: "https://hypit.ai/commercial/pricing/" },
-      summary: [{ at: ["prompt"], value: "A concise scene" }, { at: ["duration"], value: 10 }, { at: ["resolution"], value: "720p" }],
       pending: [],
     },
     { capability: "@hypit/media@1#inspect", readiness: "concrete", pending: [], resolution: "resolved", support: "supported", endpoint: "media.local", use: "@hypit/media-local", pricing: { kind: "local" } },
@@ -162,16 +163,16 @@ test("plan names the Provider and price page behind each request, and points at 
       use: "@example/provider-downstream",
     },
   ] } });
-  assert.match(output, /Providers and price pages/u);
+  assert.match(output, /External work/u);
   assert.match(output, /@hypit\/seedance@1#seedance-2-mini\n\s+hypihub\.default \(@hypit\/provider-hypihub\)\s+·\s+https:\/\/hypit\.ai\/commercial\/pricing\//u);
   assert.match(output, /media\.local .*·\s+local, no Provider charge/u);
   assert.match(output, /whisperx\.remote .*·\s+price source unknown/u);
   assert.match(output, /Unsupported\s+1/u);
   assert.match(output, /gpt-image@1#gpt-image-2\n\s+hypihub\.default: transparent background is available only at 1K; requested 2K\s+·\s+price source unknown/u);
-  assert.match(output, /prompt A concise scene · duration 10 · resolution 720p/u);
+  assert.match(output, /×1\s+concrete/u);
   assert.match(output, /downstream\.default \(@example\/provider-downstream\)/u);
   assert.doesNotMatch(output, /Requests not yet concrete/u);
-  assert.match(output, /downstream@1#generate[\s\S]*input produced during Build/u);
+  assert.match(output, /downstream@1#generate[\s\S]*source produced during Build/u);
   assert.doesNotMatch(output, /Pass --runtime/u);
   assert.match(output, /seedance@1#/u);
 
@@ -187,7 +188,6 @@ test("pricing presents Provider-owned material beside the corresponding Needs", 
       support: "supported",
       endpoint: "hypihub.default", use: "@hypit/provider-hypihub",
       pricing: { kind: "page", url: "https://hypit.ai/commercial/pricing/" },
-      summary: [{ at: ["duration"], value: 5 }, { at: ["resolution"], value: "720p" }],
       pricingDocuments: [{
         source: "https://hypit.ai/v1/pricing?model=seedance-2",
         data: { model: "seedance-2", pricing: { mode: "per_second", per_second_usd: 0.1045 } },
@@ -207,7 +207,7 @@ test("pricing presents Provider-owned material beside the corresponding Needs", 
   assert.match(output, /Provider pricing information/u);
   assert.match(output, /https:\/\/hypit\.ai\/v1\/pricing\?model=seedance-2/u);
   assert.match(output, /"per_second_usd": 0\.1045/u);
-  assert.match(output, /duration 5 · resolution 720p/u);
+  assert.match(output, /Requests\s+1/u);
   assert.match(output, /Pricing page\s+https:\/\/images\.example\/pricing/u);
   assert.match(output, /Request-sensitive pricing deferred until the request is concrete/u);
 
@@ -247,10 +247,9 @@ test("pricing preserves every Producer failure alongside rates regardless of the
 test("pricing summarizes 24 no-charge requests and retains all 15 priced requests with shared rate documents", () => {
   const requests: PricingRequest[] = [];
   const add = (count: number, capability: string,
-    metadata: Omit<PricingRequest, "capability" | "readiness" | "pending" | "summary">) => {
+    metadata: Omit<PricingRequest, "capability" | "readiness" | "pending">) => {
     for (let index = 0; index < count; index++) {
-      requests.push({ capability, readiness: "concrete", pending: [],
-        summary: [{ at: ["quantity"], value: index + 1 }], ...metadata });
+      requests.push({ capability, readiness: "concrete", pending: [], ...metadata });
     }
   };
   add(24, "example.processing@1#prepare", {
@@ -266,12 +265,10 @@ test("pricing summarizes 24 no-charge requests and retains all 15 priced request
   assert.equal(machine.requestCount, 39);
   assert.equal(machine.noChargeRequestCount, 24);
   assert.deepEqual(machine.groups.map((group) => group.requests.length), [7, 7, 1]);
-  assert.deepEqual(machine.groups.flatMap((group) => group.requests).map((request) => request.summary?.[0]?.value),
-    Array.from({ length: 15 }, (_, index) => index < 7 ? index + 1 : index < 14 ? index - 6 : 1));
   const output = capture(human, { kind: "pricing", machine });
   assert.doesNotMatch(output, /example.processing/u);
   assert.equal(output.match(/"creditsPerUnit": 3/gu)?.length, 3);
-  assert.match(output, /quantity 7/u);
+  assert.match(output, /Requests\s+7/u);
   assert.match(output, /example.work@1#draw/u);
   const detailed = createPricingOutput("main.svml", requests, true);
   assert.equal(detailed.groups.flatMap((group) => group.requests).length, 39);
@@ -317,6 +314,8 @@ test("numeric options accept unsigned decimal integer spelling only", () => {
   assert.equal((parseCommand(["status", "bld_example", "--watch", "--max-wait-ms", "0"]) as { maxWaitMs: number }).maxWaitMs, 0);
   assert.throws(() => parseCommand(["status", "bld_example", "--limit", "1"]), /--limit does not apply to status/u);
   assert.equal((parseCommand(["builds", "--limit", "12"]) as { limit: number }).limit, 12);
+  assert.equal((parseCommand(["plan", "main.svml", "--request", "3"]) as { request: number }).request, 3);
+  assert.throws(() => parseCommand(["pricing", "main.svml", "--request", "1"]), /--request does not apply to pricing/u);
   for (const value of ["", " ", "0x10", "0b11", "1e3", "-1", "1.5", "9007199254740992"]) {
     assert.throws(
       () => parseCommand(["status", "bld_example", "--watch", "--max-wait-ms", value]),
@@ -333,21 +332,39 @@ test("numeric options accept unsigned decimal integer spelling only", () => {
   }
 });
 
-test("Provider summaries keep raw pricing available and shared parameters preserve differing combinations", () => {
-  const requests = ["first", "second", "third"].map((_name, index): PricingRequest => ({
+test("a focused plan request is the only plan view that exposes complete constraints", () => {
+  const machine = {
+    format: "hypit.cli-plan-request@1" as const,
+    source: "/project/main.svml",
+    ordinal: 2,
+    requestCount: 4,
+    capability: "example.image@1#generate",
+    returns: "example.image@1#ImageSet",
+    readiness: "concrete" as const,
+    resolution: "resolved" as const,
+    support: "supported" as const,
+    endpoint: "images.default",
+    pricing: { kind: "page" as const, url: "https://images.example/pricing" },
+    pending: [],
+    constraints: { fields: { prompt: ["A red paper bird"], count: [1] } },
+  };
+  const output = capture(human, { kind: "plan-request", machine });
+  assert.match(output, /Plan request 2 of 4/u);
+  assert.match(output, /A red paper bird/u);
+  assert.match(output, /resource identities/u);
+  assert.deepEqual(JSON.parse(capture({ ...human, json: true }, { kind: "plan-request", machine })), machine);
+});
+
+test("Provider summaries keep raw pricing available without interpreting request parameters", () => {
+  const requests = ["first", "second", "third"].map((_name): PricingRequest => ({
     capability: "example@1#generate", readiness: "concrete", pending: [], resolution: "resolved", support: "supported", endpoint: "vendor",
     pricingDocuments: [{ source: "https://vendor.example/prices", summary: "Gold: 2 credits per unit",
       data: { actualRate: 2, marketingComparison: 99 } }],
-    summary: [{ at: ["mode"], value: "gold" }, { at: ["duration"], value: index === 0 ? 5 : 10 },
-      { at: ["size"], value: index === 2 ? "large" : "small" }],
   }));
   const machine = createPricingOutput("main.svml", requests);
   const presentation = { kind: "pricing", machine } as const;
   const output = capture(human, presentation);
-  assert.equal(output.match(/mode gold/gu)?.length, 1);
-  assert.match(output, /duration 5 · size small/u);
-  assert.match(output, /duration 10 · size small/u);
-  assert.match(output, /duration 10 · size large/u);
+  assert.match(output, /Requests\s+3/u);
   assert.match(output, /Gold: 2 credits per unit/u);
   assert.doesNotMatch(output, /marketingComparison/u);
   assert.match(capture({ ...human, verbose: true }, presentation), /"marketingComparison": 99/u);
@@ -385,12 +402,16 @@ test("plan scope omits unused branches while retaining every demanded request an
   assert.match(rendered, /Timeline end must be after its start/u);
   assert.match(rendered, /last required error/u);
   assert.doesNotMatch(rendered, /output-\d/u);
-  assert.match(rendered, /request summary unavailable/u);
+  assert.match(rendered, /×60\s+concrete/u);
   assert.doesNotMatch(rendered, /no parameters/u);
 
   const detailed = createPlanOutput(plan, { verbose: true, limit: 1 });
   assert.equal(detailed.requests.length, 61);
   assert.deepEqual(detailed.preflight?.diagnostics, plan.preflight.diagnostics);
+  const expanded = capture({ ...human, verbose: true }, { kind: "plan", machine: detailed, limit: 1 });
+  assert.match(expanded, /\[1\] example@1#render/u);
+  assert.match(expanded, /\[61\] example@1#render/u);
+  assert.match(expanded, /59 more requests/u);
 });
 
 test("help is concise and describes stable rather than complete output", () => {

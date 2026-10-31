@@ -8,7 +8,7 @@ import type { TypeRef } from "@hypit/protocol";
 import type { CliBuildView as BuildView } from "./runtime-port.js";
 import type { CommandScope } from "./command-hint.js";
 
-export type PublicOutputRepresentation = "inline" | "file" | "value-document";
+export type PublicOutputRepresentation = "inline" | "file" | "structured";
 
 export type CliOutputView = {
   readonly name: string;
@@ -43,7 +43,7 @@ export type CliBuildResultView = {
   readonly omittedOutputs?: number;
   readonly failure?: string;
   readonly operations?: readonly Pick<BuildResultOperation,
-    "endpoint" | "outcome" | "receipt" | "failure">[];
+    "request" | "endpoint" | "outcome" | "receipt" | "failure">[];
   readonly executionLog?: BuildResult["executionLog"];
   readonly omittedOperations?: number;
 };
@@ -53,7 +53,6 @@ export type CliBuildStatusView = {
   readonly targets?: readonly string[];
   readonly failure?: string;
   readonly commands?: readonly {
-    readonly id?: string;
     readonly endpoint: string;
     readonly progress: NonNullable<BuildView["commands"]>[number]["progress"];
   }[];
@@ -71,7 +70,6 @@ export type CliBuildStatusView = {
   readonly attention?: { readonly message: string; readonly action?: string };
   readonly operations?: readonly {
     readonly count?: number;
-    readonly id?: string;
     readonly receipt?: { readonly id: string; readonly url?: string };
     readonly endpoint: string;
     readonly state: string;
@@ -111,16 +109,13 @@ export function outputView(
   if (output === undefined) {
     throw new Error(`Build Result ${manifest.id} Output ${name} cannot be resolved`);
   }
-  const representation = output.value.kind === "build-file"
-    ? "file" as const
-    : output.value.kind === "value" ? "value-document" as const : "inline" as const;
   return {
     name,
     type: cliTypeName(output.type),
-    representation,
-    ...(output.value.kind === "build-file" ? {
-      mediaType: output.value.mediaType,
-      size: output.value.size,
+    representation: output.representation,
+    ...(output.representation === "file" ? {
+      mediaType: output.mediaType,
+      size: output.size,
     } : {}),
   };
 }
@@ -162,7 +157,7 @@ export function buildStatusView(options: {
       failure: finished?.failure ?? options.runtime!.stop!.reason,
     }),
     ...(options.runtime?.commands?.length ? { commands: options.runtime.commands.map((command) => ({
-      ...(options.verbose ? { id: command.id } : {}), endpoint: command.endpoint, progress: command.progress,
+      endpoint: command.endpoint, progress: command.progress,
     })) } : {}),
     work: {
       state: workState(options.runtime, options.result),
@@ -185,7 +180,6 @@ export function buildStatusView(options: {
     ...(operations.length > 0 ? {
       operations: groupOperationViews(operations
         .map((item) => ({
-          ...(!options.verbose || !("id" in item) || item.id === undefined ? {} : { id: item.id }),
           ...(item.receipt === undefined || (!options.verbose && item.failure === undefined) ? {} : { receipt: item.receipt }),
           endpoint: item.endpoint,
           state: "status" in item ? item.status : item.outcome ?? "accepted",
@@ -243,8 +237,9 @@ export async function buildResultView(
     ...(finished?.failure === undefined ? {} : { failure: finished.failure }),
     ...(finished?.executionLog === undefined ? {} : { executionLog: finished.executionLog }),
     ...(selectedOperations.length === 0 ? {} : { operations: selectedOperations.map((item) => options.verbose ? item : ({
+      request: item.request,
       endpoint: item.endpoint,
-      ...(item.outcome === undefined ? {} : { outcome: item.outcome }),
+      outcome: item.outcome,
       ...(item.receipt === undefined ? {} : { receipt: item.receipt }),
       ...(item.failure === undefined ? {} : { failure: item.failure }),
     })) }),

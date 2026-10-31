@@ -16,10 +16,8 @@ export type OperationIdentity = {
 
 /** Immutable execution context captured when the Operation is created. */
 export type OperationContext = {
-  readonly createdAt: number;
   readonly need: Need;
   readonly credentials: Readonly<Record<string, CredentialRef>>;
-  readonly pool?: string;
 };
 
 export type OperationFailure = {
@@ -106,10 +104,8 @@ export function applyOperationUpdate(current: OperationSnapshot, update: Operati
     build: current.build,
     command: current.command,
     endpoint: current.endpoint,
-    createdAt: current.createdAt,
     need: current.need,
     credentials: current.credentials,
-    ...(current.pool === undefined ? {} : { pool: current.pool }),
     ...(update.receipt ?? current.receipt) === undefined ? {} : { receipt: update.receipt ?? current.receipt },
     ...(update.progress ?? current.progress) === undefined ? {} : { progress: update.progress ?? current.progress },
     ...update,

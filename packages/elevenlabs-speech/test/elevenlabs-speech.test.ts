@@ -17,7 +17,6 @@ import { elevenLabsSpeechMarkupDeclarations, elevenLabsVoiceDesignAuthorDeclarat
 
 const speech = sealText("Exact authored words stay exact.");
 const speechReference: AuthorResolvedReference = {
-  path: "story.segment.opening.speech",
   ref: { kind: "record", id: "story.segment.opening.speech" },
   type: textTypes.text,
   record: {
@@ -44,7 +43,7 @@ test("VoiceDesign publishes one reusable voice reference", async () => {
     A clear, confident young woman with a grounded conversational tone.
   </eleven:VoiceDesign>`, module: elevenLabsSpeechModuleRef, alias: "eleven",
     compilers: [elevenLabsVoiceDesignAuthorDeclaration], syntax: elevenLabsSpeechMarkupDeclarations,
-    references: new Map([[speechReference.path, speechReference]]) });
+    references: new Map([["story.segment.opening.speech", speechReference]]) });
   assert.deepEqual(result.components[0]!.outputs, { audio: "host.reference" });
   const exported = result.components[0]!.fragment.exports.find((item) => item.name === "audio");
   assert.deepEqual(exported?.type, blobTypes.blob);

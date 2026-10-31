@@ -17,12 +17,10 @@ import { seedanceModuleRef } from "../src/index.js";
 
 const refs = new Map<string, AuthorResolvedReference>([
   ["direction", {
-    path: "direction",
     ref: { kind: "component-output", component: "assembled-direction", output: "text" },
     type: textTypes.text,
   }],
   ...["first.image", "last.image", "generated.image", "voice.audio"].map((path) => [path, {
-    path,
     ref: { kind: "component-output" as const, component: path.split(".")[0]!, output: path.split(".")[1]! },
     type: blobTypes.blob,
   }] as const),

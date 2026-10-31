@@ -194,7 +194,7 @@ Build around the directed material and accepted project resources. Locate the pa
 events; for spoken work, use Script and any semantic timing the current composition actually
 consumes. Watch how MG, Caption, B-roll, Typography and Effects work together in the current picture.
 Prefer [snapshots](references/production/snapshots.md)
-for detailed states and continuous frame grids, and Studio playback for the passage with sound: the graphics make the idea clear,
+for detailed states and continuous frame grids, and a focused render for the passage with sound: the graphics make the idea clear,
 the Caption is easy to read, and the pictures and effects appear where and when they serve the
 passage. Adjust the owning Source or component to improve those relationships. Reuse produced media
 as declared project resources referenced by their consumers. A useful change makes a comparison readable, lands a reveal on its word, or
@@ -202,13 +202,10 @@ lets B-roll cover the explanation it supports. The composition is ready when its
 carry the Treatment clearly and compellingly. Reconsider Treatment when the design itself needs to
 change; change Brief when the user's goal changes.
 
-When collaborating with a user who can access Studio, show a meaningful passage as it develops and
-keep the current composition available for discussion. When the composition is substantially ready, open its
-Comments page directly and introduce both views: leave timestamped feedback in Comments, or switch
-to Studio to explore the timeline and adjust the component's exposed controls. Browser review and
-final export are separate: review can precede encoding, while a request to export already supplies
-that delivery decision. [Working in Studio](references/production/studio.md#discuss-the-work-while-composing)
-connects that visible progress to the component's authored choices.
+Show a meaningful passage as it develops with evidence suited to the question: exact frames for
+layout and state, a focused encoded interval for motion and sound, and the finished file for delivery.
+Translate feedback back to the Source, Recipe, material choice or project component that owns it.
+Review can precede the final encode, while a request to export already supplies that delivery decision.
 
 Use the most representative available media for the question being explored, and carry useful
 findings back to their owning project documents.
@@ -257,11 +254,9 @@ practical, revisit that choice and carry the improvement into the work and its n
   explaining material changes and what they establish.
 - **Done means watched.** Watch and listen to the actual deliverable and judge it against the Brief,
   Treatment, and relevant reference relationships. Judge its performance, sound, clarity, visual
-  hierarchy, timing, character, and suitability for publishing. Browser review can settle the composition before export; when
-  delivering an encoded video, inspect that file too. Explain the important choices and limitations.
-  Alongside the finished video, show the editable production in
-  [Studio](references/production/studio.md#show-the-finished-work) when it is readily accessible
-  to the user, so they can see how the piece is arranged and what they can change.
+  hierarchy, timing, character, and suitability for publishing. Focused frame and interval review can
+  settle the composition before final export; when delivering an encoded video, inspect that file too.
+  Explain the important choices, limitations, and which project Sources or components own likely revisions.
 
 ## Where the current question is answered
 
@@ -298,7 +293,7 @@ practical, revisit that choice and carry the improvement into the work and its n
 | writing Author Sources and Recipes, reusing produced work, adding a component | `references/production/authoring.md` |
 | imports, output references, literal values or Recipe rules | `references/production/source-syntax.md` |
 | choosing an existing Prompt Kit, assembling its wording or authoring a new one | `references/production/prompt-kits.md` |
-| choosing the explicit Targets for one plan, Build or Studio session | `references/production/targets.md` |
+| choosing the explicit Targets for one plan or Build | `references/production/targets.md` |
 | supplying or reusing images/video/audio, model references, preparation, local domains, NarrativeAlignment, trims or processed variants | `references/production/media.md` |
 | placing independent images, prepared video or surfaces and choosing source playback | `references/production/visual-clips.md` |
 | placing independent music, narration, ambience or effects and selecting source playback | `references/production/audio-clips.md` |
@@ -317,8 +312,6 @@ practical, revisit that choice and carry the improvement into the work and its n
 | drawing a component's elements, animation, resources or prepared surfaces | `references/production/component-visuals.md` |
 | writing a Caption family with new word relationships, scheduling or layout | `references/production/caption-authoring.md` |
 | `plan`, Provider pricing information, `build`, a retry or interrupted submission, following work, Results and exports | `references/production/builds.md` |
-| showing the editable work before export: Comments, Studio timeline, parameters, timestamped feedback and interface language | `references/production/studio.md` |
-| giving a component useful timeline Items, picture selection and author controls | `references/production/studio-companions.md` |
 | Film assembly, pure MG with authored time, picture and sound, final rendering or a selected frame interval | `references/production/rendering.md` |
 | exact frames or paginated grids of an existing production, without a new render Build | `references/production/snapshots.md` |
 | judging the preview or finished Result and deciding what to fix | `references/production/review.md` |

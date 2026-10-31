@@ -49,7 +49,7 @@ that owner; reuse preserves a relationship across uses. These decisions serve di
 | Parameterization | The production needs an external choice: an asset, a spoken trigger, a placement or a setting the author will actually adjust. |
 | Reusable design | Actual uses share a relationship or treatment. Share that behavior and generalize only the variation those uses need. |
 
-An author input is not a requirement to publish a package or provide a Studio control. A shared
+An author input is not a requirement to publish a package or expose an editor control. A shared
 internal function is not necessarily another Track. Numeric and qualitative choices use the same
 criterion: does an external dependency or a useful directing decision belong here? A color, mood,
 layout mode or easing name does not deserve a public parameter merely because it could vary.
@@ -210,12 +210,10 @@ Give the component vocabulary and an example that show its purpose, required inp
 and the meaning of its timing. For persistent state, explain what remains after activation. A preview
 should reveal the behavior that makes someone choose this component, with useful default content.
 
-For a production the user will explore in Studio, make its useful objects recognizable: a board's
-lifetime, a row's reveal, a Caption Cue's actual Style. Watching and understanding the work are useful
-on their own; a read-only scene with a clear identity can be complete. Expose controls for the real
-adjustments the user needs, such as Caption position and color, through the existing author inputs.
-An empty parameter panel alone is no reason to widen the component interface.
-[Companion authoring](studio-companions.md) owns those bindings.
+Make the component's useful objects recognizable in its vocabulary and preview: a board's lifetime,
+a row's reveal, or a Caption Cue's actual Style. Expose real adjustments such as Caption position
+and color through ordinary author inputs. The possibility of a future parameter panel is no reason
+to widen the component interface.
 
 If the current project deliberately installed `@hypit/ranking`, its README is one example of
 semantic reveals, settled state, layout and editor Items. Do not assume that optional package is

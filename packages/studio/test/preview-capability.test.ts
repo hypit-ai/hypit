@@ -65,7 +65,6 @@ test("Studio rejects a selected non-default audio stream instead of playing the 
       streamIndex: 1,
       presentationStart: exactTemporalZero(),
       sourceDomain: domain,
-      interpretation: { sampleRate: 48_000, channels: 2 },
     },
     preparation: identityTemporalMap(domain),
     target: frameRangeFixture(0, 48_000, sampleClock.frameRate),

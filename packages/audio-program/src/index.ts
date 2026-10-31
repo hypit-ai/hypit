@@ -9,8 +9,9 @@ export {
   audioProgramTypes,
 } from "./manifest.js";
 export {
-  audioProgramGainRoutes,
+  audioProgramClipSampleSpan,
   audioProgramGraphFromClips,
+  audioProgramSampleFrames,
   audioProgramSourceClips,
   compileAudioProgram,
   sealAudioProgram,

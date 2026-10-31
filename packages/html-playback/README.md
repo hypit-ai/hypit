@@ -12,8 +12,8 @@ Provider-backed preview.
 
 Media playback uses `HtmlProgram.videoSources`: the adapter binds the shared sided `TemporalMap` evaluator
 to obtain source presentation timestamps for Program frames.
-Timed Surfaces are projected from their typed frame-addressed runs and addressed through the compiler-owned stable
-display plane; playback does not reconstruct the removed per-run DOM attributes. The generated preview never reconstructs
+Timed Surfaces retain the same complete map and are addressed through the compiler-owned stable
+display plane. The generated preview never reconstructs
 sampling from filenames, average frame rate or mutable DOM layout.
 
 Native media elements are an explicitly narrower preview endpoint. They do not reliably select an arbitrary

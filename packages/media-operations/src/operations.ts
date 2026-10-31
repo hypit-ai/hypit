@@ -218,10 +218,6 @@ function verifyAudioSelector(value: unknown, subject: string, allowNone: boolean
 export function verifyAudioExtractionRequest(value: unknown): asserts value is AudioExtractionRequest {
   const request = object(value, "AudioExtractionRequest");
   verifyAudioSelector(request.audio, "AudioExtractionRequest.audio", false);
-  const output = object(request.output, "AudioExtractionRequest.output");
-  assert(output.container === "wav" && output.codec === "pcm_s16le"
-    && output.sampleRate === 48_000 && output.channels === 2,
-  "AudioExtractionRequest output profile is unsupported");
 }
 
 export function sealAudioExtractionRequest(value: AudioExtractionRequest): AudioExtractionRequest {
@@ -238,8 +234,6 @@ export function verifyFrameExtractionRequest(value: unknown): asserts value is F
     "FrameExtractionRequest.at.kind is invalid");
   if (at.kind === "frame") streamIndex(at.index, "FrameExtractionRequest.at.index");
   if (at.kind === "time") finiteNonNegative(at.seconds, "FrameExtractionRequest.at.seconds");
-  const output = object(request.output, "FrameExtractionRequest.output");
-  assert(output.format === "png", "FrameExtractionRequest output format is unsupported");
 }
 
 export function sealFrameExtractionRequest(value: FrameExtractionRequest): FrameExtractionRequest {
@@ -301,9 +295,6 @@ export function verifyStillVideoRequest(value: unknown): asserts value is StillV
   "StillVideoRequest.frameRate must be a positive rational");
   assert(Number.isSafeInteger(request.frameCount) && (request.frameCount as number) > 0,
     "StillVideoRequest.frameCount must be positive");
-  const output = object(request.output, "StillVideoRequest.output");
-  assert(output.container === "mp4" && output.codec === "h264" && output.pixelFormat === "yuv420p",
-    "StillVideoRequest output profile is unsupported");
   assert(Array.isArray(request.segments) && request.segments.length > 0, "StillVideoRequest needs at least one segment");
   let cursor = 0;
   for (const item of request.segments) {

@@ -3,7 +3,7 @@ title: Targets & Builds
 description: Declaring build targets, reusing results and configuring the runtime.
 ---
 
-The Author Source defines the video. Each `plan`, `pricing`, `build` or Studio command explicitly
+The Author Source defines the video. Each `plan`, `pricing` or `build` command explicitly
 chooses which author Outputs to evaluate as Targets. The official Distribution supplies the Local Runtime; its Profile names the
 credentials, Provider Endpoints and services available to execute the resulting plan.
 

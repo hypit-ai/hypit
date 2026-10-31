@@ -17,14 +17,32 @@ export {
   visualMaskSchema, visualTextSchema, visualImageSchema, visualVideoSchema, visualSurfaceSchema, visualProgramSchema, visualElementSchema,
 } from "./schema.js";
 export {
-  assertAudioTrackIdentity,
-  assertAudioProcessProgram,
-  assertAudioReconstructionProgram,
-  audioGainProcess,
   audioGraphFromClips,
   audioSignal,
   audioTrackClips,
-  AUDIO_GAIN_PROCESS_FORMAT,
+  sealAudioTrack,
+} from "./audio.js";
+export {
+  sealComposition,
+  sealVisualScope,
+  visualScopeTrackOccurrences,
+  visualScopeProcesses,
+  visualScopeTracks,
+} from "./scope.js";
+export {
+  sealPresentVisualTrack,
+  sealVisualTrack,
+  visualAdjustments,
+  visualContributionPresents,
+  visualElementChildren,
+  visualElements,
+  visualPresents,
+  visualProcesses,
+} from "./visual.js";
+export {
+  assertAudioTrackIdentity,
+  assertAudioProcessProgram,
+  assertAudioReconstructionProgram,
   assertCompositionIdentity,
   assertAudioCompositionIdentity,
   assertVisualCompositionIdentity,
@@ -34,25 +52,10 @@ export {
   assertVisualTextAppearance,
   assertVisualTrackIdentity,
   assertVisualScopeIdentity,
-  sealAudioTrack,
-  sealComposition,
-  sealPresentVisualTrack,
-  sealVisualTrack,
   sealVisualProcessEffect,
-  sealVisualScope,
-  readAudioGainProcess,
-  visualScopeTrackOccurrences,
-  visualScopeProcesses,
-  visualScopeTracks,
-  visualAdjustments,
-  visualContributionPresents,
-  visualElementChildren,
-  visualElements,
-  visualPresents,
-  visualProcesses,
-} from "./track.js";
+} from "./validation.js";
 export { visualCompositionVocabulary } from "./introspection.js";
-export type * from "./track.js";
+export type * from "./types.js";
 
 export * from "./audio-level-automation.js";
 export { audioSampleSpanSchema, audioGainEnvelopeSchema } from "./schema.js";

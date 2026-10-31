@@ -48,13 +48,11 @@ test("local media accepts complete AudioProgram maps while speech evidence keeps
   const domain = { id: "audio", duration: one };
   const program = sealAudioProgram({
     frameRate: { numerator: 30, denominator: 1 }, frameCount: 30,
-    sampleRate: 48_000, sampleFrames: 48_000,
     graph: audioProgramGraphFromClips([{
       id: "curve",
       source: {
         source: { kind: "blob", resource: fixtureResource("media-local:support"), size: 1, mediaType: "audio/wav" },
         streamIndex: 0, presentationStart: zero, sourceDomain: domain,
-        interpretation: { sampleRate: 48_000, channels: 2 },
       },
       preparation: identityTemporalMap(domain),
       sampling: sealTemporalMap({ stages: [{
@@ -63,8 +61,6 @@ test("local media accepts complete AudioProgram maps while speech evidence keeps
           sourceControl1: zero, sourceControl2: one, sourceAtEnd: one }],
       }] }),
       target: { start: zero, end: one },
-      targetStartSample: 0, targetEndSampleExclusive: 48_000,
-      mixStartSample: 0, mixEndSampleExclusive: 48_000,
       gain: 1, fadeInSamples: 0, fadeOutSamples: 0,
     }]),
   });
@@ -74,11 +70,11 @@ test("local media accepts complete AudioProgram maps while speech evidence keeps
     nodes: [...program.graph.nodes, { kind: "process", id: process,
       inputs: { signal: program.graph.output },
       program: { format: "example.audio-effect@1", payload: {}, artifacts: [] } }],
-    output: { node: process, port: "signal" },
+    output: { node: process },
   } });
   assert.deepEqual(supportsLocalAudioProgram(canonicalize({ program: unsupportedProgram })), {
     status: "unsupported",
-    reason: "AudioProgram capability is unsupported: Audio programme does not support Process format example.audio-effect@1.",
+    reason: "AudioProgram capability is unsupported: Audio Gain does not support Process format example.audio-effect@1.",
   });
   assert.deepEqual(supportsLocalSpeechEvidenceAudio(canonicalize({
     source: audioProgramSourceClips(program)[0]!.source,
@@ -95,13 +91,11 @@ test("pitch-preserving reconstruction is explicit and the local Provider reports
   const domain = { id: "audio", duration: one };
   const curve = sealAudioProgram({
     frameRate: { numerator: 30, denominator: 1 }, frameCount: 30,
-    sampleRate: 48_000, sampleFrames: 48_000,
     graph: audioProgramGraphFromClips([{
       id: "curve-preserve-pitch",
       source: {
         source: { kind: "blob", resource: fixtureResource("media-local:pitch-curve"), size: 1, mediaType: "audio/wav" },
         streamIndex: 0, presentationStart: zero, sourceDomain: domain,
-        interpretation: { sampleRate: 48_000, channels: 2 },
       },
       preparation: identityTemporalMap(domain),
       sampling: sealTemporalMap({ stages: [{
@@ -111,8 +105,6 @@ test("pitch-preserving reconstruction is explicit and the local Provider reports
       }] }),
       reconstruction: preservePitch(),
       target: { start: zero, end: one },
-      targetStartSample: 0, targetEndSampleExclusive: 48_000,
-      mixStartSample: 0, mixEndSampleExclusive: 48_000,
       gain: 1, fadeInSamples: 0, fadeOutSamples: 0,
     }]),
   });

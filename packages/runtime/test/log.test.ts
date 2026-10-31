@@ -11,7 +11,7 @@ test("execution log decoding reconstructs one owned event branch from an untrust
   const view = await readExecutionLog(bytes(`${JSON.stringify({
     format: "hypit.execution-log@1",
     time: 1,
-    command: "command:one",
+    request: "need:one",
     endpoint: "renderer",
     kind: "phase",
     phase: "rendering",
@@ -22,7 +22,7 @@ test("execution log decoding reconstructs one owned event branch from an untrust
     records: [{
       format: "hypit.execution-log@1",
       time: 1,
-      command: "command:one",
+      request: "need:one",
       endpoint: "renderer",
       kind: "phase",
       phase: "rendering",

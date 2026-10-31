@@ -44,7 +44,17 @@ type FfprobeFrame = {
   readonly nb_samples?: unknown;
 };
 
-type Unit = { pts: bigint; duration: bigint | undefined; samples: number };
+type TimingState = {
+  readonly stream: FfprobeStream;
+  readonly kind: "video" | "audio" | "other";
+  readonly index: number;
+  readonly timeBase: MediaRational | undefined;
+  decodedUnitCount: number;
+  decodedSampleFrames: number;
+  firstPts: bigint | undefined;
+  lastEndPts: bigint | undefined;
+  complete: boolean;
+};
 
 function object(value: unknown): JsonObject | undefined {
   return value !== null && typeof value === "object" && !Array.isArray(value)
@@ -126,11 +136,6 @@ function pictureObservation(stream: FfprobeStream, formats: readonly FfprobePixe
   return result;
 }
 
-function median(values: readonly bigint[]): bigint {
-  const ordered = [...values].sort((left, right) => left < right ? -1 : left > right ? 1 : 0);
-  return ordered[Math.floor((ordered.length - 1) / 2)]!;
-}
-
 function sampleDurationTicks(
   samples: number,
   stream: FfprobeStream,
@@ -140,192 +145,163 @@ function sampleDurationTicks(
   if (samples <= 0 || sampleRate === undefined) return undefined;
   const numerator = BigInt(samples) * BigInt(timeBase.denominator);
   const denominator = BigInt(sampleRate) * BigInt(timeBase.numerator);
-  if (denominator <= 0n) return undefined;
-  return (numerator + denominator / 2n) / denominator;
+  if (denominator <= 0n || numerator % denominator !== 0n) return undefined;
+  return numerator / denominator;
 }
 
-function timing(
-  frames: readonly FfprobeFrame[],
+function timingState(
   stream: FfprobeStream,
   kind: "video" | "audio" | "other",
   index: number,
   timeBase: MediaRational | undefined,
-): {
-  readonly timingStatus: MediaStream["timingStatus"];
+): TimingState {
+  return {
+    stream, kind, index, timeBase,
+    decodedUnitCount: 0,
+    decodedSampleFrames: 0,
+    firstPts: undefined,
+    lastEndPts: undefined,
+    complete: timeBase !== undefined,
+  };
+}
+
+function observeFrame(state: TimingState, frame: FfprobeFrame): void {
+  if (integer(frame.stream_index) !== state.index
+    || (state.kind !== "other" && frame.media_type !== state.kind)) return;
+  state.decodedUnitCount += 1;
+  const samples = positiveInteger(frame.nb_samples) ?? 0;
+  state.decodedSampleFrames += samples;
+  if (state.timeBase === undefined) return;
+  const pts = bigintValue(frame.pts) ?? bigintValue(frame.best_effort_timestamp);
+  const duration = bigintValue(frame.duration) ?? bigintValue(frame.pkt_duration)
+    ?? (state.kind === "audio" ? sampleDurationTicks(samples, state.stream, state.timeBase) : undefined);
+  if (pts === undefined || duration === undefined || duration <= 0n) {
+    state.complete = false;
+    return;
+  }
+  const end = pts + duration;
+  if (state.firstPts === undefined || pts < state.firstPts) state.firstPts = pts;
+  if (state.lastEndPts === undefined || end > state.lastEndPts) state.lastEndPts = end;
+}
+
+function timing(state: TimingState): {
   readonly startPts?: MediaTimestamp;
   readonly endPts?: MediaTimestamp;
   readonly decodedUnitCount: number;
   readonly decodedSampleFrames: number;
 } {
-  if (timeBase === undefined) return { timingStatus: "missing", decodedUnitCount: 0, decodedSampleFrames: 0 };
-  const selected = frames.filter((frame) => integer(frame.stream_index) === index
-    && (kind === "other" || frame.media_type === kind));
-  const units: Unit[] = [];
-  for (const frame of selected) {
-    const pts = bigintValue(frame.pts) ?? bigintValue(frame.best_effort_timestamp);
-    if (pts === undefined) return { timingStatus: "missing", decodedUnitCount: selected.length, decodedSampleFrames: 0 };
-    const samples = positiveInteger(frame.nb_samples) ?? 0;
-    units.push({
-      pts,
-      duration: bigintValue(frame.duration) ?? bigintValue(frame.pkt_duration)
-        ?? (kind === "audio" ? sampleDurationTicks(samples, stream, timeBase) : undefined),
-      samples,
-    });
-  }
-  if (units.length === 0) return { timingStatus: "missing", decodedUnitCount: 0, decodedSampleFrames: 0 };
-  const deltas: bigint[] = [];
-  for (let offset = 1; offset < units.length; offset += 1) {
-    const delta = units[offset]!.pts - units[offset - 1]!.pts;
-    if (delta <= 0n) {
-      return {
-        timingStatus: "non-monotonic",
-        decodedUnitCount: units.length,
-        decodedSampleFrames: units.reduce((sum, unit) => sum + unit.samples, 0),
-      };
-    }
-    deltas.push(delta);
-  }
-  for (let offset = 0; offset < units.length - 1; offset += 1) {
-    if (units[offset]!.duration === undefined || units[offset]!.duration! <= 0n) {
-      units[offset]!.duration = units[offset + 1]!.pts - units[offset]!.pts;
-    }
-  }
-  const last = units.at(-1)!;
-  if (last.duration === undefined || last.duration <= 0n) {
-    last.duration = deltas.at(-1);
-  }
-  if (last.duration === undefined || last.duration <= 0n) {
-    return {
-      timingStatus: "missing",
-      decodedUnitCount: units.length,
-      decodedSampleFrames: units.reduce((sum, unit) => sum + unit.samples, 0),
-    };
-  }
-  if (kind === "audio") {
-    for (let offset = 0; offset < units.length - 1; offset += 1) {
-      const gap = units[offset + 1]!.pts - (units[offset]!.pts + units[offset]!.duration!);
-      if (gap > 2n || gap < -2n) {
-        return {
-          timingStatus: gap > 0n ? "discontinuous" : "non-monotonic",
-          decodedUnitCount: units.length,
-          decodedSampleFrames: units.reduce((sum, unit) => sum + unit.samples, 0),
-        };
-      }
-    }
-  } else if (kind === "video" && deltas.length >= 2) {
-    const cadence = median(deltas);
-    const halfSecondTicks = (BigInt(timeBase.denominator) + 2n * BigInt(timeBase.numerator) - 1n)
-      / (2n * BigInt(timeBase.numerator));
-    const threshold = cadence * 4n > halfSecondTicks ? cadence * 4n : halfSecondTicks;
-    if (deltas.some((delta) => delta > threshold)) {
-      return {
-        timingStatus: "discontinuous",
-        decodedUnitCount: units.length,
-        decodedSampleFrames: 0,
-      };
-    }
-  }
+  const base = {
+    decodedUnitCount: state.decodedUnitCount,
+    decodedSampleFrames: state.decodedSampleFrames,
+  };
+  if (!state.complete || state.decodedUnitCount === 0 || state.timeBase === undefined
+    || state.firstPts === undefined || state.lastEndPts === undefined
+    || state.lastEndPts <= state.firstPts) return base;
   return {
-    timingStatus: "admissible",
-    startPts: timestamp(units[0]!.pts, timeBase),
-    endPts: timestamp(last.pts + last.duration, timeBase),
-    decodedUnitCount: units.length,
-    decodedSampleFrames: units.reduce((sum, unit) => sum + unit.samples, 0),
+    startPts: timestamp(state.firstPts, state.timeBase),
+    endPts: timestamp(state.lastEndPts, state.timeBase),
+    ...base,
   };
 }
 
-export function parseMediaInspection(value: unknown): MediaInspection {
+/** Incrementally collect decoded-unit facts without retaining one object per frame. */
+export function createMediaInspectionCollector(value: unknown): {
+  readonly observe: (frame: unknown) => void;
+  readonly finish: () => MediaInspection;
+} {
   const root = object(value);
   if (root === undefined) throw new Error("ffprobe output must be an object");
   const rawStreams = Array.isArray(root.streams) ? root.streams.map(object).filter((item): item is JsonObject => item !== undefined) : [];
   const streams = rawStreams as FfprobeStream[];
-  const rawFrames = Array.isArray(root.frames) ? root.frames.map(object).filter((item): item is JsonObject => item !== undefined) : [];
-  const frames = rawFrames as FfprobeFrame[];
   const rawFormats = Array.isArray(root.pixel_formats)
     ? root.pixel_formats.map(object).filter((item): item is JsonObject => item !== undefined) : [];
   const formats = rawFormats as FfprobePixelFormat[];
-  const parsed: MediaStream[] = streams.map((stream): MediaStream => {
+  const states = streams.map((stream) => {
     const index = integer(stream.index);
     if (index === undefined || index < 0) throw new Error("ffprobe stream index is invalid");
     const codecType = typeof stream.codec_type === "string" && stream.codec_type.length > 0 ? stream.codec_type : "unknown";
+    const kind = codecType === "video" || codecType === "audio" ? codecType : "other";
+    return timingState(stream, kind, index, rational(stream.time_base));
+  });
+  const stateByIndex = new Map(states.map((state) => [state.index, state]));
+  return {
+    observe(value: unknown): void {
+      const frame = object(value) as FfprobeFrame | undefined;
+      const index = frame === undefined ? undefined : integer(frame.stream_index);
+      if (frame !== undefined && index !== undefined) {
+        const state = stateByIndex.get(index);
+        if (state !== undefined) observeFrame(state, frame);
+      }
+    },
+    finish(): MediaInspection {
+      const parsed: MediaStream[] = states.map((state): MediaStream => {
+    const { stream, index } = state;
+    const codecType = typeof stream.codec_type === "string" && stream.codec_type.length > 0 ? stream.codec_type : "unknown";
     const codecName = typeof stream.codec_name === "string" && stream.codec_name.length > 0 ? stream.codec_name : "unknown";
-    const timeBase = rational(stream.time_base);
     const disposition = {
       default: integer(stream.disposition?.default) === 1,
       attachedPicture: integer(stream.disposition?.attached_pic) === 1,
     };
     if (codecType === "video") {
-      const measured = timing(frames, stream, "video", index, timeBase);
+      const measured = timing(state);
       const width = positiveInteger(stream.width);
       const height = positiveInteger(stream.height);
       if (width === undefined || height === undefined) throw new Error(`video stream ${index} dimensions are invalid`);
-      const role: MediaVideoStream["role"] = disposition.attachedPicture
-        ? "attached-picture"
-        : measured.decodedUnitCount >= 2 ? "moving" : "still";
       return {
         kind: "video",
         index,
-        codecType: "video",
         codecName,
         disposition,
-        timingStatus: measured.timingStatus,
-        ...(timeBase === undefined ? {} : { timeBase }),
         ...(measured.startPts === undefined ? {} : { startPts: measured.startPts, endPts: measured.endPts! }),
         decodedUnitCount: measured.decodedUnitCount,
-        role,
         width,
         height,
         sampleAspectRatio: sampleAspectRatio(stream.sample_aspect_ratio),
         rotationDegrees: ffprobeDisplayRotation(stream, `video stream ${index}`),
         picture: pictureObservation(stream, formats),
         ...(rational(stream.avg_frame_rate, true) === undefined ? {} : { averageFrameRate: rational(stream.avg_frame_rate, true)! }),
-        ...(rational(stream.r_frame_rate, true) === undefined ? {} : { nominalFrameRate: rational(stream.r_frame_rate, true)! }),
       };
     }
     if (codecType === "audio") {
-      const measured = timing(frames, stream, "audio", index, timeBase);
+      const measured = timing(state);
       const sampleRate = positiveInteger(stream.sample_rate);
       const channels = positiveInteger(stream.channels);
       if (sampleRate === undefined || channels === undefined) throw new Error(`audio stream ${index} shape is invalid`);
       const result: MediaAudioStream = {
         kind: "audio",
         index,
-        codecType: "audio",
         codecName,
         disposition,
-        timingStatus: measured.timingStatus,
-        ...(timeBase === undefined ? {} : { timeBase }),
         ...(measured.startPts === undefined ? {} : { startPts: measured.startPts, endPts: measured.endPts! }),
-        decodedUnitCount: measured.decodedUnitCount,
         sampleRate,
         channels,
-        ...(typeof stream.channel_layout === "string" && stream.channel_layout.length > 0
-          ? { channelLayout: stream.channel_layout }
-          : {}),
         decodedSampleFrames: measured.decodedSampleFrames,
       };
       return result;
     }
-    const measured = timing(frames, stream, "other", index, timeBase);
+    const measured = timing(state);
     const result: MediaOtherStream = {
       kind: "other",
       index,
       codecType,
       codecName,
       disposition,
-      timingStatus: measured.timingStatus,
-      ...(timeBase === undefined ? {} : { timeBase }),
       ...(measured.startPts === undefined ? {} : { startPts: measured.startPts, endPts: measured.endPts! }),
-      decodedUnitCount: measured.decodedUnitCount,
     };
     return result;
-  });
-  const format = object(root.format);
-  const formatNames = typeof format?.format_name === "string"
-    ? [...new Set(format.format_name.split(",").map((item) => item.trim()).filter(Boolean))].sort()
-    : ["unknown"];
-  return sealMediaInspection({
-    container: { formatNames: formatNames.length === 0 ? ["unknown"] : formatNames },
-    streams: parsed.sort((left, right) => left.index - right.index),
-  });
+      });
+      return sealMediaInspection({
+        streams: parsed.sort((left, right) => left.index - right.index),
+      });
+    },
+  };
+}
+
+export function parseMediaInspection(value: unknown): MediaInspection {
+  const root = object(value);
+  if (root === undefined) throw new Error("ffprobe output must be an object");
+  const collector = createMediaInspectionCollector(root);
+  const frames = Array.isArray(root.frames) ? root.frames : [];
+  for (const frame of frames) collector.observe(frame);
+  return collector.finish();
 }

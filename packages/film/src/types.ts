@@ -1,7 +1,7 @@
 import type { Track, VisualProcessEffect } from "@hypit/composition";
 
-/** Package-owned authoring value. A future Film Surface may produce this record. */
-export type FilmProgram = {
+/** Package-owned, non-executable assembly value produced by Film authoring. */
+export type FilmAssemblyPlan = {
   readonly id: string;
   readonly clearColor: string;
   readonly visual: FilmVisualPlan;

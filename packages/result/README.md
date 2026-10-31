@@ -28,9 +28,9 @@ accepted Type. Reusing an earlier Output is an authoring
 operation: export the accepted material into the project and reference it from the Author Source.
 Result storage never substitutes a historical Build for an authored value.
 
-An unfinished `BuildResultDraft` contains only Source, Targets and accepted retained Outputs. Outcome,
+An unfinished storage draft contains only Source, Targets and accepted retained Outputs. Outcome,
 failure, operation evidence and execution log cannot appear until `finish()` publishes an immutable
-`BuildResult`. The writer keeps only its current Result-local Resource and Value paths while storing.
+stored manifest. The writer keeps only its current Result-local Resource and Value paths while storing.
 Persistent Output documents contain the Result-local references they actually use; private writer
 state is removed at the terminal outcome. Core still receives ordinary typed Records and Resource identities. It has no knowledge
 of file paths or Result repositories. Runtime may stage input bytes for execution independently of
@@ -46,9 +46,11 @@ finished historical Result. The Node filesystem adapters mirror that split:
 `@hypit/result/node` exposes `FileBuildResultHistory`, while Runtime uses
 `@hypit/result/runtime-storage/node`.
 
-Repositories own address access. `openFile` streams one Result-local file or byte range. A custom
-repository can provide another physical implementation without changing Result identity or retention
-semantics.
+Repositories own address access. `BuildResultHistory.resolve(build, output)` turns the private
+persistence representation into an ordinary domain `Value`. Its returned `openResource()` capability
+can stream only Blob resources bound into that exact Output, including a normalized byte range.
+Callers never receive a general Result-relative path opener. A custom repository can provide another
+physical implementation without changing Result identity or retention semantics.
 
 The manifest reports domain `type` separately from storage representation. An Output is stored inline,
 as a file, or as a Result-local value document; those forms do not claim a domain value category.
@@ -57,8 +59,8 @@ A `complete` outcome is valid only after every retained Output named by the Resu
 Failed and cancelled Results may intentionally retain the subset that completed. This is a local per-Build
 closure check, not a central Result index or an attempt to infer missing work.
 
-`fileReferenceIdentity` identifies one containing Build and relative path. Separate Results remain
-separate even when their bytes happen to match; retention performs no content hashing or historical lookup.
+Storage file references remain scoped to one containing Build. Separate Results remain separate even
+when their bytes happen to match; retention performs no content hashing or historical lookup.
 
 An explicit `hypit result export` materializes one retained Output at an author-selected destination.
 Blob bytes and inline scalars have universal representations. A structured Type is exported through
@@ -78,12 +80,16 @@ preserve it as `execution.jsonl` before the terminal manifest is committed. Repe
 completed finish does not rewrite it.
 
 This file describes how the Build ran; it is neither an authored Output nor a gallery asset. Consumers
-read it with `openFile(build, manifest.executionLog)`. Its absence means no log was recorded, including
-Results made before logging was available; readers do not reconstruct history from other projects.
+read it through the dedicated `openExecutionLog(build)` history operation. Its absence means no log was
+recorded; readers do not reconstruct history from other projects or open arbitrary manifest paths.
 
-`operations` records only durable external-attempt facts: capability, selected Endpoint, Provider
-acknowledgement/completion times, explicit completion, failure or cancellation conclusions, and any
-Provider receipt. A Provider-accepted operation whose conclusion was not known when the Build ended has
-no invented terminal outcome. Purely queued or submitting Runtime work has no external evidence and is
-not copied. Runtime Operation, Command and Need ids, allocation time, capacity pools, lifecycle phase and
-last progress samples remain Runtime state rather than becoming Result history.
+`operations` records only durable external-attempt facts: the stable Need id, selected Endpoint,
+explicit completion, failure or cancellation conclusions, and any Provider receipt. The same Need id
+appears as `request` in the execution log, so
+multiple attempts through one Endpoint remain attributable without retaining request constraints. A
+Provider-accepted operation whose conclusion was not known when the Build ended has the explicit
+historical outcome `unsettled`; it is not presented as terminal success or failure. Purely queued or
+submitting Runtime work has no external evidence and is not copied. Runtime Operation and Command ids,
+capability, acknowledgement/completion times, allocation time, capacity pools, lifecycle phase, handles,
+credentials and last progress samples remain
+Runtime state rather than becoming Result history.

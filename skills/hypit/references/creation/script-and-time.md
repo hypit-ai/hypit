@@ -243,7 +243,7 @@ one Selection can end where the next begins; for a held reaction, a range can in
 before the next word. [Marker affinities](../production/script-syntax.md#bind-meaning-to-script-identities)
 express these choices through word and structural boundaries. [Timing](../production/timing.md)
 explains projecting those identities into named Instants or Windows, adding deliberate offsets,
-and what a later Studio edit changes.
+and what a later author edit changes.
 
 Reference archives keep original seconds and explain which original words or content events an item
 serves. The target Source names the intended relation against the target Script. After the target's
@@ -252,7 +252,7 @@ the target or preserve an incidental lead/lag unless that offset itself is part 
 
 ## Connect reference understanding to audiovisual composition
 
-Timing seen in Studio or a real Result may expose one of several different problems. A wrong Cue or
+Timing seen in a focused render or a real Result may expose one of several different problems. A wrong Cue or
 semantic anchor changes Script. A sound performance that changes the intended rhythm may change the
 duration choice or Treatment. A correct Selection rendered badly changes the component or Recipe. An
 unusable generated clip changes its prompt, reference, consumer reference, or shot design. Put each correction

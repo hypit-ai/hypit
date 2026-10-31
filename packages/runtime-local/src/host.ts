@@ -18,6 +18,7 @@ import {
   openTransientRuntimeConfigExecution,
   preflightRuntimeConfig,
   readRuntimeConfigPricing,
+  readRuntimePlanningPolicy,
   resolveRuntimeConfigPaths,
 } from "./config.js";
 import {
@@ -91,6 +92,7 @@ export async function openLocalRuntimeHost(
   };
   return {
     profile,
+    planningPolicy: async () => await readRuntimePlanningPolicy(profile, basePackageRoot),
     executionStatus: async () => {
       const selected = await controller();
       return await selected.worker.status();

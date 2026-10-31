@@ -8,6 +8,6 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@hypit/protocol": "workspace:*"
+    "@hypit/protocol": "workspace:^0.0.0-dev"
   }
 }

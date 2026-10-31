@@ -21,7 +21,6 @@ export const htmlProgramProducers = {
 } satisfies Record<string, ProducerRef>;
 
 const positiveInteger = { kind: "number", integer: true, minimum: 1 } as const;
-const nonNegativeInteger = { kind: "number", integer: true, minimum: 0 } as const;
 const frameRateSchema = {
   kind: "object" as const,
   fields: {
@@ -43,7 +42,6 @@ export const htmlProgramSchema: ValueSchema = {
     } },
     processUsages: { schema: { kind: "array", items: { kind: "object", fields: {
       order: { schema: positiveInteger },
-      passes: { schema: positiveInteger },
       stageKeys: { schema: { kind: "array", minItems: 1, items: { kind: "string", minLength: 1 } } },
       spans: { schema: { kind: "array", minItems: 1, items: frameSpanSchema } },
     } } } },
@@ -113,12 +111,7 @@ export const htmlProgramSchema: ValueSchema = {
         { kind: "object", fields: { kind: { schema: { kind: "literal", value: "frames" } },
           spans: { schema: { kind: "array", minItems: 1, items: frameSpanSchema } } } },
       ] } },
-      sourceFrame: { schema: { kind: "object", fields: {
-        numerator: { schema: nonNegativeInteger }, denominator: { schema: positiveInteger },
-      } } },
-      sourceRate: { schema: { kind: "object", fields: {
-        numerator: { schema: { kind: "number", integer: true } }, denominator: { schema: positiveInteger },
-      } } },
+      sampling: { schema: temporalMapSchema },
       sourceFrameRate: { schema: { kind: "object", fields: {
         numerator: { schema: positiveInteger }, denominator: { schema: positiveInteger },
       } } },

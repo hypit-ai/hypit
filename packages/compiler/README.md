@@ -47,14 +47,28 @@ available to package code.
 while the exact Module Closure must be known before typed Records can be verified. It then invokes
 the Source Closure compiler and parser-independent Author linker.
 
+The embedding Host supplies `SourceCompilationLimits` for one finite compilation. Source count,
+import edges and depth are accepted during discovery; Record and Component counts are accepted after
+decode; bytes requested through the readable author-asset capability are counted when read. Defaults
+are provided for ordinary Hosts, and a Host may choose stricter or larger limits. These are execution
+limits only: they are never copied into Source Closure, AuthorGraph, BuildDefinition, Programme or
+Result values, and they do not form a central complexity score.
+
 `BuildCompiler` compiles an Author Source together with one explicit transient Target selection
 from CLI or Studio arguments. Durable Records, operations and consumer references remain in the
 Author Source. The compiler follows each demanded output through its one fixed AuthorGraph
-producer, then asks Core for the finite BuildPlan.
+producer, then asks Core for the finite BuildPlan. `CompiledBuild` owns that Author compilation; it
+does not repeat its Programme or attachment bundle as sibling fields.
+
+Normal compilation does not return source-range provenance. An authoring consumer that actually
+joins graph values back to source elements requests `authorProjection: true`; the resulting
+`ProjectedCompiledAuthorSource` carries that disposable projection. Check, plan and build do not
+precompute or transport it for a hypothetical interface.
 
 `prepareBuild` turns that completed structural selection into a `PreparedBuild`: it derives
-one immutable `ResultIntent`, seals the `BuildDefinition`, and exposes the Kernel's disposable
-`BuildView`. The prepared targets describe the execution goals; the intent separately
+one immutable `ResultIntent` and seals the `BuildDefinition`. An interactive authoring consumer may
+request `executionView: true` to receive resolved outputs and the Kernel's disposable `BuildView`;
+ordinary Build preparation does not expose either projection. The prepared targets describe the execution goals; the intent separately
 contains only reachable package-owned retained outputs and carries their Result name and current Record
 without leaking Logical Output identities into Result storage.
 CLI catalogs, Runtime submission and Result writing consume

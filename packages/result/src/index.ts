@@ -1,26 +1,15 @@
 export {
-  assertBuildResultValueDocument,
-  assertBuildResultFileRef,
-  assertBuildResultPath,
   buildResultOutput,
 } from "./types.js";
-export {
-  decodeBuildResultValueDocument,
-} from "./decode.js";
 export type {
   BuildResultOutcome,
-  BuildResultFileRef,
   BuildResultFileRange,
-  BuildResultValuePath,
-  BuildResultResourceBinding,
-  BuildResultValueDocument,
-  BuildResultOutputValue,
   BuildResultOutput,
   BuildResultOperation,
   BuildResult,
   BuildResultBrowseRequest,
   BuildResultPage,
-  RepositoryBuildResultOutput,
+  ResolvedBuildResultOutput,
   BuildResultHistory,
 } from "./types.js";
 export {

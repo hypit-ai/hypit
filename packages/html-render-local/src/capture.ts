@@ -311,7 +311,7 @@ export async function captureStagedVisual(input: CaptureInput, controller: Abort
                     url: new URL(slot.src, serverUrl).href,
                     picture: slot.picture,
                     sample: { kind: "frame" as const, frame: sourceFrame, fps: slot.sourceFps,
-                      streamIndex: slot.streamIndex, reverse: slot.sourceRate.numerator < 0n },
+                      streamIndex: slot.streamIndex },
                   }];
                 })
                 : [...activeFramePayloads(frame)].map(([id, payload]) => {

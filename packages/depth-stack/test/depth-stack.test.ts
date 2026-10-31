@@ -86,15 +86,14 @@ function timedMaterial(
   const prepared = prepareMedia({
     id: `prepared-${name}`,
     source: video(name),
-    inspection: { container: { formatNames: ["mp4"] }, streams: [{
-      kind: "video" as const, index: 0, codecType: "video" as const, codecName: "h264", role: "moving" as const,
-      disposition: { default: true, attachedPicture: false }, timingStatus: "admissible" as const,
-      timeBase: { numerator: frameRate.denominator, denominator: frameRate.numerator },
+    inspection: { streams: [{
+      kind: "video" as const, index: 0, codecName: "h264",
+      disposition: { default: true, attachedPicture: false },
       startPts: { ticks: "0", timeBase: { numerator: frameRate.denominator, denominator: frameRate.numerator } },
       endPts: { ticks: String(frameCount), timeBase: { numerator: frameRate.denominator, denominator: frameRate.numerator } },
       decodedUnitCount: frameCount, width: 120, height: 90,
       sampleAspectRatio: { numerator: 1, denominator: 1 }, rotationDegrees: 0 as const, picture: { colorPrimaries: "bt709", colorTransfer: "bt709", colorMatrix: "bt709", colorRange: "limited", bitDepth: 8, alphaMode: "opaque" } as const,
-      averageFrameRate: frameRate, nominalFrameRate: frameRate,
+      averageFrameRate: frameRate,
     }] },
     selection: { videoStreamIndex: 0, spanAuthority: "video", picture: {
       colorPrimaries: "bt709", colorTransfer: "bt709", colorMatrix: "bt709", colorRange: "limited",

@@ -1,3 +1,5 @@
+import type { NeedId } from "@hypit/protocol";
+
 /** Provider-authored diagnostic text suitable for users; never credentials or request bodies. */
 export type ExecutionDiagnostic = {
   readonly level: "info" | "warning" | "error";
@@ -15,7 +17,8 @@ export type ExecutionLogEvent = { readonly endpoint: string } & (
 export type ExecutionLogRecord = ExecutionLogEvent & {
   readonly format: "hypit.execution-log@1";
   readonly time: number;
-  readonly command: string;
+  /** Stable Need identity shared with planning and finished Result operation evidence. */
+  readonly request: NeedId;
 };
 
 export type ExecutionLogView = {
@@ -45,7 +48,7 @@ function decodeExecutionLogRecord(value: unknown): ExecutionLogRecord {
     format: "hypit.execution-log@1" as const,
     time: item.time,
     endpoint: logText(item.endpoint, "endpoint"),
-    command: logText(item.command, "command"),
+    request: logText(item.request, "request"),
   };
   if (item.kind === "started" || item.kind === "completed") return { ...evidence, kind: item.kind };
   if (item.kind === "failed") return { ...evidence, kind: "failed", message: logText(item.message, "message") };

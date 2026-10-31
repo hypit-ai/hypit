@@ -54,7 +54,6 @@ test("Media Operations declarations preserve lazy transform order and resolve so
     range,
   }];
   const source: AuthorResolvedReference = {
-    path: "source",
     ref: { kind: "record", id: "source" },
     type: blobTypes.blob,
   };
@@ -94,7 +93,6 @@ test("Media Operations declarations preserve lazy transform order and resolve so
 
 test("nested Rate syntax reaches one exact retime profile through the public Markup boundary", async () => {
   const prepared: AuthorResolvedReference = {
-    path: "raw.media",
     ref: { kind: "component-output", component: "raw", output: "media" },
     type: mediaTypes.prepared,
   };
@@ -110,7 +108,7 @@ test("nested Rate syntax reaches one exact retime profile through the public Mar
     alias: "mediaop",
     compilers: [transformMediaAuthorDeclaration],
     syntax: mediaOperationsMarkupDeclarations,
-    references: new Map([[prepared.path, prepared]]),
+    references: new Map([["raw.media", prepared]]),
   });
 
   const program = result.records.find((record) => record.id === "ramped.program");
@@ -121,7 +119,6 @@ test("nested Rate syntax reaches one exact retime profile through the public Mar
 
 test("Prepare reads an explicit picture literal through the same typed declaration boundary as other fields", async () => {
   const source: AuthorResolvedReference = {
-    path: "asset.video",
     ref: { kind: "record", id: "asset.video" },
     type: blobTypes.blob,
   };
@@ -131,7 +128,7 @@ test("Prepare reads an explicit picture literal through the same typed declarati
     alias: "mediaop",
     compilers: [preparedMediaAuthorDeclaration],
     syntax: mediaOperationsMarkupDeclarations,
-    references: new Map([[source.path, source]]),
+    references: new Map([["asset.video", source]]),
   });
   const request = result.records.find((record) => record.id === "prepared.request");
   assert.deepEqual((request?.value as { picture?: unknown }).picture, {

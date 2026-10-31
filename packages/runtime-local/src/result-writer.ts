@@ -6,7 +6,7 @@ import type {
   OperationSnapshot,
 } from "@hypit/hypit/runtime";
 import type { BuildExecutionSnapshot } from "./execution.js";
-import type { CommandResult } from "@hypit/hypit/protocol";
+import { compareCodeUnits, type CommandResult } from "@hypit/hypit/protocol";
 import type { BuildResultOperation } from "@hypit/hypit/result";
 import type { BuildResultFinish, BuildResultWriter, StoredBuildResult } from "@hypit/result/runtime-storage";
 
@@ -47,22 +47,19 @@ function operationEvent(operation: OperationSnapshot): CommandResult | undefined
 
 function resultOperation(operation: OperationSnapshot): BuildResultOperation | undefined {
   const evidence = {
-    capability: operation.need.capability,
+    request: operation.need.id,
     endpoint: operation.endpoint,
     ...(operation.receipt === undefined ? {} : { receipt: operation.receipt }),
   };
   return operation.status === "failed"
-    ? { ...evidence, outcome: "failed", failedAt: operation.endedAt, failure: operation.failure }
+    ? { ...evidence, outcome: "failed", failure: operation.failure }
     : operation.status === "cancelled"
-      ? { ...evidence, outcome: "cancelled", cancelledAt: operation.endedAt, cancellation: operation.cancellation }
+      ? { ...evidence, outcome: "cancelled", cancellation: operation.cancellation }
       : operation.status === "queued" || operation.status === "submitting"
         ? undefined
-        : operation.status === "running"
-          ? { ...evidence, acknowledgedAt: operation.acknowledgedAt }
-          : operation.status === "collecting"
-            ? { ...evidence, acknowledgedAt: operation.acknowledgedAt, providerCompletedAt: operation.endedAt }
-            : { ...evidence, outcome: "complete", acknowledgedAt: operation.acknowledgedAt,
-              providerCompletedAt: operation.endedAt };
+        : operation.status === "running" || operation.status === "collecting"
+          ? { ...evidence, outcome: "unsettled" }
+          : { ...evidence, outcome: "complete" };
 }
 
 function resultFinish(
@@ -182,7 +179,8 @@ export function createLocalResultWriter(
             .flatMap((operation) => {
               const evidence = resultOperation(operation);
               return evidence === undefined ? [] : [evidence];
-            });
+            })
+            .sort((left, right) => compareCodeUnits(left.request, right.request));
           const executionLog = await options.executionLogs?.open(execution.build);
           await reopened.writer.finish(resultFinish(execution.decision, {
             ...(executionLog === undefined ? {} : { executionLog }),

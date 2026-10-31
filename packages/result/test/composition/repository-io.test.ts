@@ -6,6 +6,7 @@ import { setTimeout as delay } from "node:timers/promises";
 import test from "node:test";
 
 import { buildResultDirectory, FileBuildResult, FileBuildResultStore } from "@hypit/result/runtime-storage/node";
+import { isBlobRef } from "@hypit/protocol";
 import type { BlobRef } from "@hypit/protocol";
 
 import {
@@ -14,25 +15,46 @@ import {
   videoType,
 } from "./repository-scenario.js";
 
-test("filesystem repository streams one normalized byte range", async () => {
+test("finished Output readers expose only that Output's retained Resources", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-result-range-"));
   const build = "bld_20260902T100000009Z_0000000001";
   try {
-    const directory = buildResultDirectory(root, build);
-    await mkdir(join(directory, "files"), { recursive: true });
     const bytes = new TextEncoder().encode("abcdefghij");
-    await writeFile(join(directory, "files", "video.mp4"), bytes);
+    const source: BlobRef = { kind: "blob", resource: "res_source_video", size: bytes.byteLength, mediaType: "video/mp4" };
+    const writer = await FileBuildResult.create(root, {
+      id: build, sourcePath: "main.svml", targets: ["video"],
+      intent: resultIntent([
+        { name: "video", record: "record:video" },
+        { name: "video-copy", record: "record:video" },
+      ]),
+    });
+    await writer.sync({
+      records: [{ id: "record:video", type: videoType, value: source }],
+      resources: { async open(blob) {
+        assert.equal(blob.resource, source.resource);
+        return (async function* () { yield bytes; })();
+      } },
+    });
     const repository = new FileBuildResultStore(root);
-    const stream = await repository.openFile(build, {
-      kind: "build-file",
-      path: "files/video.mp4",
-      size: bytes.byteLength,
-      mediaType: "video/mp4",
-    }, { start: 3, endExclusive: 7 });
+    assert.equal(await repository.resolve(build, "video"), undefined, "drafts stay outside history");
+    await writer.finish({ outcome: "complete", executionLog: (async function* () {
+      yield new TextEncoder().encode("log\n");
+    })() });
+    const resolved = await repository.resolve(build, "video");
+    assert.ok(resolved !== undefined && isBlobRef(resolved.value));
+    if (resolved === undefined || !isBlobRef(resolved.value)) throw new Error("expected retained Blob");
+    const stream = await resolved.openResource(resolved.value, { start: 3, endExclusive: 7 });
     assert.notEqual(stream, undefined);
     const chunks: number[] = [];
     for await (const chunk of stream!) chunks.push(...chunk);
     assert.equal(new TextDecoder().decode(Uint8Array.from(chunks)), "defg");
+    assert.equal(await resolved.openResource({ ...resolved.value, resource: "res_forged" }), undefined);
+    const sibling = await repository.resolve(build, "video-copy");
+    assert.ok(sibling !== undefined && isBlobRef(sibling.value));
+    if (sibling === undefined) throw new Error("expected sibling retained Blob");
+    assert.equal(await sibling.openResource(resolved.value), undefined,
+      "a BlobRef resolved for one Output is not authority over a sibling Output");
+    assert.notEqual(await repository.openExecutionLog(build), undefined);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -99,9 +121,7 @@ test("reserved-looking domain objects remain ordinary domain data", async () => 
       resources: [],
     }));
     const resolved = await new FileBuildResultStore(root).resolve(id, "value");
-    assert.equal(resolved?.value.kind, "value");
-    if (resolved?.value.kind !== "value") throw new Error("expected Result value document");
-    assert.deepEqual(resolved.value.document.value, {
+    assert.deepEqual(resolved?.value, {
       nested: { kind: "value", path: "domain-authored" },
     });
   } finally {
@@ -125,7 +145,7 @@ test("reading a value-document Output manifest does not open its document", asyn
     }));
     const repository = new FileBuildResultStore(root);
     const manifest = await repository.read(id);
-    assert.equal(manifest?.outputs.take?.value.kind, "value");
+    assert.equal(manifest?.outputs.take?.representation, "structured");
     await assert.rejects(repository.resolve(id, "take"), /missing\.json/u);
   } finally {
     await rm(root, { recursive: true, force: true });

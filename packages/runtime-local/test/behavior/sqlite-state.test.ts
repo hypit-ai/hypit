@@ -16,7 +16,6 @@ const resultLocation = {
 } as const;
 
 const operationContext = {
-  createdAt: 1,
   need: {
     id: "need:test",
     capability: capabilities.generation,

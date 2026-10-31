@@ -21,8 +21,7 @@ import type {
   VisualScope,
 } from "@hypit/composition";
 import { visualProcesses } from "@hypit/composition";
-import { assertTemporalMap, compareExactTemporalValues, exactTemporalValueFromFrames, isAffineTemporalMapPiece, resolveTemporalBoundary, temporalValueInFrames } from "@hypit/temporal";
-import type { ExactTemporalValue, TemporalMap } from "@hypit/temporal";
+import { assertTemporalMap, compareExactTemporalValues, exactTemporalValueFromFrames } from "@hypit/temporal";
 import { assertBlobRef, canonicalStringify, compareCodeUnits } from "@hypit/hypit/protocol";
 import type { BlobRef, ResourceId } from "@hypit/hypit/protocol";
 import { readHtmlVisual, htmlVisualHtml, htmlVisualScript } from "./html-visual.js";
@@ -90,161 +89,6 @@ function fpsDecimal(numerator: number, denominator: number): string {
 
 function fpsRational(numerator: number, denominator: number): string {
   return denominator === 1 ? String(numerator) : `${numerator}/${denominator}`;
-}
-
-type FrameRational = { readonly numerator: number; readonly denominator: number };
-type FrameSamplingPiece = {
-  readonly target: FrameSpan;
-  readonly sourceAtStart: FrameRational;
-  readonly rate: FrameRational;
-  readonly wrap?: FrameSpan;
-};
-
-function sourcePosition(piece: FrameSamplingPiece, offset: number): {
-  readonly position: FrameRational;
-  readonly cycle: bigint;
-} {
-  const denominator = BigInt(piece.sourceAtStart.denominator) * BigInt(piece.rate.denominator);
-  const raw = BigInt(piece.sourceAtStart.numerator) * BigInt(piece.rate.denominator)
-    + BigInt(offset) * BigInt(piece.rate.numerator) * BigInt(piece.sourceAtStart.denominator);
-  if (piece.wrap === undefined) {
-    if (raw < 0n || raw > BigInt(Number.MAX_SAFE_INTEGER) || denominator > BigInt(Number.MAX_SAFE_INTEGER)) {
-      throw new Error("HTML renderer visual sampling exceeds safe arithmetic.");
-    }
-    return { position: { numerator: Number(raw), denominator: Number(denominator) }, cycle: 0n };
-  }
-  const start = BigInt(piece.wrap.startFrame) * denominator;
-  const length = BigInt(piece.wrap.endFrameExclusive - piece.wrap.startFrame) * denominator;
-  const delta = raw - start;
-  const cycle = delta >= 0n ? delta / length : -((-delta + length - 1n) / length);
-  const wrapped = ((delta % length) + length) % length;
-  const numerator = start + wrapped;
-  if (piece.rate.numerator < 0 && numerator === start) {
-    const end = BigInt(piece.wrap.endFrameExclusive) * denominator;
-    if (end > BigInt(Number.MAX_SAFE_INTEGER) || denominator > BigInt(Number.MAX_SAFE_INTEGER)) {
-      throw new Error("HTML renderer visual sampling exceeds safe arithmetic.");
-    }
-    return { position: { numerator: Number(end), denominator: Number(denominator) }, cycle: cycle - 1n };
-  }
-  if (numerator > BigInt(Number.MAX_SAFE_INTEGER) || denominator > BigInt(Number.MAX_SAFE_INTEGER)) {
-    throw new Error("HTML renderer visual sampling exceeds safe arithmetic.");
-  }
-  return { position: { numerator: Number(numerator), denominator: Number(denominator) }, cycle };
-}
-
-function samplingRuns(piece: FrameSamplingPiece): Array<FrameSpan & {
-  readonly sourceFrame: FrameRational;
-}> {
-  const length = piece.target.endFrameExclusive - piece.target.startFrame;
-  const runs: Array<FrameSpan & { sourceFrame: FrameRational }> = [];
-  // Keep a hold as the interval it is. HTMLMediaElement cannot accept a zero
-  // playbackRate, but that browser limitation belongs to the render/preview
-  // adapters; expanding the shared sampling description here would turn one
-  // authored relation into O(target frames) DOM and Provider work.
-  if (piece.rate.numerator === 0 || piece.wrap === undefined) {
-    return [{
-      startFrame: piece.target.startFrame,
-      endFrameExclusive: piece.target.endFrameExclusive,
-      sourceFrame: sourcePosition(piece, 0).position,
-    }];
-  }
-  let runStart = 0;
-  while (runStart < length) {
-    const runSource = sourcePosition(piece, runStart);
-    let left = runStart + 1;
-    let right = length;
-    while (left < right) {
-      const middle = left + Math.floor((right - left) / 2);
-      const cycle = sourcePosition(piece, middle).cycle;
-      const crossed = piece.rate.numerator > 0 ? cycle > runSource.cycle : cycle < runSource.cycle;
-      if (crossed) right = middle;
-      else left = middle + 1;
-    }
-    runs.push({
-      startFrame: piece.target.startFrame + runStart,
-      endFrameExclusive: piece.target.startFrame + left,
-      sourceFrame: runSource.position,
-    });
-    runStart = left;
-  }
-  return runs;
-}
-
-function safeFrameRational(value: { readonly numerator: bigint; readonly denominator: bigint }, label: string): FrameRational {
-  let left = value.numerator < 0n ? -value.numerator : value.numerator;
-  let right = value.denominator;
-  while (right !== 0n) [left, right] = [right, left % right];
-  const divisor = left === 0n ? 1n : left;
-  const numerator = value.numerator / divisor;
-  const denominator = value.denominator / divisor;
-  if (numerator < BigInt(Number.MIN_SAFE_INTEGER) || numerator > BigInt(Number.MAX_SAFE_INTEGER)
-    || denominator <= 0n || denominator > BigInt(Number.MAX_SAFE_INTEGER)) {
-    throw new Error(`${label} exceeds safe frame arithmetic.`);
-  }
-  return { numerator: Number(numerator), denominator: Number(denominator) };
-}
-
-function frameValue(value: ExactTemporalValue, frameRate: FrameRational, label: string): FrameRational {
-  return safeFrameRational(temporalValueInFrames(value, { frameRate }), label);
-}
-
-function advanceFramePosition(
-  position: FrameRational,
-  from: FrameRational,
-  to: number,
-  rate: FrameRational,
-  label: string,
-): FrameRational {
-  const deltaNumerator = BigInt(to) * BigInt(from.denominator) - BigInt(from.numerator);
-  return safeFrameRational({
-    numerator: BigInt(position.numerator) * BigInt(from.denominator) * BigInt(rate.denominator)
-      + deltaNumerator * BigInt(rate.numerator) * BigInt(position.denominator),
-    denominator: BigInt(position.denominator) * BigInt(from.denominator) * BigInt(rate.denominator),
-  }, label);
-}
-
-/** Terminal HTML adapter: quantize one exact local Map only at the decoded-frame consumer. */
-function frameSamplingPieces(
-  map: TemporalMap,
-  timing: { readonly frameRate: { readonly numerator: number; readonly denominator: number }; readonly frameCount: number },
-  programFrameRate: FrameRational,
-): FrameSamplingPiece[] {
-  assertTemporalMap(map);
-  if (map.stages.length !== 1) {
-    throw new Error("HTML renderer requires one occurrence-to-source sampling stage.");
-  }
-  const stage = map.stages[0]!;
-  return stage.pieces.flatMap((piece) => {
-    if (!isAffineTemporalMapPiece(piece)) {
-      throw new Error("HTML timed Surface adapter does not support cubic temporal sampling.");
-    }
-    const targetStart = frameValue(piece.target.start, programFrameRate, "Visual sampling target start");
-    const startFrame = resolveTemporalBoundary(piece.target.start, { frameRate: programFrameRate }, "cover");
-    const endFrameExclusive = resolveTemporalBoundary(piece.target.end, { frameRate: programFrameRate }, "cover");
-    if (endFrameExclusive <= startFrame) return [];
-    const rate = safeFrameRational({
-      numerator: BigInt(piece.rate.numerator) * BigInt(timing.frameRate.numerator)
-        * BigInt(programFrameRate.denominator),
-      denominator: BigInt(piece.rate.denominator) * BigInt(timing.frameRate.denominator)
-        * BigInt(programFrameRate.numerator),
-    }, "Visual sampling rate");
-    const sourceAtStart = advanceFramePosition(
-      frameValue(piece.sourceAtStart, timing.frameRate, "Visual sampling source start"),
-      targetStart,
-      startFrame,
-      rate,
-      "Visual sampling source start after target quantization",
-    );
-    return [{
-      target: { startFrame, endFrameExclusive },
-      sourceAtStart,
-      rate,
-      ...(piece.wrap === undefined ? {} : { wrap: {
-        startFrame: resolveTemporalBoundary(piece.wrap.start, { frameRate: timing.frameRate }, "cover"),
-        endFrameExclusive: resolveTemporalBoundary(piece.wrap.end, { frameRate: timing.frameRate }, "cover"),
-      } }),
-    }];
-  });
 }
 
 function percentage(frame: number, totalFrames: number): string {
@@ -441,7 +285,7 @@ function renderElement(
       sampling: structuredClone(element.sampling),
     });
     const sourceAttributes = [
-      "data-hypit-source-frame=\"media\"",
+      "data-hypit-video-source=\"media\"",
       `data-hypit-start-frame="${context.presentStartFrame}"`,
       `data-hypit-end-frame="${context.presentStartFrame + context.presentDurationFrames}"`,
     ];
@@ -457,36 +301,21 @@ function renderElement(
   }
   if (element.kind === "surface" && element.sampling !== undefined) {
     const artifact = element.surface.artifact;
-    const timing = element.surface.timing.kind === "frames"
-        ? { frameRate: element.surface.timing.frameRate, frameCount: element.surface.timing.frameCount }
-        : undefined;
-    if (timing === undefined) throw new Error(`Visual element ${element.id} has sampling without frame timing.`);
-    const pieces = frameSamplingPieces(element.sampling, timing, {
-      numerator: context.programNumerator, denominator: context.programDenominator,
-    });
-    let part = 0;
-    for (const piece of pieces) for (const run of samplingRuns(piece)) {
-      part += 1;
-      const startFrame = context.presentStartFrame + run.startFrame;
-      const durationFrames = run.endFrameExclusive - run.startFrame;
-      const partId = `${id}-sample-${String(part).padStart(4, "0")}`;
-      context.videoSources.push({
-        kind: "surface",
-        id: partId,
-        elementId: id,
-        artifactId: artifact.resource,
-        picture: structuredClone(element.surface.picture),
-        startFrame,
-        endFrameExclusive: startFrame + durationFrames,
-        usage: frameUsage(intersectFrameSpans([{
-          startFrame,
-          endFrameExclusive: startFrame + durationFrames,
-        }], context.presentUsage)),
-        sourceFrame: { ...run.sourceFrame },
-        sourceRate: { ...piece.rate },
-        sourceFrameRate: { ...timing.frameRate },
-      });
+    if (element.surface.timing.kind !== "frames") {
+      throw new Error(`Visual element ${element.id} has sampling without frame timing.`);
     }
+    context.videoSources.push({
+      kind: "surface",
+      id,
+      elementId: id,
+      artifactId: artifact.resource,
+      picture: structuredClone(element.surface.picture),
+      startFrame: context.presentStartFrame,
+      endFrameExclusive: context.presentStartFrame + context.presentDurationFrames,
+      usage: frameUsage(context.presentUsage),
+      sampling: structuredClone(element.sampling),
+      sourceFrameRate: { ...element.surface.timing.frameRate },
+    });
     return mediaDisplayPlane({
       id,
       logicalElementId: element.id,
@@ -494,7 +323,9 @@ function renderElement(
       width: element.surface.width,
       height: element.surface.height,
       sourceAttributes: [
-        "data-hypit-source-frame=\"surface\"",
+        "data-hypit-video-source=\"surface\"",
+        `data-hypit-start-frame="${context.presentStartFrame}"`,
+        `data-hypit-end-frame="${context.presentStartFrame + context.presentDurationFrames}"`,
         `data-hypit-surface-artifact="${element.surface.artifact.resource}"`,
         `data-hypit-alpha-mode="${element.surface.picture.alphaMode}"`,
         `data-hypit-color-primaries="${element.surface.picture.colorPrimaries}"`,
@@ -1013,7 +844,6 @@ function emitHtml(
         );
         processUsages.push({
           order,
-          passes: renderedInputs.length,
           stageKeys: renderedInputs.map(({ key }) => key),
           spans: [{ startFrame: 0, endFrameExclusive: timelineFrameCount(timeline) }],
         });
@@ -1098,7 +928,6 @@ function normalizedDocument(value: HtmlProgram): HtmlProgram {
     canvas: { ...value.canvas },
     processUsages: value.processUsages.map((usage) => ({
       order: usage.order,
-      passes: usage.passes,
       stageKeys: [...usage.stageKeys],
       spans: usage.spans.map((span) => ({ ...span })),
     })),
@@ -1124,7 +953,7 @@ function normalizedDocument(value: HtmlProgram): HtmlProgram {
       ...source,
       usage: structuredClone(source.usage),
       picture: structuredClone(source.picture),
-      sourceFrame: { ...source.sourceFrame }, sourceRate: { ...source.sourceRate },
+      sampling: structuredClone(source.sampling),
       sourceFrameRate: { ...source.sourceFrameRate },
     })).sort((left, right) => left.startFrame - right.startFrame || compareCodeUnits(left.id, right.id)),
     html: value.html,
@@ -1190,8 +1019,7 @@ export function assertHtmlProgram(document: HtmlProgram): void {
   if (!document.html.startsWith("<!doctype html>")) throw new Error("HtmlProgram HTML is invalid.");
   if (!Array.isArray(document.processUsages) || document.processUsages.some((usage) =>
     !Number.isSafeInteger(usage.order) || usage.order <= 0
-    || !Number.isSafeInteger(usage.passes) || usage.passes <= 0
-    || !Array.isArray(usage.stageKeys) || usage.stageKeys.length !== usage.passes
+    || !Array.isArray(usage.stageKeys) || usage.stageKeys.length === 0
     || usage.stageKeys.some((key: unknown) => typeof key !== "string" || key.length === 0)
     || new Set(usage.stageKeys).size !== usage.stageKeys.length
     || !Array.isArray(usage.spans) || usage.spans.length === 0
@@ -1266,15 +1094,29 @@ export function assertHtmlProgram(document: HtmlProgram): void {
       } catch { return true; }
     })() : source.kind !== "surface" || typeof source.artifactId !== "string"
       || !PROGRAM_RESOURCE_ID.test(source.artifactId)
-      || (() => { try { verifyPictureInterpretation(source.picture, `HtmlProgram.videoSources.${source.id}.picture`); return false; }
-        catch { return true; } })()
-      || !Number.isSafeInteger(source.sourceFrame?.numerator) || source.sourceFrame.numerator < 0
-      || !Number.isSafeInteger(source.sourceFrame?.denominator) || source.sourceFrame.denominator <= 0
-      || !Number.isSafeInteger(source.sourceRate?.numerator)
-      || !Number.isSafeInteger(source.sourceRate?.denominator) || source.sourceRate.denominator <= 0
       || !Number.isSafeInteger(source.sourceFrameRate?.numerator) || source.sourceFrameRate.numerator <= 0
       || !Number.isSafeInteger(source.sourceFrameRate?.denominator) || source.sourceFrameRate.denominator <= 0
-      || !declared.some((entry) => entry.id === source.artifactId)))) {
+      || !declared.some((entry) => entry.id === source.artifactId)
+      || (() => {
+        try {
+          verifyPictureInterpretation(source.picture, `HtmlProgram.videoSources.${source.id}.picture`);
+          assertTemporalMap(source.sampling);
+          const binding = document.surfaces.find((entry) => entry.artifactId === source.artifactId);
+          if (binding === undefined) return true;
+          assertCompositableSurfaceRef(binding.surface);
+          if (binding.surface.timing.kind !== "frames") return true;
+          const target = source.sampling.stages[0]!.target;
+          const terminal = source.sampling.stages.at(-1)!.source;
+          return compareExactTemporalValues(target.duration,
+            exactTemporalValueFromFrames(source.endFrameExclusive - source.startFrame, document)) !== 0
+            || compareExactTemporalValues(terminal.duration,
+              exactTemporalValueFromFrames(binding.surface.timing.frameCount,
+                { frameRate: binding.surface.timing.frameRate })) !== 0
+            || source.sourceFrameRate.numerator !== binding.surface.timing.frameRate.numerator
+            || source.sourceFrameRate.denominator !== binding.surface.timing.frameRate.denominator
+            || canonicalStringify(source.picture) !== canonicalStringify(binding.surface.picture);
+        } catch { return true; }
+      })()))) {
     throw new Error("HtmlProgram video-source plan is invalid.");
   }
   if (new Set(document.videoSources.map((source) => source.id)).size !== document.videoSources.length) {

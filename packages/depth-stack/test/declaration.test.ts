@@ -23,7 +23,6 @@ const reference = (name: string, path: string) => ({ name, value: { kind: "refer
 
 function external(path: string, type: AuthorResolvedReference["type"], value?: unknown): AuthorResolvedReference {
   return {
-    path,
     ref: { kind: "record", id: path },
     type,
     ...(value === undefined ? {} : { record: { id: path, type, value: value as never } }),

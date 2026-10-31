@@ -198,27 +198,18 @@ function verifyBlob(value: unknown, subject: string): asserts value is BlobRef {
 function verifyStream(value: unknown, subject: string): asserts value is MediaStream {
   const item = object(value, subject);
   nonNegativeInteger(item.index, `${subject}.index`);
-  assert(typeof item.codecType === "string" && item.codecType.length > 0, `${subject}.codecType is invalid`);
   assert(typeof item.codecName === "string" && item.codecName.length > 0, `${subject}.codecName is invalid`);
-  assert(item.timingStatus === "admissible" || item.timingStatus === "missing"
-    || item.timingStatus === "non-monotonic" || item.timingStatus === "discontinuous",
-  `${subject}.timingStatus is invalid`);
-  nonNegativeInteger(item.decodedUnitCount, `${subject}.decodedUnitCount`);
   const disposition = object(item.disposition, `${subject}.disposition`);
   assert(typeof disposition.default === "boolean", `${subject}.disposition.default is invalid`);
   assert(typeof disposition.attachedPicture === "boolean", `${subject}.disposition.attachedPicture is invalid`);
-  if (item.timeBase !== undefined) verifyRational(item.timeBase, `${subject}.timeBase`);
   if (item.startPts !== undefined) verifyTimestamp(item.startPts, `${subject}.startPts`);
   if (item.endPts !== undefined) verifyTimestamp(item.endPts, `${subject}.endPts`);
   assert((item.startPts === undefined) === (item.endPts === undefined), `${subject} must provide both presentation endpoints`);
-  assert(item.timingStatus !== "admissible" || item.startPts !== undefined,
-    `${subject} admissible timing has no presentation interval`);
   if (item.startPts !== undefined && item.endPts !== undefined) {
     assert(compareTimestamp(item.startPts, item.endPts) < 0, `${subject} presentation interval is empty or reversed`);
   }
   if (item.kind === "video") {
-    assert(item.codecType === "video", `${subject} video codecType differs`);
-    assert(item.role === "moving" || item.role === "attached-picture" || item.role === "still", `${subject}.role is invalid`);
+    nonNegativeInteger(item.decodedUnitCount, `${subject}.decodedUnitCount`);
     positiveInteger(item.width, `${subject}.width`);
     positiveInteger(item.height, `${subject}.height`);
     verifyRational(item.sampleAspectRatio, `${subject}.sampleAspectRatio`);
@@ -226,30 +217,15 @@ function verifyStream(value: unknown, subject: string): asserts value is MediaSt
       || item.rotationDegrees === 180 || item.rotationDegrees === 270,
     `${subject}.rotationDegrees is invalid`);
     if (item.averageFrameRate !== undefined) verifyRational(item.averageFrameRate, `${subject}.averageFrameRate`);
-    if (item.nominalFrameRate !== undefined) verifyRational(item.nominalFrameRate, `${subject}.nominalFrameRate`);
     verifyPictureObservation(item.picture, `${subject}.picture`);
-    if (item.role === "attached-picture") {
-      assert(disposition.attachedPicture === true, `${subject} attached-picture role differs from disposition`);
-    }
   } else if (item.kind === "audio") {
-    assert(item.codecType === "audio", `${subject} audio codecType differs`);
     positiveInteger(item.sampleRate, `${subject}.sampleRate`);
     positiveInteger(item.channels, `${subject}.channels`);
     nonNegativeInteger(item.decodedSampleFrames, `${subject}.decodedSampleFrames`);
-    if (item.channelLayout !== undefined) {
-      assert(typeof item.channelLayout === "string" && item.channelLayout.length > 0, `${subject}.channelLayout is invalid`);
-    }
   } else {
     assert(item.kind === "other", `${subject}.kind is invalid`);
+    assert(typeof item.codecType === "string" && item.codecType.length > 0, `${subject}.codecType is invalid`);
   }
-}
-
-function expectedSampleFrames(frameCount: number, frameRate: MediaRational): number {
-  const numerator = BigInt(frameCount) * 48_000n * BigInt(frameRate.denominator);
-  const denominator = BigInt(frameRate.numerator);
-  const rounded = (numerator * 2n + denominator) / (denominator * 2n);
-  assert(rounded > 0n && rounded <= BigInt(Number.MAX_SAFE_INTEGER), "Media frame domain has an invalid sample count");
-  return Number(rounded);
 }
 
 export function sealMediaInspection(value: MediaInspection): MediaInspection {
@@ -259,9 +235,6 @@ export function sealMediaInspection(value: MediaInspection): MediaInspection {
 
 export function verifyMediaInspection(value: unknown): asserts value is MediaInspection {
   const item = object(value, "MediaInspection") as unknown as MediaInspection;
-  assert(Array.isArray(item.container?.formatNames), "MediaInspection container formats are invalid");
-  item.container.formatNames.forEach((format) => assert(typeof format === "string" && format.length > 0,
-    "MediaInspection container format is invalid"));
   assert(Array.isArray(item.streams), "MediaInspection streams are invalid");
   item.streams.forEach((stream, index) => verifyStream(stream, `MediaInspection.streams[${index}]`));
   assert(new Set(item.streams.map((stream) => stream.index)).size === item.streams.length,
@@ -329,13 +302,6 @@ export function verifyPreparedMedia(value: unknown): asserts value is PreparedMe
   if (item.audio !== undefined) {
     const audio = object(item.audio, "PreparedMedia.audio") as unknown as PreparedAudioMember;
     verifyPreparedMember(audio, item.domain, "PreparedMedia.audio");
-    const interpretation = object(audio.interpretation, "PreparedMedia.audio.interpretation");
-    positiveInteger(interpretation.sampleRate, "PreparedMedia.audio.interpretation.sampleRate");
-    positiveInteger(interpretation.channels, "PreparedMedia.audio.interpretation.channels");
-    if (interpretation.channelLayout !== undefined) {
-      assert(typeof interpretation.channelLayout === "string" && interpretation.channelLayout.length > 0,
-        "PreparedMedia.audio.interpretation.channelLayout is invalid");
-    }
   }
 }
 
@@ -361,13 +327,6 @@ export function verifyPreparedAudioSource(value: unknown): asserts value is Prep
   nonNegativeInteger(item.streamIndex, "PreparedAudioSource.streamIndex");
   assertExactTemporalValue(item.presentationStart, "PreparedAudioSource.presentationStart");
   assertLocalTemporalDomain(item.sourceDomain);
-  const interpretation = object(item.interpretation, "PreparedAudioSource.interpretation");
-  positiveInteger(interpretation.sampleRate, "PreparedAudioSource.interpretation.sampleRate");
-  positiveInteger(interpretation.channels, "PreparedAudioSource.interpretation.channels");
-  if (interpretation.channelLayout !== undefined) {
-    assert(typeof interpretation.channelLayout === "string" && interpretation.channelLayout.length > 0,
-      "PreparedAudioSource.interpretation.channelLayout is invalid");
-  }
 }
 
 export function sealTimelineVisual(value: TimelineVisual): TimelineVisual {
@@ -395,8 +354,6 @@ export function verifyTimelineAudio(value: unknown): asserts value is TimelineAu
   const item = object(value, "TimelineAudio") as unknown as TimelineAudio;
   verifyBlob(item.artifact, "TimelineAudio.artifact");
   assert(item.artifact.mediaType === "audio/wav", "TimelineAudio Artifact must be WAV");
-  assert(item.sampleRate === 48_000, "TimelineAudio sample rate must be 48 kHz");
-  assert(item.channelLayout === "stereo", "TimelineAudio channel layout must be stereo");
   positiveInteger(item.sampleFrames, "TimelineAudio.sampleFrames");
 }
 
@@ -411,8 +368,6 @@ export function verifyMuxedMedia(value: unknown): asserts value is MuxedMedia {
   positiveInteger(item.frameCount, "MuxedMedia.frameCount");
   positiveInteger(item.canvas?.width, "MuxedMedia.canvas.width");
   positiveInteger(item.canvas?.height, "MuxedMedia.canvas.height");
-  assert(item.presentationSampleFrames === expectedSampleFrames(item.frameCount, item.frameRate),
-    "MuxedMedia presentation sample count differs from its frame domain");
   verifyBlob(item.artifact, "MuxedMedia.artifact");
   verifyMediaDeliverySpec(item.delivery);
   assert(item.artifact.mediaType === "video/mp4", "MuxedMedia Artifact must be MP4");

@@ -51,7 +51,11 @@ type TargetOptions = {
 
 export type AuthorCommand =
   | (CommandBase & SourceOptions & { readonly command: "check" })
-  | (CommandBase & SourceOptions & TargetOptions & RuntimeOption & { readonly command: "plan" })
+  | (CommandBase & SourceOptions & TargetOptions & RuntimeOption & {
+      readonly command: "plan";
+      /** One-based request position in this freshly evaluated finite plan. */
+      readonly request?: number;
+    })
   | (CommandBase & Omit<SourceOptions, "limit"> & TargetOptions & RuntimeOption & {
       readonly command: "pricing";
       readonly limit?: number;

@@ -117,15 +117,6 @@ export const audioExtractionRequestSchema: ValueSchema = {
   kind: "object",
   fields: {
     audio: { schema: audioSelectorSchema },
-    output: { schema: {
-      kind: "object",
-      fields: {
-        container: { schema: { kind: "literal", value: "wav" } },
-        codec: { schema: { kind: "literal", value: "pcm_s16le" } },
-        sampleRate: { schema: { kind: "literal", value: 48_000 } },
-        channels: { schema: { kind: "literal", value: 2 } },
-      },
-    } },
   },
 };
 export const frameExtractionRequestSchema: ValueSchema = {
@@ -144,10 +135,6 @@ export const frameExtractionRequestSchema: ValueSchema = {
         seconds: { schema: nonNegativeNumber },
       } },
     ] } },
-    output: { schema: {
-      kind: "object",
-      fields: { format: { schema: { kind: "literal", value: "png" } } },
-    } },
   },
 };
 
@@ -162,14 +149,6 @@ export const stillVideoRequestSchema: ValueSchema = {
       },
     } },
     frameCount: { schema: { kind: "number", integer: true, minimum: 1 } },
-    output: { schema: {
-      kind: "object",
-      fields: {
-        container: { schema: { kind: "literal", value: "mp4" } },
-        codec: { schema: { kind: "literal", value: "h264" } },
-        pixelFormat: { schema: { kind: "literal", value: "yuv420p" } },
-      },
-    } },
     segments: { schema: { kind: "array", items: {
       kind: "object",
       fields: {

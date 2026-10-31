@@ -9,7 +9,7 @@
     "./http": "./src/http.ts"
   },
   "dependencies": {
-    "@hypit/protocol": "workspace:*",
-    "@hypit/runtime": "workspace:*"
+    "@hypit/protocol": "workspace:^0.0.0-dev",
+    "@hypit/runtime": "workspace:^0.0.0-dev"
   }
 }

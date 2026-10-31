@@ -25,6 +25,7 @@ export {
   openTransientRuntimeConfigExecution,
   preflightRuntimeConfig,
   readRuntimeConfigPricing,
+  readRuntimePlanningPolicy,
   parseLocalRuntimeProfile,
   resolveRuntimeConfigPaths,
 } from "./config.js";

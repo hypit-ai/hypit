@@ -1,28 +1,19 @@
 # Reviewing the production
 
-Read this when opening Studio, judging an encoded Result, or improving the layout, timing and
-expression of the new Film.
+Read this when judging current production evidence or an encoded Result, or improving the layout,
+timing and expression of the new Film.
 
-For picture inspection, start with [Snapshots](snapshots.md) of the current Studio work or existing
-HTML. Single frames establish detail; continuous frame grids establish movement and handoffs.
-Use Studio playback to hear and feel the passage, and the exported file to judge encoded delivery.
-
-[Studio](studio.md) explains launch, session reuse, displayed information, Source writeback and
-project Companions. [Timestamped Comments](studio.md#revise-from-timestamped-comments) connects user
-feedback to the owning production facts. [Builds and Results](builds.md) explains Result inspection,
-export and accepting a produced file into the project.
-
-For a collaborative review, [show the editable work before export](studio.md#review-before-export)
-and introduce both views: Comments for time-located direction, Studio for the timeline and exposed
-parameters. Browser playback makes both available without first encoding a complete video. When a final file is requested,
-render and inspect that encoded deliverable as a separate step.
+For picture inspection, start with [Snapshots](snapshots.md) of existing HTML or media. Single frames
+establish detail; continuous frame grids establish movement and handoffs. Use a focused encoded
+interval to hear and feel a passage, and the exported file to judge delivery. [Builds and Results](builds.md)
+explains Result inspection, export and accepting a produced file into the project.
 
 ## Make the composition work
 
 Watch the selected performance and its assembled picture and sound. In pure A-roll, judge whether
 speech, action, reactions, camera changes and pauses carry the intended passage. In a mixed work,
 judge the additional Caption, evidence and graphic relationships together with that performance.
-Watch their actual arrangement in Studio or a rendered Result: is the comparison clear, is the
+Watch their actual arrangement in a focused render or the rendered Result: is the comparison clear, is the
 Caption readable, does the B-roll cover the intended explanation, and do entries and exits land on
 the right words or actions? Does a persistent object retain its identity and state through the
 handoff, and does moving a video viewport keep its intended playback? Adjust the layout, timing or
@@ -31,15 +22,15 @@ composition.
 
 Work from the authored Script and the production's existing semantic timing when locating a word,
 reveal or handoff. Those relationships identify the passages whose composition needs attention;
-Studio and rendered frames show how the chosen assets work there. Carry the same produced media
+Rendered frames and intervals show how the chosen assets work there. Carry the same produced media
 and semantic Outputs through layout and component revisions.
 
 ## Review the work the Targets actually select
 
 Use the Source and Targets for the production's actual deliverable. Durable material
 remains in the Author Source. Preserve the produced media and semantic Outputs as the composition
-changes. Studio opens the selected work for playback and editing; snapshot captures its current
-compiled picture directly. Focused Targets can serve a requested encoded interval.
+changes. Snapshot can inspect an already materialized HTML Programme or existing media directly.
+Focused Targets can serve a requested encoded interval.
 
 Judge the relationship that the evidence can establish. A component's own example can show its
 style and behavior. The actual production image establishes its framing and color; the produced
@@ -48,8 +39,7 @@ with the material that will appear in the deliverable.
 
 ## Show what the current work establishes
 
-`hypit check` can establish that the Source and graph are legal. Studio can establish what the
-configured composition displays. A completed Build can establish what the selected Endpoints actually
+`hypit check` can establish that the Source and graph are legal. A completed Build can establish what the selected Endpoints actually
 produced. Creative review asks a different question: does this composition perform the
 Treatment and the useful relationships learned from the reference?
 
@@ -73,28 +63,26 @@ break the piece's rhythm.
 ## Choose evidence that exists
 
 The useful frame or interval is not known merely because a component has been authored. It becomes
-known from something visible or time-locatable: an authored Segment or clock relation, the Studio
-playhead, an encoded Result, or timing produced elsewhere in the graph. Until then, its exact
+known from something visible or time-locatable: an authored Segment or clock relation, an encoded
+Result, or timing produced elsewhere in the graph. Until then, its exact
 location remains an open question.
 
 Use whichever view can answer the current question:
 
 - Once frame positions are known, use [snapshot](snapshots.md) to inspect the existing HTML Programme
   directly. Select individual states or continuous frames; keep the surrounding handoffs visible.
-  The locations can come from semantic events, the playhead or authored clock time.
+  The locations can come from semantic events or authored clock time.
 - On an encoded Result, focused media operations such as frames, cut and grid can expose exact pixels,
   adjacent frames or a short passage. Waveforms expose amplitude and transients; spectrograms expose
   frequency content. Attach either or both to a grid when their relation to sampled pictures matters.
-- Open Studio when interactive playback, parameter editing or a component's Companion helps the
-  current work. Seek projected domain evidence or select Track Items to inspect their place in the composition.
 - Use a [range render](rendering.md#choose-a-render-interval-in-frames) when the question requires
   an encoded clip with sound, such as testing an export setting or delivering a passage.
 - Watch the whole deliverable when the question concerns Hook clarity, story movement, payoff,
   CTA, or how A-roll, B-roll, Caption, MG and Effects work together.
 
 Choose and combine these views according to the current question. A component name alone does not
-prove that a particular state is stable or that a change occurs at a guessed time; Studio or actual
-media supplies that evidence.
+prove that a particular state is stable or that a change occurs at a guessed time; actual media
+supplies that evidence.
 
 Inspect the relationships that make the composition work:
 

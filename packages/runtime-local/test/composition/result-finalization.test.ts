@@ -20,6 +20,7 @@ import test from "node:test";
 import { FileResourceStore } from "../../src/resource-store.js";
 import { FileBuildResultStore } from "@hypit/result/runtime-storage/node";
 import type { BuildResultStore } from "@hypit/result/runtime-storage";
+import { isBlobRef } from "@hypit/protocol";
 import { EnvironmentCredentialStore } from "@hypit/credential-store-env";
 import { defineEndpoint } from "@hypit/endpoint";
 import type { AsyncEndpoint, EndpointInstance } from "@hypit/endpoint";
@@ -93,11 +94,11 @@ test("a completed retained file moves into its Build Result and leaves no Runtim
     assert.equal((await finishClaimedBuild(runtime)).outcome, "complete");
     const results = new FileBuildResultStore(join(directory, "results"));
     const result = await results.read(id);
-    assert.equal(result?.outputs["clip.video"]?.value.kind, "build-file");
+    assert.equal(result?.outputs["clip.video"]?.representation, "file");
     const resolved = await results.resolve(id, "clip.video");
-    assert.equal(resolved?.value.kind, "build-file");
-    if (resolved?.value.kind !== "build-file") throw new Error("expected completed Result file");
-    const opened = await results.openFile(id, resolved.value);
+    assert.ok(resolved !== undefined && isBlobRef(resolved.value));
+    if (resolved === undefined || !isBlobRef(resolved.value)) throw new Error("expected completed Result file");
+    const opened = await resolved.openResource(resolved.value);
     if (opened === undefined) throw new Error("expected completed Result bytes");
     const resultBytes: number[] = [];
     for await (const chunk of opened) resultBytes.push(...chunk);
@@ -163,7 +164,11 @@ test("a failed Build keeps retained Outputs completed before removing active Run
     assert.equal(result?.outcome, "failed");
     assert.equal(result?.failure, "generation failed");
     assert.deepEqual(Object.keys(result?.outputs ?? {}), ["prompt.text"]);
-    assert.deepEqual(result?.outputs["prompt.text"]?.value, { kind: "inline", value: "Greet Ada" });
+    assert.deepEqual(result?.outputs["prompt.text"], {
+      type: result?.outputs["prompt.text"]?.type,
+      representation: "inline",
+      value: "Greet Ada",
+    });
     const status = await runtime.inspect("bld_20260902T120000005Z_0000000001");
     assert.equal(status, undefined);
     await runtime.close();
@@ -205,7 +210,8 @@ for (const phase of ["submit", "poll"] as const) {
       assert.equal((await finishClaimedBuild(runtime)).outcome, "failed");
       const result = await new FileBuildResultStore(join(directory, "results")).read(id);
       assert.equal(result?.failure, "first request failed");
-      assert.deepEqual(result?.outputs["target.2"]?.value, { kind: "inline", value: "retained sibling output" });
+      assert.equal(result?.outputs["target.2"]?.representation, "inline");
+      assert.equal(result?.outputs["target.2"]?.value, "retained sibling output");
       assert.equal(starts, 2);
       assert.equal(polls, phase === "submit" ? 0 : 2);
       assert.equal((await runtime.activity()).builds.length, 0);
@@ -263,7 +269,7 @@ test("an interrupted Result write can be retried internally without rerunning th
       readStored: async (build) => await base.readStored(build),
       browse: async (request) => await base.browse(request),
       resolve: async (build, output) => await base.resolve(build, output),
-      openFile: async (build, file) => await base.openFile(build, file),
+      openExecutionLog: async (build) => await base.openExecutionLog(build),
     };
     return { repository };
   };
@@ -293,7 +299,7 @@ test("an interrupted Result write can be retried internally without rerunning th
     rejectSync = false;
     const resultWriter = createLocalResultWriter({ ...fixture, openBuildResultRepository: openRepository });
     const completed = await resultWriter.completeResult(blocked);
-    assert.ok(!("createdAt" in completed));
+    assert(completed !== undefined && "outcome" in completed);
     assert.equal(completed.outcome, "complete");
     assert.equal(generationCalls, 1);
     await runtime.close();
@@ -314,7 +320,7 @@ test("a failed Result creation leaves no active Build", async () => {
     async readStored() { return undefined; },
     async browse() { return { results: [] }; },
     async resolve() { return undefined; },
-    async openFile() { return undefined; },
+    async openExecutionLog() { return undefined; },
   };
   try {
     const runtime = await createLocalRuntime({

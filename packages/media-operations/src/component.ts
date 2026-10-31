@@ -130,7 +130,6 @@ export const mediaOperationsComponent = {
         const need: ExtractAudioNeed = {
           source,
           streamIndex: selected.index,
-          output: request.output,
         };
         return { kind: "need", constraints: canonicalize(need) };
       },
@@ -152,7 +151,6 @@ export const mediaOperationsComponent = {
           streamIndex: selected.index,
           sourceFrameCount: selected.decodedUnitCount,
           at: request.at,
-          output: request.output,
         };
         return { kind: "need", constraints: canonicalize(need) };
       },
@@ -174,7 +172,6 @@ export const mediaOperationsComponent = {
         const request = sealStillVideoRequest({
           frameRate: clock.frameRate,
           frameCount: frames,
-          output: { container: "mp4", codec: "h264", pixelFormat: "yuv420p" },
           segments: planStillVideoSegments(frames, layout.weights),
         });
         return { kind: "output", value: (canonicalize(request)) };

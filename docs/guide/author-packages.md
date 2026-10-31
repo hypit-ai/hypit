@@ -58,17 +58,12 @@ A preview Source gives authors a small example they can open or render. Inspect 
 explain the behavior: entry, meaningful changes, held layout and exit. Check the component in the
 actual composition too, where its content, space and timing have a purpose.
 
-For richer interactive editing, add a Studio Companion. The
-[Companion SDK](https://github.com/hypit-ai/hypit/blob/main/packages/studio-companion/README.md)
-shows how to expose timeline Items, properties and source bindings. The rendering code and
-Companion are separate contributions in the same package.
-
 ## Use and share it
 
 Import the installed component's logical Module in Source:
 
 ```svml
-<import as="mine" from="@your-studio/my-component@1"/>
+<import as="mine" from="@your-scope/my-component@1"/>
 ```
 
 Use its declared elements and outputs in the composition. `hypit vocabulary` exposes their authored
@@ -91,4 +86,4 @@ expose parameters or design for reuse. Accepted material is supplied separately,
 can open and render the composition without another generation request.
 
 [Watch the finished film](https://storage.googleapis.com/hypit-public-assets/assets/examples/complex-explainer/v1/20260914/final.mp4)
-or follow the example's download instructions to open its accepted material in Studio.
+or follow the example's download instructions to inspect and reuse its accepted material.

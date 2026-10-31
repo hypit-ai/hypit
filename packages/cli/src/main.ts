@@ -13,7 +13,7 @@ import type { OperationalMachineView } from "./machine-view.js";
 import { parseCommand } from "./arguments.js";
 import type { CliCommand, RuntimeOption } from "./command.js";
 import { commandHint } from "./command-hint.js";
-import { assertPlannedRequests, assertPreflight, createBuildAuthoring, describePlanEndpoints, describePlanRequests, describePlanPricing, describePricingRequests, evaluatePlanNeeds, plannedEndpointQueries, preflightPlan } from "./build-planning.js";
+import { assertPlannedRequests, assertPreflight, createBuildAuthoring, describePlanEndpoints, describePlanRequest, describePlanRequests, describePlanPricing, describePricingRequests, evaluatePlanNeeds, plannedEndpointQueries, preflightPlan } from "./build-planning.js";
 import { buildProgressLines, observeBuild } from "./observation.js";
 import { isProjectResultCommand, runProjectResultCommand } from "./commands/results.js";
 import { isEnvironmentCommand, runEnvironmentCommand } from "./commands/environment.js";
@@ -26,6 +26,7 @@ import {
   cliTypeName,
   projectPath,
 } from "./view.js";
+import { CliUsageError } from "./usage-error.js";
 
 function createPublicBuildId(now = Date.now()): string {
   return orderedBuildId(now, randomBytes(5).toString("hex").toUpperCase());
@@ -278,13 +279,18 @@ export async function runCli(
             .map((item) => item.specifier),
         }),
         authoring,
-        attachments: result.compilation.attachments,
+        attachments: result.compilation.author.attachments,
         result: {
           repository: buildResults.location,
         },
       } as const;
       const host = await runtimeHost(runtimeProfile, sourcePackageRoot);
-      const evaluated = await evaluatePlanNeeds(result.definition, packageContributions);
+      const planningPolicy = await host.planningPolicy?.();
+      const evaluated = await evaluatePlanNeeds(
+        result.definition,
+        packageContributions,
+        planningPolicy?.producerExecutionLimits,
+      );
       inspection = await host.openInspection(plannedEndpointQueries(evaluated.state, evaluated));
       const buildInspection = inspection;
       const endpoints = await describePlanEndpoints(buildInspection);
@@ -382,8 +388,8 @@ export async function runCli(
             `Inspect  ${commandHint(["inspect", built.id], resultScope)}`,
             ...retainedOutputs
               .slice(0, args.limit)
-              .map((item) => item.output.value.kind === "inline"
-                ? `Result   ${item.name} = ${inlineValuePreview(item.output.value.value)}`
+              .map((item) => item.output.representation === "inline"
+                ? `Result   ${item.name} = ${inlineValuePreview(item.output.value)}`
                 : `Export   ${commandHint(["result", "export", built.id, "--output", item.name], resultScope)} --to <path>`),
             ...(retainedOutputs.length > 0 ? [] : targetPresentations
               .filter((item) => item.inline !== undefined)
@@ -432,7 +438,12 @@ export async function runCli(
     const loaded = await compileSelectedTargets();
     const result = buildCompiler.prepareBuild(loaded);
     const planHost = runtimeProfile === undefined ? undefined : await runtimeHost(runtimeProfile);
-    const evaluated = await evaluatePlanNeeds(result.definition, packageContributions);
+    const planningPolicy = await planHost?.planningPolicy?.();
+    const evaluated = await evaluatePlanNeeds(
+      result.definition,
+      packageContributions,
+      planningPolicy?.producerExecutionLimits,
+    );
     planInspection = planHost === undefined
       ? undefined
       : await planHost.openInspection(plannedEndpointQueries(evaluated.state, evaluated));
@@ -454,8 +465,31 @@ export async function runCli(
       return;
     }
     const endpoints = planInspection === undefined ? undefined : await describePlanEndpoints(planInspection);
-    const preflight = planInspection === undefined ? undefined : await preflightPlan(planInspection, evaluated.state);
     const requests = describePlanRequests(evaluated.state, evaluated, endpoints ?? []);
+    if (args.request !== undefined) {
+      if (args.request > requests.length) {
+        throw new CliUsageError(
+          `--request ${args.request} is outside this plan of ${requests.length} requests`,
+          "hypit help plan",
+        );
+      }
+      const focused = describePlanRequest(
+        projectPath(loaded.authorSource, effectiveWorkspaceRoot),
+        args.request,
+        evaluated.state,
+        evaluated,
+        endpoints ?? [],
+      );
+      writeCliOutput(io, args.presentation, {
+        kind: "plan-request",
+        machine: focused,
+      });
+      if (focused.issue !== undefined || focused.readiness === "failed" || focused.readiness === "unavailable"
+        || focused.resolution === "unresolved" || focused.resolution === "ambiguous"
+        || focused.support === "unsupported") io.setExitCode?.(1);
+      return;
+    }
+    const preflight = planInspection === undefined ? undefined : await preflightPlan(planInspection, evaluated.state);
     const targets = args.targets;
     const unsupportedRequestCount = endpoints?.filter((item) => item.support === "unsupported").length ?? 0;
     const unresolvedRequestCount = endpoints?.filter((item) => item.status === "unresolved" || item.status === "ambiguous").length ?? 0;
@@ -466,6 +500,7 @@ export async function runCli(
     const producerFailureCount = producerFailures.length;
     writeCliOutput(io, args.presentation, {
       kind: "plan",
+      limit: args.limit,
       machine: createPlanOutput({
         format: "hypit.cli-plan@1",
         ok: (preflight?.ok ?? true) && unresolvedRequestCount === 0

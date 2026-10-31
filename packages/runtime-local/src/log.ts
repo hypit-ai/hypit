@@ -5,7 +5,7 @@ import { readExecutionLog } from "@hypit/hypit/runtime";
 import type { ExecutionLogEvent, ExecutionLogRecord, ExecutionLogView } from "@hypit/hypit/runtime";
 
 export type LocalExecutionLogs = {
-  record(build: string, command: string, event: ExecutionLogEvent): Promise<void>;
+  record(build: string, request: ExecutionLogRecord["request"], event: ExecutionLogEvent): Promise<void>;
   open(build: string): Promise<AsyncIterable<Uint8Array> | undefined>;
   read(build: string, lines: number): Promise<ExecutionLogView | undefined>;
 };
@@ -24,8 +24,8 @@ export function fileExecutionLogs(workDirectory: (build: string) => string): Loc
     return (async function* () { yield* createReadStream(path(build)); })();
   };
   return {
-    async record(build, command, event) {
-      const record: ExecutionLogRecord = { ...event, format: "hypit.execution-log@1", time: Date.now(), command };
+    async record(build, request, event) {
+      const record: ExecutionLogRecord = { ...event, format: "hypit.execution-log@1", time: Date.now(), request };
       const write = (pending.get(build) ?? Promise.resolve()).then(async () => {
         await mkdir(workDirectory(build), { recursive: true });
         await appendFile(path(build), `${JSON.stringify(record)}\n`, "utf8");

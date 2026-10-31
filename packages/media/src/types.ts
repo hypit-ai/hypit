@@ -54,51 +54,42 @@ export type MediaDisposition = {
 
 type MediaStreamBase = {
   readonly index: number;
-  readonly codecType: string;
   readonly codecName: string;
   readonly disposition: MediaDisposition;
-  readonly timingStatus: "admissible" | "missing" | "non-monotonic" | "discontinuous";
-  readonly timeBase?: MediaRational;
   readonly startPts?: MediaTimestamp;
   readonly endPts?: MediaTimestamp;
-  readonly decodedUnitCount: number;
 };
 
 export type MediaVideoStream = MediaStreamBase & {
   readonly kind: "video";
-  readonly codecType: "video";
-  readonly role: "moving" | "attached-picture" | "still";
+  readonly decodedUnitCount: number;
   readonly width: number;
   readonly height: number;
   /** Coded-pixel width/height become display geometry only after resolving this ratio and rotation. */
   readonly sampleAspectRatio: MediaRational;
   readonly rotationDegrees: 0 | 90 | 180 | 270;
   readonly averageFrameRate?: MediaRational;
-  readonly nominalFrameRate?: MediaRational;
   readonly picture: PictureObservation;
 };
 
 export type MediaAudioStream = MediaStreamBase & {
   readonly kind: "audio";
-  readonly codecType: "audio";
   readonly sampleRate: number;
   readonly channels: number;
-  readonly channelLayout?: string;
   readonly decodedSampleFrames: number;
 };
 
 /** Subtitle, data, attachment and unknown streams remain visible instead of being discarded. */
 export type MediaOtherStream = MediaStreamBase & {
   readonly kind: "other";
+  /** Original ffprobe stream class for streams Hypit does not interpret. */
+  readonly codecType: string;
 };
 
 export type MediaStream = MediaVideoStream | MediaAudioStream | MediaOtherStream;
 
 /** Immutable observed facts about one exact media container. */
 export type MediaInspection = {
-  readonly container: {
-    readonly formatNames: readonly string[];
-  };
   readonly streams: readonly MediaStream[];
 };
 
@@ -133,11 +124,6 @@ export type PreparedAudioMember = {
   readonly sourceDomain: LocalTemporalDomain;
   /** Prepared-local to this member's source-presentation domain. */
   readonly map: TemporalMap;
-  readonly interpretation: {
-    readonly sampleRate: number;
-    readonly channels: number;
-    readonly channelLayout?: string;
-  };
 };
 
 /** Signal-specific terminal facts projected from PreparedMedia for visual execution. */
@@ -157,7 +143,6 @@ export type PreparedAudioSource = {
   /** Original presentation timestamp corresponding to source-domain zero. */
   readonly presentationStart: ExactTemporalValue;
   readonly sourceDomain: LocalTemporalDomain;
-  readonly interpretation: PreparedAudioMember["interpretation"];
 };
 
 /**
@@ -238,8 +223,6 @@ export type TimelineVisual = {
 /** Exact 48 kHz stereo PCM result of one explicit AudioProgram. */
 export type TimelineAudio = {
   readonly artifact: BlobRef;
-  readonly sampleRate: 48_000;
-  readonly channelLayout: "stereo";
   readonly sampleFrames: number;
 };
 
@@ -251,7 +234,6 @@ export type MuxedMedia = {
     readonly width: number;
     readonly height: number;
   };
-  readonly presentationSampleFrames: number;
   readonly delivery: MediaDeliverySpec;
   readonly artifact: BlobRef;
 };

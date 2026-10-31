@@ -18,7 +18,7 @@ htmlRegisterFrameProgramInitializer(() => {
         // every browser Worker from independently traversing the same video.
         // Studio has no frame selection and therefore keeps native playback.
         if (htmlRequestedFrameSpans !== null && attribute === 'src'
-          && element.matches('video[data-hypit-source-frame]')) continue;
+          && element.matches('video[data-hypit-video-source]')) continue;
         element.setAttribute(attribute, value);
         element.removeAttribute(deferred);
       }

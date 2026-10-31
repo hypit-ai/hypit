@@ -4,14 +4,15 @@ import {
   producerPackagesFromFacets,
   registerProducerFacets,
 } from "@hypit/producer";
+import type { ProducerExecutionLimits } from "@hypit/producer";
 import { evaluateProducerPlan, ProducerRegistry } from "@hypit/executor";
 import type { EvaluatedProducerStep } from "@hypit/executor";
 import type { PackageContribution } from "@hypit/loader";
-import { capabilityIdentity, capabilityKey, compareCodeUnits } from "@hypit/protocol";
-import type { BuildDefinition, CanonicalValue, CapabilityRef, ResultIntent, ValuePath } from "@hypit/protocol";
+import { capabilityIdentity, capabilityKey, compareCodeUnits, typeKey } from "@hypit/protocol";
+import type { BuildDefinition, CanonicalValue, CapabilityRef, ResultIntent } from "@hypit/protocol";
 import type { BuildView } from "@hypit/kernel";
 import type { CliBuildAuthoring, CliEndpointQuery, CliRuntimeInspection } from "./runtime-port.js";
-import type { PlanRequest, PricingRequest } from "./output.js";
+import type { PlanRequest, PlanRequestOutput, PricingRequest } from "./output.js";
 import { plannedNeeds } from "@hypit/kernel";
 import {
   refinementPackagesFromFacets,
@@ -58,26 +59,10 @@ export type PlanPricingView = PlanEndpointView & {
   readonly pricingError?: string;
 };
 
-export type PendingPlanInput = {
-  readonly input: string;
-  readonly record: string;
-  readonly sourceStep?: string;
-};
-
-export type NeedSummaryField = {
-  /** Exact path in the request value. Empty means the request itself is scalar. */
-  readonly at: ValuePath;
-  readonly value: string | number | boolean;
-};
-
-/** A bounded presentation of concrete scalar leaves, never a second request payload. */
-export type NeedSummary = readonly NeedSummaryField[];
-
 export type EvaluatedPlanNeed = {
   readonly status: "concrete" | "blocked" | "failed" | "unavailable";
   readonly constraints?: CanonicalValue;
-  readonly summary?: NeedSummary;
-  readonly pending: readonly PendingPlanInput[];
+  readonly pending: readonly string[];
   readonly issue?: string;
 };
 
@@ -91,60 +76,9 @@ export type EvaluatedPlan = {
   }[];
 };
 
-function scalarSummary(value: CanonicalValue): string | number | boolean | undefined {
-  if (typeof value === "number" || typeof value === "boolean") return value;
-  if (typeof value === "string") {
-    const display = value.replace(/\s+/gu, " ").trim();
-    const characters = [...display];
-    return characters.length <= 40 ? display : `${characters.slice(0, 39).join("")}…`;
-  }
-  return undefined;
-}
-
-type SummaryField = {
-  readonly at: ValuePath;
-  readonly value: string | number | boolean;
-};
-
-function collectSummaryFields(
-  value: CanonicalValue,
-  at: ValuePath,
-  fields: SummaryField[],
-): void {
-  const scalar = scalarSummary(value);
-  if (scalar !== undefined) {
-    fields.push({ at, value: scalar });
-    return;
-  }
-  if (Array.isArray(value)) {
-    for (const [index, item] of value.entries()) {
-      collectSummaryFields(item, [...at, index], fields);
-    }
-    return;
-  }
-  if (value === null || typeof value !== "object") return;
-  for (const [name, item] of Object.entries(value)) {
-    collectSummaryFields(item, [...at, name], fields);
-  }
-}
-
-/** Generic requests are projected structurally without recognizing domain envelopes or value kinds. */
-export function summarizeConstraints(constraints: CanonicalValue): NeedSummary {
-  const collected: SummaryField[] = [];
-  collectSummaryFields(constraints, [], collected);
-  return collected;
-}
-
-function pendingPlanInputs(step: EvaluatedProducerStep | undefined): readonly PendingPlanInput[] {
+function pendingPlanInputs(step: EvaluatedProducerStep | undefined): readonly string[] {
   if (step?.status !== "blocked") return [];
-  return step.dependencies.map((dependency): PendingPlanInput => {
-    const sourceStep = dependency.source.kind === "program-record" ? undefined : dependency.source.step;
-    return {
-      input: dependency.input,
-      record: dependency.record,
-      ...(sourceStep === undefined ? {} : { sourceStep }),
-    };
-  });
+  return step.dependencies.map((dependency) => dependency.input);
 }
 
 /**
@@ -154,6 +88,7 @@ function pendingPlanInputs(step: EvaluatedProducerStep | undefined): readonly Pe
 export async function evaluatePlanNeeds(
   definition: BuildDefinition,
   contributions: readonly PackageContribution[],
+  producerExecutionLimits?: ProducerExecutionLimits,
 ): Promise<EvaluatedPlan> {
   const producers = new ProducerRegistry();
   const refinements = new RefinementRegistry();
@@ -166,7 +101,12 @@ export async function evaluatePlanNeeds(
       registerTypeRefinements(refinements, item);
     }
   }
-  const evaluation = await evaluateProducerPlan(definition, producers, refinements);
+  const evaluation = await evaluateProducerPlan(
+    definition,
+    producers,
+    refinements,
+    producerExecutionLimits,
+  );
   const state = evaluation.state;
   const known = new Map(state.needs.map((need) => [need.id, need]));
   const evaluatedSteps = new Map(evaluation.steps.map((step) => [step.step, step]));
@@ -179,7 +119,6 @@ export async function evaluatePlanNeeds(
       result.set(planned.need, {
         status: "concrete",
         constraints: need.constraints,
-        summary: summarizeConstraints(need.constraints),
         pending: [],
       });
       continue;
@@ -355,8 +294,7 @@ function describeRequests(
         ...(endpoint.binding === undefined ? {} : { binding: endpoint.binding }),
       }),
       ...(endpoint?.endpoint === undefined ? {} : { endpoint: endpoint.endpoint }),
-      ...(found.summary === undefined ? {} : { summary: found.summary }),
-      pending: found.pending.map((item) => item.input),
+      pending: found.pending,
       ...(found.issue === undefined ? {} : { issue: found.issue }),
     };
   });
@@ -368,6 +306,33 @@ export function describePlanRequests(
   endpoints: readonly PlanEndpointView[],
 ): readonly PlanRequest[] {
   return describeRequests(state, evaluated, endpoints);
+}
+
+/** Focus one request without making its execution payload part of the ordinary plan projection. */
+export function describePlanRequest(
+  source: string,
+  ordinal: number,
+  state: BuildView,
+  evaluated: EvaluatedPlan,
+  endpoints: readonly PlanEndpointView[],
+): PlanRequestOutput {
+  const planned = plannedNeeds(state);
+  const selected = planned[ordinal - 1];
+  if (selected === undefined) {
+    throw new Error(`request ${ordinal} is outside this plan of ${planned.length} requests`);
+  }
+  const request = describeRequests(state, evaluated, endpoints)[ordinal - 1]!;
+  const found = evaluated.needs.get(selected.need);
+  if (found === undefined) throw new Error(`planned request ${selected.need} has no evaluation result`);
+  return {
+    format: "hypit.cli-plan-request@1",
+    source,
+    ordinal,
+    requestCount: planned.length,
+    returns: typeKey(selected.returns),
+    ...request,
+    ...(found.constraints === undefined ? {} : { constraints: found.constraints }),
+  };
 }
 
 export function describePricingRequests(

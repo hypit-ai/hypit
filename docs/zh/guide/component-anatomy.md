@@ -5,7 +5,7 @@ description: 将场景的创作接口变成可复用的项目组件。
 
 组件把作者面对的创作想法与具体实现连接起来。对于榜单，这个想法可以是“说到每个候选时介绍它，再让图标移动到对应排名位置”。输入表达这些关系，代码完成绘制和运动。
 
-[添加作者包](./author-packages.md) 提供完整可构建的起点。[Ranking](https://github.com/hypit-ai/hypit/blob/main/packages/ranking/README.md) 则展示更丰富的语义事件、持久视觉状态和 Studio Companion。
+[添加作者包](./author-packages.md) 提供完整可构建的起点。[Ranking](https://github.com/hypit-ai/hypit/blob/main/packages/ranking/README.md) 则展示更丰富的语义事件和持久视觉状态。
 
 ## 从作者面对的行为开始
 
@@ -30,4 +30,4 @@ HTML/CSS 或元素树协调视频、文字、遮罩和图形。共享行为的�
 
 具体视频的文案和媒体作为输入。组件绘制自己的图形结构，也可以携带可复用字体或图标等资源。示例 Source 展示关键状态，包括换内容或改变事件时间后的行为。
 
-包的 README 与 vocabulary 帮助作者选择和使用组件。Studio Companion 可以为含义明确的 Source 值添加编辑手柄。新的视觉行为在组件包内实现；图需要外部执行时，由 Provider 完成。
+包的 README 与 vocabulary 帮助作者选择和使用组件。新的视觉行为在组件包内实现；图需要外部执行时，由 Provider 完成。

@@ -11,7 +11,7 @@ const input = (name: string) => ({ kind: "fragment-input" as const, name });
 const operation = (id: string) => ({ kind: "fragment-operation" as const, operation: id });
 
 function assertTrackInputs(tracks: readonly FilmTrackInput[]): FilmTrackInput[] {
-  const names = new Set(["program", "canvas", "timeline"]);
+  const names = new Set(["assembly", "canvas", "timeline"]);
   return [...tracks]
     .map((track) => ({ name: track.name.trim(), kind: track.kind }))
     .map((track) => {
@@ -52,7 +52,7 @@ export function createFilmAssemblyFragment(options: FilmAssemblyFragmentOptions)
     id: "film:composition",
     producer: filmProducers.compileComposition,
     inputs: {
-      program: input("program"),
+      assembly: input("assembly"),
       canvas: input("canvas"),
       timeline: input("timeline"),
       set: operation(current),
@@ -61,7 +61,7 @@ export function createFilmAssemblyFragment(options: FilmAssemblyFragmentOptions)
   });
   return sealGraphFragment({
     inputs: [
-      { name: "program", type: filmTypes.program },
+      { name: "assembly", type: filmTypes.assembly },
       { name: "canvas", type: spatialTypes.canvas },
       { name: "timeline", type: timelineTypes.timeline },
       ...tracks.map((track) => ({

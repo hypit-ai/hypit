@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import type { CompiledAuthorSource } from "@hypit/compiler";
+import type { ProjectedCompiledAuthorSource } from "@hypit/compiler";
 import type { StudioPlacement } from "@hypit/studio-companion";
 
 import { observedCompiledSource } from "../src/compile.js";
@@ -32,12 +32,12 @@ function placement(sourcePath: string): StudioPlacement {
 
 test("Studio joins repeated local names through compiler-owned provenance", async () => {
   const element = (source: string, output: string) => ({
-    id: `${source}::element::10:20`, source, sourceName: source, frontend: "@hypit/markup@1",
-    range: { start: 10, end: 20 }, records: [], components: [{ local: "track", id: `${source}::component::track` }],
+    id: `${source}::element::10:20`, sourceName: source,
+    range: { start: 10, end: 20 }, records: [],
     outputs: [{ component: `${source}::component::track`, name: "visual", local: "visual", id: output }],
-    inputs: [{ id: `${source}::endpoint::10:id`, name: "id", range: { start: 14, end: 19 }, kind: "literal" as const }],
+    inputs: [{ id: `${source}::endpoint::10:id`, name: "id" }],
   });
-  const compiled: CompiledAuthorSource = {
+  const compiled: ProjectedCompiledAuthorSource = {
     closure: { entry: "a.svml", units: [] },
     program: { closure: { format: "hypit.closure@1", modules: [] }, records: [] },
     graph: {

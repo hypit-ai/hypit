@@ -34,9 +34,7 @@ export type RuntimeHostBuildSubmission = RuntimeHostActiveBuildSubmission | Runt
 export type BuildActivity = "submitting" | "ready" | "running" | "waiting" | "saving-result";
 
 type BuildOperationViewEvidence = {
-  readonly id: string;
   readonly receipt?: import("@hypit/hypit/runtime").OperationReceipt;
-  readonly wakeAt?: number;
   readonly endpoint: string;
   readonly progress?: OperationSnapshot["progress"];
 };
@@ -49,7 +47,6 @@ export type BuildOperationView = BuildOperationViewEvidence & (
 /** Stable Host view. Runtime persistence records never cross this boundary. */
 export type BuildView = {
   readonly id: string;
-  readonly createdAt: number;
   readonly activity: BuildActivity;
   readonly outcome?: BuildCompletion["outcome"];
   readonly issue?: { readonly scope: "result" | "cleanup"; readonly message: string };
@@ -58,12 +55,9 @@ export type BuildView = {
   readonly targets: readonly string[];
   /** External Needs in the frozen Build Plan and the subset already accepted by Core. */
   readonly requests?: { readonly total: number; readonly completed: number };
-  readonly acceptedRecords: number;
-  readonly outstandingCommands: number;
   readonly operations: readonly BuildOperationView[];
   /** Activity reported by calls running in the local Worker. */
   readonly commands?: readonly {
-    readonly id: string;
     readonly endpoint: string;
     readonly progress: NonNullable<OperationSnapshot["progress"]>;
   }[];
@@ -207,6 +201,10 @@ export type RuntimeWorkerLaunch = {
 
 export type LocalRuntimeHost = {
   readonly profile: string;
+  /** Profile execution policy consumed by CLI Producer planning before submission. */
+  planningPolicy(): Promise<{
+    readonly producerExecutionLimits?: NonNullable<ExecutorOptions["producerExecutionLimits"]>;
+  }>;
   executionStatus(): Promise<{ readonly state: "running" | "stopped" }>;
   ensureExecution(options?: { readonly maxWaitMs?: number }): Promise<{ readonly state: "running" | "stopped" }>;
   resolvePaths(): Promise<{

@@ -67,9 +67,10 @@ class CapacityExecutor implements RuntimeCommandExecutor {
     context: { readonly build: string },
   ): Promise<RuntimeExecutionResult> {
     const store = this.#options.stores.executions;
-    const recordExecution = this.#options.executionLogs === undefined ? {} : {
+    const request = descriptor.command.kind === "fulfill-need" ? descriptor.command.need.id : undefined;
+    const recordExecution = this.#options.executionLogs === undefined || request === undefined ? {} : {
       recordExecution: (event: import("@hypit/hypit/runtime").ExecutionLogEvent) =>
-        this.#options.executionLogs!.record(context.build, descriptor.command.id, event),
+        this.#options.executionLogs!.record(context.build, request, event),
     };
     const execute = (executionContext: import("@hypit/hypit/runtime").RuntimeExecutionContext) =>
       this.#delegate.executeCommand(execution, descriptor, executionContext);
@@ -255,7 +256,7 @@ class DurableLocalWorker {
           if (operation.status === "queued" || operation.status === "submitting"
             || operation.status === "running" || operation.status === "collecting") {
             const cancelled = await this.#executor.cancelOperation?.(operation);
-            if (cancelled !== undefined) await this.#options.executionLogs?.record(operation.build, operation.command, {
+            if (cancelled !== undefined) await this.#options.executionLogs?.record(operation.build, operation.need.id, {
               endpoint: operation.endpoint, kind: "diagnostic", level: "info",
               message: `Cancellation: ${cancelled.status === "cancelled" ? cancelled.cancellation.outcome : "unsupported"}${
                 cancelled.status !== "cancelled" || cancelled.cancellation.message === undefined ? "" : `; ${cancelled.cancellation.message}`}`,
@@ -340,7 +341,7 @@ class DurableLocalWorker {
               build: operation.build,
               ...(this.#options.executionLogs === undefined ? {} : {
                 recordExecution: (event: import("@hypit/hypit/runtime").ExecutionLogEvent) =>
-                  this.#options.executionLogs!.record(operation.build, operation.command, event),
+                  this.#options.executionLogs!.record(operation.build, operation.need.id, event),
               }),
             });
             if (result.status !== "submitting" && result.status !== "running") {

@@ -1,6 +1,6 @@
 export { CompilerError } from "./error.js";
-export { compileSourceClosure, SourceClosureError } from "./source.js";
-export type { CompileSourceClosureRequest } from "./source.js";
+export { compileSourceClosure, defaultSourceCompilationLimits, SourceClosureError } from "./source.js";
+export type { CompileSourceClosureRequest, SourceCompilationLimits } from "./source.js";
 export {
   ModulePackageRegistry,
 } from "./modules.js";
@@ -12,13 +12,17 @@ export { Compiler } from "./compiler.js";
 export { BuildCompiler, resolveTargetSelection } from "./build.js";
 export type {
   CompilerOptions,
+  CompileAuthorSourceOptions,
   CompiledAuthorSource,
+  ProjectedCompiledAuthorSource,
 } from "./compiler.js";
 export type {
   BuildAuthorCompiler,
   BuildCompilerOptions,
   CompiledBuild,
+  PrepareBuildOptions,
   PreparedBuild,
+  ProjectedPreparedBuild,
   ResolvedTarget,
   ResolvedTargetSelection,
   TargetSelection,

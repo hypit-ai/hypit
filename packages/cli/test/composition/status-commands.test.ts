@@ -100,12 +100,9 @@ test("status --watch follows active execution, then reads its finished Result", 
   } as const;
   const view = () => ({
     id: "build-watch",
-    createdAt: 1,
     activity: "running" as const,
 
     targets: [],
-    acceptedRecords: 0,
-    outstandingCommands: 1,
     operations: [],
   });
   let statusReads = 0;
@@ -243,13 +240,10 @@ test("finished status defaults to the Result outcome without repeating internal 
 test("status separates execution from Result only while the Result is being saved", async () => {
   const view = {
     id: "build-saving",
-    createdAt: 1,
     activity: "saving-result" as const,
     outcome: "complete" as const,
 
     targets: ["final.video"],
-    acceptedRecords: 1,
-    outstandingCommands: 0,
     operations: [],
   };
   const distribution = cliDistribution({
@@ -277,15 +271,12 @@ test("status separates execution from Result only while the Result is being save
 test("status preserves Runtime decision and attention when its Result Store is unavailable", async () => {
   const view = {
     id: "build-result-unavailable",
-    createdAt: 1,
     activity: "saving-result" as const,
     outcome: "failed" as const,
     issue: { scope: "result" as "result" | "cleanup", message: "S3 unavailable" },
 
     targets: [],
-    acceptedRecords: 0,
-    outstandingCommands: 0,
-    operations: [{ id: "operation:failed", endpoint: "images.internal", status: "failed" as const,
+    operations: [{ endpoint: "images.internal", status: "failed" as const,
       failure: { code: "REMOTE", message: "provider detail" } }],
   };
   const control = runtimeControl({
@@ -449,8 +440,8 @@ test("cancelling a completed Build reports that no cancellation was requested", 
 test("cancelling an already failed execution preserves and reports its stop reason", async () => {
   const stop = { cause: "execution-failed", reason: "Original execution failure" } as const;
   const active = {
-    id: "build-stopping", createdAt: 1, activity: "waiting", stop,
-    targets: [], acceptedRecords: 0, outstandingCommands: 0, operations: [],
+    id: "build-stopping", activity: "waiting", stop,
+    targets: [], operations: [],
   } as const;
   const control = runtimeControl({ async cancel() { return active; }, async close() {} });
   const distribution = cliDistribution({
@@ -478,8 +469,8 @@ test("a stopped Worker ends observation with scoped evidence commands, not a Res
     openRuntimeHost: async () => ({
       openControl: async () => ({
         inspect: async () => ({
-          id: "waiting-build", createdAt: Date.now(), activity: "waiting",
-          targets: [], acceptedRecords: 0, outstandingCommands: 1, operations: [],
+          id: "waiting-build", activity: "waiting",
+          targets: [], operations: [],
         }),
         close() { closed = true; },
       }),

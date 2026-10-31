@@ -2,7 +2,6 @@ import type {
   AudioLevelAutomation,
   AudioProcessProgram,
   AudioReconstructionProgram,
-  AudioSignalRef,
 } from "@hypit/composition";
 import type { MediaRational, PreparedAudioSource } from "@hypit/media";
 import type { FrameSpan } from "@hypit/timeline";
@@ -19,46 +18,37 @@ export type AudioProgramClip = AudioLevelAutomation & {
   readonly reconstruction?: AudioReconstructionProgram;
   /** Exact absolute programme range; sample boundaries are its 48 kHz projection. */
   readonly target: TemporalRange;
-  readonly targetStartSample: number;
-  readonly targetEndSampleExclusive: number;
-  /** Complete owning Clip Window; fades do not restart at sampling-piece boundaries. */
-  readonly mixStartSample: number;
-  readonly mixEndSampleExclusive: number;
   readonly gain: number;
   readonly fadeInSamples: number;
   readonly fadeOutSamples: number;
 };
 
+/** A node reference inside the closed AudioProgram graph. Every node has one signal output. */
+export type AudioProgramSignalRef = {
+  readonly node: string;
+};
+
 export type AudioProgramNode =
   | { readonly kind: "silence"; readonly id: string }
   | { readonly kind: "source"; readonly id: string; readonly clip: AudioProgramClip }
-  | { readonly kind: "mix"; readonly id: string; readonly inputs: readonly AudioSignalRef[] }
+  | { readonly kind: "mix"; readonly id: string; readonly inputs: readonly AudioProgramSignalRef[] }
   | {
       readonly kind: "process";
       readonly id: string;
-      readonly inputs: Readonly<Record<string, AudioSignalRef>>;
+      readonly inputs: Readonly<Record<string, AudioProgramSignalRef>>;
       readonly program: AudioProcessProgram;
     };
 
 export type AudioProgramGraph = {
   readonly nodes: readonly AudioProgramNode[];
-  readonly output: AudioSignalRef;
+  readonly output: AudioProgramSignalRef;
 };
 
 /** Pure, provider-independent executable audio DAG lowered from one AudioComposition. */
 export type AudioProgram = {
   readonly frameRate: MediaRational;
   readonly frameCount: number;
-  readonly sampleRate: 48_000;
-  readonly sampleFrames: number;
   readonly graph: AudioProgramGraph;
-};
-
-/** One gain-only route through an AudioProgram, used by endpoints with a flat additive evaluator. */
-export type AudioProgramGainRoute = {
-  readonly id: string;
-  readonly clip: AudioProgramClip;
-  readonly gain: number;
 };
 
 export type RenderAudioNeed = {

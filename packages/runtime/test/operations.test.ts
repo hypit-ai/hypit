@@ -9,7 +9,6 @@ const queued: OperationSnapshot = {
   build: "build:test",
   command: "command:test",
   endpoint: "endpoint:test",
-  createdAt: 1,
   need: {
     id: "need:test",
     capability: { module: { name: "test", version: "1" }, name: "generate" },

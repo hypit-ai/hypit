@@ -18,27 +18,23 @@ function view(
 ): CliBuildView {
   return {
     id: "bld_20260903T000000000Z_0000000000",
-    createdAt: Date.now(),
     activity,
 
     targets: ["final.video"],
     requests: { total: pending + completed, completed },
-    acceptedRecords: 0,
-    outstandingCommands: pending,
     operations: [
-      ...Array.from({ length: pending }, (_, index) => ({
-        id: `pending-${index}`,
+      ...Array.from({ length: pending }, () => ({
         endpoint: "images.default",
         status: "pending" as const,
         progress: { phase: "generating" },
       })),
-      ...Array.from({ length: completed }, (_, index) => ({ id: `completed-${index}`, endpoint: "images.default", status: "completed" as const })),
+      ...Array.from({ length: completed }, () => ({ endpoint: "images.default", status: "completed" as const })),
     ],
   };
 }
 
 test("local command activity appears without verbose and wakes observation when frame counts change", () => {
-  const initial = { ...view("running", 0, 0), commands: [{ id: "render", endpoint: "local.example",
+  const initial = { ...view("running", 0, 0), commands: [{ endpoint: "local.example",
     progress: { phase: "drawing", completed: 40, total: 100, unit: "frames" } }] };
   const advanced = { ...initial, commands: [{ ...initial.commands[0]!,
     progress: { ...initial.commands[0]!.progress, completed: 60 } }] };
@@ -73,7 +69,7 @@ test("Build observation ignores Worker turn churn and coalesces rapid real progr
     { generating: 7 },
   ]);
   assert.deepEqual(buildProgressLines(
-    buildProgressView({ ...running, createdAt: 1_000 }, 32_000),
+    buildProgressView({ ...running, id: "bld_19700101T000001000Z_0000000000" }, 32_000),
     { verbose: false, limit: 20 },
   ), [
     "  · Working · 0/7 steps complete · 7 generating · 31s",

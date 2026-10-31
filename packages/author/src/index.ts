@@ -89,6 +89,7 @@ export type {
   AuthorRecordRefiner,
   Awaitable,
   CompiledSourceClosure,
+  ProjectedCompiledSourceClosure,
   CompiledRetainedOutput,
   CompiledSourceExport,
   DecodedAuthorSource,

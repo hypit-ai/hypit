@@ -20,7 +20,6 @@ export const audioProgramProducers = {
 const integer = { kind: "number", integer: true, minimum: 0 } as const;
 const signalRef: ValueSchema = { kind: "object", fields: {
   node: { schema: { kind: "string", minLength: 1 } },
-  port: { schema: { kind: "literal", value: "signal" } },
 } };
 const programClip: ValueSchema = {
   kind: "object",
@@ -34,10 +33,6 @@ const programClip: ValueSchema = {
       start: { schema: exactTemporalValueSchema },
       end: { schema: exactTemporalValueSchema },
     } } },
-    targetStartSample: { schema: integer },
-    targetEndSampleExclusive: { schema: { kind: "number", integer: true, minimum: 1 } },
-    mixStartSample: { schema: integer },
-    mixEndSampleExclusive: { schema: { kind: "number", integer: true, minimum: 1 } },
     gain: { schema: { kind: "number", minimum: 0 } },
     fadeInSamples: { schema: integer },
     fadeOutSamples: { schema: integer },
@@ -75,8 +70,6 @@ export const audioProgramSchema: ValueSchema = {
       denominator: { schema: { kind: "number", integer: true, minimum: 1 } },
     } } },
     frameCount: { schema: { kind: "number", integer: true, minimum: 1 } },
-    sampleRate: { schema: { kind: "literal", value: 48_000 } },
-    sampleFrames: { schema: { kind: "number", integer: true, minimum: 1 } },
     graph: { schema: { kind: "object", fields: {
       nodes: { schema: { kind: "array", minItems: 1, items: programNode } },
       output: { schema: signalRef },

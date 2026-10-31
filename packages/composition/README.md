@@ -51,7 +51,7 @@ The exported `VisualElement` union covers `mask`, `text`, `text-flow`, `path-tex
 `video`, `surface` and `program`. Text carries exact FontArtifactRef values. Every image carries a BlobRef
 and complete `PictureInterpretation`; video carries a selected `PreparedVisualSource` with the same
 picture semantics plus its local temporal facts; `surface` carries a CompositableSurfaceRef with its
-declared picture interpretation. The schema and exported TypeScript types in `src/track.ts`
+declared picture interpretation. The schema and exported TypeScript types in `src/types.ts`
 give each shape. `hypit vocabulary --visual visual-track` and focused element queries expose those
 schemas through the installed Distribution.
 

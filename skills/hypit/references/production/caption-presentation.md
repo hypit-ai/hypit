@@ -41,7 +41,7 @@ caption can use a project family with its own layout and behavior.
 [Timing](timing.md) owns the shared expressions and semantic references.
 Use semantic boundaries when the treatment follows what is being said. Absolute times remain useful
 for an explicitly timed presentation. A Role filters whose content is presented, independently of the
-window: it can cover several turns and does not change the Window shown in Studio.
+window: it can cover several turns and does not change the authored Window.
 
 The last matching Use in Source order wins locally. Each match replaces the whole Style; properties
 are not merged. A hidden Use clears this Track's subtitle presentation throughout that window,
@@ -65,8 +65,7 @@ not restart the Cue's animation clock. Changing only one word's visual role is a
 choice: Fine provides current/trail unit emphasis, while a custom family can interpret authored word
 attributes for structural layouts. Display/pronunciation units remain complete.
 
-In Studio, Caption's timeline row shows Cue Items. Presentation Uses remain Inspector objects rather
-than draggable timeline ranges: their referenced Style or Recipe can be edited there, while their
-Scope and Role explain which Cues they affect. Changing `||` changes Cue structure; changing a Use
-does not. Inspect the resulting placement, handoffs and emphasis alongside the other visuals while
-reusing the existing media.
+Presentation Uses select Style and scope; they are not additional Timeline ranges. Their Scope and
+Role explain which Cues they affect. Changing `||` changes Cue structure; changing a Use does not.
+Inspect the resulting placement, handoffs and emphasis alongside the other visuals while reusing the
+existing media.

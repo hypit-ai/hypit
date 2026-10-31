@@ -118,8 +118,7 @@ test("isolated Builds load fresh transitive code and Profile choices, share capa
   });
   const value = async (directory: string, id: string) => {
     const output = await new FileBuildResultStore(join(directory, "results")).resolve(id, "document");
-    assert.equal(output?.value.kind, "value");
-    return output?.value.kind === "value" ? output.value.document.value : undefined;
+    return output?.value;
   };
   try {
     const pkg = await packageAt(project, "old");

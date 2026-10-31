@@ -25,9 +25,7 @@ function playbackVideoPlan(program: HtmlProgram | undefined): readonly PlaybackV
     if (source.kind === "media" && source.source.streamIndex !== 0) {
       throw new Error(`Browser playback cannot select visual stream ${source.source.streamIndex} for ${source.id}; use a renderer that executes the HtmlProgram source plan`);
     }
-    const evaluateSampling = source.kind === "media"
-      ? createTemporalMapEvaluator(source.sampling)
-      : undefined;
+    const evaluateSampling = createTemporalMapEvaluator(source.sampling);
     let timestamps = plans.get(source.elementId);
     if (timestamps === undefined) {
       timestamps = Array.from({ length: program.frameCount }, () => null);
@@ -35,23 +33,21 @@ function playbackVideoPlan(program: HtmlProgram | undefined): readonly PlaybackV
     }
     for (let frame = source.startFrame; frame < source.endFrameExclusive; frame += 1) {
       let seconds: number | undefined;
-      if (source.kind === "media") {
-        const mapped = evaluateSampling!(exactTemporalValueFromFrames(frame - source.startFrame, program), "after");
-        if (mapped !== undefined) {
+      const mapped = evaluateSampling(exactTemporalValueFromFrames(frame - source.startFrame, program), "after");
+      if (mapped !== undefined) {
+        if (source.kind === "media") {
           const absolute = exactTemporalRational(addExactTemporalValues(source.source.presentationStart, mapped.position));
           seconds = Number(absolute.numerator) / Number(absolute.denominator);
-        }
-      } else {
-        const a = source.sourceFrame;
-        const r = source.sourceRate;
-        const numerator = BigInt(a.numerator) * BigInt(r.denominator)
-          + BigInt(frame - source.startFrame) * BigInt(r.numerator) * BigInt(a.denominator);
-        const denominator = BigInt(a.denominator) * BigInt(r.denominator);
-        let ordinal = numerator / denominator;
-        if (r.numerator < 0 && numerator % denominator === 0n) ordinal -= 1n;
-        if (ordinal >= 0n) {
-          seconds = (Number(ordinal) + 0.5) * source.sourceFrameRate.denominator
-            / source.sourceFrameRate.numerator;
+        } else {
+          const position = exactTemporalRational(mapped.position);
+          const numerator = position.numerator * BigInt(source.sourceFrameRate.numerator);
+          const denominator = position.denominator * BigInt(source.sourceFrameRate.denominator);
+          let ordinal = numerator / denominator;
+          if (mapped.sourceSide === "before" && numerator % denominator === 0n) ordinal -= 1n;
+          if (ordinal >= 0n) {
+            seconds = (Number(ordinal) + 0.5) * source.sourceFrameRate.denominator
+              / source.sourceFrameRate.numerator;
+          }
         }
       }
       if (seconds === undefined) continue;
@@ -100,26 +96,18 @@ function shim(videoPlan: readonly PlaybackVideoPlan[]): string {
     root.style.height = (root.getAttribute('data-hypit-height') || '0') + 'px';
   }
 
-  // Sampling runs are separate video elements with their own absolute spans.
-  // Addressing only their containing Present makes every run paint at once.
   var media = [];
   for (var element of document.querySelectorAll('.hypit-visual-present video')) {
     var plane = element.closest && element.closest('[data-hypit-media-display-plane]');
     var plan = directMediaPlans.get(plane ? plane.id : element.id);
     var timestamps = plan && plan.timestamps;
-    var sourceFrame = element.getAttribute('data-hypit-source-frame');
-    var sourceRate = element.getAttribute('data-hypit-source-rate');
-    var sourceFps = element.getAttribute('data-hypit-source-fps');
-    if (!timestamps && (!sourceFrame || !sourceRate || !sourceFps)) continue;
+    if (!timestamps) continue;
     media.push({
       element: element,
       url: element.getAttribute('data-hypit-src'),
       startFrame: plan ? plan.startFrame : Number(element.getAttribute('data-hypit-start-frame')),
       endFrame: plan ? plan.endFrameExclusive : Number(element.getAttribute('data-hypit-end-frame')),
-      timestamps: timestamps,
-      sourceFrame: timestamps ? undefined : sourceFrame.split('/').map(BigInt),
-      sourceRate: timestamps ? undefined : sourceRate.split('/').map(BigInt),
-      sourceFps: timestamps ? undefined : sourceFps.split('/').map(Number)
+      timestamps: timestamps
     });
   }
   var audioContext;
@@ -248,21 +236,8 @@ function shim(videoPlan: readonly PlaybackVideoPlan[]): string {
   // Source time (seconds, decoded-frame centre) that a visual record shows at
   // one Program frame. A hold stays on its authored source frame.
   function sourceTarget(record, programFrame) {
-    if (record.timestamps) return record.timestamps[programFrame - record.startFrame];
-    var sourceFrame;
-    if (record.sourceRate[0] === 0n) sourceFrame = Number(record.sourceFrame[0] / record.sourceFrame[1]);
-    else {
-      var a = record.sourceFrame, r = record.sourceRate;
-      var sourceNumerator = a[0] * r[1] + BigInt(programFrame - record.startFrame) * r[0] * a[1];
-      var sourceDenominator = a[1] * r[1];
-      var sourceOrdinal = sourceNumerator / sourceDenominator;
-      // A reverse relation owns the interval immediately to an exact
-      // boundary's left. Match offline Surface sampling instead of letting
-      // BigInt truncation silently choose the following frame.
-      if (r[0] < 0n && sourceNumerator % sourceDenominator === 0n && sourceOrdinal > 0n) sourceOrdinal -= 1n;
-      sourceFrame = Number(sourceOrdinal);
-    }
-    var target = (sourceFrame + 0.5) * record.sourceFps[1] / record.sourceFps[0];
+    var target = record.timestamps[programFrame - record.startFrame];
+    if (target === null || target === undefined) return target;
     var element = record.element;
     if (Number.isFinite(element.duration) && element.duration > 0) {
       target = Math.min(target, Math.max(0, element.duration - 0.001));
@@ -294,14 +269,13 @@ function shim(videoPlan: readonly PlaybackVideoPlan[]): string {
         else cancelSeek(element);
         continue;
       }
-      var directNext = record.timestamps && programFrame + 1 < record.endFrame
+      var directNext = programFrame + 1 < record.endFrame
         ? sourceTarget(record, programFrame + 1) : undefined;
       var directRate = directNext === undefined || directNext === null ? 0 : (directNext - target) * fps;
       // A hold remains one compact target interval. Its exact zero source rate
       // cannot be assigned to HTMLMediaElement.playbackRate, so keep the native
       // decoder paused at the authored source frame instead.
-      if (scrubbing || (record.timestamps ? directRate <= 0 : record.sourceRate[0] <= 0n)
-        || programFrame === record.endFrame - 1) {
+      if (scrubbing || directRate <= 0 || programFrame === record.endFrame - 1) {
         element.style.visibility = 'visible';
         element.pause();
         waits.push(seekDecoded(element, target));
@@ -322,8 +296,7 @@ function shim(videoPlan: readonly PlaybackVideoPlan[]): string {
       cancelSeek(element);
       if (element.readyState === 0) continue;
       if (!element.seeking && Math.abs(element.currentTime - target) > 0.08) element.currentTime = target;
-      element.playbackRate = record.timestamps ? directRate
-        : Number(record.sourceRate[0]) / Number(record.sourceRate[1]) * fps * record.sourceFps[1] / record.sourceFps[0];
+      element.playbackRate = directRate;
       if (element.paused) {
         var started = element.play();
         if (started) started.catch(function () {});

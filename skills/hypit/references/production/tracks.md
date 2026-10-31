@@ -14,6 +14,7 @@ shared inputs.
 | Supply independent writing | [Typography/Text](fonts-and-text.md) | package-owned VisualTrack |
 | Apply color, blur, opacity or affine treatment to an accumulated picture | Visual Adjustment with a package-owned treatment inside the intended Film Stack | VisualTrack |
 | Hand off between two adjacent overlapping Visual Clips | Visual Transition with a package-owned effect | VisualTrack |
+| Place several completed VisualTracks at one ordered Film position | Visual Combine | VisualTrack |
 | Close several sound contributions with explicit gain | [Audio Clip](audio-clips.md#combine-closed-audio-contributions) | AudioTrack |
 | Coordinate continuing sources, cross-Track or visual/audio transitions, ducking, layout or state | [Project component](track-authoring.md) | declared VisualTrack and/or AudioTrack |
 
@@ -44,10 +45,18 @@ event.
 
 Film receives Canvas, Timeline and each selected visual/audio output. Components establish their
 local picture programmes; the parent Film scope establishes order between complete visual
-contributions through named `id`/`z` memberships. Film Stack closes a local group of VisualTracks
-when that composite needs one shared treatment. Audio remains outside visual Stacks; combine it into
-a closed AudioTrack before Film when shared gain or routing is required. Include picture and sound
-explicitly, and select one intended route for each audible source.
+contributions through named memberships whose declaration order is the complete paint order. The
+member `id` addresses one occurrence and never acts as a second ordering field. Film Stack closes a
+local group of VisualTracks when that composite needs one shared treatment. Audio remains outside
+visual Stacks; combine it into a closed AudioTrack before Film when shared gain or routing is required.
+Include picture and sound explicitly, and select one intended route for each audible source.
+
+When several independently authored VisualTracks share one continuing picture responsibility and
+one Film paint position, use `@hypit/visual-combine`. Its `Use` order concatenates their complete
+Item programmes from back to front. Sources may overlap; later Uses then paint above earlier Uses.
+It does not reorder by Window, infer a transition or close a Picture scope. Wrapping the combined
+Track in one Film Stack has the same Picture result as placing the source Tracks in that Stack in
+the same order; use that boundary when their Adjustments must not reach the parent picture.
 
 [Rendering](rendering.md#assemble-the-picture-and-sound) shows Film assembly and delivery.
 [Review](review.md) judges the resulting picture, performance and complete mix.

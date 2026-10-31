@@ -37,14 +37,12 @@ Style 一类声明在裸作者 id 下公开其值，例如 `style={board-style}`
 
 preview Source 为作者提供可打开或渲染的小例子。查看能说明行为的状态：进入、关键变化、停留布局和退出。也要在实际编排中查看，这时内容、空间和时机才有具体用途。
 
-需要更丰富的交互编辑时，可以添加 Studio Companion。[Companion SDK](https://github.com/hypit-ai/hypit/blob/main/packages/studio-companion/README.md) 介绍如何公开时间线 Item、属性和 Source 绑定。绘制代码和 Companion 是同一个包中分别提供的贡献。
-
 ## 使用与分享
 
 在 Source 中导入已安装组件的逻辑 Module：
 
 ```svml
-<import as="mine" from="@your-studio/my-component@1"/>
+<import as="mine" from="@your-scope/my-component@1"/>
 ```
 
 将它声明的元素与输出用于编排。`hypit vocabulary` 展示作者接口，`hypit check` 检查 Author Source。组件 README 应包含可复制示例、输出、实用的创作选择和行为示意图。
@@ -55,4 +53,4 @@ preview Source 为作者提供可打开或渲染的小例子。查看能说明�
 
 [复杂口播示例](https://github.com/hypit-ai/hypit/tree/main/examples/complex-explainer) 将主持人变场、独立字幕、网页演示和多个协同动效场景组合成完整作品。项目说明把每种修改指向负责它的 Source、Recipe 或组件包。它区分了三件事：划分组件职责、开放有用参数、为真实需求设计复用。已接受素材作为项目资源并由 Author Source 显式选择，显式 Target 可以直接打开并渲染这份编排，无需重新请求生成。
 
-可以直接[观看最终成片](https://storage.googleapis.com/hypit-public-assets/assets/examples/complex-explainer/v1/20260914/final.mp4)，也可以按照示例中的下载说明取得素材包，在 Studio 中打开完整作品。
+可以直接[观看最终成片](https://storage.googleapis.com/hypit-public-assets/assets/examples/complex-explainer/v1/20260914/final.mp4)，也可以按照示例中的下载说明取得素材包，检查并复用其中已接受的素材。

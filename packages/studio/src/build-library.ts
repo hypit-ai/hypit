@@ -1,7 +1,7 @@
-import { buildResultOutput, fileReferenceIdentity } from "@hypit/hypit/result/node";
+import { buildResultOutput } from "@hypit/hypit/result/node";
 import { isAbsolute, relative, resolve, sep } from "node:path";
 
-import { buildIdCreatedAt } from "@hypit/hypit/protocol";
+import { buildIdCreatedAt, isBlobRef } from "@hypit/hypit/protocol";
 import type {
   BuildResult,
   BuildResultFileRange,
@@ -66,7 +66,7 @@ function taskView(
   const detail = view.issue?.message ?? view.stop?.reason;
   return {
     id: view.id,
-    createdAt: view.createdAt,
+    createdAt: buildIdCreatedAt(view.id)!,
     ongoing: true,
     status: taskStatus(view),
     ...(detail === undefined ? {} : { detail }),
@@ -110,20 +110,17 @@ async function artifactsForResults(
   const nested = await Promise.all(manifests.flatMap((manifest) =>
     Object.entries(manifest.outputs).map(async ([output, entry]): Promise<StudioArtifactView[]> => {
       // Value-document Outputs remain intact. Listing media never opens their documents.
-      if (entry.value.kind !== "build-file") return [];
-      const description = { representation: "file" as const, mediaType: entry.value.mediaType, size: entry.value.size };
-      if (description?.representation !== "file" || !isMedia(description.mediaType)) return [];
-      if (media !== undefined && !description.mediaType.startsWith(`${media}/`)) return [];
-      const file = entry.value;
+      if (entry.representation !== "file" || !isMedia(entry.mediaType)) return [];
+      if (media !== undefined && !entry.mediaType.startsWith(`${media}/`)) return [];
       const source = presentedPath(root, manifest.sourcePath);
       return [{
-        id: fileReferenceIdentity(manifest.id, file),
+        id: `${manifest.id}:${output}`,
         build: manifest.id,
         createdAt: buildIdCreatedAt(manifest.id)!,
         output,
-        filePath: file.path,
-        size: file.size,
-        mediaType: file.mediaType,
+        filePath: output,
+        size: entry.size,
+        mediaType: entry.mediaType,
         source,
         origins: [{
           build: manifest.id,
@@ -241,12 +238,12 @@ export async function openStudioBuildLibrary(
     async openArtifact(build, output) {
       const resolved = await results.resolve(build, output);
       if (resolved === undefined) return undefined;
-      if (resolved.value.kind !== "build-file" || !isMedia(resolved.value.mediaType)) return undefined;
-      const file = resolved.value;
+      if (!isBlobRef(resolved.value) || !isMedia(resolved.value.mediaType)) return undefined;
+      const resource = resolved.value;
       return {
-        mediaType: file.mediaType,
-        size: file.size,
-        open: async (range) => await results.openFile(build, file, range),
+        mediaType: resource.mediaType,
+        size: resource.size,
+        open: async (range) => await resolved.openResource(resource, range),
       };
     },
     async close() {

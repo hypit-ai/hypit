@@ -44,7 +44,7 @@ Keep these locations distinct:
 | Host state / Program Home | Machine-level prepared packages and helpers, reported by `hypit paths` |
 | Project `.hypit/results` | Finished Results and Outputs owned by this project |
 
-The selection file and execution directory must be different paths. CLI, Studio and creation
+The selection file and execution directory must be different paths. CLI and creation
 commands address the same project context.
 Installed code, selected configuration and existing execution data remain separate.
 
@@ -77,7 +77,7 @@ are the actual requirements, not as a replacement for a production's existing Pr
 | `bindings` | Complete capability keys mapped to Endpoint instance names |
 | Endpoint `pool` | Optional identity of a real shared account, deployment or compute quota |
 | `dataRoot` | Where this Runtime keeps execution state; changing it selects different state |
-| Optional `worker.executionMemoryMb` | Memory budget available to each active Build; startup policy owned by the Runtime package |
+| Optional `worker.executionMemoryMb` | Soft RSS retirement threshold for the execution carrier; not a Build memory limit |
 
 Merge documentation fragments into the corresponding existing objects. Retain other services,
 credential references and bindings the project uses. A fragment without `format` and `dataRoot`
@@ -269,7 +269,8 @@ Ending a Build attempt releases local claims while retaining receipts and last k
 it does not imply a remote task has been cancelled.
 
 Use `hypit activity` when actual claims matter. The installed Runtime and Provider READMEs own the
-exact settings. Studio's permitted transient work has session-local concurrency.
+exact settings. Disposable authoring clients can only use capabilities whose Endpoint explicitly
+permits transient execution; their concurrency is local to that disposable session.
 
 ## Ask each command for the fact it owns
 
@@ -304,7 +305,6 @@ distinguishes useful intermediate evidence from the intended deliverable.
 | A running local service's model, device, compute, batch size or cache location | Prepare its selected resources, then restart that helper when idle |
 | Additional WhisperX alignment language in the same cache | Execute scoped `programs prepare`; the service can stay running |
 | Browser download mirror | Used for the next required preparation; a healthy cached browser remains usable |
-| Profile used by an existing Studio session | Restart the session if it needs to load the edited selection |
 
 A new Build loads the current project implementation and selected configuration; external files and
 services retain their own lifetimes. Read

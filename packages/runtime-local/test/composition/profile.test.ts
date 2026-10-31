@@ -36,6 +36,7 @@ import {
   parseLocalRuntimeProfile,
   preflightRuntimeConfig,
   readRuntimeConfigPricing,
+  readRuntimePlanningPolicy,
 } from "@hypit/runtime-local";
 import { readRuntimeWorkerOptions } from "../../src/config.js";
 
@@ -71,6 +72,22 @@ test("Producer inline Value policy belongs to captured Build execution", () => {
   assert.throws(() => parseLocalRuntimeProfile({ ...profile(), execution: {
     producerInlineValueBytes: 8_388_608, producerTimeoutMs: 1000,
   } }), /producerTimeoutMs/u);
+});
+
+test("Producer planning reads the same inline Value policy as Build execution", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "hypit-profile-planning-policy-"));
+  const path = join(directory, "runtime.json");
+  try {
+    await writeFile(path, JSON.stringify({
+      ...profile(),
+      execution: { producerInlineValueBytes: 16 },
+    }));
+    assert.deepEqual(await readRuntimePlanningPolicy(path), {
+      producerExecutionLimits: { maxInlineValueBytes: 16 },
+    });
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
 });
 
 

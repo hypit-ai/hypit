@@ -24,7 +24,6 @@ test("a time selection with no decoded frame has an evidence-bounded error", {
     streamIndex: 0,
     sourceFrameCount: 10,
     at: { kind: "time", seconds },
-    output: { format: "png" },
   }));
   const extracted = (await extract(0.5)).value;
   assertBlobRef(extracted, "extracted frame");

@@ -54,7 +54,6 @@ A-roll-only or B-roll-only.
 | How do I give a project component useful time, content and visual behavior? | [Track authoring](track-authoring.md) |
 | How do I draw elements, video, graphics and frame-driven motion? | [Component visuals](component-visuals.md) |
 | How do I create a new Caption layout using existing wording and timing? | [Caption authoring](caption-authoring.md) |
-| How do I expose meaningful Studio Items and actual author controls? | [Studio Companions](studio-companions.md) |
 | How does an owner distribute and update a package across projects? | [Component sharing](component-sharing.md) |
 
 ## Execute, revise and deliver
@@ -66,7 +65,6 @@ A-roll-only or B-roll-only.
 | Plan, price, submit, follow, recover and retrieve work | [Builds and Results](builds.md) |
 | Inspect the current picture, precise frames and continuous motion grids | [Snapshots](snapshots.md) |
 | Assemble Film, request full/range rendering and export the result | [Rendering](rendering.md) |
-| Open the selected work, read feedback and edit its Source | [Studio](studio.md) |
 | Judge the actual performance, composition and encoded deliverable | [Review](review.md) |
 
 For installation, service selection or local preparation, follow the [Environment routes](../../SKILL.md#where-the-current-question-is-answered).

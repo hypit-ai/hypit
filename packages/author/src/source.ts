@@ -52,15 +52,12 @@ export type AuthorRetainedOutput = {
 
 export type AuthorInputProvenanceDraft = {
   readonly name: string;
-  readonly range: SourceRange;
-  readonly kind: "literal" | "reference";
   readonly ref?: AuthorValueRef;
 };
 
 export type AuthorElementProvenanceDraft = {
   readonly range: SourceRange;
   readonly records: readonly string[];
-  readonly components: readonly string[];
   readonly outputs: readonly { readonly component: string; readonly name: string; readonly id: string }[];
   readonly inputs: readonly AuthorInputProvenanceDraft[];
 };
@@ -143,19 +140,14 @@ export type SourceClosureUnit = {
 export type AuthorInputProvenance = {
   readonly id: string;
   readonly name: string;
-  readonly range: SourceRange;
-  readonly kind: "literal" | "reference";
   readonly ref?: AuthorValueRef;
 };
 
 export type AuthorElementProvenance = {
   readonly id: string;
-  readonly source: string;
   readonly sourceName: string;
-  readonly frontend: string;
   readonly range: SourceRange;
   readonly records: readonly { readonly local: string; readonly id: string }[];
-  readonly components: readonly { readonly local: string; readonly id: string }[];
   readonly outputs: readonly {
     readonly component: string;
     readonly name: string;
@@ -195,6 +187,10 @@ export type CompiledSourceClosure = {
   readonly graph: AuthorGraph;
   readonly exports: readonly CompiledSourceExport[];
   readonly retainedOutputs: readonly CompiledRetainedOutput[];
+};
+
+/** Optional author-tool projection requested independently of Build compilation. */
+export type ProjectedCompiledSourceClosure = CompiledSourceClosure & {
   readonly provenance: AuthorProvenance;
 };
 

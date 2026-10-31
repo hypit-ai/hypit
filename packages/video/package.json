@@ -60,6 +60,7 @@
     "@hypit/text-fine": "workspace:^0.2.1",
     "@hypit/timeline": "workspace:^0.1.1",
     "@hypit/timeline-author": "workspace:^0.2.1",
+    "@hypit/visual-combine": "workspace:^0.1.0",
     "@hypit/visual-track": "workspace:^0.3.0",
     "@hypit/visual-adjustment": "workspace:^0.1.0",
     "@hypit/visual-matte": "workspace:^0.1.0",

@@ -1,6 +1,6 @@
 import { audioProgramSourceClips, verifyAudioProgram } from "@hypit/audio-program";
 import type { AudioProgram } from "@hypit/audio-program";
-import { readAudioGainProcess } from "@hypit/composition";
+import { readAudioGainProcess } from "@hypit/audio-mix";
 import { readPreservePitch } from "@hypit/audio-stretch";
 import type { EndpointSupport } from "@hypit/hypit/endpoint";
 import type { CanonicalValue } from "@hypit/hypit/protocol";

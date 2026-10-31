@@ -68,11 +68,10 @@ export function assertFrameSpan(value: unknown, frameCount?: number): asserts va
   }
 }
 
-/** Quantize a selected span as a new zero-based sample interval on the same Clock. */
+/** Quantize both absolute frame boundaries on the Clock's one sample grid. */
 export function clockFrameSpanSamples(span: FrameSpan, clock: Clock, sampleRate: number) {
   assertFrameSpan(span);
   const startSample = clockFrameSampleBoundary(clock, span.startFrame, sampleRate);
-  const sampleFrames = clockFrameSampleBoundary(clock,
-    span.endFrameExclusive - span.startFrame, sampleRate);
-  return { startSample, endSampleExclusive: startSample + sampleFrames, sampleFrames };
+  const endSampleExclusive = clockFrameSampleBoundary(clock, span.endFrameExclusive, sampleRate);
+  return { startSample, endSampleExclusive, sampleFrames: endSampleExclusive - startSample };
 }

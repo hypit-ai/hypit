@@ -137,18 +137,11 @@ export type ScheduledBuild = {
   readonly facts: readonly BuildFact[];
 };
 
-type SchedulerExecutionOutcomeBase = {
-  readonly command: string;
-  readonly kind: BuildCommand["kind"];
-  readonly resources: readonly string[];
-};
-
-export type SchedulerExecutionOutcome = SchedulerExecutionOutcomeBase & (
+export type SchedulerExecutionOutcome =
   | { readonly status: "completed"; readonly operation?: never; readonly wakeAt?: never; readonly message?: never }
   | { readonly status: "pending"; readonly operation: string; readonly wakeAt?: number; readonly message?: never }
   | { readonly status: "deferred"; readonly wakeAt?: number; readonly message: string; readonly operation?: never }
-  | { readonly status: "error"; readonly message: string; readonly operation?: never; readonly wakeAt?: never }
-);
+  | { readonly status: "error"; readonly message: string; readonly operation?: never; readonly wakeAt?: never };
 
 export type ScheduledBuildResult = {
   readonly id: string;

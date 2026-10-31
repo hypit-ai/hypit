@@ -50,9 +50,9 @@ test("Image Operations declarations preserve paint and transform order independe
     range,
   }];
   const external: Record<string, AuthorResolvedReference> = {
-    source: { path: "source", ref: { kind: "record", id: "source" }, type: blobTypes.blob },
-    canvas: { path: "canvas", ref: { kind: "record", id: "canvas" }, type: spatialTypes.canvas },
-    frame: { path: "frame", ref: { kind: "record", id: "frame" }, type: spatialTypes.frame },
+    source: { ref: { kind: "record", id: "source" }, type: blobTypes.blob },
+    canvas: { ref: { kind: "record", id: "canvas" }, type: spatialTypes.canvas },
+    frame: { ref: { kind: "record", id: "frame" }, type: spatialTypes.frame },
   };
   const registry = new AuthorDeclarationRegistry();
   installAuthorDeclarationFacets(hypitPackage.facets, registry);

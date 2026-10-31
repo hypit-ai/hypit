@@ -18,6 +18,7 @@ import test from "node:test";
 
 import { FileResourceStore } from "../../src/resource-store.js";
 import { FileBuildResultStore } from "@hypit/result/runtime-storage/node";
+import { isBlobRef } from "@hypit/protocol";
 import { EnvironmentCredentialStore } from "@hypit/credential-store-env";
 import { defineEndpoint } from "@hypit/endpoint";
 import type { AsyncEndpoint, EndpointInstance } from "@hypit/endpoint";
@@ -139,11 +140,18 @@ test("a selected file is staged once and remains referenced in the produced stru
     assert.equal(await work.has(authoredAsset.resource), false);
     const results = new FileBuildResultStore(join(directory, "results"));
     const resolved = (await results.resolve("bld_20260902T120000009Z_0000000001", "final.document"))!;
-    assert.equal(resolved.value.kind, "value");
-    if (resolved.value.kind !== "value") throw new Error("expected value document");
-    assert.deepEqual(resolved.value.document.resources.map((binding) => binding.file), [{
-      kind: "build-file", path: "files/file-0001.png", size: bytes.length, mediaType: authoredAsset.mediaType,
-    }]);
+    const content = (resolved.value as {
+      readonly layers: readonly [{ readonly content: { readonly image: unknown } }];
+    }).layers[0].content.image;
+    assert.ok(isBlobRef(content));
+    if (!isBlobRef(content)) throw new Error("expected retained nested Blob");
+    assert.equal(content.size, bytes.length);
+    assert.equal(content.mediaType, authoredAsset.mediaType);
+    const opened = await resolved.openResource(content);
+    assert.notEqual(opened, undefined);
+    const retained: number[] = [];
+    for await (const chunk of opened!) retained.push(...chunk);
+    assert.deepEqual(Uint8Array.from(retained), bytes);
     const resultDirectory = join(directory, "results", "2026-09-02", "bld_20260902T120000009Z_0000000001");
     assert.deepEqual((await readdir(resultDirectory)).sort(), ["execution.jsonl", "files", "result.json", "values"]);
     assert.deepEqual(await readFile(join(resultDirectory, "files", "file-0001.png")), Buffer.from(bytes));

@@ -65,6 +65,5 @@ test("targeted Author compilation retains embedded attachments for later Runtime
     authorCompiler,
   });
   const compiled = await buildCompiler.compileAuthorEntry(authorFile, { targets: ["hello.result"] });
-  assert.deepEqual(compiled.attachments.map((item) => item.blob), compiled.author.attachments.map((item) => item.blob));
-  assert.deepEqual(await readAttachment(compiled.attachments[0]), new Uint8Array([8, 6, 7, 5, 3, 0, 9]));
+  assert.deepEqual(await readAttachment(compiled.author.attachments[0]), new Uint8Array([8, 6, 7, 5, 3, 0, 9]));
 });

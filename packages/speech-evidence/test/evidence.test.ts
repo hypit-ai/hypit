@@ -95,13 +95,12 @@ test("Speech Evidence projects only the selected audio source and its complete p
   const media = prepareMedia({
     id: "speech",
     source,
-    inspection: { container: { formatNames: ["wav"] }, streams: [{
-      kind: "audio", index: 0, codecType: "audio", codecName: "pcm_s16le",
-      disposition: { default: true, attachedPicture: false }, timingStatus: "admissible",
-      timeBase: { numerator: 1, denominator: 48_000 },
+    inspection: { streams: [{
+      kind: "audio", index: 0, codecName: "pcm_s16le",
+      disposition: { default: true, attachedPicture: false },
       startPts: { ticks: "0", timeBase: { numerator: 1, denominator: 48_000 } },
       endPts: { ticks: "96000", timeBase: { numerator: 1, denominator: 48_000 } },
-      decodedUnitCount: 96_000, sampleRate: 48_000, channels: 2, decodedSampleFrames: 96_000,
+      sampleRate: 48_000, channels: 2, decodedSampleFrames: 96_000,
     }] },
     selection: { audioStreamIndex: 0, spanAuthority: "audio" },
   });

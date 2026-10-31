@@ -196,9 +196,6 @@ export class InProcessBuildScheduler {
             message,
           };
           build.outcomes.push({
-            command: settled.command.command.id,
-            kind: settled.command.command.kind,
-            resources: settled.command.resources.map((resource) => resource.id),
             status: "error",
             message,
           });
@@ -207,9 +204,6 @@ export class InProcessBuildScheduler {
         if (settled.execution.status === "pending") {
           build.attempted.add(settled.command.command.id);
           build.outcomes.push({
-            command: settled.command.command.id,
-            kind: settled.command.command.kind,
-            resources: settled.command.resources.map((resource) => resource.id),
             status: "pending",
             operation: settled.execution.operation,
             ...(settled.execution.wakeAt === undefined ? {} : { wakeAt: settled.execution.wakeAt }),
@@ -219,9 +213,6 @@ export class InProcessBuildScheduler {
         if (settled.execution.status === "deferred") {
           build.attempted.add(settled.command.command.id);
           build.outcomes.push({
-            command: settled.command.command.id,
-            kind: settled.command.command.kind,
-            resources: settled.command.resources.map((resource) => resource.id),
             status: "deferred",
             ...(settled.execution.wakeAt === undefined ? {} : { wakeAt: settled.execution.wakeAt }),
             message: settled.execution.reason,
@@ -242,17 +233,11 @@ export class InProcessBuildScheduler {
             }
           }
           build.outcomes.push({
-            command: settled.command.command.id,
-            kind: settled.command.command.kind,
-            resources: settled.command.resources.map((resource) => resource.id),
             status: "completed",
           });
         } catch (error) {
           build.stopped = true;
           build.outcomes.push({
-            command: settled.command.command.id,
-            kind: settled.command.command.kind,
-            resources: settled.command.resources.map((resource) => resource.id),
             status: "error",
             message: error instanceof Error ? error.message : String(error),
           });

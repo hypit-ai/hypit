@@ -24,7 +24,7 @@ export type CommandExecutionBegin = {
   readonly receipt: CommandExecutionReceipt;
 };
 
-/** Live handoff for an immediate command between invocation and the accepted Kernel fact. */
+/** Live handoff between command execution and the accepted Kernel fact. */
 export type CommandExecutionStore = {
   begin(build: string, command: string): Promise<CommandExecutionBegin>;
   reportProgress(build: string, command: string, activity: CommandExecutionActivity): Promise<void>;

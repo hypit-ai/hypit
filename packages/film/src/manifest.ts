@@ -6,7 +6,7 @@ import { timelineTypes, timelineDependency } from "@hypit/timeline";
 
 export const filmModuleRef = { name: "@hypit/film", version: "1" } as const;
 export const filmTypes = {
-  program: { module: filmModuleRef, name: "FilmProgram" },
+  assembly: { module: filmModuleRef, name: "FilmAssemblyPlan" },
   trackSet: { module: filmModuleRef, name: "FilmTrackSet" },
 } satisfies Record<string, TypeRef>;
 export const filmProducers = {
@@ -23,7 +23,7 @@ const object = (fields: Readonly<Record<string, { readonly schema: ValueSchema; 
   ...(allowUnknown ? { allowUnknown: true } : {}),
 });
 
-export const filmProgramSchema: ValueSchema = object({
+export const filmAssemblyPlanSchema: ValueSchema = object({
   id: { schema: string },
   clearColor: { schema: string },
   // Film owns the recursive Plan refinement; admission keeps the envelope domain-neutral.
@@ -53,7 +53,7 @@ export const filmManifest: ModuleManifest = {
     recipeModuleRef,
   ],
   types: [
-    filmTypes.program.name,
+    filmTypes.assembly.name,
     filmTypes.trackSet.name,
   ],
   capabilities: [],
@@ -84,7 +84,7 @@ export const filmManifest: ModuleManifest = {
     {
       name: filmProducers.compileComposition.name,
       inputs: [
-        { name: "program", type: filmTypes.program },
+        { name: "assembly", type: filmTypes.assembly },
         { name: "canvas", type: spatialTypes.canvas },
         { name: "timeline", type: timelineTypes.timeline },
         { name: "set", type: filmTypes.trackSet },

@@ -18,7 +18,6 @@ import { mimoSpeechMarkupDeclarations, mimoVoiceCloneAuthorDeclaration,
 
 const speech = sealText("Exact authored words stay exact.");
 const speechReference: AuthorResolvedReference = {
-  path: "story.segment.opening.speech",
   ref: { kind: "record", id: "story.segment.opening.speech" },
   type: textTypes.text,
   record: {
@@ -28,7 +27,6 @@ const speechReference: AuthorResolvedReference = {
   },
 };
 const voiceReference: AuthorResolvedReference = {
-  path: "host.reference",
   ref: { kind: "record", id: "host.reference" },
   type: blobTypes.blob,
   record: {
@@ -42,7 +40,7 @@ async function decode(source: string, compiler: AuthorDeclarationCompiler,
   voice: AuthorResolvedReference = voiceReference) {
   return await compileMarkupDeclaration({ source, module: mimoSpeechModuleRef, alias: "mimo",
     compilers: [compiler], syntax: mimoSpeechMarkupDeclarations,
-    references: new Map([[speechReference.path, speechReference], [voice.path, voice]]) });
+    references: new Map([["story.segment.opening.speech", speechReference], ["host.reference", voice]]) });
 }
 
 test("MiMo Speech declares the two exact audio request shapes", () => {

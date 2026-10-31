@@ -132,14 +132,13 @@ A screen passage can carry actual interface evidence, an authored explanation, o
 direction and reference relationships belong to their [Craft pages](../index.md#craft).
 
 Review a useful passage in its surrounding composition as the design develops. Explain what it
-demonstrates and what is still being built. Comments can carry a change of visual idea that no
-parameter panel can express; Studio exposes the Timeline and the choices that are useful to adjust.
-Follow a timestamped comment to the responsible Source, Recipe, media or scene implementation.
+demonstrates and what is still being built. Follow time-located feedback to the responsible Source,
+Recipe, media or scene implementation.
 The timestamp locates evidence; the desired change may concern a recurring system throughout the work.
 
 Preserve accepted material through explicit Source declarations and consumer references while revising the composition. Seek and
 review the changed action and its handoffs; export the encoded film when that deliverable is wanted.
-[Review](../../production/review.md) and [Studio](../../production/studio.md) own the interaction;
+[Review](../../production/review.md) owns the evidence and revision loop;
 [Rendering](../../production/rendering.md) owns render scope and resource choices.
 
 ## Study one complete production

@@ -21,55 +21,40 @@ const timestamp = (ticks: string) => ({ ticks, timeBase });
 
 function grokInspection(): MediaInspection {
   return sealMediaInspection({
-    container: { formatNames: ["mov", "mp4"] },
     streams: [
       {
         kind: "video",
         index: 0,
-        codecType: "video",
         codecName: "h264",
         disposition: { default: true, attachedPicture: false },
-        timingStatus: "admissible",
-        timeBase,
         startPts: timestamp("0"),
         endPts: timestamp("74240"),
         decodedUnitCount: 145,
-        role: "moving",
         width: 464,
         height: 688,
         sampleAspectRatio: { numerator: 1, denominator: 1 },
         rotationDegrees: 0, picture: { colorPrimaries: "bt709", colorTransfer: "bt709", colorMatrix: "bt709", colorRange: "limited", bitDepth: 8, alphaMode: "opaque" } as const,
         averageFrameRate: { numerator: 24, denominator: 1 },
-        nominalFrameRate: { numerator: 24, denominator: 1 },
       },
       {
         kind: "audio",
         index: 1,
-        codecType: "audio",
         codecName: "aac",
         disposition: { default: true, attachedPicture: false },
-        timingStatus: "admissible",
-        timeBase: { numerator: 1, denominator: 48_000 },
         startPts: { ticks: "0", timeBase: { numerator: 1, denominator: 48_000 } },
         endPts: { ticks: "288000", timeBase: { numerator: 1, denominator: 48_000 } },
-        decodedUnitCount: 283,
         sampleRate: 48_000,
         channels: 2,
-        channelLayout: "stereo",
         decodedSampleFrames: 289_792,
       },
       {
         kind: "video",
         index: 2,
-        codecType: "video",
         codecName: "mjpeg",
         disposition: { default: false, attachedPicture: true },
-        timingStatus: "admissible",
-        timeBase: { numerator: 1, denominator: 90_000 },
         startPts: { ticks: "0", timeBase: { numerator: 1, denominator: 90_000 } },
         endPts: { ticks: "543750", timeBase: { numerator: 1, denominator: 90_000 } },
         decodedUnitCount: 1,
-        role: "attached-picture",
         width: 464,
         height: 688,
         sampleAspectRatio: { numerator: 1, denominator: 1 },
@@ -128,6 +113,25 @@ test("an attached picture cannot be forced into the moving-video preparation pat
     picture: { mode: "source" },
   });
   assert.throws(() => selectMediaStreams(grokInspection(), request), /not a moving visual stream/u);
+});
+
+test("a stream without an observed presentation span cannot be selected for exact preparation", () => {
+  const inspection = grokInspection();
+  const missing = sealMediaInspection({
+    ...inspection,
+    streams: inspection.streams.map((stream) => {
+      if (stream.kind !== "video" || stream.index !== 0) return stream;
+      const { startPts: _startPts, endPts: _endPts, ...withoutSpan } = stream;
+      return withoutSpan;
+    }),
+  });
+  const request = sealMediaSelectionRequest({
+    video: { mode: "stream-index", streamIndex: 0 },
+    audio: { mode: "none" },
+    spanAuthority: "video",
+    picture: { mode: "source" },
+  });
+  assert.throws(() => selectMediaStreams(missing, request), /has no presentation interval/u);
 });
 
 test("incomplete source picture facts require an explicit author interpretation", () => {

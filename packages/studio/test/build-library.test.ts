@@ -7,7 +7,7 @@ import test from "node:test";
 import { buildResultDirectory, FileBuildResultStore } from "@hypit/result/runtime-storage/node";
 import type { BuildResult, BuildResultHistory } from "@hypit/result";
 import type { CliBuildView as BuildView } from "@hypit/cli";
-import { buildIdCreatedAt } from "@hypit/protocol";
+import type { BlobRef } from "@hypit/protocol";
 import { createVideoDistribution } from "@hypit/video";
 
 import { openStudioBuildLibrary, readStudioLibrary } from "../src/build-library.js";
@@ -17,14 +17,11 @@ const videoDistribution = createVideoDistribution();
 function activeBuild(id: string, root: string): BuildView {
   return {
     id,
-    createdAt: buildIdCreatedAt(id)!,
     activity: "saving-result",
     outcome: "complete",
 
     sourcePath: `${root}/author/main.svml`,
     targets: ["final.video"],
-    acceptedRecords: 1,
-    outstandingCommands: 0,
     operations: [],
   };
 }
@@ -32,17 +29,17 @@ function activeBuild(id: string, root: string): BuildView {
 test("Studio library joins this environment's Builds with project Build Result files", async () => {
   const relevant = activeBuild("bld_20260902T130000000Z_0000000001", "/project");
   const unrelated = activeBuild("bld_20260902T130000001Z_0000000001", "/another-project");
-  const manifests = [relevant, unrelated].map((entry) => ({
+  const manifests = [relevant, unrelated].map((entry, index) => ({
     format: "hypit.build-result@1" as const,
     id: entry.id,
     sourcePath: entry.sourcePath!,
     targets: ["final.video"],
-    finishedAt: entry.createdAt,
+    finishedAt: Date.parse(index === 0 ? "2026-09-02T13:00:01.000Z" : "2026-09-02T13:00:02.000Z"),
     outcome: "complete" as const,
     outputs: {
       "final.video": {
         type: { module: { name: "example", version: "1" }, name: "Video" },
-        value: { kind: "build-file" as const, path: "files/final.video.mp4", size: 42, mediaType: "video/mp4" },
+        representation: "file" as const, size: 42, mediaType: "video/mp4",
       },
     },
   }));
@@ -55,10 +52,13 @@ test("Studio library joins this environment's Builds with project Build Result f
     },
     async resolve(build, output) {
       const manifest = manifests.find((item) => item.id === build);
-      const value = manifest?.outputs[output as "final.video"];
-      return value === undefined ? undefined : { build, output, type: value.type, value: value.value };
+      const retained = manifest?.outputs[output as "final.video"];
+      if (retained === undefined || retained.representation !== "file") return undefined;
+      const value: BlobRef = { kind: "blob", resource: "res_result_0",
+        size: retained.size, mediaType: retained.mediaType };
+      return { type: retained.type, value, async openResource() { return undefined; } };
     },
-    async openFile() { return undefined; },
+    async openExecutionLog() { return undefined; },
   };
   const input = {
     profile: "/project/hypit.runtime.json",
@@ -95,7 +95,7 @@ test("Studio library joins this environment's Builds with project Build Result f
       if (request?.before === undefined) return { results: [manifests[0]!], next: relevant.id };
       return { results: [{ ...manifests[0]!, outputs: { "still.image": {
         ...manifests[0]!.outputs["final.video"],
-        value: { kind: "build-file" as const, path: "files/still.png", size: 20, mediaType: "image/png" },
+        representation: "file" as const, size: 20, mediaType: "image/png",
       } } }] };
     },
   } });
@@ -111,7 +111,7 @@ test("Studio library joins this environment's Builds with project Build Result f
   })), [{
     build: "bld_20260902T130000000Z_0000000001",
     output: "final.video",
-    filePath: "files/final.video.mp4",
+    filePath: "final.video",
     mediaType: "video/mp4",
   }]);
 });
@@ -167,16 +167,16 @@ const mediaTypeRef = { module: { name: "example", version: "1" }, name: "Media" 
 test("media listing reads finished history and leaves active Result drafts private", async () => {
   const owner = "bld_20260902T130000010Z_0000000001";
   const active = "bld_20260902T130000011Z_0000000001";
-  const image = { type: mediaTypeRef, value: { kind: "build-file" as const, path: "files/portrait.png", mediaType: "image/png", size: 100 } };
+  const image = { type: mediaTypeRef, representation: "file" as const, mediaType: "image/png", size: 100 };
   const manifests: BuildResult[] = [{
     format: "hypit.build-result@1", id: owner, sourcePath: "/project/main.svml",
     targets: ["portrait.image"], outcome: "failed", finishedAt: 300,
     failure: "Rendering failed",
     outputs: {
       "portrait.image": image,
-      "data.json": { type: mediaTypeRef, value: { kind: "build-file", path: "files/data.json", mediaType: "application/json", size: 20 } },
-      "prepared.video": { type: mediaTypeRef, value: { kind: "value", path: "values/prepared.json" } },
-      "semantic.take": { type: mediaTypeRef, value: { kind: "value", path: "values/semantic.json" } },
+      "data.json": { type: mediaTypeRef, representation: "file", mediaType: "application/json", size: 20 },
+      "prepared.video": { type: mediaTypeRef, representation: "structured" },
+      "semantic.take": { type: mediaTypeRef, representation: "structured" },
     },
   }];
   const resolved: string[] = [];
@@ -187,7 +187,7 @@ test("media listing reads finished history and leaves active Result drafts priva
       resolved.push(output);
       throw new Error(`Listing should not resolve ${output}`);
     },
-    async openFile() { throw new Error("Listing never reads media bytes"); },
+    async openExecutionLog() { throw new Error("Listing never reads execution bytes"); },
   };
   const view: BuildView = {
     ...activeBuild(active, "/project"), sourcePath: "/project/main.svml",
@@ -201,8 +201,6 @@ test("media listing reads finished history and leaves active Result drafts priva
   assert.equal(tasks.tasks[1]?.detail, "Rendering failed");
   assert.equal(tasks.tasks[1]?.finishedAt, 300);
   assert.deepEqual(tasks.tasks[0]?.requests, { total: 4, completed: 2 });
-  assert.equal("acceptedRecords" in tasks.tasks[0]!, false);
-
   const media = await readStudioLibrary({ ...input, section: "artifacts" });
   assert.equal(media.artifacts.length, 1);
   const portrait = media.artifacts.find((item) => item.mediaType === "image/png")!;

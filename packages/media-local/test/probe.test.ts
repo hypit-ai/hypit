@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { parseMediaInspection } from "../src/probe.js";
 
-test("probe derives the last decoded-unit duration instead of adding whole-stream duration_ts", () => {
+test("probe does not publish a cadence estimate as presentation timing", () => {
   const inspection = parseMediaInspection({
     format: { format_name: "mov,mp4" },
     streams: [
@@ -40,8 +40,42 @@ test("probe derives the last decoded-unit duration instead of adding whole-strea
 
   const video = inspection.streams.find((stream) => stream.kind === "video");
   const audio = inspection.streams.find((stream) => stream.kind === "audio");
-  assert.equal(video?.endPts?.ticks, "120", "last video frame should inherit the preceding 40-tick cadence");
+  assert.equal(video?.startPts, undefined);
+  assert.equal(video?.endPts, undefined);
+  assert.notEqual(audio?.startPts, undefined);
   assert.equal(audio?.endPts?.ticks, "510", "480 samples at 48kHz equal 10 ticks in a 1/1000 time base");
+});
+
+test("probe publishes observed timing only when every decoded unit has an explicit duration", () => {
+  const inspection = parseMediaInspection({
+    format: { format_name: "mov,mp4" },
+    streams: [{
+      index: 0, codec_type: "video", codec_name: "h264", width: 160, height: 96,
+      time_base: "1/1000", disposition: { default: 1, attached_pic: 0 },
+    }],
+    frames: [
+      { media_type: "video", stream_index: 0, pts: 0, duration: 40 },
+      { media_type: "video", stream_index: 0, pts: 40, duration: 40 },
+      { media_type: "video", stream_index: 0, pts: 80, duration: 20 },
+    ],
+  });
+
+  assert.notEqual(inspection.streams[0]?.startPts, undefined);
+  assert.equal(inspection.streams[0]?.endPts?.ticks, "100");
+});
+
+test("probe leaves a single decoded unit without duration as missing timing", () => {
+  const inspection = parseMediaInspection({
+    format: { format_name: "mov,mp4" },
+    streams: [{
+      index: 0, codec_type: "video", codec_name: "h264", width: 160, height: 96,
+      time_base: "1/1000", disposition: { default: 1, attached_pic: 0 },
+    }],
+    frames: [{ media_type: "video", stream_index: 0, pts: 0 }],
+  });
+
+  assert.equal(inspection.streams[0]?.startPts, undefined);
+  assert.equal(inspection.streams[0]?.endPts, undefined);
 });
 
 test("probe preserves square-pixel and quarter-turn facts needed before Spatial", () => {

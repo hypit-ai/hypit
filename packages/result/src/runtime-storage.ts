@@ -3,11 +3,22 @@
  * Open drafts, writer state and recovery operations are deliberately isolated here.
  */
 export {
+  assertBuildResultFileRef,
+  assertBuildResultPath,
+  assertBuildResultValueDocument,
   assertBuildResultSeed,
-  defineBuildResultOutput,
+  defineStoredBuildResultOutput,
+  storedBuildResultOutput,
 } from "./types.js";
 export type {
+  BuildResultFileRef,
+  StoredBuildResultOutputValue,
+  StoredBuildResultOutput,
+  BuildResultValuePath,
+  BuildResultResourceBinding,
+  BuildResultValueDocument,
   BuildResultDraft,
+  StoredFinishedBuildResult,
   StoredBuildResult,
   BuildResultSeed,
   BuildResultResourceSource,
@@ -17,6 +28,7 @@ export type {
   BuildResultStore,
 } from "./types.js";
 export {
+  decodeBuildResultValueDocument,
   decodeStoredBuildResult,
   decodeBuildResultWriterState,
   encodeStoredBuildResult,

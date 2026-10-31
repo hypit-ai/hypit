@@ -192,8 +192,6 @@ test("one local Scheduler shares an Endpoint resource across multiple Builds", a
   assert.deepEqual(results.map((result) => result.status), ["complete", "complete"]);
   assert.equal(getCalls(), 2);
   assert.equal(maximumActive, 1);
-  assert.equal(results.every((result) =>
-    result.outcomes.some((entry) => entry.resources.includes("pool:fixture.account"))), true);
 });
 
 test("independent paid commands inside one Build may fill the same resource without duplicating their shared upstream", async () => {

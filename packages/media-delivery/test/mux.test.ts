@@ -28,7 +28,6 @@ for (const { frameRate, frameCount, sampleFrames } of cases) {
       artifact: { kind: "blob", resource: fixtureResource("mux:visual"), size: 1, mediaType: "video/mp4" } });
     const run = (samples: number) => {
       const audio = sealTimelineAudio({ sampleFrames: samples,
-        sampleRate: 48_000, channelLayout: "stereo",
         artifact: { kind: "blob", resource: fixtureResource("mux:audio"), size: 1, mediaType: "audio/wav" } });
       return mux.handler({ inputs: {
         visual: { value: (visual) },
@@ -54,8 +53,6 @@ test("mux rejects visual bytes rendered for a different delivery requirement", a
   });
   const audio = sealTimelineAudio({
     sampleFrames: 48_000,
-    sampleRate: 48_000,
-    channelLayout: "stereo",
     artifact: { kind: "blob", resource: fixtureResource("mux:draft-audio"), size: 1, mediaType: "audio/wav" },
   });
 

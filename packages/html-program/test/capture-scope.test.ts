@@ -16,8 +16,8 @@ test("compiled capture scope retains selected roots and makes unrelated media in
     </div>
     <div id="selected" data-hypit-capture-root data-hypit-contribution-start-frame="90" data-hypit-contribution-end-frame="120">
       <img id="selected-image" data-hypit-artifact-src="selected.png"/>
-      <video id="selected-media" data-hypit-source-frame="media" data-hypit-artifact-src="media.mp4"></video>
-      <video id="selected-surface" data-hypit-source-frame="0/1" data-hypit-sampling-part="1" data-hypit-artifact-src="surface.mp4"></video>
+      <video id="selected-media" data-hypit-video-source="media" data-hypit-artifact-src="media.mp4"></video>
+      <video id="selected-surface" data-hypit-video-source="surface" data-hypit-artifact-src="surface.mp4"></video>
       <svg><image id="selected-svg" data-hypit-artifact-href="selected.svg"/></svg>
     </div>
   </body>`);
@@ -75,7 +75,7 @@ test("compiled capture scope defaults to every contribution outside a render sel
   const { document } = parseHTML(`<!doctype html><body>
     <div id="one" data-hypit-capture-root data-hypit-contribution-start-frame="0" data-hypit-contribution-end-frame="30">
       <img data-hypit-artifact-src="one.png"/>
-      <video data-hypit-source-frame="media" data-hypit-artifact-src="one.mp4"></video>
+      <video data-hypit-video-source="media" data-hypit-artifact-src="one.mp4"></video>
     </div>
     <div id="two" data-hypit-capture-root data-hypit-contribution-start-frame="30" data-hypit-contribution-end-frame="60"><img data-hypit-artifact-src="two.png"/></div>
   </body>`);

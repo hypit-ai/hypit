@@ -43,8 +43,8 @@ The project lockfile records the installed dependency tree. Updates are explicit
 operations; Builds use the selected installed code. A missing package is an installation problem.
 Select the intended new release in the consumer project, inspect its changed vocabulary where
 relevant, check the actual Source and Targets and review the changed behavior. New Builds load that selected
-implementation; restart an existing Studio session to load package-code changes. Reuse compatible
-project media through authored consumer references while recomputing the component being revised. The package's own
+implementation. Reuse compatible project media through authored consumer references while recomputing
+the component being revised. The package's own
 release notes describe any required author changes.
 
 ## Send a tarball to another person

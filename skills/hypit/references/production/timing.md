@@ -68,6 +68,6 @@ The authored value determines the editing relationship:
 - editing a Narrative-produced value changes the mapping or Narrative source that produced it;
 - editing a reused value changes its declaration and all uses follow after recompilation.
 
-Studio can display any resolved value. It offers source editing only where the package declares a
-meaningful author relation. Keep semantic relationships, absolute offsets and response duration as
-separate decisions.
+Keep semantic relationships, absolute offsets and response duration as separate decisions. A future
+editor can project these authored relations, but it must not infer a different ownership relation
+from the resolved number alone.

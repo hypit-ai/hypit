@@ -90,11 +90,10 @@ execution and produced files in Build Results; the Agent reports progress as the
 <video controls playsInline preload="metadata" width="100%" src="https://storage.googleapis.com/hypit-public-assets/quickstart/2026-09-10/watch_the_finished_video.mp4"></video>
 
 With the actual material in place, the Agent checks whether the layout, captions, graphics and
-B-roll appear clearly and at the right moments. It delivers the video and can open Studio so you
-can explore its timeline and edit supported properties.
+B-roll appear clearly and at the right moments, then watches and delivers the encoded video.
 
 Keep talking to make changes or variants. Suitable existing material stays in use while the Agent
 changes the relevant script, component or placement. Your project remains editable in ordinary files.
 
-For more detail, see [Making videos with an Agent](./guide/skill.md),
-[Targets and Builds](./quickstart/run.md), and [Studio](./quickstart/preview.md).
+For more detail, see [Making videos with an Agent](./guide/skill.md) and
+[Targets and Builds](./quickstart/run.md).

@@ -29,10 +29,10 @@ selecting equal closed signals twice contributes twice. The author declaration r
 same Source reference twice and directs intentional repeated routing through Audio Mix.
 
 The package-owned `film` declaration compiler validates an imported generic SVS Recipe into a nominal
-`FilmProgram`, receives Canvas and the selected time source through separate explicit edges,
+`FilmAssemblyPlan`, receives Canvas and the selected time source through separate explicit edges,
 passes the Timeline directly, type-checks each `<film:Track source={...}/>` reference and generates
 the finite fold. Visual Tracks require `id`; Audio Tracks reject it. Canvas is the only
-dimension truth, Timeline is the only time-range truth, and FilmProgram owns only assembly
+dimension truth, Timeline is the only time-range truth, and FilmAssemblyPlan owns only assembly
 identity, clear color and its visual/audio plan.
 Film has no author-selectable color-space field and does not name delivery formats or renderers.
 Its recursive Track/Stack/Process grammar is expressed by declaration-local child groups in the syntax-neutral
@@ -89,4 +89,4 @@ reordering visual siblings changes stacking. A Stack explicitly closes a local v
 Adjustment inside it cannot affect pictures outside that Stack.
 
 The `appearance` Recipe uses `background`, for example `film.vertical { background: #18212A; }`.
-The compiled FilmProgram's field is `clearColor`; it is not a Recipe key named `clear-color`.
+The compiled FilmAssemblyPlan's field is `clearColor`; it is not a Recipe key named `clear-color`.

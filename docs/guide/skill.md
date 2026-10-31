@@ -16,7 +16,7 @@ npx skills add hypit-ai/hypit -g
 ```
 
 The Skill supplies production knowledge. The executable `hypit` package supplies the commands,
-components, Runtime, and Studio. Your Agent can locate an existing executable installation or prepare
+components, and Runtime. Your Agent can locate an existing executable installation or prepare
 the selected release. The Skill, executable, and video project have independent locations and update
 through their own installation channels.
 
@@ -62,10 +62,9 @@ these relationships, while purely visual animation can use an authored clock. A 
 published as an ordinary versioned package under its owner's scope.
 
 When revising the work, export suitable Outputs from earlier Results into the project and select them
-in the Author Source, including useful media produced before a Build failed. A new Build executes the revised Source and explicit Targets. Studio displays the
-selected work and writes supported edits back to its Source files; the Agent reviews the actual
-finished video against the intended result.
+in the Author Source, including useful media produced before a Build failed. A new Build executes the
+revised Source and explicit Targets. The Agent reviews focused evidence while composing and checks the
+actual finished video against the intended result.
 
 [Quickstart](../quickstart.md) walks through making a video with your Agent.
 [Targets and Builds](../quickstart/run.md) explains execution and accepting Outputs into the project.
-[Studio](../quickstart/preview.md) explains interactive preview and editing.

@@ -9,7 +9,7 @@ inputs express those relationships; its code supplies the drawing and motion.
 
 Start with [Adding an Author Package](./author-packages.md) for a complete buildable example.
 [Ranking](https://github.com/hypit-ai/hypit/blob/main/packages/ranking/README.md) is a richer example
-of semantic events, persistent state and a Studio Companion.
+of semantic events and persistent state.
 
 ## Start from the author-facing behavior
 
@@ -47,6 +47,5 @@ Keep the video's particular copy and media as inputs. The component draws its ow
 structure and can ship reusable assets such as fonts or icons. Its example Source should show the
 states that matter, including how it behaves with different content or a changed event time.
 
-The package's README and vocabulary give authors enough information to choose and use it. A Studio
-Companion can add editing handles for the source values that have a clear interpretation. New visual
+The package's README and vocabulary give authors enough information to choose and use it. New visual
 behavior belongs in this package; a Provider handles external execution when the graph needs it.

@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { audioGainProcess, sealAudioTrack, sealComposition } from "@hypit/composition";
+import { sealAudioTrack, sealComposition } from "@hypit/composition";
 import type { AudioClip } from "@hypit/composition";
 import { sealTimeline } from "@hypit/timeline";
 import { fixtureResource } from "../../../test/fixture-resource.js";
 import { frameRangeFixture, frameSamplingMapFixture } from "../../../test/temporal-fixture.js";
-import { audioProgramGainRoutes, audioProgramSourceClips, compileAudioProgram, verifyAudioProgram } from "../src/index.js";
+import { audioProgramSourceClips, compileAudioProgram, verifyAudioProgram } from "../src/index.js";
 import { exactTemporalZero, identityTemporalMap } from "@hypit/temporal";
 
 const timeline = sealTimeline({ id: "story", frameCount: 30, frameRate: { numerator: 30, denominator: 1 } });
@@ -24,7 +24,6 @@ function clip(id: string): AudioClip {
     source: {
       source: { kind: "blob", resource: fixtureResource(`audio-program:${id}`), size: 1, mediaType: "audio/wav" },
       streamIndex: 0, presentationStart: exactTemporalZero(), sourceDomain: domain,
-      interpretation: { sampleRate: 48_000, channels: 2 },
     },
     preparation: identityTemporalMap(domain),
     target: frameRangeFixture(0, 48_000, { numerator: 48_000, denominator: 1 }),
@@ -81,14 +80,14 @@ test("AudioProgram canonicalizes a valid root signal multiset regardless of its 
   );
 });
 
-test("AudioProgram preserves one shared source across explicit gain branches", () => {
+test("AudioProgram preserves one shared source across package-owned Process branches", () => {
   const track = sealAudioTrack({ id: "parallel", timelineId: timeline.id, graph: {
     nodes: [
       { kind: "source", id: "source", clip: clip("line") },
       { kind: "process", id: "dry", inputs: { signal: { node: "source", port: "signal" } },
-        program: audioGainProcess(0.5) },
+        program: { format: "example.dry@1", payload: {}, artifacts: [] } },
       { kind: "process", id: "send", inputs: { signal: { node: "source", port: "signal" } },
-        program: audioGainProcess(0.25) },
+        program: { format: "example.send@1", payload: {}, artifacts: [] } },
       { kind: "mix", id: "return", inputs: [
         { node: "dry", port: "signal" }, { node: "send", port: "signal" },
       ] },
@@ -97,7 +96,8 @@ test("AudioProgram preserves one shared source across explicit gain branches", (
   } });
   const program = compileAudioProgram(sealComposition({ id: "audio-program", visual: { canvas: { width: 1, height: 1, clearColor: "#000000" }, root: { members: [] } }, audio: { contributions: [track] } }, timeline));
   assert.equal(audioProgramSourceClips(program).length, 1);
-  assert.deepEqual(audioProgramGainRoutes(program).map((route) => route.gain).sort(), [0.25, 0.5]);
+  assert.deepEqual(program.graph.nodes.filter((node) => node.kind === "process").map((node) => node.program.format).sort(),
+    ["example.dry@1", "example.send@1"]);
 });
 
 test("AudioProgram retains package-owned Process programmes for endpoint capability decisions", () => {
@@ -112,5 +112,4 @@ test("AudioProgram retains package-owned Process programmes for endpoint capabil
   const program = compileAudioProgram(sealComposition({ id: "audio-program", visual: { canvas: { width: 1, height: 1, clearColor: "#000000" }, root: { members: [] } }, audio: { contributions: [track] } }, timeline));
   assert.equal(program.graph.nodes.find((node) => node.kind === "process")?.program.format,
     "example.audio-effect@1");
-  assert.throws(() => audioProgramGainRoutes(program), /does not support Process format/u);
 });

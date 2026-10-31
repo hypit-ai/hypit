@@ -21,7 +21,8 @@ test("inspection chooses its scope before following any Output reference", async
     finishedAt: 1,
     outputs: Object.fromEntries(names.map((name) => [name, {
       type: valueType,
-      value: { kind: "inline" as const, value: null },
+      representation: "inline" as const,
+      value: null,
     }])),
   };
   const view = await buildResultView(manifest, { projectRoot: "/project", limit: 2 });
@@ -37,17 +38,16 @@ test("inspection chooses its scope before following any Output reference", async
 
 test("status groups identical active requests and retains late failures without verbose", () => {
   const pending: BuildView["operations"] = Array.from({ length: 30 }, (_, index) => ({
-    id: `op-${index}`, endpoint: "chosen", status: "pending" as const, receipt: { id: `remote-${index}` },
+    endpoint: "chosen", status: "pending" as const, receipt: { id: `remote-${index}` },
     progress: { phase: "generating" },
   }));
   const runtime: BuildView = {
-    id: "build", createdAt: 0, targets: ["final"], activity: "running",
- acceptedRecords: 0, outstandingCommands: 1,
+    id: "build", targets: ["final"], activity: "running",
     operations: [...pending,
-      { id: "done", endpoint: "chosen", status: "completed" as const, receipt: { id: "completed-remote" } },
-      { id: "failed", endpoint: "chosen", status: "failed" as const, receipt: { id: "failed-remote" },
+      { endpoint: "chosen", status: "completed" as const, receipt: { id: "completed-remote" } },
+      { endpoint: "chosen", status: "failed" as const, receipt: { id: "failed-remote" },
         failure: { code: "NETWORK", message: "download failed" } }],
-    commands: [{ id: "raw-command-id", endpoint: "renderer", progress: { phase: "capturing", completed: 50, total: 100, unit: "frames" } }],
+    commands: [{ endpoint: "renderer", progress: { phase: "capturing", completed: 50, total: 100, unit: "frames" } }],
   };
   const view = buildStatusView({ id: "build", runtime });
   assert.deepEqual(view.targets, ["final"]);
@@ -57,7 +57,6 @@ test("status groups identical active requests and retains late failures without 
   assert.equal(view.operations?.[1]?.failure?.message, "download failed");
   assert.equal(view.operations?.[1]?.receipt?.id, "failed-remote");
   assert.equal(view.commands?.[0]?.progress.completed, 50);
-  assert.equal(view.commands?.[0]?.id, undefined);
   const detailed = buildStatusView({ id: "build", runtime, verbose: true });
   assert.equal(detailed.operations?.length, 32);
   assert.equal(detailed.operations?.[0]?.receipt?.id, "remote-0");
@@ -73,8 +72,7 @@ test("finished status retains completed receipts only when requested", () => {
     outcome: "complete",
     finishedAt: 1,
     outputs: {}, operations: [
-    { capability: { module: { name: "example", version: "1" }, name: "generate" },
-      endpoint: "chosen", outcome: "complete", acknowledgedAt: 0, providerCompletedAt: 1,
+    { request: "need:generate", endpoint: "chosen", outcome: "complete",
       receipt: { id: "remote-task" } },
   ] };
   assert.equal(buildStatusView({ id: "build", result }).operations, undefined);

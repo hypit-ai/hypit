@@ -110,7 +110,7 @@ for (const cancellation of ["accepted", "unsupported", "failed-build", "host-fai
       const result = await new FileBuildResultStore(join(directory, "results")).read(first);
       assert.equal(result?.outcome, completion.outcome);
       assert.equal(result?.operations?.[0]?.receipt?.id, "job-1");
-      assert.equal(result?.operations?.[0]?.outcome, isFailure ? undefined : "cancelled");
+      assert.equal(result?.operations?.[0]?.outcome, isFailure ? "unsettled" : "cancelled");
       assert.equal(polls, 0);
       assert.equal(cancels, isFailure ? 0 : 1);
       assert.equal(remoteActive, 1, "local termination does not pretend the cloud task stopped");

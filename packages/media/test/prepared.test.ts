@@ -17,19 +17,18 @@ const VIDEO_PICTURE = { colorPrimaries: "bt709", colorTransfer: "bt709", colorMa
   colorRange: "limited", bitDepth: 8, alphaMode: "opaque" } as const;
 const timestamp = (ticks: string) => ({ ticks, timeBase: { numerator: 1, denominator: 1_000 } });
 const inspection: MediaInspection = {
-  container: { formatNames: ["mp4"] },
   streams: [{
-    kind: "video", index: 0, codecType: "video", codecName: "h264",
-    disposition: { default: true, attachedPicture: false }, timingStatus: "admissible",
-    timeBase: { numerator: 1, denominator: 1_000 }, startPts: timestamp("100"), endPts: timestamp("10100"),
-    decodedUnitCount: 240, role: "moving", width: 720, height: 576,
+    kind: "video", index: 0, codecName: "h264",
+    disposition: { default: true, attachedPicture: false },
+    startPts: timestamp("100"), endPts: timestamp("10100"),
+    decodedUnitCount: 240, width: 720, height: 576,
     sampleAspectRatio: { numerator: 16, denominator: 15 }, rotationDegrees: 90, picture: { colorPrimaries: "bt709", colorTransfer: "bt709", colorMatrix: "bt709", colorRange: "limited", bitDepth: 8, alphaMode: "opaque" } as const,
   }, {
-    kind: "audio", index: 1, codecType: "audio", codecName: "aac",
-    disposition: { default: true, attachedPicture: false }, timingStatus: "admissible",
-    timeBase: { numerator: 1, denominator: 1_000 }, startPts: timestamp("350"), endPts: timestamp("9850"),
-    decodedUnitCount: 456_000, decodedSampleFrames: 456_000,
-    sampleRate: 48_000, channels: 2, channelLayout: "stereo",
+    kind: "audio", index: 1, codecName: "aac",
+    disposition: { default: true, attachedPicture: false },
+    startPts: timestamp("350"), endPts: timestamp("9850"),
+    decodedSampleFrames: 456_000,
+    sampleRate: 48_000, channels: 2,
   }],
 };
 
@@ -55,9 +54,25 @@ test("PreparedMedia preserves source identity, exact member offsets and display 
   assert.deepEqual(preparedVisualExtent(media), { widthPx: 576, heightPx: 768 });
 });
 
+test("PreparedMedia rejects a stream without an observed presentation span", () => {
+  const missing: MediaInspection = {
+    ...inspection,
+    streams: inspection.streams.map((stream) => {
+      if (stream.kind !== "video") return stream;
+      const { startPts: _startPts, endPts: _endPts, ...withoutSpan } = stream;
+      return withoutSpan;
+    }),
+  };
+  assert.throws(() => prepareMedia({
+    id: "missing-span-shot",
+    source: { kind: "blob", resource: fixtureResource("prepared-missing-span"), size: 128, mediaType: "video/mp4" },
+    inspection: missing,
+    selection: { videoStreamIndex: 0, spanAuthority: "video", picture: VIDEO_PICTURE },
+  }), /has no observed presentation span/u);
+});
+
 test("square-pixel display extent preserves actual dimensions instead of reducing an aspect ratio", () => {
   const squareInspection: MediaInspection = {
-    container: { formatNames: ["mp4"] },
     streams: [{
       ...(inspection.streams[0]! as MediaVideoStream), width: 64, height: 64,
       sampleAspectRatio: { numerator: 1, denominator: 1 }, rotationDegrees: 0,

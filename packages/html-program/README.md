@@ -34,9 +34,9 @@ to Artifact staging and to this page ABI; the page does not obtain render policy
 from a hidden browser global or infer it from worker assignment.
 
 `HtmlProgram.videoSources` is the compiler-owned terminal source-sampling plan. Direct media keeps the selected
-visual stream and its complete exact `TemporalMap`. An already rendered Surface keeps its explicit frame relation
-and `PictureInterpretation`: a Surface is already a discrete frame carrier, so its occurrence is represented by
-compact `sourceFrame`/`sourceRate` runs without adding a second continuous-time evaluator. A Provider
+visual stream and its complete exact `TemporalMap`. An already rendered Surface keeps its complete exact
+`TemporalMap`, source frame rate and `PictureInterpretation`; compilation does not expand that relation into
+renderer-private runs. A Provider
 uses this plan to decode the source samples it needs; it must not recover sampling semantics by
 parsing generated markup. Resource URLs in the HTML remain inert
 `hypit-artifact://` placeholders until execution materializes the program.
@@ -68,8 +68,8 @@ owned media or Surface `VisualElement`, whose prepared stream, clock and samplin
 
 Every timed media element owns one stable display plane. Authored layout, crop,
 transform and selector identity stay on that plane; the native video and a
-Provider-owned decoded payload slot are private children. All sampled runs of
-one timed Surface share the same plane. A Provider replaces pixels inside the
+Provider-owned decoded payload slot are private children. One timed Surface
+remains one occurrence and one plane. A Provider replaces pixels inside the
 slot and never adds a sibling to the authored flex/grid or selector tree.
 
 Each timed media source carries its authored `TemporalMap` directly. Executors bind the shared sided

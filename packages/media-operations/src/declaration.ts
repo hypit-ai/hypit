@@ -457,7 +457,6 @@ const decodeExtractAudioDeclaration: DeclarationDecoder = ({ element, resolveRef
   const source = ref(element.attributes.source, `${element.name}.source`, resolveReference);
   const request = sealAudioExtractionRequest({
     audio: audioSelector(text(element, "audio")),
-    output: { container: "wav", codec: "pcm_s16le", sampleRate: 48_000, channels: 2 },
   });
   const requestId = `${id}.request`;
   return {
@@ -491,7 +490,6 @@ const decodeExtractFrameDeclaration: DeclarationDecoder = ({ element, resolveRef
   const request = sealFrameExtractionRequest({
     video: videoSelector(text(element, "video")),
     at: frameSelector(text(element, "at"), `${element.name}.at`),
-    output: { format: "png" },
   });
   const requestId = `${id}.request`;
   return {

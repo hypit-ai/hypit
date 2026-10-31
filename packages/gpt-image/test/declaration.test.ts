@@ -14,12 +14,10 @@ import {
 
 const refs = new Map<string, AuthorResolvedReference>([
   ["prompt", {
-    path: "prompt",
     ref: { kind: "component-output", component: "assembled-prompt", output: "text" },
     type: textTypes.text,
   }],
   ...["person.image", "product.image"].map((path) => [path, {
-    path,
     ref: { kind: "component-output" as const, component: path.split(".")[0]!, output: "image" },
     type: blobTypes.blob,
   }] as const),

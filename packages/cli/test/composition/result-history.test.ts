@@ -171,7 +171,7 @@ test("result export writes Blob bytes and uses the Type owner's structured autho
       readonly build: { readonly outputs: readonly [{ readonly name: string; readonly representation: string }] };
     };
     assert.equal(inspected.build.outputs[0].name, "final.take");
-    assert.equal(inspected.build.outputs[0].representation, "value-document");
+    assert.equal(inspected.build.outputs[0].representation, "structured");
     assert.equal("value" in inspected.build.outputs[0], false);
     assert.equal("path" in inspected.build.outputs[0], false);
 

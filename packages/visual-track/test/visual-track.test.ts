@@ -182,27 +182,25 @@ function stillLayers(): MediaLayerSet {
 
 function preparedTimed(id = "timed", withAudio = true): PreparedMedia {
   const videoStream = {
-    kind: "video" as const, index: 0, codecType: "video" as const, codecName: "h264", role: "moving" as const,
-    disposition: { default: true, attachedPicture: false }, timingStatus: "admissible" as const,
-    timeBase: { numerator: 1, denominator: 30 },
+    kind: "video" as const, index: 0, codecName: "h264",
+    disposition: { default: true, attachedPicture: false },
     startPts: { ticks: "0", timeBase: { numerator: 1, denominator: 30 } },
     endPts: { ticks: "60", timeBase: { numerator: 1, denominator: 30 } },
     decodedUnitCount: 60, width: 720, height: 1280,
     sampleAspectRatio: { numerator: 1, denominator: 1 }, rotationDegrees: 0 as const, picture: { colorPrimaries: "bt709", colorTransfer: "bt709", colorMatrix: "bt709", colorRange: "limited", bitDepth: 8, alphaMode: "opaque" } as const,
-    averageFrameRate: { numerator: 30, denominator: 1 }, nominalFrameRate: { numerator: 30, denominator: 1 },
+    averageFrameRate: { numerator: 30, denominator: 1 },
   };
   const audioStream = {
-    kind: "audio" as const, index: 1, codecType: "audio" as const, codecName: "pcm_s16le",
-    disposition: { default: true, attachedPicture: false }, timingStatus: "admissible" as const,
-    timeBase: { numerator: 1, denominator: 48_000 },
+    kind: "audio" as const, index: 1, codecName: "pcm_s16le",
+    disposition: { default: true, attachedPicture: false },
     startPts: { ticks: "0", timeBase: { numerator: 1, denominator: 48_000 } },
     endPts: { ticks: "96000", timeBase: { numerator: 1, denominator: 48_000 } },
-    decodedUnitCount: 96_000, sampleRate: 48_000, channels: 2, decodedSampleFrames: 96_000,
+    sampleRate: 48_000, channels: 2, decodedSampleFrames: 96_000,
   };
   return prepareMedia({
     id: `prepared-${id}`,
     source: { kind: "blob", resource: fixtureResource(`source:${id}`), size: 10_000, mediaType: "video/mp4" },
-    inspection: { container: { formatNames: ["mp4"] }, streams: withAudio ? [videoStream, audioStream] : [videoStream] },
+    inspection: { streams: withAudio ? [videoStream, audioStream] : [videoStream] },
     selection: { videoStreamIndex: 0, ...(withAudio ? { audioStreamIndex: 1 } : {}), spanAuthority: "video",
       picture: { colorPrimaries: "bt709", colorTransfer: "bt709", colorMatrix: "bt709",
         colorRange: "limited", bitDepth: 8, alphaMode: "opaque" } },

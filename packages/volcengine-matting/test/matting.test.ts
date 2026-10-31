@@ -12,7 +12,7 @@ test("portrait matting binds a source video and publishes an ordinary video edge
   assert.deepEqual(sealPortraitMattingRequest({ source: [{ role: "video", artifact: source }] }).fields.format, ["WEBM"]);
   assert.throws(() => sealPortraitMattingRequest({ source: [{ role: "image", artifact: { ...source, mediaType: "image/png" } }] }), /video|role/u);
   assert.throws(() => sealPortraitMattingRequest({ source: [{ role: "video", artifact: source }], format: ["MP4"] }), /format/u);
-  const reference = { path: "performance.video", ref: { kind: "record" as const, id: "performance.video" },
+  const reference = { ref: { kind: "record" as const, id: "performance.video" },
     type: blobTypes.blob, record: { id: "performance.video", type: blobTypes.blob, value: source } };
   const result = await compileMarkupDeclaration({
     source: '<matte:Portrait id="cutout" source={performance.video}/>',
@@ -20,7 +20,7 @@ test("portrait matting binds a source video and publishes an ordinary video edge
     alias: "matte",
     compilers: [portraitMattingAuthorDeclaration],
     syntax: volcengineMattingMarkupDeclarations,
-    references: new Map([[reference.path, reference]]),
+    references: new Map([["performance.video", reference]]),
   });
   assert.deepEqual(result.components[0]!.outputs, { video: "cutout.video" });
   assert.deepEqual(result.components[0]!.inputs["source:artifact"], { kind: "record", id: "performance.video" });

@@ -5,6 +5,11 @@ It provides the two universal operations already justified by the signal algebra
 gain and explicit additive mixing. It never normalizes, limits, discovers a “master” bus, or routes by
 Track name.
 
+The package owns the exact `hypit.audio-gain@1` Process format it authors, including its constructor
+and payload reader. Composition and Audio Program keep Process programmes opaque; a playback or
+rendering package supports gain by depending explicitly on this format owner and performs its own
+request-local graph lowering.
+
 ```svml
 <mix:Track id="dialogue" timeline={story.timeline}>
   <mix:Input id="host" source={host.audio}/>

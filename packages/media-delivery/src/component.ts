@@ -33,9 +33,6 @@ export const mediaDeliveryComponent = {
         if (!sameVisualDeliverySpec(visual.delivery, delivery.visual)) {
           throw new Error("Rendered visual implements a different delivery requirement.");
         }
-        if (audio.sampleRate !== delivery.audio.sampleRate || audio.channelLayout !== delivery.audio.channelLayout) {
-          throw new Error("Rendered audio implements a different delivery requirement.");
-        }
         const { sampleFrames } = clockFrameSpanSamples(
           { startFrame: 0, endFrameExclusive: visual.frameCount },
           { frameRate: visual.frameRate },

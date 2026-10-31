@@ -67,7 +67,7 @@ export type AuthorDeclarationChild = {
   readonly range?: SourceRange;
 };
 
-/** One syntax-neutral invocation of a package author capability. */
+/** One syntax-neutral occurrence of a package-owned author declaration. */
 export type AuthorDeclaration = {
   readonly module: ModuleRef;
   readonly name: string;
@@ -104,7 +104,6 @@ export function declarationBody(
 }
 
 export type AuthorResolvedReference = {
-  readonly path: string;
   readonly ref: AuthorValueRef;
   readonly type: TypeRef;
   /** Present only when the reference denotes an already-authored Record. */
@@ -141,7 +140,6 @@ export type AuthorDeclarationOutput = {
 
 export type AuthorDeclarationCompileContext = {
   readonly sourceName: string;
-  readonly sourceId?: string;
   readonly declaration: AuthorDeclaration;
   readonly resolveReference: (path: string) => Awaitable<AuthorResolvedReference | undefined>;
   readonly resolveAsset: (request: AuthorSourceAssetRequest) => Awaitable<BlobRef>;
@@ -150,7 +148,6 @@ export type AuthorDeclarationCompileContext = {
 
 export type AuthorDeclarationBindingContext = {
   readonly sourceName: string;
-  readonly sourceId?: string;
 };
 
 export type AuthorDeclarationFieldKind = "identifier" | "literal" | "reference" | "expression";
@@ -309,7 +306,6 @@ export class AuthorDeclarationError extends Error {
 
 export type CompileAuthorDeclarationsOptions = {
   readonly sourceName: string;
-  readonly sourceId?: string;
   readonly declarations: readonly AuthorDeclaration[];
   readonly registry: AuthorDeclarationRegistryLike;
   readonly resolveReference?: (path: string) => Awaitable<AuthorResolvedReference | undefined>;
@@ -335,7 +331,6 @@ type DeclarationLike = Pick<AuthorDeclaration, "fields" | "children" | "body" | 
 type DeclarationProvenanceGroup = {
   readonly range: SourceRange;
   readonly records: string[];
-  readonly components: string[];
   readonly outputs: Array<{ readonly component: string; readonly name: string; readonly id: string }>;
   readonly inputs: AuthorInputProvenanceDraft[];
 };
@@ -355,7 +350,6 @@ function declarationProvenanceGroups(
     const group = groups.get(key) ?? {
       range: { ...node.range },
       records: [],
-      components: [],
       outputs: [],
       inputs: [],
     };
@@ -366,8 +360,6 @@ function declarationProvenanceGroups(
         : undefined;
       group.inputs.push({
         name: field.name,
-        range: { ...field.value.range },
-        kind: field.value.kind,
         ...(ref === undefined ? {} : { ref }),
       });
     }
@@ -528,7 +520,6 @@ export async function compileAuthorDeclarations(
     );
     const bindings = compiler.bindings(declaration, {
       sourceName: options.sourceName,
-      ...(options.sourceId === undefined ? {} : { sourceId: options.sourceId }),
     });
     for (const binding of bindings) validateBinding(binding, declaration);
     return { declaration, compiler, bindings, references };
@@ -589,7 +580,6 @@ export async function compileAuthorDeclarations(
           ? recordsById.get(local.binding.ref.id)
           : undefined;
         const result: AuthorResolvedReference = {
-          path,
           ref: local.binding.ref,
           type: local.binding.type,
           ...(record === undefined ? {} : { record: structuredClone(record) }),
@@ -623,7 +613,6 @@ export async function compileAuthorDeclarations(
     }
     const output = await item.compiler.compile({
       sourceName: options.sourceName,
-      ...(options.sourceId === undefined ? {} : { sourceId: options.sourceId }),
       declaration: item.declaration,
       resolveReference,
       resolveAsset: options.resolveAsset,
@@ -686,7 +675,7 @@ export async function compileAuthorDeclarations(
     const groupFor = (range: SourceRange): DeclarationProvenanceGroup => {
       const key = rangeKey(range);
       const group = groups.get(key) ?? {
-        range: { ...range }, records: [], components: [], outputs: [], inputs: [],
+        range: { ...range }, records: [], outputs: [], inputs: [],
       };
       groups.set(key, group);
       return group;
@@ -694,7 +683,6 @@ export async function compileAuthorDeclarations(
     for (const record of output.records) groupFor(record.range).records.push(record.id);
     for (const component of output.components) {
       const group = groupFor(component.range);
-      group.components.push(component.id);
       group.outputs.push(...Object.entries(component.outputs).map(([name, id]) => ({
         component: component.id,
         name,

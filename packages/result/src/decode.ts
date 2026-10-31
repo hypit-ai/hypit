@@ -1,11 +1,10 @@
 import {
   assertOrderedBuildId,
   assertResultIntent,
-  createCapabilityRef,
   createModuleRef,
   createTypeRef,
 } from "@hypit/protocol";
-import type { CapabilityRef, TypeRef } from "@hypit/protocol";
+import type { TypeRef } from "@hypit/protocol";
 
 import {
   assertBuildResultFileRef,
@@ -16,8 +15,8 @@ import type {
   BuildResultFileRef,
   BuildResultOperation,
   StoredBuildResult,
-  BuildResultOutput,
-  BuildResultOutputValue,
+  StoredBuildResultOutput,
+  StoredBuildResultOutputValue,
   BuildResultValueDocument,
 } from "./types.js";
 import type { BuildResultWriterState } from "./writer.js";
@@ -68,15 +67,6 @@ function typeRef(value: unknown, subject: string): TypeRef {
   ), text(item.name, `${subject}.name`));
 }
 
-function capabilityRef(value: unknown, subject: string): CapabilityRef {
-  const item = object(value, subject);
-  const module = object(item.module, `${subject}.module`);
-  return createCapabilityRef(createModuleRef(
-    text(module.name, `${subject}.module.name`),
-    text(module.version, `${subject}.module.version`),
-  ), text(item.name, `${subject}.name`));
-}
-
 function resultPath(value: unknown, subject: string): string {
   assertBuildResultPath(value, subject);
   return value;
@@ -92,7 +82,7 @@ function fileRef(value: unknown, subject: string): BuildResultFileRef {
   };
 }
 
-function outputValue(value: unknown, subject: string): BuildResultOutputValue {
+function outputValue(value: unknown, subject: string): StoredBuildResultOutputValue {
   const item = object(value, subject);
   if (item.kind === "build-file") {
     return fileRef(item, subject);
@@ -111,7 +101,7 @@ function outputValue(value: unknown, subject: string): BuildResultOutputValue {
   throw new Error(`${subject}.kind is not a Result value kind`);
 }
 
-function outputs(value: unknown, subject: string): Readonly<Record<string, BuildResultOutput>> {
+function outputs(value: unknown, subject: string): Readonly<Record<string, StoredBuildResultOutput>> {
   const raw = object(value, subject);
   return Object.fromEntries(Object.entries(raw).map(([name, value]) => {
     text(name, `${subject} Output name`);
@@ -131,12 +121,6 @@ function optionalTime(value: unknown, subject: string): number | undefined {
   return value;
 }
 
-function time(value: unknown, subject: string): number {
-  const decoded = optionalTime(value, subject);
-  if (decoded === undefined) throw new Error(`${subject} is required`);
-  return decoded;
-}
-
 /** Decode JSON bytes without letting invalid UTF-8 or an anonymous SyntaxError escape the Result boundary. */
 export function decodeBuildResultJson(value: Uint8Array, subject: string): unknown {
   try {
@@ -151,7 +135,7 @@ function operationEvidence(value: unknown, subject: string): readonly BuildResul
   return value.map((raw, index) => {
     const item = object(raw, `${subject}[${index}]`);
     const outcome = item.outcome;
-    if (outcome !== undefined && outcome !== "complete" && outcome !== "failed" && outcome !== "cancelled") {
+    if (outcome !== "unsettled" && outcome !== "complete" && outcome !== "failed" && outcome !== "cancelled") {
       throw new Error(`${subject}[${index}] has an invalid Operation outcome`);
     }
     const cancellation = item.cancellation === undefined ? undefined : object(item.cancellation, `${subject}[${index}].cancellation`);
@@ -161,7 +145,7 @@ function operationEvidence(value: unknown, subject: string): readonly BuildResul
     const receipt = item.receipt === undefined ? undefined : object(item.receipt, `${subject}[${index}].receipt`);
     const failure = item.failure === undefined ? undefined : object(item.failure, `${subject}[${index}].failure`);
     const evidence = {
-      capability: capabilityRef(item.capability, "Operation capability"),
+      request: text(item.request, "Operation request"),
       endpoint: text(item.endpoint, "Operation Endpoint"),
       ...(receipt === undefined ? {} : { receipt: { id: text(receipt.id, "Remote receipt id"),
         ...(receipt.url === undefined ? {} : { url: text(receipt.url, "Remote receipt URL") }) } }),
@@ -169,29 +153,21 @@ function operationEvidence(value: unknown, subject: string): readonly BuildResul
     if (outcome === "failed") {
       if (failure === undefined) throw new Error(`${subject} failed Operation has no failure`);
       if (item.cancellation !== undefined) throw new Error(`${subject}[${index}] failed Operation cannot have cancellation evidence`);
-      return { ...evidence, outcome, failedAt: time(item.failedAt, "Operation failedAt"), failure: {
+      return { ...evidence, outcome, failure: {
         code: text(failure.code, "Operation failure code"),
         message: text(failure.message, "Operation failure message"),
       } };
     }
-    if (failure !== undefined) throw new Error(`${subject}[${index}] ${outcome ?? "accepted"} Operation cannot have a failure`);
+    if (failure !== undefined) throw new Error(`${subject}[${index}] ${outcome} Operation cannot have a failure`);
     if (outcome === "cancelled") {
       if (cancellation === undefined) throw new Error(`${subject}[${index}] cancelled Operation has no cancellation evidence`);
-      return { ...evidence, outcome, cancelledAt: time(item.cancelledAt, "Operation cancelledAt"), cancellation: {
+      return { ...evidence, outcome, cancellation: {
         outcome: cancellation.outcome as "confirmed" | "accepted" | "unsupported" | "too-late" | "failed",
         ...(cancellation.message === undefined ? {} : { message: text(cancellation.message, "Cancellation error") }),
       } };
     }
-    if (cancellation !== undefined) throw new Error(`${subject}[${index}] ${outcome ?? "accepted"} Operation cannot have cancellation evidence`);
-    const acknowledgedAt = time(item.acknowledgedAt, "Operation acknowledgedAt");
-    if (outcome === "complete") {
-      return { ...evidence, outcome, acknowledgedAt,
-        providerCompletedAt: time(item.providerCompletedAt, "Operation providerCompletedAt") };
-    }
-    return { ...evidence, acknowledgedAt,
-      ...(item.providerCompletedAt === undefined ? {} : {
-        providerCompletedAt: time(item.providerCompletedAt, "Operation providerCompletedAt"),
-      }) };
+    if (cancellation !== undefined) throw new Error(`${subject}[${index}] ${outcome} Operation cannot have cancellation evidence`);
+    return { ...evidence, outcome };
   });
 }
 
@@ -206,7 +182,7 @@ export function decodeStoredBuildResult(
   if (item.format !== "hypit.build-result@1") throw new Error(`${subject} is not a Hypit Build Result`);
   const sourcePath = text(item.sourcePath, `${subject}.sourcePath`);
   const finishedAt = optionalTime(item.finishedAt, `${subject}.finishedAt`);
-  let outcome: import("./types.js").BuildResult["outcome"] | undefined;
+  let outcome: import("./types.js").StoredFinishedBuildResult["outcome"] | undefined;
   if (item.outcome !== undefined) {
     if (item.outcome !== "complete" && item.outcome !== "failed" && item.outcome !== "cancelled") {
       throw new Error(`${subject}.outcome is not a Build Result outcome`);

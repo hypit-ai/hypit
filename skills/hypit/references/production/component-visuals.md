@@ -2,7 +2,7 @@
 
 Read this while implementing a project component's rendered output. [Track authoring](track-authoring.md)
 owns its author interface, temporal inputs and state behavior. [Spatial layout](spatial.md) explains
-the incoming geometry; [Studio](studio.md) explains an optional Companion.
+the incoming geometry.
 
 ## From program to visible Track
 
@@ -90,7 +90,7 @@ placement, sampling and lifetime.
 
 For an effect that transforms an image, pass that image as an explicit input to the effect's
 preparation. For a local mask, own the mask and content in the same element tree. These relationships
-make the required materials available both in Studio and in a render of any selected interval.
+make the required materials available in a render of any selected interval.
 
 ## Compose video and graphics in one HTML visual
 

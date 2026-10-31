@@ -151,9 +151,10 @@ migrate completed Results explicitly after a Build when needed.
 Results retain package-declared Outputs as they become available and record the terminal outcome.
 A new Output can reference an existing file, including within a composite; it does not necessarily
 create new media bytes. Explicit local file references remain live. Keep dependencies available for
-future reuse. `get` creates a separate export when a person or another tool needs those files.
+future reuse. `result export` creates a separate export when a person or another tool needs one
+retained Output.
 
-`builds`, `history`, `inspect` and `get` read project Results without requiring the original Runtime.
+`builds`, `history`, `inspect` and `result export` read project Results without requiring the original Runtime.
 For exact storage and execution interfaces, see the
 [Result package](https://github.com/hypit-ai/hypit/blob/main/packages/result/README.md) and
 [local Runtime package](https://github.com/hypit-ai/hypit/blob/main/packages/runtime-local/README.md).

@@ -235,13 +235,11 @@ function parseOperationSnapshot(row: Row): OperationSnapshot {
     command: nonEmptyString(row.command_id, "SQLite Operation command id"),
     endpoint: nonEmptyString(row.endpoint_id, "SQLite Operation endpoint id"),
   };
-  const commonKeys = ["createdAt", "need", "credentials", "pool", "receipt", "progress"] as const;
+  const commonKeys = ["need", "credentials", "receipt", "progress"] as const;
   const common = {
     ...identity,
-    createdAt: nonNegativeTime(facts.createdAt, "SQLite Operation creation time"),
     need: parseNeed(facts.need),
     credentials: parseCredentials(facts.credentials),
-    ...(facts.pool === undefined ? {} : { pool: nonEmptyString(facts.pool, "SQLite Operation pool") }),
     ...parseEvidence(facts),
   };
   if (row.status === "queued") {
@@ -1029,14 +1027,14 @@ class SqliteBuildExecutionStore implements BuildExecutionStore {
             updated_at = excluded.updated_at
         `).run(resource.id, resource.limit, resource.periodMs, this.#rate(resource, request.now) - capacityUnits(resource), request.now);
       }
+      const lifetime = request.lifetime ?? "operation";
       const reservation: CapacityReservation = {
-        build: request.build, command: request.command, createdAt: request.now,
+        build: request.build, command: request.command,
         resources: resources.filter((resource) => resource.periodMs === undefined),
-        lifetime: request.lifetime ?? "operation",
       };
       if (reservation.resources.length > 0) this.#database.prepare(`
         INSERT INTO hypit_capacity (build_id, command_id, resources_json, created_at, lifetime) VALUES (?, ?, ?, ?, ?)
-      `).run(request.build, request.command, JSON.stringify(reservation.resources), request.now, reservation.lifetime!);
+      `).run(request.build, request.command, JSON.stringify(reservation.resources), request.now, lifetime);
       this.#database.prepare("DELETE FROM hypit_resource_waits WHERE build_id = ? AND command_id = ?").run(request.build, request.command);
       this.#wakeAvailableWaiter();
       return { status: "acquired", reservation };
@@ -1107,8 +1105,6 @@ function parseCapacityReservation(row: Row): CapacityReservation {
     build: row.build_id,
     command: row.command_id,
     resources,
-    lifetime: row.lifetime as "action" | "operation",
-    createdAt: row.created_at,
   };
   return value;
 }

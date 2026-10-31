@@ -516,7 +516,7 @@ export function modelTextInputName(name: string): string {
 }
 
 /**
- * Expand one exact-model invocation into a deterministic request-assembly
+ * Expand one exact-model request declaration into a deterministic request-assembly
  * graph. Every runtime-produced media artifact remains a real Fragment input;
  * the fold only constructs the Provider-facing request after those inputs are
  * available.
