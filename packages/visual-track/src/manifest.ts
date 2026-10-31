@@ -168,6 +168,7 @@ export const visualTransitionEffectSchema: ValueSchema = object({
 export const visualTransitionSpecSchema: ValueSchema = object({
   id: { schema: string },
   outgoingClipId: { schema: string },
+  durationFrames: { schema: { kind: "number", integer: true, minimum: 1 }, optional: true },
   incomingClipId: { schema: string },
   effect: { schema: visualTransitionEffectSchema },
 });

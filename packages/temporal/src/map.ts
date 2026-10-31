@@ -307,3 +307,31 @@ export function sliceTemporalMap(value: TemporalMap, from: ExactTemporalValue, u
   });
   return sealTemporalMap({ stages: [{ ...structuredClone(first), target: { id: targetId, duration }, pieces }, ...structuredClone(value.stages.slice(1))] });
 }
+
+/** Extend the target clock using its boundary rates while retaining authored interior mappings. */
+export function extendTemporalMap(value: TemporalMap, before: ExactTemporalValue, after: ExactTemporalValue, targetId: string): TemporalMap {
+  assertTemporalMap(value);
+  const first = value.stages[0]!;
+  const lead = exactTemporalRational(before), tail = exactTemporalRational(after), zero = rational(0n);
+  assert(compare(lead, zero) >= 0 && compare(tail, zero) >= 0, "Temporal Map extensions must be nonnegative.");
+  const duration = exactTemporalValue(add(add(lead, exactTemporalRational(first.target.duration)), tail));
+  const pieces = first.pieces.map((piece, index): TemporalMapPiece => {
+    const atStart = index === 0 && compare(lead, zero) > 0;
+    const atEnd = index === first.pieces.length - 1 && compare(tail, zero) > 0;
+    if (atStart || atEnd) {
+      assert(isAffineTemporalMapPiece(piece), "Temporal Map extension requires an affine boundary rate.");
+      if (atStart) assert(compareExactTemporalValues(piece.target.start, exactTemporalZero()) === 0, "Temporal Map has no mapping at its start.");
+      if (atEnd) assert(compareExactTemporalValues(piece.target.end, first.target.duration) === 0, "Temporal Map has no mapping at its end.");
+    }
+    return {
+      ...structuredClone(piece),
+      target: {
+        start: atStart ? exactTemporalZero() : exactTemporalValue(add(exactTemporalRational(piece.target.start), lead)),
+        end: atEnd ? duration : exactTemporalValue(add(exactTemporalRational(piece.target.end), lead)),
+      },
+      sourceAtStart: atStart ? pieceValue(piece, exactTemporalValue(subtract(zero, lead))) : structuredClone(piece.sourceAtStart),
+    };
+  });
+  assert(pieces.length > 0, "Temporal Map extension requires a sampling relation.");
+  return sealTemporalMap({ stages: [{ ...structuredClone(first), target: { id: targetId, duration }, pieces }, ...structuredClone(value.stages.slice(1))] });
+}

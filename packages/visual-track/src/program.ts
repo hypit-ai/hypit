@@ -12,6 +12,7 @@ import {
   assertMediaIdentity,
   assertMediaLayerSet,
 } from "./layers.js";
+import { transitionContribution } from "./transition.js";
 import { lowerVisualClipRoot } from "./lower.js";
 import { assertVisualClipMotion, poseAnimation } from "./motion.js";
 import { assertVisualFrameTreatment } from "./frame-treatment.js";
@@ -173,6 +174,7 @@ export function assertVisualTransitionSpec(value: VisualTransitionSpec): void {
   assertMediaIdentity(value.outgoingClipId, "VisualTransitionSpec.outgoingClipId");
   assertMediaIdentity(value.incomingClipId, "VisualTransitionSpec.incomingClipId");
   assert(value.outgoingClipId !== value.incomingClipId, "Visual Transition requires two different Clips.");
+  if (value.durationFrames !== undefined) assert(Number.isSafeInteger(value.durationFrames) && value.durationFrames > 0, "Transition duration must be a positive frame count.");
   assertVisualTransitionEffect(value.effect);
 }
 
@@ -193,6 +195,13 @@ export function visualTransitionSpan(
   const incoming = clips.find((clip) => clip.id === transition.incomingClipId);
   assert(outgoing !== undefined, `Visual Transition references missing outgoing Clip ${transition.outgoingClipId}.`);
   assert(incoming !== undefined, `Visual Transition references missing incoming Clip ${transition.incomingClipId}.`);
+  if (transition.durationFrames !== undefined) {
+    assert(outgoing.span.endFrameExclusive === incoming.span.startFrame, "A duration-based Transition requires adjacent Clip Windows.");
+    const startFrame = incoming.span.startFrame - Math.floor(transition.durationFrames / 2);
+    const endFrameExclusive = startFrame + transition.durationFrames;
+    assert(startFrame >= outgoing.span.startFrame && endFrameExclusive <= incoming.span.endFrameExclusive, "Transition duration exceeds its adjacent Clips.");
+    return { startFrame, endFrameExclusive };
+  }
   return transitionIntersection(outgoing, incoming);
 }
 
@@ -388,8 +397,9 @@ export function projectVisualTrack(timeline: Timeline, program: VisualTrackProgr
     const resolved = transitionsByIncoming.get(clip.id);
     if (resolved === undefined) return [authored];
     const { transition, span } = resolved;
-    const outgoing = base.get(transition.outgoingClipId)!;
-    const incoming = base.get(transition.incomingClipId)!;
+    const contribution = (id: string) => transition.durationFrames === undefined ? base.get(id)! : transitionContribution(program.clips.find(item => item.id === id)!, span, timeline);
+    const outgoing = contribution(transition.outgoingClipId);
+    const incoming = contribution(transition.incomingClipId);
     return [{
       kind: "process" as const,
       id: transition.id,

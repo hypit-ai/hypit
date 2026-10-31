@@ -210,14 +210,11 @@ export type VisualTransitionEffect = Omit<VisualProcessEffect, "inputs"> & {
   readonly inputs: typeof VISUAL_TRANSITION_INPUTS;
 };
 
-/**
- * A relation between two neighbouring Clip occurrences. The relation owns no source media and does
- * not replace either Clip's sampling Map; it only describes how their already overlapping pictures
- * are mixed over the exact intersection of their Windows.
- */
+/** A two-picture relation over an overlap or a duration centred on an adjacent cut. */
 export type VisualTransitionSpec = {
   readonly id: string;
   readonly outgoingClipId: string;
+  readonly durationFrames?: number;
   readonly incomingClipId: string;
   readonly effect: VisualTransitionEffect;
 };

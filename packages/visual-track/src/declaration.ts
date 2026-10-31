@@ -363,8 +363,9 @@ export const visualTrackAuthorDeclaration: AuthorDeclarationCompiler = {
     { name: "Curve", cardinality: "many", summary: "Adds one exact monotone cubic source-position relation.", fields: curveFields },
     { name: "Sampling", cardinality: "many", summary: "Animates the sampled crop inside the Frame.", fields: samplingFields },
     { name: "Pose", cardinality: "many", summary: "Animates the complete framed Clip.", fields: poseFields },
-  ] }, { name: "Transition", cardinality: "many", summary: "Applies one visual effect to two adjacent Clips across their exact overlap.", fields: [
+  ] }, { name: "Transition", cardinality: "many", summary: "Applies one visual effect to two adjacent Clips across an overlap or a centred adjacent cut.", fields: [
     { name: "id", kind: "identifier", required: true, summary: "Names this Transition relation." },
+    { name: "for", kind: "literal", required: false, summary: "Sets a positive frame duration centred on adjacent Clip Windows, for example 15f." },
     { name: "outgoing", kind: "literal", required: true, summary: "Names the outgoing Clip id." },
     { name: "incoming", kind: "literal", required: true, summary: "Names the incoming Clip id." },
     { name: "effect", kind: "reference", required: true, accepts: [visualTrackTypes.transitionEffect], summary: "Selects the package-owned two-input visual effect." },
@@ -432,7 +433,10 @@ export const visualTrackAuthorDeclaration: AuthorDeclarationCompiler = {
       const suffix = String(index + 1).padStart(4, "0"), range = child.range ?? declaration.range;
       const transitionId = literal(child, "id");
       const effect = await resolved(child, "effect", visualTrackTypes.transitionEffect, resolveReference);
+      const duration = field(child, "for") === undefined ? undefined : literal(child, "for");
+      if (duration !== undefined && !/^[1-9]\d*f$/u.test(duration)) throw new Error("Transition.for must be a positive frame duration.");
       const spec: VisualTransitionSpec = {
+        ...(duration === undefined ? {} : { durationFrames: Number(duration.slice(0, -1)) }),
         id: transitionId,
         outgoingClipId: literal(child, "outgoing"),
         incomingClipId: literal(child, "incoming"),
