@@ -146,7 +146,7 @@ const motionPosition: ValueSchema = { kind: "oneOf", variants: [
 ] };
 const poseKeyframe = object({
   at: { schema: motionPosition }, translateX: { schema: number }, translateY: { schema: number },
-  scaleX: { schema: { kind: "number", minimum: 0.000001 } }, scaleY: { schema: { kind: "number", minimum: 0.000001 } },
+  scaleX: { schema: number }, scaleY: { schema: number },
   rotationDeg: { schema: number }, opacity: { schema: { kind: "number", minimum: 0, maximum: 1 } },
   originX: { schema: { kind: "number", minimum: 0, maximum: 1 } }, originY: { schema: { kind: "number", minimum: 0, maximum: 1 } },
   easing: { schema: { kind: "string", enum: ["linear", "ease-in", "ease-out", "ease-in-out"] }, optional: true },

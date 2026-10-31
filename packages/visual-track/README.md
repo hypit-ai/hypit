@@ -81,7 +81,9 @@ in program-picture pixels. A typed `Motion` transforms the whole framed Clip wit
 `Pose` keyframes; inline `Pose` children express the same value. `Sampling` children animate the
 fitted source inside the Frame. A single `Pose at="start"` applies a constant transform for
 the full Clip Window. Multiple Poses span the local clock from start through end.
-Coordinates use program-picture pixels, scale uses factors and rotation uses degrees.
+Coordinates use program-picture pixels, scale uses finite nonzero factors and rotation uses degrees.
+A negative scale factor reflects the corresponding local axis before rotation;
+`scale-x="-1"` mirrors a Clip horizontally while retaining its position and rotation.
 
 The resolved Program never retains fit as a competing spatial authority. When the Clip Frame is
 known, ordinary fit resolves once against the Frame's deterministic border/padding inset; an

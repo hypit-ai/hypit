@@ -51,7 +51,7 @@ function assertPose(value: VisualPoseKeyframe, label: string): void {
   finite(value.translateY, `${label}.translateY`);
   finite(value.scaleX, `${label}.scaleX`);
   finite(value.scaleY, `${label}.scaleY`);
-  assert(value.scaleX > 0 && value.scaleY > 0, `${label} scale must be positive.`);
+  assert(value.scaleX !== 0 && value.scaleY !== 0, `${label} scale must be nonzero.`);
   finite(value.rotationDeg, `${label}.rotationDeg`);
   unit(value.opacity, `${label}.opacity`);
   unit(value.originX, `${label}.originX`);
