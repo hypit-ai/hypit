@@ -152,7 +152,7 @@ const poseKeyframe = object({
   easing: { schema: { kind: "string", enum: ["linear", "ease-in", "ease-out", "ease-in-out"] }, optional: true },
 });
 export const visualClipMotionSchema: ValueSchema = object({
-  keyframes: { schema: { kind: "array", minItems: 2, items: poseKeyframe } },
+  keyframes: { schema: { kind: "array", minItems: 1, items: poseKeyframe } },
 });
 export const visualClipSpecSchema: ValueSchema = object({
   id: { schema: string },
