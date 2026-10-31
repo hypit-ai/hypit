@@ -36,3 +36,8 @@ export {
 export { syncBuildResultOutputs } from "./writer.js";
 export type { BuildResultWriterState, BuildResultWriteTarget } from "./writer.js";
 export { preserveExecutionLog } from "./execution-log.js";
+export {
+  FileBuildResult,
+  FileBuildResultStore,
+} from "./store.js";
+export { buildResultDirectory } from "@hypit/hypit/result/node";

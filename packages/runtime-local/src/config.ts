@@ -21,8 +21,8 @@ import {
 } from "@hypit/hypit/runtime";
 import type { CredentialStore, CredentialValue, ResourceStore } from "@hypit/hypit/runtime";
 import type { BuildResultRepositoryLocation } from "./execution.js";
-import { FileBuildResultStore } from "@hypit/result/runtime-storage/node";
-import type { BuildResultStore } from "@hypit/result/runtime-storage";
+import { FileBuildResultStore } from "./result-storage/store.js";
+import type { BuildResultStore } from "./result-storage/types.js";
 import { FileResourceStore } from "./resource-store.js";
 import {
   isRuntimeAdapterFacet,

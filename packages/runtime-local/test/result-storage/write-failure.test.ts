@@ -5,9 +5,13 @@ import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import test from "node:test";
 
-import { buildResultDirectory, FileBuildResult, FileBuildResultStore } from "@hypit/result/runtime-storage/node";
-import { syncBuildResultOutputs } from "@hypit/result/runtime-storage";
-import type { BuildResultWriteTarget } from "@hypit/result/runtime-storage";
+import {
+  buildResultDirectory,
+  FileBuildResult,
+  FileBuildResultStore,
+  syncBuildResultOutputs,
+} from "../../src/result-storage/index.js";
+import type { BuildResultWriteTarget } from "../../src/result-storage/index.js";
 import type { BlobRef } from "@hypit/protocol";
 
 import {

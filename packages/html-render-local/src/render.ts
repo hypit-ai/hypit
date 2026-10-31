@@ -2,15 +2,15 @@ import { createReadStream } from "node:fs";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { EndpointInvocationContext } from "@hypit/endpoint";
-import type { BlobRef } from "@hypit/protocol";
+import type { EndpointInvocationContext } from "@hypit/hypit/endpoint";
+import type { BlobRef } from "@hypit/hypit/protocol";
 import { sealTimelineVisual } from "@hypit/media";
 import type { TimelineVisual } from "@hypit/media";
 import type { FrameSpan } from "@hypit/timeline";
 import { verifyCompositableSurfaceFile, verifyPictureArtifactFile } from "./surface-validation.js";
 import { verifyHtmlRasterRequest, verifyHtmlFrameRequest } from "@hypit/html-program";
 import type { HtmlRasterRequest, HtmlFrameRequest, HtmlFrameImages } from "@hypit/html-program";
-import { isStreamingResourceStore } from "@hypit/endpoint";
+import { isStreamingResourceStore } from "@hypit/hypit/endpoint";
 import type { HtmlExecutionOptions } from "./options.js";
 import { assert, positiveInteger } from "./process.js";
 import { runCaptureProcess } from "./capture-process.js";
@@ -35,7 +35,7 @@ export type HtmlRasterProgress =
 export type HtmlRasterOptions = HtmlExecutionOptions & {
   readonly resources: EndpointInvocationContext["resources"];
   readonly signal?: AbortSignal;
-  readonly onDiagnostic?: (diagnostic: import("@hypit/endpoint").ExecutionDiagnostic) => Promise<void>;
+  readonly onDiagnostic?: (diagnostic: import("@hypit/hypit/endpoint").ExecutionDiagnostic) => Promise<void>;
   readonly onProgress?: (event: HtmlRasterProgress) => void;
 };
 

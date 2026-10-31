@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { decodeBuildResultValueDocument, decodeStoredBuildResult } from "@hypit/result/runtime-storage";
+import { decodeBuildResultValueDocument, decodeStoredBuildResult } from "../../src/result-storage/index.js";
 
 test("Result decoding rejects contradictory terminal and Operation states", () => {
   const build = "bld_20260902T100000000Z_0000000001";

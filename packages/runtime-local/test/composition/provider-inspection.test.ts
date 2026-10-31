@@ -9,7 +9,7 @@ import {
   createRuntimeEndpointAdapterFacet,
   RuntimeAdapterRegistry,
 } from "@hypit/runtime-local/extension";
-import { FileBuildResultStore } from "@hypit/result/runtime-storage/node";
+import { FileBuildResultStore } from "../../src/result-storage/index.js";
 import { MemoryResourceStore, ProducerRegistry } from "@hypit/executor";
 import { defineEndpoint } from "@hypit/endpoint";
 import { credentialRef } from "@hypit/runtime";

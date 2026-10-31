@@ -1,11 +1,11 @@
-import { compareCodeUnits, isBlobRef, mapValueBlobs } from "@hypit/protocol";
+import { compareCodeUnits, isBlobRef, mapValueBlobs } from "@hypit/hypit/protocol";
 import type {
   BlobRef,
   CanonicalValue,
   ResultIntent,
   ResultOutputIntent,
   TypedRecord,
-} from "@hypit/protocol";
+} from "@hypit/hypit/protocol";
 
 import type {
   BuildResultFileRef,

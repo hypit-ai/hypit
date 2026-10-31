@@ -45,3 +45,13 @@ test("default domain dependencies remain independent through the Video product",
   assert.ok(index("timeline") < index("temporal"));
   assert.ok(index("temporal") < index("video"));
 });
+
+test("internal Core remains embedded instead of becoming an unversioned release dependency", async () => {
+  const root = fileURLToPath(new URL("../../", import.meta.url));
+  const embedded = await distributionEmbeddedPackageDirectories(root);
+  for (const name of ["atomic-file", "endpoint", "facet", "kernel", "protocol", "result", "runtime"]) {
+    assert.equal(embedded.has(name), true, `${name} must remain owned by the Distribution`);
+  }
+  const plan = await releaseCandidatePackages();
+  assert.equal(plan.independent.some((item) => item.version === "0.0.0-dev"), false);
+});

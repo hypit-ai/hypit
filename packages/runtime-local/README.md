@@ -133,6 +133,9 @@ Provider's authentication, quota or transport error never changes that selection
 The official video Distribution writes Results to the project's `.hypit/results` directory, with no
 cloud account or service. The filesystem implementation belongs to this single-host Runtime rather
 than a public adapter registry.
+Open Result drafts, incremental output retention, writer recovery and terminal publication are private
+Runtime Local implementation. `@hypit/result` owns only immutable history types and readers; no writable
+Result repository entry point is published for CLI or author packages.
 Runtime working Resources remain internal and Build-local; there is no ResourceStore selector. After
 a Result has an outcome, history is read from the project Result repository, not Runtime SQLite.
 The submission passes known Resource references to the Result writer, separately from the execution

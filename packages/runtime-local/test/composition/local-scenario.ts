@@ -3,7 +3,7 @@ import { FileResourceStore } from "../../src/resource-store.js";
 import { SqliteRuntimeState } from "../../src/sqlite-state.js";
 import { EnvironmentCredentialStore } from "@hypit/credential-store-env";
 import { defineBuild } from "@hypit/kernel";
-import { FileBuildResultStore } from "@hypit/result/runtime-storage/node";
+import { FileBuildResultStore } from "../../src/result-storage/index.js";
 import { buildExecutionActivity, createLocalRuntime } from "@hypit/runtime-local";
 import type { BuildCompletion } from "@hypit/runtime-local";
 import { rm } from "node:fs/promises";

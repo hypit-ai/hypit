@@ -1,4 +1,4 @@
-import type { ExecutionDiagnostic } from "@hypit/endpoint";
+import type { ExecutionDiagnostic } from "@hypit/hypit/endpoint";
 import { spawn } from "node:child_process";
 import { killRenderTree } from "./process-tree.js";
 import type { HtmlRasterProgress } from "./render.js";

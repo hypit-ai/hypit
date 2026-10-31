@@ -8,7 +8,7 @@ import type {
 import type { BuildExecutionSnapshot } from "./execution.js";
 import { compareCodeUnits, type CommandResult } from "@hypit/hypit/protocol";
 import type { BuildResultOperation } from "@hypit/hypit/result";
-import type { BuildResultFinish, BuildResultWriter, StoredBuildResult } from "@hypit/result/runtime-storage";
+import type { BuildResultFinish, BuildResultWriter, StoredBuildResult } from "./result-storage/types.js";
 
 import type {
   CreateLocalResultWriterOptions,

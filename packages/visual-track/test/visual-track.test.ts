@@ -8,15 +8,14 @@ import type { TemporalWindowProjection } from "../../../test/temporal-fixture.js
 
 import { sealComposition, visualElements } from "@hypit/composition";
 import type { VisualItem } from "@hypit/composition";
-import { compileHtmlProgram } from "@hypit/html-program";
+import { compileHtmlProgram, htmlVisual } from "@hypit/html-program";
 import type { HtmlElement } from "@hypit/html-program";
 import { mediaTypes, prepareMedia, SRGB_STRAIGHT_PICTURE } from "@hypit/media";
 import type { CompositableSurfaceRef, PreparedMedia } from "@hypit/media";
 import { blobTypes } from "@hypit/blob";
 import { defaultTemporalRelationSpec, evaluateTemporalMap, exactTemporalValueFromFrames, isAffineTemporalMapPiece, resolveTemporalRelation, temporalTypes,
   temporalValueInFrames } from "@hypit/temporal";
-import { appendMediaPaintLayer, appendMappedStillMediaLayer, appendVisualClip, appendVisualTransition, assertVisualTrackSet, appendStillMediaLayer, appendSurfaceMediaLayer, appendTimedMediaLayer, bindVisualClipPath, createMediaLayerSet, createVisualTrackSet, decodeMediaFramePaint, finalizeVisualTrack, projectVisualTrack, poseAnimation, sealVisualClipSpec, sealMediaPaintLayerSpec, sealMediaSampleLayerSpec, sealVisualTrackHeader, stillVisualTrackFragment, visualTrackManifest, visualTrackTypes, visualTransitionSpan } from "@hypit/visual-track";
-import { crossDissolveEffect } from "@hypit/visual-transition";
+import { appendMediaPaintLayer, appendMappedStillMediaLayer, appendVisualClip, appendVisualTransition, assertVisualTrackSet, appendStillMediaLayer, appendSurfaceMediaLayer, appendTimedMediaLayer, bindVisualClipPath, createMediaLayerSet, createVisualTrackSet, decodeMediaFramePaint, finalizeVisualTrack, projectVisualTrack, poseAnimation, sealVisualClipSpec, sealMediaPaintLayerSpec, sealMediaSampleLayerSpec, sealVisualTrackHeader, sealVisualTransitionEffect, stillVisualTrackFragment, visualTrackManifest, visualTrackTypes, visualTransitionSpan } from "@hypit/visual-track";
 import type { VisualClipSpec, MediaLayerSet } from "@hypit/visual-track";
 import type { ExactTemporalValue, TemporalMapPiece, TemporalRelationSpec } from "@hypit/temporal";
 import type { NarrativeMomentRef, NarrativeSelectionRef } from "@hypit/narrative";
@@ -41,6 +40,15 @@ const htmlElements = (root: HtmlElement): readonly HtmlElement[] => {
         : [];
   return [root, ...children.flatMap(htmlElements)];
 };
+
+const transitionEffect = (easing = "linear") => sealVisualTransitionEffect({
+  inputs: ["outgoing", "incoming"],
+  program: htmlVisual({
+    html: "<div>{{outgoing}}</div><div>{{incoming}}</div>",
+    css: ":scope { isolation: isolate; } :scope > div { mix-blend-mode: plus-lighter; }",
+    data: { easing },
+  }),
+});
 
 const loweredClipElements = (program: ReturnType<typeof finalizeVisualTrack>, index = 0) =>
   htmlElements(lowerVisualClipElement(program.clips[index]!));
@@ -564,7 +572,7 @@ test("a Transition applies a package-owned effect over the exact Clip intersecti
   set = appendVisualClip(set, header, space, stillLayers(), frame,
     clipSpec({ id: "incoming" }), incomingWindow);
   const pair = set;
-  const effect = crossDissolveEffect("ease-in-out");
+  const effect = transitionEffect("ease-in-out");
   set = appendVisualTransition(set, {
     id: "handoff", outgoingClipId: "outgoing", incomingClipId: "incoming", effect,
   });
@@ -618,7 +626,7 @@ test("a timed Transition reaches HTML with both Prepared Media clocks intact", (
     id: "timed-handoff",
     outgoingClipId: "timed-outgoing",
     incomingClipId: "timed-incoming",
-    effect: crossDissolveEffect(),
+    effect: transitionEffect(),
   });
   const track = projectVisualTrack(space, finalizeVisualTrack(set, header, space));
   const process = track.items.find((item) => item.kind === "process");

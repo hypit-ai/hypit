@@ -17,7 +17,7 @@ import { join } from "node:path";
 import test from "node:test";
 
 import { FileResourceStore } from "../../src/resource-store.js";
-import { FileBuildResultStore } from "@hypit/result/runtime-storage/node";
+import { FileBuildResultStore } from "../../src/result-storage/index.js";
 import { isBlobRef } from "@hypit/protocol";
 import { EnvironmentCredentialStore } from "@hypit/credential-store-env";
 import { defineEndpoint } from "@hypit/endpoint";

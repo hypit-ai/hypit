@@ -14,5 +14,8 @@
     "@hypit/protocol": "workspace:*",
     "cjs-module-lexer": "2.2.1",
     "typescript": "5.9.3"
+  },
+  "devDependencies": {
+    "@hypit/composition": "workspace:*"
   }
 }

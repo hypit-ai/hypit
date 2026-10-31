@@ -20,31 +20,24 @@ addresses. When their bytes appear in a retained Record, Result storage copies t
 the current Result. A Result therefore neither points at another Build nor keeps a live project-file
 dependency.
 
-## Retaining accepted Records
+## Finished history
 
 `ResultIntent.outputs` is the single lifetime authority for Result name and the accepted Record
-that owns the value in this Build. The writer retains only that current Record and records its
+that owns the value in this Build. Runtime retains only that current Record and records its
 accepted Type. Reusing an earlier Output is an authoring
 operation: export the accepted material into the project and reference it from the Author Source.
 Result storage never substitutes a historical Build for an authored value.
 
-An unfinished storage draft contains only Source, Targets and accepted retained Outputs. Outcome,
-failure, operation evidence and execution log cannot appear until `finish()` publishes an immutable
-stored manifest. The writer keeps only its current Result-local Resource and Value paths while storing.
-Persistent Output documents contain the Result-local references they actually use; private writer
-state is removed at the terminal outcome. Core still receives ordinary typed Records and Resource identities. It has no knowledge
-of file paths or Result repositories. Runtime may stage input bytes for execution independently of
-Result retention.
+Draft creation, incremental retention, crash recovery and terminal publication belong to Runtime
+Local. They are not Result package APIs. Runtime owns its writable filesystem implementation and
+atomically publishes the same `hypit.build-result@1` document that this package later reads as
+history. Private writer state disappears at the terminal outcome. Core still receives ordinary typed
+Records and Resource identities; it has no knowledge of file paths or Result repositories.
 
 Drafts are not project history. The package root exposes `BuildResultHistory`; its `read()` and
-`browse()` methods return finished `BuildResult` values only. CLI, Studio and history browsers use
-that port and therefore cannot observe, finish, discard or recover an open draft. Runtime publication
-and crash recovery use the deliberately separate `@hypit/result/runtime-storage` entry point, whose
-`BuildResultStore.readStored()` is the only repository read that can return a draft. This is an
-ownership boundary, not two competing Result models: the same draft is atomically published as the
-finished historical Result. The Node filesystem adapters mirror that split:
-`@hypit/result/node` exposes `FileBuildResultHistory`, while Runtime uses
-`@hypit/result/runtime-storage/node`.
+`browse()` methods return finished `BuildResult` values only. CLI and history browsers therefore
+cannot observe, finish, discard or recover an open draft. `@hypit/result/node` exposes only
+`FileBuildResultHistory` and the finished-history filesystem reader.
 
 Repositories own address access. `BuildResultHistory.resolve(build, output)` turns the private
 persistence representation into an ordinary domain `Value`. Its returned `openResource()` capability
@@ -55,7 +48,7 @@ physical implementation without changing Result identity or retention semantics.
 The manifest reports domain `type` separately from storage representation. An Output is stored inline,
 as a file, or as a Result-local value document; those forms do not claim a domain value category.
 
-A `complete` outcome is valid only after every retained Output named by the Result Intent has been stored.
+A `complete` outcome is published only after every retained Output named by the Result Intent has been stored.
 Failed and cancelled Results may intentionally retain the subset that completed. This is a local per-Build
 closure check, not a central Result index or an attempt to infer missing work.
 

@@ -49,6 +49,9 @@ export async function releaseCandidatePackages() {
     if (name === rootManifest.name || selected.has(name)) return;
     const item = byName.get(name);
     if (item === undefined) throw new Error(`${owner} dependency ${name} is not a workspace package`);
+    if (item.manifest.version === "0.0.0-dev") {
+      throw new Error(`${owner} makes unversioned internal package ${name} an independent release dependency`);
+    }
     selected.set(name, item);
     for (const dependency of workspaceEdges(item.manifest)) select(dependency, name);
   };

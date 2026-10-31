@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { buildResultDirectory, FileBuildResultStore } from "@hypit/result/runtime-storage/node";
+import { buildResultDirectory, FileBuildResultStore } from "../../runtime-local/src/result-storage/index.js";
 import type { BuildResult, BuildResultHistory } from "@hypit/result";
 import type { CliBuildView as BuildView } from "@hypit/cli";
 import type { BlobRef } from "@hypit/protocol";

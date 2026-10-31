@@ -8,7 +8,7 @@ import type {
   OperationSnapshot,
 } from "@hypit/hypit/runtime";
 import type { PendingBuildSubmission } from "./submission.js";
-import type { StoredBuildResult } from "@hypit/result/runtime-storage";
+import type { StoredBuildResult } from "./result-storage/types.js";
 import type { BuildExecutionSnapshot } from "./execution.js";
 import type { BuildView } from "./host-api.js";
 import { compareCodeUnits } from "@hypit/hypit/protocol";

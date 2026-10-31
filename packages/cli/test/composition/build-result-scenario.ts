@@ -1,6 +1,6 @@
 import { join } from "node:path";
 
-import { FileBuildResult, FileBuildResultStore } from "@hypit/result/runtime-storage/node";
+import { FileBuildResult, FileBuildResultStore } from "../../../runtime-local/src/result-storage/index.js";
 import type { ResultOutputExporter } from "@hypit/result";
 import type { CapabilityRef, TypeRef, TypedRecord } from "@hypit/protocol";
 import { sameType } from "@hypit/protocol";

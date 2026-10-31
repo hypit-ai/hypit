@@ -9,7 +9,7 @@ import test from "node:test";
 import {
   FileBuildResult,
   FileBuildResultStore,
-} from "@hypit/result/runtime-storage/node";
+} from "../../../runtime-local/src/result-storage/index.js";
 
 import type { CliDistribution } from "../../src/distribution.js";
 import { cliDistribution } from "../distribution-scenario.js";

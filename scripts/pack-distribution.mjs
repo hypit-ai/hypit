@@ -197,6 +197,7 @@ try {
     ]),
   ));
   delete stagedManifest.devDependencies;
+  delete stagedManifest.scripts;
   await writeFile(stagedManifestPath, `${JSON.stringify(stagedManifest, null, 2)}\n`);
 
   for (const name of independentDefaults) {
