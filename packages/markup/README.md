@@ -80,6 +80,12 @@ Frontend representation to discover them. Package
 tags used for insertion are resolved from the same `MarkupDeclarationRegistry` used for parsing.
 Opaque text is written verbatim; structured text is entity-escaped.
 
+The document indexes nested package children and their structured containers. Field edits,
+deletion and movement address the same revision-scoped node IDs at each depth. `insert-child`
+accepts the package-owned child grammar; inserting into a self-closing container expands it.
+A move preserves the child's authored content and leading comments. The destination `before`
+node must be a direct sibling, and moving a container into its own subtree is rejected.
+
 ## Assets and source dependencies
 
 Declaration compilers receive the Host's narrow `resolveAsset()` and optional `readAsset()`

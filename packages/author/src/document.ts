@@ -34,6 +34,14 @@ export type AuthorDocumentContainer = {
   readonly declarations: readonly AuthorDocumentNodeId[];
 };
 
+export type AuthorDocumentChild = AuthorDeclarationChild & {
+  readonly node: AuthorDocumentNodeId;
+  readonly container: AuthorDocumentNodeId;
+  /** Root declaration whose package owns this nested grammar. */
+  readonly owner: AuthorDocumentNodeId;
+  readonly range: SourceRange;
+};
+
 /**
  * Editable projection of one Source. `representation` is owned exclusively by
  * its Frontend and never enters AuthorGraph or package compilers.
@@ -45,6 +53,7 @@ export type AuthorDocument = {
   readonly root: AuthorDocumentContainer;
   readonly containers: readonly AuthorDocumentContainer[];
   readonly declarations: readonly AuthorDocumentDeclaration[];
+  readonly nested: readonly AuthorDocumentChild[];
   readonly representation: unknown;
 };
 
@@ -82,6 +91,12 @@ export type AuthorDocumentOperation =
       readonly container: AuthorDocumentNodeId;
       readonly before?: AuthorDocumentNodeId;
       readonly declaration: AuthorDeclarationDraft;
+    }
+  | {
+      readonly kind: "insert-child";
+      readonly container: AuthorDocumentNodeId;
+      readonly before?: AuthorDocumentNodeId;
+      readonly child: AuthorDeclarationChild;
     }
   | {
       readonly kind: "delete-declaration";

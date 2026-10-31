@@ -56,6 +56,7 @@ export type {
   AuthorDocumentImport,
   AuthorDocumentNodeId,
   AuthorDocumentOperation,
+  AuthorDocumentChild,
 } from "./document.js";
 export {
   authorDeclarationFacetAbi,

@@ -136,6 +136,23 @@ export class Compiler {
     return await frontend.document.openDocument(source.unit);
   }
 
+  /** Apply a revision-scoped edit through the Source's selected Frontend. */
+  async applyAuthorDocumentOperations(
+    source: ResolvedSource,
+    document: AuthorDocument,
+    operations: readonly import("@hypit/author").AuthorDocumentOperation[],
+  ): Promise<ResolvedSource> {
+    if (source.unit.id !== document.source.id || source.unit.bytes.length !== document.source.bytes.length
+      || source.unit.bytes.some((byte, index) => byte !== document.source.bytes[index])) {
+      throw new CompilerError("AUTHOR_DOCUMENT_REVISION", "Document belongs to a different Source revision", source.unit.id);
+    }
+    const frontend = this.#options.frontends.resolve(source.frontend);
+    if (frontend?.document === undefined) {
+      throw new CompilerError("AUTHOR_DOCUMENT_UNAVAILABLE", `Frontend ${source.frontend} does not expose an editable author document`, source.frontend);
+    }
+    return { ...source, unit: await frontend.document.applyDocumentOperations(document, operations) };
+  }
+
   /** Compile an explicitly resolved Source inside one already isolated Workspace. */
   async compileResolvedSource(entry: ResolvedSource, workspace: WorkspaceSession): Promise<CompiledAuthorSource> {
     const discovered = await discoverClosure(

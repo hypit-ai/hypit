@@ -55,11 +55,14 @@ and any textual Frontend can therefore construct the same declaration and use th
 validation and graph lowering.
 
 The separate `AuthorDocument` contract is the revision-scoped editing projection of one Source. It
-contains neutral imports and declaration/container locators plus an opaque representation owned by the selected
+contains neutral imports, root declaration/container locators and nested child locators plus an opaque representation owned by the selected
 Frontend. Document operations describe insertion, deletion, movement, distinct field add/replace/remove,
 structured-text replacement and import changes without exposing the Frontend's syntax tree. They do not enter `DecodedAuthorSource` or
 AuthorGraph and are not an editor database. A Frontend may expose this capability through
 `AuthorFrontend.document`; non-editable Frontends need not implement it.
+Nested children retain their owning root declaration so Hosts can resolve the package's child grammar.
+`Compiler.applyAuthorDocumentOperations()` dispatches an edit through the selected Frontend after
+checking the supplied Source revision. The Host owns file revision checks and atomic persistence.
 
 The official Markup adapter emits this same parser-independent structure. Its separate non-video
 integration fixture proves the complete `Source → declaration → AuthorGraph → BuildPlan` path;

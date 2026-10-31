@@ -10,6 +10,8 @@ import type {
   AuthorDeclarationFieldValue,
   AuthorDocument,
   AuthorDocumentDeclaration,
+  AuthorDocumentChild,
+  AuthorDocumentContainer,
   AuthorDocumentFrontend,
   AuthorDocumentImport,
   AuthorDocumentOperation,
@@ -526,12 +528,25 @@ function projectDocument(
       range: { ...element.range },
     }];
   });
+  const nested: AuthorDocumentChild[] = [];
+  const containers: AuthorDocumentContainer[] = [{ node: document.root.node, declarations: declarations.map(item => item.node) }];
+  const visit = (element: MarkupDocumentElement, owner: string) => {
+    if (element.opaque) return;
+    const children = element.children.filter((child): child is MarkupDocumentElement => child.kind === "element");
+    containers.push({ node: element.node, declarations: children.map(child => child.node) });
+    for (const child of children) {
+      nested.push({ ...childFromElement(document, child), node: child.node, container: element.node, owner, range: { ...child.range } });
+      visit(child, owner);
+    }
+  };
+  for (const element of document.declarations) visit(element, element.node);
   return {
     source,
     imports: document.imports.map((item) => requestImport(item.request)),
     root: { node: document.root.node, declarations: declarations.map((item) => item.node) },
-    containers: [{ node: document.root.node, declarations: declarations.map((item) => item.node) }],
+    containers,
     declarations,
+    nested,
     representation: document,
   };
 }
@@ -679,7 +694,14 @@ export function applyMarkupDocumentOperations(
   operations: readonly AuthorDocumentOperation[],
   options: MarkupDocumentFrontendOptions,
 ): string {
-  const elements = new Map(document.declarations.map((element) => [element.node, element]));
+  const elements = new Map<string, MarkupDocumentElement>();
+  const parents = new Map<string, string>();
+  const index = (element: MarkupDocumentElement) => {
+    elements.set(element.node, element);
+    if (element.opaque) return;
+    for (const child of element.children) if (child.kind === "element") { parents.set(child.node, element.node); index(child); }
+  };
+  index(document.root);
   const currentImports = document.imports.map((item) => requestImport(item.request));
   const effectiveImports = [...currentImports];
   for (const operation of operations) {
@@ -693,6 +715,26 @@ export function applyMarkupDocumentOperations(
   }
   const edits: TextEdit[] = [];
   const indent = rootIndent(document);
+  const expansions = new Map<string, string[]>();
+  const elementIndent = (element: MarkupDocumentElement) => {
+    const lineStart = document.source.text.lastIndexOf("\n", element.range.start - 1) + 1;
+    const prefix = document.source.text.slice(lineStart, element.range.start);
+    return /^[\t ]*$/u.test(prefix) ? prefix : "";
+  };
+  const insert = (containerId: string, beforeId: string | undefined, text: string) => {
+    const container = elements.get(containerId);
+    if (!container || container.opaque) throw new Error(`Unknown structured container ${containerId}.`);
+    const before = beforeId === undefined ? undefined : elements.get(beforeId);
+    if (beforeId !== undefined && (!before || parents.get(beforeId) !== containerId)) throw new Error(`Insertion sibling ${beforeId} is outside container ${containerId}.`);
+    if (container.opening.selfClosing) {
+      const values = expansions.get(containerId) ?? [];
+      values.push(text); expansions.set(containerId, values);
+    } else {
+      const trailing = document.source.text.slice(container.opening.end, container.closing!.start).match(/\s*$/u)![0];
+      const offset = before?.ownedRange.start ?? container.closing!.start - trailing.length;
+      edits.push({ start: offset, end: offset, text });
+    }
+  };
   for (const operation of operations) {
     if (operation.kind === "add-field") {
       const element = elements.get(operation.declaration);
@@ -755,15 +797,25 @@ export function applyMarkupDocumentOperations(
       continue;
     }
     if (operation.kind === "move-declaration") {
-      if (operation.container !== document.root.node) throw new Error(`Unknown container ${operation.container}.`);
       const element = elements.get(operation.declaration);
-      if (element === undefined) throw new Error(`Unknown declaration ${operation.declaration}.`);
-      const before = operation.before === undefined ? undefined : elements.get(operation.before);
-      if (operation.before !== undefined && before === undefined) throw new Error(`Unknown declaration ${operation.before}.`);
+      if (!element || element === document.root) throw new Error(`Unknown declaration ${operation.declaration}.`);
+      if (operation.before === element.node && operation.container === parents.get(element.node)) continue;
+      let parent: string | undefined = operation.container;
+      while (parent !== undefined) {
+        if (parent === element.node) throw new Error("A declaration cannot move into its own subtree.");
+        parent = parents.get(parent);
+      }
       const text = document.source.text.slice(element.ownedRange.start, element.ownedRange.end);
-      const offset = before?.ownedRange.start ?? document.root.closing!.start;
+      insert(operation.container, operation.before, text);
       edits.push({ start: element.ownedRange.start, end: element.ownedRange.end, text: "" });
-      edits.push({ start: offset, end: offset, text });
+      continue;
+    }
+    if (operation.kind === "insert-child") {
+      if (operation.container === document.root.node) throw new Error("A child requires a declaration container.");
+      const container = elements.get(operation.container);
+      if (!container) throw new Error(`Unknown container ${operation.container}.`);
+      const childIndent = `${elementIndent(container)}  `;
+      insert(operation.container, operation.before, `\n${childIndent}${serializeChild(operation.child, childIndent)}`);
       continue;
     }
     if (operation.kind === "insert-declaration") {
@@ -785,6 +837,10 @@ export function applyMarkupDocumentOperations(
     const item = document.imports.find((candidate) => sameImport(requestImport(candidate.request), operation.value));
     if (item === undefined) throw new Error(`Unknown import ${operation.value.from}.`);
     edits.push({ start: item.element.ownedRange.start, end: item.element.ownedRange.end, text: "" });
+  }
+  for (const [node, values] of expansions) {
+    const element = elements.get(node)!;
+    edits.push({ start: element.opening.end - 2, end: element.opening.end, text: `>${values.join("")}\n${elementIndent(element)}</${element.name}>` });
   }
   return applyTextEdits(document.source.text, edits);
 }

@@ -14,9 +14,6 @@ importers:
       '@hypit/media-local':
         specifier: workspace:0.4.1-preview.0
         version: link:packages/media-local
-      '@hypit/nle':
-        specifier: workspace:0.4.1-preview.0
-        version: link:packages/nle
       '@hypit/runtime-local':
         specifier: workspace:0.4.1-preview.0
         version: link:packages/runtime-local
@@ -1966,8 +1963,6 @@ importers:
       '@hypit/refinement':
         specifier: workspace:*
         version: link:../refinement
-
-  packages/nle: {}
 
   packages/pixverse:
     dependencies:
