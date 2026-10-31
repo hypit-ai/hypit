@@ -2,12 +2,13 @@ import { canonicalize } from "@hypit/hypit/protocol";
 import type { ProducerPackage } from "@hypit/hypit/producer";
 import type { RefinementPackage } from "@hypit/hypit/refinement";
 import type { Value } from "@hypit/hypit/protocol";
-import type { AudioTrack, VisualTrack } from "@hypit/composition";
+import type { AudioTrack, Composition, VisualTrack } from "@hypit/composition";
 import type { Canvas } from "@hypit/spatial";
+import type { TemporalInstant } from "@hypit/temporal";
 import type { Timeline } from "@hypit/timeline";
 
 import { filmProducers, filmTypes } from "./manifest.js";
-import { appendFilmAudioTrack, appendFilmVisualTrack, assertFilmProgramIdentity, assertFilmTrackSetIdentity, compileFilmComposition, createFilmTrackSet } from "./program.js";
+import { appendFilmCompound, appendFilmAudioTrack, appendFilmVisualTrack, assertFilmProgramIdentity, assertFilmTrackSetIdentity, compileFilmComposition, createFilmTrackSet } from "./program.js";
 import type { FilmProgram, FilmTrackSet } from "./types.js";
 
 function valueOf<T>(value: Value | undefined, subject: string): T {
@@ -36,6 +37,15 @@ export const filmComponent = {
           valueOf<Timeline>(inputs.timeline?.value, "Timeline"),
           valueOf<AudioTrack>(inputs.track?.value, "AudioTrack"),
         ))) }),
+    },
+    {
+      producer: filmProducers.appendCompound,
+      handler: ({ inputs }) => ({ kind: "output", value: canonicalize(appendFilmCompound(
+        valueOf<FilmTrackSet>(inputs.set?.value, "FilmTrackSet"),
+        valueOf<Timeline>(inputs.timeline?.value, "Timeline"),
+        valueOf<Composition>(inputs.composition?.value, "Composition"),
+        valueOf<TemporalInstant>(inputs.at?.value, "TemporalInstant"),
+      )) }),
     },
     {
       producer: filmProducers.compileComposition,

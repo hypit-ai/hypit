@@ -37,11 +37,28 @@ identity, clear color, its visual/audio plan and linked editing groups.
 Film has no author-selectable color-space field and does not name delivery formats or renderers.
 Its recursive Track/Stack/Process grammar is expressed by declaration-local child groups in the syntax-neutral
 Author shape. Markup contributes only the `Film` spelling; direct callers and other Frontends use the
-same compiler. Film consumes a completed Timeline and has no runtime dependency on Temporal or its
-Markup helpers.
+same compiler. Film consumes a completed Timeline and resolves Compound placement through a typed
+Temporal Instant.
 Child order is visual structure, so Film needs no second numeric ordering channel. Visual occurrence
 identity belongs to Film; Track value identity, Present identity and timing remain in their own typed
 values. Final rendering is a separate author package and capability.
+
+`Compound` references a local audiovisual Composition and places its complete duration at an
+Instant on the parent Timeline. The source keeps its own Timeline and can be shared by multiple
+occurrences. Frame rates and canvas dimensions must match; the parent Timeline contains the full
+placed interval. Visual stacking follows the Compound's sibling position, and its audio joins the
+parent mix. The Film Companion declares the source and placement attributes for editor discovery.
+
+```xml
+<film:Film id="parent" canvas={canvas.canvas} timeline={parentTime.timeline}
+  appearance={recipes.film.main}>
+  <film:Compound id="opening" source={opening.composition} at={parentTime.opening}/>
+</film:Film>
+```
+
+Composition placement shifts visual intervals, recursive scope process clocks, audio intervals and
+sample-based level automation together. Media sampling and occurrence-local animation retain their
+source coordinates. Each occurrence preserves its local canvas clear during its placed interval.
 
 `Link` is a direct Film child that preserves a group of clips for coordinated editing. Each
 `Member` selects a Track already included in the Film and a clip identity within that Track:

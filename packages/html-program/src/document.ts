@@ -989,12 +989,15 @@ function emitHtml(
       if ("stack" in entry) {
         const childScopePath = [...scopePath, entry.stack.id];
         const childPaintPath = [...paintPath, stackIndex];
-        const child = renderScope(entry.stack.scope, false, childScopePath, childPaintPath, captureContributions);
+        const background = entry.stack.background;
+        const clear = background ? `<div data-hypit-canvas-clear data-hypit-contribution-start-frame="${background.span.startFrame}" data-hypit-contribution-end-frame="${background.span.endFrameExclusive}" style="position:absolute;inset:0;z-index:0;background:${escapeHtml(background.color)};pointer-events:none"></div>` : "";
+        const child = clear + renderScope(entry.stack.scope, false, childScopePath, childPaintPath, captureContributions);
         const id = stableId(["visual-stack", ...childScopePath]);
         html += `\n    <div id="${id}" class="hypit-visual-stack" data-hypit-stack-id="${escapeHtml(entry.stack.id)}" data-hypit-stack-path="${escapeHtml(JSON.stringify(childScopePath))}" style="position:absolute;inset:0;z-index:${stackIndex};overflow:hidden;pointer-events:none;isolation:isolate">${child}</div>`;
         continue;
       }
       if ("process" in entry) {
+        const processSpan = entry.process.timing ?? { startFrame: 0, endFrameExclusive: timelineFrameCount(timeline) };
         const processPath = [...scopePath, `process:${entry.process.id}`];
         const processPaintPath = [...paintPath, stackIndex];
         const id = stableId(["visual-scope-process", ...processPath]);
@@ -1009,16 +1012,16 @@ function emitHtml(
         const slots = new Map(renderedInputs.map(({ input, key }) => [input.name,
           `<div data-hypit-process-input="${escapeHtml(input.name)}" style="position:absolute;inset:0;overflow:hidden;pointer-events:none;isolation:isolate"><img data-hypit-process-raster-key="${key}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:fill;pointer-events:none"/></div>`] as const));
         for (const { input, child, key } of renderedInputs) processStages.push(
-          `<div id="${key}" data-hypit-process-stage data-hypit-process-order="${order}" data-hypit-process-stage-key="${key}" data-hypit-process-input-name="${escapeHtml(input.name)}" data-hypit-capture-root data-hypit-contribution-start-frame="0" data-hypit-contribution-end-frame="${timelineFrameCount(timeline)}" style="display:none;position:fixed;inset:0;width:${composition.visual.canvas.width}px;height:${composition.visual.canvas.height}px;overflow:hidden;pointer-events:none;background:transparent;isolation:isolate">${child}</div>`,
+          `<div id="${key}" data-hypit-process-stage data-hypit-process-order="${order}" data-hypit-process-stage-key="${key}" data-hypit-process-input-name="${escapeHtml(input.name)}" data-hypit-capture-root data-hypit-contribution-start-frame="${processSpan.startFrame}" data-hypit-contribution-end-frame="${processSpan.endFrameExclusive}" style="display:none;position:fixed;inset:0;width:${composition.visual.canvas.width}px;height:${composition.visual.canvas.height}px;overflow:hidden;pointer-events:none;background:transparent;isolation:isolate">${child}</div>`,
         );
         processUsages.push({
           order,
           passes: renderedInputs.length,
           stageKeys: renderedInputs.map(({ key }) => key),
-          spans: [{ startFrame: 0, endFrameExclusive: timelineFrameCount(timeline) }],
+          spans: [processSpan],
         });
-        scopePrograms.push({ id, startFrame: 0, durationFrames: timelineFrameCount(timeline), program });
-        html += `\n    <div id="${id}" class="hypit-visual-scope-process"${captureContributions ? " data-hypit-capture-root" : ""} data-hypit-process-id="${escapeHtml(entry.process.id)}" data-hypit-occurrence-path="${escapeHtml(JSON.stringify(processPath))}" data-hypit-paint-path="${escapeHtml(JSON.stringify(processPaintPath))}" data-hypit-contribution-start-frame="0" data-hypit-contribution-end-frame="${timelineFrameCount(timeline)}" style="position:absolute;inset:0;z-index:${stackIndex};overflow:hidden;pointer-events:none;isolation:isolate">${htmlVisualHtml(program, slots)}</div>`;
+        scopePrograms.push({ id, startFrame: processSpan.startFrame, durationFrames: processSpan.endFrameExclusive - processSpan.startFrame, program });
+        html += `\n    <div id="${id}" class="hypit-visual-scope-process"${captureContributions ? " data-hypit-capture-root" : ""} data-hypit-process-id="${escapeHtml(entry.process.id)}" data-hypit-occurrence-path="${escapeHtml(JSON.stringify(processPath))}" data-hypit-paint-path="${escapeHtml(JSON.stringify(processPaintPath))}" data-hypit-contribution-start-frame="${processSpan.startFrame}" data-hypit-contribution-end-frame="${processSpan.endFrameExclusive}" style="position:absolute;inset:0;z-index:${stackIndex};overflow:hidden;pointer-events:none;isolation:isolate">${htmlVisualHtml(program, slots)}</div>`;
         continue;
       }
       const { item } = entry;

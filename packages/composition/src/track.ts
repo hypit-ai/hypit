@@ -501,6 +501,8 @@ export type VisualScopeTrackMember = {
 };
 
 export type VisualScopeStackMember = {
+  /** Local canvas clear beneath this scope, visible during the placed composition. */
+  readonly background?: { readonly color: string; readonly span: FrameSpan };
   readonly kind: "stack";
   /** Stable identity of this composited visual sub-tree inside its parent scope. */
   readonly id: string;
@@ -514,6 +516,8 @@ export type VisualProcessEffect = {
 };
 
 export type VisualScopeProcessMember = {
+  /** Visible interval and animation clock after placement of a local composition. */
+  readonly timing?: FrameSpan;
   readonly kind: "process";
   /** Stable identity of this Process occurrence inside its parent VisualScope. */
   readonly id: string;
@@ -1559,10 +1563,11 @@ function visualScopeContent(value: VisualScope): VisualScope {
   return {
     members: [...value.members].map((member): VisualScopeMember => {
       if (member.kind === "track") return { kind: "track", id: member.id, track: structuredClone(member.track) };
-      if (member.kind === "stack") return { kind: "stack", id: member.id, scope: visualScopeContent(member.scope) };
+      if (member.kind === "stack") return { kind: "stack", id: member.id, scope: visualScopeContent(member.scope), ...(member.background === undefined ? {} : { background: structuredClone(member.background) }) };
       return {
         kind: "process",
         id: member.id,
+        ...(member.timing === undefined ? {} : { timing: { ...member.timing } }),
         inputs: member.inputs.map((input) => ({ name: input.name, scope: visualScopeContent(input.scope) })),
         effect: {
           inputs: [...member.effect.inputs],
@@ -1672,7 +1677,11 @@ function assertVisualScope(
     }
     if (member.kind === "stack") {
       assertVisualScope(member.scope, timeline, `${memberLabel}.scope`);
-      if (!visualScopeTracks(member.scope).some((track) => visualPresents(track).length > 0)) {
+      if (member.background !== undefined) {
+        if (!/^#[0-9a-f]{6}(?:[0-9a-f]{2})?$/iu.test(member.background.color)) throw new Error(`${memberLabel}.background color is invalid.`);
+        assertFrameSpan(member.background.span, timeline?.frameCount ?? Number.MAX_SAFE_INTEGER, `${memberLabel}.background.span`);
+      }
+      if (member.background === undefined && !visualScopeTracks(member.scope).some((track) => visualPresents(track).length > 0)) {
         throw new Error(`${memberLabel} must contain a source-owning Present.`);
       }
       continue;
@@ -1681,6 +1690,7 @@ function assertVisualScope(
       throw new Error(`${memberLabel}.kind is invalid.`);
     }
     assertVisualProcessEffect(member.effect, `${memberLabel}.effect`);
+    if (member.timing !== undefined) assertFrameSpan(member.timing, timeline?.frameCount ?? Number.MAX_SAFE_INTEGER, `${memberLabel}.timing`);
     const inputNames = new Set<string>();
     for (const [inputIndex, input] of member.inputs.entries()) {
       const inputLabel = `${memberLabel}.inputs.${inputIndex}`;

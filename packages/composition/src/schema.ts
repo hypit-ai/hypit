@@ -227,10 +227,11 @@ const visualScopeMemberSchema: ValueSchema = { kind: "oneOf", variants: [
   // ValueSchema intentionally has no recursive reference primitive. The
   // refinement validates every nested scope exactly; this envelope only keeps
   // admission domain-neutral instead of adding a Core feature for one type.
-  object({ kind: { schema: { kind: "literal", value: "stack" } }, id: { schema: string }, scope: { schema: object({}, true) } }),
+  object({ kind: { schema: { kind: "literal", value: "stack" } }, id: { schema: string }, scope: { schema: object({}, true) }, background: { schema: object({ color: { schema: string }, span: { schema: frameSpanSchema } }), optional: true } }),
   object({
     kind: { schema: { kind: "literal", value: "process" } },
     id: { schema: string },
+    timing: { schema: frameSpanSchema, optional: true },
     inputs: { schema: { kind: "array", minItems: 1, items: object({
       name: { schema: string },
       scope: { schema: object({}, true) },

@@ -1,4 +1,5 @@
-import type { Track, VisualProcessEffect } from "@hypit/composition";
+import type { FrameSpan } from "@hypit/timeline";
+import type { Composition, Track, VisualProcessEffect } from "@hypit/composition";
 
 /** Package-owned authoring value. A future Film Surface may produce this record. */
 export type FilmProgram = {
@@ -18,6 +19,7 @@ export type FilmLink = {
 
 export type FilmVisualPlanMember =
   | { readonly kind: "track"; readonly id: string; readonly slot: number }
+  | { readonly kind: "compound"; readonly id: string; readonly slot: number }
   | {
       readonly kind: "stack";
       readonly id: string;
@@ -44,13 +46,13 @@ export type FilmVisualPlan = {
  * only the binding order; visual order belongs to FilmVisualPlan.members.
  */
 export type FilmTrackSet = {
-  readonly tracks: readonly Track[];
+  readonly tracks: readonly (Track | { readonly kind: "compound"; readonly composition: Composition; readonly span: FrameSpan })[];
 };
 
 export type FilmTrackInput = {
   /** Fragment input name used by the author module lowering this Film instance. */
   readonly name: string;
-  readonly kind: "visual" | "audio";
+  readonly kind: "visual" | "audio" | "compound";
 };
 
 export type FilmAssemblyFragmentOptions = {

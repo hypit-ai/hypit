@@ -43,6 +43,7 @@
   "dependencies": {
     "@hypit/composition": "workspace:0.4.1-preview.0",
     "@hypit/spatial": "workspace:0.4.1-preview.0",
-    "@hypit/timeline": "workspace:0.4.1-preview.0"
+    "@hypit/timeline": "workspace:0.4.1-preview.0",
+    "@hypit/temporal": "workspace:0.4.1-preview.0"
   }
 }

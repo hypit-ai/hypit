@@ -1167,6 +1167,9 @@ importers:
       '@hypit/spatial':
         specifier: workspace:0.4.1-preview.0
         version: link:../spatial
+      '@hypit/temporal':
+        specifier: workspace:0.4.1-preview.0
+        version: link:../temporal
       '@hypit/timeline':
         specifier: workspace:0.4.1-preview.0
         version: link:../timeline
@@ -1210,9 +1213,6 @@ importers:
       '@hypit/studio-companion':
         specifier: workspace:*
         version: link:../studio-companion
-      '@hypit/temporal':
-        specifier: workspace:*
-        version: link:../temporal
       '@hypit/text':
         specifier: workspace:*
         version: link:../text

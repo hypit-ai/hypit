@@ -682,6 +682,15 @@ export type StudioFilmCompanion = {
     readonly sourceAttribute: string;
     readonly types: readonly TypeRef[];
   };
+  /** Package-owned references to local audiovisual compositions and their parent placement. */
+  readonly compounds?: {
+    readonly childDeclaration: string;
+    readonly idAttribute: string;
+    readonly sourceAttribute: string;
+    readonly placementAttribute: string;
+    readonly sourceType: TypeRef;
+    readonly placementType: TypeRef;
+  };
   /** Package-owned source vocabulary for persistent linked editing groups. */
   readonly links?: {
     readonly childDeclaration: string;

@@ -11,6 +11,7 @@ import { assertVisualProcessEffect, compositionTypes } from "@hypit/composition"
 import type { VisualProcessEffect } from "@hypit/composition";
 import { spatialTypes } from "@hypit/spatial";
 import { recipeType, type Recipe } from "@hypit/hypit/recipe";
+import { temporalTypes } from "@hypit/temporal";
 import { timelineTypes } from "@hypit/timeline";
 
 import { createFilmAssemblyFragment } from "./fragment.js";
@@ -103,6 +104,15 @@ export const filmAuthorDeclaration: AuthorDeclarationCompiler = {
           { name: "source", kind: "reference", required: true, accepts: [compositionTypes.visualTrack, compositionTypes.audioTrack], summary: "Selects the Track value." },
         ],
       }, {
+        name: "Compound",
+        cardinality: "many",
+        summary: "Places a referenced audiovisual Composition on this Timeline.",
+        fields: [
+          { name: "id", kind: "identifier", required: true, summary: "Names this Compound occurrence." },
+          { name: "source", kind: "reference", required: true, accepts: [compositionTypes.composition], summary: "Selects the local Composition." },
+          { name: "at", kind: "reference", required: true, accepts: [temporalTypes.instant], summary: "Selects the parent placement start." },
+        ],
+      }, {
         name: "Stack",
         cardinality: "many",
         summary: "Closes one recursively nested visual scope.",
@@ -151,7 +161,7 @@ export const filmAuthorDeclaration: AuthorDeclarationCompiler = {
       throw new Error(`${declaration.name}.appearance must reference an authored Recipe value.`);
     }
     const appearance = filmAppearanceFromRecipe((appearanceValue as unknown as Recipe).properties);
-    const tracks: Array<FilmTrackInput & { readonly source: AuthorResolvedReference }> = [];
+    const tracks: Array<FilmTrackInput & { readonly source: AuthorResolvedReference; readonly at?: AuthorResolvedReference }> = [];
     const audio: number[] = [];
     const sourceSlots = new Map<string, number>();
     const addTrack = async (
@@ -204,6 +214,15 @@ export const filmAuthorDeclaration: AuthorDeclarationCompiler = {
         const memberId = literal(child, "id");
         if (memberIds.has(memberId)) throw new Error(`${subject} contains duplicate visual member id ${memberId}.`);
         memberIds.add(memberId);
+        if (child.name === "Compound") {
+          if (!root) throw new Error('Compound must be declared directly inside Film.');
+          const source = await resolved(child, 'source', compositionTypes.composition, resolveReference);
+          const at = await resolved(child, 'at', temporalTypes.instant, resolveReference);
+          const slot = tracks.length;
+          tracks.push({ name: `track-${slot + 1}`, kind: 'compound', source, at });
+          members.push({ kind: 'compound', id: memberId, slot });
+          continue;
+        }
         if (child.name === "Stack") {
           const nested = await visualChildren(child.children, false, child.name);
           if (nested.length === 0) throw new Error(`${child.name} requires at least one visual child.`);
@@ -267,7 +286,7 @@ export const filmAuthorDeclaration: AuthorDeclarationCompiler = {
           program: { kind: "record", id: programId },
           canvas: canvas.ref,
           timeline: timeline.ref,
-          ...Object.fromEntries(tracks.map((track) => [track.name, track.source.ref])),
+          ...Object.fromEntries(tracks.flatMap((track) => [[track.name, track.source.ref], ...(track.at ? [[`${track.name}:at`, track.at.ref]] : [])])),
         },
         outputs: { composition: `${id}.composition` },
         range: declaration.range,

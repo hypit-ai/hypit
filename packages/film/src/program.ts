@@ -1,8 +1,9 @@
-import { assertAudioTrackIdentity, assertCompositionIdentity, assertVisualProcessEffect, assertVisualTrackIdentity, sealComposition, sealVisualScope } from "@hypit/composition";
+import { assertAudioTrackIdentity, assertCompositionIdentity, assertVisualProcessEffect, assertVisualTrackIdentity, placeComposition, sealComposition, sealVisualScope } from "@hypit/composition";
 import type { AudioTrack, Composition, Track, VisualScope, VisualTrack } from "@hypit/composition";
 import { assertCanvas } from "@hypit/spatial";
 import type { Canvas } from "@hypit/spatial";
-import { assertTimelineIdentity } from "@hypit/timeline";
+import { assertFrameSpan, assertTimelineIdentity } from "@hypit/timeline";
+import type { TemporalInstant } from "@hypit/temporal";
 import type { Timeline } from "@hypit/timeline";
 
 import type { FilmProgram, FilmTrackSet, FilmVisualPlanMember } from "./types.js";
@@ -52,7 +53,7 @@ export function assertFilmProgramIdentity(program: FilmProgram): void {
         throw new Error(`${item}.id is empty or duplicated in its parent Visual Scope.`);
       }
       memberIds.add(member.id);
-      if (member.kind === "track") {
+      if (member.kind === "track" || member.kind === "compound") {
         if (!Number.isSafeInteger(member.slot) || member.slot < 0) {
           throw new Error(`${item} is an invalid Visual Track member.`);
         }
@@ -119,7 +120,8 @@ export function assertFilmTrackSetIdentity(set: FilmTrackSet): void {
     throw new Error("FilmTrackSet is invalid.");
   }
   for (const track of set.tracks) {
-    if (track.kind === "visual") assertVisualTrackIdentity(track);
+    if (track.kind === "compound") { assertCompositionIdentity(track.composition); assertFrameSpan(track.span, track.composition.timeline.frameCount); }
+    else if (track.kind === "visual") assertVisualTrackIdentity(track);
     else assertAudioTrackIdentity(track);
   }
 }
@@ -150,6 +152,12 @@ export function appendFilmAudioTrack(set: FilmTrackSet, timeline: Timeline, trac
   return appendTrack(set, timeline, track);
 }
 
+export function appendFilmCompound(set: FilmTrackSet, timeline: Timeline, composition: Composition, at: TemporalInstant): FilmTrackSet {
+  assertFilmTrackSetIdentity(set);
+  if (at.timelineId !== timeline.id) throw new Error('Compound placement belongs to another Timeline.');
+  return sealFilmTrackSet({ tracks: [...set.tracks, { kind: 'compound', composition: placeComposition(composition, timeline, at.frame), span: { startFrame: at.frame, endFrameExclusive: at.frame + composition.timeline.frameCount } }] });
+}
+
 export function compileFilmComposition(
   program: FilmProgram,
   canvas: Canvas,
@@ -161,28 +169,39 @@ export function compileFilmComposition(
   assertTimelineIdentity(timeline);
   assertFilmTrackSetIdentity(set);
   const usedSlots = new Set<number>();
-  const trackAt = (slot: number): Track => {
+  const trackAt = (slot: number): FilmTrackSet["tracks"][number] => {
     const track = set.tracks[slot];
     if (track === undefined) throw new Error(`FilmProgram references missing Track slot ${slot}.`);
     usedSlots.add(slot);
     return track;
   };
+  const compoundAudio: AudioTrack[] = [];
   const compileVisual = (members: readonly FilmVisualPlanMember[]): VisualScope => sealVisualScope({
-    members: members.map((member) => {
+    members: members.flatMap((member): VisualScope["members"][number][] => {
       if (member.kind === "stack") {
-        return { kind: "stack" as const, id: member.id, scope: compileVisual(member.members) };
+        return [{ kind: "stack" as const, id: member.id, scope: compileVisual(member.members) }];
       }
       if (member.kind === "process") {
-        return {
+        return [{
           kind: "process" as const,
           id: member.id,
           inputs: member.inputs.map((input) => ({ name: input.name, scope: compileVisual(input.members) })),
           effect: structuredClone(member.effect),
-        };
+        }];
       }
       const track = trackAt(member.slot);
+      if (member.kind === "compound") {
+        if (track.kind !== "compound") throw new Error(`Film Compound slot ${member.slot} must be a Composition.`);
+        const source = track.composition;
+        if (source.timeline.id !== timeline.id) throw new Error("Compound belongs to another enclosing Timeline.");
+        if (source.visual.canvas.width !== canvas.widthPx || source.visual.canvas.height !== canvas.heightPx) {
+          throw new Error('Compound canvas must match its enclosing Film.');
+        }
+        compoundAudio.push(...source.audio.contributions);
+        return [{ kind: 'stack', id: member.id, scope: source.visual.root, background: { color: source.visual.canvas.clearColor, span: track.span } }];
+      }
       if (track.kind !== "visual") throw new Error(`FilmProgram Track slot ${member.slot} must be visual.`);
-      return { kind: "track" as const, id: member.id, track };
+      return [{ kind: "track" as const, id: member.id, track }];
     }),
   });
   const visual = compileVisual(program.visual.members);
@@ -197,6 +216,7 @@ export function compileFilmComposition(
   for (const link of program.links ?? []) {
     for (const member of link.members) {
       const track = trackAt(member.slot);
+      if (track.kind === 'compound') throw new Error('Film Link members must address Track clips.');
       const found = track.kind === 'visual'
         ? track.items.some(item => item.subjectId === member.clip || item.id === member.clip)
         : track.graph.nodes.some(node => node.kind === 'source' && (node.clip.subjectId === member.clip || node.clip.id === member.clip));
@@ -213,7 +233,7 @@ export function compileFilmComposition(
       },
       root: visual,
     },
-    audio: { contributions: audio },
+    audio: { contributions: [...audio, ...compoundAudio] },
   }, timeline);
   assertCompositionIdentity(composition);
   return composition;

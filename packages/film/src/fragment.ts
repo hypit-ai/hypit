@@ -2,6 +2,7 @@ import { sealGraphFragment } from "@hypit/hypit/author";
 import type { FragmentOperation } from "@hypit/hypit/author";
 import { compositionTypes } from "@hypit/composition";
 import { spatialTypes } from "@hypit/spatial";
+import { temporalTypes } from "@hypit/temporal";
 import { timelineTypes } from "@hypit/timeline";
 
 import { filmProducers, filmTypes } from "./manifest.js";
@@ -18,6 +19,10 @@ function assertTrackInputs(tracks: readonly FilmTrackInput[]): FilmTrackInput[] 
       if (!track.name) throw new Error("Film Track input name must not be empty.");
       if (names.has(track.name)) throw new Error(`Film Track input name ${track.name} is reserved or duplicated.`);
       names.add(track.name);
+      if (track.kind === "compound") {
+        if (names.has(`${track.name}:at`)) throw new Error(`Film input ${track.name}:at is duplicated.`);
+        names.add(`${track.name}:at`);
+      }
       return track;
     });
 }
@@ -42,8 +47,11 @@ export function createFilmAssemblyFragment(options: FilmAssemblyFragmentOptions)
     const id = `track-set:append:${String(index).padStart(4, "0")}`;
     operations.push({
       id,
-      producer: track.kind === "visual" ? filmProducers.appendVisualTrack : filmProducers.appendAudioTrack,
-      inputs: { set: operation(current), timeline: input("timeline"), track: input(track.name) },
+      producer: track.kind === "compound" ? filmProducers.appendCompound
+        : track.kind === "visual" ? filmProducers.appendVisualTrack : filmProducers.appendAudioTrack,
+      inputs: track.kind === "compound"
+        ? { set: operation(current), timeline: input("timeline"), composition: input(track.name), at: input(`${track.name}:at`) }
+        : { set: operation(current), timeline: input("timeline"), track: input(track.name) },
       result: { kind: "output" as const, name: "set" },
     });
     current = id;
@@ -64,10 +72,10 @@ export function createFilmAssemblyFragment(options: FilmAssemblyFragmentOptions)
       { name: "program", type: filmTypes.program },
       { name: "canvas", type: spatialTypes.canvas },
       { name: "timeline", type: timelineTypes.timeline },
-      ...tracks.map((track) => ({
-        name: track.name,
-        type: track.kind === "visual" ? compositionTypes.visualTrack : compositionTypes.audioTrack,
-      })),
+      ...tracks.flatMap((track) => track.kind === "compound" ? [
+        { name: track.name, type: compositionTypes.composition },
+        { name: `${track.name}:at`, type: temporalTypes.instant },
+      ] : [{ name: track.name, type: track.kind === "visual" ? compositionTypes.visualTrack : compositionTypes.audioTrack }]),
     ],
     operations,
     exports: [

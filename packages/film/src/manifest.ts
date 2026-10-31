@@ -1,8 +1,9 @@
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/hypit/protocol";
-import { audioTrackSchema, compositionDependency, compositionTypes, visualTrackSchema } from "@hypit/composition";
+import { audioTrackSchema, compositionSchema, compositionDependency, compositionTypes, visualTrackSchema } from "@hypit/composition";
 import { spatialDependency, spatialTypes } from "@hypit/spatial";
 import { recipeModuleRef, recipeType } from "@hypit/hypit/recipe";
-import { timelineTypes, timelineDependency } from "@hypit/timeline";
+import { temporalModuleRef, temporalTypes } from "@hypit/temporal";
+import { frameSpanSchema, timelineTypes, timelineDependency } from "@hypit/timeline";
 
 export const filmModuleRef = { name: "@hypit/film", version: "1" } as const;
 export const filmTypes = {
@@ -13,6 +14,7 @@ export const filmProducers = {
   createTrackSet: { module: filmModuleRef, name: "create-track-set" },
   appendVisualTrack: { module: filmModuleRef, name: "append-visual-track" },
   appendAudioTrack: { module: filmModuleRef, name: "append-audio-track" },
+  appendCompound: { module: filmModuleRef, name: "append-compound" },
   compileComposition: { module: filmModuleRef, name: "compile-composition" },
 } satisfies Record<string, ProducerRef>;
 
@@ -43,7 +45,7 @@ export const filmTrackSetSchema: ValueSchema = object({
   tracks: {
     schema: {
       kind: "array",
-      items: { kind: "oneOf", variants: [visualTrackSchema, audioTrackSchema] },
+      items: { kind: "oneOf", variants: [visualTrackSchema, audioTrackSchema, object({ kind: { schema: { kind: "literal", value: "compound" } }, composition: { schema: compositionSchema }, span: { schema: frameSpanSchema } })] },
     },
   },
 });
@@ -55,6 +57,7 @@ export const filmManifest: ModuleManifest = {
   version: filmModuleRef.version,
   dependencies: [
     timelineDependency,
+    temporalModuleRef,
     spatialDependency,
     compositionDependency,
     recipeModuleRef,
@@ -85,6 +88,16 @@ export const filmManifest: ModuleManifest = {
         { name: "set", type: filmTypes.trackSet },
         { name: "timeline", type: timelineTypes.timeline },
         { name: "track", type: compositionTypes.audioTrack },
+      ],
+      result: { kind: "output" as const, name: "set", type: filmTypes.trackSet },
+    },
+    {
+      name: filmProducers.appendCompound.name,
+      inputs: [
+        { name: "set", type: filmTypes.trackSet },
+        { name: "timeline", type: timelineTypes.timeline },
+        { name: "composition", type: compositionTypes.composition },
+        { name: "at", type: temporalTypes.instant },
       ],
       result: { kind: "output" as const, name: "set", type: filmTypes.trackSet },
     },

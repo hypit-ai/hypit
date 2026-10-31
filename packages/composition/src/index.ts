@@ -56,3 +56,5 @@ export type * from "./track.js";
 
 export * from "./audio-level-automation.js";
 export { audioSampleSpanSchema, audioGainEnvelopeSchema } from "./schema.js";
+
+export { placeComposition } from "./placement.js";
