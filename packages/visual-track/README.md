@@ -79,7 +79,9 @@ the same VisualTrack be placed in another Film or nested Stack without rewriting
 An authored spatial Path may replace the treatment clip with `clip={path}`. Path coordinates remain
 in program-picture pixels. A typed `Motion` transforms the whole framed Clip with affine/opacity
 `Pose` keyframes; inline `Pose` children express the same value. `Sampling` children animate the
-fitted source inside the Frame. Neither form names a closed aesthetic effect.
+fitted source inside the Frame. A single `Pose at="start"` applies a constant transform for
+the full Clip Window. Multiple Poses span the local clock from start through end.
+Coordinates use program-picture pixels, scale uses factors and rotation uses degrees.
 
 The resolved Program never retains fit as a competing spatial authority. When the Clip Frame is
 known, ordinary fit resolves once against the Frame's deterministic border/padding inset; an
