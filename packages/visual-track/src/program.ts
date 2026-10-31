@@ -327,7 +327,6 @@ export function sealVisualTrackProgram(value: VisualTrackProgram, timeline: Time
 export function finalizeVisualTrack(set: VisualTrackSet, header: VisualTrackHeader, timeline: Timeline): VisualTrackProgram {
   assertVisualTrackSet(set);
   assertVisualTrackHeader(header);
-  assert(set.clips.length > 0, "Visual Track requires at least one Clip.");
   return sealVisualTrackProgram({ id: header.id, clips: set.clips, transitions: set.transitions }, timeline);
 }
 
@@ -335,7 +334,6 @@ export function assertVisualTrackProgram(value: VisualTrackProgram): void {
   assert(value !== null && typeof value === "object" && !Array.isArray(value)
     && Array.isArray(value.clips) && Array.isArray(value.transitions), "VisualTrackProgram is invalid.");
   assertMediaIdentity(value.id, "VisualTrackProgram.id");
-  assert(value.clips.length > 0, "VisualTrackProgram is empty.");
   assertVisualClipPrograms(value.clips, "VisualTrackProgram");
   assertVisualTransitions(value.transitions, value.clips, "VisualTrackProgram");
 }

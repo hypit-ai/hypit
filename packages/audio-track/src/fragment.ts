@@ -18,7 +18,6 @@ const input = (name: string) => ({ kind: "fragment-input" as const, name });
 const operation = (id: string) => ({ kind: "fragment-operation" as const, operation: id });
 
 export function createAudioTrackFragment(clips: readonly AudioTrackFragmentItem[]) {
-  if (clips.length === 0) throw new Error("Audio Track Fragment requires at least one Clip.");
   const inputTypes = new Map<string, (typeof audioTrackTypes.clipSpec | typeof mediaTypes.prepared | typeof temporalTypes.window)>();
   const operations: FragmentOperation[] = [
     { id: "audio:set:empty", producer: audioTrackProducers.createSet, inputs: {}, result: { kind: "output" as const, name: "set" } },

@@ -165,7 +165,6 @@ export function sealAudioTrackProgram(value: AudioTrackProgram): AudioTrackProgr
 export function finalizeAudioTrack(set: AudioTrackSet, header: AudioTrackHeader): AudioTrackProgram {
   assertAudioTrackSet(set);
   assertAudioTrackHeader(header);
-  assert(set.clips.length > 0, "Audio Track requires at least one Clip.");
   return sealAudioTrackProgram({ id: header.id, clips: set.clips });
 }
 
@@ -173,7 +172,6 @@ export function assertAudioTrackProgram(value: AudioTrackProgram): void {
   assert(value !== null && typeof value === "object" && !Array.isArray(value)
     && Array.isArray(value.clips), "AudioTrackProgram is invalid.");
   assertIdentity(value.id, "AudioTrackProgram.id");
-  assert(value.clips.length > 0, "AudioTrackProgram requires at least one Clip.");
   const ids = new Set<string>();
   for (const [index, clip] of value.clips.entries()) {
     assertAudioClipProgram(clip, `AudioTrackProgram.clips.${index}`);

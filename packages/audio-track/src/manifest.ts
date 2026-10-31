@@ -49,7 +49,7 @@ export const audioClipSpecSchema: ValueSchema = clipSpec;
 export const audioTrackSetSchema: ValueSchema = object({ clips: { schema: { kind: "array", items: clip } } });
 export const audioTrackProgramSchema: ValueSchema = object({
   id: { schema: string },
-  clips: { schema: { kind: "array", minItems: 1, items: clip } },
+  clips: { schema: { kind: "array", items: clip } },
 });
 
 const clipInputs = [

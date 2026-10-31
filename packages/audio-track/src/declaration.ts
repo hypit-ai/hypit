@@ -154,7 +154,6 @@ export const audioTrackAuthorDeclaration: AuthorDeclarationCompiler = {
   },
   async compile({ declaration, resolveReference }) {
     const id = literal(declaration, "id");
-    if (declaration.children.length === 0) throw new Error(`${declaration.name} requires at least one Clip.`);
     const timeline = await resolved(declaration, "timeline", timelineTypes.timeline, resolveReference);
     const headerId = `${id}.header`;
     const records = [{

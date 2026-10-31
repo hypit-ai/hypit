@@ -374,7 +374,6 @@ export const visualTrackAuthorDeclaration: AuthorDeclarationCompiler = {
     const id = literal(declaration, "id");
     const clipChildren = declaration.children.filter((child) => child.name === "Clip");
     const transitionChildren = declaration.children.filter((child) => child.name === "Transition");
-    if (clipChildren.length === 0) throw new Error(`${declaration.name} requires at least one Clip.`);
     const timeline = await resolved(declaration, "timeline", timelineTypes.timeline, resolveReference);
     const state = buildState(); state.addReference("timeline", timeline);
     state.addRecord("header", `${id}.header`, visualTrackTypes.header, sealVisualTrackHeader({ id }), declaration.range);

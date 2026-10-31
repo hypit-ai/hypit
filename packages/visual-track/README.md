@@ -18,6 +18,8 @@ The Track consumes one completed Timeline. It publishes `.program` for
 declared tooling and `.visual` for Film. It does not discover media or anchors from Timeline, infer
 semantic roles, select audio, or derive Transition participants from timing proximity.
 
+A Track can contain zero Clips. It retains its identity and Timeline and contributes a transparent picture until Clips are added.
+
 ```svml
 <import as="transition" from="@hypit/visual-transition@1"/>
 

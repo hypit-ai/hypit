@@ -17,6 +17,8 @@ Timeline supplies the program clock, not hidden audio. Each Clip names its own p
 destination Window. The Track publishes `.program` for declared tooling and `.audio` as an ordinary
 peer contribution to Film.
 
+A Track can contain zero Clips. It retains its identity and Timeline and contributes a silence signal until Clips are added.
+
 ```svml
 <time:Window id="reveal-hit-window" timeline={program.timeline}
   from={reveal} for="600ms"/>
