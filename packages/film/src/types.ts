@@ -10,6 +10,13 @@ export type FilmProgram = {
   readonly audio: readonly number[];
   /** Editing groups address clip identities within the Film's Track inputs. */
   readonly links?: readonly FilmLink[];
+  readonly groups?: readonly FilmGroup[];
+};
+
+/** Selection groups retain Track clips and Compound occurrences in their current composition. */
+export type FilmGroup = {
+  readonly id: string;
+  readonly members: readonly ({ readonly slot: number; readonly clip: string } | { readonly slot: number; readonly clip?: never })[];
 };
 
 export type FilmLink = {

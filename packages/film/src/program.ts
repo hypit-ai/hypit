@@ -20,6 +20,7 @@ function filmProgramContent(value: FilmProgram): FilmProgram {
     visual: structuredClone(value.visual),
     audio: [...value.audio],
     ...(value.links === undefined ? {} : { links: structuredClone(value.links) }),
+    ...(value.groups === undefined ? {} : { groups: structuredClone(value.groups) }),
   };
 }
 
@@ -44,7 +45,7 @@ export function assertFilmProgramIdentity(program: FilmProgram): void {
   }
   if (program.visual === null || typeof program.visual !== "object" || !Array.isArray(program.visual.members)
     || !Array.isArray(program.audio)) throw new Error("FilmProgram assembly is invalid.");
-  const visualSlots = new Set<number>();
+  const visualSlots = new Set<number>(), compoundSlots = new Set<number>();
   const visit = (members: readonly FilmVisualPlanMember[], label: string): void => {
     const memberIds = new Set<string>();
     for (const [index, member] of members.entries()) {
@@ -59,6 +60,7 @@ export function assertFilmProgramIdentity(program: FilmProgram): void {
           throw new Error(`${item} is an invalid Visual Track member.`);
         }
         visualSlots.add(member.slot);
+        if (member.kind === "compound") compoundSlots.add(member.slot);
         continue;
       }
       if (member.kind === "stack") {
@@ -108,6 +110,17 @@ export function assertFilmProgramIdentity(program: FilmProgram): void {
         throw new Error('Film Link member must identify one Track clip and belong to one Link.');
       }
       linked.add(key);
+    }
+  }
+  const groupIds = new Set<string>(), grouped = new Set<string>();
+  for (const group of program.groups ?? []) {
+    if (!group.id?.trim() || groupIds.has(group.id) || !Array.isArray(group.members) || group.members.length < 2) throw new Error('Film Group requires a unique id and at least two members.');
+    groupIds.add(group.id);
+    for (const member of group.members) {
+      const key = JSON.stringify([member.slot, member.clip]);
+      if ((!visualSlots.has(member.slot) && !audioSlots.has(member.slot)) || grouped.has(key)
+        || (compoundSlots.has(member.slot) ? member.clip !== undefined : !member.clip?.trim())) throw new Error('Film Group member must identify one Track clip or Compound occurrence and belong to one Group.');
+      grouped.add(key);
     }
   }
 }
@@ -214,10 +227,13 @@ export function compileFilmComposition(
   if (usedSlots.size !== set.tracks.length || [...set.tracks.keys()].some((slot) => !usedSlots.has(slot))) {
     throw new Error("FilmProgram must use every assembled Track.");
   }
-  for (const link of program.links ?? []) {
+  for (const link of [...program.links ?? [], ...program.groups ?? []]) {
     for (const member of link.members) {
       const track = trackAt(member.slot);
-      if (track.kind === 'compound') throw new Error('Film Link members must address Track clips.');
+      if (track.kind === 'compound') {
+        if (member.clip !== undefined) throw new Error('Compound editing member must identify its occurrence.');
+        continue;
+      }
       const found = track.kind === 'visual'
         ? track.items.some(item => item.subjectId === member.clip || item.id === member.clip)
         : track.graph.nodes.some(node => node.kind === 'source' && (node.clip.subjectId === member.clip || node.clip.id === member.clip));

@@ -18,7 +18,7 @@ import { createFilmAssemblyFragment } from "./fragment.js";
 import { filmModuleRef, filmTypes } from "./manifest.js";
 import { sealFilmProgram } from "./program.js";
 import { filmAppearanceFromRecipe } from "./recipe.js";
-import type { FilmLink, FilmTrackInput, FilmVisualPlanMember } from "./types.js";
+import type { FilmGroup, FilmLink, FilmTrackInput, FilmVisualPlanMember } from "./types.js";
 
 type DeclarationNode = AuthorDeclaration | AuthorDeclarationChild;
 
@@ -90,6 +90,12 @@ export const filmAuthorDeclaration: AuthorDeclarationCompiler = {
     children: { group: "members" },
     childGroups: {
       members: [{
+        name: "Group",
+        cardinality: "many",
+        summary: "Selects and moves clips together while retaining their Track placement.",
+        fields: [{ name: "id", kind: "identifier", required: true, summary: "Names the selection group." }],
+        children: { group: "grouped-clips" },
+      }, {
         name: "Link",
         cardinality: "many",
         summary: "Groups Track clips for coordinated editing within this Film.",
@@ -129,6 +135,16 @@ export const filmAuthorDeclaration: AuthorDeclarationCompiler = {
             summary: "Selects the package-owned Process effect and its named input contract." },
         ],
         children: { group: "inputs" },
+      }],
+      "grouped-clips": [{
+        name: "Member", cardinality: "many", summary: "Identifies a Track clip.",
+        fields: [
+          { name: "source", kind: "reference", required: true, accepts: [compositionTypes.visualTrack, compositionTypes.audioTrack], summary: "Selects a Track included in this Film." },
+          { name: "clip", kind: "literal", required: true, summary: "Selects a clip in that Track." },
+        ],
+      }, {
+        name: "Occurrence", cardinality: "many", summary: "Identifies a Compound occurrence.",
+        fields: [{ name: "path", kind: "literal", required: true, summary: "Selects a slash-separated Compound path through this Film's visual scopes." }],
       }],
       "linked-clips": [{
         name: "Member",
@@ -199,8 +215,8 @@ export const filmAuthorDeclaration: AuthorDeclarationCompiler = {
       const members: FilmVisualPlanMember[] = [];
       const memberIds = new Set<string>();
       for (const child of children) {
-        if (child.name === "Link") {
-          if (!root) throw new Error('Link must be declared directly inside Film.');
+        if (child.name === "Link" || child.name === "Group") {
+          if (!root) throw new Error(`${child.name} must be declared directly inside Film.`);
           continue;
         }
         if (child.name === "Track") {
@@ -269,12 +285,39 @@ export const filmAuthorDeclaration: AuthorDeclarationCompiler = {
       }
       links.push({ id: literal(link, 'id'), members });
     }
+    const occurrences = new Map<string, number>();
+    const indexOccurrences = (members: readonly FilmVisualPlanMember[], prefix: string[] = []) => {
+      for (const member of members) {
+        const path = [...prefix, member.id];
+        if (member.kind === 'compound') occurrences.set(path.join('/'), member.slot);
+        if (member.kind === 'stack') indexOccurrences(member.members, path);
+        if (member.kind === 'process') for (const input of member.inputs) indexOccurrences(input.members, [...path, input.name]);
+      }
+    };
+    indexOccurrences(visual.members);
+    const groups: FilmGroup[] = [];
+    for (const group of declaration.children.filter(child => child.name === 'Group')) {
+      const members: FilmGroup['members'][number][] = [];
+      for (const member of group.children) {
+        if (member.name === 'Occurrence') {
+          const slot = occurrences.get(literal(member, 'path'));
+          if (slot === undefined) throw new Error('Group Occurrence must identify a Compound in this Film.');
+          members.push({ slot });
+        } else {
+          const source = await trackReference(member, resolveReference);
+          const slot = sourceSlots.get(referenceKey(source));
+          if (slot === undefined) throw new Error('Group Member must reference a Track included in this Film.');
+          members.push({ slot, clip: literal(member, 'clip') });
+        }
+      }
+      groups.push({ id: literal(group, 'id'), members });
+    }
     const programId = `${id}.program`;
     return {
       records: [{
         id: programId,
         type: filmTypes.program,
-        value: sealFilmProgram({ id, clearColor: appearance.clearColor, visual, audio, ...(links.length ? { links } : {}) }),
+        value: sealFilmProgram({ id, clearColor: appearance.clearColor, visual, audio, ...(links.length ? { links } : {}), ...(groups.length ? { groups } : {}) }),
         range: declaration.range,
       }],
       components: [{

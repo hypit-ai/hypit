@@ -20,6 +20,10 @@ export const filmStudioCompanions: readonly StudioFilmCompanion[] = [{
     childDeclaration: "Compound", idAttribute: "id", sourceAttribute: "source", placementAttribute: "during", sourcePositionAttribute: "from",
     sourceType: compositionTypes.composition, placementType: temporalTypes.window, sourcePositionType: temporalTypes.instant,
   },
+  groups: {
+    childDeclaration: "Group", idAttribute: "id", memberDeclaration: "Member",
+    sourceAttribute: "source", clipAttribute: "clip", occurrenceDeclaration: "Occurrence", occurrencePathAttribute: "path",
+  },
   links: {
     childDeclaration: "Link", idAttribute: "id", memberDeclaration: "Member",
     sourceAttribute: "source", clipAttribute: "clip",

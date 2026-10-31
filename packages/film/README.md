@@ -83,6 +83,23 @@ Positions and source ranges stay on the linked clips; editors preserve their rel
 when moving a group. Splitting, trimming and unlinking are explicit source editing transactions.
 The Film Companion declares the Link/Member vocabulary for editor discovery.
 
+`Group` preserves a selection of clips across Tracks and time intervals. Its `Member` entries address
+Track clips; `Occurrence` entries address Compound placements by slash-separated visual scope paths.
+Each clip or Compound occurrence belongs to at most one Group within its Film. A Group requires at
+least two distinct members. A clip can also retain its audio/video Link independently.
+
+```xml
+<film:Group id="intro-selection">
+  <film:Member source={picture.visual} clip="take-1"/>
+  <film:Member source={sound.audio} clip="take-1-sound"/>
+  <film:Occurrence path="scene-lane/scene-2"/>
+</film:Group>
+```
+
+Group membership retains each member's Track, placement, and local time domain. Editors move the
+selection by a shared offset, add split pieces to the same Group, and merge intersecting Groups when
+creating a new selection group. The Film Companion exposes this vocabulary through `groups`.
+
 For example, after the named inputs are declared:
 
 ```svml

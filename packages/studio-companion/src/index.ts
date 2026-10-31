@@ -693,6 +693,16 @@ export type StudioFilmCompanion = {
     readonly placementType: TypeRef;
     readonly sourcePositionType: TypeRef;
   };
+  /** Selection groups keep clips on their existing Tracks and local time domains. */
+  readonly groups?: {
+    readonly childDeclaration: string;
+    readonly idAttribute: string;
+    readonly memberDeclaration: string;
+    readonly sourceAttribute: string;
+    readonly clipAttribute: string;
+    readonly occurrenceDeclaration: string;
+    readonly occurrencePathAttribute: string;
+  };
   /** Package-owned source vocabulary for persistent linked editing groups. */
   readonly links?: {
     readonly childDeclaration: string;
