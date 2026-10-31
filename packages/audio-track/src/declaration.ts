@@ -117,6 +117,7 @@ export const audioTrackAuthorDeclaration: AuthorDeclarationCompiler = {
     summary: "Places prepared audio Clips on one completed Timeline.",
     fields: [
       { name: "id", kind: "identifier", required: true, summary: "Names the Audio Track." },
+      { name: "muted", kind: "literal", required: false, summary: "Silences the Track while retaining authored Clip gains." },
       { name: "timeline", kind: "reference", required: true, accepts: [timelineTypes.timeline], summary: "Selects its absolute Timeline." },
     ],
     children: [{
@@ -155,6 +156,8 @@ export const audioTrackAuthorDeclaration: AuthorDeclarationCompiler = {
   async compile({ declaration, resolveReference }) {
     const id = literal(declaration, "id");
     const timeline = await resolved(declaration, "timeline", timelineTypes.timeline, resolveReference);
+    const muted = literal(declaration, "muted", "false");
+    if (muted !== "true" && muted !== "false") throw new Error("Audio Track muted must be true or false.");
     const headerId = `${id}.header`;
     const records = [{
       id: headerId,
@@ -182,12 +185,14 @@ export const audioTrackAuthorDeclaration: AuthorDeclarationCompiler = {
         ? undefined
         : { relations: child.children.map(relation) };
       if (sampling !== undefined) assertTemporalRelationSpec(sampling);
+      const gain = numeric(child, "gain", audioClipDefaults.gain);
+      if (gain < 0) throw new Error("Audio Clip gain must be nonnegative.");
       const spec = sealAudioClipSpec({
         id: clipId,
         ...(sampling === undefined ? {} : { sampling }),
         ...(reconstruction === undefined ? {} : { reconstruction }),
         mix: {
-          gain: numeric(child, "gain", audioClipDefaults.gain),
+          gain: gain * (muted === "true" ? 0 : 1),
           fadeIn: parseTemporalDuration(literal(child, "fade-in", audioClipDefaults["fade-in"]), `${child.name}.fade-in`),
           fadeOut: parseTemporalDuration(literal(child, "fade-out", audioClipDefaults["fade-out"]), `${child.name}.fade-out`),
         },

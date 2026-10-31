@@ -38,6 +38,8 @@ A Track can contain zero Clips. It retains its identity and Timeline and contrib
 `during` consumes a resolved Window. Timeline authoring or a domain projector declares that value
 upstream; Audio Track neither constructs time ranges nor recognizes semantic, beat or other domains.
 
+`muted="true"` on a Track silences its Clips. Their authored gain and fade values remain available when the Track is unmuted. The default is `false`.
+
 `gain` is a linear multiplier and fades default to zero. Omitting Map means bounded partial identity:
 target start maps to source start at native rate, and excess Window time is silent. One `Map` relates
 target and source intervals through an exact rational rate; `wrap-from`/`wrap-until` makes a selected
