@@ -18,6 +18,7 @@ import { whisperXCapabilities, whisperXRequestForEvidenceAudio } from "@hypit/wh
 import { portraitMattingEndpoint, sealPortraitMattingRequest } from "@hypit/volcengine-matting";
 
 import { createHypiHubProvider, diagnoseHypiHubProvider } from "../src/provider.js";
+import type { CreateHypiHubProviderOptions } from "../src/provider.js";
 
 const packageVersion = (JSON.parse(
   readFileSync(new URL("../package.json", import.meta.url), "utf8"),
@@ -89,9 +90,13 @@ for (const operation of ["pricing", "generation"] as const) {
   });
 }
 
-async function endpointFor(request: Need, fetch: typeof globalThis.fetch): Promise<AsyncEndpoint> {
+async function endpointFor(
+  request: Need,
+  fetch: typeof globalThis.fetch,
+  providerOptions: CreateHypiHubProviderOptions = {},
+): Promise<AsyncEndpoint> {
   const registry = new EndpointRegistry();
-  await createHypiHubProvider({ fetch, pollIntervalMs: 0, requestTimeoutMs: 1_000 }).install(registry);
+  await createHypiHubProvider({ fetch, pollIntervalMs: 0, requestTimeoutMs: 1_000, ...providerOptions }).install(registry);
   const resolution = registry.resolve(request);
   assert.equal(resolution.status, "resolved");
   assert.equal(resolution.registration.kind, "asynchronous");
@@ -140,6 +145,7 @@ test("HypiHub portrait matting uses the video job lifecycle and stores transpare
   let submissions = 0;
   const registry = new EndpointRegistry();
   await createHypiHubProvider({
+    assetHosts: ["media.example.test"],
     publicAssetUrl: async (artifact) => { assert.equal(artifact.resource, source.resource); return "https://media.example.test/source.mp4"; },
     pollIntervalMs: 0,
     fetch: async (input, init) => {
@@ -178,6 +184,150 @@ test("HypiHub portrait matting uses the video job lifecycle and stores transpare
   const artifact = (result.result.value as unknown as { kind: "inline"; value: { videos: [typeof source] } }).value.videos[0];
   assert.equal(artifact.mediaType, "video/webm");
   assert.deepEqual(await resources.get(artifact.resource), new Uint8Array([4, 5, 6]));
+});
+
+test("HypiHub rejects result asset URLs outside the trusted host policy", async () => {
+  const resources = new MemoryResourceStore();
+  const request = need(sealSeedanceRequest("seedance-2-mini", {
+    prompt: ["A presenter turns toward camera."], resolution: ["720p"], aspectRatio: ["16:9"],
+    duration: [5], generateAudio: [false], webSearch: [false],
+  }) as unknown as CanonicalValue);
+  let assetFetched = false;
+  const fakeFetch: typeof globalThis.fetch = async (input) => {
+    const url = String(input);
+    if (url.endsWith("/models/seedance-2-mini")) return Response.json({ endpoints: ["videos"] });
+    if (url.endsWith("/videos")) return Response.json({ id: "job_untrusted", status: "succeeded" });
+    if (url.endsWith("/jobs/job_untrusted/assets")) return Response.json({ items: [{ url: "https://evil.example.test/result.mp4" }] });
+    if (url === "https://evil.example.test/result.mp4") {
+      assetFetched = true;
+      return new Response(new Uint8Array([1]), { headers: { "content-type": "video/mp4" } });
+    }
+    throw new Error(`Unexpected request ${url}`);
+  };
+  const endpoint = await endpointFor(request, fakeFetch);
+  const common = {
+    command: { kind: "fulfill-need" as const, id: "command:untrusted", need: request },
+    need: request, resources, credentials: { apiKey: { secret: "test-key" } },
+    operation: "operation:untrusted",
+  };
+  const started = await endpoint.start(common);
+  assert.equal(started.status, "ready");
+  if (started.status !== "ready") return;
+  const outcome = await endpoint.collect!({ ...common, handle: started.handle });
+  assert.equal(outcome.status, "failed");
+  if (outcome.status !== "failed") return;
+  assert.equal(outcome.failure.code, "HYPIHUB_ASSET_URL_UNTRUSTED");
+  assert.equal(assetFetched, false);
+});
+
+test("HypiHub validates each redirect hop before fetching it", async () => {
+  const resources = new MemoryResourceStore();
+  const request = need(sealSeedanceRequest("seedance-2-mini", {
+    prompt: ["A presenter turns toward camera."], resolution: ["720p"], aspectRatio: ["16:9"],
+    duration: [5], generateAudio: [false], webSearch: [false],
+  }) as unknown as CanonicalValue);
+  let assetFetched = false;
+  const fakeFetch: typeof globalThis.fetch = async (input) => {
+    const url = String(input);
+    if (url.endsWith("/models/seedance-2-mini")) return Response.json({ endpoints: ["videos"] });
+    if (url.endsWith("/videos")) return Response.json({ id: "job_redirect", status: "succeeded" });
+    if (url.endsWith("/jobs/job_redirect/assets")) return Response.json({ items: [{ url: "https://s3.amazonaws.com/hypit/result.mp4" }] });
+    if (url === "https://s3.amazonaws.com/hypit/result.mp4") {
+      return new Response(null, { status: 302, headers: { location: "https://evil.example.test/result.mp4" } });
+    }
+    if (url === "https://evil.example.test/result.mp4") {
+      assetFetched = true;
+      return new Response(new Uint8Array([1]), { headers: { "content-type": "video/mp4" } });
+    }
+    throw new Error(`Unexpected request ${url}`);
+  };
+  const endpoint = await endpointFor(request, fakeFetch);
+  const common = {
+    command: { kind: "fulfill-need" as const, id: "command:redirect", need: request },
+    need: request, resources, credentials: { apiKey: { secret: "test-key" } },
+    operation: "operation:redirect",
+  };
+  const started = await endpoint.start(common);
+  assert.equal(started.status, "ready");
+  if (started.status !== "ready") return;
+  const outcome = await endpoint.collect!({ ...common, handle: started.handle });
+  assert.equal(outcome.status, "failed");
+  if (outcome.status !== "failed") return;
+  assert.equal(outcome.failure.code, "HYPIHUB_ASSET_URL_UNTRUSTED");
+  assert.equal(assetFetched, false);
+});
+
+test("HypiHub follows redirects to a trusted S3 asset host", async () => {
+  const resources = new MemoryResourceStore();
+  const request = need(sealSeedanceRequest("seedance-2-mini", {
+    prompt: ["A presenter turns toward camera."], resolution: ["720p"], aspectRatio: ["16:9"],
+    duration: [5], generateAudio: [false], webSearch: [false],
+  }) as unknown as CanonicalValue);
+  const fakeFetch: typeof globalThis.fetch = async (input) => {
+    const url = String(input);
+    if (url.endsWith("/models/seedance-2-mini")) return Response.json({ endpoints: ["videos"] });
+    if (url.endsWith("/videos")) return Response.json({ id: "job_trusted_redirect", status: "succeeded" });
+    if (url.endsWith("/jobs/job_trusted_redirect/assets")) return Response.json({ items: [{ url: "https://hypit.ai/assets/result.mp4" }] });
+    if (url === "https://hypit.ai/assets/result.mp4") {
+      return new Response(null, { status: 302, headers: { location: "https://s3.amazonaws.com/hypit/result.mp4" } });
+    }
+    if (url === "https://s3.amazonaws.com/hypit/result.mp4") {
+      return new Response(new Uint8Array([9, 8, 7]), { headers: { "content-type": "video/mp4" } });
+    }
+    throw new Error(`Unexpected request ${url}`);
+  };
+  const endpoint = await endpointFor(request, fakeFetch);
+  const common = {
+    command: { kind: "fulfill-need" as const, id: "command:trusted_redirect", need: request },
+    need: request, resources, credentials: { apiKey: { secret: "test-key" } },
+    operation: "operation:trusted_redirect",
+  };
+  const started = await endpoint.start(common);
+  assert.equal(started.status, "ready");
+  if (started.status !== "ready") return;
+  const outcome = await endpoint.collect!({ ...common, handle: started.handle });
+  assert.equal(outcome.status, "completed");
+});
+
+test("HypiHub validates speech result asset URLs with the same host policy", async () => {
+  const provider = createHypiHubProvider({
+    fetch: async (input) => {
+      const url = String(input);
+      if (url.includes("/models/")) return Response.json({ endpoints: ["audio_speech"] });
+      if (url.endsWith("/audio/speech")) {
+        return Response.json({ previews: [{ url: "https://evil.example.test/voice.mp3", mime_type: "audio/mpeg" }] });
+      }
+      throw new Error(`Unexpected request ${url}`);
+    },
+  });
+  const registry = new EndpointRegistry();
+  await provider.install(registry);
+  const request = {
+    id: "need:hypihub-speech-untrusted",
+    capability: mimoSpeechEndpoints.voiceDesign.capability,
+    returns: mimoSpeechEndpoints.voiceDesign.returns,
+    constraints: sealMimoSpeechRequest("mimo-v2.5-tts-voicedesign", {
+      text: ["A short voice sample."], voiceDescription: ["Warm and confident."],
+    }) as unknown as CanonicalValue,
+    result: "record:hypihub-speech-untrusted",
+  };
+  const resolution = registry.resolve(request);
+  assert.equal(resolution.status, "resolved");
+  if (resolution.status !== "resolved") return;
+  assert.equal(resolution.registration.kind, "immediate");
+  if (resolution.registration.kind !== "immediate") return;
+  let failed: { readonly code?: string } | undefined;
+  try {
+    await resolution.registration.handler({
+      command: { kind: "fulfill-need", id: "command:hypihub-speech-untrusted", need: request },
+      need: request,
+      resources: new MemoryResourceStore(),
+      credentials: { apiKey: { secret: "test-key" } },
+    });
+  } catch (error) {
+    failed = error as Error & { readonly code?: string };
+  }
+  assert.equal(failed?.code, "HYPIHUB_ASSET_URL_UNTRUSTED");
 });
 
 function wav(sampleFrames: number): Uint8Array {
@@ -584,7 +734,7 @@ test("HypiHub uploads one referenced Resource once and submits its HTTPS URL", a
     }
     throw new Error(`Unexpected URL ${url}`);
   };
-  const endpoint = await endpointFor(request, fakeFetch);
+  const endpoint = await endpointFor(request, fakeFetch, { assetHosts: ["download.hypit.test"] });
   const common = {
     command: { kind: "fulfill-need", id: "command:hypihub-test", need: request } as const,
     need: request, resources, credentials: { apiKey: { secret: "test-key" } },

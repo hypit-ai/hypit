@@ -215,6 +215,7 @@ Execution policy remains local to this Provider:
 | `uploadPartTimeoutMs` | 5 minutes | one upload part |
 | `uploadPartAttempts` | 3 | attempts for one upload part |
 | `downloadAttempts` | 3 | attempts to collect one result |
+| `assetHosts` | service origin + AWS S3 | extra trusted hostnames for result asset downloads |
 
 `defaultConcurrency` controls the total shared capacity of this Profile's HypiHub pool. Optional `capabilityConcurrency`
 sets narrower group limits, for example `{ "seedance-2-mini": 2, "transcription": 1 }`.
@@ -243,6 +244,13 @@ limit applies. Token refresh can change that grouping. Separate processes are no
 local limit. It is a positive safe integer; HypiHub still enforces its own account quota. Part
 concurrency is separately negotiated by HypiHub for each file. These are transport limits inside a
 Runtime action, not additional Build admission limits.
+
+Result asset downloads validate both the returned URL and every redirect hop before fetching. The
+selected service origin and AWS S3 hostnames (`*.amazonaws.com` and `*.amazonaws.com.cn`) are
+trusted by default. A custom deployment whose signed asset URLs use another hostname lists it in
+`assetHosts`, for example `["downloads.example.com", "*.media.example.net"]`. A leading `*.` matches
+that domain and its subdomains. Remote asset URLs must use HTTPS; loopback HTTP is accepted for
+local testing.
 
 Signing, completing and cancelling a known upload session may retry temporary transport failures
 within at most four attempts and the smaller of `requestTimeoutMs` or 120 seconds. A new upload
