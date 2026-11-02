@@ -10,7 +10,7 @@ import {
   isAffineTemporalMapPiece,
 } from "@hypit/temporal";
 import type { TemporalMap } from "@hypit/temporal";
-import { planPositiveAffineReconstruction } from "./audio-render.js";
+import { planAffineReconstruction } from "./audio-render.js";
 
 function unsupported(reason: string): EndpointSupport {
   return { status: "unsupported", reason };
@@ -40,7 +40,7 @@ export function supportsLocalAudioProgram(constraints: CanonicalValue): Endpoint
     if (clip.reconstruction === undefined) continue;
     try {
       readPreservePitch(clip.reconstruction);
-      planPositiveAffineReconstruction(clip);
+      planAffineReconstruction(clip);
     } catch (error) {
       return unsupported(`Audio Clip ${clip.id} reconstruction is unsupported: ${error instanceof Error ? error.message : String(error)}`);
     }

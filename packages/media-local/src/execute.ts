@@ -34,7 +34,7 @@ import {
   audioRenderPlanSourceClips,
   CanonicalPcmReader,
   planAudioProgramRender,
-  planPositiveAffineReconstruction,
+  planAffineReconstruction,
   renderAudioProgramWav,
 } from "./audio-render.js";
 
@@ -968,7 +968,7 @@ export async function executeRenderTimelineAudio(
     for (const clip of clips) {
       if (clip.reconstruction === undefined) continue;
       readPreservePitch(clip.reconstruction);
-      const plan = planPositiveAffineReconstruction(clip);
+      const plan = planAffineReconstruction(clip);
       const source = clipSources.get(clip);
       const sourcePath = clipSourcePaths.get(clip);
       assert(source !== undefined && sourcePath !== undefined,
@@ -976,10 +976,11 @@ export async function executeRenderTimelineAudio(
       assert(plan.sourceEndSampleExclusive <= source.sampleFrames,
         `Audio renderer Clip ${clip.id} reconstruction exceeds its selected source`);
       const path = join(work, `reconstructed-${reconstructed.size}.wav`);
-      const tempo = atempo(plan.rate);
+      const tempo = atempo(Math.abs(plan.rate));
       const filters = [
         `atrim=start_sample=${plan.sourceStartSample}:end_sample=${plan.sourceEndSampleExclusive}`,
         "asetpts=N/SR/TB",
+        ...(plan.rate < 0 ? ["areverse"] : []),
         ...tempo,
         `apad=whole_len=${plan.targetSampleFrames}`,
         `atrim=start_sample=0:end_sample=${plan.targetSampleFrames}`,

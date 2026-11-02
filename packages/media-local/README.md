@@ -154,7 +154,7 @@ the Renderer reads them through a bounded page cache, applies Clip automation an
 signals in output blocks. The AudioProgram is one closed signal graph.
 It does not infer pitch-preserving stretch from a temporal relation: such a
 reconstruction policy is an explicit Clip reconstruction with its own programme owner. The Provider
-implements `@hypit/audio-stretch` PreservePitch for a complete positive-affine, non-looping occurrence;
+implements `@hypit/audio-stretch` PreservePitch for a complete nonzero-affine, non-looping occurrence, including reverse playback;
 other relations or reconstruction formats are accurately unsupported rather than silently resampled.
 Speech-evidence projection remains intentionally narrower and reports its positive-affine, non-looping
 signal boundary instead of rewriting the preserved media relation.

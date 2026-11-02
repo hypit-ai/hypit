@@ -118,5 +118,5 @@ test("pitch-preserving reconstruction is explicit and the local Provider reports
   });
   const support = supportsLocalAudioProgram(canonicalize({ program: curve }));
   assert.equal(support.status, "unsupported");
-  assert.match(support.reason, /positive affine/u);
+  assert.match(support.reason, /nonzero affine/u);
 });

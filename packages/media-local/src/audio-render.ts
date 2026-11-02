@@ -76,14 +76,14 @@ function sampleCoordinate(
   };
 }
 
-export type PositiveAffineReconstructionPlan = {
+export type AffineReconstructionPlan = {
   readonly sourceStartSample: number;
   readonly sourceEndSampleExclusive: number;
   readonly rate: number;
   readonly targetSampleFrames: number;
 };
 
-function positiveAffineSpan(map: TemporalMap, start: ExactTemporalValue, end: ExactTemporalValue, label: string): {
+function affineSpan(map: TemporalMap, start: ExactTemporalValue, end: ExactTemporalValue, label: string): {
   readonly start: ExactTemporalValue;
   readonly end: ExactTemporalValue;
   readonly rate: number;
@@ -92,16 +92,18 @@ function positiveAffineSpan(map: TemporalMap, start: ExactTemporalValue, end: Ex
   let right = end;
   let totalRate = 1;
   for (const [index, stage] of map.stages.entries()) {
+    const backwards = compareExactTemporalValues(left, right) > 0;
+    const lower = backwards ? right : left, upper = backwards ? left : right;
     const piece = stage.pieces.find((candidate) =>
-      compareExactTemporalValues(candidate.target.start, left) <= 0
-      && compareExactTemporalValues(candidate.target.end, right) >= 0);
+      compareExactTemporalValues(candidate.target.start, lower) <= 0
+      && compareExactTemporalValues(candidate.target.end, upper) >= 0);
     assert(piece !== undefined,
       `${label} stage ${index} crosses a gap or piece boundary unsupported by pitch-preserving reconstruction`);
-    assert(isAffineTemporalMapPiece(piece) && piece.wrap === undefined && piece.rate.numerator > 0,
-      `${label} stage ${index} must be one positive affine, non-looping relation for pitch-preserving reconstruction`);
+    assert(isAffineTemporalMapPiece(piece) && piece.wrap === undefined && piece.rate.numerator !== 0,
+      `${label} stage ${index} must be one nonzero affine, non-looping relation for pitch-preserving reconstruction`);
     const oneStage = { stages: [{ ...stage, pieces: [piece] }] };
-    const projectedLeft = evaluateTemporalMap(oneStage, left, "after");
-    const projectedRight = evaluateTemporalMap(oneStage, right, "before");
+    const projectedLeft = evaluateTemporalMap(oneStage, left, backwards ? "before" : "after");
+    const projectedRight = evaluateTemporalMap(oneStage, right, backwards ? "after" : "before");
     assert(projectedLeft !== undefined && projectedRight !== undefined,
       `${label} stage ${index} cannot project its selected span`);
     left = projectedLeft.position;
@@ -112,22 +114,22 @@ function positiveAffineSpan(map: TemporalMap, start: ExactTemporalValue, end: Ex
 }
 
 /**
- * Resolve the exact Maps to the constant positive source span understood by
+ * Resolve the exact Maps to the constant-rate source span understood by
  * this Provider's pitch-preserving implementation. Other renderers may support
  * richer reconstruction without changing AudioProgram.
  */
-export function planPositiveAffineReconstruction(clip: AudioProgramClip): PositiveAffineReconstructionPlan {
+export function planAffineReconstruction(clip: AudioProgramClip): AffineReconstructionPlan {
   const targetSampleFrames = clip.targetEndSampleExclusive - clip.targetStartSample;
   assert(targetSampleFrames > 0, `Audio Clip ${clip.id} has no target samples`);
-  const sampled = positiveAffineSpan(clip.sampling, exactTemporalZero(),
+  const sampled = affineSpan(clip.sampling, exactTemporalZero(),
     clip.sampling.stages[0]!.target.duration,
     `Audio Clip ${clip.id} sampling`);
-  const prepared = positiveAffineSpan(clip.preparation, sampled.start, sampled.end,
+  const prepared = affineSpan(clip.preparation, sampled.start, sampled.end,
     `Audio Clip ${clip.id} preparation`);
-  const sourceStartSample = Math.round(exactNumber(prepared.start) * SAMPLE_RATE);
-  const sourceEndSampleExclusive = Math.round(exactNumber(prepared.end) * SAMPLE_RATE);
+  const startSample = Math.round(exactNumber(prepared.start) * SAMPLE_RATE), endSample = Math.round(exactNumber(prepared.end) * SAMPLE_RATE);
+  const sourceStartSample = Math.min(startSample, endSample), sourceEndSampleExclusive = Math.max(startSample, endSample);
   const rate = sampled.rate * prepared.rate;
-  assert(Number.isFinite(rate) && rate > 0 && sourceStartSample >= 0
+  assert(Number.isFinite(rate) && rate !== 0 && sourceStartSample >= 0
     && sourceEndSampleExclusive > sourceStartSample,
   `Audio Clip ${clip.id} has an invalid pitch-preserving source span`);
   return { sourceStartSample, sourceEndSampleExclusive, rate, targetSampleFrames };
