@@ -1,3 +1,4 @@
+export * from "./scope-motion.js";
 export { compositionComponent } from "./component.js";
 export { compositionDependency, compositionManifest, compositionModuleRef, compositionTypes } from "./manifest.js";
 export {

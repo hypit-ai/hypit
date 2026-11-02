@@ -132,3 +132,11 @@ disjoint and inside the original target; omission means the whole target, an emp
 Original target and source sampling remain intact when a Clip is partially inaudible. Range
 rendering applies envelopes and masks before cropping. These fields express generic sound behavior;
 multi-Clip relationships such as ducking or crossfades belong to ordinary author components.
+
+## Scope transform motion
+
+A visual Stack may carry `motion: { clock, channels }` alongside its base `transform`.
+Each channel identifies `x`, `y`, `scaleX`, `scaleY`, `rotation` or `opacity` and ordered
+`{ frame, value, easing? }` keyframes relative to `clock.startFrame`. The full clock
+survives partial placement; `placeComposition` shifts its origin with the enclosing
+composition. Source sampling and visible intervals retain their own time domains.

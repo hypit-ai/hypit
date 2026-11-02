@@ -1,3 +1,4 @@
+import { assertVisualScopeMotion } from "./scope-motion.js";
 import { assertSourceCrop, type SourceCrop } from "@hypit/spatial";
 import { assertAudioLevelAutomation } from "./audio-level-automation.js";
 import type { AudioLevelAutomation } from "./audio-level-automation.js";
@@ -524,6 +525,7 @@ export function assertVisualScopeTransform(value: VisualScopeTransform): void {
 }
 
 export type VisualScopeStackMember = {
+  readonly motion?: import("./scope-motion.js").VisualScopeMotion;
   readonly crop?: SourceCrop;
   /** Applied to the complete local picture, including its canvas clear. */
   readonly transform?: VisualScopeTransform;
@@ -1603,7 +1605,7 @@ function visualScopeContent(value: VisualScope): VisualScope {
   return {
     members: [...value.members].map((member): VisualScopeMember => {
       if (member.kind === "track") return { kind: "track", id: member.id, track: structuredClone(member.track) };
-      if (member.kind === "stack") return { kind: "stack", id: member.id, scope: visualScopeContent(member.scope), ...(member.crop ? { crop: { ...member.crop } } : {}), ...(member.background === undefined ? {} : { background: structuredClone(member.background) }), ...(member.transform ? { transform: { ...member.transform } } : {}) };
+      if (member.kind === "stack") return { kind: "stack", id: member.id, scope: visualScopeContent(member.scope), ...(member.crop ? { crop: { ...member.crop } } : {}), ...(member.background === undefined ? {} : { background: structuredClone(member.background) }), ...(member.transform ? { transform: { ...member.transform } } : {}), ...(member.motion ? { motion: structuredClone(member.motion) } : {}) };
       return {
         kind: "process",
         id: member.id,
@@ -1723,6 +1725,7 @@ function assertVisualScope(
     if (member.kind === "stack") {
       if (member.crop) assertSourceCrop(member.crop);
       if (member.transform) assertVisualScopeTransform(member.transform);
+      if (member.motion) assertVisualScopeMotion(member.motion);
       assertVisualScope(member.scope, timeline, `${memberLabel}.scope`);
       if (member.background !== undefined) {
         if (!/^#[0-9a-f]{6}(?:[0-9a-f]{2})?$/iu.test(member.background.color)) throw new Error(`${memberLabel}.background color is invalid.`);

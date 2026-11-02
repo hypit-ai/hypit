@@ -161,3 +161,26 @@ Adjustment inside it cannot affect pictures outside that Stack.
 
 The `appearance` Recipe uses `background`, for example `film.vertical { background: #18212A; }`.
 The compiled FilmProgram's field is `clearColor`; it is not a Recipe key named `clear-color`.
+
+## Compound picture animation
+
+A `Compound` places a local Composition through `during` and `from`. Its optional `Pose` sets
+position, scale, rotation, opacity and pivot for the complete local picture. `Crop` selects a
+region of the local canvas before that outer transform.
+
+```svml
+<film:Compound id="scene" source={scene.composition} during={mainTime.scene} from={sceneTime.begin}>
+  <film:Pose scale="1"/>
+  <film:Keyframe property="scale-x" at="start" value="1"/>
+  <film:Keyframe property="scale-x" at="30f" value="1.5"/>
+  <film:Keyframe property="scale-y" at="start" value="1"/>
+  <film:Keyframe property="scale-y" at="30f" value="1.5"/>
+</film:Compound>
+```
+
+Each property has independent, ordered keyframes. Supported properties are `x`, `y`, `scale-x`,
+`scale-y`, `rotate` and `opacity`. Positions accept local frame offsets, `start`, `end`,
+`start+Nf`, `end-Nf` or percentages of the occurrence duration. `easing` selects `linear`,
+`ease-in`, `ease-out` or `ease-in-out` for the interval to the next keyframe. Values hold
+before the first keyframe and after the last. Moving or nesting the occurrence preserves
+its animation clock; `from` independently selects the nested Composition's source time.

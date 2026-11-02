@@ -14,6 +14,7 @@ import { recipeType, type Recipe } from "@hypit/hypit/recipe";
 import { temporalTypes } from "@hypit/temporal";
 import { timelineTypes } from "@hypit/timeline";
 
+import { compoundKeyframes } from "./compound-motion.js";
 import { createFilmAssemblyFragment } from "./fragment.js";
 import { filmModuleRef, filmTypes } from "./manifest.js";
 import { sealFilmProgram } from "./program.js";
@@ -159,6 +160,14 @@ export const filmAuthorDeclaration: AuthorDeclarationCompiler = {
         name: "Pose", cardinality: "optional", summary: "Transforms the complete compound picture in its parent Canvas.",
         fields: ["x", "y", "scale", "scale-x", "scale-y", "rotate", "opacity", "origin-x", "origin-y"].map(name => ({ name, kind: "literal" as const, required: false, summary: `Supplies the compound Pose ${name} parameter.` })),
       }, {
+        name: "Keyframe", cardinality: "many", summary: "Animates one compound transform property on its local occurrence clock.",
+        fields: [
+          { name: "property", kind: "literal", required: true, summary: "Selects x, y, scale-x, scale-y, rotate or opacity." },
+          { name: "at", kind: "literal", required: true, summary: "Sets a local frame, start, end or percentage." },
+          { name: "value", kind: "literal", required: true, summary: "Sets the property value." },
+          { name: "easing", kind: "literal", required: false, summary: "Sets interpolation to the next keyframe." },
+        ],
+      }, {
         name: "Crop", cardinality: "optional", summary: "Selects a normalized region of the local Canvas before its outer Pose.",
         fields: ["x", "y", "width", "height", "zoom", "rotate"].map(name => ({ name, kind: "literal" as const, required: ["x", "y", "width", "height"].includes(name), summary: `Supplies the compound Crop ${name} parameter.` })),
       }],
@@ -263,8 +272,8 @@ export const filmAuthorDeclaration: AuthorDeclarationCompiler = {
           const from = await resolved(child, 'from', temporalTypes.instant, resolveReference);
           const slot = tracks.length;
           tracks.push({ name: `track-${slot + 1}`, kind: 'compound', source, during, from });
-          const transform = compoundTransform(child), crop = compoundCrop(child);
-          members.push({ kind: 'compound', id: memberId, slot, ...(transform ? { transform } : {}), ...(crop ? { crop } : {}) });
+          const transform = compoundTransform(child), crop = compoundCrop(child), keyframes = compoundKeyframes(child);
+          members.push({ kind: 'compound', id: memberId, slot, ...(keyframes ? { keyframes } : {}), ...(transform ? { transform } : {}), ...(crop ? { crop } : {}) });
           continue;
         }
         if (child.name === "Stack") {

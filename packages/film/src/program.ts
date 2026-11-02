@@ -1,3 +1,4 @@
+import { resolveCompoundMotion } from "./compound-motion.js";
 import { assertVisualScopeTransform, assertAudioTrackIdentity, assertCompositionIdentity, assertVisualProcessEffect, assertVisualTrackIdentity, placeComposition, sealComposition, sealVisualScope } from "@hypit/composition";
 import type { AudioTrack, Composition, Track, VisualScope, VisualTrack } from "@hypit/composition";
 import { assertSourceCrop, assertCanvas } from "@hypit/spatial";
@@ -219,7 +220,7 @@ export function compileFilmComposition(
           throw new Error('Compound canvas must match its enclosing Film.');
         }
         compoundAudio.push(...source.audio.contributions);
-        return [{ kind: 'stack', id: member.id, scope: source.visual.root, ...(member.crop ? { crop: { ...member.crop } } : {}), ...(member.transform ? { transform: { ...member.transform } } : {}), background: { color: source.visual.canvas.clearColor, span: track.span } }];
+        return [{ kind: 'stack', id: member.id, scope: source.visual.root, ...(member.keyframes ? { motion: resolveCompoundMotion(member.keyframes, track.span) } : {}), ...(member.crop ? { crop: { ...member.crop } } : {}), ...(member.transform ? { transform: { ...member.transform } } : {}), background: { color: source.visual.canvas.clearColor, span: track.span } }];
       }
       if (track.kind !== "visual") throw new Error(`FilmProgram Track slot ${member.slot} must be visual.`);
       return [{ kind: "track" as const, id: member.id, track }];

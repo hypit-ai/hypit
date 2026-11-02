@@ -1,3 +1,4 @@
+import { scopeMotionScript } from "./scope-motion.js";
 import { resolveSourceCrop } from "@hypit/spatial";
 import { assertCompositableSurfaceRef, verifyPictureInterpretation, verifyPreparedVisualSource } from "@hypit/media";
 import type { CompositableSurfaceRef, FontArtifactRef } from "@hypit/media";
@@ -977,6 +978,7 @@ function emitHtml(
     readonly clock?: FrameSpan;
     readonly program: ReturnType<typeof readHtmlVisual>;
   }[] = [];
+  const scopeMotions: Parameters<typeof scopeMotionScript>[0][number][] = [];
   const processStages: string[] = [];
   let processOrder = 0;
   const renderScope = (
@@ -1006,6 +1008,7 @@ function emitHtml(
         const pose = entry.stack.transform;
         const transformStyle = pose ? `;transform:translate(${pose.x}px,${pose.y}px) rotate(${pose.rotation}deg) scale(${pose.scaleX},${pose.scaleY});transform-origin:${pose.originX * 100}% ${pose.originY * 100}%;opacity:${pose.opacity}` : "";
         const id = stableId(["visual-stack", ...childScopePath]);
+        if (entry.stack.motion) scopeMotions.push({ id, ...(pose ? { transform: pose } : {}), motion: entry.stack.motion });
         html += `\n    <div id="${id}" class="hypit-visual-stack" data-hypit-stack-id="${escapeHtml(entry.stack.id)}" data-hypit-stack-path="${escapeHtml(JSON.stringify(childScopePath))}" style="position:absolute;inset:0;z-index:${stackIndex};overflow:hidden;pointer-events:none;isolation:isolate${transformStyle}">${child}</div>`;
         continue;
       }
@@ -1073,6 +1076,7 @@ function emitHtml(
     || processes.some(({ process }) => process.visibility !== undefined);
   const initializer = (runtime: string): string =>
     `<script>htmlRegisterFrameProgramInitializer(() => {\n${runtime}\n});</script>`;
+  const motionRuntime = scopeMotions.length ? initializer(scopeMotionScript(scopeMotions)) : "";
   const programRuntime = programs.length === 0 ? "" : initializer(htmlVisualScript(programs, composition.visual.canvas));
   const visibilityRuntime = hasVisibility ? initializer(presentationVisibilityScript()) : "";
   const adjustmentRuntime = adjustments.length === 0 ? "" : initializer(htmlAdjustmentScript(adjustments));
@@ -1102,7 +1106,7 @@ function emitHtml(
   <div data-hypit-program-root data-hypit-program-id="${escapeHtml(composition.id)}" data-hypit-width="${composition.visual.canvas.width}" data-hypit-height="${composition.visual.canvas.height}" data-hypit-frame-numerator="${numerator}" data-hypit-frame-denominator="${denominator}" data-hypit-frame-count="${frameCount}" style="width:${composition.visual.canvas.width}px;height:${composition.visual.canvas.height}px">
     ${sharedDefinitionsHtml}${sharedDefinitionsHtml.length === 0 ? "" : "\n    "}${visualHtml}
   </div>${frameRuntime}${programRuntime}
-  ${visibilityRuntime}${adjustmentRuntime}
+  ${visibilityRuntime}${adjustmentRuntime}${motionRuntime}
   <script>${frameProgramRuntime(frameCount)}</script>
 </body>
 </html>

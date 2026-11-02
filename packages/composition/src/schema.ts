@@ -224,12 +224,13 @@ const audioGraphNode: ValueSchema = { kind: "oneOf", variants: [
   object({ kind: { schema: { kind: "literal", value: "process" } }, id: { schema: string }, inputs: { schema: object({}, true) }, program: { schema: audioProcessProgram } }),
 ] };
 export const audioTrackSchema: ValueSchema = object({ kind: { schema: { kind: "literal", value: "audio" } }, timelineId: { schema: string }, id: { schema: string }, graph: { schema: object({ nodes: { schema: { kind: "array", minItems: 1, items: audioGraphNode } }, output: { schema: audioSignalRef } }) } });
+const visualScopeMotionSchema: ValueSchema = object({ clock: { schema: animationClock }, channels: { schema: { kind: "array", minItems: 1, items: object({ property: { schema: string }, keyframes: { schema: { kind: "array", minItems: 1, items: object({ frame: { schema: { kind: "number", integer: true, minimum: 0 } }, value: { schema: { kind: "number" } }, easing: { optional: true, schema: string } }) } } }) } } });
 const visualScopeMemberSchema: ValueSchema = { kind: "oneOf", variants: [
   object({ kind: { schema: { kind: "literal", value: "track" } }, id: { schema: string }, track: { schema: visualTrackSchema } }),
   // ValueSchema intentionally has no recursive reference primitive. The
   // refinement validates every nested scope exactly; this envelope only keeps
   // admission domain-neutral instead of adding a Core feature for one type.
-  object({ kind: { schema: { kind: "literal", value: "stack" } }, id: { schema: string }, scope: { schema: object({}, true) }, crop: { optional: true, schema: object(Object.fromEntries(['x','y','width','height','zoom','rotation'].map(name => [name, { schema: { kind: 'number' } }]))) }, transform: { optional: true, schema: object(Object.fromEntries(['x','y','scaleX','scaleY','rotation','opacity','originX','originY'].map(name => [name, { schema: { kind: 'number' } }]))) }, background: { schema: object({ color: { schema: string }, span: { schema: frameSpanSchema } }), optional: true } }),
+  object({ kind: { schema: { kind: "literal", value: "stack" } }, id: { schema: string }, scope: { schema: object({}, true) }, motion: { optional: true, schema: visualScopeMotionSchema }, crop: { optional: true, schema: object(Object.fromEntries(['x','y','width','height','zoom','rotation'].map(name => [name, { schema: { kind: 'number' } }]))) }, transform: { optional: true, schema: object(Object.fromEntries(['x','y','scaleX','scaleY','rotation','opacity','originX','originY'].map(name => [name, { schema: { kind: 'number' } }]))) }, background: { schema: object({ color: { schema: string }, span: { schema: frameSpanSchema } }), optional: true } }),
   object({
     kind: { schema: { kind: "literal", value: "process" } },
     id: { schema: string },
