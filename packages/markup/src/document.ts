@@ -508,13 +508,7 @@ function projectDocument(
   const declarations: AuthorDocumentDeclaration[] = document.declarations.flatMap((element) => {
     const declaration = declarationsByTag.get(element.name);
     if (declaration === undefined) return [];
-    const opaque = declaration.declaration.body === "opaque";
-    const structured = !opaque;
-    const opaqueText = structured ? undefined : semanticText(document, element);
-    const content = structured
-      ? structuredContent(document, element)
-      : { children: [] as readonly AuthorDeclarationChild[],
-          ...(opaqueText === undefined || opaqueText.length === 0 ? {} : { text: opaqueText }) };
+    const content = structuredContent(document, element);
     return [{
       node: element.node,
       container: document.root.node,

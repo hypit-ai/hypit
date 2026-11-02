@@ -391,3 +391,14 @@ attributes, references and child content survive. Existing references within the
 read-only. Domain validation still owns valid author values; existing transactions reject an
 invalid edit without leaving invalid Source behind. Source grouping is available on direct and
 referenced element bindings and stays data-only across the editor boundary.
+
+### Local semantic time
+
+A temporal-domain Companion can implement `projectLocal` to expose aligned semantic content in
+its own `LocalTemporalDomain`. Each projection identifies its domain, frame rate and frame count.
+The host supplies evaluated values and the inspected source map. Its clip view applies placement,
+trim and playback rate when displaying those positions on an editing Timeline.
+
+`observe` receives the AuthorDocument body's `contentStart` and `contentEnd` where the frontend
+provides them. Package-owned `adjust` operations consume explicit semantic anchor identities.
+The host checks source revisions and saves the returned body through the document frontend.

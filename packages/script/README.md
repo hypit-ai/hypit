@@ -230,3 +230,15 @@ that give those words structural visual roles.
 For content lookup, use the Narrative package's `narrativeTokensForSelection` or
 `narrativeSelectionTokenRange`. These query authored order; Timeline separately locates the same
 anchors in the assembled video. No timestamps or display Styles enter the Script value.
+
+## Semantic editor projections
+
+The Script Companion provides `project` for resolved NarrativeProjection values on a Timeline
+and `projectLocal` for NarrativeAlignment values in a LocalTemporalDomain. Local views include
+that domain's identity, frame rate and frame count. Both expose the actual Segment and Token
+boundaries, plus editable Selection and Moment markers.
+
+An editor associates a local view with the consuming media output and applies each clip's time
+mapping for placement. Selection and Moment edits use the Companion's `adjust` method with
+anchor identities; the resulting Script body can be saved with an AuthorDocument `replace-text`
+operation at the inspected source revision.

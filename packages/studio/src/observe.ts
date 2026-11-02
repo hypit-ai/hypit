@@ -144,7 +144,7 @@ export function observeAuthorDocument(
       source,
       tag: declaration.name,
       range: { ...range },
-      ...(declaration.textRange === undefined ? {} : { contentStart: declaration.textRange.start }),
+      ...(declaration.textRange === undefined ? {} : { contentStart: declaration.textRange.start, contentEnd: declaration.textRange.end }),
       nextOffset: range.end,
       attributes: authoredAttributes(declaration),
     });

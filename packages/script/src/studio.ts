@@ -1,12 +1,15 @@
 import { narrativeTypes } from "@hypit/narrative";
 import { narrativeTemporalTypes } from "@hypit/narrative-temporal";
-import type { NarrativeProjection } from "@hypit/narrative-temporal";
+import { temporalTypes, resolveTemporalBoundary, type LocalTemporalDomain } from "@hypit/temporal";
+import type { NarrativeAlignment, NarrativeProjection } from "@hypit/narrative-temporal";
 import { sameType } from "@hypit/hypit/protocol";
 import type {
   Range,
   StudioTemporalDomainCompanion,
   StudioTemporalDomainProjection,
   StudioTemporalDomainProjectionInput,
+  StudioLocalTemporalDomainProjectionInput,
+  StudioLocalTemporalDomainProjection,
 } from "@hypit/studio-companion";
 
 import { adjustScriptMoment, adjustScriptSelection } from "./edit.js";
@@ -44,7 +47,30 @@ export function projectScriptTemporalDomain(input: StudioTemporalDomainProjectio
     && (item.value as NarrativeProjection).narrativeId === input.source.domainId
     && (item.value as NarrativeProjection).timelineId === input.timeline.id)
     .map((item) => item.value as NarrativeProjection);
-  const source = input.source.data as ScriptStudioObservation;
+  return scriptTemporalViews(input.source.data as ScriptStudioObservation, narrative, projections).map(view => ({ ...view, timelineId: input.timeline.id }));
+}
+
+export function projectScriptLocalTemporalDomain(input: StudioLocalTemporalDomainProjectionInput): readonly StudioLocalTemporalDomainProjection[] {
+  const narrative = one(input.values.filter(item => sameType(item.type, narrativeTypes.narrative)
+    && (item.value as NarrativeValue).id === input.source.domainId), `Studio Narrative id ${input.source.domainId}`)?.value as NarrativeValue | undefined;
+  if (!narrative) return [];
+  const alignments = input.values.filter(item => sameType(item.type, narrativeTemporalTypes.narrativeAlignment)
+    && (item.value as NarrativeAlignment).narrativeId === input.source.domainId).map(item => item.value as NarrativeAlignment);
+  const domains = input.values.filter(item => sameType(item.type, temporalTypes.localDomain)).map(item => item.value as LocalTemporalDomain);
+  return [...new Set(alignments.map(alignment => alignment.domainId))].flatMap(domainId => {
+    const domain = one(domains.filter(domain => domain.id === domainId), `Studio local domain ${domainId}`);
+    if (!domain) return [];
+    const parts = alignments.filter(alignment => alignment.domainId === domainId);
+    const frames = (value: Parameters<typeof resolveTemporalBoundary>[0]) => resolveTemporalBoundary(value, { frameRate: input.frameRate }, 'nearest');
+    const frameCount = resolveTemporalBoundary(domain.duration, { frameRate: input.frameRate }, 'cover');
+    const projection = { id: `${input.source.domainId}/${domainId}`, segments: parts.map(part => part.segment),
+      tokens: parts.flatMap(part => part.tokens), boundaries: parts.flatMap(part => part.boundaries.map(boundary => ({ id: boundary.id, frame: frames(boundary.at) }))) };
+    return scriptTemporalViews(input.source.data as ScriptStudioObservation, narrative, [projection]).map(view => ({ ...view, domainId, frameRate: input.frameRate, frameCount }));
+  });
+}
+
+function scriptTemporalViews(source: ScriptStudioObservation, narrative: NarrativeValue,
+  projections: readonly Pick<NarrativeProjection, 'id' | 'segments' | 'tokens' | 'boundaries'>[]) {
   const segmentRanges = new Map(source.segments.map((item) => [item.id, item.range]));
   const tokenRanges = new Map(source.tokens.map((item) => [item.id, item.range]));
   const selectionRanges = new Map(source.selections.map((item) => [item.id, { start: item.open.start, end: item.close.end }]));
@@ -58,7 +84,7 @@ export function projectScriptTemporalDomain(input: StudioTemporalDomainProjectio
       const at = frame.get(anchor.id);
       if (at === undefined) return [];
       const detail = [anchor.tokenId === undefined ? undefined : tokenText.get(anchor.tokenId), anchor.segmentId]
-        .filter((part): part is string => part !== undefined).join(" · ");
+        .filter((part): part is string => part !== undefined).join(", ");
       return [{ id: anchor.id, kind: anchor.kind, frame: at,
         ...(anchor.tokenId === undefined ? {} : { label: tokenText.get(anchor.tokenId) ?? anchor.tokenId }),
         ...(detail.length === 0 ? {} : { detail }) }];
@@ -97,7 +123,7 @@ export function projectScriptTemporalDomain(input: StudioTemporalDomainProjectio
         source: { type: narrativeTypes.moment, kind: "moment", id: moment.id }, editable: true,
         anchorId: moment.anchorId, frame: at, ...(momentRanges.has(moment.id) ? { range: momentRanges.get(moment.id)! } : {}) }];
     });
-    return { id: projection.id, timelineId: input.timeline.id,
+    return { id: projection.id,
       lanes: [{ id: "maps", label: "Map", heightPx: timelineBandHeightPx },
         { id: "evidence", label: "Evidence", heightPx: timelineBandHeightPx }],
       anchors, items: [...segments, ...tokens], editItems: [...selections, ...moments] };
@@ -109,7 +135,7 @@ const scriptTemporalSourceTypes = [narrativeTypes.segmentRef, narrativeTypes.sel
 export const scriptStudioTemporalDomains: readonly StudioTemporalDomainCompanion[] = [{
   id: "script",
   match: { module: scriptModuleRef, declaration: "script" },
-  valueTypes: [narrativeTypes.narrative, narrativeTemporalTypes.narrativeProjection],
+  valueTypes: [narrativeTypes.narrative, narrativeTemporalTypes.narrativeProjection, narrativeTemporalTypes.narrativeAlignment, temporalTypes.localDomain],
   sourceTypes: scriptTemporalSourceTypes,
   presentation: { family: "narrative", tone: "teal", icon: "brand" },
   identify({ type, value }) {
@@ -123,6 +149,7 @@ export const scriptStudioTemporalDomains: readonly StudioTemporalDomainCompanion
     return kind === undefined ? undefined : { domainId: held.narrativeId, kind, id: held.id };
   },
   project: projectScriptTemporalDomain,
+  projectLocal: projectScriptLocalTemporalDomain,
   observe(input) {
     const narrativeId = input.attributes.id ?? "script";
     if (typeof narrativeId !== "string" || narrativeId.length === 0) return undefined;
@@ -130,8 +157,8 @@ export const scriptStudioTemporalDomains: readonly StudioTemporalDomainCompanion
     const closing = `</${input.tag}>`;
     const closeEnd = input.nextOffset;
     if (closeEnd === undefined) return undefined;
-    const end = closeEnd - closing.length;
-    if (end < input.contentStart || input.source.slice(end, closeEnd) !== closing) return undefined;
+    const end = input.contentEnd ?? closeEnd - closing.length;
+    if (end < input.contentStart || (input.contentEnd === undefined && input.source.slice(end, closeEnd) !== closing)) return undefined;
     const parsed = parseScript(input.sourceName, input.source.slice(input.contentStart, end), input.contentStart);
     return {
       domainId: narrativeId,

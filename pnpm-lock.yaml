@@ -2574,6 +2574,9 @@ importers:
       '@hypit/narrative-temporal':
         specifier: workspace:0.4.1-preview.0
         version: link:../narrative-temporal
+      '@hypit/temporal':
+        specifier: workspace:0.4.1-preview.0
+        version: link:../temporal
     devDependencies:
       '@hypit/hypit':
         specifier: workspace:*

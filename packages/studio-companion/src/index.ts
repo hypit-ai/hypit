@@ -751,6 +751,18 @@ export type StudioTemporalDomainProjectionInput = {
   };
 };
 
+/** Package-owned semantic rows in a source-local clock, before placement into an edit. */
+export type StudioLocalTemporalDomainProjection = Omit<StudioTemporalDomainProjection, "timelineId"> & {
+  readonly domainId: string;
+  readonly frameRate: { readonly numerator: number; readonly denominator: number };
+  readonly frameCount: number;
+};
+export type StudioLocalTemporalDomainProjectionInput = {
+  readonly source: StudioTemporalDomainSourceMap;
+  readonly values: readonly StudioObservedValue[];
+  readonly frameRate: { readonly numerator: number; readonly denominator: number };
+};
+
 /** A package projects its own temporal facts and receives its own inverse edits. */
 export type StudioTemporalDomainCompanion = {
   readonly id: string;
@@ -779,11 +791,13 @@ export type StudioTemporalDomainCompanion = {
     readonly range: Range;
     /** Raw grammars may expose their body boundaries for package-owned parsing. */
     readonly contentStart?: number;
+    readonly contentEnd?: number;
     /** Authoritative end returned after an opaque declaration parsed its own grammar. */
     readonly nextOffset?: number;
     readonly attributes: Readonly<Record<string, unknown>>;
   }) => Omit<StudioTemporalDomainSourceMap, "companion"> | undefined;
   readonly project: (input: StudioTemporalDomainProjectionInput) => readonly StudioTemporalDomainProjection[];
+  readonly projectLocal?: (input: StudioLocalTemporalDomainProjectionInput) => readonly StudioLocalTemporalDomainProjection[];
   readonly adjust: (input: {
     readonly sourceName: string;
     readonly source: string;
