@@ -1,4 +1,4 @@
-import { placeComposition } from '@hypit/composition';
+import { extendVisualPresent, placeComposition } from '@hypit/composition';
 import type { VisualScope, VisualScopeMember } from '@hypit/composition';
 import type { FrameSpan, Timeline } from '@hypit/timeline';
 import { resolveCompoundMotion } from './compound-motion.js';
@@ -7,24 +7,35 @@ import type { FilmTrackSet, FilmVisualPlanMember } from './types.js';
 type Compound = Extract<FilmVisualPlanMember, { kind: 'compound' }>;
 type Source = Extract<FilmTrackSet['tracks'][number], { kind: 'compound' }>;
 type Transition = Extract<FilmVisualPlanMember, { kind: 'transition' }>;
-export type CompoundTransition = { transition: Transition; span: FrameSpan; outgoing: Compound; incoming: Compound };
+export type CompoundTransition = { transition: Transition; span: FrameSpan; outgoing: Picture; incoming: Picture };
 
+type TrackMember = Extract<FilmVisualPlanMember, { kind: 'track' }>;
+type Picture = { id: string; span: FrameSpan } & ({ member: Compound; source: Source; present?: never; track?: never } | { member: TrackMember; source?: never; present: import('@hypit/composition').VisualPresent; track: import('@hypit/composition').VisualTrack });
+function pictureAt(path: string, members: readonly FilmVisualPlanMember[], tracks: FilmTrackSet): Picture {
+  const [id, clipId, extra] = path.split('/');
+  const member = members.find(member => member.id === id);
+  if (member?.kind === 'compound' && !clipId) {
+    const source = tracks.tracks[member.slot];
+    if (source?.kind === 'compound') return { id: path, member, source, span: source.span };
+  }
+  if (member?.kind === 'track' && clipId && !extra) {
+    const track = tracks.tracks[member.slot];
+    const present = track?.kind === 'visual' ? track.items.find(item => item.id === clipId) : undefined;
+    if (track?.kind === 'visual' && present?.kind === 'present' && !present.visibility) return { id: path, member, track, present, span: present.span };
+  }
+  throw new Error(`Transition picture is unavailable: ${path}`);
+}
 export function compoundTransitions(members: readonly FilmVisualPlanMember[], tracks: FilmTrackSet): CompoundTransition[] {
   const result: CompoundTransition[] = [];
   for (const transition of members) {
     if (transition.kind !== 'transition') continue;
-    const outgoing = members.find(member => member.id === transition.outgoing), incoming = members.find(member => member.id === transition.incoming);
-    if (outgoing?.kind !== 'compound' || incoming?.kind !== 'compound' || outgoing === incoming) throw new Error('Film Transition requires two sibling Compound occurrences.');
-    const left = tracks.tracks[outgoing.slot], right = tracks.tracks[incoming.slot];
-    if (left?.kind !== 'compound' || right?.kind !== 'compound' || left.span.endFrameExclusive !== right.span.startFrame) throw new Error('Film Transition requires adjacent Compound intervals.');
-    const startFrame = right.span.startFrame - Math.floor(transition.durationFrames / 2), endFrameExclusive = startFrame + transition.durationFrames;
-    if (startFrame < left.span.startFrame || endFrameExclusive > right.span.endFrameExclusive) throw new Error('Film Transition exceeds its adjacent Compound intervals.');
-    for (const source of [left, right]) {
-      const start = source.sourceStartFrame + startFrame - source.span.startFrame;
-      if (start < 0 || start + transition.durationFrames > source.composition.timeline.frameCount) throw new Error('Film Transition requires available Compound source frames on both sides of the cut.');
-    }
+    const outgoing = pictureAt(transition.outgoing, members, tracks), incoming = pictureAt(transition.incoming, members, tracks);
+    const left = outgoing.span, right = incoming.span;
+    if (outgoing.id === incoming.id || left.endFrameExclusive !== right.startFrame) throw new Error('Film Transition requires adjacent picture intervals.');
+    const startFrame = right.startFrame - Math.floor(transition.durationFrames / 2), endFrameExclusive = startFrame + transition.durationFrames;
+    if (startFrame < left.startFrame || endFrameExclusive > right.endFrameExclusive) throw new Error('Film Transition exceeds its adjacent picture intervals.');
     for (const other of result) {
-      if ([other.outgoing.id, other.incoming.id].some(id => id === outgoing.id || id === incoming.id) && startFrame < other.span.endFrameExclusive && other.span.startFrame < endFrameExclusive) throw new Error('Film Transitions on one Compound cannot overlap.');
+      if ([other.outgoing.id, other.incoming.id].some(id => id === outgoing.id || id === incoming.id) && startFrame < other.span.endFrameExclusive && other.span.startFrame < endFrameExclusive) throw new Error('Film Transitions on one picture cannot overlap.');
     }
     result.push({ transition, outgoing, incoming, span: { startFrame, endFrameExclusive } });
   }
@@ -32,7 +43,7 @@ export function compoundTransitions(members: readonly FilmVisualPlanMember[], tr
 }
 
 export function compoundPicture(member: Compound, source: Source, timeline: Timeline, span: FrameSpan, id = member.id): VisualScopeMember {
-  const placed = placeComposition(source.composition, timeline, span, source.sourceStartFrame + span.startFrame - source.span.startFrame);
+  const placed = placeComposition(source.composition, timeline, span, source.sourceStartFrame + span.startFrame - source.span.startFrame, { boundary: "hold" });
   let picture: VisualScopeMember = { kind: 'stack', id: member.effects?.length ? `${id}:picture` : id, scope: placed.visual.root,
     ...(member.keyframes ? { motion: resolveCompoundMotion(member.keyframes, source.span) } : {}),
     ...(member.crop ? { crop: { ...member.crop } } : {}), ...(member.transform ? { transform: { ...member.transform } } : {}),
@@ -55,7 +66,7 @@ export function compoundVisibleRanges(span: FrameSpan, transitions: readonly Com
 }
 
 export function compoundTransitionPicture(value: CompoundTransition, tracks: FilmTrackSet, timeline: Timeline): VisualScopeMember {
-  const input = (member: Compound): VisualScope => ({ members: [compoundPicture(member, tracks.tracks[member.slot] as Source, timeline, value.span)] });
+  const input = (picture: Picture): VisualScope => ({ members: [picture.source ? compoundPicture(picture.member as Compound, picture.source, timeline, value.span) : { kind: 'track', id: picture.member.id, track: { ...picture.track!, items: [extendVisualPresent(picture.present!, value.span, timeline)] } }] });
   return { kind: 'process', id: value.transition.id, timing: value.span, clock: value.span,
     effect: structuredClone(value.transition.effect), inputs: [{ name: 'outgoing', scope: input(value.outgoing) }, { name: 'incoming', scope: input(value.incoming) }],
   };

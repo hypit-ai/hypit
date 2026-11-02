@@ -12,6 +12,7 @@ export type AudioClipMix = {
   readonly gain: number;
   readonly fadeIn: TemporalDuration;
   readonly fadeOut: TemporalDuration;
+  readonly gainKeyframes?: readonly { readonly at: TemporalDuration; readonly gain: number }[];
 };
 
 export type AudioClipSpec = {
@@ -46,6 +47,7 @@ export type AudioClipProgram = {
     readonly gain: number;
     readonly fadeIn: ExactTemporalValue;
     readonly fadeOut: ExactTemporalValue;
+    readonly gainKeyframes?: readonly { readonly at: ExactTemporalValue; readonly gain: number }[];
   };
 };
 

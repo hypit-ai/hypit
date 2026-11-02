@@ -143,6 +143,12 @@ export const audioTrackAuthorDeclaration: AuthorDeclarationCompiler = {
         cardinality: "many",
         summary: "Adds one exact monotone cubic source-position relation.",
         fields: curveFields,
+      }, {
+        name: "Gain", cardinality: "many", summary: "Adds a linear gain multiplier at a Clip-local time.",
+        fields: [
+          { name: "at", kind: "literal", required: true, summary: "Selects the Clip-local time." },
+          { name: "value", kind: "literal", required: true, summary: "Supplies the nonnegative gain multiplier." },
+        ],
       }],
     }],
   },
@@ -181,9 +187,11 @@ export const audioTrackAuthorDeclaration: AuthorDeclarationCompiler = {
           await resolved(child, "reconstruction", audioTrackTypes.reconstruction, resolveReference),
           `${child.name}.reconstruction`,
         );
-      const sampling: TemporalRelationSpec | undefined = child.children.length === 0
+      const mappings = child.children.filter(node => node.name !== "Gain");
+      const gainKeyframes = child.children.filter(node => node.name === "Gain").map(node => ({ at: parseTemporalDuration(literal(node, "at"), "Gain.at"), gain: numeric(node, "value", 1) }));
+      const sampling: TemporalRelationSpec | undefined = mappings.length === 0
         ? undefined
-        : { relations: child.children.map(relation) };
+        : { relations: mappings.map(relation) };
       if (sampling !== undefined) assertTemporalRelationSpec(sampling);
       const gain = numeric(child, "gain", audioClipDefaults.gain);
       if (gain < 0) throw new Error("Audio Clip gain must be nonnegative.");
@@ -192,6 +200,7 @@ export const audioTrackAuthorDeclaration: AuthorDeclarationCompiler = {
         ...(sampling === undefined ? {} : { sampling }),
         ...(reconstruction === undefined ? {} : { reconstruction }),
         mix: {
+          ...(gainKeyframes.length ? { gainKeyframes } : {}),
           gain: gain * (muted === "true" ? 0 : 1),
           fadeIn: parseTemporalDuration(literal(child, "fade-in", audioClipDefaults["fade-in"]), `${child.name}.fade-in`),
           fadeOut: parseTemporalDuration(literal(child, "fade-out", audioClipDefaults["fade-out"]), `${child.name}.fade-out`),

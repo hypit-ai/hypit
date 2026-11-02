@@ -185,9 +185,10 @@ Each property has independent, ordered keyframes. Supported properties are `x`, 
 before the first keyframe and after the last. Moving or nesting the occurrence preserves
 its animation clock; `from` independently selects the nested Composition's source time.
 
-## Compound transitions
+## Picture transitions
 
-A `Transition` references two adjacent sibling `Compound` occurrences. The selected effect
+A `Transition` references two adjacent pictures in the same visual scope. A Compound uses its
+occurrence ID; a media Clip uses `trackOccurrenceId/clipId`. The selected effect
 has `outgoing` and `incoming` picture inputs. Official visual transitions expose that process
 through the effect's `.process` binding.
 
@@ -202,8 +203,8 @@ through the effect's `.process` binding.
 </film:Film>
 ```
 
-The duration is centered on the cut, with `floor(duration / 2)` frames before it. Both source
-Compositions must contain the required handles. The transition applies to each complete local
+The duration is centered on the cut, with `floor(duration / 2)` frames before it. Available
+source handles extend into the transition; unavailable handles hold the nearest boundary frame. The transition applies to each complete local
 picture, including its background, crop, pose and animation. Occurrence animation keeps its
-original clock while nested media uses the extended source interval. Audio retains each
+original clock and holds its boundary pose while nested media uses the extended source interval. Audio retains each
 occurrence's authored placement. Transitions sharing one occurrence must have disjoint intervals.

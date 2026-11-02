@@ -171,7 +171,7 @@ export function htmlVisualScript(entries: readonly {
       // including repeated frames after an asynchronously prepared image became ready.
       if (region !== 'active' && entry.region === region) return;
       try {
-        const result = entry.render(Math.max(0, Math.min(duration, local)));
+        const result = entry.render(Math.max(0, Math.min(region === 'active' ? duration - 1 : duration, local)));
         if (result != null && typeof result.then === 'function') {
           // Observe a later rejection, but never let asynchronous drawing race frame capture.
           Promise.resolve(result).catch(fail);

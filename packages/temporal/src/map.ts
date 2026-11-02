@@ -309,7 +309,7 @@ export function sliceTemporalMap(value: TemporalMap, from: ExactTemporalValue, u
 }
 
 /** Extend the target clock using its boundary rates while retaining authored interior mappings. */
-export function extendTemporalMap(value: TemporalMap, before: ExactTemporalValue, after: ExactTemporalValue, targetId: string): TemporalMap {
+export function extendTemporalMap(value: TemporalMap, before: ExactTemporalValue, after: ExactTemporalValue, targetId: string, holdFrame?: ExactTemporalValue): TemporalMap {
   assertTemporalMap(value);
   const first = value.stages[0]!;
   const lead = exactTemporalRational(before), tail = exactTemporalRational(after), zero = rational(0n);
@@ -333,5 +333,42 @@ export function extendTemporalMap(value: TemporalMap, before: ExactTemporalValue
     };
   });
   assert(pieces.length > 0, "Temporal Map extension requires a sampling relation.");
-  return sealTemporalMap({ stages: [{ ...structuredClone(first), target: { id: targetId, duration }, pieces }, ...structuredClone(value.stages.slice(1))] });
+  const bounded = holdFrame ? pieces.flatMap((piece): TemporalMapPiece[] => {
+    if (!isAffineTemporalMapPiece(piece) || piece.wrap || piece.rate.numerator === 0) return [piece];
+    const rate = rational(BigInt(piece.rate.numerator), BigInt(piece.rate.denominator));
+    const from = exactTemporalRational(piece.target.start), until = exactTemporalRational(piece.target.end);
+    const sourceStart = exactTemporalRational(piece.sourceAtStart), limit = exactTemporalRational(first.source.duration);
+    const points = [from, until];
+    for (const boundary of [zero, limit]) {
+      const crossing = add(from, divide(subtract(boundary, sourceStart), rate));
+      if (compare(crossing, from) > 0 && compare(crossing, until) < 0) points.push(crossing);
+    }
+    points.sort(compare);
+    const magnitude = rate.numerator < 0n ? rational(-rate.numerator, rate.denominator) : rate;
+    const inset = multiply(magnitude, exactTemporalRational(holdFrame));
+    const last = compare(inset, limit) < 0 ? subtract(limit, inset) : zero;
+    return points.slice(1).map((end, index): TemporalMapPiece => {
+      const start = points[index]!, middle = divide(add(start, end), rational(2n));
+      const at = add(sourceStart, multiply(subtract(middle, from), rate));
+      const outside = compare(at, zero) < 0 ? zero : compare(at, limit) > 0 ? last : undefined;
+      return { target: { start: exactTemporalValue(start), end: exactTemporalValue(end) },
+        sourceAtStart: outside ? exactTemporalValue(outside) : exactTemporalValue(add(sourceStart, multiply(subtract(start, from), rate))),
+        rate: outside ? { numerator: 0, denominator: 1 } : piece.rate };
+    });
+  }) : pieces;
+  return sealTemporalMap({ stages: [{ ...structuredClone(first), target: { id: targetId, duration }, pieces: bounded }, ...structuredClone(value.stages.slice(1))] });
+}
+
+/** Pad a local occurrence with its first and last displayed frame. */
+export function padTemporalMap(value: TemporalMap, before: ExactTemporalValue, after: ExactTemporalValue, frameStep: ExactTemporalValue, targetId: string): TemporalMap {
+  assertTemporalMap(value);
+  const source = value.stages[0]!.target, lead = exactTemporalRational(before), tail = exactTemporalRational(after), zero = rational(0n);
+  assert(compare(lead, zero) >= 0 && compare(tail, zero) >= 0, 'Temporal padding must be nonnegative.');
+  const original = exactTemporalRational(source.duration), end = add(lead, original), duration = add(end, tail);
+  const inset = exactTemporalRational(frameStep), last = compare(original, inset) > 0 ? subtract(original, inset) : zero;
+  const pieces: TemporalMapPiece[] = [];
+  if (compare(lead, zero) > 0) pieces.push({ target: { start: exactTemporalZero(), end: before }, sourceAtStart: exactTemporalZero(), rate: { numerator: 0, denominator: 1 } });
+  pieces.push({ target: { start: before, end: exactTemporalValue(end) }, sourceAtStart: exactTemporalZero(), rate: { numerator: 1, denominator: 1 } });
+  if (compare(tail, zero) > 0) pieces.push({ target: { start: exactTemporalValue(end), end: exactTemporalValue(duration) }, sourceAtStart: exactTemporalValue(last), rate: { numerator: 0, denominator: 1 } });
+  return sealTemporalMap({ stages: [{ target: { id: targetId, duration: exactTemporalValue(duration) }, source, pieces }, ...structuredClone(value.stages)] });
 }

@@ -216,7 +216,8 @@ export function compileFilmComposition(
     members: members.flatMap((member): VisualScope["members"][number][] => {
       if (member.kind === "transition") return [compoundTransitionPicture(transitions.find(value => value.transition === member)!, set, timeline)];
       if (member.kind === "stack") {
-        return [{ kind: "stack" as const, id: member.id, scope: compileVisual(member.members) }];
+        const scope = compileVisual(member.members);
+        return scope.members.length ? [{ kind: "stack" as const, id: member.id, scope }] : [];
       }
       if (member.kind === "process") {
         return [{
@@ -239,7 +240,12 @@ export function compileFilmComposition(
         return [{ kind: 'stack', id: member.id, scope: { members: compoundVisibleRanges(track.span, transitions, member.id).map((span, index) => compoundPicture(member, track, timeline, span, `part-${index}`)) } }];
       }
       if (track.kind !== "visual") throw new Error(`FilmProgram Track slot ${member.slot} must be visual.`);
-      return [{ kind: "track" as const, id: member.id, track }];
+      if (!track.items.length) return [];
+      return [{ kind: "track" as const, id: member.id, track: { ...track, items: track.items.map(item => {
+        const id = `${member.id}/${item.id}`;
+        if (!transitions.some(value => value.outgoing.id === id || value.incoming.id === id)) return item;
+        return { ...item, visibility: compoundVisibleRanges(item.span, transitions, id) };
+      }) } }];
     }),
   });
   };

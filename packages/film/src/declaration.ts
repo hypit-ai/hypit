@@ -146,11 +146,11 @@ export const filmAuthorDeclaration: AuthorDeclarationCompiler = {
         fields: [{ name: "id", kind: "identifier", required: true, summary: "Names the visual scope occurrence." }],
         children: { group: "members" },
       }, {
-        name: "Transition", cardinality: "many", summary: "Transitions between adjacent Compound pictures using their local source handles.",
+        name: "Transition", cardinality: "many", summary: "Transitions between adjacent Compound or Track Clip pictures.",
         fields: [
           { name: "id", kind: "identifier", required: true, summary: "Names this transition." },
-          { name: "outgoing", kind: "literal", required: true, summary: "Names the outgoing sibling Compound." },
-          { name: "incoming", kind: "literal", required: true, summary: "Names the incoming sibling Compound." },
+          { name: "outgoing", kind: "literal", required: true, summary: "Selects the outgoing Compound ID or Track occurrence/Clip path." },
+          { name: "incoming", kind: "literal", required: true, summary: "Selects the incoming Compound ID or Track occurrence/Clip path." },
           { name: "for", kind: "literal", required: true, summary: "Sets the centered transition duration in frames." },
           { name: "effect", kind: "reference", required: true, accepts: [compositionTypes.visualProcessEffect], summary: "Selects a process with outgoing and incoming picture inputs." },
         ],

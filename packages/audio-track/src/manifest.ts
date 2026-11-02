@@ -33,7 +33,7 @@ const clipSpec = object({
   id: { schema: string },
   sampling: { schema: temporalRelationSpecSchema, optional: true },
   reconstruction: { schema: audioReconstructionProgramSchema, optional: true },
-  mix: { schema: object({ gain: { schema: number }, fadeIn: { schema: duration }, fadeOut: { schema: duration } }) },
+  mix: { schema: object({ gain: { schema: number }, fadeIn: { schema: duration }, fadeOut: { schema: duration }, gainKeyframes: { optional: true, schema: { kind: "array", items: object({ at: { schema: duration }, gain: { schema: number } }) } } }) },
 });
 const clip = object({
   id: { schema: string }, subjectId: { schema: string }, window: { schema: frameSpanSchema },
@@ -41,7 +41,7 @@ const clip = object({
   sampling: { schema: temporalMapSchema },
   reconstruction: { schema: audioReconstructionProgramSchema, optional: true },
   mix: { schema: object({ gain: { schema: number }, fadeIn: { schema: exactTemporalValueSchema },
-    fadeOut: { schema: exactTemporalValueSchema } }) },
+    fadeOut: { schema: exactTemporalValueSchema }, gainKeyframes: { optional: true, schema: { kind: "array", items: object({ at: { schema: exactTemporalValueSchema }, gain: { schema: number } }) } } }) },
 });
 
 export const audioTrackHeaderSchema: ValueSchema = object({ id: { schema: string } });

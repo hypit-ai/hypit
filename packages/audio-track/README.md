@@ -92,3 +92,19 @@ Other components can therefore publish an AudioTrack without depending on Audio 
 generic terminal fallback can still display those contributions. Package managers and ordinary
 lockfiles select the physical package version; Hypit does not add another version or installation
 mechanism.
+
+## Volume keyframes
+
+A Clip accepts `Gain` children with a Clip-local `at` duration and a nonnegative linear
+`value`. Times must be ordered and unique within its Window. The multiplier interpolates
+linearly and holds its first and last values outside the keyframe range. It multiplies the
+Clip's `gain` and fade envelope. Composition resolves the points onto its 48 kHz program clock.
+
+```svml
+<audio:Clip id="voice" during={time.voice} source={voice.media} gain="1">
+  <audio:Map target-at="start" source-at="start" rate="1"/>
+  <audio:Gain at="0f" value="1"/>
+  <audio:Gain at="30f" value="0.25"/>
+  <audio:Gain at="90f" value="1"/>
+</audio:Clip>
+```

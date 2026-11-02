@@ -1005,7 +1005,6 @@ function assertPathCommands(path: readonly VisualVectorPathCommand[], label: str
 function assertAnimationClock(clock: FrameSpan | undefined, visible: FrameSpan, label: string): void {
   if (clock === undefined) return;
   if (!Number.isSafeInteger(clock.startFrame) || !Number.isSafeInteger(clock.endFrameExclusive)
-    || clock.startFrame > visible.startFrame || clock.endFrameExclusive < visible.endFrameExclusive
     || clock.endFrameExclusive <= clock.startFrame) throw new Error(`${label} has an invalid animation clock.`);
 }
 

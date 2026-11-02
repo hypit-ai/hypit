@@ -1,4 +1,4 @@
-import { addExactTemporalValues, compareExactTemporalValues, exactTemporalValueFromFrames, resolveTemporalBoundary, sliceTemporalMap, subtractExactTemporalValues } from '@hypit/temporal';
+import { addExactTemporalValues, compareExactTemporalValues, exactTemporalValueFromFrames, resolveTemporalBoundary, padTemporalMap, sliceTemporalMap, subtractExactTemporalValues } from '@hypit/temporal';
 import type { ExactTemporalValue } from '@hypit/temporal';
 import { assertFrameSpan, assertTimelineIdentity } from '@hypit/timeline';
 import type { FrameSpan, Timeline } from '@hypit/timeline';
@@ -7,23 +7,28 @@ import { audioEnvelopeGainAt } from './audio-level-automation.js';
 import type { AudioGraphNode, Composition, VisualContribution, VisualElement, VisualItem, VisualScope, VisualScopeMember } from './track.js';
 
 /** Place a selected local interval while retaining the authored animation and fade clocks. */
-export function placeComposition(source: Composition, timeline: Timeline, target: FrameSpan, sourceStartFrame: number): Composition {
+export function placeComposition(source: Composition, timeline: Timeline, target: FrameSpan, sourceStartFrame: number, options: { boundary?: "hold" } = {}): Composition {
   assertCompositionIdentity(source); assertTimelineIdentity(timeline); assertFrameSpan(target, timeline.frameCount);
   if (source.timeline.frameRate.numerator * timeline.frameRate.denominator !== timeline.frameRate.numerator * source.timeline.frameRate.denominator) throw new Error('Composition placement requires matching frame rates.');
   const duration = target.endFrameExclusive - target.startFrame;
-  if (!Number.isSafeInteger(sourceStartFrame) || sourceStartFrame < 0 || sourceStartFrame + duration > source.timeline.frameCount) throw new Error('Composition placement exceeds its local Timeline.');
+  if (!Number.isSafeInteger(sourceStartFrame) || (!options.boundary && (sourceStartFrame < 0 || sourceStartFrame + duration > source.timeline.frameCount))) throw new Error('Composition placement exceeds its local Timeline.');
   const selected = { startFrame: sourceStartFrame, endFrameExclusive: sourceStartFrame + duration };
   const offset = target.startFrame - sourceStartFrame;
   const shift = (span: FrameSpan): FrameSpan => ({ startFrame: span.startFrame + offset, endFrameExclusive: span.endFrameExclusive + offset });
   const intersect = (span: FrameSpan): FrameSpan | undefined => {
-    const startFrame = Math.max(span.startFrame, selected.startFrame), endFrameExclusive = Math.min(span.endFrameExclusive, selected.endFrameExclusive);
+    const startFrame = Math.max(options.boundary && span.startFrame === 0 ? Math.min(0, selected.startFrame) : span.startFrame, selected.startFrame), endFrameExclusive = Math.min(options.boundary && span.endFrameExclusive === source.timeline.frameCount ? Math.max(source.timeline.frameCount, selected.endFrameExclusive) : span.endFrameExclusive, selected.endFrameExclusive);
     return startFrame < endFrameExclusive ? { startFrame, endFrameExclusive } : undefined;
   };
   const visibility = (spans: readonly FrameSpan[] | undefined) => spans?.flatMap(span => { const value = intersect(span); return value ? [shift(value)] : []; });
   const element = (value: VisualElement, from: number, until: number): VisualElement => {
     if (value.kind === 'program') return { ...value, slots: value.slots.map(slot => ({ ...slot, element: element(slot.element, from, until) })) };
     if (value.kind === 'mask') return { ...value, mask: element(value.mask, from, until), content: element(value.content, from, until) };
-    if (value.kind === 'video' || value.kind === 'surface' && value.sampling) return { ...value, sampling: sliceTemporalMap(value.sampling!, exactTemporalValueFromFrames(from, timeline), exactTemporalValueFromFrames(until, timeline), `compound-window-${from}-${until}`) };
+    if (value.kind === 'video' || value.kind === 'surface' && value.sampling) {
+      const original = value.sampling!, duration = resolveTemporalBoundary(original.stages[0]!.target.duration, timeline, 'nearest');
+      const lead = Math.max(0, -from), tail = Math.max(0, until - duration);
+      const map = lead || tail ? padTemporalMap(original, exactTemporalValueFromFrames(lead, timeline), exactTemporalValueFromFrames(tail, timeline), exactTemporalValueFromFrames(1, timeline), `compound-padding-${from}-${until}`) : original;
+      return { ...value, sampling: sliceTemporalMap(map, exactTemporalValueFromFrames(from + lead, timeline), exactTemporalValueFromFrames(until + lead, timeline), `compound-window-${from}-${until}`) };
+    }
     return structuredClone(value);
   };
   const contribution = (value: VisualContribution): VisualContribution | undefined => {

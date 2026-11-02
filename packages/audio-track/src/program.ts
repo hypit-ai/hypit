@@ -6,6 +6,8 @@ import { preparedAudioSource, verifyPreparedMedia } from "@hypit/media";
 import type { PreparedMedia } from "@hypit/media";
 import { canonicalize, compareCodeUnits } from "@hypit/hypit/protocol";
 import {
+  addExactTemporalValues,
+  resolveTemporalBoundary,
   assertTemporalMap,
   assertTemporalRelationSpec,
   assertTemporalWindowFor,
@@ -71,6 +73,10 @@ export function assertAudioClipSpec(value: AudioClipSpec): void {
     "AudioClipSpec gain is invalid.");
   assertDuration(value.mix.fadeIn, "AudioClipSpec fade in");
   assertDuration(value.mix.fadeOut, "AudioClipSpec fade out");
+  for (const point of value.mix.gainKeyframes ?? []) {
+    assertDuration(point.at, "Audio gain keyframe time");
+    assert(Number.isFinite(point.gain) && point.gain >= 0, "Audio gain keyframe must be nonnegative.");
+  }
 }
 
 function assertAudioSampling(value: TemporalRelationSpec, label: string): void {
@@ -129,7 +135,7 @@ function realizedClips(
       ...(spec.sampling === undefined ? {} : { spec: spec.sampling }),
     }),
     ...(spec.reconstruction === undefined ? {} : { reconstruction: structuredClone(spec.reconstruction) }),
-    mix: { gain: spec.mix.gain, fadeIn, fadeOut },
+    mix: { gain: spec.mix.gain, fadeIn, fadeOut, ...(spec.mix.gainKeyframes?.length ? { gainKeyframes: spec.mix.gainKeyframes.map(point => ({ at: exactTemporalValueFromDuration(point.at, timeline), gain: point.gain })) } : {}) },
   } satisfies AudioClipProgram;
   const ids = new Set(set.clips.map((clip) => clip.id));
   assert(!ids.has(addition.id), `Audio Track ${header.id} already contains Clip ${addition.id}.`);
@@ -215,7 +221,12 @@ function terminalClip(clip: AudioClipProgram, timeline: Timeline): AudioClip {
   assert(compareExactTemporalValues(clip.mix.fadeIn, windowDuration) <= 0
     && compareExactTemporalValues(clip.mix.fadeOut, windowDuration) <= 0,
     `Audio Clip ${clip.id} fade exceeds its Window.`);
+  const gainEnvelope = clip.mix.gainKeyframes?.map(point => {
+    assert(compareExactTemporalValues(point.at, { ticks: "0", timeBase: { numerator: 1, denominator: 1 } }) >= 0 && compareExactTemporalValues(point.at, windowDuration) <= 0, "Audio gain keyframe exceeds its Clip.");
+    return { sample: resolveTemporalBoundary(addExactTemporalValues(target.start, point.at), { frameRate: { numerator: 48_000, denominator: 1 } }, 'nearest'), gain: point.gain };
+  });
   return {
+    ...(gainEnvelope?.length ? { gainEnvelope } : {}),
     id: clip.id,
     subjectId: clip.subjectId,
     source: preparedAudioSource(clip.source.media),
