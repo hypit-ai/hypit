@@ -26,7 +26,7 @@ export type FilmLink = {
 
 export type FilmVisualPlanMember =
   | { readonly kind: "track"; readonly id: string; readonly slot: number }
-  | { readonly kind: "compound"; readonly id: string; readonly slot: number }
+  | { readonly kind: "compound"; readonly id: string; readonly slot: number; readonly transform?: import("@hypit/composition").VisualScopeTransform }
   | {
       readonly kind: "stack";
       readonly id: string;

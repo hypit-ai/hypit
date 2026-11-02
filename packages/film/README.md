@@ -51,12 +51,20 @@ Compound members may appear at the Film root or inside a Stack; their visual sib
 the stacking order, and their audio joins the parent mix. The Film Companion declares the source,
 placement and source-position attributes for editor discovery.
 
+An optional `Pose` child applies a static transform to the complete local picture, including its
+canvas background. Translation uses parent-canvas pixels; rotation uses degrees; scale and opacity
+are dimensionless. `origin-x` and `origin-y` use normalized canvas coordinates and default to `0.5`.
+`scale` supplies both axes, with `scale-x` and `scale-y` overriding either axis. Each occurrence
+stores its own Pose while sharing its source Composition. Audio retains its placement and level.
+
 ```xml
 <film:Film id="parent" canvas={canvas.canvas} timeline={parentTime.timeline}
   appearance={recipes.film.main}>
   <film:Stack id="sequences">
     <film:Compound id="opening" source={opening.composition}
-      during={parentTime.opening} from={openingTime.inPoint}/>
+      during={parentTime.opening} from={openingTime.inPoint}>
+      <film:Pose x="120" y="-60" scale="0.6" rotate="12" opacity="0.8"/>
+    </film:Compound>
   </film:Stack>
 </film:Film>
 ```

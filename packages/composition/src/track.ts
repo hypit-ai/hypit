@@ -505,7 +505,26 @@ export type VisualScopeTrackMember = {
   readonly track: VisualTrack;
 };
 
+export type VisualScopeTransform = {
+  readonly x: number; readonly y: number;
+  readonly scaleX: number; readonly scaleY: number;
+  readonly rotation: number; readonly opacity: number;
+  readonly originX: number; readonly originY: number;
+};
+
+export function assertVisualScopeTransform(value: VisualScopeTransform): void {
+  for (const name of ['x', 'y', 'scaleX', 'scaleY', 'rotation', 'opacity', 'originX', 'originY'] as const) {
+    if (!Number.isFinite(value[name])) throw new Error(`VisualScope transform ${name} must be finite.`);
+  }
+  if (value.scaleX === 0 || value.scaleY === 0) throw new Error('VisualScope transform scale must be nonzero.');
+  for (const name of ['opacity', 'originX', 'originY'] as const) {
+    if (value[name] < 0 || value[name] > 1) throw new Error(`VisualScope transform ${name} must be inside [0, 1].`);
+  }
+}
+
 export type VisualScopeStackMember = {
+  /** Applied to the complete local picture, including its canvas clear. */
+  readonly transform?: VisualScopeTransform;
   /** Local canvas clear beneath this scope, visible during the placed composition. */
   readonly background?: { readonly color: string; readonly span: FrameSpan };
   readonly kind: "stack";
@@ -1582,7 +1601,7 @@ function visualScopeContent(value: VisualScope): VisualScope {
   return {
     members: [...value.members].map((member): VisualScopeMember => {
       if (member.kind === "track") return { kind: "track", id: member.id, track: structuredClone(member.track) };
-      if (member.kind === "stack") return { kind: "stack", id: member.id, scope: visualScopeContent(member.scope), ...(member.background === undefined ? {} : { background: structuredClone(member.background) }) };
+      if (member.kind === "stack") return { kind: "stack", id: member.id, scope: visualScopeContent(member.scope), ...(member.background === undefined ? {} : { background: structuredClone(member.background) }), ...(member.transform ? { transform: { ...member.transform } } : {}) };
       return {
         kind: "process",
         id: member.id,
@@ -1700,6 +1719,7 @@ function assertVisualScope(
       continue;
     }
     if (member.kind === "stack") {
+      if (member.transform) assertVisualScopeTransform(member.transform);
       assertVisualScope(member.scope, timeline, `${memberLabel}.scope`);
       if (member.background !== undefined) {
         if (!/^#[0-9a-f]{6}(?:[0-9a-f]{2})?$/iu.test(member.background.color)) throw new Error(`${memberLabel}.background color is invalid.`);

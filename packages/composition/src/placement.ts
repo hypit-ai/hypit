@@ -39,7 +39,7 @@ export function placeComposition(source: Composition, timeline: Timeline, target
     if (member.kind === 'stack') {
       const child = scope(member.scope), clear = member.background && intersect(member.background.span);
       if (!child.members.length && !clear) return [];
-      return [{ kind: 'stack', id: member.id, scope: child, ...(clear ? { background: { color: member.background!.color, span: shift(clear) } } : {}) }];
+      return [{ kind: 'stack', id: member.id, scope: child, ...(member.transform ? { transform: { ...member.transform } } : {}), ...(clear ? { background: { color: member.background!.color, span: shift(clear) } } : {}) }];
     }
     if (member.kind === 'process') {
       const original = member.timing ?? { startFrame: 0, endFrameExclusive: source.timeline.frameCount }, range = intersect(original);

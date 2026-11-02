@@ -997,8 +997,10 @@ function emitHtml(
         const background = entry.stack.background;
         const clear = background ? `<div data-hypit-canvas-clear data-hypit-contribution-start-frame="${background.span.startFrame}" data-hypit-contribution-end-frame="${background.span.endFrameExclusive}" style="position:absolute;inset:0;z-index:0;background:${escapeHtml(background.color)};pointer-events:none"></div>` : "";
         const child = clear + renderScope(entry.stack.scope, false, childScopePath, childPaintPath, captureContributions);
+        const pose = entry.stack.transform;
+        const transformStyle = pose ? `;transform:translate(${pose.x}px,${pose.y}px) rotate(${pose.rotation}deg) scale(${pose.scaleX},${pose.scaleY});transform-origin:${pose.originX * 100}% ${pose.originY * 100}%;opacity:${pose.opacity}` : "";
         const id = stableId(["visual-stack", ...childScopePath]);
-        html += `\n    <div id="${id}" class="hypit-visual-stack" data-hypit-stack-id="${escapeHtml(entry.stack.id)}" data-hypit-stack-path="${escapeHtml(JSON.stringify(childScopePath))}" style="position:absolute;inset:0;z-index:${stackIndex};overflow:hidden;pointer-events:none;isolation:isolate">${child}</div>`;
+        html += `\n    <div id="${id}" class="hypit-visual-stack" data-hypit-stack-id="${escapeHtml(entry.stack.id)}" data-hypit-stack-path="${escapeHtml(JSON.stringify(childScopePath))}" style="position:absolute;inset:0;z-index:${stackIndex};overflow:hidden;pointer-events:none;isolation:isolate${transformStyle}">${child}</div>`;
         continue;
       }
       if ("process" in entry) {

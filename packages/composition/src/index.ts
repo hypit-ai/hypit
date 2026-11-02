@@ -34,6 +34,7 @@ export {
   assertVisualTextAppearance,
   assertVisualTrackIdentity,
   assertVisualScopeIdentity,
+  assertVisualScopeTransform,
   sealAudioTrack,
   sealComposition,
   sealPresentVisualTrack,

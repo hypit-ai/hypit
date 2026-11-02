@@ -1,4 +1,4 @@
-import { assertAudioTrackIdentity, assertCompositionIdentity, assertVisualProcessEffect, assertVisualTrackIdentity, placeComposition, sealComposition, sealVisualScope } from "@hypit/composition";
+import { assertVisualScopeTransform, assertAudioTrackIdentity, assertCompositionIdentity, assertVisualProcessEffect, assertVisualTrackIdentity, placeComposition, sealComposition, sealVisualScope } from "@hypit/composition";
 import type { AudioTrack, Composition, Track, VisualScope, VisualTrack } from "@hypit/composition";
 import { assertCanvas } from "@hypit/spatial";
 import type { Canvas } from "@hypit/spatial";
@@ -62,7 +62,7 @@ export function assertFilmProgramIdentity(program: FilmProgram): void {
         }
         visualSlots.add(member.slot);
         occurrences.set(path.join('/'), member.slot);
-        if (member.kind === "compound") compoundSlots.add(member.slot);
+        if (member.kind === "compound") { compoundSlots.add(member.slot); if (member.transform) assertVisualScopeTransform(member.transform); }
         continue;
       }
       if (member.kind === "stack") {
@@ -219,7 +219,7 @@ export function compileFilmComposition(
           throw new Error('Compound canvas must match its enclosing Film.');
         }
         compoundAudio.push(...source.audio.contributions);
-        return [{ kind: 'stack', id: member.id, scope: source.visual.root, background: { color: source.visual.canvas.clearColor, span: track.span } }];
+        return [{ kind: 'stack', id: member.id, scope: source.visual.root, ...(member.transform ? { transform: { ...member.transform } } : {}), background: { color: source.visual.canvas.clearColor, span: track.span } }];
       }
       if (track.kind !== "visual") throw new Error(`FilmProgram Track slot ${member.slot} must be visual.`);
       return [{ kind: "track" as const, id: member.id, track }];
