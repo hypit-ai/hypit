@@ -23,5 +23,7 @@ export type ParsedSvsProperty = {
 
 export type ParsedSvsSheet = {
   readonly id?: string;
+  /** Contents between the opening and closing sheet tags. */
+  readonly bodyRange: SourceRange;
   readonly recipes: readonly ParsedSvsRecipe[];
 };

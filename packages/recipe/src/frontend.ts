@@ -5,9 +5,11 @@ import { decodeSourceText } from "@hypit/source";
 
 import { recipeFrontendId, recipeModuleRef, recipeType } from "./manifest.js";
 import { parseRecipe } from "./parser.js";
+import { recipeDocumentFrontend } from "./document.js";
 
 export const recipeFrontend: AuthorFrontend = {
   id: recipeFrontendId,
+  document: recipeDocumentFrontend,
   discover() {
     return { modules: [moduleKey(recipeModuleRef)], sources: [] };
   },

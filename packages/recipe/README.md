@@ -37,3 +37,15 @@ them. A consumer that needs graph media or font inputs takes explicit Source ref
 The Recipe Source's rule paths do not imply parent/child inheritance: `caption.base` and
 `caption.guest` are independent values. Any parameter defaults or overrides come from the declared
 consumer, such as TextTemplate's defaults/Recipe/Param precedence, not from SVS itself.
+
+## Document editing
+
+`recipeFrontend.document` exposes the shared `AuthorDocumentFrontend` interface.
+Each rule is a declaration whose name is its dotted path. Its fields are Recipe
+properties, with literal values written in Recipe syntax: `52` is a number and
+`"52"` is a string. `formatRecipeValue` converts a canonical value to this syntax.
+
+Editors can add, replace and remove properties, or insert, delete and reorder
+rules. Operations address nodes in the opened source revision. Property changes
+replace the parsed value span; surrounding formatting and comments remain intact.
+Stage dependent operations against the document returned by the previous stage.

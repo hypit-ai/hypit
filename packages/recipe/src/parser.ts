@@ -51,7 +51,7 @@ function consumeQuotedSyntax(scan: RecipeQuoteScan, character: string): boolean 
 }
 
 function withoutComments(sourceName: string, text: string): string {
-  const output = [...text];
+  const output = text.split("");
   let cursor = 0;
   const quoted: RecipeQuoteScan = { quote: undefined, escaped: false };
   while (cursor < text.length) {
@@ -301,6 +301,7 @@ export function parseRecipe(sourceName: string, source: string): ParsedSvsSheet 
   }
   return {
     ...(attributes.id === undefined ? {} : { id: attributes.id }),
+    bodyRange: { start: openEnd + 1, end: close },
     recipes,
   };
 }
