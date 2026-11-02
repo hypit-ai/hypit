@@ -129,8 +129,9 @@ export function verifyOutputPictureSpec(value: unknown): asserts value is Output
     && signal.colorMatrix === "bt709" && signal.colorRange === "limited" && signal.bitDepth === 8;
   assert(image || video, "OutputPictureSpec color interpretation is invalid");
   const alpha = object(picture.alpha, "OutputPictureSpec.alpha") as unknown as OutputPictureSpec["alpha"];
-  assert(alpha.mode === "opaque", "OutputPictureSpec alpha mode must be opaque");
-  verifyHexColor(alpha.matte, "OutputPictureSpec.alpha.matte");
+  assert(alpha.mode === "opaque" || (image && alpha.mode === "straight"),
+    "OutputPictureSpec requires opaque video or opaque/straight PNG alpha");
+  if (alpha.mode === "opaque") verifyHexColor(alpha.matte, "OutputPictureSpec.alpha.matte");
 }
 
 export function sameOutputPictureSpec(left: OutputPictureSpec, right: OutputPictureSpec): boolean {

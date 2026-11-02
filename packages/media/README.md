@@ -60,7 +60,7 @@ current execution path does not implement so Preparation can reject them accurat
 by current preparation and rendering. Composition and Program do not carry a selectable or extensible-looking
 working-picture record. `OutputPictureSpec`
 describes a delivery picture: encoded video uses `VideoOutputPictureSpec`, while PNG frame capture uses
-`FrameOutputPictureSpec`. `MediaDeliverySpec` is the author-owned requirement for one finished file. It declares the picture
+`FrameOutputPictureSpec`, with either straight alpha or an opaque matte. `MediaDeliverySpec` is the author-owned requirement for one finished file. It declares the picture
 profile and matte policy, coded video target, audio target and container once. The pure
 `project-visual-delivery` Producer derives the `VisualDeliverySpec` needed by a visual renderer;
 the complete value independently reaches final mux.

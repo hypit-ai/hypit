@@ -37,7 +37,7 @@ frame capture and source decoding. This package assembles the author-facing rend
 
 `still.image` is a retained PNG Blob at the Composition's canvas size. `at-frame` is a
 zero-based integer on that Composition's clock and must fall within its duration. The output
-uses full-range sRGB, 8-bit RGB with an opaque black matte. The graph compiles the composed
+uses full-range sRGB, 8-bit RGBA with straight alpha. The graph compiles the composed
 picture, requests one frame through `rasterize-frames`, and projects its image Artifact.
 
 Build `still.image` and export its Result to save a stable picture for subsequent editing.

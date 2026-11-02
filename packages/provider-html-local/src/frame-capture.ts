@@ -1,3 +1,4 @@
+import type { OutputPictureSpec } from "@hypit/media";
 import type { Page } from "puppeteer-core";
 import type { HtmlProcessUsage } from "@hypit/html-program";
 import {
@@ -8,19 +9,22 @@ import type {
   SourceFrameUpdate,
 } from "@hypit/html-render-local";
 
-/** Capture one prepared Chromium page state as an opaque PNG. */
-export async function createOpaqueFrameCapture(
+/** Capture one prepared Chromium page state as a PNG with the requested alpha interpretation. */
+export async function createFrameCapture(
   page: Page,
   canvas: { readonly width: number; readonly height: number },
-  matte: string,
+  alpha: OutputPictureSpec["alpha"],
   processUsages: readonly HtmlProcessUsage[] = [],
 ) {
   const cdp = await page.createCDPSession();
-  const match = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/iu.exec(matte);
-  if (match === null) throw new Error("HTML renderer matte must be an opaque hexadecimal color");
-  await cdp.send("Emulation.setDefaultBackgroundColorOverride", { color: {
-    r: Number.parseInt(match[1]!, 16), g: Number.parseInt(match[2]!, 16), b: Number.parseInt(match[3]!, 16), a: 1,
-  } });
+  let color = { r: 0, g: 0, b: 0, a: 0 };
+  if (alpha.mode === "opaque") {
+    const match = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/iu.exec(alpha.matte);
+    if (match === null) throw new Error("HTML renderer matte must be an opaque hexadecimal color");
+    color = { r: Number.parseInt(match[1]!, 16), g: Number.parseInt(match[2]!, 16),
+      b: Number.parseInt(match[3]!, 16), a: 1 };
+  }
+  await cdp.send("Emulation.setDefaultBackgroundColorOverride", { color });
   const preparationPage: FramePreparationPage = {
     evaluate: page.evaluate.bind(page) as FramePreparationPage["evaluate"],
     screenshot: async options => await page.screenshot(options) as Uint8Array,

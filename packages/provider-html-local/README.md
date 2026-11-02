@@ -7,7 +7,7 @@ Local Chromium implementation of:
 
 The Provider consumes a typed `HtmlProgram`. It stages only the Artifacts selected by the request,
 extracts exact source samples through FFmpeg, applies absolute integer frames through
-`window.__hypitFrameProgram`, captures opaque PNG frames through Chrome DevTools Protocol and writes
+`window.__hypitFrameProgram`, captures PNG frames with the requested alpha interpretation through Chrome DevTools Protocol and writes
 encoded visual output through an ordered FFmpeg pipe.
 
 The package owns Chromium selection, installation, frame capture and its disposable worker process.

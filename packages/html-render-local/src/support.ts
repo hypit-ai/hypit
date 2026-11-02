@@ -83,7 +83,7 @@ export function localHtmlFrameRejection(request: HtmlFrameRequest): string | und
   const picture = request.picture;
   if (picture.colorPrimaries !== "bt709" || picture.colorTransfer !== "srgb"
     || picture.colorMatrix !== "rgb" || picture.colorRange !== "full" || picture.bitDepth !== 8) {
-    return "The local HTML Provider currently implements only opaque sRGB 8-bit PNG frame delivery";
+    return "The local HTML Provider currently implements sRGB 8-bit PNG frame delivery";
   }
   return undefined;
 }

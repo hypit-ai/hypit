@@ -45,7 +45,7 @@ export const htmlProgramComponent = {
       if (range.endFrameExclusive !== range.startFrame + 1) throw new Error("Frame capture selects exactly one frame");
       return { kind: "need", constraints: htmlFrameRequest({
         program: valueOf(inputs.program!.value, "HtmlProgram") as unknown as HtmlProgram,
-        picture: { colorPrimaries: "bt709", colorTransfer: "srgb", colorMatrix: "rgb", colorRange: "full", bitDepth: 8, alpha: { mode: "opaque", matte: "#000000" } },
+        picture: { colorPrimaries: "bt709", colorTransfer: "srgb", colorMatrix: "rgb", colorRange: "full", bitDepth: 8, alpha: { mode: "straight" } },
         frames: [range.startFrame],
       }) };
     },

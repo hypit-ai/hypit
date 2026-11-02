@@ -50,6 +50,10 @@ const videoOutputPictureSpecSchema: ValueSchema = object({
 });
 const frameOutputPictureSpecSchema: ValueSchema = object({
   ...outputPictureBase,
+  alpha: { schema: { kind: "oneOf", variants: [
+    outputPictureBase.alpha.schema,
+    object({ mode: { schema: { kind: "literal", value: "straight" } } }),
+  ] } },
   colorTransfer: { schema: { kind: "literal", value: "srgb" } },
   colorMatrix: { schema: { kind: "literal", value: "rgb" } },
   colorRange: { schema: { kind: "literal", value: "full" } },

@@ -48,7 +48,7 @@ function backend(options: BrowserOptions) {
   const executablePath = browserExecutablePath(options);
   return {
     mode: "frame-buffer" as const,
-    label: "opaque Chromium PNG",
+    label: "Chromium PNG",
     executablePath,
     workerLaunch: () => chromiumWorkerLaunch(executablePath),
     verifyExecutable: async () => { await requireBrowserExecutable(executablePath, selectedBrowserVersion(options)); },

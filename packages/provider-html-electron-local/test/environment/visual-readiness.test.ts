@@ -13,7 +13,7 @@ import { compileHtmlProgram, htmlVisualElement, materializeHtmlProgram } from "@
 import { captionDocument, parseScript } from "@hypit/script";
 import { sealTimeline } from "@hypit/timeline";
 import { browserExecutablePath } from "../../../provider-html-local/src/browser.js";
-import { createOpaqueFrameCapture } from "../../../provider-html-local/src/opaque-capture.js";
+import { createFrameCapture } from "../../../provider-html-local/src/frame-capture.js";
 import { rasterizeHtmlFrames } from "../../../provider-html-local/src/render.js";
 import { rasterizeElectronHtmlProgram } from "../../src/index.js";
 import { htmlProviderDelivery, htmlProviderPicture } from "../../../provider-html-local/test/provider-scenario.js";
@@ -60,7 +60,7 @@ test("capture waits for dynamic images and rejects broken images or exact fonts"
             else if (target !== null) target.classList.add("paint");
           } };
         }, { kind, origin });
-        const capture = await createOpaqueFrameCapture(page, { width: 64, height: 64 }, "#000000");
+        const capture = await createFrameCapture(page, { width: 64, height: 64 }, { mode: "opaque", matte: "#000000" });
         if (kind === "broken") await assert.rejects(capture(0), /image could not be decoded/u);
         else if (kind === "font") await assert.rejects(capture(0), /font could not be loaded/u);
         else {
@@ -86,7 +86,7 @@ test("capture waits for dynamic images and rejects broken images or exact fonts"
             async applyFrame() {},
           };
         });
-        const capture = await createOpaqueFrameCapture(page, { width: 64, height: 64 }, "#000000");
+        const capture = await createFrameCapture(page, { width: 64, height: 64 }, { mode: "opaque", matte: "#000000" });
         const frame = await capture(0, [{
           id: "source",
           elementId: "source",
@@ -115,7 +115,7 @@ test("capture waits for dynamic images and rejects broken images or exact fonts"
             if (frame >= 2) document.getElementById("target")!.style.backgroundImage = `url(${origin}/local.png)`;
           } };
         }, origin);
-        const capture = await createOpaqueFrameCapture(page, { width: 64, height: 64 }, "#000000");
+        const capture = await createFrameCapture(page, { width: 64, height: 64 }, { mode: "opaque", matte: "#000000" });
         await capture(0);
         const initialReads = await page.evaluate(() => (window as unknown as { __styleReads: number }).__styleReads);
         assert.ok(initialReads >= 600, "the initial pass should discover the complete existing document");
@@ -149,7 +149,7 @@ test("capture waits for dynamic images and rejects broken images or exact fonts"
             if (time >= 1 / 30) selected.style.backgroundImage = `url(${origin}/scoped.png)`;
           } };
         }, origin);
-        const capture = await createOpaqueFrameCapture(page, { width: 64, height: 64 }, "#000000");
+        const capture = await createFrameCapture(page, { width: 64, height: 64 }, { mode: "opaque", matte: "#000000" });
         await capture(0);
         const initialReads = await page.evaluate(() => (window as unknown as { __styleReads: number }).__styleReads);
         assert.ok(initialReads <= 6, `one capture root unexpectedly caused ${initialReads} style reads`);
@@ -173,7 +173,7 @@ test("capture waits for dynamic images and rejects broken images or exact fonts"
           animation.pause();
           (window as unknown as { __hypitFrameProgram: unknown }).__hypitFrameProgram = { async applyFrame(time: number) { animation.currentTime = time * 1_000; } };
         }, origin);
-        const capture = await createOpaqueFrameCapture(page, { width: 64, height: 64 }, "#000000");
+        const capture = await createFrameCapture(page, { width: 64, height: 64 }, { mode: "opaque", matte: "#000000" });
         const first = await capture(0);
         const last = await capture(30);
         for (const [frame, expected] of [[first, [255, 0, 0]], [last, [0, 0, 255]]] as const) {
@@ -197,7 +197,7 @@ test("capture waits for dynamic images and rejects broken images or exact fonts"
             }
           } };
         }, origin);
-        const capture = await createOpaqueFrameCapture(page, { width: 64, height: 64 }, "#000000");
+        const capture = await createFrameCapture(page, { width: 64, height: 64 }, { mode: "opaque", matte: "#000000" });
         await capture(0);
         const frame = await capture(1);
         const { data, info } = await sharp(frame.buffer).raw().toBuffer({ resolveWithObject: true });
@@ -387,7 +387,7 @@ test("Fine Caption Cues stay isolated over Picture during reverse seeks and inde
     try {
       await page.setViewport({ width: 320, height: 180 });
       await page.setContent(materialized);
-      const capture = await createOpaqueFrameCapture(page, { width: 320, height: 180 }, "#000000");
+      const capture = await createFrameCapture(page, { width: 320, height: 180 }, { mode: "opaque", matte: "#000000" });
       for (const [frame, color] of [[75, "blue"], [15, "red"], [45, "green"]] as const) {
         await assertCueColors((await capture(frame)).buffer, color, `direct reverse seek frame ${frame}`);
       }

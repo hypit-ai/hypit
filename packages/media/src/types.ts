@@ -191,7 +191,8 @@ export type VideoOutputPictureSpec = OutputPictureBase & {
   readonly colorRange: "limited";
 };
 
-export type FrameOutputPictureSpec = OutputPictureBase & {
+export type FrameOutputPictureSpec = Omit<OutputPictureBase, "alpha"> & {
+  readonly alpha: OutputPictureBase["alpha"] | { readonly mode: "straight" };
   readonly colorPrimaries: "bt709";
   readonly colorTransfer: "srgb";
   readonly colorMatrix: "rgb";

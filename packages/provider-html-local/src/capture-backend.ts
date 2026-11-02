@@ -7,12 +7,12 @@ import type {
   StagedCaptureSession,
   StagedCaptureWorker,
 } from "@hypit/html-render-local";
-import { createOpaqueFrameCapture } from "./opaque-capture.js";
+import { createFrameCapture } from "./frame-capture.js";
 
 export function chromiumCaptureBackend(executablePath: string): StagedCaptureBackend {
   return {
     mode: "frame-buffer",
-    label: "opaque Chromium PNG",
+    label: "Chromium PNG",
     async create(input: CaptureInput, origin: string, _pages, controller): Promise<StagedCaptureSession> {
       const sessions = new Set<Browser>();
       const closing = new Map<Browser, Promise<void>>();
@@ -52,7 +52,7 @@ export function chromiumCaptureBackend(executablePath: string): StagedCaptureBac
             await program.prepare(frameSelection);
           }, input.frameSelection);
           const picture = input.frames === undefined ? input.delivery.picture : input.picture;
-          const capturePng = await createOpaqueFrameCapture(page, input.document.canvas, picture.alpha.matte,
+          const capturePng = await createFrameCapture(page, input.document.canvas, picture.alpha,
             selectHtmlProcessUsages(input.document, input.frameSelection));
           return {
             browserPid: browser.process()?.pid,
