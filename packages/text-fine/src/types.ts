@@ -23,8 +23,16 @@ export type TextStyle = {
   readonly paints: readonly TextPaintLayer[];
 };
 
+export type TextPose = {
+  readonly x: number; readonly y: number;
+  readonly scaleX: number; readonly scaleY: number;
+  readonly rotation: number; readonly opacity: number;
+  readonly originX: number; readonly originY: number;
+};
+
 export type TextMotion = {
   readonly id: string;
+  readonly pose?: TextPose;
   readonly item?: VisualAnimation;
   readonly sequences: readonly VisualTextSequenceAnimation[];
 };

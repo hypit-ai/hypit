@@ -551,12 +551,19 @@ const decodeTypographyMotionDeclaration: DeclarationDecoder = ({ element }) => {
   const id = text(element, "id");
   const itemKeyframes: NonNullable<TextMotion["item"]>["keyframes"][number][] = [];
   const sequences: VisualTextSequenceAnimation[] = [];
+  let pose: TextMotion["pose"];
   for (const child of element.children) {
     if (child.kind === "text") {
-      if (child.value.trim()) throw new Error(`${element.name} accepts ItemKeyframe and Sequence children.`);
+      if (child.value.trim()) throw new Error(`${element.name} accepts Pose, ItemKeyframe and Sequence children.`);
       continue;
     }
     const name = localName(child.name);
+    if (name === "Pose") {
+      if (pose !== undefined) throw new Error(`${element.name} accepts one Pose.`);
+      if (child.children.some(nested => nested.kind === "element" || nested.value.trim())) throw new Error(`${child.name} must be empty.`);
+      pose = { x: numeric(child, "x", 0), y: numeric(child, "y", 0), scaleX: numeric(child, "scale-x", 1), scaleY: numeric(child, "scale-y", 1), rotation: numeric(child, "rotate", 0), opacity: numeric(child, "opacity", 1), originX: numeric(child, "origin-x", .5), originY: numeric(child, "origin-y", .5) };
+      continue;
+    }
     if (name === "ItemKeyframe") {
       if (child.children.some((nested) => nested.kind === "element" || nested.value.trim())) throw new Error(`${child.name} must be empty.`);
       itemKeyframes.push({ atFrame: integer(child, "at"), ...(child.attributes.easing === undefined ? {} : { easing: text(child, "easing") as "linear" | "ease-in" | "ease-out" | "ease-in-out" }), style: htmlKeyframeStyle(child) });
@@ -582,6 +589,7 @@ const decodeTypographyMotionDeclaration: DeclarationDecoder = ({ element }) => {
   }
   const motion = sealTextMotion({
     id,
+    ...(pose === undefined ? {} : { pose }),
     ...(itemKeyframes.length === 0 ? {} : { item: { keyframes: itemKeyframes } }),
     sequences,
   });
@@ -1042,6 +1050,7 @@ export const fineTextMotionAuthorDeclaration = declarationCompiler(
   "motion",
   [textFineTypes.motion],
   { summary: "Authors one reusable fine-text Motion.", fields: [identifierField()], children: [
+    { name: "Pose", cardinality: "optional", summary: "Transforms the whole text item around its placement origin.", fields: ["x", "y", "scale-x", "scale-y", "rotate", "opacity", "origin-x", "origin-y"].map(name => literalField(name)) },
     { name: "ItemKeyframe", cardinality: "many", summary: "One whole-item keyframe.", fields: keyframeFields },
     { name: "Sequence", cardinality: "many", summary: "One unit sequence.",
       fields: [identifierField(), literalField("unit", true), literalField("start-index", true),

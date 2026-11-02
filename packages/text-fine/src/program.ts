@@ -89,6 +89,10 @@ export function sealTextStyle(value: TextStyle): TextStyle {
 
 export function assertTextMotion(motion: TextMotion): void {
   nonEmpty(motion.id, "TextMotion id");
+  const pose = motion.pose;
+  if (pose && (!Object.values(pose).every(Number.isFinite) || pose.scaleX === 0 || pose.scaleY === 0 || pose.opacity < 0 || pose.opacity > 1 || pose.originX < 0 || pose.originX > 1 || pose.originY < 0 || pose.originY > 1)) {
+    throw new Error("TextMotion pose requires finite values, nonzero scales, and opacity and origins between zero and one.");
+  }
   const ids = new Set<string>();
   for (const sequence of motion.sequences) {
     nonEmpty(sequence.id, "Text sequence id");
@@ -504,7 +508,18 @@ function elementRoot(item: TextItem): VisualElement {
       : [{ name: "position", value: "absolute" }, { name: "inset", value: 0 }],
     ...(item.motion.item === undefined ? {} : { animation: item.motion.item }),
   };
-  return { id: "placement", kind: "box", children: [motion], style: rootStyle };
+  const pose = item.motion.pose;
+  const content: VisualElement = pose === undefined ? motion : {
+    id: "pose", kind: "box", children: [motion],
+    style: [
+      { name: "position", value: item.placement.kind === "point" ? "relative" : "absolute" },
+      ...(item.placement.kind === "point" ? [] : [{ name: "inset", value: 0 }]),
+      { name: "transform", value: `translate(${pose.x}px,${pose.y}px) rotate(${pose.rotation}deg) scale(${pose.scaleX},${pose.scaleY})` },
+      { name: "transform-origin", value: `${pose.originX * 100}% ${pose.originY * 100}%` },
+      { name: "opacity", value: pose.opacity },
+    ],
+  };
+  return { id: "placement", kind: "box", children: [content], style: rootStyle };
 }
 
 export function renderFineTextOccurrence(timeline: Timeline, occurrence: FineTextOccurrence): PresentVisualTrack {
