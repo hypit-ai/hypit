@@ -514,6 +514,9 @@ function renderDocument(
   const indices: UnitIndices = { paragraph: 0, run: 0, word: 0, grapheme: 0 };
   const renderGrapheme = (value: string, paints: readonly VisualTextPaintLayer[]): string => {
     const graphemeIndex = indices.grapheme++;
+    if (value === "\n" || value === "\r" || value === "\r\n") {
+      return `<br data-hypit-text-unit-grapheme="${graphemeIndex}"/>`;
+    }
     const styles = [
       "position:relative",
       "display:inline-grid",

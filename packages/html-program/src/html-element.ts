@@ -186,6 +186,9 @@ export function htmlVisualElement(root: HtmlElement): VisualProgramElement {
       if (element.kind !== "text" && element.kind !== "text-flow" && element.kind !== "path-text") {
         rules.push(`${selector}>[data-hypit-element-id]{display:block;width:100%;height:100%;object-fit:inherit}`);
       }
+      if (element.kind === "text-flow") {
+        rules.push(`${selector}>[data-hypit-element-id]{width:100%;height:100%}`);
+      }
       const name = `slot-${slots.length + 1}`;
       slots.push({ name, element: stripHtmlOwnership(element, close) });
       return `<div data-hypit-html-element="${key}" data-hypit-html-element-id="${escapeHtml(element.id)}"${attributes}>{{${name}}}</div>`;
