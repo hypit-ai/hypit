@@ -13,10 +13,10 @@ export type FilmProgram = {
   readonly groups?: readonly FilmGroup[];
 };
 
-/** Selection groups retain Track clips and Compound occurrences in their current composition. */
+/** Selection groups address Track clips or visual occurrences in their current composition. */
 export type FilmGroup = {
   readonly id: string;
-  readonly members: readonly ({ readonly slot: number; readonly clip: string } | { readonly slot: number; readonly clip?: never })[];
+  readonly members: readonly ({ readonly slot: number; readonly clip: string; readonly occurrence?: never } | { readonly slot: number; readonly clip?: never; readonly occurrence?: string })[];
 };
 
 export type FilmLink = {

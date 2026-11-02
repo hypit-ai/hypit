@@ -143,7 +143,7 @@ export const filmAuthorDeclaration: AuthorDeclarationCompiler = {
           { name: "clip", kind: "literal", required: true, summary: "Selects a clip in that Track." },
         ],
       }, {
-        name: "Occurrence", cardinality: "many", summary: "Identifies a Compound occurrence.",
+        name: "Occurrence", cardinality: "many", summary: "Identifies a visual Track or Compound occurrence.",
         fields: [{ name: "path", kind: "literal", required: true, summary: "Selects a slash-separated Compound path through this Film's visual scopes." }],
       }],
       "linked-clips": [{
@@ -289,7 +289,7 @@ export const filmAuthorDeclaration: AuthorDeclarationCompiler = {
     const indexOccurrences = (members: readonly FilmVisualPlanMember[], prefix: string[] = []) => {
       for (const member of members) {
         const path = [...prefix, member.id];
-        if (member.kind === 'compound') occurrences.set(path.join('/'), member.slot);
+        if (member.kind === 'compound' || member.kind === 'track') occurrences.set(path.join('/'), member.slot);
         if (member.kind === 'stack') indexOccurrences(member.members, path);
         if (member.kind === 'process') for (const input of member.inputs) indexOccurrences(input.members, [...path, input.name]);
       }
@@ -300,9 +300,9 @@ export const filmAuthorDeclaration: AuthorDeclarationCompiler = {
       const members: FilmGroup['members'][number][] = [];
       for (const member of group.children) {
         if (member.name === 'Occurrence') {
-          const slot = occurrences.get(literal(member, 'path'));
-          if (slot === undefined) throw new Error('Group Occurrence must identify a Compound in this Film.');
-          members.push({ slot });
+          const occurrence = literal(member, 'path'), slot = occurrences.get(occurrence);
+          if (slot === undefined) throw new Error('Group Occurrence must identify a visual Track or Compound in this Film.');
+          members.push({ slot, occurrence });
         } else {
           const source = await trackReference(member, resolveReference);
           const slot = sourceSlots.get(referenceKey(source));

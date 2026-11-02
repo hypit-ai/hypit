@@ -45,8 +45,8 @@ export function assertFilmProgramIdentity(program: FilmProgram): void {
   }
   if (program.visual === null || typeof program.visual !== "object" || !Array.isArray(program.visual.members)
     || !Array.isArray(program.audio)) throw new Error("FilmProgram assembly is invalid.");
-  const visualSlots = new Set<number>(), compoundSlots = new Set<number>();
-  const visit = (members: readonly FilmVisualPlanMember[], label: string): void => {
+  const visualSlots = new Set<number>(), compoundSlots = new Set<number>(), occurrences = new Map<string, number>();
+  const visit = (members: readonly FilmVisualPlanMember[], label: string, prefix: string[] = []): void => {
     const memberIds = new Set<string>();
     for (const [index, member] of members.entries()) {
       const item = `${label}.${index}`;
@@ -55,11 +55,13 @@ export function assertFilmProgramIdentity(program: FilmProgram): void {
         throw new Error(`${item}.id is empty or duplicated in its parent Visual Scope.`);
       }
       memberIds.add(member.id);
+      const path = [...prefix, member.id];
       if (member.kind === "track" || member.kind === "compound") {
         if (!Number.isSafeInteger(member.slot) || member.slot < 0) {
           throw new Error(`${item} is an invalid Visual Track member.`);
         }
         visualSlots.add(member.slot);
+        occurrences.set(path.join('/'), member.slot);
         if (member.kind === "compound") compoundSlots.add(member.slot);
         continue;
       }
@@ -67,7 +69,7 @@ export function assertFilmProgramIdentity(program: FilmProgram): void {
         if (!Array.isArray(member.members) || member.members.length === 0) {
           throw new Error(`${item} is an invalid Visual Stack.`);
         }
-        visit(member.members, `${item}.members`);
+        visit(member.members, `${item}.members`, path);
         continue;
       }
       if (member.kind !== "process" || !Array.isArray(member.inputs) || member.inputs.length === 0) {
@@ -82,7 +84,7 @@ export function assertFilmProgramIdentity(program: FilmProgram): void {
           throw new Error(`${inputLabel} is invalid.`);
         }
         inputNames.add(input.name);
-        visit(input.members, `${inputLabel}.members`);
+        visit(input.members, `${inputLabel}.members`, [...path, input.name]);
       }
       if (inputNames.size !== member.effect.inputs.length
         || member.effect.inputs.some((name) => !inputNames.has(name))) {
@@ -117,9 +119,14 @@ export function assertFilmProgramIdentity(program: FilmProgram): void {
     if (!group.id?.trim() || groupIds.has(group.id) || !Array.isArray(group.members) || group.members.length < 2) throw new Error('Film Group requires a unique id and at least two members.');
     groupIds.add(group.id);
     for (const member of group.members) {
-      const key = JSON.stringify([member.slot, member.clip]);
-      if ((!visualSlots.has(member.slot) && !audioSlots.has(member.slot)) || grouped.has(key)
-        || (compoundSlots.has(member.slot) ? member.clip !== undefined : !member.clip?.trim())) throw new Error('Film Group member must identify one Track clip or Compound occurrence and belong to one Group.');
+      const compound = compoundSlots.has(member.slot);
+      const key = JSON.stringify(compound ? [member.slot] : [member.slot, member.clip, member.occurrence]);
+      const validAddress = member.occurrence !== undefined
+        ? member.clip === undefined && occurrences.get(member.occurrence) === member.slot
+        : compound ? member.clip === undefined : Boolean(member.clip?.trim());
+      if ((!visualSlots.has(member.slot) && !audioSlots.has(member.slot)) || grouped.has(key) || !validAddress) {
+        throw new Error('Film Group member must identify one Track clip or visual occurrence and belong to one Group.');
+      }
       grouped.add(key);
     }
   }
@@ -230,6 +237,7 @@ export function compileFilmComposition(
   for (const link of [...program.links ?? [], ...program.groups ?? []]) {
     for (const member of link.members) {
       const track = trackAt(member.slot);
+      if ('occurrence' in member && member.occurrence !== undefined) continue;
       if (track.kind === 'compound') {
         if (member.clip !== undefined) throw new Error('Compound editing member must identify its occurrence.');
         continue;
