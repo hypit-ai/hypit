@@ -57,6 +57,12 @@ are dimensionless. `origin-x` and `origin-y` use normalized canvas coordinates a
 `scale` supplies both axes, with `scale-x` and `scale-y` overriding either axis. Each occurrence
 stores its own Pose while sharing its source Composition. Audio retains its placement and level.
 
+A `Crop` child selects a normalized rectangle of the local canvas. Its `zoom` and `rotate` fields
+transform the source picture before selecting that region. The selected region is fitted inside the
+parent canvas with its aspect ratio preserved, then the outer Pose is applied. The local Composition
+retains its original content. `x`, `y`, `width` and `height` are required; `zoom` defaults to `1`
+and `rotate` to `0`. Spatial provides the common crop geometry used by Film and Visual Track.
+
 ```xml
 <film:Film id="parent" canvas={canvas.canvas} timeline={parentTime.timeline}
   appearance={recipes.film.main}>

@@ -72,6 +72,13 @@ The Recipe decoder exposes `fit`, `frame-x`, `frame-y`, `content-x`, `content-y`
 `fit-offset-y` and `fit-constraint`. Visual Track uses it, and project components may use the same
 pure functions.
 
+## Source cropping
+
+`SourceCrop` describes a normalized source rectangle after source-centred zoom and rotation.
+`assertSourceCrop` checks its rectangle, zoom and angle. `resolveSourceCrop` fits that region inside
+a destination frame and returns its clipping frame and affine source mapping. Visual Track and Film
+use these values for media and compound pictures respectively.
+
 ## Spatial sequences are a peer package
 
 Frame-indexed regions do not belong to static geometry. `@hypit/spatial-sequence` imports an editable

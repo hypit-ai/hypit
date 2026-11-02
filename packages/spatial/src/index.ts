@@ -27,3 +27,5 @@ export {
   spatialPointSchema,
 } from "./schema.js";export { spatialMarkupDeclarations, spatialPointMarkupDeclaration } from "./declaration.js";
 export type * from "./types.js";
+
+export { assertSourceCrop, resolveSourceCrop, type SourceCrop } from "./crop.js";

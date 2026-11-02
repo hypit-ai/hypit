@@ -1,3 +1,4 @@
+import { resolveSourceCrop } from "@hypit/spatial";
 import { assertCompositableSurfaceRef, verifyPictureInterpretation, verifyPreparedVisualSource } from "@hypit/media";
 import type { CompositableSurfaceRef, FontArtifactRef } from "@hypit/media";
 import { assertFrameSpan, timelineFrameCount } from "@hypit/timeline";
@@ -996,7 +997,12 @@ function emitHtml(
         const childPaintPath = [...paintPath, stackIndex];
         const background = entry.stack.background;
         const clear = background ? `<div data-hypit-canvas-clear data-hypit-contribution-start-frame="${background.span.startFrame}" data-hypit-contribution-end-frame="${background.span.endFrameExclusive}" style="position:absolute;inset:0;z-index:0;background:${escapeHtml(background.color)};pointer-events:none"></div>` : "";
-        const child = clear + renderScope(entry.stack.scope, false, childScopePath, childPaintPath, captureContributions);
+        let child = clear + renderScope(entry.stack.scope, false, childScopePath, childPaintPath, captureContributions);
+        if (entry.stack.crop) {
+          const { width, height } = composition.visual.canvas;
+          const { frame: box, mapping: m } = resolveSourceCrop(entry.stack.crop, { widthPx: width, heightPx: height }, { xPx: 0, yPx: 0, widthPx: width, heightPx: height });
+          child = `<div style="position:absolute;inset:0;clip-path:inset(${box.yPx}px ${width - box.xPx - box.widthPx}px ${height - box.yPx - box.heightPx}px ${box.xPx}px)"><div style="position:absolute;inset:0;transform-origin:0 0;transform:matrix(${m.xx},${m.yx},${m.xy},${m.yy},${m.tx},${m.ty})">${child}</div></div>`;
+        }
         const pose = entry.stack.transform;
         const transformStyle = pose ? `;transform:translate(${pose.x}px,${pose.y}px) rotate(${pose.rotation}deg) scale(${pose.scaleX},${pose.scaleY});transform-origin:${pose.originX * 100}% ${pose.originY * 100}%;opacity:${pose.opacity}` : "";
         const id = stableId(["visual-stack", ...childScopePath]);

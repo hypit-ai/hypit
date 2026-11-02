@@ -982,6 +982,9 @@ importers:
       '@hypit/media':
         specifier: workspace:0.4.1-preview.0
         version: link:../media
+      '@hypit/spatial':
+        specifier: workspace:0.4.1-preview.0
+        version: link:../spatial
       '@hypit/temporal':
         specifier: workspace:0.4.1-preview.0
         version: link:../temporal
@@ -1013,9 +1016,6 @@ importers:
       '@hypit/refinement':
         specifier: workspace:*
         version: link:../refinement
-      '@hypit/spatial':
-        specifier: workspace:*
-        version: link:../spatial
       '@hypit/speech-evidence':
         specifier: workspace:*
         version: link:../speech-evidence
@@ -1425,6 +1425,9 @@ importers:
       '@hypit/media':
         specifier: workspace:0.4.1-preview.0
         version: link:../media
+      '@hypit/spatial':
+        specifier: workspace:0.4.1-preview.0
+        version: link:../spatial
       '@hypit/temporal':
         specifier: workspace:0.4.1-preview.0
         version: link:../temporal
@@ -1465,9 +1468,6 @@ importers:
       '@hypit/script':
         specifier: workspace:*
         version: link:../script
-      '@hypit/spatial':
-        specifier: workspace:*
-        version: link:../spatial
       '@hypit/text-fine':
         specifier: workspace:*
         version: link:../text-fine

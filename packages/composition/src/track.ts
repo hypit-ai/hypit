@@ -1,3 +1,4 @@
+import { assertSourceCrop, type SourceCrop } from "@hypit/spatial";
 import { assertAudioLevelAutomation } from "./audio-level-automation.js";
 import type { AudioLevelAutomation } from "./audio-level-automation.js";
 import { assertBlobRef, canonicalize, canonicalStringify, compareCodeUnits } from "@hypit/hypit/protocol";
@@ -523,6 +524,7 @@ export function assertVisualScopeTransform(value: VisualScopeTransform): void {
 }
 
 export type VisualScopeStackMember = {
+  readonly crop?: SourceCrop;
   /** Applied to the complete local picture, including its canvas clear. */
   readonly transform?: VisualScopeTransform;
   /** Local canvas clear beneath this scope, visible during the placed composition. */
@@ -1601,7 +1603,7 @@ function visualScopeContent(value: VisualScope): VisualScope {
   return {
     members: [...value.members].map((member): VisualScopeMember => {
       if (member.kind === "track") return { kind: "track", id: member.id, track: structuredClone(member.track) };
-      if (member.kind === "stack") return { kind: "stack", id: member.id, scope: visualScopeContent(member.scope), ...(member.background === undefined ? {} : { background: structuredClone(member.background) }), ...(member.transform ? { transform: { ...member.transform } } : {}) };
+      if (member.kind === "stack") return { kind: "stack", id: member.id, scope: visualScopeContent(member.scope), ...(member.crop ? { crop: { ...member.crop } } : {}), ...(member.background === undefined ? {} : { background: structuredClone(member.background) }), ...(member.transform ? { transform: { ...member.transform } } : {}) };
       return {
         kind: "process",
         id: member.id,
@@ -1719,6 +1721,7 @@ function assertVisualScope(
       continue;
     }
     if (member.kind === "stack") {
+      if (member.crop) assertSourceCrop(member.crop);
       if (member.transform) assertVisualScopeTransform(member.transform);
       assertVisualScope(member.scope, timeline, `${memberLabel}.scope`);
       if (member.background !== undefined) {

@@ -9,7 +9,7 @@ import {
 import { sameType, type TypeRef } from "@hypit/hypit/protocol";
 import { assertVisualScopeTransform, assertVisualProcessEffect, compositionTypes } from "@hypit/composition";
 import type { VisualScopeTransform, VisualProcessEffect } from "@hypit/composition";
-import { spatialTypes } from "@hypit/spatial";
+import { assertSourceCrop, type SourceCrop, spatialTypes } from "@hypit/spatial";
 import { recipeType, type Recipe } from "@hypit/hypit/recipe";
 import { temporalTypes } from "@hypit/temporal";
 import { timelineTypes } from "@hypit/timeline";
@@ -40,6 +40,15 @@ function compoundTransform(node: AuthorDeclarationChild): VisualScopeTransform |
   const number = (name: string, fallback: number) => field(pose, name) ? Number(literal(pose, name)) : fallback;
   const value = { x: number('x', 0), y: number('y', 0), scaleX: number('scale-x', number('scale', 1)), scaleY: number('scale-y', number('scale', 1)), rotation: number('rotate', 0), opacity: number('opacity', 1), originX: number('origin-x', .5), originY: number('origin-y', .5) };
   assertVisualScopeTransform(value);
+  return value;
+}
+
+function compoundCrop(node: AuthorDeclarationChild): SourceCrop | undefined {
+  const crop = node.children.find(child => child.name === 'Crop');
+  if (!crop) return undefined;
+  const number = (name: string, fallback?: number) => field(crop, name) ? Number(literal(crop, name)) : fallback!;
+  const value = { x: number('x'), y: number('y'), width: number('width'), height: number('height'), zoom: number('zoom', 1), rotation: number('rotate', 0) };
+  assertSourceCrop(value);
   return value;
 }
 
@@ -122,7 +131,7 @@ export const filmAuthorDeclaration: AuthorDeclarationCompiler = {
         name: "Compound",
         cardinality: "many",
         summary: "Places a referenced audiovisual Composition on this Timeline.",
-        children: { group: "compound-pose" },
+        children: { group: "compound-picture" },
         fields: [
           { name: "id", kind: "identifier", required: true, summary: "Names this Compound occurrence." },
           { name: "source", kind: "reference", required: true, accepts: [compositionTypes.composition], summary: "Selects the local Composition." },
@@ -146,9 +155,12 @@ export const filmAuthorDeclaration: AuthorDeclarationCompiler = {
         ],
         children: { group: "inputs" },
       }],
-      "compound-pose": [{
+      "compound-picture": [{
         name: "Pose", cardinality: "optional", summary: "Transforms the complete compound picture in its parent Canvas.",
         fields: ["x", "y", "scale", "scale-x", "scale-y", "rotate", "opacity", "origin-x", "origin-y"].map(name => ({ name, kind: "literal" as const, required: false, summary: `Supplies the compound Pose ${name} parameter.` })),
+      }, {
+        name: "Crop", cardinality: "optional", summary: "Selects a normalized region of the local Canvas before its outer Pose.",
+        fields: ["x", "y", "width", "height", "zoom", "rotate"].map(name => ({ name, kind: "literal" as const, required: ["x", "y", "width", "height"].includes(name), summary: `Supplies the compound Crop ${name} parameter.` })),
       }],
       "grouped-clips": [{
         name: "Member", cardinality: "many", summary: "Identifies a Track clip.",
@@ -251,8 +263,8 @@ export const filmAuthorDeclaration: AuthorDeclarationCompiler = {
           const from = await resolved(child, 'from', temporalTypes.instant, resolveReference);
           const slot = tracks.length;
           tracks.push({ name: `track-${slot + 1}`, kind: 'compound', source, during, from });
-          const transform = compoundTransform(child);
-          members.push({ kind: 'compound', id: memberId, slot, ...(transform ? { transform } : {}) });
+          const transform = compoundTransform(child), crop = compoundCrop(child);
+          members.push({ kind: 'compound', id: memberId, slot, ...(transform ? { transform } : {}), ...(crop ? { crop } : {}) });
           continue;
         }
         if (child.name === "Stack") {

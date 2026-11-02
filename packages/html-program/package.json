@@ -14,7 +14,8 @@
     "@hypit/composition": "workspace:0.4.1-preview.0",
     "@hypit/media": "workspace:0.4.1-preview.0",
     "@hypit/temporal": "workspace:0.4.1-preview.0",
-    "@hypit/timeline": "workspace:0.4.1-preview.0"
+    "@hypit/timeline": "workspace:0.4.1-preview.0",
+    "@hypit/spatial": "workspace:0.4.1-preview.0"
   },
   "devDependencies": {
     "@hypit/caption": "workspace:*",
@@ -23,7 +24,6 @@
     "@hypit/visual-track": "workspace:*",
     "@hypit/ranking": "workspace:*",
     "@hypit/script": "workspace:*",
-    "@hypit/spatial": "workspace:*",
     "@hypit/recipe": "workspace:*",
     "@hypit/text-fine": "workspace:*",
     "linkedom": "0.18.13",
