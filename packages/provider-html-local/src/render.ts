@@ -37,7 +37,7 @@ function chromiumWorkerLaunch(executablePath: string): CaptureWorkerLaunch {
     executable: process.execPath,
     args: [
       "--import", import.meta.resolve("tsx"),
-      fileURLToPath(new URL("./capture-worker.js", import.meta.url)),
+      fileURLToPath(new URL("./worker-bootstrap.js", import.meta.url)),
       executablePath,
     ],
     detached: process.platform !== "win32",
