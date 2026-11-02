@@ -35,8 +35,8 @@ test("all official transition declarations compile through the public Markup sur
 
   assert.deepEqual(decoded.exports.map(({ name }) => name), [
     "blur", "dip", "dissolve", "iris", "push", "slide", "wipe", "zoom",
-  ]);
-  assert.equal(decoded.records.length, 8);
+  ].flatMap(name => [name, `${name}.process`]));
+  assert.equal(decoded.records.length, 16);
   assert.equal(decoded.records.every(({ value }) => {
     const effect = value as unknown as { readonly inputs?: readonly string[]; readonly program?: { readonly format?: string } };
     return effect.inputs?.join(",") === "outgoing,incoming" && effect.program?.format === HTML_VISUAL_FORMAT;

@@ -25,6 +25,7 @@ export type FilmLink = {
 };
 
 export type FilmVisualPlanMember =
+  | { readonly kind: "transition"; readonly id: string; readonly outgoing: string; readonly incoming: string; readonly durationFrames: number; readonly effect: VisualProcessEffect }
   | { readonly kind: "track"; readonly id: string; readonly slot: number }
   | { readonly kind: "compound"; readonly keyframes?: readonly import("./compound-motion.js").CompoundKeyframe[]; readonly id: string; readonly slot: number; readonly transform?: import("@hypit/composition").VisualScopeTransform; readonly crop?: import("@hypit/spatial").SourceCrop }
   | {
@@ -53,7 +54,7 @@ export type FilmVisualPlan = {
  * only the binding order; visual order belongs to FilmVisualPlan.members.
  */
 export type FilmTrackSet = {
-  readonly tracks: readonly (Track | { readonly kind: "compound"; readonly composition: Composition; readonly span: FrameSpan })[];
+  readonly tracks: readonly (Track | { readonly kind: "compound"; readonly composition: Composition; readonly span: FrameSpan; readonly timelineId: string; readonly sourceStartFrame: number })[];
 };
 
 export type FilmTrackInput = {

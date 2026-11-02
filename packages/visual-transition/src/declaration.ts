@@ -4,6 +4,7 @@ import {
   type AuthorDeclarationCompiler,
   type AuthorDeclarationFieldShape,
 } from "@hypit/hypit/author";
+import { compositionTypes } from "@hypit/composition";
 import { visualTrackTypes } from "@hypit/visual-track";
 import type { VisualTransitionEffect } from "@hypit/visual-track";
 
@@ -50,7 +51,7 @@ function transitionDeclaration(
   return {
     module: visualTransitionModuleRef,
     declaration,
-    outputs: [visualTrackTypes.transitionEffect],
+    outputs: [visualTrackTypes.transitionEffect, compositionTypes.visualProcessEffect],
     shape: {
       summary,
       fields: [
@@ -60,12 +61,15 @@ function transitionDeclaration(
     },
     bindings(value) {
       const id = literal(value, "id");
-      return [{ name: id, ref: { kind: "record", id }, type: visualTrackTypes.transitionEffect }];
+      return [{ name: id, ref: { kind: "record", id }, type: visualTrackTypes.transitionEffect }, { name: `${id}.process`, ref: { kind: "record", id: `${id}.process` }, type: compositionTypes.visualProcessEffect }];
     },
     compile({ declaration: value }) {
       const id = literal(value, "id");
       return {
-        records: [{ id, type: visualTrackTypes.transitionEffect, value: compileEffect(value) as never, range: value.range }],
+        records: [
+          { id, type: visualTrackTypes.transitionEffect, value: compileEffect(value) as never, range: value.range },
+          { id: `${id}.process`, type: compositionTypes.visualProcessEffect, value: compileEffect(value) as never, range: value.range },
+        ],
         components: [],
       };
     },

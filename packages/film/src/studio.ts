@@ -20,6 +20,10 @@ export const filmStudioCompanions: readonly StudioFilmCompanion[] = [{
     childDeclaration: "Compound", idAttribute: "id", sourceAttribute: "source", placementAttribute: "during", sourcePositionAttribute: "from",
     sourceType: compositionTypes.composition, placementType: temporalTypes.window, sourcePositionType: temporalTypes.instant,
   },
+  compoundTransitions: {
+    childDeclaration: "Transition", idAttribute: "id", outgoingAttribute: "outgoing", incomingAttribute: "incoming",
+    durationAttribute: "for", effectAttribute: "effect", effectType: compositionTypes.visualProcessEffect,
+  },
   groups: {
     childDeclaration: "Group", idAttribute: "id", memberDeclaration: "Member",
     sourceAttribute: "source", clipAttribute: "clip", occurrenceDeclaration: "Occurrence", occurrencePathAttribute: "path",

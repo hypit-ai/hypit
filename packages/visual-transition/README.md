@@ -49,3 +49,7 @@ with the exact ordered ports `outgoing` and `incoming`. Visual Track validates t
 not enumerate effect implementations; project or ecosystem packages can publish other effects through the Type.
 Content-aware morphs, optical-flow effects, and true 3D page or cube geometry require their own
 implementation rather than an approximation in this package.
+
+Each effect declaration exposes its VisualTransitionEffect as `id` and the same two-picture
+process as `id.process`. The latter uses Composition's VisualProcessEffect type and can be
+referenced by Film Compound transitions. Both outputs have `outgoing` and `incoming` inputs.

@@ -184,3 +184,26 @@ Each property has independent, ordered keyframes. Supported properties are `x`, 
 `ease-in`, `ease-out` or `ease-in-out` for the interval to the next keyframe. Values hold
 before the first keyframe and after the last. Moving or nesting the occurrence preserves
 its animation clock; `from` independently selects the nested Composition's source time.
+
+## Compound transitions
+
+A `Transition` references two adjacent sibling `Compound` occurrences. The selected effect
+has `outgoing` and `incoming` picture inputs. Official visual transitions expose that process
+through the effect's `.process` binding.
+
+```svml
+<transition:CrossDissolve id="dissolve" easing="linear"/>
+<film:Film id="main" canvas={canvas.canvas} timeline={mainTime.timeline} appearance={recipes.film.main}>
+  <film:Stack id="scenes">
+    <film:Compound id="first" source={first.composition} during={mainTime.first} from={firstTime.inPoint}/>
+    <film:Compound id="second" source={second.composition} during={mainTime.second} from={secondTime.inPoint}/>
+    <film:Transition id="cut" outgoing="first" incoming="second" for="15f" effect={dissolve.process}/>
+  </film:Stack>
+</film:Film>
+```
+
+The duration is centered on the cut, with `floor(duration / 2)` frames before it. Both source
+Compositions must contain the required handles. The transition applies to each complete local
+picture, including its background, crop, pose and animation. Occurrence animation keeps its
+original clock while nested media uses the extended source interval. Audio retains each
+occurrence's authored placement. Transitions sharing one occurrence must have disjoint intervals.

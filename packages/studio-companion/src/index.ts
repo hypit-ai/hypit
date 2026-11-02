@@ -693,6 +693,16 @@ export type StudioFilmCompanion = {
     readonly placementType: TypeRef;
     readonly sourcePositionType: TypeRef;
   };
+  /** Relations between sibling compound occurrences with a centered picture transition. */
+  readonly compoundTransitions?: {
+    readonly childDeclaration: string;
+    readonly idAttribute: string;
+    readonly outgoingAttribute: string;
+    readonly incomingAttribute: string;
+    readonly durationAttribute: string;
+    readonly effectAttribute: string;
+    readonly effectType: TypeRef;
+  };
   /** Selection groups keep clips on their existing Tracks and local time domains. */
   readonly groups?: {
     readonly childDeclaration: string;

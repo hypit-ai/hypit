@@ -52,7 +52,7 @@ export const filmTrackSetSchema: ValueSchema = object({
   tracks: {
     schema: {
       kind: "array",
-      items: { kind: "oneOf", variants: [visualTrackSchema, audioTrackSchema, object({ kind: { schema: { kind: "literal", value: "compound" } }, composition: { schema: compositionSchema }, span: { schema: frameSpanSchema } })] },
+      items: { kind: "oneOf", variants: [visualTrackSchema, audioTrackSchema, object({ kind: { schema: { kind: "literal", value: "compound" } }, composition: { schema: compositionSchema }, span: { schema: frameSpanSchema }, timelineId: { schema: string }, sourceStartFrame: { schema: { kind: "number", integer: true, minimum: 0 } } })] },
     },
   },
 });

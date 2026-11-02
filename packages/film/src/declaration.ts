@@ -146,6 +146,15 @@ export const filmAuthorDeclaration: AuthorDeclarationCompiler = {
         fields: [{ name: "id", kind: "identifier", required: true, summary: "Names the visual scope occurrence." }],
         children: { group: "members" },
       }, {
+        name: "Transition", cardinality: "many", summary: "Transitions between adjacent Compound pictures using their local source handles.",
+        fields: [
+          { name: "id", kind: "identifier", required: true, summary: "Names this transition." },
+          { name: "outgoing", kind: "literal", required: true, summary: "Names the outgoing sibling Compound." },
+          { name: "incoming", kind: "literal", required: true, summary: "Names the incoming sibling Compound." },
+          { name: "for", kind: "literal", required: true, summary: "Sets the centered transition duration in frames." },
+          { name: "effect", kind: "reference", required: true, accepts: [compositionTypes.visualProcessEffect], summary: "Selects a process with outgoing and incoming picture inputs." },
+        ],
+      }, {
         name: "Process",
         cardinality: "many",
         summary: "Combines named visual input scopes through one package-owned Picture process.",
@@ -266,6 +275,14 @@ export const filmAuthorDeclaration: AuthorDeclarationCompiler = {
         const memberId = literal(child, "id");
         if (memberIds.has(memberId)) throw new Error(`${subject} contains duplicate visual member id ${memberId}.`);
         memberIds.add(memberId);
+        if (child.name === "Transition") {
+          const duration = /^(\d+)f$/.exec(literal(child, 'for'));
+          if (!duration || !Number.isSafeInteger(Number(duration[1])) || Number(duration[1]) < 1) throw new Error('Transition.for requires a positive frame duration.');
+          const effect = await resolved(child, 'effect', compositionTypes.visualProcessEffect, resolveReference);
+          if (!effect.record) throw new Error('Transition.effect must reference an authored picture process.');
+          members.push({ kind: 'transition', id: memberId, outgoing: literal(child, 'outgoing'), incoming: literal(child, 'incoming'), durationFrames: Number(duration[1]), effect: structuredClone(effect.record.value) as unknown as VisualProcessEffect });
+          continue;
+        }
         if (child.name === "Compound") {
           const source = await resolved(child, 'source', compositionTypes.composition, resolveReference);
           const during = await resolved(child, 'during', temporalTypes.window, resolveReference);
