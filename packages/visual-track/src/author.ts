@@ -187,12 +187,13 @@ export function decodeVisualFrameTreatment(recipe: Recipe): VisualFrameTreatment
 
 export function decodeVisualClipSpec(
   recipe: Recipe,
-  input: Pick<VisualClipSpec, "id" | "motion">,
+  input: Pick<VisualClipSpec, "id" | "motion" | "crop">,
 ): VisualClipSpec {
   assertKeys(recipe, [...SAMPLE_KEYS, ...FRAME_KEYS]);
   return sealVisualClipSpec({
 
     id: input.id,
+    ...(input.crop === undefined ? {} : { crop: input.crop }),
     treatment: decodeVisualFrameTreatment(recipe),
     ...(input.motion === undefined ? {} : { motion: input.motion }),
   });

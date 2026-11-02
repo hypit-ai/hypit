@@ -379,6 +379,10 @@ export const visualTrackAuthorDeclaration: AuthorDeclarationCompiler = {
   ], children: [
     { name: "Map", cardinality: "many", summary: "Adds one exact partial target-to-source temporal relation.", fields: relationFields },
     { name: "Curve", cardinality: "many", summary: "Adds one exact monotone cubic source-position relation.", fields: curveFields },
+    { name: "Crop", cardinality: "optional", summary: "Selects a normalized region of the source after zoom and rotation, fitted inside the destination Frame.", fields: [
+      ...["x", "y", "width", "height"].map(name => ({ name, kind: "literal" as const, required: true, summary: `Supplies normalized source ${name}.` })),
+      ...["zoom", "rotate"].map(name => ({ name, kind: "literal" as const, required: false, summary: `Supplies source-centred ${name}.` })),
+    ] },
     { name: "Sampling", cardinality: "many", summary: "Animates the sampled crop inside the Frame.", fields: samplingFields },
     { name: "Pose", cardinality: "many", summary: "Animates the complete framed Clip.", fields: poseFields },
     { name: "Keyframe", cardinality: "many", summary: "Animates an independent property.", fields: propertyKeyframeFields },
@@ -417,6 +421,10 @@ export const visualTrackAuthorDeclaration: AuthorDeclarationCompiler = {
       const externalMotion = inline === undefined && field(child, "motion") !== undefined ? await resolved(child, "motion", visualTrackTypes.motion, resolveReference) : undefined;
       const clipPath = field(child, "clip") === undefined ? undefined : await resolved(child, "clip", spatialTypes.path, resolveReference);
       if (clipPath !== undefined && treatment.properties.clip !== undefined) throw new Error(`${child.name} cannot combine clip with treatment clip.`);
+      const cropNode = child.children.find(node => node.name === 'Crop');
+      if (child.children.filter(node => node.name === 'Crop').length > 1) throw new Error('Clip accepts one Crop.');
+      if (cropNode && (mapping || FIT_FIELDS.some(name => field(child, name) !== undefined) || child.children.some(node => node.name === 'Sampling'))) throw new Error('Crop owns source fitting; author its rectangle, zoom and rotation directly.');
+      const crop = cropNode ? { x: numeric(cropNode, 'x', 0), y: numeric(cropNode, 'y', 0), width: numeric(cropNode, 'width', 1), height: numeric(cropNode, 'height', 1), zoom: numeric(cropNode, 'zoom', 1), rotation: numeric(cropNode, 'rotate', 0) } : undefined;
       const relation = samplingRelation(child), cropMotion = samplingMotion(child);
       const sourceKind = source.kind === "image" ? "still" : source.kind === "surface" ? "surface" : "timed";
       const layers: FragmentLayer[] = [];
@@ -436,7 +444,7 @@ export const visualTrackAuthorDeclaration: AuthorDeclarationCompiler = {
       }
       else layers.push({ kind: source.kind === "media" ? "timed" : "surface", sourceName, placementKind, placementName, specName: layerSpecName });
       const specName = `clip-${suffix}-spec`;
-      state.addRecord(specName, `${id}.clip.${suffix}.spec`, visualTrackTypes.clipSpec, decodeVisualClipSpec(treatment, { id: clipId }), range);
+      state.addRecord(specName, `${id}.clip.${suffix}.spec`, visualTrackTypes.clipSpec, decodeVisualClipSpec(treatment, { id: clipId, ...(crop ? { crop } : {}) }), range);
       const frameName = `clip-${suffix}-frame`, windowName = `clip-${suffix}-window`; state.addReference(frameName, frame); state.addReference(windowName, window);
       let clipPathName: string | undefined;
       if (clipPath !== undefined) {

@@ -72,6 +72,23 @@ temporal sampling; an optional treatment Recipe contains only reusable pixel and
 | opacity, blur, brightness, contrast, saturation | Treatment of the sampled picture. |
 | `Map` / `Curve` child | Optional Clip-local relation from target-local time to prepared-media-local time. |
 
+A `Crop` child selects a normalized rectangle in the source plane. Its optional `zoom`
+(default 1) and `rotate` (degrees, default 0) transform the source around its centre
+before selection. The selected rectangle is fitted inside `frame`, retaining its
+aspect ratio. Crop owns source fitting and requires the Clip's fit, mapping and
+Sampling controls to be omitted. Frame treatment and Pose motion apply to the
+fitted rectangle.
+
+```svml
+<visual:Clip id="detail" media={speaker-media.media}
+  during={program.speaker} frame={full-frame}>
+  <visual:Crop x="0.2" y="0.1" width="0.4" height="0.8" zoom="1.2" rotate="5"/>
+</visual:Clip>
+```
+
+The `@hypit/visual-track/crop` entry exposes `resolveVisualCrop` for editor
+previews using the same destination frame and source-to-picture mapping.
+
 Clip declaration order is retained as the Track-local item sequence. Whole-film placement belongs to the
 parent `<film:Track id="...">` relation, not to a Clip or its reusable treatment Recipe. This lets
 the same VisualTrack be placed in another Film or nested Stack without rewriting its contents.

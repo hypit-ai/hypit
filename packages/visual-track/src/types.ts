@@ -193,6 +193,7 @@ export type VisualClipMotion = {
 };
 
 export type VisualClipSpec = {
+  readonly crop?: import("./crop.js").VisualCrop;
   readonly id: string;
   readonly treatment: VisualFrameTreatment;
   readonly motion?: VisualClipMotion;

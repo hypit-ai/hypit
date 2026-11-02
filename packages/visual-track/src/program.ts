@@ -1,3 +1,4 @@
+import { assertVisualCrop, resolveVisualCrop } from "./crop.js";
 import { assertVisualProcessEffect, assertVisualTrackIdentity, sealVisualProcessEffect, sealVisualTrack } from "@hypit/composition";
 import type { VisualPresent, VisualTrack } from "@hypit/composition";
 import { canonicalize } from "@hypit/hypit/protocol";
@@ -53,6 +54,7 @@ export function bindVisualClipMotion(spec: VisualClipSpec, motion: VisualClipMot
 export function assertVisualClipSpec(value: VisualClipSpec): void {
   assert(value !== null && typeof value === "object" && !Array.isArray(value), "VisualClipSpec is invalid.");
   assertMediaIdentity(value.id, "VisualClipSpec.id");
+  if (value.crop !== undefined) assertVisualCrop(value.crop);
   assertVisualFrameTreatment(value.treatment, "VisualClipSpec.treatment");
   if (value.motion !== undefined) assertVisualClipMotion(value.motion, "VisualClipSpec.motion");
 }
@@ -101,8 +103,16 @@ export function appendVisualClip(
   assertSpatialFrame(frame);
   assertVisualClipSpec(spec);
   assertTemporalWindowFor(window, { timeline });
+  let cropMapping: ReturnType<typeof resolveVisualCrop>["mapping"] | undefined;
+  if (spec.crop) {
+    const samples = layers.layers.filter(layer => layer.kind === 'sample');
+    assert(samples.length === 1, 'A cropped Clip requires one visual source.');
+    const crop = resolveVisualCrop(spec.crop, samples[0]!.source.extent, frame);
+    frame = crop.frame; cropMapping = crop.mapping;
+  }
   const duration = window.span.endFrameExclusive - window.span.startFrame;
-  const resolvedLayers = resolveMediaLayerPrograms(layers, frame, spec.treatment).map((layer) => {
+  const resolvedLayers = resolveMediaLayerPrograms(layers, frame, spec.treatment).map((original) => {
+    const layer = original.kind === "sample" && cropMapping ? { ...original, mapping: cropMapping } : original;
     if (layer.kind !== "sample" || layer.source.kind === "still") return layer;
     let sourceDomain;
     if (layer.source.kind === "timed") {
