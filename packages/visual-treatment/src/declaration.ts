@@ -5,11 +5,13 @@ import {
   type AuthorDeclarationCompiler,
   type AuthorDeclarationFieldShape,
 } from "@hypit/hypit/author";
+import { compositionTypes } from "@hypit/composition";
 import type { VisualAdjustmentEffect } from "@hypit/visual-adjustment";
 import { visualAdjustmentTypes } from "@hypit/visual-adjustment";
 
 import { visualTreatmentModuleRef } from "./manifest.js";
 import {
+  treatmentProcess,
   blurTreatment,
   colorTreatment,
   opacityTreatment,
@@ -71,7 +73,7 @@ function treatmentDeclaration(
   return {
     module: visualTreatmentModuleRef,
     declaration,
-    outputs: [visualAdjustmentTypes.effect],
+    outputs: [visualAdjustmentTypes.effect, compositionTypes.visualProcessEffect],
     shape: {
       summary,
       fields: [
@@ -82,7 +84,7 @@ function treatmentDeclaration(
     },
     bindings(value) {
       const id = literal(value, "id");
-      return [{ name: id, ref: { kind: "record", id }, type: visualAdjustmentTypes.effect }];
+      return [{ name: id, ref: { kind: "record", id }, type: visualAdjustmentTypes.effect }, { name: `${id}.process`, ref: { kind: "record", id: `${id}.process` }, type: compositionTypes.visualProcessEffect }];
     },
     compile({ declaration: value }) {
       const id = literal(value, "id");
@@ -92,7 +94,7 @@ function treatmentDeclaration(
       }
       if (keyframes.length === 1) throw new Error(`${value.name} animated treatment requires at least two Keyframes.`);
       const effect = keyframes.length === 0 ? compileStatic(value, 0) : compileAnimated(keyframes);
-      return { records: [{ id, type: visualAdjustmentTypes.effect, value: effect as never, range: value.range }], components: [] };
+      return { records: [{ id, type: visualAdjustmentTypes.effect, value: effect as never, range: value.range }, { id: `${id}.process`, type: compositionTypes.visualProcessEffect, value: treatmentProcess(effect) as never, range: value.range }], components: [] };
     },
   };
 }

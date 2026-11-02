@@ -330,5 +330,7 @@ export function lowerVisualClipRoot(
   clip: VisualClipProgram,
   options: Parameters<typeof lowerVisualClipElement>[1] = {},
 ): VisualProgramElement {
-  return htmlVisualElement(lowerVisualClipElement(clip, options));
+  let root = htmlVisualElement(lowerVisualClipElement(clip, options));
+  for (const [index, effect] of (clip.effects ?? []).entries()) root = { kind: "program", id: `${clip.id}:effect:${index}`, program: effect.program, slots: [{ name: "content", element: root }] };
+  return root;
 }

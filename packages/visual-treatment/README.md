@@ -40,3 +40,17 @@ All declarations produce the public `VisualAdjustmentEffect` Type. Visual Adjust
 enumerate them, and project or ecosystem packages can publish other effects through the same Type.
 Separate Adjustment occurrences make effect order explicit; `Color` alone defines one stable order
 for the parameters that are jointly one color operation.
+
+Each declaration also exports `id.process`, a `Composition.VisualProcessEffect` with one
+`content` input. A Visual Track Clip or Film Compound can apply ordered `Effect` children:
+
+```xml
+<treatment:Color id="grade" contrast="1.1" saturation="0.9"/>
+<treatment:Blur id="soft" radius="4"/>
+<!-- Within a Clip or Compound -->
+<Effect source={grade.process}/>
+<Effect source={soft.process} enabled="true"/>
+```
+
+`enabled` defaults to `true`. A process applies to its complete input picture. Ordering follows
+child declaration order. The treatment's keyframes use the owning occurrence clock.

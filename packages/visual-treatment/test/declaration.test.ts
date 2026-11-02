@@ -32,9 +32,9 @@ test("all official treatments compile through the public Markup surface", async 
     sourceImports: [],
   });
 
-  assert.deepEqual(decoded.exports.map(({ name }) => name), ["fade", "grade", "move", "soft"]);
-  assert.equal(decoded.records.length, 4);
-  assert.equal(decoded.records.every(({ value }) => {
+  assert.deepEqual(decoded.exports.map(({ name }) => name), ["fade", "fade.process", "grade", "grade.process", "move", "move.process", "soft", "soft.process"]);
+  assert.equal(decoded.records.length, 8);
+  assert.equal(decoded.records.filter(record => record.type.name === "VisualAdjustmentEffect").every(({ value }) => {
     const program = value as unknown as { readonly format?: string };
     return program.format === HTML_ADJUSTMENT_FORMAT;
   }), true);

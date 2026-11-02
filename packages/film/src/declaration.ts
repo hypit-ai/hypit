@@ -177,6 +177,8 @@ export const filmAuthorDeclaration: AuthorDeclarationCompiler = {
           { name: "easing", kind: "literal", required: false, summary: "Sets interpolation to the next keyframe." },
         ],
       }, {
+        name: "Effect", cardinality: "many", summary: "Applies an ordered unary process to this complete picture.", fields: [{ name: "source", kind: "reference", required: true, accepts: [compositionTypes.visualProcessEffect], summary: "Selects a process with one content input." }, { name: "enabled", kind: "literal", required: false, values: ["true", "false"], summary: "Includes this effect in the picture." }],
+      }, {
         name: "Crop", cardinality: "optional", summary: "Selects a normalized region of the local Canvas before its outer Pose.",
         fields: ["x", "y", "width", "height", "zoom", "rotate"].map(name => ({ name, kind: "literal" as const, required: ["x", "y", "width", "height"].includes(name), summary: `Supplies the compound Crop ${name} parameter.` })),
       }],
@@ -289,8 +291,9 @@ export const filmAuthorDeclaration: AuthorDeclarationCompiler = {
           const from = await resolved(child, 'from', temporalTypes.instant, resolveReference);
           const slot = tracks.length;
           tracks.push({ name: `track-${slot + 1}`, kind: 'compound', source, during, from });
+          const effects = await Promise.all(child.children.filter(node => node.name === "Effect" && (!field(node, "enabled") || literal(node, "enabled") !== "false")).map(async node => { const value = await resolved(node, "source", compositionTypes.visualProcessEffect, resolveReference); if (!value.record) throw new Error("Effect.source requires an authored process."); return structuredClone(value.record.value) as unknown as VisualProcessEffect; }));
           const transform = compoundTransform(child), crop = compoundCrop(child), keyframes = compoundKeyframes(child);
-          members.push({ kind: 'compound', id: memberId, slot, ...(keyframes ? { keyframes } : {}), ...(transform ? { transform } : {}), ...(crop ? { crop } : {}) });
+          members.push({ kind: 'compound', id: memberId, slot, ...(effects.length ? { effects } : {}), ...(keyframes ? { keyframes } : {}), ...(transform ? { transform } : {}), ...(crop ? { crop } : {}) });
           continue;
         }
         if (child.name === "Stack") {

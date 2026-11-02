@@ -72,7 +72,7 @@ test("Visual Track declarations own source, time, space and motion independently
     sourceImports: [facts],
   });
 
-  assert.deepEqual(decoded.exports.map((value) => value.name), ["picture.program", "picture.visual", "push", "soft-mix"]);
+  assert.deepEqual(decoded.exports.map((value) => value.name), ["picture.program", "picture.visual", "push", "soft-mix", "soft-mix.process"]);
   assert.equal(decoded.records.filter((record) => record.type.name === visualTrackTypes.clipSpec.name).length, 2);
   assert.equal(decoded.records.filter((record) => record.type.name === visualTrackTypes.transitionEffect.name).length, 1);
   assert.equal(decoded.records.filter((record) => record.type.name === visualTrackTypes.transitionSpec.name).length, 1);

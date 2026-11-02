@@ -54,6 +54,7 @@ export function bindVisualClipMotion(spec: VisualClipSpec, motion: VisualClipMot
 export function assertVisualClipSpec(value: VisualClipSpec): void {
   assert(value !== null && typeof value === "object" && !Array.isArray(value), "VisualClipSpec is invalid.");
   assertMediaIdentity(value.id, "VisualClipSpec.id");
+  for (const effect of value.effects ?? []) { assertVisualProcessEffect(effect); assert(effect.inputs.length === 1 && effect.inputs[0] === "content", "Clip Effect requires one content input."); }
   if (value.crop !== undefined) assertVisualCrop(value.crop);
   assertVisualFrameTreatment(value.treatment, "VisualClipSpec.treatment");
   if (value.motion !== undefined) assertVisualClipMotion(value.motion, "VisualClipSpec.motion");
@@ -159,6 +160,7 @@ export function appendVisualClip(
     frame: { ...frame },
     treatment: structuredClone(spec.treatment),
     layers: structuredClone(resolvedLayers),
+    ...(spec.effects?.length ? { effects: structuredClone(spec.effects) } : {}),
     ...(spec.motion === undefined ? {} : { motion: structuredClone(spec.motion) }),
   };
   assert(!set.clips.some((clip) => clip.id === addition.id), `Visual Track ${header.id} already contains ${addition.id}.`);
@@ -297,6 +299,7 @@ function assertSampleLayer(layer: MediaSampleLayerProgram, label: string): void 
 function assertClip(clip: VisualClipProgram, label: string): void {
   assert(clip !== null && typeof clip === "object" && !Array.isArray(clip), `${label} is invalid.`);
   assertMediaIdentity(clip.id, `${label}.id`);
+  for (const effect of clip.effects ?? []) { assertVisualProcessEffect(effect); assert(effect.inputs.length === 1 && effect.inputs[0] === "content", "Clip Effect requires one content input."); }
   assertMediaIdentity(clip.subjectId, `${label}.subjectId`);
   try {
     assertFrameSpan(clip.span);

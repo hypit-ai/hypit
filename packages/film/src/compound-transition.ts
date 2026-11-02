@@ -33,11 +33,13 @@ export function compoundTransitions(members: readonly FilmVisualPlanMember[], tr
 
 export function compoundPicture(member: Compound, source: Source, timeline: Timeline, span: FrameSpan, id = member.id): VisualScopeMember {
   const placed = placeComposition(source.composition, timeline, span, source.sourceStartFrame + span.startFrame - source.span.startFrame);
-  return { kind: 'stack', id, scope: placed.visual.root,
+  let picture: VisualScopeMember = { kind: 'stack', id: member.effects?.length ? `${id}:picture` : id, scope: placed.visual.root,
     ...(member.keyframes ? { motion: resolveCompoundMotion(member.keyframes, source.span) } : {}),
     ...(member.crop ? { crop: { ...member.crop } } : {}), ...(member.transform ? { transform: { ...member.transform } } : {}),
     background: { color: placed.visual.canvas.clearColor, span },
   };
+  for (const [index, effect] of (member.effects ?? []).entries()) picture = { kind: 'process', id: index === member.effects!.length - 1 ? id : `${id}:effect:${index}`, timing: span, clock: source.span, effect, inputs: [{ name: 'content', scope: { members: [picture] } }] };
+  return picture;
 }
 
 export function compoundVisibleRanges(span: FrameSpan, transitions: readonly CompoundTransition[], id: string): FrameSpan[] {

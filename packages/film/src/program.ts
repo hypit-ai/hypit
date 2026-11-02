@@ -63,7 +63,7 @@ export function assertFilmProgramIdentity(program: FilmProgram): void {
         }
         visualSlots.add(member.slot);
         occurrences.set(path.join('/'), member.slot);
-        if (member.kind === "compound") { compoundSlots.add(member.slot); if (member.crop) assertSourceCrop(member.crop); if (member.transform) assertVisualScopeTransform(member.transform); }
+        if (member.kind === "compound") { for (const effect of member.effects ?? []) { assertVisualProcessEffect(effect); if (effect.inputs.length !== 1 || effect.inputs[0] !== "content") throw new Error("Compound Effect requires one content input."); } compoundSlots.add(member.slot); if (member.crop) assertSourceCrop(member.crop); if (member.transform) assertVisualScopeTransform(member.transform); }
         continue;
       }
       if (member.kind === "transition") {

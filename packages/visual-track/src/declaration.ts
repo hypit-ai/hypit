@@ -377,6 +377,7 @@ export const visualTrackAuthorDeclaration: AuthorDeclarationCompiler = {
     { name: "fit-constraint", kind: "literal", required: false, values: ["bounded", "free"], summary: "Chooses bounded or free fitting." },
     { name: "during", kind: "reference", required: true, accepts: [temporalTypes.window], summary: "Selects the resolved destination Window." },
   ], children: [
+    { name: "Effect", cardinality: "many", summary: "Applies an ordered unary picture process to this Clip.", fields: [{ name: "source", kind: "reference", required: true, accepts: [compositionTypes.visualProcessEffect], summary: "Selects a process with one content input." }, { name: "enabled", kind: "literal", required: false, values: ["true", "false"], summary: "Includes this effect in the picture." }] },
     { name: "Map", cardinality: "many", summary: "Adds one exact partial target-to-source temporal relation.", fields: relationFields },
     { name: "Curve", cardinality: "many", summary: "Adds one exact monotone cubic source-position relation.", fields: curveFields },
     { name: "Crop", cardinality: "optional", summary: "Selects a normalized region of the source after zoom and rotation, fitted inside the destination Frame.", fields: [
@@ -443,8 +444,9 @@ export const visualTrackAuthorDeclaration: AuthorDeclarationCompiler = {
         layers.push({ kind: "still", sourceName, pictureName, extentName, placementKind, placementName, specName: layerSpecName });
       }
       else layers.push({ kind: source.kind === "media" ? "timed" : "surface", sourceName, placementKind, placementName, specName: layerSpecName });
+      const effects = await Promise.all(child.children.filter(node => node.name === "Effect" && literal(node, "enabled", "true") !== "false").map(async node => authoredValue<import("@hypit/composition").VisualProcessEffect>(await resolved(node, "source", compositionTypes.visualProcessEffect, resolveReference), "Effect.source")));
       const specName = `clip-${suffix}-spec`;
-      state.addRecord(specName, `${id}.clip.${suffix}.spec`, visualTrackTypes.clipSpec, decodeVisualClipSpec(treatment, { id: clipId, ...(crop ? { crop } : {}) }), range);
+      state.addRecord(specName, `${id}.clip.${suffix}.spec`, visualTrackTypes.clipSpec, decodeVisualClipSpec(treatment, { id: clipId, ...(crop ? { crop } : {}), ...(effects.length ? { effects } : {}) }), range);
       const frameName = `clip-${suffix}-frame`, windowName = `clip-${suffix}-window`; state.addReference(frameName, frame); state.addReference(windowName, window);
       let clipPathName: string | undefined;
       if (clipPath !== undefined) {

@@ -193,6 +193,7 @@ export type VisualClipMotion = {
 };
 
 export type VisualClipSpec = {
+  readonly effects?: readonly VisualProcessEffect[];
   readonly crop?: import("./crop.js").VisualCrop;
   readonly id: string;
   readonly treatment: VisualFrameTreatment;
@@ -200,6 +201,7 @@ export type VisualClipSpec = {
 };
 
 export type VisualClipProgram = {
+  readonly effects?: readonly VisualProcessEffect[];
   readonly id: string;
   /** One author-owned Clip occurrence realized by this absolute Window. */
   readonly subjectId: string;

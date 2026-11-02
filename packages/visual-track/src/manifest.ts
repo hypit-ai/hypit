@@ -1,7 +1,7 @@
 import { frameSpanSchema, timelineDependency, timelineTypes } from "@hypit/timeline";
 
 import { blobDependency, blobTypes } from "@hypit/hypit/blob";
-import { compositionDependency, compositionTypes, visualProgramCarrierSchema } from "@hypit/composition";
+import { compositionDependency, compositionTypes, visualProcessEffectSchema, visualProgramCarrierSchema } from "@hypit/composition";
 import {
   compositableSurfaceSchema,
   mediaDependency,
@@ -159,6 +159,7 @@ export const visualClipMotionSchema: ValueSchema = object({
   }) }, optional: true },
 });
 export const visualClipSpecSchema: ValueSchema = object({
+  effects: { schema: { kind: "array", items: visualProcessEffectSchema }, optional: true },
   id: { schema: string },
   treatment: { schema: visualFrameTreatmentSchema }, motion: { schema: visualClipMotionSchema, optional: true },
 });
@@ -177,6 +178,7 @@ export const visualTransitionSpecSchema: ValueSchema = object({
   effect: { schema: visualTransitionEffectSchema },
 });
 const resolvedClip = object({
+  effects: { schema: { kind: "array", items: visualProcessEffectSchema }, optional: true },
   id: { schema: string }, subjectId: { schema: string }, span: { schema: frameSpanSchema }, frame: { schema: spatialFrameSchema },
   treatment: { schema: visualFrameTreatmentSchema }, layers: { schema: { kind: "array", minItems: 1, items: resolvedLayer } }, motion: { schema: visualClipMotionSchema, optional: true },
 });

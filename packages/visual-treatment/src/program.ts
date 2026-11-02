@@ -1,4 +1,4 @@
-import { htmlAdjustment, type HtmlAdjustmentKeyframe } from "@hypit/html-program";
+import { htmlVisual, readHtmlAdjustment, htmlAdjustment, type HtmlAdjustmentKeyframe } from "@hypit/html-program";
 import type { VisualAdjustmentEffect } from "@hypit/visual-adjustment";
 
 export type TreatmentEasing = "linear" | "ease-in" | "ease-out" | "ease-in-out";
@@ -121,4 +121,20 @@ export function colorTreatment(
       ].join(" "),
     };
   });
+}
+
+/** Expose the same treatment as an owned picture operation. */
+export function treatmentProcess(effect: VisualAdjustmentEffect): import('@hypit/composition').VisualProcessEffect {
+  const { keyframes } = readHtmlAdjustment(effect);
+  return { inputs: ['content'], program: htmlVisual({
+    html: '<div data-treatment>{{content}}</div>',
+    css: ':scope, :scope > [data-treatment] { position:absolute; inset:0; pointer-events:none; }',
+    data: { keyframes },
+    setup: `const target = root.querySelector('[data-treatment]');
+const keys = data.keyframes.map(({ at, ...state }) => ({ ...state, offset: at }));
+if (keys.length === 1) keys.push({ ...keys[0], offset: 1 });
+const animation = target.animate(keys, { duration: 1000, fill: 'both' });
+animation.pause();
+return frame => { animation.currentTime = Math.max(0, Math.min(1, frame / Math.max(1, context.durationFrames))) * 1000; };`,
+  }) };
 }

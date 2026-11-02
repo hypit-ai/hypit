@@ -8,7 +8,10 @@
     ".": "./src/index.ts",
     "./studio": "./src/studio.ts"
   },
-  "files": ["dist", "README.md"],
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "hypit": {
     "activation": "./src/activation.ts"
   },
@@ -27,6 +30,7 @@
   },
   "dependencies": {
     "@hypit/html-program": "workspace:0.4.1-preview.0",
-    "@hypit/visual-adjustment": "workspace:0.4.1-preview.0"
+    "@hypit/visual-adjustment": "workspace:0.4.1-preview.0",
+    "@hypit/composition": "workspace:0.4.1-preview.0"
   }
 }

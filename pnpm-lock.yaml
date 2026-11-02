@@ -3316,6 +3316,9 @@ importers:
 
   packages/visual-treatment:
     dependencies:
+      '@hypit/composition':
+        specifier: workspace:0.4.1-preview.0
+        version: link:../composition
       '@hypit/html-program':
         specifier: workspace:0.4.1-preview.0
         version: link:../html-program
