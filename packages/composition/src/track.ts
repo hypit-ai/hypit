@@ -1,3 +1,5 @@
+import { assertAnimationClock as validateAnimationClock } from "./animation-clock.js";
+import type { AnimationClock } from "./animation-clock.js";
 import { assertVisualScopeMotion } from "./scope-motion.js";
 import { assertSourceCrop, type SourceCrop } from "@hypit/spatial";
 import { assertAudioLevelAutomation } from "./audio-level-automation.js";
@@ -344,7 +346,7 @@ export type VisualElement = VisualProgramElement | VisualMaskElement | VisualTex
 
 export type VisualItemBase = {
   /** Authored animation clock retained when the visible interval is cropped. Its origin may precede frame zero. */
-  readonly clock?: FrameSpan;
+  readonly clock?: AnimationClock;
   readonly id: string;
   /** Optional domain entity implemented by this renderer item. */
   readonly subjectId?: string;
@@ -544,7 +546,7 @@ export type VisualProcessEffect = {
 };
 
 export type VisualScopeProcessMember = {
-  readonly clock?: FrameSpan;
+  readonly clock?: AnimationClock;
   /** Visible interval after placement of a local composition. */
   readonly timing?: FrameSpan;
   readonly kind: "process";
@@ -1002,10 +1004,8 @@ function assertPathCommands(path: readonly VisualVectorPathCommand[], label: str
   }
 }
 
-function assertAnimationClock(clock: FrameSpan | undefined, visible: FrameSpan, label: string): void {
-  if (clock === undefined) return;
-  if (!Number.isSafeInteger(clock.startFrame) || !Number.isSafeInteger(clock.endFrameExclusive)
-    || clock.endFrameExclusive <= clock.startFrame) throw new Error(`${label} has an invalid animation clock.`);
+function assertAnimationClock(clock: AnimationClock | undefined, visible: FrameSpan, label: string): void {
+  if (clock) validateAnimationClock(clock);
 }
 
 function assertVisualItemBase(item: VisualItemBase, timeline: Timeline | undefined, trackId: string): void {

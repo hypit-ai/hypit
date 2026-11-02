@@ -44,9 +44,12 @@ identity belongs to Film; Track value identity, Present identity and timing rema
 values. Final rendering is a separate author package and capability.
 
 `Compound` references a local audiovisual Composition. Its `during` Window selects the parent
-placement interval, and `from` selects the starting Instant on the source Timeline. The selected
-source duration equals the parent interval duration. Multiple occurrences can share the same source
-Composition while retaining their own intervals. Frame rates and canvas dimensions must match.
+placement interval, and `from` selects the starting Instant on the source Timeline. The positive
+`rate` scales source time relative to that interval (default `1`); `source-offset` adds an exact
+Temporal Duration to the starting Instant (default `0s`). For example, a 90-frame placement at
+`rate="2"` consumes 180 source frames. Fractional offsets preserve the source position when a
+retimed occurrence is split. Multiple occurrences can share the same source Composition while
+retaining their own intervals. Frame rates and canvas dimensions must match.
 Compound members may appear at the Film root or inside a Stack; their visual sibling position sets
 the stacking order, and their audio joins the parent mix. The Film Companion declares the source,
 placement and source-position attributes for editor discovery.

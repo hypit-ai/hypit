@@ -1,3 +1,4 @@
+import { animationClockRuntime } from "./animation-clock.js";
 import { assertBlobRef, canonicalize, canonicalStringify } from "@hypit/hypit/protocol";
 import type { BlobRef, CanonicalValue } from "@hypit/hypit/protocol";
 import type { VisualProgramElement } from "@hypit/composition";
@@ -136,10 +137,11 @@ export function htmlVisualScript(entries: readonly {
   readonly id: string;
   readonly startFrame: number;
   readonly durationFrames: number;
-  readonly clock?: { readonly startFrame: number; readonly endFrameExclusive: number };
+  readonly clock?: import("@hypit/composition").AnimationClock;
   readonly program: Pick<HtmlVisual, "data" | "html" | "setup">;
 }[], context: { readonly width: number; readonly height: number } = { width: 0, height: 0 }): string {
   return `(() => {
+    ${animationClockRuntime}
     const fail = error => { window.__hypitHtmlVisualError = String(error?.stack || error); };
     const entries = ${scriptJson(entries)}.filter(entry =>
       htmlSelectionOverlaps(entry.startFrame, entry.startFrame + entry.durationFrames));
@@ -148,7 +150,7 @@ export function htmlVisualScript(entries: readonly {
       try {
         const render = entry.program.setup === undefined ? () => {} :
           new Function('root', 'data', 'context', entry.program.setup)(root, entry.program.data, {
-            durationFrames: entry.clock ? entry.clock.endFrameExclusive - entry.clock.startFrame : entry.durationFrames,
+            durationFrames: entry.clock ? htmlAnimationDuration(entry.clock) : entry.durationFrames,
             width: ${context.width},
             height: ${context.height},
           });
@@ -164,8 +166,8 @@ export function htmlVisualScript(entries: readonly {
     })));
     let previousFrame;
     const renderAt = (entry, frame) => {
-      const local = frame - (entry.clock?.startFrame ?? entry.startFrame);
-      const duration = entry.clock ? entry.clock.endFrameExclusive - entry.clock.startFrame : entry.durationFrames;
+      const local = entry.clock ? htmlAnimationFrame(entry.clock, frame) : frame - entry.startFrame;
+      const duration = entry.clock ? htmlAnimationDuration(entry.clock) : entry.durationFrames;
       const region = frame < entry.startFrame ? 'before' : frame >= entry.startFrame + entry.durationFrames ? 'after' : 'active';
       // Preserve initial and crossed boundary poses. Active seeks always redraw,
       // including repeated frames after an asynchronously prepared image became ready.

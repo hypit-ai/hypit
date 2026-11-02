@@ -372,3 +372,20 @@ export function padTemporalMap(value: TemporalMap, before: ExactTemporalValue, a
   if (compare(tail, zero) > 0) pieces.push({ target: { start: exactTemporalValue(end), end: exactTemporalValue(duration) }, sourceAtStart: exactTemporalValue(last), rate: { numerator: 0, denominator: 1 } });
   return sealTemporalMap({ stages: [{ target: { id: targetId, duration: exactTemporalValue(duration) }, source, pieces }, ...structuredClone(value.stages)] });
 }
+
+/** Change the target duration while preserving all source intervals and downstream stages. */
+export function retimeTemporalMap(value: TemporalMap, duration: ExactTemporalValue, targetId: string): TemporalMap {
+  assertTemporalMap(value);
+  const first = value.stages[0]!, oldDuration = exactTemporalRational(first.target.duration), newDuration = exactTemporalRational(duration);
+  assert(compare(newDuration, rational(0n)) > 0, 'Retimed target duration must be positive.');
+  const stretch = divide(newDuration, oldDuration), speed = divide(oldDuration, newDuration);
+  const time = (value: ExactTemporalValue) => exactTemporalValue(multiply(exactTemporalRational(value), stretch));
+  return sealTemporalMap({ stages: [{ ...first, target: { id: targetId, duration }, pieces: first.pieces.map(piece => {
+    const target = { start: time(piece.target.start), end: time(piece.target.end) };
+    if (!isAffineTemporalMapPiece(piece)) return { ...structuredClone(piece), target };
+    const rate = multiply(rational(BigInt(piece.rate.numerator), BigInt(piece.rate.denominator)), speed);
+    const numerator = Number(rate.numerator), denominator = Number(rate.denominator);
+    assert(Number.isSafeInteger(numerator) && Number.isSafeInteger(denominator), 'Retimed rate exceeds safe integer arithmetic.');
+    return { ...structuredClone(piece), target, rate: { numerator, denominator } };
+  }) }, ...value.stages.slice(1)] });
+}

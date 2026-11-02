@@ -1,3 +1,4 @@
+import { animationClockRuntime } from "./animation-clock.js";
 import type { FontArtifactRef } from "@hypit/media";
 import type {
   VisualColorPaint,
@@ -19,6 +20,7 @@ export type TextRenderContext = {
   readonly durationFrames: number;
   readonly durationSeconds: string;
   readonly presentStartFrame: number;
+  readonly animationClock?: import("@hypit/composition").AnimationClock;
   readonly programNumerator: number;
   readonly programDenominator: number;
   readonly escape: (value: string) => string;
@@ -745,7 +747,7 @@ function renderPathDocument(element: VisualPathTextElement, context: TextRenderC
 
 export function renderTerminalTextElement(element: TerminalTextElement, context: TextRenderContext): string {
   assertTextUnitRanges(element);
-  const clockAttributes = `data-hypit-text-clock data-hypit-text-start-frame="${context.presentStartFrame}" data-hypit-text-duration-frames="${context.durationFrames}" data-hypit-text-frame-numerator="${context.programNumerator}" data-hypit-text-frame-denominator="${context.programDenominator}"`;
+  const clockAttributes = `data-hypit-text-clock data-hypit-animation-clock="${context.escape(JSON.stringify(context.animationClock ?? { startFrame: context.presentStartFrame, endFrameExclusive: context.presentStartFrame + context.durationFrames }))}" data-hypit-text-start-frame="${context.presentStartFrame}" data-hypit-text-duration-frames="${context.durationFrames}" data-hypit-text-frame-numerator="${context.programNumerator}" data-hypit-text-frame-denominator="${context.programDenominator}"`;
   const sequenceAttributes = element.sequences.length === 0 ? "" : ` data-hypit-text-sequences="${context.escape(JSON.stringify(element.sequences))}"`;
   if (element.kind === "path-text") {
     const pathId = context.stableId(["visual-occurrence", ...context.occurrencePath, context.presentId, element.id, "path"]);
@@ -758,6 +760,7 @@ export function renderTerminalTextElement(element: TerminalTextElement, context:
       }))}"`
       : ` data-hypit-text-path-margin="${context.escape(JSON.stringify({
         startFrame: context.presentStartFrame,
+        clock: context.animationClock,
         numerator: context.programNumerator,
         denominator: context.programDenominator,
         align: element.align,
@@ -815,6 +818,7 @@ export function collectTerminalTextFonts(element: TerminalTextElement): FontArti
 
 /** Renderer-owned deterministic post-layout step for physical-line selectors. */
 export const terminalTextLayoutScript = String.raw`
+${animationClockRuntime}
 const svmlTextRootSelected = (root) => {
   const startFrame = Number(root.getAttribute('data-hypit-text-start-frame'));
   const durationFrames = Number(root.getAttribute('data-hypit-text-duration-frames'));
@@ -867,7 +871,7 @@ const svmlUpdateTextPathMargins = (programFrame) => {
     const frames = data.keyframes;
     // The page ABI already supplies the authored integer frame; no seconds
     // conversion or worker history participates in package-owned motion.
-    const local = programFrame - data.startFrame;
+    const local = data.clock ? htmlAnimationFrame(data.clock, programFrame) : programFrame - data.startFrame;
     let value = frames[0].startMarginPx;
     if (local >= frames[frames.length - 1].atFrame) value = frames[frames.length - 1].startMarginPx;
     else {
@@ -996,6 +1000,7 @@ const svmlPrepareTextUnitAnimations = () => {
       order,
       payload: {
         root,
+        clock: JSON.parse(root.getAttribute('data-hypit-animation-clock')),
         encodedSequences: root.getAttribute('data-hypit-text-sequences') || '[]',
         units: undefined,
       },
@@ -1007,7 +1012,7 @@ const svmlSeekTextUnitAnimations = (programFrame) => {
   if (svmlTextAnimationFrameRate === undefined) return;
   for (const work of svmlTextAnimationIndex.at(programFrame)) {
     const units = svmlPrepareTextRootApplications(work.payload);
-    const localFrame = programFrame - work.startFrame;
+    const localFrame = htmlAnimationFrame(work.payload.clock, programFrame);
     for (const preparedUnit of units) {
       for (const application of preparedUnit.applications) {
         const { sequence, rank, animation } = application;

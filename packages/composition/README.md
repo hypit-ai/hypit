@@ -138,5 +138,8 @@ multi-Clip relationships such as ducking or crossfades belong to ordinary author
 A visual Stack may carry `motion: { clock, channels }` alongside its base `transform`.
 Each channel identifies `x`, `y`, `scaleX`, `scaleY`, `rotation` or `opacity` and ordered
 `{ frame, value, easing? }` keyframes relative to `clock.startFrame`. The full clock
-survives partial placement; `placeComposition` shifts its origin with the enclosing
-composition. Source sampling and visible intervals retain their own time domains.
+survives partial placement. `placeComposition` accepts an exact rate and source time, retimes
+media sampling and audio envelopes, and maps animation clocks into the parent timeline.
+An animation clock's optional `sampling` stores its authored offset, rate and duration;
+`animationFrame` and `animationDuration` recover the authored coordinates for rendering.
+Source sampling and visible intervals retain their own time domains.

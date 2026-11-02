@@ -1,3 +1,4 @@
+export * from "./animation-clock.js";
 export { extendVisualPresent } from './contribution-window.js';
 export * from "./scope-motion.js";
 export { compositionComponent } from "./component.js";

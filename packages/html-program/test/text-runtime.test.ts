@@ -47,6 +47,7 @@ test("terminal Text lazily prepares one persistent Animation per active Unit × 
   const root = (startFrame: number, elements: MockElement[]) => {
     const attributes = new Map([
       ["data-hypit-text-start-frame", String(startFrame)],
+      ["data-hypit-animation-clock", JSON.stringify({ startFrame, endFrameExclusive: startFrame + 30 })],
       ["data-hypit-text-frame-numerator", "30"],
       ["data-hypit-text-frame-denominator", "1"],
       ["data-hypit-text-duration-frames", "30"],

@@ -1,3 +1,4 @@
+import { parseTemporalRate, parseTemporalDuration } from "@hypit/temporal";
 import {
   declarationField,
   type AuthorDeclaration,
@@ -138,6 +139,8 @@ export const filmAuthorDeclaration: AuthorDeclarationCompiler = {
           { name: "source", kind: "reference", required: true, accepts: [compositionTypes.composition], summary: "Selects the local Composition." },
           { name: "during", kind: "reference", required: true, accepts: [temporalTypes.window], summary: "Selects the parent placement interval." },
           { name: "from", kind: "reference", required: true, accepts: [temporalTypes.instant], summary: "Selects the source position on the local Timeline." },
+          { name: "rate", kind: "literal", required: false, summary: "Sets a positive source-to-parent playback rate." },
+          { name: "source-offset", kind: "literal", required: false, summary: "Adds an exact duration to the source Instant." },
         ],
       }, {
         name: "Stack",
@@ -293,7 +296,7 @@ export const filmAuthorDeclaration: AuthorDeclarationCompiler = {
           tracks.push({ name: `track-${slot + 1}`, kind: 'compound', source, during, from });
           const effects = await Promise.all(child.children.filter(node => node.name === "Effect" && (!field(node, "enabled") || literal(node, "enabled") !== "false")).map(async node => { const value = await resolved(node, "source", compositionTypes.visualProcessEffect, resolveReference); if (!value.record) throw new Error("Effect.source requires an authored process."); return structuredClone(value.record.value) as unknown as VisualProcessEffect; }));
           const transform = compoundTransform(child), crop = compoundCrop(child), keyframes = compoundKeyframes(child);
-          members.push({ kind: 'compound', id: memberId, slot, ...(effects.length ? { effects } : {}), ...(keyframes ? { keyframes } : {}), ...(transform ? { transform } : {}), ...(crop ? { crop } : {}) });
+          members.push({ kind: 'compound', id: memberId, slot, rate: parseTemporalRate(field(child, 'rate') ? literal(child, 'rate') : '1', 'Compound rate'), ...(field(child, 'source-offset') ? { sourceOffset: parseTemporalDuration(literal(child, 'source-offset'), 'Compound source offset') } : {}), ...(effects.length ? { effects } : {}), ...(keyframes ? { keyframes } : {}), ...(transform ? { transform } : {}), ...(crop ? { crop } : {}) });
           continue;
         }
         if (child.name === "Stack") {

@@ -175,7 +175,7 @@ export const visualProgramSchema: ValueSchema = object({
   slots: { schema: { kind: "array", items: object({ name: { schema: string }, element: { schema: visualNodeEnvelope } }) } },
 });
 export const visualElementSchema: ValueSchema = { kind: "oneOf", variants: [visualMaskSchema, visualTextSchema, textFlowElement, pathTextElement, visualImageSchema, visualVideoSchema, visualSurfaceSchema, visualProgramSchema] };
-const animationClock = object({ startFrame: { schema: signedInteger }, endFrameExclusive: { schema: signedInteger } });
+const animationClock = object({ startFrame: { schema: signedInteger }, endFrameExclusive: { schema: signedInteger }, sampling: { optional: true, schema: object({ offset: { schema: finiteNumber }, rate: { schema: finiteNumber }, durationFrames: { schema: integer } }) } });
 const visualItemBase = { clock: { schema: animationClock, optional: true }, id: { schema: string }, subjectId: { schema: string, optional: true }, span: { schema: frameSpanSchema }, visibility: { schema: { kind: "array", items: frameSpanSchema }, optional: true } } as const;
 export const visualPresentSchema: ValueSchema = object({ ...visualItemBase, kind: { schema: { kind: "literal", value: "present" } }, root: { schema: visualElementSchema } });
 export const visualProcessSchema: ValueSchema = object({

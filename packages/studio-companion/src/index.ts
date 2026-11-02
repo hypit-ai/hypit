@@ -689,6 +689,8 @@ export type StudioFilmCompanion = {
     readonly sourceAttribute: string;
     readonly placementAttribute: string;
     readonly sourcePositionAttribute: string;
+    readonly rateAttribute?: string;
+    readonly sourceOffsetAttribute?: string;
     readonly sourceType: TypeRef;
     readonly placementType: TypeRef;
     readonly sourcePositionType: TypeRef;

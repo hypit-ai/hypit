@@ -1,3 +1,4 @@
+import { animationClockRuntime } from "./animation-clock.js";
 import { canonicalize } from "@hypit/hypit/protocol";
 import type { VisualAdjustment } from "@hypit/composition";
 import type { FrameSpan } from "@hypit/timeline";
@@ -74,10 +75,11 @@ export function htmlAdjustmentScript(entries: readonly (FrameSpan & {
   readonly occurrencePath: readonly string[];
   readonly adjustmentId: string;
   readonly visibility?: readonly FrameSpan[];
-  readonly clock?: FrameSpan;
+  readonly clock?: import("@hypit/composition").AnimationClock;
   readonly keyframes: readonly HtmlAdjustmentKeyframe[];
 })[]): string {
   return `(() => {
+    ${animationClockRuntime}
     const entries = ${scriptJson(entries)}.map((entry, order) => {
       const element = document.getElementById(entry.id);
       const keyframes = entry.keyframes.map(keyframe => ({
@@ -122,8 +124,8 @@ export function htmlAdjustmentScript(entries: readonly (FrameSpan & {
         return;
       }
       const origin = entry.clock ?? entry;
-      const length = origin.endFrameExclusive - origin.startFrame;
-      const progress = length <= 1 ? 1 : Math.max(0, Math.min(1, (frame - origin.startFrame) / (length - 1)));
+      const length = htmlAnimationDuration(origin);
+      const progress = length <= 1 ? 1 : Math.max(0, Math.min(1, htmlAnimationFrame(origin, frame) / (length - 1)));
       entry.probe.cancel();
       entry.probe.pause();
       entry.probe.currentTime = progress * 1000;

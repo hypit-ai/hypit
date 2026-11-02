@@ -1,10 +1,10 @@
-import { compoundPicture, compoundTransitions, compoundTransitionPicture, compoundVisibleRanges } from "./compound-transition.js";
+import { compoundPicture, compoundSourceStart, compoundSourceTime, compoundTransitions, compoundTransitionPicture, compoundVisibleRanges } from "./compound-transition.js";
 import { assertVisualScopeTransform, assertAudioTrackIdentity, assertCompositionIdentity, assertVisualProcessEffect, assertVisualTrackIdentity, placeComposition, sealComposition, sealVisualScope } from "@hypit/composition";
 import type { AudioTrack, Composition, Track, VisualScope, VisualTrack } from "@hypit/composition";
 import { assertSourceCrop, assertCanvas } from "@hypit/spatial";
 import type { Canvas } from "@hypit/spatial";
 import { assertFrameSpan, assertTimelineIdentity } from "@hypit/timeline";
-import { assertTemporalWindowFor } from "@hypit/temporal";
+import { assertTemporalWindowFor, assertTemporalDuration, parseTemporalRate } from "@hypit/temporal";
 import type { TemporalInstant, TemporalWindow } from "@hypit/temporal";
 import type { Timeline } from "@hypit/timeline";
 
@@ -63,7 +63,7 @@ export function assertFilmProgramIdentity(program: FilmProgram): void {
         }
         visualSlots.add(member.slot);
         occurrences.set(path.join('/'), member.slot);
-        if (member.kind === "compound") { for (const effect of member.effects ?? []) { assertVisualProcessEffect(effect); if (effect.inputs.length !== 1 || effect.inputs[0] !== "content") throw new Error("Compound Effect requires one content input."); } compoundSlots.add(member.slot); if (member.crop) assertSourceCrop(member.crop); if (member.transform) assertVisualScopeTransform(member.transform); }
+        if (member.kind === "compound") { if (member.sourceOffset) assertTemporalDuration(member.sourceOffset); if (member.rate && parseTemporalRate(`${member.rate.numerator}/${member.rate.denominator}`, "Compound rate").numerator <= 0) throw new Error("Compound rate must be positive."); for (const effect of member.effects ?? []) { assertVisualProcessEffect(effect); if (effect.inputs.length !== 1 || effect.inputs[0] !== "content") throw new Error("Compound Effect requires one content input."); } compoundSlots.add(member.slot); if (member.crop) assertSourceCrop(member.crop); if (member.transform) assertVisualScopeTransform(member.transform); }
         continue;
       }
       if (member.kind === "transition") {
@@ -151,7 +151,7 @@ export function assertFilmTrackSetIdentity(set: FilmTrackSet): void {
     if (track.kind === "compound") {
       assertCompositionIdentity(track.composition); assertNonEmpty(track.timelineId, 'Compound timeline');
       assertFrameSpan(track.span);
-      if (!Number.isSafeInteger(track.sourceStartFrame) || track.sourceStartFrame < 0 || track.sourceStartFrame + track.span.endFrameExclusive - track.span.startFrame > track.composition.timeline.frameCount) throw new Error('Compound source interval exceeds its local Timeline.');
+      if (!Number.isSafeInteger(track.sourceStartFrame) || track.sourceStartFrame < 0 || track.sourceStartFrame > track.composition.timeline.frameCount) throw new Error('Compound source interval exceeds its local Timeline.');
     }
     else if (track.kind === "visual") assertVisualTrackIdentity(track);
     else assertAudioTrackIdentity(track);
@@ -235,7 +235,7 @@ export function compileFilmComposition(
         if (source.visual.canvas.width !== canvas.widthPx || source.visual.canvas.height !== canvas.heightPx) {
           throw new Error('Compound canvas must match its enclosing Film.');
         }
-        compoundAudio.push(...placeComposition(source, timeline, track.span, track.sourceStartFrame).audio.contributions);
+        compoundAudio.push(...placeComposition(source, timeline, track.span, compoundSourceStart(member, track), { rate: member.rate ?? { numerator: 1, denominator: 1 }, sourceStartTime: compoundSourceTime(member, track) }).audio.contributions);
         if (!transitions.some(value => value.outgoing.id === member.id || value.incoming.id === member.id)) return [compoundPicture(member, track, timeline, track.span)];
         return [{ kind: 'stack', id: member.id, scope: { members: compoundVisibleRanges(track.span, transitions, member.id).map((span, index) => compoundPicture(member, track, timeline, span, `part-${index}`)) } }];
       }

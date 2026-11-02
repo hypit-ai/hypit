@@ -17,7 +17,7 @@ export const filmStudioCompanions: readonly StudioFilmCompanion[] = [{
     types: [compositionTypes.visualTrack, compositionTypes.audioTrack],
   },
   compounds: {
-    childDeclaration: "Compound", idAttribute: "id", sourceAttribute: "source", placementAttribute: "during", sourcePositionAttribute: "from",
+    childDeclaration: "Compound", idAttribute: "id", sourceAttribute: "source", placementAttribute: "during", sourcePositionAttribute: "from", rateAttribute: "rate", sourceOffsetAttribute: "source-offset",
     sourceType: compositionTypes.composition, placementType: temporalTypes.window, sourcePositionType: temporalTypes.instant,
   },
   compoundTransitions: {

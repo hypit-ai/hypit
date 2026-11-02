@@ -1,3 +1,4 @@
+import type { AnimationClock } from "@hypit/composition";
 import { scopeMotionScript } from "./scope-motion.js";
 import { resolveSourceCrop } from "@hypit/spatial";
 import { assertCompositableSurfaceRef, verifyPictureInterpretation, verifyPreparedVisualSource } from "@hypit/media";
@@ -306,7 +307,7 @@ type ElementContext = {
   readonly presentDurationFrames: number;
   readonly presentStartFrame: number;
   readonly presentUsage: readonly FrameSpan[];
-  readonly clock: FrameSpan;
+  readonly clock: AnimationClock;
   readonly programNumerator: number;
   readonly programDenominator: number;
   readonly stackIndex: number;
@@ -412,6 +413,7 @@ function renderElement(
     durationFrames: context.clock.endFrameExclusive - context.clock.startFrame,
     durationSeconds: frameSeconds(context.clock.endFrameExclusive - context.clock.startFrame, context.programNumerator, context.programDenominator),
     presentStartFrame: context.clock.startFrame,
+    animationClock: context.clock,
     programNumerator: context.programNumerator,
     programDenominator: context.programDenominator,
     escape: escapeHtml,
@@ -640,7 +642,7 @@ type RenderedAdjustment = {
     readonly occurrencePath: readonly string[];
     readonly adjustmentId: string;
     readonly visibility?: readonly FrameSpan[];
-    readonly clock?: FrameSpan;
+    readonly clock?: AnimationClock;
     readonly keyframes: ReturnType<typeof readHtmlAdjustment>["keyframes"];
   };
 };
@@ -975,7 +977,7 @@ function emitHtml(
     readonly id: string;
     readonly startFrame: number;
     readonly durationFrames: number;
-    readonly clock?: FrameSpan;
+    readonly clock?: AnimationClock;
     readonly program: ReturnType<typeof readHtmlVisual>;
   }[] = [];
   const scopeMotions: Parameters<typeof scopeMotionScript>[0][number][] = [];

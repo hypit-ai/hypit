@@ -1,4 +1,4 @@
-import type { FrameSpan } from "@hypit/timeline";
+import { animationDuration, assertAnimationClock, type AnimationClock } from "./animation-clock.js";
 
 export type VisualScopeMotionProperty = 'x' | 'y' | 'scaleX' | 'scaleY' | 'rotation' | 'opacity';
 export type VisualScopeMotionChannel = {
@@ -6,10 +6,11 @@ export type VisualScopeMotionChannel = {
   readonly keyframes: readonly { readonly frame: number; readonly value: number; readonly easing?: 'linear' | 'ease-in' | 'ease-out' | 'ease-in-out' }[];
 };
 /** Keyframe positions use the complete occurrence clock, retained when its visible interval is clipped. */
-export type VisualScopeMotion = { readonly clock: FrameSpan; readonly channels: readonly VisualScopeMotionChannel[] };
+export type VisualScopeMotion = { readonly clock: AnimationClock; readonly channels: readonly VisualScopeMotionChannel[] };
 
 export function assertVisualScopeMotion(value: VisualScopeMotion): void {
-  const duration = value.clock.endFrameExclusive - value.clock.startFrame;
+  const duration = animationDuration(value.clock);
+  assertAnimationClock(value.clock);
   if (!Number.isSafeInteger(value.clock.startFrame) || !Number.isSafeInteger(value.clock.endFrameExclusive) || duration <= 0) throw new Error('VisualScope motion clock is invalid.');
   const properties = new Set<string>();
   if (!Array.isArray(value.channels) || !value.channels.length) throw new Error('VisualScope motion requires channels.');

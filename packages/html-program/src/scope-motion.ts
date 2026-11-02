@@ -1,7 +1,9 @@
+import { animationClockRuntime } from "./animation-clock.js";
 import type { VisualScopeMotion, VisualScopeTransform } from '@hypit/composition';
 
 export function scopeMotionScript(entries: readonly { readonly id: string; readonly transform?: VisualScopeTransform; readonly motion: VisualScopeMotion }[]): string {
   return `(() => {
+    ${animationClockRuntime}
     const entries = ${JSON.stringify(entries).replaceAll('<', '\\u003c')}.map(entry => ({ ...entry, element: document.getElementById(entry.id) }));
     const ease = (value, easing) => {
       if (!easing || easing === 'linear') return value;
@@ -21,7 +23,7 @@ export function scopeMotionScript(entries: readonly { readonly id: string; reado
     const apply = frame => {
       for(const entry of entries){
         const pose={x:0,y:0,scaleX:1,scaleY:1,rotation:0,opacity:1,originX:.5,originY:.5,...entry.transform};
-        for(const channel of entry.motion.channels) pose[channel.property]=sample(channel.keyframes,Math.max(0,Math.min(entry.motion.clock.endFrameExclusive-entry.motion.clock.startFrame-1,frame-entry.motion.clock.startFrame)));
+        for(const channel of entry.motion.channels) pose[channel.property]=sample(channel.keyframes,Math.max(0,Math.min(htmlAnimationDuration(entry.motion.clock)-1,htmlAnimationFrame(entry.motion.clock,frame))));
         entry.element.style.transform='translate('+pose.x+'px,'+pose.y+'px) rotate('+pose.rotation+'deg) scale('+pose.scaleX+','+pose.scaleY+')';
         entry.element.style.transformOrigin=(pose.originX*100)+'% '+(pose.originY*100)+'%';
         entry.element.style.opacity=String(pose.opacity);

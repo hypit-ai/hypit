@@ -1,3 +1,4 @@
+import { exactTemporalValueFromDuration, temporalValueInFrames, exactTemporalValueFromFrames, addExactTemporalValues, scaleExactTemporalValue } from "@hypit/temporal";
 import { extendVisualPresent, placeComposition } from '@hypit/composition';
 import type { VisualScope, VisualScopeMember } from '@hypit/composition';
 import type { FrameSpan, Timeline } from '@hypit/timeline';
@@ -42,8 +43,19 @@ export function compoundTransitions(members: readonly FilmVisualPlanMember[], tr
   return result;
 }
 
+export function compoundRate(member: Compound): number { return member.rate ? member.rate.numerator / member.rate.denominator : 1; }
+export function compoundSourceTime(member: Compound, source: Source, frameDelta = 0) {
+  const timeline = source.composition.timeline;
+  const offset = member.sourceOffset ? exactTemporalValueFromDuration(member.sourceOffset, timeline) : exactTemporalValueFromFrames(0, timeline);
+  return addExactTemporalValues(addExactTemporalValues(exactTemporalValueFromFrames(source.sourceStartFrame, timeline), offset), scaleExactTemporalValue(exactTemporalValueFromFrames(frameDelta, timeline), member.rate ?? { numerator: 1, denominator: 1 }));
+}
+export function compoundSourceStart(member: Compound, source: Source): number {
+  const position = temporalValueInFrames(compoundSourceTime(member, source), source.composition.timeline);
+  return Number(position.numerator) / Number(position.denominator);
+}
+
 export function compoundPicture(member: Compound, source: Source, timeline: Timeline, span: FrameSpan, id = member.id): VisualScopeMember {
-  const placed = placeComposition(source.composition, timeline, span, source.sourceStartFrame + span.startFrame - source.span.startFrame, { boundary: "hold" });
+  const placed = placeComposition(source.composition, timeline, span, compoundSourceStart(member, source) + (span.startFrame - source.span.startFrame) * compoundRate(member), { boundary: "hold", rate: member.rate ?? { numerator: 1, denominator: 1 }, sourceStartTime: compoundSourceTime(member, source, span.startFrame - source.span.startFrame) });
   let picture: VisualScopeMember = { kind: 'stack', id: member.effects?.length ? `${id}:picture` : id, scope: placed.visual.root,
     ...(member.keyframes ? { motion: resolveCompoundMotion(member.keyframes, source.span) } : {}),
     ...(member.crop ? { crop: { ...member.crop } } : {}), ...(member.transform ? { transform: { ...member.transform } } : {}),

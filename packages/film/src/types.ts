@@ -27,7 +27,7 @@ export type FilmLink = {
 export type FilmVisualPlanMember =
   | { readonly kind: "transition"; readonly id: string; readonly outgoing: string; readonly incoming: string; readonly durationFrames: number; readonly effect: VisualProcessEffect }
   | { readonly kind: "track"; readonly id: string; readonly slot: number }
-  | { readonly kind: "compound"; readonly effects?: readonly VisualProcessEffect[]; readonly keyframes?: readonly import("./compound-motion.js").CompoundKeyframe[]; readonly id: string; readonly slot: number; readonly transform?: import("@hypit/composition").VisualScopeTransform; readonly crop?: import("@hypit/spatial").SourceCrop }
+  | { readonly kind: "compound"; readonly rate?: import("@hypit/temporal").TemporalRate; readonly sourceOffset?: import("@hypit/temporal").TemporalDuration; readonly effects?: readonly VisualProcessEffect[]; readonly keyframes?: readonly import("./compound-motion.js").CompoundKeyframe[]; readonly id: string; readonly slot: number; readonly transform?: import("@hypit/composition").VisualScopeTransform; readonly crop?: import("@hypit/spatial").SourceCrop }
   | {
       readonly kind: "stack";
       readonly id: string;
