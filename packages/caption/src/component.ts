@@ -3,6 +3,8 @@ import type { TemporalWindow } from "@hypit/temporal";
 import type { ProducerPackage } from "@hypit/hypit/producer";
 import type { Value } from "@hypit/hypit/protocol";
 import { canonicalize } from "@hypit/hypit/protocol";
+import type { Timeline } from "@hypit/timeline";
+import { createAbsoluteCaptionTiming, type CaptionTimingSpec } from "./absolute-timing.js";
 
 import { captionProducers, captionTypes } from "./manifest.js";
 import { appendCaptionUse, assertCaptionProgram, assertCaptionStyle } from "./style.js";
@@ -17,6 +19,13 @@ function valueOf<T>(value: Value | undefined, subject: string): T {
 
 export const captionComponent = {
   producers: [{
+    producer: captionProducers.resolveTiming,
+    handler: ({ inputs }) => ({ kind: "output", value: canonicalize(createAbsoluteCaptionTiming(
+      valueOf<CaptionDocument>(inputs.document?.value, "CaptionDocument"),
+      valueOf<Timeline>(inputs.timeline?.value, "Timeline"),
+      valueOf<CaptionTimingSpec>(inputs.spec?.value, "CaptionTimingSpec"),
+    )) }),
+  }, {
     producer: captionProducers.create,
     handler: ({ inputs }) => ({ kind: "output", value: (canonicalize({
       id: valueOf<{id:string}>(inputs.header?.value, "CaptionTrackSpec").id,

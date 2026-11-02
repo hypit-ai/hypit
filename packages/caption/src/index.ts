@@ -19,4 +19,8 @@ export { assertCaptionTiming, assertCaptionTimingForDocument } from "./temporali
 export type * from "./types.js";
 
 export { captionUseVisibility } from "./visibility.js";
+export { captionDocumentDeclaration, captionDocumentFromDeclaration, captionDocumentAuthorDeclaration, captionDocumentMarkupDeclaration } from "./document-declaration.js";
+export { captionTimingAuthorDeclaration, captionTimingMarkupDeclaration } from "./timing-declaration.js";
+export { createAbsoluteCaptionTiming } from "./absolute-timing.js";
+export type { CaptionTimingSpec } from "./absolute-timing.js";
 export { hiddenCaptionStyleAuthorDeclaration } from "./declaration.js";export { hiddenCaptionStyleMarkupDeclaration } from "./declaration.js";

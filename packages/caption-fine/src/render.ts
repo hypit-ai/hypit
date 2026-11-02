@@ -211,7 +211,7 @@ function glyphStyle(
     ...typographyStyle(parameters),
     { name: "min-width", value: "0" },
     { name: "opacity", value: paint.opacity },
-    { name: "white-space", value: "normal" },
+    { name: "white-space", value: "pre-wrap" },
     ...(painted || paint.gradient === undefined ? [] : [
       { name: "background-image", value: `linear-gradient(${compactNumber(paint.gradient.angleDeg)}deg,${paint.gradient.from},${paint.gradient.to})` },
       { name: "background-clip", value: "text" },
@@ -233,7 +233,7 @@ function transparentGlyphStyle(
     { name: "color", value: "#00000000" },
     ...typographyStyle(parameters),
     { name: "min-width", value: "0" },
-    { name: "white-space", value: "normal" },
+    { name: "white-space", value: "pre-wrap" },
     ...(underline === undefined ? [] : underlineStyle(underline)),
   ];
 }

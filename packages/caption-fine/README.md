@@ -97,7 +97,8 @@ The underlying character anchors remain available to other Timeline consumers. `
 
 `word-gap` sizes the separators authored in `CaptionDisplayWord.separatorBefore`. A numeric or
 writing-system boundary does not create a space: `3D` and `3개월` stay joined, while `是的 就是这样`
-keeps its space. Base text, active text, underlines and joined boxes consume the same boundaries.
+keeps its space. Word text preserves authored spaces and line breaks. Base text, active text,
+underlines and joined boxes consume the same boundaries.
 For `active-box: trail; active-box-continuity: joined`, Fine measures the complete stationary Cue,
 including the inactive suffix, and joins its painted line rectangles. An over-wide word's internal
 lines are included. Padding and borders extend beyond those rectangles without changing text flow;

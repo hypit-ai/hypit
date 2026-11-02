@@ -77,3 +77,38 @@ See Fine's [declaration compiler](../caption-fine/src/declaration.ts), [schedule
 [renderer](../caption-fine/src/render.ts) for a concrete implementation. New family behavior belongs
 in its own project package. The selected family interprets its own Styles; mixed-family dispatch,
 when useful, is an explicit component responsibility.
+
+## Authored caption content and timing
+
+`Document` stores editable Cue, Unit and Word declarations. A Cue contains complete ordered Units;
+each Unit contains its displayed Words. Stable identities associate editing selections and timing.
+`separator-before` is either empty or one space. Word body text preserves authored line breaks.
+Optional `Attribute` children carry string, number or boolean values for rendering families.
+
+```xml
+<caption:Document id="subtitles">
+  <Cue id="opening" role="HOST">
+    <Unit id="opening-line">
+      <Word id="opening-text" separator-before="">Welcome</Word>
+    </Unit>
+  </Cue>
+  <Cue id="closing">
+    <Unit id="closing-line">
+      <Word id="closing-text" separator-before="">Thank you</Word>
+    </Unit>
+  </Cue>
+</caption:Document>
+<caption:Timing id="subtitle-time" document={subtitles} timeline={film-time.timeline}>
+  <Unit unit="opening-line" from="15f" for="45f"/>
+  <Unit unit="closing-line" from="90f" for="30f"/>
+</caption:Timing>
+```
+
+`Timing` supplies an absolute frame interval for every Unit in the selected document. Intervals
+must have positive duration and fit inside the referenced Timeline. Each Unit appears exactly once;
+intervals can overlap. Content and time declarations remain independently editable.
+
+Use `document={subtitles}` and `timing={subtitle-time}` on a Caption rendering family such as Fine.
+`captionDocumentDeclaration` converts a typed CaptionDocument into structured author nodes;
+`captionDocumentFromDeclaration` reads those nodes. Editors can replace one Word's text, move a Cue,
+or update a Timing Unit's fields through AuthorDocument operations.
