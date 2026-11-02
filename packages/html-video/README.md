@@ -1,9 +1,8 @@
 # @hypit/html-video
 
-The package-owned `video` declaration consumes a completed Composition and Timeline, then authors an
-explicit delivery requirement and optional frame range. Markup supplies only the `Video` spelling.
-Renderer and Endpoint selection remain downstream Build concerns, and the package has no runtime
-dependency on Temporal or its Markup helpers.
+The package-owned `video` and `frame` declarations consume a completed Composition and Timeline.
+`Video` authors a delivery requirement and optional frame range; `Frame` selects one frame for PNG output.
+Renderer and Endpoint selection remain downstream Build concerns.
 
 `@hypit/html-video` is the author-facing video assembly that selects Hypit's HTML
 visual path:
@@ -18,8 +17,7 @@ advanced author packages can instead pass a `MediaDeliverySpec` through `deliver
 
 The author contract exposes one finished-video family: BT.709 H.264/AAC MP4.
 
-The package contributes only the `html` author declaration and its orchestration
-Fragment. It:
+The video assembly Fragment:
 
 1. compiles the selected Composition and Timeline with `@hypit/html-program`;
 2. projects the one media delivery requirement into the visual requirement and requests a
@@ -28,10 +26,18 @@ Fragment. It:
 4. verifies and muxes the two frame-exact products under the same delivery requirement into
    the Film artifact.
 
-It does not own the `HtmlProgram` ABI, browser execution, frame capture, source
-decoding, or the rasterization Capabilities. Consequently a local Provider,
-Studio snapshot, or another executor never depends on this author package.
+`@hypit/html-program` owns the HTML Program ABI and rasterization Capabilities. Providers execute
+frame capture and source decoding. This package assembles the author-facing render graph.
 
-The name describes the selected representation and product assembly, not an
-implementation command. There is intentionally no `<render:Video>` compatibility
-alias: `render` confuses the desired video with one possible execution method.
+## Single-frame output
+
+```xml
+<html:Frame id="still" composition={scene.composition} at-frame="45"/>
+```
+
+`still.image` is a retained PNG Blob at the Composition's canvas size. `at-frame` is a
+zero-based integer on that Composition's clock and must fall within its duration. The output
+uses full-range sRGB, 8-bit RGB with an opaque black matte. The graph compiles the composed
+picture, requests one frame through `rasterize-frames`, and projects its image Artifact.
+
+Build `still.image` and export its Result to save a stable picture for subsequent editing.

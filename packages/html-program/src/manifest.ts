@@ -1,5 +1,6 @@
 import { compositionDependency, compositionTypes } from "@hypit/composition";
 import { compositableSurfaceSchema, mediaDependency, mediaTypes, pictureInterpretationSchema, preparedVisualSourceSchema } from "@hypit/media";
+import { blobDependency, blobTypes } from "@hypit/hypit/blob";
 import { blobRefSchema } from "@hypit/hypit/protocol";
 import type { CapabilityRef, ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/hypit/protocol";
 import { frameSpanSchema, timelineDependency, timelineTypes } from "@hypit/timeline";
@@ -18,6 +19,8 @@ export const htmlProgramProducers = {
   compile: { module: htmlProgramModuleRef, name: "compile-composition" },
   requestVisual: { module: htmlProgramModuleRef, name: "request-visual" },
   requestVisualRange: { module: htmlProgramModuleRef, name: "request-visual-range" },
+  requestFrame: { module: htmlProgramModuleRef, name: "request-frame" },
+  projectFrame: { module: htmlProgramModuleRef, name: "project-frame" },
 } satisfies Record<string, ProducerRef>;
 
 const positiveInteger = { kind: "number", integer: true, minimum: 1 } as const;
@@ -131,7 +134,7 @@ export const htmlProgramManifest: ModuleManifest = {
   format: "hypit.module@1",
   name: htmlProgramModuleRef.name,
   version: htmlProgramModuleRef.version,
-  dependencies: [compositionDependency, mediaDependency, temporalDependency, timelineDependency],
+  dependencies: [blobDependency, compositionDependency, mediaDependency, temporalDependency, timelineDependency],
   types: [htmlProgramTypes.program.name, htmlProgramTypes.frameImages.name],
   capabilities: [
     { name: htmlProgramCapabilities.rasterizeVisual.name, returns: mediaTypes.timelineVisual },
@@ -147,5 +150,13 @@ export const htmlProgramManifest: ModuleManifest = {
   }, {
     name: htmlProgramProducers.requestVisualRange.name,
     inputs: [{ name: "program", type: htmlProgramTypes.program }, { name: "delivery", type: mediaTypes.visualDelivery }, { name: "range", type: timelineTypes.frameSpan }], result: { kind: "need" as const, name: "visual", capability: htmlProgramCapabilities.rasterizeVisual },
+  }, {
+    name: htmlProgramProducers.requestFrame.name,
+    inputs: [{ name: "program", type: htmlProgramTypes.program }, { name: "range", type: timelineTypes.frameSpan }],
+    result: { kind: "need", name: "frames", capability: htmlProgramCapabilities.rasterizeFrames },
+  }, {
+    name: htmlProgramProducers.projectFrame.name,
+    inputs: [{ name: "frames", type: htmlProgramTypes.frameImages }, { name: "range", type: timelineTypes.frameSpan }],
+    result: { kind: "output", name: "image", type: blobTypes.blob },
   }],
 };

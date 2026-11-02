@@ -7,10 +7,11 @@ import { canonicalize } from "@hypit/hypit/protocol";
 import { compileHtmlProgram } from "./document.js";
 import { assertHtmlProgram } from "./document.js";
 import type { HtmlProgram } from "./types.js";
+import { assertFrameSpan } from "@hypit/timeline";
 import type { FrameSpan } from "@hypit/timeline";
 import { verifyVisualDeliverySpec } from "@hypit/media";
 import type { VisualDeliverySpec } from "@hypit/media";
-import { htmlRasterRequest, verifyHtmlFrameImages } from "./execution.js";
+import { htmlRasterRequest, verifyHtmlFrameImages, htmlFrameRequest } from "./execution.js";
 import { htmlProgramProducers, htmlProgramTypes } from "./manifest.js";
 
 function valueOf(value: Value, subject: string): CanonicalValue {
@@ -36,7 +37,29 @@ export const htmlProgramComponent = {
         inputs.range === undefined ? {} : { range: valueOf(inputs.range.value, "FrameSpan") as unknown as FrameSpan },
       ) };
     },
-  }))],
+  })), {
+    producer: htmlProgramProducers.requestFrame,
+    handler: ({ inputs }) => {
+      const range = valueOf(inputs.range!.value, "FrameSpan") as unknown as FrameSpan;
+      assertFrameSpan(range);
+      if (range.endFrameExclusive !== range.startFrame + 1) throw new Error("Frame capture selects exactly one frame");
+      return { kind: "need", constraints: htmlFrameRequest({
+        program: valueOf(inputs.program!.value, "HtmlProgram") as unknown as HtmlProgram,
+        picture: { colorPrimaries: "bt709", colorTransfer: "srgb", colorMatrix: "rgb", colorRange: "full", bitDepth: 8, alpha: { mode: "opaque", matte: "#000000" } },
+        frames: [range.startFrame],
+      }) };
+    },
+  }, {
+    producer: htmlProgramProducers.projectFrame,
+    handler: ({ inputs }) => {
+      const images = valueOf(inputs.frames!.value, "FrameImages");
+      verifyHtmlFrameImages(images);
+      const range = valueOf(inputs.range!.value, "FrameSpan") as unknown as FrameSpan;
+      assertFrameSpan(range);
+      if (range.endFrameExclusive !== range.startFrame + 1 || images.frames.length !== 1 || images.frames[0]!.frame !== range.startFrame) throw new Error("Captured frame does not match its selected position");
+      return { kind: "output", value: images.frames[0]!.artifact };
+    },
+  }],
   refinements: [
     { type: htmlProgramTypes.program, handler: ({ value }) => assertHtmlProgram(value as unknown as HtmlProgram) },
     { type: htmlProgramTypes.frameImages, handler: ({ value }) => verifyHtmlFrameImages(value) },

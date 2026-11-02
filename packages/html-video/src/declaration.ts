@@ -10,6 +10,7 @@ import { compositionTypes } from "@hypit/composition";
 import { mediaTypes } from "@hypit/media";
 import { assertFrameSpan, timelineTypes } from "@hypit/timeline";
 
+import { htmlFrameAuthorDeclaration } from "./frame.js";
 import { htmlVideoDeliverySpec } from "./delivery.js";
 import { createHtmlVideoFragment } from "./fragment.js";
 import { htmlVideoModuleRef } from "./manifest.js";
@@ -124,6 +125,6 @@ export const htmlVideoAuthorDeclaration: AuthorDeclarationCompiler = {
   },
 };
 
-export const htmlVideoAuthorDeclarations = [htmlVideoAuthorDeclaration] as const;
+export const htmlVideoAuthorDeclarations = [htmlVideoAuthorDeclaration, htmlFrameAuthorDeclaration] as const;
 
-export const htmlVideoMarkupDeclarations = [{ name: "video", tag: "Video" }] as const;
+export const htmlVideoMarkupDeclarations = [{ name: "video", tag: "Video" }, { name: "frame", tag: "Frame" }] as const;
