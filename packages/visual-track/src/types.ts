@@ -181,9 +181,15 @@ export type VisualPoseKeyframe = {
   readonly easing?: VisualEasing;
 };
 
+export type VisualMotionProperty = 'translateX' | 'translateY' | 'scaleX' | 'scaleY' | 'rotationDeg' | 'opacity';
+export type VisualPropertyKeyframe = { readonly at: VisualMotionPosition; readonly value: number; readonly easing?: VisualEasing };
+export type VisualMotionChannel = { readonly property: VisualMotionProperty; readonly keyframes: readonly VisualPropertyKeyframe[] };
+
 /** Reusable Clip-local visual motion. Components may construct the same value directly. */
 export type VisualClipMotion = {
   readonly keyframes: readonly VisualPoseKeyframe[];
+  /** Property channels override the corresponding values of the complete Pose curve. */
+  readonly channels?: readonly VisualMotionChannel[];
 };
 
 export type VisualClipSpec = {

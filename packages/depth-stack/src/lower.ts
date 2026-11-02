@@ -312,7 +312,7 @@ export function renderDepthStack(
         layers: resolveMediaLayerPrograms(card.material, localFrame(program.frame), program.spec.treatment),
       };
       let material = lowerVisualClipElement(mediaItem, {
-        poseAnimationOverride: null,
+        poseAnimationsOverride: null,
         samplingOverrides,
         samplingAnimationOverrides,
       });

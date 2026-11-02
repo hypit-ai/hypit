@@ -4,7 +4,7 @@ import { exactTemporalValueFromFrames, extendTemporalMap } from '@hypit/temporal
 import type { TemporalMap } from '@hypit/temporal';
 import type { FrameSpan, Timeline } from '@hypit/timeline';
 import { lowerVisualClipRoot } from './lower.js';
-import { poseAnimation, samplingAnimation } from './motion.js';
+import { poseAnimations, samplingAnimation } from './motion.js';
 import type { VisualClipProgram } from './types.js';
 
 /** Hold the boundary pose in source handles and retain every authored keyframe's timeline position. */
@@ -39,7 +39,7 @@ export function transitionContribution(clip: VisualClipProgram, transition: Fram
     kind: 'present', id: clip.id, subjectId: clip.subjectId, span,
     root: lowerVisualClipRoot({ ...clip, span }, {
       samplingOverrides, samplingAnimationOverrides,
-      poseAnimationOverride: extendAnimation(poseAnimation(clip.motion, originalDuration), lead, duration),
+      poseAnimationsOverride: poseAnimations(clip.motion, originalDuration).map(animation => extendAnimation(animation, lead, duration)!),
     }),
   };
 }

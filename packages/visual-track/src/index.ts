@@ -40,6 +40,7 @@ export {
   assertVisualClipMotion,
   assertVisualMotionPosition,
   poseAnimation,
+  poseAnimations,
   resolveVisualMotionPosition,
   sealVisualClipMotion,
   samplingAnimation,

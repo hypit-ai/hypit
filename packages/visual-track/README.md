@@ -82,6 +82,22 @@ in program-picture pixels. A typed `Motion` transforms the whole framed Clip wit
 fitted source inside the Frame. Pose positions use the Clip-local clock. The first pose holds
 from the Clip start to its keyframe; the last pose holds through the Clip end. A single Pose
 applies a constant transform throughout the Clip Window.
+Individual properties use `Keyframe` children with `property`, `at`, `value`, and optional
+`easing`. Supported properties are `x`, `y`, `scale-x`, `scale-y`, `rotate`, and `opacity`.
+A property's Keyframes replace that property's Pose curve for the full Clip Window. Each
+property keeps its own ordered times and easing; the first and last values hold outside
+its keyframe range. Pose supplies the remaining properties and the constant transform origin.
+
+```svml
+<Keyframe property="scale-x" at="15f" value="1.5" easing="ease-in"/>
+<Keyframe property="scale-x" at="60f" value="1"/>
+<Keyframe property="x" at="8f" value="200"/>
+<Keyframe property="x" at="40f" value="0"/>
+```
+
+`poseAnimations` lowers Motion to an ordered set of property animations. The framed Clip
+uses translate, rotate, and scale wrappers so independent curves retain their authored timing.
+
 Coordinates use program-picture pixels, scale uses finite nonzero factors and rotation uses degrees.
 A negative scale factor reflects the corresponding local axis before rotation;
 `scale-x="-1"` mirrors a Clip horizontally while retaining its position and rotation.

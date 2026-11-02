@@ -11,7 +11,7 @@ import type { SpatialFrame, SpatialPath } from "@hypit/spatial";
 import { composeTemporalMaps } from "@hypit/temporal";
 import type { TemporalMap } from "@hypit/temporal";
 
-import { poseAnimation, samplingAnimation } from "./motion.js";
+import { poseAnimations, samplingAnimation } from "./motion.js";
 import type {
   VisualFrameTreatment,
   MediaGradientStop,
@@ -285,7 +285,7 @@ function layerElements(
 export function lowerVisualClipElement(
   clip: VisualClipProgram,
   options: {
-    readonly poseAnimationOverride?: VisualAnimation | null;
+    readonly poseAnimationsOverride?: readonly VisualAnimation[] | null;
     /** Implementation-level reuse hook for collection components with their own explicit clock. */
     readonly samplingOverrides?: Readonly<Record<string, TemporalMap>>;
     readonly samplingAnimationOverrides?: Readonly<Record<string, VisualAnimation | null>>;
@@ -305,16 +305,13 @@ export function lowerVisualClipElement(
     children: layers,
     style: frameStyles(clip.treatment, clip.frame),
   };
-  const motion = options.poseAnimationOverride === undefined
-    ? poseAnimation(clip.motion, durationFrames)
-    : options.poseAnimationOverride ?? undefined;
+  const motions = options.poseAnimationsOverride === undefined
+    ? poseAnimations(clip.motion, durationFrames) : options.poseAnimationsOverride ?? [];
   const motionOrigin = clip.motion?.keyframes[0];
-  const pose = box(
-    `${clip.id}:pose`,
-    [frame],
-    motion,
-    motionOrigin === undefined ? "center center" : `${motionOrigin.originX * 100}% ${motionOrigin.originY * 100}%`,
-  );
+  const origin = motionOrigin === undefined ? 'center center' : `${motionOrigin.originX * 100}% ${motionOrigin.originY * 100}%`;
+  let pose: VisualElement = frame;
+  for (let i = motions.length - 1; i > 0; i--) pose = box(`${clip.id}:pose:${i}`, [pose], motions[i], origin);
+  pose = box(`${clip.id}:pose`, [pose], motions[0], origin);
   return {
     id: root,
     kind: "box",

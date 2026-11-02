@@ -9,6 +9,7 @@ import type {
   VisualClipMotion,
   VisualMotionPosition,
   VisualPoseKeyframe,
+  VisualMotionProperty,
 } from "./types.js";
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -65,6 +66,18 @@ function assertPose(value: VisualPoseKeyframe, label: string): void {
 export function assertVisualClipMotion(value: VisualClipMotion, label: string): void {
   assert(Array.isArray(value.keyframes) && value.keyframes.length >= 1, `${label} needs at least one keyframe.`);
   for (const [index, keyframe] of value.keyframes.entries()) assertPose(keyframe, `${label}.keyframes.${index}`);
+  const seen = new Set<string>();
+  for (const channel of value.channels ?? []) {
+    assert(['translateX', 'translateY', 'rotationDeg', 'scaleX', 'scaleY', 'opacity'].includes(channel.property), `${label} property is invalid.`);
+    assert(!seen.has(channel.property), `${label} property channel is repeated.`); seen.add(channel.property);
+    assert(channel.keyframes.length > 0, `${label} property channel needs keyframes.`);
+    for (const key of channel.keyframes) {
+      assertVisualMotionPosition(key.at, `${label}.${channel.property}.at`); finite(key.value, `${label}.${channel.property}.value`);
+      if (channel.property === 'scaleX' || channel.property === 'scaleY') assert(key.value !== 0, `${label} scale must be nonzero.`);
+      if (channel.property === 'opacity') unit(key.value, `${label}.opacity`);
+      if (key.easing) assert(['linear','ease-in','ease-out','ease-in-out'].includes(key.easing), `${label} easing is invalid.`);
+    }
+  }
   const origin = value.keyframes[0]!;
   assert(value.keyframes.every((keyframe) => keyframe.originX === origin.originX && keyframe.originY === origin.originY),
     `${label} transform origin must remain constant; animate sampling or author a component when the pivot itself changes.`);
@@ -113,6 +126,7 @@ function poseStyle(value: Omit<VisualPoseKeyframe, "at" | "easing">): readonly V
 
 export function poseAnimation(value: VisualClipMotion | undefined, durationFrames: number): VisualAnimation | undefined {
   if (value === undefined) return undefined;
+  assert(!value.channels?.length, 'Independent property motion requires poseAnimations.');
   return {
     keyframes: resolvedKeyframes(value, durationFrames).map(({ frame, pose }) => ({
       atFrame: frame,
@@ -120,6 +134,27 @@ export function poseAnimation(value: VisualClipMotion | undefined, durationFrame
       style: poseStyle(pose),
     })),
   };
+}
+
+/** Compose independent property curves in translate, rotate, scale order. */
+export function poseAnimations(value: VisualClipMotion | undefined, durationFrames: number): readonly VisualAnimation[] {
+  if (!value) return [];
+  if (!value.channels?.length) return [poseAnimation(value, durationFrames)!];
+  const base = resolvedKeyframes(value, durationFrames);
+  const properties: readonly VisualMotionProperty[] = ['translateX', 'translateY', 'rotationDeg', 'scaleX', 'scaleY', 'opacity'];
+  return properties.map(property => {
+    const channel = value.channels!.find(item => item.property === property);
+    const keys = channel ? channel.keyframes.map(key => ({ frame: resolveVisualMotionPosition(key.at, durationFrames), value: key.value, easing: key.easing }))
+      : base.map(key => ({ frame: key.frame, value: key.pose[property], easing: key.pose.easing }));
+    let previous = -1;
+    for (const key of keys) { assert(key.frame > previous, `Motion ${property} keyframes must be ordered.`); previous = key.frame; }
+    const first = keys[0]!, last = keys.at(-1)!;
+    if (first.frame > 0) keys.unshift({ ...first, frame: 0 });
+    if (last.frame < durationFrames) keys.push({ ...last, frame: durationFrames });
+    return { keyframes: keys.map(key => ({ atFrame: key.frame, ...(key.easing ? { easing: key.easing } : {}), style: [property === 'opacity' ? { name: 'opacity', value: key.value } : {
+      name: 'transform', value: `${property === 'rotationDeg' ? 'rotate' : property}(${clean(key.value)}${property.startsWith('translate') ? 'px' : property === 'rotationDeg' ? 'deg' : ''})`,
+    }] })) };
+  });
 }
 
 export function samplingAnimation(value: MediaSamplingMotion, durationFrames: number): VisualAnimation {

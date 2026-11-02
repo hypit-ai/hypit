@@ -14,7 +14,7 @@ import {
 } from "./layers.js";
 import { transitionContribution } from "./transition.js";
 import { lowerVisualClipRoot } from "./lower.js";
-import { assertVisualClipMotion, poseAnimation } from "./motion.js";
+import { assertVisualClipMotion, poseAnimations } from "./motion.js";
 import { assertVisualFrameTreatment } from "./frame-treatment.js";
 import { assertMediaLayerPrograms, assertResolvedSampleLayer, resolveMediaLayerPrograms } from "./spatial.js";
 import type {
@@ -140,7 +140,7 @@ export function appendVisualClip(
   });
   if (spec.motion !== undefined) {
     assertVisualClipMotion(spec.motion, `Visual Clip ${spec.id} motion`);
-    poseAnimation(spec.motion, duration);
+    poseAnimations(spec.motion, duration);
   }
   const addition: VisualClipProgram = {
     id: spec.id,
@@ -297,7 +297,7 @@ function assertClip(clip: VisualClipProgram, label: string): void {
   assertVisualFrameTreatment(clip.treatment, `${label}.treatment`);
   if (clip.motion !== undefined) {
     assertVisualClipMotion(clip.motion, `${label}.motion`);
-    poseAnimation(clip.motion, clip.span.endFrameExclusive - clip.span.startFrame);
+    poseAnimations(clip.motion, clip.span.endFrameExclusive - clip.span.startFrame);
   }
   assert(Array.isArray(clip.layers) && clip.layers.length > 0, `${label} requires layers.`);
   assertMediaLayerPrograms(clip.layers);

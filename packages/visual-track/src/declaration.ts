@@ -129,9 +129,21 @@ export function decodeVisualPoseKeyframe(node: AuthorDeclarationChild): VisualCl
   };
 }
 
+const propertyNames = { x: 'translateX', y: 'translateY', 'scale-x': 'scaleX', 'scale-y': 'scaleY', rotate: 'rotationDeg', opacity: 'opacity' } as const;
 function inlineMotion(node: DeclarationNode): VisualClipMotion | undefined {
-  const poses = node.children.filter((child) => child.name === "Pose");
-  return poses.length === 0 ? undefined : sealVisualClipMotion({ keyframes: poses.map(decodeVisualPoseKeyframe) });
+  const poses = node.children.filter(child => child.name === 'Pose');
+  const keys = node.children.filter(child => child.name === 'Keyframe');
+  if (!poses.length && !keys.length) return undefined;
+  const channels: NonNullable<VisualClipMotion['channels']>[number][] = [];
+  for (const key of keys) {
+    const property = propertyNames[literal(key, 'property') as keyof typeof propertyNames];
+    if (!property) throw new Error('Keyframe.property is invalid.');
+    const value = { at: motionPosition(key), value: numeric(key, 'value', Number.NaN), ...(field(key, 'easing') ? { easing: literal(key, 'easing') as 'linear' | 'ease-in' | 'ease-out' | 'ease-in-out' } : {}) };
+    const channel = channels.find(item => item.property === property);
+    if (channel) (channel.keyframes as typeof value[]).push(value); else channels.push({ property, keyframes: [value] });
+  }
+  const keyframes: VisualClipMotion['keyframes'] = poses.length ? poses.map(decodeVisualPoseKeyframe) : [{ at: { kind: 'start', offsetFrames: 0 }, translateX: 0, translateY: 0, scaleX: 1, scaleY: 1, rotationDeg: 0, opacity: 1, originX: .5, originY: .5 }];
+  return sealVisualClipMotion({ keyframes, ...(channels.length ? { channels } : {}) });
 }
 
 export function decodeMediaSamplingKeyframe(node: AuthorDeclarationChild): MediaSamplingMotion["keyframes"][number] {
@@ -311,6 +323,12 @@ const poseFields = [
   ...["x", "y", "scale", "scale-x", "scale-y", "rotate", "opacity", "origin-x", "origin-y"].map((name) => ({ name, kind: "literal" as const, required: false, summary: `Supplies the Pose ${name} parameter.` })),
   { name: "easing", kind: "literal" as const, required: false, values: ["linear", "ease-in", "ease-out", "ease-in-out"], summary: "Shapes the interval leaving this Pose." },
 ] as const;
+const propertyKeyframeFields = [
+  { name: 'property', kind: 'literal' as const, required: true, values: Object.keys(propertyNames), summary: 'Selects one independently animated property.' },
+  { name: 'at', kind: 'literal' as const, required: true, summary: 'Places this value on the Clip-local clock.' },
+  { name: 'value', kind: 'literal' as const, required: true, summary: 'Supplies the property value.' },
+  { name: 'easing', kind: 'literal' as const, required: false, values: ['linear','ease-in','ease-out','ease-in-out'], summary: 'Shapes the interval leaving this keyframe.' },
+];
 const samplingFields = [
   { name: "at", kind: "literal" as const, required: true, summary: "Places this crop state on normalized Clip progress." },
   ...["zoom", "x", "y", "rotate"].map((name) => ({ name, kind: "literal" as const, required: false, summary: `Supplies the Sampling ${name} parameter.` })),
@@ -323,11 +341,11 @@ const curveFields = temporalCubicRelationFieldNames.map((name) => ({ name, kind:
 export const visualMotionAuthorDeclaration: AuthorDeclarationCompiler = {
   module: visualTrackModuleRef, declaration: "motion", outputs: [visualTrackTypes.motion],
   shape: { summary: "Authors one reusable Clip-local affine and opacity Motion.", fields: [{ name: "id", kind: "identifier", required: true, summary: "Names this Motion value." }],
-    children: [{ name: "Pose", cardinality: "many", summary: "Declares one complete visual state.", fields: poseFields }] },
+    children: [{ name: "Pose", cardinality: "many", summary: "Declares one complete visual state.", fields: poseFields }, { name: "Keyframe", cardinality: "many", summary: "Animates an independent property.", fields: propertyKeyframeFields }] },
   bindings(declaration) { const id = literal(declaration, "id"); return [{ name: id, ref: { kind: "record", id }, type: visualTrackTypes.motion }]; },
   compile({ declaration }) {
     const id = literal(declaration, "id"), motion = inlineMotion(declaration);
-    if (motion === undefined) throw new Error(`${declaration.name} requires at least two Pose children.`);
+    if (motion === undefined) throw new Error(`${declaration.name} requires Pose or Keyframe children.`);
     return { records: [{ id, type: visualTrackTypes.motion, value: motion as never, range: declaration.range }], components: [] };
   },
 };
@@ -363,6 +381,7 @@ export const visualTrackAuthorDeclaration: AuthorDeclarationCompiler = {
     { name: "Curve", cardinality: "many", summary: "Adds one exact monotone cubic source-position relation.", fields: curveFields },
     { name: "Sampling", cardinality: "many", summary: "Animates the sampled crop inside the Frame.", fields: samplingFields },
     { name: "Pose", cardinality: "many", summary: "Animates the complete framed Clip.", fields: poseFields },
+    { name: "Keyframe", cardinality: "many", summary: "Animates an independent property.", fields: propertyKeyframeFields },
   ] }, { name: "Transition", cardinality: "many", summary: "Applies one visual effect to two adjacent Clips across an overlap or a centred adjacent cut.", fields: [
     { name: "id", kind: "identifier", required: true, summary: "Names this Transition relation." },
     { name: "for", kind: "literal", required: false, summary: "Sets a positive frame duration centred on adjacent Clip Windows, for example 15f." },
@@ -394,7 +413,7 @@ export const visualTrackAuthorDeclaration: AuthorDeclarationCompiler = {
       const mapping = field(child, "mapping") === undefined ? undefined : await resolved(child, "mapping", spatialTypes.map2D, resolveReference);
       if (mapping !== undefined && FIT_FIELDS.some((name) => field(child, name) !== undefined)) throw new Error(`${child.name} cannot combine mapping with fit fields.`);
       const inline = inlineMotion(child);
-      if (inline !== undefined && field(child, "motion") !== undefined) throw new Error(`${child.name} cannot combine motion with Pose children.`);
+      if (inline !== undefined && field(child, "motion") !== undefined) throw new Error(`${child.name} cannot combine motion with inline animation children.`);
       const externalMotion = inline === undefined && field(child, "motion") !== undefined ? await resolved(child, "motion", visualTrackTypes.motion, resolveReference) : undefined;
       const clipPath = field(child, "clip") === undefined ? undefined : await resolved(child, "clip", spatialTypes.path, resolveReference);
       if (clipPath !== undefined && treatment.properties.clip !== undefined) throw new Error(`${child.name} cannot combine clip with treatment clip.`);

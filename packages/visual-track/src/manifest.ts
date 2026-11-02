@@ -153,6 +153,10 @@ const poseKeyframe = object({
 });
 export const visualClipMotionSchema: ValueSchema = object({
   keyframes: { schema: { kind: "array", minItems: 1, items: poseKeyframe } },
+  channels: { schema: { kind: "array", items: object({
+    property: { schema: { kind: "string", enum: ['translateX','translateY','rotationDeg','scaleX','scaleY','opacity'] } },
+    keyframes: { schema: { kind: "array", minItems: 1, items: object({ at: { schema: motionPosition }, value: { schema: number }, easing: { schema: { kind: 'string', enum: ['linear','ease-in','ease-out','ease-in-out'] }, optional: true } }) } },
+  }) }, optional: true },
 });
 export const visualClipSpecSchema: ValueSchema = object({
   id: { schema: string },
