@@ -1,15 +1,18 @@
+import { textDependency, textTypes } from "@hypit/hypit/text";
 import { temporalDependency, temporalTypes, temporalWindowSchema } from "@hypit/temporal";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/hypit/protocol";
 import { frameSpanSchema, timelineDependency, timelineTypes } from "@hypit/timeline";
 
 export const captionModuleRef = { name: "@hypit/caption", version: "1" } as const;
 export const captionProducers = {
+  cueText: { module: captionModuleRef, name: "cue-text" },
   resolveTiming: { module: captionModuleRef, name: "resolve-caption-timing" },
   create: { module: captionModuleRef, name: "create-caption-uses" },
   append: { module: captionModuleRef, name: "append-caption-use" },
   appendUnbounded: { module: captionModuleRef, name: "append-unbounded-caption-use" },
 } satisfies Record<string, ProducerRef>;
 export const captionTypes = {
+  cueSelection: { module: captionModuleRef, name: "CaptionCueSelection" },
   timingSpec: { module: captionModuleRef, name: "CaptionTimingSpec" },
   document: { module: captionModuleRef, name: "CaptionDocument" },
   header: { module: captionModuleRef, name: "CaptionTrackSpec" },
@@ -70,10 +73,14 @@ export const captionTimingSchema: ValueSchema = object({
 
 export const captionManifest: ModuleManifest = {
   format: "hypit.module@1", name: captionModuleRef.name, version: captionModuleRef.version,
-  dependencies: [temporalDependency, timelineDependency], types: [
-    captionTypes.document.name, captionTypes.header.name, captionTypes.filter.name,
+  dependencies: [temporalDependency, timelineDependency, textDependency], types: [
+    captionTypes.cueSelection.name, captionTypes.document.name, captionTypes.header.name, captionTypes.filter.name,
     captionTypes.style.name, captionTypes.program.name, captionTypes.timing.name, captionTypes.timingSpec.name,
   ], capabilities: [], producers: [{
+    name: captionProducers.cueText.name,
+    inputs: [{ name: "document", type: captionTypes.document }, { name: "cue", type: captionTypes.cueSelection }],
+    result: { kind: "output" as const, name: "text", type: textTypes.text },
+  }, {
     name: captionProducers.resolveTiming.name,
     inputs: [{ name: "document", type: captionTypes.document }, { name: "timeline", type: timelineTypes.timeline }, { name: "spec", type: captionTypes.timingSpec }],
     result: { kind: "output" as const, name: "timing", type: captionTypes.timing },

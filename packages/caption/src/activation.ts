@@ -1,3 +1,4 @@
+import { captionTextAuthorDeclaration, captionTextMarkupDeclaration } from "./text-declaration.js";
 import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
 import { createProducerPackageFacet } from "@hypit/hypit/producer";
 import { createAuthorDeclarationFacet } from "@hypit/hypit/author";
@@ -13,6 +14,8 @@ export const hypitPackage = {
     ...[captionComponent].flatMap((component) => [createProducerPackageFacet(component.producers ?? []), createRefinementPackageFacet(component.refinements ?? [])]),
     createAuthorDeclarationFacet(hiddenCaptionStyleAuthorDeclaration),
     createAuthorDeclarationFacet(captionDocumentAuthorDeclaration),
+    createAuthorDeclarationFacet(captionTextAuthorDeclaration),
+    createMarkupDeclarationFacet({ module: captionModuleRef, declaration: captionTextMarkupDeclaration }),
     createAuthorDeclarationFacet(captionTimingAuthorDeclaration),
     createMarkupDeclarationFacet({ module: captionModuleRef, declaration: captionTimingMarkupDeclaration }),
     createMarkupDeclarationFacet({ module: captionModuleRef, declaration: captionDocumentMarkupDeclaration }),

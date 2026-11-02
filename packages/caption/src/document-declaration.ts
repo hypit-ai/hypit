@@ -75,7 +75,7 @@ const identifier = { name: "id", kind: "identifier", required: true, summary: "S
 export const captionDocumentAuthorDeclaration: AuthorDeclarationCompiler = {
   module: captionModuleRef, declaration: "document", outputs: [captionTypes.document],
   shape: {
-    summary: "Authored caption content with ordered cues, units and words.", fields: [identifier],
+    summary: "Authored caption content with ordered cues, units and words.", fields: [identifier, { name: "source-uri", kind: "literal", required: false, summary: "Original source URI retained by the authoring document." }],
     children: [{ name: "Cue", cardinality: "many", summary: "One reading group.",
       fields: [identifier, { name: "role", kind: "literal", required: false, summary: "Optional speaker or presentation role." }],
       children: [{ name: "Unit", cardinality: "many", summary: "One independently timed display unit.", fields: [identifier],

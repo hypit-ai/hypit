@@ -1,3 +1,4 @@
+import { captionCueText } from "./text-declaration.js";
 import type { RefinementPackage } from "@hypit/hypit/refinement";
 import type { TemporalWindow } from "@hypit/temporal";
 import type { ProducerPackage } from "@hypit/hypit/producer";
@@ -19,6 +20,9 @@ function valueOf<T>(value: Value | undefined, subject: string): T {
 
 export const captionComponent = {
   producers: [{
+    producer: captionProducers.cueText,
+    handler: ({ inputs }) => ({ kind: "output", value: canonicalize(captionCueText(valueOf<CaptionDocument>(inputs.document?.value, "CaptionDocument"), valueOf<{ cueId: string }>(inputs.cue?.value, "CaptionCueSelection").cueId)) }),
+  }, {
     producer: captionProducers.resolveTiming,
     handler: ({ inputs }) => ({ kind: "output", value: canonicalize(createAbsoluteCaptionTiming(
       valueOf<CaptionDocument>(inputs.document?.value, "CaptionDocument"),

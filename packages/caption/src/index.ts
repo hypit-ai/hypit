@@ -24,3 +24,5 @@ export { captionTimingAuthorDeclaration, captionTimingMarkupDeclaration } from "
 export { createAbsoluteCaptionTiming } from "./absolute-timing.js";
 export type { CaptionTimingSpec } from "./absolute-timing.js";
 export { hiddenCaptionStyleAuthorDeclaration } from "./declaration.js";export { hiddenCaptionStyleMarkupDeclaration } from "./declaration.js";
+
+export { captionCueText, captionTextAuthorDeclaration, captionTextMarkupDeclaration } from "./text-declaration.js";

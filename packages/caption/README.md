@@ -112,3 +112,15 @@ Use `document={subtitles}` and `timing={subtitle-time}` on a Caption rendering f
 `captionDocumentDeclaration` converts a typed CaptionDocument into structured author nodes;
 `captionDocumentFromDeclaration` reads those nodes. Editors can replace one Word's text, move a Cue,
 or update a Timing Unit's fields through AuthorDocument operations.
+
+An imported Document can retain its original location in the optional author field `source-uri`.
+The declaration's Cue content supplies the saved text. `Text` selects one Cue as a typed Text value,
+including its Word separators and line breaks:
+
+```xml
+<caption:Text id="opening-copy" document={subtitles} cue="opening"/>
+```
+
+Text consumers can reference this value, including a Text Fine Flow's `content` input. Its Window
+and Motion then describe that occurrence's timing and placement. Editors update the referenced
+Caption Word while preserving the Cue's identity.
