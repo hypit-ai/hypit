@@ -9,5 +9,10 @@ export const seedanceEditors: readonly StudioDeclarationEditor[] = Object.entrie
   id: declaration, match: { module: seedanceModuleRef, declaration }, category: 'video', layout: 'prompt', title,
   prompts: [{ label: { en: 'Prompt', 'zh-CN': '提示词' }, source: { kind: 'reference', field: 'prompt' }, placeholder: { en: 'Describe the scene and camera movement…', 'zh-CN': '描述画面、动作和镜头运动…' } }],
   settings: [{ field: 'model', label: { en: 'Model', 'zh-CN': '模型' } }, { field: 'duration', label: { en: 'Duration (s)', 'zh-CN': '时长（秒）' } }, { field: 'resolution', label: { en: 'Resolution', 'zh-CN': '分辨率' } }, { field: 'aspect-ratio', label: { en: 'Aspect ratio', 'zh-CN': '画面比例' } }],
+  references: declaration === 'frame-video'
+    ? [{ field: 'first-frame', media: ['image'] }, { field: 'last-frame', media: ['image'] }]
+    : declaration === 'reference-video'
+      ? [{ child: 'Reference', field: 'image', media: ['image'] }, { child: 'Reference', field: 'video', media: ['video'] }, { child: 'Reference', field: 'audio', media: ['audio'] }]
+      : [],
   defaults: { model: 'standard', duration: '5', resolution: '720p', 'aspect-ratio': '16:9', ...(declaration === 'frame-video' ? { 'first-frame-person-reference': 'false' } : {}) },
 }));

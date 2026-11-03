@@ -670,6 +670,11 @@ export type StudioDeclarationEditor = {
     readonly source: { readonly kind: "body" } | { readonly kind: "reference"; readonly field: string };
     readonly placeholder?: StudioEditorLabel;
   }[];
+  readonly references?: readonly {
+    readonly field: string;
+    readonly child?: string;
+    readonly media: readonly ("image" | "video" | "audio")[];
+  }[];
   readonly settings?: readonly { readonly field: string; readonly label: StudioEditorLabel }[];
   readonly defaults?: Readonly<Record<string, string>>;
 };
