@@ -656,6 +656,24 @@ export type StudioParameterCompanion = {
   readonly inspector: readonly StudioInspectorFieldDeclaration[];
 };
 
+export type StudioEditorLabel = string | Readonly<Record<string, string>>;
+
+/** Package-owned presentation of an authored declaration. Writes use the Author document API. */
+export type StudioDeclarationEditor = {
+  readonly id: string;
+  readonly match: { readonly module: ModuleRef; readonly declaration: string };
+  readonly category: "text" | "image" | "video" | "audio" | "component";
+  readonly title: StudioEditorLabel;
+  readonly layout: "prompt" | "form";
+  readonly prompts?: readonly {
+    readonly label: StudioEditorLabel;
+    readonly source: { readonly kind: "body" } | { readonly kind: "reference"; readonly field: string };
+    readonly placeholder?: StudioEditorLabel;
+  }[];
+  readonly settings?: readonly { readonly field: string; readonly label: StudioEditorLabel }[];
+  readonly defaults?: Readonly<Record<string, string>>;
+};
+
 export type StudioCompanionContribution = {
   readonly format: "hypit.studio-companions@1";
   readonly tracks: readonly StudioTrackCompanion[];
@@ -664,6 +682,7 @@ export type StudioCompanionContribution = {
   readonly temporalDeclarations?: readonly StudioTemporalDeclarationCompanion[];
   readonly temporalRelations?: readonly StudioTemporalRelationCompanion[];
   readonly parameters?: readonly StudioParameterCompanion[];
+  readonly declarationEditors?: readonly StudioDeclarationEditor[];
 };
 
 /** Declarative Film boundary. Studio follows only the references named here. */
@@ -894,6 +913,7 @@ export function createStudioCompanionFacet(input: {
   readonly temporalDeclarations?: readonly StudioTemporalDeclarationCompanion[];
   readonly temporalRelations?: readonly StudioTemporalRelationCompanion[];
   readonly parameters?: readonly StudioParameterCompanion[];
+  readonly declarationEditors?: readonly StudioDeclarationEditor[];
 }): StudioCompanionFacet {
   return {
     abi: studioCompanionFacetAbi,
@@ -905,6 +925,7 @@ export function createStudioCompanionFacet(input: {
       ...(input.temporalDeclarations === undefined ? {} : { temporalDeclarations: input.temporalDeclarations }),
       ...(input.temporalRelations === undefined ? {} : { temporalRelations: input.temporalRelations }),
       ...(input.parameters === undefined ? {} : { parameters: input.parameters }),
+      ...(input.declarationEditors === undefined ? {} : { declarationEditors: input.declarationEditors }),
     },
   };
 }
@@ -916,6 +937,7 @@ export type StudioPackageContribution = {
   readonly temporalDeclarations: readonly StudioTemporalDeclarationCompanion[];
   readonly temporalRelations: readonly StudioTemporalRelationCompanion[];
   readonly parameters: readonly StudioParameterCompanion[];
+  readonly declarationEditors: readonly StudioDeclarationEditor[];
 };
 
 function qualify(owner: string, local: string, subject: string): string {
@@ -936,6 +958,7 @@ export function studioContributionFromPackage(
   const temporalDeclarations: StudioTemporalDeclarationCompanion[] = [];
   const temporalRelations: StudioTemporalRelationCompanion[] = [];
   const parameters: StudioParameterCompanion[] = [];
+  const declarationEditors: StudioDeclarationEditor[] = [];
   for (const facet of facets) {
     if (facet.abi !== studioCompanionFacetAbi) continue;
     const contribution = facet.implementation as Partial<StudioCompanionContribution>;
@@ -953,6 +976,9 @@ export function studioContributionFromPackage(
     parameters.push(...(contribution.parameters ?? []).map((parameter) => ({
       ...parameter, id: qualify(owner, parameter.id, "Studio Parameter companion"),
     })));
+    declarationEditors.push(...(contribution.declarationEditors ?? []).map(editor => ({
+      ...editor, id: qualify(owner, editor.id, "Studio Declaration editor"),
+    })));
     temporalDomains.push(...(contribution.temporalDomains ?? []).map((domain) => ({
       ...domain,
       id: qualify(owner, domain.id, "Studio Temporal Domain companion"),
@@ -966,7 +992,7 @@ export function studioContributionFromPackage(
       id: qualify(owner, relation.id, "Studio Temporal Relation companion"),
     })));
   }
-  return { tracks, films, temporalDomains, temporalDeclarations, temporalRelations, parameters };
+  return { tracks, films, temporalDomains, temporalDeclarations, temporalRelations, parameters, declarationEditors };
 }
 
 /**

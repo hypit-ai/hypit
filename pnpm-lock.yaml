@@ -1225,6 +1225,9 @@ importers:
       '@hypit/generation':
         specifier: workspace:0.4.1-preview.0
         version: link:../generation
+      '@hypit/studio-companion':
+        specifier: workspace:0.4.1-preview.0
+        version: link:../studio-companion
     devDependencies:
       '@hypit/blob':
         specifier: workspace:*
@@ -2605,6 +2608,9 @@ importers:
       '@hypit/generation':
         specifier: workspace:0.4.1-preview.0
         version: link:../generation
+      '@hypit/studio-companion':
+        specifier: workspace:0.4.1-preview.0
+        version: link:../studio-companion
     devDependencies:
       '@hypit/hypit':
         specifier: workspace:*
@@ -2633,6 +2639,9 @@ importers:
       '@hypit/generation':
         specifier: workspace:0.4.1-preview.0
         version: link:../generation
+      '@hypit/studio-companion':
+        specifier: workspace:0.4.1-preview.0
+        version: link:../studio-companion
     devDependencies:
       '@hypit/blob':
         specifier: workspace:*

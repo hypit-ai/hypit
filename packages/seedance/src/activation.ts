@@ -1,3 +1,5 @@
+import { createStudioCompanionFacet } from "@hypit/studio-companion";
+import { seedanceEditors } from "./studio.js";
 import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
 import { createProducerPackageFacet } from "@hypit/hypit/producer";
 import { createAuthorDeclarationFacet } from "@hypit/hypit/author";
@@ -8,7 +10,7 @@ import { seedanceAuthorDeclarations, seedanceMarkupDeclarations } from "./declar
 export const hypitPackage = {
   format: "hypit.package@1" as const,
   modules: [{ manifest: seedanceManifest }],
-  facets: [
+  facets: [createStudioCompanionFacet({ declarationEditors: seedanceEditors }),
     ...[seedanceComponent].flatMap((component) => [createProducerPackageFacet(component.producers ?? []), createRefinementPackageFacet(component.refinements ?? [])]),
     ...seedanceAuthorDeclarations.map(createAuthorDeclarationFacet),
     ...seedanceMarkupDeclarations.map((declaration) =>

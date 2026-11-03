@@ -402,3 +402,31 @@ trim and playback rate when displaying those positions on an editing Timeline.
 `observe` receives the AuthorDocument body's `contentStart` and `contentEnd` where the frontend
 provides them. Package-owned `adjust` operations consume explicit semantic anchor identities.
 The host checks source revisions and saves the returned body through the document frontend.
+
+## Declaration editors
+
+A package can contribute `declarationEditors` through `createStudioCompanionFacet`.
+Each editor matches an exact module and author declaration and supplies a category,
+localized title, prompt sources, common settings, and optional creation defaults.
+A prompt source selects the declaration body or a reference-valued field. The host
+renders `layout: "prompt"` as a creation panel and applies edits through the Author
+transaction API with the document revision. Referenced text retains its source
+object identity. Field types and accepted references come from the matched Author
+shape. Other fields remain available in the host's detailed settings.
+
+```ts
+createStudioCompanionFacet({
+  declarationEditors: [{
+    id: "image",
+    match: { module: imageModule, declaration: "text-image" },
+    category: "image",
+    title: { en: "Create image", "zh-CN": "生成图片" },
+    layout: "prompt",
+    prompts: [{
+      label: { en: "Prompt", "zh-CN": "提示词" },
+      source: { kind: "reference", field: "prompt" },
+    }],
+    settings: [{ field: "aspect-ratio", label: "Aspect ratio" }],
+  }],
+});
+```

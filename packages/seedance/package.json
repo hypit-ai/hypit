@@ -21,9 +21,11 @@
     "@hypit/hypit": "workspace:*",
     "@hypit/markup": "workspace:*",
     "@hypit/protocol": "workspace:*",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "@hypit/studio-companion": "workspace:*"
   },
   "dependencies": {
-    "@hypit/generation": "workspace:0.4.1-preview.0"
+    "@hypit/generation": "workspace:0.4.1-preview.0",
+    "@hypit/studio-companion": "workspace:0.4.1-preview.0"
   }
 }
