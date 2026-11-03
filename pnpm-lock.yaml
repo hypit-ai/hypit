@@ -1287,6 +1287,9 @@ importers:
       '@hypit/image-operations':
         specifier: workspace:0.4.1-preview.0
         version: link:../image-operations
+      '@hypit/studio-companion':
+        specifier: workspace:0.4.1-preview.0
+        version: link:../studio-companion
     devDependencies:
       '@hypit/author':
         specifier: workspace:*

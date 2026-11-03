@@ -15,6 +15,7 @@
     "README.md"
   ],
   "dependencies": {
+    "@hypit/studio-companion": "workspace:0.4.1-preview.0",
     "@hypit/generation": "workspace:0.4.1-preview.0",
     "@hypit/image-operations": "workspace:0.4.1-preview.0"
   },
@@ -22,6 +23,7 @@
     "@hypit/hypit": "workspace:0.4.1-preview.0"
   },
   "devDependencies": {
+    "@hypit/studio-companion": "workspace:*",
     "@hypit/blob": "workspace:*",
     "@hypit/kernel": "workspace:*",
     "@hypit/author": "workspace:*",

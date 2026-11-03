@@ -1,4 +1,6 @@
 import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
+import { createStudioCompanionFacet } from "@hypit/studio-companion";
+import { gptImageEditors } from "./studio.js";
 import { createProducerPackageFacet } from "@hypit/hypit/producer";
 import { createAuthorDeclarationFacet } from "@hypit/hypit/author";
 import { createMarkupDeclarationFacet } from "@hypit/hypit/markup";
@@ -12,6 +14,7 @@ export const hypitPackage = {
     manifest: gptImageCleanManifest,
   }],
   facets: [
+    createStudioCompanionFacet({ declarationEditors: gptImageEditors }),
     ...[gptImageComponent].flatMap((component) => [createProducerPackageFacet(component.producers ?? []), createRefinementPackageFacet(component.refinements ?? [])]),
     ...gptImageAuthorDeclarations.map(createAuthorDeclarationFacet),
     ...gptImageMarkupDeclarations.map(({ module, declaration }) =>
