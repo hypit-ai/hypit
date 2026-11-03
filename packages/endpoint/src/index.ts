@@ -90,6 +90,8 @@ export function verifyEndpointPricingDocument(value: EndpointPricingDocument): v
 }
 
 export type EndpointInvocationContext = {
+  /** Execution identity for host-side authorization and activity correlation. */
+  readonly execution?: { readonly build: string; readonly command: string; readonly need: string };
   readonly request: EndpointRequest;
   readonly resources: ResourceStore;
   /** Only slots explicitly declared by this configured Endpoint instance are present. */

@@ -11,3 +11,5 @@ export { discoverSourcePackages } from "./source-discovery.js";
 export type { CliCompilerOptions, CliDistribution } from "./distribution.js";
 export type { CliIo, CliMachineView, CliOutputOptions, CliTerminal } from "./output.js";
 export type * from "./runtime-port.js";
+export { evaluatePlanNeeds, plannedEndpointQueries, describePlanEndpoints, describePlanPricing } from './build-planning.js';
+export type { EvaluatedPlan, PlanEndpointView, PlanPricingView } from './build-planning.js';

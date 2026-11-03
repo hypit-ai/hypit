@@ -301,11 +301,12 @@ export type BuildResultWriter = {
 };
 
 /**
- * Immutable project history addressed by Build id and retained Output name. Open drafts never
- * cross this reader boundary.
+ * Project results addressed by Build id and retained Output name. Only persisted outputs are exposed.
  */
 export type BuildResultHistory = {
   read(build: string): Promise<BuildResult | undefined>;
+  /** Successfully persisted outputs, including those from a running Build. */
+  available(build: string): Promise<Readonly<Record<string, BuildResultOutput>>>;
   /** Browse finished Results in descending Build-id time order. */
   browse(request: BuildResultBrowseRequest): Promise<BuildResultPage>;
   resolve(build: string, output: string): Promise<RepositoryBuildResultOutput | undefined>;

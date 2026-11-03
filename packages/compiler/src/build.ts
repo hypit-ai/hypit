@@ -13,6 +13,8 @@ import type {
 import type {
   BuildDefinition,
   LogicalOutputId,
+  LogicalOutputSelection,
+  TypedRecord,
   ResultIntent,
   TypeRef,
 } from "@hypit/protocol";
@@ -57,6 +59,12 @@ export type CompiledBuild = {
   /** The fixed graph resolution shared by execution slicing and Result retention. */
   readonly execution: PlannedExecution;
   readonly attachments: readonly BlobAttachment[];
+};
+
+export type BuildCandidateSelection = {
+  readonly records: readonly TypedRecord[];
+  readonly selections: readonly LogicalOutputSelection[];
+  readonly attachments?: readonly BlobAttachment[];
 };
 
 export type PreparedBuild = {
@@ -134,7 +142,19 @@ export class BuildCompiler {
     return await this.compileAuthorResolvedSource(workspace.entry, workspace, request);
   }
 
-  prepareBuild(compilation: CompiledBuild): PreparedBuild {
+  prepareBuild(compilation: CompiledBuild, candidates?: BuildCandidateSelection): PreparedBuild {
+    if (candidates) {
+      const ids = new Set(compilation.program.records.map(record => record.id));
+      for (const record of candidates.records) {
+        if (ids.has(record.id)) throw new Error(`Candidate record repeats identity ${record.id}`);
+        ids.add(record.id);
+      }
+      const program = { ...compilation.program, records: [...compilation.program.records, ...candidates.records] };
+      compilation = { ...compilation, program,
+        attachments: mergeAttachments([compilation.attachments, candidates.attachments ?? []]),
+        execution: planBuild(program, compilation.author.graph, outputIds(compilation.selection), candidates.selections),
+      };
+    }
     const sliced = sliceExecution(
       compilation.program,
       outputIds(compilation.selection),

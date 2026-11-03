@@ -18,6 +18,9 @@ export const mediaTypes = {
   blobArtifact: blobTypes.blob,
 } satisfies Record<string, TypeRef>;
 export const mediaProducers = {
+  referenceImage: {module:mediaModuleRef,name:"reference-image"},
+  referenceVideo: {module:mediaModuleRef,name:"reference-video"},
+  referenceAudio: {module:mediaModuleRef,name:"reference-audio"},
   prepare: { module: mediaModuleRef, name: "prepare-media" },
   localDomain: { module: mediaModuleRef, name: "local-domain" },
   visualDelivery: { module: mediaModuleRef, name: "project-visual-delivery" },
@@ -39,6 +42,7 @@ export const mediaManifest: ModuleManifest = {
     mediaTypes.compositableSurface.name,
     mediaTypes.pictureInterpretation.name,
   ], capabilities: [], producers: [
+    ...[mediaProducers.referenceImage,mediaProducers.referenceVideo,mediaProducers.referenceAudio].map(producer=>({name:producer.name,inputs:[{name:"source",type:blobTypes.blob}],result:{kind:"output" as const,name:"artifact",type:blobTypes.blob}})),
     { name: mediaProducers.prepare.name,
       inputs: [
         { name: "source", type: blobTypes.blob },

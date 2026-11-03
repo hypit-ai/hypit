@@ -19,6 +19,7 @@ export type {
   BuildCompilerOptions,
   CompiledBuild,
   PreparedBuild,
+  BuildCandidateSelection,
   ResolvedTarget,
   ResolvedTargetSelection,
   TargetSelection,

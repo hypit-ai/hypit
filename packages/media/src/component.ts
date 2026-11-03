@@ -33,6 +33,11 @@ export const mediaComponent = {
     ) },
   ],
   producers: [
+    ...([{producer:mediaProducers.referenceImage,kind:'image'},{producer:mediaProducers.referenceVideo,kind:'video'},{producer:mediaProducers.referenceAudio,kind:'audio'}] as const).map(({producer,kind})=>({producer,handler:({inputs}:Parameters<ProducerPackage[number]['handler']>[0])=>{
+      const source=valueOf(inputs.source?.value,'Media reference');assertBlobRef(source,'Media reference');
+      if(!source.mediaType.startsWith(`${kind}/`))throw new Error(`Media reference requires ${kind}`);
+      return {kind:'output' as const,value:source};
+    }})),
     { producer: mediaProducers.prepare, handler: ({ inputs }) => {
       const source = valueOf(inputs.source!.value, "Prepared Media source");
       assertBlobRef(source, "Prepared Media source");

@@ -1,3 +1,4 @@
+export { resolveBuildResultValue } from "./value.js";
 export {
   assertBuildResultValueDocument,
   assertBuildResultFileRef,

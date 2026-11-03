@@ -53,6 +53,12 @@ function buildView(input: {
     ...(input.result?.sourcePath === undefined ? {} : { sourcePath: input.result.sourcePath }),
     targets,
     ...(requests === undefined ? {} : { requests }),
+    steps: input.snapshot?.definition.plan.steps.map(step => ({
+      id: step.id, result: step.result.record,
+      ...(step.result.kind === "need" ? { need: step.result.id } : {}),
+      status: state?.records.some(record => record.id === step.result.record) ? "complete" as const
+        : state?.outstanding.some(command => command.kind === "invoke-producer" ? command.step === step.id : step.result.kind === "need" && command.need.id === step.result.id) ? "running" as const : "waiting" as const,
+    })) ?? [],
     acceptedRecords: state?.records.length ?? 0,
     outstandingCommands: state?.outstanding.length ?? 0,
     commands: input.commands.flatMap((command) => command.status === "started" && command.activity !== undefined
@@ -60,6 +66,11 @@ function buildView(input: {
     operations: input.operations.map((operation): BuildView["operations"][number] => {
       const evidence = {
         id: operation.id,
+        command: operation.command,
+        need: operation.need.id,
+        result: operation.need.result,
+        phase: operation.status,
+        createdAt: operation.createdAt,
         endpoint: operation.endpoint,
         ...(operation.receipt === undefined ? {} : { receipt: operation.receipt }),
         ...("wakeAt" in operation && operation.wakeAt !== undefined ? { wakeAt: operation.wakeAt } : {}),

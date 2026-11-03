@@ -462,6 +462,7 @@ export class Executor {
     const actionEndedAt = operation.status === "collecting" ? operation.endedAt : undefined;
     const invoke = async (): Promise<EndpointOutcome> => {
       const context = {
+        execution: { build: operation.build, command: operation.command, need: operation.need.id },
         request: endpointRequest(operation.need),
         resources: this.#resourceStore(operation.build), operation: operation.id,
         credentials: await this.#endpointCredentials({ ...registration, credentials: operation.credentials }),
@@ -611,6 +612,7 @@ export class Executor {
     await context?.recordExecution?.({ endpoint: executable.endpointId, kind: "started" });
     try {
       const result = await executable.registration.handler({
+        ...(context ? { execution: { build: context.build, command: executable.command.id, need: executable.command.need.id } } : {}),
         request: endpointRequest(executable.command.need),
         resources: this.#resourceStore(context?.build),
         credentials: await this.#endpointCredentials(executable.registration),
@@ -686,6 +688,7 @@ export class Executor {
         const support = this.endpoints.checkSupport(selected.registration, current.need);
         if (support.status === "unsupported") throw new Error(`Operation request is unsupported: ${support.reason}`);
         const result = await selected.registration.endpoint.cancel?.({
+          execution: { build: current.build, command: current.command, need: current.need.id },
           request: endpointRequest(current.need), operation: current.id, handle: current.handle,
           resources: this.#resourceStore(current.build),
           credentials: await this.#endpointCredentials(selected.registration),

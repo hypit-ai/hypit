@@ -1,5 +1,6 @@
 import {
   declarationField,
+  sealGraphFragment,
   type AuthorDeclaration,
   type AuthorDeclarationChild,
   type AuthorDeclarationCompiler,
@@ -11,7 +12,7 @@ import { sameType, type CanonicalValue, type TypeRef } from "@hypit/hypit/protoc
 import type { MediaDeliverySpec } from "./types.js";
 import { mediaDeliveryProfile } from "./delivery.js";
 
-import { mediaModuleRef, mediaTypes } from "./manifest.js";
+import { mediaModuleRef, mediaTypes, mediaProducers } from "./manifest.js";
 import {
   assertFontArtifactRef,
   assertFontStackRef,
@@ -100,14 +101,23 @@ function assetDeclaration(
     outputs: [blobTypes.blob],
     shape: {
       summary: `Publishes one Host-resolved ${kind} Artifact.`,
-      fields: [idField, sourceField, mediaTypeField],
+      fields: [idField, {...sourceField,required:false}, {name:"source",kind:"reference",required:false,accepts:[blobTypes.blob],summary:"Selects a logical media output."}, mediaTypeField],
     },
     bindings(value) {
       const id = literal(value, "id");
-      return [idBinding(id, blobTypes.blob)];
+      return [declarationField(value,"source") ? {name:id,ref:{kind:"component-output" as const,component:id,output:"artifact"},type:blobTypes.blob} : idBinding(id, blobTypes.blob)];
     },
-    async compile({ declaration: value, resolveAsset }) {
+    async compile({ declaration: value, resolveAsset, resolveReference }) {
       const id = literal(value, "id");
+      const reference=declarationField(value,'source');
+      if(reference) {
+        if(declarationField(value,'src') || reference.kind!=='reference')throw new Error('Media requires either a file location or a logical source');
+        const source=await resolveReference(reference.path);
+        if(!source || !sameType(source.type,blobTypes.blob))throw new Error('Media source must resolve to Blob');
+        const producer=kind==='image'?mediaProducers.referenceImage:kind==='video'?mediaProducers.referenceVideo:mediaProducers.referenceAudio;
+        const fragment=sealGraphFragment({inputs:[{name:'source',type:blobTypes.blob}],operations:[{id:'reference',producer,inputs:{source:{kind:'fragment-input',name:'source'}},result:{kind:'output',name:'artifact'}}],exports:[{name:'artifact',type:blobTypes.blob,root:{kind:'fragment-operation',operation:'reference'}}]});
+        return {records:[],components:[{id,fragment,inputs:{source:source.ref},outputs:{artifact:id},range:value.range}]};
+      }
       const source = literal(value, "src");
       const mediaType = mediaTypeFor(value, source, kind, known);
       const resolved = await resolveAsset({ from: source, mediaType, range: value.range });

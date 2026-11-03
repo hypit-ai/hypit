@@ -5,6 +5,7 @@ import {
   defineBuild,
   materializeBuild,
   plannedNeeds,
+  planBuild,
 } from "@hypit/kernel";
 import type {
   CommandResult,
@@ -15,7 +16,7 @@ import type {
 } from "@hypit/protocol";
 import type { BuildView } from "@hypit/kernel";
 
-import { createGreetingBuild, createParallelGreetingBuild } from "../greeting-fixture.js";
+import { createGreetingBuild, createParallelGreetingBuild, greetingGraph, types } from "../greeting-fixture.js";
 
 function machineFor(state: BuildView): BuildMachine {
   return new BuildMachine(defineBuild({ program: state.program, plan: state.plan }));
@@ -168,4 +169,16 @@ test("planned Needs cover the complete finite topology before any Producer execu
     { step: "generate-b", need: "need:generation-b", result: "generated:b" },
     { step: "generate-c", need: "need:generation-c", result: "generated:c" },
   ]);
+});
+
+// Reintroducing a selected output's producer into planning would repeat a paid request.
+test("selected generation results remove only their upstream requests", () => {
+  const original = createGreetingBuild({ includeSideTarget: true });
+  const program = { ...original.program, records: [...original.program.records, { id: "selected:generation", type: types.generated, value: { text: "Chosen result" } }] };
+  const planned = planBuild(program, greetingGraph(true), ["document", "side-document"], [{ output: "generated", record: "selected:generation" }]);
+  const main = planned.plan.steps.find(step => step.id === "assemble")!;
+  assert.equal(main.inputs.generated, "selected:generation");
+  assert.equal(planned.plan.steps.some(step => step.id === "request-text"), false);
+  assert.equal(planned.plan.steps.some(step => step.id === "side-placeholder"), true);
+  assert.throws(() => planBuild(program, greetingGraph(), ["document"], [{ output: "generated", record: "intent:root" }]), /Candidate/);
 });

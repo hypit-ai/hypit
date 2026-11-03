@@ -35,6 +35,11 @@ export type BuildActivity = "submitting" | "ready" | "running" | "waiting" | "sa
 
 type BuildOperationViewEvidence = {
   readonly id: string;
+  readonly command: string;
+  readonly need: string;
+  readonly result: string;
+  readonly phase: OperationSnapshot["status"];
+  readonly createdAt: number;
   readonly receipt?: import("@hypit/hypit/runtime").OperationReceipt;
   readonly wakeAt?: number;
   readonly endpoint: string;
@@ -58,6 +63,12 @@ export type BuildView = {
   readonly targets: readonly string[];
   /** External Needs in the frozen Build Plan and the subset already accepted by Core. */
   readonly requests?: { readonly total: number; readonly completed: number };
+  readonly steps: readonly {
+    readonly id: string;
+    readonly result: string;
+    readonly need?: string;
+    readonly status: "waiting" | "running" | "complete";
+  }[];
   readonly acceptedRecords: number;
   readonly outstandingCommands: number;
   readonly operations: readonly BuildOperationView[];

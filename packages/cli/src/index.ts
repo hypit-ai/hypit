@@ -38,3 +38,5 @@ export type {
   CliDistribution,
 } from "./distribution.js";
 export type * from "./runtime-port.js";
+export { evaluatePlanNeeds, plannedEndpointQueries, describePlanEndpoints, describePlanPricing } from './build-planning.js';
+export type { EvaluatedPlan, PlanEndpointView, PlanPricingView } from './build-planning.js';

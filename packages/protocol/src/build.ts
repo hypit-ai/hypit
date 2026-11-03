@@ -51,6 +51,12 @@ export type LogicalOutput = {
   readonly result: OperationResultRef;
 };
 
+/** A resolved, typed Candidate chosen for a logical output in one execution. */
+export type LogicalOutputSelection = {
+  readonly output: LogicalOutputId;
+  readonly record: RecordId;
+};
+
 export type OperationResult =
   | {
       readonly kind: "output";

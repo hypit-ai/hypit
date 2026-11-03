@@ -199,7 +199,7 @@ export async function resolveBuildResultOutput(
 ): Promise<ResolvedFileBuildResultOutput | undefined> {
   const directory = buildResultDirectory(root, build);
   const manifest = await readStoredBuildResult(directory);
-  if (manifest === undefined || manifest.outcome === undefined) return undefined;
+  if (manifest === undefined) return undefined;
   const entry = buildResultOutput(manifest, output);
   if (entry === undefined) return undefined;
   if (entry.value.kind === "value") {
@@ -333,7 +333,7 @@ export class FileBuildResult {
   }
 }
 
-/** Finished project history backed by one ordinary directory tree. */
+/** Persisted project results backed by one directory tree. */
 export class FileBuildResultHistory implements BuildResultHistory {
   readonly root: string;
 
@@ -345,6 +345,11 @@ export class FileBuildResultHistory implements BuildResultHistory {
   async read(build: string): Promise<BuildResult | undefined> {
     const manifest = await readStoredBuildResult(buildResultDirectory(this.root, build));
     return manifest?.outcome === undefined ? undefined : manifest;
+  }
+
+  async available(build: string) {
+    const manifest = await readStoredBuildResult(buildResultDirectory(this.root, build));
+    return manifest?.outputs ?? {};
   }
 
   async browse(request: { readonly before?: string; readonly limit: number }) {

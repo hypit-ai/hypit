@@ -4,6 +4,7 @@ import type {
   AuthorGraph,
   GraphValueRef,
   LinkedProgram,
+  LogicalOutputSelection,
   NeedId,
   OperationNode,
   ProducerStep,
@@ -112,6 +113,7 @@ function compilePlanning(
   program: LinkedProgram,
   graph: AuthorGraph,
   targets: readonly string[],
+  selections: readonly LogicalOutputSelection[] = [],
 ): PlannedExecution {
   verifyAuthorGraph(program, graph);
   const targetIds = new Set<string>();
@@ -122,6 +124,15 @@ function compilePlanning(
   }
 
   const authored = new Map(program.records.map((record) => [record.id, record]));
+  const selected = new Map<string, ResolvedSource>();
+  for (const selection of selections) {
+    const output = resolveLogicalOutput(graph, selection.output);
+    const record = authored.get(selection.record);
+    invariant(!selected.has(output.id), "DUPLICATE_OUTPUT_SELECTION", `Output ${output.id} is selected twice`, output.id);
+    invariant(record !== undefined, "UNKNOWN_RECORD", `Candidate record ${selection.record} is unavailable`, selection.record);
+    invariant(sameType(record.type, output.type), "OUTPUT_SELECTION_TYPE_MISMATCH", `Candidate for ${output.id} must have type ${typeKey(output.type)}`, output.id);
+    selected.set(output.id, { record: record.id, type: record.type });
+  }
   const demandedOperations = new Map<string, OperationNode>();
   const resolvedOutputs = new Map<string, ResolvedSource>();
   const outputs = new Map<string, ResolvedOutput>();
@@ -160,8 +171,8 @@ function compilePlanning(
     }
     if (resolvedOutputs.has(ref.id)) continue;
     const output = resolveLogicalOutput(graph, ref.id);
-    const resolved = operationSource(output.result.operation);
-    pending.push(output.result);
+    const resolved = selected.get(output.id) ?? operationSource(output.result.operation);
+    if (!selected.has(output.id)) pending.push(output.result);
     invariant(
       sameType(resolved.type, output.type),
       "OUTPUT_RESULT_TYPE_MISMATCH",
@@ -219,8 +230,9 @@ export function planBuild(
   program: LinkedProgram,
   authorGraph: AuthorGraph,
   targets: readonly string[],
+  selections: readonly LogicalOutputSelection[] = [],
 ): PlannedExecution {
-  return compilePlanning(program, authorGraph, targets);
+  return compilePlanning(program, authorGraph, targets, selections);
 }
 
 export function verifyBuildPlan(

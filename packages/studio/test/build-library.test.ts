@@ -48,6 +48,7 @@ test("Studio library joins this environment's Builds with project Build Result f
   }));
   const results: BuildResultHistory = {
     async read(build) { return manifests.find((item) => item.id === build); },
+    async available(build) { return manifests.find((item) => item.id === build)?.outputs ?? {}; },
     async browse(request) {
       if (request?.before !== undefined) return { results: [] };
       assert.deepEqual(request, { limit: 25 });
@@ -182,6 +183,7 @@ test("media listing reads finished history and leaves active Result drafts priva
   const resolved: string[] = [];
   const results: BuildResultHistory = {
     async read(build) { return manifests.find((item) => item.id === build); },
+    async available(build) { return manifests.find((item) => item.id === build)?.outputs ?? {}; },
     async browse() { return { results: manifests }; },
     async resolve(_build, output) {
       resolved.push(output);
