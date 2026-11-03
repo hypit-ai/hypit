@@ -16,7 +16,11 @@ export type AuthorDocumentField = {
   readonly value: AuthorDeclarationFieldValue;
 };
 
+/** Optional editor-space coordinates of a source declaration. */
+export type AuthorDocumentPosition = { readonly x: number; readonly y: number };
+
 export type AuthorDocumentDeclaration = {
+  readonly position?: AuthorDocumentPosition;
   readonly node: AuthorDocumentNodeId;
   readonly container: AuthorDocumentNodeId;
   readonly module: ModuleRef;
@@ -64,6 +68,12 @@ export type AuthorDocumentImport = {
 };
 
 export type AuthorDocumentOperation =
+  | {
+      readonly kind: "set-position";
+      readonly declaration: AuthorDocumentNodeId;
+      /** Omit to restore automatic placement. */
+      readonly position?: AuthorDocumentPosition;
+    }
   | {
       readonly kind: "add-field";
       readonly declaration: AuthorDocumentNodeId;

@@ -334,6 +334,29 @@ function structuredContent(
   };
 }
 
+const positionAttribute = "canvas:position";
+
+function declarationPosition(document: MarkupDocument, element: MarkupDocumentElement) {
+  const attribute = element.opening.attributeSyntax.find(item => item.name === positionAttribute);
+  if (!attribute) return undefined;
+  const parts = typeof attribute.value === "string" ? attribute.value.trim().split(/\s+/u) : [];
+  const numbers = parts.map(Number);
+  if (parts.length !== 2 || !parts.every(part => /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/u.test(part)) || !numbers.every(Number.isFinite))
+    fail(document.source, "MARKUP_CANVAS_POSITION", "canvas:position requires two finite coordinates separated by whitespace.", attribute.range.start);
+  return { x: numbers[0]!, y: numbers[1]! };
+}
+
+function declarationFields(document: MarkupDocument, element: MarkupDocumentElement) {
+  declarationPosition(document, element);
+  return element.opening.attributeSyntax.filter(attribute => attribute.name !== positionAttribute)
+    .map(attribute => ({ name: attribute.name, value: fieldValue(attribute) }));
+}
+
+function serializePosition(position: import("@hypit/author").AuthorDocumentPosition): string {
+  if (!Number.isFinite(position.x) || !Number.isFinite(position.y)) throw new Error("Canvas coordinates must be finite numbers.");
+  return serializeValue({ kind: "literal", value: `${position.x} ${position.y}` });
+}
+
 function childFromElement(document: MarkupDocument, element: MarkupDocumentElement): AuthorDeclarationChild {
   const content = structuredContent(document, element);
   return {
@@ -356,7 +379,7 @@ export function declarationsFromMarkupDocument(
     return {
       module: bound.module,
       name: bound.declaration.declaration,
-      fields: element.opening.attributeSyntax.map((attribute) => ({ name: attribute.name, value: fieldValue(attribute) })),
+      fields: declarationFields(document, element),
       ...content,
       range: { ...element.range },
     };
@@ -509,15 +532,14 @@ function projectDocument(
     const declaration = declarationsByTag.get(element.name);
     if (declaration === undefined) return [];
     const content = structuredContent(document, element);
+    const position = declarationPosition(document, element);
     return [{
       node: element.node,
       container: document.root.node,
       module: declaration.module,
       name: declaration.declaration.declaration,
-      fields: element.opening.attributeSyntax.map((attribute) => ({
-        name: attribute.name,
-        value: fieldValue(attribute),
-      })),
+      fields: declarationFields(document, element),
+      ...(position === undefined ? {} : { position }),
       ...content,
       range: { ...element.range },
     }];
@@ -613,7 +635,8 @@ function serializeDeclaration(
 ): string {
   const spelling = spellingForDeclaration(declaration, imports, options);
   const tag = spelling.tag;
-  const fields = declaration.fields.map((field) => ` ${field.name}=${serializeValue(field.value)}`).join("");
+  const fields = declaration.fields.map((field) => ` ${field.name}=${serializeValue(field.value)}`).join("")
+    + (declaration.position === undefined ? "" : ` ${positionAttribute}=${serializePosition(declaration.position)}`);
   if (spelling.body === "structured" && declaration.children.length === 0 && declaration.text === undefined && declaration.body === undefined) {
     return `<${tag}${fields}/>`;
   }
@@ -730,6 +753,22 @@ export function applyMarkupDocumentOperations(
     }
   };
   for (const operation of operations) {
+    if (operation.kind === "set-position") {
+      const element = document.declarations.find(item => item.node === operation.declaration);
+      if (!element) throw new Error(`Unknown source declaration ${operation.declaration}.`);
+      const attribute = element.opening.attributeSyntax.find(item => item.name === positionAttribute);
+      if (operation.position === undefined) {
+        if (attribute) edits.push({ start: attribute.range.start, end: attribute.range.end, text: "" });
+      } else {
+        const value = serializePosition(operation.position);
+        if (attribute) edits.push({ start: attribute.valueTokenRange.start, end: attribute.valueTokenRange.end, text: value });
+        else {
+          const offset = element.opening.end - (element.opening.selfClosing ? 2 : 1);
+          edits.push({ start: offset, end: offset, text: ` ${positionAttribute}=${value}` });
+        }
+      }
+      continue;
+    }
     if (operation.kind === "add-field") {
       const element = elements.get(operation.declaration);
       if (element === undefined) throw new Error(`Unknown declaration ${operation.declaration}.`);

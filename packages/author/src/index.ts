@@ -51,6 +51,7 @@ export type {
   AuthorDocument,
   AuthorDocumentContainer,
   AuthorDocumentDeclaration,
+  AuthorDocumentPosition,
   AuthorDocumentField,
   AuthorDocumentFrontend,
   AuthorDocumentImport,

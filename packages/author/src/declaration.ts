@@ -81,7 +81,9 @@ export type AuthorDeclaration = {
   readonly range: SourceRange;
 };
 
-export type AuthorDeclarationDraft = Omit<AuthorDeclaration, "range">;
+export type AuthorDeclarationDraft = Omit<AuthorDeclaration, "range"> & {
+  readonly position?: import("./document.js").AuthorDocumentPosition;
+};
 
 export type AuthorDeclarationBodyNode =
   | { readonly kind: "text"; readonly value: string; readonly range?: SourceRange }

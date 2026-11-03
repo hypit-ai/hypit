@@ -58,6 +58,23 @@ Source order does not determine declaration dependencies. Markup first projects 
 document to Author declarations. `@hypit/author` then resolves their symbolic bindings and compiles
 them in dependency order.
 
+## Canvas coordinates
+
+Top-level declarations accept an optional `canvas:position` attribute:
+
+```svml
+<image:TextImage id="image" prompt={prompt} canvas:position="600 260"/>
+```
+
+The value contains two whitespace-separated finite numbers, `x y`, in editor canvas units.
+Negative coordinates and fractional values are supported. Omission leaves placement to the editor.
+Markup exposes the position through `AuthorDocumentDeclaration.position`; package compilers receive
+only semantic fields. Moving a node preserves its generation inputs and result selection.
+
+The revision-scoped `set-position` operation writes both coordinates together. Omitting its
+`position` removes the attribute. `AuthorDeclarationDraft.position` carries coordinates when
+inserting or copying a declaration.
+
 ## Structured and opaque bodies
 
 Structured declarations receive decoded text, ordered children and package-neutral field values.
