@@ -36,8 +36,8 @@ import {
   type LocalSpatialDomain,
   type SpatialMap,
 } from "@hypit/spatial/algebra";
-import { crossDissolveOperator } from "@hypit/visual-transition";
-import { opacityOperator } from "@hypit/visual-treatment";
+import { crossDissolveOperator } from "@hypit/picture-transition";
+import { IDENTITY_PICTURE_FILTER, pictureFilterControlOperator } from "@hypit/picture-filter";
 import { fixtureResource } from "../../../test/fixture-resource.js";
 
 import {
@@ -293,18 +293,23 @@ test("package-owned Picture reconstruction survives AVIR lowering into the execu
   assert.deepEqual(selectHtmlVideoSources(document)[0]?.reconstruction, { kind: "nearest" });
 });
 
-test("a package-owned unary Treatment closes through AVIR apply and the HTML terminal", () => {
+test("a package-owned Picture Filter closes through AVIR apply and the HTML terminal", () => {
   const document = lowerAudiovisualPictureProgramToHtmlProgram({
-    program: pictureProgram(opacityOperator(programTime, [
-      { at: 0, value: 0.25 },
-      { at: 1, value: 1 },
-    ])),
-    output: htmlOutput("treatment-html-proof"),
+    program: pictureProgram(pictureFilterControlOperator({
+      domain: programTime,
+      segments: [{
+        range: { start: seconds(0), end: seconds(2) },
+        from: { ...IDENTITY_PICTURE_FILTER, opacity: 0.25 },
+        to: IDENTITY_PICTURE_FILTER,
+        interpolation: { kind: "linear" },
+      }],
+    })),
+    output: htmlOutput("picture-filter-html-proof"),
     sources: htmlSources("red", "blue"),
   });
   assert.doesNotThrow(() => assertHtmlProgram(document));
-  assert.match(document.html, /data-hypit-visual-treatment-layer/u);
-  assert.match(document.html, /context\.durationFrames|progress/u);
+  assert.match(document.html, /data-hypit-picture-filter-layer/u);
+  assert.match(document.html, /controlPosition\('filter'/u);
 });
 
 test("terminal lowering refuses unsupported Operator programmes and closes an explicit viewport conversion", () => {

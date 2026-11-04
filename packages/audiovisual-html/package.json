@@ -18,8 +18,8 @@
     "@hypit/spatial": "workspace:^0.1.1"
   },
   "devDependencies": {
-    "@hypit/visual-transition": "workspace:^0.1.0",
-    "@hypit/visual-treatment": "workspace:^0.1.0"
+    "@hypit/picture-transition": "workspace:^0.1.0",
+    "@hypit/picture-filter": "workspace:^0.1.0"
   },
   "peerDependencies": {
     "@hypit/hypit": "workspace:^0.4.0"

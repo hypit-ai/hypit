@@ -157,7 +157,7 @@ the Renderer reads them through a bounded page cache, evaluates the closed signa
 signals in output blocks. The AudioProgram is one closed signal graph.
 It does not infer pitch-preserving stretch from a temporal relation: such a
 reconstruction policy belongs to the mapped nested Programme use and has its own package owner. The Provider
-implements `@hypit/audio-stretch` PreservePitch when that use has a direct one-media-leaf child Programme and a
+implements `@hypit/audio-preserve-pitch` PreservePitch when that use has a direct one-media-leaf child Programme and a
 complete positive-affine, non-looping Mapping;
 its source trim keeps exact rational boundaries through Map composition and uses Temporal's shared nearest-boundary
 rule on the 48 kHz grid. Only the final FFmpeg tempo parameter is floating point.

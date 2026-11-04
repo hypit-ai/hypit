@@ -17,7 +17,7 @@ import {
 } from "@hypit/media-operations";
 import { audioProgramSampleFrames, verifyAudioProgram } from "@hypit/audio-program";
 import type { AudioProgram, AudioProgramMediaSource, AudioProgramNode, RenderAudioNeed } from "@hypit/audio-program";
-import { readPreservePitch } from "@hypit/audio-stretch";
+import { readPreservePitch } from "@hypit/audio-preserve-pitch";
 import type { MuxMediaNeed } from "@hypit/media-delivery";
 import { assertBlobRef, canonicalize } from "@hypit/hypit/protocol";
 import type { BlobRef, CanonicalValue, Value } from "@hypit/hypit/protocol";

@@ -6,7 +6,7 @@ import test from "node:test";
 
 import { pointwiseOperatorTemporalSupport, sealAudioProgram } from "@hypit/audio-program";
 import type { AudioProgram, AudioProgramMediaSource } from "@hypit/audio-program";
-import { audioGainControlOperator } from "@hypit/audio-mix";
+import { audioGainControlOperator } from "@hypit/audio-gain";
 import {
   exactTemporalValueFromFrames,
   identityTemporalMap,

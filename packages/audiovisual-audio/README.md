@@ -35,7 +35,7 @@ contract is copied onto the same Process node, so a Provider can plan look-aroun
 tail without recovering an effect name. The Audio Gain proof exercises an
 Occurrence-local Control through AVIR lowering and real 48 kHz sample rendering.
 
-The Preserve Pitch proof follows the other orthogonal path: `@hypit/audio-stretch` publishes a typed
+The Preserve Pitch proof follows the other orthogonal path: `@hypit/audio-preserve-pitch` publishes a typed
 `SignalReconstruction`, the author fold may receive it as a future Operation value, and lowering places its opaque
 programme on the mapped nested Programme use. The local terminal currently executes the direct-media,
 positive-affine subset and rejects other shapes at its capability boundary.

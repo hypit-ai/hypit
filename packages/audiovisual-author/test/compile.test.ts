@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { audioGainOperator } from "@hypit/audio-mix";
-import { preservePitch } from "@hypit/audio-stretch";
+import { audioGainOperator } from "@hypit/audio-gain";
+import { preservePitch } from "@hypit/audio-preserve-pitch";
 import { verifyAudioProgram } from "@hypit/audio-program";
 import {
   audioType,
@@ -20,7 +20,7 @@ import {
 } from "@hypit/audiovisual-html";
 import { programSourceFromPreparedMedia } from "@hypit/audiovisual-media";
 import { assertHtmlProgram, htmlVisual } from "@hypit/html-program";
-import { crossDissolveOperator } from "@hypit/visual-transition";
+import { crossDissolveOperator } from "@hypit/picture-transition";
 import { prepareMedia } from "@hypit/media";
 import { sealLocalSpatialDomain, sealSpatialMap } from "@hypit/spatial/algebra";
 import {
@@ -237,7 +237,7 @@ test("A-roll, material B-roll and a component compile into one resolved Programm
   assert.deepEqual(evaluateTemporalMap(productMap, at(0), "after")?.position, at(2));
   assert.deepEqual(evaluateTemporalMap(productMap, at(5), "before")?.position, at(7));
   const transition = Object.values(program.picture!.nodes).find((node) =>
-    node.kind === "apply" && node.operator.id === "hypit.visual-transition:cross-dissolve");
+    node.kind === "apply" && node.operator.id === "hypit.picture-transition:cross-dissolve");
   assert.deepEqual(transition, {
     kind: "apply",
     operator: crossDissolveOperator(temporalDomain("main:time", 12)),

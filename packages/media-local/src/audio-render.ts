@@ -12,7 +12,7 @@ import {
   evaluateAudioGainControl,
   readAudioGainProgram,
   type AudioGainControl,
-} from "@hypit/audio-mix";
+} from "@hypit/audio-gain";
 import {
   compareExactTemporalValues,
   composeTemporalMaps,

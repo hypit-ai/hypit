@@ -5,8 +5,8 @@ import {
   pointwiseOperatorTemporalSupport,
   sealAudioProgram,
 } from "@hypit/audio-program";
-import { audioGainControlProcess, audioGainProcess } from "@hypit/audio-mix";
-import { preservePitch } from "@hypit/audio-stretch";
+import { audioGainControlProcess, audioGainProcess } from "@hypit/audio-gain";
+import { preservePitch } from "@hypit/audio-preserve-pitch";
 import { preparedAudioSource } from "@hypit/media";
 import { fixtureResource } from "../../../test/fixture-resource.js";
 import { lowerPlaybackAudio } from "../src/index.js";

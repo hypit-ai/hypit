@@ -24,6 +24,6 @@ demux-capable playback adapter may close this preview gap without changing `Prep
 Programme.
 
 Audio reconstruction is explicit in AudioProgram. Ordinary sampling sets the browser's
-`preservesPitch` flag to `false`; `@hypit/audio-stretch` PreservePitch sets it to `true`. The adapter
+`preservesPitch` flag to `false`; `@hypit/audio-preserve-pitch` PreservePitch sets it to `true`. The adapter
 therefore never inherits a browser default that disagrees with offline rendering, and an unknown
 reconstruction programme is rejected at this adapter boundary.

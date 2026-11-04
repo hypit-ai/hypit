@@ -6,8 +6,8 @@ import {
   audioGainControlOperator,
   audioGainOperator,
   readAudioGainProcess,
-} from "@hypit/audio-mix";
-import { preservePitch } from "@hypit/audio-stretch";
+} from "@hypit/audio-gain";
+import { preservePitch } from "@hypit/audio-preserve-pitch";
 import {
   audioType,
   audiovisualProgramSource,

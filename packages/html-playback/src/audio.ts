@@ -3,9 +3,9 @@ import {
   verifyAudioProgram,
 } from "@hypit/audio-program";
 import type { AudioProgram, AudioProgramMediaSource, AudioProgramSignalRef } from "@hypit/audio-program";
-import { readAudioGainProgram } from "@hypit/audio-mix";
-import type { AudioGainControl } from "@hypit/audio-mix";
-import { readPreservePitch } from "@hypit/audio-stretch";
+import { readAudioGainProgram } from "@hypit/audio-gain";
+import type { AudioGainControl } from "@hypit/audio-gain";
+import { readPreservePitch } from "@hypit/audio-preserve-pitch";
 import type { BlobRef } from "@hypit/hypit/protocol";
 import {
   addExactTemporalValues,

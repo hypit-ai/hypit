@@ -96,8 +96,8 @@ rename the Fragment port. The Manifest's Producer ports, Fragment wiring and han
 must agree for that operation.
 
 Read the closest installed owner for the behavior being authored: `@hypit/audiovisual-media` for
-prepared media Sources, `@hypit/visual-transition` for a two-Picture Operator, and
-`@hypit/visual-treatment` for a unary Picture Operator. A new component owns its local mechanics and
+prepared media Sources, `@hypit/picture-transition` for a two-Picture Operator, and
+`@hypit/picture-filter` for a unary Picture Operator. A new component owns its local mechanics and
 publishes the corresponding typed Source or Operator; it does not recreate Track, Composition,
 Timeline, the framework loader or Runtime.
 

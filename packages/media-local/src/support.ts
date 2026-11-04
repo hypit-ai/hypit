@@ -1,7 +1,7 @@
 import { isPointwiseOperatorTemporalSupport, verifyAudioProgram } from "@hypit/audio-program";
 import type { AudioProgram } from "@hypit/audio-program";
-import { readAudioGainProgram } from "@hypit/audio-mix";
-import { readPreservePitch } from "@hypit/audio-stretch";
+import { readAudioGainProgram } from "@hypit/audio-gain";
+import { readPreservePitch } from "@hypit/audio-preserve-pitch";
 import type { EndpointSupport } from "@hypit/hypit/endpoint";
 import type { CanonicalValue } from "@hypit/hypit/protocol";
 import { verifyPreparedAudioSource } from "@hypit/media";

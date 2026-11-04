@@ -439,7 +439,7 @@ importers:
         specifier: 3.2.1
         version: 3.2.1
 
-  packages/audio-mix:
+  packages/audio-gain:
     dependencies:
       '@hypit/audiovisual':
         specifier: workspace:^0.1.0
@@ -486,7 +486,7 @@ importers:
         specifier: workspace:*
         version: link:../refinement
 
-  packages/audio-stretch:
+  packages/audio-preserve-pitch:
     dependencies:
       '@hypit/audiovisual':
         specifier: workspace:^0.1.0
@@ -606,12 +606,12 @@ importers:
         specifier: workspace:^0.1.1
         version: link:../temporal
     devDependencies:
-      '@hypit/audio-mix':
+      '@hypit/audio-gain':
         specifier: workspace:^0.1.0
-        version: link:../audio-mix
-      '@hypit/audio-stretch':
+        version: link:../audio-gain
+      '@hypit/audio-preserve-pitch':
         specifier: workspace:^0.1.0
-        version: link:../audio-stretch
+        version: link:../audio-preserve-pitch
       '@hypit/hypit':
         specifier: workspace:^0.4.0
         version: link:../..
@@ -631,15 +631,15 @@ importers:
         specifier: workspace:^0.1.1
         version: link:../temporal
     devDependencies:
-      '@hypit/audio-mix':
+      '@hypit/audio-gain':
         specifier: workspace:^0.1.0
-        version: link:../audio-mix
+        version: link:../audio-gain
       '@hypit/audio-program':
         specifier: workspace:^0.1.0
         version: link:../audio-program
-      '@hypit/audio-stretch':
+      '@hypit/audio-preserve-pitch':
         specifier: workspace:^0.1.0
-        version: link:../audio-stretch
+        version: link:../audio-preserve-pitch
       '@hypit/audiovisual-audio':
         specifier: workspace:^0.1.0
         version: link:../audiovisual-audio
@@ -673,9 +673,9 @@ importers:
       '@hypit/refinement':
         specifier: workspace:^0.1.0
         version: link:../refinement
-      '@hypit/visual-transition':
+      '@hypit/picture-transition':
         specifier: workspace:^0.1.0
-        version: link:../visual-transition
+        version: link:../picture-transition
 
   packages/audiovisual-html:
     dependencies:
@@ -698,12 +698,12 @@ importers:
         specifier: workspace:^0.1.1
         version: link:../spatial
     devDependencies:
-      '@hypit/visual-transition':
+      '@hypit/picture-transition':
         specifier: workspace:^0.1.0
-        version: link:../visual-transition
-      '@hypit/visual-treatment':
+        version: link:../picture-transition
+      '@hypit/picture-filter':
         specifier: workspace:^0.1.0
-        version: link:../visual-treatment
+        version: link:../picture-filter
 
   packages/audiovisual-media:
     dependencies:
@@ -1413,15 +1413,15 @@ importers:
 
   packages/html-playback:
     dependencies:
-      '@hypit/audio-mix':
+      '@hypit/audio-gain':
         specifier: workspace:^0.1.0
-        version: link:../audio-mix
+        version: link:../audio-gain
       '@hypit/audio-program':
         specifier: workspace:^0.1.0
         version: link:../audio-program
-      '@hypit/audio-stretch':
+      '@hypit/audio-preserve-pitch':
         specifier: workspace:^0.1.0
-        version: link:../audio-stretch
+        version: link:../audio-preserve-pitch
       '@hypit/html-program':
         specifier: workspace:^0.2.0
         version: link:../html-program
@@ -1680,15 +1680,15 @@ importers:
 
   packages/media-local:
     dependencies:
-      '@hypit/audio-mix':
+      '@hypit/audio-gain':
         specifier: workspace:^0.1.0
-        version: link:../audio-mix
+        version: link:../audio-gain
       '@hypit/audio-program':
         specifier: workspace:^0.1.0
         version: link:../audio-program
-      '@hypit/audio-stretch':
+      '@hypit/audio-preserve-pitch':
         specifier: workspace:^0.1.0
-        version: link:../audio-stretch
+        version: link:../audio-preserve-pitch
       '@hypit/media':
         specifier: workspace:^0.2.0
         version: link:../media
@@ -2924,12 +2924,12 @@ importers:
 
   packages/video:
     dependencies:
-      '@hypit/audio-mix':
+      '@hypit/audio-gain':
         specifier: workspace:^0.1.0
-        version: link:../audio-mix
-      '@hypit/audio-stretch':
+        version: link:../audio-gain
+      '@hypit/audio-preserve-pitch':
         specifier: workspace:^0.1.0
-        version: link:../audio-stretch
+        version: link:../audio-preserve-pitch
       '@hypit/audiovisual':
         specifier: workspace:^0.1.0
         version: link:../audiovisual
@@ -3035,15 +3035,15 @@ importers:
       '@hypit/temporal':
         specifier: workspace:^0.1.1
         version: link:../temporal
-      '@hypit/visual-matte':
+      '@hypit/picture-matte':
         specifier: workspace:^0.1.0
-        version: link:../visual-matte
-      '@hypit/visual-transition':
+        version: link:../picture-matte
+      '@hypit/picture-transition':
         specifier: workspace:^0.1.0
-        version: link:../visual-transition
-      '@hypit/visual-treatment':
+        version: link:../picture-transition
+      '@hypit/picture-filter':
         specifier: workspace:^0.1.0
-        version: link:../visual-treatment
+        version: link:../picture-filter
       '@hypit/volcengine-matting':
         specifier: workspace:^0.3.0
         version: link:../volcengine-matting
@@ -3064,7 +3064,7 @@ importers:
         specifier: workspace:*
         version: link:../markup
 
-  packages/visual-matte:
+  packages/picture-matte:
     dependencies:
       '@hypit/audiovisual':
         specifier: workspace:^0.1.0
@@ -3138,7 +3138,7 @@ importers:
         specifier: 5.9.3
         version: 5.9.3
 
-  packages/visual-transition:
+  packages/picture-transition:
     dependencies:
       '@hypit/audiovisual':
         specifier: workspace:^0.1.0
@@ -3166,7 +3166,7 @@ importers:
         specifier: 5.9.3
         version: 5.9.3
 
-  packages/visual-treatment:
+  packages/picture-filter:
     dependencies:
       '@hypit/audiovisual':
         specifier: workspace:^0.1.0

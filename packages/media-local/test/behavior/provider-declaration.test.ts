@@ -8,7 +8,7 @@ import { supportsLocalAudioProgram, supportsLocalSpeechEvidenceAudio } from "../
 import { endpointOffers } from "@hypit/endpoint";
 import { canonicalize, capabilityKey } from "@hypit/protocol";
 import { audioProgramCapabilities, audioProgramGraphFromMediaSources, audioProgramMediaSources, sealAudioProgram } from "@hypit/audio-program";
-import { preservePitch } from "@hypit/audio-stretch";
+import { preservePitch } from "@hypit/audio-preserve-pitch";
 import { mediaDeliveryCapabilities } from "@hypit/media-delivery";
 import { mediaCapabilities } from "@hypit/media";
 import { mediaOperationsCapabilities } from "@hypit/media-operations";

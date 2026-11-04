@@ -17,8 +17,8 @@
     "@hypit/temporal": "workspace:^0.1.1"
   },
   "devDependencies": {
-    "@hypit/audio-mix": "workspace:^0.1.0",
-    "@hypit/audio-stretch": "workspace:^0.1.0",
+    "@hypit/audio-gain": "workspace:^0.1.0",
+    "@hypit/audio-preserve-pitch": "workspace:^0.1.0",
     "@hypit/hypit": "workspace:^0.4.0",
     "@hypit/media-local": "workspace:^0.1.0"
   },

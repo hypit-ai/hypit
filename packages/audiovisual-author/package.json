@@ -19,8 +19,8 @@
     "@hypit/temporal": "workspace:^0.1.1"
   },
   "devDependencies": {
-    "@hypit/audio-mix": "workspace:^0.1.0",
-    "@hypit/audio-stretch": "workspace:^0.1.0",
+    "@hypit/audio-gain": "workspace:^0.1.0",
+    "@hypit/audio-preserve-pitch": "workspace:^0.1.0",
     "@hypit/audio-program": "workspace:^0.1.0",
     "@hypit/audiovisual-audio": "workspace:^0.1.0",
     "@hypit/audiovisual-html": "workspace:^0.1.0",
@@ -33,7 +33,7 @@
     "@hypit/producer": "workspace:^0.1.0",
     "@hypit/protocol": "workspace:^0.1.0",
     "@hypit/refinement": "workspace:^0.1.0",
-    "@hypit/visual-transition": "workspace:^0.1.0"
+    "@hypit/picture-transition": "workspace:^0.1.0"
   },
   "files": [
     "dist",
