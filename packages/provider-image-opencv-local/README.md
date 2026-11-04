@@ -1,7 +1,8 @@
 # `@hypit/provider-image-opencv-local`
 
 Local OpenCV/NumPy realization of the two deterministic capabilities owned by
-`@hypit/image-operations`: `transform-image` and `compose-image`.
+`@hypit/raster-transform` and `@hypit/raster-composition`: `transform-raster` and
+`render-raster-composition`.
 
 Transform and Compose remain separate Needs. One Provider implements both while its private Python
 interpreter shares decoding, fit, interpolation, alpha and encoding primitives. Each Need runs in a

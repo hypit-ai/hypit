@@ -7,8 +7,9 @@ import { installEndpoint } from "@hypit/hypit/endpoint";
 
 import { blobTypes } from "@hypit/blob";
 import { EndpointRegistry, MemoryResourceStore } from "@hypit/executor";
-import { imageOperationsCapabilities, sealImageTransformProgram } from "@hypit/image-operations";
-import type { ImageTransformProgram } from "@hypit/image-operations";
+import { rasterTransformCapabilities, sealImageTransformProgram } from "@hypit/raster-transform";
+import type { ImageTransformProgram } from "@hypit/raster-transform";
+import { rasterCompositionCapabilities } from "@hypit/raster-composition";
 import { createLocalOpenCvImageProvider } from "@hypit/provider-image-opencv-local";
 import { assertBlobRef, canonicalize } from "@hypit/protocol";
 import type { BlobRef, Need } from "@hypit/protocol";
@@ -37,7 +38,7 @@ const denoiseProgram = sealImageTransformProgram({
 function need(source: BlobRef, program: ImageTransformProgram = denoiseProgram): Need {
   return {
     id: "need:image-transform",
-    capability: imageOperationsCapabilities.transform,
+    capability: rasterTransformCapabilities.transform,
     returns: blobTypes.blob,
     constraints: canonicalize({ source, operations: program.operations }),
     result: "record:image-transform",
@@ -45,17 +46,23 @@ function need(source: BlobRef, program: ImageTransformProgram = denoiseProgram):
 }
 
 function composeNeed(source: BlobRef): Need {
+  const target = { id: "output", region: { x: 0, y: 0, width: 3, height: 2 } } as const;
   return {
     id: "need:image-compose",
-    capability: imageOperationsCapabilities.compose,
+    capability: rasterCompositionCapabilities.render,
     returns: blobTypes.blob,
     constraints: canonicalize({
-      canvas: { widthPx: 3, heightPx: 2 },
+      target,
       background: "#00000000",
       layers: [{
         source,
-        frame: { xPx: 0, yPx: 0, widthPx: 3, heightPx: 2 },
-        fit: "stretch", interpolation: "nearest", opacity: 1,
+        mapping: {
+          target,
+          source: { id: "source", region: { x: 0, y: 0, width: 1, height: 1 } },
+          transform: { kind: "affine", xx: 1 / 3, xy: 0, yx: 0, yy: 1 / 2, tx: 0, ty: 0 },
+        },
+        interpolation: "nearest",
+        opacity: 1,
       }],
     }),
     result: "record:image-compose",
@@ -94,7 +101,7 @@ test("the local Provider returns only a new image Blob", async () => {
   assert.equal(encoded.readUInt32BE(20), 64);
 });
 
-test("the local Provider composes ordered Layers into exact Canvas pixels", async () => {
+test("the local Provider samples ordered Layers through Spatial Maps", async () => {
   const resources = new MemoryResourceStore();
   const png = Buffer.from(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",

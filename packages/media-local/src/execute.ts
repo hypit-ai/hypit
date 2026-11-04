@@ -12,9 +12,8 @@ import {
   verifyFrameExtractionRequest,
   type ExtractAudioNeed,
   type ExtractFrameNeed,
-  type RenderStillVideoNeed,
-  verifyStillVideoRequest,
-} from "@hypit/media-operations";
+} from "@hypit/media-extraction";
+import { type RenderStillVideoNeed, verifyStillVideoRequest } from "@hypit/still-video";
 import { audioProgramSampleFrames, verifyAudioProgram } from "@hypit/audio-program";
 import type { AudioProgram, AudioProgramMediaSource, AudioProgramNode, RenderAudioNeed } from "@hypit/audio-program";
 import { readPreservePitch } from "@hypit/audio-preserve-pitch";

@@ -1,7 +1,7 @@
 import { blobTypes } from "@hypit/hypit/blob";
 import { sealGraphFragment } from "@hypit/hypit/author";
 import { generationProducers } from "@hypit/generation";
-import { imageTransformProducers, imageTransformTypes } from "@hypit/image-operations";
+import { rasterTransformProducers, rasterTransformTypes } from "@hypit/raster-transform";
 import { modelArtifactInputNames, modelTextInputName } from "@hypit/generation/model-fields";
 import type { ModelArtifactInput, ModelTextInput } from "@hypit/generation/model-fields";
 import type { FragmentOperation } from "@hypit/hypit/author";
@@ -26,7 +26,7 @@ export function createGptImageCleanFragment(
   if (new Set(names).size !== names.length) throw new Error("GPT Image input names must be unique");
   const inputs = [
     { name: "draft", type: endpoint.draftType },
-    { name: "cleanup", type: imageTransformTypes.program },
+    { name: "cleanup", type: rasterTransformTypes.program },
   ];
   const operations: FragmentOperation[] = [];
   let draft = input("draft") as ReturnType<typeof input> | ReturnType<typeof operation>;
@@ -80,7 +80,7 @@ export function createGptImageCleanFragment(
     },
     {
       id: "clean-image",
-      producer: imageTransformProducers.request,
+      producer: rasterTransformProducers.request,
       inputs: { source: operation("select-primary-image"), program: input("cleanup") },
       result: { kind: "need" as const, name: "image" },
     },

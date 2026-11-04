@@ -5,7 +5,7 @@ import { canonicalize, sameType, type TypeRef } from "@hypit/hypit/protocol";
 import { textTypes } from "@hypit/hypit/text";
 import { fieldModelAuthorComponent, type FieldModelAuthorArtifactInput } from "@hypit/generation/model-fields/author";
 import { createFieldModelPrimaryFragment } from "@hypit/generation/model-fields";
-import { imageTransformTypes } from "@hypit/image-operations";
+import { rasterTransformTypes } from "@hypit/raster-transform";
 
 import { gptImageCleanupProgram } from "./cleanup-program.js";
 import { createGptImageCleanFragment } from "./fragment.js";
@@ -50,7 +50,7 @@ function compiler(clean: boolean): AuthorDeclarationCompiler {
     module: clean ? gptImageCleanModuleRef : gptImageModuleRef,
     declaration: "image",
     outputs: [endpoint.draftType, endpoint.mediaBindings.images!.type,
-      ...(clean ? [imageTransformTypes.program] : []), blobTypes.blob],
+      ...(clean ? [rasterTransformTypes.program] : []), blobTypes.blob],
     shape: { summary: clean
       ? "Generates an image with GPT Image 2 and applies the package cleanup Program."
       : "Generates an image with GPT Image 2.",
@@ -84,7 +84,7 @@ function compiler(clean: boolean): AuthorDeclarationCompiler {
         text: [{ name: "prompt", field: "prompt", source: prompt }] });
       if (!clean) return output;
       return {
-        records: [...output.records, { id: `${id}.cleanup`, type: imageTransformTypes.program,
+        records: [...output.records, { id: `${id}.cleanup`, type: rasterTransformTypes.program,
           value: canonicalize(gptImageCleanupProgram), range: declaration.range }],
         components: output.components.map((component) => ({ ...component,
           inputs: { ...component.inputs, cleanup: { kind: "record", id: `${id}.cleanup` } } })),

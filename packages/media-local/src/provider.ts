@@ -10,7 +10,8 @@ import {
   executeRenderStillVideo,
 } from "./execute.js";
 import type { MediaExecutionEnvironment, MediaOperationResult } from "./execute.js";
-import { mediaOperationsCapabilities } from "@hypit/media-operations";
+import { mediaExtractionCapabilities } from "@hypit/media-extraction";
+import { stillVideoCapabilities } from "@hypit/still-video";
 import { audioProgramCapabilities } from "@hypit/audio-program";
 import { mediaDeliveryCapabilities } from "@hypit/media-delivery";
 import { isStreamingResourceStore } from "@hypit/hypit/endpoint";
@@ -92,21 +93,21 @@ export function createLocalMediaProvider(config: CreateLocalMediaProviderOptions
       {
         lifecycle: "immediate" as const,
         transient: true,
-        capability: mediaOperationsCapabilities.extractAudio,
+        capability: mediaExtractionCapabilities.audio,
         returns: blobTypes.blob,
         handler: operation(executeExtractAudio),
       },
       {
         lifecycle: "immediate" as const,
         transient: true,
-        capability: mediaOperationsCapabilities.extractFrame,
+        capability: mediaExtractionCapabilities.frame,
         returns: blobTypes.blob,
         handler: operation(executeExtractFrame),
       },
       {
         lifecycle: "immediate" as const,
         transient: true,
-        capability: mediaOperationsCapabilities.renderStill,
+        capability: stillVideoCapabilities.render,
         returns: blobTypes.blob,
         handler: operation(executeRenderStillVideo),
       },

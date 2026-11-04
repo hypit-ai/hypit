@@ -9,13 +9,17 @@ import { defineEndpoint } from "@hypit/hypit/endpoint";
 import type { EndpointInvocationContext } from "@hypit/hypit/endpoint";
 import type { CanonicalValue, Value } from "@hypit/hypit/protocol";
 import {
-  assertImageComposeRequest,
   assertImageTransformRequest,
-  imageComposeSources,
-  imageOperationsCapabilities,
   imageTransformOutputMediaType,
-} from "@hypit/image-operations";
-import type { ImageComposeRequest, ImageTransformRequest } from "@hypit/image-operations";
+  rasterTransformCapabilities,
+} from "@hypit/raster-transform";
+import type { ImageTransformRequest } from "@hypit/raster-transform";
+import {
+  assertRasterComposition,
+  rasterCompositionCapabilities,
+  rasterCompositionSources,
+} from "@hypit/raster-composition";
+import type { RasterComposition } from "@hypit/raster-composition";
 
 export const localOpenCvImageProviderModuleRef = {
   name: "@hypit/provider-image-opencv-local",
@@ -48,10 +52,11 @@ function transformRequest(value: CanonicalValue): ImageTransformRequest {
   return item;
 }
 
-function composeRequest(value: CanonicalValue): ImageComposeRequest {
-  assert(value !== null && typeof value === "object" && !Array.isArray(value), "Image compose request must be an object");
-  const item = value as unknown as ImageComposeRequest;
-  assertImageComposeRequest(item);
+function compositionRequest(value: CanonicalValue): RasterComposition {
+  assert(value !== null && typeof value === "object" && !Array.isArray(value),
+    "Raster composition request must be an object");
+  const item = value as unknown as RasterComposition;
+  assertRasterComposition(item, true);
   return item;
 }
 
@@ -103,12 +108,12 @@ export function createLocalOpenCvImageProvider(config: CreateLocalOpenCvImagePro
 
   const execute = async (
     kind: "transform" | "compose",
-    need: ImageTransformRequest | ImageComposeRequest,
+    need: ImageTransformRequest | RasterComposition,
     context: EndpointInvocationContext,
   ): Promise<Value> => {
     const sources = kind === "transform"
       ? [(need as ImageTransformRequest).source]
-      : imageComposeSources(need as ImageComposeRequest);
+      : rasterCompositionSources(need as RasterComposition);
     const uniqueSources = [...new Map(sources.map((source) => [source.resource, source])).values()];
     const totalInputBytes = uniqueSources.reduce((sum, source) => sum + source.size, 0);
     assert(totalInputBytes <= maxInputBytes, "Image operation inputs exceed their configured byte limit");
@@ -131,10 +136,10 @@ export function createLocalOpenCvImageProvider(config: CreateLocalOpenCvImagePro
           }
         : {
             kind,
-            canvas: (need as ImageComposeRequest).canvas,
-            background: (need as ImageComposeRequest).background,
-            layers: (need as ImageComposeRequest).layers.map((layer) => ({
-              source: paths.get(layer.source.resource), frame: layer.frame, fit: layer.fit,
+            target: (need as RasterComposition).target,
+            background: (need as RasterComposition).background,
+            layers: (need as RasterComposition).layers.map((layer) => ({
+              source: paths.get(layer.source.resource), mapping: layer.mapping,
               interpolation: layer.interpolation, opacity: layer.opacity,
             })),
           };
@@ -166,16 +171,16 @@ export function createLocalOpenCvImageProvider(config: CreateLocalOpenCvImagePro
     defaultConcurrency: config.defaultConcurrency ?? 1,
     capabilities: [{
       lifecycle: "immediate" as const,
-      capability: imageOperationsCapabilities.transform,
+      capability: rasterTransformCapabilities.transform,
       returns: blobTypes.blob,
       handler: async (context): Promise<Value> =>
         await execute("transform", transformRequest(context.request.constraints), context),
     }, {
       lifecycle: "immediate" as const,
-      capability: imageOperationsCapabilities.compose,
+      capability: rasterCompositionCapabilities.render,
       returns: blobTypes.blob,
       handler: async (context): Promise<Value> =>
-        await execute("compose", composeRequest(context.request.constraints), context),
+        await execute("compose", compositionRequest(context.request.constraints), context),
     }],
   });
 }

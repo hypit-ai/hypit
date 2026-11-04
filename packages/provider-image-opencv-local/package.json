@@ -17,14 +17,16 @@
   ],
   "peerDependencies": {
     "@hypit/hypit": "workspace:^0.4.0",
-    "@hypit/image-operations": "workspace:^0.3.0",
+    "@hypit/raster-composition": "workspace:^0.1.0",
+    "@hypit/raster-transform": "workspace:^0.1.0",
     "@hypit/runtime-local": "workspace:^0.2.0"
   },
   "devDependencies": {
     "@hypit/blob": "workspace:*",
     "@hypit/executor": "workspace:*",
     "@hypit/hypit": "workspace:*",
-    "@hypit/image-operations": "workspace:*",
+    "@hypit/raster-composition": "workspace:*",
+    "@hypit/raster-transform": "workspace:*",
     "@hypit/protocol": "workspace:*",
     "@hypit/runtime-local": "workspace:*"
   }

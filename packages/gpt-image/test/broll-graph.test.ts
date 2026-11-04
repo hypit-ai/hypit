@@ -26,7 +26,7 @@ import {
   gptImageManifest,
   sealGptImage2Draft,
 } from "@hypit/gpt-image";
-import { imageOperationsManifest, imageTransformTypes } from "@hypit/image-operations";
+import { rasterTransformManifest, rasterTransformTypes } from "@hypit/raster-transform";
 import { modelArtifactInputNames } from "@hypit/generation/model-fields";
 import { mediaManifest } from "@hypit/media";
 import { narrativeManifest } from "@hypit/narrative";
@@ -65,7 +65,7 @@ function fixture() {
     blobManifest,
     textManifest,
     generationManifest,
-    imageOperationsManifest,
+    rasterTransformManifest,
     gptImageManifest,
     gptImageCleanManifest,
     narrativeManifest,
@@ -90,7 +90,7 @@ function fixture() {
   const add = (id: string, type: TypeRef, value: Value) => records.push({ id, type, value });
   add("person", blobTypes.blob, image("person"));
   add("product", blobTypes.blob, image("product"));
-  add("cleanup", imageTransformTypes.program, (gptImageCleanupProgram as unknown as CanonicalValue));
+  add("cleanup", rasterTransformTypes.program, (gptImageCleanupProgram as unknown as CanonicalValue));
 
   const gptFragments = {
     holding: createGptImageCleanFragment([
@@ -178,7 +178,7 @@ test("the common B-roll topology is one graph with one shared holding image", ()
   const state = buildState(program, graph, ["montage.video"]);
   const producers = state.plan.steps.map((step) => step.producer.name);
   assert.equal(producers.filter((name) => name === "request-gpt-image-2").length, 3);
-  assert.equal(producers.filter((name) => name === "request-image-transform").length, 3);
+  assert.equal(producers.filter((name) => name === "request-raster-transform").length, 3);
   assert.equal(producers.filter((name) => name === "request-seedance-2-mini").length, 1);
   const holding = graph.outputs.find((output) => output.id === "holding.image");
   assert.ok(holding);

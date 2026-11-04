@@ -50,7 +50,7 @@ Provider before generation.
 The raw module expands to request
 assembly, generation and primary-image selection. The clean module then adds its package-owned
 `gptImageCleanupProgram` and the shared `Transform` Need as one further visible operation. The
-generic image-operations package owns the Program shape and operation semantics; this package owns
+generic raster-transform package owns the Program shape and operation semantics; this package owns
 the selected cleanup recipe.
 
 The declaration compiler belongs to this package. The public

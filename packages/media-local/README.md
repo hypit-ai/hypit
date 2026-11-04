@@ -18,7 +18,8 @@ contracts rather than importing this Provider's process code.
 
 The local process runner is shared by the Provider and file ports, so bounds, shell avoidance and
 failure reporting do not fork into two executors. Material contracts remain in
-`@hypit/media-operations`, audio Programme execution in `@hypit/audio-program`, and terminal assembly
+`@hypit/media-extraction` and `@hypit/still-video`, audio Programme execution in
+`@hypit/audio-program`, and terminal assembly
 in `@hypit/media-delivery`; paths, subprocesses and ffprobe output remain here.
 
 ## File authoring and inspection

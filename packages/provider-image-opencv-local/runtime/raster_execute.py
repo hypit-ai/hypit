@@ -227,13 +227,34 @@ def round_half_up(value):
     return math.floor(float(value) + 0.5)
 
 
-def fit_layer(image, frame, mode, method):
-    frame_width = max(1, round_half_up(frame["widthPx"]))
-    frame_height = max(1, round_half_up(frame["heightPx"]))
-    height, width = image.shape[:2]
-    scaled_width, scaled_height, x, y = fit_geometry(width, height, frame_width, frame_height, mode)
-    scaled = cv2.resize(image, (scaled_width, scaled_height), interpolation=method)
-    return scaled, x, y
+def spatial_matrix(transform):
+    if transform["kind"] == "affine":
+        return np.array([
+            [transform["xx"], transform["xy"], transform["tx"]],
+            [transform["yx"], transform["yy"], transform["ty"]],
+            [0.0, 0.0, 1.0],
+        ], dtype=np.float64)
+    return np.array([
+        [transform["xx"], transform["xy"], transform["tx"]],
+        [transform["yx"], transform["yy"], transform["ty"]],
+        [transform["wx"], transform["wy"], transform["ww"]],
+    ], dtype=np.float64)
+
+
+def raster_sampling_matrix(mapping, image_width, image_height):
+    target = mapping["target"]["region"]
+    source = mapping["source"]["region"]
+    output_pixel_to_target = np.array([
+        [1.0, 0.0, target["x"]],
+        [0.0, 1.0, target["y"]],
+        [0.0, 0.0, 1.0],
+    ], dtype=np.float64)
+    source_to_image_pixel = np.array([
+        [image_width / source["width"], 0.0, -source["x"] * image_width / source["width"]],
+        [0.0, image_height / source["height"], -source["y"] * image_height / source["height"]],
+        [0.0, 0.0, 1.0],
+    ], dtype=np.float64)
+    return source_to_image_pixel @ spatial_matrix(mapping["transform"]) @ output_pixel_to_target
 
 
 def alpha_over(canvas, image, x, y, opacity):
@@ -256,22 +277,24 @@ def alpha_over(canvas, image, x, y, opacity):
 
 
 def compose(request):
-    width, height = int(request["canvas"]["widthPx"]), int(request["canvas"]["heightPx"])
+    target = request["target"]["region"]
+    width, height = int(target["width"]), int(target["height"])
     fill = color(request["background"])
     canvas = np.empty((height, width, 4), dtype=np.uint8)
     canvas[:] = fill
     for layer in request["layers"]:
         with open(layer["source"], "rb") as source_file:
             image = bgra(decode(source_file.read()))
-        fitted, offset_x, offset_y = fit_layer(
-            image, layer["frame"], layer["fit"], interpolation(layer["interpolation"])
+        sampling = raster_sampling_matrix(layer["mapping"], image.shape[1], image.shape[0])
+        sampled = cv2.warpPerspective(
+            image,
+            sampling,
+            (width, height),
+            flags=interpolation(layer["interpolation"]) | cv2.WARP_INVERSE_MAP,
+            borderMode=cv2.BORDER_CONSTANT,
+            borderValue=(0, 0, 0, 0),
         )
-        alpha_over(
-            canvas, fitted,
-            round_half_up(layer["frame"]["xPx"]) + offset_x,
-            round_half_up(layer["frame"]["yPx"]) + offset_y,
-            layer["opacity"],
-        )
+        alpha_over(canvas, sampled, 0, 0, layer["opacity"])
     return encode_image(canvas)
 
 

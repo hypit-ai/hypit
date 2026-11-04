@@ -24,7 +24,8 @@ const consumer = join(root, "consumer");
 const distribution = join(root, "distribution");
 let passed = false;
 try {
-  const mediaOperations = await packIndependentPackage("packages/media-operations", output);
+  const mediaExtraction = await packIndependentPackage("packages/media-extraction", output);
+  const stillVideo = await packIndependentPackage("packages/still-video", output, { buildPublicTypes: false });
   const mediaLocal = await packIndependentPackage("packages/media-local", output, { buildPublicTypes: false });
   const narrativeSpeechAlignment = await packIndependentPackage(
     "packages/narrative-speech-alignment",
@@ -33,7 +34,10 @@ try {
   );
   const whisperx = await packIndependentPackage("packages/whisperx", output, { buildPublicTypes: false });
   const provider = await packIndependentPackage("packages/provider-hypihub", output, { buildPublicTypes: false });
-  const dependencies = await packConsumerDependencies(["media-operations", "media-local", "narrative-speech-alignment", "whisperx", "provider-hypihub"], output);
+  const dependencies = await packConsumerDependencies([
+    "media-extraction", "still-video", "media-local",
+    "narrative-speech-alignment", "whisperx", "provider-hypihub",
+  ], output);
   await mkdir(consumer);
   await writeFile(join(consumer, "package.json"), `${JSON.stringify({
     name: "hypihub-independent-consumer",
@@ -48,7 +52,8 @@ try {
     "--no-fund",
     "--legacy-peer-deps",
     ...dependencies,
-    mediaOperations,
+    mediaExtraction,
+    stillVideo,
     mediaLocal,
     narrativeSpeechAlignment,
     whisperx,
@@ -91,7 +96,8 @@ try {
   for (const entry of await readdir(join(repositoryRoot, "packages"), { withFileTypes: true })) {
     if (!entry.isDirectory() || [
       "media-local",
-      "media-operations",
+      "media-extraction",
+      "still-video",
       "narrative-speech-alignment",
       "provider-hypihub",
       "whisperx",
@@ -111,7 +117,7 @@ try {
     && item.contribution.modules?.[0]?.manifest.name === "@hypit/whisperx"));
 
   const lock = await readFile(join(consumer, "package-lock.json"), "utf8");
-  for (const tarball of [provider, whisperx, mediaLocal, mediaOperations, narrativeSpeechAlignment]) {
+  for (const tarball of [provider, whisperx, mediaLocal, mediaExtraction, stillVideo, narrativeSpeechAlignment]) {
     assert.ok(lock.includes(tarball.split(/[\\/]/u).at(-1)));
   }
   passed = true;

@@ -17,7 +17,8 @@ import {
 import type { EndpointRegistration } from "@hypit/executor";
 import type { ImmediateEndpointHandler } from "@hypit/endpoint";
 import { installEndpoint } from "@hypit/endpoint";
-import { mediaOperationsCapabilities } from "@hypit/media-operations";
+import { mediaExtractionCapabilities } from "@hypit/media-extraction";
+import { stillVideoCapabilities } from "@hypit/still-video";
 import { audioProgramCapabilities, audioProgramGraphFromMediaSources, sealAudioProgram } from "@hypit/audio-program";
 import type { AudioProgramGraph } from "@hypit/audio-program";
 import { audioGainControlProcess, audioGainProcess } from "@hypit/audio-gain";
@@ -376,7 +377,7 @@ test("local media Provider extracts ordinary audio and frame Artifacts and rende
     const audioIndex = inspection.streams.find((item) => item.kind === "audio")!.index;
     const extractedAudio = await executeArtifact(need(
       "need:extract-audio",
-      mediaOperationsCapabilities.extractAudio,
+      mediaExtractionCapabilities.audio,
       blobTypes.blob,
       canonicalize({
         source,
@@ -392,7 +393,7 @@ test("local media Provider extracts ordinary audio and frame Artifacts and rende
       && !item.disposition.attachedPicture && item.decodedUnitCount >= 2)!;
     const extractedFrame = await executeArtifact(need(
       "need:extract-frame",
-      mediaOperationsCapabilities.extractFrame,
+      mediaExtractionCapabilities.frame,
       blobTypes.blob,
       canonicalize({
         source,
@@ -407,7 +408,7 @@ test("local media Provider extracts ordinary audio and frame Artifacts and rende
 
     const stillVideo = await executeArtifact(need(
       "need:render-still-video",
-      mediaOperationsCapabilities.renderStill,
+      stillVideoCapabilities.render,
       blobTypes.blob,
       canonicalize({
         request: {
@@ -426,7 +427,7 @@ test("local media Provider extracts ordinary audio and frame Artifacts and rende
 
     const spread = await executeArtifact(need(
       "need:render-still-spread",
-      mediaOperationsCapabilities.renderStill,
+      stillVideoCapabilities.render,
       blobTypes.blob,
       canonicalize({
         request: {
@@ -445,7 +446,7 @@ test("local media Provider extracts ordinary audio and frame Artifacts and rende
       && spreadInspection.streams[0].decodedUnitCount, 15, "two pictures spread over the same frame count");
     const twentyFourSpread = await executeArtifact(need(
       "need:render-still-24fps-spread",
-      mediaOperationsCapabilities.renderStill,
+      stillVideoCapabilities.render,
       blobTypes.blob,
       canonicalize({
         request: {
@@ -495,7 +496,7 @@ test("StillVideo converts authored RGB pictures to tagged BT.709 in both render 
     }[]) => {
       const request = need(
         `need:${id}`,
-        mediaOperationsCapabilities.renderStill,
+        stillVideoCapabilities.render,
         blobTypes.blob,
         canonicalize({
           request: {

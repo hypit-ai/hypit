@@ -48,7 +48,6 @@ reuse the generic compiler and CLI contracts with another Frontend or Workspace.
 
 ```bash
 hypit vocabulary
-hypit vocabulary @hypit/media-operations --tag StillVideo
 hypit vocabulary --visual text
 ```
 

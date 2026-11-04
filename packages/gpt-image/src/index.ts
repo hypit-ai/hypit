@@ -5,7 +5,7 @@ import {
 } from "@hypit/generation/model-fields";
 import type { ModelFieldTable, ModelFieldValue, ModelFieldRequest } from "@hypit/generation/model-fields";
 import { defineFieldModelModule, standardGenerationResults } from "@hypit/generation/model-fields";
-import { imageOperationsModuleRef } from "@hypit/image-operations";
+import { rasterTransformModuleRef } from "@hypit/raster-transform";
 
 export const gptImageModuleRef = { name: "@hypit/gpt-image", version: "1" } as const;
 
@@ -81,7 +81,7 @@ export const gptImageCleanManifest = {
   version: gptImageCleanModuleRef.version,
   dependencies: [
     gptImageModuleRef,
-    imageOperationsModuleRef,
+    rasterTransformModuleRef,
   ],
   types: [],
   capabilities: [],

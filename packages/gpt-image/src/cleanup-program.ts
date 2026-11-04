@@ -1,4 +1,4 @@
-import { sealImageTransformProgram } from "@hypit/image-operations";
+import { sealImageTransformProgram } from "@hypit/raster-transform";
 
 /** The package-owned cleanup recipe used by `@hypit/gpt-image/clean@1`. */
 export const gptImageCleanupProgram = sealImageTransformProgram({

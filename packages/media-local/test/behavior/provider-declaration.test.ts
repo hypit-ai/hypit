@@ -11,7 +11,8 @@ import { audioProgramCapabilities, audioProgramGraphFromMediaSources, audioProgr
 import { preservePitch } from "@hypit/audio-preserve-pitch";
 import { mediaDeliveryCapabilities } from "@hypit/media-delivery";
 import { mediaCapabilities } from "@hypit/media";
-import { mediaOperationsCapabilities } from "@hypit/media-operations";
+import { mediaExtractionCapabilities } from "@hypit/media-extraction";
+import { stillVideoCapabilities } from "@hypit/still-video";
 import { speechEvidenceCapabilities } from "@hypit/speech-evidence";
 import { exactTemporalZero, identityTemporalMap, sealTemporalMap } from "@hypit/temporal";
 import { fixtureResource } from "../../../../test/fixture-resource.js";
@@ -32,9 +33,9 @@ test("local media exposes only author-requested reusable operations as transient
   assert.deepEqual(endpointOffers(provider).filter((offer) => offer.transient === true)
     .map((offer) => capabilityKey(offer.capability)), [
     capabilityKey(mediaCapabilities.inspect),
-    capabilityKey(mediaOperationsCapabilities.extractAudio),
-    capabilityKey(mediaOperationsCapabilities.extractFrame),
-    capabilityKey(mediaOperationsCapabilities.renderStill),
+    capabilityKey(mediaExtractionCapabilities.audio),
+    capabilityKey(mediaExtractionCapabilities.frame),
+    capabilityKey(stillVideoCapabilities.render),
   ]);
   assert.deepEqual(endpointOffers(provider).filter((offer) => offer.transient !== true)
     .map((offer) => capabilityKey(offer.capability)), [

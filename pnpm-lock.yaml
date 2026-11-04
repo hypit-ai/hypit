@@ -72,9 +72,9 @@ importers:
       '@hypit/media':
         specifier: workspace:*
         version: link:packages/media
-      '@hypit/media-operations':
+      '@hypit/media-extraction':
         specifier: workspace:*
-        version: link:packages/media-operations
+        version: link:packages/media-extraction
       '@hypit/narrative':
         specifier: workspace:*
         version: link:packages/narrative
@@ -90,12 +90,21 @@ importers:
       '@hypit/protocol':
         specifier: workspace:*
         version: link:packages/protocol
+      '@hypit/raster-composition':
+        specifier: workspace:*
+        version: link:packages/raster-composition
+      '@hypit/raster-transform':
+        specifier: workspace:*
+        version: link:packages/raster-transform
       '@hypit/script':
         specifier: workspace:*
         version: link:packages/script
       '@hypit/speech-evidence':
         specifier: workspace:*
         version: link:packages/speech-evidence
+      '@hypit/still-video':
+        specifier: workspace:*
+        version: link:packages/still-video
       '@hypit/temporal':
         specifier: workspace:*
         version: link:packages/temporal
@@ -1305,9 +1314,9 @@ importers:
       '@hypit/generation':
         specifier: workspace:^0.2.0
         version: link:../generation
-      '@hypit/image-operations':
-        specifier: workspace:^0.3.0
-        version: link:../image-operations
+      '@hypit/raster-transform':
+        specifier: workspace:^0.1.0
+        version: link:../raster-transform
     devDependencies:
       '@hypit/author':
         specifier: workspace:*
@@ -1348,9 +1357,6 @@ importers:
       '@hypit/text':
         specifier: workspace:*
         version: link:../text
-      '@hypit/timeline':
-        specifier: workspace:*
-        version: link:../timeline
 
   packages/gpt-image-kits:
     devDependencies:
@@ -1531,24 +1537,33 @@ importers:
         specifier: workspace:*
         version: link:../source
 
-  packages/image-operations:
+  packages/raster-composition:
     dependencies:
       '@hypit/spatial':
         specifier: workspace:^0.1.1
         version: link:../spatial
     devDependencies:
-      '@hypit/author':
-        specifier: workspace:*
-        version: link:../author
       '@hypit/blob':
         specifier: workspace:*
         version: link:../blob
       '@hypit/hypit':
         specifier: workspace:*
         version: link:../..
-      '@hypit/markup':
+      '@hypit/producer':
         specifier: workspace:*
-        version: link:../markup
+        version: link:../producer
+      '@hypit/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+
+  packages/raster-transform:
+    devDependencies:
+      '@hypit/blob':
+        specifier: workspace:*
+        version: link:../blob
+      '@hypit/hypit':
+        specifier: workspace:*
+        version: link:../..
       '@hypit/producer':
         specifier: workspace:*
         version: link:../producer
@@ -1692,15 +1707,18 @@ importers:
       '@hypit/media':
         specifier: workspace:^0.2.0
         version: link:../media
+      '@hypit/media-extraction':
+        specifier: workspace:^0.1.0
+        version: link:../media-extraction
       '@hypit/media-delivery':
         specifier: workspace:^0.1.0
         version: link:../media-delivery
-      '@hypit/media-operations':
-        specifier: workspace:^0.3.0
-        version: link:../media-operations
       '@hypit/speech-evidence':
         specifier: workspace:^0.2.0
         version: link:../speech-evidence
+      '@hypit/still-video':
+        specifier: workspace:^0.1.0
+        version: link:../still-video
       '@hypit/temporal':
         specifier: workspace:^0.1.1
         version: link:../temporal
@@ -1730,30 +1748,37 @@ importers:
         specifier: workspace:*
         version: link:../runtime-local
 
-  packages/media-operations:
+  packages/media-extraction:
     dependencies:
       '@hypit/media':
         specifier: workspace:^0.2.0
         version: link:../media
-      '@hypit/temporal':
-        specifier: workspace:^0.1.1
-        version: link:../temporal
-      '@hypit/timeline':
-        specifier: workspace:^0.1.1
-        version: link:../timeline
     devDependencies:
-      '@hypit/author':
-        specifier: workspace:*
-        version: link:../author
       '@hypit/blob':
         specifier: workspace:*
         version: link:../blob
       '@hypit/hypit':
         specifier: workspace:*
         version: link:../..
-      '@hypit/markup':
+      '@hypit/producer':
         specifier: workspace:*
-        version: link:../markup
+        version: link:../producer
+      '@hypit/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+
+  packages/still-video:
+    dependencies:
+      '@hypit/temporal':
+        specifier: workspace:^0.1.1
+        version: link:../temporal
+    devDependencies:
+      '@hypit/blob':
+        specifier: workspace:*
+        version: link:../blob
+      '@hypit/hypit':
+        specifier: workspace:*
+        version: link:../..
       '@hypit/producer':
         specifier: workspace:*
         version: link:../producer
@@ -2220,9 +2245,12 @@ importers:
       '@hypit/hypit':
         specifier: workspace:*
         version: link:../..
-      '@hypit/image-operations':
+      '@hypit/raster-composition':
         specifier: workspace:*
-        version: link:../image-operations
+        version: link:../raster-composition
+      '@hypit/raster-transform':
+        specifier: workspace:*
+        version: link:../raster-transform
       '@hypit/protocol':
         specifier: workspace:*
         version: link:../protocol
@@ -2987,9 +3015,12 @@ importers:
       '@hypit/html-video':
         specifier: workspace:^0.2.1
         version: link:../html-video
-      '@hypit/image-operations':
-        specifier: workspace:^0.3.0
-        version: link:../image-operations
+      '@hypit/raster-composition':
+        specifier: workspace:^0.1.0
+        version: link:../raster-composition
+      '@hypit/raster-transform':
+        specifier: workspace:^0.1.0
+        version: link:../raster-transform
       '@hypit/media':
         specifier: workspace:^0.2.0
         version: link:../media
