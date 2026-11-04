@@ -20,17 +20,13 @@
   "devDependencies": {
     "@hypit/blob": "workspace:*",
     "@hypit/producer": "workspace:*",
-    "@hypit/author": "workspace:*",
     "@hypit/media": "workspace:*",
     "@hypit/protocol": "workspace:*",
-    "@hypit/markup": "workspace:*",
-    "@hypit/timeline": "workspace:*",
     "@hypit/temporal": "workspace:*",
     "@hypit/hypit": "workspace:*"
   },
   "dependencies": {
     "@hypit/media": "workspace:^0.2.0",
-    "@hypit/temporal": "workspace:^0.1.1",
-    "@hypit/timeline": "workspace:^0.1.1"
+    "@hypit/temporal": "workspace:^0.1.1"
   }
 }

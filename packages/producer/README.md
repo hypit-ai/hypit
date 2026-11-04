@@ -34,8 +34,8 @@ Author Kit; import only the owner of each responsibility:
 | `@hypit/hypit/author` | syntax-neutral Author Declarations, compilers and sealed Graph Fragments |
 | `@hypit/hypit/markup` | Markup spelling for package-owned Author Declarations |
 | `@hypit/temporal` | exact duration, rate and relation values and literal parsing |
-| `@hypit/timeline-author` | authored absolute Clock, Timeline, Window and Instant construction |
-| `@hypit/composition` | peer Track values and renderer-independent visual representation |
+| `@hypit/audiovisual` | resolved Source, Occurrence, Picture, Audio, Operator and Programme values |
+| `@hypit/audiovisual-author` | syntax-neutral audiovisual Author Spec compilation |
 | `@hypit/studio-companion` (optional, in Companion code) | editor Item projection, Inspector bindings and executed temporal lineage |
 
 The Author Package keeps `@hypit/hypit` as its framework development dependency. A package that
@@ -95,16 +95,16 @@ Component output mappings use **Fragment export name → public Source name**. I
 rename the Fragment port. The Manifest's Producer ports, Fragment wiring and handler output names
 must agree for that operation.
 
-Read the closest installed implementation for the behavior being authored: Emoji Reveal for a
-persistent event-driven strip, Visual Track for sampling and transitions, Caption Fine for a
-schedule/render split. Their package-local files supply concrete patterns without requiring a
-monorepo checkout. A new component owns its own mechanics, not a fork of the framework loader or
-Runtime.
+Read the closest installed owner for the behavior being authored: `@hypit/audiovisual-media` for
+prepared media Sources, `@hypit/visual-transition` for a two-Picture Operator, and
+`@hypit/visual-treatment` for a unary Picture Operator. A new component owns its local mechanics and
+publishes the corresponding typed Source or Operator; it does not recreate Track, Composition,
+Timeline, the framework loader or Runtime.
 
 ## Optional Studio presentation
 
-A component can render through the ordinary Track protocol without custom editor behavior. When it
-needs meaningful timeline Items or Inspector fields, put a Companion in a separate file and
+A component can enter the audiovisual Programme without custom editor behavior. When it
+needs meaningful projected Items or Inspector fields, put a Companion in a separate file and
 merge `createStudioTrackCompanionFacet(companions)` into the same activation's `facets`.
 Retain the existing Module, Producer, Author Declaration and Markup spelling contributions. The selected project's package
 supplies the extension; do not edit Studio's registry or add editor metadata to the domain Manifest.

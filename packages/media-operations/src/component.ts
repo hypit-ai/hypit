@@ -1,10 +1,8 @@
 import type { ProducerPackage } from "@hypit/hypit/producer";
 import type { RefinementPackage } from "@hypit/hypit/refinement";
 import { selectAudioStream, selectVideoStream, verifyMediaInspection } from "@hypit/media";
-import { assertClockIdentity } from "@hypit/timeline";
-import type { Clock } from "@hypit/timeline";
-import { durationInFrames } from "@hypit/temporal";
-import type { TemporalDuration } from "@hypit/temporal";
+import { assertTemporalSamplingGrid, durationInFrames } from "@hypit/temporal";
+import type { TemporalDuration, TemporalSamplingGrid } from "@hypit/temporal";
 import type { BlobRef, CanonicalValue, Value } from "@hypit/hypit/protocol";
 import { assertBlobRef, canonicalize } from "@hypit/hypit/protocol";
 
@@ -107,18 +105,18 @@ export const mediaOperationsComponent = {
       producer: mediaOperationsProducers.planStill,
       handler: ({ inputs }) => {
         const duration = valueOf(inputs.duration!.value, "TemporalDuration") as unknown as TemporalDuration;
-        const clock = valueOf(inputs.clock!.value, "Clock") as unknown as Clock;
-        assertClockIdentity(clock);
+        const sampling = valueOf(inputs.sampling!.value, "TemporalSamplingGrid") as unknown as TemporalSamplingGrid;
+        assertTemporalSamplingGrid(sampling);
         const layout = valueOf(inputs.layout!.value, "StillVideoLayout") as unknown as StillVideoLayout;
         verifyStillVideoLayout(layout);
-        const exactFrames = durationInFrames(duration, clock);
+        const exactFrames = durationInFrames(duration, sampling);
         if (exactFrames.numerator <= 0n || exactFrames.denominator !== 1n
           || exactFrames.numerator > BigInt(Number.MAX_SAFE_INTEGER)) {
           throw new Error("Still video duration must resolve to a positive whole frame count");
         }
         const frames = Number(exactFrames.numerator);
         const request = sealStillVideoRequest({
-          frameRate: clock.frameRate,
+          frameRate: sampling.frameRate,
           frameCount: frames,
           segments: planStillVideoSegments(frames, layout.weights),
         });

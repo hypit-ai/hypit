@@ -30,7 +30,6 @@ import { imageOperationsManifest, imageTransformTypes } from "@hypit/image-opera
 import { modelArtifactInputNames } from "@hypit/generation/model-fields";
 import { mediaManifest } from "@hypit/media";
 import { narrativeManifest } from "@hypit/narrative";
-import { timelineManifest } from "@hypit/timeline";
 import { temporalManifest } from "@hypit/temporal";
 import type { CanonicalValue, ResourceId, ModuleManifest, Value, TypeRef } from "@hypit/protocol";
 import {
@@ -72,7 +71,6 @@ function fixture() {
     narrativeManifest,
     mediaManifest,
     temporalManifest,
-    timelineManifest,
     spatialManifest,
     recipeManifest,
     seedanceManifest,

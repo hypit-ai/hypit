@@ -27,7 +27,7 @@ import { assertBlobRef, canonicalize } from "@hypit/protocol";
 import type { CapabilityRef, CanonicalValue, Need, TypeRef } from "@hypit/protocol";
 import { identityTemporalMap, sealTemporalMap } from "@hypit/temporal";
 import type { TemporalMap, TemporalMapPiece, TemporalRange } from "@hypit/temporal";
-import { frameRangeFixture, frameSamplingMapFixture } from "../../../../test/temporal-fixture.js";
+import { frameRangeFixture, frameSamplingMapFixture } from "../../../../test/exact-temporal-fixture.js";
 
 import { createLocalMediaProvider } from "../../src/index.js";
 

@@ -1,7 +1,7 @@
 import type { MediaAudioSelector, MediaVideoSelector } from "@hypit/media";
 import { canonicalize } from "@hypit/hypit/protocol";
 import type { BlobRef } from "@hypit/hypit/protocol";
-import { assertFrameSpan } from "@hypit/timeline";
+import { assertFrameSpan } from "@hypit/temporal";
 
 import type {
   AudioExtractionRequest,

@@ -9,7 +9,7 @@ import {
   exactTemporalZero,
 } from "@hypit/temporal";
 
-import { frameSamplingMapFixture } from "../../../test/temporal-fixture.js";
+import { frameSamplingMapFixture } from "../../../test/exact-temporal-fixture.js";
 
 const frameRate = { numerator: 30, denominator: 1 } as const;
 const picture: PictureInterpretation = {

@@ -28,6 +28,7 @@ export const temporalTypes = {
   exactValue: { module: temporalModuleRef, name: "ExactTemporalValue" },
   extent: { module: temporalModuleRef, name: "TemporalExtent" },
   frameSpan: { module: temporalModuleRef, name: "FrameSpan" },
+  samplingGrid: { module: temporalModuleRef, name: "TemporalSamplingGrid" },
   map: { module: temporalModuleRef, name: "TemporalMap" },
   localDomain: { module: temporalModuleRef, name: "LocalTemporalDomain" },
 } satisfies Record<string, TypeRef>;
@@ -44,6 +45,7 @@ export const temporalManifest: ModuleManifest = {
     temporalTypes.exactValue.name,
     temporalTypes.extent.name,
     temporalTypes.frameSpan.name,
+    temporalTypes.samplingGrid.name,
     temporalTypes.map.name,
     temporalTypes.localDomain.name,
   ],
@@ -77,6 +79,12 @@ export const temporalExtentSchema: ValueSchema = object({ duration: { schema: ex
 export const frameSpanSchema: ValueSchema = object({
   startFrame: { schema: { kind: "number", integer: true, minimum: 0 } },
   endFrameExclusive: { schema: { kind: "number", integer: true, minimum: 1 } },
+});
+export const temporalSamplingGridSchema: ValueSchema = object({
+  frameRate: { schema: object({
+    numerator: { schema: { kind: "number", integer: true, minimum: 1 } },
+    denominator: { schema: { kind: "number", integer: true, minimum: 1 } },
+  }) },
 });
 const temporalRangeSchema: ValueSchema = object({
   start: { schema: exactTemporalValueSchema }, end: { schema: exactTemporalValueSchema },

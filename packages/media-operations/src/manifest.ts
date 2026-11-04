@@ -1,7 +1,6 @@
 import { blobDependency } from "@hypit/hypit/blob";
 import { mediaDependency, mediaTypes } from "@hypit/media";
-import { frameSpanSchema, timelineDependency, timelineTypes } from "@hypit/timeline";
-import { temporalDependency, temporalTypes } from "@hypit/temporal";
+import { frameSpanSchema, temporalDependency, temporalTypes } from "@hypit/temporal";
 import { blobTypes } from "@hypit/hypit/blob";
 import { blobRefSchema } from "@hypit/hypit/protocol";
 import type { CapabilityRef, ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/hypit/protocol";
@@ -108,7 +107,6 @@ export const mediaOperationsManifest: ModuleManifest = {
   dependencies: [
     blobDependency,
     mediaDependency,
-    timelineDependency,
     temporalDependency,
   ],
   types: [
@@ -145,7 +143,7 @@ export const mediaOperationsManifest: ModuleManifest = {
       name: mediaOperationsProducers.planStill.name,
       inputs: [
         { name: "duration", type: temporalTypes.duration },
-        { name: "clock", type: timelineTypes.clock },
+        { name: "sampling", type: temporalTypes.samplingGrid },
         { name: "layout", type: mediaOperationsTypes.stillVideoLayout },
       ],
       result: { kind: "output" as const, name: "request", type: mediaOperationsTypes.stillVideoRequest },

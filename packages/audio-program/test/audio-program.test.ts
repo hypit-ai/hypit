@@ -3,7 +3,7 @@ import test from "node:test";
 import { pointwiseOperatorTemporalSupport } from "@hypit/audiovisual";
 
 import { fixtureResource } from "../../../test/fixture-resource.js";
-import { frameRangeFixture } from "../../../test/temporal-fixture.js";
+import { frameRangeFixture } from "../../../test/exact-temporal-fixture.js";
 import {
   audioProgramMediaSources,
   sealAudioProgram,

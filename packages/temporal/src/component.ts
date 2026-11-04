@@ -7,6 +7,7 @@ import { assertTemporalExtent } from "./extent.js";
 import { assertExactTemporalValue } from "./exact.js";
 import { assertLocalTemporalDomain } from "./domain.js";
 import { assertTemporalMap } from "./map.js";
+import { assertFrameSpan, assertTemporalSamplingGrid } from "./sampling.js";
 import { temporalProducers, temporalTypes } from "./index.js";
 import type { LocalTemporalDomain } from "./types.js";
 import { assertTemporalDuration } from "./validation.js";
@@ -23,6 +24,8 @@ export const temporalComponent = {
     { type: temporalTypes.duration, handler: ({ value }) => assertTemporalDuration(value) },
     { type: temporalTypes.exactValue, handler: ({ value }) => assertExactTemporalValue(value as never) },
     { type: temporalTypes.extent, handler: ({ value }) => assertTemporalExtent(value as never) },
+    { type: temporalTypes.frameSpan, handler: ({ value }) => assertFrameSpan(value) },
+    { type: temporalTypes.samplingGrid, handler: ({ value }) => assertTemporalSamplingGrid(value as never) },
     { type: temporalTypes.map, handler: ({ value }) => assertTemporalMap(value as never) },
     { type: temporalTypes.localDomain, handler: ({ value }) => assertLocalTemporalDomain(value as never) },
   ],

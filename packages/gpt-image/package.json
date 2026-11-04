@@ -35,7 +35,6 @@
     "@hypit/spatial": "workspace:*",
     "@hypit/recipe": "workspace:*",
     "@hypit/temporal": "workspace:*",
-    "@hypit/text": "workspace:*",
-    "@hypit/timeline": "workspace:*"
+    "@hypit/text": "workspace:*"
   }
 }

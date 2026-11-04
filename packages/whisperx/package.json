@@ -34,7 +34,6 @@
     "@hypit/speech-evidence": "workspace:*",
     "@hypit/markup": "workspace:*",
     "@hypit/temporal": "workspace:*",
-    "typescript": "5.9.3",
-    "@hypit/timeline": "workspace:*"
+    "typescript": "5.9.3"
   }
 }

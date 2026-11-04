@@ -12,7 +12,7 @@ const planStill = mediaOperationsComponent.producers.find(
 function plan(duration: unknown, frameRate = { numerator: 30, denominator: 1 }) {
   return planStill.handler({ inputs: {
     duration: { value: (duration) },
-    clock: { value: ({ frameRate }) },
+    sampling: { value: ({ frameRate }) },
     layout: { value: ({ weights: [1] }) },
   } } as never);
 }

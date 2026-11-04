@@ -1,6 +1,6 @@
 import type { BlobRef } from "@hypit/hypit/protocol";
 import type { MediaAudioSelector, MediaRational, MediaVideoSelector } from "@hypit/media";
-import type { FrameSpan } from "@hypit/timeline";
+import type { FrameSpan } from "@hypit/temporal";
 
 export type AudioExtractionRequest = {
   readonly audio: Exclude<MediaAudioSelector,
