@@ -19,7 +19,7 @@ const operation = (id: string) => ({ kind: "fragment-operation" as const, operat
 
 export function createAudioTrackFragment(clips: readonly AudioTrackFragmentItem[]) {
   if (clips.length === 0) throw new Error("Audio Track Fragment requires at least one Clip.");
-  const inputTypes = new Map<string, (typeof audioTrackTypes.clipSpec | typeof mediaTypes.prepared | typeof temporalTypes.window)>();
+  const inputTypes = new Map<string, (typeof audioTrackTypes.clipSpec | typeof mediaTypes.prepared | typeof timelineTypes.window)>();
   const operations: FragmentOperation[] = [
     { id: "audio:set:empty", producer: audioTrackProducers.createSet, inputs: {}, result: { kind: "output" as const, name: "set" } },
   ];
@@ -27,7 +27,7 @@ export function createAudioTrackFragment(clips: readonly AudioTrackFragmentItem[
   clips.forEach((clip, index) => {
     inputTypes.set(clip.mediaName, mediaTypes.prepared);
     inputTypes.set(clip.specName, audioTrackTypes.clipSpec);
-    inputTypes.set(clip.windowName, temporalTypes.window);
+    inputTypes.set(clip.windowName, timelineTypes.window);
     const id = `audio:set:append:${String(index + 1).padStart(4, "0")}`;
     operations.push({
       id,

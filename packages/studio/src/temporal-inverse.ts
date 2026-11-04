@@ -1,8 +1,8 @@
+import { timelineTypes } from "@hypit/timeline";
 import { isAbsolute, relative, resolve } from "node:path";
 
 import type { ProducerStep, Value, TypedRecord } from "@hypit/hypit/protocol";
 import { sameType } from "@hypit/hypit/protocol";
-import { temporalTypes } from "@hypit/temporal";
 import type { FrameSpan } from "@hypit/timeline";
 import type {
   StudioSourceBinding,
@@ -173,10 +173,10 @@ export function planTemporalInverse(input: {
   };
   const initial: SolutionState = { desired: new Map(), queue: [], writes: new Map() };
   if (input.target.kind === "instant") {
-    if (!sameType(root.type, temporalTypes.instant)) throw new Error("Temporal inverse expected an Instant record.");
+    if (!sameType(root.type, timelineTypes.instant)) throw new Error("Temporal inverse expected an Instant record.");
     constrain(initial, root.id, input.target);
   } else {
-    if (!sameType(root.type, temporalTypes.window)) throw new Error("Temporal inverse expected a Window record.");
+    if (!sameType(root.type, timelineTypes.window)) throw new Error("Temporal inverse expected a Window record.");
     constrain(initial, root.id, { kind: "span", startFrame: input.target.startFrame,
       endFrameExclusive: input.target.endFrameExclusive });
   }

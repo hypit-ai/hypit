@@ -1,7 +1,7 @@
 import type { EndpointSupport } from "@hypit/hypit/endpoint";
-import { selectHtmlArtifacts, selectHtmlSurfaces, selectHtmlVideoSources } from "@hypit/html-program";
+import { selectHtmlArtifacts, selectHtmlVideoSources } from "@hypit/html-program";
 import type { HtmlFrameRequest, HtmlRasterRequest } from "@hypit/html-program";
-import type { FrameSpan } from "@hypit/timeline";
+import type { FrameSpan } from "@hypit/temporal";
 import type { PictureInterpretation } from "@hypit/media";
 
 function sdrSourcePictureRejection(picture: PictureInterpretation, label: string): string | undefined {
@@ -47,16 +47,8 @@ function programRejection(request: HtmlRasterRequest | HtmlFrameRequest): string
     }
   }
   for (const source of selectHtmlVideoSources(request.program, selection)) {
-    if (source.kind === "media") {
-      const picture = source.source.interpretation.picture;
-      const reason = sdrSourcePictureRejection(picture, `Video source ${source.id}`);
-      if (reason !== undefined) return reason;
-    }
-  }
-  for (const surface of selectHtmlSurfaces(request.program, selection)) {
-    const reason = surface.surface.timing.kind === "still"
-      ? stillPictureRejection(surface.surface.picture, `Surface ${surface.artifactId}`)
-      : sdrSourcePictureRejection(surface.surface.picture, `Surface ${surface.artifactId}`);
+    const picture = source.source.interpretation.picture;
+    const reason = sdrSourcePictureRejection(picture, `Video source ${source.id}`);
     if (reason !== undefined) return reason;
   }
   return undefined;

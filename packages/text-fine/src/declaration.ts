@@ -780,7 +780,7 @@ function createFineTextFragment(form: FineTextForm, externalContent: boolean): G
       ...(externalContent ? [{ name: "content", type: textTypes.text }] : []),
       { name: "style", type: textFineTypes.style },
       { name: "motion", type: textFineTypes.motion },
-      { name: "window", type: temporalTypes.window },
+      { name: "window", type: timelineTypes.window },
     ],
     operations,
     exports: [
@@ -796,7 +796,7 @@ function decodeFineTextOccurrenceDeclaration(form: FineTextForm): DeclarationDec
     const geometryType = form === "flow" ? spatialTypes.frame : form === "point" ? spatialTypes.point : spatialTypes.path;
     const id = text(element, "id");
     const timeline = reference(element.attributes.timeline, `${element.name}.timeline`, timelineTypes.timeline, resolveReference);
-    const window = reference(element.attributes.during, `${element.name}.during`, temporalTypes.window, resolveReference);
+    const window = reference(element.attributes.during, `${element.name}.during`, timelineTypes.window, resolveReference);
     const geometry = reference(element.attributes[geometryAttribute], `${element.name}.${geometryAttribute}`, geometryType, resolveReference);
     const style = reference(element.attributes.style, `${element.name}.style`, textFineTypes.style, resolveReference);
     const defaultMotionId = `${id}.__still-motion`;
@@ -997,7 +997,7 @@ const occurrenceFields = [
   referenceField("style", textFineTypes.style, true),
   referenceField("motion", textFineTypes.motion, false),
   referenceField("content", textTypes.text, false),
-  referenceField("during", temporalTypes.window, true),
+  referenceField("during", timelineTypes.window, true),
 ] as const;
 const flowFields = [
   ...occurrenceFields,

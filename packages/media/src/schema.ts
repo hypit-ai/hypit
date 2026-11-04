@@ -159,3 +159,27 @@ const surfaceTiming: ValueSchema = { kind: "oneOf", variants: [
 export const compositableSurfaceSchema: ValueSchema = object({ artifact: { schema: blobRefSchema() }, width: { schema: { kind: "number", integer: true, minimum: 1 } },
   height: { schema: { kind: "number", integer: true, minimum: 1 } }, picture: { schema: pictureInterpretationSchema },
   timing: { schema: surfaceTiming } });
+
+const selectionMode = (name: string): ValueSchema => object({
+  mode: { schema: { kind: "literal", value: name } },
+});
+const streamSelectionMode: ValueSchema = object({
+  mode: { schema: { kind: "literal", value: "stream-index" } },
+  streamIndex: { schema: integer },
+});
+export const mediaSelectionRequestSchema: ValueSchema = object({
+  video: { schema: { kind: "oneOf", variants: [
+    selectionMode("primary-moving"), streamSelectionMode, selectionMode("none"),
+  ] } },
+  audio: { schema: { kind: "oneOf", variants: [
+    selectionMode("default"), selectionMode("default-if-present"), streamSelectionMode, selectionMode("none"),
+  ] } },
+  spanAuthority: { schema: { kind: "string", enum: ["video", "audio"] } },
+  picture: { schema: { kind: "oneOf", variants: [
+    selectionMode("none"), selectionMode("source"),
+    object({
+      mode: { schema: { kind: "literal", value: "explicit" } },
+      interpretation: { schema: pictureInterpretationSchema },
+    }),
+  ] } },
+});

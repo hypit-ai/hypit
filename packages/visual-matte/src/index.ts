@@ -1,8 +1,10 @@
+export { visualMatteComponent } from "./component.js";
 export {
-  visualMatteAuthorDeclaration,
-  visualMatteAuthorDeclarations,
-  visualMatteMarkupDeclarations,
-} from "./declaration.js";
-export { visualMatteManifest, visualMatteModuleRef } from "./manifest.js";
-export { visualMatteEffect } from "./program.js";
-export type { VisualMatteChannel } from "./program.js";
+  visualMatteManifest,
+  visualMatteModuleRef,
+  visualMatteOperatorSpecSchema,
+  visualMatteProducers,
+  visualMatteTypes,
+} from "./manifest.js";
+export { visualMatteEffect, visualMatteOperator } from "./program.js";
+export type { VisualMatteChannel, VisualMatteOperatorSpec, VisualMatteProgram } from "./program.js";

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import type { HtmlElement } from "@hypit/html-program";
 import type { BlobRef } from "@hypit/hypit/protocol";
-import type { TemporalInstant } from "@hypit/temporal";
+import type { TemporalInstant } from "@hypit/timeline";
 import { sealTimeline } from "@hypit/timeline";
 import { fixtureResource } from "../../../test/fixture-resource.js";
 import { decodeEmojiRevealStyle, renderEmojiReveal } from "../src/index.js";

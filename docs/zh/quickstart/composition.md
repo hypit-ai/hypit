@@ -67,36 +67,6 @@ caption.base { }
 item 保持在所属 Track 的放置关系内。若多张画面、图形与文字因为共享布局或运动而需要局部交错顺序，
 应由一个组件拥有该 programme 及其内部元素树或浏览器程序；仍可独立使用的贡献保持为并列 Track。
 
-## 闭合局部视觉栈
-
-若一组画面需要先合成为一张 Picture，并让一个 Adjustment 只作用于该组，使用 Film Stack：
-
-```svml
-<import as="adjust" from="@hypit/visual-adjustment@1"/>
-<import as="treatment" from="@hypit/visual-treatment@1"/>
-
-<treatment:Color id="cinematic" contrast="1.08" saturation="0.9" hue="-2"/>
-
-<adjust:Track id="look" timeline={speech.timeline}>
-  <adjust:Adjustment id="grade" during={speech.window}
-    effect={cinematic}/>
-</adjust:Track>
-
-<film:Film id="main" canvas={vertical.canvas} timeline={speech.timeline}
-  appearance={recipes.film.vertical}>
-  <film:Track id="background" source={background.visual}/>
-  <film:Stack id="treated-subject">
-    <film:Track id="subject" source={subject.visual}/>
-    <film:Track id="look" source={look.visual}/>
-  </film:Stack>
-  <film:Track id="captions" source={captions.visual}/>
-  <film:Track source={dialogue.audio}/>
-</film:Film>
-```
-
-Stack 从透明画面开始，在父 Scope 中按自身声明位置作为一张画面进入。Adjustment 只变换该 Stack 内已经累积的
-画面。AudioTrack 保持在 Film 根上，不会继承视觉 Stack 的归属。
-
 ## 渲染完整视频
 
 ```svml

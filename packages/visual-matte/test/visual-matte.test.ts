@@ -2,8 +2,14 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { HTML_VISUAL_FORMAT, type HtmlVisual } from "@hypit/html-program";
+import { canonicalize } from "@hypit/hypit/protocol";
 
-import { visualMatteEffect } from "../src/index.js";
+import {
+  visualMatteComponent,
+  visualMatteEffect,
+  visualMatteOperator,
+  visualMatteProducers,
+} from "../src/index.js";
 
 test("Visual Matte publishes one explicit two-Picture process contract", () => {
   for (const channel of ["alpha", "luminance"] as const) for (const invert of [false, true]) {
@@ -20,4 +26,18 @@ test("Visual Matte publishes one explicit two-Picture process contract", () => {
 
 test("Visual Matte rejects an unknown channel instead of guessing", () => {
   assert.throws(() => visualMatteEffect("red" as "alpha"), /channel red is invalid/u);
+});
+
+test("Visual Matte publishes its package-owned Picture Operator through a typed Producer", async () => {
+  const producer = visualMatteComponent.producers.find((candidate) =>
+    candidate.producer.name === visualMatteProducers.operator.name)!;
+  for (const spec of [
+    { channel: "alpha", invert: false },
+    { channel: "luminance", invert: true },
+  ] as const) {
+    const result = await producer.handler({ inputs: { spec: { value: canonicalize(spec) } } } as never);
+    assert.equal(result.kind, "output");
+    assert.deepEqual(result.value, visualMatteOperator(spec.channel, spec.invert));
+    assert.deepEqual((result.value as unknown as { inputs: string[] }).inputs, ["content", "matte"]);
+  }
 });

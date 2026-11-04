@@ -31,8 +31,8 @@
 
   <wording:Value id="direction">A neutral catalogue card in a quiet studio.</wording:Value>
   <seedance:TextVideo id="take" model="mini" prompt={direction} duration="4" generate-audio="true"/>
-  <mediaop:Prepare id="take-media" source={take.video} recipe={recipes.media.aroll}/>
-  <whisperx:Transcription id="showcase-semantic-transcription" media={take-media.media} language="en"/>
+  <media:Video id="take-media" source={take.video} audio="default"/>
+  <whisperx:Transcription id="showcase-semantic-transcription" media={take-media.source} language="en"/>
   <speechalign:Alignment id="showcase-semantic" narrative={story}
     segment={story.segment.showcase} domain={take-media.domain} evidence={showcase-semantic-transcription.transcript}/>
   <time:Timeline id="speech" clock={clock} end="showcase-semantic.end">
@@ -44,10 +44,10 @@
     <semantic:Map alignment={showcase-semantic.alignment} domain={take-media.domain} window={speech.showcase-semantic}/>
   </semantic:Projection>
   <audio:Track id="speech-sound" timeline={speech.timeline}>
-    <audio:Clip id="showcase-semantic-source" source={take-media.media} during={speech.showcase-semantic}/>
+    <audio:Clip id="showcase-semantic-source" source={take-media.source} during={speech.showcase-semantic}/>
   </audio:Track>
   <visual:Track id="speech-picture" timeline={speech.timeline}>
-    <visual:Clip id="showcase-semantic-source" media={take-media.media} during={speech.showcase-semantic} frame={speech-frame} fit="cover"/>
+    <visual:Clip id="showcase-semantic-source" media={take-media.source} during={speech.showcase-semantic} frame={speech-frame} fit="cover"/>
   </visual:Track>
 
   <example:Box id="box" timeline={speech.timeline} within={vertical.bounds}/>

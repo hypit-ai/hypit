@@ -1,79 +1,14 @@
 import type { BlobRef } from "@hypit/hypit/protocol";
-import type { MediaRational, PictureInterpretation } from "@hypit/media";
+import type { MediaAudioSelector, MediaRational, MediaVideoSelector } from "@hypit/media";
 import type { FrameSpan } from "@hypit/timeline";
-import type { ExactTemporalValue, TemporalRate } from "@hypit/temporal";
-
-export type MediaSelectionRequest = {
-  readonly video:
-    | { readonly mode: "primary-moving" }
-    | { readonly mode: "stream-index"; readonly streamIndex: number }
-    | { readonly mode: "none" };
-  readonly audio:
-    | { readonly mode: "default" }
-    | { readonly mode: "stream-index"; readonly streamIndex: number }
-    | { readonly mode: "none" };
-  readonly spanAuthority: "video" | "audio";
-  readonly picture:
-    | { readonly mode: "none" }
-    | { readonly mode: "source" }
-    | { readonly mode: "explicit"; readonly interpretation: PictureInterpretation };
-};
-
-export type InspectMediaNeed = {
-  readonly source: BlobRef;
-};
-
-export type MediaVideoSelector =
-  | { readonly mode: "primary-moving" }
-  | { readonly mode: "stream-index"; readonly streamIndex: number };
-
-export type MediaAudioSelector =
-  | { readonly mode: "default" }
-  | { readonly mode: "stream-index"; readonly streamIndex: number }
-  | { readonly mode: "none" };
-
-export type MediaTransformOperation =
-  | {
-      readonly kind: "trim";
-      /** Exact positions in the operation's current local domain. */
-      readonly start?: ExactTemporalValue;
-      readonly end?: ExactTemporalValue;
-      readonly tail?: ExactTemporalValue;
-    }
-  | {
-      readonly kind: "retime";
-      /** Source-local advance per one target-local unit. */
-      readonly rate: TemporalRate;
-    }
-  | {
-      readonly kind: "retime-profile";
-      /** Complete, ordered traversal of the current source domain. */
-      readonly knots: readonly MediaTransformRateKnot[];
-    };
-
-/** One inward offset from a current PreparedMedia domain edge. */
-export type MediaTransformRelativePoint = {
-  readonly edge: "start" | "end";
-  readonly offset: ExactTemporalValue;
-};
-
-/** One source-local position and its signed source-per-target rate. */
-export type MediaTransformRateKnot = {
-  readonly at: MediaTransformRelativePoint;
-  readonly rate: TemporalRate;
-};
-
-/** Ordered, deterministic temporal operations over PreparedMedia. */
-export type MediaTransformProgram = {
-  readonly operations: readonly MediaTransformOperation[];
-};
 
 export type AudioExtractionRequest = {
-  readonly audio: Exclude<MediaAudioSelector, { readonly mode: "none" }>;
+  readonly audio: Exclude<MediaAudioSelector,
+    { readonly mode: "none" } | { readonly mode: "default-if-present" }>;
 };
 
 export type FrameExtractionRequest = {
-  readonly video: MediaVideoSelector;
+  readonly video: Exclude<MediaVideoSelector, { readonly mode: "none" }>;
   readonly at:
     | { readonly kind: "first" }
     | { readonly kind: "last" }

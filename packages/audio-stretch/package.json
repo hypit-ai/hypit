@@ -18,12 +18,12 @@
     "@hypit/hypit": "workspace:^0.4.0"
   },
   "devDependencies": {
-    "@hypit/author": "workspace:*",
     "@hypit/hypit": "workspace:*",
-    "@hypit/markup": "workspace:*",
+    "@hypit/producer": "workspace:*",
+    "@hypit/protocol": "workspace:*",
     "typescript": "5.9.3"
   },
   "dependencies": {
-    "@hypit/audio-track": "workspace:^0.3.0"
+    "@hypit/audiovisual": "workspace:^0.1.0"
   }
 }

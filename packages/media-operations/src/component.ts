@@ -1,6 +1,6 @@
 import type { ProducerPackage } from "@hypit/hypit/producer";
 import type { RefinementPackage } from "@hypit/hypit/refinement";
-import { verifyMediaDomainSpec, verifyMediaInspection, verifyPreparedMedia } from "@hypit/media";
+import { selectAudioStream, selectVideoStream, verifyMediaInspection } from "@hypit/media";
 import { assertClockIdentity } from "@hypit/timeline";
 import type { Clock } from "@hypit/timeline";
 import { durationInFrames } from "@hypit/temporal";
@@ -10,33 +10,23 @@ import { assertBlobRef, canonicalize } from "@hypit/hypit/protocol";
 
 import { mediaOperationsProducers, mediaOperationsTypes } from "./manifest.js";
 import {
-  selectMediaStreams,
-  selectAudioStream,
-  selectVideoStream,
-  verifyMediaSelectionRequest,
-} from "./selection.js";
-import {
   bindStillVideoSource,
   planStillVideoSegments,
   sealStillVideoRequest,
   verifyStillVideoLayout,
   verifyAudioExtractionRequest,
   verifyFrameExtractionRequest,
-  verifyMediaTransformProgram,
   verifyStillVideoRequest,
-  transformPreparedMedia,
 } from "./operations.js";
 import type {
   AudioExtractionRequest,
   ExtractAudioNeed,
   ExtractFrameNeed,
   FrameExtractionRequest,
-  InspectMediaNeed,
   RenderStillVideoNeed,
   StillVideoLayout,
   StillVideoRequest,
 } from "./types.js";
-import type { MediaDomainSpec, PreparedMedia } from "@hypit/media";
 
 function valueOf(value: Value, subject: string): CanonicalValue {
   if (value === undefined) throw new Error(`${subject} is missing`);
@@ -50,18 +40,6 @@ function blob(value: Value, subject: string): BlobRef {
 
 export const mediaOperationsComponent = {
   refinements: [
-    {
-      type: mediaOperationsTypes.selectionRequest,
-      handler: ({ value }) => {
-        verifyMediaSelectionRequest(valueOf(value, "MediaSelectionRequest"));
-      },
-    },
-    {
-      type: mediaOperationsTypes.transformProgram,
-      handler: ({ value }) => {
-        verifyMediaTransformProgram(valueOf(value, "MediaTransformProgram"));
-      },
-    },
     {
       type: mediaOperationsTypes.audioExtractionRequest,
       handler: ({ value }) => {
@@ -88,36 +66,6 @@ export const mediaOperationsComponent = {
     },
   ],
   producers: [
-    {
-      producer: mediaOperationsProducers.inspect,
-      handler: ({ inputs }) => {
-        const source = blob(inputs.source!.value, "Media inspection source");
-        const need: InspectMediaNeed = { source };
-        return { kind: "need", constraints: canonicalize(need) };
-      },
-    },
-    {
-      producer: mediaOperationsProducers.select,
-      handler: ({ inputs }) => {
-        const inspection = valueOf(inputs.inspection!.value, "MediaInspection");
-        const request = valueOf(inputs.request!.value, "MediaSelectionRequest");
-        verifyMediaInspection(inspection);
-        verifyMediaSelectionRequest(request);
-        return { kind: "output", value: (canonicalize(selectMediaStreams(inspection, request))) };
-      },
-    },
-    {
-      producer: mediaOperationsProducers.transform,
-      handler: ({ inputs }) => {
-        const media = valueOf(inputs.media!.value, "PreparedMedia") as unknown as PreparedMedia;
-        const program = valueOf(inputs.program!.value, "MediaTransformProgram");
-        const spec = valueOf(inputs.spec!.value, "MediaDomainSpec") as unknown as MediaDomainSpec;
-        verifyPreparedMedia(media);
-        verifyMediaTransformProgram(program);
-        verifyMediaDomainSpec(spec);
-        return { kind: "output", value: canonicalize(transformPreparedMedia(media, program, spec.id)) };
-      },
-    },
     {
       producer: mediaOperationsProducers.extractAudio,
       handler: ({ inputs }) => {

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { MemoryResourceStore } from "@hypit/executor";
 import { verifyTimelineVisual } from "@hypit/media";
-import type { CompositableSurfaceRef, TimelineVisual } from "@hypit/media";
+import type { TimelineVisual } from "@hypit/media";
 import type { CanonicalValue } from "@hypit/protocol";
 import { rasterizeChromiumHtmlProgram } from "../../../provider-html-local/src/index.js";
 import { rasterizeElectronHtmlProgram } from "../../src/index.js";
@@ -26,19 +26,7 @@ test("an explicit browser renders without installing a managed replacement", asy
 });
 test("local HTML renderer Provider really renders a silent frame-exact MP4 with parallel workers", async () => {
   const resources = new MemoryResourceStore();
-  const png = Buffer.from(
-    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
-    "base64",
-  );
-  const surfaceArtifact = await resources.put(png, "image/png");
-  const surface: CompositableSurfaceRef = {
-    artifact: surfaceArtifact,
-    width: 1,
-    height: 1,
-    picture: { colorPrimaries: "bt709", colorTransfer: "srgb", colorMatrix: "rgb", colorRange: "full", bitDepth: 8, alphaMode: "straight" } as const,
-    timing: { kind: "still" },
-  };
-  const request = htmlProviderNeed(htmlProviderDocument(surface));
+  const request = htmlProviderNeed(htmlProviderDocument());
   const { handler } = await htmlProviderHandler(request);
   const output = await handler({
 

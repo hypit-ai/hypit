@@ -13,18 +13,16 @@ import {
 import { canonicalize, sameType, type TypeRef } from "@hypit/hypit/protocol";
 import {
   parseTemporalDuration,
-  temporalProducers,
   temporalTypes,
   type TemporalDuration,
-  type TemporalInstantExpression,
 } from "@hypit/temporal";
-import { timelineTypes, type Clock } from "@hypit/timeline";
+import { timelineProducers, timelineTypes, type Clock } from "@hypit/timeline";
 
 import { compileTimelineAuthorFragment } from "./fragment.js";
 import { parseTimelineInstantExpression } from "./literal.js";
-import { timelineAuthorModuleRef, timelineAuthorTypes } from "./manifest.js";
+import { timelineAuthorModuleRef, timelineAuthorProducers, timelineAuthorTypes } from "./manifest.js";
 import { constructionDuration } from "./program.js";
-import type { ConstructionDurationSpec, TimelineAuthorDeclaration } from "./types.js";
+import type { ConstructionDurationSpec, TimelineAuthorDeclaration, TimelineInstantExpression } from "./types.js";
 
 type DeclarationNode = AuthorDeclaration | AuthorDeclarationChild;
 
@@ -142,7 +140,7 @@ export const timelineAuthorDeclaration: AuthorDeclarationCompiler = {
   module: timelineAuthorModuleRef,
   declaration: "timeline",
   outputs: [...Object.values(timelineAuthorTypes), timelineTypes.timeline, timelineTypes.frameSpan,
-    temporalTypes.instant, temporalTypes.window],
+    timelineTypes.instant, timelineTypes.window],
   shape: {
     summary: "Constructs one finite Timeline and its named absolute Instants and Windows.",
     fields: [
@@ -235,7 +233,7 @@ export const timelineAuthorDeclaration: AuthorDeclarationCompiler = {
 };
 
 type InstantDraft =
-  | { readonly kind: "expression"; readonly expression: TemporalInstantExpression; readonly binding?: string }
+  | { readonly kind: "expression"; readonly expression: TimelineInstantExpression; readonly binding?: string }
   | { readonly kind: "reference"; readonly reference: AuthorResolvedReference };
 type ExtentDraft =
   | { readonly kind: "duration"; readonly duration: TemporalDuration; readonly binding: string }
@@ -252,7 +250,7 @@ async function instantDraft(
     kind: "expression", expression: parseTimelineInstantExpression(value.value, `${declaration.name}.${name}`), binding: name,
   };
   const reference = await resolveReference(value.path);
-  if (reference === undefined || !sameType(reference.type, temporalTypes.instant)) {
+  if (reference === undefined || !sameType(reference.type, timelineTypes.instant)) {
     throw new Error(`${declaration.name}.${name} has the wrong Type.`);
   }
   return { kind: "reference", reference };
@@ -286,37 +284,37 @@ function compileWindow(
 ): AuthorDeclarationOutput {
   const ports: Array<{ readonly name: string; readonly type: TypeRef }> = [
     { name: "timeline", type: timelineTypes.timeline },
-    { name: "window-spec", type: temporalTypes.windowSpec },
+    { name: "window-spec", type: timelineTypes.temporalIdentity },
   ];
   const bindings: Record<string, AuthorResolvedReference["ref"] | { kind: "record"; id: string }> = {
     timeline: timeline.ref,
     "window-spec": { kind: "record", id: `${id}.__temporal.window` },
   };
   const records: AuthorDeclarationOutput["records"][number][] = [{
-    id: `${id}.__temporal.window`, type: temporalTypes.windowSpec,
+    id: `${id}.__temporal.window`, type: timelineTypes.temporalIdentity,
     value: canonicalize({ id, subjectId: id }), range: declaration.range,
   }];
   const operations: FragmentOperation[] = [];
   const materialize = (name: "start" | "end", draft: InstantDraft): FragmentOperationRef => {
     if (draft.kind === "reference") {
       const port = `${name}-instant`;
-      ports.push({ name: port, type: temporalTypes.instant });
+      ports.push({ name: port, type: timelineTypes.instant });
       bindings[port] = draft.reference.ref;
       const operationId = `reuse-${name}`;
-      operations.push({ id: operationId, producer: temporalProducers.reuseInstant,
+      operations.push({ id: operationId, producer: timelineAuthorProducers.reuseInstant,
         inputs: { instant: input(port) }, result: { kind: "output" as const, name: "instant" } });
       return operation(operationId);
     }
     const port = `${name}-spec`;
     const recordId = `${id}.__temporal.${name}`;
-    ports.push({ name: port, type: temporalTypes.instantSpec });
+    ports.push({ name: port, type: timelineAuthorTypes.instantSpec });
     bindings[port] = { kind: "record", id: recordId };
-    records.push({ id: recordId, type: temporalTypes.instantSpec, value: canonicalize({
+    records.push({ id: recordId, type: timelineAuthorTypes.instantSpec, value: canonicalize({
       id: `${id}.${name}`, subjectId: id, projection: draft.expression,
       ...(draft.binding === undefined ? {} : { author: { binding: draft.binding, relation: "direct" } }),
     }), range: declaration.range });
     const operationId = `materialize-${name}`;
-    operations.push({ id: operationId, producer: temporalProducers.projectProgramInstant,
+    operations.push({ id: operationId, producer: timelineAuthorProducers.projectInstant,
       inputs: { timeline: input("timeline"), spec: input(port) }, result: { kind: "output" as const, name: "instant" } });
     return operation(operationId);
   };
@@ -333,34 +331,34 @@ function compileWindow(
       const durationId = `${id}.__temporal.duration`;
       bindings.duration = { kind: "record", id: durationId };
       records.push({ id: durationId, type: temporalTypes.duration, value: canonicalize(extent.duration), range: declaration.range });
-      operations.push({ id: "resolve-extent", producer: temporalProducers.extentFromDuration,
+      operations.push({ id: "resolve-extent", producer: timelineAuthorProducers.extentFromDuration,
         inputs: { timeline: input("timeline"), duration: input("duration") }, result: { kind: "output" as const, name: "extent" } });
       extentRef = operation("resolve-extent");
     }
     if (direction === undefined) throw new Error("Temporal Window shift has no direction.");
     const base = direction === 1 ? start : end;
     if (base === undefined) throw new Error("Temporal Window shift has no base Instant.");
-    ports.push({ name: "shift-spec", type: temporalTypes.shiftSpec });
+    ports.push({ name: "shift-spec", type: timelineAuthorTypes.shiftSpec });
     const shiftId = `${id}.__temporal.shift`;
     bindings["shift-spec"] = { kind: "record", id: shiftId };
-    records.push({ id: shiftId, type: temporalTypes.shiftSpec, value: canonicalize({
+    records.push({ id: shiftId, type: timelineAuthorTypes.shiftSpec, value: canonicalize({
       id: `${id}.${direction === 1 ? "end" : "start"}`, subjectId: id, direction,
       ...(extent.kind === "duration" ? { author: {
         binding: extent.binding, relation: direction === 1 ? "after-start" : "before-end",
       } } : {}),
     }), range: declaration.range });
-    operations.push({ id: "shift", producer: temporalProducers.shiftInstant,
+    operations.push({ id: "shift", producer: timelineAuthorProducers.shiftInstant,
       inputs: { timeline: input("timeline"), instant: base, extent: extentRef, spec: input("shift-spec") },
       result: { kind: "output" as const, name: "instant" } });
     if (direction === 1) end = operation("shift"); else start = operation("shift");
   }
   if (end === undefined) throw new Error("Temporal Window has no end Instant.");
-  operations.push({ id: "compose", producer: temporalProducers.composeWindow,
+  operations.push({ id: "compose", producer: timelineProducers.composeWindow,
     inputs: { spec: input("window-spec"), start, end }, result: { kind: "output" as const, name: "window" } });
   const fragment = sealGraphFragment({ inputs: ports, operations, exports: [
-    { name: "window", type: temporalTypes.window, root: operation("compose") },
-    { name: "start", type: temporalTypes.instant, root: start },
-    { name: "end", type: temporalTypes.instant, root: end },
+    { name: "window", type: timelineTypes.window, root: operation("compose") },
+    { name: "start", type: timelineTypes.instant, root: start },
+    { name: "end", type: timelineTypes.instant, root: end },
   ] });
   const componentId = `${id}.__temporal`;
   return {
@@ -370,8 +368,8 @@ function compileWindow(
   };
 }
 
-const standaloneOutputs = [temporalTypes.duration, temporalTypes.extent, temporalTypes.shiftSpec,
-  temporalTypes.instantSpec, temporalTypes.windowSpec, temporalTypes.instant, temporalTypes.window];
+const standaloneOutputs = [temporalTypes.duration, temporalTypes.extent, timelineAuthorTypes.shiftSpec,
+  timelineAuthorTypes.instantSpec, timelineTypes.temporalIdentity, timelineTypes.instant, timelineTypes.window];
 
 export const absoluteWindowAuthorDeclaration: AuthorDeclarationCompiler = {
   module: timelineAuthorModuleRef,
@@ -382,17 +380,17 @@ export const absoluteWindowAuthorDeclaration: AuthorDeclarationCompiler = {
     fields: [
       { name: "id", kind: "identifier", required: true, summary: "Names the Window." },
       { name: "timeline", kind: "reference", required: true, accepts: [timelineTypes.timeline], summary: "Selects its Timeline." },
-      { name: "from", kind: "expression", required: false, accepts: [temporalTypes.instant], summary: "Chooses the start." },
-      { name: "until", kind: "expression", required: false, accepts: [temporalTypes.instant], summary: "Chooses the end." },
+      { name: "from", kind: "expression", required: false, accepts: [timelineTypes.instant], summary: "Chooses the start." },
+      { name: "until", kind: "expression", required: false, accepts: [timelineTypes.instant], summary: "Chooses the end." },
       { name: "for", kind: "expression", required: false, accepts: [temporalTypes.extent], summary: "Chooses the duration." },
     ],
   },
   bindings(declaration) {
     const id = literal(declaration, "id");
     return [
-      componentBinding(`${id}.__temporal`, "window", id, temporalTypes.window),
-      componentBinding(`${id}.__temporal`, "start", `${id}.start`, temporalTypes.instant),
-      componentBinding(`${id}.__temporal`, "end", `${id}.end`, temporalTypes.instant),
+      componentBinding(`${id}.__temporal`, "window", id, timelineTypes.window),
+      componentBinding(`${id}.__temporal`, "start", `${id}.start`, timelineTypes.instant),
+      componentBinding(`${id}.__temporal`, "end", `${id}.end`, timelineTypes.instant),
     ];
   },
   async compile({ declaration, resolveReference }) {
@@ -421,13 +419,13 @@ export const absoluteInstantAuthorDeclaration: AuthorDeclarationCompiler = {
     fields: [
       { name: "id", kind: "identifier", required: true, summary: "Names the Instant." },
       { name: "timeline", kind: "reference", required: true, accepts: [timelineTypes.timeline], summary: "Selects its Timeline." },
-      { name: "at", kind: "expression", required: true, accepts: [temporalTypes.instant], summary: "Chooses a point or existing Instant." },
+      { name: "at", kind: "expression", required: true, accepts: [timelineTypes.instant], summary: "Chooses a point or existing Instant." },
       { name: "offset", kind: "literal", required: false, summary: "Offsets a referenced Instant." },
     ],
   },
   bindings(declaration) {
     const id = literal(declaration, "id");
-    return [componentBinding(`${id}.__temporal`, "instant", id, temporalTypes.instant)];
+    return [componentBinding(`${id}.__temporal`, "instant", id, timelineTypes.instant)];
   },
   async compile({ declaration, resolveReference }) {
     const id = literal(declaration, "id");
@@ -439,12 +437,12 @@ export const absoluteInstantAuthorDeclaration: AuthorDeclarationCompiler = {
       if (offset !== undefined) throw new Error("Instant.offset is only valid when at references an existing Instant.");
       const specId = `${id}.__temporal.instant`;
       const fragment = sealGraphFragment({ inputs: [
-        { name: "timeline", type: timelineTypes.timeline }, { name: "spec", type: temporalTypes.instantSpec },
-      ], operations: [{ id: "materialize", producer: temporalProducers.projectProgramInstant,
+        { name: "timeline", type: timelineTypes.timeline }, { name: "spec", type: timelineAuthorTypes.instantSpec },
+      ], operations: [{ id: "materialize", producer: timelineAuthorProducers.projectInstant,
         inputs: { timeline: input("timeline"), spec: input("spec") }, result: { kind: "output" as const, name: "instant" } }],
-      exports: [{ name: "instant", type: temporalTypes.instant, root: operation("materialize") }] });
+      exports: [{ name: "instant", type: timelineTypes.instant, root: operation("materialize") }] });
       return {
-        records: [{ id: specId, type: temporalTypes.instantSpec, value: canonicalize({
+        records: [{ id: specId, type: timelineAuthorTypes.instantSpec, value: canonicalize({
           id, subjectId: id, projection: at.expression, author: { binding: "at", relation: "direct" },
         }), range: declaration.range }],
         components: [{ id: `${id}.__temporal`, fragment, inputs: {
@@ -459,18 +457,18 @@ export const absoluteInstantAuthorDeclaration: AuthorDeclarationCompiler = {
     const durationId = `${id}.__temporal.duration`;
     const shiftId = `${id}.__temporal.shift`;
     const fragment = sealGraphFragment({ inputs: [
-      { name: "timeline", type: timelineTypes.timeline }, { name: "instant", type: temporalTypes.instant },
-      { name: "duration", type: temporalTypes.duration }, { name: "spec", type: temporalTypes.shiftSpec },
-    ], operations: [{ id: "extent", producer: temporalProducers.extentFromDuration,
+      { name: "timeline", type: timelineTypes.timeline }, { name: "instant", type: timelineTypes.instant },
+      { name: "duration", type: temporalTypes.duration }, { name: "spec", type: timelineAuthorTypes.shiftSpec },
+    ], operations: [{ id: "extent", producer: timelineAuthorProducers.extentFromDuration,
       inputs: { timeline: input("timeline"), duration: input("duration") }, result: { kind: "output" as const, name: "extent" } },
-    { id: "shift", producer: temporalProducers.shiftInstant,
+    { id: "shift", producer: timelineAuthorProducers.shiftInstant,
       inputs: { timeline: input("timeline"), instant: input("instant"), extent: operation("extent"), spec: input("spec") },
       result: { kind: "output" as const, name: "instant" } }],
-    exports: [{ name: "instant", type: temporalTypes.instant, root: operation("shift") }] });
+    exports: [{ name: "instant", type: timelineTypes.instant, root: operation("shift") }] });
     return {
       records: [
         { id: durationId, type: temporalTypes.duration, value: canonicalize(shift.duration), range: declaration.range },
-        { id: shiftId, type: temporalTypes.shiftSpec, value: canonicalize({
+        { id: shiftId, type: timelineAuthorTypes.shiftSpec, value: canonicalize({
           id, subjectId: id, direction: shift.direction, author: { binding: "offset", relation: "direct" },
         }), range: declaration.range },
       ],

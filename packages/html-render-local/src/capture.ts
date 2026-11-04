@@ -1,7 +1,7 @@
 import { mkdir, rm, stat, writeFile } from "node:fs/promises";
 import { join, relative, sep } from "node:path";
 import type { HtmlProgram } from "@hypit/html-program";
-import type { FrameSpan } from "@hypit/timeline";
+import type { FrameSpan } from "@hypit/temporal";
 import type { VisualDeliverySpec, OutputPictureSpec } from "@hypit/media";
 import type { HtmlRasterProgress, ResolvedHtmlExecutionOptions } from "./render.js";
 import { assert, mediaExecutablePath, openProcessInput, runProcess } from "./process.js";
@@ -134,20 +134,18 @@ export async function captureStagedVisual(input: CaptureInput, controller: Abort
     // The portable path indexes exact selected-stream timestamps before it
     // plans ordinal decode windows. Pixel frames remain lazy.
     for (const slot of requestedSlots.values()) {
-      if (!decodedSlotKeys.has(slot.sourceKey) && !(encodedCapture && slot.kind === "media")) continue;
+      if (!decodedSlotKeys.has(slot.sourceKey) && !encodedCapture) continue;
       const path = resolveStagedPath(work, slot.src);
       assert(path !== undefined, "HTML renderer source is outside the staged project");
       const metadata = await probeSourceVideo({ executable: ffprobePath, path,
         streamIndex: slot.streamIndex,
         timeoutMs: config.processTimeoutMs, maxOutputBytes: config.maxProcessOutputBytes, signal });
       signal.throwIfAborted();
-      if (slot.kind === "media") {
-        assert(metadata.width === slot.codedWidth && metadata.height === slot.codedHeight,
-          `HTML renderer source ${slot.id} coded extent differs from its Programme interpretation`);
-      }
+      assert(metadata.width === slot.codedWidth && metadata.height === slot.codedHeight,
+        `HTML renderer source ${slot.id} coded extent differs from its Programme interpretation`);
       sourceFrames.set(slot.sourceKey, metadata);
       sources.set(slot.sourceKey, { path, picture: slot.picture,
-        rotation: slot.kind === "media" ? slot.rotation : 0, metadata });
+        rotation: slot.rotation, metadata });
     }
     const plannedSources = sourceWindows(decodedSlots, requestedRanges, sourceFrames, decodedSlotIndex);
     const sourceTotal = plannedSources.reduce((sum, source) => sum + source.windows.reduce((count, window) =>
@@ -294,24 +292,13 @@ export async function captureStagedVisual(input: CaptureInput, controller: Abort
             try {
               const sourceUpdates: SourceFrameUpdate[] = encodedCapture
                 ? slotIndex.at(frame).flatMap((slot): SourceFrameUpdate[] => {
-                  if (slot.kind === "media") {
-                    const sample = browserTimestampAt(slot, frame);
-                    return sample === undefined ? [] : [{
-                      id: slot.id,
-                      elementId: slot.elementId,
-                      url: new URL(slot.src, serverUrl).href,
-                      picture: slot.picture,
-                      sample,
-                    }];
-                  }
-                  const sourceFrame = sourceFrameAt(slot, frame);
-                  return sourceFrame === undefined ? [] : [{
+                  const sample = browserTimestampAt(slot, frame);
+                  return sample === undefined ? [] : [{
                     id: slot.id,
                     elementId: slot.elementId,
                     url: new URL(slot.src, serverUrl).href,
                     picture: slot.picture,
-                    sample: { kind: "frame" as const, frame: sourceFrame, fps: slot.sourceFps,
-                      streamIndex: slot.streamIndex },
+                    sample,
                   }];
                 })
                 : [...activeFramePayloads(frame)].map(([id, payload]) => {

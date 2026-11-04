@@ -1,31 +1,24 @@
 import { blobDependency } from "@hypit/hypit/blob";
-import { mediaDependency, mediaTypes, pictureInterpretationSchema } from "@hypit/media";
+import { mediaDependency, mediaTypes } from "@hypit/media";
 import { frameSpanSchema, timelineDependency, timelineTypes } from "@hypit/timeline";
-import { recipeModuleRef, recipeType } from "@hypit/hypit/recipe";
-import { exactTemporalValueSchema, temporalDependency, temporalRateSchema, temporalTypes } from "@hypit/temporal";
+import { temporalDependency, temporalTypes } from "@hypit/temporal";
 import { blobTypes } from "@hypit/hypit/blob";
 import { blobRefSchema } from "@hypit/hypit/protocol";
 import type { CapabilityRef, ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/hypit/protocol";
 
 export const mediaOperationsModuleRef = { name: "@hypit/media-operations", version: "1" } as const;
 export const mediaOperationsTypes = {
-  selectionRequest: { module: mediaOperationsModuleRef, name: "MediaSelectionRequest" },
-  transformProgram: { module: mediaOperationsModuleRef, name: "MediaTransformProgram" },
   audioExtractionRequest: { module: mediaOperationsModuleRef, name: "AudioExtractionRequest" },
   frameExtractionRequest: { module: mediaOperationsModuleRef, name: "FrameExtractionRequest" },
   stillVideoRequest: { module: mediaOperationsModuleRef, name: "StillVideoRequest" },
   stillVideoLayout: { module: mediaOperationsModuleRef, name: "StillVideoLayout" },
 } satisfies Record<string, TypeRef>;
 export const mediaOperationsCapabilities = {
-  inspect: { module: mediaOperationsModuleRef, name: "inspect-media" },
   extractAudio: { module: mediaOperationsModuleRef, name: "extract-media-audio" },
   extractFrame: { module: mediaOperationsModuleRef, name: "extract-media-frame" },
   renderStill: { module: mediaOperationsModuleRef, name: "render-still-video" },
 } satisfies Record<string, CapabilityRef>;
 export const mediaOperationsProducers = {
-  inspect: { module: mediaOperationsModuleRef, name: "request-media-inspection" },
-  select: { module: mediaOperationsModuleRef, name: "select-media-streams" },
-  transform: { module: mediaOperationsModuleRef, name: "transform-prepared-media" },
   extractAudio: { module: mediaOperationsModuleRef, name: "request-audio-extraction" },
   extractFrame: { module: mediaOperationsModuleRef, name: "request-frame-extraction" },
   planStill: { module: mediaOperationsModuleRef, name: "plan-still-video" },
@@ -45,21 +38,6 @@ const streamMode: ValueSchema = {
     streamIndex: { schema: integer },
   },
 };
-export const mediaSelectionRequestSchema: ValueSchema = {
-  kind: "object",
-  fields: {
-    video: { schema: { kind: "oneOf", variants: [mode("primary-moving"), streamMode, mode("none")] } },
-    audio: { schema: { kind: "oneOf", variants: [mode("default"), streamMode, mode("none")] } },
-    spanAuthority: { schema: { kind: "string", enum: ["video", "audio"] } },
-    picture: { schema: { kind: "oneOf", variants: [mode("none"), mode("source"), {
-      kind: "object", fields: {
-        mode: { schema: { kind: "literal", value: "explicit" } },
-        interpretation: { schema: pictureInterpretationSchema },
-      },
-    }] } },
-  },
-};
-
 const videoSelectorSchema: ValueSchema = {
   kind: "oneOf",
   variants: [mode("primary-moving"), streamMode],
@@ -69,50 +47,6 @@ const audioSelectorSchema: ValueSchema = {
   variants: [mode("default"), streamMode],
 };
 const nonNegativeNumber = { kind: "number", minimum: 0 } as const;
-const trimOperationSchema: ValueSchema = {
-  kind: "object",
-  fields: {
-    kind: { schema: { kind: "literal", value: "trim" } },
-    start: { schema: exactTemporalValueSchema, optional: true },
-    end: { schema: exactTemporalValueSchema, optional: true },
-    tail: { schema: exactTemporalValueSchema, optional: true },
-  },
-};
-const retimeOperationSchema: ValueSchema = {
-  kind: "object",
-  fields: {
-    kind: { schema: { kind: "literal", value: "retime" } },
-    rate: { schema: temporalRateSchema },
-  },
-};
-const transformRelativePointSchema: ValueSchema = {
-  kind: "object",
-  fields: {
-    edge: { schema: { kind: "string", enum: ["start", "end"] } },
-    offset: { schema: exactTemporalValueSchema },
-  },
-};
-const retimeProfileOperationSchema: ValueSchema = {
-  kind: "object",
-  fields: {
-    kind: { schema: { kind: "literal", value: "retime-profile" } },
-    knots: { schema: { kind: "array", minItems: 2, items: {
-      kind: "object",
-      fields: {
-        at: { schema: transformRelativePointSchema },
-        rate: { schema: temporalRateSchema },
-      },
-    } } },
-  },
-};
-export const mediaTransformProgramSchema: ValueSchema = {
-  kind: "object",
-  fields: {
-    operations: { schema: { kind: "array", minItems: 1, items: {
-      kind: "oneOf", variants: [trimOperationSchema, retimeOperationSchema, retimeProfileOperationSchema],
-    } } },
-  },
-};
 export const audioExtractionRequestSchema: ValueSchema = {
   kind: "object",
   fields: {
@@ -176,45 +110,19 @@ export const mediaOperationsManifest: ModuleManifest = {
     mediaDependency,
     timelineDependency,
     temporalDependency,
-    recipeModuleRef,
   ],
   types: [
-    mediaOperationsTypes.selectionRequest.name,
-    mediaOperationsTypes.transformProgram.name,
     mediaOperationsTypes.audioExtractionRequest.name,
     mediaOperationsTypes.frameExtractionRequest.name,
     mediaOperationsTypes.stillVideoRequest.name,
     mediaOperationsTypes.stillVideoLayout.name,
   ],
   capabilities: [
-    { name: mediaOperationsCapabilities.inspect.name, returns: mediaTypes.inspection },
     { name: mediaOperationsCapabilities.extractAudio.name, returns: blobTypes.blob },
     { name: mediaOperationsCapabilities.extractFrame.name, returns: blobTypes.blob },
     { name: mediaOperationsCapabilities.renderStill.name, returns: blobTypes.blob },
   ],
   producers: [
-    {
-      name: mediaOperationsProducers.inspect.name,
-      inputs: [{ name: "source", type: blobTypes.blob }],
-      result: { kind: "need" as const, name: "inspection", capability: mediaOperationsCapabilities.inspect },
-    },
-    {
-      name: mediaOperationsProducers.select.name,
-      inputs: [
-        { name: "inspection", type: mediaTypes.inspection },
-        { name: "request", type: mediaOperationsTypes.selectionRequest },
-      ],
-      result: { kind: "output" as const, name: "selection", type: mediaTypes.streamSelection },
-    },
-    {
-      name: mediaOperationsProducers.transform.name,
-      inputs: [
-        { name: "media", type: mediaTypes.prepared },
-        { name: "program", type: mediaOperationsTypes.transformProgram },
-        { name: "spec", type: mediaTypes.domainSpec },
-      ],
-      result: { kind: "output" as const, name: "media", type: mediaTypes.prepared },
-    },
     {
       name: mediaOperationsProducers.extractAudio.name,
       inputs: [

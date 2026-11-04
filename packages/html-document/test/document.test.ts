@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { sealComposition, sealPresentVisualTrack } from "@hypit/composition";
-import { sealTimeline } from "@hypit/timeline";
-import { htmlVisualElement } from "@hypit/html-program";
+import { compileHtmlPictureProgram } from "@hypit/html-program";
+import { sealAudioProgram } from "@hypit/audio-program";
+import { exactTemporalValueFromFrames } from "@hypit/temporal";
 import { fixtureResource } from "../../../test/fixture-resource.js";
 import {
   assertHtmlDocument,
@@ -11,11 +11,8 @@ import {
 } from "../src/index.js";
 
 function fixture() {
-  const timeline = sealTimeline({
-    id: "document-clock",
-    frameCount: 60,
-    frameRate: { numerator: 30_000, denominator: 1_001 },
-  });
+  const frameRate = { numerator: 30_000, denominator: 1_001 };
+  const frameCount = 60;
   const picture = {
     kind: "blob" as const,
     resource: fixtureResource("html-document:picture"),
@@ -26,32 +23,36 @@ function fixture() {
     ...picture,
     resource: fixtureResource("html-document:second-picture"),
   };
-  const track = sealPresentVisualTrack({
-    timelineId: timeline.id,
-
-    id: "picture",
-    presents: [{
-      id: "picture",
-      span: { startFrame: 0, endFrameExclusive: timeline.frameCount },
-      root: htmlVisualElement({ id: "root", kind: "box", children: [
-        { id: "image", kind: "image", picture: { colorPrimaries: "bt709", colorTransfer: "srgb", colorMatrix: "rgb", colorRange: "full", bitDepth: 8, alphaMode: "straight" } as const, artifact: picture, style: [] },
-        { id: "second-image", kind: "image", picture: { colorPrimaries: "bt709", colorTransfer: "srgb", colorMatrix: "rgb", colorRange: "full", bitDepth: 8, alphaMode: "straight" } as const, artifact: secondPicture, style: [] },
-      ], style: [] }),
-    }],
+  const program = compileHtmlPictureProgram({
+    id: "document",
+    frameRate,
+    frameCount,
+    canvas: { width: 1920, height: 1080, clearColor: "#000000" },
+    root: { id: "root", kind: "box" as const, spans: [{ startFrame: 0, endFrameExclusive: frameCount }], children: [
+      { id: "image", kind: "image", spans: [{ startFrame: 0, endFrameExclusive: frameCount }], picture: { colorPrimaries: "bt709", colorTransfer: "srgb", colorMatrix: "rgb", colorRange: "full", bitDepth: 8, alphaMode: "straight" } as const, artifact: picture, style: [] },
+      { id: "second-image", kind: "image", spans: [{ startFrame: 0, endFrameExclusive: frameCount }], picture: { colorPrimaries: "bt709", colorTransfer: "srgb", colorMatrix: "rgb", colorRange: "full", bitDepth: 8, alphaMode: "straight" } as const, artifact: secondPicture, style: [] },
+    ], style: [] },
+  });
+  const audio = sealAudioProgram({
+    domain: { id: "document:audio", duration: exactTemporalValueFromFrames(frameCount, { frameRate }) },
+    sampling: { sampleRate: 48_000 },
+    graph: { nodes: [{ kind: "silence", id: "silence" }], output: { node: "silence" } },
   });
   return {
-    timeline,
     pictures: [picture, secondPicture],
-    composition: sealComposition({ id: "document", visual: { canvas: { width: 1920, height: 1080, clearColor: "#000000" }, root: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }, timeline),
+    program,
+    audio,
   };
 }
 
 test("HTML Document composes independently compiled picture, sound and shared playback", () => {
-  const { composition, pictures, timeline } = fixture();
-  const document = compileHtmlDocument(composition);
+  const { program, audio, pictures } = fixture();
+  const document = compileHtmlDocument(program, audio);
   assert.doesNotThrow(() => assertHtmlDocument(document));
   assert.equal(document.program.frameCount, 60);
-  assert.equal(document.audio.frameCount, 60);
+  assert.equal(document.audio.sampling.sampleRate, 48_000);
+  assert.deepEqual(document.audio.domain.duration,
+    exactTemporalValueFromFrames(60, { frameRate: document.program.frameRate }));
   assert.deepEqual(document.program.artifacts.map((entry) => entry.artifact), pictures);
   assert.equal(new Set(document.program.artifacts.map((entry) => entry.id)).size, pictures.length);
 
@@ -68,8 +69,8 @@ test("HTML Document composes independently compiled picture, sound and shared pl
 });
 
 test("document-local identities survive recursive Result material rebinding", () => {
-  const { composition, timeline } = fixture();
-  const original = compileHtmlDocument(composition);
+  const { program, audio } = fixture();
+  const original = compileHtmlDocument(program, audio);
   const reboundResource = fixtureResource("html-document:rebound-picture");
   const rebound = {
     ...original,
@@ -78,11 +79,6 @@ test("document-local identities survive recursive Result material rebinding", ()
       artifacts: original.program.artifacts.map((entry) => ({
         ...entry,
         artifact: { ...entry.artifact, resource: reboundResource },
-      })),
-      surfaces: original.program.surfaces.map((binding) => ({
-        ...binding,
-        surface: { ...binding.surface,
-          artifact: { ...binding.surface.artifact, resource: reboundResource } },
       })),
     },
   };
@@ -96,20 +92,20 @@ test("document-local identities survive recursive Result material rebinding", ()
   assert.match(html, /\/rebound\//u);
 });
 
-test("HTML Document rejects picture and sound that disagree on their frame clock", () => {
-  const { composition, timeline } = fixture();
-  const document = compileHtmlDocument(composition);
+test("HTML Document rejects picture and sound that disagree on exact duration", () => {
+  const { program, audio } = fixture();
+  const document = compileHtmlDocument(program, audio);
   const invalid = { ...document, audio: {
     ...document.audio,
-    frameRate: { numerator: 60, denominator: 1 },
-    sampleFrames: 48_000,
+    domain: { ...document.audio.domain,
+      duration: exactTemporalValueFromFrames(1, { frameRate: { numerator: 1, denominator: 1 } }) },
   } };
-  assert.throws(() => assertHtmlDocument(invalid), /same frame clock/u);
+  assert.throws(() => assertHtmlDocument(invalid), /same exact duration/u);
 });
 
 test("HTML Document inserts extracted author scripts as literal text", () => {
-  const { composition, timeline } = fixture();
-  const document = compileHtmlDocument(composition);
+  const { program, audio } = fixture();
+  const document = compileHtmlDocument(program, audio);
   const token = "window.__hypitLiteral='$&-$`-$\'';";
   const withLiteral = {
     ...document,

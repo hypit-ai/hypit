@@ -177,7 +177,7 @@ function samplingFor(input: {
     return resolveTemporalRelation({
       target: targetDomain(`${input.card.id}:${input.layer.id}:stage`, input.stageDuration, input.timeline),
       source,
-      clock: input.timeline,
+      grid: input.timeline,
       ...(input.layer.sampling?.kind !== "relation" ? {} : { spec: input.layer.sampling.value }),
     });
   }

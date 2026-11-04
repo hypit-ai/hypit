@@ -1,5 +1,5 @@
 import type { RefinementPackage } from "@hypit/hypit/refinement";
-import type { TemporalWindow } from "@hypit/temporal";
+import type { TemporalWindow } from "@hypit/timeline";
 import type { ProducerPackage } from "@hypit/hypit/producer";
 import type { Value } from "@hypit/hypit/protocol";
 import { canonicalize } from "@hypit/hypit/protocol";

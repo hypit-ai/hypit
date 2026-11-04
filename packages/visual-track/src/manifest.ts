@@ -1,7 +1,7 @@
 import { frameSpanSchema, timelineDependency, timelineTypes } from "@hypit/timeline";
 
 import { blobDependency, blobTypes } from "@hypit/hypit/blob";
-import { compositionDependency, compositionTypes, visualProgramCarrierSchema } from "@hypit/composition";
+import { compositionDependency, compositionTypes } from "@hypit/composition";
 import {
   compositableSurfaceSchema,
   mediaDependency,
@@ -30,8 +30,6 @@ export const visualTrackTypes = {
   sampleLayerSpec: { module: visualTrackModuleRef, name: "MediaSampleLayerSpec" },
   layerSet: { module: visualTrackModuleRef, name: "MediaLayerSet" },
   clipSpec: { module: visualTrackModuleRef, name: "VisualClipSpec" },
-  transitionEffect: { module: visualTrackModuleRef, name: "VisualTransitionEffect" },
-  transitionSpec: { module: visualTrackModuleRef, name: "VisualTransitionSpec" },
   set: { module: visualTrackModuleRef, name: "VisualTrackSet" },
   program: { module: visualTrackModuleRef, name: "VisualTrackProgram" },
 } satisfies Record<string, TypeRef>;
@@ -47,7 +45,6 @@ export const visualTrackProducers = {
   appendMappedSurfaceLayer: { module: visualTrackModuleRef, name: "append-mapped-surface-media-layer" },
   createSet: { module: visualTrackModuleRef, name: "create-visual-track-set" },
   appendClip: { module: visualTrackModuleRef, name: "append-visual-clip" },
-  appendTransition: { module: visualTrackModuleRef, name: "append-visual-transition" },
   bindClipPath: { module: visualTrackModuleRef, name: "bind-visual-clip-path" },
   bindMotion: { module: visualTrackModuleRef, name: "bind-visual-clip-motion" },
   finalize: { module: visualTrackModuleRef, name: "finalize-visual-track" },
@@ -158,31 +155,16 @@ export const visualClipSpecSchema: ValueSchema = object({
   id: { schema: string },
   treatment: { schema: visualFrameTreatmentSchema }, motion: { schema: visualClipMotionSchema, optional: true },
 });
-export const visualTransitionEffectSchema: ValueSchema = object({
-  inputs: { schema: {
-    kind: "array", minItems: 2, maxItems: 2,
-    items: { kind: "string", enum: ["outgoing", "incoming"] },
-  } },
-  program: { schema: visualProgramCarrierSchema },
-});
-export const visualTransitionSpecSchema: ValueSchema = object({
-  id: { schema: string },
-  outgoingClipId: { schema: string },
-  incomingClipId: { schema: string },
-  effect: { schema: visualTransitionEffectSchema },
-});
 const resolvedClip = object({
   id: { schema: string }, subjectId: { schema: string }, span: { schema: frameSpanSchema }, frame: { schema: spatialFrameSchema },
   treatment: { schema: visualFrameTreatmentSchema }, layers: { schema: { kind: "array", minItems: 1, items: resolvedLayer } }, motion: { schema: visualClipMotionSchema, optional: true },
 });
 export const visualTrackSetSchema: ValueSchema = object({
   clips: { schema: { kind: "array", items: resolvedClip } },
-  transitions: { schema: { kind: "array", items: visualTransitionSpecSchema } },
 });
 export const visualTrackProgramSchema: ValueSchema = object({
   id: { schema: string },
   clips: { schema: { kind: "array", items: resolvedClip } },
-  transitions: { schema: { kind: "array", items: visualTransitionSpecSchema } },
 });
 export const visualTrackHeaderSchema: ValueSchema = object({
   id: { schema: string },
@@ -193,7 +175,7 @@ const clipInputs = [
   { name: "timeline", type: timelineTypes.timeline },
   { name: "layers", type: visualTrackTypes.layerSet },
   { name: "frame", type: spatialTypes.frame }, { name: "spec", type: visualTrackTypes.clipSpec },
-  { name: "window", type: temporalTypes.window },
+  { name: "window", type: timelineTypes.window },
 ] as const;
 
 
@@ -216,8 +198,6 @@ export const visualTrackManifest: ModuleManifest = {
     visualTrackTypes.sampleLayerSpec.name,
     visualTrackTypes.layerSet.name,
     visualTrackTypes.clipSpec.name,
-    visualTrackTypes.transitionEffect.name,
-    visualTrackTypes.transitionSpec.name,
     visualTrackTypes.set.name,
     visualTrackTypes.program.name,
   ],
@@ -233,9 +213,6 @@ export const visualTrackManifest: ModuleManifest = {
     { name: visualTrackProducers.appendMappedSurfaceLayer.name, inputs: [{ name: "layers", type: visualTrackTypes.layerSet }, { name: "source", type: mediaTypes.compositableSurface }, { name: "mapping", type: spatialTypes.map2D }, { name: "spec", type: visualTrackTypes.sampleLayerSpec }], result: { kind: "output" as const, name: "layers", type: visualTrackTypes.layerSet } },
     { name: visualTrackProducers.createSet.name, inputs: [], result: { kind: "output" as const, name: "set", type: visualTrackTypes.set } },
     { name: visualTrackProducers.appendClip.name, inputs: clipInputs, result: { kind: "output" as const, name: "set", type: visualTrackTypes.set } },
-    { name: visualTrackProducers.appendTransition.name, inputs: [
-      { name: "set", type: visualTrackTypes.set }, { name: "spec", type: visualTrackTypes.transitionSpec },
-    ], result: { kind: "output" as const, name: "set", type: visualTrackTypes.set } },
     { name: visualTrackProducers.bindClipPath.name, inputs: [{ name: "spec", type: visualTrackTypes.clipSpec }, { name: "path", type: spatialTypes.path }], result: { kind: "output" as const, name: "spec", type: visualTrackTypes.clipSpec } },
     { name: visualTrackProducers.bindMotion.name, inputs: [{ name: "spec", type: visualTrackTypes.clipSpec }, { name: "motion", type: visualTrackTypes.motion }], result: { kind: "output" as const, name: "spec", type: visualTrackTypes.clipSpec } },
     { name: visualTrackProducers.finalize.name, inputs: [{ name: "set", type: visualTrackTypes.set }, { name: "header", type: visualTrackTypes.header }, { name: "timeline", type: timelineTypes.timeline }], result: { kind: "output" as const, name: "program", type: visualTrackTypes.program } },

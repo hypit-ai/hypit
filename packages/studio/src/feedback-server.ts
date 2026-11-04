@@ -3,7 +3,7 @@ import type { FSWatcher } from "node:fs";
 import { relative } from "node:path";
 import type { Plugin } from "vite";
 import { createFeedbackStore, FeedbackConflict } from "./feedback-store.js";
-import { readFeedbackMutation } from "./feedback.js";
+import { feedbackBelongsToContext, readFeedbackMutation } from "./feedback.js";
 import { allowsStudioMutation } from "./mutation-origin.js";
 import type { FeedbackDocument, FeedbackView } from "./feedback.js";
 
@@ -14,7 +14,7 @@ export function studioFeedbackPlugin(workspaceRoot: string, contextPath: string)
   const view = (document: FeedbackDocument): FeedbackView => ({
     file: "FEEDBACK.json",
     context,
-    comments: document.comments.filter((comment) => comment.context === context),
+    comments: document.comments.filter((comment) => feedbackBelongsToContext(comment, context)),
   });
   return {
     name: "hypit-studio-feedback",
@@ -57,7 +57,7 @@ export function studioFeedbackPlugin(workspaceRoot: string, contextPath: string)
             for await (const chunk of request) chunks.push(Buffer.from(chunk));
             const mutation = readFeedbackMutation(JSON.parse(Buffer.concat(chunks).toString("utf8")));
             const comment = mutation.type === "delete" ? mutation.before : mutation.comment;
-            if (comment.context !== context) throw new Error("The comment belongs to another authoring context.");
+            if (!feedbackBelongsToContext(comment, context)) throw new Error("The comment belongs to another authoring context.");
             const result = view(await store.mutate(mutation));
             response.end(JSON.stringify(result));
             server.ws.send({ type: "custom", event: "studio:feedback-changed", data: {} });

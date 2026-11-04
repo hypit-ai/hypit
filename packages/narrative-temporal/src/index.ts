@@ -9,6 +9,7 @@ export {
 } from "./declaration.js";
 export { assertNarrativeAlignmentIdentity, sealNarrativeAlignment } from "./identity.js";
 export { materializeSegmentBoundaryAlignment } from "./materialize.js";
+export { assertNarrativeDomainWindow, projectNarrativeDomainPosition } from "./domain-projection.js";
 export { narrativeTemporalDependency, narrativeTemporalManifest, narrativeTemporalModuleRef,
   narrativeTemporalProducers, narrativeTemporalTypes } from "./manifest.js";
 export { createNarrativeProjection, momentFrame, narrativeBoundaryFrame, projectNarrativeAlignment, projectNarrativeInstant,

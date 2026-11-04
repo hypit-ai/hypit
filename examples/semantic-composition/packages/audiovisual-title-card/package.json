@@ -1,0 +1,38 @@
+{
+  "name": "@example/audiovisual-title-card",
+  "version": "0.0.0-dev",
+  "private": true,
+  "type": "module",
+  "hypit": {
+    "activation": "./dist/activation.js"
+  },
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prepack": "npm run build"
+  },
+  "peerDependencies": {
+    "@hypit/hypit": "workspace:^0.4.0"
+  },
+  "dependencies": {
+    "@hypit/audiovisual": "workspace:^0.1.0",
+    "@hypit/audiovisual-html": "workspace:^0.1.0",
+    "@hypit/html-program": "workspace:^0.2.0",
+    "@hypit/spatial": "workspace:^0.1.1",
+    "@hypit/temporal": "workspace:^0.1.1"
+  },
+  "devDependencies": {
+    "@hypit/audiovisual-author": "workspace:^0.1.0",
+    "@hypit/author": "workspace:^0.1.0",
+    "@hypit/kernel": "workspace:^0.1.0",
+    "@hypit/protocol": "workspace:^0.1.0",
+    "@types/node": "24.10.1",
+    "typescript": "5.9.3"
+  }
+}

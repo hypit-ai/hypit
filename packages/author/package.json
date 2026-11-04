@@ -12,11 +12,5 @@
     "@hypit/facet": "workspace:*",
     "@hypit/protocol": "workspace:*",
     "@hypit/source": "workspace:*"
-  },
-  "devDependencies": {
-    "@hypit/blob": "workspace:*",
-    "@hypit/composition": "workspace:*",
-    "@hypit/narrative-temporal": "workspace:*",
-    "@hypit/spatial": "workspace:*"
   }
 }

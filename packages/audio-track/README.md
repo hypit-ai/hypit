@@ -23,7 +23,7 @@ peer contribution to Film.
 
 <audio:Track id="mix" timeline={program.timeline}>
   <audio:Clip id="voice" source={speaker-media.media} during={program.speaker}/>
-  <audio:Clip id="music" source={music-media.media} during={program.window}
+  <audio:Clip id="music" source={music-media.source} during={program.window}
     gain="0.18" fade-in="12f" fade-out="18f">
     <audio:Map target-at="end" source-at="end" rate="1"
       wrap-from="start" wrap-until="end"/>

@@ -676,7 +676,7 @@ export function renderRankingAudio(
     assert(compareExactTemporalValues(fadeIn, targetDuration) <= 0,
       `Ranking sound ${event.id} fade exceeds its audible interval.`);
     const sampling = resolveTemporalRelation({
-      clock: timeline,
+      grid: timeline,
       target: { id: `${event.id}:occurrence`, duration: targetDuration },
       source: structuredClone(media.domain),
     });

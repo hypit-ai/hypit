@@ -180,8 +180,8 @@ to the occurrence; reusable pixel treatment and typed Motion remain optional val
 <space:Frame id="product-frame" within={vertical.bounds}
   left="8%" top="20%" right="92%" bottom="68%"/>
 
-<mediaop:Prepare id="product-media" source={product-motion.video}
-  video="primary-moving" audio="none" span-authority="video"/>
+<media:Video id="product-media" source={product-motion.video}
+   audio="none" />
 
 <visual:Motion id="product-motion-in">
   <visual:Pose at="start" y="80" opacity="0" easing="ease-out"/>
@@ -190,7 +190,7 @@ to the occurrence; reusable pixel treatment and typed Motion remain optional val
 </visual:Motion>
 
 <visual:Track id="product-broll" timeline={speech.timeline}>
-  <visual:Clip media={product-media.media} frame={product-frame}
+  <visual:Clip media={product-media.source} frame={product-frame}
     during={product-demo} fit="contain"
     treatment={recipes.visual.product} motion={product-motion-in}>
     <visual:Map/>
@@ -203,7 +203,7 @@ to the occurrence; reusable pixel treatment and typed Motion remain optional val
 prepared-media domain:
 
 ```svml
-<visual:Clip media={product-media.media} frame={product-frame}
+<visual:Clip media={product-media.source} frame={product-frame}
   during={product-demo} fit="contain">
   <visual:Curve source-at-start="start" source-control-1="start+250ms"
     source-control-2="end-250ms" source-at-end="end"/>
@@ -224,44 +224,8 @@ already owns the exact affine relation, declare a `<space:Map>` and pass it thro
 instead of all fit attributes. The Clip's `frame` still independently controls clipping and Frame
 treatment.
 The same Clip model also covers full-canvas cutaways, split screens and corner overlays. A public
-Clip has one source. A Transition explicitly relates two adjacent Clip occurrences and references a
-package-owned effect; broader relationships spanning several sources or Clips belong to a component
-rather than a built-in Sequence grammar.
-
-### Transition between Clips
-
-Give both Clips their actual overlapping Windows, author an effect, then name the relation explicitly.
-Their complete intersection is the Transition span; Hypit does not infer the participants from timing,
-ask the author to repeat that span, or invent source handles.
-The Clips must be neighbours in Track order, with the outgoing Clip starting and ending first;
-containment or multi-picture choreography is a component relationship rather than an ordinary handoff.
-
-```svml
-<transition:CrossDissolve id="soft-mix" easing="ease-in-out"/>
-
-<visual:Track id="cut" timeline={speech.timeline}>
-  <visual:Clip id="wide" media={wide.media} during={wide-window} frame={full} fit="cover"/>
-  <visual:Clip id="close" media={close.media} during={close-window} frame={full} fit="cover"/>
-  <visual:Transition id="wide-to-close"
-    outgoing="wide" incoming="close" effect={soft-mix}/>
-</visual:Track>
-```
-
-Both Clips keep their own temporal Maps during the overlap. Visual Track validates the relationship;
-the selected package owns how the two independently timed pictures combine. More involved visual/audio
-coordination remains component behavior.
-
-The official package also provides `DipToColor`, `Push`, `Slide`, `LinearWipe`, `Iris`,
-`ZoomDissolve`, and `BlurDissolve`. For example:
-
-```svml
-<transition:Push id="push-left" direction="left" easing="ease-in-out"/>
-<transition:LinearWipe id="wipe-right" direction="right"/>
-<transition:BlurDissolve id="blur-mix" radius="24"/>
-```
-
-The declaration produces an effect value; the same `visual:Transition` relation selects whichever
-effect the edit requires. A direct cut needs no Transition declaration.
+Clip has one source. The legacy Track declaration no longer owns Transition relations; visual
+transitions are package-owned picture operators in the audiovisual programme rather than Track facts.
 
 Every direct Clip or sample Layer declares exactly one visual input form:
 
@@ -271,7 +235,7 @@ Every direct Clip or sample Layer declares exactly one visual input form:
 | `media={...}` | `PreparedMedia` | Connect an explicitly prepared timed source directly |
 | `surface={...}` | `CompositableSurfaceRef` | Connect an alpha-aware still or timed surface directly |
 
-A generated or imported video Blob reaches a Track through `<mediaop:Prepare>`, which inspects it,
+A generated or imported video Blob reaches a Track through `<media:Video>`, which inspects it,
 selects its streams and preserves their exact local temporal relations without choosing a Film clock;
 its `.media` output is what `media=` connects to. The visual consumer requests its execution material
 on the Track's Timeline only when needed. These forms are explicit so a generic Blob is never guessed
@@ -279,28 +243,6 @@ to be an image or a video.
 
 **Outputs:** `{product-broll.program}` and `{product-broll.visual}`. Audio is always authored on an
 Audio Track; connecting a PreparedMedia visual member here never selects its audio member.
-
-## Combine completed VisualTracks
-
-When several independently authored visual components share one Film paint position, Visual Combine
-concatenates their complete Item programmes into one ordinary VisualTrack:
-
-```svml
-<import as="combine" from="@hypit/visual-combine@1"/>
-
-<combine:Track id="motion" timeline={speech.timeline}>
-  <combine:Use id="opening" source={opening.visual}/>
-  <combine:Use id="comparison" source={comparison.visual}/>
-  <combine:Use id="editor" source={editor.visual}/>
-  <combine:Use id="outro" source={outro.visual}/>
-</combine:Track>
-```
-
-The output `{motion.visual}` can enter Film or another Visual Combine. `Use` declaration order is
-back-to-front paint order. Sources may be disjoint or overlap; during an overlap, later Uses paint
-above earlier Uses. The package does not sort by Window, infer a transition or change source timing.
-Use a Film Stack when the inputs must first become one isolated child Picture, and use an explicit
-Transition, Process or component when their overlap needs another relationship.
 
 ## Audio tracks
 
@@ -316,11 +258,11 @@ then choose its exact program Window and, when needed, an inline temporal Map:
 
 <time:Clock id="clock" frame-rate="30"/>
 <media:Audio id="music" src="./assets/music.wav"/>
-<mediaop:Prepare id="music-media" source={music}
-  video="none" audio="default" span-authority="audio"/>
+<media:Audio id="music-media" source={music}
+    />
 
 <audio:Track id="music-bed" timeline={speech.timeline}>
-  <audio:Clip source={music-media.media} during={speech.window}
+  <audio:Clip source={music-media.source} during={speech.window}
     gain="0.28" fade-in="600ms" fade-out="800ms">
     <audio:Map target-at="end" source-at="end" rate="1"
       wrap-from="start" wrap-until="end"/>
@@ -347,19 +289,6 @@ source-position relations under ordinary point sampling. To keep pitch under a c
 declare `<stretch:PreservePitch id="natural"/>` from `@hypit/audio-stretch@1` and reference it with
 `reconstruction={natural}`. The speed remains solely in `Map`; the local Provider currently supports
 PreservePitch for a complete positive-affine, non-looping relation and accurately rejects other forms.
-
-To apply explicit gain and close several AudioTracks into one contribution, use Audio Mix:
-
-```svml
-<import as="mix" from="@hypit/audio-mix@1"/>
-<mix:Track id="dialogue" timeline={speech.timeline}>
-  <mix:Input id="host" source={host.audio}/>
-  <mix:Input id="guest" source={guest.audio} gain="0.9"/>
-</mix:Track>
-```
-
-The output `{dialogue.audio}` is another ordinary AudioTrack. Audio Mix applies each declared gain
-and adds the signals. Use an audio component for limiting, ducking, sends or master treatment.
 
 ## Text overlays
 
@@ -636,10 +565,10 @@ All four track families together in one source file:
   left="10%" top="20%" right="90%" bottom="70%"/>
 
 <!-- Media: one ordinary Clip used editorially as B-roll -->
-<mediaop:Prepare id="card-media" source={motion.video}
-  video="primary-moving" audio="none" span-authority="video"/>
+<media:Video id="card-media" source={motion.video}
+   audio="none" />
 <visual:Track id="cards" timeline={speech.timeline}>
-  <visual:Clip media={card-media.media} frame={card-frame}
+  <visual:Clip media={card-media.source} frame={card-frame}
     during={demo} fit="cover" treatment={recipes.visual.card}/>
 </visual:Track>
 
@@ -652,10 +581,10 @@ All four track families together in one source file:
 
 <!-- Audio: prepare one declared source, then place it for the complete program -->
 <media:Audio id="music" src="./assets/music.wav"/>
-<mediaop:Prepare id="music-media" source={music}
-  video="none" audio="default" span-authority="audio"/>
+<media:Audio id="music-media" source={music}
+    />
 <audio:Track id="music-bed" timeline={speech.timeline}>
-  <audio:Clip source={music-media.media} during={speech.window}
+  <audio:Clip source={music-media.source} during={speech.window}
     gain="0.28" fade-in="600ms" fade-out="800ms">
     <audio:Map target-at="end" source-at="end" rate="1"
       wrap-from="start" wrap-until="end"/>

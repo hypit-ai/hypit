@@ -6,7 +6,7 @@ import type { ProducerStep, TypeRef, TypedRecord } from "@hypit/protocol";
 
 import { planTemporalInverse, temporalAuthorBindings } from "../src/temporal-inverse.js";
 import { StudioCompanionRegistry } from "../src/studio-registry.js";
-import { commonTemporalStudioRelations } from "@hypit/temporal/studio";
+import { timelineAuthorLegacyStudioRelations as commonTemporalStudioRelations } from "@hypit/timeline-author/studio";
 import { timelineAuthorProducers } from "../../timeline-author/src/manifest.js";
 import { timelineAuthorStudioTemporalRelations } from "../../timeline-author/src/studio.js";
 import { executedGraph } from "./executed-graph-scenario.js";
@@ -18,10 +18,10 @@ const type = (owner: string, name: string): TypeRef => ({ module: module(owner),
 const record = (id: string, owner: string, name: string, value: unknown): TypedRecord => ({
   id, type: type(owner, name), value: canonicalize(value),
 });
-const step = (id: string, name: string, inputs: ProducerStep["inputs"], outputs: Readonly<Record<string, string>>): ProducerStep => {
+const step = (id: string, name: string, inputs: ProducerStep["inputs"], outputs: Readonly<Record<string, string>>, owner = "@hypit/timeline-author"): ProducerStep => {
   const [result] = Object.entries(outputs);
   assert.ok(result);
-  return { id, producer: { module: module("@hypit/temporal"), name }, inputs,
+  return { id, producer: { module: module(owner), name }, inputs,
     result: { kind: "output", name: result[0], record: result[1] } };
 };
 
@@ -30,31 +30,31 @@ function fixture(): ExecutedGraph {
     record("timeline", "@hypit/timeline", "Timeline", {
       id: "main", frameRate: { numerator: 30, denominator: 1 }, frameCount: 100,
     }),
-    record("start-spec", "@hypit/temporal", "TemporalInstantSpec", {
+    record("start-spec", "@hypit/timeline-author", "TimelineInstantSpec", {
       id: "clip.start", subjectId: "clip", projection: { ref: "absolute", at: { unit: "frames", value: 10 } },
       author: { binding: "from", relation: "direct" },
     }),
     record("duration", "@hypit/temporal", "TemporalDuration", { unit: "frames", value: 20 }),
-    record("shift-spec", "@hypit/temporal", "TemporalShiftSpec", {
+    record("shift-spec", "@hypit/timeline-author", "TimelineShiftSpec", {
       id: "clip.end", subjectId: "clip", direction: 1,
       author: { binding: "for", relation: "after-start" },
     }),
-    record("window-spec", "@hypit/temporal", "TemporalWindowSpec", { id: "clip", subjectId: "clip" }),
+    record("window-spec", "@hypit/timeline", "TemporalIdentitySpec", { id: "clip", subjectId: "clip" }),
   ];
   const executed = [
-    record("upstream-start", "@hypit/temporal", "TemporalInstant", {
+    record("upstream-start", "@hypit/timeline", "TemporalInstant", {
       id: "clip.start", subjectId: "clip", timelineId: "main", frame: 10,
     }),
-    record("start", "@hypit/temporal", "TemporalInstant", {
+    record("start", "@hypit/timeline", "TemporalInstant", {
       id: "clip.start", subjectId: "clip", timelineId: "main", frame: 10,
     }),
     record("extent", "@hypit/temporal", "TemporalExtent", {
       duration: { ticks: "2", timeBase: { numerator: 1, denominator: 3 } },
     }),
-    record("end", "@hypit/temporal", "TemporalInstant", {
+    record("end", "@hypit/timeline", "TemporalInstant", {
       id: "clip.end", subjectId: "clip", timelineId: "main", frame: 30,
     }),
-    record("window", "@hypit/temporal", "TemporalWindow", {
+    record("window", "@hypit/timeline", "TemporalWindow", {
       id: "clip", subjectId: "clip",
       start: { id: "clip.start", subjectId: "clip", timelineId: "main", frame: 10 },
       end: { id: "clip.end", subjectId: "clip", timelineId: "main", frame: 30 },
@@ -62,11 +62,11 @@ function fixture(): ExecutedGraph {
     }),
   ];
   const steps = [
-    step("project", "project-program-instant", { timeline: "timeline", spec: "start-spec" }, { instant: "upstream-start" }),
-    step("reuse", "reuse-instant", { instant: "upstream-start" }, { instant: "start" }),
+    step("project", "project-timeline-instant", { timeline: "timeline", spec: "start-spec" }, { instant: "upstream-start" }),
+    step("reuse", "reuse-timeline-instant", { instant: "upstream-start" }, { instant: "start" }),
     step("extent", "extent-from-duration", { timeline: "timeline", duration: "duration" }, { extent: "extent" }),
-    step("shift", "shift-instant", { timeline: "timeline", instant: "start", extent: "extent", spec: "shift-spec" }, { instant: "end" }),
-    step("compose", "compose-window", { spec: "window-spec", start: "start", end: "end" }, { window: "window" }),
+    step("shift", "shift-timeline-instant", { timeline: "timeline", instant: "start", extent: "extent", spec: "shift-spec" }, { instant: "end" }),
+    step("compose", "compose-window", { spec: "window-spec", start: "start", end: "end" }, { window: "window" }, "@hypit/timeline"),
   ];
   return executedGraph({ programRecords: program, steps, records: executed });
 }
@@ -112,7 +112,9 @@ const plan = (state: ExecutedGraph, startFrame: number, endFrameExclusive: numbe
   target: { kind: "window", startFrame, endFrameExclusive },
   bindings: bindings(state),
   domainFrame: () => undefined,
-  registry: new StudioCompanionRegistry([], { temporalRelations: commonTemporalStudioRelations }),
+  registry: new StudioCompanionRegistry([], {
+    temporalRelations: [...commonTemporalStudioRelations, ...timelineAuthorStudioTemporalRelations],
+  }),
 });
 
 test("recursive Temporal inverse crosses reuse and atomically compensates from/for", () => {
@@ -162,7 +164,7 @@ test("Timeline Author Companion reverses private Points and Extents through the 
     { id: "start-point", type: authorType("ConstructionPoint"), value: ({ frame: 10 }) },
     { id: "clip-extent", type: authorType("ConstructionExtent"), value: ({ frameCount: 20 }) },
     { id: "clip-span", type: type("@hypit/timeline", "FrameSpan"), value: ({ startFrame: 10, endFrameExclusive: 30 }) },
-    record("author-window", "@hypit/temporal", "TemporalWindow", {
+    record("author-window", "@hypit/timeline", "TemporalWindow", {
       id: "main.clip", subjectId: "main.clip",
       start: { id: "main.clip.start", subjectId: "main.clip", timelineId: "main", frame: 10 },
       end: { id: "main.clip.end", subjectId: "main.clip", timelineId: "main", frame: 30 },
@@ -209,7 +211,7 @@ test("Timeline Author Companion reverses private Points and Extents through the 
 
 test("relation alternatives are solved by their final author writes", () => {
   const spec = record("spec", "@example/time", "Spec", { author: { binding: "at" } });
-  const point = record("point", "@hypit/temporal", "TemporalInstant", {
+  const point = record("point", "@hypit/timeline", "TemporalInstant", {
     id: "point", subjectId: "point", timelineId: "main", frame: 10,
   });
   const producer = { module: module("@example/time"), name: "choose-point" };

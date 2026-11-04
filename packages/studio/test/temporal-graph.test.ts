@@ -5,7 +5,7 @@ import { canonicalize } from "@hypit/protocol";
 import type { ProducerStep, TypeRef, TypedRecord } from "@hypit/protocol";
 
 import { executedTemporalBindings } from "../src/temporal-graph.js";
-import { commonTemporalStudioRelations } from "@hypit/temporal/studio";
+import { timelineAuthorLegacyStudioRelations as commonTemporalStudioRelations } from "@hypit/timeline-author/studio";
 import { narrativeStudioTemporalRelations } from "../../narrative-temporal/src/studio.js";
 import { executedGraph } from "./executed-graph-scenario.js";
 
@@ -39,12 +39,12 @@ test("Studio reads Instant lineage and author authority from executed graph edge
     record("card-spec", "@hypit/depth-stack", "DepthStackCardSpec", { id: "card" }),
   ];
   const executed = [
-    record("point", "@hypit/temporal", "TemporalInstant", {
+    record("point", "@hypit/timeline", "TemporalInstant", {
       id: "deck.card::cue", subjectId: "card", timelineId: "speech", frame: 42,
     }),
     record("cards", "@hypit/depth-stack", "DepthStackCardSet", { cards: [{ id: "card", activationFrame: 42 }] }),
     record("track", "@hypit/composition", "VisualTrack", { items: [] }),
-    record("unused-point", "@hypit/temporal", "TemporalInstant", {
+    record("unused-point", "@hypit/timeline", "TemporalInstant", {
       id: "unused::cue", subjectId: "unused", timelineId: "speech", frame: 7,
     }),
   ];
@@ -59,7 +59,7 @@ test("Studio reads Instant lineage and author authority from executed graph edge
   const opaque = executedTemporalBindings(state, outputs, "visual");
   assert.deepEqual(opaque[0]?.projection, {
     kind: "instant", expression: "42f", reference: "absolute", frame: 42,
-    source: { scope: "timeline", timelineId: "speech", type: type("@hypit/temporal", "TemporalInstant"), kind: "resolved", id: "deck.card::cue" },
+    source: { scope: "timeline", timelineId: "speech", type: type("@hypit/timeline", "TemporalInstant"), kind: "resolved", id: "deck.card::cue" },
     authority: { kind: "fixed" },
   });
   const bindings = executedTemporalBindings(state, outputs, "visual", (sourceType, value) => {
@@ -86,19 +86,19 @@ test("Studio reads Instant lineage and author authority from executed graph edge
       input: "activation",
       role: "domain",
       inputs: [
-        { name: "activation", record: "point", type: type("@hypit/temporal", "TemporalInstant"), value: executed[0]!.value },
+        { name: "activation", record: "point", type: type("@hypit/timeline", "TemporalInstant"), value: executed[0]!.value },
         { name: "spec", record: "card-spec", type: type("@hypit/depth-stack", "DepthStackCardSpec"), value: { id: "card" } },
       ],
     }],
   });
 });
 
-test("Studio reads author parameter authority declared by the Temporal Spec", () => {
+test("Studio reads author parameter authority declared by the Timeline Author Spec", () => {
   const program = [
     record("timeline", "@hypit/timeline", "Timeline", {
       id: "main", frameRate: { numerator: 30, denominator: 1 }, frameCount: 100,
     }),
-    record("point-spec", "@hypit/temporal", "TemporalInstantSpec", {
+    record("point-spec", "@hypit/timeline-author", "TimelineInstantSpec", {
       id: "card.activation", subjectId: "card",
       projection: { ref: "absolute", at: { unit: "frames", value: 42 } },
       author: { binding: "at", relation: "direct" },
@@ -106,14 +106,14 @@ test("Studio reads author parameter authority declared by the Temporal Spec", ()
     record("card-spec", "@hypit/depth-stack", "DepthStackCardSpec", { id: "card" }),
   ];
   const executed = [
-    record("point", "@hypit/temporal", "TemporalInstant", {
+    record("point", "@hypit/timeline", "TemporalInstant", {
       id: "card.activation", subjectId: "card", timelineId: "main", frame: 42,
     }),
     record("cards", "@hypit/depth-stack", "DepthStackCardSet", { cards: [{ id: "card", activationFrame: 42 }] }),
     record("track", "@hypit/composition", "VisualTrack", { items: [] }),
   ];
   const steps = [
-    step("project", "@hypit/temporal", "project-program-instant", { timeline: "timeline", spec: "point-spec" }, { instant: "point" }),
+    step("project", "@hypit/timeline-author", "project-timeline-instant", { timeline: "timeline", spec: "point-spec" }, { instant: "point" }),
     step("append", "@hypit/depth-stack", "append-depth-stack-card", { set: "empty", spec: "card-spec", activation: "point" }, { set: "cards" }),
     step("render", "@hypit/depth-stack", "render-depth-stack", { program: "cards" }, { track: "track" }),
   ];

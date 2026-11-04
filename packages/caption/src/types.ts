@@ -51,7 +51,7 @@ export type CaptionStyleIntent = {
 /** Ordered, resolved Uses owned by a Caption Track, not a separate author element. */
 export type CaptionUse = {
   readonly id: string;
-  readonly window?: import("@hypit/temporal").TemporalWindow;
+  readonly window?: import("@hypit/timeline").TemporalWindow;
   readonly styleId: string;
   readonly role?: string;
 };

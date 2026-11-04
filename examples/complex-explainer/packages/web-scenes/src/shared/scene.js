@@ -3,8 +3,9 @@ import { scene_styles } from "./scene-styles.js";
 import { sealPresentVisualTrack } from "@hypit/composition";
 import { htmlVisual } from "@hypit/html-program";
 import { preparedVisualSource } from "@hypit/media";
-import { assertTemporalWindowFor, composeTemporalMaps, exactTemporalValueFromFrames,
+import { composeTemporalMaps, exactTemporalValueFromFrames,
   exactTemporalZero, resolveTemporalBoundary, scaleExactTemporalValue, sealTemporalMap } from "@hypit/temporal";
+import { assertTemporalWindowFor } from "@hypit/timeline";
 const styles = (o) => Object.entries(o).map(([name, value]) => ({ name, value }));
 export function scene(t, within, w, font, o, html, css, setup, events, entries, extra = {}) {
   assertTemporalWindowFor(w, { subjectId: o.id, timeline: t });

@@ -64,7 +64,7 @@ export function createDepthStackFragment(
       { name: card.sampleSpecName, type: visualTrackTypes.sampleLayerSpec },
       { name: card.labelName, type: depthStackTypes.cardLabel },
       { name: card.cardSpecName, type: depthStackTypes.cardSpec },
-      { name: card.activationName, type: temporalTypes.instant },
+      { name: card.activationName, type: timelineTypes.instant },
     );
     if (card.framePaintSpecName !== undefined) {
       inputs.push({ name: card.framePaintSpecName, type: visualTrackTypes.paintLayerSpec });
@@ -121,7 +121,7 @@ export function createDepthStackFragment(
     });
     cardSet = operation(appendId);
   }
-  inputs.push({ name: terminalName, type: temporalTypes.instant });
+  inputs.push({ name: terminalName, type: timelineTypes.instant });
   operations.push({
     id: "program",
     producer: depthStackProducers.finalize,

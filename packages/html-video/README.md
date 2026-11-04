@@ -1,37 +1,19 @@
 # @hypit/html-video
 
-The package-owned `video` declaration consumes a completed Composition and Timeline, then authors an
-explicit delivery requirement and optional frame range. Markup supplies only the `Video` spelling.
-Renderer and Endpoint selection remain downstream Build concerns, and the package has no runtime
-dependency on Temporal or its Markup helpers.
+`@hypit/html-video` assembles an already compiled `HtmlProgram`, an `AudioProgram` and one explicit
+`MediaDeliverySpec` into a final video request.
 
-`@hypit/html-video` is the author-facing video assembly that selects Hypit's HTML
-visual path:
+Its Fragment:
 
-```xml
-<html:Video id="video" composition={main.composition}/>
-```
+1. projects the delivery requirement into a visual requirement;
+2. requests rasterization of the supplied `HtmlProgram`;
+3. requests rendering of the supplied `AudioProgram`;
+4. muxes the two typed products under the same delivery requirement; and
+5. exports the resulting video Blob.
 
-Omitting delivery publishes a private standard BT.709 H.264/AAC MP4 requirement in the
-author graph. `quality="draft|standard|high"` changes that explicit standard requirement;
-advanced author packages can instead pass a `MediaDeliverySpec` through `delivery`.
+An optional selected-range form accepts an absolute visual `FrameSpan` and an audio render range.
+Those are request-time selections, not a Timeline author model.
 
-The author contract exposes one finished-video family: BT.709 H.264/AAC MP4.
-
-The package contributes only the `html` author declaration and its orchestration
-Fragment. It:
-
-1. compiles the selected Composition and Timeline with `@hypit/html-program`;
-2. projects the one media delivery requirement into the visual requirement and requests a
-   matching `TimelineVisual` through `rasterize-visual`;
-3. prepares Timeline audio through the media path;
-4. verifies and muxes the two frame-exact products under the same delivery requirement into
-   the Film artifact.
-
-It does not own the `HtmlProgram` ABI, browser execution, frame capture, source
-decoding, or the rasterization Capabilities. Consequently a local Provider,
-Studio snapshot, or another executor never depends on this author package.
-
-The name describes the selected representation and product assembly, not an
-implementation command. There is intentionally no `<render:Video>` compatibility
-alias: `render` confuses the desired video with one possible execution method.
+The package does not compile Composition or Track values, does not own browser execution, and does
+not select a Provider. Visual compilation belongs upstream in `@hypit/audiovisual-html`; concrete
+rasterization, audio processing and muxing belong to the selected Runtime capabilities.

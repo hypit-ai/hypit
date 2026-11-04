@@ -6,8 +6,8 @@ import { recipeType, type Recipe } from "@hypit/hypit/recipe";
 import { sameType, type CanonicalValue, type TypeRef } from "@hypit/hypit/protocol";
 import { spatialTypes } from "@hypit/spatial";
 import { temporalTypes } from "@hypit/temporal";
-import { resolveAuthorInstant, resolveAuthorTimeline, resolveAuthorWindow, temporalContextFieldShape,
-  temporalInstantFieldShape, temporalWindowFieldShape } from "@hypit/temporal/author";
+import { resolveInstantReference, resolveTimelineReference, resolveWindowReference, timelineContextFieldShape,
+  timelineInstantFieldShape, timelineWindowFieldShape } from "@hypit/timeline-author/reference";
 
 import { createEmojiRevealFragment } from "./fragment.js";
 import { emojiRevealModuleRef, emojiRevealTypes } from "./manifest.js";
@@ -72,17 +72,17 @@ export const emojiRevealTrackAuthorDeclaration: AuthorDeclarationCompiler = {
     summary: "Draws one adaptive row of preset or progressively revealed icon slots.",
     fields: [
       { name: "id", kind: "identifier", required: true, summary: "Names the reveal program." },
-      temporalContextFieldShape,
+      timelineContextFieldShape,
       { name: "within", kind: "reference", required: true, accepts: [spatialTypes.frame], summary: "Selects the placement Frame." },
       { name: "style", kind: "reference", required: true, accepts: [emojiRevealTypes.style], summary: "Selects the reveal style." },
       { name: "placeholder", kind: "reference", required: true, accepts: [blobTypes.blob], summary: "Selects the unrevealed icon." },
-      temporalWindowFieldShape,
+      timelineWindowFieldShape,
     ],
     children: [{ name: "Item", cardinality: "many", summary: "Declares one answer slot.", fields: [
       { name: "id", kind: "identifier", required: true, summary: "Names the answer slot." },
       { name: "icon", kind: "reference", required: true, accepts: [blobTypes.blob], summary: "Selects the revealed icon." },
       { name: "preset", kind: "literal", required: false, values: ["true", "false"], summary: "Settles the item from the start." },
-      { ...temporalInstantFieldShape, required: false },
+      { ...timelineInstantFieldShape, required: false },
     ] }],
   },
   bindings(declaration) {
@@ -97,8 +97,8 @@ export const emojiRevealTrackAuthorDeclaration: AuthorDeclarationCompiler = {
   async compile({ declaration, resolveReference }) {
     if (declaration.children.length === 0) throw new Error("EmojiReveal requires at least one Item.");
     const id = literal(declaration, "id");
-    const timeline = await resolveAuthorTimeline(declaration, resolveReference);
-    const outer = await resolveAuthorWindow(declaration, resolveReference);
+    const timeline = await resolveTimelineReference(declaration, resolveReference);
+    const outer = await resolveWindowReference(declaration, resolveReference);
     const within = await reference(declaration, "within", spatialTypes.frame, resolveReference);
     const style = await reference(declaration, "style", emojiRevealTypes.style, resolveReference);
     const placeholder = await reference(declaration, "placeholder", blobTypes.blob, resolveReference);
@@ -136,7 +136,7 @@ export const emojiRevealTrackAuthorDeclaration: AuthorDeclarationCompiler = {
       if (preset) items.push({ specName, iconName });
       else {
         const activationName = `item-${suffix}-activation`;
-        inputs[activationName] = (await resolveAuthorInstant(child, resolveReference)).ref;
+        inputs[activationName] = (await resolveInstantReference(child, resolveReference)).ref;
         items.push({ specName, iconName, activationName });
       }
     }

@@ -116,7 +116,7 @@ const appendInputs = [
   { name: "timeline", type: timelineTypes.timeline },
   { name: "frame", type: spatialTypes.frame }, { name: "style", type: commentStickerTypes.style },
   { name: "spec", type: commentStickerTypes.itemSpec },
-  { name: "content", type: commentStickerTypes.content }, { name: "window", type: temporalTypes.window },
+  { name: "content", type: commentStickerTypes.content }, { name: "window", type: timelineTypes.window },
 ] as const;
 
 export const commentStickerManifest: ModuleManifest = {

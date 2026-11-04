@@ -57,7 +57,7 @@ Moments or boundaries:
 NarrativeAlignment + LocalDomain + Window -> absolute Instants / Windows
 ```
 
-This mapping preserves the local endpoints at native speed. Prepare trims, retiming or other altered
+This mapping preserves the local endpoints at native speed. Apply trims, retiming or other alterations to
 media before projecting evidence whose endpoints must remain meaningful.
 
 Visual and Audio placement is a separate decision:

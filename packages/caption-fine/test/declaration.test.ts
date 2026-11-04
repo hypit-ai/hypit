@@ -61,7 +61,7 @@ test("Fine Caption declarations own Style, Uses and graph lowering independently
       { name: "timing", ref: { kind: "record", id: "timing" }, type: captionTypes.timing },
       { name: "timeline", ref: { kind: "record", id: "timeline" }, type: timelineTypes.timeline },
       { name: "frame", ref: { kind: "record", id: "frame" }, type: spatialTypes.frame },
-      { name: "window", ref: { kind: "record", id: "window" }, type: temporalTypes.window },
+      { name: "window", ref: { kind: "record", id: "window" }, type: timelineTypes.window },
       { name: "regions", ref: { kind: "record", id: "regions" }, type: spatialSequenceTypes.timelineRegions },
     ],
   };

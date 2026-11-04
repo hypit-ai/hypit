@@ -1,5 +1,4 @@
 import type { PictureInterpretation } from "@hypit/media";
-import type { HtmlProcessUsage } from "@hypit/html-program";
 
 /** The optional completion hooks supplied by the pinned HTML page runtime. */
 type RenderWindow = Window & {
@@ -56,17 +55,10 @@ export type FramePreparationPage = {
     operation: (...parameters: Parameters) => Result | Promise<Result>,
     ...parameters: Parameters
   ) => Promise<Awaited<Result>>;
-  readonly screenshot?: (options: {
-    readonly type: "png";
-    readonly omitBackground: boolean;
-    readonly optimizeForSpeed: boolean;
-    readonly captureBeyondViewport: boolean;
-    readonly clip: { readonly x: number; readonly y: number; readonly width: number; readonly height: number };
-  }) => Promise<Uint8Array>;
 };
 
 /** Install page-owned readiness and prepare one deterministic frame state. */
-export async function createFramePreparer(page: FramePreparationPage, processUsages: readonly HtmlProcessUsage[] = []) {
+export async function createFramePreparer(page: FramePreparationPage) {
   // Image readiness belongs to this page. A seek can select a new image through
   // attributes, a CSS class or a pseudo-element after initial page readiness.
   await page.evaluate(() => {
@@ -335,93 +327,9 @@ export async function createFramePreparer(page: FramePreparationPage, processUsa
       if (w.__hypitHtmlVisualError !== undefined) throw new Error(w.__hypitHtmlVisualError);
       return { programMs, sourceMs, readinessMs: performance.now() - readinessStarted };
     }, { frame, sources });
-    const processStarted = performance.now();
-    const activeProcessStageKeys = processUsages
-      .filter((usage) => usage.spans.some((span) => frame >= span.startFrame && frame < span.endFrameExclusive))
-      .toSorted((left, right) => left.order - right.order)
-      .flatMap((usage) => usage.stageKeys);
-    const processPlan = await page.evaluate((stageKeys) => {
-      const program = document.querySelector<HTMLElement>("[data-hypit-program-root]");
-      if (program === null) throw new Error("HTML Program root is missing.");
-      const width = Number(program.dataset.hypitWidth);
-      const height = Number(program.dataset.hypitHeight);
-      if (!Number.isSafeInteger(width) || width <= 0 || !Number.isSafeInteger(height) || height <= 0) {
-        throw new Error("HTML Program canvas is invalid.");
-      }
-      const stages = stageKeys.map((key) => {
-        const stage = document.getElementById(key);
-        if (!(stage instanceof HTMLElement) || !stage.hasAttribute("data-hypit-process-stage")
-          || stage.dataset.hypitProcessStageKey !== key) {
-          throw new Error(`HTML Program Process stage ${key} is unavailable.`);
-        }
-        return { key, width, height };
-      });
-      return { width, height, stages };
-    }, activeProcessStageKeys);
-    if (processPlan.stages.length > 0 && page.screenshot === undefined) {
-      throw new Error("Selected HTML renderer does not implement Visual Process input rasterization.");
-    }
-    for (const stage of processPlan.stages) {
-      await page.evaluate(({ key }) => {
-        const target = document.getElementById(key);
-        if (!(target instanceof HTMLElement) || !target.hasAttribute("data-hypit-process-stage")) {
-          throw new Error(`HTML Program Process stage ${key} is unavailable.`);
-        }
-        const changed = new Map<HTMLElement, string | null>();
-        for (const child of Array.from(document.body?.children ?? [])) {
-          if (!(child instanceof HTMLElement)) continue;
-          changed.set(child, child.getAttribute("style"));
-          // A root Process input is a compiler-owned fixed, full-canvas plane.
-          // Remove peer body subtrees while retaining the stage's own layout;
-          // no authored ancestor transform or filter is rewritten.
-          child.style.display = "none";
-        }
-        target.style.display = "block";
-        (window as unknown as {
-          __hypitProcessCaptureRestore?: [HTMLElement, string | null][];
-        }).__hypitProcessCaptureRestore = [...changed];
-      }, { key: stage.key });
-      try {
-        const png = await page.screenshot!({
-          type: "png",
-          omitBackground: true,
-          optimizeForSpeed: true,
-          captureBeyondViewport: false,
-          clip: { x: 0, y: 0, width: stage.width, height: stage.height },
-        });
-        const url = `data:image/png;base64,${Buffer.from(png).toString("base64")}`;
-        await page.evaluate(async ({ key, url }) => {
-          const images = Array.from(document.querySelectorAll<HTMLImageElement>("[data-hypit-process-raster-key]"))
-            .filter(image => image.dataset.hypitProcessRasterKey === key);
-          if (images.length === 0) throw new Error(`HTML Program Process input ${key} has no raster target.`);
-          await Promise.all(images.map(async image => {
-            if (image.src !== url) image.src = url;
-            await image.decode();
-          }));
-        }, { key: stage.key, url });
-      } finally {
-        await page.evaluate(() => {
-          const state = window as unknown as {
-            __hypitProcessCaptureRestore?: [HTMLElement, string | null][];
-          };
-          for (const [element, previous] of (state.__hypitProcessCaptureRestore ?? []).reverse()) {
-            if (previous === null) element.removeAttribute("style");
-            else element.setAttribute("style", previous);
-          }
-          delete state.__hypitProcessCaptureRestore;
-        });
-      }
-      await page.evaluate(async (frame) => {
-        const w = window as unknown as RenderWindow;
-        await w.__hypitFrameProgram.applyFrame(frame);
-        await w.__hypitPrepareImages();
-        if (w.__hypitHtmlVisualError !== undefined) throw new Error(w.__hypitHtmlVisualError);
-      }, frame);
-    }
     return {
       evaluationMs: performance.now() - started,
       ...timing,
-      programMs: timing.programMs + (performance.now() - processStarted),
     } satisfies FramePreparationTiming;
   };
 }

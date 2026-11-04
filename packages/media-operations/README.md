@@ -1,11 +1,10 @@
 # `@hypit/media-operations`
 
-Author declarations and graph lowering are owned by this package. Markup supplies only the public
-`Prepare`, `StillVideo`, `Transform`, `ExtractAudio` and `ExtractFrame` spellings; the same operations
-can be constructed through another author frontend without changing their media semantics.
+Provider-neutral materialization and extraction operations. Markup supplies the public `StillVideo`,
+`ExtractAudio` and `ExtractFrame` spellings; the same operations can be constructed through another
+author frontend without changing their media semantics.
 
-Provider-neutral media preparation and execution vocabulary. Preparation contributes one ordinary
-finite Fragment:
+Resource inspection, stream selection and PreparedMedia construction are owned by `@hypit/media` itself:
 
 ```text
 Blob -> inspect-media Need -> MediaInspection
@@ -14,10 +13,10 @@ Blob -> inspect-media Need -> MediaInspection
      -> PreparedMedia + exact LocalTemporalDomain + TemporalExtent
 ```
 
-`MediaInspection` enumerates every container stream. The default moving-video policy excludes
-`attached_pic` streams, prefers one declared default, accepts one unambiguous remaining candidate,
-and otherwise fails closed. An explicit stream index is available when the author genuinely knows
-which alternate stream is intended.
+`Video` and `Audio` are Media author objects with a direct Resource branch and lazy prepared branch.
+`MediaInspection` enumerates every container stream. Default selection excludes `attached_pic` streams,
+prefers one declared default, accepts one unambiguous remaining candidate, and otherwise fails closed.
+An explicit stream index remains available on the Media declaration.
 
 `PreparedMedia` retains the original Blob, selected members, exact local domain, visual interpretation
 and maps back to source presentation time. Audio decoder shape is not copied beyond inspection because no Programme consumer uses it.
@@ -26,25 +25,23 @@ no execution representation. Selecting embedded audio remains a media fact only;
 placement stay downstream.
 
 ```svml
-<time:Clock id="clock" frame-rate="30"/>
-<mediaop:Prepare id="shot-media" source={shot.video}
-  recipe={recipes.media.aroll}/>
+<media:Video id="shot" source={generation.video} audio="default"/>
 ```
 
 Visual and Audio Tracks consume that prepared value with explicit Windows and sampling relations.
 Visual lowering keeps the exact selected stream and composed `TemporalMap` in the terminal visual program; audio lowering
 projects the selected audio source plus its preparation and occurrence maps before the terminal Audio Track enters Composition.
 `@hypit/audio-program` then projects absolute programme boundaries onto its sample grid while retaining
-both maps. The selected renderer evaluates them with its own decoder and working formats. An SVS
-recipe may centralize stream selection without hiding the Prepare node.
+both maps. The selected renderer evaluates them with its own decoder and working formats. Media preparation
+is not a top-level `@hypit/media-operations` declaration and does not materialize a normalized file.
 
 A still image becomes ordinary video before it enters that waist:
 
 ```svml
 <mediaop:StillVideo id="opening-still" source={opening-head.image}
   duration="6s" clock={clock}/>
-<mediaop:Prepare id="opening-media" source={opening-still.video}
-  video="primary-moving" audio="none" span-authority="video"/>
+<media:Video id="opening-media" source={opening-still.video}
+   audio="none" />
 ```
 
 Several images spread over one literal duration the same way, each held for its share of the frames:
@@ -68,55 +65,23 @@ or generated moving video. The resulting Blob is ordinary time-bearing visual me
 comes entirely from the downstream Source relationships; StillVideo itself owns only the authored
 images, duration and frame clock.
 
-Preparation and pure transformation use the same source-preserving boundary:
+Audio and frame extraction are explicit Blob operations:
 
 ```xml
-<mediaop:Prepare id="shot-media" source={shot.video}
-  video="primary-moving" picture="source" audio="default" span-authority="video"/>
-<mediaop:Transform id="prepared" source={shot-media.media}>
-  <mediaop:Trim tail="0.25s"/>
-  <mediaop:Retime rate="1.05"/>
-</mediaop:Transform>
-
-<mediaop:Transform id="bullet-time" source={shot-media.media}>
-  <mediaop:Retime>
-    <mediaop:Rate at="start" value="1"/>
-    <mediaop:Rate at="end-1s" value="1/8"/>
-    <mediaop:Rate at="end" value="1"/>
-  </mediaop:Retime>
-</mediaop:Transform>
-
 <mediaop:ExtractAudio id="voice-reference" source={shot.video} audio="default"/>
 <mediaop:ExtractFrame id="continuity" source={shot.video} video="primary-moving" at="last"/>
 ```
 
-Transform returns another `PreparedMedia`. Ordered trim, constant retime and complete rate profiles compose exact
-temporal maps without decoding or encoding. A profile's first and last `Rate` must name opposite source
-edges and every intermediate `at` must remain strictly ordered. `start`, `end`, offsets such as
-`end-500ms`, and exact integer, decimal or fractional rates let the declaration wait for the connected
-PreparedMedia's actual duration. Adjacent Rate knots define a source interval; linear rate change over
-target time is integrated exactly into one cubic source-position piece, and that interval uniquely
-determines its target duration. A zero rate may occur at one knot, but two adjacent zero rates cannot
-define finite time; a hold needs an explicit target duration elsewhere. Profiles do not hide cuts,
-repetition or source overlap inside `Retime`.
-
-Audio/frame extraction remain explicit Blob operations
-over a source Blob. Audio extraction emits a deterministic 48 kHz stereo PCM
+Audio extraction emits a deterministic 48 kHz stereo PCM
 WAV but makes no NarrativeAlignment, speaker or semantic claim; it can therefore feed a later model
 reference port directly. Frame extraction supports `first`, `last`, `frame:<index>` and
-`time:<seconds>`. Transform operations are ordered author meaning and never an arbitrary FFmpeg string.
+`time:<seconds>`.
 
-Transform exposes only constructors whose target domains are unambiguous. Trim derives its duration
-from a selected source interval. Constant Retime derives it from source duration and the absolute
-rate; a negative rate starts at the source end and reverses traversal. Profile Retime derives every
-target segment by integrating the signed endpoint rates across its explicit source interval. These
-declarations are not free-standing temporal maps: the connected PreparedMedia supplies the concrete
-finite source domain, and Transform immediately resolves a named target domain and exact map.
-
-The target-parameterized cubic relation used by Clips instead receives its target domain from the
-occurrence Window. Both paths produce the same `TemporalMap` cubic pieces; their author syntax differs
-because different facts are already known. Reconstruction quality remains a Renderer decision, not a
-rate-profile field.
+This package deliberately has no `PreparedMedia -> PreparedMedia` Transform. Trim, retime, reverse,
+loop, hold and curve operations belong to one Film/NLE occurrence and resolve there into its
+target-to-source `TemporalMap`. Repeating the same edit repeats the occurrence relation. A reusable
+materialized result is produced outside SVML and re-enters as a new Blob/Media; an editor gesture does
+not create a second media identity.
 
 The terminal audio Programme and final audiovisual delivery are deliberately not operations on
 prepared material. `@hypit/audio-program` owns Composition-to-sample-plan lowering and its renderer

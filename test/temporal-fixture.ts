@@ -1,15 +1,10 @@
 import type { NarrativeSegmentRef, NarrativeMomentRef, NarrativeSelectionRef } from "@hypit/narrative";
 import type { Timeline } from "@hypit/timeline";
-import {
-  composeTemporalWindow,
-  exactTemporalValueFromFrames,
-  projectProgramInstant,
-  scaleExactTemporalValue,
-  sealTemporalMap,
-  shiftTemporalInstant,
-  temporalExtentFromDuration,
-} from "@hypit/temporal";
-import type { TemporalDuration, TemporalInstantExpression, TemporalMap } from "@hypit/temporal";
+import { exactTemporalValueFromFrames, scaleExactTemporalValue, sealTemporalMap, temporalExtentFromDuration } from "@hypit/temporal";
+import { projectTimelineInstant as projectProgramInstant, shiftTimelineInstant as shiftTemporalInstant } from "@hypit/timeline-author";
+import { composeTemporalWindow } from "@hypit/timeline";
+import type { TemporalDuration, TemporalMap } from "@hypit/temporal";
+import type { TimelineInstantExpression as TemporalInstantExpression } from "@hypit/timeline-author";
 import { projectNarrativeInstant } from "@hypit/narrative-temporal";
 import type { NarrativeProjection } from "@hypit/narrative-temporal";
 

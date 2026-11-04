@@ -15,6 +15,32 @@ export type ConstructionIdentitySpec = { readonly id: string; readonly subjectId
 export type ConstructionDurationSpec = { readonly duration: TemporalDuration; readonly author?: TimelineAuthorBinding };
 export type ConstructionResolutionSpec = { readonly policy: TemporalBoundaryPolicy };
 
+/** Author spelling for a boundary on one selected completed Timeline. */
+export type TimelineInstantExpression =
+  | { readonly ref: "timeline.start"; readonly offset?: TemporalDuration }
+  | { readonly ref: "timeline.end"; readonly offset?: TemporalDuration }
+  | { readonly ref: "absolute"; readonly at: TemporalDuration; readonly offset?: TemporalDuration };
+
+export type TimelineAuthorParameter = {
+  readonly binding: string;
+  readonly relation: "direct" | "after-start" | "before-end";
+};
+
+export type TimelineInstantSpec = {
+  readonly id: string;
+  readonly subjectId: string;
+  readonly projection: TimelineInstantExpression;
+  readonly author?: TimelineAuthorParameter;
+};
+
+export type TimelineShiftSpec = {
+  readonly id: string;
+  readonly subjectId: string;
+  readonly direction: 1 | -1;
+  readonly resolution?: TemporalBoundaryPolicy;
+  readonly author?: TimelineAuthorParameter;
+};
+
 export type TimelineInstantDeclaration = {
   readonly id: string;
   readonly kind: "instant";

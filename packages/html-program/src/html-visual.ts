@@ -1,6 +1,5 @@
 import { assertBlobRef, canonicalize, canonicalStringify } from "@hypit/hypit/protocol";
 import type { BlobRef, CanonicalValue } from "@hypit/hypit/protocol";
-import type { VisualProgramElement } from "@hypit/composition";
 import { verifyPictureInterpretation } from "@hypit/media";
 import type { PictureInterpretation } from "@hypit/media";
 
@@ -20,19 +19,26 @@ export type HtmlVisualDependency =
     };
 
 export type HtmlVisual = {
-  /** HTML fragment. {{child-id}} inserts an owned VisualElement, including frame-sampled video. */
+  /** HTML fragment. {{input-name}} inserts one named Picture input. */
   readonly html: string;
   /** CSS in an @scope rooted at this program's element. */
   readonly css?: string;
   /** Function body with (root, data, context) arguments; returns a synchronous render(localFrame) function. */
   readonly setup?: string;
   readonly data?: CanonicalValue;
-  /** Package-owned resource meaning. Timed media must instead be an owned VisualElement slot. */
+  /** Package-owned resource meaning. Timed media must instead arrive through a named Picture input. */
   readonly dependencies: readonly HtmlVisualDependency[];
 };
 
 export type HtmlVisualAuthoring = Omit<HtmlVisual, "dependencies"> & {
   readonly dependencies?: readonly HtmlVisualDependency[];
+};
+
+/** Package-owned execution carrier; it is independent of legacy Composition elements. */
+export type HtmlVisualProgram = {
+  readonly format: string;
+  readonly payload: { readonly [key: string]: CanonicalValue };
+  readonly artifacts: readonly BlobRef[];
 };
 
 function assertExactKeys(value: object, keys: readonly string[], label: string): void {
@@ -52,7 +58,7 @@ function assertDependency(value: unknown, index: number): asserts value is HtmlV
     const artifact = dependency.artifact;
     assertBlobRef(artifact, `${label}.artifact`);
     if (["audio/", "image/", "video/"].some((prefix) => artifact.mediaType.startsWith(prefix))) {
-      throw new Error(`${label} cannot present media as data; use a picture dependency or an owned VisualElement.`);
+      throw new Error(`${label} cannot present media as data; use a picture dependency or a named Picture input.`);
     }
     return;
   }
@@ -68,8 +74,8 @@ function assertDependency(value: unknown, index: number): asserts value is HtmlV
   throw new Error(`${label} must declare data or picture use.`);
 }
 
-export function htmlVisual(value: HtmlVisualAuthoring): VisualProgramElement["program"] {
-  const payload = canonicalize({ ...value, dependencies: value.dependencies ?? [] }) as VisualProgramElement["program"]["payload"];
+export function htmlVisual(value: HtmlVisualAuthoring): HtmlVisualProgram {
+  const payload = canonicalize({ ...value, dependencies: value.dependencies ?? [] }) as HtmlVisualProgram["payload"];
   const dependencies = (payload as unknown as HtmlVisual).dependencies;
   const program = {
     format: HTML_VISUAL_FORMAT,
@@ -80,7 +86,7 @@ export function htmlVisual(value: HtmlVisualAuthoring): VisualProgramElement["pr
   return program;
 }
 
-export function readHtmlVisual(program: VisualProgramElement["program"]): HtmlVisual {
+export function readHtmlVisual(program: HtmlVisualProgram): HtmlVisual {
   if (program.format !== HTML_VISUAL_FORMAT) {
     throw new Error(`HTML renderer does not support visual program format ${program.format}.`);
   }
@@ -136,6 +142,9 @@ export function htmlVisualScript(entries: readonly {
   readonly id: string;
   readonly startFrame: number;
   readonly durationFrames: number;
+  readonly spans: readonly { readonly startFrame: number; readonly endFrameExclusive: number }[];
+  readonly controlPositions?: Readonly<Record<string, readonly (import("@hypit/temporal").ExactTemporalValue | null)[]>>;
+  readonly renderFrames?: readonly (number | null)[];
   readonly program: Pick<HtmlVisual, "data" | "html" | "setup">;
 }[], context: { readonly width: number; readonly height: number } = { width: 0, height: 0 }): string {
   return `(() => {
@@ -150,6 +159,11 @@ export function htmlVisualScript(entries: readonly {
             durationFrames: entry.durationFrames,
             width: ${context.width},
             height: ${context.height},
+            controlPosition(name, localFrame) {
+              const positions = entry.controlPositions?.[name];
+              if (positions === undefined) throw new Error('HTML visual requested undeclared Control ' + name + '.');
+              return positions[Math.max(0, Math.min(positions.length - 1, Math.floor(localFrame)))] ?? undefined;
+            },
           });
         if (typeof render !== 'function') throw new Error('HTML visual setup must return render(localFrame).');
         return { ...entry, order, render, region: undefined };
@@ -164,12 +178,15 @@ export function htmlVisualScript(entries: readonly {
     let previousFrame;
     const renderAt = (entry, frame) => {
       const local = frame - entry.startFrame;
-      const region = local < 0 ? 'before' : local >= entry.durationFrames ? 'after' : 'active';
+      const active = entry.spans.some(span => frame >= span.startFrame && frame < span.endFrameExclusive);
+      const region = local < 0 ? 'before' : local >= entry.durationFrames ? 'after' : active ? 'active' : 'gap';
       // Preserve initial and crossed boundary poses. Active seeks always redraw,
       // including repeated frames after an asynchronously prepared image became ready.
       if (region !== 'active' && entry.region === region) return;
       try {
-        const result = entry.render(Math.max(0, Math.min(entry.durationFrames, local)));
+        const index = Math.max(0, Math.min(entry.durationFrames, local));
+        const mapped = entry.renderFrames?.[Math.min(entry.renderFrames.length - 1, Math.floor(index))];
+        const result = entry.render(mapped ?? index);
         if (result != null && typeof result.then === 'function') {
           // Observe a later rejection, but never let asynchronous drawing race frame capture.
           Promise.resolve(result).catch(fail);

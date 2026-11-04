@@ -6,7 +6,8 @@ import { compositionDependency, compositionTypes } from "@hypit/composition";
 import { blobRefSchema } from "@hypit/hypit/protocol";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/hypit/protocol";
 import { spatialDependency, spatialTypes } from "@hypit/spatial";
-import { temporalDependency, temporalInstantSchema, temporalTypes, temporalWindowSchema } from "@hypit/temporal";
+import { temporalDependency, temporalTypes } from "@hypit/temporal";
+import { temporalInstantSchema, temporalWindowSchema } from "@hypit/timeline";
 
 export const emojiRevealModuleRef = { name: "@hypit/interview-emoji-reveal", version: "1" } as const;
 
@@ -70,13 +71,13 @@ export const emojiRevealManifest: ModuleManifest = {
   producers: [
     { name: emojiRevealProducers.createSet.name, inputs: [], result: { kind: "output" as const, name: "set", type: emojiRevealTypes.set } },
     { name: emojiRevealProducers.appendItem.name,
-      inputs: [{ name: "set", type: emojiRevealTypes.set }, { name: "timeline", type: timelineTypes.timeline }, { name: "spec", type: emojiRevealTypes.itemSpec }, { name: "icon", type: blobTypes.blob }, { name: "activation", type: temporalTypes.instant }],
+      inputs: [{ name: "set", type: emojiRevealTypes.set }, { name: "timeline", type: timelineTypes.timeline }, { name: "spec", type: emojiRevealTypes.itemSpec }, { name: "icon", type: blobTypes.blob }, { name: "activation", type: timelineTypes.instant }],
       result: { kind: "output" as const, name: "set", type: emojiRevealTypes.set } },
     { name: emojiRevealProducers.appendPresetItem.name,
       inputs: [{ name: "set", type: emojiRevealTypes.set }, { name: "spec", type: emojiRevealTypes.itemSpec }, { name: "icon", type: blobTypes.blob }],
       result: { kind: "output" as const, name: "set", type: emojiRevealTypes.set } },
     { name: emojiRevealProducers.finalize.name,
-      inputs: [{ name: "header", type: emojiRevealTypes.header }, { name: "timeline", type: timelineTypes.timeline }, { name: "outer", type: temporalTypes.window }, { name: "style", type: emojiRevealTypes.style }, { name: "placeholder", type: blobTypes.blob }, { name: "set", type: emojiRevealTypes.set }],
+      inputs: [{ name: "header", type: emojiRevealTypes.header }, { name: "timeline", type: timelineTypes.timeline }, { name: "outer", type: timelineTypes.window }, { name: "style", type: emojiRevealTypes.style }, { name: "placeholder", type: blobTypes.blob }, { name: "set", type: emojiRevealTypes.set }],
       result: { kind: "output" as const, name: "program", type: emojiRevealTypes.program } },
     { name: emojiRevealProducers.render.name,
       inputs: [{ name: "within", type: spatialTypes.frame }, { name: "timeline", type: timelineTypes.timeline }, { name: "program", type: emojiRevealTypes.program }],

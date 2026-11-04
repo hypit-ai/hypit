@@ -7,8 +7,18 @@ htmlRegisterFrameProgramInitializer(() => {
   const selected = [];
   const contributions = [...document.querySelectorAll('[data-hypit-capture-root][data-hypit-contribution-start-frame][data-hypit-contribution-end-frame]')];
   const media = (root) => [root, ...root.querySelectorAll('img,source,video,audio,image')];
+  const selectedAt = element => {
+    const owner = element.closest('[data-hypit-contribution-spans]');
+    if (owner === null) return true;
+    return (owner.getAttribute('data-hypit-contribution-spans') || '').split(',').filter(Boolean).some(value => {
+      const [startFrame, endFrameExclusive] = value.split(':').map(Number);
+      return Number.isSafeInteger(startFrame) && Number.isSafeInteger(endFrameExclusive)
+        && htmlSelectionOverlaps(startFrame, endFrameExclusive);
+    });
+  };
   const activate = (root) => {
     for (const element of media(root)) {
+      if (!selectedAt(element)) continue;
       for (const attribute of ['src', 'href']) {
         const deferred = 'data-hypit-artifact-' + attribute;
         const value = element.getAttribute(deferred);

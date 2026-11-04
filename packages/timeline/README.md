@@ -26,7 +26,13 @@ with explicit absolute Windows, without asking Timeline to discover material or 
 that media's Extent helped construct it.
 
 This package validates and seals the completed value. It performs no media I/O, transcription,
-generation, rendering, projection policy or Studio behavior.
+generation, rendering or projection policy.
+
+Resolved `TemporalInstant` and `TemporalWindow` are also Timeline values: they name a frame boundary or a
+non-empty half-open interval on one completed Timeline. `compose-window` is a Timeline graph producer because it
+only validates and combines two resolved boundaries; it is not exact-time algebra and does not belong to an author
+syntax package. Timeline Author contributes the optional Studio Companion that explains how this relation maps back
+to author inputs, so this domain package does not depend on Studio.
 
 `FrameSpan` is the common half-open interval on a finite frame domain. Rendering, Caption and Studio
 packages compose it into their richer values instead of publishing parallel interval identities; the

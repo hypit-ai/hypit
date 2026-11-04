@@ -4,7 +4,7 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createFeedbackStore, FeedbackConflict } from "../src/feedback-store.js";
-import { readFeedbackComment } from "../src/feedback.js";
+import { feedbackBelongsToContext, readFeedbackComment } from "../src/feedback.js";
 import type { FeedbackComment } from "../src/feedback.js";
 
 const note: FeedbackComment = { id: "caption-size", context: "authors/main.svml", at: 12.5, text: "字幕大一点" };
@@ -51,4 +51,13 @@ test("unfinished manual JSON stays intact and timestamps are required", async (t
   await assert.rejects(store.mutate({ type: "add", comment: note }));
   assert.equal(await readFile(store.path, "utf8"), '{"comments": [');
   assert.throws(() => readFeedbackComment({ ...note, at: undefined }), /time/u);
+});
+
+test("an explicit legacy run remains the comment context", () => {
+  const comment = readFeedbackComment({ id: "old", run: "productions/review/runs/final.svrun", at: 2, text: "旧评论", resolved: true });
+  assert.deepEqual(comment, { id: "old", run: "productions/review/runs/final.svrun", context: "productions/review/runs/final.svrun", at: 2, text: "旧评论", resolved: true });
+  assert.equal(feedbackBelongsToContext(comment, "productions/review/authors/main.svml"), true);
+  assert.equal(feedbackBelongsToContext(comment, "productions/other/authors/main.svml"), false);
+  const { run: _run, ...contextOnly } = comment;
+  assert.equal(feedbackBelongsToContext(contextOnly, "productions/review/authors/main.svml"), true);
 });

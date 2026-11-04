@@ -19,6 +19,8 @@ export {
   materializeWindow,
 } from "./program.js";export { timelineAuthorMarkupDeclarations } from "./declaration.js";
 export { parseTimelineInstantExpression } from "./literal.js";
+export { projectTimelineBoundary, projectTimelineInstant, shiftTimelineInstant } from "./legacy-projection.js";
+export { assertTimelineInstantExpression, assertTimelineInstantSpec, assertTimelineShiftSpec } from "./legacy-validation.js";
 export {
   absoluteInstantAuthorDeclaration,
   absoluteWindowAuthorDeclaration,

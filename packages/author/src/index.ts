@@ -49,13 +49,18 @@ export type {
 } from "./declaration.js";
 export type {
   AuthorDocument,
+  AuthorDocumentBlock,
+  AuthorDocumentBlockDraft,
   AuthorDocumentContainer,
   AuthorDocumentDeclaration,
   AuthorDocumentField,
   AuthorDocumentFrontend,
   AuthorDocumentImport,
+  AuthorDocumentInline,
+  AuthorDocumentInlineDraft,
   AuthorDocumentNodeId,
   AuthorDocumentOperation,
+  AuthorDocumentTextMark,
 } from "./document.js";
 export {
   authorDeclarationFacetAbi,

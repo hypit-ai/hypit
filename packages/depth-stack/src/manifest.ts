@@ -126,10 +126,10 @@ export const depthStackManifest: ModuleManifest = {
     { name: depthStackProducers.appendCard.name, inputs: [
       { name: "set", type: depthStackTypes.cardSet }, { name: "timeline", type: timelineTypes.timeline }, { name: "material", type: visualTrackTypes.layerSet },
       { name: "label", type: depthStackTypes.cardLabel }, { name: "spec", type: depthStackTypes.cardSpec },
-      { name: "activation", type: temporalTypes.instant },
+      { name: "activation", type: timelineTypes.instant },
     ], result: { kind: "output" as const, name: "set", type: depthStackTypes.cardSet } },
     { name: depthStackProducers.finalize.name,
-      inputs: [...finalizeInputs, { name: "terminal", type: temporalTypes.instant }],
+      inputs: [...finalizeInputs, { name: "terminal", type: timelineTypes.instant }],
       result: { kind: "output" as const, name: "program", type: depthStackTypes.program } },
     { name: depthStackProducers.render.name, inputs: [
       { name: "timeline", type: timelineTypes.timeline },

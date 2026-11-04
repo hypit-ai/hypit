@@ -1,21 +1,15 @@
-import { createAuthorDeclarationFacet } from "@hypit/hypit/author";
-import { createMarkupDeclarationFacet } from "@hypit/hypit/markup";
-import { createStudioCompanionFacet } from "@hypit/studio-companion";
+import { createProducerPackageFacet } from "@hypit/hypit/producer";
+import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
 
-import { visualTreatmentAuthorDeclarations, visualTreatmentMarkupDeclarations } from "./declaration.js";
-import { visualTreatmentManifest, visualTreatmentModuleRef } from "./manifest.js";
-import { visualTreatmentStudioParameterCompanions } from "./studio.js";
+import { visualTreatmentComponent } from "./component.js";
+import { visualTreatmentManifest } from "./manifest.js";
 
 export const hypitPackage = {
   format: "hypit.package@1" as const,
   modules: [{ manifest: visualTreatmentManifest }],
   facets: [
-    ...visualTreatmentAuthorDeclarations.map((declaration) => createAuthorDeclarationFacet(declaration)),
-    ...visualTreatmentMarkupDeclarations.map((declaration) => createMarkupDeclarationFacet({
-      module: visualTreatmentModuleRef,
-      declaration,
-    })),
-    createStudioCompanionFacet({ parameters: visualTreatmentStudioParameterCompanions }),
+    createProducerPackageFacet(visualTreatmentComponent.producers),
+    createRefinementPackageFacet(visualTreatmentComponent.refinements),
   ],
 };
 export default hypitPackage;

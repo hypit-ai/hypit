@@ -1,7 +1,7 @@
 import { assert } from "./process.js";
 import { WeightedCapacity } from "./weighted-capacity.js";
 import type { CapacityLease } from "./weighted-capacity.js";
-import type { FrameSpan } from "@hypit/timeline";
+import type { FrameSpan } from "@hypit/temporal";
 
 // Bound speculative work per process without making decoder tuning a public
 // rendering concept. Actual byte admission can stop the stream earlier.

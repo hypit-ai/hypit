@@ -22,7 +22,7 @@ import type {
   TextMaskSpec,
   TextStyle,
 } from "./types.js";
-import type { TemporalWindow } from "@hypit/temporal";
+import type { TemporalWindow } from "@hypit/timeline";
 
 function valueOf<T>(value: Value | undefined, subject: string): T {
   if (value === undefined) throw new Error(`${subject} is missing.`);

@@ -32,7 +32,7 @@ export const narrativeTemporalManifest: ModuleManifest = {
   }, {
     name: narrativeTemporalProducers.projectAlignment.name,
     inputs: [{ name: "alignment", type: narrativeTemporalTypes.narrativeAlignment },
-      { name: "domain", type: temporalTypes.localDomain }, { name: "window", type: temporalTypes.window },
+      { name: "domain", type: temporalTypes.localDomain }, { name: "window", type: timelineTypes.window },
       { name: "timeline", type: timelineTypes.timeline }],
     result: { kind: "output" as const, name: "parts", type: narrativeTemporalTypes.narrativeProjectionParts },
   }, {
@@ -49,17 +49,17 @@ export const narrativeTemporalManifest: ModuleManifest = {
     name: narrativeTemporalProducers.projectSelectionInstant.name,
     inputs: [{ name: "projection", type: narrativeTemporalTypes.narrativeProjection },
       { name: "selection", type: narrativeTypes.selection }, { name: "spec", type: narrativeTemporalTypes.narrativeInstantSpec }],
-    result: { kind: "output" as const, name: "instant", type: temporalTypes.instant },
+    result: { kind: "output" as const, name: "instant", type: timelineTypes.instant },
   }, {
     name: narrativeTemporalProducers.projectSegmentInstant.name,
     inputs: [{ name: "projection", type: narrativeTemporalTypes.narrativeProjection },
       { name: "segment", type: narrativeTypes.segmentRef }, { name: "spec", type: narrativeTemporalTypes.narrativeInstantSpec }],
-    result: { kind: "output" as const, name: "instant", type: temporalTypes.instant },
+    result: { kind: "output" as const, name: "instant", type: timelineTypes.instant },
   }, {
     name: narrativeTemporalProducers.projectMomentInstant.name,
     inputs: [{ name: "projection", type: narrativeTemporalTypes.narrativeProjection },
       { name: "moment", type: narrativeTypes.moment }, { name: "spec", type: narrativeTemporalTypes.narrativeInstantSpec }],
-    result: { kind: "output" as const, name: "instant", type: temporalTypes.instant },
+    result: { kind: "output" as const, name: "instant", type: timelineTypes.instant },
   }],
 };
 export const narrativeTemporalDependency = narrativeTemporalModuleRef;

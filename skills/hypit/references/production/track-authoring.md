@@ -175,16 +175,10 @@ those exercise the new behavior.
 
 ## A reusable relation spanning Clips
 
-For an ordinary two-shot handoff, give the Clips their true overlapping Windows, author a package-owned
-effect such as `<transition:CrossDissolve id="..."/>`, `<transition:Push id="..." direction="left"/>`,
-or `<transition:LinearWipe id="..." direction="right"/>`, and add
-`<visual:Transition outgoing="..." incoming="..." effect={...}/>`.
-The relation span is the complete intersection and is not declared a second time. Each Clip keeps its own
-temporal Map, and the relation adds no media handles or inferred cut.
-
-When behavior spans more than that relation, make it the component's own vocabulary. A continuing
+When behavior spans several pictures, make it the component's own vocabulary. A continuing
 Presenter may own explicit Source and Use children; a mask wipe may own both pictures and the shared
 mask; a slideshow may own its replacement policy. The component receives Timeline, Frames, media and
 events through normal typed inputs and publishes an ordinary VisualTrack. Its package owns the local
 grammar for that relation, while a larger scene coordinating footage and graphics can remain one
-project component. Both paths use the same rendering capabilities.
+project component. The legacy Visual Track declaration no longer publishes a separate Transition
+relation; the audiovisual backend represents package-owned effects as typed picture operators.

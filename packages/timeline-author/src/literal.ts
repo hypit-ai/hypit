@@ -1,4 +1,6 @@
-import { parseTemporalDuration, type TemporalDuration, type TemporalInstantExpression } from "@hypit/temporal";
+import { parseTemporalDuration, type TemporalDuration } from "@hypit/temporal";
+
+import type { TimelineInstantExpression } from "./types.js";
 
 function negate(value: TemporalDuration): TemporalDuration {
   return value.unit === "seconds"
@@ -7,7 +9,7 @@ function negate(value: TemporalDuration): TemporalDuration {
 }
 
 /** Parse the restricted absolute Point expression owned by Timeline Author. */
-export function parseTimelineInstantExpression(value: string, label: string): TemporalInstantExpression {
+export function parseTimelineInstantExpression(value: string, label: string): TimelineInstantExpression {
   const trimmed = value.trim();
   const aliases = [["start", "timeline.start"], ["end", "timeline.end"],
     ["timeline.start", "timeline.start"], ["timeline.end", "timeline.end"]] as const;

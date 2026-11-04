@@ -8,14 +8,14 @@ import type { TemporalWindowProjection } from "../../../test/temporal-fixture.js
 
 import { sealComposition, visualElements } from "@hypit/composition";
 import type { VisualItem } from "@hypit/composition";
-import { compileHtmlProgram, htmlVisual } from "@hypit/html-program";
+import { compileHtmlProgram } from "@hypit/html-program";
 import type { HtmlElement } from "@hypit/html-program";
 import { mediaTypes, prepareMedia, SRGB_STRAIGHT_PICTURE } from "@hypit/media";
 import type { CompositableSurfaceRef, PreparedMedia } from "@hypit/media";
 import { blobTypes } from "@hypit/blob";
 import { defaultTemporalRelationSpec, evaluateTemporalMap, exactTemporalValueFromFrames, isAffineTemporalMapPiece, resolveTemporalRelation, temporalTypes,
   temporalValueInFrames } from "@hypit/temporal";
-import { appendMediaPaintLayer, appendMappedStillMediaLayer, appendVisualClip, appendVisualTransition, assertVisualTrackSet, appendStillMediaLayer, appendSurfaceMediaLayer, appendTimedMediaLayer, bindVisualClipPath, createMediaLayerSet, createVisualTrackSet, decodeMediaFramePaint, finalizeVisualTrack, projectVisualTrack, poseAnimation, sealVisualClipSpec, sealMediaPaintLayerSpec, sealMediaSampleLayerSpec, sealVisualTrackHeader, sealVisualTransitionEffect, stillVisualTrackFragment, visualTrackManifest, visualTrackTypes, visualTransitionSpan } from "@hypit/visual-track";
+import { appendMediaPaintLayer, appendMappedStillMediaLayer, appendVisualClip, assertVisualTrackSet, appendStillMediaLayer, appendSurfaceMediaLayer, appendTimedMediaLayer, bindVisualClipPath, createMediaLayerSet, createVisualTrackSet, decodeMediaFramePaint, finalizeVisualTrack, projectVisualTrack, poseAnimation, sealVisualClipSpec, sealMediaPaintLayerSpec, sealMediaSampleLayerSpec, sealVisualTrackHeader, stillVisualTrackFragment, visualTrackManifest, visualTrackTypes } from "@hypit/visual-track";
 import type { VisualClipSpec, MediaLayerSet } from "@hypit/visual-track";
 import type { ExactTemporalValue, TemporalMapPiece, TemporalRelationSpec } from "@hypit/temporal";
 import type { NarrativeMomentRef, NarrativeSelectionRef } from "@hypit/narrative";
@@ -40,15 +40,6 @@ const htmlElements = (root: HtmlElement): readonly HtmlElement[] => {
         : [];
   return [root, ...children.flatMap(htmlElements)];
 };
-
-const transitionEffect = (easing = "linear") => sealVisualTransitionEffect({
-  inputs: ["outgoing", "incoming"],
-  program: htmlVisual({
-    html: "<div>{{outgoing}}</div><div>{{incoming}}</div>",
-    css: ":scope { isolation: isolate; } :scope > div { mix-blend-mode: plus-lighter; }",
-    data: { easing },
-  }),
-});
 
 const loweredClipElements = (program: ReturnType<typeof finalizeVisualTrack>, index = 0) =>
   htmlElements(lowerVisualClipElement(program.clips[index]!));
@@ -556,103 +547,6 @@ test("overlapping Clips retain their authored Track-local order", () => {
   assert.deepEqual(program.clips.map(({ id }) => id), ["first", "second"]);
 });
 
-test("a Transition applies a package-owned effect over the exact Clip intersection", () => {
-  const outgoingWindow = projectProgramWindow({ itemId: "outgoing-window", semantic,
-    projection: {
-      start: { ref: "absolute", at: { unit: "frames", value: 0 } },
-      end: { ref: "absolute", at: { unit: "frames", value: 60 } },
-    } });
-  const incomingWindow = projectProgramWindow({ itemId: "incoming-window", semantic,
-    projection: {
-      start: { ref: "absolute", at: { unit: "frames", value: 45 } },
-      end: { ref: "absolute", at: { unit: "frames", value: 100 } },
-    } });
-  let set = appendVisualClip(createVisualTrackSet(), header, space, stillLayers(), frame,
-    clipSpec({ id: "outgoing" }), outgoingWindow);
-  set = appendVisualClip(set, header, space, stillLayers(), frame,
-    clipSpec({ id: "incoming" }), incomingWindow);
-  const pair = set;
-  const effect = transitionEffect("ease-in-out");
-  set = appendVisualTransition(set, {
-    id: "handoff", outgoingClipId: "outgoing", incomingClipId: "incoming", effect,
-  });
-  const program = finalizeVisualTrack(set, header, space);
-  assert.deepEqual(program.transitions, [{
-    id: "handoff", outgoingClipId: "outgoing", incomingClipId: "incoming", effect,
-  }]);
-  assert.deepEqual(visualTransitionSpan(program.transitions[0]!, program.clips),
-    { startFrame: 45, endFrameExclusive: 60 });
-  const projected = projectVisualTrack(space, program);
-  const process = projected.items.find((item) => item.kind === "process");
-  assert.ok(process?.kind === "process");
-  assert.deepEqual(process.span, { startFrame: 45, endFrameExclusive: 60 });
-  assert.deepEqual(process.inputs.map(({ name, contribution }) => ({ name, id: contribution.id })), [
-    { name: "outgoing", id: "outgoing" }, { name: "incoming", id: "incoming" },
-  ]);
-  assert.deepEqual(process.effect, effect);
-
-  assert.throws(() => appendVisualTransition(pair, {
-    id: "reversed", outgoingClipId: "incoming", incomingClipId: "outgoing", effect,
-  }), /adjacent in Track paint order/u);
-  assert.throws(() => appendVisualTransition({
-    clips: [pair.clips[0]!, {
-      ...pair.clips[1]!, span: { startFrame: 60, endFrameExclusive: 100 },
-    }],
-    transitions: [],
-  }, {
-    id: "disjoint", outgoingClipId: "outgoing", incomingClipId: "incoming", effect,
-  }), /requires overlapping Clip Windows/u);
-  assert.throws(() => appendVisualTransition(pair, {
-    id: "outgoing", outgoingClipId: "outgoing", incomingClipId: "incoming", effect,
-  }), /conflicts with a Clip id/u);
-});
-
-test("a timed Transition reaches HTML with both Prepared Media clocks intact", () => {
-  const outgoingWindow = projectProgramWindow({ itemId: "timed-outgoing-window", semantic,
-    projection: {
-      start: { ref: "absolute", at: { unit: "frames", value: 0 } },
-      end: { ref: "absolute", at: { unit: "frames", value: 60 } },
-    } });
-  const incomingWindow = projectProgramWindow({ itemId: "timed-incoming-window", semantic,
-    projection: {
-      start: { ref: "absolute", at: { unit: "frames", value: 45 } },
-      end: { ref: "absolute", at: { unit: "frames", value: 100 } },
-    } });
-  let set = appendVisualClip(createVisualTrackSet(), header, space, timedLayers("transition-outgoing"), frame,
-    clipSpec({ id: "timed-outgoing" }), outgoingWindow);
-  set = appendVisualClip(set, header, space, timedLayers("transition-incoming"), { ...frame, xPx: 220 },
-    clipSpec({ id: "timed-incoming" }), incomingWindow);
-  set = appendVisualTransition(set, {
-    id: "timed-handoff",
-    outgoingClipId: "timed-outgoing",
-    incomingClipId: "timed-incoming",
-    effect: transitionEffect(),
-  });
-  const track = projectVisualTrack(space, finalizeVisualTrack(set, header, space));
-  const process = track.items.find((item) => item.kind === "process");
-  assert.ok(process?.kind === "process");
-  assert.deepEqual(process.span, { startFrame: 45, endFrameExclusive: 60 });
-  assert.deepEqual(process.inputs.map(({ name, contribution }) => ({ name, span: contribution.span })), [
-    { name: "outgoing", span: { startFrame: 0, endFrameExclusive: 60 } },
-    { name: "incoming", span: { startFrame: 45, endFrameExclusive: 100 } },
-  ]);
-
-  const document = compileHtmlProgram(sealComposition({ id: "timed-transition", visual: { canvas: { width: 1080, height: 1920, clearColor: "#000000" }, root: { members: [{ kind: "track", id: track.id, track }] } }, audio: { contributions: [] } }, space));
-  const sourceSpans = new Map<string, { startFrame: number; endFrameExclusive: number }[]>();
-  for (const video of document.videoSources) {
-    if (video.kind !== "media") continue;
-    const spans = sourceSpans.get(video.source.source.resource) ?? [];
-    spans.push({ startFrame: video.startFrame, endFrameExclusive: video.endFrameExclusive });
-    sourceSpans.set(video.source.source.resource, spans);
-  }
-  assert.ok(sourceSpans.get(fixtureResource("source:transition-outgoing"))?.some((span) =>
-    span.startFrame === 0 && span.endFrameExclusive === 60));
-  assert.ok(sourceSpans.get(fixtureResource("source:transition-incoming"))?.some((span) =>
-    span.startFrame === 45 && span.endFrameExclusive === 100));
-  assert.match(document.html, /data-hypit-process-id="timed-handoff"/u);
-  assert.match(document.html, /mix-blend-mode:\s*plus-lighter/u);
-});
-
 test("one resolved Window can time distinct Visual Clip occurrences", () => {
   const shared = projectProgramWindow({ itemId: "shared-window", semantic,
     projection: { start: { ref: "timeline.start" }, end: { ref: "absolute", at: { unit: "frames", value: 30 } } } });
@@ -669,9 +563,9 @@ test("VisualTrackSet refinement validates accumulated Clips in declaration order
   const set = appendVisualClip(createVisualTrackSet(), header, space, stillLayers(), frame,
     clipSpec({ id: "first" }), shared);
   assert.doesNotThrow(() => assertVisualTrackSet(set));
-  assert.throws(() => assertVisualTrackSet({ clips: [set.clips[0]!, structuredClone(set.clips[0]!)], transitions: [] }),
+  assert.throws(() => assertVisualTrackSet({ clips: [set.clips[0]!, structuredClone(set.clips[0]!)] }),
     /repeats first/u);
-  assert.throws(() => assertVisualTrackSet({ clips: [{ ...set.clips[0]!, layers: [] }], transitions: [] }),
+  assert.throws(() => assertVisualTrackSet({ clips: [{ ...set.clips[0]!, layers: [] }] }),
     /requires layers/u);
 });
 
@@ -784,7 +678,7 @@ test("visual occurrences use the shared temporal relation algebra without frame-
   const target = { id: "visual-occurrence", duration: exactTemporalValueFromFrames(50, space) };
   const source = { id: "visual-source-domain", duration: exactTemporalValueFromFrames(30,
     { frameRate: { numerator: 30, denominator: 1 } }) };
-  const resolve = (spec?: TemporalRelationSpec) => resolveTemporalRelation({ target, source, clock: space,
+  const resolve = (spec?: TemporalRelationSpec) => resolveTemporalRelation({ target, source, grid: space,
     ...(spec === undefined ? {} : { spec }) });
   const frames = (value: ExactTemporalValue, frameRate = space.frameRate) => {
     const result = temporalValueInFrames(value, { frameRate });
@@ -821,7 +715,7 @@ test("visual occurrences use the shared temporal relation algebra without frame-
     sourceAtStart: { numerator: 30, denominator: 1 },
     rate: { numerator: -1, denominator: 1 },
   });
-  const native24 = resolveTemporalRelation({ clock: space,
+  const native24 = resolveTemporalRelation({ grid: space,
     target: { id: "occurrence-24", duration: exactTemporalValueFromFrames(30, space) },
     source: { id: "source-domain-24", duration: exactTemporalValueFromFrames(24,
       { frameRate: { numerator: 24, denominator: 1 } }) } });

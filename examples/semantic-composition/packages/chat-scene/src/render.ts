@@ -4,8 +4,8 @@ import type { HtmlElement } from "@hypit/html-program";
 import type { FontStackRef } from "@hypit/media";
 import type { Timeline } from "@hypit/timeline";
 import type { SpatialFrame } from "@hypit/spatial";
-import { assertTemporalWindowFor } from "@hypit/temporal";
-import type { TemporalInstant, TemporalWindow } from "@hypit/temporal";
+import { assertTemporalWindowFor } from "@hypit/timeline";
+import type { TemporalInstant, TemporalWindow } from "@hypit/timeline";
 
 export type Message = { id: string; sender: string; text: string; side: "left" | "right"; at: TemporalInstant };
 export type ChatOptions = { id: string; title: string; entranceFrames: number };

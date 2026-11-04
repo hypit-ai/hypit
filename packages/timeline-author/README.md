@@ -92,6 +92,10 @@ The exact literal codec for this Point grammar is package-owned as
 `parseTimelineInstantExpression()`. Temporal's main entry owns only the exact duration primitive;
 neither Markup nor a generic Temporal helper interprets Timeline Author expressions.
 
+Standalone absolute expressions, signed shifts, duration-to-Extent graph conversion and their private Specs are
+also owned here. They previously lived in the Temporal root; the old TypeRefs, producers and subpath were deleted
+rather than retained as aliases. `@hypit/temporal` consequently has no Timeline dependency.
+
 ## Studio inverse
 
 Timeline Author retains the exact child declaration and binding on private literal Duration and
@@ -107,6 +111,8 @@ change would require choosing among inputs; Studio does not guess which branch t
 
 These inverse facts are package-local Studio support. They do not change the Timeline value, add an
 editing concern to Core, or create a second author graph.
+
+See [Author-directed Timeline editing](EDITING.md) for the exact ownership and writeback rules.
 
 ## Unknown generated duration
 

@@ -113,9 +113,42 @@ export async function createStudioStoryboard(file: ServedFile): Promise<StudioSt
   return withMediaFile(file, storyboardFromFile);
 }
 
+/** Build the same presentation derivative for one exact interval of a rendered film. */
+export async function createStudioStoryboardSpan(
+  file: ServedFile,
+  startSec: number,
+  durationSec: number,
+): Promise<StudioStoryboard> {
+  if (!file.mediaType.startsWith("video/") || !Number.isFinite(startSec) || startSec < 0
+    || !Number.isFinite(durationSec) || durationSec <= 0) {
+    throw new Error("Studio storyboard spans require a finite video interval.");
+  }
+  return withMediaFile(file, async (path) => await storyboardFromFile(path, { startSec, durationSec }));
+}
+
 /** Decode the low-resolution waveform outside the playback browser. */
 export async function createStudioWaveform(file: ServedFile): Promise<Uint8Array> {
   return withMediaFile(file, (path) => renderWaveform(path, { width: 2048, height: 56 }));
+}
+
+/** Decode only the source interval actually sampled by one audio Item. */
+export async function createStudioWaveformSpan(
+  file: ServedFile,
+  startSec: number,
+  durationSec: number,
+): Promise<Uint8Array> {
+  if (!Number.isFinite(startSec) || startSec < 0 || !Number.isFinite(durationSec) || durationSec <= 0) {
+    throw new Error("Studio waveform spans require a finite audio interval.");
+  }
+  return withMediaFile(file, async (path) => {
+    const clipped = `${path}.wav`;
+    await run("ffmpeg", [
+      "-hide_banner", "-loglevel", "error", "-y",
+      "-i", path, "-ss", String(startSec), "-t", String(durationSec),
+      "-vn", "-c:a", "pcm_s16le", clipped,
+    ], 64 * 1024);
+    return await renderWaveform(clipped, { width: 2048, height: 56 });
+  });
 }
 
 async function withMediaFile<T>(file: ServedFile, use: (path: string) => Promise<T>): Promise<T> {
@@ -129,8 +162,16 @@ async function withMediaFile<T>(file: ServedFile, use: (path: string) => Promise
   }
 }
 
-async function storyboardFromFile(path: string): Promise<StudioStoryboard> {
-  const facts = await videoFacts(path);
+async function storyboardFromFile(
+  path: string,
+  span?: { readonly startSec: number; readonly durationSec: number },
+): Promise<StudioStoryboard> {
+  const sourceFacts = await videoFacts(path);
+  const facts = span === undefined ? sourceFacts : {
+    ...sourceFacts,
+    duration: Math.min(span.durationSec, Math.max(0, sourceFacts.duration - span.startSec)),
+  };
+  if (facts.duration <= 0) throw new Error("Studio storyboard interval lies outside its video.");
   // Timeline content is roughly 40 CSS px high. An 80 px atlas tile remains
   // crisp on a 2x display while still being a small presentation derivative.
   const tileHeight = 80;
@@ -149,7 +190,9 @@ async function storyboardFromFile(path: string): Promise<StudioStoryboard> {
   ].join(",");
   const bytes = await run("ffmpeg", [
     "-hide_banner", "-loglevel", "error",
+    ...(span === undefined ? [] : ["-ss", String(span.startSec)]),
     "-i", path,
+    ...(span === undefined ? [] : ["-t", String(facts.duration)]),
     "-vf", filter,
     "-frames:v", "1",
     "-f", "image2pipe",

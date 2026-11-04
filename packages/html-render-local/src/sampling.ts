@@ -1,12 +1,12 @@
 import type { HtmlArtifactUsage, HtmlVideoSource } from "@hypit/html-program";
-import type { Clock, FrameSpan } from "@hypit/timeline";
+import type { FrameSpan, TemporalSamplingGrid } from "@hypit/temporal";
 import {
   addExactTemporalValues,
   createTemporalMapEvaluator,
   exactTemporalRational,
-  exactTemporalValueFromFrames,
-} from "@hypit/temporal";
-import type { TemporalMapEvaluator } from "@hypit/temporal";
+} from "@hypit/temporal/algebra";
+import type { TemporalMapEvaluator } from "@hypit/temporal/algebra";
+import { exactTemporalValueFromFrames } from "@hypit/temporal/sampling";
 import { FrameSpanIndex } from "./frame-span-index.js";
 import { assert } from "./process.js";
 
@@ -24,25 +24,17 @@ export type VideoSlot = FrameSpan & {
   readonly sourceKey: string;
   readonly usage: HtmlArtifactUsage;
   readonly evaluateSampling: TemporalMapEvaluator;
-  readonly programClock: Clock;
-} & (
-  | {
-      readonly kind: "media";
-      readonly streamIndex: number;
-      readonly picture: Extract<HtmlVideoSource, { readonly kind: "media" }>["source"]["interpretation"]["picture"];
-      readonly codedWidth: number;
-      readonly codedHeight: number;
-      readonly sampleAspectRatio: { readonly numerator: number; readonly denominator: number };
-      readonly rotation: 0 | 90 | 180 | 270;
-      readonly presentationStart: ExactValue;
-    }
-  | {
-      readonly kind: "surface";
-      readonly streamIndex: 0;
-      readonly picture: Extract<HtmlVideoSource, { readonly kind: "surface" }>["picture"];
-      readonly sourceFps: { readonly num: number; readonly den: number };
-    }
-);
+  readonly samplingGrid: TemporalSamplingGrid;
+  readonly kind: "media";
+  readonly streamIndex: number;
+  readonly picture: HtmlVideoSource["source"]["interpretation"]["picture"];
+  readonly codedWidth: number;
+  readonly codedHeight: number;
+  readonly sampleAspectRatio: { readonly numerator: number; readonly denominator: number };
+  readonly rotation: 0 | 90 | 180 | 270;
+  readonly presentationStart: ExactValue;
+  readonly reconstruction: HtmlVideoSource["reconstruction"];
+};
 
 export function requestedFrameRanges(range: FrameSpan, frames?: readonly number[]): FrameSpan[] {
   if (frames === undefined) return [{ ...range }];
@@ -65,57 +57,38 @@ export function requestedFrameRanges(range: FrameSpan, frames?: readonly number[
 export function videoSlots(
   sources: readonly HtmlVideoSource[],
   pathFor: (resource: string) => string,
-  programClock: Clock,
+  samplingGrid: TemporalSamplingGrid,
 ): VideoSlot[] {
   return sources.map((source) => {
-    if (source.kind === "media") {
-      const src = pathFor(source.source.source.resource);
-      const picture = structuredClone(source.source.interpretation.picture);
-      return {
-        kind: "media",
-        id: source.id,
-        elementId: source.elementId,
-        usage: structuredClone(source.usage),
-        src,
-        // Two author preparations may select the same container stream with a
-        // different resolved picture interpretation. They are distinct decoder
-        // inputs even when their bytes and stream index happen to coincide.
-        sourceKey: `${src}\u0000${source.source.streamIndex}\u0000${JSON.stringify({
-          picture,
-          codedWidth: source.source.interpretation.codedWidth,
-          codedHeight: source.source.interpretation.codedHeight,
-          sampleAspectRatio: source.source.interpretation.sampleAspectRatio,
-          rotation: source.source.interpretation.rotationDegrees,
-        })}`,
-        streamIndex: source.source.streamIndex,
-        picture,
-        codedWidth: source.source.interpretation.codedWidth,
-        codedHeight: source.source.interpretation.codedHeight,
-        sampleAspectRatio: { ...source.source.interpretation.sampleAspectRatio },
-        rotation: source.source.interpretation.rotationDegrees,
-        presentationStart: structuredClone(source.source.presentationStart),
-        evaluateSampling: createTemporalMapEvaluator(source.sampling),
-        programClock: structuredClone(programClock),
-        startFrame: source.startFrame,
-        endFrameExclusive: source.endFrameExclusive,
-      };
-    }
-    const src = pathFor(source.artifactId);
-    const picture = structuredClone(source.picture);
+    const src = pathFor(source.source.source.resource);
+    const picture = structuredClone(source.source.interpretation.picture);
     return {
-      kind: "surface",
+      kind: "media",
       id: source.id,
       elementId: source.elementId,
       usage: structuredClone(source.usage),
       src,
-      sourceKey: `${src}\u00000\u0000${JSON.stringify(picture)}`,
-      streamIndex: 0,
+      // Two preparations may select the same container stream with a different
+      // resolved picture interpretation, so they remain distinct decoder inputs.
+      sourceKey: `${src}\u0000${source.source.streamIndex}\u0000${JSON.stringify({
+        picture,
+        codedWidth: source.source.interpretation.codedWidth,
+        codedHeight: source.source.interpretation.codedHeight,
+        sampleAspectRatio: source.source.interpretation.sampleAspectRatio,
+        rotation: source.source.interpretation.rotationDegrees,
+      })}`,
+      streamIndex: source.source.streamIndex,
       picture,
+      codedWidth: source.source.interpretation.codedWidth,
+      codedHeight: source.source.interpretation.codedHeight,
+      sampleAspectRatio: { ...source.source.interpretation.sampleAspectRatio },
+      rotation: source.source.interpretation.rotationDegrees,
+      presentationStart: structuredClone(source.source.presentationStart),
+      reconstruction: source.reconstruction === undefined ? undefined : structuredClone(source.reconstruction),
+      evaluateSampling: createTemporalMapEvaluator(source.sampling),
+      samplingGrid: structuredClone(samplingGrid),
       startFrame: source.startFrame,
       endFrameExclusive: source.endFrameExclusive,
-      evaluateSampling: createTemporalMapEvaluator(source.sampling),
-      programClock: structuredClone(programClock),
-      sourceFps: { num: source.sourceFrameRate.numerator, den: source.sourceFrameRate.denominator },
     };
   });
 }
@@ -140,12 +113,10 @@ function exactSourceSampleAt(slot: VideoSlot, frame: number): {
 } | undefined {
   const localFrame = frame - slot.startFrame;
   assert(Number.isSafeInteger(localFrame) && localFrame >= 0, "HTML Program frame lies outside its source occurrence");
-  const mapped = slot.evaluateSampling(exactTemporalValueFromFrames(localFrame, slot.programClock), "after");
+  const mapped = slot.evaluateSampling(exactTemporalValueFromFrames(localFrame, slot.samplingGrid), "after");
   if (mapped === undefined) return undefined;
   return {
-    timestamp: exactTemporalRational(slot.kind === "media"
-      ? addExactTemporalValues(slot.presentationStart, mapped.position)
-      : mapped.position),
+    timestamp: exactTemporalRational(addExactTemporalValues(slot.presentationStart, mapped.position)),
     direction: mapped.sourceSide === "before" ? -1 : 1,
   };
 }
@@ -154,33 +125,42 @@ export function sourceFrameAt(slot: VideoSlot, frame: number, frames?: SourceFra
   assert(Number.isSafeInteger(frame) && frame >= slot.startFrame && frame < slot.endFrameExclusive,
     "HTML Program frame lies outside its source occurrence");
   if (!usedAt(slot.usage, frame)) return undefined;
-  if (slot.kind === "media") {
-    assert(frames !== undefined && frames.timestamps.length > 0,
-      `HTML renderer has no timestamp index for source ${slot.sourceKey}`);
-    const sample = exactSourceSampleAt(slot, frame);
-    if (sample === undefined) return undefined;
-    const timestamp = sample.timestamp;
-    const reverse = sample.direction === -1;
+  assert(frames !== undefined && frames.timestamps.length > 0,
+    `HTML renderer has no timestamp index for source ${slot.sourceKey}`);
+  const sample = exactSourceSampleAt(slot, frame);
+  if (sample === undefined) return undefined;
+  const timestamp = sample.timestamp;
+  if (slot.reconstruction?.kind === "nearest") {
     let low = 0, high = frames.timestamps.length;
     while (low < high) {
       const middle = Math.floor((low + high) / 2);
       const sourceNumerator = frames.timestamps[middle]! * frames.timeBase.numerator;
       const comparison = sourceNumerator * timestamp.denominator
         - timestamp.numerator * frames.timeBase.denominator;
-      if (reverse ? comparison < 0n : comparison <= 0n) low = middle + 1;
+      if (comparison < 0n) low = middle + 1;
       else high = middle;
     }
-    return Math.max(0, Math.min(frames.timestamps.length - 1, low - 1));
+    const upper = Math.min(frames.timestamps.length - 1, low);
+    const lower = Math.max(0, upper - (low < frames.timestamps.length ? 1 : 0));
+    const distance = (ordinal: number): bigint => {
+      const sourceNumerator = frames.timestamps[ordinal]! * frames.timeBase.numerator;
+      const delta = sourceNumerator * timestamp.denominator
+        - timestamp.numerator * frames.timeBase.denominator;
+      return delta < 0n ? -delta : delta;
+    };
+    return distance(lower) <= distance(upper) ? lower : upper;
   }
-  const sample = exactSourceSampleAt(slot, frame);
-  if (sample === undefined) return undefined;
-  const numerator = sample.timestamp.numerator * BigInt(slot.sourceFps.num);
-  const denominator = sample.timestamp.denominator * BigInt(slot.sourceFps.den);
-  const ordinal = numerator / denominator
-    - (sample.direction === -1 && numerator % denominator === 0n ? 1n : 0n);
-  const value = Number(ordinal);
-  assert(Number.isSafeInteger(value) && value >= 0, "HTML Program source frame exceeds safe arithmetic");
-  return value;
+  const reverse = sample.direction === -1;
+  let low = 0, high = frames.timestamps.length;
+  while (low < high) {
+    const middle = Math.floor((low + high) / 2);
+    const sourceNumerator = frames.timestamps[middle]! * frames.timeBase.numerator;
+    const comparison = sourceNumerator * timestamp.denominator
+      - timestamp.numerator * frames.timeBase.denominator;
+    if (reverse ? comparison < 0n : comparison <= 0n) low = middle + 1;
+    else high = middle;
+  }
+  return Math.max(0, Math.min(frames.timestamps.length - 1, low - 1));
 }
 
 export function sourceWindows(

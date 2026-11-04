@@ -7,7 +7,8 @@ import { mediaOperationsModuleRef } from "@hypit/media-operations";
 
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/hypit/protocol";
 import { spatialDependency, spatialTypes } from "@hypit/spatial";
-import { temporalDependency, temporalInstantSchema, temporalTypes, temporalWindowSchema } from "@hypit/temporal";
+import { temporalDependency, temporalTypes } from "@hypit/temporal";
+import { temporalInstantSchema, temporalWindowSchema } from "@hypit/timeline";
 import { textDependency, textTypes } from "@hypit/hypit/text";
 
 export const rankingModuleRef = { name: "@hypit/ranking", version: "1" } as const;
@@ -189,33 +190,33 @@ export const rankingManifest: ModuleManifest = {
     { name: rankingProducers.createTriggeredCandidates.name, inputs: [], result: { kind: "output" as const, name: "set", type: rankingTypes.triggeredCandidates } },
     { name: rankingProducers.appendTriggeredCandidate.name, inputs: [
       { name: "set", type: rankingTypes.triggeredCandidates }, { name: "spec", type: rankingTypes.itemSpec },
-      { name: "activation", type: temporalTypes.instant },
+      { name: "activation", type: timelineTypes.instant },
     ], result: { kind: "output" as const, name: "set", type: rankingTypes.triggeredCandidates } },
     { name: rankingProducers.schedule.name, inputs: [
       { name: "header", type: rankingTypes.header }, { name: "items", type: rankingTypes.itemSpecs },
       { name: "timeline", type: timelineTypes.timeline },
-      { name: "outer", type: temporalTypes.window }, { name: "candidates", type: rankingTypes.triggeredCandidates },
-      { name: "terminal", type: temporalTypes.instant },
+      { name: "outer", type: timelineTypes.window }, { name: "candidates", type: rankingTypes.triggeredCandidates },
+      { name: "terminal", type: timelineTypes.instant },
     ], result: { kind: "output" as const, name: "schedule", type: rankingTypes.schedule } },
     { name: rankingProducers.createTierWindows.name, inputs: [], result: { kind: "output" as const, name: "set", type: rankingTypes.tierWindows } },
     { name: rankingProducers.appendTierWindow.name, inputs: [
       { name: "set", type: rankingTypes.tierWindows }, { name: "spec", type: rankingTypes.itemSpec },
-      { name: "window", type: temporalTypes.window },
+      { name: "window", type: timelineTypes.window },
     ], result: { kind: "output" as const, name: "set", type: rankingTypes.tierWindows } },
     { name: rankingProducers.tierSchedule.name, inputs: [
       { name: "header", type: rankingTypes.header }, { name: "items", type: rankingTypes.itemSpecs },
       { name: "timeline", type: timelineTypes.timeline },
-      { name: "outer", type: temporalTypes.window }, { name: "windows", type: rankingTypes.tierWindows },
+      { name: "outer", type: timelineTypes.window }, { name: "windows", type: rankingTypes.tierWindows },
     ], result: { kind: "output" as const, name: "schedule", type: rankingTypes.schedule } },
     { name: rankingProducers.createColumnWindows.name, inputs: [], result: { kind: "output" as const, name: "set", type: rankingTypes.columnWindows } },
     { name: rankingProducers.appendColumnWindow.name, inputs: [
       { name: "set", type: rankingTypes.columnWindows }, { name: "spec", type: rankingTypes.itemSpec },
-      { name: "window", type: temporalTypes.window },
+      { name: "window", type: timelineTypes.window },
     ], result: { kind: "output" as const, name: "set", type: rankingTypes.columnWindows } },
     { name: rankingProducers.columnSchedule.name, inputs: [
       { name: "header", type: rankingTypes.header }, { name: "items", type: rankingTypes.itemSpecs },
       { name: "timeline", type: timelineTypes.timeline },
-      { name: "outer", type: temporalTypes.window }, { name: "windows", type: rankingTypes.columnWindows },
+      { name: "outer", type: timelineTypes.window }, { name: "windows", type: rankingTypes.columnWindows },
     ], result: { kind: "output" as const, name: "schedule", type: rankingTypes.schedule } },
     ...([
       [rankingProducers.createTierItems, rankingTypes.tierItems],

@@ -34,9 +34,10 @@ the source's sided Temporal Map, compares exact rational source time with the se
 integer PTS ticks, and lazily decodes bounded frame windows. Reverse, hold, loop and rational-rate
 mapping do not use rounded seconds or an average-frame-rate resample.
 
-Visual Process inputs use compiler-owned stage keys and order. The capture path does not inspect HTML
-to reconstruct Process topology. Direct still dependencies and timed media retain distinct typed
-validation and decoding paths.
+Picture Operators have already closed their named inputs before `HtmlProgram` reaches this Provider.
+The capture path therefore has no parallel Scope Process rasterization plan and does not inspect HTML
+to reconstruct visual topology. Direct still dependencies and timed media retain distinct typed validation
+and decoding paths.
 
 ## Runtime configuration
 

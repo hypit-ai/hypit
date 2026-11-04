@@ -126,7 +126,7 @@ export const audioTrackAuthorDeclaration: AuthorDeclarationCompiler = {
       fields: [
         { name: "id", kind: "identifier", required: false, summary: "Optionally names the Clip occurrence." },
         { name: "source", kind: "reference", required: true, accepts: [mediaTypes.prepared], summary: "Selects prepared audio media." },
-        { name: "during", kind: "reference", required: true, accepts: [temporalTypes.window], summary: "Selects its resolved destination Window." },
+        { name: "during", kind: "reference", required: true, accepts: [timelineTypes.window], summary: "Selects its resolved destination Window." },
         { name: "reconstruction", kind: "reference", required: false, accepts: [audioTrackTypes.reconstruction], summary: "Explicitly selects how the sampled occurrence becomes an audible signal." },
         { name: "gain", kind: "literal", required: false, summary: "Supplies linear gain." },
         { name: "fade-in", kind: "literal", required: false, summary: "Supplies an exact fade-in duration." },
@@ -172,7 +172,7 @@ export const audioTrackAuthorDeclaration: AuthorDeclarationCompiler = {
       const suffix = String(index + 1).padStart(4, "0");
       const clipId = field(child, "id") === undefined ? `${id}.clip.${suffix}` : literal(child, "id");
       const source = await resolved(child, "source", mediaTypes.prepared, resolveReference);
-      const window = await resolved(child, "during", temporalTypes.window, resolveReference);
+      const window = await resolved(child, "during", timelineTypes.window, resolveReference);
       const reconstruction = field(child, "reconstruction") === undefined
         ? undefined
         : authoredReconstruction(

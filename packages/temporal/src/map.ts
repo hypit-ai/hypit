@@ -15,7 +15,7 @@ import type {
   TemporalMapPiece,
   TemporalMapStage,
   TemporalRange,
-} from "./types.js";
+} from "./algebra-types.js";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);

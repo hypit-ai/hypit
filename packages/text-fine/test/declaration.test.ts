@@ -44,7 +44,7 @@ test("Text Fine declarations preserve ordered rich content and compile independe
       { name: "recipe", ref: { kind: "record", id: "recipe" }, type: recipeType },
       { name: "font", ref: { kind: "record", id: "font" }, type: mediaTypes.fontArtifact },
       { name: "timeline", ref: { kind: "record", id: "timeline" }, type: timelineTypes.timeline },
-      { name: "window", ref: { kind: "record", id: "window" }, type: temporalTypes.window },
+      { name: "window", ref: { kind: "record", id: "window" }, type: timelineTypes.window },
       { name: "frame", ref: { kind: "record", id: "frame" }, type: spatialTypes.frame },
     ],
   };

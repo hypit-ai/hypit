@@ -1,105 +1,72 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { audioGraphFromClips, sealAudioTrack } from "@hypit/composition";
-import { compileAudioProgram } from "@hypit/audio-program";
-import type { AudioProgram, AudioProgramClip, AudioProgramSignalRef } from "@hypit/audio-program";
-import { sealComposition } from "@hypit/composition";
-import { sealTimeline } from "@hypit/timeline";
-import { appendAudioMixInput, assertAudioMixSet, createAudioMixSet, finalizeAudioMix, readAudioGainProcess } from "../src/index.js";
-import { audioMixTypes } from "../src/index.js";
-import { compositionTypes } from "@hypit/composition";
-import { timelineTypes } from "@hypit/timeline";
-import { fixtureResource } from "../../../test/fixture-resource.js";
-import { frameRangeFixture, frameSamplingMapFixture } from "../../../test/temporal-fixture.js";
-import { exactTemporalValueFromFrames, exactTemporalZero, identityTemporalMap } from "@hypit/temporal";
+import { canonicalize } from "@hypit/hypit/protocol";
 
-const timeline = sealTimeline({ id: "story", frameCount: 30, frameRate: { numerator: 30, denominator: 1 } });
-const audioDomain = { id: "fixture-materialization", duration: exactTemporalValueFromFrames(48_000,
-  { frameRate: { numerator: 48_000, denominator: 1 } }) };
-const source = sealAudioTrack({ timelineId: timeline.id, id: "voice", graph: audioGraphFromClips([{
-  id: "line", subjectId: "line", source: {
-    source: { kind: "blob", resource: fixtureResource("audio-mix:voice"), size: 1, mediaType: "audio/wav" },
-    streamIndex: 0, presentationStart: exactTemporalZero(), sourceDomain: audioDomain,
-  },
-  preparation: identityTemporalMap(audioDomain),
-  target: frameRangeFixture(0, 48_000, { numerator: 48_000, denominator: 1 }),
-  sampling: frameSamplingMapFixture({ targetFrameRate: { numerator: 48_000, denominator: 1 }, targetFrames: 48_000,
-    sourceFrameRate: { numerator: 48_000, denominator: 1 }, sourceFrames: 48_000,
-    pieces: [{ target: { startFrame: 0, endFrameExclusive: 48_000 },
-      sourceAtStart: { numerator: 0, denominator: 1 }, rate: { numerator: 1, denominator: 1 } }] }),
-  gain: 1,
-  fadeIn: { ticks: "0", timeBase: { numerator: 1, denominator: 1 } },
-  fadeOut: { ticks: "0", timeBase: { numerator: 1, denominator: 1 } },
-}]) });
+import {
+  AUDIO_GAIN_PROCESS_FORMAT,
+  audioGainControlOperator,
+  audioGainOperator,
+  audioGainProcess,
+  audioMixComponent,
+  audioMixProducers,
+  evaluateAudioGainControl,
+  readAudioGainProgram,
+  readAudioGainProcess,
+} from "../src/index.js";
+import { exactTemporalValue, sealLocalTemporalDomain } from "@hypit/temporal/algebra";
 
-function gainRoutes(program: AudioProgram): readonly { readonly clip: AudioProgramClip; readonly gain: number }[] {
-  const nodes = new Map(program.graph.nodes.map((node) => [node.id, node] as const));
-  const visit = (input: AudioProgramSignalRef, gain: number): { readonly clip: AudioProgramClip; readonly gain: number }[] => {
-    const node = nodes.get(input.node)!;
-    if (node.kind === "silence") return [];
-    if (node.kind === "source") return [{ clip: node.clip, gain }];
-    if (node.kind === "mix") return node.inputs.flatMap((entry) => visit(entry, gain));
-    return visit(node.inputs.signal!, gain * readAudioGainProcess(node.program));
-  };
-  return visit(program.graph.output, 1);
-}
-
-test("Audio Mix closes explicit gain branches into one DAG and Film-level compilation preserves them", () => {
-  let set = createAudioMixSet();
-  set = appendAudioMixInput(set, timeline, { id: "dry", gain: 1 }, source);
-  set = appendAudioMixInput(set, timeline, { id: "quiet-copy", gain: 0.25 }, source);
-  const mixed = finalizeAudioMix(set, { id: "dialogue" }, timeline);
-  assert.deepEqual([...mixed.graph.nodes.reduce((counts, node) => counts.set(node.kind, (counts.get(node.kind) ?? 0) + 1),
-    new Map<string, number>())], [["source", 2], ["process", 1], ["mix", 1]]);
-  const program = compileAudioProgram(sealComposition({ id: "film", visual: { canvas: { width: 1, height: 1, clearColor: "#000000" }, root: { members: [] } }, audio: { contributions: [mixed] } }, timeline));
-  assert.deepEqual(gainRoutes(program).map(({ clip, gain }) => clip.gain * gain).sort(), [0.25, 1]);
+const at = (numerator: number, denominator = 1) => exactTemporalValue({
+  numerator: BigInt(numerator), denominator: BigInt(denominator),
 });
 
-test("Audio Mix keeps routing identity explicit and rejects duplicate Input ids", () => {
-  const set = appendAudioMixInput(createAudioMixSet(), timeline, { id: "voice", gain: 1 }, source);
-  assert.throws(() => appendAudioMixInput(set, timeline, { id: "voice", gain: 1 }, source), /repeats Input/u);
+const gainControl = {
+  domain: sealLocalTemporalDomain({ id: "gain:time", duration: at(1) }),
+  segments: [{
+    range: { start: at(0), end: at(1) },
+    from: 0,
+    to: 1,
+    interpolation: { kind: "linear" as const },
+  }],
+};
+
+test("Audio Gain publishes one typed Audio Operator with gain in its programme", async () => {
+  const producer = audioMixComponent.producers.find((candidate) =>
+    candidate.producer.name === audioMixProducers.gainOperator.name)!;
+  const result = await producer.handler({
+    inputs: { spec: { value: canonicalize({ gain: 0.25 }) } },
+  } as never);
+  assert.equal(result.kind, "output");
+  assert.deepEqual(result.value, audioGainOperator(0.25));
 });
 
-test("AudioMixSet refinement validates accumulated routing edges", () => {
-  const set = appendAudioMixInput(createAudioMixSet(), timeline, { id: "voice", gain: 1 }, source);
-  assert.doesNotThrow(() => assertAudioMixSet(set));
-  assert.throws(() => assertAudioMixSet({ inputs: [set.inputs[0]!, structuredClone(set.inputs[0]!)] }),
-    /repeats Input voice/u);
-  assert.throws(() => assertAudioMixSet({ inputs: [{ spec: { id: "voice", gain: 1 }, track: undefined as never }] }),
-    /AudioTrack is invalid/u);
+test("Audio Gain owns its exact execution programme and payload validation", () => {
+  const program = audioGainProcess(4);
+  assert.equal(program.format, AUDIO_GAIN_PROCESS_FORMAT);
+  assert.equal(readAudioGainProcess(program), 4);
+  assert.equal(readAudioGainProcess(audioGainOperator(0.5).program), 0.5);
+  assert.throws(() => audioGainOperator(-1), /invalid/u);
+  assert.throws(() => readAudioGainProcess({
+    format: AUDIO_GAIN_PROCESS_FORMAT,
+    payload: { gain: -1 },
+    artifacts: [],
+  }), /invalid/u);
 });
 
-test("Audio Mix identity is independent of declaration order while retaining repeated signals", () => {
-  const mixed = (order: readonly [string, number][]) => {
-    let set = createAudioMixSet();
-    for (const [id, gain] of order) set = appendAudioMixInput(set, timeline, { id, gain }, source);
-    return finalizeAudioMix(set, { id: "dialogue" }, timeline);
-  };
-  const forward = mixed([["dry", 1], ["quiet-copy", 0.25]]);
-  const reversed = mixed([["quiet-copy", 0.25], ["dry", 1]]);
-  assert.deepEqual(forward, reversed);
-  assert.equal(forward.graph.nodes.find((node) => node.kind === "mix")?.inputs.length, 2);
-  const program = (track: typeof forward) => compileAudioProgram(sealComposition({ id: "film", visual: { canvas: { width: 1, height: 1, clearColor: "#000000" }, root: { members: [] } }, audio: { contributions: [track] } }, timeline));
-  assert.deepEqual(program(forward), program(reversed));
-});
+test("Audio Gain owns temporal automation instead of adding fade semantics to AVIR", async () => {
+  const operator = audioGainControlOperator(gainControl);
+  assert.deepEqual(operator.temporalControls, { gain: gainControl.domain });
+  assert.deepEqual(readAudioGainProgram(operator.program), {
+    kind: "control",
+    control: gainControl,
+  });
+  assert.equal(evaluateAudioGainControl(gainControl, at(1, 2)), 0.5);
 
-test("composed gain remains an ordinary finite signal value", () => {
-  const set = appendAudioMixInput(createAudioMixSet(), timeline, { id: "amplified", gain: 100 }, source);
-  const mixed = finalizeAudioMix(set, { id: "loud" }, timeline);
-  const program = compileAudioProgram(sealComposition({ id: "film", visual: { canvas: { width: 1, height: 1, clearColor: "#000000" }, root: { members: [] } }, audio: { contributions: [mixed] } }, timeline));
-  const route = gainRoutes(program)[0];
-  assert.equal(route === undefined ? undefined : route.clip.gain * route.gain, 100);
-});
-
-test("Audio Mix preserves structural identity when namespaced nodes use process-like names", () => {
-  const namedGain = sealAudioTrack({ timelineId: timeline.id, id: "voice", graph: {
-    nodes: [{ kind: "source", id: "gain", clip: source.graph.nodes.find((node) => node.kind === "source")!.clip }],
-    output: { node: "gain", port: "signal" },
-  } });
-  const set = appendAudioMixInput(createAudioMixSet(), timeline, { id: "voice", gain: 0.5 }, namedGain);
-  const mixed = finalizeAudioMix(set, { id: "dialogue" }, timeline);
-  assert.equal(new Set(mixed.graph.nodes.map((node) => node.id)).size, mixed.graph.nodes.length);
-  const route = gainRoutes(compileAudioProgram(sealComposition({ id: "film", visual: { canvas: { width: 1, height: 1, clearColor: "#000000" }, root: { members: [] } }, audio: { contributions: [mixed] } }, timeline)))[0];
-  assert.equal(route === undefined ? undefined : route.clip.gain * route.gain, 0.5);
+  const producer = audioMixComponent.producers.find((candidate) =>
+    candidate.producer.name === audioMixProducers.gainControlOperator.name)!;
+  const result = await producer.handler({
+    inputs: { control: { value: canonicalize(gainControl) } },
+  } as never);
+  assert.equal(result.kind, "output");
+  assert.deepEqual(result.value, operator);
 });

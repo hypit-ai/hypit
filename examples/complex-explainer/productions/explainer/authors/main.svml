@@ -26,160 +26,160 @@
   <import as="spatial" from="@hypit/spatial@1"/>
 
   <!-- Prepared material outputs selected from explicit project resources -->
-  <mediaop:Prepare id="bgm-media" source={assets.bgm-source} video="none" audio="default" span-authority="audio"/>
-  <mediaop:Prepare id="web-hypit-media" source={assets.web-hypit} video="primary-moving" audio="none" span-authority="video"/>
-  <mediaop:Prepare id="web-creatify-media" source={assets.web-creatify} video="primary-moving" audio="none" span-authority="video"/>
-  <mediaop:Prepare id="web-higgsfield-media" source={assets.web-higgsfield} video="primary-moving" audio="none" span-authority="video"/>
+  <media:Audio id="bgm-media" source={assets.bgm-source}   />
+  <media:Video id="web-hypit-media" source={assets.web-hypit}  audio="none" />
+  <media:Video id="web-creatify-media" source={assets.web-creatify}  audio="none" />
+  <media:Video id="web-higgsfield-media" source={assets.web-higgsfield}  audio="none" />
   <seedance:ReferenceVideo id="opening-generation" model="mini" prompt={direction.opening-prompt} duration="5" resolution="720p" aspect-ratio="9:16" generate-audio="true">
     <seedance:Reference image={assets.presenter-reference} person-reference="true"/>
     <seedance:Reference audio={assets.voice-reference}/>
   </seedance:ReferenceVideo>
-  <mediaop:Prepare id="opening-media" source={assets.accepted-opening} video="primary-moving" audio="default" span-authority="video"/>
-  <whisperx:Transcription id="opening-transcription" media={opening-media.media} language="zh"/>
+  <media:Video id="opening-media" source={assets.accepted-opening}  audio="default" />
+  <whisperx:Transcription id="opening-transcription" media={opening-media.source} language="zh"/>
   <speechalign:Alignment id="opening" narrative={copy.story}
     segment={copy.story.segment.opening} domain={opening-media.domain} evidence={opening-transcription.transcript}/>
   <seedance:ReferenceVideo id="introduction-generation" model="mini" prompt={direction.introduction-prompt} duration="11" resolution="720p" aspect-ratio="9:16" generate-audio="true">
     <seedance:Reference image={assets.presenter-reference} person-reference="true"/>
     <seedance:Reference audio={assets.voice-reference}/>
   </seedance:ReferenceVideo>
-  <mediaop:Prepare id="introduction-media" source={assets.accepted-introduction} video="primary-moving" audio="default" span-authority="video"/>
-  <whisperx:Transcription id="introduction-transcription" media={introduction-media.media} language="zh"/>
+  <media:Video id="introduction-media" source={assets.accepted-introduction}  audio="default" />
+  <whisperx:Transcription id="introduction-transcription" media={introduction-media.source} language="zh"/>
   <speechalign:Alignment id="introduction" narrative={copy.story}
     segment={copy.story.segment.introduction} domain={introduction-media.domain} evidence={introduction-transcription.transcript}/>
   <seedance:ReferenceVideo id="competitors-generation" model="mini" prompt={direction.competitors-prompt} duration="8" resolution="720p" aspect-ratio="9:16" generate-audio="true">
     <seedance:Reference image={assets.presenter-reference} person-reference="true"/>
     <seedance:Reference audio={assets.voice-reference}/>
   </seedance:ReferenceVideo>
-  <mediaop:Prepare id="competitors-media" source={assets.accepted-competitors} video="primary-moving" audio="default" span-authority="video"/>
-  <whisperx:Transcription id="competitors-transcription" media={competitors-media.media} language="zh"/>
+  <media:Video id="competitors-media" source={assets.accepted-competitors}  audio="default" />
+  <whisperx:Transcription id="competitors-transcription" media={competitors-media.source} language="zh"/>
   <speechalign:Alignment id="competitors" narrative={copy.story}
     segment={copy.story.segment.competitors} domain={competitors-media.domain} evidence={competitors-transcription.transcript}/>
   <seedance:ReferenceVideo id="two-roads-generation" model="mini" prompt={direction.two-roads-prompt} duration="6" resolution="720p" aspect-ratio="9:16" generate-audio="true">
     <seedance:Reference image={assets.presenter-reference} person-reference="true"/>
     <seedance:Reference audio={assets.voice-reference}/>
   </seedance:ReferenceVideo>
-  <mediaop:Prepare id="two-roads-media" source={assets.accepted-two-roads} video="primary-moving" audio="default" span-authority="video"/>
-  <whisperx:Transcription id="two-roads-transcription" media={two-roads-media.media} language="zh"/>
+  <media:Video id="two-roads-media" source={assets.accepted-two-roads}  audio="default" />
+  <whisperx:Transcription id="two-roads-transcription" media={two-roads-media.source} language="zh"/>
   <speechalign:Alignment id="two-roads" narrative={copy.story}
     segment={copy.story.segment.two-roads} domain={two-roads-media.domain} evidence={two-roads-transcription.transcript}/>
   <seedance:ReferenceVideo id="editor-road-generation" model="mini" prompt={direction.editor-road-prompt} duration="8" resolution="720p" aspect-ratio="9:16" generate-audio="true">
     <seedance:Reference image={assets.presenter-reference} person-reference="true"/>
     <seedance:Reference audio={assets.voice-reference}/>
   </seedance:ReferenceVideo>
-  <mediaop:Prepare id="editor-road-media" source={assets.accepted-editor-road} video="primary-moving" audio="default" span-authority="video"/>
-  <whisperx:Transcription id="editor-road-transcription" media={editor-road-media.media} language="zh"/>
+  <media:Video id="editor-road-media" source={assets.accepted-editor-road}  audio="default" />
+  <whisperx:Transcription id="editor-road-transcription" media={editor-road-media.source} language="zh"/>
   <speechalign:Alignment id="editor-road" narrative={copy.story}
     segment={copy.story.segment.editor-road} domain={editor-road-media.domain} evidence={editor-road-transcription.transcript}/>
   <seedance:ReferenceVideo id="keyframe-cost-generation" model="mini" prompt={direction.keyframe-cost-prompt} duration="13" resolution="720p" aspect-ratio="9:16" generate-audio="true">
     <seedance:Reference image={assets.presenter-reference} person-reference="true"/>
     <seedance:Reference audio={assets.voice-reference}/>
   </seedance:ReferenceVideo>
-  <mediaop:Prepare id="keyframe-cost-media" source={assets.accepted-keyframe-cost} video="primary-moving" audio="default" span-authority="video"/>
-  <whisperx:Transcription id="keyframe-cost-transcription" media={keyframe-cost-media.media} language="zh"/>
+  <media:Video id="keyframe-cost-media" source={assets.accepted-keyframe-cost}  audio="default" />
+  <whisperx:Transcription id="keyframe-cost-transcription" media={keyframe-cost-media.source} language="zh"/>
   <speechalign:Alignment id="keyframe-cost" narrative={copy.story}
     segment={copy.story.segment.keyframe-cost} domain={keyframe-cost-media.domain} evidence={keyframe-cost-transcription.transcript}/>
   <seedance:ReferenceVideo id="code-road-generation" model="mini" prompt={direction.code-road-prompt} duration="6" resolution="720p" aspect-ratio="9:16" generate-audio="true">
     <seedance:Reference image={assets.presenter-reference} person-reference="true"/>
     <seedance:Reference audio={assets.voice-reference}/>
   </seedance:ReferenceVideo>
-  <mediaop:Prepare id="code-road-media" source={assets.accepted-code-road} video="primary-moving" audio="default" span-authority="video"/>
-  <whisperx:Transcription id="code-road-transcription" media={code-road-media.media} language="zh"/>
+  <media:Video id="code-road-media" source={assets.accepted-code-road}  audio="default" />
+  <whisperx:Transcription id="code-road-transcription" media={code-road-media.source} language="zh"/>
   <speechalign:Alignment id="code-road" narrative={copy.story}
     segment={copy.story.segment.code-road} domain={code-road-media.domain} evidence={code-road-transcription.transcript}/>
   <seedance:ReferenceVideo id="reuse-cost-generation" model="mini" prompt={direction.reuse-cost-prompt} duration="8" resolution="720p" aspect-ratio="9:16" generate-audio="true">
     <seedance:Reference image={assets.presenter-reference} person-reference="true"/>
     <seedance:Reference audio={assets.voice-reference}/>
   </seedance:ReferenceVideo>
-  <mediaop:Prepare id="reuse-cost-media" source={assets.accepted-reuse-cost} video="primary-moving" audio="default" span-authority="video"/>
-  <whisperx:Transcription id="reuse-cost-transcription" media={reuse-cost-media.media} language="zh"/>
+  <media:Video id="reuse-cost-media" source={assets.accepted-reuse-cost}  audio="default" />
+  <whisperx:Transcription id="reuse-cost-transcription" media={reuse-cost-media.source} language="zh"/>
   <speechalign:Alignment id="reuse-cost" narrative={copy.story}
     segment={copy.story.segment.reuse-cost} domain={reuse-cost-media.domain} evidence={reuse-cost-transcription.transcript}/>
   <seedance:ReferenceVideo id="timing-cost-generation" model="mini" prompt={direction.timing-cost-prompt} duration="8" resolution="720p" aspect-ratio="9:16" generate-audio="true">
     <seedance:Reference image={assets.presenter-reference} person-reference="true"/>
     <seedance:Reference audio={assets.voice-reference}/>
   </seedance:ReferenceVideo>
-  <mediaop:Prepare id="timing-cost-media" source={assets.accepted-timing-cost} video="primary-moving" audio="default" span-authority="video"/>
-  <whisperx:Transcription id="timing-cost-transcription" media={timing-cost-media.media} language="zh"/>
+  <media:Video id="timing-cost-media" source={assets.accepted-timing-cost}  audio="default" />
+  <whisperx:Transcription id="timing-cost-transcription" media={timing-cost-media.source} language="zh"/>
   <speechalign:Alignment id="timing-cost" narrative={copy.story}
     segment={copy.story.segment.timing-cost} domain={timing-cost-media.domain} evidence={timing-cost-transcription.transcript}/>
   <seedance:ReferenceVideo id="water-break-generation" model="mini" prompt={direction.water-break-prompt} duration="4" resolution="720p" aspect-ratio="9:16" generate-audio="true">
     <seedance:Reference image={assets.presenter-reference} person-reference="true"/>
     <seedance:Reference audio={assets.voice-reference}/>
   </seedance:ReferenceVideo>
-  <mediaop:Prepare id="water-break-media" source={assets.accepted-water-break} video="primary-moving" audio="default" span-authority="video"/>
-  <whisperx:Transcription id="water-break-transcription" media={water-break-media.media} language="zh"/>
+  <media:Video id="water-break-media" source={assets.accepted-water-break}  audio="default" />
+  <whisperx:Transcription id="water-break-transcription" media={water-break-media.source} language="zh"/>
   <speechalign:Alignment id="water-break" narrative={copy.story}
     segment={copy.story.segment.water-break} domain={water-break-media.domain} evidence={water-break-transcription.transcript}/>
   <seedance:ReferenceVideo id="synthesis-generation" model="mini" prompt={direction.synthesis-prompt} duration="5" resolution="720p" aspect-ratio="9:16" generate-audio="true">
     <seedance:Reference image={assets.presenter-reference} person-reference="true"/>
     <seedance:Reference audio={assets.voice-reference}/>
   </seedance:ReferenceVideo>
-  <mediaop:Prepare id="synthesis-media" source={assets.accepted-synthesis} video="primary-moving" audio="default" span-authority="video"/>
-  <whisperx:Transcription id="synthesis-transcription" media={synthesis-media.media} language="zh"/>
+  <media:Video id="synthesis-media" source={assets.accepted-synthesis}  audio="default" />
+  <whisperx:Transcription id="synthesis-transcription" media={synthesis-media.source} language="zh"/>
   <speechalign:Alignment id="synthesis" narrative={copy.story}
     segment={copy.story.segment.synthesis} domain={synthesis-media.domain} evidence={synthesis-transcription.transcript}/>
   <seedance:ReferenceVideo id="components-generation" model="mini" prompt={direction.components-prompt} duration="12" resolution="720p" aspect-ratio="9:16" generate-audio="true">
     <seedance:Reference image={assets.presenter-reference} person-reference="true"/>
     <seedance:Reference audio={assets.voice-reference}/>
   </seedance:ReferenceVideo>
-  <mediaop:Prepare id="components-media" source={assets.accepted-components} video="primary-moving" audio="default" span-authority="video"/>
-  <whisperx:Transcription id="components-transcription" media={components-media.media} language="zh"/>
+  <media:Video id="components-media" source={assets.accepted-components}  audio="default" />
+  <whisperx:Transcription id="components-transcription" media={components-media.source} language="zh"/>
   <speechalign:Alignment id="components" narrative={copy.story}
     segment={copy.story.segment.components} domain={components-media.domain} evidence={components-transcription.transcript}/>
   <seedance:ReferenceVideo id="semantic-time-generation" model="mini" prompt={direction.semantic-time-prompt} duration="5" resolution="720p" aspect-ratio="9:16" generate-audio="true">
     <seedance:Reference image={assets.presenter-reference} person-reference="true"/>
     <seedance:Reference audio={assets.voice-reference}/>
   </seedance:ReferenceVideo>
-  <mediaop:Prepare id="semantic-time-media" source={assets.accepted-semantic-time} video="primary-moving" audio="default" span-authority="video"/>
-  <whisperx:Transcription id="semantic-time-transcription" media={semantic-time-media.media} language="zh"/>
+  <media:Video id="semantic-time-media" source={assets.accepted-semantic-time}  audio="default" />
+  <whisperx:Transcription id="semantic-time-transcription" media={semantic-time-media.source} language="zh"/>
   <speechalign:Alignment id="semantic-time" narrative={copy.story}
     segment={copy.story.segment.semantic-time} domain={semantic-time-media.domain} evidence={semantic-time-transcription.transcript}/>
   <seedance:ReferenceVideo id="semantic-demo-generation" model="mini" prompt={direction.semantic-demo-prompt} duration="10" resolution="720p" aspect-ratio="9:16" generate-audio="true">
     <seedance:Reference image={assets.presenter-reference} person-reference="true"/>
     <seedance:Reference audio={assets.voice-reference}/>
   </seedance:ReferenceVideo>
-  <mediaop:Prepare id="semantic-demo-media" source={assets.accepted-semantic-demo} video="primary-moving" audio="default" span-authority="video"/>
-  <whisperx:Transcription id="semantic-demo-transcription" media={semantic-demo-media.media} language="zh"/>
+  <media:Video id="semantic-demo-media" source={assets.accepted-semantic-demo}  audio="default" />
+  <whisperx:Transcription id="semantic-demo-transcription" media={semantic-demo-media.source} language="zh"/>
   <speechalign:Alignment id="semantic-demo" narrative={copy.story}
     segment={copy.story.segment.semantic-demo} domain={semantic-demo-media.domain} evidence={semantic-demo-transcription.transcript}/>
   <seedance:ReferenceVideo id="result-generation" model="mini" prompt={direction.result-prompt} duration="8" resolution="720p" aspect-ratio="9:16" generate-audio="true">
     <seedance:Reference image={assets.presenter-reference} person-reference="true"/>
     <seedance:Reference audio={assets.voice-reference}/>
   </seedance:ReferenceVideo>
-  <mediaop:Prepare id="result-media" source={assets.accepted-result} video="primary-moving" audio="default" span-authority="video"/>
-  <whisperx:Transcription id="result-transcription" media={result-media.media} language="zh"/>
+  <media:Video id="result-media" source={assets.accepted-result}  audio="default" />
+  <whisperx:Transcription id="result-transcription" media={result-media.source} language="zh"/>
   <speechalign:Alignment id="result" narrative={copy.story}
     segment={copy.story.segment.result} domain={result-media.domain} evidence={result-transcription.transcript}/>
   <seedance:ReferenceVideo id="reference-reveal-generation" model="mini" prompt={direction.reference-reveal-prompt} duration="5" resolution="720p" aspect-ratio="9:16" generate-audio="true">
     <seedance:Reference image={assets.presenter-reference} person-reference="true"/>
     <seedance:Reference audio={assets.voice-reference}/>
   </seedance:ReferenceVideo>
-  <mediaop:Prepare id="reference-reveal-media" source={assets.accepted-reference-reveal} video="primary-moving" audio="default" span-authority="video"/>
-  <whisperx:Transcription id="reference-reveal-transcription" media={reference-reveal-media.media} language="zh"/>
+  <media:Video id="reference-reveal-media" source={assets.accepted-reference-reveal}  audio="default" />
+  <whisperx:Transcription id="reference-reveal-transcription" media={reference-reveal-media.source} language="zh"/>
   <speechalign:Alignment id="reference-reveal" narrative={copy.story}
     segment={copy.story.segment.reference-reveal} domain={reference-reveal-media.domain} evidence={reference-reveal-transcription.transcript}/>
   <seedance:ReferenceVideo id="closing-generation" model="mini" prompt={direction.closing-prompt} duration="11" resolution="720p" aspect-ratio="9:16" generate-audio="true">
     <seedance:Reference image={assets.presenter-reference} person-reference="true"/>
     <seedance:Reference audio={assets.voice-reference}/>
   </seedance:ReferenceVideo>
-  <mediaop:Prepare id="closing-media" source={assets.accepted-closing} video="primary-moving" audio="default" span-authority="video"/>
-  <whisperx:Transcription id="closing-transcription" media={closing-media.media} language="zh"/>
+  <media:Video id="closing-media" source={assets.accepted-closing}  audio="default" />
+  <whisperx:Transcription id="closing-transcription" media={closing-media.source} language="zh"/>
   <speechalign:Alignment id="closing" narrative={copy.story}
     segment={copy.story.segment.closing} domain={closing-media.domain} evidence={closing-transcription.transcript}/>
-  <mediaop:Prepare id="code-demo-media" source={assets.code-demo} video="primary-moving" audio="none" span-authority="video"/>
-  <mediaop:Prepare id="readme-demo-media" source={assets.readme-demo} video="primary-moving" audio="none" span-authority="video"/>
-  <mediaop:Prepare id="price-creatify-media" source={assets.price-creatify} video="primary-moving" audio="none" span-authority="video"/>
-  <mediaop:Prepare id="price-higgsfield-media" source={assets.price-higgsfield} video="primary-moving" audio="none" span-authority="video"/>
-  <mediaop:Prepare id="templates-creatify-media" source={assets.templates-creatify} video="primary-moving" audio="none" span-authority="video"/>
-  <mediaop:Prepare id="templates-higgsfield-media" source={assets.templates-higgsfield} video="primary-moving" audio="none" span-authority="video"/>
-  <mediaop:Prepare id="case-creatify-media" source={assets.case-creatify} video="primary-moving" audio="none" span-authority="video"/>
-  <mediaop:Prepare id="case-higgsfield-media" source={assets.case-higgsfield} video="primary-moving" audio="none" span-authority="video"/>
-  <mediaop:Prepare id="reference-ranking-media" source={assets.reference-ranking} video="primary-moving" audio="none" span-authority="video"/>
-  <mediaop:Prepare id="reference-podcast-media" source={assets.reference-podcast} video="primary-moving" audio="none" span-authority="video"/>
-  <mediaop:Prepare id="reference-interview-media" source={assets.reference-interview} video="primary-moving" audio="none" span-authority="video"/>
-  <mediaop:Prepare id="hypit-ranking-media" source={assets.hypit-ranking} video="primary-moving" audio="none" span-authority="video"/>
-  <mediaop:Prepare id="hypit-podcast-media" source={assets.hypit-podcast} video="primary-moving" audio="none" span-authority="video"/>
-  <mediaop:Prepare id="hypit-interview-media" source={assets.hypit-interview} video="primary-moving" audio="none" span-authority="video"/>
+  <media:Video id="code-demo-media" source={assets.code-demo}  audio="none" />
+  <media:Video id="readme-demo-media" source={assets.readme-demo}  audio="none" />
+  <media:Video id="price-creatify-media" source={assets.price-creatify}  audio="none" />
+  <media:Video id="price-higgsfield-media" source={assets.price-higgsfield}  audio="none" />
+  <media:Video id="templates-creatify-media" source={assets.templates-creatify}  audio="none" />
+  <media:Video id="templates-higgsfield-media" source={assets.templates-higgsfield}  audio="none" />
+  <media:Video id="case-creatify-media" source={assets.case-creatify}  audio="none" />
+  <media:Video id="case-higgsfield-media" source={assets.case-higgsfield}  audio="none" />
+  <media:Video id="reference-ranking-media" source={assets.reference-ranking}  audio="none" />
+  <media:Video id="reference-podcast-media" source={assets.reference-podcast}  audio="none" />
+  <media:Video id="reference-interview-media" source={assets.reference-interview}  audio="none" />
+  <media:Video id="hypit-ranking-media" source={assets.hypit-ranking}  audio="none" />
+  <media:Video id="hypit-podcast-media" source={assets.hypit-podcast}  audio="none" />
+  <media:Video id="hypit-interview-media" source={assets.hypit-interview}  audio="none" />
 
   <!-- One Timeline: placed Takes, opening gap and silent ending -->
   <time:Timeline id="program" clock={assets.clock} end="closing.end+2s">
@@ -423,12 +423,12 @@
   <time:Window id="sfx-montage-4-window" timeline={program.timeline} from={segment-opening-end-plus-14f} until={segment-opening-end-plus-28f}/>
   <narrative-caption:Timing id="caption-timing" document={copy.story.caption}
     binding={copy.story.caption-binding} projection={story-time}/>
-  <mediaop:Prepare id="ranking-clone-media" source={assets.ranking-clone} video="primary-moving" audio="none" span-authority="video"/>
-  <mediaop:Prepare id="swap-virtual-media" source={assets.swap-virtual} video="primary-moving" audio="none" span-authority="video"/>
-  <mediaop:Prepare id="swap-language-media" source={assets.swap-language} video="primary-moving" audio="none" span-authority="video"/>
-  <mediaop:Prepare id="swap-topic-media" source={assets.swap-topic} video="primary-moving" audio="none" span-authority="video"/>
-  <mediaop:Prepare id="swap-product-media" source={assets.swap-product} video="primary-moving" audio="none" span-authority="video"/>
-  <mediaop:Prepare id="swap-vehicle-media" source={assets.swap-vehicle} video="primary-moving" audio="none" span-authority="video"/>
+  <media:Video id="ranking-clone-media" source={assets.ranking-clone}  audio="none" />
+  <media:Video id="swap-virtual-media" source={assets.swap-virtual}  audio="none" />
+  <media:Video id="swap-language-media" source={assets.swap-language}  audio="none" />
+  <media:Video id="swap-topic-media" source={assets.swap-topic}  audio="none" />
+  <media:Video id="swap-product-media" source={assets.swap-product}  audio="none" />
+  <media:Video id="swap-vehicle-media" source={assets.swap-vehicle}  audio="none" />
 
   <!-- Opening chrome and independent montage -->
   <gfx:Title id="opening-title" timeline={program.timeline} within={assets.canvas.bounds} font={assets.display-font} during={opening-title-window} bounce-at={moment-opening-brand-cue} color="#fa67aa" title-y="0.58" title="Hypit" subtitle="一分钟了解" seconds="60"/>
@@ -455,23 +455,23 @@
   <gfx:Reframe id="host-rise" from={full-frame} to={upper-frame}/>
   <gfx:PortraitTransition id="host-resume" from={full-frame} to={host-inset}/>
   <gfx:Presenter id="presenter" timeline={program.timeline} within={assets.canvas.bounds}>
-    <gfx:Source id="opening-source" media={opening-media.media} window={program.opening}/>
-    <gfx:Source id="introduction-source" media={introduction-media.media} window={program.introduction}/>
-    <gfx:Source id="competitors-source" media={competitors-media.media} window={program.competitors}/>
-    <gfx:Source id="two-roads-source" media={two-roads-media.media} window={program.two-roads}/>
-    <gfx:Source id="editor-road-source" media={editor-road-media.media} window={program.editor-road}/>
-    <gfx:Source id="keyframe-cost-source" media={keyframe-cost-media.media} window={program.keyframe-cost}/>
-    <gfx:Source id="code-road-source" media={code-road-media.media} window={program.code-road}/>
-    <gfx:Source id="reuse-cost-source" media={reuse-cost-media.media} window={program.reuse-cost}/>
-    <gfx:Source id="timing-cost-source" media={timing-cost-media.media} window={program.timing-cost}/>
-    <gfx:Source id="water-break-source" media={water-break-media.media} window={program.water-break}/>
-    <gfx:Source id="synthesis-source" media={synthesis-media.media} window={program.synthesis}/>
-    <gfx:Source id="components-source" media={components-media.media} window={program.components}/>
-    <gfx:Source id="semantic-time-source" media={semantic-time-media.media} window={program.semantic-time}/>
-    <gfx:Source id="semantic-demo-source" media={semantic-demo-media.media} window={program.semantic-demo}/>
-    <gfx:Source id="result-source" media={result-media.media} window={program.result}/>
-    <gfx:Source id="reference-reveal-source" media={reference-reveal-media.media} window={program.reference-reveal}/>
-    <gfx:Source id="closing-source" media={closing-media.media} window={program.closing}/>
+    <gfx:Source id="opening-source" media={opening-media.source} window={program.opening}/>
+    <gfx:Source id="introduction-source" media={introduction-media.source} window={program.introduction}/>
+    <gfx:Source id="competitors-source" media={competitors-media.source} window={program.competitors}/>
+    <gfx:Source id="two-roads-source" media={two-roads-media.source} window={program.two-roads}/>
+    <gfx:Source id="editor-road-source" media={editor-road-media.source} window={program.editor-road}/>
+    <gfx:Source id="keyframe-cost-source" media={keyframe-cost-media.source} window={program.keyframe-cost}/>
+    <gfx:Source id="code-road-source" media={code-road-media.source} window={program.code-road}/>
+    <gfx:Source id="reuse-cost-source" media={reuse-cost-media.source} window={program.reuse-cost}/>
+    <gfx:Source id="timing-cost-source" media={timing-cost-media.source} window={program.timing-cost}/>
+    <gfx:Source id="water-break-source" media={water-break-media.source} window={program.water-break}/>
+    <gfx:Source id="synthesis-source" media={synthesis-media.source} window={program.synthesis}/>
+    <gfx:Source id="components-source" media={components-media.source} window={program.components}/>
+    <gfx:Source id="semantic-time-source" media={semantic-time-media.source} window={program.semantic-time}/>
+    <gfx:Source id="semantic-demo-source" media={semantic-demo-media.source} window={program.semantic-demo}/>
+    <gfx:Source id="result-source" media={result-media.source} window={program.result}/>
+    <gfx:Source id="reference-reveal-source" media={reference-reveal-media.source} window={program.reference-reveal}/>
+    <gfx:Source id="closing-source" media={closing-media.source} window={program.closing}/>
     <gfx:Use style={host-small} during={host-small-from-introduction}/>
     <gfx:Use during={segment-opening} style={host-full}/>
     <gfx:Use during={opening-pullback-window} style={opening-pullback}/>
@@ -493,74 +493,74 @@
   </gfx:Presenter>
   <!-- Voice, music and independently authored effects -->
   <audio:Track id="voice" timeline={program.timeline}>
-    <audio:Clip id="opening-source" source={opening-media.media} during={program.opening}/>
-    <audio:Clip id="introduction-source" source={introduction-media.media} during={program.introduction}/>
-    <audio:Clip id="competitors-source" source={competitors-media.media} during={program.competitors}/>
-    <audio:Clip id="two-roads-source" source={two-roads-media.media} during={program.two-roads}/>
-    <audio:Clip id="editor-road-source" source={editor-road-media.media} during={program.editor-road}/>
-    <audio:Clip id="keyframe-cost-source" source={keyframe-cost-media.media} during={program.keyframe-cost}/>
-    <audio:Clip id="code-road-source" source={code-road-media.media} during={program.code-road}/>
-    <audio:Clip id="reuse-cost-source" source={reuse-cost-media.media} during={program.reuse-cost}/>
-    <audio:Clip id="timing-cost-source" source={timing-cost-media.media} during={program.timing-cost}/>
-    <audio:Clip id="water-break-source" source={water-break-media.media} during={program.water-break}/>
-    <audio:Clip id="synthesis-source" source={synthesis-media.media} during={program.synthesis}/>
-    <audio:Clip id="components-source" source={components-media.media} during={program.components}/>
-    <audio:Clip id="semantic-time-source" source={semantic-time-media.media} during={program.semantic-time}/>
-    <audio:Clip id="semantic-demo-source" source={semantic-demo-media.media} during={program.semantic-demo}/>
-    <audio:Clip id="result-source" source={result-media.media} during={program.result}/>
-    <audio:Clip id="reference-reveal-source" source={reference-reveal-media.media} during={program.reference-reveal}/>
-    <audio:Clip id="closing-source" source={closing-media.media} during={program.closing}/>
+    <audio:Clip id="opening-source" source={opening-media.source} during={program.opening}/>
+    <audio:Clip id="introduction-source" source={introduction-media.source} during={program.introduction}/>
+    <audio:Clip id="competitors-source" source={competitors-media.source} during={program.competitors}/>
+    <audio:Clip id="two-roads-source" source={two-roads-media.source} during={program.two-roads}/>
+    <audio:Clip id="editor-road-source" source={editor-road-media.source} during={program.editor-road}/>
+    <audio:Clip id="keyframe-cost-source" source={keyframe-cost-media.source} during={program.keyframe-cost}/>
+    <audio:Clip id="code-road-source" source={code-road-media.source} during={program.code-road}/>
+    <audio:Clip id="reuse-cost-source" source={reuse-cost-media.source} during={program.reuse-cost}/>
+    <audio:Clip id="timing-cost-source" source={timing-cost-media.source} during={program.timing-cost}/>
+    <audio:Clip id="water-break-source" source={water-break-media.source} during={program.water-break}/>
+    <audio:Clip id="synthesis-source" source={synthesis-media.source} during={program.synthesis}/>
+    <audio:Clip id="components-source" source={components-media.source} during={program.components}/>
+    <audio:Clip id="semantic-time-source" source={semantic-time-media.source} during={program.semantic-time}/>
+    <audio:Clip id="semantic-demo-source" source={semantic-demo-media.source} during={program.semantic-demo}/>
+    <audio:Clip id="result-source" source={result-media.source} during={program.result}/>
+    <audio:Clip id="reference-reveal-source" source={reference-reveal-media.source} during={program.reference-reveal}/>
+    <audio:Clip id="closing-source" source={closing-media.source} during={program.closing}/>
   </audio:Track>
   <audio:Track id="music" timeline={program.timeline}>
-    <audio:Clip id="bgm" source={bgm-media.media} during={program.window} gain="0.09" fade-in="6f" fade-out="2s"/>
+    <audio:Clip id="bgm" source={bgm-media.source} during={program.window} gain="0.09" fade-in="6f" fade-out="2s"/>
   </audio:Track>
-  <mediaop:Prepare id="sfx-tap-media" source={assets.sfx-tap} video="none" audio="default" span-authority="audio"/>
-  <mediaop:Prepare id="sfx-pop-media" source={assets.sfx-pop} video="none" audio="default" span-authority="audio"/>
-  <mediaop:Prepare id="sfx-swipe-media" source={assets.sfx-swipe} video="none" audio="default" span-authority="audio"/>
-  <mediaop:Prepare id="sfx-land-media" source={assets.sfx-land} video="none" audio="default" span-authority="audio"/>
-  <mediaop:Prepare id="sfx-reject-media" source={assets.sfx-reject} video="none" audio="default" span-authority="audio"/>
-  <mediaop:Prepare id="sfx-ticks-media" source={assets.sfx-ticks} video="none" audio="default" span-authority="audio"/>
-  <mediaop:Prepare id="sfx-spark-media" source={assets.sfx-spark} video="none" audio="default" span-authority="audio"/>
-  <mediaop:Prepare id="sfx-finish-media" source={assets.sfx-finish} video="none" audio="default" span-authority="audio"/>
+  <media:Audio id="sfx-tap-media" source={assets.sfx-tap}   />
+  <media:Audio id="sfx-pop-media" source={assets.sfx-pop}   />
+  <media:Audio id="sfx-swipe-media" source={assets.sfx-swipe}   />
+  <media:Audio id="sfx-land-media" source={assets.sfx-land}   />
+  <media:Audio id="sfx-reject-media" source={assets.sfx-reject}   />
+  <media:Audio id="sfx-ticks-media" source={assets.sfx-ticks}   />
+  <media:Audio id="sfx-spark-media" source={assets.sfx-spark}   />
+  <media:Audio id="sfx-finish-media" source={assets.sfx-finish}   />
   <audio:Track id="pixel-effects" timeline={program.timeline}>
-    <audio:Clip id="sfx-intro-codex" source={sfx-pop-media.media} during={sfx-intro-codex-window} gain="0.16" fade-out="1f"/>
-    <audio:Clip id="sfx-intro-claude" source={sfx-pop-media.media} during={sfx-intro-claude-window} gain="0.16" fade-out="1f"/>
-    <audio:Clip id="sfx-intro-examples" source={sfx-swipe-media.media} during={sfx-intro-examples-window} gain="0.2" fade-out="1f"/>
-    <audio:Clip id="sfx-intro-face" source={sfx-spark-media.media} during={sfx-intro-face-window} gain="0.13" fade-out="1f"/>
-    <audio:Clip id="sfx-competitor-monthly" source={sfx-tap-media.media} during={sfx-competitor-monthly-window} gain="0.16" fade-out="1f"/>
-    <audio:Clip id="sfx-competitor-watermark" source={sfx-ticks-media.media} during={sfx-competitor-watermark-window} gain="0.13" fade-out="1f"/>
-    <audio:Clip id="sfx-roads" source={sfx-land-media.media} during={sfx-roads-window} gain="0.22" fade-out="1f"/>
-    <audio:Clip id="sfx-road-assets" source={sfx-pop-media.media} during={sfx-road-assets-window} gain="0.15" fade-out="1f"/>
-    <audio:Clip id="sfx-road-drag" source={sfx-tap-media.media} during={sfx-road-drag-window} gain="0.13" fade-out="1f"/>
-    <audio:Clip id="sfx-road-fail" source={sfx-reject-media.media} during={sfx-road-fail-window} gain="0.19" fade-out="1f"/>
-    <audio:Clip id="sfx-road-number" source={sfx-pop-media.media} during={sfx-road-number-window} gain="0.2" fade-out="1f"/>
-    <audio:Clip id="sfx-road-image" source={sfx-swipe-media.media} during={sfx-road-image-window} gain="0.18" fade-out="1f"/>
-    <audio:Clip id="sfx-road-keys" source={sfx-ticks-media.media} during={sfx-road-keys-window} gain="0.13" fade-out="1f"/>
-    <audio:Clip id="sfx-road-tokens" source={sfx-ticks-media.media} during={sfx-road-tokens-window} gain="0.12" fade-out="1f"/>
-    <audio:Clip id="sfx-code-play" source={sfx-pop-media.media} during={sfx-code-play-window} gain="0.16" fade-out="1f"/>
-    <audio:Clip id="sfx-code-duplicate" source={sfx-ticks-media.media} during={sfx-code-duplicate-window} gain="0.12" fade-out="1f"/>
-    <audio:Clip id="sfx-solution-keep" source={sfx-spark-media.media} during={sfx-solution-keep-window} gain="0.19" fade-out="1f"/>
-    <audio:Clip id="sfx-solution-drop" source={sfx-swipe-media.media} during={sfx-solution-drop-window} gain="0.18" fade-out="1f"/>
-    <audio:Clip id="sfx-part-caption" source={sfx-tap-media.media} during={sfx-part-caption-window} gain="0.13" fade-out="1f"/>
-    <audio:Clip id="sfx-part-ranking" source={sfx-tap-media.media} during={sfx-part-ranking-window} gain="0.13" fade-out="1f"/>
-    <audio:Clip id="sfx-part-chart" source={sfx-tap-media.media} during={sfx-part-chart-window} gain="0.13" fade-out="1f"/>
-    <audio:Clip id="sfx-part-card" source={sfx-tap-media.media} during={sfx-part-card-window} gain="0.13" fade-out="1f"/>
-    <audio:Clip id="sfx-parts-library" source={sfx-land-media.media} during={sfx-parts-library-window} gain="0.18" fade-out="1f"/>
-    <audio:Clip id="sfx-parts-reuse" source={sfx-spark-media.media} during={sfx-parts-reuse-window} gain="0.14" fade-out="1f"/>
-    <audio:Clip id="sfx-parts-swap" source={sfx-swipe-media.media} during={sfx-parts-swap-window} gain="0.19" fade-out="1f"/>
-    <audio:Clip id="sfx-rank-reveal" source={sfx-land-media.media} during={sfx-rank-reveal-window} gain="0.2" fade-out="1f"/>
-    <audio:Clip id="sfx-product-reveal" source={sfx-pop-media.media} during={sfx-product-reveal-window} gain="0.2" fade-out="1f"/>
-    <audio:Clip id="sfx-sem-voice" source={sfx-tap-media.media} during={sfx-sem-voice-window} gain="0.13" fade-out="1f"/>
-    <audio:Clip id="sfx-sem-adapt" source={sfx-spark-media.media} during={sfx-sem-adapt-window} gain="0.14" fade-out="1f"/>
-    <audio:Clip id="sfx-result-assets" source={sfx-finish-media.media} during={sfx-result-assets-window} gain="0.16" fade-out="1f"/>
-    <audio:Clip id="sfx-result-meta" source={sfx-swipe-media.media} during={sfx-result-meta-window} gain="0.17" fade-out="1f"/>
-    <audio:Clip id="sfx-outro-install" source={sfx-tap-media.media} during={sfx-outro-install-window} gain="0.15" fade-out="1f"/>
-    <audio:Clip id="sfx-outro-gift" source={sfx-spark-media.media} during={sfx-outro-gift-window} gain="0.18" fade-out="1f"/>
-    <audio:Clip id="sfx-outro-bye" source={sfx-finish-media.media} during={sfx-outro-bye-window} gain="0.18" fade-out="1f"/>
-    <audio:Clip id="sfx-montage-1" source={sfx-tap-media.media} during={sfx-montage-1-window} gain="0.21"/>
-    <audio:Clip id="sfx-montage-2" source={sfx-tap-media.media} during={sfx-montage-2-window} gain="0.21"/>
-    <audio:Clip id="sfx-montage-3" source={sfx-tap-media.media} during={sfx-montage-3-window} gain="0.21"/>
-    <audio:Clip id="sfx-montage-4" source={sfx-spark-media.media} during={sfx-montage-4-window} gain="0.27"/>
+    <audio:Clip id="sfx-intro-codex" source={sfx-pop-media.source} during={sfx-intro-codex-window} gain="0.16" fade-out="1f"/>
+    <audio:Clip id="sfx-intro-claude" source={sfx-pop-media.source} during={sfx-intro-claude-window} gain="0.16" fade-out="1f"/>
+    <audio:Clip id="sfx-intro-examples" source={sfx-swipe-media.source} during={sfx-intro-examples-window} gain="0.2" fade-out="1f"/>
+    <audio:Clip id="sfx-intro-face" source={sfx-spark-media.source} during={sfx-intro-face-window} gain="0.13" fade-out="1f"/>
+    <audio:Clip id="sfx-competitor-monthly" source={sfx-tap-media.source} during={sfx-competitor-monthly-window} gain="0.16" fade-out="1f"/>
+    <audio:Clip id="sfx-competitor-watermark" source={sfx-ticks-media.source} during={sfx-competitor-watermark-window} gain="0.13" fade-out="1f"/>
+    <audio:Clip id="sfx-roads" source={sfx-land-media.source} during={sfx-roads-window} gain="0.22" fade-out="1f"/>
+    <audio:Clip id="sfx-road-assets" source={sfx-pop-media.source} during={sfx-road-assets-window} gain="0.15" fade-out="1f"/>
+    <audio:Clip id="sfx-road-drag" source={sfx-tap-media.source} during={sfx-road-drag-window} gain="0.13" fade-out="1f"/>
+    <audio:Clip id="sfx-road-fail" source={sfx-reject-media.source} during={sfx-road-fail-window} gain="0.19" fade-out="1f"/>
+    <audio:Clip id="sfx-road-number" source={sfx-pop-media.source} during={sfx-road-number-window} gain="0.2" fade-out="1f"/>
+    <audio:Clip id="sfx-road-image" source={sfx-swipe-media.source} during={sfx-road-image-window} gain="0.18" fade-out="1f"/>
+    <audio:Clip id="sfx-road-keys" source={sfx-ticks-media.source} during={sfx-road-keys-window} gain="0.13" fade-out="1f"/>
+    <audio:Clip id="sfx-road-tokens" source={sfx-ticks-media.source} during={sfx-road-tokens-window} gain="0.12" fade-out="1f"/>
+    <audio:Clip id="sfx-code-play" source={sfx-pop-media.source} during={sfx-code-play-window} gain="0.16" fade-out="1f"/>
+    <audio:Clip id="sfx-code-duplicate" source={sfx-ticks-media.source} during={sfx-code-duplicate-window} gain="0.12" fade-out="1f"/>
+    <audio:Clip id="sfx-solution-keep" source={sfx-spark-media.source} during={sfx-solution-keep-window} gain="0.19" fade-out="1f"/>
+    <audio:Clip id="sfx-solution-drop" source={sfx-swipe-media.source} during={sfx-solution-drop-window} gain="0.18" fade-out="1f"/>
+    <audio:Clip id="sfx-part-caption" source={sfx-tap-media.source} during={sfx-part-caption-window} gain="0.13" fade-out="1f"/>
+    <audio:Clip id="sfx-part-ranking" source={sfx-tap-media.source} during={sfx-part-ranking-window} gain="0.13" fade-out="1f"/>
+    <audio:Clip id="sfx-part-chart" source={sfx-tap-media.source} during={sfx-part-chart-window} gain="0.13" fade-out="1f"/>
+    <audio:Clip id="sfx-part-card" source={sfx-tap-media.source} during={sfx-part-card-window} gain="0.13" fade-out="1f"/>
+    <audio:Clip id="sfx-parts-library" source={sfx-land-media.source} during={sfx-parts-library-window} gain="0.18" fade-out="1f"/>
+    <audio:Clip id="sfx-parts-reuse" source={sfx-spark-media.source} during={sfx-parts-reuse-window} gain="0.14" fade-out="1f"/>
+    <audio:Clip id="sfx-parts-swap" source={sfx-swipe-media.source} during={sfx-parts-swap-window} gain="0.19" fade-out="1f"/>
+    <audio:Clip id="sfx-rank-reveal" source={sfx-land-media.source} during={sfx-rank-reveal-window} gain="0.2" fade-out="1f"/>
+    <audio:Clip id="sfx-product-reveal" source={sfx-pop-media.source} during={sfx-product-reveal-window} gain="0.2" fade-out="1f"/>
+    <audio:Clip id="sfx-sem-voice" source={sfx-tap-media.source} during={sfx-sem-voice-window} gain="0.13" fade-out="1f"/>
+    <audio:Clip id="sfx-sem-adapt" source={sfx-spark-media.source} during={sfx-sem-adapt-window} gain="0.14" fade-out="1f"/>
+    <audio:Clip id="sfx-result-assets" source={sfx-finish-media.source} during={sfx-result-assets-window} gain="0.16" fade-out="1f"/>
+    <audio:Clip id="sfx-result-meta" source={sfx-swipe-media.source} during={sfx-result-meta-window} gain="0.17" fade-out="1f"/>
+    <audio:Clip id="sfx-outro-install" source={sfx-tap-media.source} during={sfx-outro-install-window} gain="0.15" fade-out="1f"/>
+    <audio:Clip id="sfx-outro-gift" source={sfx-spark-media.source} during={sfx-outro-gift-window} gain="0.18" fade-out="1f"/>
+    <audio:Clip id="sfx-outro-bye" source={sfx-finish-media.source} during={sfx-outro-bye-window} gain="0.18" fade-out="1f"/>
+    <audio:Clip id="sfx-montage-1" source={sfx-tap-media.source} during={sfx-montage-1-window} gain="0.21"/>
+    <audio:Clip id="sfx-montage-2" source={sfx-tap-media.source} during={sfx-montage-2-window} gain="0.21"/>
+    <audio:Clip id="sfx-montage-3" source={sfx-tap-media.source} during={sfx-montage-3-window} gain="0.21"/>
+    <audio:Clip id="sfx-montage-4" source={sfx-spark-media.source} during={sfx-montage-4-window} gain="0.27"/>
   </audio:Track>
 
   <!-- Caption: Script text, authored cues and presentation -->
@@ -574,7 +574,7 @@
   <launch:PosterTitle id="montage-label" timeline={program.timeline} within={assets.canvas.bounds} font={assets.display-font} during={montage-image-4-window} text="Hypit" subtitle="复刻任何爆款视频" y="0.165" size="180" subtitle-size="46" subtitle-gap="35"/>
 
   <!-- Coordinated scenes: supplied media plus semantic events -->
-  <webscene:Introduction id="intro-scene" timeline={program.timeline} within={assets.canvas.bounds} font={assets.display-font} during={segment-introduction} page={web-hypit-media.media} code={code-demo-media.media} readme={readme-demo-media.media} codex={assets.icon-codex} claude={assets.icon-claude} reference-ranking={reference-ranking-media.media} reference-podcast={reference-podcast-media.media} reference-interview={reference-interview-media.media} hypit-ranking={hypit-ranking-media.media} hypit-podcast={hypit-podcast-media.media} hypit-interview={hypit-interview-media.media}>
+  <webscene:Introduction id="intro-scene" timeline={program.timeline} within={assets.canvas.bounds} font={assets.display-font} during={segment-introduction} page={web-hypit-media.source} code={code-demo-media.source} readme={readme-demo-media.source} codex={assets.icon-codex} claude={assets.icon-claude} reference-ranking={reference-ranking-media.source} reference-podcast={reference-podcast-media.source} reference-interview={reference-interview-media.source} hypit-ranking={hypit-ranking-media.source} hypit-podcast={hypit-podcast-media.source} hypit-interview={hypit-interview-media.source}>
     <webscene:Beat name="language" at={moment-intro-language-cue}/>
     <webscene:Beat name="install" at={moment-intro-install-cue}/>
     <webscene:Beat name="codex" at={moment-intro-codex-cue}/>
@@ -584,14 +584,14 @@
     <webscene:Beat name="face" at={moment-intro-face-cue}/>
     <webscene:Beat name="product" at={moment-intro-product-cue}/>
   </webscene:Introduction>
-  <webscene:Comparison id="competitor-scene" timeline={program.timeline} within={assets.canvas.bounds} font={assets.display-font} during={segment-competitors} left={web-creatify-media.media} right={web-higgsfield-media.media} price-a={price-creatify-media.media} price-b={price-higgsfield-media.media} templates-a={templates-creatify-media.media} templates-b={templates-higgsfield-media.media} case-a={case-creatify-media.media} case-b={case-higgsfield-media.media} logo-a={assets.logo-creatify} logo-b={assets.logo-higgsfield}>
+  <webscene:Comparison id="competitor-scene" timeline={program.timeline} within={assets.canvas.bounds} font={assets.display-font} during={segment-competitors} left={web-creatify-media.source} right={web-higgsfield-media.source} price-a={price-creatify-media.source} price-b={price-higgsfield-media.source} templates-a={templates-creatify-media.source} templates-b={templates-higgsfield-media.source} case-a={case-creatify-media.source} case-b={case-higgsfield-media.source} logo-a={assets.logo-creatify} logo-b={assets.logo-higgsfield}>
     <webscene:Beat name="other" at={moment-competitor-other-cue}/>
     <webscene:Beat name="monthly" at={moment-competitor-monthly-cue}/>
     <webscene:Beat name="templates" at={moment-competitor-templates-cue}/>
     <webscene:Beat name="cases" at={moment-competitor-cases-cue}/>
     <webscene:Beat name="watermark" at={moment-competitor-watermark-cue}/>
   </webscene:Comparison>
-  <webscene:Road id="editor-journey" timeline={program.timeline} within={assets.canvas.bounds} font={assets.display-font} during={editor-journey-window} page={web-hypit-media.media} sample={case-higgsfield-media.media} codex={assets.icon-codex} capcut={assets.icon-capcut} premiere={assets.icon-premiere} resolve={assets.icon-resolve} logo={assets.road-logo} portrait={assets.presenter-reference} thumb-a={assets.gallery-ranking} thumb-b={assets.gallery-podcast} thumb-c={assets.gallery-interview} thumb-d={assets.gallery-original-ranking} thumb-e={assets.gallery-original-interview} thumb-f={assets.gallery-homepage} thumb-g={assets.gallery-code}>
+  <webscene:Road id="editor-journey" timeline={program.timeline} within={assets.canvas.bounds} font={assets.display-font} during={editor-journey-window} page={web-hypit-media.source} sample={case-higgsfield-media.source} codex={assets.icon-codex} capcut={assets.icon-capcut} premiere={assets.icon-premiere} resolve={assets.icon-resolve} logo={assets.road-logo} portrait={assets.presenter-reference} thumb-a={assets.gallery-ranking} thumb-b={assets.gallery-podcast} thumb-c={assets.gallery-interview} thumb-d={assets.gallery-original-ranking} thumb-e={assets.gallery-original-interview} thumb-f={assets.gallery-homepage} thumb-g={assets.gallery-code}>
     <webscene:Beat name="half" at={moment-road-half-cue}/>
     <webscene:Beat name="overview" at={moment-road-overview-cue}/>
     <webscene:Beat name="editor" at={moment-road-editor-cue}/>
@@ -612,7 +612,7 @@
     <webscene:Beat name="unstable" at={moment-road-unstable-cue}/>
     <webscene:Beat name="styles" at={moment-road-styles-cue}/>
   </webscene:Road>
-  <webscene:CodeJourney id="code-journey" timeline={program.timeline} within={assets.canvas.bounds} font={assets.display-font} during={code-journey-window} codex={assets.icon-codex} remotion={assets.icon-remotion} hyperframes={assets.icon-hyperframes} ranking={reference-ranking-media.media} podcast={reference-podcast-media.media} interview={reference-interview-media.media} target={hypit-ranking-media.media}>
+  <webscene:CodeJourney id="code-journey" timeline={program.timeline} within={assets.canvas.bounds} font={assets.display-font} during={code-journey-window} codex={assets.icon-codex} remotion={assets.icon-remotion} hyperframes={assets.icon-hyperframes} ranking={reference-ranking-media.source} podcast={reference-podcast-media.source} interview={reference-interview-media.source} target={hypit-ranking-media.source}>
     <webscene:Beat name="remotion" at={moment-code-remotion-cue}/>
     <webscene:Beat name="hyperframes" at={moment-code-hyperframes-cue}/>
     <webscene:Beat name="html" at={moment-code-html-cue}/>
@@ -633,7 +633,7 @@
     <webscene:Beat name="keep" at={moment-solution-keep-cue}/>
     <webscene:Beat name="drop" at={moment-solution-drop-cue}/>
   </webscene:CodeJourney>
-  <webscene:ComponentWorkshop id="component-workshop" timeline={program.timeline} within={assets.canvas.bounds} font={assets.display-font} during={segment-components} v0={ranking-clone-media.media} v1={swap-virtual-media.media} v2={swap-language-media.media} v3={swap-topic-media.media} v4={swap-product-media.media} v5={swap-vehicle-media.media}>
+  <webscene:ComponentWorkshop id="component-workshop" timeline={program.timeline} within={assets.canvas.bounds} font={assets.display-font} during={segment-components} v0={ranking-clone-media.source} v1={swap-virtual-media.source} v2={swap-language-media.source} v3={swap-topic-media.source} v4={swap-product-media.source} v5={swap-vehicle-media.source}>
     <webscene:Beat name="all" at={moment-parts-all-cue}/>
     <webscene:Beat name="caption" at={moment-part-caption-cue}/>
     <webscene:Beat name="ranking" at={moment-part-ranking-cue}/>
@@ -658,7 +658,7 @@
     <webscene:Beat name="adapt" at={moment-sem-adapt-cue}/>
     <webscene:Beat name="syntax" at={moment-sem-syntax-cue}/>
   </webscene:SemanticWorkshop>
-  <webscene:DeliveryWorkshop id="delivery-workshop" timeline={program.timeline} within={assets.canvas.bounds} font={assets.display-font} during={delivery-workshop-window} film={hypit-ranking-media.media} clone={ranking-clone-media.media} water={water-break-media.media} reference={assets.reference-drink-illustration} host={assets.ranking-host} thumb1={assets.ranking-icon} thumb2={assets.ranking-creatify} thumb3={assets.ranking-higgsfield}>
+  <webscene:DeliveryWorkshop id="delivery-workshop" timeline={program.timeline} within={assets.canvas.bounds} font={assets.display-font} during={delivery-workshop-window} film={hypit-ranking-media.source} clone={ranking-clone-media.source} water={water-break-media.source} reference={assets.reference-drink-illustration} host={assets.ranking-host} thumb1={assets.ranking-icon} thumb2={assets.ranking-creatify} thumb3={assets.ranking-higgsfield}>
     <webscene:Beat name="assets" at={moment-result-assets-cue}/>
     <webscene:Beat name="upload" at={moment-result-upload-cue}/>
     <webscene:Beat name="compare" at={moment-result-compare-cue}/>
@@ -666,7 +666,7 @@
     <webscene:Beat name="brand" at={moment-result-brand-cue}/>
     <webscene:Beat name="guess" at={moment-result-guess-cue}/>
   </webscene:DeliveryWorkshop>
-  <webscene:Outro id="outro-scene" timeline={program.timeline} within={assets.canvas.bounds} font={assets.display-font} during={outro-scene-window} page={readme-demo-media.media} codex={assets.icon-codex} portraits-0={assets.portraits-0} portraits-1={assets.portraits-1} portraits-2={assets.portraits-2} portraits-3={assets.portraits-3} portraits-4={assets.portraits-4}>
+  <webscene:Outro id="outro-scene" timeline={program.timeline} within={assets.canvas.bounds} font={assets.display-font} during={outro-scene-window} page={readme-demo-media.source} codex={assets.icon-codex} portraits-0={assets.portraits-0} portraits-1={assets.portraits-1} portraits-2={assets.portraits-2} portraits-3={assets.portraits-3} portraits-4={assets.portraits-4}>
     <webscene:Beat name="overtime" at={moment-outro-overtime-cue}/>
     <webscene:Beat name="github" at={moment-outro-github-cue}/>
     <webscene:Beat name="copy" at={moment-outro-copy-cue}/>

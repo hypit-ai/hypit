@@ -14,8 +14,9 @@ import type { Timeline } from "@hypit/timeline";
 import { timelineTypes } from "@hypit/timeline";
 import { spatialTypes } from "@hypit/spatial";
 import type { SpatialFrame } from "@hypit/spatial";
-import { assertTemporalInstantFor, temporalTypes } from "@hypit/temporal";
-import type { TemporalInstant, TemporalWindow } from "@hypit/temporal";
+import { temporalTypes } from "@hypit/temporal";
+import { assertTemporalInstantFor } from "@hypit/timeline";
+import type { TemporalInstant, TemporalWindow } from "@hypit/timeline";
 import { renderChat } from "./render.js";
 import type { ChatOptions, Message } from "./render.js";
 
@@ -23,14 +24,14 @@ const module = { name: "@example/chat-scene", version: "1" } as const;
 const types = Object.fromEntries(["Options", "Message", "Messages"].map(name => [name, { module, name }])) as Record<"Options" | "Message" | "Messages", TypeRef>;
 const producers = Object.fromEntries(["empty", "append", "render"].map(name => [name, { module, name }])) as Record<"empty" | "append" | "render", { module: typeof module; name: string }>;
 export const manifest: ModuleManifest = { format: "hypit.module@1", ...module,
-  dependencies: [compositionTypes.visualTrack, mediaTypes.fontStack, timelineTypes.timeline, spatialTypes.frame, temporalTypes.instant].map(type => type.module),
+  dependencies: [compositionTypes.visualTrack, mediaTypes.fontStack, timelineTypes.timeline, spatialTypes.frame, timelineTypes.instant].map(type => type.module),
   types: Object.values(types).map(type => type.name), capabilities: [], producers: [
     { name: "empty", inputs: [], result: { kind: "output" as const, name: "messages", type: types.Messages } },
     { name: "append", inputs: [{ name: "messages", type: types.Messages }, { name: "message", type: types.Message },
-      { name: "at", type: temporalTypes.instant }, { name: "timeline", type: timelineTypes.timeline }], result: { kind: "output" as const, name: "messages", type: types.Messages } },
+      { name: "at", type: timelineTypes.instant }, { name: "timeline", type: timelineTypes.timeline }], result: { kind: "output" as const, name: "messages", type: types.Messages } },
     { name: "render", inputs: [{ name: "messages", type: types.Messages }, { name: "options", type: types.Options },
       { name: "timeline", type: timelineTypes.timeline }, { name: "within", type: spatialTypes.frame },
-      { name: "window", type: temporalTypes.window }, { name: "font", type: mediaTypes.fontStack }], result: { kind: "output" as const, name: "visual", type: compositionTypes.visualTrack } },
+      { name: "window", type: timelineTypes.window }, { name: "font", type: mediaTypes.fontStack }], result: { kind: "output" as const, name: "visual", type: compositionTypes.visualTrack } },
   ],
 };
 const valueOf = <T>(record: TypedRecord | undefined): T => {
@@ -77,7 +78,7 @@ const authorDeclaration: AuthorDeclarationCompiler = {
       { name: "timeline", kind: "reference", required: true, accepts: [timelineTypes.timeline], summary: "Selects the Timeline." },
       { name: "within", kind: "reference", required: true, accepts: [spatialTypes.frame], summary: "Places the scene." },
       { name: "font", kind: "reference", required: true, accepts: [mediaTypes.fontStack], summary: "Selects the font stack." },
-      { name: "during", kind: "expression", required: true, accepts: [temporalTypes.window], summary: "Selects the scene window." },
+      { name: "during", kind: "expression", required: true, accepts: [timelineTypes.window], summary: "Selects the scene window." },
       { name: "title", kind: "literal", required: true, summary: "Sets the title." },
       { name: "entrance-frames", kind: "literal", required: false, summary: "Sets the entrance duration." },
     ],
@@ -88,7 +89,7 @@ const authorDeclaration: AuthorDeclarationCompiler = {
         { name: "sender", kind: "literal", required: true, summary: "Sets the sender." },
         { name: "text", kind: "literal", required: true, summary: "Sets the copy." },
         { name: "side", kind: "literal", required: true, values: ["left", "right"], summary: "Places the bubble." },
-        { name: "at", kind: "expression", required: true, accepts: [temporalTypes.instant], summary: "Selects the arrival Instant." },
+        { name: "at", kind: "expression", required: true, accepts: [timelineTypes.instant], summary: "Selects the arrival Instant." },
       ],
     }],
   },
@@ -101,13 +102,13 @@ const authorDeclaration: AuthorDeclarationCompiler = {
     const timeline = await reference(declaration, "timeline", timelineTypes.timeline, resolveReference);
     const within = await reference(declaration, "within", spatialTypes.frame, resolveReference);
     const font = await reference(declaration, "font", mediaTypes.fontStack, resolveReference);
-    const window = await reference(declaration, "during", temporalTypes.window, resolveReference);
+    const window = await reference(declaration, "during", timelineTypes.window, resolveReference);
     const entrance = declarationField(declaration, "entrance-frames");
     const options: ChatOptions = { id, title: literal(declaration, "title"),
       entranceFrames: Number(entrance?.kind === "literal" ? entrance.value : "10") };
     const records = [{ id: `${id}.options`, type: types.Options, value: value(options), range: declaration.range }];
     const fragmentInputs = [{ name: "timeline", type: timelineTypes.timeline }, { name: "within", type: spatialTypes.frame },
-      { name: "font", type: mediaTypes.fontStack }, { name: "window", type: temporalTypes.window }, { name: "options", type: types.Options }];
+      { name: "font", type: mediaTypes.fontStack }, { name: "window", type: timelineTypes.window }, { name: "options", type: types.Options }];
     const bindings: Record<string, import("@hypit/hypit/author").AuthorValueRef> = {
       timeline: timeline.ref, within: within.ref, font: font.ref, window: window.ref, options: { kind: "record", id: `${id}.options` },
     };
@@ -121,11 +122,11 @@ const authorDeclaration: AuthorDeclarationCompiler = {
       const messageId = literal(child, "id");
       const side = literal(child, "side");
       if (side !== "left" && side !== "right") throw new Error("Message side must be left or right.");
-      const at = await reference(child, "at", temporalTypes.instant, resolveReference);
+      const at = await reference(child, "at", timelineTypes.instant, resolveReference);
       const key = `message-${++index}`;
       records.push({ id: `${id}.${key}`, type: types.Message,
         value: value({ id: messageId, sender: literal(child, "sender"), text: literal(child, "text"), side }), range: child.range ?? declaration.range });
-      fragmentInputs.push({ name: key, type: types.Message }, { name: `${key}-at`, type: temporalTypes.instant });
+      fragmentInputs.push({ name: key, type: types.Message }, { name: `${key}-at`, type: timelineTypes.instant });
       bindings[key] = { kind: "record", id: `${id}.${key}` };
       bindings[`${key}-at`] = at.ref;
       operations.push({ id: key, producer: producers.append,

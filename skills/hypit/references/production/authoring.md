@@ -126,8 +126,8 @@ authored production:
 <import as="mediaop" from="@hypit/media-operations@1"/>
 
 <asset:Video id="accepted-opening" src="./assets/opening.mp4"/>
-<mediaop:Prepare id="opening-media" source={accepted-opening}
-  video="primary-moving" audio="default" span-authority="video"/>
+<media:Video id="opening-media" source={accepted-opening}
+   audio="default" />
 ```
 
 Replacing a Caption or graphic leaves that accepted performance reference unchanged. To request

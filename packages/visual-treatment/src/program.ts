@@ -1,5 +1,11 @@
-import { htmlAdjustment, type HtmlAdjustmentKeyframe } from "@hypit/html-program";
-import type { VisualAdjustmentEffect } from "@hypit/visual-adjustment";
+import { pointwiseOperatorTemporalSupport } from "@hypit/audiovisual";
+import type { PictureOperator, SignalOperatorProgram } from "@hypit/audiovisual";
+import type { LocalTemporalDomain } from "@hypit/temporal/algebra";
+import {
+  visualTreatmentHtml,
+  visualTreatmentHtmlProgram,
+  type VisualTreatmentHtmlKeyframe,
+} from "./html.js";
 
 export type TreatmentEasing = "linear" | "ease-in" | "ease-out" | "ease-in-out";
 export type TreatmentKeyframe<T> = T & { readonly at: number; readonly easing?: TreatmentEasing };
@@ -23,6 +29,12 @@ export type ColorTreatment = {
   readonly sepia: number;
   readonly invert: number;
 };
+
+export type TreatmentOperatorSpec =
+  | { readonly kind: "transform"; readonly states: readonly TreatmentKeyframe<TransformTreatment>[] }
+  | { readonly kind: "opacity"; readonly states: readonly TreatmentKeyframe<{ readonly value: number }>[] }
+  | { readonly kind: "blur"; readonly states: readonly TreatmentKeyframe<{ readonly radius: number }>[] }
+  | { readonly kind: "color"; readonly states: readonly TreatmentKeyframe<ColorTreatment>[] };
 
 const identity = {
   filter: "none",
@@ -48,10 +60,10 @@ function easing(value: TreatmentEasing | undefined): void {
 
 function effect<T>(
   states: readonly TreatmentKeyframe<T>[],
-  convert: (state: TreatmentKeyframe<T>) => HtmlAdjustmentKeyframe,
-): VisualAdjustmentEffect {
+  convert: (state: TreatmentKeyframe<T>) => VisualTreatmentHtmlKeyframe,
+): SignalOperatorProgram {
   if (states.length === 0) throw new Error("Visual Treatment requires at least one state.");
-  return htmlAdjustment({ keyframes: states.map((state) => {
+  return visualTreatmentHtml({ keyframes: states.map((state) => {
     range(state.at, 0, 1, "Treatment keyframe position");
     easing(state.easing);
     return convert(state);
@@ -64,7 +76,7 @@ function common<T>(state: TreatmentKeyframe<T>) {
 
 export function transformTreatment(
   states: readonly TreatmentKeyframe<TransformTreatment>[],
-): VisualAdjustmentEffect {
+): SignalOperatorProgram {
   return effect(states, (state) => {
     for (const [name, value] of Object.entries(state)) if (name !== "easing") finite(value as number, `Transform ${name}`);
     return {
@@ -78,7 +90,7 @@ export function transformTreatment(
 
 export function opacityTreatment(
   states: readonly TreatmentKeyframe<{ readonly value: number }>[],
-): VisualAdjustmentEffect {
+): SignalOperatorProgram {
   return effect(states, (state) => {
     range(state.value, 0, 1, "Opacity value");
     return { ...common(state), ...identity, opacity: state.value };
@@ -87,7 +99,7 @@ export function opacityTreatment(
 
 export function blurTreatment(
   states: readonly TreatmentKeyframe<{ readonly radius: number }>[],
-): VisualAdjustmentEffect {
+): SignalOperatorProgram {
   return effect(states, (state) => {
     finite(state.radius, "Blur radius");
     if (state.radius < 0) throw new Error("Blur radius must not be negative.");
@@ -98,7 +110,7 @@ export function blurTreatment(
 /** Browser-sRGB basic colour operation with one explicit, stable internal order. */
 export function colorTreatment(
   states: readonly TreatmentKeyframe<ColorTreatment>[],
-): VisualAdjustmentEffect {
+): SignalOperatorProgram {
   return effect(states, (state) => {
     for (const [name, value] of Object.entries(state)) if (name !== "easing") finite(value as number, `Color ${name}`);
     if (state.brightness < 0 || state.contrast < 0 || state.saturation < 0) {
@@ -121,4 +133,53 @@ export function colorTreatment(
       ].join(" "),
     };
   });
+}
+
+function pictureOperator(id: TreatmentOperatorSpec["kind"], domain: LocalTemporalDomain,
+  effect: SignalOperatorProgram): PictureOperator {
+  return {
+    id: `hypit.visual-treatment:${id}`,
+    inputs: ["picture"],
+    temporalControls: { progress: structuredClone(domain) },
+    temporalSupport: pointwiseOperatorTemporalSupport(["picture"]),
+    program: visualTreatmentHtmlProgram(effect, domain, "picture"),
+  };
+}
+
+export function transformOperator(domain: LocalTemporalDomain,
+  states: readonly TreatmentKeyframe<TransformTreatment>[]): PictureOperator {
+  return pictureOperator("transform", domain, transformTreatment(states));
+}
+
+export function opacityOperator(domain: LocalTemporalDomain,
+  states: readonly TreatmentKeyframe<{ readonly value: number }>[]): PictureOperator {
+  return pictureOperator("opacity", domain, opacityTreatment(states));
+}
+
+export function blurOperator(domain: LocalTemporalDomain,
+  states: readonly TreatmentKeyframe<{ readonly radius: number }>[]): PictureOperator {
+  return pictureOperator("blur", domain, blurTreatment(states));
+}
+
+export function colorOperator(domain: LocalTemporalDomain,
+  states: readonly TreatmentKeyframe<ColorTreatment>[]): PictureOperator {
+  return pictureOperator("color", domain, colorTreatment(states));
+}
+
+export function assertTreatmentOperatorSpec(spec: TreatmentOperatorSpec): void {
+  if (spec.kind === "transform") { transformTreatment(spec.states); return; }
+  if (spec.kind === "opacity") { opacityTreatment(spec.states); return; }
+  if (spec.kind === "blur") { blurTreatment(spec.states); return; }
+  if (spec.kind === "color") { colorTreatment(spec.states); return; }
+  throw new Error(`Visual treatment kind ${String((spec as { readonly kind?: unknown }).kind)} is invalid.`);
+}
+
+/** Resolves one package-owned treatment configuration into a closed unary Picture Operator. */
+export function treatmentOperator(spec: TreatmentOperatorSpec, domain: LocalTemporalDomain): PictureOperator {
+  assertTreatmentOperatorSpec(spec);
+  if (spec.kind === "transform") return transformOperator(domain, spec.states);
+  if (spec.kind === "opacity") return opacityOperator(domain, spec.states);
+  if (spec.kind === "blur") return blurOperator(domain, spec.states);
+  if (spec.kind === "color") return colorOperator(domain, spec.states);
+  throw new Error(`Visual treatment kind ${String((spec as { readonly kind?: unknown }).kind)} is invalid.`);
 }

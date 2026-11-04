@@ -96,8 +96,8 @@ reference that authored Record:
 <import as="mediaop" from="@hypit/media-operations@1"/>
 
 <asset:Video id="accepted-opening" src="./assets/opening.mp4"/>
-<mediaop:Prepare id="opening-media" source={accepted-opening}
-  video="primary-moving" audio="default" span-authority="video"/>
+<media:Video id="opening-media" source={accepted-opening}
+   audio="default" />
 ```
 
 This is a durable production edit. Captions, Timeline placement, visual treatment and rendering use

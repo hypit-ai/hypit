@@ -1,13 +1,10 @@
 import type { RefinementPackage } from "@hypit/hypit/refinement";
 import type { ProducerPackage } from "@hypit/hypit/producer";
-import type { Composition } from "@hypit/composition";
 import type { CanonicalValue, Value } from "@hypit/hypit/protocol";
-import { canonicalize } from "@hypit/hypit/protocol";
 
-import { compileHtmlProgram } from "./document.js";
-import { assertHtmlProgram } from "./document.js";
+import { assertHtmlProgram } from "./program.js";
 import type { HtmlProgram } from "./types.js";
-import type { FrameSpan } from "@hypit/timeline";
+import type { FrameSpan } from "@hypit/temporal";
 import { verifyVisualDeliverySpec } from "@hypit/media";
 import type { VisualDeliverySpec } from "@hypit/media";
 import { htmlRasterRequest, verifyHtmlFrameImages } from "./execution.js";
@@ -20,12 +17,7 @@ function valueOf(value: Value, subject: string): CanonicalValue {
 
 /** Trusted deterministic lowering only; this component never renders frames or reads Artifacts. */
 export const htmlProgramComponent = {
-  producers: [{
-    producer: htmlProgramProducers.compile,
-    handler: ({ inputs }: { inputs: Record<string, { value: Value } | undefined> }) => ({ kind: "output" as const, value: (canonicalize(compileHtmlProgram(
-          valueOf(inputs.composition!.value, "Composition") as unknown as Composition,
-          ))) }),
-  }, ...[htmlProgramProducers.requestVisual, htmlProgramProducers.requestVisualRange].map((producer) => ({
+  producers: [htmlProgramProducers.requestVisual, htmlProgramProducers.requestVisualRange].map((producer) => ({
     producer,
     handler: ({ inputs }: { inputs: Record<string, { value: Value } | undefined> }) => {
       const delivery = valueOf(inputs.delivery!.value, "VisualDeliverySpec") as unknown as VisualDeliverySpec;
@@ -36,7 +28,7 @@ export const htmlProgramComponent = {
         inputs.range === undefined ? {} : { range: valueOf(inputs.range.value, "FrameSpan") as unknown as FrameSpan },
       ) };
     },
-  }))],
+  })),
   refinements: [
     { type: htmlProgramTypes.program, handler: ({ value }) => assertHtmlProgram(value as unknown as HtmlProgram) },
     { type: htmlProgramTypes.frameImages, handler: ({ value }) => verifyHtmlFrameImages(value) },

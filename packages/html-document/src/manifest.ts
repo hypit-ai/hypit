@@ -1,7 +1,5 @@
-import { compositionDependency, compositionTypes } from "@hypit/composition";
-import { htmlProgramModuleRef, htmlProgramSchema } from "@hypit/html-program";
-import { audioProgramModuleRef, audioProgramSchema } from "@hypit/audio-program";
-import { timelineDependency } from "@hypit/timeline";
+import { htmlProgramModuleRef, htmlProgramSchema, htmlProgramTypes } from "@hypit/html-program";
+import { audioProgramModuleRef, audioProgramSchema, audioProgramTypes } from "@hypit/audio-program";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/hypit/protocol";
 
 export const htmlDocumentModuleRef = { name: "@hypit/html-document", version: "1" } as const;
@@ -23,8 +21,6 @@ export const htmlDocumentManifest: ModuleManifest = {
   format: "hypit.module@1",
   ...htmlDocumentModuleRef,
   dependencies: [
-    compositionDependency,
-    timelineDependency,
     htmlProgramModuleRef,
     audioProgramModuleRef,
   ],
@@ -32,7 +28,10 @@ export const htmlDocumentManifest: ModuleManifest = {
   capabilities: [],
   producers: [{
     name: htmlDocumentProducers.compile.name,
-    inputs: [{ name: "composition", type: compositionTypes.composition }],
+    inputs: [
+      { name: "program", type: htmlProgramTypes.program },
+      { name: "audio", type: audioProgramTypes.program },
+    ],
     result: { kind: "output", name: "document", type: htmlDocumentTypes.document },
   }],
 };

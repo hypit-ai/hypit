@@ -11,24 +11,12 @@
     "activation": "./src/activation.ts"
   },
   "dependencies": {
-    "@hypit/composition": "workspace:^0.2.0",
     "@hypit/media": "workspace:^0.2.0",
-    "@hypit/temporal": "workspace:^0.1.1",
-    "@hypit/timeline": "workspace:^0.1.1"
+    "@hypit/temporal": "workspace:^0.1.1"
   },
   "devDependencies": {
-    "@hypit/caption": "workspace:*",
-    "@hypit/depth-stack": "workspace:*",
-    "@hypit/fontsource": "workspace:*",
-    "@hypit/visual-track": "workspace:*",
-    "@hypit/ranking": "workspace:*",
-    "@hypit/script": "workspace:*",
-    "@hypit/spatial": "workspace:*",
-    "@hypit/recipe": "workspace:*",
-    "@hypit/text-fine": "workspace:*",
     "linkedom": "0.18.13",
     "@hypit/producer": "workspace:*",
-    "@hypit/author": "workspace:*",
     "@hypit/protocol": "workspace:*",
     "@hypit/refinement": "workspace:*",
     "@hypit/hypit": "workspace:*"

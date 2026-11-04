@@ -1,40 +1,30 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { timelineFrameSampleBoundary, timelineSampleFrames } from "@hypit/timeline";
-import type { Timeline } from "@hypit/timeline";
-
 import {
-  assertTemporalInstantFor,
-  assertDomainWindow,
-  assertTemporalWindowFor,
-  assertWindowRelation,
-  composeTemporalWindow,
   composeTemporalMaps,
   createTemporalMapEvaluator,
   evaluateTemporalMap,
   exactTemporalValueFromFrames,
+  frameSampleBoundary,
+  frameSpanSamples,
   identityTemporalMap,
   integrateTemporalRateProfile,
   moduloExactTemporalValue,
-  projectDomainPosition,
-  projectProgramInstant,
   parseTemporalRelationFields,
   parseTemporalCubicRelationFields,
   resolveTemporalBoundary,
+  resolveExactTemporalRelation,
   resolveTemporalRelation,
   sealTemporalMap,
-  resolveTriggeredSchedule,
   temporalDurationInSamples,
   temporalExtentFromDomain,
   temporalMapMayContain,
 } from "../src/index.js";
 
-const timeline: Timeline = { id: "film", frameRate: { numerator: 30, denominator: 1 }, frameCount: 300 };
+const timeline = { id: "film", frameRate: { numerator: 30, denominator: 1 }, frameCount: 300 };
 const frames = (value: number) => ({ unit: "frames" as const, value });
 const seconds = (numerator: number, denominator = 1) => ({ unit: "seconds" as const, numerator, denominator });
-const instant = (id: string, projection: import("../src/index.js").TemporalInstantExpression) =>
-  projectProgramInstant({ itemId: id, subjectId: "subject", timeline, projection });
 
 test("Temporal relation literals are parsed without a Frontend", () => {
   assert.deepEqual(parseTemporalRelationFields({
@@ -90,31 +80,6 @@ test("exact temporal modulo preserves phase without choosing a frame grid", () =
   assert.deepEqual(moduloExactTemporalValue(
     { ticks: "-1", timeBase: { numerator: 1, denominator: 3 } }, halfSecond,
   ), { ticks: "1", timeBase: { numerator: 1, denominator: 6 } });
-});
-
-test("one domain projector resolves exact local positions only after placement", () => {
-  const domain = { id: "voice-local", duration: exactTemporalValueFromFrames(90, timeline) };
-  const start = instant("voice.start", { ref: "absolute", at: frames(150) });
-  const end = instant("voice.end", { ref: "absolute", at: frames(240) });
-  const window = composeTemporalWindow({ id: "voice", subjectId: "voice" }, start, end);
-  assert.doesNotThrow(() => assertDomainWindow(domain, window, timeline));
-  assert.equal(projectDomainPosition(domain, window, timeline, exactTemporalValueFromFrames(0, timeline)), 150);
-  assert.equal(projectDomainPosition(domain, window, timeline, domain.duration), 240);
-});
-
-test("domain projection uses explicit boundary policy and rejects positions outside the domain", () => {
-  const domain = { id: "voice-local", duration: { ticks: "2", timeBase: { numerator: 1, denominator: 1 } } };
-  const start = instant("voice.start", { ref: "absolute", at: frames(30) });
-  const end = instant("voice.end", { ref: "absolute", at: frames(90) });
-  const window = composeTemporalWindow({ id: "voice", subjectId: "voice" }, start, end);
-  assert.doesNotThrow(() => assertDomainWindow(domain, window, timeline));
-  const short = composeTemporalWindow({ id: "short", subjectId: "voice" }, start,
-    instant("short.end", { ref: "absolute", at: frames(89) }));
-  assert.throws(() => assertDomainWindow(domain, short, timeline), /does not cover/u);
-  assert.throws(() => projectDomainPosition(domain, window, timeline,
-    { ticks: "-1", timeBase: { numerator: 1, denominator: 30 } }), /outside local temporal domain/u);
-  assert.throws(() => projectDomainPosition(domain, window, timeline,
-    { ticks: "61", timeBase: { numerator: 1, denominator: 30 } }), /outside local temporal domain/u);
 });
 
 test("boundary policies are explicit for exact durations that do not land on a frame", () => {
@@ -273,6 +238,29 @@ test("cubic Map pieces evaluate exact monotone source positions without a curve 
   }] }] }), /controls must be monotone/u);
 });
 
+test("one clock-free occurrence relation closes trim, hold and loop into one Map stage", () => {
+  const value = (ticks: string) => ({ ticks, timeBase: { numerator: 1, denominator: 1 } } as const);
+  const point = (ticks: string) => ({ edge: "start" as const, offset: value(ticks) });
+  const target = { id: "occurrence-relation", duration: value("6") };
+  const source = { id: "source-relation", duration: value("10") };
+  const fullSource = { from: point("0"), until: point("10") };
+  const map = resolveExactTemporalRelation({ target, source, spec: { relations: [
+    { kind: "rate", target: { from: point("0"), until: point("2") },
+      targetAt: point("0"), sourceAt: point("1"), rate: { numerator: 1, denominator: 1 },
+      source: fullSource },
+    { kind: "rate", target: { from: point("2"), until: point("4") },
+      targetAt: point("2"), sourceAt: point("5"), rate: { numerator: 0, denominator: 1 },
+      source: fullSource },
+    { kind: "rate", target: { from: point("4"), until: point("6") },
+      targetAt: point("4"), sourceAt: point("0"), rate: { numerator: 1, denominator: 1 },
+      source: fullSource, wrap: { from: point("0"), until: point("2") } },
+  ] } });
+  assert.equal(map.stages.length, 1);
+  assert.deepEqual(evaluateTemporalMap(map, value("1"), "after")?.position, value("2"));
+  assert.deepEqual(evaluateTemporalMap(map, value("3"), "after")?.position, value("5"));
+  assert.deepEqual(evaluateTemporalMap(map, value("5"), "after")?.position, value("1"));
+});
+
 test("a signed rate profile integrates to one exact cubic target-to-source Map", () => {
   const value = (ticks: string, denominator = 1) => ({ ticks, timeBase: { numerator: 1, denominator } });
   const source = { id: "footage", duration: value("10") };
@@ -337,14 +325,14 @@ test("a wrap seam is represented by its source side instead of the rate sign", (
 test("one relation resolver binds edge-relative author intent to exact domains", () => {
   const target = { id: "occurrence", duration: { ticks: "4", timeBase: { numerator: 1, denominator: 1 } } };
   const source = { id: "prepared", duration: { ticks: "2", timeBase: { numerator: 1, denominator: 1 } } };
-  const partial = resolveTemporalRelation({ target, source, clock: timeline });
+  const partial = resolveTemporalRelation({ target, source, grid: timeline });
   assert.deepEqual(partial.stages[0]?.pieces[0], {
     target: { start: { ticks: "0", timeBase: { numerator: 1, denominator: 1 } },
       end: { ticks: "2", timeBase: { numerator: 1, denominator: 1 } } },
     sourceAtStart: { ticks: "0", timeBase: { numerator: 1, denominator: 1 } },
     rate: { numerator: 1, denominator: 1 },
   });
-  const reverse = resolveTemporalRelation({ target: source, source, clock: timeline, spec: { relations: [{
+  const reverse = resolveTemporalRelation({ target: source, source, grid: timeline, spec: { relations: [{
     kind: "rate",
     target: { from: { edge: "start", offset: seconds(0) }, until: { edge: "end", offset: seconds(0) } },
     targetAt: { edge: "start", offset: seconds(0) },
@@ -359,75 +347,11 @@ test("one relation resolver binds edge-relative author intent to exact domains",
   });
 });
 
-test("Timeline and absolute expressions resolve to minimal absolute Instants", () => {
-  assert.deepEqual(instant("start", { ref: "timeline.start" }), {
-    id: "start", subjectId: "subject", timelineId: "film", frame: 0,
-  });
-  assert.deepEqual(instant("end", { ref: "timeline.end" }), {
-    id: "end", subjectId: "subject", timelineId: "film", frame: 300,
-  });
-  assert.equal(instant("absolute", { ref: "absolute", at: seconds(5, 2), offset: frames(8) }).frame, 83);
-});
-
-test("Instant projection uses exact rational clock arithmetic and rejects out-of-range points", () => {
-  const ntsc: Timeline = { id: "ntsc", frameRate: { numerator: 30_000, denominator: 1_001 }, frameCount: 30 };
-  assert.equal(projectProgramInstant({ itemId: "half", subjectId: "half", timeline: ntsc,
-    projection: { ref: "absolute", at: { unit: "milliseconds", value: 500 } } }).frame, 15);
-  assert.throws(() => instant("before", { ref: "timeline.start", offset: frames(-1) }), /falls outside Timeline/u);
-  assert.throws(() => instant("after", { ref: "timeline.end", offset: frames(1) }), /falls outside Timeline/u);
-});
-
-test("Window composition keeps its own identity while accepting independent endpoint origins", () => {
-  const start = projectProgramInstant({ itemId: "reveal", subjectId: "semantic.reveal", timeline,
-    projection: { ref: "absolute", at: frames(30) } });
-  const end = projectProgramInstant({ itemId: "answer-end", subjectId: "semantic.answer-end", timeline,
-    projection: { ref: "absolute", at: frames(90) } });
-  const window = composeTemporalWindow({ id: "window", subjectId: "authored.reveal-band" }, start, end);
-  assert.deepEqual(window, {
-    id: "window",
-    subjectId: "authored.reveal-band",
-    start,
-    end,
-    span: { startFrame: 30, endFrameExclusive: 90 },
-  });
-  assert.doesNotThrow(() => assertTemporalWindowFor(window, { timeline }));
-  assert.throws(() => composeTemporalWindow({ id: "zero", subjectId: "subject" }, start, start), /zero window/u);
-  assert.throws(() => composeTemporalWindow({ id: "reverse", subjectId: "subject" }, end, start), /reversed/u);
-});
-
-test("resolved Instants validate only absolute execution identity", () => {
-  const value = instant("point", { ref: "absolute", at: frames(40) });
-  assert.doesNotThrow(() => assertTemporalInstantFor(value, { timeline }));
-  assert.throws(() => assertTemporalInstantFor(value, { timeline: { ...timeline, id: "other" } }), /different Timeline/u);
-});
-
 test("frame and authored durations enter one exact sample-boundary rule", () => {
-  const ntsc: Timeline = { id: "ntsc", frameRate: { numerator: 30_000, denominator: 1_001 }, frameCount: 30 };
-  assert.equal(timelineFrameSampleBoundary(ntsc, 15, 48_000), 24_024);
-  assert.equal(timelineSampleFrames(ntsc, 48_000), 48_048);
+  const ntsc = { frameRate: { numerator: 30_000, denominator: 1_001 } };
+  assert.equal(frameSampleBoundary(ntsc, 15, 48_000), 24_024);
+  assert.equal(frameSpanSamples({ startFrame: 0, endFrameExclusive: 30 }, ntsc, 48_000).sampleFrames, 48_048);
   assert.equal(temporalDurationInSamples(frames(15), ntsc), 24_024);
   assert.equal(temporalDurationInSamples({ unit: "milliseconds", value: 125 }, ntsc), 6_000);
   assert.equal(temporalDurationInSamples(seconds(1, 3), ntsc), 16_000);
-});
-
-test("disjoint validation checks physical overlap without reordering input", () => {
-  const window = (id: string, start: number, end: number) => composeTemporalWindow({ id, subjectId: "subject" },
-    instant(`${id}.start`, { ref: "absolute", at: frames(start) }),
-    instant(`${id}.end`, { ref: "absolute", at: frames(end) }));
-  const windows = [window("later", 90, 180), window("earlier", 30, 120)];
-  assert.equal(assertWindowRelation(windows, "independent"), windows);
-  assert.throws(() => assertWindowRelation(windows, "disjoint"), /overlap under disjoint/u);
-});
-
-test("triggered schedule derives cumulative and exclusive windows from authored order", () => {
-  const result = resolveTriggeredSchedule({ outer: { startFrame: 0, endFrameExclusive: 300 }, terminalFrame: 240,
-    triggers: [{ id: "one", frame: 30 }, { id: "two", frame: 90 }, { id: "three", frame: 150 }] });
-  assert.deepEqual(result.cumulative, [
-    { startFrame: 30, endFrameExclusive: 300 }, { startFrame: 90, endFrameExclusive: 300 }, { startFrame: 150, endFrameExclusive: 300 },
-  ]);
-  assert.deepEqual(result.exclusive, [
-    { startFrame: 30, endFrameExclusive: 90 }, { startFrame: 90, endFrameExclusive: 150 }, { startFrame: 150, endFrameExclusive: 240 },
-  ]);
-  assert.throws(() => resolveTriggeredSchedule({ outer: { startFrame: 20, endFrameExclusive: 200 }, terminalFrame: 180,
-    triggers: [{ id: "a", frame: 40 }, { id: "b", frame: 40 }] }), /strictly increasing/u);
 });

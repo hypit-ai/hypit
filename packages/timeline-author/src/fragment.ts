@@ -224,7 +224,7 @@ export function compileTimelineAuthorFragment(options: TimelineAuthorFragmentOpt
     addOperation({ id: operationId, producer: timelineAuthorProducers.instant,
       inputs: { timeline: operation("timeline"), point, spec: identitySpec(id, subjectId) },
       result: { kind: "output" as const, name: "instant" } });
-    exports.push({ name: port, type: temporalTypes.instant, root: operation(operationId) });
+    exports.push({ name: port, type: timelineTypes.instant, root: operation(operationId) });
     outputNames.push({ port, suffix });
   };
   const exportWindow = (port: string, suffix: string, span: FragmentOperationRef, id: string): void => {
@@ -232,7 +232,7 @@ export function compileTimelineAuthorFragment(options: TimelineAuthorFragmentOpt
     addOperation({ id: operationId, producer: timelineAuthorProducers.window,
       inputs: { timeline: operation("timeline"), span, spec: identitySpec(id) },
       result: { kind: "output" as const, name: "window" } });
-    exports.push({ name: port, type: temporalTypes.window, root: operation(operationId) });
+    exports.push({ name: port, type: timelineTypes.window, root: operation(operationId) });
     outputNames.push({ port, suffix });
   };
 

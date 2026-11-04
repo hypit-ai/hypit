@@ -6,7 +6,7 @@ import type { FontArtifactRef, PreparedMedia } from "@hypit/media";
 import type { Timeline } from "@hypit/timeline";
 import type { SpatialFrame } from "@hypit/spatial";
 import { compareExactTemporalValues, composeTemporalMaps, exactTemporalValueFromFrames, sealTemporalMap } from "@hypit/temporal";
-import type { TemporalInstant, TemporalWindow } from "@hypit/temporal";
+import type { TemporalInstant, TemporalWindow } from "@hypit/timeline";
 
 export type ExplainerOptions = { id: string; title: string; transitionFrames: number };
 

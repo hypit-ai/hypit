@@ -16,7 +16,7 @@ import type {
   CommentStickerSet,
   CommentStickerStyle,
 } from "./types.js";
-import type { TemporalWindow } from "@hypit/temporal";
+import type { TemporalWindow } from "@hypit/timeline";
 
 function valueOf<T>(value: Value | undefined, label: string): T {
   if (value === undefined) throw new Error(`${label} is missing.`);

@@ -58,9 +58,9 @@ export function createRankingFragment(
   const inputs: Array<GraphFragment["inputs"][number]> = [
     { name: "header", type: rankingTypes.header },
     { name: "timeline", type: timelineTypes.timeline },
-    { name: "outer", type: temporalTypes.window },
+    { name: "outer", type: timelineTypes.window },
     ...(variant === "top-three" ? [
-      { name: "terminal", type: temporalTypes.instant },
+      { name: "terminal", type: timelineTypes.instant },
     ] : []),
     ...(variant === "column" || variant === "tier-board" ? [{ name: "within", type: spatialTypes.frame }] : []),
     { name: "frame", type: spatialTypes.frame },
@@ -83,7 +83,7 @@ export function createRankingFragment(
     if (item.iconName !== undefined) inputs.push({ name: item.iconName, type: mediaTypes.blobArtifact });
     if (item.timingName !== undefined) inputs.push({
       name: item.timingName,
-      type: variant === "top-three" ? temporalTypes.instant : temporalTypes.window,
+      type: variant === "top-three" ? timelineTypes.instant : timelineTypes.window,
     });
     const materializedId = `materialize-${item.suffix}`;
     if (item.contentName !== undefined) operations.push({

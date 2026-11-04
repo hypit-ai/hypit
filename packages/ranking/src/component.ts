@@ -4,7 +4,8 @@ import type { RefinementPackage } from "@hypit/hypit/refinement";
 import type { PreparedMedia } from "@hypit/media";
 import { assertBlobRef, canonicalize } from "@hypit/hypit/protocol";
 import type { BlobRef, Value } from "@hypit/hypit/protocol";
-import type { TemporalInstant, TemporalWindow } from "@hypit/temporal";
+import type { TemporalInstant } from "@hypit/timeline";
+import type { TemporalWindow } from "@hypit/timeline";
 import type { SpatialFrame } from "@hypit/spatial";
 import type { Text } from "@hypit/hypit/text";
 

@@ -70,8 +70,8 @@ test("DepthStack declarations resolve package-owned labels and time values indep
       path: "recipes.deck.proof",
       properties: { "visible-previous": 1, "visible-next": 0 },
     })],
-    ["terminal", external("terminal", temporalTypes.instant)],
-    ["activation", external("activation", temporalTypes.instant)],
+    ["terminal", external("terminal", timelineTypes.instant)],
+    ["activation", external("activation", timelineTypes.instant)],
     ["image", external("image", blobTypes.blob)],
     ["extent", external("extent", spatialTypes.extent)],
     ["font", external("font", mediaTypes.fontStack, { faces: [{

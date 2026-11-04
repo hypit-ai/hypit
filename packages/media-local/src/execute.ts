@@ -4,8 +4,7 @@ import { copyFile, mkdir, mkdtemp, open, readFile, rm, stat, writeFile } from "n
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { sameVisualDeliverySpec, sealMediaInspection, sealMuxedMedia, sealTimelineAudio, verifyMediaDeliverySpec, verifyPreparedAudioSource, verifyTimelineVisual, verifyTimelineAudio } from "@hypit/media";
-import type { MediaAudioStream, MediaInspection, MediaTimestamp, MediaVideoStream, MuxedMedia, PreparedAudioSource, TimelineAudio } from "@hypit/media";
-import { assertFrameSpan, clockFrameSpanSamples } from "@hypit/timeline";
+import type { InspectMediaNeed, MediaAudioStream, MediaInspection, MediaTimestamp, MediaVideoStream, MuxedMedia, PreparedAudioSource, TimelineAudio } from "@hypit/media";
 import { assertSpeechEvidenceAudioIdentity, sealSpeechEvidenceAudio, speechEvidenceSampleFrames } from "@hypit/speech-evidence";
 import type { ProjectSpeechEvidenceAudioNeed, SpeechEvidenceAudio } from "@hypit/speech-evidence";
 import {
@@ -13,17 +12,16 @@ import {
   verifyFrameExtractionRequest,
   type ExtractAudioNeed,
   type ExtractFrameNeed,
-  type InspectMediaNeed,
   type RenderStillVideoNeed,
   verifyStillVideoRequest,
 } from "@hypit/media-operations";
 import { audioProgramSampleFrames, verifyAudioProgram } from "@hypit/audio-program";
-import type { AudioProgram, AudioProgramClip, RenderAudioNeed } from "@hypit/audio-program";
+import type { AudioProgram, AudioProgramMediaSource, AudioProgramNode, RenderAudioNeed } from "@hypit/audio-program";
 import { readPreservePitch } from "@hypit/audio-stretch";
 import type { MuxMediaNeed } from "@hypit/media-delivery";
 import { assertBlobRef, canonicalize } from "@hypit/hypit/protocol";
 import type { BlobRef, CanonicalValue, Value } from "@hypit/hypit/protocol";
-import { addExactTemporalValues, assertTemporalMap, compareExactTemporalValues, isAffineTemporalMapPiece, resolveTemporalBoundary, scaleExactTemporalValue, subtractExactTemporalValues } from "@hypit/temporal";
+import { addExactTemporalValues, assertExactTemporalValue, assertTemporalMap, compareExactTemporalValues, exactTemporalZero, isAffineTemporalMapPiece, resolveTemporalBoundary, scaleExactTemporalValue, subtractExactTemporalValues } from "@hypit/temporal";
 import type { ExactTemporalValue, TemporalMapStage } from "@hypit/temporal";
 
 import { runBoundedMediaProcess, runMediaProcessLines } from "./process.js";
@@ -31,10 +29,11 @@ import { createMediaInspectionCollector, parseMediaInspection } from "./probe.js
 import { parseAnimatedWebp } from "./webp.js";
 import type { AnimatedWebp } from "./webp.js";
 import {
-  audioRenderPlanSourceClips,
+  audioRenderPlanMediaSources,
+  audioRenderPlanReconstructionUses,
   CanonicalPcmReader,
   planAudioProgramRender,
-  planPositiveAffineReconstruction,
+  planDirectProgrammeReconstruction,
   renderAudioProgramWav,
 } from "./audio-render.js";
 
@@ -418,7 +417,14 @@ function evidenceAudioNeed(value: CanonicalValue): ProjectSpeechEvidenceAudioNee
 function renderAudioNeed(value: CanonicalValue): RenderAudioNeed {
   const item = object(value, "RenderAudioNeed") as unknown as RenderAudioNeed;
   verifyAudioProgram(item.program);
-  if (item.range !== undefined) assertFrameSpan(item.range, item.program.frameCount);
+  if (item.range !== undefined) {
+    assertExactTemporalValue(item.range.start, "RenderAudioNeed range start");
+    assertExactTemporalValue(item.range.end, "RenderAudioNeed range end");
+    assert(compareExactTemporalValues(item.range.start, item.range.end) < 0
+      && compareExactTemporalValues(item.range.start, exactTemporalZero()) >= 0
+      && compareExactTemporalValues(item.range.end, item.program.domain.duration) <= 0,
+    "RenderAudioNeed range lies outside its Programme domain");
+  }
   return item;
 }
 
@@ -963,9 +969,15 @@ export async function executeRenderTimelineAudio(
   const programSampleFrames = audioProgramSampleFrames(program);
   const window = need.range === undefined
     ? { startSample: 0, endSampleExclusive: programSampleFrames, sampleFrames: programSampleFrames }
-    : clockFrameSpanSamples(need.range, { frameRate: program.frameRate }, 48_000);
+    : (() => {
+        const startSample = resolveTemporalBoundary(need.range.start,
+          { frameRate: { numerator: program.sampling.sampleRate, denominator: 1 } }, "nearest");
+        const endSampleExclusive = resolveTemporalBoundary(need.range.end,
+          { frameRate: { numerator: program.sampling.sampleRate, denominator: 1 } }, "nearest");
+        return { startSample, endSampleExclusive, sampleFrames: endSampleExclusive - startSample };
+      })();
   const renderPlan = planAudioProgramRender(program, window.startSample, window.sampleFrames);
-  const clips = [...new Set(audioRenderPlanSourceClips(renderPlan))];
+  const mediaSources = [...new Set(audioRenderPlanMediaSources(renderPlan))];
   const work = await mkdtemp(join(tmpdir(), "hypit-media-audio-"));
   const readers = new Set<CanonicalPcmReader>();
   try {
@@ -975,16 +987,16 @@ export async function executeRenderTimelineAudio(
       readonly path: string;
       readonly reader: CanonicalPcmReader;
     }>();
-    // Clip object identity addresses the request-local plan independently of
-    // authored ids that may repeat across namespaced root Tracks.
-    const clipSources = new Map<AudioProgramClip, CanonicalPcmReader>();
-    const clipSourcePaths = new Map<AudioProgramClip, string>();
-    for (const clip of clips) {
-      const key = `${clip.source.source.resource}\u0000${clip.source.streamIndex}`;
+    // Media-source object identity addresses the request-local plan independently
+    // of authored ids. Occurrence timing belongs to Programme uses, not this cache.
+    const mediaReaders = new Map<AudioProgramMediaSource, CanonicalPcmReader>();
+    const mediaPaths = new Map<AudioProgramMediaSource, string>();
+    for (const media of mediaSources) {
+      const key = `${media.source.source.resource}\u0000${media.source.streamIndex}`;
       let decoded = sources.get(key);
       if (decoded === undefined) {
         const path = join(work, `source-${sources.size}.wav`);
-        const renderSource = await decodePreparedAudioBase(rendererEnv, clip.source);
+        const renderSource = await decodePreparedAudioBase(rendererEnv, media.source);
         await stageArtifact(rendererEnv, renderSource.artifact, path);
         const audio = await assertCanonicalWav({
           path,
@@ -994,39 +1006,40 @@ export async function executeRenderTimelineAudio(
           ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
         });
         assert(audio.decodedSampleFrames === renderSource.sampleFrames,
-          `Audio renderer source ${clip.id} differs from its decoded domain`);
+          `Audio renderer source ${media.id} differs from its decoded domain`);
         const reader = new CanonicalPcmReader(path, renderSource.sampleFrames);
         readers.add(reader);
-        decoded = { source: clip.source, path, reader };
+        decoded = { source: media.source, path, reader };
         sources.set(key, decoded);
       } else {
         assert(compareExactTemporalValues(decoded.source.sourceDomain.duration,
-          clip.source.sourceDomain.duration) === 0,
-        `Audio renderer source ${clip.id} reuses one stream with a different domain`);
+          media.source.sourceDomain.duration) === 0,
+        `Audio renderer source ${media.id} reuses one stream with a different domain`);
       }
-      clipSources.set(clip, decoded.reader);
-      clipSourcePaths.set(clip, decoded.path);
+      mediaReaders.set(media, decoded.reader);
+      mediaPaths.set(media, decoded.path);
     }
 
-    const reconstructed = new Map<AudioProgramClip, CanonicalPcmReader>();
-    for (const clip of clips) {
-      if (clip.reconstruction === undefined) continue;
-      readPreservePitch(clip.reconstruction);
-      const plan = planPositiveAffineReconstruction(clip);
-      const source = clipSources.get(clip);
-      const sourcePath = clipSourcePaths.get(clip);
+    const reconstructedProgrammes = new Map<
+      Extract<AudioProgramNode, { readonly kind: "program" }>,
+      CanonicalPcmReader
+    >();
+    for (const node of audioRenderPlanReconstructionUses(renderPlan)) {
+      readPreservePitch(node.reconstruction!);
+      const reconstruction = planDirectProgrammeReconstruction(node, program.sampling);
+      const source = mediaReaders.get(reconstruction.media);
+      const sourcePath = mediaPaths.get(reconstruction.media);
       assert(source !== undefined && sourcePath !== undefined,
-        `Audio renderer Clip ${clip.id} has no decoded source for reconstruction`);
-      assert(plan.sourceEndSampleExclusive <= source.sampleFrames,
-        `Audio renderer Clip ${clip.id} reconstruction exceeds its selected source`);
-      const path = join(work, `reconstructed-${reconstructed.size}.wav`);
-      const tempo = atempo(plan.rate);
+        `Audio Programme use ${node.id} has no decoded source for reconstruction`);
+      assert(reconstruction.sourceEndSampleExclusive <= source.sampleFrames,
+        `Audio Programme use ${node.id} reconstruction exceeds its selected source`);
+      const path = join(work, `reconstructed-programme-${reconstructedProgrammes.size}.wav`);
       const filters = [
-        `atrim=start_sample=${plan.sourceStartSample}:end_sample=${plan.sourceEndSampleExclusive}`,
+        `atrim=start_sample=${reconstruction.sourceStartSample}:end_sample=${reconstruction.sourceEndSampleExclusive}`,
         "asetpts=N/SR/TB",
-        ...tempo,
-        `apad=whole_len=${plan.targetSampleFrames}`,
-        `atrim=start_sample=0:end_sample=${plan.targetSampleFrames}`,
+        ...atempo(reconstruction.rate),
+        `apad=whole_len=${reconstruction.targetSampleFrames}`,
+        `atrim=start_sample=0:end_sample=${reconstruction.targetSampleFrames}`,
         "asetpts=N/SR/TB",
       ];
       await runProcess({
@@ -1037,9 +1050,9 @@ export async function executeRenderTimelineAudio(
         maxStdoutBytes: 64 * 1024,
         ...(env.sharedLibraryPath === undefined ? {} : { sharedLibraryPath: env.sharedLibraryPath }),
       });
-      const reader = new CanonicalPcmReader(path, plan.targetSampleFrames);
+      const reader = new CanonicalPcmReader(path, reconstruction.targetSampleFrames);
       readers.add(reader);
-      reconstructed.set(clip, reader);
+      reconstructedProgrammes.set(node, reader);
     }
 
     const output = join(work, "program.wav");
@@ -1049,12 +1062,12 @@ export async function executeRenderTimelineAudio(
       plan: renderPlan,
       startSample: window.startSample,
       sampleFrames: window.sampleFrames,
-      sourceForClip: (clip) => {
-        const reader = clipSources.get(clip);
-        assert(reader !== undefined, `Audio renderer Clip ${clip.id} has no decoded source`);
+      sourceForMedia: (media) => {
+        const reader = mediaReaders.get(media);
+        assert(reader !== undefined, `Audio renderer media source ${media.id} has no decoded source`);
         return reader;
       },
-      reconstructedForClip: (clip) => reconstructed.get(clip),
+      reconstructedForProgram: (node) => reconstructedProgrammes.get(node),
     });
     const artifact = await env.artifacts.putFile(output, "audio/wav");
     const audio = await assertCanonicalWav({

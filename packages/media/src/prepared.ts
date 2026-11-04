@@ -1,19 +1,17 @@
 import {
   addExactTemporalValues,
   assertLocalTemporalDomain,
-  assertTemporalMap,
   compareExactTemporalValues,
-  composeTemporalMaps,
   exactTemporalZero,
   sealLocalTemporalDomain,
   sealTemporalMap,
   subtractExactTemporalValues,
-} from "@hypit/temporal";
+} from "@hypit/temporal/algebra";
 import type {
   ExactTemporalValue,
   LocalTemporalDomain,
   TemporalMap,
-} from "@hypit/temporal";
+} from "@hypit/temporal/algebra";
 import { canonicalize } from "@hypit/hypit/protocol";
 import type { BlobRef } from "@hypit/hypit/protocol";
 
@@ -143,28 +141,6 @@ export function prepareMedia(input: {
     domain,
     ...(visual === undefined ? {} : { visual }),
     ...(preparedAudio === undefined ? {} : { audio: preparedAudio }),
-  }) as unknown as PreparedMedia;
-  verifyPreparedMedia(value);
-  return value;
-}
-
-/** Apply one target-to-current relation to every selected member without materializing media. */
-export function mapPreparedMedia(media: PreparedMedia, relation: TemporalMap): PreparedMedia {
-  verifyPreparedMedia(media);
-  assertTemporalMap(relation);
-  const relationSource = relation.stages.at(-1)!.source.id;
-  assert(relationSource === media.domain.id,
-    `Prepared Media map source ${relationSource} differs from ${media.domain.id}.`);
-  const domain = structuredClone(relation.stages[0]!.target);
-  const value = canonicalize({
-    source: media.source,
-    domain,
-    ...(media.visual === undefined ? {} : {
-      visual: { ...media.visual, map: composeTemporalMaps(relation, media.visual.map) },
-    }),
-    ...(media.audio === undefined ? {} : {
-      audio: { ...media.audio, map: composeTemporalMaps(relation, media.audio.map) },
-    }),
   }) as unknown as PreparedMedia;
   verifyPreparedMedia(value);
   return value;

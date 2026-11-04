@@ -1,7 +1,7 @@
+import { timelineTypes } from "@hypit/timeline";
 import { sameType } from "@hypit/hypit/protocol";
 import type { ProducerRef, ProducerStep, Value, TypeRef, TypedRecord } from "@hypit/hypit/protocol";
 import type { BuildView, ResolvedOutputRecord } from "@hypit/hypit/kernel";
-import { temporalTypes } from "@hypit/temporal";
 import type {
   StudioTemporalBinding,
   StudioTemporalInstantProjection,
@@ -127,8 +127,8 @@ function traceRecord(input: {
       });
     }
   }
-  if (sameType(record.type, temporalTypes.instant)) return fixedInstant(record);
-  if (sameType(record.type, temporalTypes.window)) return fixedWindow(record);
+  if (sameType(record.type, timelineTypes.instant)) return fixedInstant(record);
+  if (sameType(record.type, timelineTypes.window)) return fixedWindow(record);
   return undefined;
 }
 
@@ -182,7 +182,7 @@ export function executedTemporalBindings(
   const stepIds = closure(state, outputs, output);
   const steps = state.plan.steps.filter((step) => stepIds.has(step.id));
   return [...records.values()]
-    .filter((record) => sameType(record.type, temporalTypes.instant) || sameType(record.type, temporalTypes.window))
+    .filter((record) => sameType(record.type, timelineTypes.instant) || sameType(record.type, timelineTypes.window))
     .flatMap((record): readonly StudioTemporalBinding[] => {
       const held = valueOf(record.value) as { readonly id?: unknown; readonly subjectId?: unknown } | undefined;
       if (typeof held?.id !== "string" || typeof held.subjectId !== "string") return [];
@@ -193,7 +193,7 @@ export function executedTemporalBindings(
         .map(([name]) => {
           const produced = step.result.kind === "output" ? records.get(step.result.record) : undefined;
           const producesTemporal = produced !== undefined
-            && (sameType(produced.type, temporalTypes.instant) || sameType(produced.type, temporalTypes.window));
+            && (sameType(produced.type, timelineTypes.instant) || sameType(produced.type, timelineTypes.window));
           return {
             step: step.id,
             producer: { module: { ...step.producer.module }, name: step.producer.name },

@@ -179,25 +179,25 @@
     left="0%" top="0%" right="100%" bottom="100%"/>
   <time:Clock id="clock" frame-rate="30"/>
 
-  <mediaop:Prepare id="soundtrack-media" source={soundtrack}
-    video="none" audio="default" span-authority="audio"/>
+  <asset:Audio id="soundtrack-media" source={soundtrack}
+      />
 
-  <mediaop:Prepare id="opening-media" source={opening-take.video}
-    video="primary-moving" audio="default" span-authority="video"/>
-  <mediaop:Prepare id="daily-retinol-media" source={daily-retinol-take.video}
-    video="primary-moving" audio="default" span-authority="video"/>
-  <mediaop:Prepare id="skin-is-asking-media" source={skin-is-asking-take.video}
-    video="primary-moving" audio="default" span-authority="video"/>
-  <mediaop:Prepare id="lifestyle-media" source={lifestyle-montage.video}
-    video="primary-moving" audio="none" span-authority="video"/>
+  <asset:Video id="opening-media" source={opening-take.video}
+     audio="default" />
+  <asset:Video id="daily-retinol-media" source={daily-retinol-take.video}
+     audio="default" />
+  <asset:Video id="skin-is-asking-media" source={skin-is-asking-take.video}
+     audio="default" />
+  <asset:Video id="lifestyle-media" source={lifestyle-montage.video}
+     audio="none" />
 
-  <whisperx:Transcription id="opening-semantic-transcription" media={opening-media.media} language="en"/>
+  <whisperx:Transcription id="opening-semantic-transcription" media={opening-media.source} language="en"/>
   <speechalign:Alignment id="opening-semantic" narrative={story}
     segment={story.segment.opening-question} domain={opening-media.domain} evidence={opening-semantic-transcription.transcript}/>
-  <whisperx:Transcription id="daily-retinol-semantic-transcription" media={daily-retinol-media.media} language="en"/>
+  <whisperx:Transcription id="daily-retinol-semantic-transcription" media={daily-retinol-media.source} language="en"/>
   <speechalign:Alignment id="daily-retinol-semantic" narrative={story}
     segment={story.segment.daily-retinol} domain={daily-retinol-media.domain} evidence={daily-retinol-semantic-transcription.transcript}/>
-  <whisperx:Transcription id="skin-is-asking-semantic-transcription" media={skin-is-asking-media.media} language="en"/>
+  <whisperx:Transcription id="skin-is-asking-semantic-transcription" media={skin-is-asking-media.source} language="en"/>
   <speechalign:Alignment id="skin-is-asking-semantic" narrative={story}
     segment={story.segment.skin-is-asking} domain={skin-is-asking-media.domain} evidence={skin-is-asking-semantic-transcription.transcript}/>
 
@@ -215,23 +215,23 @@
   </semantic:Projection>
   <semantic:Window id="selection-lifestyle" projection={story-time} during={story.selection.lifestyle}/>
   <audio:Track id="speech-sound" timeline={speech.timeline}>
-    <audio:Clip id="opening-semantic-source" source={opening-media.media} during={speech.opening-semantic}/>
-    <audio:Clip id="daily-retinol-semantic-source" source={daily-retinol-media.media} during={speech.daily-retinol-semantic}/>
-    <audio:Clip id="skin-is-asking-semantic-source" source={skin-is-asking-media.media} during={speech.skin-is-asking-semantic}/>
+    <audio:Clip id="opening-semantic-source" source={opening-media.source} during={speech.opening-semantic}/>
+    <audio:Clip id="daily-retinol-semantic-source" source={daily-retinol-media.source} during={speech.daily-retinol-semantic}/>
+    <audio:Clip id="skin-is-asking-semantic-source" source={skin-is-asking-media.source} during={speech.skin-is-asking-semantic}/>
   </audio:Track>
   <visual:Track id="speech-picture" timeline={speech.timeline}>
-    <visual:Clip id="opening-semantic-source" media={opening-media.media} during={speech.opening-semantic} frame={full-frame} fit="cover"/>
-    <visual:Clip id="daily-retinol-semantic-source" media={daily-retinol-media.media} during={speech.daily-retinol-semantic} frame={full-frame} fit="cover"/>
-    <visual:Clip id="skin-is-asking-semantic-source" media={skin-is-asking-media.media} during={speech.skin-is-asking-semantic} frame={full-frame} fit="cover"/>
+    <visual:Clip id="opening-semantic-source" media={opening-media.source} during={speech.opening-semantic} frame={full-frame} fit="cover"/>
+    <visual:Clip id="daily-retinol-semantic-source" media={daily-retinol-media.source} during={speech.daily-retinol-semantic} frame={full-frame} fit="cover"/>
+    <visual:Clip id="skin-is-asking-semantic-source" media={skin-is-asking-media.source} during={speech.skin-is-asking-semantic} frame={full-frame} fit="cover"/>
   </visual:Track>
 
   <audio-track:Track id="music-bed" timeline={speech.timeline}>
-    <audio-track:Clip source={soundtrack-media.media} during={speech.window}
+    <audio-track:Clip source={soundtrack-media.source} during={speech.window}
       gain="0.12" fade-in="300ms" fade-out="600ms"/>
   </audio-track:Track>
 
   <visual:Track id="lifestyle" timeline={speech.timeline}>
-    <visual:Clip id="lifestyle-cutaway" media={lifestyle-media.media}
+    <visual:Clip id="lifestyle-cutaway" media={lifestyle-media.source}
       frame={full-frame} during={selection-lifestyle} fit="cover">
       <visual:Map/>
     </visual:Clip>

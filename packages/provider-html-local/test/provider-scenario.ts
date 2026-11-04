@@ -1,34 +1,36 @@
-import { sealComposition, sealPresentVisualTrack } from "@hypit/composition";
 import { EndpointRegistry } from "@hypit/executor";
 import type { EndpointRegistration } from "@hypit/executor";
 import type { ImmediateEndpointHandler } from "@hypit/endpoint";
 import { installEndpoint } from "@hypit/endpoint";
-import { compileHtmlProgram, htmlProgramCapabilities, htmlRasterRequest, htmlVisualElement } from "@hypit/html-program";
-import { mediaTypes, sealVisualDeliverySpec, sealOutputPictureSpec } from "@hypit/media";
+import {
+  compileHtmlPictureProgram,
+  htmlProgramCapabilities,
+  htmlRasterRequest,
+} from "@hypit/html-program";
+import { mediaTypes, sealOutputPictureSpec, sealVisualDeliverySpec } from "@hypit/media";
 import type { FrameOutputPictureSpec, VisualDeliverySpec } from "@hypit/media";
-import type { CompositableSurfaceRef } from "@hypit/media";
 import type { Need } from "@hypit/protocol";
-import { sealTimeline } from "@hypit/timeline";
+
 import { createLocalChromiumHtmlProvider } from "../src/index.js";
 
-export function htmlProviderDocument(surface?: CompositableSurfaceRef) {
-  const timeline = sealTimeline({ id: "test-space", frameCount: 12, frameRate: { numerator: 12, denominator: 1 } });
-  const track = sealPresentVisualTrack({ timelineId: "test-space", id: "provider-fixture",
-    presents: [{ id: "card", span: { startFrame: 0, endFrameExclusive: 12 }, root:
-      htmlVisualElement({ id: "background", kind: "box", children: [
-        ...(surface === undefined ? [] : [{
-          id: "surface", kind: "surface" as const, surface,
-          style: [
-            { name: "position" as const, value: "absolute" }, { name: "left" as const, value: "0px" },
-            { name: "top" as const, value: "0px" }, { name: "width" as const, value: "1px" },
-            { name: "height" as const, value: "1px" },
-          ],
-        }]),
-      ], style: [
-        { name: "position", value: "absolute" }, { name: "inset", value: 0 }, { name: "background", value: "#261447" },
-      ] }) }],
+export function htmlProviderDocument() {
+  return compileHtmlPictureProgram({
+    id: "local-html-provider-fixture",
+    frameRate: { numerator: 12, denominator: 1 },
+    frameCount: 12,
+    canvas: { width: 160, height: 96, clearColor: "#000000" },
+    root: {
+      id: "background",
+      kind: "box" as const,
+      spans: [{ startFrame: 0, endFrameExclusive: 12 }],
+      style: [
+        { name: "position", value: "absolute" },
+        { name: "inset", value: 0 },
+        { name: "background", value: "#261447" },
+      ],
+      children: [],
+    },
   });
-  return compileHtmlProgram(sealComposition({ id: "local-html-provider-fixture", visual: { canvas: { width: 160, height: 96, clearColor: "#000000" }, root: { members: [track].map(track => ({ kind: "track" as const, id: track.id, track })) } }, audio: { contributions: [] } }, timeline));
 }
 
 export function htmlProviderDelivery(

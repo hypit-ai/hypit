@@ -5,7 +5,6 @@ import { presenterStyle, presenterTypes } from "./presenter.js";
 import { sealPresentVisualTrack, compositionTypes } from "@hypit/composition";
 import { timelineTypes } from "@hypit/timeline";
 import { spatialTypes } from "@hypit/spatial";
-import { temporalTypes } from "@hypit/temporal";
 import { htmlVisual } from "@hypit/html-program";
 const styles = (o) =>
   Object.entries(o).map(([name, value]) => ({ name, value }));
@@ -16,7 +15,7 @@ export function installPullback(module, manifest, component, optionsType, mode="
   const inputs = [
     { name: "timeline", type: timelineTypes.timeline },
     { name: "within", type: spatialTypes.frame },
-    { name: "window", type: temporalTypes.window },
+    { name: "window", type: timelineTypes.window },
     { name: "sources", type: types.sources },
     { name: "options", type: optionsType },
   ];

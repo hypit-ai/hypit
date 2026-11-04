@@ -1,7 +1,7 @@
 import type { RefinementPackage } from "@hypit/hypit/refinement";
 import type { ProducerPackage } from "@hypit/hypit/producer";
 import { projectVisualDeliverySpec, verifyMediaDeliverySpec, verifyMediaDomainSpec, verifyMediaInspection, verifyMediaStreamSelection, verifyMuxedMedia, verifyPictureInterpretation, verifyPreparedMedia, verifyTimelineVisual, verifyTimelineAudio, verifyVisualDeliverySpec } from "./identity.js";
-import type { MediaDomainSpec, PreparedMedia } from "./types.js";
+import type { InspectMediaNeed, MediaDomainSpec, MediaInspection, MediaSelectionRequest, PreparedMedia } from "./types.js";
 import { canonicalize } from "@hypit/hypit/protocol";
 import type { Value } from "@hypit/hypit/protocol";
 import { mediaProducers } from "./manifest.js";
@@ -9,10 +9,12 @@ import { mediaTypes } from "./manifest.js";
 import { prepareMedia } from "./prepared.js";
 import { assertBlobRef } from "@hypit/hypit/protocol";
 import { assertCompositableSurfaceRef, assertFontArtifactRef, assertFontStackRef } from "./render.js";
+import { selectMediaStreams, verifyMediaSelectionRequest } from "./selection.js";
 function valueOf(value: Value | undefined, subject: string): unknown { if (value === undefined) throw new Error(`${subject} is missing`); return value; }
 export const mediaComponent = {
   refinements: [
     { type: mediaTypes.inspection, handler: ({ value }) => verifyMediaInspection(valueOf(value, "MediaInspection")) },
+    { type: mediaTypes.selectionRequest, handler: ({ value }) => verifyMediaSelectionRequest(valueOf(value, "MediaSelectionRequest")) },
     { type: mediaTypes.streamSelection, handler: ({ value }) => verifyMediaStreamSelection(valueOf(value, "MediaStreamSelection")) },
     { type: mediaTypes.prepared, handler: ({ value }) => verifyPreparedMedia(valueOf(value, "PreparedMedia")) },
     { type: mediaTypes.pictureInterpretation, handler: ({ value }) => verifyPictureInterpretation(valueOf(value, "PictureInterpretation")) },
@@ -33,6 +35,24 @@ export const mediaComponent = {
     ) },
   ],
   producers: [
+    { producer: mediaProducers.resource, handler: ({ inputs }) => {
+      const resource = valueOf(inputs.resource!.value, "Media Resource");
+      assertBlobRef(resource, "Media Resource");
+      return { kind: "output", value: resource };
+    } },
+    { producer: mediaProducers.inspect, handler: ({ inputs }) => {
+      const source = valueOf(inputs.source!.value, "Media inspection source");
+      assertBlobRef(source, "Media inspection source");
+      const need: InspectMediaNeed = { source };
+      return { kind: "need", constraints: canonicalize(need) };
+    } },
+    { producer: mediaProducers.select, handler: ({ inputs }) => {
+      const inspection = valueOf(inputs.inspection!.value, "MediaInspection") as MediaInspection;
+      const request = valueOf(inputs.request!.value, "MediaSelectionRequest") as MediaSelectionRequest;
+      verifyMediaInspection(inspection);
+      verifyMediaSelectionRequest(request);
+      return { kind: "output", value: canonicalize(selectMediaStreams(inspection, request)) };
+    } },
     { producer: mediaProducers.prepare, handler: ({ inputs }) => {
       const source = valueOf(inputs.source!.value, "Prepared Media source");
       assertBlobRef(source, "Prepared Media source");

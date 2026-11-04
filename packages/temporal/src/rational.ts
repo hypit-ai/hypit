@@ -1,7 +1,3 @@
-import type { Clock } from "@hypit/timeline";
-
-import type { TemporalDuration } from "./types.js";
-
 export type Rational = {
   readonly numerator: bigint;
   readonly denominator: bigint;
@@ -60,31 +56,6 @@ export function maximum(left: Rational, right: Rational): Rational {
 
 export function minimum(left: Rational, right: Rational): Rational {
   return compare(left, right) <= 0 ? left : right;
-}
-
-function safeInteger(value: number, label: string): bigint {
-  if (!Number.isSafeInteger(value)) throw new Error(`${label} must be a safe integer.`);
-  return BigInt(value);
-}
-
-export function durationInFrames(duration: TemporalDuration, clock: Clock): Rational {
-  const frameNumerator = safeInteger(clock.frameRate.numerator, "Clock frame-rate numerator");
-  const frameDenominator = safeInteger(clock.frameRate.denominator, "Clock frame-rate denominator");
-  switch (duration.unit) {
-    case "frames":
-      return rational(safeInteger(duration.value, "Frame duration"));
-    case "milliseconds":
-      return rational(
-        safeInteger(duration.value, "Millisecond duration") * frameNumerator,
-        1000n * frameDenominator,
-      );
-    case "seconds": {
-      const numerator = safeInteger(duration.numerator, "Second duration numerator");
-      const denominator = safeInteger(duration.denominator, "Second duration denominator");
-      if (denominator <= 0n) throw new Error("Second duration denominator must be positive.");
-      return rational(numerator * frameNumerator, denominator * frameDenominator);
-    }
-  }
 }
 
 /** Nearest frame boundary; an exact half lands on the later boundary. Input must be non-negative. */

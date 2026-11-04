@@ -3,7 +3,8 @@ import { flagSetup } from "./flag-cloth.js";
 import { sealPresentVisualTrack } from "@hypit/composition";
 import { htmlVisual } from "@hypit/html-program";
 import { preparedVisualSource } from "@hypit/media";
-import { assertTemporalWindowFor, composeTemporalMaps } from "@hypit/temporal";
+import { composeTemporalMaps } from "@hypit/temporal";
+import { assertTemporalWindowFor } from "@hypit/timeline";
 import { preparedSampling } from "./frame-sampling.js";
 
 const digits = {

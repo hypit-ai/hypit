@@ -176,12 +176,12 @@
 
   <space:Canvas id="vertical" width="720" height="1280"/>
   <time:Clock id="clock" frame-rate="30"/>
-  <mediaop:Prepare id="soundtrack-media" source={soundtrack}
-    video="none" audio="default" span-authority="audio"/>
-  <mediaop:Prepare id="ranking-appear-media" source={ranking-appear-sfx}
-    video="none" audio="default" span-authority="audio"/>
-  <mediaop:Prepare id="ranking-move-media" source={ranking-move-sfx}
-    video="none" audio="default" span-authority="audio"/>
+  <asset:Audio id="soundtrack-media" source={soundtrack}
+      />
+  <asset:Audio id="ranking-appear-media" source={ranking-appear-sfx}
+      />
+  <asset:Audio id="ranking-move-media" source={ranking-move-sfx}
+      />
   <space:Frame id="speech-frame" within={vertical.bounds}
     left="0%" top="0%" right="100%" bottom="100%"/>
   <space:Frame id="tier-frame" within={vertical.bounds}
@@ -218,14 +218,14 @@
 
   <!-- Real Build path: generated video -> one shared preparation waist ->
        measured alignment. -->
-  <mediaop:Prepare id="ronaldo-media" source={ronaldo-take.video}
-    video="primary-moving" audio="default" span-authority="video"/>
-  <mediaop:Prepare id="messi-media" source={messi-take.video}
-    video="primary-moving" audio="default" span-authority="video"/>
-  <whisperx:Transcription id="ronaldo-semantic-transcription" media={ronaldo-media.media} language="en"/>
+  <asset:Video id="ronaldo-media" source={ronaldo-take.video}
+     audio="default" />
+  <asset:Video id="messi-media" source={messi-take.video}
+     audio="default" />
+  <whisperx:Transcription id="ronaldo-semantic-transcription" media={ronaldo-media.source} language="en"/>
   <speechalign:Alignment id="ronaldo-semantic" narrative={story}
     segment={story.segment.ronaldo} domain={ronaldo-media.domain} evidence={ronaldo-semantic-transcription.transcript}/>
-  <whisperx:Transcription id="messi-semantic-transcription" media={messi-media.media} language="en"/>
+  <whisperx:Transcription id="messi-semantic-transcription" media={messi-media.source} language="en"/>
   <speechalign:Alignment id="messi-semantic" narrative={story}
     segment={story.segment.messi} domain={messi-media.domain} evidence={messi-semantic-transcription.transcript}/>
 
@@ -250,9 +250,9 @@
   <semantic:Window id="selection-walks-around" projection={story-time} during={story.selection.walks-around}/>
   <semantic:Window id="selection-hat-trick" projection={story-time} during={story.selection.hat-trick}/>
   <audio:Track id="mix" timeline={speech.timeline}>
-      <audio:Clip id="ronaldo-semantic-source" source={ronaldo-media.media} during={speech.ronaldo-semantic}/>
-      <audio:Clip id="messi-semantic-source" source={messi-media.media} during={speech.messi-semantic}/>
-    <audio:Clip id="music-bed" source={soundtrack-media.media} during={speech.window}
+      <audio:Clip id="ronaldo-semantic-source" source={ronaldo-media.source} during={speech.ronaldo-semantic}/>
+      <audio:Clip id="messi-semantic-source" source={messi-media.source} during={speech.messi-semantic}/>
+    <audio:Clip id="music-bed" source={soundtrack-media.source} during={speech.window}
       gain="0.12" fade-in="300ms" fade-out="600ms"/>
   </audio:Track>
   <fonts:Face id="display-font" package="@fontsource-variable/montserrat" weight="900" style="normal"/>
@@ -262,8 +262,8 @@
   <ranking:TierBoard id="football-tiers" timeline={speech.timeline}
     within={vertical.bounds} frame={tier-frame}
     during={speech.window} style={tier-style}
-    appear-sound={ranking-appear-media.media}
-    move-sound={ranking-move-media.media}>
+    appear-sound={ranking-appear-media.source}
+    move-sound={ranking-move-media.source}>
     <ranking:TierItem id="yamal" tier="s" preset="true" icon={yamal-icon}/>
     <ranking:TierItem id="haaland" tier="a" preset="true" icon={haaland-icon}/>
     <ranking:TierItem id="de-bruyne" tier="b" preset="true" icon={de-bruyne-icon}/>
@@ -301,8 +301,8 @@
   </visual:Motion>
 
   <visual:Track id="picture" timeline={speech.timeline}>
-      <visual:Clip id="ronaldo-semantic-source" media={ronaldo-media.media} during={speech.ronaldo-semantic} frame={speech-frame} fit="cover"/>
-      <visual:Clip id="messi-semantic-source" media={messi-media.media} during={speech.messi-semantic} frame={speech-frame} fit="cover"/>
+      <visual:Clip id="ronaldo-semantic-source" media={ronaldo-media.source} during={speech.ronaldo-semantic} frame={speech-frame} fit="cover"/>
+      <visual:Clip id="messi-semantic-source" media={messi-media.source} during={speech.messi-semantic} frame={speech-frame} fit="cover"/>
     <visual:Clip id="hair-gel" image={broll-hair-gel.image} picture="srgb"
       extent={hair-gel-extent} during={selection-hair-gel}
       frame={hair-gel-frame} fit="cover" treatment={recipes.media.hair-gel}

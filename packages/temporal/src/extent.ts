@@ -1,12 +1,10 @@
-import type { Clock } from "@hypit/timeline";
-
 import {
   assertExactTemporalValue,
   compareExactTemporalValues,
-  exactTemporalValueFromDuration,
   exactTemporalZero,
-  resolveTemporalBoundary,
 } from "./exact.js";
+import { exactTemporalValueFromDuration, resolveTemporalBoundary } from "./sampling.js";
+import type { TemporalSamplingGrid } from "./sampling.js";
 import type {
   LocalTemporalDomain,
   TemporalBoundaryPolicy,
@@ -33,15 +31,15 @@ export function temporalExtentFromDomain(domain: LocalTemporalDomain): TemporalE
   return sealTemporalExtent({ duration: structuredClone(domain.duration) });
 }
 
-export function temporalExtentFromDuration(duration: TemporalDuration, clock: Clock): TemporalExtent {
-  return sealTemporalExtent({ duration: exactTemporalValueFromDuration(duration, clock) });
+export function temporalExtentFromDuration(duration: TemporalDuration, grid: TemporalSamplingGrid): TemporalExtent {
+  return sealTemporalExtent({ duration: exactTemporalValueFromDuration(duration, grid) });
 }
 
 export function resolveTemporalExtent(
   extent: TemporalExtent,
-  clock: Clock,
+  grid: TemporalSamplingGrid,
   policy: TemporalBoundaryPolicy,
 ): number {
   assertTemporalExtent(extent);
-  return resolveTemporalBoundary(extent.duration, clock, policy);
+  return resolveTemporalBoundary(extent.duration, grid, policy);
 }

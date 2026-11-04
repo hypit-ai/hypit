@@ -1,20 +1,18 @@
 # @hypit/visual-transition
 
-`@hypit/visual-transition` supplies reusable two-input effects for explicit Visual Transition
-relations. `@hypit/visual-track` owns the relation between adjacent Clip occurrences and derives its
-span from their exact overlap; this package owns only how the two resulting Pictures combine.
+`@hypit/visual-transition` supplies reusable two-input Picture Operators. The owning audiovisual
+Programme decides which two closed Pictures participate and over what occurrence Domain; this package
+owns only how those Pictures combine.
 
-```xml
-<import as="transition" from="@hypit/visual-transition@1"/>
-
-<transition:CrossDissolve id="soft-mix" easing="ease-in-out"/>
-
-<visual:Transition id="handoff"
-  outgoing="wide" incoming="close" effect={soft-mix}/>
-```
-
-Both Clips must be adjacent in paint order and overlap. Their complete overlap is the Transition
-interval; authors do not repeat it as another Window. A direct cut needs no Transition declaration.
+For the new audiovisual backend, this package publishes every official effect through one typed
+`picture-operator` Producer. The Producer receives a `VisualTransitionOperatorSpec` and the exact local
+Control domain. The resulting Operator declares a named `progress` Control; each AVIR `apply` binds that
+coordinate to Programme, Occurrence, Source or an explicit Mapping. The package projects the bound exact
+position to normalized progress and owns easing. Its package-owned spec selects and configures the
+implementation; the resulting `PictureOperator` carries the exact ordered ports (`outgoing`, `incoming`)
+and its opaque HTML execution programme together. `@hypit/audiovisual` neither enumerates transition names
+nor asks a terminal to recover an implementation from an id. The former Markup declarations and
+VisualTrack transition-effect type have been removed; there is no Track adjacency rule in this package.
 
 ## Official effects
 
@@ -34,18 +32,8 @@ All effects accept `linear`, `ease-in`, `ease-out`, or `ease-in-out` easing. Dir
 `Iris` shapes are `circle`, `box`, and `diamond`. `DipToColor.color` is a six- or eight-digit hex
 color. `ZoomDissolve.strength` is within 0–1, and `BlurDissolve.radius` is within 0–200 pixels.
 
-```xml
-<transition:DipToColor id="dip-white" color="#ffffff" easing="ease-in"/>
-<transition:Push id="push-left" direction="left" easing="ease-in-out"/>
-<transition:Slide id="cover-up" direction="up"/>
-<transition:LinearWipe id="reveal-right" direction="right"/>
-<transition:Iris id="diamond-open" shape="diamond"/>
-<transition:ZoomDissolve id="zoom" strength="0.18"/>
-<transition:BlurDissolve id="soft-blur" radius="24"/>
-```
-
-These declarations all produce the same public `VisualTransitionEffect` Type: one `VisualProcessEffect`
-with the exact ordered ports `outgoing` and `incoming`. Visual Track validates that closed contract but does
-not enumerate effect implementations; project or ecosystem packages can publish other effects through the Type.
+Each configuration produces the same public `PictureOperator` Type with the exact ordered ports
+`outgoing` and `incoming` plus the `progress` Control. Project or ecosystem packages can publish other operators without changing
+AVIR.
 Content-aware morphs, optical-flow effects, and true 3D page or cube geometry require their own
 implementation rather than an approximation in this package.

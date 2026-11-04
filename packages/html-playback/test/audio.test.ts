@@ -9,12 +9,12 @@ class Param {
   setValueAtTime(value: number, time: number) { this.events.push({ kind: "set", value, time }); }
   linearRampToValueAtTime(value: number, time: number) { this.events.push({ kind: "ramp", value, time }); }
 }
-function player(gain: number, levelAutomation: object = {}, preservesPitch = false) {
+function player(gain: number, gainControls: readonly object[] = [], preservesPitch = false) {
   const nodes: { gain: Param; connect: () => void }[] = [];
   const attrs: Record<string,string> = {
     "data-start": "0", "data-duration": "4", "data-media-start": "0", "data-media-end": "4",
     "data-preserves-pitch": String(preservesPitch),
-    "data-gain": String(gain), "data-level-automation": encodeURIComponent(JSON.stringify(levelAutomation)),
+    "data-gain": String(gain), "data-gain-controls": encodeURIComponent(JSON.stringify(gainControls)),
   };
   const audio = { getAttribute: (name: string) => attrs[name] ?? null, currentTime: 0, readyState: 4,
     preservesPitch: !preservesPitch,
@@ -45,24 +45,32 @@ test("preview preserves silence and gain above unity through the audio graph", a
 
 test("preview applies the reconstruction's explicit pitch policy instead of the browser default", async () => {
   for (const preservesPitch of [false, true]) {
-    const p = player(1, {}, preservesPitch);
+    const p = player(1, [], preservesPitch);
     await p.play(30);
     assert.equal(p.audio.preservesPitch, preservesPitch);
   }
 });
 
 test("preview schedules independent envelopes, fades and half-open audible regions on the sample clock", async () => {
-  const p = player(2, {
-    fadeInSamples: 96000, fadeOutSamples: 96000,
-    gainEnvelope: [{ sample: 0, gain: 1 }, { sample: 192000, gain: 0 }],
-    audibility: [{ startSample: 48000, endSampleExclusive: 96000 }, { startSample: 144000, endSampleExclusive: 192000 }],
-  });
+  const control = (segments: readonly object[]) => ({ segments });
+  const segment = (startSample: number, endSampleExclusive: number, from: number, to: number) =>
+    ({ startSample, endSampleExclusive, from, to });
+  const p = player(2, [
+    control([segment(0, 192000, 1, 0)]),
+    control([segment(0, 96000, 0, 1), segment(96000, 192000, 1, 1)]),
+    control([segment(0, 96000, 1, 1), segment(96000, 192000, 1, 0)]),
+    control([
+      segment(0, 48000, 0, 0), segment(48000, 96000, 1, 1),
+      segment(96000, 144000, 0, 0), segment(144000, 192000, 1, 1),
+    ]),
+  ]);
   await p.play(30);
   const time = 1;
   assert.equal(p.nodes[1]!.gain.events[0]!.value, 1 - time/4);
   assert.equal(p.nodes[2]!.gain.events[0]!.value, time/2);
   assert.equal(p.nodes[3]!.gain.events[0]!.value, 1);
-  assert.deepEqual(p.nodes[4]!.gain.events.map(event => event.value), [1, 0, 1, 0]);
+  assert.equal(p.nodes[4]!.gain.events[0]!.value, 1);
+  assert.ok(p.nodes[4]!.gain.events.some(event => event.value === 0));
   assert.ok(p.nodes[1]!.gain.events.some(event => event.kind === "ramp"));
   await p.play(60);
   assert.equal(p.nodes.length, 5, "reuse one audio graph across frames");

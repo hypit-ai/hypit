@@ -5,10 +5,10 @@ delivery. [Production navigation](index.md) routes each relationship to its deta
 
 ## Material becomes useful through explicit relationships
 
-A supplied file or generated Output can become the same project material Type once declared with the
-package that owns its meaning. Prepare
-timed media to select its streams, establish a finite exact local temporal domain and publish its Extent.
-The work then decides how to use those facts.
+A supplied file or generated Output becomes one Media object once declared with the package that owns
+its meaning. Timed Media publishes the original Resource directly and lazily prepares selected streams,
+a finite exact local temporal domain and its Extent when a consumer demands those facets. The work then
+decides how to use those facts.
 
 For spoken work, Script names meaningful passages and events. `NarrativeAlignment` locates one
 Segment on a source-local domain. The prepared medium supplies picture and sound. Connect the

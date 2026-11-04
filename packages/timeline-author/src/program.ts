@@ -1,16 +1,7 @@
-import {
-  composeTemporalWindow,
-  durationInFrames,
-  projectProgramInstant,
-  resolveTemporalExtent,
-} from "@hypit/temporal";
-import type {
-  TemporalBoundaryPolicy,
-  TemporalExtent,
-  TemporalDuration,
-  TemporalInstant,
-  TemporalWindow,
-} from "@hypit/temporal";
+import { durationInFrames, resolveTemporalExtent } from "@hypit/temporal";
+import { composeTemporalWindow } from "@hypit/timeline";
+import type { TemporalBoundaryPolicy, TemporalExtent, TemporalDuration } from "@hypit/temporal";
+import type { TemporalInstant, TemporalWindow } from "@hypit/timeline";
 import { assertClockIdentity, sealTimeline } from "@hypit/timeline";
 import type { Clock, FrameSpan, Timeline } from "@hypit/timeline";
 
@@ -21,6 +12,7 @@ import type {
   ConstructionPoint,
   TimelineAuthorHeader,
 } from "./types.js";
+import { projectTimelineInstant } from "./legacy-projection.js";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -114,7 +106,7 @@ export function materializeInstant(
   identity(spec.id, "Instant id");
   const subjectId = spec.subjectId ?? spec.id;
   identity(subjectId, "Instant subject id");
-  return projectProgramInstant({
+  return projectTimelineInstant({
     itemId: spec.id,
     subjectId,
     timeline,
@@ -130,9 +122,9 @@ export function materializeWindow(
   identity(spec.id, "Window id");
   return composeTemporalWindow(
     { id: spec.id, subjectId: spec.id },
-    projectProgramInstant({ itemId: `${spec.id}.start`, subjectId: spec.id, timeline,
+    projectTimelineInstant({ itemId: `${spec.id}.start`, subjectId: spec.id, timeline,
       projection: { ref: "absolute", at: { unit: "frames", value: span.startFrame } } }),
-    projectProgramInstant({ itemId: `${spec.id}.end`, subjectId: spec.id, timeline,
+    projectTimelineInstant({ itemId: `${spec.id}.end`, subjectId: spec.id, timeline,
       projection: { ref: "absolute", at: { unit: "frames", value: span.endFrameExclusive } } }),
   );
 }

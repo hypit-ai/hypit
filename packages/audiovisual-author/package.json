@@ -1,0 +1,42 @@
+{
+  "name": "@hypit/audiovisual-author",
+  "version": "0.1.0",
+  "license": "SEE LICENSE IN LICENSE",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "hypit": {
+    "activation": "./src/activation.ts"
+  },
+  "peerDependencies": {
+    "@hypit/hypit": "workspace:^0.4.0"
+  },
+  "dependencies": {
+    "@hypit/audiovisual": "workspace:^0.1.0",
+    "@hypit/spatial": "workspace:^0.1.1",
+    "@hypit/temporal": "workspace:^0.1.1"
+  },
+  "devDependencies": {
+    "@hypit/audio-mix": "workspace:^0.1.0",
+    "@hypit/audio-stretch": "workspace:^0.1.0",
+    "@hypit/audio-program": "workspace:^0.1.0",
+    "@hypit/audiovisual-audio": "workspace:^0.1.0",
+    "@hypit/audiovisual-html": "workspace:^0.1.0",
+    "@hypit/audiovisual-media": "workspace:^0.1.0",
+    "@hypit/html-program": "workspace:^0.1.0",
+    "@hypit/hypit": "workspace:^0.4.0",
+    "@hypit/media": "workspace:^0.1.0",
+    "@hypit/author": "workspace:^0.1.0",
+    "@hypit/kernel": "workspace:^0.1.0",
+    "@hypit/producer": "workspace:^0.1.0",
+    "@hypit/protocol": "workspace:^0.1.0",
+    "@hypit/refinement": "workspace:^0.1.0",
+    "@hypit/visual-transition": "workspace:^0.1.0"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ]
+}

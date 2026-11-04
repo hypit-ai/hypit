@@ -12,17 +12,15 @@ Provider-backed preview.
 
 Media playback uses `HtmlProgram.videoSources`: the adapter binds the shared sided `TemporalMap` evaluator
 to obtain source presentation timestamps for Program frames.
-Timed Surfaces retain the same complete map and are addressed through the compiler-owned stable
-display plane. The generated preview never reconstructs
+Prepared media is addressed through a compiler-owned stable display plane. The generated preview never reconstructs
 sampling from filenames, average frame rate or mutable DOM layout.
 
 Native media elements are an explicitly narrower preview endpoint. They do not reliably select an arbitrary
 stream from a multi-stream container, and audio playback can execute only the linear relations supported by
 `HTMLMediaElement`; the adapter rejects every nonzero selected visual or audio stream and rejects other
-audio relations instead of allowing the browser to choose a different stream or approximate a map. Visual
-Process input rasterization is Provider-owned and is also rejected rather than showing empty process inputs. Exact
+audio relations instead of allowing the browser to choose a different stream or approximate a map. Exact
 selected-stream and arbitrary-map execution belongs to a capable offline Renderer. A future
-demux-capable playback adapter may close this preview gap without changing `PreparedMedia`, Film, or either
+demux-capable playback adapter may close this preview gap without changing `PreparedMedia` or either
 Programme.
 
 Audio reconstruction is explicit in AudioProgram. Ordinary sampling sets the browser's

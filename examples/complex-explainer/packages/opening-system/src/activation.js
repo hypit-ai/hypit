@@ -11,17 +11,18 @@ import { createAuthorDeclarationFacet, declarationField, sealGraphFragment } fro
 import { compositionTypes } from "@hypit/composition";
 import { mediaTypes } from "@hypit/media";
 import { timelineTypes } from "@hypit/timeline";
+import { timelineAuthorTypes } from "@hypit/timeline-author";
 import { spatialTypes } from "@hypit/spatial";
 import { temporalTypes } from "@hypit/temporal";
 import { visualTrackModuleRef } from "@hypit/visual-track";
 import {
-  resolveAuthorWindow,
-  resolveAuthorInstant,
-  resolveAuthorTimeline,
-  temporalWindowFieldShape,
-  temporalContextFieldShape,
-  temporalInstantFieldShape,
-} from "@hypit/temporal/author";
+  resolveWindowReference,
+  resolveInstantReference,
+  resolveTimelineReference,
+  timelineWindowFieldShape,
+  timelineContextFieldShape,
+  timelineInstantFieldShape,
+} from "@hypit/timeline-author/reference";
 import { renderTitle, renderTimer, renderFlag, renderStage, renderVeil } from "./render.js";
 import { module, defaults } from "./definition.js";
 import { studioFacet } from "./studio.js";
@@ -33,7 +34,7 @@ const port = (name, type) => ({ name, type });
 const common = [
   port("timeline", timelineTypes.timeline),
   port("within", spatialTypes.frame),
-  port("window", temporalTypes.window),
+  port("window", timelineTypes.window),
   port("options", optionsType),
 ];
 export const manifest = {
@@ -48,8 +49,8 @@ export const manifest = {
         mediaTypes.blobArtifact,
         timelineTypes.timeline,
         spatialTypes.frame,
-        temporalTypes.window,
-        temporalTypes.duration, temporalTypes.extent, temporalTypes.shiftSpec,
+        timelineTypes.window,
+        temporalTypes.duration, temporalTypes.extent, timelineAuthorTypes.shiftSpec,
         { module: visualTrackModuleRef, name: "VisualTrackProgram" },
       ].map((t) => [t.module.name, t.module]),
     ).values(),
@@ -59,7 +60,7 @@ export const manifest = {
   producers: [
     {
       name: "title",
-      inputs: [...common, port("font", mediaTypes.fontArtifact), port("bounce", temporalTypes.instant)],
+      inputs: [...common, port("font", mediaTypes.fontArtifact), port("bounce", timelineTypes.instant)],
       result: { kind: "output", ...port("track", compositionTypes.visualTrack) },
     },
     {
@@ -68,7 +69,7 @@ export const manifest = {
         ...common,
         port("font", mediaTypes.fontArtifact),
         port("logo", mediaTypes.blobArtifact),
-        port("stop", temporalTypes.instant),
+        port("stop", timelineTypes.instant),
       ],
       result: { kind: "output", ...port("track", compositionTypes.visualTrack) },
     },
@@ -88,7 +89,7 @@ export const manifest = {
       inputs: [
         port("items", itemsType),
         port("options", optionsType),
-        port("window", temporalTypes.window),
+        port("window", timelineTypes.window),
         port(
           "asset",
           kind === "image" ? mediaTypes.blobArtifact : mediaTypes.prepared,
@@ -204,11 +205,11 @@ function compiler(kind) {
       }[kind],
       fields: [
         { name: "id", kind: "identifier", required: true, summary: "Declaration identity." },
-        temporalContextFieldShape,
-        temporalWindowFieldShape,
+        timelineContextFieldShape,
+        timelineWindowFieldShape,
         { name: "within", kind: "reference", required: true, accepts: [spatialTypes.frame], summary: "Picture frame." },
-        ...(kind === "Title" ? [{ ...temporalInstantFieldShape, name: "bounce-at", summary: "Resolved Instant when the title jumps." }] : []),
-        ...(kind === "Timer" ? [{ ...temporalInstantFieldShape, name: "stop-at", summary: "Resolved Instant that freezes the overtime display and flashes." }] : []),
+        ...(kind === "Title" ? [{ ...timelineInstantFieldShape, name: "bounce-at", summary: "Resolved Instant when the title jumps." }] : []),
+        ...(kind === "Timer" ? [{ ...timelineInstantFieldShape, name: "stop-at", summary: "Resolved Instant that freezes the overtime display and flashes." }] : []),
         ...(["Title", "Timer"].includes(kind) ? [{ name: "font", kind: "reference", required: true, accepts: [mediaTypes.fontArtifact], summary: "Font." }] : []),
         ...(["Timer", "Flag"].includes(kind) ? [{ name: "logo", kind: "reference", required: true, accepts: [mediaTypes.blobArtifact], summary: "Logo." }] : []),
         ...Object.keys(values).map((name) => ({ name, kind: "literal", required: false, summary: `${name}; default ${values[name]}` })),
@@ -218,7 +219,7 @@ function compiler(kind) {
         { name: "image", kind: "reference", required: false, accepts: [mediaTypes.blobArtifact], summary: "Image artifact" },
         { name: "video", kind: "reference", required: false, accepts: [mediaTypes.prepared], summary: "Prepared moving media" },
         { name: "source-start-frame", kind: "literal", required: false, summary: "First source frame, default zero" },
-        temporalWindowFieldShape,
+        timelineWindowFieldShape,
       ] }] : [],
     },
     bindings(element) {
@@ -227,8 +228,8 @@ function compiler(kind) {
     },
     async compile({ declaration: element, resolveReference }) {
     const id = literal(element, "id"),
-      timeline = await resolveAuthorTimeline(element, resolveReference),
-      win = await resolveAuthorWindow(element, resolveReference);
+      timeline = await resolveTimelineReference(element, resolveReference),
+      win = await resolveWindowReference(element, resolveReference);
     const o = { id };
     for (const [name, d] of Object.entries(values)) {
       const raw = declarationField(element, name);
@@ -292,12 +293,12 @@ function compiler(kind) {
         options: { kind: "record", id: id + ".options" },
       };
     if (kind === "Title") {
-      const bounce = await resolveAuthorInstant(element, resolveReference, "bounce-at");
-      inputs.push(port("bounce", temporalTypes.instant)); bindings.bounce = bounce.ref;
+      const bounce = await resolveInstantReference(element, resolveReference, "bounce-at");
+      inputs.push(port("bounce", timelineTypes.instant)); bindings.bounce = bounce.ref;
     }
     if (kind === "Timer") {
-      const stop = await resolveAuthorInstant(element, resolveReference, "stop-at");
-      inputs.push(port("stop",temporalTypes.instant));bindings.stop=stop.ref;
+      const stop = await resolveInstantReference(element, resolveReference, "stop-at");
+      inputs.push(port("stop",timelineTypes.instant));bindings.stop=stop.ref;
     }
     const input = (name) => ({ kind: "fragment-input", name }),
       operation = (name) => ({ kind: "fragment-operation", operation: name });
@@ -320,7 +321,7 @@ function compiler(kind) {
           isImage = image !== undefined;
         if (isImage === (video !== undefined))
           throw Error("Item needs exactly one image or prepared video");
-        const iw = await resolveAuthorWindow(child, resolveReference);
+        const iw = await resolveWindowReference(child, resolveReference);
         const key = "item" + ++n,
           optsId = id + "." + key,
           sourceStartField = declarationField(child, "source-start-frame"),
@@ -337,7 +338,7 @@ function compiler(kind) {
         });
         for (const [suffix, t, r] of [
           ["options", optionsType, { kind: "record", id: optsId }],
-          ["window", temporalTypes.window, iw.ref],
+          ["window", timelineTypes.window, iw.ref],
           [
             "asset",
             isImage ? mediaTypes.blobArtifact : mediaTypes.prepared,

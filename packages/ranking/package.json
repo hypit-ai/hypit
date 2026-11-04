@@ -33,6 +33,7 @@
     "@hypit/temporal": "workspace:*",
     "@hypit/text": "workspace:*",
     "@hypit/timeline": "workspace:*",
+    "@hypit/timeline-author": "workspace:*",
     "typescript": "5.9.3"
   },
   "dependencies": {
@@ -42,6 +43,7 @@
     "@hypit/media-operations": "workspace:^0.3.0",
     "@hypit/spatial": "workspace:^0.1.1",
     "@hypit/temporal": "workspace:^0.1.1",
-    "@hypit/timeline": "workspace:^0.1.1"
+    "@hypit/timeline": "workspace:^0.1.1",
+    "@hypit/timeline-author": "workspace:^0.2.1"
   }
 }

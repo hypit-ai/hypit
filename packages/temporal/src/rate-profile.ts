@@ -11,7 +11,7 @@ import type {
   TemporalMap,
   TemporalMapPiece,
   TemporalRate,
-} from "./types.js";
+} from "./algebra-types.js";
 
 /** Pure constructor input; resolved Maps retain only integrated source positions. */
 export type TemporalRateProfileKnot = {

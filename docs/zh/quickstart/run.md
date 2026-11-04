@@ -88,8 +88,8 @@ hypit result export <build-id> --output opening-generation.video --to assets/ope
 <import as="mediaop" from="@hypit/media-operations@1"/>
 
 <asset:Video id="accepted-opening" src="./assets/opening.mp4"/>
-<mediaop:Prepare id="opening-media" source={accepted-opening}
-  video="primary-moving" audio="default" span-authority="video"/>
+<media:Video id="opening-media" source={accepted-opening}
+   audio="default" />
 ```
 
 这是一次持久的作品编辑。字幕、时间线放置、视觉处理和渲染直接使用这段表演，不需要让

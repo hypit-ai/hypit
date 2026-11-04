@@ -4,7 +4,7 @@ import { releaseDependencyVersion } from "../release-dependencies.mjs";
 import { selectReleasePackages, releaseCandidatePackages } from "../release-candidate.mjs";
 import { distributionEmbeddedPackageDirectories } from "../distribution-ownership.mjs";
 import { fileURLToPath } from "node:url";
-import { cp, mkdtemp, rm } from "node:fs/promises";
+import { cp, mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { execFileSync } from "node:child_process";
@@ -39,10 +39,14 @@ test("default domain dependencies remain independent through the Video product",
   assert.equal(embedded.has("temporal"), false);
   assert.equal(embedded.has("narrative-temporal"), false);
   assert.equal(embedded.has("compiler"), true);
+  const video = JSON.parse(await readFile(join(root, "packages/video/package.json"), "utf8"));
+  for (const name of ["@hypit/composition", "@hypit/film", "@hypit/visual-track", "@hypit/audio-track",
+    "@hypit/timeline", "@hypit/timeline-author", "@hypit/script", "@hypit/narrative-temporal"]) {
+    assert.equal(video.dependencies[name], undefined, `${name} must not be a Video product root`);
+  }
   const plan = await releaseCandidatePackages();
   const index = name => plan.independent.findIndex(item => item.name === `@hypit/${name}`);
-  assert.ok(index("timeline") >= 0);
-  assert.ok(index("timeline") < index("temporal"));
+  assert.ok(index("temporal") >= 0);
   assert.ok(index("temporal") < index("video"));
 });
 

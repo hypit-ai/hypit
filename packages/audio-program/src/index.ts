@@ -5,16 +5,20 @@ export {
   audioProgramManifest,
   audioProgramModuleRef,
   audioProgramProducers,
+  audioRenderRangeSchema,
   audioProgramSchema,
   audioProgramTypes,
 } from "./manifest.js";
 export {
-  audioProgramClipSampleSpan,
-  audioProgramGraphFromClips,
+  audioProgramGraphFromMediaSources,
+  audioProgramMediaSources,
   audioProgramSampleFrames,
-  audioProgramSourceClips,
-  compileAudioProgram,
+  audioProgramUseSampleSpan,
   sealAudioProgram,
   verifyAudioProgram,
 } from "./program.js";
 export type * from "./types.js";
+export {
+  isPointwiseOperatorTemporalSupport,
+  pointwiseOperatorTemporalSupport,
+} from "@hypit/audiovisual";

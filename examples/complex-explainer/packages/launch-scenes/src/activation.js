@@ -7,11 +7,12 @@ import { canonicalize, sameType } from "@hypit/hypit/protocol";
 import { createAuthorDeclarationFacet, declarationField, sealGraphFragment } from "@hypit/hypit/author";
 import { compositionTypes } from "@hypit/composition";
 import { mediaTypes } from "@hypit/media";
-import { timelineTypes } from "@hypit/timeline";
+import { timelineTypes, assertTemporalInstantFor } from "@hypit/timeline";
+import { timelineAuthorTypes } from "@hypit/timeline-author";
 import { spatialTypes } from "@hypit/spatial";
-import { temporalTypes, assertTemporalInstantFor } from "@hypit/temporal";
-import { resolveAuthorTimeline, resolveAuthorWindow, resolveAuthorInstant,
-  temporalContextFieldShape, temporalWindowFieldShape, temporalInstantFieldShape } from "@hypit/temporal/author";
+import { temporalTypes } from "@hypit/temporal";
+import { resolveTimelineReference, resolveWindowReference, resolveInstantReference,
+  timelineContextFieldShape, timelineWindowFieldShape, timelineInstantFieldShape } from "@hypit/timeline-author/reference";
 import { renderPoster } from "./render.js";
 const module = { name: "@explainer/launch-scenes", version: "1" },
   type = (name) => ({ module, name }),
@@ -22,7 +23,7 @@ const options = type("Options"),
 const common = [
   port("timeline", timelineTypes.timeline),
   port("within", spatialTypes.frame),
-  port("window", temporalTypes.window),
+  port("window", timelineTypes.window),
   port("font", mediaTypes.fontArtifact),
   port("options", options),
   port("events", events),
@@ -54,9 +55,9 @@ export const manifest = {
         mediaTypes.blobArtifact,
         timelineTypes.timeline,
         spatialTypes.frame,
-        temporalTypes.window,
-        temporalTypes.instant,
-        temporalTypes.duration, temporalTypes.extent, temporalTypes.shiftSpec,
+        timelineTypes.window,
+        timelineTypes.instant,
+        temporalTypes.duration, temporalTypes.extent, timelineAuthorTypes.shiftSpec,
       ].map((t) => [t.module.name, t.module]),
     ).values(),
   ],
@@ -70,7 +71,7 @@ export const manifest = {
         port("timeline", timelineTypes.timeline),
         port("events", events),
         port("options", options),
-        port("at", temporalTypes.instant),
+        port("at", timelineTypes.instant),
       ],
       result: { kind: "output", ...port("events", events) },
     },
@@ -144,15 +145,15 @@ function compiler(tag) {
       summary: "Project launch scene with phrase-driven visual beats.",
       fields: [
         { name: "id", kind: "identifier", required: true, summary: "Names the scene." },
-        temporalContextFieldShape,
-        temporalWindowFieldShape,
+        timelineContextFieldShape,
+        timelineWindowFieldShape,
         { name: "within", kind: "reference", required: true, accepts: [spatialTypes.frame], summary: "Places the scene." },
         { name: "font", kind: "reference", required: true, accepts: [mediaTypes.fontArtifact], summary: "Selects its font." },
         ...spec.assets.map((name) => ({ name, kind: "reference", required: true, accepts: [mediaTypes.blobArtifact], summary: name })),
         ...Object.keys(spec.defaults).map((name) => ({ name, kind: "literal", required: false, summary: name })),
       ],
       children: [{ name: "Beat", cardinality: "many", summary: "One named absolute scene event.", fields: [
-        { name: "name", kind: "literal", required: true, summary: "Behavioral event name." }, temporalInstantFieldShape,
+        { name: "name", kind: "literal", required: true, summary: "Behavioral event name." }, timelineInstantFieldShape,
       ] }],
     },
     bindings(declaration) {
@@ -162,8 +163,8 @@ function compiler(tag) {
     async compile({ declaration: element, resolveReference }) {
     const spec = tags[tag];
     const id = literal(element, "id"),
-      timeline = await resolveAuthorTimeline(element, resolveReference),
-      window = await resolveAuthorWindow(element, resolveReference);
+      timeline = await resolveTimelineReference(element, resolveReference),
+      window = await resolveWindowReference(element, resolveReference);
     const opts = { id };
     for (const [n, d] of Object.entries(spec.defaults)) {
       const authored = declarationField(element, n);
@@ -204,14 +205,14 @@ function compiler(tag) {
       const name = literal(ch, "name"),
         key = "beat" + ++count,
         eid = id + "." + key,
-        at = await resolveAuthorInstant(ch, resolveReference);
+        at = await resolveInstantReference(ch, resolveReference);
       records.push({
         id: eid + ".options",
         type: options,
         value: value({ id: eid, name }),
         range: ch.range,
       });
-      inputs.push(port(key, options), port(key + "-at", temporalTypes.instant));
+      inputs.push(port(key, options), port(key + "-at", timelineTypes.instant));
       bindings[key] = { kind: "record", id: eid + ".options" };
       bindings[key + "-at"] = at.ref;
       operations.push({

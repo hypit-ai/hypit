@@ -1,4 +1,4 @@
-import { clockFrameSpanSamples } from "@hypit/timeline";
+import { frameSpanSamples } from "@hypit/temporal";
 import {
   sameVisualDeliverySpec,
   verifyMediaDeliverySpec,
@@ -33,7 +33,7 @@ export const mediaDeliveryComponent = {
         if (!sameVisualDeliverySpec(visual.delivery, delivery.visual)) {
           throw new Error("Rendered visual implements a different delivery requirement.");
         }
-        const { sampleFrames } = clockFrameSpanSamples(
+        const { sampleFrames } = frameSpanSamples(
           { startFrame: 0, endFrameExclusive: visual.frameCount },
           { frameRate: visual.frameRate },
           delivery.audio.sampleRate,

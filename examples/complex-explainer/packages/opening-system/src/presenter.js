@@ -4,9 +4,8 @@ import { compositionTypes, sealPresentVisualTrack } from "@hypit/composition";
 import { mediaTypes, verifyPreparedMedia } from "@hypit/media";
 import { spatialTypes } from "@hypit/spatial";
 import { recipeType } from "@hypit/hypit/recipe";
-import { temporalTypes, assertTemporalWindowFor } from "@hypit/temporal";
-import { resolveAuthorTimeline, resolveAuthorWindow, temporalWindowFieldShape } from "@hypit/temporal/author";
-import { timelineTypes } from "@hypit/timeline";
+import { resolveTimelineReference, resolveWindowReference, timelineWindowFieldShape } from "@hypit/timeline-author/reference";
+import { timelineTypes, assertTemporalWindowFor } from "@hypit/timeline";
 import {
   appendVisualClip,
   appendTimedMediaLayer,
@@ -162,17 +161,17 @@ export function installPresenter(module, manifest, component) {
   };
   const common = [
     { name: "timeline", type: timelineTypes.timeline },
-    { name: "window", type: temporalTypes.window },
+    { name: "window", type: timelineTypes.window },
     { name: "sources", type: types.sources },
   ];
   manifest.producers.push(
     { name: producers.source.name, inputs: [
       { name: "spec", type: types.sourceSpec }, { name: "media", type: mediaTypes.prepared },
-      { name: "window", type: temporalTypes.window }, { name: "timeline", type: timelineTypes.timeline },
+      { name: "window", type: timelineTypes.window }, { name: "timeline", type: timelineTypes.timeline },
     ], result: { kind: "output", name: "sources", type: types.sources } },
     { name: producers.combineSources.name, inputs: [{ name: "left", type: types.sources }, { name: "right", type: types.sources }], result: { kind: "output", name: "sources", type: types.sources } },
     { name: producers.create.name, inputs: [], result: { kind: "output", name: "program", type: types.program } },
-    { name: producers.append.name, inputs: [{ name: "program", type: types.program }, { name: "window", type: temporalTypes.window }, { name: "visual", type: compositionTypes.visualTrack }, { name: "plane", type: types.plane }], result: { kind: "output", name: "program", type: types.program } },
+    { name: producers.append.name, inputs: [{ name: "program", type: types.program }, { name: "window", type: timelineTypes.window }, { name: "visual", type: compositionTypes.visualTrack }, { name: "plane", type: types.plane }], result: { kind: "output", name: "program", type: types.program } },
     { name: producers.resolve.name, inputs: [{ name: "program", type: types.program }, { name: "timeline", type: timelineTypes.timeline }, { name: "header", type: types.header }, { name: "plane", type: types.plane }], result: { kind: "output", name: "visual", type: compositionTypes.visualTrack } },
   );
   component.producers.push(
@@ -258,12 +257,12 @@ export function installPresenter(module, manifest, component) {
       { name: "Source", cardinality: "many", summary: "One native presenter media occurrence.", fields: [
         { name: "id", kind: "identifier", required: true, summary: "Source identity." },
         { name: "media", kind: "reference", required: true, accepts: [mediaTypes.prepared], summary: "Prepared media." },
-        { name: "window", kind: "reference", required: true, accepts: [temporalTypes.window], summary: "Exact native Window." },
+        { name: "window", kind: "reference", required: true, accepts: [timelineTypes.window], summary: "Exact native Window." },
       ] },
       { name: "Use", cardinality: "many", summary: "Selects presenter treatment over a Window; later Uses replace earlier ones.", fields: [
         { name: "id", kind: "identifier", required: false, summary: "Use identity." },
         { name: "style", kind: "reference", required: true, accepts: [types.style], summary: "Presenter treatment." },
-        temporalWindowFieldShape,
+        timelineWindowFieldShape,
       ] },
     ] },
     bindings(element) {
@@ -276,7 +275,7 @@ export function installPresenter(module, manifest, component) {
     },
   async compile({ declaration: element, resolveReference }) {
     const id = literal(element, "id");
-    const timeline = await resolveAuthorTimeline(element, resolveReference);
+    const timeline = await resolveTimelineReference(element, resolveReference);
     const within = await ref(element, "within", spatialTypes.frame, resolveReference);
     const records = [{ id: `${id}.header`, type: types.header, value: stored({ id }), range: element.range }];
     const components = [], sourceDeclarations = [], uses = [];
@@ -285,13 +284,13 @@ export function installPresenter(module, manifest, component) {
       if (tag === "Source") {
         const sourceId = literal(child, "id"), specId = `${id}.source.${sourceDeclarations.length + 1}`;
         records.push({ id: specId, type: types.sourceSpec, value: stored({ id: sourceId }), range: child.range });
-        sourceDeclarations.push({ specId, media: await ref(child, "media", mediaTypes.prepared, resolveReference), window: await ref(child, "window", temporalTypes.window, resolveReference) });
+        sourceDeclarations.push({ specId, media: await ref(child, "media", mediaTypes.prepared, resolveReference), window: await ref(child, "window", timelineTypes.window, resolveReference) });
       } else if (tag === "Use") uses.push(child);
       else throw Error("Presenter accepts only Source and Use children.");
     }
     if (!sourceDeclarations.length || !uses.length) throw Error("Presenter requires at least one Source and one Use.");
     const sourceInputs = [{ name: "timeline", type: timelineTypes.timeline }, ...sourceDeclarations.flatMap((_, index) => [
-      { name: `spec-${index}`, type: types.sourceSpec }, { name: `media-${index}`, type: mediaTypes.prepared }, { name: `window-${index}`, type: temporalTypes.window },
+      { name: `spec-${index}`, type: types.sourceSpec }, { name: `media-${index}`, type: mediaTypes.prepared }, { name: `window-${index}`, type: timelineTypes.window },
     ])];
     const sourceOps = sourceDeclarations.map((_, index) =>
       ({ id: `source-${index}`, producer: producers.source, inputs: {
@@ -322,7 +321,7 @@ export function installPresenter(module, manifest, component) {
     let previous = "empty";
     for (const [index, child] of uses.entries()) {
       const useId = literal(child, "id", false) ?? `${id}.use.${index + 1}`;
-      const temporal = await resolveAuthorWindow(child, resolveReference);
+      const temporal = await resolveWindowReference(child, resolveReference);
       const style = authored(await ref(child, "style", types.style, resolveReference), "Presenter Style");
       const needsWithin = style.fragment.inputs.some((port) => port.name === "within");
       components.push({ id: `${useId}.__style`, fragment: style.fragment, inputs: {
@@ -333,7 +332,7 @@ export function installPresenter(module, manifest, component) {
       }, outputs: { visual: `${useId}.visual` }, range: child.range });
       const planeId = `${useId}.plane`;
       records.push({ id: planeId, type: types.plane, value: stored(style.plane), range: child.range });
-      collectorInputs.push({ name: `window-${index}`, type: temporalTypes.window }, { name: `visual-${index}`, type: compositionTypes.visualTrack }, { name: `plane-${index}`, type: types.plane });
+      collectorInputs.push({ name: `window-${index}`, type: timelineTypes.window }, { name: `visual-${index}`, type: compositionTypes.visualTrack }, { name: `plane-${index}`, type: types.plane });
       bindings[`window-${index}`] = temporal.ref;
       bindings[`visual-${index}`] = { kind: "component-output", component: `${useId}.__style`, output: "visual" };
       bindings[`plane-${index}`] = { kind: "record", id: planeId };

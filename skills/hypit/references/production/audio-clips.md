@@ -16,7 +16,7 @@ Audio Track = additive set of Audio Clips
 
 <audio:Track id="mix" timeline={program.timeline}>
   <audio:Clip id="voice" source={speaker-media.media} during={program.speaker}/>
-  <audio:Clip id="music" source={music-media.media} during={program.window}
+  <audio:Clip id="music" source={music-media.source} during={program.window}
     gain="0.18" fade-in="12f" fade-out="18f">
     <audio:Map target-at="end" source-at="end" rate="1"
       wrap-from="start" wrap-until="end"/>
@@ -54,22 +54,6 @@ peers.
 
 Ducking, crossfades, speaker handoffs and other behavior spanning several Clips belong to a project
 or reusable component. It can calculate envelopes or publish its own AudioTrack for Film.
-
-## Combine closed audio contributions
-
-Use Audio Mix when the required relationship is explicit gain followed by additive mixing:
-
-```svml
-<import as="mix" from="@hypit/audio-mix@1"/>
-<mix:Track id="dialogue" timeline={program.timeline}>
-  <mix:Input id="host" source={host.audio}/>
-  <mix:Input id="guest" source={guest.audio} gain="0.9"/>
-</mix:Track>
-```
-
-`dialogue.audio` is one closed AudioTrack for Film. Each Input id names that routing occurrence;
-gain defaults to `1`. Audio Mix applies each declared gain and adds the signals. Use an audio
-component for ducking, sidechain control, reverb sends, limiting or role-specific behavior.
 
 Audio Track publishes `.audio` for Film and `.program` for declared tooling. Film includes audio
 outputs explicitly. Using prepared media in [Visual Track](visual-clips.md) does not select its

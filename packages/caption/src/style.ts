@@ -1,8 +1,8 @@
 import { canonicalStringify, canonicalize } from "@hypit/hypit/protocol";
 
 import { assertCaptionDocumentIdentity } from "./identity.js";
-import { assertTemporalWindowFor } from "@hypit/temporal";
-import type { TemporalWindow } from "@hypit/temporal";
+import { assertTemporalWindowFor } from "@hypit/timeline";
+import type { TemporalWindow } from "@hypit/timeline";
 import type { CaptionDocument, CaptionProgram, CaptionStyleIntent } from "./types.js";
 
 const ID = /^[A-Za-z][A-Za-z0-9_.-]{0,127}$/u;

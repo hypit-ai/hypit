@@ -31,7 +31,7 @@ export const exampleManifest: ModuleManifest = {
     spatialTypes.frame.module,
     timelineTypes.timeline.module,
     recipeType.module,
-    temporalTypes.window.module,
+    timelineTypes.window.module,
   ],
   types: Object.values(exampleTypes).map(({ name }) => name),
   capabilities: [],

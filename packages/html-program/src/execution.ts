@@ -1,10 +1,10 @@
 import type { CanonicalValue, BlobRef } from "@hypit/hypit/protocol";
 import { assertBlobRef } from "@hypit/hypit/protocol";
-import { assertFrameSpan } from "@hypit/timeline";
-import type { FrameSpan } from "@hypit/timeline";
+import { assertFrameSpan } from "@hypit/temporal";
+import type { FrameSpan } from "@hypit/temporal";
 import { sameOutputPictureSpec, verifyVisualDeliverySpec, verifyOutputPictureSpec } from "@hypit/media";
 import type { FrameOutputPictureSpec, VisualDeliverySpec } from "@hypit/media";
-import { assertHtmlProgram } from "./document.js";
+import { assertHtmlProgram } from "./program.js";
 import type { HtmlProgram } from "./types.js";
 
 export type HtmlRasterRequest = {

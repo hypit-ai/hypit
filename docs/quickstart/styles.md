@@ -189,7 +189,7 @@ Position remains an explicit Source reference:
   <visual:Pose at="8f" y="0" opacity="1"/>
   <visual:Pose at="end" y="0" opacity="1"/>
 </visual:Motion>
-<visual:Clip media={product-media.media}
+<visual:Clip media={product-media.source}
   during={demo} frame={product-frame} fit="contain"
   treatment={recipes.visual.product} motion={product-in}>
   <visual:Map/>

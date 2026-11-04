@@ -6,7 +6,6 @@ import { randomUUID } from "node:crypto";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { BrowserWindow, IpcMainEvent, OffscreenSharedTexture } from "electron";
-import { selectHtmlProcessUsages } from "@hypit/html-program";
 import {
   assert,
   createFramePreparer,
@@ -245,31 +244,8 @@ export async function createGpuCapture(input: CaptureInput, origin: string,
       const page: FramePreparationPage = {
         evaluate: ((fn: (...args: unknown[]) => unknown, ...args: unknown[]) =>
           programFrame.executeJavaScript(`(${fn.toString()})(...${JSON.stringify(args)})`)) as FramePreparationPage["evaluate"],
-        screenshot: async options => {
-          const clip = options.clip;
-          window.setBackgroundColor("#00000000");
-          try {
-            await new Promise<void>((resolve) => {
-              const painted = (event: { readonly texture?: OffscreenSharedTexture | null }, dirtyRect: { readonly y: number; readonly height: number }) => {
-                if (event.texture == null || event.texture.textureInfo.widgetType !== "frame") return;
-                if (dirtyRect.y >= height || dirtyRect.y + dirtyRect.height <= 0) return;
-                window.webContents.off("paint", painted);
-                resolve();
-              };
-              window.webContents.on("paint", painted);
-              window.webContents.invalidate();
-            });
-            const image = await window.webContents.capturePage({
-              x: Math.round(clip.x), y: Math.round(clip.y),
-              width: Math.round(clip.width), height: Math.round(clip.height),
-            });
-            return image.toPNG();
-          } finally {
-            window.setBackgroundColor(delivery.picture.alpha.matte);
-          }
-        },
       };
-      const prepare = await createFramePreparer(page, selectHtmlProcessUsages(document, input.frameSelection));
+      const prepare = await createFramePreparer(page);
       await programFrame.executeJavaScript(`import(${JSON.stringify(new URL(pages.video, origin).href)})
         .then(module=>module.installBrowserVideo(${JSON.stringify(new URL(pages.decoder, origin).href)},
           ${Math.max(1, Math.floor(config.maxDecodedSourceBytes / workers))}))`);

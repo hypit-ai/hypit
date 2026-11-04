@@ -1,25 +1,15 @@
 # `@hypit/audio-stretch`
 
-`@hypit/audio-stretch` supplies explicit audio reconstruction policies. The Temporal Map on an
-Audio Clip still owns the exact target-to-source relation; this package only says how the selected
-source positions become an audible signal.
+`@hypit/audio-stretch` owns the Preserve Pitch audio reconstruction policy. `preservePitch()` returns a typed
+`SignalReconstruction`, and the package publishes the same value through an ordinary Producer. It has no
+AudioTrack, Clip or textual-author declaration dependency.
 
-```xml
-<import as="audio" from="@hypit/audio-track@1"/>
-<import as="stretch" from="@hypit/audio-stretch@1"/>
+An AVIR author binding attaches this value to one selected signal read. That selection's exact Mapping remains
+the sole target-to-source position fact; Preserve Pitch contains no rate, duration or inferred source range.
+The reconstruction can therefore be a static binding or a future typed Operation result without changing the
+Programme shape.
 
-<stretch:PreservePitch id="natural-speed"/>
-
-<audio:Track id="dialogue" timeline={story.timeline}>
-  <audio:Clip source={voice.media} during={story.fast}
-              reconstruction={natural-speed}>
-    <audio:Map target-start="0s" target-end="4s"
-               source-start="0s" rate="2"/>
-  </audio:Clip>
-</audio:Track>
-```
-
-Omitting `reconstruction` keeps ordinary point sampling. `PreservePitch` does not contain a speed:
-the exact speed and source interval remain facts of the Clip's Temporal Map. Renderers may support a
-defined subset of Map relations and must reject unsupported relations instead of silently changing
-the requested reconstruction.
+Omitting reconstruction keeps ordinary point sampling. A terminal may support only a defined subset of Mapping
+relations. The local audio Provider currently supports a direct media child Programme used through a complete
+positive-affine, non-looping Mapping; it rejects other programme shapes or reconstruction formats instead of
+silently resampling them.

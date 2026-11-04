@@ -3,8 +3,9 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
+import { pointwiseOperatorTemporalSupport } from "@hypit/audio-program";
 import { blobTypes } from "@hypit/blob";
-import { mediaTypes, preparedAudioSource, prepareMedia, sealMediaDeliverySpec, sealTimelineVisual, sealTimelineAudio, verifyMediaInspection, verifyMuxedMedia, verifyTimelineAudio } from "@hypit/media";
+import { mediaCapabilities, mediaTypes, preparedAudioSource, prepareMedia, sealMediaDeliverySpec, sealMediaSelectionRequest, sealTimelineVisual, sealTimelineAudio, selectMediaStreams, verifyMediaInspection, verifyMuxedMedia, verifyTimelineAudio } from "@hypit/media";
 import type { MediaAudioStream, MediaInspection, MediaVideoStream, MuxedMedia, TimelineAudio, TimelineVisual } from "@hypit/media";
 import { assertSpeechEvidenceAudioIdentity, speechEvidenceCapabilities, speechEvidenceTypes } from "@hypit/speech-evidence";
 import type { SpeechEvidenceAudio } from "@hypit/speech-evidence";
@@ -16,19 +17,16 @@ import {
 import type { EndpointRegistration } from "@hypit/executor";
 import type { ImmediateEndpointHandler } from "@hypit/endpoint";
 import { installEndpoint } from "@hypit/endpoint";
-import {
-  mediaOperationsCapabilities,
-  sealMediaSelectionRequest,
-  selectMediaStreams,
-  transformPreparedMedia,
-} from "@hypit/media-operations";
-import { audioProgramCapabilities, audioProgramGraphFromClips, sealAudioProgram } from "@hypit/audio-program";
+import { mediaOperationsCapabilities } from "@hypit/media-operations";
+import { audioProgramCapabilities, audioProgramGraphFromMediaSources, sealAudioProgram } from "@hypit/audio-program";
+import type { AudioProgramGraph } from "@hypit/audio-program";
+import { audioGainControlProcess, audioGainProcess } from "@hypit/audio-mix";
 import { preservePitch } from "@hypit/audio-stretch";
 import { mediaDeliveryCapabilities } from "@hypit/media-delivery";
 import { assertBlobRef, canonicalize } from "@hypit/protocol";
 import type { CapabilityRef, CanonicalValue, Need, TypeRef } from "@hypit/protocol";
-import { sealTemporalMap } from "@hypit/temporal";
-import type { TemporalMapPiece } from "@hypit/temporal";
+import { identityTemporalMap, sealTemporalMap } from "@hypit/temporal";
+import type { TemporalMap, TemporalMapPiece, TemporalRange } from "@hypit/temporal";
 import { frameRangeFixture, frameSamplingMapFixture } from "../../../../test/temporal-fixture.js";
 
 import { createLocalMediaProvider } from "../../src/index.js";
@@ -81,6 +79,76 @@ function audioSampling(
 
 const audioTarget = (startSample: number, endSampleExclusive: number) =>
   frameRangeFixture(startSample, endSampleExclusive, { numerator: 48_000, denominator: 1 });
+
+const audioProgramTiming = (id: string, sampleFrames: number) => ({
+  domain: { id, duration: audioTarget(0, sampleFrames).end },
+  sampling: { sampleRate: 48_000 },
+} as const);
+
+/** Test authoring helper: media leaves stay closed; every timeline occurrence is a Programme use. */
+function audioProgramGraphFromOccurrences(occurrences: readonly {
+  readonly id: string;
+  readonly source: ReturnType<typeof preparedAudioSource>;
+  readonly preparation: TemporalMap;
+  readonly sampling: TemporalMap;
+  readonly target: TemporalRange;
+}[]): AudioProgramGraph {
+  const nodes = occurrences.map((occurrence, index) => {
+    const child = sealAudioProgram({
+      domain: occurrence.preparation.stages[0]!.target,
+      sampling: { sampleRate: 48_000 },
+      graph: audioProgramGraphFromMediaSources([{
+        id: occurrence.id,
+        source: occurrence.source,
+        preparation: occurrence.preparation,
+      }]),
+    });
+    return {
+      kind: "program" as const,
+      id: `use:${index}:${occurrence.id}`,
+      program: child,
+      sampling: occurrence.sampling,
+      target: occurrence.target,
+    };
+  });
+  if (nodes.length === 1) return { nodes, output: { node: nodes[0]!.id } };
+  const mix = { kind: "mix" as const, id: "root", inputs: nodes.map((node) => ({ node: node.id })) };
+  return { nodes: [...nodes, mix], output: { node: mix.id } };
+}
+
+function gainControl(
+  domain: ReturnType<typeof audioProgramTiming>["domain"],
+  segments: readonly { readonly start: number; readonly end: number; readonly from: number; readonly to: number }[],
+) {
+  return {
+    domain,
+    segments: segments.map((segment) => ({
+      range: audioTarget(segment.start, segment.end),
+      from: segment.from,
+      to: segment.to,
+      interpolation: { kind: "linear" as const },
+    })),
+  };
+}
+
+function gainGraph(
+  graph: AudioProgramGraph,
+  domain: ReturnType<typeof audioProgramTiming>["domain"],
+  factors: readonly ({ readonly kind: "constant"; readonly gain: number }
+    | { readonly kind: "control"; readonly control: ReturnType<typeof gainControl> })[],
+): AudioProgramGraph {
+  const nodes = [...graph.nodes];
+  let output = graph.output;
+  for (const [index, factor] of factors.entries()) {
+    const id = `gain:${index}`;
+    nodes.push({ kind: "process", id, inputs: { signal: output },
+      program: factor.kind === "constant" ? audioGainProcess(factor.gain) : audioGainControlProcess(factor.control),
+      temporalSupport: pointwiseOperatorTemporalSupport(["signal"]),
+      controlMappings: factor.kind === "constant" ? {} : { gain: identityTemporalMap(domain) } });
+    output = { node: id };
+  }
+  return { nodes, output };
+}
 
 async function run(executable: string, args: readonly string[]): Promise<void> {
   await new Promise<void>((resolve, reject) => {
@@ -189,7 +257,7 @@ async function handlerFor(request: Need): Promise<{ handler: ImmediateEndpointHa
 
 async function inspectArtifact(resources: MemoryResourceStore, source: Awaited<ReturnType<MemoryResourceStore["put"]>>) {
   const constraints = canonicalize({ source });
-  const request = need("need:media-inspect", mediaOperationsCapabilities.inspect,
+  const request = need("need:media-inspect", mediaCapabilities.inspect,
     mediaTypes.inspection, constraints);
   const provider = await handlerFor(request);
   const result = await provider.handler({
@@ -235,7 +303,7 @@ test("local media Provider inspects moving picture, audio and attached picture w
     await rm(root, { recursive: true, force: true });
   }
 });
-test("local media Provider derives exact 16 kHz evidence from retimed Prepared Media", {
+test("local media Provider derives exact 16 kHz evidence from Prepared Media", {
   skip: !hasMediaBinaries,
 }, async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-provider-media-evidence-"));
@@ -258,12 +326,9 @@ test("local media Provider derives exact 16 kHz evidence from retimed Prepared M
         video: { mode: "none" }, audio: { mode: "default" }, spanAuthority: "audio", picture: { mode: "none" },
       }),
     });
-    const media = transformPreparedMedia(prepared, { operations: [{
-      kind: "retime", rate: { numerator: 2, denominator: 1 },
-    }] }, "speech-fast");
     const constraints = canonicalize({
-      source: preparedAudioSource(media),
-      preparation: media.audio!.map,
+      source: preparedAudioSource(prepared),
+      preparation: prepared.audio!.map,
     });
     const request = need(
       "need:speech-evidence-audio",
@@ -274,14 +339,14 @@ test("local media Provider derives exact 16 kHz evidence from retimed Prepared M
     const value = await fulfillInline(resources, request);
     assertSpeechEvidenceAudioIdentity(value as unknown as SpeechEvidenceAudio);
     const evidence = value as unknown as SpeechEvidenceAudio;
-    assert.equal(evidence.sampleFrames, 8_000);
+    assert.equal(evidence.sampleFrames, 16_000);
     const inspected = await inspectArtifact(resources, evidence.artifact);
     const audio = inspected.streams.find((stream) => stream.kind === "audio");
     assert.equal(audio?.kind, "audio");
     assert.equal(audio?.kind === "audio" && audio.codecName, "pcm_s16le");
     assert.equal(audio?.kind === "audio" && audio.sampleRate, 16_000);
     assert.equal(audio?.kind === "audio" && audio.channels, 1);
-    assert.equal(audio?.kind === "audio" && audio.decodedSampleFrames, 8_000);
+    assert.equal(audio?.kind === "audio" && audio.decodedSampleFrames, 16_000);
   } finally {
     await rm(root, { recursive: true, force: true }).catch(() => {});
   }
@@ -536,26 +601,19 @@ test("local media Provider renders one frame-domain audio program and muxes exac
       resources.put(await readFile(visualPath), "video/mp4"),
     ]);
     const program = sealAudioProgram({
-      frameRate: { numerator: 30, denominator: 1 },
-      frameCount: 30,
-      graph: audioProgramGraphFromClips([
+      ...audioProgramTiming("speech-program", 48_000),
+      graph: audioProgramGraphFromOccurrences([
         {
           id: "speech:first",
           ...preparedAudioProgramSource("speech:first", first, 24_000),
           sampling: audioSampling("speech:first", 24_000, 24_000),
           target: audioTarget(0, 24_000),
-          gain: 1,
-          fadeInSamples: 0,
-          fadeOutSamples: 0,
         },
         {
           id: "speech:second",
           ...preparedAudioProgramSource("speech:second", second, 24_000),
           sampling: audioSampling("speech:second", 24_000, 24_000),
           target: audioTarget(24_000, 48_000),
-          gain: 1,
-          fadeInSamples: 0,
-          fadeOutSamples: 0,
         },
       ]),
     });
@@ -577,16 +635,23 @@ test("local media Provider renders one frame-domain audio program and muxes exac
       ...program,
       graph: {
         ...program.graph,
-        nodes: program.graph.nodes.map((node) => node.kind === "source" && node.clip.id === "speech:first"
-          ? { ...node, clip: { ...node.clip, source: { ...node.clip.source, source: partialFirst } } }
-          : node),
+        nodes: program.graph.nodes.map((node) => {
+          if (node.kind !== "program") return node;
+          const sourceNode = node.program.graph.nodes.find((candidate) => candidate.kind === "source");
+          if (sourceNode?.kind !== "source" || sourceNode.media.id !== "speech:first") return node;
+          return { ...node, program: { ...node.program, graph: { ...node.program.graph,
+            nodes: node.program.graph.nodes.map((candidate) => candidate.kind === "source"
+              ? { ...candidate, media: { ...candidate.media,
+                source: { ...candidate.media.source, source: partialFirst } } }
+              : candidate) } } };
+        }),
       },
     });
     const partialValue = await fulfillInline(partialResources, need(
       "need:render-first-half-audio",
       audioProgramCapabilities.render,
       mediaTypes.timelineAudio,
-      canonicalize({ program: partialProgram, range: { startFrame: 0, endFrameExclusive: 15 } }),
+      canonicalize({ program: partialProgram, range: audioTarget(0, 24_000) }),
     ));
     verifyTimelineAudio(partialValue);
     assert.equal((partialValue as unknown as TimelineAudio).sampleFrames, 24_000,
@@ -725,9 +790,8 @@ test("local media Provider executes an end-aligned loop from the exact authored 
     const resources = new MemoryResourceStore();
     const source = await resources.put(rampWav(100), "audio/wav");
     const program = sealAudioProgram({
-      frameRate: { numerator: 30, denominator: 1 },
-      frameCount: 30,
-      graph: audioProgramGraphFromClips([{
+      ...audioProgramTiming("loop-program", 48_000),
+      graph: audioProgramGraphFromOccurrences([{
         id: "loop:end",
         ...preparedAudioProgramSource("loop:end", source, 100),
         sampling: audioSampling("loop:end", 250, 100, {
@@ -735,9 +799,6 @@ test("local media Provider executes an end-aligned loop from the exact authored 
           wrap: { startFrame: 0, endFrameExclusive: 100 },
         }),
         target: audioTarget(0, 250),
-        gain: 1,
-        fadeInSamples: 0,
-        fadeOutSamples: 0,
       }]),
     });
     const value = await fulfillInline(resources, need(
@@ -784,9 +845,6 @@ test("audio signal evaluation treats reverse, hold, cubic motion and gaps as pee
       ...preparedAudioProgramSource(id, source, 16),
       sampling: map,
       target: audioTarget(start, start + 4),
-      gain: 1,
-      fadeInSamples: 0,
-      fadeOutSamples: 0,
     });
     const chained = preparedAudioProgramSource("prepared-chain", source, 16);
     const preparedDomain = { id: "prepared-chain:prepared", duration: at(4) } as const;
@@ -809,8 +867,8 @@ test("audio signal evaluation treats reverse, hold, cubic motion and gaps as pee
         rate: { numerator: 1, denominator: 1 } }],
     }] });
     const program = sealAudioProgram({
-      frameRate: { numerator: 30, denominator: 1 }, frameCount: 30,
-      graph: audioProgramGraphFromClips([
+      ...audioProgramTiming("mapping-program", 48_000),
+      graph: audioProgramGraphFromOccurrences([
         base("reverse", 0, sampling("reverse", {
           target: { start: at(0), end: at(4) }, sourceAtStart: at(4), rate: { numerator: -1, denominator: 1 },
         })),
@@ -826,7 +884,7 @@ test("audio signal evaluation treats reverse, hold, cubic motion and gaps as pee
         })),
         {
           id: "prepared-chain", source: chained.source, preparation, sampling: preparedSampling,
-          target: audioTarget(16, 20), gain: 1, fadeInSamples: 0, fadeOutSamples: 0,
+          target: audioTarget(16, 20),
         },
       ]),
     });
@@ -859,16 +917,26 @@ test("audio range preserves loop phase, tempo and intersected fades from the ful
   try {
     const resources = new MemoryResourceStore();
     const source = await resources.put(rampWav(4800), "audio/wav");
+    const timing = audioProgramTiming("range-program", 96_000);
+    const sourceGraph = audioProgramGraphFromOccurrences([{ id: "loop", ...preparedAudioProgramSource("loop", source, 4800),
+      sampling: audioSampling("loop", 96000, 4800, { sourceAtStart: { numerator: 1700, denominator: 1 },
+        rate: { numerator: 5, denominator: 4 }, wrap: { startFrame: 0, endFrameExclusive: 4800 } }),
+      target: audioTarget(0, 96000) }]);
     const program = sealAudioProgram({
-      frameRate: { numerator: 30, denominator: 1 }, frameCount: 60,
-      graph: audioProgramGraphFromClips([{ id: "loop", ...preparedAudioProgramSource("loop", source, 4800),
-        sampling: audioSampling("loop", 96000, 4800, { sourceAtStart: { numerator: 1700, denominator: 1 },
-          rate: { numerator: 5, denominator: 4 }, wrap: { startFrame: 0, endFrameExclusive: 4800 } }),
-        target: audioTarget(0, 96000),
-        gain: 0.8,
-        fadeInSamples: 48000, fadeOutSamples: 30000 }]),
+      ...timing,
+      graph: gainGraph(sourceGraph, timing.domain, [
+        { kind: "constant", gain: 0.8 },
+        { kind: "control", control: gainControl(timing.domain, [
+          { start: 0, end: 48_000, from: 0, to: 1 },
+          { start: 48_000, end: 96_000, from: 1, to: 1 },
+        ]) },
+        { kind: "control", control: gainControl(timing.domain, [
+          { start: 0, end: 66_000, from: 1, to: 1 },
+          { start: 66_000, end: 96_000, from: 1, to: 0 },
+        ]) },
+      ]),
     });
-    const pcm = async (name: string, range?: { startFrame: number; endFrameExclusive: number }) => {
+    const pcm = async (name: string, range?: ReturnType<typeof audioTarget>) => {
       const value = await fulfillInline(resources, need(`need:${name}`, audioProgramCapabilities.render,
         mediaTypes.timelineAudio, canonicalize({ program, ...(range === undefined ? {} : { range }) })));
       verifyTimelineAudio(value);
@@ -879,7 +947,7 @@ test("audio range preserves loop phase, tempo and intersected fades from the ful
       return { bytes: await readFile(raw), samples: audio.sampleFrames };
     };
     const full = await pcm("full");
-    const range = await pcm("range", { startFrame: 15, endFrameExclusive: 45 });
+    const range = await pcm("range", audioTarget(24_000, 72_000));
     assert.equal(range.samples, 48000);
     const expected = full.bytes.subarray(24000 * 4, 72000 * 4);
     assert.equal(range.bytes.length, expected.length);
@@ -904,17 +972,29 @@ test("pitch-preserving reconstruction follows the same explicit rate without cha
     ]);
     const resources = new MemoryResourceStore();
     const source = await resources.put(await readFile(sourcePath), "audio/wav");
-    const makeProgram = (id: string, reconstruction?: ReturnType<typeof preservePitch>) => sealAudioProgram({
-      frameRate: { numerator: 30, denominator: 1 }, frameCount: 15,
-      graph: audioProgramGraphFromClips([{
-        id,
-        ...preparedAudioProgramSource(id, source, 48_000),
-        sampling: audioSampling(id, 24_000, 48_000, { rate: { numerator: 2, denominator: 1 } }),
-        ...(reconstruction === undefined ? {} : { reconstruction }),
-        target: audioTarget(0, 24_000),
-        gain: 1, fadeInSamples: 0, fadeOutSamples: 0,
-      }]),
-    });
+    const makeProgram = (id: string, reconstruction?: ReturnType<typeof preservePitch>["program"]) => {
+      const prepared = preparedAudioProgramSource(id, source, 48_000);
+      const child = sealAudioProgram({
+        domain: prepared.preparation.stages[0]!.target,
+        sampling: { sampleRate: 48_000 },
+        graph: audioProgramGraphFromMediaSources([{
+          id: `${id}:media`,
+          ...prepared,
+        }]),
+      });
+      return sealAudioProgram({
+        ...audioProgramTiming(`${id}:program`, 24_000),
+        graph: { nodes: [{
+          kind: "program",
+          id,
+          program: child,
+          sampling: audioSampling(id, 24_000, 48_000,
+            { rate: { numerator: 2, denominator: 1 } }),
+          ...(reconstruction === undefined ? {} : { reconstruction }),
+          target: audioTarget(0, 24_000),
+        }], output: { node: id } },
+      });
+    };
     const crossings = async (name: string, program: ReturnType<typeof makeProgram>) => {
       const value = await fulfillInline(resources, need(`need:${name}`, audioProgramCapabilities.render,
         mediaTypes.timelineAudio, canonicalize({ program })));
@@ -930,7 +1010,7 @@ test("pitch-preserving reconstruction follows the same explicit rate without cha
       return count;
     };
     const ordinary = await crossings("ordinary", makeProgram("ordinary"));
-    const preserved = await crossings("preserved", makeProgram("preserved", preservePitch()));
+    const preserved = await crossings("preserved", makeProgram("preserved", preservePitch().program));
     assert.ok(ordinary >= 420 && ordinary <= 460, `Ordinary 2x sampling produced ${ordinary} cycles`);
     assert.ok(preserved >= 200 && preserved <= 240, `Pitch-preserving 2x stretch produced ${preserved} cycles`);
   } finally {
@@ -943,18 +1023,28 @@ test("audio envelopes and audible regions preserve sample phase through gaps and
   try {
     const resources = new MemoryResourceStore();
     const source = await resources.put(rampWav(4800), "audio/wav");
+    const timing = audioProgramTiming("presentation-program", 19_200);
+    const sourceGraph = audioProgramGraphFromOccurrences([{ id: "voice", ...preparedAudioProgramSource("voice", source, 4800),
+      sampling: audioSampling("voice", 16000, 4800, { wrap: { startFrame: 0, endFrameExclusive: 4800 } }),
+      target: audioTarget(1600, 17600) }]);
     const program = sealAudioProgram({
-      frameRate: { numerator: 30, denominator: 1 }, frameCount: 12,
-      graph: audioProgramGraphFromClips([{ id: "voice", ...preparedAudioProgramSource("voice", source, 4800),
-        sampling: audioSampling("voice", 16000, 4800, { wrap: { startFrame: 0, endFrameExclusive: 4800 } }),
-        target: audioTarget(1600, 17600),
-        gain: 1,
-        fadeInSamples: 0, fadeOutSamples: 0,
-        gainEnvelope: [{ sample: 1600, gain: 0 }, { sample: 17600, gain: 1 }],
-        audibility: [{ startSample: 1600, endSampleExclusive: 4800 }, { startSample: 8000, endSampleExclusive: 17600 }],
-      }]),
+      ...timing,
+      graph: gainGraph(sourceGraph, timing.domain, [
+        { kind: "control", control: gainControl(timing.domain, [
+          { start: 0, end: 1_600, from: 0, to: 0 },
+          { start: 1_600, end: 17_600, from: 0, to: 1 },
+          { start: 17_600, end: 19_200, from: 1, to: 1 },
+        ]) },
+        { kind: "control", control: gainControl(timing.domain, [
+          { start: 0, end: 1_600, from: 0, to: 0 },
+          { start: 1_600, end: 4_800, from: 1, to: 1 },
+          { start: 4_800, end: 8_000, from: 0, to: 0 },
+          { start: 8_000, end: 17_600, from: 1, to: 1 },
+          { start: 17_600, end: 19_200, from: 0, to: 0 },
+        ]) },
+      ]),
     });
-    const pcm = async (name: string, range?: { startFrame: number; endFrameExclusive: number }) => {
+    const pcm = async (name: string, range?: ReturnType<typeof audioTarget>) => {
       const value = await fulfillInline(resources, need(`need:${name}`, audioProgramCapabilities.render,
         mediaTypes.timelineAudio, canonicalize({ program, ...(range === undefined ? {} : { range }) })));
       verifyTimelineAudio(value);
@@ -970,7 +1060,7 @@ test("audio envelopes and audible regions preserve sample phase through gaps and
       const expected = (local % 4800 + 1) * local / 16000;
       assert.ok(Math.abs(full.readInt16LE(sample * 4) - expected) <= 1, `Wrong envelope or source phase at ${sample}`);
     }
-    const selected = await pcm("selected", { startFrame: 4, endFrameExclusive: 10 });
+    const selected = await pcm("selected", audioTarget(6_400, 16_000));
     const expected = full.subarray(6400 * 4, 16000 * 4);
     assert.equal(selected.length, expected.length);
     for (let index = 0; index < selected.length; index += 2) {

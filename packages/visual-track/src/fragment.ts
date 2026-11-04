@@ -24,7 +24,7 @@ export const stillVisualTrackFragment = sealGraphFragment({
     { name: "fit", type: spatialTypes.fit },
     { name: "sample-spec", type: visualTrackTypes.sampleLayerSpec },
     { name: "clip-spec", type: visualTrackTypes.clipSpec },
-    { name: "window", type: temporalTypes.window },
+    { name: "window", type: timelineTypes.window },
   ],
   operations: [
     { id: "layers", producer: visualTrackProducers.createLayers, inputs: {}, result: { kind: "output" as const, name: "layers" } },

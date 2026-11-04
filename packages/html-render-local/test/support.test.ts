@@ -7,14 +7,6 @@ import {
   htmlProviderDocument,
 } from "../../provider-html-local/test/provider-scenario.js";
 
-test("local rendering implements Visual Process passes", () => {
-  const processUsages = [{ order: 1,
-    stageKeys: ["root-stage"], spans: [{ startFrame: 6, endFrameExclusive: 12 }] }];
-  const program = { ...htmlProviderDocument(), processUsages };
-  const request = { program, delivery: htmlProviderDelivery() };
-  assert.equal(localHtmlRasterRejection(request), undefined);
-});
-
 test("browser still support is narrower than explicitly transformed timed media", () => {
   const program = htmlProviderDocument();
   const picture = { colorPrimaries: "bt709", colorTransfer: "bt709", colorMatrix: "bt709",

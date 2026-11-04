@@ -1,6 +1,5 @@
-export { htmlProgramFragment } from "./fragment.js";
 export { htmlProgramComponent } from "./component.js";
-export { assertHtmlProgram, assertHtmlFrameIndex, assertHtmlFrameSpan, compileHtmlProgram, htmlArtifactUri, htmlProgramTime, materializeHtmlProgram, selectHtmlArtifacts, selectHtmlProcessUsages, selectHtmlSurfaces, selectHtmlVideoSources } from "./document.js";
+export { assertHtmlProgram, assertHtmlFrameIndex, assertHtmlFrameSpan, htmlArtifactUri, htmlProgramTime, materializeHtmlProgram, selectHtmlArtifacts, selectHtmlVideoSources } from "./program.js";
 export {
   htmlProgramSchema,
   htmlProgramCapabilities,
@@ -13,19 +12,15 @@ export { htmlRasterRequest, verifyHtmlRasterRequest, htmlFrameRequest, verifyHtm
 export type { HtmlRasterRequest, HtmlFrameRequest, HtmlFrameImages } from "./execution.js";
 export type * from "./types.js";
 export { htmlVisual, readHtmlVisual, HTML_VISUAL_FORMAT } from "./html-visual.js";
-export type { HtmlVisual, HtmlVisualAuthoring, HtmlVisualDependency } from "./html-visual.js";
-export { htmlVisualElement } from "./html-element.js";
+export type { HtmlVisual, HtmlVisualAuthoring, HtmlVisualDependency, HtmlVisualProgram } from "./html-visual.js";
+export { compileHtmlPictureProgram } from "./picture-program.js";
+export type { HtmlPictureElement, HtmlPictureProgramInput, HtmlPictureStyle } from "./picture-program.js";
+export {
+  HTML_PICTURE_RECONSTRUCTION_FORMAT,
+  htmlNearestPictureReconstruction,
+  readHtmlPictureReconstruction,
+} from "./picture-reconstruction.js";
 export type {
-  HtmlAnimation,
-  HtmlAttribute,
-  HtmlBoxElement,
-  HtmlEasing,
-  HtmlElement,
-  HtmlElementBase,
-  HtmlKeyframe,
-  HtmlProgramElement,
-  HtmlStyleDeclaration,
-  HtmlTerminalElement,
-} from "./html-element.js";
-export { htmlAdjustment, readHtmlAdjustment, HTML_ADJUSTMENT_FORMAT } from "./html-adjustment.js";
-export type { HtmlAdjustment, HtmlAdjustmentKeyframe } from "./html-adjustment.js";
+  HtmlPictureReconstruction,
+  HtmlPictureReconstructionProgram,
+} from "./picture-reconstruction.js";

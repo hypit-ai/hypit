@@ -1,3 +1,4 @@
+import { timelineTypes } from "@hypit/timeline";
 import { composeParameterDeclarations } from "./parameters.js";
 /**
  * Turn the resolved Studio projection into what the panels read.
@@ -11,8 +12,8 @@ import { audioTrackClips, compositionTypes } from "@hypit/composition";
 import type { AudioTrack, VisualTrack } from "@hypit/composition";
 import type { TypeRef } from "@hypit/hypit/protocol";
 import { timelineFrameCount } from "@hypit/timeline";
-import { resolveTemporalBoundary, temporalTypes } from "@hypit/temporal";
-import type { TemporalInstant } from "@hypit/temporal";
+import { resolveTemporalBoundary } from "@hypit/temporal";
+import type { TemporalInstant } from "@hypit/timeline";
 import { sameModule, sameType } from "@hypit/hypit/protocol";
 
 import type {
@@ -188,7 +189,7 @@ function temporalDeclarationDomain(
   for (const { placement, draft } of declarations) {
     if (seen.has(draft.output)) continue;
     const found = values.get(draft.output);
-    if (found === undefined || !sameType(found.type, temporalTypes.instant)) continue;
+    if (found === undefined || !sameType(found.type, timelineTypes.instant)) continue;
     const range = placement.sourcePath === source.path ? draft.range : undefined;
     const value = found.value as TemporalInstant;
     if (value.timelineId !== built.timeline.id) continue;

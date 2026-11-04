@@ -1,8 +1,43 @@
 # `@hypit/spatial`
 
 Pure two-dimensional video geometry. The package owns the final raster viewport, resolved
-picture-plane geometry, source extents and affine mappings. It owns no layer tree, media, Paint,
+picture-plane geometry, source extents and affine/projective mappings. It owns no layer tree, media, Paint,
 motion, Timeline, detector, Provider or renderer policy.
+
+The package now exposes two deliberately different boundaries. `@hypit/spatial/algebra` is the
+renderer-free relationship algebra used by AVIR. The package root retains the existing author and
+resolved pixel-geometry surface. Neither boundary is Hypit Core.
+
+## Clock- and Canvas-free spatial algebra
+
+`@hypit/spatial/algebra` owns `LocalSpatialDomain`, finite `SpatialRegion` and an invertible affine or projective
+`SpatialMap`. A Map has an explicit sampling direction:
+
+```text
+target / parent position -> source / child position | outside
+```
+
+It can therefore answer the renderer's actual question without deriving an inverse from CSS, DOM
+hierarchy or nearby Frames. `evaluateSpatialMap()` returns no sample when either the target position
+or its mapped source position lies outside the corresponding finite Domain. `composeSpatialMaps()`,
+`invertSpatialMap()` and `identitySpatialMap()` preserve the named Domain boundaries.
+
+Coordinates in this algebra are unit-neutral. A component may use pixels, normalized layout units,
+an SVG viewBox or another local convention, provided its public Mapping states the relationship.
+Affine transforms use six coefficients. Projective transforms use an explicit invertible homogeneous 3×3
+relation; a map whose horizon crosses its finite target Domain is rejected. `composeSpatialMaps()`,
+`invertSpatialMap()` and `evaluateSpatialMap()` work on both kinds. Arbitrary warp, camera and 3D rasterization
+remain package-owned Mapping programmes or typed Picture Operators instead of becoming central flags.
+
+The existing root `SpatialMap2D` has a different, author-facing direction: it places local geometry
+into the program picture plane. A compiler may invert that placement into the canonical sampling
+Map, but the two meanings are not aliases and are not accepted interchangeably.
+
+`interpolateSpatialMaps()` is one deliberately named value policy: linear interpolation of the six
+affine coefficients while preserving target and source Domains. It is used by the first resolved AVIR
+motion Control. It is not a universal motion rule—decomposed rotation, perspective, path motion and 3D
+camera interpolation remain separate package-owned policies. A coefficient interpolation that becomes
+singular is rejected at the sampled position rather than silently repaired.
 
 ## The spatial values
 

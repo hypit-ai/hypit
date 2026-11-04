@@ -1,14 +1,19 @@
 import { sealGraphFragment } from "@hypit/hypit/author";
-import { compositionTypes } from "@hypit/composition";
+import { audioProgramTypes } from "@hypit/audio-program";
+import { htmlProgramTypes } from "@hypit/html-program";
 import { htmlDocumentProducers, htmlDocumentTypes } from "./manifest.js";
 
 export const htmlDocumentFragment = sealGraphFragment({
-  inputs: [{ name: "composition", type: compositionTypes.composition }],
+  inputs: [
+    { name: "program", type: htmlProgramTypes.program },
+    { name: "audio", type: audioProgramTypes.program },
+  ],
   operations: [{
     id: "compile-document",
     producer: htmlDocumentProducers.compile,
     inputs: {
-      composition: { kind: "fragment-input", name: "composition" },
+      program: { kind: "fragment-input", name: "program" },
+      audio: { kind: "fragment-input", name: "audio" },
     },
     result: { kind: "output", name: "document" },
   }],

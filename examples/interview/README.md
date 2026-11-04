@@ -88,7 +88,7 @@ Style placement. A null WIFE region hides her Caption on that frame.
 
 Accept the three generated clips into the project before the second composition pass. Export each
 video artifact, declare the exported file with `@hypit/media`, and change the corresponding
-`mediaop:Prepare` source to that project asset:
+the corresponding `media:Video` source to that project asset:
 
 ```bash
 hypit get ACTUAL_BUILD_ID --output manifest-rule-take.video \
@@ -100,8 +100,8 @@ hypit get ACTUAL_BUILD_ID --output manifest-rule-take.video \
 <import as="mediaop" from="@hypit/media-operations@1"/>
 
 <media:Video id="accepted-manifest-rule" src="./assets/accepted/manifest-rule.mp4"/>
-<mediaop:Prepare id="manifest-rule-media" source={accepted-manifest-rule}
-  video="primary-moving" audio="default" span-authority="video"/>
+<media:Video id="manifest-rule-media" source={accepted-manifest-rule}
+   audio="default" />
 ```
 
 Apply the same direct-reference edit to the other two passages. Media preparation then derives the

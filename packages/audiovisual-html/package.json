@@ -1,0 +1,31 @@
+{
+  "name": "@hypit/audiovisual-html",
+  "version": "0.1.0",
+  "license": "SEE LICENSE IN LICENSE",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "hypit": {
+    "activation": "./src/activation.ts"
+  },
+  "dependencies": {
+    "@hypit/audiovisual": "workspace:^0.1.0",
+    "@hypit/audiovisual-media": "workspace:^0.1.0",
+    "@hypit/html-program": "workspace:^0.2.0",
+    "@hypit/media": "workspace:^0.1.0",
+    "@hypit/spatial": "workspace:^0.1.1"
+  },
+  "devDependencies": {
+    "@hypit/visual-transition": "workspace:^0.1.0",
+    "@hypit/visual-treatment": "workspace:^0.1.0"
+  },
+  "peerDependencies": {
+    "@hypit/hypit": "workspace:^0.4.0"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ]
+}

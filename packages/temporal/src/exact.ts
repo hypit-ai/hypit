@@ -1,31 +1,18 @@
-import { assertClockIdentity } from "@hypit/timeline";
-import type { Clock } from "@hypit/timeline";
-
 import {
   add,
-  ceilBoundary,
   compare,
-  floorBoundary,
   multiply,
-  quantizeBoundary,
   rational,
   subtract,
 } from "./rational.js";
 import type { Rational } from "./rational.js";
 import type {
   ExactTemporalValue,
-  TemporalBoundaryPolicy,
-  TemporalDuration,
   TemporalRate,
-} from "./types.js";
+} from "./algebra-types.js";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
-}
-
-function safeInteger(value: number, label: string): bigint {
-  assert(Number.isSafeInteger(value), `${label} must be a safe integer.`);
-  return BigInt(value);
 }
 
 export function assertExactTemporalValue(value: ExactTemporalValue, label = "ExactTemporalValue"): void {
@@ -91,57 +78,4 @@ export function scaleExactTemporalValue(value: ExactTemporalValue, rate: Tempora
   return exactTemporalValue(multiply(exactTemporalRational(value), rational(
     BigInt(rate.numerator), BigInt(rate.denominator),
   )));
-}
-
-export function exactTemporalValueFromFrames(frameCount: number, clock: Clock): ExactTemporalValue {
-  assertClockIdentity(clock);
-  assert(Number.isSafeInteger(frameCount), "Frame count must be a safe integer.");
-  return exactTemporalValue(rational(
-    BigInt(frameCount) * BigInt(clock.frameRate.denominator),
-    BigInt(clock.frameRate.numerator),
-  ));
-}
-
-export function exactTemporalValueFromDuration(duration: TemporalDuration, clock: Clock): ExactTemporalValue {
-  assertClockIdentity(clock);
-  switch (duration.unit) {
-    case "frames":
-      return exactTemporalValueFromFrames(duration.value, clock);
-    case "milliseconds":
-      return exactTemporalValue(rational(safeInteger(duration.value, "Millisecond duration"), 1_000n));
-    case "seconds":
-      assert(duration.denominator > 0, "Second duration denominator must be positive.");
-      return exactTemporalValue(rational(
-        safeInteger(duration.numerator, "Second duration numerator"),
-        safeInteger(duration.denominator, "Second duration denominator"),
-      ));
-  }
-}
-
-export function temporalValueInFrames(value: ExactTemporalValue, clock: Clock): Rational {
-  assertClockIdentity(clock);
-  return multiply(exactTemporalRational(value), rational(
-    BigInt(clock.frameRate.numerator),
-    BigInt(clock.frameRate.denominator),
-  ));
-}
-
-export function resolveTemporalBoundary(
-  value: ExactTemporalValue,
-  clock: Clock,
-  policy: TemporalBoundaryPolicy,
-): number {
-  const frames = temporalValueInFrames(value, clock);
-  assert(frames.numerator >= 0n, "Temporal boundary must be non-negative.");
-  switch (policy) {
-    case "exact":
-      assert(frames.denominator === 1n, "Temporal boundary does not fall exactly on the selected Clock.");
-      return floorBoundary(frames);
-    case "cover":
-      return ceilBoundary(frames);
-    case "inside":
-      return floorBoundary(frames);
-    case "nearest":
-      return quantizeBoundary(frames);
-  }
 }

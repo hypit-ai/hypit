@@ -8,7 +8,7 @@ import {
   assertLocalTemporalDomain,
   assertTemporalMap,
   compareExactTemporalValues,
-} from "@hypit/temporal";
+} from "@hypit/temporal/algebra";
 
 import type {
   MediaInspection,

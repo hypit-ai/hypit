@@ -233,6 +233,8 @@ export type StudioSnapshot = {
     /** Workspace-relative presentation path; the server retains the absolute write target. */
     readonly path: string;
     readonly text: string;
+    /** This projection can be inspected but not written back to its Source. */
+    readonly readOnly?: boolean;
     /** The exact Author closure; never a directory scan or inferred project tree. */
     readonly files: readonly StudioSourceView[];
   };

@@ -9,7 +9,7 @@ import type { CliIo } from "@hypit/cli";
 import { authorDeclarationFacetAbi } from "@hypit/author";
 import { markupDeclarationFacetAbi } from "@hypit/markup";
 
-import { listDeclarations, listPackages, runVocabularyCli, visualSchema } from "../src/vocabulary.js";
+import { listDeclarations, listPackages, runVocabularyCli } from "../src/vocabulary.js";
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 
@@ -29,10 +29,10 @@ function io(): { readonly io: CliIo; text: () => string } {
 test("the listing sees every activatable package from the repository root", async () => {
   const listing = await listPackages(repositoryRoot);
   assert.equal(new Set(listing.map((item) => item.name)).size, listing.length);
-  const pipeline = listing.find((item) => item.name === "@hypit/media-operations");
-  assert.ok(pipeline !== undefined, "media-operations is listed");
-  assert.ok(pipeline.tags.includes("StillVideo"), `tags: ${pipeline.tags.join(", ")}`);
-  assert.equal(pipeline.unreadable, undefined);
+  const image = listing.find((item) => item.name === "@hypit/gpt-image");
+  assert.ok(image !== undefined, "gpt-image is listed");
+  assert.ok(image.tags.includes("Image"), `tags: ${image.tags.join(", ")}`);
+  assert.equal(image.unreadable, undefined);
   const seedance = listing.find((item) => item.name === "@hypit/seedance");
   assert.deepEqual(seedance?.capabilities?.map((item) => item.name).sort(),
     ["seedance-2", "seedance-2-fast", "seedance-2-mini", "seedance-2.5"]);
@@ -148,35 +148,26 @@ test("vocabulary discovers bundled packages from a separate project without node
 });
 
 test("a named package answers with its own Declarations only", async () => {
-  const declarations = await listDeclarations(repositoryRoot, ["@hypit/media-operations"], ["StillVideo"]);
-  assert.equal(declarations.length, 1);
-  const [still] = declarations;
-  assert.equal(still!.package, "@hypit/media-operations");
-  assert.equal(still!.tag, "StillVideo");
-  assert.ok(still!.shape.fields.some((field) => field.name === "duration"));
-  assert.ok(still!.readme !== undefined);
-  assert.equal(basename(still!.readme), "README.md");
-  assert.equal(basename(dirname(still!.readme)), "media-operations");
-});
-
-test("the visual schema prints every shape and refuses an unknown one", () => {
-  const all = visualSchema();
-  assert.ok(all.shapes.some((item) => item.shape === "text"));
-  assert.ok(all.rules.length > 0);
-  assert.equal(visualSchema("program").shapes.length, 1);
-  assert.throws(() => visualSchema("sprite"), /shape must be one of/);
+  const declarations = await listDeclarations(repositoryRoot, ["@hypit/gpt-image"], ["Image"]);
+  assert.equal(declarations.length, 2);
+  assert.ok(declarations.every((declaration) => declaration.package === "@hypit/gpt-image"
+    && declaration.tag === "Image"
+    && declaration.shape.fields.some((field) => field.name === "prompt")
+    && declaration.readme !== undefined
+    && basename(declaration.readme) === "README.md"
+    && basename(dirname(declaration.readme)) === "gpt-image"));
 });
 
 test("the command prints human and JSON views", async () => {
   const human = io();
-  await runVocabularyCli(["vocabulary", "@hypit/media-operations", "--tag", "StillVideo"], human.io, repositoryRoot);
-  assert.match(human.text(), /<StillVideo>/);
-  assert.match(human.text(), /duration/);
+  await runVocabularyCli(["vocabulary", "@hypit/gpt-image", "--tag", "Image"], human.io, repositoryRoot);
+  assert.match(human.text(), /<Image>/);
+  assert.match(human.text(), /prompt/);
 
   const json = io();
   await runVocabularyCli(["vocabulary", "--json"], json.io, repositoryRoot);
   const parsed = JSON.parse(json.text()) as { packages: readonly { name: string }[] };
-  assert.ok(parsed.packages.some((item) => item.name === "@hypit/media-operations"));
+  assert.ok(parsed.packages.some((item) => item.name === "@hypit/gpt-image"));
 
   await assert.rejects(runVocabularyCli(["vocabulary", "--tag", "x"], io().io, repositoryRoot), /name the package first/);
 });

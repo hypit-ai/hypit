@@ -1,15 +1,3 @@
-import { blobManifest } from "@hypit/blob";
-import { compositionDependency, compositionManifest, compositionTypes } from "@hypit/composition";
-import { mediaManifest } from "@hypit/media";
-import { narrativeManifest } from "@hypit/narrative";
-import {
-  narrativeTemporalDependency,
-  narrativeTemporalManifest,
-  narrativeTemporalTypes,
-} from "@hypit/narrative-temporal";
-import { spatialManifest, spatialTypes } from "@hypit/spatial";
-import { timelineManifest } from "@hypit/timeline";
-import { temporalManifest } from "@hypit/temporal";
 import assert from "node:assert/strict";
 import test from "node:test";
 
@@ -41,6 +29,10 @@ import type {
 
 const testModule = { name: "example.fragment-speech", version: "0.0.0" } as const;
 const requestType = { module: testModule, name: "Request" } satisfies TypeRef;
+const takeType = { module: testModule, name: "Take" } satisfies TypeRef;
+const visualType = { module: testModule, name: "Visual" } satisfies TypeRef;
+const audioType = { module: testModule, name: "Audio" } satisfies TypeRef;
+const canvasType = { module: testModule, name: "Canvas" } satisfies TypeRef;
 const generateProducer = { module: testModule, name: "generate" } satisfies ProducerRef;
 const projectVisualProducer = { module: testModule, name: "project-visual" } satisfies ProducerRef;
 const projectAudioProducer = { module: testModule, name: "project-audio" } satisfies ProducerRef;
@@ -49,8 +41,8 @@ const manifest: ModuleManifest = {
   format: "hypit.module@1",
   name: testModule.name,
   version: testModule.version,
-  dependencies: [narrativeTemporalDependency, compositionDependency],
-  types: [requestType.name],
+  dependencies: [],
+  types: [requestType.name, takeType.name, visualType.name, audioType.name, canvasType.name],
   capabilities: [],
   producers: [{
     name: generateProducer.name,
@@ -58,34 +50,24 @@ const manifest: ModuleManifest = {
       { name: "request", type: requestType },
       { name: "style", type: requestType },
     ],
-    result: { kind: "output" as const, name: "take", type: narrativeTemporalTypes.narrativeAlignment },
+    result: { kind: "output" as const, name: "take", type: takeType },
   }, {
     name: projectVisualProducer.name,
-    inputs: [{ name: "take", type: narrativeTemporalTypes.narrativeAlignment }],
-    result: { kind: "output" as const, name: "visual", type: compositionTypes.visualTrack },
+    inputs: [{ name: "take", type: takeType }],
+    result: { kind: "output" as const, name: "visual", type: visualType },
   }, {
     name: projectAudioProducer.name,
-    inputs: [{ name: "take", type: narrativeTemporalTypes.narrativeAlignment }],
-    result: { kind: "output" as const, name: "audio", type: compositionTypes.audioTrack },
+    inputs: [{ name: "take", type: takeType }],
+    result: { kind: "output" as const, name: "audio", type: audioType },
   }],
 };
 
-const closure = createResolvedClosure([
-  blobManifest,
-  mediaManifest,
-  narrativeManifest,
-  timelineManifest,
-  temporalManifest,
-  narrativeTemporalManifest,
-  spatialManifest,
-  compositionManifest,
-  manifest,
-]);
+const closure = createResolvedClosure([manifest]);
 
 function program(): LinkedProgram {
   const rawCanvas = {
     id: "canvas:root",
-    type: spatialTypes.canvas,
+    type: canvasType,
     value: ({
       widthPx: 1080, heightPx: 1920,
     }),
@@ -113,7 +95,7 @@ function speechFragment(): GraphFragment {
     inputs: [
       { name: "request", type: requestType },
       { name: "style", type: requestType },
-      { name: "canvas", type: spatialTypes.canvas },
+      { name: "canvas", type: canvasType },
     ],
     operations: [
       {
@@ -138,17 +120,17 @@ function speechFragment(): GraphFragment {
     exports: [
       {
         name: "take",
-        type: narrativeTemporalTypes.narrativeAlignment,
+        type: takeType,
         root: operation("generate"),
       },
       {
         name: "visual",
-        type: compositionTypes.visualTrack,
+        type: visualType,
         root: operation("visual"),
       },
       {
         name: "audio",
-        type: compositionTypes.audioTrack,
+        type: audioType,
         root: operation("audio"),
       },
     ],

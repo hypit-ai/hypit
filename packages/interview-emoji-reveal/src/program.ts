@@ -8,8 +8,9 @@ import { canonicalize } from "@hypit/hypit/protocol";
 import type { BlobRef } from "@hypit/hypit/protocol";
 import { assertSpatialFrame } from "@hypit/spatial";
 import type { SpatialFrame } from "@hypit/spatial";
-import { assertTemporalInstantFor, assertTemporalWindowFor } from "@hypit/temporal";
-import type { TemporalInstant, TemporalWindow } from "@hypit/temporal";
+import { assertTemporalInstantFor } from "@hypit/timeline";
+import { assertTemporalWindowFor } from "@hypit/timeline";
+import type { TemporalInstant, TemporalWindow } from "@hypit/timeline";
 import { SRGB_STRAIGHT_PICTURE } from "@hypit/media";
 
 import type { EmojiRevealHeader, EmojiRevealItemSpec, EmojiRevealProgram, EmojiRevealSet, EmojiRevealStyle } from "./types.js";

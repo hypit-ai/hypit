@@ -1,7 +1,7 @@
+import { timelineTypes } from "@hypit/timeline";
 import type { ResourceStore } from "@hypit/hypit/runtime";
 import type { BuildView, ResolvedOutputRecord } from "@hypit/hypit/kernel";
 import { sameType } from "@hypit/hypit/protocol";
-import { temporalTypes } from "@hypit/temporal";
 import type { StudioObservedValue } from "@hypit/studio-companion";
 import type { CliTransientExecution } from "@hypit/hypit/cli";
 import type { StudioDomain } from "./domain.js";
@@ -19,7 +19,7 @@ export function observedTemporalValues(
   const values = new Map<string, StudioObservedValue>();
   const observe = (id: string, record: typeof state.records[number] | undefined): void => {
     if (record === undefined
-      || !(sameType(record.type, temporalTypes.instant) || sameType(record.type, temporalTypes.window))) return;
+      || !(sameType(record.type, timelineTypes.instant) || sameType(record.type, timelineTypes.window))) return;
     values.set(id, { id, type: record.type, value: record.value });
   };
   for (const record of records.values()) observe(record.id, record);

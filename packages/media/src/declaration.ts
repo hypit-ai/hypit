@@ -8,10 +8,21 @@ import {
 } from "@hypit/hypit/author";
 import { blobTypes } from "@hypit/hypit/blob";
 import { sameType, type CanonicalValue, type TypeRef } from "@hypit/hypit/protocol";
+import { temporalTypes } from "@hypit/temporal";
 import type { MediaDeliverySpec } from "./types.js";
 import { mediaDeliveryProfile } from "./delivery.js";
 
 import { mediaModuleRef, mediaTypes } from "./manifest.js";
+import { mediaSourceFragment } from "./fragment.js";
+import {
+  namedPictureInterpretation,
+  sealMediaSelectionRequest,
+} from "./selection.js";
+import type {
+  MediaAudioSelector,
+  MediaSelectionRequest,
+  MediaVideoSelector,
+} from "./types.js";
 import {
   assertFontArtifactRef,
   assertFontStackRef,
@@ -90,8 +101,8 @@ const mediaTypeField = {
 };
 
 function assetDeclaration(
-  declaration: "image" | "audio" | "video",
-  kind: "image" | "audio" | "video",
+  declaration: "image",
+  kind: "image",
   known: ReadonlyMap<string, string>,
 ): AuthorDeclarationCompiler {
   return {
@@ -123,8 +134,146 @@ function assetDeclaration(
 }
 
 export const mediaImageAuthorDeclaration = assetDeclaration("image", "image", imageMediaTypes);
-export const mediaAudioAuthorDeclaration = assetDeclaration("audio", "audio", audioMediaTypes);
-export const mediaVideoAuthorDeclaration = assetDeclaration("video", "video", videoMediaTypes);
+
+function streamIndex(value: string, kind: "video"): MediaVideoSelector;
+function streamIndex(value: string, kind: "audio"): MediaAudioSelector;
+function streamIndex(value: string, kind: "video" | "audio"): MediaVideoSelector | MediaAudioSelector {
+  if (kind === "video" && value === "primary-moving") return { mode: "primary-moving" };
+  if (kind === "audio" && (value === "default" || value === "default-if-present")) return { mode: value };
+  if (value === "none") return { mode: "none" };
+  const match = /^stream:(\d+)$/u.exec(value);
+  if (match === null) {
+    throw new Error(`Media ${kind} must be ${kind === "video" ? "primary-moving" : "default or default-if-present"}, none or stream:<index>.`);
+  }
+  return { mode: "stream-index", streamIndex: Number(match[1]) };
+}
+
+function timedMediaDeclaration(
+  declaration: "audio" | "video",
+  kind: "audio" | "video",
+  known: ReadonlyMap<string, string>,
+): AuthorDeclarationCompiler {
+  const outputTypes = [
+    blobTypes.blob,
+    mediaTypes.selectionRequest,
+    mediaTypes.domainSpec,
+    mediaTypes.prepared,
+    temporalTypes.localDomain,
+    temporalTypes.extent,
+  ];
+  return {
+    module: mediaModuleRef,
+    declaration,
+    outputs: outputTypes,
+    shape: {
+      summary: `Publishes one ${kind} Media object with a direct Resource facet and lazy prepared facets.`,
+      fields: [
+        idField,
+        { ...sourceField, required: false },
+        { name: "source", kind: "reference", required: false, accepts: [blobTypes.blob],
+          summary: "Uses a Resource produced elsewhere instead of resolving an asset." },
+        mediaTypeField,
+        { name: "video", kind: "literal", required: false,
+          summary: "Overrides moving-picture selection." },
+        { name: "audio", kind: "literal", required: false,
+          summary: "Overrides audio selection." },
+        { name: "picture", kind: "literal", required: false, values: ["source", "sdr-bt709"],
+          summary: "Selects the source picture interpretation or one explicit supported profile." },
+        { name: "span-authority", kind: "literal", required: false, values: ["video", "audio"],
+          summary: "Overrides which selected signal defines the prepared local extent." },
+      ],
+    },
+    bindings(value) {
+      const id = literal(value, "id");
+      return [
+        { name: id, ref: { kind: "component-output", component: id, output: "default" }, type: blobTypes.blob },
+        { name: `${id}.resource`, ref: { kind: "component-output", component: id, output: "resource" }, type: blobTypes.blob },
+        { name: `${id}.source`, ref: { kind: "component-output", component: id, output: "source" }, type: mediaTypes.prepared },
+        { name: `${id}.domain`, ref: { kind: "component-output", component: id, output: "domain" }, type: temporalTypes.localDomain },
+        { name: `${id}.extent`, ref: { kind: "component-output", component: id, output: "extent" }, type: temporalTypes.extent },
+      ];
+    },
+    async compile({ declaration: value, resolveAsset, resolveReference }) {
+      const id = literal(value, "id");
+      const authoredSource = declarationField(value, "source");
+      const sourcePath = optionalLiteral(value, "src");
+      if ((sourcePath === undefined) === (authoredSource === undefined)) {
+        throw new Error(`Media ${declaration} requires exactly one of src or source.`);
+      }
+      if (sourcePath === undefined && optionalLiteral(value, "media-type") !== undefined) {
+        throw new Error(`Media ${declaration}.media-type can only accompany src.`);
+      }
+
+      const records: Array<{ id: string; type: TypeRef; value: CanonicalValue; range: AuthorDeclaration["range"] }> = [];
+      let resourceRef: AuthorResolvedReference["ref"];
+      if (sourcePath !== undefined) {
+        const mediaType = mediaTypeFor(value, sourcePath, kind, known);
+        const resolved = await resolveAsset({ from: sourcePath, mediaType, range: value.range });
+        if (!resolved.mediaType.startsWith(`${kind}/`)) {
+          throw new Error(`Media src did not resolve to an ${kind} artifact.`);
+        }
+        const inputId = `${id}.input`;
+        records.push({ id: inputId, type: blobTypes.blob, value: resolved, range: value.range });
+        resourceRef = { kind: "record", id: inputId };
+      } else {
+        if (authoredSource?.kind !== "reference") throw new Error(`Media ${declaration}.source must be a reference.`);
+        const resolved = await resolveReference(authoredSource.path);
+        if (resolved === undefined || !sameType(resolved.type, blobTypes.blob)) {
+          throw new Error(`Media ${declaration}.source must reference a Resource.`);
+        }
+        resourceRef = resolved.ref;
+      }
+
+      const defaultVideo = kind === "video" ? "primary-moving" : "none";
+      const defaultAudio = kind === "video" ? "default-if-present" : "default";
+      const video = streamIndex(optionalLiteral(value, "video") ?? defaultVideo, "video");
+      const audio = streamIndex(optionalLiteral(value, "audio") ?? defaultAudio, "audio");
+      const spanAuthority = optionalLiteral(value, "span-authority") ?? kind;
+      if (spanAuthority !== "video" && spanAuthority !== "audio") {
+        throw new Error(`Media ${declaration}.span-authority must be video or audio.`);
+      }
+      const pictureName = optionalLiteral(value, "picture") ?? "source";
+      const picture: MediaSelectionRequest["picture"] = video.mode === "none"
+        ? { mode: "none" }
+        : pictureName === "source"
+          ? { mode: "source" }
+          : pictureName === "sdr-bt709"
+            ? { mode: "explicit", interpretation: namedPictureInterpretation("sdr-bt709") }
+            : (() => { throw new Error(`Media ${declaration}.picture must be source or sdr-bt709.`); })();
+      const requestId = `${id}.request`;
+      const domainId = `${id}.domain-spec`;
+      records.push(
+        { id: requestId, type: mediaTypes.selectionRequest,
+          value: sealMediaSelectionRequest({ video, audio, spanAuthority, picture }) as unknown as CanonicalValue,
+          range: value.range },
+        { id: domainId, type: mediaTypes.domainSpec, value: { id } as CanonicalValue, range: value.range },
+      );
+      return {
+        records,
+        components: [{
+          id,
+          fragment: mediaSourceFragment,
+          inputs: {
+            resource: resourceRef,
+            request: { kind: "record", id: requestId },
+            domain: { kind: "record", id: domainId },
+          },
+          outputs: {
+            default: id,
+            resource: `${id}.resource`,
+            source: `${id}.source`,
+            domain: `${id}.domain`,
+            extent: `${id}.extent`,
+          },
+          range: value.range,
+        }],
+      };
+    },
+  };
+}
+
+export const mediaAudioAuthorDeclaration = timedMediaDeclaration("audio", "audio", audioMediaTypes);
+export const mediaVideoAuthorDeclaration = timedMediaDeclaration("video", "video", videoMediaTypes);
 
 export const mediaDeliveryAuthorDeclaration: AuthorDeclarationCompiler = {
   module: mediaModuleRef,

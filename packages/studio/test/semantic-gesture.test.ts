@@ -2,10 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import type { StudioEditHandle, StudioTemporalDomainAnchor, StudioTemporalInstantProjection } from "@hypit/studio-companion";
 import { adjustScriptSelection, parseScript } from "@hypit/script";
-import { projectProgramInstant } from "@hypit/temporal";
-import { parseTimelineInstantExpression } from "@hypit/timeline-author";
+import { parseTimelineInstantExpression, projectTimelineInstant as projectProgramInstant } from "@hypit/timeline-author";
 import { chooseDomainGesture, domainGestureSpan } from "../src/temporal-edit.js";
-import { formatTemporalPointEdit } from "@hypit/temporal/studio";
+import { formatTimelinePointEdit as formatTemporalPointEdit } from "@hypit/timeline-author/studio";
 
 const source = '<one><HOST>@{proof} One two @{/proof} three.</one>';
 const narrative = parseScript("gesture", source);

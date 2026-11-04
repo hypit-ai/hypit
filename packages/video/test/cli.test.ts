@@ -23,17 +23,15 @@ const runCli = (
   });
 };
 
-test("source package selection follows Author imports", async () => {
-  const root = await mkdtemp(join(tmpdir(), "hypit-cli-package-selection-"));
+test("a pure Markdown SVML selects the bundled Document Frontend without components", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hypit-document-package-selection-"));
   try {
-    await writeFile(join(root, "style.svs"), `<?svml using="@hypit/recipe@1"?>\n<sheet version="1"/>`, "utf8");
-    await writeFile(join(root, "main.svml"), `<?svml using="@hypit/markup@1"?>
-<svml>
-  <import from="@hypit/script@1"/>
-  <import as="style" source="./style.svs"/>
-  <script id="story"><line><HOST>Hello.</line></script>
-</svml>`, "utf8");
-    const source = join(root, "main.svml");
+    const source = join(root, "notes.svml");
+    await writeFile(source, `<?svml using="@hypit/document@1"?>
+# Production notes
+
+This is a **complete document** with no component declarations.
+`, "utf8");
     const packages = await loadDiscoveredSourcePackages(videoDistribution, {
       source,
       workspaceRoot: root,
@@ -46,35 +44,17 @@ test("source package selection follows Author imports", async () => {
       workspaceRoot: root,
       packages,
     });
-    assert.deepEqual(discovered.selected, ["@hypit/recipe", "@hypit/script"]);
+    assert.deepEqual(discovered.selected, ["@hypit/document"]);
+    let output = "";
+    await runCli(["check", source, "--project", root], {
+      write: (text) => { output += text; },
+    });
+    const checked = JSON.parse(output) as { readonly sourceKind: string; readonly units: number };
+    assert.equal(checked.sourceKind, "author");
+    assert.equal(checked.units, 1);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
-});
-
-test("provider-free example plans from installed Source packages", async () => {
-  // The installed package preview exercises Timeline, composition and mux planning without
-  // requiring a generation account or an authored project copy.
-  const fixture = join(process.cwd(), "packages", "visual-track", "preview");
-  let output = "";
-  await runCli([
-    "plan",
-    join(fixture, "preview.svml"),
-    "--target",
-    "final.video",
-    "--project",
-    process.cwd(),
-  ], { write: (text) => { output += text; } });
-  const plan = JSON.parse(output) as {
-    readonly format: string;
-    readonly ok: boolean;
-    readonly requestCount: number;
-    readonly targets: readonly string[];
-  };
-  assert.equal(plan.format, "hypit.cli-plan@1");
-  assert.equal(plan.ok, true);
-  assert.equal(plan.requestCount > 0, true);
-  assert.equal(plan.targets.length, 1);
 });
 
 test("check compiles a data-only package Source export without a project copy", async () => {

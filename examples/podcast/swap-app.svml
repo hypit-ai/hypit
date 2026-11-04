@@ -172,24 +172,24 @@
     left="0%" top="0%" right="100%" bottom="100%"/>
   <time:Clock id="clock" frame-rate="30"/>
 
-  <mediaop:Prepare id="soundtrack-media" source={soundtrack}
-    video="none" audio="default" span-authority="audio"/>
-  <mediaop:Prepare id="opening-media" source={opening-take.video}
-    video="primary-moving" audio="default" span-authority="video"/>
-  <mediaop:Prepare id="daily-cheatgpt-media" source={daily-cheatgpt-take.video}
-    video="primary-moving" audio="default" span-authority="video"/>
-  <mediaop:Prepare id="brain-is-asking-media" source={brain-is-asking-take.video}
-    video="primary-moving" audio="default" span-authority="video"/>
-  <mediaop:Prepare id="lifestyle-media" source={lifestyle-montage.video}
-    video="primary-moving" audio="none" span-authority="video"/>
+  <asset:Audio id="soundtrack-media" source={soundtrack}
+      />
+  <asset:Video id="opening-media" source={opening-take.video}
+     audio="default" />
+  <asset:Video id="daily-cheatgpt-media" source={daily-cheatgpt-take.video}
+     audio="default" />
+  <asset:Video id="brain-is-asking-media" source={brain-is-asking-take.video}
+     audio="default" />
+  <asset:Video id="lifestyle-media" source={lifestyle-montage.video}
+     audio="none" />
 
-  <whisperx:Transcription id="opening-semantic-transcription" media={opening-media.media} language="en"/>
+  <whisperx:Transcription id="opening-semantic-transcription" media={opening-media.source} language="en"/>
   <speechalign:Alignment id="opening-semantic" narrative={story}
     segment={story.segment.opening-question} domain={opening-media.domain} evidence={opening-semantic-transcription.transcript}/>
-  <whisperx:Transcription id="daily-cheatgpt-semantic-transcription" media={daily-cheatgpt-media.media} language="en"/>
+  <whisperx:Transcription id="daily-cheatgpt-semantic-transcription" media={daily-cheatgpt-media.source} language="en"/>
   <speechalign:Alignment id="daily-cheatgpt-semantic" narrative={story}
     segment={story.segment.daily-cheatgpt} domain={daily-cheatgpt-media.domain} evidence={daily-cheatgpt-semantic-transcription.transcript}/>
-  <whisperx:Transcription id="brain-is-asking-semantic-transcription" media={brain-is-asking-media.media} language="en"/>
+  <whisperx:Transcription id="brain-is-asking-semantic-transcription" media={brain-is-asking-media.source} language="en"/>
   <speechalign:Alignment id="brain-is-asking-semantic" narrative={story}
     segment={story.segment.brain-is-asking} domain={brain-is-asking-media.domain} evidence={brain-is-asking-semantic-transcription.transcript}/>
 
@@ -207,23 +207,23 @@
   </semantic:Projection>
   <semantic:Window id="selection-lifestyle" projection={story-time} during={story.selection.lifestyle}/>
   <audio:Track id="speech-sound" timeline={speech.timeline}>
-    <audio:Clip id="opening-semantic-source" source={opening-media.media} during={speech.opening-semantic}/>
-    <audio:Clip id="daily-cheatgpt-semantic-source" source={daily-cheatgpt-media.media} during={speech.daily-cheatgpt-semantic}/>
-    <audio:Clip id="brain-is-asking-semantic-source" source={brain-is-asking-media.media} during={speech.brain-is-asking-semantic}/>
+    <audio:Clip id="opening-semantic-source" source={opening-media.source} during={speech.opening-semantic}/>
+    <audio:Clip id="daily-cheatgpt-semantic-source" source={daily-cheatgpt-media.source} during={speech.daily-cheatgpt-semantic}/>
+    <audio:Clip id="brain-is-asking-semantic-source" source={brain-is-asking-media.source} during={speech.brain-is-asking-semantic}/>
   </audio:Track>
   <visual:Track id="speech-picture" timeline={speech.timeline}>
-    <visual:Clip id="opening-semantic-source" media={opening-media.media} during={speech.opening-semantic} frame={full-frame} fit="cover"/>
-    <visual:Clip id="daily-cheatgpt-semantic-source" media={daily-cheatgpt-media.media} during={speech.daily-cheatgpt-semantic} frame={full-frame} fit="cover"/>
-    <visual:Clip id="brain-is-asking-semantic-source" media={brain-is-asking-media.media} during={speech.brain-is-asking-semantic} frame={full-frame} fit="cover"/>
+    <visual:Clip id="opening-semantic-source" media={opening-media.source} during={speech.opening-semantic} frame={full-frame} fit="cover"/>
+    <visual:Clip id="daily-cheatgpt-semantic-source" media={daily-cheatgpt-media.source} during={speech.daily-cheatgpt-semantic} frame={full-frame} fit="cover"/>
+    <visual:Clip id="brain-is-asking-semantic-source" media={brain-is-asking-media.source} during={speech.brain-is-asking-semantic} frame={full-frame} fit="cover"/>
   </visual:Track>
 
   <audio-track:Track id="music-bed" timeline={speech.timeline}>
-    <audio-track:Clip source={soundtrack-media.media} during={speech.window}
+    <audio-track:Clip source={soundtrack-media.source} during={speech.window}
       gain="0.12" fade-in="300ms" fade-out="600ms"/>
   </audio-track:Track>
 
   <visual:Track id="lifestyle" timeline={speech.timeline}>
-    <visual:Clip id="lifestyle-cutaway" media={lifestyle-media.media}
+    <visual:Clip id="lifestyle-cutaway" media={lifestyle-media.source}
       frame={full-frame} during={selection-lifestyle} fit="cover">
       <visual:Map/>
     </visual:Clip>

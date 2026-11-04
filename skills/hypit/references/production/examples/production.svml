@@ -39,9 +39,9 @@
   </text:Render>
   <seedance:TextVideo id="performance" model="mini" prompt={prompt}
     duration="5" aspect-ratio="9:16" generate-audio="true"/>
-  <mediaop:Prepare id="performance-media" source={performance.video}
-    video="primary-moving" audio="default" span-authority="video"/>
-  <whisperx:Transcription id="opening-alignment-transcription" media={performance-media.media} language="en"/>
+  <media:Video id="performance-media" source={performance.video}
+     audio="default" />
+  <whisperx:Transcription id="opening-alignment-transcription" media={performance-media.source} language="en"/>
   <speechalign:Alignment id="opening-alignment" narrative={story}
     segment={story.segment.opening} domain={performance-media.domain} evidence={opening-alignment-transcription.transcript}/>
   <time:Timeline id="speech" clock={clock} end="opening.end">
@@ -52,10 +52,10 @@
     <semantic:Map alignment={opening-alignment.alignment} domain={performance-media.domain} window={speech.opening}/>
   </semantic:Projection>
   <audio:Track id="speech-sound" timeline={speech.timeline}>
-      <audio:Clip id="opening-source" source={performance-media.media} during={speech.opening}/>
+      <audio:Clip id="opening-source" source={performance-media.source} during={speech.opening}/>
   </audio:Track>
   <visual:Track id="speech-picture" timeline={speech.timeline}>
-      <visual:Clip id="opening-source" media={performance-media.media} during={speech.opening} frame={full} fit="cover"/>
+      <visual:Clip id="opening-source" media={performance-media.source} during={speech.opening} frame={full} fit="cover"/>
   </visual:Track>
 
   <fonts:Face id="title-font" package="@fontsource-variable/inter" weight="700" style="normal"/>

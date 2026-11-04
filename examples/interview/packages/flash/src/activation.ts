@@ -19,11 +19,9 @@ import type {
 import { htmlVisualElement } from "@hypit/html-program";
 import { assertSpatialFrame, spatialTypes } from "@hypit/spatial";
 import type { SpatialFrame } from "@hypit/spatial";
-import {
-  assertTemporalWindowFor,
-  temporalTypes,
-} from "@hypit/temporal";
-import type { TemporalWindow } from "@hypit/temporal";
+import { temporalTypes } from "@hypit/temporal";
+import { assertTemporalWindowFor } from "@hypit/timeline";
+import type { TemporalWindow } from "@hypit/timeline";
 import {
   assertTimelineIdentity,
   timelineTypes,
@@ -47,7 +45,7 @@ const manifest: ModuleManifest = {
   format: "hypit.module@1",
   name: moduleRef.name,
   version: moduleRef.version,
-  dependencies: [timelineTypes.timeline, temporalTypes.window, spatialTypes.frame, compositionTypes.visualTrack]
+  dependencies: [timelineTypes.timeline, timelineTypes.window, spatialTypes.frame, compositionTypes.visualTrack]
     .map((type) => type.module),
   types: [optionsType.name],
   capabilities: [],
@@ -56,7 +54,7 @@ const manifest: ModuleManifest = {
     inputs: [
       { name: "timeline", type: timelineTypes.timeline },
       { name: "within", type: spatialTypes.frame },
-      { name: "window", type: temporalTypes.window },
+      { name: "window", type: timelineTypes.window },
       { name: "options", type: optionsType },
     ],
     result: { kind: "output" as const, name: "visual", type: compositionTypes.visualTrack },
@@ -196,7 +194,7 @@ const flashFragment = sealGraphFragment({
   inputs: [
     { name: "timeline", type: timelineTypes.timeline },
     { name: "within", type: spatialTypes.frame },
-    { name: "window", type: temporalTypes.window },
+    { name: "window", type: timelineTypes.window },
     { name: "options", type: optionsType },
   ],
   operations: [{
@@ -221,7 +219,7 @@ const authorDeclaration: AuthorDeclarationCompiler = {
       { name: "id", kind: "identifier", required: true, summary: "Names the flash." },
       { name: "timeline", kind: "reference", required: true, accepts: [timelineTypes.timeline], summary: "Selects the Timeline." },
       { name: "within", kind: "reference", required: true, accepts: [spatialTypes.frame], summary: "Sets the painted Frame." },
-      { name: "during", kind: "expression", required: true, accepts: [temporalTypes.window], summary: "Selects the Window." },
+      { name: "during", kind: "expression", required: true, accepts: [timelineTypes.window], summary: "Selects the Window." },
       ...["color", "intensity", "attack", "hold", "decay"].map((name) => ({
         name, kind: "literal" as const, required: true, summary: `Sets ${name}.`,
       })),
@@ -235,7 +233,7 @@ const authorDeclaration: AuthorDeclarationCompiler = {
     const id = literal(declaration, "id");
     const timeline = await reference(declaration, "timeline", timelineTypes.timeline, resolveReference);
     const within = await reference(declaration, "within", spatialTypes.frame, resolveReference);
-    const window = await reference(declaration, "during", temporalTypes.window, resolveReference);
+    const window = await reference(declaration, "during", timelineTypes.window, resolveReference);
     const options: FlashOptions = {
       id, color: literal(declaration, "color"), intensity: numeric(declaration, "intensity"),
       attackFrames: integer(declaration, "attack"), holdFrames: integer(declaration, "hold"),

@@ -1,5 +1,5 @@
-import { mediaProducers, mediaTypes } from "@hypit/media";
-import { temporalProducers, temporalTypes } from "@hypit/temporal";
+import { mediaProducers } from "@hypit/media";
+import { temporalTypes } from "@hypit/temporal";
 import { blobTypes } from "@hypit/hypit/blob";
 import { timelineTypes } from "@hypit/timeline";
 import { sealGraphFragment } from "@hypit/hypit/author";
@@ -12,105 +12,6 @@ import {
 const input = (name: string) => ({ kind: "fragment-input" as const, name });
 const operation = (id: string) => ({ kind: "fragment-operation" as const, operation: id });
 
-export const preparedMediaFragment = sealGraphFragment({
-  inputs: [
-    { name: "source", type: blobTypes.blob },
-    { name: "request", type: mediaOperationsTypes.selectionRequest },
-    { name: "domain", type: mediaTypes.domainSpec },
-  ],
-  operations: [
-    {
-      id: "inspect",
-      producer: mediaOperationsProducers.inspect,
-      inputs: { source: input("source") },
-      result: { kind: "need" as const, name: "inspection" },
-    },
-    {
-      id: "select",
-      producer: mediaOperationsProducers.select,
-      inputs: { inspection: operation("inspect"), request: input("request") },
-      result: { kind: "output" as const, name: "selection" },
-    },
-    {
-      id: "prepare",
-      producer: mediaProducers.prepare,
-      inputs: {
-        source: input("source"),
-        inspection: operation("inspect"),
-        selection: operation("select"),
-        spec: input("domain"),
-      },
-      result: { kind: "output" as const, name: "media" },
-    },
-    {
-      id: "domain",
-      producer: mediaProducers.localDomain,
-      inputs: { media: operation("prepare") },
-      result: { kind: "output" as const, name: "domain" },
-    },
-    {
-      id: "extent",
-      producer: temporalProducers.extentFromDomain,
-      inputs: { domain: operation("domain") },
-      result: { kind: "output" as const, name: "extent" },
-    },
-  ],
-  exports: [{
-    name: "media",
-    type: mediaTypes.prepared,
-    root: operation("prepare"),
-  }, {
-    name: "domain",
-    type: temporalTypes.localDomain,
-    root: operation("domain"),
-  }, {
-    name: "extent",
-    type: temporalTypes.extent,
-    root: operation("extent"),
-  }],
-});
-
-export const transformMediaFragment = sealGraphFragment({
-  inputs: [
-    { name: "media", type: mediaTypes.prepared },
-    { name: "program", type: mediaOperationsTypes.transformProgram },
-    { name: "domain", type: mediaTypes.domainSpec },
-  ],
-  operations: [
-    {
-      id: "transform",
-      producer: mediaOperationsProducers.transform,
-      inputs: { media: input("media"), program: input("program"), spec: input("domain") },
-      result: { kind: "output" as const, name: "media" },
-    },
-    {
-      id: "domain",
-      producer: mediaProducers.localDomain,
-      inputs: { media: operation("transform") },
-      result: { kind: "output" as const, name: "domain" },
-    },
-    {
-      id: "extent",
-      producer: temporalProducers.extentFromDomain,
-      inputs: { domain: operation("domain") },
-      result: { kind: "output" as const, name: "extent" },
-    },
-  ],
-  exports: [{
-    name: "media",
-    type: mediaTypes.prepared,
-    root: operation("transform"),
-  }, {
-    name: "domain",
-    type: temporalTypes.localDomain,
-    root: operation("domain"),
-  }, {
-    name: "extent",
-    type: temporalTypes.extent,
-    root: operation("extent"),
-  }],
-});
-
 export const extractAudioFragment = sealGraphFragment({
   inputs: [
     { name: "source", type: blobTypes.blob },
@@ -119,7 +20,7 @@ export const extractAudioFragment = sealGraphFragment({
   operations: [
     {
       id: "inspect",
-      producer: mediaOperationsProducers.inspect,
+      producer: mediaProducers.inspect,
       inputs: { source: input("source") },
       result: { kind: "need" as const, name: "inspection" },
     },
@@ -145,7 +46,7 @@ export const extractFrameFragment = sealGraphFragment({
   operations: [
     {
       id: "inspect",
-      producer: mediaOperationsProducers.inspect,
+      producer: mediaProducers.inspect,
       inputs: { source: input("source") },
       result: { kind: "need" as const, name: "inspection" },
     },

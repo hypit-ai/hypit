@@ -16,6 +16,6 @@
     "typescript": "5.9.3"
   },
   "devDependencies": {
-    "@hypit/composition": "workspace:*"
+    "@hypit/audiovisual": "workspace:*"
   }
 }

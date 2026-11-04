@@ -35,7 +35,7 @@ export {
   sealMediaSampleLayerSpec,
 } from "./layers.js";
 export { assertMediaLayerPrograms, resolveMediaLayerPrograms } from "./spatial.js";
-export { lowerVisualClipElement, lowerVisualClipRoot } from "./lower.js";export { visualClipSpecSchema, visualClipMotionSchema, visualTransitionEffectSchema, visualTransitionSpecSchema, visualFrameTreatmentSchema, mediaLayerSetSchema, mediaPaintLayerSpecSchema, mediaSampleAppearanceSchema, mediaSampleLayerSpecSchema, mediaSamplingMotionSchema, visualTrackDependency, visualTrackHeaderSchema, visualTrackManifest, visualTrackModuleRef, visualTrackProducers, visualTrackProgramSchema, visualTrackSetSchema, visualTrackTypes } from "./manifest.js";
+export { lowerVisualClipElement, lowerVisualClipRoot } from "./lower.js";export { visualClipSpecSchema, visualClipMotionSchema, visualFrameTreatmentSchema, mediaLayerSetSchema, mediaPaintLayerSpecSchema, mediaSampleAppearanceSchema, mediaSampleLayerSpecSchema, mediaSamplingMotionSchema, visualTrackDependency, visualTrackHeaderSchema, visualTrackManifest, visualTrackModuleRef, visualTrackProducers, visualTrackProgramSchema, visualTrackSetSchema, visualTrackTypes } from "./manifest.js";
 export {
   assertVisualClipMotion,
   assertVisualMotionPosition,
@@ -45,7 +45,7 @@ export {
   samplingAnimation,
 } from "./motion.js";
 export { assertVisualFrameTreatment, visualContentFrame } from "./frame-treatment.js";
-export { appendVisualClip, appendVisualTransition, bindVisualClipMotion, bindVisualClipPath, assertVisualClipSpec, assertVisualTransitionEffect, assertVisualTransitionSpec, assertVisualTrackHeader, assertVisualTrackProgram, assertVisualTrackProgramIdentity, assertVisualTrackSet, createVisualTrackSet, finalizeVisualTrack, projectVisualTrack, sealVisualClipSpec, sealVisualTransitionEffect, sealVisualTrackHeader, sealVisualTrackProgram, visualTransitionSpan } from "./program.js";export { visualTrackMarkupDeclarations } from "./declaration.js";
+export { appendVisualClip, bindVisualClipMotion, bindVisualClipPath, assertVisualClipSpec, assertVisualTrackHeader, assertVisualTrackProgram, assertVisualTrackProgramIdentity, assertVisualTrackSet, createVisualTrackSet, finalizeVisualTrack, projectVisualTrack, sealVisualClipSpec, sealVisualTrackHeader, sealVisualTrackProgram } from "./program.js";export { visualTrackMarkupDeclarations } from "./declaration.js";
 export type * from "./types.js";
 
 export { visualTreatmentDefaults } from "./author.js";

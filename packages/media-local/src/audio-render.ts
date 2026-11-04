@@ -2,12 +2,17 @@ import { closeSync, fstatSync, openSync, readSync } from "node:fs";
 import { open } from "node:fs/promises";
 
 import {
-  audioProgramClipSampleSpan,
   audioProgramSampleFrames,
+  audioProgramUseSampleSpan,
+  isPointwiseOperatorTemporalSupport,
   verifyAudioProgram,
 } from "@hypit/audio-program";
-import type { AudioProgram, AudioProgramClip } from "@hypit/audio-program";
-import { readAudioGainProcess } from "@hypit/audio-mix";
+import type { AudioProgram, AudioProgramMediaSource, AudioProgramNode } from "@hypit/audio-program";
+import {
+  evaluateAudioGainControl,
+  readAudioGainProgram,
+  type AudioGainControl,
+} from "@hypit/audio-mix";
 import {
   compareExactTemporalValues,
   composeTemporalMaps,
@@ -136,27 +141,42 @@ function positiveAffineSpan(map: TemporalMap, start: ExactTemporalValue, end: Ex
   return { start: left, end: right, rate: totalRate };
 }
 
+export type DirectProgrammeReconstructionPlan = PositiveAffineReconstructionPlan & {
+  readonly media: AudioProgramMediaSource;
+};
+
 /**
- * Resolve the exact Maps to the constant positive source span understood by
- * this Provider's pitch-preserving implementation. Other renderers may support
- * richer reconstruction without changing AudioProgram.
+ * Current local capability for reconstruction on a mapped Programme use.
+ * It is deliberately narrow: the child must be exactly one full-domain media leaf.
  */
-export function planPositiveAffineReconstruction(clip: AudioProgramClip): PositiveAffineReconstructionPlan {
-  const target = audioProgramClipSampleSpan(clip);
+export function planDirectProgrammeReconstruction(
+  node: Extract<AudioProgramNode, { readonly kind: "program" }>,
+  sampling: AudioProgram["sampling"],
+): DirectProgrammeReconstructionPlan {
+  const child = node.program;
+  const source = child.graph.nodes.find((candidate) => candidate.kind === "source");
+  assert(child.graph.nodes.length === 1 && source?.kind === "source"
+    && child.graph.output.node === source.id,
+  `Audio Programme use ${node.id} reconstruction requires one direct media Source`);
+  const relation = composeTemporalMaps(
+    node.sampling,
+    source.media.preparation,
+  );
+  const target = audioProgramUseSampleSpan(node, sampling);
   const targetSampleFrames = target.endSampleExclusive - target.startSample;
-  assert(targetSampleFrames > 0, `Audio Clip ${clip.id} has no target samples`);
-  const sampled = positiveAffineSpan(clip.sampling, exactTemporalZero(),
-    clip.sampling.stages[0]!.target.duration,
-    `Audio Clip ${clip.id} sampling`);
-  const prepared = positiveAffineSpan(clip.preparation, sampled.start, sampled.end,
-    `Audio Clip ${clip.id} preparation`);
-  const sourceStartSample = resolveTemporalBoundary(prepared.start, SAMPLE_CLOCK, "nearest");
-  const sourceEndSampleExclusive = resolveTemporalBoundary(prepared.end, SAMPLE_CLOCK, "nearest");
-  const rate = finiteRate(multiplyPositiveRational(sampled.rate, prepared.rate));
-  assert(Number.isFinite(rate) && rate > 0 && sourceStartSample >= 0
-    && sourceEndSampleExclusive > sourceStartSample,
-  `Audio Clip ${clip.id} has an invalid pitch-preserving source span`);
-  return { sourceStartSample, sourceEndSampleExclusive, rate, targetSampleFrames };
+  assert(targetSampleFrames > 0, `Audio Programme use ${node.id} has no target samples`);
+  const mapped = positiveAffineSpan(
+    relation,
+    exactTemporalZero(),
+    relation.stages[0]!.target.duration,
+    `Audio Programme use ${node.id} sampling`,
+  );
+  const sourceStartSample = resolveTemporalBoundary(mapped.start, SAMPLE_CLOCK, "nearest");
+  const sourceEndSampleExclusive = resolveTemporalBoundary(mapped.end, SAMPLE_CLOCK, "nearest");
+  const rate = finiteRate(mapped.rate);
+  assert(sourceStartSample >= 0 && sourceEndSampleExclusive > sourceStartSample,
+    `Audio Programme use ${node.id} has an invalid pitch-preserving source span`);
+  return { media: source.media, sourceStartSample, sourceEndSampleExclusive, rate, targetSampleFrames };
 }
 
 type Page = { readonly index: number; readonly frames: number; readonly bytes: Buffer };
@@ -256,57 +276,136 @@ export class CanonicalPcmReader {
   }
 }
 
-type CompiledClip = {
-  readonly clip: AudioProgramClip;
+type CompiledMedia = {
+  readonly kind: "media";
+  readonly media: AudioProgramMediaSource;
   readonly target: SampleRange;
   readonly routeGain: number;
+  readonly gainControls: readonly GainControlUse[];
+  readonly mapping: TemporalMapEvaluator;
+  readonly source: SignalReader;
+};
+
+type CompiledProgram = {
+  readonly kind: "program";
+  readonly target: SampleRange;
+  readonly routeGain: number;
+  readonly gainControls: readonly GainControlUse[];
   readonly mapping: TemporalMapEvaluator;
   readonly source: SignalReader;
   readonly reconstructed?: SignalReader;
 };
 
-type SignalRoute = { readonly clip: AudioProgramClip; readonly gain: number };
+type CompiledRoute = CompiledMedia | CompiledProgram;
+
+type SignalRoute =
+  | { readonly kind: "media"; readonly media: AudioProgramMediaSource;
+      readonly gain: number; readonly gainControls: readonly GainControlUse[]; readonly support: SampleRange }
+  | { readonly kind: "program";
+      readonly node: Extract<AudioProgramNode, { readonly kind: "program" }>;
+      readonly gain: number; readonly gainControls: readonly GainControlUse[]; readonly support: SampleRange };
+
+type GainControlUse = {
+  readonly control: AudioGainControl;
+  readonly mapping: TemporalMapEvaluator;
+};
 
 function signalRoutes(program: AudioProgram): SignalRoute[] {
   const nodes = new Map(program.graph.nodes.map((node) => [node.id, node] as const));
   const routes: SignalRoute[] = [];
-  const visits = [{ id: program.graph.output.node, gain: 1 }];
+  const visits: Array<{ readonly id: string; readonly gain: number;
+    readonly gainControls: readonly GainControlUse[]; readonly support: SampleRange }> = [{
+    id: program.graph.output.node, gain: 1, gainControls: [],
+    support: { startSample: 0, endSampleExclusive: audioProgramSampleFrames(program) } }];
   while (visits.length > 0) {
     const visit = visits.pop()!;
     const node = nodes.get(visit.id)!;
     if (node.kind === "silence") continue;
     if (node.kind === "source") {
-      routes.push({ clip: node.clip, gain: visit.gain });
+      routes.push({ kind: "media", media: node.media, gain: visit.gain,
+        gainControls: visit.gainControls, support: visit.support });
+      continue;
+    }
+    if (node.kind === "program") {
+      routes.push({ kind: "program", node, gain: visit.gain,
+        gainControls: visit.gainControls, support: visit.support });
+      continue;
+    }
+    if (node.kind === "restrict") {
+      const restriction = {
+        startSample: resolveTemporalBoundary(node.range.start,
+          { frameRate: { numerator: program.sampling.sampleRate, denominator: 1 } }, "nearest"),
+        endSampleExclusive: resolveTemporalBoundary(node.range.end,
+          { frameRate: { numerator: program.sampling.sampleRate, denominator: 1 } }, "nearest"),
+      };
+      visits.push({ id: node.input.node, gain: visit.gain, gainControls: visit.gainControls, support: {
+        startSample: Math.max(visit.support.startSample, restriction.startSample),
+        endSampleExclusive: Math.min(visit.support.endSampleExclusive, restriction.endSampleExclusive),
+      } });
       continue;
     }
     if (node.kind === "mix") {
       for (let index = node.inputs.length - 1; index >= 0; index -= 1) {
-        visits.push({ id: node.inputs[index]!.node, gain: visit.gain });
+        visits.push({ id: node.inputs[index]!.node, gain: visit.gain,
+          gainControls: visit.gainControls, support: visit.support });
       }
       continue;
     }
     assert(Object.keys(node.inputs).every((port) => port === "signal"),
       `Audio Process ${node.id} has unsupported ports`);
-    visits.push({ id: node.inputs.signal!.node,
-      gain: visit.gain * readAudioGainProcess(node.program) });
+    assert(isPointwiseOperatorTemporalSupport(node.temporalSupport),
+      `Audio Process ${node.id} requires unsupported non-pointwise temporal support`);
+    const gain = readAudioGainProgram(node.program);
+    if (gain.kind === "constant") {
+      visits.push({ id: node.inputs.signal!.node,
+        gain: visit.gain * gain.gain, gainControls: visit.gainControls, support: visit.support });
+      continue;
+    }
+    assert(Object.keys(node.controlMappings).join("\u0000") === "gain",
+      `Audio Gain Process ${node.id} requires exactly one gain Control mapping`);
+    const mapping = node.controlMappings.gain!;
+    const source = mapping.stages.at(-1)!.source;
+    assert(source.id === gain.control.domain.id
+      && compareExactTemporalValues(source.duration, gain.control.domain.duration) === 0,
+    `Audio Gain Process ${node.id} Control mapping does not end in ${gain.control.domain.id}`);
+    visits.push({ id: node.inputs.signal!.node, gain: visit.gain,
+      gainControls: [...visit.gainControls, {
+        control: gain.control,
+        mapping: createTemporalMapEvaluator(mapping),
+      }], support: visit.support });
   }
   return routes;
 }
 
 type SampleRange = { readonly startSample: number; readonly endSampleExclusive: number };
-type PlannedClip = {
-  readonly clip: AudioProgramClip;
+type PlannedMedia = {
+  readonly kind: "media";
+  readonly media: AudioProgramMediaSource;
   readonly target: SampleRange;
   readonly gain: number;
+  readonly gainControls: readonly GainControlUse[];
   /** Shared by demand analysis and actual sample reads. */
   readonly mapping: TemporalMapEvaluator;
 };
+
+type PlannedProgram = {
+  readonly kind: "program";
+  readonly node: Extract<AudioProgramNode, { readonly kind: "program" }>;
+  readonly target: SampleRange;
+  readonly gain: number;
+  readonly gainControls: readonly GainControlUse[];
+  readonly mapping: TemporalMapEvaluator;
+  readonly plan: AudioRenderPlan;
+};
+
+type PlannedRoute = PlannedMedia | PlannedProgram;
 
 /** One request-local pull plan shared by source preparation and signal evaluation. */
 export type AudioRenderPlan = {
   readonly program: AudioProgram;
   readonly ranges: readonly SampleRange[];
-  readonly clips: readonly PlannedClip[];
+  readonly routes: readonly PlannedRoute[];
+  readonly media: readonly PlannedMedia[];
 };
 
 function mergeSampleRanges(ranges: readonly SampleRange[], limit: number): SampleRange[] {
@@ -349,15 +448,42 @@ function mapHasContent(map: TemporalMap, ranges: readonly SampleRange[]): boolea
 
 function planProgram(program: AudioProgram, ranges: readonly SampleRange[]): AudioRenderPlan {
   const selected = mergeSampleRanges(ranges, audioProgramSampleFrames(program));
-  const clips = signalRoutes(program).flatMap((route): PlannedClip[] => {
-    const target = audioProgramClipSampleSpan(route.clip);
-    const local = localRanges(selected, target.startSample, target.endSampleExclusive);
+  const routes = signalRoutes(program).flatMap((route): PlannedRoute[] => {
+    const target = route.kind === "media"
+      ? { startSample: 0, endSampleExclusive: audioProgramSampleFrames(program) }
+      : audioProgramUseSampleSpan(route.node, program.sampling);
+    const supported = selected.flatMap((range): SampleRange[] => {
+      const startSample = Math.max(range.startSample, route.support.startSample);
+      const endSampleExclusive = Math.min(range.endSampleExclusive, route.support.endSampleExclusive);
+      return endSampleExclusive <= startSample ? [] : [{ startSample, endSampleExclusive }];
+    });
+    const local = localRanges(supported, target.startSample, target.endSampleExclusive);
     if (local.length === 0) return [];
-    const map = composeTemporalMaps(route.clip.sampling, route.clip.preparation);
+    const map = route.kind === "media"
+      ? route.media.preparation
+      : route.node.sampling;
     const mapping = createTemporalMapEvaluator(map);
-    return mapHasContent(map, local) ? [{ clip: route.clip, target, gain: route.gain, mapping }] : [];
+    if (!mapHasContent(map, local)) return [];
+    if (route.kind === "media") {
+      return [{ kind: "media", media: route.media, target, gain: route.gain,
+        gainControls: route.gainControls, mapping }];
+    }
+    return [{
+      kind: "program",
+      node: route.node,
+      target,
+      gain: route.gain,
+      gainControls: route.gainControls,
+      mapping,
+      plan: planProgram(route.node.program, [{
+        startSample: 0,
+        endSampleExclusive: audioProgramSampleFrames(route.node.program),
+      }]),
+    }];
   });
-  return { program, ranges: selected, clips };
+  const media = routes.flatMap((route): readonly PlannedMedia[] =>
+    route.kind === "media" ? [route] : route.plan.media);
+  return { program, ranges: selected, routes, media };
 }
 
 export function planAudioProgramRender(
@@ -373,33 +499,29 @@ export function planAudioProgramRender(
   return planProgram(program, [{ startSample, endSampleExclusive: startSample + sampleFrames }]);
 }
 
-export function audioRenderPlanSourceClips(plan: AudioRenderPlan): readonly AudioProgramClip[] {
-  return plan.clips.map((entry) => entry.clip);
+export function audioRenderPlanMediaSources(plan: AudioRenderPlan): readonly AudioProgramMediaSource[] {
+  return plan.media.map((entry) => entry.media);
 }
 
-function levelAt(clip: AudioProgramClip, target: SampleRange, sample: number): number {
-  let gain = clip.gain;
-  const points = clip.gainEnvelope;
-  if (points !== undefined) {
-    let envelope = points.at(-1)!.gain;
-    if (sample < points[0]!.sample) envelope = points[0]!.gain;
-    else for (let index = 1; index < points.length; index += 1) {
-      const left = points[index - 1]!;
-      const right = points[index]!;
-      if (sample < right.sample) {
-        envelope = left.gain + (right.gain - left.gain) * (sample - left.sample) / (right.sample - left.sample);
-        break;
-      }
-    }
-    gain *= envelope;
-  }
-  if (clip.audibility !== undefined
-    && !clip.audibility.some((span) => sample >= span.startSample && sample < span.endSampleExclusive)) return 0;
-  if (clip.fadeInSamples > 0 && sample < target.startSample + clip.fadeInSamples) {
-    gain *= Math.max(0, (sample - target.startSample) / clip.fadeInSamples);
-  }
-  if (clip.fadeOutSamples > 0 && sample >= target.endSampleExclusive - clip.fadeOutSamples) {
-    gain *= Math.max(0, (target.endSampleExclusive - sample) / clip.fadeOutSamples);
+/** Demanded mapped Programme uses that explicitly request package-owned reconstruction. */
+export function audioRenderPlanReconstructionUses(
+  plan: AudioRenderPlan,
+): readonly Extract<AudioProgramNode, { readonly kind: "program" }>[] {
+  return plan.routes.flatMap((route): readonly Extract<AudioProgramNode, { readonly kind: "program" }>[] =>
+    route.kind === "media"
+      ? []
+      : [
+          ...(route.node.reconstruction === undefined ? [] : [route.node]),
+          ...audioRenderPlanReconstructionUses(route.plan),
+        ]);
+}
+
+function controlledGainAt(controls: readonly GainControlUse[], sample: number): number {
+  let gain = 1;
+  for (const use of controls) {
+    const position = use.mapping(samplePosition(sample), "after");
+    if (position === undefined) return 0;
+    gain *= evaluateAudioGainControl(use.control, position.position);
   }
   return gain;
 }
@@ -435,27 +557,44 @@ type SignalPage = {
 /** Request-local lazy evaluation of one closed AudioProgram. */
 class ProgramSignalReader implements SignalReader {
   readonly sampleFrames: number;
-  readonly #clips: readonly CompiledClip[];
+  readonly #routes: readonly CompiledRoute[];
   readonly #pages = new Map<number, SignalPage>();
 
   constructor(
     plan: AudioRenderPlan,
-    sourceForClip: (clip: AudioProgramClip) => SignalReader,
-    reconstructedForClip: ((clip: AudioProgramClip) => SignalReader | undefined) | undefined,
+    sourceForMedia: (media: AudioProgramMediaSource) => SignalReader,
+    reconstructedForProgram:
+      ((node: Extract<AudioProgramNode, { readonly kind: "program" }>) => SignalReader | undefined)
+      | undefined,
   ) {
     const program = plan.program;
     this.sampleFrames = audioProgramSampleFrames(program);
-    this.#clips = plan.clips.map(({ clip, target, gain, mapping }) => {
-        const reconstructed = reconstructedForClip?.(clip);
+    this.#routes = plan.routes.map((route): CompiledRoute => {
+      if (route.kind === "program") {
+        const reconstructed = reconstructedForProgram?.(route.node);
         return {
-          clip,
-          target,
-          routeGain: gain,
-          mapping,
-          source: sourceForClip(clip),
+          kind: "program",
+          target: route.target,
+          routeGain: route.gain,
+          gainControls: route.gainControls,
+          mapping: route.mapping,
+          source: reconstructed ?? new ProgramSignalReader(
+            route.plan, sourceForMedia, reconstructedForProgram,
+          ),
           ...(reconstructed === undefined ? {} : { reconstructed }),
         };
-      });
+      }
+      const { media, target, gain, mapping } = route;
+      return {
+        kind: "media",
+        media,
+        target,
+        routeGain: gain,
+        gainControls: route.gainControls,
+        mapping,
+        source: sourceForMedia(media),
+      };
+    });
   }
 
   #page(index: number): SignalPage {
@@ -470,15 +609,15 @@ class ProgramSignalReader implements SignalReader {
     assert(frames > 0, "Audio renderer requested a programme page outside its signal");
     const end = start + frames;
     const samples = new Float64Array(frames * CHANNELS);
-    for (const entry of this.#clips) {
+    for (const entry of this.#routes) {
       const left = Math.max(start, entry.target.startSample);
       const right = Math.min(end, entry.target.endSampleExclusive);
       for (let sample = left; sample < right; sample += 1) {
-        const level = levelAt(entry.clip, entry.target, sample) * entry.routeGain;
+        const level = entry.routeGain * controlledGainAt(entry.gainControls, sample);
         if (level === 0) continue;
         let sourcePosition: SignalPosition;
         let reader: SignalReader;
-        if (entry.reconstructed !== undefined) {
+        if (entry.kind === "program" && entry.reconstructed !== undefined) {
           sourcePosition = {
             position: samplePosition(sample - entry.target.startSample),
             sourceSide: "after",
@@ -518,8 +657,8 @@ class ProgramSignalReader implements SignalReader {
 
 /**
  * Evaluate one renderer-facing AudioProgram as a signal pullback. TemporalMap
- * chooses source position; pitch-preserving reconstruction is a separate,
- * explicit Clip programme and is never inferred here.
+ * chooses source position; reconstruction is an explicit mapped Programme-use
+ * policy and is never inferred from the Mapping.
  */
 export async function renderAudioProgramWav(options: {
   readonly path: string;
@@ -527,15 +666,21 @@ export async function renderAudioProgramWav(options: {
   readonly plan?: AudioRenderPlan;
   readonly startSample: number;
   readonly sampleFrames: number;
-  readonly sourceForClip: (clip: AudioProgramClip) => CanonicalPcmReader;
-  readonly reconstructedForClip?: (clip: AudioProgramClip) => CanonicalPcmReader | undefined;
+  readonly sourceForMedia: (media: AudioProgramMediaSource) => CanonicalPcmReader;
+  readonly reconstructedForProgram?: (
+    node: Extract<AudioProgramNode, { readonly kind: "program" }>,
+  ) => CanonicalPcmReader | undefined;
 }): Promise<void> {
   assert(options.startSample >= 0 && options.sampleFrames >= 0
     && options.startSample + options.sampleFrames <= audioProgramSampleFrames(options.program),
   "Audio renderer range lies outside its programme");
   const plan = options.plan ?? planAudioProgramRender(options.program, options.startSample, options.sampleFrames);
   assert(plan.program === options.program, "Audio renderer plan belongs to another programme");
-  const reader = new ProgramSignalReader(plan, options.sourceForClip, options.reconstructedForClip);
+  const reader = new ProgramSignalReader(
+    plan,
+    options.sourceForMedia,
+    options.reconstructedForProgram,
+  );
   let output: Awaited<ReturnType<typeof open>> | undefined;
   try {
     output = await open(options.path, "w");

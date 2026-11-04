@@ -34,8 +34,8 @@ owns its meaning, then make the consuming declaration reference it directly:
 <import as="mediaop" from="@hypit/media-operations@1"/>
 
 <asset:Video id="accepted-opening" src="./assets/opening.mp4"/>
-<mediaop:Prepare id="opening-media" source={accepted-opening}
-  video="primary-moving" audio="default" span-authority="video"/>
+<media:Video id="opening-media" source={accepted-opening}
+   audio="default" />
 ```
 
 The reference is part of the authored production. A title, Caption, Timeline or rendering change

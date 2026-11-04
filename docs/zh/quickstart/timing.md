@@ -33,10 +33,10 @@ Hypit 只有一条节目时间轴：`Timeline`。它只是 `{ id, frameRate, fra
 
 ```svml
 <time:Clock id="clock" frame-rate="30"/>
-<mediaop:Prepare id="opening-media" source={opening-video.video}
-  video="primary-moving" audio="default" span-authority="video"/>
-<mediaop:Prepare id="answer-media" source={answer-video.video}
-  video="primary-moving" audio="default" span-authority="video"/>
+<media:Video id="opening-media" source={opening-video.video}
+   audio="default" />
+<media:Video id="answer-media" source={answer-video.video}
+   audio="default" />
 ```
 
 准备会发布选中的媒体成员、它们精确的局部时间域与 Extent，以及后续消费者需要的源关系。
@@ -49,12 +49,12 @@ Timeline 构造只需要媒体 Extent，不要求语义对齐。只有 Caption�
 
 ```svml
 <whisperx:Transcription id="opening-transcription"
-  media={opening-media.media} language="en"/>
+  media={opening-media.source} language="en"/>
 <speechalign:Alignment id="opening-alignment" narrative={story}
   segment={story.segment.opening} domain={opening-media.domain}
   evidence={opening-transcription.transcript}/>
 <whisperx:Transcription id="answer-transcription"
-  media={answer-media.media} language="en"/>
+  media={answer-media.source} language="en"/>
 <speechalign:Alignment id="answer-alignment" narrative={story}
   segment={story.segment.answer} domain={answer-media.domain}
   evidence={answer-transcription.transcript}/>
@@ -124,15 +124,15 @@ Timeline。`from="opening.end+2s"` 表示空隙，
 
 ```svml
 <visual:Track id="picture" timeline={speech.timeline}>
-  <visual:Clip id="opening" media={opening-media.media} during={speech.opening}
+  <visual:Clip id="opening" media={opening-media.source} during={speech.opening}
     frame={speech-frame} fit="cover"/>
-  <visual:Clip id="answer" media={answer-media.media} during={speech.answer}
+  <visual:Clip id="answer" media={answer-media.source} during={speech.answer}
     frame={speech-frame} fit="cover"/>
 </visual:Track>
 
 <audio:Track id="mix" timeline={speech.timeline}>
-  <audio:Clip id="opening" source={opening-media.media} during={speech.opening}/>
-  <audio:Clip id="answer" source={answer-media.media} during={speech.answer}/>
+  <audio:Clip id="opening" source={opening-media.source} during={speech.opening}/>
+  <audio:Clip id="answer" source={answer-media.source} during={speech.answer}/>
 </audio:Track>
 ```
 

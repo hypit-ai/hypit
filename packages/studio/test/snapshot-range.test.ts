@@ -1,3 +1,4 @@
+import { timelineTypes } from "@hypit/timeline";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { compositionTypes } from "@hypit/composition";
@@ -65,13 +66,13 @@ test("the common declaration row displays Instants without duplicating Window in
   const state = executedGraph({
     programRecords: [], steps: [],
     records: [
-      { id: "run-window", type: temporalTypes.window, value: ({
+      { id: "run-window", type: timelineTypes.window, value: ({
         id: "direct", subjectId: "direct",
         start: { id: "direct.start", subjectId: "direct", timelineId: "work", frame: 3 },
         end: { id: "direct.end", subjectId: "direct", timelineId: "work", frame: 30 },
         span: { startFrame: 3, endFrameExclusive: 30 },
       }) },
-      { id: "computed-instant", type: temporalTypes.instant, value: ({
+      { id: "computed-instant", type: timelineTypes.instant, value: ({
         id: "projected", subjectId: "projected", timelineId: "work", frame: 18,
       }) },
     ],

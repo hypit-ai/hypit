@@ -3,7 +3,8 @@ import type { ProducerPackage } from "@hypit/hypit/producer";
 import type { Narrative, NarrativeSegmentRef, NarrativeMomentRef, NarrativeSelectionRef } from "@hypit/narrative";
 import { canonicalize } from "@hypit/hypit/protocol";
 import type { ProducerRef, Value } from "@hypit/hypit/protocol";
-import type { LocalTemporalDomain, TemporalWindow } from "@hypit/temporal";
+import type { LocalTemporalDomain } from "@hypit/temporal";
+import type { TemporalWindow } from "@hypit/timeline";
 import type { Timeline } from "@hypit/timeline";
 
 import {

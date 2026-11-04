@@ -2,26 +2,38 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { HTML_VISUAL_FORMAT, type HtmlVisual } from "@hypit/html-program";
-import { assertVisualTransitionEffect } from "@hypit/visual-track";
+import { canonicalize } from "@hypit/hypit/protocol";
+import { exactTemporalValue, sealLocalTemporalDomain } from "@hypit/temporal/algebra";
 import {
   assertIrisShape,
   assertTransitionColor,
   assertTransitionDirection,
   assertTransitionEasing,
   blurDissolveEffect,
+  blurDissolveOperator,
   crossDissolveEffect,
+  crossDissolveOperator,
   dipToColorEffect,
+  dipToColorOperator,
   irisEffect,
+  irisOperator,
   linearWipeEffect,
+  linearWipeOperator,
   pushEffect,
+  pushOperator,
   slideEffect,
-  visualTransitionAuthorDeclarations,
-  visualTransitionMarkupDeclarations,
+  slideOperator,
+  transitionOperator,
+  visualTransitionComponent,
+  visualTransitionProducers,
   zoomDissolveEffect,
+  zoomDissolveOperator,
 } from "../src/index.js";
-import { visualTransitionStudioParameterCompanions } from "../src/studio.js";
 
 type Layer = { style: Record<string, string> };
+const domain = sealLocalTemporalDomain({ id: "transition:time", duration: exactTemporalValue({
+  numerator: 3n, denominator: 1n,
+}) });
 
 function run(effect: ReturnType<typeof crossDissolveEffect>, durationFrames = 3) {
   assert.deepEqual(effect.inputs, ["outgoing", "incoming"]);
@@ -43,25 +55,53 @@ function run(effect: ReturnType<typeof crossDissolveEffect>, durationFrames = 3)
   return { visual, outgoing, incoming, color, render };
 }
 
-test("the official package publishes one declaration per foundational transition effect", () => {
-  assert.deepEqual(visualTransitionMarkupDeclarations.map(({ tag }) => tag), [
-    "CrossDissolve",
-    "DipToColor",
-    "Push",
-    "Slide",
-    "LinearWipe",
-    "Iris",
-    "ZoomDissolve",
-    "BlurDissolve",
+test("the typed Producer publishes every package-owned transition as a Picture Operator", async () => {
+  const producer = visualTransitionComponent.producers.find((candidate) =>
+    candidate.producer.name === visualTransitionProducers.operator.name)!;
+  const specs = [
+    { kind: "cross-dissolve", easing: "linear" },
+    { kind: "dip-to-color", color: "#ffffff", easing: "ease-in" },
+    { kind: "push", direction: "left", easing: "ease-out" },
+    { kind: "slide", direction: "up", easing: "ease-in-out" },
+    { kind: "linear-wipe", direction: "right", easing: "linear" },
+    { kind: "iris", shape: "diamond", easing: "ease-in" },
+    { kind: "zoom-dissolve", strength: 0.2, easing: "ease-out" },
+    { kind: "blur-dissolve", radius: 24, easing: "ease-in-out" },
+  ] as const;
+  for (const spec of specs) {
+    const result = await producer.handler({ inputs: {
+      spec: { value: canonicalize(spec) }, domain: { value: canonicalize(domain) },
+    } } as never);
+    assert.equal(result.kind, "output");
+    assert.deepEqual(result.value, transitionOperator(spec, domain));
+  }
+});
+
+test("every official transition closes the same two named AVIR ports", () => {
+  const operators = [
+    crossDissolveOperator(domain),
+    dipToColorOperator(domain),
+    pushOperator(domain),
+    slideOperator(domain),
+    linearWipeOperator(domain),
+    irisOperator(domain),
+    zoomDissolveOperator(domain),
+    blurDissolveOperator(domain),
+  ];
+  assert.deepEqual(operators.map(({ id }) => id), [
+    "hypit.visual-transition:cross-dissolve",
+    "hypit.visual-transition:dip-to-color",
+    "hypit.visual-transition:push",
+    "hypit.visual-transition:slide",
+    "hypit.visual-transition:linear-wipe",
+    "hypit.visual-transition:iris",
+    "hypit.visual-transition:zoom-dissolve",
+    "hypit.visual-transition:blur-dissolve",
   ]);
-  assert.deepEqual(
-    visualTransitionAuthorDeclarations.map(({ declaration }) => declaration),
-    visualTransitionMarkupDeclarations.map(({ name }) => name),
-  );
-  assert.deepEqual(
-    visualTransitionStudioParameterCompanions.map(({ match }) => match.declaration),
-    visualTransitionMarkupDeclarations.map(({ name }) => name),
-  );
+  for (const operator of operators) {
+    assert.deepEqual(operator.inputs, ["outgoing", "incoming"]);
+    assert.deepEqual(operator.temporalControls, { progress: domain });
+  }
 });
 
 test("every transition owns exactly the outgoing and incoming Picture inputs", () => {
@@ -81,11 +121,6 @@ test("every transition owns exactly the outgoing and incoming Picture inputs", (
     assert.equal(visual.html.match(/\{\{outgoing\}\}/gu)?.length, 1);
     assert.equal(visual.html.match(/\{\{incoming\}\}/gu)?.length, 1);
   }
-  const effect = crossDissolveEffect();
-  assert.throws(() => assertVisualTransitionEffect({
-    inputs: ["incoming", "outgoing"],
-    program: effect.program,
-  } as unknown as Parameters<typeof assertVisualTransitionEffect>[0]), /outgoing followed by incoming/u);
 });
 
 test("Cross Dissolve interpolates premultiplied Pictures and reaches both endpoints", () => {
@@ -161,15 +196,4 @@ test("effect packages reject invalid author parameters at their own boundary", (
   assert.throws(() => assertTransitionDirection("diagonal"), /direction diagonal is invalid/u);
   assert.throws(() => assertIrisShape("star"), /shape star is invalid/u);
   assert.throws(() => assertTransitionColor("black"), /hexadecimal color/u);
-});
-
-test("Studio edits package-owned parameters rather than adding fields to Visual Track", () => {
-  const cross = visualTransitionStudioParameterCompanions.find(({ id }) => id === "cross-dissolve")!;
-  assert.deepEqual(cross.inspector?.find(({ binding }) => binding === "easing")?.options,
-    ["linear", "ease-in", "ease-out", "ease-in-out"]);
-  const dip = visualTransitionStudioParameterCompanions.find(({ id }) => id === "dip-to-color")!;
-  assert.equal(dip.inspector?.find(({ binding }) => binding === "color")?.control, "color");
-  const iris = visualTransitionStudioParameterCompanions.find(({ id }) => id === "iris")!;
-  assert.deepEqual(iris.inspector?.find(({ binding }) => binding === "shape")?.options,
-    ["circle", "box", "diamond"]);
 });

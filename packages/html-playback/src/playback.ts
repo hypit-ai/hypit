@@ -1,4 +1,3 @@
-import { audioEnvelopeGainAt } from "@hypit/composition";
 import type { HtmlProgram } from "@hypit/html-program";
 import {
   addExactTemporalValues,
@@ -17,12 +16,9 @@ type PlaybackVideoPlan = {
 
 function playbackVideoPlan(program: HtmlProgram | undefined): readonly PlaybackVideoPlan[] {
   if (program === undefined) return [];
-  if (program.processUsages.length > 0) {
-    throw new Error("Browser playback does not execute Visual Process input rasterization; use a renderer that executes the HtmlProgram process plan");
-  }
   const plans = new Map<string, (number | null)[]>();
   for (const source of program.videoSources) {
-    if (source.kind === "media" && source.source.streamIndex !== 0) {
+    if (source.source.streamIndex !== 0) {
       throw new Error(`Browser playback cannot select visual stream ${source.source.streamIndex} for ${source.id}; use a renderer that executes the HtmlProgram source plan`);
     }
     const evaluateSampling = createTemporalMapEvaluator(source.sampling);
@@ -35,20 +31,8 @@ function playbackVideoPlan(program: HtmlProgram | undefined): readonly PlaybackV
       let seconds: number | undefined;
       const mapped = evaluateSampling(exactTemporalValueFromFrames(frame - source.startFrame, program), "after");
       if (mapped !== undefined) {
-        if (source.kind === "media") {
-          const absolute = exactTemporalRational(addExactTemporalValues(source.source.presentationStart, mapped.position));
-          seconds = Number(absolute.numerator) / Number(absolute.denominator);
-        } else {
-          const position = exactTemporalRational(mapped.position);
-          const numerator = position.numerator * BigInt(source.sourceFrameRate.numerator);
-          const denominator = position.denominator * BigInt(source.sourceFrameRate.denominator);
-          let ordinal = numerator / denominator;
-          if (mapped.sourceSide === "before" && numerator % denominator === 0n) ordinal -= 1n;
-          if (ordinal >= 0n) {
-            seconds = (Number(ordinal) + 0.5) * source.sourceFrameRate.denominator
-              / source.sourceFrameRate.numerator;
-          }
-        }
+        const absolute = exactTemporalRational(addExactTemporalValues(source.source.presentationStart, mapped.position));
+        seconds = Number(absolute.numerator) / Number(absolute.denominator);
       }
       if (seconds === undefined) continue;
       if (!Number.isFinite(seconds)) throw new Error(`Playback video ${source.id} timestamp exceeds finite arithmetic`);
@@ -125,24 +109,33 @@ function shim(videoPlan: readonly PlaybackVideoPlan[]): string {
       rate: parseFloat(element.getAttribute('data-playback-rate') || '1') || 1,
       preservesPitch: element.getAttribute('data-preserves-pitch') === 'true',
       gain: Number(element.getAttribute('data-gain') ?? '1'),
-      levelAutomation: JSON.parse(decodeURIComponent(element.getAttribute('data-level-automation') || '%7B%7D'))
+      gainControls: JSON.parse(decodeURIComponent(element.getAttribute('data-gain-controls') || '%5B%5D'))
     });
   }
 
-  function scheduleEnvelope(param, points, sample, now) {
+  function scheduleGainControl(param, control, sample, now) {
     param.cancelScheduledValues(now);
-    param.setValueAtTime(audioEnvelopeGainAt(points, sample), now);
-    for (var point of points || []) {
-      if (point.sample > sample) param.linearRampToValueAtTime(point.gain, now + (point.sample - sample) / 48000);
+    var current = control.segments.find(function (segment) {
+      return sample >= segment.startSample && sample < segment.endSampleExclusive;
+    });
+    if (!current) current = control.segments[control.segments.length - 1];
+    var progress = current.endSampleExclusive === current.startSample ? 0
+      : (sample - current.startSample) / (current.endSampleExclusive - current.startSample);
+    param.setValueAtTime(current.from + (current.to - current.from) * Math.max(0, Math.min(1, progress)), now);
+    for (var segment of control.segments) {
+      if (segment.endSampleExclusive <= sample) continue;
+      if (segment.startSample > sample) {
+        param.setValueAtTime(segment.from, now + (segment.startSample - sample) / 48000);
+      }
+      param.linearRampToValueAtTime(segment.to, now + (segment.endSampleExclusive - sample) / 48000);
     }
   }
 
-  // Each factor has its own GainNode so intersecting ramps multiply exactly.
-  // These are the same absolute-sample envelopes consumed by the render mixer.
+  // Each package-owned Control has its own GainNode so intersecting ramps multiply exactly.
   function placeAudioGain(record, seconds) {
     if (!record.nodes) {
       var source = audioContext.createMediaElementSource(record.element);
-      record.nodes = Array.from({ length: 5 }, function () { return audioContext.createGain(); });
+      record.nodes = Array.from({ length: 1 + record.gainControls.length }, function () { return audioContext.createGain(); });
       var previous = source;
       for (var node of record.nodes) { previous.connect(node); previous = node; }
       previous.connect(audioContext.destination);
@@ -150,23 +143,9 @@ function shim(videoPlan: readonly PlaybackVideoPlan[]): string {
     }
     var sample = seconds * 48000;
     var now = audioContext.currentTime;
-    var p = record.levelAutomation;
-    var start = p.mixStartSample ?? record.start * 48000;
-    var end = p.mixEndSampleExclusive ?? (record.start + record.duration) * 48000;
     record.nodes[0].gain.setValueAtTime(record.gain, now);
-    scheduleEnvelope(record.nodes[1].gain, p.gainEnvelope, sample, now);
-    scheduleEnvelope(record.nodes[2].gain, p.fadeInSamples > 0
-      ? [{ sample: start, gain: 0 }, { sample: start + p.fadeInSamples, gain: 1 }] : undefined, sample, now);
-    scheduleEnvelope(record.nodes[3].gain, p.fadeOutSamples > 0
-      ? [{ sample: end - p.fadeOutSamples, gain: 1 }, { sample: end, gain: 0 }] : undefined, sample, now);
-    var gate = record.nodes[4].gain;
-    gate.cancelScheduledValues(now);
-    gate.setValueAtTime(p.audibility === undefined || p.audibility.some(function (span) {
-      return sample >= span.startSample && sample < span.endSampleExclusive;
-    }) ? 1 : 0, now);
-    for (var span of p.audibility || []) {
-      if (span.startSample > sample) gate.setValueAtTime(1, now + (span.startSample - sample) / 48000);
-      if (span.endSampleExclusive > sample) gate.setValueAtTime(0, now + (span.endSampleExclusive - sample) / 48000);
+    for (var index = 0; index < record.gainControls.length; index += 1) {
+      scheduleGainControl(record.nodes[index + 1].gain, record.gainControls[index], sample, now);
     }
   }
 
@@ -357,7 +336,7 @@ export function injectHtmlPlayback(html: string, audio = "", program?: HtmlProgr
   // Take ownership before the renderer activates deferred resources. Otherwise
   // every video in a long Program allocates a decoder before the first frame.
   html = html.replace(/(<video\b[^>]*?)\s(?:data-hypit-artifact-src|src)=/gu, '$1 preload="none" data-hypit-src=');
-  const script = audio + shim(playbackVideoPlan(program)).replace("(function () {", `(function () {\n${audioEnvelopeGainAt.toString()}`);
+  const script = audio + shim(playbackVideoPlan(program));
   const at = html.lastIndexOf("</body>");
   return at < 0 ? html + script : html.slice(0, at) + script + html.slice(at);
 }

@@ -4,7 +4,7 @@ import test from "node:test";
 import { compositionTypes } from "@hypit/composition";
 import { createStudioTrackCompanionFacet } from "@hypit/studio-companion";
 import { loadNodePackageSelection } from "@hypit/hypit/loader/node";
-import { temporalProducers } from "@hypit/temporal";
+import { timelineProducers } from "@hypit/timeline";
 
 import { loadStudioCompanionRegistry } from "../src/companion-assembly.js";
 
@@ -30,11 +30,11 @@ test("a Source-selected package contributes its Companion without a second Studi
   );
 });
 
-test("Temporal supplies its inverse relations only when the Source selects the package", async () => {
+test("Timeline Author supplies the resolved Window relation only when selected", async () => {
   const distributionPackageRoot = process.cwd();
   const empty = await loadStudioCompanionRegistry({ distributionPackageRoot, sourcePackages: [] });
-  assert.equal(empty.temporalRelationFor(temporalProducers.composeWindow, "window"), undefined);
-  const sourcePackages = await loadNodePackageSelection(["@hypit/temporal"], distributionPackageRoot);
+  assert.equal(empty.temporalRelationFor(timelineProducers.composeWindow, "window"), undefined);
+  const sourcePackages = await loadNodePackageSelection(["@hypit/timeline-author"], distributionPackageRoot);
   const registry = await loadStudioCompanionRegistry({ distributionPackageRoot, sourcePackages });
-  assert.ok(registry.temporalRelationFor(temporalProducers.composeWindow, "window"));
+  assert.ok(registry.temporalRelationFor(timelineProducers.composeWindow, "window"));
 });

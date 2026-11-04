@@ -55,7 +55,7 @@ export const audioTrackProgramSchema: ValueSchema = object({
 const clipInputs = [
   { name: "set", type: audioTrackTypes.set }, { name: "header", type: audioTrackTypes.header },
   { name: "timeline", type: timelineTypes.timeline }, { name: "media", type: mediaTypes.prepared },
-  { name: "spec", type: audioTrackTypes.clipSpec }, { name: "window", type: temporalTypes.window },
+  { name: "spec", type: audioTrackTypes.clipSpec }, { name: "window", type: timelineTypes.window },
 ] as const;
 
 export const audioTrackManifest: ModuleManifest = {

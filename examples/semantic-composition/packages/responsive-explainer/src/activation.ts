@@ -16,7 +16,7 @@ import type { Timeline } from "@hypit/timeline";
 import { spatialTypes } from "@hypit/spatial";
 import type { SpatialFrame } from "@hypit/spatial";
 import { temporalTypes } from "@hypit/temporal";
-import type { TemporalInstant, TemporalWindow } from "@hypit/temporal";
+import type { TemporalInstant, TemporalWindow } from "@hypit/timeline";
 import { renderExplainer } from "./render.js";
 import type { ExplainerOptions } from "./render.js";
 
@@ -25,13 +25,13 @@ const optionsType = { module, name: "ExplainerOptions" };
 const producer = { module, name: "compose" };
 const inputs = [
   { name: "timeline", type: timelineTypes.timeline }, { name: "within", type: spatialTypes.frame },
-  { name: "window", type: temporalTypes.window }, { name: "reveal", type: temporalTypes.instant },
-  { name: "media", type: mediaTypes.prepared }, { name: "sourceWindow", type: temporalTypes.window },
+  { name: "window", type: timelineTypes.window }, { name: "reveal", type: timelineTypes.instant },
+  { name: "media", type: mediaTypes.prepared }, { name: "sourceWindow", type: timelineTypes.window },
   { name: "font", type: mediaTypes.fontStack }, { name: "options", type: optionsType },
 ];
 export const manifest: ModuleManifest = { format: "hypit.module@1", ...module,
   dependencies: [...[compositionTypes.visualTrack, mediaTypes.fontStack, timelineTypes.timeline,
-    spatialTypes.frame, temporalTypes.window, temporalTypes.instant]
+    spatialTypes.frame, timelineTypes.window, timelineTypes.instant]
     .map(type => type.module)],
   types: [optionsType.name], capabilities: [],
   producers: [{ name: producer.name, inputs, result: { kind: "output" as const, name: "visual", type: compositionTypes.visualTrack } }],
@@ -78,9 +78,9 @@ const authorDeclaration: AuthorDeclarationCompiler = {
     { name: "within", kind: "reference", required: true, accepts: [spatialTypes.frame], summary: "Places the scene." },
     { name: "font", kind: "reference", required: true, accepts: [mediaTypes.fontStack], summary: "Selects the font." },
     { name: "media", kind: "reference", required: true, accepts: [mediaTypes.prepared], summary: "Selects prepared media." },
-    { name: "source-window", kind: "reference", required: true, accepts: [temporalTypes.window], summary: "Selects source time." },
-    { name: "reveal", kind: "expression", required: true, accepts: [temporalTypes.instant], summary: "Selects the reveal Instant." },
-    { name: "during", kind: "expression", required: true, accepts: [temporalTypes.window], summary: "Selects the scene Window." },
+    { name: "source-window", kind: "reference", required: true, accepts: [timelineTypes.window], summary: "Selects source time." },
+    { name: "reveal", kind: "expression", required: true, accepts: [timelineTypes.instant], summary: "Selects the reveal Instant." },
+    { name: "during", kind: "expression", required: true, accepts: [timelineTypes.window], summary: "Selects the scene Window." },
   ] },
   bindings(declaration) {
     const id = literal(declaration, "id");
@@ -95,9 +95,9 @@ const authorDeclaration: AuthorDeclarationCompiler = {
       within: await reference(declaration, "within", spatialTypes.frame, resolveReference),
       font: await reference(declaration, "font", mediaTypes.fontStack, resolveReference),
       media: await reference(declaration, "media", mediaTypes.prepared, resolveReference),
-      sourceWindow: await reference(declaration, "source-window", temporalTypes.window, resolveReference),
-      window: await reference(declaration, "during", temporalTypes.window, resolveReference),
-      reveal: await reference(declaration, "reveal", temporalTypes.instant, resolveReference),
+      sourceWindow: await reference(declaration, "source-window", timelineTypes.window, resolveReference),
+      window: await reference(declaration, "during", timelineTypes.window, resolveReference),
+      reveal: await reference(declaration, "reveal", timelineTypes.instant, resolveReference),
     };
     return {
       records: [{ id: `${id}.options`, type: optionsType, value: canonicalize(options), range: declaration.range }],

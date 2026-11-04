@@ -27,19 +27,27 @@ function surfaceMap(
   }] }] });
 }
 
-function surfaceProgram(
+function mediaProgram(
   frameCount: number,
   sources: readonly { readonly id: string; readonly startFrame: number; readonly endFrameExclusive: number;
     readonly sampling: TemporalMap }[],
 ): HtmlProgram {
-  return { frameRate: playbackClock.frameRate, frameCount, processUsages: [],
+  return { frameRate: playbackClock.frameRate, frameCount, artifacts: [], html: "<!doctype html>",
     videoSources: sources.map((source) => ({
-      kind: "surface" as const, id: source.id, elementId: source.id,
-      artifactId: `artifact_${source.id}`, picture,
+      kind: "media" as const, id: source.id, elementId: source.id,
       startFrame: source.startFrame, endFrameExclusive: source.endFrameExclusive,
       usage: { kind: "frames" as const, spans: [{ startFrame: source.startFrame,
         endFrameExclusive: source.endFrameExclusive }] },
-      sampling: source.sampling, sourceFrameRate: playbackClock.frameRate,
+      source: {
+        source: { kind: "blob" as const, resource: `res_${source.id}` as const,
+          size: 1, mediaType: "video/mp4" },
+        streamIndex: 0,
+        presentationStart: { ticks: "0", timeBase: { numerator: 1, denominator: 1 } },
+        sourceDomain: structuredClone(source.sampling.stages.at(-1)!.source),
+        interpretation: { codedWidth: 16, codedHeight: 9,
+          sampleAspectRatio: { numerator: 1, denominator: 1 }, rotationDegrees: 0 as const, picture },
+      },
+      sampling: source.sampling,
     })) } as unknown as HtmlProgram;
 }
 
@@ -55,7 +63,7 @@ test("PreparedMedia preview samples the HtmlProgram TemporalMap as its timing au
   const domain = { id: "direct-source", duration: exactTemporalValueFromFrames(30,
     { frameRate: { numerator: 30, denominator: 1 } }) };
   const program = {
-    frameRate: { numerator: 30, denominator: 1 }, frameCount: 3, processUsages: [],
+    frameRate: { numerator: 30, denominator: 1 }, frameCount: 3,
     videoSources: [{ kind: "media", id: "direct", elementId: "direct",
       startFrame: 0, endFrameExclusive: 3,
       source: { source: { kind: "blob", resource: "res_direct", size: 1, mediaType: "video/mp4" },
@@ -95,7 +103,7 @@ test("browser playback rejects a selected nonzero visual stream instead of playi
   const domain = { id: "alternate-source", duration: exactTemporalValueFromFrames(1,
     { frameRate: { numerator: 30, denominator: 1 } }) };
   const program = {
-    frameRate: { numerator: 30, denominator: 1 }, frameCount: 1, processUsages: [],
+    frameRate: { numerator: 30, denominator: 1 }, frameCount: 1,
     videoSources: [{ kind: "media", id: "alternate", elementId: "alternate",
       startFrame: 0, endFrameExclusive: 1,
       source: { source: { kind: "blob", resource: "res_alternate", size: 1, mediaType: "video/mp4" },
@@ -110,15 +118,7 @@ test("browser playback rejects a selected nonzero visual stream instead of playi
     /cannot select visual stream 2 for alternate/u);
 });
 
-test("browser playback rejects Provider-owned Visual Process passes", () => {
-  const program = { frameRate: { numerator: 30, denominator: 1 }, frameCount: 1,
-    processUsages: [{ order: 1, stageKeys: ["content", "matte"],
-      spans: [{ startFrame: 0, endFrameExclusive: 1 }] }], videoSources: [] } as unknown as HtmlProgram;
-  assert.throws(() => injectHtmlPlayback("", "", program),
-    /does not execute Visual Process input rasterization/u);
-});
-
-test("timed Surface playback evaluates one complete multi-stage cubic Map behind its display plane", async () => {
+test("PreparedMedia playback evaluates one complete multi-stage cubic Map behind its display plane", async () => {
   const target = { id: "surface-target", duration: exactTemporalValueFromFrames(3, playbackClock) };
   const middle = { id: "surface-middle", duration: exactTemporalValueFromFrames(3, playbackClock) };
   const source = { id: "surface-source", duration: exactTemporalValueFromFrames(3, playbackClock) };
@@ -132,7 +132,7 @@ test("timed Surface playback evaluates one complete multi-stage cubic Map behind
     target: { start: exactTemporalValueFromFrames(0, playbackClock), end: middle.duration },
     sourceAtStart: exactTemporalValueFromFrames(0, playbackClock), rate: { numerator: 1, denominator: 1 },
   }] }] });
-  const program = surfaceProgram(3, [{ id: "surface-plane", startFrame: 0, endFrameExclusive: 3, sampling }]);
+  const program = mediaProgram(3, [{ id: "surface-plane", startFrame: 0, endFrameExclusive: 3, sampling }]);
   const attrs: Record<string, string> = { "data-hypit-src": "surface.mp4" };
   const listeners = new Map<string, () => void>();
   let currentTime = 0;
@@ -155,7 +155,7 @@ test("timed Surface playback evaluates one complete multi-stage cubic Map behind
   vm.runInNewContext(script, { window, document: { querySelector: () => root,
     querySelectorAll: (selector: string) => selector === ".hypit-visual-present video" ? [video] : [] } });
   await window.__hypitSeekFrame(2);
-  assert.equal(currentTime, 2.5 / 30);
+  assert.equal(currentTime, 2 / 30);
 });
 
 test("long preview releases remote Clips and cancels obsolete metadata waits", async () => {
@@ -179,7 +179,7 @@ test("long preview releases remote Clips and cancels obsolete metadata waits", a
   });
   const root = { style: {}, getAttribute: () => null };
   const window: Record<string, any> = { addEventListener() {}, __hypitFrameProgram: { async applyFrame() {} } };
-  const program = surfaceProgram(clips.length * 300, clips.map((_clip, index) => ({
+  const program = mediaProgram(clips.length * 300, clips.map((_clip, index) => ({
     id: `clip-${index}`, startFrame: index * 300, endFrameExclusive: (index + 1) * 300,
     sampling: surfaceMap(`clip-${index}`, 300, 300),
   })));
@@ -216,7 +216,7 @@ test("preview scrubs to the same source frame as rendering at fractional sample 
   const root = { style: {}, getAttribute: (name: string) => ({ "data-fps": "30", "data-composition-id": "test" })[name] ?? null };
   const window: Record<string, any> = { addEventListener() {}, dispatchEvent() {},
     __hypitFrameProgram: { async applyFrame() {} } };
-  const program = surfaceProgram(30, [{ id: "fractional", startFrame: 0, endFrameExclusive: 30,
+  const program = mediaProgram(30, [{ id: "fractional", startFrame: 0, endFrameExclusive: 30,
     sampling: surfaceMap("fractional", 30, 30, { numerator: 7, denominator: 4 },
       { numerator: 1, denominator: 2 }) }]);
   const html = injectHtmlPlayback("", "", program).trim();
@@ -226,10 +226,10 @@ test("preview scrubs to the same source frame as rendering at fractional sample 
     CustomEvent: class {},
   });
   await window.__hypitFrameReady;
-  // Source positions are 1.75, 2.25, 2.75, 3.25. Each decoded frame owns [n,n+1).
-  for (const [frame, sourceFrame] of [[0, 1], [1, 2], [2, 2], [3, 3], [0, 1]] as const) {
+  // Browser playback seeks the exact mapped media timestamp; the renderer separately selects samples.
+  for (const [frame, sourcePosition] of [[0, 1.75], [1, 2.25], [2, 2.75], [3, 3.25], [0, 1.75]] as const) {
     await window.__hypitSeekFrame(frame);
-    assert.equal(video.currentTime, (sourceFrame + 0.5) / 30, `preview frame ${frame}`);
+    assert.equal(video.currentTime, sourcePosition / 30, `preview frame ${frame}`);
   }
 });
 
@@ -254,7 +254,7 @@ test("preview keeps a compact zero-rate sampling interval paused on its source f
   const root = { style: {}, getAttribute: (name: string) => ({ "data-fps": "30", "data-composition-id": "test" })[name] ?? null };
   const window: Record<string, any> = { addEventListener() {}, dispatchEvent() {},
     __hypitFrameProgram: { async applyFrame() {} } };
-  const program = surfaceProgram(360, [{ id: "hold", startFrame: 60, endFrameExclusive: 360,
+  const program = mediaProgram(360, [{ id: "hold", startFrame: 60, endFrameExclusive: 360,
     sampling: surfaceMap("hold", 300, 30, { numerator: 3, denominator: 1 },
       { numerator: 0, denominator: 1 }) }]);
   const html = injectHtmlPlayback("", "", program).trim();
@@ -266,7 +266,7 @@ test("preview keeps a compact zero-rate sampling interval paused on its source f
   await window.__hypitSeekFrame(60);
   await window.__hypitPlayFrame(211);
   await window.__hypitSeekFrame(359);
-  assert.equal(currentTime, 3.5 / 30);
+  assert.equal(currentTime, 3 / 30);
   assert.equal(plays, 0, "a held interval never hands its clock to native video playback");
   assert.ok(pauses >= 3);
 });
@@ -293,7 +293,7 @@ test("preview gives an exact reverse boundary to its left-hand source frame", as
   const root = { style: {}, getAttribute: (name: string) => ({ "data-fps": "30", "data-composition-id": "test" })[name] ?? null };
   const window: Record<string, any> = { addEventListener() {}, dispatchEvent() {},
     __hypitFrameProgram: { async applyFrame() {} } };
-  const program = surfaceProgram(10, [{ id: "reverse", startFrame: 0, endFrameExclusive: 10,
+  const program = mediaProgram(10, [{ id: "reverse", startFrame: 0, endFrameExclusive: 10,
     sampling: surfaceMap("reverse", 10, 10, { numerator: 10, denominator: 1 },
       { numerator: -1, denominator: 1 }) }]);
   const html = injectHtmlPlayback("", "", program).trim();
@@ -303,7 +303,7 @@ test("preview gives an exact reverse boundary to its left-hand source frame", as
     CustomEvent: class {},
   });
   await window.__hypitPlayFrame(3);
-  assert.equal(currentTime, 6.5 / 30);
+  assert.equal(currentTime, 7 / 30);
   assert.equal(assignedRate, undefined);
   assert.equal(plays, 0);
 });
@@ -336,7 +336,7 @@ test("playback parks the next Clip on its entry frame and shows it only once dec
   });
   const root = { style: {}, getAttribute: (name: string) => ({ "data-hypit-frame-numerator": "30" })[name] ?? null };
   const window: Record<string, any> = { addEventListener() {}, __hypitFrameProgram: { async applyFrame() {} } };
-  const program = surfaceProgram(240, [0, 1].map((index) => ({
+  const program = mediaProgram(240, [0, 1].map((index) => ({
     id: `park-${index}`, startFrame: index * 120, endFrameExclusive: (index + 1) * 120,
     sampling: surfaceMap(`park-${index}`, 120, 420,
       { numerator: index === 0 ? 0 : 300, denominator: 1 }),
@@ -349,7 +349,7 @@ test("playback parks the next Clip on its entry frame and shows it only once dec
   await window.__hypitPlayFrame(80);
   await new Promise((resolve) => setTimeout(resolve, 0));
   await window.__hypitPlayFrame(81);
-  assert.equal(clips[1]!.currentTime, 300.5 / 30);
+  assert.equal(clips[1]!.currentTime, 300 / 30);
   assert.equal(clips[1]!.style.visibility, "hidden");
   await window.__hypitPlayFrame(120);
   assert.equal(clips[1]!.style.visibility, "visible");

@@ -7,8 +7,8 @@ import {
   resolveContentFit,
 } from "@hypit/spatial";
 import type { SpatialFrame, SpatialPath, SpatialPoint } from "@hypit/spatial";
-import { assertTemporalWindowFor } from "@hypit/temporal";
-import type { TemporalWindow } from "@hypit/temporal";
+import { assertTemporalWindowFor } from "@hypit/timeline";
+import type { TemporalWindow } from "@hypit/timeline";
 import {
   assertVisualTextAppearance,
   assertVisualTrackIdentity,

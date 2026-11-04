@@ -12,8 +12,8 @@ import { verifyText } from "@hypit/hypit/text";
 import type { Text } from "@hypit/hypit/text";
 import { assertSpatialFrame } from "@hypit/spatial";
 import type { SpatialFrame } from "@hypit/spatial";
-import { assertTemporalInstantFor } from "@hypit/temporal";
-import type { TemporalInstant } from "@hypit/temporal";
+import { assertTemporalInstantFor } from "@hypit/timeline";
+import type { TemporalInstant } from "@hypit/timeline";
 
 import type {
   DeckCardTone,

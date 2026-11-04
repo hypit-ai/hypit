@@ -1,5 +1,4 @@
 import type { Page } from "puppeteer-core";
-import type { HtmlProcessUsage } from "@hypit/html-program";
 import {
   createFramePreparer,
 } from "@hypit/html-render-local";
@@ -13,7 +12,6 @@ export async function createOpaqueFrameCapture(
   page: Page,
   canvas: { readonly width: number; readonly height: number },
   matte: string,
-  processUsages: readonly HtmlProcessUsage[] = [],
 ) {
   const cdp = await page.createCDPSession();
   const match = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/iu.exec(matte);
@@ -23,9 +21,8 @@ export async function createOpaqueFrameCapture(
   } });
   const preparationPage: FramePreparationPage = {
     evaluate: page.evaluate.bind(page) as FramePreparationPage["evaluate"],
-    screenshot: async options => await page.screenshot(options) as Uint8Array,
   };
-  const prepare = await createFramePreparer(preparationPage, processUsages);
+  const prepare = await createFramePreparer(preparationPage);
   return async (frame: number, sources: readonly SourceFrameUpdate[] = []) => {
     const timing = await prepare(frame, sources);
     const started = performance.now();

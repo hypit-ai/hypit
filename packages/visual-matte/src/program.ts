@@ -1,8 +1,16 @@
-import { sealVisualProcessEffect } from "@hypit/composition";
-import type { VisualProcessEffect } from "@hypit/composition";
+import { pointwiseOperatorTemporalSupport } from "@hypit/audiovisual";
+import type { PictureOperator, SignalOperatorProgram } from "@hypit/audiovisual";
 import { htmlVisual } from "@hypit/html-program";
 
 export type VisualMatteChannel = "alpha" | "luminance";
+export type VisualMatteOperatorSpec = {
+  readonly channel: VisualMatteChannel;
+  readonly invert: boolean;
+};
+export type VisualMatteProgram = {
+  readonly inputs: readonly ["content", "matte"];
+  readonly program: SignalOperatorProgram;
+};
 
 /**
  * Build one two-input Picture process. Content and matte remain independent, already-formed
@@ -11,7 +19,7 @@ export type VisualMatteChannel = "alpha" | "luminance";
 export function visualMatteEffect(
   channel: VisualMatteChannel = "alpha",
   invert = false,
-): VisualProcessEffect {
+): VisualMatteProgram {
   if (channel !== "alpha" && channel !== "luminance") {
     throw new Error(`Visual Matte channel ${String(channel)} is invalid.`);
   }
@@ -57,5 +65,19 @@ return () => {
 };`,
     data: { channel, invert },
   });
-  return sealVisualProcessEffect({ inputs: ["content", "matte"], program });
+  return { inputs: ["content", "matte"], program: structuredClone(program) };
+}
+
+export function visualMatteOperator(
+  channel: VisualMatteChannel = "alpha",
+  invert = false,
+): PictureOperator {
+  const effect = visualMatteEffect(channel, invert);
+  return {
+    id: "hypit.visual-matte:matte",
+    inputs: ["content", "matte"],
+    temporalControls: {},
+    temporalSupport: pointwiseOperatorTemporalSupport(["content", "matte"]),
+    program: structuredClone(effect.program),
+  };
 }

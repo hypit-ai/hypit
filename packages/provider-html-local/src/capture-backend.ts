@@ -1,6 +1,5 @@
 import puppeteer from "puppeteer-core";
 import type { Browser } from "puppeteer-core";
-import { selectHtmlProcessUsages } from "@hypit/html-program";
 import type {
   CaptureInput,
   StagedCaptureBackend,
@@ -52,8 +51,7 @@ export function chromiumCaptureBackend(executablePath: string): StagedCaptureBac
             await program.prepare(frameSelection);
           }, input.frameSelection);
           const picture = input.frames === undefined ? input.delivery.picture : input.picture;
-          const capturePng = await createOpaqueFrameCapture(page, input.document.canvas, picture.alpha.matte,
-            selectHtmlProcessUsages(input.document, input.frameSelection));
+          const capturePng = await createOpaqueFrameCapture(page, input.document.canvas, picture.alpha.matte);
           return {
             browserPid: browser.process()?.pid,
             async capture(frame, sources, _ordinal, prepared) {

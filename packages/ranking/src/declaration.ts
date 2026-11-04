@@ -6,8 +6,8 @@ import { recipeType, type Recipe } from "@hypit/hypit/recipe";
 import { sameType, type CanonicalValue, type TypeRef } from "@hypit/hypit/protocol";
 import { spatialTypes } from "@hypit/spatial";
 import { textTypes } from "@hypit/hypit/text";
-import { resolveAuthorInstant, resolveAuthorTimeline, resolveAuthorWindow,
-  temporalContextFieldShape, temporalInstantFieldShape, temporalWindowFieldShape } from "@hypit/temporal/author";
+import { resolveInstantReference, resolveTimelineReference, resolveWindowReference,
+  timelineContextFieldShape, timelineInstantFieldShape, timelineWindowFieldShape } from "@hypit/timeline-author/reference";
 
 import { createRankingFragment, type RankingFragmentItem, type RankingFragmentSound } from "./fragment.js";
 import { rankingModuleRef, rankingTypes } from "./manifest.js";
@@ -171,9 +171,9 @@ async function itemSpec(declaration: AuthorDeclarationChild, variant: RankingVar
 
 const commonTrackFields = [
   { name: "id", kind: "identifier" as const, required: true, summary: "Names the Ranking program." },
-  temporalContextFieldShape,
+  timelineContextFieldShape,
   { name: "frame", kind: "reference" as const, required: true, accepts: [spatialTypes.frame], summary: "Selects the board Frame." },
-  temporalWindowFieldShape,
+  timelineWindowFieldShape,
   { name: "appear-sound", kind: "reference" as const, required: false, accepts: [mediaTypes.prepared], summary: "Selects the appear sound." },
 ];
 
@@ -190,7 +190,7 @@ function trackCompiler(variant: RankingVariant): AuthorDeclarationCompiler {
     { name: "entry", kind: "literal" as const, required: false, values: ["direct", "drop"], summary: "Selects the reveal mode." },
     { name: "icon", kind: "reference" as const, required: true, accepts: [mediaTypes.blobArtifact], summary: "Selects the Item icon." },
     { name: "preset", kind: "literal" as const, required: false, values: ["true", "false"], summary: "Settles the Item from the start." },
-    { ...temporalWindowFieldShape, required: false },
+    { ...timelineWindowFieldShape, required: false },
     { name: "stack", kind: "literal" as const, required: false, summary: "Overrides Item draw order." },
   ] : variant === "column" ? [
     { name: "id", kind: "identifier" as const, required: false, summary: "Names the Item." },
@@ -198,13 +198,13 @@ function trackCompiler(variant: RankingVariant): AuthorDeclarationCompiler {
     { name: "icon", kind: "reference" as const, required: false, accepts: [mediaTypes.blobArtifact], summary: "Selects the Item icon." },
     { name: "rank", kind: "literal" as const, required: true, summary: "Sets the rank." },
     { name: "preset", kind: "literal" as const, required: false, values: ["true", "false"], summary: "Settles the Item from the start." },
-    { ...temporalWindowFieldShape, required: false },
+    { ...timelineWindowFieldShape, required: false },
     { name: "stack", kind: "literal" as const, required: false, summary: "Overrides Item draw order." },
   ] : [
     { name: "id", kind: "identifier" as const, required: false, summary: "Names the Item." },
     { name: "label", kind: "expression" as const, required: true, accepts: [textTypes.text], summary: "States or selects the Item label." },
     { name: "icon", kind: "reference" as const, required: false, accepts: [mediaTypes.blobArtifact], summary: "Selects the Item icon." },
-    temporalInstantFieldShape,
+    timelineInstantFieldShape,
     { name: "stack", kind: "literal" as const, required: false, summary: "Overrides Item draw order." },
   ];
   return {
@@ -219,7 +219,7 @@ function trackCompiler(variant: RankingVariant): AuthorDeclarationCompiler {
         { name: "within", kind: "reference" as const, required: true, accepts: [spatialTypes.frame], summary: "Selects the placement Frame." },
         { name: "move-sound", kind: "reference" as const, required: false, accepts: [mediaTypes.prepared], summary: "Selects the move sound." },
       ] : [
-        { name: "terminal", kind: "expression" as const, required: true, accepts: [temporalInstantFieldShape.accepts![0]!], summary: "Selects the terminal Instant." },
+        { name: "terminal", kind: "expression" as const, required: true, accepts: [timelineInstantFieldShape.accepts![0]!], summary: "Selects the terminal Instant." },
       ]),
       { name: "style", kind: "reference", required: true, accepts: [selected.style], summary: "Selects the matching Ranking style." },
     ], children: [{ name: selected.child, cardinality: "many", summary: "Declares one Ranking Item.", fields: childFields }] },
@@ -240,11 +240,11 @@ function trackCompiler(variant: RankingVariant): AuthorDeclarationCompiler {
     async compile({ declaration, resolveReference }) {
       if (declaration.children.length === 0) throw new Error(`Ranking ${selected.declaration} requires at least one ${selected.child}.`);
       const id = literal(declaration, "id");
-      const timeline = await resolveAuthorTimeline(declaration, resolveReference);
+      const timeline = await resolveTimelineReference(declaration, resolveReference);
       const frame = await reference(declaration, "frame", [spatialTypes.frame], resolveReference);
-      const outer = await resolveAuthorWindow(declaration, resolveReference);
+      const outer = await resolveWindowReference(declaration, resolveReference);
       const within = windowed ? await reference(declaration, "within", [spatialTypes.frame], resolveReference) : undefined;
-      const terminal = !windowed ? await resolveAuthorInstant(declaration, resolveReference, "terminal") : undefined;
+      const terminal = !windowed ? await resolveInstantReference(declaration, resolveReference, "terminal") : undefined;
       const style = await reference(declaration, "style", [selected.style], resolveReference);
       const headerId = `${id}.header`;
       const records: { id: string; type: TypeRef; value: CanonicalValue; range: AuthorDeclaration["range"] }[] = [{
@@ -274,8 +274,8 @@ function trackCompiler(variant: RankingVariant): AuthorDeclarationCompiler {
         const contentName = authored.content === undefined ? undefined : `item-${suffix}-content`;
         if (authored.content !== undefined) inputs[contentName!] = authored.content.ref;
         const timing = !authored.timed ? undefined : variant === "top-three"
-          ? await resolveAuthorInstant(child, resolveReference)
-          : await resolveAuthorWindow(child, resolveReference);
+          ? await resolveInstantReference(child, resolveReference)
+          : await resolveWindowReference(child, resolveReference);
         const timingName = timing === undefined ? undefined : `item-${suffix}-timing`;
         if (timing !== undefined) inputs[timingName!] = timing.ref;
         let iconName: string | undefined;

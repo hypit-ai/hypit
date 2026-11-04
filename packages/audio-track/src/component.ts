@@ -3,7 +3,7 @@ import type { RefinementPackage } from "@hypit/hypit/refinement";
 import type { Value } from "@hypit/hypit/protocol";
 import { canonicalize } from "@hypit/hypit/protocol";
 import type { PreparedMedia } from "@hypit/media";
-import type { TemporalWindow } from "@hypit/temporal";
+import type { TemporalWindow } from "@hypit/timeline";
 import type { Timeline } from "@hypit/timeline";
 
 import { audioTrackProducers, audioTrackTypes } from "./manifest.js";

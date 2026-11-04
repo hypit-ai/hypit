@@ -27,6 +27,19 @@ cd /path/to/external-video-project
 hypit studio --source main.svml --target final.video
 ```
 
+For a presentation that only needs an already produced video beside its Author Source, open an
+explicit read-only session:
+
+```bash
+hypit studio --source main.svml --target final.video --media output/final.mp4 \
+  --result .hypit/results/2026-11-02/build-id/result.json
+```
+
+This mode reads exactly the selected Source, Build Result and media file. The Result restores its
+resolved Timeline, Tracks and temporal values while the media supplies the displayed picture. It does not compile the Source, open a
+Runtime, execute Producers, load Companions or expose Source mutation endpoints. The media path is
+never inferred from the Target or Result history.
+
 When `--runtime` is omitted, Studio reads the resolved project's `.hypit/runtime`
 selection made by `hypit runtime use`. It does not search parent projects for a
 Profile. `--project` explicitly selects the project boundary; `--package-root`

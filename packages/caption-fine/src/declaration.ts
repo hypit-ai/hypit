@@ -93,7 +93,7 @@ export function createFineCaptionDeclarationFragment(uses: readonly CaptionUseFr
     inputs: { document: input("document"), header: input("header") }, result: { kind: "output", name: "program" } }];
   let previous = "create";
   for (const use of uses) {
-    if (use.bounded) inputs.push({ name: `${use.key}-window`, type: temporalTypes.window });
+    if (use.bounded) inputs.push({ name: `${use.key}-window`, type: timelineTypes.window });
     inputs.push({ name: `${use.key}-style`, type: captionTypes.style }, { name: `${use.key}-filter`, type: captionTypes.filter });
     operations.push({ id: use.key, producer: use.bounded ? captionProducers.append : captionProducers.appendUnbounded,
       inputs: { program: operation(previous), ...(use.bounded ? { window: input(`${use.key}-window`) } : {}),
@@ -170,7 +170,7 @@ export const fineCaptionTrackAuthorDeclaration: AuthorDeclarationCompiler = {
         { name: "id", kind: "identifier", required: false, summary: "Optionally names this Use." },
         { name: "style", kind: "reference", required: true, accepts: [captionTypes.style], summary: "Selects a complete Caption Style." },
         { name: "role", kind: "literal", required: false, summary: "Optionally filters by speaker Role." },
-        { name: "during", kind: "reference", required: false, accepts: [temporalTypes.window], summary: "Optionally narrows presentation to one Window." },
+        { name: "during", kind: "reference", required: false, accepts: [timelineTypes.window], summary: "Optionally narrows presentation to one Window." },
       ] },
       { name: "Follow", cardinality: "many", summary: "Explicitly binds one Script Role to one named spatial series.", fields: [
         { name: "role", kind: "literal", required: true, summary: "Selects the Script Role whose Cues follow this series." },
@@ -208,7 +208,7 @@ export const fineCaptionTrackAuthorDeclaration: AuthorDeclarationCompiler = {
       const number = index + 1, key = `use-${number}`;
       const useId = field(child, "id") === undefined ? `${id}.use.${number}` : literal(child, "id");
       const style = await resolved(child, "style", captionTypes.style, resolveReference);
-      const window = field(child, "during") === undefined ? undefined : await resolved(child, "during", temporalTypes.window, resolveReference);
+      const window = field(child, "during") === undefined ? undefined : await resolved(child, "during", timelineTypes.window, resolveReference);
       const role = field(child, "role") === undefined ? undefined : literal(child, "role");
       const filterId = `${useId}.filter`;
       records.push({ id: filterId, type: captionTypes.filter,

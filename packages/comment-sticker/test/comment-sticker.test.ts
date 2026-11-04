@@ -195,7 +195,7 @@ test("Track declaration lowers literal and graph Text with a resolved Window to 
     ["social", authored("social", commentStickerTypes.style, style)],
     ["avatar", authored("avatar", blobTypes.blob, blob)],
     ["copy", authored("copy", textTypes.text, sealText("This is graph-supplied comment content."))],
-    ["whole", authored("whole", temporalTypes.window, projectProgramWindow({ itemId: "whole", semantic,
+    ["whole", authored("whole", timelineTypes.window, projectProgramWindow({ itemId: "whole", semantic,
       projection: { start: { ref: "timeline.start" }, end: { ref: "timeline.end" } } }))],
   ]);
   const result = await decode(`<comment:Track id="comments" timeline={video.timeline}>

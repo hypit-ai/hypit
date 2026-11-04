@@ -4,8 +4,8 @@
  * This utility owns no media or rendering semantics. Callers keep those in the
  * payload and may query frames or ranges in any order, from any Worker.
  */
-import { assertFrameSpan } from "@hypit/timeline";
-import type { FrameSpan } from "@hypit/timeline";
+import { assertFrameSpan } from "@hypit/temporal";
+import type { FrameSpan } from "@hypit/temporal";
 
 type Entry<T> = FrameSpan & { readonly serial: number; readonly payload: T };
 type Node<T> = {

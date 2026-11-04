@@ -6,8 +6,8 @@ import type { EndpointInvocationContext } from "@hypit/hypit/endpoint";
 import type { BlobRef } from "@hypit/hypit/protocol";
 import { sealTimelineVisual } from "@hypit/media";
 import type { TimelineVisual } from "@hypit/media";
-import type { FrameSpan } from "@hypit/timeline";
-import { verifyCompositableSurfaceFile, verifyPictureArtifactFile } from "./surface-validation.js";
+import type { FrameSpan } from "@hypit/temporal";
+import { verifyPictureArtifactFile } from "./picture-validation.js";
 import { verifyHtmlRasterRequest, verifyHtmlFrameRequest } from "@hypit/html-program";
 import type { HtmlRasterRequest, HtmlFrameRequest, HtmlFrameImages } from "@hypit/html-program";
 import { isStreamingResourceStore } from "@hypit/hypit/endpoint";
@@ -164,9 +164,6 @@ export async function rasterizeHtmlWithBackend(
     await stageHtmlProgram({ document, directory: work, signal, read,
       frameSelection,
       maxConcurrentArtifacts: config.artifactStagingConcurrency,
-      validateSurface: (surface, path, probeSignal) => verifyCompositableSurfaceFile({ surface, path,
-        ffprobePath: config.ffprobePath, processTimeoutMs: config.processTimeoutMs,
-        maxProbeOutputBytes: config.maxProcessOutputBytes, signal: probeSignal! }),
       validatePicture: (picture, path, probeSignal) => verifyPictureArtifactFile({ picture, path,
         ffprobePath: config.ffprobePath, processTimeoutMs: config.processTimeoutMs,
         maxProbeOutputBytes: config.maxProcessOutputBytes, signal: probeSignal! }),

@@ -4,7 +4,7 @@ import type { ProducerPackage, ProducerHandlerContext } from "@hypit/hypit/produ
 import type { RefinementPackage } from "@hypit/hypit/refinement";
 import type { Value } from "@hypit/hypit/protocol";
 import type { SpatialFrame } from "@hypit/spatial";
-import type { TemporalInstant } from "@hypit/temporal";
+import type { TemporalInstant } from "@hypit/timeline";
 import type { MediaLayerSet } from "@hypit/visual-track";
 import type { Text } from "@hypit/hypit/text";
 

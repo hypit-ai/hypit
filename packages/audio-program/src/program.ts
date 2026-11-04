@@ -1,32 +1,21 @@
-import { clockFrameSampleBoundary, timelineFrameCount } from "@hypit/timeline";
-import {
-  assertAudioLevelAutomation,
-  assertAudioProcessProgram,
-  assertAudioReconstructionProgram,
-  assertAudioTrackIdentity,
-  sealAudioTrack,
-} from "@hypit/composition";
-import type {
-  AudioClip,
-  Composition,
-  AudioSignalRef,
-  AudioTrack,
-} from "@hypit/composition";
-import { canonicalStringify, canonicalize, compareCodeUnits } from "@hypit/hypit/protocol";
+import { assertOperatorTemporalSupport, assertSignalOperatorProgram } from "@hypit/audiovisual";
+import { canonicalize } from "@hypit/hypit/protocol";
 import { verifyPreparedAudioSource } from "@hypit/media";
 import {
-  addExactTemporalValues,
+  assertLocalTemporalDomain,
   assertTemporalMap,
   compareExactTemporalValues,
-  resolveTemporalBoundary,
+  exactTemporalZero,
   subtractExactTemporalValues,
-} from "@hypit/temporal";
-import type { ExactTemporalValue } from "@hypit/temporal";
+} from "@hypit/temporal/algebra";
+import type { ExactTemporalValue, TemporalMap } from "@hypit/temporal/algebra";
+import { resolveTemporalBoundary } from "@hypit/temporal/sampling";
 
 import type {
   AudioProgram,
-  AudioProgramClip,
+  AudioProgramMediaSource,
   AudioProgramNode,
+  AudioOutputSampling,
   AudioProgramSignalRef,
 } from "./types.js";
 
@@ -34,26 +23,36 @@ function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
 
-function sampleBoundary(value: ExactTemporalValue, label: string): number {
+function assertSampling(value: AudioOutputSampling): void {
+  assert(Number.isSafeInteger(value.sampleRate) && value.sampleRate > 0,
+    "AudioProgram sample rate must be a positive safe integer");
+}
+
+function sampleBoundary(value: ExactTemporalValue, sampling: AudioOutputSampling, label: string): number {
   try {
-    return resolveTemporalBoundary(value, { frameRate: { numerator: 48_000, denominator: 1 } }, "nearest");
+    return resolveTemporalBoundary(value,
+      { frameRate: { numerator: sampling.sampleRate, denominator: 1 } }, "nearest");
   } catch {
     throw new Error(`${label} is outside sample arithmetic`);
   }
 }
 
 export function audioProgramSampleFrames(
-  program: Pick<AudioProgram, "frameRate" | "frameCount">,
+  program: Pick<AudioProgram, "domain" | "sampling">,
 ): number {
-  return clockFrameSampleBoundary({ frameRate: program.frameRate }, program.frameCount, 48_000);
+  assertLocalTemporalDomain(program.domain);
+  assertSampling(program.sampling);
+  return sampleBoundary(program.domain.duration, program.sampling, "AudioProgram duration");
 }
 
-export function audioProgramClipSampleSpan(
-  clip: Pick<AudioProgramClip, "id" | "target">,
+export function audioProgramUseSampleSpan(
+  use: { readonly id: string; readonly target: import("@hypit/temporal/algebra").TemporalRange },
+  sampling: AudioOutputSampling,
 ): { readonly startSample: number; readonly endSampleExclusive: number } {
   return {
-    startSample: sampleBoundary(clip.target.start, `AudioProgram clip ${clip.id} target start`),
-    endSampleExclusive: sampleBoundary(clip.target.end, `AudioProgram clip ${clip.id} target end`),
+    startSample: sampleBoundary(use.target.start, sampling, `AudioProgram use ${use.id} target start`),
+    endSampleExclusive: sampleBoundary(use.target.end, sampling,
+      `AudioProgram use ${use.id} target end`),
   };
 }
 
@@ -61,77 +60,26 @@ function structuralId(parts: readonly string[]): string {
   return parts.map((part) => `${part.length}:${part}`).join(":");
 }
 
-function lowerClip(clip: AudioClip, id: string, owner: string): AudioProgramClip {
-  assertTemporalMap(clip.sampling);
-  const mixStartSample = sampleBoundary(clip.target.start, `${owner}.${clip.id} target start`);
-  const mixEndSampleExclusive = sampleBoundary(clip.target.end, `${owner}.${clip.id} target end`);
-  return {
-    id,
-    source: structuredClone(clip.source),
-    preparation: structuredClone(clip.preparation),
-    sampling: structuredClone(clip.sampling),
-    ...(clip.reconstruction === undefined ? {} : { reconstruction: structuredClone(clip.reconstruction) }),
-    target: structuredClone(clip.target),
-    gain: clip.gain,
-    fadeInSamples: sampleBoundary(addExactTemporalValues(clip.target.start, clip.fadeIn),
-      `${owner}.${clip.id} fade in`) - mixStartSample,
-    fadeOutSamples: mixEndSampleExclusive - sampleBoundary(
-      subtractExactTemporalValues(clip.target.end, clip.fadeOut), `${owner}.${clip.id} fade out`),
-    ...(clip.gainEnvelope === undefined ? {} : { gainEnvelope: structuredClone(clip.gainEnvelope) }),
-    ...(clip.audibility === undefined ? {} : { audibility: clip.audibility.flatMap((span) => {
-      const startSample = Math.max(span.startSample, mixStartSample);
-      const endSampleExclusive = Math.min(span.endSampleExclusive, mixEndSampleExclusive);
-      return endSampleExclusive <= startSample ? [] : [{ startSample, endSampleExclusive }];
-    }) }),
-  };
-}
-
-function namespaceTrack(
-  track: AudioTrack,
-  rootIndex: number,
-): {
-  readonly nodes: readonly AudioProgramNode[];
-  readonly output: AudioProgramSignalRef;
-} {
-  assertAudioTrackIdentity(track);
-  const nodeId = (id: string): string => structuralId(["audio", String(rootIndex), "track", track.id, "node", id]);
-  const reference = (input: AudioSignalRef): AudioProgramSignalRef => ({ node: nodeId(input.node) });
-  const nodes = track.graph.nodes.map((node): AudioProgramNode => {
-    const id = nodeId(node.id);
-    if (node.kind === "silence") return { kind: "silence", id };
-    if (node.kind === "source") return {
-      kind: "source",
-      id,
-      clip: lowerClip(node.clip, structuralId(["audio", String(rootIndex), "track", track.id,
-        "node", node.id, "clip", node.clip.id]), track.id),
-    };
-    if (node.kind === "mix") return { kind: "mix", id, inputs: node.inputs.map(reference) };
-    return {
-      kind: "process",
-      id,
-      inputs: Object.fromEntries(Object.entries(node.inputs).map(([port, input]) => [port, reference(input)])),
-      program: structuredClone(node.program),
-    };
-  });
-  return { nodes, output: reference(track.graph.output) };
-}
-
 export function sealAudioProgram(value: AudioProgram): AudioProgram {
   verifyAudioProgram(value);
   return canonicalize(value) as unknown as AudioProgram;
 }
 
-export function audioProgramSourceClips(program: AudioProgram): readonly AudioProgramClip[] {
+export function audioProgramMediaSources(program: AudioProgram): readonly AudioProgramMediaSource[] {
   verifyAudioProgram(program);
-  return program.graph.nodes.flatMap((node) => node.kind === "source" ? [node.clip] : []);
+  return program.graph.nodes.flatMap((node): readonly AudioProgramMediaSource[] => {
+    if (node.kind === "source") return [node.media];
+    if (node.kind === "program") return audioProgramMediaSources(node.program);
+    return [];
+  });
 }
 
 /** Construct the ordinary source-plus-root-mix subset without changing the graph value model. */
-export function audioProgramGraphFromClips(clips: readonly AudioProgramClip[]): AudioProgram["graph"] {
-  const nodes: AudioProgramNode[] = clips.map((clip, index) => ({
+export function audioProgramGraphFromMediaSources(sources: readonly AudioProgramMediaSource[]): AudioProgram["graph"] {
+  const nodes: AudioProgramNode[] = sources.map((media, index) => ({
     kind: "source",
     id: structuralId(["source", String(index)]),
-    clip: structuredClone(clip),
+    media: structuredClone(media),
   }));
   if (nodes.length === 0) return { nodes: [{ kind: "silence", id: "root" }], output: { node: "root" } };
   if (nodes.length === 1) return { nodes, output: { node: nodes[0]!.id } };
@@ -140,14 +88,15 @@ export function audioProgramGraphFromClips(clips: readonly AudioProgramClip[]): 
   return { nodes, output: { node: "root" } };
 }
 
-export function verifyAudioProgram(value: unknown): asserts value is AudioProgram {
+function verifyAudioProgramValue(value: unknown, ancestors: Set<object>): asserts value is AudioProgram {
   assert(value !== null && typeof value === "object" && !Array.isArray(value), "AudioProgram must be an object");
   const item = value as AudioProgram;
-  assert(Number.isSafeInteger(item.frameRate?.numerator) && item.frameRate.numerator > 0
-    && Number.isSafeInteger(item.frameRate?.denominator) && item.frameRate.denominator > 0,
-  "AudioProgram frame rate is invalid");
-  assert(Number.isSafeInteger(item.frameCount) && item.frameCount > 0, "AudioProgram frame count is invalid");
+  assert(!ancestors.has(item), "AudioProgram nesting contains a cycle");
+  ancestors.add(item);
+  assertLocalTemporalDomain(item.domain);
+  assertSampling(item.sampling);
   const sampleFrames = audioProgramSampleFrames(item);
+  assert(sampleFrames > 0, "AudioProgram duration has no output samples");
   assert(item.graph !== null && typeof item.graph === "object" && !Array.isArray(item.graph)
     && Array.isArray(item.graph.nodes), "AudioProgram graph is invalid");
   const nodes = new Map<string, AudioProgramNode>();
@@ -156,14 +105,35 @@ export function verifyAudioProgram(value: unknown): asserts value is AudioProgra
     assert(typeof node.id === "string" && node.id.length > 0 && !nodes.has(node.id),
       "AudioProgram node id is empty or repeated");
     nodes.set(node.id, node);
-    if (node.kind === "silence" || node.kind === "source") references.set(node.id, []);
+    if (node.kind === "silence" || node.kind === "source" || node.kind === "program") references.set(node.id, []);
+    else if (node.kind === "restrict") {
+      assert(compareExactTemporalValues(node.range.start, exactTemporalZero()) >= 0
+        && compareExactTemporalValues(node.range.start, node.range.end) < 0
+        && compareExactTemporalValues(node.range.end, item.domain.duration) <= 0,
+      `AudioProgram Restrict ${node.id} range lies outside Programme domain`);
+      references.set(node.id, [node.input]);
+    }
     else if (node.kind === "mix") {
       assert(Array.isArray(node.inputs) && node.inputs.length > 0, `AudioProgram Mix ${node.id} has no inputs`);
       references.set(node.id, node.inputs);
     } else {
       assert(node.kind === "process" && node.inputs !== null && typeof node.inputs === "object"
-        && node.inputs.signal !== undefined, `AudioProgram Process ${node.id} is invalid`);
-      assertAudioProcessProgram(node.program, `AudioProgram Process ${node.id}`);
+        && !Array.isArray(node.inputs) && Object.keys(node.inputs).length > 0,
+      `AudioProgram Process ${node.id} is invalid`);
+      assertSignalOperatorProgram(node.program, `AudioProgram Process ${node.id}`);
+      assertOperatorTemporalSupport(node.temporalSupport, Object.keys(node.inputs),
+        `AudioProgram Process ${node.id} temporal support`);
+      assert(node.controlMappings !== null && typeof node.controlMappings === "object"
+        && !Array.isArray(node.controlMappings), `AudioProgram Process ${node.id} Controls are invalid`);
+      for (const [name, mapping] of Object.entries(node.controlMappings) as [string, TemporalMap][]) {
+        assert(typeof name === "string" && name.length > 0,
+          `AudioProgram Process ${node.id} has an invalid Control name`);
+        assertTemporalMap(mapping);
+        const target = mapping.stages[0]!.target;
+        assert(target.id === item.domain.id
+          && compareExactTemporalValues(target.duration, item.domain.duration) === 0,
+        `AudioProgram Process ${node.id} Control ${name} does not begin in Programme domain ${item.domain.id}`);
+      }
       references.set(node.id, Object.values(node.inputs));
     }
   }
@@ -197,77 +167,50 @@ export function verifyAudioProgram(value: unknown): asserts value is AudioProgra
     }
   }
   assert(reachable.size === nodes.size, "AudioProgram graph contains unreachable nodes");
-  const clipIds = new Set<string>();
-  for (const clip of item.graph.nodes.flatMap((node) => node.kind === "source" ? [node.clip] : [])) {
-    assert(typeof clip.id === "string" && clip.id.length > 0 && !clipIds.has(clip.id),
-      "AudioProgram clip id is empty or repeated");
-    clipIds.add(clip.id);
-    verifyPreparedAudioSource(clip.source);
-    assertTemporalMap(clip.preparation);
-    assertTemporalMap(clip.sampling);
-    if (clip.reconstruction !== undefined) {
-      assertAudioReconstructionProgram(clip.reconstruction, `AudioProgram clip ${clip.id} reconstruction`);
+  for (const node of item.graph.nodes) {
+    if (node.kind !== "program") continue;
+    verifyAudioProgramValue(node.program, ancestors);
+    if (node.reconstruction !== undefined) {
+      assertSignalOperatorProgram(node.reconstruction,
+        `AudioProgram nested Programme ${node.id} reconstruction`);
     }
-    assert(compareExactTemporalValues(clip.target.start, clip.target.end) < 0,
-      `AudioProgram clip ${clip.id} exact target interval is invalid`);
-    const target = audioProgramClipSampleSpan(clip);
+    assert(node.program.sampling.sampleRate === item.sampling.sampleRate,
+      `AudioProgram nested Programme ${node.id} uses another sample rate`);
+    assertTemporalMap(node.sampling);
+    assert(compareExactTemporalValues(node.target.start, node.target.end) < 0,
+      `AudioProgram nested Programme ${node.id} exact target interval is invalid`);
+    const target = audioProgramUseSampleSpan(node, item.sampling);
     assert(target.startSample >= 0 && target.endSampleExclusive > target.startSample
       && target.endSampleExclusive <= sampleFrames,
-    `AudioProgram clip ${clip.id} target interval is invalid`);
-    const preparedDomain = clip.preparation.stages[0]!.target;
-    const sourceDomain = clip.preparation.stages.at(-1)!.source;
-    assert(sourceDomain.id === clip.source.sourceDomain.id
-      && compareExactTemporalValues(sourceDomain.duration, clip.source.sourceDomain.duration) === 0,
-    `AudioProgram clip ${clip.id} preparation does not end at its selected audio source`);
-    const samplingTarget = clip.sampling.stages[0]!.target;
-    const samplingSource = clip.sampling.stages.at(-1)!.source;
+    `AudioProgram nested Programme ${node.id} target interval is invalid`);
+    const samplingTarget = node.sampling.stages[0]!.target;
+    const samplingSource = node.sampling.stages.at(-1)!.source;
     assert(compareExactTemporalValues(samplingTarget.duration,
-      subtractExactTemporalValues(clip.target.end, clip.target.start)) === 0,
-    `AudioProgram clip ${clip.id} sampling target differs from its exact target interval`);
-    assert(samplingSource.id === preparedDomain.id
-      && compareExactTemporalValues(samplingSource.duration, preparedDomain.duration) === 0,
-    `AudioProgram clip ${clip.id} sampling does not end at its PreparedMedia domain`);
-    assert(Number.isFinite(clip.gain) && clip.gain >= 0, `AudioProgram clip ${clip.id} gain is invalid`);
-    assertAudioLevelAutomation(clip,
-      target, sampleFrames);
-    const mixLength = target.endSampleExclusive - target.startSample;
-    assert(Number.isSafeInteger(clip.fadeInSamples) && clip.fadeInSamples >= 0 && clip.fadeInSamples <= mixLength
-      && Number.isSafeInteger(clip.fadeOutSamples) && clip.fadeOutSamples >= 0 && clip.fadeOutSamples <= mixLength,
-    `AudioProgram clip ${clip.id} fade is invalid`);
+      subtractExactTemporalValues(node.target.end, node.target.start)) === 0,
+    `AudioProgram nested Programme ${node.id} sampling target differs from its exact target interval`);
+    assert(samplingSource.id === node.program.domain.id
+      && compareExactTemporalValues(samplingSource.duration, node.program.domain.duration) === 0,
+    `AudioProgram nested Programme ${node.id} sampling does not end at its child domain`);
   }
+  const mediaIds = new Set<string>();
+  for (const media of item.graph.nodes.flatMap((node) => node.kind === "source" ? [node.media] : [])) {
+    assert(typeof media.id === "string" && media.id.length > 0 && !mediaIds.has(media.id),
+      "AudioProgram media source id is empty or repeated");
+    mediaIds.add(media.id);
+    verifyPreparedAudioSource(media.source);
+    assertTemporalMap(media.preparation);
+    const preparedDomain = media.preparation.stages[0]!.target;
+    const sourceDomain = media.preparation.stages.at(-1)!.source;
+    assert(preparedDomain.id === item.domain.id
+      && compareExactTemporalValues(preparedDomain.duration, item.domain.duration) === 0,
+    `AudioProgram media source ${media.id} preparation does not begin in Programme domain ${item.domain.id}`);
+    assert(sourceDomain.id === media.source.sourceDomain.id
+      && compareExactTemporalValues(sourceDomain.duration, media.source.sourceDomain.duration) === 0,
+    `AudioProgram media source ${media.id} preparation does not end at its selected audio source`);
+  }
+  ancestors.delete(item);
 }
 
-export function compileAudioProgram(value: Composition): AudioProgram {
-  const composition = value.audio;
-  const timeline = value.timeline;
-  assert(composition !== null && typeof composition === "object" && !Array.isArray(composition)
-    && Array.isArray(composition.contributions), "AudioComposition is invalid.");
-  const contributions = composition.contributions.map((track) => {
-    assertAudioTrackIdentity(track, timeline);
-    return sealAudioTrack(track);
-  }).sort((left, right) => compareCodeUnits(canonicalStringify(left), canonicalStringify(right)));
-  const frameCount = timelineFrameCount(timeline);
-  const nodes: AudioProgramNode[] = [];
-  const outputs: AudioProgramSignalRef[] = [];
-  for (const [rootIndex, track] of contributions.entries()) {
-    const namespaced = namespaceTrack(track, rootIndex);
-    nodes.push(...namespaced.nodes);
-    outputs.push(namespaced.output);
-  }
-  let output: AudioProgramSignalRef;
-  if (outputs.length === 0) {
-    nodes.push({ kind: "silence", id: "root" });
-    output = { node: "root" };
-  } else if (outputs.length === 1) output = outputs[0]!;
-  else {
-    nodes.push({ kind: "mix", id: "root", inputs: outputs });
-    output = { node: "root" };
-  }
-  const program = sealAudioProgram({
-    frameRate: { ...timeline.frameRate },
-    frameCount,
-    graph: { nodes, output },
-  });
-  verifyAudioProgram(program);
-  return program;
+export function verifyAudioProgram(value: unknown): asserts value is AudioProgram {
+  verifyAudioProgramValue(value, new Set<object>());
 }

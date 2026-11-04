@@ -8,7 +8,7 @@ import type {
   StudioTemporalRelationTrace,
   StudioTemporalRelationValue,
 } from "@hypit/studio-companion";
-import type { FrameSpan } from "@hypit/timeline";
+import { timelineProducers, type FrameSpan } from "@hypit/timeline";
 
 import { timelineAuthorModuleRef, timelineAuthorProducers } from "./manifest.js";
 import type {
@@ -17,6 +17,8 @@ import type {
   ConstructionOffsetSpec,
   ConstructionPoint,
 } from "./types.js";
+
+export { formatTimelinePointEdit, timelineAuthorLegacyStudioRelations } from "./legacy-studio.js";
 
 function output(
   placement: StudioPlacement,
@@ -81,6 +83,28 @@ function parameterFromExtent(
 /** Timeline Author owns the inverse meaning of its private construction Producers. */
 export const timelineAuthorStudioTemporalRelations: readonly StudioTemporalRelationCompanion[] = [
   {
+    id: "timeline-compose-window",
+    match: { producer: timelineProducers.composeWindow, output: "window" },
+    invert({ target }) {
+      return target.kind !== "span" ? [] : [{ constraints: [
+        { input: "start", target: { kind: "instant", frame: target.startFrame } },
+        { input: "end", target: { kind: "instant", frame: target.endFrameExclusive } },
+      ] }];
+    },
+    trace({ output, trace }) {
+      const held = output.value as { readonly span?: {
+        readonly startFrame?: number;
+        readonly endFrameExclusive?: number;
+      } };
+      const start = trace("start");
+      const end = trace("end");
+      return start?.kind !== "instant" || end?.kind !== "instant"
+        || !Number.isSafeInteger(held.span?.startFrame) || !Number.isSafeInteger(held.span?.endFrameExclusive)
+        ? undefined
+        : { kind: "window", start, end,
+            startFrame: held.span!.startFrame!, endFrameExclusive: held.span!.endFrameExclusive! };
+    },
+  }, {
     id: "materialize-instant", match: { producer: timelineAuthorProducers.instant, output: "instant" },
     invert({ target }) {
       const desired = instant(target);

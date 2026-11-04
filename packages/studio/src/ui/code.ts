@@ -299,6 +299,9 @@ export function createCodePane(): CodePane {
     toolbar,
     element,
     show(snapshot, selected) {
+      mode.hidden = snapshot.source.readOnly === true;
+      mode.style.display = snapshot.source.readOnly === true ? "none" : "";
+      if (snapshot.source.readOnly === true && editing) setEditing(false);
       const sourceFile = selected
         ?? snapshot.source.files.find((file) => file.path === snapshot.source.path)
         ?? {

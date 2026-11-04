@@ -10,7 +10,6 @@ import type {
 import { artifactPreview, authoredItemTitle, childItems, previewLayer, requiredDeclarationValue, temporalLineageFor, temporalDomainMarker } from "@hypit/studio-companion";
 import { visualMaterialKeys, visualMaterialOptions, visualTreatmentDefaults } from "./author.js";
 import { visualTrackModuleRef, visualTrackTypes } from "./manifest.js";
-import { visualTransitionSpan } from "./program.js";
 import type { MediaLayerProgram, VisualTrackProgram } from "./types.js";
 
 const frameParameters: readonly StudioSourceBindingDeclaration[] = [
@@ -167,26 +166,7 @@ function projectVisualItems(context: StudioTrackCompanionContext): readonly Stud
         ...(temporal === undefined ? {} : { temporal }),
       };
     });
-  const transitions = program.transitions.map((transition) => {
-    const span = visualTransitionSpan(transition, program.clips);
-    return {
-      id: transition.id,
-      subjectId: transition.id,
-      startFrame: span.startFrame,
-      endFrameExclusive: span.endFrameExclusive,
-      stackOrder: program.clips.findIndex((clip) => clip.id === transition.incomingClipId),
-      sourceTypes: [visualTrackTypes.transitionSpec],
-    };
-  });
-  const transitionItems = childItems(context, transitions, "visual-transition", "compact")
-    .map((projected) => {
-      return {
-        ...projected,
-        lane: "transitions",
-        display: { title: "Transition", layers: [] },
-      };
-    });
-  return [...clipItems, ...transitionItems];
+  return clipItems;
 }
 
 const frameSizeParameters = new Set(["width", "height"]);
@@ -221,21 +201,6 @@ export const visualTrackStudioTrackCompanions: readonly StudioTrackCompanion[] =
       ...directClipInspector,
       ...visualClipTreatmentStudioFields.inspector,
     ],
-    attachments: [{
-      id: "transitions",
-      family: "visual-transition",
-      tone: "blue-muted",
-      label: "Transitions",
-      icon: "layers",
-      facet: "visual",
-      lane: { heightPx: 32 },
-      bindings: [
-        { name: "outgoing" },
-        { name: "incoming" },
-        { name: "effect", companion: true },
-      ],
-      inspector: [],
-    }],
     requiredValues: ["program"], project: projectVisualItems,
     lane: { heightPx: 76 },
   },

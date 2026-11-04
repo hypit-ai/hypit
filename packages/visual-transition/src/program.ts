@@ -1,11 +1,24 @@
-import type { VisualProgram } from "@hypit/composition";
-import { htmlVisual } from "@hypit/html-program";
-import { sealVisualTransitionEffect } from "@hypit/visual-track";
-import type { VisualTransitionEffect } from "@hypit/visual-track";
+import { pointwiseOperatorTemporalSupport } from "@hypit/audiovisual";
+import type { PictureOperator, SignalOperatorProgram } from "@hypit/audiovisual";
+import { htmlVisual, readHtmlVisual } from "@hypit/html-program";
+import { assertLocalTemporalDomain, type LocalTemporalDomain } from "@hypit/temporal/algebra";
 
 export type TransitionEasing = "linear" | "ease-in" | "ease-out" | "ease-in-out";
 export type TransitionDirection = "left" | "right" | "up" | "down";
 export type IrisShape = "circle" | "box" | "diamond";
+export type TransitionOperatorSpec =
+  | { readonly kind: "cross-dissolve"; readonly easing: TransitionEasing }
+  | { readonly kind: "dip-to-color"; readonly color: string; readonly easing: TransitionEasing }
+  | { readonly kind: "push"; readonly direction: TransitionDirection; readonly easing: TransitionEasing }
+  | { readonly kind: "slide"; readonly direction: TransitionDirection; readonly easing: TransitionEasing }
+  | { readonly kind: "linear-wipe"; readonly direction: TransitionDirection; readonly easing: TransitionEasing }
+  | { readonly kind: "iris"; readonly shape: IrisShape; readonly easing: TransitionEasing }
+  | { readonly kind: "zoom-dissolve"; readonly strength: number; readonly easing: TransitionEasing }
+  | { readonly kind: "blur-dissolve"; readonly radius: number; readonly easing: TransitionEasing };
+export type VisualTransitionProgram = {
+  readonly inputs: readonly ["outgoing", "incoming"];
+  readonly program: SignalOperatorProgram;
+};
 
 const easings = ["linear", "ease-in", "ease-out", "ease-in-out"] as const;
 const directions = ["left", "right", "up", "down"] as const;
@@ -52,13 +65,40 @@ const progressRuntime = `const ease = progress => {
   return progress;
 };
 const progressAt = localFrame => {
+  if (data.progressDomain !== undefined) {
+    const position = context.controlPosition('progress', localFrame);
+    if (position === undefined) return 0;
+    const seconds = value => Number(value.ticks) * value.timeBase.numerator / value.timeBase.denominator;
+    return ease(Math.max(0, Math.min(1, seconds(position) / seconds(data.progressDomain.duration))));
+  }
   const denominator = Math.max(1, context.durationFrames - 1);
   const progress = context.durationFrames <= 1 ? 1 : Math.max(0, Math.min(1, localFrame / denominator));
   return ease(progress);
 };`;
 
-function transitionEffect(program: VisualProgram): VisualTransitionEffect {
-  return sealVisualTransitionEffect({ inputs: ["outgoing", "incoming"], program });
+function transitionEffect(program: SignalOperatorProgram): VisualTransitionProgram {
+  return { inputs: ["outgoing", "incoming"], program: structuredClone(program) };
+}
+
+function pictureOperator(
+  id: TransitionOperatorSpec["kind"],
+  domain: LocalTemporalDomain,
+  effect: VisualTransitionProgram,
+): PictureOperator {
+  assertLocalTemporalDomain(domain);
+  const visual = readHtmlVisual(effect.program);
+  const data = visual.data === undefined ? {} : visual.data;
+  if (data === null || typeof data !== "object" || Array.isArray(data)) {
+    throw new Error("Visual Transition programme data must be an object.");
+  }
+  return {
+    id: `hypit.visual-transition:${id}`,
+    inputs: ["outgoing", "incoming"],
+    temporalControls: { progress: structuredClone(domain) },
+    temporalSupport: pointwiseOperatorTemporalSupport(["outgoing", "incoming"]),
+    program: htmlVisual({ ...structuredClone(visual),
+      data: { ...structuredClone(data), progressDomain: structuredClone(domain) } }),
+  };
 }
 
 function transitionSetup(body: string, selectors = `const outgoing = root.querySelector('[data-hypit-transition-layer="outgoing"]');
@@ -72,7 +112,7 @@ ${body}
 };`;
 }
 
-export function crossDissolveEffect(easing: TransitionEasing = "linear"): VisualTransitionEffect {
+export function crossDissolveEffect(easing: TransitionEasing = "linear"): VisualTransitionProgram {
   assertTransitionEasing(easing);
   return transitionEffect(htmlVisual({
     html: twoInputHtml,
@@ -83,8 +123,13 @@ export function crossDissolveEffect(easing: TransitionEasing = "linear"): Visual
   }));
 }
 
+/** Package-owned AVIR contract including named ports and its opaque execution programme. */
+export function crossDissolveOperator(domain: LocalTemporalDomain, easing: TransitionEasing = "linear"): PictureOperator {
+  return pictureOperator("cross-dissolve", domain, crossDissolveEffect(easing));
+}
+
 /** Fade through one explicit opaque colour. */
-export function dipToColorEffect(color = "#000000", easing: TransitionEasing = "linear"): VisualTransitionEffect {
+export function dipToColorEffect(color = "#000000", easing: TransitionEasing = "linear"): VisualTransitionProgram {
   assertTransitionColor(color);
   assertTransitionEasing(easing);
   return transitionEffect(htmlVisual({
@@ -125,17 +170,17 @@ function movementSetup(direction: TransitionDirection, easing: TransitionEasing,
 }
 
 /** Move both pictures as one continuous strip. Direction names picture travel. */
-export function pushEffect(direction: TransitionDirection = "left", easing: TransitionEasing = "ease-in-out"): VisualTransitionEffect {
+export function pushEffect(direction: TransitionDirection = "left", easing: TransitionEasing = "ease-in-out"): VisualTransitionProgram {
   return transitionEffect(htmlVisual({ html: twoInputHtml, css: twoInputCss, setup: movementSetup(direction, easing, true), data: { direction, easing } }));
 }
 
 /** Move the incoming picture over a stationary outgoing picture. Direction names incoming travel. */
-export function slideEffect(direction: TransitionDirection = "left", easing: TransitionEasing = "ease-in-out"): VisualTransitionEffect {
+export function slideEffect(direction: TransitionDirection = "left", easing: TransitionEasing = "ease-in-out"): VisualTransitionProgram {
   return transitionEffect(htmlVisual({ html: twoInputHtml, css: twoInputCss, setup: movementSetup(direction, easing, false), data: { direction, easing } }));
 }
 
 /** Reveal the incoming picture with one straight boundary travelling in direction. */
-export function linearWipeEffect(direction: TransitionDirection = "right", easing: TransitionEasing = "ease-in-out"): VisualTransitionEffect {
+export function linearWipeEffect(direction: TransitionDirection = "right", easing: TransitionEasing = "ease-in-out"): VisualTransitionProgram {
   assertTransitionDirection(direction);
   assertTransitionEasing(easing);
   return transitionEffect(htmlVisual({
@@ -151,7 +196,7 @@ export function linearWipeEffect(direction: TransitionDirection = "right", easin
 }
 
 /** Reveal the incoming picture from the centre through one geometric aperture. */
-export function irisEffect(shape: IrisShape = "circle", easing: TransitionEasing = "ease-in-out"): VisualTransitionEffect {
+export function irisEffect(shape: IrisShape = "circle", easing: TransitionEasing = "ease-in-out"): VisualTransitionProgram {
   assertIrisShape(shape);
   assertTransitionEasing(easing);
   return transitionEffect(htmlVisual({
@@ -170,7 +215,7 @@ export function irisEffect(shape: IrisShape = "circle", easing: TransitionEasing
 }
 
 /** Dissolve while the outgoing picture expands and the incoming picture settles from a smaller scale. */
-export function zoomDissolveEffect(strength = 0.16, easing: TransitionEasing = "ease-in-out"): VisualTransitionEffect {
+export function zoomDissolveEffect(strength = 0.16, easing: TransitionEasing = "ease-in-out"): VisualTransitionProgram {
   finiteRange(strength, 0, 1, "Zoom Dissolve strength");
   assertTransitionEasing(easing);
   return transitionEffect(htmlVisual({
@@ -185,7 +230,7 @@ export function zoomDissolveEffect(strength = 0.16, easing: TransitionEasing = "
 }
 
 /** Dissolve through a blur peak without changing either picture's spatial relation. */
-export function blurDissolveEffect(radius = 20, easing: TransitionEasing = "ease-in-out"): VisualTransitionEffect {
+export function blurDissolveEffect(radius = 20, easing: TransitionEasing = "ease-in-out"): VisualTransitionProgram {
   finiteRange(radius, 0, 200, "Blur Dissolve radius");
   assertTransitionEasing(easing);
   return transitionEffect(htmlVisual({
@@ -198,4 +243,58 @@ export function blurDissolveEffect(radius = 20, easing: TransitionEasing = "ease
   incoming.style.filter = \`blur(\${blur}px)\`;`),
     data: { radius, easing },
   }));
+}
+
+export function dipToColorOperator(domain: LocalTemporalDomain, color = "#000000", easing: TransitionEasing = "linear"): PictureOperator {
+  return pictureOperator("dip-to-color", domain, dipToColorEffect(color, easing));
+}
+
+export function pushOperator(domain: LocalTemporalDomain, direction: TransitionDirection = "left", easing: TransitionEasing = "ease-in-out"): PictureOperator {
+  return pictureOperator("push", domain, pushEffect(direction, easing));
+}
+
+export function slideOperator(domain: LocalTemporalDomain, direction: TransitionDirection = "left", easing: TransitionEasing = "ease-in-out"): PictureOperator {
+  return pictureOperator("slide", domain, slideEffect(direction, easing));
+}
+
+export function linearWipeOperator(domain: LocalTemporalDomain, direction: TransitionDirection = "right", easing: TransitionEasing = "ease-in-out"): PictureOperator {
+  return pictureOperator("linear-wipe", domain, linearWipeEffect(direction, easing));
+}
+
+export function irisOperator(domain: LocalTemporalDomain, shape: IrisShape = "circle", easing: TransitionEasing = "ease-in-out"): PictureOperator {
+  return pictureOperator("iris", domain, irisEffect(shape, easing));
+}
+
+export function zoomDissolveOperator(domain: LocalTemporalDomain, strength = 0.16, easing: TransitionEasing = "ease-in-out"): PictureOperator {
+  return pictureOperator("zoom-dissolve", domain, zoomDissolveEffect(strength, easing));
+}
+
+export function blurDissolveOperator(domain: LocalTemporalDomain, radius = 20, easing: TransitionEasing = "ease-in-out"): PictureOperator {
+  return pictureOperator("blur-dissolve", domain, blurDissolveEffect(radius, easing));
+}
+
+export function assertTransitionOperatorSpec(spec: TransitionOperatorSpec): void {
+  if (spec.kind === "cross-dissolve") { crossDissolveEffect(spec.easing); return; }
+  if (spec.kind === "dip-to-color") { dipToColorEffect(spec.color, spec.easing); return; }
+  if (spec.kind === "push") { pushEffect(spec.direction, spec.easing); return; }
+  if (spec.kind === "slide") { slideEffect(spec.direction, spec.easing); return; }
+  if (spec.kind === "linear-wipe") { linearWipeEffect(spec.direction, spec.easing); return; }
+  if (spec.kind === "iris") { irisEffect(spec.shape, spec.easing); return; }
+  if (spec.kind === "zoom-dissolve") { zoomDissolveEffect(spec.strength, spec.easing); return; }
+  if (spec.kind === "blur-dissolve") { blurDissolveEffect(spec.radius, spec.easing); return; }
+  throw new Error(`Visual transition kind ${String((spec as { readonly kind?: unknown }).kind)} is invalid.`);
+}
+
+/** Resolves one package-owned configuration into a closed AVIR operator contract. */
+export function transitionOperator(spec: TransitionOperatorSpec, domain: LocalTemporalDomain): PictureOperator {
+  assertTransitionOperatorSpec(spec);
+  if (spec.kind === "cross-dissolve") return crossDissolveOperator(domain, spec.easing);
+  if (spec.kind === "dip-to-color") return dipToColorOperator(domain, spec.color, spec.easing);
+  if (spec.kind === "push") return pushOperator(domain, spec.direction, spec.easing);
+  if (spec.kind === "slide") return slideOperator(domain, spec.direction, spec.easing);
+  if (spec.kind === "linear-wipe") return linearWipeOperator(domain, spec.direction, spec.easing);
+  if (spec.kind === "iris") return irisOperator(domain, spec.shape, spec.easing);
+  if (spec.kind === "zoom-dissolve") return zoomDissolveOperator(domain, spec.strength, spec.easing);
+  if (spec.kind === "blur-dissolve") return blurDissolveOperator(domain, spec.radius, spec.easing);
+  throw new Error(`Visual transition kind ${String((spec as { readonly kind?: unknown }).kind)} is invalid.`);
 }

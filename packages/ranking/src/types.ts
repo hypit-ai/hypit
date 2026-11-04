@@ -1,11 +1,10 @@
 import type { FrameSpan } from "@hypit/timeline";
 import type {
-  FontArtifactRef,
-  PreparedMedia,
-} from "@hypit/media";
+  FontArtifactRef, PreparedMedia, } from "@hypit/media";
 import type { BlobRef } from "@hypit/hypit/protocol";
 import type { SpatialFrame } from "@hypit/spatial";
-import type { TemporalInstant, TemporalWindow } from "@hypit/temporal";
+import type { TemporalInstant } from "@hypit/timeline";
+import type { TemporalWindow } from "@hypit/timeline";
 
 export type RankingVariant = "tier-board" | "column" | "top-three";
 

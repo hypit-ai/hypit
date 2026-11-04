@@ -1,4 +1,4 @@
-import { mediaTypes } from "@hypit/media";
+import { mediaCapabilities, mediaTypes } from "@hypit/media";
 import { blobTypes } from "@hypit/hypit/blob";
 import {
   executeExtractAudio,
@@ -85,7 +85,7 @@ export function createLocalMediaProvider(config: CreateLocalMediaProviderOptions
       {
         lifecycle: "immediate" as const,
         transient: true,
-        capability: mediaOperationsCapabilities.inspect,
+        capability: mediaCapabilities.inspect,
         returns: mediaTypes.inspection,
         handler: operation(executeInspectMedia),
       },

@@ -161,12 +161,12 @@
 
   <space:Canvas id="vertical" width="720" height="1280"/>
   <time:Clock id="clock" frame-rate="30"/>
-  <mediaop:Prepare id="soundtrack-media" source={soundtrack}
-    video="none" audio="default" span-authority="audio"/>
-  <mediaop:Prepare id="ranking-appear-media" source={ranking-appear-sfx}
-    video="none" audio="default" span-authority="audio"/>
-  <mediaop:Prepare id="ranking-move-media" source={ranking-move-sfx}
-    video="none" audio="default" span-authority="audio"/>
+  <asset:Audio id="soundtrack-media" source={soundtrack}
+      />
+  <asset:Audio id="ranking-appear-media" source={ranking-appear-sfx}
+      />
+  <asset:Audio id="ranking-move-media" source={ranking-move-sfx}
+      />
   <space:Frame id="speech-frame" within={vertical.bounds}
     left="0%" top="0%" right="100%" bottom="100%"/>
   <space:Frame id="tier-frame" within={vertical.bounds}
@@ -213,14 +213,14 @@
   <space:AspectFrame id="still-here-frame" within={vertical.bounds}
     x="50%" y="70%" width="64%" aspect={still-here-extent} anchor="center"/>
 
-  <mediaop:Prepare id="elon-media" source={elon-take.video}
-    video="primary-moving" audio="default" span-authority="video"/>
-  <mediaop:Prepare id="sam-media" source={sam-take.video}
-    video="primary-moving" audio="default" span-authority="video"/>
-  <whisperx:Transcription id="elon-semantic-transcription" media={elon-media.media} language="en"/>
+  <asset:Video id="elon-media" source={elon-take.video}
+     audio="default" />
+  <asset:Video id="sam-media" source={sam-take.video}
+     audio="default" />
+  <whisperx:Transcription id="elon-semantic-transcription" media={elon-media.source} language="en"/>
   <speechalign:Alignment id="elon-semantic" narrative={story}
     segment={story.segment.elon} domain={elon-media.domain} evidence={elon-semantic-transcription.transcript}/>
-  <whisperx:Transcription id="sam-semantic-transcription" media={sam-media.media} language="en"/>
+  <whisperx:Transcription id="sam-semantic-transcription" media={sam-media.source} language="en"/>
   <speechalign:Alignment id="sam-semantic" narrative={story}
     segment={story.segment.sam} domain={sam-media.domain} evidence={sam-semantic-transcription.transcript}/>
 
@@ -250,8 +250,8 @@
   <semantic:Window id="selection-congress-grilled" projection={story-time} during={story.selection.congress-grilled}/>
   <semantic:Window id="selection-still-here" projection={story-time} during={story.selection.still-here}/>
   <audio:Track id="speech-sound" timeline={speech.timeline}>
-    <audio:Clip id="elon-semantic-source" source={elon-media.media} during={speech.elon-semantic}/>
-    <audio:Clip id="sam-semantic-source" source={sam-media.media} during={speech.sam-semantic}/>
+    <audio:Clip id="elon-semantic-source" source={elon-media.source} during={speech.elon-semantic}/>
+    <audio:Clip id="sam-semantic-source" source={sam-media.source} during={speech.sam-semantic}/>
   </audio:Track>
   <visual:Motion id="broll-left">
     <visual:Pose at="start" scale="0.7" opacity="0" easing="ease-out"/>
@@ -273,11 +273,11 @@
   </visual:Motion>
 
   <visual:Track id="speech-picture" timeline={speech.timeline}>
-    <visual:Clip id="elon-semantic-source" media={elon-media.media} during={speech.elon-semantic} frame={speech-frame} fit="cover"/>
-    <visual:Clip id="sam-semantic-source" media={sam-media.media} during={speech.sam-semantic} frame={speech-frame} fit="cover"/>
+    <visual:Clip id="elon-semantic-source" media={elon-media.source} during={speech.elon-semantic} frame={speech-frame} fit="cover"/>
+    <visual:Clip id="sam-semantic-source" media={sam-media.source} during={speech.sam-semantic} frame={speech-frame} fit="cover"/>
   </visual:Track>
   <audio-track:Track id="music-bed" timeline={speech.timeline}>
-    <audio-track:Clip source={soundtrack-media.media} during={speech.window}
+    <audio-track:Clip source={soundtrack-media.source} during={speech.window}
       gain="0.12" fade-in="300ms" fade-out="600ms"/>
   </audio-track:Track>
 
@@ -288,8 +288,8 @@
   <ranking:TierBoard id="tech-tiers" timeline={speech.timeline}
     within={vertical.bounds} frame={tier-frame}
     during={speech.window} style={tier-style}
-    appear-sound={ranking-appear-media.media}
-    move-sound={ranking-move-media.media}>
+    appear-sound={ranking-appear-media.source}
+    move-sound={ranking-move-media.source}>
     <ranking:TierItem id="jensen" tier="s" preset="true" icon={jensen-icon.image}/>
     <ranking:TierItem id="bill" tier="s" preset="true" icon={bill-icon.image}/>
     <ranking:TierItem id="jeff" tier="a" preset="true" icon={jeff-icon.image}/>

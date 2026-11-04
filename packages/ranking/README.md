@@ -65,7 +65,7 @@ installed tarball contains a second editable source tree:
 
 A project component can use these relationships with its own behavior. External TypeScript uses
 `@hypit/hypit/author`, `@hypit/hypit/producer`, `@hypit/hypit/refinement`,
-`@hypit/hypit/markup`, `@hypit/temporal/author` and the appropriate domain APIs. Copy the relevant idea into
+`@hypit/hypit/markup`, `@hypit/timeline-author/reference` and the appropriate domain APIs. Copy the relevant idea into
 the project's own package, with its own Module identity, instead of editing the installed Ranking.
 
 The Companion uses published values and temporal lineage, so a visible row and its reveal handle can

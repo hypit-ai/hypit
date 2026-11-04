@@ -7,7 +7,6 @@ import type {
   AuthorDeclarationCompiler,
   AuthorDeclarationFieldShape,
 } from "@hypit/hypit/author";
-import { visualCompositionVocabulary } from "@hypit/composition";
 import { markupDeclarationFacetAbi } from "@hypit/hypit/markup";
 import type { RegisteredMarkupDeclaration } from "@hypit/hypit/markup";
 import { loadNodePackageSelection, locateNodePackage, distributionPackageRoots } from "@hypit/hypit/loader/node";
@@ -184,9 +183,6 @@ export async function listDeclarations(
   return declarations;
 }
 
-// ---------------------------------------------------------------------------------------------------
-// Visual schema, for a component that draws
-
 /** Render a declared value shape as prose an author can act on. */
 export function describeSchema(schema: ValueSchema, indent = ""): string[] {
   const step = `${indent}  `;
@@ -221,20 +217,6 @@ export function describeSchema(schema: ValueSchema, indent = ""): string[] {
     case "null": return [`${indent}null`];
     default: return [`${indent}${(schema as { kind: string }).kind}`];
   }
-}
-
-export function visualSchema(shape?: string): {
-  readonly shapes: readonly { readonly shape: string; readonly describes: string }[];
-  readonly rules: readonly string[];
-} {
-  const asked = shape?.trim();
-  const shapes = visualCompositionVocabulary.shapes;
-  assert(asked === undefined || asked.length === 0 || Object.hasOwn(shapes, asked), `shape must be one of ${Object.keys(shapes).join(", ")}`);
-  const chosen = asked === undefined || asked.length === 0 ? Object.keys(shapes) : [asked];
-  return {
-    shapes: chosen.map((name) => ({ shape: name, describes: describeSchema(shapes[name]!).join("\n") })),
-    rules: visualCompositionVocabulary.rules,
-  };
 }
 
 // ---------------------------------------------------------------------------------------------------
@@ -279,7 +261,6 @@ export function writeVocabularyHelp(io: CliIo): void {
     "",
     "  hypit vocabulary                         every installed package with its tags and capabilities",
     "  hypit vocabulary <package…> [--tag <tag>] the author Declarations a package contributes",
-    "  hypit vocabulary --visual [<shape>]      the value shapes and rules a drawing Producer must emit",
     "",
     "Read the package README the listing names before writing its elements. Add --json for a machine view.",
     "",
@@ -297,15 +278,6 @@ export async function runVocabularyCli(
   const json = rest.includes("--json");
   const words = rest.filter((item) => item !== "--json" && item !== "--debug" && item !== "--verbose" && item !== "--no-color");
   const projectRoot = await findProjectRoot({ cwd }) ?? distributionRoot ?? resolve(cwd);
-
-  if (words[0] === "--visual") {
-    const shape = words[1];
-    assert(words.length <= 2, "hypit vocabulary --visual takes at most one shape name");
-    const schema = visualSchema(shape);
-    if (json) { io.write(`${JSON.stringify(schema, null, 2)}\n`); return; }
-    io.write(`${schema.shapes.map((item) => `${item.shape}\n${item.describes.split("\n").map((line) => `  ${line}`).join("\n")}`).join("\n\n")}\n\nrules\n${schema.rules.map((rule) => `  ${rule}`).join("\n")}\n`);
-    return;
-  }
 
   const tags: string[] = [];
   const packages: string[] = [];

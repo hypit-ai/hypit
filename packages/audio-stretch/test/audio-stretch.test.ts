@@ -7,12 +7,15 @@ import {
   readPreservePitch,
 } from "@hypit/audio-stretch";
 
-test("PreservePitch is one explicit reconstruction programme without a hidden speed", () => {
-  const program = preservePitch();
-  assert.deepEqual(program, {
-    format: PITCH_PRESERVING_RECONSTRUCTION_FORMAT,
-    payload: {},
-    artifacts: [],
+test("PreservePitch is one typed Audio reconstruction without a hidden speed", () => {
+  const reconstruction = preservePitch();
+  assert.deepEqual(reconstruction, {
+    signal: { module: { name: "@hypit/audiovisual", version: "1" }, name: "Audio" },
+    program: {
+      format: PITCH_PRESERVING_RECONSTRUCTION_FORMAT,
+      payload: {},
+      artifacts: [],
+    },
   });
-  assert.doesNotThrow(() => readPreservePitch(program));
+  assert.doesNotThrow(() => readPreservePitch(reconstruction.program));
 });

@@ -13,12 +13,18 @@ Open an Author Source with explicit Targets in the browser.
     [--port <number>] [--project <directory>] [--package-root <directory>]
     [--locale-pack <./language.json | installed-package/language.json>]...
 
+  hypit studio --source <main.svml> --media <produced.mp4>
+    [--result <result.json>] [--target <output>]... [--port <number>] [--project <directory>]
+
   hypit studio --check-locale <./language.json | installed-package/language.json>
     [--package-root <directory>]
 
 Language packs are explicit JSON data. Relative files use the current directory;
 package exports resolve from --package-root (the project by default).
 --check-locale lists missing translations and unknown IDs without opening a project.
+--media opens an explicit produced video beside its Author Source. --result adds
+that Build Result's exact Timeline, Tracks and temporal values. This read-only
+view does not compile, execute, load a Runtime or write back to the Source.
 
 Relative command-line paths start at the current directory; --project selects
 the project, without rebasing those paths. Otherwise the nearest package.json
@@ -35,7 +41,7 @@ function invalidArguments(message: string): never {
 
 function argumentsByName(argv: readonly string[]): ReadonlyMap<string, readonly string[]> {
   const accepted = new Set([
-    "source", "target", "runtime", "port", "project", "package-root",
+    "source", "target", "runtime", "port", "project", "package-root", "media", "result",
     "locale-pack", "check-locale",
   ]);
   const repeatable = new Set(["target", "locale-pack"]);
@@ -88,9 +94,46 @@ export async function runStudio(
   if (sourceArgument === undefined) invalidArguments("--source is required");
   const selectedPath = resolve(invokedFrom, sourceArgument);
   const targets = values.get("target") ?? [];
+  const { createServer } = await import("vite");
+  const port = Number(values.get("port")?.at(-1) ?? "5179");
+  if (!Number.isSafeInteger(port) || port <= 0) invalidArguments("--port must be a positive integer");
+  const mediaArgument = values.get("media")?.at(-1);
+  const languages = await studioLanguages(values.get("locale-pack") ?? [], invokedFrom, packageRoot);
+  if (mediaArgument !== undefined) {
+    if (values.has("runtime")) invalidArguments("--media does not load a Runtime");
+    if (values.has("package-root")) invalidArguments("--media does not load Author packages");
+    const media = resolve(invokedFrom, mediaArgument);
+    const resultArgument = values.get("result")?.at(-1);
+    const result = resultArgument === undefined ? undefined : resolve(invokedFrom, resultArgument);
+    const { dirname } = await import("node:path");
+    const { studioFeedbackPlugin } = await import("./feedback-server.js");
+    const { readOnlyStudioPlugin } = await import("./read-only-server.js");
+    console.info([
+      `  Project            ${workspaceRoot}`,
+      `  Author input       ${selectedPath}`,
+      `  Produced media     ${media}`,
+      ...(result === undefined ? [] : [`  Build Result       ${result}`]),
+      `  Targets            ${targets.join(", ") || "not selected"}`,
+      `  Studio mode        read-only`,
+      "",
+    ].join("\n"));
+    const server = await createServer({
+      configFile: false,
+      root: here,
+      server: {
+        port,
+        fs: { allow: [workspaceRoot, dirname(selectedPath), dirname(media), ...(result === undefined ? [] : [dirname(result)]), here] },
+      },
+      plugins: [studioLocalizationPlugin(languages), studioFeedbackPlugin(workspaceRoot, selectedPath), readOnlyStudioPlugin({ source: selectedPath, media,
+        ...(result === undefined ? {} : { result }), workspaceRoot, targets })],
+    });
+    await server.listen();
+    server.printUrls();
+    return;
+  }
+  if (values.has("result")) invalidArguments("--result requires --media");
   if (targets.length === 0) invalidArguments("--source requires at least one --target");
   const selection = { source: selectedPath, request: { targets } };
-  const { createServer } = await import("vite");
   const { resolveDistributionPackageImport } = await import("@hypit/hypit/loader/node");
   const { openStudioBuildLibrary } = await import("./build-library.js");
   const { loadStudioCompanionRegistry } = await import("./companion-assembly.js");
@@ -99,7 +142,6 @@ export async function runStudio(
   const { studioPlugin } = await import("./server.js");
   const { studioFeedbackPlugin } = await import("./feedback-server.js");
   const { inspectStudioPlan } = await import("./studio-preflight.js");
-  const languages = await studioLanguages(values.get("locale-pack") ?? [], invokedFrom, packageRoot);
   const runtimeArgument = values.get("runtime")?.at(-1);
   const selectedRuntime = runtimeArgument === undefined
     ? await application.distribution.resolveProjectRuntime?.(workspaceRoot)
@@ -117,9 +159,6 @@ export async function runStudio(
     ...(packageRoot === workspaceRoot ? [] : [`  Package root       ${packageRoot}`]),
     "",
   ].join("\n"));
-  const port = Number(values.get("port")?.at(-1) ?? "5179");
-  if (!Number.isSafeInteger(port) || port <= 0) invalidArguments("--port must be a positive integer");
-
   const distributionPackageRoot = application.distribution.packageRoot ?? resolve(here, "../..");
   const domain = await loadStudioDomain({ source: selectedPath, workspaceRoot, packageRoot, distribution: application.distribution });
   const registry = await loadStudioCompanionRegistry({

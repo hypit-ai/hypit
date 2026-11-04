@@ -6,26 +6,20 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./author": "./src/author.ts",
-    "./studio": "./src/studio.ts"
+    "./algebra": "./src/algebra.ts",
+    "./sampling": "./src/sampling.ts"
   },
   "hypit": {
     "activation": "./src/activation.ts"
-  },
-  "dependencies": {
-    "@hypit/timeline": "workspace:^0.1.1"
   },
   "files": [
     "dist",
     "README.md"
   ],
   "peerDependencies": {
-    "@hypit/hypit": "workspace:^0.4.0",
-    "@hypit/studio-companion": "workspace:^0.1.3"
+    "@hypit/hypit": "workspace:^0.4.0"
   },
   "devDependencies": {
-    "@hypit/author": "workspace:*",
-    "@hypit/markup": "workspace:*",
     "@hypit/producer": "workspace:*",
     "@hypit/protocol": "workspace:*",
     "@hypit/refinement": "workspace:*",

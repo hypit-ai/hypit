@@ -16,8 +16,8 @@ import { assertBlobRef, canonicalize } from "@hypit/hypit/protocol";
 import type { BlobRef } from "@hypit/hypit/protocol";
 import { assertSpatialFrame } from "@hypit/spatial";
 import type { SpatialFrame } from "@hypit/spatial";
-import { assertTemporalWindowFor } from "@hypit/temporal";
-import type { TemporalWindow } from "@hypit/temporal";
+import { assertTemporalWindowFor } from "@hypit/timeline";
+import type { TemporalWindow } from "@hypit/timeline";
 import { verifyText } from "@hypit/hypit/text";
 import type { Text } from "@hypit/hypit/text";
 

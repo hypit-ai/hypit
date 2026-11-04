@@ -7,7 +7,7 @@ import { sealPortraitMattingRequest, volcengineMattingModuleRef } from "../src/i
 
 const source = { kind: "blob" as const, resource: "res_matting-source" as const, size: 4, mediaType: "video/mp4" };
 
-test("portrait matting binds a source video and publishes an ordinary video edge for Prepare", async () => {
+test("portrait matting binds a source video and publishes an ordinary video edge for Media", async () => {
   assert.deepEqual(sealPortraitMattingRequest({ source: [{ role: "video", artifact: source }], format: ["MOV"] }).fields.format, ["MOV"]);
   assert.deepEqual(sealPortraitMattingRequest({ source: [{ role: "video", artifact: source }] }).fields.format, ["WEBM"]);
   assert.throws(() => sealPortraitMattingRequest({ source: [{ role: "image", artifact: { ...source, mediaType: "image/png" } }] }), /video|role/u);

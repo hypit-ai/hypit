@@ -1,31 +1,30 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { sealComposition, sealPresentVisualTrack } from "@hypit/composition";
-import { htmlVisualElement } from "@hypit/html-program";
-import { sealTimeline } from "@hypit/timeline";
+import { compileHtmlPictureProgram } from "@hypit/html-program";
+import { sealAudioProgram } from "@hypit/audio-program";
+import { exactTemporalValueFromFrames } from "@hypit/temporal";
 import puppeteer from "puppeteer-core";
 
 import { browserExecutablePath } from "../../../provider-html-local/src/browser.js";
 import { compileHtmlDocument, materializeHtmlDocument } from "../../src/index.js";
 
 test("standalone HTML Document prepares once across ready, seek, play and pause", async () => {
-  const timeline = sealTimeline({ id: "document-playback", frameCount: 2,
-    frameRate: { numerator: 2, denominator: 1 } });
-  const track = sealPresentVisualTrack({ id: "picture", timelineId: timeline.id, presents: [{
-    id: "picture",
-    span: { startFrame: 0, endFrameExclusive: 2 },
-    root: htmlVisualElement({ id: "fill", kind: "box", children: [], style: [
+  const frameRate = { numerator: 2, denominator: 1 };
+  const program = compileHtmlPictureProgram({ id: "document-playback", frameRate, frameCount: 2,
+    root: { id: "fill", kind: "box" as const, spans: [{ startFrame: 0, endFrameExclusive: 2 }], children: [], style: [
       { name: "position", value: "absolute" },
       { name: "inset", value: 0 },
       { name: "background", value: "#ff0000" },
-    ] }),
-  }] });
-  const composition = sealComposition({ id: "document-playback", visual: {
+    ] },
     canvas: { width: 64, height: 64, clearColor: "#000000" },
-    root: { members: [{ kind: "track", id: track.id, track }] },
-  }, audio: { contributions: [] } }, timeline);
-  const html = materializeHtmlDocument(compileHtmlDocument(composition), () => {
+  });
+  const audio = sealAudioProgram({
+    domain: { id: "document-playback:audio", duration: exactTemporalValueFromFrames(2, { frameRate }) },
+    sampling: { sampleRate: 48_000 },
+    graph: { nodes: [{ kind: "silence", id: "silence" }], output: { node: "silence" } },
+  });
+  const html = materializeHtmlDocument(compileHtmlDocument(program, audio), () => {
     throw new Error("The fixture has no material resources");
   }, { autoplay: false, loop: false, muted: true, responsive: false });
 

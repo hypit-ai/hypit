@@ -19,11 +19,7 @@ test("Visual Studio keeps occurrence facts, treatment and typed Motion separate"
   assert.ok("recipe" in bindings.get("treatment")!);
   assert.equal("recipe" in bindings.get("motion")!, false);
 
-  const transitions = companion.attachments?.find((attachment) => attachment.id === "transitions");
-  assert.equal(transitions?.label, "Transitions");
-  assert.deepEqual(transitions?.bindings?.map(({ name }) => name), ["outgoing", "incoming", "effect"]);
-  assert.equal(transitions?.bindings?.find(({ name }) => name === "effect")?.companion, true);
-  assert.deepEqual(transitions?.inspector, []);
+  assert.equal(companion.attachments, undefined);
 
   const treatmentNames = visualClipTreatmentStudioFields.bindings.map(({ name }) => name);
   assert.deepEqual(treatmentNames, [
@@ -32,22 +28,13 @@ test("Visual Studio keeps occurrence facts, treatment and typed Motion separate"
   ]);
 });
 
-test("Studio selects the visible Transition Process instead of its hidden participant Presents", () => {
+test("Studio projects only the Visual Clip occurrences owned by this legacy package", () => {
   const program = {
     id: "picture",
     clips: [
       { id: "outgoing", subjectId: "outgoing", span: { startFrame: 0, endFrameExclusive: 20 }, layers: [] },
       { id: "incoming", subjectId: "incoming", span: { startFrame: 10, endFrameExclusive: 30 }, layers: [] },
     ],
-    transitions: [{
-      id: "handoff",
-      outgoingClipId: "outgoing",
-      incomingClipId: "incoming",
-      effect: {
-        inputs: ["outgoing", "incoming"],
-        program: { format: "example.transition@1", payload: {}, artifacts: [] },
-      },
-    }],
   };
   const context: StudioTrackCompanionContext = {
     track: {
@@ -61,15 +48,12 @@ test("Studio selects the visible Transition Process instead of its hidden partic
     values: new Map([["picture.program", program]]),
     spans: [
       { id: "outgoing", subjectId: "outgoing", startFrame: 0, endFrameExclusive: 20, stackOrder: 0 },
-      { id: "handoff", subjectId: "handoff", startFrame: 10, endFrameExclusive: 20, stackOrder: 1 },
-      { id: "incoming", subjectId: "incoming", startFrame: 10, endFrameExclusive: 30, stackOrder: 2 },
+      { id: "incoming", subjectId: "incoming", startFrame: 10, endFrameExclusive: 30, stackOrder: 1 },
     ],
     temporalBindings: [],
     temporalDomains: [],
     generic: () => [],
   };
   const items = visualTrackStudioTrackCompanions[0]!.project!(context);
-  const transition = items.find((item) => item.authoredId === "handoff");
-  assert.deepEqual(transition?.terminalLinks, [{ spanId: "handoff" }]);
-  assert.deepEqual([transition?.startFrame, transition?.endFrameExclusive], [10, 20]);
+  assert.deepEqual(items.map((item) => item.authoredId), ["outgoing", "incoming"]);
 });

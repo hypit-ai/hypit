@@ -1,5 +1,5 @@
 import type { BlobRef } from "@hypit/hypit/protocol";
-import type { ExactTemporalValue, LocalTemporalDomain, TemporalMap } from "@hypit/temporal";
+import type { ExactTemporalValue, LocalTemporalDomain, TemporalMap } from "@hypit/temporal/algebra";
 
 export type MediaRational = {
   readonly numerator: number;
@@ -33,6 +33,33 @@ export type PictureInterpretation =
       readonly bitDepth: 8;
       readonly alphaMode: "opaque" | "straight";
     };
+
+export type MediaVideoSelector =
+  | { readonly mode: "primary-moving" }
+  | { readonly mode: "stream-index"; readonly streamIndex: number }
+  | { readonly mode: "none" };
+
+export type MediaAudioSelector =
+  | { readonly mode: "default" }
+  | { readonly mode: "default-if-present" }
+  | { readonly mode: "stream-index"; readonly streamIndex: number }
+  | { readonly mode: "none" };
+
+/** Author policy for interpreting one time-bearing Resource as PreparedMedia. */
+export type MediaSelectionRequest = {
+  readonly video: MediaVideoSelector;
+  readonly audio: MediaAudioSelector;
+  readonly spanAuthority: "video" | "audio";
+  readonly picture:
+    | { readonly mode: "none" }
+    | { readonly mode: "source" }
+    | { readonly mode: "explicit"; readonly interpretation: PictureInterpretation };
+};
+
+/** Runtime observation request. The Resource identity remains on the graph edge. */
+export type InspectMediaNeed = {
+  readonly source: BlobRef;
+};
 
 export type PictureSignal = Omit<PictureInterpretation, "alphaMode">;
 

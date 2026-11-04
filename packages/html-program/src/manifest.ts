@@ -1,9 +1,7 @@
-import { compositionDependency, compositionTypes } from "@hypit/composition";
-import { compositableSurfaceSchema, mediaDependency, mediaTypes, pictureInterpretationSchema, preparedVisualSourceSchema } from "@hypit/media";
+import { mediaDependency, mediaTypes, pictureInterpretationSchema, preparedVisualSourceSchema } from "@hypit/media";
 import { blobRefSchema } from "@hypit/hypit/protocol";
 import type { CapabilityRef, ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/hypit/protocol";
-import { frameSpanSchema, timelineDependency, timelineTypes } from "@hypit/timeline";
-import { temporalDependency, temporalMapSchema } from "@hypit/temporal";
+import { frameSpanSchema, temporalDependency, temporalMapSchema, temporalTypes } from "@hypit/temporal";
 
 export const htmlProgramModuleRef = { name: "@hypit/html-program", version: "1" } as const;
 export const htmlProgramTypes = {
@@ -15,7 +13,6 @@ export const htmlProgramCapabilities = {
   rasterizeFrames: { module: htmlProgramModuleRef, name: "rasterize-frames" },
 } satisfies Record<string, CapabilityRef>;
 export const htmlProgramProducers = {
-  compile: { module: htmlProgramModuleRef, name: "compile-composition" },
   requestVisual: { module: htmlProgramModuleRef, name: "request-visual" },
   requestVisualRange: { module: htmlProgramModuleRef, name: "request-visual-range" },
 } satisfies Record<string, ProducerRef>;
@@ -40,11 +37,6 @@ export const htmlProgramSchema: ValueSchema = {
         height: { schema: positiveInteger },
       },
     } },
-    processUsages: { schema: { kind: "array", items: { kind: "object", fields: {
-      order: { schema: positiveInteger },
-      stageKeys: { schema: { kind: "array", minItems: 1, items: { kind: "string", minLength: 1 } } },
-      spans: { schema: { kind: "array", minItems: 1, items: frameSpanSchema } },
-    } } } },
     artifacts: { schema: { kind: "array", items: { kind: "oneOf", variants: [
       { kind: "object", fields: {
         kind: { schema: { kind: "literal", value: "bytes" } },
@@ -74,19 +66,7 @@ export const htmlProgramSchema: ValueSchema = {
         ] } },
       } },
     ] } } },
-    surfaces: { schema: { kind: "array", items: { kind: "object", fields: {
-      artifactId: { schema: { kind: "string", minLength: 1 } },
-      surface: { schema: compositableSurfaceSchema },
-      usage: { schema: { kind: "oneOf", variants: [
-        { kind: "object", fields: { kind: { schema: { kind: "literal", value: "never" } } } },
-        { kind: "object", fields: { kind: { schema: { kind: "literal", value: "always" } } } },
-        { kind: "object", fields: {
-          kind: { schema: { kind: "literal", value: "frames" } },
-          spans: { schema: { kind: "array", minItems: 1, items: frameSpanSchema } },
-        } },
-      ] } },
-    } } } },
-    videoSources: { schema: { kind: "array", items: { kind: "oneOf", variants: [{ kind: "object", fields: {
+    videoSources: { schema: { kind: "array", items: { kind: "object", fields: {
       id: { schema: { kind: "string", minLength: 1 } },
       elementId: { schema: { kind: "string", minLength: 1 } },
       kind: { schema: { kind: "literal", value: "media" } },
@@ -98,24 +78,10 @@ export const htmlProgramSchema: ValueSchema = {
           spans: { schema: { kind: "array", minItems: 1, items: frameSpanSchema } } } },
       ] } },
       source: { schema: preparedVisualSourceSchema }, sampling: { schema: temporalMapSchema },
-    } }, { kind: "object", fields: {
-      id: { schema: { kind: "string", minLength: 1 } },
-      elementId: { schema: { kind: "string", minLength: 1 } },
-      kind: { schema: { kind: "literal", value: "surface" } },
-      artifactId: { schema: { kind: "string", minLength: 1 } },
-      picture: { schema: pictureInterpretationSchema },
-      ...(frameSpanSchema.kind === "object" ? frameSpanSchema.fields : {}),
-      usage: { schema: { kind: "oneOf", variants: [
-        { kind: "object", fields: { kind: { schema: { kind: "literal", value: "never" } } } },
-        { kind: "object", fields: { kind: { schema: { kind: "literal", value: "always" } } } },
-        { kind: "object", fields: { kind: { schema: { kind: "literal", value: "frames" } },
-          spans: { schema: { kind: "array", minItems: 1, items: frameSpanSchema } } } },
-      ] } },
-      sampling: { schema: temporalMapSchema },
-      sourceFrameRate: { schema: { kind: "object", fields: {
-        numerator: { schema: positiveInteger }, denominator: { schema: positiveInteger },
-      } } },
-    } }] } } },
+      reconstruction: { schema: { kind: "object", fields: {
+        kind: { schema: { kind: "literal", value: "nearest" } },
+      } }, optional: true },
+    } } } },
     html: { schema: { kind: "string", minLength: 1 } },
   },
 };
@@ -124,21 +90,17 @@ export const htmlProgramManifest: ModuleManifest = {
   format: "hypit.module@1",
   name: htmlProgramModuleRef.name,
   version: htmlProgramModuleRef.version,
-  dependencies: [compositionDependency, mediaDependency, temporalDependency, timelineDependency],
+  dependencies: [mediaDependency, temporalDependency],
   types: [htmlProgramTypes.program.name, htmlProgramTypes.frameImages.name],
   capabilities: [
     { name: htmlProgramCapabilities.rasterizeVisual.name, returns: mediaTypes.timelineVisual },
     { name: htmlProgramCapabilities.rasterizeFrames.name, returns: htmlProgramTypes.frameImages },
   ],
   producers: [{
-    name: htmlProgramProducers.compile.name,
-    inputs: [{ name: "composition", type: compositionTypes.composition }],
-    result: { kind: "output" as const, name: "program", type: htmlProgramTypes.program },
-  }, {
     name: htmlProgramProducers.requestVisual.name,
     inputs: [{ name: "program", type: htmlProgramTypes.program }, { name: "delivery", type: mediaTypes.visualDelivery }], result: { kind: "need" as const, name: "visual", capability: htmlProgramCapabilities.rasterizeVisual },
   }, {
     name: htmlProgramProducers.requestVisualRange.name,
-    inputs: [{ name: "program", type: htmlProgramTypes.program }, { name: "delivery", type: mediaTypes.visualDelivery }, { name: "range", type: timelineTypes.frameSpan }], result: { kind: "need" as const, name: "visual", capability: htmlProgramCapabilities.rasterizeVisual },
+    inputs: [{ name: "program", type: htmlProgramTypes.program }, { name: "delivery", type: mediaTypes.visualDelivery }, { name: "range", type: temporalTypes.frameSpan }], result: { kind: "need" as const, name: "visual", capability: htmlProgramCapabilities.rasterizeVisual },
   }],
 };

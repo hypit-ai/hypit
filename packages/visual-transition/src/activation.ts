@@ -1,21 +1,15 @@
-import { createAuthorDeclarationFacet } from "@hypit/hypit/author";
-import { createMarkupDeclarationFacet } from "@hypit/hypit/markup";
-import { createStudioCompanionFacet } from "@hypit/studio-companion";
+import { createProducerPackageFacet } from "@hypit/hypit/producer";
+import { createRefinementPackageFacet } from "@hypit/hypit/refinement";
 
-import { visualTransitionAuthorDeclarations, visualTransitionMarkupDeclarations } from "./declaration.js";
-import { visualTransitionManifest, visualTransitionModuleRef } from "./manifest.js";
-import { visualTransitionStudioParameterCompanions } from "./studio.js";
+import { visualTransitionComponent } from "./component.js";
+import { visualTransitionManifest } from "./manifest.js";
 
 export const hypitPackage = {
   format: "hypit.package@1" as const,
   modules: [{ manifest: visualTransitionManifest }],
   facets: [
-    ...visualTransitionAuthorDeclarations.map((declaration) => createAuthorDeclarationFacet(declaration)),
-    ...visualTransitionMarkupDeclarations.map((declaration) => createMarkupDeclarationFacet({
-      module: visualTransitionModuleRef,
-      declaration,
-    })),
-    createStudioCompanionFacet({ parameters: visualTransitionStudioParameterCompanions }),
+    createProducerPackageFacet(visualTransitionComponent.producers),
+    createRefinementPackageFacet(visualTransitionComponent.refinements),
   ],
 };
 export default hypitPackage;

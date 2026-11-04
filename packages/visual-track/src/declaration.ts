@@ -36,7 +36,7 @@ import {
 import { visualTrackModuleRef, visualTrackProducers, visualTrackTypes } from "./manifest.js";
 import { sealVisualClipMotion } from "./motion.js";
 import { sealVisualTrackHeader } from "./program.js";
-import type { MediaSamplingMotion, VisualClipMotion, VisualMotionPosition, VisualTransitionSpec } from "./types.js";
+import type { MediaSamplingMotion, VisualClipMotion, VisualMotionPosition } from "./types.js";
 
 type DeclarationNode = AuthorDeclaration | AuthorDeclarationChild;
 type ValueRef = AuthorResolvedReference["ref"] | { readonly kind: "record"; readonly id: string };
@@ -80,11 +80,6 @@ function recipe(reference: AuthorResolvedReference, label: string): Recipe {
     throw new Error(`${label} must be an authored Recipe.`);
   }
   return reference.record.value as unknown as Recipe;
-}
-
-function authoredValue<T>(reference: AuthorResolvedReference, label: string): T {
-  if (reference.record === undefined) throw new Error(`${label} must reference an authored Record.`);
-  return reference.record.value as unknown as T;
 }
 
 const FIT_FIELDS = ["fit", "frame-x", "frame-y", "content-x", "content-y", "fit-offset-x", "fit-offset-y", "fit-constraint"] as const;
@@ -183,11 +178,6 @@ type FragmentClip = {
   readonly clipPathName?: string; readonly motionName?: string; readonly layers: readonly FragmentLayer[];
 };
 
-type FragmentTransition = {
-  readonly suffix: string;
-  readonly specName: string;
-};
-
 const input = (name: string) => ({ kind: "fragment-input" as const, name });
 const operation = (id: string) => ({ kind: "fragment-operation" as const, operation: id });
 
@@ -220,7 +210,6 @@ function appendLayers(operations: FragmentOperation[], prefix: string, layers: r
 export function createVisualTrackFragment(
   inputTypes: readonly { readonly name: string; readonly type: TypeRef }[],
   clips: readonly FragmentClip[],
-  transitions: readonly FragmentTransition[] = [],
 ) {
   const operations: FragmentOperation[] = [{ id: "track:set:empty", producer: visualTrackProducers.createSet, inputs: {}, result: { kind: "output", name: "set" } }];
   let set = "track:set:empty";
@@ -242,19 +231,6 @@ export function createVisualTrackFragment(
     operations.push({ id, producer: visualTrackProducers.appendClip,
       inputs: { set: operation(set), header: input("header"), timeline: input("timeline"), layers: operation(layers), frame: input(clip.frameName), spec, window: input(clip.windowName) },
       result: { kind: "output", name: "set" } });
-    set = id;
-  }
-  for (const transition of transitions) {
-    const id = `transition:${transition.suffix}:append`;
-    operations.push({
-      id,
-      producer: visualTrackProducers.appendTransition,
-      inputs: {
-        set: operation(set),
-        spec: input(transition.specName),
-      },
-      result: { kind: "output", name: "set" },
-    });
     set = id;
   }
   operations.push(
@@ -337,9 +313,9 @@ export const visualTrackAuthorDeclaration: AuthorDeclarationCompiler = {
   outputs: [spatialTypes.fit, visualTrackTypes.header, visualTrackTypes.motion,
     mediaTypes.pictureInterpretation,
     visualTrackTypes.paintLayerSpec, visualTrackTypes.sampleLayerSpec, visualTrackTypes.layerSet,
-    visualTrackTypes.clipSpec, visualTrackTypes.transitionEffect, visualTrackTypes.transitionSpec,
+    visualTrackTypes.clipSpec,
     visualTrackTypes.set, visualTrackTypes.program, compositionTypes.visualTrack],
-  shape: { summary: "Places ordinary visual Clips and explicit Transition relations on one completed Timeline.", fields: [
+  shape: { summary: "Places ordinary visual Clips on one completed Timeline.", fields: [
     { name: "id", kind: "identifier", required: true, summary: "Names this Track." },
     { name: "timeline", kind: "reference", required: true, accepts: [timelineTypes.timeline], summary: "Selects its absolute Timeline." },
   ], children: [{ name: "Clip", cardinality: "many", summary: "Places one independently timed visual source.", fields: [
@@ -357,23 +333,17 @@ export const visualTrackAuthorDeclaration: AuthorDeclarationCompiler = {
     { name: "fit", kind: "literal", required: false, values: ["contain", "cover", "fit-width", "fit-height", "native", "scale-down", "stretch"], summary: "Chooses automatic content fitting." },
     ...["frame-x", "frame-y", "content-x", "content-y", "fit-offset-x", "fit-offset-y"].map((name) => ({ name, kind: "literal" as const, required: false, summary: `Supplies the fit ${name} parameter.` })),
     { name: "fit-constraint", kind: "literal", required: false, values: ["bounded", "free"], summary: "Chooses bounded or free fitting." },
-    { name: "during", kind: "reference", required: true, accepts: [temporalTypes.window], summary: "Selects the resolved destination Window." },
+    { name: "during", kind: "reference", required: true, accepts: [timelineTypes.window], summary: "Selects the resolved destination Window." },
   ], children: [
     { name: "Map", cardinality: "many", summary: "Adds one exact partial target-to-source temporal relation.", fields: relationFields },
     { name: "Curve", cardinality: "many", summary: "Adds one exact monotone cubic source-position relation.", fields: curveFields },
     { name: "Sampling", cardinality: "many", summary: "Animates the sampled crop inside the Frame.", fields: samplingFields },
     { name: "Pose", cardinality: "many", summary: "Animates the complete framed Clip.", fields: poseFields },
-  ] }, { name: "Transition", cardinality: "many", summary: "Applies one visual effect to two adjacent Clips across their exact overlap.", fields: [
-    { name: "id", kind: "identifier", required: true, summary: "Names this Transition relation." },
-    { name: "outgoing", kind: "literal", required: true, summary: "Names the outgoing Clip id." },
-    { name: "incoming", kind: "literal", required: true, summary: "Names the incoming Clip id." },
-    { name: "effect", kind: "reference", required: true, accepts: [visualTrackTypes.transitionEffect], summary: "Selects the package-owned two-input visual effect." },
   ] }] },
   bindings(declaration) { const id = literal(declaration, "id"); return [outputBinding(id, "program", visualTrackTypes.program), outputBinding(id, "visual", compositionTypes.visualTrack)]; },
   async compile({ declaration, resolveReference }) {
     const id = literal(declaration, "id");
     const clipChildren = declaration.children.filter((child) => child.name === "Clip");
-    const transitionChildren = declaration.children.filter((child) => child.name === "Transition");
     if (clipChildren.length === 0) throw new Error(`${declaration.name} requires at least one Clip.`);
     const timeline = await resolved(declaration, "timeline", timelineTypes.timeline, resolveReference);
     const state = buildState(); state.addReference("timeline", timeline);
@@ -390,7 +360,7 @@ export const visualTrackAuthorDeclaration: AuthorDeclarationCompiler = {
       if (source.kind === "image" && pictureField === undefined) throw new Error(`${child.name}.picture is required with image.`);
       if (source.kind !== "image" && pictureField !== undefined) throw new Error(`${child.name}.picture is only valid with image.`);
       const frame = await resolved(child, "frame", spatialTypes.frame, resolveReference);
-      const window = await resolved(child, "during", temporalTypes.window, resolveReference);
+      const window = await resolved(child, "during", timelineTypes.window, resolveReference);
       const mapping = field(child, "mapping") === undefined ? undefined : await resolved(child, "mapping", spatialTypes.map2D, resolveReference);
       if (mapping !== undefined && FIT_FIELDS.some((name) => field(child, name) !== undefined)) throw new Error(`${child.name} cannot combine mapping with fit fields.`);
       const inline = inlineMotion(child);
@@ -428,22 +398,7 @@ export const visualTrackAuthorDeclaration: AuthorDeclarationCompiler = {
       if (motionName !== undefined) { if (inline !== undefined) state.addRecord(motionName, `${id}.clip.${suffix}.motion`, visualTrackTypes.motion, inline, range); else state.addReference(motionName, externalMotion!); }
       clips.push({ suffix, windowName, frameName, specName, layers, ...(clipPathName === undefined ? {} : { clipPathName }), ...(motionName === undefined ? {} : { motionName }) });
     }
-    const transitions: FragmentTransition[] = [];
-    for (const [index, child] of transitionChildren.entries()) {
-      const suffix = String(index + 1).padStart(4, "0"), range = child.range ?? declaration.range;
-      const transitionId = literal(child, "id");
-      const effect = await resolved(child, "effect", visualTrackTypes.transitionEffect, resolveReference);
-      const spec: VisualTransitionSpec = {
-        id: transitionId,
-        outgoingClipId: literal(child, "outgoing"),
-        incomingClipId: literal(child, "incoming"),
-        effect: authoredValue<VisualTransitionSpec["effect"]>(effect, `${child.name}.effect`),
-      };
-      const specName = `transition-${suffix}-spec`;
-      state.addRecord(specName, `${id}.transition.${suffix}.spec`, visualTrackTypes.transitionSpec, spec, range);
-      transitions.push({ suffix, specName });
-    }
-    return { records: state.records, components: [{ id, fragment: createVisualTrackFragment(state.inputTypes, clips, transitions), inputs: state.inputs, outputs: { visual: `${id}.visual`, program: `${id}.program` }, range: declaration.range }] };
+    return { records: state.records, components: [{ id, fragment: createVisualTrackFragment(state.inputTypes, clips), inputs: state.inputs, outputs: { visual: `${id}.visual`, program: `${id}.program` }, range: declaration.range }] };
   },
 };
 

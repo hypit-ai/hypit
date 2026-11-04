@@ -1,6 +1,4 @@
-import type { Timeline } from "@hypit/timeline";
-
-import type { TemporalDuration } from "./types.js";
+import type { TemporalDuration, TemporalSamplingGrid } from "./types.js";
 
 function integer(value: number, label: string): bigint {
   if (!Number.isSafeInteger(value) || value < 0) throw new Error(`${label} must be a non-negative safe integer.`);
@@ -19,7 +17,7 @@ function roundedRatio(numerator: bigint, denominator: bigint, label: string): nu
 /** Quantize one non-negative authored duration into the canonical sample domain exactly once. */
 export function temporalDurationInSamples(
   duration: TemporalDuration,
-  timeline: Timeline,
+  grid: TemporalSamplingGrid,
   sampleRate = 48_000,
 ): number {
   const rate = integer(sampleRate, "Sample rate");
@@ -27,8 +25,8 @@ export function temporalDurationInSamples(
   switch (duration.unit) {
     case "frames":
       return roundedRatio(
-        integer(duration.value, "Frame duration") * rate * integer(timeline.frameRate.denominator, "Frame-rate denominator"),
-        integer(timeline.frameRate.numerator, "Frame-rate numerator"),
+        integer(duration.value, "Frame duration") * rate * integer(grid.frameRate.denominator, "Frame-rate denominator"),
+        integer(grid.frameRate.numerator, "Frame-rate numerator"),
         "Frame duration",
       );
     case "milliseconds":

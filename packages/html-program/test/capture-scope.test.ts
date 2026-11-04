@@ -17,7 +17,6 @@ test("compiled capture scope retains selected roots and makes unrelated media in
     <div id="selected" data-hypit-capture-root data-hypit-contribution-start-frame="90" data-hypit-contribution-end-frame="120">
       <img id="selected-image" data-hypit-artifact-src="selected.png"/>
       <video id="selected-media" data-hypit-video-source="media" data-hypit-artifact-src="media.mp4"></video>
-      <video id="selected-surface" data-hypit-video-source="surface" data-hypit-artifact-src="surface.mp4"></video>
       <svg><image id="selected-svg" data-hypit-artifact-href="selected.svg"/></svg>
     </div>
   </body>`);
@@ -43,10 +42,8 @@ test("compiled capture scope retains selected roots and makes unrelated media in
   assert.equal(earlyVideo.hasAttribute("poster"), false);
   assert.equal(document.getElementById("selected-image")!.getAttribute("src"), "selected.png");
   assert.equal(document.getElementById("selected-image")!.hasAttribute("data-hypit-artifact-src"), false);
-  for (const id of ["selected-media", "selected-surface"]) {
-    assert.equal(document.getElementById(id)!.hasAttribute("src"), false);
-    assert.equal(document.getElementById(id)!.getAttribute("data-hypit-artifact-src"), `${id.slice(9)}.mp4`);
-  }
+  assert.equal(document.getElementById("selected-media")!.hasAttribute("src"), false);
+  assert.equal(document.getElementById("selected-media")!.getAttribute("data-hypit-artifact-src"), "media.mp4");
   assert.equal(document.getElementById("selected-svg")!.getAttribute("href"), "selected.svg");
   assert.equal(document.getElementById("selected-svg")!.hasAttribute("data-hypit-artifact-href"), false);
 });
@@ -90,9 +87,9 @@ test("compiled capture scope defaults to every contribution outside a render sel
   assert.equal(document.querySelector("video")!.getAttribute("src"), "one.mp4");
 });
 
-test("compiled capture scope preserves nested process inputs as one structural root", () => {
+test("compiled capture scope preserves nested operator inputs as one structural root", () => {
   const { document } = parseHTML(`<!doctype html><body>
-    <div id="process" data-hypit-capture-root data-hypit-contribution-start-frame="20" data-hypit-contribution-end-frame="30">
+    <div id="operator" data-hypit-capture-root data-hypit-contribution-start-frame="20" data-hypit-contribution-end-frame="30">
       <div id="outgoing" data-hypit-contribution-start-frame="0" data-hypit-contribution-end-frame="30">
         <img id="outgoing-image" data-hypit-artifact-src="outgoing.png"/>
       </div>
@@ -107,9 +104,26 @@ test("compiled capture scope preserves nested process inputs as one structural r
     htmlPrepareFrameSelection([{ startFrame: 25, endFrameExclusive: 26 }]);
     for (const initialize of htmlFrameProgramInitializers) initialize();`, context);
 
-  assert.deepEqual(JSON.parse(JSON.stringify(context.__hypitCaptureRoots?.map(root => root.id))), ["process"]);
+  assert.deepEqual(JSON.parse(JSON.stringify(context.__hypitCaptureRoots?.map(root => root.id))), ["operator"]);
   assert.notEqual(document.getElementById("outgoing"), null);
   assert.notEqual(document.getElementById("incoming"), null);
   assert.equal(document.getElementById("outgoing-image")!.getAttribute("src"), "outgoing.png");
   assert.equal(document.getElementById("incoming-image")!.getAttribute("src"), "incoming.png");
+});
+
+test("stable roots activate only nested resources used by the selected frame spans", () => {
+  const { document } = parseHTML(`<!doctype html><body>
+    <div id="root" data-hypit-capture-root data-hypit-contribution-start-frame="0" data-hypit-contribution-end-frame="20">
+      <div data-hypit-contribution-spans="0:5"><img id="early" data-hypit-artifact-src="early.png"/></div>
+      <div data-hypit-contribution-spans="10:15"><img id="late" data-hypit-artifact-src="late.png"/></div>
+    </div>
+  </body>`);
+  const context: { document: Document; __hypitCaptureRoots?: readonly Element[] } = { document };
+  runInNewContext(`${frameSelectionRuntime}
+    ${presentationCaptureScopeRuntime}
+    htmlPrepareFrameSelection([{ startFrame: 11, endFrameExclusive: 12 }]);
+    for (const initialize of htmlFrameProgramInitializers) initialize();`, context);
+
+  assert.equal(document.getElementById("early")!.hasAttribute("src"), false);
+  assert.equal(document.getElementById("late")!.getAttribute("src"), "late.png");
 });

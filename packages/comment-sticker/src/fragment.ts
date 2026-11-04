@@ -44,7 +44,7 @@ export function createCommentStickerFragment(items: readonly CommentStickerFragm
   let current = "comment:set:empty";
   items.forEach((item, index) => {
     types.set(item.specName, commentStickerTypes.itemSpec);
-    types.set(item.windowName, temporalTypes.window);
+    types.set(item.windowName, timelineTypes.window);
     types.set(item.frameName, spatialTypes.frame);
     types.set(item.styleName, commentStickerTypes.style);
     types.set(item.commentName, textTypes.text);

@@ -54,8 +54,9 @@ Output paths are package vocabulary, not inferred from the element's tag:
 
 - `copy:Value id="direction"` publishes `{direction}`;
 - an imported `media:Image id="logo"` publishes `{logo}`;
+- `media:Video id="performance"` publishes raw `{performance}` / `{performance.resource}` plus
+  `{performance.source}`, `{performance.domain}` and `{performance.extent}` prepared facets;
 - `gpt:Image id="portrait"` publishes `{portrait.image}`;
-- `mediaop:Prepare id="prepared"` publishes `{prepared.media}`;
 - `time:Timeline id="speech"` publishes `{speech.timeline}`;
 - `typo:Flow id="title"` publishes `{title.occurrence}` and `{title.visual}`;
 - `visual:Track id="picture"` publishes `{picture.visual}` and `{picture.program}`;

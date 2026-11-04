@@ -1,4 +1,6 @@
-import { temporalDependency, temporalTypes, temporalWindowSchema } from "@hypit/temporal";
+import { timelineTypes } from "@hypit/timeline";
+import { temporalDependency, temporalTypes } from "@hypit/temporal";
+import { temporalWindowSchema } from "@hypit/timeline";
 import type { ModuleManifest, ProducerRef, TypeRef, ValueSchema } from "@hypit/hypit/protocol";
 import { frameSpanSchema, timelineDependency } from "@hypit/timeline";
 
@@ -77,7 +79,7 @@ export const captionManifest: ModuleManifest = {
     result: { kind: "output" as const, name: "program", type: captionTypes.program },
   }, {
     name: captionProducers.append.name,
-    inputs: [{ name: "program", type: captionTypes.program }, { name: "window", type: temporalTypes.window },
+    inputs: [{ name: "program", type: captionTypes.program }, { name: "window", type: timelineTypes.window },
       { name: "style", type: captionTypes.style }, { name: "filter", type: captionTypes.filter }],
     result: { kind: "output" as const, name: "program", type: captionTypes.program },
   }, {

@@ -1,14 +1,28 @@
-import { sealComposition, sealPresentVisualTrack } from "@hypit/composition";
-import { htmlVisual, compileHtmlProgram, htmlVisualElement } from "@hypit/html-program";
-import { sealTimeline } from "@hypit/timeline";
+import { compileHtmlPictureProgram } from "@hypit/html-program";
 
 export function htmlFrameFixture() {
-  const space = sealTimeline({ id: "space", frameCount: 12, frameRate: { numerator: 12, denominator: 1 } });
-  return compileHtmlProgram(sealComposition({ id: "frames", visual: { canvas: { width: 96, height: 64, clearColor: "#000000" }, root: { members: [{ kind: "track", id: "motion", track: sealPresentVisualTrack({ id: "motion", timelineId: space.id, presents: [{ id: "reveal",
-      span: { startFrame: 3, endFrameExclusive: 12 }, root: htmlVisualElement({ id: "program",
-        kind: "program", style: [{ name: "position", value: "absolute" }, { name: "inset", value: 0 }],
-        slots: [],
-        program: htmlVisual({ html: '<div class="box"></div>', css: '.box{position:absolute;top:0;width:8px;height:64px;background:#ff0000}',
-          setup: 'return frame => { root.querySelector(".box").style.left = `${frame * 8}px`; };' }),
-      }) }] }) }] } }, audio: { contributions: [] } }, space));
+  return compileHtmlPictureProgram({
+    id: "frames",
+    frameRate: { numerator: 12, denominator: 1 },
+    frameCount: 12,
+    canvas: { width: 96, height: 64, clearColor: "#000000" },
+    root: { id: "frames-root", kind: "box", spans: [{ startFrame: 0, endFrameExclusive: 12 }],
+      style: [], children: Array.from({ length: 9 }, (_, index) => {
+        const frame = index + 3;
+        return {
+          id: `box-${frame}`,
+          kind: "box" as const,
+          spans: [{ startFrame: frame, endFrameExclusive: frame + 1 }],
+          style: [
+            { name: "position", value: "absolute" },
+            { name: "left", value: `${(frame - 3) * 8}px` },
+            { name: "top", value: 0 },
+            { name: "width", value: "8px" },
+            { name: "height", value: "64px" },
+            { name: "background", value: "#ff0000" },
+          ],
+          children: [],
+        };
+      }) },
+  });
 }

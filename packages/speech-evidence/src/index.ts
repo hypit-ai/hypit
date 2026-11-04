@@ -2,7 +2,8 @@ import { assertBlobRef } from "@hypit/hypit/protocol";
 import { mediaDependency, mediaTypes } from "@hypit/media";
 import type { BlobRef, ModuleManifest, ValueSchema } from "@hypit/hypit/protocol";
 import type { PreparedAudioSource } from "@hypit/media";
-import { assertLocalTemporalDomain, resolveTemporalBoundary } from "@hypit/temporal";
+import { assertLocalTemporalDomain } from "@hypit/temporal/algebra";
+import { resolveTemporalBoundary } from "@hypit/temporal/sampling";
 import type { LocalTemporalDomain, TemporalMap } from "@hypit/temporal";
 export {
   decodeSpeechTranscriptEvidence,

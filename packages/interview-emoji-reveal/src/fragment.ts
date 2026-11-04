@@ -47,11 +47,11 @@ export function createEmojiRevealFragment(items: readonly EmojiRevealFragmentIte
   return sealGraphFragment({
     inputs: [
       { name: "header", type: emojiRevealTypes.header }, { name: "timeline", type: timelineTypes.timeline },
-      { name: "within", type: spatialTypes.frame }, { name: "outer", type: temporalTypes.window }, { name: "style", type: emojiRevealTypes.style },
+      { name: "within", type: spatialTypes.frame }, { name: "outer", type: timelineTypes.window }, { name: "style", type: emojiRevealTypes.style },
       { name: "placeholder", type: blobTypes.blob },
       ...items.flatMap((item) => [
         { name: item.specName, type: emojiRevealTypes.itemSpec }, { name: item.iconName, type: blobTypes.blob },
-        ...(item.activationName === undefined ? [] : [{ name: item.activationName, type: temporalTypes.instant }]),
+        ...(item.activationName === undefined ? [] : [{ name: item.activationName, type: timelineTypes.instant }]),
       ]),
     ],
     operations,

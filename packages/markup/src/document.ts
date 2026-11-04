@@ -527,8 +527,8 @@ function projectDocument(
   return {
     source,
     imports: document.imports.map((item) => requestImport(item.request)),
-    root: { node: document.root.node, declarations: declarations.map((item) => item.node) },
-    containers: [{ node: document.root.node, declarations: declarations.map((item) => item.node) }],
+    root: { node: document.root.node, blocks: [], declarations: declarations.map((item) => item.node) },
+    containers: [{ node: document.root.node, blocks: [], declarations: declarations.map((item) => item.node) }],
     declarations,
     representation: document,
   };
@@ -692,6 +692,10 @@ export function applyMarkupDocumentOperations(
   const edits: TextEdit[] = [];
   const indent = rootIndent(document);
   for (const operation of operations) {
+    if (operation.kind === "insert-block" || operation.kind === "replace-block"
+      || operation.kind === "delete-block" || operation.kind === "move-block") {
+      throw new Error("The declaration Markup Frontend does not own document-native blocks.");
+    }
     if (operation.kind === "add-field") {
       const element = elements.get(operation.declaration);
       if (element === undefined) throw new Error(`Unknown declaration ${operation.declaration}.`);

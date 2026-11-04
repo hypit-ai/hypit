@@ -5,23 +5,14 @@ import type { Narrative, NarrativeSelectionRef } from "@hypit/narrative";
 import { projectNarrativeCaptionTiming } from "@hypit/narrative-caption";
 import { alignNarrative } from "@hypit/narrative-speech-alignment";
 import {
-  createNarrativeProjection,
-  projectNarrativeAlignment,
-  projectNarrativeInstant,
-} from "@hypit/narrative-temporal";
+  createNarrativeProjection, projectNarrativeAlignment, projectNarrativeInstant, } from "@hypit/narrative-temporal";
 import {
-  captionDocument,
-  narrativeCaptionBinding,
-  narrativeValue,
-  parseScript,
-} from "@hypit/script";
+  captionDocument, narrativeCaptionBinding, narrativeValue, parseScript, } from "@hypit/script";
 import {
-  decodeSpeechTranscriptSource,
-  speechTranscriptSource,
-  type SpeechTranscriptEvidence,
-} from "@hypit/speech-evidence";
-import { composeTemporalWindow, exactTemporalValueFromFrames,
-  type LocalTemporalDomain, type TemporalWindow } from "@hypit/temporal";
+  decodeSpeechTranscriptSource, speechTranscriptSource, type SpeechTranscriptEvidence, } from "@hypit/speech-evidence";
+import { exactTemporalValueFromFrames, type LocalTemporalDomain } from "@hypit/temporal";
+import { composeTemporalWindow } from "@hypit/timeline";
+import type { type TemporalWindow } from "@hypit/timeline";
 import type { Timeline } from "@hypit/timeline";
 
 function segmentEvidence(sampleFrames: number, text: string, startSample: number, endSampleExclusive: number): SpeechTranscriptEvidence {

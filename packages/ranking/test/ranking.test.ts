@@ -84,7 +84,7 @@ import { spatialTypes } from "@hypit/spatial";
 import { recipeType } from "@hypit/recipe";
 import { sealText, textManifest, textTypes } from "@hypit/text";
 import { temporalManifest, temporalTypes } from "@hypit/temporal";
-import type { TemporalWindow } from "@hypit/temporal";
+import type { TemporalWindow } from "@hypit/timeline";
 import { compileMarkupDeclaration } from "../../../test/compile-markup-declaration.js";
 import {
   columnAuthorDeclaration,
@@ -549,13 +549,13 @@ test("all three author declarations preserve absolute temporal, spatial, font, i
   const references = new Map<string, AuthorResolvedReference>([
     ["semantic", plain("semantic", timelineTypes.timeline)],
     ["frame", plain("frame", spatialTypes.frame)],
-    ["outer", plain("outer", temporalTypes.window)],
-    ["ranking-segment", plain("ranking-segment", temporalTypes.window)],
-    ["tier-reveal", plain("tier-reveal", temporalTypes.window)],
-    ["column-reveal", plain("column-reveal", temporalTypes.window)],
-    ["moment-one", plain("moment-one", temporalTypes.instant)],
-    ["moment-two", plain("moment-two", temporalTypes.instant)],
-    ["terminal", plain("terminal", temporalTypes.instant)],
+    ["outer", plain("outer", timelineTypes.window)],
+    ["ranking-segment", plain("ranking-segment", timelineTypes.window)],
+    ["tier-reveal", plain("tier-reveal", timelineTypes.window)],
+    ["column-reveal", plain("column-reveal", timelineTypes.window)],
+    ["moment-one", plain("moment-one", timelineTypes.instant)],
+    ["moment-two", plain("moment-two", timelineTypes.instant)],
+    ["terminal", plain("terminal", timelineTypes.instant)],
     ["icon-1", plain("icon-1", mediaTypes.blobArtifact)],
     ["icon-2", plain("icon-2", mediaTypes.blobArtifact)],
     ["appear", plain("appear", mediaTypes.prepared)],
@@ -646,7 +646,7 @@ test("Ranking author declarations fail closed on impossible image and sound comb
   const plain = (path: string, type: AuthorResolvedReference["type"]): AuthorResolvedReference => ({ ref: { kind: "record", id: path }, type });
   const references = new Map<string, AuthorResolvedReference>([
     ["semantic", plain("semantic", timelineTypes.timeline)],
-    ["frame", plain("frame", spatialTypes.frame)], ["outer", plain("outer", temporalTypes.window)],
+    ["frame", plain("frame", spatialTypes.frame)], ["outer", plain("outer", timelineTypes.window)],
     ["icon", plain("icon", mediaTypes.blobArtifact)],
     ["style", plain("style", rankingTypes.tierStyle)], ["style.sound", plain("style.sound", rankingTypes.soundStyle)],
     ["move", plain("move", mediaTypes.prepared)],

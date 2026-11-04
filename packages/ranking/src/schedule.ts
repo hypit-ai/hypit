@@ -1,9 +1,7 @@
-import { assertTimelineIdentity, timelineFrameCount } from "@hypit/timeline";
+import { assertTimelineIdentity, resolveTriggeredSchedule, timelineFrameCount } from "@hypit/timeline";
 import type { FrameSpan, Timeline } from "@hypit/timeline";
 import {
-  assertFontArtifactRef,
-  verifyPreparedMedia,
-} from "@hypit/media";
+  assertFontArtifactRef, verifyPreparedMedia, } from "@hypit/media";
 import type { PreparedMedia } from "@hypit/media";
 import { assertBlobRef, canonicalize, compareCodeUnits } from "@hypit/hypit/protocol";
 import type { BlobRef } from "@hypit/hypit/protocol";
@@ -11,12 +9,9 @@ import { verifyText } from "@hypit/hypit/text";
 import type { Text } from "@hypit/hypit/text";
 import { assertSpatialFrame } from "@hypit/spatial";
 import type { SpatialFrame } from "@hypit/spatial";
-import {
-  assertTemporalInstantFor,
-  assertTemporalWindowFor,
-  resolveTriggeredSchedule,
-} from "@hypit/temporal";
-import type { TemporalInstant, TemporalWindow } from "@hypit/temporal";
+import { assertTemporalInstantFor } from "@hypit/timeline";
+import { assertTemporalWindowFor } from "@hypit/timeline";
+import type { TemporalInstant, TemporalWindow } from "@hypit/timeline";
 
 import type {
   ColumnItem,

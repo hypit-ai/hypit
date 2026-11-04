@@ -9,7 +9,7 @@ import { audioTrackManifest, audioTrackModuleRef, audioTrackProducers, appendAud
 import type { AudioClipSpec, AudioTrackSet } from "@hypit/audio-track";
 import { blobManifest } from "@hypit/blob";
 import { registerTypeRefinements } from "@hypit/refinement";
-import { audioGraphFromClips, audioTrackClips, sealComposition, compositionManifest, compositionTypes } from "@hypit/composition";
+import { audioTrackClips, compositionManifest, compositionTypes } from "@hypit/composition";
 import {
   createResolvedClosure,
   defineBuild,
@@ -23,7 +23,6 @@ import type { PreparedMedia } from "@hypit/media";
 import { mediaComponent, mediaDependency, mediaManifest, mediaTypes, prepareMedia } from "@hypit/media";
 import type { NarrativeMomentRef, NarrativeSelectionRef } from "@hypit/narrative";
 import { narrativeManifest } from "@hypit/narrative";
-import { audioProgramClipSampleSpan, audioProgramSourceClips, compileAudioProgram } from "@hypit/audio-program";
 import { mediaOperationsManifest } from "@hypit/media-operations";
 import type { ModuleManifest } from "@hypit/protocol";
 import { exactTemporalValueFromFrames, isAffineTemporalMapPiece, resolveTemporalRelation, temporalDependency, temporalTypes,
@@ -85,6 +84,7 @@ const sampledPiece = (piece: TemporalMapPiece) => {
     endSampleExclusive: sampleRational(piece.wrap.end).numerator,
   } }) };
 };
+
 const affinePiece = (piece: TemporalMapPiece) => {
   assert.ok(isAffineTemporalMapPiece(piece));
   return piece;
@@ -196,7 +196,7 @@ test("partial identity and end alignment preserve exact silence and source head/
 
 test("fractional rates remain exact until the audio executor chooses sample boundaries", () => {
   const sampling = resolveTemporalRelation({
-    clock: space,
+    grid: space,
     target: { id: "occurrence", duration: exactTemporalValueFromFrames(10, sampleClock) },
     source: { id: "materialization", duration: exactTemporalValueFromFrames(100, sampleClock) },
     spec: rateSpec({ rate: { numerator: 2, denominator: 3 } }),
@@ -240,8 +240,6 @@ test("exact audio rates are not rejected by an arbitrary playback-mode ceiling",
     sampling: rateSpec({ rate: { numerator: 128, denominator: 1 } }),
   }));
   assert.deepEqual(affinePiece(audioTrackClips(track)[0]!.sampling.stages[0]!.pieces[0]!).rate, { numerator: 128, denominator: 1 });
-  const program = compileAudioProgram(sealComposition({ id: "fast", visual: { canvas: { width: 1, height: 1, clearColor: "#000000" }, root: { members: [] } }, audio: { contributions: [track] } }, space));
-  assert.deepEqual(affinePiece(audioProgramSourceClips(program)[0]!.sampling.stages[0]!.pieces[0]!).rate, { numerator: 128, denominator: 1 });
 });
 
 test("Audio Track preserves a reverse relation instead of enforcing one renderer's tempo capability", () => {
@@ -251,9 +249,6 @@ test("Audio Track preserves a reverse relation instead of enforcing one renderer
     }),
   }));
   assert.deepEqual(affinePiece(audioTrackClips(track)[0]!.sampling.stages[0]!.pieces[0]!).rate,
-    { numerator: -1, denominator: 1 });
-  const program = compileAudioProgram(sealComposition({ id: "reverse", visual: { canvas: { width: 1, height: 1, clearColor: "#000000" }, root: { members: [] } }, audio: { contributions: [track] } }, space));
-  assert.deepEqual(affinePiece(audioProgramSourceClips(program)[0]!.sampling.stages[0]!.pieces[0]!).rate,
     { numerator: -1, denominator: 1 });
 });
 
@@ -274,47 +269,12 @@ test("source bounds and fades quantize once into the same sample domain", () => 
   assert.deepEqual(sampledPiece(audioTrackClips(track)[0]!.sampling.stages[0]!.pieces[0]!).target,
     { startSample: 0, endSampleExclusive: 96_000 });
   assert.equal(audioTrackClips(track)[0]?.gain, 0.25);
-  const compiled = compileAudioProgram(sealComposition({ id: "trim", visual: { canvas: { width: 1, height: 1, clearColor: "#000000" }, root: { members: [] } }, audio: { contributions: [track] } }, space));
-  assert.equal(audioProgramSourceClips(compiled)[0]?.fadeInSamples, 4_800);
-  assert.equal(audioProgramSourceClips(compiled)[0]?.fadeOutSamples, 9_600);
   assert.throws(() => programTrack(media("fade", 24_000), spec({
     mix: { gain: 1, fadeIn: { unit: "seconds", numerator: 3, denominator: 1 }, fadeOut: zero },
   })), /fade exceeds its Window/u);
 });
 
-test("frame-authored fades share their Clip boundaries on a rational clock", () => {
-  const ntsc = sealTimeline({
-    id: "ntsc-space",
-    frameCount: 300,
-    frameRate: { numerator: 30_000, denominator: 1_001 },
-  });
-  const ntscSemantic = timelineFixture(ntsc, {
-    narrativeId: "ntsc-narrative",
-    segments: [{ id: "line", frameCount: 300 }],
-    anchors: [],
-  });
-  const sixteen = { unit: "frames" as const, value: 16 };
-  for (const startFrame of [0, 1, 2, 3]) {
-    const clip = spec({
-      mix: { gain: 1, fadeIn: sixteen, fadeOut: sixteen },
-      projection: {
-        start: { ref: "absolute", at: { unit: "frames", value: startFrame } },
-        end: { ref: "absolute", at: { unit: "frames", value: startFrame + 16 } },
-      },
-    });
-    const track = renderAudioTrack(ntsc, finalizeAudioTrack(
-      appendProgramAudioItem(createAudioTrackSet(), header, ntscSemantic, media("sting", 48_000), clip),
-      header,
-    ));
-    const rendered = audioProgramSourceClips(compileAudioProgram(sealComposition({ id: `ntsc-${startFrame}`, visual: { canvas: { width: 1, height: 1, clearColor: "#000000" }, root: { members: [] } }, audio: { contributions: [track] } }, ntsc)))[0]!;
-    const span = audioProgramClipSampleSpan(rendered);
-    const length = span.endSampleExclusive - span.startSample;
-    assert.equal(rendered.fadeInSamples, length, `fade-in from frame ${startFrame}`);
-    assert.equal(rendered.fadeOutSamples, length, `fade-out from frame ${startFrame}`);
-  }
-});
-
-test("piecewise audio maps preserve silent gaps while execution keeps one Clip-global fade clock", () => {
+test("piecewise audio maps preserve authored gaps", () => {
   const second = { unit: "seconds" as const, numerator: 1, denominator: 1 };
   const seconds = (value: number): TemporalDuration => ({ unit: "seconds", numerator: value, denominator: 1 });
   const track = programTrack(media("pieces", 96_000), spec({
@@ -332,17 +292,6 @@ test("piecewise audio maps preserve silent gaps while execution keeps one Clip-g
   assert.deepEqual(audioTrackClips(track)[0]?.sampling.stages[0]?.pieces.map((piece) => sampledPiece(piece).target), [
     { startSample: 0, endSampleExclusive: 48_000 },
     { startSample: 96_000, endSampleExclusive: 144_000 },
-  ]);
-  const program = compileAudioProgram(sealComposition({ id: "piecewise", visual: { canvas: { width: 1, height: 1, clearColor: "#000000" }, root: { members: [] } }, audio: { contributions: [track] } }, space));
-  assert.deepEqual(audioProgramSourceClips(program).map((clip) => ({
-    target: Object.values(audioProgramClipSampleSpan(clip)),
-    fade: [clip.fadeInSamples, clip.fadeOutSamples],
-    pieces: clip.sampling.stages[0]?.pieces.map((piece) => sampledPiece(piece).target),
-  })), [
-    { target: [0, 192_000], fade: [48_000, 48_000], pieces: [
-      { startSample: 0, endSampleExclusive: 48_000 },
-      { startSample: 96_000, endSampleExclusive: 144_000 },
-    ] },
   ]);
 });
 
@@ -392,28 +341,6 @@ test("AudioTrackSet refinement validates every accumulated Clip and its identity
     /duplicate Clip first/u);
   assert.throws(() => assertAudioTrackSet({ clips: [{ ...set.clips[0]!, source: undefined } as never] }),
     /source is invalid/u);
-});
-
-test("one Track with overlaps and two peer Tracks compile to the same mix", () => {
-  const sourceA = media("a", 48_000);
-  const sourceB = media("b", 48_000);
-  const first = { ...programTrack(sourceA, spec({ id: "a" })), id: "first" };
-  const second = { ...programTrack(sourceB, spec({ id: "b" })), id: "second" };
-  const combined = {
-    kind: "audio" as const,
-    id: "combined",
-    timelineId: space.id,
-    graph: audioGraphFromClips([
-      { ...audioTrackClips(first)[0]!, id: "a" },
-      { ...audioTrackClips(second)[0]!, id: "b" },
-    ]),
-  };
-  const peerProgram = compileAudioProgram(sealComposition({ id: "peer", visual: { canvas: { width: 1, height: 1, clearColor: "#000000" }, root: { members: [] } }, audio: { contributions: [first, second] } }, space));
-  const combinedProgram = compileAudioProgram(sealComposition({ id: "combined", visual: { canvas: { width: 1, height: 1, clearColor: "#000000" }, root: { members: [] } }, audio: { contributions: [combined] } }, space));
-  assert.deepEqual(
-    audioProgramSourceClips(peerProgram).map(({ id: _id, ...clip }) => clip),
-    audioProgramSourceClips(combinedProgram).map(({ id: _id, ...clip }) => clip),
-  );
 });
 
 test("dynamic Fragment keeps every material and temporal dependency as an explicit input", () => {

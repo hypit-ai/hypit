@@ -92,7 +92,7 @@ served by a supporting HypiHub Endpoint:
 <matte:Portrait id="cutout" source={performance.video}/>
 ```
 
-Prepare `cutout.video` to obtain `PreparedMedia` and its local domain. If it carries spoken
+Declare `cutout.video` as `media:Video` to obtain `PreparedMedia` and its local domain. If it carries spoken
 meaning, align that local domain to its Script Segment, then project the alignment through the
 equal-length Timeline Window. Place the prepared cutout as an ordinary Visual Clip. Matting changes the picture's
 background; the composition determines its role.

@@ -11,8 +11,8 @@ import {
 } from "@hypit/hypit/author";
 import { narrativeTypes } from "@hypit/narrative";
 import { canonicalize, sameType, type TypeRef } from "@hypit/hypit/protocol";
-import { temporalProducers, temporalTypes } from "@hypit/temporal";
-import { timelineTypes } from "@hypit/timeline";
+import { temporalTypes } from "@hypit/temporal";
+import { timelineProducers, timelineTypes } from "@hypit/timeline";
 
 import { narrativeTemporalModuleRef, narrativeTemporalProducers, narrativeTemporalTypes } from "./manifest.js";
 
@@ -96,7 +96,7 @@ export function createNarrativeProjectionFragment(mapCount: number): GraphFragme
     ports.push(
       { name: alignmentName, type: narrativeTemporalTypes.narrativeAlignment },
       { name: domainName, type: temporalTypes.localDomain },
-      { name: windowName, type: temporalTypes.window },
+      { name: windowName, type: timelineTypes.window },
     );
     const id = `entry-${number}`;
     operations.push({ id, producer: narrativeTemporalProducers.projectAlignment,
@@ -134,23 +134,23 @@ export function createNarrativeTimeFragment(kind: NarrativeSource["kind"], outpu
     projection: input("projection"), [kind]: input("source"), spec: input("start-spec"),
   }, result: { kind: "output", name: "instant" } }];
   if (output === "instant") return sealGraphFragment({ inputs: ports, operations,
-    exports: [{ name: "instant", type: temporalTypes.instant, root: operation("start") }] });
+    exports: [{ name: "instant", type: timelineTypes.instant, root: operation("start") }] });
   ports.push(
     { name: "end-spec", type: narrativeTemporalTypes.narrativeInstantSpec },
-    { name: "window-spec", type: temporalTypes.windowSpec },
+    { name: "window-spec", type: timelineTypes.temporalIdentity },
   );
   operations.push(
     { id: "end", producer: projectionProducer(kind), inputs: {
       projection: input("projection"), [kind]: input("source"), spec: input("end-spec"),
     }, result: { kind: "output", name: "instant" } },
-    { id: "window", producer: temporalProducers.composeWindow,
+    { id: "window", producer: timelineProducers.composeWindow,
       inputs: { spec: input("window-spec"), start: operation("start"), end: operation("end") },
       result: { kind: "output", name: "window" } },
   );
   return sealGraphFragment({ inputs: ports, operations, exports: [
-    { name: "window", type: temporalTypes.window, root: operation("window") },
-    { name: "start", type: temporalTypes.instant, root: operation("start") },
-    { name: "end", type: temporalTypes.instant, root: operation("end") },
+    { name: "window", type: timelineTypes.window, root: operation("window") },
+    { name: "start", type: timelineTypes.instant, root: operation("start") },
+    { name: "end", type: timelineTypes.instant, root: operation("end") },
   ] });
 }
 
@@ -172,7 +172,7 @@ export const narrativeProjectionAuthorDeclaration: AuthorDeclarationCompiler = {
     children: [{ name: "Map", cardinality: "many", summary: "Projects one local NarrativeAlignment into one absolute Window.", fields: [
       { name: "alignment", kind: "reference", required: true, accepts: [narrativeTemporalTypes.narrativeAlignment], summary: "Selects local Narrative timing facts." },
       { name: "domain", kind: "reference", required: true, accepts: [temporalTypes.localDomain], summary: "Selects the Alignment's local coordinate domain." },
-      { name: "window", kind: "reference", required: true, accepts: [temporalTypes.window], summary: "Selects the receiving absolute Window." },
+      { name: "window", kind: "reference", required: true, accepts: [timelineTypes.window], summary: "Selects the receiving absolute Window." },
     ] }],
   },
   bindings(declaration) {
@@ -191,7 +191,7 @@ export const narrativeProjectionAuthorDeclaration: AuthorDeclarationCompiler = {
       const number = index + 1;
       inputs[`alignment-${number}`] = (await resolved(child, "alignment", narrativeTemporalTypes.narrativeAlignment, resolveReference)).ref;
       inputs[`domain-${number}`] = (await resolved(child, "domain", temporalTypes.localDomain, resolveReference)).ref;
-      inputs[`window-${number}`] = (await resolved(child, "window", temporalTypes.window, resolveReference)).ref;
+      inputs[`window-${number}`] = (await resolved(child, "window", timelineTypes.window, resolveReference)).ref;
     }
     return {
       records: [{ id: `${id}.__header`, type: narrativeTemporalTypes.narrativeProjectionHeader, value: canonicalize({ id }), range: declaration.range }],
@@ -203,7 +203,7 @@ export const narrativeProjectionAuthorDeclaration: AuthorDeclarationCompiler = {
 export const narrativeInstantAuthorDeclaration: AuthorDeclarationCompiler = {
   module: narrativeTemporalModuleRef,
   declaration: "narrative-instant",
-  outputs: [narrativeTemporalTypes.narrativeInstantSpec, temporalTypes.instant],
+  outputs: [narrativeTemporalTypes.narrativeInstantSpec, timelineTypes.instant],
   shape: {
     summary: "Reveals one Narrative point or boundary as a named absolute Instant.",
     fields: [
@@ -215,7 +215,7 @@ export const narrativeInstantAuthorDeclaration: AuthorDeclarationCompiler = {
   },
   bindings(declaration) {
     const id = literal(declaration, "id");
-    return [outputBinding(id, `${id}.__projection`, "instant", temporalTypes.instant)];
+    return [outputBinding(id, `${id}.__projection`, "instant", timelineTypes.instant)];
   },
   async compile({ declaration, resolveReference }) {
     const id = literal(declaration, "id");
@@ -244,7 +244,7 @@ export const narrativeInstantAuthorDeclaration: AuthorDeclarationCompiler = {
 export const narrativeWindowAuthorDeclaration: AuthorDeclarationCompiler = {
   module: narrativeTemporalModuleRef,
   declaration: "narrative-window",
-  outputs: [narrativeTemporalTypes.narrativeInstantSpec, temporalTypes.windowSpec, temporalTypes.instant, temporalTypes.window],
+  outputs: [narrativeTemporalTypes.narrativeInstantSpec, timelineTypes.temporalIdentity, timelineTypes.instant, timelineTypes.window],
   shape: {
     summary: "Reveals one Narrative interval as a named absolute Window.",
     fields: [
@@ -256,9 +256,9 @@ export const narrativeWindowAuthorDeclaration: AuthorDeclarationCompiler = {
   bindings(declaration) {
     const id = literal(declaration, "id"), component = `${id}.__projection`;
     return [
-      outputBinding(id, component, "window", temporalTypes.window),
-      outputBinding(`${id}.start`, component, "start", temporalTypes.instant),
-      outputBinding(`${id}.end`, component, "end", temporalTypes.instant),
+      outputBinding(id, component, "window", timelineTypes.window),
+      outputBinding(`${id}.start`, component, "start", timelineTypes.instant),
+      outputBinding(`${id}.end`, component, "end", timelineTypes.instant),
     ];
   },
   async compile({ declaration, resolveReference }) {
@@ -271,7 +271,7 @@ export const narrativeWindowAuthorDeclaration: AuthorDeclarationCompiler = {
       records: [
         { id: startSpecId, type: narrativeTemporalTypes.narrativeInstantSpec, value: canonicalize({ id: `${id}.start`, subjectId: id, boundary: "start" }), range: declaration.range },
         { id: endSpecId, type: narrativeTemporalTypes.narrativeInstantSpec, value: canonicalize({ id: `${id}.end`, subjectId: id, boundary: "end" }), range: declaration.range },
-        { id: windowSpecId, type: temporalTypes.windowSpec, value: canonicalize({ id, subjectId: id }), range: declaration.range },
+        { id: windowSpecId, type: timelineTypes.temporalIdentity, value: canonicalize({ id, subjectId: id }), range: declaration.range },
       ],
       components: [{ id: componentId, fragment: createNarrativeTimeFragment(source.kind, "window"), inputs: {
         projection: projection.ref, source: source.reference.ref,

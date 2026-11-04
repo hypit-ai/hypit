@@ -136,7 +136,7 @@ already available:
   <time:Window id="opening" from="start" for={opening-media.extent}/>
 </time:Timeline>
 <visual:Track id="presenter" timeline={speech.timeline}>
-  <visual:Clip id="opening" media={opening-media.media} during={speech.opening}
+  <visual:Clip id="opening" media={opening-media.source} during={speech.opening}
     frame={presenter-frame} fit="cover" treatment={look.presenter}/>
 </visual:Track>
 ```
@@ -170,7 +170,7 @@ A typed `Motion` moves or fades the complete framed occurrence, including its bo
 for a moving crop or a slow push-in while a card's outline stays still:
 
 ```svml
-<visual:Clip media={prepared.media} during={detail}
+<visual:Clip media={prepared.source} during={detail}
   frame={detail-frame} fit="cover" treatment={look.detail}>
   <visual:Sampling at="start" zoom="1"/>
   <visual:Sampling at="end" zoom="1.08" y="-18"/>

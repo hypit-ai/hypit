@@ -162,25 +162,25 @@
     left="0%" top="0%" right="100%" bottom="100%"/>
   <time:Clock id="clock" frame-rate="30"/>
 
-  <mediaop:Prepare id="soundtrack-media" source={soundtrack}
-    video="none" audio="default" span-authority="audio"/>
-  <mediaop:Prepare id="rule-reveal-sound-media" source={rule-reveal-sound}
-    video="none" audio="default" span-authority="audio"/>
+  <media:Audio id="soundtrack-media" source={soundtrack}
+      />
+  <media:Audio id="rule-reveal-sound-media" source={rule-reveal-sound}
+      />
 
-  <mediaop:Prepare id="manifest-rule-media" source={manifest-rule-take.video}
-    video="primary-moving" audio="default" span-authority="video"/>
-  <mediaop:Prepare id="real-estate-rule-media" source={real-estate-rule-take.video}
-    video="primary-moving" audio="default" span-authority="video"/>
-  <mediaop:Prepare id="bitcoin-rule-media" source={bitcoin-rule-take.video}
-    video="primary-moving" audio="default" span-authority="video"/>
+  <media:Video id="manifest-rule-media" source={manifest-rule-take.video}
+     audio="default" />
+  <media:Video id="real-estate-rule-media" source={real-estate-rule-take.video}
+     audio="default" />
+  <media:Video id="bitcoin-rule-media" source={bitcoin-rule-take.video}
+     audio="default" />
 
-  <whisperx:Transcription id="manifest-rule-semantic-transcription" media={manifest-rule-media.media} language="en"/>
+  <whisperx:Transcription id="manifest-rule-semantic-transcription" media={manifest-rule-media.source} language="en"/>
   <speechalign:Alignment id="manifest-rule-semantic" narrative={story}
     segment={story.segment.manifest-rule} domain={manifest-rule-media.domain} evidence={manifest-rule-semantic-transcription.transcript}/>
-  <whisperx:Transcription id="real-estate-rule-semantic-transcription" media={real-estate-rule-media.media} language="en"/>
+  <whisperx:Transcription id="real-estate-rule-semantic-transcription" media={real-estate-rule-media.source} language="en"/>
   <speechalign:Alignment id="real-estate-rule-semantic" narrative={story}
     segment={story.segment.real-estate-rule} domain={real-estate-rule-media.domain} evidence={real-estate-rule-semantic-transcription.transcript}/>
-  <whisperx:Transcription id="bitcoin-rule-semantic-transcription" media={bitcoin-rule-media.media} language="en"/>
+  <whisperx:Transcription id="bitcoin-rule-semantic-transcription" media={bitcoin-rule-media.source} language="en"/>
   <speechalign:Alignment id="bitcoin-rule-semantic" narrative={story}
     segment={story.segment.bitcoin-rule} domain={bitcoin-rule-media.domain} evidence={bitcoin-rule-semantic-transcription.transcript}/>
 
@@ -209,25 +209,25 @@
   <sequence:TimelineRegions id="wojak-heads" document={wojak-tracking.heads}
     timeline={speech.timeline} canvas={vertical.canvas}/>
   <audio:Track id="speech-sound" timeline={speech.timeline}>
-    <audio:Clip id="manifest-rule-semantic-source" source={manifest-rule-media.media} during={speech.manifest-rule-semantic}/>
-    <audio:Clip id="real-estate-rule-semantic-source" source={real-estate-rule-media.media} during={speech.real-estate-rule-semantic}/>
-    <audio:Clip id="bitcoin-rule-semantic-source" source={bitcoin-rule-media.media} during={speech.bitcoin-rule-semantic}/>
+    <audio:Clip id="manifest-rule-semantic-source" source={manifest-rule-media.source} during={speech.manifest-rule-semantic}/>
+    <audio:Clip id="real-estate-rule-semantic-source" source={real-estate-rule-media.source} during={speech.real-estate-rule-semantic}/>
+    <audio:Clip id="bitcoin-rule-semantic-source" source={bitcoin-rule-media.source} during={speech.bitcoin-rule-semantic}/>
   </audio:Track>
   <visual:Track id="speech-picture" timeline={speech.timeline}>
-    <visual:Clip id="manifest-rule-semantic-source" media={manifest-rule-media.media} during={speech.manifest-rule-semantic} frame={full-frame} fit="cover"/>
-    <visual:Clip id="real-estate-rule-semantic-source" media={real-estate-rule-media.media} during={speech.real-estate-rule-semantic} frame={full-frame} fit="cover"/>
-    <visual:Clip id="bitcoin-rule-semantic-source" media={bitcoin-rule-media.media} during={speech.bitcoin-rule-semantic} frame={full-frame} fit="cover"/>
+    <visual:Clip id="manifest-rule-semantic-source" media={manifest-rule-media.source} during={speech.manifest-rule-semantic} frame={full-frame} fit="cover"/>
+    <visual:Clip id="real-estate-rule-semantic-source" media={real-estate-rule-media.source} during={speech.real-estate-rule-semantic} frame={full-frame} fit="cover"/>
+    <visual:Clip id="bitcoin-rule-semantic-source" media={bitcoin-rule-media.source} during={speech.bitcoin-rule-semantic} frame={full-frame} fit="cover"/>
   </visual:Track>
 
   <audio-track:Track id="music-bed" timeline={speech.timeline}>
-    <audio-track:Clip source={soundtrack-media.media} during={speech.window}
+    <audio-track:Clip source={soundtrack-media.source} during={speech.window}
       gain="0.12" fade-in="300ms" fade-out="600ms"/>
   </audio-track:Track>
 
   <audio-track:Track id="rule-reveal-sfx" timeline={speech.timeline}>
-    <audio-track:Clip id="manifest-reveal-sfx" source={rule-reveal-sound-media.media} during={manifest-reveal-sfx-window} gain="0.20"/>
-    <audio-track:Clip id="real-estate-reveal-sfx" source={rule-reveal-sound-media.media} during={real-estate-reveal-sfx-window} gain="0.20"/>
-    <audio-track:Clip id="bitcoin-reveal-sfx" source={rule-reveal-sound-media.media} during={bitcoin-reveal-sfx-window} gain="0.20"/>
+    <audio-track:Clip id="manifest-reveal-sfx" source={rule-reveal-sound-media.source} during={manifest-reveal-sfx-window} gain="0.20"/>
+    <audio-track:Clip id="real-estate-reveal-sfx" source={rule-reveal-sound-media.source} during={real-estate-reveal-sfx-window} gain="0.20"/>
+    <audio-track:Clip id="bitcoin-reveal-sfx" source={rule-reveal-sound-media.source} during={bitcoin-reveal-sfx-window} gain="0.20"/>
   </audio-track:Track>
 
   <fonts:Face id="caption-font" package="@fontsource-variable/league-spartan" weight="900" style="normal"/>

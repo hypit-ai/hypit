@@ -1,8 +1,6 @@
 import type { Composition } from "@hypit/composition";
 import { compileHtmlProgram, materializeHtmlProgram } from "@hypit/html-program";
 import type { HtmlProgram } from "@hypit/html-program";
-import { lowerPlaybackAudio } from "@hypit/html-playback";
-import { compileAudioProgram } from "@hypit/audio-program";
 
 import { injectRuntimeShim } from "./runtime-shim.js";
 
@@ -39,14 +37,5 @@ export function renderStudioHtmlProgram(input: RenderInput): { readonly document
     }
     return `/__studio/material/${artifact.resource}`;
   });
-  const audio = lowerPlaybackAudio(
-    compileAudioProgram(input.composition),
-    (artifact) => {
-      if (input.served?.has(artifact.resource) !== true) {
-        throw new Error(`Preview audio references Artifact ${artifact.resource}, which it cannot serve.`);
-      }
-      return `/__studio/material/${artifact.resource}`;
-    },
-  );
-  return { document, html, preview: injectRuntimeShim(html, audio, document) };
+  return { document, html, preview: injectRuntimeShim(html, "", document) };
 }

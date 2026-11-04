@@ -7,8 +7,8 @@ import { recipeType, type Recipe } from "@hypit/hypit/recipe";
 import { sameType, type CanonicalValue, type TypeRef } from "@hypit/hypit/protocol";
 import { spatialTypes } from "@hypit/spatial";
 import { sealText, textTypes } from "@hypit/hypit/text";
-import { resolveAuthorTimeline, resolveAuthorWindow, temporalContextFieldShape,
-  temporalWindowFieldShape } from "@hypit/temporal/author";
+import { resolveTimelineReference, resolveWindowReference, timelineContextFieldShape,
+  timelineWindowFieldShape } from "@hypit/timeline-author/reference";
 
 import { decodeCommentStickerStyle } from "./author.js";
 import { createCommentStickerFragment } from "./fragment.js";
@@ -91,7 +91,7 @@ export const commentStickerTrackAuthorDeclaration: AuthorDeclarationCompiler = {
   shape: {
     summary: "Builds a visual Track from timed comment Stickers.",
     fields: [{ name: "id", kind: "identifier", required: true, summary: "Names the Sticker program." },
-      temporalContextFieldShape],
+      timelineContextFieldShape],
     children: [{ name: "Sticker", cardinality: "many", summary: "Declares one timed comment card.", fields: [
       { name: "id", kind: "identifier", required: true, summary: "Names the Sticker." },
       { name: "comment", kind: "expression", required: false, accepts: [textTypes.text], summary: "States or selects the comment text." },
@@ -101,7 +101,7 @@ export const commentStickerTrackAuthorDeclaration: AuthorDeclarationCompiler = {
       { name: "author", kind: "expression", required: false, accepts: [textTypes.text], summary: "States or selects the author label." },
       { name: "header", kind: "expression", required: false, accepts: [textTypes.text], summary: "States or selects the header label." },
       { name: "meta", kind: "expression", required: false, accepts: [textTypes.text], summary: "States or selects metadata text." },
-      temporalWindowFieldShape,
+      timelineWindowFieldShape,
     ], text: "Comment text when the comment field is omitted." }],
   },
   bindings(declaration) {
@@ -114,7 +114,7 @@ export const commentStickerTrackAuthorDeclaration: AuthorDeclarationCompiler = {
   async compile({ declaration, resolveReference }) {
     if (declaration.children.length === 0) throw new Error("Comment Sticker Track requires at least one Sticker.");
     const id = literal(declaration, "id");
-    const timeline = await resolveAuthorTimeline(declaration, resolveReference);
+    const timeline = await resolveTimelineReference(declaration, resolveReference);
     const headerId = `${id}.__header`;
     const records: { id: string; type: TypeRef; value: CanonicalValue; range: AuthorDeclaration["range"] }[] = [{
       id: headerId, type: commentStickerTypes.header,
@@ -126,7 +126,7 @@ export const commentStickerTrackAuthorDeclaration: AuthorDeclarationCompiler = {
       if (child.name !== "Sticker") throw new Error(`Comment Sticker Track does not accept ${child.name}.`);
       const suffix = String(items.length + 1).padStart(4, "0");
       const itemId = literal(child, "id");
-      const window = await resolveAuthorWindow(child, resolveReference);
+      const window = await resolveWindowReference(child, resolveReference);
       const frame = await reference(child, "frame", spatialTypes.frame, resolveReference);
       const style = await reference(child, "style", commentStickerTypes.style, resolveReference);
       const avatar = declarationField(child, "avatar") === undefined ? undefined

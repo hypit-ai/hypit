@@ -1,6 +1,6 @@
 import type { NarrativeSegmentRef, NarrativeMomentRef, NarrativeSelectionRef } from "@hypit/narrative";
-import { projectDomainPosition } from "@hypit/temporal";
-import type { LocalTemporalDomain, TemporalInstant, TemporalWindow } from "@hypit/temporal";
+import type { LocalTemporalDomain } from "@hypit/temporal";
+import type { TemporalInstant, TemporalWindow } from "@hypit/timeline";
 import { assertTimelineIdentity, timelineFrameCount } from "@hypit/timeline";
 import type { Timeline } from "@hypit/timeline";
 
@@ -11,6 +11,7 @@ import {
   assertNarrativeProjectionPartsIdentity,
 } from "./identity.js";
 import type { NarrativeAlignment, NarrativeInstantSpec, NarrativeProjection, ProjectedNarrativeAlignment } from "./types.js";
+import { projectNarrativeDomainPosition } from "./domain-projection.js";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -31,7 +32,7 @@ export function projectNarrativeAlignment(
     tokens: structuredClone(alignment.tokens),
     boundaries: alignment.boundaries.map((boundary) => ({
       id: boundary.id,
-      frame: projectDomainPosition(domain, window, timeline, boundary.at),
+      frame: projectNarrativeDomainPosition(domain, window, timeline, boundary.at),
     })),
   };
 }

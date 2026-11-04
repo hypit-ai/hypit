@@ -1,6 +1,6 @@
 import { sealPresentVisualTrack } from "@hypit/composition";
 import { htmlVisual } from "@hypit/html-program";
-import { assertTemporalWindowFor } from "@hypit/temporal";
+import { assertTemporalWindowFor } from "@hypit/timeline";
 const sty = (o) => Object.entries(o).map(([name, value]) => ({ name, value }));
 const esc = (s) =>
   String(s).replace(

@@ -8,7 +8,7 @@ Named Instants, Windows, media occurrences and semantic projections refer to tha
 
 For spoken work, independent facts meet around that axis:
 
-1. Prepare accepted media as source-preserving `PreparedMedia` plus a finite exact local temporal domain.
+1. Let each accepted Media object expose source-preserving `PreparedMedia` plus its finite exact local temporal domain.
 2. Construct Timeline from a DAG of named Instants, Windows and Extents with one required `end`.
 3. When a consumer needs positions inside performed speech, align its Script Segment on the local domain.
 4. Project requested semantic values through the explicitly placed Window; present ordinary media through independent Visual and Audio sources.
@@ -28,20 +28,20 @@ or Script.
 <import as="audio" from="@hypit/audio-track@1"/>
 ```
 
-## Prepare local media
+## Declare timed Media
 
-Preparation selects the intended members and publishes an exact local domain and Extent without
-choosing the final Timeline's frame grid:
+Timed Media publishes the original Resource directly and selects the intended members lazily to expose
+an exact local domain and Extent without choosing the final Timeline's frame grid:
 
 ```svml
 <time:Clock id="clock" frame-rate="30"/>
-<mediaop:Prepare id="opening-media" source={opening-video.video}
-  video="primary-moving" audio="default" span-authority="video"/>
-<mediaop:Prepare id="answer-media" source={answer-video.video}
-  video="primary-moving" audio="default" span-authority="video"/>
+<media:Video id="opening-media" source={opening-video.video}
+   audio="default" />
+<media:Video id="answer-media" source={answer-video.video}
+   audio="default" />
 ```
 
-Preparation publishes the selected members, their exact local temporal domain and Extent, and the
+The Media prepared branch publishes the selected members, their exact local temporal domain and Extent, and the
 source relationship needed by later consumers. Script alignment and programme placement remain
 separate author decisions.
 
@@ -53,12 +53,12 @@ accepted performance:
 
 ```svml
 <whisperx:Transcription id="opening-transcription"
-  media={opening-media.media} language="en"/>
+  media={opening-media.source} language="en"/>
 <speechalign:Alignment id="opening-alignment" narrative={story}
   segment={story.segment.opening} domain={opening-media.domain}
   evidence={opening-transcription.transcript}/>
 <whisperx:Transcription id="answer-transcription"
-  media={answer-media.media} language="en"/>
+  media={answer-media.source} language="en"/>
 <speechalign:Alignment id="answer-alignment" narrative={story}
   segment={story.segment.answer} domain={answer-media.domain}
   evidence={answer-transcription.transcript}/>
@@ -133,15 +133,15 @@ offset is needed.
 
 ```svml
 <visual:Track id="picture" timeline={speech.timeline}>
-  <visual:Clip id="opening" media={opening-media.media} during={speech.opening}
+  <visual:Clip id="opening" media={opening-media.source} during={speech.opening}
     frame={speech-frame} fit="cover"/>
-  <visual:Clip id="answer" media={answer-media.media} during={speech.answer}
+  <visual:Clip id="answer" media={answer-media.source} during={speech.answer}
     frame={speech-frame} fit="cover"/>
 </visual:Track>
 
 <audio:Track id="mix" timeline={speech.timeline}>
-  <audio:Clip id="opening" source={opening-media.media} during={speech.opening}/>
-  <audio:Clip id="answer" source={answer-media.media} during={speech.answer}/>
+  <audio:Clip id="opening" source={opening-media.source} during={speech.opening}/>
+  <audio:Clip id="answer" source={answer-media.source} during={speech.answer}/>
 </audio:Track>
 ```
 

@@ -1,11 +1,11 @@
 import { parseHTML } from "linkedom";
-import type { Composition } from "@hypit/composition";
-import { assertHtmlProgram, compileHtmlProgram, materializeHtmlProgram } from "@hypit/html-program";
+import { assertHtmlProgram, materializeHtmlProgram } from "@hypit/html-program";
 import type { HtmlProgram, ResourceUrlResolver } from "@hypit/html-program";
 import { injectHtmlPlayback, lowerPlaybackAudio } from "@hypit/html-playback";
 import type { PlaybackResourceUrlResolver } from "@hypit/html-playback";
-import { compileAudioProgram, verifyAudioProgram } from "@hypit/audio-program";
+import { verifyAudioProgram } from "@hypit/audio-program";
 import type { AudioProgram } from "@hypit/audio-program";
+import { compareExactTemporalValues, exactTemporalValueFromFrames } from "@hypit/temporal";
 
 export type HtmlDocument = {
   readonly format: "hypit.html-document@1";
@@ -20,13 +20,13 @@ export type HtmlDocumentPlaybackOptions = {
   readonly responsive?: boolean;
 };
 
-export function compileHtmlDocument(composition: Composition): HtmlDocument {
-  const program = compileHtmlProgram(composition);
-  const audio = compileAudioProgram(composition);
+export function compileHtmlDocument(program: HtmlProgram, audio: AudioProgram): HtmlDocument {
+  assertHtmlProgram(program);
+  verifyAudioProgram(audio);
   return {
     format: "hypit.html-document@1",
-    program,
-    audio,
+    program: structuredClone(program),
+    audio: structuredClone(audio),
   };
 }
 
@@ -39,10 +39,11 @@ export function assertHtmlDocument(value: unknown): asserts value is HtmlDocumen
   const program = document.program;
   assertHtmlProgram(program);
   verifyAudioProgram(document.audio);
-  if (program.frameCount !== document.audio.frameCount
-    || program.frameRate.numerator !== document.audio.frameRate.numerator
-    || program.frameRate.denominator !== document.audio.frameRate.denominator) {
-    throw new Error("HTML picture and sound must use the same frame clock");
+  if (compareExactTemporalValues(
+    exactTemporalValueFromFrames(program.frameCount, { frameRate: program.frameRate }),
+    document.audio.domain.duration,
+  ) !== 0) {
+    throw new Error("HTML picture and sound must cover the same exact duration");
   }
 }
 

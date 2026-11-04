@@ -109,7 +109,7 @@ The Endpoint:
 During one `render-timeline-audio` request, selected sources and transform working files stay in that request's temporary
 directory. The requested output sample range is projected through the closed AudioProgram into one request-local demand plan.
 Source preparation and the signal reader consume that same plan, so a partial render neither decodes
-nor later asks for an unrelated Clip. Each Prepared Media and Clip occurrence Map is validated and bound once while building
+nor later asks for an unrelated signal use. Each Prepared Media and occurrence Map is validated and bound once while building
 that plan; range projection and sample reading retain the same sided evaluator instance. Reverse, hold, gaps, wrapping and cubic
 relations therefore cannot acquire a separate demand interpretation, and structural Map checks do not run once per output sample.
 A selected source may still be decoded as a complete canonical PCM track in this first implementation; that execution choice does
@@ -153,13 +153,14 @@ execution topology leaves author meaning unchanged.
 The local audio Renderer evaluates the complete occurrence and Prepared Media maps as one signal
 pullback. Affine, reverse, hold, wrap, gap, cubic and multi-stage relations therefore use the same
 execution path. Selected source streams are decoded once per request to canonical 48 kHz stereo PCM;
-the Renderer reads them through a bounded page cache, applies Clip automation and adds the resulting
+the Renderer reads them through a bounded page cache, evaluates the closed signal graph and adds the resulting
 signals in output blocks. The AudioProgram is one closed signal graph.
 It does not infer pitch-preserving stretch from a temporal relation: such a
-reconstruction policy is an explicit Clip reconstruction with its own programme owner. The Provider
-implements `@hypit/audio-stretch` PreservePitch for a complete positive-affine, non-looping occurrence;
+reconstruction policy belongs to the mapped nested Programme use and has its own package owner. The Provider
+implements `@hypit/audio-stretch` PreservePitch when that use has a direct one-media-leaf child Programme and a
+complete positive-affine, non-looping Mapping;
 its source trim keeps exact rational boundaries through Map composition and uses Temporal's shared nearest-boundary
 rule on the 48 kHz grid. Only the final FFmpeg tempo parameter is floating point.
-other relations or reconstruction formats are accurately unsupported rather than silently resampled.
+Other relations, child Programme shapes or reconstruction formats are accurately unsupported rather than silently resampled.
 Speech-evidence projection remains intentionally narrower and reports its positive-affine, non-looping
 signal boundary instead of rewriting the preserved media relation.

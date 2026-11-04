@@ -5,8 +5,7 @@ Visual Track is the plain picture-placement package. Its author model is deliber
 ```text
 Visual Clip = one picture source + absolute Window + Frame
             + spatial map + optional temporal Map/Curve + optional treatment + optional typed Motion
-Transition = two adjacent, overlapping Visual Clips + a package-owned effect
-Visual Track = ordered Clips + explicit Transition relations
+Visual Track = ordered Clips
 ```
 
 That model is owned by the package's syntax-neutral Author declarations. They define Clip source
@@ -16,17 +15,13 @@ Temporal's value-level API, while this package decides where those relations are
 
 The Track consumes one completed Timeline. It publishes `.program` for
 declared tooling and `.visual` for Film. It does not discover media or anchors from Timeline, infer
-semantic roles, select audio, or derive Transition participants from timing proximity.
+semantic roles, or select audio.
 
 ```svml
-<import as="transition" from="@hypit/visual-transition@1"/>
-
 <visual:Motion id="gentle-push">
   <visual:Pose at="start" scale="1.08" easing="ease-out"/>
   <visual:Pose at="end" scale="1"/>
 </visual:Motion>
-
-<transition:CrossDissolve id="soft-mix" easing="ease-in-out"/>
 
 <visual:Track id="picture" timeline={program.timeline}>
   <visual:Clip id="speaker" media={speaker-media.media}
@@ -34,8 +29,6 @@ semantic roles, select audio, or derive Transition participants from timing prox
   <visual:Clip id="diagram" image={diagram} picture="srgb" extent={diagram-extent}
     during={explanation} frame={inset-frame} fit="contain"
     treatment={recipes.visual.diagram} motion={gentle-push}/>
-  <visual:Transition id="speaker-to-diagram"
-    outgoing="speaker" incoming="diagram" effect={soft-mix}/>
 </visual:Track>
 ```
 
@@ -133,38 +126,6 @@ Source media may use a different or variable frame cadence from the Timeline; th
 traversal. A still image has no temporal domain and refuses Map; it simply remains visually active throughout the Clip Window while
 Clip-local Motion may still animate it.
 
-## Transitions
-
-`Transition` is a relation between two existing Clip occurrences, not a third picture source.
-`outgoing` and `incoming` name the participants explicitly, and `effect` references a separately
-authored `VisualTransitionEffect`. The two Clips must overlap and be neighbours in Track paint order,
-with the outgoing Clip starting and ending first. Their complete intersection is the Transition span;
-authors do not repeat that fact as a `during` Window. There are no hidden handles, freeze frames,
-repeated samples or inferred edit points. The Program retains only the relation; projection and
-Studio derive the intersection from the participant Windows instead of caching a second span fact.
-
-```svml
-<transition:CrossDissolve id="soft-mix" easing="ease-in-out"/>
-
-<visual:Track id="sequence" timeline={program.timeline}>
-  <visual:Clip id="wide" media={wide.media} during={wide-window} frame={full} fit="cover"/>
-  <visual:Clip id="close" media={close.media} during={close-window} frame={full} fit="cover"/>
-  <visual:Transition id="wide-to-close"
-    outgoing="wide" incoming="close" effect={soft-mix}/>
-</visual:Track>
-```
-
-Each Clip keeps evaluating its own temporal Map during the overlap. Projection supplies both Presents
-as independently timed inputs to a generic Composition `VisualProcess`. `VisualTransitionEffect` is the
-closed two-port `VisualProcessEffect` whose ports are exactly `outgoing` and `incoming`, so the port contract
-survives projection instead of becoming a renderer convention. The effect package decides how they combine.
-Visual Track knows no transition catalogue. Studio shows the relation on an attached
-Transitions lane and follows `effect` to that package's parameter companion.
-
-`@hypit/visual-transition` supplies the official Dissolve, Dip, Push, Slide, Wipe, Iris, Zoom Dissolve
-and Blur Dissolve effects. Other packages can publish the same `VisualTransitionEffect` Type without
-changing this package, Composition or Film.
-
 Visual Track still contains no generic `Presentation`, `Use`, `Sequence` or inferred `Handoff`.
 Multi-shot choreography, slideshows, shared masks and coordinated visual/audio behavior remain
 ordinary project/author components that publish the same terminal `VisualTrack`.
@@ -191,5 +152,9 @@ terminal value without depending on this package.
 
 The package's activation contributes both its author declarations and its Studio Companion. The
 Companion preserves Clip material, Frame, fit, treatment and typed Motion as separate
-author facts, and presents Cross Dissolve relations in their own attached lane. Studio's generic terminal fallback can still display a Composition `VisualTrack` made
+author facts. Studio's generic terminal fallback can still display a Composition `VisualTrack` made
 by another package without interpreting it as a Visual Track Clip.
+
+This package is now a migration bridge for the remaining legacy Clip path. It deliberately no longer
+owns Transition facts. Package-owned visual transitions publish typed `PictureOperator` values and are
+applied in an `AudiovisualProgram`; adjacency, overlap and a Track lane are not execution semantics.

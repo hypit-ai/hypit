@@ -6,17 +6,10 @@ import { preparedAudioSource, verifyPreparedMedia } from "@hypit/media";
 import type { PreparedMedia } from "@hypit/media";
 import { canonicalize, compareCodeUnits } from "@hypit/hypit/protocol";
 import {
-  assertTemporalMap,
-  assertTemporalRelationSpec,
-  assertTemporalWindowFor,
-  compareExactTemporalValues,
-  exactTemporalValueFromDuration,
-  exactTemporalValueFromFrames,
-  resolveTemporalRelation,
-  sealLocalTemporalDomain,
-  subtractExactTemporalValues,
-} from "@hypit/temporal";
-import type { TemporalWindow, TemporalDuration, TemporalRelationSpec } from "@hypit/temporal";
+  assertTemporalMap, assertTemporalRelationSpec, compareExactTemporalValues, exactTemporalValueFromDuration, exactTemporalValueFromFrames, resolveTemporalRelation, sealLocalTemporalDomain, subtractExactTemporalValues } from "@hypit/temporal";
+import { assertTemporalWindowFor } from "@hypit/timeline";
+import type { TemporalDuration, TemporalRelationSpec } from "@hypit/temporal";
+import type { TemporalWindow } from "@hypit/timeline";
 
 import type {
   AudioClipSpec,
@@ -125,7 +118,7 @@ function realizedClips(
         duration: exactTemporalValueFromFrames(window.span.endFrameExclusive - window.span.startFrame, timeline),
       }),
       source: media.domain,
-      clock: timeline,
+      grid: timeline,
       ...(spec.sampling === undefined ? {} : { spec: spec.sampling }),
     }),
     ...(spec.reconstruction === undefined ? {} : { reconstruction: structuredClone(spec.reconstruction) }),

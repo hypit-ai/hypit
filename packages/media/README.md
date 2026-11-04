@@ -2,19 +2,26 @@
 
 Author-facing media declarations for the neutral `@hypit/media` contract module.
 
-`<media:Image>`, `<media:Audio>`, `<media:Video>` and `<media:Font>` request bytes through the Host-owned source-asset
-capability. Image, Audio and Video emit one Resource-backed `Blob`; Font wraps the same immutable
-bytes with exact weight/style metadata as a one-source `FontArtifactRef`. A logical font face may
-also contain several exact Unicode-range sources when another package, such as
-`@hypit/fontsource`, adapts a sharded installed font. `FontStackRef` is the generic ordered value
-for one primary face followed by exact glyph fallbacks. Media declarations do not open files themselves,
-inspect media, call a Provider or promote declared audio to speech. The consuming author package
-decides whether an audio artifact is a voice reference, soundtrack, evidence source or something
-else, whether a video is a generation reference or another input, and which visual component uses
-an exact Font.
+`<media:Image>`, `<media:Audio>`, `<media:Video>` and `<media:Font>` may request bytes through the Host-owned source-asset
+capability. `Audio` and `Video` can instead bind `source` to a Blob produced by generation, a media operation or another Source.
+Image emits one Resource-backed `Blob`; Font wraps the same immutable bytes with exact weight/style metadata as a one-source
+`FontArtifactRef`. A logical font face may also contain several exact Unicode-range sources when another package, such as
+`@hypit/fontsource`, adapts a sharded installed font. `FontStackRef` is the generic ordered value for one primary face followed
+by exact glyph fallbacks.
+
+Audio and Video are complete Media author objects. Their default binding and `.resource` facet project the original Blob;
+`.source`, `.domain` and `.extent` derive PreparedMedia through `inspect -> select -> prepare`. Kernel target closure makes
+the two branches genuinely lazy: a generation request that consumes only the Resource never issues the inspection Need,
+while Film, Evidence or temporal construction can demand the prepared branch after the actual Resource exists. Neither the
+author declaration nor Host guesses an AIGC duration.
+
+The default Video policy selects primary moving picture, optional default audio and visual span authority. The default Audio
+policy selects default audio and audio authority. Authors can override stream selection, picture interpretation and authority
+on the same Media object. Selecting audio still does not promote it to speech; downstream relationships decide whether a
+Resource or prepared signal is a voice reference, soundtrack, evidence source or occurrence.
 
 Media's syntax-neutral Author declarations own these fields, conditional Font shape, asset requests,
-reference Types and output Records. Markup contributes only the Image, Audio, Video, Font, FontStack
+reference Types, graph branches and output Records. Markup contributes only the Image, Audio, Video, Font, FontStack
 and Delivery spellings. Asset resolution remains an explicit compiler capability, and FontStack may
 reference authored Font Records regardless of their textual order.
 

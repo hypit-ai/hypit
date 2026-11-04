@@ -3,9 +3,9 @@ import { join } from "node:path";
 
 import { materializeHtmlProgram, selectHtmlArtifacts } from "@hypit/html-program";
 import type { HtmlProgram } from "@hypit/html-program";
-import type { CompositableSurfaceRef, PictureInterpretation } from "@hypit/media";
+import type { PictureInterpretation } from "@hypit/media";
 import type { BlobRef } from "@hypit/hypit/protocol";
-import type { FrameSpan } from "@hypit/timeline";
+import type { FrameSpan } from "@hypit/temporal";
 
 /** Reads one execution resource. Whose store it comes from is the caller's business. */
 export type HtmlArtifactReader = (
@@ -13,11 +13,6 @@ export type HtmlArtifactReader = (
   signal?: AbortSignal,
 ) => Promise<Uint8Array | AsyncIterable<Uint8Array>>;
 /** Inspect the completed staged file; its lifetime belongs to the staging caller. */
-export type HtmlSurfaceValidator = (
-  surface: CompositableSurfaceRef,
-  path: string,
-  signal?: AbortSignal,
-) => Promise<void>;
 /** Validate a direct still whose author interpretation cannot be recovered from browser state. */
 export type HtmlPictureValidator = (
   picture: PictureInterpretation,
@@ -57,7 +52,6 @@ export async function stageHtmlProgram(options: {
   readonly document: HtmlProgram;
   readonly directory: string;
   readonly read: HtmlArtifactReader;
-  readonly validateSurface?: HtmlSurfaceValidator;
   readonly validatePicture?: HtmlPictureValidator;
   /** Whole-request absolute selection. Omit only when every frame may be rendered. */
   readonly frameSelection?: readonly FrameSpan[];
@@ -84,13 +78,8 @@ export async function stageHtmlProgram(options: {
   // selected roots can only activate Artifacts admitted above.
   const paths = new Map(document.artifacts.map((entry, index) => [entry.id,
     `./artifacts/asset-${index}${extension(entry.artifact.mediaType)}`]));
-  const surfaces = new Map(document.surfaces.map((binding) => [binding.artifactId, binding.surface]));
-  if (options.validateSurface === undefined
-    && selected.some(({ entry }) => surfaces.has(entry.id))) {
-    throw new Error("HTML renderer Runtime has no Surface-byte validator");
-  }
   if (options.validatePicture === undefined
-    && selected.some(({ entry }) => entry.kind === "picture" && !surfaces.has(entry.id))) {
+    && selected.some(({ entry }) => entry.kind === "picture")) {
     throw new Error("HTML renderer Runtime has no picture-byte validator");
   }
   let nextArtifact = 0;
@@ -111,7 +100,6 @@ export async function stageHtmlProgram(options: {
         const chunks = opened instanceof Uint8Array
           ? (async function* () { yield opened; })()
           : opened;
-        const surface = surfaces.get(selectedArtifact.entry.id);
         let size = 0;
         const path = join(artifactDirectory, name);
         const target = await open(path, "w");
@@ -127,10 +115,7 @@ export async function stageHtmlProgram(options: {
         if (size !== artifact.size) {
           throw new Error(`HTML renderer Artifact ${artifact.resource} size differs`);
         }
-        if (surface !== undefined) {
-          // The validator borrows the completed staged file for this call only.
-          await options.validateSurface!(structuredClone(surface), path, signal);
-        } else if (selectedArtifact.entry.kind === "picture") {
+        if (selectedArtifact.entry.kind === "picture") {
           await options.validatePicture!(structuredClone(selectedArtifact.entry.picture), path, signal);
         }
       } catch (error) {

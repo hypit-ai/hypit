@@ -9,7 +9,7 @@
   "hypit": { "activation": "./src/activation.ts" },
   "dependencies": {
     "@hypit/media": "workspace:^0.2.0",
-    "@hypit/timeline": "workspace:^0.1.1"
+    "@hypit/temporal": "workspace:^0.1.1"
   },
   "peerDependencies": { "@hypit/hypit": "workspace:^0.4.0" },
   "devDependencies": {

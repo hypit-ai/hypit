@@ -75,22 +75,29 @@ An image reference can enter a model directly. A still placed as a Visual Clip n
 IntrinsicExtent as well. Inspect its dimensions with `hypit media probe <file>` and declare them
 with `space:Extent`; [spatial layout](spatial.md) explains extent versus destination Frame.
 
-## Prepare moving media
+## Use the Resource and prepared facets of timed Media
 
 Clips can arrive with different frame rates, several streams or picture and sound of different
-lengths. Prepare selects the intended streams, preserves their exact local time and source relation,
-and leaves the Film clock to the consumer.
+lengths. `media:Video` and `media:Audio` own both the original Resource and a lazy prepared branch.
+The branch selects the intended streams, preserves their exact local time and source relation, and
+leaves the Film clock to the consumer.
 
 The following excerpt prepares a performance and an independent soundtrack:
 
 ```svml
-<import as="mediaop" from="@hypit/media-operations@1"/>
+<import as="media" from="@hypit/media@1"/>
 
-<mediaop:Prepare id="performance-media" source={performance}
-  video="primary-moving" picture="source" audio="default" span-authority="video"/>
-<mediaop:Prepare id="music-media" source={music}
-  video="none" audio="default" span-authority="audio"/>
+<media:Video id="performance-media" source={performance}
+   picture="source" audio="default" />
+<media:Audio id="music-media" source={music}
+    />
 ```
+
+Use `src` for a project asset and `source` for a Blob produced by generation, a media operation or an
+imported Source. The Media's default binding and `.resource` publish the original Blob. `.source`,
+`.domain` and `.extent` publish its prepared facets. If a Build consumes only the Resource, Kernel
+target closure does not run inspection; requesting a prepared facet waits for the actual Resource and
+then observes its real duration.
 
 The prepared media supplies an exact length independently of a Film Clock. Visual and Audio consumers
 each declare their own occurrence Window and exact sampling relation. The selected renderer evaluates only
@@ -105,9 +112,9 @@ the signal it consumes; its decoder, frame grid, sample buffers and caches are e
 
 `primary-moving` excludes attached cover art. The default audio selection uses the default or
 unambiguous audio stream; select an explicit stream when the container has several intended choices.
-`hypit vocabulary @hypit/media-operations --tag Prepare` gives the supported selectors.
+`hypit vocabulary @hypit/media --tag Video` and `--tag Audio` give the supported selectors.
 
-Preparation inspects the bytes and produces `{performance-media.media}`: a `PreparedMedia` value with
+The prepared branch inspects the bytes and produces `{performance-media.source}`: a `PreparedMedia` value with
 an exact local domain, optional picture and optional audio, and explicit maps to source presentation
 time. It does not transcode or resample. Balance, fades and music ducking remain mix decisions in
 [Audio Track and sound mix](../playbooks/craft/sound-mix.md).
@@ -141,7 +148,7 @@ them on the accepted media's local domain:
 <import as="speechalign" from="@hypit/narrative-speech-alignment@1"/>
 
 <whisperx:Transcription id="opening-transcription"
-  media={performance-media.media} language="en"/>
+  media={performance-media.source} language="en"/>
 <speechalign:Alignment id="opening-semantic" narrative={story}
   segment={story.segment.opening} domain={performance-media.domain}
   evidence={opening-transcription.transcript}/>
@@ -205,8 +212,8 @@ time-bearing clip, use StillVideo:
 <import as="mediaop" from="@hypit/media-operations@1"/>
 
 <mediaop:StillVideo id="opening-still" source={product} duration="6s" clock={clock}/>
-<mediaop:Prepare id="opening-media" source={opening-still.video}
-  video="primary-moving" audio="none" span-authority="video"/>
+<media:Video id="opening-media" source={opening-still.video}
+   audio="none" />
 ```
 
 StillVideo produces a video-only Blob. Multiple `media:Still` children divide the authored
@@ -214,39 +221,24 @@ duration by their optional weights. Preparation then makes that clip usable as p
 media. Choose it when one or more held images need to become a time-bearing video Artifact; its role
 is assigned by the downstream Source relationships just like any other video.
 
-## Derive or extract media explicitly
+## Extract material explicitly; keep timing edits in the occurrence
 
 ```svml
-<mediaop:Transform id="edited" source={performance-media.media}>
-  <mediaop:Trim tail="0.25s"/>
-  <mediaop:Retime rate="1.05"/>
-</mediaop:Transform>
-<mediaop:Transform id="ramped" source={performance-media.media}>
-  <mediaop:Retime>
-    <mediaop:Rate at="start" value="1"/>
-    <mediaop:Rate at="end-1s" value="1/8"/>
-    <mediaop:Rate at="end" value="1"/>
-  </mediaop:Retime>
-</mediaop:Transform>
 <mediaop:ExtractAudio id="voice-reference" source={performance} audio="default"/>
 <mediaop:ExtractFrame id="frame-reference" source={performance}
   video="primary-moving" at="last"/>
 ```
 
-Transform applies its operations in order and publishes another `PreparedMedia`; trim and retime
-therefore compose without creating intermediate files. A leaf `Retime` uses one non-zero rational
-rate; a negative rate traverses the complete current local domain in reverse. A nested profile uses
-ordered `Rate` knots across the complete source. The first and last knots name opposite edges,
-intermediate positions stay strictly ordered, and each adjacent pair is integrated into an exact
-target-to-source curve after the actual PreparedMedia duration is known; rate changes linearly over
-that derived target interval. Use `start`, `end`, seconds
-or milliseconds from either edge; native source-frame numbers are not local-time coordinates.
-Extracted audio or a frame can directly
-feed a compatible model reference port.
+Trim, retime, reverse, loop, hold and speed curves belong to the Film/NLE occurrence that uses the
+Media. Compose them there into that use's target-to-source relation; do not publish another
+`PreparedMedia`. Repeat the relation when several uses need the same edit. If a processed result must
+be independently uploaded, analysed or reused across projects, materialize it with an external media
+tool and import the resulting file as a new Media object.
+
+Extracted audio or a frame can directly feed a compatible model reference port.
 `ExtractFrame` also accepts `first`, `frame:<index>` and `time:<seconds>`.
 
-Use graph operations for repeatable preparation belonging to the production. `hypit media` commands
-are useful for inspection and deliberately exported evidence. Image geometry changes and compositing
+`hypit media` commands are useful for inspection and deliberately exported evidence. Image geometry changes and compositing
 have one installed vocabulary in `@hypit/image-operations`; select
 the operation that matches the asset's intended use.
 
@@ -264,7 +256,7 @@ visual source. Author that relation in the component.
 
 For a moving portrait, the installed `@hypit/volcengine-matting` package exposes `Portrait` with
 `source={performance.video}` and publishes `cutout.video`; query its vocabulary and README for
-transparent formats and current Provider support. Existing transparent material can enter Prepare
+transparent formats and current Provider support. Existing transparent material can enter `media:Video`
 directly. Removing a still reference's background does not establish transparency in generated video.
 
 Choose an operation for the material it actually accepts: a moving silhouette needs a video matte
@@ -273,12 +265,14 @@ or suitable keying operation; deterministic Image Operations do not silently tur
 preparing and judging footage for that use. A fixed flattened arrangement of still images can use
 [Image Compose](image-operations.md#flatten-a-fixed-still-image-arrangement) when that is the desired output.
 
-Pure trim and retime preserve the source and alpha interpretation until a consumer requests signal.
+Occurrence-local trim and retime preserve the Media and alpha interpretation until a consumer requests signal.
 Pixel-changing operations such as matting still own their output format; read the selected operation's
 output behavior rather than assuming every processed video preserves transparency.
 
-Trimming, retiming or replacing the performance changes its local temporal relation and requires a
-new local domain. Prepare new semantic timing as well when downstream consumers use it.
+Trimming or retiming one Film/NLE use changes only that occurrence relation; it does not create a new
+Media domain or Evidence identity. Project existing semantic evidence through the same occurrence
+relation when downstream consumers need absolute timing. Replacing or externally materializing the
+performance creates a new Media and requires evidence for that new source when consumers use it.
 [Reuse boundaries](authoring.md#reuse-produced-work-explicitly) explain which completed Output can
 remain selected.
 

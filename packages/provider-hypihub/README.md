@@ -94,7 +94,7 @@ For moving portraits, [Volcengine Matting](../volcengine-matting/README.md) maps
 `model: "matte-portrait-video"`, `ref_video_url` and `format` (`WEBM` by default, or `MOV`).
 Both formats carry transparency. The source video uses the same upload transport as other video
 references; the returned job uses the same polling and asset collection lifecycle. The selected
-account's `/v1/models` establishes availability. The processed video enters ordinary Prepare,
+account's `/v1/models` establishes availability. The processed video enters an ordinary Media object's prepared branch,
 then a Visual Clip or another ordinary media consumer; add semantic alignment separately when a
 Script relationship needs positions inside that performance.
 

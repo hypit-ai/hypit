@@ -1,30 +1,20 @@
 # `@hypit/audio-mix`
 
-Audio Mix consumes closed `AudioTrack` signal graphs and publishes one new closed `AudioTrack`.
-It provides the two universal operations already justified by the signal algebra: non-negative scalar
-gain and explicit additive mixing. It never normalizes, limits, discovers a “master” bus, or routes by
-Track name.
+Audio Mix owns the package-defined gain execution programme used by the new audiovisual Audio DAG.
+`audio-gain-operator` accepts an `AudioGainOperatorSpec` and publishes a typed `AudioOperator` with the
+named `signal` port. The exact `hypit.audio-gain@1` programme and gain parameter travel on that value, so
+`@hypit/audiovisual` and its terminal adapter do not maintain a gain enum or recover parameters by id.
 
-The package owns the exact `hypit.audio-gain@1` Process format it authors, including its constructor
-and payload reader. Composition and Audio Program keep Process programmes opaque; a playback or
-rendering package supports gain by depending explicitly on this format owner and performs its own
-request-local graph lowering.
+`audio-gain-control-operator` is the time-varying form. Its package-owned `AudioGainControl` is a total
+piecewise-linear gain signal on one explicit local temporal Domain. The Operator advertises that Domain
+under the named `gain` Control port; an AVIR `apply` supplies a Programme-, Occurrence-, Source- or
+explicit-Map binding. Audio lowering preserves the resulting Programme-to-Control Map and the local
+renderer evaluates it at audio sample positions. Fade in, fade out and gain envelopes are therefore
+ordinary uses of this Operator, not concepts added to Occurrence, Track, Clip, AVIR or Temporal Core.
 
-```svml
-<mix:Track id="dialogue" timeline={story.timeline}>
-  <mix:Input id="host" source={host.audio}/>
-  <mix:Input id="guest" source={guest.audio} gain="0.9"/>
-</mix:Track>
-```
+Additive mixing itself is the closed Audio algebra's ordinary `mix` node. It therefore needs no package
+declaration, `AudioTrack`, Timeline, Mixer lane or intermediate set. Dry/wet branches, parallel copies and
+sidechain routing are expressed by signal graph edges and package-owned named Operator ports.
 
-The result can be selected by Film like any other AudioTrack. More specialized processing packages
-may add package-owned Process programmes to the same graph; Film remains unaware of their effects
-and routing.
-
-The Track author declaration is syntax-neutral and package-owned. Its shape validates the Timeline,
-Input AudioTracks and gains before lowering the finite mix Fragment; Markup contributes only the
-`Track` tag spelling. A mix may consume another mix written later in the Source because declaration
-dependencies, not text order, choose compilation order.
-
-Audio Mix consumes one completed Timeline and closed AudioTrack values; it neither authors nor
-resolves Temporal Windows, so Timeline ownership stays outside the signal graph.
+The former `Track / Input / AudioMixSet` author path has been removed. It duplicated Audio DAG facts through
+Timeline-bound `AudioTrack` values and made a traditional mixer UI structure part of backend semantics.

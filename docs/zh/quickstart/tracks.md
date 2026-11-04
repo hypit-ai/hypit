@@ -130,8 +130,8 @@ Recipe 与类型化 Motion 都只是可选的复用值：
 <space:Frame id="product-frame" within={vertical.bounds}
   left="8%" top="20%" right="92%" bottom="68%"/>
 
-<mediaop:Prepare id="product-media" source={product-motion.video}
-  video="primary-moving" audio="none" span-authority="video"/>
+<media:Video id="product-media" source={product-motion.video}
+   audio="none" />
 
 <visual:Motion id="product-motion-in">
   <visual:Pose at="start" y="80" opacity="0" easing="ease-out"/>
@@ -140,7 +140,7 @@ Recipe 与类型化 Motion 都只是可选的复用值：
 </visual:Motion>
 
 <visual:Track id="product-broll" timeline={speech.timeline}>
-  <visual:Clip media={product-media.media} frame={product-frame}
+  <visual:Clip media={product-media.source} frame={product-frame}
     during={product-demo} fit="contain"
     treatment={recipes.visual.product} motion={product-motion-in}>
     <visual:Map/>
@@ -152,7 +152,7 @@ Recipe 与类型化 Motion 都只是可选的复用值：
 `visual:Curve`；target 参数保持线性，四个必填值都是 PreparedMedia 局部域里的位置：
 
 ```svml
-<visual:Clip media={product-media.media} frame={product-frame}
+<visual:Clip media={product-media.source} frame={product-frame}
   during={product-demo} fit="contain">
   <visual:Curve source-at-start="start" source-control-1="start+250ms"
     source-control-2="end-250ms" source-at-end="end"/>
@@ -167,40 +167,8 @@ fit 是构造 Clip 源局部平面到节目画面 `SpatialMap2D` 的常用入口
 而不是另存一个“内容框”。当组件或源局部证据已经拥有精确仿射关系时，可以声明
 `<space:Map>`，并用 `mapping={...}` 代替全部 fit 属性。Clip 的 `frame` 仍独立负责裁剪和外框处理。
 同一个
-Clip 模型也能表达全屏切换、分屏和角落小窗。公开 Clip 只有一个来源。Transition 显式连接两个相邻
-Clip occurrence，并引用由效果包拥有的 effect；更广泛的多来源、多 Clip 关系属于组件，而不是内置 Sequence 语法。
-
-### Clip 之间的 Transition
-
-先让两个 Clip 各自声明真实且重叠的 Window，再制作 effect 并显式指认关系。两个 Window 的完整交集就是
-Transition span；Hypit 不根据时间邻近猜参与者、不要求作者重复声明交集，也不虚构 source handle。
-两个 Clip 必须在 Track 顺序中相邻，且 outgoing 先开始、先结束；包含关系或多画面编排属于组件关系，
-不是普通镜头交接。
-
-```svml
-<transition:CrossDissolve id="soft-mix" easing="ease-in-out"/>
-
-<visual:Track id="cut" timeline={speech.timeline}>
-  <visual:Clip id="wide" media={wide.media} during={wide-window} frame={full} fit="cover"/>
-  <visual:Clip id="close" media={close.media} during={close-window} frame={full} fit="cover"/>
-  <visual:Transition id="wide-to-close"
-    outgoing="wide" incoming="close" effect={soft-mix}/>
-</visual:Track>
-```
-
-重叠期间两个 Clip 仍分别使用自己的 TemporalMap。Visual Track 只验证关系，效果包负责如何组合两张各自含时的
-画面；更复杂的视听联动仍由组件负责。
-
-官方包还提供 `DipToColor`、`Push`、`Slide`、`LinearWipe`、`Iris`、`ZoomDissolve` 和
-`BlurDissolve`。例如：
-
-```svml
-<transition:Push id="push-left" direction="left" easing="ease-in-out"/>
-<transition:LinearWipe id="wipe-right" direction="right"/>
-<transition:BlurDissolve id="blur-mix" radius="24"/>
-```
-
-声明产生一个效果值；同一个 `visual:Transition` 关系按剪辑需要选择相应效果。直接切镜不需要声明 Transition。
+Clip 模型也能表达全屏切换、分屏和角落小窗。公开 Clip 只有一个来源。旧 Track declaration
+不再拥有 Transition 关系；视觉转场属于视听 Programme 中由能力包发布的 Picture Operator，而不是 Track 事实。
 
 每个直接 Clip 或采样 Layer 都必须且只能声明一种视觉输入形式：
 
@@ -210,31 +178,10 @@ Transition span；Hypit 不根据时间邻近猜参与者、不要求作者重�
 | `media={...}` | `PreparedMedia` | 直接连接显式准备好的含时素材 |
 | `surface={...}` | `CompositableSurfaceRef` | 直接连接带透明度语义的静态或含时 Surface |
 
-生成或导入的视频 Blob 经 `<mediaop:Prepare>` 进入 Track：它检查该 Blob、选出其中的流，并保留精确的源时间关系而不选择 Film 帧钟；输出的 `.media` 即 `media=` 所连接的值。视觉消费者只在需要执行时，才按 Track 的 Timeline 求值。输入名必须显式，是为了绝不靠猜测把一个通用 Blob 当成图片或视频。
+生成或导入的视频 Blob 经 `<media:Video>` 进入 Track：它检查该 Blob、选出其中的流，并保留精确的源时间关系而不选择 Film 帧钟；输出的 `.media` 即 `media=` 所连接的值。视觉消费者只在需要执行时，才按 Track 的 Timeline 求值。输入名必须显式，是为了绝不靠猜测把一个通用 Blob 当成图片或视频。
 
 **输出：**`{product-broll.program}` 与 `{product-broll.visual}`。音频始终在 Audio Track
 中单独声明；这里连接 PreparedMedia 不会顺带选择它的音频成员。
-
-## 合并完成的 VisualTrack
-
-若若干独立创作的视觉组件共享同一个 Film 绘制位置，Visual Combine 可以把它们完整的 Item programme
-连接成一条普通 VisualTrack：
-
-```svml
-<import as="combine" from="@hypit/visual-combine@1"/>
-
-<combine:Track id="motion" timeline={speech.timeline}>
-  <combine:Use id="opening" source={opening.visual}/>
-  <combine:Use id="comparison" source={comparison.visual}/>
-  <combine:Use id="editor" source={editor.visual}/>
-  <combine:Use id="outro" source={outro.visual}/>
-</combine:Track>
-```
-
-输出 `{motion.visual}` 可以进入 Film 或另一个 Visual Combine。`Use` 声明顺序就是从后往前的绘制顺序。
-来源可以彼此分离，也可以重叠；重叠期间，后面的 Use 绘制在前面的 Use 之上。该包不会按 Window 排序、
-推断转场或修改来源时间。输入必须先闭合成一张隔离子画面时使用 Film Stack；重叠需要其他关系时，使用
-显式 Transition、Process 或组件。
 
 ## Audio Track
 
@@ -249,11 +196,11 @@ Transition span；Hypit 不根据时间邻近猜参与者、不要求作者重�
 
 <time:Clock id="clock" frame-rate="30"/>
 <media:Audio id="music" src="./assets/music.wav"/>
-<mediaop:Prepare id="music-media" source={music}
-  video="none" audio="default" span-authority="audio"/>
+<media:Audio id="music-media" source={music}
+    />
 
 <audio:Track id="music-bed" timeline={speech.timeline}>
-  <audio:Clip source={music-media.media} during={speech.window}
+  <audio:Clip source={music-media.source} during={speech.window}
     gain="0.28" fade-in="600ms" fade-out="800ms">
     <audio:Map target-at="end" source-at="end" rate="1"
       wrap-from="start" wrap-until="end"/>
@@ -278,19 +225,6 @@ Track 都会作为独立输入进入 Film。输出 `{music-bed.audio}` 是普通
 统一作为源位置关系求值。若恒速变速需要保持音高，从 `@hypit/audio-stretch@1` 声明
 `<stretch:PreservePitch id="natural"/>`，再以 `reconstruction={natural}` 显式引用。速度仍只存在于 Map；
 本地 Provider 当前对完整的正向、非循环仿射关系支持 PreservePitch，并准确拒绝其他形态。
-
-需要显式设置 gain，并把若干 AudioTrack 闭合成一个贡献时，使用 Audio Mix：
-
-```svml
-<import as="mix" from="@hypit/audio-mix@1"/>
-<mix:Track id="dialogue" timeline={speech.timeline}>
-  <mix:Input id="host" source={host.audio}/>
-  <mix:Input id="guest" source={guest.audio} gain="0.9"/>
-</mix:Track>
-```
-
-输出 `{dialogue.audio}` 仍是普通 AudioTrack。Film 只看到这个闭合输出；Audio Mix 不会归一化、限幅、
-发明 Master，也不会按 Track 名寻址。
 
 ## 文字叠加层
 
@@ -548,10 +482,10 @@ npm install @hypit/comment-sticker
   left="10%" top="20%" right="90%" bottom="70%"/>
 
 <!-- Media：Selection 期间显示一个普通 Clip -->
-<mediaop:Prepare id="card-media" source={motion.video}
-  video="primary-moving" audio="none" span-authority="video"/>
+<media:Video id="card-media" source={motion.video}
+   audio="none" />
 <visual:Track id="cards" timeline={speech.timeline}>
-  <visual:Clip media={card-media.media} frame={card-frame}
+  <visual:Clip media={card-media.source} frame={card-frame}
     during={demo} fit="cover" treatment={recipes.visual.card}/>
 </visual:Track>
 
@@ -564,10 +498,10 @@ npm install @hypit/comment-sticker
 
 <!-- Audio：先准备一份已声明素材，再把它放满整个节目 -->
 <media:Audio id="music" src="./assets/music.wav"/>
-<mediaop:Prepare id="music-media" source={music}
-  video="none" audio="default" span-authority="audio"/>
+<media:Audio id="music-media" source={music}
+    />
 <audio:Track id="music-bed" timeline={speech.timeline}>
-  <audio:Clip source={music-media.media} during={speech.window}
+  <audio:Clip source={music-media.source} during={speech.window}
     gain="0.28" fade-in="600ms" fade-out="800ms">
     <audio:Map target-at="end" source-at="end" rate="1"
       wrap-from="start" wrap-until="end"/>

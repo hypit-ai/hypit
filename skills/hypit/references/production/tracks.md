@@ -51,12 +51,5 @@ local group of VisualTracks when that composite needs one shared treatment. Audi
 visual Stacks; combine it into a closed AudioTrack before Film when shared gain or routing is required.
 Include picture and sound explicitly, and select one intended route for each audible source.
 
-When several independently authored VisualTracks share one continuing picture responsibility and
-one Film paint position, use `@hypit/visual-combine`. Its `Use` order concatenates their complete
-Item programmes from back to front. Sources may overlap; later Uses then paint above earlier Uses.
-It does not reorder by Window, infer a transition or close a Picture scope. Wrapping the combined
-Track in one Film Stack has the same Picture result as placing the source Tracks in that Stack in
-the same order; use that boundary when their Adjustments must not reach the parent picture.
-
 [Rendering](rendering.md#assemble-the-picture-and-sound) shows Film assembly and delivery.
 [Review](review.md) judges the resulting picture, performance and complete mix.

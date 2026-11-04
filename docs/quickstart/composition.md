@@ -71,38 +71,6 @@ Items remain inside their owning Track's placement. When several pictures, graph
 interleaved local order because they share layout or motion, one component should own that programme
 and its internal element tree or HTML visual. Keep independently useful contributions as peer Tracks.
 
-## Close a local visual stack
-
-Use a Film Stack when a group must first become one picture and an adjustment should affect exactly
-that group:
-
-```svml
-<import as="adjust" from="@hypit/visual-adjustment@1"/>
-<import as="treatment" from="@hypit/visual-treatment@1"/>
-
-<treatment:Color id="cinematic" contrast="1.08" saturation="0.9" hue="-2"/>
-
-<adjust:Track id="look" timeline={speech.timeline}>
-  <adjust:Adjustment id="grade" during={speech.window}
-    effect={cinematic}/>
-</adjust:Track>
-
-<film:Film id="main" canvas={vertical.canvas} timeline={speech.timeline}
-  appearance={recipes.film.vertical}>
-  <film:Track id="background" source={background.visual}/>
-  <film:Stack id="treated-subject">
-    <film:Track id="subject" source={subject.visual}/>
-    <film:Track id="look" source={look.visual}/>
-  </film:Stack>
-  <film:Track id="captions" source={captions.visual}/>
-  <film:Track source={dialogue.audio}/>
-</film:Film>
-```
-
-The Stack begins with transparency and enters its parent as one picture at its declaration position. The Adjustment
-transforms only the picture accumulated inside that Stack. AudioTracks remain at the Film root and
-never inherit visual Stack membership.
-
 ## Render the complete video
 
 ```svml

@@ -1,7 +1,7 @@
 import type { Narrative, NarrativeSegmentRef } from "@hypit/narrative";
 import type { NarrativeAlignment } from "@hypit/narrative-temporal";
 import type { SpeechTranscriptEvidence } from "@hypit/speech-evidence";
-import { resolveTemporalBoundary } from "@hypit/temporal";
+import { resolveTemporalBoundary } from "@hypit/temporal/sampling";
 import type { LocalTemporalDomain } from "@hypit/temporal";
 
 import { locateAlignedSegmentTiming } from "./locate.js";

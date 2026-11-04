@@ -45,7 +45,7 @@ returns to the original source:
 
 ```svml
 <whisperx:Transcription id="opening-transcription"
-  media={opening-media.media} language="ko"/>
+  media={opening-media.source} language="ko"/>
 <speechalign:Alignment id="opening" narrative={story}
   segment={story.segment.opening} domain={opening-media.domain}
   evidence={opening-transcription.transcript}/>

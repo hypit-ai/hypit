@@ -26,7 +26,7 @@ test("Audio Track declaration consumes typed time values and parses package-neut
     exports: [
       { name: "timeline", ref: { kind: "record", id: "timeline" }, type: timelineTypes.timeline },
       { name: "media", ref: { kind: "record", id: "media" }, type: mediaTypes.prepared },
-      { name: "window", ref: { kind: "record", id: "window" }, type: temporalTypes.window },
+      { name: "window", ref: { kind: "record", id: "window" }, type: timelineTypes.window },
       { name: "reconstruction", ref: { kind: "record", id: "reconstruction" }, type: audioTrackTypes.reconstruction },
     ],
   };

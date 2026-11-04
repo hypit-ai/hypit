@@ -6,8 +6,7 @@ import { MemoryResourceStore } from "../packages/executor/src/index.js";
 export { MemoryResourceStore };
 import { executeInspectMedia } from "../packages/media-local/src/execute.js";
 import type { MediaExecutionEnvironment } from "../packages/media-local/src/execute.js";
-import { prepareMedia, verifyMediaInspection } from "@hypit/media";
-import { selectMediaStreams } from "@hypit/media-operations";
+import { prepareMedia, selectMediaStreams, verifyMediaInspection } from "@hypit/media";
 import { canonicalize } from "@hypit/protocol";
 import type { BlobRef } from "@hypit/protocol";
 

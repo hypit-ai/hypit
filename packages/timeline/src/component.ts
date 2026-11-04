@@ -1,9 +1,10 @@
 import type { RefinementPackage } from "@hypit/hypit/refinement";
 import type { ProducerPackage } from "@hypit/hypit/producer";
-import type { Value } from "@hypit/hypit/protocol";
-import { timelineTypes } from "./manifest.js";
+import { canonicalize, type Value } from "@hypit/hypit/protocol";
+import { timelineProducers, timelineTypes } from "./manifest.js";
 import { assertClockIdentity, assertFrameSpan, assertTimelineIdentity } from "./identity.js";
-import type { Clock, FrameSpan, Timeline } from "./types.js";
+import { assertTemporalIdentitySpec, assertTemporalInstant, assertTemporalWindow, composeTemporalWindow } from "./temporal.js";
+import type { Clock, FrameSpan, TemporalIdentitySpec, TemporalInstant, TemporalWindow, Timeline } from "./types.js";
 
 function timeline(value: Value | undefined): Timeline {
   if (value === undefined) throw new Error("Timeline is missing.");
@@ -11,7 +12,13 @@ function timeline(value: Value | undefined): Timeline {
 }
 
 export const timelineComponent = {
-  producers: [],
+  producers: [{ producer: timelineProducers.composeWindow, handler: ({ inputs }) => {
+    const spec = inputs.spec?.value as unknown as TemporalIdentitySpec;
+    const start = inputs.start?.value as unknown as TemporalInstant;
+    const end = inputs.end?.value as unknown as TemporalInstant;
+    assertTemporalIdentitySpec(spec);
+    return { kind: "output", value: canonicalize(composeTemporalWindow(spec, start, end)) };
+  } }],
   refinements: [{
     type: timelineTypes.timeline,
     handler: ({ value }) => assertTimelineIdentity(timeline(value)),
@@ -21,5 +28,14 @@ export const timelineComponent = {
   }, {
     type: timelineTypes.frameSpan,
     handler: ({ value }) => assertFrameSpan(value as unknown as FrameSpan),
+  }, {
+    type: timelineTypes.instant,
+    handler: ({ value }) => assertTemporalInstant(value as unknown as TemporalInstant),
+  }, {
+    type: timelineTypes.window,
+    handler: ({ value }) => assertTemporalWindow(value as unknown as TemporalWindow),
+  }, {
+    type: timelineTypes.temporalIdentity,
+    handler: ({ value }) => assertTemporalIdentitySpec(value),
   }],
 } satisfies { producers?: ProducerPackage; refinements?: RefinementPackage };

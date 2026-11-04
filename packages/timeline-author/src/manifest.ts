@@ -11,6 +11,8 @@ export const timelineAuthorTypes = {
   resolution: { module: timelineAuthorModuleRef, name: "ConstructionResolutionSpec" },
   offset: { module: timelineAuthorModuleRef, name: "ConstructionOffsetSpec" },
   identity: { module: timelineAuthorModuleRef, name: "ConstructionIdentitySpec" },
+  instantSpec: { module: timelineAuthorModuleRef, name: "TimelineInstantSpec" },
+  shiftSpec: { module: timelineAuthorModuleRef, name: "TimelineShiftSpec" },
 } satisfies Record<string, TypeRef>;
 
 export const timelineAuthorProducers = {
@@ -29,6 +31,10 @@ export const timelineAuthorProducers = {
   finalize: { module: timelineAuthorModuleRef, name: "finalize-timeline" },
   instant: { module: timelineAuthorModuleRef, name: "materialize-instant" },
   window: { module: timelineAuthorModuleRef, name: "materialize-window" },
+  extentFromDuration: { module: timelineAuthorModuleRef, name: "extent-from-duration" },
+  projectInstant: { module: timelineAuthorModuleRef, name: "project-timeline-instant" },
+  shiftInstant: { module: timelineAuthorModuleRef, name: "shift-timeline-instant" },
+  reuseInstant: { module: timelineAuthorModuleRef, name: "reuse-timeline-instant" },
 } satisfies Record<string, ProducerRef>;
 
 const string = { kind: "string", minLength: 1 } as const;
@@ -57,7 +63,20 @@ export const timelineAuthorManifest: ModuleManifest = {
     { name: timelineAuthorProducers.spanStart.name, inputs: [{ name: "span", type: timelineTypes.frameSpan }], result: { kind: "output" as const, name: "point", type: timelineAuthorTypes.point } },
     { name: timelineAuthorProducers.spanEnd.name, inputs: [{ name: "span", type: timelineTypes.frameSpan }], result: { kind: "output" as const, name: "point", type: timelineAuthorTypes.point } },
     { name: timelineAuthorProducers.finalize.name, inputs: [{ name: "header", type: timelineAuthorTypes.header }, { name: "clock", type: timelineTypes.clock }, { name: "end", type: timelineAuthorTypes.point }], result: { kind: "output" as const, name: "timeline", type: timelineTypes.timeline } },
-    { name: timelineAuthorProducers.instant.name, inputs: [{ name: "timeline", type: timelineTypes.timeline }, { name: "point", type: timelineAuthorTypes.point }, { name: "spec", type: timelineAuthorTypes.identity }], result: { kind: "output" as const, name: "instant", type: temporalTypes.instant } },
-    { name: timelineAuthorProducers.window.name, inputs: [{ name: "timeline", type: timelineTypes.timeline }, { name: "span", type: timelineTypes.frameSpan }, { name: "spec", type: timelineAuthorTypes.identity }], result: { kind: "output" as const, name: "window", type: temporalTypes.window } },
+    { name: timelineAuthorProducers.instant.name, inputs: [{ name: "timeline", type: timelineTypes.timeline }, { name: "point", type: timelineAuthorTypes.point }, { name: "spec", type: timelineAuthorTypes.identity }], result: { kind: "output" as const, name: "instant", type: timelineTypes.instant } },
+    { name: timelineAuthorProducers.window.name, inputs: [{ name: "timeline", type: timelineTypes.timeline }, { name: "span", type: timelineTypes.frameSpan }, { name: "spec", type: timelineAuthorTypes.identity }], result: { kind: "output" as const, name: "window", type: timelineTypes.window } },
+    { name: timelineAuthorProducers.extentFromDuration.name,
+      inputs: [{ name: "timeline", type: timelineTypes.timeline }, { name: "duration", type: temporalTypes.duration }],
+      result: { kind: "output" as const, name: "extent", type: temporalTypes.extent } },
+    { name: timelineAuthorProducers.projectInstant.name,
+      inputs: [{ name: "timeline", type: timelineTypes.timeline }, { name: "spec", type: timelineAuthorTypes.instantSpec }],
+      result: { kind: "output" as const, name: "instant", type: timelineTypes.instant } },
+    { name: timelineAuthorProducers.shiftInstant.name,
+      inputs: [{ name: "timeline", type: timelineTypes.timeline }, { name: "instant", type: timelineTypes.instant },
+        { name: "extent", type: temporalTypes.extent }, { name: "spec", type: timelineAuthorTypes.shiftSpec }],
+      result: { kind: "output" as const, name: "instant", type: timelineTypes.instant } },
+    { name: timelineAuthorProducers.reuseInstant.name,
+      inputs: [{ name: "instant", type: timelineTypes.instant }],
+      result: { kind: "output" as const, name: "instant", type: timelineTypes.instant } },
   ],
 };

@@ -1,0 +1,28 @@
+{
+  "name": "@hypit/audiovisual",
+  "version": "0.1.0",
+  "license": "SEE LICENSE IN LICENSE",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "hypit": {
+    "activation": "./src/activation.ts"
+  },
+  "peerDependencies": {
+    "@hypit/hypit": "workspace:^0.4.0"
+  },
+  "dependencies": {
+    "@hypit/spatial": "workspace:^0.1.1",
+    "@hypit/temporal": "workspace:^0.1.1"
+  },
+  "devDependencies": {
+    "@hypit/hypit": "workspace:^0.4.0",
+    "@hypit/protocol": "workspace:*"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ]
+}

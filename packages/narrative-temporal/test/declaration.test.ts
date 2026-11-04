@@ -24,7 +24,7 @@ test("Narrative temporal declarations project semantic references without source
       { name: "timeline", ref: { kind: "record", id: "timeline" }, type: timelineTypes.timeline },
       { name: "alignment", ref: { kind: "record", id: "alignment" }, type: narrativeTemporalTypes.narrativeAlignment },
       { name: "domain", ref: { kind: "record", id: "domain" }, type: temporalTypes.localDomain },
-      { name: "window", ref: { kind: "record", id: "window" }, type: temporalTypes.window },
+      { name: "window", ref: { kind: "record", id: "window" }, type: timelineTypes.window },
       { name: "selection", ref: { kind: "record", id: "selection" }, type: narrativeTypes.selection },
       { name: "moment", ref: { kind: "record", id: "moment" }, type: narrativeTypes.moment },
     ],

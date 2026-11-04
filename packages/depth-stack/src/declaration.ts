@@ -184,7 +184,7 @@ async function compileDepthStack({
   const timeline = await reference(element, "timeline", timelineTypes.timeline, resolveReference);
   const frame = await reference(element, "frame", spatialTypes.frame, resolveReference);
   const appearance = await recipe(element, "appearance", resolveReference);
-  const terminal = await reference(element, "until", temporalTypes.instant, resolveReference);
+  const terminal = await reference(element, "until", timelineTypes.instant, resolveReference);
   const records: AuthorRecordDraft[] = [];
   const headerId = `${id}.header`;
   const specId = `${id}.spec`;
@@ -217,7 +217,7 @@ async function compileDepthStack({
       : await reference(child, "extent", spatialTypes.extent, resolveReference);
     if (sourceKind === "still" && extent === undefined) throw new Error(`${child.name}.extent is required for a still image.`);
     if (sourceKind !== "still" && extent !== undefined) throw new Error(`${child.name}.extent belongs only to a still image.`);
-    const activation = await reference(child, "at", temporalTypes.instant, resolveReference);
+    const activation = await reference(child, "at", timelineTypes.instant, resolveReference);
     const cardAppearance = field(child, "appearance") === undefined
       ? appearance : await recipe(child, "appearance", resolveReference);
     const material = decodeDepthStackMaterial(cardAppearance, `${id}.${cardId}`, sourceKind);
@@ -377,7 +377,7 @@ export const depthStackTrackAuthorDeclaration: AuthorDeclarationCompiler = {
       referenceField("timeline", timelineTypes.timeline, true),
       referenceField("frame", spatialTypes.frame, true),
       referenceField("appearance", recipeType, true),
-      referenceField("until", temporalTypes.instant, true, "expression"),
+      referenceField("until", timelineTypes.instant, true, "expression"),
     ],
     children: [{
       name: "Card",
@@ -388,7 +388,7 @@ export const depthStackTrackAuthorDeclaration: AuthorDeclarationCompiler = {
         referenceField("source", [blobTypes.blob, mediaTypes.prepared, mediaTypes.compositableSurface], true),
         referenceField("extent", spatialTypes.extent, false),
         literalField("picture", false, ["srgb"]),
-        referenceField("at", temporalTypes.instant, true, "expression"),
+        referenceField("at", timelineTypes.instant, true, "expression"),
         referenceField("appearance", recipeType, false),
         referenceField("label", depthStackTypes.cardLabel, false),
       ],
