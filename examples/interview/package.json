@@ -9,5 +9,9 @@
     "@hypit/hypit": "^0.3.1",
     "@hypit/interview-emoji-reveal": "^0.1.0",
     "@interview/flash": "file:packages/flash"
+  },
+  "overrides": {
+    "esbuild": "0.28.1",
+    "zod": "4.6.6"
   }
 }
