@@ -1129,6 +1129,12 @@ export function renderFineCaption(
     const endFrameExclusive = Math.min(totalFrames, Math.max(startFrame + 1, measuredEnd));
     if (startFrame >= totalFrames || endFrameExclusive <= startFrame) return [];
     const durationFrames = endFrameExclusive - startFrame;
+    // `tail-frames` can carry the envelope past the Timeline end; keep visibility inside the span.
+    const visibility = cue.visibility.map((span) => ({
+      startFrame: Math.max(span.startFrame, startFrame),
+      endFrameExclusive: Math.min(span.endFrameExclusive, endFrameExclusive),
+    })).filter((span) => span.endFrameExclusive > span.startFrame);
+    if (visibility.length === 0) return [];
     const trackedPlacement = regionSeriesById === undefined ? undefined : (() => {
       const role = authoredCue.role;
       if (role === undefined) throw new Error(`Fine Caption Cue ${cue.id} must have one Script Role to follow regions`);
@@ -1147,7 +1153,7 @@ export function renderFineCaption(
       order,
       z: parameters.stackingOrder,
       span: { startFrame, endFrameExclusive },
-      visibility: cue.visibility,
+      visibility,
       elements: cueElements(resolvedAtoms, atomFrames, parameters, wordText, durationFrames, cue.styleId, within, trackedPlacement),
     }];
   });
