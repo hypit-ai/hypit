@@ -188,6 +188,24 @@ test("Fine Caption uniformly springs the whole Cue through exact scales", () => 
   assert.equal(declarationAt(4, "filter"), "none");
 });
 
+test("Fine Caption shake moves throughout the Cue at the default period", () => {
+  const { document, projection } = fixture();
+  const keyframes = (loop: string, name: string) => {
+    const style = fineCaptionStyle("plain", { ...recipe, properties: { ...recipe.properties, loop } }, [font]);
+    const looping: CaptionProgram = { ...fixture().program, styles: [style] };
+    const track = renderCaption(scheduleFineCaption(projection, looping, document), looping, document,
+      sealTimeline({ id: "test-space", frameCount: 90, frameRate: { numerator: 30, denominator: 1 } }));
+    const cueLoop = track.presents[0]?.elements.find((element) => element.id === "cue-loop");
+    return (cueLoop?.animation?.keyframes ?? []).map((keyframe) => ({
+      frame: keyframe.atFrame, value: keyframe.style.find((declaration) => declaration.name === name)?.value,
+    }));
+  };
+  // The first Cue is 30 frames, so a 12-frame loop runs more than twice.
+  const shaken = keyframes("shake", "transform").filter(({ value }) => value !== "translateX(0px)" && value !== "none");
+  assert.ok(shaken.length >= 6, `shake keyframes: ${JSON.stringify(shaken)}`);
+  assert.ok(shaken[0]!.frame < 6, "the shake starts with the Cue, not on its last frame");
+});
+
 test("Fine Caption follows measured Role regions and hides null Frames", () => {
   const { document, program, projection } = fixture(`<line>
   <BOY>one two || three four
