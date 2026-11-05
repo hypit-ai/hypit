@@ -67,6 +67,8 @@ export type CreateHypiHubProviderOptions = {
   readonly downloadAttempts?: number;
   /** HypiHub model used for the Provider-neutral WhisperX alignment capability. */
   readonly transcriptionModel?: string;
+  /** Additional trusted asset hostnames for result downloads. Use `*.example.com` to match subdomains. */
+  readonly assetHosts?: readonly string[];
   readonly fetch?: typeof globalThis.fetch;
   /** Overrides HypiHub's negotiated upload transport for referenced Resources. */
   readonly publicAssetUrl?: (artifact: BlobRef, artifacts: ResourceStore, fields?: Readonly<Record<string, string | number | boolean>>) => Promise<string>;
@@ -86,6 +88,23 @@ function apiBaseUrl(value: string): string {
   const origin = trimmed.replace(/\/(?:v1beta|v1)$/iu, "");
   return `${origin}/v1`;
 }
+
+function normalizeAssetHostPattern(value: string, subject: string): string {
+  const normalized = value.trim().toLowerCase().replace(/\.$/u, "");
+  assert(normalized.length > 0, `${subject} is empty`);
+  assert(!normalized.includes("://"), `${subject} must be a hostname pattern, not a URL`);
+  assert(/^(?:\*\.)?[a-z0-9.-]+$/u.test(normalized), `${subject} is not a valid hostname pattern`);
+  return normalized;
+}
+
+function defaultAssetHosts(baseUrl: string): readonly string[] {
+  return [
+    new URL(baseUrl).hostname.toLowerCase().replace(/\.$/u, ""),
+    "*.amazonaws.com",
+    "*.amazonaws.com.cn",
+  ];
+}
+
 function credential(credentials: Readonly<Record<string, EndpointCredential>>) {
   const value = credentials.apiKey?.secret;
   if (typeof value !== "string" || value.length === 0) {
@@ -150,6 +169,7 @@ class HypiHubClient {
   readonly timeout: number;
   readonly oauthTimeout: number;
   readonly downloadAttempts: number;
+  readonly assetHosts: readonly string[];
   readonly fetcher: typeof globalThis.fetch;
   readonly uploader: HypiHubUploader;
   constructor(options: {
@@ -160,12 +180,14 @@ class HypiHubClient {
     readonly uploadPartTimeout: number;
     readonly uploadPartAttempts: number;
     readonly downloadAttempts: number;
+    readonly assetHosts?: readonly string[];
     readonly fetcher: typeof globalThis.fetch;
   }) {
     this.baseUrl = options.baseUrl.replace(/\/$/u, "");
     this.timeout = options.timeout;
     this.oauthTimeout = options.oauthTimeout;
     this.downloadAttempts = options.downloadAttempts;
+    this.assetHosts = this.trustedAssetHosts(options.assetHosts);
     this.fetcher = identifiedFetch(options.fetcher);
     this.uploader = new HypiHubUploader({
       baseUrl: this.baseUrl,
@@ -175,6 +197,38 @@ class HypiHubClient {
       uploadPartAttempts: options.uploadPartAttempts,
       fetch: this.fetcher,
     });
+  }
+  private trustedAssetHosts(extra?: readonly string[]): readonly string[] {
+    const hosts = new Set(defaultAssetHosts(this.baseUrl));
+    for (const value of extra ?? []) hosts.add(normalizeAssetHostPattern(value, "HypiHub assetHosts"));
+    return [...hosts];
+  }
+  private assetHostAllowed(hostname: string): boolean {
+    const normalized = hostname.toLowerCase().replace(/\.$/u, "");
+    return this.assetHosts.some((pattern) => {
+      if (pattern === normalized) return true;
+      if (pattern.startsWith("*.")) {
+        const suffix = pattern.slice(1);
+        return normalized === pattern.slice(2) || normalized.endsWith(suffix);
+      }
+      return false;
+    });
+  }
+  private trustedAssetUrl(value: string): URL {
+    let parsed: URL;
+    try {
+      parsed = new URL(value, this.baseUrl);
+    } catch {
+      throw new EndpointResponseError("HypiHub returned an invalid asset URL");
+    }
+    const loopback = ["localhost", "127.0.0.1", "::1", "[::1]"].includes(parsed.hostname);
+    if (parsed.protocol !== "https:" && !(parsed.protocol === "http:" && loopback)) {
+      throw new HypiHubServiceError("HYPIHUB_ASSET_URL_UNTRUSTED", "HypiHub asset URL must use HTTPS");
+    }
+    if (!this.assetHostAllowed(parsed.hostname)) {
+      throw new HypiHubServiceError("HYPIHUB_ASSET_URL_UNTRUSTED", `HypiHub asset host ${parsed.hostname} is not trusted`);
+    }
+    return parsed;
   }
   async json(path: string, auth: HypiHubAuth, init: RequestInit = {}, refreshOnUnauthorized = true,
     onResponse?: (response: Response) => Promise<void>): Promise<Record<string, unknown>> {
@@ -205,9 +259,30 @@ class HypiHubClient {
     for (let attempt = 0; attempt < this.downloadAttempts; attempt += 1) {
       try {
         return await withRequestDeadline(this.timeout, async ({ signal, wait }) => {
-          const response = await wait(this.fetcher(url, { signal }));
-          if (!response.ok) throw new HypiHubHttpError(response.status, response, "", { method: "GET", url });
-          return { bytes: new Uint8Array(await wait(response.arrayBuffer())), mediaType: response.headers.get("content-type")?.split(";", 1)[0] ?? "application/octet-stream" };
+          let current = this.trustedAssetUrl(url);
+          for (let redirects = 0; redirects < 10; redirects += 1) {
+            const response = await wait(this.fetcher(current.href, { signal, redirect: "manual" }));
+            if (response.status >= 300 && response.status < 400) {
+              const location = response.headers.get("location");
+              if (location === null) {
+                throw new HypiHubHttpError(response.status, response, "", { method: "GET", url: current.href });
+              }
+              let next: string;
+              try {
+                next = new URL(location, current).href;
+              } catch {
+                throw new EndpointResponseError("HypiHub returned an invalid asset redirect URL");
+              }
+              current = this.trustedAssetUrl(next);
+              continue;
+            }
+            if (!response.ok) throw new HypiHubHttpError(response.status, response, "", { method: "GET", url: current.href });
+            return {
+              bytes: new Uint8Array(await wait(response.arrayBuffer())),
+              mediaType: response.headers.get("content-type")?.split(";", 1)[0] ?? "application/octet-stream",
+            };
+          }
+          throw new EndpointResponseError("HypiHub asset download redirected too many times");
         });
       } catch (error) {
         lastError = error;
@@ -392,6 +467,7 @@ export async function diagnoseHypiHubProvider(
     uploadPartTimeout: options.uploadPartTimeoutMs ?? 5 * 60_000,
     uploadPartAttempts: options.uploadPartAttempts ?? 3,
     downloadAttempts: options.downloadAttempts ?? 3,
+    ...(options.assetHosts === undefined ? {} : { assetHosts: options.assetHosts }),
     fetcher: options.fetch ?? globalThis.fetch,
   });
   const auth = createHypiHubAuth({
@@ -577,6 +653,7 @@ export function createHypiHubProvider(options: CreateHypiHubProviderOptions = {}
     uploadPartTimeout: uploadPartTimeoutMs,
     uploadPartAttempts,
     downloadAttempts,
+    ...(options.assetHosts === undefined ? {} : { assetHosts: options.assetHosts }),
     fetcher: options.fetch ?? globalThis.fetch,
   });
   const pricingClient = new HypiHubClient({
@@ -587,6 +664,7 @@ export function createHypiHubProvider(options: CreateHypiHubProviderOptions = {}
     uploadPartTimeout: uploadPartTimeoutMs,
     uploadPartAttempts,
     downloadAttempts,
+    ...(options.assetHosts === undefined ? {} : { assetHosts: options.assetHosts }),
     fetcher: options.fetch ?? globalThis.fetch,
   });
   const asyncEndpoint = endpoint(client, options.pollIntervalMs ?? 10_000, operationTimeoutMs, options.publicAssetUrl);
