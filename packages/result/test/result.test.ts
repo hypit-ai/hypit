@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, open, readFile, readdir, rm, stat, utimes, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, open, readFile, readdir, rm, stat, symlink, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
@@ -253,6 +253,37 @@ test("filesystem repository streams one normalized byte range", async () => {
     assert.equal(new TextDecoder().decode(Uint8Array.from(chunks)), "defg");
   } finally {
     await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("filesystem repository refuses Result files that resolve outside their Result", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hypit-result-symlink-"));
+  const outside = await mkdtemp(join(tmpdir(), "hypit-result-outside-"));
+  const build = "bld_20260902T100000012Z_0000000001";
+  try {
+    const directory = buildResultDirectory(root, build);
+    await mkdir(join(directory, "files"), { recursive: true });
+    await writeFile(join(outside, "secret.txt"), "not part of the Result");
+    await mkdir(join(outside, "nested"));
+    await writeFile(join(outside, "nested", "video.mp4"), "outside");
+    await writeFile(join(directory, "files", "inside.mp4"), "inside");
+    await symlink(join(outside, "secret.txt"), join(directory, "files", "video.mp4"));
+    await symlink(join(outside, "nested"), join(directory, "linked"));
+    await symlink("inside.mp4", join(directory, "files", "alias.mp4"));
+    const repository = new FileBuildResultRepository(root);
+    const file = (path: string) => ({ kind: "build-file" as const, path, size: 6, mediaType: "video/mp4" });
+    await assert.rejects(repository.openFile(build, file("files/video.mp4")), /leaves/u);
+    await assert.rejects(repository.openFile(build, file("linked/video.mp4")), /leaves/u);
+    await assert.rejects(repository.openFile(build, file("files/video.mp4"), { start: 0, endExclusive: 1 }), /leaves/u);
+    assert.equal(await repository.openFile(build, file("files/missing.mp4")), undefined);
+    const stream = await repository.openFile(build, file("files/alias.mp4"));
+    assert.notEqual(stream, undefined);
+    const chunks: number[] = [];
+    for await (const chunk of stream!) chunks.push(...chunk);
+    assert.equal(new TextDecoder().decode(Uint8Array.from(chunks)), "inside");
+  } finally {
+    await rm(root, { recursive: true, force: true });
+    await rm(outside, { recursive: true, force: true });
   }
 });
 

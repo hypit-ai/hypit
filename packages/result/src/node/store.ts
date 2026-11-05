@@ -7,6 +7,7 @@ import {
   open,
   readFile,
   readdir,
+  realpath,
   rename,
   rm,
   stat,
@@ -233,6 +234,27 @@ function containedResultPath(directory: string, path: string): string {
   return absolute;
 }
 
+/**
+ * The physical file behind one Result path, or undefined when it is absent. A Result directory can
+ * arrive from an extracted archive, so a symbolic link inside it must not lead a read elsewhere.
+ */
+async function physicalResultPath(directory: string, path: string): Promise<string | undefined> {
+  const absolute = containedResultPath(directory, path);
+  let root: string;
+  let target: string;
+  try {
+    root = await realpath(resolve(directory));
+    target = await realpath(absolute);
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") return undefined;
+    throw error;
+  }
+  const relation = relative(root, target);
+  assert(relation.length > 0 && relation !== ".." && !relation.startsWith(`..${sep}`) && !isAbsolute(relation),
+    `Build Result path ${path} leaves ${root}`);
+  return target;
+}
+
 export async function browseBuildResults(
   root: string,
   request: { readonly before?: string; readonly limit: number },
@@ -306,7 +328,8 @@ export async function resolveBuildResultOutput(
       continue;
     }
     if (entry.value.kind === "value") {
-      const path = containedResultPath(directory, entry.value.path);
+      const path = await physicalResultPath(directory, entry.value.path)
+        ?? containedResultPath(directory, entry.value.path);
       const document = decodeBuildResultValueDocument(
         decodeBuildResultJson(await readFile(path), path),
         `Build ${currentBuild} Output ${currentOutput}`,
@@ -571,8 +594,8 @@ export class FileBuildResultRepository implements BuildResultRepository {
   ): Promise<AsyncIterable<Uint8Array> | undefined> {
     if (file.kind === "external-file") return await this.externalFiles.open(file.uri, range);
     const directory = buildResultDirectory(this.root, file.build ?? build);
-    const path = containedResultPath(directory, file.path);
-    if (!await exists(path)) return undefined;
+    const path = await physicalResultPath(directory, file.path);
+    if (path === undefined || !await exists(path)) return undefined;
     if (range === undefined) return createReadStream(path);
     assert(Number.isSafeInteger(range.start) && range.start >= 0, "Build Result file range start is invalid");
     assert(Number.isSafeInteger(range.endExclusive) && range.endExclusive > range.start,
