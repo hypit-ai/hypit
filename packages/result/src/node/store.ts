@@ -7,6 +7,7 @@ import {
   open,
   readFile,
   readdir,
+  realpath,
   rename,
   rm,
   stat,
@@ -233,6 +234,34 @@ function containedResultPath(directory: string, path: string): string {
   return absolute;
 }
 
+const missingPathCodes = new Set(["ENOENT", "ENOTDIR", "ELOOP"]);
+
+/**
+ * The physical file behind one Result path, or undefined when it is absent. A Result directory can
+ * arrive from an extracted archive, so a symbolic link inside it, or a Build or date directory that
+ * is itself a link, must not lead a read elsewhere. Only the Result root is resolved physically,
+ * so a root that is a link to another disk still works.
+ */
+async function physicalResultPath(root: string, directory: string, path: string): Promise<string | undefined> {
+  const absolute = containedResultPath(directory, path);
+  const location = relative(resolve(root), resolve(directory));
+  assert(location.length > 0 && location !== ".." && !location.startsWith(`..${sep}`) && !isAbsolute(location),
+    `Build Result directory ${directory} leaves ${root}`);
+  let allowed: string;
+  let target: string;
+  try {
+    allowed = join(await realpath(resolve(root)), location);
+    target = await realpath(absolute);
+  } catch (error) {
+    if (error instanceof Error && "code" in error && missingPathCodes.has(String(error.code))) return undefined;
+    throw error;
+  }
+  const relation = relative(allowed, target);
+  assert(relation.length > 0 && relation !== ".." && !relation.startsWith(`..${sep}`) && !isAbsolute(relation),
+    `Build Result path ${path} leaves ${allowed}`);
+  return target;
+}
+
 export async function browseBuildResults(
   root: string,
   request: { readonly before?: string; readonly limit: number },
@@ -306,7 +335,8 @@ export async function resolveBuildResultOutput(
       continue;
     }
     if (entry.value.kind === "value") {
-      const path = containedResultPath(directory, entry.value.path);
+      const path = await physicalResultPath(root, directory, entry.value.path);
+      assert(path !== undefined, `Build ${currentBuild} Output ${currentOutput} is missing value document ${entry.value.path}`);
       const document = decodeBuildResultValueDocument(
         decodeBuildResultJson(await readFile(path), path),
         `Build ${currentBuild} Output ${currentOutput}`,
@@ -571,8 +601,8 @@ export class FileBuildResultRepository implements BuildResultRepository {
   ): Promise<AsyncIterable<Uint8Array> | undefined> {
     if (file.kind === "external-file") return await this.externalFiles.open(file.uri, range);
     const directory = buildResultDirectory(this.root, file.build ?? build);
-    const path = containedResultPath(directory, file.path);
-    if (!await exists(path)) return undefined;
+    const path = await physicalResultPath(this.root, directory, file.path);
+    if (path === undefined || !await exists(path)) return undefined;
     if (range === undefined) return createReadStream(path);
     assert(Number.isSafeInteger(range.start) && range.start >= 0, "Build Result file range start is invalid");
     assert(Number.isSafeInteger(range.endExclusive) && range.endExclusive > range.start,
