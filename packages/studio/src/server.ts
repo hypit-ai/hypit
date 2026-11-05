@@ -49,8 +49,35 @@ function json(response: import("node:http").ServerResponse, status: number, valu
  * leaves <img>, <video> and <audio> use unchanged.
  */
 function inertMedia(response: import("node:http").ServerResponse): void {
-  response.setHeader("content-security-policy", "sandbox");
+  // `allow-downloads` keeps native video/audio controls able to save the file;
+  // without `allow-scripts` the document still runs no script.
+  response.setHeader("content-security-policy", "sandbox allow-downloads");
   response.setHeader("x-content-type-options", "nosniff");
+}
+
+/**
+ * Vite's `/@fs/<absolute path>` (and `/@id/<absolute path>`) serve any file
+ * under `server.fs.allow`, which includes the author workspace. Treat project
+ * files reached that way as the same inert bytes as `/__studio/material`, so a
+ * workspace SVG or HTML file cannot run in the Studio origin. Dependencies
+ * under `node_modules` keep Vite's ordinary module serving.
+ */
+export function inertWorkspaceFile(workspaceRoot: string, requestUrl: string | undefined): boolean {
+  let path = (requestUrl ?? "/").split(/[?#]/u, 1)[0]!;
+  if (path.startsWith("/@id/")) path = path.slice("/@id".length).replace(/^\/__x00__/u, "/");
+  if (path.startsWith("/@fs/")) path = path.slice("/@fs".length);
+  else if (!(requestUrl ?? "").startsWith("/@id/")) return false;
+  try {
+    path = decodeURIComponent(path);
+  } catch {
+    return true;
+  }
+  // `/@fs/C:/...` on Windows.
+  if (/^\/[a-zA-Z]:[\\/]/u.test(path)) path = path.slice(1);
+  if (!isAbsolute(path)) return false;
+  const rel = relative(resolve(workspaceRoot), resolve(path));
+  if (rel === "" || rel === ".." || rel.startsWith(`..${sep}`) || isAbsolute(rel)) return false;
+  return !rel.split(/[\\/]/u).includes("node_modules");
 }
 
 function requestedByteRange(value: string | undefined, size: number): BuildResultFileRange | undefined {
@@ -470,6 +497,12 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
     configureServer(value) {
       server = value;
       sourceWatch.replace([resolve(options.runPath), resolve(currentSource)]);
+      // Registered directly in configureServer, so it runs before Vite's own
+      // `/@fs` and transform middlewares.
+      value.middlewares.use((request, response, next) => {
+        if (inertWorkspaceFile(options.workspaceRoot, request.url)) inertMedia(response);
+        next();
+      });
       value.middlewares.use((request, response, next) => {
         const url = new URL(request.url ?? "/", "http://studio.hypit.local");
         if (request.method === "PUT" && url.pathname === "/__studio/source") {
