@@ -3,7 +3,7 @@ name = "hypit-whisperx-service"
 version = "0.1.0"
 description = "Warm, loopback-only WhisperX alignment service for the SVML local Provider"
 readme = "README.md"
-requires-python = ">=3.10,<3.14"
+requires-python = ">=3.11,<3.14"
 license = { text = "Hypit Open Source License (Apache-2.0 with additional conditions); see LICENSE at the repository root" }
 dependencies = [
   "numpy>=2.1,<3",
