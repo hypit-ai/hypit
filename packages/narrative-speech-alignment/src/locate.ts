@@ -445,13 +445,22 @@ export function locateAlignedSegmentTiming(
     const basisSegment = basis.segments.find((item) => item.segmentId === segment.id)!;
     const bounds = speechBounds(basis, aligned, basisSegment);
     const complete = fillMissingTiming(located, source, bounds.start, bounds.end);
+    // Provider windows may overlap or nest, but an alignment's Token starts and ends never run
+    // backwards. Overlap stays; only a start or end earlier than the previous Token's is raised.
+    let previousStart = 0;
+    let previousEnd = 0;
     timedTokens.push(...source.map((token, index): LocalTimedSpeechToken => {
       const timing = complete[index]!;
       const projected = projectSampleTiming(basis, timing);
+      const startFrame = Math.max(projected.startFrame, previousStart);
+      const endFrameExclusive = Math.max(projected.endFrameExclusive, previousEnd, startFrame + 1);
+      previousStart = startFrame;
+      previousEnd = endFrameExclusive;
       return {
         tokenId: token.id,
         segmentId: segment.id,
-        ...projected,
+        startFrame,
+        endFrameExclusive,
       };
     }));
     timedSegments.push({
