@@ -11,7 +11,11 @@
     "@interview/flash": "file:packages/flash"
   },
   "overrides": {
-    "esbuild": "0.28.1",
-    "zod": "4.6.6"
+    "chromium-bidi": {
+      "zod": "^4.6.6"
+    },
+    "tsx": {
+      "esbuild": "~0.28.1"
+    }
   }
 }
