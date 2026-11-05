@@ -42,6 +42,17 @@ function json(response: import("node:http").ServerResponse, status: number, valu
   response.end(`${JSON.stringify(value)}\n`);
 }
 
+/**
+ * Material, Results and previews are project bytes, not Studio pages. An SVG
+ * (or any other active format) opened directly in a tab would otherwise run in
+ * the Studio origin and pass the same-origin mutation guard. A sandboxed CSP
+ * leaves <img>, <video> and <audio> use unchanged.
+ */
+function inertMedia(response: import("node:http").ServerResponse): void {
+  response.setHeader("content-security-policy", "sandbox");
+  response.setHeader("x-content-type-options", "nosniff");
+}
+
 function requestedByteRange(value: string | undefined, size: number): BuildResultFileRange | undefined {
   if (value === undefined) return undefined;
   const match = /^bytes=(\d*)-(\d*)$/u.exec(value.trim());
@@ -661,6 +672,7 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
             const bytes = await preview.open();
             response.statusCode = 200;
             response.setHeader("content-type", preview.mediaType);
+            inertMedia(response);
             response.setHeader("cache-control", "no-store");
             if (request.method === "HEAD") response.end();
             else response.end(Buffer.from(bytes));
@@ -687,6 +699,7 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
               const storyboard = await pending;
               response.statusCode = 200;
               response.setHeader("content-type", "image/png");
+              inertMedia(response);
               response.setHeader("cache-control", "public, max-age=31536000, immutable");
               response.setHeader("x-hypit-storyboard-count", String(storyboard.count));
               response.setHeader("x-hypit-storyboard-columns", String(storyboard.columns));
@@ -724,6 +737,7 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
           }
           response.statusCode = range === undefined ? 200 : 206;
           response.setHeader("content-type", file.mediaType);
+          inertMedia(response);
           response.setHeader("content-length", String(range === undefined ? size : range.endExclusive - range.start));
           response.setHeader("cache-control", "no-store");
           response.setHeader("accept-ranges", "bytes");
@@ -761,6 +775,7 @@ export function studioPlugin(options: StudioPluginOptions): Plugin {
             }
             response.statusCode = range === undefined ? 200 : 206;
             response.setHeader("content-type", artifact.mediaType);
+            inertMedia(response);
             response.setHeader("content-length", String(range === undefined
               ? artifact.size
               : range.endExclusive - range.start));
