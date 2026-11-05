@@ -81,7 +81,9 @@ jobs:
           JS
       - name: Use npm with trusted publishing support
         if: github.event_name == 'release' || inputs.publish
-        run: npm install --global npm@11
+        # An exact version: this job holds the npm OIDC token and contents: write, so it must not
+        # pick up whichever npm 11 release is newest on the day of publication.
+        run: npm install --global npm@11.21.1
       - name: Inspect or publish the selected immutable packages
         env:
           RELEASE_PACKAGES: ${{ inputs.packages }}
