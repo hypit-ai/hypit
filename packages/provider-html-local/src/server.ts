@@ -22,17 +22,26 @@ export async function serveHtmlProgram(root: string): Promise<{ readonly url: st
       }
       const info = await stat(path);
       if (!info.isFile()) { response.writeHead(404).end(); return; }
+      const type = mediaTypes[extname(path).toLowerCase()] ?? "application/octet-stream";
       const range = /^bytes=(\d+)-(\d*)$/u.exec(request.headers.range ?? "");
-      const start = range === null ? 0 : Number(range[1]);
-      const end = range === null || range[2] === "" ? info.size - 1 : Number(range[2]);
-      if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 0 || end < start || end >= info.size) {
+      if (range === null) {
+        response.writeHead(200, { "Content-Type": type, "Content-Length": info.size, "Accept-Ranges": "bytes" });
+        // An empty asset is a complete 200, not an unsatisfiable range.
+        if (info.size === 0) { response.end(); return; }
+        createReadStream(path).on("error", () => response.destroy()).pipe(response);
+        return;
+      }
+      const start = Number(range[1]);
+      // RFC 9110 §14.1.2: a last position at or past the end means "to the end".
+      const end = range[2] === "" ? info.size - 1 : Math.min(Number(range[2]), info.size - 1);
+      if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start >= info.size || end < start) {
         response.writeHead(416, { "Content-Range": `bytes */${info.size}` }).end(); return;
       }
-      response.writeHead(range === null ? 200 : 206, {
-        "Content-Type": mediaTypes[extname(path).toLowerCase()] ?? "application/octet-stream",
+      response.writeHead(206, {
+        "Content-Type": type,
         "Content-Length": end - start + 1,
         "Accept-Ranges": "bytes",
-        ...(range === null ? {} : { "Content-Range": `bytes ${start}-${end}/${info.size}` }),
+        "Content-Range": `bytes ${start}-${end}/${info.size}`,
       });
       createReadStream(path, { start, end }).on("error", () => response.destroy()).pipe(response);
     } catch (error) {
