@@ -72,6 +72,9 @@ importers:
       '@hypit/author':
         specifier: workspace:*
         version: link:packages/author
+      '@hypit/bach':
+        specifier: workspace:*
+        version: link:packages/bach
       '@hypit/blob':
         specifier: workspace:*
         version: link:packages/blob
@@ -646,6 +649,28 @@ importers:
       '@hypit/spatial':
         specifier: workspace:*
         version: link:../spatial
+
+  packages/bach:
+    dependencies:
+      '@hypit/generation':
+        specifier: workspace:^0.1.0
+        version: link:../generation
+    devDependencies:
+      '@hypit/blob':
+        specifier: workspace:*
+        version: link:../blob
+      '@hypit/hypit':
+        specifier: workspace:*
+        version: link:../..
+      '@hypit/markup':
+        specifier: workspace:*
+        version: link:../markup
+      '@hypit/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@hypit/text':
+        specifier: workspace:*
+        version: link:../text
 
   packages/blob:
     dependencies:
@@ -2721,6 +2746,9 @@ importers:
       '@hypit/audio-track':
         specifier: workspace:^0.2.0
         version: link:../audio-track
+      '@hypit/bach':
+        specifier: workspace:^0.1.0
+        version: link:../bach
       '@hypit/caption':
         specifier: workspace:^0.1.0
         version: link:../caption

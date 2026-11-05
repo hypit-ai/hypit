@@ -27,6 +27,17 @@ admits them into the current Build's working byte area. Image references use Hyp
 `reference_image_urls`, `reference_videos`, and `reference_audios` fields. A single reference video
 remains in `reference_videos`; `ref_video_url` is reserved for a model's source-video port. First/last-frame images use `first_frame` and `last_frame`.
 
+`@hypit/bach@1#bach-1.0-pro` maps to `bach/bach-1.0-pro` on `POST /v1/videos`.
+It accepts text prompts, first/last-frame images, and reference images with optional reference audio.
+`duration` maps to `seconds`, `generateAudio` to `generate_audio`, and `seed` is preserved.
+Resolution is `1080p` or `4k`; durations from 5 to 16 seconds retain their decimal value.
+The service's price card determines billed seconds. Frame requests use the service's `auto` aspect ratio.
+
+The HypiHub Bach Endpoint requires references without `startTime` offsets. Reference videos are
+unavailable while upstream input billing is being verified. These requests return unsupported
+before upload or generation; the Model package retains its complete reference vocabulary for
+Endpoints that support it. The configured account's model catalogue determines Bach availability.
+
 Seedance 2.5 (`@hypit/seedance` model `2.5`) maps to `seedance-2.5` and supports
 `480p`, `720p` and `1080p`. The Provider passes the authored `resolution` to `POST /v1/videos`;
 omitting it in the Seedance Surface defaults to `720p`.

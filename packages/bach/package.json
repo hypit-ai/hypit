@@ -1,0 +1,31 @@
+{
+  "name": "@hypit/bach",
+  "version": "0.1.0",
+  "license": "SEE LICENSE IN LICENSE",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "hypit": {
+    "activation": "./src/activation.ts"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "peerDependencies": {
+    "@hypit/hypit": "workspace:^0.3.1"
+  },
+  "devDependencies": {
+    "@hypit/blob": "workspace:*",
+    "@hypit/generation": "workspace:*",
+    "@hypit/hypit": "workspace:*",
+    "@hypit/markup": "workspace:*",
+    "@hypit/protocol": "workspace:*",
+    "@hypit/text": "workspace:*"
+  },
+  "dependencies": {
+    "@hypit/generation": "workspace:^0.1.0"
+  }
+}

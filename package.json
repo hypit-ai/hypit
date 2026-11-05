@@ -242,6 +242,7 @@
   "devDependencies": {
     "@hypit/admission": "workspace:*",
     "@hypit/author": "workspace:*",
+    "@hypit/bach": "workspace:*",
     "@hypit/blob": "workspace:*",
     "@hypit/browser-capture": "workspace:*",
     "@hypit/result": "workspace:*",
