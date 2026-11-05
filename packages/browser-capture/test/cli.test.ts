@@ -22,6 +22,12 @@ test("capture rejects incomplete or contradictory requests before browser work",
   await assert.rejects(runCaptureCli(["capture", "screenshot", "https://example.com", "--to", "x.png",
     "--clip", "1,2,3"], io), /--clip needs/);
   await assert.rejects(runCaptureCli(["capture", "run", "x.mjs", "--to", "x.png"], io), /belongs to capture screenshot/);
+  await assert.rejects(runCaptureCli(["capture", "plan", "plan.json"], io), /requires --to/);
+  await assert.rejects(runCaptureCli(["capture", "plan", "plan.json", "--to", "take", "--cursor", "fancy"], io), /none or page/);
+  await assert.rejects(runCaptureCli(["capture", "screenshot", "https://example.com", "--to", "x.png", "--cursor", "page"], io),
+    /belongs to capture plan/);
+  await assert.rejects(runCaptureCli(["capture", "login", "https://example.com"], io), /requires --profile/);
+  await assert.rejects(runCaptureCli(["capture", "login", "https://example.com", "--profile", "../escape"], io), /profile name/);
 });
 
 test("the shipped launcher captures from a plain project and passes script arguments without project dependencies", {
