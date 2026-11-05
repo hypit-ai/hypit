@@ -7,6 +7,7 @@ settings:
 overrides:
   vitepress>vite: 6.4.5
   vue@<3.5.42: ^3.5.42
+  '@vue/shared@<3.5.42': ^3.5.42
   source-map-js@<1.2.2: ^1.2.2
 
 importers:
@@ -17,7 +18,7 @@ importers:
         specifier: workspace:^0.1.0
         version: link:packages/bach
       '@hypit/browser-capture':
-        specifier: workspace:^0.2.0
+        specifier: workspace:^0.2.1
         version: link:packages/browser-capture
       '@hypit/media-local':
         specifier: workspace:^0.2.1
@@ -689,8 +690,8 @@ importers:
         specifier: workspace:^0.2.0
         version: link:../media-local
       '@puppeteer/browsers':
-        specifier: 3.2.2
-        version: 3.2.2
+        specifier: 3.2.4
+        version: 3.2.4
       puppeteer-core:
         specifier: 25.13.0
         version: 25.13.0
@@ -1926,8 +1927,8 @@ importers:
         specifier: workspace:^0.1.0
         version: link:../media
       '@puppeteer/browsers':
-        specifier: 3.2.2
-        version: 3.2.2
+        specifier: 3.2.4
+        version: 3.2.4
       puppeteer-core:
         specifier: 25.13.0
         version: 25.13.0
@@ -2833,7 +2834,7 @@ importers:
         specifier: workspace:^0.2.0
         version: link:../pixverse
       '@hypit/provider-html-local':
-        specifier: workspace:^0.2.0
+        specifier: workspace:^0.2.1
         version: link:../provider-html-local
       '@hypit/provider-hypihub':
         specifier: workspace:^0.2.1
@@ -3778,19 +3779,6 @@ packages:
   '@oxc-project/types@0.148.0':
     resolution: {integrity: sha512-Nm4s/jB+4FpFsPhWGEC4h7rzksesmtnMXomo6rCMcg/b8zLQuOziRgkCS1fxDCXOlJB/6Q8oABOZ/OP6RIPj9A==}
 
-  '@puppeteer/browsers@3.2.2':
-    resolution: {integrity: sha512-q2BU4YfO9h/Wt7IcWPcggpOOqLk2Tbs1hDwolvKZrweRjy751OJBKMN9zO5bfD0pzU7X/tvKw/exQds4pM/LOg==}
-    engines: {node: '>=22.12.0'}
-    hasBin: true
-    peerDependencies:
-      proxy-agent: '>=8.0.1'
-      yauzl: ^2.10.0 || ^3.4.0
-    peerDependenciesMeta:
-      proxy-agent:
-        optional: true
-      yauzl:
-        optional: true
-
   '@puppeteer/browsers@3.2.4':
     resolution: {integrity: sha512-okJ6yQMc0SBexOKxMi966omwAV1uAPwgF/YMZdb04gZQPXVjWHl9bmXjZYtIcsN1+PN3Bz4iFfGK3g+c6lZJ0Q==}
     engines: {node: '>=22.12.0'}
@@ -4134,9 +4122,6 @@ packages:
 
   '@vue/server-renderer@3.5.45':
     resolution: {integrity: sha512-1fNXUHhhsWf4EVL4XixbGBU5mKdiIXJAB82feHRTyPPo6ZUEYWIJuEeUl3mVV6QDBp50HJOX4obLhxYXlrjrzA==}
-
-  '@vue/shared@3.5.41':
-    resolution: {integrity: sha512-IOnwSCma8j+9xJT6b8H0dEYidC80NsYmNMlZxRsukYcSoGaDBohog5hDxzeUXdFeGWFA++vWvxqOmrr96VlqMA==}
 
   '@vue/shared@3.5.45':
     resolution: {integrity: sha512-ue9fgHmVNPlP7iW3+cxoBX/Cnlw53dHlVSw0JKGY6z1lObg8pHoj928M2nzG4/yVsMZ3NaRZ2s2z61uC16NDwQ==}
@@ -5329,11 +5314,6 @@ snapshots:
 
   '@oxc-project/types@0.148.0': {}
 
-  '@puppeteer/browsers@3.2.2':
-    dependencies:
-      modern-tar: 0.8.5
-      yargs: 18.1.0
-
   '@puppeteer/browsers@3.2.4':
     dependencies:
       modern-tar: 0.8.5
@@ -5604,8 +5584,6 @@ snapshots:
       '@vue/compiler-ssr': 3.5.45
       '@vue/runtime-dom': 3.5.45
       '@vue/shared': 3.5.45
-
-  '@vue/shared@3.5.41': {}
 
   '@vue/shared@3.5.45': {}
 
@@ -6289,7 +6267,7 @@ snapshots:
       '@types/markdown-it': 14.1.2
       '@vitejs/plugin-vue': 5.2.4(vite@6.4.5(@types/node@24.10.1)(lightningcss@1.33.0)(tsx@4.22.5))(vue@3.5.45(typescript@5.9.3))
       '@vue/devtools-api': 7.7.10
-      '@vue/shared': 3.5.41
+      '@vue/shared': 3.5.45
       '@vueuse/core': 12.8.2(typescript@5.9.3)
       '@vueuse/integrations': 12.8.2(focus-trap@7.8.0)(typescript@5.9.3)
       focus-trap: 7.8.0

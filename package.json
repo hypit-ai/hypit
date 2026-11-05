@@ -327,7 +327,7 @@
   },
   "dependencies": {
     "@hypit/bach": "workspace:^0.1.0",
-    "@hypit/browser-capture": "workspace:^0.2.0",
+    "@hypit/browser-capture": "workspace:^0.2.1",
     "@hypit/speech-estimate": "workspace:^0.1.1",
     "@hypit/media-local": "workspace:^0.2.1",
     "@hypit/runtime-local": "workspace:^0.1.1",
