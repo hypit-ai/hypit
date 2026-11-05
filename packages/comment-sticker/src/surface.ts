@@ -53,8 +53,15 @@ function inline<T>(value: SurfaceResolvedReference, label: string): T {
   if (value.record?.value.kind !== "inline") throw new Error(`${label} must reference authored inline data.`);
   return value.record.value.value as unknown as T;
 }
+/** Same result as `.replace(/\n\s*$/u, "")`, without retrying the trailing whitespace from every newline. */
+function trimTrailingBlankLines(value: string): string {
+  let start = value.length;
+  while (start > 0 && /\s/u.test(value[start - 1]!)) start -= 1;
+  const newline = value.indexOf("\n", start);
+  return newline === -1 ? value : value.slice(0, newline);
+}
 function dedent(value: string): string {
-  const lines = value.replace(/^\n/u, "").replace(/\n\s*$/u, "").split("\n");
+  const lines = trimTrailingBlankLines(value.startsWith("\n") ? value.slice(1) : value).split("\n");
   const indentation = lines.filter((line) => line.trim()).reduce(
     (minimum, line) => Math.min(minimum, /^\s*/u.exec(line)?.[0].length ?? 0), Number.POSITIVE_INFINITY,
   );
