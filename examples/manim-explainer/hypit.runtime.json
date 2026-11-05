@@ -1,0 +1,54 @@
+{
+  "format": "hypit.runtime-local@1",
+  "dataRoot": ".hypit/execution",
+  "credentials": {
+    "local": {
+      "use": "@hypit/credential-store-local"
+    }
+  },
+  "endpoints": {
+    "media.local": {
+      "use": "@hypit/media-local",
+      "config": {
+        "defaultConcurrency": 2
+      }
+    },
+    "html.local": {
+      "use": "@hypit/provider-html-local",
+      "config": {
+        "workers": 8,
+        "defaultConcurrency": 1
+      }
+    },
+    "whisperx.local": {
+      "use": "@hypit/provider-whisperx-local",
+      "config": {
+        "alignmentLanguages": [
+          "en"
+        ],
+        "defaultConcurrency": 1
+      }
+    },
+    "vectrust.seedance": {
+      "use": "@project/provider-vectrust-seedance",
+      "pool": "vectrust.seedance",
+      "config": {
+        "baseUrl": "https://draw.openai-next.com",
+        "apiKey": {
+          "store": "local",
+          "key": "vectrust.seedance"
+        },
+        "concurrency": 1,
+        "pollIntervalMs": 10000,
+        "requestTimeoutMs": 600000
+      }
+    }
+  },
+  "bindings": {
+    "@hypit/html-program@1#rasterize-visual": "html.local",
+    "@hypit/media-operations@1#render-timeline-audio": "media.local",
+    "@hypit/media-operations@1#mux-program-media": "media.local",
+    "@hypit/whisperx@1#whisperx-alignment": "whisperx.local",
+    "@hypit/seedance@1#seedance-2": "vectrust.seedance"
+  }
+}
