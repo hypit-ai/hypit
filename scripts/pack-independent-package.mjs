@@ -207,8 +207,16 @@ export async function packIndependentPackage(packageDirectory, outputDirectory, 
   try {
     const compiled = await compileSources(packageRoot, stage);
     for (const entry of manifest.files ?? []) {
-      if (entry === "dist" || entry === "LICENSE") continue;
+      if (entry === "dist" || entry === "LICENSE" || (entry === "browser" && manifest.hypit?.browserAssets)) continue;
       await copyDeclaredEntry(packageRoot, stage, entry);
+    }
+    // Browser-only libraries ship their runtime bundle and original source/license.
+    for (const [name, entries] of Object.entries(manifest.hypit?.browserAssets ?? {})) {
+      const source = resolve(packageRoot, "node_modules", name);
+      const target = resolve(stage, "browser", name);
+      if (!inside(resolve(stage, "browser"), target)) throw new Error(`Invalid browser asset package ${name}`);
+      await mkdir(target, { recursive: true });
+      for (const entry of [...entries, "package.json"]) await copyDeclaredEntry(source, target, entry);
     }
     const localLicense = resolve(packageRoot, "LICENSE");
     const license = await stat(localLicense).then(() => localLicense).catch(() => resolve(repositoryRoot, "LICENSE"));

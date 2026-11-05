@@ -17,6 +17,7 @@ import { autoWorkerLimit, renderWorkerLimit } from "./concurrency.js";
 import { requestedFrameRanges } from "./sampling.js";
 import { browserCacheDirectory, browserExecutablePath, configuredBrowserPath, requireBrowserExecutable, selectedBrowserVersion } from "./browser.js";
 import { htmlArtifactRelativePath, stageHtmlProgram } from "./stage.js";
+import { electronExecutablePath, requireElectronExecutable } from "./electron.js";
 
 export type HtmlRasterProgress =
   | { readonly phase: "staging" | "encoding" | "storing"; readonly elapsedMs: number }
@@ -44,7 +45,10 @@ export function resolveExecutionOptions(options: HtmlExecutionOptions) {
   assert(["draft", "standard", "high"].includes(quality), "HTML renderer quality is invalid");
   const browserGpu = options.browserGpu ?? "hardware";
   assert(["auto", "software", "hardware"].includes(browserGpu), "HTML renderer browserGpu is invalid");
+  const electronPath = electronExecutablePath(options);
+  assert(electronPath === undefined || browserGpu !== "software", "Shared-texture export requires browserGpu auto or hardware");
   return {
+    electronPath,
     chromePath: configuredBrowserPath(options),
     browserVersion: selectedBrowserVersion(options),
     browserCacheDirectory: browserCacheDirectory(options),
@@ -62,8 +66,8 @@ export function resolveExecutionOptions(options: HtmlExecutionOptions) {
     processTimeoutMs: positiveInteger(options.processTimeoutMs ?? 30 * 60_000, "processTimeoutMs"),
     maxProcessOutputBytes: positiveInteger(options.maxProcessOutputBytes ?? 4 * 1024 * 1024, "maxProcessOutputBytes"),
     artifactStagingConcurrency: positiveInteger(options.artifactStagingConcurrency ?? 4, "artifactStagingConcurrency"),
-    maxPendingFrameBytes: positiveInteger(options.maxPendingFrameBytes ?? 256 * 1024 * 1024, "maxPendingFrameBytes"),
-    maxDecodedSourceBytes: positiveInteger(options.maxDecodedSourceBytes ?? 1024 * 1024 * 1024, "maxDecodedSourceBytes"),
+    maxPendingFrameBytes: positiveInteger(options.maxPendingFrameBytes ?? 128 * 1024 * 1024, "maxPendingFrameBytes"),
+    maxDecodedSourceBytes: positiveInteger(options.maxDecodedSourceBytes ?? 2304 * 1024 * 1024, "maxDecodedSourceBytes"),
     maxRenderedBytes: positiveInteger(options.maxRenderedBytes ?? 16 * 1024 * 1024 * 1024, "maxRenderedBytes"),
   };
 }
@@ -85,8 +89,10 @@ export async function rasterizeHtmlFrames(request: HtmlFrameRequest, options: Ht
 }
 
 async function capture(request: HtmlRasterRequest | HtmlFrameRequest, options: HtmlRasterOptions): Promise<TimelineVisual | HtmlFrameImages> {
-  const config = { ...resolveExecutionOptions(options), chromePath: browserExecutablePath(options) };
   const frames = "frames" in request ? request.frames : undefined;
+  const execution = resolveExecutionOptions(options);
+  const config = { ...execution,
+    chromePath: frames === undefined && execution.electronPath !== undefined ? "" : browserExecutablePath(options) };
   const document = request.program;
   const range = frames === undefined
     ? (request as HtmlRasterRequest).range ?? { startFrame: 0, endFrameExclusive: document.frameCount }
@@ -115,12 +121,14 @@ async function capture(request: HtmlRasterRequest | HtmlFrameRequest, options: H
   };
   try {
     signal.throwIfAborted();
-    await requireBrowserExecutable(config.chromePath, config.browserVersion);
+    const gpu = frames === undefined && config.electronPath !== undefined;
+    if (gpu) await requireElectronExecutable(config.electronPath!);
+    else await requireBrowserExecutable(config.chromePath, config.browserVersion);
     await options.onDiagnostic?.({ level: "info", message:
-      `Capture ${frameCount} frames; workers ${config.workers} (limit ${renderWorkerLimit(config, frameCount, document.frameRate.numerator / document.frameRate.denominator)}); opaque fast PNG; GPU ${config.browserGpu}; browser ${config.chromePath}`
+      `Capture ${frameCount} frames; workers ${config.workers} (limit ${renderWorkerLimit(config, frameCount, document.frameRate.numerator / document.frameRate.denominator, gpu && document.frameSources.length > 0)}); ${gpu ? "shared GPU texture" : "opaque fast PNG"}; GPU ${config.browserGpu}; browser ${gpu ? config.electronPath : config.chromePath}`
       + `; artifact staging concurrency ${config.artifactStagingConcurrency}`
       + `; decoded source budget ${config.maxDecodedSourceBytes} bytes`
-      + (frames === undefined ? `; quality ${config.quality}; ordered FFmpeg pipe; pending PNG budget ${config.maxPendingFrameBytes} bytes; encoder ${config.ffmpegPath}` : "; PNG output") });
+      + (frames === undefined ? `; quality ${config.quality}; ${gpu ? "WebCodecs H.264 and FFmpeg mux" : "ordered FFmpeg pipe"}; pending frame budget ${config.maxPendingFrameBytes} bytes; FFmpeg ${config.ffmpegPath}` : "; PNG output") });
     options.onProgress?.({ phase: "staging", elapsedMs: 0 });
     work = await mkdtemp(join(tmpdir(), "hypit-html-local-"));
     const read: import("./stage.js").HtmlArtifactReader = async (artifact, readSignal) => {
