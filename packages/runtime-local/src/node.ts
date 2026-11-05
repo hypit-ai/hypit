@@ -14,7 +14,7 @@ export function resolveRuntimeExecutable(root: string, value: string): string {
 }
 
 /** True when the last path segment has an extension: a `.` followed by at least one character. */
-function hasExtension(value: string): boolean {
+export function hasExtension(value: string): boolean {
   const segment = value.slice(Math.max(value.lastIndexOf("/"), value.lastIndexOf("\\")) + 1);
   const dot = segment.indexOf(".");
   return dot !== -1 && dot < segment.length - 1;
