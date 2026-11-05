@@ -19,7 +19,7 @@ corepack enable
 pnpm install --frozen-lockfile
 ```
 
-运行真实 Build 还需要 Python 3.10–3.13、uv、ffmpeg 和 Chromium，各自的用途见[开发指南](https://hypit.ai/zh/guide/develop/)。
+运行真实 Build 还需要 Python 3.11–3.13、uv、ffmpeg 和 Chromium，各自的用途见[开发指南](https://hypit.ai/zh/guide/develop/)。
 
 使用本地渲染的 Profile，首次渲染前执行
 `hypit programs up --runtime <profile> --endpoint <render-instance>`；也可以执行
