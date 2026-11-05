@@ -287,6 +287,73 @@ test("filesystem repository refuses Result files that resolve outside their Resu
   }
 });
 
+test("filesystem repository refuses Result files under a Build or date directory linked outside the root", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hypit-result-linked-build-"));
+  const outside = await mkdtemp(join(tmpdir(), "hypit-result-linked-outside-"));
+  const linkedBuild = "bld_20260902T100000013Z_0000000001";
+  const linkedBucketBuild = "bld_20260903T100000013Z_0000000001";
+  try {
+    await mkdir(join(outside, ".ssh"), { recursive: true });
+    await writeFile(join(outside, ".ssh", "id_rsa"), "secret");
+    await mkdir(join(outside, linkedBucketBuild, ".ssh"), { recursive: true });
+    await writeFile(join(outside, linkedBucketBuild, ".ssh", "id_rsa"), "secret");
+    const buildDirectory = buildResultDirectory(root, linkedBuild);
+    await mkdir(join(buildDirectory, ".."), { recursive: true });
+    await symlink(outside, buildDirectory);
+    const bucketDirectory = join(buildResultDirectory(root, linkedBucketBuild), "..");
+    await symlink(outside, bucketDirectory);
+    const repository = new FileBuildResultRepository(root);
+    const file = (build: string) => ({
+      kind: "build-file" as const,
+      build,
+      path: ".ssh/id_rsa",
+      size: 6,
+      mediaType: "application/octet-stream",
+    });
+    await assert.rejects(repository.openFile(linkedBuild, file(linkedBuild)), /leaves/u);
+    await assert.rejects(repository.openFile(linkedBucketBuild, file(linkedBucketBuild)), /leaves/u);
+    const other = "bld_20260904T100000013Z_0000000001";
+    await mkdir(buildResultDirectory(root, other), { recursive: true });
+    await assert.rejects(repository.openFile(other, file(linkedBuild)), /leaves/u);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+    await rm(outside, { recursive: true, force: true });
+  }
+});
+
+test("filesystem repository reads Result files when the Result root is itself a symbolic link", async () => {
+  const parent = await mkdtemp(join(tmpdir(), "hypit-result-linked-root-"));
+  const build = "bld_20260902T100000014Z_0000000001";
+  try {
+    const real = join(parent, "real");
+    const root = join(parent, "results");
+    await mkdir(real);
+    await symlink(real, root);
+    const directory = buildResultDirectory(root, build);
+    await mkdir(join(directory, "files"), { recursive: true });
+    await writeFile(join(directory, "files", "video.mp4"), "inside");
+    const repository = new FileBuildResultRepository(root);
+    const stream = await repository.openFile(build, {
+      kind: "build-file",
+      path: "files/video.mp4",
+      size: 6,
+      mediaType: "video/mp4",
+    });
+    assert.notEqual(stream, undefined);
+    const chunks: number[] = [];
+    for await (const chunk of stream!) chunks.push(...chunk);
+    assert.equal(new TextDecoder().decode(Uint8Array.from(chunks)), "inside");
+    assert.equal(await repository.openFile(build, {
+      kind: "build-file",
+      path: "files/video.mp4/child",
+      size: 6,
+      mediaType: "video/mp4",
+    }), undefined);
+  } finally {
+    await rm(parent, { recursive: true, force: true });
+  }
+});
+
 test("filesystem decodes Result and writer data before exposing it", async () => {
   const root = await mkdtemp(join(tmpdir(), "hypit-result-decode-"));
   const malformed = "bld_20260902T100000010Z_0000000001";
