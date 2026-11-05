@@ -106,7 +106,7 @@ function shadows(recipe: Recipe): VisualFrameTreatment["shadows"] {
   const source = optionalString(recipe, "shadows");
   if (source === undefined || source === "none") return [];
   return source.split(";").map((entry) => {
-    const match = /^([-+]?\d+(?:\.\d+)?)\s+([-+]?\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s+([-+]?\d+(?:\.\d+)?)\s+(.+)$/u.exec(entry.trim());
+    const match = /^([-+]?\d+(?:\.\d+)?)\s+([-+]?\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s+([-+]?\d+(?:\.\d+)?)\s+(\S.*)$/u.exec(entry.trim());
     if (match === null) fail(recipe, "shadows entries require x y blur spread color.");
     return {
       offsetX: Number(match[1]), offsetY: Number(match[2]), blurPx: Number(match[3]),

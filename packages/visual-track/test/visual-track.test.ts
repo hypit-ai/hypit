@@ -22,6 +22,7 @@ import {
   bindVisualClipPath,
   createMediaLayerSet,
   createVisualTrackSet,
+  decodeVisualFrameTreatment,
   decodeVisualTrackSurface,
   finalizeVisualTrack,
   projectVisualTrack,
@@ -719,4 +720,20 @@ test("the Visual author Surface emits explicit graph edges for layers, absolute 
   const clipSpecs = result.records.filter((entry) => entry.type.name === "VisualClipSpec");
   assert.equal(clipSpecs.length, 6);
   assert.ok(visualTrackMarkupSurfaces.some((surface) => surface.name === "track"));
+});
+
+test("frame shadows parse x y blur spread color and reject a long whitespace run in linear time", () => {
+  const recipe = (shadows: string) => ({ path: "media.frame", properties: { shadows } });
+  assert.deepEqual(decodeVisualFrameTreatment(recipe("0 8 20 0 #00000080; -2.5\t+3  4 1   rgba(0, 0, 0, 0.5)")).shadows, [
+    { offsetX: 0, offsetY: 8, blurPx: 20, spreadPx: 0, color: "#00000080" },
+    { offsetX: -2.5, offsetY: 3, blurPx: 4, spreadPx: 1, color: "rgba(0, 0, 0, 0.5)" },
+  ]);
+  assert.deepEqual(decodeVisualFrameTreatment(recipe("1 2 3 4 \n red")).shadows, [
+    { offsetX: 1, offsetY: 2, blurPx: 3, spreadPx: 4, color: "red" },
+  ]);
+  assert.throws(() => decodeVisualFrameTreatment(recipe("1 2 3 4")), /shadows entries require/u);
+  assert.throws(() => decodeVisualFrameTreatment(recipe("1 2 3 4 red\nblue")), /shadows entries require/u);
+  const startedAt = performance.now();
+  assert.throws(() => decodeVisualFrameTreatment(recipe(`0\t0\t0\t0\t${"\t\t".repeat(50_000)}\nx\ny`)), /shadows entries require/u);
+  assert.ok(performance.now() - startedAt < 1_000, "pathological shadows entry took too long");
 });

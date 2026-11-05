@@ -550,7 +550,7 @@ test("all three author Surfaces preserve absolute temporal, spatial, font, image
     references.set(`${id}-recipe`, inlineReference(`${id}-recipe`, recipeType, recipe(id, properties)));
     const result = await handler({
       sourceName: "ranking.svml",
-      element: node(`ranking:${type.name.replace(/Style$/u, "Style")}`, { id, recipe: ref(`${id}-recipe`), font: ref("font") }),
+      element: node(`ranking:${type.name}`, { id, recipe: ref(`${id}-recipe`), font: ref("font") }),
       resolveReference: (path) => references.get(path),
       resolveAsset: async () => { throw new Error("no asset resolution expected"); },
     });
