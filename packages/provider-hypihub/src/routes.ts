@@ -35,8 +35,20 @@ function scalar(request: GenerationRequest, port: string): string | number | boo
   return typeof value === "string" || typeof value === "number" || typeof value === "boolean" ? value : undefined;
 }
 
-/** Current HypiHub GPT Image combinations, independently declared at this Endpoint boundary. */
-function hypiHubGenerationRejection(mapping: GenerationWireMapping, request: GenerationRequest): string | undefined {
+/** Service-specific request limits, checked before resolving reference URLs. */
+function hypiHubGenerationRejection(
+  mapping: GenerationWireMapping,
+  request: GenerationRequest,
+  pendingPorts: readonly string[] = [],
+): string | undefined {
+  if (mapping.capability.module.name === "@hypit/bach") {
+    if ((request.ports.referenceVideo?.length ?? 0) > 0 || pendingPorts.includes("referenceVideo")) {
+      return "HypiHub Bach reference videos await verification of upstream input billing";
+    }
+    try { selectWireModelForRequest(mapping, request, pendingPorts); }
+    catch (error) { return error instanceof Error ? error.message : String(error); }
+    return undefined;
+  }
   if (mapping.capability.module.name !== "@hypit/gpt-image" || mapping.capability.name !== "gpt-image-2") {
     return undefined;
   }
@@ -56,8 +68,9 @@ function hypiHubGenerationRejection(mapping: GenerationWireMapping, request: Gen
 }
 
 export const hypiHubRoutes: readonly HypiHubRoute[] = hypiHubMappings.map((mapping) => {
-  const hasRequestLimits = mapping.capability.module.name === "@hypit/gpt-image"
-    && mapping.capability.name === "gpt-image-2";
+  const hasRequestLimits = mapping.capability.module.name === "@hypit/bach"
+    || (mapping.capability.module.name === "@hypit/gpt-image"
+      && mapping.capability.name === "gpt-image-2");
   return {
     ...mapping,
     key: capabilityKey(mapping.capability),
@@ -66,7 +79,8 @@ export const hypiHubRoutes: readonly HypiHubRoute[] = hypiHubMappings.map((mappi
     media: mapping.result,
     ...(hasRequestLimits ? {
       supports: (request: EndpointRequest) => {
-        const reason = hypiHubGenerationRejection(mapping, request.constraints as unknown as GenerationRequest);
+        const reason = hypiHubGenerationRejection(mapping, request.constraints as unknown as GenerationRequest,
+          request.pendingInputs?.map((input) => input.input));
         return reason === undefined ? { status: "supported" } : { status: "unsupported", reason };
       },
     } : {}),

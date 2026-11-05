@@ -9,6 +9,7 @@ const SEEDREAM: ModuleRef = { name: "@hypit/seedream", version: "1" };
 const MINIMAX: ModuleRef = { name: "@hypit/minimax-h3", version: "1" };
 const GROK: ModuleRef = { name: "@hypit/grok-imagine", version: "1" };
 const PIXVERSE: ModuleRef = { name: "@hypit/pixverse", version: "1" };
+const BACH: ModuleRef = { name: "@hypit/bach", version: "1" };
 const MIMO_SPEECH: ModuleRef = { name: "@hypit/mimo-speech", version: "1" };
 const FISHAUDIO_SPEECH: ModuleRef = { name: "@hypit/fishaudio-speech", version: "1" };
 const ELEVENLABS_SPEECH: ModuleRef = { name: "@hypit/elevenlabs-speech", version: "1" };
@@ -51,6 +52,21 @@ const pixverse = (name: string, model: string): GenerationWireMapping => ({
 });
 
 export const hypiHubMappings: readonly GenerationWireMapping[] = [
+  {
+    capability: { module: BACH, name: "bach-1.0-pro" }, result: "video", routes: [{ model: "bach/bach-1.0-pro" }],
+    fields: {
+      prompt: { as: "value", field: "prompt" },
+      duration: { as: "value", field: "seconds" },
+      resolution: { as: "value", field: "resolution" },
+      aspectRatio: { as: "value", field: "aspect_ratio" },
+      generateAudio: { as: "value", field: "generate_audio" },
+      seed: { as: "value", field: "seed" },
+      firstFrame: { as: "url", field: "first_frame" },
+      lastFrame: { as: "url", field: "last_frame" },
+      referenceImage: { as: "urlArray", field: "reference_image_urls" },
+      referenceAudio: { as: "urlArray", field: "reference_audios" },
+    },
+  },
   {
     capability: { module: { name: "@hypit/volcengine-matting", version: "1" }, name: "matte-portrait-video" },
     result: "video", routes: [{ model: "matte-portrait-video" }],

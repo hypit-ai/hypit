@@ -7,6 +7,12 @@ const REFERENCE_MEDIA_TYPES = {
   audio: ["audio/wav", "audio/x-wav", "audio/wave", "audio/vnd.wave", "audio/mpeg", "audio/mp3"],
 };
 
+export function validateBachFrameResolution(firstFrame: boolean, lastFrame: boolean, resolution: unknown): void {
+  if (lastFrame && !firstFrame && resolution !== "4k") {
+    throw new Error("Bach generation with only a last frame requires resolution 4k");
+  }
+}
+
 export function validateBachMedia(artifact: BlobRef, reference: boolean): void {
   const role = artifact.mediaType.split("/")[0] as keyof typeof REFERENCE_MEDIA_TYPES;
   const limit = role === "video" ? 30 : role === "audio" ? 15 : 10;

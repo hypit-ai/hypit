@@ -4,7 +4,7 @@ import { textTypes } from "@hypit/hypit/text";
 import { sealGenerationPortTable } from "@hypit/generation";
 import type { GenerationPortTable, GenerationPortValue, GenerationRequest } from "@hypit/generation";
 import { defineExactModelModule } from "@hypit/generation/model";
-import { validateBachInputs } from "./validation.js";
+import { validateBachFrameResolution, validateBachInputs } from "./validation.js";
 
 export const bachModuleRef = { name: "@hypit/bach", version: "1" } as const;
 
@@ -49,6 +49,9 @@ export const bachDefinition = defineExactModelModule({
     producerName: "request-bach-1.0-pro",
     ports: bachPorts,
     validateInputs: validateBachInputs,
+    validateRequest: ({ ports }) => validateBachFrameResolution(
+      Boolean(ports.firstFrame?.length), Boolean(ports.lastFrame?.length), ports.resolution?.[0],
+    ),
   }],
 });
 
@@ -112,7 +115,7 @@ export const bachMarkupSurfaces = [
     ],
     ports: videoPorts,
     example: '<bach:FrameVideo id="transition" prompt={prompt} first-frame={opening.image} last-frame={ending.image}/>',
-    notes: [promptNote, durationNote, "At least one frame is required. The output aspect ratio is always `auto`; any supplied `aspect-ratio` is treated as `auto`.", "Each frame must be 10 MB or smaller.", "The element is empty."],
+    notes: [promptNote, durationNote, "At least one frame is required. Generation with only a last frame requires resolution `4k`; `1080p` requires a first frame. The output aspect ratio is always `auto`; any supplied `aspect-ratio` is treated as `auto`.", "Each frame must be 10 MB or smaller.", "The element is empty."],
   }),
   declaration("reference-video", "ReferenceVideo", ["referenceImage", "referenceVideo", "referenceAudio"], {
     summary: "Generates a video from a Text prompt and image, video or audio references with Bach 1.0 Pro.",

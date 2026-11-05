@@ -7,7 +7,7 @@ import type { CanonicalValue, TypeRef } from "@hypit/hypit/protocol";
 import type { MarkupAttributeValue, StructuredElement, StructuredSurfaceHandler, SurfaceResolvedReference } from "@hypit/hypit/markup";
 import { textTypes, verifyText } from "@hypit/hypit/text";
 import { bachEndpoints } from "./index.js";
-import { validateBachMedia } from "./validation.js";
+import { validateBachFrameResolution, validateBachMedia } from "./validation.js";
 
 type Media = {
   readonly port: "referenceImage" | "referenceVideo" | "referenceAudio" | "firstFrame" | "lastFrame";
@@ -139,6 +139,9 @@ export const decodeBachFrameVideoSurface: StructuredSurfaceHandler = ({ element,
   empty(element);
   assert(element.attributes["first-frame"] !== undefined || element.attributes["last-frame"] !== undefined, `${element.name} requires first-frame, last-frame or both`);
   const { prompt, ports } = common(element, resolveReference);
+  validateBachFrameResolution(
+    element.attributes["first-frame"] !== undefined, element.attributes["last-frame"] !== undefined, ports.resolution?.[0],
+  );
   ports.aspectRatio = ["auto"];
   const media: Media[] = [];
   if (element.attributes["first-frame"] !== undefined)
