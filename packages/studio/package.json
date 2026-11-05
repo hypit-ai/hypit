@@ -24,7 +24,7 @@
     "@hypit/studio-companion": "workspace:^0.1.1",
     "@hypit/temporal": "workspace:^0.1.0",
     "@hypit/timeline": "workspace:^0.1.0",
-    "vite": "8.2.2"
+    "vite": "8.2.4"
   },
   "peerDependencies": {
     "@hypit/hypit": "workspace:^0.3.1"
@@ -45,6 +45,6 @@
     "@hypit/timeline": "workspace:*",
     "@hypit/video": "workspace:*",
     "@hypit/visual-track": "workspace:*",
-    "sharp": "0.35.4"
+    "sharp": "0.35.5"
   }
 }
