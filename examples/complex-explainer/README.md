@@ -10,17 +10,46 @@ to give each visual relationship an owner while exposing only the parameters the
 [Watch the finished film](https://storage.googleapis.com/hypit-public-assets/assets/examples/complex-explainer/v1/20260914/final.mp4)
 (137 seconds, approximately 42 MiB), or
 [download the complete media archive](https://storage.googleapis.com/hypit-public-assets/assets/examples/complex-explainer/v1/20260914/media.tar.gz)
-(approximately 455 MiB) to open the editable production below.
+(approximately 455 MiB). Read the compatibility requirements below before opening the archive.
 
-## Open the production
+## Archive compatibility
 
-Use the Hypit checkout accompanying this example. The example has been validated against that
-checkout; it does not claim compatibility with an older published Distribution. Install the
-project-local packages from this directory:
+The `20260914` archive contains legacy Build Results. It is not compatible with the current 0.3.x
+checkout or installed CLI. The current source has been updated, but the separately hosted archive
+has not been migrated with it. See [#388](https://github.com/hypit-ai/hypit/issues/388).
+
+For example, the archive records Source and Run paths, while 0.3 requires their identities; its
+structured media also uses the earlier `timeline` shape instead of `frameDomain`. Adding dummy
+`source.id` or `run.id` fields does not convert those values. Preserve the original archive and
+Results. The [0.3 migration guide](../../migrations/0.3.md#6-preserve-usable-results-and-verify-the-real-production)
+explains the distinction between reusable media files and structured values that need recomputation.
+
+The source on `main` remains useful for studying the component boundaries below. To replay the
+archived production, keep its source, toolchain and Results together in a separate legacy checkout.
+Do not combine the commands below with the 0.3 source or a globally installed 0.3 executable.
+
+## Open the archived production
+
+Use the pinned 0.2.18 checkout, including its lockfile. That checkout requires Node 22.15 or newer:
+
+```sh
+git clone https://github.com/hypit-ai/hypit.git hypit-explainer-legacy
+cd hypit-explainer-legacy
+git checkout --detach 02805ebc46d695dfc05237d8119b06d6142fa382
+pnpm install --frozen-lockfile
+cd examples/complex-explainer
+```
+
+Install the project-local packages in that legacy checkout:
 
 ```sh
 npm ci --ignore-scripts
 ```
+
+That command is for the pinned example only. The current example's component packages contain
+`workspace:` dependencies and cannot be installed independently with `npm ci`. For development in
+the current repository, install its workspaces with `pnpm install --frozen-lockfile` at the repository
+root; this does not migrate the archived Results.
 
 The code is stored in Git. Images, recordings, accepted Result resources and a finished video are
 supplied separately in the media archive. Download and extract the archive **at this directory**:
@@ -39,10 +68,16 @@ After extraction, `.hypit/media.tar.gz` can be removed to reclaim the archive's 
 
 ```sh
 cd productions/explainer
-hypit check runs/render.svrun
-hypit plan runs/render.svrun --runtime ../../hypit.runtime.json
-hypit studio --run runs/render.svrun --runtime ../../hypit.runtime.json
+node ../../../../bin/hypit.mjs check runs/render.svrun
+node ../../../../bin/hypit.mjs programs prepare --runtime ../../hypit.runtime.json --endpoint hyperframes.local
+node ../../../../bin/hypit.mjs plan runs/render.svrun --runtime ../../hypit.runtime.json
+node ../../../../bin/hypit.mjs studio --run runs/render.svrun --runtime ../../hypit.runtime.json
 ```
+
+These commands explicitly use the CLI from the pinned checkout. `programs prepare` installs its
+selected render browser; FFmpeg and FFprobe must also be available as described in that checkout's
+development guide. Use the same launcher for
+`build`, `status` and `get` so an installed newer CLI cannot accidentally read the legacy Results.
 
 Open the printed **Comments** URL (`#comments`) to review the composition before export and leave
 timestamped direction on the current picture. In the same session, switch to **Studio** to explore
