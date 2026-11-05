@@ -82,8 +82,10 @@ class PolloClient {
   constructor(readonly baseUrl: string, readonly timeout: number, readonly fetcher: typeof globalThis.fetch) {}
   async json(path: string, key: string, init: RequestInit = {}): Promise<Record<string, unknown>> {
     return await withRequestDeadline(this.timeout, async ({ signal, wait }) => {
+      // Fetch strips `authorization` on a cross-origin redirect but forwards custom headers such as
+      // `x-api-key`, so a followed redirect would hand the key to whatever host it names.
       const response = await wait(this.fetcher(`${this.baseUrl}${path}`, {
-        ...init, signal, headers: { "x-api-key": key, ...(init.headers ?? {}) },
+        ...init, signal, redirect: "manual", headers: { "x-api-key": key, ...(init.headers ?? {}) },
       }));
       const text = await wait(response.text());
       if (!response.ok) throw new PolloHttpError(response.status, response, text, { method: init.method ?? "GET", path });
