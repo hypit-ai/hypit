@@ -189,6 +189,19 @@ test("exact audio rates are not rejected by an arbitrary playback-mode ceiling",
   assert.equal(plan.clips[0]?.playbackRate, 128);
 });
 
+test("a fractional rate ends its piece on a whole source sample", () => {
+  // At 3/2 the source position is whole only on every second target sample. A source that runs out
+  // mid-Window used to end the piece half a sample past its last sample, so render threw.
+  const track = programTrack(media("fractional", 16_000), spec({
+    sourceTime: rateSpec({ rate: { numerator: 3, denominator: 2 } }),
+  }));
+  assert.deepEqual(track.clips[0]?.sourceTime.pieces[0]?.target, { startSample: 0, endSampleExclusive: 10_666 });
+  const plan = compileAudioProgramPlan(sealComposition({
+    id: "fractional", canvas: { width: 1, height: 1, clearColor: "#000000" }, tracks: [track],
+  }), space);
+  assert.equal(plan.clips[0]?.sourceEndSampleExclusive, 15_999);
+});
+
 test("source bounds and fades quantize once into the same sample domain", () => {
   const track = programTrack(media("trim", 144_000), spec({
     sourceTime: rateSpec({
