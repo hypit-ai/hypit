@@ -13,8 +13,12 @@ const mediaTypes: Readonly<Record<string, string>> = {
 /** Serve one staged program and its lazily decoded frames to local capture pages. */
 export async function serveHtmlProgram(root: string): Promise<{ readonly url: string; close(): Promise<void> }> {
   const base = resolve(root);
+  let origin: string | undefined;
   const server = createServer(async (request, response) => {
     try {
+      // Only the capture page addresses this server, always by its loopback URL.
+      // A page reaching it through another name (DNS rebinding) is refused.
+      if (request.headers.host !== origin) { response.writeHead(421).end(); return; }
       const pathname = decodeURIComponent(new URL(request.url ?? "/", "http://127.0.0.1").pathname);
       const path = resolve(base, pathname === "/" ? "index.html" : `.${pathname}`);
       if (path !== base && !path.startsWith(`${base}${sep}`)) {
@@ -45,6 +49,7 @@ export async function serveHtmlProgram(root: string): Promise<{ readonly url: st
   });
   const address = server.address();
   if (address === null || typeof address === "string") throw new Error("HTML Program server did not bind a TCP port");
+  origin = `127.0.0.1:${address.port}`;
   return {
     url: `http://127.0.0.1:${address.port}/`,
     close: () => new Promise<void>((resolveClose, reject) => server.close(error => error ? reject(error) : resolveClose())),
