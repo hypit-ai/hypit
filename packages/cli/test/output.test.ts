@@ -300,6 +300,18 @@ test("pricing retains unknown and rejected requests and distinguishes Endpoint-s
   assert.equal((parseCommand(["pricing", "build.svrun", "--limit", "1"]) as { limit: number }).limit, 1);
 });
 
+test("numeric options accept only decimal digits", () => {
+  assert.equal((parseCommand(["status", "bld_x", "--watch", "--max-wait-ms", "0"]) as { maxWaitMs: number }).maxWaitMs, 0);
+  assert.equal((parseCommand(["builds", "--limit", "12"]) as { limit: number }).limit, 12);
+  for (const value of ["", " ", "0x10", "1e3", "-1", "1.5"]) {
+    assert.throws(() => parseCommand(["status", "bld_x", "--watch", "--max-wait-ms", value]),
+      /--max-wait-ms must be a non-negative safe integer/u, JSON.stringify(value));
+  }
+  for (const value of ["", "0b11", "0x10", "0"]) {
+    assert.throws(() => parseCommand(["builds", "--limit", value]), /--limit requires a positive integer/u, JSON.stringify(value));
+  }
+});
+
 test("Provider summaries keep raw pricing available and shared parameters preserve differing combinations", () => {
   const entries = ["first", "second", "third"].map((request) => ({
     request, capability: "example@1#generate", status: "resolved" as const, endpoint: "vendor",
