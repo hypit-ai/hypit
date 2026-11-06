@@ -183,22 +183,6 @@ export function createUniqueSourceEventPositionFragment(options: { readonly offs
   });
 }
 
-export function createOccurrenceUsePositionFragment() {
-  return sealGraphFragment({
-    inputs: [
-      { name: "use", type: audiovisualAuthorTypes.occurrenceUse },
-      { name: "local", type: temporalTypes.exactValue },
-    ],
-    operations: [{
-      id: "position:project",
-      producer: audiovisualAuthorProducers.projectOccurrenceUsePosition,
-      inputs: { use: input("use"), local: input("local") },
-      result: { kind: "output", name: "position" },
-    }],
-    exports: [{ name: "position", type: temporalTypes.exactValue, root: operation("position:project") }],
-  });
-}
-
 export function createAudiovisualProgramDomainFragment() {
   return sealGraphFragment({
     inputs: [

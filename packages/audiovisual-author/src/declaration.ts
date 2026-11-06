@@ -32,7 +32,6 @@ import {
   createOccurrenceBoundOccurrenceUseFragment,
   createOccurrenceClosureFragment,
   createOccurrenceUseFragment,
-  createOccurrenceUsePositionFragment,
   createSourceBoundOccurrenceUseFragment,
   createUniqueSourceEventPositionFragment,
   createResolvedAudiovisualProgramFragment,
@@ -94,23 +93,6 @@ type FutureValue = {
   readonly binding: string;
   readonly reference: AuthorResolvedReference;
 };
-
-type LocalAnchor = {
-  readonly occurrence: string;
-  readonly name: string;
-  readonly child: AuthorDeclarationChild;
-};
-
-function localAnchorPath(path: string): { readonly occurrence: string; readonly anchor: string } | undefined {
-  const parts = path.split(".");
-  return parts.length === 4 && parts[0] === "occurrence" && parts[2] === "anchor"
-    ? { occurrence: parts[1]!, anchor: parts[3]! }
-    : undefined;
-}
-
-function anchorComponentId(program: string, occurrence: string, anchor: string): string {
-  return `${program}:occurrence:${occurrence}:anchor:${anchor}`;
-}
 
 function useComponentId(program: string, occurrence: string): string {
   return `${program}:occurrence:${occurrence}:use`;
@@ -533,7 +515,7 @@ const occurrenceChild = {
     { name: "source", kind: "reference" as const, referenceScope: "declaration" as const, required: true,
       summary: "Selects a Programme-local Source binding." },
     { name: "at", kind: "expression" as const, referenceScope: "declaration" as const, required: false,
-      summary: "Places the occurrence at an exact position or another occurrence's projected anchor." },
+      summary: "Places the occurrence at an exact position supplied by the authoring layer." },
     { name: "duration", kind: "expression" as const, referenceScope: "declaration" as const,
       required: false, accepts: [temporalTypes.exactValue],
       summary: "Optionally fixes the occurrence duration; omission waits for actual Source domains." },
@@ -559,13 +541,6 @@ const occurrenceChild = {
       { name: "offset", kind: "expression" as const, required: false, accepts: [temporalTypes.exactValue],
         summary: "Adds an explicit exact offset after event projection." },
     ],
-  }, {
-    name: "anchor",
-    label: "required" as const,
-    cardinality: "many" as const,
-    summary: "Names one occurrence-local point that other placements may consume.",
-    fields: [{ name: "at", kind: "expression" as const, referenceScope: "declaration" as const, required: true,
-      summary: "Places the anchor in this occurrence's local time." }],
   }],
 };
 
@@ -687,22 +662,11 @@ export const audiovisualProgramAuthorDeclaration: AuthorDeclarationCompiler = {
     const constructionRecordIds = new Set<string>();
     const eventReferences = new Map<string, AuthorResolvedReference>();
     const occurrenceByName = new Map(occurrences.map((child) => [label(child), child]));
-    const localAnchors = new Map<string, LocalAnchor>();
-    for (const child of occurrences) {
-      const occurrence = label(child);
-      for (const anchor of child.children.filter((candidate) => candidate.name === "anchor")) {
-        const name = label(anchor);
-        const path = `occurrence.${occurrence}.anchor.${name}`;
-        if (localAnchors.has(path)) throw new Error(`Audiovisual occurrence ${occurrence} repeats anchor ${name}.`);
-        localAnchors.set(path, { occurrence, name, child: anchor });
-      }
-    }
     const exactReference = async (
       value: ReturnType<typeof field>,
       subject: string,
       literalId: string,
       range: AuthorDeclarationChild["range"] | AuthorDeclaration["range"],
-      allowProjectedAnchor = true,
     ): Promise<AuthorResolvedReference> => {
       if (value?.kind === "literal") {
         if (!constructionRecordIds.has(literalId)) {
@@ -713,7 +677,7 @@ export const audiovisualProgramAuthorDeclaration: AuthorDeclarationCompiler = {
         return { ref: { kind: "record", id: literalId }, type: temporalTypes.exactValue };
       }
       if (value?.kind !== "reference") {
-        throw new Error(`${subject} must be an exact literal or anchor reference.`);
+        throw new Error(`${subject} must be an exact literal or typed reference.`);
       }
       const occurrenceEnd = occurrenceEndPath(value.path);
       if (occurrenceEnd !== undefined) {
@@ -722,22 +686,6 @@ export const audiovisualProgramAuthorDeclaration: AuthorDeclarationCompiler = {
         }
         return {
           ref: { kind: "component-output", component: useComponentId(id, occurrenceEnd), output: "end" },
-          type: temporalTypes.exactValue,
-        };
-      }
-      const localAnchor = localAnchorPath(value.path);
-      if (localAnchor !== undefined) {
-        if (!allowProjectedAnchor) {
-          throw new Error(`${subject} is occurrence-local and cannot consume a projected Programme position.`);
-        }
-        const path = `occurrence.${localAnchor.occurrence}.anchor.${localAnchor.anchor}`;
-        if (!localAnchors.has(path)) throw new Error(`${subject} references missing local anchor ${value.path}.`);
-        return {
-          ref: {
-            kind: "component-output",
-            component: anchorComponentId(id, localAnchor.occurrence, localAnchor.anchor),
-            output: "position",
-          },
           type: temporalTypes.exactValue,
         };
       }
@@ -852,23 +800,6 @@ export const audiovisualProgramAuthorDeclaration: AuthorDeclarationCompiler = {
         });
       }
     }
-
-    const anchorComponents = await Promise.all([...localAnchors.values()].map(async (anchor) => {
-      const occurrence = occurrenceByName.get(anchor.occurrence)!;
-      return {
-        id: anchorComponentId(id, anchor.occurrence, anchor.name),
-        fragment: createOccurrenceUsePositionFragment(),
-        inputs: {
-          use: { kind: "component-output" as const,
-            component: useComponentId(id, anchor.occurrence), output: "use" },
-          local: (await exactReference(field(anchor.child, "at"),
-            `Audiovisual occurrence ${anchor.occurrence} anchor ${anchor.name}.at`,
-            `${id}:occurrence:${anchor.occurrence}:anchor:${anchor.name}:local`, anchor.child.range, false)).ref,
-        },
-        outputs: { position: `${id}.occurrence.${anchor.occurrence}.anchor.${anchor.name}` },
-        range: anchor.child.range ?? occurrence.range ?? declaration.range,
-      };
-    }));
 
     const sourceReferences: Array<{ readonly name: string; readonly reference: AuthorResolvedReference;
       readonly range: AuthorDeclaration["range"] }> = [];
@@ -1151,7 +1082,7 @@ export const audiovisualProgramAuthorDeclaration: AuthorDeclarationCompiler = {
     return {
       records,
       components: [...useComponents, ...eventPositionComponents, domainComponent,
-        ...closedOccurrenceComponents, ...anchorComponents, {
+        ...closedOccurrenceComponents, {
         id: `${id}:program`,
         fragment: createResolvedAudiovisualProgramFragment({
           occurrences: occurrences.length,

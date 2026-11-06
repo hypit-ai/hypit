@@ -43,7 +43,6 @@ export {
   createOccurrenceBoundOccurrenceUseFragment,
   createOccurrenceClosureFragment,
   createOccurrenceUseFragment,
-  createOccurrenceUsePositionFragment,
   createSourceBoundOccurrenceUseFragment,
   createUniqueSourceEventPositionFragment,
   createResolvedAudiovisualProgramFragment,
