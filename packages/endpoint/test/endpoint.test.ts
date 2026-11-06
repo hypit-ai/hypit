@@ -114,6 +114,9 @@ test("HTTP mechanics retain transport evidence without choosing an Endpoint outc
   assert.equal(retryAfterMs(new Headers({ "retry-after": "30" }), now), 30_000);
   assert.equal(retryAfterMs(new Headers({ "retry-after": "Wed, 07 Oct 2026 00:00:45 GMT" }), now), 45_000);
   assert.equal(retryAfterMs(new Headers({ "retry-after": "later" }), now), undefined);
+  assert.equal(retryAfterMs(new Headers({ "retry-after": "1.5" }), now), 1_500);
+  assert.equal(retryAfterMs(new Headers({ "retry-after": "-1" }), now), undefined);
+  assert.equal(retryAfterMs(new Headers({ "retry-after": "2026" }), now), 2_026_000);
 
   const cause = Object.assign(new Error("getaddrinfo ENOTFOUND api.example.test"), { code: "ENOTFOUND" });
   const observed = endpointTransportError(new TypeError("fetch failed", { cause }));
