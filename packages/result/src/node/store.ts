@@ -82,7 +82,7 @@ export function applyBuildResultPresentation(
   if (update.highlightedOutputs !== undefined) {
     const highlighted = [...new Set(update.highlightedOutputs)];
     for (const output of highlighted) {
-      assert(manifest.outputs[output] !== undefined,
+      assert(Object.hasOwn(manifest.outputs, output),
         `Build Result ${manifest.id} has no Output ${output}`);
     }
     if (highlighted.length === 0) delete base.highlightedOutputs;
@@ -153,7 +153,8 @@ export async function locateRepositoryBuildResultOutput(
     const manifest = await repository.read(currentBuild);
     if (manifest === undefined) return undefined;
     assert(manifest.outcome !== undefined, `Build ${currentBuild} is not a finished Result`);
-    const entry = manifest.outputs[currentOutput];
+    // Output names are data; `toString` must not resolve to Object.prototype.
+    const entry = Object.hasOwn(manifest.outputs, currentOutput) ? manifest.outputs[currentOutput] : undefined;
     if (entry === undefined) return undefined;
     if (entry.value.kind === "build-output") {
       currentBuild = entry.value.build;
@@ -298,7 +299,8 @@ export async function resolveBuildResultOutput(
     const directory = buildResultDirectory(root, currentBuild);
     const manifest = await readBuildResult(directory);
     if (manifest === undefined) return undefined;
-    const entry = manifest.outputs[currentOutput];
+    // Output names are data; `toString` must not resolve to Object.prototype.
+    const entry = Object.hasOwn(manifest.outputs, currentOutput) ? manifest.outputs[currentOutput] : undefined;
     if (entry === undefined) return undefined;
     if (entry.value.kind === "build-output") {
       currentBuild = entry.value.build;
@@ -346,7 +348,8 @@ export async function describeBuildResultOutput(
     assert(!seen.has(address), `Build Output forwarding repeats ${currentBuild} / ${currentOutput}`);
     seen.add(address);
     const manifest = await readBuildResult(buildResultDirectory(root, currentBuild));
-    const entry = manifest?.outputs[currentOutput];
+    const entry = manifest !== undefined && Object.hasOwn(manifest.outputs, currentOutput)
+      ? manifest.outputs[currentOutput] : undefined;
     if (entry === undefined) return undefined;
     if (entry.value.kind === "build-output") {
       currentBuild = entry.value.build;

@@ -124,7 +124,7 @@ export async function exportBuildResultOutput(
 ): Promise<BuildResultExport> {
   const manifest = await repository.read(build);
   if (manifest === undefined) throw new Error(`Build Result ${build} does not exist`);
-  const publishedOutput = manifest.outputs[output];
+  const publishedOutput = Object.hasOwn(manifest.outputs, output) ? manifest.outputs[output] : undefined;
   if (publishedOutput === undefined) throw new Error(`Build ${build} has no Output ${output}`);
   const resolvedOutput = await repository.resolve(build, output);
   if (resolvedOutput === undefined) throw new Error(`Build ${build} Output ${output} cannot be resolved`);
